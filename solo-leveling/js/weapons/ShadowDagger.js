@@ -38,7 +38,7 @@ export class ShadowDagger extends WeaponBase {
         dagger.damageAmount = this.getDamage();
 
         // Auto-destroy after distance
-        this.scene.time.delayedCall(7200, () => {
+        this.scene.time.delayedCall(14400, () => {
             if (dagger.active) {
                 dagger.setActive(false);
                 dagger.setVisible(false);
