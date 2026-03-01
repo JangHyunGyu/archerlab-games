@@ -180,10 +180,11 @@ class UIManager {
 
         const row2Y = this.titleText.y + this.titleText.height + 4;
 
-        // Score label + score
-        this.scoreLabelText.position.set(padding, row2Y);
+        // Score label + score (offset right to avoid overlapping home button)
+        const scoreX = padding + this.homeBtn.width + 8;
+        this.scoreLabelText.position.set(scoreX, row2Y);
         this.scoreLabelText.style.fontSize = Math.max(8, screenWidth * 0.022);
-        this.scoreText.position.set(padding, row2Y + this.scoreLabelText.height + 4);
+        this.scoreText.position.set(scoreX, row2Y + this.scoreLabelText.height + 4);
         this.scoreText.style.fontSize = Math.max(16, Math.min(26, screenWidth * 0.055));
 
         // Best
