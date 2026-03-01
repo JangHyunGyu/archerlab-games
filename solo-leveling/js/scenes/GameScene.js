@@ -112,12 +112,6 @@ export class GameScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isGameOver) return;
 
-        // Mobile controls
-        const mobileInput = this.mobileControls.getMovement();
-        if (mobileInput) {
-            this.player.setMobileInput(mobileInput);
-        }
-
         // Update player
         this.player.update(time, delta);
 

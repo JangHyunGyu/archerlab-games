@@ -40,8 +40,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             right: scene.input.keyboard.addKey('D'),
         };
 
-        // Mobile input
-        this.mobileInput = null;
+        // Smoothed velocity for mobile (lerp)
+        this.smoothVx = 0;
+        this.smoothVy = 0;
 
         // Aura effect
         this.aura = scene.add.sprite(x, y, 'player_aura')
@@ -91,20 +92,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._checkRankUp();
     }
 
-    setMobileInput(input) {
-        this.mobileInput = input;
-    }
-
     _handleMovement() {
         const speed = this.stats.speed;
         let vx = 0;
         let vy = 0;
+        let usingJoystick = false;
 
-        // Mobile joystick input
-        if (this.mobileInput) {
-            vx = this.mobileInput.x;
-            vy = this.mobileInput.y;
-            this.mobileInput = null;
+        // Read joystick state directly each frame (no intermediary)
+        const mc = this.scene.mobileControls;
+        const joy = mc ? mc.getJoystickState() : null;
+
+        if (joy) {
+            vx = joy.x;
+            vy = joy.y;
+            usingJoystick = true;
         } else {
             if (this.cursors.left.isDown || this.wasd.left.isDown) vx = -1;
             if (this.cursors.right.isDown || this.wasd.right.isDown) vx = 1;
@@ -112,16 +113,36 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             if (this.cursors.down.isDown || this.wasd.down.isDown) vy = 1;
         }
 
-        // Normalize diagonal movement
-        if (vx !== 0 && vy !== 0) {
+        // Normalize diagonal keyboard input
+        if (!usingJoystick && vx !== 0 && vy !== 0) {
             vx *= 0.707;
             vy *= 0.707;
         }
 
-        this.body.setVelocity(vx * speed, vy * speed);
-        this.isMoving = vx !== 0 || vy !== 0;
+        if (usingJoystick) {
+            // Lerp smoothing for mobile — fast response, no jitter
+            const lerpFactor = 0.35;
+            this.smoothVx += (vx - this.smoothVx) * lerpFactor;
+            this.smoothVy += (vy - this.smoothVy) * lerpFactor;
 
-        if (vx !== 0) this.facingRight = vx > 0;
+            // Snap to zero if very small to prevent drifting
+            if (Math.abs(this.smoothVx) < 0.01) this.smoothVx = 0;
+            if (Math.abs(this.smoothVy) < 0.01) this.smoothVy = 0;
+
+            this.body.setVelocity(this.smoothVx * speed, this.smoothVy * speed);
+            this.isMoving = Math.abs(this.smoothVx) > 0.01 || Math.abs(this.smoothVy) > 0.01;
+
+            if (Math.abs(this.smoothVx) > 0.1) this.facingRight = this.smoothVx > 0;
+        } else {
+            // Keyboard: instant response, reset smoothing
+            this.smoothVx = vx;
+            this.smoothVy = vy;
+            this.body.setVelocity(vx * speed, vy * speed);
+            this.isMoving = vx !== 0 || vy !== 0;
+
+            if (vx !== 0) this.facingRight = vx > 0;
+        }
+
         this.setFlipX(!this.facingRight);
     }
 
