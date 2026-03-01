@@ -17,6 +17,7 @@ class UIManager {
         this._targetScore = 0;
         this._scoreAnimating = false;
         this._titleRefs = null;
+        this._activeButtons = [];
 
         this._build();
     }
@@ -368,6 +369,13 @@ class UIManager {
         startBtn.on('pointertap', doStart);
         container.addChild(startBtn);
 
+        // Register DOM fallback hit area
+        this._activeButtons = [{
+            x: btnX - 10, y: startBtnY - 10,
+            w: btnW + 20, h: btnH + 20,
+            action: doStart
+        }];
+
         const startBtnText = new PIXI.Text(getText('gameStart'), {
             fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
             fontSize: Math.min(20, w * 0.05) * sc,
@@ -580,6 +588,7 @@ class UIManager {
     }
 
     hideTitleScreen(onComplete) {
+        this._activeButtons = [];
         if (!this.titleContainer) {
             if (onComplete) onComplete();
             return;
@@ -813,6 +822,13 @@ class UIManager {
         btn.on('pointertap', doRestart);
         overlay.addChild(btn);
 
+        // Register DOM fallback hit area
+        this._activeButtons = [{
+            x: btnX - 10, y: btnY - 10,
+            w: btnW + 20, h: btnH + 20,
+            action: doRestart
+        }];
+
         const btnText = new PIXI.Text(getText('playAgain'), {
             fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
             fontSize: Math.min(15, panelW * 0.045),
@@ -849,6 +865,13 @@ class UIManager {
         titleBtn.on('pointerdown', doTitle);
         titleBtn.on('pointertap', doTitle);
         overlay.addChild(titleBtn);
+
+        // Add title button to DOM fallback
+        this._activeButtons.push({
+            x: btnX - 10, y: titleBtnY - 10,
+            w: btnW + 20, h: btnH - 4 + 20,
+            action: doTitle
+        });
 
         const titleBtnText = new PIXI.Text(getText('backToTitle'), {
             fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
@@ -899,6 +922,7 @@ class UIManager {
     }
 
     hideGameOver() {
+        this._activeButtons = [];
         if (this.gameOverOverlay) {
             this.gameOverOverlay.destroy({ children: true });
             this.gameOverOverlay = null;
