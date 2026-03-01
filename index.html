@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Archerlab Games - 브라우저 웹게임 포털</title>
-    <meta name="description" content="Archerlab Games - 브라우저에서 바로 플레이할 수 있는 웹게임 포털. 그림자 서바이벌 등 다양한 게임을 무료로 즐기세요.">
-    <meta name="keywords" content="웹게임, 브라우저게임, 그림자 서바이벌, 뱀파이어서바이버즈, 무료게임, archerlab, shadow survival, vampire survivors">
+    <meta name="description" content="Archerlab Games - 브라우저에서 바로 플레이할 수 있는 웹게임 포털. 블럭팡, 그림자 서바이벌 등 다양한 게임을 무료로 즐기세요.">
+    <meta name="keywords" content="웹게임, 브라우저게임, 블럭팡, 블록퍼즐, 그림자 서바이벌, 뱀파이어서바이버즈, 무료게임, archerlab, block puzzle, shadow survival, vampire survivors">
     <meta property="og:title" content="Archerlab Games - 브라우저 웹게임 포털">
-    <meta property="og:description" content="브라우저에서 바로 플레이! 그림자 서바이벌 등 다양한 웹게임을 무료로 즐기세요.">
+    <meta property="og:description" content="브라우저에서 바로 플레이! 블럭팡, 그림자 서바이벌 등 다양한 웹게임을 무료로 즐기세요.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://game.archerlab.dev/">
     <meta property="og:locale" content="ko_KR">
@@ -116,6 +116,22 @@
         }
 
         /* Game-specific themes */
+        .blockpang .game-thumb {
+            background: linear-gradient(135deg, #0a1628 0%, #0d2847 50%, #1a0a2e 100%);
+        }
+        .blockpang .game-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .blockpang .game-tag {
+            background: #00e5ff22;
+            color: #00e5ff;
+            border: 1px solid #00e5ff44;
+        }
+        .blockpang:hover {
+            border-color: #00e5ff;
+        }
         .solo-leveling .game-thumb {
             background: linear-gradient(135deg, #1a0a2e 0%, #2a1050 100%);
         }
@@ -133,6 +149,17 @@
     </header>
 
     <div class="games-grid">
+        <a href="blockpang/" class="game-card blockpang">
+            <div class="game-thumb">
+                <img src="blockpang/blox_pang_link.png" alt="블럭팡 - 블록 퍼즐 게임">
+            </div>
+            <div class="game-info">
+                <h2>블럭팡</h2>
+                <p>블록을 배치하고 줄을 완성하여 최고 점수에 도전하세요! 설치 없이 브라우저에서 즐기는 무료 블록 퍼즐 게임.</p>
+                <span class="game-tag">Puzzle / Block</span>
+            </div>
+        </a>
+
         <a href="solo-leveling/" class="game-card solo-leveling">
             <div class="game-thumb">
                 &#9876;&#65039;
