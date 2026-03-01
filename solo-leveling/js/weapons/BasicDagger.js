@@ -67,34 +67,59 @@ export class BasicDagger extends WeaponBase {
 
                 const currentAngle = Phaser.Math.Linear(swingStart, swingEnd, progress.t);
                 const prevAngle = Phaser.Math.Linear(swingStart, swingEnd, Math.max(0, progress.t - 0.3));
+                const farPrevAngle = Phaser.Math.Linear(swingStart, swingEnd, Math.max(0, progress.t - 0.5));
 
-                // Blade trail (fading arc)
-                trailGfx.lineStyle(6, 0xaaaacc, 0.2 * (1 - progress.t));
+                // Afterimage trail (wide, faded)
+                trailGfx.lineStyle(14, 0x7b2fff, 0.08 * (1 - progress.t));
+                trailGfx.beginPath();
+                trailGfx.arc(px, py, slashRadius, farPrevAngle, prevAngle, this.swingDir > 0);
+                trailGfx.strokePath();
+
+                // Main trail (purple)
+                trailGfx.lineStyle(10, 0x7b2fff, 0.25 * (1 - progress.t));
                 trailGfx.beginPath();
                 trailGfx.arc(px, py, slashRadius, prevAngle, currentAngle, this.swingDir > 0);
                 trailGfx.strokePath();
 
-                // Main slash line (bright arc)
-                slashGfx.lineStyle(3, 0xddddee, 0.9 * (1 - progress.t * 0.5));
-                slashGfx.beginPath();
+                // Bright slash line (purple glow)
                 const arcStart = Phaser.Math.Linear(swingStart, swingEnd, Math.max(0, progress.t - 0.15));
+                slashGfx.lineStyle(5, 0xb366ff, 0.9 * (1 - progress.t * 0.5));
+                slashGfx.beginPath();
                 slashGfx.arc(px, py, slashRadius, arcStart, currentAngle, this.swingDir > 0);
                 slashGfx.strokePath();
 
-                // Dagger tip
+                // Inner blade edge (white core)
+                slashGfx.lineStyle(2, 0xffffff, 0.7 * (1 - progress.t * 0.6));
+                slashGfx.beginPath();
+                slashGfx.arc(px, py, slashRadius, arcStart, currentAngle, this.swingDir > 0);
+                slashGfx.strokePath();
+
+                // Dagger tip glow
                 const tipX = px + Math.cos(currentAngle) * slashRadius;
                 const tipY = py + Math.sin(currentAngle) * slashRadius;
-                slashGfx.fillStyle(0xeeeeFF, 0.9);
-                slashGfx.fillCircle(tipX, tipY, 3);
+                slashGfx.fillStyle(0xd4aaff, 0.9);
+                slashGfx.fillCircle(tipX, tipY, 4);
+                slashGfx.fillStyle(0xffffff, 0.6);
+                slashGfx.fillCircle(tipX, tipY, 2);
 
-                // Small spark at tip
-                if (progress.t > 0.2 && progress.t < 0.8) {
-                    slashGfx.fillStyle(0xffffff, 0.6);
-                    slashGfx.fillCircle(
-                        tipX + Phaser.Math.Between(-4, 4),
-                        tipY + Phaser.Math.Between(-4, 4),
-                        1.5
-                    );
+                // Spark particles along arc
+                if (progress.t > 0.1 && progress.t < 0.9) {
+                    for (let s = 0; s < 2; s++) {
+                        const spark = this.scene.add.circle(
+                            tipX + Phaser.Math.Between(-6, 6),
+                            tipY + Phaser.Math.Between(-6, 6),
+                            Phaser.Math.Between(1, 3),
+                            0xd4aaff, 0.8
+                        ).setDepth(9);
+                        this.scene.tweens.add({
+                            targets: spark,
+                            alpha: 0, scale: 0,
+                            x: spark.x + Phaser.Math.Between(-15, 15),
+                            y: spark.y + Phaser.Math.Between(-15, 15),
+                            duration: 200,
+                            onComplete: () => spark.destroy(),
+                        });
+                    }
                 }
             },
             onComplete: () => {

@@ -360,6 +360,129 @@ export class SoundManager {
         }, 600);
     }
 
+    // ========== INTRO MUSIC ==========
+
+    // Epic ominous ambient loop for menu screen
+    playIntroMusic() {
+        if (!this._initialized || !this.enabled) return;
+        this.stopIntroMusic(); // clean previous
+        this._introNodes = [];
+        this._introIntervals = [];
+        const t = this.ctx.currentTime;
+        const introGain = this.ctx.createGain();
+        introGain.gain.setValueAtTime(0.001, t);
+        introGain.gain.linearRampToValueAtTime(0.25, t + 3);
+        introGain.connect(this.out);
+        this._introGain = introGain;
+
+        // 1. Low drone pad - sawtooth C2 (~65Hz) with filter LFO sweep
+        const droneOsc = this.ctx.createOscillator();
+        droneOsc.type = 'sawtooth';
+        droneOsc.frequency.value = 65.41; // C2
+        const droneFilter = this.ctx.createBiquadFilter();
+        droneFilter.type = 'lowpass';
+        droneFilter.frequency.value = 400;
+        droneFilter.Q.value = 5;
+        const droneLfo = this.ctx.createOscillator();
+        droneLfo.type = 'sine';
+        droneLfo.frequency.value = 0.15; // slow sweep
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = 350; // LFO depth
+        droneLfo.connect(lfoGain);
+        lfoGain.connect(droneFilter.frequency);
+        const droneVol = this.ctx.createGain();
+        droneVol.gain.value = 0.35;
+        droneOsc.connect(droneFilter);
+        droneFilter.connect(droneVol);
+        droneVol.connect(introGain);
+        droneOsc.start(t);
+        droneLfo.start(t);
+        this._introNodes.push(droneOsc, droneLfo);
+
+        // 2. Secondary drone - sine, fifth above: G2 (~98Hz)
+        const drone2Osc = this.ctx.createOscillator();
+        drone2Osc.type = 'sine';
+        drone2Osc.frequency.value = 98.00; // G2
+        const drone2Vol = this.ctx.createGain();
+        drone2Vol.gain.value = 0.18;
+        drone2Osc.connect(drone2Vol);
+        drone2Vol.connect(introGain);
+        drone2Osc.start(t);
+        this._introNodes.push(drone2Osc);
+
+        // 3. Arpeggiated notes in C minor pentatonic
+        const notes = [130.81, 155.56, 196.00, 233.08, 261.63]; // C3, Eb3, G3, Bb3, C4
+        let noteIndex = 0;
+        const arpInterval = setInterval(() => {
+            if (!this._initialized || !this.ctx) return;
+            try {
+                const now = this.ctx.currentTime;
+                const noteOsc = this.ctx.createOscillator();
+                noteOsc.type = 'sine';
+                noteOsc.frequency.value = notes[noteIndex % notes.length];
+                const noteGain = this.ctx.createGain();
+                // ADSR envelope for short note
+                noteGain.gain.setValueAtTime(0.001, now);
+                noteGain.gain.linearRampToValueAtTime(0.18, now + 0.05);   // attack
+                noteGain.gain.linearRampToValueAtTime(0.10, now + 0.15);   // decay/sustain
+                noteGain.gain.linearRampToValueAtTime(0.001, now + 0.45);  // release
+                noteOsc.connect(noteGain);
+                noteGain.connect(introGain);
+                noteOsc.start(now);
+                noteOsc.stop(now + 0.5);
+                noteIndex++;
+            } catch (e) { /* silent */ }
+        }, 500); // 120 BPM = 500ms per beat
+        this._introIntervals.push(arpInterval);
+
+        // 4. Subtle percussion - filtered noise hits
+        const percInterval = setInterval(() => {
+            if (!this._initialized || !this.ctx) return;
+            try {
+                const now = this.ctx.currentTime;
+                const sr = this.ctx.sampleRate;
+                const len = Math.floor(sr * 0.08);
+                const buf = this.ctx.createBuffer(1, len, sr);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+                const noiseSrc = this.ctx.createBufferSource();
+                noiseSrc.buffer = buf;
+                const percFilter = this.ctx.createBiquadFilter();
+                percFilter.type = 'bandpass';
+                percFilter.frequency.value = 800;
+                percFilter.Q.value = 2;
+                const percGain = this.ctx.createGain();
+                percGain.gain.setValueAtTime(0.12, now);
+                percGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                noiseSrc.connect(percFilter);
+                percFilter.connect(percGain);
+                percGain.connect(introGain);
+                noiseSrc.start(now);
+            } catch (e) { /* silent */ }
+        }, 2000); // soft noise hit every 2 seconds
+        this._introIntervals.push(percInterval);
+    }
+
+    stopIntroMusic() {
+        if (this._introIntervals) {
+            this._introIntervals.forEach(id => clearInterval(id));
+            this._introIntervals = [];
+        }
+        if (this._introNodes) {
+            this._introNodes.forEach(node => {
+                try { node.stop(); } catch (e) { /* silent */ }
+            });
+            this._introNodes = [];
+        }
+        if (this._introGain) {
+            try {
+                const t = this.ctx.currentTime;
+                this._introGain.gain.linearRampToValueAtTime(0.001, t + 0.5);
+            } catch (e) { /* silent */ }
+            this._introGain = null;
+        }
+    }
+
     toggleSound() {
         this.enabled = !this.enabled;
         return this.enabled;

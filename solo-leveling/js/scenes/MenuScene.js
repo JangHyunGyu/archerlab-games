@@ -83,6 +83,11 @@ export class MenuScene extends Phaser.Scene {
             startText.setScale(1);
         });
         startBtn.on('pointerdown', () => {
+            // Stop intro music
+            if (this.game._soundManager) {
+                this.game._soundManager.stopIntroMusic();
+            }
+
             // Initialize audio on first user interaction (browsers require user gesture)
             if (!this.game._soundManager) {
                 this.game._soundManager = new SoundManager();
@@ -137,6 +142,14 @@ export class MenuScene extends Phaser.Scene {
         });
 
         this.cameras.main.fadeIn(500, 0, 0, 0);
+
+        // Initialize sound manager if needed and play intro music
+        if (!this.game._soundManager) {
+            this.game._soundManager = new SoundManager();
+            this.game._soundManager.init();
+        }
+        this.game._soundManager.resume();
+        this.game._soundManager.playIntroMusic();
     }
 
     update() {
