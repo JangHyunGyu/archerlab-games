@@ -60,6 +60,22 @@
             }
         }, { passive: false });
 
+        // DOM-level fallback for UI buttons (bypasses PixiJS event system)
+        app.view.addEventListener('pointerdown', (e) => {
+            if (!game.ui._activeButtons || game.ui._activeButtons.length === 0) return;
+            const rect = app.view.getBoundingClientRect();
+            const scaleX = app.screen.width / rect.width;
+            const scaleY = app.screen.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            for (const btn of game.ui._activeButtons) {
+                if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+                    btn.action();
+                    return;
+                }
+            }
+        }, { passive: true });
+
         console.log('%c🎮 블럭팡 Premium Edition', 'color: #00E5FF; font-size: 14px; font-weight: bold;');
     }
 })();

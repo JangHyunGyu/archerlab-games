@@ -190,6 +190,92 @@ export class MenuScene extends Phaser.Scene {
         this.game._soundManager.playIntroMusic();
     }
 
+    _createLanguageDropdown(isMobile) {
+        const currentLabel = LANGUAGES.find(l => l.code === LANG)?.label || '한국어';
+        const btnW = uv(isMobile ? 120 : 110);
+        const btnH = uv(32);
+        const btnX = GAME_WIDTH - btnW / 2 - uv(15);
+        const btnY = uv(30);
+        const depth = 50;
+
+        // Trigger button background
+        const triggerBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x1a1a3e, 0.85)
+            .setStrokeStyle(1, COLORS.SHADOW_PRIMARY)
+            .setDepth(depth)
+            .setInteractive({ useHandCursor: true });
+
+        // Trigger button text
+        const triggerText = this.add.text(btnX, btnY, `🌐 ${currentLabel} ▾`, {
+            fontSize: fs(isMobile ? 14 : 12),
+            fontFamily: 'Arial, sans-serif',
+            color: '#b366ff',
+        }).setOrigin(0.5).setDepth(depth);
+
+        // Dropdown elements (initially hidden)
+        const dropdownItems = [];
+        let dropdownOpen = false;
+
+        // Invisible full-screen overlay to catch outside clicks
+        const dismissOverlay = this.add.rectangle(
+            GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0
+        ).setDepth(depth + 1).setInteractive().setVisible(false);
+
+        LANGUAGES.forEach((lang, i) => {
+            const itemY = btnY + btnH / 2 + uv(2) + (i * (btnH + uv(2))) + btnH / 2;
+            const isActive = lang.code === LANG;
+
+            const itemBg = this.add.rectangle(btnX, itemY, btnW, btnH, isActive ? 0x3a1a6e : 0x1a1a3e, 0.95)
+                .setStrokeStyle(1, isActive ? COLORS.SHADOW_GLOW : 0x333355)
+                .setDepth(depth + 2)
+                .setInteractive({ useHandCursor: true })
+                .setVisible(false);
+
+            const itemText = this.add.text(btnX, itemY, lang.label, {
+                fontSize: fs(isMobile ? 14 : 12),
+                fontFamily: 'Arial, sans-serif',
+                color: isActive ? '#ffffff' : '#9999bb',
+            }).setOrigin(0.5).setDepth(depth + 2).setVisible(false);
+
+            itemBg.on('pointerover', () => {
+                if (!isActive) itemBg.setFillStyle(0x2a1a4e, 0.95);
+                itemText.setColor('#ffffff');
+            });
+            itemBg.on('pointerout', () => {
+                if (!isActive) itemBg.setFillStyle(0x1a1a3e, 0.95);
+                if (!isActive) itemText.setColor('#9999bb');
+            });
+            itemBg.on('pointerdown', () => {
+                if (lang.code !== LANG) {
+                    setLang(lang.code);
+                    this.scene.restart();
+                } else {
+                    closeDropdown();
+                }
+            });
+
+            dropdownItems.push(itemBg, itemText);
+        });
+
+        const openDropdown = () => {
+            dropdownOpen = true;
+            dismissOverlay.setVisible(true);
+            triggerBg.setFillStyle(0x2a1a4e, 0.95);
+            dropdownItems.forEach(el => el.setVisible(true));
+        };
+
+        const closeDropdown = () => {
+            dropdownOpen = false;
+            dismissOverlay.setVisible(false);
+            triggerBg.setFillStyle(0x1a1a3e, 0.85);
+            dropdownItems.forEach(el => el.setVisible(false));
+        };
+
+        triggerBg.on('pointerover', () => triggerBg.setFillStyle(0x2a1a4e, 0.95));
+        triggerBg.on('pointerout', () => { if (!dropdownOpen) triggerBg.setFillStyle(0x1a1a3e, 0.85); });
+        triggerBg.on('pointerdown', () => { dropdownOpen ? closeDropdown() : openDropdown(); });
+        dismissOverlay.on('pointerdown', closeDropdown);
+    }
+
     _showContactModal() {
         const elements = [];
         const cx = GAME_WIDTH / 2;
