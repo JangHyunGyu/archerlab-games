@@ -36,7 +36,7 @@ class Board {
         this.cellSize = cellSize;
         this.container.position.set(x, y);
 
-        if (needsRebuild) {
+        if (needsRebuild && cellSize > 0) {
             this._buildVisuals();
         }
     }

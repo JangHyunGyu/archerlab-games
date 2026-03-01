@@ -36,8 +36,6 @@
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 game.resize();
-                game.board._buildVisuals();
-                game.tray._rebuildSlotVisuals();
             }, 150);
         });
 
@@ -45,8 +43,6 @@
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 game.resize();
-                game.board._buildVisuals();
-                game.tray._rebuildSlotVisuals();
             }, 300);
         });
 
