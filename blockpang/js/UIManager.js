@@ -214,9 +214,10 @@ class UIManager {
         this.soundBtn.position.set(screenWidth - padding, padding * 0.3);
         this.soundBtn.style.fontSize = Math.max(16, Math.min(22, screenWidth * 0.045));
 
-        // Home button
-        this.homeBtn.position.set(padding, padding * 0.3);
-        this.homeBtn.style.fontSize = Math.max(16, Math.min(22, screenWidth * 0.045));
+        // Home button (below score area)
+        const homeBtnY = this.scoreText.y + this.scoreText.height + 6;
+        this.homeBtn.position.set(padding, homeBtnY);
+        this.homeBtn.style.fontSize = Math.max(14, Math.min(18, screenWidth * 0.035));
     }
 
     updateScore(score, bestScore) {
@@ -441,8 +442,15 @@ class UIManager {
             () => { window.open('mailto:contact@archerlab.dev', '_blank'); }
         );
 
-        // Position bottom buttons centered
-        const totalBtnW = langBtn.width + contactBtn.width + gap;
+        // archerlab.dev button
+        const linkBtn = createSmallBtn(
+            'archerlab.dev',
+            0x2979FF,
+            () => { window.open('https://archerlab.dev', '_blank'); }
+        );
+
+        // Position bottom buttons centered (3 buttons)
+        const totalBtnW = langBtn.width + contactBtn.width + linkBtn.width + gap * 2;
         let bx = centerX - totalBtnW / 2;
 
         langBtn.btn.position.set(bx, bottomY);
@@ -451,19 +459,10 @@ class UIManager {
 
         contactBtn.btn.position.set(bx, bottomY);
         container.addChild(contactBtn.btn);
+        bx += contactBtn.width + gap;
 
-        // ── archerlab.dev link (top center, emoji) ──
-        const linkBtn = new PIXI.Text('�', {
-            fontSize: Math.max(20, Math.min(28, w * 0.055)) * sc,
-        });
-        linkBtn.anchor.set(0.5, 0);
-        linkBtn.position.set(centerX, 12);
-        linkBtn.eventMode = 'static';
-        linkBtn.cursor = 'pointer';
-        linkBtn.on('pointerdown', () => { window.open('https://archerlab.dev', '_blank'); });
-        linkBtn.on('pointerover', () => { linkBtn.alpha = 0.7; });
-        linkBtn.on('pointerout', () => { linkBtn.alpha = 1; });
-        container.addChild(linkBtn);
+        linkBtn.btn.position.set(bx, bottomY);
+        container.addChild(linkBtn.btn);
 
         // ── Sound toggle ──
         const titleSoundBtn = new PIXI.Text('♪', {
