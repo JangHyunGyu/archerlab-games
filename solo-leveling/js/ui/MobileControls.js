@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT, fs, uv } from '../utils/Constants.js';
 /**
  * 모바일 터치 컨트롤
  * - 플로팅 조이스틱: 화면 어디든 터치하면 그 위치에 조이스틱 생성
+ * - 조이스틱 상태는 매 프레임 Player가 직접 읽음 (입력 소실 방지)
  * - 우측 상단 상태/사운드 버튼
  */
 export class MobileControls {
@@ -19,8 +20,9 @@ export class MobileControls {
 
         // Joystick config
         this.baseRadius = uv(70);
-        this.thumbRadius = uv(28);
-        this.maxDist = uv(55);
+        this.thumbRadius = uv(30);
+        this.maxDist = uv(70);
+        this.deadZone = 0.05;
 
         if (this.isMobile) {
             this._setupFloatingJoystick();
@@ -88,11 +90,20 @@ export class MobileControls {
         if (dist > this.maxDist) {
             this.joystick.x = dx / dist;
             this.joystick.y = dy / dist;
+            // Drag base along if finger moves far enough (common in mobile games)
+            const overflow = dist - this.maxDist * 1.3;
+            if (overflow > 0) {
+                const angle = Math.atan2(dy, dx);
+                this.padX += Math.cos(angle) * overflow;
+                this.padY += Math.sin(angle) * overflow;
+                this.joystickBase.setPosition(this.padX, this.padY);
+                this.joystickGlow.setPosition(this.padX, this.padY);
+            }
             this.joystickThumb.setPosition(
                 this.padX + (dx / dist) * this.maxDist,
                 this.padY + (dy / dist) * this.maxDist
             );
-        } else if (dist > 5) {
+        } else if (dist > 3) {
             this.joystick.x = dx / this.maxDist;
             this.joystick.y = dy / this.maxDist;
             this.joystickThumb.setPosition(px, py);
@@ -151,14 +162,19 @@ export class MobileControls {
         });
     }
 
-    getMovement() {
+    getJoystickState() {
         if (!this.isMobile || !this.joystick.active) return null;
 
-        const deadzone = 0.15;
-        let vx = Math.abs(this.joystick.x) > deadzone ? this.joystick.x : 0;
-        let vy = Math.abs(this.joystick.y) > deadzone ? this.joystick.y : 0;
+        const mag = Math.sqrt(this.joystick.x * this.joystick.x + this.joystick.y * this.joystick.y);
+        if (mag < this.deadZone) return { x: 0, y: 0 };
 
-        return { x: vx, y: vy };
+        // Remap: dead zone~1.0 → 0~1.0 for smooth start
+        const remapped = (mag - this.deadZone) / (1.0 - this.deadZone);
+        const clamped = Math.min(remapped, 1.0);
+        return {
+            x: (this.joystick.x / mag) * clamped,
+            y: (this.joystick.y / mag) * clamped,
+        };
     }
 
     destroy() {}
