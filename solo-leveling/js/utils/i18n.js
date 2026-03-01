@@ -1,7 +1,19 @@
-// Detect language from URL parameter or path: ?lang=en, ?lang=ja
+// Detect language from saved preference, URL parameter, or default to 'ko'
 const params = new URLSearchParams(window.location.search);
 const langParam = params.get('lang');
-export const LANG = langParam === 'en' || langParam === 'ja' ? langParam : 'ko';
+const savedLang = localStorage.getItem('shadow_survival_lang');
+export let LANG = savedLang || (langParam === 'en' || langParam === 'ja' ? langParam : 'ko');
+
+export const LANGUAGES = [
+    { code: 'ko', label: '한국어' },
+    { code: 'en', label: 'English' },
+    { code: 'ja', label: '日本語' },
+];
+
+export function setLang(code) {
+    LANG = code;
+    localStorage.setItem('shadow_survival_lang', code);
+}
 
 const TEXTS = {
     ko: {

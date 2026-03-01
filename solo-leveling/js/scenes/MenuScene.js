@@ -1,6 +1,6 @@
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, fs, uv } from '../utils/Constants.js';
 import { SoundManager } from '../managers/SoundManager.js';
-import { t } from '../utils/i18n.js';
+import { t, LANG, LANGUAGES, setLang } from '../utils/i18n.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -144,6 +144,9 @@ export class MenuScene extends Phaser.Scene {
         archerlabBtn.on('pointerdown', () => {
             window.open('https://archerlab.dev', '_blank');
         });
+
+        // Language dropdown (top-right)
+        this._createLanguageDropdown(isMobile);
 
         // Footer: contact + copyright
         const footerY = GAME_HEIGHT * 0.92;
