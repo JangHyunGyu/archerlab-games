@@ -442,15 +442,8 @@ class UIManager {
             () => { window.open('mailto:contact@archerlab.dev', '_blank'); }
         );
 
-        // archerlab.dev button
-        const linkBtn = createSmallBtn(
-            'archerlab.dev',
-            0x2979FF,
-            () => { window.open('https://archerlab.dev', '_blank'); }
-        );
-
-        // Position bottom buttons centered (3 buttons)
-        const totalBtnW = langBtn.width + contactBtn.width + linkBtn.width + gap * 2;
+        // Position bottom buttons centered (2 buttons)
+        const totalBtnW = langBtn.width + contactBtn.width + gap;
         let bx = centerX - totalBtnW / 2;
 
         langBtn.btn.position.set(bx, bottomY);
@@ -459,10 +452,23 @@ class UIManager {
 
         contactBtn.btn.position.set(bx, bottomY);
         container.addChild(contactBtn.btn);
-        bx += contactBtn.width + gap;
 
-        linkBtn.btn.position.set(bx, bottomY);
-        container.addChild(linkBtn.btn);
+        // ── archerlab.dev link (top center, styled text) ──
+        const linkBtn = new PIXI.Text('archerlab.dev', {
+            fontFamily: 'Orbitron, sans-serif',
+            fontSize: Math.max(13, Math.min(16, w * 0.035)) * sc,
+            fill: 0x2979FF,
+            fontWeight: '700',
+            letterSpacing: 2,
+        });
+        linkBtn.anchor.set(0.5, 0);
+        linkBtn.position.set(centerX, 14);
+        linkBtn.eventMode = 'static';
+        linkBtn.cursor = 'pointer';
+        linkBtn.on('pointerdown', () => { window.open('https://archerlab.dev', '_blank'); });
+        linkBtn.on('pointerover', () => { linkBtn.alpha = 0.7; });
+        linkBtn.on('pointerout', () => { linkBtn.alpha = 1; });
+        container.addChild(linkBtn);
 
         // ── Sound toggle ──
         const titleSoundBtn = new PIXI.Text('♪', {
