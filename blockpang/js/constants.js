@@ -152,6 +152,13 @@ function getText(key) {
     return I18N[currentLang]?.[key] || I18N['en'][key] || key;
 }
 
+const LANG_LABELS = { ko: '한국어', en: 'English', ja: '日本語' };
+
+function setLanguage(code) {
+    currentLang = code;
+    localStorage.setItem('blockpang_lang', code);
+}
+
 function cycleLanguage() {
     const idx = LANGUAGES.indexOf(currentLang);
     currentLang = LANGUAGES[(idx + 1) % LANGUAGES.length];
