@@ -214,10 +214,9 @@ class UIManager {
         this.soundBtn.position.set(screenWidth - padding, padding * 0.3);
         this.soundBtn.style.fontSize = Math.max(16, Math.min(22, screenWidth * 0.045));
 
-        // Home button (below score area)
-        const homeBtnY = this.scoreText.y + this.scoreText.height + 6;
-        this.homeBtn.position.set(padding, homeBtnY);
-        this.homeBtn.style.fontSize = Math.max(14, Math.min(18, screenWidth * 0.035));
+        // Home button (top-left)
+        this.homeBtn.position.set(padding, padding * 0.3);
+        this.homeBtn.style.fontSize = Math.max(16, Math.min(22, screenWidth * 0.045));
     }
 
     updateScore(score, bestScore) {
@@ -425,33 +424,125 @@ class UIManager {
             return { btn, txt, width: bw };
         };
 
-        // Language button
-        const langBtn = createSmallBtn(
-            `${getText('langLabel')} ${getText('language')}`,
-            0xD500F9,
-            () => {
-                cycleLanguage();
-                this._refreshTitleTexts();
-            }
-        );
-
-        // Contact button
+        // Contact button (centered)
         const contactBtn = createSmallBtn(
             getText('contact'),
             0xFFD600,
             () => { window.open('mailto:contact@archerlab.dev', '_blank'); }
         );
-
-        // Position bottom buttons centered (2 buttons)
-        const totalBtnW = langBtn.width + contactBtn.width + gap;
-        let bx = centerX - totalBtnW / 2;
-
-        langBtn.btn.position.set(bx, bottomY);
-        container.addChild(langBtn.btn);
-        bx += langBtn.width + gap;
-
-        contactBtn.btn.position.set(bx, bottomY);
+        contactBtn.btn.position.set(centerX - contactBtn.width / 2, bottomY);
         container.addChild(contactBtn.btn);
+
+        // ── Language dropdown (top-left, emoji style) ──
+        const langLabel = LANG_LABELS[currentLang] || '한국어';
+        const langFontSize = Math.max(11, Math.min(13, w * 0.032)) * sc;
+        const langBtnW = Math.min(110, w * 0.28);
+        const langBtnH = Math.min(30, h * 0.045);
+
+        const langTrigger = new PIXI.Graphics();
+        langTrigger.beginFill(0x1a1a3e, 0.85);
+        langTrigger.drawRoundedRect(0, 0, langBtnW, langBtnH, 6);
+        langTrigger.endFill();
+        langTrigger.lineStyle(1, 0xD500F9, 0.5);
+        langTrigger.drawRoundedRect(0, 0, langBtnW, langBtnH, 6);
+        langTrigger.lineStyle(0);
+        langTrigger.position.set(14, 14);
+        langTrigger.eventMode = 'static';
+        langTrigger.cursor = 'pointer';
+        langTrigger.hitArea = new PIXI.Rectangle(-4, -4, langBtnW + 8, langBtnH + 8);
+        container.addChild(langTrigger);
+
+        const langTriggerText = new PIXI.Text(`🌐 ${langLabel} ▾`, {
+            fontFamily: "'Noto Sans KR', 'Noto Sans JP', sans-serif",
+            fontSize: langFontSize,
+            fill: 0xD500F9,
+            fontWeight: '700',
+        });
+        langTriggerText.anchor.set(0.5, 0.5);
+        langTriggerText.position.set(langBtnW / 2, langBtnH / 2);
+        langTrigger.addChild(langTriggerText);
+
+        // Dropdown items container
+        const dropdownContainer = new PIXI.Container();
+        dropdownContainer.visible = false;
+        container.addChild(dropdownContainer);
+
+        // Dismiss overlay
+        const dismissBg = new PIXI.Graphics();
+        dismissBg.beginFill(0x000000, 0.01);
+        dismissBg.drawRect(0, 0, w, h);
+        dismissBg.endFill();
+        dismissBg.eventMode = 'static';
+        dropdownContainer.addChild(dismissBg);
+
+        let dropdownOpen = false;
+        const langItems = [
+            { code: 'ko', label: '한국어' },
+            { code: 'en', label: 'English' },
+            { code: 'ja', label: '日本語' },
+        ];
+
+        langItems.forEach((lang, i) => {
+            const iy = 14 + langBtnH + 2 + i * (langBtnH + 2);
+            const isActive = lang.code === currentLang;
+
+            const itemBg = new PIXI.Graphics();
+            itemBg.beginFill(isActive ? 0x3a1a6e : 0x1a1a3e, 0.95);
+            itemBg.drawRoundedRect(0, 0, langBtnW, langBtnH, 6);
+            itemBg.endFill();
+            itemBg.lineStyle(1, isActive ? 0xD500F9 : 0x333355, 0.6);
+            itemBg.drawRoundedRect(0, 0, langBtnW, langBtnH, 6);
+            itemBg.lineStyle(0);
+            itemBg.position.set(14, iy);
+            itemBg.eventMode = 'static';
+            itemBg.cursor = 'pointer';
+            dropdownContainer.addChild(itemBg);
+
+            const itemText = new PIXI.Text(lang.label, {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', sans-serif",
+                fontSize: langFontSize,
+                fill: isActive ? 0xffffff : 0x9999bb,
+                fontWeight: '700',
+            });
+            itemText.anchor.set(0.5, 0.5);
+            itemText.position.set(langBtnW / 2, langBtnH / 2);
+            itemBg.addChild(itemText);
+
+            itemBg.on('pointerover', () => {
+                if (!isActive) itemBg.tint = 0xCCCCFF;
+                itemText.style.fill = 0xffffff;
+            });
+            itemBg.on('pointerout', () => {
+                itemBg.tint = 0xFFFFFF;
+                if (!isActive) itemText.style.fill = 0x9999bb;
+            });
+            itemBg.on('pointerdown', () => {
+                if (lang.code !== currentLang) {
+                    setLanguage(lang.code);
+                    this.showTitleScreen();
+                } else {
+                    closeDropdown();
+                }
+            });
+        });
+
+        const openDropdown = () => {
+            dropdownOpen = true;
+            dropdownContainer.visible = true;
+            langTrigger.tint = 0xCCCCFF;
+        };
+        const closeDropdown = () => {
+            dropdownOpen = false;
+            dropdownContainer.visible = false;
+            langTrigger.tint = 0xFFFFFF;
+        };
+
+        langTrigger.on('pointerover', () => { langTrigger.tint = 0xCCCCFF; });
+        langTrigger.on('pointerout', () => { if (!dropdownOpen) langTrigger.tint = 0xFFFFFF; });
+        langTrigger.on('pointerdown', () => { dropdownOpen ? closeDropdown() : openDropdown(); });
+        dismissBg.on('pointerdown', closeDropdown);
+
+        const langBtn = { btn: langTrigger, txt: langTriggerText };
 
         // ── archerlab.dev link (top center, styled text) ──
         const linkBtn = new PIXI.Text('archerlab.dev', {
@@ -626,7 +717,7 @@ class UIManager {
         const { subtitle, startBtnText, langBtn, contactBtn } = this._titleRefs;
         if (subtitle && !subtitle.destroyed) subtitle.text = getText('blockPuzzle');
         if (startBtnText && !startBtnText.destroyed) startBtnText.text = getText('gameStart');
-        if (langBtn && langBtn.txt && !langBtn.txt.destroyed) langBtn.txt.text = `${getText('langLabel')} ${getText('language')}`;
+        if (langBtn && langBtn.txt && !langBtn.txt.destroyed) langBtn.txt.text = `🌐 ${LANG_LABELS[currentLang] || '한국어'} ▾`;
         if (contactBtn && contactBtn.txt && !contactBtn.txt.destroyed) contactBtn.txt.text = getText('contact');
     }
 

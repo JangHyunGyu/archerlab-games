@@ -16,6 +16,8 @@ export class HUD {
         // Bottom elements
         this._createWeaponSlots();
         this._createShadowArmyDisplay();
+        // Home button
+        this._createHomeButton();
     }
 
     _createLeftPanel() {
@@ -157,6 +159,26 @@ export class HUD {
             color: COLORS.TEXT_PURPLE,
         }).setDepth(100).setScrollFactor(0);
         this.elements.push(this.shadowText);
+    }
+
+    _createHomeButton() {
+        const m = this._margin;
+        const timerBottom = m + (this.timerText ? this.timerText.height : uv(20));
+        this.homeBtn = this.scene.add.text(GAME_WIDTH / 2, timerBottom + uv(5), '🏠', {
+            fontSize: fs(18),
+            fontFamily: 'Arial, sans-serif',
+        }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0)
+          .setInteractive({ useHandCursor: true });
+
+        this.homeBtn.on('pointerover', () => this.homeBtn.setAlpha(0.7));
+        this.homeBtn.on('pointerout', () => this.homeBtn.setAlpha(1));
+        this.homeBtn.on('pointerdown', () => {
+            this.scene.cameras.main.fadeOut(300, 0, 0, 0);
+            this.scene.time.delayedCall(300, () => {
+                this.scene.scene.start('MenuScene');
+            });
+        });
+        this.elements.push(this.homeBtn);
     }
 
     update(player, weaponManager, enemyManager, shadowArmyManager) {
