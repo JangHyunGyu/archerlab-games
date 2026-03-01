@@ -120,6 +120,25 @@ class UIManager {
         });
         this.container.addChild(this.soundBtn);
 
+        // Home button (go to title)
+        this.homeBtn = new PIXI.Text('🏠', {
+            fontSize: 20,
+        });
+        this.homeBtn.anchor.set(0, 0);
+        this.homeBtn.eventMode = 'static';
+        this.homeBtn.cursor = 'pointer';
+        this.homeBtn.on('pointerdown', () => {
+            if (this.game.isAnimating) return;
+            this.game.goToTitle();
+        });
+        this.homeBtn.on('pointerover', () => {
+            this.homeBtn.alpha = 0.7;
+        });
+        this.homeBtn.on('pointerout', () => {
+            this.homeBtn.alpha = 1;
+        });
+        this.container.addChild(this.homeBtn);
+
         // Start score counter animation
         this.game.app.ticker.add(this._updateScoreAnimation, this);
     }
@@ -135,6 +154,7 @@ class UIManager {
         this.levelBarFill.visible = true;
         this.levelBarGlow.visible = true;
         this.soundBtn.visible = true;
+        this.homeBtn.visible = true;
     }
 
     hideGameHUD() {
@@ -147,6 +167,7 @@ class UIManager {
         this.levelBarFill.visible = false;
         this.levelBarGlow.visible = false;
         this.soundBtn.visible = false;
+        this.homeBtn.visible = false;
     }
 
     resize(screenWidth, scoreAreaHeight, padding) {
@@ -191,6 +212,10 @@ class UIManager {
         // Sound button
         this.soundBtn.position.set(screenWidth - padding, padding * 0.3);
         this.soundBtn.style.fontSize = Math.max(16, Math.min(22, screenWidth * 0.045));
+
+        // Home button
+        this.homeBtn.position.set(padding, padding * 0.3);
+        this.homeBtn.style.fontSize = Math.max(16, Math.min(22, screenWidth * 0.045));
     }
 
     updateScore(score, bestScore) {
@@ -408,15 +433,8 @@ class UIManager {
             () => { window.open('mailto:contact@archerlab.dev', '_blank'); }
         );
 
-        // archerlab.dev button
-        const linkBtn = createSmallBtn(
-            'archerlab.dev',
-            0x2979FF,
-            () => { window.open('https://archerlab.dev', '_blank'); }
-        );
-
         // Position bottom buttons centered
-        const totalBtnW = langBtn.width + contactBtn.width + linkBtn.width + gap * 2;
+        const totalBtnW = langBtn.width + contactBtn.width + gap;
         let bx = centerX - totalBtnW / 2;
 
         langBtn.btn.position.set(bx, bottomY);
@@ -425,10 +443,19 @@ class UIManager {
 
         contactBtn.btn.position.set(bx, bottomY);
         container.addChild(contactBtn.btn);
-        bx += contactBtn.width + gap;
 
-        linkBtn.btn.position.set(bx, bottomY);
-        container.addChild(linkBtn.btn);
+        // ── archerlab.dev link (top center, emoji) ──
+        const linkBtn = new PIXI.Text('🏠', {
+            fontSize: Math.max(20, Math.min(28, w * 0.055)) * sc,
+        });
+        linkBtn.anchor.set(0.5, 0);
+        linkBtn.position.set(centerX, 12);
+        linkBtn.eventMode = 'static';
+        linkBtn.cursor = 'pointer';
+        linkBtn.on('pointerdown', () => { window.open('https://archerlab.dev', '_blank'); });
+        linkBtn.on('pointerover', () => { linkBtn.alpha = 0.7; });
+        linkBtn.on('pointerout', () => { linkBtn.alpha = 1; });
+        container.addChild(linkBtn);
 
         // ── Sound toggle ──
         const titleSoundBtn = new PIXI.Text('♪', {
