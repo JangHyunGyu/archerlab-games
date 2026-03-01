@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archerlab Games</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a1a;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            text-align: center;
+            padding: 60px 20px 40px;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            color: #b366ff;
+            text-shadow: 0 0 20px rgba(179, 102, 255, 0.3);
+            margin-bottom: 8px;
+        }
+        header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+            padding: 20px;
+            max-width: 1000px;
+            width: 100%;
+        }
+        .game-card {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4e;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .game-card:hover {
+            transform: translateY(-4px);
+            border-color: #7b2fff;
+        }
+        .game-thumb {
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .game-thumb::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0.15;
+        }
+        .game-info {
+            padding: 20px;
+        }
+        .game-info h2 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .game-info p {
+            font-size: 0.9rem;
+            color: #999;
+            line-height: 1.5;
+        }
+        .game-tag {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        footer {
+            margin-top: auto;
+            padding: 40px 20px;
+            text-align: center;
+            color: #555;
+            font-size: 0.85rem;
+        }
+
+        /* Game-specific themes */
+        .solo-leveling .game-thumb {
+            background: linear-gradient(135deg, #1a0a2e 0%, #2a1050 100%);
+        }
+        .solo-leveling .game-tag {
+            background: #7b2fff22;
+            color: #b366ff;
+            border: 1px solid #7b2fff44;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Archerlab Games</h1>
+        <p>Browser-based games by Archerlab</p>
+    </header>
+
+    <div class="games-grid">
+        <a href="solo-leveling/" class="game-card solo-leveling">
+            <div class="game-thumb">
+                &#9876;&#65039;
+            </div>
+            <div class="game-info">
+                <h2>나혼자레벨업: 서바이버즈</h2>
+                <p>Solo Leveling x Vampire Survivors 스타일의 2D 서바이벌 게임. 던전 몬스터를 처치하고 그림자 군단을 이끌어라!</p>
+                <span class="game-tag">Action / Survival</span>
+            </div>
+        </a>
+    </div>
+
+    <footer>
+        &copy; 2025 Archerlab. All rights reserved.
+    </footer>
+</body>
+</html>
