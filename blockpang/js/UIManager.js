@@ -445,7 +445,7 @@ class UIManager {
         container.addChild(contactBtn.btn);
 
         // ── archerlab.dev link (top center, emoji) ──
-        const linkBtn = new PIXI.Text('🏠', {
+        const linkBtn = new PIXI.Text('�', {
             fontSize: Math.max(20, Math.min(28, w * 0.055)) * sc,
         });
         linkBtn.anchor.set(0.5, 0);
