@@ -260,6 +260,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Damage effect
         this.scene.cameras.main.shake(100, 0.005);
 
+        // Haptic feedback (mobile vibration)
+        if (navigator.vibrate) {
+            navigator.vibrate(damage > this.stats.maxHp * 0.3 ? [80, 30, 80] : 50);
+        }
+
+        // Sound
+        if (this.scene.soundManager) this.scene.soundManager.play('playerHit');
+
         // Damage number
         this._showDamageNumber(damage, COLORS.TEXT_RED);
 
