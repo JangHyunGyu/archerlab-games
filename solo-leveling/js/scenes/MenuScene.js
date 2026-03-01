@@ -130,6 +130,19 @@ export class MenuScene extends Phaser.Scene {
             }).setOrigin(0.5);
         }
 
+        // ArcherLab link button
+        const archerlabBtn = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.92, 'archerlab.dev', {
+            fontSize: fs(14),
+            fontFamily: 'Arial, sans-serif',
+            color: '#8888bb',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        archerlabBtn.on('pointerover', () => archerlabBtn.setColor('#b366ff'));
+        archerlabBtn.on('pointerout', () => archerlabBtn.setColor('#8888bb'));
+        archerlabBtn.on('pointerdown', () => {
+            window.open('https://archerlab.dev', '_blank');
+        });
+
         // Pulsing title glow
         this.tweens.add({
             targets: titleGlow,
