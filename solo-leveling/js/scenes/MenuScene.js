@@ -1,5 +1,6 @@
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, fs, uv } from '../utils/Constants.js';
 import { SoundManager } from '../managers/SoundManager.js';
+import { t } from '../utils/i18n.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -23,25 +24,30 @@ export class MenuScene extends Phaser.Scene {
             });
         }
 
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const titleSize = isMobile ? 36 : 64;
+        const subSize = isMobile ? 18 : 28;
+
         // Title glow
-        const titleGlow = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, '그림자 서바이벌', {
-            fontSize: fs(64),
+        const titleGlow = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, t('title'), {
+            fontSize: fs(titleSize),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
             color: '#7b2fff',
         }).setOrigin(0.5).setAlpha(0.3).setScale(1.05);
 
         // Title
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, '그림자 서바이벌', {
-            fontSize: fs(64),
+        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, t('title'), {
+            fontSize: fs(titleSize),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
             color: '#ffffff',
         }).setOrigin(0.5);
 
         // Subtitle
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.33, 'S U R V I V O R S', {
-            fontSize: fs(28),
+        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.30, t('subtitle'), {
+            fontSize: fs(subSize),
             fontFamily: 'Arial, sans-serif',
             letterSpacing: 8,
             color: '#b366ff',
@@ -67,7 +73,7 @@ export class MenuScene extends Phaser.Scene {
             .setStrokeStyle(2, COLORS.SHADOW_GLOW)
             .setInteractive({ useHandCursor: true });
 
-        const startText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.65, '게임 시작', {
+        const startText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.65, t('startGame'), {
             fontSize: fs(24),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -99,49 +105,65 @@ export class MenuScene extends Phaser.Scene {
             this.time.delayedCall(500, () => this.scene.start('GameScene'));
         });
 
-        // Controls info - detect mobile
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
+        // Controls info
         if (isMobile) {
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.77, '화면 왼쪽을 터치 & 드래그하여 이동', {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.77, t('controlsMobile'), {
                 fontSize: fs(16),
                 fontFamily: 'Arial, sans-serif',
                 fontStyle: 'bold',
                 color: '#8888bb',
             }).setOrigin(0.5);
 
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.81, '공격은 자동 | 적을 처치하고 레벨업하세요', {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.81, t('controlsMobileAuto'), {
                 fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
         } else {
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.78, 'WASD / 방향키로 이동  |  자동 공격  |  TAB: 상태창  |  M: 사운드', {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.78, t('controlsPC'), {
                 fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
 
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, '적을 처치하고 경험치를 모아 스킬을 강화하세요', {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, t('controlsPC2'), {
                 fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
         }
 
-        // ArcherLab link button
-        const archerlabBtn = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.92, 'archerlab.dev', {
-            fontSize: fs(14),
+        // ArcherLab link button (top center, emoji style)
+        const archerlabBtn = this.add.text(GAME_WIDTH / 2, uv(30), '🏹', {
+            fontSize: fs(isMobile ? 24 : 20),
+            fontFamily: 'Arial, sans-serif',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        archerlabBtn.on('pointerover', () => archerlabBtn.setScale(1.2));
+        archerlabBtn.on('pointerout', () => archerlabBtn.setScale(1));
+        archerlabBtn.on('pointerdown', () => {
+            window.open('https://archerlab.dev', '_blank');
+        });
+
+        // Footer: contact + copyright
+        const footerY = GAME_HEIGHT * 0.92;
+        const contactBtn = this.add.text(GAME_WIDTH / 2, footerY, t('contact'), {
+            fontSize: fs(isMobile ? 14 : 12),
             fontFamily: 'Arial, sans-serif',
             color: '#8888bb',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        archerlabBtn.on('pointerover', () => archerlabBtn.setColor('#b366ff'));
-        archerlabBtn.on('pointerout', () => archerlabBtn.setColor('#8888bb'));
-        archerlabBtn.on('pointerdown', () => {
-            window.open('https://archerlab.dev', '_blank');
+        contactBtn.on('pointerover', () => contactBtn.setColor('#b366ff'));
+        contactBtn.on('pointerout', () => contactBtn.setColor('#8888bb'));
+        contactBtn.on('pointerdown', () => {
+            this._showContactModal();
         });
+
+        this.add.text(GAME_WIDTH / 2, footerY + uv(25), '© 2026 ArcherLab', {
+            fontSize: fs(isMobile ? 11 : 10),
+            fontFamily: 'Arial, sans-serif',
+            color: '#444466',
+        }).setOrigin(0.5);
 
         // Pulsing title glow
         this.tweens.add({
@@ -163,6 +185,76 @@ export class MenuScene extends Phaser.Scene {
         }
         this.game._soundManager.resume();
         this.game._soundManager.playIntroMusic();
+    }
+
+    _showContactModal() {
+        const elements = [];
+        const cx = GAME_WIDTH / 2;
+        const cy = GAME_HEIGHT / 2;
+
+        // Dim overlay
+        const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7)
+            .setDepth(100).setInteractive();
+        elements.push(dim);
+
+        // Modal box
+        const boxW = uv(300);
+        const boxH = uv(220);
+        const box = this.add.rectangle(cx, cy, boxW, boxH, 0x1a1a3e, 0.95)
+            .setStrokeStyle(2, 0x7b2fff).setDepth(101);
+        elements.push(box);
+
+        // Title
+        const title = this.add.text(cx, cy - uv(80), t('contactTitle'), {
+            fontSize: fs(18), fontFamily: 'Arial, sans-serif', fontStyle: 'bold', color: '#ffffff',
+        }).setOrigin(0.5).setDepth(102);
+        elements.push(title);
+
+        const desc = this.add.text(cx, cy - uv(50), t('contactDesc'), {
+            fontSize: fs(11), fontFamily: 'Arial, sans-serif', color: '#999999',
+        }).setOrigin(0.5).setDepth(102);
+        elements.push(desc);
+
+        // KakaoTalk button
+        const kakaoBtn = this.add.rectangle(cx, cy - uv(10), boxW - uv(40), uv(40), 0x3a1a5e, 0.9)
+            .setStrokeStyle(1, 0x7b2fff).setDepth(101).setInteractive({ useHandCursor: true });
+        const kakaoText = this.add.text(cx, cy - uv(10), t('contactKakao'), {
+            fontSize: fs(14), fontFamily: 'Arial, sans-serif', color: '#ddddff',
+        }).setOrigin(0.5).setDepth(102);
+        elements.push(kakaoBtn, kakaoText);
+
+        kakaoBtn.on('pointerover', () => kakaoBtn.setFillStyle(0x5a2a8e, 0.9));
+        kakaoBtn.on('pointerout', () => kakaoBtn.setFillStyle(0x3a1a5e, 0.9));
+        kakaoBtn.on('pointerdown', () => {
+            window.open('https://open.kakao.com/o/pF6xil6h', '_blank');
+        });
+
+        // Email button
+        const emailBtn = this.add.rectangle(cx, cy + uv(40), boxW - uv(40), uv(40), 0x3a1a5e, 0.9)
+            .setStrokeStyle(1, 0x7b2fff).setDepth(101).setInteractive({ useHandCursor: true });
+        const emailText = this.add.text(cx, cy + uv(40), t('contactEmail'), {
+            fontSize: fs(14), fontFamily: 'Arial, sans-serif', color: '#ddddff',
+        }).setOrigin(0.5).setDepth(102);
+        elements.push(emailBtn, emailText);
+
+        emailBtn.on('pointerover', () => emailBtn.setFillStyle(0x5a2a8e, 0.9));
+        emailBtn.on('pointerout', () => emailBtn.setFillStyle(0x3a1a5e, 0.9));
+        emailBtn.on('pointerdown', () => {
+            window.open('mailto:hyungyu@archerlab.dev');
+        });
+
+        // Close button
+        const closeBtn = this.add.text(cx, cy + uv(85), t('close'), {
+            fontSize: fs(13), fontFamily: 'Arial, sans-serif', color: '#888888',
+        }).setOrigin(0.5).setDepth(102).setInteractive({ useHandCursor: true });
+        elements.push(closeBtn);
+
+        closeBtn.on('pointerover', () => closeBtn.setColor('#ffffff'));
+        closeBtn.on('pointerout', () => closeBtn.setColor('#888888'));
+
+        const closeAll = () => elements.forEach(el => el.destroy());
+        closeBtn.on('pointerdown', closeAll);
+        dim.on('pointerdown', closeAll);
     }
 
     update() {

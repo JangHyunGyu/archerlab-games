@@ -1,4 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, RANKS, fs, uv } from '../utils/Constants.js';
+import { t } from '../utils/i18n.js';
 
 export class GameOverScene extends Phaser.Scene {
     constructor() {
@@ -22,7 +23,7 @@ export class GameOverScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // You died text
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.2, '사냥은 끝났다...', {
+        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.2, t('huntOver'), {
             fontSize: fs(18), fontFamily: 'Arial',
             color: '#888888',
         }).setOrigin(0.5);
@@ -40,11 +41,11 @@ export class GameOverScene extends Phaser.Scene {
         const rankColor = '#' + rankData.color.toString(16).padStart(6, '0');
 
         const stats = [
-            { label: '생존 시간', value: `${min}:${sec}`, color: '#ffffff' },
-            { label: '레벨', value: `Lv.${level}`, color: '#ffffff' },
-            { label: '랭크', value: rankData.label, color: rankColor },
-            { label: '처치 수', value: `${kills}`, color: '#ff6644' },
-            { label: '그림자 군단', value: `${shadowCount}마리`, color: COLORS.TEXT_PURPLE },
+            { label: t('timeLabel'), value: `${min}:${sec}`, color: '#ffffff' },
+            { label: t('levelLabel'), value: `Lv.${level}`, color: '#ffffff' },
+            { label: t('rankLabel'), value: rankData.label, color: rankColor },
+            { label: t('killLabel'), value: `${kills}`, color: '#ff6644' },
+            { label: t('shadowLabel'), value: `${shadowCount}${t('statUnit') ? t('statUnit') : ''}`, color: COLORS.TEXT_PURPLE },
         ];
 
         stats.forEach((stat, i) => {
@@ -66,7 +67,7 @@ export class GameOverScene extends Phaser.Scene {
             .setStrokeStyle(2, COLORS.SHADOW_GLOW)
             .setInteractive({ useHandCursor: true });
 
-        this.add.text(GAME_WIDTH / 2, retryBtnY, '다시 도전', {
+        this.add.text(GAME_WIDTH / 2, retryBtnY, t('retry'), {
             fontSize: fs(20), fontFamily: 'Arial', fontStyle: 'bold',
             color: '#ffffff',
         }).setOrigin(0.5);
@@ -84,7 +85,7 @@ export class GameOverScene extends Phaser.Scene {
             .setStrokeStyle(1, 0x4a4a6e)
             .setInteractive({ useHandCursor: true });
 
-        this.add.text(GAME_WIDTH / 2, menuBtnY, '메뉴로', {
+        this.add.text(GAME_WIDTH / 2, menuBtnY, t('toMenu'), {
             fontSize: fs(16), fontFamily: 'Arial',
             color: '#aaaacc',
         }).setOrigin(0.5);
