@@ -1,4 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, WEAPONS, PASSIVES, COLORS, fs, uv } from '../utils/Constants.js';
+import { t, tNested } from '../utils/i18n.js';
 
 export class LevelUpScene extends Phaser.Scene {
     constructor() {
@@ -22,7 +23,7 @@ export class LevelUpScene extends Phaser.Scene {
         const titleY = isMobile ? 60 : 80;
 
         // Title
-        this.add.text(GAME_WIDTH / 2, titleY, 'LEVEL UP!', {
+        this.add.text(GAME_WIDTH / 2, titleY, t('levelUp'), {
             fontSize: fs(isMobile ? 40 : 36),
             fontFamily: 'Arial',
             fontStyle: 'bold',
@@ -194,7 +195,7 @@ export class LevelUpScene extends Phaser.Scene {
 
         // Type badge
         const typeColor = choice.type === 'weapon' ? '#ff6644' : '#44aaff';
-        const typeLabel = choice.type === 'weapon' ? '스킬' : '패시브';
+        const typeLabel = choice.type === 'weapon' ? t('skillLabel') : t('passiveLabel');
         this.add.text(x, y - uv(10), typeLabel, {
             fontSize: fs(11),
             fontFamily: 'Arial',
@@ -275,7 +276,7 @@ export class LevelUpScene extends Phaser.Scene {
 
         // Type badge + Name on same line
         const typeColor = choice.type === 'weapon' ? '#ff6644' : '#44aaff';
-        const typeLabel = choice.type === 'weapon' ? '스킬' : '패시브';
+        const typeLabel = choice.type === 'weapon' ? t('skillLabel') : t('passiveLabel');
         this.add.text(textX, y - uv(20), typeLabel, {
             fontSize: fs(13),
             fontFamily: 'Arial',

@@ -1,4 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE, COLORS, BOSS_SCHEDULE, BOSS_TYPES } from '../utils/Constants.js';
+import { t } from '../utils/i18n.js';
 import { Player } from '../entities/Player.js';
 import { EnemyManager } from '../managers/EnemyManager.js';
 import { WeaponManager } from '../managers/WeaponManager.js';
@@ -89,23 +90,23 @@ export class GameScene extends Phaser.Scene {
 
         // Intro system messages (원작: 시스템 메시지)
         this.time.delayedCall(500, () => {
-            this.systemMessage.show('[시스템]', [
-                '플레이어가 던전에 입장했습니다.',
-                '마수를 처치하고 레벨을 올리세요.',
+            this.systemMessage.show(t('sysSystem'), [
+                t('sysEnterDungeon'),
+                t('sysKillToLevel'),
             ], { duration: 3000 });
         });
 
         this.time.delayedCall(4000, () => {
-            this.systemMessage.show('[시스템]', [
-                '일일 퀘스트가 주어질 예정입니다.',
-                'TAB 키로 상태창을 확인할 수 있습니다.',
+            this.systemMessage.show(t('sysSystem'), [
+                t('sysQuestComing'),
+                t('sysTabHint'),
             ], { duration: 3000, type: 'quest' });
         });
 
         // Sound toggle key (M)
         this.input.keyboard.addKey('M').on('down', () => {
             const enabled = this.soundManager.toggleSound();
-            this.systemMessage.show('[시스템]', [enabled ? '사운드: ON' : '사운드: OFF'], { duration: 1000 });
+            this.systemMessage.show(t('sysSystem'), [enabled ? t('sysSoundOn') : t('sysSoundOff')], { duration: 1000 });
         });
     }
 
@@ -218,9 +219,9 @@ export class GameScene extends Phaser.Scene {
 
         // System message for boss
         const bossConfig = BOSS_TYPES[bossKey];
-        this.systemMessage.show('[경고]', [
-            '강력한 마수의 기운이 감지되었습니다!',
-            `${bossConfig.name}이(가) 출현했습니다.`,
+        this.systemMessage.show(t('sysWarning'), [
+            t('bossDetected'),
+            `${bossConfig.name}${t('bossAppeared')}`,
         ], { duration: 3000, type: 'warning' });
 
         // Boss-player collision (with active check, store collider for cleanup)
@@ -306,9 +307,9 @@ export class GameScene extends Phaser.Scene {
         if (this.soundManager) this.soundManager.play('levelup');
 
         // System message
-        this.systemMessage.show('[시스템]', [
-            `레벨이 올랐습니다! Lv.${this.player.level}`,
-            '새로운 스킬을 선택하세요.',
+        this.systemMessage.show(t('sysSystem'), [
+            `${t('levelUpMsg')} Lv.${this.player.level}`,
+            t('newSkill'),
         ], { duration: 2000, type: 'levelup' });
 
         // Pause game and show level up screen
@@ -324,9 +325,9 @@ export class GameScene extends Phaser.Scene {
         if (this.isGameOver) return;
         this.isGameOver = true;
 
-        this.systemMessage.show('[시스템]', [
-            '플레이어가 사망했습니다.',
-            '던전에서 퇴장합니다...',
+        this.systemMessage.show(t('sysSystem'), [
+            t('playerDied'),
+            t('exitDungeon'),
         ], { duration: 2000, type: 'warning' });
 
         this.cameras.main.shake(500, 0.02);

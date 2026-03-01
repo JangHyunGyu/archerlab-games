@@ -1,4 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, RANKS, COLORS, fs, uv } from '../utils/Constants.js';
+import { t } from '../utils/i18n.js';
 
 /**
  * Tab 키로 토글하는 원작 스타일 스테이터스 창
@@ -65,7 +66,7 @@ export class StatusWindow {
         });
 
         // Title: "상태창"
-        const title = this.scene.add.text(cx, cy - h / 2 + uv(25), '상태창', {
+        const title = this.scene.add.text(cx, cy - h / 2 + uv(25), t('statusTitle'), {
             fontSize: fs(20), fontFamily: 'Arial', fontStyle: 'bold',
             color: '#55aadd',
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
@@ -82,9 +83,9 @@ export class StatusWindow {
         let yOff = cy - h / 2 + uv(65);
 
         // Name and title
-        this._addRow('이름', '성진우', '#ffffff', yOff); yOff += uv(28);
-        this._addRow('칭호', rank.label, rankColor, yOff); yOff += uv(28);
-        this._addRow('레벨', `${player.level}`, '#ffffff', yOff); yOff += uv(28);
+        this._addRow(t('statName'), t('playerName'), '#ffffff', yOff); yOff += uv(28);
+        this._addRow(t('statRank'), rank.label, rankColor, yOff); yOff += uv(28);
+        this._addRow(t('statLevel'), `${player.level}`, '#ffffff', yOff); yOff += uv(28);
 
         // Divider
         const div1 = this.scene.add.rectangle(cx, yOff, w - uv(50), 1, 0x3388cc, 0.3)
@@ -93,7 +94,7 @@ export class StatusWindow {
         yOff += uv(15);
 
         // Stats header
-        const statsHeader = this.scene.add.text(cx, yOff, '[ 능력치 ]', {
+        const statsHeader = this.scene.add.text(cx, yOff, t('statSection'), {
             fontSize: fs(13), fontFamily: 'Arial', fontStyle: 'bold',
             color: '#55aadd',
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
@@ -102,14 +103,14 @@ export class StatusWindow {
 
         // Stats
         const stats = [
-            { label: 'HP', value: `${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`, color: '#ff6666' },
-            { label: '공격력', value: `${player.stats.attack}`, color: '#ff8844' },
-            { label: '방어력', value: `${player.stats.defense}`, color: '#44aaff' },
-            { label: '이동속도', value: `${player.stats.speed}`, color: '#44ff88' },
-            { label: '치명타율', value: `${(player.stats.critRate * 100).toFixed(1)}%`, color: '#ffff44' },
-            { label: '치명타 피해', value: `${(player.stats.critDamage * 100).toFixed(0)}%`, color: '#ffaa44' },
-            { label: '경험치 배율', value: `x${player.stats.xpMultiplier.toFixed(2)}`, color: '#aa88ff' },
-            { label: '쿨타임 감소', value: `${(player.stats.cooldownReduction * 100).toFixed(1)}%`, color: '#88aaff' },
+            { label: t('statHP'), value: `${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`, color: '#ff6666' },
+            { label: t('statAttack'), value: `${player.stats.attack}`, color: '#ff8844' },
+            { label: t('statDefense'), value: `${player.stats.defense}`, color: '#44aaff' },
+            { label: t('statSpeed'), value: `${player.stats.speed}`, color: '#44ff88' },
+            { label: t('statCrit'), value: `${(player.stats.critRate * 100).toFixed(1)}%`, color: '#ffff44' },
+            { label: t('statCritDmg'), value: `${(player.stats.critDamage * 100).toFixed(0)}%`, color: '#ffaa44' },
+            { label: t('statXP'), value: `x${player.stats.xpMultiplier.toFixed(2)}`, color: '#aa88ff' },
+            { label: t('statCDR'), value: `${(player.stats.cooldownReduction * 100).toFixed(1)}%`, color: '#88aaff' },
         ];
 
         stats.forEach(stat => {
@@ -126,7 +127,7 @@ export class StatusWindow {
         // Shadow army info
         const shadowCount = this.scene.shadowArmyManager?.getSoldierCount() || 0;
         const soldiers = this.scene.shadowArmyManager?.getSoldiers() || [];
-        this._addRow('그림자 군단', `${shadowCount}마리`, '#b366ff', yOff);
+        this._addRow(t('statShadow'), `${shadowCount}${t('statUnit')}`, '#b366ff', yOff);
         yOff += uv(24);
 
         soldiers.forEach(s => {
@@ -135,7 +136,7 @@ export class StatusWindow {
         });
 
         // Close hint
-        const hint = this.scene.add.text(cx, cy + h / 2 - uv(20), 'TAB 키로 닫기', {
+        const hint = this.scene.add.text(cx, cy + h / 2 - uv(20), t('tabClose'), {
             fontSize: fs(11), fontFamily: 'Arial',
             color: '#556688',
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);

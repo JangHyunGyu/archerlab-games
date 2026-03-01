@@ -1,4 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, fs, uv } from '../utils/Constants.js';
+import { t } from '../utils/i18n.js';
 
 /**
  * 모바일 터치 컨트롤
@@ -136,7 +137,7 @@ export class MobileControls {
             .setStrokeStyle(2, 0x5555aa, 0.6)
             .setInteractive();
 
-        this.scene.add.text(btnX, uv(90), '상태', {
+        this.scene.add.text(btnX, uv(90), t('hudStatus'), {
             fontSize: fs(11), fontFamily: 'Arial', fontStyle: 'bold', color: '#bbbbee',
         }).setOrigin(0.5).setDepth(601).setScrollFactor(0);
 
