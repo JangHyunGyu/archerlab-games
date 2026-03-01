@@ -25,6 +25,17 @@ export class SoundManager {
             this._compressor.connect(this._masterGain);
             this._masterGain.connect(this.ctx.destination);
             this._initialized = true;
+
+            // 페이지 이탈/탭 전환 시 오디오 자동 일시정지
+            this._onVisibilityChange = () => {
+                if (!this.ctx) return;
+                if (document.hidden) {
+                    this.ctx.suspend();
+                } else if (this.enabled) {
+                    this.ctx.resume();
+                }
+            };
+            document.addEventListener('visibilitychange', this._onVisibilityChange);
         } catch (e) {
             this.enabled = false;
         }
