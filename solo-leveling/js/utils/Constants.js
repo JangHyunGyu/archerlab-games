@@ -107,7 +107,7 @@ export const ENEMY_TYPES = {
     // --- 중반 적 (1~5분) ---
     orc: {
         name: '오크',
-        hp: 225, attack: 18, defense: 2, speed: 55, xp: 15,
+        hp: 225, attack: 18, defense: 2, speed: 75, xp: 15,
         color: 0x6b4423, size: 44,
     },
     iceBear: {
@@ -118,7 +118,7 @@ export const ENEMY_TYPES = {
     // --- 후반 적 (5분~) ---
     stoneGolem: {
         name: '스톤 골렘',
-        hp: 600, attack: 27, defense: 15, speed: 55, xp: 35,
+        hp: 600, attack: 27, defense: 15, speed: 65, xp: 35,
         color: 0x666677, size: 60,
     },
     darkMage: {

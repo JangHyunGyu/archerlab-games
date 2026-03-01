@@ -159,16 +159,26 @@ export class SoundManager {
         this._osc('sine', 90, { attack: 0.005, decay: 0.06, sustain: 0, release: 0.04, vol: 0.25 });
     }
 
-    // 그림자 베기 - 무겁고 어두운 대검 슬래시
+    // 그림자 검기 - 검의 기가 뻗어나가는 에너지 슬래시
     _playSlash() {
-        // 1. 무거운 swoosh
-        this._noise(0.2, { vol: 0.3, filterType: 'bandpass', freq: 800, freqEnd: 4000, Q: 0.5 });
-        // 2. 어두운 임팩트
-        this._sweep('sawtooth', 120, 40, 0.15, 0.2);
-        // 3. 서브베이스 thud
-        this._osc('sine', 50, { attack: 0.005, decay: 0.12, sustain: 0, release: 0.08, vol: 0.3 });
-        // 4. 고주파 금속 링잉
-        setTimeout(() => this._metalImpact(1200, 0.08, 0.1), 30);
+        // 1. 날카로운 검명 (금속 공명 시작)
+        this._osc('sine', 1200, { attack: 0.003, decay: 0.04, sustain: 0, release: 0.03, vol: 0.15 });
+        this._osc('triangle', 2400, { attack: 0.003, decay: 0.03, sustain: 0, release: 0.02, vol: 0.06 });
+        // 2. 에너지 방출 swoosh (저→고주파 스윕, 기가 뻗어나가는 느낌)
+        this._noise(0.35, { vol: 0.3, filterType: 'bandpass', freq: 600, freqEnd: 6000, Q: 0.7 });
+        this._sweep('sawtooth', 150, 800, 0.3, 0.18);
+        // 3. 검기 공명 (에너지가 공간을 가르는 잔향)
+        setTimeout(() => {
+            this._sweep('sine', 400, 1200, 0.25, 0.12);
+            this._osc('sine', 220, { attack: 0.02, decay: 0.15, sustain: 0.1, release: 0.2, vol: 0.1 });
+        }, 60);
+        // 4. 깊은 서브베이스 임팩트 (무게감)
+        this._osc('sine', 55, { attack: 0.005, decay: 0.15, sustain: 0, release: 0.1, vol: 0.3 });
+        // 5. 에너지 잔향 테일 (기가 사라지는 여운)
+        setTimeout(() => {
+            this._noise(0.25, { vol: 0.08, filterType: 'bandpass', freq: 3000, freqEnd: 800, Q: 2 });
+            this._osc('sine', 600, { attack: 0.01, decay: 0.15, sustain: 0, release: 0.15, vol: 0.05 });
+        }, 150);
     }
 
     // 지배자의 권능 - 텔레키네시스 에너지 방출
