@@ -185,7 +185,7 @@ export const WAVE_CONFIG = {
 
 export const WEAPONS = {
     basicDagger: {
-        name: '카심의 독',
+        name: '단검 공격',
         description: '단검으로 가까운 적을 빠르게 찌릅니다',
         type: 'melee',
         unlockLevel: 1,

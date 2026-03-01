@@ -15,7 +15,7 @@ export class ShadowSlash extends WeaponBase {
     }
 
     _doSlash(angleOffset) {
-        const target = this.player.getClosestEnemy(180 + this.extraRange);
+        const target = this.player.getClosestEnemy(360 + this.extraRange);
         let angle;
         if (target) {
             angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
@@ -24,7 +24,7 @@ export class ShadowSlash extends WeaponBase {
         }
         angle += angleOffset;
 
-        const range = 130 + this.extraRange;
+        const range = 260 + this.extraRange;
         const slashDist = range * 0.45;
         const slashX = this.player.x + Math.cos(angle) * slashDist;
         const slashY = this.player.y + Math.sin(angle) * slashDist;
