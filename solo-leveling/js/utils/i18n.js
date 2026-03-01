@@ -2,7 +2,11 @@
 const params = new URLSearchParams(window.location.search);
 const langParam = params.get('lang');
 const savedLang = localStorage.getItem('shadow_survival_lang');
-export let LANG = savedLang || (langParam === 'en' || langParam === 'ja' ? langParam : 'ko');
+const _supportedLangs = ['ko', 'en', 'ja'];
+const _browserLang = (navigator.language || '').slice(0, 2);
+export let LANG = savedLang
+    || (langParam === 'en' || langParam === 'ja' ? langParam : null)
+    || (_supportedLangs.includes(_browserLang) ? _browserLang : 'ko');
 
 export const LANGUAGES = [
     { code: 'ko', label: '한국어' },
