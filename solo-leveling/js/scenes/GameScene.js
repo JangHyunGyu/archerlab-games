@@ -344,23 +344,28 @@ export class GameScene extends Phaser.Scene {
     }
 
     shutdown() {
-        if (this.weaponManager) this.weaponManager.destroy();
-        if (this.shadowArmyManager) this.shadowArmyManager.destroy();
-        if (this.itemDropManager) this.itemDropManager.destroy();
-        if (this.statusWindow) this.statusWindow.destroy();
+        try {
+            if (this.weaponManager) this.weaponManager.destroy();
+            if (this.shadowArmyManager) this.shadowArmyManager.destroy();
+            if (this.itemDropManager) this.itemDropManager.destroy();
+            if (this.statusWindow) this.statusWindow.destroy();
 
-        // Clean up active bosses
-        if (this.activeBosses) {
-            for (const boss of this.activeBosses) {
-                if (boss._playerCollider) this.physics.world.removeCollider(boss._playerCollider);
-                if (boss._weaponColliders) {
-                    for (const c of boss._weaponColliders) this.physics.world.removeCollider(c);
+            if (this.activeBosses && this.physics?.world) {
+                for (const boss of this.activeBosses) {
+                    try {
+                        if (boss._playerCollider) this.physics.world.removeCollider(boss._playerCollider);
+                        if (boss._weaponColliders) {
+                            for (const c of boss._weaponColliders) this.physics.world.removeCollider(c);
+                        }
+                    } catch (e) { /* already removed */ }
+                    if (boss.hpBarBg) boss.hpBarBg.destroy();
+                    if (boss.hpBarFill) boss.hpBarFill.destroy();
+                    if (boss.nameText) boss.nameText.destroy();
                 }
-                if (boss.hpBarBg) boss.hpBarBg.destroy();
-                if (boss.hpBarFill) boss.hpBarFill.destroy();
-                if (boss.nameText) boss.nameText.destroy();
+                this.activeBosses = [];
             }
-            this.activeBosses = [];
+        } catch (e) {
+            console.warn('GameScene shutdown error:', e);
         }
     }
 }
