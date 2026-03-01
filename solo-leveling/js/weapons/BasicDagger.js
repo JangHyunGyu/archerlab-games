@@ -22,7 +22,7 @@ const BASIC_DAGGER_CONFIG = {
 export class BasicDagger extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, BASIC_DAGGER_CONFIG);
-        this.attackRange = 90;
+        this.attackRange = 150;
         this.swingDir = 1; // Alternate swing direction
     }
 
@@ -33,7 +33,7 @@ export class BasicDagger extends WeaponBase {
     }
 
     _slash() {
-        const target = this.player.getClosestEnemy(this.attackRange + 40);
+        const target = this.player.getClosestEnemy(this.attackRange + 50);
 
         let baseAngle;
         if (target) {
