@@ -352,7 +352,8 @@ class UIManager {
         });
         startBtnText.anchor.set(0.5, 0.5);
         startBtnText.position.set(centerX, startBtnY + btnH / 2);
-        container.addChild(startBtnText);
+        startBtnText.eventMode = 'none';
+        startBtn.addChild(startBtnText);
 
         // ── Bottom Button Row ──
         const smallBtnH = Math.min(38, h * 0.055);
@@ -468,7 +469,6 @@ class UIManager {
         logo.alpha = 0;
         subtitle.alpha = 0;
         startBtn.alpha = 0;
-        startBtnText.alpha = 0;
         langBtn.btn.alpha = 0;
         contactBtn.btn.alpha = 0;
         linkBtn.btn.alpha = 0;
@@ -499,7 +499,6 @@ class UIManager {
                 if (t > 0.35) {
                     const bt = Math.min((t - 0.35) / 0.35, 1);
                     startBtn.alpha = easeOutCubic(bt);
-                    startBtnText.alpha = easeOutCubic(bt);
                 }
 
                 // Bottom buttons staggered
@@ -545,7 +544,6 @@ class UIManager {
                 }
                 const glow = 0.85 + Math.sin(this.elapsed * 0.004) * 0.15;
                 startBtn.alpha = glow;
-                startBtnText.alpha = glow;
                 return false;
             }
         });
@@ -797,7 +795,8 @@ class UIManager {
         });
         btnText.anchor.set(0.5, 0.5);
         btnText.position.set(centerX, btnY + btnH / 2);
-        overlay.addChild(btnText);
+        btnText.eventMode = 'none';
+        btn.addChild(btnText);
 
         // ── Back to Title button ──
         const titleBtnY = btnY + btnH + 12;
@@ -833,12 +832,13 @@ class UIManager {
         });
         titleBtnText.anchor.set(0.5, 0.5);
         titleBtnText.position.set(centerX, titleBtnY + (btnH - 4) / 2);
-        overlay.addChild(titleBtnText);
+        titleBtnText.eventMode = 'none';
+        titleBtn.addChild(titleBtnText);
 
         // ── Animate overlay in ──
         overlay.alpha = 0;
         const panelOffset = 30;
-        const slideElements = [panel, title, divider, scoreLabel, scoreVal, bestLabel, levelLabel, btn, btnText, titleBtn, titleBtnText];
+        const slideElements = [panel, title, divider, scoreLabel, scoreVal, bestLabel, levelLabel, btn, titleBtn];
 
         // Find and add newBest element if exists
         overlay.children.forEach(c => {
