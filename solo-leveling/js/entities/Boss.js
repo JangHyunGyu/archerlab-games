@@ -97,7 +97,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
         const dist = Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY);
 
-        if (dist > 50) {
+        if (dist > 40) {
             this.body.setVelocity(
                 Math.cos(angle) * this.speed,
                 Math.sin(angle) * this.speed
@@ -143,7 +143,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     // Igris: telegraphed sword slash - red warning zone then damage
     _igrisSlash(playerX, playerY) {
         const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
-        const range = 150;
+        const range = 250;
         const slashX = this.x + Math.cos(angle) * (range * 0.4);
         const slashY = this.y + Math.sin(angle) * (range * 0.4);
 
@@ -189,7 +189,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     _tuskGroundSlam(playerX, playerY) {
         const slamX = playerX;
         const slamY = playerY;
-        const radius = 120;
+        const radius = 200;
 
         // Warning circle on player position (1s telegraph)
         const warning = this.scene.add.circle(slamX, slamY, radius, 0x8b5a2b, 0.12)
@@ -245,7 +245,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             proj.body.setAllowGravity(false);
             proj.body.setCircle(6);
 
-            const speed = 160;
+            const speed = 280;
             proj.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
             // Collision with player (store collider to clean up)
