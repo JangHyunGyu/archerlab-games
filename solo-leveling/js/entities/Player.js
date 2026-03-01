@@ -85,6 +85,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     update(time, delta) {
+        if (this.isDead) return;
         this._handleMovement();
         this._updateAnimation();
         this._updateInvincibility(delta);
@@ -250,7 +251,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     takeDamage(amount) {
-        if (this.isInvincible) return false;
+        if (this.isDead || this.isInvincible) return false;
 
         const damage = Math.max(1, amount - this.stats.defense);
         this.stats.hp -= damage;
@@ -273,10 +274,78 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         if (this.stats.hp <= 0) {
             this.stats.hp = 0;
-            this.scene.onPlayerDeath();
+            this.die();
             return true;
         }
         return false;
+    }
+
+    die() {
+        if (this.isDead) return;
+        this.isDead = true;
+
+        // Stop movement
+        this.body.setVelocity(0, 0);
+        this.body.enable = false;
+        this.stop(); // Stop animations
+
+        // Red flash
+        this.setTint(0xff0000);
+
+        // Shadow particles burst from body
+        for (let i = 0; i < 20; i++) {
+            const p = this.scene.add.circle(
+                this.x + Phaser.Math.Between(-10, 10),
+                this.y + Phaser.Math.Between(-15, 10),
+                Phaser.Math.Between(3, 7),
+                COLORS.SHADOW_PRIMARY,
+                0.8
+            ).setDepth(11);
+
+            this.scene.tweens.add({
+                targets: p,
+                x: p.x + Phaser.Math.Between(-80, 80),
+                y: p.y + Phaser.Math.Between(-100, 30),
+                alpha: 0,
+                scale: 0,
+                duration: Phaser.Math.Between(600, 1200),
+                delay: Phaser.Math.Between(0, 300),
+                onComplete: () => p.destroy(),
+            });
+        }
+
+        // Player collapse animation: shrink + rotate + fade
+        this.scene.tweens.add({
+            targets: this,
+            scaleY: 0.3,
+            scaleX: 2.5,
+            alpha: 0.5,
+            angle: this.facingRight ? 90 : -90,
+            duration: 600,
+            ease: 'Power2',
+            onComplete: () => {
+                // Dissolve into shadow
+                this.scene.tweens.add({
+                    targets: this,
+                    alpha: 0,
+                    duration: 500,
+                    onComplete: () => {
+                        // Hide aura
+                        if (this.aura) this.aura.setAlpha(0);
+                        this.scene.onPlayerDeath();
+                    },
+                });
+            },
+        });
+
+        // Aura flicker and fade
+        if (this.aura) {
+            this.scene.tweens.add({
+                targets: this.aura,
+                alpha: 0,
+                duration: 800,
+            });
+        }
     }
 
     heal(amount) {
