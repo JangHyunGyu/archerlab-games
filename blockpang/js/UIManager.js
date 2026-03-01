@@ -247,15 +247,16 @@ class UIManager {
         }
 
         const container = new PIXI.Container();
+        container.eventMode = 'static';
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
+        container.hitArea = new PIXI.Rectangle(0, 0, w, h);
 
         // Semi-transparent overlay (starfield shows through)
         const bg = new PIXI.Graphics();
         bg.beginFill(0x000000, 0.3);
         bg.drawRect(0, 0, w, h);
         bg.endFill();
-        bg.eventMode = 'static';
         container.addChild(bg);
 
         const centerX = w / 2;
@@ -331,10 +332,15 @@ class UIManager {
         startBtn.hitArea = new PIXI.Rectangle(btnX - 10, startBtnY - 10, btnW + 20, btnH + 20);
         startBtn.on('pointerover', () => { startBtn.tint = 0xCCFFFF; });
         startBtn.on('pointerout', () => { startBtn.tint = 0xFFFFFF; });
-        startBtn.on('pointerdown', () => {
+        let startTriggered = false;
+        const doStart = () => {
+            if (startTriggered) return;
+            startTriggered = true;
             this.game.sound.ensureContext();
             this.game.startGame();
-        });
+        };
+        startBtn.on('pointerdown', doStart);
+        startBtn.on('pointertap', doStart);
         container.addChild(startBtn);
 
         const startBtnText = new PIXI.Text(getText('gameStart'), {
@@ -524,13 +530,19 @@ class UIManager {
             }
         });
 
-        // Idle start button glow pulse
+        // Idle start button glow pulse (delayed until after entrance animation)
         this.game.effects.tweens.push({
             elapsed: 0,
             duration: 99999,
+            _ready: false,
             update(dt) {
                 if (!startBtn || startBtn.destroyed) return true;
                 this.elapsed += dt;
+                if (!this._ready) {
+                    if (this.elapsed < 950) return false;
+                    this._ready = true;
+                    this.elapsed = 0;
+                }
                 const glow = 0.85 + Math.sin(this.elapsed * 0.004) * 0.15;
                 startBtn.alpha = glow;
                 startBtnText.alpha = glow;
@@ -588,8 +600,10 @@ class UIManager {
         }
 
         const overlay = new PIXI.Container();
+        overlay.eventMode = 'static';
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
+        overlay.hitArea = new PIXI.Rectangle(0, 0, w, h);
 
         // Dark background
         const bg = new PIXI.Graphics();
@@ -601,7 +615,6 @@ class UIManager {
             bg.drawRect(0, 0, w, h);
             bg.endFill();
         }
-        bg.eventMode = 'static';
         overlay.addChild(bg);
 
         // Panel
@@ -764,10 +777,15 @@ class UIManager {
         btn.hitArea = new PIXI.Rectangle(btnX - 10, btnY - 10, btnW + 20, btnH + 20);
         btn.on('pointerover', () => { btn.tint = 0xCCDDFF; });
         btn.on('pointerout', () => { btn.tint = 0xFFFFFF; });
-        btn.on('pointerdown', () => {
+        let restartTriggered = false;
+        const doRestart = () => {
+            if (restartTriggered) return;
+            restartTriggered = true;
             this.hideGameOver();
             this.game.restart();
-        });
+        };
+        btn.on('pointerdown', doRestart);
+        btn.on('pointertap', doRestart);
         overlay.addChild(btn);
 
         const btnText = new PIXI.Text(getText('playAgain'), {
@@ -796,9 +814,14 @@ class UIManager {
         titleBtn.hitArea = new PIXI.Rectangle(btnX - 10, titleBtnY - 10, btnW + 20, btnH - 4 + 20);
         titleBtn.on('pointerover', () => { titleBtn.tint = 0xCCDDFF; });
         titleBtn.on('pointerout', () => { titleBtn.tint = 0xFFFFFF; });
-        titleBtn.on('pointerdown', () => {
+        let titleTriggered = false;
+        const doTitle = () => {
+            if (titleTriggered) return;
+            titleTriggered = true;
             this.game.goToTitle();
-        });
+        };
+        titleBtn.on('pointerdown', doTitle);
+        titleBtn.on('pointertap', doTitle);
         overlay.addChild(titleBtn);
 
         const titleBtnText = new PIXI.Text(getText('backToTitle'), {
