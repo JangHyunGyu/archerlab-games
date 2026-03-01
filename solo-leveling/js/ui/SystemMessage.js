@@ -1,7 +1,7 @@
 import { GAME_WIDTH, GAME_HEIGHT, fs, uv } from '../utils/Constants.js';
 
 /**
- * 원작 나혼자레벨업의 시스템 창 UI를 재현합니다.
+ * 그림자 서바이벌의 시스템 창 UI입니다.
  * 파란색 반투명 홀로그램 윈도우에 메시지가 표시됩니다.
  */
 export class SystemMessage {

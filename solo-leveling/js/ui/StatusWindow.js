@@ -2,7 +2,7 @@ import { GAME_WIDTH, GAME_HEIGHT, RANKS, COLORS, fs, uv } from '../utils/Constan
 
 /**
  * Tab 키로 토글하는 원작 스타일 스테이터스 창
- * 나혼자레벨업의 파란색 상태 패널 재현
+ * 그림자 서바이벌의 파란색 상태 패널 재현
  */
 export class StatusWindow {
     constructor(scene) {

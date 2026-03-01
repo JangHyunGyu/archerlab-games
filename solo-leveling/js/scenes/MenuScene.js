@@ -24,7 +24,7 @@ export class MenuScene extends Phaser.Scene {
         }
 
         // Title glow
-        const titleGlow = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, '나혼자레벨업', {
+        const titleGlow = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, '그림자 서바이벌', {
             fontSize: fs(64),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -32,7 +32,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5).setAlpha(0.3).setScale(1.05);
 
         // Title
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, '나혼자레벨업', {
+        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, '그림자 서바이벌', {
             fontSize: fs(64),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',

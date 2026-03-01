@@ -1,4 +1,4 @@
-// 나혼자레벨업: 서바이버즈 - Phaser 기반 뱀서라이크 게임
+// 그림자 서바이벌: 서바이버즈 - Phaser 기반 뱀서라이크 게임
 import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
