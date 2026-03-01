@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Blockpang - Free Block Puzzle Web Game | ArcherLab</title>
+    <meta name="description" content="Play a free block puzzle game right in your browser — no install needed. Place blocks on a 10×10 grid, complete lines, and aim for the highest score! Works on PC and mobile.">
+    <meta name="keywords" content="block puzzle, free web game, blockpang, puzzle game, mobile puzzle, browser game, 10x10 puzzle, free puzzle game, casual game, brain game, block fit, grid puzzle">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Blockpang - Free Block Puzzle Web Game">
+    <meta property="og:description" content="Play a free block puzzle game right in your browser! Place blocks on a 10×10 grid, complete lines, and aim for the highest score.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://game.archerlab.dev/blockpang/index-en.html">
+    <meta property="og:image" content="https://archerlab.dev/assets/images/blockpang_link.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:site_name" content="ArcherLab">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Blockpang - Free Block Puzzle Web Game">
+    <meta name="twitter:description" content="Play a free block puzzle game right in your browser! Place blocks on a 10×10 grid, complete lines, and aim for the highest score.">
+    <meta name="twitter:image" content="https://archerlab.dev/assets/images/blockpang_link.png">
+
+    <!-- Canonical & hreflang -->
+    <link rel="canonical" href="https://game.archerlab.dev/blockpang/index-en.html">
+    <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/blockpang/">
+    <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/blockpang/index-en.html">
+
+    <!-- Indexing -->
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="ArcherLab">
+
+    <!-- Structured Data / JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoGame",
+      "name": "Blockpang",
+      "alternateName": "블럭팡",
+      "description": "Play a free block puzzle game right in your browser — no install needed. Place blocks on a 10×10 grid, complete lines, and aim for the highest score!",
+      "url": "https://game.archerlab.dev/blockpang/index-en.html",
+      "image": "https://archerlab.dev/assets/images/blockpang_link.png",
+      "genre": ["Puzzle", "Casual", "Brain Game"],
+      "gamePlatform": ["Web Browser", "Mobile Browser"],
+      "applicationCategory": "Game",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "ArcherLab",
+        "url": "https://archerlab.dev/"
+      },
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "playMode": "SinglePlayer",
+      "numberOfPlayers": {
+        "@type": "QuantitativeValue",
+        "value": 1
+      }
+    }
+    </script>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-66FS0YCEEM');
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.3/dist/pixi.min.js"></script>
+</head>
+<body>
+    <div id="game-container"></div>
+    <script src="js/constants.js"></script>
+    <script src="js/SoundManager.js"></script>
+    <script src="js/ScoreManager.js"></script>
+    <script src="js/EffectManager.js"></script>
+    <script src="js/Board.js"></script>
+    <script src="js/Piece.js"></script>
+    <script src="js/InputManager.js"></script>
+    <script src="js/UIManager.js"></script>
+    <script src="js/Game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
