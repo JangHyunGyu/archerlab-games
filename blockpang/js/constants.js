@@ -96,7 +96,9 @@ function easeOutBack(t) {
 
 // ─── Internationalization ───
 const LANGUAGES = ['ko', 'en', 'ja'];
-let currentLang = localStorage.getItem('blockpang_lang') || 'ko';
+const _browserLang = (navigator.language || '').slice(0, 2);
+let currentLang = localStorage.getItem('blockpang_lang')
+    || (LANGUAGES.includes(_browserLang) ? _browserLang : 'ko');
 
 const I18N = {
     ko: {
