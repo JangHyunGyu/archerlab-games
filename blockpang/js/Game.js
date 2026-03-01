@@ -415,6 +415,21 @@ class Game {
         const shakeIntensity = Math.min(3 + clearResult.lines * 2 + combo * 2, 15);
         this.effects.screenShake(shakeIntensity, 200 + clearResult.lines * 50);
 
+        // 모바일/태블릿 진동 피드백
+        if (navigator.vibrate) {
+            if (combo > 1) {
+                // 콤보: 짧은 진동 반복 패턴
+                const pattern = [];
+                for (let i = 0; i < Math.min(combo, 5); i++) {
+                    pattern.push(40 + clearResult.lines * 10, 30);
+                }
+                pattern.pop(); // 마지막 pause 제거
+                navigator.vibrate(pattern);
+            } else {
+                navigator.vibrate(30 + clearResult.lines * 20);
+            }
+        }
+
         if (clearResult.rows || clearResult.cols) {
             const boardPos = this.board.getGlobalPosition();
             this.effects.playLineSweep(clearResult.rows || [], clearResult.cols || [], boardPos);
