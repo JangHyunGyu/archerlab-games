@@ -39,7 +39,11 @@ class EffectManager {
 
         // ── Tweens ──
         for (let i = this.tweens.length - 1; i >= 0; i--) {
-            if (this.tweens[i].update(dt)) {
+            try {
+                if (this.tweens[i].update(dt)) {
+                    this.tweens.splice(i, 1);
+                }
+            } catch (e) {
                 this.tweens.splice(i, 1);
             }
         }
