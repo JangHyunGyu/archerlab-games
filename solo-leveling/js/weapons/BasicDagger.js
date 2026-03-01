@@ -2,7 +2,7 @@ import { WeaponBase } from './WeaponBase.js';
 import { COLORS } from '../utils/Constants.js';
 
 const BASIC_DAGGER_CONFIG = {
-    name: '카심의 독',
+    name: '단검 공격',
     description: '단검으로 가까운 적을 빠르게 벱니다',
     type: 'melee',
     baseDamage: 10,
@@ -42,104 +42,105 @@ export class BasicDagger extends WeaponBase {
             baseAngle = this.player.facingRight ? 0 : Math.PI;
         }
 
-        // Alternate swing direction each attack
+        // Alternate slight offset for multi-stab variation
         this.swingDir *= -1;
-        const swingStart = baseAngle + this.swingDir * 0.8;  // ~45 degrees offset
-        const swingEnd = baseAngle - this.swingDir * 0.8;
+        const sideOffset = this.swingDir * 0.15;
+        const stabAngle = baseAngle + sideOffset;
         const px = this.player.x;
         const py = this.player.y;
-        const slashRadius = this.attackRange * 0.75;
+        const stabLength = this.attackRange * 0.75;
 
-        // Draw the slash arc with multiple frames via tween
-        const slashGfx = this.scene.add.graphics().setDepth(8);
-        const trailGfx = this.scene.add.graphics().setDepth(7);
+        // Stab visual: straight thrust line
+        const stabGfx = this.scene.add.graphics().setDepth(8);
+        const glowGfx = this.scene.add.graphics().setDepth(7);
+
+        const cos = Math.cos(stabAngle);
+        const sin = Math.sin(stabAngle);
 
         let progress = { t: 0 };
 
         this.scene.tweens.add({
             targets: progress,
             t: 1,
-            duration: 150,
-            ease: 'Power2',
+            duration: 120,
+            ease: 'Power3',
             onUpdate: () => {
-                slashGfx.clear();
-                trailGfx.clear();
+                stabGfx.clear();
+                glowGfx.clear();
 
-                const currentAngle = Phaser.Math.Linear(swingStart, swingEnd, progress.t);
-                const prevAngle = Phaser.Math.Linear(swingStart, swingEnd, Math.max(0, progress.t - 0.3));
-                const farPrevAngle = Phaser.Math.Linear(swingStart, swingEnd, Math.max(0, progress.t - 0.5));
+                // Thrust extends outward then retracts
+                const thrust = progress.t < 0.5
+                    ? progress.t * 2         // extend 0→1
+                    : 2 - progress.t * 2;    // retract 1→0
+                const fadeAlpha = 1 - progress.t;
 
-                // Afterimage trail (wide, faded)
-                trailGfx.lineStyle(14, 0x7b2fff, 0.08 * (1 - progress.t));
-                trailGfx.beginPath();
-                trailGfx.arc(px, py, slashRadius, farPrevAngle, prevAngle, this.swingDir > 0);
-                trailGfx.strokePath();
+                const startDist = 12;
+                const endDist = startDist + stabLength * thrust;
+                const sx = px + cos * startDist;
+                const sy = py + sin * startDist;
+                const ex = px + cos * endDist;
+                const ey = py + sin * endDist;
 
-                // Main trail (purple)
-                trailGfx.lineStyle(10, 0x7b2fff, 0.25 * (1 - progress.t));
-                trailGfx.beginPath();
-                trailGfx.arc(px, py, slashRadius, prevAngle, currentAngle, this.swingDir > 0);
-                trailGfx.strokePath();
+                // Outer glow trail
+                glowGfx.lineStyle(10, 0x7b2fff, 0.15 * fadeAlpha);
+                glowGfx.lineBetween(sx, sy, ex, ey);
 
-                // Bright slash line (purple glow)
-                const arcStart = Phaser.Math.Linear(swingStart, swingEnd, Math.max(0, progress.t - 0.15));
-                slashGfx.lineStyle(5, 0xb366ff, 0.9 * (1 - progress.t * 0.5));
-                slashGfx.beginPath();
-                slashGfx.arc(px, py, slashRadius, arcStart, currentAngle, this.swingDir > 0);
-                slashGfx.strokePath();
+                // Main blade line (purple)
+                stabGfx.lineStyle(4, 0xb366ff, 0.85 * fadeAlpha);
+                stabGfx.lineBetween(sx, sy, ex, ey);
 
-                // Inner blade edge (white core)
-                slashGfx.lineStyle(2, 0xffffff, 0.7 * (1 - progress.t * 0.6));
-                slashGfx.beginPath();
-                slashGfx.arc(px, py, slashRadius, arcStart, currentAngle, this.swingDir > 0);
-                slashGfx.strokePath();
+                // White core
+                stabGfx.lineStyle(1.5, 0xffffff, 0.7 * fadeAlpha);
+                stabGfx.lineBetween(sx, sy, ex, ey);
 
-                // Dagger tip glow
-                const tipX = px + Math.cos(currentAngle) * slashRadius;
-                const tipY = py + Math.sin(currentAngle) * slashRadius;
-                slashGfx.fillStyle(0xd4aaff, 0.9);
-                slashGfx.fillCircle(tipX, tipY, 4);
-                slashGfx.fillStyle(0xffffff, 0.6);
-                slashGfx.fillCircle(tipX, tipY, 2);
+                // Tip glow
+                if (thrust > 0.3) {
+                    stabGfx.fillStyle(0xd4aaff, 0.9 * fadeAlpha);
+                    stabGfx.fillCircle(ex, ey, 4);
+                    stabGfx.fillStyle(0xffffff, 0.6 * fadeAlpha);
+                    stabGfx.fillCircle(ex, ey, 2);
+                }
 
-                // Spark particles along arc
-                if (progress.t > 0.1 && progress.t < 0.9) {
+                // Impact sparks at max extension
+                if (progress.t > 0.3 && progress.t < 0.6) {
                     for (let s = 0; s < 2; s++) {
+                        const sparkAngle = stabAngle + Phaser.Math.FloatBetween(-0.8, 0.8);
+                        const sparkDist = Phaser.Math.FloatBetween(3, 12);
                         const spark = this.scene.add.circle(
-                            tipX + Phaser.Math.Between(-6, 6),
-                            tipY + Phaser.Math.Between(-6, 6),
-                            Phaser.Math.Between(1, 3),
+                            ex + Math.cos(sparkAngle) * sparkDist,
+                            ey + Math.sin(sparkAngle) * sparkDist,
+                            Phaser.Math.FloatBetween(1, 2.5),
                             0xd4aaff, 0.8
                         ).setDepth(9);
                         this.scene.tweens.add({
                             targets: spark,
                             alpha: 0, scale: 0,
-                            x: spark.x + Phaser.Math.Between(-15, 15),
-                            y: spark.y + Phaser.Math.Between(-15, 15),
-                            duration: 200,
+                            x: spark.x + Math.cos(sparkAngle) * 10,
+                            y: spark.y + Math.sin(sparkAngle) * 10,
+                            duration: 150,
                             onComplete: () => spark.destroy(),
                         });
                     }
                 }
             },
             onComplete: () => {
-                slashGfx.destroy();
-                trailGfx.destroy();
+                stabGfx.destroy();
+                glowGfx.destroy();
             },
         });
 
-        // Deal damage on the swing midpoint
-        this.scene.time.delayedCall(60, () => {
+        // Deal damage at thrust peak
+        this.scene.time.delayedCall(50, () => {
             const enemies = this.player.getAllEnemies();
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
                 const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
                 if (dist > this.attackRange) continue;
 
-                // Check if enemy is in the swing arc
+                // Narrow cone check for stab (±30 degrees)
                 const enemyAngle = Phaser.Math.Angle.Between(px, py, enemy.x, enemy.y);
                 const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - baseAngle));
-                if (angleDiff < Math.PI / 3) {
+                if (angleDiff < Math.PI / 6) {
                     enemy.takeDamage(this.getDamage(), px, py);
                     if (this.scene.soundManager) this.scene.soundManager.play('hit');
                 }
