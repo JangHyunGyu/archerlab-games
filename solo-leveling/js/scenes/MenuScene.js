@@ -1,6 +1,6 @@
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, fs, uv } from '../utils/Constants.js';
 import { SoundManager } from '../managers/SoundManager.js';
-import { t, LANG, LANGUAGES, setLang } from '../utils/i18n.js';
+import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -105,28 +105,45 @@ export class MenuScene extends Phaser.Scene {
             this.time.delayedCall(500, () => this.scene.start('GameScene'));
         });
 
+        // Hall of Fame button
+        const hofBtnY = GAME_HEIGHT * 0.73;
+        const hofBtn = this.add.rectangle(GAME_WIDTH / 2, hofBtnY, uv(200), uv(40), 0x3a2a0a, 0.8)
+            .setStrokeStyle(2, 0xFFD600)
+            .setInteractive({ useHandCursor: true });
+
+        this.add.text(GAME_WIDTH / 2, hofBtnY, `🏆 ${t('hallOfFame')}`, {
+            fontSize: fs(isMobile ? 16 : 14),
+            fontFamily: 'Arial, sans-serif',
+            fontStyle: 'bold',
+            color: '#ffd700',
+        }).setOrigin(0.5);
+
+        hofBtn.on('pointerover', () => hofBtn.setFillStyle(0x5a3a1a, 0.9));
+        hofBtn.on('pointerout', () => hofBtn.setFillStyle(0x3a2a0a, 0.8));
+        hofBtn.on('pointerdown', () => this._showHallOfFame(isMobile));
+
         // Controls info
         if (isMobile) {
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.77, t('controlsMobile'), {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.79, t('controlsMobile'), {
                 fontSize: fs(16),
                 fontFamily: 'Arial, sans-serif',
                 fontStyle: 'bold',
                 color: '#8888bb',
             }).setOrigin(0.5);
 
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.81, t('controlsMobileAuto'), {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.83, t('controlsMobileAuto'), {
                 fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
         } else {
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.78, t('controlsPC'), {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.80, t('controlsPC'), {
                 fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
 
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, t('controlsPC2'), {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.84, t('controlsPC2'), {
                 fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
@@ -344,6 +361,122 @@ export class MenuScene extends Phaser.Scene {
         const closeAll = () => elements.forEach(el => el.destroy());
         closeBtn.on('pointerdown', closeAll);
         dim.on('pointerdown', closeAll);
+    }
+
+    _showHallOfFame(isMobile) {
+        const elements = [];
+        const cx = GAME_WIDTH / 2;
+        const cy = GAME_HEIGHT / 2;
+        const depth = 200;
+
+        // Dim overlay
+        const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.85)
+            .setDepth(depth).setInteractive();
+        elements.push(dim);
+
+        // Modal box
+        const boxW = uv(380);
+        const boxH = uv(520);
+        const box = this.add.rectangle(cx, cy, boxW, boxH, 0x0a0a30, 0.97)
+            .setStrokeStyle(2, 0xFFD600).setDepth(depth + 1);
+        elements.push(box);
+
+        // Title
+        const title = this.add.text(cx, cy - boxH / 2 + uv(25), `🏆 ${t('hallOfFame')}`, {
+            fontSize: fs(isMobile ? 20 : 18),
+            fontFamily: 'Arial, sans-serif',
+            fontStyle: 'bold',
+            color: '#ffd700',
+        }).setOrigin(0.5).setDepth(depth + 2);
+        elements.push(title);
+
+        // Divider
+        const divG = this.add.graphics().setDepth(depth + 2);
+        divG.lineStyle(1, 0xFFD600, 0.3);
+        divG.lineBetween(cx - boxW / 2 + uv(20), cy - boxH / 2 + uv(50), cx + boxW / 2 - uv(20), cy - boxH / 2 + uv(50));
+        elements.push(divG);
+
+        // Loading text
+        const loadingText = this.add.text(cx, cy, t('loading'), {
+            fontSize: fs(14), fontFamily: 'Arial, sans-serif', color: '#6677aa',
+        }).setOrigin(0.5).setDepth(depth + 2);
+        elements.push(loadingText);
+
+        // Close button
+        const closeBtn = this.add.text(cx, cy + boxH / 2 - uv(25), t('close'), {
+            fontSize: fs(14), fontFamily: 'Arial, sans-serif', color: '#888888',
+        }).setOrigin(0.5).setDepth(depth + 2).setInteractive({ useHandCursor: true });
+        elements.push(closeBtn);
+
+        closeBtn.on('pointerover', () => closeBtn.setColor('#ffffff'));
+        closeBtn.on('pointerout', () => closeBtn.setColor('#888888'));
+
+        const closeAll = () => elements.forEach(el => el.destroy());
+        closeBtn.on('pointerdown', closeAll);
+        dim.on('pointerdown', closeAll);
+
+        // Fetch rankings
+        fetch(`${GAME_API_URL}/rankings?game_id=${GAME_ID_SHADOW}&limit=20`)
+            .then(resp => resp.json())
+            .then(data => {
+                if (loadingText && loadingText.active) loadingText.setVisible(false);
+
+                const rankings = data.rankings || [];
+                if (rankings.length === 0) {
+                    const noData = this.add.text(cx, cy, t('noRecords'), {
+                        fontSize: fs(14), fontFamily: 'Arial, sans-serif', color: '#6677aa',
+                    }).setOrigin(0.5).setDepth(depth + 2);
+                    elements.push(noData);
+                    return;
+                }
+
+                const startY = cy - boxH / 2 + uv(60);
+                const maxH = boxH - uv(110);
+                const rowH = Math.min(uv(22), maxH / Math.min(rankings.length + 1, 21));
+
+                // Header row
+                let y = startY;
+                const hStyle = { fontSize: fs(10), fontFamily: 'Arial, sans-serif', color: '#6677aa' };
+                const hR = this.add.text(cx - boxW / 2 + uv(25), y, '#', hStyle).setDepth(depth + 2);
+                const hN = this.add.text(cx - boxW / 2 + uv(55), y, 'NAME', hStyle).setDepth(depth + 2);
+                const hS = this.add.text(cx + boxW / 2 - uv(25), y, t('scoreLabel'), hStyle).setOrigin(1, 0).setDepth(depth + 2);
+                elements.push(hR, hN, hS);
+
+                y += rowH;
+                const hdiv = this.add.graphics().setDepth(depth + 2);
+                hdiv.lineStyle(1, 0x334466, 0.5);
+                hdiv.lineBetween(cx - boxW / 2 + uv(15), y, cx + boxW / 2 - uv(15), y);
+                elements.push(hdiv);
+                y += 4;
+
+                rankings.forEach((entry, i) => {
+                    if (y + rowH > startY + maxH) return;
+                    const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
+                    const color = i < 3 ? rankColors[i] : '#8899bb';
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+                    const fSize = fs(Math.min(12, rowH * 0.6));
+                    const bold = i < 3 ? 'bold' : 'normal';
+
+                    const rT = this.add.text(cx - boxW / 2 + uv(22), y, `${medal}${i < 3 ? '' : (i + 1)}`, {
+                        fontSize: fSize, fontFamily: 'Arial, sans-serif', fontStyle: bold, color,
+                    }).setDepth(depth + 2);
+                    const nT = this.add.text(cx - boxW / 2 + uv(58), y, entry.player_name, {
+                        fontSize: fSize, fontFamily: 'Arial, sans-serif', fontStyle: bold, color,
+                    }).setDepth(depth + 2);
+                    const sT = this.add.text(cx + boxW / 2 - uv(25), y, entry.score.toLocaleString(), {
+                        fontSize: fSize, fontFamily: 'Arial, sans-serif', fontStyle: bold, color,
+                    }).setOrigin(1, 0).setDepth(depth + 2);
+                    elements.push(rT, nT, sT);
+
+                    y += rowH;
+                });
+            })
+            .catch(() => {
+                if (loadingText && loadingText.active) {
+                    loadingText.setText('Error loading rankings');
+                    loadingText.setColor('#ff4444');
+                }
+            });
     }
 
     update() {

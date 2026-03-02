@@ -100,6 +100,10 @@ const _browserLang = (navigator.language || '').slice(0, 2);
 let currentLang = localStorage.getItem('blockpang_lang')
     || (LANGUAGES.includes(_browserLang) ? _browserLang : 'ko');
 
+// ─── Game API Config ───
+const GAME_API_URL = 'https://game-api.yama5993.workers.dev';
+const GAME_ID_BLOCKPANG = 'blockpang';
+
 const I18N = {
     ko: {
         gameStart: '게임 시작',
@@ -115,6 +119,17 @@ const I18N = {
         lines: 'LINES',
         langLabel: 'KO',
         blockPuzzle: 'BLOCK PUZZLE',
+        hallOfFame: '명예의 전당',
+        ranking: '랭킹',
+        noRecords: '기록이 없습니다',
+        close: '닫기',
+        enterName: '이름을 입력하세요',
+        submit: '등록',
+        skip: '건너뛰기',
+        nameInputTitle: '명예의 전당 등록',
+        rankSubmitted: '등록 완료!',
+        yourRank: '순위',
+        loading: '로딩 중...',
     },
     en: {
         gameStart: 'GAME START',
@@ -130,6 +145,17 @@ const I18N = {
         lines: 'LINES',
         langLabel: 'EN',
         blockPuzzle: 'BLOCK PUZZLE',
+        hallOfFame: 'HALL OF FAME',
+        ranking: 'RANKING',
+        noRecords: 'No records yet',
+        close: 'CLOSE',
+        enterName: 'Enter your name',
+        submit: 'SUBMIT',
+        skip: 'SKIP',
+        nameInputTitle: 'HALL OF FAME',
+        rankSubmitted: 'Submitted!',
+        yourRank: 'Rank',
+        loading: 'Loading...',
     },
     ja: {
         gameStart: 'ゲームスタート',
@@ -145,6 +171,17 @@ const I18N = {
         lines: 'LINES',
         langLabel: 'JA',
         blockPuzzle: 'ブロックパズル',
+        hallOfFame: '殿堂入り',
+        ranking: 'ランキング',
+        noRecords: '記録がありません',
+        close: '閉じる',
+        enterName: '名前を入力',
+        submit: '登録',
+        skip: 'スキップ',
+        nameInputTitle: '殿堂入り',
+        rankSubmitted: '登録完了！',
+        yourRank: '順位',
+        loading: '読み込み中...',
     },
 };
 

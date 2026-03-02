@@ -501,13 +501,14 @@ class Game {
         this.sound.playGameOver();
 
         const isNewBest = this.scoreManager.score >= this.scoreManager.bestScore;
+        const finalScore = this.scoreManager.score;
+        const bestScore = this.scoreManager.bestScore;
 
         setTimeout(() => {
-            this.ui.showGameOver(
-                this.scoreManager.score,
-                this.scoreManager.bestScore,
-                isNewBest
-            );
+            // Show name input first, then game over screen
+            this.ui.showNameInput(finalScore, () => {
+                this.ui.showGameOver(finalScore, bestScore, isNewBest);
+            });
         }, 600);
     }
 }

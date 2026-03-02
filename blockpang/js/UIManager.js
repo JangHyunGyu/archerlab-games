@@ -425,13 +425,25 @@ class UIManager {
             return { btn, txt, width: bw };
         };
 
-        // Contact button (centered)
+        // Hall of Fame button
+        const hofBtn = createSmallBtn(
+            `🏆 ${getText('hallOfFame')}`,
+            0xFFD600,
+            () => { this.showHallOfFame(); }
+        );
+        // Contact button
         const contactBtn = createSmallBtn(
             getText('contact'),
-            0xFFD600,
+            0x6677aa,
             () => { window.open('mailto:contact@archerlab.dev', '_blank'); }
         );
-        contactBtn.btn.position.set(centerX - contactBtn.width / 2, bottomY);
+
+        // Position: two buttons side by side
+        const totalBtnW = hofBtn.width + gap + contactBtn.width;
+        const btnStartX = centerX - totalBtnW / 2;
+        hofBtn.btn.position.set(btnStartX, bottomY);
+        container.addChild(hofBtn.btn);
+        contactBtn.btn.position.set(btnStartX + hofBtn.width + gap, bottomY);
         container.addChild(contactBtn.btn);
 
         // ── Language dropdown (top-left, emoji style) ──
@@ -593,7 +605,7 @@ class UIManager {
         container.addChild(versionText);
 
         // Store refs for language refresh
-        this._titleRefs = { logo, subtitle, startBtnText, langBtn, contactBtn, bestText };
+        this._titleRefs = { logo, subtitle, startBtnText, langBtn, contactBtn, hofBtn, bestText };
 
         // ── Entrance Animation ──
         container.alpha = 0;
@@ -602,6 +614,7 @@ class UIManager {
         subtitle.alpha = 0;
         startBtn.alpha = 0;
         langBtn.btn.alpha = 0;
+        hofBtn.btn.alpha = 0;
         contactBtn.btn.alpha = 0;
         linkBtn.alpha = 0;
 
@@ -636,6 +649,9 @@ class UIManager {
                 // Bottom buttons staggered
                 if (t > 0.45) {
                     langBtn.btn.alpha = easeOutCubic(Math.min((t - 0.45) / 0.25, 1));
+                }
+                if (t > 0.48) {
+                    hofBtn.btn.alpha = easeOutCubic(Math.min((t - 0.48) / 0.25, 1));
                 }
                 if (t > 0.5) {
                     contactBtn.btn.alpha = easeOutCubic(Math.min((t - 0.5) / 0.25, 1));
@@ -1024,5 +1040,410 @@ class UIManager {
             this.gameOverOverlay.destroy({ children: true });
             this.gameOverOverlay = null;
         }
+    }
+
+    // ══════════════════════════════════════
+    // ══  HALL OF FAME (명예의 전당)
+    // ══════════════════════════════════════
+
+    showHallOfFame() {
+        if (this._hofOverlay) {
+            this._hofOverlay.destroy({ children: true });
+            this._hofOverlay = null;
+        }
+
+        const overlay = new PIXI.Container();
+        overlay.eventMode = 'static';
+        const w = this.game.app.screen.width;
+        const h = this.game.app.screen.height;
+        overlay.hitArea = new PIXI.Rectangle(0, 0, w, h);
+
+        // Dark background
+        const bg = new PIXI.Graphics();
+        bg.beginFill(0x000000, 0.8);
+        bg.drawRect(0, 0, w, h);
+        bg.endFill();
+        bg.eventMode = 'static';
+        bg.on('pointerdown', () => this._closeHallOfFame());
+        overlay.addChild(bg);
+
+        // Panel
+        const panelW = Math.min(w * 0.9, 400);
+        const panelH = Math.min(h * 0.85, 600);
+        const panelX = (w - panelW) / 2;
+        const panelY = (h - panelH) / 2;
+
+        const panel = new PIXI.Graphics();
+        panel.beginFill(0x0a0a30, 0.97);
+        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
+        panel.endFill();
+        panel.lineStyle(2, 0xFFD600, 0.6);
+        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
+        panel.lineStyle(0);
+        panel.eventMode = 'static';
+        overlay.addChild(panel);
+
+        const centerX = w / 2;
+        let yOff = panelY + 20;
+
+        // Title
+        const title = new PIXI.Text(`🏆 ${getText('hallOfFame')}`, {
+            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+            fontSize: Math.min(22, panelW * 0.06),
+            fill: 0xFFD600,
+            fontWeight: '900',
+            letterSpacing: 2,
+        });
+        title.anchor.set(0.5, 0);
+        title.position.set(centerX, yOff);
+        overlay.addChild(title);
+        yOff += title.height + 12;
+
+        // Divider
+        const divider = new PIXI.Graphics();
+        divider.lineStyle(1, 0xFFD600, 0.3);
+        divider.moveTo(panelX + 20, yOff);
+        divider.lineTo(panelX + panelW - 20, yOff);
+        overlay.addChild(divider);
+        yOff += 10;
+
+        // Loading text
+        const loadingText = new PIXI.Text(getText('loading'), {
+            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+            fontSize: 14,
+            fill: 0x6677aa,
+        });
+        loadingText.anchor.set(0.5, 0);
+        loadingText.position.set(centerX, yOff + 40);
+        overlay.addChild(loadingText);
+
+        // Close button
+        const closeBtnY = panelY + panelH - 50;
+        const closeBtnW = panelW * 0.4;
+        const closeBtnH = 36;
+        const closeBtnX = centerX - closeBtnW / 2;
+
+        const closeBtn = new PIXI.Graphics();
+        closeBtn.beginFill(0x3355cc, 0.15);
+        closeBtn.drawRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
+        closeBtn.endFill();
+        closeBtn.lineStyle(1, 0x3355cc, 0.4);
+        closeBtn.drawRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
+        closeBtn.lineStyle(0);
+        closeBtn.eventMode = 'static';
+        closeBtn.cursor = 'pointer';
+        closeBtn.hitArea = new PIXI.Rectangle(closeBtnX - 5, closeBtnY - 5, closeBtnW + 10, closeBtnH + 10);
+        closeBtn.on('pointerdown', () => this._closeHallOfFame());
+        closeBtn.on('pointerover', () => { closeBtn.tint = 0xCCDDFF; });
+        closeBtn.on('pointerout', () => { closeBtn.tint = 0xFFFFFF; });
+        overlay.addChild(closeBtn);
+
+        const closeBtnText = new PIXI.Text(getText('close'), {
+            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+            fontSize: 13,
+            fill: 0x6677aa,
+            fontWeight: '700',
+        });
+        closeBtnText.anchor.set(0.5, 0.5);
+        closeBtnText.position.set(centerX, closeBtnY + closeBtnH / 2);
+        closeBtnText.eventMode = 'none';
+        overlay.addChild(closeBtnText);
+
+        this._hofOverlay = overlay;
+        this.game.app.stage.addChild(overlay);
+
+        // Fetch rankings
+        this._fetchRankings(overlay, centerX, yOff, panelX, panelW, closeBtnY - yOff - 10, loadingText);
+    }
+
+    async _fetchRankings(overlay, centerX, startY, panelX, panelW, maxHeight, loadingText) {
+        try {
+            const resp = await fetch(`${GAME_API_URL}/rankings?game_id=${GAME_ID_BLOCKPANG}&limit=20`);
+            const data = await resp.json();
+
+            if (loadingText && !loadingText.destroyed) loadingText.visible = false;
+
+            const rankings = data.rankings || [];
+            if (rankings.length === 0) {
+                const noData = new PIXI.Text(getText('noRecords'), {
+                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                    fontSize: 14,
+                    fill: 0x6677aa,
+                });
+                noData.anchor.set(0.5, 0);
+                noData.position.set(centerX, startY + 40);
+                overlay.addChild(noData);
+                return;
+            }
+
+            const rowH = Math.min(22, maxHeight / Math.min(rankings.length + 1, 21));
+            let y = startY;
+
+            // Header
+            const headerStyle = {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.min(10, rowH * 0.5),
+                fill: 0x6677aa,
+                letterSpacing: 1,
+            };
+            const hRank = new PIXI.Text('#', headerStyle);
+            hRank.position.set(panelX + 20, y);
+            overlay.addChild(hRank);
+            const hName = new PIXI.Text('NAME', headerStyle);
+            hName.position.set(panelX + 50, y);
+            overlay.addChild(hName);
+            const hScore = new PIXI.Text('SCORE', headerStyle);
+            hScore.anchor.set(1, 0);
+            hScore.position.set(panelX + panelW - 20, y);
+            overlay.addChild(hScore);
+            y += rowH;
+
+            // Divider
+            const hDiv = new PIXI.Graphics();
+            hDiv.lineStyle(1, 0x334466, 0.5);
+            hDiv.moveTo(panelX + 15, y);
+            hDiv.lineTo(panelX + panelW - 15, y);
+            overlay.addChild(hDiv);
+            y += 4;
+
+            rankings.forEach((entry, i) => {
+                if (y + rowH > startY + maxHeight) return;
+                const rankColors = [0xFFD600, 0xC0C0C0, 0xCD7F32];
+                const color = i < 3 ? rankColors[i] : 0x8899bb;
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+
+                const rowStyle = {
+                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                    fontSize: Math.min(12, rowH * 0.6),
+                    fill: color,
+                    fontWeight: i < 3 ? '700' : '400',
+                };
+
+                const rankText = new PIXI.Text(`${medal}${i < 3 ? '' : (i + 1)}`, rowStyle);
+                rankText.position.set(panelX + 18, y);
+                overlay.addChild(rankText);
+
+                const nameText = new PIXI.Text(entry.player_name, rowStyle);
+                nameText.position.set(panelX + 55, y);
+                overlay.addChild(nameText);
+
+                const scoreText = new PIXI.Text(entry.score.toLocaleString(), {
+                    ...rowStyle,
+                    fontFamily: 'Orbitron, sans-serif',
+                });
+                scoreText.anchor.set(1, 0);
+                scoreText.position.set(panelX + panelW - 20, y);
+                overlay.addChild(scoreText);
+
+                y += rowH;
+            });
+
+        } catch (e) {
+            if (loadingText && !loadingText.destroyed) {
+                loadingText.text = 'Error loading rankings';
+                loadingText.style.fill = 0xFF4444;
+            }
+        }
+    }
+
+    _closeHallOfFame() {
+        if (this._hofOverlay) {
+            this._hofOverlay.destroy({ children: true });
+            this._hofOverlay = null;
+        }
+    }
+
+    // ══════════════════════════════════════
+    // ══  NAME INPUT POPUP (Game Over)
+    // ══════════════════════════════════════
+
+    showNameInput(score, onComplete) {
+        if (this._nameInputOverlay) {
+            this._nameInputOverlay.destroy({ children: true });
+        }
+
+        const w = this.game.app.screen.width;
+        const h = this.game.app.screen.height;
+        const overlay = new PIXI.Container();
+        overlay.eventMode = 'static';
+        overlay.hitArea = new PIXI.Rectangle(0, 0, w, h);
+
+        // Dark bg
+        const bg = new PIXI.Graphics();
+        bg.beginFill(0x000000, 0.85);
+        bg.drawRect(0, 0, w, h);
+        bg.endFill();
+        overlay.addChild(bg);
+
+        // Panel
+        const panelW = Math.min(w * 0.85, 350);
+        const panelH = Math.min(230, h * 0.4);
+        const panelX = (w - panelW) / 2;
+        const panelY = (h - panelH) / 2;
+
+        const panel = new PIXI.Graphics();
+        panel.beginFill(0x0a0a30, 0.97);
+        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
+        panel.endFill();
+        panel.lineStyle(2, 0xFFD600, 0.5);
+        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
+        panel.lineStyle(0);
+        overlay.addChild(panel);
+
+        const centerX = w / 2;
+        let yOff = panelY + 20;
+
+        // Title
+        const titleText = new PIXI.Text(`🏆 ${getText('nameInputTitle')}`, {
+            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+            fontSize: Math.min(18, panelW * 0.055),
+            fill: 0xFFD600,
+            fontWeight: '900',
+        });
+        titleText.anchor.set(0.5, 0);
+        titleText.position.set(centerX, yOff);
+        overlay.addChild(titleText);
+        yOff += titleText.height + 8;
+
+        // Score display
+        const scoreDisp = new PIXI.Text(`SCORE: ${score.toLocaleString()}`, {
+            fontFamily: 'Orbitron, sans-serif',
+            fontSize: Math.min(16, panelW * 0.05),
+            fill: [0x76FF03, 0x00E5FF],
+            fillGradientType: 0,
+            fontWeight: '700',
+        });
+        scoreDisp.anchor.set(0.5, 0);
+        scoreDisp.position.set(centerX, yOff);
+        overlay.addChild(scoreDisp);
+        yOff += scoreDisp.height + 14;
+
+        // Create HTML input for name entry
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = 20;
+        input.placeholder = getText('enterName');
+        input.style.cssText = `
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: ${Math.min(260, panelW * 0.7)}px;
+            padding: 10px 14px;
+            font-size: 16px;
+            font-family: 'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif;
+            background: #1a1a40;
+            border: 2px solid #FFD600;
+            border-radius: 8px;
+            color: #ffffff;
+            text-align: center;
+            outline: none;
+            z-index: 10000;
+        `;
+
+        // Restore last used name
+        const lastName = localStorage.getItem('blockpang_player_name') || '';
+        input.value = lastName;
+
+        document.body.appendChild(input);
+        setTimeout(() => input.focus(), 100);
+
+        // Buttons
+        const btnW = panelW * 0.35;
+        const btnH = 38;
+        const gap = 10;
+        const btnY = panelY + panelH - btnH - 20;
+
+        // Submit button
+        const submitBtn = new PIXI.Graphics();
+        submitBtn.beginFill(0xFFD600);
+        submitBtn.drawRoundedRect(centerX - btnW - gap / 2, btnY, btnW, btnH, 8);
+        submitBtn.endFill();
+        submitBtn.eventMode = 'static';
+        submitBtn.cursor = 'pointer';
+        submitBtn.hitArea = new PIXI.Rectangle(centerX - btnW - gap / 2 - 5, btnY - 5, btnW + 10, btnH + 10);
+        overlay.addChild(submitBtn);
+
+        const submitText = new PIXI.Text(getText('submit'), {
+            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+            fontSize: 14,
+            fill: 0x000000,
+            fontWeight: '700',
+        });
+        submitText.anchor.set(0.5, 0.5);
+        submitText.position.set(centerX - btnW / 2 - gap / 2, btnY + btnH / 2);
+        submitText.eventMode = 'none';
+        overlay.addChild(submitText);
+
+        // Skip button
+        const skipBtn = new PIXI.Graphics();
+        skipBtn.beginFill(0x3355cc, 0.2);
+        skipBtn.drawRoundedRect(centerX + gap / 2, btnY, btnW, btnH, 8);
+        skipBtn.endFill();
+        skipBtn.lineStyle(1, 0x3355cc, 0.4);
+        skipBtn.drawRoundedRect(centerX + gap / 2, btnY, btnW, btnH, 8);
+        skipBtn.lineStyle(0);
+        skipBtn.eventMode = 'static';
+        skipBtn.cursor = 'pointer';
+        skipBtn.hitArea = new PIXI.Rectangle(centerX + gap / 2 - 5, btnY - 5, btnW + 10, btnH + 10);
+        overlay.addChild(skipBtn);
+
+        const skipText = new PIXI.Text(getText('skip'), {
+            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+            fontSize: 14,
+            fill: 0x6677aa,
+            fontWeight: '700',
+        });
+        skipText.anchor.set(0.5, 0.5);
+        skipText.position.set(centerX + btnW / 2 + gap / 2, btnY + btnH / 2);
+        skipText.eventMode = 'none';
+        overlay.addChild(skipText);
+
+        const cleanup = () => {
+            if (input.parentNode) input.parentNode.removeChild(input);
+            if (this._nameInputOverlay) {
+                this._nameInputOverlay.destroy({ children: true });
+                this._nameInputOverlay = null;
+            }
+        };
+
+        const doSubmit = async () => {
+            const name = input.value.trim().slice(0, 20);
+            if (!name) { input.focus(); return; }
+            localStorage.setItem('blockpang_player_name', name);
+            cleanup();
+            try {
+                await fetch(`${GAME_API_URL}/rankings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        game_id: GAME_ID_BLOCKPANG,
+                        player_name: name,
+                        score: score,
+                        extra_data: {
+                            level: this.game.scoreManager.level,
+                            lines: this.game.scoreManager.linesCleared,
+                        },
+                    }),
+                });
+            } catch (e) { /* silent */ }
+            if (onComplete) onComplete();
+        };
+
+        const doSkip = () => {
+            cleanup();
+            if (onComplete) onComplete();
+        };
+
+        submitBtn.on('pointerdown', doSubmit);
+        skipBtn.on('pointerdown', doSkip);
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') doSubmit();
+            if (e.key === 'Escape') doSkip();
+        });
+
+        this._nameInputOverlay = overlay;
+        this.game.app.stage.addChild(overlay);
     }
 }
