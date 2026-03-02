@@ -29,6 +29,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.specialTimer = 0;
         this.phase = 1; // Boss phases
 
+        // Spawn invincibility (1.5s entrance animation protection)
+        this.isInvincible = true;
+        scene.time.delayedCall(1500, () => { this.isInvincible = false; });
+
+        // Hit cooldown to prevent multi-hit in same frame
+        this._lastHitTime = 0;
+
         // HP bar
         this.hpBarBg = scene.add.rectangle(x, y - config.size - 10, 60, 6, 0x333333)
             .setDepth(20);
@@ -280,10 +287,23 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     takeDamage(amount, knockbackX, knockbackY) {
         if (!this.active) return false;
 
+        // Spawn invincibility
+        if (this.isInvincible) return false;
+
+        // Min 50ms between hits to prevent same-frame multi-hit
+        const now = this.scene.time.now;
+        if (now - this._lastHitTime < 50) return false;
+        this._lastHitTime = now;
+
         // Defense reduces damage (minimum 1)
         const defense = this.config.defense || 0;
         amount = Math.max(1, amount - defense);
         this.hp -= amount;
+
+        // Immediately update HP bar on damage
+        if (this.hpBarFill && this.hpBarBg) {
+            this.hpBarFill.setDisplaySize(60 * Math.max(0, this.hp / this.maxHp), 6);
+        }
 
         // Flash red on hit, then restore
         this.setTint(0xff0000);
