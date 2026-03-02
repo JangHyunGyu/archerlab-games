@@ -14,48 +14,70 @@ const BLOCK_COLORS = [
 ];
 
 // ─── Piece Shape Definitions ───
+// tier: 난이도 단계. 낮을수록 초반부터 등장 (1=가장 쉬움)
+//   tier 1: 레벨 1+ (1칸, 2칸 선, 2×2 정사각형)
+//   tier 2: 레벨 2+ (3칸 선, Small L)
+//   tier 3: 레벨 3+ (4칸 선, T, S/Z)
+//   tier 4: 레벨 5+ (Big L, 5칸 선)
+//   tier 5: 레벨 7+ (3×3 정사각형, 십자)
 const PIECE_SHAPES = [
-    // ── Singles & Lines ──
-    { shape: [[1]], weight: 4 },
-    { shape: [[1, 1]], weight: 7 },
-    { shape: [[1, 1, 1]], weight: 10 },
-    { shape: [[1, 1, 1, 1]], weight: 5 },
-    { shape: [[1, 1, 1, 1, 1]], weight: 2 },
-    { shape: [[1], [1]], weight: 7 },
-    { shape: [[1], [1], [1]], weight: 10 },
-    { shape: [[1], [1], [1], [1]], weight: 5 },
-    { shape: [[1], [1], [1], [1], [1]], weight: 2 },
+    // ── Singles & Short Lines ── (tier 1)
+    { shape: [[1]], weight: 4, tier: 1 },
+    { shape: [[1, 1]], weight: 7, tier: 1 },
+    { shape: [[1], [1]], weight: 7, tier: 1 },
 
-    // ── Squares ──
-    { shape: [[1, 1], [1, 1]], weight: 8 },
-    { shape: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], weight: 1 },
+    // ── 3-cell Lines & Square ── (tier 2)
+    { shape: [[1, 1, 1]], weight: 10, tier: 2 },
+    { shape: [[1], [1], [1]], weight: 10, tier: 2 },
+    { shape: [[1, 1], [1, 1]], weight: 8, tier: 2 },
 
-    // ── Small L (2×2 corners) ──
-    { shape: [[1, 0], [1, 1]], weight: 7 },
-    { shape: [[0, 1], [1, 1]], weight: 7 },
-    { shape: [[1, 1], [1, 0]], weight: 7 },
-    { shape: [[1, 1], [0, 1]], weight: 7 },
+    // ── Small L (2×2 corners) ── (tier 2)
+    { shape: [[1, 0], [1, 1]], weight: 7, tier: 2 },
+    { shape: [[0, 1], [1, 1]], weight: 7, tier: 2 },
+    { shape: [[1, 1], [1, 0]], weight: 7, tier: 2 },
+    { shape: [[1, 1], [0, 1]], weight: 7, tier: 2 },
 
-    // ── Big L (3×3 corners) ──
-    { shape: [[1, 0, 0], [1, 0, 0], [1, 1, 1]], weight: 3 },
-    { shape: [[0, 0, 1], [0, 0, 1], [1, 1, 1]], weight: 3 },
-    { shape: [[1, 1, 1], [1, 0, 0], [1, 0, 0]], weight: 3 },
-    { shape: [[1, 1, 1], [0, 0, 1], [0, 0, 1]], weight: 3 },
+    // ── 4-cell Lines ── (tier 3)
+    { shape: [[1, 1, 1, 1]], weight: 5, tier: 3 },
+    { shape: [[1], [1], [1], [1]], weight: 5, tier: 3 },
 
-    // ── T shapes ──
-    { shape: [[1, 1, 1], [0, 1, 0]], weight: 4 },
-    { shape: [[0, 1, 0], [1, 1, 1]], weight: 4 },
-    { shape: [[1, 0], [1, 1], [1, 0]], weight: 4 },
-    { shape: [[0, 1], [1, 1], [0, 1]], weight: 4 },
+    // ── T shapes ── (tier 3)
+    { shape: [[1, 1, 1], [0, 1, 0]], weight: 4, tier: 3 },
+    { shape: [[0, 1, 0], [1, 1, 1]], weight: 4, tier: 3 },
+    { shape: [[1, 0], [1, 1], [1, 0]], weight: 4, tier: 3 },
+    { shape: [[0, 1], [1, 1], [0, 1]], weight: 4, tier: 3 },
 
-    // ── S / Z shapes ──
-    { shape: [[1, 1, 0], [0, 1, 1]], weight: 4 },
-    { shape: [[0, 1, 1], [1, 1, 0]], weight: 4 },
-    { shape: [[1, 0], [1, 1], [0, 1]], weight: 4 },
-    { shape: [[0, 1], [1, 1], [1, 0]], weight: 4 },
+    // ── S / Z shapes ── (tier 3)
+    { shape: [[1, 1, 0], [0, 1, 1]], weight: 4, tier: 3 },
+    { shape: [[0, 1, 1], [1, 1, 0]], weight: 4, tier: 3 },
+    { shape: [[1, 0], [1, 1], [0, 1]], weight: 4, tier: 3 },
+    { shape: [[0, 1], [1, 1], [1, 0]], weight: 4, tier: 3 },
 
-    // ── Cross ──
-    { shape: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], weight: 2 },
+    // ── Big L (3×3 corners) ── (tier 4)
+    { shape: [[1, 0, 0], [1, 0, 0], [1, 1, 1]], weight: 3, tier: 4 },
+    { shape: [[0, 0, 1], [0, 0, 1], [1, 1, 1]], weight: 3, tier: 4 },
+    { shape: [[1, 1, 1], [1, 0, 0], [1, 0, 0]], weight: 3, tier: 4 },
+    { shape: [[1, 1, 1], [0, 0, 1], [0, 0, 1]], weight: 3, tier: 4 },
+
+    // ── 5-cell Lines ── (tier 4)
+    { shape: [[1, 1, 1, 1, 1]], weight: 2, tier: 4 },
+    { shape: [[1], [1], [1], [1], [1]], weight: 2, tier: 4 },
+
+    // ── 3×3 Square & Cross ── (tier 5)
+    { shape: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], weight: 1, tier: 5 },
+    { shape: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], weight: 2, tier: 5 },
+];
+
+// 레벨 → 허용 최대 tier 매핑
+const LEVEL_MAX_TIER = [
+    /* Lv 0 */ 1,
+    /* Lv 1 */ 1,
+    /* Lv 2 */ 2,
+    /* Lv 3 */ 3,
+    /* Lv 4 */ 3,
+    /* Lv 5 */ 4,
+    /* Lv 6 */ 4,
+    /* Lv 7 */ 5,  // 레벨 7 이후 전체 해금
 ];
 
 // ─── Scoring ───

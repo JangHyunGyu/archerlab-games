@@ -1,27 +1,9 @@
 import { WeaponBase } from './WeaponBase.js';
-import { COLORS } from '../utils/Constants.js';
-
-const BASIC_DAGGER_CONFIG = {
-    name: '단검 공격',
-    description: '단검으로 가까운 적을 빠르게 벱니다',
-    type: 'melee',
-    baseDamage: 10,
-    baseCooldown: 650,
-    baseCount: 1,
-    levelBonuses: {
-        2: { damage: 3 },
-        3: { count: 1 },
-        4: { damage: 4 },
-        5: { cooldown: -50 },
-        6: { count: 1 },
-        7: { damage: 6 },
-        8: { count: 1, damage: 4 },
-    },
-};
+import { WEAPONS, COLORS } from '../utils/Constants.js';
 
 export class BasicDagger extends WeaponBase {
     constructor(scene, player) {
-        super(scene, player, BASIC_DAGGER_CONFIG);
+        super(scene, player, WEAPONS.basicDagger);
         this.attackRange = 150;
         this.swingDir = 1; // Alternate swing direction
     }
