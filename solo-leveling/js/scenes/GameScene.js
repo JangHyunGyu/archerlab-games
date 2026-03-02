@@ -205,10 +205,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     _spawnBoss(bossKey) {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 400;
-        const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * dist, 100, WORLD_SIZE - 100);
-        const y = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * dist, 100, WORLD_SIZE - 100);
+        // Spawn boss just outside visible screen
+        const cam = this.cameras.main;
+        const halfW = (cam.width / cam.zoom) / 2 + 120;
+        const halfH = (cam.height / cam.zoom) / 2 + 120;
+        const edge = Phaser.Math.Between(0, 3);
+        let x, y;
+        switch (edge) {
+            case 0: x = this.player.x + Phaser.Math.Between(-halfW, halfW); y = this.player.y - halfH; break;
+            case 1: x = this.player.x + Phaser.Math.Between(-halfW, halfW); y = this.player.y + halfH; break;
+            case 2: x = this.player.x - halfW; y = this.player.y + Phaser.Math.Between(-halfH, halfH); break;
+            case 3: x = this.player.x + halfW; y = this.player.y + Phaser.Math.Between(-halfH, halfH); break;
+        }
+        x = Phaser.Math.Clamp(x, 100, WORLD_SIZE - 100);
+        y = Phaser.Math.Clamp(y, 100, WORLD_SIZE - 100);
 
         // Scale boss stats with game time difficulty
         const diffMult = this.enemyManager.difficultyMultiplier;

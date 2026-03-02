@@ -1,4 +1,4 @@
-import { GAME_WIDTH, GAME_HEIGHT, COLORS, RANKS, fs, uv } from '../utils/Constants.js';
+import { GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE, COLORS, RANKS, fs, uv } from '../utils/Constants.js';
 
 export class HUD {
     constructor(scene) {
@@ -16,6 +16,8 @@ export class HUD {
         // Bottom elements
         this._createWeaponSlots();
         this._createShadowArmyDisplay();
+        // Minimap
+        this._createMinimap();
         // Home button
         this._createHomeButton();
     }
@@ -161,6 +163,95 @@ export class HUD {
         this.elements.push(this.shadowText);
     }
 
+    _createMinimap() {
+        const size = uv(90);
+        const m = this._margin;
+        this._mmSize = size;
+        this._mmX = GAME_WIDTH - m - size;
+        this._mmY = GAME_HEIGHT - m - size;
+        this._mmScale = size / WORLD_SIZE;
+
+        // Background
+        this._mmBg = this.scene.add.rectangle(
+            this._mmX, this._mmY, size, size, 0x0a0a1a, 0.75
+        ).setOrigin(0, 0).setDepth(100).setScrollFactor(0)
+         .setStrokeStyle(1, 0x4a1a8a, 0.8);
+        this.elements.push(this._mmBg);
+
+        // Graphics layer for dots
+        this._mmGfx = this.scene.add.graphics()
+            .setDepth(101).setScrollFactor(0);
+        this.elements.push(this._mmGfx);
+    }
+
+    _updateMinimap(player, enemyManager, shadowArmyManager) {
+        if (!this._mmGfx || !player) return;
+
+        const gfx = this._mmGfx;
+        const ox = this._mmX;
+        const oy = this._mmY;
+        const s = this._mmScale;
+
+        gfx.clear();
+
+        // Camera viewport indicator
+        const cam = this.scene.cameras.main;
+        const vx = ox + (cam.scrollX * s);
+        const vy = oy + (cam.scrollY * s);
+        const vw = (cam.width / cam.zoom) * s;
+        const vh = (cam.height / cam.zoom) * s;
+        gfx.lineStyle(1, 0x444466, 0.6);
+        gfx.strokeRect(vx, vy, vw, vh);
+
+        // Enemies (small red dots)
+        if (enemyManager) {
+            const enemies = enemyManager.getActiveEnemies();
+            gfx.fillStyle(0xff4444, 0.7);
+            for (const e of enemies) {
+                if (!e.active) continue;
+                const ex = ox + e.x * s;
+                const ey = oy + e.y * s;
+                if (e.isElite) {
+                    gfx.fillStyle(0xff8844, 0.9);
+                    gfx.fillRect(ex - 1.5, ey - 1.5, 3, 3);
+                    gfx.fillStyle(0xff4444, 0.7);
+                } else {
+                    gfx.fillRect(ex - 0.5, ey - 0.5, 1.5, 1.5);
+                }
+            }
+        }
+
+        // Bosses (large bright dots)
+        const bosses = this.scene.activeBosses || [];
+        for (const b of bosses) {
+            if (!b.active) continue;
+            const bx = ox + b.x * s;
+            const by = oy + b.y * s;
+            gfx.fillStyle(0xff0000, 1);
+            gfx.fillCircle(bx, by, 3);
+            gfx.lineStyle(1, 0xff6666, 0.8);
+            gfx.strokeCircle(bx, by, 4);
+        }
+
+        // Shadow soldiers (purple dots)
+        if (shadowArmyManager) {
+            const soldiers = shadowArmyManager.getSoldiers();
+            gfx.fillStyle(0xb366ff, 0.9);
+            for (const sol of soldiers) {
+                if (!sol.active) continue;
+                gfx.fillRect(ox + sol.x * s - 1, oy + sol.y * s - 1, 2.5, 2.5);
+            }
+        }
+
+        // Player (bright white dot)
+        const px = ox + player.x * s;
+        const py = oy + player.y * s;
+        gfx.fillStyle(0x44ccff, 1);
+        gfx.fillCircle(px, py, 2.5);
+        gfx.fillStyle(0xffffff, 1);
+        gfx.fillCircle(px, py, 1);
+    }
+
     _createHomeButton() {
         const m = this._margin;
         const timerBottom = m + (this.timerText ? this.timerText.height : uv(20));
@@ -244,6 +335,9 @@ export class HUD {
             const quests = enemyManager.getActiveQuests();
             this.questText.setText(quests.length > 0 ? quests.map(q => `[퀘스트] ${q.description}`).join('\n') : '');
         }
+
+        // Minimap
+        this._updateMinimap(player, enemyManager, shadowArmyManager);
 
         // Dungeon break indicator
         if (enemyManager && this.breakText) {
