@@ -207,8 +207,20 @@ class PieceTray {
             cont.cursor = 'pointer';
             cont.hitArea = new PIXI.Rectangle(-padX, -padY, pw + padX * 2, ph + padY * 2);
 
+            // 터치 영역 시각적 표시 (연한 테두리)
+            const touchBorder = new PIXI.Graphics();
+            touchBorder.lineStyle(1, 0x4466aa, 0.25);
+            touchBorder.drawRoundedRect(-padX, -padY, pw + padX * 2, ph + padY * 2, 8);
+            cont.addChildAt(touchBorder, 0);
+            cont._touchBorder = touchBorder;
+
             const slotIdx = i;
             cont.on('pointerdown', (e) => {
+                // 터치 시 테두리 제거
+                if (cont._touchBorder && !cont._touchBorder.destroyed) {
+                    cont._touchBorder.destroy();
+                    cont._touchBorder = null;
+                }
                 if (this.game.input) {
                     this.game.input.startDrag(slotIdx, e);
                 }
