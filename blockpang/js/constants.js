@@ -73,6 +73,10 @@ const PIECE_SHAPES = [
     { shape: [[1, 1, 1, 1, 1]], weight: 2, tier: 4 },
     { shape: [[1], [1], [1], [1], [1]], weight: 2, tier: 4 },
 
+    // ── 2×3 / 3×2 Rectangles ── (tier 4)
+    { shape: [[1, 1, 1], [1, 1, 1]], weight: 3, tier: 4 },
+    { shape: [[1, 1], [1, 1], [1, 1]], weight: 3, tier: 4 },
+
     // ── 3×3 Square & Cross ── (tier 5)
     { shape: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], weight: 1, tier: 5 },
     { shape: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], weight: 2, tier: 5 },
