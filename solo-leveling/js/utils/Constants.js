@@ -168,9 +168,9 @@ export const BOSS_SCHEDULE = [
     { time: 420, type: 'tusk' },    // 7분
     { time: 780, type: 'beru' },    // 13분
     // 후반 보스 재등장 (강화 버전)
-    { time: 960, type: 'igris' },   // 16분
-    { time: 1140, type: 'tusk' },   // 19분
-    { time: 1320, type: 'beru' },   // 22분
+    { time: 1080, type: 'igris' },  // 18분
+    { time: 1440, type: 'tusk' },   // 24분
+    { time: 1800, type: 'beru' },   // 30분
 ];
 
 export const WAVE_CONFIG = {
