@@ -200,10 +200,12 @@ class PieceTray {
             cont.position.set(targetX, targetY);
             this._slotBaseY[i] = targetY;
 
-            // Interactive
+            // Interactive — 터치 영역을 넉넉하게 확보 (모바일 대응)
+            const padX = Math.max(24, pw * 0.4);
+            const padY = Math.max(24, ph * 0.4);
             cont.eventMode = 'static';
             cont.cursor = 'pointer';
-            cont.hitArea = new PIXI.Rectangle(-10, -10, pw + 20, ph + 20);
+            cont.hitArea = new PIXI.Rectangle(-padX, -padY, pw + padX * 2, ph + padY * 2);
 
             const slotIdx = i;
             cont.on('pointerdown', (e) => {
