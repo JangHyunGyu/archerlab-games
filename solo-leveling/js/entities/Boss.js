@@ -115,10 +115,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         this.setFlipX(playerX < this.x);
 
-        // Update HP bar position
+        // Update HP bar position & fill
         this.hpBarBg.setPosition(this.x, this.y - this.config.size - 10);
         this.hpBarFill.setPosition(this.x - 30, this.y - this.config.size - 10);
-        this.hpBarFill.setDisplaySize(60 * (this.hp / this.maxHp), 6);
+        this.hpBarFill.scaleX = Math.max(0, this.hp / this.maxHp);
         this.nameText.setPosition(this.x, this.y - this.config.size - 22);
 
         // Phase change at 50% HP
