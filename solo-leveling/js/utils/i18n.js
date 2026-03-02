@@ -125,6 +125,19 @@ const TEXTS = {
             manaCrystal: '마나 크리스탈',
             shadowEssence: '그림자 정수',
         },
+
+        // Hall of Fame
+        hallOfFame: '명예의 전당',
+        ranking: '랭킹',
+        noRecords: '기록이 없습니다',
+        enterName: '이름을 입력하세요',
+        submitScore: '등록',
+        skipScore: '건너뛰기',
+        nameInputTitle: '명예의 전당 등록',
+        rankSubmitted: '등록 완료!',
+        yourRank: '순위',
+        loading: '로딩 중...',
+        scoreLabel: '점수',
     },
 
     en: {
@@ -221,6 +234,18 @@ const TEXTS = {
             manaCrystal: 'Mana Crystal',
             shadowEssence: 'Shadow Essence',
         },
+
+        hallOfFame: 'HALL OF FAME',
+        ranking: 'RANKING',
+        noRecords: 'No records yet',
+        enterName: 'Enter your name',
+        submitScore: 'SUBMIT',
+        skipScore: 'SKIP',
+        nameInputTitle: 'HALL OF FAME',
+        rankSubmitted: 'Submitted!',
+        yourRank: 'Rank',
+        loading: 'Loading...',
+        scoreLabel: 'Score',
     },
 
     ja: {
@@ -317,8 +342,24 @@ const TEXTS = {
             manaCrystal: 'マナクリスタル',
             shadowEssence: '影のエッセンス',
         },
+
+        hallOfFame: '殿堂入り',
+        ranking: 'ランキング',
+        noRecords: '記録がありません',
+        enterName: '名前を入力',
+        submitScore: '登録',
+        skipScore: 'スキップ',
+        nameInputTitle: '殿堂入り',
+        rankSubmitted: '登録完了！',
+        yourRank: '順位',
+        loading: '読み込み中...',
+        scoreLabel: 'スコア',
     },
 };
+
+// Game API Config
+export const GAME_API_URL = 'https://game-api.yama5993.workers.dev';
+export const GAME_ID_SHADOW = 'shadow-survival';
 
 export function t(key) {
     return TEXTS[LANG]?.[key] ?? TEXTS.ko[key] ?? key;
