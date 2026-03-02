@@ -42,8 +42,9 @@ class Board {
     }
 
     _buildVisuals() {
-        // Clean up
-        this.container.removeChildren();
+        // Clean up — destroy all children to free GPU memory
+        const oldChildren = this.container.removeChildren();
+        oldChildren.forEach(c => c.destroy({ children: true }));
         this.cellTextures.forEach(t => t.destroy(true));
         this.cellTextures = [];
         if (this.emptyTexture) { this.emptyTexture.destroy(true); this.emptyTexture = null; }
@@ -174,7 +175,8 @@ class Board {
     }
 
     _drawGridLines(cs) {
-        this.gridLineContainer.removeChildren();
+        const oldChildren = this.gridLineContainer.removeChildren();
+        oldChildren.forEach(c => c.destroy({ children: true }));
         const g = new PIXI.Graphics();
         const total = cs * GRID_SIZE;
 
@@ -385,7 +387,8 @@ class Board {
     // ── Row/Col completion hints ──
     showCompletionHints() {
         if (!this.hintContainer) return;
-        this.hintContainer.removeChildren();
+        const removed = this.hintContainer.removeChildren();
+        removed.forEach(c => c.destroy({ children: true }));
         const cs = this.cellSize;
         const total = cs * GRID_SIZE;
 
@@ -424,7 +427,8 @@ class Board {
 
     clearCompletionHints() {
         if (this.hintContainer) {
-            this.hintContainer.removeChildren();
+            const removed = this.hintContainer.removeChildren();
+            removed.forEach(c => c.destroy({ children: true }));
         }
     }
 
@@ -474,7 +478,8 @@ class Board {
 
     clearGhost() {
         if (this.ghostContainer) {
-            this.ghostContainer.removeChildren();
+            const removed = this.ghostContainer.removeChildren();
+            removed.forEach(c => c.destroy({ children: true }));
         }
         this.clearCompletionHints();
     }
