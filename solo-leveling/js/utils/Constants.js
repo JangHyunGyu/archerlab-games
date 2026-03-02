@@ -76,7 +76,7 @@ export const RANK_ORDER = ['E', 'D', 'C', 'B', 'A', 'S'];
 export const PLAYER_BASE_STATS = {
     hp: 100,
     maxHp: 100,
-    attack: 12,
+    attack: 24,
     defense: 2,
     speed: 160,
     critRate: 0.05,
@@ -189,7 +189,7 @@ export const WEAPONS = {
         description: '단검으로 가까운 적을 빠르게 찌릅니다',
         type: 'melee',
         unlockLevel: 1,
-        baseDamage: 15,
+        baseDamage: 30,
         baseCooldown: 650,
         baseCount: 1,
         levelBonuses: {
@@ -207,7 +207,7 @@ export const WEAPONS = {
         description: '가장 가까운 적에게 그림자 단검을 투척합니다',
         type: 'projectile',
         unlockLevel: 3,
-        baseDamage: 36,
+        baseDamage: 120,
         baseCooldown: 800,
         baseCount: 1,
         levelBonuses: {
@@ -225,7 +225,7 @@ export const WEAPONS = {
         description: '전방에 그림자 검기를 휘둘러 적을 벱니다',
         type: 'melee',
         unlockLevel: 5,
-        baseDamage: 30,
+        baseDamage: 60,
         baseCooldown: 1500,
         baseCount: 1,
         levelBonuses: {
@@ -243,7 +243,7 @@ export const WEAPONS = {
         description: '텔레키네시스로 주변 적에게 범위 피해를 줍니다',
         type: 'area',
         unlockLevel: 8,
-        baseDamage: 27,
+        baseDamage: 54,
         baseCooldown: 2500,
         baseCount: 1,
         levelBonuses: {
@@ -261,7 +261,7 @@ export const WEAPONS = {
         description: '공포의 오라로 주변 적의 이동속도를 감소시킵니다',
         type: 'aura',
         unlockLevel: 12,
-        baseDamage: 12,
+        baseDamage: 24,
         baseCooldown: 3000,
         baseCount: 1,
         levelBonuses: {
