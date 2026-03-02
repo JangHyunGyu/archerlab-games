@@ -208,10 +208,12 @@ export class ShadowArmyManager {
                                         );
 
                                         // Flash
-                                        const flash = scene.add.rectangle(
-                                            0, 0, scene.cameras.main.width, scene.cameras.main.height,
-                                            COLORS.SHADOW_PRIMARY, 0
-                                        ).setDepth(53).setScrollFactor(0).setOrigin(0, 0);
+                                        const flash = this._trackElement(
+                                            scene.add.rectangle(
+                                                0, 0, scene.cameras.main.width, scene.cameras.main.height,
+                                                COLORS.SHADOW_PRIMARY, 0
+                                            ).setDepth(53).setScrollFactor(0).setOrigin(0, 0)
+                                        );
 
                                         scene.tweens.add({
                                             targets: flash,
@@ -307,6 +309,7 @@ export class ShadowArmyManager {
             if (soldier.active) {
                 soldier.update(time, delta, player, enemies);
             } else {
+                soldier.destroy();
                 this.soldiers.splice(i, 1);
             }
         }
