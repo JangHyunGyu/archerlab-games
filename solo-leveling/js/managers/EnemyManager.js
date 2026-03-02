@@ -99,9 +99,14 @@ export class EnemyManager {
             if (enemy.active) {
                 enemy.update(time, delta, player.x, player.y);
 
-                // Despawn if too far (must be larger than spawn distance ~600px)
+                // Despawn distance scales with screen size
+                if (!this._despawnDist) {
+                    const cw = this.scene.cameras.main.width / 2;
+                    const ch = this.scene.cameras.main.height / 2;
+                    this._despawnDist = Math.sqrt(cw * cw + ch * ch) + 500;
+                }
                 const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
-                if (dist > 1200) {
+                if (dist > this._despawnDist) {
                     // Clean up elite label before despawning
                     if (enemy._eliteLabel) {
                         enemy._eliteLabel.destroy();
@@ -366,26 +371,29 @@ export class EnemyManager {
         // Spawn just outside the visible screen
         const halfW = (cam.width / cam.zoom) / 2 + 60;
         const halfH = (cam.height / cam.zoom) / 2 + 60;
+        // Limit spread along edges to prevent extreme diagonal distances
+        const spreadW = Math.min(halfW, 500);
+        const spreadH = Math.min(halfH, 500);
 
         // Pick a random edge (top, bottom, left, right)
         const edge = Phaser.Math.Between(0, 3);
         let x, y;
         switch (edge) {
             case 0: // top
-                x = player.x + Phaser.Math.Between(-halfW, halfW);
+                x = player.x + Phaser.Math.Between(-spreadW, spreadW);
                 y = player.y - halfH - Phaser.Math.Between(0, 30);
                 break;
             case 1: // bottom
-                x = player.x + Phaser.Math.Between(-halfW, halfW);
+                x = player.x + Phaser.Math.Between(-spreadW, spreadW);
                 y = player.y + halfH + Phaser.Math.Between(0, 30);
                 break;
             case 2: // left
                 x = player.x - halfW - Phaser.Math.Between(0, 30);
-                y = player.y + Phaser.Math.Between(-halfH, halfH);
+                y = player.y + Phaser.Math.Between(-spreadH, spreadH);
                 break;
             case 3: // right
                 x = player.x + halfW + Phaser.Math.Between(0, 30);
-                y = player.y + Phaser.Math.Between(-halfH, halfH);
+                y = player.y + Phaser.Math.Between(-spreadH, spreadH);
                 break;
         }
 
