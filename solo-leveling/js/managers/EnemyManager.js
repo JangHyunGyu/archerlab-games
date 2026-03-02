@@ -229,25 +229,29 @@ export class EnemyManager {
         // Check quest completion
         for (let i = this.quests.length - 1; i >= 0; i--) {
             const quest = this.quests[i];
+            let completed = false;
 
             if (quest.type === 'kill') {
                 const player = this.scene.player;
                 if (player && player.kills - quest.startKills >= quest.target) {
                     this._completeQuest(i);
+                    completed = true;
                 }
             } else if (quest.type === 'survive') {
                 if (seconds - quest.startTime >= quest.target) {
                     this._completeQuest(i);
+                    completed = true;
                 }
             } else if (quest.type === 'killType') {
                 const count = (this.killCounters[quest.targetType] || 0) - (quest.startCount || 0);
                 if (count >= quest.target) {
                     this._completeQuest(i);
+                    completed = true;
                 }
             }
 
-            // Quest timeout (120 seconds)
-            if (quest.type !== 'survive' && seconds - quest.startTime > 120) {
+            // Quest timeout (120 seconds) - skip if already completed
+            if (!completed && quest.type !== 'survive' && seconds - quest.startTime > 120) {
                 this.quests.splice(i, 1);
                 if (this.scene.systemMessage) {
                     this.scene.systemMessage.show('[시스템]', ['퀘스트 시간이 초과되었습니다.'], { duration: 2000 });

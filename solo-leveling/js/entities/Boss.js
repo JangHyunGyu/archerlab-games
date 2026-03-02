@@ -41,7 +41,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         // HP bar
         this.hpBarBg = scene.add.rectangle(x, y - config.size - 10, 60, 6, 0x333333)
             .setDepth(20);
-        this.hpBarFill = scene.add.rectangle(x, y - config.size - 10, 60, 6, 0xff0000)
+        this.hpBarFill = scene.add.rectangle(x - 30, y - config.size - 10, 60, 6, 0xff0000)
             .setDepth(21)
             .setOrigin(0, 0.5);
 
@@ -396,13 +396,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             const healAmount = Math.floor(player.stats.maxHp * 0.3);
             player.heal(healAmount);
 
-            // Temporary attack buff (20% for 15 seconds)
-            if (!player._baseAttack) player._baseAttack = player.stats.attack;
-            player.stats.attack = Math.floor(player._baseAttack * 1.2);
+            // Temporary attack buff (20% for 15 seconds, additive)
+            const buffAmount = Math.floor(player.stats.attack * 0.2);
+            player.stats.attack += buffAmount;
+            player._attackBuffs = (player._attackBuffs || 0) + buffAmount;
             this.scene.time.delayedCall(15000, () => {
-                if (player && !player.isDead && player._baseAttack) {
-                    player.stats.attack = player._baseAttack;
-                    player._baseAttack = null;
+                if (player && !player.isDead) {
+                    player.stats.attack = Math.max(1, player.stats.attack - buffAmount);
+                    player._attackBuffs = Math.max(0, (player._attackBuffs || 0) - buffAmount);
                 }
             });
 
