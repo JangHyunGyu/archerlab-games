@@ -295,27 +295,23 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         // Spawn invincibility
         if (this.isInvincible) return false;
 
-        // Frame-based cooldown: only 1 hit per 6 frames (~100ms at 60fps)
+        // Frame-based cooldown: only 1 hit per 3 frames (~50ms at 60fps)
         const currentFrame = this.scene.game.loop.frame;
-        if (currentFrame - this._lastHitFrame < 6) return false;
+        if (currentFrame - this._lastHitFrame < 3) return false;
         this._lastHitFrame = currentFrame;
 
-        // Per-second damage cap: max 10% of maxHp per second
+        // Per-second damage cap: max 25% of maxHp per second
         const now = this.scene.time.now;
         if (now - this._lastSecondReset > 1000) {
             this._damageThisSecond = 0;
             this._lastSecondReset = now;
         }
-        const maxDmgPerSecond = Math.floor(this.maxHp * 0.10);
+        const maxDmgPerSecond = Math.floor(this.maxHp * 0.25);
         if (this._damageThisSecond >= maxDmgPerSecond) return false;
 
         // Defense reduces damage (minimum 1)
         const defense = this.config.defense || 0;
         amount = Math.max(1, amount - defense);
-
-        // Cap single hit damage (max 2% of maxHp)
-        const maxPerHit = Math.max(1, Math.floor(this.maxHp * 0.02));
-        amount = Math.min(amount, maxPerHit);
 
         this._damageThisSecond += amount;
         this.hp -= amount;
