@@ -160,10 +160,10 @@ export class EnemyManager {
         scene.cameras.main.shake(500, 0.012);
 
         // Red screen flash
+        const cam = scene.cameras.main;
         const flash = scene.add.rectangle(
-            scene.cameras.main.scrollX + 512,
-            scene.cameras.main.scrollY + 384,
-            1024, 768, 0xff0000, 0
+            cam.width / 2, cam.height / 2,
+            cam.width, cam.height, 0xff0000, 0
         ).setDepth(45).setScrollFactor(0);
 
         scene.tweens.add({
@@ -177,9 +177,8 @@ export class EnemyManager {
 
         // Warning border effect
         this._dungeonBreakBorder = scene.add.rectangle(
-            scene.cameras.main.scrollX + 512,
-            scene.cameras.main.scrollY + 384,
-            1020, 764, 0x000000, 0
+            cam.width / 2, cam.height / 2,
+            cam.width - 4, cam.height - 4, 0x000000, 0
         ).setDepth(95).setScrollFactor(0).setStrokeStyle(3, 0xff2222, 0.6);
 
         // Pulsing border

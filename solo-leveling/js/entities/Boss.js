@@ -64,10 +64,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     _entranceEffect() {
         this.scene.cameras.main.shake(500, 0.01);
 
-        // Warning text
+        // Warning text (use camera viewport center for scrollFactor(0) elements)
+        const cam = this.scene.cameras.main;
         const warning = this.scene.add.text(
-            this.scene.cameras.main.scrollX + 512,
-            this.scene.cameras.main.scrollY + 200,
+            cam.width / 2,
+            cam.height * 0.26,
             `⚔ BOSS: ${this.config.name} ⚔`,
             {
                 fontSize: '32px',
