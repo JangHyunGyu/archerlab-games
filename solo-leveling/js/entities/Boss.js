@@ -13,8 +13,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.config = config;
         this.isBoss = true;
 
-        // Stats scaled by difficulty
-        this.maxHp = Math.floor(config.hp * difficultyMult);
+        // Stats scaled by difficulty (enforce minimum HP)
+        this.maxHp = Math.max(10000, Math.floor(config.hp * difficultyMult));
         this.hp = this.maxHp;
         this.attack = Math.floor(config.attack * difficultyMult);
         this.speed = config.speed * (1 + (difficultyMult - 1) * 0.3);
@@ -29,12 +29,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.specialTimer = 0;
         this.phase = 1; // Boss phases
 
-        // Spawn invincibility (1.5s entrance animation protection)
+        // Spawn invincibility (3s entrance animation protection)
         this.isInvincible = true;
-        scene.time.delayedCall(1500, () => { this.isInvincible = false; });
+        scene.time.delayedCall(3000, () => { this.isInvincible = false; });
 
-        // Hit cooldown to prevent multi-hit in same frame
-        this._lastHitTime = 0;
+        // Frame-based hit cooldown (prevents ALL multi-hit in same frame)
+        this._lastHitFrame = -999;
+        this._damageThisSecond = 0;
+        this._lastSecondReset = 0;
 
         // HP bar
         this.hpBarBg = scene.add.rectangle(x, y - config.size - 10, 60, 6, 0x333333)
@@ -52,6 +54,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             stroke: '#000000',
             strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
+
+        console.log(`[BOSS] ${config.name} spawned: HP=${this.maxHp}, diffMult=${difficultyMult}`);
 
         // Entrance effect
         this._entranceEffect();
@@ -284,25 +288,42 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    takeDamage(amount, knockbackX, knockbackY) {
+    takeDamage(amount) {
         if (!this.active) return false;
 
         // Spawn invincibility
         if (this.isInvincible) return false;
 
-        // Min 50ms between hits to prevent same-frame multi-hit
+        // Frame-based cooldown: only 1 hit per 6 frames (~100ms at 60fps)
+        const currentFrame = this.scene.game.loop.frame;
+        if (currentFrame - this._lastHitFrame < 6) return false;
+        this._lastHitFrame = currentFrame;
+
+        // Per-second damage cap: max 10% of maxHp per second
         const now = this.scene.time.now;
-        if (now - this._lastHitTime < 50) return false;
-        this._lastHitTime = now;
+        if (now - this._lastSecondReset > 1000) {
+            this._damageThisSecond = 0;
+            this._lastSecondReset = now;
+        }
+        const maxDmgPerSecond = Math.floor(this.maxHp * 0.10);
+        if (this._damageThisSecond >= maxDmgPerSecond) return false;
 
         // Defense reduces damage (minimum 1)
         const defense = this.config.defense || 0;
         amount = Math.max(1, amount - defense);
+
+        // Cap single hit damage (max 2% of maxHp)
+        const maxPerHit = Math.max(1, Math.floor(this.maxHp * 0.02));
+        amount = Math.min(amount, maxPerHit);
+
+        this._damageThisSecond += amount;
         this.hp -= amount;
 
-        // Immediately update HP bar on damage
-        if (this.hpBarFill && this.hpBarBg) {
-            this.hpBarFill.setDisplaySize(60 * Math.max(0, this.hp / this.maxHp), 6);
+        console.log(`[BOSS HIT] ${this.config.name}: -${amount} HP (${this.hp}/${this.maxHp})`);
+
+        // Update HP bar using scaleX (not setDisplaySize)
+        if (this.hpBarFill) {
+            this.hpBarFill.scaleX = Math.max(0, this.hp / this.maxHp);
         }
 
         // Flash red on hit, then restore

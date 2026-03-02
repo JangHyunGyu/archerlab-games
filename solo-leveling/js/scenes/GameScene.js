@@ -239,18 +239,26 @@ export class GameScene extends Phaser.Scene {
         if (!boss._weaponColliders) boss._weaponColliders = [];
         for (const [key, weapon] of this.weaponManager.weapons) {
             if (weapon.getProjectileGroup) {
-                const collider = this.physics.add.overlap(weapon.getProjectileGroup(), boss, (proj) => {
-                    if (!proj.active || !boss.active) return;
-                    const dmg = proj.damageAmount || weapon.getDamage();
-                    boss.takeDamage(dmg, proj.x, proj.y);
-                    if (this.soundManager) this.soundManager.play('hit');
+                const collider = this.physics.add.overlap(
+                    weapon.getProjectileGroup(), boss,
+                    (proj) => {
+                        if (!proj.active || !boss.active) return;
+                        if (boss.isInvincible) return;
+                        const dmg = proj.damageAmount || weapon.getDamage();
+                        const died = boss.takeDamage(dmg);
+                        if (this.soundManager) this.soundManager.play('hit');
 
-                    if (key === 'shadowDagger') {
+                        // Deactivate projectile after hitting boss
                         proj.setActive(false);
                         proj.setVisible(false);
-                        proj.body.enable = false;
-                    }
-                });
+                        if (proj.body) proj.body.enable = false;
+                    },
+                    // processCallback: only process if both are active and proj body enabled
+                    (proj) => {
+                        return proj.active && proj.body && proj.body.enable && boss.active && !boss.isInvincible;
+                    },
+                    this
+                );
                 boss._weaponColliders.push(collider);
             }
         }
@@ -261,18 +269,25 @@ export class GameScene extends Phaser.Scene {
         for (const boss of this.activeBosses) {
             if (!boss.active) continue;
             if (weapon.getProjectileGroup) {
-                const collider = this.physics.add.overlap(weapon.getProjectileGroup(), boss, (proj) => {
-                    if (!proj.active || !boss.active) return;
-                    const dmg = proj.damageAmount || weapon.getDamage();
-                    boss.takeDamage(dmg, proj.x, proj.y);
-                    if (this.soundManager) this.soundManager.play('hit');
+                const collider = this.physics.add.overlap(
+                    weapon.getProjectileGroup(), boss,
+                    (proj) => {
+                        if (!proj.active || !boss.active) return;
+                        if (boss.isInvincible) return;
+                        const dmg = proj.damageAmount || weapon.getDamage();
+                        const died = boss.takeDamage(dmg);
+                        if (this.soundManager) this.soundManager.play('hit');
 
-                    if (key === 'shadowDagger') {
+                        // Deactivate projectile after hitting boss
                         proj.setActive(false);
                         proj.setVisible(false);
-                        proj.body.enable = false;
-                    }
-                });
+                        if (proj.body) proj.body.enable = false;
+                    },
+                    (proj) => {
+                        return proj.active && proj.body && proj.body.enable && boss.active && !boss.isInvincible;
+                    },
+                    this
+                );
                 if (!boss._weaponColliders) boss._weaponColliders = [];
                 boss._weaponColliders.push(collider);
             }
