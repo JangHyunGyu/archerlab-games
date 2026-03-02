@@ -164,13 +164,13 @@ export const BOSS_TYPES = {
 };
 
 export const BOSS_SCHEDULE = [
-    { time: 120, type: 'igris' },
-    { time: 300, type: 'tusk' },
-    { time: 540, type: 'beru' },
+    { time: 120, type: 'igris' },   // 2분
+    { time: 420, type: 'tusk' },    // 7분
+    { time: 780, type: 'beru' },    // 13분
     // 후반 보스 재등장 (강화 버전)
-    { time: 720, type: 'igris' },
-    { time: 840, type: 'tusk' },
-    { time: 960, type: 'beru' },
+    { time: 960, type: 'igris' },   // 16분
+    { time: 1140, type: 'tusk' },   // 19분
+    { time: 1320, type: 'beru' },   // 22분
 ];
 
 export const WAVE_CONFIG = {
