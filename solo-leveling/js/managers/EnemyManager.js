@@ -357,12 +357,37 @@ export class EnemyManager {
     _getSpawnPosition() {
         const player = this.scene.player;
         const margin = 50;
-        const spawnDist = 450;
+        const cam = this.scene.cameras.main;
 
-        const angle = Math.random() * Math.PI * 2;
+        // Spawn outside the visible screen with some padding
+        const halfW = (cam.width / cam.zoom) / 2 + 80;
+        const halfH = (cam.height / cam.zoom) / 2 + 80;
+
+        // Pick a random edge (top, bottom, left, right)
+        const edge = Phaser.Math.Between(0, 3);
+        let x, y;
+        switch (edge) {
+            case 0: // top
+                x = player.x + Phaser.Math.Between(-halfW, halfW);
+                y = player.y - halfH - Phaser.Math.Between(0, 100);
+                break;
+            case 1: // bottom
+                x = player.x + Phaser.Math.Between(-halfW, halfW);
+                y = player.y + halfH + Phaser.Math.Between(0, 100);
+                break;
+            case 2: // left
+                x = player.x - halfW - Phaser.Math.Between(0, 100);
+                y = player.y + Phaser.Math.Between(-halfH, halfH);
+                break;
+            case 3: // right
+                x = player.x + halfW + Phaser.Math.Between(0, 100);
+                y = player.y + Phaser.Math.Between(-halfH, halfH);
+                break;
+        }
+
         return {
-            x: Phaser.Math.Clamp(player.x + Math.cos(angle) * spawnDist, margin, WORLD_SIZE - margin),
-            y: Phaser.Math.Clamp(player.y + Math.sin(angle) * spawnDist, margin, WORLD_SIZE - margin),
+            x: Phaser.Math.Clamp(x, margin, WORLD_SIZE - margin),
+            y: Phaser.Math.Clamp(y, margin, WORLD_SIZE - margin),
         };
     }
 
