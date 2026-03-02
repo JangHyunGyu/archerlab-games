@@ -100,7 +100,9 @@ class Game {
     }
 
     _createBackground() {
-        this.bgContainer.removeChildren();
+        // Destroy old background objects to free GPU memory
+        const oldChildren = this.bgContainer.removeChildren();
+        oldChildren.forEach(c => c.destroy({ children: true }));
         this._stars = [];
         this._nebulae = [];
         this._shootingStars = [];
