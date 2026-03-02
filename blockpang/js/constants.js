@@ -41,6 +41,16 @@ const PIECE_SHAPES = [
     { shape: [[1, 1, 1, 1]], weight: 5, tier: 3 },
     { shape: [[1], [1], [1], [1]], weight: 5, tier: 3 },
 
+    // ── Medium L (J/L tetromino) ── (tier 3)
+    { shape: [[1, 1, 1], [1, 0, 0]], weight: 4, tier: 3 },   // ㄱ
+    { shape: [[1, 1, 1], [0, 0, 1]], weight: 4, tier: 3 },   // ㄱ 좌우반전
+    { shape: [[1, 0, 0], [1, 1, 1]], weight: 4, tier: 3 },   // ㄱ 상하반전
+    { shape: [[0, 0, 1], [1, 1, 1]], weight: 4, tier: 3 },   // ㄱ 상하+좌우반전
+    { shape: [[1, 1], [1, 0], [1, 0]], weight: 4, tier: 3 },  // 세로 ㄱ
+    { shape: [[1, 1], [0, 1], [0, 1]], weight: 4, tier: 3 },  // 세로 좌우반전
+    { shape: [[1, 0], [1, 0], [1, 1]], weight: 4, tier: 3 },  // 세로 상하반전
+    { shape: [[0, 1], [0, 1], [1, 1]], weight: 4, tier: 3 },  // 세로 상하+좌우반전
+
     // ── T shapes ── (tier 3)
     { shape: [[1, 1, 1], [0, 1, 0]], weight: 4, tier: 3 },
     { shape: [[0, 1, 0], [1, 1, 1]], weight: 4, tier: 3 },

@@ -251,11 +251,13 @@ export class GameScene extends Phaser.Scene {
             if (weapon.getProjectileGroup) {
                 const collider = this.physics.add.overlap(
                     weapon.getProjectileGroup(), boss,
-                    (proj) => {
+                    (objA, objB) => {
+                        // Phaser may swap argument order; identify which is proj vs boss
+                        const proj = (objA === boss) ? objB : objA;
                         if (!proj.active || !boss.active) return;
                         if (boss.isInvincible) return;
                         const dmg = proj.damageAmount || weapon.getDamage();
-                        const died = boss.takeDamage(dmg);
+                        boss.takeDamage(dmg);
                         if (this.soundManager) this.soundManager.play('hit');
 
                         // Deactivate projectile after hitting boss
@@ -264,7 +266,8 @@ export class GameScene extends Phaser.Scene {
                         if (proj.body) proj.body.enable = false;
                     },
                     // processCallback: only process if both are active and proj body enabled
-                    (proj) => {
+                    (objA, objB) => {
+                        const proj = (objA === boss) ? objB : objA;
                         return proj.active && proj.body && proj.body.enable && boss.active && !boss.isInvincible;
                     },
                     this
@@ -281,11 +284,12 @@ export class GameScene extends Phaser.Scene {
             if (weapon.getProjectileGroup) {
                 const collider = this.physics.add.overlap(
                     weapon.getProjectileGroup(), boss,
-                    (proj) => {
+                    (objA, objB) => {
+                        const proj = (objA === boss) ? objB : objA;
                         if (!proj.active || !boss.active) return;
                         if (boss.isInvincible) return;
                         const dmg = proj.damageAmount || weapon.getDamage();
-                        const died = boss.takeDamage(dmg);
+                        boss.takeDamage(dmg);
                         if (this.soundManager) this.soundManager.play('hit');
 
                         // Deactivate projectile after hitting boss
@@ -293,7 +297,8 @@ export class GameScene extends Phaser.Scene {
                         proj.setVisible(false);
                         if (proj.body) proj.body.enable = false;
                     },
-                    (proj) => {
+                    (objA, objB) => {
+                        const proj = (objA === boss) ? objB : objA;
                         return proj.active && proj.body && proj.body.enable && boss.active && !boss.isInvincible;
                     },
                     this
