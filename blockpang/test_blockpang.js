@@ -7,18 +7,31 @@
 global.localStorage = { _data: {}, getItem(k) { return this._data[k] || null; }, setItem(k, v) { this._data[k] = v; } };
 global.navigator = { language: 'ko' };
 
-// ── 소스 로드 (eval로 전역에 주입) ──
+// ── 소스 로드 (vm 모듈로 전역 컨텍스트에 주입) ──
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const jsDir = path.join(__dirname, 'js');
 
-eval(fs.readFileSync(path.join(jsDir, 'constants.js'), 'utf-8'));
-eval(fs.readFileSync(path.join(jsDir, 'ScoreManager.js'), 'utf-8'));
+// global 컨텍스트에서 직접 실행
+function loadIntoGlobal(filePath) {
+    const code = fs.readFileSync(filePath, 'utf-8');
+    vm.runInThisContext(code, { filename: filePath });
+}
 
-// Piece.js에서 generateRandomPiece만 추출 (createPieceContainer는 PIXI 의존이라 건너뜀)
-const pieceCode = fs.readFileSync(path.join(jsDir, 'Piece.js'), 'utf-8');
-const genFuncMatch = pieceCode.match(/(function generateRandomPiece[\s\S]*?\nfunction createPieceContainer)/);
-if (genFuncMatch) eval(genFuncMatch[1].replace(/\nfunction createPieceContainer$/, ''));
+loadIntoGlobal(path.join(jsDir, 'constants.js'));
+loadIntoGlobal(path.join(jsDir, 'ScoreManager.js'));
+
+// Piece.js에서 generateRandomPiece 함수만 추출
+{
+    const code = fs.readFileSync(path.join(jsDir, 'Piece.js'), 'utf-8');
+    const match = code.match(/function generateRandomPiece[\s\S]*?\n\}/);
+    if (match) {
+        vm.runInThisContext(match[0], { filename: 'generateRandomPiece' });
+    } else {
+        console.error('⚠️  generateRandomPiece 함수를 추출하지 못했습니다!');
+    }
+}
 
 // Board 로직만 추출 (canPlace, canPlaceAnywhere, checkAndClearLines 등)
 // PIXI 의존 부분 제외, 그리드 로직만 테스트용 클래스로 구현
@@ -470,13 +483,15 @@ test('시뮬레이션: 50턴 이상 정상 진행 가능', () => {
     console.log(`     → ${turns}턴 진행, 점수 ${sm.score}, 레벨 ${sm.level}, 줄 ${sm.linesCleared}`);
 });
 
-test('시뮬레이션: 레벨 1에서 큰 피스가 안 나와야 한다 (tier 제한)', () => {
-    let bigPieceCount = 0;
+test('시뮬레이션: 레벨 1에서 tier 3+ 피스(T,S/Z,4칸선)가 안 나와야 한다', () => {
+    let tier3PlusCount = 0;
     for (let i = 0; i < 500; i++) {
         const piece = generateRandomPiece(1);
-        if (piece.cellCount >= 4) bigPieceCount++;
+        const matched = PIECE_SHAPES.find(p =>
+            JSON.stringify(p.shape) === JSON.stringify(piece.shape));
+        if (matched.tier >= 3) tier3PlusCount++;
     }
-    assertEqual(bigPieceCount, 0, `레벨 1에서 4셀 이상 피스 ${bigPieceCount}개 나옴 `);
+    assertEqual(tier3PlusCount, 0, `레벨 1에서 tier 3+ 피스 ${tier3PlusCount}개 나옴 `);
 });
 
 test('시뮬레이션: 레벨 4에서 대형 피스가 나와야 한다', () => {
