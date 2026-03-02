@@ -11,15 +11,16 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         this.soldierType = soldierType;
         this.bossName = bossName;
 
-        // Stats based on type
+        // Stats based on type, scaled with player attack
+        const playerAttack = scene.player ? scene.player.stats.attack : 24;
         const typeStats = {
-            melee:  { damage: 15, speed: 130, range: 40, attackCD: 800 },
-            tank:   { damage: 10, speed: 90,  range: 50, attackCD: 1200 },
-            ranged: { damage: 20, speed: 100, range: 200, attackCD: 1000 },
+            melee:  { damageMult: 1.2, speed: 140, range: 45, attackCD: 700 },
+            tank:   { damageMult: 0.8, speed: 100, range: 55, attackCD: 1000 },
+            ranged: { damageMult: 1.5, speed: 110, range: 220, attackCD: 900 },
         };
 
         const stats = typeStats[soldierType] || typeStats.melee;
-        this.damage = stats.damage;
+        this.damage = Math.floor(playerAttack * stats.damageMult);
         this.speed = stats.speed;
         this.attackRange = stats.range;
         this.attackCooldown = stats.attackCD;

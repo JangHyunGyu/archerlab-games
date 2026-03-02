@@ -352,10 +352,11 @@ class Game {
     }
 
     generatePieces() {
+        const lv = this.scoreManager.level;
         const pieces = [
-            generateRandomPiece(),
-            generateRandomPiece(),
-            generateRandomPiece(),
+            generateRandomPiece(lv),
+            generateRandomPiece(lv),
+            generateRandomPiece(lv),
         ];
         this.tray.setPieces(pieces);
         this._checkGameOver();

@@ -142,21 +142,21 @@ export const ENEMY_TYPES = {
 export const BOSS_TYPES = {
     igris: {
         name: '이그리스',
-        hp: 7500, attack: 38, speed: 94, xp: 200,
+        hp: 25000, attack: 38, defense: 10, speed: 94, xp: 500,
         color: 0xcc0000, size: 80,
         shadowType: 'melee',
         shadowColor: 0x220000,
     },
     tusk: {
         name: '터스크',
-        hp: 12000, attack: 52, speed: 68, xp: 300,
+        hp: 40000, attack: 52, defense: 20, speed: 68, xp: 800,
         color: 0x5a3a1a, size: 100,
         shadowType: 'tank',
         shadowColor: 0x1a1000,
     },
     beru: {
         name: '베루',
-        hp: 18000, attack: 60, speed: 102, xp: 500,
+        hp: 60000, attack: 60, defense: 15, speed: 102, xp: 1200,
         color: 0x660033, size: 90,
         shadowType: 'ranged',
         shadowColor: 0x110022,

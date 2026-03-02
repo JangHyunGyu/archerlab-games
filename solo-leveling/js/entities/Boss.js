@@ -280,6 +280,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     takeDamage(amount, knockbackX, knockbackY) {
         if (!this.active) return false;
 
+        // Defense reduces damage (minimum 1)
+        const defense = this.config.defense || 0;
+        amount = Math.max(1, amount - defense);
         this.hp -= amount;
 
         // Flash red on hit, then restore
@@ -342,6 +345,32 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         // Kill count
         if (this.scene.player) {
             this.scene.player.kills++;
+        }
+
+        // === Boss Kill Rewards ===
+        const player = this.scene.player;
+        if (player) {
+            // HP restore (30% of max HP)
+            const healAmount = Math.floor(player.stats.maxHp * 0.3);
+            player.heal(healAmount);
+
+            // Temporary attack buff (20% for 15 seconds)
+            const originalAttack = player.stats.attack;
+            player.stats.attack = Math.floor(originalAttack * 1.2);
+            this.scene.time.delayedCall(15000, () => {
+                if (player && !player.isDead) {
+                    player.stats.attack = originalAttack;
+                }
+            });
+
+            // Reward system message
+            if (this.scene.systemMessage) {
+                this.scene.systemMessage.show('[보스 처치 보상]', [
+                    `HP +${healAmount} 회복`,
+                    '공격력 20% 증가 (15초)',
+                    `경험치 +${this.xpValue} 획득`,
+                ], { duration: 3000, type: 'levelup' });
+            }
         }
 
         // Sound

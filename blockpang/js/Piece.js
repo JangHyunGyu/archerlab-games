@@ -1,11 +1,15 @@
 // ─── Piece Utilities ───
 
-function generateRandomPiece() {
-    // Weighted random
-    const totalWeight = PIECE_SHAPES.reduce((s, p) => s + p.weight, 0);
+function generateRandomPiece(level = 99) {
+    // 현재 레벨에 맞는 최대 tier 결정
+    const maxTier = LEVEL_MAX_TIER[Math.min(level, LEVEL_MAX_TIER.length - 1)];
+    const available = PIECE_SHAPES.filter(p => (p.tier || 1) <= maxTier);
+
+    // Weighted random (레벨에 맞는 피스만)
+    const totalWeight = available.reduce((s, p) => s + p.weight, 0);
     let roll = Math.random() * totalWeight;
-    let chosen = PIECE_SHAPES[0];
-    for (const def of PIECE_SHAPES) {
+    let chosen = available[0];
+    for (const def of available) {
         roll -= def.weight;
         if (roll <= 0) { chosen = def; break; }
     }
