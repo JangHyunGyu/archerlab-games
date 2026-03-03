@@ -27,7 +27,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         const typeStats = {
             melee:  { damageMult: 3.0, speed: 140, range: 50, attackCD: 700 },
             tank:   { damageMult: 2.0, speed: 100, range: 60, attackCD: 1000 },
-            ranged: { damageMult: 4.0, speed: 110, range: 250, attackCD: 900 },
+            ranged: { damageMult: 5.5, speed: 110, range: 250, attackCD: 900 },
         };
 
         const stats = typeStats[this.soldierType] || typeStats.melee;
@@ -68,7 +68,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Update damage with current player attack + level scaling
         const playerAttack = player.stats.attack;
         const levelMult = 1 + (player.level - 1) * 0.06;
-        const multMap = { melee: 3.0, tank: 2.0, ranged: 4.0 };
+        const multMap = { melee: 3.0, tank: 2.0, ranged: 5.5 };
         this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 3.0) * levelMult);
 
         // Find nearest enemy
