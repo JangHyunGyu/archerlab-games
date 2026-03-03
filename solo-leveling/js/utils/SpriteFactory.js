@@ -62,6 +62,7 @@ export class SpriteFactory {
         this.createUITextures(scene);
         this.createShadowSoldierTextures(scene);
         this.createFloorTexture(scene);
+        this._createParticleTextures(scene);
     }
 
     // =============================================
@@ -1136,5 +1137,72 @@ export class SpriteFactory {
 
         g.generateTexture('floor_tile', ts, ts);
         g.destroy();
+    }
+
+    // ===== Particle textures =====
+    static _createParticleTextures(scene) {
+        // Soft circle particle (8x8)
+        let g = scene.make.graphics({ add: false });
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(4, 4, 4);
+        g.fillStyle(0xffffff, 0.5);
+        g.fillCircle(4, 4, 3);
+        g.generateTexture('particle_circle', 8, 8);
+        g.destroy();
+
+        // Soft glow particle (16x16) - radial gradient effect
+        g = scene.make.graphics({ add: false });
+        for (let r = 8; r > 0; r--) {
+            const alpha = (1 - r / 8) * 0.8;
+            g.fillStyle(0xffffff, alpha);
+            g.fillCircle(8, 8, r);
+        }
+        g.generateTexture('particle_glow', 16, 16);
+        g.destroy();
+
+        // Spark particle (8x8) - diamond shape
+        g = scene.make.graphics({ add: false });
+        g.fillStyle(0xffffff, 1);
+        g.fillTriangle(4, 0, 8, 4, 4, 8);
+        g.fillTriangle(4, 0, 0, 4, 4, 8);
+        g.fillStyle(0xffffff, 0.6);
+        g.fillCircle(4, 4, 2);
+        g.generateTexture('particle_spark', 8, 8);
+        g.destroy();
+
+        // Smoke particle (12x12) - soft blob
+        g = scene.make.graphics({ add: false });
+        for (let r = 6; r > 0; r--) {
+            g.fillStyle(0xffffff, (1 - r / 6) * 0.4);
+            g.fillCircle(6, 6, r);
+        }
+        g.generateTexture('particle_smoke', 12, 12);
+        g.destroy();
+
+        // Ring particle (16x16)
+        g = scene.make.graphics({ add: false });
+        g.lineStyle(2, 0xffffff, 0.8);
+        g.strokeCircle(8, 8, 6);
+        g.lineStyle(1, 0xffffff, 0.4);
+        g.strokeCircle(8, 8, 7);
+        g.generateTexture('particle_ring', 16, 16);
+        g.destroy();
+
+        // Vignette overlay texture (256x256, dark edges → transparent center)
+        try {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(size / 2, size / 2, size * 0.2, size / 2, size / 2, size * 0.52);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(0.5, 'rgba(0,0,0,0.05)');
+            gradient.addColorStop(0.8, 'rgba(0,0,0,0.3)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.65)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            scene.textures.addCanvas('vignette', canvas);
+        } catch (e) { /* vignette texture failed */ }
     }
 }

@@ -36,7 +36,7 @@ const size = calcGameSize();
 setGameDimensions(size.w, size.h);
 
 const config = {
-    type: Phaser.AUTO,
+    type: Phaser.WEBGL,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     parent: 'game-container',
