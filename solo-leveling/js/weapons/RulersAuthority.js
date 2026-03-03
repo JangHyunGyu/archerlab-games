@@ -13,7 +13,7 @@ export class RulersAuthority extends WeaponBase {
     }
 
     _blast() {
-        const range = 120 + this.extraRange;
+        const range = 240 + this.extraRange;
 
         // Find a cluster of enemies, or default to player position
         let targetX = this.player.x;
@@ -26,7 +26,7 @@ export class RulersAuthority extends WeaponBase {
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
                 const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-                if (dist > 300) continue;
+                if (dist > 600) continue;
 
                 let count = 0;
                 for (const other of enemies) {

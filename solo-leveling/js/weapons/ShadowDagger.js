@@ -17,7 +17,7 @@ export class ShadowDagger extends WeaponBase {
     }
 
     _throwDagger() {
-        const target = this.player.getClosestEnemy(3000);
+        const target = this.player.getClosestEnemy(6000);
         if (!target) return;
 
         const dagger = this.projectiles.get(this.player.x, this.player.y, 'proj_dagger');
@@ -38,7 +38,7 @@ export class ShadowDagger extends WeaponBase {
         dagger.damageAmount = this.getDamage();
 
         // Auto-destroy after distance
-        this.scene.time.delayedCall(14400, () => {
+        this.scene.time.delayedCall(28800, () => {
             if (dagger.active) {
                 dagger.setActive(false);
                 dagger.setVisible(false);
