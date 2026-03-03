@@ -89,6 +89,7 @@ export class GameOverScene extends Phaser.Scene {
         nameElements.push(skipBtn, skipText);
 
         const cleanup = () => {
+            this.input.keyboard.enabled = true;
             if (input.parentNode) input.parentNode.removeChild(input);
             nameElements.forEach(el => { if (el && el.active) el.destroy(); });
         };
@@ -130,7 +131,11 @@ export class GameOverScene extends Phaser.Scene {
         skipBtn.on('pointerout', () => skipBtn.setFillStyle(0x2a2a4e, 0.8));
         skipBtn.on('pointerdown', doSkip);
 
+        // Phaser WASD 캡처 해제 → input에서 모든 키 입력 가능하도록
+        this.input.keyboard.enabled = false;
+
         input.addEventListener('keydown', (e) => {
+            e.stopPropagation();
             if (e.key === 'Enter') doSubmit();
             if (e.key === 'Escape') doSkip();
         });
