@@ -142,21 +142,21 @@ export const ENEMY_TYPES = {
 export const BOSS_TYPES = {
     igris: {
         name: '이그리스',
-        hp: 2000, attack: 38, defense: 10, speed: 94, xp: 500,
+        hp: 4000, attack: 38, defense: 10, speed: 94, xp: 500,
         color: 0xcc0000, size: 80,
         shadowType: 'melee',
         shadowColor: 0x220000,
     },
     tusk: {
         name: '터스크',
-        hp: 5500, attack: 52, defense: 20, speed: 68, xp: 800,
+        hp: 11000, attack: 52, defense: 20, speed: 68, xp: 800,
         color: 0x5a3a1a, size: 100,
         shadowType: 'tank',
         shadowColor: 0x1a1000,
     },
     beru: {
         name: '베루',
-        hp: 9000, attack: 60, defense: 15, speed: 102, xp: 1200,
+        hp: 18000, attack: 60, defense: 15, speed: 102, xp: 1200,
         color: 0x660033, size: 90,
         shadowType: 'ranged',
         shadowColor: 0x110022,
@@ -167,10 +167,10 @@ export const BOSS_SCHEDULE = [
     { time: 120, type: 'igris' },   // 2분
     { time: 420, type: 'tusk' },    // 7분
     { time: 780, type: 'beru' },    // 13분
-    // 후반 보스 재등장 (강화 버전)
-    { time: 1080, type: 'igris' },  // 18분
-    { time: 1440, type: 'tusk' },   // 24분
-    { time: 1800, type: 'beru' },   // 30분
+    // 후반 보스 재등장 (강화 버전 - HP 2배)
+    { time: 1080, type: 'igris', hpMult: 2 },  // 18분
+    { time: 1440, type: 'tusk', hpMult: 2 },   // 24분
+    { time: 1800, type: 'beru' },               // 30분
 ];
 
 export const WAVE_CONFIG = {

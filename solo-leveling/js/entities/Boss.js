@@ -1,7 +1,7 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 
 export class Boss extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, bossKey, difficultyMult = 1) {
+    constructor(scene, x, y, bossKey, difficultyMult = 1, hpMult = 1) {
         const config = BOSS_TYPES[bossKey];
         super(scene, x, y, 'boss_' + bossKey);
 
@@ -15,7 +15,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         // Stats scaled by difficulty
         this._difficultyMult = difficultyMult;
-        this.maxHp = Math.floor(config.hp * difficultyMult);
+        this.maxHp = Math.floor(config.hp * difficultyMult * hpMult);
         this.hp = this.maxHp;
         this.attack = Math.floor(config.attack * difficultyMult);
         this.defense = Math.floor((config.defense || 0) * (1 + (difficultyMult - 1) * 0.4));
@@ -65,7 +65,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
 
-        console.log(`[BOSS] ${config.name} spawned: HP=${this.maxHp}, diffMult=${difficultyMult}`);
+        console.log(`[BOSS] ${config.name} spawned: HP=${this.maxHp}, diffMult=${difficultyMult}, hpMult=${hpMult}`);
 
         // Glow filter for boss
         try {
