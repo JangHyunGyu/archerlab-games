@@ -14,7 +14,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.isBoss = true;
 
         // Stats scaled by difficulty (enforce minimum HP)
-        this.maxHp = Math.max(10000, Math.floor(config.hp * difficultyMult));
+        this.maxHp = Math.floor(config.hp * difficultyMult);
         this.hp = this.maxHp;
         this.attack = Math.floor(config.attack * difficultyMult);
         this.speed = config.speed * (1 + (difficultyMult - 1) * 0.3);
