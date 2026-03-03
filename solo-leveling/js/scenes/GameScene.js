@@ -79,6 +79,10 @@ export class GameScene extends Phaser.Scene {
         // Ambient particles
         this._createAmbientParticles();
 
+        // === Phaser 4 Filters (WebGL only) ===
+        this._setupCameraFilters();
+        this._setupVignette();
+
         // Camera fade in
         this.cameras.main.fadeIn(500, 0, 0, 0);
 
@@ -137,6 +141,14 @@ export class GameScene extends Phaser.Scene {
         // Check boss spawn schedule
         this._checkBossSpawns();
 
+        // Update ambient emitter to follow player
+        if (this.ambientEmitter) {
+            this.ambientEmitter.setPosition(this.player.x, this.player.y);
+        }
+
+        // Update vignette (dynamic HP-based intensity)
+        this._updateVignette();
+
         // Update HUD
         this.hud.update(this.player, this.weaponManager, this.enemyManager, this.shadowArmyManager);
     }
@@ -152,37 +164,39 @@ export class GameScene extends Phaser.Scene {
     }
 
     _createAmbientParticles() {
-        this.ambientParticles = [];
-        for (let i = 0; i < 30; i++) {
-            const p = this.add.circle(
-                Phaser.Math.Between(0, WORLD_SIZE),
-                Phaser.Math.Between(0, WORLD_SIZE),
-                Phaser.Math.Between(1, 2),
-                COLORS.SHADOW_PRIMARY,
-                Phaser.Math.FloatBetween(0.05, 0.15)
-            ).setDepth(1);
-
-            this.ambientParticles.push({
-                obj: p,
-                speedX: Phaser.Math.FloatBetween(-0.3, 0.3),
-                speedY: Phaser.Math.FloatBetween(-0.5, -0.1),
+        try {
+            // Floating shadow embers around world center (repositioned in update)
+            this.ambientEmitter = this.add.particles(WORLD_SIZE / 2, WORLD_SIZE / 2, 'particle_glow', {
+                x: { min: -600, max: 600 },
+                y: { min: -600, max: 600 },
+                speed: { min: 5, max: 25 },
+                angle: { min: 250, max: 290 },
+                scale: { start: 0.4, end: 0.1 },
+                alpha: { start: 0.2, end: 0 },
+                lifespan: { min: 3000, max: 6000 },
+                tint: [COLORS.SHADOW_PRIMARY, 0x4400aa, 0x220044],
+                blendMode: 'ADD',
+                frequency: 150,
+                quantity: 1,
             });
-        }
-
-        this.time.addEvent({
-            delay: 50,
-            loop: true,
-            callback: () => {
-                for (const p of this.ambientParticles) {
-                    p.obj.x += p.speedX;
-                    p.obj.y += p.speedY;
-                    if (p.obj.y < 0) {
-                        p.obj.y = WORLD_SIZE;
-                        p.obj.x = Phaser.Math.Between(0, WORLD_SIZE);
-                    }
+            this.ambientEmitter.setDepth(1);
+        } catch (e) {
+            // Fallback to manual particles
+            this._ambientFallback = [];
+            for (let i = 0; i < 30; i++) {
+                const p = this.add.circle(
+                    Phaser.Math.Between(0, WORLD_SIZE), Phaser.Math.Between(0, WORLD_SIZE),
+                    Phaser.Math.Between(1, 2), COLORS.SHADOW_PRIMARY, Phaser.Math.FloatBetween(0.05, 0.15)
+                ).setDepth(1);
+                this._ambientFallback.push({ obj: p, sx: Phaser.Math.FloatBetween(-0.3, 0.3), sy: Phaser.Math.FloatBetween(-0.5, -0.1) });
+            }
+            this.time.addEvent({ delay: 50, loop: true, callback: () => {
+                for (const p of this._ambientFallback) {
+                    p.obj.x += p.sx; p.obj.y += p.sy;
+                    if (p.obj.y < 0) { p.obj.y = WORLD_SIZE; p.obj.x = Phaser.Math.Between(0, WORLD_SIZE); }
                 }
-            },
-        });
+            }});
+        }
     }
 
     _onPlayerHitEnemy(player, enemy) {
@@ -342,6 +356,9 @@ export class GameScene extends Phaser.Scene {
             t('newSkill'),
         ], { duration: 2000, type: 'levelup' });
 
+        // Add blur to camera while paused
+        this._addLevelUpBlur();
+
         // Pause game and show level up screen
         this.scene.pause();
         this.scene.launch('LevelUpScene', {
@@ -374,12 +391,105 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
+    // === FILTER SETUP ===
+
+    _setupCameraFilters() {
+        try {
+            const cam = this.cameras.main;
+
+            // Bloom effect via ParallelFilters (bright areas glow)
+            this._bloomFilter = cam.filters.internal.addParallelFilters();
+            this._bloomFilter.top.addThreshold(0.6, 1);
+            this._bloomFilter.top.addBlur(0, 2, 2, 1);
+            this._bloomFilter.blend.blendMode = Phaser.BlendModes.ADD;
+            this._bloomFilter.blend.amount = 0.25;
+
+            // ColorMatrix for dungeon atmosphere
+            this._colorMatrix = cam.filters.internal.addColorMatrix();
+            this._colorMatrix.colorMatrix.brightness(0.92);
+            this._colorMatrix.colorMatrix.saturate(1.1);
+        } catch (e) {
+            console.warn('Camera filters not available:', e);
+        }
+    }
+
+    _setupVignette() {
+        try {
+            if (!this.textures.exists('vignette')) return;
+            // Fixed-position vignette overlay
+            this._vignetteOverlay = this.add.image(
+                this.cameras.main.width / 2,
+                this.cameras.main.height / 2,
+                'vignette'
+            )
+                .setScrollFactor(0)
+                .setDepth(90)
+                .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
+                .setAlpha(0.4);
+        } catch (e) { /* vignette not available */ }
+    }
+
+    _updateVignette() {
+        if (!this._vignetteOverlay || !this.player) return;
+        // Intensify vignette when HP is low
+        const hpRatio = this.player.stats.hp / this.player.stats.maxHp;
+        if (hpRatio < 0.4) {
+            // Low HP: stronger vignette (0.4 → 0.85 as HP drops to 0)
+            const intensity = 0.4 + (1 - hpRatio / 0.4) * 0.45;
+            this._vignetteOverlay.setAlpha(intensity);
+            // Desaturate + redden camera when very low HP
+            if (this._colorMatrix && hpRatio < 0.25) {
+                try {
+                    this._colorMatrix.colorMatrix.reset();
+                    this._colorMatrix.colorMatrix.brightness(0.85);
+                    this._colorMatrix.colorMatrix.saturate(0.7);
+                } catch (e) { /* silent */ }
+            }
+        } else {
+            this._vignetteOverlay.setAlpha(0.4);
+            // Reset color matrix to normal
+            if (this._colorMatrix) {
+                try {
+                    this._colorMatrix.colorMatrix.reset();
+                    this._colorMatrix.colorMatrix.brightness(0.92);
+                    this._colorMatrix.colorMatrix.saturate(1.1);
+                } catch (e) { /* silent */ }
+            }
+        }
+    }
+
+    _addLevelUpBlur() {
+        try {
+            if (!this._levelUpBlur) {
+                this._levelUpBlur = this.cameras.main.filters.internal.addBlur(0, 2, 2, 1);
+            }
+            this._levelUpBlur.setActive(true);
+        } catch (e) { /* blur not available */ }
+    }
+
+    removeLevelUpBlur() {
+        try {
+            if (this._levelUpBlur) {
+                this._levelUpBlur.setActive(false);
+            }
+        } catch (e) { /* silent */ }
+    }
+
     shutdown() {
         try {
             if (this.weaponManager) this.weaponManager.destroy();
             if (this.shadowArmyManager) this.shadowArmyManager.destroy();
             if (this.itemDropManager) this.itemDropManager.destroy();
             if (this.statusWindow) this.statusWindow.destroy();
+
+            // Clean up filters
+            try {
+                if (this._bloomFilter) this.cameras.main.filters.internal.remove(this._bloomFilter);
+                if (this._colorMatrix) this.cameras.main.filters.internal.remove(this._colorMatrix);
+                if (this._levelUpBlur) this.cameras.main.filters.internal.remove(this._levelUpBlur);
+            } catch (e) { /* filters cleanup */ }
+
+            if (this._vignetteOverlay) { this._vignetteOverlay.destroy(); this._vignetteOverlay = null; }
 
             if (this.activeBosses && this.physics?.world) {
                 for (const boss of this.activeBosses) {

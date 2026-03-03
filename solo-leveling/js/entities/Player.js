@@ -51,6 +51,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             .setScale(2)
             .setBlendMode(Phaser.BlendModes.ADD);
 
+        // Glow filter (rank-based)
+        try {
+            this.enableFilters();
+            this._glowFilter = this.filters.internal.addGlow(0x7b2fff, 2, 0, 1, false, 8, 8);
+            this._glowFilter.setActive(false); // Starts inactive, enabled on rank up
+        } catch (e) { /* filters not available */ }
+
         // Create animations
         this._createAnimations(scene);
     }
@@ -209,6 +216,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.scene.systemMessage.show('[시스템]', msgs, { duration: 3500, type: 'levelup' });
         }
 
+        // Update glow filter based on rank
+        try {
+            if (this._glowFilter) {
+                this._glowFilter.setActive(true);
+                this._glowFilter.color = rank.color;
+                this._glowFilter.outerStrength = rank.glowAlpha > 0.3 ? 6 : 3;
+            }
+        } catch (e) { /* silent */ }
+
         // Flash effect
         this.scene.cameras.main.flash(300, 100, 50, 200);
 
@@ -293,25 +309,51 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xff0000);
 
         // Shadow particles burst from body
-        for (let i = 0; i < 20; i++) {
-            const p = this.scene.add.circle(
-                this.x + Phaser.Math.Between(-10, 10),
-                this.y + Phaser.Math.Between(-15, 10),
-                Phaser.Math.Between(3, 7),
-                COLORS.SHADOW_PRIMARY,
-                0.8
-            ).setDepth(11);
-
-            this.scene.tweens.add({
-                targets: p,
-                x: p.x + Phaser.Math.Between(-80, 80),
-                y: p.y + Phaser.Math.Between(-100, 30),
-                alpha: 0,
-                scale: 0,
-                duration: Phaser.Math.Between(600, 1200),
-                delay: Phaser.Math.Between(0, 300),
-                onComplete: () => p.destroy(),
+        try {
+            // Main shadow burst
+            const burst = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+                speed: { min: 40, max: 180 },
+                scale: { start: 1.2, end: 0 },
+                alpha: { start: 0.9, end: 0 },
+                lifespan: { min: 600, max: 1200 },
+                angle: { min: 0, max: 360 },
+                tint: [COLORS.SHADOW_PRIMARY, 0x4400aa, 0x220044],
+                blendMode: 'ADD',
+                emitting: false,
             });
+            burst.setDepth(11);
+            burst.explode(25);
+
+            // Rising wisps (soul leaving body)
+            const wisps = this.scene.add.particles(this.x, this.y - 10, 'particle_spark', {
+                speed: { min: 15, max: 60 },
+                angle: { min: 240, max: 300 },
+                scale: { start: 0.8, end: 0 },
+                alpha: { start: 0.8, end: 0 },
+                lifespan: { min: 800, max: 1500 },
+                tint: [0x7b2fff, 0xaa66ff, 0xddaaff],
+                blendMode: 'ADD',
+                frequency: 60,
+                quantity: 2,
+            });
+            wisps.setDepth(11);
+            this.scene.time.delayedCall(1200, () => {
+                wisps.stop();
+                this.scene.time.delayedCall(1600, () => { burst.destroy(); wisps.destroy(); });
+            });
+        } catch (e) {
+            // Fallback
+            for (let i = 0; i < 20; i++) {
+                const p = this.scene.add.circle(
+                    this.x + Phaser.Math.Between(-10, 10), this.y + Phaser.Math.Between(-15, 10),
+                    Phaser.Math.Between(3, 7), COLORS.SHADOW_PRIMARY, 0.8
+                ).setDepth(11);
+                this.scene.tweens.add({
+                    targets: p, x: p.x + Phaser.Math.Between(-80, 80), y: p.y + Phaser.Math.Between(-100, 30),
+                    alpha: 0, scale: 0, duration: Phaser.Math.Between(600, 1200),
+                    delay: Phaser.Math.Between(0, 300), onComplete: () => p.destroy(),
+                });
+            }
         }
 
         // Player collapse animation: shrink + rotate + fade

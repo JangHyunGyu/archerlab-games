@@ -436,9 +436,13 @@ export class EnemyManager {
         enemy.spawn(typeKey, ENEMY_TYPES[typeKey], eliteMult, pos.x, pos.y);
         enemy.isElite = true;
 
-        // Elite visual: larger size + red tint + name label
+        // Elite visual: larger size + red tint + glow + name label
         enemy.setScale(enemy.scaleX * 1.5, enemy.scaleY * 1.5);
         enemy.setTint(0xff6644);
+        try {
+            enemy.enableFilters();
+            enemy._eliteGlow = enemy.filters.internal.addGlow(0xff4400, 4, 0, 1, false, 6, 6);
+        } catch (e) { /* filters not available */ }
 
         const name = ENEMY_TYPES[typeKey].name;
         const label = this.scene.add.text(enemy.x, enemy.y - 30, `★ ${name}`, {
@@ -460,6 +464,7 @@ export class EnemyManager {
         const originalDie = enemy.die.bind(enemy);
         enemy.die = function() {
             if (this._eliteLabel) { this._eliteLabel.destroy(); this._eliteLabel = null; }
+            try { if (this._eliteGlow && this.filters) { this.filters.internal.remove(this._eliteGlow); this._eliteGlow = null; } } catch (e) { /* silent */ }
             this.isElite = false;
             originalDie();
         };

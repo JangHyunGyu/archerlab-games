@@ -1,53 +1,124 @@
 /**
- * Web Audio API 기반 프로시저럴 사운드 매니저
- * 필터, ADSR 엔벨로프, 레이어드 합성으로 리얼한 효과음 생성
+ * Tone.js 기반 프로시저럴 사운드 매니저
+ * FM/AM 합성, 리버브, 컴프레서, 프리셋 신스 풀로 리얼한 게임 사운드 생성
  */
 export class SoundManager {
     constructor() {
-        this.ctx = null;
         this.enabled = true;
-        this.volume = 0.35;
         this._initialized = false;
-        this._masterGain = null;
-        this._compressor = null;
     }
 
     init() {
         try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            // Master chain: compressor → gain → output
-            this._compressor = this.ctx.createDynamicsCompressor();
-            this._compressor.threshold.value = -24;
-            this._compressor.knee.value = 12;
-            this._compressor.ratio.value = 4;
-            this._masterGain = this.ctx.createGain();
-            this._masterGain.gain.value = this.volume;
-            this._compressor.connect(this._masterGain);
-            this._masterGain.connect(this.ctx.destination);
+            if (typeof Tone === 'undefined') { this.enabled = false; return; }
+
+            // Effects chain: synths → comp → masterVol → destination
+            this._masterVol = new Tone.Volume(-8).toDestination();
+            this._comp = new Tone.Compressor(-18, 6).connect(this._masterVol);
+            this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
+
+            // === Pre-created synth pool ===
+
+            // Impact (bass drum / punch)
+            this._impact = new Tone.MembraneSynth({
+                pitchDecay: 0.04, octaves: 5,
+                envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.08 },
+            }).connect(this._comp);
+
+            // Tonal (melodies, beeps - dry)
+            this._tone = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 },
+            }).connect(this._comp);
+
+            // Tonal wet (reverbed melodies)
+            this._toneWet = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.15, sustain: 0.1, release: 0.2 },
+            }).connect(this._reverb);
+
+            // FM synth (energy, weapon effects - dry)
+            this._fm = new Tone.FMSynth({
+                harmonicity: 3, modulationIndex: 10,
+                envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 },
+                modulation: { type: 'sine' },
+            }).connect(this._comp);
+
+            // FM synth wet (spacious FX)
+            this._fmWet = new Tone.FMSynth({
+                harmonicity: 2, modulationIndex: 8,
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.3 },
+                modulation: { type: 'sine' },
+            }).connect(this._reverb);
+
+            // Metal synth (metallic clinks, blade rings)
+            this._metal = new Tone.MetalSynth({
+                frequency: 800, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.08 },
+                harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5,
+            }).connect(this._comp);
+
+            // Noise synth → bandpass filter (whooshes, textures)
+            this._noiseFilter = new Tone.Filter(2000, 'bandpass').connect(this._comp);
+            this._noise = new Tone.NoiseSynth({
+                noise: { type: 'white' },
+                envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.08 },
+            }).connect(this._noiseFilter);
+
+            // Sub bass (deep sine)
+            this._sub = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.003, decay: 0.15, sustain: 0, release: 0.1 },
+            }).connect(this._comp);
+
+            // Poly synth (chords, arpeggios - reverbed)
+            this._poly = new Tone.PolySynth(Tone.Synth, {
+                maxPolyphony: 8,
+                voice: Tone.Synth,
+                options: {
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.15, release: 0.3 },
+                },
+            }).connect(this._reverb);
+
+            // FM Poly (rich chords)
+            this._fmPoly = new Tone.PolySynth(Tone.FMSynth, {
+                maxPolyphony: 6,
+                voice: Tone.FMSynth,
+                options: {
+                    harmonicity: 3, modulationIndex: 5,
+                    envelope: { attack: 0.008, decay: 0.2, sustain: 0.1, release: 0.25 },
+                },
+            }).connect(this._reverb);
+
             this._initialized = true;
 
-            // 페이지 이탈/탭 전환 시 오디오 자동 일시정지
+            // 탭 전환 시 자동 일시정지
             this._onVisibilityChange = () => {
-                if (!this.ctx) return;
-                if (document.hidden) {
-                    this.ctx.suspend();
-                } else if (this.enabled) {
-                    this.ctx.resume();
-                }
+                try {
+                    if (document.hidden) {
+                        Tone.getContext().rawContext.suspend();
+                    } else if (this.enabled) {
+                        Tone.getContext().rawContext.resume();
+                    }
+                } catch (e) { /* silent */ }
             };
             document.addEventListener('visibilitychange', this._onVisibilityChange);
         } catch (e) {
+            console.warn('SoundManager init failed:', e);
             this.enabled = false;
         }
     }
 
     resume() {
-        if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
+        try {
+            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                Tone.start();
+            }
+        } catch (e) { /* silent */ }
     }
 
-    get out() { return this._compressor || this.ctx.destination; }
+    get out() { return this._comp; }
+    get wet() { return this._reverb; }
 
     play(soundName) {
         if (!this.enabled || !this._initialized) return;
@@ -76,412 +147,505 @@ export class SoundManager {
         } catch (e) { /* silent */ }
     }
 
-    // --- Helper: create oscillator with ADSR envelope ---
-    _osc(type, freq, { attack = 0.01, decay = 0.1, sustain = 0, release = 0.1, vol = 0.5, detune = 0 } = {}) {
-        const t = this.ctx.currentTime;
-        const dur = attack + decay + release;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.value = freq;
-        if (detune) osc.detune.value = detune;
-        gain.gain.setValueAtTime(0.001, t);
-        gain.gain.linearRampToValueAtTime(vol, t + attack);
-        gain.gain.linearRampToValueAtTime(vol * sustain, t + attack + decay);
-        gain.gain.linearRampToValueAtTime(0.001, t + dur);
-        osc.connect(gain);
-        gain.connect(this.out);
-        osc.start(t);
-        osc.stop(t + dur + 0.05);
-        return { osc, gain, dur };
-    }
-
-    // --- Helper: frequency sweep oscillator ---
-    _sweep(type, startFreq, endFreq, duration, vol = 0.3) {
-        const t = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(startFreq, t);
-        osc.frequency.exponentialRampToValueAtTime(endFreq, t + duration);
-        gain.gain.setValueAtTime(vol, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-        osc.connect(gain);
-        gain.connect(this.out);
-        osc.start(t);
-        osc.stop(t + duration + 0.05);
-    }
-
-    // --- Helper: filtered noise burst ---
-    _noise(duration, { vol = 0.3, filterType = 'bandpass', freq = 2000, Q = 1, freqEnd = null } = {}) {
-        const t = this.ctx.currentTime;
-        const sr = this.ctx.sampleRate;
-        const len = Math.floor(sr * duration);
-        const buf = this.ctx.createBuffer(1, len, sr);
-        const d = buf.getChannelData(0);
-        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-
-        const src = this.ctx.createBufferSource();
-        src.buffer = buf;
-
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = filterType;
-        filter.frequency.setValueAtTime(freq, t);
-        if (freqEnd) filter.frequency.exponentialRampToValueAtTime(freqEnd, t + duration);
-        filter.Q.value = Q;
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(vol, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-        src.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.out);
-        src.start(t);
-    }
-
-    // --- Helper: metallic impact (layered sines at inharmonic ratios) ---
-    _metalImpact(baseFreq, vol = 0.3, decay = 0.15) {
-        const ratios = [1, 2.76, 4.07, 5.48];
-        const t = this.ctx.currentTime;
-        for (const r of ratios) {
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = baseFreq * r;
-            gain.gain.setValueAtTime(vol / (r * 0.8), t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + decay / r);
-            osc.connect(gain);
-            gain.connect(this.out);
-            osc.start(t);
-            osc.stop(t + decay + 0.05);
-        }
-    }
-
     // ========== WEAPON SOUNDS ==========
 
-    // 단검 베기 - 금속 칼날이 공기를 가르는 소리 + 임팩트
+    // 단검 베기 - swoosh + metallic clink
     _playDagger() {
-        // 1. 칼바람 swoosh (고주파 노이즈 스윕)
-        this._noise(0.12, { vol: 0.25, filterType: 'bandpass', freq: 3000, freqEnd: 8000, Q: 0.8 });
-        // 2. 칼날 금속음
-        this._metalImpact(800, 0.12, 0.08);
-        // 3. 저주파 임팩트 (베기 느낌)
-        this._osc('sine', 90, { attack: 0.005, decay: 0.06, sustain: 0, release: 0.04, vol: 0.25 });
+        const now = Tone.now();
+        // Swoosh
+        this._noiseFilter.frequency.setValueAtTime(3000, now);
+        this._noiseFilter.frequency.rampTo(9000, 0.08);
+        this._noise.envelope.decay = 0.08;
+        this._noise.envelope.release = 0.04;
+        this._noise.triggerAttackRelease('16n', now, 0.5);
+        // Blade ring
+        this._metal.frequency = 900;
+        this._metal.envelope.decay = 0.06;
+        this._metal.triggerAttackRelease('32n', now, 0.25);
+        // Sub thud
+        this._sub.envelope.decay = 0.06;
+        this._sub.triggerAttackRelease('C2', '32n', now, 0.5);
     }
 
-    // 그림자 검기 - 검의 기가 뻗어나가는 에너지 슬래시
+    // 그림자 검기 - dark energy slash (thick layers)
     _playSlash() {
-        // 1. 날카로운 검명 (금속 공명 시작)
-        this._osc('sine', 1200, { attack: 0.003, decay: 0.04, sustain: 0, release: 0.03, vol: 0.15 });
-        this._osc('triangle', 2400, { attack: 0.003, decay: 0.03, sustain: 0, release: 0.02, vol: 0.06 });
-        // 2. 에너지 방출 swoosh (저→고주파 스윕, 기가 뻗어나가는 느낌)
-        this._noise(0.35, { vol: 0.3, filterType: 'bandpass', freq: 600, freqEnd: 6000, Q: 0.7 });
-        this._sweep('sawtooth', 150, 800, 0.3, 0.18);
-        // 3. 검기 공명 (에너지가 공간을 가르는 잔향)
-        setTimeout(() => {
-            this._sweep('sine', 400, 1200, 0.25, 0.12);
-            this._osc('sine', 220, { attack: 0.02, decay: 0.15, sustain: 0.1, release: 0.2, vol: 0.1 });
-        }, 60);
-        // 4. 깊은 서브베이스 임팩트 (무게감)
-        this._osc('sine', 55, { attack: 0.005, decay: 0.15, sustain: 0, release: 0.1, vol: 0.3 });
-        // 5. 에너지 잔향 테일 (기가 사라지는 여운)
-        setTimeout(() => {
-            this._noise(0.25, { vol: 0.08, filterType: 'bandpass', freq: 3000, freqEnd: 800, Q: 2 });
-            this._osc('sine', 600, { attack: 0.01, decay: 0.15, sustain: 0, release: 0.15, vol: 0.05 });
-        }, 150);
+        const now = Tone.now();
+        // Blade FM ring
+        this._fm.harmonicity.value = 3;
+        this._fm.modulationIndex.value = 12;
+        this._fm.envelope.decay = 0.04;
+        this._fm.triggerAttackRelease('A5', '32n', now, 0.3);
+        // Energy sweep noise (low → high)
+        this._noiseFilter.frequency.setValueAtTime(500, now);
+        this._noiseFilter.frequency.rampTo(7000, 0.3);
+        this._noiseFilter.type = 'bandpass';
+        this._noise.envelope.decay = 0.3;
+        this._noise.envelope.release = 0.05;
+        this._noise.triggerAttackRelease('4n', now, 0.6);
+        // Deep sub impact
+        this._sub.envelope.decay = 0.2;
+        this._sub.triggerAttackRelease('A1', '8n', now, 0.7);
+        // Delayed resonance
+        this._fmWet.harmonicity.value = 2;
+        this._fmWet.modulationIndex.value = 5;
+        this._fmWet.triggerAttackRelease('D4', '8n', now + 0.05, 0.2);
+        // High shimmer
+        this._toneWet.triggerAttackRelease('A6', '16n', now + 0.08, 0.1);
     }
 
-    // 지배자의 권능 - 텔레키네시스 에너지 방출
+    // 지배자의 권능 - telekinesis energy burst
     _playAuthority() {
-        // 에너지 차징 → 방출
-        this._sweep('sine', 200, 600, 0.3, 0.25);
-        this._sweep('sawtooth', 150, 400, 0.25, 0.1);
-        this._noise(0.35, { vol: 0.15, filterType: 'lowpass', freq: 1500, freqEnd: 500, Q: 2 });
-        setTimeout(() => {
-            this._osc('sine', 350, { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.15, vol: 0.2 });
-            this._noise(0.15, { vol: 0.2, filterType: 'bandpass', freq: 2000, Q: 3 });
-        }, 150);
+        const now = Tone.now();
+        // Charge FM rising
+        this._fm.harmonicity.value = 2;
+        this._fm.modulationIndex.value = 8;
+        this._fm.envelope.attack = 0.05;
+        this._fm.envelope.decay = 0.2;
+        this._fm.triggerAttackRelease('G3', '4n', now, 0.4);
+        this._fm.envelope.attack = 0.005; // reset
+        // Sub rumble
+        this._sub.envelope.decay = 0.25;
+        this._sub.triggerAttackRelease('E1', '4n', now, 0.5);
+        // Psionic noise
+        this._noiseFilter.frequency.setValueAtTime(800, now);
+        this._noiseFilter.frequency.rampTo(3000, 0.3);
+        this._noise.envelope.attack = 0.08;
+        this._noise.envelope.decay = 0.3;
+        this._noise.triggerAttackRelease('4n', now, 0.3);
+        this._noise.envelope.attack = 0.005; // reset
+        // Impact burst
+        this._impact.triggerAttackRelease('C2', '16n', now + 0.18, 0.7);
+        // Reverb tail
+        this._fmWet.triggerAttackRelease('C4', '8n', now + 0.2, 0.15);
     }
 
-    // 용의 공포 - 깊은 으르렁 + 에너지 파동
+    // 용의 공포 - deep dragon growl
     _playFear() {
-        this._sweep('sawtooth', 60, 30, 0.6, 0.2);
-        this._osc('sine', 80, { attack: 0.05, decay: 0.3, sustain: 0.2, release: 0.3, vol: 0.15 });
-        this._noise(0.5, { vol: 0.1, filterType: 'lowpass', freq: 400, freqEnd: 100, Q: 4 });
+        const now = Tone.now();
+        // Deep FM growl
+        this._fm.harmonicity.value = 1.5;
+        this._fm.modulationIndex.value = 6;
+        this._fm.envelope.attack = 0.08;
+        this._fm.envelope.decay = 0.4;
+        this._fm.envelope.sustain = 0.2;
+        this._fm.envelope.release = 0.3;
+        this._fm.triggerAttackRelease('A1', '2n', now, 0.4);
+        // Sub bass drone
+        this._sub.envelope.decay = 0.5;
+        this._sub.triggerAttackRelease('D1', '2n', now, 0.5);
+        // Dark filtered noise
+        this._noiseFilter.frequency.setValueAtTime(400, now);
+        this._noiseFilter.frequency.rampTo(80, 0.5);
+        this._noiseFilter.type = 'lowpass';
+        this._noise.envelope.decay = 0.5;
+        this._noise.triggerAttackRelease('2n', now, 0.25);
+        // Dissonant beating
+        this._toneWet.triggerAttackRelease(93, '2n', now, 0.15);
+        // Reset
+        setTimeout(() => {
+            this._fm.envelope.attack = 0.005;
+            this._fm.envelope.sustain = 0;
+            this._noiseFilter.type = 'bandpass';
+            this._noise.envelope.attack = 0.005;
+        }, 1200);
     }
 
     // ========== COMBAT SOUNDS ==========
 
-    // 적 타격 - 묵직한 임팩트
+    // 적 타격 - punchy impact
     _playHit() {
-        // 저주파 펀치
-        this._osc('sine', 80, { attack: 0.003, decay: 0.06, sustain: 0, release: 0.04, vol: 0.3 });
-        // 살짝 딱 하는 임팩트 노이즈
-        this._noise(0.05, { vol: 0.2, filterType: 'bandpass', freq: 1500, Q: 1.5 });
-        // 미세한 금속감
-        this._metalImpact(600, 0.06, 0.04);
+        const now = Tone.now();
+        this._impact.triggerAttackRelease('G1', '32n', now, 0.6);
+        this._noiseFilter.frequency.setValueAtTime(2000, now);
+        this._noise.envelope.decay = 0.04;
+        this._noise.triggerAttackRelease('64n', now, 0.5);
+        this._metal.frequency = 700;
+        this._metal.envelope.decay = 0.04;
+        this._metal.triggerAttackRelease('64n', now, 0.1);
     }
 
-    // 적 처치 - 짧은 폭발 + 보상감
+    // 적 처치 - burst + reward chime
     _playKill() {
-        // 터지는 느낌
-        this._noise(0.08, { vol: 0.25, filterType: 'bandpass', freq: 2000, freqEnd: 500, Q: 0.5 });
-        // 피치 드롭
-        this._sweep('sine', 500, 100, 0.12, 0.2);
-        // 보상 톤
-        setTimeout(() => {
-            this._osc('sine', 880, { attack: 0.005, decay: 0.08, sustain: 0, release: 0.06, vol: 0.1 });
-        }, 40);
+        const now = Tone.now();
+        // Burst
+        this._noiseFilter.frequency.setValueAtTime(2500, now);
+        this._noiseFilter.frequency.rampTo(400, 0.06);
+        this._noise.envelope.decay = 0.06;
+        this._noise.triggerAttackRelease('32n', now, 0.5);
+        // Body pop
+        this._impact.triggerAttackRelease('E1', '32n', now, 0.5);
+        // Reward chime
+        this._tone.triggerAttackRelease('A5', '32n', now + 0.03, 0.2);
+        this._toneWet.triggerAttackRelease('E6', '16n', now + 0.05, 0.1);
     }
 
-    // 플레이어 피격 - 위협적인 임팩트
+    // 플레이어 피격 - heavy slam + warning
     _playPlayerHit() {
-        // 무거운 타격
-        this._osc('sine', 60, { attack: 0.003, decay: 0.1, sustain: 0, release: 0.08, vol: 0.35 });
-        // 깨지는 노이즈
-        this._noise(0.08, { vol: 0.3, filterType: 'lowpass', freq: 3000, freqEnd: 200, Q: 1 });
-        // 경고 톤
-        this._osc('square', 200, { attack: 0.005, decay: 0.04, sustain: 0, release: 0.05, vol: 0.1 });
+        const now = Tone.now();
+        // Heavy impact
+        this._impact.pitchDecay = 0.06;
+        this._impact.triggerAttackRelease('D1', '16n', now, 0.8);
+        this._impact.pitchDecay = 0.04; // reset
+        // Cracking noise
+        this._noiseFilter.frequency.setValueAtTime(1500, now);
+        this._noiseFilter.frequency.rampTo(300, 0.06);
+        this._noise.envelope.decay = 0.06;
+        this._noise.triggerAttackRelease('16n', now, 0.6);
+        // FM distortion layer
+        this._fm.harmonicity.value = 4;
+        this._fm.modulationIndex.value = 15;
+        this._fm.triggerAttackRelease('D2', '16n', now, 0.35);
+        // Sub thud
+        this._sub.triggerAttackRelease('A0', '16n', now, 0.5);
     }
 
     // ========== REWARD SOUNDS ==========
 
-    // XP 획득 - 가벼운 코인 소리
+    // XP 획득 - bell ting
     _playXP() {
-        this._osc('sine', 1400, { attack: 0.003, decay: 0.04, sustain: 0, release: 0.03, vol: 0.08 });
-        setTimeout(() => {
-            this._osc('sine', 1800, { attack: 0.003, decay: 0.04, sustain: 0, release: 0.03, vol: 0.06 });
-        }, 25);
+        const now = Tone.now();
+        this._fm.harmonicity.value = 3;
+        this._fm.modulationIndex.value = 5;
+        this._fm.envelope.decay = 0.04;
+        this._fm.triggerAttackRelease('A6', '64n', now, 0.15);
+        this._tone.triggerAttackRelease('E7', '64n', now + 0.025, 0.1);
     }
 
-    // 레벨업 - 화려한 팡파르
+    // 레벨업 - ascending fanfare chord
     _playLevelUp() {
-        const notes = [523, 659, 784, 1047];
-        notes.forEach((freq, i) => {
-            setTimeout(() => {
-                this._osc('sine', freq, { attack: 0.01, decay: 0.15, sustain: 0.3, release: 0.2, vol: 0.2 });
-                this._osc('triangle', freq * 2, { attack: 0.01, decay: 0.1, sustain: 0, release: 0.15, vol: 0.05 });
-            }, i * 90);
+        const now = Tone.now();
+        const notes = ['C5', 'E5', 'G5', 'C6'];
+        notes.forEach((note, i) => {
+            this._fmPoly.triggerAttackRelease(note, '4n', now + i * 0.085, 0.35);
         });
-        // 마지막에 심벌 노이즈
-        setTimeout(() => {
-            this._noise(0.3, { vol: 0.08, filterType: 'highpass', freq: 6000, Q: 0.5 });
-        }, 350);
+        // Bright shimmer
+        this._toneWet.triggerAttackRelease('C7', '8n', now + 0.34, 0.08);
+        // Sub warmth
+        this._sub.envelope.decay = 0.4;
+        this._sub.triggerAttackRelease('C3', '4n', now, 0.2);
     }
 
-    // 랭크업 - 장엄한 상승 멜로디
+    // 랭크업 - heroic ascending arpeggio
     _playRankUp() {
-        const notes = [440, 554, 659, 880, 1047, 1319];
-        notes.forEach((freq, i) => {
-            setTimeout(() => {
-                this._osc('sine', freq, { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.25, vol: 0.18 });
-                this._osc('triangle', freq * 0.5, { attack: 0.02, decay: 0.15, sustain: 0, release: 0.2, vol: 0.08 });
-            }, i * 70);
+        const now = Tone.now();
+        const notes = ['A4', 'C#5', 'E5', 'A5', 'C#6', 'E6'];
+        notes.forEach((note, i) => {
+            this._fmPoly.triggerAttackRelease(note, '4n', now + i * 0.065, 0.3);
         });
-        // 에너지 윙 사운드
-        setTimeout(() => {
-            this._sweep('sawtooth', 200, 2000, 0.5, 0.08);
-            this._noise(0.4, { vol: 0.06, filterType: 'highpass', freq: 4000, Q: 0.5 });
-        }, 400);
+        // Ethereal pad
+        this._toneWet.triggerAttackRelease('A3', '2n', now + 0.2, 0.1);
+        // Power burst
+        this._impact.triggerAttackRelease('A1', '8n', now + 0.4, 0.35);
+        // Shimmer noise
+        this._noiseFilter.frequency.setValueAtTime(5000, now + 0.38);
+        this._noise.envelope.decay = 0.3;
+        this._noise.triggerAttackRelease('4n', now + 0.38, 0.12);
     }
 
     // ========== EVENT SOUNDS ==========
 
-    // 시스템 메시지 - 전자적 알림음
+    // 시스템 메시지 - digital double beep
     _playSystem() {
-        this._osc('sine', 880, { attack: 0.005, decay: 0.05, sustain: 0.3, release: 0.05, vol: 0.12 });
-        setTimeout(() => {
-            this._osc('sine', 1100, { attack: 0.005, decay: 0.05, sustain: 0.3, release: 0.05, vol: 0.1 });
-        }, 50);
+        const now = Tone.now();
+        this._fm.harmonicity.value = 3;
+        this._fm.modulationIndex.value = 4;
+        this._fm.envelope.decay = 0.04;
+        this._fm.triggerAttackRelease('A5', '32n', now, 0.2);
+        this._fm.triggerAttackRelease('C#6', '32n', now + 0.055, 0.15);
     }
 
-    // ARISE! - 극적인 드라마틱 사운드
+    // ARISE! - epic dramatic summon
     _playArise() {
-        // 1. 깊은 럼블
-        this._osc('sawtooth', 40, { attack: 0.1, decay: 0.5, sustain: 0.3, release: 0.8, vol: 0.25 });
-        this._osc('sine', 60, { attack: 0.1, decay: 0.4, sustain: 0.2, release: 0.6, vol: 0.2 });
-        // 2. 상승 에너지
-        this._sweep('sine', 80, 800, 1.2, 0.15);
-        this._sweep('sawtooth', 60, 600, 1.0, 0.08);
-        // 3. 노이즈 빌드업
-        this._noise(1.5, { vol: 0.12, filterType: 'lowpass', freq: 200, freqEnd: 3000, Q: 2 });
-        // 4. 임팩트 (0.8초 후)
+        const now = Tone.now();
+        // Deep rumble
+        this._sub.envelope.attack = 0.15;
+        this._sub.envelope.decay = 0.8;
+        this._sub.envelope.sustain = 0.3;
+        this._sub.envelope.release = 0.5;
+        this._sub.triggerAttackRelease('C1', '1n', now, 0.6);
+        // Rising FM
+        this._fm.harmonicity.value = 2;
+        this._fm.modulationIndex.value = 6;
+        this._fm.envelope.attack = 0.1;
+        this._fm.envelope.decay = 0.5;
+        this._fm.triggerAttackRelease('E2', '2n', now + 0.1, 0.3);
+        // Noise buildup
+        this._noiseFilter.frequency.setValueAtTime(150, now);
+        this._noiseFilter.frequency.rampTo(4000, 1.2);
+        this._noiseFilter.type = 'lowpass';
+        this._noise.envelope.attack = 0.3;
+        this._noise.envelope.decay = 1.0;
+        this._noise.triggerAttackRelease('1n', now, 0.3);
+        // Dissonant tension
+        this._toneWet.triggerAttackRelease(130, '2n', now + 0.2, 0.15);
+        // IMPACT at 0.8s
         setTimeout(() => {
-            this._osc('square', 100, { attack: 0.005, decay: 0.2, sustain: 0.1, release: 0.2, vol: 0.3 });
-            this._noise(0.25, { vol: 0.25, filterType: 'bandpass', freq: 1000, Q: 0.5 });
-            this._metalImpact(200, 0.15, 0.3);
+            try {
+                const t = Tone.now();
+                this._impact.triggerAttackRelease('C1', '8n', t, 0.9);
+                this._metal.frequency = 200;
+                this._metal.envelope.decay = 0.3;
+                this._metal.triggerAttackRelease('4n', t, 0.3);
+                this._noiseFilter.frequency.setValueAtTime(1200, t);
+                this._noise.envelope.decay = 0.2;
+                this._noise.triggerAttackRelease('8n', t, 0.6);
+            } catch (e) { /* silent */ }
         }, 800);
+        // Ethereal afterglow
+        setTimeout(() => {
+            try {
+                const t = Tone.now();
+                this._fmWet.triggerAttackRelease('C4', '2n', t, 0.12);
+                this._toneWet.triggerAttackRelease('G4', '2n', t, 0.08);
+            } catch (e) { /* silent */ }
+        }, 1000);
+        // Reset envelopes
+        setTimeout(() => {
+            this._sub.envelope.attack = 0.003;
+            this._sub.envelope.sustain = 0;
+            this._fm.envelope.attack = 0.005;
+            this._noise.envelope.attack = 0.005;
+            this._noiseFilter.type = 'bandpass';
+        }, 2000);
     }
 
-    // 보스 등장 - 위압적인 진동음
+    // 보스 등장 - ominous boss entrance
     _playBossAppear() {
-        // 저주파 공명
-        this._osc('sawtooth', 45, { attack: 0.1, decay: 0.3, sustain: 0.3, release: 0.4, vol: 0.3 });
-        this._osc('sine', 70, { attack: 0.05, decay: 0.2, sustain: 0.2, release: 0.3, vol: 0.2 });
-        // 긴장감 노이즈
-        this._noise(0.5, { vol: 0.15, filterType: 'lowpass', freq: 600, freqEnd: 200, Q: 3 });
-        // 브라스 스탭
+        const now = Tone.now();
+        // Ground shake FM
+        this._fm.harmonicity.value = 1.5;
+        this._fm.modulationIndex.value = 8;
+        this._fm.envelope.attack = 0.08;
+        this._fm.envelope.decay = 0.35;
+        this._fm.triggerAttackRelease('C#2', '2n', now, 0.5);
+        // Sub bass
+        this._sub.envelope.decay = 0.6;
+        this._sub.triggerAttackRelease('B0', '2n', now, 0.6);
+        // Tension noise
+        this._noiseFilter.frequency.setValueAtTime(500, now);
+        this._noiseFilter.frequency.rampTo(150, 0.5);
+        this._noise.envelope.decay = 0.5;
+        this._noise.triggerAttackRelease('2n', now, 0.25);
+        // Brass stab 1
         setTimeout(() => {
-            this._osc('square', 80, { attack: 0.01, decay: 0.15, sustain: 0.1, release: 0.2, vol: 0.2 });
-            this._osc('sawtooth', 65, { attack: 0.02, decay: 0.2, sustain: 0.1, release: 0.25, vol: 0.15 });
-        }, 250);
-        // 두 번째 스탭
+            try {
+                this._impact.triggerAttackRelease('E1', '8n', Tone.now(), 0.6);
+                this._fmWet.triggerAttackRelease('E2', '8n', Tone.now(), 0.3);
+            } catch (e) { /* silent */ }
+        }, 280);
+        // Brass stab 2 (deeper)
         setTimeout(() => {
-            this._osc('square', 60, { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.3, vol: 0.25 });
-            this._noise(0.2, { vol: 0.2, filterType: 'bandpass', freq: 800, Q: 1 });
-        }, 500);
+            try {
+                this._impact.triggerAttackRelease('C1', '4n', Tone.now(), 0.7);
+                this._noiseFilter.frequency.setValueAtTime(600, Tone.now());
+                this._noise.envelope.decay = 0.15;
+                this._noise.triggerAttackRelease('8n', Tone.now(), 0.35);
+            } catch (e) { /* silent */ }
+        }, 550);
+        // Reset
+        setTimeout(() => {
+            this._fm.envelope.attack = 0.005;
+        }, 1200);
     }
 
-    // 경고 - 사이렌 느낌
+    // 경고 - sharp alarm
     _playWarning() {
-        this._sweep('square', 600, 400, 0.12, 0.15);
-        setTimeout(() => this._sweep('square', 600, 400, 0.12, 0.15), 180);
+        const now = Tone.now();
+        this._fm.harmonicity.value = 3;
+        this._fm.modulationIndex.value = 8;
+        this._fm.triggerAttackRelease('E5', '32n', now, 0.3);
+        this._fm.triggerAttackRelease('E5', '32n', now + 0.16, 0.3);
     }
 
-    // 포션 - 버블 + 힐링 톤
+    // 포션 - bubble + healing
     _playPotion() {
-        this._osc('sine', 500, { attack: 0.01, decay: 0.08, sustain: 0.2, release: 0.1, vol: 0.15 });
-        setTimeout(() => this._osc('sine', 700, { attack: 0.01, decay: 0.08, sustain: 0.1, release: 0.1, vol: 0.12 }), 70);
-        setTimeout(() => this._osc('sine', 900, { attack: 0.01, decay: 0.06, sustain: 0, release: 0.1, vol: 0.08 }), 140);
-        // 거품 노이즈
-        this._noise(0.2, { vol: 0.05, filterType: 'bandpass', freq: 3000, Q: 5 });
-    }
-
-    // UI 선택
-    _playSelect() {
-        this._osc('sine', 660, { attack: 0.003, decay: 0.04, sustain: 0, release: 0.04, vol: 0.12 });
-        this._osc('triangle', 1320, { attack: 0.003, decay: 0.03, sustain: 0, release: 0.03, vol: 0.04 });
-    }
-
-    // 퀘스트 완료 - 성취감
-    _playQuest() {
-        const notes = [660, 880, 1100];
-        notes.forEach((freq, i) => {
-            setTimeout(() => {
-                this._osc('sine', freq, { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.15, vol: 0.15 });
-            }, i * 100);
+        const now = Tone.now();
+        const notes = ['C5', 'E5', 'G5', 'B5'];
+        notes.forEach((note, i) => {
+            this._fmPoly.triggerAttackRelease(note, '16n', now + i * 0.055, 0.2);
         });
+        // Healing shimmer noise
+        this._noiseFilter.frequency.setValueAtTime(4000, now);
+        this._noise.envelope.decay = 0.2;
+        this._noise.triggerAttackRelease('8n', now, 0.08);
+        // Warm resolve
+        this._toneWet.triggerAttackRelease('E5', '8n', now + 0.2, 0.12);
     }
 
-    // 던전 브레이크 - 지진 + 경고음
+    // UI 선택 - quick click
+    _playSelect() {
+        const now = Tone.now();
+        this._fm.harmonicity.value = 3;
+        this._fm.modulationIndex.value = 3;
+        this._fm.envelope.decay = 0.03;
+        this._fm.triggerAttackRelease('E5', '64n', now, 0.2);
+    }
+
+    // 퀘스트 완료 - achievement jingle
+    _playQuest() {
+        const now = Tone.now();
+        const notes = ['E5', 'A5', 'C#6', 'E6'];
+        notes.forEach((note, i) => {
+            this._fmPoly.triggerAttackRelease(note, '8n', now + i * 0.08, 0.25);
+        });
+        // Shimmer
+        this._toneWet.triggerAttackRelease('E7', '16n', now + 0.3, 0.06);
+    }
+
+    // 던전 브레이크 - earthquake + alarm
     _playDungeonBreak() {
-        // 지진 럼블
-        this._osc('sawtooth', 30, { attack: 0.2, decay: 0.5, sustain: 0.3, release: 0.8, vol: 0.3 });
-        this._noise(1.0, { vol: 0.2, filterType: 'lowpass', freq: 300, freqEnd: 80, Q: 2 });
-        // 경고 사이렌
+        const now = Tone.now();
+        // Earthquake rumble
+        this._sub.envelope.attack = 0.2;
+        this._sub.envelope.decay = 0.8;
+        this._sub.envelope.sustain = 0.3;
+        this._sub.envelope.release = 0.6;
+        this._sub.triggerAttackRelease('B0', '1n', now, 0.7);
+        // Debris noise
+        this._noiseFilter.frequency.setValueAtTime(400, now);
+        this._noiseFilter.frequency.rampTo(60, 1.0);
+        this._noiseFilter.type = 'lowpass';
+        this._noise.envelope.attack = 0.2;
+        this._noise.envelope.decay = 0.8;
+        this._noise.triggerAttackRelease('1n', now, 0.4);
+        // Alarm siren
         setTimeout(() => {
-            this._sweep('square', 400, 800, 0.3, 0.15);
-            setTimeout(() => this._sweep('square', 800, 400, 0.3, 0.15), 300);
-        }, 300);
-        // 임팩트
+            try {
+                const t = Tone.now();
+                this._fm.harmonicity.value = 3;
+                this._fm.modulationIndex.value = 10;
+                this._fm.triggerAttackRelease('E4', '4n', t, 0.25);
+                setTimeout(() => this._fm.triggerAttackRelease('B3', '4n', Tone.now(), 0.25), 300);
+            } catch (e) { /* silent */ }
+        }, 350);
+        // Structural collapse
         setTimeout(() => {
-            this._osc('sine', 40, { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.4, vol: 0.35 });
-            this._noise(0.3, { vol: 0.25, filterType: 'bandpass', freq: 500, Q: 0.5 });
-        }, 600);
+            try {
+                const t = Tone.now();
+                this._impact.triggerAttackRelease('C1', '4n', t, 0.8);
+                this._metal.frequency = 150;
+                this._metal.envelope.decay = 0.35;
+                this._metal.triggerAttackRelease('4n', t, 0.2);
+            } catch (e) { /* silent */ }
+        }, 650);
+        // Reset
+        setTimeout(() => {
+            this._sub.envelope.attack = 0.003;
+            this._sub.envelope.sustain = 0;
+            this._noise.envelope.attack = 0.005;
+            this._noiseFilter.type = 'bandpass';
+        }, 2500);
     }
 
     // ========== INTRO MUSIC ==========
 
-    // Epic ominous ambient loop for menu screen
     playIntroMusic() {
         if (!this._initialized || !this.enabled) return;
-        this.stopIntroMusic(); // clean previous
+        this.resume();
+        this.stopIntroMusic();
         this._introNodes = [];
         this._introIntervals = [];
-        const t = this.ctx.currentTime;
-        const introGain = this.ctx.createGain();
-        introGain.gain.setValueAtTime(0.001, t);
-        introGain.gain.linearRampToValueAtTime(0.25, t + 3);
-        introGain.connect(this.out);
-        this._introGain = introGain;
 
-        // 1. Low drone pad - sawtooth C2 (~65Hz) with filter LFO sweep
-        const droneOsc = this.ctx.createOscillator();
-        droneOsc.type = 'sawtooth';
-        droneOsc.frequency.value = 65.41; // C2
-        const droneFilter = this.ctx.createBiquadFilter();
-        droneFilter.type = 'lowpass';
-        droneFilter.frequency.value = 400;
-        droneFilter.Q.value = 5;
-        const droneLfo = this.ctx.createOscillator();
-        droneLfo.type = 'sine';
-        droneLfo.frequency.value = 0.15; // slow sweep
-        const lfoGain = this.ctx.createGain();
-        lfoGain.gain.value = 350; // LFO depth
-        droneLfo.connect(lfoGain);
-        lfoGain.connect(droneFilter.frequency);
-        const droneVol = this.ctx.createGain();
-        droneVol.gain.value = 0.35;
-        droneOsc.connect(droneFilter);
-        droneFilter.connect(droneVol);
-        droneVol.connect(introGain);
-        droneOsc.start(t);
-        droneLfo.start(t);
-        this._introNodes.push(droneOsc, droneLfo);
+        try {
+            // Master gain for intro (fade in)
+            const introGain = new Tone.Volume(-30).connect(this._comp);
+            introGain.volume.rampTo(-10, 4);
+            this._introGain = introGain;
 
-        // 2. Secondary drone - sine, fifth above: G2 (~98Hz)
-        const drone2Osc = this.ctx.createOscillator();
-        drone2Osc.type = 'sine';
-        drone2Osc.frequency.value = 98.00; // G2
-        const drone2Vol = this.ctx.createGain();
-        drone2Vol.gain.value = 0.18;
-        drone2Osc.connect(drone2Vol);
-        drone2Vol.connect(introGain);
-        drone2Osc.start(t);
-        this._introNodes.push(drone2Osc);
+            // 1. Low drone - filtered sawtooth C2
+            const droneOsc = new Tone.Oscillator({ frequency: 65.41, type: 'sawtooth' });
+            const droneFilter = new Tone.Filter({ frequency: 350, type: 'lowpass', Q: 6 });
+            const droneVol = new Tone.Volume(-10);
+            droneOsc.connect(droneFilter);
+            droneFilter.connect(droneVol);
+            droneVol.connect(introGain);
+            // LFO on filter
+            const lfo = new Tone.LFO({ frequency: 0.1, min: 200, max: 550 });
+            lfo.connect(droneFilter.frequency);
+            lfo.start();
+            droneOsc.start();
+            this._introNodes.push(droneOsc, lfo);
 
-        // 3. Arpeggiated notes in C minor pentatonic
-        const notes = [130.81, 155.56, 196.00, 233.08, 261.63]; // C3, Eb3, G3, Bb3, C4
-        let noteIndex = 0;
-        const arpInterval = setInterval(() => {
-            if (!this._initialized || !this.ctx) return;
-            try {
-                const now = this.ctx.currentTime;
-                const noteOsc = this.ctx.createOscillator();
-                noteOsc.type = 'sine';
-                noteOsc.frequency.value = notes[noteIndex % notes.length];
-                const noteGain = this.ctx.createGain();
-                // ADSR envelope for short note
-                noteGain.gain.setValueAtTime(0.001, now);
-                noteGain.gain.linearRampToValueAtTime(0.18, now + 0.05);   // attack
-                noteGain.gain.linearRampToValueAtTime(0.10, now + 0.15);   // decay/sustain
-                noteGain.gain.linearRampToValueAtTime(0.001, now + 0.45);  // release
-                noteOsc.connect(noteGain);
-                noteGain.connect(introGain);
-                noteOsc.start(now);
-                noteOsc.stop(now + 0.5);
-                noteIndex++;
-            } catch (e) { /* silent */ }
-        }, 500); // 120 BPM = 500ms per beat
-        this._introIntervals.push(arpInterval);
+            // 2. Sub bass sine C1
+            const subOsc = new Tone.Oscillator({ frequency: 32.7, type: 'sine' });
+            const subVol = new Tone.Volume(-16);
+            subOsc.connect(subVol);
+            subVol.connect(introGain);
+            subOsc.start();
+            this._introNodes.push(subOsc);
 
-        // 4. Subtle percussion - filtered noise hits
-        const percInterval = setInterval(() => {
-            if (!this._initialized || !this.ctx) return;
-            try {
-                const now = this.ctx.currentTime;
-                const sr = this.ctx.sampleRate;
-                const len = Math.floor(sr * 0.08);
-                const buf = this.ctx.createBuffer(1, len, sr);
-                const data = buf.getChannelData(0);
-                for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-                const noiseSrc = this.ctx.createBufferSource();
-                noiseSrc.buffer = buf;
-                const percFilter = this.ctx.createBiquadFilter();
-                percFilter.type = 'bandpass';
-                percFilter.frequency.value = 800;
-                percFilter.Q.value = 2;
-                const percGain = this.ctx.createGain();
-                percGain.gain.setValueAtTime(0.12, now);
-                percGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-                noiseSrc.connect(percFilter);
-                percFilter.connect(percGain);
-                percGain.connect(introGain);
-                noiseSrc.start(now);
-            } catch (e) { /* silent */ }
-        }, 2000); // soft noise hit every 2 seconds
-        this._introIntervals.push(percInterval);
+            // 3. Minor drone Eb2
+            const drone2 = new Tone.Oscillator({ frequency: 77.78, type: 'sine' });
+            const drone2Vol = new Tone.Volume(-18);
+            drone2.connect(drone2Vol);
+            drone2Vol.connect(introGain);
+            drone2.start();
+            this._introNodes.push(drone2);
+
+            // 4. Dark FM arpeggio (C minor pentatonic)
+            const arpSynth = new Tone.FMSynth({
+                harmonicity: 3, modulationIndex: 5,
+                envelope: { attack: 0.03, decay: 0.15, sustain: 0.08, release: 0.25 },
+            });
+            const arpReverb = new Tone.Freeverb({ roomSize: 0.7, dampening: 2500, wet: 0.35 });
+            arpSynth.connect(arpReverb);
+            arpReverb.connect(introGain);
+            this._introArpSynth = arpSynth;
+
+            const notes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4'];
+            let noteIdx = 0;
+            const arpInterval = setInterval(() => {
+                if (!this._initialized) return;
+                try {
+                    arpSynth.triggerAttackRelease(notes[noteIdx % notes.length], '8n', Tone.now(), 0.25);
+                    noteIdx++;
+                } catch (e) { /* silent */ }
+            }, 600);
+            this._introIntervals.push(arpInterval);
+
+            // 5. Subtle percussion noise
+            const percNoise = new Tone.NoiseSynth({
+                noise: { type: 'white' },
+                envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.03 },
+            });
+            const percFilter = new Tone.Filter({ frequency: 700, type: 'bandpass', Q: 3 });
+            percNoise.connect(percFilter);
+            percFilter.connect(introGain);
+
+            const percInterval = setInterval(() => {
+                if (!this._initialized) return;
+                try {
+                    percFilter.frequency.value = 600 + Math.random() * 400;
+                    percNoise.triggerAttackRelease('64n', Tone.now(), 0.15);
+                } catch (e) { /* silent */ }
+            }, 2400);
+            this._introIntervals.push(percInterval);
+
+            // 6. Tension riser every 8 seconds
+            const riserInterval = setInterval(() => {
+                if (!this._initialized) return;
+                try {
+                    const rOsc = new Tone.Oscillator({ type: 'sawtooth' });
+                    const rFilter = new Tone.Filter({ frequency: 100, type: 'lowpass', Q: 3 });
+                    const rVol = new Tone.Volume(-25);
+                    rOsc.connect(rFilter);
+                    rFilter.connect(rVol);
+                    rVol.connect(introGain);
+                    rOsc.frequency.rampTo(200, 2);
+                    rFilter.frequency.rampTo(1500, 2);
+                    rVol.volume.rampTo(-15, 1.5);
+                    rVol.volume.rampTo(-60, 0.5, '+2');
+                    rOsc.start();
+                    rOsc.stop('+2.5');
+                    setTimeout(() => {
+                        try { rOsc.dispose(); rFilter.dispose(); rVol.dispose(); } catch (e) { /* silent */ }
+                    }, 3000);
+                } catch (e) { /* silent */ }
+            }, 8000);
+            this._introIntervals.push(riserInterval);
+        } catch (e) {
+            console.warn('Intro music error:', e);
+        }
     }
 
     stopIntroMusic() {
@@ -491,14 +655,20 @@ export class SoundManager {
         }
         if (this._introNodes) {
             this._introNodes.forEach(node => {
-                try { node.stop(); } catch (e) { /* silent */ }
+                try { node.stop(); node.dispose(); } catch (e) { /* silent */ }
             });
             this._introNodes = [];
         }
+        if (this._introArpSynth) {
+            try { this._introArpSynth.dispose(); } catch (e) { /* silent */ }
+            this._introArpSynth = null;
+        }
         if (this._introGain) {
             try {
-                const t = this.ctx.currentTime;
-                this._introGain.gain.linearRampToValueAtTime(0.001, t + 0.5);
+                this._introGain.volume.rampTo(-60, 0.5);
+                setTimeout(() => {
+                    try { this._introGain.dispose(); } catch (e) { /* silent */ }
+                }, 600);
             } catch (e) { /* silent */ }
             this._introGain = null;
         }
@@ -506,6 +676,9 @@ export class SoundManager {
 
     toggleSound() {
         this.enabled = !this.enabled;
+        if (this._masterVol) {
+            this._masterVol.volume.value = this.enabled ? -8 : -Infinity;
+        }
         return this.enabled;
     }
 }

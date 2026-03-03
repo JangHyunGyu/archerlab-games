@@ -57,49 +57,87 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         console.log(`[BOSS] ${config.name} spawned: HP=${this.maxHp}, diffMult=${difficultyMult}`);
 
+        // Glow filter for boss
+        try {
+            this.enableFilters();
+            this._glowFilter = this.filters.internal.addGlow(config.color, 5, 0, 1, false, 8, 10);
+        } catch (e) { /* filters not available */ }
+
         // Entrance effect
         this._entranceEffect();
     }
 
     _entranceEffect() {
-        this.scene.cameras.main.shake(500, 0.01);
+        this.scene.cameras.main.shake(500, 0.015);
 
-        // Warning text (use camera viewport center for scrollFactor(0) elements)
+        // Warning text
         const cam = this.scene.cameras.main;
         const warning = this.scene.add.text(
-            cam.width / 2,
-            cam.height * 0.26,
+            cam.width / 2, cam.height * 0.26,
             `⚔ BOSS: ${this.config.name} ⚔`,
-            {
-                fontSize: '32px',
-                fontFamily: 'Arial',
-                fontStyle: 'bold',
-                color: '#ff3333',
-                stroke: '#000000',
-                strokeThickness: 4,
-            }
+            { fontSize: '32px', fontFamily: 'Arial', fontStyle: 'bold', color: '#ff3333', stroke: '#000000', strokeThickness: 4 }
         ).setOrigin(0.5).setDepth(100).setScrollFactor(0);
 
         this.scene.tweens.add({
-            targets: warning,
-            alpha: 0,
-            scaleX: 1.5,
-            scaleY: 1.5,
-            duration: 2000,
-            onComplete: () => warning.destroy(),
+            targets: warning, alpha: 0, scaleX: 1.5, scaleY: 1.5,
+            duration: 2000, onComplete: () => warning.destroy(),
         });
 
-        // Glow ring
-        const ring = this.scene.add.circle(this.x, this.y, 10, this.config.color, 0.5)
-            .setDepth(3);
+        // Glow ring (original)
+        const ring = this.scene.add.circle(this.x, this.y, 10, this.config.color, 0.5).setDepth(3);
         this.scene.tweens.add({
-            targets: ring,
-            scaleX: 8,
-            scaleY: 8,
-            alpha: 0,
-            duration: 1000,
-            onComplete: () => ring.destroy(),
+            targets: ring, scaleX: 8, scaleY: 8, alpha: 0,
+            duration: 1000, onComplete: () => ring.destroy(),
         });
+
+        // Particle burst — dramatic entrance
+        try {
+            const burstEmitter = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+                speed: { min: 30, max: 120 },
+                scale: { start: 1.2, end: 0 },
+                alpha: { start: 0.8, end: 0 },
+                lifespan: { min: 600, max: 1200 },
+                angle: { min: 0, max: 360 },
+                tint: [this.config.color, 0xff3333, 0xff6600],
+                blendMode: 'ADD',
+                emitting: false,
+            });
+            burstEmitter.setDepth(4);
+            burstEmitter.explode(25);
+
+            // Rising energy particles
+            const riseEmitter = this.scene.add.particles(this.x, this.y, 'particle_spark', {
+                speed: { min: 20, max: 80 },
+                angle: { min: 250, max: 290 },
+                scale: { start: 0.8, end: 0 },
+                alpha: { start: 1, end: 0 },
+                lifespan: { min: 800, max: 1500 },
+                tint: [this.config.color, 0xffaa00],
+                blendMode: 'ADD',
+                frequency: 40,
+                quantity: 2,
+            });
+            riseEmitter.setDepth(4);
+            this.scene.time.delayedCall(1500, () => {
+                riseEmitter.stop();
+                this.scene.time.delayedCall(1600, () => riseEmitter.destroy());
+            });
+
+            // Ground smoke
+            const smoke = this.scene.add.particles(this.x, this.y + 20, 'particle_smoke', {
+                speed: { min: 15, max: 50 },
+                angle: { min: 160, max: 380 },
+                scale: { start: 1.5, end: 0.3 },
+                alpha: { start: 0.4, end: 0 },
+                lifespan: { min: 600, max: 1000 },
+                tint: 0x220000,
+                emitting: false,
+            });
+            smoke.setDepth(3);
+            smoke.explode(12);
+
+            this.scene.time.delayedCall(1300, () => { burstEmitter.destroy(); smoke.destroy(); });
+        } catch (e) { /* particle fallback not needed — ring already shown */ }
     }
 
     update(time, delta, playerX, playerY) {
@@ -133,6 +171,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this.attack *= 1.2;
             this.setTint(0xff6666);
             this.scene.cameras.main.flash(200, 255, 50, 50);
+            // Intensify glow in phase 2
+            try {
+                if (this._glowFilter) {
+                    this._glowFilter.color = 0xff3333;
+                    this._glowFilter.outerStrength = 8;
+                }
+            } catch (e) { /* silent */ }
         }
 
         // Special attack
@@ -423,28 +468,79 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this.scene.shadowArmyManager.onBossKilled(this);
         }
 
-        // Death explosion
-        for (let i = 0; i < 15; i++) {
-            const p = this.scene.add.circle(
-                this.x + Phaser.Math.Between(-20, 20),
-                this.y + Phaser.Math.Between(-20, 20),
-                Phaser.Math.Between(3, 8),
-                this.config.color,
-                0.8
-            ).setDepth(15);
-
-            this.scene.tweens.add({
-                targets: p,
-                alpha: 0,
-                scale: 0,
-                x: p.x + Phaser.Math.Between(-60, 60),
-                y: p.y + Phaser.Math.Between(-60, 60),
-                duration: 600,
-                onComplete: () => p.destroy(),
+        // Death explosion — enhanced with particle emitters
+        try {
+            // Main explosion burst
+            const explosion = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+                speed: { min: 60, max: 250 },
+                scale: { start: 1.5, end: 0 },
+                alpha: { start: 1, end: 0 },
+                lifespan: { min: 400, max: 900 },
+                tint: [this.config.color, 0xff4444, 0xff8800, 0xffdd00],
+                blendMode: 'ADD',
+                emitting: false,
             });
+            explosion.setDepth(15);
+            explosion.explode(30);
+
+            // Sparks shower
+            const sparks = this.scene.add.particles(this.x, this.y, 'particle_spark', {
+                speed: { min: 80, max: 300 },
+                scale: { start: 1, end: 0 },
+                alpha: { start: 1, end: 0 },
+                lifespan: { min: 300, max: 700 },
+                tint: [0xffffff, 0xffdd00, this.config.color],
+                blendMode: 'ADD',
+                emitting: false,
+            });
+            sparks.setDepth(16);
+            sparks.explode(20);
+
+            // Smoke cloud
+            const smoke = this.scene.add.particles(this.x, this.y, 'particle_smoke', {
+                speed: { min: 20, max: 60 },
+                scale: { start: 2, end: 0.5 },
+                alpha: { start: 0.5, end: 0 },
+                lifespan: { min: 600, max: 1200 },
+                tint: [0x333333, 0x1a0033],
+                emitting: false,
+            });
+            smoke.setDepth(14);
+            smoke.explode(15);
+
+            // Shockwave ring
+            const ring = this.scene.add.particles(this.x, this.y, 'particle_ring', {
+                speed: { min: 150, max: 250 },
+                scale: { start: 0.5, end: 2.5 },
+                alpha: { start: 0.8, end: 0 },
+                lifespan: 500,
+                tint: this.config.color,
+                blendMode: 'ADD',
+                emitting: false,
+            });
+            ring.setDepth(15);
+            ring.explode(6);
+
+            this.scene.time.delayedCall(1300, () => {
+                explosion.destroy(); sparks.destroy(); smoke.destroy(); ring.destroy();
+            });
+        } catch (e) {
+            // Fallback
+            for (let i = 0; i < 15; i++) {
+                const p = this.scene.add.circle(
+                    this.x + Phaser.Math.Between(-20, 20), this.y + Phaser.Math.Between(-20, 20),
+                    Phaser.Math.Between(3, 8), this.config.color, 0.8
+                ).setDepth(15);
+                this.scene.tweens.add({
+                    targets: p, alpha: 0, scale: 0,
+                    x: p.x + Phaser.Math.Between(-60, 60), y: p.y + Phaser.Math.Between(-60, 60),
+                    duration: 600, onComplete: () => p.destroy(),
+                });
+            }
         }
 
-        this.scene.cameras.main.shake(300, 0.015);
+        this.scene.cameras.main.shake(400, 0.02);
+        this.scene.cameras.main.flash(200, 255, 100, 50);
 
         this.destroy();
     }

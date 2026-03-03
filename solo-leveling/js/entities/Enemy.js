@@ -235,25 +235,50 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     _deathEffect() {
-        // Purple particle burst on death
-        for (let i = 0; i < 5; i++) {
-            const p = this.scene.add.circle(
-                this.x + Phaser.Math.Between(-10, 10),
-                this.y + Phaser.Math.Between(-10, 10),
-                Phaser.Math.Between(2, 5),
-                COLORS.SHADOW_PRIMARY,
-                0.7
-            ).setDepth(15);
-
-            this.scene.tweens.add({
-                targets: p,
-                alpha: 0,
-                scale: 0,
-                x: p.x + Phaser.Math.Between(-30, 30),
-                y: p.y + Phaser.Math.Between(-30, 30),
-                duration: 400,
-                onComplete: () => p.destroy(),
+        try {
+            // Shadow burst particles
+            const emitter = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+                speed: { min: 40, max: 140 },
+                scale: { start: 0.8, end: 0 },
+                alpha: { start: 0.9, end: 0 },
+                lifespan: { min: 300, max: 600 },
+                tint: [COLORS.SHADOW_PRIMARY, 0x7b2fff, 0x4400aa],
+                blendMode: 'ADD',
+                emitting: false,
             });
+            emitter.setDepth(15);
+            emitter.explode(this.isElite ? 15 : 8);
+
+            // Spark particles
+            const sparks = this.scene.add.particles(this.x, this.y, 'particle_spark', {
+                speed: { min: 60, max: 180 },
+                scale: { start: 0.6, end: 0 },
+                alpha: { start: 1, end: 0 },
+                lifespan: { min: 200, max: 400 },
+                tint: 0xddaaff,
+                blendMode: 'ADD',
+                emitting: false,
+            });
+            sparks.setDepth(15);
+            sparks.explode(this.isElite ? 8 : 4);
+
+            this.scene.time.delayedCall(700, () => {
+                if (emitter) emitter.destroy();
+                if (sparks) sparks.destroy();
+            });
+        } catch (e) {
+            // Fallback
+            for (let i = 0; i < 5; i++) {
+                const p = this.scene.add.circle(
+                    this.x + Phaser.Math.Between(-10, 10), this.y + Phaser.Math.Between(-10, 10),
+                    Phaser.Math.Between(2, 5), COLORS.SHADOW_PRIMARY, 0.7
+                ).setDepth(15);
+                this.scene.tweens.add({
+                    targets: p, alpha: 0, scale: 0,
+                    x: p.x + Phaser.Math.Between(-30, 30), y: p.y + Phaser.Math.Between(-30, 30),
+                    duration: 400, onComplete: () => p.destroy(),
+                });
+            }
         }
     }
 

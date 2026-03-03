@@ -326,6 +326,11 @@ export class LevelUpScene extends Phaser.Scene {
             this.player.applyPassive(config.stat, config.bonus);
         }
 
+        // Remove blur from game camera
+        if (this.gameScene && this.gameScene.removeLevelUpBlur) {
+            this.gameScene.removeLevelUpBlur();
+        }
+
         // Resume game
         this.scene.resume('GameScene');
         this.scene.stop();
