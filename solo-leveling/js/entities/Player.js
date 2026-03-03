@@ -246,11 +246,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             onComplete: () => rankText.destroy(),
         });
 
-        // Stat boost on rank up
-        this.stats.maxHp += 20;
-        this.stats.hp = Math.min(this.stats.hp + 20, this.stats.maxHp);
-        this.stats.attack += 2;
-        this.stats.defense += 1;
+        // Stat boost on rank up (significant to keep pace with difficulty scaling)
+        this.stats.maxHp += 30;
+        this.stats.hp = Math.min(this.stats.hp + 30, this.stats.maxHp);
+        this.stats.attack += 5;
+        this.stats.defense += 2;
     }
 
     addXP(amount) {
