@@ -11,7 +11,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.hp = 0;
         this.maxHp = 0;
         this.attack = 0;
-        this.defense = 0;
         this.speed = 0;
         this.xpValue = 0;
         this.animFrame = 0;
@@ -41,8 +40,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.maxHp = Math.floor(typeData.hp * difficultyMult);
         this.hp = this.maxHp;
         this.attack = Math.floor(typeData.attack * difficultyMult);
-        // Defense scales at 40% of difficulty rate (reduced to prevent late-game damage immunity)
-        this.defense = Math.floor((typeData.defense || 0) * (1 + (difficultyMult - 1) * 0.4));
         // Speed scales at 40% of difficulty rate so enemies can still reach the player late-game
         this.speed = typeData.speed * (1 + (difficultyMult - 1) * 0.4);
         this.xpValue = Math.floor(typeData.xp * (1 + (difficultyMult - 1) * 0.3));
@@ -166,10 +163,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     takeDamage(amount, knockbackX, knockbackY) {
-        // Defense reduces damage (minimum 1)
-        const reduced = Math.max(1, amount - this.defense);
-        this.hp -= reduced;
-        amount = reduced;
+        this.hp -= amount;
 
         // Flash red on hit, then restore
         this.setTint(0xff0000);

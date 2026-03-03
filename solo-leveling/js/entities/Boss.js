@@ -18,7 +18,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.maxHp = Math.floor(config.hp * difficultyMult * hpMult);
         this.hp = this.maxHp;
         this.attack = Math.floor(config.attack * difficultyMult);
-        this.defense = Math.floor((config.defense || 0) * (1 + (difficultyMult - 1) * 0.4));
         this.speed = config.speed * (1 + (difficultyMult - 1) * 0.3);
         this.xpValue = Math.floor(config.xp * (1 + (difficultyMult - 1) * 0.3));
 
@@ -398,9 +397,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const capPercent = Math.max(0.04, 0.20 / Math.sqrt(this._difficultyMult));
         const maxDmgPerSecond = Math.floor(this.maxHp * capPercent);
         if (this._damageThisSecond >= maxDmgPerSecond) return false;
-
-        // Scaled defense reduces damage (minimum 1)
-        amount = Math.max(1, amount - this.defense);
 
         this._damageThisSecond += amount;
         this.hp -= amount;
