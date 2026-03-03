@@ -13,10 +13,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.config = config;
         this.isBoss = true;
 
-        // Stats scaled by difficulty (enforce minimum HP)
+        // Stats scaled by difficulty
+        this._difficultyMult = difficultyMult;
         this.maxHp = Math.floor(config.hp * difficultyMult);
         this.hp = this.maxHp;
         this.attack = Math.floor(config.attack * difficultyMult);
+        this.defense = Math.floor((config.defense || 0) * (1 + (difficultyMult - 1) * 0.4));
         this.speed = config.speed * (1 + (difficultyMult - 1) * 0.3);
         this.xpValue = Math.floor(config.xp * (1 + (difficultyMult - 1) * 0.3));
 
@@ -38,15 +40,23 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this._damageThisSecond = 0;
         this._lastSecondReset = 0;
 
-        // HP bar
-        this.hpBarBg = scene.add.rectangle(x, y - config.size - 10, 60, 6, 0x333333)
-            .setDepth(20);
-        this.hpBarFill = scene.add.rectangle(x - 30, y - config.size - 10, 60, 6, 0xff0000)
-            .setDepth(21)
-            .setOrigin(0, 0.5);
+        // HP bar (Graphics-based for reliable rendering)
+        this._hpBarWidth = Math.max(80, config.size * 1.5);
+        this._hpBarHeight = 8;
+        this.hpBarGfx = scene.add.graphics().setDepth(21);
+
+        // HP text
+        this.hpText = scene.add.text(x, y - config.size - 10, '', {
+            fontSize: '11px',
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(22);
 
         // Name plate
-        this.nameText = scene.add.text(x, y - config.size - 22, config.name, {
+        this.nameText = scene.add.text(x, y - config.size - 26, config.name, {
             fontSize: '14px',
             fontFamily: 'Arial',
             fontStyle: 'bold',
@@ -158,11 +168,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         this.setFlipX(playerX < this.x);
 
-        // Update HP bar position & fill
-        this.hpBarBg.setPosition(this.x, this.y - this.config.size - 10);
-        this.hpBarFill.setPosition(this.x - 30, this.y - this.config.size - 10);
-        this.hpBarFill.scaleX = Math.max(0, this.hp / this.maxHp);
-        this.nameText.setPosition(this.x, this.y - this.config.size - 22);
+        // Update HP bar
+        this._drawHpBar();
+        this.nameText.setPosition(this.x, this.y - this.config.size - 26);
 
         // Phase change at 50% HP
         if (this.phase === 1 && this.hp < this.maxHp * 0.5) {
@@ -186,6 +194,41 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         if (this.specialTimer >= cooldown) {
             this.specialTimer = 0;
             this._doSpecialAttack(playerX, playerY, dist);
+        }
+    }
+
+    _drawHpBar() {
+        if (!this.hpBarGfx) return;
+        this.hpBarGfx.clear();
+
+        const w = this._hpBarWidth;
+        const h = this._hpBarHeight;
+        const barX = this.x - w / 2;
+        const barY = this.y - this.config.size - 14;
+        const ratio = Math.max(0, this.hp / this.maxHp);
+
+        // Background
+        this.hpBarGfx.fillStyle(0x000000, 0.6);
+        this.hpBarGfx.fillRect(barX - 1, barY - 1, w + 2, h + 2);
+
+        // Fill color based on HP ratio
+        let fillColor = 0xff0000;
+        if (ratio > 0.6) fillColor = 0xff3333;
+        else if (ratio > 0.3) fillColor = 0xff6600;
+        else fillColor = 0xff0000;
+
+        this.hpBarGfx.fillStyle(fillColor, 1);
+        this.hpBarGfx.fillRect(barX, barY, w * ratio, h);
+
+        // Border
+        this.hpBarGfx.lineStyle(1, 0xffffff, 0.4);
+        this.hpBarGfx.strokeRect(barX - 1, barY - 1, w + 2, h + 2);
+
+        // HP text
+        if (this.hpText) {
+            const percent = Math.max(0, Math.ceil(ratio * 100));
+            this.hpText.setText(`${this.hp} / ${this.maxHp}  (${percent}%)`);
+            this.hpText.setPosition(this.x, barY + h / 2);
         }
     }
 
@@ -345,28 +388,24 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         if (currentFrame - this._lastHitFrame < 3) return false;
         this._lastHitFrame = currentFrame;
 
-        // Per-second damage cap: max 25% of maxHp per second
+        // Dynamic per-second damage cap: tighter as difficulty increases
+        // Ensures TTK increases progressively over time
         const now = this.scene.time.now;
         if (now - this._lastSecondReset > 1000) {
             this._damageThisSecond = 0;
             this._lastSecondReset = now;
         }
-        const maxDmgPerSecond = Math.floor(this.maxHp * 0.25);
+        const capPercent = Math.max(0.04, 0.20 / Math.sqrt(this._difficultyMult));
+        const maxDmgPerSecond = Math.floor(this.maxHp * capPercent);
         if (this._damageThisSecond >= maxDmgPerSecond) return false;
 
-        // Defense reduces damage (minimum 1)
-        const defense = this.config.defense || 0;
-        amount = Math.max(1, amount - defense);
+        // Scaled defense reduces damage (minimum 1)
+        amount = Math.max(1, amount - this.defense);
 
         this._damageThisSecond += amount;
         this.hp -= amount;
 
         console.log(`[BOSS HIT] ${this.config.name}: -${amount} HP (${this.hp}/${this.maxHp})`);
-
-        // Update HP bar using scaleX (not setDisplaySize)
-        if (this.hpBarFill) {
-            this.hpBarFill.scaleX = Math.max(0, this.hp / this.maxHp);
-        }
 
         // Flash red on hit, then restore
         this.setTint(0xff0000);
@@ -411,8 +450,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         if (!this.active) return; // Prevent double die
 
         // Cleanup HP bar FIRST (before any effects that could throw)
-        if (this.hpBarBg) { this.hpBarBg.destroy(); this.hpBarBg = null; }
-        if (this.hpBarFill) { this.hpBarFill.destroy(); this.hpBarFill = null; }
+        if (this.hpBarGfx) { this.hpBarGfx.destroy(); this.hpBarGfx = null; }
+        if (this.hpText) { this.hpText.destroy(); this.hpText = null; }
         if (this.nameText) { this.nameText.destroy(); this.nameText = null; }
 
         // Drop lots of XP
