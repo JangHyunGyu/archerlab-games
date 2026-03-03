@@ -129,7 +129,7 @@ export const ENEMY_TYPES = {
     // --- 최후반 적 (8분~) ---
     ironKnight: {
         name: '아이언 나이트',
-        hp: 680, attack: 33, speed: 60, xp: 40,
+        hp: 950, attack: 33, speed: 60, xp: 40,
         color: 0x8888aa, size: 52,
     },
     demonWarrior: {
