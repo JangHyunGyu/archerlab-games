@@ -107,34 +107,34 @@ export const ENEMY_TYPES = {
     // --- 중반 적 (1~5분) ---
     orc: {
         name: '오크',
-        hp: 240, attack: 18, speed: 64, xp: 15,
+        hp: 270, attack: 18, speed: 64, xp: 15,
         color: 0x6b4423, size: 44,
     },
     iceBear: {
         name: '아이스 베어',
-        hp: 175, attack: 12, speed: 64, xp: 10,
+        hp: 190, attack: 12, speed: 64, xp: 10,
         color: 0xaaccee, size: 40,
     },
     // --- 후반 적 (5분~) ---
     stoneGolem: {
         name: '스톤 골렘',
-        hp: 720, attack: 27, speed: 55, xp: 35,
+        hp: 850, attack: 27, speed: 55, xp: 35,
         color: 0x666677, size: 60,
     },
     darkMage: {
         name: '다크 메이지',
-        hp: 260, attack: 38, speed: 68, xp: 25,
+        hp: 300, attack: 38, speed: 68, xp: 25,
         color: 0x3a1a5e, size: 36,
     },
     // --- 최후반 적 (8분~) ---
     ironKnight: {
         name: '아이언 나이트',
-        hp: 550, attack: 33, speed: 60, xp: 40,
+        hp: 680, attack: 33, speed: 60, xp: 40,
         color: 0x8888aa, size: 52,
     },
     demonWarrior: {
         name: '마족 전사',
-        hp: 1100, attack: 45, speed: 68, xp: 60,
+        hp: 1400, attack: 45, speed: 68, xp: 60,
         color: 0x440022, size: 56,
     },
 };
