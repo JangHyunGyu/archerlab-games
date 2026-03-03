@@ -8,7 +8,7 @@ export class DragonFear extends WeaponBase {
     }
 
     fire() {
-        const range = 100 + this.extraRange;
+        const range = 200 + this.extraRange;
         const slowAmount = 0.4 - this.extraSlow; // Lower = slower
         const slowDuration = 2000;
 
