@@ -1,25 +1,36 @@
-import { COLORS } from '../utils/Constants.js';
+import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 
 export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, soldierType, bossName) {
-        super(scene, x, y, 'shadow_' + soldierType);
+    constructor(scene, x, y, bossKey) {
+        const config = BOSS_TYPES[bossKey];
+        // Use boss texture with shadow tint
+        super(scene, x, y, 'boss_' + bossKey);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         this.setDepth(9);
-        this.soldierType = soldierType;
-        this.bossName = bossName;
+        this.bossKey = bossKey;
+        this.bossName = config.name;
+        this.soldierType = config.shadowType;
 
-        // Stats based on type, scaled with player attack
+        // Match boss original size
+        this.body.setSize(config.size * 1.4, config.size * 1.4);
+        this.setDisplaySize(config.size * 2, config.size * 2);
+
+        // Shadow appearance - dark purple tint
+        this.setTint(0x6622aa);
+        this.setAlpha(0.85);
+
+        // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
         const typeStats = {
-            melee:  { damageMult: 1.2, speed: 140, range: 45, attackCD: 700 },
-            tank:   { damageMult: 0.8, speed: 100, range: 55, attackCD: 1000 },
-            ranged: { damageMult: 1.5, speed: 110, range: 220, attackCD: 900 },
+            melee:  { damageMult: 1.2, speed: 140, range: 50, attackCD: 700 },
+            tank:   { damageMult: 0.8, speed: 100, range: 60, attackCD: 1000 },
+            ranged: { damageMult: 1.5, speed: 110, range: 250, attackCD: 900 },
         };
 
-        const stats = typeStats[soldierType] || typeStats.melee;
+        const stats = typeStats[this.soldierType] || typeStats.melee;
         this.damage = Math.floor(playerAttack * stats.damageMult);
         this.speed = stats.speed;
         this.attackRange = stats.range;
@@ -28,13 +39,19 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
         // Follow offset
         this.followAngle = Math.random() * Math.PI * 2;
-        this.followDist = 60 + Math.random() * 30;
+        this.followDist = 80 + Math.random() * 40;
 
         // Shadow trail effect
         this.trailTimer = 0;
 
+        // Shadow glow filter
+        try {
+            this.enableFilters();
+            this._glowFilter = this.filters.internal.addGlow(COLORS.SHADOW_PRIMARY, 4, 0, 1, false, 8, 8);
+        } catch (e) { /* filters not available */ }
+
         // Name tag
-        this.nameTag = scene.add.text(x, y - 20, bossName, {
+        this.nameTag = scene.add.text(x, y - config.size - 10, config.name, {
             fontSize: '10px',
             fontFamily: 'Arial',
             color: COLORS.TEXT_PURPLE,
@@ -45,6 +62,11 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
     update(time, delta, player, enemies) {
         if (!this.active || !player) return;
+
+        // Update damage with current player attack
+        const playerAttack = player.stats.attack;
+        const multMap = { melee: 1.2, tank: 0.8, ranged: 1.5 };
+        this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 1.0));
 
         // Find nearest enemy
         let target = null;
@@ -59,7 +81,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        if (target && targetDist < 300) {
+        if (target && targetDist < 400) {
             // Attack mode
             if (targetDist > this.attackRange) {
                 // Move toward enemy
@@ -102,7 +124,8 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Update name tag
-        this.nameTag.setPosition(this.x, this.y - 20);
+        const config = BOSS_TYPES[this.bossKey];
+        this.nameTag.setPosition(this.x, this.y - (config ? config.size : 40) - 10);
 
         // Shadow trail
         this.trailTimer += delta;
@@ -113,48 +136,98 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
     }
 
     _attack(target) {
-        if (this.soldierType === 'ranged') {
-            // Shoot shadow projectile
-            const proj = this.scene.add.sprite(this.x, this.y, 'proj_shadow').setDepth(8);
-            const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-
-            this.scene.tweens.add({
-                targets: proj,
-                x: target.x,
-                y: target.y,
-                duration: 300,
-                onComplete: () => {
-                    if (target.active) {
-                        target.takeDamage(this.damage, this.x, this.y);
-                    }
-                    proj.destroy();
-                },
-            });
-        } else {
-            // Melee attack - slash effect
-            target.takeDamage(this.damage, this.x, this.y);
-
-            // Visual slash
-            const slash = this.scene.add.circle(target.x, target.y, 15, COLORS.SHADOW_PRIMARY, 0.5)
-                .setDepth(8);
-            this.scene.tweens.add({
-                targets: slash,
-                alpha: 0,
-                scale: 2,
-                duration: 200,
-                onComplete: () => slash.destroy(),
-            });
+        switch (this.bossKey) {
+            case 'igris': this._igrisAttack(target); break;
+            case 'tusk':  this._tuskAttack(target); break;
+            case 'beru':  this._beruAttack(target); break;
+            default:      this._meleeAttack(target); break;
         }
     }
 
+    // Igris: fast melee slash (shadow version)
+    _igrisAttack(target) {
+        target.takeDamage(this.damage, this.x, this.y);
+
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+        const slash = this.scene.add.sprite(target.x, target.y, 'proj_igris')
+            .setDepth(8).setRotation(angle).setScale(1.5).setTint(COLORS.SHADOW_PRIMARY);
+        this.scene.tweens.add({
+            targets: slash,
+            alpha: 0, scaleX: 2.5, scaleY: 2.5,
+            duration: 250,
+            onComplete: () => slash.destroy(),
+        });
+    }
+
+    // Tusk: ground slam AoE (shadow version)
+    _tuskAttack(target) {
+        // Slam at target position, hits all nearby enemies
+        const radius = 120;
+        const slam = this.scene.add.circle(target.x, target.y, radius, COLORS.SHADOW_PRIMARY, 0.3)
+            .setDepth(8);
+        this.scene.tweens.add({
+            targets: slam,
+            alpha: 0, scale: 1.5,
+            duration: 400,
+            onComplete: () => slam.destroy(),
+        });
+
+        // Damage all enemies in range
+        const enemies = [
+            ...(this.scene.enemyManager?.getActiveEnemies() || []),
+            ...(this.scene.activeBosses?.filter(b => b.active) || []),
+        ];
+        for (const enemy of enemies) {
+            if (!enemy.active) continue;
+            const dist = Phaser.Math.Distance.Between(target.x, target.y, enemy.x, enemy.y);
+            if (dist < radius) {
+                enemy.takeDamage(Math.floor(this.damage * 0.7), target.x, target.y);
+            }
+        }
+    }
+
+    // Beru: ranged acid spit (shadow version)
+    _beruAttack(target) {
+        const proj = this.scene.add.sprite(this.x, this.y, 'proj_beru')
+            .setDepth(8).setTint(COLORS.SHADOW_PRIMARY).setScale(1.3);
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+
+        this.scene.tweens.add({
+            targets: proj,
+            x: target.x,
+            y: target.y,
+            rotation: angle + Math.PI * 4,
+            duration: 350,
+            onComplete: () => {
+                if (target.active) {
+                    target.takeDamage(this.damage, this.x, this.y);
+                }
+                proj.destroy();
+            },
+        });
+    }
+
+    // Fallback melee
+    _meleeAttack(target) {
+        target.takeDamage(this.damage, this.x, this.y);
+        const slash = this.scene.add.circle(target.x, target.y, 15, COLORS.SHADOW_PRIMARY, 0.5)
+            .setDepth(8);
+        this.scene.tweens.add({
+            targets: slash,
+            alpha: 0, scale: 2,
+            duration: 200,
+            onComplete: () => slash.destroy(),
+        });
+    }
+
     _spawnTrail() {
-        const trail = this.scene.add.circle(this.x, this.y + 5, 4, COLORS.SHADOW_PRIMARY, 0.3)
+        const trail = this.scene.add.circle(this.x, this.y + 5, 6, COLORS.SHADOW_PRIMARY, 0.25)
             .setDepth(2);
         this.scene.tweens.add({
             targets: trail,
             alpha: 0,
-            scale: 0.5,
-            duration: 400,
+            scale: 0.3,
+            duration: 500,
             onComplete: () => trail.destroy(),
         });
     }

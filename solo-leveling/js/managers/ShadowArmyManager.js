@@ -240,18 +240,18 @@ export class ShadowArmyManager {
 
                                                 const soldier = new ShadowSoldier(
                                                     scene, bossX, bossY,
-                                                    bossConfig.shadowType,
-                                                    bossConfig.name
+                                                    bossData.bossKey
                                                 );
                                                 this.soldiers.push(soldier);
 
                                                 console.log(`[ARISE] Shadow soldier created: ${bossConfig.name} (${bossConfig.shadowType})`);
 
                                                 soldier.setAlpha(0);
-                                                soldier.setScale(0.2);
+                                                const finalScale = soldier.scaleX;
+                                                soldier.setScale(finalScale * 0.2);
                                                 scene.tweens.add({
                                                     targets: soldier,
-                                                    alpha: 1, scaleX: 1, scaleY: 1,
+                                                    alpha: 0.85, scaleX: finalScale, scaleY: finalScale,
                                                     y: bossY - 10,
                                                     duration: 500, ease: 'Back.easeOut',
                                                 });
