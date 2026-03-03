@@ -68,7 +68,7 @@ export class XPOrbPool {
         if (!player || !player.active) return;
 
         const pickupRange = player.stats.pickupRange || 60;
-        const magnetRange = pickupRange * 2.5;
+        const magnetRange = pickupRange * 3;
 
         this.group.getChildren().forEach(orb => {
             if (!orb.active) return;

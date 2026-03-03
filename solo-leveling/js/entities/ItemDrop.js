@@ -109,7 +109,7 @@ export class ItemDropManager {
         this.items.push(item);
     }
 
-    update(player) {
+    update(player, delta) {
         if (!player) return;
 
         const now = this.scene.time.now;
@@ -130,7 +130,22 @@ export class ItemDropManager {
 
             // Pickup check
             const dist = Phaser.Math.Distance.Between(player.x, player.y, item.x, item.y);
-            if (dist < 40) {
+            const magnetRange = (player.stats.pickupRange || 60) * 3;
+            const pickupRange = 50;
+
+            // Magnet attraction effect
+            if (dist < magnetRange && dist > pickupRange) {
+                const angle = Phaser.Math.Angle.Between(item.x, item.y, player.x, player.y);
+                const speed = (200 + (1 - dist / magnetRange) * 400) * (delta / 1000);
+                const dx = Math.cos(angle) * speed;
+                const dy = Math.sin(angle) * speed;
+                item.x += dx;
+                item.y += dy;
+                if (item._glow) { item._glow.x += dx; item._glow.y += dy; }
+                if (item._plusText) { item._plusText.x += dx; item._plusText.y += dy; }
+            }
+
+            if (dist < pickupRange) {
                 // Collect
                 item._config.effect(player, this.scene);
 

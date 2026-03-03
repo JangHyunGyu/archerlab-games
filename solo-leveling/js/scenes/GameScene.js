@@ -130,7 +130,7 @@ export class GameScene extends Phaser.Scene {
         this.xpOrbPool.update(this.player);
 
         // Update items
-        this.itemDropManager.update(this.player);
+        this.itemDropManager.update(this.player, delta);
 
         // Update shadow army
         this.shadowArmyManager.update(time, delta);

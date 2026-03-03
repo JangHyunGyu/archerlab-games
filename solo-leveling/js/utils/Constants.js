@@ -96,45 +96,45 @@ export const ENEMY_TYPES = {
     // --- 초반 적 (0~3분) ---
     goblin: {
         name: '고블린',
-        hp: 90, attack: 8, defense: 0, speed: 85, xp: 5,
+        hp: 90, attack: 8, speed: 85, xp: 5,
         color: 0x4a7a3a, size: 28,
     },
     antSoldier: {
         name: '개미 병사',
-        hp: 75, attack: 9, defense: 0, speed: 98, xp: 4,
+        hp: 75, attack: 9, speed: 98, xp: 4,
         color: 0x8b0000, size: 24,
     },
     // --- 중반 적 (1~5분) ---
     orc: {
         name: '오크',
-        hp: 225, attack: 18, defense: 2, speed: 64, xp: 15,
+        hp: 240, attack: 18, speed: 64, xp: 15,
         color: 0x6b4423, size: 44,
     },
     iceBear: {
         name: '아이스 베어',
-        hp: 165, attack: 12, defense: 1, speed: 64, xp: 10,
+        hp: 175, attack: 12, speed: 64, xp: 10,
         color: 0xaaccee, size: 40,
     },
     // --- 후반 적 (5분~) ---
     stoneGolem: {
         name: '스톤 골렘',
-        hp: 600, attack: 27, defense: 15, speed: 55, xp: 35,
+        hp: 720, attack: 27, speed: 55, xp: 35,
         color: 0x666677, size: 60,
     },
     darkMage: {
         name: '다크 메이지',
-        hp: 240, attack: 38, defense: 5, speed: 68, xp: 25,
+        hp: 260, attack: 38, speed: 68, xp: 25,
         color: 0x3a1a5e, size: 36,
     },
     // --- 최후반 적 (8분~) ---
     ironKnight: {
         name: '아이언 나이트',
-        hp: 450, attack: 33, defense: 20, speed: 60, xp: 40,
+        hp: 550, attack: 33, speed: 60, xp: 40,
         color: 0x8888aa, size: 52,
     },
     demonWarrior: {
         name: '마족 전사',
-        hp: 900, attack: 45, defense: 30, speed: 68, xp: 60,
+        hp: 1100, attack: 45, speed: 68, xp: 60,
         color: 0x440022, size: 56,
     },
 };
@@ -142,21 +142,21 @@ export const ENEMY_TYPES = {
 export const BOSS_TYPES = {
     igris: {
         name: '이그리스',
-        hp: 4000, attack: 38, defense: 10, speed: 94, xp: 500,
+        hp: 4500, attack: 38, speed: 94, xp: 500,
         color: 0xcc0000, size: 80,
         shadowType: 'melee',
         shadowColor: 0x220000,
     },
     tusk: {
         name: '터스크',
-        hp: 11000, attack: 52, defense: 20, speed: 68, xp: 800,
+        hp: 13000, attack: 52, speed: 68, xp: 800,
         color: 0x5a3a1a, size: 100,
         shadowType: 'tank',
         shadowColor: 0x1a1000,
     },
     beru: {
         name: '베루',
-        hp: 18000, attack: 60, defense: 15, speed: 102, xp: 1200,
+        hp: 20000, attack: 60, speed: 102, xp: 1200,
         color: 0x660033, size: 90,
         shadowType: 'ranged',
         shadowColor: 0x110022,
