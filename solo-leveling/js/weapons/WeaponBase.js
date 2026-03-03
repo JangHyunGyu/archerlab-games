@@ -40,7 +40,9 @@ export class WeaponBase {
     }
 
     getDamage() {
-        let dmg = this.damage + this.player.stats.attack * 0.3;
+        // Level-based scaling so player damage keeps up with exponential enemy HP
+        const levelMult = 1 + (this.player.level - 1) * 0.06;
+        let dmg = (this.damage + this.player.stats.attack) * levelMult;
         // Crit check
         if (Math.random() < this.player.stats.critRate) {
             dmg = Math.floor(dmg * this.player.stats.critDamage);

@@ -77,7 +77,7 @@ export const PLAYER_BASE_STATS = {
     hp: 100,
     maxHp: 100,
     attack: 24,
-    defense: 2,
+    defense: 5,
     speed: 160,
     critRate: 0.05,
     critDamage: 1.5,
