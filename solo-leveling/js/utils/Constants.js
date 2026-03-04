@@ -167,9 +167,9 @@ export const BOSS_SCHEDULE = [
     { time: 420, type: 'tusk' },    // 7분
     { time: 780, type: 'beru' },    // 13분
     // 후반 보스 재등장 (강화 버전 - HP·공격 모두 순차 상승)
-    { time: 1080, type: 'igris', hpMult: 5, atkMult: 1.5 },  // 18분
-    { time: 1440, type: 'tusk', hpMult: 3, atkMult: 1.2 },   // 24분
-    { time: 1800, type: 'beru', hpMult: 3, atkMult: 1.2 },   // 30분
+    { time: 1080, type: 'igris', hpMult: 8, atkMult: 1.5 },  // 18분
+    { time: 1440, type: 'tusk', hpMult: 4, atkMult: 1.2 },   // 24분
+    { time: 1800, type: 'beru', hpMult: 4, atkMult: 1.2 },   // 30분
 ];
 
 export const WAVE_CONFIG = {

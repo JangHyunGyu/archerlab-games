@@ -91,6 +91,26 @@ export class BasicDagger extends WeaponBase {
                 if (angleDiff < Math.PI / 6) {
                     enemy.takeDamage(this.getDamage(), px, py);
                     if (this.scene.soundManager) this.scene.soundManager.play('hit');
+
+                    // Impact spark circles
+                    const spark1 = this.scene.add.circle(
+                        enemy.x + Phaser.Math.Between(-5, 5),
+                        enemy.y + Phaser.Math.Between(-5, 5),
+                        3, 0xddaaff, 0.9
+                    ).setDepth(9);
+                    this.scene.tweens.add({
+                        targets: spark1, alpha: 0, scale: 0,
+                        duration: 200, onComplete: () => spark1.destroy(),
+                    });
+                    const spark2 = this.scene.add.circle(
+                        enemy.x + Phaser.Math.Between(-5, 5),
+                        enemy.y + Phaser.Math.Between(-5, 5),
+                        2, 0xffffff, 0.8
+                    ).setDepth(9);
+                    this.scene.tweens.add({
+                        targets: spark2, alpha: 0, scale: 0,
+                        duration: 150, onComplete: () => spark2.destroy(),
+                    });
                 }
             }
         });
