@@ -233,12 +233,12 @@ export class GameScene extends Phaser.Scene {
             const schedule = BOSS_SCHEDULE[i];
             if (gameTimeSec >= schedule.time && !this.bossesSpawned.includes(i)) {
                 this.bossesSpawned.push(i);
-                this._spawnBoss(schedule.type, schedule.hpMult || 1, schedule.atkMult || 1);
+                this._spawnBoss(schedule.type, schedule.hp, schedule.atkMult || 1);
             }
         }
     }
 
-    _spawnBoss(bossKey, hpMult = 1, atkMult = 1) {
+    _spawnBoss(bossKey, hp = null, atkMult = 1) {
         // Spawn boss just outside visible screen
         const cam = this.cameras.main;
         const halfW = (cam.width / cam.zoom) / 2 + 120;
@@ -256,7 +256,7 @@ export class GameScene extends Phaser.Scene {
 
         // Boss uses sqrt of difficulty (bosses already have high base stats)
         const diffMult = Math.sqrt(this.enemyManager.difficultyMultiplier);
-        const boss = new Boss(this, x, y, bossKey, diffMult, hpMult, atkMult);
+        const boss = new Boss(this, x, y, bossKey, diffMult, hp, atkMult);
         this.activeBosses.push(boss);
 
         if (this.soundManager) this.soundManager.play('bossAppear');
