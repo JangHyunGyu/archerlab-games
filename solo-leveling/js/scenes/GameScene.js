@@ -120,6 +120,13 @@ export class GameScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isGameOver) return;
 
+        // 30-minute victory condition
+        if (this.enemyManager.getGameTime() >= 1800000 && !this._victoryTriggered) {
+            this._victoryTriggered = true;
+            this._onVictory();
+            return;
+        }
+
         // Update player
         this.player.update(time, delta);
 
@@ -372,6 +379,29 @@ export class GameScene extends Phaser.Scene {
             gameScene: this,
             player: this.player,
             weaponManager: this.weaponManager,
+        });
+    }
+
+    _onVictory() {
+        this.isGameOver = true;
+
+        this.systemMessage.show(t('sysSystem'), [
+            t('victory'),
+        ], { duration: 3000, type: 'levelup' });
+
+        // Flash white then fade
+        this.cameras.main.flash(1000, 123, 47, 255);
+        this.cameras.main.fadeOut(2500, 10, 0, 26);
+
+        this.time.delayedCall(2500, () => {
+            this.scene.start('GameOverScene', {
+                victory: true,
+                level: this.player.level,
+                rank: this.player.currentRank,
+                kills: this.player.kills,
+                time: Math.floor(this.enemyManager.getGameTime() / 1000),
+                shadowCount: this.shadowArmyManager.getSoldierCount(),
+            });
         });
     }
 

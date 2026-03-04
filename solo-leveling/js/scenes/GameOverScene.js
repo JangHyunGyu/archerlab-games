@@ -143,17 +143,19 @@ export class GameOverScene extends Phaser.Scene {
 
     _showStats(time, level, rank, kills, shadowCount) {
         const cx = GAME_WIDTH / 2;
+        const isVictory = this.finalData.victory;
 
         // Title
-        this.add.text(cx, GAME_HEIGHT * 0.13, 'GAME OVER', {
+        this.add.text(cx, GAME_HEIGHT * 0.13, isVictory ? t('victoryTitle') : 'GAME OVER', {
             fontSize: fs(48), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#ff3333', stroke: '#000000', strokeThickness: 4,
+            color: isVictory ? '#ffd700' : '#ff3333',
+            stroke: '#000000', strokeThickness: 4,
         }).setOrigin(0.5);
 
-        // You died text
-        this.add.text(cx, GAME_HEIGHT * 0.2, t('huntOver'), {
-            fontSize: fs(18), fontFamily: 'Arial',
-            color: '#888888',
+        // Subtitle
+        this.add.text(cx, GAME_HEIGHT * 0.2, isVictory ? t('victorySub') : t('huntOver'), {
+            fontSize: fs(isVictory ? 16 : 18), fontFamily: 'Arial',
+            color: isVictory ? '#b366ff' : '#888888',
         }).setOrigin(0.5);
 
         // Stats card
