@@ -33,17 +33,22 @@ export class ShadowDagger extends WeaponBase {
             .setRotation(angle + Math.PI / 2);
 
         let hasHit = false;
+        let trailInterval = null;
+
+        const cleanup = () => {
+            if (trailInterval) { trailInterval.destroy(); trailInterval = null; }
+            if (dagger.active) dagger.destroy();
+        };
 
         // 트윈으로 직선 이동
-        const tween = this.scene.tweens.add({
+        this.scene.tweens.add({
             targets: dagger,
             x: endX,
             y: endY,
             duration: duration,
             ease: 'Linear',
             onUpdate: () => {
-                if (hasHit) return;
-                // 비행 중 적 충돌 판정
+                if (hasHit || !dagger.active) return;
                 const enemies = this.player.getAllEnemies();
                 for (const enemy of enemies) {
                     if (!enemy.active) continue;
@@ -52,32 +57,26 @@ export class ShadowDagger extends WeaponBase {
                         enemy.takeDamage(dmg, dagger.x, dagger.y);
                         if (this.scene.soundManager) this.scene.soundManager.play('hit');
                         hasHit = true;
-
-                        // 적중 이펙트
-                        const spark = this.scene.add.circle(dagger.x, dagger.y, 6, 0xb366ff, 0.8).setDepth(9);
+                        const sx = dagger.x, sy = dagger.y;
+                        cleanup();
+                        const spark = this.scene.add.circle(sx, sy, 6, 0xb366ff, 0.8).setDepth(9);
                         this.scene.tweens.add({
                             targets: spark, alpha: 0, scale: 3,
                             duration: 200, onComplete: () => spark.destroy(),
                         });
-
-                        // 단검 소멸
-                        tween.stop();
-                        dagger.destroy();
                         return;
                     }
                 }
             },
-            onComplete: () => {
-                dagger.destroy();
-            },
+            onComplete: () => cleanup(),
         });
 
         // 트레일 이펙트
-        const trailInterval = this.scene.time.addEvent({
+        trailInterval = this.scene.time.addEvent({
             delay: 50,
-            repeat: -1,
+            repeat: duration / 50,
             callback: () => {
-                if (!dagger.active) { trailInterval.destroy(); return; }
+                if (!dagger.active) return;
                 const trail = this.scene.add.circle(dagger.x, dagger.y, 3, 0xb366ff, 0.4).setDepth(7);
                 this.scene.tweens.add({
                     targets: trail, alpha: 0, scale: 0,

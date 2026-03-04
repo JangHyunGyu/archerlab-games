@@ -143,6 +143,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 if (!proj.active) return;
                 player.takeDamage(this.attack);
                 if (collider) this.scene.physics.world.removeCollider(collider);
+                this.scene.tweens.killTweensOf(proj);
                 proj.destroy();
             });
         }
@@ -151,6 +152,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.scene.time.delayedCall(3500, () => {
             if (proj && proj.active) {
                 if (collider) this.scene.physics.world.removeCollider(collider);
+                this.scene.tweens.killTweensOf(proj);
                 proj.destroy();
             }
         });
