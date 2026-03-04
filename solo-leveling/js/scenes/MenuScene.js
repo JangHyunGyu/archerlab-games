@@ -100,8 +100,6 @@ export class MenuScene extends Phaser.Scene {
                 this.game._soundManager.init();
             }
             this.game._soundManager.resume();
-            // 게임 시작 전 신스 워밍업 (fadeOut 500ms 동안 비동기 완료)
-            this.game._soundManager.warmup();
 
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => this.scene.start('GameScene'));
@@ -209,6 +207,7 @@ export class MenuScene extends Phaser.Scene {
             }
             const sm = this.game._soundManager;
             sm.resume();
+            sm.warmup(); // 볼륨 조작 없이 극소 velocity로 트리거 → 인트로와 충돌 없음
             sm.playIntroMusic();
         });
     }
