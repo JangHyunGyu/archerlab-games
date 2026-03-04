@@ -39,7 +39,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Apply difficulty scaling
         this.maxHp = Math.floor(typeData.hp * difficultyMult);
         this.hp = this.maxHp;
-        this.attack = Math.floor(typeData.attack * difficultyMult);
+        // Attack scales at 30% of difficulty rate (danger comes from swarms, not individual hits)
+        this.attack = Math.floor(typeData.attack * (1 + (difficultyMult - 1) * 0.3));
         // Speed scales at 40% of difficulty rate so enemies can still reach the player late-game
         this.speed = typeData.speed * (1 + (difficultyMult - 1) * 0.4);
         this.xpValue = Math.floor(typeData.xp * (1 + (difficultyMult - 1) * 0.3));
