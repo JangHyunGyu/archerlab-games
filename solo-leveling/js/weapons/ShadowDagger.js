@@ -4,10 +4,7 @@ import { WEAPONS, COLORS } from '../utils/Constants.js';
 export class ShadowDagger extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, WEAPONS.shadowDagger);
-        this.projectiles = scene.physics.add.group({
-            defaultKey: 'proj_dagger',
-            maxSize: 30,
-        });
+        this._activeDaggers = [];
     }
 
     fire() {
@@ -20,55 +17,75 @@ export class ShadowDagger extends WeaponBase {
         const target = this.player.getClosestEnemy(6000);
         if (!target) return;
 
-        const dagger = this.projectiles.get(this.player.x, this.player.y, 'proj_dagger');
-        if (!dagger) return;
+        const px = this.player.x;
+        const py = this.player.y;
+        const angle = Phaser.Math.Angle.Between(px, py, target.x, target.y);
+        const range = 1500;
+        const endX = px + Math.cos(angle) * range;
+        const endY = py + Math.sin(angle) * range;
+        const duration = 2500; // 600px/s * 2.5s = 1500px
+        const dmg = this.getDamage();
 
-        dagger.setActive(true);
-        dagger.setVisible(true);
-        dagger.setDepth(8);
-        dagger.setScale(1.2);
-        dagger.setPosition(this.player.x, this.player.y);
-        dagger.body.enable = true;
+        // 단검 스프라이트 생성 (physics body 없이)
+        const dagger = this.scene.add.sprite(px, py, 'proj_dagger')
+            .setDepth(8)
+            .setScale(1.2)
+            .setRotation(angle + Math.PI / 2);
 
-        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
-        const speed = 600;
+        let hasHit = false;
 
-        dagger.setRotation(angle + Math.PI / 2);
-        dagger.body.velocity.x = Math.cos(angle) * speed;
-        dagger.body.velocity.y = Math.sin(angle) * speed;
+        // 트윈으로 직선 이동
+        const tween = this.scene.tweens.add({
+            targets: dagger,
+            x: endX,
+            y: endY,
+            duration: duration,
+            ease: 'Linear',
+            onUpdate: () => {
+                if (hasHit) return;
+                // 비행 중 적 충돌 판정
+                const enemies = this.player.getAllEnemies();
+                for (const enemy of enemies) {
+                    if (!enemy.active) continue;
+                    const dist = Phaser.Math.Distance.Between(dagger.x, dagger.y, enemy.x, enemy.y);
+                    if (dist < 25) {
+                        enemy.takeDamage(dmg, dagger.x, dagger.y);
+                        if (this.scene.soundManager) this.scene.soundManager.play('hit');
+                        hasHit = true;
 
-        dagger.damageAmount = this.getDamage();
+                        // 적중 이펙트
+                        const spark = this.scene.add.circle(dagger.x, dagger.y, 6, 0xb366ff, 0.8).setDepth(9);
+                        this.scene.tweens.add({
+                            targets: spark, alpha: 0, scale: 3,
+                            duration: 200, onComplete: () => spark.destroy(),
+                        });
 
-        // 비행 트레일 이펙트
-        const trailInterval = this.scene.time.addEvent({
-            delay: 40,
-            repeat: -1,
-            callback: () => {
-                if (!dagger.active) { trailInterval.destroy(); return; }
-                const trail = this.scene.add.circle(dagger.x, dagger.y, 3, 0xb366ff, 0.5).setDepth(7);
-                this.scene.tweens.add({
-                    targets: trail, alpha: 0, scale: 0,
-                    duration: 200, onComplete: () => trail.destroy(),
-                });
+                        // 단검 소멸
+                        tween.stop();
+                        dagger.destroy();
+                        return;
+                    }
+                }
+            },
+            onComplete: () => {
+                dagger.destroy();
             },
         });
 
-        // Auto-destroy after distance (~2.5s at speed 600 = 1500px range)
-        this.scene.time.delayedCall(2500, () => {
-            if (dagger.active) {
-                dagger.setActive(false);
-                dagger.setVisible(false);
-                dagger.body.enable = false;
-            }
-            trailInterval.destroy();
+        // 트레일 이펙트
+        const trailInterval = this.scene.time.addEvent({
+            delay: 50,
+            repeat: -1,
+            callback: () => {
+                if (!dagger.active) { trailInterval.destroy(); return; }
+                const trail = this.scene.add.circle(dagger.x, dagger.y, 3, 0xb366ff, 0.4).setDepth(7);
+                this.scene.tweens.add({
+                    targets: trail, alpha: 0, scale: 0,
+                    duration: 180, onComplete: () => trail.destroy(),
+                });
+            },
         });
     }
 
-    getProjectileGroup() {
-        return this.projectiles;
-    }
-
-    destroy() {
-        this.projectiles.destroy(true);
-    }
+    destroy() {}
 }
