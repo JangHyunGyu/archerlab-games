@@ -3,8 +3,8 @@ import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, bossKey) {
         const config = BOSS_TYPES[bossKey];
-        // Use boss texture with shadow tint
-        super(scene, x, y, 'boss_' + bossKey);
+        // Use boss texture frame 0 with shadow tint
+        super(scene, x, y, 'boss_' + bossKey + '_0');
 
         scene.add.existing(this);
         scene.physics.add.existing(this);

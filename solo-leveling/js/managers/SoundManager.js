@@ -9,8 +9,8 @@ export class SoundManager {
         // Sound throttling: prevents audio glitch from rapid triggers
         this._lastPlayTime = {};
         this._throttleMs = {
-            hit: 50, kill: 60, xp: 50, dagger: 80,
-            slash: 100, authority: 150, fear: 200,
+            hit: 80, kill: 100, xp: 50, dagger: 100,
+            slash: 140, authority: 150, fear: 200,
             playerHit: 200, system: 200, warning: 300,
         };
     }
@@ -201,12 +201,12 @@ export class SoundManager {
     // 단검 베기 - swoosh + metallic clink + stereo shimmer
     _playDagger() {
         const now = Tone.now();
-        // Fast swoosh (rising filter)
-        this._noiseFilter.frequency.setValueAtTime(3000, now);
-        this._noiseFilter.frequency.rampTo(10000, 0.06);
-        this._noise.envelope.decay = 0.07;
-        this._noise.envelope.release = 0.03;
-        this._noise.triggerAttackRelease('16n', now, 0.55);
+        // Fast swoosh (fixed high freq, no rampTo)
+        this._noiseFilter.frequency.cancelScheduledValues(now);
+        this._noiseFilter.frequency.setValueAtTime(6000, now);
+        this._noise.envelope.decay = 0.05;
+        this._noise.envelope.release = 0.02;
+        this._noise.triggerAttackRelease('16n', now, 0.35);
         // Blade ring (sharp metallic)
         this._metal.frequency = 1100;
         this._metal.envelope.decay = 0.05;
@@ -226,13 +226,14 @@ export class SoundManager {
         this._fm.modulationIndex.value = 14;
         this._fm.envelope.decay = 0.05;
         this._fm.triggerAttackRelease('B5', '32n', now, 0.35);
-        // Energy sweep noise (low → high, tighter tail)
-        this._noiseFilter.frequency.setValueAtTime(400, now);
-        this._noiseFilter.frequency.rampTo(6000, 0.15);
+        // Energy sweep noise (cancel previous, short ramp)
+        this._noiseFilter.frequency.cancelScheduledValues(now);
+        this._noiseFilter.frequency.setValueAtTime(800, now);
+        this._noiseFilter.frequency.rampTo(4000, 0.1);
         this._noiseFilter.type = 'bandpass';
-        this._noise.envelope.decay = 0.14;
-        this._noise.envelope.release = 0.04;
-        this._noise.triggerAttackRelease('8n', now, 0.5);
+        this._noise.envelope.decay = 0.1;
+        this._noise.envelope.release = 0.03;
+        this._noise.triggerAttackRelease('16n', now, 0.35);
         // Deep sub impact (heavier)
         this._sub.envelope.decay = 0.22;
         this._sub.triggerAttackRelease('G1', '8n', now, 0.75);
@@ -263,11 +264,12 @@ export class SoundManager {
         this._sub.envelope.decay = 0.25;
         this._sub.triggerAttackRelease('E1', '4n', now, 0.5);
         // Psionic noise
+        this._noiseFilter.frequency.cancelScheduledValues(now);
         this._noiseFilter.frequency.setValueAtTime(800, now);
         this._noiseFilter.frequency.rampTo(3000, 0.3);
         this._noise.envelope.attack = 0.08;
         this._noise.envelope.decay = 0.3;
-        this._noise.triggerAttackRelease('4n', now, 0.3);
+        this._noise.triggerAttackRelease('4n', now, 0.25);
         this._noise.envelope.attack = 0.005; // reset
         // Impact burst
         this._impact.triggerAttackRelease('C2', '16n', now + 0.18, 0.7);
@@ -290,11 +292,12 @@ export class SoundManager {
         this._sub.envelope.decay = 0.5;
         this._sub.triggerAttackRelease('D1', '2n', now, 0.5);
         // Dark filtered noise
+        this._noiseFilter.frequency.cancelScheduledValues(now);
         this._noiseFilter.frequency.setValueAtTime(400, now);
         this._noiseFilter.frequency.rampTo(80, 0.5);
         this._noiseFilter.type = 'lowpass';
         this._noise.envelope.decay = 0.5;
-        this._noise.triggerAttackRelease('2n', now, 0.25);
+        this._noise.triggerAttackRelease('2n', now, 0.2);
         // Dissonant beating
         this._toneWet.triggerAttackRelease(93, '2n', now, 0.15);
     }
@@ -306,11 +309,11 @@ export class SoundManager {
         const now = Tone.now();
         // Heavy membrane hit
         this._impact.triggerAttackRelease('F1', '32n', now, 0.65);
-        // Crunch noise (fast filtered burst)
-        this._noiseFilter.frequency.setValueAtTime(2500, now);
-        this._noiseFilter.frequency.rampTo(800, 0.03);
-        this._noise.envelope.decay = 0.04;
-        this._noise.triggerAttackRelease('64n', now, 0.55);
+        // Crunch noise (fixed freq, no rampTo to avoid zipper noise)
+        this._noiseFilter.frequency.cancelScheduledValues(now);
+        this._noiseFilter.frequency.setValueAtTime(1800, now);
+        this._noise.envelope.decay = 0.03;
+        this._noise.triggerAttackRelease('64n', now, 0.3);
         // Metallic click
         this._metal.frequency = 800;
         this._metal.envelope.decay = 0.03;
@@ -323,11 +326,11 @@ export class SoundManager {
     // 적 처치 - burst + reward chime + satisfying pop
     _playKill() {
         const now = Tone.now();
-        // Visceral burst (high→low sweep)
-        this._noiseFilter.frequency.setValueAtTime(3000, now);
-        this._noiseFilter.frequency.rampTo(300, 0.05);
-        this._noise.envelope.decay = 0.06;
-        this._noise.triggerAttackRelease('32n', now, 0.55);
+        // Visceral burst (fixed freq, no rampTo)
+        this._noiseFilter.frequency.cancelScheduledValues(now);
+        this._noiseFilter.frequency.setValueAtTime(2200, now);
+        this._noise.envelope.decay = 0.04;
+        this._noise.triggerAttackRelease('32n', now, 0.3);
         // Body pop impact
         this._impact.triggerAttackRelease('D1', '32n', now, 0.55);
         // Pop pitch (satisfying high click)
@@ -348,10 +351,11 @@ export class SoundManager {
         this._impact.triggerAttackRelease('D1', '16n', now, 0.8);
         this._impact.pitchDecay = 0.04; // reset
         // Cracking noise
+        this._noiseFilter.frequency.cancelScheduledValues(now);
         this._noiseFilter.frequency.setValueAtTime(1500, now);
         this._noiseFilter.frequency.rampTo(300, 0.06);
         this._noise.envelope.decay = 0.06;
-        this._noise.triggerAttackRelease('16n', now, 0.6);
+        this._noise.triggerAttackRelease('16n', now, 0.45);
         // FM distortion layer
         this._fm.harmonicity.value = 4;
         this._fm.modulationIndex.value = 15;
@@ -438,12 +442,13 @@ export class SoundManager {
         this._fm.envelope.decay = 0.5;
         this._fm.triggerAttackRelease('E2', '2n', now + 0.1, 0.3);
         // Noise buildup
+        this._noiseFilter.frequency.cancelScheduledValues(now);
         this._noiseFilter.frequency.setValueAtTime(150, now);
         this._noiseFilter.frequency.rampTo(4000, 1.2);
         this._noiseFilter.type = 'lowpass';
         this._noise.envelope.attack = 0.3;
         this._noise.envelope.decay = 1.0;
-        this._noise.triggerAttackRelease('1n', now, 0.3);
+        this._noise.triggerAttackRelease('1n', now, 0.25);
         // Dissonant tension
         this._toneWet.triggerAttackRelease(130, '2n', now + 0.2, 0.15);
         // IMPACT at 0.8s
@@ -483,10 +488,11 @@ export class SoundManager {
         this._sub.envelope.decay = 0.7;
         this._sub.triggerAttackRelease('B0', '2n', now, 0.65);
         // Tension noise sweep
+        this._noiseFilter.frequency.cancelScheduledValues(now);
         this._noiseFilter.frequency.setValueAtTime(600, now);
         this._noiseFilter.frequency.rampTo(120, 0.6);
         this._noise.envelope.decay = 0.6;
-        this._noise.triggerAttackRelease('2n', now, 0.28);
+        this._noise.triggerAttackRelease('2n', now, 0.22);
         // Dissonant horn tone
         this._toneWet.triggerAttackRelease('Bb1', '2n', now + 0.05, 0.18);
         // Brass stab 1 (sharp)
@@ -568,12 +574,13 @@ export class SoundManager {
         this._sub.envelope.release = 0.6;
         this._sub.triggerAttackRelease('B0', '1n', now, 0.7);
         // Debris noise
+        this._noiseFilter.frequency.cancelScheduledValues(now);
         this._noiseFilter.frequency.setValueAtTime(400, now);
         this._noiseFilter.frequency.rampTo(60, 1.0);
         this._noiseFilter.type = 'lowpass';
         this._noise.envelope.attack = 0.2;
         this._noise.envelope.decay = 0.8;
-        this._noise.triggerAttackRelease('1n', now, 0.4);
+        this._noise.triggerAttackRelease('1n', now, 0.35);
         // Alarm siren
         setTimeout(() => {
             try {
