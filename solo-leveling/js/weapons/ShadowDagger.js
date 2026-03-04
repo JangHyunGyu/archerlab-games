@@ -23,19 +23,20 @@ export class ShadowDagger extends WeaponBase {
         const dagger = this.projectiles.get(this.player.x, this.player.y, 'proj_dagger');
         if (!dagger) return;
 
-        dagger.setActive(true);
-        dagger.setVisible(true);
+        // 풀에서 재활용 시 body+sprite 위치를 플레이어 좌표로 확실히 리셋
+        dagger.enableBody(true, this.player.x, this.player.y, true, true);
         dagger.setDepth(8);
         dagger.setScale(1.2);
-
-        // body 위치를 플레이어 위치로 확실히 리셋 (풀 재사용 시 이전 위치 잔존 방지)
-        dagger.body.reset(this.player.x, this.player.y);
 
         const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
         const speed = 600;
 
         dagger.setRotation(angle + Math.PI / 2);
-        dagger.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+        this.scene.time.delayedCall(0, () => {
+            if (dagger.active && dagger.body) {
+                dagger.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+            }
+        });
 
         dagger.damageAmount = this.getDamage();
 
