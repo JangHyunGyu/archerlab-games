@@ -380,6 +380,12 @@ class EffectManager {
 
     // ── Score popup (premium floating text) ──
     showScorePopup(x, y, text, color = 0xFFFFFF) {
+        // 화면 안으로 클램핑 (70px 올라감)
+        const sw = this.game.app.screen.width;
+        const sh = this.game.app.screen.height;
+        x = Math.max(50, Math.min(sw - 50, x));
+        y = Math.max(100, Math.min(sh - 40, y));
+
         const size = Math.max(16, this.game.cellSize * 0.65);
         const txt = new PIXI.Text({
             text,
@@ -469,11 +475,12 @@ class EffectManager {
 
     // ── Combo popup (tier-based) — 화려한 WOW 연출 ──
     showComboPopup(x, y, comboLevel, tier = 1) {
-        // 화면 안으로 클램핑
+        // 화면 안으로 클램핑 (올라가는 거리 고려)
         const sw = this.game.app.screen.width;
         const sh = this.game.app.screen.height;
+        const floatUp = 100 + tier * 30; // 애니메이션에서 올라가는 최대 거리
         x = Math.max(80, Math.min(sw - 80, x));
-        y = Math.max(50, Math.min(sh - 50, y));
+        y = Math.max(floatUp + 30, Math.min(sh - 50, y));
 
         const colors = [0xFFFFFF, 0x76FF03, 0x00E5FF, 0xFFD600, 0xFF1744, 0xD500F9, 0xFF6D00, 0xFF4081];
         const color = colors[Math.min(comboLevel - 1, colors.length - 1)];
@@ -596,11 +603,13 @@ class EffectManager {
 
     // ── Multi-line clear popup — "DOUBLE!" "TRIPLE!" "QUAD!" ──
     showMultiLinePopup(x, y, lineCount) {
-        // 화면 안으로 클램핑
+        // 화면 안으로 클램핑 (올라가는 거리 고려)
         const sw = this.game.app.screen.width;
         const sh = this.game.app.screen.height;
+        const intensity = Math.min(lineCount, 4);
+        const floatUp = 80 + intensity * 25; // 애니메이션에서 올라가는 최대 거리
         x = Math.max(80, Math.min(sw - 80, x));
-        y = Math.max(50, Math.min(sh - 50, y));
+        y = Math.max(floatUp + 30, Math.min(sh - 50, y));
 
         const configs = {
             2: { text: 'DOUBLE!', color: 0x00E5FF, size: 1.2, sparkles: 15 },
@@ -608,7 +617,6 @@ class EffectManager {
             4: { text: 'QUAD!',   color: 0xFF1744, size: 1.8, sparkles: 40 },
         };
         const cfg = configs[Math.min(lineCount, 4)] || configs[4];
-        const intensity = Math.min(lineCount, 4);
 
         const size = Math.max(28, this.game.cellSize * 1.0) * cfg.size;
         const style = {
