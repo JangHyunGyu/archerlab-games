@@ -694,12 +694,34 @@ class SoundManager {
         this._noise.volume.value = -20 + clampLevel;
         this._noise.triggerAttackRelease('16n', now + 0.03);
 
-        // High sparkle accent (metallic)
+        // High sparkle accent — glass crack (scales with combo)
+        this._metal.frequency.value = 800 + clampLevel * 80;
+        this._metal.harmonicity.value = 5.1;
+        this._metal.modulationIndex.value = 18 + clampLevel * 2;
+        this._metal.octaves = 1.5 + clampLevel * 0.2;
+        this._metal.resonance.value = 4500 + clampLevel * 300;
         this._metal.envelope.decay = 0.06 + clampLevel * 0.01;
         this._metal.volume.value = -24 + clampLevel;
         this._metal.triggerAttackRelease('16n', now + 0.05);
 
-        // At very high combos (6+), add distortion-like overtone
+        // Combo 4+: glass shatter double crack
+        if (clampLevel >= 4) {
+            this._at(0.07, () => {
+                this._metal.frequency.value = 1000 + clampLevel * 100;
+                this._metal.envelope.decay = 0.05 + clampLevel * 0.008;
+                this._metal.volume.value = -20 + clampLevel;
+                this._metal.triggerAttackRelease('16n', now + 0.07);
+            });
+            this._at(0.04, () => {
+                this._noise.noise.type = 'white';
+                this._noise.envelope.attack = 0.001;
+                this._noise.envelope.decay = 0.06 + clampLevel * 0.01;
+                this._noise.volume.value = -22 + clampLevel;
+                this._noise.triggerAttackRelease('32n', now + 0.04);
+            });
+        }
+
+        // Combo 6+: triple crack + distortion overtone + long shatter spray
         if (clampLevel >= 6) {
             const highHarmonic = Tone.Frequency(baseFreq * 3, 'hz').toNote();
             this._at(0.015, () => {
@@ -707,6 +729,19 @@ class SoundManager {
                 this._click.envelope.decay = 0.03;
                 this._click.volume.value = -18 + clampLevel;
                 this._click.triggerAttackRelease(highHarmonic, 0.06, now + 0.015);
+            });
+            this._at(0.11, () => {
+                this._metal.frequency.value = 1600 + clampLevel * 80;
+                this._metal.envelope.decay = 0.04;
+                this._metal.volume.value = -18 + clampLevel;
+                this._metal.triggerAttackRelease('32n', now + 0.11);
+            });
+            this._at(0.06, () => {
+                this._noise.noise.type = 'white';
+                this._noise.envelope.attack = 0.001;
+                this._noise.envelope.decay = 0.12;
+                this._noise.volume.value = -18 + clampLevel;
+                this._noise.triggerAttackRelease('16n', now + 0.06);
             });
         }
     }
