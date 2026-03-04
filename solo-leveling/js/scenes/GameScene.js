@@ -351,6 +351,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     onLevelUp() {
+        // Prevent double-launch if LevelUpScene is already running
+        if (this._levelUpActive) return;
+        this._levelUpActive = true;
+
         if (this.soundManager) this.soundManager.play('levelup');
 
         // System message
