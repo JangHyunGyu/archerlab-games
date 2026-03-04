@@ -9,10 +9,13 @@ export class SoundManager {
         // Sound throttling: prevents audio glitch from rapid triggers
         this._lastPlayTime = {};
         this._throttleMs = {
-            hit: 80, kill: 100, xp: 50, dagger: 100,
-            slash: 140, authority: 150, fear: 200,
-            playerHit: 200, system: 200, warning: 300,
+            hit: 150, kill: 180, xp: 80, dagger: 150,
+            slash: 200, authority: 200, fear: 250,
+            playerHit: 250, system: 250, warning: 350,
         };
+        // Global limit: max simultaneous sounds to prevent crackling
+        this._activeSounds = 0;
+        this._maxActiveSounds = 5;
     }
 
     init() {
