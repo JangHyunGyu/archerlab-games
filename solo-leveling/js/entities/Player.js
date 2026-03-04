@@ -100,6 +100,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._updateInvincibility(delta);
         this._updateAura();
         this._checkRankUp();
+        this._updateRegen(delta);
     }
 
     _handleMovement() {
@@ -264,9 +265,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.xp -= this.xpToNext;
             this.level++;
             this.xpToNext = XP_TABLE[this.level] || this.xpToNext * 1.2;
+            // Level-up heal (30% of max HP)
+            this.heal(Math.floor(this.stats.maxHp * 0.3));
             return true; // Level up occurred (one at a time, remaining XP carries over)
         }
         return false;
+    }
+
+    _updateRegen(delta) {
+        // Passive HP regen: 1.5 HP/sec
+        if (this.stats.hp >= this.stats.maxHp) return;
+        this._regenAccum = (this._regenAccum || 0) + 1.5 * (delta / 1000);
+        if (this._regenAccum >= 1) {
+            const heal = Math.floor(this._regenAccum);
+            this._regenAccum -= heal;
+            this.stats.hp = Math.min(this.stats.hp + heal, this.stats.maxHp);
+        }
     }
 
     takeDamage(amount) {

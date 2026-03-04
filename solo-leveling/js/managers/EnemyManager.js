@@ -430,8 +430,10 @@ export class EnemyManager {
         }
 
         // Spawn with boosted stats (elite multiplier on top of difficulty)
+        // HP uses full 3x difficulty, but attack caps at 1.5x to prevent elites outdamaging bosses
         const eliteMult = this.difficultyMultiplier * 3;
         enemy.spawn(typeKey, ENEMY_TYPES[typeKey], eliteMult, pos.x, pos.y);
+        enemy.attack = Math.floor(ENEMY_TYPES[typeKey].attack * (1 + (this.difficultyMultiplier * 1.5 - 1) * 0.3));
         enemy.isElite = true;
 
         // Elite visual: larger size + red tint + glow + name label
