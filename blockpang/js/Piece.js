@@ -39,34 +39,28 @@ function createPieceContainer(piece, cellSize, alpha = 1) {
             const g = new PIXI.Graphics();
 
             // Shadow (bottom-right)
-            g.beginFill(color.dark, alpha * 0.9);
-            g.drawRoundedRect(p, p, cellSize - p * 2, cellSize - p * 2, r);
-            g.endFill();
+            g.roundRect(p, p, cellSize - p * 2, cellSize - p * 2, r)
+             .fill({ color: color.dark, alpha: alpha * 0.9 });
 
             // Main body
-            g.beginFill(color.main, alpha);
-            g.drawRoundedRect(p + 1, p, cellSize - p * 2 - 2, cellSize - p * 2 - 2, r - 1);
-            g.endFill();
+            g.roundRect(p + 1, p, cellSize - p * 2 - 2, cellSize - p * 2 - 2, r - 1)
+             .fill({ color: color.main, alpha });
 
             // Bottom gradient for depth
-            g.beginFill(color.dark, 0.18 * alpha);
-            g.drawRoundedRect(p + 2, p + (cellSize - p * 2) * 0.5, cellSize - p * 2 - 4, (cellSize - p * 2) * 0.48, r - 2);
-            g.endFill();
+            g.roundRect(p + 2, p + (cellSize - p * 2) * 0.5, cellSize - p * 2 - 4, (cellSize - p * 2) * 0.48, r - 2)
+             .fill({ color: color.dark, alpha: 0.18 * alpha });
 
             // Top highlight (glass-like)
-            g.beginFill(color.light, 0.55 * alpha);
-            g.drawRoundedRect(p + 2, p + 1, cellSize - p * 2 - 4, (cellSize - p * 2) * 0.3, r - 1);
-            g.endFill();
+            g.roundRect(p + 2, p + 1, cellSize - p * 2 - 4, (cellSize - p * 2) * 0.3, r - 1)
+             .fill({ color: color.light, alpha: 0.55 * alpha });
 
             // Specular highlight
-            g.beginFill(0xFFFFFF, 0.35 * alpha);
-            g.drawRoundedRect(p + 4, p + 2, (cellSize - p * 2) * 0.2, (cellSize - p * 2) * 0.07, 1);
-            g.endFill();
+            g.roundRect(p + 4, p + 2, (cellSize - p * 2) * 0.2, (cellSize - p * 2) * 0.07, 1)
+             .fill({ color: 0xFFFFFF, alpha: 0.35 * alpha });
 
             // Inner border
-            g.lineStyle(0.5, color.light, 0.15 * alpha);
-            g.drawRoundedRect(p + 1, p + 1, cellSize - p * 2 - 2, cellSize - p * 2 - 2, r - 1);
-            g.lineStyle(0);
+            g.roundRect(p + 1, p + 1, cellSize - p * 2 - 2, cellSize - p * 2 - 2, r - 1)
+             .stroke({ width: 0.5, color: color.light, alpha: 0.15 * alpha });
 
             g.position.set(col * cellSize, row * cellSize);
             container.addChild(g);
@@ -94,7 +88,8 @@ class PieceTray {
         game.app.ticker.add(this._updateIdle, this);
     }
 
-    _updateIdle(delta) {
+    _updateIdle(ticker) {
+        const delta = ticker.deltaTime;
         this._idleTime += delta * (1000 / 60) * 0.002;
         for (let i = 0; i < 3; i++) {
             const cont = this.slotContainers[i];
@@ -142,15 +137,10 @@ class PieceTray {
         const g = new PIXI.Graphics();
 
         // Subtle dark panel
-        g.beginFill(0x080825, 0.5);
-        g.drawRoundedRect(10, 0, w - 20, h - 5, 12);
-        g.endFill();
+        g.roundRect(10, 0, w - 20, h - 5, 12).fill({ color: 0x080825, alpha: 0.5 });
 
         // Top border glow
-        g.lineStyle(1, 0x3355cc, 0.2);
-        g.moveTo(30, 0);
-        g.lineTo(w - 30, 0);
-        g.lineStyle(0);
+        g.moveTo(30, 0).lineTo(w - 30, 0).stroke({ width: 1, color: 0x3355cc, alpha: 0.2 });
 
         this.trayBg = g;
         this.container.addChildAt(g, 0);
@@ -213,8 +203,8 @@ class PieceTray {
 
             // 터치 영역 시각적 표시 (연한 테두리)
             const touchBorder = new PIXI.Graphics();
-            touchBorder.lineStyle(1, 0x4466aa, 0.25);
-            touchBorder.drawRoundedRect(-padX, -padY, pw + padX * 2, ph + padY * 2, 8);
+            touchBorder.roundRect(-padX, -padY, pw + padX * 2, ph + padY * 2, 8)
+                       .stroke({ width: 1, color: 0x4466aa, alpha: 0.25 });
             cont.addChildAt(touchBorder, 0);
             cont._touchBorder = touchBorder;
 

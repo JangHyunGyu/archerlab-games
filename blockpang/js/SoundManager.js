@@ -1,544 +1,855 @@
 class SoundManager {
     constructor() {
-        this.ctx = null;
         this.enabled = true;
         this.volume = 0.35;
-        this.masterGain = null;
-        this.reverbNode = null;
-        this.compressor = null;
+        this._initialized = false;
+
+        // Synth references (created in init)
+        this._membrane = null;
+        this._bass = null;
+        this._click = null;
+        this._bell = null;
+        this._poly = null;
+        this._fm = null;
+        this._am = null;
+        this._metal = null;
+        this._noise = null;
+        this._sweep = null;
+
+        // Effects
+        this._reverb = null;
+        this._compressor = null;
+        this._limiter = null;
     }
 
+    // ── Initialization ──────────────────────────────────────────────
+
     init() {
+        if (this._initialized) return;
+        if (typeof Tone === 'undefined') {
+            console.warn('SoundManager: Tone.js not loaded, audio disabled.');
+            this.enabled = false;
+            return;
+        }
+
         try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            // Master compressor for punchy, polished sound
-            this.compressor = this.ctx.createDynamicsCompressor();
-            this.compressor.threshold.setValueAtTime(-20, this.ctx.currentTime);
-            this.compressor.knee.setValueAtTime(25, this.ctx.currentTime);
-            this.compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
-            this.compressor.attack.setValueAtTime(0.002, this.ctx.currentTime);
-            this.compressor.release.setValueAtTime(0.15, this.ctx.currentTime);
+            // Convert linear volume (0.35) to dB for Tone.Destination
+            const volDb = 20 * Math.log10(this.volume);
+            Tone.Destination.volume.value = volDb;
 
-            // Master gain
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+            // ── Effects chain ──
+            this._limiter = new Tone.Limiter(-1).toDestination();
 
-            // Convolution reverb
-            this._createReverb();
+            this._compressor = new Tone.Compressor({
+                threshold: -20,
+                knee: 25,
+                ratio: 8,
+                attack: 0.002,
+                release: 0.15
+            }).connect(this._limiter);
 
-            this.compressor.connect(this.masterGain);
-            this.masterGain.connect(this.ctx.destination);
+            this._reverb = new Tone.Reverb({
+                decay: 1.8,
+                wet: 0.18,
+                preDelay: 0.01
+            }).connect(this._compressor);
+
+            // Generate the reverb impulse response immediately
+            this._reverb.generate();
+
+            // Dry path (no reverb)
+            this._dryChannel = new Tone.Channel({ volume: 0 }).connect(this._compressor);
+
+            // Wet path (with reverb)
+            this._wetChannel = new Tone.Channel({ volume: 0 }).connect(this._reverb);
+
+            // ── Synths ──
+
+            // MembraneSynth: Deep bass thumps and impacts
+            this._membrane = new Tone.MembraneSynth({
+                pitchDecay: 0.06,
+                octaves: 4,
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 0.001,
+                    decay: 0.15,
+                    sustain: 0,
+                    release: 0.08
+                }
+            }).connect(this._dryChannel);
+
+            // Bass Synth: Sub-bass and low-end foundation
+            this._bass = new Tone.MonoSynth({
+                oscillator: { type: 'sine' },
+                filter: { type: 'lowpass', frequency: 800, Q: 1 },
+                envelope: {
+                    attack: 0.005,
+                    decay: 0.2,
+                    sustain: 0.3,
+                    release: 0.3
+                },
+                filterEnvelope: {
+                    attack: 0.005,
+                    decay: 0.15,
+                    sustain: 0.2,
+                    release: 0.2,
+                    baseFrequency: 80,
+                    octaves: 2
+                }
+            }).connect(this._wetChannel);
+            this._bass.volume.value = -6;
+
+            // Click Synth: Short percussive clicks and pops
+            this._click = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: {
+                    attack: 0.001,
+                    decay: 0.015,
+                    sustain: 0.05,
+                    release: 0.02
+                }
+            }).connect(this._wetChannel);
+            this._click.volume.value = -8;
+
+            // Bell Synth: Crystalline melodic tones
+            this._bell = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 0.002,
+                    decay: 0.08,
+                    sustain: 0.35,
+                    release: 0.4
+                }
+            }).connect(this._wetChannel);
+            this._bell.volume.value = -8;
+
+            // PolySynth: Chords and arpeggios
+            this._poly = new Tone.PolySynth(Tone.Synth, {
+                maxPolyphony: 12,
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 0.005,
+                    decay: 0.1,
+                    sustain: 0.4,
+                    release: 0.4
+                }
+            }).connect(this._wetChannel);
+            this._poly.volume.value = -10;
+
+            // FMSynth: Rich harmonic tones, power chords
+            this._fm = new Tone.FMSynth({
+                harmonicity: 3,
+                modulationIndex: 10,
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 0.003,
+                    decay: 0.15,
+                    sustain: 0.3,
+                    release: 0.25
+                },
+                modulation: { type: 'sine' },
+                modulationEnvelope: {
+                    attack: 0.005,
+                    decay: 0.2,
+                    sustain: 0.3,
+                    release: 0.2
+                }
+            }).connect(this._wetChannel);
+            this._fm.volume.value = -12;
+
+            // AMSynth: Tremolo-rich tones for atmosphere
+            this._am = new Tone.AMSynth({
+                harmonicity: 2,
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 0.01,
+                    decay: 0.2,
+                    sustain: 0.3,
+                    release: 0.5
+                },
+                modulation: { type: 'sine' },
+                modulationEnvelope: {
+                    attack: 0.02,
+                    decay: 0.3,
+                    sustain: 0.3,
+                    release: 0.4
+                }
+            }).connect(this._wetChannel);
+            this._am.volume.value = -10;
+
+            // MetalSynth: Metallic percussion, shimmers, impacts
+            this._metal = new Tone.MetalSynth({
+                frequency: 200,
+                envelope: {
+                    attack: 0.001,
+                    decay: 0.1,
+                    release: 0.05
+                },
+                harmonicity: 5.1,
+                modulationIndex: 16,
+                resonance: 4000,
+                octaves: 1.5
+            }).connect(this._wetChannel);
+            this._metal.volume.value = -20;
+
+            // NoiseSynth: Noise bursts for texture
+            this._noise = new Tone.NoiseSynth({
+                noise: { type: 'pink' },
+                envelope: {
+                    attack: 0.002,
+                    decay: 0.12,
+                    sustain: 0,
+                    release: 0.05
+                }
+            }).connect(this._wetChannel);
+            this._noise.volume.value = -18;
+
+            // Sweep Synth: Filter sweeps, whooshes
+            this._sweep = new Tone.MonoSynth({
+                oscillator: { type: 'sawtooth' },
+                filter: { type: 'lowpass', frequency: 300, rolloff: -24, Q: 3 },
+                envelope: {
+                    attack: 0.005,
+                    decay: 0.15,
+                    sustain: 0.15,
+                    release: 0.15
+                },
+                filterEnvelope: {
+                    attack: 0.01,
+                    decay: 0.2,
+                    sustain: 0.1,
+                    release: 0.15,
+                    baseFrequency: 200,
+                    octaves: 4
+                }
+            }).connect(this._wetChannel);
+            this._sweep.volume.value = -16;
+
+            this._initialized = true;
         } catch (e) {
+            console.error('SoundManager init failed:', e);
             this.enabled = false;
         }
     }
 
-    _createReverb() {
-        const sampleRate = this.ctx.sampleRate;
-        const length = sampleRate * 1.8;
-        const impulse = this.ctx.createBuffer(2, length, sampleRate);
-        for (let ch = 0; ch < 2; ch++) {
-            const data = impulse.getChannelData(ch);
-            for (let i = 0; i < length; i++) {
-                const t = i / sampleRate;
-                // More lush reverb with early reflections
-                const earlyRef = t < 0.05 ? Math.sin(t * 200) * 0.3 : 0;
-                data[i] = ((Math.random() * 2 - 1) * Math.exp(-t * 3.5) * 0.35) + earlyRef;
-            }
-        }
-        this.reverbNode = this.ctx.createConvolver();
-        this.reverbNode.buffer = impulse;
-
-        const reverbGain = this.ctx.createGain();
-        reverbGain.gain.setValueAtTime(0.18, this.ctx.currentTime);
-        this.reverbNode.connect(reverbGain);
-        reverbGain.connect(this.compressor);
-
-        this.reverbSend = this.ctx.createGain();
-        this.reverbSend.gain.setValueAtTime(1, this.ctx.currentTime);
-        this.reverbSend.connect(this.reverbNode);
-    }
-
     ensureContext() {
-        if (!this.ctx) this.init();
-        if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
+        if (typeof Tone !== 'undefined') {
+            Tone.start().catch(() => {});
+        }
+        if (!this._initialized) {
+            this.init();
         }
     }
 
-    _getOutput() {
-        return this.compressor || this.ctx.destination;
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    _canPlay() {
+        return this.enabled && this._initialized;
     }
 
-    _playTone(freq, duration, type = 'sine', vol = 0.2, delay = 0, opts = {}) {
-        if (!this.enabled || !this.ctx) return;
-        const t = this.ctx.currentTime + delay;
-        const output = this._getOutput();
-
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const filter = this.ctx.createBiquadFilter();
-
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, t);
-
-        // Detune for richness
-        if (opts.detune) {
-            osc.detune.setValueAtTime(opts.detune, t);
-        }
-
-        // Vibrato
-        if (opts.vibrato) {
-            const lfo = this.ctx.createOscillator();
-            const lfoGain = this.ctx.createGain();
-            lfo.frequency.setValueAtTime(opts.vibrato.rate || 5, t);
-            lfoGain.gain.setValueAtTime(opts.vibrato.depth || 3, t);
-            lfo.connect(lfoGain);
-            lfoGain.connect(osc.frequency);
-            lfo.start(t);
-            lfo.stop(t + duration);
-        }
-
-        // Filter for warmth
-        filter.type = opts.filterType || 'lowpass';
-        filter.frequency.setValueAtTime(opts.filterFreq || 8000, t);
-        filter.Q.setValueAtTime(opts.filterQ || 1, t);
-        if (opts.filterSweep) {
-            filter.frequency.exponentialRampToValueAtTime(opts.filterSweep, t + duration);
-        }
-
-        // Envelope: ADSR
-        const attack = opts.attack || 0.005;
-        const decay = opts.decay || duration * 0.3;
-        const sustain = opts.sustain || 0.5;
-        const release = opts.release || duration * 0.5;
-
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(vol, t + attack);
-        gain.gain.linearRampToValueAtTime(vol * sustain, t + attack + decay);
-        gain.gain.setValueAtTime(vol * sustain, t + duration - release);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-        // Frequency glide
-        if (opts.freqEnd) {
-            osc.frequency.exponentialRampToValueAtTime(opts.freqEnd, t + duration);
-        }
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(output);
-
-        // Send to reverb
-        if (this.reverbSend && (opts.reverb !== false)) {
-            const reverbAmount = this.ctx.createGain();
-            reverbAmount.gain.setValueAtTime(opts.reverbMix || 0.3, t);
-            gain.connect(reverbAmount);
-            reverbAmount.connect(this.reverbSend);
-        }
-
-        osc.start(t);
-        osc.stop(t + duration + 0.05);
-    }
-
-    _playChord(freqs, duration, type = 'sine', vol = 0.15, delay = 0, opts = {}) {
-        freqs.forEach((f, i) => {
-            this._playTone(f, duration, type, vol / freqs.length, delay, {
-                ...opts,
-                detune: (i - Math.floor(freqs.length / 2)) * 5,
-            });
-        });
-    }
-
-    _playNoise(duration, vol = 0.08, delay = 0, opts = {}) {
-        if (!this.enabled || !this.ctx) return;
-        const t = this.ctx.currentTime + delay;
-        const output = this._getOutput();
-        const bufferSize = Math.floor(this.ctx.sampleRate * duration);
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-
-        const noiseType = opts.type || 'white';
-        if (noiseType === 'pink') {
-            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-            for (let i = 0; i < bufferSize; i++) {
-                const white = Math.random() * 2 - 1;
-                b0 = 0.99886 * b0 + white * 0.0555179;
-                b1 = 0.99332 * b1 + white * 0.0750759;
-                b2 = 0.96900 * b2 + white * 0.1538520;
-                b3 = 0.86650 * b3 + white * 0.3104856;
-                b4 = 0.55000 * b4 + white * 0.5329522;
-                b5 = -0.7616 * b5 - white * 0.0168980;
-                data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-                data[i] *= Math.pow(1 - i / bufferSize, opts.decay || 2);
-                b6 = white * 0.115926;
-            }
+    /**
+     * Schedule a callback at an offset from "now" (in seconds).
+     * Uses Tone.Transport-free scheduling via Tone.Draw or setTimeout.
+     */
+    _at(offsetSec, fn) {
+        if (offsetSec <= 0.005) {
+            fn();
         } else {
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, opts.decay || 2);
-            }
+            const ms = offsetSec * 1000;
+            setTimeout(fn, ms);
         }
-
-        const src = this.ctx.createBufferSource();
-        const gain = this.ctx.createGain();
-        const filter = this.ctx.createBiquadFilter();
-
-        src.buffer = buffer;
-        filter.type = opts.filterType || 'bandpass';
-        filter.frequency.setValueAtTime(opts.filterFreq || 4000, t);
-        filter.Q.setValueAtTime(opts.filterQ || 0.5, t);
-        if (opts.filterSweep) {
-            filter.frequency.exponentialRampToValueAtTime(opts.filterSweep, t + duration);
-        }
-
-        gain.gain.setValueAtTime(vol, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-        src.connect(filter);
-        filter.connect(gain);
-        gain.connect(output);
-
-        if (this.reverbSend && opts.reverb !== false) {
-            const revGain = this.ctx.createGain();
-            revGain.gain.setValueAtTime(0.2, t);
-            gain.connect(revGain);
-            revGain.connect(this.reverbSend);
-        }
-
-        src.start(t);
     }
 
-    // ── PLACE: Heavy satisfying THUMP + crystalline shimmer ──
+    // ── PLACE: Heavy satisfying THUMP + crystalline click ──────────
+
     playPlace() {
+        if (!this._canPlay()) return;
         this.ensureContext();
+        const now = Tone.now();
+
         // Deep punchy bass thud (the satisfying weight)
-        this._playTone(90, 0.15, 'sine', 0.3, 0, {
-            attack: 0.001, decay: 0.04, sustain: 0.2, release: 0.1,
-            freqEnd: 40, filterFreq: 400, filterSweep: 60,
-            reverb: false
-        });
+        this._membrane.envelope.decay = 0.12;
+        this._membrane.envelope.release = 0.06;
+        this._membrane.octaves = 4;
+        this._membrane.pitchDecay = 0.06;
+        this._membrane.volume.value = -4;
+        this._membrane.triggerAttackRelease('C1', '16n', now);
+
         // Sub-bass body (feel the impact)
-        this._playTone(55, 0.1, 'sine', 0.2, 0.005, {
-            attack: 0.001, decay: 0.03, sustain: 0.15, release: 0.06,
-            reverb: false
-        });
-        // Snappy mid click (the crispness)
-        this._playTone(520, 0.04, 'triangle', 0.15, 0.008, {
-            attack: 0.001, decay: 0.012, sustain: 0.1, release: 0.02,
-            filterFreq: 2000, filterSweep: 400
-        });
-        // Bright crystalline sparkle
-        this._playTone(1880, 0.07, 'sine', 0.06, 0.015, {
-            attack: 0.001, decay: 0.025, sustain: 0.08, release: 0.03,
-            reverbMix: 0.5
-        });
-        this._playTone(2640, 0.05, 'sine', 0.03, 0.02, {
-            attack: 0.001, decay: 0.02, sustain: 0.05, release: 0.02,
-            reverbMix: 0.6
-        });
-        // Soft transient noise (gives texture)
-        this._playNoise(0.03, 0.06, 0, {
-            type: 'pink', filterFreq: 3500, filterSweep: 300, decay: 6
-        });
+        this._bass.envelope.attack = 0.001;
+        this._bass.envelope.decay = 0.08;
+        this._bass.envelope.sustain = 0.1;
+        this._bass.envelope.release = 0.06;
+        this._bass.volume.value = -8;
+        this._bass.triggerAttackRelease('A0', '32n', now + 0.005);
+
+        // Snappy mid click (crispness)
+        this._click.oscillator.type = 'triangle';
+        this._click.envelope.decay = 0.012;
+        this._click.envelope.release = 0.02;
+        this._click.volume.value = -10;
+        this._click.triggerAttackRelease('C5', '64n', now + 0.008);
+
+        // Bright crystalline sparkle - two layers
+        this._bell.volume.value = -16;
+        this._bell.triggerAttackRelease('A#6', 0.07, now + 0.015);
+
+        // Metallic shimmer (adds texture)
+        this._metal.envelope.decay = 0.04;
+        this._metal.volume.value = -26;
+        this._metal.triggerAttackRelease('32n', now + 0.01);
+
+        // Soft transient noise (texture)
+        this._noise.noise.type = 'pink';
+        this._noise.envelope.decay = 0.025;
+        this._noise.volume.value = -22;
+        this._noise.triggerAttackRelease('64n', now);
     }
 
-    // ── LINE CLEAR: Euphoric ascending arpeggio with harmonics ──
-    playClear(lineCount) {
-        this.ensureContext();
-        const clampLines = Math.min(lineCount, 4);
+    // ── LINE CLEAR: Euphoric ascending arpeggio ────────────────────
 
-        // Musical scales - each progressively more euphoric
+    playClear(lineCount) {
+        if (!this._canPlay()) return;
+        this.ensureContext();
+        const now = Tone.now();
+        const clampLines = Math.min(Math.max(lineCount, 1), 4);
+
+        // Musical scales - progressively more euphoric
         const scales = {
-            1: [523.25, 659.25, 783.99],
-            2: [523.25, 659.25, 783.99, 1046.50],
-            3: [523.25, 659.25, 783.99, 987.77, 1174.66],
-            4: [523.25, 659.25, 783.99, 987.77, 1174.66, 1567.98]
+            1: ['C5', 'E5', 'G5'],
+            2: ['C5', 'E5', 'G5', 'C6'],
+            3: ['C5', 'E5', 'G5', 'B5', 'D6'],
+            4: ['C5', 'E5', 'G5', 'B5', 'D6', 'G6']
         };
         const notes = scales[clampLines];
         const noteSpacing = 0.05;
 
-        notes.forEach((freq, i) => {
+        // Ascending arpeggio with bell tones
+        notes.forEach((note, i) => {
+            const t = now + i * noteSpacing;
+
             // Main bell-like tone
-            this._playTone(freq, 0.4 - i * 0.015, 'sine', 0.18, i * noteSpacing, {
-                attack: 0.002, decay: 0.06, sustain: 0.5, release: 0.2,
-                reverbMix: 0.5, vibrato: { rate: 5, depth: 2 }
-            });
-            // Bright harmonic (octave up, adds sparkle)
-            this._playTone(freq * 2, 0.2, 'sine', 0.05, i * noteSpacing + 0.008, {
-                attack: 0.002, decay: 0.04, sustain: 0.15, release: 0.1,
-                reverbMix: 0.7
-            });
-            // Warm triangle sub-layer
-            this._playTone(freq * 0.5, 0.25, 'triangle', 0.07, i * noteSpacing, {
-                attack: 0.008, decay: 0.08, sustain: 0.3, release: 0.1
+            this._at(i * noteSpacing, () => {
+                this._bell.envelope.attack = 0.002;
+                this._bell.envelope.decay = 0.08;
+                this._bell.envelope.sustain = 0.4;
+                this._bell.envelope.release = 0.3;
+                this._bell.volume.value = -8;
+                this._bell.triggerAttackRelease(note, 0.35 - i * 0.015, t);
             });
         });
 
-        // Satisfying "whoosh" sweep
-        this._playTone(200, 0.3, 'sawtooth', 0.04, 0, {
-            freqEnd: 800 + clampLines * 200,
-            filterType: 'lowpass', filterFreq: 300, filterSweep: 3000 + clampLines * 500,
-            attack: 0.005, decay: 0.1, sustain: 0.2, release: 0.12,
-            reverbMix: 0.3
+        // Rich chord layer using PolySynth (all notes together, delayed)
+        this._at(noteSpacing * 0.5, () => {
+            this._poly.volume.value = -14;
+            this._poly.triggerAttackRelease(
+                notes.slice(0, 3),
+                0.3,
+                now + noteSpacing * 0.5
+            );
         });
 
-        // Sparkle shower noise
-        this._playNoise(0.25, 0.07, notes.length * noteSpacing * 0.2, {
-            type: 'pink', filterFreq: 9000, filterSweep: 2000, decay: 2.5,
-            reverbMix: 0.5
-        });
+        // FM harmonic shimmer on top notes
+        if (clampLines >= 2) {
+            const topNote = notes[notes.length - 1];
+            this._at(notes.length * noteSpacing * 0.6, () => {
+                this._fm.harmonicity.value = 3;
+                this._fm.modulationIndex.value = 6;
+                this._fm.volume.value = -16;
+                this._fm.triggerAttackRelease(topNote, 0.25, now + notes.length * noteSpacing * 0.6);
+            });
+        }
 
-        // Foundation bass pad (fullness)
-        this._playTone(notes[0] * 0.25, 0.5, 'sine', 0.1, 0, {
-            attack: 0.08, decay: 0.15, sustain: 0.4, release: 0.2,
-            filterFreq: 800, filterSweep: 2500, reverbMix: 0.6
+        // Satisfying whoosh sweep (rising with line count)
+        this._sweep.filterEnvelope.octaves = 3 + clampLines;
+        this._sweep.filterEnvelope.decay = 0.2 + clampLines * 0.05;
+        this._sweep.volume.value = -18;
+        this._sweep.triggerAttackRelease('G2', 0.3, now);
+
+        // Sparkle noise burst
+        this._at(notes.length * noteSpacing * 0.3, () => {
+            this._noise.noise.type = 'pink';
+            this._noise.envelope.decay = 0.15;
+            this._noise.volume.value = -20;
+            this._noise.triggerAttackRelease(0.2, now + notes.length * noteSpacing * 0.3);
         });
 
         // Impact sub-bass hit
-        this._playTone(65, 0.12, 'sine', 0.15, 0, {
-            attack: 0.001, decay: 0.04, sustain: 0.1, release: 0.07,
-            freqEnd: 35, reverb: false
-        });
+        this._membrane.octaves = 5;
+        this._membrane.pitchDecay = 0.04;
+        this._membrane.envelope.decay = 0.1;
+        this._membrane.volume.value = -6;
+        this._membrane.triggerAttackRelease('C1', '16n', now);
+
+        // Foundation bass pad
+        this._bass.envelope.attack = 0.06;
+        this._bass.envelope.decay = 0.2;
+        this._bass.envelope.sustain = 0.3;
+        this._bass.envelope.release = 0.25;
+        this._bass.volume.value = -10;
+        this._bass.triggerAttackRelease('C2', 0.4, now + 0.01);
+
+        // Metallic sparkle accent
+        this._metal.envelope.decay = 0.08;
+        this._metal.volume.value = -24 + clampLines;
+        this._metal.triggerAttackRelease('16n', now + 0.02);
     }
 
-    // ── COMBO: Escalating power chord with rising energy ──
+    // ── COMBO: Escalating power chord ──────────────────────────────
+
     playCombo(level) {
+        if (!this._canPlay()) return;
         this.ensureContext();
+        const now = Tone.now();
         const clampLevel = Math.min(level, 8);
-        const baseNote = 440 * Math.pow(2, (clampLevel - 2) / 12);
 
-        // Power chord: root, 5th, octave
-        const chord = [baseNote, baseNote * 1.5, baseNote * 2];
+        // Base note rises with combo level
+        const semitonesUp = clampLevel - 2;
+        const baseFreq = 440 * Math.pow(2, semitonesUp / 12);
+        const baseNote = Tone.Frequency(baseFreq, 'hz').toNote();
+        const fifthFreq = baseFreq * 1.5;
+        const fifthNote = Tone.Frequency(fifthFreq, 'hz').toNote();
+        const octaveFreq = baseFreq * 2;
+        const octaveNote = Tone.Frequency(octaveFreq, 'hz').toNote();
 
-        // Punchy strum
-        chord.forEach((freq, i) => {
-            this._playTone(freq, 0.35, 'sine', 0.14, i * 0.025, {
-                attack: 0.003, decay: 0.08, sustain: 0.5, release: 0.18,
-                reverbMix: 0.5, vibrato: { rate: 4 + clampLevel * 0.5, depth: 2 + clampLevel * 0.3 }
-            });
-            // Bright octave shimmer
-            this._playTone(freq * 2, 0.2, 'triangle', 0.05, i * 0.025 + 0.01, {
-                attack: 0.003, decay: 0.06, sustain: 0.25, release: 0.1,
-                reverbMix: 0.6
-            });
+        // Power chord via PolySynth (root, 5th, octave)
+        this._poly.set({
+            oscillator: { type: 'sine' },
+            envelope: {
+                attack: 0.003,
+                decay: 0.1,
+                sustain: 0.45,
+                release: 0.2
+            }
         });
+        this._poly.volume.value = -8;
+        this._poly.triggerAttackRelease([baseNote, fifthNote, octaveNote], 0.3, now);
+
+        // FM layer for grit/harmonics - more intense at higher levels
+        this._fm.harmonicity.value = 2 + clampLevel * 0.3;
+        this._fm.modulationIndex.value = 6 + clampLevel * 2;
+        this._fm.volume.value = -14 + clampLevel * 0.5;
+        this._fm.triggerAttackRelease(baseNote, 0.25, now + 0.01);
+
+        // At high combos, add AM layer for extra intensity
+        if (clampLevel >= 4) {
+            this._am.harmonicity.value = 2 + clampLevel * 0.2;
+            this._am.volume.value = -16 + clampLevel * 0.5;
+            this._am.triggerAttackRelease(octaveNote, 0.2, now + 0.02);
+        }
 
         // Rising whoosh (increasing intensity with level)
-        this._playTone(150, 0.3, 'sawtooth', 0.04 + clampLevel * 0.005, 0, {
-            freqEnd: 150 * Math.pow(2, clampLevel / 4),
-            filterType: 'lowpass', filterFreq: 400, filterSweep: 3000 + clampLevel * 500,
-            attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.12,
-            reverbMix: 0.4
-        });
+        this._sweep.filterEnvelope.octaves = 3 + clampLevel * 0.5;
+        this._sweep.filterEnvelope.decay = 0.15 + clampLevel * 0.02;
+        this._sweep.filter.Q.value = 2 + clampLevel * 0.5;
+        this._sweep.volume.value = -18 + clampLevel * 0.5;
+        this._sweep.triggerAttackRelease('D#2', 0.25, now);
 
         // Heavy impact thud
-        this._playTone(80, 0.1, 'sine', 0.15 + clampLevel * 0.01, 0, {
-            attack: 0.001, decay: 0.03, sustain: 0.15, release: 0.06,
-            freqEnd: 40, reverb: false
-        });
+        this._membrane.octaves = 4 + clampLevel * 0.3;
+        this._membrane.pitchDecay = 0.04;
+        this._membrane.envelope.decay = 0.08;
+        this._membrane.volume.value = -5 + clampLevel * 0.3;
+        this._membrane.triggerAttackRelease('E1', '16n', now);
 
         // Crispy noise burst
-        this._playNoise(0.12, 0.06, 0.03, {
-            type: 'pink', filterFreq: 5000 + clampLevel * 500, filterSweep: 800, decay: 4,
-            reverbMix: 0.3
-        });
+        this._noise.noise.type = 'pink';
+        this._noise.envelope.decay = 0.08 + clampLevel * 0.01;
+        this._noise.volume.value = -20 + clampLevel;
+        this._noise.triggerAttackRelease('16n', now + 0.03);
 
-        // High sparkle accent
-        this._playTone(baseNote * 4, 0.12, 'sine', 0.04, 0.06, {
-            attack: 0.001, decay: 0.04, sustain: 0.08, release: 0.06,
-            reverbMix: 0.8
-        });
+        // High sparkle accent (metallic)
+        this._metal.envelope.decay = 0.06 + clampLevel * 0.01;
+        this._metal.volume.value = -24 + clampLevel;
+        this._metal.triggerAttackRelease('16n', now + 0.05);
+
+        // At very high combos (6+), add distortion-like overtone
+        if (clampLevel >= 6) {
+            const highHarmonic = Tone.Frequency(baseFreq * 3, 'hz').toNote();
+            this._at(0.015, () => {
+                this._click.oscillator.type = 'square';
+                this._click.envelope.decay = 0.03;
+                this._click.volume.value = -18 + clampLevel;
+                this._click.triggerAttackRelease(highHarmonic, 0.06, now + 0.015);
+            });
+        }
     }
 
-    // ── GAME OVER: Dramatic descending with weight ──
+    // ── GAME OVER: Dramatic descending progression ─────────────────
+
     playGameOver() {
+        if (!this._canPlay()) return;
         this.ensureContext();
+        const now = Tone.now();
+
+        // Descending minor chord progression
         const progression = [
-            { freqs: [440, 523.25, 659.25], delay: 0 },
-            { freqs: [392, 466.16, 587.33], delay: 0.3 },
-            { freqs: [349.23, 415.30, 523.25], delay: 0.6 },
-            { freqs: [293.66, 349.23, 440], delay: 0.9 },
-            { freqs: [220, 261.63, 329.63], delay: 1.2 },
+            { notes: ['A4', 'C5', 'E5'], delay: 0 },
+            { notes: ['G4', 'Bb4', 'D5'], delay: 0.3 },
+            { notes: ['F4', 'Ab4', 'C5'], delay: 0.6 },
+            { notes: ['D4', 'F4', 'A4'], delay: 0.9 },
+            { notes: ['A3', 'C4', 'E4'], delay: 1.2 }
         ];
 
-        progression.forEach(({ freqs, delay }) => {
-            freqs.forEach((f, i) => {
-                this._playTone(f, 0.7, 'sine', 0.09, delay + i * 0.01, {
-                    attack: 0.02, decay: 0.2, sustain: 0.35, release: 0.3,
-                    reverbMix: 0.7, vibrato: { rate: 2.5, depth: 5 }
+        progression.forEach(({ notes, delay }) => {
+            this._at(delay, () => {
+                const t = now + delay;
+
+                // Chord with rich sustain
+                this._poly.set({
+                    oscillator: { type: 'sine' },
+                    envelope: {
+                        attack: 0.02,
+                        decay: 0.25,
+                        sustain: 0.3,
+                        release: 0.35
+                    }
                 });
+                this._poly.volume.value = -10;
+                this._poly.triggerAttackRelease(notes, 0.55, t);
+
+                // AM layer for melancholy tremolo
+                this._am.harmonicity.value = 1.5;
+                this._am.volume.value = -14;
+                this._am.triggerAttackRelease(notes[0], 0.6, t + 0.01);
             });
-            // Heavy sub bass
-            this._playTone(freqs[0] * 0.25, 0.9, 'sine', 0.08, delay, {
-                attack: 0.04, decay: 0.25, sustain: 0.25, release: 0.35,
-                filterFreq: 180, reverbMix: 0.5
+        });
+
+        // Heavy sub bass following root notes
+        const bassNotes = ['A1', 'G1', 'F1', 'D1', 'A0'];
+        bassNotes.forEach((note, i) => {
+            const delay = i * 0.3;
+            this._at(delay, () => {
+                this._bass.envelope.attack = 0.03;
+                this._bass.envelope.decay = 0.3;
+                this._bass.envelope.sustain = 0.2;
+                this._bass.envelope.release = 0.35;
+                this._bass.volume.value = -10;
+                this._bass.triggerAttackRelease(note, 0.7, now + delay);
             });
         });
 
         // Ominous final low rumble
-        this._playTone(45, 2.0, 'sine', 0.12, 1.4, {
-            attack: 0.1, decay: 0.5, sustain: 0.25, release: 0.8,
-            filterFreq: 150, filterSweep: 30, reverbMix: 0.8,
-            vibrato: { rate: 1.5, depth: 8 }
+        this._at(1.4, () => {
+            this._membrane.octaves = 6;
+            this._membrane.pitchDecay = 0.3;
+            this._membrane.envelope.decay = 1.5;
+            this._membrane.envelope.release = 0.8;
+            this._membrane.volume.value = -6;
+            this._membrane.triggerAttackRelease('F0', 1.8, now + 1.4);
         });
-        // Noise tail
-        this._playNoise(1.5, 0.05, 1.2, {
-            type: 'pink', filterFreq: 400, filterSweep: 40, decay: 1.2,
-            reverbMix: 0.7
+
+        // FM dark rumble tail
+        this._at(1.5, () => {
+            this._fm.harmonicity.value = 1.5;
+            this._fm.modulationIndex.value = 20;
+            this._fm.volume.value = -14;
+            this._fm.triggerAttackRelease('A0', 1.5, now + 1.5);
+        });
+
+        // Noise tail (fading static)
+        this._at(1.2, () => {
+            this._noise.noise.type = 'brown';
+            this._noise.envelope.attack = 0.1;
+            this._noise.envelope.decay = 1.2;
+            this._noise.volume.value = -18;
+            this._noise.triggerAttackRelease(1.5, now + 1.2);
         });
     }
 
-    // ── INVALID: Short punchy rejection buzz ──
+    // ── INVALID: Short punchy rejection buzz ───────────────────────
+
     playInvalid() {
+        if (!this._canPlay()) return;
         this.ensureContext();
-        this._playTone(180, 0.08, 'square', 0.08, 0, {
-            attack: 0.001, decay: 0.02, sustain: 0.3, release: 0.04,
-            filterFreq: 700, filterSweep: 150
+        const now = Tone.now();
+
+        // Low harsh buzz
+        this._click.oscillator.type = 'square';
+        this._click.envelope.attack = 0.001;
+        this._click.envelope.decay = 0.03;
+        this._click.envelope.sustain = 0.2;
+        this._click.envelope.release = 0.04;
+        this._click.volume.value = -12;
+        this._click.triggerAttackRelease('F#3', 0.07, now);
+
+        // Second lower buzz (descending feel)
+        this._at(0.04, () => {
+            this._fm.harmonicity.value = 7;
+            this._fm.modulationIndex.value = 15;
+            this._fm.volume.value = -16;
+            this._fm.triggerAttackRelease('C#3', 0.06, now + 0.04);
         });
-        this._playTone(140, 0.1, 'square', 0.05, 0.04, {
-            attack: 0.001, decay: 0.02, sustain: 0.3, release: 0.05,
-            filterFreq: 500, filterSweep: 120
-        });
+
         // Low thud
-        this._playTone(70, 0.06, 'sine', 0.08, 0, {
-            attack: 0.001, decay: 0.02, sustain: 0.1, release: 0.03,
-            reverb: false
-        });
+        this._membrane.octaves = 3;
+        this._membrane.pitchDecay = 0.03;
+        this._membrane.envelope.decay = 0.04;
+        this._membrane.volume.value = -8;
+        this._membrane.triggerAttackRelease('C#1', '32n', now);
+
+        // Brief noise crunch
+        this._noise.noise.type = 'white';
+        this._noise.envelope.decay = 0.03;
+        this._noise.volume.value = -22;
+        this._noise.triggerAttackRelease('64n', now);
     }
 
-    // ── PICKUP: Snappy satisfying click-pop ──
+    // ── PICKUP: Snappy satisfying click-pop ─────────────────────────
+
     playPickup() {
+        if (!this._canPlay()) return;
         this.ensureContext();
+        const now = Tone.now();
+
         // Pop click
-        this._playTone(700, 0.04, 'sine', 0.1, 0, {
-            attack: 0.001, decay: 0.01, sustain: 0.15, release: 0.015
-        });
+        this._click.oscillator.type = 'sine';
+        this._click.envelope.attack = 0.001;
+        this._click.envelope.decay = 0.012;
+        this._click.envelope.sustain = 0.08;
+        this._click.envelope.release = 0.015;
+        this._click.volume.value = -8;
+        this._click.triggerAttackRelease('F5', 0.035, now);
+
         // High sparkle
-        this._playTone(1200, 0.035, 'triangle', 0.05, 0.008, {
-            attack: 0.001, decay: 0.008, sustain: 0.08, release: 0.015,
-            reverbMix: 0.4
-        });
+        this._bell.envelope.decay = 0.01;
+        this._bell.envelope.release = 0.015;
+        this._bell.volume.value = -16;
+        this._bell.triggerAttackRelease('D#6', 0.03, now + 0.008);
+
         // Tiny sub bump
-        this._playTone(250, 0.03, 'sine', 0.06, 0, {
-            attack: 0.001, decay: 0.01, sustain: 0.1, release: 0.015,
-            reverb: false
-        });
+        this._membrane.octaves = 2;
+        this._membrane.pitchDecay = 0.02;
+        this._membrane.envelope.decay = 0.03;
+        this._membrane.volume.value = -10;
+        this._membrane.triggerAttackRelease('B1', '64n', now);
+
+        // Delicate metallic tick
+        this._metal.envelope.decay = 0.02;
+        this._metal.volume.value = -30;
+        this._metal.triggerAttackRelease('64n', now + 0.005);
     }
 
-    // ── LEVEL UP: Triumphant fanfare with punch ──
+    // ── LEVEL UP: Triumphant fanfare with punch ─────────────────────
+
     playLevelUp() {
+        if (!this._canPlay()) return;
         this.ensureContext();
+        const now = Tone.now();
+
         // Impact hit
-        this._playTone(80, 0.12, 'sine', 0.2, 0, {
-            attack: 0.001, decay: 0.04, sustain: 0.15, release: 0.07,
-            freqEnd: 45, reverb: false
-        });
-        this._playNoise(0.05, 0.08, 0, {
-            type: 'white', filterFreq: 4000, filterSweep: 500, decay: 5
-        });
+        this._membrane.octaves = 5;
+        this._membrane.pitchDecay = 0.06;
+        this._membrane.envelope.decay = 0.1;
+        this._membrane.envelope.release = 0.06;
+        this._membrane.volume.value = -4;
+        this._membrane.triggerAttackRelease('C1', '8n', now);
+
+        // Impact noise
+        this._noise.noise.type = 'white';
+        this._noise.envelope.decay = 0.04;
+        this._noise.volume.value = -16;
+        this._noise.triggerAttackRelease('32n', now);
 
         // Fanfare arpeggio: C-E-G-C-E (triumphant major)
-        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
-        notes.forEach((freq, i) => {
-            this._playTone(freq, 0.35, 'sine', 0.14, 0.05 + i * 0.07, {
-                attack: 0.003, decay: 0.08, sustain: 0.5, release: 0.18,
-                reverbMix: 0.5, vibrato: { rate: 5, depth: 2 }
-            });
-            // Harmonic shimmer
-            this._playTone(freq * 2, 0.25, 'sine', 0.04, 0.05 + i * 0.07 + 0.015, {
-                attack: 0.003, decay: 0.06, sustain: 0.2, release: 0.12,
-                reverbMix: 0.7
+        const fanfare = ['C5', 'E5', 'G5', 'C6', 'E6'];
+        fanfare.forEach((note, i) => {
+            const t = 0.05 + i * 0.07;
+            this._at(t, () => {
+                // Main bell tone
+                this._bell.envelope.attack = 0.003;
+                this._bell.envelope.decay = 0.1;
+                this._bell.envelope.sustain = 0.45;
+                this._bell.envelope.release = 0.25;
+                this._bell.volume.value = -8;
+                this._bell.triggerAttackRelease(note, 0.3, now + t);
+
+                // FM shimmer layer
+                this._fm.harmonicity.value = 3;
+                this._fm.modulationIndex.value = 4;
+                this._fm.volume.value = -18;
+                this._fm.triggerAttackRelease(note, 0.2, now + t + 0.01);
             });
         });
 
         // Grand resolving chord
-        const finalChord = [1046.50, 1318.51, 1567.98];
-        finalChord.forEach((f, i) => {
-            this._playTone(f, 0.9, 'sine', 0.1, notes.length * 0.07 + 0.05 + i * 0.015, {
-                attack: 0.008, decay: 0.2, sustain: 0.45, release: 0.4,
-                reverbMix: 0.8, vibrato: { rate: 4, depth: 3 }
+        const resolveDelay = fanfare.length * 0.07 + 0.05;
+        this._at(resolveDelay, () => {
+            this._poly.set({
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 0.008,
+                    decay: 0.25,
+                    sustain: 0.4,
+                    release: 0.5
+                }
             });
+            this._poly.volume.value = -8;
+            this._poly.triggerAttackRelease(['C6', 'E6', 'G6'], 0.8, now + resolveDelay);
+
+            // AM sustain layer
+            this._am.harmonicity.value = 2;
+            this._am.volume.value = -12;
+            this._am.triggerAttackRelease('C6', 0.7, now + resolveDelay + 0.01);
         });
 
         // Uplifting sweep
-        this._playTone(200, 0.5, 'sawtooth', 0.03, 0.05, {
-            freqEnd: 1600,
-            filterType: 'lowpass', filterFreq: 300, filterSweep: 5000,
-            attack: 0.01, decay: 0.15, sustain: 0.2, release: 0.15,
-            reverbMix: 0.4
-        });
+        this._sweep.filterEnvelope.octaves = 5;
+        this._sweep.filterEnvelope.decay = 0.35;
+        this._sweep.volume.value = -20;
+        this._sweep.triggerAttackRelease('G2', 0.45, now + 0.05);
 
-        // Sparkle shower
-        this._playNoise(0.4, 0.06, 0.15, {
-            type: 'pink', filterFreq: 10000, filterSweep: 3000, decay: 2,
-            reverbMix: 0.5
+        // Sparkle shower noise
+        this._at(0.15, () => {
+            this._noise.noise.type = 'pink';
+            this._noise.envelope.decay = 0.25;
+            this._noise.volume.value = -20;
+            this._noise.triggerAttackRelease(0.35, now + 0.15);
         });
 
         // Foundation bass
-        this._playTone(65.41, 0.5, 'sine', 0.12, 0, {
-            attack: 0.008, decay: 0.15, sustain: 0.3, release: 0.2
-        });
+        this._bass.envelope.attack = 0.008;
+        this._bass.envelope.decay = 0.2;
+        this._bass.envelope.sustain = 0.25;
+        this._bass.envelope.release = 0.25;
+        this._bass.volume.value = -8;
+        this._bass.triggerAttackRelease('C2', 0.45, now);
+
+        // Metallic shimmer accent
+        this._metal.envelope.decay = 0.1;
+        this._metal.volume.value = -22;
+        this._metal.triggerAttackRelease('8n', now + 0.08);
     }
 
-    // ── PERFECT CLEAR: Magical euphoric celebration ──
+    // ── PERFECT CLEAR: Magical euphoric celebration ─────────────────
+
     playPerfectClear() {
+        if (!this._canPlay()) return;
         this.ensureContext();
+        const now = Tone.now();
 
         // Massive impact
-        this._playTone(60, 0.15, 'sine', 0.25, 0, {
-            attack: 0.001, decay: 0.05, sustain: 0.15, release: 0.08,
-            freqEnd: 30, reverb: false
-        });
-        this._playNoise(0.06, 0.1, 0, {
-            type: 'white', filterFreq: 5000, filterSweep: 400, decay: 5
+        this._membrane.octaves = 6;
+        this._membrane.pitchDecay = 0.08;
+        this._membrane.envelope.decay = 0.12;
+        this._membrane.envelope.release = 0.08;
+        this._membrane.volume.value = -2;
+        this._membrane.triggerAttackRelease('B0', '8n', now);
+
+        // Impact noise
+        this._noise.noise.type = 'white';
+        this._noise.envelope.decay = 0.05;
+        this._noise.volume.value = -14;
+        this._noise.triggerAttackRelease('16n', now);
+
+        // Sparkling ascending major scale
+        const scale = ['C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6', 'D6', 'E6', 'G6', 'A6'];
+        const noteSpacing = 0.045;
+
+        scale.forEach((note, i) => {
+            const t = 0.05 + i * noteSpacing;
+            this._at(t, () => {
+                // Primary bell tone
+                this._bell.envelope.attack = 0.002;
+                this._bell.envelope.decay = 0.07;
+                this._bell.envelope.sustain = 0.3;
+                this._bell.envelope.release = 0.25;
+                this._bell.volume.value = -9;
+                this._bell.triggerAttackRelease(note, 0.4 - i * 0.018, now + t);
+            });
+
+            // Every other note gets a metallic sparkle
+            if (i % 2 === 0) {
+                this._at(t + 0.008, () => {
+                    this._metal.envelope.decay = 0.04;
+                    this._metal.volume.value = -28;
+                    this._metal.triggerAttackRelease('64n', now + t + 0.008);
+                });
+            }
         });
 
-        // Sparkling ascending scale
-        const scale = [523.25, 587.33, 659.25, 698.46, 783.99, 880, 987.77, 1046.50, 1174.66, 1318.51, 1567.98, 1760];
-        scale.forEach((freq, i) => {
-            this._playTone(freq, 0.45 - i * 0.02, 'sine', 0.09, 0.05 + i * 0.045, {
-                attack: 0.002, decay: 0.06, sustain: 0.35, release: 0.2,
-                reverbMix: 0.6
+        // Sweeping PolySynth chords underneath the arpeggio
+        // First chord
+        this._at(0.08, () => {
+            this._poly.set({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.35, release: 0.4 }
             });
-            // Octave sparkle
-            this._playTone(freq * 2, 0.25, 'sine', 0.03, 0.05 + i * 0.045 + 0.008, {
-                attack: 0.002, decay: 0.04, sustain: 0.12, release: 0.12,
-                reverbMix: 0.8
-            });
+            this._poly.volume.value = -12;
+            this._poly.triggerAttackRelease(['C5', 'E5', 'G5'], 0.4, now + 0.08);
+        });
+
+        // Second chord (midway)
+        this._at(0.28, () => {
+            this._poly.volume.value = -12;
+            this._poly.triggerAttackRelease(['G5', 'B5', 'D6'], 0.4, now + 0.28);
         });
 
         // Grand finale chord
-        const finaleDelay = 0.05 + scale.length * 0.045;
-        const finale = [1046.50, 1318.51, 1567.98, 2093.00];
-        finale.forEach((f, i) => {
-            this._playTone(f, 1.5, 'sine', 0.09, finaleDelay + i * 0.015, {
-                attack: 0.01, decay: 0.3, sustain: 0.4, release: 0.7,
-                reverbMix: 0.9, vibrato: { rate: 4, depth: 4 }
+        const finaleDelay = 0.05 + scale.length * noteSpacing;
+        this._at(finaleDelay, () => {
+            this._poly.set({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.35, sustain: 0.35, release: 0.8 }
             });
+            this._poly.volume.value = -8;
+            this._poly.triggerAttackRelease(['C6', 'E6', 'G6', 'C7'], 1.3, now + finaleDelay);
+
+            // AM swell on the finale
+            this._am.harmonicity.value = 2;
+            this._am.volume.value = -10;
+            this._am.envelope.attack = 0.02;
+            this._am.envelope.decay = 0.4;
+            this._am.envelope.sustain = 0.35;
+            this._am.envelope.release = 0.6;
+            this._am.triggerAttackRelease('C6', 1.2, now + finaleDelay + 0.01);
+
+            // FM rich overtone layer
+            this._fm.harmonicity.value = 3;
+            this._fm.modulationIndex.value = 5;
+            this._fm.volume.value = -16;
+            this._fm.triggerAttackRelease('G6', 1.0, now + finaleDelay + 0.02);
         });
 
         // Bass foundation
-        this._playTone(130.81, 1.5, 'sine', 0.14, 0, {
-            attack: 0.04, decay: 0.3, sustain: 0.3, release: 0.6,
-            reverbMix: 0.5
+        this._bass.envelope.attack = 0.03;
+        this._bass.envelope.decay = 0.35;
+        this._bass.envelope.sustain = 0.25;
+        this._bass.envelope.release = 0.6;
+        this._bass.volume.value = -8;
+        this._bass.triggerAttackRelease('C2', 1.2, now + 0.02);
+
+        // Rising whoosh sweep
+        this._sweep.filterEnvelope.octaves = 6;
+        this._sweep.filterEnvelope.decay = 0.5;
+        this._sweep.filter.Q.value = 4;
+        this._sweep.volume.value = -20;
+        this._sweep.triggerAttackRelease('C2', 0.7, now);
+
+        // Noise atmosphere (airy sparkle shower)
+        this._at(0.15, () => {
+            this._noise.noise.type = 'pink';
+            this._noise.envelope.attack = 0.05;
+            this._noise.envelope.decay = 0.8;
+            this._noise.volume.value = -20;
+            this._noise.triggerAttackRelease(0.9, now + 0.15);
         });
 
-        // Noise sweep (airy atmosphere)
-        this._playNoise(1.0, 0.06, 0.15, {
-            type: 'pink', filterFreq: 12000, filterSweep: 2000, decay: 1.5,
-            reverbMix: 0.7
-        });
-
-        // Rising whoosh
-        this._playTone(100, 0.8, 'sawtooth', 0.03, 0, {
-            freqEnd: 2000,
-            filterType: 'lowpass', filterFreq: 200, filterSweep: 6000,
-            attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.3,
-            reverbMix: 0.5
+        // Late sparkle metallic shimmer burst
+        this._at(finaleDelay + 0.05, () => {
+            this._metal.envelope.decay = 0.15;
+            this._metal.volume.value = -22;
+            this._metal.triggerAttackRelease('8n', now + finaleDelay + 0.05);
         });
     }
 
+    // ── Toggle ──────────────────────────────────────────────────────
+
     toggle() {
         this.enabled = !this.enabled;
+        if (typeof Tone !== 'undefined') {
+            Tone.Destination.mute = !this.enabled;
+        }
         return this.enabled;
     }
 }

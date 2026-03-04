@@ -112,9 +112,7 @@ class Game {
 
         // Base dark gradient
         const baseBg = new PIXI.Graphics();
-        baseBg.beginFill(0x020215);
-        baseBg.drawRect(0, 0, w, h);
-        baseBg.endFill();
+        baseBg.rect(0, 0, w, h).fill({ color: 0x020215 });
 
         // Multi-layer gradient for depth
         const gradients = [
@@ -124,9 +122,7 @@ class Game {
             { color: 0x0a1535, alpha: 0.12, y: h * 0.65, h: h * 0.35 },
         ];
         gradients.forEach(({ color, alpha, y: gy, h: gh }) => {
-            baseBg.beginFill(color, alpha);
-            baseBg.drawRect(0, gy, w, gh);
-            baseBg.endFill();
+            baseBg.rect(0, gy, w, gh).fill({ color, alpha });
         });
 
         this.bgContainer.addChild(baseBg);
@@ -148,9 +144,8 @@ class Game {
             const nc = nebulaColors[i % nebulaColors.length];
 
             for (let j = 5; j >= 0; j--) {
-                g.beginFill(nc.base, 0.015 + j * 0.008);
-                g.drawEllipse(0, 0, nr + j * 25, (nr + j * 25) * (0.6 + Math.random() * 0.4));
-                g.endFill();
+                g.ellipse(0, 0, nr + j * 25, (nr + j * 25) * (0.6 + Math.random() * 0.4))
+                 .fill({ color: nc.base, alpha: 0.015 + j * 0.008 });
             }
 
             g.position.set(nx, ny);
@@ -182,29 +177,19 @@ class Game {
             const g = new PIXI.Graphics();
 
             if (size > 1.2) {
-                g.beginFill(starColor, alpha * 0.08);
-                g.drawCircle(0, 0, size * 5);
-                g.endFill();
-                g.beginFill(starColor, alpha * 0.15);
-                g.drawCircle(0, 0, size * 3);
-                g.endFill();
+                g.circle(0, 0, size * 5).fill({ color: starColor, alpha: alpha * 0.08 });
+                g.circle(0, 0, size * 3).fill({ color: starColor, alpha: alpha * 0.15 });
             }
 
             if (size > 1.5) {
-                g.beginFill(starColor, alpha * 0.3);
-                g.drawRect(-size * 2, -0.5, size * 4, 1);
-                g.drawRect(-0.5, -size * 2, 1, size * 4);
-                g.endFill();
+                g.rect(-size * 2, -0.5, size * 4, 1).fill({ color: starColor, alpha: alpha * 0.3 });
+                g.rect(-0.5, -size * 2, 1, size * 4).fill({ color: starColor, alpha: alpha * 0.3 });
             }
 
-            g.beginFill(starColor, alpha);
-            g.drawCircle(0, 0, size);
-            g.endFill();
+            g.circle(0, 0, size).fill({ color: starColor, alpha });
 
             if (size > 0.8) {
-                g.beginFill(0xFFFFFF, Math.min(1, alpha * 1.5));
-                g.drawCircle(0, 0, size * 0.4);
-                g.endFill();
+                g.circle(0, 0, size * 0.4).fill({ color: 0xFFFFFF, alpha: Math.min(1, alpha * 1.5) });
             }
 
             g.position.set(x, y);
@@ -240,17 +225,12 @@ class Game {
         const trailLen = length;
         for (let i = 0; i < 8; i++) {
             const t = i / 8;
-            g.beginFill(0xFFFFFF, 0.5 * (1 - t));
-            g.drawCircle(-Math.cos(angle) * trailLen * t, -Math.sin(angle) * trailLen * t, 1.5 * (1 - t * 0.8));
-            g.endFill();
+            g.circle(-Math.cos(angle) * trailLen * t, -Math.sin(angle) * trailLen * t, 1.5 * (1 - t * 0.8))
+             .fill({ color: 0xFFFFFF, alpha: 0.5 * (1 - t) });
         }
 
-        g.beginFill(0xFFFFFF, 0.9);
-        g.drawCircle(0, 0, 2);
-        g.endFill();
-        g.beginFill(0xCCDDFF, 0.4);
-        g.drawCircle(0, 0, 4);
-        g.endFill();
+        g.circle(0, 0, 2).fill({ color: 0xFFFFFF, alpha: 0.9 });
+        g.circle(0, 0, 4).fill({ color: 0xCCDDFF, alpha: 0.4 });
 
         g.position.set(startX, startY);
         this._shootingStarContainer.addChild(g);
@@ -264,7 +244,8 @@ class Game {
         });
     }
 
-    _updateBackground(delta) {
+    _updateBackground(ticker) {
+        const delta = ticker.deltaTime;
         const dt = delta * (1000 / 60);
         this._bgTime += dt;
 
@@ -415,18 +396,14 @@ class Game {
             this.sound.playClear(clearResult.lines);
         }
 
-        const shakeIntensity = Math.min(3 + clearResult.lines * 2 + combo * 2, 15);
-        this.effects.screenShake(shakeIntensity, 200 + clearResult.lines * 50);
-
         // 모바일/태블릿 진동 피드백
         if (navigator.vibrate) {
             if (combo > 1) {
-                // 콤보: 짧은 진동 반복 패턴
                 const pattern = [];
                 for (let i = 0; i < Math.min(combo, 5); i++) {
                     pattern.push(40 + clearResult.lines * 10, 30);
                 }
-                pattern.pop(); // 마지막 pause 제거
+                pattern.pop();
                 navigator.vibrate(pattern);
             } else {
                 navigator.vibrate(30 + clearResult.lines * 20);
@@ -444,27 +421,31 @@ class Game {
             const boardPos = this.board.getGlobalPosition();
             this.effects.playClearEffect(clearResult.cells, boardPos);
 
-            // Shockwave at center of cleared cells
+            // Calculate center of cleared cells
+            let avgX = 0, avgY = 0;
             if (clearResult.cells.length > 0) {
-                let avgX = 0, avgY = 0;
                 clearResult.cells.forEach(c => { avgX += c.col; avgY += c.row; });
                 avgX = boardPos.x + (avgX / clearResult.cells.length) * this.cellSize + this.cellSize / 2;
                 avgY = boardPos.y + (avgY / clearResult.cells.length) * this.cellSize + this.cellSize / 2;
-                this.effects.playShockwave(avgX, avgY, clearResult.lines);
             }
 
+            // ── Combo Effect System (replaces old individual calls) ──
+            if (combo > 1) {
+                this.effects.playComboEffect(combo, avgX, avgY, clearResult.lines);
+            } else {
+                // Single clear — basic shockwave
+                const shakeIntensity = Math.min(3 + clearResult.lines * 2, 10);
+                this.effects.screenShake(shakeIntensity, 200 + clearResult.lines * 50);
+                if (clearResult.cells.length > 0) {
+                    this.effects.playShockwave(avgX, avgY, clearResult.lines);
+                }
+            }
+
+            // Score popup
             const midCell = clearResult.cells[Math.floor(clearResult.cells.length / 2)];
             const popupX = boardPos.x + midCell.col * this.cellSize + this.cellSize / 2;
             const popupY = boardPos.y + midCell.row * this.cellSize;
             this.effects.showScorePopup(popupX, popupY, `+${pts}`);
-
-            if (combo > 1) {
-                this.effects.showComboPopup(
-                    this.app.screen.width / 2,
-                    boardPos.y + (GRID_SIZE * this.cellSize) / 2,
-                    combo
-                );
-            }
 
             if (result.leveledUp) {
                 this.sound.playLevelUp();

@@ -13,7 +13,8 @@ class EffectManager {
         game.app.ticker.add(this.update, this);
     }
 
-    update(delta) {
+    update(ticker) {
+        const delta = ticker.deltaTime;
         const dt = delta * (1000 / 60);
         this._time += dt;
 
@@ -80,19 +81,11 @@ class EffectManager {
             const gfx = new PIXI.Graphics();
 
             // Outer glow
-            gfx.beginFill(color, 0.3);
-            gfx.drawCircle(0, 0, size * 1.5);
-            gfx.endFill();
-
+            gfx.circle(0, 0, size * 1.5).fill({ color, alpha: 0.3 });
             // Main particle
-            gfx.beginFill(color);
-            gfx.drawRoundedRect(-size / 2, -size / 2, size, size, size * 0.3);
-            gfx.endFill();
-
+            gfx.roundRect(-size / 2, -size / 2, size, size, size * 0.3).fill({ color });
             // Bright center
-            gfx.beginFill(0xFFFFFF, 0.7);
-            gfx.drawCircle(0, 0, size * 0.25);
-            gfx.endFill();
+            gfx.circle(0, 0, size * 0.25).fill({ color: 0xFFFFFF, alpha: 0.7 });
 
             gfx.position.set(worldX + cellSize / 2, worldY + cellSize / 2);
             this.container.addChild(gfx);
@@ -118,12 +111,8 @@ class EffectManager {
             const gfx = new PIXI.Graphics();
 
             // Star shape sparkle
-            gfx.beginFill(0xFFFFFF, 0.8);
-            gfx.drawCircle(0, 0, size);
-            gfx.endFill();
-            gfx.beginFill(color, 0.4);
-            gfx.drawCircle(0, 0, size * 2);
-            gfx.endFill();
+            gfx.circle(0, 0, size).fill({ color: 0xFFFFFF, alpha: 0.8 });
+            gfx.circle(0, 0, size * 2).fill({ color, alpha: 0.4 });
 
             gfx.position.set(
                 worldX + (Math.random() - 0.5) * 30,
@@ -142,6 +131,35 @@ class EffectManager {
                 fadeIn: true,
                 life: 600 + Math.random() * 600,
                 maxLife: 1200,
+            });
+        }
+    }
+
+    // ── Star-shaped burst particles (for high combos) ──
+    spawnStarParticles(worldX, worldY, color, count = 10) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.5;
+            const speed = 3 + Math.random() * 5;
+            const size = 2 + Math.random() * 4;
+            const gfx = new PIXI.Graphics();
+
+            // 4-pointed star shape
+            gfx.star(0, 0, 4, size, size * 0.4).fill({ color, alpha: 0.9 });
+            gfx.circle(0, 0, size * 0.3).fill({ color: 0xFFFFFF, alpha: 0.8 });
+
+            gfx.position.set(worldX, worldY);
+            this.container.addChild(gfx);
+
+            this.particles.push({
+                gfx,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                rotSpeed: (Math.random() - 0.5) * 0.3,
+                gravity: 0.05,
+                baseScale: 0.8 + Math.random() * 0.6,
+                shrink: 0.6,
+                life: 600 + Math.random() * 500,
+                maxLife: 1100,
             });
         }
     }
@@ -248,12 +266,8 @@ class EffectManager {
         // Row sweeps (horizontal)
         rows.forEach((row, ri) => {
             const g = new PIXI.Graphics();
-            g.beginFill(0xFFFFFF, 0.6);
-            g.drawRect(0, 0, 20, cs);
-            g.endFill();
-            g.beginFill(0x44FF88, 0.3);
-            g.drawRect(-10, 0, 40, cs);
-            g.endFill();
+            g.rect(0, 0, 20, cs).fill({ color: 0xFFFFFF, alpha: 0.6 });
+            g.rect(-10, 0, 40, cs).fill({ color: 0x44FF88, alpha: 0.3 });
 
             g.position.set(boardGlobalPos.x - 20, boardGlobalPos.y + row * cs);
             this.container.addChild(g);
@@ -277,12 +291,8 @@ class EffectManager {
         // Column sweeps (vertical)
         cols.forEach((col, ci) => {
             const g = new PIXI.Graphics();
-            g.beginFill(0xFFFFFF, 0.6);
-            g.drawRect(0, 0, cs, 20);
-            g.endFill();
-            g.beginFill(0x44FF88, 0.3);
-            g.drawRect(0, -10, cs, 40);
-            g.endFill();
+            g.rect(0, 0, cs, 20).fill({ color: 0xFFFFFF, alpha: 0.6 });
+            g.rect(0, -10, cs, 40).fill({ color: 0x44FF88, alpha: 0.3 });
 
             g.position.set(boardGlobalPos.x + col * cs, boardGlobalPos.y - 20);
             this.container.addChild(g);
@@ -314,19 +324,17 @@ class EffectManager {
     // ── Score popup (premium floating text) ──
     showScorePopup(x, y, text, color = 0xFFFFFF) {
         const size = Math.max(16, this.game.cellSize * 0.65);
-        const style = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: size,
-            fill: color,
-            fontWeight: 'bold',
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 6,
-            dropShadowDistance: 2,
-            stroke: 0x000000,
-            strokeThickness: 3,
+        const txt = new PIXI.Text({
+            text,
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: size,
+                fill: color,
+                fontWeight: 'bold',
+                dropShadow: { color: 0x000000, blur: 6, distance: 2 },
+                stroke: { color: 0x000000, width: 3 },
+            }
         });
-        const txt = new PIXI.Text(text, style);
         txt.anchor.set(0.5);
         txt.position.set(x, y);
         txt.alpha = 0;
@@ -363,39 +371,88 @@ class EffectManager {
         });
     }
 
-    // ── Combo popup (premium animated) ──
-    showComboPopup(x, y, comboLevel) {
+    // ══════════════════════════════════════════════════
+    // ── COMBO EFFECT SYSTEM (3-Tier WOW Effects) ──
+    // ══════════════════════════════════════════════════
+
+    playComboEffect(combo, x, y, lineCount) {
+        const tier = combo <= 3 ? 1 : combo <= 5 ? 2 : 3;
+
+        // ── Tier 1 (combo 2-3): "Nice" ──
+        if (tier >= 1) {
+            this.screenShake(5 + combo, 200 + lineCount * 30);
+            this.playShockwave(x, y, lineCount);
+            this.spawnSparkles(x, y, 0x44FF88, 15 + combo * 5);
+            this.showComboPopup(x, y, combo, tier);
+        }
+
+        // ── Tier 2 (combo 4-5): "Amazing" ──
+        if (tier >= 2) {
+            this.screenShake(8 + combo, 300 + lineCount * 40);
+            this.playScreenFlash(0xFFFFFF, 0.15, 200);
+            this.playMultiRingWave(x, y, 2, [0x44FF88, 0x00E5FF], 120 + lineCount * 30);
+            this.playRadialRays(x, y, 6, 0x44FF88, 100);
+            this.spawnSparkles(x, y, 0x00E5FF, 20 + combo * 5);
+        }
+
+        // ── Tier 3 (combo 6+): "LEGENDARY" ──
+        if (tier >= 3) {
+            this.screenShake(12 + Math.min(combo, 10), 400 + lineCount * 50);
+            this.playRainbowFlash(300);
+            this.playScreenZoomPulse(0.03, 350);
+            this.playMultiRingWave(x, y, 4,
+                [0xFF1744, 0xFFD600, 0x76FF03, 0x00E5FF, 0xD500F9],
+                160 + lineCount * 40);
+            this.playRadialRays(x, y, 12, 0xFFD600, 150);
+            this.spawnStarParticles(x, y, 0xFFD600, 15 + combo * 3);
+            this.playParticleShower(40 + combo * 8);
+            this.spawnSparkles(x, y, 0xD500F9, 25);
+        }
+    }
+
+    // ── Combo popup (tier-based) ──
+    showComboPopup(x, y, comboLevel, tier = 1) {
         const colors = [0xFFFFFF, 0x76FF03, 0x00E5FF, 0xFFD600, 0xFF1744, 0xD500F9, 0xFF6D00, 0xFF4081];
         const color = colors[Math.min(comboLevel - 1, colors.length - 1)];
-        const size = Math.max(24, this.game.cellSize * 0.9);
 
-        const style = new PIXI.TextStyle({
+        // Scale text based on tier
+        const sizeMultiplier = tier === 3 ? 1.6 : tier === 2 ? 1.3 : 1.0;
+        const size = Math.max(24, this.game.cellSize * 0.9) * sizeMultiplier;
+
+        const style = {
             fontFamily: 'Orbitron, sans-serif',
             fontSize: size,
-            fill: [color, 0xFFFFFF],
-            fillGradientType: 0,
+            fill: color,
             fontWeight: '900',
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 8,
-            dropShadowDistance: 3,
-            stroke: 0x000000,
-            strokeThickness: 4,
-            letterSpacing: 2,
-        });
-        const txt = new PIXI.Text(`COMBO x${comboLevel}!`, style);
+            dropShadow: { color: 0x000000, blur: 8 + tier * 4, distance: 3 },
+            stroke: { color: 0x000000, width: 4 + tier },
+            letterSpacing: 2 + tier * 2,
+        };
+
+        const comboText = tier === 3 ? `★ COMBO x${comboLevel}! ★` :
+                          tier === 2 ? `COMBO x${comboLevel}!` :
+                          `COMBO x${comboLevel}!`;
+
+        const txt = new PIXI.Text({ text: comboText, style });
         txt.anchor.set(0.5);
         txt.position.set(x, y);
         txt.alpha = 0;
         this.container.addChild(txt);
 
         // Spawn sparkles around combo text
-        this.spawnSparkles(x, y, color, Math.min(comboLevel * 3, 15));
+        const sparkleCount = tier === 3 ? 30 : tier === 2 ? 20 : Math.min(comboLevel * 3, 15);
+        this.spawnSparkles(x, y, color, sparkleCount);
+
+        // Tier 3: star burst around text
+        if (tier === 3) {
+            this.spawnStarParticles(x, y, color, 12);
+        }
 
         const startY = y;
+        const duration = 1400 + tier * 300;
         this.tweens.push({
             elapsed: 0,
-            duration: 1400,
+            duration,
             update(dt) {
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
@@ -404,18 +461,18 @@ class EffectManager {
                 if (t < 0.2) {
                     const p = t / 0.2;
                     txt.alpha = easeOutCubic(p);
-                    txt.scale.set(easeOutElastic(p) * 1.2);
+                    txt.scale.set(easeOutElastic(p) * (1 + tier * 0.1));
                 } else if (t < 0.5) {
                     txt.alpha = 1;
-                    const pulse = 1 + Math.sin((t - 0.2) / 0.3 * Math.PI * 4) * 0.08 * (1 - (t - 0.2) / 0.3);
+                    const pulse = 1 + Math.sin((t - 0.2) / 0.3 * Math.PI * (4 + tier * 2)) * (0.06 + tier * 0.03) * (1 - (t - 0.2) / 0.3);
                     txt.scale.set(pulse);
                 } else {
                     txt.alpha = 1 - easeInOutQuad((t - 0.5) / 0.5);
                     txt.scale.set(1 - (t - 0.5) * 0.3);
                 }
 
-                txt.y = startY - easeOutCubic(t) * 90;
-                txt.rotation = Math.sin(t * Math.PI * 6) * 0.02 * (1 - t);
+                txt.y = startY - easeOutCubic(t) * (90 + tier * 20);
+                txt.rotation = Math.sin(t * Math.PI * (6 + tier * 2)) * (0.02 + tier * 0.015) * (1 - t);
 
                 if (t >= 1) {
                     txt.destroy();
@@ -424,6 +481,183 @@ class EffectManager {
                 return false;
             }
         });
+    }
+
+    // ── Screen Flash ──
+    playScreenFlash(color, intensity, duration) {
+        const w = this.game.app.screen.width;
+        const h = this.game.app.screen.height;
+        const flash = new PIXI.Graphics();
+        flash.rect(0, 0, w, h).fill({ color, alpha: intensity });
+        this.container.addChild(flash);
+
+        this.tweens.push({
+            elapsed: 0,
+            duration,
+            update(dt) {
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                flash.alpha = (1 - easeOutCubic(t));
+                if (t >= 1) { flash.destroy(); return true; }
+                return false;
+            }
+        });
+    }
+
+    // ── Rainbow Flash (for tier 3 combos) ──
+    playRainbowFlash(duration) {
+        const w = this.game.app.screen.width;
+        const h = this.game.app.screen.height;
+        const rainbowColors = BLOCK_COLORS.map(c => c.glow);
+
+        const flash = new PIXI.Graphics();
+        flash.rect(0, 0, w, h).fill({ color: rainbowColors[0], alpha: 0.2 });
+        this.container.addChild(flash);
+
+        let colorIndex = 0;
+        this.tweens.push({
+            elapsed: 0,
+            duration,
+            update(dt) {
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+
+                // Cycle through rainbow colors
+                const ci = Math.floor(t * rainbowColors.length * 2) % rainbowColors.length;
+                if (ci !== colorIndex) {
+                    colorIndex = ci;
+                    flash.clear();
+                    flash.rect(0, 0, w, h).fill({ color: rainbowColors[ci], alpha: 0.18 * (1 - t) });
+                }
+                flash.alpha = (1 - easeOutCubic(t));
+
+                if (t >= 1) { flash.destroy(); return true; }
+                return false;
+            }
+        });
+    }
+
+    // ── Screen Zoom Pulse ──
+    playScreenZoomPulse(intensity, duration) {
+        const gc = this.game.gameContainer;
+        if (!gc) return;
+        const w = this.game.app.screen.width;
+        const h = this.game.app.screen.height;
+
+        this.tweens.push({
+            elapsed: 0,
+            duration,
+            update(dt) {
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                const scale = 1 + intensity * Math.sin(t * Math.PI) * (1 - t);
+                gc.scale.set(scale);
+                gc.pivot.set(w / 2, h / 2);
+                gc.position.set(w / 2, h / 2);
+
+                if (t >= 1) {
+                    gc.scale.set(1);
+                    gc.pivot.set(0, 0);
+                    gc.position.set(0, 0);
+                    return true;
+                }
+                return false;
+            }
+        });
+    }
+
+    // ── Radial Light Rays ──
+    playRadialRays(x, y, count, color, maxLength) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.3;
+            const ray = new PIXI.Graphics();
+            ray.position.set(x, y);
+            ray.rotation = angle;
+            this.container.addChild(ray);
+
+            const width = 2 + Math.random() * 3;
+            this.tweens.push({
+                elapsed: 0,
+                duration: 500 + Math.random() * 200,
+                delay: i * 20,
+                update(dt) {
+                    if (this.delay > 0) { this.delay -= dt; return false; }
+                    this.elapsed += dt;
+                    const t = Math.min(this.elapsed / this.duration, 1);
+                    const len = easeOutQuart(t) * maxLength;
+                    const alpha = (1 - t) * 0.6;
+
+                    ray.clear();
+                    ray.rect(0, -width / 2, len, width).fill({ color, alpha });
+                    // Bright core
+                    ray.rect(0, -width / 4, len * 0.7, width / 2).fill({ color: 0xFFFFFF, alpha: alpha * 0.5 });
+
+                    if (t >= 1) { ray.destroy(); return true; }
+                    return false;
+                }
+            });
+        }
+    }
+
+    // ── Multiple Ring Waves ──
+    playMultiRingWave(x, y, count, colors, maxRadius) {
+        for (let r = 0; r < count; r++) {
+            const ringColor = colors[r % colors.length];
+            const wave = new PIXI.Graphics();
+            wave.position.set(x, y);
+            this.container.addChild(wave);
+
+            this.tweens.push({
+                elapsed: 0,
+                duration: 500 + r * 80,
+                delay: r * 80,
+                update(dt) {
+                    if (this.delay > 0) { this.delay -= dt; return false; }
+                    this.elapsed += dt;
+                    const t = Math.min(this.elapsed / this.duration, 1);
+                    const radius = easeOutQuart(t) * (maxRadius + r * 20);
+                    const alpha = (1 - t) * 0.6;
+                    const thickness = (4 + count - r) * (1 - t * 0.6);
+
+                    wave.clear();
+                    wave.circle(0, 0, radius).stroke({ width: thickness, color: ringColor, alpha });
+                    wave.circle(0, 0, radius * 0.85).stroke({ width: thickness * 0.4, color: 0xFFFFFF, alpha: alpha * 0.4 });
+
+                    if (t >= 1) { wave.destroy(); return true; }
+                    return false;
+                }
+            });
+        }
+    }
+
+    // ── Particle Shower from top of screen ──
+    playParticleShower(count) {
+        const w = this.game.app.screen.width;
+        const colors = BLOCK_COLORS.map(c => c.particle);
+
+        for (let i = 0; i < count; i++) {
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const size = 1 + Math.random() * 3;
+            const gfx = new PIXI.Graphics();
+            gfx.circle(0, 0, size).fill({ color, alpha: 0.8 });
+            gfx.circle(0, 0, size * 1.8).fill({ color, alpha: 0.3 });
+
+            gfx.position.set(Math.random() * w, -10 - Math.random() * 50);
+            this.container.addChild(gfx);
+
+            this.particles.push({
+                gfx,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: 1 + Math.random() * 3,
+                rotSpeed: (Math.random() - 0.5) * 0.1,
+                gravity: 0.03,
+                baseScale: 0.5 + Math.random() * 0.8,
+                shrink: 0.4,
+                fadeIn: true,
+                life: 800 + Math.random() * 800,
+                maxLife: 1600,
+            });
+        }
     }
 
     // ── Level Up celebration ──
@@ -435,9 +669,7 @@ class EffectManager {
 
         // Background flash
         const flash = new PIXI.Graphics();
-        flash.beginFill(0xFFD600, 0.15);
-        flash.drawRect(0, 0, w, h);
-        flash.endFill();
+        flash.rect(0, 0, w, h).fill({ color: 0xFFD600, alpha: 0.15 });
         this.container.addChild(flash);
 
         this.tweens.push({
@@ -453,21 +685,18 @@ class EffectManager {
         });
 
         // Level up text
-        const style = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.max(30, this.game.cellSize * 1.2),
-            fill: [0xFFD600, 0xFF6D00],
-            fillGradientType: 0,
-            fontWeight: '900',
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 10,
-            dropShadowDistance: 4,
-            stroke: 0x000000,
-            strokeThickness: 5,
-            letterSpacing: 4,
+        const txt = new PIXI.Text({
+            text: `LEVEL ${level}`,
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.max(30, this.game.cellSize * 1.2),
+                fill: 0xFFD600,
+                fontWeight: '900',
+                dropShadow: { color: 0x000000, blur: 10, distance: 4 },
+                stroke: { color: 0x000000, width: 5 },
+                letterSpacing: 4,
+            }
         });
-        const txt = new PIXI.Text(`LEVEL ${level}`, style);
         txt.anchor.set(0.5);
         txt.position.set(x, y);
         txt.alpha = 0;
@@ -523,9 +752,7 @@ class EffectManager {
 
         // Rainbow flash background
         const flash = new PIXI.Graphics();
-        flash.beginFill(0xFFFFFF, 0.3);
-        flash.drawRect(0, 0, w, h);
-        flash.endFill();
+        flash.rect(0, 0, w, h).fill({ color: 0xFFFFFF, alpha: 0.3 });
         this.container.addChild(flash);
 
         this.tweens.push({
@@ -553,23 +780,23 @@ class EffectManager {
             );
         }
 
+        // Multi-ring wave burst
+        this.playMultiRingWave(x, y, 3, [0xFF4081, 0xFFD600, 0x00E5FF], 150);
+        this.playRadialRays(x, y, 8, 0xFFD600, 120);
+
         // PERFECT text
-        const style = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.max(28, this.game.cellSize * 1.0),
-            fill: [0xFF4081, 0xFFD600, 0x00E5FF],
-            fillGradientType: 0,
-            fillGradientStops: [0, 0.5, 1],
-            fontWeight: '900',
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 12,
-            dropShadowDistance: 4,
-            stroke: 0x000000,
-            strokeThickness: 5,
-            letterSpacing: 6,
+        const txt = new PIXI.Text({
+            text: 'PERFECT CLEAR!',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.max(28, this.game.cellSize * 1.0),
+                fill: 0xFF4081,
+                fontWeight: '900',
+                dropShadow: { color: 0x000000, blur: 12, distance: 4 },
+                stroke: { color: 0x000000, width: 5 },
+                letterSpacing: 6,
+            }
         });
-        const txt = new PIXI.Text('PERFECT CLEAR!', style);
         txt.anchor.set(0.5);
         txt.position.set(x, y);
         txt.alpha = 0;
@@ -611,8 +838,6 @@ class EffectManager {
         const ringCount = 2;
         for (let r = 0; r < ringCount; r++) {
             const ring = new PIXI.Graphics();
-            ring.lineStyle(3, color, 0.6);
-            ring.drawCircle(0, 0, 10);
             ring.position.set(x, y);
             this.container.addChild(ring);
 
@@ -630,12 +855,10 @@ class EffectManager {
                     const alpha = (1 - easeInOutQuad(t)) * 0.7;
                     const thickness = 3 * (1 - t * 0.7);
                     ring.clear();
-                    ring.lineStyle(thickness, color, alpha);
-                    ring.drawCircle(0, 0, radius);
+                    ring.circle(0, 0, radius).stroke({ width: thickness, color, alpha });
                     // Inner bright ring
                     if (t < 0.5) {
-                        ring.lineStyle(1, 0xFFFFFF, alpha * 0.5);
-                        ring.drawCircle(0, 0, radius - 2);
+                        ring.circle(0, 0, radius - 2).stroke({ width: 1, color: 0xFFFFFF, alpha: alpha * 0.5 });
                     }
                     if (t >= 1) { ring.destroy(); return true; }
                     return false;
@@ -645,12 +868,8 @@ class EffectManager {
 
         // Central flash
         const flash = new PIXI.Graphics();
-        flash.beginFill(0xFFFFFF, 0.5);
-        flash.drawCircle(0, 0, 15);
-        flash.endFill();
-        flash.beginFill(color, 0.3);
-        flash.drawCircle(0, 0, 25);
-        flash.endFill();
+        flash.circle(0, 0, 15).fill({ color: 0xFFFFFF, alpha: 0.5 });
+        flash.circle(0, 0, 25).fill({ color, alpha: 0.3 });
         flash.position.set(x, y);
         this.container.addChild(flash);
 
@@ -689,15 +908,11 @@ class EffectManager {
                 const thickness = (4 + intensity) * (1 - t * 0.6);
                 wave.clear();
                 // Outer ring
-                wave.lineStyle(thickness, 0xFFFFFF, alpha * 0.4);
-                wave.drawCircle(0, 0, radius);
+                wave.circle(0, 0, radius).stroke({ width: thickness, color: 0xFFFFFF, alpha: alpha * 0.4 });
                 // Inner bright ring
-                wave.lineStyle(thickness * 0.5, 0x44FF88, alpha * 0.6);
-                wave.drawCircle(0, 0, radius * 0.85);
+                wave.circle(0, 0, radius * 0.85).stroke({ width: thickness * 0.5, color: 0x44FF88, alpha: alpha * 0.6 });
                 // Fill glow
-                wave.beginFill(0xFFFFFF, alpha * 0.03);
-                wave.drawCircle(0, 0, radius);
-                wave.endFill();
+                wave.circle(0, 0, radius).fill({ color: 0xFFFFFF, alpha: alpha * 0.03 });
                 if (t >= 1) { wave.destroy(); return true; }
                 return false;
             }
@@ -712,12 +927,8 @@ class EffectManager {
             const pColor = i % 2 === 0 ? 0xFFFFFF : 0x44FF88;
 
             const gfx = new PIXI.Graphics();
-            gfx.beginFill(pColor, 0.8);
-            gfx.drawCircle(0, 0, size);
-            gfx.endFill();
-            gfx.beginFill(pColor, 0.3);
-            gfx.drawCircle(0, 0, size * 2);
-            gfx.endFill();
+            gfx.circle(0, 0, size).fill({ color: pColor, alpha: 0.8 });
+            gfx.circle(0, 0, size * 2).fill({ color: pColor, alpha: 0.3 });
             gfx.position.set(x, y);
             this.container.addChild(gfx);
 
@@ -738,19 +949,17 @@ class EffectManager {
     // ── Bonus score popup (large, colored) ──
     showBonusPopup(x, y, text, color = 0xFFD600) {
         const size = Math.max(20, this.game.cellSize * 0.8);
-        const style = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: size,
-            fill: color,
-            fontWeight: '900',
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 8,
-            dropShadowDistance: 3,
-            stroke: 0x000000,
-            strokeThickness: 4,
+        const txt = new PIXI.Text({
+            text,
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: size,
+                fill: color,
+                fontWeight: '900',
+                dropShadow: { color: 0x000000, blur: 8, distance: 3 },
+                stroke: { color: 0x000000, width: 4 },
+            }
         });
-        const txt = new PIXI.Text(text, style);
         txt.anchor.set(0.5);
         txt.position.set(x, y);
         txt.alpha = 0;
