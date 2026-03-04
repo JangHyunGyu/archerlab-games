@@ -167,19 +167,76 @@ class EffectManager {
     // ── Line clear effect with wave ──
     playClearEffect(clearedCells, boardGlobalPos) {
         const cellSize = this.game.cellSize;
+        const lineCount = clearedCells.length > 0
+            ? Math.max(1, Math.round(clearedCells.length / GRID_SIZE))
+            : 1;
 
         // Sort cells for wave effect
         const sorted = [...clearedCells].sort((a, b) => (a.row + a.col) - (b.row + b.col));
 
+        // Center of all cleared cells (for directional debris)
+        let cx = 0, cy = 0;
+        sorted.forEach(c => { cx += c.col; cy += c.row; });
+        cx = boardGlobalPos.x + (cx / sorted.length) * cellSize + cellSize / 2;
+        cy = boardGlobalPos.y + (cy / sorted.length) * cellSize + cellSize / 2;
+
         sorted.forEach((cell, idx) => {
             const wx = boardGlobalPos.x + cell.col * cellSize;
             const wy = boardGlobalPos.y + cell.row * cellSize;
-            const color = BLOCK_COLORS[cell.colorIndex] ? BLOCK_COLORS[cell.colorIndex].particle : 0xFFFFFF;
+            const blockColor = BLOCK_COLORS[cell.colorIndex] || BLOCK_COLORS[0];
+            const color = blockColor.particle || 0xFFFFFF;
 
-            // Stagger particles for wave effect
             setTimeout(() => {
-                this.spawnCellParticles(wx, wy, color, 6);
-            }, idx * 15);
+                // Original sparkle particles
+                this.spawnCellParticles(wx, wy, color, 4 + lineCount);
+
+                // ── Explosion debris: block shatters into fragments ──
+                const debrisCount = 2 + Math.min(lineCount, 4);
+                const cellCx = wx + cellSize / 2;
+                const cellCy = wy + cellSize / 2;
+                // Direction away from center of cleared area
+                const dirX = cellCx - cx;
+                const dirY = cellCy - cy;
+                const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+
+                for (let d = 0; d < debrisCount; d++) {
+                    const fragW = cellSize * (0.15 + Math.random() * 0.25);
+                    const fragH = cellSize * (0.15 + Math.random() * 0.25);
+                    const frag = new PIXI.Graphics();
+
+                    // Fragment with same block color
+                    frag.roundRect(-fragW / 2, -fragH / 2, fragW, fragH, 1)
+                        .fill({ color: blockColor.main });
+                    // Bright edge highlight
+                    frag.roundRect(-fragW * 0.3, -fragH * 0.3, fragW * 0.6, fragH * 0.6, 1)
+                        .fill({ color: blockColor.light, alpha: 0.5 });
+
+                    // Start from random position within the cell
+                    frag.position.set(
+                        cellCx + (Math.random() - 0.5) * cellSize * 0.5,
+                        cellCy + (Math.random() - 0.5) * cellSize * 0.5
+                    );
+                    this.container.addChild(frag);
+
+                    // Velocity: outward from center + random spread
+                    const spread = 0.8 + Math.random() * 0.5;
+                    const speedMul = 1.5 + lineCount * 0.8;
+                    const angle = Math.atan2(dirY, dirX) + (Math.random() - 0.5) * 1.8;
+                    const speed = (3 + Math.random() * 4) * speedMul;
+
+                    this.particles.push({
+                        gfx: frag,
+                        vx: Math.cos(angle) * speed * spread,
+                        vy: Math.sin(angle) * speed * spread - 3 - Math.random() * 2,
+                        rotSpeed: (Math.random() - 0.5) * 0.4,
+                        gravity: 0.18 + Math.random() * 0.08,
+                        baseScale: 0.6 + Math.random() * 0.5,
+                        shrink: 0.6,
+                        life: 400 + Math.random() * 500,
+                        maxLife: 900,
+                    });
+                }
+            }, idx * 12);
         });
     }
 
@@ -485,21 +542,29 @@ class EffectManager {
                     glow.alpha = easeOutCubic(p) * (0.6 + tier * 0.15);
                     glow.scale.set(easeOutElastic(p) * 1.2);
                 }
-                // Phase 2: Energetic pulsing
+                // Phase 2: Neon flicker + energetic pulsing
                 else if (t < 0.55) {
-                    txt.alpha = 1;
                     const pp = (t - 0.15) / 0.4;
                     const pulseAmp = (0.08 + tier * 0.04) * (1 - pp);
                     const pulseFreq = (5 + tier * 3);
                     const pulse = 1 + Math.sin(pp * Math.PI * pulseFreq) * pulseAmp;
                     txt.scale.set(pulse * (1 + tier * 0.05));
-                    glow.alpha = (0.4 + tier * 0.1) * (1 - pp * 0.5);
-                    glow.scale.set(1 + pp * 0.5 + Math.sin(pp * Math.PI * pulseFreq * 0.5) * 0.1);
+
+                    // Neon flicker: tier가 높을수록 더 격렬
+                    const neonSpeed = 20 + tier * 12;
+                    const neonFlicker = 0.85 + Math.sin(pp * Math.PI * neonSpeed) * 0.15;
+                    const glitch = Math.random() < (0.03 + tier * 0.03) ? 0.3 : 1;
+                    txt.alpha = neonFlicker * glitch;
+
+                    glow.alpha = ((0.4 + tier * 0.1) * (1 - pp * 0.5))
+                        + Math.sin(pp * Math.PI * neonSpeed * 0.5) * 0.12;
+                    glow.scale.set(1 + pp * 0.5 + Math.sin(pp * Math.PI * neonSpeed) * 0.06);
                 }
-                // Phase 3: Dramatic float-up and fade
+                // Phase 3: Dramatic float-up with fading flicker
                 else {
                     const pp = (t - 0.55) / 0.45;
-                    txt.alpha = 1 - easeInOutQuad(pp);
+                    const fadeFlicker = pp < 0.4 ? (0.9 + Math.sin(pp * Math.PI * 16) * 0.1) : 1;
+                    txt.alpha = (1 - easeInOutQuad(pp)) * fadeFlicker;
                     txt.scale.set((1 + tier * 0.05) * (1 - pp * 0.2));
                     glow.alpha = (0.2 + tier * 0.05) * (1 - easeInOutQuad(pp));
                     glow.scale.set(1.5 + pp * 0.5);
@@ -588,25 +653,31 @@ class EffectManager {
                 if (t < 0.2) {
                     const p = t / 0.2;
                     txt.alpha = easeOutCubic(p);
-                    // Start big (3x), slam down to 1x with elastic bounce
                     txt.scale.set(3 - easeOutElastic(p) * 2);
                     glow.alpha = easeOutCubic(p) * 0.7;
                     glow.scale.set(0.3 + easeOutElastic(p) * 0.9);
                 }
-                // Phase 2: Energetic pulse + glow breathing
+                // Phase 2: Neon flicker + energetic pulse
                 else if (t < 0.6) {
-                    txt.alpha = 1;
                     const pp = (t - 0.2) / 0.4;
                     const pulseAmp = 0.12 * (1 - pp);
                     const pulse = 1 + Math.sin(pp * Math.PI * 8) * pulseAmp;
                     txt.scale.set(pulse);
-                    glow.alpha = (0.5 - pp * 0.3) + Math.sin(pp * Math.PI * 4) * 0.1;
-                    glow.scale.set(1.2 + pp * 0.8);
+
+                    // Neon flicker: rapid alpha oscillation
+                    const flickerSpeed = 25 + intensity * 10;
+                    const flicker = 0.85 + Math.sin(pp * Math.PI * flickerSpeed) * 0.15;
+                    const glitch = Math.random() < 0.06 ? 0.4 : 1; // rare hard flicker
+                    txt.alpha = flicker * glitch;
+
+                    glow.alpha = (0.5 - pp * 0.3) + Math.sin(pp * Math.PI * flickerSpeed * 0.5) * 0.15;
+                    glow.scale.set(1.2 + pp * 0.8 + Math.sin(pp * Math.PI * flickerSpeed) * 0.05);
                 }
-                // Phase 3: Float up + fade out
+                // Phase 3: Float up + fade out with final flicker
                 else {
                     const pp = (t - 0.6) / 0.4;
-                    txt.alpha = 1 - easeInOutQuad(pp);
+                    const fadeFlicker = pp < 0.5 ? (0.9 + Math.sin(pp * Math.PI * 20) * 0.1) : 1;
+                    txt.alpha = (1 - easeInOutQuad(pp)) * fadeFlicker;
                     txt.scale.set(1 + pp * 0.15);
                     glow.alpha = 0.2 * (1 - easeInOutQuad(pp));
                     glow.scale.set(2 + pp);
