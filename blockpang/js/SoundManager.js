@@ -362,10 +362,10 @@ class SoundManager {
 
             // Light crystal crack
             this._metal.frequency.value = 800;
-            this._metal.harmonicity.value = 5.1;
-            this._metal.modulationIndex.value = 20;
+            this._metal.harmonicity = 5.1;
+            this._metal.modulationIndex = 20;
             this._metal.octaves = 1.5;
-            this._metal.resonance.value = 5000;
+            this._metal.resonance = 5000;
             this._metal.envelope.decay = 0.04;
             this._metal.volume.value = -26;
             this._metal.triggerAttackRelease('32n', now + 0.01);
@@ -420,10 +420,10 @@ class SoundManager {
 
             // Glass shatter — crisp metallic crack + noise texture
             this._metal.frequency.value = 900;
-            this._metal.harmonicity.value = 5.1;
-            this._metal.modulationIndex.value = 24;
+            this._metal.harmonicity = 5.1;
+            this._metal.modulationIndex = 24;
             this._metal.octaves = 2;
-            this._metal.resonance.value = 5500;
+            this._metal.resonance = 5500;
             this._metal.envelope.decay = 0.06;
             this._metal.volume.value = -20;
             this._metal.triggerAttackRelease('16n', now + 0.01);
@@ -496,10 +496,10 @@ class SoundManager {
 
             // Glass shatter — double crack cascade
             this._metal.frequency.value = 1000;
-            this._metal.harmonicity.value = 5.1;
-            this._metal.modulationIndex.value = 28;
+            this._metal.harmonicity = 5.1;
+            this._metal.modulationIndex = 28;
             this._metal.octaves = 2.5;
-            this._metal.resonance.value = 6000;
+            this._metal.resonance = 6000;
             this._metal.envelope.decay = 0.08;
             this._metal.volume.value = -17;
             this._metal.triggerAttackRelease('16n', now + 0.01);
@@ -589,10 +589,10 @@ class SoundManager {
 
             // Glass shatter — massive triple crack explosion
             this._metal.frequency.value = 1100;
-            this._metal.harmonicity.value = 5.1;
-            this._metal.modulationIndex.value = 32;
+            this._metal.harmonicity = 5.1;
+            this._metal.modulationIndex = 32;
             this._metal.octaves = 3;
-            this._metal.resonance.value = 6500;
+            this._metal.resonance = 6500;
             this._metal.envelope.decay = 0.1;
             this._metal.volume.value = -14;
             this._metal.triggerAttackRelease('8n', now + 0.01);
@@ -696,10 +696,10 @@ class SoundManager {
 
         // High sparkle accent — glass crack (scales with combo)
         this._metal.frequency.value = 800 + clampLevel * 80;
-        this._metal.harmonicity.value = 5.1;
-        this._metal.modulationIndex.value = 18 + clampLevel * 2;
+        this._metal.harmonicity = 5.1;
+        this._metal.modulationIndex = 18 + clampLevel * 2;
         this._metal.octaves = 1.5 + clampLevel * 0.2;
-        this._metal.resonance.value = 4500 + clampLevel * 300;
+        this._metal.resonance = 4500 + clampLevel * 300;
         this._metal.envelope.decay = 0.06 + clampLevel * 0.01;
         this._metal.volume.value = -24 + clampLevel;
         this._metal.triggerAttackRelease('16n', now + 0.05);
