@@ -1,4 +1,4 @@
-import { PLAYER_BASE_STATS, RANKS, RANK_ORDER, XP_TABLE, COLORS, WORLD_SIZE } from '../utils/Constants.js';
+import { PLAYER_BASE_STATS, RANKS, RANK_ORDER, XP_TABLE, COLORS, WORLD_SIZE, PASSIVES } from '../utils/Constants.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
@@ -30,6 +30,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Passive bonuses tracking
         this.passiveLevels = {};
+        // Rank-up bonuses tracking (preserved across passive recalculations)
+        this.rankBonuses = { maxHp: 0, attack: 0 };
 
         // Input
         this.cursors = scene.input.keyboard.createCursorKeys();
@@ -246,11 +248,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             onComplete: () => rankText.destroy(),
         });
 
-        // Stat boost on rank up (significant to keep pace with difficulty scaling)
-        this.stats.maxHp += 30;
+        // Stat boost on rank up (tracked separately for passive recalculation)
+        this.rankBonuses.maxHp += 30;
+        this.rankBonuses.attack += 5;
+        this._recalcStat('maxHp');
+        this._recalcStat('attack');
         this.stats.hp = Math.min(this.stats.hp + 30, this.stats.maxHp);
-        this.stats.attack += 5;
-        this.stats.defense += 2;
     }
 
     addXP(amount) {
@@ -269,7 +272,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     takeDamage(amount) {
         if (this.isDead || this.isInvincible) return false;
 
-        const damage = Math.max(1, amount - this.stats.defense);
+        const damage = Math.max(1, amount);
         this.stats.hp -= damage;
         this.isInvincible = true;
         this.invincibleTimer = 1000;
@@ -416,9 +419,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     applyPassive(statKey, bonusPerLevel) {
         if (!this.passiveLevels[statKey]) this.passiveLevels[statKey] = 0;
         this.passiveLevels[statKey]++;
+        this._recalcStat(statKey, bonusPerLevel);
 
+        if (statKey === 'maxHp') {
+            this.stats.hp = Math.min(this.stats.hp + 15, this.stats.maxHp);
+        }
+    }
+
+    _recalcStat(statKey, bonusPerLevel) {
         const base = PLAYER_BASE_STATS[statKey];
-        const lvl = this.passiveLevels[statKey];
+        const lvl = this.passiveLevels[statKey] || 0;
 
         // Diminishing returns: each stack is worth slightly less than the previous
         // effectiveLevels = sum of (1/sqrt(i)) for i=1..lvl
@@ -428,16 +438,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             effectiveLevels += 1 / Math.sqrt(i);
         }
 
-        if (statKey === 'critRate' || statKey === 'cooldownReduction') {
-            this.stats[statKey] = base + bonusPerLevel * effectiveLevels;
-        } else if (statKey === 'xpMultiplier') {
-            this.stats[statKey] = base + bonusPerLevel * effectiveLevels;
-        } else {
-            this.stats[statKey] = Math.floor(base * (1 + bonusPerLevel * effectiveLevels));
+        // Look up bonusPerLevel from passive config if not provided
+        if (bonusPerLevel === undefined) {
+            const passive = Object.values(PASSIVES).find(p => p.stat === statKey);
+            bonusPerLevel = passive ? passive.bonus : 0;
         }
 
-        if (statKey === 'maxHp') {
-            this.stats.hp = Math.min(this.stats.hp + 15, this.stats.maxHp);
+        const rankBonus = this.rankBonuses[statKey] || 0;
+
+        if (statKey === 'critRate' || statKey === 'cooldownReduction' || statKey === 'xpMultiplier') {
+            this.stats[statKey] = base + bonusPerLevel * effectiveLevels;
+        } else {
+            // (base + rankBonus) × passiveMultiplier
+            this.stats[statKey] = Math.floor((base + rankBonus) * (1 + bonusPerLevel * effectiveLevels));
         }
     }
 

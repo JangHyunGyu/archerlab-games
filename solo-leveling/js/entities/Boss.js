@@ -34,10 +34,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.isInvincible = true;
         scene.time.delayedCall(3000, () => { this.isInvincible = false; });
 
-        // Frame-based hit cooldown (prevents ALL multi-hit in same frame)
-        this._lastHitFrame = -999;
-        this._damageThisSecond = 0;
-        this._lastSecondReset = 0;
 
         // HP bar (Graphics-based for reliable rendering)
         this._hpBarWidth = Math.max(80, config.size * 1.5);
@@ -382,23 +378,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         // Spawn invincibility
         if (this.isInvincible) return false;
 
-        // Frame-based cooldown: only 1 hit per 3 frames (~50ms at 60fps)
-        const currentFrame = this.scene.game.loop.frame;
-        if (currentFrame - this._lastHitFrame < 3) return false;
-        this._lastHitFrame = currentFrame;
-
-        // Dynamic per-second damage cap: tighter as difficulty increases
-        // Ensures TTK increases progressively over time
-        const now = this.scene.time.now;
-        if (now - this._lastSecondReset > 1000) {
-            this._damageThisSecond = 0;
-            this._lastSecondReset = now;
-        }
-        const capPercent = Math.max(0.04, 0.20 / Math.sqrt(this._difficultyMult));
-        const maxDmgPerSecond = Math.floor(this.maxHp * capPercent);
-        if (this._damageThisSecond >= maxDmgPerSecond) return false;
-
-        this._damageThisSecond += amount;
         this.hp -= amount;
 
         console.log(`[BOSS HIT] ${this.config.name}: -${amount} HP (${this.hp}/${this.maxHp})`);
