@@ -66,7 +66,7 @@ export class HUD {
 
         this.xpBg = this.scene.add.rectangle(m, y, barW, xpH, COLORS.XP_BG)
             .setOrigin(0, 0).setDepth(100).setScrollFactor(0);
-        this.xpFill = this.scene.add.rectangle(m + 1, y + 1, 0, xpH - 2, COLORS.XP_PURPLE)
+        this.xpFill = this.scene.add.rectangle(m + 1, y + 1, barW - 2, xpH - 2, COLORS.XP_PURPLE)
             .setOrigin(0, 0).setDepth(101).setScrollFactor(0);
         this.elements.push(this.xpBg, this.xpFill);
     }
@@ -277,7 +277,7 @@ export class HUD {
 
         // HP
         const hpRatio = player.stats.hp / player.stats.maxHp;
-        this.hpFill.setDisplaySize((this._hpW - 2) * hpRatio, this._hpH - 2);
+        this.hpFill.width = (this._hpW - 2) * hpRatio;
         this.hpText.setText(`${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`);
 
         if (hpRatio < 0.3) {
@@ -290,7 +290,7 @@ export class HUD {
 
         // XP
         const xpRatio = player.xpToNext > 0 ? player.xp / player.xpToNext : 0;
-        this.xpFill.setDisplaySize((this._xpW - 2) * xpRatio, this._xpH - 2);
+        this.xpFill.width = (this._xpW - 2) * xpRatio;
 
         // Timer
         if (enemyManager) {
