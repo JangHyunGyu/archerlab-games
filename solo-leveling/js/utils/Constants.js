@@ -64,11 +64,11 @@ export const COLORS = {
 
 export const RANKS = {
     E: { name: 'E', level: 1,  color: 0x888888, glowAlpha: 0,    label: 'E-Rank Hunter' },
-    D: { name: 'D', level: 5,  color: 0x44aa44, glowAlpha: 0.1,  label: 'D-Rank Hunter' },
-    C: { name: 'C', level: 10, color: 0x4488ff, glowAlpha: 0.2,  label: 'C-Rank Hunter' },
-    B: { name: 'B', level: 15, color: 0xaa44ff, glowAlpha: 0.3,  label: 'B-Rank Hunter' },
-    A: { name: 'A', level: 20, color: 0xff8800, glowAlpha: 0.4,  label: 'A-Rank Hunter' },
-    S: { name: 'S', level: 25, color: 0xff2222, glowAlpha: 0.6,  label: 'S-Rank Shadow Monarch' },
+    D: { name: 'D', level: 6,  color: 0x44aa44, glowAlpha: 0.1,  label: 'D-Rank Hunter' },
+    C: { name: 'C', level: 12, color: 0x4488ff, glowAlpha: 0.2,  label: 'C-Rank Hunter' },
+    B: { name: 'B', level: 18, color: 0xaa44ff, glowAlpha: 0.3,  label: 'B-Rank Hunter' },
+    A: { name: 'A', level: 24, color: 0xff8800, glowAlpha: 0.4,  label: 'A-Rank Hunter' },
+    S: { name: 'S', level: 30, color: 0xff2222, glowAlpha: 0.6,  label: 'S-Rank Shadow Monarch' },
 };
 
 export const RANK_ORDER = ['E', 'D', 'C', 'B', 'A', 'S'];
