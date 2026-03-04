@@ -232,11 +232,29 @@ class UIManager {
     }
 
     updateScore(score, bestScore) {
+        const hadIncrease = score > this._targetScore;
         this._targetScore = score;
         if (!this._scoreAnimating) {
             this._scoreAnimating = true;
         }
         this.bestText.text = `BEST ${bestScore.toLocaleString()}`;
+
+        // Score pulse effect on increase
+        if (hadIncrease && this.scoreText && !this.scoreText.destroyed) {
+            const txt = this.scoreText;
+            this.game.effects.tweens.push({
+                elapsed: 0,
+                duration: 300,
+                update(dt) {
+                    if (txt.destroyed) return true;
+                    this.elapsed += dt;
+                    const t = Math.min(this.elapsed / this.duration, 1);
+                    const scale = 1 + Math.sin(t * Math.PI) * 0.15 * (1 - t);
+                    txt.scale.set(scale);
+                    return t >= 1;
+                }
+            });
+        }
     }
 
     updateLevel(level, progress) {
@@ -246,12 +264,23 @@ class UIManager {
             this.levelBarFill.clear();
             const fillW = this._levelBarW * Math.min(1, progress);
             if (fillW > 0) {
-                this.levelBarFill.roundRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH, 2).fill({ color: 0x00E5FF, alpha: 0.9 });
+                // Main fill
+                this.levelBarFill.roundRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH, 2)
+                    .fill({ color: 0x00E5FF, alpha: 0.9 });
+                // Top highlight (glass bar effect)
+                this.levelBarFill.roundRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH * 0.4, 1)
+                    .fill({ color: 0x66F0FF, alpha: 0.4 });
             }
 
             this.levelBarGlow.clear();
             if (fillW > 2) {
-                this.levelBarGlow.circle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 4).fill({ color: 0x00E5FF, alpha: 0.3 });
+                // Tip glow (larger, multi-layer)
+                this.levelBarGlow.circle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 8)
+                    .fill({ color: 0x00E5FF, alpha: 0.12 });
+                this.levelBarGlow.circle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 4)
+                    .fill({ color: 0x00E5FF, alpha: 0.35 });
+                this.levelBarGlow.circle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 2)
+                    .fill({ color: 0xFFFFFF, alpha: 0.5 });
             }
         }
     }
@@ -310,7 +339,58 @@ class UIManager {
         });
         logo.anchor.set(0.5, 0.5);
         logo.position.set(centerX, h * 0.2);
+
+        // Logo glow halo
+        const logoGlow = new PIXI.Graphics();
+        logoGlow.ellipse(0, 0, logoFontSize * 3.5, logoFontSize * 1.2)
+                .fill({ color: 0x00E5FF, alpha: 0.06 });
+        logoGlow.ellipse(0, 0, logoFontSize * 2.5, logoFontSize * 0.8)
+                .fill({ color: 0x00E5FF, alpha: 0.08 });
+        logoGlow.position.set(centerX, h * 0.2);
+        container.addChild(logoGlow);
         container.addChild(logo);
+
+        // Floating particles around logo
+        const logoParticles = new PIXI.Container();
+        container.addChild(logoParticles);
+        const logoParticleData = [];
+        for (let i = 0; i < 12; i++) {
+            const pg = new PIXI.Graphics();
+            const pSize = 1 + Math.random() * 2.5;
+            const pColor = [0x00E5FF, 0x76FF03, 0xFFD600, 0xD500F9][Math.floor(Math.random() * 4)];
+            pg.circle(0, 0, pSize).fill({ color: pColor, alpha: 0.5 + Math.random() * 0.3 });
+            pg.circle(0, 0, pSize * 0.4).fill({ color: 0xFFFFFF, alpha: 0.4 });
+            const angle = (Math.PI * 2 * i) / 12;
+            const dist = logoFontSize * 2 + Math.random() * logoFontSize;
+            pg.position.set(
+                centerX + Math.cos(angle) * dist,
+                h * 0.2 + Math.sin(angle) * dist * 0.4
+            );
+            logoParticles.addChild(pg);
+            logoParticleData.push({ gfx: pg, angle, dist, speed: 0.0003 + Math.random() * 0.0005, phase: Math.random() * Math.PI * 2 });
+        }
+
+        // Animate logo particles
+        this.game.effects.tweens.push({
+            elapsed: 0,
+            duration: 99999,
+            update(dt) {
+                if (!logoParticles || logoParticles.destroyed) return true;
+                this.elapsed += dt;
+                logoParticleData.forEach(p => {
+                    const t = this.elapsed * p.speed + p.phase;
+                    p.gfx.x = centerX + Math.cos(t) * p.dist;
+                    p.gfx.y = h * 0.2 + Math.sin(t) * p.dist * 0.4;
+                    p.gfx.alpha = 0.3 + Math.sin(t * 3) * 0.3;
+                });
+                // Glow pulse
+                if (logoGlow && !logoGlow.destroyed) {
+                    const glowPulse = 0.8 + Math.sin(this.elapsed * 0.003) * 0.2;
+                    logoGlow.alpha = glowPulse;
+                }
+                return false;
+            }
+        });
 
         // ── Subtitle ──
         const subtitle = new PIXI.Text({
@@ -827,9 +907,9 @@ class UIManager {
         overlay.addChild(scoreLabel);
         yOff += scoreLabel.height + 4;
 
-        // Score value
+        // Score value (count-up animation)
         const scoreVal = new PIXI.Text({
-            text: score.toLocaleString(),
+            text: '0',
             style: {
                 fontFamily: 'Orbitron, sans-serif',
                 fontSize: Math.min(36, panelW * 0.1),
@@ -841,6 +921,33 @@ class UIManager {
         scoreVal.anchor.set(0.5, 0);
         scoreVal.position.set(centerX, yOff);
         overlay.addChild(scoreVal);
+
+        // Score count-up animation
+        const finalScore = score;
+        this.game.effects.tweens.push({
+            elapsed: 0,
+            duration: 1200,
+            _delay: 400,
+            update(dt) {
+                if (scoreVal.destroyed) return true;
+                if (this._delay > 0) { this._delay -= dt; return false; }
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                const eased = easeOutCubic(t);
+                const displayScore = Math.round(finalScore * eased);
+                scoreVal.text = displayScore.toLocaleString();
+
+                // Pulse scale during counting
+                if (t < 1) {
+                    const pulse = 1 + Math.sin(t * Math.PI * 8) * 0.03 * (1 - t);
+                    scoreVal.scale.set(pulse);
+                } else {
+                    scoreVal.scale.set(1);
+                }
+                return t >= 1;
+            }
+        });
+
         yOff += scoreVal.height + 10;
 
         // New best indicator
@@ -860,6 +967,13 @@ class UIManager {
             newBest.position.set(centerX, yOff);
             overlay.addChild(newBest);
 
+            // New record glow
+            const recordGlow = new PIXI.Graphics();
+            recordGlow.ellipse(0, 0, panelW * 0.3, 12)
+                      .fill({ color: 0xFFD600, alpha: 0.08 });
+            recordGlow.position.set(centerX, yOff + newBest.height / 2);
+            overlay.addChildAt(recordGlow, overlay.children.indexOf(newBest));
+
             this.game.effects.tweens.push({
                 elapsed: 0,
                 duration: 99999,
@@ -868,7 +982,51 @@ class UIManager {
                     this.elapsed += dt;
                     const pulse = 1 + Math.sin(this.elapsed * 0.005) * 0.08;
                     newBest.scale.set(pulse);
+                    if (recordGlow && !recordGlow.destroyed) {
+                        recordGlow.alpha = 0.6 + Math.sin(this.elapsed * 0.004) * 0.4;
+                    }
                     return false;
+                }
+            });
+
+            // Gold sparkle particles around new record
+            this.game.effects.tweens.push({
+                elapsed: 0,
+                duration: 3000,
+                _timer: 0,
+                update(dt) {
+                    if (newBest.destroyed) return true;
+                    this.elapsed += dt;
+                    this._timer += dt;
+                    if (this._timer > 150 && this.elapsed < 2500) {
+                        this._timer = 0;
+                        const sx = centerX + (Math.random() - 0.5) * panelW * 0.5;
+                        const sy = yOff + (Math.random() - 0.5) * 20;
+                        const sparkle = new PIXI.Graphics();
+                        const ss = 1 + Math.random() * 2;
+                        sparkle.star(0, 0, 4, ss, ss * 0.4).fill({ color: 0xFFD600, alpha: 0.8 });
+                        sparkle.position.set(sx, sy);
+                        overlay.addChild(sparkle);
+
+                        const startY = sy;
+                        const sparkRef = sparkle;
+                        const game = overlay;
+                        setTimeout(() => {
+                            if (!sparkRef.destroyed) sparkRef.destroy();
+                        }, 800);
+
+                        let life = 0;
+                        const sparkTween = setInterval(() => {
+                            life += 16;
+                            if (sparkRef.destroyed) { clearInterval(sparkTween); return; }
+                            const t = life / 800;
+                            sparkRef.y = startY - t * 30;
+                            sparkRef.alpha = 1 - t;
+                            sparkRef.rotation += 0.05;
+                            if (t >= 1) { clearInterval(sparkTween); if (!sparkRef.destroyed) sparkRef.destroy(); }
+                        }, 16);
+                    }
+                    return this.elapsed >= 3000;
                 }
             });
 

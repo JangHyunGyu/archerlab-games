@@ -324,6 +324,7 @@ class Game {
         this.board.clearAll();
         this.ui.updateScore(0, this.scoreManager.bestScore);
         this.ui.updateLevel(1, 0);
+        this.sound.startAmbient();
         this.generatePieces();
     }
 
@@ -478,6 +479,7 @@ class Game {
         this.state = 'gameover';
         this.isGameOver = true;
         this.scoreManager.finalize();
+        this.sound.stopAmbient();
         this.sound.playGameOver();
 
         const isNewBest = this.scoreManager.score >= this.scoreManager.bestScore;

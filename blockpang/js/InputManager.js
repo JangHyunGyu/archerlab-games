@@ -12,6 +12,8 @@ class InputManager {
         this._trailTimer = 0;
         this._lastDragX = 0;
         this._lastDragY = 0;
+        this._lastGridCol = -1;
+        this._lastGridRow = -1;
 
         game.app.stage.addChild(this.dragLayer);
 
@@ -121,31 +123,59 @@ class InputManager {
 
     _spawnTrailParticle(x, y) {
         if (!this.dragPieceData) return;
-        const color = BLOCK_COLORS[this.dragPieceData.colorIndex].glow;
-        const size = 1.5 + Math.random() * 2.5;
+        const blockColor = BLOCK_COLORS[this.dragPieceData.colorIndex];
+        const color = blockColor.glow;
 
+        // Main glowing particle
+        const size = 2 + Math.random() * 3;
         const gfx = new PIXI.Graphics();
-        gfx.circle(0, 0, size).fill({ color, alpha: 0.5 });
-        gfx.circle(0, 0, size * 0.4).fill({ color: 0xFFFFFF, alpha: 0.3 });
+        gfx.circle(0, 0, size * 2).fill({ color, alpha: 0.15 });
+        gfx.circle(0, 0, size).fill({ color, alpha: 0.6 });
+        gfx.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.5 });
 
         gfx.position.set(
-            x + (Math.random() - 0.5) * 20,
-            y + (Math.random() - 0.5) * 20
+            x + (Math.random() - 0.5) * 25,
+            y + (Math.random() - 0.5) * 25
         );
         this.game.effects.container.addChild(gfx);
 
         this.game.effects.particles.push({
             gfx,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: -0.5 - Math.random() * 1.0,
+            vx: (Math.random() - 0.5) * 0.8,
+            vy: -0.8 - Math.random() * 1.5,
             rotSpeed: 0,
-            gravity: -0.03,
-            baseScale: 0.6 + Math.random() * 0.6,
-            shrink: 0.8,
+            gravity: -0.04,
+            baseScale: 0.5 + Math.random() * 0.7,
+            shrink: 0.7,
             fadeIn: true,
-            life: 300 + Math.random() * 300,
-            maxLife: 600,
+            life: 350 + Math.random() * 350,
+            maxLife: 700,
         });
+
+        // Occasional sparkle (30% chance)
+        if (Math.random() < 0.3) {
+            const sparkSize = 1 + Math.random() * 2;
+            const sparkGfx = new PIXI.Graphics();
+            sparkGfx.star(0, 0, 4, sparkSize, sparkSize * 0.4)
+                     .fill({ color: blockColor.light, alpha: 0.7 });
+            sparkGfx.position.set(
+                x + (Math.random() - 0.5) * 30,
+                y + (Math.random() - 0.5) * 30
+            );
+            this.game.effects.container.addChild(sparkGfx);
+            this.game.effects.particles.push({
+                gfx: sparkGfx,
+                vx: (Math.random() - 0.5) * 1.2,
+                vy: -1 - Math.random() * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.3,
+                gravity: -0.02,
+                baseScale: 0.4 + Math.random() * 0.6,
+                shrink: 0.6,
+                fadeIn: true,
+                life: 250 + Math.random() * 250,
+                maxLife: 500,
+            });
+        }
     }
 
     onPointerUp(event) {
@@ -180,7 +210,21 @@ class InputManager {
 
         if (!gridPos) {
             board.clearGhost();
+            this._lastGridCol = -1;
+            this._lastGridRow = -1;
             return;
+        }
+
+        // Play snap sound when grid position changes
+        if (gridPos.col !== this._lastGridCol || gridPos.row !== this._lastGridRow) {
+            this._lastGridCol = gridPos.col;
+            this._lastGridRow = gridPos.row;
+            this.game.sound.playDragSnap();
+
+            // Check for near-completion hint sound
+            if (board.canPlace(piece.shape, gridPos.col, gridPos.row)) {
+                this._checkNearComplete(piece.shape, gridPos.col, gridPos.row);
+            }
         }
 
         const canPlace = board.canPlace(piece.shape, gridPos.col, gridPos.row);
@@ -274,6 +318,34 @@ class InputManager {
         this.dragging = false;
         this.dragPieceIndex = -1;
         this.dragPieceData = null;
+    }
+
+    _checkNearComplete(shape, gridX, gridY) {
+        const board = this.game.board;
+        // Simulate placement and check if any row/col would be 0 empty (i.e., line clear)
+        // by counting how many cells would complete rows/cols
+        for (let r = 0; r < shape.length; r++) {
+            for (let c = 0; c < shape[r].length; c++) {
+                if (!shape[r][c]) continue;
+                const gr = gridY + r;
+                const gc = gridX + c;
+                if (gr < 0 || gr >= GRID_SIZE || gc < 0 || gc >= GRID_SIZE) continue;
+
+                // Check row completion
+                let rowEmpty = 0;
+                for (let cc = 0; cc < GRID_SIZE; cc++) {
+                    if (board.grid[gr][cc] === -1) {
+                        // Check if this empty cell is filled by our piece
+                        const inPiece = shape[gr - gridY] && shape[gr - gridY][cc - gridX];
+                        if (!inPiece) rowEmpty++;
+                    }
+                }
+                if (rowEmpty === 0) {
+                    this.game.sound.playNearComplete(0);
+                    return;
+                }
+            }
+        }
     }
 
     updateHitArea() {

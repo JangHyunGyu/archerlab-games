@@ -173,22 +173,34 @@ class Board {
     _drawGridLines(cs) {
         const oldChildren = this.gridLineContainer.removeChildren();
         oldChildren.forEach(c => c.destroy({ children: true }));
-        const g = new PIXI.Graphics();
         const total = cs * GRID_SIZE;
 
-        // Subtle grid lines
+        // Regular grid lines
+        const g = new PIXI.Graphics();
         for (let i = 1; i < GRID_SIZE; i++) {
             g.moveTo(i * cs, 0).lineTo(i * cs, total);
             g.moveTo(0, i * cs).lineTo(total, i * cs);
         }
-        g.stroke({ width: 0.5, color: 0x2233aa, alpha: 0.08 });
-
-        // 5x5 section dividers (slightly brighter)
-        g.moveTo(cs * 5, 0).lineTo(cs * 5, total);
-        g.moveTo(0, cs * 5).lineTo(total, cs * 5);
-        g.stroke({ width: 0.8, color: 0x3344bb, alpha: 0.12 });
-
+        g.stroke({ width: 0.5, color: 0x2244bb, alpha: 0.1 });
         this.gridLineContainer.addChild(g);
+
+        // 5x5 section dividers (brighter, double line)
+        const g2 = new PIXI.Graphics();
+        g2.moveTo(cs * 5, 0).lineTo(cs * 5, total);
+        g2.moveTo(0, cs * 5).lineTo(total, cs * 5);
+        g2.stroke({ width: 1.2, color: 0x3355cc, alpha: 0.18 });
+        this.gridLineContainer.addChild(g2);
+
+        // Subtle glow on 5x5 dividers
+        const g3 = new PIXI.Graphics();
+        g3.rect(cs * 5 - 2, 0, 4, total).fill({ color: 0x3355cc, alpha: 0.04 });
+        g3.rect(0, cs * 5 - 2, total, 4).fill({ color: 0x3355cc, alpha: 0.04 });
+        this.gridLineContainer.addChild(g3);
+
+        // Corner dots at intersections (every 5 cells)
+        const dots = new PIXI.Graphics();
+        dots.circle(cs * 5, cs * 5, 2).fill({ color: 0x4466dd, alpha: 0.2 });
+        this.gridLineContainer.addChild(dots);
     }
 
     _createEmptyTexture(size) {
@@ -196,14 +208,28 @@ class Board {
         const s = size - 2;
         const r = Math.max(2, s * 0.1);
 
-        // Base
-        g.roundRect(0, 0, s, s, r).fill({ color: 0x0e0e2a, alpha: 0.92 });
+        // Outer recess shadow (pressed-in look)
+        g.roundRect(0, 0, s, s, r).fill({ color: 0x060618, alpha: 0.95 });
 
-        // Subtle inner border
-        g.roundRect(0.5, 0.5, s - 1, s - 1, r).stroke({ width: 0.5, color: 0x1a1a50, alpha: 0.7 });
+        // Inner recessed surface
+        g.roundRect(1, 1, s - 2, s - 2, r - 1).fill({ color: 0x0c0c28, alpha: 0.9 });
 
-        // Very subtle top highlight
-        g.roundRect(1, 1, s - 2, s * 0.3, r).fill({ color: 0x1a1a55, alpha: 0.2 });
+        // Top-left inner shadow (concave depth)
+        g.roundRect(1, 1, s - 2, 2, r - 1).fill({ color: 0x000000, alpha: 0.15 });
+        g.roundRect(1, 1, 2, s - 2, r - 1).fill({ color: 0x000000, alpha: 0.12 });
+
+        // Bottom-right inner light (concave reflected edge)
+        g.roundRect(1, s - 3, s - 2, 2, r - 1).fill({ color: 0x1a1a55, alpha: 0.15 });
+        g.roundRect(s - 3, 1, 2, s - 2, r - 1).fill({ color: 0x1a1a55, alpha: 0.12 });
+
+        // Subtle center gradient (slight warmth)
+        g.roundRect(3, 3, s - 6, s - 6, r - 2).fill({ color: 0x10103a, alpha: 0.3 });
+
+        // Very faint specular hint (glass floor feel)
+        g.roundRect(2, 2, s - 4, s * 0.2, r - 1).fill({ color: 0x18184a, alpha: 0.2 });
+
+        // Subtle border
+        g.roundRect(0.5, 0.5, s - 1, s - 1, r).stroke({ width: 0.5, color: 0x1a1a50, alpha: 0.5 });
 
         const tex = this.app.renderer.generateTexture({
             target: g,
@@ -218,33 +244,60 @@ class Board {
         const g = new PIXI.Graphics();
         const s = size;
         const r = Math.max(2, s * 0.12);
-        const p = 2; // Padding to keep everything inside cell bounds
+        const p = 2;
+        const inner = s - p * 2;
 
-        // Shadow (bottom-right bias for 3D feel)
-        g.roundRect(p, p, s - p * 2, s - p * 2, r).fill({ color: color.dark, alpha: 0.9 });
+        // ── 1. Drop shadow (bottom-right, for 3D lift) ──
+        g.roundRect(p + 1, p + 1, inner, inner, r)
+         .fill({ color: 0x000000, alpha: 0.35 });
 
-        // Main body
-        g.roundRect(p + 1, p, s - p * 2 - 2, s - p * 2 - 2, r - 1).fill({ color: color.main });
+        // ── 2. Dark base (bottom bevel edge) ──
+        g.roundRect(p, p, inner, inner, r)
+         .fill({ color: color.dark, alpha: 0.95 });
 
-        // Inner gradient (darker bottom half for 3D depth)
-        g.roundRect(p + 2, p + (s - p * 2) * 0.5, s - p * 2 - 4, (s - p * 2) * 0.48, r - 2)
-         .fill({ color: color.dark, alpha: 0.18 });
+        // ── 3. Main body (inset for bevel) ──
+        g.roundRect(p + 1, p + 1, inner - 2, inner - 2, r - 1)
+         .fill({ color: color.main });
 
-        // Top highlight (glass-like reflection)
-        g.roundRect(p + 2, p + 1, s - p * 2 - 4, (s - p * 2) * 0.3, r - 1)
-         .fill({ color: color.light, alpha: 0.55 });
+        // ── 4. Bottom-half darken (3D curvature) ──
+        g.roundRect(p + 2, p + inner * 0.5, inner - 4, inner * 0.47, r - 2)
+         .fill({ color: color.dark, alpha: 0.25 });
 
-        // Specular highlight (small bright spot, top-left)
-        g.roundRect(p + 4, p + 2, (s - p * 2) * 0.2, (s - p * 2) * 0.07, 2)
+        // ── 5. Left-edge highlight (bevel light) ──
+        g.roundRect(p + 1, p + 2, 2, inner - 6, r - 1)
+         .fill({ color: color.light, alpha: 0.3 });
+
+        // ── 6. Top-edge highlight (bevel light) ──
+        g.roundRect(p + 2, p + 1, inner - 6, 2, r - 1)
+         .fill({ color: color.light, alpha: 0.35 });
+
+        // ── 7. Glass reflection (large curved highlight, top 35%) ──
+        g.roundRect(p + 3, p + 2, inner - 6, inner * 0.35, r - 1)
+         .fill({ color: color.light, alpha: 0.5 });
+
+        // ── 8. Glass gloss (bright band at top) ──
+        g.roundRect(p + 4, p + 2, inner - 8, inner * 0.15, r - 2)
          .fill({ color: 0xFFFFFF, alpha: 0.35 });
 
-        // Wider specular bar
-        g.roundRect(p + s * 0.1, p + 2, (s - p * 2) * 0.5, (s - p * 2) * 0.035, 1)
-         .fill({ color: 0xFFFFFF, alpha: 0.1 });
+        // ── 9. Specular dot (top-left, like light source) ──
+        g.roundRect(p + 5, p + 3, inner * 0.15, inner * 0.06, 2)
+         .fill({ color: 0xFFFFFF, alpha: 0.55 });
 
-        // Subtle inner border (premium feel)
-        g.roundRect(p + 1, p + 1, s - p * 2 - 2, s - p * 2 - 2, r - 1)
-         .stroke({ width: 0.5, color: color.light, alpha: 0.15 });
+        // ── 10. Secondary reflection (lower-center, subtle) ──
+        g.roundRect(p + inner * 0.3, p + inner * 0.6, inner * 0.4, inner * 0.08, 2)
+         .fill({ color: color.light, alpha: 0.12 });
+
+        // ── 11. Bottom-right inner shadow (depth) ──
+        g.roundRect(p + inner * 0.6, p + inner * 0.75, inner * 0.35, inner * 0.2, r - 2)
+         .fill({ color: 0x000000, alpha: 0.08 });
+
+        // ── 12. Edge glow (colored soft border) ──
+        g.roundRect(p + 1, p + 1, inner - 2, inner - 2, r - 1)
+         .stroke({ width: 1, color: color.glow, alpha: 0.12 });
+
+        // ── 13. Outer glass rim (bright top-left, dark bottom-right) ──
+        g.roundRect(p + 1, p + 1, inner - 2, inner - 2, r - 1)
+         .stroke({ width: 0.5, color: color.light, alpha: 0.2 });
 
         const tex = this.app.renderer.generateTexture({
             target: g,
@@ -363,13 +416,14 @@ class Board {
         return true;
     }
 
-    // ── Row/Col completion hints ──
+    // ── Row/Col completion hints (animated glow) ──
     showCompletionHints() {
         if (!this.hintContainer) return;
         const removed = this.hintContainer.removeChildren();
         removed.forEach(c => c.destroy({ children: true }));
         const cs = this.cellSize;
         const total = cs * GRID_SIZE;
+        let nearCompleteFound = false;
 
         // Check rows
         for (let r = 0; r < GRID_SIZE; r++) {
@@ -380,8 +434,16 @@ class Board {
             if (empty > 0 && empty <= 3) {
                 const g = new PIXI.Graphics();
                 const intensity = (4 - empty) * 0.06;
-                g.rect(0, r * cs, total, cs).fill({ color: 0x44FF88, alpha: intensity });
+                const color = empty === 1 ? 0x76FF03 : 0x44FF88;
+
+                // Main highlight
+                g.rect(0, r * cs, total, cs).fill({ color, alpha: intensity });
+                // Edge glow lines
+                g.moveTo(0, r * cs).lineTo(total, r * cs).stroke({ width: 1, color, alpha: intensity * 2 });
+                g.moveTo(0, (r + 1) * cs).lineTo(total, (r + 1) * cs).stroke({ width: 1, color, alpha: intensity * 2 });
+
                 this.hintContainer.addChild(g);
+                if (empty <= 2) nearCompleteFound = true;
             }
         }
 
@@ -394,9 +456,34 @@ class Board {
             if (empty > 0 && empty <= 3) {
                 const g = new PIXI.Graphics();
                 const intensity = (4 - empty) * 0.06;
-                g.rect(c * cs, 0, cs, total).fill({ color: 0x44FF88, alpha: intensity });
+                const color = empty === 1 ? 0x76FF03 : 0x44FF88;
+
+                g.rect(c * cs, 0, cs, total).fill({ color, alpha: intensity });
+                g.moveTo(c * cs, 0).lineTo(c * cs, total).stroke({ width: 1, color, alpha: intensity * 2 });
+                g.moveTo((c + 1) * cs, 0).lineTo((c + 1) * cs, total).stroke({ width: 1, color, alpha: intensity * 2 });
+
                 this.hintContainer.addChild(g);
+                if (empty <= 2) nearCompleteFound = true;
             }
+        }
+
+        // Pulse animation for hint container
+        if (nearCompleteFound && !this._hintPulseActive) {
+            this._hintPulseActive = true;
+            const hintRef = this.hintContainer;
+            this.game.effects.tweens.push({
+                elapsed: 0,
+                duration: 99999,
+                update(dt) {
+                    if (!hintRef || hintRef.destroyed || hintRef.children.length === 0) {
+                        return true;
+                    }
+                    this.elapsed += dt;
+                    const pulse = 0.6 + Math.sin(this.elapsed * 0.006) * 0.4;
+                    hintRef.alpha = pulse;
+                    return false;
+                }
+            });
         }
     }
 
@@ -404,7 +491,9 @@ class Board {
         if (this.hintContainer) {
             const removed = this.hintContainer.removeChildren();
             removed.forEach(c => c.destroy({ children: true }));
+            this.hintContainer.alpha = 1;
         }
+        this._hintPulseActive = false;
     }
 
     // ── Ghost Preview (animated pulsing) ──
@@ -424,15 +513,28 @@ class Board {
 
                 const g = new PIXI.Graphics();
 
+                // Soft outer glow
+                g.roundRect(x - 1, y - 1, cs + 2, cs + 2, r + 1)
+                 .fill({ color, alpha: alpha * 0.15 });
+
                 // Filled ghost cell
-                g.roundRect(x + 1, y + 1, cs - 2, cs - 2, r).fill({ color, alpha });
+                g.roundRect(x + 1, y + 1, cs - 2, cs - 2, r)
+                 .fill({ color, alpha });
 
-                // Border
-                g.roundRect(x + 1, y + 1, cs - 2, cs - 2, r).stroke({ width: 1.5, color, alpha: alpha + 0.3 });
-
-                // Inner glow for valid
+                // Glass highlight (top)
                 if (isValid) {
-                    g.roundRect(x + 3, y + 3, cs - 6, (cs - 6) * 0.3, r - 1).fill({ color: 0xFFFFFF, alpha: 0.1 });
+                    g.roundRect(x + 3, y + 2, cs - 6, (cs - 4) * 0.3, r - 1)
+                     .fill({ color: 0xFFFFFF, alpha: 0.15 });
+                }
+
+                // Border with glow effect
+                g.roundRect(x + 1, y + 1, cs - 2, cs - 2, r)
+                 .stroke({ width: 1.5, color, alpha: alpha + 0.35 });
+
+                // Inner bright rim (glass edge)
+                if (isValid) {
+                    g.roundRect(x + 2, y + 2, cs - 4, cs - 4, r - 1)
+                     .stroke({ width: 0.5, color: 0xFFFFFF, alpha: 0.1 });
                 }
 
                 this.ghostContainer.addChild(g);
