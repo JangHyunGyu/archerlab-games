@@ -120,10 +120,15 @@ export class XPOrbPool {
     }
 
     destroy() {
-        const tweens = this.scene?.tweens;
-        this.group.getChildren().forEach(orb => {
-            if (tweens) tweens.killTweensOf(orb);
-        });
-        this.group.clear(true, true);
+        try {
+            const tweens = this.scene?.tweens;
+            const children = this.group?.getChildren?.();
+            if (children) {
+                children.forEach(orb => {
+                    if (tweens) tweens.killTweensOf(orb);
+                });
+            }
+            if (this.group) this.group.clear(true, true);
+        } catch (e) { /* group already destroyed by scene shutdown */ }
     }
 }
