@@ -887,6 +887,56 @@ class EffectManager {
         });
     }
 
+    // ══════════════════════════════════════════════════
+    // ── SINGLE CLEAR EFFECT (WoW-Style, Non-Combo) ──
+    // ══════════════════════════════════════════════════
+
+    playSingleClearEffect(lineCount, x, y, clearedCells) {
+        const intensity = Math.min(lineCount, 4);
+
+        // ── Screen shake (enhanced) ──
+        this.screenShake(4 + intensity * 3, 250 + lineCount * 60);
+
+        // ── Central flash burst ──
+        this.playScreenFlash(0xFFFFFF, 0.08 + intensity * 0.03, 180 + lineCount * 30);
+
+        // ── Shockwave (always) ──
+        this.playShockwave(x, y, lineCount);
+
+        // ── Colored ring wave based on cleared block colors ──
+        const uniqueColors = [];
+        if (clearedCells && clearedCells.length > 0) {
+            const seen = new Set();
+            clearedCells.forEach(c => {
+                if (c.colorIndex >= 0 && !seen.has(c.colorIndex)) {
+                    seen.add(c.colorIndex);
+                    uniqueColors.push(BLOCK_COLORS[c.colorIndex].glow);
+                }
+            });
+        }
+        if (uniqueColors.length === 0) uniqueColors.push(0x44FF88);
+
+        // Ring wave with actual block colors
+        this.playMultiRingWave(x, y, Math.min(uniqueColors.length, 3), uniqueColors,
+            80 + lineCount * 25);
+
+        // ── Sparkles from center ──
+        this.spawnSparkles(x, y, uniqueColors[0], 10 + lineCount * 5);
+
+        // ── 2+ lines: radial rays + more particles ──
+        if (lineCount >= 2) {
+            this.playRadialRays(x, y, 4 + lineCount, uniqueColors[0], 70 + lineCount * 20);
+            this.spawnStarParticles(x, y, uniqueColors[Math.min(1, uniqueColors.length - 1)],
+                6 + lineCount * 2);
+        }
+
+        // ── 3+ lines: mini particle shower + zoom pulse ──
+        if (lineCount >= 3) {
+            this.playParticleShower(15 + lineCount * 5);
+            this.playScreenZoomPulse(0.015, 250);
+        }
+    }
+
     // ── Shockwave: expanding distortion ring on line clear ──
     playShockwave(x, y, lineCount) {
         const intensity = Math.min(lineCount, 4);
