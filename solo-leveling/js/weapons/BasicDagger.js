@@ -50,27 +50,65 @@ export class BasicDagger extends WeaponBase {
 
                 const startDist = 12;
                 const endDist = startDist + stabLength * thrust;
-                const sx = px + cos * startDist;
-                const sy = py + sin * startDist;
                 const ex = px + cos * endDist;
                 const ey = py + sin * endDist;
+                const hx = px + cos * startDist;
+                const hy = py + sin * startDist;
 
-                // Glow trail
-                gfx.lineStyle(10, 0x7b2fff, 0.15 * fadeAlpha);
-                gfx.lineBetween(sx, sy, ex, ey);
+                // 칼날 폭 (perpendicular offset)
+                const perpX = -sin;
+                const perpY = cos;
+                const bladeW = 5 * thrust;
 
-                // Main blade
-                gfx.lineStyle(4, 0xb366ff, 0.85 * fadeAlpha);
-                gfx.lineBetween(sx, sy, ex, ey);
+                // 칼날 꼭짓점: 끝(뾰족) → 좌측 → 손잡이 → 우측
+                const tipX = ex, tipY = ey;
+                const midDist = startDist + (endDist - startDist) * 0.35;
+                const mx = px + cos * midDist;
+                const my = py + sin * midDist;
+                const lx = mx + perpX * bladeW;
+                const ly = my + perpY * bladeW;
+                const rx = mx - perpX * bladeW;
+                const ry = my - perpY * bladeW;
 
-                // White core
-                gfx.lineStyle(1.5, 0xffffff, 0.7 * fadeAlpha);
-                gfx.lineBetween(sx, sy, ex, ey);
+                // 글로우 (넓은 칼날 실루엣)
+                gfx.fillStyle(0x7b2fff, 0.15 * fadeAlpha);
+                gfx.beginPath();
+                gfx.moveTo(tipX + perpX * 2, tipY + perpY * 2);
+                gfx.lineTo(lx + perpX * 3, ly + perpY * 3);
+                gfx.lineTo(hx + perpX * 2, hy + perpY * 2);
+                gfx.lineTo(hx - perpX * 2, hy - perpY * 2);
+                gfx.lineTo(rx - perpX * 3, ry - perpY * 3);
+                gfx.lineTo(tipX - perpX * 2, tipY - perpY * 2);
+                gfx.closePath();
+                gfx.fillPath();
 
-                // Tip glow
+                // 메인 칼날 (다이아몬드 형태)
+                gfx.fillStyle(0xb366ff, 0.85 * fadeAlpha);
+                gfx.beginPath();
+                gfx.moveTo(tipX, tipY);
+                gfx.lineTo(lx, ly);
+                gfx.lineTo(hx, hy);
+                gfx.lineTo(rx, ry);
+                gfx.closePath();
+                gfx.fillPath();
+
+                // 칼날 엣지 라인
+                gfx.lineStyle(1, 0xddccff, 0.7 * fadeAlpha);
+                gfx.beginPath();
+                gfx.moveTo(tipX, tipY);
+                gfx.lineTo(lx, ly);
+                gfx.moveTo(tipX, tipY);
+                gfx.lineTo(rx, ry);
+                gfx.strokePath();
+
+                // 중앙 하이라이트 (칼등)
+                gfx.lineStyle(1.5, 0xffffff, 0.6 * fadeAlpha);
+                gfx.lineBetween(hx, hy, tipX, tipY);
+
+                // 끝부분 빛
                 if (thrust > 0.3) {
-                    gfx.fillStyle(0xd4aaff, 0.9 * fadeAlpha);
-                    gfx.fillCircle(ex, ey, 4);
+                    gfx.fillStyle(0xeeddff, 0.9 * fadeAlpha);
+                    gfx.fillCircle(tipX, tipY, 3);
                 }
             },
             onComplete: () => {
