@@ -26,7 +26,7 @@ export class SoundManager {
             this._masterVol = new Tone.Volume(-8).toDestination();
             this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
                 .connect(this._masterVol).start();
-            this._comp = new Tone.Compressor(-18, 6).connect(this._chorus);
+            this._comp = new Tone.Compressor(-24, 4).connect(this._chorus);
             this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
             // Dedicated delay for spatial FX (weapon trails, echoes)
             this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
@@ -136,6 +136,8 @@ export class SoundManager {
 
     play(soundName) {
         if (!this.enabled || !this._initialized) return;
+        // Global active sounds limit
+        if (this._activeSounds >= this._maxActiveSounds) return;
         // Throttle: skip if called too soon
         const now = performance.now();
         const cooldown = this._throttleMs[soundName] || 0;
@@ -144,6 +146,8 @@ export class SoundManager {
             if (now - last < cooldown) return;
         }
         this._lastPlayTime[soundName] = now;
+        this._activeSounds++;
+        setTimeout(() => { this._activeSounds = Math.max(0, this._activeSounds - 1); }, 100);
         this.resume();
         // Reset shared synth params to defaults before playing
         this._resetSynths();
