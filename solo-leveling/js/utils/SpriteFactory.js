@@ -885,19 +885,32 @@ export class SpriteFactory {
     //  PROJECTILE TEXTURES
     // =============================================
     static createProjectileTextures(scene) {
-        // Shadow Dagger
+        // Shadow Dagger (32x32 — 글로우 + 날카로운 블레이드)
         const dg = scene.make.graphics({ add: false });
-        dg.fillStyle(COLORS.SHADOW_PRIMARY, 0.3);
-        dg.fillTriangle(1, 11, 8, -2, 15, 11);
+        // 외곽 글로우
+        dg.fillStyle(COLORS.SHADOW_PRIMARY, 0.15);
+        dg.fillTriangle(4, 26, 16, -2, 28, 26);
+        // 보라색 오라
+        dg.fillStyle(COLORS.SHADOW_GLOW || 0xb366ff, 0.25);
+        dg.fillTriangle(6, 24, 16, 1, 26, 24);
+        // 메인 블레이드
         dg.fillStyle(COLORS.DAGGER);
-        dg.fillTriangle(2, 10, 8, 0, 14, 10);
-        dg.lineStyle(1, 0xbbbbcc, 0.5);
-        dg.beginPath(); dg.moveTo(2, 10); dg.lineTo(8, 0); dg.lineTo(14, 10); dg.strokePath();
-        dg.fillStyle(0x999aaa);
-        dg.fillRect(5, 10, 6, 6);
-        dg.fillStyle(0xffffff, 0.3);
-        dg.fillRect(7, 2, 2, 6);
-        dg.generateTexture('proj_dagger', 16, 16);
+        dg.fillTriangle(8, 22, 16, 3, 24, 22);
+        // 블레이드 엣지
+        dg.lineStyle(1.5, 0xccccdd, 0.6);
+        dg.beginPath(); dg.moveTo(8, 22); dg.lineTo(16, 3); dg.lineTo(24, 22); dg.strokePath();
+        // 손잡이
+        dg.fillStyle(0x888899);
+        dg.fillRect(12, 22, 8, 6);
+        dg.fillStyle(COLORS.SHADOW_PRIMARY, 0.5);
+        dg.fillRect(13, 22, 6, 5);
+        // 중앙 하이라이트
+        dg.fillStyle(0xffffff, 0.4);
+        dg.fillRect(15, 5, 2, 14);
+        // 끝부분 빛
+        dg.fillStyle(0xffffff, 0.6);
+        dg.fillCircle(16, 4, 2);
+        dg.generateTexture('proj_dagger', 32, 32);
         dg.destroy();
 
         // Shadow Slash arc
