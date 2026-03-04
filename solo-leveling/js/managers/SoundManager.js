@@ -141,32 +141,26 @@ export class SoundManager {
      * 모든 신스를 무음으로 트리거하여 Web Audio 노드를 사전 활성화 (콜드 스타트 노이즈 방지)
      * 메뉴 화면에서 호출하면 게임 시작 시 찌직거림 없이 깨끗한 사운드 출력
      */
-    async warmup() {
+    warmup() {
         if (!this.enabled || !this._initialized || this._warmedUp) return;
-        const savedVol = this._masterVol.volume.value;
-        this._masterVol.volume.value = -Infinity;
         try {
-            await Tone.start();
-            // AudioContext 안정화 대기 후 미래 시점에 스케줄 (타이밍 충돌 방지)
+            // 극소 velocity(0.001)로 트리거 → 마스터 볼륨 조작 불필요
+            // 이전 방식(볼륨 -Infinity 설정→복원)은 급격한 신호 변화로 찌직거림 유발
             const now = Tone.now() + 0.1;
-            // 각 신스를 개별 try-catch로 트리거 (하나 실패해도 나머지 진행)
-            try { this._impact.triggerAttackRelease('C1', '32n', now, 0.01); } catch (e) { /* */ }
-            try { this._tone.triggerAttackRelease('C4', '32n', now + 0.01, 0.01); } catch (e) { /* */ }
-            try { this._toneWet.triggerAttackRelease('C4', '32n', now + 0.02, 0.01); } catch (e) { /* */ }
-            try { this._fm.triggerAttackRelease('C4', '32n', now + 0.03, 0.01); } catch (e) { /* */ }
-            try { this._fmWet.triggerAttackRelease('C4', '32n', now + 0.04, 0.01); } catch (e) { /* */ }
-            try { this._metal.triggerAttackRelease('32n', now + 0.05, 0.01); } catch (e) { /* */ }
-            try { this._noise.triggerAttackRelease('32n', now + 0.06, 0.01); } catch (e) { /* */ }
-            try { this._sub.triggerAttackRelease('C2', '32n', now + 0.07, 0.01); } catch (e) { /* */ }
-            try { this._poly.triggerAttackRelease('C4', '32n', now + 0.08, 0.01); } catch (e) { /* */ }
-            try { this._fmPoly.triggerAttackRelease('C4', '32n', now + 0.09, 0.01); } catch (e) { /* */ }
-            await new Promise(resolve => setTimeout(resolve, 300));
+            const v = 0.001; // 사실상 무음이지만 Web Audio 노드를 활성화
+            try { this._impact.triggerAttackRelease('C1', '32n', now, v); } catch (e) { /* */ }
+            try { this._tone.triggerAttackRelease('C4', '32n', now + 0.01, v); } catch (e) { /* */ }
+            try { this._toneWet.triggerAttackRelease('C4', '32n', now + 0.02, v); } catch (e) { /* */ }
+            try { this._fm.triggerAttackRelease('C4', '32n', now + 0.03, v); } catch (e) { /* */ }
+            try { this._fmWet.triggerAttackRelease('C4', '32n', now + 0.04, v); } catch (e) { /* */ }
+            try { this._metal.triggerAttackRelease('32n', now + 0.05, v); } catch (e) { /* */ }
+            try { this._noise.triggerAttackRelease('32n', now + 0.06, v); } catch (e) { /* */ }
+            try { this._sub.triggerAttackRelease('C2', '32n', now + 0.07, v); } catch (e) { /* */ }
+            try { this._poly.triggerAttackRelease('C4', '32n', now + 0.08, v); } catch (e) { /* */ }
+            try { this._fmPoly.triggerAttackRelease('C4', '32n', now + 0.09, v); } catch (e) { /* */ }
             this._warmedUp = true;
         } catch (e) {
             console.warn('SoundManager warmup failed:', e);
-        } finally {
-            // 에러 발생해도 반드시 볼륨 복원 (이전엔 catch에서 복원 누락 → 영구 무음 버그)
-            this._masterVol.volume.value = savedVol;
         }
     }
 
