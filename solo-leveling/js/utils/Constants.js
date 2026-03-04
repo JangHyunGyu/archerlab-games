@@ -100,7 +100,7 @@ export const ENEMY_TYPES = {
     },
     antSoldier: {
         name: '개미 병사',
-        hp: 75, attack: 9, speed: 98, xp: 4,
+        hp: 75, attack: 9, speed: 98, xp: 6,
         color: 0x8b0000, size: 24,
     },
     // --- 중반 적 (1~5분) ---
@@ -111,7 +111,7 @@ export const ENEMY_TYPES = {
     },
     iceBear: {
         name: '아이스 베어',
-        hp: 250, attack: 12, speed: 64, xp: 10,
+        hp: 400, attack: 15, speed: 55, xp: 12,
         color: 0xaaccee, size: 40,
     },
     // --- 후반 적 (5분~) ---
@@ -122,7 +122,7 @@ export const ENEMY_TYPES = {
     },
     darkMage: {
         name: '다크 메이지',
-        hp: 420, attack: 38, speed: 68, xp: 25,
+        hp: 350, attack: 22, speed: 68, xp: 25,
         color: 0x3a1a5e, size: 36,
     },
     // --- 최후반 적 (8분~) ---
