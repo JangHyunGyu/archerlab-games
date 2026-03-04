@@ -397,17 +397,30 @@ class Game {
             this.sound.playClear(clearResult.lines);
         }
 
-        // 모바일/태블릿 진동 피드백
+        // 모바일/태블릿 진동 피드백 (콤보 + 라인수 조합)
         if (navigator.vibrate) {
-            if (combo > 1) {
-                const pattern = [];
-                for (let i = 0; i < Math.min(combo, 5); i++) {
-                    pattern.push(40 + clearResult.lines * 10, 30);
-                }
-                pattern.pop();
-                navigator.vibrate(pattern);
+            const lines = clearResult.lines;
+            if (combo >= 6) {
+                // 콤보 Tier 3: 강렬한 롱 진동 + 스타카토 연타
+                navigator.vibrate([200, 30, 60, 20, 60, 20, 60, 20, 150, 40, 40, 15, 40, 15, 40]);
+            } else if (combo >= 4) {
+                // 콤보 Tier 2: 강한 진동 + 빠른 연타
+                navigator.vibrate([150, 30, 50, 20, 50, 20, 50, 30, 120]);
+            } else if (combo >= 2) {
+                // 콤보 Tier 1: 중간 연타
+                navigator.vibrate([80, 25, 40, 20, 40, 25, 80]);
+            } else if (lines >= 4) {
+                // 4줄+: 강렬한 더블 임팩트
+                navigator.vibrate([150, 25, 60, 20, 60, 20, 120, 30, 50, 15, 50]);
+            } else if (lines === 3) {
+                // 3줄: 강한 임팩트 + 연타
+                navigator.vibrate([120, 25, 50, 20, 50, 25, 80]);
+            } else if (lines === 2) {
+                // 2줄: 중간 임팩트
+                navigator.vibrate([80, 25, 40, 20, 60]);
             } else {
-                navigator.vibrate(30 + clearResult.lines * 20);
+                // 1줄: 가벼운 탭
+                navigator.vibrate([40, 20, 25]);
             }
         }
 
@@ -445,6 +458,11 @@ class Game {
             const popupX = boardPos.x + midCell.col * this.cellSize + this.cellSize / 2;
             const popupY = boardPos.y + midCell.row * this.cellSize;
             this.effects.showScorePopup(popupX, popupY, `+${pts}`);
+
+            // Multi-line bonus popup (화려한 전용 팝업)
+            if (clearResult.lines >= 2) {
+                this.effects.showMultiLinePopup(popupX, popupY - this.cellSize * 1.5, clearResult.lines);
+            }
 
             if (result.leveledUp) {
                 this.sound.playLevelUp();
