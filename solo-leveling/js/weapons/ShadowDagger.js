@@ -40,7 +40,6 @@ export class ShadowDagger extends WeaponBase {
         const cleanup = () => {
             if (trailInterval) { trailInterval.destroy(); trailInterval = null; }
             entry.trailInterval = null;
-            this.scene.tweens.killTweensOf(dagger);
             if (dagger.active) dagger.destroy();
             // 추적 배열에서 제거
             const idx = this._activeDaggers.indexOf(entry);
@@ -65,7 +64,10 @@ export class ShadowDagger extends WeaponBase {
                         if (this.scene.soundManager) this.scene.soundManager.play('hit');
                         hasHit = true;
                         const sx = dagger.x, sy = dagger.y;
-                        cleanup();
+                        // onUpdate 내에서 tween 조작하면 프리즈 → 숨기기만 하고 onComplete에서 정리
+                        dagger.setVisible(false);
+                        if (trailInterval) { trailInterval.destroy(); trailInterval = null; }
+                        entry.trailInterval = null;
                         const spark = this.scene.add.circle(sx, sy, 6, 0xb366ff, 0.8).setDepth(9);
                         this.scene.tweens.add({
                             targets: spark, alpha: 0, scale: 3,
