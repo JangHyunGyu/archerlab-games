@@ -63,7 +63,7 @@ export class DragonFear extends WeaponBase {
 
     destroy() {
         if (this.auraSprite) {
-            this.scene.tweens.killTweensOf(this.auraSprite);
+            if (this.scene?.tweens) this.scene.tweens.killTweensOf(this.auraSprite);
             this.auraSprite.destroy();
             this.auraSprite = null;
         }

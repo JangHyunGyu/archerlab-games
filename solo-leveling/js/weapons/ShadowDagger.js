@@ -98,9 +98,10 @@ export class ShadowDagger extends WeaponBase {
 
     destroy() {
         // 비행 중인 모든 단검 정리
+        const tweens = this.scene?.tweens;
         for (const entry of this._activeDaggers) {
             if (entry.trailInterval) entry.trailInterval.destroy();
-            this.scene.tweens.killTweensOf(entry.dagger);
+            if (tweens) tweens.killTweensOf(entry.dagger);
             if (entry.dagger.active) entry.dagger.destroy();
         }
         this._activeDaggers = [];

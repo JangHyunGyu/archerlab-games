@@ -179,9 +179,10 @@ export class ItemDropManager {
     }
 
     destroy() {
+        const tweens = this.scene?.tweens;
         this.items.forEach(item => {
-            this.scene.tweens.killTweensOf(item);
-            if (item._glow) { this.scene.tweens.killTweensOf(item._glow); item._glow.destroy(); }
+            if (tweens) tweens.killTweensOf(item);
+            if (item._glow) { if (tweens) tweens.killTweensOf(item._glow); item._glow.destroy(); }
             if (item._plusText) item._plusText.destroy();
             item.destroy();
         });

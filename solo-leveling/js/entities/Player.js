@@ -486,11 +486,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     destroy(fromScene) {
-        this.scene.tweens.killTweensOf(this);
-        if (this.aura) {
-            this.scene.tweens.killTweensOf(this.aura);
-            this.aura.destroy();
+        if (this.scene?.tweens) {
+            this.scene.tweens.killTweensOf(this);
+            if (this.aura) this.scene.tweens.killTweensOf(this.aura);
         }
+        if (this.aura) { this.aura.destroy(); this.aura = null; }
         super.destroy(fromScene);
     }
 }
