@@ -210,6 +210,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     die() {
+        // 데미지 넘버 타이머 정리
+        if (this._dmgTextTimer) {
+            this._dmgTextTimer.remove(false);
+            this._dmgTextTimer = null;
+        }
+
         // Drop XP
         if (this.scene.xpOrbPool) {
             this.scene.xpOrbPool.spawn(this.x, this.y, this.xpValue);

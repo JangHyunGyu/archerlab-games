@@ -492,4 +492,20 @@ export class EnemyManager {
     getGameTime() {
         return this.gameTime;
     }
+
+    destroy() {
+        // 던전 브레이크 보더 정리
+        if (this._dungeonBreakBorder) {
+            this.scene.tweens.killTweensOf(this._dungeonBreakBorder);
+            this._dungeonBreakBorder.destroy();
+            this._dungeonBreakBorder = null;
+        }
+        // 엘리트 라벨 정리
+        this.pool.getChildren().forEach(enemy => {
+            if (enemy._eliteLabel) {
+                enemy._eliteLabel.destroy();
+                enemy._eliteLabel = null;
+            }
+        });
+    }
 }

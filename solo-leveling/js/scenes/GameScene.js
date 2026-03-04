@@ -361,8 +361,8 @@ export class GameScene extends Phaser.Scene {
                     }
                 }
                 // Safety: clean up HP bar if not already destroyed
-                if (boss.hpBarBg) { boss.hpBarBg.destroy(); boss.hpBarBg = null; }
-                if (boss.hpBarFill) { boss.hpBarFill.destroy(); boss.hpBarFill = null; }
+                if (boss.hpBarGfx) { boss.hpBarGfx.destroy(); boss.hpBarGfx = null; }
+                if (boss.hpText) { boss.hpText.destroy(); boss.hpText = null; }
                 if (boss.nameText) { boss.nameText.destroy(); boss.nameText = null; }
                 this.activeBosses.splice(i, 1);
             }
@@ -514,6 +514,8 @@ export class GameScene extends Phaser.Scene {
             if (this.weaponManager) this.weaponManager.destroy();
             if (this.shadowArmyManager) this.shadowArmyManager.destroy();
             if (this.itemDropManager) this.itemDropManager.destroy();
+            if (this.xpOrbPool) this.xpOrbPool.destroy();
+            if (this.enemyManager) this.enemyManager.destroy();
             if (this.statusWindow) this.statusWindow.destroy();
 
             // Clean up filters
@@ -533,9 +535,9 @@ export class GameScene extends Phaser.Scene {
                             for (const c of boss._weaponColliders) this.physics.world.removeCollider(c);
                         }
                     } catch (e) { /* already removed */ }
-                    if (boss.hpBarBg) boss.hpBarBg.destroy();
-                    if (boss.hpBarFill) boss.hpBarFill.destroy();
-                    if (boss.nameText) boss.nameText.destroy();
+                    if (boss.hpBarGfx) { boss.hpBarGfx.destroy(); boss.hpBarGfx = null; }
+                    if (boss.hpText) { boss.hpText.destroy(); boss.hpText = null; }
+                    if (boss.nameText) { boss.nameText.destroy(); boss.nameText = null; }
                 }
                 this.activeBosses = [];
             }
