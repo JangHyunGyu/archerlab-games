@@ -11,7 +11,7 @@ const ITEM_TYPES = {
         color: 0xff4444,
         dropRate: 0.08,
         effect: (player, scene) => {
-            const healAmount = Math.floor(player.stats.maxHp * 0.25);
+            const healAmount = Math.floor(player.stats.maxHp * 0.15);
             player.heal(healAmount);
             scene.systemMessage?.show('[시스템]', [`HP가 ${healAmount} 회복되었습니다.`], { duration: 1500 });
         },
