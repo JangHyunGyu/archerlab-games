@@ -40,76 +40,83 @@ export class BasicDagger extends WeaponBase {
         this.scene.tweens.add({
             targets: progress,
             t: 1,
-            duration: 120,
-            ease: 'Power3',
+            duration: 180,
+            ease: 'Power2',
             onUpdate: () => {
                 gfx.clear();
 
-                const thrust = progress.t < 0.5 ? progress.t * 2 : 2 - progress.t * 2;
-                const fadeAlpha = 1 - progress.t;
+                const thrust = progress.t < 0.4 ? progress.t / 0.4 : (1 - progress.t) / 0.6;
+                const fadeAlpha = Math.min(1, (1 - progress.t) * 1.5);
 
-                const startDist = 12;
-                const endDist = startDist + stabLength * thrust;
-                const ex = px + cos * endDist;
-                const ey = py + sin * endDist;
-                const hx = px + cos * startDist;
-                const hy = py + sin * startDist;
+                const startDist = 14;
+                const endDist = startDist + stabLength * Math.max(thrust, 0.15);
+                const tipX = px + cos * endDist;
+                const tipY = py + sin * endDist;
+                const hiltX = px + cos * startDist;
+                const hiltY = py + sin * startDist;
 
-                // 칼날 폭 (perpendicular offset)
+                // 수직 방향 (칼날 폭 방향)
                 const perpX = -sin;
                 const perpY = cos;
-                const bladeW = 5 * thrust;
+                const bladeW = 8 * Math.max(thrust, 0.2);
 
-                // 칼날 꼭짓점: 끝(뾰족) → 좌측 → 손잡이 → 우측
-                const tipX = ex, tipY = ey;
-                const midDist = startDist + (endDist - startDist) * 0.35;
-                const mx = px + cos * midDist;
-                const my = py + sin * midDist;
-                const lx = mx + perpX * bladeW;
-                const ly = my + perpY * bladeW;
-                const rx = mx - perpX * bladeW;
-                const ry = my - perpY * bladeW;
+                // 칼날 가장 넓은 부분 (30% 지점)
+                const widePt = 0.3;
+                const wideX = hiltX + (tipX - hiltX) * widePt;
+                const wideY = hiltY + (tipY - hiltY) * widePt;
 
-                // 글로우 (넓은 칼날 실루엣)
-                gfx.fillStyle(0x7b2fff, 0.15 * fadeAlpha);
-                gfx.beginPath();
-                gfx.moveTo(tipX + perpX * 2, tipY + perpY * 2);
-                gfx.lineTo(lx + perpX * 3, ly + perpY * 3);
-                gfx.lineTo(hx + perpX * 2, hy + perpY * 2);
-                gfx.lineTo(hx - perpX * 2, hy - perpY * 2);
-                gfx.lineTo(rx - perpX * 3, ry - perpY * 3);
-                gfx.lineTo(tipX - perpX * 2, tipY - perpY * 2);
-                gfx.closePath();
-                gfx.fillPath();
+                // 글로우 외곽
+                gfx.fillStyle(0x7b2fff, 0.2 * fadeAlpha);
+                gfx.fillTriangle(
+                    tipX, tipY,
+                    wideX + perpX * (bladeW + 4), wideY + perpY * (bladeW + 4),
+                    hiltX, hiltY
+                );
+                gfx.fillTriangle(
+                    tipX, tipY,
+                    wideX - perpX * (bladeW + 4), wideY - perpY * (bladeW + 4),
+                    hiltX, hiltY
+                );
 
-                // 메인 칼날 (다이아몬드 형태)
-                gfx.fillStyle(0xb366ff, 0.85 * fadeAlpha);
-                gfx.beginPath();
-                gfx.moveTo(tipX, tipY);
-                gfx.lineTo(lx, ly);
-                gfx.lineTo(hx, hy);
-                gfx.lineTo(rx, ry);
-                gfx.closePath();
-                gfx.fillPath();
+                // 메인 칼날 (왼쪽 반)
+                gfx.fillStyle(0xb366ff, 0.9 * fadeAlpha);
+                gfx.fillTriangle(
+                    tipX, tipY,
+                    wideX + perpX * bladeW, wideY + perpY * bladeW,
+                    hiltX, hiltY
+                );
+                // 메인 칼날 (오른쪽 반)
+                gfx.fillStyle(0x9944ee, 0.85 * fadeAlpha);
+                gfx.fillTriangle(
+                    tipX, tipY,
+                    wideX - perpX * bladeW, wideY - perpY * bladeW,
+                    hiltX, hiltY
+                );
 
-                // 칼날 엣지 라인
-                gfx.lineStyle(1, 0xddccff, 0.7 * fadeAlpha);
-                gfx.beginPath();
-                gfx.moveTo(tipX, tipY);
-                gfx.lineTo(lx, ly);
-                gfx.moveTo(tipX, tipY);
-                gfx.lineTo(rx, ry);
-                gfx.strokePath();
+                // 칼날 엣지
+                gfx.lineStyle(1.5, 0xddccff, 0.8 * fadeAlpha);
+                gfx.lineBetween(hiltX, hiltY, tipX, tipY);
 
-                // 중앙 하이라이트 (칼등)
-                gfx.lineStyle(1.5, 0xffffff, 0.6 * fadeAlpha);
-                gfx.lineBetween(hx, hy, tipX, tipY);
+                // 칼등 하이라이트
+                gfx.lineStyle(1, 0xffffff, 0.5 * fadeAlpha);
+                gfx.lineBetween(
+                    hiltX + perpX * 1, hiltY + perpY * 1,
+                    tipX, tipY
+                );
 
                 // 끝부분 빛
-                if (thrust > 0.3) {
+                if (thrust > 0.2) {
                     gfx.fillStyle(0xeeddff, 0.9 * fadeAlpha);
-                    gfx.fillCircle(tipX, tipY, 3);
+                    gfx.fillCircle(tipX, tipY, 3.5);
                 }
+
+                // 손잡이 (작은 사각형)
+                gfx.fillStyle(0x666688, 0.7 * fadeAlpha);
+                const hLen = 6;
+                const hEndX = px + cos * (startDist - hLen);
+                const hEndY = py + sin * (startDist - hLen);
+                gfx.lineStyle(3, 0x888899, 0.6 * fadeAlpha);
+                gfx.lineBetween(hEndX, hEndY, hiltX, hiltY);
             },
             onComplete: () => {
                 gfx.destroy();
