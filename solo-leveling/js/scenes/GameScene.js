@@ -78,8 +78,8 @@ export class GameScene extends Phaser.Scene {
         // HUD (must be last UI element)
         this.hud = new HUD(this);
 
-        // Player-Enemy collision
-        this.physics.add.overlap(this.player, this.enemyManager.getGroup(), this._onPlayerHitEnemy, null, this);
+        // Player-Enemy collision (밀치기만, 데미지는 Enemy.update에서 거리 기반 처리)
+        this.physics.add.collider(this.player, this.enemyManager.getGroup());
 
         // Ambient particles
         this._createAmbientParticles();

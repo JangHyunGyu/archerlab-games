@@ -58,6 +58,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.slowMultiplier = 1;
         this.slowDuration = 0;
         this.rangedCooldown = 0;
+        this.meleeCooldown = 0;
+        this._meleeRange = s * 2 + 30; // 몹 크기 기반 근접 공격 사거리
         this.setAlpha(1);
         this.setTint(0xffffff);
     }
@@ -84,11 +86,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.enemyType === 'darkMage') {
             const attackRange = 250;
             if (dist > attackRange) {
-                // Move closer
                 const speed = this.speed * this.slowMultiplier;
                 this.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
             } else {
-                // Stop and shoot
                 this.body.setVelocity(0, 0);
                 this.rangedCooldown -= delta;
                 if (this.rangedCooldown <= 0) {
@@ -100,6 +100,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Normal melee: move toward player
             const speed = this.speed * this.slowMultiplier;
             this.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+
+            // 근접 공격 (사거리 내일 때 쿨다운 기반)
+            if (this.meleeCooldown > 0) this.meleeCooldown -= delta;
+            if (dist < this._meleeRange && this.meleeCooldown <= 0) {
+                this.meleeCooldown = 800;
+                const player = this.scene.player;
+                if (player && !player.isDead) {
+                    player.takeDamage(this.attack);
+                    if (this.scene.soundManager) this.scene.soundManager.play('playerHit');
+                }
+            }
         }
 
         // Face direction
