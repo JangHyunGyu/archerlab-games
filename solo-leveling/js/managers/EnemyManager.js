@@ -320,8 +320,8 @@ export class EnemyManager {
         const count = Math.floor(WAVE_CONFIG.baseEnemiesPerSpawn + minutes * WAVE_CONFIG.extraEnemiesPerMinute);
         const activeCount = this.getActiveEnemies().length;
 
-        // Max enemies scales with time: 150 base, up to 300 at 20 min
-        const maxEnemies = Math.floor(WAVE_CONFIG.maxEnemiesOnScreen + minutes * 7.5);
+        // Max enemies scales with time: 100 base, up to 175 at 15 min
+        const maxEnemies = Math.floor(WAVE_CONFIG.maxEnemiesOnScreen + minutes * 5);
         if (activeCount >= maxEnemies) return;
 
         const toSpawn = Math.min(count, maxEnemies - activeCount);

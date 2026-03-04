@@ -132,7 +132,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
         // Shadow trail
         this.trailTimer += delta;
-        if (this.trailTimer > 200) {
+        if (this.trailTimer > 500) {
             this.trailTimer = 0;
             this._spawnTrail();
         }

@@ -331,6 +331,9 @@ export class LevelUpScene extends Phaser.Scene {
             this.gameScene.removeLevelUpBlur();
         }
 
+        // Reset level-up guard flag
+        if (this.gameScene) this.gameScene._levelUpActive = false;
+
         // Resume game
         this.scene.resume('GameScene');
         this.scene.stop();

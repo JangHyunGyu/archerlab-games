@@ -179,8 +179,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.knockbackTimer = 150;
         }
 
-        // Damage number
-        this._showDamageNumber(amount);
+        // Damage number (throttled: accumulate hits within 200ms window)
+        this._dmgAccum = (this._dmgAccum || 0) + amount;
+        if (!this._dmgTextTimer) {
+            this._dmgTextTimer = this.scene.time.delayedCall(200, () => {
+                if (this.active || this._dmgAccum > 0) {
+                    this._showDamageNumber(this._dmgAccum);
+                }
+                this._dmgAccum = 0;
+                this._dmgTextTimer = null;
+            });
+        }
 
         if (this.hp <= 0) {
             this.die();
