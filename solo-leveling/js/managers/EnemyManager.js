@@ -496,7 +496,7 @@ export class EnemyManager {
     destroy() {
         // 던전 브레이크 보더 정리
         if (this._dungeonBreakBorder) {
-            this.scene.tweens.killTweensOf(this._dungeonBreakBorder);
+            if (this.scene?.tweens) this.scene.tweens.killTweensOf(this._dungeonBreakBorder);
             this._dungeonBreakBorder.destroy();
             this._dungeonBreakBorder = null;
         }

@@ -49,10 +49,11 @@ export class ShadowArmyManager {
 
     _cleanupArise() {
         // Kill tweens then destroy all tracked elements
+        const tweens = this.scene?.tweens;
         for (const el of this._ariseElements) {
             try {
-                if (el && el.active !== false) {
-                    this.scene.tweens.killTweensOf(el);
+                if (tweens && el && el.active !== false) {
+                    tweens.killTweensOf(el);
                 }
                 if (el && el.destroy) el.destroy();
             } catch (e) { /* already destroyed */ }
