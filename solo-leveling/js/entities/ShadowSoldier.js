@@ -42,7 +42,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
         // Follow offset
         this.followAngle = Math.random() * Math.PI * 2;
-        this.followDist = 80 + Math.random() * 40;
+        this.followDist = 120 + Math.random() * 60;
 
         // Shadow trail effect
         this.trailTimer = 0;
@@ -76,8 +76,8 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         this.speed = player.stats.speed * this.speedRatio;
 
         // Guard mode: find enemy closest to PLAYER within guard radius
-        const guardRadius = 250;
-        const leashDist = 300;
+        const guardRadius = 400;
+        const leashDist = 450;
         let target = null;
         let targetDistToPlayer = guardRadius;
 
