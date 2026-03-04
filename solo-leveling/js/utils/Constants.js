@@ -117,7 +117,7 @@ export const ENEMY_TYPES = {
     // --- 후반 적 (5분~) ---
     stoneGolem: {
         name: '스톤 골렘',
-        hp: 1400, attack: 32, speed: 55, xp: 45,
+        hp: 2000, attack: 32, speed: 55, xp: 45,
         color: 0x666677, size: 60,
     },
     darkMage: {
@@ -128,12 +128,12 @@ export const ENEMY_TYPES = {
     // --- 최후반 적 (8분~) ---
     ironKnight: {
         name: '아이언 나이트',
-        hp: 1600, attack: 40, speed: 60, xp: 55,
+        hp: 2800, attack: 40, speed: 60, xp: 55,
         color: 0x8888aa, size: 52,
     },
     demonWarrior: {
         name: '마족 전사',
-        hp: 2400, attack: 55, speed: 68, xp: 80,
+        hp: 4000, attack: 55, speed: 68, xp: 80,
         color: 0x440022, size: 56,
     },
 };
@@ -141,21 +141,21 @@ export const ENEMY_TYPES = {
 export const BOSS_TYPES = {
     igris: {
         name: '이그리스',
-        hp: 4500, attack: 38, speed: 94, xp: 500,
+        hp: 6000, attack: 38, speed: 94, xp: 500,
         color: 0xcc0000, size: 80,
         shadowType: 'melee',
         shadowColor: 0x220000,
     },
     tusk: {
         name: '터스크',
-        hp: 18000, attack: 52, speed: 68, xp: 800,
+        hp: 25000, attack: 52, speed: 68, xp: 800,
         color: 0x5a3a1a, size: 100,
         shadowType: 'tank',
         shadowColor: 0x1a1000,
     },
     beru: {
         name: '베루',
-        hp: 20000, attack: 60, speed: 102, xp: 1200,
+        hp: 35000, attack: 60, speed: 102, xp: 1200,
         color: 0x660033, size: 90,
         shadowType: 'ranged',
         shadowColor: 0x110022,
