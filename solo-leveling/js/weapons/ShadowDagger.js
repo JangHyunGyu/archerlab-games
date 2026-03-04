@@ -26,8 +26,10 @@ export class ShadowDagger extends WeaponBase {
         dagger.setActive(true);
         dagger.setVisible(true);
         dagger.setDepth(8);
-        dagger.body.enable = true;
         dagger.setScale(1.2);
+
+        // body 위치를 플레이어 위치로 확실히 리셋 (풀 재사용 시 이전 위치 잔존 방지)
+        dagger.body.reset(this.player.x, this.player.y);
 
         const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
         const speed = 600;
