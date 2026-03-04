@@ -29,9 +29,11 @@ export class GameScene extends Phaser.Scene {
         }
         this.soundManager = this.game._soundManager;
         this.soundManager.resume();
-        // Stop intro music, start game BGM (짧은 딜레이로 오디오 컨텍스트 안정화)
+        // Stop intro music, start game BGM
+        // 씬 초기화(physics, sprites, enemies 등) CPU 부하와 BGM 시작이 겹치면 찌직거림 발생
+        // → 800ms 딜레이로 씬 안정화 후 BGM 시작 (BGM은 -60dB에서 시작하여 자체 페이드인)
         this.soundManager.stopIntroMusic();
-        this.time.delayedCall(150, () => {
+        this.time.delayedCall(800, () => {
             this.soundManager.startGameBGM();
         });
 

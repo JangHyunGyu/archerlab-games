@@ -88,7 +88,7 @@ export class MenuScene extends Phaser.Scene {
             startBtn.setFillStyle(0x4a1a8a, 0.8);
             startText.setScale(1);
         });
-        startBtn.on('pointerdown', () => {
+        startBtn.on('pointerdown', async () => {
             // Stop intro music
             if (this.game._soundManager) {
                 this.game._soundManager.stopIntroMusic();
@@ -99,7 +99,7 @@ export class MenuScene extends Phaser.Scene {
                 this.game._soundManager = new SoundManager();
                 this.game._soundManager.init();
             }
-            this.game._soundManager.resume();
+            try { await Tone.start(); } catch (e) { /* */ }
 
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => this.scene.start('GameScene'));
@@ -200,14 +200,15 @@ export class MenuScene extends Phaser.Scene {
 
         // AudioContext는 브라우저 정책상 사용자 제스처(클릭/터치) 후에만 시작 가능
         // SoundManager 생성(init) 자체가 AudioContext를 만들므로 반드시 사용자 제스처 안에서 수행
-        this.input.once('pointerdown', () => {
+        this.input.once('pointerdown', async () => {
             if (!this.game._soundManager) {
                 this.game._soundManager = new SoundManager();
                 this.game._soundManager.init();
             }
             const sm = this.game._soundManager;
-            sm.resume();
-            sm.warmup(); // 볼륨 조작 없이 극소 velocity로 트리거 → 인트로와 충돌 없음
+            // Tone.start()는 async → await 필수 (안 하면 context가 suspended 상태에서 오실레이터 시작 → 무음)
+            try { await Tone.start(); } catch (e) { /* */ }
+            sm.warmup();
             sm.playIntroMusic();
         });
     }
