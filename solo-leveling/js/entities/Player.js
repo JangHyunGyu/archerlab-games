@@ -68,26 +68,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (!scene.anims.exists('player_idle')) {
             scene.anims.create({
                 key: 'player_idle',
-                frames: [
-                    { key: 'player_idle_0' },
-                    { key: 'player_idle_1' },
-                    { key: 'player_idle_2' },
-                    { key: 'player_idle_3' },
-                ],
-                frameRate: 4,
+                frames: Array.from({ length: 8 }, (_, i) => ({ key: 'player_idle_' + i })),
+                frameRate: 6,
                 repeat: -1,
             });
         }
         if (!scene.anims.exists('player_walk')) {
             scene.anims.create({
                 key: 'player_walk',
-                frames: [
-                    { key: 'player_walk_0' },
-                    { key: 'player_walk_1' },
-                    { key: 'player_walk_2' },
-                    { key: 'player_walk_3' },
-                ],
-                frameRate: 8,
+                frames: Array.from({ length: 8 }, (_, i) => ({ key: 'player_walk_' + i })),
+                frameRate: 12,
                 repeat: -1,
             });
         }

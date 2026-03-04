@@ -1,6 +1,7 @@
 // 그림자 서바이벌: 서바이버즈 - Phaser 기반 뱀서라이크 게임
 import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js';
 import { BootScene } from './scenes/BootScene.js';
+import { PreloadScene } from './scenes/PreloadScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { LevelUpScene } from './scenes/LevelUpScene.js';
@@ -48,7 +49,7 @@ const config = {
             debug: false,
         },
     },
-    scene: [BootScene, MenuScene, GameScene, LevelUpScene, GameOverScene],
+    scene: [BootScene, PreloadScene, MenuScene, GameScene, LevelUpScene, GameOverScene],
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
