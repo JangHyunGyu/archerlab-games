@@ -105,7 +105,6 @@ export class StatusWindow {
         const stats = [
             { label: t('statHP'), value: `${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`, color: '#ff6666' },
             { label: t('statAttack'), value: `${player.stats.attack}`, color: '#ff8844' },
-            { label: t('statDefense'), value: `${player.stats.defense}`, color: '#44aaff' },
             { label: t('statSpeed'), value: `${player.stats.speed}`, color: '#44ff88' },
             { label: t('statCrit'), value: `${(player.stats.critRate * 100).toFixed(1)}%`, color: '#ffff44' },
             { label: t('statCritDmg'), value: `${(player.stats.critDamage * 100).toFixed(0)}%`, color: '#ffaa44' },

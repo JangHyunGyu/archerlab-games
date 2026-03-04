@@ -54,11 +54,9 @@ export class EnemyManager {
         const minutes = this.gameTime / 60000;
         const seconds = this.gameTime / 1000;
 
-        // Update difficulty: hybrid linear + exponential scaling
-        // Linear part keeps early game familiar, exponential part catches up to player power in late game
-        const linearPart = 1 + minutes * 0.10;
-        const expPart = Math.pow(1.05, minutes);
-        this.difficultyMultiplier = linearPart * expPart;
+        // Update difficulty: linear base + gentle late-game acceleration
+        // Keeps mid-game power fantasy while ramping up pressure in endgame
+        this.difficultyMultiplier = 1 + minutes * 0.25 + Math.pow(minutes / 30, 2) * 3;
 
         // Check dungeon break
         this._updateDungeonBreak(seconds);
