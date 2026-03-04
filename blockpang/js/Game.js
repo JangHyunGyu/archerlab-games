@@ -434,84 +434,83 @@ class Game {
         }
 
         this.effects.playFlashEffect(clearResult.sprites, () => {
-            clearResult.apply();
+            try {
+                clearResult.apply();
 
-            const boardPos = this.board.getGlobalPosition();
-            this.effects.playClearEffect(clearResult.cells, boardPos);
+                const boardPos = this.board.getGlobalPosition();
+                this.effects.playClearEffect(clearResult.cells, boardPos);
 
-            // Calculate center of cleared cells
-            let avgX = 0, avgY = 0;
-            if (clearResult.cells.length > 0) {
-                clearResult.cells.forEach(c => { avgX += c.col; avgY += c.row; });
-                avgX = boardPos.x + (avgX / clearResult.cells.length) * this.cellSize + this.cellSize / 2;
-                avgY = boardPos.y + (avgY / clearResult.cells.length) * this.cellSize + this.cellSize / 2;
-            }
-
-            // ── Clamp popup positions inside screen ──
-            const screenW = this.app.screen.width;
-            const screenH = this.app.screen.height;
-            const clampX = (v) => Math.max(60, Math.min(screenW - 60, v));
-            const clampY = (v) => Math.max(40, Math.min(screenH - 40, v));
-
-            // ── Effect + Popup System ──
-            const fxX = clampX(avgX);
-            const fxY = clampY(avgY);
-            const midCell = clearResult.cells[Math.floor(clearResult.cells.length / 2)];
-            const popupX = clampX(boardPos.x + midCell.col * this.cellSize + this.cellSize / 2);
-            const popupY = clampY(boardPos.y + midCell.row * this.cellSize);
-
-            if (combo > 1 && clearResult.lines >= 2) {
-                // ── 콤보 + 멀티라인 동시: 시차(stagger) 연출 ──
-                // 1단계 (0ms): 멀티라인 이펙트 + 팝업
-                this.effects.playSingleClearEffect(clearResult.lines, fxX, fxY, clearResult.cells);
-                const mlY = clampY(popupY - this.cellSize * 2.5);
-                this.effects.showMultiLinePopup(popupX, mlY, clearResult.lines);
-
-                // 2단계 (180ms): 콤보 이펙트 + 팝업
-                setTimeout(() => {
-                    this.effects.playComboEffect(combo, fxX, fxY, clearResult.lines);
-                }, 180);
-
-                // 점수 팝업 (약간 지연)
-                setTimeout(() => {
-                    this.effects.showScorePopup(popupX, popupY, `+${pts}`);
-                }, 100);
-
-            } else if (combo > 1) {
-                // ── 콤보만 ──
-                this.effects.playComboEffect(combo, fxX, fxY, clearResult.lines);
-                this.effects.showScorePopup(popupX, popupY, `+${pts}`);
-
-            } else {
-                // ── 단일/멀티라인 클리어 ──
+                // Calculate center of cleared cells
+                let avgX = 0, avgY = 0;
                 if (clearResult.cells.length > 0) {
+                    clearResult.cells.forEach(c => { avgX += c.col; avgY += c.row; });
+                    avgX = boardPos.x + (avgX / clearResult.cells.length) * this.cellSize + this.cellSize / 2;
+                    avgY = boardPos.y + (avgY / clearResult.cells.length) * this.cellSize + this.cellSize / 2;
+                }
+
+                // ── Clamp popup positions inside screen ──
+                const screenW = this.app.screen.width;
+                const screenH = this.app.screen.height;
+                const clampX = (v) => Math.max(60, Math.min(screenW - 60, v));
+                const clampY = (v) => Math.max(40, Math.min(screenH - 40, v));
+
+                // ── Effect + Popup System ──
+                const fxX = clampX(avgX);
+                const fxY = clampY(avgY);
+                const midCell = clearResult.cells[Math.floor(clearResult.cells.length / 2)];
+                const popupX = clampX(boardPos.x + midCell.col * this.cellSize + this.cellSize / 2);
+                const popupY = clampY(boardPos.y + midCell.row * this.cellSize);
+
+                if (combo > 1 && clearResult.lines >= 2) {
+                    // ── 콤보 + 멀티라인 동시: 시차(stagger) 연출 ──
                     this.effects.playSingleClearEffect(clearResult.lines, fxX, fxY, clearResult.cells);
-                }
-                this.effects.showScorePopup(popupX, popupY, `+${pts}`);
-
-                if (clearResult.lines >= 2) {
-                    const mlY = clampY(popupY - this.cellSize * 2);
+                    const mlY = clampY(popupY - this.cellSize * 2.5);
                     this.effects.showMultiLinePopup(popupX, mlY, clearResult.lines);
+
+                    setTimeout(() => {
+                        this.effects.playComboEffect(combo, fxX, fxY, clearResult.lines);
+                    }, 180);
+
+                    setTimeout(() => {
+                        this.effects.showScorePopup(popupX, popupY, `+${pts}`);
+                    }, 100);
+
+                } else if (combo > 1) {
+                    this.effects.playComboEffect(combo, fxX, fxY, clearResult.lines);
+                    this.effects.showScorePopup(popupX, popupY, `+${pts}`);
+
+                } else {
+                    if (clearResult.cells.length > 0) {
+                        this.effects.playSingleClearEffect(clearResult.lines, fxX, fxY, clearResult.cells);
+                    }
+                    this.effects.showScorePopup(popupX, popupY, `+${pts}`);
+
+                    if (clearResult.lines >= 2) {
+                        const mlY = clampY(popupY - this.cellSize * 2);
+                        this.effects.showMultiLinePopup(popupX, mlY, clearResult.lines);
+                    }
                 }
-            }
 
-            if (result.leveledUp) {
-                this.sound.playLevelUp();
-                this.effects.showLevelUp(result.level);
-            }
+                if (result.leveledUp) {
+                    this.sound.playLevelUp();
+                    this.effects.showLevelUp(result.level);
+                }
 
-            if (this.board.isEmpty()) {
-                const pcBonus = this.scoreManager.addPerfectClearBonus();
-                this.sound.playPerfectClear();
-                this.effects.showPerfectClear();
-                setTimeout(() => {
-                    this.effects.showBonusPopup(
-                        this.app.screen.width / 2,
-                        boardPos.y + (GRID_SIZE * this.cellSize) / 2 + 40,
-                        `PERFECT +${pcBonus}`,
-                        0xFF4081
-                    );
-                }, 500);
+                if (this.board.isEmpty()) {
+                    const pcBonus = this.scoreManager.addPerfectClearBonus();
+                    this.sound.playPerfectClear();
+                    this.effects.showPerfectClear();
+                    setTimeout(() => {
+                        this.effects.showBonusPopup(
+                            this.app.screen.width / 2,
+                            boardPos.y + (GRID_SIZE * this.cellSize) / 2 + 40,
+                            `PERFECT +${pcBonus}`,
+                            0xFF4081
+                        );
+                    }, 500);
+                }
+            } catch (e) {
+                console.error('LineClear effect error:', e);
             }
 
             onComplete();
