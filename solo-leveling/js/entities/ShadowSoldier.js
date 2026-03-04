@@ -25,16 +25,17 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
         const typeStats = {
-            melee:  { damageMult: 3.0, speed: 140, range: 50, attackCD: 700 },
-            tank:   { damageMult: 2.0, speed: 100, range: 60, attackCD: 1000 },
-            ranged: { damageMult: 5.5, speed: 110, range: 250, attackCD: 900 },
+            melee:  { damageMult: 3.0, speedRatio: 0.9, range: 50, attackCD: 700 },
+            tank:   { damageMult: 2.0, speedRatio: 0.7, range: 60, attackCD: 1000 },
+            ranged: { damageMult: 5.5, speedRatio: 0.75, range: 250, attackCD: 900 },
         };
 
         const stats = typeStats[this.soldierType] || typeStats.melee;
         const playerLevel = scene.player ? scene.player.level : 1;
         const levelMult = 1 + (playerLevel - 1) * 0.06;
         this.damage = Math.floor(playerAttack * stats.damageMult * levelMult);
-        this.speed = stats.speed;
+        this.speedRatio = stats.speedRatio;
+        this.speed = (scene.player ? scene.player.stats.speed : 160) * this.speedRatio;
         this.attackRange = stats.range;
         this.attackCooldown = stats.attackCD;
         this.attackTimer = 0;
@@ -67,29 +68,41 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
     update(time, delta, player, enemies) {
         if (!this.active || !player) return;
 
-        // Update damage with current player attack + level scaling
+        // Update damage and speed with current player stats
         const playerAttack = player.stats.attack;
         const levelMult = 1 + (player.level - 1) * 0.06;
         const multMap = { melee: 3.0, tank: 2.0, ranged: 5.5 };
         this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 3.0) * levelMult);
+        this.speed = player.stats.speed * this.speedRatio;
 
-        // Find nearest enemy
+        // Guard mode: find enemy closest to PLAYER within guard radius
+        const guardRadius = 250;
+        const leashDist = 300;
         let target = null;
-        let targetDist = 999999;
+        let targetDistToPlayer = guardRadius;
 
         for (const enemy of enemies) {
             if (!enemy.active) continue;
-            const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-            if (dist < targetDist) {
-                targetDist = dist;
+            const distToPlayer = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
+            if (distToPlayer < targetDistToPlayer) {
+                targetDistToPlayer = distToPlayer;
                 target = enemy;
             }
         }
 
-        if (target && targetDist < 400) {
-            // Attack mode
-            if (targetDist > this.attackRange) {
-                // Move toward enemy
+        const distFromPlayer = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
+
+        if (distFromPlayer > leashDist) {
+            // Too far from player - return to orbit
+            const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+            this.body.setVelocity(
+                Math.cos(angle) * this.speed * 1.5,
+                Math.sin(angle) * this.speed * 1.5
+            );
+        } else if (target) {
+            // Intercept enemy approaching player
+            const distToTarget = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+            if (distToTarget > this.attackRange) {
                 const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
                 this.body.setVelocity(
                     Math.cos(angle) * this.speed * 1.2,
@@ -97,7 +110,6 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
                 );
             } else {
                 this.body.setVelocity(0, 0);
-                // Attack
                 this.attackTimer -= delta;
                 if (this.attackTimer <= 0) {
                     this.attackTimer = this.attackCooldown;
@@ -105,7 +117,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
                 }
             }
         } else {
-            // Follow player
+            // No threat - orbit around player
             this.followAngle += delta * 0.001;
             const targetX = player.x + Math.cos(this.followAngle) * this.followDist;
             const targetY = player.y + Math.sin(this.followAngle) * this.followDist;
