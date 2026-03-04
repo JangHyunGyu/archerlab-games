@@ -112,34 +112,30 @@ class Board {
         for (let i = 5; i >= 0; i--) {
             const expand = 8 + i * 4;
             const alpha = 0.02 + i * 0.015;
-            g.beginFill(0x3355cc, alpha);
-            g.drawRoundedRect(-expand, -expand, total + expand * 2, total + expand * 2, 14 + i * 2);
-            g.endFill();
+            g.roundRect(-expand, -expand, total + expand * 2, total + expand * 2, 14 + i * 2)
+             .fill({ color: 0x3355cc, alpha });
         }
 
         // Board background
-        g.beginFill(0x080825, 0.97);
-        g.drawRoundedRect(-6, -6, total + 12, total + 12, 10);
-        g.endFill();
+        g.roundRect(-6, -6, total + 12, total + 12, 10)
+         .fill({ color: 0x080825, alpha: 0.97 });
 
         // Subtle gradient overlay (top lighter)
-        g.beginFill(0x1a1a4a, 0.15);
-        g.drawRoundedRect(-6, -6, total + 12, (total + 12) * 0.3, 10);
-        g.endFill();
+        g.roundRect(-6, -6, total + 12, (total + 12) * 0.3, 10)
+         .fill({ color: 0x1a1a4a, alpha: 0.15 });
 
         // Bottom gradient (darker)
-        g.beginFill(0x030315, 0.1);
-        g.drawRoundedRect(-6, total * 0.6, total + 12, total * 0.4 + 6, 10);
-        g.endFill();
+        g.roundRect(-6, total * 0.6, total + 12, total * 0.4 + 6, 10)
+         .fill({ color: 0x030315, alpha: 0.1 });
 
         container.addChild(g);
 
         // Animated pulsing border (separate graphic for ticker updates)
         this._borderGfx = new PIXI.Graphics();
-        this._borderGfx.lineStyle(2, 0x3355cc, 0.5);
-        this._borderGfx.drawRoundedRect(-6, -6, total + 12, total + 12, 10);
-        this._borderGfx.lineStyle(1, 0x4466dd, 0.15);
-        this._borderGfx.drawRoundedRect(-3, -3, total + 6, total + 6, 8);
+        this._borderGfx.roundRect(-6, -6, total + 12, total + 12, 10)
+            .stroke({ width: 2, color: 0x3355cc, alpha: 0.5 });
+        this._borderGfx.roundRect(-3, -3, total + 6, total + 6, 8)
+            .stroke({ width: 1, color: 0x4466dd, alpha: 0.15 });
         container.addChild(this._borderGfx);
 
         // Corner accents (premium detail)
@@ -151,18 +147,18 @@ class Board {
             { x: -6, y: total + 6, dx: 1, dy: -1 },
             { x: total + 6, y: total + 6, dx: -1, dy: -1 },
         ];
-        cornerG.lineStyle(2, 0x5577ee, 0.4);
         corners.forEach(c => {
-            cornerG.moveTo(c.x, c.y + c.dy * cornerLen);
-            cornerG.lineTo(c.x, c.y);
-            cornerG.lineTo(c.x + c.dx * cornerLen, c.y);
+            cornerG.moveTo(c.x, c.y + c.dy * cornerLen)
+                   .lineTo(c.x, c.y)
+                   .lineTo(c.x + c.dx * cornerLen, c.y);
         });
+        cornerG.stroke({ width: 2, color: 0x5577ee, alpha: 0.4 });
         container.addChild(cornerG);
 
         // Start border pulse ticker if not already running
         if (!this._borderTickerAdded) {
             this._borderTickerAdded = true;
-            this.app.ticker.add(() => {
+            this.app.ticker.add((ticker) => {
                 this._glowTime += 0.015;
                 if (this._borderGfx && !this._borderGfx.destroyed) {
                     const pulse = 0.4 + Math.sin(this._glowTime) * 0.15;
@@ -181,20 +177,16 @@ class Board {
         const total = cs * GRID_SIZE;
 
         // Subtle grid lines
-        g.lineStyle(0.5, 0x2233aa, 0.08);
         for (let i = 1; i < GRID_SIZE; i++) {
-            g.moveTo(i * cs, 0);
-            g.lineTo(i * cs, total);
-            g.moveTo(0, i * cs);
-            g.lineTo(total, i * cs);
+            g.moveTo(i * cs, 0).lineTo(i * cs, total);
+            g.moveTo(0, i * cs).lineTo(total, i * cs);
         }
+        g.stroke({ width: 0.5, color: 0x2233aa, alpha: 0.08 });
 
         // 5x5 section dividers (slightly brighter)
-        g.lineStyle(0.8, 0x3344bb, 0.12);
-        g.moveTo(cs * 5, 0);
-        g.lineTo(cs * 5, total);
-        g.moveTo(0, cs * 5);
-        g.lineTo(total, cs * 5);
+        g.moveTo(cs * 5, 0).lineTo(cs * 5, total);
+        g.moveTo(0, cs * 5).lineTo(total, cs * 5);
+        g.stroke({ width: 0.8, color: 0x3344bb, alpha: 0.12 });
 
         this.gridLineContainer.addChild(g);
     }
@@ -205,23 +197,18 @@ class Board {
         const r = Math.max(2, s * 0.1);
 
         // Base
-        g.beginFill(0x0e0e2a, 0.92);
-        g.drawRoundedRect(0, 0, s, s, r);
-        g.endFill();
+        g.roundRect(0, 0, s, s, r).fill({ color: 0x0e0e2a, alpha: 0.92 });
 
         // Subtle inner border
-        g.lineStyle(0.5, 0x1a1a50, 0.7);
-        g.drawRoundedRect(0.5, 0.5, s - 1, s - 1, r);
-        g.lineStyle(0);
+        g.roundRect(0.5, 0.5, s - 1, s - 1, r).stroke({ width: 0.5, color: 0x1a1a50, alpha: 0.7 });
 
         // Very subtle top highlight
-        g.beginFill(0x1a1a55, 0.2);
-        g.drawRoundedRect(1, 1, s - 2, s * 0.3, r);
-        g.endFill();
+        g.roundRect(1, 1, s - 2, s * 0.3, r).fill({ color: 0x1a1a55, alpha: 0.2 });
 
-        const tex = this.app.renderer.generateTexture(g, {
+        const tex = this.app.renderer.generateTexture({
+            target: g,
             resolution: Math.min(window.devicePixelRatio || 1, 2),
-            scaleMode: PIXI.SCALE_MODES.LINEAR,
+            scaleMode: 'linear',
         });
         g.destroy();
         return tex;
@@ -234,43 +221,35 @@ class Board {
         const p = 2; // Padding to keep everything inside cell bounds
 
         // Shadow (bottom-right bias for 3D feel)
-        g.beginFill(color.dark, 0.9);
-        g.drawRoundedRect(p, p, s - p * 2, s - p * 2, r);
-        g.endFill();
+        g.roundRect(p, p, s - p * 2, s - p * 2, r).fill({ color: color.dark, alpha: 0.9 });
 
         // Main body
-        g.beginFill(color.main);
-        g.drawRoundedRect(p + 1, p, s - p * 2 - 2, s - p * 2 - 2, r - 1);
-        g.endFill();
+        g.roundRect(p + 1, p, s - p * 2 - 2, s - p * 2 - 2, r - 1).fill({ color: color.main });
 
         // Inner gradient (darker bottom half for 3D depth)
-        g.beginFill(color.dark, 0.18);
-        g.drawRoundedRect(p + 2, p + (s - p * 2) * 0.5, s - p * 2 - 4, (s - p * 2) * 0.48, r - 2);
-        g.endFill();
+        g.roundRect(p + 2, p + (s - p * 2) * 0.5, s - p * 2 - 4, (s - p * 2) * 0.48, r - 2)
+         .fill({ color: color.dark, alpha: 0.18 });
 
         // Top highlight (glass-like reflection)
-        g.beginFill(color.light, 0.55);
-        g.drawRoundedRect(p + 2, p + 1, s - p * 2 - 4, (s - p * 2) * 0.3, r - 1);
-        g.endFill();
+        g.roundRect(p + 2, p + 1, s - p * 2 - 4, (s - p * 2) * 0.3, r - 1)
+         .fill({ color: color.light, alpha: 0.55 });
 
         // Specular highlight (small bright spot, top-left)
-        g.beginFill(0xFFFFFF, 0.35);
-        g.drawRoundedRect(p + 4, p + 2, (s - p * 2) * 0.2, (s - p * 2) * 0.07, 2);
-        g.endFill();
+        g.roundRect(p + 4, p + 2, (s - p * 2) * 0.2, (s - p * 2) * 0.07, 2)
+         .fill({ color: 0xFFFFFF, alpha: 0.35 });
 
         // Wider specular bar
-        g.beginFill(0xFFFFFF, 0.1);
-        g.drawRoundedRect(p + s * 0.1, p + 2, (s - p * 2) * 0.5, (s - p * 2) * 0.035, 1);
-        g.endFill();
+        g.roundRect(p + s * 0.1, p + 2, (s - p * 2) * 0.5, (s - p * 2) * 0.035, 1)
+         .fill({ color: 0xFFFFFF, alpha: 0.1 });
 
         // Subtle inner border (premium feel)
-        g.lineStyle(0.5, color.light, 0.15);
-        g.drawRoundedRect(p + 1, p + 1, s - p * 2 - 2, s - p * 2 - 2, r - 1);
-        g.lineStyle(0);
+        g.roundRect(p + 1, p + 1, s - p * 2 - 2, s - p * 2 - 2, r - 1)
+         .stroke({ width: 0.5, color: color.light, alpha: 0.15 });
 
-        const tex = this.app.renderer.generateTexture(g, {
+        const tex = this.app.renderer.generateTexture({
+            target: g,
             resolution: Math.min(window.devicePixelRatio || 1, 2),
-            scaleMode: PIXI.SCALE_MODES.LINEAR,
+            scaleMode: 'linear',
         });
         g.destroy();
         return tex;
@@ -401,9 +380,7 @@ class Board {
             if (empty > 0 && empty <= 3) {
                 const g = new PIXI.Graphics();
                 const intensity = (4 - empty) * 0.06;
-                g.beginFill(0x44FF88, intensity);
-                g.drawRect(0, r * cs, total, cs);
-                g.endFill();
+                g.rect(0, r * cs, total, cs).fill({ color: 0x44FF88, alpha: intensity });
                 this.hintContainer.addChild(g);
             }
         }
@@ -417,9 +394,7 @@ class Board {
             if (empty > 0 && empty <= 3) {
                 const g = new PIXI.Graphics();
                 const intensity = (4 - empty) * 0.06;
-                g.beginFill(0x44FF88, intensity);
-                g.drawRect(c * cs, 0, cs, total);
-                g.endFill();
+                g.rect(c * cs, 0, cs, total).fill({ color: 0x44FF88, alpha: intensity });
                 this.hintContainer.addChild(g);
             }
         }
@@ -450,20 +425,14 @@ class Board {
                 const g = new PIXI.Graphics();
 
                 // Filled ghost cell
-                g.beginFill(color, alpha);
-                g.drawRoundedRect(x + 1, y + 1, cs - 2, cs - 2, r);
-                g.endFill();
+                g.roundRect(x + 1, y + 1, cs - 2, cs - 2, r).fill({ color, alpha });
 
                 // Border
-                g.lineStyle(1.5, color, alpha + 0.3);
-                g.drawRoundedRect(x + 1, y + 1, cs - 2, cs - 2, r);
-                g.lineStyle(0);
+                g.roundRect(x + 1, y + 1, cs - 2, cs - 2, r).stroke({ width: 1.5, color, alpha: alpha + 0.3 });
 
                 // Inner glow for valid
                 if (isValid) {
-                    g.beginFill(0xFFFFFF, 0.1);
-                    g.drawRoundedRect(x + 3, y + 3, cs - 6, (cs - 6) * 0.3, r - 1);
-                    g.endFill();
+                    g.roundRect(x + 3, y + 3, cs - 6, (cs - 6) * 0.3, r - 1).fill({ color: 0xFFFFFF, alpha: 0.1 });
                 }
 
                 this.ghostContainer.addChild(g);

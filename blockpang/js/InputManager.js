@@ -51,13 +51,11 @@ class InputManager {
         const pw = piece.cols * cs;
         const ph = piece.rows * cs;
         // Outer soft glow
-        this.dragGlow.beginFill(glowColor, 0.04);
-        this.dragGlow.drawRoundedRect(-pw / 2 - 16, -ph / 2 - 16, pw + 32, ph + 32, 12);
-        this.dragGlow.endFill();
+        this.dragGlow.roundRect(-pw / 2 - 16, -ph / 2 - 16, pw + 32, ph + 32, 12)
+            .fill({ color: glowColor, alpha: 0.04 });
         // Inner glow
-        this.dragGlow.beginFill(glowColor, 0.08);
-        this.dragGlow.drawRoundedRect(-pw / 2 - 8, -ph / 2 - 8, pw + 16, ph + 16, 8);
-        this.dragGlow.endFill();
+        this.dragGlow.roundRect(-pw / 2 - 8, -ph / 2 - 8, pw + 16, ph + 16, 8)
+            .fill({ color: glowColor, alpha: 0.08 });
 
         const pos = event.global;
         const dragX = pos.x;
@@ -127,12 +125,8 @@ class InputManager {
         const size = 1.5 + Math.random() * 2.5;
 
         const gfx = new PIXI.Graphics();
-        gfx.beginFill(color, 0.5);
-        gfx.drawCircle(0, 0, size);
-        gfx.endFill();
-        gfx.beginFill(0xFFFFFF, 0.3);
-        gfx.drawCircle(0, 0, size * 0.4);
-        gfx.endFill();
+        gfx.circle(0, 0, size).fill({ color, alpha: 0.5 });
+        gfx.circle(0, 0, size * 0.4).fill({ color: 0xFFFFFF, alpha: 0.3 });
 
         gfx.position.set(
             x + (Math.random() - 0.5) * 20,

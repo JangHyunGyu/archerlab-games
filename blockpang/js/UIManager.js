@@ -24,65 +24,72 @@ class UIManager {
 
     _build() {
         // Title with gradient
-        this.titleText = new PIXI.Text('BLOCKPANG', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: 28,
-            fill: [0x00E5FF, 0xD500F9],
-            fillGradientType: 0,
-            fontWeight: '900',
-            letterSpacing: 6,
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 8,
-            dropShadowDistance: 2,
+        this.titleText = new PIXI.Text({
+            text: 'BLOCKPANG',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: 28,
+                fill: 0x00E5FF,
+                fontWeight: '900',
+                letterSpacing: 6,
+                dropShadow: { color: 0x000000, blur: 8, distance: 2 },
+            },
         });
         this.titleText.anchor.set(0.5, 0);
         this.container.addChild(this.titleText);
 
         // Score label
-        this.scoreLabelText = new PIXI.Text('SCORE', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: 10,
-            fill: 0x6677aa,
-            fontWeight: '400',
-            letterSpacing: 2,
+        this.scoreLabelText = new PIXI.Text({
+            text: 'SCORE',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: 10,
+                fill: 0x6677aa,
+                fontWeight: '400',
+                letterSpacing: 2,
+            },
         });
         this.scoreLabelText.anchor.set(0, 0.5);
         this.container.addChild(this.scoreLabelText);
 
         // Score (animated)
-        this.scoreText = new PIXI.Text('0', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: 22,
-            fill: [0x76FF03, 0x00E5FF],
-            fillGradientType: 0,
-            fontWeight: '700',
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 4,
-            dropShadowDistance: 1,
+        this.scoreText = new PIXI.Text({
+            text: '0',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: 22,
+                fill: 0x76FF03,
+                fontWeight: '700',
+                dropShadow: { color: 0x000000, blur: 4, distance: 1 },
+            },
         });
         this.scoreText.anchor.set(0, 0.5);
         this.container.addChild(this.scoreText);
 
         // Best
-        this.bestText = new PIXI.Text('BEST 0', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: 12,
-            fill: 0xFFD600,
-            fontWeight: '400',
-            letterSpacing: 1,
+        this.bestText = new PIXI.Text({
+            text: 'BEST 0',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: 12,
+                fill: 0xFFD600,
+                fontWeight: '400',
+                letterSpacing: 1,
+            },
         });
         this.bestText.anchor.set(1, 0.5);
         this.container.addChild(this.bestText);
 
         // Level display
-        this.levelText = new PIXI.Text('LV.1', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: 11,
-            fill: 0x00E5FF,
-            fontWeight: '700',
-            letterSpacing: 1,
+        this.levelText = new PIXI.Text({
+            text: 'LV.1',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: 11,
+                fill: 0x00E5FF,
+                fontWeight: '700',
+                letterSpacing: 1,
+            },
         });
         this.levelText.anchor.set(1, 0.5);
         this.container.addChild(this.levelText);
@@ -100,11 +107,14 @@ class UIManager {
         this.container.addChild(this.levelBarFill);
 
         // Sound button
-        this.soundBtn = new PIXI.Text('♪', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: 20,
-            fill: 0x6677aa,
-            fontWeight: '700',
+        this.soundBtn = new PIXI.Text({
+            text: '\u266A',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: 20,
+                fill: 0x6677aa,
+                fontWeight: '700',
+            },
         });
         this.soundBtn.anchor.set(1, 0);
         this.soundBtn.eventMode = 'static';
@@ -122,8 +132,11 @@ class UIManager {
         this.container.addChild(this.soundBtn);
 
         // Home button (go to title)
-        this.homeBtn = new PIXI.Text('🏠', {
-            fontSize: 20,
+        this.homeBtn = new PIXI.Text({
+            text: '\uD83C\uDFE0',
+            style: {
+                fontSize: 20,
+            },
         });
         this.homeBtn.anchor.set(0, 0);
         this.homeBtn.eventMode = 'static';
@@ -202,9 +215,7 @@ class UIManager {
         const barY = row2Y + 38;
 
         this.levelBarBg.clear();
-        this.levelBarBg.beginFill(0x1a1a40, 0.8);
-        this.levelBarBg.drawRoundedRect(barX, barY, barW, barH, 2);
-        this.levelBarBg.endFill();
+        this.levelBarBg.roundRect(barX, barY, barW, barH, 2).fill({ color: 0x1a1a40, alpha: 0.8 });
 
         this._levelBarX = barX;
         this._levelBarY = barY;
@@ -235,16 +246,12 @@ class UIManager {
             this.levelBarFill.clear();
             const fillW = this._levelBarW * Math.min(1, progress);
             if (fillW > 0) {
-                this.levelBarFill.beginFill(0x00E5FF, 0.9);
-                this.levelBarFill.drawRoundedRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH, 2);
-                this.levelBarFill.endFill();
+                this.levelBarFill.roundRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH, 2).fill({ color: 0x00E5FF, alpha: 0.9 });
             }
 
             this.levelBarGlow.clear();
             if (fillW > 2) {
-                this.levelBarGlow.beginFill(0x00E5FF, 0.3);
-                this.levelBarGlow.drawCircle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 4);
-                this.levelBarGlow.endFill();
+                this.levelBarGlow.circle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 4).fill({ color: 0x00E5FF, alpha: 0.3 });
             }
         }
     }
@@ -281,9 +288,7 @@ class UIManager {
 
         // Semi-transparent overlay (starfield shows through)
         const bg = new PIXI.Graphics();
-        bg.beginFill(0x000000, 0.3);
-        bg.drawRect(0, 0, w, h);
-        bg.endFill();
+        bg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.3 });
         container.addChild(bg);
 
         const centerX = w / 2;
@@ -292,28 +297,30 @@ class UIManager {
 
         // ── Logo: "BLOCKPANG" ──
         const logoFontSize = Math.min(44, w * 0.11) * sc;
-        const logo = new PIXI.Text('BLOCKPANG', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: logoFontSize,
-            fill: [0x00E5FF, 0xD500F9],
-            fillGradientType: 0,
-            fontWeight: '900',
-            letterSpacing: 8 * sc,
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 16,
-            dropShadowDistance: 4,
+        const logo = new PIXI.Text({
+            text: 'BLOCKPANG',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: logoFontSize,
+                fill: 0x00E5FF,
+                fontWeight: '900',
+                letterSpacing: 8 * sc,
+                dropShadow: { color: 0x000000, blur: 16, distance: 4 },
+            },
         });
         logo.anchor.set(0.5, 0.5);
         logo.position.set(centerX, h * 0.2);
         container.addChild(logo);
 
         // ── Subtitle ──
-        const subtitle = new PIXI.Text(getText('blockPuzzle'), {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: Math.min(13, w * 0.035) * sc,
-            fill: 0x6677aa,
-            letterSpacing: 5,
+        const subtitle = new PIXI.Text({
+            text: getText('blockPuzzle'),
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: Math.min(13, w * 0.035) * sc,
+                fill: 0x6677aa,
+                letterSpacing: 5,
+            },
         });
         subtitle.anchor.set(0.5, 0);
         subtitle.position.set(centerX, logo.y + logoFontSize / 2 + 14);
@@ -323,11 +330,14 @@ class UIManager {
         const bestScore = this.game.scoreManager.bestScore;
         let bestText = null;
         if (bestScore > 0) {
-            bestText = new PIXI.Text(`BEST  ${bestScore.toLocaleString()}`, {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(14, w * 0.035) * sc,
-                fill: 0xFFD600,
-                letterSpacing: 2,
+            bestText = new PIXI.Text({
+                text: `BEST  ${bestScore.toLocaleString()}`,
+                style: {
+                    fontFamily: 'Orbitron, sans-serif',
+                    fontSize: Math.min(14, w * 0.035) * sc,
+                    fill: 0xFFD600,
+                    letterSpacing: 2,
+                },
             });
             bestText.anchor.set(0.5, 0);
             bestText.position.set(centerX, subtitle.y + subtitle.height + 16);
@@ -342,17 +352,11 @@ class UIManager {
 
         const startBtn = new PIXI.Graphics();
         // Glow
-        startBtn.beginFill(0x00E5FF, 0.1);
-        startBtn.drawRoundedRect(btnX - 6, startBtnY - 6, btnW + 12, btnH + 12, 16);
-        startBtn.endFill();
+        startBtn.roundRect(btnX - 6, startBtnY - 6, btnW + 12, btnH + 12, 16).fill({ color: 0x00E5FF, alpha: 0.1 });
         // Body
-        startBtn.beginFill(0x00E5FF);
-        startBtn.drawRoundedRect(btnX, startBtnY, btnW, btnH, 12);
-        startBtn.endFill();
+        startBtn.roundRect(btnX, startBtnY, btnW, btnH, 12).fill({ color: 0x00E5FF });
         // Highlight
-        startBtn.beginFill(0x66F0FF, 0.4);
-        startBtn.drawRoundedRect(btnX + 2, startBtnY + 2, btnW - 4, btnH * 0.4, 10);
-        startBtn.endFill();
+        startBtn.roundRect(btnX + 2, startBtnY + 2, btnW - 4, btnH * 0.4, 10).fill({ color: 0x66F0FF, alpha: 0.4 });
 
         startBtn.eventMode = 'static';
         startBtn.cursor = 'pointer';
@@ -377,12 +381,15 @@ class UIManager {
             action: doStart
         }];
 
-        const startBtnText = new PIXI.Text(getText('gameStart'), {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: Math.min(20, w * 0.05) * sc,
-            fill: 0x000000,
-            fontWeight: '700',
-            letterSpacing: 3,
+        const startBtnText = new PIXI.Text({
+            text: getText('gameStart'),
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: Math.min(20, w * 0.05) * sc,
+                fill: 0x000000,
+                fontWeight: '700',
+                letterSpacing: 3,
+            },
         });
         startBtnText.anchor.set(0.5, 0.5);
         startBtnText.position.set(centerX, startBtnY + btnH / 2);
@@ -397,12 +404,8 @@ class UIManager {
         const createSmallBtn = (label, color, action) => {
             const bw = Math.min((w - gap * 4) / 3, 110);
             const btn = new PIXI.Graphics();
-            btn.beginFill(color, 0.12);
-            btn.drawRoundedRect(0, 0, bw, smallBtnH, 8);
-            btn.endFill();
-            btn.lineStyle(1, color, 0.35);
-            btn.drawRoundedRect(0, 0, bw, smallBtnH, 8);
-            btn.lineStyle(0);
+            btn.roundRect(0, 0, bw, smallBtnH, 8).fill({ color: color, alpha: 0.12 });
+            btn.roundRect(0, 0, bw, smallBtnH, 8).stroke({ width: 1, color: color, alpha: 0.35 });
 
             btn.eventMode = 'static';
             btn.cursor = 'pointer';
@@ -411,12 +414,15 @@ class UIManager {
             btn.on('pointerout', () => { btn.tint = 0xFFFFFF; });
             btn.on('pointerdown', action);
 
-            const txt = new PIXI.Text(label, {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: Math.min(11, w * 0.028) * sc,
-                fill: color,
-                fontWeight: '700',
-                letterSpacing: 1,
+            const txt = new PIXI.Text({
+                text: label,
+                style: {
+                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                    fontSize: Math.min(11, w * 0.028) * sc,
+                    fill: color,
+                    fontWeight: '700',
+                    letterSpacing: 1,
+                },
             });
             txt.anchor.set(0.5, 0.5);
             txt.position.set(bw / 2, smallBtnH / 2);
@@ -427,7 +433,7 @@ class UIManager {
 
         // Hall of Fame button
         const hofBtn = createSmallBtn(
-            `🏆 ${getText('hallOfFame')}`,
+            `\uD83C\uDFC6 ${getText('hallOfFame')}`,
             0xFFD600,
             () => { this.showHallOfFame(); }
         );
@@ -447,29 +453,28 @@ class UIManager {
         container.addChild(contactBtn.btn);
 
         // ── Language dropdown (top-left, emoji style) ──
-        const langLabel = LANG_LABELS[currentLang] || '한국어';
+        const langLabel = LANG_LABELS[currentLang] || '\uD55C\uAD6D\uC5B4';
         const langFontSize = Math.max(11, Math.min(13, w * 0.032)) * sc;
         const langBtnW = Math.min(110, w * 0.28);
         const langBtnH = Math.min(30, h * 0.045);
 
         const langTrigger = new PIXI.Graphics();
-        langTrigger.beginFill(0x1a1a3e, 0.85);
-        langTrigger.drawRoundedRect(0, 0, langBtnW, langBtnH, 6);
-        langTrigger.endFill();
-        langTrigger.lineStyle(1, 0xD500F9, 0.5);
-        langTrigger.drawRoundedRect(0, 0, langBtnW, langBtnH, 6);
-        langTrigger.lineStyle(0);
+        langTrigger.roundRect(0, 0, langBtnW, langBtnH, 6).fill({ color: 0x1a1a3e, alpha: 0.85 });
+        langTrigger.roundRect(0, 0, langBtnW, langBtnH, 6).stroke({ width: 1, color: 0xD500F9, alpha: 0.5 });
         langTrigger.position.set(14, 14);
         langTrigger.eventMode = 'static';
         langTrigger.cursor = 'pointer';
         langTrigger.hitArea = new PIXI.Rectangle(-4, -4, langBtnW + 8, langBtnH + 8);
         container.addChild(langTrigger);
 
-        const langTriggerText = new PIXI.Text(`🌐 ${langLabel} ▾`, {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', sans-serif",
-            fontSize: langFontSize,
-            fill: 0xD500F9,
-            fontWeight: '700',
+        const langTriggerText = new PIXI.Text({
+            text: `\uD83C\uDF10 ${langLabel} \u25BE`,
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', sans-serif",
+                fontSize: langFontSize,
+                fill: 0xD500F9,
+                fontWeight: '700',
+            },
         });
         langTriggerText.anchor.set(0.5, 0.5);
         langTriggerText.position.set(langBtnW / 2, langBtnH / 2);
@@ -482,17 +487,15 @@ class UIManager {
 
         // Dismiss overlay
         const dismissBg = new PIXI.Graphics();
-        dismissBg.beginFill(0x000000, 0.01);
-        dismissBg.drawRect(0, 0, w, h);
-        dismissBg.endFill();
+        dismissBg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.01 });
         dismissBg.eventMode = 'static';
         dropdownContainer.addChild(dismissBg);
 
         let dropdownOpen = false;
         const langItems = [
-            { code: 'ko', label: '한국어' },
+            { code: 'ko', label: '\uD55C\uAD6D\uC5B4' },
             { code: 'en', label: 'English' },
-            { code: 'ja', label: '日本語' },
+            { code: 'ja', label: '\u65E5\u672C\u8A9E' },
         ];
 
         langItems.forEach((lang, i) => {
@@ -500,22 +503,21 @@ class UIManager {
             const isActive = lang.code === currentLang;
 
             const itemBg = new PIXI.Graphics();
-            itemBg.beginFill(isActive ? 0x3a1a6e : 0x1a1a3e, 0.95);
-            itemBg.drawRoundedRect(0, 0, langBtnW, langBtnH, 6);
-            itemBg.endFill();
-            itemBg.lineStyle(1, isActive ? 0xD500F9 : 0x333355, 0.6);
-            itemBg.drawRoundedRect(0, 0, langBtnW, langBtnH, 6);
-            itemBg.lineStyle(0);
+            itemBg.roundRect(0, 0, langBtnW, langBtnH, 6).fill({ color: isActive ? 0x3a1a6e : 0x1a1a3e, alpha: 0.95 });
+            itemBg.roundRect(0, 0, langBtnW, langBtnH, 6).stroke({ width: 1, color: isActive ? 0xD500F9 : 0x333355, alpha: 0.6 });
             itemBg.position.set(14, iy);
             itemBg.eventMode = 'static';
             itemBg.cursor = 'pointer';
             dropdownContainer.addChild(itemBg);
 
-            const itemText = new PIXI.Text(lang.label, {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', sans-serif",
-                fontSize: langFontSize,
-                fill: isActive ? 0xffffff : 0x9999bb,
-                fontWeight: '700',
+            const itemText = new PIXI.Text({
+                text: lang.label,
+                style: {
+                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', sans-serif",
+                    fontSize: langFontSize,
+                    fill: isActive ? 0xffffff : 0x9999bb,
+                    fontWeight: '700',
+                },
             });
             itemText.anchor.set(0.5, 0.5);
             itemText.position.set(langBtnW / 2, langBtnH / 2);
@@ -558,12 +560,15 @@ class UIManager {
         const langBtn = { btn: langTrigger, txt: langTriggerText };
 
         // ── archerlab.dev link (top center, styled text) ──
-        const linkBtn = new PIXI.Text('archerlab.dev', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.max(13, Math.min(16, w * 0.035)) * sc,
-            fill: 0x2979FF,
-            fontWeight: '700',
-            letterSpacing: 2,
+        const linkBtn = new PIXI.Text({
+            text: 'archerlab.dev',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.max(13, Math.min(16, w * 0.035)) * sc,
+                fill: 0x2979FF,
+                fontWeight: '700',
+                letterSpacing: 2,
+            },
         });
         linkBtn.anchor.set(0.5, 0);
         linkBtn.position.set(centerX, 14);
@@ -575,11 +580,14 @@ class UIManager {
         container.addChild(linkBtn);
 
         // ── Sound toggle ──
-        const titleSoundBtn = new PIXI.Text('♪', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.max(18, Math.min(24, w * 0.05)),
-            fill: this.game.sound.enabled ? 0x6677aa : 0x333355,
-            fontWeight: '700',
+        const titleSoundBtn = new PIXI.Text({
+            text: '\u266A',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.max(18, Math.min(24, w * 0.05)),
+                fill: this.game.sound.enabled ? 0x6677aa : 0x333355,
+                fontWeight: '700',
+            },
         });
         titleSoundBtn.anchor.set(1, 0);
         titleSoundBtn.position.set(w - 16, 16);
@@ -594,11 +602,14 @@ class UIManager {
         container.addChild(titleSoundBtn);
 
         // ── Version text ──
-        const versionText = new PIXI.Text('v1.0  ArcherLab', {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.min(9, w * 0.024),
-            fill: 0x334466,
-            letterSpacing: 1,
+        const versionText = new PIXI.Text({
+            text: 'v1.0  ArcherLab',
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.min(9, w * 0.024),
+                fill: 0x334466,
+                letterSpacing: 1,
+            },
         });
         versionText.anchor.set(0.5, 1);
         versionText.position.set(centerX, h - 12);
@@ -734,7 +745,7 @@ class UIManager {
         const { subtitle, startBtnText, langBtn, contactBtn } = this._titleRefs;
         if (subtitle && !subtitle.destroyed) subtitle.text = getText('blockPuzzle');
         if (startBtnText && !startBtnText.destroyed) startBtnText.text = getText('gameStart');
-        if (langBtn && langBtn.txt && !langBtn.txt.destroyed) langBtn.txt.text = `🌐 ${LANG_LABELS[currentLang] || '한국어'} ▾`;
+        if (langBtn && langBtn.txt && !langBtn.txt.destroyed) langBtn.txt.text = `\uD83C\uDF10 ${LANG_LABELS[currentLang] || '\uD55C\uAD6D\uC5B4'} \u25BE`;
         if (contactBtn && contactBtn.txt && !contactBtn.txt.destroyed) contactBtn.txt.text = getText('contact');
     }
 
@@ -754,13 +765,9 @@ class UIManager {
 
         // Dark background
         const bg = new PIXI.Graphics();
-        bg.beginFill(0x000000, 0.7);
-        bg.drawRect(0, 0, w, h);
-        bg.endFill();
+        bg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.7 });
         for (let i = 0; i < 3; i++) {
-            bg.beginFill(0x050520, 0.1);
-            bg.drawRect(0, 0, w, h);
-            bg.endFill();
+            bg.rect(0, 0, w, h).fill({ color: 0x050520, alpha: 0.1 });
         }
         overlay.addChild(bg);
 
@@ -772,36 +779,27 @@ class UIManager {
 
         const panel = new PIXI.Graphics();
         for (let i = 2; i >= 0; i--) {
-            panel.beginFill(0x2244aa, 0.03 + i * 0.02);
-            panel.drawRoundedRect(panelX - i * 4, panelY - i * 4, panelW + i * 8, panelH + i * 8, 18 + i * 2);
-            panel.endFill();
+            panel.roundRect(panelX - i * 4, panelY - i * 4, panelW + i * 8, panelH + i * 8, 18 + i * 2).fill({ color: 0x2244aa, alpha: 0.03 + i * 0.02 });
         }
-        panel.beginFill(0x0a0a30, 0.97);
-        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
-        panel.endFill();
-        panel.lineStyle(2, 0x3355cc, 0.5);
-        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
-        panel.lineStyle(0);
-        panel.lineStyle(1, 0x4466dd, 0.15);
-        panel.drawRoundedRect(panelX + 3, panelY + 3, panelW - 6, panelH - 6, 14);
-        panel.lineStyle(0);
+        panel.roundRect(panelX, panelY, panelW, panelH, 16).fill({ color: 0x0a0a30, alpha: 0.97 });
+        panel.roundRect(panelX, panelY, panelW, panelH, 16).stroke({ width: 2, color: 0x3355cc, alpha: 0.5 });
+        panel.roundRect(panelX + 3, panelY + 3, panelW - 6, panelH - 6, 14).stroke({ width: 1, color: 0x4466dd, alpha: 0.15 });
         overlay.addChild(panel);
 
         const centerX = w / 2;
         let yOff = panelY + 30;
 
         // Game Over title
-        const title = new PIXI.Text(getText('gameOver'), {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.min(30, panelW * 0.09),
-            fill: [0xFF1744, 0xFF6D00],
-            fillGradientType: 0,
-            fontWeight: '900',
-            letterSpacing: 4,
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 8,
-            dropShadowDistance: 2,
+        const title = new PIXI.Text({
+            text: getText('gameOver'),
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.min(30, panelW * 0.09),
+                fill: 0xFF1744,
+                fontWeight: '900',
+                letterSpacing: 4,
+                dropShadow: { color: 0x000000, blur: 8, distance: 2 },
+            },
         });
         title.anchor.set(0.5, 0);
         title.position.set(centerX, yOff);
@@ -810,18 +808,19 @@ class UIManager {
 
         // Divider
         const divider = new PIXI.Graphics();
-        divider.lineStyle(1, 0x3355cc, 0.3);
-        divider.moveTo(panelX + 30, yOff);
-        divider.lineTo(panelX + panelW - 30, yOff);
+        divider.moveTo(panelX + 30, yOff).lineTo(panelX + panelW - 30, yOff).stroke({ width: 1, color: 0x3355cc, alpha: 0.3 });
         overlay.addChild(divider);
         yOff += 16;
 
         // Score label
-        const scoreLabel = new PIXI.Text(getText('score'), {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.min(12, panelW * 0.035),
-            fill: 0x6677aa,
-            letterSpacing: 3,
+        const scoreLabel = new PIXI.Text({
+            text: getText('score'),
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.min(12, panelW * 0.035),
+                fill: 0x6677aa,
+                letterSpacing: 3,
+            },
         });
         scoreLabel.anchor.set(0.5, 0);
         scoreLabel.position.set(centerX, yOff);
@@ -829,16 +828,15 @@ class UIManager {
         yOff += scoreLabel.height + 4;
 
         // Score value
-        const scoreVal = new PIXI.Text(score.toLocaleString(), {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.min(36, panelW * 0.1),
-            fill: [0x76FF03, 0x00E5FF],
-            fillGradientType: 0,
-            fontWeight: '900',
-            dropShadow: true,
-            dropShadowColor: 0x000000,
-            dropShadowBlur: 6,
-            dropShadowDistance: 2,
+        const scoreVal = new PIXI.Text({
+            text: score.toLocaleString(),
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.min(36, panelW * 0.1),
+                fill: 0x76FF03,
+                fontWeight: '900',
+                dropShadow: { color: 0x000000, blur: 6, distance: 2 },
+            },
         });
         scoreVal.anchor.set(0.5, 0);
         scoreVal.position.set(centerX, yOff);
@@ -847,17 +845,16 @@ class UIManager {
 
         // New best indicator
         if (isNewBest) {
-            const newBest = new PIXI.Text(getText('newRecord'), {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(16, panelW * 0.05),
-                fill: [0xFFD600, 0xFF6D00],
-                fillGradientType: 0,
-                fontWeight: '900',
-                letterSpacing: 3,
-                dropShadow: true,
-                dropShadowColor: 0x000000,
-                dropShadowBlur: 6,
-                dropShadowDistance: 2,
+            const newBest = new PIXI.Text({
+                text: getText('newRecord'),
+                style: {
+                    fontFamily: 'Orbitron, sans-serif',
+                    fontSize: Math.min(16, panelW * 0.05),
+                    fill: 0xFFD600,
+                    fontWeight: '900',
+                    letterSpacing: 3,
+                    dropShadow: { color: 0x000000, blur: 6, distance: 2 },
+                },
             });
             newBest.anchor.set(0.5, 0);
             newBest.position.set(centerX, yOff);
@@ -879,11 +876,14 @@ class UIManager {
         }
 
         // Best score
-        const bestLabel = new PIXI.Text(`${getText('best')}  ${bestScore.toLocaleString()}`, {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.min(13, panelW * 0.038),
-            fill: 0xFFD600,
-            letterSpacing: 1,
+        const bestLabel = new PIXI.Text({
+            text: `${getText('best')}  ${bestScore.toLocaleString()}`,
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.min(13, panelW * 0.038),
+                fill: 0xFFD600,
+                letterSpacing: 1,
+            },
         });
         bestLabel.anchor.set(0.5, 0);
         bestLabel.position.set(centerX, yOff);
@@ -891,11 +891,14 @@ class UIManager {
         yOff += bestLabel.height + 6;
 
         // Level & Lines
-        const levelLabel = new PIXI.Text(`${getText('level')} ${this.game.scoreManager.level}  |  ${getText('lines')} ${this.game.scoreManager.linesCleared}`, {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.min(10, panelW * 0.03),
-            fill: 0x5566aa,
-            letterSpacing: 1,
+        const levelLabel = new PIXI.Text({
+            text: `${getText('level')} ${this.game.scoreManager.level}  |  ${getText('lines')} ${this.game.scoreManager.linesCleared}`,
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.min(10, panelW * 0.03),
+                fill: 0x5566aa,
+                letterSpacing: 1,
+            },
         });
         levelLabel.anchor.set(0.5, 0);
         levelLabel.position.set(centerX, yOff);
@@ -909,15 +912,9 @@ class UIManager {
         const btnY = Math.min(yOff, panelY + panelH - btnH * 2 - 40);
 
         const btn = new PIXI.Graphics();
-        btn.beginFill(0x2979FF, 0.15);
-        btn.drawRoundedRect(btnX - 4, btnY - 4, btnW + 8, btnH + 8, 14);
-        btn.endFill();
-        btn.beginFill(0x2979FF);
-        btn.drawRoundedRect(btnX, btnY, btnW, btnH, 10);
-        btn.endFill();
-        btn.beginFill(0x5599FF, 0.4);
-        btn.drawRoundedRect(btnX + 2, btnY + 2, btnW - 4, btnH * 0.4, 8);
-        btn.endFill();
+        btn.roundRect(btnX - 4, btnY - 4, btnW + 8, btnH + 8, 14).fill({ color: 0x2979FF, alpha: 0.15 });
+        btn.roundRect(btnX, btnY, btnW, btnH, 10).fill({ color: 0x2979FF });
+        btn.roundRect(btnX + 2, btnY + 2, btnW - 4, btnH * 0.4, 8).fill({ color: 0x5599FF, alpha: 0.4 });
 
         btn.eventMode = 'static';
         btn.cursor = 'pointer';
@@ -942,12 +939,15 @@ class UIManager {
             action: doRestart
         }];
 
-        const btnText = new PIXI.Text(getText('playAgain'), {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: Math.min(15, panelW * 0.045),
-            fill: 0xFFFFFF,
-            fontWeight: '700',
-            letterSpacing: 3,
+        const btnText = new PIXI.Text({
+            text: getText('playAgain'),
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: Math.min(15, panelW * 0.045),
+                fill: 0xFFFFFF,
+                fontWeight: '700',
+                letterSpacing: 3,
+            },
         });
         btnText.anchor.set(0.5, 0.5);
         btnText.position.set(centerX, btnY + btnH / 2);
@@ -957,12 +957,8 @@ class UIManager {
         // ── Back to Title button ──
         const titleBtnY = btnY + btnH + 12;
         const titleBtn = new PIXI.Graphics();
-        titleBtn.beginFill(0x3355cc, 0.12);
-        titleBtn.drawRoundedRect(btnX, titleBtnY, btnW, btnH - 4, 10);
-        titleBtn.endFill();
-        titleBtn.lineStyle(1, 0x3355cc, 0.35);
-        titleBtn.drawRoundedRect(btnX, titleBtnY, btnW, btnH - 4, 10);
-        titleBtn.lineStyle(0);
+        titleBtn.roundRect(btnX, titleBtnY, btnW, btnH - 4, 10).fill({ color: 0x3355cc, alpha: 0.12 });
+        titleBtn.roundRect(btnX, titleBtnY, btnW, btnH - 4, 10).stroke({ width: 1, color: 0x3355cc, alpha: 0.35 });
 
         titleBtn.eventMode = 'static';
         titleBtn.cursor = 'pointer';
@@ -986,12 +982,15 @@ class UIManager {
             action: doTitle
         });
 
-        const titleBtnText = new PIXI.Text(getText('backToTitle'), {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: Math.min(13, panelW * 0.04),
-            fill: 0x6677aa,
-            fontWeight: '700',
-            letterSpacing: 2,
+        const titleBtnText = new PIXI.Text({
+            text: getText('backToTitle'),
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: Math.min(13, panelW * 0.04),
+                fill: 0x6677aa,
+                fontWeight: '700',
+                letterSpacing: 2,
+            },
         });
         titleBtnText.anchor.set(0.5, 0.5);
         titleBtnText.position.set(centerX, titleBtnY + (btnH - 4) / 2);
@@ -1060,9 +1059,7 @@ class UIManager {
 
         // Dark background
         const bg = new PIXI.Graphics();
-        bg.beginFill(0x000000, 0.8);
-        bg.drawRect(0, 0, w, h);
-        bg.endFill();
+        bg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.8 });
         bg.eventMode = 'static';
         bg.on('pointerdown', () => this._closeHallOfFame());
         overlay.addChild(bg);
@@ -1074,12 +1071,8 @@ class UIManager {
         const panelY = (h - panelH) / 2;
 
         const panel = new PIXI.Graphics();
-        panel.beginFill(0x0a0a30, 0.97);
-        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
-        panel.endFill();
-        panel.lineStyle(2, 0xFFD600, 0.6);
-        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
-        panel.lineStyle(0);
+        panel.roundRect(panelX, panelY, panelW, panelH, 16).fill({ color: 0x0a0a30, alpha: 0.97 });
+        panel.roundRect(panelX, panelY, panelW, panelH, 16).stroke({ width: 2, color: 0xFFD600, alpha: 0.6 });
         panel.eventMode = 'static';
         overlay.addChild(panel);
 
@@ -1087,12 +1080,15 @@ class UIManager {
         let yOff = panelY + 20;
 
         // Title
-        const title = new PIXI.Text(`🏆 ${getText('hallOfFame')}`, {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: Math.min(22, panelW * 0.06),
-            fill: 0xFFD600,
-            fontWeight: '900',
-            letterSpacing: 2,
+        const title = new PIXI.Text({
+            text: `\uD83C\uDFC6 ${getText('hallOfFame')}`,
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: Math.min(22, panelW * 0.06),
+                fill: 0xFFD600,
+                fontWeight: '900',
+                letterSpacing: 2,
+            },
         });
         title.anchor.set(0.5, 0);
         title.position.set(centerX, yOff);
@@ -1101,17 +1097,18 @@ class UIManager {
 
         // Divider
         const divider = new PIXI.Graphics();
-        divider.lineStyle(1, 0xFFD600, 0.3);
-        divider.moveTo(panelX + 20, yOff);
-        divider.lineTo(panelX + panelW - 20, yOff);
+        divider.moveTo(panelX + 20, yOff).lineTo(panelX + panelW - 20, yOff).stroke({ width: 1, color: 0xFFD600, alpha: 0.3 });
         overlay.addChild(divider);
         yOff += 10;
 
         // Loading text
-        const loadingText = new PIXI.Text(getText('loading'), {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: 14,
-            fill: 0x6677aa,
+        const loadingText = new PIXI.Text({
+            text: getText('loading'),
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: 14,
+                fill: 0x6677aa,
+            },
         });
         loadingText.anchor.set(0.5, 0);
         loadingText.position.set(centerX, yOff + 40);
@@ -1124,12 +1121,8 @@ class UIManager {
         const closeBtnX = centerX - closeBtnW / 2;
 
         const closeBtn = new PIXI.Graphics();
-        closeBtn.beginFill(0x3355cc, 0.15);
-        closeBtn.drawRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
-        closeBtn.endFill();
-        closeBtn.lineStyle(1, 0x3355cc, 0.4);
-        closeBtn.drawRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
-        closeBtn.lineStyle(0);
+        closeBtn.roundRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8).fill({ color: 0x3355cc, alpha: 0.15 });
+        closeBtn.roundRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8).stroke({ width: 1, color: 0x3355cc, alpha: 0.4 });
         closeBtn.eventMode = 'static';
         closeBtn.cursor = 'pointer';
         closeBtn.hitArea = new PIXI.Rectangle(closeBtnX - 5, closeBtnY - 5, closeBtnW + 10, closeBtnH + 10);
@@ -1138,11 +1131,14 @@ class UIManager {
         closeBtn.on('pointerout', () => { closeBtn.tint = 0xFFFFFF; });
         overlay.addChild(closeBtn);
 
-        const closeBtnText = new PIXI.Text(getText('close'), {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: 13,
-            fill: 0x6677aa,
-            fontWeight: '700',
+        const closeBtnText = new PIXI.Text({
+            text: getText('close'),
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: 13,
+                fill: 0x6677aa,
+                fontWeight: '700',
+            },
         });
         closeBtnText.anchor.set(0.5, 0.5);
         closeBtnText.position.set(centerX, closeBtnY + closeBtnH / 2);
@@ -1165,10 +1161,13 @@ class UIManager {
 
             const rankings = data.rankings || [];
             if (rankings.length === 0) {
-                const noData = new PIXI.Text(getText('noRecords'), {
-                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                    fontSize: 14,
-                    fill: 0x6677aa,
+                const noData = new PIXI.Text({
+                    text: getText('noRecords'),
+                    style: {
+                        fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                        fontSize: 14,
+                        fill: 0x6677aa,
+                    },
                 });
                 noData.anchor.set(0.5, 0);
                 noData.position.set(centerX, startY + 40);
@@ -1186,13 +1185,13 @@ class UIManager {
                 fill: 0x6677aa,
                 letterSpacing: 1,
             };
-            const hRank = new PIXI.Text('#', headerStyle);
+            const hRank = new PIXI.Text({ text: '#', style: headerStyle });
             hRank.position.set(panelX + 20, y);
             overlay.addChild(hRank);
-            const hName = new PIXI.Text('NAME', headerStyle);
+            const hName = new PIXI.Text({ text: 'NAME', style: headerStyle });
             hName.position.set(panelX + 50, y);
             overlay.addChild(hName);
-            const hScore = new PIXI.Text('SCORE', headerStyle);
+            const hScore = new PIXI.Text({ text: 'SCORE', style: headerStyle });
             hScore.anchor.set(1, 0);
             hScore.position.set(panelX + panelW - 20, y);
             overlay.addChild(hScore);
@@ -1200,9 +1199,7 @@ class UIManager {
 
             // Divider
             const hDiv = new PIXI.Graphics();
-            hDiv.lineStyle(1, 0x334466, 0.5);
-            hDiv.moveTo(panelX + 15, y);
-            hDiv.lineTo(panelX + panelW - 15, y);
+            hDiv.moveTo(panelX + 15, y).lineTo(panelX + panelW - 15, y).stroke({ width: 1, color: 0x334466, alpha: 0.5 });
             overlay.addChild(hDiv);
             y += 4;
 
@@ -1210,7 +1207,7 @@ class UIManager {
                 if (y + rowH > startY + maxHeight) return;
                 const rankColors = [0xFFD600, 0xC0C0C0, 0xCD7F32];
                 const color = i < 3 ? rankColors[i] : 0x8899bb;
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+                const medal = i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : '';
 
                 const rowStyle = {
                     fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
@@ -1219,17 +1216,20 @@ class UIManager {
                     fontWeight: i < 3 ? '700' : '400',
                 };
 
-                const rankText = new PIXI.Text(`${medal}${i < 3 ? '' : (i + 1)}`, rowStyle);
+                const rankText = new PIXI.Text({ text: `${medal}${i < 3 ? '' : (i + 1)}`, style: rowStyle });
                 rankText.position.set(panelX + 18, y);
                 overlay.addChild(rankText);
 
-                const nameText = new PIXI.Text(entry.player_name, rowStyle);
+                const nameText = new PIXI.Text({ text: entry.player_name, style: rowStyle });
                 nameText.position.set(panelX + 55, y);
                 overlay.addChild(nameText);
 
-                const scoreText = new PIXI.Text(entry.score.toLocaleString(), {
-                    ...rowStyle,
-                    fontFamily: 'Orbitron, sans-serif',
+                const scoreText = new PIXI.Text({
+                    text: entry.score.toLocaleString(),
+                    style: {
+                        ...rowStyle,
+                        fontFamily: 'Orbitron, sans-serif',
+                    },
                 });
                 scoreText.anchor.set(1, 0);
                 scoreText.position.set(panelX + panelW - 20, y);
@@ -1270,9 +1270,7 @@ class UIManager {
 
         // Dark bg
         const bg = new PIXI.Graphics();
-        bg.beginFill(0x000000, 0.85);
-        bg.drawRect(0, 0, w, h);
-        bg.endFill();
+        bg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.85 });
         overlay.addChild(bg);
 
         // Panel
@@ -1282,23 +1280,22 @@ class UIManager {
         const panelY = (h - panelH) / 2;
 
         const panel = new PIXI.Graphics();
-        panel.beginFill(0x0a0a30, 0.97);
-        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
-        panel.endFill();
-        panel.lineStyle(2, 0xFFD600, 0.5);
-        panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
-        panel.lineStyle(0);
+        panel.roundRect(panelX, panelY, panelW, panelH, 16).fill({ color: 0x0a0a30, alpha: 0.97 });
+        panel.roundRect(panelX, panelY, panelW, panelH, 16).stroke({ width: 2, color: 0xFFD600, alpha: 0.5 });
         overlay.addChild(panel);
 
         const centerX = w / 2;
         let yOff = panelY + 20;
 
         // Title
-        const titleText = new PIXI.Text(`🏆 ${getText('nameInputTitle')}`, {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: Math.min(18, panelW * 0.055),
-            fill: 0xFFD600,
-            fontWeight: '900',
+        const titleText = new PIXI.Text({
+            text: `\uD83C\uDFC6 ${getText('nameInputTitle')}`,
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: Math.min(18, panelW * 0.055),
+                fill: 0xFFD600,
+                fontWeight: '900',
+            },
         });
         titleText.anchor.set(0.5, 0);
         titleText.position.set(centerX, yOff);
@@ -1306,12 +1303,14 @@ class UIManager {
         yOff += titleText.height + 8;
 
         // Score display
-        const scoreDisp = new PIXI.Text(`SCORE: ${score.toLocaleString()}`, {
-            fontFamily: 'Orbitron, sans-serif',
-            fontSize: Math.min(16, panelW * 0.05),
-            fill: [0x76FF03, 0x00E5FF],
-            fillGradientType: 0,
-            fontWeight: '700',
+        const scoreDisp = new PIXI.Text({
+            text: `SCORE: ${score.toLocaleString()}`,
+            style: {
+                fontFamily: 'Orbitron, sans-serif',
+                fontSize: Math.min(16, panelW * 0.05),
+                fill: 0x76FF03,
+                fontWeight: '700',
+            },
         });
         scoreDisp.anchor.set(0.5, 0);
         scoreDisp.position.set(centerX, yOff);
@@ -1356,19 +1355,20 @@ class UIManager {
 
         // Submit button
         const submitBtn = new PIXI.Graphics();
-        submitBtn.beginFill(0xFFD600);
-        submitBtn.drawRoundedRect(centerX - btnW - gap / 2, btnY, btnW, btnH, 8);
-        submitBtn.endFill();
+        submitBtn.roundRect(centerX - btnW - gap / 2, btnY, btnW, btnH, 8).fill({ color: 0xFFD600 });
         submitBtn.eventMode = 'static';
         submitBtn.cursor = 'pointer';
         submitBtn.hitArea = new PIXI.Rectangle(centerX - btnW - gap / 2 - 5, btnY - 5, btnW + 10, btnH + 10);
         overlay.addChild(submitBtn);
 
-        const submitText = new PIXI.Text(getText('submit'), {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: 14,
-            fill: 0x000000,
-            fontWeight: '700',
+        const submitText = new PIXI.Text({
+            text: getText('submit'),
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: 14,
+                fill: 0x000000,
+                fontWeight: '700',
+            },
         });
         submitText.anchor.set(0.5, 0.5);
         submitText.position.set(centerX - btnW / 2 - gap / 2, btnY + btnH / 2);
@@ -1377,22 +1377,21 @@ class UIManager {
 
         // Skip button
         const skipBtn = new PIXI.Graphics();
-        skipBtn.beginFill(0x3355cc, 0.2);
-        skipBtn.drawRoundedRect(centerX + gap / 2, btnY, btnW, btnH, 8);
-        skipBtn.endFill();
-        skipBtn.lineStyle(1, 0x3355cc, 0.4);
-        skipBtn.drawRoundedRect(centerX + gap / 2, btnY, btnW, btnH, 8);
-        skipBtn.lineStyle(0);
+        skipBtn.roundRect(centerX + gap / 2, btnY, btnW, btnH, 8).fill({ color: 0x3355cc, alpha: 0.2 });
+        skipBtn.roundRect(centerX + gap / 2, btnY, btnW, btnH, 8).stroke({ width: 1, color: 0x3355cc, alpha: 0.4 });
         skipBtn.eventMode = 'static';
         skipBtn.cursor = 'pointer';
         skipBtn.hitArea = new PIXI.Rectangle(centerX + gap / 2 - 5, btnY - 5, btnW + 10, btnH + 10);
         overlay.addChild(skipBtn);
 
-        const skipText = new PIXI.Text(getText('skip'), {
-            fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-            fontSize: 14,
-            fill: 0x6677aa,
-            fontWeight: '700',
+        const skipText = new PIXI.Text({
+            text: getText('skip'),
+            style: {
+                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontSize: 14,
+                fill: 0x6677aa,
+                fontWeight: '700',
+            },
         });
         skipText.anchor.set(0.5, 0.5);
         skipText.position.set(centerX + btnW / 2 + gap / 2, btnY + btnH / 2);

@@ -1,81 +1,78 @@
 // ─── Entry Point ───
-(function () {
+(async function () {
     'use strict';
 
     // Wait for DOM
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+        await new Promise(r => document.addEventListener('DOMContentLoaded', r));
     }
 
-    function init() {
-        const container = document.getElementById('game-container');
+    const container = document.getElementById('game-container');
 
-        // Create PixiJS Application
-        const app = new PIXI.Application({
-            resizeTo: container,
-            backgroundColor: 0x030318,
-            antialias: true,
-            resolution: Math.min(window.devicePixelRatio || 1, 2),
-            autoDensity: true,
-            powerPreference: 'high-performance',
-        });
+    // Create PixiJS Application (v8 async init)
+    const app = new PIXI.Application();
+    await app.init({
+        resizeTo: container,
+        backgroundColor: 0x030318,
+        antialias: true,
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
+        autoDensity: true,
+        powerPreference: 'high-performance',
+    });
 
-        container.appendChild(app.view);
+    container.appendChild(app.canvas);
 
-        // Prevent context menu on long press (mobile)
-        app.view.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Prevent context menu on long press (mobile)
+    app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Create game
-        const game = new Game(app);
+    // Create game
+    const game = new Game(app);
 
-        // Handle resize
-        let resizeTimer;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                game.resize();
-            }, 150);
-        });
+    // Handle resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            game.resize();
+        }, 150);
+    });
 
-        // Handle orientation change
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                game.resize();
-            }, 300);
-        });
+    // Handle orientation change
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            game.resize();
+        }, 300);
+    });
 
-        // Ensure audio context on first interaction
-        const resumeAudio = () => {
-            game.sound.ensureContext();
-            document.removeEventListener('pointerdown', resumeAudio);
-        };
-        document.addEventListener('pointerdown', resumeAudio);
+    // Ensure audio context on first interaction
+    const resumeAudio = () => {
+        game.sound.ensureContext();
+        document.removeEventListener('pointerdown', resumeAudio);
+    };
+    document.addEventListener('pointerdown', resumeAudio);
 
-        // Prevent pull-to-refresh on mobile
-        document.body.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) {
-                e.preventDefault();
+    // Prevent pull-to-refresh on mobile
+    document.body.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // DOM-level fallback for UI buttons (bypasses PixiJS event system)
+    app.canvas.addEventListener('pointerdown', (e) => {
+        if (!game.ui._activeButtons || game.ui._activeButtons.length === 0) return;
+        const rect = app.canvas.getBoundingClientRect();
+        const scaleX = app.screen.width / rect.width;
+        const scaleY = app.screen.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+        for (const btn of game.ui._activeButtons) {
+            if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+                btn.action();
+                return;
             }
-        }, { passive: false });
+        }
+    }, { passive: true });
 
-        // DOM-level fallback for UI buttons (bypasses PixiJS event system)
-        app.view.addEventListener('pointerdown', (e) => {
-            if (!game.ui._activeButtons || game.ui._activeButtons.length === 0) return;
-            const rect = app.view.getBoundingClientRect();
-            const scaleX = app.screen.width / rect.width;
-            const scaleY = app.screen.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            for (const btn of game.ui._activeButtons) {
-                if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
-                    btn.action();
-                    return;
-                }
-            }
-        }, { passive: true });
-
-        console.log('%c🎮 블럭팡 Premium Edition', 'color: #00E5FF; font-size: 14px; font-weight: bold;');
-    }
+    console.log('%c🎮 블럭팡 Premium Edition', 'color: #00E5FF; font-size: 14px; font-weight: bold;');
 })();
