@@ -205,6 +205,9 @@ export class MenuScene extends Phaser.Scene {
         }
         this.game._soundManager.resume();
         this.game._soundManager.playIntroMusic();
+
+        // 모든 신스를 무음으로 사전 활성화 (게임 시작 시 찌직거림 방지)
+        this.game._soundManager.warmup();
     }
 
     _createLanguageDropdown(isMobile) {

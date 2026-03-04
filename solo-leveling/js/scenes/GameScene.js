@@ -29,9 +29,11 @@ export class GameScene extends Phaser.Scene {
         }
         this.soundManager = this.game._soundManager;
         this.soundManager.resume();
-        // Stop intro music, start game BGM
+        // Stop intro music, start game BGM (짧은 딜레이로 오디오 컨텍스트 안정화)
         this.soundManager.stopIntroMusic();
-        this.soundManager.startGameBGM();
+        this.time.delayedCall(150, () => {
+            this.soundManager.startGameBGM();
+        });
 
         // System Message UI
         this.systemMessage = new SystemMessage(this);
