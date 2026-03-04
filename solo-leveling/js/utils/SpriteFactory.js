@@ -53,6 +53,47 @@ export class SpriteFactory {
         g.fillCircle(rx - 0.5, ry - 0.5, size * 0.4);
     }
 
+    // --- Canvas2D helpers ---
+    static _hex(c) { return '#' + c.toString(16).padStart(6, '0'); }
+
+    static _tex(scene, key, w, h, drawFn) {
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        drawFn(ctx);
+        if (scene.textures.exists(key)) scene.textures.remove(key);
+        scene.textures.addCanvas(key, canvas);
+    }
+
+    static _cRoundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    // Pseudo-gradient 3D lighting overlay (for Phaser Graphics sprites)
+    static _applyLighting(g, cx, cy, radius) {
+        // Top-left highlight
+        for (let j = 1; j <= 5; j++) {
+            const t = j / 5;
+            g.fillStyle(0xffffff, 0.015 + t * 0.02);
+            g.fillCircle(cx - radius * 0.15, cy - radius * 0.2, radius * (1 - t * 0.6));
+        }
+        // Bottom-right shadow
+        for (let j = 1; j <= 5; j++) {
+            const t = j / 5;
+            g.fillStyle(0x000011, 0.015 + t * 0.02);
+            g.fillCircle(cx + radius * 0.15, cy + radius * 0.15, radius * (1 - t * 0.4));
+        }
+        // Rim light (subtle edge highlight)
+        g.fillStyle(0x4466aa, 0.04);
+        g.fillCircle(cx - radius * 0.3, cy - radius * 0.3, radius * 0.6);
+    }
+
     static createAll(scene) {
         this.createPlayerTextures(scene);
         this.createEnemyTextures(scene);
@@ -69,29 +110,27 @@ export class SpriteFactory {
     //  PLAYER TEXTURES
     // =============================================
     static createPlayerTextures(scene) {
-        const W = 48, H = 52, cx = 24;
+        const W = 48, H = 52;
 
-        // Player idle frames (8 frames for smooth breathing)
+        // Player idle frames (8 frames, Canvas2D with gradients)
         for (let i = 0; i < 8; i++) {
-            const g = scene.make.graphics({ add: false });
-            const breathOffset = Math.sin(i * Math.PI / 4) * 1.5;
-            this._drawPlayer(g, cx, breathOffset, 0, 0, false);
-            g.generateTexture('player_idle_' + i, W, H);
-            g.destroy();
+            const breathe = Math.sin(i * Math.PI / 4) * 1.5;
+            this._tex(scene, 'player_idle_' + i, W, H, (ctx) => {
+                this._drawPlayerCanvas(ctx, W, H, breathe, 0, 0, false);
+            });
         }
 
-        // Player walking frames (8 frames for smooth stride)
+        // Player walk frames (8 frames)
         for (let i = 0; i < 8; i++) {
-            const g = scene.make.graphics({ add: false });
             const legSwing = Math.sin(i * Math.PI / 4) * 4;
             const armSwing = Math.sin(i * Math.PI / 4) * 3;
-            const bodyBob = Math.abs(Math.sin(i * Math.PI / 4)) * 1.5;
-            this._drawPlayer(g, cx, -bodyBob, legSwing, armSwing, true);
-            g.generateTexture('player_walk_' + i, W, H);
-            g.destroy();
+            const bob = Math.abs(Math.sin(i * Math.PI / 4)) * 1.5;
+            this._tex(scene, 'player_walk_' + i, W, H, (ctx) => {
+                this._drawPlayerCanvas(ctx, W, H, -bob, legSwing, armSwing, true);
+            });
         }
 
-        // Player S-rank aura
+        // Player S-rank aura (keep Phaser Graphics)
         const sg = scene.make.graphics({ add: false });
         sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.06);
         sg.fillCircle(48, 48, 48);
@@ -103,113 +142,188 @@ export class SpriteFactory {
         sg.destroy();
     }
 
-    static _drawPlayer(g, cx, by, legSwing, armSwing, walking) {
-        // Ground shadow
-        this._groundShadow(g, cx, 48, 16, 5);
+    static _drawPlayerCanvas(ctx, W, H, by, legSwing, armSwing, walking) {
+        const cx = W / 2;
 
-        // Legs / boots
-        const legColor = 0x12122a;
-        const bootColor = 0x0e0e20;
-        g.fillStyle(legColor);
-        g.fillRect(16 + (walking ? legSwing : 0), 41 + by, 6, 8);
-        g.fillRect(26 + (walking ? -legSwing : 0), 41 + by, 6, 8);
-        // Boots
-        this._outlinedRect(g, 14 + (walking ? legSwing : 0), 47 + by, 9, 4, bootColor, 0x060612, 2);
-        this._outlinedRect(g, 25 + (walking ? -legSwing : 0), 47 + by, 9, 4, bootColor, 0x060612, 2);
+        // Ground shadow (gradient ellipse)
+        ctx.save();
+        const shadowGrad = ctx.createRadialGradient(cx, 48, 0, cx, 48, 16);
+        shadowGrad.addColorStop(0, 'rgba(0,0,0,0.4)');
+        shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = shadowGrad;
+        ctx.fillRect(0, 40, W, 16);
+        ctx.restore();
 
-        // Coat body
-        const coatColor = COLORS.PLAYER_COAT;
-        const coatDark = this._darken(coatColor, 0x0a);
-        const coatLight = this._lighten(coatColor, 0x10);
-        this._outlinedRect(g, 11, 16 + by, 26, 26, coatColor, 0x080816, 3);
-        // Coat shadow right side
-        g.fillStyle(coatDark, 0.6);
-        g.fillRect(32, 18 + by, 4, 22);
-        // Coat highlight left edge
-        g.fillStyle(coatLight, 0.4);
-        g.fillRect(12, 18 + by, 2, 22);
+        // --- LEGS ---
+        const lx1 = 16 + (walking ? legSwing : 0);
+        const lx2 = 26 + (walking ? -legSwing : 0);
+        const legGrad = ctx.createLinearGradient(0, 41, 0, 49);
+        legGrad.addColorStop(0, '#18183a');
+        legGrad.addColorStop(1, '#0e0e24');
+        ctx.fillStyle = legGrad;
+        ctx.fillRect(lx1, 41 + by, 6, 8);
+        ctx.fillRect(lx2, 41 + by, 6, 8);
 
-        // Coat flaps (bottom)
-        g.fillStyle(coatColor);
-        g.fillTriangle(11, 38 + by, 7 - (walking ? armSwing/2 : 0), 48, 17, 42 + by);
-        g.fillTriangle(37, 38 + by, 41 + (walking ? armSwing/2 : 0), 48, 31, 42 + by);
-        g.lineStyle(1, 0x080816, 0.5);
-        g.beginPath();
-        g.moveTo(11, 38 + by); g.lineTo(7 - (walking ? armSwing/2 : 0), 48); g.lineTo(17, 42 + by);
-        g.strokePath();
-        g.beginPath();
-        g.moveTo(37, 38 + by); g.lineTo(41 + (walking ? armSwing/2 : 0), 48); g.lineTo(31, 42 + by);
-        g.strokePath();
+        // --- BOOTS (gradient + rim) ---
+        const bootGrad = ctx.createLinearGradient(0, 47, 0, 51);
+        bootGrad.addColorStop(0, '#141428');
+        bootGrad.addColorStop(1, '#080814');
+        ctx.fillStyle = bootGrad;
+        this._cRoundRect(ctx, lx1 - 2, 47 + by, 9, 4, 2); ctx.fill();
+        this._cRoundRect(ctx, lx2 - 1, 47 + by, 9, 4, 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(80,80,120,0.25)';
+        ctx.lineWidth = 0.5;
+        this._cRoundRect(ctx, lx1 - 2, 47 + by, 9, 4, 2); ctx.stroke();
+        this._cRoundRect(ctx, lx2 - 1, 47 + by, 9, 4, 2); ctx.stroke();
 
-        // Collar / V-neck
-        g.fillStyle(0x0a0a22);
-        g.fillTriangle(17, 17 + by, cx, 26 + by, 31, 17 + by);
-        // Collar highlights
-        g.lineStyle(1, coatLight, 0.5);
-        g.beginPath(); g.moveTo(17, 17 + by); g.lineTo(cx, 24 + by); g.strokePath();
-        g.beginPath(); g.moveTo(31, 17 + by); g.lineTo(cx, 24 + by); g.strokePath();
+        // --- COAT BODY (gradient shading) ---
+        const coatGrad = ctx.createLinearGradient(11, 16, 37, 42);
+        coatGrad.addColorStop(0, '#1e2a50');
+        coatGrad.addColorStop(0.4, '#16213e');
+        coatGrad.addColorStop(1, '#0f1530');
+        ctx.fillStyle = coatGrad;
+        this._cRoundRect(ctx, 11, 16 + by, 26, 26, 3); ctx.fill();
+        // Vertical shading
+        const coatVGrad = ctx.createLinearGradient(0, 16, 0, 42);
+        coatVGrad.addColorStop(0, 'rgba(40,50,90,0.25)');
+        coatVGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
+        coatVGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
+        ctx.fillStyle = coatVGrad;
+        this._cRoundRect(ctx, 11, 16 + by, 26, 26, 3); ctx.fill();
+        // Outline
+        ctx.strokeStyle = 'rgba(8,8,22,0.6)';
+        ctx.lineWidth = 1;
+        this._cRoundRect(ctx, 11, 16 + by, 26, 26, 3); ctx.stroke();
 
-        // Belt
-        g.fillStyle(0x2a2a44);
-        g.fillRect(13, 38 + by, 22, 3);
-        // Belt buckle
-        g.fillStyle(0x8888aa);
-        g.fillRect(22, 38 + by, 4, 3);
+        // Coat flaps (bezier curves)
+        ctx.fillStyle = '#16213e';
+        ctx.beginPath();
+        ctx.moveTo(11, 38 + by);
+        ctx.quadraticCurveTo(7 - (walking ? armSwing * 0.5 : 0), 48, 17, 42 + by);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(37, 38 + by);
+        ctx.quadraticCurveTo(41 + (walking ? armSwing * 0.5 : 0), 48, 31, 42 + by);
+        ctx.fill();
 
-        // Arms
-        g.fillStyle(coatColor);
-        g.fillRect(7, 18 + by + (walking ? armSwing : 0), 6, 15);
-        g.fillRect(35, 18 + by + (walking ? -armSwing : 0), 6, 15);
-        g.lineStyle(1, 0x080816, 0.4);
-        g.strokeRect(7, 18 + by + (walking ? armSwing : 0), 6, 15);
-        g.strokeRect(35, 18 + by + (walking ? -armSwing : 0), 6, 15);
+        // V-neck collar (gradient)
+        const neckGrad = ctx.createLinearGradient(0, 17, 0, 26);
+        neckGrad.addColorStop(0, '#0c0c28');
+        neckGrad.addColorStop(1, '#060618');
+        ctx.fillStyle = neckGrad;
+        ctx.beginPath();
+        ctx.moveTo(17, 17 + by); ctx.lineTo(cx, 26 + by); ctx.lineTo(31, 17 + by);
+        ctx.fill();
+        // Collar edge highlight
+        ctx.strokeStyle = 'rgba(40,50,80,0.5)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(17, 17 + by); ctx.lineTo(cx, 24 + by); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(31, 17 + by); ctx.lineTo(cx, 24 + by); ctx.stroke();
+
+        // Belt (metallic gradient)
+        const beltGrad = ctx.createLinearGradient(0, 38, 0, 41);
+        beltGrad.addColorStop(0, '#3a3a5a');
+        beltGrad.addColorStop(1, '#2a2a44');
+        ctx.fillStyle = beltGrad;
+        ctx.fillRect(13, 38 + by, 22, 3);
+        // Buckle
+        const buckGrad = ctx.createLinearGradient(22, 38, 26, 41);
+        buckGrad.addColorStop(0, '#aaaacc');
+        buckGrad.addColorStop(1, '#666688');
+        ctx.fillStyle = buckGrad;
+        ctx.fillRect(22, 38 + by, 4, 3);
+
+        // --- ARMS (gradient + outline) ---
+        const armGrad = ctx.createLinearGradient(7, 0, 13, 0);
+        armGrad.addColorStop(0, '#1e2a50');
+        armGrad.addColorStop(1, '#16213e');
+        ctx.fillStyle = armGrad;
+        ctx.fillRect(7, 18 + by + (walking ? armSwing : 0), 6, 15);
+        ctx.fillRect(35, 18 + by + (walking ? -armSwing : 0), 6, 15);
+        ctx.strokeStyle = 'rgba(8,8,22,0.4)';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(7, 18 + by + (walking ? armSwing : 0), 6, 15);
+        ctx.strokeRect(35, 18 + by + (walking ? -armSwing : 0), 6, 15);
         // Arm highlight
-        g.fillStyle(coatLight, 0.3);
-        g.fillRect(8, 19 + by + (walking ? armSwing : 0), 2, 13);
+        ctx.fillStyle = 'rgba(35,45,85,0.35)';
+        ctx.fillRect(8, 19 + by + (walking ? armSwing : 0), 2, 13);
 
-        // Hands (skin)
-        this._outlinedCircle(g, 10, 34 + by + (walking ? armSwing : 0), 3, 0xdeb887, 0x886644);
-        this._outlinedCircle(g, 38, 34 + by + (walking ? -armSwing : 0), 3, 0xdeb887, 0x886644);
+        // --- HANDS (radial gradient skin) ---
+        for (const [hx, hy] of [[10, 34 + by + (walking ? armSwing : 0)], [38, 34 + by + (walking ? -armSwing : 0)]]) {
+            const handGrad = ctx.createRadialGradient(hx - 0.5, hy - 0.5, 0, hx, hy, 3.5);
+            handGrad.addColorStop(0, '#e8c89a');
+            handGrad.addColorStop(1, '#b08860');
+            ctx.fillStyle = handGrad;
+            ctx.beginPath(); ctx.arc(hx, hy, 3, 0, Math.PI * 2); ctx.fill();
+        }
 
-        // Head
-        g.fillStyle(0xdeb887);
-        g.fillCircle(cx, 11, 9);
-        // Face shadow (bottom half)
-        g.fillStyle(0xc9a372, 0.4);
-        g.fillRect(16, 12, 16, 6);
-        g.lineStyle(1, 0x886644, 0.5);
-        g.strokeCircle(cx, 11, 9);
+        // --- HEAD (radial gradient skin) ---
+        const headY = 11;
+        const faceGrad = ctx.createRadialGradient(cx - 1, headY - 1, 0, cx, headY, 10);
+        faceGrad.addColorStop(0, '#f0d4a8');
+        faceGrad.addColorStop(0.6, '#deb887');
+        faceGrad.addColorStop(1, '#b89060');
+        ctx.fillStyle = faceGrad;
+        ctx.beginPath(); ctx.arc(cx, headY, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(120,80,50,0.35)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
 
-        // Hair (dark with blue sheen)
-        const hairBase = COLORS.PLAYER_HAIR;
-        const hairHighlight = 0x3a4a6e;
-        g.fillStyle(hairBase);
-        g.fillRect(15, 2, 18, 10);
-        // Spiky hair tips
-        g.fillTriangle(14, 6, 12, 12, 18, 8);
-        g.fillTriangle(34, 6, 36, 12, 30, 8);
-        g.fillTriangle(21, 1, 24, -2, 27, 1);
-        g.fillTriangle(17, 3, 19, -1, 22, 2);
-        g.fillTriangle(26, 2, 29, -1, 31, 3);
-        // Hair blue highlight
-        g.fillStyle(hairHighlight, 0.5);
-        g.fillRect(18, 3, 12, 4);
-        g.fillTriangle(22, 1, 24, -2, 26, 1);
+        // --- HAIR (gradient + spiky curves) ---
+        const hairGrad = ctx.createLinearGradient(15, 0, 33, 12);
+        hairGrad.addColorStop(0, '#2e2e44');
+        hairGrad.addColorStop(0.5, '#2a2a3e');
+        hairGrad.addColorStop(1, '#1e1e32');
+        ctx.fillStyle = hairGrad;
+        ctx.fillRect(15, 2, 18, 10);
+        // Side hair
+        ctx.beginPath(); ctx.moveTo(14, 6); ctx.quadraticCurveTo(11, 10, 13, 14); ctx.lineTo(18, 8); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(34, 6); ctx.quadraticCurveTo(37, 10, 35, 14); ctx.lineTo(30, 8); ctx.fill();
+        // Top spikes (smooth curves)
+        ctx.beginPath(); ctx.moveTo(17, 3); ctx.quadraticCurveTo(19, -2, 22, 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(21, 1); ctx.quadraticCurveTo(24, -3, 27, 1); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(26, 2); ctx.quadraticCurveTo(29, -2, 31, 3); ctx.fill();
+        // Blue sheen highlight
+        const sheenGrad = ctx.createLinearGradient(18, 3, 30, 7);
+        sheenGrad.addColorStop(0, 'rgba(58,74,110,0)');
+        sheenGrad.addColorStop(0.5, 'rgba(58,74,110,0.45)');
+        sheenGrad.addColorStop(1, 'rgba(58,74,110,0)');
+        ctx.fillStyle = sheenGrad;
+        ctx.fillRect(18, 3, 12, 4);
         // Hair outline
-        g.lineStyle(1, 0x0a0a18, 0.6);
-        g.beginPath();
-        g.moveTo(12, 12); g.lineTo(14, 6); g.lineTo(17, 3); g.lineTo(19, -1);
-        g.lineTo(22, 1); g.lineTo(24, -2); g.lineTo(26, 1); g.lineTo(29, -1);
-        g.lineTo(31, 3); g.lineTo(34, 6); g.lineTo(36, 12);
-        g.strokePath();
+        ctx.strokeStyle = 'rgba(10,10,24,0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(12, 12); ctx.lineTo(14, 6); ctx.lineTo(17, 3); ctx.quadraticCurveTo(19, -2, 22, 1);
+        ctx.quadraticCurveTo(24, -3, 26, 1); ctx.quadraticCurveTo(29, -2, 31, 3);
+        ctx.lineTo(34, 6); ctx.lineTo(36, 12);
+        ctx.stroke();
 
-        // Eyes (glowing blue)
-        this._glowEyes(g, 20, 10, 28, 10, 0x4499ff, 2.5);
+        // --- EYES (glowing blue, radial gradient bloom) ---
+        for (const ex of [20, 28]) {
+            // Bloom
+            const bloom = ctx.createRadialGradient(ex, 10, 0, ex, 10, 6);
+            bloom.addColorStop(0, 'rgba(68,153,255,0.35)');
+            bloom.addColorStop(1, 'rgba(68,153,255,0)');
+            ctx.fillStyle = bloom;
+            ctx.fillRect(ex - 7, 3, 14, 14);
+            // Eye core
+            const eyeGrad = ctx.createRadialGradient(ex - 0.5, 9.5, 0, ex, 10, 3);
+            eyeGrad.addColorStop(0, '#99ddff');
+            eyeGrad.addColorStop(0.5, '#4499ff');
+            eyeGrad.addColorStop(1, '#2266cc');
+            ctx.fillStyle = eyeGrad;
+            ctx.beginPath(); ctx.arc(ex, 10, 2.5, 0, Math.PI * 2); ctx.fill();
+            // Highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.beginPath(); ctx.arc(ex - 0.7, 9.3, 0.8, 0, Math.PI * 2); ctx.fill();
+        }
 
         // Eyebrows
-        g.lineStyle(1.5, 0x1a1a2e, 0.8);
-        g.beginPath(); g.moveTo(18, 7); g.lineTo(22, 7.5); g.strokePath();
-        g.beginPath(); g.moveTo(26, 7.5); g.lineTo(30, 7); g.strokePath();
+        ctx.strokeStyle = 'rgba(26,26,46,0.8)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(18, 7); ctx.lineTo(22, 7.5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(26, 7.5); ctx.lineTo(30, 7); ctx.stroke();
     }
 
     // =============================================
@@ -527,6 +641,8 @@ export class SpriteFactory {
             // Ground shadow
             this._groundShadow(g, s, s * 1.7, s * 0.7, s * 0.15);
             drawFn(g, s, i);
+            // 3D gradient lighting overlay
+            this._applyLighting(g, s, s * 0.8, s * 0.85);
             g.generateTexture('enemy_' + key + '_' + i, size * 2, size * 2);
             g.destroy();
         }
@@ -715,6 +831,9 @@ export class SpriteFactory {
             this._groundShadow(g, s, s * 1.8, s * 0.8, s * 0.15);
 
             drawFn(g, s, i, breathe);
+
+            // 3D gradient lighting overlay
+            this._applyLighting(g, s, s * 0.8, s * 1.0);
 
             g.generateTexture('boss_' + key + '_' + i, s * 2, s * 2);
             g.destroy();
@@ -979,6 +1098,9 @@ export class SpriteFactory {
             g.fillEllipse(half, s - 3, half * 1.3, 7);
             g.fillStyle(COLORS.SHADOW_DARK, 0.08);
             g.fillEllipse(half, s - 1, half * 1.0, 5);
+
+            // 3D gradient lighting
+            this._applyLighting(g, half, half * 0.7, half * 0.8);
 
             g.generateTexture('shadow_' + type, s, s);
             g.destroy();
