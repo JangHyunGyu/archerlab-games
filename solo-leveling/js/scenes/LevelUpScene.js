@@ -59,7 +59,7 @@ export class LevelUpScene extends Phaser.Scene {
             if (playerLevel < unlockLv) continue; // 아직 해금 안 됨
 
             const currentLevel = this.weaponManager.getWeaponLevel(key);
-            if (currentLevel >= 8) continue; // Max level
+            if (currentLevel >= 10) continue; // Max level
             if (key === 'basicDagger' && currentLevel === 0) continue; // 기본무기는 이미 보유
 
             if (currentLevel === 0) {
@@ -90,7 +90,7 @@ export class LevelUpScene extends Phaser.Scene {
         // Passive options
         for (const [key, config] of Object.entries(PASSIVES)) {
             const currentLevel = this.player.passiveLevels[config.stat] || 0;
-            if (currentLevel >= 5) continue;
+            if (currentLevel >= 10) continue;
 
             passiveOptions.push({
                 type: 'passive',
