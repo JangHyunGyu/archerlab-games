@@ -802,7 +802,12 @@ export class SoundManager {
             const bgmGain = new Tone.Volume(-14).connect(this._comp);
             bgmGain.volume.rampTo(-10, 3);
             this._bgmGain = bgmGain;
+            this._bgmTimeouts = [];
 
+            const bpm = 100;
+            const beatMs = 60000 / bpm;
+
+            // === 1단계: 드론 + 서브베이스 (즉시) ===
             // 1. Dark ambient drone — Cm (C + Eb)
             const droneOsc = new Tone.Oscillator({ frequency: 65.41, type: 'triangle' });
             const droneFilter = new Tone.Filter({ frequency: 280, type: 'lowpass', Q: 4 });
@@ -810,7 +815,6 @@ export class SoundManager {
             droneOsc.connect(droneFilter);
             droneFilter.connect(droneVol);
             droneVol.connect(bgmGain);
-            // Slow filter sweep
             const droneLfo = new Tone.LFO({ frequency: 0.06, min: 180, max: 400 });
             droneLfo.connect(droneFilter.frequency);
             droneLfo.start();
@@ -828,118 +832,130 @@ export class SoundManager {
             subOsc.start();
             this._bgmNodes.push(subOsc, subVol, subLfo);
 
-            // 3. Battle rhythm — kick pattern (4-beat loop)
-            const kickSynth = new Tone.MembraneSynth({
-                pitchDecay: 0.03, octaves: 4,
-                envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.06 },
-            });
-            const kickVol = new Tone.Volume(-16);
-            kickSynth.connect(kickVol);
-            kickVol.connect(bgmGain);
-            this._bgmNodes.push(kickSynth, kickVol);
-
-            let beatIdx = 0;
-            const bpm = 100;
-            const beatMs = 60000 / bpm;
-            const kickPattern = [1, 0, 0.6, 0, 1, 0, 0.4, 0.7]; // velocity pattern
-            const kickInterval = setInterval(() => {
+            // === 2단계: 킥 + 하이햇 (500ms 후) ===
+            this._bgmTimeouts.push(setTimeout(() => {
                 if (!this._initialized) return;
                 try {
-                    const vel = kickPattern[beatIdx % kickPattern.length];
-                    if (vel > 0) kickSynth.triggerAttackRelease('C1', '32n', Tone.now(), vel * 0.35);
-                    beatIdx++;
+                    // 3. Battle rhythm — kick pattern
+                    const kickSynth = new Tone.MembraneSynth({
+                        pitchDecay: 0.03, octaves: 4,
+                        envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.06 },
+                    });
+                    const kickVol = new Tone.Volume(-16);
+                    kickSynth.connect(kickVol);
+                    kickVol.connect(bgmGain);
+                    this._bgmNodes.push(kickSynth, kickVol);
+
+                    let beatIdx = 0;
+                    const kickPattern = [1, 0, 0.6, 0, 1, 0, 0.4, 0.7];
+                    const kickInterval = setInterval(() => {
+                        if (!this._initialized) return;
+                        try {
+                            const vel = kickPattern[beatIdx % kickPattern.length];
+                            if (vel > 0) kickSynth.triggerAttackRelease('C1', '32n', Tone.now(), vel * 0.35);
+                            beatIdx++;
+                        } catch (e) { /* silent */ }
+                    }, beatMs / 2);
+                    this._bgmIntervals.push(kickInterval);
+
+                    // 6. Hi-hat texture
+                    const hatNoise = new Tone.NoiseSynth({
+                        noise: { type: 'white' },
+                        envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
+                    });
+                    const hatFilter = new Tone.Filter({ frequency: 8000, type: 'highpass' });
+                    const hatVol = new Tone.Volume(-24);
+                    hatNoise.connect(hatFilter);
+                    hatFilter.connect(hatVol);
+                    hatVol.connect(bgmGain);
+                    this._bgmNodes.push(hatNoise, hatFilter, hatVol);
+
+                    let hatIdx = 0;
+                    const hatPattern = [0.3, 0.1, 0.2, 0.1];
+                    const hatInterval = setInterval(() => {
+                        if (!this._initialized) return;
+                        try {
+                            const vel = hatPattern[hatIdx % hatPattern.length];
+                            hatNoise.triggerAttackRelease('64n', Tone.now(), vel);
+                            hatIdx++;
+                        } catch (e) { /* silent */ }
+                    }, beatMs / 2);
+                    this._bgmIntervals.push(hatInterval);
                 } catch (e) { /* silent */ }
-            }, beatMs / 2);
-            this._bgmIntervals.push(kickInterval);
+            }, 500));
 
-            // 4. Dark arpeggio (Cm pentatonic, slower than intro)
-            const arpSynth = new Tone.FMSynth({
-                harmonicity: 2, modulationIndex: 3,
-                envelope: { attack: 0.02, decay: 0.12, sustain: 0.05, release: 0.2 },
-            });
-            const arpVol = new Tone.Volume(-18);
-            arpSynth.connect(this._reverb); // 공유 리버브 재사용 (전용 Freeverb 제거)
-            arpSynth.connect(arpVol);       // 드라이 시그널도 믹스
-            arpVol.connect(bgmGain);
-            this._bgmNodes.push(arpSynth, arpVol);
-
-            const arpNotes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4', 'Bb3', 'G3', 'Eb3'];
-            let arpIdx = 0;
-            const arpInterval = setInterval(() => {
+            // === 3단계: 아르페지오 + 패드 (1200ms 후) ===
+            this._bgmTimeouts.push(setTimeout(() => {
                 if (!this._initialized) return;
                 try {
-                    arpSynth.triggerAttackRelease(arpNotes[arpIdx % arpNotes.length], '16n', Tone.now(), 0.2);
-                    arpIdx++;
+                    // 4. Dark arpeggio
+                    const arpSynth = new Tone.FMSynth({
+                        harmonicity: 2, modulationIndex: 3,
+                        envelope: { attack: 0.02, decay: 0.12, sustain: 0.05, release: 0.2 },
+                    });
+                    const arpVol = new Tone.Volume(-18);
+                    arpSynth.connect(this._reverb);
+                    arpSynth.connect(arpVol);
+                    arpVol.connect(bgmGain);
+                    this._bgmNodes.push(arpSynth, arpVol);
+
+                    const arpNotes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4', 'Bb3', 'G3', 'Eb3'];
+                    let arpIdx = 0;
+                    const arpInterval = setInterval(() => {
+                        if (!this._initialized) return;
+                        try {
+                            arpSynth.triggerAttackRelease(arpNotes[arpIdx % arpNotes.length], '16n', Tone.now(), 0.2);
+                            arpIdx++;
+                        } catch (e) { /* silent */ }
+                    }, beatMs);
+                    this._bgmIntervals.push(arpInterval);
+
+                    // 5. Atmospheric pad layer
+                    const padSynth = new Tone.PolySynth(Tone.Synth, {
+                        maxPolyphony: 4,
+                        voice: Tone.Synth,
+                        options: {
+                            oscillator: { type: 'sine' },
+                            envelope: { attack: 1.5, decay: 2.0, sustain: 0.3, release: 2.0 },
+                        },
+                    });
+                    const padFilter = new Tone.Filter({ frequency: 600, type: 'lowpass', Q: 1 });
+                    const padVol = new Tone.Volume(-22);
+                    padSynth.connect(padFilter);
+                    padFilter.connect(this._reverb);
+                    padFilter.connect(padVol);
+                    padVol.connect(bgmGain);
+                    this._bgmNodes.push(padSynth, padFilter, padVol);
+
+                    const padChords = [
+                        ['C3', 'Eb3', 'G3', 'Bb3'],
+                        ['Ab2', 'C3', 'Eb3', 'G3'],
+                        ['F2', 'Ab2', 'C3', 'Eb3'],
+                        ['G2', 'B2', 'D3', 'F3'],
+                    ];
+                    let padIdx = 0;
+                    const padInterval = setInterval(() => {
+                        if (!this._initialized) return;
+                        try {
+                            const chord = padChords[padIdx % padChords.length];
+                            padSynth.triggerAttackRelease(chord, '1m', Tone.now(), 0.15);
+                            padIdx++;
+                        } catch (e) { /* silent */ }
+                    }, beatMs * 8);
+                    this._bgmIntervals.push(padInterval);
+                    try { padSynth.triggerAttackRelease(padChords[0], '1m', Tone.now(), 0.15); } catch (e) { /* silent */ }
                 } catch (e) { /* silent */ }
-            }, beatMs);
-            this._bgmIntervals.push(arpInterval);
-
-            // 5. Atmospheric pad layer (Cm7 chord, slow morph)
-            const padSynth = new Tone.PolySynth(Tone.Synth, {
-                maxPolyphony: 4,
-                voice: Tone.Synth,
-                options: {
-                    oscillator: { type: 'sine' },
-                    envelope: { attack: 1.5, decay: 2.0, sustain: 0.3, release: 2.0 },
-                },
-            });
-            const padFilter = new Tone.Filter({ frequency: 600, type: 'lowpass', Q: 1 });
-            const padVol = new Tone.Volume(-22);
-            padSynth.connect(padFilter);
-            padFilter.connect(this._reverb); // 공유 리버브 재사용 (전용 Freeverb 제거)
-            padFilter.connect(padVol);        // 드라이 시그널도 믹스
-            padVol.connect(bgmGain);
-            this._bgmNodes.push(padSynth, padFilter, padVol);
-
-            // Slow pad chord changes
-            const padChords = [
-                ['C3', 'Eb3', 'G3', 'Bb3'],   // Cm7
-                ['Ab2', 'C3', 'Eb3', 'G3'],     // AbMaj7
-                ['F2', 'Ab2', 'C3', 'Eb3'],     // Fm7
-                ['G2', 'B2', 'D3', 'F3'],       // G7
-            ];
-            let padIdx = 0;
-            const padInterval = setInterval(() => {
-                if (!this._initialized) return;
-                try {
-                    const chord = padChords[padIdx % padChords.length];
-                    padSynth.triggerAttackRelease(chord, '1m', Tone.now(), 0.15);
-                    padIdx++;
-                } catch (e) { /* silent */ }
-            }, beatMs * 8); // change chord every 4 bars
-            this._bgmIntervals.push(padInterval);
-            // Trigger first chord immediately
-            try { padSynth.triggerAttackRelease(padChords[0], '1m', Tone.now(), 0.15); } catch (e) { /* silent */ }
-
-            // 6. Hi-hat texture
-            const hatNoise = new Tone.NoiseSynth({
-                noise: { type: 'white' },
-                envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
-            });
-            const hatFilter = new Tone.Filter({ frequency: 8000, type: 'highpass' });
-            const hatVol = new Tone.Volume(-24);
-            hatNoise.connect(hatFilter);
-            hatFilter.connect(hatVol);
-            hatVol.connect(bgmGain);
-            this._bgmNodes.push(hatNoise, hatFilter, hatVol);
-
-            let hatIdx = 0;
-            const hatPattern = [0.3, 0.1, 0.2, 0.1]; // velocity
-            const hatInterval = setInterval(() => {
-                if (!this._initialized) return;
-                try {
-                    const vel = hatPattern[hatIdx % hatPattern.length];
-                    hatNoise.triggerAttackRelease('64n', Tone.now(), vel);
-                    hatIdx++;
-                } catch (e) { /* silent */ }
-            }, beatMs / 2);
-            this._bgmIntervals.push(hatInterval);
+            }, 1200));
         } catch (e) {
             console.warn('Game BGM error:', e);
         }
     }
 
     stopGameBGM() {
+        if (this._bgmTimeouts) {
+            this._bgmTimeouts.forEach(id => clearTimeout(id));
+            this._bgmTimeouts = [];
+        }
         if (this._bgmIntervals) {
             this._bgmIntervals.forEach(id => clearInterval(id));
             this._bgmIntervals = [];
