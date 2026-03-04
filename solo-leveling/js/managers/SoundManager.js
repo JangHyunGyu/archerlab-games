@@ -645,9 +645,11 @@ export class SoundManager {
 
     // ========== INTRO MUSIC ==========
 
-    playIntroMusic() {
+    async playIntroMusic() {
         if (!this._initialized || !this.enabled) return;
-        this.resume();
+        // AudioContext가 running 상태인지 확인 (suspended면 무음이므로 대기)
+        try { await Tone.start(); } catch (e) { /* */ }
+        if (Tone.context.state !== 'running') return;
         this.stopIntroMusic();
         this._introNodes = [];
         this._introIntervals = [];
@@ -783,9 +785,10 @@ export class SoundManager {
 
     // ========== IN-GAME BGM ==========
 
-    startGameBGM() {
+    async startGameBGM() {
         if (!this._initialized || !this.enabled) return;
-        this.resume();
+        try { await Tone.start(); } catch (e) { /* */ }
+        if (Tone.context.state !== 'running') return;
         this.stopGameBGM();
         this._bgmNodes = [];
         this._bgmIntervals = [];
