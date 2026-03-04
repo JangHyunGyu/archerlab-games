@@ -234,8 +234,8 @@ export class GameScene extends Phaser.Scene {
         x = Phaser.Math.Clamp(x, 100, WORLD_SIZE - 100);
         y = Phaser.Math.Clamp(y, 100, WORLD_SIZE - 100);
 
-        // Scale boss stats with game time difficulty
-        const diffMult = this.enemyManager.difficultyMultiplier;
+        // Boss uses sqrt of difficulty (bosses already have high base stats)
+        const diffMult = Math.sqrt(this.enemyManager.difficultyMultiplier);
         const boss = new Boss(this, x, y, bossKey, diffMult, hpMult);
         this.activeBosses.push(boss);
 
