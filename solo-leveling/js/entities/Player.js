@@ -466,6 +466,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             // (base + rankBonus) × passiveMultiplier
             this.stats[statKey] = Math.floor((base + rankBonus) * (1 + bonusPerLevel * effectiveLevels));
         }
+
+        // Re-apply temporary boss kill attack buffs (prevents buff erasure on passive pickup)
+        if (statKey === 'attack' && this._attackBuffs > 0) {
+            this.stats.attack += this._attackBuffs;
+        }
     }
 
     getAllEnemies() {

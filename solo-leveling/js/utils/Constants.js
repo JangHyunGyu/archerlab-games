@@ -282,4 +282,5 @@ export const PASSIVES = {
     critMaster: { name: '치명타 달인', description: '치명타율 +5%', stat: 'critRate', bonus: 0.05, icon: 0xffff44 },
     scholar:    { name: '학습 능력', description: '경험치 +15%', stat: 'xpMultiplier', bonus: 0.15, icon: 0x44aaff },
     hastening:  { name: '쿨타임 감소', description: '스킬 쿨타임 -8%', stat: 'cooldownReduction', bonus: 0.08, icon: 0xaa44ff },
+    magnet:     { name: '자석', description: '아이템 픽업 범위 +20%', stat: 'pickupRange', bonus: 0.20, icon: 0x66ccff },
 };
