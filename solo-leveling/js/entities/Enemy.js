@@ -105,12 +105,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Face direction
         this.setFlipX(playerX < this.x);
 
-        // Smooth 4-frame animation
-        this.animTimer += delta;
-        if (this.animTimer > 200) {
-            this.animTimer = 0;
-            this.animFrame = (this.animFrame + 1) % 4;
-            this.setTexture('enemy_' + this.enemyType + '_' + this.animFrame);
+        // Smooth 4-frame animation (skip for offscreen enemies to save texture swaps)
+        if (dist < 800) {
+            this.animTimer += delta;
+            if (this.animTimer > 200) {
+                this.animTimer = 0;
+                this.animFrame = (this.animFrame + 1) % 4;
+                this.setTexture('enemy_' + this.enemyType + '_' + this.animFrame);
+            }
         }
     }
 

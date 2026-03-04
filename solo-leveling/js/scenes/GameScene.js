@@ -127,6 +127,23 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
+        // Auto quality adjustment based on FPS
+        this._fpsCheckTimer = (this._fpsCheckTimer || 0) + delta;
+        if (this._fpsCheckTimer > 3000) {
+            this._fpsCheckTimer = 0;
+            const fps = this.game.loop.actualFps;
+            if (fps < 25 && !this._lowQuality) {
+                this._lowQuality = true;
+                // Disable heavy filters
+                try {
+                    if (this._bloomFilter) { this.cameras.main.filters.internal.remove(this._bloomFilter); this._bloomFilter = null; }
+                    if (this._colorMatrix) { this.cameras.main.filters.internal.remove(this._colorMatrix); this._colorMatrix = null; }
+                } catch (e) {}
+                // Disable ambient particles
+                if (this.ambientEmitter) { this.ambientEmitter.destroy(); this.ambientEmitter = null; }
+            }
+        }
+
         // Update player
         this.player.update(time, delta);
 
@@ -431,6 +448,11 @@ export class GameScene extends Phaser.Scene {
     // === FILTER SETUP ===
 
     _setupCameraFilters() {
+        // Skip heavy filters on low-end devices (mobile or low pixel ratio)
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || ('ontouchstart' in window);
+        if (isMobile) return;
+
         try {
             const cam = this.cameras.main;
 
