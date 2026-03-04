@@ -13,7 +13,7 @@ export class RulersAuthority extends WeaponBase {
     }
 
     _blast() {
-        const range = 240 + this.extraRange;
+        const range = 160 + this.extraRange;
 
         // Find a cluster of enemies, or default to player position
         let targetX = this.player.x;
