@@ -751,38 +751,57 @@ class EffectManager {
         const y = h * 0.4;
 
         // Rainbow flash background
-        const flash = new PIXI.Graphics();
-        flash.rect(0, 0, w, h).fill({ color: 0xFFFFFF, alpha: 0.3 });
-        this.container.addChild(flash);
-
-        this.tweens.push({
-            elapsed: 0,
-            duration: 1000,
-            update(dt) {
-                this.elapsed += dt;
-                const t = Math.min(this.elapsed / this.duration, 1);
-                flash.alpha = (1 - easeOutCubic(t)) * 0.4;
-                if (t >= 1) { flash.destroy(); return true; }
-                return false;
-            }
-        });
+        this.playRainbowFlash(500);
+        this.playScreenFlash(0xFFFFFF, 0.25, 300);
+        this.playScreenZoomPulse(0.04, 400);
+        this.screenShake(10, 400);
 
         // Massive particle burst
         const colors = BLOCK_COLORS.map(c => c.particle);
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 60; i++) {
             const color = colors[Math.floor(Math.random() * colors.length)];
-            const angle = (Math.PI * 2 * i / 50) + (Math.random() - 0.5) * 0.3;
-            const dist = 20 + Math.random() * 40;
+            const angle = (Math.PI * 2 * i / 60) + (Math.random() - 0.5) * 0.3;
+            const dist = 20 + Math.random() * 50;
             this.spawnSparkles(
                 x + Math.cos(angle) * dist,
                 y + Math.sin(angle) * dist,
-                color, 2
+                color, 3
             );
         }
 
-        // Multi-ring wave burst
-        this.playMultiRingWave(x, y, 3, [0xFF4081, 0xFFD600, 0x00E5FF], 150);
-        this.playRadialRays(x, y, 8, 0xFFD600, 120);
+        // Star particles explosion
+        this.spawnStarParticles(x, y, 0xFFD600, 20);
+        this.spawnStarParticles(x, y, 0xFF4081, 15);
+
+        // Multi-ring wave burst (more rings)
+        this.playMultiRingWave(x, y, 5, [0xFF4081, 0xFFD600, 0x00E5FF, 0x76FF03, 0xD500F9], 180);
+        this.playRadialRays(x, y, 12, 0xFFD600, 150);
+
+        // Massive particle shower
+        this.playParticleShower(60);
+
+        // Board shimmer wave (sweep glow across the board)
+        const boardPos = this.game.board.getGlobalPosition();
+        const cs = this.game.cellSize;
+        const boardTotal = cs * GRID_SIZE;
+        const shimmer = new PIXI.Graphics();
+        shimmer.rect(0, 0, 30, boardTotal).fill({ color: 0xFFFFFF, alpha: 0.2 });
+        shimmer.rect(8, 0, 14, boardTotal).fill({ color: 0xFFD600, alpha: 0.15 });
+        shimmer.position.set(boardPos.x - 30, boardPos.y);
+        this.container.addChild(shimmer);
+
+        this.tweens.push({
+            elapsed: 0,
+            duration: 600,
+            update(dt) {
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                shimmer.x = boardPos.x - 30 + easeOutQuart(t) * (boardTotal + 60);
+                shimmer.alpha = t < 0.2 ? t * 5 : (1 - (t - 0.2) / 0.8);
+                if (t >= 1) { shimmer.destroy(); return true; }
+                return false;
+            }
+        });
 
         // PERFECT text
         const txt = new PIXI.Text({

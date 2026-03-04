@@ -267,42 +267,60 @@ class SoundManager {
         this.ensureContext();
         const now = Tone.now();
 
-        // Deep punchy bass thud (the satisfying weight)
-        this._membrane.envelope.decay = 0.12;
-        this._membrane.envelope.release = 0.06;
-        this._membrane.octaves = 4;
-        this._membrane.pitchDecay = 0.06;
-        this._membrane.volume.value = -4;
-        this._membrane.triggerAttackRelease('C1', '16n', now);
+        // ── 1. Punchy impact body (heavy snap) ──
+        this._membrane.envelope.decay = 0.1;
+        this._membrane.envelope.release = 0.04;
+        this._membrane.octaves = 5;
+        this._membrane.pitchDecay = 0.04;
+        this._membrane.volume.value = -3;
+        this._membrane.triggerAttackRelease('D1', '16n', now);
 
-        // Sub-bass body (feel the impact)
+        // ── 2. Sub-bass thump (feel it in your chest) ──
         this._bass.envelope.attack = 0.001;
-        this._bass.envelope.decay = 0.08;
-        this._bass.envelope.sustain = 0.1;
-        this._bass.envelope.release = 0.06;
-        this._bass.volume.value = -8;
-        this._bass.triggerAttackRelease('A0', '32n', now + 0.005);
+        this._bass.envelope.decay = 0.1;
+        this._bass.envelope.sustain = 0.05;
+        this._bass.envelope.release = 0.05;
+        this._bass.volume.value = -7;
+        this._bass.triggerAttackRelease('G0', '32n', now + 0.003);
 
-        // Snappy mid click (crispness)
-        this._click.oscillator.type = 'triangle';
-        this._click.envelope.decay = 0.012;
-        this._click.envelope.release = 0.02;
-        this._click.volume.value = -10;
-        this._click.triggerAttackRelease('C5', '64n', now + 0.008);
+        // ── 3. Crisp snap attack (bright transient) ──
+        this._click.oscillator.type = 'sine';
+        this._click.envelope.attack = 0.001;
+        this._click.envelope.decay = 0.008;
+        this._click.envelope.sustain = 0.1;
+        this._click.envelope.release = 0.01;
+        this._click.volume.value = -6;
+        this._click.triggerAttackRelease('E5', '64n', now + 0.005);
 
-        // Bright crystalline sparkle - two layers
-        this._bell.volume.value = -16;
-        this._bell.triggerAttackRelease('A#6', 0.07, now + 0.015);
+        // ── 4. Harmonic pop (satisfying "lock-in" tone) ──
+        this._bell.envelope.attack = 0.001;
+        this._bell.envelope.decay = 0.04;
+        this._bell.envelope.sustain = 0.25;
+        this._bell.envelope.release = 0.15;
+        this._bell.volume.value = -10;
+        this._bell.triggerAttackRelease('G5', 0.1, now + 0.01);
 
-        // Metallic shimmer (adds texture)
-        this._metal.envelope.decay = 0.04;
-        this._metal.volume.value = -26;
-        this._metal.triggerAttackRelease('32n', now + 0.01);
+        // ── 5. Upper sparkle (crystal shimmer) ──
+        this._at(0.018, () => {
+            this._bell.volume.value = -14;
+            this._bell.triggerAttackRelease('E6', 0.08, now + 0.018);
+        });
 
-        // Soft transient noise (texture)
-        this._noise.noise.type = 'pink';
-        this._noise.envelope.decay = 0.025;
-        this._noise.volume.value = -22;
+        // ── 6. FM harmonic richness (warm overtone) ──
+        this._fm.harmonicity.value = 2;
+        this._fm.modulationIndex.value = 4;
+        this._fm.volume.value = -18;
+        this._fm.triggerAttackRelease('G4', 0.06, now + 0.008);
+
+        // ── 7. Metallic sparkle (texture) ──
+        this._metal.envelope.decay = 0.035;
+        this._metal.volume.value = -24;
+        this._metal.triggerAttackRelease('32n', now + 0.012);
+
+        // ── 8. Crisp noise transient (snap texture) ──
+        this._noise.noise.type = 'white';
+        this._noise.envelope.decay = 0.015;
+        this._noise.volume.value = -18;
         this._noise.triggerAttackRelease('64n', now);
     }
 
@@ -843,12 +861,76 @@ class SoundManager {
         });
     }
 
+    // ── DRAG GRID SNAP: Subtle tick when piece snaps to new grid cell ──
+
+    playDragSnap() {
+        if (!this._canPlay()) return;
+        this.ensureContext();
+        const now = Tone.now();
+
+        this._click.oscillator.type = 'sine';
+        this._click.envelope.attack = 0.001;
+        this._click.envelope.decay = 0.006;
+        this._click.envelope.sustain = 0.02;
+        this._click.envelope.release = 0.008;
+        this._click.volume.value = -18;
+        this._click.triggerAttackRelease('A5', '128n', now);
+    }
+
+    // ── NEAR COMPLETE: Tension tone when row/col is 1-2 cells from full ──
+
+    playNearComplete(emptyCells) {
+        if (!this._canPlay()) return;
+        this.ensureContext();
+        const now = Tone.now();
+
+        const note = emptyCells === 1 ? 'E5' : 'B4';
+        this._bell.envelope.attack = 0.005;
+        this._bell.envelope.decay = 0.06;
+        this._bell.envelope.sustain = 0.15;
+        this._bell.envelope.release = 0.2;
+        this._bell.volume.value = -20;
+        this._bell.triggerAttackRelease(note, 0.1, now);
+    }
+
+    // ── AMBIENT: Subtle background pad loop ──
+
+    startAmbient() {
+        if (!this._canPlay() || this._ambientLoop) return;
+        this.ensureContext();
+
+        // Create a soft ambient pad loop using AM synth
+        this._ambientLoop = new Tone.Loop((time) => {
+            if (!this.enabled) return;
+            this._am.harmonicity.value = 1.5;
+            this._am.volume.value = -32;
+            this._am.envelope.attack = 0.8;
+            this._am.envelope.decay = 1.5;
+            this._am.envelope.sustain = 0.2;
+            this._am.envelope.release = 2.0;
+            this._am.triggerAttackRelease('C3', 3.5, time);
+        }, 4);
+        this._ambientLoop.start(Tone.now());
+        Tone.Transport.start();
+    }
+
+    stopAmbient() {
+        if (this._ambientLoop) {
+            this._ambientLoop.stop();
+            this._ambientLoop.dispose();
+            this._ambientLoop = null;
+        }
+    }
+
     // ── Toggle ──────────────────────────────────────────────────────
 
     toggle() {
         this.enabled = !this.enabled;
         if (typeof Tone !== 'undefined') {
             Tone.Destination.mute = !this.enabled;
+        }
+        if (!this.enabled) {
+            this.stopAmbient();
         }
         return this.enabled;
     }

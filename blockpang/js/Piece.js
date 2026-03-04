@@ -31,36 +31,65 @@ function createPieceContainer(piece, cellSize, alpha = 1) {
     const container = new PIXI.Container();
     const color = BLOCK_COLORS[piece.colorIndex];
     const r = Math.max(1, cellSize * 0.12);
-    const p = 2; // Padding inside cell bounds
+    const p = 2;
+    const inner = cellSize - p * 2;
 
     for (let row = 0; row < piece.shape.length; row++) {
         for (let col = 0; col < piece.shape[row].length; col++) {
             if (!piece.shape[row][col]) continue;
             const g = new PIXI.Graphics();
 
-            // Shadow (bottom-right)
-            g.roundRect(p, p, cellSize - p * 2, cellSize - p * 2, r)
-             .fill({ color: color.dark, alpha: alpha * 0.9 });
+            // 1. Drop shadow
+            g.roundRect(p + 1, p + 1, inner, inner, r)
+             .fill({ color: 0x000000, alpha: 0.35 * alpha });
 
-            // Main body
-            g.roundRect(p + 1, p, cellSize - p * 2 - 2, cellSize - p * 2 - 2, r - 1)
+            // 2. Dark base (bevel edge)
+            g.roundRect(p, p, inner, inner, r)
+             .fill({ color: color.dark, alpha: 0.95 * alpha });
+
+            // 3. Main body
+            g.roundRect(p + 1, p + 1, inner - 2, inner - 2, r - 1)
              .fill({ color: color.main, alpha });
 
-            // Bottom gradient for depth
-            g.roundRect(p + 2, p + (cellSize - p * 2) * 0.5, cellSize - p * 2 - 4, (cellSize - p * 2) * 0.48, r - 2)
-             .fill({ color: color.dark, alpha: 0.18 * alpha });
+            // 4. Bottom-half darken (3D curvature)
+            g.roundRect(p + 2, p + inner * 0.5, inner - 4, inner * 0.47, r - 2)
+             .fill({ color: color.dark, alpha: 0.25 * alpha });
 
-            // Top highlight (glass-like)
-            g.roundRect(p + 2, p + 1, cellSize - p * 2 - 4, (cellSize - p * 2) * 0.3, r - 1)
-             .fill({ color: color.light, alpha: 0.55 * alpha });
+            // 5. Left-edge bevel highlight
+            g.roundRect(p + 1, p + 2, 2, inner - 6, r - 1)
+             .fill({ color: color.light, alpha: 0.3 * alpha });
 
-            // Specular highlight
-            g.roundRect(p + 4, p + 2, (cellSize - p * 2) * 0.2, (cellSize - p * 2) * 0.07, 1)
+            // 6. Top-edge bevel highlight
+            g.roundRect(p + 2, p + 1, inner - 6, 2, r - 1)
+             .fill({ color: color.light, alpha: 0.35 * alpha });
+
+            // 7. Glass reflection (top 35%)
+            g.roundRect(p + 3, p + 2, inner - 6, inner * 0.35, r - 1)
+             .fill({ color: color.light, alpha: 0.5 * alpha });
+
+            // 8. Glass gloss (bright band)
+            g.roundRect(p + 4, p + 2, inner - 8, inner * 0.15, r - 2)
              .fill({ color: 0xFFFFFF, alpha: 0.35 * alpha });
 
-            // Inner border
-            g.roundRect(p + 1, p + 1, cellSize - p * 2 - 2, cellSize - p * 2 - 2, r - 1)
-             .stroke({ width: 0.5, color: color.light, alpha: 0.15 * alpha });
+            // 9. Specular dot
+            g.roundRect(p + 5, p + 3, inner * 0.15, inner * 0.06, 2)
+             .fill({ color: 0xFFFFFF, alpha: 0.55 * alpha });
+
+            // 10. Secondary reflection
+            g.roundRect(p + inner * 0.3, p + inner * 0.6, inner * 0.4, inner * 0.08, 2)
+             .fill({ color: color.light, alpha: 0.12 * alpha });
+
+            // 11. Bottom-right inner shadow
+            g.roundRect(p + inner * 0.6, p + inner * 0.75, inner * 0.35, inner * 0.2, r - 2)
+             .fill({ color: 0x000000, alpha: 0.08 * alpha });
+
+            // 12. Edge glow
+            g.roundRect(p + 1, p + 1, inner - 2, inner - 2, r - 1)
+             .stroke({ width: 1, color: color.glow, alpha: 0.12 * alpha });
+
+            // 13. Outer glass rim
+            g.roundRect(p + 1, p + 1, inner - 2, inner - 2, r - 1)
+             .stroke({ width: 0.5, color: color.light, alpha: 0.2 * alpha });
 
             g.position.set(col * cellSize, row * cellSize);
             container.addChild(g);
@@ -136,11 +165,33 @@ class PieceTray {
         }
         const g = new PIXI.Graphics();
 
-        // Subtle dark panel
-        g.roundRect(10, 0, w - 20, h - 5, 12).fill({ color: 0x080825, alpha: 0.5 });
+        // Outer glow
+        g.roundRect(6, -4, w - 12, h + 2, 16)
+         .fill({ color: 0x2244aa, alpha: 0.04 });
 
-        // Top border glow
-        g.moveTo(30, 0).lineTo(w - 30, 0).stroke({ width: 1, color: 0x3355cc, alpha: 0.2 });
+        // Main glass panel
+        g.roundRect(10, 0, w - 20, h - 5, 12)
+         .fill({ color: 0x080828, alpha: 0.6 });
+
+        // Glass top highlight
+        g.roundRect(12, 1, w - 24, (h - 5) * 0.2, 11)
+         .fill({ color: 0x1a1a55, alpha: 0.2 });
+
+        // Neon top border glow (layered)
+        g.moveTo(40, 0).lineTo(w - 40, 0)
+         .stroke({ width: 2, color: 0x3355cc, alpha: 0.25 });
+        g.moveTo(60, -1).lineTo(w - 60, -1)
+         .stroke({ width: 1, color: 0x00E5FF, alpha: 0.1 });
+
+        // Side borders (subtle)
+        g.moveTo(10, 8).lineTo(10, h - 12)
+         .stroke({ width: 0.5, color: 0x3355cc, alpha: 0.1 });
+        g.moveTo(w - 10, 8).lineTo(w - 10, h - 12)
+         .stroke({ width: 0.5, color: 0x3355cc, alpha: 0.1 });
+
+        // Glass rim border
+        g.roundRect(10, 0, w - 20, h - 5, 12)
+         .stroke({ width: 1, color: 0x3355cc, alpha: 0.15 });
 
         this.trayBg = g;
         this.container.addChildAt(g, 0);
