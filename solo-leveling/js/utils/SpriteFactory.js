@@ -77,6 +77,7 @@ export class SpriteFactory {
 
     // Scale an external CDN texture to target size and register under a new key
     // Uses nearest-neighbor scaling to keep pixel art crisp
+    // Flips horizontally so sprites face right (DCSS tiles face left by default)
     static _scaleExtTexture(scene, extKey, targetKey, w, h) {
         if (!scene.textures.exists(extKey)) return false;
         try {
@@ -85,6 +86,9 @@ export class SpriteFactory {
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d');
             ctx.imageSmoothingEnabled = false;
+            // Flip horizontally so sprite faces right by default
+            ctx.translate(w, 0);
+            ctx.scale(-1, 1);
             ctx.drawImage(src, 0, 0, w, h);
             if (scene.textures.exists(targetKey)) scene.textures.remove(targetKey);
             scene.textures.addCanvas(targetKey, canvas);
