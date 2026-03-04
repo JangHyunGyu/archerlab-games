@@ -433,11 +433,9 @@ class Game {
             if (combo > 1) {
                 this.effects.playComboEffect(combo, avgX, avgY, clearResult.lines);
             } else {
-                // Single clear — basic shockwave
-                const shakeIntensity = Math.min(3 + clearResult.lines * 2, 10);
-                this.effects.screenShake(shakeIntensity, 200 + clearResult.lines * 50);
+                // Single clear — WoW-style effects
                 if (clearResult.cells.length > 0) {
-                    this.effects.playShockwave(avgX, avgY, clearResult.lines);
+                    this.effects.playSingleClearEffect(clearResult.lines, avgX, avgY, clearResult.cells);
                 }
             }
 
