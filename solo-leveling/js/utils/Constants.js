@@ -148,7 +148,7 @@ export const BOSS_TYPES = {
     },
     tusk: {
         name: '터스크',
-        hp: 13000, attack: 52, speed: 68, xp: 800,
+        hp: 18000, attack: 52, speed: 68, xp: 800,
         color: 0x5a3a1a, size: 100,
         shadowType: 'tank',
         shadowColor: 0x1a1000,
