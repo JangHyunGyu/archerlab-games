@@ -4,7 +4,7 @@ import { WEAPONS, COLORS } from '../utils/Constants.js';
 export class ShadowDagger extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, WEAPONS.shadowDagger);
-        this._activeDaggers = [];
+        this._activeDaggers = []; // 비행 중 단검 추적 (씬 종료 시 정리용)
     }
 
     fire() {
@@ -34,10 +34,17 @@ export class ShadowDagger extends WeaponBase {
 
         let hasHit = false;
         let trailInterval = null;
+        const entry = { dagger, trailInterval: null };
+        this._activeDaggers.push(entry);
 
         const cleanup = () => {
             if (trailInterval) { trailInterval.destroy(); trailInterval = null; }
+            entry.trailInterval = null;
+            this.scene.tweens.killTweensOf(dagger);
             if (dagger.active) dagger.destroy();
+            // 추적 배열에서 제거
+            const idx = this._activeDaggers.indexOf(entry);
+            if (idx !== -1) this._activeDaggers.splice(idx, 1);
         };
 
         // 트윈으로 직선 이동
@@ -84,7 +91,16 @@ export class ShadowDagger extends WeaponBase {
                 });
             },
         });
+        entry.trailInterval = trailInterval;
     }
 
-    destroy() {}
+    destroy() {
+        // 비행 중인 모든 단검 정리
+        for (const entry of this._activeDaggers) {
+            if (entry.trailInterval) entry.trailInterval.destroy();
+            this.scene.tweens.killTweensOf(entry.dagger);
+            if (entry.dagger.active) entry.dagger.destroy();
+        }
+        this._activeDaggers = [];
+    }
 }
