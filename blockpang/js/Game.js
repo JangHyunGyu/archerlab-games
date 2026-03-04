@@ -391,7 +391,11 @@ class Game {
         const pts = result.points;
         const combo = this.scoreManager.combo;
 
-        if (combo > 1) {
+        if (combo > 1 && clearResult.lines >= 2) {
+            // 콤보 + 멀티라인 동시: 유리 깨지는 소리 먼저 → 콤보 사운드
+            this.sound.playClear(clearResult.lines);
+            setTimeout(() => this.sound.playCombo(combo), 150);
+        } else if (combo > 1) {
             this.sound.playCombo(combo);
         } else {
             this.sound.playClear(clearResult.lines);
@@ -443,25 +447,52 @@ class Game {
                 avgY = boardPos.y + (avgY / clearResult.cells.length) * this.cellSize + this.cellSize / 2;
             }
 
-            // ── Combo Effect System (replaces old individual calls) ──
-            if (combo > 1) {
-                this.effects.playComboEffect(combo, avgX, avgY, clearResult.lines);
-            } else {
-                // Single clear — WoW-style effects
-                if (clearResult.cells.length > 0) {
-                    this.effects.playSingleClearEffect(clearResult.lines, avgX, avgY, clearResult.cells);
-                }
-            }
+            // ── Clamp popup positions inside screen ──
+            const screenW = this.app.screen.width;
+            const screenH = this.app.screen.height;
+            const clampX = (v) => Math.max(60, Math.min(screenW - 60, v));
+            const clampY = (v) => Math.max(40, Math.min(screenH - 40, v));
 
-            // Score popup
+            // ── Effect + Popup System ──
+            const fxX = clampX(avgX);
+            const fxY = clampY(avgY);
             const midCell = clearResult.cells[Math.floor(clearResult.cells.length / 2)];
-            const popupX = boardPos.x + midCell.col * this.cellSize + this.cellSize / 2;
-            const popupY = boardPos.y + midCell.row * this.cellSize;
-            this.effects.showScorePopup(popupX, popupY, `+${pts}`);
+            const popupX = clampX(boardPos.x + midCell.col * this.cellSize + this.cellSize / 2);
+            const popupY = clampY(boardPos.y + midCell.row * this.cellSize);
 
-            // Multi-line bonus popup (화려한 전용 팝업)
-            if (clearResult.lines >= 2) {
-                this.effects.showMultiLinePopup(popupX, popupY - this.cellSize * 1.5, clearResult.lines);
+            if (combo > 1 && clearResult.lines >= 2) {
+                // ── 콤보 + 멀티라인 동시: 시차(stagger) 연출 ──
+                // 1단계 (0ms): 멀티라인 이펙트 + 팝업
+                this.effects.playSingleClearEffect(clearResult.lines, fxX, fxY, clearResult.cells);
+                const mlY = clampY(popupY - this.cellSize * 2.5);
+                this.effects.showMultiLinePopup(popupX, mlY, clearResult.lines);
+
+                // 2단계 (180ms): 콤보 이펙트 + 팝업
+                setTimeout(() => {
+                    this.effects.playComboEffect(combo, fxX, fxY, clearResult.lines);
+                }, 180);
+
+                // 점수 팝업 (약간 지연)
+                setTimeout(() => {
+                    this.effects.showScorePopup(popupX, popupY, `+${pts}`);
+                }, 100);
+
+            } else if (combo > 1) {
+                // ── 콤보만 ──
+                this.effects.playComboEffect(combo, fxX, fxY, clearResult.lines);
+                this.effects.showScorePopup(popupX, popupY, `+${pts}`);
+
+            } else {
+                // ── 단일/멀티라인 클리어 ──
+                if (clearResult.cells.length > 0) {
+                    this.effects.playSingleClearEffect(clearResult.lines, fxX, fxY, clearResult.cells);
+                }
+                this.effects.showScorePopup(popupX, popupY, `+${pts}`);
+
+                if (clearResult.lines >= 2) {
+                    const mlY = clampY(popupY - this.cellSize * 2);
+                    this.effects.showMultiLinePopup(popupX, mlY, clearResult.lines);
+                }
             }
 
             if (result.leveledUp) {
