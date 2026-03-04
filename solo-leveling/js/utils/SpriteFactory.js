@@ -1045,6 +1045,7 @@ export class SpriteFactory {
             critMaster: 0xffff44,
             scholar: 0x44aaff,
             hastening: 0xaa44ff,
+            magnet: 0x66ccff,
         };
 
         for (const [key, color] of Object.entries(passiveColors)) {
