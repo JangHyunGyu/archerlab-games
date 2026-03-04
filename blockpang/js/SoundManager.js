@@ -359,6 +359,16 @@ class SoundManager {
             this._membrane.envelope.decay = 0.08;
             this._membrane.volume.value = -8;
             this._membrane.triggerAttackRelease('C1', '32n', now);
+
+            // Light crystal crack
+            this._metal.frequency.value = 800;
+            this._metal.harmonicity.value = 5.1;
+            this._metal.modulationIndex.value = 20;
+            this._metal.octaves = 1.5;
+            this._metal.resonance.value = 5000;
+            this._metal.envelope.decay = 0.04;
+            this._metal.volume.value = -26;
+            this._metal.triggerAttackRelease('32n', now + 0.01);
         }
 
         // ── 2줄: 풍성한 코드 + 스윕 ──
@@ -407,6 +417,24 @@ class SoundManager {
             this._bass.envelope.decay = 0.2;
             this._bass.volume.value = -10;
             this._bass.triggerAttackRelease('C2', 0.35, now + 0.01);
+
+            // Glass shatter — crisp metallic crack + noise texture
+            this._metal.frequency.value = 900;
+            this._metal.harmonicity.value = 5.1;
+            this._metal.modulationIndex.value = 24;
+            this._metal.octaves = 2;
+            this._metal.resonance.value = 5500;
+            this._metal.envelope.decay = 0.06;
+            this._metal.volume.value = -20;
+            this._metal.triggerAttackRelease('16n', now + 0.01);
+            // Shatter tail
+            this._at(0.04, () => {
+                this._noise.noise.type = 'white';
+                this._noise.envelope.attack = 0.001;
+                this._noise.envelope.decay = 0.06;
+                this._noise.volume.value = -24;
+                this._noise.triggerAttackRelease('32n', now + 0.04);
+            });
         }
 
         // ── 3줄: 파워풀 아르페지오 + 더블 히트 ──
@@ -465,6 +493,30 @@ class SoundManager {
             this._noise.envelope.decay = 0.12;
             this._noise.volume.value = -18;
             this._noise.triggerAttackRelease(0.15, now + 0.05);
+
+            // Glass shatter — double crack cascade
+            this._metal.frequency.value = 1000;
+            this._metal.harmonicity.value = 5.1;
+            this._metal.modulationIndex.value = 28;
+            this._metal.octaves = 2.5;
+            this._metal.resonance.value = 6000;
+            this._metal.envelope.decay = 0.08;
+            this._metal.volume.value = -17;
+            this._metal.triggerAttackRelease('16n', now + 0.01);
+            this._at(0.05, () => {
+                this._metal.frequency.value = 1200;
+                this._metal.envelope.decay = 0.06;
+                this._metal.volume.value = -19;
+                this._metal.triggerAttackRelease('16n', now + 0.05);
+            });
+            // Shatter spray
+            this._at(0.03, () => {
+                this._noise.noise.type = 'white';
+                this._noise.envelope.attack = 0.001;
+                this._noise.envelope.decay = 0.1;
+                this._noise.volume.value = -20;
+                this._noise.triggerAttackRelease('16n', now + 0.03);
+            });
         }
 
         // ── 4줄+: 유포릭 폭발! 풀 오케스트라 ──
@@ -534,6 +586,36 @@ class SoundManager {
             this._noise.envelope.decay = 0.2;
             this._noise.volume.value = -16;
             this._noise.triggerAttackRelease(0.25, now + 0.03);
+
+            // Glass shatter — massive triple crack explosion
+            this._metal.frequency.value = 1100;
+            this._metal.harmonicity.value = 5.1;
+            this._metal.modulationIndex.value = 32;
+            this._metal.octaves = 3;
+            this._metal.resonance.value = 6500;
+            this._metal.envelope.decay = 0.1;
+            this._metal.volume.value = -14;
+            this._metal.triggerAttackRelease('8n', now + 0.01);
+            this._at(0.04, () => {
+                this._metal.frequency.value = 1400;
+                this._metal.envelope.decay = 0.07;
+                this._metal.volume.value = -16;
+                this._metal.triggerAttackRelease('16n', now + 0.04);
+            });
+            this._at(0.09, () => {
+                this._metal.frequency.value = 1800;
+                this._metal.envelope.decay = 0.05;
+                this._metal.volume.value = -18;
+                this._metal.triggerAttackRelease('16n', now + 0.09);
+            });
+            // Long shatter spray
+            this._at(0.02, () => {
+                this._noise.noise.type = 'white';
+                this._noise.envelope.attack = 0.001;
+                this._noise.envelope.decay = 0.15;
+                this._noise.volume.value = -17;
+                this._noise.triggerAttackRelease('8n', now + 0.02);
+            });
 
             // AM shimmer tail
             this._at(0.1, () => {
