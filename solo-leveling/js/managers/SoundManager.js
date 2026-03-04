@@ -761,30 +761,30 @@ export class SoundManager {
     }
 
     stopIntroMusic() {
+        // 인터벌 먼저 정리 (새 노트 트리거 방지)
         if (this._introIntervals) {
             this._introIntervals.forEach(id => clearInterval(id));
             this._introIntervals = [];
         }
-        if (this._introNodes) {
-            this._introNodes.forEach(node => {
+        // 게인을 페이드아웃한 뒤 노드 dispose (즉시 stop → 클릭/팝 노이즈 방지)
+        if (this._introGain) {
+            try { this._introGain.volume.rampTo(-60, 0.3); } catch (e) { /* silent */ }
+        }
+        const nodes = this._introNodes || [];
+        const arpSynth = this._introArpSynth;
+        const gain = this._introGain;
+        this._introNodes = [];
+        this._introArpSynth = null;
+        this._introGain = null;
+        // 페이드아웃 완료 후 dispose
+        setTimeout(() => {
+            nodes.forEach(node => {
                 try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
                 try { node.dispose(); } catch (e) { /* silent */ }
             });
-            this._introNodes = [];
-        }
-        if (this._introArpSynth) {
-            try { this._introArpSynth.dispose(); } catch (e) { /* silent */ }
-            this._introArpSynth = null;
-        }
-        if (this._introGain) {
-            try {
-                this._introGain.volume.rampTo(-60, 0.5);
-                setTimeout(() => {
-                    try { this._introGain.dispose(); } catch (e) { /* silent */ }
-                }, 600);
-            } catch (e) { /* silent */ }
-            this._introGain = null;
-        }
+            if (arpSynth) { try { arpSynth.dispose(); } catch (e) { /* silent */ } }
+            if (gain) { try { gain.dispose(); } catch (e) { /* silent */ } }
+        }, 400);
     }
 
     // ========== IN-GAME BGM ==========
@@ -797,9 +797,9 @@ export class SoundManager {
         this._bgmIntervals = [];
 
         try {
-            // Master gain for game BGM
-            const bgmGain = new Tone.Volume(-14).connect(this._comp);
-            bgmGain.volume.rampTo(-10, 3);
+            // Master gain for game BGM (콜드 스타트 노이즈 마스킹: 매우 낮은 볼륨에서 시작)
+            const bgmGain = new Tone.Volume(-60).connect(this._comp);
+            bgmGain.volume.rampTo(-10, 1.5);
             this._bgmGain = bgmGain;
             this._bgmTimeouts = [];
 
@@ -816,8 +816,10 @@ export class SoundManager {
             droneVol.connect(bgmGain);
             const droneLfo = new Tone.LFO({ frequency: 0.06, min: 180, max: 400 });
             droneLfo.connect(droneFilter.frequency);
-            droneLfo.start();
-            droneOsc.start();
+            // 오디오 그래프 안정화 후 오실레이터 시작 (콜드 스타트 클릭/팝 방지)
+            const bgmStart = Tone.now() + 0.05;
+            droneLfo.start(bgmStart);
+            droneOsc.start(bgmStart);
             this._bgmNodes.push(droneOsc, droneFilter, droneVol, droneLfo);
 
             // 2. Sub bass pulse
@@ -827,8 +829,8 @@ export class SoundManager {
             subOsc.connect(subVol);
             subVol.connect(bgmGain);
             subLfo.connect(subVol.volume);
-            subLfo.start();
-            subOsc.start();
+            subLfo.start(bgmStart);
+            subOsc.start(bgmStart);
             this._bgmNodes.push(subOsc, subVol, subLfo);
 
             // === 2단계: 킥 + 하이햇 (500ms 후) ===
