@@ -21,7 +21,7 @@ export class SoundManager {
 
             // Effects chain: synths → comp → chorus → masterVol → destination
             this._masterVol = new Tone.Volume(-8).toDestination();
-            this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.4, wet: 0.15 })
+            this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
                 .connect(this._masterVol).start();
             this._comp = new Tone.Compressor(-18, 6).connect(this._chorus);
             this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
@@ -189,6 +189,8 @@ export class SoundManager {
             this._noise.envelope.sustain = 0;
             this._noise.envelope.release = 0.08;
             this._noiseFilter.type = 'bandpass';
+            this._noiseFilter.frequency.cancelScheduledValues(Tone.now());
+            this._noiseFilter.frequency.value = 2000;
             // Impact defaults
             this._impact.pitchDecay = 0.04;
         } catch (e) { /* silent */ }
@@ -224,13 +226,13 @@ export class SoundManager {
         this._fm.modulationIndex.value = 14;
         this._fm.envelope.decay = 0.05;
         this._fm.triggerAttackRelease('B5', '32n', now, 0.35);
-        // Energy sweep noise (low → high, wider)
+        // Energy sweep noise (low → high, tighter tail)
         this._noiseFilter.frequency.setValueAtTime(400, now);
-        this._noiseFilter.frequency.rampTo(8000, 0.25);
+        this._noiseFilter.frequency.rampTo(6000, 0.15);
         this._noiseFilter.type = 'bandpass';
-        this._noise.envelope.decay = 0.25;
-        this._noise.envelope.release = 0.06;
-        this._noise.triggerAttackRelease('4n', now, 0.65);
+        this._noise.envelope.decay = 0.14;
+        this._noise.envelope.release = 0.04;
+        this._noise.triggerAttackRelease('8n', now, 0.5);
         // Deep sub impact (heavier)
         this._sub.envelope.decay = 0.22;
         this._sub.triggerAttackRelease('G1', '8n', now, 0.75);
