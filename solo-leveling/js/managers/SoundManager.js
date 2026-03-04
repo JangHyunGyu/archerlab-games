@@ -22,16 +22,10 @@ export class SoundManager {
         try {
             if (typeof Tone === 'undefined') { this.enabled = false; return; }
 
-            // 오디오 컨텍스트 최적화: 버퍼를 넉넉하게 잡아 저사양 기기 찌직거림 방지
-            // latencyHint "playback" = 안정적 재생 우선 (약간의 지연 허용)
-            // lookAhead = 이벤트를 미리 스케줄링하여 버퍼 언더런 방지
+            // 오디오 컨텍스트 최적화: 저사양 기기 찌직거림 방지
+            // "playback" 힌트 = 큰 버퍼 사용, 안정적 재생 우선 (약간의 지연 허용)
             try {
-                const ctx = Tone.getContext();
-                ctx.lookAhead = 0.1; // 100ms 미리 스케줄링 (기본 8ms)
-                if (ctx.rawContext && ctx.rawContext.audioWorklet === undefined) {
-                    // ScriptProcessor 폴백 기기에서 추가 여유
-                    ctx.lookAhead = 0.15;
-                }
+                Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.1 }));
             } catch (e) { /* silent */ }
 
             // Effects chain: synths → comp → chorus → masterVol → destination
@@ -706,11 +700,9 @@ export class SoundManager {
                 harmonicity: 3, modulationIndex: 5,
                 envelope: { attack: 0.03, decay: 0.15, sustain: 0.08, release: 0.25 },
             });
-            const arpReverb = new Tone.Freeverb({ roomSize: 0.7, dampening: 2500, wet: 0.35 });
-            arpSynth.connect(arpReverb);
-            arpReverb.connect(introGain);
+            arpSynth.connect(this._reverb); // 공유 리버브 재사용
+            arpSynth.connect(introGain);    // 드라이 시그널도 믹스
             this._introArpSynth = arpSynth;
-            this._introNodes.push(arpReverb);
 
             const notes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4'];
             let noteIdx = 0;
@@ -865,12 +857,11 @@ export class SoundManager {
                 harmonicity: 2, modulationIndex: 3,
                 envelope: { attack: 0.02, decay: 0.12, sustain: 0.05, release: 0.2 },
             });
-            const arpReverb = new Tone.Freeverb({ roomSize: 0.6, dampening: 3000, wet: 0.3 });
             const arpVol = new Tone.Volume(-18);
-            arpSynth.connect(arpReverb);
-            arpReverb.connect(arpVol);
+            arpSynth.connect(this._reverb); // 공유 리버브 재사용 (전용 Freeverb 제거)
+            arpSynth.connect(arpVol);       // 드라이 시그널도 믹스
             arpVol.connect(bgmGain);
-            this._bgmNodes.push(arpSynth, arpReverb, arpVol);
+            this._bgmNodes.push(arpSynth, arpVol);
 
             const arpNotes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4', 'Bb3', 'G3', 'Eb3'];
             let arpIdx = 0;
@@ -893,13 +884,12 @@ export class SoundManager {
                 },
             });
             const padFilter = new Tone.Filter({ frequency: 600, type: 'lowpass', Q: 1 });
-            const padReverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 2000, wet: 0.5 });
             const padVol = new Tone.Volume(-22);
             padSynth.connect(padFilter);
-            padFilter.connect(padReverb);
-            padReverb.connect(padVol);
+            padFilter.connect(this._reverb); // 공유 리버브 재사용 (전용 Freeverb 제거)
+            padFilter.connect(padVol);        // 드라이 시그널도 믹스
             padVol.connect(bgmGain);
-            this._bgmNodes.push(padSynth, padFilter, padReverb, padVol);
+            this._bgmNodes.push(padSynth, padFilter, padVol);
 
             // Slow pad chord changes
             const padChords = [
