@@ -53,14 +53,31 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     _loadOptionalAssets() {
-        // Future: load external sprite sheets / audio here
-        // Example format:
-        // this.load.spritesheet('ext_player', 'assets/sprites/player.png', { frameWidth: 48, frameHeight: 52 });
-        // this.load.audio('bgm_game', 'assets/audio/bgm/game.mp3');
-        //
-        // For now, all textures are procedurally generated in create().
-        // When external assets are added, SpriteFactory can check if a texture
-        // already exists before generating it:
-        //   if (!scene.textures.exists('player_idle_0')) { ... }
+        const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
+
+        // Silently ignore load failures — procedural fallback will be used
+        this.load.on('loaderror', (file) => {
+            console.warn('CDN asset not loaded (procedural fallback):', file.key);
+        });
+
+        // --- Enemy sprites (DCSS 32x32 CC0 tiles) ---
+        this.load.image('ext_enemy_goblin', CDN + 'mon/humanoids/goblin.png');
+        this.load.image('ext_enemy_orc', CDN + 'mon/humanoids/orcs/orc_warrior.png');
+        this.load.image('ext_enemy_iceBear', CDN + 'mon/animals/polar_bear.png');
+        this.load.image('ext_enemy_antSoldier', CDN + 'mon/animals/goliath_beetle.png');
+        this.load.image('ext_enemy_stoneGolem', CDN + 'mon/nonliving/iron_golem.png');
+        this.load.image('ext_enemy_darkMage', CDN + 'mon/humanoids/humans/necromancer.png');
+        this.load.image('ext_enemy_ironKnight', CDN + 'mon/humanoids/humans/death_knight.png');
+        this.load.image('ext_enemy_demonWarrior', CDN + 'mon/demons/executioner.png');
+
+        // --- Boss sprites ---
+        this.load.image('ext_boss_igris', CDN + 'mon/humanoids/humans/death_knight.png');
+        this.load.image('ext_boss_tusk', CDN + 'mon/humanoids/orcs/orc_warlord.png');
+        this.load.image('ext_boss_beru', CDN + 'mon/animals/emperor_scorpion.png');
+
+        // --- Shadow soldier sprites ---
+        this.load.image('ext_shadow_melee', CDN + 'mon/nonliving/shadows/shadow_human.png');
+        this.load.image('ext_shadow_tank', CDN + 'mon/nonliving/shadows/shadow_dwarf.png');
+        this.load.image('ext_shadow_ranged', CDN + 'mon/nonliving/shadows/shadow_elf.png');
     }
 }

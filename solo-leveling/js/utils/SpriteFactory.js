@@ -75,6 +75,23 @@ export class SpriteFactory {
         ctx.closePath();
     }
 
+    // Scale an external CDN texture to target size and register under a new key
+    // Uses nearest-neighbor scaling to keep pixel art crisp
+    static _scaleExtTexture(scene, extKey, targetKey, w, h) {
+        if (!scene.textures.exists(extKey)) return false;
+        try {
+            const src = scene.textures.get(extKey).getSourceImage();
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(src, 0, 0, w, h);
+            if (scene.textures.exists(targetKey)) scene.textures.remove(targetKey);
+            scene.textures.addCanvas(targetKey, canvas);
+            return true;
+        } catch (e) { return false; }
+    }
+
     // Pseudo-gradient 3D lighting overlay (for Phaser Graphics sprites)
     static _applyLighting(g, cx, cy, radius) {
         // Top-left highlight
@@ -635,6 +652,16 @@ export class SpriteFactory {
     }
 
     static _createEnemySprite(scene, key, size, drawFn) {
+        // Try external CDN texture first
+        const extKey = 'ext_enemy_' + key;
+        if (scene.textures.exists(extKey)) {
+            const texW = size * 2, texH = size * 2;
+            for (let i = 0; i < 4; i++) {
+                this._scaleExtTexture(scene, extKey, 'enemy_' + key + '_' + i, texW, texH);
+            }
+            return;
+        }
+        // Fallback: procedural generation
         for (let i = 0; i < 4; i++) {
             const g = scene.make.graphics({ add: false });
             const s = size;
@@ -815,6 +842,16 @@ export class SpriteFactory {
     }
 
     static _createBossSprite(scene, key, config, drawFn) {
+        // Try external CDN texture first
+        const extKey = 'ext_boss_' + key;
+        if (scene.textures.exists(extKey)) {
+            const s = config.size;
+            for (let i = 0; i < 4; i++) {
+                this._scaleExtTexture(scene, extKey, 'boss_' + key + '_' + i, s * 2, s * 2);
+            }
+            return;
+        }
+        // Fallback: procedural generation
         for (let i = 0; i < 4; i++) {
             const g = scene.make.graphics({ add: false });
             const s = config.size;
@@ -1047,8 +1084,15 @@ export class SpriteFactory {
         const sizes = [32, 40, 30];
 
         types.forEach((type, idx) => {
-            const g = scene.make.graphics({ add: false });
+            // Try external CDN texture first
+            const extKey = 'ext_shadow_' + type;
             const s = sizes[idx];
+            if (scene.textures.exists(extKey)) {
+                this._scaleExtTexture(scene, extKey, 'shadow_' + type, s, s);
+                return;
+            }
+            // Fallback: procedural generation
+            const g = scene.make.graphics({ add: false });
             const half = s / 2;
 
             // Shadow aura (double layer)
