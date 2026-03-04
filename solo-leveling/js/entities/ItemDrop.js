@@ -180,7 +180,8 @@ export class ItemDropManager {
 
     destroy() {
         this.items.forEach(item => {
-            if (item._glow) item._glow.destroy();
+            this.scene.tweens.killTweensOf(item);
+            if (item._glow) { this.scene.tweens.killTweensOf(item._glow); item._glow.destroy(); }
             if (item._plusText) item._plusText.destroy();
             item.destroy();
         });

@@ -12,8 +12,11 @@ export class DragonFear extends WeaponBase {
         const slowAmount = 0.4 - this.extraSlow; // Lower = slower
         const slowDuration = 2000;
 
-        // Visual aura effect
-        if (this.auraSprite) this.auraSprite.destroy();
+        // Visual aura effect (이전 트윈 확실히 정리)
+        if (this.auraSprite) {
+            this.scene.tweens.killTweensOf(this.auraSprite);
+            this.auraSprite.destroy();
+        }
         this.auraSprite = this.scene.add.sprite(this.player.x, this.player.y, 'proj_fear')
             .setDepth(3)
             .setAlpha(0)
