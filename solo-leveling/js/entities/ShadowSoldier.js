@@ -46,11 +46,13 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Shadow trail effect
         this.trailTimer = 0;
 
-        // Shadow glow filter
+        // Shadow glow filter (rollback pipeline on failure to prevent GPU stall)
         try {
             this.enableFilters();
             this._glowFilter = this.filters.internal.addGlow(COLORS.SHADOW_PRIMARY, 4, 0, 1, false, 8, 8);
-        } catch (e) { /* filters not available */ }
+        } catch (e) {
+            try { this.disableFilters(); } catch (_) {}
+        }
 
         // Name tag
         this.nameTag = scene.add.text(x, y - config.size - 10, config.name, {

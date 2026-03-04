@@ -66,11 +66,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         console.log(`[BOSS] ${config.name} spawned: HP=${this.maxHp}, diffMult=${difficultyMult}, hpMult=${hpMult}`);
 
-        // Glow filter for boss
+        // Glow filter for boss (rollback pipeline on failure to prevent GPU stall)
         try {
             this.enableFilters();
             this._glowFilter = this.filters.internal.addGlow(config.color, 5, 0, 1, false, 8, 10);
-        } catch (e) { /* filters not available */ }
+        } catch (e) {
+            try { this.disableFilters(); } catch (_) {}
+        }
 
         // Entrance effect
         this._entranceEffect();
@@ -507,32 +509,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 emitting: false,
             });
             explosion.setDepth(15);
-            explosion.explode(30);
+            explosion.explode(15);
 
             // Sparks shower
             const sparks = this.scene.add.particles(this.x, this.y, 'particle_spark', {
                 speed: { min: 80, max: 300 },
                 scale: { start: 1, end: 0 },
                 alpha: { start: 1, end: 0 },
-                lifespan: { min: 300, max: 700 },
+                lifespan: { min: 300, max: 600 },
                 tint: [0xffffff, 0xffdd00, this.config.color],
                 blendMode: 'ADD',
                 emitting: false,
             });
             sparks.setDepth(16);
-            sparks.explode(20);
-
-            // Smoke cloud
-            const smoke = this.scene.add.particles(this.x, this.y, 'particle_smoke', {
-                speed: { min: 20, max: 60 },
-                scale: { start: 2, end: 0.5 },
-                alpha: { start: 0.5, end: 0 },
-                lifespan: { min: 600, max: 1200 },
-                tint: [0x333333, 0x1a0033],
-                emitting: false,
-            });
-            smoke.setDepth(14);
-            smoke.explode(15);
+            sparks.explode(10);
 
             // Shockwave ring
             const ring = this.scene.add.particles(this.x, this.y, 'particle_ring', {
@@ -545,14 +535,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 emitting: false,
             });
             ring.setDepth(15);
-            ring.explode(6);
+            ring.explode(4);
 
-            this.scene.time.delayedCall(1300, () => {
-                explosion.destroy(); sparks.destroy(); smoke.destroy(); ring.destroy();
+            this.scene.time.delayedCall(1000, () => {
+                explosion.destroy(); sparks.destroy(); ring.destroy();
             });
         } catch (e) {
             // Fallback
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 8; i++) {
                 const p = this.scene.add.circle(
                     this.x + Phaser.Math.Between(-20, 20), this.y + Phaser.Math.Between(-20, 20),
                     Phaser.Math.Between(3, 8), this.config.color, 0.8

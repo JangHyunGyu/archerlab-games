@@ -48,9 +48,12 @@ export class ShadowArmyManager {
     }
 
     _cleanupArise() {
-        // Destroy all tracked elements
+        // Kill tweens then destroy all tracked elements
         for (const el of this._ariseElements) {
             try {
+                if (el && el.active !== false) {
+                    this.scene.tweens.killTweensOf(el);
+                }
                 if (el && el.destroy) el.destroy();
             } catch (e) { /* already destroyed */ }
         }
@@ -124,18 +127,18 @@ export class ShadowArmyManager {
                     duration: 1200, ease: 'Power2',
                 });
 
-                // Purple particles
-                for (let i = 0; i < 30; i++) {
-                    scene.time.delayedCall(i * 40, () => {
+                // Purple particles (reduced count for performance)
+                for (let i = 0; i < 12; i++) {
+                    scene.time.delayedCall(i * 80, () => {
                         try {
                             const px = bossX + Phaser.Math.Between(-50, 50);
-                            const p = scene.add.circle(px, bossY + 20, Phaser.Math.Between(2, 6), COLORS.SHADOW_PRIMARY, 0.8)
+                            const p = scene.add.circle(px, bossY + 20, Phaser.Math.Between(3, 7), COLORS.SHADOW_PRIMARY, 0.8)
                                 .setDepth(52);
                             scene.tweens.add({
                                 targets: p,
                                 y: p.y - Phaser.Math.Between(80, 160),
                                 alpha: 0, scale: 0.3,
-                                duration: 1000,
+                                duration: 800,
                                 onComplete: () => p.destroy(),
                             });
                         } catch (e) { /* particle error, not critical */ }
