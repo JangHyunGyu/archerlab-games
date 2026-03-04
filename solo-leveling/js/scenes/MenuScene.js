@@ -100,6 +100,8 @@ export class MenuScene extends Phaser.Scene {
                 this.game._soundManager.init();
             }
             this.game._soundManager.resume();
+            // 게임 시작 전 신스 워밍업 (fadeOut 500ms 동안 비동기 완료)
+            this.game._soundManager.warmup();
 
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => this.scene.start('GameScene'));
@@ -198,22 +200,16 @@ export class MenuScene extends Phaser.Scene {
 
         this.cameras.main.fadeIn(500, 0, 0, 0);
 
-        // Initialize sound manager if needed
-        if (!this.game._soundManager) {
-            this.game._soundManager = new SoundManager();
-            this.game._soundManager.init();
-        }
-
         // AudioContext는 브라우저 정책상 사용자 제스처(클릭/터치) 후에만 시작 가능
-        // create()는 Phaser가 자동 호출하므로 여기서 직접 재생하면 suspended 경고 발생
-        // → 첫 번째 사용자 인터랙션에서 오디오 시작
+        // SoundManager 생성(init) 자체가 AudioContext를 만들므로 반드시 사용자 제스처 안에서 수행
         this.input.once('pointerdown', () => {
-            const sm = this.game._soundManager;
-            if (sm) {
-                sm.resume();
-                sm.playIntroMusic();
-                sm.warmup();
+            if (!this.game._soundManager) {
+                this.game._soundManager = new SoundManager();
+                this.game._soundManager.init();
             }
+            const sm = this.game._soundManager;
+            sm.resume();
+            sm.playIntroMusic();
         });
     }
 
