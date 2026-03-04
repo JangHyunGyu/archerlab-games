@@ -501,11 +501,16 @@ export class EnemyManager {
             this._dungeonBreakBorder = null;
         }
         // 엘리트 라벨 정리
-        this.pool.getChildren().forEach(enemy => {
-            if (enemy._eliteLabel) {
-                enemy._eliteLabel.destroy();
-                enemy._eliteLabel = null;
+        try {
+            const children = this.pool?.getChildren?.();
+            if (children) {
+                children.forEach(enemy => {
+                    if (enemy._eliteLabel) {
+                        enemy._eliteLabel.destroy();
+                        enemy._eliteLabel = null;
+                    }
+                });
             }
-        });
+        } catch (e) { /* pool already destroyed by scene shutdown */ }
     }
 }
