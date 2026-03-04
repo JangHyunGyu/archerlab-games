@@ -203,8 +203,12 @@ export class GameOverScene extends Phaser.Scene {
         retryBtn.on('pointerover', () => retryBtn.setFillStyle(0x6b2fbf, 0.9));
         retryBtn.on('pointerout', () => retryBtn.setFillStyle(0x4a1a8a, 0.9));
         retryBtn.on('pointerdown', () => {
-            this.cameras.main.fadeOut(300, 0, 0, 0);
-            this.time.delayedCall(300, () => this.scene.start('GameScene'));
+            if (this._transitioning) return;
+            this._transitioning = true;
+            retryBtn.disableInteractive();
+            this._showTransition(t('loading'));
+            this.cameras.main.fadeOut(500, 0, 0, 0);
+            this.time.delayedCall(500, () => this.scene.start('GameScene'));
         });
 
         // Menu button
@@ -221,8 +225,50 @@ export class GameOverScene extends Phaser.Scene {
         menuBtn.on('pointerover', () => menuBtn.setFillStyle(0x3a3a5e, 0.8));
         menuBtn.on('pointerout', () => menuBtn.setFillStyle(0x2a2a4e, 0.7));
         menuBtn.on('pointerdown', () => {
-            this.cameras.main.fadeOut(300, 0, 0, 0);
-            this.time.delayedCall(300, () => this.scene.start('MenuScene'));
+            if (this._transitioning) return;
+            this._transitioning = true;
+            menuBtn.disableInteractive();
+            this._showTransition(t('loading'));
+            this.cameras.main.fadeOut(500, 0, 0, 0);
+            this.time.delayedCall(500, () => this.scene.start('MenuScene'));
+        });
+    }
+
+    _showTransition(message) {
+        // Full-screen dark overlay with loading text (scrollFactor 0 = fixed to camera)
+        const cx = GAME_WIDTH / 2;
+        const cy = GAME_HEIGHT / 2;
+
+        this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6)
+            .setDepth(200).setScrollFactor(0);
+
+        const dots = this.add.text(cx, cy, message || '로딩 중...', {
+            fontSize: fs(20),
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            color: '#b366ff',
+            stroke: '#000000',
+            strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        // Animated dots
+        let dotCount = 0;
+        this.time.addEvent({
+            delay: 400,
+            loop: true,
+            callback: () => {
+                dotCount = (dotCount + 1) % 4;
+                dots.setText((message || '로딩 중') + '.'.repeat(dotCount));
+            },
+        });
+
+        // Pulsing effect
+        this.tweens.add({
+            targets: dots,
+            alpha: { from: 1, to: 0.5 },
+            duration: 600,
+            yoyo: true,
+            repeat: -1,
         });
     }
 }
