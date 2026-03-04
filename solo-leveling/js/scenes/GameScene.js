@@ -29,6 +29,9 @@ export class GameScene extends Phaser.Scene {
         }
         this.soundManager = this.game._soundManager;
         this.soundManager.resume();
+        // Stop intro music, start game BGM
+        this.soundManager.stopIntroMusic();
+        this.soundManager.startGameBGM();
 
         // System Message UI
         this.systemMessage = new SystemMessage(this);
@@ -477,6 +480,8 @@ export class GameScene extends Phaser.Scene {
 
     shutdown() {
         try {
+            // Stop game BGM
+            if (this.soundManager) this.soundManager.stopGameBGM();
             if (this.weaponManager) this.weaponManager.destroy();
             if (this.shadowArmyManager) this.shadowArmyManager.destroy();
             if (this.itemDropManager) this.itemDropManager.destroy();

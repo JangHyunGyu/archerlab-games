@@ -6,6 +6,13 @@ export class SoundManager {
     constructor() {
         this.enabled = true;
         this._initialized = false;
+        // Sound throttling: prevents audio glitch from rapid triggers
+        this._lastPlayTime = {};
+        this._throttleMs = {
+            hit: 50, kill: 60, xp: 50, dagger: 80,
+            slash: 100, authority: 150, fear: 200,
+            playerHit: 200, system: 200, warning: 300,
+        };
     }
 
     init() {
@@ -122,7 +129,17 @@ export class SoundManager {
 
     play(soundName) {
         if (!this.enabled || !this._initialized) return;
+        // Throttle: skip if called too soon
+        const now = performance.now();
+        const cooldown = this._throttleMs[soundName] || 0;
+        if (cooldown > 0) {
+            const last = this._lastPlayTime[soundName] || 0;
+            if (now - last < cooldown) return;
+        }
+        this._lastPlayTime[soundName] = now;
         this.resume();
+        // Reset shared synth params to defaults before playing
+        this._resetSynths();
         try {
             switch (soundName) {
                 case 'hit': this._playHit(); break;
@@ -144,6 +161,32 @@ export class SoundManager {
                 case 'quest': this._playQuest(); break;
                 case 'dungeonBreak': this._playDungeonBreak(); break;
             }
+        } catch (e) { /* silent */ }
+    }
+
+    // Reset shared synth parameters to defaults (prevents cross-contamination)
+    _resetSynths() {
+        try {
+            // FM synth defaults
+            this._fm.harmonicity.value = 3;
+            this._fm.modulationIndex.value = 10;
+            this._fm.envelope.attack = 0.005;
+            this._fm.envelope.decay = 0.1;
+            this._fm.envelope.sustain = 0;
+            this._fm.envelope.release = 0.1;
+            // Sub defaults
+            this._sub.envelope.attack = 0.003;
+            this._sub.envelope.decay = 0.15;
+            this._sub.envelope.sustain = 0;
+            this._sub.envelope.release = 0.1;
+            // Noise defaults
+            this._noise.envelope.attack = 0.005;
+            this._noise.envelope.decay = 0.1;
+            this._noise.envelope.sustain = 0;
+            this._noise.envelope.release = 0.08;
+            this._noiseFilter.type = 'bandpass';
+            // Impact defaults
+            this._impact.pitchDecay = 0.04;
         } catch (e) { /* silent */ }
     }
 
@@ -241,13 +284,6 @@ export class SoundManager {
         this._noise.triggerAttackRelease('2n', now, 0.25);
         // Dissonant beating
         this._toneWet.triggerAttackRelease(93, '2n', now, 0.15);
-        // Reset
-        setTimeout(() => {
-            this._fm.envelope.attack = 0.005;
-            this._fm.envelope.sustain = 0;
-            this._noiseFilter.type = 'bandpass';
-            this._noise.envelope.attack = 0.005;
-        }, 1200);
     }
 
     // ========== COMBAT SOUNDS ==========
@@ -399,14 +435,6 @@ export class SoundManager {
                 this._toneWet.triggerAttackRelease('G4', '2n', t, 0.08);
             } catch (e) { /* silent */ }
         }, 1000);
-        // Reset envelopes
-        setTimeout(() => {
-            this._sub.envelope.attack = 0.003;
-            this._sub.envelope.sustain = 0;
-            this._fm.envelope.attack = 0.005;
-            this._noise.envelope.attack = 0.005;
-            this._noiseFilter.type = 'bandpass';
-        }, 2000);
     }
 
     // 보스 등장 - ominous boss entrance
@@ -442,10 +470,6 @@ export class SoundManager {
                 this._noise.triggerAttackRelease('8n', Tone.now(), 0.35);
             } catch (e) { /* silent */ }
         }, 550);
-        // Reset
-        setTimeout(() => {
-            this._fm.envelope.attack = 0.005;
-        }, 1200);
     }
 
     // 경고 - sharp alarm
@@ -528,13 +552,6 @@ export class SoundManager {
                 this._metal.triggerAttackRelease('4n', t, 0.2);
             } catch (e) { /* silent */ }
         }, 650);
-        // Reset
-        setTimeout(() => {
-            this._sub.envelope.attack = 0.003;
-            this._sub.envelope.sustain = 0;
-            this._noise.envelope.attack = 0.005;
-            this._noiseFilter.type = 'bandpass';
-        }, 2500);
     }
 
     // ========== INTRO MUSIC ==========
@@ -564,7 +581,7 @@ export class SoundManager {
             lfo.connect(droneFilter.frequency);
             lfo.start();
             droneOsc.start();
-            this._introNodes.push(droneOsc, lfo);
+            this._introNodes.push(droneOsc, lfo, droneFilter, droneVol);
 
             // 2. Sub bass sine C1
             const subOsc = new Tone.Oscillator({ frequency: 32.7, type: 'sine' });
@@ -572,7 +589,7 @@ export class SoundManager {
             subOsc.connect(subVol);
             subVol.connect(introGain);
             subOsc.start();
-            this._introNodes.push(subOsc);
+            this._introNodes.push(subOsc, subVol);
 
             // 3. Minor drone Eb2
             const drone2 = new Tone.Oscillator({ frequency: 77.78, type: 'sine' });
@@ -580,7 +597,7 @@ export class SoundManager {
             drone2.connect(drone2Vol);
             drone2Vol.connect(introGain);
             drone2.start();
-            this._introNodes.push(drone2);
+            this._introNodes.push(drone2, drone2Vol);
 
             // 4. Dark FM arpeggio (C minor pentatonic)
             const arpSynth = new Tone.FMSynth({
@@ -591,6 +608,7 @@ export class SoundManager {
             arpSynth.connect(arpReverb);
             arpReverb.connect(introGain);
             this._introArpSynth = arpSynth;
+            this._introNodes.push(arpReverb);
 
             const notes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4'];
             let noteIdx = 0;
@@ -611,6 +629,7 @@ export class SoundManager {
             const percFilter = new Tone.Filter({ frequency: 700, type: 'bandpass', Q: 3 });
             percNoise.connect(percFilter);
             percFilter.connect(introGain);
+            this._introNodes.push(percNoise, percFilter);
 
             const percInterval = setInterval(() => {
                 if (!this._initialized) return;
@@ -655,7 +674,8 @@ export class SoundManager {
         }
         if (this._introNodes) {
             this._introNodes.forEach(node => {
-                try { node.stop(); node.dispose(); } catch (e) { /* silent */ }
+                try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
+                try { node.dispose(); } catch (e) { /* silent */ }
             });
             this._introNodes = [];
         }
@@ -671,6 +691,144 @@ export class SoundManager {
                 }, 600);
             } catch (e) { /* silent */ }
             this._introGain = null;
+        }
+    }
+
+    // ========== IN-GAME BGM ==========
+
+    startGameBGM() {
+        if (!this._initialized || !this.enabled) return;
+        this.resume();
+        this.stopGameBGM();
+        this._bgmNodes = [];
+        this._bgmIntervals = [];
+
+        try {
+            // Master gain for game BGM
+            const bgmGain = new Tone.Volume(-14).connect(this._comp);
+            bgmGain.volume.rampTo(-10, 3);
+            this._bgmGain = bgmGain;
+
+            // 1. Dark ambient drone — Cm (C + Eb)
+            const droneOsc = new Tone.Oscillator({ frequency: 65.41, type: 'triangle' });
+            const droneFilter = new Tone.Filter({ frequency: 280, type: 'lowpass', Q: 4 });
+            const droneVol = new Tone.Volume(-12);
+            droneOsc.connect(droneFilter);
+            droneFilter.connect(droneVol);
+            droneVol.connect(bgmGain);
+            // Slow filter sweep
+            const droneLfo = new Tone.LFO({ frequency: 0.06, min: 180, max: 400 });
+            droneLfo.connect(droneFilter.frequency);
+            droneLfo.start();
+            droneOsc.start();
+            this._bgmNodes.push(droneOsc, droneFilter, droneVol, droneLfo);
+
+            // 2. Sub bass pulse
+            const subOsc = new Tone.Oscillator({ frequency: 32.7, type: 'sine' });
+            const subVol = new Tone.Volume(-18);
+            const subLfo = new Tone.LFO({ frequency: 0.5, min: -22, max: -14 });
+            subOsc.connect(subVol);
+            subVol.connect(bgmGain);
+            subLfo.connect(subVol.volume);
+            subLfo.start();
+            subOsc.start();
+            this._bgmNodes.push(subOsc, subVol, subLfo);
+
+            // 3. Battle rhythm — kick pattern (4-beat loop)
+            const kickSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.03, octaves: 4,
+                envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.06 },
+            });
+            const kickVol = new Tone.Volume(-16);
+            kickSynth.connect(kickVol);
+            kickVol.connect(bgmGain);
+            this._bgmNodes.push(kickSynth, kickVol);
+
+            let beatIdx = 0;
+            const bpm = 100;
+            const beatMs = 60000 / bpm;
+            const kickPattern = [1, 0, 0.6, 0, 1, 0, 0.4, 0.7]; // velocity pattern
+            const kickInterval = setInterval(() => {
+                if (!this._initialized) return;
+                try {
+                    const vel = kickPattern[beatIdx % kickPattern.length];
+                    if (vel > 0) kickSynth.triggerAttackRelease('C1', '32n', Tone.now(), vel * 0.35);
+                    beatIdx++;
+                } catch (e) { /* silent */ }
+            }, beatMs / 2);
+            this._bgmIntervals.push(kickInterval);
+
+            // 4. Dark arpeggio (Cm pentatonic, slower than intro)
+            const arpSynth = new Tone.FMSynth({
+                harmonicity: 2, modulationIndex: 3,
+                envelope: { attack: 0.02, decay: 0.12, sustain: 0.05, release: 0.2 },
+            });
+            const arpReverb = new Tone.Freeverb({ roomSize: 0.6, dampening: 3000, wet: 0.3 });
+            const arpVol = new Tone.Volume(-18);
+            arpSynth.connect(arpReverb);
+            arpReverb.connect(arpVol);
+            arpVol.connect(bgmGain);
+            this._bgmNodes.push(arpSynth, arpReverb, arpVol);
+
+            const arpNotes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4', 'Bb3', 'G3', 'Eb3'];
+            let arpIdx = 0;
+            const arpInterval = setInterval(() => {
+                if (!this._initialized) return;
+                try {
+                    arpSynth.triggerAttackRelease(arpNotes[arpIdx % arpNotes.length], '16n', Tone.now(), 0.2);
+                    arpIdx++;
+                } catch (e) { /* silent */ }
+            }, beatMs);
+            this._bgmIntervals.push(arpInterval);
+
+            // 5. Hi-hat texture
+            const hatNoise = new Tone.NoiseSynth({
+                noise: { type: 'white' },
+                envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
+            });
+            const hatFilter = new Tone.Filter({ frequency: 8000, type: 'highpass' });
+            const hatVol = new Tone.Volume(-24);
+            hatNoise.connect(hatFilter);
+            hatFilter.connect(hatVol);
+            hatVol.connect(bgmGain);
+            this._bgmNodes.push(hatNoise, hatFilter, hatVol);
+
+            let hatIdx = 0;
+            const hatPattern = [0.3, 0.1, 0.2, 0.1]; // velocity
+            const hatInterval = setInterval(() => {
+                if (!this._initialized) return;
+                try {
+                    const vel = hatPattern[hatIdx % hatPattern.length];
+                    hatNoise.triggerAttackRelease('64n', Tone.now(), vel);
+                    hatIdx++;
+                } catch (e) { /* silent */ }
+            }, beatMs / 2);
+            this._bgmIntervals.push(hatInterval);
+        } catch (e) {
+            console.warn('Game BGM error:', e);
+        }
+    }
+
+    stopGameBGM() {
+        if (this._bgmIntervals) {
+            this._bgmIntervals.forEach(id => clearInterval(id));
+            this._bgmIntervals = [];
+        }
+        if (this._bgmNodes) {
+            this._bgmNodes.forEach(node => {
+                try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
+                try { node.dispose(); } catch (e) { /* silent */ }
+            });
+            this._bgmNodes = [];
+        }
+        if (this._bgmGain) {
+            try {
+                this._bgmGain.volume.rampTo(-60, 0.5);
+                setTimeout(() => {
+                    try { this._bgmGain.dispose(); } catch (e) { /* silent */ }
+                }, 600);
+            } catch (e) { /* silent */ }
+            this._bgmGain = null;
         }
     }
 
