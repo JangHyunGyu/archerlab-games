@@ -329,6 +329,10 @@ class SoundManager {
     playClear(lineCount) {
         if (!this._canPlay()) return;
         this.ensureContext();
+        try { this._playClearInner(lineCount); } catch (e) { console.warn('playClear error:', e); }
+    }
+
+    _playClearInner(lineCount) {
         const now = Tone.now();
         const clampLines = Math.min(Math.max(lineCount, 1), 4);
 
@@ -636,6 +640,10 @@ class SoundManager {
     playCombo(level) {
         if (!this._canPlay()) return;
         this.ensureContext();
+        try { this._playComboInner(level); } catch (e) { console.warn('playCombo error:', e); }
+    }
+
+    _playComboInner(level) {
         const now = Tone.now();
         const clampLevel = Math.min(level, 8);
 
