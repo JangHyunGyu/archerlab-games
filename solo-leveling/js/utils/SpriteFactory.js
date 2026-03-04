@@ -71,21 +71,21 @@ export class SpriteFactory {
     static createPlayerTextures(scene) {
         const W = 48, H = 52, cx = 24;
 
-        // Player idle frames (4 frames)
-        for (let i = 0; i < 4; i++) {
+        // Player idle frames (8 frames for smooth breathing)
+        for (let i = 0; i < 8; i++) {
             const g = scene.make.graphics({ add: false });
-            const breathOffset = Math.sin(i * Math.PI / 2) * 1.5;
+            const breathOffset = Math.sin(i * Math.PI / 4) * 1.5;
             this._drawPlayer(g, cx, breathOffset, 0, 0, false);
             g.generateTexture('player_idle_' + i, W, H);
             g.destroy();
         }
 
-        // Player walking frames (4 frames)
-        for (let i = 0; i < 4; i++) {
+        // Player walking frames (8 frames for smooth stride)
+        for (let i = 0; i < 8; i++) {
             const g = scene.make.graphics({ add: false });
-            const legSwing = Math.sin(i * Math.PI / 2) * 4;
-            const armSwing = Math.sin(i * Math.PI / 2) * 3;
-            const bodyBob = Math.abs(Math.sin(i * Math.PI / 2)) * 1.5;
+            const legSwing = Math.sin(i * Math.PI / 4) * 4;
+            const armSwing = Math.sin(i * Math.PI / 4) * 3;
+            const bodyBob = Math.abs(Math.sin(i * Math.PI / 4)) * 1.5;
             this._drawPlayer(g, cx, -bodyBob, legSwing, armSwing, true);
             g.generateTexture('player_walk_' + i, W, H);
             g.destroy();
@@ -218,7 +218,7 @@ export class SpriteFactory {
     static createEnemyTextures(scene) {
         // Goblin
         this._createEnemySprite(scene, 'goblin', ENEMY_TYPES.goblin.size, (g, s, frame) => {
-            const wobble = frame * 1.5;
+            const wobble = Math.sin(frame * Math.PI / 2) * 1.5;
             const c = ENEMY_TYPES.goblin.color;
             // Body
             this._outlinedCircle(g, s, s + wobble, s * 0.65, c, this._darken(c, 0x20));
@@ -242,14 +242,14 @@ export class SpriteFactory {
             g.fillRect(s + 1, s + 4 + wobble, 2, 2);
             // Small knife
             g.fillStyle(0xaaaacc);
-            g.fillRect(s + s*0.5, s - s*0.1 + wobble + (frame ? 2 : 0), 2, 10);
+            g.fillRect(s + s*0.5, s - s*0.1 + wobble + wobble * 1.3, 2, 10);
             g.fillStyle(0x665544);
-            g.fillRect(s + s*0.5 - 1, s + 4 + wobble + (frame ? 2 : 0), 4, 3);
+            g.fillRect(s + s*0.5 - 1, s + 4 + wobble + wobble * 1.3, 4, 3);
         });
 
         // Orc
         this._createEnemySprite(scene, 'orc', ENEMY_TYPES.orc.size, (g, s, frame) => {
-            const wobble = frame * 1;
+            const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.orc.color;
             // Body (bulky)
             this._outlinedRect(g, s * 0.2, s * 0.3 + wobble, s * 1.6, s * 1.5, c, this._darken(c, 0x20), 6);
@@ -283,7 +283,7 @@ export class SpriteFactory {
 
         // Ice Bear
         this._createEnemySprite(scene, 'iceBear', ENEMY_TYPES.iceBear.size, (g, s, frame) => {
-            const wobble = frame * 1;
+            const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.iceBear.color;
             // Body
             this._outlinedRect(g, s * 0.2, s * 0.3 + wobble, s * 1.6, s * 1.4, c, this._darken(c, 0x20), 8);
@@ -324,7 +324,7 @@ export class SpriteFactory {
 
         // Ant Soldier
         this._createEnemySprite(scene, 'antSoldier', ENEMY_TYPES.antSoldier.size, (g, s, frame) => {
-            const wobble = frame * 1.5;
+            const wobble = Math.sin(frame * Math.PI / 2) * 1.5;
             const c = ENEMY_TYPES.antSoldier.color;
             const cd = this._darken(c, 0x20);
             // Body segments
@@ -346,7 +346,7 @@ export class SpriteFactory {
             this._glowEyes(g, s - 3, s * 0.35 + wobble, s + 3, s * 0.35 + wobble, 0xff2200, 2);
             // Legs
             g.lineStyle(1.5, cd);
-            const legAngle = frame ? 0.15 : -0.15;
+            const legAngle = Math.sin(frame * Math.PI / 2) * 0.15;
             for (let side = -1; side <= 1; side += 2) {
                 g.beginPath(); g.moveTo(s, s * 0.7 + wobble); g.lineTo(s + side * s * 0.75, s * 0.45 + legAngle * side * 10); g.strokePath();
                 g.beginPath(); g.moveTo(s, s * 0.8 + wobble); g.lineTo(s + side * s * 0.85, s * 0.8); g.strokePath();
@@ -356,7 +356,7 @@ export class SpriteFactory {
 
         // Stone Golem
         this._createEnemySprite(scene, 'stoneGolem', ENEMY_TYPES.stoneGolem.size, (g, s, frame) => {
-            const wobble = frame * 1;
+            const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.stoneGolem.color;
             // Body (massive)
             this._outlinedRect(g, s * 0.15, s * 0.25 + wobble, s * 1.7, s * 1.6, 0x555566, this._darken(c, 0x20), 10);
@@ -390,7 +390,7 @@ export class SpriteFactory {
 
         // Dark Mage
         this._createEnemySprite(scene, 'darkMage', ENEMY_TYPES.darkMage.size, (g, s, frame) => {
-            const wobble = frame * 1.5;
+            const wobble = Math.sin(frame * Math.PI / 2) * 1.5;
             const c = ENEMY_TYPES.darkMage.color;
             // Robe body (triangular)
             g.fillStyle(c);
@@ -418,7 +418,7 @@ export class SpriteFactory {
             g.fillStyle(0xffffff, 0.5);
             g.fillCircle(s * 1.62, s * 0.12, 1.5);
             // Magic particles
-            const angle = frame * Math.PI;
+            const angle = frame * Math.PI / 2;
             g.fillStyle(0xcc66ff, 0.5);
             g.fillCircle(s * 1.65 + Math.cos(angle) * 10, s * 0.15 + Math.sin(angle) * 10, 2);
             g.fillCircle(s * 1.65 + Math.cos(angle + 2) * 8, s * 0.15 + Math.sin(angle + 2) * 8, 1.5);
@@ -426,7 +426,7 @@ export class SpriteFactory {
 
         // Iron Knight
         this._createEnemySprite(scene, 'ironKnight', ENEMY_TYPES.ironKnight.size, (g, s, frame) => {
-            const wobble = frame * 1;
+            const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.ironKnight.color;
             // Armor body
             this._outlinedRect(g, s * 0.3, s * 0.35 + wobble, s * 1.4, s * 1.3, c, this._darken(c, 0x20), 5);
@@ -459,9 +459,10 @@ export class SpriteFactory {
             g.fillCircle(s * 0.2, s * 0.85 + wobble, 3);
             // Sword
             g.fillStyle(0xddddee);
-            g.fillRect(s * 1.72, s * 0.15 + wobble + (frame ? 3 : 0), 4, s * 1.3);
+            const swordBob = Math.sin(frame * Math.PI / 2) * 3;
+            g.fillRect(s * 1.72, s * 0.15 + wobble + swordBob, 4, s * 1.3);
             g.lineStyle(1, 0xaaaacc, 0.6);
-            g.strokeRect(s * 1.72, s * 0.15 + wobble + (frame ? 3 : 0), 4, s * 1.3);
+            g.strokeRect(s * 1.72, s * 0.15 + wobble + swordBob, 4, s * 1.3);
             // Sword guard
             g.fillStyle(0xaaaa88);
             g.fillRect(s * 1.6, s * 1.0 + wobble, s * 0.4, 4);
@@ -475,7 +476,7 @@ export class SpriteFactory {
 
         // Demon Warrior
         this._createEnemySprite(scene, 'demonWarrior', ENEMY_TYPES.demonWarrior.size, (g, s, frame) => {
-            const wobble = frame * 1;
+            const wobble = Math.sin(frame * Math.PI / 2) * 1;
             const c = ENEMY_TYPES.demonWarrior.color;
             // Demonic energy aura
             g.fillStyle(0x880044, 0.12);
@@ -512,14 +513,15 @@ export class SpriteFactory {
             this._outlinedRect(g, s * 1.7, s * 0.5 + wobble, s * 0.35, s * 1.0, 0x350018, this._darken(c, 0x15), 3);
             // Energy wisps
             g.fillStyle(0xff0044, 0.3);
-            g.fillCircle(s * 0.3 + (frame ? 3 : 0), s * 0.3, 3);
-            g.fillCircle(s * 1.7 - (frame ? 3 : 0), s * 0.5, 2.5);
+            const wispOff = Math.sin(frame * Math.PI / 2) * 3;
+            g.fillCircle(s * 0.3 + wispOff, s * 0.3, 3);
+            g.fillCircle(s * 1.7 - wispOff, s * 0.5, 2.5);
             g.fillCircle(s, s * 1.7, 3);
         });
     }
 
     static _createEnemySprite(scene, key, size, drawFn) {
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 4; i++) {
             const g = scene.make.graphics({ add: false });
             const s = size;
             // Ground shadow
@@ -535,176 +537,188 @@ export class SpriteFactory {
     // =============================================
     static createBossTextures(scene) {
         // Igris - Red armored knight
-        this._createBossSprite(scene, 'igris', BOSS_TYPES.igris, (g, s) => {
+        this._createBossSprite(scene, 'igris', BOSS_TYPES.igris, (g, s, frame, breathe) => {
             // Armor body
-            this._outlinedRect(g, s * 0.3, s * 0.3, s * 1.4, s * 1.3, 0x880000, 0x440000, 6);
+            this._outlinedRect(g, s * 0.3, s * 0.3 + breathe, s * 1.4, s * 1.3, 0x880000, 0x440000, 6);
+            const b = breathe;
             // Armor shading
             g.fillStyle(0x990000, 0.3);
-            g.fillRect(s * 0.35, s * 0.35, s * 0.4, s * 1.2);
+            g.fillRect(s * 0.35, s * 0.35 + b, s * 0.4, s * 1.2);
             g.fillStyle(0x660000, 0.3);
-            g.fillRect(s * 1.2, s * 0.35, s * 0.4, s * 1.2);
+            g.fillRect(s * 1.2, s * 0.35 + b, s * 0.4, s * 1.2);
             // Armor detail lines
             g.lineStyle(1, 0x660000, 0.5);
-            g.beginPath(); g.moveTo(s * 0.5, s * 0.7); g.lineTo(s * 1.5, s * 0.7); g.strokePath();
-            g.beginPath(); g.moveTo(s * 0.5, s * 1.1); g.lineTo(s * 1.5, s * 1.1); g.strokePath();
+            g.beginPath(); g.moveTo(s * 0.5, s * 0.7 + b); g.lineTo(s * 1.5, s * 0.7 + b); g.strokePath();
+            g.beginPath(); g.moveTo(s * 0.5, s * 1.1 + b); g.lineTo(s * 1.5, s * 1.1 + b); g.strokePath();
             // Rivets
             g.fillStyle(0xcc4444, 0.6);
-            for (const rx of [0.4, 1.6]) for (const ry of [0.5, 0.9, 1.3]) g.fillCircle(s * rx, s * ry, 2);
+            for (const rx of [0.4, 1.6]) for (const ry of [0.5, 0.9, 1.3]) g.fillCircle(s * rx, s * ry + b, 2);
             // Helmet
-            this._outlinedCircle(g, s, s * 0.3, s * 0.45, 0xaa0000, 0x550000);
+            this._outlinedCircle(g, s, s * 0.3 + b, s * 0.45, 0xaa0000, 0x550000);
             // Visor
             g.fillStyle(0x440000, 0.9);
-            g.fillRect(s * 0.55, s * 0.2, s * 0.9, s * 0.12);
+            g.fillRect(s * 0.55, s * 0.2 + b, s * 0.9, s * 0.12);
             // Eyes through visor (glowing)
-            this._glowEyes(g, s * 0.75, s * 0.25, s * 1.25, s * 0.25, 0xff4444, 3.5);
+            this._glowEyes(g, s * 0.75, s * 0.25 + b, s * 1.25, s * 0.25 + b, 0xff4444, 3.5);
             // Plume
             g.fillStyle(0xff2222);
-            g.fillTriangle(s, s * 0.08, s * 0.8, s * -0.18, s * 1.2, s * -0.18);
+            g.fillTriangle(s, s * 0.08 + b, s * 0.8, s * -0.18 + b, s * 1.2, s * -0.18 + b);
             g.lineStyle(1, 0xcc0000, 0.6);
-            g.beginPath(); g.moveTo(s * 0.8, s * -0.18); g.lineTo(s, s * 0.08); g.lineTo(s * 1.2, s * -0.18); g.strokePath();
+            g.beginPath(); g.moveTo(s * 0.8, s * -0.18 + b); g.lineTo(s, s * 0.08 + b); g.lineTo(s * 1.2, s * -0.18 + b); g.strokePath();
             // Shoulder pads
-            this._outlinedCircle(g, s * 0.25, s * 0.45, s * 0.22, 0x990000, 0x550000);
-            this._outlinedCircle(g, s * 1.75, s * 0.45, s * 0.22, 0x990000, 0x550000);
+            this._outlinedCircle(g, s * 0.25, s * 0.45 + b, s * 0.22, 0x990000, 0x550000);
+            this._outlinedCircle(g, s * 1.75, s * 0.45 + b, s * 0.22, 0x990000, 0x550000);
             // Shoulder spikes
             g.fillStyle(0xbb0000);
-            g.fillTriangle(s * 0.25, s * 0.25, s * 0.15, s * 0.45, s * 0.35, s * 0.45);
-            g.fillTriangle(s * 1.75, s * 0.25, s * 1.65, s * 0.45, s * 1.85, s * 0.45);
+            g.fillTriangle(s * 0.25, s * 0.25 + b, s * 0.15, s * 0.45 + b, s * 0.35, s * 0.45 + b);
+            g.fillTriangle(s * 1.75, s * 0.25 + b, s * 1.65, s * 0.45 + b, s * 1.85, s * 0.45 + b);
             // Sword
+            const swordSwing = Math.sin(frame * Math.PI / 2) * 3;
             g.fillStyle(0xdddddd);
-            g.fillRect(s * 1.82, s * 0.05, 5, s * 1.25);
+            g.fillRect(s * 1.82, s * 0.05 + b + swordSwing, 5, s * 1.25);
             g.lineStyle(1, 0xaaaaaa, 0.6);
-            g.strokeRect(s * 1.82, s * 0.05, 5, s * 1.25);
+            g.strokeRect(s * 1.82, s * 0.05 + b + swordSwing, 5, s * 1.25);
             // Sword gleam
             g.fillStyle(0xffffff, 0.5);
-            g.fillRect(s * 1.83, s * 0.1, 2, s * 0.4);
+            g.fillRect(s * 1.83, s * 0.1 + b + swordSwing, 2, s * 0.4);
             // Crossguard
             g.fillStyle(0xcc8833);
-            g.fillRect(s * 1.72, s * 0.03, 22, 5);
+            g.fillRect(s * 1.72, s * 0.03 + b + swordSwing, 22, 5);
             // Legs
             this._outlinedRect(g, s * 0.5, s * 1.5, s * 0.35, s * 0.5, 0x770000, 0x440000, 2);
             this._outlinedRect(g, s * 1.15, s * 1.5, s * 0.35, s * 0.5, 0x770000, 0x440000, 2);
         });
 
         // Tusk - Giant Orc King
-        this._createBossSprite(scene, 'tusk', BOSS_TYPES.tusk, (g, s) => {
+        this._createBossSprite(scene, 'tusk', BOSS_TYPES.tusk, (g, s, frame, breathe) => {
+            const b = breathe;
             // Massive body
-            this._outlinedRect(g, s * 0.15, s * 0.25, s * 1.7, s * 1.5, 0x4a2a0a, 0x2a1a00, 10);
+            this._outlinedRect(g, s * 0.15, s * 0.25 + b, s * 1.7, s * 1.5, 0x4a2a0a, 0x2a1a00, 10);
             // Body muscle shading
             g.fillStyle(0x5a3a1a, 0.3);
-            g.fillCircle(s * 0.6, s * 0.7, s * 0.4);
-            g.fillCircle(s * 1.4, s * 0.7, s * 0.4);
+            g.fillCircle(s * 0.6, s * 0.7 + b, s * 0.4);
+            g.fillCircle(s * 1.4, s * 0.7 + b, s * 0.4);
             g.fillStyle(0x3a1a00, 0.25);
-            g.fillRect(s * 1.3, s * 0.3, s * 0.5, s * 1.4);
+            g.fillRect(s * 1.3, s * 0.3 + b, s * 0.5, s * 1.4);
             // Head
-            this._outlinedCircle(g, s, s * 0.3, s * 0.5, 0x5a3a1a, 0x2a1a00);
+            this._outlinedCircle(g, s, s * 0.3 + b, s * 0.5, 0x5a3a1a, 0x2a1a00);
             // Crown
             g.fillStyle(0xccaa33);
-            g.fillRect(s * 0.5, s * -0.05, s, s * 0.12);
-            g.fillTriangle(s * 0.5, s * -0.05, s * 0.65, s * -0.28, s * 0.8, s * -0.05);
-            g.fillTriangle(s * 0.85, s * -0.05, s, s * -0.33, s * 1.15, s * -0.05);
-            g.fillTriangle(s * 1.2, s * -0.05, s * 1.35, s * -0.28, s * 1.5, s * -0.05);
+            g.fillRect(s * 0.5, s * -0.05 + b, s, s * 0.12);
+            g.fillTriangle(s * 0.5, s * -0.05 + b, s * 0.65, s * -0.28 + b, s * 0.8, s * -0.05 + b);
+            g.fillTriangle(s * 0.85, s * -0.05 + b, s, s * -0.33 + b, s * 1.15, s * -0.05 + b);
+            g.fillTriangle(s * 1.2, s * -0.05 + b, s * 1.35, s * -0.28 + b, s * 1.5, s * -0.05 + b);
             g.lineStyle(1, 0xaa8822, 0.6);
-            g.strokeRect(s * 0.5, s * -0.05, s, s * 0.12);
+            g.strokeRect(s * 0.5, s * -0.05 + b, s, s * 0.12);
             // Crown gems
             g.fillStyle(0xff2222, 0.8);
-            g.fillCircle(s, s * -0.25, 3);
+            g.fillCircle(s, s * -0.25 + b, 3);
             g.fillStyle(0xffffff, 0.4);
-            g.fillCircle(s - 1, s * -0.26, 1);
+            g.fillCircle(s - 1, s * -0.26 + b, 1);
             // Giant tusks
             g.fillStyle(0xeeeecc);
-            g.fillTriangle(s * 0.6, s * 0.4, s * 0.35, s * 0.85, s * 0.8, s * 0.4);
-            g.fillTriangle(s * 1.4, s * 0.4, s * 1.2, s * 0.4, s * 1.65, s * 0.85);
+            g.fillTriangle(s * 0.6, s * 0.4 + b, s * 0.35, s * 0.85 + b, s * 0.8, s * 0.4 + b);
+            g.fillTriangle(s * 1.4, s * 0.4 + b, s * 1.2, s * 0.4 + b, s * 1.65, s * 0.85 + b);
             g.lineStyle(1, 0xcccc99, 0.5);
-            g.beginPath(); g.moveTo(s * 0.6, s * 0.4); g.lineTo(s * 0.35, s * 0.85); g.lineTo(s * 0.8, s * 0.4); g.strokePath();
-            g.beginPath(); g.moveTo(s * 1.4, s * 0.4); g.lineTo(s * 1.65, s * 0.85); g.lineTo(s * 1.2, s * 0.4); g.strokePath();
+            g.beginPath(); g.moveTo(s * 0.6, s * 0.4 + b); g.lineTo(s * 0.35, s * 0.85 + b); g.lineTo(s * 0.8, s * 0.4 + b); g.strokePath();
+            g.beginPath(); g.moveTo(s * 1.4, s * 0.4 + b); g.lineTo(s * 1.65, s * 0.85 + b); g.lineTo(s * 1.2, s * 0.4 + b); g.strokePath();
             // Eyes
-            this._glowEyes(g, s * 0.75, s * 0.25, s * 1.25, s * 0.25, 0xff5500, 4);
+            this._glowEyes(g, s * 0.75, s * 0.25 + b, s * 1.25, s * 0.25 + b, 0xff5500, 4);
             // Brow
             g.lineStyle(2.5, 0x3a1a00, 0.8);
-            g.beginPath(); g.moveTo(s * 0.55, s * 0.17); g.lineTo(s * 0.8, s * 0.2); g.strokePath();
-            g.beginPath(); g.moveTo(s * 1.45, s * 0.17); g.lineTo(s * 1.2, s * 0.2); g.strokePath();
-            // Arms (massive)
-            this._outlinedRect(g, s * -0.15, s * 0.5, s * 0.4, s, 0x4a2a0a, 0x2a1a00, 5);
-            this._outlinedRect(g, s * 1.75, s * 0.5, s * 0.4, s, 0x4a2a0a, 0x2a1a00, 5);
+            g.beginPath(); g.moveTo(s * 0.55, s * 0.17 + b); g.lineTo(s * 0.8, s * 0.2 + b); g.strokePath();
+            g.beginPath(); g.moveTo(s * 1.45, s * 0.17 + b); g.lineTo(s * 1.2, s * 0.2 + b); g.strokePath();
+            // Arms (massive) - arms swing slightly
+            const armSwing = Math.sin(frame * Math.PI / 2) * 2;
+            this._outlinedRect(g, s * -0.15, s * 0.5 + armSwing, s * 0.4, s, 0x4a2a0a, 0x2a1a00, 5);
+            this._outlinedRect(g, s * 1.75, s * 0.5 - armSwing, s * 0.4, s, 0x4a2a0a, 0x2a1a00, 5);
             // Fists
-            this._outlinedCircle(g, s * 0.05, s * 1.5, s * 0.22, 0x5a3a1a, 0x2a1a00);
-            this._outlinedCircle(g, s * 1.95, s * 1.5, s * 0.22, 0x5a3a1a, 0x2a1a00);
+            this._outlinedCircle(g, s * 0.05, s * 1.5 + armSwing, s * 0.22, 0x5a3a1a, 0x2a1a00);
+            this._outlinedCircle(g, s * 1.95, s * 1.5 - armSwing, s * 0.22, 0x5a3a1a, 0x2a1a00);
             // Arm bands
             g.fillStyle(0x8b6914, 0.6);
-            g.fillRect(s * -0.1, s * 0.65, s * 0.3, 4);
-            g.fillRect(s * 1.8, s * 0.65, s * 0.3, 4);
+            g.fillRect(s * -0.1, s * 0.65 + armSwing, s * 0.3, 4);
+            g.fillRect(s * 1.8, s * 0.65 - armSwing, s * 0.3, 4);
         });
 
         // Beru - Ant King
-        this._createBossSprite(scene, 'beru', BOSS_TYPES.beru, (g, s) => {
-            // Wings (behind body)
+        this._createBossSprite(scene, 'beru', BOSS_TYPES.beru, (g, s, frame, breathe) => {
+            const b = breathe;
+            const wingFlap = Math.sin(frame * Math.PI / 2) * 0.08;
+            // Wings (behind body) - flutter animation
             g.fillStyle(0x880044, 0.25);
-            g.fillEllipse(s * 0.15, s * 0.6, s * 0.65, s * 1.05);
-            g.fillEllipse(s * 1.85, s * 0.6, s * 0.65, s * 1.05);
+            g.fillEllipse(s * 0.15, s * 0.6 + b, s * (0.65 + wingFlap), s * (1.05 - wingFlap));
+            g.fillEllipse(s * 1.85, s * 0.6 + b, s * (0.65 + wingFlap), s * (1.05 - wingFlap));
             g.lineStyle(1, 0x660033, 0.3);
-            g.strokeEllipse(s * 0.15, s * 0.6, s * 0.65, s * 1.05);
-            g.strokeEllipse(s * 1.85, s * 0.6, s * 0.65, s * 1.05);
+            g.strokeEllipse(s * 0.15, s * 0.6 + b, s * (0.65 + wingFlap), s * (1.05 - wingFlap));
+            g.strokeEllipse(s * 1.85, s * 0.6 + b, s * (0.65 + wingFlap), s * (1.05 - wingFlap));
             // Wing veins
             g.lineStyle(0.5, 0xaa0055, 0.2);
-            g.beginPath(); g.moveTo(s * 0.15, s * 0.3); g.lineTo(s * 0.15, s * 1.1); g.strokePath();
-            g.beginPath(); g.moveTo(s * 1.85, s * 0.3); g.lineTo(s * 1.85, s * 1.1); g.strokePath();
+            g.beginPath(); g.moveTo(s * 0.15, s * 0.3 + b); g.lineTo(s * 0.15, s * 1.1 + b); g.strokePath();
+            g.beginPath(); g.moveTo(s * 1.85, s * 0.3 + b); g.lineTo(s * 1.85, s * 1.1 + b); g.strokePath();
             // Thorax
             g.fillStyle(0x440022);
             g.fillEllipse(s, s * 1.3, s * 0.9, s * 0.7);
             g.lineStyle(1, 0x330011, 0.6);
             g.strokeEllipse(s, s * 1.3, s * 0.9, s * 0.7);
             // Abdomen
-            this._outlinedRect(g, s * 0.35, s * 0.35, s * 1.3, s * 1.0, 0x550033, 0x330016, 8);
+            this._outlinedRect(g, s * 0.35, s * 0.35 + b, s * 1.3, s * 1.0, 0x550033, 0x330016, 8);
             // Chitin shading
             g.fillStyle(0x660044, 0.3);
-            g.fillRect(s * 0.4, s * 0.4, s * 0.4, s * 0.9);
+            g.fillRect(s * 0.4, s * 0.4 + b, s * 0.4, s * 0.9);
             // Head
-            this._outlinedCircle(g, s, s * 0.3, s * 0.42, 0x660033, 0x330016);
-            // Mandibles (large, sharp)
+            this._outlinedCircle(g, s, s * 0.3 + b, s * 0.42, 0x660033, 0x330016);
+            // Mandibles (large, sharp) - snap animation
+            const mandibleSnap = Math.sin(frame * Math.PI / 2) * 0.03;
             g.fillStyle(0xaa0044);
-            g.fillTriangle(s * 0.45, s * 0.4, s * 0.15, s * 0.75, s * 0.7, s * 0.55);
-            g.fillTriangle(s * 1.55, s * 0.4, s * 1.85, s * 0.75, s * 1.3, s * 0.55);
+            g.fillTriangle(s * (0.45 - mandibleSnap), s * 0.4 + b, s * (0.15 - mandibleSnap), s * 0.75 + b, s * 0.7, s * 0.55 + b);
+            g.fillTriangle(s * (1.55 + mandibleSnap), s * 0.4 + b, s * (1.85 + mandibleSnap), s * 0.75 + b, s * 1.3, s * 0.55 + b);
             g.lineStyle(1, 0x880033, 0.6);
-            g.beginPath(); g.moveTo(s * 0.45, s * 0.4); g.lineTo(s * 0.15, s * 0.75); g.lineTo(s * 0.7, s * 0.55); g.strokePath();
-            g.beginPath(); g.moveTo(s * 1.55, s * 0.4); g.lineTo(s * 1.85, s * 0.75); g.lineTo(s * 1.3, s * 0.55); g.strokePath();
+            g.beginPath(); g.moveTo(s * (0.45 - mandibleSnap), s * 0.4 + b); g.lineTo(s * (0.15 - mandibleSnap), s * 0.75 + b); g.lineTo(s * 0.7, s * 0.55 + b); g.strokePath();
+            g.beginPath(); g.moveTo(s * (1.55 + mandibleSnap), s * 0.4 + b); g.lineTo(s * (1.85 + mandibleSnap), s * 0.75 + b); g.lineTo(s * 1.3, s * 0.55 + b); g.strokePath();
             // Eyes (multiple, glowing pink)
-            this._glowEyes(g, s * 0.75, s * 0.22, s * 1.25, s * 0.22, 0xff0066, 4);
+            this._glowEyes(g, s * 0.75, s * 0.22 + b, s * 1.25, s * 0.22 + b, 0xff0066, 4);
             // Secondary eyes
             g.fillStyle(0xff0044, 0.7);
-            g.fillCircle(s * 0.63, s * 0.33, 2.5);
-            g.fillCircle(s * 1.37, s * 0.33, 2.5);
+            g.fillCircle(s * 0.63, s * 0.33 + b, 2.5);
+            g.fillCircle(s * 1.37, s * 0.33 + b, 2.5);
             // Chitin armor plates
             g.fillStyle(0x770044, 0.4);
-            g.fillRect(s * 0.45, s * 0.65, s * 1.1, s * 0.1);
-            g.fillRect(s * 0.45, s * 0.85, s * 1.1, s * 0.1);
+            g.fillRect(s * 0.45, s * 0.65 + b, s * 1.1, s * 0.1);
+            g.fillRect(s * 0.45, s * 0.85 + b, s * 1.1, s * 0.1);
             g.fillRect(s * 0.45, s * 1.05, s * 1.1, s * 0.1);
-            // Legs (6 legs with joints)
+            // Legs (6 legs with joints) - leg movement
+            const legMove = Math.sin(frame * Math.PI / 2) * 0.05;
             g.lineStyle(3, 0x440022);
             for (let side = -1; side <= 1; side += 2) {
-                g.beginPath(); g.moveTo(s, s * 0.6); g.lineTo(s + side * s * 0.7, s * 0.4); g.lineTo(s + side * s * 0.95, s * 0.25); g.strokePath();
-                g.beginPath(); g.moveTo(s, s * 0.8); g.lineTo(s + side * s * 0.8, s * 0.7); g.lineTo(s + side * s * 1.05, s * 0.8); g.strokePath();
-                g.beginPath(); g.moveTo(s, s * 1.0); g.lineTo(s + side * s * 0.7, s * 1.1); g.lineTo(s + side * s * 0.95, s * 1.3); g.strokePath();
+                g.beginPath(); g.moveTo(s, s * 0.6 + b); g.lineTo(s + side * s * (0.7 + legMove), s * 0.4); g.lineTo(s + side * s * (0.95 + legMove), s * 0.25); g.strokePath();
+                g.beginPath(); g.moveTo(s, s * 0.8 + b); g.lineTo(s + side * s * 0.8, s * 0.7); g.lineTo(s + side * s * 1.05, s * 0.8); g.strokePath();
+                g.beginPath(); g.moveTo(s, s * 1.0); g.lineTo(s + side * s * (0.7 - legMove), s * 1.1); g.lineTo(s + side * s * (0.95 - legMove), s * 1.3); g.strokePath();
             }
         });
     }
 
     static _createBossSprite(scene, key, config, drawFn) {
-        const g = scene.make.graphics({ add: false });
-        const s = config.size;
+        for (let i = 0; i < 4; i++) {
+            const g = scene.make.graphics({ add: false });
+            const s = config.size;
+            const breathe = Math.sin(i * Math.PI / 2) * 2;
+            const auraPulse = 1 + Math.sin(i * Math.PI / 2) * 0.08;
 
-        // Boss glow aura (double layer)
-        g.fillStyle(config.color, 0.08);
-        g.fillCircle(s, s, s * 1.2);
-        g.fillStyle(config.color, 0.15);
-        g.fillCircle(s, s, s * 0.9);
+            // Boss glow aura (double layer, pulsing)
+            g.fillStyle(config.color, 0.06 + Math.sin(i * Math.PI / 2) * 0.03);
+            g.fillCircle(s, s, s * 1.2 * auraPulse);
+            g.fillStyle(config.color, 0.12 + Math.sin(i * Math.PI / 2) * 0.04);
+            g.fillCircle(s, s, s * 0.9 * auraPulse);
 
-        // Ground shadow
-        this._groundShadow(g, s, s * 1.8, s * 0.8, s * 0.15);
+            // Ground shadow
+            this._groundShadow(g, s, s * 1.8, s * 0.8, s * 0.15);
 
-        drawFn(g, s);
+            drawFn(g, s, i, breathe);
 
-        g.generateTexture('boss_' + key, s * 2, s * 2);
-        g.destroy();
+            g.generateTexture('boss_' + key + '_' + i, s * 2, s * 2);
+            g.destroy();
+        }
     }
 
     // =============================================

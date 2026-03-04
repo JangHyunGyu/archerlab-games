@@ -3,7 +3,7 @@ import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 export class Boss extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, bossKey, difficultyMult = 1, hpMult = 1, atkMult = 1) {
         const config = BOSS_TYPES[bossKey];
-        super(scene, x, y, 'boss_' + bossKey);
+        super(scene, x, y, 'boss_' + bossKey + '_0');
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -29,6 +29,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.attackCooldown = 0;
         this.specialTimer = 0;
         this.phase = 1; // Boss phases
+
+        // Idle animation (4 frames)
+        this.animFrame = 0;
+        this.animTimer = 0;
 
         // Spawn invincibility (3s entrance animation protection)
         this.isInvincible = true;
@@ -147,6 +151,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     update(time, delta, playerX, playerY) {
         if (!this.active) return;
+
+        // Idle animation (4 frames)
+        this.animTimer += delta;
+        if (this.animTimer > 250) {
+            this.animTimer = 0;
+            this.animFrame = (this.animFrame + 1) % 4;
+            this.setTexture('boss_' + this.bossKey + '_' + this.animFrame);
+        }
 
         // Move toward player
         const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);

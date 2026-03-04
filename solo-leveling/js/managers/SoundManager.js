@@ -19,10 +19,14 @@ export class SoundManager {
         try {
             if (typeof Tone === 'undefined') { this.enabled = false; return; }
 
-            // Effects chain: synths → comp → masterVol → destination
+            // Effects chain: synths → comp → chorus → masterVol → destination
             this._masterVol = new Tone.Volume(-8).toDestination();
-            this._comp = new Tone.Compressor(-18, 6).connect(this._masterVol);
+            this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.4, wet: 0.15 })
+                .connect(this._masterVol).start();
+            this._comp = new Tone.Compressor(-18, 6).connect(this._chorus);
             this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
+            // Dedicated delay for spatial FX (weapon trails, echoes)
+            this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
 
             // === Pre-created synth pool ===
 
@@ -192,48 +196,55 @@ export class SoundManager {
 
     // ========== WEAPON SOUNDS ==========
 
-    // 단검 베기 - swoosh + metallic clink
+    // 단검 베기 - swoosh + metallic clink + stereo shimmer
     _playDagger() {
         const now = Tone.now();
-        // Swoosh
+        // Fast swoosh (rising filter)
         this._noiseFilter.frequency.setValueAtTime(3000, now);
-        this._noiseFilter.frequency.rampTo(9000, 0.08);
-        this._noise.envelope.decay = 0.08;
-        this._noise.envelope.release = 0.04;
-        this._noise.triggerAttackRelease('16n', now, 0.5);
-        // Blade ring
-        this._metal.frequency = 900;
-        this._metal.envelope.decay = 0.06;
-        this._metal.triggerAttackRelease('32n', now, 0.25);
-        // Sub thud
-        this._sub.envelope.decay = 0.06;
-        this._sub.triggerAttackRelease('C2', '32n', now, 0.5);
+        this._noiseFilter.frequency.rampTo(10000, 0.06);
+        this._noise.envelope.decay = 0.07;
+        this._noise.envelope.release = 0.03;
+        this._noise.triggerAttackRelease('16n', now, 0.55);
+        // Blade ring (sharp metallic)
+        this._metal.frequency = 1100;
+        this._metal.envelope.decay = 0.05;
+        this._metal.triggerAttackRelease('32n', now + 0.01, 0.3);
+        // Sub thud (punch)
+        this._sub.envelope.decay = 0.05;
+        this._sub.triggerAttackRelease('D2', '32n', now, 0.55);
+        // Delayed shimmer for spatial feel
+        this._toneWet.triggerAttackRelease('A6', '64n', now + 0.04, 0.06);
     }
 
-    // 그림자 검기 - dark energy slash (thick layers)
+    // 그림자 검기 - dark energy slash (thick layers + spatial delay)
     _playSlash() {
         const now = Tone.now();
-        // Blade FM ring
-        this._fm.harmonicity.value = 3;
-        this._fm.modulationIndex.value = 12;
-        this._fm.envelope.decay = 0.04;
-        this._fm.triggerAttackRelease('A5', '32n', now, 0.3);
-        // Energy sweep noise (low → high)
-        this._noiseFilter.frequency.setValueAtTime(500, now);
-        this._noiseFilter.frequency.rampTo(7000, 0.3);
+        // Blade FM ring (brighter)
+        this._fm.harmonicity.value = 3.5;
+        this._fm.modulationIndex.value = 14;
+        this._fm.envelope.decay = 0.05;
+        this._fm.triggerAttackRelease('B5', '32n', now, 0.35);
+        // Energy sweep noise (low → high, wider)
+        this._noiseFilter.frequency.setValueAtTime(400, now);
+        this._noiseFilter.frequency.rampTo(8000, 0.25);
         this._noiseFilter.type = 'bandpass';
-        this._noise.envelope.decay = 0.3;
-        this._noise.envelope.release = 0.05;
-        this._noise.triggerAttackRelease('4n', now, 0.6);
-        // Deep sub impact
-        this._sub.envelope.decay = 0.2;
-        this._sub.triggerAttackRelease('A1', '8n', now, 0.7);
-        // Delayed resonance
+        this._noise.envelope.decay = 0.25;
+        this._noise.envelope.release = 0.06;
+        this._noise.triggerAttackRelease('4n', now, 0.65);
+        // Deep sub impact (heavier)
+        this._sub.envelope.decay = 0.22;
+        this._sub.triggerAttackRelease('G1', '8n', now, 0.75);
+        // Dark resonance with delay
         this._fmWet.harmonicity.value = 2;
-        this._fmWet.modulationIndex.value = 5;
-        this._fmWet.triggerAttackRelease('D4', '8n', now + 0.05, 0.2);
-        // High shimmer
-        this._toneWet.triggerAttackRelease('A6', '16n', now + 0.08, 0.1);
+        this._fmWet.modulationIndex.value = 6;
+        this._fmWet.triggerAttackRelease('D4', '8n', now + 0.04, 0.22);
+        // High shimmer cascade
+        this._toneWet.triggerAttackRelease('B6', '16n', now + 0.06, 0.12);
+        this._toneWet.triggerAttackRelease('F#7', '32n', now + 0.1, 0.06);
+        // Metal tail
+        this._metal.frequency = 1200;
+        this._metal.envelope.decay = 0.08;
+        this._metal.triggerAttackRelease('16n', now + 0.03, 0.12);
     }
 
     // 지배자의 권능 - telekinesis energy burst
@@ -288,31 +299,43 @@ export class SoundManager {
 
     // ========== COMBAT SOUNDS ==========
 
-    // 적 타격 - punchy impact
+    // 적 타격 - punchy impact with crunch
     _playHit() {
         const now = Tone.now();
-        this._impact.triggerAttackRelease('G1', '32n', now, 0.6);
-        this._noiseFilter.frequency.setValueAtTime(2000, now);
+        // Heavy membrane hit
+        this._impact.triggerAttackRelease('F1', '32n', now, 0.65);
+        // Crunch noise (fast filtered burst)
+        this._noiseFilter.frequency.setValueAtTime(2500, now);
+        this._noiseFilter.frequency.rampTo(800, 0.03);
         this._noise.envelope.decay = 0.04;
-        this._noise.triggerAttackRelease('64n', now, 0.5);
-        this._metal.frequency = 700;
-        this._metal.envelope.decay = 0.04;
-        this._metal.triggerAttackRelease('64n', now, 0.1);
+        this._noise.triggerAttackRelease('64n', now, 0.55);
+        // Metallic click
+        this._metal.frequency = 800;
+        this._metal.envelope.decay = 0.03;
+        this._metal.triggerAttackRelease('64n', now + 0.005, 0.12);
+        // Micro sub thump
+        this._sub.envelope.decay = 0.04;
+        this._sub.triggerAttackRelease('C2', '64n', now, 0.35);
     }
 
-    // 적 처치 - burst + reward chime
+    // 적 처치 - burst + reward chime + satisfying pop
     _playKill() {
         const now = Tone.now();
-        // Burst
-        this._noiseFilter.frequency.setValueAtTime(2500, now);
-        this._noiseFilter.frequency.rampTo(400, 0.06);
+        // Visceral burst (high→low sweep)
+        this._noiseFilter.frequency.setValueAtTime(3000, now);
+        this._noiseFilter.frequency.rampTo(300, 0.05);
         this._noise.envelope.decay = 0.06;
-        this._noise.triggerAttackRelease('32n', now, 0.5);
-        // Body pop
-        this._impact.triggerAttackRelease('E1', '32n', now, 0.5);
-        // Reward chime
-        this._tone.triggerAttackRelease('A5', '32n', now + 0.03, 0.2);
-        this._toneWet.triggerAttackRelease('E6', '16n', now + 0.05, 0.1);
+        this._noise.triggerAttackRelease('32n', now, 0.55);
+        // Body pop impact
+        this._impact.triggerAttackRelease('D1', '32n', now, 0.55);
+        // Pop pitch (satisfying high click)
+        this._fm.harmonicity.value = 5;
+        this._fm.modulationIndex.value = 2;
+        this._fm.envelope.decay = 0.02;
+        this._fm.triggerAttackRelease('C6', '64n', now + 0.01, 0.15);
+        // Reward chime (brighter)
+        this._tone.triggerAttackRelease('B5', '32n', now + 0.03, 0.22);
+        this._toneWet.triggerAttackRelease('F#6', '16n', now + 0.05, 0.12);
     }
 
     // 플레이어 피격 - heavy slam + warning
@@ -347,18 +370,25 @@ export class SoundManager {
         this._tone.triggerAttackRelease('E7', '64n', now + 0.025, 0.1);
     }
 
-    // 레벨업 - ascending fanfare chord
+    // 레벨업 - ascending fanfare with sparkle
     _playLevelUp() {
         const now = Tone.now();
         const notes = ['C5', 'E5', 'G5', 'C6'];
         notes.forEach((note, i) => {
-            this._fmPoly.triggerAttackRelease(note, '4n', now + i * 0.085, 0.35);
+            this._fmPoly.triggerAttackRelease(note, '4n', now + i * 0.08, 0.38);
         });
-        // Bright shimmer
-        this._toneWet.triggerAttackRelease('C7', '8n', now + 0.34, 0.08);
+        // Sparkle cascade
+        this._toneWet.triggerAttackRelease('C7', '16n', now + 0.32, 0.1);
+        this._toneWet.triggerAttackRelease('E7', '32n', now + 0.38, 0.06);
         // Sub warmth
         this._sub.envelope.decay = 0.4;
-        this._sub.triggerAttackRelease('C3', '4n', now, 0.2);
+        this._sub.triggerAttackRelease('C3', '4n', now, 0.22);
+        // Impact punctuation
+        this._impact.triggerAttackRelease('C2', '16n', now + 0.32, 0.3);
+        // Shimmer noise
+        this._noiseFilter.frequency.setValueAtTime(6000, now + 0.3);
+        this._noise.envelope.decay = 0.15;
+        this._noise.triggerAttackRelease('8n', now + 0.3, 0.06);
     }
 
     // 랭크업 - heroic ascending arpeggio
@@ -437,37 +467,47 @@ export class SoundManager {
         }, 1000);
     }
 
-    // 보스 등장 - ominous boss entrance
+    // 보스 등장 - ominous boss entrance (cinematic)
     _playBossAppear() {
         const now = Tone.now();
-        // Ground shake FM
+        // Ground shake FM (ominous rumble)
         this._fm.harmonicity.value = 1.5;
-        this._fm.modulationIndex.value = 8;
+        this._fm.modulationIndex.value = 10;
         this._fm.envelope.attack = 0.08;
-        this._fm.envelope.decay = 0.35;
-        this._fm.triggerAttackRelease('C#2', '2n', now, 0.5);
-        // Sub bass
-        this._sub.envelope.decay = 0.6;
-        this._sub.triggerAttackRelease('B0', '2n', now, 0.6);
-        // Tension noise
-        this._noiseFilter.frequency.setValueAtTime(500, now);
-        this._noiseFilter.frequency.rampTo(150, 0.5);
-        this._noise.envelope.decay = 0.5;
-        this._noise.triggerAttackRelease('2n', now, 0.25);
-        // Brass stab 1
+        this._fm.envelope.decay = 0.4;
+        this._fm.triggerAttackRelease('C#2', '2n', now, 0.55);
+        // Deep sub bass drone
+        this._sub.envelope.attack = 0.05;
+        this._sub.envelope.decay = 0.7;
+        this._sub.triggerAttackRelease('B0', '2n', now, 0.65);
+        // Tension noise sweep
+        this._noiseFilter.frequency.setValueAtTime(600, now);
+        this._noiseFilter.frequency.rampTo(120, 0.6);
+        this._noise.envelope.decay = 0.6;
+        this._noise.triggerAttackRelease('2n', now, 0.28);
+        // Dissonant horn tone
+        this._toneWet.triggerAttackRelease('Bb1', '2n', now + 0.05, 0.18);
+        // Brass stab 1 (sharp)
         setTimeout(() => {
             try {
-                this._impact.triggerAttackRelease('E1', '8n', Tone.now(), 0.6);
-                this._fmWet.triggerAttackRelease('E2', '8n', Tone.now(), 0.3);
+                const t = Tone.now();
+                this._impact.triggerAttackRelease('E1', '8n', t, 0.65);
+                this._fmWet.triggerAttackRelease('E2', '8n', t, 0.35);
+                this._metal.frequency = 300;
+                this._metal.envelope.decay = 0.12;
+                this._metal.triggerAttackRelease('8n', t, 0.15);
             } catch (e) { /* silent */ }
         }, 280);
-        // Brass stab 2 (deeper)
+        // Brass stab 2 (massive)
         setTimeout(() => {
             try {
-                this._impact.triggerAttackRelease('C1', '4n', Tone.now(), 0.7);
-                this._noiseFilter.frequency.setValueAtTime(600, Tone.now());
-                this._noise.envelope.decay = 0.15;
-                this._noise.triggerAttackRelease('8n', Tone.now(), 0.35);
+                const t = Tone.now();
+                this._impact.triggerAttackRelease('C1', '4n', t, 0.8);
+                this._noiseFilter.frequency.setValueAtTime(700, t);
+                this._noise.envelope.decay = 0.18;
+                this._noise.triggerAttackRelease('8n', t, 0.4);
+                // Minor chord stinger
+                this._fmPoly.triggerAttackRelease(['C3', 'Eb3', 'Gb3'], '4n', t, 0.25);
             } catch (e) { /* silent */ }
         }, 550);
     }
@@ -781,7 +821,45 @@ export class SoundManager {
             }, beatMs);
             this._bgmIntervals.push(arpInterval);
 
-            // 5. Hi-hat texture
+            // 5. Atmospheric pad layer (Cm7 chord, slow morph)
+            const padSynth = new Tone.PolySynth(Tone.Synth, {
+                maxPolyphony: 4,
+                voice: Tone.Synth,
+                options: {
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 1.5, decay: 2.0, sustain: 0.3, release: 2.0 },
+                },
+            });
+            const padFilter = new Tone.Filter({ frequency: 600, type: 'lowpass', Q: 1 });
+            const padReverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 2000, wet: 0.5 });
+            const padVol = new Tone.Volume(-22);
+            padSynth.connect(padFilter);
+            padFilter.connect(padReverb);
+            padReverb.connect(padVol);
+            padVol.connect(bgmGain);
+            this._bgmNodes.push(padSynth, padFilter, padReverb, padVol);
+
+            // Slow pad chord changes
+            const padChords = [
+                ['C3', 'Eb3', 'G3', 'Bb3'],   // Cm7
+                ['Ab2', 'C3', 'Eb3', 'G3'],     // AbMaj7
+                ['F2', 'Ab2', 'C3', 'Eb3'],     // Fm7
+                ['G2', 'B2', 'D3', 'F3'],       // G7
+            ];
+            let padIdx = 0;
+            const padInterval = setInterval(() => {
+                if (!this._initialized) return;
+                try {
+                    const chord = padChords[padIdx % padChords.length];
+                    padSynth.triggerAttackRelease(chord, '1m', Tone.now(), 0.15);
+                    padIdx++;
+                } catch (e) { /* silent */ }
+            }, beatMs * 8); // change chord every 4 bars
+            this._bgmIntervals.push(padInterval);
+            // Trigger first chord immediately
+            try { padSynth.triggerAttackRelease(padChords[0], '1m', Tone.now(), 0.15); } catch (e) { /* silent */ }
+
+            // 6. Hi-hat texture
             const hatNoise = new Tone.NoiseSynth({
                 noise: { type: 'white' },
                 envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
