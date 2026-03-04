@@ -1075,7 +1075,7 @@ class EffectManager {
     }
 
     // ── Ring Burst: expanding ring on piece placement ──
-    playRingBurst(x, y, color = 0x44FF88) {
+    playRingBurst(x, y, color = 0x44FF88, baseRadius = 60) {
         const ringCount = 2;
         for (let r = 0; r < ringCount; r++) {
             const ring = new PIXI.Graphics();
@@ -1083,7 +1083,7 @@ class EffectManager {
             this.container.addChild(ring);
 
             const delayMs = r * 80;
-            const maxRadius = 60 + r * 30;
+            const maxRadius = baseRadius + r * 30;
             this.tweens.push({
                 elapsed: 0,
                 duration: 450 + r * 100,
