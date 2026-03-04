@@ -475,12 +475,12 @@ class EffectManager {
 
     // ── Combo popup (tier-based) — 화려한 WOW 연출 ──
     showComboPopup(x, y, comboLevel, tier = 1) {
-        // 화면 안으로 클램핑 (올라가는 거리 고려)
+        // 화면 중앙 X, Y는 클램핑
         const sw = this.game.app.screen.width;
         const sh = this.game.app.screen.height;
-        const floatUp = 100 + tier * 30; // 애니메이션에서 올라가는 최대 거리
-        x = Math.max(80, Math.min(sw - 80, x));
-        y = Math.max(floatUp + 30, Math.min(sh - 50, y));
+        const floatUp = 100 + tier * 30;
+        x = sw / 2;
+        y = Math.max(floatUp + 30, Math.min(sh * 0.45, y));
 
         const colors = [0xFFFFFF, 0x76FF03, 0x00E5FF, 0xFFD600, 0xFF1744, 0xD500F9, 0xFF6D00, 0xFF4081];
         const color = colors[Math.min(comboLevel - 1, colors.length - 1)];
@@ -603,13 +603,13 @@ class EffectManager {
 
     // ── Multi-line clear popup — "DOUBLE!" "TRIPLE!" "QUAD!" ──
     showMultiLinePopup(x, y, lineCount) {
-        // 화면 안으로 클램핑 (올라가는 거리 고려)
+        // 화면 중앙 X, Y는 클램핑
         const sw = this.game.app.screen.width;
         const sh = this.game.app.screen.height;
         const intensity = Math.min(lineCount, 4);
-        const floatUp = 80 + intensity * 25; // 애니메이션에서 올라가는 최대 거리
-        x = Math.max(80, Math.min(sw - 80, x));
-        y = Math.max(floatUp + 30, Math.min(sh - 50, y));
+        const floatUp = 80 + intensity * 25;
+        x = sw / 2;
+        y = Math.max(floatUp + 30, Math.min(sh * 0.45, y));
 
         const configs = {
             2: { text: 'DOUBLE!', color: 0x00E5FF, size: 1.2, sparkles: 15 },
