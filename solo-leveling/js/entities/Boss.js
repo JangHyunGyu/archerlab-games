@@ -1,7 +1,7 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 
 export class Boss extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, bossKey, difficultyMult = 1, hpMult = 1) {
+    constructor(scene, x, y, bossKey, difficultyMult = 1, hpMult = 1, atkMult = 1) {
         const config = BOSS_TYPES[bossKey];
         super(scene, x, y, 'boss_' + bossKey);
 
@@ -17,7 +17,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this._difficultyMult = difficultyMult;
         this.maxHp = Math.floor(config.hp * difficultyMult * hpMult);
         this.hp = this.maxHp;
-        this.attack = Math.floor(config.attack * difficultyMult);
+        this.attack = Math.floor(config.attack * difficultyMult * atkMult);
         this.speed = config.speed * (1 + (difficultyMult - 1) * 0.3);
         this.xpValue = Math.floor(config.xp * (1 + (difficultyMult - 1) * 0.3));
 
