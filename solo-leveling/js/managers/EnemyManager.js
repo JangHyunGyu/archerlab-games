@@ -54,9 +54,9 @@ export class EnemyManager {
         const minutes = this.gameTime / 60000;
         const seconds = this.gameTime / 1000;
 
-        // Update difficulty: linear base + gentle late-game acceleration
-        // Keeps mid-game power fantasy while ramping up pressure in endgame
-        this.difficultyMultiplier = 1 + minutes * 0.25 + Math.pow(minutes / 30, 2) * 3;
+        // Update difficulty: linear base + late-game acceleration
+        // Fewer enemies on screen → each one is individually tougher
+        this.difficultyMultiplier = 1 + minutes * 0.35 + Math.pow(minutes / 25, 2) * 3;
 
         // Check dungeon break
         this._updateDungeonBreak(seconds);

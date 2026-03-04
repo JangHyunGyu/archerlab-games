@@ -117,23 +117,23 @@ export const ENEMY_TYPES = {
     // --- 후반 적 (5분~) ---
     stoneGolem: {
         name: '스톤 골렘',
-        hp: 1100, attack: 27, speed: 55, xp: 35,
+        hp: 1400, attack: 32, speed: 55, xp: 45,
         color: 0x666677, size: 60,
     },
     darkMage: {
         name: '다크 메이지',
-        hp: 350, attack: 22, speed: 68, xp: 25,
+        hp: 450, attack: 28, speed: 68, xp: 30,
         color: 0x3a1a5e, size: 36,
     },
     // --- 최후반 적 (8분~) ---
     ironKnight: {
         name: '아이언 나이트',
-        hp: 1200, attack: 33, speed: 60, xp: 40,
+        hp: 1600, attack: 40, speed: 60, xp: 55,
         color: 0x8888aa, size: 52,
     },
     demonWarrior: {
         name: '마족 전사',
-        hp: 1800, attack: 45, speed: 68, xp: 60,
+        hp: 2400, attack: 55, speed: 68, xp: 80,
         color: 0x440022, size: 56,
     },
 };
