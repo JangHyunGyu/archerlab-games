@@ -410,23 +410,22 @@ class EffectManager {
         }
     }
 
-    // ── Combo popup (tier-based) ──
+    // ── Combo popup (tier-based) — 화려한 WOW 연출 ──
     showComboPopup(x, y, comboLevel, tier = 1) {
         const colors = [0xFFFFFF, 0x76FF03, 0x00E5FF, 0xFFD600, 0xFF1744, 0xD500F9, 0xFF6D00, 0xFF4081];
         const color = colors[Math.min(comboLevel - 1, colors.length - 1)];
 
-        // Scale text based on tier
-        const sizeMultiplier = tier === 3 ? 1.6 : tier === 2 ? 1.3 : 1.0;
-        const size = Math.max(24, this.game.cellSize * 0.9) * sizeMultiplier;
+        const sizeMultiplier = tier === 3 ? 1.8 : tier === 2 ? 1.4 : 1.0;
+        const size = Math.max(26, this.game.cellSize * 1.0) * sizeMultiplier;
 
         const style = {
             fontFamily: 'Orbitron, sans-serif',
             fontSize: size,
             fill: color,
             fontWeight: '900',
-            dropShadow: { color: 0x000000, blur: 8 + tier * 4, distance: 3 },
-            stroke: { color: 0x000000, width: 4 + tier },
-            letterSpacing: 2 + tier * 2,
+            dropShadow: { color: 0x000000, blur: 10 + tier * 6, distance: 3 + tier },
+            stroke: { color: 0x000000, width: 5 + tier * 2 },
+            letterSpacing: 2 + tier * 3,
         };
 
         const comboText = tier === 3 ? `★ COMBO x${comboLevel}! ★` :
@@ -439,17 +438,37 @@ class EffectManager {
         txt.alpha = 0;
         this.container.addChild(txt);
 
-        // Spawn sparkles around combo text
-        const sparkleCount = tier === 3 ? 30 : tier === 2 ? 20 : Math.min(comboLevel * 3, 15);
+        // ── Glow ring behind text ──
+        const glowRadius = size * 2;
+        const glow = new PIXI.Graphics();
+        glow.circle(0, 0, glowRadius).fill({ color, alpha: 0.15 + tier * 0.05 });
+        glow.position.set(x, y);
+        glow.alpha = 0;
+        this.container.addChildAt(glow, this.container.children.indexOf(txt));
+
+        // ── Sparkles ──
+        const sparkleCount = tier === 3 ? 40 : tier === 2 ? 25 : Math.min(comboLevel * 4, 18);
         this.spawnSparkles(x, y, color, sparkleCount);
 
-        // Tier 3: star burst around text
+        // Tier 2+: ring burst behind text
+        if (tier >= 2) {
+            this.playRingBurst(x, y, color, glowRadius * 0.8);
+            this.spawnSparkles(x, y - 20, 0xFFD600, 12);
+        }
+
+        // Tier 3: star burst + secondary sparkle wave
         if (tier === 3) {
-            this.spawnStarParticles(x, y, color, 12);
+            this.spawnStarParticles(x, y, color, 16);
+            this.spawnStarParticles(x, y, 0xFFD600, 8);
+            // Delayed second sparkle burst
+            setTimeout(() => {
+                this.spawnSparkles(x, y - 40, 0xFF1744, 15);
+            }, 150);
         }
 
         const startY = y;
-        const duration = 1400 + tier * 300;
+        const duration = 1600 + tier * 400;
+        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration,
@@ -457,25 +476,157 @@ class EffectManager {
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
-                // Pop in with elastic
-                if (t < 0.2) {
-                    const p = t / 0.2;
+                // Phase 1: Explosive pop-in with overshoot
+                if (t < 0.15) {
+                    const p = t / 0.15;
                     txt.alpha = easeOutCubic(p);
-                    txt.scale.set(easeOutElastic(p) * (1 + tier * 0.1));
-                } else if (t < 0.5) {
+                    const scale = easeOutElastic(p) * (1 + tier * 0.15);
+                    txt.scale.set(scale);
+                    glow.alpha = easeOutCubic(p) * (0.6 + tier * 0.15);
+                    glow.scale.set(easeOutElastic(p) * 1.2);
+                }
+                // Phase 2: Energetic pulsing
+                else if (t < 0.55) {
                     txt.alpha = 1;
-                    const pulse = 1 + Math.sin((t - 0.2) / 0.3 * Math.PI * (4 + tier * 2)) * (0.06 + tier * 0.03) * (1 - (t - 0.2) / 0.3);
-                    txt.scale.set(pulse);
-                } else {
-                    txt.alpha = 1 - easeInOutQuad((t - 0.5) / 0.5);
-                    txt.scale.set(1 - (t - 0.5) * 0.3);
+                    const pp = (t - 0.15) / 0.4;
+                    const pulseAmp = (0.08 + tier * 0.04) * (1 - pp);
+                    const pulseFreq = (5 + tier * 3);
+                    const pulse = 1 + Math.sin(pp * Math.PI * pulseFreq) * pulseAmp;
+                    txt.scale.set(pulse * (1 + tier * 0.05));
+                    glow.alpha = (0.4 + tier * 0.1) * (1 - pp * 0.5);
+                    glow.scale.set(1 + pp * 0.5 + Math.sin(pp * Math.PI * pulseFreq * 0.5) * 0.1);
+                }
+                // Phase 3: Dramatic float-up and fade
+                else {
+                    const pp = (t - 0.55) / 0.45;
+                    txt.alpha = 1 - easeInOutQuad(pp);
+                    txt.scale.set((1 + tier * 0.05) * (1 - pp * 0.2));
+                    glow.alpha = (0.2 + tier * 0.05) * (1 - easeInOutQuad(pp));
+                    glow.scale.set(1.5 + pp * 0.5);
                 }
 
-                txt.y = startY - easeOutCubic(t) * (90 + tier * 20);
-                txt.rotation = Math.sin(t * Math.PI * (6 + tier * 2)) * (0.02 + tier * 0.015) * (1 - t);
+                const floatDist = 100 + tier * 30;
+                txt.y = startY - easeOutCubic(t) * floatDist;
+                glow.y = txt.y;
+                glow.x = x;
+
+                // Wobble rotation (more dramatic per tier)
+                txt.rotation = Math.sin(t * Math.PI * (8 + tier * 3)) * (0.03 + tier * 0.02) * (1 - t);
 
                 if (t >= 1) {
                     txt.destroy();
+                    glow.destroy();
+                    return true;
+                }
+                return false;
+            }
+        });
+    }
+
+    // ── Multi-line clear popup — "DOUBLE!" "TRIPLE!" "QUAD!" ──
+    showMultiLinePopup(x, y, lineCount) {
+        const configs = {
+            2: { text: 'DOUBLE!', color: 0x00E5FF, size: 1.2, sparkles: 15 },
+            3: { text: 'TRIPLE!', color: 0xFFD600, size: 1.5, sparkles: 25 },
+            4: { text: 'QUAD!',   color: 0xFF1744, size: 1.8, sparkles: 40 },
+        };
+        const cfg = configs[Math.min(lineCount, 4)] || configs[4];
+        const intensity = Math.min(lineCount, 4);
+
+        const size = Math.max(28, this.game.cellSize * 1.0) * cfg.size;
+        const style = {
+            fontFamily: 'Orbitron, sans-serif',
+            fontSize: size,
+            fill: cfg.color,
+            fontWeight: '900',
+            dropShadow: { color: 0x000000, blur: 12 + intensity * 4, distance: 3 },
+            stroke: { color: 0x000000, width: 5 + intensity },
+            letterSpacing: 3 + intensity * 2,
+        };
+
+        const txt = new PIXI.Text({ text: cfg.text, style });
+        txt.anchor.set(0.5);
+        txt.position.set(x, y);
+        txt.alpha = 0;
+        txt.scale.set(3);
+        this.container.addChild(txt);
+
+        // ── Dramatic glow burst ──
+        const glow = new PIXI.Graphics();
+        const glowR = size * 2.5;
+        glow.circle(0, 0, glowR).fill({ color: cfg.color, alpha: 0.2 });
+        glow.position.set(x, y);
+        glow.alpha = 0;
+        this.container.addChildAt(glow, this.container.children.indexOf(txt));
+
+        // ── Sparkles + effects ──
+        this.spawnSparkles(x, y, cfg.color, cfg.sparkles);
+        this.playRingBurst(x, y, cfg.color, glowR * 0.6);
+
+        if (lineCount >= 3) {
+            this.spawnStarParticles(x, y, cfg.color, 8 + lineCount * 2);
+            this.spawnSparkles(x, y, 0xFFFFFF, 12);
+        }
+        if (lineCount >= 4) {
+            this.spawnStarParticles(x, y, 0xFFD600, 12);
+            setTimeout(() => {
+                this.spawnSparkles(x, y - 30, 0xD500F9, 15);
+                this.playRingBurst(x, y, 0xFFD600, glowR * 0.4);
+            }, 120);
+        }
+
+        const startY = y;
+        const duration = 1800 + intensity * 200;
+        this.tweens.push({
+            elapsed: 0,
+            duration,
+            update(dt) {
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+
+                // Phase 1: Slam-in (big → normal with bounce)
+                if (t < 0.2) {
+                    const p = t / 0.2;
+                    txt.alpha = easeOutCubic(p);
+                    // Start big (3x), slam down to 1x with elastic bounce
+                    txt.scale.set(3 - easeOutElastic(p) * 2);
+                    glow.alpha = easeOutCubic(p) * 0.7;
+                    glow.scale.set(0.3 + easeOutElastic(p) * 0.9);
+                }
+                // Phase 2: Energetic pulse + glow breathing
+                else if (t < 0.6) {
+                    txt.alpha = 1;
+                    const pp = (t - 0.2) / 0.4;
+                    const pulseAmp = 0.12 * (1 - pp);
+                    const pulse = 1 + Math.sin(pp * Math.PI * 8) * pulseAmp;
+                    txt.scale.set(pulse);
+                    glow.alpha = (0.5 - pp * 0.3) + Math.sin(pp * Math.PI * 4) * 0.1;
+                    glow.scale.set(1.2 + pp * 0.8);
+                }
+                // Phase 3: Float up + fade out
+                else {
+                    const pp = (t - 0.6) / 0.4;
+                    txt.alpha = 1 - easeInOutQuad(pp);
+                    txt.scale.set(1 + pp * 0.15);
+                    glow.alpha = 0.2 * (1 - easeInOutQuad(pp));
+                    glow.scale.set(2 + pp);
+                }
+
+                txt.y = startY - easeOutCubic(t) * (80 + intensity * 25);
+                glow.y = txt.y;
+
+                // Shake on slam (first 20%)
+                if (t < 0.2) {
+                    const shake = (1 - t / 0.2) * 4 * intensity;
+                    txt.x = x + (Math.random() - 0.5) * shake;
+                } else {
+                    txt.x = x;
+                    txt.rotation = Math.sin(t * Math.PI * 10) * 0.02 * (1 - t);
+                }
+
+                if (t >= 1) {
+                    txt.destroy();
+                    glow.destroy();
                     return true;
                 }
                 return false;
@@ -911,18 +1062,7 @@ class EffectManager {
     // ══════════════════════════════════════════════════
 
     playSingleClearEffect(lineCount, x, y, clearedCells) {
-        const intensity = Math.min(lineCount, 4);
-
-        // ── Screen shake (enhanced) ──
-        this.screenShake(4 + intensity * 3, 250 + lineCount * 60);
-
-        // ── Central flash burst ──
-        this.playScreenFlash(0xFFFFFF, 0.08 + intensity * 0.03, 180 + lineCount * 30);
-
-        // ── Shockwave (always) ──
-        this.playShockwave(x, y, lineCount);
-
-        // ── Colored ring wave based on cleared block colors ──
+        // ── Collect unique block colors ──
         const uniqueColors = [];
         if (clearedCells && clearedCells.length > 0) {
             const seen = new Set();
@@ -935,24 +1075,53 @@ class EffectManager {
         }
         if (uniqueColors.length === 0) uniqueColors.push(0x44FF88);
 
-        // Ring wave with actual block colors
-        this.playMultiRingWave(x, y, Math.min(uniqueColors.length, 3), uniqueColors,
-            80 + lineCount * 25);
-
-        // ── Sparkles from center ──
-        this.spawnSparkles(x, y, uniqueColors[0], 10 + lineCount * 5);
-
-        // ── 2+ lines: radial rays + more particles ──
-        if (lineCount >= 2) {
-            this.playRadialRays(x, y, 4 + lineCount, uniqueColors[0], 70 + lineCount * 20);
-            this.spawnStarParticles(x, y, uniqueColors[Math.min(1, uniqueColors.length - 1)],
-                6 + lineCount * 2);
+        // ── 1줄: 기본 임팩트 (기존 수준 유지) ──
+        if (lineCount <= 1) {
+            this.screenShake(7, 250);
+            this.playScreenFlash(0xFFFFFF, 0.08, 180);
+            this.playShockwave(x, y, 1);
+            this.playMultiRingWave(x, y, Math.min(uniqueColors.length, 2), uniqueColors, 80);
+            this.spawnSparkles(x, y, uniqueColors[0], 15);
         }
 
-        // ── 3+ lines: mini particle shower + zoom pulse ──
-        if (lineCount >= 3) {
-            this.playParticleShower(15 + lineCount * 5);
+        // ── 2줄: 중간 임팩트 ──
+        else if (lineCount === 2) {
+            this.screenShake(6, 250);
+            this.playScreenFlash(0xFFFFFF, 0.08, 180);
+            this.playShockwave(x, y, 2);
+            this.playMultiRingWave(x, y, 2, uniqueColors, 100);
+            this.spawnSparkles(x, y, uniqueColors[0], 18);
+            this.playRadialRays(x, y, 5, uniqueColors[0], 80);
+        }
+
+        // ── 3줄: 강한 임팩트 ──
+        else if (lineCount === 3) {
+            this.screenShake(10, 350);
+            this.playScreenFlash(0xFFFFFF, 0.14, 220);
+            this.playShockwave(x, y, 3);
+            this.playMultiRingWave(x, y, 3, uniqueColors, 130);
+            this.spawnSparkles(x, y, uniqueColors[0], 30);
+            this.playRadialRays(x, y, 8, uniqueColors[0], 110);
+            this.spawnStarParticles(x, y, uniqueColors[Math.min(1, uniqueColors.length - 1)], 10);
+            this.playParticleShower(20);
             this.playScreenZoomPulse(0.015, 250);
+        }
+
+        // ── 4줄+: 폭발적 임팩트 ──
+        else {
+            this.screenShake(14, 450);
+            this.playScreenFlash(0xFFFFFF, 0.2, 280);
+            this.playRainbowFlash(250);
+            this.playShockwave(x, y, 4);
+            this.playMultiRingWave(x, y, 4,
+                [0xFF1744, 0xFFD600, 0x76FF03, 0x00E5FF, 0xD500F9],
+                170);
+            this.spawnSparkles(x, y, uniqueColors[0], 50);
+            this.spawnSparkles(x, y, 0xFFD600, 20);
+            this.playRadialRays(x, y, 12, 0xFFD600, 150);
+            this.spawnStarParticles(x, y, 0xFFD600, 18);
+            this.playParticleShower(40);
+            this.playScreenZoomPulse(0.025, 350);
         }
     }
 

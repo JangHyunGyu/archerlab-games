@@ -30,8 +30,14 @@ class ScoreManager {
         this.linesCleared += lineCount;
         this.totalLinesForLevel += lineCount;
 
-        // Base line score: 100 per line + 50 bonus per extra line
-        let pts = lineCount * SCORE_PER_LINE + Math.max(0, lineCount - 1) * SCORE_MULTI_LINE_BONUS;
+        // Base line score: 100 per line + multi-line bonus
+        // 1줄: 100, 2줄: 220, 3줄: 350, 4줄: 500
+        // 콤보 누적(2연속=250, 3연속=450, 4연속=700)보다 항상 낮게 유지
+        const multiBonus = lineCount >= 4 ? 100
+                         : lineCount === 3 ? 50
+                         : lineCount === 2 ? 20
+                         : 0;
+        let pts = lineCount * SCORE_PER_LINE + multiBonus;
 
         // Combo multiplier
         if (this.combo > 1) {

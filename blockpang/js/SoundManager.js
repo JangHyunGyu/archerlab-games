@@ -332,80 +332,216 @@ class SoundManager {
         const now = Tone.now();
         const clampLines = Math.min(Math.max(lineCount, 1), 4);
 
-        // Musical scales - progressively more euphoric
-        const scales = {
-            1: ['C5', 'E5', 'G5'],
-            2: ['C5', 'E5', 'G5', 'C6'],
-            3: ['C5', 'E5', 'G5', 'B5', 'D6'],
-            4: ['C5', 'E5', 'G5', 'B5', 'D6', 'G6']
-        };
-        const notes = scales[clampLines];
-        const noteSpacing = 0.05;
-
-        // Ascending arpeggio with bell tones
-        notes.forEach((note, i) => {
-            const t = now + i * noteSpacing;
-
-            // Main bell-like tone
-            this._at(i * noteSpacing, () => {
-                this._bell.envelope.attack = 0.002;
-                this._bell.envelope.decay = 0.08;
-                this._bell.envelope.sustain = 0.4;
-                this._bell.envelope.release = 0.3;
-                this._bell.volume.value = -8;
-                this._bell.triggerAttackRelease(note, 0.35 - i * 0.015, t);
+        // ── 1줄: 깔끔한 "딩" ──
+        if (clampLines === 1) {
+            // Simple clean arpeggio
+            const notes = ['C5', 'E5', 'G5'];
+            notes.forEach((note, i) => {
+                this._at(i * 0.05, () => {
+                    this._bell.envelope.attack = 0.002;
+                    this._bell.envelope.decay = 0.06;
+                    this._bell.envelope.sustain = 0.3;
+                    this._bell.envelope.release = 0.2;
+                    this._bell.volume.value = -8;
+                    this._bell.triggerAttackRelease(note, 0.25, now + i * 0.05);
+                });
             });
-        });
 
-        // Rich chord layer using PolySynth (all notes together, delayed)
-        this._at(noteSpacing * 0.5, () => {
-            this._poly.volume.value = -14;
-            this._poly.triggerAttackRelease(
-                notes.slice(0, 3),
-                0.3,
-                now + noteSpacing * 0.5
-            );
-        });
+            // Light sweep
+            this._sweep.filterEnvelope.octaves = 3;
+            this._sweep.filterEnvelope.decay = 0.15;
+            this._sweep.volume.value = -20;
+            this._sweep.triggerAttackRelease('G2', 0.2, now);
 
-        // FM harmonic shimmer on top notes
-        if (clampLines >= 2) {
-            const topNote = notes[notes.length - 1];
-            this._at(notes.length * noteSpacing * 0.6, () => {
-                this._fm.harmonicity.value = 3;
-                this._fm.modulationIndex.value = 6;
-                this._fm.volume.value = -16;
-                this._fm.triggerAttackRelease(topNote, 0.25, now + notes.length * noteSpacing * 0.6);
-            });
+            // Soft sub hit
+            this._membrane.octaves = 4;
+            this._membrane.pitchDecay = 0.03;
+            this._membrane.envelope.decay = 0.08;
+            this._membrane.volume.value = -8;
+            this._membrane.triggerAttackRelease('C1', '32n', now);
         }
 
-        // Satisfying whoosh sweep (rising with line count)
-        this._sweep.filterEnvelope.octaves = 3 + clampLines;
-        this._sweep.filterEnvelope.decay = 0.2 + clampLines * 0.05;
-        this._sweep.volume.value = -18;
-        this._sweep.triggerAttackRelease('G2', 0.3, now);
+        // ── 2줄: 풍성한 코드 + 스윕 ──
+        else if (clampLines === 2) {
+            const notes = ['C5', 'E5', 'G5', 'C6'];
+            notes.forEach((note, i) => {
+                this._at(i * 0.045, () => {
+                    this._bell.envelope.attack = 0.002;
+                    this._bell.envelope.decay = 0.08;
+                    this._bell.envelope.sustain = 0.4;
+                    this._bell.envelope.release = 0.3;
+                    this._bell.volume.value = -7;
+                    this._bell.triggerAttackRelease(note, 0.3, now + i * 0.045);
+                });
+            });
 
-        // Sparkle noise burst
-        this._at(notes.length * noteSpacing * 0.3, () => {
+            // Chord layer
+            this._at(0.03, () => {
+                this._poly.volume.value = -12;
+                this._poly.triggerAttackRelease(['C5', 'E5', 'G5'], 0.3, now + 0.03);
+            });
+
+            // FM shimmer
+            this._at(0.12, () => {
+                this._fm.harmonicity.value = 3;
+                this._fm.modulationIndex.value = 5;
+                this._fm.volume.value = -15;
+                this._fm.triggerAttackRelease('C6', 0.2, now + 0.12);
+            });
+
+            // Medium sweep
+            this._sweep.filterEnvelope.octaves = 5;
+            this._sweep.filterEnvelope.decay = 0.25;
+            this._sweep.volume.value = -17;
+            this._sweep.triggerAttackRelease('G2', 0.3, now);
+
+            // Impact
+            this._membrane.octaves = 5;
+            this._membrane.pitchDecay = 0.04;
+            this._membrane.envelope.decay = 0.1;
+            this._membrane.volume.value = -5;
+            this._membrane.triggerAttackRelease('C1', '16n', now);
+
+            // Bass pad
+            this._bass.envelope.attack = 0.04;
+            this._bass.envelope.decay = 0.2;
+            this._bass.volume.value = -10;
+            this._bass.triggerAttackRelease('C2', 0.35, now + 0.01);
+        }
+
+        // ── 3줄: 파워풀 아르페지오 + 더블 히트 ──
+        else if (clampLines === 3) {
+            const notes = ['C5', 'E5', 'G5', 'B5', 'D6', 'E6'];
+            notes.forEach((note, i) => {
+                this._at(i * 0.04, () => {
+                    this._bell.envelope.attack = 0.001;
+                    this._bell.envelope.decay = 0.1;
+                    this._bell.envelope.sustain = 0.5;
+                    this._bell.envelope.release = 0.4;
+                    this._bell.volume.value = -6;
+                    this._bell.triggerAttackRelease(note, 0.35, now + i * 0.04);
+                });
+            });
+
+            // Power chord
+            this._at(0.02, () => {
+                this._poly.volume.value = -10;
+                this._poly.triggerAttackRelease(['C5', 'E5', 'G5', 'B5'], 0.35, now + 0.02);
+            });
+
+            // FM power shimmer
+            this._at(0.1, () => {
+                this._fm.harmonicity.value = 4;
+                this._fm.modulationIndex.value = 8;
+                this._fm.volume.value = -12;
+                this._fm.triggerAttackRelease('D6', 0.3, now + 0.1);
+            });
+
+            // Wide sweep
+            this._sweep.filterEnvelope.octaves = 6;
+            this._sweep.filterEnvelope.decay = 0.3;
+            this._sweep.volume.value = -15;
+            this._sweep.triggerAttackRelease('G2', 0.4, now);
+
+            // Double impact
+            this._membrane.octaves = 6;
+            this._membrane.pitchDecay = 0.05;
+            this._membrane.envelope.decay = 0.12;
+            this._membrane.volume.value = -4;
+            this._membrane.triggerAttackRelease('C1', '16n', now);
+            this._at(0.08, () => {
+                this._membrane.triggerAttackRelease('G0', '16n', now + 0.08);
+            });
+
+            // Deep bass
+            this._bass.envelope.attack = 0.03;
+            this._bass.envelope.decay = 0.25;
+            this._bass.envelope.sustain = 0.4;
+            this._bass.volume.value = -8;
+            this._bass.triggerAttackRelease('C2', 0.45, now + 0.01);
+
+            // Noise burst
             this._noise.noise.type = 'pink';
-            this._noise.envelope.decay = 0.15;
-            this._noise.volume.value = -20;
-            this._noise.triggerAttackRelease(0.2, now + notes.length * noteSpacing * 0.3);
-        });
+            this._noise.envelope.decay = 0.12;
+            this._noise.volume.value = -18;
+            this._noise.triggerAttackRelease(0.15, now + 0.05);
+        }
 
-        // Impact sub-bass hit
-        this._membrane.octaves = 5;
-        this._membrane.pitchDecay = 0.04;
-        this._membrane.envelope.decay = 0.1;
-        this._membrane.volume.value = -6;
-        this._membrane.triggerAttackRelease('C1', '16n', now);
+        // ── 4줄+: 유포릭 폭발! 풀 오케스트라 ──
+        else {
+            const notes = ['C5', 'E5', 'G5', 'B5', 'D6', 'E6', 'G6'];
+            notes.forEach((note, i) => {
+                this._at(i * 0.035, () => {
+                    this._bell.envelope.attack = 0.001;
+                    this._bell.envelope.decay = 0.12;
+                    this._bell.envelope.sustain = 0.6;
+                    this._bell.envelope.release = 0.5;
+                    this._bell.volume.value = -5;
+                    this._bell.triggerAttackRelease(note, 0.4, now + i * 0.035);
+                });
+            });
 
-        // Foundation bass pad
-        this._bass.envelope.attack = 0.06;
-        this._bass.envelope.decay = 0.2;
-        this._bass.envelope.sustain = 0.3;
-        this._bass.envelope.release = 0.25;
-        this._bass.volume.value = -10;
-        this._bass.triggerAttackRelease('C2', 0.4, now + 0.01);
+            // Massive chord
+            this._at(0.02, () => {
+                this._poly.volume.value = -8;
+                this._poly.triggerAttackRelease(['C5', 'E5', 'G5', 'B5', 'D6'], 0.45, now + 0.02);
+            });
+
+            // Dual FM shimmer (wide harmonics)
+            this._at(0.08, () => {
+                this._fm.harmonicity.value = 5;
+                this._fm.modulationIndex.value = 12;
+                this._fm.volume.value = -10;
+                this._fm.triggerAttackRelease('E6', 0.35, now + 0.08);
+            });
+            this._at(0.15, () => {
+                this._fm.harmonicity.value = 3;
+                this._fm.modulationIndex.value = 8;
+                this._fm.volume.value = -12;
+                this._fm.triggerAttackRelease('G6', 0.3, now + 0.15);
+            });
+
+            // Epic sweep
+            this._sweep.filterEnvelope.octaves = 8;
+            this._sweep.filterEnvelope.decay = 0.4;
+            this._sweep.volume.value = -12;
+            this._sweep.triggerAttackRelease('G2', 0.5, now);
+
+            // Triple impact cascade
+            this._membrane.octaves = 7;
+            this._membrane.pitchDecay = 0.06;
+            this._membrane.envelope.decay = 0.15;
+            this._membrane.volume.value = -3;
+            this._membrane.triggerAttackRelease('C1', '8n', now);
+            this._at(0.07, () => {
+                this._membrane.triggerAttackRelease('G0', '16n', now + 0.07);
+            });
+            this._at(0.14, () => {
+                this._membrane.triggerAttackRelease('C0', '16n', now + 0.14);
+            });
+
+            // Thunderous bass
+            this._bass.envelope.attack = 0.02;
+            this._bass.envelope.decay = 0.3;
+            this._bass.envelope.sustain = 0.5;
+            this._bass.envelope.release = 0.3;
+            this._bass.volume.value = -6;
+            this._bass.triggerAttackRelease('C2', 0.5, now + 0.01);
+
+            // White noise crash
+            this._noise.noise.type = 'white';
+            this._noise.envelope.attack = 0.005;
+            this._noise.envelope.decay = 0.2;
+            this._noise.volume.value = -16;
+            this._noise.triggerAttackRelease(0.25, now + 0.03);
+
+            // AM shimmer tail
+            this._at(0.1, () => {
+                this._am.harmonicity.value = 2;
+                this._am.volume.value = -16;
+                this._am.triggerAttackRelease('C6', 0.4, now + 0.1);
+            });
+        }
 
         // Metallic sparkle accent
         this._metal.envelope.decay = 0.08;
@@ -582,35 +718,46 @@ class SoundManager {
         this.ensureContext();
         const now = Tone.now();
 
-        // Low harsh buzz
-        this._click.oscillator.type = 'square';
-        this._click.envelope.attack = 0.001;
-        this._click.envelope.decay = 0.03;
-        this._click.envelope.sustain = 0.2;
-        this._click.envelope.release = 0.04;
-        this._click.volume.value = -12;
-        this._click.triggerAttackRelease('F#3', 0.07, now);
+        // ── Swoosh down: pitch-descending FM sweep ──
+        this._fm.harmonicity.value = 3;
+        this._fm.modulationIndex.value = 8;
+        this._fm.volume.value = -14;
+        this._fm.triggerAttackRelease('A4', 0.12, now);
+        this._fm.frequency.setValueAtTime(Tone.Frequency('A4').toFrequency(), now);
+        this._fm.frequency.exponentialRampToValueAtTime(
+            Tone.Frequency('D3').toFrequency(), now + 0.12
+        );
 
-        // Second lower buzz (descending feel)
-        this._at(0.04, () => {
-            this._fm.harmonicity.value = 7;
-            this._fm.modulationIndex.value = 15;
-            this._fm.volume.value = -16;
-            this._fm.triggerAttackRelease('C#3', 0.06, now + 0.04);
+        // ── Soft rubber "bonk" landing ──
+        this._membrane.octaves = 5;
+        this._membrane.pitchDecay = 0.08;
+        this._membrane.envelope.decay = 0.12;
+        this._membrane.volume.value = -6;
+        this._membrane.triggerAttackRelease('G1', '16n', now + 0.06);
+
+        // ── Gentle tonal bounce (two quick pops) ──
+        this._click.oscillator.type = 'triangle';
+        this._click.envelope.attack = 0.001;
+        this._click.envelope.decay = 0.04;
+        this._click.envelope.sustain = 0.05;
+        this._click.envelope.release = 0.03;
+        this._click.volume.value = -10;
+        this._click.triggerAttackRelease('E4', 0.04, now + 0.08);
+
+        this._at(0.13, () => {
+            this._bell.oscillator.type = 'sine';
+            this._bell.envelope.decay = 0.06;
+            this._bell.envelope.release = 0.08;
+            this._bell.volume.value = -14;
+            this._bell.triggerAttackRelease('B3', 0.05, now + 0.13);
         });
 
-        // Low thud
-        this._membrane.octaves = 3;
-        this._membrane.pitchDecay = 0.03;
-        this._membrane.envelope.decay = 0.04;
-        this._membrane.volume.value = -8;
-        this._membrane.triggerAttackRelease('C#1', '32n', now);
-
-        // Brief noise crunch
-        this._noise.noise.type = 'white';
-        this._noise.envelope.decay = 0.03;
-        this._noise.volume.value = -22;
-        this._noise.triggerAttackRelease('64n', now);
+        // ── Soft air puff ──
+        this._noise.noise.type = 'pink';
+        this._noise.envelope.attack = 0.005;
+        this._noise.envelope.decay = 0.06;
+        this._noise.volume.value = -24;
+        this._noise.triggerAttackRelease('32n', now + 0.02);
     }
 
     // ── PICKUP: Snappy satisfying click-pop ─────────────────────────
