@@ -163,7 +163,7 @@ export const BOSS_TYPES = {
 };
 
 export const BOSS_SCHEDULE = [
-    { time: 120, type: 'igris' },   // 2분
+    { time: 120, type: 'igris', hpMult: 0.7 },   // 2분
     { time: 420, type: 'tusk' },    // 7분
     { time: 780, type: 'beru' },    // 13분
     // 후반 보스 재등장 (강화 버전 - HP·공격 모두 순차 상승)
