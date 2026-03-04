@@ -22,6 +22,18 @@ export class SoundManager {
         try {
             if (typeof Tone === 'undefined') { this.enabled = false; return; }
 
+            // 오디오 컨텍스트 최적화: 버퍼를 넉넉하게 잡아 저사양 기기 찌직거림 방지
+            // latencyHint "playback" = 안정적 재생 우선 (약간의 지연 허용)
+            // lookAhead = 이벤트를 미리 스케줄링하여 버퍼 언더런 방지
+            try {
+                const ctx = Tone.getContext();
+                ctx.lookAhead = 0.1; // 100ms 미리 스케줄링 (기본 8ms)
+                if (ctx.rawContext && ctx.rawContext.audioWorklet === undefined) {
+                    // ScriptProcessor 폴백 기기에서 추가 여유
+                    ctx.lookAhead = 0.15;
+                }
+            } catch (e) { /* silent */ }
+
             // Effects chain: synths → comp → chorus → masterVol → destination
             this._masterVol = new Tone.Volume(-8).toDestination();
             this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
