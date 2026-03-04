@@ -30,15 +30,15 @@ export class ShadowDagger extends WeaponBase {
         dagger.setScale(1);
 
         const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
-        const speed = 400;
+        const speed = 500;
 
         dagger.setRotation(angle + Math.PI / 2);
         dagger.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
         dagger.damageAmount = this.getDamage();
 
-        // Auto-destroy after distance (~2s at speed 400)
-        this.scene.time.delayedCall(2000, () => {
+        // Auto-destroy after distance (~3s at speed 500 = 1500px range)
+        this.scene.time.delayedCall(3000, () => {
             if (dagger.active) {
                 dagger.setActive(false);
                 dagger.setVisible(false);
