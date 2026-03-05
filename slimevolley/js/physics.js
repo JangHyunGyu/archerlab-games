@@ -5,7 +5,7 @@ class PhysicsEngine {
     }
 
     reset() {
-        this.ball = { x: 200, y: 100, vx: 0, vy: 0, lastHitBy: -1 };
+        this.ball = { x: 200, y: 100, vx: 0, vy: 0, lastHitBy: -1, lastHitSlimeId: -1 };
         this.slimes = [];
         this.scores = [0, 0];
         this.servingTeam = 0;
@@ -62,6 +62,9 @@ class PhysicsEngine {
                     input: { left: false, right: false, jump: false },
                     isBot: false,
                     colorIdx: i % 3,
+                    hitCount: 0,
+                    receiveCount: 0,  // 상대 공격 첫 리시브 성공
+                    killCount: 0,     // 공격 성공 (득점)
                 });
             }
         }
@@ -233,7 +236,14 @@ class PhysicsEngine {
                 this.ball.vy = -3;
             }
 
+            // 리시브 판정: 상대가 마지막으로 쳤고, 내 팀에서 처음 받는 경우
+            if (this.ball.lastHitBy !== -1 && this.ball.lastHitBy !== slime.team) {
+                slime.receiveCount++;
+            }
+
             this.ball.lastHitBy = slime.team;
+            this.ball.lastHitSlimeId = slime.id;
+            slime.hitCount++;
             return true;
         }
         return false;
@@ -314,6 +324,14 @@ class PhysicsEngine {
             this.scores[scoringTeam]++;
             this.servingTeam = scoringTeam;
 
+            // 킬 카운트: 마지막으로 친 슬라임이 득점팀이면 공격 성공
+            if (this.ball.lastHitSlimeId >= 0) {
+                const killer = this.slimes.find(s => s.id === this.ball.lastHitSlimeId);
+                if (killer && killer.team === scoringTeam) {
+                    killer.killCount++;
+                }
+            }
+
             // 세트 승리 체크
             if (this.isSetWon(scoringTeam)) {
                 this.setScores.push([...this.scores]);
@@ -323,12 +341,30 @@ class PhysicsEngine {
                 // 매치 승리 체크
                 if (this.setsWon[scoringTeam] >= this.setsToWin) {
                     this.phase = 'gameOver';
+
+                    // MVP: 이긴 팀에서 (킬 + 리시브) 점수 기반 선정
+                    const winnerSlimes = this.slimes.filter(s => s.team === scoringTeam);
+                    let mvp = null;
+                    if (winnerSlimes.length >= 2) {
+                        const scored = winnerSlimes.map(s => ({
+                            id: s.id,
+                            nickname: s.nickname || '',
+                            kills: s.killCount,
+                            receives: s.receiveCount,
+                            score: s.killCount * 2 + s.receiveCount,
+                        }));
+                        const maxScore = Math.max(...scored.map(s => s.score));
+                        const mvps = scored.filter(s => s.score === maxScore);
+                        mvp = mvps; // 배열: 공동 MVP 지원
+                    }
+
                     return {
                         type: 'gameOver',
                         winner: scoringTeam,
                         scores: [...this.scores],
                         setsWon: [...this.setsWon],
                         setScores: this.setScores.map(s => [...s]),
+                        mvp,
                     };
                 }
 

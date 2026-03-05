@@ -708,6 +708,30 @@ kbd {
     font-size: 2rem;
 }
 
+.game-over-mvp {
+    margin: 16px 0;
+    text-align: center;
+}
+.mvp-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #FFD700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    margin-bottom: 6px;
+}
+.mvp-names {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 4px;
+}
+.mvp-stats {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+}
+
 /* Rotate Overlay (portrait warning) */
 #rotate-overlay {
     display: none;

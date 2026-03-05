@@ -416,7 +416,7 @@ class LobbyManager {
     }
 
     // === Game Over ===
-    showGameOver(winner, scores, myTeam, setScores) {
+    showGameOver(winner, scores, myTeam, setScores, mvp) {
         const won = winner === myTeam;
         document.getElementById('game-over-title').textContent = won ? 'Victory!' : 'Defeat';
         document.getElementById('game-over-title').className = won ? 'victory' : 'defeat';
@@ -429,6 +429,26 @@ class LobbyManager {
             ).join(' ');
         } else {
             setsEl.innerHTML = '';
+        }
+
+        // MVP 표시
+        let mvpEl = document.getElementById('game-over-mvp');
+        if (!mvpEl) {
+            mvpEl = document.createElement('div');
+            mvpEl.id = 'game-over-mvp';
+            mvpEl.className = 'game-over-mvp';
+            const setsContainer = document.getElementById('game-over-sets');
+            setsContainer.parentNode.insertBefore(mvpEl, setsContainer.nextSibling);
+        }
+
+        if (mvp && mvp.length > 0) {
+            const names = mvp.map(m => this.escapeHtml(m.nickname || '???')).join(', ');
+            const stats = mvp.map(m =>
+                `${this.escapeHtml(m.nickname || '???')} (Kill: ${m.kills}, Receive: ${m.receives})`
+            ).join('<br>');
+            mvpEl.innerHTML = `<div class="mvp-title">MVP</div><div class="mvp-names">${names}</div><div class="mvp-stats">${stats}</div>`;
+        } else {
+            mvpEl.innerHTML = '';
         }
 
         this.showScreen('game-over');
