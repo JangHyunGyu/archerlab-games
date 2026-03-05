@@ -718,6 +718,7 @@ kbd {
 
 @media (hover: none) and (pointer: coarse) {
     .mobile-controls { display: flex; }
+    .controls-guide { display: none; }
 }
 
 /* 모바일 가로 모드: 캔버스+컨트롤 화면에 맞추기 */
