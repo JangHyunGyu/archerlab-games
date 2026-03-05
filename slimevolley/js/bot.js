@@ -19,8 +19,8 @@ class BotAI {
         const team = slime.team;
         const halfW = CONFIG.COURT_WIDTH / 2;
 
-        // 더 먼 미래까지 예측 (느린 공에 맞게)
-        const predicted = this.predictBallPosition(ball, 60);
+        // 더 먼 미래까지 예측 (매우 느린 공에 맞게)
+        const predicted = this.predictBallPosition(ball, 90);
         const ballOnMySide = team === 0 ? ball.x < halfW : ball.x > halfW;
         const predictedOnMySide = team === 0 ? predicted.x < halfW : predicted.x > halfW;
 
@@ -44,20 +44,20 @@ class BotAI {
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             // 공이 가까이 있고 내 위에 있으면 점프
-            if (dist < CONFIG.SLIME_RADIUS * 5 && ball.y < slime.y) {
-                if (slime.onGround && Math.abs(dx) < CONFIG.SLIME_RADIUS * 3) {
+            if (dist < CONFIG.SLIME_RADIUS * 6 && ball.y < slime.y) {
+                if (slime.onGround && Math.abs(dx) < CONFIG.SLIME_RADIUS * 4) {
                     input.jump = true;
                 }
             }
 
             // 긴급: 공이 떨어지고 있고 가까움
-            if (ball.vy > 0 && dist < CONFIG.SLIME_RADIUS * 4 && ball.y < slime.y) {
+            if (ball.vy > 0 && dist < CONFIG.SLIME_RADIUS * 5 && ball.y < slime.y) {
                 if (slime.onGround) input.jump = true;
             }
 
-            // 공이 매우 높이 있을 때 미리 점프 준비
-            if (ball.y < CONFIG.GROUND_Y - CONFIG.NET_HEIGHT && Math.abs(dx) < CONFIG.SLIME_RADIUS * 2) {
-                if (slime.onGround && ball.vy > -1) {
+            // 공이 매우 높이 있을 때 미리 점프 준비 (느린 점프에 맞게 더 일찍)
+            if (ball.y < CONFIG.GROUND_Y - CONFIG.NET_HEIGHT && Math.abs(dx) < CONFIG.SLIME_RADIUS * 3) {
+                if (slime.onGround && ball.vy > -0.5) {
                     input.jump = true;
                 }
             }

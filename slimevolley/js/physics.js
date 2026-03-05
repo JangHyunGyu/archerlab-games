@@ -71,7 +71,7 @@ class PhysicsEngine {
         const halfW = CONFIG.COURT_WIDTH / 2;
         this.ball.x = team === 0 ? halfW / 2 : halfW + halfW / 2;
         this.ball.y = 80;
-        this.ball.vx = team === 0 ? 1.5 : -1.5;
+        this.ball.vx = team === 0 ? 0.8 : -0.8;
         this.ball.vy = 0;
         this.ball.lastHitBy = -1;
         this.phase = 'playing';
@@ -220,11 +220,11 @@ class PhysicsEngine {
                 this.ball.vy -= 2 * dot * ny;
             }
 
-            this.ball.vx += slime.vx * 0.5;
-            this.ball.vy += slime.vy * 0.3;
+            this.ball.vx += slime.vx * 0.8;
+            this.ball.vy += slime.vy * 0.5;
 
-            if (this.ball.vy > -3) {
-                this.ball.vy = Math.min(this.ball.vy, -5);
+            if (this.ball.vy > -2) {
+                this.ball.vy = Math.min(this.ball.vy, -3.5);
             }
 
             this.ball.vx *= CONFIG.BALL_SLIME_BOUNCE;
