@@ -103,18 +103,9 @@ class SoundManager {
     playHit(intensity = 1) {
         if (!this.initialized || this.muted) return;
         try {
-            // 세기에 따라 필터 주파수와 볼륨 조절
-            const freq = 2000 + intensity * 2000;
-            this.hitFilter.frequency.value = freq;
-
-            // 노이즈 임팩트 (팡!)
-            this.hitNoise.volume.value = -8 + intensity * 6;
-            this.hitNoise.triggerAttackRelease('32n');
-
-            // 짧은 톤 (탁 하는 느낌)
-            const note = 'G' + (3 + Math.floor(intensity * 2));
-            this.hitTone.volume.value = -12 + intensity * 4;
-            this.hitTone.triggerAttackRelease(note, '32n');
+            const note = 'C' + (3 + Math.floor(intensity * 2));
+            this.hitTone.volume.value = -14 + intensity * 6;
+            this.hitTone.triggerAttackRelease(note, '16n');
         } catch (e) {}
     }
 
