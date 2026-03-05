@@ -779,12 +779,15 @@ class EffectManager {
         });
     }
 
-    // ── Screen Zoom Pulse ──
+    // ── Screen Zoom Pulse (uses zoomContainer to avoid conflicting with shake) ──
     playScreenZoomPulse(intensity, duration) {
-        const gc = this.game.gameContainer;
-        if (!gc) return;
+        const zc = this.game.zoomContainer;
+        if (!zc) return;
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
+
+        zc.pivot.set(w / 2, h / 2);
+        zc.position.set(w / 2, h / 2);
 
         this.tweens.push({
             elapsed: 0,
@@ -793,14 +796,12 @@ class EffectManager {
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 const scale = 1 + intensity * Math.sin(t * Math.PI) * (1 - t);
-                gc.scale.set(scale);
-                gc.pivot.set(w / 2, h / 2);
-                gc.position.set(w / 2, h / 2);
+                zc.scale.set(scale);
 
                 if (t >= 1) {
-                    gc.scale.set(1);
-                    gc.pivot.set(0, 0);
-                    gc.position.set(0, 0);
+                    zc.scale.set(1);
+                    zc.pivot.set(0, 0);
+                    zc.position.set(0, 0);
                     return true;
                 }
                 return false;

@@ -7,8 +7,11 @@ class Game {
         this.state = 'title'; // 'title' | 'playing' | 'gameover'
 
         // ── Containers (render order) ──
+        this.zoomContainer = new PIXI.Container();
+        app.stage.addChild(this.zoomContainer);
+
         this.gameContainer = new PIXI.Container();
-        app.stage.addChild(this.gameContainer);
+        this.zoomContainer.addChild(this.gameContainer);
 
         this.bgContainer = new PIXI.Container();
         this.gameContainer.addChild(this.bgContainer);
