@@ -25,7 +25,7 @@ const CONFIG = {
     BALL_SLIME_BOUNCE: 0.45,
 
     // Physics
-    GRAVITY: 0.2,
+    GRAVITY: 0.35,
 
     // Game rules
     MAX_SCORE: 15,
