@@ -25,8 +25,8 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
         const typeStats = {
-            melee:  { damageMult: 5.0, speedRatio: 0.9, range: 50, attackCD: 600 },
-            tank:   { damageMult: 3.5, speedRatio: 0.7, range: 60, attackCD: 900 },
+            melee:  { damageMult: 5.0, speedRatio: 0.9, range: 130, attackCD: 600 },
+            tank:   { damageMult: 3.5, speedRatio: 0.7, range: 150, attackCD: 900 },
             ranged: { damageMult: 8.0, speedRatio: 0.75, range: 250, attackCD: 800 },
         };
 
@@ -102,19 +102,26 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         } else if (target) {
             // Intercept enemy approaching player
             const distToTarget = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
-            if (distToTarget > this.attackRange) {
+
+            // Always tick attack cooldown when we have a target
+            this.attackTimer -= delta;
+
+            // Move toward target (keep chasing even in attack range)
+            if (distToTarget > this.attackRange * 0.5) {
                 const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+                const chaseSpeed = distToTarget > this.attackRange ? 1.2 : 0.6;
                 this.body.setVelocity(
-                    Math.cos(angle) * this.speed * 1.2,
-                    Math.sin(angle) * this.speed * 1.2
+                    Math.cos(angle) * this.speed * chaseSpeed,
+                    Math.sin(angle) * this.speed * chaseSpeed
                 );
             } else {
                 this.body.setVelocity(0, 0);
-                this.attackTimer -= delta;
-                if (this.attackTimer <= 0) {
-                    this.attackTimer = this.attackCooldown;
-                    this._attack(target);
-                }
+            }
+
+            // Attack when in range and cooldown ready
+            if (distToTarget <= this.attackRange && this.attackTimer <= 0) {
+                this.attackTimer = this.attackCooldown;
+                this._attack(target);
             }
         } else {
             // No threat - orbit around player
