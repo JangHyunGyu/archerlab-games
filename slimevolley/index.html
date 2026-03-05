@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Slime Volley - 슬라임 배구 | Archerlab Games</title>
+    <meta name="description" content="슬라임 배구 - 피카츄 배구 스타일의 멀티플레이어 배구 게임. 1:1부터 4:4까지 온라인 대전! 브라우저에서 바로 플레이.">
+    <meta name="keywords" content="슬라임배구, 피카츄배구, 온라인배구게임, 멀티플레이어, slime volleyball, pikachu volleyball, archerlab">
+    <meta property="og:title" content="Slime Volley - 슬라임 배구">
+    <meta property="og:description" content="슬라임 배구 - 1:1부터 4:4까지 온라인 대전! 봇 연습 모드 지원.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://game.archerlab.dev/slimevolley/">
+    <link rel="canonical" href="https://game.archerlab.dev/slimevolley/">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-66FS0YCEEM');
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header id="game-header">
+            <a href="../" class="back-link" title="Back to Games">&#8592;</a>
+            <h1>Slime Volley</h1>
+            <button id="btn-sound" class="icon-btn" title="Toggle Sound">Sound ON</button>
+        </header>
+
+        <!-- Error Toast -->
+        <div id="error-toast"></div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen active">
+            <div class="menu-container">
+                <div class="game-logo">
+                    <div class="logo-slime blue"></div>
+                    <div class="logo-ball"></div>
+                    <div class="logo-slime red"></div>
+                </div>
+                <h2 class="menu-title">Slime Volley</h2>
+                <p class="menu-subtitle">Classic Volleyball Battle</p>
+
+                <div class="menu-buttons">
+                    <button id="btn-practice" class="btn btn-primary btn-large">
+                        <span class="btn-icon">&#9889;</span>
+                        <span>혼자 연습</span>
+                        <span class="btn-desc">봇 상대 연습 모드</span>
+                    </button>
+                    <button id="btn-create-room" class="btn btn-secondary btn-large">
+                        <span class="btn-icon">&#43;</span>
+                        <span>방 만들기</span>
+                        <span class="btn-desc">멀티플레이어 방 생성</span>
+                    </button>
+                    <button id="btn-join-room" class="btn btn-secondary btn-large">
+                        <span class="btn-icon">&#8680;</span>
+                        <span>방 참가</span>
+                        <span class="btn-desc">코드로 방 입장</span>
+                    </button>
+                </div>
+
+                <div class="controls-guide">
+                    <p><strong>Controls</strong></p>
+                    <p>Move: <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> or <kbd>A</kbd> <kbd>D</kbd></p>
+                    <p>Jump: <kbd>&#8593;</kbd> or <kbd>W</kbd> or <kbd>Space</kbd></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Practice Setup -->
+        <div id="practice-setup" class="screen">
+            <div class="panel">
+                <h2>Practice Mode</h2>
+                <div class="form-group">
+                    <label>My Team Size</label>
+                    <select id="practice-my-team" class="input-select">
+                        <option value="1" selected>1 (Solo)</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Bot Team Size</label>
+                    <select id="practice-bot-team" class="input-select">
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Difficulty</label>
+                    <select id="practice-difficulty" class="input-select">
+                        <option value="easy">Easy</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button id="btn-back-practice" class="btn btn-ghost">Back</button>
+                    <button id="btn-start-practice" class="btn btn-primary">Start!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Room -->
+        <div id="create-room" class="screen">
+            <div class="panel">
+                <h2>Create Room</h2>
+                <div class="form-group">
+                    <label>Player Name</label>
+                    <input type="text" class="player-name-input input-text" placeholder="Enter your name" maxlength="12">
+                </div>
+                <div class="form-actions">
+                    <button id="btn-back-create" class="btn btn-ghost">Back</button>
+                    <button id="btn-do-create" class="btn btn-primary">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Join Room -->
+        <div id="join-room" class="screen">
+            <div class="panel">
+                <h2>Join Room</h2>
+                <div class="form-group">
+                    <label>Player Name</label>
+                    <input type="text" class="player-name-input input-text" placeholder="Enter your name" maxlength="12">
+                </div>
+                <div class="form-group">
+                    <label>Room Code</label>
+                    <input type="text" id="join-code-input" class="input-text code-input" placeholder="ABCD" maxlength="6" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="form-actions">
+                    <button id="btn-back-join" class="btn btn-ghost">Back</button>
+                    <button id="btn-do-join" class="btn btn-primary">Join</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Room Screen -->
+        <div id="room-screen" class="screen">
+            <div class="panel panel-wide">
+                <h2>Room</h2>
+                <div class="room-code-section">
+                    <span class="room-code-label">Room Code:</span>
+                    <span id="room-code-display" class="room-code">----</span>
+                    <button id="btn-copy-code" class="btn btn-small">Copy</button>
+                </div>
+                <div id="player-list" class="player-list"></div>
+                <div class="form-actions">
+                    <button id="btn-leave-room" class="btn btn-ghost">Leave</button>
+                    <button id="btn-ready" class="btn btn-secondary">Ready</button>
+                    <button id="btn-start-game" class="btn btn-primary" disabled style="display:none">Start Game</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div id="game-canvas-container" class="game-canvas-container"></div>
+            <!-- Mobile Controls -->
+            <div id="mobile-controls" class="mobile-controls">
+                <div class="touch-area touch-left">
+                    <button id="touch-left" class="touch-btn">&#8592;</button>
+                    <button id="touch-right" class="touch-btn">&#8594;</button>
+                </div>
+                <div class="touch-area touch-right-side">
+                    <button id="touch-jump" class="touch-btn touch-jump-btn">JUMP</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over" class="screen">
+            <div class="panel game-over-panel">
+                <h2 id="game-over-title" class="victory">Victory!</h2>
+                <div id="game-over-score" class="game-over-score">0 - 0</div>
+                <div class="form-actions">
+                    <button id="btn-back-lobby" class="btn btn-ghost">Lobby</button>
+                    <button id="btn-play-again" class="btn btn-primary">Play Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tone@15/build/Tone.js"></script>
+
+    <!-- Game Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/bot.js"></script>
+    <script src="js/sound.js"></script>
+    <script src="js/network.js"></script>
+    <script src="js/lobby.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
