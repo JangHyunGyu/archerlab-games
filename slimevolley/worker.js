@@ -380,7 +380,12 @@ export class GameRoom {
                 break;
 
             case 'ping':
-                this.sendTo(ws, { type: 'pong', t: msg.t, st: Date.now() });
+                this.sendTo(ws, { type: 'pong', t: msg.t });
+                break;
+
+            case 'reportPing':
+                player.ping = Math.min(Math.max(Math.round(msg.ping || 0), 0), 9999);
+                this.broadcastPings();
                 break;
 
             case 'chat':
@@ -529,6 +534,16 @@ export class GameRoom {
         return this.players.map(p => this.sanitizePlayer(p));
     }
 
+    broadcastPings() {
+        const pings = {};
+        for (const p of this.players) {
+            if (!p.isBot) {
+                pings[p.id] = p.ping || 0;
+            }
+        }
+        this.broadcast({ type: 'pingUpdate', pings });
+    }
+
     sanitizePlayer(p) {
         return {
             id: p.id,
@@ -538,6 +553,7 @@ export class GameRoom {
             isBot: p.isBot,
             isHost: p.isHost,
             slotIndex: p.slotIndex,
+            ping: p.ping || 0,
         };
     }
 

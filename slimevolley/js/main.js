@@ -17,6 +17,11 @@ class SlimeVolleyGame {
         this.countdownTimer = null;
         this.relayUrl = 'wss://game-relay.yama5993.workers.dev';
 
+        // 스냅샷 보간 버퍼
+        this.snapshotBuffer = [];
+        this.snapshotMaxSize = 30;
+        this.interpolationDelay = CONFIG.INTERPOLATION_DELAY;
+
         this.setupInput();
         this.setupNetworkHandlers();
     }
@@ -159,6 +164,12 @@ class SlimeVolleyGame {
     }
 
     update() {
+        if (this.mode === 'multiplayer' && !this.network.isHost) {
+            this.updateMultiplayerClient();
+            return;
+        }
+
+        // 호스트 또는 연습 모드: 기존 로직
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
         if (mySlime) {
             mySlime.input = this.getMyInput();
@@ -176,56 +187,140 @@ class SlimeVolleyGame {
             }
         }
 
-        if (this.mode === 'multiplayer' && !this.network.isHost) {
-            this.network.sendInput(this.getMyInput());
-        }
-
         const result = this.physics.update();
+        this.handlePhysicsResult(result);
 
-        if (result) {
-            if (result.type === 'hit') {
-                const intensity = Math.sqrt(
-                    this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2
-                ) / CONFIG.BALL_MAX_SPEED;
-                this.sound.playHit(intensity);
-                this.renderer.spawnHitParticles(
-                    this.physics.ball.x, this.physics.ball.y,
-                    CONFIG.TEAM_COLORS[result.slime.team][0]
-                );
-                if (intensity > 0.6) {
-                    this.renderer.shake(intensity * 6);
-                }
-            } else if (result.type === 'score') {
-                this.sound.playScore(result.team);
-                this.renderer.spawnScoreParticles(result.team);
-                this.renderer.shake(8);
-                this.renderer.showMessage(
-                    `${result.scores[0]} - ${result.scores[1]}`,
-                    CONFIG.POINT_FREEZE
-                );
-            } else if (result.type === 'setWon') {
-                this.sound.playScore(result.setWinner);
-                this.renderer.shake(10);
-                this.renderer.showMessage(
-                    `Set ${result.setNumber}! (${result.setsWon[0]}-${result.setsWon[1]})`,
-                    1800
-                );
-            } else if (result.type === 'gameOver') {
-                this.running = false;
-                const won = result.winner === this.myTeam;
-                this.sound.playGameOver(won);
-                this.renderer.shake(12);
-
-                setTimeout(() => {
-                    this.lobby.showGameOver(
-                        result.winner, result.setsWon, this.myTeam, result.setScores, result.mvp
-                    );
-                }, 1500);
-            }
-        }
-
+        // 호스트: 게임 이벤트를 클라이언트에 전송
         if (this.mode === 'multiplayer' && this.network.isHost) {
             this.network.sendGameState(this.physics.getState());
+
+            if (result) {
+                if (result.type === 'hit') {
+                    const intensity = Math.sqrt(
+                        this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2
+                    ) / CONFIG.BALL_MAX_SPEED;
+                    this.network.sendGameEvent({
+                        event: 'hit',
+                        intensity,
+                        x: this.physics.ball.x,
+                        y: this.physics.ball.y,
+                        color: CONFIG.TEAM_COLORS[result.slime.team][0],
+                    });
+                } else if (result.type === 'score') {
+                    this.network.sendGameEvent({
+                        event: 'scored',
+                        team: result.team,
+                        scores: result.scores,
+                    });
+                } else if (result.type === 'setWon') {
+                    this.network.sendGameEvent({
+                        event: 'setWon',
+                        setWinner: result.setWinner,
+                        setNumber: result.setNumber,
+                        setsWon: result.setsWon,
+                    });
+                } else if (result.type === 'gameOver') {
+                    this.network.sendGameEvent({
+                        event: 'gameOver',
+                        winner: result.winner,
+                        setsWon: result.setsWon,
+                        setScores: result.setScores,
+                        mvp: result.mvp,
+                    });
+                }
+            }
+        }
+    }
+
+    // 멀티플레이어 클라이언트: 예측 + 보간
+    updateMultiplayerClient() {
+        const myInput = this.getMyInput();
+        this.network.sendInput(myInput);
+
+        // 클라이언트 예측: 내 슬라임은 로컬에서 즉시 업데이트
+        this.physics.predictMySlime(this.mySlimeId, myInput);
+
+        // 스냅샷 보간: 공 + 상대 슬라임
+        const now = performance.now();
+        const renderTime = now - this.interpolationDelay;
+        const buf = this.snapshotBuffer;
+
+        if (buf.length >= 2) {
+            // renderTime에 맞는 두 스냅샷 찾기
+            let i = 0;
+            while (i < buf.length - 1 && buf[i + 1].time <= renderTime) {
+                i++;
+            }
+
+            if (i < buf.length - 1) {
+                const a = buf[i];
+                const b = buf[i + 1];
+                const span = b.time - a.time;
+                const t = span > 0 ? Math.min(1, (renderTime - a.time) / span) : 1;
+                this.physics.applyInterpolatedState(a.state, b.state, t, this.mySlimeId);
+            } else {
+                // 버퍼 뒤쪽 (최신 스냅샷만 사용)
+                const latest = buf[buf.length - 1];
+                this.physics.applyInterpolatedState(latest.state, latest.state, 1, this.mySlimeId);
+            }
+
+            // 오래된 스냅샷 정리 (renderTime 이전 1개만 남기고 삭제)
+            while (buf.length > 2 && buf[1].time <= renderTime) {
+                buf.shift();
+            }
+
+            // 서버 보정: 내 슬라임 위치를 서버와 부드럽게 맞춤
+            const latest = buf[buf.length - 1];
+            this.physics.reconcileMySlime(this.mySlimeId, latest.state, 0.15);
+        } else if (buf.length === 1) {
+            // 스냅샷 1개: 직접 적용 (내 슬라임 제외)
+            const s = buf[0].state;
+            this.physics.applyInterpolatedState(s, s, 1, this.mySlimeId);
+            this.physics.reconcileMySlime(this.mySlimeId, s, 0.15);
+        }
+    }
+
+    handlePhysicsResult(result) {
+        if (!result) return;
+
+        if (result.type === 'hit') {
+            const intensity = Math.sqrt(
+                this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2
+            ) / CONFIG.BALL_MAX_SPEED;
+            this.sound.playHit(intensity);
+            this.renderer.spawnHitParticles(
+                this.physics.ball.x, this.physics.ball.y,
+                CONFIG.TEAM_COLORS[result.slime.team][0]
+            );
+            if (intensity > 0.6) {
+                this.renderer.shake(intensity * 6);
+            }
+        } else if (result.type === 'score') {
+            this.sound.playScore(result.team);
+            this.renderer.spawnScoreParticles(result.team);
+            this.renderer.shake(8);
+            this.renderer.showMessage(
+                `${result.scores[0]} - ${result.scores[1]}`,
+                CONFIG.POINT_FREEZE
+            );
+        } else if (result.type === 'setWon') {
+            this.sound.playScore(result.setWinner);
+            this.renderer.shake(10);
+            this.renderer.showMessage(
+                `Set ${result.setNumber}! (${result.setsWon[0]}-${result.setsWon[1]})`,
+                1800
+            );
+        } else if (result.type === 'gameOver') {
+            this.running = false;
+            const won = result.winner === this.myTeam;
+            this.sound.playGameOver(won);
+            this.renderer.shake(12);
+
+            setTimeout(() => {
+                this.lobby.showGameOver(
+                    result.winner, result.setsWon, this.myTeam, result.setScores, result.mvp
+                );
+            }, 1500);
         }
     }
 
@@ -283,6 +378,10 @@ class SlimeVolleyGame {
             this.lobby.addChatMessage(msg.name, msg.message);
         });
 
+        this.network.on('pingUpdate', (pings) => {
+            this.lobby.updatePingDisplay(pings);
+        });
+
         this.network.on('kicked', () => {
             this.network.disconnect();
             this.lobby.showError('방장에 의해 퇴장되었습니다');
@@ -293,6 +392,7 @@ class SlimeVolleyGame {
             this.mode = 'multiplayer';
             this.myTeam = msg.myTeam;
             this.mySlimeId = msg.mySlotIndex;
+            this.snapshotBuffer = [];
 
             this.physics.reset();
             const meta = msg.metadata || {};
@@ -326,7 +426,15 @@ class SlimeVolleyGame {
 
         this.network.on('gameState', (msg) => {
             if (!this.network.isHost && this.running) {
-                this.physics.setState(msg.state);
+                // 스냅샷 버퍼에 추가 (보간용)
+                this.snapshotBuffer.push({
+                    time: performance.now(),
+                    state: msg.state,
+                });
+                // 버퍼 크기 제한
+                while (this.snapshotBuffer.length > this.snapshotMaxSize) {
+                    this.snapshotBuffer.shift();
+                }
             }
         });
 
@@ -343,6 +451,33 @@ class SlimeVolleyGame {
             if (msg.event === 'scored') {
                 this.sound.playScore(msg.team);
                 this.renderer.spawnScoreParticles(msg.team);
+                this.renderer.shake(8);
+                this.renderer.showMessage(
+                    `${msg.scores[0]} - ${msg.scores[1]}`,
+                    CONFIG.POINT_FREEZE
+                );
+            } else if (msg.event === 'hit') {
+                this.sound.playHit(msg.intensity || 0.5);
+                if (msg.x !== undefined) {
+                    this.renderer.spawnHitParticles(msg.x, msg.y, msg.color || 0xFFFFFF);
+                }
+            } else if (msg.event === 'setWon') {
+                this.sound.playScore(msg.setWinner);
+                this.renderer.shake(10);
+                this.renderer.showMessage(
+                    `Set ${msg.setNumber}! (${msg.setsWon[0]}-${msg.setsWon[1]})`,
+                    1800
+                );
+            } else if (msg.event === 'gameOver') {
+                this.running = false;
+                const won = msg.winner === this.myTeam;
+                this.sound.playGameOver(won);
+                this.renderer.shake(12);
+                setTimeout(() => {
+                    this.lobby.showGameOver(
+                        msg.winner, msg.setsWon, this.myTeam, msg.setScores, msg.mvp
+                    );
+                }, 1500);
             }
         });
 

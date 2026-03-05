@@ -317,6 +317,13 @@ class LobbyManager {
                 if (p.ready) badges += '<span class="player-badge ready-badge">READY</span>';
                 if (p.isBot) badges += '<span class="player-badge bot-badge">BOT</span>';
 
+                let pingHtml = '';
+                if (!p.isBot) {
+                    const ping = this.getPingForPlayer(p.id);
+                    const pingClass = ping < 50 ? 'ping-good' : ping < 100 ? 'ping-ok' : 'ping-bad';
+                    pingHtml = `<span class="player-ping ${pingClass}" data-player-ping="${p.id}">${ping}ms</span>`;
+                }
+
                 let kickBtn = '';
                 if (this.isHost && !p.isHost && !p.isBot) {
                     kickBtn = `<button class="btn-kick" data-id="${p.id}" title="강퇴">✕</button>`;
@@ -324,7 +331,7 @@ class LobbyManager {
 
                 pDiv.innerHTML = `
                     <span class="player-name">${this.escapeHtml(p.name)}</span>
-                    ${badges}${kickBtn}
+                    ${pingHtml}${badges}${kickBtn}
                 `;
 
                 // 강퇴 버튼 이벤트
@@ -452,6 +459,21 @@ class LobbyManager {
         }
 
         this.showScreen('game-over');
+    }
+
+    getPingForPlayer(playerId) {
+        const pings = this.game.network.playerPings;
+        return pings[playerId] || 0;
+    }
+
+    updatePingDisplay(pings) {
+        for (const [playerId, ping] of Object.entries(pings)) {
+            const el = document.querySelector(`[data-player-ping="${playerId}"]`);
+            if (el) {
+                el.textContent = `${ping}ms`;
+                el.className = `player-ping ${ping < 50 ? 'ping-good' : ping < 100 ? 'ping-ok' : 'ping-bad'}`;
+            }
+        }
     }
 
     escapeHtml(str) {

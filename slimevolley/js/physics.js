@@ -459,4 +459,81 @@ class PhysicsEngine {
         if (state.setsWon) this.setsWon = [...state.setsWon];
         if (state.currentSet !== undefined) this.currentSet = state.currentSet;
     }
+
+    // 클라이언트 예측: 내 슬라임만 로컬 업데이트
+    predictMySlime(slimeId, input) {
+        const slime = this.slimes.find(s => s.id === slimeId);
+        if (!slime) return;
+        slime.input = input;
+        this.updateSlime(slime);
+    }
+
+    // 보간 상태 적용: 내 슬라임 제외, 나머지는 lerp
+    applyInterpolatedState(stateA, stateB, t, mySlimeId) {
+        const lerp = (a, b, f) => a + (b - a) * f;
+
+        // 공 보간
+        this.ball.x = lerp(stateA.ball.x, stateB.ball.x, t);
+        this.ball.y = lerp(stateA.ball.y, stateB.ball.y, t);
+        this.ball.vx = lerp(stateA.ball.vx, stateB.ball.vx, t);
+        this.ball.vy = lerp(stateA.ball.vy, stateB.ball.vy, t);
+        this.ball.lastHitBy = stateB.ball.lastHitBy;
+
+        // 슬라임 보간 (내 슬라임 제외)
+        for (let i = 0; i < stateB.slimes.length; i++) {
+            const ssB = stateB.slimes[i];
+            if (ssB.id === mySlimeId) continue;
+
+            const ssA = stateA.slimes.find(s => s.id === ssB.id);
+            const slime = this.slimes.find(s => s.id === ssB.id);
+            if (!slime) continue;
+
+            if (ssA) {
+                slime.x = lerp(ssA.x, ssB.x, t);
+                slime.y = lerp(ssA.y, ssB.y, t);
+                slime.vx = lerp(ssA.vx, ssB.vx, t);
+                slime.vy = lerp(ssA.vy, ssB.vy, t);
+            } else {
+                slime.x = ssB.x;
+                slime.y = ssB.y;
+                slime.vx = ssB.vx;
+                slime.vy = ssB.vy;
+            }
+            slime.onGround = ssB.onGround;
+        }
+
+        // 게임 상태
+        this.scores = [...stateB.scores];
+        this.phase = stateB.phase;
+        this.servingTeam = stateB.servingTeam;
+        if (stateB.setsWon) this.setsWon = [...stateB.setsWon];
+        if (stateB.currentSet !== undefined) this.currentSet = stateB.currentSet;
+    }
+
+    // 내 슬라임을 서버 위치로 부드럽게 보정
+    reconcileMySlime(slimeId, serverState, correctionRate) {
+        const slime = this.slimes.find(s => s.id === slimeId);
+        if (!slime) return;
+        const ss = serverState.slimes.find(s => s.id === slimeId);
+        if (!ss) return;
+
+        const lerp = (a, b, f) => a + (b - a) * f;
+        const dx = Math.abs(slime.x - ss.x);
+        const dy = Math.abs(slime.y - ss.y);
+
+        // 위치 차이가 크면 즉시 보정, 작으면 부드럽게
+        if (dx > 20 || dy > 20) {
+            slime.x = ss.x;
+            slime.y = ss.y;
+            slime.vx = ss.vx;
+            slime.vy = ss.vy;
+            slime.onGround = ss.onGround;
+        } else {
+            slime.x = lerp(slime.x, ss.x, correctionRate);
+            slime.y = lerp(slime.y, ss.y, correctionRate);
+            slime.vx = lerp(slime.vx, ss.vx, correctionRate);
+            slime.vy = lerp(slime.vy, ss.vy, correctionRate);
+            slime.onGround = ss.onGround;
+        }
+    }
 }

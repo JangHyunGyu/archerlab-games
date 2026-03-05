@@ -589,6 +589,31 @@ kbd {
 }
 
 /* Kick Button */
+/* Ping Display */
+.player-ping {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: auto;
+    margin-right: 4px;
+    min-width: 42px;
+    text-align: center;
+}
+.ping-good {
+    background: rgba(102, 187, 106, 0.2);
+    color: #66BB6A;
+}
+.ping-ok {
+    background: rgba(255, 193, 7, 0.2);
+    color: #FFC107;
+}
+.ping-bad {
+    background: rgba(239, 83, 80, 0.2);
+    color: #EF5350;
+}
+
 .btn-kick {
     background: none;
     border: 1px solid var(--danger);
@@ -610,6 +635,14 @@ kbd {
     background: rgba(79, 195, 247, 0.08);
 }
 
+/* Game Screen Layout */
+#game-screen.screen.active {
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 10px;
+    overflow: hidden;
+}
+
 /* Game Canvas */
 .game-canvas-container {
     display: flex;
@@ -618,11 +651,15 @@ kbd {
     width: 100%;
     max-width: 800px;
     margin: 0 auto;
+    flex-shrink: 1;
+    min-height: 0;
 }
 
 .game-canvas-container canvas {
     border-radius: 8px;
     box-shadow: 0 0 30px rgba(79, 195, 247, 0.1);
+    max-height: 100%;
+    object-fit: contain;
 }
 
 /* Mobile Controls */
@@ -666,10 +703,43 @@ kbd {
     .controls-guide { display: none; }
     .lobby-top { flex-direction: column; align-items: stretch; }
     .lobby-actions { justify-content: flex-end; }
+
+    #game-screen.screen.active {
+        padding: 4px;
+    }
+    .game-canvas-container canvas {
+        width: 100%;
+        height: auto;
+    }
 }
 
 @media (hover: none) and (pointer: coarse) {
     .mobile-controls { display: flex; }
+}
+
+/* 모바일 가로 모드: 캔버스+컨트롤 화면에 맞추기 */
+@media (max-height: 500px) {
+    #game-header {
+        padding: 4px 12px;
+    }
+    #game-header h1 {
+        font-size: 1rem;
+    }
+    #game-screen.screen.active {
+        padding: 2px;
+    }
+    .mobile-controls {
+        padding: 4px 10px;
+    }
+    .touch-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    .touch-jump-btn {
+        width: 65px;
+        font-size: 0.85rem;
+    }
 }
 
 /* Game Over */
