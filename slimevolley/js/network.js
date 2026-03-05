@@ -9,6 +9,11 @@ class NetworkClient {
         this.isHost = false;
         this.handlers = {};
         this.baseUrl = null;
+        this.pingInterval = null;
+        this.lastPing = 0;
+        this.myPing = 0;
+        this.playerPings = {};
+        this.lastSentInput = null;
     }
 
     on(event, handler) {
@@ -65,6 +70,7 @@ class NetworkClient {
             this.ws.onopen = () => {
                 clearTimeout(timeout);
                 this.connected = true;
+                this.startPingLoop();
                 this.emit('connected');
             };
 
@@ -118,9 +124,39 @@ class NetworkClient {
                 this.emit('joined', msg);
                 break;
 
+            case 'pong':
+                if (msg.t) {
+                    this.myPing = Date.now() - msg.t;
+                    this.send({ type: 'reportPing', ping: this.myPing });
+                }
+                break;
+
+            case 'pingUpdate':
+                if (msg.pings) {
+                    this.playerPings = msg.pings;
+                    this.emit('pingUpdate', msg.pings);
+                }
+                break;
+
             default:
                 this.emit(msg.type, msg);
                 break;
+        }
+    }
+
+    startPingLoop() {
+        this.stopPingLoop();
+        this.pingInterval = setInterval(() => {
+            if (this.connected) {
+                this.ping();
+            }
+        }, 2000);
+    }
+
+    stopPingLoop() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
         }
     }
 
@@ -137,6 +173,11 @@ class NetworkClient {
     }
 
     sendInput(input) {
+        const last = this.lastSentInput;
+        if (last && last.left === input.left && last.right === input.right && last.jump === input.jump) {
+            return;
+        }
+        this.lastSentInput = { ...input };
         this.send({ type: 'input', input });
     }
 
@@ -168,9 +209,12 @@ class NetworkClient {
     }
 
     disconnect() {
+        this.stopPingLoop();
         this.roomCode = null;
         this.playerId = null;
         this.isHost = false;
+        this.myPing = 0;
+        this.playerPings = {};
         if (this.ws) {
             this.ws.close();
             this.ws = null;
