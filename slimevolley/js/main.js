@@ -73,8 +73,8 @@ class SlimeVolleyGame {
 
         // 좌우 이동: 터치 시작점 기준으로 좌/우 드래그
         let moveStartX = null;
-        const DEAD_ZONE = 10;
-        const MAX_DRAG = 30; // 노브 최대 이동 범위
+        const DEAD_ZONE = 3;
+        const MAX_DRAG = 15; // 노브 최대 이동 범위
 
         moveZone.addEventListener('touchstart', (e) => {
             e.preventDefault();
