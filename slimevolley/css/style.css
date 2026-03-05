@@ -724,15 +724,20 @@ kbd {
 }
 
 @media (max-width: 768px) {
-    .mobile-controls { display: block; }
-    .controls-guide { display: none; }
+    .mobile-controls { display: block !important; }
+    .controls-guide { display: none !important; }
     .lobby-top { flex-direction: column; align-items: stretch; }
     .lobby-actions { justify-content: flex-end; }
 }
 
 @media (hover: none) and (pointer: coarse) {
-    .mobile-controls { display: block; }
-    .controls-guide { display: none; }
+    .mobile-controls { display: block !important; }
+    .controls-guide { display: none !important; }
+}
+
+@media (any-pointer: coarse) {
+    .mobile-controls { display: block !important; }
+    .controls-guide { display: none !important; }
 }
 
 /* 모바일 가로 모드: 높이 부족 시 UI 압축 */
@@ -751,6 +756,66 @@ kbd {
         font-size: 1.1rem;
         padding: 2px 6px;
     }
+    /* 스크롤 방지 */
+    .screen {
+        padding: 8px;
+        overflow: hidden;
+    }
+    /* 메뉴 압축 */
+    .archerlab-link {
+        display: none;
+    }
+    .game-logo {
+        height: 36px;
+        margin-bottom: 4px;
+        gap: 10px;
+    }
+    .logo-slime {
+        width: 32px;
+        height: 16px;
+    }
+    .logo-ball {
+        width: 16px;
+        height: 16px;
+        margin-bottom: 8px;
+    }
+    .menu-title {
+        font-size: 1.2rem;
+        margin-bottom: 0;
+    }
+    .menu-subtitle {
+        font-size: 0.75rem;
+        margin-bottom: 8px;
+    }
+    .menu-buttons {
+        gap: 6px;
+        margin-bottom: 0;
+    }
+    .btn-large {
+        padding: 8px 16px;
+    }
+    .btn-icon {
+        font-size: 1rem;
+        width: 22px;
+    }
+    .btn-desc {
+        font-size: 0.6rem;
+    }
+    /* 패널 압축 */
+    .panel {
+        padding: 12px 16px;
+    }
+    .panel h2 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+    }
+    .form-group {
+        margin-bottom: 8px;
+    }
+    .form-actions {
+        margin-top: 12px;
+    }
+    /* 게임 화면 */
     #game-screen.screen {
         padding: 0 2px;
     }
