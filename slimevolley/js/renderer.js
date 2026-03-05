@@ -209,6 +209,20 @@ class GameRenderer {
         container.addChild(eyeContainer);
         container._eyeContainer = eyeContainer;
 
+        // Nickname label
+        const nameStyle = new PIXI.TextStyle({
+            fontFamily: 'Orbitron, sans-serif',
+            fontSize: 11,
+            fill: 0xffffff,
+            dropShadow: { color: 0x000000, blur: 2, distance: 1 },
+        });
+        const nameText = new PIXI.Text({ text: slime.nickname || '', style: nameStyle });
+        nameText.anchor.set(0.5);
+        nameText.y = -r * 1.25;
+        nameText.alpha = 0.8;
+        container.addChild(nameText);
+        container._nameText = nameText;
+
         container.x = slime.x;
         container.y = slime.y;
         this.gameContainer.addChild(container);

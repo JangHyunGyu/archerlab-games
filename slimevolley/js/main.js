@@ -89,13 +89,18 @@ class SlimeVolleyGame {
         this.physics.initSlimes([myTeamSize, botTeamSize]);
 
         this.bots = [];
+        let botIdx = 0;
         for (const slime of this.physics.slimes) {
             if (slime.team === 1) {
                 slime.isBot = true;
+                slime.nickname = 'Bot ' + (++botIdx);
                 this.bots.push(new BotAI(difficulty));
             } else if (slime.id > 0) {
                 slime.isBot = true;
+                slime.nickname = 'Bot ' + (++botIdx);
                 this.bots.push(new BotAI(difficulty));
+            } else {
+                slime.nickname = 'Player';
             }
         }
 
@@ -213,7 +218,7 @@ class SlimeVolleyGame {
 
                 setTimeout(() => {
                     this.lobby.showGameOver(
-                        result.winner, result.setsWon, this.myTeam, result.setScores
+                        result.winner, result.setsWon, this.myTeam, result.setScores, result.mvp
                     );
                 }, 1500);
             }
@@ -297,6 +302,16 @@ class SlimeVolleyGame {
                 deuce: meta.deuce !== false,
             });
             this.physics.initSlimes(msg.teamSizes);
+
+            // 슬라임에 닉네임 매핑
+            if (msg.players) {
+                for (const p of msg.players) {
+                    if (p.slotIndex !== undefined) {
+                        const slime = this.physics.slimes.find(s => s.id === p.slotIndex);
+                        if (slime) slime.nickname = p.name || '???';
+                    }
+                }
+            }
 
             if (!this.renderer.initialized) {
                 await this.renderer.init();
