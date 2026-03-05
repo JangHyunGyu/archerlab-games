@@ -220,11 +220,14 @@ class PhysicsEngine {
                 this.ball.vy -= 2 * dot * ny;
             }
 
-            this.ball.vx += slime.vx * 0.8;
-            this.ball.vy += slime.vy * 0.5;
+            // 슬라임 속도 영향 제한 (점프 시 너무 세지 않게)
+            const clampedVy = Math.max(slime.vy, -4);
+            this.ball.vx += slime.vx * 0.4;
+            this.ball.vy += clampedVy * 0.3;
 
-            if (this.ball.vy > -2) {
-                this.ball.vy = Math.min(this.ball.vy, -3.5);
+            // 기본 반발력 (제자리에서도 적절히 튀도록)
+            if (this.ball.vy > -3) {
+                this.ball.vy = -4;
             }
 
             this.ball.vx *= CONFIG.BALL_SLIME_BOUNCE;
