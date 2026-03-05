@@ -644,6 +644,7 @@ kbd {
 
 /* Game Screen Layout */
 #game-screen.screen {
+    position: relative;
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -653,7 +654,6 @@ kbd {
 
 /* Game Canvas */
 .game-canvas-container {
-    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -702,21 +702,21 @@ kbd {
     width: 50%;
 }
 
-/* 조이스틱 비주얼 */
+/* 조이스틱 비주얼 - 캔버스 바깥 사이드 */
 .joystick-visual {
     position: absolute;
-    bottom: 40%;
+    top: 50%;
+    transform: translateY(-50%);
     pointer-events: none;
+    z-index: 11;
 }
 
-.touch-zone-left .joystick-visual {
-    left: 50%;
-    transform: translateX(-50%);
+.joystick-visual-left {
+    left: 12px;
 }
 
-.touch-zone-right .joystick-visual {
-    right: 50%;
-    transform: translateX(50%);
+.joystick-visual-right {
+    right: 12px;
 }
 
 .joystick-base {
@@ -857,17 +857,32 @@ kbd {
     }
     /* 패널 압축 */
     .panel {
-        padding: 12px 16px;
+        padding: 10px 14px;
+        border-radius: 10px;
     }
     .panel h2 {
-        font-size: 1.1rem;
-        margin-bottom: 12px;
+        font-size: 0.95rem;
+        margin-bottom: 6px;
     }
     .form-group {
-        margin-bottom: 8px;
+        margin-bottom: 4px;
+    }
+    .form-group label {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+    }
+    .input-text, .input-select {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+        border-radius: 6px;
     }
     .form-actions {
-        margin-top: 12px;
+        margin-top: 6px;
+        gap: 8px;
+    }
+    .form-actions .btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
     }
     /* 게임 화면 */
     #game-screen.screen {
