@@ -328,6 +328,13 @@ class SlimeVolleyGame {
     handlePhysicsResult(result) {
         if (!result) return;
 
+        // 점프 사운드 (어떤 이벤트에든 포함될 수 있음)
+        if (result.jumped && result.jumped.length > 0) {
+            this.sound.playJump();
+        }
+
+        if (result.type === 'jump') return; // 점프만 있는 경우 여기서 종료
+
         if (result.type === 'hit') {
             const intensity = Math.sqrt(
                 this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2

@@ -100,6 +100,7 @@ class PhysicsEngine {
         }
 
         // Update slimes
+        this._jumpedThisFrame = [];
         for (const slime of this.slimes) {
             this.updateSlime(slime);
         }
@@ -125,9 +126,21 @@ class PhysicsEngine {
 
         // Check scoring
         const scoreResult = this.checkScoring();
-        if (scoreResult) return scoreResult;
+        if (scoreResult) {
+            scoreResult.jumped = this._jumpedThisFrame;
+            return scoreResult;
+        }
 
-        return hitResult;
+        if (hitResult) {
+            hitResult.jumped = this._jumpedThisFrame;
+            return hitResult;
+        }
+
+        if (this._jumpedThisFrame.length > 0) {
+            return { type: 'jump', jumped: this._jumpedThisFrame };
+        }
+
+        return null;
     }
 
     updateSlime(slime) {
@@ -142,6 +155,8 @@ class PhysicsEngine {
         if (slime.input.jump && slime.onGround) {
             slime.vy = CONFIG.SLIME_JUMP_SPEED;
             slime.onGround = false;
+            if (!this._jumpedThisFrame) this._jumpedThisFrame = [];
+            this._jumpedThisFrame.push(slime.id);
         }
 
         slime.vy += CONFIG.GRAVITY;

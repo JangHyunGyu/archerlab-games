@@ -52,10 +52,15 @@ class SoundManager {
             this.hitBodyFilter = new Tone.Filter(1200, 'lowpass').connect(this.limiter);
             this.hitBody.connect(this.hitBodyFilter);
 
-            // 점프: 부드러운 슈웅
+            // 점프: 젤리 튀어오르는 뽱 사운드
             this.jumpSynth = new Tone.Synth({
                 oscillator: { type: 'sine' },
-                envelope: { attack: 0.01, decay: 0.06, sustain: 0, release: 0.03 },
+                envelope: { attack: 0.005, decay: 0.12, sustain: 0, release: 0.06 },
+            }).connect(this.limiter);
+
+            this.jumpSweep = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.04 },
             }).connect(this.limiter);
 
             // 득점 팡파레
@@ -143,10 +148,16 @@ class SoundManager {
 
     playJump() {
         if (!this.initialized || this.muted) return;
-        if (!this.canPlay('jump', 80)) return;
+        if (!this.canPlay('jump', 100)) return;
         try {
-            this.jumpSynth.volume.value = -22;
-            this.jumpSynth.triggerAttackRelease('B5', 0.04);
+            // 젤리 뽱: 낮은음→높은음 슬라이드 + 하모닉
+            this.jumpSynth.volume.value = -20;
+            this.jumpSynth.frequency.setValueAtTime(200, Tone.now());
+            this.jumpSynth.frequency.exponentialRampToValueAtTime(600, Tone.now() + 0.08);
+            this.jumpSynth.triggerAttackRelease('C4', 0.1);
+            // 경쾌한 상승음
+            this.jumpSweep.volume.value = -26;
+            this.jumpSweep.triggerAttackRelease('E6', 0.05, Tone.now() + 0.02);
         } catch (e) {}
     }
 
