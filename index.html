@@ -160,6 +160,46 @@
             color: #b366ff;
             border: 1px solid #7b2fff44;
         }
+        .slimevolley .game-thumb {
+            background: linear-gradient(135deg, #0a2e1a 0%, #1a4e2e 50%, #0a1a2e 100%);
+            position: relative;
+        }
+        .slimevolley .game-thumb-content {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 30px;
+            height: 100%;
+            padding-bottom: 30px;
+        }
+        .slimevolley .sv-slime {
+            width: 50px;
+            height: 25px;
+            border-radius: 50px 50px 0 0;
+        }
+        .slimevolley .sv-slime.blue { background: #4FC3F7; }
+        .slimevolley .sv-slime.red { background: #EF5350; }
+        .slimevolley .sv-ball {
+            width: 22px;
+            height: 22px;
+            background: #FFEB3B;
+            border-radius: 50%;
+            margin-bottom: 30px;
+        }
+        .slimevolley .sv-net {
+            width: 4px;
+            height: 60px;
+            background: #ccc;
+            align-self: flex-end;
+        }
+        .slimevolley .game-tag {
+            background: #4FC3F722;
+            color: #4FC3F7;
+            border: 1px solid #4FC3F744;
+        }
+        .slimevolley:hover {
+            border-color: #4FC3F7;
+        }
     </style>
 </head>
 <body>
@@ -189,6 +229,21 @@
                 <h2>그림자 서바이벌</h2>
                 <p>2D 던전 서바이벌 로그라이크 게임. 던전 몬스터를 처치하고 그림자 군단을 이끌어라!</p>
                 <span class="game-tag">Action / Survival</span>
+            </div>
+        </a>
+        <a href="slimevolley/" class="game-card slimevolley">
+            <div class="game-thumb">
+                <div class="game-thumb-content">
+                    <div class="sv-slime blue"></div>
+                    <div class="sv-ball"></div>
+                    <div class="sv-net"></div>
+                    <div class="sv-slime red"></div>
+                </div>
+            </div>
+            <div class="game-info">
+                <h2>Slime Volley</h2>
+                <p>슬라임 배구! 1:1부터 4:4까지 온라인 멀티플레이. 봇 상대 연습 모드도 지원.</p>
+                <span class="game-tag">Sports / Multiplayer</span>
             </div>
         </a>
     </div>
