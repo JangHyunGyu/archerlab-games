@@ -15,7 +15,7 @@ class SlimeVolleyGame {
         this.gameLoop = null;
         this.countdown = 0;
         this.countdownTimer = null;
-        this.relayUrl = 'wss://relay.archerlab.dev';
+        this.relayUrl = 'wss://game-relay.yama5993.workers.dev';
 
         this.setupInput();
         this.setupNetworkHandlers();
