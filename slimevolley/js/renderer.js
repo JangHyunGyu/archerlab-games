@@ -167,19 +167,28 @@ class GameRenderer {
         container.addChild(shadow);
         container._shadow = shadow;
 
-        // Body (semicircle)
+        // Body (slime blob shape using bezier curves)
         const body = new PIXI.Graphics();
-        body.arc(0, 0, r, Math.PI, 0, false);
-        body.lineTo(r, 0);
+        body.moveTo(-r, 0);
+        // 왼쪽 곡선 (약간 볼록)
+        body.bezierCurveTo(-r, -r * 0.5, -r * 0.85, -r * 0.95, -r * 0.5, -r * 1.05);
+        // 상단 곡선 (부드러운 돔)
+        body.bezierCurveTo(-r * 0.2, -r * 1.15, r * 0.2, -r * 1.15, r * 0.5, -r * 1.05);
+        // 오른쪽 곡선 (약간 볼록)
+        body.bezierCurveTo(r * 0.85, -r * 0.95, r, -r * 0.5, r, 0);
         body.lineTo(-r, 0);
         body.closePath();
         body.fill(baseColor);
-        // Highlight
-        body.arc(0, -2, r * 0.75, Math.PI, 0, false);
-        body.lineTo(r * 0.75, -2);
-        body.lineTo(-r * 0.75, -2);
+        // Highlight (젤리 반사광)
+        body.moveTo(-r * 0.6, -2);
+        body.bezierCurveTo(-r * 0.6, -r * 0.5, -r * 0.4, -r * 0.85, 0, -r * 0.9);
+        body.bezierCurveTo(r * 0.3, -r * 0.85, r * 0.5, -r * 0.5, r * 0.5, -2);
+        body.lineTo(-r * 0.6, -2);
         body.closePath();
-        body.fill({ color: 0xffffff, alpha: 0.15 });
+        body.fill({ color: 0xffffff, alpha: 0.18 });
+        // 작은 하이라이트 점
+        body.circle(-r * 0.25, -r * 0.7, r * 0.12);
+        body.fill({ color: 0xffffff, alpha: 0.35 });
         container.addChild(body);
 
         // Eye
@@ -217,25 +226,52 @@ class GameRenderer {
         container.addChild(shadow);
         container._shadow = shadow;
 
-        // Ball body
+        // Ball body (배구공 - 흰색 베이스)
         const ball = new PIXI.Graphics();
         ball.circle(0, 0, r);
-        ball.fill(0xFFEB3B);
-        // Highlight
-        ball.circle(-3, -4, r * 0.4);
-        ball.fill({ color: 0xffffff, alpha: 0.4 });
+        ball.fill(0xF5F5F0);
         container.addChild(ball);
         container._body = ball;
 
-        // Volleyball lines
+        // 배구공 패널 라인 (3개의 곡선 스트라이프)
         const lines = new PIXI.Graphics();
-        lines.arc(0, 0, r - 1, -0.3, Math.PI + 0.3, false);
-        lines.stroke({ color: 0xFFC107, width: 1.5, alpha: 0.5 });
-        lines.moveTo(-r + 2, 0);
-        lines.lineTo(r - 2, 0);
-        lines.stroke({ color: 0xFFC107, width: 1, alpha: 0.4 });
+        // 세로 중심선
+        lines.arc(0, 0, r - 1, -Math.PI * 0.5, Math.PI * 0.5, false);
+        lines.stroke({ color: 0x2266AA, width: 1.8, alpha: 0.7 });
+        // 왼쪽 곡선
+        lines.arc(-r * 0.15, 0, r * 0.85, -Math.PI * 0.4, Math.PI * 0.4, false);
+        lines.stroke({ color: 0x2266AA, width: 1.5, alpha: 0.5 });
+        // 오른쪽 곡선
+        lines.arc(r * 0.15, 0, r * 0.85, Math.PI * 0.6, Math.PI * 1.4, false);
+        lines.stroke({ color: 0x2266AA, width: 1.5, alpha: 0.5 });
+        // 가로선
+        lines.moveTo(-r + 3, 0);
+        lines.lineTo(r - 3, 0);
+        lines.stroke({ color: 0x2266AA, width: 1.2, alpha: 0.4 });
         container.addChild(lines);
         container._lines = lines;
+
+        // 배구공 컬러 패널 (파랑/노랑)
+        const panels = new PIXI.Graphics();
+        // 상단 파란 패널
+        panels.arc(0, 0, r - 2, -Math.PI * 0.8, -Math.PI * 0.2, false);
+        panels.lineTo(0, 0);
+        panels.closePath();
+        panels.fill({ color: 0x2266CC, alpha: 0.25 });
+        // 하단 노란 패널
+        panels.arc(0, 0, r - 2, Math.PI * 0.2, Math.PI * 0.8, false);
+        panels.lineTo(0, 0);
+        panels.closePath();
+        panels.fill({ color: 0xFFCC00, alpha: 0.25 });
+        container.addChild(panels);
+
+        // 하이라이트 (빛 반사)
+        const highlight = new PIXI.Graphics();
+        highlight.circle(-r * 0.25, -r * 0.25, r * 0.3);
+        highlight.fill({ color: 0xffffff, alpha: 0.45 });
+        highlight.circle(-r * 0.15, -r * 0.35, r * 0.12);
+        highlight.fill({ color: 0xffffff, alpha: 0.6 });
+        container.addChild(highlight);
 
         this.gameContainer.addChild(container);
         this.ballSprite = container;
@@ -306,7 +342,7 @@ class GameRenderer {
 
         const trail = new PIXI.Graphics();
         trail.circle(0, 0, CONFIG.BALL_RADIUS * 0.6);
-        trail.fill({ color: 0xFFEB3B, alpha: 0.3 });
+        trail.fill({ color: 0xCCCCCC, alpha: 0.2 });
         trail.x = x;
         trail.y = y;
         trail._life = 8;
