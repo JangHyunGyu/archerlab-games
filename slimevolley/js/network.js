@@ -8,8 +8,6 @@ class NetworkClient {
         this.playerId = null;
         this.isHost = false;
         this.handlers = {};
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
         this.baseUrl = null;
     }
 
@@ -30,14 +28,20 @@ class NetworkClient {
         }
     }
 
-    // 방 생성 (WebSocket 연결과 동시에)
+    // 방 목록 조회 (REST API)
+    async fetchRooms(baseUrl) {
+        const httpUrl = baseUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+        const res = await fetch(`${httpUrl}/api/rooms?game=${encodeURIComponent(this.gameId)}`);
+        if (!res.ok) throw new Error('Failed to fetch rooms');
+        return await res.json();
+    }
+
     createRoom(baseUrl, playerName) {
         const url = `${baseUrl}/ws?game=${encodeURIComponent(this.gameId)}&action=create&name=${encodeURIComponent(playerName)}`;
         this.baseUrl = baseUrl;
         return this._connect(url);
     }
 
-    // 방 참가 (WebSocket 연결과 동시에)
     joinRoom(baseUrl, roomCode, playerName) {
         const url = `${baseUrl}/ws?game=${encodeURIComponent(this.gameId)}&action=join&room=${encodeURIComponent(roomCode.toUpperCase())}&name=${encodeURIComponent(playerName)}`;
         this.baseUrl = baseUrl;
@@ -61,9 +65,7 @@ class NetworkClient {
             this.ws.onopen = () => {
                 clearTimeout(timeout);
                 this.connected = true;
-                this.reconnectAttempts = 0;
                 this.emit('connected');
-                // resolve는 서버 응답(roomCreated/joined) 받을 때
             };
 
             this.ws.onmessage = (event) => {
@@ -71,7 +73,6 @@ class NetworkClient {
                     const msg = JSON.parse(event.data);
                     this.handleMessage(msg);
 
-                    // 첫 응답으로 resolve
                     if (msg.type === 'roomCreated' || msg.type === 'joined') {
                         clearTimeout(timeout);
                         resolve(msg);

@@ -25,7 +25,6 @@ class SlimeVolleyGame {
         this.renderer = new GameRenderer(document.getElementById('game-canvas-container'));
         this.lobby = new LobbyManager(this);
 
-        // Init sound on first user interaction
         const initSound = async () => {
             await this.sound.init();
             document.removeEventListener('click', initSound);
@@ -40,7 +39,6 @@ class SlimeVolleyGame {
     setupInput() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            // Prevent arrow key scrolling
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
                 if (this.running) e.preventDefault();
             }
@@ -50,7 +48,6 @@ class SlimeVolleyGame {
             this.keys[e.code] = false;
         });
 
-        // Mobile touch controls
         this.setupMobileControls();
     }
 
@@ -88,24 +85,22 @@ class SlimeVolleyGame {
         this.mode = 'practice';
         this.myTeam = 0;
         this.physics.reset();
+        this.physics.configure({ sets: 1, scorePerSet: CONFIG.MAX_SCORE, deuce: true });
         this.physics.initSlimes([myTeamSize, botTeamSize]);
 
-        // Mark bots
         this.bots = [];
         for (const slime of this.physics.slimes) {
             if (slime.team === 1) {
                 slime.isBot = true;
                 this.bots.push(new BotAI(difficulty));
             } else if (slime.id > 0) {
-                // Teammate bots (all except first slime on my team)
                 slime.isBot = true;
                 this.bots.push(new BotAI(difficulty));
             }
         }
 
-        this.mySlimeId = 0; // First slime on team 0
+        this.mySlimeId = 0;
 
-        // Init renderer
         if (!this.renderer.initialized) {
             await this.renderer.init();
         } else {
@@ -159,13 +154,11 @@ class SlimeVolleyGame {
     }
 
     update() {
-        // Apply my input
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
         if (mySlime) {
             mySlime.input = this.getMyInput();
         }
 
-        // Apply bot inputs
         let botIdx = 0;
         for (const slime of this.physics.slimes) {
             if (slime.isBot) {
@@ -178,14 +171,10 @@ class SlimeVolleyGame {
             }
         }
 
-        // Send input to server in multiplayer
-        if (this.mode === 'multiplayer' && this.network.isHost) {
-            // Host runs physics and broadcasts state
-        } else if (this.mode === 'multiplayer') {
+        if (this.mode === 'multiplayer' && !this.network.isHost) {
             this.network.sendInput(this.getMyInput());
         }
 
-        // Update physics
         const result = this.physics.update();
 
         if (result) {
@@ -209,6 +198,13 @@ class SlimeVolleyGame {
                     `${result.scores[0]} - ${result.scores[1]}`,
                     CONFIG.POINT_FREEZE
                 );
+            } else if (result.type === 'setWon') {
+                this.sound.playScore(result.setWinner);
+                this.renderer.shake(10);
+                this.renderer.showMessage(
+                    `Set ${result.setNumber}! (${result.setsWon[0]}-${result.setsWon[1]})`,
+                    1800
+                );
             } else if (result.type === 'gameOver') {
                 this.running = false;
                 const won = result.winner === this.myTeam;
@@ -216,12 +212,13 @@ class SlimeVolleyGame {
                 this.renderer.shake(12);
 
                 setTimeout(() => {
-                    this.lobby.showGameOver(result.winner, result.scores, this.myTeam);
+                    this.lobby.showGameOver(
+                        result.winner, result.setsWon, this.myTeam, result.setScores
+                    );
                 }, 1500);
             }
         }
 
-        // Broadcast state in multiplayer (host only)
         if (this.mode === 'multiplayer' && this.network.isHost) {
             this.network.sendGameState(this.physics.getState());
         }
@@ -253,15 +250,16 @@ class SlimeVolleyGame {
     // === Multiplayer ===
     setupNetworkHandlers() {
         this.network.on('roomCreated', (msg) => {
-            this.lobby.showRoomScreen(msg.roomCode, msg.players, true);
+            this.lobby.showRoomScreen(msg.roomCode, msg.players, true, msg.metadata);
         });
 
         this.network.on('joined', (msg) => {
-            this.lobby.showRoomScreen(msg.roomCode, msg.players, false);
+            this.lobby.showRoomScreen(msg.roomCode, msg.players, false, msg.metadata);
         });
 
         this.network.on('roomState', (msg) => {
             this.lobby.updatePlayerList(msg.players);
+            this.lobby.updateRoomMeta(msg.metadata);
         });
 
         this.network.on('playerJoined', (msg) => {
@@ -276,12 +274,28 @@ class SlimeVolleyGame {
             this.lobby.updatePlayerList(msg.players);
         });
 
+        this.network.on('chat', (msg) => {
+            this.lobby.addChatMessage(msg.name, msg.message);
+        });
+
+        this.network.on('kicked', () => {
+            this.network.disconnect();
+            this.lobby.showError('방장에 의해 퇴장되었습니다');
+            this.lobby.showScreen('main-menu');
+        });
+
         this.network.on('gameStart', async (msg) => {
             this.mode = 'multiplayer';
             this.myTeam = msg.myTeam;
             this.mySlimeId = msg.mySlotIndex;
 
             this.physics.reset();
+            const meta = msg.metadata || {};
+            this.physics.configure({
+                sets: meta.sets || 1,
+                scorePerSet: meta.scorePerSet || 25,
+                deuce: meta.deuce !== false,
+            });
             this.physics.initSlimes(msg.teamSizes);
 
             if (!this.renderer.initialized) {
@@ -351,5 +365,5 @@ class SlimeVolleyGame {
 window.addEventListener('DOMContentLoaded', async () => {
     const game = new SlimeVolleyGame();
     await game.init();
-    window.game = game; // for debugging
+    window.game = game;
 });

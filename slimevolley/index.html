@@ -53,15 +53,10 @@
                         <span>혼자 연습</span>
                         <span class="btn-desc">봇 상대 연습 모드</span>
                     </button>
-                    <button id="btn-create-room" class="btn btn-secondary btn-large">
-                        <span class="btn-icon">&#43;</span>
-                        <span>방 만들기</span>
-                        <span class="btn-desc">멀티플레이어 방 생성</span>
-                    </button>
-                    <button id="btn-join-room" class="btn btn-secondary btn-large">
-                        <span class="btn-icon">&#8680;</span>
-                        <span>방 참가</span>
-                        <span class="btn-desc">코드로 방 입장</span>
+                    <button id="btn-multiplayer" class="btn btn-secondary btn-large">
+                        <span class="btn-icon">&#9775;</span>
+                        <span>다같이 시합</span>
+                        <span class="btn-desc">온라인 멀티플레이어</span>
                     </button>
                 </div>
 
@@ -110,36 +105,58 @@
             </div>
         </div>
 
-        <!-- Create Room -->
-        <div id="create-room" class="screen">
-            <div class="panel">
-                <h2>Create Room</h2>
-                <div class="form-group">
-                    <label>Player Name</label>
-                    <input type="text" class="player-name-input input-text" placeholder="Enter your name" maxlength="12">
+        <!-- Multiplayer Lobby (방 목록) -->
+        <div id="multiplayer-lobby" class="screen">
+            <div class="panel panel-wide">
+                <h2>온라인 대전</h2>
+                <div class="lobby-top">
+                    <div class="form-group form-inline">
+                        <label>닉네임</label>
+                        <input type="text" class="player-name-input input-text" placeholder="이름 입력" maxlength="12">
+                    </div>
+                    <div class="lobby-actions">
+                        <button id="btn-refresh-rooms" class="btn btn-small">새로고침</button>
+                        <button id="btn-create-room" class="btn btn-primary btn-small-primary">방 만들기</button>
+                    </div>
+                </div>
+                <div id="room-list" class="room-list">
+                    <div class="room-list-empty">방 목록을 불러오는 중...</div>
                 </div>
                 <div class="form-actions">
-                    <button id="btn-back-create" class="btn btn-ghost">Back</button>
-                    <button id="btn-do-create" class="btn btn-primary">Create</button>
+                    <button id="btn-back-multiplayer" class="btn btn-ghost">Back</button>
                 </div>
             </div>
         </div>
 
-        <!-- Join Room -->
-        <div id="join-room" class="screen">
+        <!-- Create Room (세트/스코어 설정) -->
+        <div id="create-room" class="screen">
             <div class="panel">
-                <h2>Join Room</h2>
+                <h2>방 만들기</h2>
                 <div class="form-group">
-                    <label>Player Name</label>
-                    <input type="text" class="player-name-input input-text" placeholder="Enter your name" maxlength="12">
+                    <label>세트 수</label>
+                    <select id="create-sets" class="input-select">
+                        <option value="1" selected>단판 (1세트)</option>
+                        <option value="3">3세트 (2선승)</option>
+                        <option value="5">5세트 (3선승)</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label>Room Code</label>
-                    <input type="text" id="join-code-input" class="input-text code-input" placeholder="ABCD" maxlength="6" autocomplete="off" spellcheck="false">
+                    <label>세트 당 스코어</label>
+                    <select id="create-score" class="input-select">
+                        <option value="15">15점</option>
+                        <option value="21">21점</option>
+                        <option value="25" selected>25점</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="create-deuce" checked>
+                        듀스 (동점 시 2점 차 승리)
+                    </label>
                 </div>
                 <div class="form-actions">
-                    <button id="btn-back-join" class="btn btn-ghost">Back</button>
-                    <button id="btn-do-join" class="btn btn-primary">Join</button>
+                    <button id="btn-back-create" class="btn btn-ghost">Back</button>
+                    <button id="btn-do-create" class="btn btn-primary">생성</button>
                 </div>
             </div>
         </div>
@@ -153,9 +170,18 @@
                     <span id="room-code-display" class="room-code">----</span>
                     <button id="btn-copy-code" class="btn btn-small">Copy</button>
                 </div>
+                <div id="room-meta" class="room-meta"></div>
                 <div id="player-list" class="player-list"></div>
+                <div class="chat-section">
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div class="chat-input-row">
+                        <input type="text" id="chat-input" class="input-text chat-input-field" placeholder="메시지 입력..." maxlength="200">
+                        <button id="btn-chat-send" class="btn btn-small">전송</button>
+                    </div>
+                </div>
                 <div class="form-actions">
                     <button id="btn-leave-room" class="btn btn-ghost">Leave</button>
+                    <button id="btn-switch-team" class="btn btn-secondary">팀 변경</button>
                     <button id="btn-ready" class="btn btn-secondary">Ready</button>
                     <button id="btn-start-game" class="btn btn-primary" disabled style="display:none">Start Game</button>
                 </div>
@@ -182,13 +208,24 @@
             <div class="panel game-over-panel">
                 <h2 id="game-over-title" class="victory">Victory!</h2>
                 <div id="game-over-score" class="game-over-score">0 - 0</div>
+                <div id="game-over-sets" class="game-over-sets"></div>
                 <div class="form-actions">
-                    <button id="btn-back-lobby" class="btn btn-ghost">Lobby</button>
+                    <button id="btn-gameover-lobby" class="btn btn-ghost">Lobby</button>
                     <button id="btn-play-again" class="btn btn-primary">Play Again</button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Kakao in-app browser redirect -->
+    <script>
+        (function() {
+            var ua = navigator.userAgent || '';
+            if (ua.match(/KAKAOTALK/i)) {
+                location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+            }
+        })();
+    </script>
 
     <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
