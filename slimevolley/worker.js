@@ -2,7 +2,6 @@
 // 범용 WebSocket 방 관리/릴레이 서버 (모든 게임 공용)
 //
 // Worker 이름: game-relay (game-relay.yama5993.workers.dev)
-// 커스텀 도메인: relay.archerlab.dev
 // Durable Object 바인딩: GAME_ROOM -> GameRoom class
 //
 // 엔드포인트:
