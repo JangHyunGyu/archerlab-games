@@ -16,6 +16,9 @@ export class SoundManager {
         // Global limit: max simultaneous sounds to prevent crackling
         this._activeSounds = 0;
         this._maxActiveSounds = 5;
+        // Pre-rendered SFX buffers
+        this._buffers = {};
+        this._sfxGain = null;
     }
 
     init() {
@@ -112,6 +115,14 @@ export class SoundManager {
 
             this._initialized = true;
 
+            // Web Audio API 직접 재생용 (사전 렌더링된 SFX 버퍼 출력)
+            try {
+                this._audioCtx = Tone.getContext().rawContext;
+                this._sfxGain = this._audioCtx.createGain();
+                this._sfxGain.connect(this._audioCtx.destination);
+                this.prerenderSFX(); // async, 백그라운드에서 렌더링 (완료 전에는 라이브 합성 폴백)
+            } catch (e) { /* silent */ }
+
             // 탭 전환 시 자동 일시정지
             this._onVisibilityChange = () => {
                 try {
@@ -181,6 +192,9 @@ export class SoundManager {
         this._lastPlayTime[soundName] = now;
         this._activeSounds++;
         setTimeout(() => { this._activeSounds = Math.max(0, this._activeSounds - 1); }, 100);
+        // 사전 렌더링된 버퍼가 있으면 Web Audio로 직접 재생 (실시간 합성 오버헤드 없음)
+        if (this._playBuffer(soundName)) return;
+        // 버퍼 없으면 라이브 합성 폴백 (arise, bossAppear, dungeonBreak 또는 아직 렌더링 미완료)
         this.resume();
         // Reset shared synth params to defaults before playing
         this._resetSynths();
@@ -234,6 +248,93 @@ export class SoundManager {
             // Impact defaults
             this._impact.pitchDecay = 0.04;
         } catch (e) { /* silent */ }
+    }
+
+    // ========== PRE-RENDERED SFX BUFFERS ==========
+
+    /**
+     * 오프라인 컨텍스트용 신스 풀 생성 (라이브 풀과 동일한 구성)
+     * Tone.Offline 내부에서 호출 → toDestination()이 오프라인 출력으로 연결됨
+     */
+    _buildOfflinePool() {
+        const comp = new Tone.Compressor(-24, 4).toDestination();
+        const reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(comp);
+        const noiseFilter = new Tone.Filter(2000, 'bandpass').connect(comp);
+        return {
+            impact: new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 5, envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.08 } }).connect(comp),
+            tone: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } }).connect(comp),
+            toneWet: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.15, sustain: 0.1, release: 0.2 } }).connect(reverb),
+            fm: new Tone.FMSynth({ harmonicity: 3, modulationIndex: 10, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }, modulation: { type: 'sine' } }).connect(comp),
+            fmWet: new Tone.FMSynth({ harmonicity: 2, modulationIndex: 8, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.3 }, modulation: { type: 'sine' } }).connect(reverb),
+            metal: new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.08 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).connect(comp),
+            noiseFilter,
+            noise: new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.08 } }).connect(noiseFilter),
+            sub: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.003, decay: 0.15, sustain: 0, release: 0.1 } }).connect(comp),
+            poly: new Tone.PolySynth(Tone.Synth, { maxPolyphony: 8, voice: Tone.Synth, options: { oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.15, release: 0.3 } } }).connect(reverb),
+            fmPoly: new Tone.PolySynth(Tone.FMSynth, { maxPolyphony: 6, voice: Tone.FMSynth, options: { harmonicity: 3, modulationIndex: 5, envelope: { attack: 0.008, decay: 0.2, sustain: 0.1, release: 0.25 } } }).connect(reverb),
+        };
+    }
+
+    /**
+     * 모든 SFX를 Tone.Offline으로 사전 렌더링하여 AudioBuffer로 저장
+     * 게임 중에는 AudioBuffer 재생만 하므로 실시간 합성 오버헤드 제거 → 찌직거림 방지
+     * setTimeout 사용하는 복잡한 사운드(arise, bossAppear, dungeonBreak)는 라이브 합성 유지
+     */
+    async prerenderSFX() {
+        const sfxList = [
+            ['hit', 0.3], ['kill', 0.4], ['dagger', 0.3], ['slash', 0.4],
+            ['authority', 0.6], ['fear', 1.2], ['xp', 0.15], ['levelup', 0.7],
+            ['system', 0.2], ['rankup', 1.0], ['playerHit', 0.4],
+            ['warning', 0.4], ['potion', 0.5], ['select', 0.15], ['quest', 0.6],
+        ];
+        const methodMap = {
+            hit: '_playHit', kill: '_playKill', dagger: '_playDagger',
+            slash: '_playSlash', authority: '_playAuthority', fear: '_playFear',
+            xp: '_playXP', levelup: '_playLevelUp', system: '_playSystem',
+            rankup: '_playRankUp', playerHit: '_playPlayerHit',
+            warning: '_playWarning', potion: '_playPotion', select: '_playSelect',
+            quest: '_playQuest',
+        };
+        const synthKeys = ['impact','tone','toneWet','fm','fmWet','metal','noiseFilter','noise','sub','poly','fmPoly'];
+
+        for (const [name, dur] of sfxList) {
+            try {
+                const buffer = await Tone.Offline(() => {
+                    const pool = this._buildOfflinePool();
+                    // 라이브 신스를 오프라인 풀로 교체 → 기존 _play* 메서드 재사용
+                    const saved = {};
+                    for (const k of synthKeys) {
+                        saved[k] = this[`_${k}`];
+                        this[`_${k}`] = pool[k];
+                    }
+                    this._resetSynths();
+                    this[methodMap[name]]();
+                    // 라이브 신스 복원 (오프라인 신스는 렌더링 완료까지 오디오 그래프에 유지됨)
+                    for (const k of synthKeys) {
+                        this[`_${k}`] = saved[k];
+                    }
+                }, dur);
+                this._buffers[name] = buffer.get();
+            } catch (e) { /* silent */ }
+        }
+    }
+
+    /**
+     * 사전 렌더링된 AudioBuffer 재생 (Web Audio API 직접 사용, Tone.js 불필요)
+     * @returns {boolean} 버퍼 존재 시 true, 없으면 false (라이브 합성 폴백)
+     */
+    _playBuffer(name) {
+        try {
+            const buf = this._buffers[name];
+            if (!buf || !this._audioCtx) return false;
+            const source = this._audioCtx.createBufferSource();
+            source.buffer = buf;
+            source.connect(this._sfxGain);
+            source.start();
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
     // ========== WEAPON SOUNDS ==========
@@ -980,6 +1081,10 @@ export class SoundManager {
         this.enabled = !this.enabled;
         if (this._masterVol) {
             this._masterVol.volume.value = this.enabled ? -8 : -Infinity;
+        }
+        // 사전 렌더링된 SFX 버퍼도 음소거/복원
+        if (this._sfxGain) {
+            this._sfxGain.gain.value = this.enabled ? 1 : 0;
         }
         return this.enabled;
     }
