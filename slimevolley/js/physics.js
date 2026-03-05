@@ -242,25 +242,30 @@ class PhysicsEngine {
         const netTop = CONFIG.GROUND_Y - CONFIG.NET_HEIGHT;
         const br = CONFIG.BALL_RADIUS;
 
-        if (this.ball.x + br > netLeft - 8 && this.ball.x - br < netRight + 8) {
-            if (this.ball.y + br > netTop && this.ball.y + br < netTop + 20 && this.ball.vy > 0) {
+        // 공이 네트 높이 아래에 있을 때 (바닥까지 완전한 벽)
+        if (this.ball.y + br > netTop) {
+            // 왼쪽에서 오른쪽으로 관통 방지
+            if (this.ball.x + br > netLeft && this.ball.x < CONFIG.NET_X) {
+                this.ball.x = netLeft - br;
+                this.ball.vx = -Math.abs(this.ball.vx) * CONFIG.BALL_BOUNCE_DAMPING;
+            }
+            // 오른쪽에서 왼쪽으로 관통 방지
+            if (this.ball.x - br < netRight && this.ball.x > CONFIG.NET_X) {
+                this.ball.x = netRight + br;
+                this.ball.vx = Math.abs(this.ball.vx) * CONFIG.BALL_BOUNCE_DAMPING;
+            }
+        }
+
+        // 네트 상단 표면 (위에서 떨어질 때 바운스)
+        if (this.ball.x + br > netLeft - 4 && this.ball.x - br < netRight + 4) {
+            if (this.ball.y + br > netTop && this.ball.y - br < netTop && this.ball.vy > 0) {
                 this.ball.y = netTop - br;
                 this.ball.vy = -this.ball.vy * CONFIG.BALL_BOUNCE_DAMPING;
                 return;
             }
         }
 
-        if (this.ball.y + br > netTop) {
-            if (this.ball.x + br > netLeft && this.ball.x < CONFIG.NET_X && this.ball.vx > 0) {
-                this.ball.x = netLeft - br;
-                this.ball.vx = -Math.abs(this.ball.vx) * CONFIG.BALL_BOUNCE_DAMPING;
-            }
-            if (this.ball.x - br < netRight && this.ball.x > CONFIG.NET_X && this.ball.vx < 0) {
-                this.ball.x = netRight + br;
-                this.ball.vx = Math.abs(this.ball.vx) * CONFIG.BALL_BOUNCE_DAMPING;
-            }
-        }
-
+        // 네트 상단 모서리 (원형 충돌)
         const corners = [
             { x: netLeft, y: netTop },
             { x: netRight, y: netTop }
