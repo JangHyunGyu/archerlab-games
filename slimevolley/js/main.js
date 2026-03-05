@@ -57,6 +57,15 @@ class SlimeVolleyGame {
     }
 
     setupMobileControls() {
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const mobileControls = document.getElementById('mobile-controls');
+        const controlsGuide = document.querySelector('.controls-guide');
+
+        if (isTouchDevice) {
+            if (mobileControls) mobileControls.style.display = 'block';
+            if (controlsGuide) controlsGuide.style.display = 'none';
+        }
+
         const leftBtn = document.getElementById('touch-left');
         const rightBtn = document.getElementById('touch-right');
         const jumpBtn = document.getElementById('touch-jump');
