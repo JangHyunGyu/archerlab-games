@@ -700,22 +700,81 @@ kbd {
 .touch-zone-right {
     right: 0;
     width: 50%;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 20px;
 }
 
-.touch-zone-label {
-    color: rgba(255, 255, 255, 0.15);
-    font-family: 'Orbitron', monospace;
-    font-size: 1rem;
-    font-weight: bold;
+/* 조이스틱 비주얼 */
+.joystick-visual {
+    position: absolute;
+    bottom: 40%;
     pointer-events: none;
 }
 
-.touch-zone-right:active .touch-zone-label {
-    color: rgba(79, 195, 247, 0.4);
+.touch-zone-left .joystick-visual {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.touch-zone-right .joystick-visual {
+    right: 50%;
+    transform: translateX(50%);
+}
+
+.joystick-base {
+    width: 100px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    position: relative;
+}
+
+.joystick-knob {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    transition: transform 0.1s;
+    flex-shrink: 0;
+}
+
+.joystick-arrow {
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.jump-btn-visual {
+    width: 70px;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.2);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* 터치 활성화 시 */
+.touch-zone-left.active .joystick-base {
+    border-color: rgba(79, 195, 247, 0.3);
+}
+.touch-zone-left.active .joystick-knob {
+    background: rgba(79, 195, 247, 0.3);
+    border-color: rgba(79, 195, 247, 0.5);
+}
+.touch-zone-right.active .jump-btn-visual {
+    background: rgba(79, 195, 247, 0.15);
+    border-color: rgba(79, 195, 247, 0.4);
+    color: rgba(79, 195, 247, 0.6);
 }
 
 @media (max-width: 768px) {
@@ -814,11 +873,18 @@ kbd {
     #game-screen.screen {
         padding: 0 2px;
     }
-    .touch-zone-right {
-        padding-bottom: 10px;
+    .joystick-base {
+        width: 80px;
+        height: 40px;
     }
-    .touch-zone-label {
-        font-size: 0.8rem;
+    .joystick-knob {
+        width: 22px;
+        height: 22px;
+    }
+    .jump-btn-visual {
+        width: 55px;
+        height: 55px;
+        font-size: 0.65rem;
     }
 }
 
@@ -830,8 +896,18 @@ kbd {
     #game-screen.screen {
         padding: 0;
     }
-    .touch-zone-label {
-        font-size: 0.7rem;
+    .joystick-base {
+        width: 70px;
+        height: 36px;
+    }
+    .joystick-knob {
+        width: 20px;
+        height: 20px;
+    }
+    .jump-btn-visual {
+        width: 48px;
+        height: 48px;
+        font-size: 0.6rem;
     }
 }
 

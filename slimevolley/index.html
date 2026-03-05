@@ -21,7 +21,7 @@
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/style.css?v=7">
     <script>
         // 모바일 주소창 높이를 반영한 실제 뷰포트 높이
         function setVH() {
@@ -209,9 +209,19 @@
             <div id="game-canvas-container" class="game-canvas-container">
                 <!-- Mobile Controls (overlay) -->
                 <div id="mobile-controls" class="mobile-controls">
-                    <div id="touch-move-zone" class="touch-zone touch-zone-left"></div>
+                    <div id="touch-move-zone" class="touch-zone touch-zone-left">
+                        <div class="joystick-visual" id="joystick-move">
+                            <div class="joystick-base">
+                                <div class="joystick-arrow joystick-arrow-left">&#9664;</div>
+                                <div class="joystick-knob" id="joystick-knob"></div>
+                                <div class="joystick-arrow joystick-arrow-right">&#9654;</div>
+                            </div>
+                        </div>
+                    </div>
                     <div id="touch-jump-zone" class="touch-zone touch-zone-right">
-                        <span class="touch-zone-label">JUMP</span>
+                        <div class="joystick-visual" id="joystick-jump">
+                            <div class="jump-btn-visual">JUMP</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -246,13 +256,13 @@
     <script src="https://cdn.jsdelivr.net/npm/tone@15/build/Tone.js"></script>
 
     <!-- Game Scripts -->
-    <script src="js/config.js?v=6"></script>
-    <script src="js/physics.js?v=6"></script>
-    <script src="js/renderer.js?v=6"></script>
-    <script src="js/bot.js?v=6"></script>
-    <script src="js/sound.js?v=6"></script>
-    <script src="js/network.js?v=6"></script>
-    <script src="js/lobby.js?v=6"></script>
-    <script src="js/main.js?v=6"></script>
+    <script src="js/config.js?v=7"></script>
+    <script src="js/physics.js?v=7"></script>
+    <script src="js/renderer.js?v=7"></script>
+    <script src="js/bot.js?v=7"></script>
+    <script src="js/sound.js?v=7"></script>
+    <script src="js/network.js?v=7"></script>
+    <script src="js/lobby.js?v=7"></script>
+    <script src="js/main.js?v=7"></script>
 </body>
 </html>

@@ -68,15 +68,18 @@ class SlimeVolleyGame {
 
         const moveZone = document.getElementById('touch-move-zone');
         const jumpZone = document.getElementById('touch-jump-zone');
+        const joystickKnob = document.getElementById('joystick-knob');
         if (!moveZone || !jumpZone) return;
 
         // 좌우 이동: 터치 시작점 기준으로 좌/우 드래그
         let moveStartX = null;
-        const DEAD_ZONE = 10; // px 이내는 무시
+        const DEAD_ZONE = 10;
+        const MAX_DRAG = 30; // 노브 최대 이동 범위
 
         moveZone.addEventListener('touchstart', (e) => {
             e.preventDefault();
             moveStartX = e.touches[0].clientX;
+            moveZone.classList.add('active');
         }, { passive: false });
 
         moveZone.addEventListener('touchmove', (e) => {
@@ -85,6 +88,11 @@ class SlimeVolleyGame {
             const dx = e.touches[0].clientX - moveStartX;
             this.keys['ArrowLeft'] = dx < -DEAD_ZONE;
             this.keys['ArrowRight'] = dx > DEAD_ZONE;
+            // 조이스틱 노브 이동
+            if (joystickKnob) {
+                const clampedDx = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, dx));
+                joystickKnob.style.transform = `translateX(${clampedDx}px)`;
+            }
         }, { passive: false });
 
         const stopMove = (e) => {
@@ -92,6 +100,8 @@ class SlimeVolleyGame {
             moveStartX = null;
             this.keys['ArrowLeft'] = false;
             this.keys['ArrowRight'] = false;
+            moveZone.classList.remove('active');
+            if (joystickKnob) joystickKnob.style.transform = '';
         };
         moveZone.addEventListener('touchend', stopMove, { passive: false });
         moveZone.addEventListener('touchcancel', stopMove, { passive: false });
@@ -100,11 +110,13 @@ class SlimeVolleyGame {
         jumpZone.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.keys['ArrowUp'] = true;
+            jumpZone.classList.add('active');
         }, { passive: false });
 
         const stopJump = (e) => {
             e.preventDefault();
             this.keys['ArrowUp'] = false;
+            jumpZone.classList.remove('active');
         };
         jumpZone.addEventListener('touchend', stopJump, { passive: false });
         jumpZone.addEventListener('touchcancel', stopJump, { passive: false });
