@@ -225,13 +225,13 @@ class PhysicsEngine {
             this.ball.vx += slime.vx * 0.4;
             this.ball.vy += clampedVy * 0.3;
 
-            // 기본 반발력 (제자리에서도 적절히 튀도록)
-            if (this.ball.vy > -3) {
-                this.ball.vy = -4;
-            }
-
             this.ball.vx *= CONFIG.BALL_SLIME_BOUNCE;
             this.ball.vy *= CONFIG.BALL_SLIME_BOUNCE;
+
+            // 기본 반발력 (바운스 적용 후 최소 보장)
+            if (this.ball.vy > -3) {
+                this.ball.vy = -3;
+            }
 
             this.ball.lastHitBy = slime.team;
             return true;
