@@ -8,24 +8,24 @@ const CONFIG = {
     // Net
     NET_X: 400,
     NET_WIDTH: 8,
-    NET_HEIGHT: 130,
+    NET_HEIGHT: 190,
     NET_TOP_WIDTH: 24,
     NET_TOP_HEIGHT: 8,
 
     // Slime
     SLIME_RADIUS: 38,
     SLIME_SPEED: 5.5,
-    SLIME_JUMP_SPEED: -5,
+    SLIME_JUMP_SPEED: -7,
 
     // Ball
     BALL_RADIUS: 18,
-    BALL_GRAVITY: 0.08,
+    BALL_GRAVITY: 0.04,
     BALL_BOUNCE_DAMPING: 0.4,
     BALL_MAX_SPEED: 12,
     BALL_SLIME_BOUNCE: 0.85,
 
     // Physics
-    GRAVITY: 0.15,
+    GRAVITY: 0.08,
 
     // Game rules
     MAX_SCORE: 15,
