@@ -15,7 +15,7 @@ const CONFIG = {
     // Slime
     SLIME_RADIUS: 38,
     SLIME_SPEED: 3.5,
-    SLIME_JUMP_SPEED: -9,
+    SLIME_JUMP_SPEED: -12,
 
     // Ball
     BALL_RADIUS: 18,
