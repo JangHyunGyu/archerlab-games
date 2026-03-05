@@ -21,7 +21,7 @@ const CONFIG = {
     BALL_RADIUS: 18,
     BALL_GRAVITY: 0.08,
     BALL_BOUNCE_DAMPING: 0.4,
-    BALL_MAX_SPEED: 2,
+    BALL_MAX_SPEED: 12,
     BALL_SLIME_BOUNCE: 0.85,
 
     // Physics
