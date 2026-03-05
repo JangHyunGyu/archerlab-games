@@ -14,8 +14,8 @@ const CONFIG = {
 
     // Slime
     SLIME_RADIUS: 38,
-    SLIME_SPEED: 2.5,
-    SLIME_JUMP_SPEED: -10,
+    SLIME_SPEED: 2,
+    SLIME_JUMP_SPEED: -9,
 
     // Ball
     BALL_RADIUS: 18,
@@ -25,7 +25,7 @@ const CONFIG = {
     BALL_SLIME_BOUNCE: 0.45,
 
     // Physics
-    GRAVITY: 0.25,
+    GRAVITY: 0.18,
 
     // Game rules
     MAX_SCORE: 15,
