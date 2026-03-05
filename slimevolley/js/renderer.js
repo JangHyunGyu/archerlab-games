@@ -384,17 +384,50 @@ class GameRenderer {
     }
 
     spawnHitParticles(x, y, color) {
-        for (let i = 0; i < 8; i++) {
+        const baseColor = color || 0xFFEB3B;
+
+        // 임팩트 링 (팽창하며 사라지는 원)
+        const ring = new PIXI.Graphics();
+        ring.circle(0, 0, 8);
+        ring.stroke({ color: 0xFFFFFF, width: 2, alpha: 0.8 });
+        ring.x = x;
+        ring.y = y;
+        ring._life = 12;
+        ring._maxLife = 12;
+        ring._isRing = true;
+        this.particleContainer.addChild(ring);
+        this.particles.push(ring);
+
+        // 스파크 파티클 (빠르고 밝은)
+        for (let i = 0; i < 6; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 4 + 2;
+            const speed = Math.random() * 6 + 4;
             const p = new PIXI.Graphics();
-            p.circle(0, 0, Math.random() * 3 + 1);
-            p.fill(color || 0xFFEB3B);
+            p.circle(0, 0, Math.random() * 2 + 1);
+            p.fill(0xFFFFFF);
             p.x = x;
             p.y = y;
             p._vx = Math.cos(angle) * speed;
             p._vy = Math.sin(angle) * speed - 2;
-            p._life = 15 + Math.random() * 10;
+            p._life = 8 + Math.random() * 6;
+            p._maxLife = p._life;
+            this.particleContainer.addChild(p);
+            this.particles.push(p);
+        }
+
+        // 컬러 파티클 (느리고 큰)
+        for (let i = 0; i < 10; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 3 + 1.5;
+            const p = new PIXI.Graphics();
+            const size = Math.random() * 4 + 1.5;
+            p.circle(0, 0, size);
+            p.fill(baseColor);
+            p.x = x;
+            p.y = y;
+            p._vx = Math.cos(angle) * speed;
+            p._vy = Math.sin(angle) * speed - 2.5;
+            p._life = 18 + Math.random() * 12;
             p._maxLife = p._life;
             this.particleContainer.addChild(p);
             this.particles.push(p);
@@ -424,13 +457,23 @@ class GameRenderer {
     updateParticles() {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
-            p._vx *= 0.96;
-            p._vy += 0.15;
-            p._vy *= 0.96;
-            p.x += p._vx;
-            p.y += p._vy;
             p._life--;
-            p.alpha = p._life / p._maxLife;
+
+            if (p._isRing) {
+                // 임팩트 링: 팽창하면서 페이드 아웃
+                const progress = 1 - p._life / p._maxLife;
+                p.scale.set(1 + progress * 3);
+                p.alpha = (1 - progress) * 0.8;
+            } else {
+                p._vx *= 0.95;
+                p._vy += 0.15;
+                p._vy *= 0.95;
+                p.x += p._vx;
+                p.y += p._vy;
+                p.alpha = p._life / p._maxLife;
+                p.scale.set(0.5 + 0.5 * (p._life / p._maxLife));
+            }
+
             if (p._life <= 0) {
                 this.particleContainer.removeChild(p);
                 p.destroy();
