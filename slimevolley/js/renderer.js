@@ -25,9 +25,9 @@ class GameRenderer {
             autoDensity: true,
         });
         this.container.appendChild(this.app.canvas);
-        this.app.canvas.style.width = '100%';
-        this.app.canvas.style.maxWidth = CONFIG.COURT_WIDTH + 'px';
-        this.app.canvas.style.height = 'auto';
+        // CSS가 max-width/max-height + object-fit: contain으로 반응형 처리
+        this.app.canvas.style.width = '';
+        this.app.canvas.style.height = '';
 
         this.gameContainer = new PIXI.Container();
         this.app.stage.addChild(this.gameContainer);
