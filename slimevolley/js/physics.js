@@ -11,7 +11,28 @@ class PhysicsEngine {
         this.servingTeam = 0;
         this.phase = 'waiting'; // waiting, serving, playing, scored, gameOver
         this.freezeTimer = 0;
-        this.maxScore = CONFIG.MAX_SCORE;
+
+        // 세트/듀스 설정
+        this.totalSets = 1;
+        this.scorePerSet = 25;
+        this.deuceEnabled = true;
+        this.currentSet = 0;
+        this.setScores = []; // [{0: score, 1: score}, ...]
+        this.setsWon = [0, 0];
+        this.setsToWin = 1;
+    }
+
+    configure(opts) {
+        if (opts) {
+            this.totalSets = opts.sets || 1;
+            this.scorePerSet = opts.scorePerSet || 25;
+            this.deuceEnabled = opts.deuce !== false;
+            this.setsToWin = Math.ceil(this.totalSets / 2);
+        }
+        this.currentSet = 0;
+        this.setScores = [];
+        this.setsWon = [0, 0];
+        this.scores = [0, 0];
     }
 
     initSlimes(teamSizes) {
@@ -22,7 +43,7 @@ class PhysicsEngine {
         for (let team = 0; team < 2; team++) {
             const count = teamSizes[team];
             const baseX = team === 0 ? netGap : halfW + netGap;
-            const rangeW = team === 0 ? (halfW - netGap - CONFIG.SLIME_RADIUS) : (halfW - netGap - CONFIG.SLIME_RADIUS);
+            const rangeW = halfW - netGap - CONFIG.SLIME_RADIUS;
 
             for (let i = 0; i < count; i++) {
                 const spacing = rangeW / (count + 1);
@@ -50,7 +71,7 @@ class PhysicsEngine {
         const halfW = CONFIG.COURT_WIDTH / 2;
         this.ball.x = team === 0 ? halfW / 2 : halfW + halfW / 2;
         this.ball.y = 80;
-        this.ball.vx = team === 0 ? 2 : -2;
+        this.ball.vx = team === 0 ? 1.5 : -1.5;
         this.ball.vy = 0;
         this.ball.lastHitBy = -1;
         this.phase = 'playing';
@@ -83,7 +104,7 @@ class PhysicsEngine {
         // Update ball
         this.updateBall();
 
-        // Slime-slime collision (same team, prevent overlap)
+        // Slime-slime collision
         this.resolveSlimeCollisions();
 
         // Ball-slime collision
@@ -107,7 +128,6 @@ class PhysicsEngine {
     }
 
     updateSlime(slime) {
-        // Apply input
         if (slime.input.left) {
             slime.vx = -CONFIG.SLIME_SPEED;
         } else if (slime.input.right) {
@@ -121,19 +141,16 @@ class PhysicsEngine {
             slime.onGround = false;
         }
 
-        // Gravity
         slime.vy += CONFIG.GRAVITY;
         slime.y += slime.vy;
         slime.x += slime.vx;
 
-        // Ground
         if (slime.y >= CONFIG.GROUND_Y) {
             slime.y = CONFIG.GROUND_Y;
             slime.vy = 0;
             slime.onGround = true;
         }
 
-        // Stay on own side
         const halfW = CONFIG.COURT_WIDTH / 2;
         const netGap = CONFIG.NET_WIDTH / 2 + CONFIG.SLIME_RADIUS;
 
@@ -151,7 +168,6 @@ class PhysicsEngine {
         this.ball.x += this.ball.vx;
         this.ball.y += this.ball.vy;
 
-        // Speed limit
         const speed = Math.sqrt(this.ball.vx * this.ball.vx + this.ball.vy * this.ball.vy);
         if (speed > CONFIG.BALL_MAX_SPEED) {
             const scale = CONFIG.BALL_MAX_SPEED / speed;
@@ -168,14 +184,13 @@ class PhysicsEngine {
                 if (a.team !== b.team) continue;
 
                 const dx = b.x - a.x;
-                const dy = (b.y) - (a.y);
+                const dy = b.y - a.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 const minDist = CONFIG.SLIME_RADIUS * 2;
 
                 if (dist < minDist && dist > 0) {
                     const overlap = (minDist - dist) / 2;
                     const nx = dx / dist;
-                    const ny = dy / dist;
                     a.x -= nx * overlap;
                     b.x += nx * overlap;
                 }
@@ -190,15 +205,12 @@ class PhysicsEngine {
         const minDist = CONFIG.BALL_RADIUS + CONFIG.SLIME_RADIUS;
 
         if (dist < minDist && dist > 0 && dy <= CONFIG.SLIME_RADIUS * 0.3) {
-            // Normal from slime center to ball center
             const nx = dx / dist;
             const ny = dy / dist;
 
-            // Move ball outside slime
             this.ball.x = slime.x + nx * minDist;
             this.ball.y = slime.y + ny * minDist;
 
-            // Reflect velocity
             const relVx = this.ball.vx - slime.vx;
             const relVy = this.ball.vy - slime.vy;
             const dot = relVx * nx + relVy * ny;
@@ -208,16 +220,13 @@ class PhysicsEngine {
                 this.ball.vy -= 2 * dot * ny;
             }
 
-            // Add slime velocity influence and bounce boost
             this.ball.vx += slime.vx * 0.5;
             this.ball.vy += slime.vy * 0.3;
 
-            // Minimum upward velocity on hit
             if (this.ball.vy > -3) {
                 this.ball.vy = Math.min(this.ball.vy, -5);
             }
 
-            // Boost
             this.ball.vx *= CONFIG.BALL_SLIME_BOUNCE;
             this.ball.vy *= CONFIG.BALL_SLIME_BOUNCE;
 
@@ -233,7 +242,6 @@ class PhysicsEngine {
         const netTop = CONFIG.GROUND_Y - CONFIG.NET_HEIGHT;
         const br = CONFIG.BALL_RADIUS;
 
-        // Ball vs net top (horizontal surface)
         if (this.ball.x + br > netLeft - 8 && this.ball.x - br < netRight + 8) {
             if (this.ball.y + br > netTop && this.ball.y + br < netTop + 20 && this.ball.vy > 0) {
                 this.ball.y = netTop - br;
@@ -242,21 +250,17 @@ class PhysicsEngine {
             }
         }
 
-        // Ball vs net sides
         if (this.ball.y + br > netTop) {
-            // Left side
             if (this.ball.x + br > netLeft && this.ball.x < CONFIG.NET_X && this.ball.vx > 0) {
                 this.ball.x = netLeft - br;
                 this.ball.vx = -Math.abs(this.ball.vx) * CONFIG.BALL_BOUNCE_DAMPING;
             }
-            // Right side
             if (this.ball.x - br < netRight && this.ball.x > CONFIG.NET_X && this.ball.vx < 0) {
                 this.ball.x = netRight + br;
                 this.ball.vx = Math.abs(this.ball.vx) * CONFIG.BALL_BOUNCE_DAMPING;
             }
         }
 
-        // Ball vs net top corners (circular collision)
         const corners = [
             { x: netLeft, y: netTop },
             { x: netRight, y: netTop }
@@ -282,17 +286,14 @@ class PhysicsEngine {
     checkBallWallCollision() {
         const br = CONFIG.BALL_RADIUS;
 
-        // Left wall
         if (this.ball.x - br < 0) {
             this.ball.x = br;
             this.ball.vx = Math.abs(this.ball.vx) * CONFIG.BALL_BOUNCE_DAMPING;
         }
-        // Right wall
         if (this.ball.x + br > CONFIG.COURT_WIDTH) {
             this.ball.x = CONFIG.COURT_WIDTH - br;
             this.ball.vx = -Math.abs(this.ball.vx) * CONFIG.BALL_BOUNCE_DAMPING;
         }
-        // Ceiling
         if (this.ball.y - br < 0) {
             this.ball.y = br;
             this.ball.vy = Math.abs(this.ball.vy) * CONFIG.BALL_BOUNCE_DAMPING;
@@ -301,20 +302,50 @@ class PhysicsEngine {
 
     checkScoring() {
         if (this.ball.y + CONFIG.BALL_RADIUS >= CONFIG.GROUND_Y) {
-            // Ball hit the ground
             const scoringTeam = this.ball.x < CONFIG.NET_X ? 1 : 0;
             this.scores[scoringTeam]++;
             this.servingTeam = scoringTeam;
 
-            if (this.scores[scoringTeam] >= this.maxScore) {
-                this.phase = 'gameOver';
-                return { type: 'gameOver', winner: scoringTeam, scores: [...this.scores] };
+            // 세트 승리 체크
+            if (this.isSetWon(scoringTeam)) {
+                this.setScores.push([...this.scores]);
+                this.setsWon[scoringTeam]++;
+                this.currentSet++;
+
+                // 매치 승리 체크
+                if (this.setsWon[scoringTeam] >= this.setsToWin) {
+                    this.phase = 'gameOver';
+                    return {
+                        type: 'gameOver',
+                        winner: scoringTeam,
+                        scores: [...this.scores],
+                        setsWon: [...this.setsWon],
+                        setScores: this.setScores.map(s => [...s]),
+                    };
+                }
+
+                // 다음 세트
+                this.phase = 'scored';
+                this.freezeTimer = Math.round(2000 / (1000 / 60));
+                this.ball.vx = 0;
+                this.ball.vy = 0;
+                this.ball.y = CONFIG.GROUND_Y - CONFIG.BALL_RADIUS;
+
+                const result = {
+                    type: 'setWon',
+                    setWinner: scoringTeam,
+                    setNumber: this.currentSet,
+                    setScore: [...this.scores],
+                    setsWon: [...this.setsWon],
+                };
+
+                this.scores = [0, 0];
+                return result;
             }
 
             this.phase = 'scored';
             this.freezeTimer = Math.round(CONFIG.POINT_FREEZE / (1000 / 60));
 
-            // Reset ball position (freeze it)
             this.ball.vx = 0;
             this.ball.vy = 0;
             this.ball.y = CONFIG.GROUND_Y - CONFIG.BALL_RADIUS;
@@ -322,6 +353,23 @@ class PhysicsEngine {
             return { type: 'score', team: scoringTeam, scores: [...this.scores] };
         }
         return null;
+    }
+
+    isSetWon(team) {
+        const target = this.scorePerSet;
+        const myScore = this.scores[team];
+        const otherScore = this.scores[1 - team];
+
+        if (myScore < target) return false;
+
+        if (this.deuceEnabled) {
+            // 듀스: target-1 동점 이후 2점 차 필요
+            if (otherScore >= target - 1) {
+                return myScore - otherScore >= 2;
+            }
+        }
+
+        return true;
     }
 
     getState() {
@@ -340,6 +388,8 @@ class PhysicsEngine {
             scores: [...this.scores],
             phase: this.phase,
             servingTeam: this.servingTeam,
+            setsWon: [...this.setsWon],
+            currentSet: this.currentSet,
         };
     }
 
@@ -362,5 +412,7 @@ class PhysicsEngine {
         this.scores = [...state.scores];
         this.phase = state.phase;
         this.servingTeam = state.servingTeam;
+        if (state.setsWon) this.setsWon = [...state.setsWon];
+        if (state.currentSet !== undefined) this.currentSet = state.currentSet;
     }
 }

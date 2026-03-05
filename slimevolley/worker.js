@@ -1,13 +1,5 @@
 // Archerlab Game Relay Server - Cloudflare Worker + Durable Objects
 // 범용 WebSocket 방 관리/릴레이 서버 (모든 게임 공용)
-//
-// Worker 이름: game-relay (game-relay.yama5993.workers.dev)
-// Durable Object 바인딩: GAME_ROOM -> GameRoom class
-//
-// 엔드포인트:
-//   GET  /                          - Health check
-//   WS   /ws?game=slimevolley&action=create&name=Player
-//   WS   /ws?game=slimevolley&action=join&room=ABCD&name=Player
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -38,9 +30,27 @@ export default {
         if (path === '/' || path === '/health') {
             return new Response(JSON.stringify({
                 service: 'archerlab-game-relay',
-                version: '1.0.0',
+                version: '1.1.0',
                 status: 'ok',
             }), {
+                headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+            });
+        }
+
+        // 방 목록 API
+        if (path === '/api/rooms') {
+            const game = url.searchParams.get('game');
+            if (!game) {
+                return new Response(JSON.stringify({ error: 'game parameter required' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+                });
+            }
+            const lobbyId = env.GAME_LOBBY.idFromName(`lobby:${game}`);
+            const lobby = env.GAME_LOBBY.get(lobbyId);
+            const res = await lobby.fetch(new Request(`http://internal/list?game=${game}`));
+            const data = await res.json();
+            return new Response(JSON.stringify(data), {
                 headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
             });
         }
@@ -75,7 +85,6 @@ export default {
                 });
             }
 
-            // Durable Object ID = "game:roomCode" -> 게임간 방 코드 충돌 방지
             const doId = env.GAME_ROOM.idFromName(`${game}:${roomCode}`);
             const room = env.GAME_ROOM.get(doId);
 
@@ -92,19 +101,80 @@ export default {
     },
 };
 
+// --- Durable Object: GameLobby (방 목록 관리) ---
+export class GameLobby {
+    constructor(state, env) {
+        this.state = state;
+        this.env = env;
+        this.rooms = new Map();
+    }
+
+    async fetch(request) {
+        const url = new URL(request.url);
+        const path = url.pathname;
+
+        if (path === '/list') {
+            const now = Date.now();
+            for (const [code, info] of this.rooms) {
+                if (now - info.updatedAt > 30 * 60 * 1000) {
+                    this.rooms.delete(code);
+                }
+            }
+            const rooms = [];
+            for (const [code, info] of this.rooms) {
+                rooms.push({ ...info, roomCode: code });
+            }
+            return new Response(JSON.stringify({ rooms }));
+        }
+
+        if (path === '/register') {
+            const data = await request.json();
+            this.rooms.set(data.roomCode, {
+                game: data.game,
+                hostName: data.hostName,
+                playerCount: data.playerCount || 1,
+                gameStarted: false,
+                metadata: data.metadata || {},
+                updatedAt: Date.now(),
+            });
+            return new Response('ok');
+        }
+
+        if (path === '/update') {
+            const data = await request.json();
+            const room = this.rooms.get(data.roomCode);
+            if (room) {
+                if (data.playerCount !== undefined) room.playerCount = data.playerCount;
+                if (data.gameStarted !== undefined) room.gameStarted = data.gameStarted;
+                if (data.metadata) Object.assign(room.metadata, data.metadata);
+                room.updatedAt = Date.now();
+            }
+            return new Response('ok');
+        }
+
+        if (path === '/unregister') {
+            const data = await request.json();
+            this.rooms.delete(data.roomCode);
+            return new Response('ok');
+        }
+
+        return new Response('Not Found', { status: 404 });
+    }
+}
+
 // --- Durable Object: GameRoom (범용) ---
 export class GameRoom {
     constructor(state, env) {
         this.state = state;
         this.env = env;
-        this.sessions = new Map(); // WebSocket -> playerData
+        this.sessions = new Map();
         this.game = null;
         this.roomCode = null;
         this.hostId = null;
         this.players = [];
         this.gameStarted = false;
         this.nextPlayerId = 1;
-        this.metadata = {}; // 게임별 커스텀 데이터 (클라이언트가 설정)
+        this.metadata = {};
     }
 
     async fetch(request) {
@@ -119,6 +189,14 @@ export class GameRoom {
             this.game = game;
         }
 
+        // 게임 중이면 참가 거부 (WebSocket 업그레이드 전에 차단)
+        if (action === 'join' && this.gameStarted) {
+            return new Response(JSON.stringify({ error: 'Game already in progress' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
         const pair = new WebSocketPair();
         const [client, server] = Object.values(pair);
 
@@ -129,7 +207,6 @@ export class GameRoom {
             this.hostId = playerId;
         }
 
-        // 팀 자동 배분
         const teamACnt = this.players.filter(p => p.team === 0).length;
         const teamBCnt = this.players.filter(p => p.team === 1).length;
         const team = teamACnt <= teamBCnt ? 0 : 1;
@@ -166,6 +243,22 @@ export class GameRoom {
             }, server);
         }
 
+        // 로비에 방 정보 업데이트
+        if (isHost) {
+            this.notifyLobby('register', {
+                roomCode: this.roomCode,
+                game: this.game,
+                hostName: playerData.name,
+                playerCount: this.players.filter(p => !p.isBot).length,
+                metadata: this.metadata,
+            });
+        } else {
+            this.notifyLobby('update', {
+                roomCode: this.roomCode,
+                playerCount: this.players.filter(p => !p.isBot).length,
+            });
+        }
+
         server.addEventListener('message', (event) => {
             try {
                 const msg = JSON.parse(event.data);
@@ -184,6 +277,19 @@ export class GameRoom {
         });
 
         return new Response(null, { status: 101, webSocket: client });
+    }
+
+    async notifyLobby(action, data) {
+        try {
+            const lobbyId = this.env.GAME_LOBBY.idFromName(`lobby:${this.game}`);
+            const lobby = this.env.GAME_LOBBY.get(lobbyId);
+            await lobby.fetch(new Request(`http://internal/${action}`, {
+                method: 'POST',
+                body: JSON.stringify(data),
+            }));
+        } catch (e) {
+            console.error('Lobby notify error:', e);
+        }
     }
 
     handleMessage(ws, player, msg) {
@@ -211,7 +317,6 @@ export class GameRoom {
                 }
                 break;
 
-            // 범용 릴레이: 호스트에게 전달
             case 'input':
                 if (player.id !== this.hostId) {
                     const hostWs = this.getHostWs();
@@ -221,25 +326,26 @@ export class GameRoom {
                 }
                 break;
 
-            // 범용 릴레이: 호스트 -> 나머지 전원
             case 'gameState':
                 if (player.id === this.hostId) {
                     this.broadcast(msg, ws);
                 }
                 break;
 
-            // 범용 릴레이: 호스트 -> 나머지 전원 (이벤트성)
             case 'gameEvent':
                 if (player.id === this.hostId) {
                     this.broadcast(msg, ws);
                 }
                 break;
 
-            // 방 메타데이터 설정 (호스트만)
             case 'setMetadata':
                 if (player.id === this.hostId && msg.metadata) {
                     Object.assign(this.metadata, msg.metadata);
                     this.broadcastRoomState();
+                    this.notifyLobby('update', {
+                        roomCode: this.roomCode,
+                        metadata: this.metadata,
+                    });
                 }
                 break;
 
@@ -255,6 +361,19 @@ export class GameRoom {
                 }
                 break;
 
+            case 'kick':
+                if (player.id === this.hostId && msg.targetId) {
+                    for (const [targetWs, targetData] of this.sessions) {
+                        if (targetData.id === msg.targetId && !targetData.isHost) {
+                            this.sendTo(targetWs, { type: 'kicked' });
+                            this.handleDisconnect(targetWs, targetData);
+                            targetWs.close(1000, 'kicked');
+                            break;
+                        }
+                    }
+                }
+                break;
+
             case 'leaveRoom':
                 this.handleDisconnect(ws, player);
                 ws.close(1000, 'left');
@@ -264,7 +383,6 @@ export class GameRoom {
                 this.sendTo(ws, { type: 'pong', t: msg.t, st: Date.now() });
                 break;
 
-            // 채팅
             case 'chat':
                 this.broadcast({
                     type: 'chat',
@@ -274,7 +392,6 @@ export class GameRoom {
                 });
                 break;
 
-            // 알 수 없는 메시지 -> 호스트에게 릴레이 (게임별 커스텀 메시지용)
             default:
                 if (player.id !== this.hostId) {
                     const hostWs = this.getHostWs();
@@ -282,7 +399,6 @@ export class GameRoom {
                         this.sendTo(hostWs, { ...msg, _from: player.id });
                     }
                 } else {
-                    // 호스트가 보낸 알 수 없는 타입 -> 전원 브로드캐스트
                     this.broadcast(msg, ws);
                 }
                 break;
@@ -308,12 +424,21 @@ export class GameRoom {
             playerId: player.id,
             players: this.getPlayerList(),
         });
+
+        const humanCount = this.players.filter(p => !p.isBot).length;
+        if (humanCount === 0) {
+            this.notifyLobby('unregister', { roomCode: this.roomCode });
+        } else {
+            this.notifyLobby('update', {
+                roomCode: this.roomCode,
+                playerCount: humanCount,
+            });
+        }
     }
 
     startGame(msg) {
         this.gameStarted = true;
 
-        // 슬롯 인덱스 재할당 (팀 순서대로)
         let slotIdx = 0;
         for (const p of this.players.filter(pp => pp.team === 0)) {
             p.slotIndex = slotIdx++;
@@ -327,7 +452,6 @@ export class GameRoom {
             this.players.filter(p => p.team === 1).length,
         ];
 
-        // 각 플레이어에게 자신의 정보 포함해서 전송
         for (const [ws, pData] of this.sessions) {
             this.sendTo(ws, {
                 type: 'gameStart',
@@ -340,6 +464,11 @@ export class GameRoom {
                 config: msg.config || null,
             });
         }
+
+        this.notifyLobby('update', {
+            roomCode: this.roomCode,
+            gameStarted: true,
+        });
     }
 
     canStart() {

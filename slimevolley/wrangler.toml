@@ -5,9 +5,14 @@ compatibility_date = "2024-01-01"
 # Durable Objects
 [durable_objects]
 bindings = [
-  { name = "GAME_ROOM", class_name = "GameRoom" }
+  { name = "GAME_ROOM", class_name = "GameRoom" },
+  { name = "GAME_LOBBY", class_name = "GameLobby" }
 ]
 
 [[migrations]]
 tag = "v1"
 new_classes = ["GameRoom"]
+
+[[migrations]]
+tag = "v2"
+new_classes = ["GameLobby"]
