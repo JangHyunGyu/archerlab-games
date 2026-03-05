@@ -21,7 +21,16 @@
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <link rel="stylesheet" href="css/style.css?v=5">
+    <link rel="stylesheet" href="css/style.css?v=6">
+    <script>
+        // 모바일 주소창 높이를 반영한 실제 뷰포트 높이
+        function setVH() {
+            document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px');
+        }
+        setVH();
+        window.addEventListener('resize', setVH);
+        window.addEventListener('orientationchange', function() { setTimeout(setVH, 150); });
+    </script>
 </head>
 <body>
     <!-- 세로모드 경고 오버레이 -->
@@ -200,12 +209,9 @@
             <div id="game-canvas-container" class="game-canvas-container">
                 <!-- Mobile Controls (overlay) -->
                 <div id="mobile-controls" class="mobile-controls">
-                    <div class="touch-area touch-left">
-                        <button id="touch-left" class="touch-btn">&#8592;</button>
-                        <button id="touch-right" class="touch-btn">&#8594;</button>
-                    </div>
-                    <div class="touch-area touch-right-side">
-                        <button id="touch-jump" class="touch-btn touch-jump-btn">JUMP</button>
+                    <div id="touch-move-zone" class="touch-zone touch-zone-left"></div>
+                    <div id="touch-jump-zone" class="touch-zone touch-zone-right">
+                        <span class="touch-zone-label">JUMP</span>
                     </div>
                 </div>
             </div>
@@ -240,13 +246,13 @@
     <script src="https://cdn.jsdelivr.net/npm/tone@15/build/Tone.js"></script>
 
     <!-- Game Scripts -->
-    <script src="js/config.js?v=5"></script>
-    <script src="js/physics.js?v=5"></script>
-    <script src="js/renderer.js?v=5"></script>
-    <script src="js/bot.js?v=5"></script>
-    <script src="js/sound.js?v=5"></script>
-    <script src="js/network.js?v=5"></script>
-    <script src="js/lobby.js?v=5"></script>
-    <script src="js/main.js?v=5"></script>
+    <script src="js/config.js?v=6"></script>
+    <script src="js/physics.js?v=6"></script>
+    <script src="js/renderer.js?v=6"></script>
+    <script src="js/bot.js?v=6"></script>
+    <script src="js/sound.js?v=6"></script>
+    <script src="js/network.js?v=6"></script>
+    <script src="js/lobby.js?v=6"></script>
+    <script src="js/main.js?v=6"></script>
 </body>
 </html>
