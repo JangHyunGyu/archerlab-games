@@ -66,24 +66,48 @@ class SlimeVolleyGame {
             if (controlsGuide) controlsGuide.style.display = 'none';
         }
 
-        const leftBtn = document.getElementById('touch-left');
-        const rightBtn = document.getElementById('touch-right');
-        const jumpBtn = document.getElementById('touch-jump');
+        const moveZone = document.getElementById('touch-move-zone');
+        const jumpZone = document.getElementById('touch-jump-zone');
+        if (!moveZone || !jumpZone) return;
 
-        if (!leftBtn) return;
+        // 좌우 이동: 터치 시작점 기준으로 좌/우 드래그
+        let moveStartX = null;
+        const DEAD_ZONE = 10; // px 이내는 무시
 
-        const setTouch = (btn, code, active) => {
-            const handler = (e) => { e.preventDefault(); this.keys[code] = active; };
-            btn.addEventListener(active ? 'touchstart' : 'touchend', handler, { passive: false });
-            if (!active) btn.addEventListener('touchcancel', handler, { passive: false });
+        moveZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            moveStartX = e.touches[0].clientX;
+        }, { passive: false });
+
+        moveZone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (moveStartX === null) return;
+            const dx = e.touches[0].clientX - moveStartX;
+            this.keys['ArrowLeft'] = dx < -DEAD_ZONE;
+            this.keys['ArrowRight'] = dx > DEAD_ZONE;
+        }, { passive: false });
+
+        const stopMove = (e) => {
+            e.preventDefault();
+            moveStartX = null;
+            this.keys['ArrowLeft'] = false;
+            this.keys['ArrowRight'] = false;
         };
+        moveZone.addEventListener('touchend', stopMove, { passive: false });
+        moveZone.addEventListener('touchcancel', stopMove, { passive: false });
 
-        setTouch(leftBtn, 'ArrowLeft', true);
-        setTouch(leftBtn, 'ArrowLeft', false);
-        setTouch(rightBtn, 'ArrowRight', true);
-        setTouch(rightBtn, 'ArrowRight', false);
-        setTouch(jumpBtn, 'ArrowUp', true);
-        setTouch(jumpBtn, 'ArrowUp', false);
+        // 점프: 우측 영역 터치
+        jumpZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.keys['ArrowUp'] = true;
+        }, { passive: false });
+
+        const stopJump = (e) => {
+            e.preventDefault();
+            this.keys['ArrowUp'] = false;
+        };
+        jumpZone.addEventListener('touchend', stopJump, { passive: false });
+        jumpZone.addEventListener('touchcancel', stopJump, { passive: false });
     }
 
     getMyInput() {

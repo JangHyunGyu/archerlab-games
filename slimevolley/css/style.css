@@ -19,8 +19,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
-    height: 100vh;
-    height: 100dvh;
+    height: calc(var(--vh, 1vh) * 100);
+    overflow: hidden;
 }
 
 body {
@@ -33,8 +33,7 @@ body {
 #app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
+    height: calc(var(--vh, 1vh) * 100);
     overflow: hidden;
 }
 
@@ -673,7 +672,7 @@ kbd {
     object-fit: contain;
 }
 
-/* Mobile Controls - 게임 화면 위 오버레이 */
+/* Mobile Controls - 화면 좌우 분할 오버레이 */
 .mobile-controls {
     display: none;
     position: absolute;
@@ -681,46 +680,42 @@ kbd {
     left: 0;
     right: 0;
     bottom: 0;
-    pointer-events: none;
     z-index: 10;
 }
 
-.touch-area {
-    display: flex;
-    gap: 10px;
+.touch-zone {
     position: absolute;
-    bottom: 16px;
-    pointer-events: auto;
-}
-
-.touch-left {
-    left: 16px;
-}
-
-.touch-right-side {
-    right: 16px;
-}
-
-.touch-btn {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.10);
-    border: 2px solid rgba(255,255,255,0.20);
-    color: var(--text);
-    font-size: 1.4rem;
-    cursor: pointer;
+    top: 0;
+    bottom: 0;
+    touch-action: none;
     user-select: none;
     -webkit-user-select: none;
-    touch-action: manipulation;
-    backdrop-filter: blur(2px);
 }
-.touch-btn:active { background: rgba(79, 195, 247, 0.3); border-color: var(--primary); }
 
-.touch-jump-btn {
-    width: 80px;
-    font-size: 0.95rem;
+.touch-zone-left {
+    left: 0;
+    width: 50%;
+}
+
+.touch-zone-right {
+    right: 0;
+    width: 50%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 20px;
+}
+
+.touch-zone-label {
+    color: rgba(255, 255, 255, 0.15);
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
     font-weight: bold;
+    pointer-events: none;
+}
+
+.touch-zone-right:active .touch-zone-label {
+    color: rgba(79, 195, 247, 0.4);
 }
 
 @media (max-width: 768px) {
@@ -819,16 +814,10 @@ kbd {
     #game-screen.screen {
         padding: 0 2px;
     }
-    .touch-area {
-        bottom: 8px;
+    .touch-zone-right {
+        padding-bottom: 10px;
     }
-    .touch-btn {
-        width: 48px;
-        height: 48px;
-        font-size: 1rem;
-    }
-    .touch-jump-btn {
-        width: 60px;
+    .touch-zone-label {
         font-size: 0.8rem;
     }
 }
@@ -841,17 +830,8 @@ kbd {
     #game-screen.screen {
         padding: 0;
     }
-    .touch-area {
-        bottom: 4px;
-    }
-    .touch-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 0.9rem;
-    }
-    .touch-jump-btn {
-        width: 52px;
-        font-size: 0.75rem;
+    .touch-zone-label {
+        font-size: 0.7rem;
     }
 }
 
