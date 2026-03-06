@@ -123,11 +123,11 @@ class SlimeVolleyGame {
     }
 
     getMyInput() {
-        return {
-            left: this.keys['ArrowLeft'] || this.keys['KeyA'] || false,
-            right: this.keys['ArrowRight'] || this.keys['KeyD'] || false,
-            jump: this.keys['ArrowUp'] || this.keys['KeyW'] || this.keys['Space'] || false,
-        };
+        if (!this._myInput) this._myInput = { left: false, right: false, jump: false };
+        this._myInput.left = this.keys['ArrowLeft'] || this.keys['KeyA'] || false;
+        this._myInput.right = this.keys['ArrowRight'] || this.keys['KeyD'] || false;
+        this._myInput.jump = this.keys['ArrowUp'] || this.keys['KeyW'] || this.keys['Space'] || false;
+        return this._myInput;
     }
 
     // === Practice Mode ===
@@ -168,6 +168,12 @@ class SlimeVolleyGame {
     }
 
     startCountdown() {
+        // 이전 카운트다운 정리
+        if (this.countdownTimer) {
+            clearInterval(this.countdownTimer);
+            this.countdownTimer = null;
+        }
+
         this.countdown = 3;
         this.running = false;
         this.renderer.showMessage('3', 800);
@@ -395,6 +401,7 @@ class SlimeVolleyGame {
             clearInterval(this.countdownTimer);
             this.countdownTimer = null;
         }
+        this.renderer.clearMessages();
         this.renderer.clearSlimes();
         this.renderer.clearBall();
     }

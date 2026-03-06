@@ -569,12 +569,33 @@ class GameRenderer {
             } else if (timer <= total) {
                 msg.alpha = 1 - (timer - fadeIn - stay) / fadeOut;
             } else {
-                this.app.ticker.remove(ticker);
-                this.gameContainer.removeChild(msg);
-                msg.destroy();
+                this._removeMessageTicker(ticker, msg);
             }
         };
         this.app.ticker.add(ticker);
+
+        // 활성 메시지 ticker 추적 (게임 종료 시 일괄 정리용)
+        if (!this._activeMessages) this._activeMessages = [];
+        this._activeMessages.push({ ticker, msg });
+    }
+
+    _removeMessageTicker(ticker, msg) {
+        this.app.ticker.remove(ticker);
+        if (msg.parent) msg.parent.removeChild(msg);
+        msg.destroy();
+        if (this._activeMessages) {
+            this._activeMessages = this._activeMessages.filter(m => m.ticker !== ticker);
+        }
+    }
+
+    clearMessages() {
+        if (!this._activeMessages) return;
+        for (const { ticker, msg } of this._activeMessages) {
+            this.app.ticker.remove(ticker);
+            if (msg.parent) msg.parent.removeChild(msg);
+            msg.destroy();
+        }
+        this._activeMessages = [];
     }
 
     clearSlimes() {
@@ -590,6 +611,31 @@ class GameRenderer {
             this.gameContainer.removeChild(this.ballSprite);
             this.ballSprite.destroy({ children: true });
             this.ballSprite = null;
+        }
+        this.clearTrailsAndParticles();
+    }
+
+    clearTrailsAndParticles() {
+        // 활성 trail 정리 → 풀로 반환
+        for (const t of this.trailPoints) {
+            this.trailContainer.removeChild(t);
+            this._releaseTrail(t);
+        }
+        this.trailPoints.length = 0;
+
+        // 활성 particle 정리 → 풀로 반환
+        for (const p of this.particles) {
+            this.particleContainer.removeChild(p);
+            this._releaseParticle(p);
+        }
+        this.particles.length = 0;
+
+        // 풀 크기 제한 (최대 50개씩)
+        while (this._trailPool.length > 50) {
+            this._trailPool.pop().destroy();
+        }
+        while (this._particlePool.length > 50) {
+            this._particlePool.pop().destroy();
         }
     }
 
