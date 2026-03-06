@@ -409,11 +409,11 @@ class SlimeVolleyGame {
     // === Multiplayer ===
     setupNetworkHandlers() {
         this.network.on('roomCreated', (msg) => {
-            this.lobby.showRoomScreen(msg.roomCode, msg.players, true, msg.metadata);
+            this.lobby.showRoomScreen(msg.roomId, msg.players, true, msg.metadata);
         });
 
         this.network.on('joined', (msg) => {
-            this.lobby.showRoomScreen(msg.roomCode, msg.players, false, msg.metadata);
+            this.lobby.showRoomScreen(msg.roomId, msg.players, false, msg.metadata);
         });
 
         this.network.on('roomState', (msg) => {

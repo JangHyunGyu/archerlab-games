@@ -7,13 +7,13 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type, Upgrade',
 };
 
-function generateRoomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 4; i++) {
-        code += chars[Math.floor(Math.random() * chars.length)];
+function generateRoomId() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let id = '';
+    for (let i = 0; i < 8; i++) {
+        id += chars[Math.floor(Math.random() * chars.length)];
     }
-    return code;
+    return id;
 }
 
 // --- Worker Entry ---
@@ -30,7 +30,7 @@ export default {
         if (path === '/' || path === '/health') {
             return new Response(JSON.stringify({
                 service: 'archerlab-game-relay',
-                version: '1.1.0',
+                version: '2.0.0',
                 status: 'ok',
             }), {
                 headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
@@ -72,27 +72,29 @@ export default {
 
             const action = url.searchParams.get('action');
             const name = url.searchParams.get('name') || 'Player';
-            let roomCode = url.searchParams.get('room');
+            const password = url.searchParams.get('password') || '';
+            let roomId = url.searchParams.get('room');
 
             if (action === 'create') {
-                roomCode = generateRoomCode();
+                roomId = generateRoomId();
             }
 
-            if (!roomCode) {
-                return new Response(JSON.stringify({ error: 'room code required' }), {
+            if (!roomId) {
+                return new Response(JSON.stringify({ error: 'room id required' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
                 });
             }
 
-            const doId = env.GAME_ROOM.idFromName(`${game}:${roomCode}`);
+            const doId = env.GAME_ROOM.idFromName(`${game}:${roomId}`);
             const room = env.GAME_ROOM.get(doId);
 
             const newUrl = new URL(request.url);
             newUrl.searchParams.set('game', game);
-            newUrl.searchParams.set('room', roomCode);
+            newUrl.searchParams.set('room', roomId);
             newUrl.searchParams.set('action', action || 'join');
             newUrl.searchParams.set('name', name);
+            newUrl.searchParams.set('password', password);
 
             return room.fetch(new Request(newUrl.toString(), request));
         }
@@ -126,23 +128,23 @@ export class GameLobby {
         if (path === '/list') {
             const now = Date.now();
             let changed = false;
-            for (const [code, info] of this.rooms) {
+            for (const [id, info] of this.rooms) {
                 if (now - info.updatedAt > 30 * 60 * 1000) {
-                    this.rooms.delete(code);
+                    this.rooms.delete(id);
                     changed = true;
                 }
             }
             if (changed) await this.saveRooms();
             const rooms = [];
-            for (const [code, info] of this.rooms) {
-                rooms.push({ ...info, roomCode: code });
+            for (const [id, info] of this.rooms) {
+                rooms.push({ ...info, roomId: id });
             }
             return new Response(JSON.stringify({ rooms }));
         }
 
         if (path === '/register') {
             const data = await request.json();
-            this.rooms.set(data.roomCode, {
+            this.rooms.set(data.roomId, {
                 game: data.game,
                 hostName: data.hostName,
                 playerCount: data.playerCount || 1,
@@ -156,7 +158,7 @@ export class GameLobby {
 
         if (path === '/update') {
             const data = await request.json();
-            const room = this.rooms.get(data.roomCode);
+            const room = this.rooms.get(data.roomId);
             if (room) {
                 if (data.playerCount !== undefined) room.playerCount = data.playerCount;
                 if (data.gameStarted !== undefined) room.gameStarted = data.gameStarted;
@@ -169,7 +171,7 @@ export class GameLobby {
 
         if (path === '/unregister') {
             const data = await request.json();
-            this.rooms.delete(data.roomCode);
+            this.rooms.delete(data.roomId);
             await this.saveRooms();
             return new Response('ok');
         }
@@ -185,32 +187,51 @@ export class GameRoom {
         this.env = env;
         this.sessions = new Map();
         this.game = null;
-        this.roomCode = null;
+        this.roomId = null;
         this.hostId = null;
         this.players = [];
         this.gameStarted = false;
         this.nextPlayerId = 1;
         this.metadata = {};
+        this.password = null; // 비밀방 비밀번호 (null = 공개방)
     }
 
     async fetch(request) {
         const url = new URL(request.url);
         const action = url.searchParams.get('action');
         const name = url.searchParams.get('name');
-        const roomCode = url.searchParams.get('room');
+        const roomId = url.searchParams.get('room');
         const game = url.searchParams.get('game');
+        const password = url.searchParams.get('password') || '';
 
-        if (!this.roomCode) {
-            this.roomCode = roomCode;
+        if (!this.roomId) {
+            this.roomId = roomId;
             this.game = game;
         }
 
-        // 게임 중이면 참가 거부 (WebSocket 업그레이드 전에 차단)
-        if (action === 'join' && this.gameStarted) {
-            return new Response(JSON.stringify({ error: 'Game already in progress' }), {
-                status: 403,
-                headers: { 'Content-Type': 'application/json' },
-            });
+        // 방 생성 시 비밀번호 설정
+        if (action === 'create' && password) {
+            this.password = password;
+        }
+
+        // 입장 시 비밀번호 검증
+        if (action === 'join') {
+            if (this.gameStarted) {
+                return new Response(JSON.stringify({ error: 'Game already in progress' }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+            }
+            if (this.password && password !== this.password) {
+                // 비밀번호 틀림 - WebSocket 대신 에러 응답
+                // WebSocket은 HTTP 에러로 거부할 수 없으므로 연결 후 에러 메시지 전송
+                const pair = new WebSocketPair();
+                const [client, server] = Object.values(pair);
+                server.accept();
+                server.send(JSON.stringify({ type: 'error', message: 'Wrong password' }));
+                server.close(4001, 'Wrong password');
+                return new Response(null, { status: 101, webSocket: client });
+            }
         }
 
         const pair = new WebSocketPair();
@@ -245,7 +266,7 @@ export class GameRoom {
         this.sendTo(server, {
             type: isHost ? 'roomCreated' : 'joined',
             game: this.game,
-            roomCode: this.roomCode,
+            roomId: this.roomId,
             playerId,
             players: this.getPlayerList(),
             metadata: this.metadata,
@@ -262,15 +283,15 @@ export class GameRoom {
         // 로비에 방 정보 업데이트
         if (isHost) {
             await this.notifyLobby('register', {
-                roomCode: this.roomCode,
+                roomId: this.roomId,
                 game: this.game,
                 hostName: playerData.name,
                 playerCount: this.players.filter(p => !p.isBot).length,
-                metadata: this.metadata,
+                metadata: { ...this.metadata, password: !!this.password },
             });
         } else {
             await this.notifyLobby('update', {
-                roomCode: this.roomCode,
+                roomId: this.roomId,
                 playerCount: this.players.filter(p => !p.isBot).length,
             });
         }
@@ -359,7 +380,7 @@ export class GameRoom {
                     Object.assign(this.metadata, msg.metadata);
                     this.broadcastRoomState();
                     this.notifyLobby('update', {
-                        roomCode: this.roomCode,
+                        roomId: this.roomId,
                         metadata: this.metadata,
                     });
                 }
@@ -443,15 +464,16 @@ export class GameRoom {
         this.broadcast({
             type: 'playerLeft',
             playerId: player.id,
+            newHostId: this.hostId,
             players: this.getPlayerList(),
         });
 
         const humanCount = this.players.filter(p => !p.isBot).length;
         if (humanCount === 0) {
-            this.notifyLobby('unregister', { roomCode: this.roomCode });
+            this.notifyLobby('unregister', { roomId: this.roomId });
         } else {
             this.notifyLobby('update', {
-                roomCode: this.roomCode,
+                roomId: this.roomId,
                 playerCount: humanCount,
             });
         }
@@ -487,7 +509,7 @@ export class GameRoom {
         }
 
         this.notifyLobby('update', {
-            roomCode: this.roomCode,
+            roomId: this.roomId,
             gameStarted: true,
         });
     }

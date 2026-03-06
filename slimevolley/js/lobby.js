@@ -7,6 +7,7 @@ class LobbyManager {
         this.roomPlayers = [];
         this.roomListRefreshTimer = null;
         this.isHost = false;
+        this.pendingJoinRoom = null; // 비밀방 입장 대기용
         this.setupEventListeners();
     }
 
@@ -19,7 +20,6 @@ class LobbyManager {
 
         document.getElementById('btn-multiplayer').addEventListener('click', () => {
             this.game.sound.playUI('click');
-            // 닉네임이 없으면 로비에서 입력하게
             this.showMultiplayerLobby();
         });
 
@@ -44,6 +44,11 @@ class LobbyManager {
             this.game.sound.playUI('click');
             const name = this.getNameFromInput();
             if (!name) return;
+            // 방 만들기 화면 초기화
+            document.querySelectorAll('.room-type-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-type-public').classList.add('active');
+            document.getElementById('password-group').style.display = 'none';
+            document.getElementById('create-password').value = '';
             this.showScreen('create-room');
         });
 
@@ -53,7 +58,17 @@ class LobbyManager {
             this.showScreen('main-menu');
         });
 
-        // Create room
+        // Create room - room type toggle
+        document.querySelectorAll('.room-type-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.room-type-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const isPrivate = btn.dataset.type === 'private';
+                document.getElementById('password-group').style.display = isPrivate ? '' : 'none';
+                if (isPrivate) document.getElementById('create-password').focus();
+            });
+        });
+
         document.getElementById('btn-do-create').addEventListener('click', () => {
             this.game.sound.playUI('click');
             this.createRoom();
@@ -122,14 +137,15 @@ class LobbyManager {
             });
         });
 
-        // Copy room code
-        document.getElementById('btn-copy-code').addEventListener('click', () => {
-            const code = document.getElementById('room-code-display').textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                const btn = document.getElementById('btn-copy-code');
-                btn.textContent = 'Copied!';
-                setTimeout(() => btn.textContent = 'Copy', 1500);
-            });
+        // Password modal
+        document.getElementById('btn-pw-cancel').addEventListener('click', () => {
+            this.hidePasswordModal();
+        });
+        document.getElementById('btn-pw-confirm').addEventListener('click', () => {
+            this.confirmPasswordJoin();
+        });
+        document.getElementById('join-password').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.confirmPasswordJoin();
         });
     }
 
@@ -162,7 +178,6 @@ class LobbyManager {
     // === Multiplayer Lobby ===
     showMultiplayerLobby() {
         this.showScreen('multiplayer-lobby');
-        // 닉네임 인풋에 포커스
         const input = document.querySelector('#multiplayer-lobby .player-name-input');
         if (!input.value.trim()) {
             setTimeout(() => input.focus(), 100);
@@ -205,6 +220,7 @@ class LobbyManager {
         for (const room of rooms) {
             const item = document.createElement('div');
             const isPlaying = room.gameStarted;
+            const isPrivate = room.metadata?.password;
             item.className = `room-item ${isPlaying ? 'room-playing' : 'room-waiting'}`;
 
             const sets = room.metadata?.sets || 1;
@@ -213,12 +229,11 @@ class LobbyManager {
 
             item.innerHTML = `
                 <div class="room-info">
-                    <span class="room-host">${this.escapeHtml(room.hostName || 'Host')}</span>
+                    <span class="room-host">${this.escapeHtml(room.hostName || 'Host')}${isPrivate ? '<span class="room-lock-icon">&#128274;</span>' : ''}</span>
                     <span class="room-detail">${room.playerCount}명 | ${setsLabel} ${score}점</span>
                 </div>
                 <div class="room-status">
                     <span class="room-status-badge ${isPlaying ? 'status-playing' : 'status-waiting'}">${isPlaying ? '경기중' : '대기중'}</span>
-                    <span class="room-code-small">${room.roomCode}</span>
                 </div>
             `;
 
@@ -226,12 +241,45 @@ class LobbyManager {
                 item.style.cursor = 'pointer';
                 item.addEventListener('click', () => {
                     this.game.sound.playUI('click');
-                    this.joinRoomByCode(room.roomCode);
+                    this.tryJoinRoom(room);
                 });
             }
 
             listEl.appendChild(item);
         }
+    }
+
+    // === Password Modal ===
+    tryJoinRoom(room) {
+        const name = this.getNameFromInput();
+        if (!name) return;
+
+        if (room.metadata?.password) {
+            // 비밀방: 비밀번호 입력 팝업
+            this.pendingJoinRoom = room;
+            document.getElementById('join-password').value = '';
+            document.getElementById('password-modal').style.display = '';
+            setTimeout(() => document.getElementById('join-password').focus(), 100);
+        } else {
+            this.doJoinRoom(room.roomId);
+        }
+    }
+
+    hidePasswordModal() {
+        document.getElementById('password-modal').style.display = 'none';
+        this.pendingJoinRoom = null;
+    }
+
+    confirmPasswordJoin() {
+        const pw = document.getElementById('join-password').value.trim();
+        if (!pw || pw.length !== 4 || !/^\d{4}$/.test(pw)) {
+            this.showError('숫자 4자리를 입력해주세요');
+            return;
+        }
+        if (!this.pendingJoinRoom) return;
+
+        this.doJoinRoom(this.pendingJoinRoom.roomId, pw);
+        this.hidePasswordModal();
     }
 
     // === Create Room ===
@@ -242,14 +290,25 @@ class LobbyManager {
             return;
         }
 
+        const isPrivate = document.querySelector('.room-type-btn.active')?.dataset.type === 'private';
+        let password = null;
+        if (isPrivate) {
+            password = document.getElementById('create-password').value.trim();
+            if (!password || password.length !== 4 || !/^\d{4}$/.test(password)) {
+                this.showError('비밀번호는 숫자 4자리로 입력해주세요');
+                document.getElementById('create-password').focus();
+                return;
+            }
+        }
+
         const sets = parseInt(document.getElementById('create-sets').value);
         const scorePerSet = parseInt(document.getElementById('create-score').value);
         const deuce = document.getElementById('create-deuce').checked;
 
         try {
             this.game.network.disconnect();
-            await this.game.network.createRoom(this.game.relayUrl, name);
-            this.game.network.setMetadata({ sets, scorePerSet, deuce });
+            await this.game.network.createRoom(this.game.relayUrl, name, password);
+            this.game.network.setMetadata({ sets, scorePerSet, deuce, password: !!password });
             this.stopRoomListRefresh();
         } catch (e) {
             this.showError('서버 연결 실패. 잠시 후 다시 시도해주세요.');
@@ -257,23 +316,30 @@ class LobbyManager {
     }
 
     // === Join Room ===
-    async joinRoomByCode(roomCode) {
-        const name = this.getNameFromInput();
-        if (!name) return;
-
+    async doJoinRoom(roomId, password) {
         try {
             this.game.network.disconnect();
-            await this.game.network.joinRoom(this.game.relayUrl, roomCode, name);
+            await this.game.network.joinRoom(this.game.relayUrl, roomId, this.playerName, password);
             this.stopRoomListRefresh();
         } catch (e) {
-            this.showError('방에 입장할 수 없습니다');
+            const msg = e.message || '';
+            if (msg.includes('password') || msg.includes('Wrong')) {
+                this.showError('비밀번호가 틀렸습니다');
+            } else {
+                this.showError('방에 입장할 수 없습니다');
+            }
         }
     }
 
     // === Room Screen ===
-    showRoomScreen(roomCode, players, isHost, metadata) {
+    showRoomScreen(roomId, players, isHost, metadata) {
         this.isHost = isHost;
-        document.getElementById('room-code-display').textContent = roomCode;
+        // 방 유형 표시
+        const typeEl = document.getElementById('room-type-display');
+        const isPrivate = metadata?.password;
+        typeEl.innerHTML = isPrivate
+            ? '<span class="room-type-badge badge-private">&#128274; 비밀방</span>'
+            : '<span class="room-type-badge badge-public">공개방</span>';
         this.updateRoomMeta(metadata);
         this.updatePlayerList(players);
         document.getElementById('btn-start-game').style.display = isHost ? 'block' : 'none';
@@ -326,7 +392,7 @@ class LobbyManager {
 
                 let kickBtn = '';
                 if (this.isHost && !p.isHost && !p.isBot) {
-                    kickBtn = `<button class="btn-kick" data-id="${p.id}" title="강퇴">✕</button>`;
+                    kickBtn = `<button class="btn-kick" data-id="${p.id}" title="강퇴">&#10005;</button>`;
                 }
 
                 pDiv.innerHTML = `
@@ -334,7 +400,6 @@ class LobbyManager {
                     ${pingHtml}${badges}${kickBtn}
                 `;
 
-                // 강퇴 버튼 이벤트
                 if (kickBtn) {
                     pDiv.querySelector('.btn-kick').addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -399,7 +464,6 @@ class LobbyManager {
         chatEl.appendChild(msgDiv);
         chatEl.scrollTop = chatEl.scrollHeight;
 
-        // 최대 50개 메시지 유지
         while (chatEl.children.length > 50) {
             chatEl.removeChild(chatEl.firstChild);
         }
@@ -438,7 +502,6 @@ class LobbyManager {
             setsEl.innerHTML = '';
         }
 
-        // MVP 표시
         let mvpEl = document.getElementById('game-over-mvp');
         if (!mvpEl) {
             mvpEl = document.createElement('div');
