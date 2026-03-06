@@ -47,6 +47,10 @@ export class EnemyManager {
             { type: 'killType', targetType: 'antSoldier', target: 10, description: '개미 병사 10마리 처치', reward: 80 },
         ];
         this.killCounters = {};
+
+        // Cached arrays for getAllEnemies/getActiveEnemies (invalidated each frame)
+        this._cachedActiveEnemies = null;
+        this._activeEnemiesDirtyFrame = -1;
     }
 
     update(time, delta) {
@@ -482,7 +486,13 @@ export class EnemyManager {
     }
 
     getActiveEnemies() {
-        return this.pool.getChildren().filter(e => e.active);
+        // Cache the filtered result per frame to avoid creating new arrays on every call
+        const currentFrame = this.scene.game.loop.frame;
+        if (this._activeEnemiesDirtyFrame !== currentFrame || !this._cachedActiveEnemies) {
+            this._cachedActiveEnemies = this.pool.getChildren().filter(e => e.active);
+            this._activeEnemiesDirtyFrame = currentFrame;
+        }
+        return this._cachedActiveEnemies;
     }
 
     getGroup() {
