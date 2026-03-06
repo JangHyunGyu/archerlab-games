@@ -43,6 +43,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         // HP bar (Graphics-based for reliable rendering)
         this._hpBarWidth = Math.max(80, config.size * 1.5);
         this._hpBarHeight = 8;
+        this._lastDrawnHp = -1; // Cache to avoid redrawing every frame
+        this._lastDrawnX = -1;
+        this._lastDrawnY = -1;
         this.hpBarGfx = scene.add.graphics().setDepth(21);
 
         // HP text
@@ -209,6 +212,15 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     _drawHpBar() {
         if (!this.hpBarGfx) return;
+
+        // Only redraw when HP or position actually changes
+        const roundedX = Math.round(this.x);
+        const roundedY = Math.round(this.y);
+        if (this._lastDrawnHp === this.hp && this._lastDrawnX === roundedX && this._lastDrawnY === roundedY) return;
+        this._lastDrawnHp = this.hp;
+        this._lastDrawnX = roundedX;
+        this._lastDrawnY = roundedY;
+
         this.hpBarGfx.clear();
 
         const w = this._hpBarWidth;

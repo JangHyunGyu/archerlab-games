@@ -51,6 +51,9 @@ export class XPOrbPool {
             // Slow down
             orb.body.setDrag(100);
 
+            // Kill any leftover tweens from previous use before creating new ones
+            this.scene.tweens.killTweensOf(orb);
+
             // Pulsing glow
             this.scene.tweens.add({
                 targets: orb,

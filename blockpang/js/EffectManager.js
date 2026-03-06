@@ -10,7 +10,70 @@ class EffectManager {
         this.shakeIntensity = 0;
         this._time = 0;
 
+        // ── Particle Graphics pool ──
+        this._particlePool = [];
+        this._POOL_MAX = 200;
+
+        // ── Text object pool for score/combo/bonus popups ──
+        this._textPool = [];
+        this._TEXT_POOL_MAX = 20;
+
         game.app.ticker.add(this.update, this);
+    }
+
+    // Get a Graphics object from pool or create new
+    _getParticleGfx() {
+        if (this._particlePool.length > 0) {
+            const gfx = this._particlePool.pop();
+            gfx.clear();
+            gfx.visible = true;
+            gfx.alpha = 1;
+            gfx.scale.set(1);
+            gfx.rotation = 0;
+            gfx.position.set(0, 0);
+            return gfx;
+        }
+        return new PIXI.Graphics();
+    }
+
+    // Return a Graphics object to pool
+    _releaseParticleGfx(gfx) {
+        if (gfx.destroyed) return;
+        gfx.visible = false;
+        if (gfx.parent) gfx.parent.removeChild(gfx);
+        if (this._particlePool.length < this._POOL_MAX) {
+            this._particlePool.push(gfx);
+        } else {
+            gfx.destroy();
+        }
+    }
+
+    // Get a Text object from pool or create new
+    _getTextObj(text, style) {
+        if (this._textPool.length > 0) {
+            const txt = this._textPool.pop();
+            txt.text = text;
+            Object.assign(txt.style, style);
+            txt.visible = true;
+            txt.alpha = 1;
+            txt.scale.set(1);
+            txt.rotation = 0;
+            txt.tint = 0xFFFFFF;
+            return txt;
+        }
+        return new PIXI.Text({ text, style });
+    }
+
+    // Return a Text object to pool
+    _releaseTextObj(txt) {
+        if (txt.destroyed) return;
+        txt.visible = false;
+        if (txt.parent) txt.parent.removeChild(txt);
+        if (this._textPool.length < this._TEXT_POOL_MAX) {
+            this._textPool.push(txt);
+        } else {
+            txt.destroy();
+        }
     }
 
     update(ticker) {
@@ -23,7 +86,7 @@ class EffectManager {
             const p = this.particles[i];
             p.life -= dt;
             if (p.life <= 0) {
-                p.gfx.destroy();
+                this._releaseParticleGfx(p.gfx);
                 this.particles.splice(i, 1);
                 continue;
             }
@@ -78,7 +141,7 @@ class EffectManager {
             const speed = 2 + Math.random() * 4;
             const size = 2 + Math.random() * (cellSize * 0.18);
 
-            const gfx = new PIXI.Graphics();
+            const gfx = this._getParticleGfx();
 
             // Outer glow
             gfx.circle(0, 0, size * 1.5).fill({ color, alpha: 0.3 });
@@ -108,7 +171,7 @@ class EffectManager {
     spawnSparkles(worldX, worldY, color, count = 5) {
         for (let i = 0; i < count; i++) {
             const size = 1 + Math.random() * 3;
-            const gfx = new PIXI.Graphics();
+            const gfx = this._getParticleGfx();
 
             // Star shape sparkle
             gfx.circle(0, 0, size).fill({ color: 0xFFFFFF, alpha: 0.8 });

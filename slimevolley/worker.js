@@ -106,20 +106,33 @@ export class GameLobby {
     constructor(state, env) {
         this.state = state;
         this.env = env;
-        this.rooms = new Map();
+        this.rooms = null; // lazy loaded from storage
+    }
+
+    async loadRooms() {
+        if (this.rooms) return;
+        this.rooms = new Map(Object.entries((await this.state.storage.get('rooms')) || {}));
+    }
+
+    async saveRooms() {
+        await this.state.storage.put('rooms', Object.fromEntries(this.rooms));
     }
 
     async fetch(request) {
+        await this.loadRooms();
         const url = new URL(request.url);
         const path = url.pathname;
 
         if (path === '/list') {
             const now = Date.now();
+            let changed = false;
             for (const [code, info] of this.rooms) {
                 if (now - info.updatedAt > 30 * 60 * 1000) {
                     this.rooms.delete(code);
+                    changed = true;
                 }
             }
+            if (changed) await this.saveRooms();
             const rooms = [];
             for (const [code, info] of this.rooms) {
                 rooms.push({ ...info, roomCode: code });
@@ -137,6 +150,7 @@ export class GameLobby {
                 metadata: data.metadata || {},
                 updatedAt: Date.now(),
             });
+            await this.saveRooms();
             return new Response('ok');
         }
 
@@ -148,6 +162,7 @@ export class GameLobby {
                 if (data.gameStarted !== undefined) room.gameStarted = data.gameStarted;
                 if (data.metadata) Object.assign(room.metadata, data.metadata);
                 room.updatedAt = Date.now();
+                await this.saveRooms();
             }
             return new Response('ok');
         }
@@ -155,6 +170,7 @@ export class GameLobby {
         if (path === '/unregister') {
             const data = await request.json();
             this.rooms.delete(data.roomCode);
+            await this.saveRooms();
             return new Response('ok');
         }
 
@@ -245,7 +261,7 @@ export class GameRoom {
 
         // 로비에 방 정보 업데이트
         if (isHost) {
-            this.notifyLobby('register', {
+            await this.notifyLobby('register', {
                 roomCode: this.roomCode,
                 game: this.game,
                 hostName: playerData.name,
@@ -253,7 +269,7 @@ export class GameRoom {
                 metadata: this.metadata,
             });
         } else {
-            this.notifyLobby('update', {
+            await this.notifyLobby('update', {
                 roomCode: this.roomCode,
                 playerCount: this.players.filter(p => !p.isBot).length,
             });

@@ -5,6 +5,29 @@ export class ShadowDagger extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, WEAPONS.shadowDagger);
         this._activeDaggers = []; // 비행 중 단검 추적 (씬 종료 시 정리용)
+        this._trailPool = []; // Pool for trail circle objects
+    }
+
+    _getTrailCircle(x, y) {
+        let trail = this._trailPool.pop();
+        if (trail && trail.scene) {
+            trail.setPosition(x, y);
+            trail.setVisible(true);
+            trail.setAlpha(0.4);
+            trail.setScale(1);
+            return trail;
+        }
+        return this.scene.add.circle(x, y, 3, 0xb366ff, 0.4).setDepth(7);
+    }
+
+    _releaseTrailCircle(trail) {
+        if (!trail || !trail.scene) return;
+        trail.setVisible(false);
+        if (this._trailPool.length < 50) {
+            this._trailPool.push(trail);
+        } else {
+            trail.destroy();
+        }
     }
 
     fire() {
@@ -34,6 +57,7 @@ export class ShadowDagger extends WeaponBase {
 
         let hasHit = false;
         let trailInterval = null;
+        let collisionCheckCounter = 0;
         const entry = { dagger, trailInterval: null };
         this._activeDaggers.push(entry);
 
@@ -55,6 +79,9 @@ export class ShadowDagger extends WeaponBase {
             ease: 'Linear',
             onUpdate: () => {
                 if (hasHit || !dagger.active) return;
+                // Throttle collision checks to every 3rd frame
+                collisionCheckCounter++;
+                if (collisionCheckCounter % 3 !== 0) return;
                 const enemies = this.player.getAllEnemies();
                 for (const enemy of enemies) {
                     if (!enemy.active) continue;

@@ -6,6 +6,31 @@ export class BasicDagger extends WeaponBase {
         super(scene, player, WEAPONS.basicDagger);
         this.attackRange = 150;
         this.swingDir = 1;
+
+        // Graphics object pool for dagger visuals
+        this._gfxPool = [];
+    }
+
+    _getGfx() {
+        let gfx = this._gfxPool.pop();
+        if (!gfx || !gfx.scene) {
+            gfx = this.scene.add.graphics().setDepth(8);
+        } else {
+            gfx.clear();
+            gfx.setVisible(true);
+            gfx.setAlpha(1);
+        }
+        return gfx;
+    }
+
+    _releaseGfx(gfx) {
+        gfx.clear();
+        gfx.setVisible(false);
+        if (this._gfxPool.length < 10) {
+            this._gfxPool.push(gfx);
+        } else {
+            gfx.destroy();
+        }
     }
 
     fire() {
@@ -33,8 +58,8 @@ export class BasicDagger extends WeaponBase {
         const cos = Math.cos(stabAngle);
         const sin = Math.sin(stabAngle);
 
-        // Single graphics object for stab visual
-        const gfx = this.scene.add.graphics().setDepth(8);
+        // Pooled graphics object for stab visual
+        const gfx = this._getGfx();
 
         let progress = { t: 0 };
         this.scene.tweens.add({
@@ -119,7 +144,7 @@ export class BasicDagger extends WeaponBase {
                 gfx.lineBetween(hEndX, hEndY, hiltX, hiltY);
             },
             onComplete: () => {
-                gfx.destroy();
+                this._releaseGfx(gfx);
             },
         });
 
@@ -163,5 +188,10 @@ export class BasicDagger extends WeaponBase {
         if (this.scene.soundManager) this.scene.soundManager.play('dagger');
     }
 
-    destroy() {}
+    destroy() {
+        for (const gfx of this._gfxPool) {
+            if (gfx && gfx.scene) gfx.destroy();
+        }
+        this._gfxPool = [];
+    }
 }

@@ -1,6 +1,81 @@
 import { COLORS } from '../utils/Constants.js';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
+    // Shared particle emitter pool for death effects (class-level)
+    static _deathEmitterPool = [];
+    static _deathSparkPool = [];
+    static MAX_POOLED_EMITTERS = 8;
+
+    static _getDeathEmitter(scene, x, y) {
+        // Try to reuse an existing emitter
+        for (let i = Enemy._deathEmitterPool.length - 1; i >= 0; i--) {
+            const em = Enemy._deathEmitterPool[i];
+            if (em && em.scene && !em.emitting) {
+                Enemy._deathEmitterPool.splice(i, 1);
+                em.setPosition(x, y);
+                return em;
+            }
+        }
+        // Create new one
+        try {
+            const emitter = scene.add.particles(x, y, 'particle_glow', {
+                speed: { min: 40, max: 140 },
+                scale: { start: 0.8, end: 0 },
+                alpha: { start: 0.9, end: 0 },
+                lifespan: { min: 300, max: 600 },
+                tint: [COLORS.SHADOW_PRIMARY, 0x7b2fff, 0x4400aa],
+                blendMode: 'ADD',
+                emitting: false,
+            });
+            emitter.setDepth(15);
+            return emitter;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    static _getDeathSparks(scene, x, y) {
+        for (let i = Enemy._deathSparkPool.length - 1; i >= 0; i--) {
+            const em = Enemy._deathSparkPool[i];
+            if (em && em.scene && !em.emitting) {
+                Enemy._deathSparkPool.splice(i, 1);
+                em.setPosition(x, y);
+                return em;
+            }
+        }
+        try {
+            const sparks = scene.add.particles(x, y, 'particle_spark', {
+                speed: { min: 60, max: 180 },
+                scale: { start: 0.6, end: 0 },
+                alpha: { start: 1, end: 0 },
+                lifespan: { min: 200, max: 400 },
+                tint: 0xddaaff,
+                blendMode: 'ADD',
+                emitting: false,
+            });
+            sparks.setDepth(15);
+            return sparks;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    static _returnDeathEmitter(emitter) {
+        if (emitter && emitter.scene && Enemy._deathEmitterPool.length < Enemy.MAX_POOLED_EMITTERS) {
+            Enemy._deathEmitterPool.push(emitter);
+        } else if (emitter && emitter.scene) {
+            emitter.destroy();
+        }
+    }
+
+    static _returnDeathSparks(sparks) {
+        if (sparks && sparks.scene && Enemy._deathSparkPool.length < Enemy.MAX_POOLED_EMITTERS) {
+            Enemy._deathSparkPool.push(sparks);
+        } else if (sparks && sparks.scene) {
+            sparks.destroy();
+        }
+    }
+
     constructor(scene, x, y) {
         super(scene, x, y, 'enemy_goblin_0');
         scene.add.existing(this);
@@ -262,35 +337,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     _deathEffect() {
         try {
-            // Shadow burst particles
-            const emitter = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-                speed: { min: 40, max: 140 },
-                scale: { start: 0.8, end: 0 },
-                alpha: { start: 0.9, end: 0 },
-                lifespan: { min: 300, max: 600 },
-                tint: [COLORS.SHADOW_PRIMARY, 0x7b2fff, 0x4400aa],
-                blendMode: 'ADD',
-                emitting: false,
-            });
-            emitter.setDepth(15);
-            emitter.explode(this.isElite ? 15 : 8);
+            // Shadow burst particles (pooled)
+            const emitter = Enemy._getDeathEmitter(this.scene, this.x, this.y);
+            if (emitter) emitter.explode(this.isElite ? 15 : 8);
 
-            // Spark particles
-            const sparks = this.scene.add.particles(this.x, this.y, 'particle_spark', {
-                speed: { min: 60, max: 180 },
-                scale: { start: 0.6, end: 0 },
-                alpha: { start: 1, end: 0 },
-                lifespan: { min: 200, max: 400 },
-                tint: 0xddaaff,
-                blendMode: 'ADD',
-                emitting: false,
-            });
-            sparks.setDepth(15);
-            sparks.explode(this.isElite ? 8 : 4);
+            // Spark particles (pooled)
+            const sparks = Enemy._getDeathSparks(this.scene, this.x, this.y);
+            if (sparks) sparks.explode(this.isElite ? 8 : 4);
 
             this.scene.time.delayedCall(700, () => {
-                if (emitter) emitter.destroy();
-                if (sparks) sparks.destroy();
+                Enemy._returnDeathEmitter(emitter);
+                Enemy._returnDeathSparks(sparks);
             });
         } catch (e) {
             // Fallback

@@ -16,6 +16,18 @@ class Board {
         this.gridLineContainer = null;
         this._glowTime = 0;
 
+        // Ghost preview pool (reuse Graphics instead of create/destroy)
+        this._ghostPool = [];
+        this._ghostActiveCount = 0;
+
+        // Completion hint pool
+        this._hintPool = [];
+        this._hintActiveCount = 0;
+
+        // Reusable arrays for collision/placement checks
+        this._tempRowCounts = new Array(GRID_SIZE);
+        this._tempColCounts = new Array(GRID_SIZE);
+
         this._initGrid();
     }
 
@@ -416,14 +428,22 @@ class Board {
         return true;
     }
 
-    // ── Row/Col completion hints (animated glow) ──
+    // ── Row/Col completion hints (pooled Graphics, animated glow) ──
+    _getHintGfx(index) {
+        if (index < this._hintPool.length) {
+            return this._hintPool[index];
+        }
+        const g = new PIXI.Graphics();
+        this._hintPool.push(g);
+        return g;
+    }
+
     showCompletionHints() {
         if (!this.hintContainer) return;
-        const removed = this.hintContainer.removeChildren();
-        removed.forEach(c => c.destroy({ children: true }));
         const cs = this.cellSize;
         const total = cs * GRID_SIZE;
         let nearCompleteFound = false;
+        let hintIdx = 0;
 
         // Check rows
         for (let r = 0; r < GRID_SIZE; r++) {
@@ -432,17 +452,20 @@ class Board {
                 if (this.grid[r][c] === -1) empty++;
             }
             if (empty > 0 && empty <= 3) {
-                const g = new PIXI.Graphics();
+                const g = this._getHintGfx(hintIdx);
+                g.clear();
                 const intensity = (4 - empty) * 0.06;
                 const color = empty === 1 ? 0x76FF03 : 0x44FF88;
 
-                // Main highlight
                 g.rect(0, r * cs, total, cs).fill({ color, alpha: intensity });
-                // Edge glow lines
                 g.moveTo(0, r * cs).lineTo(total, r * cs).stroke({ width: 1, color, alpha: intensity * 2 });
                 g.moveTo(0, (r + 1) * cs).lineTo(total, (r + 1) * cs).stroke({ width: 1, color, alpha: intensity * 2 });
 
-                this.hintContainer.addChild(g);
+                g.visible = true;
+                if (!g.parent) {
+                    this.hintContainer.addChild(g);
+                }
+                hintIdx++;
                 if (empty <= 2) nearCompleteFound = true;
             }
         }
@@ -454,7 +477,8 @@ class Board {
                 if (this.grid[r][c] === -1) empty++;
             }
             if (empty > 0 && empty <= 3) {
-                const g = new PIXI.Graphics();
+                const g = this._getHintGfx(hintIdx);
+                g.clear();
                 const intensity = (4 - empty) * 0.06;
                 const color = empty === 1 ? 0x76FF03 : 0x44FF88;
 
@@ -462,56 +486,100 @@ class Board {
                 g.moveTo(c * cs, 0).lineTo(c * cs, total).stroke({ width: 1, color, alpha: intensity * 2 });
                 g.moveTo((c + 1) * cs, 0).lineTo((c + 1) * cs, total).stroke({ width: 1, color, alpha: intensity * 2 });
 
-                this.hintContainer.addChild(g);
+                g.visible = true;
+                if (!g.parent) {
+                    this.hintContainer.addChild(g);
+                }
+                hintIdx++;
                 if (empty <= 2) nearCompleteFound = true;
             }
         }
 
-        // Pulse animation for hint container
+        // Hide unused pooled hint graphics
+        for (let i = hintIdx; i < this._hintActiveCount; i++) {
+            if (i < this._hintPool.length) {
+                this._hintPool[i].visible = false;
+            }
+        }
+        this._hintActiveCount = hintIdx;
+
+        // Pulse animation for hint container (kill previous before starting new)
         if (nearCompleteFound && !this._hintPulseActive) {
             this._hintPulseActive = true;
+            // Tag the tween so we can find and kill it later
             const hintRef = this.hintContainer;
-            this.game.effects.tweens.push({
+            const tween = {
                 elapsed: 0,
                 duration: 99999,
+                _isHintPulse: true,
                 update(dt) {
-                    if (!hintRef || hintRef.destroyed || hintRef.children.length === 0) {
+                    if (!hintRef || hintRef.destroyed) {
                         return true;
                     }
+                    // Check if any hints are visible
+                    let anyVisible = false;
+                    for (let i = 0; i < hintRef.children.length; i++) {
+                        if (hintRef.children[i].visible) { anyVisible = true; break; }
+                    }
+                    if (!anyVisible) return true;
                     this.elapsed += dt;
                     const pulse = 0.6 + Math.sin(this.elapsed * 0.006) * 0.4;
                     hintRef.alpha = pulse;
                     return false;
                 }
-            });
+            };
+            this.game.effects.tweens.push(tween);
         }
     }
 
     clearCompletionHints() {
+        for (let i = 0; i < this._hintActiveCount; i++) {
+            if (i < this._hintPool.length) {
+                this._hintPool[i].visible = false;
+            }
+        }
+        this._hintActiveCount = 0;
         if (this.hintContainer) {
-            const removed = this.hintContainer.removeChildren();
-            removed.forEach(c => c.destroy({ children: true }));
             this.hintContainer.alpha = 1;
         }
-        this._hintPulseActive = false;
+        // Kill the hint pulse tween
+        if (this._hintPulseActive) {
+            this._hintPulseActive = false;
+            const tweens = this.game.effects.tweens;
+            for (let i = tweens.length - 1; i >= 0; i--) {
+                if (tweens[i]._isHintPulse) {
+                    tweens.splice(i, 1);
+                }
+            }
+        }
     }
 
-    // ── Ghost Preview (animated pulsing) ──
+    // ── Ghost Preview (pooled Graphics, no create/destroy per move) ──
+    _getGhostGfx(index) {
+        if (index < this._ghostPool.length) {
+            return this._ghostPool[index];
+        }
+        const g = new PIXI.Graphics();
+        this._ghostPool.push(g);
+        return g;
+    }
+
     showGhost(shape, gridX, gridY, isValid) {
-        this.clearGhost();
         if (!this.ghostContainer) return;
         const cs = this.cellSize;
         const color = isValid ? 0x44FF88 : 0xFF4444;
         const alpha = isValid ? 0.35 : 0.2;
         const r = Math.max(2, cs * 0.1);
 
+        let idx = 0;
         for (let row = 0; row < shape.length; row++) {
             for (let col = 0; col < shape[row].length; col++) {
                 if (!shape[row][col]) continue;
                 const x = (gridX + col) * cs;
                 const y = (gridY + row) * cs;
 
-                const g = new PIXI.Graphics();
+                const g = this._getGhostGfx(idx);
+                g.clear();
 
                 // Soft outer glow
                 g.roundRect(x - 1, y - 1, cs + 2, cs + 2, r + 1)
@@ -537,21 +605,37 @@ class Board {
                      .stroke({ width: 0.5, color: 0xFFFFFF, alpha: 0.1 });
                 }
 
-                this.ghostContainer.addChild(g);
+                g.visible = true;
+                if (!g.parent) {
+                    this.ghostContainer.addChild(g);
+                }
+                idx++;
             }
         }
+
+        // Hide unused pooled ghost graphics
+        for (let i = idx; i < this._ghostActiveCount; i++) {
+            if (i < this._ghostPool.length) {
+                this._ghostPool[i].visible = false;
+            }
+        }
+        this._ghostActiveCount = idx;
 
         // Show completion hints when ghost is valid
         if (isValid) {
             this.showCompletionHints();
+        } else {
+            this.clearCompletionHints();
         }
     }
 
     clearGhost() {
-        if (this.ghostContainer) {
-            const removed = this.ghostContainer.removeChildren();
-            removed.forEach(c => c.destroy({ children: true }));
+        for (let i = 0; i < this._ghostActiveCount; i++) {
+            if (i < this._ghostPool.length) {
+                this._ghostPool[i].visible = false;
+            }
         }
+        this._ghostActiveCount = 0;
         this.clearCompletionHints();
     }
 
