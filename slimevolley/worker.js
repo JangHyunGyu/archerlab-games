@@ -358,7 +358,7 @@ export class GameRoom {
                 if (player.id !== this.hostId) {
                     const hostWs = this.getHostWs();
                     if (hostWs) {
-                        this.sendTo(hostWs, { ...msg, playerId: player.id });
+                        this.sendTo(hostWs, { ...msg, playerId: player.id, slotIndex: player.slotIndex });
                     }
                 }
                 break;
@@ -464,6 +464,7 @@ export class GameRoom {
         this.broadcast({
             type: 'playerLeft',
             playerId: player.id,
+            slotIndex: player.slotIndex,
             newHostId: this.hostId,
             players: this.getPlayerList(),
         });

@@ -708,8 +708,51 @@ kbd {
 }
 .btn-kick:hover { opacity: 1; }
 
+.btn-remove-bot {
+    border-color: var(--secondary);
+    color: var(--secondary);
+}
+
+.btn-add-bot {
+    display: block;
+    width: 100%;
+    padding: 4px 8px;
+    margin-top: 4px;
+    background: rgba(179, 102, 255, 0.08);
+    border: 1px dashed var(--secondary);
+    color: var(--secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+.btn-add-bot:hover {
+    background: rgba(179, 102, 255, 0.18);
+    border-style: solid;
+}
+
 .player-item.me {
     background: rgba(79, 195, 247, 0.08);
+}
+
+/* Room Body Layout */
+.room-body {
+    flex: 1;
+    min-height: 0;
+}
+.room-sidebar {
+    display: flex;
+    flex-direction: column;
+}
+.room-sidebar .chat-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.room-sidebar .chat-messages {
+    flex: 1;
+    min-height: 60px;
 }
 
 /* Game Screen Layout */
@@ -975,10 +1018,44 @@ kbd {
         flex-direction: column;
         margin: 0 auto;
     }
-    #multiplayer-lobby .room-list,
-    #room-screen .player-list {
+    #multiplayer-lobby .room-list {
         flex-shrink: 1;
         min-height: 0;
+    }
+    /* 방 화면: 가로 2열 레이아웃 */
+    .room-header-section {
+        flex-shrink: 0;
+    }
+    .room-header-section h2 {
+        margin-bottom: 2px;
+    }
+    .room-body {
+        display: flex;
+        gap: 8px;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+    .room-body .player-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        margin-bottom: 0;
+    }
+    .room-sidebar {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+    }
+    .room-sidebar .chat-section {
+        margin-top: 0;
+        height: 100%;
+    }
+    .room-sidebar .chat-messages {
+        flex: 1;
+        min-height: 0;
+        height: auto;
     }
     /* 로비 화면 압축 */
     .panel-wide {
@@ -1019,40 +1096,45 @@ kbd {
     }
     /* 방 화면 압축 */
     .room-type-display {
-        padding: 4px 10px;
-        margin-bottom: 4px;
+        padding: 2px 10px;
+        margin-bottom: 2px;
         font-size: 0.75rem;
     }
     .room-meta {
         font-size: 0.75rem;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
     .player-list {
-        gap: 8px;
-        margin-bottom: 4px;
+        gap: 6px;
+        margin-bottom: 0;
     }
     .team-group {
-        padding: 6px 8px;
+        padding: 4px 6px;
     }
     .team-label {
         font-size: 0.7rem;
-        margin-bottom: 4px;
-        padding-bottom: 3px;
+        margin-bottom: 3px;
+        padding-bottom: 2px;
     }
     .player-item {
-        padding: 3px 6px;
-        font-size: 0.8rem;
-        margin-bottom: 2px;
+        padding: 2px 5px;
+        font-size: 0.78rem;
+        margin-bottom: 1px;
+    }
+    .btn-add-bot {
+        padding: 2px 6px;
+        font-size: 0.65rem;
+        margin-top: 2px;
     }
     .chat-section {
-        margin-top: 4px;
-        margin-bottom: 4px;
+        margin-top: 0;
+        margin-bottom: 0;
     }
     .chat-messages {
         height: 48px;
         padding: 4px 6px;
         font-size: 0.7rem;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
     }
     .chat-input-field {
         padding: 3px 8px;
@@ -1095,7 +1177,7 @@ kbd {
         display: none;
     }
     .panel-wide {
-        padding: 6px 10px;
+        padding: 4px 8px;
     }
     .panel-wide h2 {
         font-size: 0.8rem;
@@ -1105,36 +1187,17 @@ kbd {
         max-height: 25vh;
     }
     .room-type-display {
-        padding: 4px 8px;
+        display: none;
+    }
+    .room-meta {
         margin-bottom: 2px;
     }
-    /* 극소 화면 채팅: 한 줄 인라인 */
-    .chat-section {
-        margin: 2px 0;
-        display: flex;
-        gap: 4px;
-        align-items: center;
-    }
-    .chat-messages {
-        height: 20px;
-        flex: 1;
-        overflow: hidden;
-        border: none;
-        background: transparent;
-        padding: 0 4px;
+    /* 극소 화면: 채팅 최소화 */
+    .room-sidebar .chat-messages {
+        min-height: 24px;
         font-size: 0.65rem;
-        margin-bottom: 0;
-        display: flex;
-        align-items: center;
-        border-radius: 4px;
-        background: rgba(255,255,255,0.03);
-    }
-    .chat-input-row {
-        flex-shrink: 0;
-        gap: 3px;
     }
     .chat-input-field {
-        width: 90px;
         padding: 2px 6px;
         font-size: 0.65rem;
     }
@@ -1144,17 +1207,25 @@ kbd {
     }
     .player-list {
         gap: 4px;
-        margin-bottom: 2px;
+        margin-bottom: 0;
     }
     .team-group {
-        padding: 4px 6px;
+        padding: 3px 5px;
+    }
+    .player-item {
+        padding: 1px 4px;
+        font-size: 0.72rem;
+    }
+    .btn-add-bot {
+        padding: 1px 4px;
+        font-size: 0.6rem;
     }
     .form-actions {
-        margin-top: 4px;
+        margin-top: 3px;
     }
     .form-actions .btn {
-        padding: 5px 8px;
-        font-size: 0.75rem;
+        padding: 4px 8px;
+        font-size: 0.72rem;
     }
     #game-screen.screen {
         padding: 0;

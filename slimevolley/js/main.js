@@ -6,7 +6,7 @@ class SlimeVolleyGame {
         this.sound = new SoundManager();
         this.network = new NetworkClient('slimevolley');
         this.lobby = null;
-        this.bots = [];
+        this.botMap = new Map(); // slimeId -> BotAI
         this.running = false;
         this.mode = null; // 'practice' | 'multiplayer'
         this.mySlimeId = 0;
@@ -138,17 +138,17 @@ class SlimeVolleyGame {
         this.physics.configure({ sets: 1, scorePerSet: CONFIG.MAX_SCORE, deuce: true });
         this.physics.initSlimes([myTeamSize, botTeamSize]);
 
-        this.bots = [];
+        this.botMap = new Map();
         let botIdx = 0;
         for (const slime of this.physics.slimes) {
             if (slime.team === 1) {
                 slime.isBot = true;
                 slime.nickname = 'Bot ' + (++botIdx);
-                this.bots.push(new BotAI(difficulty));
+                this.botMap.set(slime.id, new BotAI(difficulty));
             } else if (slime.id > 0) {
                 slime.isBot = true;
                 slime.nickname = 'Bot ' + (++botIdx);
-                this.bots.push(new BotAI(difficulty));
+                this.botMap.set(slime.id, new BotAI(difficulty));
             } else {
                 slime.nickname = 'Player';
             }
@@ -200,14 +200,27 @@ class SlimeVolleyGame {
         this.running = true;
         this.physics.phase = 'serving';
         this.physics.freezeTimer = 30;
+        this.physicsAccumulator = 0;
 
         if (this.gameLoop) {
             this.renderer.app.ticker.remove(this.gameLoop);
         }
 
-        this.gameLoop = () => {
+        const FIXED_DT = 1000 / 60; // 60fps 고정 물리 스텝
+        this.gameLoop = (ticker) => {
             if (!this.running) return;
-            this.update();
+
+            this.physicsAccumulator += ticker.deltaMS;
+            // 프레임 드롭 시 최대 4스텝까지만 (spiral of death 방지)
+            if (this.physicsAccumulator > FIXED_DT * 4) {
+                this.physicsAccumulator = FIXED_DT * 4;
+            }
+
+            while (this.physicsAccumulator >= FIXED_DT) {
+                this.update();
+                this.physicsAccumulator -= FIXED_DT;
+            }
+
             this.renderer.render(this.physics.getState());
         };
 
@@ -222,18 +235,17 @@ class SlimeVolleyGame {
 
         // 호스트 또는 연습 모드: 기존 로직
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
-        if (mySlime) {
+        if (mySlime && !mySlime.isBot) {
             mySlime.input = this.getMyInput();
         }
 
-        let botIdx = 0;
         for (const slime of this.physics.slimes) {
             if (slime.isBot) {
-                if (botIdx < this.bots.length) {
-                    slime.input = this.bots[botIdx].getInput(
+                const bot = this.botMap.get(slime.id);
+                if (bot) {
+                    slime.input = bot.getInput(
                         slime, this.physics.ball, this.physics.slimes, this.physics
                     );
-                    botIdx++;
                 }
             }
         }
@@ -407,6 +419,24 @@ class SlimeVolleyGame {
     }
 
     // === Multiplayer ===
+    becomeHost() {
+        this.network.isHost = true;
+
+        // 최신 스냅샷 상태를 물리엔진에 적용
+        if (this.snapshotBuffer.length > 0) {
+            const latest = this.snapshotBuffer[this.snapshotBuffer.length - 1];
+            this.physics.setState(latest.state);
+        }
+        this.snapshotBuffer = [];
+
+        // 모든 봇 슬라임에 대해 BotAI 생성
+        for (const slime of this.physics.slimes) {
+            if (slime.isBot && !this.botMap.has(slime.id)) {
+                this.botMap.set(slime.id, new BotAI('normal'));
+            }
+        }
+    }
+
     setupNetworkHandlers() {
         this.network.on('roomCreated', (msg) => {
             this.lobby.showRoomScreen(msg.roomId, msg.players, true, msg.metadata);
@@ -426,7 +456,29 @@ class SlimeVolleyGame {
         });
 
         this.network.on('playerLeft', (msg) => {
+            // 로비 UI 업데이트
             this.lobby.updatePlayerList(msg.players);
+
+            // 게임 중 퇴장 처리
+            if (this.running && this.mode === 'multiplayer') {
+                // 호스트 이전: 내가 새 호스트인 경우
+                if (msg.newHostId === this.network.playerId && !this.network.isHost) {
+                    this.becomeHost();
+                }
+
+                // 나간 유저의 슬라임을 봇으로 대체
+                if (msg.slotIndex !== undefined) {
+                    const slime = this.physics.slimes.find(s => s.id === msg.slotIndex);
+                    if (slime && !slime.isBot) {
+                        slime.isBot = true;
+                        slime.nickname = (slime.nickname || 'Player') + ' (Bot)';
+                        // 호스트만 BotAI 관리
+                        if (this.network.isHost) {
+                            this.botMap.set(slime.id, new BotAI('normal'));
+                        }
+                    }
+                }
+            }
         });
 
         this.network.on('playerReady', (msg) => {
@@ -452,6 +504,7 @@ class SlimeVolleyGame {
             this.myTeam = msg.myTeam;
             this.mySlimeId = msg.mySlotIndex;
             this.snapshotBuffer = [];
+            this.botMap = new Map();
 
             this.physics.reset();
             const meta = msg.metadata || {};
@@ -462,12 +515,21 @@ class SlimeVolleyGame {
             });
             this.physics.initSlimes(msg.teamSizes);
 
-            // 슬라임에 닉네임 매핑
+            // 슬라임에 닉네임 매핑 + 봇 초기화
             if (msg.players) {
                 for (const p of msg.players) {
                     if (p.slotIndex !== undefined) {
                         const slime = this.physics.slimes.find(s => s.id === p.slotIndex);
-                        if (slime) slime.nickname = p.name || '???';
+                        if (slime) {
+                            slime.nickname = p.name || '???';
+                            if (p.isBot) {
+                                slime.isBot = true;
+                                // 호스트만 BotAI 인스턴스 관리
+                                if (this.network.isHost) {
+                                    this.botMap.set(slime.id, new BotAI('normal'));
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -499,8 +561,8 @@ class SlimeVolleyGame {
 
         this.network.on('input', (msg) => {
             if (this.network.isHost) {
-                const slime = this.physics.slimes.find(s => s.id === msg.playerId);
-                if (slime) {
+                const slime = this.physics.slimes.find(s => s.id === msg.slotIndex);
+                if (slime && !slime.isBot) {
                     slime.input = msg.input;
                 }
             }

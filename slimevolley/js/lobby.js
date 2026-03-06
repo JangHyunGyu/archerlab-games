@@ -390,20 +390,27 @@ class LobbyManager {
                     pingHtml = `<span class="player-ping ${pingClass}" data-player-ping="${p.id}">${ping}ms</span>`;
                 }
 
-                let kickBtn = '';
+                let actionBtn = '';
                 if (this.isHost && !p.isHost && !p.isBot) {
-                    kickBtn = `<button class="btn-kick" data-id="${p.id}" title="강퇴">&#10005;</button>`;
+                    actionBtn = `<button class="btn-kick" data-id="${p.id}" title="강퇴">&#10005;</button>`;
+                } else if (this.isHost && p.isBot) {
+                    actionBtn = `<button class="btn-kick btn-remove-bot" data-bot-id="${p.id}" title="봇 제거">&#10005;</button>`;
                 }
 
                 pDiv.innerHTML = `
                     <span class="player-name">${this.escapeHtml(p.name)}</span>
-                    ${pingHtml}${badges}${kickBtn}
+                    ${pingHtml}${badges}${actionBtn}
                 `;
 
-                if (kickBtn) {
+                if (this.isHost && !p.isHost && !p.isBot) {
                     pDiv.querySelector('.btn-kick').addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.game.network.send({ type: 'kick', targetId: p.id });
+                    });
+                } else if (this.isHost && p.isBot) {
+                    pDiv.querySelector('.btn-remove-bot').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.game.network.removeBot(p.id, p.team);
                     });
                 }
 
@@ -416,6 +423,17 @@ class LobbyManager {
                 emptyDiv.className = 'player-item empty';
                 emptyDiv.innerHTML = '<span class="player-name empty-slot">Empty</span>';
                 teamDiv.appendChild(emptyDiv);
+            }
+
+            // 호스트: 봇 추가 버튼
+            if (this.isHost && teams[t].length < maxPerTeam) {
+                const addBotBtn = document.createElement('button');
+                addBotBtn.className = 'btn-add-bot';
+                addBotBtn.textContent = '+ Bot';
+                addBotBtn.addEventListener('click', () => {
+                    this.game.network.addBot(t);
+                });
+                teamDiv.appendChild(addBotBtn);
             }
 
             listEl.appendChild(teamDiv);

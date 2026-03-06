@@ -21,7 +21,7 @@
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <link rel="stylesheet" href="css/style.css?v=13">
+    <link rel="stylesheet" href="css/style.css?v=14">
     <script>
         // 모바일 주소창 높이를 반영한 실제 뷰포트 높이
         function setVH() {
@@ -191,15 +191,21 @@
         <!-- Room Screen -->
         <div id="room-screen" class="screen">
             <div class="panel panel-wide">
-                <h2>Room</h2>
-                <div id="room-type-display" class="room-type-display"></div>
-                <div id="room-meta" class="room-meta"></div>
-                <div id="player-list" class="player-list"></div>
-                <div class="chat-section">
-                    <div id="chat-messages" class="chat-messages"></div>
-                    <div class="chat-input-row">
-                        <input type="text" id="chat-input" class="input-text chat-input-field" placeholder="메시지 입력..." maxlength="200">
-                        <button id="btn-chat-send" class="btn btn-small">전송</button>
+                <div class="room-header-section">
+                    <h2>Room</h2>
+                    <div id="room-type-display" class="room-type-display"></div>
+                    <div id="room-meta" class="room-meta"></div>
+                </div>
+                <div class="room-body">
+                    <div id="player-list" class="player-list"></div>
+                    <div class="room-sidebar">
+                        <div class="chat-section">
+                            <div id="chat-messages" class="chat-messages"></div>
+                            <div class="chat-input-row">
+                                <input type="text" id="chat-input" class="input-text chat-input-field" placeholder="메시지 입력..." maxlength="200">
+                                <button id="btn-chat-send" class="btn btn-small">전송</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="form-actions">
@@ -272,13 +278,13 @@
     <script src="https://cdn.jsdelivr.net/npm/tone@15/build/Tone.js"></script>
 
     <!-- Game Scripts -->
-    <script src="js/config.js?v=13"></script>
-    <script src="js/physics.js?v=13"></script>
-    <script src="js/renderer.js?v=13"></script>
-    <script src="js/bot.js?v=13"></script>
-    <script src="js/sound.js?v=13"></script>
-    <script src="js/network.js?v=13"></script>
-    <script src="js/lobby.js?v=13"></script>
-    <script src="js/main.js?v=13"></script>
+    <script src="js/config.js?v=14"></script>
+    <script src="js/physics.js?v=14"></script>
+    <script src="js/renderer.js?v=14"></script>
+    <script src="js/bot.js?v=14"></script>
+    <script src="js/sound.js?v=14"></script>
+    <script src="js/network.js?v=14"></script>
+    <script src="js/lobby.js?v=14"></script>
+    <script src="js/main.js?v=14"></script>
 </body>
 </html>
