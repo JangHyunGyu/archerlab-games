@@ -204,7 +204,7 @@ class EffectManager {
             const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.5;
             const speed = 3 + Math.random() * 5;
             const size = 2 + Math.random() * 4;
-            const gfx = new PIXI.Graphics();
+            const gfx = this._getParticleGfx();
 
             // 4-pointed star shape
             gfx.star(0, 0, 4, size, size * 0.4).fill({ color, alpha: 0.9 });
@@ -384,8 +384,9 @@ class EffectManager {
         const total = cs * GRID_SIZE;
 
         // Row sweeps (horizontal)
+        const self = this;
         rows.forEach((row, ri) => {
-            const g = new PIXI.Graphics();
+            const g = self._getParticleGfx();
             g.rect(0, 0, 20, cs).fill({ color: 0xFFFFFF, alpha: 0.6 });
             g.rect(-10, 0, 40, cs).fill({ color: 0x44FF88, alpha: 0.3 });
 
@@ -402,7 +403,7 @@ class EffectManager {
                     const t = Math.min(this.elapsed / this.duration, 1);
                     g.x = boardGlobalPos.x - 20 + easeOutQuart(t) * (total + 40);
                     g.alpha = t < 0.8 ? 1 : 1 - (t - 0.8) / 0.2;
-                    if (t >= 1) { g.destroy(); return true; }
+                    if (t >= 1) { self._releaseParticleGfx(g); return true; }
                     return false;
                 }
             });
@@ -410,7 +411,7 @@ class EffectManager {
 
         // Column sweeps (vertical)
         cols.forEach((col, ci) => {
-            const g = new PIXI.Graphics();
+            const g = self._getParticleGfx();
             g.rect(0, 0, cs, 20).fill({ color: 0xFFFFFF, alpha: 0.6 });
             g.rect(0, -10, cs, 40).fill({ color: 0x44FF88, alpha: 0.3 });
 
@@ -427,7 +428,7 @@ class EffectManager {
                     const t = Math.min(this.elapsed / this.duration, 1);
                     g.y = boardGlobalPos.y - 20 + easeOutQuart(t) * (total + 40);
                     g.alpha = t < 0.8 ? 1 : 1 - (t - 0.8) / 0.2;
-                    if (t >= 1) { g.destroy(); return true; }
+                    if (t >= 1) { self._releaseParticleGfx(g); return true; }
                     return false;
                 }
             });
@@ -944,7 +945,7 @@ class EffectManager {
         for (let i = 0; i < count; i++) {
             const color = colors[Math.floor(Math.random() * colors.length)];
             const size = 1 + Math.random() * 3;
-            const gfx = new PIXI.Graphics();
+            const gfx = this._getParticleGfx();
             gfx.circle(0, 0, size).fill({ color, alpha: 0.8 });
             gfx.circle(0, 0, size * 1.8).fill({ color, alpha: 0.3 });
 
@@ -1319,7 +1320,7 @@ class EffectManager {
             const size = 1.5 + Math.random() * 2;
             const pColor = i % 2 === 0 ? 0xFFFFFF : 0x44FF88;
 
-            const gfx = new PIXI.Graphics();
+            const gfx = this._getParticleGfx();
             gfx.circle(0, 0, size).fill({ color: pColor, alpha: 0.8 });
             gfx.circle(0, 0, size * 2).fill({ color: pColor, alpha: 0.3 });
             gfx.position.set(x, y);
