@@ -553,29 +553,22 @@ class PhysicsEngine {
         if (stateB.currentSet !== undefined) this.currentSet = stateB.currentSet;
     }
 
-    // 내 슬라임을 서버 위치로 부드럽게 보정
-    reconcileMySlime(slimeId, serverState, correctionRate) {
+    // 내 슬라임: 큰 오차(비예측 이벤트)만 스냅, 그 외 보정 없음
+    reconcileMySlime(slimeId, serverState) {
         const slime = this.slimes.find(s => s.id === slimeId);
         if (!slime) return;
         const ss = serverState.slimes.find(s => s.id === slimeId);
         if (!ss) return;
 
-        const lerp = (a, b, f) => a + (b - a) * f;
         const dx = Math.abs(slime.x - ss.x);
         const dy = Math.abs(slime.y - ss.y);
 
-        // 위치 차이가 크면 즉시 보정, 작으면 부드럽게
-        if (dx > 20 || dy > 20) {
+        // 큰 오차만 스냅 (슬라임 간 충돌, 코트 경계 등 비예측 이벤트)
+        if (dx > 30 || dy > 30) {
             slime.x = ss.x;
             slime.y = ss.y;
             slime.vx = ss.vx;
             slime.vy = ss.vy;
-            slime.onGround = ss.onGround;
-        } else {
-            slime.x = lerp(slime.x, ss.x, correctionRate);
-            slime.y = lerp(slime.y, ss.y, correctionRate);
-            slime.vx = lerp(slime.vx, ss.vx, correctionRate);
-            slime.vy = lerp(slime.vy, ss.vy, correctionRate);
             slime.onGround = ss.onGround;
         }
     }
