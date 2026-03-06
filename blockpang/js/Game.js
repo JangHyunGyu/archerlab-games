@@ -42,6 +42,7 @@ class Game {
         this._stars = [];
         this._nebulae = [];
         this._shootingStars = [];
+        this._shootingStarPool = [];
         this._bgTime = 0;
         this._shootingStarTimer = 0;
         this._createBackground();
@@ -223,7 +224,17 @@ class Game {
         const length = 60 + Math.random() * 100;
         const speed = 4 + Math.random() * 6;
 
-        const g = new PIXI.Graphics();
+        // Reuse from pool or create new
+        let g;
+        if (this._shootingStarPool && this._shootingStarPool.length > 0) {
+            g = this._shootingStarPool.pop();
+            g.clear();
+            g.visible = true;
+            g.alpha = 1;
+            g.scale.set(1);
+        } else {
+            g = new PIXI.Graphics();
+        }
 
         const trailLen = length;
         for (let i = 0; i < 8; i++) {
@@ -278,7 +289,13 @@ class Game {
             const ss = this._shootingStars[i];
             ss.life -= dt;
             if (ss.life <= 0) {
-                ss.gfx.destroy();
+                ss.gfx.visible = false;
+                if (ss.gfx.parent) ss.gfx.parent.removeChild(ss.gfx);
+                if (this._shootingStarPool.length < 10) {
+                    this._shootingStarPool.push(ss.gfx);
+                } else {
+                    ss.gfx.destroy();
+                }
                 this._shootingStars.splice(i, 1);
                 continue;
             }
@@ -311,7 +328,14 @@ class Game {
         this.tray.resize(this.cellSize, w, trayH, 0, trayY);
         this.ui.resize(w, scoreAreaH, padding);
         this.input.updateHitArea();
-        this._createBackground();
+
+        // Only recreate background if dimensions changed significantly (>5px)
+        if (!this._lastBgW || !this._lastBgH ||
+            Math.abs(w - this._lastBgW) > 5 || Math.abs(h - this._lastBgH) > 5) {
+            this._lastBgW = w;
+            this._lastBgH = h;
+            this._createBackground();
+        }
 
         // Resize title screen if visible
         if (this.state === 'title' && this.ui.titleContainer) {

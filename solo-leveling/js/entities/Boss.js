@@ -68,7 +68,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             strokeThickness: 2,
         }).setOrigin(0.5).setDepth(20);
 
-        console.log(`[BOSS] ${config.name} spawned: HP=${this.maxHp}, baseHp=${baseHp}, diffMult=${difficultyMult}`);
+        // console.log(`[BOSS] ${config.name} spawned: HP=${this.maxHp}, baseHp=${baseHp}, diffMult=${difficultyMult}`);
 
         // Glow filter for boss (rollback pipeline on failure to prevent GPU stall)
         try {
@@ -409,7 +409,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         this.hp -= amount;
 
-        console.log(`[BOSS HIT] ${this.config.name}: -${amount} HP (${this.hp}/${this.maxHp})`);
+        // console.log(`[BOSS HIT] ${this.config.name}: -${amount} HP (${this.hp}/${this.maxHp})`);
 
         // Flash red on hit, then restore
         this.setTint(0xff0000);

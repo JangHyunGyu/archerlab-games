@@ -336,8 +336,11 @@ export class HUD {
             this.questText.setText(quests.length > 0 ? quests.map(q => `[퀘스트] ${q.description}`).join('\n') : '');
         }
 
-        // Minimap
-        this._updateMinimap(player, enemyManager, shadowArmyManager);
+        // Minimap (throttled: update every 3 frames)
+        this._mmFrameCounter = ((this._mmFrameCounter || 0) + 1) % 3;
+        if (this._mmFrameCounter === 0) {
+            this._updateMinimap(player, enemyManager, shadowArmyManager);
+        }
 
         // Dungeon break indicator
         if (enemyManager && this.breakText) {

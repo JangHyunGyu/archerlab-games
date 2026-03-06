@@ -107,16 +107,16 @@ export class ShadowDagger extends WeaponBase {
             onComplete: () => cleanup(),
         });
 
-        // 트레일 이펙트
+        // 트레일 이펙트 (pooled circles)
         trailInterval = this.scene.time.addEvent({
             delay: 50,
             repeat: duration / 50,
             callback: () => {
                 if (!dagger.active) return;
-                const trail = this.scene.add.circle(dagger.x, dagger.y, 3, 0xb366ff, 0.4).setDepth(7);
+                const trail = this._getTrailCircle(dagger.x, dagger.y);
                 this.scene.tweens.add({
                     targets: trail, alpha: 0, scale: 0,
-                    duration: 180, onComplete: () => trail.destroy(),
+                    duration: 180, onComplete: () => this._releaseTrailCircle(trail),
                 });
             },
         });
