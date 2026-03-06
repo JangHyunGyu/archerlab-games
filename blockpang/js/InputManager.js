@@ -125,10 +125,11 @@ class InputManager {
         if (!this.dragPieceData) return;
         const blockColor = BLOCK_COLORS[this.dragPieceData.colorIndex];
         const color = blockColor.glow;
+        const effects = this.game.effects;
 
-        // Main glowing particle
+        // Main glowing particle (pooled)
         const size = 2 + Math.random() * 3;
-        const gfx = new PIXI.Graphics();
+        const gfx = effects._getParticleGfx();
         gfx.circle(0, 0, size * 2).fill({ color, alpha: 0.15 });
         gfx.circle(0, 0, size).fill({ color, alpha: 0.6 });
         gfx.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.5 });
@@ -137,9 +138,9 @@ class InputManager {
             x + (Math.random() - 0.5) * 25,
             y + (Math.random() - 0.5) * 25
         );
-        this.game.effects.container.addChild(gfx);
+        effects.container.addChild(gfx);
 
-        this.game.effects.particles.push({
+        effects.particles.push({
             gfx,
             vx: (Math.random() - 0.5) * 0.8,
             vy: -0.8 - Math.random() * 1.5,
@@ -152,18 +153,18 @@ class InputManager {
             maxLife: 700,
         });
 
-        // Occasional sparkle (30% chance)
+        // Occasional sparkle (30% chance, pooled)
         if (Math.random() < 0.3) {
             const sparkSize = 1 + Math.random() * 2;
-            const sparkGfx = new PIXI.Graphics();
+            const sparkGfx = effects._getParticleGfx();
             sparkGfx.star(0, 0, 4, sparkSize, sparkSize * 0.4)
                      .fill({ color: blockColor.light, alpha: 0.7 });
             sparkGfx.position.set(
                 x + (Math.random() - 0.5) * 30,
                 y + (Math.random() - 0.5) * 30
             );
-            this.game.effects.container.addChild(sparkGfx);
-            this.game.effects.particles.push({
+            effects.container.addChild(sparkGfx);
+            effects.particles.push({
                 gfx: sparkGfx,
                 vx: (Math.random() - 0.5) * 1.2,
                 vy: -1 - Math.random() * 2,

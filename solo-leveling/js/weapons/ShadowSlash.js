@@ -5,6 +5,29 @@ export class ShadowSlash extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, WEAPONS.shadowSlash);
         this.slashGroup = scene.physics.add.group();
+        this._gfxPool = [];
+    }
+
+    _getGfx() {
+        let gfx = this._gfxPool.pop();
+        if (!gfx || !gfx.scene) {
+            gfx = this.scene.add.graphics().setDepth(8);
+        } else {
+            gfx.clear();
+            gfx.setVisible(true);
+            gfx.setAlpha(1);
+        }
+        return gfx;
+    }
+
+    _releaseGfx(gfx) {
+        gfx.clear();
+        gfx.setVisible(false);
+        if (this._gfxPool.length < 10) {
+            this._gfxPool.push(gfx);
+        } else {
+            gfx.destroy();
+        }
     }
 
     fire() {
@@ -29,8 +52,8 @@ export class ShadowSlash extends WeaponBase {
         const slashX = this.player.x + Math.cos(angle) * slashDist;
         const slashY = this.player.y + Math.sin(angle) * slashDist;
 
-        // Single graphics object for all arc layers
-        const gfx = this.scene.add.graphics().setDepth(8);
+        // Single graphics object for all arc layers (pooled)
+        const gfx = this._getGfx();
         const px = this.player.x;
         const py = this.player.y;
         const arcRadius = range;
@@ -116,7 +139,7 @@ export class ShadowSlash extends WeaponBase {
                 }
             },
             onComplete: () => {
-                gfx.destroy();
+                this._releaseGfx(gfx);
             },
         });
 
@@ -173,5 +196,9 @@ export class ShadowSlash extends WeaponBase {
 
     destroy() {
         this.slashGroup.destroy(true);
+        for (const gfx of this._gfxPool) {
+            if (gfx && gfx.scene) gfx.destroy();
+        }
+        this._gfxPool = [];
     }
 }
