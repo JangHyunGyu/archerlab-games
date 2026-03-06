@@ -21,6 +21,7 @@ class SlimeVolleyGame {
         this.snapshotBuffer = [];
         this.snapshotMaxSize = 30;
         this.interpolationDelay = CONFIG.INTERPOLATION_DELAY;
+        this._lastReconcileSnapshotTime = 0; // 마지막으로 보정에 사용한 스냅샷 시각
 
         this.setupInput();
         this.setupNetworkHandlers();
@@ -338,13 +339,24 @@ class SlimeVolleyGame {
                 buf.shift();
             }
 
-            // 서버 보정: 렌더 프레임당 1회, 부드러운 보정률
+            // 서버 보정: 새 스냅샷이 도착했을 때만 적용 (매 프레임 X)
             const latest = buf[buf.length - 1];
-            this.physics.reconcileMySlime(this.mySlimeId, latest.state, 0.1);
+            if (latest.time !== this._lastReconcileSnapshotTime) {
+                this._lastReconcileSnapshotTime = latest.time;
+                // 공중에서는 보정률을 낮춤 (예측이 결정적이므로 drift 적음)
+                const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
+                const rate = (mySlime && !mySlime.onGround) ? 0.05 : 0.15;
+                this.physics.reconcileMySlime(this.mySlimeId, latest.state, rate);
+            }
         } else if (buf.length === 1) {
             const s = buf[0].state;
             this.physics.applyInterpolatedState(s, s, 1, this.mySlimeId);
-            this.physics.reconcileMySlime(this.mySlimeId, s, 0.1);
+            if (buf[0].time !== this._lastReconcileSnapshotTime) {
+                this._lastReconcileSnapshotTime = buf[0].time;
+                const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
+                const rate = (mySlime && !mySlime.onGround) ? 0.05 : 0.15;
+                this.physics.reconcileMySlime(this.mySlimeId, s, rate);
+            }
         }
     }
 
@@ -521,6 +533,7 @@ class SlimeVolleyGame {
             this.myTeam = msg.myTeam;
             this.mySlimeId = msg.mySlotIndex;
             this.snapshotBuffer = [];
+            this._lastReconcileSnapshotTime = 0;
             this.botMap = new Map();
 
             this.physics.reset();
