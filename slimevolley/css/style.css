@@ -810,10 +810,15 @@ kbd {
         font-size: 1.1rem;
         padding: 2px 6px;
     }
-    /* 스크롤 방지 */
+    /* 스크롤 방지 - 로비/방 화면은 패널 내부 스크롤 허용 */
     .screen {
         padding: 8px;
         overflow: hidden;
+    }
+    #multiplayer-lobby.screen,
+    #room-screen.screen {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     /* 메뉴 압축 */
     .archerlab-link {
@@ -884,6 +889,124 @@ kbd {
         padding: 8px 12px;
         font-size: 0.85rem;
     }
+    /* 로비/방 화면: 패널이 뷰포트에 맞게 축소 */
+    #multiplayer-lobby.screen,
+    #room-screen.screen,
+    #create-room.screen,
+    #practice-setup.screen {
+        align-items: stretch;
+        justify-content: center;
+        padding: 4px 8px;
+    }
+    #multiplayer-lobby .panel-wide,
+    #room-screen .panel-wide {
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        margin: 0 auto;
+    }
+    #multiplayer-lobby .room-list,
+    #room-screen .player-list {
+        flex-shrink: 1;
+        min-height: 0;
+    }
+    /* 로비 화면 압축 */
+    .panel-wide {
+        padding: 8px 12px;
+        max-width: 95vw;
+    }
+    .panel-wide h2 {
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+    }
+    .lobby-top {
+        flex-direction: row !important;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+    .lobby-top .form-group {
+        margin-bottom: 0;
+    }
+    .lobby-top .form-inline {
+        gap: 6px;
+    }
+    .lobby-top .input-text {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+    .lobby-actions {
+        gap: 4px;
+    }
+    .room-list {
+        max-height: 35vh;
+    }
+    .room-list-empty {
+        padding: 16px 10px;
+    }
+    .room-item {
+        padding: 6px 10px;
+    }
+    /* 방 화면 압축 */
+    .room-code-section {
+        padding: 6px 10px;
+        margin-bottom: 4px;
+        gap: 8px;
+    }
+    .room-code {
+        font-size: 1.2rem;
+        letter-spacing: 2px;
+    }
+    .room-code-label {
+        font-size: 0.75rem;
+    }
+    .room-meta {
+        font-size: 0.75rem;
+        margin-bottom: 4px;
+    }
+    .player-list {
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    .team-group {
+        padding: 6px 8px;
+    }
+    .team-label {
+        font-size: 0.7rem;
+        margin-bottom: 4px;
+        padding-bottom: 3px;
+    }
+    .player-item {
+        padding: 3px 6px;
+        font-size: 0.8rem;
+        margin-bottom: 2px;
+    }
+    .chat-section {
+        margin-top: 4px;
+        margin-bottom: 4px;
+    }
+    .chat-messages {
+        height: 48px;
+        padding: 4px 6px;
+        font-size: 0.7rem;
+        margin-bottom: 4px;
+    }
+    .chat-input-field {
+        padding: 3px 8px;
+        font-size: 0.75rem;
+    }
+    .btn-small, .btn-small-primary {
+        padding: 3px 8px;
+        font-size: 0.7rem;
+    }
+    /* checkbox 압축 */
+    .checkbox-label {
+        font-size: 0.8rem;
+    }
+    .checkbox-label input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+    }
     /* 게임 화면 */
     #game-screen.screen {
         padding: 0 2px;
@@ -907,6 +1030,40 @@ kbd {
 @media (max-height: 300px) {
     #game-header {
         display: none;
+    }
+    .panel-wide {
+        padding: 6px 10px;
+    }
+    .panel-wide h2 {
+        font-size: 0.8rem;
+        margin-bottom: 2px;
+    }
+    .room-list {
+        max-height: 25vh;
+    }
+    .room-code-section {
+        padding: 4px 8px;
+        margin-bottom: 2px;
+    }
+    .room-code {
+        font-size: 1rem;
+    }
+    .chat-section {
+        display: none;
+    }
+    .player-list {
+        gap: 4px;
+        margin-bottom: 2px;
+    }
+    .team-group {
+        padding: 4px 6px;
+    }
+    .form-actions {
+        margin-top: 4px;
+    }
+    .form-actions .btn {
+        padding: 5px 8px;
+        font-size: 0.75rem;
     }
     #game-screen.screen {
         padding: 0;
