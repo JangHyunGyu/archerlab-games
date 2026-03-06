@@ -207,18 +207,32 @@ class SlimeVolleyGame {
         }
 
         const FIXED_DT = 1000 / 120; // 120fps 고정 물리 스텝
+        const isClient = () => this.mode === 'multiplayer' && !this.network.isHost;
+
         this.gameLoop = (ticker) => {
             if (!this.running) return;
 
             this.physicsAccumulator += ticker.deltaMS;
-            // 프레임 드롭 시 최대 4스텝까지만 (spiral of death 방지)
             if (this.physicsAccumulator > FIXED_DT * 4) {
                 this.physicsAccumulator = FIXED_DT * 4;
             }
 
-            while (this.physicsAccumulator >= FIXED_DT) {
-                this.update();
-                this.physicsAccumulator -= FIXED_DT;
+            if (isClient()) {
+                // 클라이언트: 내 슬라임 예측만 120fps 물리 루프
+                const myInput = this.getMyInput();
+                this.network.sendInput(myInput);
+                while (this.physicsAccumulator >= FIXED_DT) {
+                    this.physics.predictMySlime(this.mySlimeId, myInput);
+                    this.physicsAccumulator -= FIXED_DT;
+                }
+                // 보간 + 보정은 렌더 프레임당 1회
+                this.interpolateClientState();
+            } else {
+                // 호스트/연습: 기존 물리 루프
+                while (this.physicsAccumulator >= FIXED_DT) {
+                    this.update();
+                    this.physicsAccumulator -= FIXED_DT;
+                }
             }
 
             this.renderer.render(this.physics.getState());
@@ -228,11 +242,6 @@ class SlimeVolleyGame {
     }
 
     update() {
-        if (this.mode === 'multiplayer' && !this.network.isHost) {
-            this.updateMultiplayerClient();
-            return;
-        }
-
         // 호스트 또는 연습 모드: 기존 로직
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
         if (mySlime && !mySlime.isBot) {
@@ -300,15 +309,8 @@ class SlimeVolleyGame {
         }
     }
 
-    // 멀티플레이어 클라이언트: 예측 + 보간
-    updateMultiplayerClient() {
-        const myInput = this.getMyInput();
-        this.network.sendInput(myInput);
-
-        // 클라이언트 예측: 내 슬라임은 로컬에서 즉시 업데이트
-        this.physics.predictMySlime(this.mySlimeId, myInput);
-
-        // 스냅샷 보간: 공 + 상대 슬라임
+    // 멀티플레이어 클라이언트: 보간 + 보정 (렌더 프레임당 1회)
+    interpolateClientState() {
         const now = performance.now();
         const renderTime = now - this.interpolationDelay;
         const buf = this.snapshotBuffer;
@@ -327,24 +329,22 @@ class SlimeVolleyGame {
                 const t = span > 0 ? Math.min(1, (renderTime - a.time) / span) : 1;
                 this.physics.applyInterpolatedState(a.state, b.state, t, this.mySlimeId);
             } else {
-                // 버퍼 뒤쪽 (최신 스냅샷만 사용)
                 const latest = buf[buf.length - 1];
                 this.physics.applyInterpolatedState(latest.state, latest.state, 1, this.mySlimeId);
             }
 
-            // 오래된 스냅샷 정리 (renderTime 이전 1개만 남기고 삭제)
+            // 오래된 스냅샷 정리
             while (buf.length > 2 && buf[1].time <= renderTime) {
                 buf.shift();
             }
 
-            // 서버 보정: 내 슬라임 위치를 서버와 부드럽게 맞춤
+            // 서버 보정: 렌더 프레임당 1회, 부드러운 보정률
             const latest = buf[buf.length - 1];
-            this.physics.reconcileMySlime(this.mySlimeId, latest.state, 0.15);
+            this.physics.reconcileMySlime(this.mySlimeId, latest.state, 0.1);
         } else if (buf.length === 1) {
-            // 스냅샷 1개: 직접 적용 (내 슬라임 제외)
             const s = buf[0].state;
             this.physics.applyInterpolatedState(s, s, 1, this.mySlimeId);
-            this.physics.reconcileMySlime(this.mySlimeId, s, 0.15);
+            this.physics.reconcileMySlime(this.mySlimeId, s, 0.1);
         }
     }
 
