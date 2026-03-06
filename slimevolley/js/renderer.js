@@ -579,6 +579,50 @@ class GameRenderer {
         this._activeMessages.push({ ticker, msg });
     }
 
+    showNotice(text, duration = 2000) {
+        if (!this._noticeStyle) {
+            this._noticeStyle = new PIXI.TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: 16,
+                fontWeight: 'bold',
+                fill: 0xffcc00,
+                dropShadow: {
+                    color: 0x000000,
+                    blur: 4,
+                    distance: 2,
+                },
+            });
+        }
+        const msg = new PIXI.Text({ text, style: this._noticeStyle });
+        msg.anchor.set(0.5, 0);
+        msg.x = CONFIG.COURT_WIDTH / 2;
+        msg.y = 12;
+        msg.alpha = 0;
+        this.gameContainer.addChild(msg);
+
+        let timer = 0;
+        const fadeIn = 8;
+        const stay = duration * 60 / 1000;
+        const fadeOut = 20;
+        const total = fadeIn + stay + fadeOut;
+
+        const ticker = () => {
+            timer++;
+            if (timer <= fadeIn) {
+                msg.alpha = timer / fadeIn;
+            } else if (timer <= fadeIn + stay) {
+                msg.alpha = 1;
+            } else if (timer <= total) {
+                msg.alpha = 1 - (timer - fadeIn - stay) / fadeOut;
+            } else {
+                this._removeMessageTicker(ticker, msg);
+            }
+        };
+        this.app.ticker.add(ticker);
+        if (!this._activeMessages) this._activeMessages = [];
+        this._activeMessages.push({ ticker, msg });
+    }
+
     _removeMessageTicker(ticker, msg) {
         this.app.ticker.remove(ticker);
         if (msg.parent) msg.parent.removeChild(msg);
