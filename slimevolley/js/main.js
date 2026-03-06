@@ -461,6 +461,13 @@ class SlimeVolleyGame {
 
             // 게임 중 퇴장 처리
             if (this.running && this.mode === 'multiplayer') {
+                // 나간 유저 이름 찾기 (봇 대체 전에)
+                let leftName = null;
+                if (msg.slotIndex !== undefined) {
+                    const slime = this.physics.slimes.find(s => s.id === msg.slotIndex);
+                    if (slime) leftName = slime.nickname;
+                }
+
                 // 호스트 이전: 내가 새 호스트인 경우
                 if (msg.newHostId === this.network.playerId && !this.network.isHost) {
                     this.becomeHost();
@@ -477,6 +484,11 @@ class SlimeVolleyGame {
                             this.botMap.set(slime.id, new BotAI('normal'));
                         }
                     }
+                }
+
+                // 퇴장 알림 표시
+                if (leftName && this.renderer) {
+                    this.renderer.showNotice(`${leftName} left → Bot`, 2500);
                 }
             }
         });
