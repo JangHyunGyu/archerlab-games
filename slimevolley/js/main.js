@@ -21,7 +21,6 @@ class SlimeVolleyGame {
         this.snapshotBuffer = [];
         this.snapshotMaxSize = 30;
         this.interpolationDelay = CONFIG.INTERPOLATION_DELAY;
-        this._lastReconcileSnapshotTime = 0; // 마지막으로 보정에 사용한 스냅샷 시각
 
         this.setupInput();
         this.setupNetworkHandlers();
@@ -310,22 +309,20 @@ class SlimeVolleyGame {
         }
     }
 
-    // 멀티플레이어 클라이언트: 보간 + 보정 (렌더 프레임당 1회)
+    // 멀티플레이어 클라이언트: 슬라임 보간 + 공 외삽
     interpolateClientState() {
         const now = performance.now();
         const renderTime = now - this.interpolationDelay;
         const buf = this.snapshotBuffer;
+        if (buf.length === 0) return;
 
+        // === 다른 슬라임: 보간 (부드러운 움직임) ===
         if (buf.length >= 2) {
-            // renderTime에 맞는 두 스냅샷 찾기
             let i = 0;
-            while (i < buf.length - 1 && buf[i + 1].time <= renderTime) {
-                i++;
-            }
+            while (i < buf.length - 1 && buf[i + 1].time <= renderTime) { i++; }
 
             if (i < buf.length - 1) {
-                const a = buf[i];
-                const b = buf[i + 1];
+                const a = buf[i], b = buf[i + 1];
                 const span = b.time - a.time;
                 const t = span > 0 ? Math.min(1, (renderTime - a.time) / span) : 1;
                 this.physics.applyInterpolatedState(a.state, b.state, t, this.mySlimeId);
@@ -334,25 +331,35 @@ class SlimeVolleyGame {
                 this.physics.applyInterpolatedState(latest.state, latest.state, 1, this.mySlimeId);
             }
 
-            // 오래된 스냅샷 정리
-            while (buf.length > 2 && buf[1].time <= renderTime) {
-                buf.shift();
-            }
-
-            // 큰 오차만 스냅 (새 스냅샷 도착 시에만)
-            const latest = buf[buf.length - 1];
-            if (latest.time !== this._lastReconcileSnapshotTime) {
-                this._lastReconcileSnapshotTime = latest.time;
-                this.physics.reconcileMySlime(this.mySlimeId, latest.state);
-            }
-        } else if (buf.length === 1) {
+            while (buf.length > 2 && buf[1].time <= renderTime) { buf.shift(); }
+        } else {
             const s = buf[0].state;
             this.physics.applyInterpolatedState(s, s, 1, this.mySlimeId);
-            if (buf[0].time !== this._lastReconcileSnapshotTime) {
-                this._lastReconcileSnapshotTime = buf[0].time;
-                this.physics.reconcileMySlime(this.mySlimeId, s);
-            }
         }
+
+        // === 공: 최신 스냅샷에서 앞으로 외삽 (지연 최소화) ===
+        const latest = buf[buf.length - 1];
+        const ticksAhead = (now - latest.time) / (1000 / 120);
+        if (ticksAhead >= 0 && ticksAhead < 12) {
+            const b = latest.state.ball;
+            let bx = b.x + b.vx * ticksAhead;
+            let by = b.y + b.vy * ticksAhead + 0.5 * CONFIG.BALL_GRAVITY * ticksAhead * ticksAhead;
+            let bvy = b.vy + CONFIG.BALL_GRAVITY * ticksAhead;
+
+            // 외삽된 공이 벽/바닥을 뚫지 않도록 클램프
+            bx = Math.max(CONFIG.BALL_RADIUS, Math.min(CONFIG.COURT_WIDTH - CONFIG.BALL_RADIUS, bx));
+            by = Math.max(CONFIG.BALL_RADIUS, by);
+            if (by + CONFIG.BALL_RADIUS > CONFIG.GROUND_Y) {
+                by = CONFIG.GROUND_Y - CONFIG.BALL_RADIUS;
+            }
+
+            this.physics.ball.x = bx;
+            this.physics.ball.y = by;
+            this.physics.ball.vx = b.vx;
+            this.physics.ball.vy = bvy;
+        }
+
+        // 내 슬라임: 보정 없음 (예측이 결정적이므로 정확함)
     }
 
     handlePhysicsResult(result) {
@@ -515,6 +522,10 @@ class SlimeVolleyGame {
 
         this.network.on('pingUpdate', (pings) => {
             this.lobby.updatePingDisplay(pings);
+            // 핑 기반 적응형 보간 지연 (최소 30ms, 핑의 60% + 1프레임 버퍼)
+            if (this.network.myPing > 0) {
+                this.interpolationDelay = Math.max(30, this.network.myPing * 0.6 + 16);
+            }
         });
 
         this.network.on('kicked', () => {
@@ -528,7 +539,6 @@ class SlimeVolleyGame {
             this.myTeam = msg.myTeam;
             this.mySlimeId = msg.mySlotIndex;
             this.snapshotBuffer = [];
-            this._lastReconcileSnapshotTime = 0;
             this.botMap = new Map();
 
             this.physics.reset();

@@ -552,24 +552,4 @@ class PhysicsEngine {
         if (stateB.setsWon) this.setsWon = [...stateB.setsWon];
         if (stateB.currentSet !== undefined) this.currentSet = stateB.currentSet;
     }
-
-    // 내 슬라임: 큰 오차(비예측 이벤트)만 스냅, 그 외 보정 없음
-    reconcileMySlime(slimeId, serverState) {
-        const slime = this.slimes.find(s => s.id === slimeId);
-        if (!slime) return;
-        const ss = serverState.slimes.find(s => s.id === slimeId);
-        if (!ss) return;
-
-        const dx = Math.abs(slime.x - ss.x);
-        const dy = Math.abs(slime.y - ss.y);
-
-        // 큰 오차만 스냅 (슬라임 간 충돌, 코트 경계 등 비예측 이벤트)
-        if (dx > 30 || dy > 30) {
-            slime.x = ss.x;
-            slime.y = ss.y;
-            slime.vx = ss.vx;
-            slime.vy = ss.vy;
-            slime.onGround = ss.onGround;
-        }
-    }
 }

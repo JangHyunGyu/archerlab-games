@@ -49,5 +49,5 @@ const CONFIG = {
 
     // Network
     TICK_RATE: 60,
-    INTERPOLATION_DELAY: 100,
+    INTERPOLATION_DELAY: 50,
 };
