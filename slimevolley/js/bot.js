@@ -4,10 +4,11 @@ class BotAI {
         this.difficulty = difficulty;
 
         // 난이도별 파라미터
+        // 120fps 물리 기준 파라미터
         const params = {
-            easy:   { reaction: 10, accuracy: 0.6, jumpTiming: 0.7, aggression: 0.2, predictFrames: 60 },
-            normal: { reaction: 4,  accuracy: 0.85, jumpTiming: 0.85, aggression: 0.5, predictFrames: 90 },
-            hard:   { reaction: 1,  accuracy: 0.97, jumpTiming: 0.95, aggression: 0.8, predictFrames: 120 },
+            easy:   { reaction: 20, accuracy: 0.6, jumpTiming: 0.7, aggression: 0.2, predictFrames: 120 },
+            normal: { reaction: 8,  accuracy: 0.85, jumpTiming: 0.85, aggression: 0.5, predictFrames: 180 },
+            hard:   { reaction: 2,  accuracy: 0.97, jumpTiming: 0.95, aggression: 0.8, predictFrames: 240 },
         };
         const p = params[difficulty] || params.normal;
         this.reactionDelay = p.reaction;
@@ -127,7 +128,7 @@ class BotAI {
                 if (ballYAtApex < slimeYAtApex + CONFIG.SLIME_RADIUS * 0.5) {
                     if (Math.random() < this.jumpTiming) {
                         input.jump = true;
-                        this.jumpCooldown = 15;
+                        this.jumpCooldown = 30;
                     }
                 }
             }
@@ -135,7 +136,7 @@ class BotAI {
             // 긴급 점프: 공이 빠르게 떨어지고 매우 가까움
             if (ball.vy > 1 && dist < hitZone * 1.8 && ball.y < slime.y) {
                 input.jump = true;
-                this.jumpCooldown = 10;
+                this.jumpCooldown = 20;
             }
         }
     }
@@ -161,7 +162,7 @@ class BotAI {
                 if (ball.vy > -1 && Math.abs(dx) < CONFIG.SLIME_RADIUS * 2) {
                     if (Math.random() < this.jumpTiming) {
                         input.jump = true;
-                        this.jumpCooldown = 12;
+                        this.jumpCooldown = 24;
                     }
                 }
             }
@@ -171,7 +172,7 @@ class BotAI {
                 Math.abs(dx) < CONFIG.SLIME_RADIUS * 1.5 &&
                 ball.vy > -0.5) {
                 input.jump = true;
-                this.jumpCooldown = 15;
+                this.jumpCooldown = 30;
             }
         }
     }
@@ -197,7 +198,7 @@ class BotAI {
         if (slime.onGround && this.jumpCooldown <= 0 && dist < (CONFIG.SLIME_RADIUS + CONFIG.BALL_RADIUS) * 2.5) {
             if (ball.y < slime.y && ball.vy > 0 && Math.abs(dx) < CONFIG.SLIME_RADIUS * 2) {
                 input.jump = true;
-                this.jumpCooldown = 12;
+                this.jumpCooldown = 24;
             }
         }
     }
