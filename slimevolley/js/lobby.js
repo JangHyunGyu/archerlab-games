@@ -86,6 +86,18 @@ class LobbyManager {
         });
 
         document.getElementById('btn-start-game').addEventListener('click', () => {
+            // 시작 조건 재검증 + 알림
+            const teams = [[], []];
+            for (const p of this.roomPlayers) teams[p.team || 0].push(p);
+            if (teams[0].length === 0 || teams[1].length === 0) {
+                this.showError('양 팀 모두 최소 1명이 필요합니다');
+                return;
+            }
+            const allReady = this.roomPlayers.filter(p => !p.isHost).every(p => p.ready || p.isBot);
+            if (!allReady) {
+                this.showError('모든 플레이어가 Ready 상태여야 합니다');
+                return;
+            }
             this.game.sound.playUI('start');
             this.game.startMultiplayerGame();
         });
@@ -441,8 +453,9 @@ class LobbyManager {
 
         const allReady = players.filter(p => !p.isHost).every(p => p.ready || p.isBot);
         const hasPlayers = players.length >= 2;
+        const bothTeamsHavePlayers = teams[0].length > 0 && teams[1].length > 0;
         const startBtn = document.getElementById('btn-start-game');
-        startBtn.disabled = !allReady || !hasPlayers;
+        startBtn.disabled = !allReady || !hasPlayers || !bothTeamsHavePlayers;
     }
 
     switchTeam() {

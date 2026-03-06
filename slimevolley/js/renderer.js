@@ -553,21 +553,22 @@ class GameRenderer {
         msg.alpha = 0;
         this.gameContainer.addChild(msg);
 
-        let timer = 0;
-        const fadeIn = 10;
-        const stay = duration * 60 / 1000;
-        const fadeOut = 15;
-        const total = fadeIn + stay + fadeOut;
+        const fadeInMs = 150;
+        const stayMs = duration;
+        const fadeOutMs = 250;
+        const totalMs = fadeInMs + stayMs + fadeOutMs;
+        let elapsed = 0;
 
-        const ticker = () => {
-            timer++;
-            if (timer <= fadeIn) {
-                msg.alpha = timer / fadeIn;
-                msg.scale.set(0.8 + 0.2 * (timer / fadeIn));
-            } else if (timer <= fadeIn + stay) {
+        const ticker = (t) => {
+            elapsed += t.deltaMS;
+            if (elapsed <= fadeInMs) {
+                const p = elapsed / fadeInMs;
+                msg.alpha = p;
+                msg.scale.set(0.8 + 0.2 * p);
+            } else if (elapsed <= fadeInMs + stayMs) {
                 msg.alpha = 1;
-            } else if (timer <= total) {
-                msg.alpha = 1 - (timer - fadeIn - stay) / fadeOut;
+            } else if (elapsed <= totalMs) {
+                msg.alpha = 1 - (elapsed - fadeInMs - stayMs) / fadeOutMs;
             } else {
                 this._removeMessageTicker(ticker, msg);
             }
@@ -600,20 +601,20 @@ class GameRenderer {
         msg.alpha = 0;
         this.gameContainer.addChild(msg);
 
-        let timer = 0;
-        const fadeIn = 8;
-        const stay = duration * 60 / 1000;
-        const fadeOut = 20;
-        const total = fadeIn + stay + fadeOut;
+        const fadeInMs = 120;
+        const stayMs = duration;
+        const fadeOutMs = 300;
+        const totalMs = fadeInMs + stayMs + fadeOutMs;
+        let elapsed = 0;
 
-        const ticker = () => {
-            timer++;
-            if (timer <= fadeIn) {
-                msg.alpha = timer / fadeIn;
-            } else if (timer <= fadeIn + stay) {
+        const ticker = (t) => {
+            elapsed += t.deltaMS;
+            if (elapsed <= fadeInMs) {
+                msg.alpha = elapsed / fadeInMs;
+            } else if (elapsed <= fadeInMs + stayMs) {
                 msg.alpha = 1;
-            } else if (timer <= total) {
-                msg.alpha = 1 - (timer - fadeIn - stay) / fadeOut;
+            } else if (elapsed <= totalMs) {
+                msg.alpha = 1 - (elapsed - fadeInMs - stayMs) / fadeOutMs;
             } else {
                 this._removeMessageTicker(ticker, msg);
             }

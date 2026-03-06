@@ -253,9 +253,14 @@ class SlimeVolleyGame {
         const result = this.physics.update();
         this.handlePhysicsResult(result);
 
-        // 호스트: 게임 이벤트를 클라이언트에 전송
+        // 호스트: 게임 이벤트를 클라이언트에 전송 (60fps로 제한)
         if (this.mode === 'multiplayer' && this.network.isHost) {
-            this.network.sendGameState(this.physics.getState());
+            if (!this._netSendCounter) this._netSendCounter = 0;
+            this._netSendCounter++;
+            if (this._netSendCounter >= 2) {
+                this._netSendCounter = 0;
+                this.network.sendGameState(this.physics.getState());
+            }
 
             if (result) {
                 if (result.type === 'hit') {
