@@ -462,35 +462,105 @@ kbd {
     background: rgba(239, 83, 80, 0.2);
     color: var(--danger);
 }
-.room-code-small {
-    font-family: 'Orbitron', monospace;
+.room-lock-icon {
     font-size: 0.75rem;
-    color: var(--text-dim);
+    color: var(--danger);
+    margin-left: 6px;
 }
 
-/* Room Screen */
-.room-code-section {
+/* Room Type Selector */
+.room-type-selector {
+    display: flex;
+    gap: 8px;
+}
+.room-type-btn {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+.room-type-btn.active {
+    border-color: var(--primary);
+    background: rgba(79, 195, 247, 0.15);
+    color: var(--primary);
+    font-weight: bold;
+}
+.room-type-btn:hover:not(.active) {
+    border-color: var(--text-dim);
+}
+
+/* Room Type Display (in room screen) */
+.room-type-display {
+    text-align: center;
+    margin-bottom: 12px;
+    padding: 8px 16px;
+    background: var(--bg-dark);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+.room-type-display .room-type-badge {
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+.room-type-badge.badge-public {
+    background: rgba(102, 187, 106, 0.2);
+    color: var(--success);
+}
+.room-type-badge.badge-private {
+    background: rgba(239, 83, 80, 0.2);
+    color: var(--danger);
+}
+
+/* Password Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 300;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding: 16px;
-    background: var(--bg-dark);
-    border-radius: 10px;
+    backdrop-filter: blur(4px);
 }
-
-.room-code-label {
-    color: var(--text-dim);
-    font-size: 0.9rem;
+.modal-box {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 320px;
+    width: 90%;
+    text-align: center;
 }
-
-.room-code {
+.modal-box h3 {
     font-family: 'Orbitron', monospace;
-    font-size: 1.8rem;
-    font-weight: 700;
+    font-size: 1.1rem;
     color: var(--primary);
-    letter-spacing: 4px;
+    margin-bottom: 16px;
+}
+.modal-box .input-text {
+    text-align: center;
+    font-size: 1.4rem;
+    letter-spacing: 8px;
+    margin-bottom: 8px;
+}
+.modal-box .form-actions {
+    margin-top: 16px;
+}
+
+/* Room Screen */
+.room-private-badge {
+    color: var(--danger);
+    font-size: 0.8rem;
+    margin-left: 4px;
 }
 
 .room-meta {
@@ -948,16 +1018,9 @@ kbd {
         padding: 6px 10px;
     }
     /* 방 화면 압축 */
-    .room-code-section {
-        padding: 6px 10px;
+    .room-type-display {
+        padding: 4px 10px;
         margin-bottom: 4px;
-        gap: 8px;
-    }
-    .room-code {
-        font-size: 1.2rem;
-        letter-spacing: 2px;
-    }
-    .room-code-label {
         font-size: 0.75rem;
     }
     .room-meta {
@@ -1041,12 +1104,9 @@ kbd {
     .room-list {
         max-height: 25vh;
     }
-    .room-code-section {
+    .room-type-display {
         padding: 4px 8px;
         margin-bottom: 2px;
-    }
-    .room-code {
-        font-size: 1rem;
     }
     /* 극소 화면 채팅: 한 줄 인라인 */
     .chat-section {

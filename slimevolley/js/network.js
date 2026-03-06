@@ -41,14 +41,16 @@ class NetworkClient {
         return await res.json();
     }
 
-    createRoom(baseUrl, playerName) {
-        const url = `${baseUrl}/ws?game=${encodeURIComponent(this.gameId)}&action=create&name=${encodeURIComponent(playerName)}`;
+    createRoom(baseUrl, playerName, password) {
+        let url = `${baseUrl}/ws?game=${encodeURIComponent(this.gameId)}&action=create&name=${encodeURIComponent(playerName)}`;
+        if (password) url += `&password=${encodeURIComponent(password)}`;
         this.baseUrl = baseUrl;
         return this._connect(url);
     }
 
-    joinRoom(baseUrl, roomCode, playerName) {
-        const url = `${baseUrl}/ws?game=${encodeURIComponent(this.gameId)}&action=join&room=${encodeURIComponent(roomCode.toUpperCase())}&name=${encodeURIComponent(playerName)}`;
+    joinRoom(baseUrl, roomId, playerName, password) {
+        let url = `${baseUrl}/ws?game=${encodeURIComponent(this.gameId)}&action=join&room=${encodeURIComponent(roomId)}&name=${encodeURIComponent(playerName)}`;
+        if (password) url += `&password=${encodeURIComponent(password)}`;
         this.baseUrl = baseUrl;
         return this._connect(url);
     }
@@ -82,6 +84,9 @@ class NetworkClient {
                     if (msg.type === 'roomCreated' || msg.type === 'joined') {
                         clearTimeout(timeout);
                         resolve(msg);
+                    } else if (msg.type === 'error') {
+                        clearTimeout(timeout);
+                        reject(new Error(msg.message || 'Server error'));
                     }
                 } catch (e) {
                     console.warn('Invalid message:', e);
@@ -111,14 +116,14 @@ class NetworkClient {
     handleMessage(msg) {
         switch (msg.type) {
             case 'roomCreated':
-                this.roomCode = msg.roomCode;
+                this.roomId = msg.roomId;
                 this.playerId = msg.playerId;
                 this.isHost = true;
                 this.emit('roomCreated', msg);
                 break;
 
             case 'joined':
-                this.roomCode = msg.roomCode;
+                this.roomId = msg.roomId;
                 this.playerId = msg.playerId;
                 this.isHost = false;
                 this.emit('joined', msg);
@@ -203,14 +208,14 @@ class NetworkClient {
 
     leaveRoom() {
         this.send({ type: 'leaveRoom' });
-        this.roomCode = null;
+        this.roomId = null;
         this.playerId = null;
         this.isHost = false;
     }
 
     disconnect() {
         this.stopPingLoop();
-        this.roomCode = null;
+        this.roomId = null;
         this.playerId = null;
         this.isHost = false;
         this.myPing = 0;
