@@ -432,24 +432,52 @@ class PhysicsEngine {
     }
 
     getState() {
-        return {
-            ball: { ...this.ball },
-            slimes: this.slimes.map(s => ({
-                id: s.id,
-                team: s.team,
-                x: s.x,
-                y: s.y,
-                vx: s.vx,
-                vy: s.vy,
-                onGround: s.onGround,
-                colorIdx: s.colorIdx,
-            })),
-            scores: [...this.scores],
-            phase: this.phase,
-            servingTeam: this.servingTeam,
-            setsWon: [...this.setsWon],
-            currentSet: this.currentSet,
-        };
+        // 캐시된 상태 객체 재사용하여 GC 압박 최소화
+        if (!this._cachedState) {
+            this._cachedState = {
+                ball: { x: 0, y: 0, vx: 0, vy: 0, lastHitBy: -1, lastHitSlimeId: -1 },
+                slimes: [],
+                scores: [0, 0],
+                phase: '',
+                servingTeam: 0,
+                setsWon: [0, 0],
+                currentSet: 0,
+            };
+        }
+        const st = this._cachedState;
+        st.ball.x = this.ball.x;
+        st.ball.y = this.ball.y;
+        st.ball.vx = this.ball.vx;
+        st.ball.vy = this.ball.vy;
+        st.ball.lastHitBy = this.ball.lastHitBy;
+        st.ball.lastHitSlimeId = this.ball.lastHitSlimeId;
+
+        // 슬라임 배열 크기 맞추기
+        while (st.slimes.length < this.slimes.length) {
+            st.slimes.push({ id: 0, team: 0, x: 0, y: 0, vx: 0, vy: 0, onGround: true, colorIdx: 0 });
+        }
+        st.slimes.length = this.slimes.length;
+        for (let i = 0; i < this.slimes.length; i++) {
+            const s = this.slimes[i];
+            const c = st.slimes[i];
+            c.id = s.id;
+            c.team = s.team;
+            c.x = s.x;
+            c.y = s.y;
+            c.vx = s.vx;
+            c.vy = s.vy;
+            c.onGround = s.onGround;
+            c.colorIdx = s.colorIdx;
+        }
+
+        st.scores[0] = this.scores[0];
+        st.scores[1] = this.scores[1];
+        st.phase = this.phase;
+        st.servingTeam = this.servingTeam;
+        st.setsWon[0] = this.setsWon[0];
+        st.setsWon[1] = this.setsWon[1];
+        st.currentSet = this.currentSet;
+        return st;
     }
 
     setState(state) {
