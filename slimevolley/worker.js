@@ -129,7 +129,7 @@ export class GameLobby {
             const now = Date.now();
             let changed = false;
             for (const [id, info] of this.rooms) {
-                if (now - info.updatedAt > 30 * 60 * 1000) {
+                if (now - info.updatedAt > 5 * 60 * 1000) {
                     this.rooms.delete(id);
                     changed = true;
                 }
@@ -447,7 +447,10 @@ export class GameRoom {
         }
     }
 
-    handleDisconnect(ws, player) {
+    async handleDisconnect(ws, player) {
+        // 중복 호출 방지
+        if (!this.sessions.has(ws) && !this.players.find(p => p.id === player.id)) return;
+
         this.sessions.delete(ws);
         this.players = this.players.filter(p => p.id !== player.id);
 
@@ -471,9 +474,9 @@ export class GameRoom {
 
         const humanCount = this.players.filter(p => !p.isBot).length;
         if (humanCount === 0) {
-            this.notifyLobby('unregister', { roomId: this.roomId });
+            await this.notifyLobby('unregister', { roomId: this.roomId });
         } else {
-            this.notifyLobby('update', {
+            await this.notifyLobby('update', {
                 roomId: this.roomId,
                 playerCount: humanCount,
             });
