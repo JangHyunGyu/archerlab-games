@@ -199,14 +199,14 @@ class SlimeVolleyGame {
     startGameLoop() {
         this.running = true;
         this.physics.phase = 'serving';
-        this.physics.freezeTimer = 30;
+        this.physics.freezeTimer = 60;
         this.physicsAccumulator = 0;
 
         if (this.gameLoop) {
             this.renderer.app.ticker.remove(this.gameLoop);
         }
 
-        const FIXED_DT = 1000 / 60; // 60fps 고정 물리 스텝
+        const FIXED_DT = 1000 / 120; // 120fps 고정 물리 스텝
         this.gameLoop = (ticker) => {
             if (!this.running) return;
 

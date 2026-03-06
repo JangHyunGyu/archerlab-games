@@ -385,7 +385,7 @@ class PhysicsEngine {
 
                 // 다음 세트
                 this.phase = 'scored';
-                this.freezeTimer = Math.round(2000 / (1000 / 60));
+                this.freezeTimer = Math.round(2000 / (1000 / 120));
                 this.ball.vx = 0;
                 this.ball.vy = 0;
                 this.ball.y = CONFIG.GROUND_Y - CONFIG.BALL_RADIUS;
@@ -403,7 +403,7 @@ class PhysicsEngine {
             }
 
             this.phase = 'scored';
-            this.freezeTimer = Math.round(CONFIG.POINT_FREEZE / (1000 / 60));
+            this.freezeTimer = Math.round(CONFIG.POINT_FREEZE / (1000 / 120));
 
             this.ball.vx = 0;
             this.ball.vy = 0;
