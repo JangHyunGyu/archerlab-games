@@ -12,6 +12,11 @@ class GameRenderer {
         this.scoreTexts = [null, null];
         this.shakeAmount = 0;
         this.initialized = false;
+
+        // 오브젝트 풀: trail과 particle Graphics 재사용
+        this._trailPool = [];
+        this._particlePool = [];
+        this._msgStyle = null; // showMessage TextStyle 캐시
     }
 
     async init() {
@@ -350,15 +355,43 @@ class GameRenderer {
         this.addTrailPoint(ball.x, ball.y, ball.vx, ball.vy);
     }
 
+    _getTrail() {
+        if (this._trailPool.length > 0) {
+            return this._trailPool.pop();
+        }
+        const g = new PIXI.Graphics();
+        g.circle(0, 0, CONFIG.BALL_RADIUS * 0.6);
+        g.fill({ color: 0xCCCCCC, alpha: 0.2 });
+        return g;
+    }
+
+    _releaseTrail(g) {
+        g.visible = false;
+        this._trailPool.push(g);
+    }
+
+    _getParticle() {
+        if (this._particlePool.length > 0) {
+            return this._particlePool.pop();
+        }
+        return new PIXI.Graphics();
+    }
+
+    _releaseParticle(g) {
+        g.visible = false;
+        this._particlePool.push(g);
+    }
+
     addTrailPoint(x, y, vx, vy) {
         const speed = Math.sqrt(vx * vx + vy * vy);
         if (speed < 3) return;
 
-        const trail = new PIXI.Graphics();
-        trail.circle(0, 0, CONFIG.BALL_RADIUS * 0.6);
-        trail.fill({ color: 0xCCCCCC, alpha: 0.2 });
+        const trail = this._getTrail();
         trail.x = x;
         trail.y = y;
+        trail.alpha = 0.2;
+        trail.scale.set(1);
+        trail.visible = true;
         trail._life = 8;
         this.trailContainer.addChild(trail);
         this.trailPoints.push(trail);
@@ -372,7 +405,7 @@ class GameRenderer {
             t.scale.set(t._life / 8);
             if (t._life <= 0) {
                 this.trailContainer.removeChild(t);
-                t.destroy();
+                this._releaseTrail(t);
                 this.trailPoints.splice(i, 1);
             }
         }
@@ -383,54 +416,52 @@ class GameRenderer {
         if (this.scoreTexts[1]) this.scoreTexts[1].text = String(scores[1]);
     }
 
+    _spawnParticle(x, y, color, size, vx, vy, life, isRing) {
+        const p = this._getParticle();
+        p.clear();
+        if (isRing) {
+            p.circle(0, 0, 8);
+            p.stroke({ color: 0xFFFFFF, width: 2, alpha: 0.8 });
+        } else {
+            p.circle(0, 0, size);
+            p.fill(color);
+        }
+        p.x = x;
+        p.y = y;
+        p.alpha = 1;
+        p.scale.set(1);
+        p.visible = true;
+        p._vx = vx;
+        p._vy = vy;
+        p._life = life;
+        p._maxLife = life;
+        p._isRing = !!isRing;
+        this.particleContainer.addChild(p);
+        this.particles.push(p);
+    }
+
     spawnHitParticles(x, y, color) {
         const baseColor = color || 0xFFEB3B;
 
-        // 임팩트 링 (팽창하며 사라지는 원)
-        const ring = new PIXI.Graphics();
-        ring.circle(0, 0, 8);
-        ring.stroke({ color: 0xFFFFFF, width: 2, alpha: 0.8 });
-        ring.x = x;
-        ring.y = y;
-        ring._life = 12;
-        ring._maxLife = 12;
-        ring._isRing = true;
-        this.particleContainer.addChild(ring);
-        this.particles.push(ring);
+        // 임팩트 링
+        this._spawnParticle(x, y, 0, 0, 0, 0, 12, true);
 
-        // 스파크 파티클 (빠르고 밝은)
+        // 스파크 파티클
         for (let i = 0; i < 6; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Math.random() * 6 + 4;
-            const p = new PIXI.Graphics();
-            p.circle(0, 0, Math.random() * 2 + 1);
-            p.fill(0xFFFFFF);
-            p.x = x;
-            p.y = y;
-            p._vx = Math.cos(angle) * speed;
-            p._vy = Math.sin(angle) * speed - 2;
-            p._life = 8 + Math.random() * 6;
-            p._maxLife = p._life;
-            this.particleContainer.addChild(p);
-            this.particles.push(p);
+            this._spawnParticle(x, y, 0xFFFFFF, Math.random() * 2 + 1,
+                Math.cos(angle) * speed, Math.sin(angle) * speed - 2,
+                8 + Math.random() * 6, false);
         }
 
-        // 컬러 파티클 (느리고 큰)
+        // 컬러 파티클
         for (let i = 0; i < 10; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Math.random() * 3 + 1.5;
-            const p = new PIXI.Graphics();
-            const size = Math.random() * 4 + 1.5;
-            p.circle(0, 0, size);
-            p.fill(baseColor);
-            p.x = x;
-            p.y = y;
-            p._vx = Math.cos(angle) * speed;
-            p._vy = Math.sin(angle) * speed - 2.5;
-            p._life = 18 + Math.random() * 12;
-            p._maxLife = p._life;
-            this.particleContainer.addChild(p);
-            this.particles.push(p);
+            this._spawnParticle(x, y, baseColor, Math.random() * 4 + 1.5,
+                Math.cos(angle) * speed, Math.sin(angle) * speed - 2.5,
+                18 + Math.random() * 12, false);
         }
     }
 
@@ -440,17 +471,11 @@ class GameRenderer {
         for (let i = 0; i < 20; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Math.random() * 6 + 2;
-            const p = new PIXI.Graphics();
-            p.circle(0, 0, Math.random() * 4 + 2);
-            p.fill(colors[Math.floor(Math.random() * colors.length)]);
-            p.x = x;
-            p.y = CONFIG.COURT_HEIGHT / 2;
-            p._vx = Math.cos(angle) * speed;
-            p._vy = Math.sin(angle) * speed - 3;
-            p._life = 30 + Math.random() * 20;
-            p._maxLife = p._life;
-            this.particleContainer.addChild(p);
-            this.particles.push(p);
+            this._spawnParticle(x, CONFIG.COURT_HEIGHT / 2,
+                colors[Math.floor(Math.random() * colors.length)],
+                Math.random() * 4 + 2,
+                Math.cos(angle) * speed, Math.sin(angle) * speed - 3,
+                30 + Math.random() * 20, false);
         }
     }
 
@@ -460,7 +485,6 @@ class GameRenderer {
             p._life--;
 
             if (p._isRing) {
-                // 임팩트 링: 팽창하면서 페이드 아웃
                 const progress = 1 - p._life / p._maxLife;
                 p.scale.set(1 + progress * 3);
                 p.alpha = (1 - progress) * 0.8;
@@ -476,7 +500,7 @@ class GameRenderer {
 
             if (p._life <= 0) {
                 this.particleContainer.removeChild(p);
-                p.destroy();
+                this._releaseParticle(p);
                 this.particles.splice(i, 1);
             }
         }
@@ -509,18 +533,20 @@ class GameRenderer {
     }
 
     showMessage(text, duration) {
-        const style = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, monospace',
-            fontSize: 36,
-            fontWeight: 'bold',
-            fill: 0xffffff,
-            dropShadow: {
-                color: 0x000000,
-                blur: 6,
-                distance: 3,
-            },
-        });
-        const msg = new PIXI.Text({ text, style });
+        if (!this._msgStyle) {
+            this._msgStyle = new PIXI.TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: 36,
+                fontWeight: 'bold',
+                fill: 0xffffff,
+                dropShadow: {
+                    color: 0x000000,
+                    blur: 6,
+                    distance: 3,
+                },
+            });
+        }
+        const msg = new PIXI.Text({ text, style: this._msgStyle });
         msg.anchor.set(0.5);
         msg.x = CONFIG.COURT_WIDTH / 2;
         msg.y = CONFIG.COURT_HEIGHT / 2 - 40;
@@ -568,6 +594,11 @@ class GameRenderer {
     }
 
     destroy() {
+        // 풀 정리
+        for (const g of this._trailPool) g.destroy();
+        for (const g of this._particlePool) g.destroy();
+        this._trailPool = [];
+        this._particlePool = [];
         if (this.app) {
             this.app.destroy(true);
         }
