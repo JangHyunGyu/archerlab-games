@@ -265,7 +265,7 @@ class EffectManager {
                 for (let d = 0; d < debrisCount; d++) {
                     const fragW = cellSize * (0.15 + Math.random() * 0.25);
                     const fragH = cellSize * (0.15 + Math.random() * 0.25);
-                    const frag = new PIXI.Graphics();
+                    const frag = this._getParticleGfx();
 
                     // Fragment with same block color
                     frag.roundRect(-fragW / 2, -fragH / 2, fragW, fragH, 1)
