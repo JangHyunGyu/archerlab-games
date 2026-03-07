@@ -40,9 +40,9 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         this.attackCooldown = stats.attackCD;
         this.attackTimer = 0;
 
-        // Follow offset
+        // Follow offset — wider patrol perimeter
         this.followAngle = Math.random() * Math.PI * 2;
-        this.followDist = 120 + Math.random() * 60;
+        this.followDist = 220 + Math.random() * 80;
 
         // Shadow trail effect
         this.trailTimer = 0;
@@ -75,17 +75,20 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 3.0) * levelMult);
         this.speed = player.stats.speed * this.speedRatio;
 
-        // Guard mode: find enemy closest to PLAYER within guard radius
-        const guardRadius = 400;
-        const leashDist = 450;
+        // Guard mode: find enemy closest to SOLDIER within guard radius of player
+        // Each soldier targets its own closest enemy → natural aggro distribution
+        const guardRadius = 800;
+        const leashDist = 700;
         let target = null;
-        let targetDistToPlayer = guardRadius;
+        let bestDistToSelf = Infinity;
 
         for (const enemy of enemies) {
             if (!enemy.active) continue;
             const distToPlayer = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
-            if (distToPlayer < targetDistToPlayer) {
-                targetDistToPlayer = distToPlayer;
+            if (distToPlayer > guardRadius) continue;
+            const distToSelf = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+            if (distToSelf < bestDistToSelf) {
+                bestDistToSelf = distToSelf;
                 target = enemy;
             }
         }
@@ -96,8 +99,8 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             // Too far from player - return to orbit
             const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
             this.body.setVelocity(
-                Math.cos(angle) * this.speed * 1.5,
-                Math.sin(angle) * this.speed * 1.5
+                Math.cos(angle) * this.speed * 2.0,
+                Math.sin(angle) * this.speed * 2.0
             );
         } else if (target) {
             // Intercept enemy approaching player
@@ -107,9 +110,9 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             this.attackTimer -= delta;
 
             // Move toward target (keep chasing even in attack range)
-            if (distToTarget > this.attackRange * 0.5) {
+            if (distToTarget > this.attackRange * 0.4) {
                 const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-                const chaseSpeed = distToTarget > this.attackRange ? 1.2 : 0.6;
+                const chaseSpeed = distToTarget > this.attackRange ? 1.6 : 0.8;
                 this.body.setVelocity(
                     Math.cos(angle) * this.speed * chaseSpeed,
                     Math.sin(angle) * this.speed * chaseSpeed
