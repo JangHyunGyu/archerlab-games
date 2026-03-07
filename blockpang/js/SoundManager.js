@@ -1,7 +1,7 @@
 class SoundManager {
     constructor() {
         this.enabled = true;
-        this.volume = 0.35;
+        this.volume = 0.7;
         this._initialized = false;
 
         // Synth references (created in init)
