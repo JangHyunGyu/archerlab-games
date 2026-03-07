@@ -22,9 +22,8 @@ class SlimeVolleyGame {
         this.snapshotMaxSize = 30;
         this.interpolationDelay = CONFIG.INTERPOLATION_DELAY;
 
-        // 클라이언트 측 공 히트 예측
-        this._clientHitTime = 0;
-        this._ballOverrideDuration = 150;
+        // 클라이언트 측 물리 예측 + 서버 보정
+        this._lastAppliedSnapshot = null;
 
         this.setupInput();
         this.setupNetworkHandlers();
@@ -222,20 +221,52 @@ class SlimeVolleyGame {
             }
 
             if (isClient()) {
-                // 클라이언트: 내 슬라임 예측 + 볼 오버라이드 시 로컬 물리
+                // 클라이언트: 풀 물리 시뮬레이션 + 서버 보정 (방장과 동일한 물리)
                 const myInput = this.getMyInput();
                 this.network.sendInput(myInput);
-                const ballOverride = this._clientHitTime && (performance.now() - this._clientHitTime < this._ballOverrideDuration);
+                this.reconcileWithServer();
+
                 while (this.physicsAccumulator >= FIXED_DT) {
-                    this.physics.predictMySlime(this.mySlimeId, myInput);
-                    if (ballOverride) {
+                    if (this.physics.phase === 'playing') {
+                        // 내 슬라임 예측 (점프 감지)
+                        const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
+                        const wasOnGround = mySlime?.onGround;
+                        this.physics.predictMySlime(this.mySlimeId, myInput);
+                        if (wasOnGround && mySlime && !mySlime.onGround) {
+                            this.sound.playJump();
+                        }
+
+                        // 공 물리 + 충돌
                         this.physics.updateBall();
-                        this.physics.checkBallWallCollision();
+                        this.physics.resolveSlimeCollisions();
+
+                        for (const slime of this.physics.slimes) {
+                            if (this.physics.checkBallSlimeCollision(slime)) {
+                                const intensity = Math.sqrt(
+                                    this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2
+                                ) / CONFIG.BALL_MAX_SPEED;
+                                this.sound.playHit(intensity);
+                                this.renderer.spawnHitParticles(
+                                    this.physics.ball.x, this.physics.ball.y,
+                                    CONFIG.TEAM_COLORS[slime.team][0]
+                                );
+                                if (intensity > 0.6) {
+                                    this.renderer.shake(intensity * 6);
+                                }
+                            }
+                        }
+
                         this.physics.checkBallNetCollision();
+                        this.physics.checkBallWallCollision();
+
+                        // 바닥 클램프 (득점 판정은 서버 전담)
+                        if (this.physics.ball.y + CONFIG.BALL_RADIUS >= CONFIG.GROUND_Y) {
+                            this.physics.ball.y = CONFIG.GROUND_Y - CONFIG.BALL_RADIUS;
+                            this.physics.ball.vy = 0;
+                        }
                     }
                     this.physicsAccumulator -= FIXED_DT;
                 }
-                this.interpolateClientState();
             } else {
                 // 호스트/연습: 기존 물리 루프
                 while (this.physicsAccumulator >= FIXED_DT) {
@@ -319,55 +350,67 @@ class SlimeVolleyGame {
         }
     }
 
-    // 멀티플레이어 클라이언트: 슬라임+공 보간 + 클라이언트 측 충돌 예측
-    interpolateClientState() {
-        const now = performance.now();
-        const renderTime = now - this.interpolationDelay;
+    // 멀티플레이어 클라이언트: 서버 스냅샷으로 보정 (풀 물리 예측 + 서버 블렌딩)
+    reconcileWithServer() {
         const buf = this.snapshotBuffer;
         if (buf.length === 0) return;
 
-        const ballOverride = this._clientHitTime && (now - this._clientHitTime < this._ballOverrideDuration);
+        const latest = buf[buf.length - 1];
+        if (latest === this._lastAppliedSnapshot) return;
+        this._lastAppliedSnapshot = latest;
+        const state = latest.state;
 
-        // === 스냅샷 보간 (공은 오버라이드 중이면 로컬 물리 유지) ===
-        if (buf.length >= 2) {
-            let i = 0;
-            while (i < buf.length - 1 && buf[i + 1].time <= renderTime) { i++; }
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const isPlaying = state.phase === 'playing';
 
-            if (i < buf.length - 1) {
-                const a = buf[i], b = buf[i + 1];
-                const span = b.time - a.time;
-                const t = span > 0 ? Math.min(1, (renderTime - a.time) / span) : 1;
-                this.physics.applyInterpolatedState(a.state, b.state, t, this.mySlimeId, ballOverride);
+        // 슬라임 보정
+        for (const ss of state.slimes) {
+            const slime = this.physics.slimes.find(s => s.id === ss.id);
+            if (!slime) continue;
+
+            // playing 중엔 내 슬라임은 로컬 예측 유지
+            if (ss.id === this.mySlimeId && isPlaying) continue;
+
+            if (isPlaying) {
+                slime.x = lerp(slime.x, ss.x, 0.5);
+                slime.y = lerp(slime.y, ss.y, 0.5);
             } else {
-                const latest = buf[buf.length - 1];
-                this.physics.applyInterpolatedState(latest.state, latest.state, 1, this.mySlimeId, ballOverride);
+                slime.x = ss.x;
+                slime.y = ss.y;
             }
+            slime.vx = ss.vx;
+            slime.vy = ss.vy;
+            slime.onGround = ss.onGround;
+        }
 
-            while (buf.length > 2 && buf[1].time <= renderTime) { buf.shift(); }
+        // 공 보정: 적응형 블렌딩 (오차 클수록 빠르게 보정)
+        if (isPlaying) {
+            const dx = state.ball.x - this.physics.ball.x;
+            const dy = state.ball.y - this.physics.ball.y;
+            const error = Math.sqrt(dx * dx + dy * dy);
+            const posBlend = error > 50 ? 0.5 : error > 20 ? 0.3 : 0.15;
+
+            this.physics.ball.x = lerp(this.physics.ball.x, state.ball.x, posBlend);
+            this.physics.ball.y = lerp(this.physics.ball.y, state.ball.y, posBlend);
+            this.physics.ball.vx = lerp(this.physics.ball.vx, state.ball.vx, 0.4);
+            this.physics.ball.vy = lerp(this.physics.ball.vy, state.ball.vy, 0.4);
         } else {
-            const s = buf[0].state;
-            this.physics.applyInterpolatedState(s, s, 1, this.mySlimeId, ballOverride);
+            this.physics.ball.x = state.ball.x;
+            this.physics.ball.y = state.ball.y;
+            this.physics.ball.vx = state.ball.vx;
+            this.physics.ball.vy = state.ball.vy;
         }
+        this.physics.ball.lastHitBy = state.ball.lastHitBy;
 
-        // === 클라이언트 측 공-슬라임 충돌 (즉각 피드백) ===
-        if (this.physics.phase === 'playing') {
-            const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
-            if (mySlime) {
-                const hit = this.physics.checkBallSlimeCollision(mySlime);
-                if (hit) {
-                    this._clientHitTime = now;
-                    this._ballOverrideDuration = Math.max(150, this.interpolationDelay + this.network.myPing * 0.5 + 50);
-                    const intensity = Math.sqrt(
-                        this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2
-                    ) / CONFIG.BALL_MAX_SPEED;
-                    this.sound.playHit(intensity);
-                    this.renderer.spawnHitParticles(
-                        this.physics.ball.x, this.physics.ball.y,
-                        CONFIG.TEAM_COLORS[mySlime.team][0]
-                    );
-                }
-            }
-        }
+        // 게임 상태 (서버 권위)
+        this.physics.scores = [...state.scores];
+        this.physics.phase = state.phase;
+        this.physics.servingTeam = state.servingTeam;
+        if (state.setsWon) this.physics.setsWon = [...state.setsWon];
+        if (state.currentSet !== undefined) this.physics.currentSet = state.currentSet;
+
+        // 오래된 스냅샷 정리
+        while (buf.length > 3) buf.shift();
     }
 
     handlePhysicsResult(result) {
@@ -547,7 +590,7 @@ class SlimeVolleyGame {
             this.myTeam = msg.myTeam;
             this.mySlimeId = msg.mySlotIndex;
             this.snapshotBuffer = [];
-            this._clientHitTime = 0;
+            this._lastAppliedSnapshot = null;
             this.botMap = new Map();
 
             this.physics.reset();
@@ -622,14 +665,7 @@ class SlimeVolleyGame {
                     CONFIG.POINT_FREEZE
                 );
             } else if (msg.event === 'hit') {
-                // 내 슬라임 히트는 클라이언트 측에서 이미 처리 → 중복 방지
-                if (msg.slimeId === this.mySlimeId && this._clientHitTime && performance.now() - this._clientHitTime < 300) {
-                    return;
-                }
-                this.sound.playHit(msg.intensity || 0.5);
-                if (msg.x !== undefined) {
-                    this.renderer.spawnHitParticles(msg.x, msg.y, msg.color || 0xFFFFFF);
-                }
+                // 클라이언트 로컬 물리에서 히트를 직접 처리 → 서버 이벤트 무시
             } else if (msg.event === 'setWon') {
                 this.sound.playScore(msg.setWinner);
                 this.renderer.shake(10);
