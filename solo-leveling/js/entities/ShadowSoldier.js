@@ -25,9 +25,9 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
         const typeStats = {
-            melee:  { damageMult: 5.0, speedRatio: 0.9, range: 130, attackCD: 600 },
-            tank:   { damageMult: 3.5, speedRatio: 0.7, range: 150, attackCD: 900 },
-            ranged: { damageMult: 8.0, speedRatio: 0.75, range: 250, attackCD: 800 },
+            melee:  { damageMult: 12.0, speedRatio: 0.9, range: 130, attackCD: 450 },
+            tank:   { damageMult: 8.0, speedRatio: 0.7, range: 150, attackCD: 700 },
+            ranged: { damageMult: 18.0, speedRatio: 0.75, range: 250, attackCD: 600 },
         };
 
         const stats = typeStats[this.soldierType] || typeStats.melee;
@@ -71,7 +71,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Update damage and speed with current player stats
         const playerAttack = player.stats.attack;
         const levelMult = 1 + (player.level - 1) * 0.08;
-        const multMap = { melee: 5.0, tank: 3.5, ranged: 8.0 };
+        const multMap = { melee: 12.0, tank: 8.0, ranged: 18.0 };
         this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 3.0) * levelMult);
         this.speed = player.stats.speed * this.speedRatio;
 
@@ -208,7 +208,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(target.x, target.y, enemy.x, enemy.y);
             if (dist < radius) {
-                enemy.takeDamage(Math.floor(this.damage * 0.7), target.x, target.y);
+                enemy.takeDamage(Math.floor(this.damage * 0.85), target.x, target.y);
             }
         }
     }
