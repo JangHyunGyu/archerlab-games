@@ -512,15 +512,17 @@ class PhysicsEngine {
     }
 
     // 보간 상태 적용: 내 슬라임 제외, 나머지는 lerp
-    applyInterpolatedState(stateA, stateB, t, mySlimeId) {
+    applyInterpolatedState(stateA, stateB, t, mySlimeId, skipBall) {
         const lerp = (a, b, f) => a + (b - a) * f;
 
-        // 공 보간
-        this.ball.x = lerp(stateA.ball.x, stateB.ball.x, t);
-        this.ball.y = lerp(stateA.ball.y, stateB.ball.y, t);
-        this.ball.vx = lerp(stateA.ball.vx, stateB.ball.vx, t);
-        this.ball.vy = lerp(stateA.ball.vy, stateB.ball.vy, t);
-        this.ball.lastHitBy = stateB.ball.lastHitBy;
+        // 공 보간 (클라이언트 히트 오버라이드 중이면 로컬 물리 유지)
+        if (!skipBall) {
+            this.ball.x = lerp(stateA.ball.x, stateB.ball.x, t);
+            this.ball.y = lerp(stateA.ball.y, stateB.ball.y, t);
+            this.ball.vx = lerp(stateA.ball.vx, stateB.ball.vx, t);
+            this.ball.vy = lerp(stateA.ball.vy, stateB.ball.vy, t);
+            this.ball.lastHitBy = stateB.ball.lastHitBy;
+        }
 
         // 슬라임 보간 (내 슬라임 제외)
         for (let i = 0; i < stateB.slimes.length; i++) {
