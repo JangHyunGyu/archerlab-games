@@ -3,7 +3,7 @@ class SoundManager {
     constructor() {
         this.initialized = false;
         this.muted = false;
-        this.volume = 0.5;
+        this.volume = 1.0;
         this.cooldowns = {};
     }
 
