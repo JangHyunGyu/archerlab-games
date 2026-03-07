@@ -32,7 +32,7 @@ export class SoundManager {
             } catch (e) { /* silent */ }
 
             // Effects chain: synths → comp → chorus → masterVol → destination
-            this._masterVol = new Tone.Volume(-8).toDestination();
+            this._masterVol = new Tone.Volume(4).toDestination();
             this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
                 .connect(this._masterVol).start();
             this._comp = new Tone.Compressor(-24, 4).connect(this._chorus);
@@ -1080,7 +1080,7 @@ export class SoundManager {
     toggleSound() {
         this.enabled = !this.enabled;
         if (this._masterVol) {
-            this._masterVol.volume.value = this.enabled ? -8 : -Infinity;
+            this._masterVol.volume.value = this.enabled ? 4 : -Infinity;
         }
         // 사전 렌더링된 SFX 버퍼도 음소거/복원
         if (this._sfxGain) {
