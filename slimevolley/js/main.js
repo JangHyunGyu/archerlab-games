@@ -251,7 +251,7 @@ class SlimeVolleyGame {
         this._rbBotStates = {};         // frame -> { [slimeId]: botState }
         this._rbPendingRemoteInputs = [];
         this._rbSuppressSounds = false;
-        this._rbMaxRollback = 30;
+        this._rbMaxRollback = 60;
         this._rbInputSendTimer = 0;
 
         // 원격 플레이어 슬롯 목록
@@ -295,9 +295,9 @@ class SlimeVolleyGame {
             const myInput = this.getMyInput();
             this._rbLocalInputs[frame] = { ...myInput };
             this._rbInputSendTimer++;
-            // 입력 변경 시 또는 4프레임마다 전송
+            // 입력 변경 시 또는 2프레임마다 전송 (하트비트 주기 단축)
             const lastSent = this._rbLocalInputs[frame - 1];
-            if (!lastSent || lastSent.left !== myInput.left || lastSent.right !== myInput.right || lastSent.jump !== myInput.jump || this._rbInputSendTimer >= 4) {
+            if (!lastSent || lastSent.left !== myInput.left || lastSent.right !== myInput.right || lastSent.jump !== myInput.jump || this._rbInputSendTimer >= 2) {
                 this.network.sendFrameInput(frame, myInput);
                 this._rbInputSendTimer = 0;
             }
