@@ -270,14 +270,24 @@ class SlimeVolleyGame {
     _rollbackTick(FIXED_DT) {
         this._processRemoteInputs();
 
+        let stepsThisTick = 0;
+        const maxStepsPerTick = 6; // CPU 스파이크 방지
+
         while (this.physicsAccumulator >= FIXED_DT) {
-            // Frame advantage: 너무 앞서나가지 않기
+            // Frame advantage: 너무 앞서나가지 않기 (soft limit)
             const minConfirmed = this._rbRemoteSlots.length > 0
                 ? Math.min(...this._rbRemoteSlots.map(id => this._rbConfirmedRemoteFrame[id]))
                 : this._rbFrame;
-            if (this._rbFrame - minConfirmed > this._rbMaxRollback - 2) {
-                break;
+            const frameAdvantage = this._rbFrame - minConfirmed;
+            if (frameAdvantage > this._rbMaxRollback - 2) {
+                // Hard break 대신 accumulator만 소비 (프레임 스킵으로 부드러운 대기)
+                this.physicsAccumulator -= FIXED_DT;
+                continue;
             }
+            if (stepsThisTick >= maxStepsPerTick) {
+                break; // 한 틱에 너무 많은 물리 스텝 방지
+            }
+            stepsThisTick++;
 
             const frame = this._rbFrame;
 
