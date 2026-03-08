@@ -1,7 +1,21 @@
+// Seeded PRNG (mulberry32) for deterministic bot behavior
+class SeededRNG {
+    constructor(seed) {
+        this.seed = seed | 0;
+    }
+    next() {
+        this.seed = this.seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(this.seed ^ this.seed >>> 15, 1 | this.seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+}
+
 // Bot AI for Slime Volleyball - Advanced
 class BotAI {
-    constructor(difficulty = 'normal') {
+    constructor(difficulty = 'normal', seed = 42) {
         this.difficulty = difficulty;
+        this.rng = new SeededRNG(seed);
 
         // 난이도별 파라미터
         // 120fps 물리 기준 파라미터
@@ -21,6 +35,24 @@ class BotAI {
         this.cachedInput = { left: false, right: false, jump: false };
         this.state = 'defend'; // defend, approach, attack, retreat
         this.jumpCooldown = 0;
+    }
+
+    saveState() {
+        return {
+            frameCounter: this.frameCounter,
+            cachedInput: { ...this.cachedInput },
+            state: this.state,
+            jumpCooldown: this.jumpCooldown,
+            rngSeed: this.rng.seed,
+        };
+    }
+
+    loadState(s) {
+        this.frameCounter = s.frameCounter;
+        this.cachedInput = { ...s.cachedInput };
+        this.state = s.state;
+        this.jumpCooldown = s.jumpCooldown;
+        this.rng.seed = s.rngSeed;
     }
 
     getInput(slime, ball, allSlimes, physics) {
@@ -48,7 +80,7 @@ class BotAI {
 
         // 정확도 지터
         const jitter = (1 - this.accuracy) * 40;
-        const jitterX = (Math.random() - 0.5) * jitter;
+        const jitterX = (this.rng.next() - 0.5) * jitter;
 
         // 상태 결정
         this.updateState(slime, ball, ballComingToMe, predicted, team, halfW);
@@ -88,7 +120,7 @@ class BotAI {
             }
         } else {
             // 상대 쪽에 공이 있음
-            if (ballHigh && Math.random() < this.aggression) {
+            if (ballHigh && this.rng.next() < this.aggression) {
                 // 공격적: 네트 앞으로
                 this.state = 'approach';
             } else {
@@ -126,7 +158,7 @@ class BotAI {
                 const slimeYAtApex = CONFIG.GROUND_Y + CONFIG.SLIME_JUMP_SPEED * timeToApex + 0.5 * CONFIG.GRAVITY * timeToApex * timeToApex;
 
                 if (ballYAtApex < slimeYAtApex + CONFIG.SLIME_RADIUS * 0.5) {
-                    if (Math.random() < this.jumpTiming) {
+                    if (this.rng.next() < this.jumpTiming) {
                         input.jump = true;
                         this.jumpCooldown = 30;
                     }
@@ -160,7 +192,7 @@ class BotAI {
             if (dist < hitZone * 3 && ball.y < slime.y - CONFIG.SLIME_RADIUS) {
                 // 공이 내려오기 시작하거나 거의 수평
                 if (ball.vy > -1 && Math.abs(dx) < CONFIG.SLIME_RADIUS * 2) {
-                    if (Math.random() < this.jumpTiming) {
+                    if (this.rng.next() < this.jumpTiming) {
                         input.jump = true;
                         this.jumpCooldown = 24;
                     }
