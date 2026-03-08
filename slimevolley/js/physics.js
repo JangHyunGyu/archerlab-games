@@ -239,9 +239,9 @@ class PhysicsEngine {
             }
 
             // 슬라임 속도 영향 제한 (점프 시 너무 세지 않게)
-            const clampedVy = Math.max(slime.vy, -4);
-            this.ball.vx += slime.vx * 0.4;
-            this.ball.vy += clampedVy * 0.3;
+            const clampedVy = Math.max(slime.vy, -2.5);
+            this.ball.vx += slime.vx * 0.3;
+            this.ball.vy += clampedVy * 0.2;
 
             this.ball.vx *= CONFIG.BALL_SLIME_BOUNCE;
             this.ball.vy *= CONFIG.BALL_SLIME_BOUNCE;
@@ -429,6 +429,52 @@ class PhysicsEngine {
         }
 
         return true;
+    }
+
+    // Rollback용: 전체 상태 저장 (deep copy)
+    saveFullState() {
+        return {
+            ball: { ...this.ball },
+            slimes: this.slimes.map(s => ({
+                id: s.id, team: s.team, x: s.x, y: s.y, vx: s.vx, vy: s.vy,
+                onGround: s.onGround, isBot: s.isBot, colorIdx: s.colorIdx,
+                input: { ...s.input },
+                hitCount: s.hitCount, receiveCount: s.receiveCount, killCount: s.killCount,
+            })),
+            scores: [...this.scores],
+            phase: this.phase,
+            servingTeam: this.servingTeam,
+            freezeTimer: this.freezeTimer,
+            setsWon: [...this.setsWon],
+            currentSet: this.currentSet,
+            setScores: this.setScores.map(s => [...s]),
+        };
+    }
+
+    // Rollback용: 전체 상태 복원
+    loadFullState(st) {
+        this.ball.x = st.ball.x; this.ball.y = st.ball.y;
+        this.ball.vx = st.ball.vx; this.ball.vy = st.ball.vy;
+        this.ball.lastHitBy = st.ball.lastHitBy;
+        this.ball.lastHitSlimeId = st.ball.lastHitSlimeId;
+        for (const ss of st.slimes) {
+            const slime = this.slimes.find(s => s.id === ss.id);
+            if (!slime) continue;
+            slime.x = ss.x; slime.y = ss.y;
+            slime.vx = ss.vx; slime.vy = ss.vy;
+            slime.onGround = ss.onGround;
+            slime.input = { ...ss.input };
+            slime.hitCount = ss.hitCount;
+            slime.receiveCount = ss.receiveCount;
+            slime.killCount = ss.killCount;
+        }
+        this.scores = [...st.scores];
+        this.phase = st.phase;
+        this.servingTeam = st.servingTeam;
+        this.freezeTimer = st.freezeTimer;
+        this.setsWon = [...st.setsWon];
+        this.currentSet = st.currentSet;
+        this.setScores = st.setScores.map(s => [...s]);
     }
 
     getState() {

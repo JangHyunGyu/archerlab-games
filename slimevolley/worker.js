@@ -354,6 +354,11 @@ export class GameRoom {
                 }
                 break;
 
+            case 'frameInput':
+                // Rollback netcode: broadcast frame input to all other players
+                this.broadcast({ ...msg, slotIndex: player.slotIndex }, ws);
+                break;
+
             case 'input':
                 if (player.id !== this.hostId) {
                     const hostWs = this.getHostWs();

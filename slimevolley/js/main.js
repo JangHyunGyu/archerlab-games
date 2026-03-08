@@ -210,7 +210,11 @@ class SlimeVolleyGame {
         }
 
         const FIXED_DT = 1000 / 120; // 120fps 고정 물리 스텝
-        const isClient = () => this.mode === 'multiplayer' && !this.network.isHost;
+        const isMultiplayer = this.mode === 'multiplayer';
+
+        if (isMultiplayer) {
+            this._initRollback();
+        }
 
         this.gameLoop = (ticker) => {
             if (!this.running) return;
@@ -220,55 +224,9 @@ class SlimeVolleyGame {
                 this.physicsAccumulator = FIXED_DT * 4;
             }
 
-            if (isClient()) {
-                // 클라이언트: 풀 물리 시뮬레이션 + 서버 보정 (방장과 동일한 물리)
-                const myInput = this.getMyInput();
-                this.network.sendInput(myInput);
-                this.reconcileWithServer();
-
-                while (this.physicsAccumulator >= FIXED_DT) {
-                    if (this.physics.phase === 'playing') {
-                        // 내 슬라임 예측 (점프 감지)
-                        const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
-                        const wasOnGround = mySlime?.onGround;
-                        this.physics.predictMySlime(this.mySlimeId, myInput);
-                        if (wasOnGround && mySlime && !mySlime.onGround) {
-                            this.sound.playJump();
-                        }
-
-                        // 공 물리 + 충돌
-                        this.physics.updateBall();
-                        this.physics.resolveSlimeCollisions();
-
-                        for (const slime of this.physics.slimes) {
-                            if (this.physics.checkBallSlimeCollision(slime)) {
-                                const intensity = Math.sqrt(
-                                    this.physics.ball.vx ** 2 + this.physics.ball.vy ** 2
-                                ) / CONFIG.BALL_MAX_SPEED;
-                                this.sound.playHit(intensity);
-                                this.renderer.spawnHitParticles(
-                                    this.physics.ball.x, this.physics.ball.y,
-                                    CONFIG.TEAM_COLORS[slime.team][0]
-                                );
-                                if (intensity > 0.6) {
-                                    this.renderer.shake(intensity * 6);
-                                }
-                            }
-                        }
-
-                        this.physics.checkBallNetCollision();
-                        this.physics.checkBallWallCollision();
-
-                        // 바닥 클램프 (득점 판정은 서버 전담)
-                        if (this.physics.ball.y + CONFIG.BALL_RADIUS >= CONFIG.GROUND_Y) {
-                            this.physics.ball.y = CONFIG.GROUND_Y - CONFIG.BALL_RADIUS;
-                            this.physics.ball.vy = 0;
-                        }
-                    }
-                    this.physicsAccumulator -= FIXED_DT;
-                }
+            if (isMultiplayer) {
+                this._rollbackTick(FIXED_DT);
             } else {
-                // 호스트/연습: 기존 물리 루프
                 while (this.physicsAccumulator >= FIXED_DT) {
                     this.update();
                     this.physicsAccumulator -= FIXED_DT;
@@ -279,6 +237,179 @@ class SlimeVolleyGame {
         };
 
         this.renderer.app.ticker.add(this.gameLoop);
+    }
+
+    // === Rollback Netcode ===
+    _initRollback() {
+        this._rbFrame = 0;
+        this._rbLocalInputs = {};
+        this._rbRemoteInputs = {};      // { [slotIndex]: { [frame]: input } }
+        this._rbUsedRemoteInputs = {};  // { [slotIndex]: { [frame]: input } }
+        this._rbLastRemoteInput = {};   // { [slotIndex]: input }
+        this._rbConfirmedRemoteFrame = {}; // { [slotIndex]: frame }
+        this._rbStates = {};            // frame -> { physics, bots }
+        this._rbBotStates = {};         // frame -> { [slimeId]: botState }
+        this._rbPendingRemoteInputs = [];
+        this._rbSuppressSounds = false;
+        this._rbMaxRollback = 10;
+        this._rbInputSendTimer = 0;
+
+        // 원격 플레이어 슬롯 목록
+        this._rbRemoteSlots = [];
+        for (const slime of this.physics.slimes) {
+            if (slime.id !== this.mySlimeId && !slime.isBot) {
+                this._rbRemoteSlots.push(slime.id);
+                this._rbRemoteInputs[slime.id] = {};
+                this._rbUsedRemoteInputs[slime.id] = {};
+                this._rbLastRemoteInput[slime.id] = { left: false, right: false, jump: false };
+                this._rbConfirmedRemoteFrame[slime.id] = -1;
+            }
+        }
+    }
+
+    _rollbackTick(FIXED_DT) {
+        this._processRemoteInputs();
+
+        while (this.physicsAccumulator >= FIXED_DT) {
+            // Frame advantage: 너무 앞서나가지 않기
+            const minConfirmed = this._rbRemoteSlots.length > 0
+                ? Math.min(...this._rbRemoteSlots.map(id => this._rbConfirmedRemoteFrame[id]))
+                : this._rbFrame;
+            if (this._rbFrame - minConfirmed > this._rbMaxRollback - 2) {
+                break;
+            }
+
+            const frame = this._rbFrame;
+
+            // 내 입력 기록 + 전송
+            const myInput = this.getMyInput();
+            this._rbLocalInputs[frame] = { ...myInput };
+            this._rbInputSendTimer++;
+            // 입력 변경 시 또는 4프레임마다 전송
+            const lastSent = this._rbLocalInputs[frame - 1];
+            if (!lastSent || lastSent.left !== myInput.left || lastSent.right !== myInput.right || lastSent.jump !== myInput.jump || this._rbInputSendTimer >= 4) {
+                this.network.sendFrameInput(frame, myInput);
+                this._rbInputSendTimer = 0;
+            }
+
+            // 입력 적용 + 물리 실행
+            this._applyInputsForFrame(frame);
+            const result = this.physics.update();
+            if (!this._rbSuppressSounds) {
+                this.handlePhysicsResult(result);
+            }
+
+            // 상태 저장
+            this._rbStates[frame] = this.physics.saveFullState();
+            this._rbBotStates[frame] = {};
+            for (const [id, bot] of this.botMap) {
+                this._rbBotStates[frame][id] = bot.saveState();
+            }
+
+            this._rbFrame++;
+            this.physicsAccumulator -= FIXED_DT;
+
+            // 오래된 프레임 정리
+            const oldest = this._rbFrame - this._rbMaxRollback - 2;
+            if (oldest >= 0) {
+                delete this._rbStates[oldest];
+                delete this._rbBotStates[oldest];
+                delete this._rbLocalInputs[oldest];
+                for (const slotId of this._rbRemoteSlots) {
+                    delete this._rbRemoteInputs[slotId][oldest];
+                    delete this._rbUsedRemoteInputs[slotId][oldest];
+                }
+            }
+        }
+    }
+
+    _processRemoteInputs() {
+        const pending = this._rbPendingRemoteInputs;
+        if (pending.length === 0) return;
+
+        let needsRollback = false;
+        let rollbackFrame = Infinity;
+
+        for (const { frame, input, slotIndex } of pending) {
+            if (!this._rbRemoteInputs[slotIndex]) continue;
+            this._rbRemoteInputs[slotIndex][frame] = input;
+            this._rbLastRemoteInput[slotIndex] = { ...input };
+
+            if (frame > (this._rbConfirmedRemoteFrame[slotIndex] || -1)) {
+                this._rbConfirmedRemoteFrame[slotIndex] = frame;
+            }
+
+            // 이미 시뮬레이션한 프레임이면 예측과 비교
+            if (frame < this._rbFrame) {
+                const predicted = this._rbUsedRemoteInputs[slotIndex]?.[frame];
+                if (predicted && (predicted.left !== input.left || predicted.right !== input.right || predicted.jump !== input.jump)) {
+                    needsRollback = true;
+                    rollbackFrame = Math.min(rollbackFrame, frame);
+                }
+            }
+        }
+
+        this._rbPendingRemoteInputs = [];
+
+        if (needsRollback) {
+            this._performRollback(rollbackFrame);
+        }
+    }
+
+    _performRollback(toFrame) {
+        const restoreFrame = toFrame - 1;
+        const savedState = this._rbStates[restoreFrame];
+        if (!savedState) return;
+
+        this.physics.loadFullState(savedState);
+        // 봇 상태 복원
+        const botStates = this._rbBotStates[restoreFrame];
+        if (botStates) {
+            for (const [id, bot] of this.botMap) {
+                if (botStates[id]) bot.loadState(botStates[id]);
+            }
+        }
+
+        this._rbSuppressSounds = true;
+
+        // 재시뮬레이션
+        for (let f = toFrame; f < this._rbFrame; f++) {
+            this._applyInputsForFrame(f);
+            this.physics.update();
+            this._rbStates[f] = this.physics.saveFullState();
+            this._rbBotStates[f] = {};
+            for (const [id, bot] of this.botMap) {
+                this._rbBotStates[f][id] = bot.saveState();
+            }
+        }
+
+        this._rbSuppressSounds = false;
+    }
+
+    _applyInputsForFrame(frame) {
+        for (const slime of this.physics.slimes) {
+            if (slime.id === this.mySlimeId) {
+                slime.input = this._rbLocalInputs[frame] || { left: false, right: false, jump: false };
+            } else if (slime.isBot) {
+                const bot = this.botMap.get(slime.id);
+                if (bot) {
+                    slime.input = bot.getInput(slime, this.physics.ball, this.physics.slimes, this.physics);
+                }
+            } else {
+                // 원격 플레이어: 확인된 입력 또는 예측
+                const confirmed = this._rbRemoteInputs[slime.id]?.[frame];
+                if (confirmed) {
+                    slime.input = { ...confirmed };
+                    if (!this._rbUsedRemoteInputs[slime.id]) this._rbUsedRemoteInputs[slime.id] = {};
+                    this._rbUsedRemoteInputs[slime.id][frame] = { ...confirmed };
+                } else {
+                    const predicted = this._rbLastRemoteInput[slime.id] || { left: false, right: false, jump: false };
+                    slime.input = { ...predicted };
+                    if (!this._rbUsedRemoteInputs[slime.id]) this._rbUsedRemoteInputs[slime.id] = {};
+                    this._rbUsedRemoteInputs[slime.id][frame] = { ...predicted };
+                }
+            }
+        }
     }
 
     update() {
@@ -348,69 +479,6 @@ class SlimeVolleyGame {
                 }
             }
         }
-    }
-
-    // 멀티플레이어 클라이언트: 서버 스냅샷으로 보정 (풀 물리 예측 + 서버 블렌딩)
-    reconcileWithServer() {
-        const buf = this.snapshotBuffer;
-        if (buf.length === 0) return;
-
-        const latest = buf[buf.length - 1];
-        if (latest === this._lastAppliedSnapshot) return;
-        this._lastAppliedSnapshot = latest;
-        const state = latest.state;
-
-        const lerp = (a, b, t) => a + (b - a) * t;
-        const isPlaying = state.phase === 'playing';
-
-        // 슬라임 보정
-        for (const ss of state.slimes) {
-            const slime = this.physics.slimes.find(s => s.id === ss.id);
-            if (!slime) continue;
-
-            // playing 중엔 내 슬라임은 로컬 예측 유지
-            if (ss.id === this.mySlimeId && isPlaying) continue;
-
-            if (isPlaying) {
-                slime.x = lerp(slime.x, ss.x, 0.5);
-                slime.y = lerp(slime.y, ss.y, 0.5);
-            } else {
-                slime.x = ss.x;
-                slime.y = ss.y;
-            }
-            slime.vx = ss.vx;
-            slime.vy = ss.vy;
-            slime.onGround = ss.onGround;
-        }
-
-        // 공 보정: 적응형 블렌딩 (오차 클수록 빠르게 보정)
-        if (isPlaying) {
-            const dx = state.ball.x - this.physics.ball.x;
-            const dy = state.ball.y - this.physics.ball.y;
-            const error = Math.sqrt(dx * dx + dy * dy);
-            const posBlend = error > 50 ? 0.5 : error > 20 ? 0.3 : 0.15;
-
-            this.physics.ball.x = lerp(this.physics.ball.x, state.ball.x, posBlend);
-            this.physics.ball.y = lerp(this.physics.ball.y, state.ball.y, posBlend);
-            this.physics.ball.vx = lerp(this.physics.ball.vx, state.ball.vx, 0.4);
-            this.physics.ball.vy = lerp(this.physics.ball.vy, state.ball.vy, 0.4);
-        } else {
-            this.physics.ball.x = state.ball.x;
-            this.physics.ball.y = state.ball.y;
-            this.physics.ball.vx = state.ball.vx;
-            this.physics.ball.vy = state.ball.vy;
-        }
-        this.physics.ball.lastHitBy = state.ball.lastHitBy;
-
-        // 게임 상태 (서버 권위)
-        this.physics.scores = [...state.scores];
-        this.physics.phase = state.phase;
-        this.physics.servingTeam = state.servingTeam;
-        if (state.setsWon) this.physics.setsWon = [...state.setsWon];
-        if (state.currentSet !== undefined) this.physics.currentSet = state.currentSet;
-
-        // 오래된 스냅샷 정리
-        while (buf.length > 3) buf.shift();
     }
 
     handlePhysicsResult(result) {
@@ -543,15 +611,17 @@ class SlimeVolleyGame {
                     this.becomeHost();
                 }
 
-                // 나간 유저의 슬라임을 봇으로 대체
+                // 나간 유저의 슬라임을 봇으로 대체 (양쪽 모두)
                 if (msg.slotIndex !== undefined) {
                     const slime = this.physics.slimes.find(s => s.id === msg.slotIndex);
                     if (slime && !slime.isBot) {
                         slime.isBot = true;
                         slime.nickname = (slime.nickname || 'Player') + ' (Bot)';
-                        // 호스트만 BotAI 관리
-                        if (this.network.isHost) {
-                            this.botMap.set(slime.id, new BotAI('normal'));
+                        const seed = (this._gameSeed || 12345) + slime.id;
+                        this.botMap.set(slime.id, new BotAI('normal', seed));
+                        // Rollback 원격 슬롯에서 제거
+                        if (this._rbRemoteSlots) {
+                            this._rbRemoteSlots = this._rbRemoteSlots.filter(id => id !== slime.id);
                         }
                     }
                 }
@@ -602,7 +672,8 @@ class SlimeVolleyGame {
             });
             this.physics.initSlimes(msg.teamSizes);
 
-            // 슬라임에 닉네임 매핑 + 봇 초기화
+            // 슬라임에 닉네임 매핑 + 봇 초기화 (양쪽 모두 동일한 시드로)
+            const gameSeed = (msg.config && msg.config.gameSeed) || 12345;
             if (msg.players) {
                 for (const p of msg.players) {
                     if (p.slotIndex !== undefined) {
@@ -611,15 +682,13 @@ class SlimeVolleyGame {
                             slime.nickname = p.name || '???';
                             if (p.isBot) {
                                 slime.isBot = true;
-                                // 호스트만 BotAI 인스턴스 관리
-                                if (this.network.isHost) {
-                                    this.botMap.set(slime.id, new BotAI('normal'));
-                                }
+                                this.botMap.set(slime.id, new BotAI('normal', gameSeed + slime.id));
                             }
                         }
                     }
                 }
             }
+            this._gameSeed = gameSeed;
 
             if (!this.renderer.initialized) {
                 await this.renderer.init();
@@ -632,27 +701,22 @@ class SlimeVolleyGame {
             this.startCountdown();
         });
 
-        this.network.on('gameState', (msg) => {
-            if (!this.network.isHost && this.running) {
-                // 스냅샷 버퍼에 추가 (보간용)
-                this.snapshotBuffer.push({
-                    time: performance.now(),
-                    state: msg.state,
+        this.network.on('frameInput', (msg) => {
+            if (this._rbPendingRemoteInputs) {
+                this._rbPendingRemoteInputs.push({
+                    frame: msg.frame,
+                    input: msg.input,
+                    slotIndex: msg.slotIndex,
                 });
-                // 버퍼 크기 제한
-                while (this.snapshotBuffer.length > this.snapshotMaxSize) {
-                    this.snapshotBuffer.shift();
-                }
             }
         });
 
+        this.network.on('gameState', (msg) => {
+            // Rollback 모드에서는 gameState 무시 (양쪽 로컬 물리 사용)
+        });
+
         this.network.on('input', (msg) => {
-            if (this.network.isHost) {
-                const slime = this.physics.slimes.find(s => s.id === msg.slotIndex);
-                if (slime && !slime.isBot) {
-                    slime.input = msg.input;
-                }
-            }
+            // Legacy: 호스트 전용 모드 (rollback에서는 미사용)
         });
 
         this.network.on('gameEvent', (msg) => {
@@ -698,7 +762,7 @@ class SlimeVolleyGame {
     }
 
     startMultiplayerGame() {
-        this.network.startGame();
+        this.network.startGame({ gameSeed: Date.now() });
     }
 
     // === Sound ===

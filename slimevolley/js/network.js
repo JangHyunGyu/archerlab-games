@@ -186,6 +186,10 @@ class NetworkClient {
         this.send({ type: 'input', input });
     }
 
+    sendFrameInput(frame, input) {
+        this.send({ type: 'frameInput', frame, input });
+    }
+
     sendGameState(state) {
         this.send({ type: 'gameState', state });
     }
