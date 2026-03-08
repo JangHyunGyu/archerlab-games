@@ -2,6 +2,10 @@ name = "game-relay"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
+# Smart Placement 명시적 비활성화 (DO 위치로 Worker 이동 방지)
+[placement]
+mode = "off"
+
 # Durable Objects
 [durable_objects]
 bindings = [
