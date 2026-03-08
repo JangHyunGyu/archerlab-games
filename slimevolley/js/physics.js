@@ -195,25 +195,7 @@ class PhysicsEngine {
     }
 
     resolveSlimeCollisions() {
-        for (let i = 0; i < this.slimes.length; i++) {
-            for (let j = i + 1; j < this.slimes.length; j++) {
-                const a = this.slimes[i];
-                const b = this.slimes[j];
-                if (a.team !== b.team) continue;
-
-                const dx = b.x - a.x;
-                const dy = b.y - a.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const minDist = CONFIG.SLIME_RADIUS * 2;
-
-                if (dist < minDist && dist > 0) {
-                    const overlap = (minDist - dist) / 2;
-                    const nx = dx / dist;
-                    a.x -= nx * overlap;
-                    b.x += nx * overlap;
-                }
-            }
-        }
+        // 같은 팀 슬라임 충돌 없음 (겹침 허용)
     }
 
     checkBallSlimeCollision(slime) {
