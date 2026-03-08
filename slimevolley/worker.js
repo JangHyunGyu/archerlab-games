@@ -49,7 +49,7 @@ export default {
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
                 });
             }
-            const lobbyId = env.GAME_LOBBY.idFromName(`lobby:${game}`);
+            const lobbyId = env.GAME_LOBBY.idFromName(`lobby_v2:${game}`);
             const continent = request.cf?.continent;
             const hintMap = { AS: 'apac', OC: 'apac', NA: 'wnam', SA: 'sam', EU: 'weur', AF: 'weur' };
             const lobby = env.GAME_LOBBY.get(lobbyId, { locationHint: hintMap[continent] || 'apac' });
@@ -327,7 +327,7 @@ export class GameRoom {
 
     async notifyLobby(action, data) {
         try {
-            const lobbyId = this.env.GAME_LOBBY.idFromName(`lobby:${this.game}`);
+            const lobbyId = this.env.GAME_LOBBY.idFromName(`lobby_v2:${this.game}`);
             const lobby = this.env.GAME_LOBBY.get(lobbyId);
             await lobby.fetch(new Request(`http://internal/${action}`, {
                 method: 'POST',
