@@ -240,16 +240,16 @@ class SlimeVolleyGame {
                 for (const slotId of this._rbRemoteSlots) {
                     const off = this._rbVisualOffsets[slotId];
                     if (off && (off.x !== 0 || off.y !== 0)) {
-                        const s = state.slimes.find(s => s.id === slotId);
-                        if (s) {
-                            s.x += off.x;
-                            s.y += off.y;
+                        const sl = state.slimes.find(s => s.id === slotId);
+                        if (sl) {
+                            sl.x += off.x;
+                            sl.y += off.y;
                         }
-                        // 지수 감쇄: 매 렌더 프레임마다 오프셋을 줄임
-                        off.x *= 0.82;
-                        off.y *= 0.82;
-                        if (Math.abs(off.x) < 0.3) off.x = 0;
-                        if (Math.abs(off.y) < 0.3) off.y = 0;
+                        // 느린 감쇄: 300ms 핑에서 부드러운 보정 (약 400ms에 걸쳐 수렴)
+                        off.x *= 0.92;
+                        off.y *= 0.92;
+                        if (Math.abs(off.x) < 0.5) off.x = 0;
+                        if (Math.abs(off.y) < 0.5) off.y = 0;
                     }
                 }
             }
@@ -430,7 +430,11 @@ class SlimeVolleyGame {
     }
 
     _performRollback(toFrame) {
-        const restoreFrame = toFrame - 1;
+        // 재시뮬레이션 깊이 제한 (CPU 스파이크 방지)
+        const maxResimFrames = 20;
+        const actualToFrame = Math.max(toFrame, this._rbFrame - maxResimFrames);
+
+        const restoreFrame = actualToFrame - 1;
         const savedState = this._rbStates[restoreFrame];
         if (!savedState) return;
 
@@ -446,7 +450,7 @@ class SlimeVolleyGame {
         this._rbSuppressSounds = true;
 
         // 재시뮬레이션
-        for (let f = toFrame; f < this._rbFrame; f++) {
+        for (let f = actualToFrame; f < this._rbFrame; f++) {
             this._applyInputsForFrame(f);
             this.physics.update();
             this._rbStates[f] = this.physics.saveFullState();
