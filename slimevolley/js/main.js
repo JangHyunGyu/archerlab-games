@@ -135,6 +135,7 @@ class SlimeVolleyGame {
 
     // === Practice Mode ===
     async startPractice(myTeamSize, botTeamSize, difficulty) {
+        this.enterFullscreen();
         this.mode = 'practice';
         this.myTeam = 0;
         this.physics.reset();
@@ -844,7 +845,16 @@ class SlimeVolleyGame {
     }
 
     startMultiplayerGame() {
+        this.enterFullscreen();
         this.network.startGame({ gameSeed: Date.now() });
+    }
+
+    // === Fullscreen ===
+    enterFullscreen() {
+        if (document.fullscreenElement || document.webkitFullscreenElement) return;
+        const el = document.documentElement;
+        const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (fn) fn.call(el).catch(() => {});
     }
 
     // === Sound ===
