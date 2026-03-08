@@ -47,7 +47,9 @@ export default {
                 });
             }
             const lobbyId = env.GAME_LOBBY.idFromName(`lobby:${game}`);
-            const lobby = env.GAME_LOBBY.get(lobbyId);
+            const continent = request.cf?.continent;
+            const hintMap = { AS: 'apac', OC: 'apac', NA: 'wnam', SA: 'sam', EU: 'weur', AF: 'weur' };
+            const lobby = env.GAME_LOBBY.get(lobbyId, { locationHint: hintMap[continent] || 'apac' });
             const res = await lobby.fetch(new Request(`http://internal/list?game=${game}`));
             const data = await res.json();
             return new Response(JSON.stringify(data), {
@@ -87,7 +89,11 @@ export default {
             }
 
             const doId = env.GAME_ROOM.idFromName(`${game}:${roomId}`);
-            const room = env.GAME_ROOM.get(doId);
+            // 접속자 대륙 기반 DO 리전 힌트 (첫 생성 시에만 적용)
+            const continent = request.cf?.continent;
+            const hintMap = { AS: 'apac', OC: 'apac', NA: 'wnam', SA: 'sam', EU: 'weur', AF: 'weur' };
+            const hint = hintMap[continent] || 'apac';
+            const room = env.GAME_ROOM.get(doId, { locationHint: hint });
 
             const newUrl = new URL(request.url);
             newUrl.searchParams.set('game', game);
