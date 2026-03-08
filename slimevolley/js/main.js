@@ -15,7 +15,7 @@ class SlimeVolleyGame {
         this.gameLoop = null;
         this.countdown = 0;
         this.countdownTimer = null;
-        this.relayUrl = 'wss://game-relay.yama5993.workers.dev';
+        this.relayUrl = 'wss://relay.archerlab.dev';
 
         // 스냅샷 보간 버퍼
         this.snapshotBuffer = [];
