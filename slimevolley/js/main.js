@@ -206,6 +206,9 @@ class SlimeVolleyGame {
         this.physics.freezeTimer = 60;
         this.physicsAccumulator = 0;
 
+        // 렌더 보간용 이전 물리 상태
+        this._interpPrev = null;
+
         if (this.gameLoop) {
             this.renderer.app.ticker.remove(this.gameLoop);
         }
@@ -229,6 +232,7 @@ class SlimeVolleyGame {
                 this._rollbackTick(FIXED_DT);
             } else {
                 while (this.physicsAccumulator >= FIXED_DT) {
+                    this._saveInterpState();
                     this.update();
                     this.physicsAccumulator -= FIXED_DT;
                 }
@@ -236,48 +240,27 @@ class SlimeVolleyGame {
 
             const state = this.physics.getState();
 
-            // 멀티플레이어: 원격 슬라임은 확인된 위치 기반 보간 (예측 위치 대신)
-            if (isMultiplayer && this._rbDisplayPos) {
+            // 렌더 보간: 이전 물리 상태와 현재 상태를 alpha로 블렌딩 (부드러운 움직임)
+            const alpha = this.physicsAccumulator / FIXED_DT;
+            if (this._interpPrev) {
+                this._applyInterpolation(state, alpha);
+            }
+
+            // 멀티플레이어: 롤백 보정 스무딩 (원격 슬라임)
+            if (isMultiplayer && this._rbVisualOffset) {
+                const decay = Math.pow(0.12, ticker.deltaMS / 16.67); // 프레임레이트 독립적 감쇠
                 for (const slotId of this._rbRemoteSlots) {
-                    const confirmedFrame = this._rbConfirmedRemoteFrame[slotId];
-                    if (confirmedFrame < 0) continue;
-
-                    // 확인된 프레임의 물리 상태에서 원격 슬라임 위치 가져오기
-                    const confirmedState = this._rbStates[confirmedFrame];
-                    if (!confirmedState) continue;
-                    const confirmedSlime = confirmedState.slimes.find(s => s.id === slotId);
-                    if (!confirmedSlime) continue;
-
+                    const offset = this._rbVisualOffset[slotId];
+                    if (!offset) continue;
+                    offset.x *= decay;
+                    offset.y *= decay;
+                    if (Math.abs(offset.x) < 0.1) offset.x = 0;
+                    if (Math.abs(offset.y) < 0.1) offset.y = 0;
                     const sl = state.slimes.find(s => s.id === slotId);
-                    if (!sl) continue;
-
-                    // 디스플레이 위치 초기화 (첫 프레임)
-                    if (!this._rbDisplayPos[slotId]) {
-                        this._rbDisplayPos[slotId] = { x: confirmedSlime.x, y: confirmedSlime.y };
+                    if (sl) {
+                        sl.x += offset.x;
+                        sl.y += offset.y;
                     }
-
-                    const dp = this._rbDisplayPos[slotId];
-                    const targetX = confirmedSlime.x;
-                    const targetY = confirmedSlime.y;
-
-                    // 부드러운 보간: 최대 이동 속도 제한 + LERP
-                    const dx = targetX - dp.x;
-                    const dy = targetY - dp.y;
-                    const maxStep = 6; // 렌더 프레임당 최대 보정 픽셀
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist <= maxStep) {
-                        dp.x = targetX;
-                        dp.y = targetY;
-                    } else {
-                        // 큰 차이: 일정 속도로 부드럽게 이동
-                        dp.x += (dx / dist) * maxStep;
-                        dp.y += (dy / dist) * maxStep;
-                    }
-
-                    // 렌더 상태를 디스플레이 위치로 교체
-                    sl.x = dp.x;
-                    sl.y = dp.y;
                 }
             }
 
@@ -285,6 +268,38 @@ class SlimeVolleyGame {
         };
 
         this.renderer.app.ticker.add(this.gameLoop);
+    }
+
+    // 렌더 보간: 마지막 물리 스텝 이전 상태 저장 (GC 최소화)
+    _saveInterpState() {
+        if (!this._interpPrev) {
+            this._interpPrev = {
+                ball: { x: 0, y: 0 },
+                slimes: []
+            };
+        }
+        this._interpPrev.ball.x = this.physics.ball.x;
+        this._interpPrev.ball.y = this.physics.ball.y;
+        for (let i = 0; i < this.physics.slimes.length; i++) {
+            if (!this._interpPrev.slimes[i]) {
+                this._interpPrev.slimes[i] = { x: 0, y: 0 };
+            }
+            this._interpPrev.slimes[i].x = this.physics.slimes[i].x;
+            this._interpPrev.slimes[i].y = this.physics.slimes[i].y;
+        }
+    }
+
+    // 렌더 보간 적용: prev 와 current 사이를 alpha 비율로 보간
+    _applyInterpolation(state, alpha) {
+        const prev = this._interpPrev;
+        if (!prev) return;
+        state.ball.x = prev.ball.x + (state.ball.x - prev.ball.x) * alpha;
+        state.ball.y = prev.ball.y + (state.ball.y - prev.ball.y) * alpha;
+        for (let i = 0; i < state.slimes.length; i++) {
+            if (!prev.slimes[i]) continue;
+            state.slimes[i].x = prev.slimes[i].x + (state.slimes[i].x - prev.slimes[i].x) * alpha;
+            state.slimes[i].y = prev.slimes[i].y + (state.slimes[i].y - prev.slimes[i].y) * alpha;
+        }
     }
 
     // === Rollback Netcode ===
@@ -301,7 +316,7 @@ class SlimeVolleyGame {
         this._rbSuppressSounds = false;
         this._rbMaxRollback = 60;
         this._rbInputSendTimer = 0;
-        this._rbDisplayPos = {}; // 원격 슬라임 디스플레이 위치 (확인된 위치 기반 보간)
+        this._rbVisualOffset = {}; // 롤백 보정 시 시각적 오프셋 (부드러운 보정용)
 
         // 원격 플레이어 슬롯 목록
         this._rbRemoteSlots = [];
@@ -312,13 +327,36 @@ class SlimeVolleyGame {
                 this._rbUsedRemoteInputs[slime.id] = {};
                 this._rbLastRemoteInput[slime.id] = { left: false, right: false, jump: false };
                 this._rbConfirmedRemoteFrame[slime.id] = -1;
-                this._rbDisplayPos[slime.id] = null; // 첫 확인 전까지 null
+                this._rbVisualOffset[slime.id] = { x: 0, y: 0 };
             }
         }
     }
 
     _rollbackTick(FIXED_DT) {
+        // 롤백 보정 전 위치 저장 (보정 스무딩용)
+        const preRollbackPositions = {};
+        for (const slotId of this._rbRemoteSlots) {
+            const sl = this.physics.slimes.find(s => s.id === slotId);
+            if (sl) preRollbackPositions[slotId] = { x: sl.x, y: sl.y };
+        }
+
         this._processRemoteInputs();
+
+        // 롤백 보정이 발생했으면 시각적 오프셋 누적
+        if (this._rbVisualOffset) {
+            for (const slotId of this._rbRemoteSlots) {
+                const sl = this.physics.slimes.find(s => s.id === slotId);
+                const pre = preRollbackPositions[slotId];
+                if (sl && pre) {
+                    const dx = sl.x - pre.x;
+                    const dy = sl.y - pre.y;
+                    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+                        this._rbVisualOffset[slotId].x -= dx;
+                        this._rbVisualOffset[slotId].y -= dy;
+                    }
+                }
+            }
+        }
 
         let stepsThisTick = 0;
         const maxStepsPerTick = 6; // CPU 스파이크 방지
@@ -330,9 +368,7 @@ class SlimeVolleyGame {
                 : this._rbFrame;
             const frameAdvantage = this._rbFrame - minConfirmed;
             if (frameAdvantage > this._rbMaxRollback - 2) {
-                // Hard break 대신 accumulator만 소비 (프레임 스킵으로 부드러운 대기)
-                this.physicsAccumulator -= FIXED_DT;
-                continue;
+                break; // 게임을 자연스럽게 감속 (accumulator 소비하지 않음)
             }
             if (stepsThisTick >= maxStepsPerTick) {
                 break; // 한 틱에 너무 많은 물리 스텝 방지
@@ -340,6 +376,9 @@ class SlimeVolleyGame {
             stepsThisTick++;
 
             const frame = this._rbFrame;
+
+            // 렌더 보간용 이전 상태 저장
+            this._saveInterpState();
 
             // 내 입력 기록 + 전송
             const myInput = this.getMyInput();
