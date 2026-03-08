@@ -2,10 +2,6 @@ name = "game-relay"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
-# Smart Placement: DO를 접속자 가까운 리전에 자동 배치
-[placement]
-mode = "smart"
-
 # Durable Objects
 [durable_objects]
 bindings = [
