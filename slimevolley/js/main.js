@@ -235,22 +235,48 @@ class SlimeVolleyGame {
 
             const state = this.physics.getState();
 
-            // 멀티플레이어: 롤백 비주얼 스무딩 적용
-            if (isMultiplayer && this._rbVisualOffsets) {
+            // 멀티플레이어: 원격 슬라임은 확인된 위치 기반 보간 (예측 위치 대신)
+            if (isMultiplayer && this._rbDisplayPos) {
                 for (const slotId of this._rbRemoteSlots) {
-                    const off = this._rbVisualOffsets[slotId];
-                    if (off && (off.x !== 0 || off.y !== 0)) {
-                        const sl = state.slimes.find(s => s.id === slotId);
-                        if (sl) {
-                            sl.x += off.x;
-                            sl.y += off.y;
-                        }
-                        // 느린 감쇄: 300ms 핑에서 부드러운 보정 (약 400ms에 걸쳐 수렴)
-                        off.x *= 0.92;
-                        off.y *= 0.92;
-                        if (Math.abs(off.x) < 0.5) off.x = 0;
-                        if (Math.abs(off.y) < 0.5) off.y = 0;
+                    const confirmedFrame = this._rbConfirmedRemoteFrame[slotId];
+                    if (confirmedFrame < 0) continue;
+
+                    // 확인된 프레임의 물리 상태에서 원격 슬라임 위치 가져오기
+                    const confirmedState = this._rbStates[confirmedFrame];
+                    if (!confirmedState) continue;
+                    const confirmedSlime = confirmedState.slimes.find(s => s.id === slotId);
+                    if (!confirmedSlime) continue;
+
+                    const sl = state.slimes.find(s => s.id === slotId);
+                    if (!sl) continue;
+
+                    // 디스플레이 위치 초기화 (첫 프레임)
+                    if (!this._rbDisplayPos[slotId]) {
+                        this._rbDisplayPos[slotId] = { x: confirmedSlime.x, y: confirmedSlime.y };
                     }
+
+                    const dp = this._rbDisplayPos[slotId];
+                    const targetX = confirmedSlime.x;
+                    const targetY = confirmedSlime.y;
+
+                    // 부드러운 보간: 최대 이동 속도 제한 + LERP
+                    const dx = targetX - dp.x;
+                    const dy = targetY - dp.y;
+                    const maxStep = 6; // 렌더 프레임당 최대 보정 픽셀
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist <= maxStep) {
+                        dp.x = targetX;
+                        dp.y = targetY;
+                    } else {
+                        // 큰 차이: 일정 속도로 부드럽게 이동
+                        dp.x += (dx / dist) * maxStep;
+                        dp.y += (dy / dist) * maxStep;
+                    }
+
+                    // 렌더 상태를 디스플레이 위치로 교체
+                    sl.x = dp.x;
+                    sl.y = dp.y;
                 }
             }
 
@@ -274,7 +300,7 @@ class SlimeVolleyGame {
         this._rbSuppressSounds = false;
         this._rbMaxRollback = 60;
         this._rbInputSendTimer = 0;
-        this._rbVisualOffsets = {}; // 롤백 시 비주얼 스무딩용 오프셋
+        this._rbDisplayPos = {}; // 원격 슬라임 디스플레이 위치 (확인된 위치 기반 보간)
 
         // 원격 플레이어 슬롯 목록
         this._rbRemoteSlots = [];
@@ -285,7 +311,7 @@ class SlimeVolleyGame {
                 this._rbUsedRemoteInputs[slime.id] = {};
                 this._rbLastRemoteInput[slime.id] = { left: false, right: false, jump: false };
                 this._rbConfirmedRemoteFrame[slime.id] = -1;
-                this._rbVisualOffsets[slime.id] = { x: 0, y: 0 };
+                this._rbDisplayPos[slime.id] = null; // 첫 확인 전까지 null
             }
         }
     }
@@ -404,28 +430,7 @@ class SlimeVolleyGame {
         this._rbPendingRemoteInputs = [];
 
         if (needsRollback) {
-            // 롤백 전 원격 슬라임 위치 저장 (비주얼 스무딩용)
-            const prePos = {};
-            for (const slotId of this._rbRemoteSlots) {
-                const slime = this.physics.slimes.find(s => s.id === slotId);
-                if (slime) prePos[slotId] = { x: slime.x, y: slime.y };
-            }
-
             this._performRollback(rollbackFrame);
-
-            // 롤백 후 위치 차이를 비주얼 오프셋에 누적
-            for (const slotId of this._rbRemoteSlots) {
-                const slime = this.physics.slimes.find(s => s.id === slotId);
-                if (slime && prePos[slotId]) {
-                    const off = this._rbVisualOffsets[slotId];
-                    off.x += prePos[slotId].x - slime.x;
-                    off.y += prePos[slotId].y - slime.y;
-                    // 오프셋 제한 (너무 큰 보정은 바로 적용)
-                    const maxOff = 80;
-                    if (Math.abs(off.x) > maxOff) off.x = Math.sign(off.x) * maxOff;
-                    if (Math.abs(off.y) > maxOff) off.y = Math.sign(off.y) * maxOff;
-                }
-            }
         }
     }
 
