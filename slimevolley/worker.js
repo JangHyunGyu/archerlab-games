@@ -26,12 +26,15 @@ export default {
         const url = new URL(request.url);
         const path = url.pathname;
 
-        // Health check
+        // Health check + 디버그 정보
         if (path === '/' || path === '/health') {
             return new Response(JSON.stringify({
                 service: 'archerlab-game-relay',
-                version: '2.0.0',
+                version: '2.1.0',
                 status: 'ok',
+                edgeColo: request.cf?.colo || 'unknown',
+                continent: request.cf?.continent || 'unknown',
+                country: request.cf?.country || 'unknown',
             }), {
                 headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
             });
