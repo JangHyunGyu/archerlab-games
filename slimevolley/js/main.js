@@ -251,7 +251,7 @@ class SlimeVolleyGame {
         this._rbBotStates = {};         // frame -> { [slimeId]: botState }
         this._rbPendingRemoteInputs = [];
         this._rbSuppressSounds = false;
-        this._rbMaxRollback = 10;
+        this._rbMaxRollback = 30;
         this._rbInputSendTimer = 0;
 
         // 원격 플레이어 슬롯 목록
@@ -332,14 +332,33 @@ class SlimeVolleyGame {
 
         for (const { frame, input, slotIndex } of pending) {
             if (!this._rbRemoteInputs[slotIndex]) continue;
+
+            const lastConf = this._rbConfirmedRemoteFrame[slotIndex] || -1;
+            const prevInput = this._rbLastRemoteInput[slotIndex] || { left: false, right: false, jump: false };
+
+            // 중간 프레임 채우기: lastConfirmed+1 ~ frame-1은 이전 입력과 동일
+            for (let f = lastConf + 1; f < frame; f++) {
+                if (!this._rbRemoteInputs[slotIndex][f]) {
+                    this._rbRemoteInputs[slotIndex][f] = { ...prevInput };
+                    // 이미 시뮬레이션한 프레임이면 예측과 비교
+                    if (f < this._rbFrame) {
+                        const predicted = this._rbUsedRemoteInputs[slotIndex]?.[f];
+                        if (predicted && (predicted.left !== prevInput.left || predicted.right !== prevInput.right || predicted.jump !== prevInput.jump)) {
+                            needsRollback = true;
+                            rollbackFrame = Math.min(rollbackFrame, f);
+                        }
+                    }
+                }
+            }
+
             this._rbRemoteInputs[slotIndex][frame] = input;
             this._rbLastRemoteInput[slotIndex] = { ...input };
 
-            if (frame > (this._rbConfirmedRemoteFrame[slotIndex] || -1)) {
+            if (frame > lastConf) {
                 this._rbConfirmedRemoteFrame[slotIndex] = frame;
             }
 
-            // 이미 시뮬레이션한 프레임이면 예측과 비교
+            // 현재 프레임 예측 비교
             if (frame < this._rbFrame) {
                 const predicted = this._rbUsedRemoteInputs[slotIndex]?.[frame];
                 if (predicted && (predicted.left !== input.left || predicted.right !== input.right || predicted.jump !== input.jump)) {
