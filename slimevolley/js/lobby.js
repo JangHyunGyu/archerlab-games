@@ -12,6 +12,15 @@ class LobbyManager {
     }
 
     setupEventListeners() {
+        // Header back button: go to main menu if not already there
+        document.getElementById('header-back').addEventListener('click', (e) => {
+            if (this.currentScreen !== 'main-menu') {
+                e.preventDefault();
+                this.game.sound.playUI('click');
+                this.showScreen('main-menu');
+            }
+        });
+
         // Main menu
         document.getElementById('btn-practice').addEventListener('click', () => {
             this.game.sound.playUI('click');
