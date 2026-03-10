@@ -12,7 +12,7 @@
     <meta property="og:title" content="シャドウサバイバル - 無料2Dダンジョンローグライクウェブゲーム">
     <meta property="og:description" content="ブラウザで今すぐプレイ！影の軍団を率いてダンジョンモンスターを倒し、最強のハンターになろう。">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://game.archerlab.dev/solo-leveling/index-ja.html">
+    <meta property="og:url" content="https://game.archerlab.dev/solo-leveling/index-ja">
     <meta property="og:image" content="https://archerlab.dev/assets/images/solo-leveling_link.png">
     <meta property="og:image:width" content="512">
     <meta property="og:image:height" content="512">
@@ -22,10 +22,10 @@
     <meta name="twitter:title" content="シャドウサバイバル - 無料2Dダンジョンローグライクウェブゲーム">
     <meta name="twitter:description" content="ブラウザで今すぐプレイ！影の軍団を率いてダンジョンモンスターを倒し、最強のハンターになろう。">
     <meta name="twitter:image" content="https://archerlab.dev/assets/images/solo-leveling_link.png">
-    <link rel="canonical" href="https://game.archerlab.dev/solo-leveling/index-ja.html">
+    <link rel="canonical" href="https://game.archerlab.dev/solo-leveling/index-ja">
     <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/solo-leveling/">
-    <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/solo-leveling/index-en.html">
-    <link rel="alternate" hreflang="ja" href="https://game.archerlab.dev/solo-leveling/index-ja.html">
+    <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/solo-leveling/index-en">
+    <link rel="alternate" hreflang="ja" href="https://game.archerlab.dev/solo-leveling/index-ja">
     <meta name="robots" content="index, follow">
     <meta name="author" content="ArcherLab">
     <script type="application/ld+json">
@@ -34,7 +34,7 @@
       "@type": "VideoGame",
       "name": "シャドウサバイバル",
       "description": "ブラウザで今すぐ遊べる無料2Dダンジョンサバイバルローグライクゲーム。影の軍団を率いてモンスターを倒し、レベルアップしよう！",
-      "url": "https://game.archerlab.dev/solo-leveling/index-ja.html",
+      "url": "https://game.archerlab.dev/solo-leveling/index-ja",
       "image": "https://archerlab.dev/assets/images/solo-leveling_link.png",
       "genre": ["サバイバル", "ローグライク", "アクション", "RPG"],
       "gamePlatform": ["Web Browser", "Mobile Browser"],
@@ -65,10 +65,13 @@
         gtag('config', 'G-66FS0YCEEM');
     </script>
     <script>
+        (function() {
+        if (/bot|crawl|spider|slurp|facebookexternalhit|mediapartners/i.test(navigator.userAgent)) return;
         // Redirect to main page with lang parameter
         const url = new URL('./', window.location.href);
         url.searchParams.set('lang', 'ja');
         window.location.replace(url.href);
+        })();
     </script>
 </head>
 <body>
