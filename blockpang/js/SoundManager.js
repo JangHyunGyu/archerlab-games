@@ -66,6 +66,7 @@ class SoundManager {
         this._createPool('sparkle', soundBase + 'sparkle.wav', 6);
         this._createPool('whoosh', soundBase + 'whoosh.wav', 4);
         this._createPool('place', soundBase + 'place.wav', 6);
+        this._createPool('pickup', soundBase + 'pickup.wav', 6);
 
         if (typeof Tone === 'undefined') {
             console.warn('SoundManager: Tone.js not loaded, using WAV-only mode.');
@@ -697,33 +698,33 @@ class SoundManager {
         if (!this._canPlay()) return;
         this.ensureContext();
 
-        // WAV sparkle layer
-        this._playWav('sparkle', 0.4);
+        // WAV glass bottle clink
+        this._playWav('pickup', 0.6);
 
         if (!this._hasTone()) return;
         const now = Tone.now();
 
-        // Pop click
+        // Soft low pop
         this._click.oscillator.type = 'sine';
         this._click.envelope.attack = 0.001;
-        this._click.envelope.decay = 0.012;
-        this._click.envelope.sustain = 0.08;
-        this._click.envelope.release = 0.015;
-        this._click.volume.value = -8;
-        this._click.triggerAttackRelease('F5', 0.035, now);
+        this._click.envelope.decay = 0.025;
+        this._click.envelope.sustain = 0.05;
+        this._click.envelope.release = 0.02;
+        this._click.volume.value = -10;
+        this._click.triggerAttackRelease('G3', 0.04, now);
 
-        // High sparkle
-        this._bell.envelope.decay = 0.01;
-        this._bell.envelope.release = 0.015;
-        this._bell.volume.value = -16;
-        this._bell.triggerAttackRelease('D#6', 0.03, now + 0.008);
+        // Warm mid accent (no high sparkle)
+        this._bell.envelope.decay = 0.02;
+        this._bell.envelope.release = 0.02;
+        this._bell.volume.value = -18;
+        this._bell.triggerAttackRelease('C4', 0.03, now + 0.01);
 
-        // Tiny sub bump
+        // Sub bump
         this._membrane.octaves = 2;
         this._membrane.pitchDecay = 0.02;
-        this._membrane.envelope.decay = 0.03;
-        this._membrane.volume.value = -10;
-        this._membrane.triggerAttackRelease('B1', '64n', now);
+        this._membrane.envelope.decay = 0.04;
+        this._membrane.volume.value = -8;
+        this._membrane.triggerAttackRelease('C2', '64n', now);
     }
 
     // ── LEVEL UP: Triumphant fanfare with punch ─────────────────────
