@@ -1,10 +1,12 @@
-// Sound Manager using Tone.js - Clean & Polished
+// Sound Manager using Tone.js + MP3 effects
 class SoundManager {
     constructor() {
         this.initialized = false;
         this.muted = false;
         this.volume = 1.0;
         this.cooldowns = {};
+        // MP3 풀: 동시 재생을 위해 여러 Audio 인스턴스 관리
+        this.mp3Pools = {};
     }
 
     // 쿨다운 체크: 같은 사운드가 너무 빨리 재트리거되는 것을 방지
@@ -13,6 +15,28 @@ class SoundManager {
         if (this.cooldowns[id] && now - this.cooldowns[id] < minInterval) return false;
         this.cooldowns[id] = now;
         return true;
+    }
+
+    // MP3 오디오 풀 생성 (동시 재생 지원)
+    createMp3Pool(name, src, poolSize = 4) {
+        this.mp3Pools[name] = [];
+        for (let i = 0; i < poolSize; i++) {
+            const audio = new Audio(src);
+            audio.preload = 'auto';
+            this.mp3Pools[name].push(audio);
+        }
+        this.mp3Pools[name]._index = 0;
+    }
+
+    // MP3 풀에서 재생 (볼륨 적용, 라운드로빈)
+    playMp3(name, volumeMultiplier = 1) {
+        const pool = this.mp3Pools[name];
+        if (!pool) return;
+        const audio = pool[pool._index];
+        pool._index = (pool._index + 1) % pool.length;
+        audio.volume = Math.max(0, Math.min(1, this.volume * volumeMultiplier));
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
     }
 
     async init() {
@@ -30,27 +54,14 @@ class SoundManager {
 
             this.limiter = new Tone.Limiter(-3).connect(this.compressor);
 
-            // 배구공 타격음: 멤브레인(둥) + 스냅 노이즈(탁) + 톤 레이어
-            this.hitMembrane = new Tone.MembraneSynth({
-                pitchDecay: 0.008,
-                octaves: 2,
-                oscillator: { type: 'sine' },
-                envelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.04 },
-            }).connect(this.limiter);
+            // === WAV 효과음 로드 (공/슬라임 충돌 & 바운스) ===
+            const soundBase = 'sounds/';
+            this.createMp3Pool('hit', soundBase + 'hit.wav', 6);
+            this.createMp3Pool('wall', soundBase + 'wall.wav', 4);
+            this.createMp3Pool('net', soundBase + 'net.wav', 4);
+            this.createMp3Pool('floor', soundBase + 'floor.wav', 4);
 
-            this.hitSnap = new Tone.NoiseSynth({
-                noise: { type: 'white' },
-                envelope: { attack: 0.001, decay: 0.015, sustain: 0, release: 0.01 },
-            });
-            this.hitSnapFilter = new Tone.Filter(4500, 'bandpass', -12).connect(this.limiter);
-            this.hitSnap.connect(this.hitSnapFilter);
-
-            this.hitBody = new Tone.NoiseSynth({
-                noise: { type: 'pink' },
-                envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.03 },
-            });
-            this.hitBodyFilter = new Tone.Filter(1200, 'lowpass').connect(this.limiter);
-            this.hitBody.connect(this.hitBodyFilter);
+            // === Tone.js 합성 사운드 (점프, 득점, 게임오버, UI) ===
 
             // 점프: 젤리 튀어오르는 뽱 사운드
             this.jumpSynth = new Tone.Synth({
@@ -69,28 +80,6 @@ class SoundManager {
                 oscillator: { type: 'triangle' },
                 envelope: { attack: 0.02, decay: 0.25, sustain: 0.05, release: 0.3 },
             }).connect(this.limiter);
-
-            // 벽 바운스
-            this.wallNoise = new Tone.NoiseSynth({
-                noise: { type: 'pink' },
-                envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
-            });
-            this.wallFilter = new Tone.Filter(600, 'lowpass').connect(this.limiter);
-            this.wallNoise.connect(this.wallFilter);
-
-            // 네트 바운스
-            this.netSynth = new Tone.Synth({
-                oscillator: { type: 'sine' },
-                envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.03 },
-            }).connect(this.limiter);
-
-            // 바닥 착지
-            this.floorNoise = new Tone.NoiseSynth({
-                noise: { type: 'brown' },
-                envelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.04 },
-            });
-            this.floorFilter = new Tone.Filter(400, 'lowpass').connect(this.limiter);
-            this.floorNoise.connect(this.floorFilter);
 
             // 게임오버
             this.gameOverSynth = new Tone.PolySynth(Tone.Synth, {
@@ -117,6 +106,15 @@ class SoundManager {
     updateVolume() {
         const db = this.muted ? -Infinity : Tone.gainToDb(this.volume);
         Tone.getDestination().volume.value = db;
+        // MP3 풀 볼륨도 업데이트
+        for (const name in this.mp3Pools) {
+            const pool = this.mp3Pools[name];
+            for (const audio of pool) {
+                if (typeof audio._index === 'undefined') {
+                    audio.volume = this.muted ? 0 : this.volume;
+                }
+            }
+        }
     }
 
     setMuted(muted) {
@@ -132,18 +130,8 @@ class SoundManager {
     playHit(intensity = 1) {
         if (!this.initialized || this.muted) return;
         if (!this.canPlay('hit', 50)) return;
-        try {
-            const note = 'C' + (2 + Math.floor(intensity * 2));
-            // 멤브레인: 둥 하는 임팩트
-            this.hitMembrane.volume.value = -16 + intensity * 5;
-            this.hitMembrane.triggerAttackRelease(note, 0.06);
-            // 스냅: 탁 하는 고음 어택
-            this.hitSnap.volume.value = -20 + intensity * 4;
-            this.hitSnap.triggerAttackRelease(0.012);
-            // 바디: 묵직한 중저음
-            this.hitBody.volume.value = -22 + intensity * 3;
-            this.hitBody.triggerAttackRelease(0.03);
-        } catch (e) {}
+        // intensity 0~1 → 볼륨 0.5~1.0
+        this.playMp3('hit', 0.5 + intensity * 0.5);
     }
 
     playJump() {
@@ -164,28 +152,19 @@ class SoundManager {
     playWallBounce() {
         if (!this.initialized || this.muted) return;
         if (!this.canPlay('wall', 40)) return;
-        try {
-            this.wallNoise.volume.value = -16;
-            this.wallNoise.triggerAttackRelease(0.03);
-        } catch (e) {}
+        this.playMp3('wall', 0.7);
     }
 
     playNetBounce() {
         if (!this.initialized || this.muted) return;
         if (!this.canPlay('net', 40)) return;
-        try {
-            this.netSynth.volume.value = -14;
-            this.netSynth.triggerAttackRelease('A3', 0.04);
-        } catch (e) {}
+        this.playMp3('net', 0.8);
     }
 
     playFloorBounce() {
         if (!this.initialized || this.muted) return;
         if (!this.canPlay('floor', 60)) return;
-        try {
-            this.floorNoise.volume.value = -10;
-            this.floorNoise.triggerAttackRelease(0.06);
-        } catch (e) {}
+        this.playMp3('floor', 0.9);
     }
 
     playScore(team) {
