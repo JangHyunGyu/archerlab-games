@@ -1,127 +1,88 @@
 /**
- * Tone.js 기반 프로시저럴 사운드 매니저
- * FM/AM 합성, 리버브, 컴프레서, 프리셋 신스 풀로 리얼한 게임 사운드 생성
+ * WAV 기반 SFX + Tone.js BGM 사운드 매니저
+ * SFX: 사전 생성된 WAV 파일을 Audio 풀로 재생 (실시간 합성 오버헤드 없음)
+ * BGM: Tone.js 프로시저럴 합성 유지 (인트로 음악, 게임 BGM)
  */
 export class SoundManager {
     constructor() {
         this.enabled = true;
         this._initialized = false;
-        // Sound throttling: prevents audio glitch from rapid triggers
         this._lastPlayTime = {};
         this._throttleMs = {
             hit: 150, kill: 180, xp: 80, dagger: 150,
             slash: 200, authority: 200, fear: 250,
             playerHit: 250, system: 250, warning: 350,
         };
-        // Global limit: max simultaneous sounds to prevent crackling
         this._activeSounds = 0;
         this._maxActiveSounds = 5;
-        // Pre-rendered SFX buffers
-        this._buffers = {};
-        this._sfxGain = null;
+        // WAV Audio pools
+        this._pools = {};
+    }
+
+    // WAV 오디오 풀 생성 (동시 재생 지원, 라운드로빈)
+    _createPool(name, src, poolSize = 4) {
+        this._pools[name] = [];
+        for (let i = 0; i < poolSize; i++) {
+            const audio = new Audio(src);
+            audio.preload = 'auto';
+            this._pools[name].push(audio);
+        }
+        this._pools[name]._index = 0;
+    }
+
+    // WAV 풀에서 재생
+    _playFromPool(name, volume = 0.7) {
+        const pool = this._pools[name];
+        if (!pool) return;
+        const audio = pool[pool._index];
+        pool._index = (pool._index + 1) % pool.length;
+        audio.volume = Math.max(0, Math.min(1, volume));
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
     }
 
     init() {
         try {
             if (typeof Tone === 'undefined') { this.enabled = false; return; }
 
-            // 오디오 컨텍스트 최적화: 저사양 기기 찌직거림 방지
-            // "playback" 힌트 = 큰 버퍼 사용, 안정적 재생 우선 (약간의 지연 허용)
             try {
                 Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.1 }));
             } catch (e) { /* silent */ }
 
-            // Effects chain: synths → comp → chorus → masterVol → destination
+            // === Tone.js BGM 전용 이펙트 체인 ===
             this._masterVol = new Tone.Volume(4).toDestination();
             this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
                 .connect(this._masterVol).start();
             this._comp = new Tone.Compressor(-24, 4).connect(this._chorus);
             this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
-            // Dedicated delay for spatial FX (weapon trails, echoes)
             this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
 
-            // === Pre-created synth pool ===
-
-            // Impact (bass drum / punch)
-            this._impact = new Tone.MembraneSynth({
-                pitchDecay: 0.04, octaves: 5,
-                envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.08 },
-            }).connect(this._comp);
-
-            // Tonal (melodies, beeps - dry)
-            this._tone = new Tone.Synth({
-                oscillator: { type: 'sine' },
-                envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 },
-            }).connect(this._comp);
-
-            // Tonal wet (reverbed melodies)
-            this._toneWet = new Tone.Synth({
-                oscillator: { type: 'sine' },
-                envelope: { attack: 0.01, decay: 0.15, sustain: 0.1, release: 0.2 },
-            }).connect(this._reverb);
-
-            // FM synth (energy, weapon effects - dry)
-            this._fm = new Tone.FMSynth({
-                harmonicity: 3, modulationIndex: 10,
-                envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 },
-                modulation: { type: 'sine' },
-            }).connect(this._comp);
-
-            // FM synth wet (spacious FX)
-            this._fmWet = new Tone.FMSynth({
-                harmonicity: 2, modulationIndex: 8,
-                envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.3 },
-                modulation: { type: 'sine' },
-            }).connect(this._reverb);
-
-            // Metal synth (metallic clinks, blade rings)
-            this._metal = new Tone.MetalSynth({
-                frequency: 800, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.08 },
-                harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5,
-            }).connect(this._comp);
-
-            // Noise synth → bandpass filter (whooshes, textures)
-            this._noiseFilter = new Tone.Filter(2000, 'bandpass').connect(this._comp);
-            this._noise = new Tone.NoiseSynth({
-                noise: { type: 'white' },
-                envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.08 },
-            }).connect(this._noiseFilter);
-
-            // Sub bass (deep sine)
-            this._sub = new Tone.Synth({
-                oscillator: { type: 'sine' },
-                envelope: { attack: 0.003, decay: 0.15, sustain: 0, release: 0.1 },
-            }).connect(this._comp);
-
-            // Poly synth (chords, arpeggios - reverbed)
-            this._poly = new Tone.PolySynth(Tone.Synth, {
-                maxPolyphony: 8,
-                voice: Tone.Synth,
-                options: {
-                    oscillator: { type: 'sine' },
-                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.15, release: 0.3 },
-                },
-            }).connect(this._reverb);
-
-            // FM Poly (rich chords)
-            this._fmPoly = new Tone.PolySynth(Tone.FMSynth, {
-                maxPolyphony: 6,
-                voice: Tone.FMSynth,
-                options: {
-                    harmonicity: 3, modulationIndex: 5,
-                    envelope: { attack: 0.008, decay: 0.2, sustain: 0.1, release: 0.25 },
-                },
-            }).connect(this._reverb);
+            // === WAV SFX 풀 로드 ===
+            const base = 'sounds/';
+            // 무기 (자주 발생 → 풀 크게)
+            this._createPool('dagger', base + 'dagger.wav', 6);
+            this._createPool('slash', base + 'slash.wav', 6);
+            this._createPool('authority', base + 'authority.wav', 4);
+            this._createPool('fear', base + 'fear.wav', 3);
+            // 전투 (매우 빈번)
+            this._createPool('hit', base + 'hit.wav', 8);
+            this._createPool('kill', base + 'kill.wav', 6);
+            this._createPool('playerHit', base + 'playerHit.wav', 4);
+            // 보상
+            this._createPool('xp', base + 'xp.wav', 8);
+            this._createPool('levelup', base + 'levelup.wav', 3);
+            this._createPool('rankup', base + 'rankup.wav', 2);
+            // 이벤트
+            this._createPool('system', base + 'system.wav', 4);
+            this._createPool('arise', base + 'arise.wav', 2);
+            this._createPool('bossAppear', base + 'bossAppear.wav', 2);
+            this._createPool('warning', base + 'warning.wav', 4);
+            this._createPool('potion', base + 'potion.wav', 3);
+            this._createPool('select', base + 'select.wav', 6);
+            this._createPool('quest', base + 'quest.wav', 3);
+            this._createPool('dungeonBreak', base + 'dungeonBreak.wav', 2);
 
             this._initialized = true;
-
-            // Web Audio API 직접 재생용 (사전 렌더링된 SFX 버퍼 출력)
-            try {
-                this._audioCtx = Tone.getContext().rawContext;
-                this._sfxGain = this._audioCtx.createGain();
-                this._sfxGain.connect(this._audioCtx.destination);
-                this.prerenderSFX(); // async, 백그라운드에서 렌더링 (완료 전에는 라이브 합성 폴백)
-            } catch (e) { /* silent */ }
 
             // 탭 전환 시 자동 일시정지
             this._onVisibilityChange = () => {
@@ -148,41 +109,28 @@ export class SoundManager {
         } catch (e) { /* silent */ }
     }
 
-    /**
-     * 모든 신스를 무음으로 트리거하여 Web Audio 노드를 사전 활성화 (콜드 스타트 노이즈 방지)
-     * 메뉴 화면에서 호출하면 게임 시작 시 찌직거림 없이 깨끗한 사운드 출력
-     */
     warmup() {
+        // WAV 기반이므로 Web Audio 노드 워밍업 불필요 (BGM용 Tone.js만 해당)
         if (!this.enabled || !this._initialized || this._warmedUp) return;
-        try {
-            // 극소 velocity(0.001)로 트리거 → 마스터 볼륨 조작 불필요
-            // 이전 방식(볼륨 -Infinity 설정→복원)은 급격한 신호 변화로 찌직거림 유발
-            const now = Tone.now() + 0.1;
-            const v = 0.001; // 사실상 무음이지만 Web Audio 노드를 활성화
-            try { this._impact.triggerAttackRelease('C1', '32n', now, v); } catch (e) { /* */ }
-            try { this._tone.triggerAttackRelease('C4', '32n', now + 0.01, v); } catch (e) { /* */ }
-            try { this._toneWet.triggerAttackRelease('C4', '32n', now + 0.02, v); } catch (e) { /* */ }
-            try { this._fm.triggerAttackRelease('C4', '32n', now + 0.03, v); } catch (e) { /* */ }
-            try { this._fmWet.triggerAttackRelease('C4', '32n', now + 0.04, v); } catch (e) { /* */ }
-            try { this._metal.triggerAttackRelease('32n', now + 0.05, v); } catch (e) { /* */ }
-            try { this._noise.triggerAttackRelease('32n', now + 0.06, v); } catch (e) { /* */ }
-            try { this._sub.triggerAttackRelease('C2', '32n', now + 0.07, v); } catch (e) { /* */ }
-            try { this._poly.triggerAttackRelease('C4', '32n', now + 0.08, v); } catch (e) { /* */ }
-            try { this._fmPoly.triggerAttackRelease('C4', '32n', now + 0.09, v); } catch (e) { /* */ }
-            this._warmedUp = true;
-        } catch (e) {
-            console.warn('SoundManager warmup failed:', e);
-        }
+        this._warmedUp = true;
     }
 
     get out() { return this._comp; }
     get wet() { return this._reverb; }
 
+    // SFX 볼륨 매핑 (사운드별 적절한 볼륨)
+    _sfxVolume = {
+        dagger: 0.6, slash: 0.7, authority: 0.75, fear: 0.65,
+        hit: 0.7, kill: 0.7, playerHit: 0.8,
+        xp: 0.5, levelup: 0.8, rankup: 0.85,
+        system: 0.6, arise: 0.85, bossAppear: 0.8,
+        warning: 0.7, potion: 0.6, select: 0.5,
+        quest: 0.7, dungeonBreak: 0.8,
+    };
+
     play(soundName) {
         if (!this.enabled || !this._initialized) return;
-        // Global active sounds limit
         if (this._activeSounds >= this._maxActiveSounds) return;
-        // Throttle: skip if called too soon
         const now = performance.now();
         const cooldown = this._throttleMs[soundName] || 0;
         if (cooldown > 0) {
@@ -192,563 +140,15 @@ export class SoundManager {
         this._lastPlayTime[soundName] = now;
         this._activeSounds++;
         setTimeout(() => { this._activeSounds = Math.max(0, this._activeSounds - 1); }, 100);
-        // 사전 렌더링된 버퍼가 있으면 Web Audio로 직접 재생 (실시간 합성 오버헤드 없음)
-        if (this._playBuffer(soundName)) return;
-        // 버퍼 없으면 라이브 합성 폴백 (arise, bossAppear, dungeonBreak 또는 아직 렌더링 미완료)
-        this.resume();
-        // Reset shared synth params to defaults before playing
-        this._resetSynths();
-        try {
-            switch (soundName) {
-                case 'hit': this._playHit(); break;
-                case 'kill': this._playKill(); break;
-                case 'dagger': this._playDagger(); break;
-                case 'slash': this._playSlash(); break;
-                case 'authority': this._playAuthority(); break;
-                case 'fear': this._playFear(); break;
-                case 'xp': this._playXP(); break;
-                case 'levelup': this._playLevelUp(); break;
-                case 'system': this._playSystem(); break;
-                case 'arise': this._playArise(); break;
-                case 'bossAppear': this._playBossAppear(); break;
-                case 'rankup': this._playRankUp(); break;
-                case 'playerHit': this._playPlayerHit(); break;
-                case 'warning': this._playWarning(); break;
-                case 'potion': this._playPotion(); break;
-                case 'select': this._playSelect(); break;
-                case 'quest': this._playQuest(); break;
-                case 'dungeonBreak': this._playDungeonBreak(); break;
-            }
-        } catch (e) { /* silent */ }
+
+        const vol = this._sfxVolume[soundName] || 0.7;
+        this._playFromPool(soundName, vol);
     }
 
-    // Reset shared synth parameters to defaults (prevents cross-contamination)
-    _resetSynths() {
-        try {
-            // FM synth defaults
-            this._fm.harmonicity.value = 3;
-            this._fm.modulationIndex.value = 10;
-            this._fm.envelope.attack = 0.005;
-            this._fm.envelope.decay = 0.1;
-            this._fm.envelope.sustain = 0;
-            this._fm.envelope.release = 0.1;
-            // Sub defaults
-            this._sub.envelope.attack = 0.003;
-            this._sub.envelope.decay = 0.15;
-            this._sub.envelope.sustain = 0;
-            this._sub.envelope.release = 0.1;
-            // Noise defaults
-            this._noise.envelope.attack = 0.005;
-            this._noise.envelope.decay = 0.1;
-            this._noise.envelope.sustain = 0;
-            this._noise.envelope.release = 0.08;
-            this._noiseFilter.type = 'bandpass';
-            this._noiseFilter.frequency.cancelScheduledValues(Tone.now());
-            this._noiseFilter.frequency.value = 2000;
-            // Impact defaults
-            this._impact.pitchDecay = 0.04;
-        } catch (e) { /* silent */ }
-    }
-
-    // ========== PRE-RENDERED SFX BUFFERS ==========
-
-    /**
-     * 오프라인 컨텍스트용 신스 풀 생성 (라이브 풀과 동일한 구성)
-     * Tone.Offline 내부에서 호출 → toDestination()이 오프라인 출력으로 연결됨
-     */
-    _buildOfflinePool() {
-        const comp = new Tone.Compressor(-24, 4).toDestination();
-        const reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(comp);
-        const noiseFilter = new Tone.Filter(2000, 'bandpass').connect(comp);
-        return {
-            impact: new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 5, envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.08 } }).connect(comp),
-            tone: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } }).connect(comp),
-            toneWet: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.15, sustain: 0.1, release: 0.2 } }).connect(reverb),
-            fm: new Tone.FMSynth({ harmonicity: 3, modulationIndex: 10, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }, modulation: { type: 'sine' } }).connect(comp),
-            fmWet: new Tone.FMSynth({ harmonicity: 2, modulationIndex: 8, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.3 }, modulation: { type: 'sine' } }).connect(reverb),
-            metal: new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.08 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).connect(comp),
-            noiseFilter,
-            noise: new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.08 } }).connect(noiseFilter),
-            sub: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.003, decay: 0.15, sustain: 0, release: 0.1 } }).connect(comp),
-            poly: new Tone.PolySynth(Tone.Synth, { maxPolyphony: 8, voice: Tone.Synth, options: { oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.15, release: 0.3 } } }).connect(reverb),
-            fmPoly: new Tone.PolySynth(Tone.FMSynth, { maxPolyphony: 6, voice: Tone.FMSynth, options: { harmonicity: 3, modulationIndex: 5, envelope: { attack: 0.008, decay: 0.2, sustain: 0.1, release: 0.25 } } }).connect(reverb),
-        };
-    }
-
-    /**
-     * 모든 SFX를 Tone.Offline으로 사전 렌더링하여 AudioBuffer로 저장
-     * 게임 중에는 AudioBuffer 재생만 하므로 실시간 합성 오버헤드 제거 → 찌직거림 방지
-     * setTimeout 사용하는 복잡한 사운드(arise, bossAppear, dungeonBreak)는 라이브 합성 유지
-     */
-    async prerenderSFX() {
-        const sfxList = [
-            ['hit', 0.3], ['kill', 0.4], ['dagger', 0.3], ['slash', 0.4],
-            ['authority', 0.6], ['fear', 1.2], ['xp', 0.15], ['levelup', 0.7],
-            ['system', 0.2], ['rankup', 1.0], ['playerHit', 0.4],
-            ['warning', 0.4], ['potion', 0.5], ['select', 0.15], ['quest', 0.6],
-        ];
-        const methodMap = {
-            hit: '_playHit', kill: '_playKill', dagger: '_playDagger',
-            slash: '_playSlash', authority: '_playAuthority', fear: '_playFear',
-            xp: '_playXP', levelup: '_playLevelUp', system: '_playSystem',
-            rankup: '_playRankUp', playerHit: '_playPlayerHit',
-            warning: '_playWarning', potion: '_playPotion', select: '_playSelect',
-            quest: '_playQuest',
-        };
-        const synthKeys = ['impact','tone','toneWet','fm','fmWet','metal','noiseFilter','noise','sub','poly','fmPoly'];
-
-        for (const [name, dur] of sfxList) {
-            try {
-                const buffer = await Tone.Offline(() => {
-                    const pool = this._buildOfflinePool();
-                    // 라이브 신스를 오프라인 풀로 교체 → 기존 _play* 메서드 재사용
-                    const saved = {};
-                    for (const k of synthKeys) {
-                        saved[k] = this[`_${k}`];
-                        this[`_${k}`] = pool[k];
-                    }
-                    this._resetSynths();
-                    this[methodMap[name]]();
-                    // 라이브 신스 복원 (오프라인 신스는 렌더링 완료까지 오디오 그래프에 유지됨)
-                    for (const k of synthKeys) {
-                        this[`_${k}`] = saved[k];
-                    }
-                }, dur);
-                this._buffers[name] = buffer.get();
-            } catch (e) { /* silent */ }
-        }
-    }
-
-    /**
-     * 사전 렌더링된 AudioBuffer 재생 (Web Audio API 직접 사용, Tone.js 불필요)
-     * @returns {boolean} 버퍼 존재 시 true, 없으면 false (라이브 합성 폴백)
-     */
-    _playBuffer(name) {
-        try {
-            const buf = this._buffers[name];
-            if (!buf || !this._audioCtx) return false;
-            const source = this._audioCtx.createBufferSource();
-            source.buffer = buf;
-            source.connect(this._sfxGain);
-            source.start();
-            return true;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    // ========== WEAPON SOUNDS ==========
-
-    // 단검 베기 - swoosh + metallic clink + stereo shimmer
-    _playDagger() {
-        const now = Tone.now();
-        // Fast swoosh (fixed high freq, no rampTo)
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(6000, now);
-        this._noise.envelope.decay = 0.05;
-        this._noise.envelope.release = 0.02;
-        this._noise.triggerAttackRelease('16n', now, 0.35);
-        // Blade ring (sharp metallic)
-        this._metal.frequency = 1100;
-        this._metal.envelope.decay = 0.05;
-        this._metal.triggerAttackRelease('32n', now + 0.01, 0.3);
-        // Sub thud (punch)
-        this._sub.envelope.decay = 0.05;
-        this._sub.triggerAttackRelease('D2', '32n', now, 0.55);
-        // Delayed shimmer for spatial feel
-        this._toneWet.triggerAttackRelease('A6', '64n', now + 0.04, 0.06);
-    }
-
-    // 그림자 검기 - dark energy slash (thick layers + spatial delay)
-    _playSlash() {
-        const now = Tone.now();
-        // Blade FM ring (brighter)
-        this._fm.harmonicity.value = 3.5;
-        this._fm.modulationIndex.value = 14;
-        this._fm.envelope.decay = 0.05;
-        this._fm.triggerAttackRelease('B5', '32n', now, 0.35);
-        // Energy sweep noise (cancel previous, short ramp)
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(800, now);
-        this._noiseFilter.frequency.rampTo(4000, 0.1);
-        this._noiseFilter.type = 'bandpass';
-        this._noise.envelope.decay = 0.1;
-        this._noise.envelope.release = 0.03;
-        this._noise.triggerAttackRelease('16n', now, 0.35);
-        // Deep sub impact (heavier)
-        this._sub.envelope.decay = 0.22;
-        this._sub.triggerAttackRelease('G1', '8n', now, 0.75);
-        // Dark resonance with delay
-        this._fmWet.harmonicity.value = 2;
-        this._fmWet.modulationIndex.value = 6;
-        this._fmWet.triggerAttackRelease('D4', '8n', now + 0.04, 0.22);
-        // High shimmer cascade
-        this._toneWet.triggerAttackRelease('B6', '16n', now + 0.06, 0.12);
-        this._toneWet.triggerAttackRelease('F#7', '32n', now + 0.1, 0.06);
-        // Metal tail
-        this._metal.frequency = 1200;
-        this._metal.envelope.decay = 0.08;
-        this._metal.triggerAttackRelease('16n', now + 0.03, 0.12);
-    }
-
-    // 지배자의 권능 - telekinesis energy burst
-    _playAuthority() {
-        const now = Tone.now();
-        // Charge FM rising
-        this._fm.harmonicity.value = 2;
-        this._fm.modulationIndex.value = 8;
-        this._fm.envelope.attack = 0.05;
-        this._fm.envelope.decay = 0.2;
-        this._fm.triggerAttackRelease('G3', '4n', now, 0.4);
-        this._fm.envelope.attack = 0.005; // reset
-        // Sub rumble
-        this._sub.envelope.decay = 0.25;
-        this._sub.triggerAttackRelease('E1', '4n', now, 0.5);
-        // Psionic noise
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(800, now);
-        this._noiseFilter.frequency.rampTo(3000, 0.3);
-        this._noise.envelope.attack = 0.08;
-        this._noise.envelope.decay = 0.3;
-        this._noise.triggerAttackRelease('4n', now, 0.25);
-        this._noise.envelope.attack = 0.005; // reset
-        // Impact burst
-        this._impact.triggerAttackRelease('C2', '16n', now + 0.18, 0.7);
-        // Reverb tail
-        this._fmWet.triggerAttackRelease('C4', '8n', now + 0.2, 0.15);
-    }
-
-    // 용의 공포 - deep dragon growl
-    _playFear() {
-        const now = Tone.now();
-        // Deep FM growl
-        this._fm.harmonicity.value = 1.5;
-        this._fm.modulationIndex.value = 6;
-        this._fm.envelope.attack = 0.08;
-        this._fm.envelope.decay = 0.4;
-        this._fm.envelope.sustain = 0.2;
-        this._fm.envelope.release = 0.3;
-        this._fm.triggerAttackRelease('A1', '2n', now, 0.4);
-        // Sub bass drone
-        this._sub.envelope.decay = 0.5;
-        this._sub.triggerAttackRelease('D1', '2n', now, 0.5);
-        // Dark filtered noise
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(400, now);
-        this._noiseFilter.frequency.rampTo(80, 0.5);
-        this._noiseFilter.type = 'lowpass';
-        this._noise.envelope.decay = 0.5;
-        this._noise.triggerAttackRelease('2n', now, 0.2);
-        // Dissonant beating
-        this._toneWet.triggerAttackRelease(93, '2n', now, 0.15);
-    }
-
-    // ========== COMBAT SOUNDS ==========
-
-    // 적 타격 - punchy impact with crunch
-    _playHit() {
-        const now = Tone.now();
-        // Heavy membrane hit
-        this._impact.triggerAttackRelease('F1', '32n', now, 0.65);
-        // Crunch noise (fixed freq, no rampTo to avoid zipper noise)
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(1800, now);
-        this._noise.envelope.decay = 0.03;
-        this._noise.triggerAttackRelease('64n', now, 0.3);
-        // Metallic click
-        this._metal.frequency = 800;
-        this._metal.envelope.decay = 0.03;
-        this._metal.triggerAttackRelease('64n', now + 0.005, 0.12);
-        // Micro sub thump
-        this._sub.envelope.decay = 0.04;
-        this._sub.triggerAttackRelease('C2', '64n', now, 0.35);
-    }
-
-    // 적 처치 - burst + reward chime + satisfying pop
-    _playKill() {
-        const now = Tone.now();
-        // Visceral burst (fixed freq, no rampTo)
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(2200, now);
-        this._noise.envelope.decay = 0.04;
-        this._noise.triggerAttackRelease('32n', now, 0.3);
-        // Body pop impact
-        this._impact.triggerAttackRelease('D1', '32n', now, 0.55);
-        // Pop pitch (satisfying high click)
-        this._fm.harmonicity.value = 5;
-        this._fm.modulationIndex.value = 2;
-        this._fm.envelope.decay = 0.02;
-        this._fm.triggerAttackRelease('C6', '64n', now + 0.01, 0.15);
-        // Reward chime (brighter)
-        this._tone.triggerAttackRelease('B5', '32n', now + 0.03, 0.22);
-        this._toneWet.triggerAttackRelease('F#6', '16n', now + 0.05, 0.12);
-    }
-
-    // 플레이어 피격 - heavy slam + warning
-    _playPlayerHit() {
-        const now = Tone.now();
-        // Heavy impact
-        this._impact.pitchDecay = 0.06;
-        this._impact.triggerAttackRelease('D1', '16n', now, 0.8);
-        this._impact.pitchDecay = 0.04; // reset
-        // Cracking noise
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(1500, now);
-        this._noiseFilter.frequency.rampTo(300, 0.06);
-        this._noise.envelope.decay = 0.06;
-        this._noise.triggerAttackRelease('16n', now, 0.45);
-        // FM distortion layer
-        this._fm.harmonicity.value = 4;
-        this._fm.modulationIndex.value = 15;
-        this._fm.triggerAttackRelease('D2', '16n', now, 0.35);
-        // Sub thud
-        this._sub.triggerAttackRelease('A0', '16n', now, 0.5);
-    }
-
-    // ========== REWARD SOUNDS ==========
-
-    // XP 획득 - bell ting
-    _playXP() {
-        const now = Tone.now();
-        this._fm.harmonicity.value = 3;
-        this._fm.modulationIndex.value = 5;
-        this._fm.envelope.decay = 0.04;
-        this._fm.triggerAttackRelease('A6', '64n', now, 0.15);
-        this._tone.triggerAttackRelease('E7', '64n', now + 0.025, 0.1);
-    }
-
-    // 레벨업 - ascending fanfare with sparkle
-    _playLevelUp() {
-        const now = Tone.now();
-        const notes = ['C5', 'E5', 'G5', 'C6'];
-        notes.forEach((note, i) => {
-            this._fmPoly.triggerAttackRelease(note, '4n', now + i * 0.08, 0.38);
-        });
-        // Sparkle cascade
-        this._toneWet.triggerAttackRelease('C7', '16n', now + 0.32, 0.1);
-        this._toneWet.triggerAttackRelease('E7', '32n', now + 0.38, 0.06);
-        // Sub warmth
-        this._sub.envelope.decay = 0.4;
-        this._sub.triggerAttackRelease('C3', '4n', now, 0.22);
-        // Impact punctuation
-        this._impact.triggerAttackRelease('C2', '16n', now + 0.32, 0.3);
-        // Shimmer noise
-        this._noiseFilter.frequency.setValueAtTime(6000, now + 0.3);
-        this._noise.envelope.decay = 0.15;
-        this._noise.triggerAttackRelease('8n', now + 0.3, 0.06);
-    }
-
-    // 랭크업 - heroic ascending arpeggio
-    _playRankUp() {
-        const now = Tone.now();
-        const notes = ['A4', 'C#5', 'E5', 'A5', 'C#6', 'E6'];
-        notes.forEach((note, i) => {
-            this._fmPoly.triggerAttackRelease(note, '4n', now + i * 0.065, 0.3);
-        });
-        // Ethereal pad
-        this._toneWet.triggerAttackRelease('A3', '2n', now + 0.2, 0.1);
-        // Power burst
-        this._impact.triggerAttackRelease('A1', '8n', now + 0.4, 0.35);
-        // Shimmer noise
-        this._noiseFilter.frequency.setValueAtTime(5000, now + 0.38);
-        this._noise.envelope.decay = 0.3;
-        this._noise.triggerAttackRelease('4n', now + 0.38, 0.12);
-    }
-
-    // ========== EVENT SOUNDS ==========
-
-    // 시스템 메시지 - digital double beep
-    _playSystem() {
-        const now = Tone.now();
-        this._fm.harmonicity.value = 3;
-        this._fm.modulationIndex.value = 4;
-        this._fm.envelope.decay = 0.04;
-        this._fm.triggerAttackRelease('A5', '32n', now, 0.2);
-        this._fm.triggerAttackRelease('C#6', '32n', now + 0.055, 0.15);
-    }
-
-    // ARISE! - epic dramatic summon
-    _playArise() {
-        const now = Tone.now();
-        // Deep rumble
-        this._sub.envelope.attack = 0.15;
-        this._sub.envelope.decay = 0.8;
-        this._sub.envelope.sustain = 0.3;
-        this._sub.envelope.release = 0.5;
-        this._sub.triggerAttackRelease('C1', '1n', now, 0.6);
-        // Rising FM
-        this._fm.harmonicity.value = 2;
-        this._fm.modulationIndex.value = 6;
-        this._fm.envelope.attack = 0.1;
-        this._fm.envelope.decay = 0.5;
-        this._fm.triggerAttackRelease('E2', '2n', now + 0.1, 0.3);
-        // Noise buildup
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(150, now);
-        this._noiseFilter.frequency.rampTo(4000, 1.2);
-        this._noiseFilter.type = 'lowpass';
-        this._noise.envelope.attack = 0.3;
-        this._noise.envelope.decay = 1.0;
-        this._noise.triggerAttackRelease('1n', now, 0.25);
-        // Dissonant tension
-        this._toneWet.triggerAttackRelease(130, '2n', now + 0.2, 0.15);
-        // IMPACT at 0.8s
-        setTimeout(() => {
-            try {
-                const t = Tone.now();
-                this._impact.triggerAttackRelease('C1', '8n', t, 0.9);
-                this._metal.frequency = 200;
-                this._metal.envelope.decay = 0.3;
-                this._metal.triggerAttackRelease('4n', t, 0.3);
-                this._noiseFilter.frequency.setValueAtTime(1200, t);
-                this._noise.envelope.decay = 0.2;
-                this._noise.triggerAttackRelease('8n', t, 0.6);
-            } catch (e) { /* silent */ }
-        }, 800);
-        // Ethereal afterglow
-        setTimeout(() => {
-            try {
-                const t = Tone.now();
-                this._fmWet.triggerAttackRelease('C4', '2n', t, 0.12);
-                this._toneWet.triggerAttackRelease('G4', '2n', t, 0.08);
-            } catch (e) { /* silent */ }
-        }, 1000);
-    }
-
-    // 보스 등장 - ominous boss entrance (cinematic)
-    _playBossAppear() {
-        const now = Tone.now();
-        // Ground shake FM (ominous rumble)
-        this._fm.harmonicity.value = 1.5;
-        this._fm.modulationIndex.value = 10;
-        this._fm.envelope.attack = 0.08;
-        this._fm.envelope.decay = 0.4;
-        this._fm.triggerAttackRelease('C#2', '2n', now, 0.55);
-        // Deep sub bass drone
-        this._sub.envelope.attack = 0.05;
-        this._sub.envelope.decay = 0.7;
-        this._sub.triggerAttackRelease('B0', '2n', now, 0.65);
-        // Tension noise sweep
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(600, now);
-        this._noiseFilter.frequency.rampTo(120, 0.6);
-        this._noise.envelope.decay = 0.6;
-        this._noise.triggerAttackRelease('2n', now, 0.22);
-        // Dissonant horn tone
-        this._toneWet.triggerAttackRelease('Bb1', '2n', now + 0.05, 0.18);
-        // Brass stab 1 (sharp)
-        setTimeout(() => {
-            try {
-                const t = Tone.now();
-                this._impact.triggerAttackRelease('E1', '8n', t, 0.65);
-                this._fmWet.triggerAttackRelease('E2', '8n', t, 0.35);
-                this._metal.frequency = 300;
-                this._metal.envelope.decay = 0.12;
-                this._metal.triggerAttackRelease('8n', t, 0.15);
-            } catch (e) { /* silent */ }
-        }, 280);
-        // Brass stab 2 (massive)
-        setTimeout(() => {
-            try {
-                const t = Tone.now();
-                this._impact.triggerAttackRelease('C1', '4n', t, 0.8);
-                this._noiseFilter.frequency.setValueAtTime(700, t);
-                this._noise.envelope.decay = 0.18;
-                this._noise.triggerAttackRelease('8n', t, 0.4);
-                // Minor chord stinger
-                this._fmPoly.triggerAttackRelease(['C3', 'Eb3', 'Gb3'], '4n', t, 0.25);
-            } catch (e) { /* silent */ }
-        }, 550);
-    }
-
-    // 경고 - sharp alarm
-    _playWarning() {
-        const now = Tone.now();
-        this._fm.harmonicity.value = 3;
-        this._fm.modulationIndex.value = 8;
-        this._fm.triggerAttackRelease('E5', '32n', now, 0.3);
-        this._fm.triggerAttackRelease('E5', '32n', now + 0.16, 0.3);
-    }
-
-    // 포션 - bubble + healing
-    _playPotion() {
-        const now = Tone.now();
-        const notes = ['C5', 'E5', 'G5', 'B5'];
-        notes.forEach((note, i) => {
-            this._fmPoly.triggerAttackRelease(note, '16n', now + i * 0.055, 0.2);
-        });
-        // Healing shimmer noise
-        this._noiseFilter.frequency.setValueAtTime(4000, now);
-        this._noise.envelope.decay = 0.2;
-        this._noise.triggerAttackRelease('8n', now, 0.08);
-        // Warm resolve
-        this._toneWet.triggerAttackRelease('E5', '8n', now + 0.2, 0.12);
-    }
-
-    // UI 선택 - quick click
-    _playSelect() {
-        const now = Tone.now();
-        this._fm.harmonicity.value = 3;
-        this._fm.modulationIndex.value = 3;
-        this._fm.envelope.decay = 0.03;
-        this._fm.triggerAttackRelease('E5', '64n', now, 0.2);
-    }
-
-    // 퀘스트 완료 - achievement jingle
-    _playQuest() {
-        const now = Tone.now();
-        const notes = ['E5', 'A5', 'C#6', 'E6'];
-        notes.forEach((note, i) => {
-            this._fmPoly.triggerAttackRelease(note, '8n', now + i * 0.08, 0.25);
-        });
-        // Shimmer
-        this._toneWet.triggerAttackRelease('E7', '16n', now + 0.3, 0.06);
-    }
-
-    // 던전 브레이크 - earthquake + alarm
-    _playDungeonBreak() {
-        const now = Tone.now();
-        // Earthquake rumble
-        this._sub.envelope.attack = 0.2;
-        this._sub.envelope.decay = 0.8;
-        this._sub.envelope.sustain = 0.3;
-        this._sub.envelope.release = 0.6;
-        this._sub.triggerAttackRelease('B0', '1n', now, 0.7);
-        // Debris noise
-        this._noiseFilter.frequency.cancelScheduledValues(now);
-        this._noiseFilter.frequency.setValueAtTime(400, now);
-        this._noiseFilter.frequency.rampTo(60, 1.0);
-        this._noiseFilter.type = 'lowpass';
-        this._noise.envelope.attack = 0.2;
-        this._noise.envelope.decay = 0.8;
-        this._noise.triggerAttackRelease('1n', now, 0.35);
-        // Alarm siren
-        setTimeout(() => {
-            try {
-                const t = Tone.now();
-                this._fm.harmonicity.value = 3;
-                this._fm.modulationIndex.value = 10;
-                this._fm.triggerAttackRelease('E4', '4n', t, 0.25);
-                setTimeout(() => this._fm.triggerAttackRelease('B3', '4n', Tone.now(), 0.25), 300);
-            } catch (e) { /* silent */ }
-        }, 350);
-        // Structural collapse
-        setTimeout(() => {
-            try {
-                const t = Tone.now();
-                this._impact.triggerAttackRelease('C1', '4n', t, 0.8);
-                this._metal.frequency = 150;
-                this._metal.envelope.decay = 0.35;
-                this._metal.triggerAttackRelease('4n', t, 0.2);
-            } catch (e) { /* silent */ }
-        }, 650);
-    }
-
-    // ========== INTRO MUSIC ==========
+    // ========== INTRO MUSIC (Tone.js) ==========
 
     async playIntroMusic() {
         if (!this._initialized || !this.enabled) return;
-        // AudioContext가 running 상태인지 확인 (suspended면 무음이므로 대기)
         try { await Tone.start(); } catch (e) { /* */ }
         if (Tone.context.state !== 'running') return;
         this.stopIntroMusic();
@@ -756,26 +156,24 @@ export class SoundManager {
         this._introIntervals = [];
 
         try {
-            // Master gain for intro (fade in)
             const introGain = new Tone.Volume(-30).connect(this._comp);
             introGain.volume.rampTo(-10, 4);
             this._introGain = introGain;
 
-            // 1. Low drone - filtered sawtooth C2
+            // 1. Low drone
             const droneOsc = new Tone.Oscillator({ frequency: 65.41, type: 'sawtooth' });
             const droneFilter = new Tone.Filter({ frequency: 350, type: 'lowpass', Q: 6 });
             const droneVol = new Tone.Volume(-10);
             droneOsc.connect(droneFilter);
             droneFilter.connect(droneVol);
             droneVol.connect(introGain);
-            // LFO on filter
             const lfo = new Tone.LFO({ frequency: 0.1, min: 200, max: 550 });
             lfo.connect(droneFilter.frequency);
             lfo.start();
             droneOsc.start();
             this._introNodes.push(droneOsc, lfo, droneFilter, droneVol);
 
-            // 2. Sub bass sine C1
+            // 2. Sub bass
             const subOsc = new Tone.Oscillator({ frequency: 32.7, type: 'sine' });
             const subVol = new Tone.Volume(-16);
             subOsc.connect(subVol);
@@ -783,7 +181,7 @@ export class SoundManager {
             subOsc.start();
             this._introNodes.push(subOsc, subVol);
 
-            // 3. Minor drone Eb2
+            // 3. Minor drone
             const drone2 = new Tone.Oscillator({ frequency: 77.78, type: 'sine' });
             const drone2Vol = new Tone.Volume(-18);
             drone2.connect(drone2Vol);
@@ -791,13 +189,13 @@ export class SoundManager {
             drone2.start();
             this._introNodes.push(drone2, drone2Vol);
 
-            // 4. Dark FM arpeggio (C minor pentatonic)
+            // 4. Dark FM arpeggio
             const arpSynth = new Tone.FMSynth({
                 harmonicity: 3, modulationIndex: 5,
                 envelope: { attack: 0.03, decay: 0.15, sustain: 0.08, release: 0.25 },
             });
-            arpSynth.connect(this._reverb); // 공유 리버브 재사용
-            arpSynth.connect(introGain);    // 드라이 시그널도 믹스
+            arpSynth.connect(this._reverb);
+            arpSynth.connect(introGain);
             this._introArpSynth = arpSynth;
 
             const notes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4'];
@@ -811,7 +209,7 @@ export class SoundManager {
             }, 600);
             this._introIntervals.push(arpInterval);
 
-            // 5. Subtle percussion noise
+            // 5. Subtle percussion
             const percNoise = new Tone.NoiseSynth({
                 noise: { type: 'white' },
                 envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.03 },
@@ -830,7 +228,7 @@ export class SoundManager {
             }, 2400);
             this._introIntervals.push(percInterval);
 
-            // 6. Tension riser every 8 seconds
+            // 6. Tension riser
             const riserInterval = setInterval(() => {
                 if (!this._initialized) return;
                 try {
@@ -858,12 +256,10 @@ export class SoundManager {
     }
 
     stopIntroMusic() {
-        // 인터벌 먼저 정리 (새 노트 트리거 방지)
         if (this._introIntervals) {
             this._introIntervals.forEach(id => clearInterval(id));
             this._introIntervals = [];
         }
-        // 게인을 페이드아웃한 뒤 노드 dispose (즉시 stop → 클릭/팝 노이즈 방지)
         if (this._introGain) {
             try { this._introGain.volume.rampTo(-60, 0.3); } catch (e) { /* silent */ }
         }
@@ -873,7 +269,6 @@ export class SoundManager {
         this._introNodes = [];
         this._introArpSynth = null;
         this._introGain = null;
-        // 페이드아웃 완료 후 dispose
         setTimeout(() => {
             nodes.forEach(node => {
                 try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
@@ -884,7 +279,7 @@ export class SoundManager {
         }, 400);
     }
 
-    // ========== IN-GAME BGM ==========
+    // ========== IN-GAME BGM (Tone.js) ==========
 
     async startGameBGM() {
         if (!this._initialized || !this.enabled) return;
@@ -895,7 +290,6 @@ export class SoundManager {
         this._bgmIntervals = [];
 
         try {
-            // Master gain for game BGM (콜드 스타트 노이즈 마스킹: 매우 낮은 볼륨에서 시작)
             const bgmGain = new Tone.Volume(-60).connect(this._comp);
             bgmGain.volume.rampTo(-10, 1.5);
             this._bgmGain = bgmGain;
@@ -904,8 +298,7 @@ export class SoundManager {
             const bpm = 100;
             const beatMs = 60000 / bpm;
 
-            // === 1단계: 드론 + 서브베이스 (즉시) ===
-            // 1. Dark ambient drone — Cm (C + Eb)
+            // === Phase 1: Drone + Sub ===
             const droneOsc = new Tone.Oscillator({ frequency: 65.41, type: 'triangle' });
             const droneFilter = new Tone.Filter({ frequency: 280, type: 'lowpass', Q: 4 });
             const droneVol = new Tone.Volume(-12);
@@ -914,13 +307,11 @@ export class SoundManager {
             droneVol.connect(bgmGain);
             const droneLfo = new Tone.LFO({ frequency: 0.06, min: 180, max: 400 });
             droneLfo.connect(droneFilter.frequency);
-            // 오디오 그래프 안정화 후 오실레이터 시작 (콜드 스타트 클릭/팝 방지)
             const bgmStart = Tone.now() + 0.05;
             droneLfo.start(bgmStart);
             droneOsc.start(bgmStart);
             this._bgmNodes.push(droneOsc, droneFilter, droneVol, droneLfo);
 
-            // 2. Sub bass pulse
             const subOsc = new Tone.Oscillator({ frequency: 32.7, type: 'sine' });
             const subVol = new Tone.Volume(-18);
             const subLfo = new Tone.LFO({ frequency: 0.5, min: -22, max: -14 });
@@ -931,11 +322,10 @@ export class SoundManager {
             subOsc.start(bgmStart);
             this._bgmNodes.push(subOsc, subVol, subLfo);
 
-            // === 2단계: 킥 + 하이햇 (500ms 후) ===
+            // === Phase 2: Kick + Hi-hat (500ms) ===
             this._bgmTimeouts.push(setTimeout(() => {
                 if (!this._initialized) return;
                 try {
-                    // 3. Battle rhythm — kick pattern
                     const kickSynth = new Tone.MembraneSynth({
                         pitchDecay: 0.03, octaves: 4,
                         envelope: { attack: 0.001, decay: 0.12, sustain: 0, release: 0.06 },
@@ -957,7 +347,6 @@ export class SoundManager {
                     }, beatMs / 2);
                     this._bgmIntervals.push(kickInterval);
 
-                    // 6. Hi-hat texture
                     const hatNoise = new Tone.NoiseSynth({
                         noise: { type: 'white' },
                         envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
@@ -983,11 +372,10 @@ export class SoundManager {
                 } catch (e) { /* silent */ }
             }, 500));
 
-            // === 3단계: 아르페지오 + 패드 (1200ms 후) ===
+            // === Phase 3: Arpeggio + Pad (1200ms) ===
             this._bgmTimeouts.push(setTimeout(() => {
                 if (!this._initialized) return;
                 try {
-                    // 4. Dark arpeggio
                     const arpSynth = new Tone.FMSynth({
                         harmonicity: 2, modulationIndex: 3,
                         envelope: { attack: 0.02, decay: 0.12, sustain: 0.05, release: 0.2 },
@@ -1009,7 +397,6 @@ export class SoundManager {
                     }, beatMs);
                     this._bgmIntervals.push(arpInterval);
 
-                    // 5. Atmospheric pad layer
                     const padSynth = new Tone.PolySynth(Tone.Synth, {
                         maxPolyphony: 8,
                         voice: Tone.Synth,
@@ -1082,9 +469,14 @@ export class SoundManager {
         if (this._masterVol) {
             this._masterVol.volume.value = this.enabled ? 4 : -Infinity;
         }
-        // 사전 렌더링된 SFX 버퍼도 음소거/복원
-        if (this._sfxGain) {
-            this._sfxGain.gain.value = this.enabled ? 1 : 0;
+        // WAV SFX 풀도 음소거/복원
+        for (const name in this._pools) {
+            const pool = this._pools[name];
+            for (let i = 0; i < pool.length; i++) {
+                if (pool[i] instanceof Audio) {
+                    pool[i].muted = !this.enabled;
+                }
+            }
         }
         return this.enabled;
     }
