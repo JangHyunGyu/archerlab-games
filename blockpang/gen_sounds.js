@@ -695,6 +695,54 @@ function genPlace() {
     return normalize(reverb(mixMulti([thump, 1], [sub, 0.8], [click, 0.6], [crystal, 0.5], [snap, 0.4]), 0.1, 'small'));
 }
 
+function genPickup() {
+    // Glass bottle clinking / lifting sound — gentle rattling glass with warm resonance
+    const dur = 0.22;
+
+    // Glass clink 1 — mid-frequency resonant tap
+    const clink1 = makeBuffer(dur);
+    for (let i = 0; i < clink1.length; i++) {
+        const t = i / RATE;
+        // Glass resonance around 800-1200Hz (pleasant mid range, not shrill)
+        const f1 = 880, f2 = 1100;
+        clink1[i] = (Math.sin(t * 2 * Math.PI * f1) * 0.6 +
+                     Math.sin(t * 2 * Math.PI * f2) * 0.4) *
+                     Math.exp(-t * 25);
+    }
+
+    // Glass clink 2 — slightly delayed second tap (달그락 double-tap feel)
+    const clink2 = makeBuffer(dur);
+    const delay2 = 0.04; // 40ms later
+    for (let i = 0; i < clink2.length; i++) {
+        const t = i / RATE;
+        if (t < delay2) continue;
+        const td = t - delay2;
+        const f1 = 950, f2 = 1250;
+        clink2[i] = (Math.sin(td * 2 * Math.PI * f1) * 0.5 +
+                     Math.sin(td * 2 * Math.PI * f2) * 0.3) *
+                     Math.exp(-td * 30) * 0.7;
+    }
+
+    // Soft body thud — hand touching glass
+    const thud = makeBuffer(dur);
+    for (let i = 0; i < thud.length; i++) {
+        const t = i / RATE;
+        thud[i] = Math.sin(t * 2 * Math.PI * 150) * Math.exp(-t * 45);
+    }
+
+    // Tiny filtered noise rattle
+    const rattle = makeBuffer(dur);
+    for (let i = 0; i < rattle.length; i++) {
+        const t = i / RATE;
+        rattle[i] = (Math.random() * 2 - 1) * Math.exp(-t * 40) * 0.3;
+    }
+    const rattleFiltered = lpf(hpf(rattle, 400), 2000);
+
+    return normalize(
+        reverb(mixMulti([clink1, 0.5], [clink2, 0.4], [thud, 0.6], [rattleFiltered, 0.3]), 0.15, 'small')
+    );
+}
+
 function genComboEscalate() {
     // Escalating power sound for high combos - more intense than combo_hit
     const dur = 0.5;
@@ -797,6 +845,7 @@ const sounds = {
     'sparkle': genSparkle,
     'whoosh': genWhoosh,
     'place': genPlace,
+    'pickup': genPickup,
     'combo_escalate': genComboEscalate,
 };
 
