@@ -40,6 +40,8 @@ export class ShadowDagger extends WeaponBase {
         const target = this.player.getClosestEnemy(6000);
         if (!target) return;
 
+        if (this.scene.soundManager) this.scene.soundManager.play('dagger');
+
         const px = this.player.x;
         const py = this.player.y;
         const angle = Phaser.Math.Angle.Between(px, py, target.x, target.y);
