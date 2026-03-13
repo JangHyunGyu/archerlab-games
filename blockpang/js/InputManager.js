@@ -261,6 +261,9 @@ class InputManager {
         const slotIdx = this.dragPieceIndex;
         const target = this.game.tray.getSlotGlobalCenter(slotIdx);
 
+        // Stop ghost updates immediately to prevent re-showing during animation
+        this.dragging = false;
+
         if (!this.dragContainer) {
             this._cleanupDrag();
             this.game.tray.showPiece(slotIdx);
@@ -295,7 +298,6 @@ class InputManager {
                     container.destroy({ children: true });
                     if (glow) glow.destroy();
                     tray.showPiece(slotIdx);
-                    self.dragging = false;
                     self.dragPieceIndex = -1;
                     self.dragPieceData = null;
                     self.dragContainer = null;
