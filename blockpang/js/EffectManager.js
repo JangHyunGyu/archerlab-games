@@ -12,7 +12,7 @@ class EffectManager {
 
         // ── Particle Graphics pool ──
         this._particlePool = [];
-        this._POOL_MAX = 200;
+        this._POOL_MAX = 400;
 
         // ── Text object pool for score/combo/bonus popups ──
         this._textPool = [];
@@ -133,36 +133,67 @@ class EffectManager {
         }
     }
 
-    // ── Spawn particles from a world position ──
+    // ── Spawn particles from a world position (EXPLOSIVE version) ──
     spawnCellParticles(worldX, worldY, color, count = 8) {
         const cellSize = this.game.cellSize;
+        const cx = worldX + cellSize / 2;
+        const cy = worldY + cellSize / 2;
+
         for (let i = 0; i < count; i++) {
-            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 1.0;
-            const speed = 2 + Math.random() * 4;
-            const size = 2 + Math.random() * (cellSize * 0.18);
+            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 1.2;
+            const speed = 3 + Math.random() * 6;
+            const size = 2 + Math.random() * (cellSize * 0.22);
 
             const gfx = this._getParticleGfx();
 
-            // Outer glow
-            gfx.circle(0, 0, size * 1.5).fill({ color, alpha: 0.3 });
-            // Main particle
+            // Outer glow (bigger, more vibrant)
+            gfx.circle(0, 0, size * 2.0).fill({ color, alpha: 0.25 });
+            // Main particle (slightly larger)
             gfx.roundRect(-size / 2, -size / 2, size, size, size * 0.3).fill({ color });
-            // Bright center
-            gfx.circle(0, 0, size * 0.25).fill({ color: 0xFFFFFF, alpha: 0.7 });
+            // Bright white-hot center
+            gfx.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.85 });
 
-            gfx.position.set(worldX + cellSize / 2, worldY + cellSize / 2);
+            gfx.position.set(cx, cy);
             this.container.addChild(gfx);
 
             this.particles.push({
                 gfx,
                 vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 2.5,
-                rotSpeed: (Math.random() - 0.5) * 0.2,
-                gravity: 0.12,
-                baseScale: 0.8 + Math.random() * 0.4,
-                shrink: 0.7,
-                life: 500 + Math.random() * 400,
-                maxLife: 900,
+                vy: Math.sin(angle) * speed - 3.5,
+                rotSpeed: (Math.random() - 0.5) * 0.35,
+                gravity: 0.14,
+                baseScale: 0.9 + Math.random() * 0.5,
+                shrink: 0.65,
+                life: 600 + Math.random() * 500,
+                maxLife: 1100,
+            });
+        }
+
+        // Extra ember particles (tiny, fast, many)
+        const emberCount = Math.ceil(count * 0.6);
+        for (let i = 0; i < emberCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 5 + Math.random() * 8;
+            const size = 1 + Math.random() * 1.5;
+
+            const gfx = this._getParticleGfx();
+            gfx.circle(0, 0, size).fill({ color: 0xFFFFFF, alpha: 0.9 });
+            gfx.circle(0, 0, size * 2.5).fill({ color, alpha: 0.3 });
+
+            gfx.position.set(cx + (Math.random() - 0.5) * cellSize * 0.3,
+                             cy + (Math.random() - 0.5) * cellSize * 0.3);
+            this.container.addChild(gfx);
+
+            this.particles.push({
+                gfx,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 2,
+                rotSpeed: 0,
+                gravity: 0.06,
+                baseScale: 0.6 + Math.random() * 0.5,
+                shrink: 0.8,
+                life: 300 + Math.random() * 400,
+                maxLife: 700,
             });
         }
     }
@@ -170,30 +201,31 @@ class EffectManager {
     // ── Sparkle particles (floating upward, no gravity) ──
     spawnSparkles(worldX, worldY, color, count = 5) {
         for (let i = 0; i < count; i++) {
-            const size = 1 + Math.random() * 3;
+            const size = 1.5 + Math.random() * 3.5;
             const gfx = this._getParticleGfx();
 
-            // Star shape sparkle
-            gfx.circle(0, 0, size).fill({ color: 0xFFFFFF, alpha: 0.8 });
-            gfx.circle(0, 0, size * 2).fill({ color, alpha: 0.4 });
+            // Bright sparkle with outer glow
+            gfx.circle(0, 0, size * 0.6).fill({ color: 0xFFFFFF, alpha: 0.9 });
+            gfx.circle(0, 0, size * 1.5).fill({ color, alpha: 0.5 });
+            gfx.circle(0, 0, size * 2.5).fill({ color, alpha: 0.15 });
 
             gfx.position.set(
-                worldX + (Math.random() - 0.5) * 30,
-                worldY + (Math.random() - 0.5) * 30
+                worldX + (Math.random() - 0.5) * 40,
+                worldY + (Math.random() - 0.5) * 40
             );
             this.container.addChild(gfx);
 
             this.particles.push({
                 gfx,
-                vx: (Math.random() - 0.5) * 0.5,
-                vy: -1 - Math.random() * 2,
+                vx: (Math.random() - 0.5) * 1.0,
+                vy: -1.5 - Math.random() * 2.5,
                 rotSpeed: 0,
-                gravity: -0.02, // Float upward
-                baseScale: 0.5 + Math.random() * 0.8,
-                shrink: 0.5,
+                gravity: -0.03, // Float upward faster
+                baseScale: 0.5 + Math.random() * 0.9,
+                shrink: 0.45,
                 fadeIn: true,
-                life: 600 + Math.random() * 600,
-                maxLife: 1200,
+                life: 700 + Math.random() * 700,
+                maxLife: 1400,
             });
         }
     }
@@ -201,14 +233,15 @@ class EffectManager {
     // ── Star-shaped burst particles (for high combos) ──
     spawnStarParticles(worldX, worldY, color, count = 10) {
         for (let i = 0; i < count; i++) {
-            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.5;
-            const speed = 3 + Math.random() * 5;
-            const size = 2 + Math.random() * 4;
+            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.6;
+            const speed = 4 + Math.random() * 7;
+            const size = 2.5 + Math.random() * 5;
             const gfx = this._getParticleGfx();
 
-            // 4-pointed star shape
+            // 4-pointed star shape with glow
+            gfx.star(0, 0, 4, size * 1.8, size * 0.5).fill({ color, alpha: 0.2 });
             gfx.star(0, 0, 4, size, size * 0.4).fill({ color, alpha: 0.9 });
-            gfx.circle(0, 0, size * 0.3).fill({ color: 0xFFFFFF, alpha: 0.8 });
+            gfx.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.9 });
 
             gfx.position.set(worldX, worldY);
             this.container.addChild(gfx);
@@ -217,17 +250,17 @@ class EffectManager {
                 gfx,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
-                rotSpeed: (Math.random() - 0.5) * 0.3,
-                gravity: 0.05,
-                baseScale: 0.8 + Math.random() * 0.6,
-                shrink: 0.6,
-                life: 600 + Math.random() * 500,
-                maxLife: 1100,
+                rotSpeed: (Math.random() - 0.5) * 0.4,
+                gravity: 0.04,
+                baseScale: 0.9 + Math.random() * 0.7,
+                shrink: 0.55,
+                life: 700 + Math.random() * 600,
+                maxLife: 1300,
             });
         }
     }
 
-    // ── Line clear effect with wave ──
+    // ── Line clear effect with EXPLOSIVE wave ──
     playClearEffect(clearedCells, boardGlobalPos) {
         const cellSize = this.game.cellSize;
         const lineCount = clearedCells.length > 0
@@ -243,6 +276,9 @@ class EffectManager {
         cx = boardGlobalPos.x + (cx / sorted.length) * cellSize + cellSize / 2;
         cy = boardGlobalPos.y + (cy / sorted.length) * cellSize + cellSize / 2;
 
+        // Intensity multiplier based on line count
+        const intensity = Math.min(lineCount, 4);
+
         sorted.forEach((cell, idx) => {
             const wx = boardGlobalPos.x + cell.col * cellSize;
             const wy = boardGlobalPos.y + cell.row * cellSize;
@@ -250,57 +286,118 @@ class EffectManager {
             const color = blockColor.particle || 0xFFFFFF;
 
             setTimeout(() => {
-                // Original sparkle particles
-                this.spawnCellParticles(wx, wy, color, 4 + lineCount);
+                // ── 1. Sparkle/glow particles (more with higher line count) ──
+                this.spawnCellParticles(wx, wy, color, 6 + intensity * 3);
 
-                // ── Explosion debris: block shatters into fragments ──
-                const debrisCount = 2 + Math.min(lineCount, 4);
+                // ── 2. Cell flash: bright white flash at cell position ──
                 const cellCx = wx + cellSize / 2;
                 const cellCy = wy + cellSize / 2;
-                // Direction away from center of cleared area
+                const flash = this._getParticleGfx();
+                const flashSize = cellSize * (0.6 + intensity * 0.15);
+                flash.circle(0, 0, flashSize).fill({ color: 0xFFFFFF, alpha: 0.7 });
+                flash.circle(0, 0, flashSize * 0.5).fill({ color, alpha: 0.5 });
+                flash.position.set(cellCx, cellCy);
+                this.container.addChild(flash);
+                this.particles.push({
+                    gfx: flash,
+                    vx: 0, vy: 0, rotSpeed: 0, gravity: 0,
+                    baseScale: 0.5,
+                    shrink: -1.5, // GROW then fade
+                    life: 150 + intensity * 30,
+                    maxLife: 150 + intensity * 30,
+                });
+
+                // ── 3. EXPLOSION DEBRIS: block shatters into many fragments ──
+                const debrisCount = 4 + intensity * 3; // Much more debris!
                 const dirX = cellCx - cx;
                 const dirY = cellCy - cy;
-                const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
 
                 for (let d = 0; d < debrisCount; d++) {
-                    const fragW = cellSize * (0.15 + Math.random() * 0.25);
-                    const fragH = cellSize * (0.15 + Math.random() * 0.25);
+                    const fragW = cellSize * (0.1 + Math.random() * 0.3);
+                    const fragH = cellSize * (0.1 + Math.random() * 0.3);
                     const frag = this._getParticleGfx();
 
                     // Fragment with same block color
                     frag.roundRect(-fragW / 2, -fragH / 2, fragW, fragH, 1)
                         .fill({ color: blockColor.main });
-                    // Bright edge highlight
-                    frag.roundRect(-fragW * 0.3, -fragH * 0.3, fragW * 0.6, fragH * 0.6, 1)
-                        .fill({ color: blockColor.light, alpha: 0.5 });
+                    // Bright edge highlight (sharper, more visible)
+                    frag.roundRect(-fragW * 0.35, -fragH * 0.35, fragW * 0.7, fragH * 0.7, 1)
+                        .fill({ color: blockColor.light || 0xFFFFFF, alpha: 0.6 });
+                    // Hot white center
+                    if (Math.random() < 0.4) {
+                        frag.circle(0, 0, Math.min(fragW, fragH) * 0.2)
+                            .fill({ color: 0xFFFFFF, alpha: 0.5 });
+                    }
 
-                    // Start from random position within the cell
+                    // Start from position within the cell
                     frag.position.set(
-                        cellCx + (Math.random() - 0.5) * cellSize * 0.5,
-                        cellCy + (Math.random() - 0.5) * cellSize * 0.5
+                        cellCx + (Math.random() - 0.5) * cellSize * 0.6,
+                        cellCy + (Math.random() - 0.5) * cellSize * 0.6
                     );
                     this.container.addChild(frag);
 
-                    // Velocity: outward from center + random spread
-                    const spread = 0.8 + Math.random() * 0.5;
-                    const speedMul = 1.5 + lineCount * 0.8;
-                    const angle = Math.atan2(dirY, dirX) + (Math.random() - 0.5) * 1.8;
-                    const speed = (3 + Math.random() * 4) * speedMul;
+                    // Velocity: EXPLOSIVE outward from center
+                    const speedMul = 2.0 + intensity * 1.2;
+                    const angle = Math.atan2(dirY, dirX) + (Math.random() - 0.5) * 2.2;
+                    const speed = (4 + Math.random() * 6) * speedMul;
 
                     this.particles.push({
                         gfx: frag,
-                        vx: Math.cos(angle) * speed * spread,
-                        vy: Math.sin(angle) * speed * spread - 3 - Math.random() * 2,
-                        rotSpeed: (Math.random() - 0.5) * 0.4,
-                        gravity: 0.18 + Math.random() * 0.08,
-                        baseScale: 0.6 + Math.random() * 0.5,
-                        shrink: 0.6,
+                        vx: Math.cos(angle) * speed * (0.7 + Math.random() * 0.6),
+                        vy: Math.sin(angle) * speed * (0.7 + Math.random() * 0.6) - 4 - Math.random() * 3,
+                        rotSpeed: (Math.random() - 0.5) * 0.6,
+                        gravity: 0.2 + Math.random() * 0.1,
+                        baseScale: 0.5 + Math.random() * 0.6,
+                        shrink: 0.55,
+                        life: 500 + Math.random() * 600,
+                        maxLife: 1100,
+                    });
+                }
+
+                // ── 4. Micro-debris dust cloud (tiny particles, lots) ──
+                const dustCount = 3 + intensity * 2;
+                for (let d = 0; d < dustCount; d++) {
+                    const dust = this._getParticleGfx();
+                    const dustSize = 1 + Math.random() * 2;
+                    dust.circle(0, 0, dustSize).fill({ color: blockColor.light || color, alpha: 0.6 });
+                    dust.position.set(
+                        cellCx + (Math.random() - 0.5) * cellSize,
+                        cellCy + (Math.random() - 0.5) * cellSize
+                    );
+                    this.container.addChild(dust);
+
+                    const dAngle = Math.random() * Math.PI * 2;
+                    const dSpeed = 1 + Math.random() * 3;
+                    this.particles.push({
+                        gfx: dust,
+                        vx: Math.cos(dAngle) * dSpeed,
+                        vy: Math.sin(dAngle) * dSpeed - 1,
+                        rotSpeed: 0,
+                        gravity: 0.03,
+                        baseScale: 0.8 + Math.random() * 0.4,
+                        shrink: 0.7,
+                        fadeIn: true,
                         life: 400 + Math.random() * 500,
                         maxLife: 900,
                     });
                 }
-            }, idx * 12);
+            }, idx * 10); // Slightly faster wave
         });
+
+        // ── 5. Per-clear-size bonus effects ──
+        if (intensity >= 2) {
+            // Shockwave at center for 2+ lines
+            setTimeout(() => {
+                this.playShockwave(cx, cy, intensity);
+            }, sorted.length * 5);
+        }
+
+        if (intensity >= 3) {
+            // Extra sparkle shower for 3+ lines
+            setTimeout(() => {
+                this.spawnSparkles(cx, cy, 0xFFFFFF, 10 + intensity * 5);
+            }, sorted.length * 8);
+        }
     }
 
     // ── Place effect (scale bounce + glow pulse) ──
@@ -1284,45 +1381,69 @@ class EffectManager {
     // ── Shockwave: expanding distortion ring on line clear ──
     playShockwave(x, y, lineCount) {
         const intensity = Math.min(lineCount, 4);
-        const maxRadius = 80 + intensity * 40;
+        const maxRadius = 100 + intensity * 50;
 
-        // Outer shockwave ring
+        // Primary shockwave ring (bigger, brighter)
         const wave = new PIXI.Graphics();
         wave.position.set(x, y);
         this.container.addChild(wave);
 
         this.tweens.push({
             elapsed: 0,
-            duration: 600,
+            duration: 650,
             update(dt) {
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 const radius = easeOutQuart(t) * maxRadius;
-                const alpha = (1 - t) * 0.6;
-                const thickness = (4 + intensity) * (1 - t * 0.6);
+                const alpha = (1 - t) * 0.7;
+                const thickness = (5 + intensity * 1.5) * (1 - t * 0.5);
                 wave.clear();
-                // Outer ring
-                wave.circle(0, 0, radius).stroke({ width: thickness, color: 0xFFFFFF, alpha: alpha * 0.4 });
+                // Outer ring (brighter)
+                wave.circle(0, 0, radius).stroke({ width: thickness, color: 0xFFFFFF, alpha: alpha * 0.5 });
                 // Inner bright ring
-                wave.circle(0, 0, radius * 0.85).stroke({ width: thickness * 0.5, color: 0x44FF88, alpha: alpha * 0.6 });
-                // Fill glow
-                wave.circle(0, 0, radius).fill({ color: 0xFFFFFF, alpha: alpha * 0.03 });
+                wave.circle(0, 0, radius * 0.85).stroke({ width: thickness * 0.6, color: 0x44FF88, alpha: alpha * 0.7 });
+                // Fill glow (more visible)
+                wave.circle(0, 0, radius).fill({ color: 0xFFFFFF, alpha: alpha * 0.05 });
                 if (t >= 1) { wave.destroy(); return true; }
                 return false;
             }
         });
 
-        // Radial particle burst
-        const burstCount = 8 + intensity * 4;
+        // Secondary inner shockwave (delayed, faster)
+        if (intensity >= 2) {
+            const wave2 = new PIXI.Graphics();
+            wave2.position.set(x, y);
+            this.container.addChild(wave2);
+
+            this.tweens.push({
+                elapsed: 0,
+                duration: 450,
+                delay: 50,
+                update(dt) {
+                    if (this.delay > 0) { this.delay -= dt; return false; }
+                    this.elapsed += dt;
+                    const t = Math.min(this.elapsed / this.duration, 1);
+                    const radius = easeOutQuart(t) * maxRadius * 0.7;
+                    const alpha = (1 - t) * 0.5;
+                    wave2.clear();
+                    wave2.circle(0, 0, radius).stroke({ width: 3 * (1 - t), color: 0x00E5FF, alpha });
+                    if (t >= 1) { wave2.destroy(); return true; }
+                    return false;
+                }
+            });
+        }
+
+        // Radial particle burst (more particles, faster)
+        const burstCount = 12 + intensity * 6;
         for (let i = 0; i < burstCount; i++) {
-            const angle = (Math.PI * 2 * i / burstCount) + (Math.random() - 0.5) * 0.3;
-            const speed = 3 + Math.random() * 3 + intensity;
-            const size = 1.5 + Math.random() * 2;
-            const pColor = i % 2 === 0 ? 0xFFFFFF : 0x44FF88;
+            const angle = (Math.PI * 2 * i / burstCount) + (Math.random() - 0.5) * 0.4;
+            const speed = 4 + Math.random() * 4 + intensity * 1.5;
+            const size = 1.5 + Math.random() * 2.5;
+            const pColor = i % 3 === 0 ? 0xFFFFFF : i % 3 === 1 ? 0x44FF88 : 0x00E5FF;
 
             const gfx = this._getParticleGfx();
-            gfx.circle(0, 0, size).fill({ color: pColor, alpha: 0.8 });
-            gfx.circle(0, 0, size * 2).fill({ color: pColor, alpha: 0.3 });
+            gfx.circle(0, 0, size).fill({ color: pColor, alpha: 0.9 });
+            gfx.circle(0, 0, size * 2.2).fill({ color: pColor, alpha: 0.3 });
             gfx.position.set(x, y);
             this.container.addChild(gfx);
 
@@ -1332,10 +1453,10 @@ class EffectManager {
                 vy: Math.sin(angle) * speed,
                 rotSpeed: 0,
                 gravity: 0.02,
-                baseScale: 0.8 + Math.random() * 0.4,
-                shrink: 0.8,
-                life: 400 + Math.random() * 300,
-                maxLife: 700,
+                baseScale: 0.9 + Math.random() * 0.5,
+                shrink: 0.75,
+                life: 450 + Math.random() * 350,
+                maxLife: 800,
             });
         }
     }
