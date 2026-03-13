@@ -469,7 +469,9 @@ export class MenuScene extends Phaser.Scene {
                     const nT = this.add.text(cx - boxW / 2 + uv(58), y, entry.player_name, {
                         fontSize: fSize, fontFamily: 'Arial, sans-serif', fontStyle: bold, color,
                     }).setDepth(depth + 2);
-                    const sT = this.add.text(cx + boxW / 2 - uv(25), y, entry.score.toLocaleString(), {
+                    const sMins = Math.floor(entry.score / 60).toString().padStart(2, '0');
+                    const sSecs = (entry.score % 60).toString().padStart(2, '0');
+                    const sT = this.add.text(cx + boxW / 2 - uv(25), y, `${sMins}:${sSecs}`, {
                         fontSize: fSize, fontFamily: 'Arial, sans-serif', fontStyle: bold, color,
                     }).setOrigin(1, 0).setDepth(depth + 2);
                     elements.push(rT, nT, sT);

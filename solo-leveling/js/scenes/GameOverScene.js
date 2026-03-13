@@ -160,7 +160,7 @@ export class GameOverScene extends Phaser.Scene {
 
         // Stats card
         const cardY = GAME_HEIGHT * 0.42;
-        this.add.rectangle(cx, cardY, uv(400), uv(280), 0x1a1a3e, 0.9)
+        this.add.rectangle(cx, cardY, uv(400), uv(325), 0x1a1a3e, 0.9)
             .setStrokeStyle(2, COLORS.SHADOW_DARK);
 
         // Format time
@@ -171,6 +171,7 @@ export class GameOverScene extends Phaser.Scene {
         const rankColor = '#' + rankData.color.toString(16).padStart(6, '0');
 
         const stats = [
+            { label: t('scoreLabel'), value: `${time.toLocaleString()}`, color: '#ffd700' },
             { label: t('timeLabel'), value: `${min}:${sec}`, color: '#ffffff' },
             { label: t('levelLabel'), value: `Lv.${level}`, color: '#ffffff' },
             { label: t('rankLabel'), value: rankData.label, color: rankColor },
