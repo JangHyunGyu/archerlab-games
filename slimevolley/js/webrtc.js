@@ -153,7 +153,7 @@ class WebRTCManager {
     _setupDataChannel(peerId, dc, peerState) {
         peerState.dc = dc;
 
-        dc.onopen = () => {
+        const onDCOpen = () => {
             peerState.connected = true;
             console.log(`%c[P2P:${peerId}] DataChannel OPEN (ordered=${dc.ordered})`, 'color: #4FC3F7; font-weight: bold');
             // 연결 검증: ping 전송
@@ -165,6 +165,13 @@ class WebRTCManager {
                 this._failPeer(peerId);
             }
         };
+
+        dc.onopen = onDCOpen;
+
+        // Edge case: DC가 이미 open 상태면 onopen이 안 불림
+        if (dc.readyState === 'open') {
+            onDCOpen();
+        }
 
         dc.onclose = () => {
             console.log(`[P2P:${peerId}] DataChannel closed`);
