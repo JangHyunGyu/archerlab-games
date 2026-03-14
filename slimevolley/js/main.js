@@ -507,12 +507,7 @@ class SlimeVolleyGame {
         // P2P 연결 성공 알림
         this.network.on('p2pReady', () => {
             console.log('%c[P2P] ✅ Direct connection established!', 'color: #4FC3F7; font-weight: bold');
-            if (this.renderer) this.renderer.showNotice('P2P Direct Connected!', 2000);
-        });
-
-        this.network.on('p2pFallback', () => {
-            console.log('%c[P2P] ❌ Failed, using WebSocket relay', 'color: #EF5350; font-weight: bold');
-            if (this.renderer) this.renderer.showNotice('Relay Mode (WS)', 2000);
+            if (this.renderer) this.renderer.showNotice('P2P Connected!', 2000);
         });
 
         this.network.on('pingUpdate', (pings) => {
@@ -567,9 +562,44 @@ class SlimeVolleyGame {
 
             this.lobby.showScreen('game-screen');
 
-            // WebSocket relay 방식 — 바로 게임 시작
+            // PeerJS P2P 연결 (필수 — 연결 안되면 게임 안 시작)
             this.network.mySlotIndex = msg.mySlotIndex;
-            this.startCountdown();
+            this._remotePlayerInputs = new Map();
+
+            // 봇만 있으면 P2P 불필요 → 바로 시작
+            const humanPeers = msg.players.filter(p => p.id !== this.network.playerId && !p.isBot);
+            if (humanPeers.length === 0) {
+                this.startCountdown();
+                return;
+            }
+
+            this.renderer.showMessage('P2P 연결 중...', 10000);
+
+            try {
+                await this.network.initP2P();
+
+                // 호스트: 비호스트가 연결할 때까지 대기 (최대 10초)
+                if (this.network.isHost && !this.network.p2pReady) {
+                    await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => reject(new Error('P2P timeout')), 10000);
+                        this.network.on('p2pReady', () => {
+                            clearTimeout(timeout);
+                            resolve();
+                        });
+                        // 이미 ready인 경우
+                        if (this.network.p2pReady) {
+                            clearTimeout(timeout);
+                            resolve();
+                        }
+                    });
+                }
+
+                this.startCountdown();
+            } catch (e) {
+                console.error('[P2P] Failed:', e);
+                this.lobby.showError('P2P 연결 실패. 다시 시도해주세요.');
+                this.lobby.showScreen('room-screen');
+            }
         });
 
         this.network.on('gameState', (msg) => {
