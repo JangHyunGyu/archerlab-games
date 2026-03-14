@@ -592,11 +592,11 @@ class SlimeVolleyGame {
             const p2pOk = await waitForP2P();
             if (p2pOk) {
                 console.log('%c[P2P] Ready! Starting game...', 'color: #66BB6A; font-weight: bold');
+                this.startCountdown();
             } else {
-                console.log('%c[P2P] Failed → WS relay fallback', 'color: #EF5350; font-weight: bold');
-                if (this.renderer) this.renderer.showNotice('WS Relay Mode', 2000);
+                this.lobby.showError('P2P 연결 실패. 다시 시도해주세요.');
+                this.lobby.showScreen('room-screen');
             }
-            this.startCountdown();
         });
 
         this.network.on('gameState', (msg) => {

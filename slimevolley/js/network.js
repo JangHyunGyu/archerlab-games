@@ -149,15 +149,11 @@ class NetworkClient {
     // === P2P 전용: 게임 데이터는 무조건 P2P ===
 
     sendGameState(state) {
-        const msg = { type: 'gameState', state };
-        if (this.p2pReady && this.webrtc.broadcast(msg)) return;
-        this.send(msg); // WS fallback
+        this.webrtc.broadcast({ type: 'gameState', state });
     }
 
     sendGameEvent(eventData) {
-        const msg = { type: 'gameEvent', ...eventData };
-        if (this.p2pReady && this.webrtc.broadcast(msg)) return;
-        this.send(msg); // WS fallback
+        this.webrtc.broadcast({ type: 'gameEvent', ...eventData });
     }
 
     // === P2P message handling ===
@@ -323,9 +319,7 @@ class NetworkClient {
             return;
         }
         this.lastSentInput = { ...input };
-        const msg = { type: 'input', input, slotIndex: this.mySlotIndex };
-        if (this.p2pReady && this.webrtc.broadcast(msg)) return;
-        this.send(msg); // WS fallback
+        this.webrtc.broadcast({ type: 'input', input, slotIndex: this.mySlotIndex });
     }
 
     setMetadata(metadata) {
