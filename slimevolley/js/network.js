@@ -194,12 +194,22 @@ class NetworkClient {
     }
 
     _checkAllP2PReady() {
-        if (this.p2pPeers.length === 0) return;
+        if (this.p2pPeers.length === 0) {
+            // 피어 목록이 아직 비어있지만 연결된 피어가 있으면 보류
+            if (this.webrtc.connected) {
+                console.log('[P2P] peers list empty but WebRTC connected - deferring check');
+                this._p2pDeferredCheck = true;
+            }
+            return;
+        }
         for (const peerId of this.p2pPeers) {
-            if (!this.webrtc.isPeerConnected(peerId)) return;
+            if (!this.webrtc.isPeerConnected(peerId)) {
+                console.log(`[P2P] checkReady: peer ${peerId} not yet connected`);
+                return;
+            }
         }
         this.p2pReady = true;
-        console.log('All P2P connections established!');
+        console.log('%c[P2P] All P2P connections established!', 'color: #4FC3F7; font-weight: bold');
         this.emit('p2pReady');
 
         // Start P2P ping measurement
@@ -235,6 +245,8 @@ class NetworkClient {
             return;
         }
 
+        console.log(`[P2P] initiateP2P: myId=${myPlayerId}, peers=${JSON.stringify(this.p2pPeers)}`);
+
         // Only the "lower" ID initiates to avoid duplicate offers
         for (const peerId of this.p2pPeers) {
             if (myPlayerId < peerId) {
@@ -243,10 +255,22 @@ class NetworkClient {
             // The other side will receive the offer and respond
         }
 
+        // 피어 목록 설정 후 재확인 (이미 연결된 경우 대비)
+        if (this._p2pDeferredCheck) {
+            this._p2pDeferredCheck = false;
+            this._checkAllP2PReady();
+        }
+
         // Timeout: if P2P not ready in 5 seconds, fall back to WS
         setTimeout(() => {
             if (!this.p2pReady) {
-                console.log('P2P connection timeout, using WebSocket fallback');
+                // 마지막으로 한번 더 확인 (race condition 방지)
+                this._checkAllP2PReady();
+                if (this.p2pReady) {
+                    console.log('[P2P] Connected just in time!');
+                    return;
+                }
+                console.log('%c[P2P] ✗ Connection timeout, using WebSocket fallback', 'color: #EF5350');
                 this.webrtc.fallbackToWS = true;
                 this.emit('p2pFallback');
             }
