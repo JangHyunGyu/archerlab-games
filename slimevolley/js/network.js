@@ -34,14 +34,13 @@ class NetworkClient {
         };
 
         this.webrtc.onPeerConnected = (peerId) => {
-            console.log(`P2P peer connected: ${peerId}`);
+            console.log(`%c[P2P] Peer ${peerId} connected via DataChannel`, 'color: #4FC3F7; font-weight: bold');
             this._checkAllP2PReady();
         };
 
         this.webrtc.onPeerDisconnected = (peerId) => {
-            console.log(`P2P peer disconnected: ${peerId}`);
+            console.log(`%c[P2P] Peer ${peerId} disconnected`, 'color: #EF5350');
             this.p2pReady = false;
-            // Fall back to WS for this peer
         };
     }
 
@@ -150,9 +149,11 @@ class NetworkClient {
 
         // Try P2P first, fall back to WS
         if (this.p2pReady && !this.webrtc.fallbackToWS) {
+            // P2P는 서버가 slotIndex를 안 붙여주므로 직접 포함
+            msg.slotIndex = this.mySlotIndex;
             if (this.webrtc.broadcast(msg)) return;
         }
-        // WS fallback
+        // WS fallback (서버가 slotIndex 붙여줌)
         this.send(msg);
     }
 
@@ -216,8 +217,9 @@ class NetworkClient {
 
     // === P2P connection initiation (called when game starts) ===
 
-    initiateP2P(playerList, myPlayerId) {
+    initiateP2P(playerList, myPlayerId, mySlotIndex) {
         this.webrtc.setMyId(myPlayerId);
+        this.mySlotIndex = mySlotIndex;
         this.p2pPeers = [];
         this.p2pReady = false;
 

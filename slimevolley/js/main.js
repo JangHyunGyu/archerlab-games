@@ -305,12 +305,20 @@ class SlimeVolleyGame {
     // === Rollback Netcode (P2P optimized, zero-GC) ===
     _initRollback() {
         this._rbFrame = 0;
-        this._rbInputDelay = 3;         // 3프레임 입력 딜레이 (25ms@120fps, 롤백 깊이 감소)
         this._rbInputRedundancy = 5;    // 최근 5프레임 입력을 매번 함께 전송
         this._rbMaxRollback = 30;       // 최대 롤백 깊이 (30프레임 = 250ms)
         this._rbMaxResimFrames = 12;    // 최대 재시뮬레이션 깊이
         this._rbSuppressSounds = false;
         this._rbInputSendTimer = 0;
+
+        // 적응형 입력 딜레이: 핑 기반 자동 조절 (롤백 최소화)
+        // P2P 연결 시 1-2프레임, WS 릴레이 시 핑/2를 프레임으로 변환
+        this._rbInputDelay = 3;         // 초기값 (25ms@120fps)
+        this._rbInputDelayTarget = 3;
+        this._rbInputDelayMin = 1;      // P2P: 최소 1프레임 (8ms)
+        this._rbInputDelayMax = 12;     // 릴레이: 최대 12프레임 (100ms)
+        this._rbRollbackCount = 0;      // 최근 롤백 횟수 (모니터링용)
+        this._rbAdaptTimer = 0;
 
         // Map 기반 (delete 시 V8 de-optimization 방지)
         this._rbLocalInputs = new Map();
@@ -527,6 +535,7 @@ class SlimeVolleyGame {
         this._rbPendingRemoteInputs.length = 0; // clear without new array
 
         if (needsRollback) {
+            this._rbRollbackCount++;
             this._performRollback(rollbackFrame);
         }
     }
@@ -851,11 +860,45 @@ class SlimeVolleyGame {
             this.lobby.addChatMessage(msg.name, msg.message);
         });
 
+        // P2P 연결 성공 알림
+        this.network.on('p2pReady', () => {
+            console.log('%c[P2P] ✅ Direct connection established!', 'color: #4FC3F7; font-weight: bold');
+            if (this.renderer) this.renderer.showNotice('P2P Direct Connected!', 2000);
+            // P2P 연결 시 입력 딜레이 최소화
+            if (this._rbInputDelay !== undefined) {
+                this._rbInputDelayTarget = 2; // P2P는 2프레임 (16ms) 충분
+            }
+        });
+
+        this.network.on('p2pFallback', () => {
+            console.log('%c[P2P] ❌ Failed, using WebSocket relay', 'color: #EF5350; font-weight: bold');
+            if (this.renderer) this.renderer.showNotice('Relay Mode (WS)', 2000);
+        });
+
         this.network.on('pingUpdate', (pings) => {
             this.lobby.updatePingDisplay(pings);
-            // 핑 기반 적응형 보간 지연 (최소 30ms, 핑의 60% + 1프레임 버퍼)
+            // 핑 기반 적응형 보간 지연
             if (this.network.myPing > 0) {
                 this.interpolationDelay = Math.max(30, this.network.myPing * 0.6 + 16);
+            }
+
+            // === 적응형 입력 딜레이: 핑에 맞춰 자동 조절 ===
+            if (this._rbInputDelay !== undefined && this.network.myPing > 0) {
+                const ping = this.network.myPing;
+                const oneWayMs = ping / 2;
+                // 편도 지연을 120fps 프레임으로 변환 + 여유 1프레임
+                const neededFrames = Math.ceil(oneWayMs / 8.33) + 1;
+                this._rbInputDelayTarget = Math.max(
+                    this._rbInputDelayMin,
+                    Math.min(this._rbInputDelayMax, neededFrames)
+                );
+                // 부드럽게 조절 (급격한 변화 방지)
+                if (this._rbInputDelay < this._rbInputDelayTarget) {
+                    this._rbInputDelay = Math.min(this._rbInputDelay + 1, this._rbInputDelayTarget);
+                } else if (this._rbInputDelay > this._rbInputDelayTarget + 2) {
+                    this._rbInputDelay = Math.max(this._rbInputDelay - 1, this._rbInputDelayTarget);
+                }
+                console.log(`[Netcode] ping=${ping}ms delay=${this._rbInputDelay}f(${Math.round(this._rbInputDelay * 8.33)}ms) p2p=${this.network.p2pReady}`);
             }
         });
 
@@ -901,7 +944,7 @@ class SlimeVolleyGame {
             this._gameSeed = gameSeed;
 
             // P2P 연결 초기화 (시그널링은 WS 경유, 게임 데이터는 P2P 직접)
-            this.network.initiateP2P(msg.players, this.network.playerId);
+            this.network.initiateP2P(msg.players, this.network.playerId, msg.mySlotIndex);
 
             if (!this.renderer.initialized) {
                 await this.renderer.init();
