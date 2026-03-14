@@ -483,6 +483,8 @@ class LobbyManager {
     }
 
     leaveRoom() {
+        this.game.backToLobby();
+        this.game.sound.stopAll();
         this.game.network.leaveRoom();
         this.game.network.disconnect();
         this.showMultiplayerLobby();

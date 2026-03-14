@@ -233,4 +233,18 @@ class SoundManager {
             }
         } catch (e) {}
     }
+
+    stopAll() {
+        if (!this.initialized) return;
+        try {
+            // BGM 중지
+            if (this.bgm) {
+                this.bgm.pause();
+                this.bgm.currentTime = 0;
+            }
+            // 모든 Tone.js transport 중지
+            Tone.getTransport().stop();
+            Tone.getTransport().cancel();
+        } catch (e) {}
+    }
 }
