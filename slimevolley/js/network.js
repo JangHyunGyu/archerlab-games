@@ -146,28 +146,14 @@ class NetworkClient {
         }
     }
 
-    // === P2P game data send (with WS fallback) ===
-
-    sendFrameInput(frame, input, history) {
-        const msg = { type: 'frameInput', frame, input };
-        if (history) msg.history = history;
-        this._sendP2PorWS(msg);
-    }
+    // === P2P 전용: 게임 데이터는 무조건 P2P ===
 
     sendGameState(state) {
-        this._sendP2PorWS({ type: 'gameState', state });
+        this.webrtc.broadcast({ type: 'gameState', state });
     }
 
     sendGameEvent(eventData) {
-        this._sendP2PorWS({ type: 'gameEvent', ...eventData });
-    }
-
-    // P2P 우선, 실패 시 WS fallback
-    _sendP2PorWS(msg) {
-        if (this.p2pReady && !this.webrtc.fallbackToWS) {
-            if (this.webrtc.broadcast(msg)) return;
-        }
-        this.send(msg);
+        this.webrtc.broadcast({ type: 'gameEvent', ...eventData });
     }
 
     // === P2P message handling ===
@@ -333,12 +319,7 @@ class NetworkClient {
             return;
         }
         this.lastSentInput = { ...input };
-        const msg = { type: 'input', input };
-        if (this.p2pReady && !this.webrtc.fallbackToWS) {
-            msg.slotIndex = this.mySlotIndex;
-            if (this.webrtc.broadcast(msg)) return;
-        }
-        this.send(msg);
+        this.webrtc.broadcast({ type: 'input', input, slotIndex: this.mySlotIndex });
     }
 
     setMetadata(metadata) {

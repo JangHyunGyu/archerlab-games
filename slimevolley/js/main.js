@@ -951,9 +951,6 @@ class SlimeVolleyGame {
             }
             this._gameSeed = gameSeed;
 
-            // P2P 연결 초기화 (시그널링은 WS 경유, 게임 데이터는 P2P 직접)
-            this.network.initiateP2P(msg.players, this.network.playerId, msg.mySlotIndex);
-
             if (!this.renderer.initialized) {
                 await this.renderer.init();
             } else {
@@ -962,7 +959,37 @@ class SlimeVolleyGame {
             }
 
             this.lobby.showScreen('game-screen');
-            this.startCountdown();
+
+            // P2P 연결 → 검증 완료 후 게임 시작
+            this.network.initiateP2P(msg.players, this.network.playerId, msg.mySlotIndex);
+
+            // 봇 전용 (P2P 불필요) → 바로 시작
+            const humanPeers = msg.players.filter(p => p.id !== this.network.playerId && !p.isBot);
+            if (humanPeers.length === 0) {
+                this.startCountdown();
+                return;
+            }
+
+            // P2P 대기 (최대 8초)
+            this.renderer.showMessage('P2P 연결 중...', 8000);
+            const waitForP2P = () => new Promise((resolve) => {
+                if (this.network.p2pReady) { resolve(true); return; }
+                const onReady = () => { resolve(true); };
+                this.network.on('p2pReady', onReady);
+                setTimeout(() => {
+                    this.network.off('p2pReady', onReady);
+                    resolve(false);
+                }, 8000);
+            });
+
+            const p2pOk = await waitForP2P();
+            if (p2pOk) {
+                console.log('%c[P2P] Ready! Starting game...', 'color: #66BB6A; font-weight: bold');
+                this.startCountdown();
+            } else {
+                this.lobby.showError('P2P 연결 실패. 다시 시도해주세요.');
+                this.lobby.showScreen('room-screen');
+            }
         });
 
         // frameInput은 롤백 모드에서만 사용 (현재 호스트 권위 모드)
