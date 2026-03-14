@@ -567,36 +567,9 @@ class SlimeVolleyGame {
 
             this.lobby.showScreen('game-screen');
 
-            // P2P 연결 → 검증 완료 후 게임 시작
-            this.network.initiateP2P(msg.players, this.network.playerId, msg.mySlotIndex);
-
-            // 봇 전용 (P2P 불필요) → 바로 시작
-            const humanPeers = msg.players.filter(p => p.id !== this.network.playerId && !p.isBot);
-            if (humanPeers.length === 0) {
-                this.startCountdown();
-                return;
-            }
-
-            // P2P 대기 (최대 8초)
-            this.renderer.showMessage('P2P 연결 중...', 8000);
-            const waitForP2P = () => new Promise((resolve) => {
-                if (this.network.p2pReady) { resolve(true); return; }
-                const onReady = () => { resolve(true); };
-                this.network.on('p2pReady', onReady);
-                setTimeout(() => {
-                    this.network.off('p2pReady', onReady);
-                    resolve(false);
-                }, 8000);
-            });
-
-            const p2pOk = await waitForP2P();
-            if (p2pOk) {
-                console.log('%c[P2P] Ready! Starting game...', 'color: #66BB6A; font-weight: bold');
-                this.startCountdown();
-            } else {
-                this.lobby.showError('P2P 연결 실패. 다시 시도해주세요.');
-                this.lobby.showScreen('room-screen');
-            }
+            // WebSocket relay 방식 — 바로 게임 시작
+            this.network.mySlotIndex = msg.mySlotIndex;
+            this.startCountdown();
         });
 
         this.network.on('gameState', (msg) => {
