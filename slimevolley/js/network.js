@@ -146,14 +146,14 @@ class NetworkClient {
         }
     }
 
-    // === P2P 전용: 게임 데이터는 무조건 P2P ===
+    // === 게임 데이터: WebSocket relay (단순·안정) ===
 
     sendGameState(state) {
-        this.webrtc.broadcast({ type: 'gameState', state });
+        this.send({ type: 'gameState', state });
     }
 
     sendGameEvent(eventData) {
-        this.webrtc.broadcast({ type: 'gameEvent', ...eventData });
+        this.send({ type: 'gameEvent', ...eventData });
     }
 
     // === P2P message handling ===
@@ -319,7 +319,7 @@ class NetworkClient {
             return;
         }
         this.lastSentInput = { ...input };
-        this.webrtc.broadcast({ type: 'input', input, slotIndex: this.mySlotIndex });
+        this.send({ type: 'input', input, slotIndex: this.mySlotIndex });
     }
 
     setMetadata(metadata) {
