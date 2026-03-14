@@ -30,17 +30,22 @@ class NetworkClient {
 
         // Handle P2P messages (game data arriving via DataChannel)
         this.webrtc.onMessage = (peerId, data) => {
-            this._handleP2PMessage(peerId, data);
+            this.emit(data.type, data);
         };
 
         this.webrtc.onPeerConnected = (peerId) => {
-            console.log(`%c[P2P] Peer ${peerId} connected via DataChannel`, 'color: #4FC3F7; font-weight: bold');
+            console.log(`%c[P2P] Peer ${peerId} VERIFIED & connected`, 'color: #66BB6A; font-weight: bold');
             this._checkAllP2PReady();
         };
 
         this.webrtc.onPeerDisconnected = (peerId) => {
             console.log(`%c[P2P] Peer ${peerId} disconnected`, 'color: #EF5350');
             this.p2pReady = false;
+        };
+
+        // P2P ping 결과 수신
+        this.webrtc._onPingResult = (peerId, rtt) => {
+            this.p2pPings[peerId] = rtt;
         };
     }
 
@@ -146,38 +151,26 @@ class NetworkClient {
     sendFrameInput(frame, input, history) {
         const msg = { type: 'frameInput', frame, input };
         if (history) msg.history = history;
-        this.send(msg);
+        this._sendP2PorWS(msg);
     }
 
     sendGameState(state) {
-        // 항상 WS로 전송 (안정적 전달 필요, 데이터 큼)
-        this.send({ type: 'gameState', state });
+        this._sendP2PorWS({ type: 'gameState', state });
     }
 
     sendGameEvent(eventData) {
-        // 항상 WS로 전송 (점수/게임오버 등 중요 이벤트)
-        this.send({ type: 'gameEvent', ...eventData });
+        this._sendP2PorWS({ type: 'gameEvent', ...eventData });
+    }
+
+    // P2P 우선, 실패 시 WS fallback
+    _sendP2PorWS(msg) {
+        if (this.p2pReady && !this.webrtc.fallbackToWS) {
+            if (this.webrtc.broadcast(msg)) return;
+        }
+        this.send(msg);
     }
 
     // === P2P message handling ===
-
-    _handleP2PMessage(peerId, data) {
-        // P2P ping/pong for latency measurement
-        if (data._p === 1) {
-            // Pong back
-            this.webrtc.sendToPeer(peerId, { _p: 2, _t: data._t });
-            return;
-        }
-        if (data._p === 2) {
-            // Pong received
-            this.p2pPings[peerId] = performance.now() - data._t;
-            return;
-        }
-
-        // Game data: emit as if it came from WS
-        // Add slotIndex from the peer's player data if needed
-        this.emit(data.type, data);
-    }
 
     _checkAllP2PReady() {
         if (this.p2pPeers.length === 0) {
@@ -340,8 +333,12 @@ class NetworkClient {
             return;
         }
         this.lastSentInput = { ...input };
-        // 항상 WS로 전송 (P2P DataChannel 전송 불안정)
-        this.send({ type: 'input', input });
+        const msg = { type: 'input', input };
+        if (this.p2pReady && !this.webrtc.fallbackToWS) {
+            msg.slotIndex = this.mySlotIndex;
+            if (this.webrtc.broadcast(msg)) return;
+        }
+        this.send(msg);
     }
 
     setMetadata(metadata) {
