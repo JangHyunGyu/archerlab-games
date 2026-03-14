@@ -443,12 +443,24 @@ class SlimeVolleyGame {
     }
 
     setupNetworkHandlers() {
-        this.network.on('roomCreated', (msg) => {
+        this.network.on('roomCreated', async (msg) => {
             this.lobby.showRoomScreen(msg.roomId, msg.players, true, msg.metadata);
+            // 호스트: PeerJS Peer 미리 생성 (로비에서 P2P 핑 표시)
+            try {
+                await this.network.initP2P();
+            } catch (e) {
+                console.warn('[P2P] Host peer creation failed:', e);
+            }
         });
 
-        this.network.on('joined', (msg) => {
+        this.network.on('joined', async (msg) => {
             this.lobby.showRoomScreen(msg.roomId, msg.players, false, msg.metadata);
+            // 비호스트: 호스트에 PeerJS 연결 (로비에서 P2P 핑 표시)
+            try {
+                await this.network.initP2P();
+            } catch (e) {
+                console.warn('[P2P] Connect to host failed:', e);
+            }
         });
 
         this.network.on('roomState', (msg) => {
@@ -562,7 +574,6 @@ class SlimeVolleyGame {
 
             this.lobby.showScreen('game-screen');
 
-            // PeerJS P2P 연결 (필수 — 연결 안되면 게임 안 시작)
             this.network.mySlotIndex = msg.mySlotIndex;
             this._remotePlayerInputs = new Map();
 
@@ -573,32 +584,29 @@ class SlimeVolleyGame {
                 return;
             }
 
-            this.renderer.showMessage('P2P 연결 중...', 10000);
-
-            try {
-                await this.network.initP2P();
-
-                // 호스트: 비호스트가 연결할 때까지 대기 (최대 10초)
-                if (this.network.isHost && !this.network.p2pReady) {
-                    await new Promise((resolve, reject) => {
-                        const timeout = setTimeout(() => reject(new Error('P2P timeout')), 10000);
-                        this.network.on('p2pReady', () => {
-                            clearTimeout(timeout);
-                            resolve();
-                        });
-                        // 이미 ready인 경우
-                        if (this.network.p2pReady) {
-                            clearTimeout(timeout);
-                            resolve();
-                        }
-                    });
-                }
-
+            // P2P는 로비에서 이미 연결됨 — 확인만
+            if (this.network.p2pReady) {
                 this.startCountdown();
-            } catch (e) {
-                console.error('[P2P] Failed:', e);
-                this.lobby.showError('P2P 연결 실패. 다시 시도해주세요.');
-                this.lobby.showScreen('room-screen');
+            } else {
+                // 아직 안됐으면 잠깐 대기
+                this.renderer.showMessage('P2P 연결 중...', 8000);
+                try {
+                    // 아직 initP2P 안 됐으면 시도
+                    if (!this.network.peerjs.peer) {
+                        await this.network.initP2P();
+                    }
+                    await new Promise((resolve, reject) => {
+                        if (this.network.p2pReady) { resolve(); return; }
+                        const timeout = setTimeout(() => reject(new Error('P2P timeout')), 8000);
+                        const onReady = () => { clearTimeout(timeout); resolve(); };
+                        this.network.on('p2pReady', onReady);
+                    });
+                    this.startCountdown();
+                } catch (e) {
+                    console.error('[P2P] Failed:', e);
+                    this.lobby.showError('P2P 연결 실패. 다시 시도해주세요.');
+                    this.lobby.showScreen('room-screen');
+                }
             }
         });
 
