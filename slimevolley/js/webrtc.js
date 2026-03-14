@@ -139,23 +139,31 @@ class WebRTCManager {
     _setupPeerConnection(peerId, pc, peerState) {
         pc.onicecandidate = (event) => {
             if (event.candidate && this.signalSend) {
+                console.log(`[P2P:${peerId}] ICE candidate: ${event.candidate.type || 'end'} ${event.candidate.address || ''}`);
                 this.signalSend(peerId, { type: 'ice', candidate: event.candidate.toJSON() });
             }
         };
 
         pc.onconnectionstatechange = () => {
             const state = pc.connectionState;
+            console.log(`[P2P:${peerId}] connection: ${state}`);
             if (state === 'connected') {
-                // P2P established
+                console.log(`%c[P2P:${peerId}] ✅ ICE connected!`, 'color: #4FC3F7; font-weight: bold');
             } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+                console.log(`%c[P2P:${peerId}] ❌ connection ${state}`, 'color: #EF5350');
                 this._failPeer(peerId);
             }
         };
 
         pc.oniceconnectionstatechange = () => {
+            console.log(`[P2P:${peerId}] ICE state: ${pc.iceConnectionState}`);
             if (pc.iceConnectionState === 'failed') {
                 this._failPeer(peerId);
             }
+        };
+
+        pc.onicegatheringstatechange = () => {
+            console.log(`[P2P:${peerId}] ICE gathering: ${pc.iceGatheringState}`);
         };
     }
 
@@ -166,17 +174,19 @@ class WebRTCManager {
         dc.onopen = () => {
             peerState.connected = true;
             this.connected = true;
-            console.log(`P2P connected to ${peerId}`);
+            console.log(`%c[P2P:${peerId}] ✅ DataChannel OPEN (label=${dc.label}, ordered=${dc.ordered})`, 'color: #4FC3F7; font-weight: bold');
             if (this.onPeerConnected) this.onPeerConnected(peerId);
         };
 
         dc.onclose = () => {
+            console.log(`[P2P:${peerId}] DataChannel closed`);
             peerState.connected = false;
             this._updateConnectedState();
             if (this.onPeerDisconnected) this.onPeerDisconnected(peerId);
         };
 
-        dc.onerror = () => {
+        dc.onerror = (e) => {
+            console.log(`[P2P:${peerId}] DataChannel error:`, e);
             this._failPeer(peerId);
         };
 
