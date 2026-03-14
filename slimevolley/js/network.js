@@ -158,19 +158,13 @@ class NetworkClient {
     }
 
     sendGameState(state) {
-        const msg = { type: 'gameState', state };
-        if (this.p2pReady && !this.webrtc.fallbackToWS) {
-            if (this.webrtc.broadcast(msg)) return;
-        }
-        this.send(msg);
+        // 항상 WS로 전송 (안정적 전달 필요, 데이터 큼)
+        this.send({ type: 'gameState', state });
     }
 
     sendGameEvent(eventData) {
-        const msg = { type: 'gameEvent', ...eventData };
-        if (this.p2pReady && !this.webrtc.fallbackToWS) {
-            if (this.webrtc.broadcast(msg)) return;
-        }
-        this.send(msg);
+        // 항상 WS로 전송 (점수/게임오버 등 중요 이벤트)
+        this.send({ type: 'gameEvent', ...eventData });
     }
 
     // === P2P message handling ===
