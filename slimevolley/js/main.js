@@ -227,9 +227,13 @@ class SlimeVolleyGame {
 
             if (isNonHostMultiplayer) {
                 // 비호스트: 물리 실행 없이 호스트 상태로만 렌더링
-                // 입력은 매 프레임 전송
                 this.network.sendInput(this.getMyInput());
                 const state = this.physics.getState();
+                if (!this._nonHostLogCount) this._nonHostLogCount = 0;
+                if (this._nonHostLogCount < 3) {
+                    console.log('[NonHost] gameLoop running, isHost=', this.network.isHost, 'ball:', state.ball?.x?.toFixed(0), state.ball?.y?.toFixed(0));
+                    this._nonHostLogCount++;
+                }
                 this.renderer.render(state);
                 return;
             }
@@ -694,7 +698,13 @@ class SlimeVolleyGame {
             this._netSendCounter++;
             if (this._netSendCounter >= 2) {
                 this._netSendCounter = 0;
-                this.network.sendGameState(this.physics.getState());
+                const gs = this.physics.getState();
+                if (!this._hostSendLog) this._hostSendLog = 0;
+                if (this._hostSendLog < 3) {
+                    console.log('[Host] sending gameState, p2p=', this.network.p2pReady, 'ball:', gs.ball?.x?.toFixed(0), gs.ball?.y?.toFixed(0));
+                    this._hostSendLog++;
+                }
+                this.network.sendGameState(gs);
             }
 
             if (result) {
@@ -984,6 +994,11 @@ class SlimeVolleyGame {
             // 비호스트: 호스트 권위적 상태 적용
             if (!this.network.isHost && msg.state) {
                 this.physics.setState(msg.state);
+                if (!this._gsLogCount) this._gsLogCount = 0;
+                if (this._gsLogCount < 5) {
+                    console.log('[GameState] received from host, ball:', msg.state.ball?.x?.toFixed(0), msg.state.ball?.y?.toFixed(0), 'scores:', msg.state.scores);
+                    this._gsLogCount++;
+                }
             }
         });
 
