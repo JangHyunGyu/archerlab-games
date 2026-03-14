@@ -413,7 +413,107 @@ class PhysicsEngine {
         return true;
     }
 
-    // Rollback용: 전체 상태 저장 (deep copy)
+    // === State Pool (zero-allocation rollback saves) ===
+
+    initStatePool(poolSize, maxSlimes) {
+        this._statePool = [];
+        this._statePoolIdx = 0;
+        for (let i = 0; i < poolSize; i++) {
+            const slimes = [];
+            for (let j = 0; j < maxSlimes; j++) {
+                slimes.push({
+                    id: 0, team: 0, x: 0, y: 0, vx: 0, vy: 0,
+                    onGround: true, isBot: false, colorIdx: 0,
+                    inputL: false, inputR: false, inputJ: false,
+                    hitCount: 0, receiveCount: 0, killCount: 0,
+                });
+            }
+            this._statePool.push({
+                ball: { x: 0, y: 0, vx: 0, vy: 0, lastHitBy: -1, lastHitSlimeId: -1 },
+                slimes,
+                slimeCount: 0,
+                scores0: 0, scores1: 0,
+                phase: '',
+                servingTeam: 0,
+                freezeTimer: 0,
+                setsWon0: 0, setsWon1: 0,
+                currentSet: 0,
+                setScoresSnapshot: null, // only copy on set changes
+            });
+        }
+    }
+
+    // Save state into pre-allocated pool slot (ZERO garbage)
+    saveStatePooled() {
+        const st = this._statePool[this._statePoolIdx];
+        this._statePoolIdx = (this._statePoolIdx + 1) % this._statePool.length;
+
+        const b = st.ball;
+        b.x = this.ball.x; b.y = this.ball.y;
+        b.vx = this.ball.vx; b.vy = this.ball.vy;
+        b.lastHitBy = this.ball.lastHitBy;
+        b.lastHitSlimeId = this.ball.lastHitSlimeId;
+
+        st.slimeCount = this.slimes.length;
+        for (let i = 0; i < this.slimes.length; i++) {
+            const s = this.slimes[i];
+            const t = st.slimes[i];
+            t.id = s.id; t.team = s.team;
+            t.x = s.x; t.y = s.y;
+            t.vx = s.vx; t.vy = s.vy;
+            t.onGround = s.onGround;
+            t.isBot = s.isBot;
+            t.colorIdx = s.colorIdx;
+            t.inputL = s.input.left;
+            t.inputR = s.input.right;
+            t.inputJ = s.input.jump;
+            t.hitCount = s.hitCount;
+            t.receiveCount = s.receiveCount;
+            t.killCount = s.killCount;
+        }
+
+        st.scores0 = this.scores[0]; st.scores1 = this.scores[1];
+        st.phase = this.phase;
+        st.servingTeam = this.servingTeam;
+        st.freezeTimer = this.freezeTimer;
+        st.setsWon0 = this.setsWon[0]; st.setsWon1 = this.setsWon[1];
+        st.currentSet = this.currentSet;
+        st.setScoresSnapshot = this.setScores.length; // just track length, rarely changes
+
+        return st;
+    }
+
+    // Load from pooled state (ZERO garbage)
+    loadStatePooled(st) {
+        this.ball.x = st.ball.x; this.ball.y = st.ball.y;
+        this.ball.vx = st.ball.vx; this.ball.vy = st.ball.vy;
+        this.ball.lastHitBy = st.ball.lastHitBy;
+        this.ball.lastHitSlimeId = st.ball.lastHitSlimeId;
+
+        for (let i = 0; i < st.slimeCount; i++) {
+            const s = st.slimes[i];
+            const t = this.slimes[i];
+            if (!t) continue;
+            t.x = s.x; t.y = s.y;
+            t.vx = s.vx; t.vy = s.vy;
+            t.onGround = s.onGround;
+            t.input.left = s.inputL;
+            t.input.right = s.inputR;
+            t.input.jump = s.inputJ;
+            t.hitCount = s.hitCount;
+            t.receiveCount = s.receiveCount;
+            t.killCount = s.killCount;
+        }
+
+        this.scores[0] = st.scores0; this.scores[1] = st.scores1;
+        this.phase = st.phase;
+        this.servingTeam = st.servingTeam;
+        this.freezeTimer = st.freezeTimer;
+        this.setsWon[0] = st.setsWon0; this.setsWon[1] = st.setsWon1;
+        this.currentSet = st.currentSet;
+    }
+
+    // Rollback용: 전체 상태 저장 (deep copy - 비멀티용 레거시)
     saveFullState() {
         return {
             ball: { ...this.ball },
@@ -433,7 +533,7 @@ class PhysicsEngine {
         };
     }
 
-    // Rollback용: 전체 상태 복원
+    // Rollback용: 전체 상태 복원 (레거시)
     loadFullState(st) {
         this.ball.x = st.ball.x; this.ball.y = st.ball.y;
         this.ball.vx = st.ball.vx; this.ball.vy = st.ball.vy;
