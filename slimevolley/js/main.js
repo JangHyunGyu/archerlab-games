@@ -17,14 +17,6 @@ class SlimeVolleyGame {
         this.countdownTimer = null;
         this.relayUrl = 'wss://relay.archerlab.dev';
 
-        // 스냅샷 보간 버퍼
-        this.snapshotBuffer = [];
-        this.snapshotMaxSize = 30;
-        this.interpolationDelay = CONFIG.INTERPOLATION_DELAY;
-
-        // 클라이언트 측 물리 예측 + 서버 보정
-        this._lastAppliedSnapshot = null;
-
         this.setupInput();
         this.setupNetworkHandlers();
     }
@@ -214,19 +206,20 @@ class SlimeVolleyGame {
         }
 
         const FIXED_DT = 1000 / 120; // 120fps 고정 물리 스텝
-
-        // Lockstep: 양쪽 모두 동일한 물리 실행, 입력만 교환
         this._remotePlayerInputs = new Map();
+        const isNonHost = this.mode === 'multiplayer' && !this.network.isHost;
 
         this.gameLoop = (ticker) => {
             if (!this.running) return;
 
-            // 멀티플레이어: 내 입력 전송
-            if (this.mode === 'multiplayer') {
+            if (isNonHost) {
+                // 비호스트: 물리 안 돌림. 입력 전송 + 호스트 상태 렌더링만.
                 this.network.sendInput(this.getMyInput());
+                this.renderer.render(this.physics.getState());
+                return;
             }
 
-            // 모든 모드: 동일한 물리 스텝
+            // 호스트 또는 연습모드: 물리 실행
             this.physicsAccumulator += ticker.deltaMS;
             if (this.physicsAccumulator > FIXED_DT * 4) {
                 this.physicsAccumulator = FIXED_DT * 4;
@@ -239,12 +232,10 @@ class SlimeVolleyGame {
             }
 
             const state = this.physics.getState();
-
             const alpha = this.physicsAccumulator / FIXED_DT;
             if (this._interpPrev) {
                 this._applyInterpolation(state, alpha);
             }
-
             this.renderer.render(state);
         };
 
@@ -283,368 +274,8 @@ class SlimeVolleyGame {
         }
     }
 
-    // === Rollback Netcode (P2P optimized, zero-GC) ===
-    _initRollback() {
-        this._rbFrame = 0;
-        this._rbInputRedundancy = 5;    // 최근 5프레임 입력을 매번 함께 전송
-        this._rbMaxRollback = 30;       // 최대 롤백 깊이 (30프레임 = 250ms)
-        this._rbMaxResimFrames = 12;    // 최대 재시뮬레이션 깊이
-        this._rbSuppressSounds = false;
-        this._rbInputSendTimer = 0;
-
-        // 적응형 입력 딜레이: 핑 기반 자동 조절 (롤백 최소화)
-        // P2P 연결 시 1-2프레임, WS 릴레이 시 핑/2를 프레임으로 변환
-        this._rbInputDelay = 3;         // 초기값 (25ms@120fps)
-        this._rbInputDelayTarget = 3;
-        this._rbInputDelayMin = 1;      // P2P: 최소 1프레임 (8ms)
-        this._rbInputDelayMax = 12;     // 릴레이: 최대 12프레임 (100ms)
-        this._rbRollbackCount = 0;      // 최근 롤백 횟수 (모니터링용)
-        this._rbAdaptTimer = 0;
-
-        // Map 기반 (delete 시 V8 de-optimization 방지)
-        this._rbLocalInputs = new Map();
-        this._rbRemoteInputs = new Map();     // slotId -> Map(frame -> {l,r,j})
-        this._rbUsedRemoteInputs = new Map(); // slotId -> Map(frame -> {l,r,j})
-        this._rbLastRemoteInput = new Map();  // slotId -> {l,r,j}
-        this._rbConfirmedRemoteFrame = new Map();
-        this._rbStates = new Map();           // frame -> pooled state ref
-        this._rbBotStates = new Map();        // frame -> Map(slimeId -> botState)
-        this._rbPendingRemoteInputs = [];
-
-        // 재사용 입력 객체 (GC 방지)
-        this._rbIdleInput = { left: false, right: false, jump: false };
-        this._rbTempInput = { left: false, right: false, jump: false };
-
-        // 시각적 오프셋 (롤백 보정 스무딩)
-        this._rbVisualOffset = new Map();
-
-        // 슬라임 인덱스 캐시 (find 호출 제거)
-        this._rbSlimeById = new Map();
-        for (const slime of this.physics.slimes) {
-            this._rbSlimeById.set(slime.id, slime);
-        }
-
-        // 원격 플레이어 슬롯 목록
-        this._rbRemoteSlots = [];
-        for (const slime of this.physics.slimes) {
-            if (slime.id !== this.mySlimeId && !slime.isBot) {
-                this._rbRemoteSlots.push(slime.id);
-                this._rbRemoteInputs.set(slime.id, new Map());
-                this._rbUsedRemoteInputs.set(slime.id, new Map());
-                this._rbLastRemoteInput.set(slime.id, { left: false, right: false, jump: false });
-                this._rbConfirmedRemoteFrame.set(slime.id, -1);
-                this._rbVisualOffset.set(slime.id, { x: 0, y: 0 });
-            }
-        }
-
-        // 상태 풀 초기화 (zero-allocation saves)
-        const poolSize = this._rbMaxRollback + this._rbMaxResimFrames + 10;
-        this.physics.initStatePool(poolSize, this.physics.slimes.length);
-
-        // 롤백 보정 전 위치 캐시 (재사용)
-        this._rbPrePositions = new Map();
-        for (const slotId of this._rbRemoteSlots) {
-            this._rbPrePositions.set(slotId, { x: 0, y: 0 });
-        }
-    }
-
-    _rollbackTick(FIXED_DT) {
-        // 롤백 보정 전 위치 저장 (재사용 객체)
-        for (const slotId of this._rbRemoteSlots) {
-            const sl = this._rbSlimeById.get(slotId);
-            if (sl) {
-                const pre = this._rbPrePositions.get(slotId);
-                pre.x = sl.x; pre.y = sl.y;
-            }
-        }
-
-        this._processRemoteInputs();
-
-        // 롤백 보정 시각적 오프셋 누적
-        for (const slotId of this._rbRemoteSlots) {
-            const sl = this._rbSlimeById.get(slotId);
-            const pre = this._rbPrePositions.get(slotId);
-            if (sl && pre) {
-                const dx = sl.x - pre.x;
-                const dy = sl.y - pre.y;
-                if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-                    const offset = this._rbVisualOffset.get(slotId);
-                    offset.x -= dx;
-                    offset.y -= dy;
-                }
-            }
-        }
-
-        let stepsThisTick = 0;
-        const maxStepsPerTick = 4; // CPU 스파이크 방지 (6→4)
-
-        while (this.physicsAccumulator >= FIXED_DT) {
-            // Frame advantage: 너무 앞서나가지 않기
-            let minConfirmed = this._rbFrame;
-            if (this._rbRemoteSlots.length > 0) {
-                minConfirmed = Infinity;
-                for (const id of this._rbRemoteSlots) {
-                    const cf = this._rbConfirmedRemoteFrame.get(id);
-                    if (cf < minConfirmed) minConfirmed = cf;
-                }
-            }
-            const frameAdvantage = this._rbFrame - minConfirmed;
-            if (frameAdvantage > this._rbMaxRollback - 2) {
-                // 프레임 진행 차단 - 1초에 한번만 로그
-                if (!this._rbStallLogTime || Date.now() - this._rbStallLogTime > 1000) {
-                    this._rbStallLogTime = Date.now();
-                    console.warn(`[Netcode] STALL: frame=${this._rbFrame} confirmed=${minConfirmed} advantage=${frameAdvantage} remoteSlots=${JSON.stringify(this._rbRemoteSlots)}`);
-                }
-                break;
-            }
-            if (stepsThisTick >= maxStepsPerTick) {
-                break;
-            }
-            stepsThisTick++;
-
-            const frame = this._rbFrame;
-
-            // 렌더 보간용 이전 상태 저장
-            this._saveInterpState();
-
-            // 내 입력: inputDelay 적용 (현재 키 입력을 frame+delay에 등록)
-            const myInput = this.getMyInput();
-            const targetFrame = frame + this._rbInputDelay;
-            // 현재 프레임용 입력이 아직 없으면 idle
-            if (!this._rbLocalInputs.has(frame)) {
-                this._rbLocalInputs.set(frame, { left: false, right: false, jump: false });
-            }
-            // 미래 프레임에 현재 입력 등록
-            this._rbLocalInputs.set(targetFrame, { left: myInput.left, right: myInput.right, jump: myInput.jump });
-
-            // 입력 전송 (매 프레임 + 중복 히스토리)
-            this._rbInputSendTimer++;
-            const lastInput = this._rbLocalInputs.get(targetFrame - 1);
-            const changed = !lastInput || lastInput.left !== myInput.left || lastInput.right !== myInput.right || lastInput.jump !== myInput.jump;
-            if (changed || this._rbInputSendTimer >= 2) {
-                // 히스토리: 최근 N프레임 입력 묶어 보내기
-                const history = [];
-                for (let i = 1; i <= this._rbInputRedundancy; i++) {
-                    const hf = targetFrame - i;
-                    const hi = this._rbLocalInputs.get(hf);
-                    if (hi) history.push({ f: hf, l: hi.left, r: hi.right, j: hi.jump });
-                }
-                this.network.sendFrameInput(targetFrame, myInput, history.length > 0 ? history : undefined);
-                this._rbInputSendTimer = 0;
-            }
-
-            // 입력 적용 + 물리 실행
-            this._applyInputsForFrame(frame);
-            const result = this.physics.update();
-            if (!this._rbSuppressSounds) {
-                this.handlePhysicsResult(result);
-
-                // 호스트: 점수/세트/게임오버 이벤트 전송 (비-호스트에게 권위적 동기화)
-                if (this.network.isHost && result) {
-                    if (result.type === 'score') {
-                        this.network.sendGameEvent({
-                            event: 'scored',
-                            team: result.team,
-                            scores: result.scores,
-                        });
-                    } else if (result.type === 'setWon') {
-                        this.network.sendGameEvent({
-                            event: 'setWon',
-                            setWinner: result.setWinner,
-                            setNumber: result.setNumber,
-                            setsWon: result.setsWon,
-                        });
-                    } else if (result.type === 'gameOver') {
-                        this.network.sendGameEvent({
-                            event: 'gameOver',
-                            winner: result.winner,
-                            setsWon: result.setsWon,
-                            setScores: result.setScores,
-                            mvp: result.mvp,
-                        });
-                    }
-                }
-            }
-
-            // 상태 저장 (zero-allocation pooled)
-            this._rbStates.set(frame, this.physics.saveStatePooled());
-            // 봇 상태 (봇이 있을 때만)
-            if (this.botMap.size > 0) {
-                const botFrame = new Map();
-                for (const [id, bot] of this.botMap) {
-                    botFrame.set(id, bot.saveState());
-                }
-                this._rbBotStates.set(frame, botFrame);
-            }
-
-            this._rbFrame++;
-            this.physicsAccumulator -= FIXED_DT;
-
-            // 오래된 프레임 정리 (Map.delete는 V8에 안전)
-            const oldest = this._rbFrame - this._rbMaxRollback - 2;
-            if (oldest >= 0) {
-                this._rbStates.delete(oldest);
-                this._rbBotStates.delete(oldest);
-                this._rbLocalInputs.delete(oldest);
-                for (const slotId of this._rbRemoteSlots) {
-                    this._rbRemoteInputs.get(slotId)?.delete(oldest);
-                    this._rbUsedRemoteInputs.get(slotId)?.delete(oldest);
-                }
-            }
-        }
-    }
-
-    _processRemoteInputs() {
-        const pending = this._rbPendingRemoteInputs;
-        if (pending.length === 0) return;
-
-        let needsRollback = false;
-        let rollbackFrame = Infinity;
-
-        for (let pi = 0; pi < pending.length; pi++) {
-            const p = pending[pi];
-            const frame = p.frame;
-            const input = p.input;
-            const slotIndex = p.slotIndex;
-            const remoteMap = this._rbRemoteInputs.get(slotIndex);
-            if (!remoteMap) continue;
-
-            const lastConf = this._rbConfirmedRemoteFrame.get(slotIndex) || -1;
-            const prevInput = this._rbLastRemoteInput.get(slotIndex) || this._rbIdleInput;
-
-            // 중간 프레임 채우기
-            for (let f = lastConf + 1; f < frame; f++) {
-                if (!remoteMap.has(f)) {
-                    remoteMap.set(f, { left: prevInput.left, right: prevInput.right, jump: prevInput.jump });
-                    if (f < this._rbFrame) {
-                        const used = this._rbUsedRemoteInputs.get(slotIndex)?.get(f);
-                        if (used && (used.left !== prevInput.left || used.right !== prevInput.right || used.jump !== prevInput.jump)) {
-                            needsRollback = true;
-                            if (f < rollbackFrame) rollbackFrame = f;
-                        }
-                    }
-                }
-            }
-
-            remoteMap.set(frame, { left: input.left, right: input.right, jump: input.jump });
-            const lastRI = this._rbLastRemoteInput.get(slotIndex);
-            lastRI.left = input.left; lastRI.right = input.right; lastRI.jump = input.jump;
-
-            if (frame > lastConf) {
-                this._rbConfirmedRemoteFrame.set(slotIndex, frame);
-            }
-
-            // 예측 비교
-            if (frame < this._rbFrame) {
-                const used = this._rbUsedRemoteInputs.get(slotIndex)?.get(frame);
-                if (used && (used.left !== input.left || used.right !== input.right || used.jump !== input.jump)) {
-                    needsRollback = true;
-                    if (frame < rollbackFrame) rollbackFrame = frame;
-                }
-            }
-        }
-
-        this._rbPendingRemoteInputs.length = 0; // clear without new array
-
-        if (needsRollback) {
-            this._rbRollbackCount++;
-            this._performRollback(rollbackFrame);
-        }
-    }
-
-    _performRollback(toFrame) {
-        const actualToFrame = Math.max(toFrame, this._rbFrame - this._rbMaxResimFrames);
-        const restoreFrame = actualToFrame - 1;
-        const savedState = this._rbStates.get(restoreFrame);
-        if (!savedState) return;
-
-        this.physics.loadStatePooled(savedState);
-
-        // 봇 상태 복원
-        const botStates = this._rbBotStates.get(restoreFrame);
-        if (botStates) {
-            for (const [id, bot] of this.botMap) {
-                const bs = botStates.get(id);
-                if (bs) bot.loadState(bs);
-            }
-        }
-
-        this._rbSuppressSounds = true;
-
-        // 재시뮬레이션
-        for (let f = actualToFrame; f < this._rbFrame; f++) {
-            this._applyInputsForFrame(f);
-            this.physics.update();
-            this._rbStates.set(f, this.physics.saveStatePooled());
-            if (this.botMap.size > 0) {
-                const botFrame = new Map();
-                for (const [id, bot] of this.botMap) {
-                    botFrame.set(id, bot.saveState());
-                }
-                this._rbBotStates.set(f, botFrame);
-            }
-        }
-
-        this._rbSuppressSounds = false;
-    }
-
-    _applyInputsForFrame(frame) {
-        for (const slime of this.physics.slimes) {
-            if (slime.id === this.mySlimeId) {
-                const li = this._rbLocalInputs.get(frame);
-                if (li) {
-                    slime.input.left = li.left;
-                    slime.input.right = li.right;
-                    slime.input.jump = li.jump;
-                } else {
-                    slime.input.left = false;
-                    slime.input.right = false;
-                    slime.input.jump = false;
-                }
-            } else if (slime.isBot) {
-                const bot = this.botMap.get(slime.id);
-                if (bot) {
-                    slime.input = bot.getInput(slime, this.physics.ball, this.physics.slimes, this.physics);
-                }
-            } else {
-                // 원격 플레이어: 확인된 입력 또는 예측 (직접 대입, spread 없음)
-                const remoteMap = this._rbRemoteInputs.get(slime.id);
-                const confirmed = remoteMap?.get(frame);
-                const usedMap = this._rbUsedRemoteInputs.get(slime.id);
-
-                if (confirmed) {
-                    slime.input.left = confirmed.left;
-                    slime.input.right = confirmed.right;
-                    slime.input.jump = confirmed.jump;
-                    // 사용 기록
-                    let usedEntry = usedMap?.get(frame);
-                    if (!usedEntry) {
-                        usedEntry = { left: false, right: false, jump: false };
-                        usedMap?.set(frame, usedEntry);
-                    }
-                    usedEntry.left = confirmed.left;
-                    usedEntry.right = confirmed.right;
-                    usedEntry.jump = confirmed.jump;
-                } else {
-                    const predicted = this._rbLastRemoteInput.get(slime.id) || this._rbIdleInput;
-                    slime.input.left = predicted.left;
-                    slime.input.right = predicted.right;
-                    slime.input.jump = predicted.jump;
-                    let usedEntry = usedMap?.get(frame);
-                    if (!usedEntry) {
-                        usedEntry = { left: false, right: false, jump: false };
-                        usedMap?.set(frame, usedEntry);
-                    }
-                    usedEntry.left = predicted.left;
-                    usedEntry.right = predicted.right;
-                    usedEntry.jump = predicted.jump;
-                }
-            }
-        }
-    }
-
     update() {
-        // Lockstep: 양쪽 동일하게 물리 실행
+        // 호스트만 물리 실행 (비호스트는 gameLoop에서 return됨)
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
         if (mySlime && !mySlime.isBot) {
             mySlime.input = this.getMyInput();
@@ -803,13 +434,6 @@ class SlimeVolleyGame {
     becomeHost() {
         this.network.isHost = true;
 
-        // 최신 스냅샷 상태를 물리엔진에 적용
-        if (this.snapshotBuffer.length > 0) {
-            const latest = this.snapshotBuffer[this.snapshotBuffer.length - 1];
-            this.physics.setState(latest.state);
-        }
-        this.snapshotBuffer = [];
-
         // 모든 봇 슬라임에 대해 BotAI 생성
         for (const slime of this.physics.slimes) {
             if (slime.isBot && !this.botMap.has(slime.id)) {
@@ -862,10 +486,6 @@ class SlimeVolleyGame {
                         slime.nickname = (slime.nickname || 'Player') + ' (Bot)';
                         const seed = (this._gameSeed || 12345) + slime.id;
                         this.botMap.set(slime.id, new BotAI('normal', seed));
-                        // Rollback 원격 슬롯에서 제거
-                        if (this._rbRemoteSlots) {
-                            this._rbRemoteSlots = this._rbRemoteSlots.filter(id => id !== slime.id);
-                        }
                     }
                 }
 
@@ -888,10 +508,6 @@ class SlimeVolleyGame {
         this.network.on('p2pReady', () => {
             console.log('%c[P2P] ✅ Direct connection established!', 'color: #4FC3F7; font-weight: bold');
             if (this.renderer) this.renderer.showNotice('P2P Direct Connected!', 2000);
-            // P2P 연결 시 입력 딜레이 최소화
-            if (this._rbInputDelay !== undefined) {
-                this._rbInputDelayTarget = 2; // P2P는 2프레임 (16ms) 충분
-            }
         });
 
         this.network.on('p2pFallback', () => {
@@ -901,13 +517,6 @@ class SlimeVolleyGame {
 
         this.network.on('pingUpdate', (pings) => {
             this.lobby.updatePingDisplay(pings);
-            if (this.network.myPing > 0) {
-                this.interpolationDelay = Math.max(30, this.network.myPing * 0.6 + 16);
-            }
-            // 간단한 네트코드 상태 로그
-            if (this.mode === 'multiplayer') {
-                console.log(`[Netcode] ping=${this.network.myPing}ms p2p=${this.network.p2pReady} host=${this.network.isHost}`);
-            }
         });
 
         this.network.on('kicked', () => {
@@ -920,8 +529,6 @@ class SlimeVolleyGame {
             this.mode = 'multiplayer';
             this.myTeam = msg.myTeam;
             this.mySlimeId = msg.mySlotIndex;
-            this.snapshotBuffer = [];
-            this._lastAppliedSnapshot = null;
             this.botMap = new Map();
 
             this.physics.reset();
@@ -992,57 +599,16 @@ class SlimeVolleyGame {
             }
         });
 
-        // frameInput은 롤백 모드에서만 사용 (현재 호스트 권위 모드)
-        this.network.on('frameInput', () => {});
-
         this.network.on('gameState', (msg) => {
+            // 비호스트: 호스트 상태 그대로 적용 (단일 소스)
             if (!this.network.isHost && msg.state) {
-                const s = msg.state;
-                const phaseChanged = s.phase !== this.physics.phase;
-
-                // Phase 변경 (득점, 서브 등): 전체 상태 즉시 동기화
-                if (phaseChanged) {
-                    this.physics.setState(s);
-                    return;
-                }
-
-                // 공: 부드러운 보정 (순간이동 방지)
-                const bx = s.ball.x - this.physics.ball.x;
-                const by = s.ball.y - this.physics.ball.y;
-                const ballDist = Math.sqrt(bx * bx + by * by);
-                if (ballDist > 3) {
-                    const t = Math.min(0.3, ballDist > 60 ? 1.0 : 0.15);
-                    this.physics.ball.x += bx * t;
-                    this.physics.ball.y += by * t;
-                    this.physics.ball.vx += (s.ball.vx - this.physics.ball.vx) * t;
-                    this.physics.ball.vy += (s.ball.vy - this.physics.ball.vy) * t;
-                }
-                this.physics.ball.lastHitBy = s.ball.lastHitBy;
-
-                // 원격 슬라임: 부드러운 보정
-                for (const ss of s.slimes) {
-                    if (ss.id === this.mySlimeId) continue;
-                    const slime = this.physics.slimes.find(sl => sl.id === ss.id);
-                    if (slime) {
-                        slime.x += (ss.x - slime.x) * 0.4;
-                        slime.y += (ss.y - slime.y) * 0.4;
-                        slime.vx = ss.vx;
-                        slime.vy = ss.vy;
-                        slime.onGround = ss.onGround;
-                    }
-                }
-
-                // 점수/세트: 호스트 권위
-                this.physics.scores = [...s.scores];
-                this.physics.servingTeam = s.servingTeam;
-                if (s.setsWon) this.physics.setsWon = [...s.setsWon];
-                if (s.currentSet !== undefined) this.physics.currentSet = s.currentSet;
+                this.physics.setState(msg.state);
             }
         });
 
         this.network.on('input', (msg) => {
-            // Lockstep: 모든 플레이어가 원격 입력 수신
-            if (msg.input && msg.slotIndex !== undefined) {
+            // 호스트: 원격 플레이어 입력 수신
+            if (this.network.isHost && msg.input && msg.slotIndex !== undefined) {
                 if (this._remotePlayerInputs) {
                     this._remotePlayerInputs.set(msg.slotIndex, msg.input);
                 }
@@ -1050,25 +616,28 @@ class SlimeVolleyGame {
         });
 
         this.network.on('gameEvent', (msg) => {
-            // Lockstep: 양쪽이 자체 물리에서 이벤트 처리하므로
-            // gameEvent는 비호스트의 점수/세트 desync 보정용으로만 사용
+            // 비호스트: 호스트의 이벤트 효과 재생
             if (!this.network.isHost) {
-                if (msg.event === 'scored' && msg.scores) {
-                    this.physics.scores[0] = msg.scores[0];
-                    this.physics.scores[1] = msg.scores[1];
-                } else if (msg.event === 'setWon' && msg.setsWon) {
-                    this.physics.setsWon[0] = msg.setsWon[0];
-                    this.physics.setsWon[1] = msg.setsWon[1];
+                if (msg.event === 'hit') {
+                    this.sound.playHit(msg.intensity || 0.5);
+                    this.renderer.spawnHitParticles(msg.x, msg.y, msg.color);
+                    if (msg.intensity > 0.6) this.renderer.shake(msg.intensity * 6);
+                } else if (msg.event === 'scored') {
+                    this.sound.playScore(msg.team);
+                    this.renderer.spawnScoreParticles(msg.team);
+                    this.renderer.shake(8);
+                    this.renderer.showMessage(`${msg.scores[0]} - ${msg.scores[1]}`, CONFIG.POINT_FREEZE);
+                } else if (msg.event === 'setWon') {
+                    this.sound.playScore(msg.setWinner);
+                    this.renderer.shake(10);
+                    this.renderer.showMessage(`Set ${msg.setNumber}! (${msg.setsWon[0]}-${msg.setsWon[1]})`, 1800);
                 } else if (msg.event === 'gameOver') {
-                    // 호스트의 게임오버 판정을 비호스트도 따름
                     this.running = false;
                     const won = msg.winner === this.myTeam;
                     this.sound.playGameOver(won);
                     this.renderer.shake(12);
                     setTimeout(() => {
-                        this.lobby.showGameOver(
-                            msg.winner, msg.setsWon, this.myTeam, msg.setScores, msg.mvp
-                        );
+                        this.lobby.showGameOver(msg.winner, msg.setsWon, this.myTeam, msg.setScores, msg.mvp);
                     }, 1500);
                 }
             }
