@@ -882,23 +882,23 @@ class SlimeVolleyGame {
                 this.interpolationDelay = Math.max(30, this.network.myPing * 0.6 + 16);
             }
 
-            // === 적응형 입력 딜레이: 핑에 맞춰 자동 조절 ===
+            // === 적응형 입력 딜레이: 스무딩 핑 기반 즉시 설정 ===
             if (this._rbInputDelay !== undefined && this.network.myPing > 0) {
                 const ping = this.network.myPing;
-                const oneWayMs = ping / 2;
+                // 스무딩: 스파이크 무시, 안정적 평균 사용
+                if (!this._rbSmoothedPing) this._rbSmoothedPing = ping;
+                this._rbSmoothedPing = this._rbSmoothedPing * 0.8 + ping * 0.2;
+
+                const oneWayMs = this._rbSmoothedPing / 2;
                 // 편도 지연을 120fps 프레임으로 변환 + 여유 1프레임
                 const neededFrames = Math.ceil(oneWayMs / 8.33) + 1;
-                this._rbInputDelayTarget = Math.max(
+                // 즉시 설정 (느린 램핑 제거)
+                this._rbInputDelay = Math.max(
                     this._rbInputDelayMin,
                     Math.min(this._rbInputDelayMax, neededFrames)
                 );
-                // 부드럽게 조절 (급격한 변화 방지)
-                if (this._rbInputDelay < this._rbInputDelayTarget) {
-                    this._rbInputDelay = Math.min(this._rbInputDelay + 1, this._rbInputDelayTarget);
-                } else if (this._rbInputDelay > this._rbInputDelayTarget + 2) {
-                    this._rbInputDelay = Math.max(this._rbInputDelay - 1, this._rbInputDelayTarget);
-                }
-                console.log(`[Netcode] ping=${ping}ms delay=${this._rbInputDelay}f(${Math.round(this._rbInputDelay * 8.33)}ms) p2p=${this.network.p2pReady}`);
+                console.log(`[Netcode] ping=${ping}ms smooth=${Math.round(this._rbSmoothedPing)}ms delay=${this._rbInputDelay}f(${Math.round(this._rbInputDelay * 8.33)}ms) rb=${this._rbRollbackCount} p2p=${this.network.p2pReady}`);
+                this._rbRollbackCount = 0; // 주기마다 리셋
             }
         });
 
