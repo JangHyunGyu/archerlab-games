@@ -1,11 +1,12 @@
-// WebSocket Network Client for Multiplayer (범용 relay 서버 대응)
-// WebRTC P2P 지원: 게임 데이터는 P2P, 로비/시그널링은 WS
+// WebSocket Network Client for Multiplayer
+// WS = 로비/시그널링 전용, 게임 데이터 = PeerJS P2P 전용
 class NetworkClient {
     constructor(gameId) {
         this.gameId = gameId || 'slimevolley';
         this.ws = null;
         this.connected = false;
         this.roomCode = null;
+        this.roomId = null;
         this.playerId = null;
         this.isHost = false;
         this.handlers = {};
@@ -15,36 +16,31 @@ class NetworkClient {
         this.myPing = 0;
         this.playerPings = {};
         this.lastSentInput = null;
+        this.mySlotIndex = 0;
 
-        // WebRTC P2P
-        this.webrtc = new WebRTCManager();
-        this.p2pReady = false;       // all game peers connected via P2P
-        this.p2pPeers = [];          // peer player IDs to connect to
-        this.p2pPings = {};          // peerId -> rtt ms
-        this._p2pPingSent = {};      // peerId -> timestamp
+        // PeerJS P2P
+        this.peerjs = new PeerJSManager();
+        this.p2pReady = false;
+        this.p2pPings = {};
 
-        // Wire up WebRTC signaling through WebSocket
-        this.webrtc.setSignalSender((targetId, signal) => {
-            this.send({ type: 'rtcSignal', targetId, signal });
-        });
-
-        // Handle P2P messages (game data arriving via DataChannel)
-        this.webrtc.onMessage = (peerId, data) => {
+        // P2P 메시지 수신 → 이벤트 emit
+        this.peerjs.onMessage = (peerId, data) => {
             this.emit(data.type, data);
         };
 
-        this.webrtc.onPeerConnected = (peerId) => {
-            console.log(`%c[P2P] Peer ${peerId} VERIFIED & connected`, 'color: #66BB6A; font-weight: bold');
-            this._checkAllP2PReady();
+        this.peerjs.onPeerConnected = (peerId) => {
+            console.log(`%c[P2P] Peer connected: ${peerId}`, 'color: #66BB6A; font-weight: bold');
+            this.p2pReady = true;
+            this.emit('p2pReady');
+            this._startP2PPingLoop();
         };
 
-        this.webrtc.onPeerDisconnected = (peerId) => {
-            console.log(`%c[P2P] Peer ${peerId} disconnected`, 'color: #EF5350');
-            this.p2pReady = false;
+        this.peerjs.onPeerDisconnected = (peerId) => {
+            console.log(`%c[P2P] Peer disconnected: ${peerId}`, 'color: #EF5350');
+            this.p2pReady = this.peerjs.connected;
         };
 
-        // P2P ping 결과 수신
-        this.webrtc._onPingResult = (peerId, rtt) => {
+        this.peerjs._onPingResult = (peerId, rtt) => {
             this.p2pPings[peerId] = rtt;
         };
     }
@@ -146,100 +142,49 @@ class NetworkClient {
         }
     }
 
-    // === 게임 데이터: WebSocket relay (단순·안정) ===
+    // === 게임 데이터: PeerJS P2P 전용 (WS 안 씀) ===
 
     sendGameState(state) {
-        this.send({ type: 'gameState', state });
+        this.peerjs.broadcast({ type: 'gameState', state });
     }
 
     sendGameEvent(eventData) {
-        this.send({ type: 'gameEvent', ...eventData });
+        this.peerjs.broadcast({ type: 'gameEvent', ...eventData });
     }
 
-    // === P2P message handling ===
-
-    _checkAllP2PReady() {
-        if (this.p2pPeers.length === 0) {
-            // 피어 목록이 아직 비어있지만 연결된 피어가 있으면 보류
-            if (this.webrtc.connected) {
-                console.log('[P2P] peers list empty but WebRTC connected - deferring check');
-                this._p2pDeferredCheck = true;
-            }
+    sendInput(input) {
+        const last = this.lastSentInput;
+        if (last && last.left === input.left && last.right === input.right && last.jump === input.jump) {
             return;
         }
-        for (const peerId of this.p2pPeers) {
-            if (!this.webrtc.isPeerConnected(peerId)) {
-                console.log(`[P2P] checkReady: peer ${peerId} not yet connected`);
-                return;
-            }
-        }
-        this.p2pReady = true;
-        console.log('%c[P2P] All P2P connections established!', 'color: #4FC3F7; font-weight: bold');
-        this.emit('p2pReady');
+        this.lastSentInput = { ...input };
+        this.peerjs.broadcast({ type: 'input', input, slotIndex: this.mySlotIndex });
+    }
 
-        // Start P2P ping measurement
-        this._startP2PPingLoop();
+    // === PeerJS P2P 연결 ===
+
+    async initP2P() {
+        try {
+            if (this.isHost) {
+                await this.peerjs.createHost(this.roomId);
+                console.log('[P2P] Host peer created, waiting for connections...');
+            } else {
+                await this.peerjs.connectToHost(this.roomId);
+                console.log('[P2P] Connected to host!');
+            }
+        } catch (e) {
+            console.error('[P2P] Connection failed:', e);
+            throw e;
+        }
     }
 
     _startP2PPingLoop() {
         if (this._p2pPingInterval) clearInterval(this._p2pPingInterval);
         this._p2pPingInterval = setInterval(() => {
-            for (const peerId of this.p2pPeers) {
-                this.webrtc.pingPeer(peerId);
+            for (const [peerId] of this.peerjs.connections) {
+                this.peerjs.pingPeer(peerId);
             }
-        }, 1000);
-    }
-
-    // === P2P connection initiation (called when game starts) ===
-
-    initiateP2P(playerList, myPlayerId, mySlotIndex) {
-        this.webrtc.setMyId(myPlayerId);
-        this.mySlotIndex = mySlotIndex;
-        this.p2pPeers = [];
-        this.p2pReady = false;
-
-        // Connect to all non-bot players except myself
-        for (const p of playerList) {
-            if (p.id !== myPlayerId && !p.isBot) {
-                this.p2pPeers.push(p.id);
-            }
-        }
-
-        if (this.p2pPeers.length === 0) {
-            // No human peers (all bots), P2P not needed
-            return;
-        }
-
-        console.log(`[P2P] initiateP2P: myId=${myPlayerId}, peers=${JSON.stringify(this.p2pPeers)}`);
-
-        // Only the "lower" ID initiates to avoid duplicate offers
-        for (const peerId of this.p2pPeers) {
-            if (myPlayerId < peerId) {
-                this.webrtc.connectToPeer(peerId);
-            }
-            // The other side will receive the offer and respond
-        }
-
-        // 피어 목록 설정 후 재확인 (이미 연결된 경우 대비)
-        if (this._p2pDeferredCheck) {
-            this._p2pDeferredCheck = false;
-            this._checkAllP2PReady();
-        }
-
-        // Timeout: if P2P not ready in 5 seconds, fall back to WS
-        setTimeout(() => {
-            if (!this.p2pReady) {
-                // 마지막으로 한번 더 확인 (race condition 방지)
-                this._checkAllP2PReady();
-                if (this.p2pReady) {
-                    console.log('[P2P] Connected just in time!');
-                    return;
-                }
-                console.log('%c[P2P] ✗ Connection timeout, using WebSocket fallback', 'color: #EF5350');
-                this.webrtc.fallbackToWS = true;
-                this.emit('p2pFallback');
-            }
-        }, 5000);
+        }, 2000);
     }
 
     handleMessage(msg) {
@@ -272,12 +217,7 @@ class NetworkClient {
                 }
                 break;
 
-            case 'rtcSignal':
-                // WebRTC signaling from a peer, relayed through WS
-                if (msg.fromId && msg.signal) {
-                    this.webrtc.handleSignal(msg.fromId, msg.signal);
-                }
-                break;
+            // rtcSignal은 더 이상 사용하지 않음 (PeerJS가 자체 시그널링)
 
             default:
                 this.emit(msg.type, msg);
@@ -313,15 +253,6 @@ class NetworkClient {
         this.send({ type: 'startGame', config });
     }
 
-    sendInput(input) {
-        const last = this.lastSentInput;
-        if (last && last.left === input.left && last.right === input.right && last.jump === input.jump) {
-            return;
-        }
-        this.lastSentInput = { ...input };
-        this.send({ type: 'input', input, slotIndex: this.mySlotIndex });
-    }
-
     setMetadata(metadata) {
         this.send({ type: 'setMetadata', metadata });
     }
@@ -347,9 +278,8 @@ class NetworkClient {
             clearInterval(this._p2pPingInterval);
             this._p2pPingInterval = null;
         }
-        this.webrtc.destroy();
+        this.peerjs.destroy();
         this.p2pReady = false;
-        this.p2pPeers = [];
         this.roomId = null;
         this.playerId = null;
         this.isHost = false;
