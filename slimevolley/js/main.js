@@ -425,9 +425,12 @@ class SlimeVolleyGame {
             clearInterval(this.countdownTimer);
             this.countdownTimer = null;
         }
-        this.renderer.clearMessages();
-        this.renderer.clearSlimes();
-        this.renderer.clearBall();
+        this.sound.stopAll();
+        if (this.renderer.initialized) {
+            this.renderer.clearMessages();
+            this.renderer.clearSlimes();
+            this.renderer.clearBall();
+        }
     }
 
     // === Multiplayer ===
