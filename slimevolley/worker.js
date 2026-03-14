@@ -439,6 +439,22 @@ export class GameRoom {
                 this.broadcastPings();
                 break;
 
+            case 'rtcSignal':
+                // WebRTC signaling relay: forward to specific target peer
+                if (msg.targetId) {
+                    for (const [targetWs, targetData] of this.sessions) {
+                        if (targetData.id === msg.targetId) {
+                            this.sendTo(targetWs, {
+                                type: 'rtcSignal',
+                                fromId: player.id,
+                                signal: msg.signal,
+                            });
+                            break;
+                        }
+                    }
+                }
+                break;
+
             case 'chat':
                 this.broadcast({
                     type: 'chat',

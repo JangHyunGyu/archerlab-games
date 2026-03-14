@@ -248,9 +248,9 @@ class SlimeVolleyGame {
 
             // 멀티플레이어: 롤백 보정 스무딩 (원격 슬라임)
             if (isMultiplayer && this._rbVisualOffset) {
-                const decay = Math.pow(0.12, ticker.deltaMS / 16.67); // 프레임레이트 독립적 감쇠
+                const decay = Math.pow(0.12, ticker.deltaMS / 16.67);
                 for (const slotId of this._rbRemoteSlots) {
-                    const offset = this._rbVisualOffset[slotId];
+                    const offset = this._rbVisualOffset.get(slotId);
                     if (!offset) continue;
                     offset.x *= decay;
                     offset.y *= decay;
@@ -302,76 +302,109 @@ class SlimeVolleyGame {
         }
     }
 
-    // === Rollback Netcode ===
+    // === Rollback Netcode (P2P optimized, zero-GC) ===
     _initRollback() {
         this._rbFrame = 0;
-        this._rbLocalInputs = {};
-        this._rbRemoteInputs = {};      // { [slotIndex]: { [frame]: input } }
-        this._rbUsedRemoteInputs = {};  // { [slotIndex]: { [frame]: input } }
-        this._rbLastRemoteInput = {};   // { [slotIndex]: input }
-        this._rbConfirmedRemoteFrame = {}; // { [slotIndex]: frame }
-        this._rbStates = {};            // frame -> { physics, bots }
-        this._rbBotStates = {};         // frame -> { [slimeId]: botState }
-        this._rbPendingRemoteInputs = [];
+        this._rbInputDelay = 3;         // 3프레임 입력 딜레이 (25ms@120fps, 롤백 깊이 감소)
+        this._rbInputRedundancy = 5;    // 최근 5프레임 입력을 매번 함께 전송
+        this._rbMaxRollback = 30;       // 최대 롤백 깊이 (30프레임 = 250ms)
+        this._rbMaxResimFrames = 12;    // 최대 재시뮬레이션 깊이
         this._rbSuppressSounds = false;
-        this._rbMaxRollback = 60;
         this._rbInputSendTimer = 0;
-        this._rbVisualOffset = {}; // 롤백 보정 시 시각적 오프셋 (부드러운 보정용)
+
+        // Map 기반 (delete 시 V8 de-optimization 방지)
+        this._rbLocalInputs = new Map();
+        this._rbRemoteInputs = new Map();     // slotId -> Map(frame -> {l,r,j})
+        this._rbUsedRemoteInputs = new Map(); // slotId -> Map(frame -> {l,r,j})
+        this._rbLastRemoteInput = new Map();  // slotId -> {l,r,j}
+        this._rbConfirmedRemoteFrame = new Map();
+        this._rbStates = new Map();           // frame -> pooled state ref
+        this._rbBotStates = new Map();        // frame -> Map(slimeId -> botState)
+        this._rbPendingRemoteInputs = [];
+
+        // 재사용 입력 객체 (GC 방지)
+        this._rbIdleInput = { left: false, right: false, jump: false };
+        this._rbTempInput = { left: false, right: false, jump: false };
+
+        // 시각적 오프셋 (롤백 보정 스무딩)
+        this._rbVisualOffset = new Map();
+
+        // 슬라임 인덱스 캐시 (find 호출 제거)
+        this._rbSlimeById = new Map();
+        for (const slime of this.physics.slimes) {
+            this._rbSlimeById.set(slime.id, slime);
+        }
 
         // 원격 플레이어 슬롯 목록
         this._rbRemoteSlots = [];
         for (const slime of this.physics.slimes) {
             if (slime.id !== this.mySlimeId && !slime.isBot) {
                 this._rbRemoteSlots.push(slime.id);
-                this._rbRemoteInputs[slime.id] = {};
-                this._rbUsedRemoteInputs[slime.id] = {};
-                this._rbLastRemoteInput[slime.id] = { left: false, right: false, jump: false };
-                this._rbConfirmedRemoteFrame[slime.id] = -1;
-                this._rbVisualOffset[slime.id] = { x: 0, y: 0 };
+                this._rbRemoteInputs.set(slime.id, new Map());
+                this._rbUsedRemoteInputs.set(slime.id, new Map());
+                this._rbLastRemoteInput.set(slime.id, { left: false, right: false, jump: false });
+                this._rbConfirmedRemoteFrame.set(slime.id, -1);
+                this._rbVisualOffset.set(slime.id, { x: 0, y: 0 });
             }
+        }
+
+        // 상태 풀 초기화 (zero-allocation saves)
+        const poolSize = this._rbMaxRollback + this._rbMaxResimFrames + 10;
+        this.physics.initStatePool(poolSize, this.physics.slimes.length);
+
+        // 롤백 보정 전 위치 캐시 (재사용)
+        this._rbPrePositions = new Map();
+        for (const slotId of this._rbRemoteSlots) {
+            this._rbPrePositions.set(slotId, { x: 0, y: 0 });
         }
     }
 
     _rollbackTick(FIXED_DT) {
-        // 롤백 보정 전 위치 저장 (보정 스무딩용)
-        const preRollbackPositions = {};
+        // 롤백 보정 전 위치 저장 (재사용 객체)
         for (const slotId of this._rbRemoteSlots) {
-            const sl = this.physics.slimes.find(s => s.id === slotId);
-            if (sl) preRollbackPositions[slotId] = { x: sl.x, y: sl.y };
+            const sl = this._rbSlimeById.get(slotId);
+            if (sl) {
+                const pre = this._rbPrePositions.get(slotId);
+                pre.x = sl.x; pre.y = sl.y;
+            }
         }
 
         this._processRemoteInputs();
 
-        // 롤백 보정이 발생했으면 시각적 오프셋 누적
-        if (this._rbVisualOffset) {
-            for (const slotId of this._rbRemoteSlots) {
-                const sl = this.physics.slimes.find(s => s.id === slotId);
-                const pre = preRollbackPositions[slotId];
-                if (sl && pre) {
-                    const dx = sl.x - pre.x;
-                    const dy = sl.y - pre.y;
-                    if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-                        this._rbVisualOffset[slotId].x -= dx;
-                        this._rbVisualOffset[slotId].y -= dy;
-                    }
+        // 롤백 보정 시각적 오프셋 누적
+        for (const slotId of this._rbRemoteSlots) {
+            const sl = this._rbSlimeById.get(slotId);
+            const pre = this._rbPrePositions.get(slotId);
+            if (sl && pre) {
+                const dx = sl.x - pre.x;
+                const dy = sl.y - pre.y;
+                if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+                    const offset = this._rbVisualOffset.get(slotId);
+                    offset.x -= dx;
+                    offset.y -= dy;
                 }
             }
         }
 
         let stepsThisTick = 0;
-        const maxStepsPerTick = 6; // CPU 스파이크 방지
+        const maxStepsPerTick = 4; // CPU 스파이크 방지 (6→4)
 
         while (this.physicsAccumulator >= FIXED_DT) {
-            // Frame advantage: 너무 앞서나가지 않기 (soft limit)
-            const minConfirmed = this._rbRemoteSlots.length > 0
-                ? Math.min(...this._rbRemoteSlots.map(id => this._rbConfirmedRemoteFrame[id]))
-                : this._rbFrame;
+            // Frame advantage: 너무 앞서나가지 않기
+            let minConfirmed = this._rbFrame;
+            if (this._rbRemoteSlots.length > 0) {
+                minConfirmed = Infinity;
+                for (const id of this._rbRemoteSlots) {
+                    const cf = this._rbConfirmedRemoteFrame.get(id);
+                    if (cf < minConfirmed) minConfirmed = cf;
+                }
+            }
             const frameAdvantage = this._rbFrame - minConfirmed;
             if (frameAdvantage > this._rbMaxRollback - 2) {
-                break; // 게임을 자연스럽게 감속 (accumulator 소비하지 않음)
+                break;
             }
             if (stepsThisTick >= maxStepsPerTick) {
-                break; // 한 틱에 너무 많은 물리 스텝 방지
+                break;
             }
             stepsThisTick++;
 
@@ -380,14 +413,29 @@ class SlimeVolleyGame {
             // 렌더 보간용 이전 상태 저장
             this._saveInterpState();
 
-            // 내 입력 기록 + 전송
+            // 내 입력: inputDelay 적용 (현재 키 입력을 frame+delay에 등록)
             const myInput = this.getMyInput();
-            this._rbLocalInputs[frame] = { ...myInput };
+            const targetFrame = frame + this._rbInputDelay;
+            // 현재 프레임용 입력이 아직 없으면 idle
+            if (!this._rbLocalInputs.has(frame)) {
+                this._rbLocalInputs.set(frame, { left: false, right: false, jump: false });
+            }
+            // 미래 프레임에 현재 입력 등록
+            this._rbLocalInputs.set(targetFrame, { left: myInput.left, right: myInput.right, jump: myInput.jump });
+
+            // 입력 전송 (매 프레임 + 중복 히스토리)
             this._rbInputSendTimer++;
-            // 입력 변경 시 또는 2프레임마다 전송 (하트비트 주기 단축)
-            const lastSent = this._rbLocalInputs[frame - 1];
-            if (!lastSent || lastSent.left !== myInput.left || lastSent.right !== myInput.right || lastSent.jump !== myInput.jump || this._rbInputSendTimer >= 2) {
-                this.network.sendFrameInput(frame, myInput);
+            const lastInput = this._rbLocalInputs.get(targetFrame - 1);
+            const changed = !lastInput || lastInput.left !== myInput.left || lastInput.right !== myInput.right || lastInput.jump !== myInput.jump;
+            if (changed || this._rbInputSendTimer >= 2) {
+                // 히스토리: 최근 N프레임 입력 묶어 보내기
+                const history = [];
+                for (let i = 1; i <= this._rbInputRedundancy; i++) {
+                    const hf = targetFrame - i;
+                    const hi = this._rbLocalInputs.get(hf);
+                    if (hi) history.push({ f: hf, l: hi.left, r: hi.right, j: hi.jump });
+                }
+                this.network.sendFrameInput(targetFrame, myInput, history.length > 0 ? history : undefined);
                 this._rbInputSendTimer = 0;
             }
 
@@ -398,25 +446,29 @@ class SlimeVolleyGame {
                 this.handlePhysicsResult(result);
             }
 
-            // 상태 저장
-            this._rbStates[frame] = this.physics.saveFullState();
-            this._rbBotStates[frame] = {};
-            for (const [id, bot] of this.botMap) {
-                this._rbBotStates[frame][id] = bot.saveState();
+            // 상태 저장 (zero-allocation pooled)
+            this._rbStates.set(frame, this.physics.saveStatePooled());
+            // 봇 상태 (봇이 있을 때만)
+            if (this.botMap.size > 0) {
+                const botFrame = new Map();
+                for (const [id, bot] of this.botMap) {
+                    botFrame.set(id, bot.saveState());
+                }
+                this._rbBotStates.set(frame, botFrame);
             }
 
             this._rbFrame++;
             this.physicsAccumulator -= FIXED_DT;
 
-            // 오래된 프레임 정리
+            // 오래된 프레임 정리 (Map.delete는 V8에 안전)
             const oldest = this._rbFrame - this._rbMaxRollback - 2;
             if (oldest >= 0) {
-                delete this._rbStates[oldest];
-                delete this._rbBotStates[oldest];
-                delete this._rbLocalInputs[oldest];
+                this._rbStates.delete(oldest);
+                this._rbBotStates.delete(oldest);
+                this._rbLocalInputs.delete(oldest);
                 for (const slotId of this._rbRemoteSlots) {
-                    delete this._rbRemoteInputs[slotId][oldest];
-                    delete this._rbUsedRemoteInputs[slotId][oldest];
+                    this._rbRemoteInputs.get(slotId)?.delete(oldest);
+                    this._rbUsedRemoteInputs.get(slotId)?.delete(oldest);
                 }
             }
         }
@@ -429,45 +481,50 @@ class SlimeVolleyGame {
         let needsRollback = false;
         let rollbackFrame = Infinity;
 
-        for (const { frame, input, slotIndex } of pending) {
-            if (!this._rbRemoteInputs[slotIndex]) continue;
+        for (let pi = 0; pi < pending.length; pi++) {
+            const p = pending[pi];
+            const frame = p.frame;
+            const input = p.input;
+            const slotIndex = p.slotIndex;
+            const remoteMap = this._rbRemoteInputs.get(slotIndex);
+            if (!remoteMap) continue;
 
-            const lastConf = this._rbConfirmedRemoteFrame[slotIndex] || -1;
-            const prevInput = this._rbLastRemoteInput[slotIndex] || { left: false, right: false, jump: false };
+            const lastConf = this._rbConfirmedRemoteFrame.get(slotIndex) || -1;
+            const prevInput = this._rbLastRemoteInput.get(slotIndex) || this._rbIdleInput;
 
-            // 중간 프레임 채우기: lastConfirmed+1 ~ frame-1은 이전 입력과 동일
+            // 중간 프레임 채우기
             for (let f = lastConf + 1; f < frame; f++) {
-                if (!this._rbRemoteInputs[slotIndex][f]) {
-                    this._rbRemoteInputs[slotIndex][f] = { ...prevInput };
-                    // 이미 시뮬레이션한 프레임이면 예측과 비교
+                if (!remoteMap.has(f)) {
+                    remoteMap.set(f, { left: prevInput.left, right: prevInput.right, jump: prevInput.jump });
                     if (f < this._rbFrame) {
-                        const predicted = this._rbUsedRemoteInputs[slotIndex]?.[f];
-                        if (predicted && (predicted.left !== prevInput.left || predicted.right !== prevInput.right || predicted.jump !== prevInput.jump)) {
+                        const used = this._rbUsedRemoteInputs.get(slotIndex)?.get(f);
+                        if (used && (used.left !== prevInput.left || used.right !== prevInput.right || used.jump !== prevInput.jump)) {
                             needsRollback = true;
-                            rollbackFrame = Math.min(rollbackFrame, f);
+                            if (f < rollbackFrame) rollbackFrame = f;
                         }
                     }
                 }
             }
 
-            this._rbRemoteInputs[slotIndex][frame] = input;
-            this._rbLastRemoteInput[slotIndex] = { ...input };
+            remoteMap.set(frame, { left: input.left, right: input.right, jump: input.jump });
+            const lastRI = this._rbLastRemoteInput.get(slotIndex);
+            lastRI.left = input.left; lastRI.right = input.right; lastRI.jump = input.jump;
 
             if (frame > lastConf) {
-                this._rbConfirmedRemoteFrame[slotIndex] = frame;
+                this._rbConfirmedRemoteFrame.set(slotIndex, frame);
             }
 
-            // 현재 프레임 예측 비교
+            // 예측 비교
             if (frame < this._rbFrame) {
-                const predicted = this._rbUsedRemoteInputs[slotIndex]?.[frame];
-                if (predicted && (predicted.left !== input.left || predicted.right !== input.right || predicted.jump !== input.jump)) {
+                const used = this._rbUsedRemoteInputs.get(slotIndex)?.get(frame);
+                if (used && (used.left !== input.left || used.right !== input.right || used.jump !== input.jump)) {
                     needsRollback = true;
-                    rollbackFrame = Math.min(rollbackFrame, frame);
+                    if (frame < rollbackFrame) rollbackFrame = frame;
                 }
             }
         }
 
-        this._rbPendingRemoteInputs = [];
+        this._rbPendingRemoteInputs.length = 0; // clear without new array
 
         if (needsRollback) {
             this._performRollback(rollbackFrame);
@@ -475,20 +532,19 @@ class SlimeVolleyGame {
     }
 
     _performRollback(toFrame) {
-        // 재시뮬레이션 깊이 제한 (CPU 스파이크 방지)
-        const maxResimFrames = 20;
-        const actualToFrame = Math.max(toFrame, this._rbFrame - maxResimFrames);
-
+        const actualToFrame = Math.max(toFrame, this._rbFrame - this._rbMaxResimFrames);
         const restoreFrame = actualToFrame - 1;
-        const savedState = this._rbStates[restoreFrame];
+        const savedState = this._rbStates.get(restoreFrame);
         if (!savedState) return;
 
-        this.physics.loadFullState(savedState);
+        this.physics.loadStatePooled(savedState);
+
         // 봇 상태 복원
-        const botStates = this._rbBotStates[restoreFrame];
+        const botStates = this._rbBotStates.get(restoreFrame);
         if (botStates) {
             for (const [id, bot] of this.botMap) {
-                if (botStates[id]) bot.loadState(botStates[id]);
+                const bs = botStates.get(id);
+                if (bs) bot.loadState(bs);
             }
         }
 
@@ -498,10 +554,13 @@ class SlimeVolleyGame {
         for (let f = actualToFrame; f < this._rbFrame; f++) {
             this._applyInputsForFrame(f);
             this.physics.update();
-            this._rbStates[f] = this.physics.saveFullState();
-            this._rbBotStates[f] = {};
-            for (const [id, bot] of this.botMap) {
-                this._rbBotStates[f][id] = bot.saveState();
+            this._rbStates.set(f, this.physics.saveStatePooled());
+            if (this.botMap.size > 0) {
+                const botFrame = new Map();
+                for (const [id, bot] of this.botMap) {
+                    botFrame.set(id, bot.saveState());
+                }
+                this._rbBotStates.set(f, botFrame);
             }
         }
 
@@ -511,24 +570,53 @@ class SlimeVolleyGame {
     _applyInputsForFrame(frame) {
         for (const slime of this.physics.slimes) {
             if (slime.id === this.mySlimeId) {
-                slime.input = this._rbLocalInputs[frame] || { left: false, right: false, jump: false };
+                const li = this._rbLocalInputs.get(frame);
+                if (li) {
+                    slime.input.left = li.left;
+                    slime.input.right = li.right;
+                    slime.input.jump = li.jump;
+                } else {
+                    slime.input.left = false;
+                    slime.input.right = false;
+                    slime.input.jump = false;
+                }
             } else if (slime.isBot) {
                 const bot = this.botMap.get(slime.id);
                 if (bot) {
                     slime.input = bot.getInput(slime, this.physics.ball, this.physics.slimes, this.physics);
                 }
             } else {
-                // 원격 플레이어: 확인된 입력 또는 예측
-                const confirmed = this._rbRemoteInputs[slime.id]?.[frame];
+                // 원격 플레이어: 확인된 입력 또는 예측 (직접 대입, spread 없음)
+                const remoteMap = this._rbRemoteInputs.get(slime.id);
+                const confirmed = remoteMap?.get(frame);
+                const usedMap = this._rbUsedRemoteInputs.get(slime.id);
+
                 if (confirmed) {
-                    slime.input = { ...confirmed };
-                    if (!this._rbUsedRemoteInputs[slime.id]) this._rbUsedRemoteInputs[slime.id] = {};
-                    this._rbUsedRemoteInputs[slime.id][frame] = { ...confirmed };
+                    slime.input.left = confirmed.left;
+                    slime.input.right = confirmed.right;
+                    slime.input.jump = confirmed.jump;
+                    // 사용 기록
+                    let usedEntry = usedMap?.get(frame);
+                    if (!usedEntry) {
+                        usedEntry = { left: false, right: false, jump: false };
+                        usedMap?.set(frame, usedEntry);
+                    }
+                    usedEntry.left = confirmed.left;
+                    usedEntry.right = confirmed.right;
+                    usedEntry.jump = confirmed.jump;
                 } else {
-                    const predicted = this._rbLastRemoteInput[slime.id] || { left: false, right: false, jump: false };
-                    slime.input = { ...predicted };
-                    if (!this._rbUsedRemoteInputs[slime.id]) this._rbUsedRemoteInputs[slime.id] = {};
-                    this._rbUsedRemoteInputs[slime.id][frame] = { ...predicted };
+                    const predicted = this._rbLastRemoteInput.get(slime.id) || this._rbIdleInput;
+                    slime.input.left = predicted.left;
+                    slime.input.right = predicted.right;
+                    slime.input.jump = predicted.jump;
+                    let usedEntry = usedMap?.get(frame);
+                    if (!usedEntry) {
+                        usedEntry = { left: false, right: false, jump: false };
+                        usedMap?.set(frame, usedEntry);
+                    }
+                    usedEntry.left = predicted.left;
+                    usedEntry.right = predicted.right;
+                    usedEntry.jump = predicted.jump;
                 }
             }
         }
@@ -812,6 +900,9 @@ class SlimeVolleyGame {
             }
             this._gameSeed = gameSeed;
 
+            // P2P 연결 초기화 (시그널링은 WS 경유, 게임 데이터는 P2P 직접)
+            this.network.initiateP2P(msg.players, this.network.playerId);
+
             if (!this.renderer.initialized) {
                 await this.renderer.init();
             } else {
@@ -830,6 +921,21 @@ class SlimeVolleyGame {
                     input: msg.input,
                     slotIndex: msg.slotIndex,
                 });
+                // 중복 히스토리 처리 (패킷 로스 대비)
+                if (msg.history) {
+                    const remoteMap = this._rbRemoteInputs?.get(msg.slotIndex);
+                    if (remoteMap) {
+                        for (const h of msg.history) {
+                            if (!remoteMap.has(h.f)) {
+                                this._rbPendingRemoteInputs.push({
+                                    frame: h.f,
+                                    input: { left: h.l, right: h.r, jump: h.j },
+                                    slotIndex: msg.slotIndex,
+                                });
+                            }
+                        }
+                    }
+                }
             }
         });
 
