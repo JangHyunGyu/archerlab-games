@@ -354,7 +354,13 @@ class NetworkClient {
             return;
         }
         this.lastSentInput = { ...input };
-        this.send({ type: 'input', input });
+        const msg = { type: 'input', input };
+        // P2P로 전송 (서버는 slotIndex를 안 붙여주므로 직접 포함)
+        if (this.p2pReady && !this.webrtc.fallbackToWS) {
+            msg.slotIndex = this.mySlotIndex;
+            if (this.webrtc.broadcast(msg)) return;
+        }
+        this.send(msg);
     }
 
     setMetadata(metadata) {
