@@ -519,7 +519,9 @@ class SlimeVolleyGame {
         // P2P 연결 성공 알림
         this.network.on('p2pReady', () => {
             console.log('%c[P2P] ✅ Direct connection established!', 'color: #4FC3F7; font-weight: bold');
-            if (this.renderer) this.renderer.showNotice('P2P Connected!', 2000);
+            if (this.renderer && this.renderer.initialized) {
+                this.renderer.showNotice('P2P Connected!', 2000);
+            }
         });
 
         this.network.on('pingUpdate', (pings) => {

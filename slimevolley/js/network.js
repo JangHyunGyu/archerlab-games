@@ -32,6 +32,8 @@ class NetworkClient {
             console.log(`%c[P2P] Peer connected: ${peerId}`, 'color: #66BB6A; font-weight: bold');
             this.p2pReady = true;
             this.emit('p2pReady');
+            // 즉시 핑 1회 측정 + 루프 시작
+            this.peerjs.pingPeer(peerId);
             this._startP2PPingLoop();
         };
 
