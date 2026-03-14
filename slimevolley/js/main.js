@@ -602,8 +602,11 @@ class SlimeVolleyGame {
                     }
                     await new Promise((resolve, reject) => {
                         if (this.network.p2pReady) { resolve(); return; }
-                        const timeout = setTimeout(() => reject(new Error('P2P timeout')), 8000);
                         const onReady = () => { clearTimeout(timeout); resolve(); };
+                        const timeout = setTimeout(() => {
+                            this.network.off('p2pReady', onReady);
+                            reject(new Error('P2P timeout'));
+                        }, 8000);
                         this.network.on('p2pReady', onReady);
                     });
                     this.startCountdown();

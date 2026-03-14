@@ -102,7 +102,10 @@ class PeerJSManager {
                 }
             });
 
+            let checkOpen = null;
+
             const timeout = setTimeout(() => {
+                if (checkOpen) clearInterval(checkOpen);
                 reject(new Error('PeerJS connect timeout'));
             }, 10000);
 
@@ -119,7 +122,7 @@ class PeerJSManager {
                 this._setupConnection(conn);
 
                 // 연결 성공 대기
-                const checkOpen = setInterval(() => {
+                checkOpen = setInterval(() => {
                     if (conn.open) {
                         clearInterval(checkOpen);
                         clearTimeout(timeout);
