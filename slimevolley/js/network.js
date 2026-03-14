@@ -146,14 +146,6 @@ class NetworkClient {
     sendFrameInput(frame, input, history) {
         const msg = { type: 'frameInput', frame, input };
         if (history) msg.history = history;
-
-        // Try P2P first, fall back to WS
-        if (this.p2pReady && !this.webrtc.fallbackToWS) {
-            // P2P는 서버가 slotIndex를 안 붙여주므로 직접 포함
-            msg.slotIndex = this.mySlotIndex;
-            if (this.webrtc.broadcast(msg)) return;
-        }
-        // WS fallback (서버가 slotIndex 붙여줌)
         this.send(msg);
     }
 
@@ -348,13 +340,8 @@ class NetworkClient {
             return;
         }
         this.lastSentInput = { ...input };
-        const msg = { type: 'input', input };
-        // P2P로 전송 (서버는 slotIndex를 안 붙여주므로 직접 포함)
-        if (this.p2pReady && !this.webrtc.fallbackToWS) {
-            msg.slotIndex = this.mySlotIndex;
-            if (this.webrtc.broadcast(msg)) return;
-        }
-        this.send(msg);
+        // 항상 WS로 전송 (P2P DataChannel 전송 불안정)
+        this.send({ type: 'input', input });
     }
 
     setMetadata(metadata) {
