@@ -452,6 +452,42 @@ class SlimeVolleyGame {
             const result = this.physics.update();
             if (!this._rbSuppressSounds) {
                 this.handlePhysicsResult(result);
+
+                // 호스트: 점수/세트/게임오버 이벤트 전송 (비-호스트에게 권위적 동기화)
+                if (this.network.isHost && result) {
+                    if (result.type === 'score') {
+                        this.network.sendGameEvent({
+                            event: 'scored',
+                            team: result.team,
+                            scores: result.scores,
+                        });
+                    } else if (result.type === 'setWon') {
+                        this.network.sendGameEvent({
+                            event: 'setWon',
+                            setWinner: result.setWinner,
+                            setNumber: result.setNumber,
+                            setsWon: result.setsWon,
+                        });
+                    } else if (result.type === 'gameOver') {
+                        this.network.sendGameEvent({
+                            event: 'gameOver',
+                            winner: result.winner,
+                            setsWon: result.setsWon,
+                            setScores: result.setScores,
+                            mvp: result.mvp,
+                        });
+                    }
+                }
+            }
+
+            // 호스트: 주기적 상태 동기화 (30프레임마다 = ~0.25초)
+            if (this.network.isHost) {
+                if (!this._rbStateSyncTimer) this._rbStateSyncTimer = 0;
+                this._rbStateSyncTimer++;
+                if (this._rbStateSyncTimer >= 30) {
+                    this._rbStateSyncTimer = 0;
+                    this.network.sendGameState(this.physics.getState());
+                }
             }
 
             // 상태 저장 (zero-allocation pooled)
@@ -983,7 +1019,48 @@ class SlimeVolleyGame {
         });
 
         this.network.on('gameState', (msg) => {
-            // Rollback 모드에서는 gameState 무시 (양쪽 로컬 물리 사용)
+            // 비-호스트: 호스트 권위적 상태로 보정 (점수/세트/페이즈 + 위치 소프트 보정)
+            if (!this.network.isHost && msg.state) {
+                const st = msg.state;
+                // 점수/세트/페이즈는 항상 호스트 기준으로 강제 동기화
+                if (st.scores) {
+                    this.physics.scores[0] = st.scores[0];
+                    this.physics.scores[1] = st.scores[1];
+                }
+                if (st.setsWon) {
+                    this.physics.setsWon[0] = st.setsWon[0];
+                    this.physics.setsWon[1] = st.setsWon[1];
+                }
+                if (st.phase) this.physics.phase = st.phase;
+                if (st.servingTeam !== undefined) this.physics.servingTeam = st.servingTeam;
+                if (st.currentSet !== undefined) this.physics.currentSet = st.currentSet;
+
+                // 볼/슬라임 위치: 큰 차이(>50px)가 있으면 스냅 보정
+                if (st.ball) {
+                    const dx = st.ball.x - this.physics.ball.x;
+                    const dy = st.ball.y - this.physics.ball.y;
+                    if (dx * dx + dy * dy > 2500) {
+                        this.physics.ball.x = st.ball.x;
+                        this.physics.ball.y = st.ball.y;
+                        this.physics.ball.vx = st.ball.vx;
+                        this.physics.ball.vy = st.ball.vy;
+                    }
+                }
+                if (st.slimes) {
+                    for (const ss of st.slimes) {
+                        const slime = this.physics.slimes.find(s => s.id === ss.id);
+                        if (!slime || slime.id === this.mySlimeId) continue; // 내 슬라임은 로컬 우선
+                        const dx = ss.x - slime.x;
+                        const dy = ss.y - slime.y;
+                        if (dx * dx + dy * dy > 2500) {
+                            slime.x = ss.x;
+                            slime.y = ss.y;
+                            slime.vx = ss.vx;
+                            slime.vy = ss.vy;
+                        }
+                    }
+                }
+            }
         });
 
         this.network.on('input', (msg) => {
@@ -992,6 +1069,11 @@ class SlimeVolleyGame {
 
         this.network.on('gameEvent', (msg) => {
             if (msg.event === 'scored') {
+                // 비-호스트: 호스트 권위적 점수 강제 적용
+                if (!this.network.isHost && msg.scores) {
+                    this.physics.scores[0] = msg.scores[0];
+                    this.physics.scores[1] = msg.scores[1];
+                }
                 this.sound.playScore(msg.team);
                 this.renderer.spawnScoreParticles(msg.team);
                 this.renderer.shake(8);
@@ -1002,6 +1084,10 @@ class SlimeVolleyGame {
             } else if (msg.event === 'hit') {
                 // 클라이언트 로컬 물리에서 히트를 직접 처리 → 서버 이벤트 무시
             } else if (msg.event === 'setWon') {
+                if (!this.network.isHost && msg.setsWon) {
+                    this.physics.setsWon[0] = msg.setsWon[0];
+                    this.physics.setsWon[1] = msg.setsWon[1];
+                }
                 this.sound.playScore(msg.setWinner);
                 this.renderer.shake(10);
                 this.renderer.showMessage(
