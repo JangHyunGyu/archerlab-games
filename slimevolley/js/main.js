@@ -226,8 +226,20 @@ class SlimeVolleyGame {
             if (!this.running) return;
 
             if (isNonHostMultiplayer) {
-                // 비호스트: 물리 실행 없이 호스트 상태로만 렌더링
-                this.network.sendInput(this.getMyInput());
+                // 비호스트: 내 슬라임만 로컬 예측, 나머지는 호스트 상태
+                const myInput = this.getMyInput();
+                this.network.sendInput(myInput);
+
+                // 내 슬라임 로컬 물리 예측 (즉각 반응)
+                this.physicsAccumulator += ticker.deltaMS;
+                if (this.physicsAccumulator > FIXED_DT * 4) {
+                    this.physicsAccumulator = FIXED_DT * 4;
+                }
+                while (this.physicsAccumulator >= FIXED_DT) {
+                    this.physics.predictMySlime(this.mySlimeId, myInput);
+                    this.physicsAccumulator -= FIXED_DT;
+                }
+
                 this.renderer.render(this.physics.getState());
                 return;
             }
@@ -979,9 +991,34 @@ class SlimeVolleyGame {
         this.network.on('frameInput', () => {});
 
         this.network.on('gameState', (msg) => {
-            // 비호스트: 호스트 권위적 상태 적용
+            // 비호스트: 호스트 상태 적용 (내 슬라임 제외 — 로컬 예측 유지)
             if (!this.network.isHost && msg.state) {
-                this.physics.setState(msg.state);
+                // 공, 점수, 상대 슬라임 등 적용
+                this.physics.ball.x = msg.state.ball.x;
+                this.physics.ball.y = msg.state.ball.y;
+                this.physics.ball.vx = msg.state.ball.vx;
+                this.physics.ball.vy = msg.state.ball.vy;
+                this.physics.ball.lastHitBy = msg.state.ball.lastHitBy;
+
+                // 슬라임: 내 슬라임 제외하고 적용
+                for (const ss of msg.state.slimes) {
+                    if (ss.id === this.mySlimeId) continue; // 내 슬라임 스킵
+                    const slime = this.physics.slimes.find(s => s.id === ss.id);
+                    if (slime) {
+                        slime.x = ss.x;
+                        slime.y = ss.y;
+                        slime.vx = ss.vx;
+                        slime.vy = ss.vy;
+                        slime.onGround = ss.onGround;
+                    }
+                }
+
+                // 점수, 세트 등
+                this.physics.scores = [...msg.state.scores];
+                this.physics.phase = msg.state.phase;
+                this.physics.servingTeam = msg.state.servingTeam;
+                if (msg.state.setsWon) this.physics.setsWon = [...msg.state.setsWon];
+                if (msg.state.currentSet !== undefined) this.physics.currentSet = msg.state.currentSet;
             }
         });
 
