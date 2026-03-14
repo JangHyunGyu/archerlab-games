@@ -185,6 +185,7 @@ class LobbyManager {
 
     getNameFromInput() {
         const input = document.querySelector('#multiplayer-lobby .player-name-input');
+        if (!input) return null;
         const name = input.value.trim();
         if (!name) {
             this.showError('닉네임을 입력해주세요');
