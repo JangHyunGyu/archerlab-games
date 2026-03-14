@@ -220,9 +220,21 @@ class SlimeVolleyGame {
         // 비호스트: 호스트 상태 수신 + 내 슬라임만 로컬 예측
         this._remotePlayerInputs = new Map();
 
+        const isNonHostMultiplayer = this.mode === 'multiplayer' && !this.network.isHost;
+
         this.gameLoop = (ticker) => {
             if (!this.running) return;
 
+            if (isNonHostMultiplayer) {
+                // 비호스트: 물리 실행 없이 호스트 상태로만 렌더링
+                // 입력은 매 프레임 전송
+                this.network.sendInput(this.getMyInput());
+                const state = this.physics.getState();
+                this.renderer.render(state);
+                return;
+            }
+
+            // 호스트 또는 연습모드: 고정 물리 스텝
             this.physicsAccumulator += ticker.deltaMS;
             if (this.physicsAccumulator > FIXED_DT * 4) {
                 this.physicsAccumulator = FIXED_DT * 4;
@@ -641,25 +653,22 @@ class SlimeVolleyGame {
     }
 
     update() {
+        // 비호스트는 gameLoop에서 직접 렌더링하므로 여기 안 옴
+        // (안전장치)
+        if (this.mode === 'multiplayer' && !this.network.isHost) return;
+
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
         if (mySlime && !mySlime.isBot) {
             mySlime.input = this.getMyInput();
         }
 
-        // 멀티플레이어: 원격 플레이어 입력 적용 + 비호스트 입력 전송
-        if (this.mode === 'multiplayer') {
-            if (!this.network.isHost) {
-                // 비호스트: 내 입력을 호스트에 전송
-                this.network.sendInput(this.getMyInput());
-            }
-            // 원격 플레이어 입력 적용 (호스트에서만 실제로 의미있음)
-            if (this._remotePlayerInputs) {
-                for (const slime of this.physics.slimes) {
-                    if (slime.id !== this.mySlimeId && !slime.isBot) {
-                        const ri = this._remotePlayerInputs.get(slime.id);
-                        if (ri) {
-                            slime.input = ri;
-                        }
+        // 호스트: 원격 플레이어 입력 적용
+        if (this.mode === 'multiplayer' && this._remotePlayerInputs) {
+            for (const slime of this.physics.slimes) {
+                if (slime.id !== this.mySlimeId && !slime.isBot) {
+                    const ri = this._remotePlayerInputs.get(slime.id);
+                    if (ri) {
+                        slime.input = ri;
                     }
                 }
             }
@@ -1002,7 +1011,14 @@ class SlimeVolleyGame {
                     CONFIG.POINT_FREEZE
                 );
             } else if (msg.event === 'hit') {
-                // 클라이언트 로컬 물리에서 히트를 직접 처리 → 서버 이벤트 무시
+                // 비호스트: 히트 효과 재생
+                if (!this.network.isHost) {
+                    this.sound.playHit(msg.intensity || 0.5);
+                    this.renderer.spawnHitParticles(msg.x, msg.y, msg.color);
+                    if (msg.intensity > 0.6) {
+                        this.renderer.shake(msg.intensity * 6);
+                    }
+                }
             } else if (msg.event === 'setWon') {
                 if (!this.network.isHost && msg.setsWon) {
                     this.physics.setsWon[0] = msg.setsWon[0];
