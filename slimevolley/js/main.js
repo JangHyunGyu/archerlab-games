@@ -215,36 +215,18 @@ class SlimeVolleyGame {
 
         const FIXED_DT = 1000 / 120; // 120fps 고정 물리 스텝
 
-        // 멀티플레이어: 호스트 권위 모델 (롤백 없음)
-        // 호스트: 풀 물리 실행 + 상태 전송
-        // 비호스트: 호스트 상태 수신 + 내 슬라임만 로컬 예측
+        // Lockstep: 양쪽 모두 동일한 물리 실행, 입력만 교환
         this._remotePlayerInputs = new Map();
-
-        const isNonHostMultiplayer = this.mode === 'multiplayer' && !this.network.isHost;
 
         this.gameLoop = (ticker) => {
             if (!this.running) return;
 
-            if (isNonHostMultiplayer) {
-                // 비호스트: 내 슬라임만 로컬 예측, 나머지는 호스트 상태
-                const myInput = this.getMyInput();
-                this.network.sendInput(myInput);
-
-                // 내 슬라임 로컬 물리 예측 (즉각 반응)
-                this.physicsAccumulator += ticker.deltaMS;
-                if (this.physicsAccumulator > FIXED_DT * 4) {
-                    this.physicsAccumulator = FIXED_DT * 4;
-                }
-                while (this.physicsAccumulator >= FIXED_DT) {
-                    this.physics.predictMySlime(this.mySlimeId, myInput);
-                    this.physicsAccumulator -= FIXED_DT;
-                }
-
-                this.renderer.render(this.physics.getState());
-                return;
+            // 멀티플레이어: 내 입력 전송
+            if (this.mode === 'multiplayer') {
+                this.network.sendInput(this.getMyInput());
             }
 
-            // 호스트 또는 연습모드: 고정 물리 스텝
+            // 모든 모드: 동일한 물리 스텝
             this.physicsAccumulator += ticker.deltaMS;
             if (this.physicsAccumulator > FIXED_DT * 4) {
                 this.physicsAccumulator = FIXED_DT * 4;
@@ -258,7 +240,6 @@ class SlimeVolleyGame {
 
             const state = this.physics.getState();
 
-            // 렌더 보간: 이전 물리 상태와 현재 상태를 alpha로 블렌딩 (부드러운 움직임)
             const alpha = this.physicsAccumulator / FIXED_DT;
             if (this._interpPrev) {
                 this._applyInterpolation(state, alpha);
@@ -663,16 +644,13 @@ class SlimeVolleyGame {
     }
 
     update() {
-        // 비호스트는 gameLoop에서 직접 렌더링하므로 여기 안 옴
-        // (안전장치)
-        if (this.mode === 'multiplayer' && !this.network.isHost) return;
-
+        // Lockstep: 양쪽 동일하게 물리 실행
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
         if (mySlime && !mySlime.isBot) {
             mySlime.input = this.getMyInput();
         }
 
-        // 호스트: 원격 플레이어 입력 적용
+        // 멀티플레이어: 원격 플레이어 입력 적용 (서버에서 브로드캐스트 받은 것)
         if (this.mode === 'multiplayer' && this._remotePlayerInputs) {
             for (const slime of this.physics.slimes) {
                 if (slime.id !== this.mySlimeId && !slime.isBot) {
@@ -991,29 +969,9 @@ class SlimeVolleyGame {
         this.network.on('frameInput', () => {});
 
         this.network.on('gameState', (msg) => {
-            // 비호스트: 호스트 상태 적용 (내 슬라임 제외 — 로컬 예측 유지)
+            // Lockstep: desync 보정용 (호스트 상태를 기준으로 보정)
             if (!this.network.isHost && msg.state) {
-                // 공, 점수, 상대 슬라임 등 적용
-                this.physics.ball.x = msg.state.ball.x;
-                this.physics.ball.y = msg.state.ball.y;
-                this.physics.ball.vx = msg.state.ball.vx;
-                this.physics.ball.vy = msg.state.ball.vy;
-                this.physics.ball.lastHitBy = msg.state.ball.lastHitBy;
-
-                // 슬라임: 내 슬라임 제외하고 적용
-                for (const ss of msg.state.slimes) {
-                    if (ss.id === this.mySlimeId) continue; // 내 슬라임 스킵
-                    const slime = this.physics.slimes.find(s => s.id === ss.id);
-                    if (slime) {
-                        slime.x = ss.x;
-                        slime.y = ss.y;
-                        slime.vx = ss.vx;
-                        slime.vy = ss.vy;
-                        slime.onGround = ss.onGround;
-                    }
-                }
-
-                // 점수, 세트 등
+                // 점수/세트/phase만 호스트 기준으로 강제 동기화
                 this.physics.scores = [...msg.state.scores];
                 this.physics.phase = msg.state.phase;
                 this.physics.servingTeam = msg.state.servingTeam;
@@ -1023,8 +981,8 @@ class SlimeVolleyGame {
         });
 
         this.network.on('input', (msg) => {
-            // 호스트: 원격 플레이어 입력 수신
-            if (this.network.isHost && msg.input && msg.slotIndex !== undefined) {
+            // Lockstep: 모든 플레이어가 원격 입력 수신
+            if (msg.input && msg.slotIndex !== undefined) {
                 if (this._remotePlayerInputs) {
                     this._remotePlayerInputs.set(msg.slotIndex, msg.input);
                 }
@@ -1032,49 +990,27 @@ class SlimeVolleyGame {
         });
 
         this.network.on('gameEvent', (msg) => {
-            if (msg.event === 'scored') {
-                // 비-호스트: 호스트 권위적 점수 강제 적용
-                if (!this.network.isHost && msg.scores) {
+            // Lockstep: 양쪽이 자체 물리에서 이벤트 처리하므로
+            // gameEvent는 비호스트의 점수/세트 desync 보정용으로만 사용
+            if (!this.network.isHost) {
+                if (msg.event === 'scored' && msg.scores) {
                     this.physics.scores[0] = msg.scores[0];
                     this.physics.scores[1] = msg.scores[1];
-                }
-                this.sound.playScore(msg.team);
-                this.renderer.spawnScoreParticles(msg.team);
-                this.renderer.shake(8);
-                this.renderer.showMessage(
-                    `${msg.scores[0]} - ${msg.scores[1]}`,
-                    CONFIG.POINT_FREEZE
-                );
-            } else if (msg.event === 'hit') {
-                // 비호스트: 히트 효과 재생
-                if (!this.network.isHost) {
-                    this.sound.playHit(msg.intensity || 0.5);
-                    this.renderer.spawnHitParticles(msg.x, msg.y, msg.color);
-                    if (msg.intensity > 0.6) {
-                        this.renderer.shake(msg.intensity * 6);
-                    }
-                }
-            } else if (msg.event === 'setWon') {
-                if (!this.network.isHost && msg.setsWon) {
+                } else if (msg.event === 'setWon' && msg.setsWon) {
                     this.physics.setsWon[0] = msg.setsWon[0];
                     this.physics.setsWon[1] = msg.setsWon[1];
+                } else if (msg.event === 'gameOver') {
+                    // 호스트의 게임오버 판정을 비호스트도 따름
+                    this.running = false;
+                    const won = msg.winner === this.myTeam;
+                    this.sound.playGameOver(won);
+                    this.renderer.shake(12);
+                    setTimeout(() => {
+                        this.lobby.showGameOver(
+                            msg.winner, msg.setsWon, this.myTeam, msg.setScores, msg.mvp
+                        );
+                    }, 1500);
                 }
-                this.sound.playScore(msg.setWinner);
-                this.renderer.shake(10);
-                this.renderer.showMessage(
-                    `Set ${msg.setNumber}! (${msg.setsWon[0]}-${msg.setsWon[1]})`,
-                    1800
-                );
-            } else if (msg.event === 'gameOver') {
-                this.running = false;
-                const won = msg.winner === this.myTeam;
-                this.sound.playGameOver(won);
-                this.renderer.shake(12);
-                setTimeout(() => {
-                    this.lobby.showGameOver(
-                        msg.winner, msg.setsWon, this.myTeam, msg.setScores, msg.mvp
-                    );
-                }, 1500);
             }
         });
 

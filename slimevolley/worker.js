@@ -369,12 +369,8 @@ export class GameRoom {
                 break;
 
             case 'input':
-                if (player.id !== this.hostId) {
-                    const hostWs = this.getHostWs();
-                    if (hostWs) {
-                        this.sendTo(hostWs, { ...msg, playerId: player.id, slotIndex: player.slotIndex });
-                    }
-                }
+                // Lockstep: 모든 플레이어에게 입력 브로드캐스트
+                this.broadcast({ ...msg, slotIndex: player.slotIndex }, ws);
                 break;
 
             case 'gameState':
