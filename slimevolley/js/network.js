@@ -41,7 +41,10 @@ class NetworkClient {
         };
 
         this.peerjs._onPingResult = (peerId, rtt) => {
-            this.p2pPings[peerId] = rtt;
+            this.p2pPings[peerId] = Math.round(rtt);
+            // P2P 핑을 서버에 보고 → 로비에 P2P 핑 표시
+            this.myPing = Math.round(rtt);
+            this.send({ type: 'reportPing', ping: this.myPing });
         };
     }
 
@@ -205,8 +208,12 @@ class NetworkClient {
 
             case 'pong':
                 if (msg.t) {
-                    this.myPing = Date.now() - msg.t;
-                    this.send({ type: 'reportPing', ping: this.myPing });
+                    // P2P 핑이 있으면 P2P 핑 사용, 없으면 WS 핑
+                    if (!this.p2pReady) {
+                        this.myPing = Date.now() - msg.t;
+                        this.send({ type: 'reportPing', ping: this.myPing });
+                    }
+                    // P2P 연결 시에는 _onPingResult에서 보고함
                 }
                 break;
 
