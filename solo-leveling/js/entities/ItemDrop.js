@@ -130,8 +130,8 @@ export class ItemDropManager {
 
             // Pickup check
             const dist = Phaser.Math.Distance.Between(player.x, player.y, item.x, item.y);
-            const magnetRange = (player.stats.pickupRange || 60) * 3;
-            const pickupRange = 50;
+            const pickupRange = player.stats.pickupRange || 100;
+            const magnetRange = pickupRange * 3;
 
             // Magnet attraction effect
             if (dist < magnetRange && dist > pickupRange) {
