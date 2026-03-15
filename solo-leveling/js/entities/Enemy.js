@@ -296,10 +296,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     die() {
-        // 데미지 넘버 타이머 정리
+        // 죽을 때 누적 데미지 즉시 표시
         if (this._dmgTextTimer) {
             this._dmgTextTimer.remove(false);
             this._dmgTextTimer = null;
+        }
+        if (this._dmgAccum > 0) {
+            this._showDamageNumber(this._dmgAccum);
+            this._dmgAccum = 0;
         }
 
         // Drop XP
