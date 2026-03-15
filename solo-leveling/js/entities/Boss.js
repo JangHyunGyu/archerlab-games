@@ -35,9 +35,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.animFrame = 0;
         this.animTimer = 0;
 
-        // Spawn invincibility (3s entrance animation protection)
-        this.isInvincible = true;
-        scene.time.delayedCall(3000, () => { this.isInvincible = false; });
+        this.isInvincible = false;
 
 
         // HP bar (Graphics-based for reliable rendering)
