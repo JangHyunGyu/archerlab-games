@@ -286,11 +286,11 @@ export const WEAPONS = {
 };
 
 export const PASSIVES = {
-    swiftness:  { name: '신속', description: '이동속도 +6%', stat: 'speed', bonus: 0.06, icon: 0x44ff44 },
-    vitality:   { name: '체력 강화', description: '최대 HP +10%', stat: 'maxHp', bonus: 0.10, icon: 0xff4444 },
+    swiftness:  { name: '신속', description: '이동속도 +8%', stat: 'speed', bonus: 0.08, icon: 0x44ff44 },
+    vitality:   { name: '체력 강화', description: '최대 HP +12%', stat: 'maxHp', bonus: 0.12, icon: 0xff4444 },
     strength:   { name: '힘 강화', description: '공격력 +8%', stat: 'attack', bonus: 0.08, icon: 0xff8844 },
-    critMaster: { name: '치명타 달인', description: '치명타율 +5%', stat: 'critRate', bonus: 0.05, icon: 0xffff44 },
-    scholar:    { name: '학습 능력', description: '경험치 +10%', stat: 'xpMultiplier', bonus: 0.10, icon: 0x44aaff },
-    hastening:  { name: '쿨타임 감소', description: '스킬 쿨타임 -10%', stat: 'cooldownReduction', bonus: 0.10, icon: 0xaa44ff },
-    magnet:     { name: '자석', description: '아이템 픽업 범위 +12%', stat: 'pickupRange', bonus: 0.12, icon: 0x66ccff },
+    critMaster: { name: '치명타 달인', description: '치명타율 +8%', stat: 'critRate', bonus: 0.08, icon: 0xffff44 },
+    scholar:    { name: '학습 능력', description: '경험치 +12%', stat: 'xpMultiplier', bonus: 0.12, icon: 0x44aaff },
+    hastening:  { name: '쿨타임 감소', description: '스킬 쿨타임 -8%', stat: 'cooldownReduction', bonus: 0.08, icon: 0xaa44ff },
+    magnet:     { name: '자석', description: '아이템 픽업 범위 +25%', stat: 'pickupRange', bonus: 0.25, icon: 0x66ccff },
 };
