@@ -82,7 +82,7 @@ export const PLAYER_BASE_STATS = {
     critDamage: 1.5,
     xpMultiplier: 1.0,
     cooldownReduction: 0,
-    pickupRange: 60,
+    pickupRange: 100,
 };
 
 export const XP_TABLE = [
