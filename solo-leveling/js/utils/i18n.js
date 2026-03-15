@@ -118,7 +118,7 @@ const TEXTS = {
             strength: { name: '힘 강화', desc: '공격력 +12%' },
             critMaster: { name: '치명타 달인', desc: '치명타율 +5%' },
             scholar: { name: '학습 능력', desc: '경험치 +15%' },
-            hastening: { name: '쿨타임 감소', desc: '스킬 쿨타임 -8%' },
+            hastening: { name: '쿨타임 감소', desc: '스킬 쿨타임 -10%' },
         },
 
         // Items

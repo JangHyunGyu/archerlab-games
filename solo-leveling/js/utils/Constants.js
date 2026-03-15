@@ -291,6 +291,6 @@ export const PASSIVES = {
     strength:   { name: '힘 강화', description: '공격력 +8%', stat: 'attack', bonus: 0.08, icon: 0xff8844 },
     critMaster: { name: '치명타 달인', description: '치명타율 +5%', stat: 'critRate', bonus: 0.05, icon: 0xffff44 },
     scholar:    { name: '학습 능력', description: '경험치 +10%', stat: 'xpMultiplier', bonus: 0.10, icon: 0x44aaff },
-    hastening:  { name: '쿨타임 감소', description: '스킬 쿨타임 -8%', stat: 'cooldownReduction', bonus: 0.08, icon: 0xaa44ff },
+    hastening:  { name: '쿨타임 감소', description: '스킬 쿨타임 -10%', stat: 'cooldownReduction', bonus: 0.10, icon: 0xaa44ff },
     magnet:     { name: '자석', description: '아이템 픽업 범위 +12%', stat: 'pickupRange', bonus: 0.12, icon: 0x66ccff },
 };
