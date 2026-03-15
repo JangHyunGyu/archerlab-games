@@ -60,7 +60,7 @@ export class EnemyManager {
 
         // Update difficulty: linear base + late-game acceleration
         // Fewer enemies on screen → each one is individually tougher
-        this.difficultyMultiplier = 1 + minutes * 0.25 + Math.pow(minutes / 25, 2) * 3;
+        this.difficultyMultiplier = 1 + minutes * 0.30 + Math.pow(minutes / 25, 2) * 3;
 
         // Check dungeon break
         this._updateDungeonBreak(seconds);
