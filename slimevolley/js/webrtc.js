@@ -12,10 +12,36 @@ class PeerJSManager {
         this._pingTimers = {};
     }
 
+    // TURN 크레덴셜 가져오기 (metered.ca)
+    async _fetchIceServers() {
+        const fallback = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+        ];
+
+        if (!CONFIG.METERED_APP || !CONFIG.METERED_API_KEY) {
+            return fallback;
+        }
+
+        try {
+            const res = await fetch(
+                `https://${CONFIG.METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${CONFIG.METERED_API_KEY}`
+            );
+            if (!res.ok) throw new Error(`TURN API ${res.status}`);
+            const servers = await res.json();
+            console.log(`%c[TURN] Got ${servers.length} ICE servers from metered.ca`, 'color: #FFB74D');
+            return servers;
+        } catch (e) {
+            console.warn('[TURN] Failed to fetch credentials, using STUN only:', e);
+            return fallback;
+        }
+    }
+
     // 호스트: 고정 ID로 Peer 생성, 연결 대기
     createHost(roomId) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const id = 'sv_' + roomId.replace(/[^a-zA-Z0-9_-]/g, '');
+            const iceServers = await this._fetchIceServers();
 
             // 이전 peer가 있으면 정리
             if (this.peer) {
@@ -24,13 +50,7 @@ class PeerJSManager {
 
             this.peer = new Peer(id, {
                 debug: 1,
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
-                    ]
-                }
+                config: { iceServers }
             });
 
             const timeout = setTimeout(() => {
@@ -60,12 +80,7 @@ class PeerJSManager {
                     console.log(`[PeerJS] ID taken, retrying with: ${retryId}`);
                     this.peer = new Peer(retryId, {
                         debug: 1,
-                        config: {
-                            iceServers: [
-                                { urls: 'stun:stun.l.google.com:19302' },
-                                { urls: 'stun:stun1.l.google.com:19302' },
-                            ]
-                        }
+                        config: { iceServers }
                     });
                     this.peer.on('open', (peerId) => {
                         this.myPeerId = peerId;
@@ -84,8 +99,9 @@ class PeerJSManager {
 
     // 비호스트: 랜덤 ID로 Peer 생성, 호스트에 연결
     connectToHost(roomId) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const hostId = 'sv_' + roomId.replace(/[^a-zA-Z0-9_-]/g, '');
+            const iceServers = await this._fetchIceServers();
 
             if (this.peer) {
                 try { this.peer.destroy(); } catch (e) {}
@@ -93,13 +109,7 @@ class PeerJSManager {
 
             this.peer = new Peer(undefined, {
                 debug: 1,
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
-                    ]
-                }
+                config: { iceServers }
             });
 
             let checkOpen = null;

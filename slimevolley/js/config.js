@@ -50,4 +50,8 @@ const CONFIG = {
     // Network
     TICK_RATE: 60,
     INTERPOLATION_DELAY: 80,
+
+    // TURN (metered.ca)
+    METERED_APP: 'archerlab',
+    METERED_API_KEY: 'dQ4eQfKPtsLEAx09BxG3WzqAWnQ418SXy0CP0-X6PzlC2aNV',
 };
