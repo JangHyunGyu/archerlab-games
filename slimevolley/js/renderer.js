@@ -40,6 +40,7 @@ class GameRenderer {
         this.createBackground();
         this.createNet();
         this.createScoreDisplay();
+        this.createFpsDisplay();
         this.particleContainer = new PIXI.Container();
         this.gameContainer.addChild(this.particleContainer);
         this.trailContainer = new PIXI.Container();
@@ -117,6 +118,20 @@ class GameRenderer {
         }
         this.gameContainer.addChild(netG);
         this.gameContainer.addChild(meshG);
+    }
+
+    createFpsDisplay() {
+        const style = new PIXI.TextStyle({
+            fontFamily: 'Orbitron, monospace',
+            fontSize: 11,
+            fill: 0xffffff,
+        });
+        this._fpsText = new PIXI.Text({ text: '', style });
+        this._fpsText.x = 6;
+        this._fpsText.y = 4;
+        this._fpsText.alpha = 0.3;
+        this._fpsFrameCount = 0;
+        this.gameContainer.addChild(this._fpsText);
     }
 
     createScoreDisplay() {
@@ -530,6 +545,14 @@ class GameRenderer {
         this.updateTrails();
         this.updateParticles();
         this.updateShake();
+        this.updateFps();
+    }
+
+    updateFps() {
+        if (++this._fpsFrameCount >= 30) {
+            this._fpsFrameCount = 0;
+            this._fpsText.text = `${Math.round(this.app.ticker.FPS)} FPS`;
+        }
     }
 
     showMessage(text, duration) {
