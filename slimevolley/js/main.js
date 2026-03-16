@@ -192,11 +192,66 @@ class SlimeVolleyGame {
         }, 1000);
     }
 
+    // === 비호스트 클라이언트 상태 보간 ===
+    _pushRemoteState(state) {
+        if (!this._stateBuffer) this._stateBuffer = [];
+        this._stateBuffer.push({
+            time: performance.now(),
+            ball: { x: state.ball.x, y: state.ball.y },
+            slimes: state.slimes.map(s => ({ x: s.x, y: s.y }))
+        });
+        // 최근 10개만 유지 (~167ms at 60fps)
+        while (this._stateBuffer.length > 10) {
+            this._stateBuffer.shift();
+        }
+    }
+
+    _getInterpolatedState() {
+        const buf = this._stateBuffer;
+        const baseState = this.physics.getState();
+        if (!buf || buf.length < 2) return baseState;
+
+        const renderTime = performance.now() - CONFIG.INTERPOLATION_DELAY;
+
+        // renderTime을 둘러싼 두 스냅샷 찾기
+        let i0 = 0, i1 = 1;
+        for (let i = 1; i < buf.length; i++) {
+            if (buf[i].time >= renderTime) {
+                i1 = i;
+                i0 = i - 1;
+                break;
+            }
+            if (i === buf.length - 1) {
+                // 모든 스냅샷이 renderTime보다 과거 → 최신 상태 사용
+                return baseState;
+            }
+        }
+
+        const s0 = buf[i0];
+        const s1 = buf[i1];
+        const dt = s1.time - s0.time;
+        const t = dt > 0 ? Math.max(0, Math.min(1, (renderTime - s0.time) / dt)) : 1;
+
+        // 위치만 보간, 나머지(점수/페이즈 등)는 최신 상태 사용
+        baseState.ball.x = s0.ball.x + (s1.ball.x - s0.ball.x) * t;
+        baseState.ball.y = s0.ball.y + (s1.ball.y - s0.ball.y) * t;
+
+        for (let i = 0; i < baseState.slimes.length; i++) {
+            if (s0.slimes[i] && s1.slimes[i]) {
+                baseState.slimes[i].x = s0.slimes[i].x + (s1.slimes[i].x - s0.slimes[i].x) * t;
+                baseState.slimes[i].y = s0.slimes[i].y + (s1.slimes[i].y - s0.slimes[i].y) * t;
+            }
+        }
+
+        return baseState;
+    }
+
     startGameLoop() {
         this.running = true;
         this.physics.phase = 'serving';
         this.physics.freezeTimer = 60;
         this.physicsAccumulator = 0;
+        this._stateBuffer = [];
 
         // 렌더 보간용 이전 물리 상태
         this._interpPrev = null;
@@ -213,9 +268,9 @@ class SlimeVolleyGame {
             if (!this.running) return;
 
             if (isNonHost) {
-                // 비호스트: 물리 안 돌림. 입력 전송 + 호스트 상태 렌더링만.
+                // 비호스트: 물리 안 돌림. 입력 전송 + 보간된 상태 렌더링.
                 this.network.sendInput(this.getMyInput());
-                this.renderer.render(this.physics.getState());
+                this.renderer.render(this._getInterpolatedState());
                 return;
             }
 
@@ -307,11 +362,11 @@ class SlimeVolleyGame {
         const result = this.physics.update();
         this.handlePhysicsResult(result);
 
-        // 호스트: 게임 이벤트를 클라이언트에 전송 (60fps로 제한)
+        // 호스트: 게임 상태를 클라이언트에 전송 (30fps — 120fps 물리 중 매 4틱)
         if (this.mode === 'multiplayer' && this.network.isHost) {
             if (!this._netSendCounter) this._netSendCounter = 0;
             this._netSendCounter++;
-            if (this._netSendCounter >= 2) {
+            if (this._netSendCounter >= 4) {
                 this._netSendCounter = 0;
                 this.network.sendGameState(this.physics.getState());
             }
@@ -619,9 +674,10 @@ class SlimeVolleyGame {
         });
 
         this.network.on('gameState', (msg) => {
-            // 비호스트: 호스트 상태 그대로 적용 (단일 소스)
+            // 비호스트: 호스트 상태 적용 + 보간 버퍼에 추가
             if (!this.network.isHost && msg.state) {
                 this.physics.setState(msg.state);
+                this._pushRemoteState(msg.state);
             }
         });
 
