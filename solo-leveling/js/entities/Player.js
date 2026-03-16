@@ -30,8 +30,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Passive bonuses tracking
         this.passiveLevels = {};
-        // Rank-up bonuses tracking (preserved across passive recalculations)
-        this.rankBonuses = { maxHp: 0, attack: 0 };
+        // Rank-up count (percentage-based bonuses)
+        this.rankUpCount = 0;
 
         // Input
         this.cursors = scene.input.keyboard.createCursorKeys();
@@ -239,12 +239,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             onComplete: () => rankText.destroy(),
         });
 
-        // Stat boost on rank up (tracked separately for passive recalculation)
-        this.rankBonuses.maxHp += 30;
-        this.rankBonuses.attack += 5;
+        // Percentage-based stat boost on rank up (단리)
+        // HP +40%, Attack +15%, Speed +5%, CDR +5% per rank-up
+        this.rankUpCount++;
+        const prevMaxHp = this.stats.maxHp;
         this._recalcStat('maxHp');
         this._recalcStat('attack');
-        this.stats.hp = Math.min(this.stats.hp + 30, this.stats.maxHp);
+        this._recalcStat('speed');
+        this._recalcStat('cooldownReduction');
+        // Heal by the amount maxHp increased
+        const hpGain = this.stats.maxHp - prevMaxHp;
+        this.stats.hp = Math.min(this.stats.hp + hpGain, this.stats.maxHp);
     }
 
     addXP(amount) {
@@ -448,13 +453,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             bonusPerLevel = passive ? passive.bonus : 0;
         }
 
-        const rankBonus = this.rankBonuses[statKey] || 0;
+        // Rank-up percentage multipliers (단리: 1 + count × rate)
+        const RANK_RATES = { maxHp: 0.40, attack: 0.15, speed: 0.05, cooldownReduction: 0.05 };
+        const rankRate = RANK_RATES[statKey] || 0;
+        const rankMult = 1 + (this.rankUpCount || 0) * rankRate;
 
-        if (statKey === 'critRate' || statKey === 'cooldownReduction' || statKey === 'xpMultiplier') {
+        if (statKey === 'cooldownReduction') {
+            // CDR: base + passive + rank (all additive)
+            this.stats[statKey] = base + bonusPerLevel * effectiveLevels + (this.rankUpCount || 0) * rankRate;
+        } else if (statKey === 'critRate' || statKey === 'xpMultiplier') {
             this.stats[statKey] = base + bonusPerLevel * effectiveLevels;
         } else {
-            // (base + rankBonus) × passiveMultiplier
-            this.stats[statKey] = Math.floor((base + rankBonus) * (1 + bonusPerLevel * effectiveLevels));
+            // base × passiveMultiplier × rankMultiplier
+            this.stats[statKey] = Math.floor(base * (1 + bonusPerLevel * effectiveLevels) * rankMult);
         }
 
         // Re-apply temporary boss kill attack buffs (prevents buff erasure on passive pickup)
