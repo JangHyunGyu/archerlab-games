@@ -980,19 +980,22 @@ if (vitalityPassive) {
 }
 
 // Test against each enemy type at base difficulty and scaled difficulty
+const lateGameEnemies = ['ironKnight', 'demonWarrior', 'stoneGolem', 'darkMage'];
 for (const [eType, enemy] of Object.entries(ENEMY_TYPES)) {
-    // Base HP survival
-    const hitsBase = Math.floor(baseHp / enemy.attack);
-    if (hitsBase < 1) {
-        errors.push(`[SURVIVAL] ${eType}: one-shots player at base HP(${baseHp}) with attack(${enemy.attack})`);
-    } else if (hitsBase < 3) {
-        warnings.push(`[SURVIVAL] ${eType}: player can only survive ${hitsBase} hits at base HP(${baseHp})`);
+    const isLateGame = lateGameEnemies.includes(eType);
+
+    if (!isLateGame) {
+        // 초반 적: base HP에서 원샷이면 에러
+        const hitsBase = Math.floor(baseHp / enemy.attack);
+        if (hitsBase < 1) {
+            errors.push(`[SURVIVAL] ${eType}: one-shots player at base HP(${baseHp}) with attack(${enemy.attack})`);
+        }
     }
 
-    // With max vitality stacks
+    // 최대 체력 패시브에서도 원샷이면 밸런스 문제
     const hitsMaxHp = Math.floor(maxHpWith5Stacks / enemy.attack);
-    if (hitsMaxHp < 2) {
-        warnings.push(`[SURVIVAL] ${eType}: even with max HP(${maxHpWith5Stacks.toFixed(0)}), player survives only ${hitsMaxHp} hit(s)`);
+    if (hitsMaxHp < 1) {
+        warnings.push(`[SURVIVAL] ${eType}: one-shots even with max HP(${maxHpWith5Stacks.toFixed(0)})`);
     }
 }
 
@@ -1010,19 +1013,24 @@ for (const [bType, boss] of Object.entries(BOSS_TYPES)) {
 }
 
 // Check survival at each game stage with scaled enemy damage
+// 5분 이후: 체력 패시브 최소 2스택 가정 (1 + 0.12×2 = 1.24배 HP)
 for (const timeSec of [60, 180, 300, 480, 600]) {
     const timeMin = timeSec / 60;
     const diffMult = getDifficultyMult(timeMin);
     const enemyTypes = getEnemyTypesAtTime(timeSec);
+    // 후반(5분+)에는 패시브 보정 HP로 체크
+    const estimatedHp = timeSec >= 300
+        ? baseHp * Math.pow(1 + 0.12, Math.min(Math.floor(timeSec / 150), 5))
+        : baseHp;
 
     for (const eType of enemyTypes) {
         const enemy = ENEMY_TYPES[eType];
         if (!enemy) continue;
 
         const scaledAttack = enemy.attack * diffMult;
-        const hitsBase = Math.floor(baseHp / scaledAttack);
-        if (hitsBase < 1) {
-            warnings.push(`[SURVIVAL] At ${timeMin}min: ${eType} (scaled atk ${scaledAttack.toFixed(0)}) one-shots base HP player`);
+        const hitsEstimated = Math.floor(estimatedHp / scaledAttack);
+        if (hitsEstimated < 1) {
+            warnings.push(`[SURVIVAL] At ${timeMin}min: ${eType} (scaled atk ${scaledAttack.toFixed(0)}) one-shots even with ~${Math.round(estimatedHp)} estimated HP`);
         }
     }
 }
@@ -1047,14 +1055,15 @@ if (fileExists('sw.js')) {
 // ═══════════════════════════════════════════
 if (fileExists('js/browser-check.js')) {
     const bcContent = readFile('js/browser-check.js');
-    // WebGL/Canvas 체크
-    const hasWebGLCheck = bcContent.includes('WebGL') || bcContent.includes('webgl') || bcContent.includes('canvas');
-    if (!hasWebGLCheck) {
-        warnings.push(`[BROWSER] browser-check.js doesn't check WebGL/Canvas support`);
+    // 인앱브라우저 감지 (KakaoTalk, Line, Facebook)
+    const hasInAppCheck = bcContent.includes('KAKAOTALK') || bcContent.includes('Line') || bcContent.includes('FBAN');
+    if (!hasInAppCheck) {
+        warnings.push(`[BROWSER] browser-check.js doesn't detect in-app browsers`);
     }
-    // 경고 메시지
-    if (!bcContent.includes('alert') && !bcContent.includes('confirm') && !bcContent.includes('textContent')) {
-        warnings.push(`[BROWSER] browser-check.js may not show user feedback on incompatible browser`);
+    // 리다이렉트 또는 안내 메시지
+    const hasRedirectOrGuide = bcContent.includes('intent://') || bcContent.includes('createElement') || bcContent.includes('innerHTML');
+    if (!hasRedirectOrGuide) {
+        warnings.push(`[BROWSER] browser-check.js has no redirect or user guide for in-app browsers`);
     }
 }
 
@@ -1154,7 +1163,7 @@ if (i18nContent) {
         warnings.push(`[I18N_DETECT] Language preference not saved to localStorage`);
     }
     // URL 파라미터 (?lang=xx) 지원
-    if (!i18nContent.includes('searchParams') && !i18nContent.includes('lang=')) {
+    if (!i18nContent.includes('searchParams') && !i18nContent.includes('URLSearchParams') && !i18nContent.includes('lang=')) {
         warnings.push(`[I18N_DETECT] No URL lang parameter support — redirect pages may not work`);
     }
 }

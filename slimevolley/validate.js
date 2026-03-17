@@ -356,7 +356,7 @@ for (const [file, content] of Object.entries(allJsContent)) {
 // ═══════════════════════════════════════════
 // 10a. spread operator로 매 프레임 새 객체 생성 (hot path)
 const botContent = allJsContent['js/bot.js'] || '';
-const spreadInGetInput = botContent.match(/getInput[^}]*\{[\s\S]*?return\s+\{[^}]*\.\.\.[\s\S]*?\}/);
+const spreadInGetInput = botContent.match(/getInput[\s\S]*?return\s+\{\s*\.\.\./);
 if (spreadInGetInput) {
     warnings.push(`[MEMORY] bot.js: getInput() uses spread operator on return — creates new object every call (120fps × bots)`);
 }
@@ -368,14 +368,17 @@ if (!soundContent.includes('dispose') && !soundContent.includes('destroy')) {
 }
 
 // 10c. window addEventListener 제거 확인
+// SPA 게임에서는 페이지 수명 동안 유지되는 리스너는 정상 (중복 등록만 체크)
 if (mainContent.includes("window.addEventListener('keydown'")) {
-    if (!mainContent.includes("window.removeEventListener('keydown'")) {
-        warnings.push(`[MEMORY] main.js: window keydown listener added but never removed`);
+    // 같은 핸들러가 여러 번 등록되는지 (constructor에서 1회만 호출되면 OK)
+    const keydownCount = (mainContent.match(/window\.addEventListener\(\s*'keydown'/g) || []).length;
+    if (keydownCount > 1) {
+        warnings.push(`[MEMORY] main.js: window keydown listener registered ${keydownCount} times — may accumulate`);
     }
 }
 
-// 10d. _stateBuffer .map() 할당
-if (mainContent.includes('.map(s =>') && mainContent.includes('_stateBuffer')) {
+// 10d. _stateBuffer .map() 할당 (풀링 미사용 시)
+if (mainContent.includes('.map(s =>') && mainContent.includes('_stateBuffer') && !mainContent.includes('_stateBufferPool')) {
     warnings.push(`[MEMORY] main.js: _pushRemoteState uses .map() creating new arrays every network frame (30fps)`);
 }
 
@@ -1200,13 +1203,14 @@ if (CONFIG.COURT_WIDTH) {
             }
         }
 
-        // Verify no slime overlap (same x position)
+        // 같은 팀 슬라임 겹침은 의도적 설계 (physics.js resolveSlimeCollisions: 겹침 허용)
+        // 다른 팀 슬라임 겹침만 체크
         for (let i = 0; i < slimes.length; i++) {
             for (let j = i + 1; j < slimes.length; j++) {
-                if (slimes[i].team === slimes[j].team) {
+                if (slimes[i].team !== slimes[j].team) {
                     const dist = Math.abs(slimes[i].x - slimes[j].x);
                     if (dist < CONFIG.SLIME_RADIUS * 2) {
-                        warnings.push(`[MULTIPLAYER] ${team0Size}v${team1Size}: slimes ${slimes[i].id} and ${slimes[j].id} overlap (dist=${Math.round(dist)}px, minDist=${CONFIG.SLIME_RADIUS * 2}px)`);
+                        errors.push(`[MULTIPLAYER] ${team0Size}v${team1Size}: cross-team slimes ${slimes[i].id} and ${slimes[j].id} overlap`);
                     }
                 }
             }

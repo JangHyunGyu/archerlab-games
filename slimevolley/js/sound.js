@@ -247,4 +247,32 @@ class SoundManager {
             Tone.getTransport().cancel();
         } catch (e) {}
     }
+
+    destroy() {
+        this.stopAll();
+        if (!this.initialized) return;
+        try {
+            // Tone.js 노드 dispose
+            const nodes = [
+                this.jumpSynth, this.jumpSweep, this.scoreSynth,
+                this.gameOverSynth, this.gameOverReverb,
+                this.uiSynth, this.compressor, this.limiter,
+            ];
+            for (const node of nodes) {
+                if (node && typeof node.dispose === 'function') node.dispose();
+            }
+            // MP3 풀 정리
+            for (const name in this.mp3Pools) {
+                const pool = this.mp3Pools[name];
+                for (const audio of pool) {
+                    if (typeof audio._index === 'undefined') {
+                        audio.pause();
+                        audio.src = '';
+                    }
+                }
+            }
+            this.mp3Pools = {};
+        } catch (e) {}
+        this.initialized = false;
+    }
 }
