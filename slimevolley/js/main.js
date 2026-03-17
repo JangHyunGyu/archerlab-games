@@ -195,15 +195,43 @@ class SlimeVolleyGame {
     // === 비호스트 클라이언트 상태 보간 ===
     _pushRemoteState(state) {
         if (!this._stateBuffer) this._stateBuffer = [];
-        this._stateBuffer.push({
-            time: performance.now(),
-            ball: { x: state.ball.x, y: state.ball.y },
-            slimes: state.slimes.map(s => ({ x: s.x, y: s.y }))
-        });
-        // 최근 10개만 유지 (~167ms at 60fps)
-        while (this._stateBuffer.length > 10) {
-            this._stateBuffer.shift();
+        if (!this._stateBufferPool) {
+            // 풀 미리 할당 (GC 최소화)
+            this._stateBufferPool = [];
+            for (let i = 0; i < 12; i++) {
+                this._stateBufferPool.push({
+                    time: 0,
+                    ball: { x: 0, y: 0 },
+                    slimes: []
+                });
+            }
         }
+
+        // 풀에서 재사용 또는 shift된 엔트리 재활용
+        let entry;
+        if (this._stateBuffer.length >= 10) {
+            entry = this._stateBuffer.shift();
+        } else if (this._stateBufferPool.length > 0) {
+            entry = this._stateBufferPool.pop();
+        } else {
+            entry = { time: 0, ball: { x: 0, y: 0 }, slimes: [] };
+        }
+
+        entry.time = performance.now();
+        entry.ball.x = state.ball.x;
+        entry.ball.y = state.ball.y;
+
+        // 슬라임 배열 재사용
+        while (entry.slimes.length < state.slimes.length) {
+            entry.slimes.push({ x: 0, y: 0 });
+        }
+        entry.slimes.length = state.slimes.length;
+        for (let i = 0; i < state.slimes.length; i++) {
+            entry.slimes[i].x = state.slimes[i].x;
+            entry.slimes[i].y = state.slimes[i].y;
+        }
+
+        this._stateBuffer.push(entry);
     }
 
     _getInterpolatedState() {

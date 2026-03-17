@@ -64,10 +64,13 @@ class BotAI {
         if (this.jumpCooldown > 0) this.jumpCooldown--;
 
         if (this.frameCounter % this.reactionDelay !== 0) {
-            return { ...this.cachedInput };
+            return this.cachedInput;
         }
 
-        const input = { left: false, right: false, jump: false };
+        const input = this.cachedInput;
+        input.left = false;
+        input.right = false;
+        input.jump = false;
         const team = slime.team;
         const halfW = CONFIG.COURT_WIDTH / 2;
         const myLeft = team === 0 ? 0 : halfW;
