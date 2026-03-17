@@ -1292,6 +1292,81 @@ if (fileExists('js/managers/SoundManager.js')) {
 }
 
 // ═══════════════════════════════════════════
+// X. 그림자 병사 색상 검증
+// ═══════════════════════════════════════════
+if (fileExists('js/entities/ShadowSoldier.js')) {
+    const ssContent = readFile('js/entities/ShadowSoldier.js');
+
+    // 틴트 색상 추출
+    const tintColors = {};
+    for (const m of ssContent.matchAll(/(melee|tank|ranged)\s*:\s*0x([0-9a-fA-F]{6})/g)) {
+        if (!tintColors[m[1]]) tintColors[m[1]] = [];
+        tintColors[m[1]].push(parseInt(m[2], 16));
+    }
+
+    // X-a. 각 타입에 틴트/글로우 색상 정의되어 있는지
+    for (const type of ['melee', 'tank', 'ranged']) {
+        if (!tintColors[type] || tintColors[type].length === 0) {
+            errors.push(`[SHADOW_COLOR] shadowType "${type}" has no tint color defined`);
+        }
+    }
+
+    // X-b. 틴트가 충분히 어두운지 (그림자 병사답게)
+    // RGB 각 채널이 0x80(128) 이하여야 어두운 톤
+    for (const [type, colors] of Object.entries(tintColors)) {
+        const tint = colors[0]; // 첫 번째가 틴트
+        const r = (tint >> 16) & 0xFF;
+        const g = (tint >> 8) & 0xFF;
+        const b = tint & 0xFF;
+        const brightness = (r + g + b) / 3;
+        if (brightness > 128) {
+            warnings.push(`[SHADOW_COLOR] ${type} tint(0x${tint.toString(16).padStart(6,'0')}) avg brightness ${brightness.toFixed(0)} — too bright for shadow soldier`);
+        }
+    }
+
+    // X-c. 타입별 색상이 서로 구분되는지 (색상 거리 체크)
+    const typeKeys = Object.keys(tintColors).filter(t => tintColors[t].length >= 1);
+    for (let i = 0; i < typeKeys.length; i++) {
+        for (let j = i + 1; j < typeKeys.length; j++) {
+            const c1 = tintColors[typeKeys[i]][0];
+            const c2 = tintColors[typeKeys[j]][0];
+            const dr = ((c1 >> 16) & 0xFF) - ((c2 >> 16) & 0xFF);
+            const dg = ((c1 >> 8) & 0xFF) - ((c2 >> 8) & 0xFF);
+            const db = (c1 & 0xFF) - (c2 & 0xFF);
+            const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+            if (dist < 30) {
+                warnings.push(`[SHADOW_COLOR] ${typeKeys[i]} and ${typeKeys[j]} tint colors too similar (distance=${dist.toFixed(0)}) — hard to distinguish`);
+            }
+        }
+    }
+
+    // X-d. 글로우 색상이 틴트보다 밝은지 (광채 효과가 보여야 함)
+    if (tintColors.melee && tintColors.melee.length >= 2) {
+        for (const [type, colors] of Object.entries(tintColors)) {
+            if (colors.length < 2) continue;
+            const tint = colors[0];
+            const glow = colors[1];
+            const tintBright = (((tint >> 16) & 0xFF) + ((tint >> 8) & 0xFF) + (tint & 0xFF)) / 3;
+            const glowBright = (((glow >> 16) & 0xFF) + ((glow >> 8) & 0xFF) + (glow & 0xFF)) / 3;
+            if (glowBright <= tintBright) {
+                warnings.push(`[SHADOW_COLOR] ${type} glow(brightness ${glowBright.toFixed(0)}) is darker than tint(${tintBright.toFixed(0)}) — glow won't be visible`);
+            }
+        }
+    }
+
+    // X-e. alpha 값이 적절한 범위 (0.5~0.95 — 반투명이되 너무 투명하면 안 됨)
+    const alphaMatch = ssContent.match(/setAlpha\(([0-9.]+)\)/);
+    if (alphaMatch) {
+        const alpha = parseFloat(alphaMatch[1]);
+        if (alpha < 0.5) {
+            warnings.push(`[SHADOW_COLOR] Shadow soldier alpha(${alpha}) too low — nearly invisible`);
+        } else if (alpha > 0.95) {
+            warnings.push(`[SHADOW_COLOR] Shadow soldier alpha(${alpha}) too high — no shadow translucency`);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
 // 결과 출력
 // ═══════════════════════════════════════════
 console.log('\n══════════ SOLO LEVELING VALIDATION ══════════\n');
