@@ -52,7 +52,7 @@ export class WeaponManager {
 
             if (projGroup && enemyGroup) {
                 this.scene.physics.add.overlap(projGroup, enemyGroup, (proj, enemy) => {
-                    if (!proj.active || !enemy.active) return;
+                    if (!proj.active || !enemy.active || !weapon) return;
                     const dmg = proj.damageAmount || weapon.getDamage();
                     enemy.takeDamage(dmg, proj.x, proj.y);
 

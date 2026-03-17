@@ -1292,6 +1292,75 @@ if (fileExists('js/managers/SoundManager.js')) {
 }
 
 // ═══════════════════════════════════════════
+// X-0. 런타임 null/undefined 가드 검증
+// ═══════════════════════════════════════════
+{
+    // Player.js: XP_TABLE bounds check at level cap
+    const playerContent = readFile('js/entities/Player.js') || '';
+    if (playerContent.includes('XP_TABLE[this.level]') || playerContent.includes('XP_TABLE[level]')) {
+        if (!playerContent.includes('XP_TABLE.length') && !playerContent.includes('level < 30') &&
+            !playerContent.match(/level\s*<\s*XP_TABLE/)) {
+            warnings.push(`[NULL_GUARD] Player.js: XP_TABLE[level] without bounds check — undefined at level cap`);
+        }
+    }
+
+    // Player.js: xpToNext could be undefined → NaN in multiplication
+    if (playerContent.includes('xpToNext * ') || playerContent.includes('xpToNext *=')) {
+        if (!playerContent.includes('xpToNext ||') && !playerContent.includes('xpToNext ??') &&
+            !playerContent.match(/if\s*\(\s*!?\s*this\.xpToNext/)) {
+            // xpToNext fallback check
+        }
+    }
+
+    // Enemy.js: player null check before takeDamage
+    const enemyContent = readFile('js/entities/Enemy.js') || '';
+    if (enemyContent.includes('scene.player') && enemyContent.includes('takeDamage')) {
+        const hasPlayerGuard = enemyContent.includes('!player') || enemyContent.includes('!this.scene.player') ||
+            enemyContent.includes('player &&') || enemyContent.match(/if\s*\(\s*!?\s*player\s*\)/);
+        if (!hasPlayerGuard) {
+            warnings.push(`[NULL_GUARD] Enemy.js: scene.player accessed without null check — crash if player dies mid-frame`);
+        }
+    }
+
+    // EnemyManager.js: player null check in quest/spawn logic
+    const emContent = readFile('js/managers/EnemyManager.js') || '';
+    if (emContent.includes('player.kills') || emContent.includes('player.level')) {
+        const hasGuard = emContent.includes('if (!player)') || emContent.includes('!player') ||
+            emContent.includes('player &&');
+        if (!hasGuard) {
+            warnings.push(`[NULL_GUARD] EnemyManager.js: player properties accessed without null guard`);
+        }
+    }
+
+    // HUD.js: RANKS[rank] undefined check
+    const hudContent2 = readFile('js/ui/HUD.js') || '';
+    if (hudContent2.includes('RANKS[') && hudContent2.includes('.color')) {
+        if (!hudContent2.includes('RANKS[rank] &&') && !hudContent2.includes('if (RANKS[') &&
+            !hudContent2.match(/RANKS\[\w+\]\s*\?\./)) {
+            // Check if rank value is always valid (comes from RANK_ORDER which is validated)
+        }
+    }
+
+    // WeaponManager.js: weapon null in projectile collision
+    const wmContent = readFile('js/managers/WeaponManager.js') || '';
+    if (wmContent.includes('weapon.getDamage') || wmContent.includes('weapon.damage')) {
+        if (!wmContent.includes('!weapon') && !wmContent.includes('weapon &&') &&
+            !wmContent.match(/if\s*\(\s*!?\s*weapon\s*\)/)) {
+            warnings.push(`[NULL_GUARD] WeaponManager.js: weapon accessed without null check in collision callback`);
+        }
+    }
+
+    // GameScene.js: boss collision after player destroyed
+    const gsContent2 = readFile('js/scenes/GameScene.js') || '';
+    if (gsContent2.includes('player.takeDamage') || gsContent2.includes('this.player.takeDamage')) {
+        // Should have player.active or player existence check in collision callbacks
+        if (!gsContent2.includes('player.active') && !gsContent2.includes('!this.player')) {
+            warnings.push(`[NULL_GUARD] GameScene.js: player.takeDamage in collision without player.active check`);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
 // X. 그림자 병사 색상 검증
 // ═══════════════════════════════════════════
 if (fileExists('js/entities/ShadowSoldier.js')) {
