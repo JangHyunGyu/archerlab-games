@@ -18,9 +18,14 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         this.body.setSize(config.size * 1.4, config.size * 1.4);
         this.setDisplaySize(config.size * 2, config.size * 2);
 
-        // Shadow appearance - dark purple tint
-        this.setTint(0x6622aa);
-        this.setAlpha(0.85);
+        // Shadow appearance - undead tint per type (zombie/grotesque feel)
+        const undeadTints = {
+            melee:  0x334455,  // 이그리스: 창백한 청회색 (유령 기사)
+            tank:   0x3a4a2a,  // 터스크: 부패한 녹갈색 (썩은 좀비)
+            ranged: 0x4a2244,  // 베루: 독기 자주색 (독충 언데드)
+        };
+        this.setTint(undeadTints[this.soldierType] || 0x334455);
+        this.setAlpha(0.82);
 
         // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
@@ -47,10 +52,16 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Shadow trail effect
         this.trailTimer = 0;
 
-        // Shadow glow filter (rollback pipeline on failure to prevent GPU stall)
+        // Shadow glow filter - undead aura per type
+        const undeadGlows = {
+            melee:  0x4466aa,  // 유령 기사: 냉기 파란 광채
+            tank:   0x55aa33,  // 썩은 좀비: 부패 녹색 광채
+            ranged: 0x9933aa,  // 독충 언데드: 독기 보라 광채
+        };
+        this._glowColor = undeadGlows[this.soldierType] || 0x4466aa;
         try {
             this.enableFilters();
-            this._glowFilter = this.filters.internal.addGlow(COLORS.SHADOW_PRIMARY, 4, 0, 1, false, 8, 8);
+            this._glowFilter = this.filters.internal.addGlow(this._glowColor, 4, 0, 1, false, 8, 8);
         } catch (e) {
             try { this.disableFilters(); } catch (_) {}
         }
@@ -248,7 +259,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
     }
 
     _spawnTrail() {
-        const trail = this.scene.add.circle(this.x, this.y + 5, 6, COLORS.SHADOW_PRIMARY, 0.25)
+        const trail = this.scene.add.circle(this.x, this.y + 5, 6, this._glowColor || COLORS.SHADOW_PRIMARY, 0.25)
             .setDepth(2);
         this.scene.tweens.add({
             targets: trail,
