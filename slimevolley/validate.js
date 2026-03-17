@@ -1452,7 +1452,57 @@ if (!lobbyContent.includes('getNameFromInput')) {
 }
 
 // ═══════════════════════════════════════════
-// Q. 세로모드 경고 오버레이 검증
+// Q-0. 런타임 null/undefined 가드 검증
+// ═══════════════════════════════════════════
+// physics.js: division by zero in ball-slime collision (dist=0)
+if (physicsContent.includes('dx / dist') || physicsContent.includes('dy / dist')) {
+    if (!physicsContent.includes('dist > 0') && !physicsContent.includes('dist === 0') && !physicsContent.includes('dist !== 0')) {
+        errors.push(`[NULL_GUARD] physics.js: dx/dist or dy/dist without dist>0 guard — division by zero possible`);
+    }
+}
+
+// physics.js: killer.team access after .find() (could be undefined)
+if (physicsContent.includes('.find(s => s.id === this.ball.lastHitSlimeId)')) {
+    if (!physicsContent.match(/killer\s*&&\s*killer\.team/) && !physicsContent.match(/if\s*\(\s*killer\s/)) {
+        warnings.push(`[NULL_GUARD] physics.js: killer from .find() used without null check — crash if slime despawned`);
+    }
+}
+
+// main.js: mySlime null check before .input access
+if (mainContent.includes('mySlime') && mainContent.includes('mySlime.input')) {
+    if (!mainContent.includes('mySlime &&') && !mainContent.includes('if (mySlime')) {
+        warnings.push(`[NULL_GUARD] main.js: mySlime used without null check`);
+    }
+}
+
+// renderer.js: ballSprite null in eye tracking
+if (rendererContent.includes('this.ballSprite') && rendererContent.includes('this.ballSprite.x')) {
+    // ballSprite used in pupil tracking — should be guarded
+    if (!rendererContent.includes('this.ballSprite &&') && !rendererContent.includes('if (this.ballSprite)') &&
+        !rendererContent.match(/this\.ballSprite\s*\)/)) {
+        // Actually check if the pupil tracking line has a guard
+    }
+}
+
+// network.js: ws.send() without try-catch
+if (networkContent.includes('this.ws.send(')) {
+    if (!networkContent.includes('try') || !networkContent.match(/try\s*\{[\s\S]*?ws\.send/)) {
+        warnings.push(`[NULL_GUARD] network.js: ws.send() without try-catch — WebSocket close race condition possible`);
+    }
+}
+
+// main.js: _getInterpolatedState s0/s1 slimes array bounds
+if (mainContent.includes('s0.slimes[i]') && mainContent.includes('s1.slimes[i]')) {
+    if (!mainContent.includes('s0.slimes[i] &&') && !mainContent.includes('s1.slimes[i] &&')) {
+        // Check if there's a guard
+        if (!mainContent.match(/if\s*\(\s*s0\.slimes\[i\]/)) {
+            warnings.push(`[NULL_GUARD] main.js: interpolation accesses s0/s1.slimes[i] without bounds check`);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+// Q-1. 세로모드 경고 오버레이 검증
 // ═══════════════════════════════════════════
 if (!htmlIds.has('rotate-overlay')) {
     errors.push(`[ROTATE] rotate-overlay element missing — mobile portrait warning won't show`);

@@ -1331,6 +1331,60 @@ if (!contactKey) {
 }
 
 // ═══════════════════════════════════════════
+// 39. 런타임 null/undefined 가드 검증
+// ═══════════════════════════════════════════
+const boardContent = allJsContent['js/Board.js'] || '';
+const gameJsContent = allJsContent['js/Game.js'] || '';
+const pieceContent = allJsContent['js/Piece.js'] || '';
+const effectContent = allJsContent['js/EffectManager.js'] || '';
+const inputMgrContent = allJsContent['js/InputManager.js'] || '';
+
+// Board.js: shape[0].length without shape[0] null check
+if (boardContent.includes('shape[0].length') || boardContent.includes('.shape[0].length')) {
+    if (!boardContent.includes('shape[0] &&') && !boardContent.includes('shape.length === 0') &&
+        !boardContent.includes('!shape') && !boardContent.match(/shape\.length\s*[<>=]/)) {
+        // shape comes from PIECE_SHAPES which is validated, but defensive check is good
+    }
+}
+
+// Game.js: clearResult.cells empty array access
+if (gameJsContent.includes('clearResult.cells[')) {
+    if (!gameJsContent.includes('cells.length >') && !gameJsContent.includes('cells.length ===') &&
+        !gameJsContent.includes('cells.length !==')) {
+        warnings.push(`[NULL_GUARD] Game.js: clearResult.cells accessed without length check — crash if empty`);
+    }
+}
+
+// Game.js: PIXI container access after destroy
+if (gameJsContent.includes('.destroy()') && gameJsContent.includes('.getGlobalPosition')) {
+    warnings.push(`[LIFECYCLE] Game.js: getGlobalPosition() may be called on destroyed PIXI object during rapid transitions`);
+}
+
+// EffectManager.js: tween callbacks on destroyed objects
+if (effectContent.includes('onComplete') && effectContent.includes('.destroy()')) {
+    if (!effectContent.includes('.active') && !effectContent.includes('if (') &&
+        !effectContent.match(/\.active\s*[)&|]/)) {
+        // Check if there's any guard before destroy in tween callbacks
+    }
+}
+
+// InputManager.js: piece drag with null piece reference
+if (inputMgrContent.includes('this.dragPiece') || inputMgrContent.includes('dragPiece')) {
+    if (!inputMgrContent.includes('!this.dragPiece') && !inputMgrContent.includes('this.dragPiece &&') &&
+        !inputMgrContent.includes('if (this.dragPiece)') && !inputMgrContent.match(/if\s*\(\s*!?\s*this\.dragPiece/)) {
+        // May need null guard on drag piece
+    }
+}
+
+// ScoreManager.js: level calculation with empty thresholds
+const scoreMgrContent = allJsContent['js/ScoreManager.js'] || '';
+if (scoreMgrContent.includes('LEVEL_THRESHOLDS')) {
+    if (!scoreMgrContent.includes('LEVEL_THRESHOLDS.length')) {
+        warnings.push(`[NULL_GUARD] ScoreManager.js: LEVEL_THRESHOLDS used without length validation`);
+    }
+}
+
+// ═══════════════════════════════════════════
 // 결과 출력
 // ═══════════════════════════════════════════
 console.log('\n══════════ BLOCKPANG VALIDATION ══════════\n');
