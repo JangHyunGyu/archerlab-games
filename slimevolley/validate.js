@@ -1502,6 +1502,26 @@ if (mainContent.includes('s0.slimes[i]') && mainContent.includes('s1.slimes[i]')
 }
 
 // ═══════════════════════════════════════════
+// Q-0b. 게임 중 뒤로가기 확인창 검증
+// ═══════════════════════════════════════════
+if (!htmlIds.has('confirm-modal')) {
+    errors.push(`[CONFIRM] confirm-modal element missing — game exit without confirmation`);
+}
+if (!htmlIds.has('confirm-message')) {
+    errors.push(`[CONFIRM] confirm-message element missing`);
+}
+if (!htmlIds.has('btn-confirm-yes') || !htmlIds.has('btn-confirm-no')) {
+    errors.push(`[CONFIRM] confirm modal buttons missing`);
+}
+if (!lobbyContent.includes('showConfirm')) {
+    errors.push(`[CONFIRM] showConfirm method missing — no exit confirmation during game`);
+}
+// 게임 중 뒤로가기 시 확인창 호출 확인
+if (!lobbyContent.includes("game-screen") || !lobbyContent.includes('showConfirm')) {
+    warnings.push(`[CONFIRM] Back button may not show confirm dialog during gameplay`);
+}
+
+// ═══════════════════════════════════════════
 // Q-1. 세로모드 경고 오버레이 검증
 // ═══════════════════════════════════════════
 if (!htmlIds.has('rotate-overlay')) {
