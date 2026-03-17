@@ -203,6 +203,7 @@ export class GameRoom {
         this.nextPlayerId = 1;
         this.metadata = {};
         this.password = null; // 비밀방 비밀번호 (null = 공개방)
+        this.lastLobbyHeartbeat = 0; // 로비 하트비트 타임스탬프
     }
 
     async fetch(request) {
@@ -290,6 +291,7 @@ export class GameRoom {
         }
 
         // 로비에 방 정보 업데이트
+        this.lastLobbyHeartbeat = Date.now();
         if (isHost) {
             await this.notifyLobby('register', {
                 roomId: this.roomId,
@@ -428,6 +430,15 @@ export class GameRoom {
 
             case 'ping':
                 this.sendTo(ws, { type: 'pong', t: msg.t });
+                // 로비 하트비트: 2분마다 로비에 방 정보 갱신 (5분 만료 방지)
+                const now = Date.now();
+                if (now - this.lastLobbyHeartbeat > 2 * 60 * 1000) {
+                    this.lastLobbyHeartbeat = now;
+                    this.notifyLobby('update', {
+                        roomId: this.roomId,
+                        playerCount: this.players.filter(p => !p.isBot).length,
+                    });
+                }
                 break;
 
             case 'reportPing':
