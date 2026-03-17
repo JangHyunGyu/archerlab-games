@@ -14,11 +14,29 @@ class LobbyManager {
     setupEventListeners() {
         // Header back button: go to main menu if not already there
         document.getElementById('header-back').addEventListener('click', (e) => {
-            if (this.currentScreen !== 'main-menu') {
-                e.preventDefault();
-                this.game.sound.playUI('click');
-                this.showScreen('main-menu');
+            if (this.currentScreen === 'main-menu') return;
+            e.preventDefault();
+            this.game.sound.playUI('click');
+
+            // 게임 중이면 확인창 표시 (실수 방지)
+            if (this.currentScreen === 'game-screen' && this.game.running) {
+                this.showConfirm('게임을 나가시겠습니까?', () => {
+                    this.game.backToLobby();
+                    this.showScreen('main-menu');
+                });
+                return;
             }
+
+            // 방 화면에서도 확인
+            if (this.currentScreen === 'room-screen') {
+                this.showConfirm('방을 나가시겠습니까?', () => {
+                    this.leaveRoom();
+                    this.showScreen('main-menu');
+                });
+                return;
+            }
+
+            this.showScreen('main-menu');
         });
 
         // Main menu
@@ -168,6 +186,16 @@ class LobbyManager {
         document.getElementById('join-password').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.confirmPasswordJoin();
         });
+
+        // Confirm modal
+        document.getElementById('btn-confirm-yes').addEventListener('click', () => {
+            const cb = this._confirmCallback;
+            this.hideConfirmModal();
+            if (cb) cb();
+        });
+        document.getElementById('btn-confirm-no').addEventListener('click', () => {
+            this.hideConfirmModal();
+        });
     }
 
     showScreen(screenId) {
@@ -181,6 +209,20 @@ class LobbyManager {
         el.textContent = message;
         el.classList.add('show');
         setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    showConfirm(message, onConfirm) {
+        const modal = document.getElementById('confirm-modal');
+        if (!modal) { onConfirm(); return; }
+        document.getElementById('confirm-message').textContent = message;
+        modal.style.display = '';
+        this._confirmCallback = onConfirm;
+    }
+
+    hideConfirmModal() {
+        const modal = document.getElementById('confirm-modal');
+        if (modal) modal.style.display = 'none';
+        this._confirmCallback = null;
     }
 
     getNameFromInput() {
