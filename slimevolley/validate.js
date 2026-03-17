@@ -1327,7 +1327,7 @@ const lsGetKeys = new Set();
 const lsSetKeys = new Set();
 for (const [, content] of Object.entries(allJsContent)) {
     for (const m of content.matchAll(/localStorage\.getItem\(\s*['"]([^'"]+)['"]\s*\)/g)) lsGetKeys.add(m[1]);
-    for (const m of content.matchAll(/localStorage\.setItem\(\s*['"]([^'"]+)['"]\s*\)/g)) lsSetKeys.add(m[1]);
+    for (const m of content.matchAll(/localStorage\.setItem\(\s*['"]([^'"]+)['"]/g)) lsSetKeys.add(m[1]);
 }
 for (const key of lsGetKeys) {
     if (!lsSetKeys.has(key)) {
@@ -1448,7 +1448,63 @@ if (!lobbyContent.includes('getNameFromInput')) {
 }
 
 // ═══════════════════════════════════════════
-// Q. 에러 토스트 검증
+// Q. 세로모드 경고 오버레이 검증
+// ═══════════════════════════════════════════
+if (!htmlIds.has('rotate-overlay')) {
+    errors.push(`[ROTATE] rotate-overlay element missing — mobile portrait warning won't show`);
+}
+// CSS에서 portrait 미디어쿼리로 표시하는지
+if (!cssContent.includes('orientation: portrait')) {
+    warnings.push(`[ROTATE] No portrait orientation media query — rotate overlay may never show`);
+}
+
+// ═══════════════════════════════════════════
+// R. 카카오톡 인앱브라우저 리다이렉트
+// ═══════════════════════════════════════════
+if (!html.includes('KAKAOTALK') && !html.includes('kakaotalk')) {
+    warnings.push(`[KAKAO] No KakaoTalk in-app browser redirect — game may not work in KakaoTalk`);
+}
+
+// ═══════════════════════════════════════════
+// S. 뒤로가기(header-back) 게임포털 링크
+// ═══════════════════════════════════════════
+if (!htmlIds.has('header-back')) {
+    errors.push(`[NAV] header-back element missing — no way to return to games portal`);
+}
+// href="../" 링크 확인
+if (!html.includes('href="../"') && !html.includes("href='../'")) {
+    warnings.push(`[NAV] header-back may not link to parent games portal`);
+}
+
+// ═══════════════════════════════════════════
+// T. 키보드 조작법 양쪽(Arrow+WASD) 검증
+// ═══════════════════════════════════════════
+const inputKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'KeyA', 'KeyD', 'KeyW', 'Space'];
+for (const key of inputKeys) {
+    if (!mainContent.includes(`'${key}'`) && !mainContent.includes(`"${key}"`)) {
+        errors.push(`[INPUT] Key "${key}" not handled — control scheme incomplete`);
+    }
+}
+
+// ═══════════════════════════════════════════
+// U. Google Analytics (gtag) 검증
+// ═══════════════════════════════════════════
+if (!html.includes('gtag') && !html.includes('googletagmanager')) {
+    warnings.push(`[ANALYTICS] No Google Analytics found — page views not tracked`);
+}
+
+// ═══════════════════════════════════════════
+// V. 웹소켓 끊김 에러 처리
+// ═══════════════════════════════════════════
+if (!networkContent.includes('onclose') && !networkContent.includes("'disconnected'")) {
+    errors.push(`[WS] No WebSocket close handler — connection drops will be silent`);
+}
+if (!mainContent.includes("'disconnected'") && !mainContent.includes('"disconnected"')) {
+    errors.push(`[WS] No disconnected event handler in main.js`);
+}
+
+// ═══════════════════════════════════════════
+// W. 에러 토스트 검증
 // ═══════════════════════════════════════════
 if (!htmlIds.has('error-toast')) {
     errors.push(`[ERROR_UI] error-toast element missing from HTML`);

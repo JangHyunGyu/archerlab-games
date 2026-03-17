@@ -1162,7 +1162,7 @@ const lsGetKeys = new Set();
 const lsSetKeys = new Set();
 for (const [, content] of Object.entries(allJsContent)) {
     for (const m of content.matchAll(/localStorage\.getItem\(\s*['"]([^'"]+)['"]\s*\)/g)) lsGetKeys.add(m[1]);
-    for (const m of content.matchAll(/localStorage\.setItem\(\s*['"]([^'"]+)['"]\s*\)/g)) lsSetKeys.add(m[1]);
+    for (const m of content.matchAll(/localStorage\.setItem\(\s*['"]([^'"]+)['"]/g)) lsSetKeys.add(m[1]);
 }
 for (const key of lsGetKeys) {
     if (!lsSetKeys.has(key)) {
@@ -1268,7 +1268,62 @@ if (!hasVibration) {
 }
 
 // ═══════════════════════════════════════════
-// 32. 연락처/외부 링크 검증
+// 32. 드래그 피스 프리뷰/고스트 검증
+// ═══════════════════════════════════════════
+const inputContent = allJsContent['js/InputManager.js'] || '';
+if (!inputContent.includes('ghost') && !inputContent.includes('preview') && !inputContent.includes('Preview') &&
+    !inputContent.includes('highlight') && !inputContent.includes('Highlight')) {
+    warnings.push(`[DRAG] No placement preview/ghost found — user can't see where piece will land`);
+}
+// 드래그 중 유효/무효 시각 피드백
+if (!inputContent.includes('tint') && !inputContent.includes('color') && !inputContent.includes('alpha') &&
+    !allJsContent['js/Board.js']?.includes('highlight') && !allJsContent['js/Board.js']?.includes('preview')) {
+    warnings.push(`[DRAG] No valid/invalid placement visual feedback found`);
+}
+
+// ═══════════════════════════════════════════
+// 33. SEO 구조화 데이터 검증
+// ═══════════════════════════════════════════
+if (!html.includes('application/ld+json')) {
+    warnings.push(`[SEO] No JSON-LD structured data found in index.html`);
+}
+if (!html.includes('VideoGame')) {
+    warnings.push(`[SEO] No VideoGame schema type found — search engines may not identify as game`);
+}
+
+// ═══════════════════════════════════════════
+// 34. 카카오톡 인앱브라우저 리다이렉트
+// ═══════════════════════════════════════════
+// blockpang은 카카오톡 리다이렉트가 없을 수 있음 (선택)
+
+// ═══════════════════════════════════════════
+// 35. Google Analytics 검증
+// ═══════════════════════════════════════════
+if (!html.includes('gtag') && !html.includes('googletagmanager')) {
+    warnings.push(`[ANALYTICS] No Google Analytics found`);
+}
+
+// ═══════════════════════════════════════════
+// 36. 리사이즈/반응형 검증
+// ═══════════════════════════════════════════
+// PixiJS 리사이즈 핸들링
+const mainJsContent = allJsContent['js/main.js'] || '';
+if (!mainJsContent.includes('resize') && !mainJsContent.includes('resizeTo') &&
+    !allJsContent['js/Game.js']?.includes('resize')) {
+    warnings.push(`[RESPONSIVE] No resize handler found — game may not adapt to window changes`);
+}
+
+// ═══════════════════════════════════════════
+// 37. 리더보드/명예의 전당 조회 검증
+// ═══════════════════════════════════════════
+const hasRankingFetch = allContent.includes("'GET'") || allContent.includes('/rankings') ||
+    allContent.includes('fetchRankings') || allContent.includes('loadRanking');
+if (!hasRankingFetch) {
+    warnings.push(`[RANKING_VIEW] No ranking GET/fetch found — Hall of Fame may not load data`);
+}
+
+// ═══════════════════════════════════════════
+// 38. 연락처/외부 링크 검증
 // ═══════════════════════════════════════════
 const contactKey = I18N.ko?.contact;
 if (!contactKey) {
