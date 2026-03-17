@@ -1178,7 +1178,94 @@ if (fileExists('js/ui/HUD.js')) {
 }
 
 // ═══════════════════════════════════════════
-// Q. 사운드 설정 검증
+// Q. 게임오버 DOM input 정리 검증 (메모리 누수)
+// ═══════════════════════════════════════════
+if (fileExists('js/scenes/GameOverScene.js')) {
+    const goContent2 = readFile('js/scenes/GameOverScene.js');
+    // DOM input 생성 확인
+    if (goContent2.includes('document.createElement')) {
+        // 정리 코드 존재 확인
+        if (!goContent2.includes('removeChild') && !goContent2.includes('remove()')) {
+            errors.push(`[DOM_LEAK] GameOverScene creates DOM elements but never removes them`);
+        }
+    }
+    // Enter/Escape 단축키
+    if (!goContent2.includes("'Enter'") && !goContent2.includes('"Enter"')) {
+        warnings.push(`[UX] GameOverScene name input: no Enter key submit shortcut`);
+    }
+    if (!goContent2.includes("'Escape'") && !goContent2.includes('"Escape"')) {
+        warnings.push(`[UX] GameOverScene name input: no Escape key skip shortcut`);
+    }
+    // Phaser 키보드 캡처 해제 (input 사용 시)
+    if (goContent2.includes('createElement') && !goContent2.includes('keyboard.enabled')) {
+        warnings.push(`[UX] GameOverScene creates input but doesn't disable Phaser keyboard capture — WASD may interfere with typing`);
+    }
+}
+
+// ═══════════════════════════════════════════
+// R. 승리 조건 검증
+// ═══════════════════════════════════════════
+{
+    // GameScene에서 victory 조건 확인
+    const gsContent = readFile('js/scenes/GameScene.js') || '';
+    const hasVictory = gsContent.includes('victory') || gsContent.includes('Victory') || gsContent.includes('win');
+    if (!hasVictory) {
+        warnings.push(`[VICTORY] No victory condition found in GameScene — game may only end by death`);
+    }
+}
+
+// ═══════════════════════════════════════════
+// S. 그림자 군단 소환 검증
+// ═══════════════════════════════════════════
+if (fileExists('js/managers/ShadowArmyManager.js')) {
+    const samContent = readFile('js/managers/ShadowArmyManager.js');
+    // 소환 메커니즘
+    if (!samContent.includes('summon') && !samContent.includes('Summon') && !samContent.includes('spawn') && !samContent.includes('add')) {
+        warnings.push(`[SHADOW] ShadowArmyManager has no summon mechanism`);
+    }
+    // 보스 처치 후 소환
+    if (!samContent.includes('boss') && !samContent.includes('Boss')) {
+        warnings.push(`[SHADOW] ShadowArmyManager doesn't reference boss — may not summon after boss kill`);
+    }
+}
+
+// ═══════════════════════════════════════════
+// T. 퀘스트 시스템 검증
+// ═══════════════════════════════════════════
+{
+    // 퀘스트 관련 코드 존재 확인
+    const allJsContent2 = allJsFiles.map(f => fs.readFileSync(f.full, 'utf8')).join('\n');
+    const hasQuest = allJsContent2.includes('quest') || allJsContent2.includes('Quest');
+    if (!hasQuest) {
+        warnings.push(`[QUEST] No quest system found in any JS file`);
+    }
+}
+
+// ═══════════════════════════════════════════
+// U. Google Analytics 검증
+// ═══════════════════════════════════════════
+if (!html.includes('gtag') && !html.includes('googletagmanager')) {
+    warnings.push(`[ANALYTICS] No Google Analytics found`);
+}
+
+// ═══════════════════════════════════════════
+// V. localStorage 키 일관성
+// ═══════════════════════════════════════════
+{
+    const allCode = allJsFiles.map(f => fs.readFileSync(f.full, 'utf8')).join('\n');
+    const lsGet = new Set();
+    const lsSet = new Set();
+    for (const m of allCode.matchAll(/localStorage\.getItem\(\s*['"]([^'"]+)['"]/g)) lsGet.add(m[1]);
+    for (const m of allCode.matchAll(/localStorage\.setItem\(\s*['"]([^'"]+)['"]/g)) lsSet.add(m[1]);
+    for (const key of lsGet) {
+        if (!lsSet.has(key)) {
+            warnings.push(`[STORAGE] localStorage.getItem("${key}") used but setItem never called`);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+// W. 사운드 설정 검증
 // ═══════════════════════════════════════════
 if (fileExists('js/managers/SoundManager.js')) {
     const smContent = readFile('js/managers/SoundManager.js');
