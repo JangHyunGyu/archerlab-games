@@ -1,0 +1,24 @@
+# Archerlab Games
+> Free browser-based web game portal — play instantly, no download needed.
+
+## About
+Archerlab Games is a web game portal where you can play various casual games directly in the browser. All games are free and require no installation.
+
+## Games
+- BlockPang: Block-breaking puzzle game
+- Shadow Survival: Survival action game
+
+## Features
+- 100% browser-based — no download or install
+- Mobile and desktop support
+- Free to play
+
+## Links
+- Play now: https://game.archerlab.dev
+- Developer: https://archerlab.dev
+
+## Language
+- Korean (한국어)
+
+## Category
+Browser Games, Casual Games, Free Web Games
