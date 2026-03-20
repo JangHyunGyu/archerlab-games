@@ -61,6 +61,8 @@ class Game {
     // ── Start game from title screen ──
     startGame() {
         this.state = 'playing';
+        const alLink = document.getElementById('archerlab-link');
+        if (alLink) alLink.style.display = 'none';
         this.ui.hideTitleScreen(() => {
             this.ui.showGameHUD();
             this.board.container.visible = true;
@@ -97,6 +99,8 @@ class Game {
     goToTitle() {
         this.ui.hideGameOver();
         this.state = 'title';
+        const alLink = document.getElementById('archerlab-link');
+        if (alLink) alLink.style.display = '';
         this.board.container.visible = false;
         this.tray.container.visible = false;
         this.ui.hideGameHUD();
