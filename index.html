@@ -45,16 +45,23 @@
         .home-link {
             position: absolute;
             top: 16px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 16px;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 4px 10px;
+            border-radius: 15px;
             text-decoration: none;
-            font-size: 1.4rem;
-            color: #b366ff;
-            opacity: 0.7;
-            transition: opacity 0.2s;
+            font-size: 1rem;
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            transition: all 0.2s;
+            line-height: 1;
+            display: flex;
+            align-items: center;
         }
         .home-link:hover {
-            opacity: 1;
+            background: rgba(0, 0, 0, 0.6);
         }
         header h1 {
             font-size: 2.5rem;
