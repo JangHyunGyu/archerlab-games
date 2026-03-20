@@ -110,6 +110,11 @@ class Game {
         this._stars = [];
         this._nebulae = [];
         this._shootingStars = [];
+        // Clear shooting star pool - old pooled objects may reference destroyed contexts
+        if (this._shootingStarPool) {
+            this._shootingStarPool.forEach(g => { if (!g.destroyed) g.destroy(); });
+            this._shootingStarPool = [];
+        }
 
         const w = this.app.screen.width;
         const h = this.app.screen.height;
@@ -226,13 +231,17 @@ class Game {
 
         // Reuse from pool or create new
         let g;
-        if (this._shootingStarPool && this._shootingStarPool.length > 0) {
-            g = this._shootingStarPool.pop();
+        while (this._shootingStarPool && this._shootingStarPool.length > 0) {
+            const candidate = this._shootingStarPool.pop();
+            if (candidate.destroyed) continue;
+            g = candidate;
             g.clear();
             g.visible = true;
             g.alpha = 1;
             g.scale.set(1);
-        } else {
+            break;
+        }
+        if (!g) {
             g = new PIXI.Graphics();
         }
 

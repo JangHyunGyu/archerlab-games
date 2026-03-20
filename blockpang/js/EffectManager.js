@@ -23,8 +23,9 @@ class EffectManager {
 
     // Get a Graphics object from pool or create new
     _getParticleGfx() {
-        if (this._particlePool.length > 0) {
+        while (this._particlePool.length > 0) {
             const gfx = this._particlePool.pop();
+            if (gfx.destroyed) continue;
             gfx.clear();
             gfx.visible = true;
             gfx.alpha = 1;

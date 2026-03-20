@@ -298,11 +298,18 @@ class SoundManager {
      */
     _at(offsetSec, fn) {
         if (offsetSec <= 0.005) {
-            fn();
+            try { fn(); } catch (e) { /* Tone scheduling drift */ }
         } else {
             const ms = offsetSec * 1000;
-            setTimeout(fn, ms);
+            setTimeout(() => { try { fn(); } catch (e) { /* Tone scheduling drift */ } }, ms);
         }
+    }
+
+    /**
+     * Returns a safe time for Tone.js scheduling (never in the past).
+     */
+    _safeTime(time) {
+        return Math.max(time, Tone.now());
     }
 
     // ── PLACE: Heavy satisfying THUMP + crystalline click ──────────
@@ -328,7 +335,7 @@ class SoundManager {
         // Upper sparkle
         this._at(0.018, () => {
             this._bell.volume.value = -14;
-            this._bell.triggerAttackRelease('E6', 0.08, now + 0.018);
+            this._bell.triggerAttackRelease('E6', 0.08, this._safeTime(now + 0.018));
         });
     }
 
@@ -377,7 +384,7 @@ class SoundManager {
                     this._bell.envelope.sustain = 0.3;
                     this._bell.envelope.release = 0.2;
                     this._bell.volume.value = -8;
-                    this._bell.triggerAttackRelease(note, 0.25, now + i * 0.05);
+                    this._bell.triggerAttackRelease(note, 0.25, this._safeTime(now + i * 0.05));
                 });
             });
         }
@@ -392,14 +399,14 @@ class SoundManager {
                     this._bell.envelope.sustain = 0.4;
                     this._bell.envelope.release = 0.3;
                     this._bell.volume.value = -7;
-                    this._bell.triggerAttackRelease(note, 0.3, now + i * 0.045);
+                    this._bell.triggerAttackRelease(note, 0.3, this._safeTime(now + i * 0.045));
                 });
             });
 
             // Chord layer
             this._at(0.03, () => {
                 this._poly.volume.value = -12;
-                this._poly.triggerAttackRelease(['C5', 'E5', 'G5'], 0.3, now + 0.03);
+                this._poly.triggerAttackRelease(['C5', 'E5', 'G5'], 0.3, this._safeTime(now + 0.03));
             });
 
             // FM shimmer
@@ -407,7 +414,7 @@ class SoundManager {
                 this._fm.harmonicity.value = 3;
                 this._fm.modulationIndex.value = 5;
                 this._fm.volume.value = -15;
-                this._fm.triggerAttackRelease('C6', 0.2, now + 0.12);
+                this._fm.triggerAttackRelease('C6', 0.2, this._safeTime(now + 0.12));
             });
         }
 
@@ -421,14 +428,14 @@ class SoundManager {
                     this._bell.envelope.sustain = 0.5;
                     this._bell.envelope.release = 0.4;
                     this._bell.volume.value = -6;
-                    this._bell.triggerAttackRelease(note, 0.35, now + i * 0.04);
+                    this._bell.triggerAttackRelease(note, 0.35, this._safeTime(now + i * 0.04));
                 });
             });
 
             // Power chord
             this._at(0.02, () => {
                 this._poly.volume.value = -10;
-                this._poly.triggerAttackRelease(['C5', 'E5', 'G5', 'B5'], 0.35, now + 0.02);
+                this._poly.triggerAttackRelease(['C5', 'E5', 'G5', 'B5'], 0.35, this._safeTime(now + 0.02));
             });
 
             // FM shimmer
@@ -436,7 +443,7 @@ class SoundManager {
                 this._fm.harmonicity.value = 4;
                 this._fm.modulationIndex.value = 8;
                 this._fm.volume.value = -12;
-                this._fm.triggerAttackRelease('D6', 0.3, now + 0.1);
+                this._fm.triggerAttackRelease('D6', 0.3, this._safeTime(now + 0.1));
             });
         }
 
@@ -450,14 +457,14 @@ class SoundManager {
                     this._bell.envelope.sustain = 0.6;
                     this._bell.envelope.release = 0.5;
                     this._bell.volume.value = -5;
-                    this._bell.triggerAttackRelease(note, 0.4, now + i * 0.035);
+                    this._bell.triggerAttackRelease(note, 0.4, this._safeTime(now + i * 0.035));
                 });
             });
 
             // Massive chord
             this._at(0.02, () => {
                 this._poly.volume.value = -8;
-                this._poly.triggerAttackRelease(['C5', 'E5', 'G5', 'B5', 'D6'], 0.45, now + 0.02);
+                this._poly.triggerAttackRelease(['C5', 'E5', 'G5', 'B5', 'D6'], 0.45, this._safeTime(now + 0.02));
             });
 
             // Dual FM shimmer
@@ -465,20 +472,20 @@ class SoundManager {
                 this._fm.harmonicity.value = 5;
                 this._fm.modulationIndex.value = 12;
                 this._fm.volume.value = -10;
-                this._fm.triggerAttackRelease('E6', 0.35, now + 0.08);
+                this._fm.triggerAttackRelease('E6', 0.35, this._safeTime(now + 0.08));
             });
             this._at(0.15, () => {
                 this._fm.harmonicity.value = 3;
                 this._fm.modulationIndex.value = 8;
                 this._fm.volume.value = -12;
-                this._fm.triggerAttackRelease('G6', 0.3, now + 0.15);
+                this._fm.triggerAttackRelease('G6', 0.3, this._safeTime(now + 0.15));
             });
 
             // AM shimmer tail
             this._at(0.1, () => {
                 this._am.harmonicity.value = 2;
                 this._am.volume.value = -16;
-                this._am.triggerAttackRelease('C6', 0.4, now + 0.1);
+                this._am.triggerAttackRelease('C6', 0.4, this._safeTime(now + 0.1));
             });
         }
     }
@@ -538,13 +545,13 @@ class SoundManager {
         this._fm.harmonicity.value = 2 + clampLevel * 0.3;
         this._fm.modulationIndex.value = 6 + clampLevel * 2;
         this._fm.volume.value = -14 + clampLevel * 0.5;
-        this._fm.triggerAttackRelease(baseNote, 0.25, now + 0.01);
+        this._fm.triggerAttackRelease(baseNote, 0.25, this._safeTime(now + 0.01));
 
         // High combos: AM layer
         if (clampLevel >= 4) {
             this._am.harmonicity.value = 2 + clampLevel * 0.2;
             this._am.volume.value = -16 + clampLevel * 0.5;
-            this._am.triggerAttackRelease(octaveNote, 0.2, now + 0.02);
+            this._am.triggerAttackRelease(octaveNote, 0.2, this._safeTime(now + 0.02));
         }
 
         // High combos: distortion overtone
@@ -554,7 +561,7 @@ class SoundManager {
                 this._click.oscillator.type = 'square';
                 this._click.envelope.decay = 0.03;
                 this._click.volume.value = -18 + clampLevel;
-                this._click.triggerAttackRelease(highHarmonic, 0.06, now + 0.015);
+                this._click.triggerAttackRelease(highHarmonic, 0.06, this._safeTime(now + 0.015));
             });
         }
     }
@@ -579,7 +586,7 @@ class SoundManager {
 
         progression.forEach(({ notes, delay }) => {
             this._at(delay, () => {
-                const t = now + delay;
+                const t = this._safeTime(now + delay);
 
                 this._poly.set({
                     oscillator: { type: 'sine' },
@@ -609,7 +616,7 @@ class SoundManager {
                 this._bass.envelope.sustain = 0.2;
                 this._bass.envelope.release = 0.35;
                 this._bass.volume.value = -10;
-                this._bass.triggerAttackRelease(note, 0.7, now + delay);
+                this._bass.triggerAttackRelease(note, 0.7, this._safeTime(now + delay));
             });
         });
 
@@ -620,7 +627,7 @@ class SoundManager {
             this._membrane.envelope.decay = 1.5;
             this._membrane.envelope.release = 0.8;
             this._membrane.volume.value = -6;
-            this._membrane.triggerAttackRelease('F0', 1.8, now + 1.4);
+            this._membrane.triggerAttackRelease('F0', 1.8, this._safeTime(now + 1.4));
         });
 
         // FM dark rumble tail
@@ -628,7 +635,7 @@ class SoundManager {
             this._fm.harmonicity.value = 1.5;
             this._fm.modulationIndex.value = 20;
             this._fm.volume.value = -14;
-            this._fm.triggerAttackRelease('A0', 1.5, now + 1.5);
+            this._fm.triggerAttackRelease('A0', 1.5, this._safeTime(now + 1.5));
         });
 
         // Noise tail
@@ -637,7 +644,7 @@ class SoundManager {
             this._noise.envelope.attack = 0.1;
             this._noise.envelope.decay = 1.2;
             this._noise.volume.value = -18;
-            this._noise.triggerAttackRelease(1.5, now + 1.2);
+            this._noise.triggerAttackRelease(1.5, this._safeTime(now + 1.2));
         });
     }
 
@@ -681,7 +688,7 @@ class SoundManager {
             this._bell.envelope.decay = 0.06;
             this._bell.envelope.release = 0.08;
             this._bell.volume.value = -14;
-            this._bell.triggerAttackRelease('B3', 0.05, now + 0.13);
+            this._bell.triggerAttackRelease('B3', 0.05, this._safeTime(now + 0.13));
         });
 
         // Soft air puff
