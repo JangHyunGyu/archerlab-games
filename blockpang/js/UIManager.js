@@ -32,6 +32,7 @@ class UIManager {
                 fill: 0x00E5FF,
                 fontWeight: '900',
                 letterSpacing: 6,
+                padding: 12,
                 dropShadow: { color: 0x000000, blur: 8, distance: 2 },
             },
         });
