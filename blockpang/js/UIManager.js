@@ -689,7 +689,6 @@ class UIManager {
         langBtn.btn.alpha = 0;
         hofBtn.btn.alpha = 0;
         contactBtn.btn.alpha = 0;
-        linkBtn.alpha = 0;
 
         this.game.effects.tweens.push({
             elapsed: 0,
@@ -729,10 +728,6 @@ class UIManager {
                 if (t > 0.5) {
                     contactBtn.btn.alpha = easeOutCubic(Math.min((t - 0.5) / 0.25, 1));
                 }
-                if (t > 0.55) {
-                    linkBtn.alpha = easeOutCubic(Math.min((t - 0.55) / 0.25, 1));
-                }
-
                 return t >= 1;
             }
         });
