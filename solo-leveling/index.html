@@ -113,6 +113,23 @@
     </style>
 </head>
 <body>
+    <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" class="archerlab-link" title="ArcherLab">🏹 ArcherLab</a>
+    <style>
+        .archerlab-link {
+            position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 9999;
+            background: linear-gradient(135deg, #2563eb, #7c3aed, #2563eb); background-size: 200% 200%;
+            animation: al-grad 3s ease infinite, al-glow 2s ease-in-out infinite;
+            color: #fff; border: 2px solid rgba(255,255,255,0.5); padding: 7px 18px; border-radius: 25px;
+            text-decoration: none; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.5px;
+            display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 0 20px rgba(37,99,235,0.5), 0 0 60px rgba(124,58,237,0.2), 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s; white-space: nowrap; font-family: system-ui, sans-serif;
+        }
+        .archerlab-link:hover { transform: translateX(-50%) scale(1.08); box-shadow: 0 0 30px rgba(37,99,235,0.7), 0 0 80px rgba(124,58,237,0.3); }
+        @keyframes al-grad { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        @keyframes al-glow { 0%,100%{box-shadow:0 0 20px rgba(37,99,235,0.5),0 4px 15px rgba(0,0,0,0.3)} 50%{box-shadow:0 0 35px rgba(37,99,235,0.8),0 4px 15px rgba(0,0,0,0.3)} }
+        @media(max-width:768px){ .archerlab-link { left:12px; transform:none; font-size:0.75rem; padding:5px 12px; } .archerlab-link:hover { transform:scale(1.08); } }
+    </style>
     <div id="game-container"></div>
     <script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0-rc.6/dist/phaser.min.js"></script>
