@@ -8,6 +8,10 @@ export class MenuScene extends Phaser.Scene {
     }
 
     create() {
+        // Show archerlab link on menu
+        const alLink = document.getElementById('archerlab-link');
+        if (alLink) alLink.style.display = '';
+
         // Background particles
         this.bgParticles = [];
         for (let i = 0; i < 50; i++) {
