@@ -101,11 +101,9 @@ export class EnemyManager {
             if (enemy.active) {
                 enemy.update(time, delta, player.x, player.y);
 
-                // Despawn distance scales with screen size
+                // Despawn distance based on world size (mobs spawn from world edges)
                 if (!this._despawnDist) {
-                    const cw = this.scene.cameras.main.width / 2;
-                    const ch = this.scene.cameras.main.height / 2;
-                    this._despawnDist = Math.sqrt(cw * cw + ch * ch) + 500;
+                    this._despawnDist = WORLD_SIZE * 0.75;
                 }
                 const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
                 if (dist > this._despawnDist) {
@@ -366,43 +364,32 @@ export class EnemyManager {
     }
 
     _getSpawnPosition() {
-        const player = this.scene.player;
-        const margin = 50;
-        const cam = this.scene.cameras.main;
+        const margin = 60;
 
-        // Spawn just outside the visible screen
-        const halfW = (cam.width / cam.zoom) / 2 + 60;
-        const halfH = (cam.height / cam.zoom) / 2 + 60;
-        // Limit spread along edges to prevent extreme diagonal distances
-        const spreadW = Math.min(halfW, 500);
-        const spreadH = Math.min(halfH, 500);
-
-        // Pick a random edge (top, bottom, left, right)
+        // Spawn from world map edges — fair for all screen sizes
+        // Mobs appear on minimap first, giving players advance warning
         const edge = Phaser.Math.Between(0, 3);
         let x, y;
         switch (edge) {
-            case 0: // top
-                x = player.x + Phaser.Math.Between(-spreadW, spreadW);
-                y = player.y - halfH - Phaser.Math.Between(0, 30);
+            case 0: // top edge
+                x = Phaser.Math.Between(margin, WORLD_SIZE - margin);
+                y = Phaser.Math.Between(margin, margin + 40);
                 break;
-            case 1: // bottom
-                x = player.x + Phaser.Math.Between(-spreadW, spreadW);
-                y = player.y + halfH + Phaser.Math.Between(0, 30);
+            case 1: // bottom edge
+                x = Phaser.Math.Between(margin, WORLD_SIZE - margin);
+                y = Phaser.Math.Between(WORLD_SIZE - margin - 40, WORLD_SIZE - margin);
                 break;
-            case 2: // left
-                x = player.x - halfW - Phaser.Math.Between(0, 30);
-                y = player.y + Phaser.Math.Between(-spreadH, spreadH);
+            case 2: // left edge
+                x = Phaser.Math.Between(margin, margin + 40);
+                y = Phaser.Math.Between(margin, WORLD_SIZE - margin);
                 break;
-            case 3: // right
-                x = player.x + halfW + Phaser.Math.Between(0, 30);
-                y = player.y + Phaser.Math.Between(-spreadH, spreadH);
+            case 3: // right edge
+                x = Phaser.Math.Between(WORLD_SIZE - margin - 40, WORLD_SIZE - margin);
+                y = Phaser.Math.Between(margin, WORLD_SIZE - margin);
                 break;
         }
 
-        return {
-            x: Phaser.Math.Clamp(x, margin, WORLD_SIZE - margin),
-            y: Phaser.Math.Clamp(y, margin, WORLD_SIZE - margin),
-        };
+        return { x, y };
     }
 
     _spawnEnemy(typeKey, x, y) {
