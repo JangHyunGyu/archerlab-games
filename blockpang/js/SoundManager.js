@@ -761,33 +761,35 @@ class SoundManager {
         fanfare.forEach((note, i) => {
             const t = 0.05 + i * 0.07;
             this._at(t, () => {
+                const st = this._safeTime(now + t);
                 this._bell.envelope.attack = 0.003;
                 this._bell.envelope.decay = 0.1;
                 this._bell.envelope.sustain = 0.45;
                 this._bell.envelope.release = 0.25;
                 this._bell.volume.value = -8;
-                this._bell.triggerAttackRelease(note, 0.3, now + t);
+                this._bell.triggerAttackRelease(note, 0.3, st);
 
                 this._fm.harmonicity.value = 3;
                 this._fm.modulationIndex.value = 4;
                 this._fm.volume.value = -18;
-                this._fm.triggerAttackRelease(note, 0.2, now + t + 0.01);
+                this._fm.triggerAttackRelease(note, 0.2, st + 0.01);
             });
         });
 
         // Grand resolving chord
         const resolveDelay = fanfare.length * 0.07 + 0.05;
         this._at(resolveDelay, () => {
+            const st = this._safeTime(now + resolveDelay);
             this._poly.set({
                 oscillator: { type: 'sine' },
                 envelope: { attack: 0.008, decay: 0.25, sustain: 0.4, release: 0.5 }
             });
             this._poly.volume.value = -8;
-            this._poly.triggerAttackRelease(['C6', 'E6', 'G6'], 0.8, now + resolveDelay);
+            this._poly.triggerAttackRelease(['C6', 'E6', 'G6'], 0.8, st);
 
             this._am.harmonicity.value = 2;
             this._am.volume.value = -12;
-            this._am.triggerAttackRelease('C6', 0.7, now + resolveDelay + 0.01);
+            this._am.triggerAttackRelease('C6', 0.7, st + 0.01);
         });
 
         // Bass foundation
