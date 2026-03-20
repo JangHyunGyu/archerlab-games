@@ -150,17 +150,7 @@ export class MenuScene extends Phaser.Scene {
             }).setOrigin(0.5);
         }
 
-        // ArcherLab link button (top center, emoji style)
-        const archerlabBtn = this.add.text(GAME_WIDTH / 2, uv(30), '🏹', {
-            fontSize: fs(isMobile ? 24 : 20),
-            fontFamily: 'Arial, sans-serif',
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        archerlabBtn.on('pointerover', () => archerlabBtn.setScale(1.2));
-        archerlabBtn.on('pointerout', () => archerlabBtn.setScale(1));
-        archerlabBtn.on('pointerdown', () => {
-            window.open('https://archerlab.dev', '_blank');
-        });
+        // ArcherLab link → HTML 버튼으로 이동 (canvas 외부)
 
         // Language dropdown (top-right)
         this._createLanguageDropdown(isMobile);
