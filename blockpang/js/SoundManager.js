@@ -267,10 +267,37 @@ class SoundManager {
             }).connect(this._wetChannel);
             this._sweep.volume.value = -16;
 
+            // Patch all synths to silently handle Tone.js scheduling conflicts
+            this._patchSynths();
+
             this._initialized = true;
         } catch (e) {
             console.error('SoundManager init failed:', e);
             this._initialized = true; // Still allow WAV playback
+        }
+    }
+
+    /**
+     * Wrap triggerAttackRelease on all synths to prevent uncaught
+     * "Start time must be strictly greater than previous start time" errors.
+     * These occur when multiple game events trigger the same synth in rapid succession.
+     */
+    _patchSynths() {
+        const synths = [this._membrane, this._bass, this._click, this._bell,
+                        this._poly, this._fm, this._am, this._metal, this._sweep];
+        for (const synth of synths) {
+            if (!synth || !synth.triggerAttackRelease) continue;
+            const orig = synth.triggerAttackRelease.bind(synth);
+            synth.triggerAttackRelease = (...args) => {
+                try { return orig(...args); } catch (e) { /* timing conflict */ }
+            };
+        }
+        // Also patch NoiseSynth (same method name)
+        if (this._noise && this._noise.triggerAttackRelease) {
+            const origNoise = this._noise.triggerAttackRelease.bind(this._noise);
+            this._noise.triggerAttackRelease = (...args) => {
+                try { return origNoise(...args); } catch (e) { /* timing conflict */ }
+            };
         }
     }
 

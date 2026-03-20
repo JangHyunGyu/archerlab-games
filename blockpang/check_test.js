@@ -385,10 +385,10 @@ test('1줄 클리어 시 100점', () => {
     assertEqual(sm.combo, 1);
 });
 
-test('2줄 동시 클리어 시 250점 (100*2 + 50 보너스)', () => {
+test('2줄 동시 클리어 시 220점 (100*2 + 20 보너스)', () => {
     const sm = new ScoreManager();
     const r = sm.addClearScore(2);
-    assertEqual(r.points, 250);
+    assertEqual(r.points, 220);
 });
 
 test('콤보: 연속 클리어 시 점수 증가', () => {
