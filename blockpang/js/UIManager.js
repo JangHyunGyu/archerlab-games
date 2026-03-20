@@ -639,25 +639,7 @@ class UIManager {
 
         const langBtn = { btn: langTrigger, txt: langTriggerText };
 
-        // ── archerlab.dev link (top center, styled text) ──
-        const linkBtn = new PIXI.Text({
-            text: 'archerlab.dev',
-            style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.max(13, Math.min(16, w * 0.035)) * sc,
-                fill: 0x2979FF,
-                fontWeight: '700',
-                letterSpacing: 2,
-            },
-        });
-        linkBtn.anchor.set(0.5, 0);
-        linkBtn.position.set(centerX, 14);
-        linkBtn.eventMode = 'static';
-        linkBtn.cursor = 'pointer';
-        linkBtn.on('pointerdown', () => { window.open('https://archerlab.dev', '_blank'); });
-        linkBtn.on('pointerover', () => { linkBtn.alpha = 0.7; });
-        linkBtn.on('pointerout', () => { linkBtn.alpha = 1; });
-        container.addChild(linkBtn);
+        // archerlab.dev link → HTML 버튼으로 이동 (canvas 외부)
 
         // ── Sound toggle ──
         const titleSoundBtn = new PIXI.Text({
