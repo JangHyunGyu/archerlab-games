@@ -19,6 +19,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     create() {
+        // Hide archerlab link during gameplay
+        const alLink = document.getElementById('archerlab-link');
+        if (alLink) alLink.style.display = 'none';
+
         // World bounds
         this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
 
