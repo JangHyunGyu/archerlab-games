@@ -837,28 +837,29 @@ class SoundManager {
                 this._bell.envelope.sustain = 0.3;
                 this._bell.envelope.release = 0.25;
                 this._bell.volume.value = -9;
-                this._bell.triggerAttackRelease(note, 0.4 - i * 0.018, now + t);
+                this._bell.triggerAttackRelease(note, 0.4 - i * 0.018, this._safeTime(now + t));
             });
         });
 
         // Grand finale chord
         const finaleDelay = 0.05 + scale.length * noteSpacing;
         this._at(finaleDelay, () => {
+            const st = this._safeTime(now + finaleDelay);
             this._poly.set({
                 oscillator: { type: 'sine' },
                 envelope: { attack: 0.01, decay: 0.35, sustain: 0.35, release: 0.8 }
             });
             this._poly.volume.value = -8;
-            this._poly.triggerAttackRelease(['C6', 'E6', 'G6', 'C7'], 1.3, now + finaleDelay);
+            this._poly.triggerAttackRelease(['C6', 'E6', 'G6', 'C7'], 1.3, st);
 
             this._am.harmonicity.value = 2;
             this._am.volume.value = -10;
-            this._am.triggerAttackRelease('C6', 1.2, now + finaleDelay + 0.01);
+            this._am.triggerAttackRelease('C6', 1.2, st + 0.01);
 
             this._fm.harmonicity.value = 3;
             this._fm.modulationIndex.value = 5;
             this._fm.volume.value = -16;
-            this._fm.triggerAttackRelease('G6', 1.0, now + finaleDelay + 0.02);
+            this._fm.triggerAttackRelease('G6', 1.0, st + 0.02);
         });
 
         // Bass foundation
