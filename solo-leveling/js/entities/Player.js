@@ -303,8 +303,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.isInvincible = true;
         this.invincibleTimer = 1000;
 
-        // Damage effect
+        // Damage effect - camera shake
         this.scene.cameras.main.shake(100, 0.005);
+
+        // Hit recoil motion (knockback + red flash + flinch)
+        this._playHitRecoil(damage);
 
         // Haptic feedback (mobile vibration)
         if (navigator.vibrate) {
@@ -417,6 +420,58 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                 duration: 800,
             });
         }
+    }
+
+    _playHitRecoil(damage) {
+        // Red flash tint
+        this.setTint(0xff3333);
+        this.scene.time.delayedCall(120, () => {
+            if (this.active && !this.isDead) this.clearTint();
+        });
+
+        // Flinch: quick scale squash + recover
+        this.scene.tweens.add({
+            targets: this,
+            scaleX: 0.85,
+            scaleY: 1.15,
+            duration: 60,
+            yoyo: true,
+            ease: 'Power2',
+        });
+
+        // Knockback recoil (slight push away from damage source)
+        const enemies = this.getAllEnemies();
+        let closestAngle = this.facingRight ? Math.PI : 0;
+        let closestDist = 9999;
+        for (const e of enemies) {
+            if (!e.active) continue;
+            const d = Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y);
+            if (d < closestDist) {
+                closestDist = d;
+                closestAngle = Phaser.Math.Angle.Between(e.x, e.y, this.x, this.y);
+            }
+        }
+        const knockDist = Math.min(20, 8 + damage * 0.15);
+        this.scene.tweens.add({
+            targets: this,
+            x: this.x + Math.cos(closestAngle) * knockDist,
+            y: this.y + Math.sin(closestAngle) * knockDist,
+            duration: 80,
+            ease: 'Power2',
+        });
+
+        // Hit spark particles
+        try {
+            const spark = this.scene.add.circle(
+                this.x + Phaser.Math.Between(-8, 8),
+                this.y + Phaser.Math.Between(-12, 4),
+                6, 0xff4444, 0.8
+            ).setDepth(12);
+            this.scene.tweens.add({
+                targets: spark, alpha: 0, scale: 3,
+                duration: 200, onComplete: () => spark.destroy(),
+            });
+        } catch (e) { /* silent */ }
     }
 
     heal(amount) {
