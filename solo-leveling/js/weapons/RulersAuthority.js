@@ -26,7 +26,7 @@ export class RulersAuthority extends WeaponBase {
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
                 const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-                if (dist > 600) continue;
+                if (dist > 250) continue;
 
                 let count = 0;
                 for (const other of enemies) {

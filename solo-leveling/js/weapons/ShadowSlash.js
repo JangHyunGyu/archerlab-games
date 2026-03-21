@@ -47,7 +47,7 @@ export class ShadowSlash extends WeaponBase {
         }
         angle += angleOffset;
 
-        const range = 260 + this.extraRange;
+        const range = 350 + this.extraRange;
         const slashDist = range * 0.45;
         const slashX = this.player.x + Math.cos(angle) * slashDist;
         const slashY = this.player.y + Math.sin(angle) * slashDist;
