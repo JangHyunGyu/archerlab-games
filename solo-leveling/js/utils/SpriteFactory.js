@@ -131,27 +131,27 @@ export class SpriteFactory {
     //  PLAYER TEXTURES
     // =============================================
     static createPlayerTextures(scene) {
-        const W = 48, H = 52;
+        const W = 96, H = 104;
 
-        // Player idle frames (8 frames, Canvas2D with gradients)
+        // Player idle frames (8 frames, high-res Canvas2D)
         for (let i = 0; i < 8; i++) {
-            const breathe = Math.sin(i * Math.PI / 4) * 1.5;
+            const breathe = Math.sin(i * Math.PI / 4) * 2.5;
             this._tex(scene, 'player_idle_' + i, W, H, (ctx) => {
-                this._drawPlayerCanvas(ctx, W, H, breathe, 0, 0, false);
+                this._drawPlayerCanvas(ctx, W, H, breathe, 0, 0, false, i);
             });
         }
 
         // Player walk frames (8 frames)
         for (let i = 0; i < 8; i++) {
-            const legSwing = Math.sin(i * Math.PI / 4) * 4;
-            const armSwing = Math.sin(i * Math.PI / 4) * 3;
-            const bob = Math.abs(Math.sin(i * Math.PI / 4)) * 1.5;
+            const legSwing = Math.sin(i * Math.PI / 4) * 7;
+            const armSwing = Math.sin(i * Math.PI / 4) * 5;
+            const bob = Math.abs(Math.sin(i * Math.PI / 4)) * 2;
             this._tex(scene, 'player_walk_' + i, W, H, (ctx) => {
-                this._drawPlayerCanvas(ctx, W, H, -bob, legSwing, armSwing, true);
+                this._drawPlayerCanvas(ctx, W, H, -bob, legSwing, armSwing, true, i);
             });
         }
 
-        // Player S-rank aura (keep Phaser Graphics)
+        // Player S-rank aura
         const sg = scene.make.graphics({ add: false });
         sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.06);
         sg.fillCircle(48, 48, 48);
@@ -163,188 +163,564 @@ export class SpriteFactory {
         sg.destroy();
     }
 
-    static _drawPlayerCanvas(ctx, W, H, by, legSwing, armSwing, walking) {
+    static _drawPlayerCanvas(ctx, W, H, by, legSwing, armSwing, walking, frame) {
         const cx = W / 2;
 
-        // Ground shadow (gradient ellipse)
+        // ── GROUND SHADOW ──
+        const gShadow = ctx.createRadialGradient(cx, 97, 0, cx, 97, 26);
+        gShadow.addColorStop(0, 'rgba(10,0,30,0.55)');
+        gShadow.addColorStop(0.5, 'rgba(5,0,20,0.2)');
+        gShadow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gShadow;
+        ctx.beginPath(); ctx.ellipse(cx, 97, 26, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+        // ── SHADOW WISPS (behind character) ──
         ctx.save();
-        const shadowGrad = ctx.createRadialGradient(cx, 48, 0, cx, 48, 16);
-        shadowGrad.addColorStop(0, 'rgba(0,0,0,0.4)');
-        shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = shadowGrad;
-        ctx.fillRect(0, 40, W, 16);
+        ctx.globalAlpha = 0.15;
+        for (let w = 0; w < 5; w++) {
+            const phase = w * 1.3 + frame * 0.8;
+            const wx = cx - 16 + w * 8 + (walking ? Math.sin(phase) * 3 : 0);
+            const wy = 90 + by;
+            const wGrad = ctx.createLinearGradient(wx, wy + 8, wx, wy - 18);
+            wGrad.addColorStop(0, 'rgba(60,30,120,0)');
+            wGrad.addColorStop(0.4, 'rgba(80,40,160,0.7)');
+            wGrad.addColorStop(1, 'rgba(60,30,120,0)');
+            ctx.fillStyle = wGrad;
+            ctx.beginPath(); ctx.ellipse(wx, wy - 4, 3, 12 + Math.sin(phase) * 3, (w - 2) * 0.15, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.restore();
 
-        // --- LEGS ---
-        const lx1 = 16 + (walking ? legSwing : 0);
-        const lx2 = 26 + (walking ? -legSwing : 0);
-        const legGrad = ctx.createLinearGradient(0, 41, 0, 49);
-        legGrad.addColorStop(0, '#18183a');
-        legGrad.addColorStop(1, '#0e0e24');
-        ctx.fillStyle = legGrad;
-        ctx.fillRect(lx1, 41 + by, 6, 8);
-        ctx.fillRect(lx2, 41 + by, 6, 8);
-
-        // --- BOOTS (gradient + rim) ---
-        const bootGrad = ctx.createLinearGradient(0, 47, 0, 51);
-        bootGrad.addColorStop(0, '#141428');
-        bootGrad.addColorStop(1, '#080814');
-        ctx.fillStyle = bootGrad;
-        this._cRoundRect(ctx, lx1 - 2, 47 + by, 9, 4, 2); ctx.fill();
-        this._cRoundRect(ctx, lx2 - 1, 47 + by, 9, 4, 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(80,80,120,0.25)';
-        ctx.lineWidth = 0.5;
-        this._cRoundRect(ctx, lx1 - 2, 47 + by, 9, 4, 2); ctx.stroke();
-        this._cRoundRect(ctx, lx2 - 1, 47 + by, 9, 4, 2); ctx.stroke();
-
-        // --- COAT BODY (gradient shading) ---
-        const coatGrad = ctx.createLinearGradient(11, 16, 37, 42);
-        coatGrad.addColorStop(0, '#1e2a50');
-        coatGrad.addColorStop(0.4, '#16213e');
-        coatGrad.addColorStop(1, '#0f1530');
-        ctx.fillStyle = coatGrad;
-        this._cRoundRect(ctx, 11, 16 + by, 26, 26, 3); ctx.fill();
-        // Vertical shading
-        const coatVGrad = ctx.createLinearGradient(0, 16, 0, 42);
-        coatVGrad.addColorStop(0, 'rgba(40,50,90,0.25)');
-        coatVGrad.addColorStop(0.5, 'rgba(0,0,0,0)');
-        coatVGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
-        ctx.fillStyle = coatVGrad;
-        this._cRoundRect(ctx, 11, 16 + by, 26, 26, 3); ctx.fill();
-        // Outline
-        ctx.strokeStyle = 'rgba(8,8,22,0.6)';
-        ctx.lineWidth = 1;
-        this._cRoundRect(ctx, 11, 16 + by, 26, 26, 3); ctx.stroke();
-
-        // Coat flaps (bezier curves)
-        ctx.fillStyle = '#16213e';
+        // ── COAT TAILS (behind legs) ──
+        const tailBase = 76 + by;
+        const tailGrad = ctx.createLinearGradient(24, tailBase, 24, 92);
+        tailGrad.addColorStop(0, '#12142a');
+        tailGrad.addColorStop(1, '#08091a');
+        ctx.fillStyle = tailGrad;
+        // Left tail
         ctx.beginPath();
-        ctx.moveTo(11, 38 + by);
-        ctx.quadraticCurveTo(7 - (walking ? armSwing * 0.5 : 0), 48, 17, 42 + by);
-        ctx.fill();
+        ctx.moveTo(28, tailBase); ctx.quadraticCurveTo(22 - (walking ? armSwing * 0.5 : 0), 94, 32, 90 + by);
+        ctx.lineTo(38, tailBase); ctx.fill();
+        // Right tail
         ctx.beginPath();
-        ctx.moveTo(37, 38 + by);
-        ctx.quadraticCurveTo(41 + (walking ? armSwing * 0.5 : 0), 48, 31, 42 + by);
-        ctx.fill();
+        ctx.moveTo(58, tailBase); ctx.quadraticCurveTo(74 + (walking ? armSwing * 0.5 : 0), 94, 64, 90 + by);
+        ctx.lineTo(68, tailBase); ctx.fill();
+        // Center tail fill
+        ctx.fillStyle = '#0e1024';
+        ctx.beginPath();
+        ctx.moveTo(36, tailBase); ctx.quadraticCurveTo(cx, 90 + (walking ? 2 : 0), 60, tailBase); ctx.fill();
+        // Tail inner lining (subtle purple)
+        ctx.fillStyle = 'rgba(40,15,60,0.25)';
+        ctx.beginPath();
+        ctx.moveTo(34, tailBase + 2); ctx.quadraticCurveTo(cx, 86 + by, 62, tailBase + 2); ctx.fill();
 
-        // V-neck collar (gradient)
-        const neckGrad = ctx.createLinearGradient(0, 17, 0, 26);
-        neckGrad.addColorStop(0, '#0c0c28');
-        neckGrad.addColorStop(1, '#060618');
-        ctx.fillStyle = neckGrad;
-        ctx.beginPath();
-        ctx.moveTo(17, 17 + by); ctx.lineTo(cx, 26 + by); ctx.lineTo(31, 17 + by);
-        ctx.fill();
-        // Collar edge highlight
-        ctx.strokeStyle = 'rgba(40,50,80,0.5)';
+        // ── LEGS ──
+        const lx1 = 34 + (walking ? legSwing : 0);
+        const lx2 = 52 + (walking ? -legSwing : 0);
+        const legTop = 78 + by;
+        const pantsGrad = ctx.createLinearGradient(0, legTop, 0, legTop + 16);
+        pantsGrad.addColorStop(0, '#16162e');
+        pantsGrad.addColorStop(1, '#0c0c1e');
+        ctx.fillStyle = pantsGrad;
+        this._cRoundRect(ctx, lx1, legTop, 10, 14, 2); ctx.fill();
+        this._cRoundRect(ctx, lx2, legTop, 10, 14, 2); ctx.fill();
+        // Leg inner highlight
+        ctx.fillStyle = 'rgba(30,30,55,0.35)';
+        ctx.fillRect(lx1 + 1, legTop + 1, 3, 12);
+        ctx.fillRect(lx2 + 1, legTop + 1, 3, 12);
+        // Knee seam
+        ctx.strokeStyle = 'rgba(20,20,40,0.4)';
         ctx.lineWidth = 0.8;
-        ctx.beginPath(); ctx.moveTo(17, 17 + by); ctx.lineTo(cx, 24 + by); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(31, 17 + by); ctx.lineTo(cx, 24 + by); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(lx1 + 1, legTop + 8); ctx.lineTo(lx1 + 9, legTop + 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(lx2 + 1, legTop + 8); ctx.lineTo(lx2 + 9, legTop + 7); ctx.stroke();
 
-        // Belt (metallic gradient)
-        const beltGrad = ctx.createLinearGradient(0, 38, 0, 41);
-        beltGrad.addColorStop(0, '#3a3a5a');
-        beltGrad.addColorStop(1, '#2a2a44');
+        // ── BOOTS ──
+        const bootY = legTop + 12;
+        const bootGrad = ctx.createLinearGradient(0, bootY, 0, bootY + 10);
+        bootGrad.addColorStop(0, '#1a1a30');
+        bootGrad.addColorStop(0.5, '#101020');
+        bootGrad.addColorStop(1, '#0a0a16');
+        ctx.fillStyle = bootGrad;
+        this._cRoundRect(ctx, lx1 - 2, bootY, 14, 10, 3); ctx.fill();
+        this._cRoundRect(ctx, lx2 - 2, bootY, 14, 10, 3); ctx.fill();
+        // Boot top strap
+        ctx.fillStyle = '#2a2a44';
+        ctx.fillRect(lx1 - 1, bootY, 12, 2.5);
+        ctx.fillRect(lx2 - 1, bootY, 12, 2.5);
+        // Boot buckle
+        const bkGrad = ctx.createLinearGradient(0, bootY, 0, bootY + 2.5);
+        bkGrad.addColorStop(0, '#aaaacc');
+        bkGrad.addColorStop(1, '#777799');
+        ctx.fillStyle = bkGrad;
+        ctx.fillRect(lx1 + 3, bootY, 4, 2.5);
+        ctx.fillRect(lx2 + 3, bootY, 4, 2.5);
+        // Boot outline
+        ctx.strokeStyle = 'rgba(0,0,10,0.45)';
+        ctx.lineWidth = 0.8;
+        this._cRoundRect(ctx, lx1 - 2, bootY, 14, 10, 3); ctx.stroke();
+        this._cRoundRect(ctx, lx2 - 2, bootY, 14, 10, 3); ctx.stroke();
+        // Boot sole rim
+        ctx.fillStyle = 'rgba(40,40,65,0.3)';
+        this._cRoundRect(ctx, lx1 - 1, bootY + 8, 12, 2, 1); ctx.fill();
+        this._cRoundRect(ctx, lx2 - 1, bootY + 8, 12, 2, 1); ctx.fill();
+
+        // ── COAT BODY (main torso) ──
+        const coatTop = 36 + by;
+        const coatBot = 78 + by;
+        // Main shape (tapered)
+        const coatGrad = ctx.createLinearGradient(26, coatTop, 70, coatBot);
+        coatGrad.addColorStop(0, '#181e3a');
+        coatGrad.addColorStop(0.3, '#141832');
+        coatGrad.addColorStop(0.7, '#101428');
+        coatGrad.addColorStop(1, '#0c0e1e');
+        ctx.fillStyle = coatGrad;
+        ctx.beginPath();
+        ctx.moveTo(30, coatTop); ctx.lineTo(66, coatTop);
+        ctx.lineTo(68, coatBot); ctx.lineTo(28, coatBot);
+        ctx.closePath(); ctx.fill();
+        // Left edge highlight (light source)
+        const leftHL = ctx.createLinearGradient(28, 0, 42, 0);
+        leftHL.addColorStop(0, 'rgba(45,55,90,0.3)');
+        leftHL.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = leftHL;
+        ctx.fillRect(28, coatTop, 14, coatBot - coatTop);
+        // Right edge shadow
+        const rightSH = ctx.createLinearGradient(56, 0, 68, 0);
+        rightSH.addColorStop(0, 'rgba(0,0,0,0)');
+        rightSH.addColorStop(1, 'rgba(0,0,10,0.2)');
+        ctx.fillStyle = rightSH;
+        ctx.fillRect(56, coatTop, 12, coatBot - coatTop);
+        // Center seam
+        ctx.strokeStyle = 'rgba(20,20,40,0.5)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(cx, coatTop + 12); ctx.lineTo(cx, coatBot); ctx.stroke();
+        // Cross-stitch on seam
+        ctx.strokeStyle = 'rgba(50,50,80,0.2)';
+        ctx.lineWidth = 0.5;
+        for (let sy = coatTop + 16; sy < coatBot - 4; sy += 8) {
+            ctx.beginPath(); ctx.moveTo(cx - 2, sy); ctx.lineTo(cx + 2, sy + 4); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx + 2, sy); ctx.lineTo(cx - 2, sy + 4); ctx.stroke();
+        }
+        // Coat outline
+        ctx.strokeStyle = 'rgba(0,0,10,0.45)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(30, coatTop); ctx.lineTo(66, coatTop);
+        ctx.lineTo(68, coatBot); ctx.lineTo(28, coatBot); ctx.closePath();
+        ctx.stroke();
+
+        // ── HIGH COLLAR (signature hunter coat) ──
+        const collarGrad = ctx.createLinearGradient(0, coatTop - 8, 0, coatTop + 6);
+        collarGrad.addColorStop(0, '#1e2444');
+        collarGrad.addColorStop(1, '#141830');
+        ctx.fillStyle = collarGrad;
+        // Left collar
+        ctx.beginPath();
+        ctx.moveTo(30, coatTop); ctx.lineTo(28, coatTop - 8);
+        ctx.lineTo(36, coatTop - 4); ctx.lineTo(40, coatTop + 6); ctx.fill();
+        // Right collar
+        ctx.beginPath();
+        ctx.moveTo(66, coatTop); ctx.lineTo(68, coatTop - 8);
+        ctx.lineTo(60, coatTop - 4); ctx.lineTo(56, coatTop + 6); ctx.fill();
+        // Collar edge highlight
+        ctx.strokeStyle = 'rgba(65,75,115,0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(28, coatTop - 8); ctx.lineTo(36, coatTop - 4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(68, coatTop - 8); ctx.lineTo(60, coatTop - 4); ctx.stroke();
+        // Collar inner shadow
+        ctx.strokeStyle = 'rgba(10,10,25,0.4)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(30, coatTop - 6); ctx.lineTo(36, coatTop - 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(66, coatTop - 6); ctx.lineTo(60, coatTop - 2); ctx.stroke();
+
+        // ── V-NECK OPENING ──
+        // Neck skin
+        ctx.fillStyle = '#c8a878';
+        ctx.beginPath();
+        ctx.moveTo(40, coatTop - 2); ctx.lineTo(cx, coatTop + 6);
+        ctx.lineTo(56, coatTop - 2); ctx.fill();
+        // V-neck shadow
+        const vGrad = ctx.createLinearGradient(0, coatTop, 0, coatTop + 10);
+        vGrad.addColorStop(0, '#0c0816');
+        vGrad.addColorStop(1, '#06040e');
+        ctx.fillStyle = vGrad;
+        ctx.beginPath();
+        ctx.moveTo(38, coatTop); ctx.lineTo(cx, coatTop + 12);
+        ctx.lineTo(58, coatTop); ctx.fill();
+        // Collar edge lines
+        ctx.strokeStyle = 'rgba(50,55,85,0.45)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(38, coatTop); ctx.lineTo(cx, coatTop + 10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(58, coatTop); ctx.lineTo(cx, coatTop + 10); ctx.stroke();
+
+        // ── BELT ──
+        const beltY = 72 + by;
+        const beltGrad = ctx.createLinearGradient(0, beltY, 0, beltY + 5);
+        beltGrad.addColorStop(0, '#3a3a58');
+        beltGrad.addColorStop(0.5, '#2e2e48');
+        beltGrad.addColorStop(1, '#22223a');
         ctx.fillStyle = beltGrad;
-        ctx.fillRect(13, 38 + by, 22, 3);
-        // Buckle
-        const buckGrad = ctx.createLinearGradient(22, 38, 26, 41);
-        buckGrad.addColorStop(0, '#aaaacc');
+        ctx.fillRect(29, beltY, 38, 5);
+        // Buckle (metallic)
+        const buckGrad = ctx.createLinearGradient(44, beltY, 52, beltY + 5);
+        buckGrad.addColorStop(0, '#ccccee');
+        buckGrad.addColorStop(0.3, '#aaaacc');
+        buckGrad.addColorStop(0.7, '#8888aa');
         buckGrad.addColorStop(1, '#666688');
         ctx.fillStyle = buckGrad;
-        ctx.fillRect(22, 38 + by, 4, 3);
+        this._cRoundRect(ctx, 44, beltY, 8, 5, 1); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 0.5;
+        this._cRoundRect(ctx, 44, beltY, 8, 5, 1); ctx.stroke();
+        // Buckle diamond detail
+        ctx.fillStyle = '#555570';
+        ctx.beginPath();
+        ctx.moveTo(48, beltY + 1); ctx.lineTo(50, beltY + 2.5);
+        ctx.lineTo(48, beltY + 4); ctx.lineTo(46, beltY + 2.5); ctx.fill();
 
-        // --- ARMS (gradient + outline) ---
-        const armGrad = ctx.createLinearGradient(7, 0, 13, 0);
-        armGrad.addColorStop(0, '#1e2a50');
-        armGrad.addColorStop(1, '#16213e');
-        ctx.fillStyle = armGrad;
-        ctx.fillRect(7, 18 + by + (walking ? armSwing : 0), 6, 15);
-        ctx.fillRect(35, 18 + by + (walking ? -armSwing : 0), 6, 15);
-        ctx.strokeStyle = 'rgba(8,8,22,0.4)';
+        // ── SHOULDER ARMOR ──
+        // Left shoulder
+        const shY = coatTop - 2;
+        const lsGrad = ctx.createLinearGradient(18, shY, 32, shY + 10);
+        lsGrad.addColorStop(0, '#282e50');
+        lsGrad.addColorStop(0.5, '#1e2444');
+        lsGrad.addColorStop(1, '#161c38');
+        ctx.fillStyle = lsGrad;
+        ctx.beginPath(); ctx.ellipse(27, shY + 4, 11, 7, -0.15, 0, Math.PI * 2); ctx.fill();
+        // Right shoulder
+        const rsGrad = ctx.createLinearGradient(64, shY, 78, shY + 10);
+        rsGrad.addColorStop(0, '#222844');
+        rsGrad.addColorStop(0.5, '#1c2240');
+        rsGrad.addColorStop(1, '#161c38');
+        ctx.fillStyle = rsGrad;
+        ctx.beginPath(); ctx.ellipse(69, shY + 4, 11, 7, 0.15, 0, Math.PI * 2); ctx.fill();
+        // Shoulder highlights
+        ctx.strokeStyle = 'rgba(65,75,115,0.4)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.ellipse(27, shY + 4, 11, 7, -0.15, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(69, shY + 4, 11, 7, 0.15, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+        // Shoulder accent lines
+        ctx.strokeStyle = 'rgba(80,90,140,0.25)';
         ctx.lineWidth = 0.8;
-        ctx.strokeRect(7, 18 + by + (walking ? armSwing : 0), 6, 15);
-        ctx.strokeRect(35, 18 + by + (walking ? -armSwing : 0), 6, 15);
-        // Arm highlight
-        ctx.fillStyle = 'rgba(35,45,85,0.35)';
-        ctx.fillRect(8, 19 + by + (walking ? armSwing : 0), 2, 13);
+        ctx.beginPath(); ctx.ellipse(27, shY + 4, 7, 4.5, -0.15, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(69, shY + 4, 7, 4.5, 0.15, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke();
+        // Shoulder outlines
+        ctx.strokeStyle = 'rgba(0,0,10,0.35)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.ellipse(27, shY + 4, 11, 7, -0.15, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(69, shY + 4, 11, 7, 0.15, 0, Math.PI * 2); ctx.stroke();
 
-        // --- HANDS (radial gradient skin) ---
-        for (const [hx, hy] of [[10, 34 + by + (walking ? armSwing : 0)], [38, 34 + by + (walking ? -armSwing : 0)]]) {
-            const handGrad = ctx.createRadialGradient(hx - 0.5, hy - 0.5, 0, hx, hy, 3.5);
-            handGrad.addColorStop(0, '#e8c89a');
-            handGrad.addColorStop(1, '#b08860');
-            ctx.fillStyle = handGrad;
-            ctx.beginPath(); ctx.arc(hx, hy, 3, 0, Math.PI * 2); ctx.fill();
+        // ── ARMS ──
+        const laOff = walking ? armSwing : 0;
+        const raOff = walking ? -armSwing : 0;
+        const armTop = coatTop + 6;
+        // Left arm
+        const laGrad = ctx.createLinearGradient(16, armTop, 28, armTop);
+        laGrad.addColorStop(0, '#1c2240');
+        laGrad.addColorStop(1, '#161c36');
+        ctx.fillStyle = laGrad;
+        this._cRoundRect(ctx, 18, armTop + laOff, 10, 24, 3); ctx.fill();
+        // Left arm highlight
+        ctx.fillStyle = 'rgba(40,50,80,0.25)';
+        ctx.fillRect(19, armTop + 1 + laOff, 3, 22);
+        // Left arm bands
+        ctx.strokeStyle = 'rgba(50,55,85,0.45)';
+        ctx.lineWidth = 1;
+        for (let b = 0; b < 3; b++) {
+            const bY = armTop + 6 + b * 7 + laOff;
+            ctx.beginPath(); ctx.moveTo(19, bY); ctx.lineTo(27, bY + 1); ctx.stroke();
         }
+        ctx.strokeStyle = 'rgba(0,0,10,0.35)';
+        ctx.lineWidth = 0.8;
+        this._cRoundRect(ctx, 18, armTop + laOff, 10, 24, 3); ctx.stroke();
+        // Right arm
+        const raGrad = ctx.createLinearGradient(68, armTop, 78, armTop);
+        raGrad.addColorStop(0, '#161c36');
+        raGrad.addColorStop(1, '#121830');
+        ctx.fillStyle = raGrad;
+        this._cRoundRect(ctx, 68, armTop + raOff, 10, 24, 3); ctx.fill();
+        ctx.strokeStyle = 'rgba(50,55,85,0.45)';
+        ctx.lineWidth = 1;
+        for (let b = 0; b < 3; b++) {
+            const bY = armTop + 6 + b * 7 + raOff;
+            ctx.beginPath(); ctx.moveTo(69, bY + 1); ctx.lineTo(77, bY); ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(0,0,10,0.35)';
+        ctx.lineWidth = 0.8;
+        this._cRoundRect(ctx, 68, armTop + raOff, 10, 24, 3); ctx.stroke();
 
-        // --- HEAD (radial gradient skin) ---
-        const headY = 11;
-        const faceGrad = ctx.createRadialGradient(cx - 1, headY - 1, 0, cx, headY, 10);
-        faceGrad.addColorStop(0, '#f0d4a8');
-        faceGrad.addColorStop(0.6, '#deb887');
+        // ── GLOVES ──
+        const gloveY_L = armTop + 22 + laOff;
+        const gloveY_R = armTop + 22 + raOff;
+        // Left glove
+        const lgGrad = ctx.createRadialGradient(23, gloveY_L + 4, 0, 23, gloveY_L + 4, 6);
+        lgGrad.addColorStop(0, '#1e1e34');
+        lgGrad.addColorStop(1, '#12122a');
+        ctx.fillStyle = lgGrad;
+        this._cRoundRect(ctx, 17, gloveY_L, 12, 9, 4); ctx.fill();
+        ctx.fillStyle = '#2a2a44';
+        ctx.fillRect(17, gloveY_L, 12, 2.5);
+        ctx.strokeStyle = 'rgba(0,0,10,0.35)';
+        ctx.lineWidth = 0.5;
+        this._cRoundRect(ctx, 17, gloveY_L, 12, 9, 4); ctx.stroke();
+        // Right glove
+        const rgGrad = ctx.createRadialGradient(73, gloveY_R + 4, 0, 73, gloveY_R + 4, 6);
+        rgGrad.addColorStop(0, '#1e1e34');
+        rgGrad.addColorStop(1, '#12122a');
+        ctx.fillStyle = rgGrad;
+        this._cRoundRect(ctx, 67, gloveY_R, 12, 9, 4); ctx.fill();
+        ctx.fillStyle = '#2a2a44';
+        ctx.fillRect(67, gloveY_R, 12, 2.5);
+        ctx.strokeStyle = 'rgba(0,0,10,0.35)';
+        ctx.lineWidth = 0.5;
+        this._cRoundRect(ctx, 67, gloveY_R, 12, 9, 4); ctx.stroke();
+
+        // ── HEAD ──
+        const headY = 20 + by;
+        const headR = 13;
+        // Neck
+        const neckGrad = ctx.createLinearGradient(0, headY + 10, 0, headY + headR + 6);
+        neckGrad.addColorStop(0, '#deb887');
+        neckGrad.addColorStop(1, '#c0a070');
+        ctx.fillStyle = neckGrad;
+        ctx.fillRect(42, headY + 10, 12, 8);
+        // Face (3D radial gradient)
+        const faceGrad = ctx.createRadialGradient(cx - 2, headY - 2, 0, cx, headY, headR + 2);
+        faceGrad.addColorStop(0, '#f2dab0');
+        faceGrad.addColorStop(0.35, '#ecd0a0');
+        faceGrad.addColorStop(0.65, '#deb887');
         faceGrad.addColorStop(1, '#b89060');
         ctx.fillStyle = faceGrad;
-        ctx.beginPath(); ctx.arc(cx, headY, 9, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(120,80,50,0.35)';
+        ctx.beginPath(); ctx.arc(cx, headY, headR, 0, Math.PI * 2); ctx.fill();
+        // Jawline (angular, Sung Jin-Woo style)
+        const jawGrad = ctx.createLinearGradient(0, headY + 4, 0, headY + headR + 2);
+        jawGrad.addColorStop(0, '#deb887');
+        jawGrad.addColorStop(1, '#c8a070');
+        ctx.fillStyle = jawGrad;
+        ctx.beginPath();
+        ctx.moveTo(cx - 11, headY + 4); ctx.lineTo(cx - 7, headY + headR + 1);
+        ctx.lineTo(cx, headY + headR + 2); ctx.lineTo(cx + 7, headY + headR + 1);
+        ctx.lineTo(cx + 11, headY + 4); ctx.closePath(); ctx.fill();
+        // Chin shadow
+        const chinSh = ctx.createLinearGradient(0, headY + 8, 0, headY + headR + 2);
+        chinSh.addColorStop(0, 'rgba(0,0,0,0)');
+        chinSh.addColorStop(1, 'rgba(140,90,50,0.15)');
+        ctx.fillStyle = chinSh;
+        ctx.beginPath(); ctx.arc(cx, headY, headR, 0.1, Math.PI - 0.1); ctx.fill();
+        // Cheek blush (subtle)
+        ctx.fillStyle = 'rgba(200,120,100,0.08)';
+        ctx.beginPath(); ctx.arc(cx - 8, headY + 5, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx + 8, headY + 5, 4, 0, Math.PI * 2); ctx.fill();
+        // Face outline
+        ctx.strokeStyle = 'rgba(120,80,50,0.25)';
         ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.arc(cx, headY, headR, 0, Math.PI * 2); ctx.stroke();
+        // Nose
+        ctx.strokeStyle = 'rgba(160,110,70,0.35)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(cx, headY + 2); ctx.lineTo(cx - 1.5, headY + 6);
+        ctx.lineTo(cx, headY + 7); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,230,200,0.25)';
+        ctx.beginPath(); ctx.arc(cx - 0.8, headY + 4, 1, 0, Math.PI * 2); ctx.fill();
+        // Mouth (determined expression)
+        ctx.strokeStyle = 'rgba(140,90,60,0.45)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(cx - 4, headY + 10);
+        ctx.quadraticCurveTo(cx, headY + 10.5, cx + 4, headY + 10);
         ctx.stroke();
 
-        // --- HAIR (gradient + spiky curves) ---
-        const hairGrad = ctx.createLinearGradient(15, 0, 33, 12);
-        hairGrad.addColorStop(0, '#2e2e44');
-        hairGrad.addColorStop(0.5, '#2a2a3e');
-        hairGrad.addColorStop(1, '#1e1e32');
+        // ── EYES (anime-style, glowing) ──
+        const eyeY = headY;
+        for (const [ex, dir] of [[cx - 6, -1], [cx + 6, 1]]) {
+            // Eye white
+            ctx.fillStyle = 'rgba(235,235,248,0.7)';
+            ctx.beginPath(); ctx.ellipse(ex, eyeY, 4.5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+            // Iris (blue → purple gradient)
+            const irisGrad = ctx.createRadialGradient(ex - dir * 0.5, eyeY - 0.5, 0, ex, eyeY, 3.5);
+            irisGrad.addColorStop(0, '#88ddff');
+            irisGrad.addColorStop(0.25, '#55aaff');
+            irisGrad.addColorStop(0.55, '#3366ee');
+            irisGrad.addColorStop(1, '#2244aa');
+            ctx.fillStyle = irisGrad;
+            ctx.beginPath(); ctx.ellipse(ex, eyeY, 3.2, 3, 0, 0, Math.PI * 2); ctx.fill();
+            // Pupil
+            ctx.fillStyle = '#0a1430';
+            ctx.beginPath(); ctx.ellipse(ex, eyeY + 0.3, 1.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+            // Iris detail ring
+            ctx.strokeStyle = 'rgba(100,180,255,0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath(); ctx.ellipse(ex, eyeY, 2.2, 2, 0, 0, Math.PI * 2); ctx.stroke();
+            // Large highlight (anime sparkle)
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath(); ctx.arc(ex - dir * 1.3, eyeY - 1.3, 1.3, 0, Math.PI * 2); ctx.fill();
+            // Small secondary highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath(); ctx.arc(ex + dir * 0.8, eyeY + 1.3, 0.6, 0, Math.PI * 2); ctx.fill();
+            // Glow bloom (strong blue)
+            const bloom = ctx.createRadialGradient(ex, eyeY, 0, ex, eyeY, 12);
+            bloom.addColorStop(0, 'rgba(68,153,255,0.3)');
+            bloom.addColorStop(0.4, 'rgba(68,120,255,0.1)');
+            bloom.addColorStop(1, 'rgba(68,100,255,0)');
+            ctx.fillStyle = bloom;
+            ctx.beginPath(); ctx.arc(ex, eyeY, 12, 0, Math.PI * 2); ctx.fill();
+            // Eye outline
+            ctx.strokeStyle = 'rgba(15,20,45,0.65)';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.ellipse(ex, eyeY, 4.5, 3.5, 0, 0, Math.PI * 2); ctx.stroke();
+            // Upper eyelid (thick, anime style)
+            ctx.strokeStyle = 'rgba(10,10,30,0.8)';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath(); ctx.ellipse(ex, eyeY - 0.3, 4.8, 3.5, 0, Math.PI + 0.15, -0.15); ctx.stroke();
+            // Lower lash line (subtle)
+            ctx.strokeStyle = 'rgba(60,40,30,0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath(); ctx.ellipse(ex, eyeY + 0.3, 4, 3.2, 0, 0.2, Math.PI - 0.2); ctx.stroke();
+        }
+        // Eyebrows (sharp, fierce)
+        ctx.strokeStyle = 'rgba(20,20,40,0.85)';
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(cx - 12, headY - 6.5);
+        ctx.quadraticCurveTo(cx - 8, headY - 8, cx - 3, headY - 6); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + 3, headY - 6);
+        ctx.quadraticCurveTo(cx + 8, headY - 8, cx + 12, headY - 6.5); ctx.stroke();
+        ctx.lineCap = 'butt';
+
+        // ── HAIR (Sung Jin-Woo style: dark, messy spikes) ──
+        const hairGrad = ctx.createLinearGradient(cx - 18, headY - headR - 8, cx + 18, headY + 4);
+        hairGrad.addColorStop(0, '#1e1e36');
+        hairGrad.addColorStop(0.3, '#181830');
+        hairGrad.addColorStop(0.6, '#141428');
+        hairGrad.addColorStop(1, '#0e0e20');
         ctx.fillStyle = hairGrad;
-        ctx.fillRect(15, 2, 18, 10);
-        // Side hair
-        ctx.beginPath(); ctx.moveTo(14, 6); ctx.quadraticCurveTo(11, 10, 13, 14); ctx.lineTo(18, 8); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(34, 6); ctx.quadraticCurveTo(37, 10, 35, 14); ctx.lineTo(30, 8); ctx.fill();
-        // Top spikes (smooth curves)
-        ctx.beginPath(); ctx.moveTo(17, 3); ctx.quadraticCurveTo(19, -2, 22, 2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(21, 1); ctx.quadraticCurveTo(24, -3, 27, 1); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(26, 2); ctx.quadraticCurveTo(29, -2, 31, 3); ctx.fill();
-        // Blue sheen highlight
-        const sheenGrad = ctx.createLinearGradient(18, 3, 30, 7);
-        sheenGrad.addColorStop(0, 'rgba(58,74,110,0)');
-        sheenGrad.addColorStop(0.5, 'rgba(58,74,110,0.45)');
-        sheenGrad.addColorStop(1, 'rgba(58,74,110,0)');
-        ctx.fillStyle = sheenGrad;
-        ctx.fillRect(18, 3, 12, 4);
+        // Hair base (covers top of head)
+        ctx.beginPath(); ctx.arc(cx, headY, headR + 1.5, Math.PI * 0.92, Math.PI * 2.08); ctx.fill();
+        // Hair mass top
+        ctx.beginPath();
+        ctx.moveTo(cx - 16, headY - 2);
+        ctx.quadraticCurveTo(cx - 17, headY - 10, cx - 12, headY - 15);
+        ctx.quadraticCurveTo(cx - 6, headY - 19, cx, headY - 17);
+        ctx.quadraticCurveTo(cx + 6, headY - 19, cx + 12, headY - 15);
+        ctx.quadraticCurveTo(cx + 17, headY - 10, cx + 16, headY - 2);
+        ctx.fill();
+        // Spike 1 (center-left, tallest)
+        ctx.beginPath();
+        ctx.moveTo(cx - 5, headY - 15);
+        ctx.quadraticCurveTo(cx - 4, headY - 25, cx, headY - 22);
+        ctx.quadraticCurveTo(cx + 1, headY - 17, cx + 3, headY - 15);
+        ctx.fill();
+        // Spike 2 (left)
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, headY - 12);
+        ctx.quadraticCurveTo(cx - 14, headY - 22, cx - 8, headY - 19);
+        ctx.quadraticCurveTo(cx - 6, headY - 14, cx - 4, headY - 15);
+        ctx.fill();
+        // Spike 3 (far left)
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, headY - 8);
+        ctx.quadraticCurveTo(cx - 20, headY - 17, cx - 15, headY - 15);
+        ctx.quadraticCurveTo(cx - 12, headY - 10, cx - 10, headY - 10);
+        ctx.fill();
+        // Spike 4 (right)
+        ctx.beginPath();
+        ctx.moveTo(cx + 9, headY - 13);
+        ctx.quadraticCurveTo(cx + 15, headY - 21, cx + 10, headY - 18);
+        ctx.quadraticCurveTo(cx + 7, headY - 14, cx + 4, headY - 15);
+        ctx.fill();
+        // Spike 5 (far right)
+        ctx.beginPath();
+        ctx.moveTo(cx + 13, headY - 8);
+        ctx.quadraticCurveTo(cx + 20, headY - 15, cx + 16, headY - 14);
+        ctx.quadraticCurveTo(cx + 13, headY - 10, cx + 10, headY - 10);
+        ctx.fill();
+        // Side hair strands (framing face)
+        ctx.beginPath();
+        ctx.moveTo(cx - 15, headY - 4);
+        ctx.quadraticCurveTo(cx - 19, headY + 4, cx - 16, headY + 12);
+        ctx.lineTo(cx - 13, headY + 4); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx + 15, headY - 4);
+        ctx.quadraticCurveTo(cx + 19, headY + 4, cx + 16, headY + 12);
+        ctx.lineTo(cx + 13, headY + 4); ctx.fill();
+        // Hair forehead bangs (layered strands)
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, headY - 12);
+        ctx.quadraticCurveTo(cx - 4, headY - 6, cx - 2, headY - 5);
+        ctx.lineTo(cx + 2, headY - 8);
+        ctx.quadraticCurveTo(cx + 5, headY - 6, cx + 7, headY - 5);
+        ctx.lineTo(cx + 10, headY - 9);
+        ctx.fill();
+        // Blue sheen highlights (multiple layers)
+        const sheen1 = ctx.createLinearGradient(cx - 10, headY - 18, cx + 10, headY - 10);
+        sheen1.addColorStop(0, 'rgba(50,65,120,0)');
+        sheen1.addColorStop(0.3, 'rgba(60,80,140,0.4)');
+        sheen1.addColorStop(0.6, 'rgba(65,85,145,0.3)');
+        sheen1.addColorStop(1, 'rgba(50,65,120,0)');
+        ctx.fillStyle = sheen1;
+        ctx.fillRect(cx - 14, headY - 22, 28, 12);
+        const sheen2 = ctx.createLinearGradient(cx - 14, headY - 8, cx + 2, headY - 2);
+        sheen2.addColorStop(0, 'rgba(45,60,110,0)');
+        sheen2.addColorStop(0.5, 'rgba(55,70,130,0.25)');
+        sheen2.addColorStop(1, 'rgba(45,60,110,0)');
+        ctx.fillStyle = sheen2;
+        ctx.fillRect(cx - 16, headY - 10, 18, 8);
+        // Individual hair strand highlights
+        ctx.strokeStyle = 'rgba(60,75,130,0.3)';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.moveTo(cx - 6, headY - 17); ctx.quadraticCurveTo(cx - 3, headY - 20, cx, headY - 18); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + 4, headY - 16); ctx.quadraticCurveTo(cx + 8, headY - 19, cx + 11, headY - 14); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - 12, headY - 10); ctx.quadraticCurveTo(cx - 16, headY - 15, cx - 14, headY - 13); ctx.stroke();
         // Hair outline
-        ctx.strokeStyle = 'rgba(10,10,24,0.6)';
+        ctx.strokeStyle = 'rgba(8,8,20,0.55)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(12, 12); ctx.lineTo(14, 6); ctx.lineTo(17, 3); ctx.quadraticCurveTo(19, -2, 22, 1);
-        ctx.quadraticCurveTo(24, -3, 26, 1); ctx.quadraticCurveTo(29, -2, 31, 3);
-        ctx.lineTo(34, 6); ctx.lineTo(36, 12);
+        // Left side
+        ctx.moveTo(cx - 16, headY + 12);
+        ctx.quadraticCurveTo(cx - 19, headY + 2, cx - 16, headY - 4);
+        ctx.quadraticCurveTo(cx - 18, headY - 10, cx - 14, headY - 14);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, headY - 8);
+        ctx.quadraticCurveTo(cx - 20, headY - 17, cx - 15, headY - 15);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, headY - 14);
+        ctx.quadraticCurveTo(cx - 14, headY - 22, cx - 8, headY - 19);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - 5, headY - 17);
+        ctx.quadraticCurveTo(cx - 4, headY - 25, cx, headY - 22);
+        ctx.quadraticCurveTo(cx + 1, headY - 18, cx + 3, headY - 15);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + 9, headY - 14);
+        ctx.quadraticCurveTo(cx + 15, headY - 21, cx + 10, headY - 18);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + 13, headY - 10);
+        ctx.quadraticCurveTo(cx + 20, headY - 15, cx + 16, headY - 14);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + 16, headY - 4);
+        ctx.quadraticCurveTo(cx + 19, headY + 2, cx + 16, headY + 12);
         ctx.stroke();
 
-        // --- EYES (glowing blue, radial gradient bloom) ---
-        for (const ex of [20, 28]) {
-            // Bloom
-            const bloom = ctx.createRadialGradient(ex, 10, 0, ex, 10, 6);
-            bloom.addColorStop(0, 'rgba(68,153,255,0.35)');
-            bloom.addColorStop(1, 'rgba(68,153,255,0)');
-            ctx.fillStyle = bloom;
-            ctx.fillRect(ex - 7, 3, 14, 14);
-            // Eye core
-            const eyeGrad = ctx.createRadialGradient(ex - 0.5, 9.5, 0, ex, 10, 3);
-            eyeGrad.addColorStop(0, '#99ddff');
-            eyeGrad.addColorStop(0.5, '#4499ff');
-            eyeGrad.addColorStop(1, '#2266cc');
-            ctx.fillStyle = eyeGrad;
-            ctx.beginPath(); ctx.arc(ex, 10, 2.5, 0, Math.PI * 2); ctx.fill();
-            // Highlight
-            ctx.fillStyle = 'rgba(255,255,255,0.7)';
-            ctx.beginPath(); ctx.arc(ex - 0.7, 9.3, 0.8, 0, Math.PI * 2); ctx.fill();
+        // ── FRONT SHADOW WISPS (subtle overlay) ──
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.06;
+        for (let w = 0; w < 3; w++) {
+            const phase = w * 2 + frame * 0.6;
+            const wx = cx - 8 + w * 8;
+            const wy = 86 + by;
+            const fwGrad = ctx.createLinearGradient(wx, wy + 6, wx, wy - 12);
+            fwGrad.addColorStop(0, 'rgba(100,60,200,0)');
+            fwGrad.addColorStop(0.5, 'rgba(100,60,200,1)');
+            fwGrad.addColorStop(1, 'rgba(100,60,200,0)');
+            ctx.fillStyle = fwGrad;
+            ctx.beginPath(); ctx.ellipse(wx, wy, 2.5, 8 + Math.sin(phase) * 2, (w - 1) * 0.2, 0, Math.PI * 2); ctx.fill();
         }
-
-        // Eyebrows
-        ctx.strokeStyle = 'rgba(26,26,46,0.8)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(18, 7); ctx.lineTo(22, 7.5); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(26, 7.5); ctx.lineTo(30, 7); ctx.stroke();
+        ctx.restore();
     }
 
     // =============================================
