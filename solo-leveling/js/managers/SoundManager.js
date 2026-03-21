@@ -9,7 +9,7 @@ export class SoundManager {
         this._initialized = false;
         this._lastPlayTime = {};
         this._throttleMs = {
-            hit: 150, kill: 180, xp: 80, dagger: 150,
+            hit: 150, kill: 180, xp: 80, dagger: 150, daggerThrow: 120,
             slash: 200, authority: 200, fear: 250,
             playerHit: 250, system: 250, warning: 350,
         };
@@ -61,6 +61,7 @@ export class SoundManager {
             const base = 'sounds/';
             // 무기 (자주 발생 → 풀 크게)
             this._createPool('dagger', base + 'dagger.wav', 6);
+            this._createPool('daggerThrow', base + 'dagger_throw.wav', 6);
             this._createPool('slash', base + 'slash.wav', 6);
             this._createPool('authority', base + 'authority.wav', 4);
             this._createPool('fear', base + 'fear.wav', 3);
@@ -120,7 +121,7 @@ export class SoundManager {
 
     // SFX 볼륨 매핑 (사운드별 적절한 볼륨)
     _sfxVolume = {
-        dagger: 0.6, slash: 0.7, authority: 0.75, fear: 0.65,
+        dagger: 0.6, daggerThrow: 0.65, slash: 0.7, authority: 0.75, fear: 0.65,
         hit: 0.7, kill: 0.7, playerHit: 0.8,
         xp: 0.5, levelup: 0.8, rankup: 0.85,
         system: 0.6, arise: 0.85, bossAppear: 0.8,
