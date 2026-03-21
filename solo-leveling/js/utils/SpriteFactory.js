@@ -115,16 +115,103 @@ export class SpriteFactory {
         g.fillCircle(cx - radius * 0.3, cy - radius * 0.3, radius * 0.6);
     }
 
+    // Chroma key: remove green background (#00FF00) and register as new texture
+    static _chromaKey(scene, srcKey, destKey, w, h) {
+        if (!scene.textures.exists(srcKey)) return false;
+        try {
+            const src = scene.textures.get(srcKey).getSourceImage();
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(src, 0, 0, w, h);
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const d = imgData.data;
+            for (let i = 0; i < d.length; i += 4) {
+                const r = d[i], g = d[i + 1], b = d[i + 2];
+                // Green screen removal: high green, low red/blue
+                if (g > 120 && g > r * 1.4 && g > b * 1.4) {
+                    d[i + 3] = 0; // Set alpha to 0
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            if (scene.textures.exists(destKey)) scene.textures.remove(destKey);
+            scene.textures.addCanvas(destKey, canvas);
+            return true;
+        } catch (e) { return false; }
+    }
+
     static createAll(scene) {
-        this.createPlayerTextures(scene);
+        // Try AI-generated player sprites first (with chroma key background removal)
+        const aiPlayerLoaded = this._loadAIPlayerTextures(scene);
+        if (!aiPlayerLoaded) {
+            this.createPlayerTextures(scene);
+        }
         this.createEnemyTextures(scene);
         this.createBossTextures(scene);
         this.createProjectileTextures(scene);
         this.createEffectTextures(scene);
         this.createUITextures(scene);
         this.createShadowSoldierTextures(scene);
-        this.createFloorTexture(scene);
+        // Use AI dungeon floor if available, else procedural
+        if (!this._loadAIDungeonFloor(scene)) {
+            this.createFloorTexture(scene);
+        }
         this._createParticleTextures(scene);
+    }
+
+    static _loadAIPlayerTextures(scene) {
+        if (!scene.textures.exists('ai_player_idle')) return false;
+        const W = 96, H = 128;
+        // Chroma key + scale all AI player sprites
+        this._chromaKey(scene, 'ai_player_idle', 'player_idle_ai', W, H);
+        const hasWalk0 = this._chromaKey(scene, 'ai_player_walk_0', 'player_walk_ai_0', W, H);
+        const hasWalk1 = this._chromaKey(scene, 'ai_player_walk_1', 'player_walk_ai_1', W, H);
+        // Register as animation frames
+        for (let i = 0; i < 8; i++) {
+            const key = 'player_idle_' + i;
+            if (scene.textures.exists(key)) scene.textures.remove(key);
+            // All idle frames use the same AI image (breathing handled by Phaser scale tween)
+            scene.textures.addCanvas(key, scene.textures.get('player_idle_ai').getSourceImage());
+        }
+        for (let i = 0; i < 8; i++) {
+            const key = 'player_walk_' + i;
+            if (scene.textures.exists(key)) scene.textures.remove(key);
+            // Alternate walk frames
+            const walkKey = (i % 2 === 0) ? 'player_walk_ai_0' : 'player_walk_ai_1';
+            if (hasWalk0 && hasWalk1 && scene.textures.exists(walkKey)) {
+                scene.textures.addCanvas(key, scene.textures.get(walkKey).getSourceImage());
+            } else {
+                scene.textures.addCanvas(key, scene.textures.get('player_idle_ai').getSourceImage());
+            }
+        }
+        // Also create aura texture
+        const sg = scene.make.graphics({ add: false });
+        sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.06);
+        sg.fillCircle(48, 48, 48);
+        sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.12);
+        sg.fillCircle(48, 48, 36);
+        sg.fillStyle(COLORS.SHADOW_GLOW, 0.06);
+        sg.fillCircle(48, 48, 24);
+        sg.generateTexture('player_aura', 96, 96);
+        sg.destroy();
+        console.log('[SpriteFactory] AI player sprites loaded (Imagen 4)');
+        return true;
+    }
+
+    static _loadAIDungeonFloor(scene) {
+        if (!scene.textures.exists('ai_dungeon_floor')) return false;
+        try {
+            const src = scene.textures.get('ai_dungeon_floor').getSourceImage();
+            const tileSize = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = tileSize; canvas.height = tileSize;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(src, 0, 0, tileSize, tileSize);
+            if (scene.textures.exists('floor_tile')) scene.textures.remove('floor_tile');
+            scene.textures.addCanvas('floor_tile', canvas);
+            console.log('[SpriteFactory] AI dungeon floor loaded (Imagen 4)');
+            return true;
+        } catch (e) { return false; }
     }
 
     // =============================================
