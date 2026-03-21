@@ -187,7 +187,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         if (this.phase === 1 && this.hp < this.maxHp * 0.5) {
             this.phase = 2;
             this.speed *= 1.2;
-            this.attack *= 1.1;
+            this.attack = Math.floor(this.attack * 1.1);
             this.setTint(0xff6666);
             this.scene.cameras.main.flash(200, 255, 50, 50);
             // Intensify glow in phase 2
@@ -341,7 +341,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 if (!player) return;
                 const d = Phaser.Math.Distance.Between(slamX, slamY, player.x, player.y);
                 if (d < radius) {
-                    player.takeDamage(this.attack * 1.3);
+                    player.takeDamage(Math.floor(this.attack * 1.3));
                 }
 
                 this.scene.cameras.main.shake(300, 0.012);
@@ -374,7 +374,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             if (player) {
                 collider = this.scene.physics.add.overlap(proj, player, () => {
                     if (!proj.active) return;
-                    player.takeDamage(this.attack * 0.7);
+                    player.takeDamage(Math.floor(this.attack * 0.7));
                     if (collider) this.scene.physics.world.removeCollider(collider);
                     this.scene.tweens.killTweensOf(proj);
                     proj.destroy();

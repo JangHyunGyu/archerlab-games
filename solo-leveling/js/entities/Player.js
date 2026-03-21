@@ -281,7 +281,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     takeDamage(amount) {
         if (this.isDead || this.isInvincible) return false;
 
-        const damage = Math.max(1, amount);
+        const damage = Math.max(1, Math.floor(amount));
         this.stats.hp -= damage;
         this.isInvincible = true;
         this.invincibleTimer = 1000;
