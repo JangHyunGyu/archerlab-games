@@ -405,6 +405,8 @@ export class GameScene extends Phaser.Scene {
         if (this.isGameOver) return;
         this.isGameOver = true;
 
+        if (this.soundManager) this.soundManager.play('dungeonBreak');
+
         this.systemMessage.show(t('sysSystem'), [
             t('playerDied'),
             t('exitDungeon'),
