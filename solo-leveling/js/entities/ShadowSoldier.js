@@ -30,9 +30,9 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
         const typeStats = {
-            melee:  { damageMult: 12.0, speedRatio: 1.15, range: 130, attackCD: 250 },
-            tank:   { damageMult: 8.0, speedRatio: 0.95, range: 150, attackCD: 450 },
-            ranged: { damageMult: 18.0, speedRatio: 1.0, range: 250, attackCD: 300 },
+            melee:  { damageMult: 2.5, speedRatio: 1.0, range: 130, attackCD: 600 },
+            tank:   { damageMult: 1.8, speedRatio: 0.8, range: 150, attackCD: 900 },
+            ranged: { damageMult: 3.5, speedRatio: 0.85, range: 250, attackCD: 700 },
         };
 
         const stats = typeStats[this.soldierType] || typeStats.melee;
@@ -82,7 +82,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Update damage and speed with current player stats
         const playerAttack = player.stats.attack;
         const levelMult = 1 + (player.level - 1) * 0.08;
-        const multMap = { melee: 12.0, tank: 8.0, ranged: 18.0 };
+        const multMap = { melee: 2.5, tank: 1.8, ranged: 3.5 };
         this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 3.0) * levelMult);
         this.speed = player.stats.speed * this.speedRatio;
 
@@ -110,8 +110,8 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             // Too far from player - return to orbit
             const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
             this.body.setVelocity(
-                Math.cos(angle) * this.speed * 2.0,
-                Math.sin(angle) * this.speed * 2.0
+                Math.cos(angle) * this.speed * 1.4,
+                Math.sin(angle) * this.speed * 1.4
             );
         } else if (target) {
             // Intercept enemy approaching player
@@ -123,7 +123,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             // Move toward target (keep chasing even in attack range)
             if (distToTarget > this.attackRange * 0.4) {
                 const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-                const chaseSpeed = distToTarget > this.attackRange ? 1.6 : 0.8;
+                const chaseSpeed = distToTarget > this.attackRange ? 1.2 : 0.7;
                 this.body.setVelocity(
                     Math.cos(angle) * this.speed * chaseSpeed,
                     Math.sin(angle) * this.speed * chaseSpeed
