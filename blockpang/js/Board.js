@@ -61,6 +61,12 @@ class Board {
         this.cellTextures = [];
         if (this.emptyTexture) { this.emptyTexture.destroy(true); this.emptyTexture = null; }
 
+        // Clear pools — old Graphics objects were destroyed with their containers
+        this._ghostPool = [];
+        this._ghostActiveCount = 0;
+        this._hintPool = [];
+        this._hintActiveCount = 0;
+
         const cs = this.cellSize;
 
         // Generate textures
