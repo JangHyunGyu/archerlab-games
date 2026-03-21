@@ -47,7 +47,7 @@ async function generateGeminiVariation(refImageBase64, prompt, filename) {
     console.log(`  Generating variation: ${filename}...`);
     try {
         const result = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-preview',
+            model: 'gemini-3.1-flash-image-preview',
             contents: [{
                 role: 'user',
                 parts: [
