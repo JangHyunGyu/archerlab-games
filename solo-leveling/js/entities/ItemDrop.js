@@ -135,6 +135,13 @@ export class ItemDropManager {
 
             // Magnet attraction effect
             if (dist < magnetRange && dist > pickupRange) {
+                // Kill float/glow tweens on first attract so they don't fight the pull
+                if (!item._attracted) {
+                    item._attracted = true;
+                    this.scene.tweens.killTweensOf(item);
+                    if (item._glow) this.scene.tweens.killTweensOf(item._glow);
+                }
+
                 const angle = Phaser.Math.Angle.Between(item.x, item.y, player.x, player.y);
                 const speed = (200 + (1 - dist / magnetRange) * 400) * (delta / 1000);
                 const dx = Math.cos(angle) * speed;
