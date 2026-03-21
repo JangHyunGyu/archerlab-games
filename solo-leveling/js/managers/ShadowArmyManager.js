@@ -187,18 +187,118 @@ export class ShadowArmyManager {
                                     try {
                                         if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
-                                        scene.cameras.main.shake(400, 0.015);
+                                        // Heavy camera shake (long, intense)
+                                        scene.cameras.main.shake(1200, 0.025);
 
+                                        // Long vibration pattern (mobile)
+                                        if (navigator.vibrate) {
+                                            navigator.vibrate([200, 50, 300, 40, 200, 30, 150, 50, 400]);
+                                        }
+
+                                        const camW = scene.cameras.main.width;
+                                        const camH = scene.cameras.main.height;
+
+                                        // Multi-flash sequence (3 bursts)
+                                        for (let f = 0; f < 3; f++) {
+                                            scene.time.delayedCall(f * 150, () => {
+                                                try {
+                                                    const fl = scene.add.rectangle(0, 0, camW, camH,
+                                                        f === 1 ? 0x7b2fff : COLORS.SHADOW_PRIMARY, 0
+                                                    ).setDepth(53).setScrollFactor(0).setOrigin(0, 0);
+                                                    scene.tweens.add({
+                                                        targets: fl,
+                                                        alpha: f === 1 ? 0.5 : 0.3,
+                                                        duration: 80, yoyo: true,
+                                                        onComplete: () => fl.destroy(),
+                                                    });
+                                                } catch (e) {}
+                                            });
+                                        }
+
+                                        // Shadow energy pillar (vertical beam from ground)
+                                        const pillar = this._trackElement(
+                                            scene.add.rectangle(bossX, bossY, 20, 0, 0x7b2fff, 0.6)
+                                                .setDepth(52).setOrigin(0.5, 1)
+                                        );
+                                        scene.tweens.add({
+                                            targets: pillar,
+                                            displayHeight: 500, displayWidth: 60, alpha: 0.8,
+                                            duration: 400, ease: 'Power3',
+                                        });
+                                        scene.tweens.add({
+                                            targets: pillar,
+                                            alpha: 0, displayWidth: 10,
+                                            duration: 600, delay: 500,
+                                        });
+
+                                        // Ground cracks (lines radiating outward)
+                                        for (let c = 0; c < 8; c++) {
+                                            const angle = (Math.PI * 2 / 8) * c;
+                                            const len = 80 + Math.random() * 60;
+                                            const crack = scene.add.line(0, 0,
+                                                bossX, bossY,
+                                                bossX + Math.cos(angle) * len,
+                                                bossY + Math.sin(angle) * len,
+                                                0x9944ee, 0
+                                            ).setDepth(51).setLineWidth(2);
+                                            scene.tweens.add({
+                                                targets: crack, alpha: 0.7,
+                                                duration: 200, delay: c * 30,
+                                                yoyo: true, hold: 300,
+                                                onComplete: () => crack.destroy(),
+                                            });
+                                        }
+
+                                        // Shadow particle explosion (massive burst)
+                                        for (let i = 0; i < 25; i++) {
+                                            scene.time.delayedCall(i * 30, () => {
+                                                try {
+                                                    const angle = Math.random() * Math.PI * 2;
+                                                    const dist = 20 + Math.random() * 40;
+                                                    const px = bossX + Math.cos(angle) * dist;
+                                                    const py = bossY + Math.sin(angle) * dist;
+                                                    const size = 4 + Math.random() * 8;
+                                                    const p = scene.add.circle(px, py, size,
+                                                        Math.random() > 0.5 ? 0x7b2fff : COLORS.SHADOW_PRIMARY,
+                                                        0.8
+                                                    ).setDepth(52);
+                                                    scene.tweens.add({
+                                                        targets: p,
+                                                        y: py - 60 - Math.random() * 100,
+                                                        x: px + (Math.random() - 0.5) * 60,
+                                                        alpha: 0, scale: 0.2,
+                                                        duration: 600 + Math.random() * 400,
+                                                        onComplete: () => p.destroy(),
+                                                    });
+                                                } catch (e) {}
+                                            });
+                                        }
+
+                                        // Shadow ring waves (expanding outward)
+                                        for (let r = 0; r < 3; r++) {
+                                            scene.time.delayedCall(r * 200, () => {
+                                                try {
+                                                    const ring = scene.add.circle(bossX, bossY, 10,
+                                                        0x7b2fff, 0
+                                                    ).setDepth(51).setStrokeStyle(3, 0x9944ee, 0.8);
+                                                    scene.tweens.add({
+                                                        targets: ring,
+                                                        scale: 8 + r * 3, alpha: 0,
+                                                        duration: 800,
+                                                        onComplete: () => ring.destroy(),
+                                                    });
+                                                } catch (e) {}
+                                            });
+                                        }
+
+                                        // "일어나라" text (epic entrance)
                                         const ariseText = this._trackElement(
                                             scene.add.text(0, 0, '일어나라', {
                                                 fontSize: '80px', fontFamily: 'Arial', fontStyle: 'bold',
                                                 color: '#b366ff', stroke: '#0a0020', strokeThickness: 8,
                                             }).setOrigin(0.5).setDepth(56).setScrollFactor(0).setAlpha(0).setScale(0.3)
                                         );
-                                        ariseText.setPosition(
-                                            scene.cameras.main.width / 2,
-                                            scene.cameras.main.height * 0.43
-                                        );
+                                        ariseText.setPosition(camW / 2, camH * 0.43);
 
                                         const ariseSubText = this._trackElement(
                                             scene.add.text(0, 0, 'ARISE', {
@@ -206,35 +306,26 @@ export class ShadowArmyManager {
                                                 color: '#7b2fff',
                                             }).setOrigin(0.5).setDepth(55).setScrollFactor(0).setAlpha(0).setScale(1.5)
                                         );
-                                        ariseSubText.setPosition(
-                                            scene.cameras.main.width / 2,
-                                            scene.cameras.main.height * 0.43
-                                        );
-
-                                        // Flash
-                                        const flash = this._trackElement(
-                                            scene.add.rectangle(
-                                                0, 0, scene.cameras.main.width, scene.cameras.main.height,
-                                                COLORS.SHADOW_PRIMARY, 0
-                                            ).setDepth(53).setScrollFactor(0).setOrigin(0, 0)
-                                        );
-
-                                        scene.tweens.add({
-                                            targets: flash,
-                                            alpha: 0.3, duration: 100, yoyo: true,
-                                            onComplete: () => flash.destroy(),
-                                        });
+                                        ariseSubText.setPosition(camW / 2, camH * 0.43);
 
                                         scene.tweens.add({
                                             targets: ariseText,
-                                            alpha: 1, scaleX: 1, scaleY: 1,
-                                            duration: 300, ease: 'Back.easeOut',
+                                            alpha: 1, scaleX: 1.1, scaleY: 1.1,
+                                            duration: 250, ease: 'Back.easeOut',
+                                            onComplete: () => {
+                                                // Text pulse after appearing
+                                                scene.tweens.add({
+                                                    targets: ariseText,
+                                                    scaleX: 1.0, scaleY: 1.0,
+                                                    duration: 150,
+                                                });
+                                            },
                                         });
 
                                         scene.tweens.add({
                                             targets: ariseSubText,
-                                            alpha: 0.5, scaleX: 2, scaleY: 2,
-                                            duration: 600,
+                                            alpha: 0.5, scaleX: 2.5, scaleY: 2.5,
+                                            duration: 800,
                                         });
 
                                         // Phase 5: Shadow soldier rises
