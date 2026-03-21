@@ -98,6 +98,8 @@ export class XPOrbPool {
     _collect(orb, player) {
         const leveled = player.addXP(orb.xpValue);
 
+        if (this.scene.soundManager) this.scene.soundManager.play('xp');
+
         // Collect effect
         const flash = this.scene.add.circle(orb.x, orb.y, 8, COLORS.XP_ORB, 0.6).setDepth(15);
         this.scene.tweens.add({
