@@ -499,9 +499,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Sound (boss kill = rankup sound for epic feel)
+        // Sound (epic boss kill)
         if (this.scene.soundManager) {
-            this.scene.soundManager.play('rankup');
+            this.scene.soundManager.play('bossKill');
         }
 
         // Trigger shadow extraction
