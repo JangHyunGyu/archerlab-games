@@ -279,8 +279,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.isInvincible = true;
         this.invincibleTimer = 1000;
 
-        // Damage effect - camera shake
-        this.scene.cameras.main.shake(100, 0.005);
+        // Damage effect - camera shake (stronger based on damage ratio)
+        const hpRatio = damage / this.stats.maxHp;
+        const shakeIntensity = Math.min(0.02, 0.006 + hpRatio * 0.05);
+        this.scene.cameras.main.shake(150, shakeIntensity);
+
+        // Red screen flash (stronger when low HP)
+        const cam = this.scene.cameras.main;
+        const currentHpRatio = this.stats.hp / this.stats.maxHp;
+        const flashAlpha = currentHpRatio < 0.3 ? 0.4 : 0.2;
+        const redOverlay = this.scene.add.rectangle(
+            cam.width / 2, cam.height / 2,
+            cam.width, cam.height, 0xff0000, 0
+        ).setDepth(90).setScrollFactor(0);
+        this.scene.tweens.add({
+            targets: redOverlay,
+            alpha: flashAlpha,
+            duration: 80,
+            yoyo: true,
+            onComplete: () => redOverlay.destroy(),
+        });
 
         // Hit recoil motion (knockback + red flash + flinch)
         this._playHitRecoil(damage);
