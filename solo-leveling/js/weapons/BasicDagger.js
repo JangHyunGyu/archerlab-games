@@ -91,7 +91,7 @@ export class BasicDagger extends WeaponBase {
                     if (idx >= 0) {
                         const h = arcHistory[idx];
                         const ta = h.fadeAlpha * (0.25 - i * 0.06);
-                        this._drawNinjaBlade(trails[i], h.tipX, h.tipY, h.hiltX, h.hiltY, h.bladeAngle, ta, 0x5511aa);
+                        this._drawNinjaBlade(trails[i], h.tipX, h.tipY, h.hiltX, h.hiltY, h.bladeAngle, ta, 0x8899aa);
                     }
                 }
 
@@ -99,7 +99,7 @@ export class BasicDagger extends WeaponBase {
                 gfx.clear();
                 if (arcHistory.length > 3) {
                     const start = Math.max(0, arcHistory.length - 10);
-                    gfx.lineStyle(3, 0x9944ee, 0.35 * fadeAlpha);
+                    gfx.lineStyle(3, 0xccddee, 0.35 * fadeAlpha);
                     gfx.beginPath();
                     gfx.moveTo(arcHistory[start].tipX, arcHistory[start].tipY);
                     for (let i = start + 1; i < arcHistory.length; i++) {
@@ -107,7 +107,7 @@ export class BasicDagger extends WeaponBase {
                     }
                     gfx.strokePath();
                     // Inner bright arc
-                    gfx.lineStyle(1.5, 0xddccff, 0.5 * fadeAlpha);
+                    gfx.lineStyle(1.5, 0xffffff, 0.5 * fadeAlpha);
                     gfx.beginPath();
                     gfx.moveTo(arcHistory[start].tipX, arcHistory[start].tipY);
                     for (let i = start + 1; i < arcHistory.length; i++) {
@@ -117,7 +117,7 @@ export class BasicDagger extends WeaponBase {
                 }
 
                 // ── Main blade ──
-                this._drawNinjaBlade(gfx, tipX, tipY, hiltX, hiltY, bladeAngle, fadeAlpha, 0xb366ff);
+                this._drawNinjaBlade(gfx, tipX, tipY, hiltX, hiltY, bladeAngle, fadeAlpha, 0xeef0ff);
 
                 // ── Speed lines (ninja slash feel) ──
                 if (t > 0.1 && t < 0.7) {
@@ -127,7 +127,7 @@ export class BasicDagger extends WeaponBase {
                         const lx = tipX + Math.cos(bladeAngle + Math.PI / 2) * offset;
                         const ly = tipY + Math.sin(bladeAngle + Math.PI / 2) * offset;
                         const len = 12 + s * 4;
-                        gfx.lineStyle(1, 0xddccff, lineAlpha);
+                        gfx.lineStyle(1, 0xffffff, lineAlpha);
                         gfx.lineBetween(
                             lx, ly,
                             lx + Math.cos(bladeAngle) * len,
