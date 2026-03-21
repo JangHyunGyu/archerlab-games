@@ -156,20 +156,20 @@ export class BasicDagger extends WeaponBase {
                     enemy.takeDamage(this.getDamage(), px, py);
                     if (this.scene.soundManager) this.scene.soundManager.play('hit');
 
-                    // Ninja slash impact
+                    // Silver slash impact
                     const spark = this.scene.add.circle(
                         enemy.x + Phaser.Math.Between(-5, 5),
                         enemy.y + Phaser.Math.Between(-5, 5),
-                        4, 0xddaaff, 0.9
+                        4, 0xeef4ff, 0.9
                     ).setDepth(9);
                     this.scene.tweens.add({
                         targets: spark, alpha: 0, scale: 2.5,
                         duration: 180, onComplete: () => spark.destroy(),
                     });
-                    // Cross spark
+                    // Cross slash mark
                     const cross = this.scene.add.text(
                         enemy.x, enemy.y, '✕',
-                        { fontSize: '16px', color: '#ddaaff' }
+                        { fontSize: '16px', color: '#ffffff' }
                     ).setOrigin(0.5).setDepth(9).setAlpha(0.8);
                     this.scene.tweens.add({
                         targets: cross, alpha: 0, scale: 2, rotation: 0.5,
@@ -185,38 +185,80 @@ export class BasicDagger extends WeaponBase {
     _drawNinjaBlade(gfx, tipX, tipY, hiltX, hiltY, angle, alpha, color) {
         const perpX = -Math.sin(angle);
         const perpY = Math.cos(angle);
-        const bladeW = 7;
-        const widePt = 0.3;
-        const wideX = hiltX + (tipX - hiltX) * widePt;
-        const wideY = hiltY + (tipY - hiltY) * widePt;
+        const bladeW = 5;
+        const bladeLen = Math.sqrt((tipX - hiltX) ** 2 + (tipY - hiltY) ** 2);
 
-        // Outer glow
-        gfx.fillStyle(color, 0.15 * alpha);
-        gfx.fillTriangle(tipX, tipY, wideX + perpX * (bladeW + 5), wideY + perpY * (bladeW + 5), hiltX, hiltY);
-        gfx.fillTriangle(tipX, tipY, wideX - perpX * (bladeW + 5), wideY - perpY * (bladeW + 5), hiltX, hiltY);
-        // Main blade
-        gfx.fillStyle(color, 0.9 * alpha);
-        gfx.fillTriangle(tipX, tipY, wideX + perpX * bladeW, wideY + perpY * bladeW, hiltX, hiltY);
-        gfx.fillStyle(0x7733bb, 0.8 * alpha);
-        gfx.fillTriangle(tipX, tipY, wideX - perpX * bladeW, wideY - perpY * bladeW, hiltX, hiltY);
-        // Blade edge
-        gfx.lineStyle(1.5, 0xddccff, 0.7 * alpha);
+        // Blade widest point (25% from hilt)
+        const wp = 0.25;
+        const wideX = hiltX + (tipX - hiltX) * wp;
+        const wideY = hiltY + (tipY - hiltY) * wp;
+        // Blade belly (55% from hilt, slightly narrower)
+        const bp = 0.55;
+        const bellyX = hiltX + (tipX - hiltX) * bp;
+        const bellyY = hiltY + (tipY - hiltY) * bp;
+        const bellyW = bladeW * 0.7;
+
+        // Silver glow aura
+        gfx.fillStyle(0xddeeff, 0.1 * alpha);
+        gfx.fillTriangle(tipX, tipY, wideX + perpX * (bladeW + 6), wideY + perpY * (bladeW + 6), hiltX, hiltY);
+        gfx.fillTriangle(tipX, tipY, wideX - perpX * (bladeW + 6), wideY - perpY * (bladeW + 6), hiltX, hiltY);
+
+        // Dark side of blade (shadow face)
+        gfx.fillStyle(0x8899aa, 0.85 * alpha);
+        gfx.beginPath();
+        gfx.moveTo(hiltX, hiltY);
+        gfx.lineTo(wideX - perpX * bladeW, wideY - perpY * bladeW);
+        gfx.lineTo(bellyX - perpX * bellyW, bellyY - perpY * bellyW);
+        gfx.lineTo(tipX, tipY);
+        gfx.closePath(); gfx.fillPath();
+
+        // Bright side of blade (lit face - silver/white)
+        gfx.fillStyle(0xdde4ee, 0.95 * alpha);
+        gfx.beginPath();
+        gfx.moveTo(hiltX, hiltY);
+        gfx.lineTo(wideX + perpX * bladeW, wideY + perpY * bladeW);
+        gfx.lineTo(bellyX + perpX * bellyW, bellyY + perpY * bellyW);
+        gfx.lineTo(tipX, tipY);
+        gfx.closePath(); gfx.fillPath();
+
+        // Center ridge (bright white line down the blade)
+        gfx.lineStyle(1.2, 0xffffff, 0.8 * alpha);
         gfx.lineBetween(hiltX, hiltY, tipX, tipY);
-        // Blade highlight
-        gfx.lineStyle(0.8, 0xffffff, 0.4 * alpha);
-        gfx.lineBetween(hiltX + perpX, hiltY + perpY, tipX, tipY);
-        // Tip glow
-        if (alpha > 0.3) {
-            gfx.fillStyle(0xeeddff, 0.7 * alpha);
-            gfx.fillCircle(tipX, tipY, 3);
+
+        // Cutting edge highlight (razor sharp glint)
+        gfx.lineStyle(0.8, 0xffffff, 0.95 * alpha);
+        gfx.lineBetween(
+            hiltX + perpX * bladeW * 0.3, hiltY + perpY * bladeW * 0.3,
+            tipX, tipY
+        );
+
+        // Tip glint
+        if (alpha > 0.2) {
+            gfx.fillStyle(0xffffff, 0.9 * alpha);
+            gfx.fillCircle(tipX, tipY, 2.5);
+            gfx.fillStyle(0xddeeff, 0.3 * alpha);
+            gfx.fillCircle(tipX, tipY, 5);
         }
-        // Handle
-        const hEndX = hiltX - Math.cos(angle) * 6;
-        const hEndY = hiltY - Math.sin(angle) * 6;
-        gfx.lineStyle(2.5, 0x555566, 0.6 * alpha);
+
+        // Handle (dark wrapped grip)
+        const hEndX = hiltX - Math.cos(angle) * 7;
+        const hEndY = hiltY - Math.sin(angle) * 7;
+        gfx.lineStyle(3, 0x222233, 0.7 * alpha);
         gfx.lineBetween(hEndX, hEndY, hiltX, hiltY);
-        // Guard
-        gfx.lineStyle(2, 0x888899, 0.5 * alpha);
+        // Handle wrap marks
+        for (let w = 0; w < 3; w++) {
+            const t = 0.2 + w * 0.3;
+            const wx = hEndX + (hiltX - hEndX) * t;
+            const wy = hEndY + (hiltY - hEndY) * t;
+            gfx.lineStyle(1, 0x444455, 0.5 * alpha);
+            gfx.lineBetween(wx + perpX * 2, wy + perpY * 2, wx - perpX * 2, wy - perpY * 2);
+        }
+
+        // Guard (cross-guard, metallic)
+        gfx.lineStyle(2.5, 0x99aabb, 0.6 * alpha);
+        gfx.lineBetween(hiltX + perpX * 5, hiltY + perpY * 5, hiltX - perpX * 5, hiltY - perpY * 5);
+        // Guard highlight
+        gfx.lineStyle(1, 0xddeeff, 0.4 * alpha);
         gfx.lineBetween(hiltX + perpX * 4, hiltY + perpY * 4, hiltX - perpX * 4, hiltY - perpY * 4);
     }
 
