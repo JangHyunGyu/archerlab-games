@@ -151,7 +151,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Slow effect
         if (this.slowDuration > 0) {
             this.slowDuration -= delta;
-            if (this.slowDuration <= 0) this.slowMultiplier = 1;
+            if (this.slowDuration <= 0) {
+                this.slowMultiplier = 1;
+                if (!this.isElite) this.setTint(0xffffff);
+            }
         }
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
