@@ -163,40 +163,23 @@ export class SpriteFactory {
         if (!scene.textures.exists('ai_player_idle')) return false;
         const W = 96, H = 128;
 
-        // Helper: scale source image to target size on a canvas
-        const scaleToCanvas = (srcImage) => {
+        // Scale AI image to game size
+        const src = scene.textures.get('ai_player_idle').getSourceImage();
+        const makeFrame = () => {
             const c = document.createElement('canvas');
             c.width = W; c.height = H;
-            c.getContext('2d').drawImage(srcImage, 0, 0, W, H);
-            return c;
-        };
-        // Helper: copy a canvas
-        const copyCanvas = (srcCanvas) => {
-            const c = document.createElement('canvas');
-            c.width = srcCanvas.width; c.height = srcCanvas.height;
-            c.getContext('2d').drawImage(srcCanvas, 0, 0);
+            c.getContext('2d').drawImage(src, 0, 0, W, H);
             return c;
         };
 
-        // AI images already have transparent backgrounds (pre-processed)
-        const idleSrc = scaleToCanvas(scene.textures.get('ai_player_idle').getSourceImage());
-        const hasWalk0 = scene.textures.exists('ai_player_walk_0');
-        const hasWalk1 = scene.textures.exists('ai_player_walk_1');
-        const walk0Src = hasWalk0 ? scaleToCanvas(scene.textures.get('ai_player_walk_0').getSourceImage()) : idleSrc;
-        const walk1Src = hasWalk1 ? scaleToCanvas(scene.textures.get('ai_player_walk_1').getSourceImage()) : idleSrc;
-
-        // Register idle frames (all same image, animation via Phaser tweens)
+        // All idle + walk frames use the same image
+        // (walk animation handled programmatically in Player.js)
         for (let i = 0; i < 8; i++) {
-            const key = 'player_idle_' + i;
-            if (scene.textures.exists(key)) scene.textures.remove(key);
-            scene.textures.addCanvas(key, copyCanvas(idleSrc));
-        }
-        // Register walk frames (alternate between 2 walk poses + idle for in-between)
-        for (let i = 0; i < 8; i++) {
-            const key = 'player_walk_' + i;
-            if (scene.textures.exists(key)) scene.textures.remove(key);
-            const src = (i % 4 < 2) ? walk0Src : walk1Src;
-            scene.textures.addCanvas(key, copyCanvas(src));
+            for (const prefix of ['player_idle_', 'player_walk_']) {
+                const key = prefix + i;
+                if (scene.textures.exists(key)) scene.textures.remove(key);
+                scene.textures.addCanvas(key, makeFrame());
+            }
         }
 
         // Aura texture
@@ -210,7 +193,7 @@ export class SpriteFactory {
         sg.generateTexture('player_aura', 96, 96);
         sg.destroy();
 
-        console.log('[SpriteFactory] AI player sprites loaded (Imagen 4)');
+        console.log('[SpriteFactory] AI player sprite loaded (single image + programmatic anim)');
         return true;
     }
 
