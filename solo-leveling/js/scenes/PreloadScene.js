@@ -53,6 +53,14 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     _loadOptionalAssets() {
+        // --- AI-generated player sprites (Imagen 4) ---
+        this.load.image('ai_player_idle', 'assets/player/player_idle.png');
+        this.load.image('ai_player_walk_0', 'assets/player/player_walk_0.png');
+        this.load.image('ai_player_walk_1', 'assets/player/player_walk_1.png');
+
+        // --- AI-generated dungeon background ---
+        this.load.image('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
+
         const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
 
         // Silently ignore load failures — procedural fallback will be used
