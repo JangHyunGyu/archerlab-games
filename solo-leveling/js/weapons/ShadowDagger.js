@@ -40,7 +40,7 @@ export class ShadowDagger extends WeaponBase {
         const target = this.player.getClosestEnemy(6000);
         if (!target) return;
 
-        if (this.scene.soundManager) this.scene.soundManager.play('dagger');
+        if (this.scene.soundManager) this.scene.soundManager.play('daggerThrow');
 
         const px = this.player.x;
         const py = this.player.y;
