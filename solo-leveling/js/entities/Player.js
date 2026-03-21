@@ -148,32 +148,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _updateAnimation() {
-        const time = this.scene.time.now;
-
-        if (this.isMoving) {
-            // Walking: bob + lean + stride pulse
-            const bobSpeed = 0.012;
-            const bob = Math.sin(time * bobSpeed) * 3;
-            const lean = Math.sin(time * bobSpeed) * 0.04 * (this.facingRight ? 1 : -1);
-            const stridePulse = 1 + Math.abs(Math.sin(time * bobSpeed * 0.5)) * 0.03;
-
-            this.y += bob * 0.15; // subtle vertical bob
-            this.setRotation(lean);
-            this.setScale(stridePulse, stridePulse);
-
-            if (this.anims.currentAnim?.key !== 'player_walk') {
-                this.play('player_walk');
-            }
-        } else {
-            // Idle: subtle breathing
-            const breathe = 1 + Math.sin(time * 0.003) * 0.015;
-            this.setScale(breathe, breathe);
-            this.setRotation(0);
-
-            if (this.anims.currentAnim?.key !== 'player_idle') {
-                this.play('player_idle');
-            }
-        }
+        // Static image - just flip based on facing direction
+        this.setFlipX(!this.facingRight);
     }
 
     _updateInvincibility(delta) {
