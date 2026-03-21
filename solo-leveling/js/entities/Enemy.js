@@ -208,14 +208,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     _fireProjectile(targetX, targetY) {
         const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
 
-        // Brief cast animation (mage glows)
-        this.setTint(0xcc44ff);
+        // Brief cast animation (mage glows RED)
+        this.setTint(0xff4422);
         this.scene.time.delayedCall(150, () => {
             if (this.active) this.setTint(0xffffff);
         });
 
         const proj = this.scene.add.sprite(this.x, this.y, 'proj_darkMage')
             .setDepth(8).setScale(1.4);
+
+        // Red danger trail (clearly enemy attack)
+        const trailEvent = this.scene.time.addEvent({
+            delay: 60, repeat: -1,
+            callback: () => {
+                if (!proj.active) { trailEvent.destroy(); return; }
+                const trail = this.scene.add.circle(proj.x, proj.y, 4, 0xff3300, 0.5).setDepth(7);
+                this.scene.tweens.add({
+                    targets: trail, alpha: 0, scale: 0.2,
+                    duration: 250, onComplete: () => trail.destroy(),
+                });
+            },
+        });
         this.scene.physics.add.existing(proj, false);
         proj.body.setAllowGravity(false);
         proj.body.setCircle(6);
