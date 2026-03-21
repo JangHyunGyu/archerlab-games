@@ -30,15 +30,13 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
         const typeStats = {
-            melee:  { damageMult: 2.5, speedRatio: 1.0, range: 130, attackCD: 250 },
-            tank:   { damageMult: 1.8, speedRatio: 0.8, range: 150, attackCD: 450 },
-            ranged: { damageMult: 3.5, speedRatio: 0.85, range: 250, attackCD: 300 },
+            melee:  { damageMult: 1.2, speedRatio: 1.0, range: 130, attackCD: 250 },
+            tank:   { damageMult: 0.8, speedRatio: 0.8, range: 150, attackCD: 450 },
+            ranged: { damageMult: 1.5, speedRatio: 0.85, range: 250, attackCD: 300 },
         };
 
         const stats = typeStats[this.soldierType] || typeStats.melee;
-        const playerLevel = scene.player ? scene.player.level : 1;
-        const levelMult = 1 + (playerLevel - 1) * 0.08;
-        this.damage = Math.floor(playerAttack * stats.damageMult * levelMult);
+        this.damage = Math.floor(playerAttack * stats.damageMult);
         this.speedRatio = stats.speedRatio;
         this.speed = (scene.player ? scene.player.stats.speed : 160) * this.speedRatio;
         this.attackRange = stats.range;
@@ -81,9 +79,8 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
         // Update damage and speed with current player stats
         const playerAttack = player.stats.attack;
-        const levelMult = 1 + (player.level - 1) * 0.08;
-        const multMap = { melee: 2.5, tank: 1.8, ranged: 3.5 };
-        this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 3.0) * levelMult);
+        const multMap = { melee: 1.2, tank: 0.8, ranged: 1.5 };
+        this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 1.2));
         this.speed = player.stats.speed * this.speedRatio;
 
         // Guard mode: find enemy closest to SOLDIER within guard radius of player
