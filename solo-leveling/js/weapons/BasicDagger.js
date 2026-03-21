@@ -50,106 +50,100 @@ export class BasicDagger extends WeaponBase {
         }
 
         this.swingDir *= -1;
-        const sideOffset = this.swingDir * 0.15;
-        const stabAngle = baseAngle + sideOffset;
         const px = this.player.x;
         const py = this.player.y;
-        const stabLength = this.attackRange * 0.75;
-        const cos = Math.cos(stabAngle);
-        const sin = Math.sin(stabAngle);
+        const slashRange = this.attackRange * 0.8;
+        const arcSpan = Math.PI * 0.7; // 126 degree arc sweep
+        const startAngle = baseAngle - (arcSpan / 2) * this.swingDir;
+        const endAngle = baseAngle + (arcSpan / 2) * this.swingDir;
 
-        // Pooled graphics object for stab visual
+        // Main blade + 3 after-image trails
         const gfx = this._getGfx();
+        const trails = [];
+        for (let i = 0; i < 3; i++) trails.push(this._getGfx());
 
+        const arcHistory = [];
         let progress = { t: 0 };
+
         this.scene.tweens.add({
             targets: progress,
             t: 1,
-            duration: 180,
-            ease: 'Power2',
+            duration: 160,
+            ease: 'Cubic.easeOut',
             onUpdate: () => {
-                gfx.clear();
+                const t = progress.t;
+                const bladeAngle = startAngle + (endAngle - startAngle) * t;
+                const reach = t < 0.25 ? t / 0.25 : 1;
+                const dist = 16 + slashRange * reach;
+                const fadeAlpha = Math.min(1, (1 - t) * 2);
 
-                const thrust = progress.t < 0.4 ? progress.t / 0.4 : (1 - progress.t) / 0.6;
-                const fadeAlpha = Math.min(1, (1 - progress.t) * 1.5);
+                const tipX = px + Math.cos(bladeAngle) * dist;
+                const tipY = py + Math.sin(bladeAngle) * dist;
+                const hiltX = px + Math.cos(bladeAngle) * 16;
+                const hiltY = py + Math.sin(bladeAngle) * 16;
 
-                const startDist = 14;
-                const endDist = startDist + stabLength * Math.max(thrust, 0.15);
-                const tipX = px + cos * endDist;
-                const tipY = py + sin * endDist;
-                const hiltX = px + cos * startDist;
-                const hiltY = py + sin * startDist;
+                arcHistory.push({ tipX, tipY, hiltX, hiltY, bladeAngle, fadeAlpha });
 
-                // 수직 방향 (칼날 폭 방향)
-                const perpX = -sin;
-                const perpY = cos;
-                const bladeW = 8 * Math.max(thrust, 0.2);
-
-                // 칼날 가장 넓은 부분 (30% 지점)
-                const widePt = 0.3;
-                const wideX = hiltX + (tipX - hiltX) * widePt;
-                const wideY = hiltY + (tipY - hiltY) * widePt;
-
-                // 글로우 외곽
-                gfx.fillStyle(0x7b2fff, 0.2 * fadeAlpha);
-                gfx.fillTriangle(
-                    tipX, tipY,
-                    wideX + perpX * (bladeW + 4), wideY + perpY * (bladeW + 4),
-                    hiltX, hiltY
-                );
-                gfx.fillTriangle(
-                    tipX, tipY,
-                    wideX - perpX * (bladeW + 4), wideY - perpY * (bladeW + 4),
-                    hiltX, hiltY
-                );
-
-                // 메인 칼날 (왼쪽 반)
-                gfx.fillStyle(0xb366ff, 0.9 * fadeAlpha);
-                gfx.fillTriangle(
-                    tipX, tipY,
-                    wideX + perpX * bladeW, wideY + perpY * bladeW,
-                    hiltX, hiltY
-                );
-                // 메인 칼날 (오른쪽 반)
-                gfx.fillStyle(0x9944ee, 0.85 * fadeAlpha);
-                gfx.fillTriangle(
-                    tipX, tipY,
-                    wideX - perpX * bladeW, wideY - perpY * bladeW,
-                    hiltX, hiltY
-                );
-
-                // 칼날 엣지
-                gfx.lineStyle(1.5, 0xddccff, 0.8 * fadeAlpha);
-                gfx.lineBetween(hiltX, hiltY, tipX, tipY);
-
-                // 칼등 하이라이트
-                gfx.lineStyle(1, 0xffffff, 0.5 * fadeAlpha);
-                gfx.lineBetween(
-                    hiltX + perpX * 1, hiltY + perpY * 1,
-                    tipX, tipY
-                );
-
-                // 끝부분 빛
-                if (thrust > 0.2) {
-                    gfx.fillStyle(0xeeddff, 0.9 * fadeAlpha);
-                    gfx.fillCircle(tipX, tipY, 3.5);
+                // ── After-image trails ──
+                for (let i = 0; i < trails.length; i++) {
+                    trails[i].clear();
+                    const idx = arcHistory.length - 1 - (i + 1) * 2;
+                    if (idx >= 0) {
+                        const h = arcHistory[idx];
+                        const ta = h.fadeAlpha * (0.25 - i * 0.06);
+                        this._drawNinjaBlade(trails[i], h.tipX, h.tipY, h.hiltX, h.hiltY, h.bladeAngle, ta, 0x5511aa);
+                    }
                 }
 
-                // 손잡이 (작은 사각형)
-                gfx.fillStyle(0x666688, 0.7 * fadeAlpha);
-                const hLen = 6;
-                const hEndX = px + cos * (startDist - hLen);
-                const hEndY = py + sin * (startDist - hLen);
-                gfx.lineStyle(3, 0x888899, 0.6 * fadeAlpha);
-                gfx.lineBetween(hEndX, hEndY, hiltX, hiltY);
+                // ── Arc slash trail (crescent effect) ──
+                gfx.clear();
+                if (arcHistory.length > 3) {
+                    const start = Math.max(0, arcHistory.length - 10);
+                    gfx.lineStyle(3, 0x9944ee, 0.35 * fadeAlpha);
+                    gfx.beginPath();
+                    gfx.moveTo(arcHistory[start].tipX, arcHistory[start].tipY);
+                    for (let i = start + 1; i < arcHistory.length; i++) {
+                        gfx.lineTo(arcHistory[i].tipX, arcHistory[i].tipY);
+                    }
+                    gfx.strokePath();
+                    // Inner bright arc
+                    gfx.lineStyle(1.5, 0xddccff, 0.5 * fadeAlpha);
+                    gfx.beginPath();
+                    gfx.moveTo(arcHistory[start].tipX, arcHistory[start].tipY);
+                    for (let i = start + 1; i < arcHistory.length; i++) {
+                        gfx.lineTo(arcHistory[i].tipX, arcHistory[i].tipY);
+                    }
+                    gfx.strokePath();
+                }
+
+                // ── Main blade ──
+                this._drawNinjaBlade(gfx, tipX, tipY, hiltX, hiltY, bladeAngle, fadeAlpha, 0xb366ff);
+
+                // ── Speed lines (ninja slash feel) ──
+                if (t > 0.1 && t < 0.7) {
+                    const lineAlpha = (1 - t) * 0.4;
+                    for (let s = 0; s < 3; s++) {
+                        const offset = (s - 1) * 8;
+                        const lx = tipX + Math.cos(bladeAngle + Math.PI / 2) * offset;
+                        const ly = tipY + Math.sin(bladeAngle + Math.PI / 2) * offset;
+                        const len = 12 + s * 4;
+                        gfx.lineStyle(1, 0xddccff, lineAlpha);
+                        gfx.lineBetween(
+                            lx, ly,
+                            lx + Math.cos(bladeAngle) * len,
+                            ly + Math.sin(bladeAngle) * len
+                        );
+                    }
+                }
             },
             onComplete: () => {
                 this._releaseGfx(gfx);
+                for (const trail of trails) this._releaseGfx(trail);
             },
         });
 
-        // Deal damage at thrust peak
-        this.scene.time.delayedCall(50, () => {
+        // Deal damage at arc midpoint (wider hit angle than stab)
+        this.scene.time.delayedCall(40, () => {
             const enemies = this.player.getAllEnemies();
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
@@ -158,34 +152,72 @@ export class BasicDagger extends WeaponBase {
 
                 const enemyAngle = Phaser.Math.Angle.Between(px, py, enemy.x, enemy.y);
                 const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - baseAngle));
-                if (angleDiff < Math.PI / 6) {
+                if (angleDiff < arcSpan / 2 + 0.15) {
                     enemy.takeDamage(this.getDamage(), px, py);
                     if (this.scene.soundManager) this.scene.soundManager.play('hit');
 
-                    // Impact spark circles
-                    const spark1 = this.scene.add.circle(
+                    // Ninja slash impact
+                    const spark = this.scene.add.circle(
                         enemy.x + Phaser.Math.Between(-5, 5),
                         enemy.y + Phaser.Math.Between(-5, 5),
-                        3, 0xddaaff, 0.9
+                        4, 0xddaaff, 0.9
                     ).setDepth(9);
                     this.scene.tweens.add({
-                        targets: spark1, alpha: 0, scale: 0,
-                        duration: 200, onComplete: () => spark1.destroy(),
+                        targets: spark, alpha: 0, scale: 2.5,
+                        duration: 180, onComplete: () => spark.destroy(),
                     });
-                    const spark2 = this.scene.add.circle(
-                        enemy.x + Phaser.Math.Between(-5, 5),
-                        enemy.y + Phaser.Math.Between(-5, 5),
-                        2, 0xffffff, 0.8
-                    ).setDepth(9);
+                    // Cross spark
+                    const cross = this.scene.add.text(
+                        enemy.x, enemy.y, '✕',
+                        { fontSize: '16px', color: '#ddaaff' }
+                    ).setOrigin(0.5).setDepth(9).setAlpha(0.8);
                     this.scene.tweens.add({
-                        targets: spark2, alpha: 0, scale: 0,
-                        duration: 150, onComplete: () => spark2.destroy(),
+                        targets: cross, alpha: 0, scale: 2, rotation: 0.5,
+                        duration: 250, onComplete: () => cross.destroy(),
                     });
                 }
             }
         });
 
         if (this.scene.soundManager) this.scene.soundManager.play('dagger');
+    }
+
+    _drawNinjaBlade(gfx, tipX, tipY, hiltX, hiltY, angle, alpha, color) {
+        const perpX = -Math.sin(angle);
+        const perpY = Math.cos(angle);
+        const bladeW = 7;
+        const widePt = 0.3;
+        const wideX = hiltX + (tipX - hiltX) * widePt;
+        const wideY = hiltY + (tipY - hiltY) * widePt;
+
+        // Outer glow
+        gfx.fillStyle(color, 0.15 * alpha);
+        gfx.fillTriangle(tipX, tipY, wideX + perpX * (bladeW + 5), wideY + perpY * (bladeW + 5), hiltX, hiltY);
+        gfx.fillTriangle(tipX, tipY, wideX - perpX * (bladeW + 5), wideY - perpY * (bladeW + 5), hiltX, hiltY);
+        // Main blade
+        gfx.fillStyle(color, 0.9 * alpha);
+        gfx.fillTriangle(tipX, tipY, wideX + perpX * bladeW, wideY + perpY * bladeW, hiltX, hiltY);
+        gfx.fillStyle(0x7733bb, 0.8 * alpha);
+        gfx.fillTriangle(tipX, tipY, wideX - perpX * bladeW, wideY - perpY * bladeW, hiltX, hiltY);
+        // Blade edge
+        gfx.lineStyle(1.5, 0xddccff, 0.7 * alpha);
+        gfx.lineBetween(hiltX, hiltY, tipX, tipY);
+        // Blade highlight
+        gfx.lineStyle(0.8, 0xffffff, 0.4 * alpha);
+        gfx.lineBetween(hiltX + perpX, hiltY + perpY, tipX, tipY);
+        // Tip glow
+        if (alpha > 0.3) {
+            gfx.fillStyle(0xeeddff, 0.7 * alpha);
+            gfx.fillCircle(tipX, tipY, 3);
+        }
+        // Handle
+        const hEndX = hiltX - Math.cos(angle) * 6;
+        const hEndY = hiltY - Math.sin(angle) * 6;
+        gfx.lineStyle(2.5, 0x555566, 0.6 * alpha);
+        gfx.lineBetween(hEndX, hEndY, hiltX, hiltY);
+        // Guard
+        gfx.lineStyle(2, 0x888899, 0.5 * alpha);
+        gfx.lineBetween(hiltX + perpX * 4, hiltY + perpY * 4, hiltX - perpX * 4, hiltY - perpY * 4);
     }
 
     destroy() {
