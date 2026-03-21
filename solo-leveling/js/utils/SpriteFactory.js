@@ -163,7 +163,14 @@ export class SpriteFactory {
         if (!scene.textures.exists('ai_player_idle')) return false;
         const W = 96, H = 128;
 
-        // Helper: copy a canvas for each unique texture key
+        // Helper: scale source image to target size on a canvas
+        const scaleToCanvas = (srcImage) => {
+            const c = document.createElement('canvas');
+            c.width = W; c.height = H;
+            c.getContext('2d').drawImage(srcImage, 0, 0, W, H);
+            return c;
+        };
+        // Helper: copy a canvas
         const copyCanvas = (srcCanvas) => {
             const c = document.createElement('canvas');
             c.width = srcCanvas.width; c.height = srcCanvas.height;
@@ -171,14 +178,12 @@ export class SpriteFactory {
             return c;
         };
 
-        // Chroma key the AI images
-        this._chromaKey(scene, 'ai_player_idle', '_ai_idle', W, H);
-        const hasWalk0 = this._chromaKey(scene, 'ai_player_walk_0', '_ai_walk0', W, H);
-        const hasWalk1 = this._chromaKey(scene, 'ai_player_walk_1', '_ai_walk1', W, H);
-
-        const idleSrc = scene.textures.get('_ai_idle').getSourceImage();
-        const walk0Src = hasWalk0 ? scene.textures.get('_ai_walk0').getSourceImage() : idleSrc;
-        const walk1Src = hasWalk1 ? scene.textures.get('_ai_walk1').getSourceImage() : idleSrc;
+        // AI images already have transparent backgrounds (pre-processed)
+        const idleSrc = scaleToCanvas(scene.textures.get('ai_player_idle').getSourceImage());
+        const hasWalk0 = scene.textures.exists('ai_player_walk_0');
+        const hasWalk1 = scene.textures.exists('ai_player_walk_1');
+        const walk0Src = hasWalk0 ? scaleToCanvas(scene.textures.get('ai_player_walk_0').getSourceImage()) : idleSrc;
+        const walk1Src = hasWalk1 ? scaleToCanvas(scene.textures.get('ai_player_walk_1').getSourceImage()) : idleSrc;
 
         // Register idle frames (all same image, animation via Phaser tweens)
         for (let i = 0; i < 8; i++) {
