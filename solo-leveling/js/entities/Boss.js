@@ -260,92 +260,159 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    // Igris: telegraphed sword slash - red warning zone then damage
+    // Igris: telegraphed sword slash - RED DANGER ZONE
     _igrisSlash(playerX, playerY) {
         const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
         const range = 250;
         const slashX = this.x + Math.cos(angle) * (range * 0.4);
         const slashY = this.y + Math.sin(angle) * (range * 0.4);
 
-        // Warning indicator (red zone, 0.6s telegraph)
-        const warning = this.scene.add.circle(slashX, slashY, range * 0.6, 0xff0000, 0.15)
+        // ⚠ Danger zone fill (bright red, pulsing)
+        const dangerZone = this.scene.add.circle(slashX, slashY, range * 0.6, 0xff0000, 0)
             .setDepth(3);
+        // ⚠ Danger border (thick red ring)
+        const dangerRing = this.scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
+            .setDepth(3).setStrokeStyle(4, 0xff2222, 0);
+        // ⚠ Warning icon
+        const warnIcon = this.scene.add.text(slashX, slashY - range * 0.3, '⚠', {
+            fontSize: '28px',
+        }).setOrigin(0.5).setDepth(4).setAlpha(0);
+
+        // Pulsing danger animation (flashing red)
         this.scene.tweens.add({
-            targets: warning,
-            alpha: 0.35,
+            targets: dangerZone,
+            alpha: { from: 0.08, to: 0.3 },
+            duration: 150, yoyo: true, repeat: 1,
+        });
+        this.scene.tweens.add({
+            targets: dangerRing,
+            alpha: { from: 0.3, to: 0.9 },
+            duration: 150, yoyo: true, repeat: 1,
+        });
+        this.scene.tweens.add({
+            targets: warnIcon,
+            alpha: 1, scale: 1.3,
+            duration: 200, yoyo: true,
+        });
+
+        // Shrinking countdown ring (fills inward)
+        const countdown = this.scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
+            .setDepth(3).setStrokeStyle(3, 0xffaa00, 0.7);
+        this.scene.tweens.add({
+            targets: countdown,
+            scale: 0.1,
             duration: 600,
-            onComplete: () => {
-                warning.destroy();
-                if (!this.active) return;
+        });
 
-                // Slash visual
-                const slash = this.scene.add.sprite(slashX, slashY, 'proj_igris')
-                    .setDepth(8).setRotation(angle).setScale(2.5);
-                this.scene.tweens.add({
-                    targets: slash,
-                    alpha: 0, scaleX: 3.5, scaleY: 3.5,
-                    duration: 300,
-                    onComplete: () => slash.destroy(),
-                });
+        this.scene.time.delayedCall(600, () => {
+            dangerZone.destroy(); dangerRing.destroy();
+            warnIcon.destroy(); countdown.destroy();
+            if (!this.active) return;
 
-                // Damage player if in cone
-                const player = this.scene.player;
-                if (!player) return;
-                const d = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
-                if (d < range) {
-                    const pAngle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
-                    const diff = Math.abs(Phaser.Math.Angle.Wrap(pAngle - angle));
-                    if (diff < 1.0) {
-                        player.takeDamage(this.attack);
-                    }
+            // Slash visual
+            const slash = this.scene.add.sprite(slashX, slashY, 'proj_igris')
+                .setDepth(8).setRotation(angle).setScale(2.5);
+            this.scene.tweens.add({
+                targets: slash,
+                alpha: 0, scaleX: 3.5, scaleY: 3.5,
+                duration: 300,
+                onComplete: () => slash.destroy(),
+            });
+
+            // Damage player if in cone
+            const player = this.scene.player;
+            if (!player) return;
+            const d = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
+            if (d < range) {
+                const pAngle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+                const diff = Math.abs(Phaser.Math.Angle.Wrap(pAngle - angle));
+                if (diff < 1.0) {
+                    player.takeDamage(this.attack);
                 }
+            }
 
-                this.scene.cameras.main.shake(100, 0.005);
-            },
+            this.scene.cameras.main.shake(100, 0.005);
         });
     }
 
-    // Tusk: ground slam - large AoE with warning circle
+    // Tusk: ground slam - RED DANGER AoE
     _tuskGroundSlam(playerX, playerY) {
         const slamX = playerX;
         const slamY = playerY;
         const radius = 200;
 
-        // Warning circle on player position (1s telegraph)
-        const warning = this.scene.add.circle(slamX, slamY, radius, 0x8b5a2b, 0.12)
+        // ⚠ Danger zone fill (bright red, growing)
+        const dangerZone = this.scene.add.circle(slamX, slamY, 10, 0xff0000, 0.15)
             .setDepth(3);
-        const warningRing = this.scene.add.circle(slamX, slamY, radius, 0x000000, 0)
-            .setDepth(3).setStrokeStyle(3, 0xff6633, 0.6);
+        // ⚠ Danger border (thick pulsing red ring)
+        const dangerRing = this.scene.add.circle(slamX, slamY, radius, 0x000000, 0)
+            .setDepth(3).setStrokeStyle(5, 0xff2222, 0);
+        // ⚠ Warning icon
+        const warnIcon = this.scene.add.text(slamX, slamY, '⚠', {
+            fontSize: '36px',
+        }).setOrigin(0.5).setDepth(4).setAlpha(0);
+        // Crosshair lines (targeting indicator)
+        const lines = [];
+        for (let a = 0; a < 4; a++) {
+            const ang = a * Math.PI / 2;
+            const line = this.scene.add.line(0, 0,
+                slamX, slamY,
+                slamX + Math.cos(ang) * radius, slamY + Math.sin(ang) * radius,
+                0xff3333, 0
+            ).setDepth(3).setLineWidth(1.5);
+            lines.push(line);
+        }
 
+        // Danger zone expands to full radius
         this.scene.tweens.add({
-            targets: [warning, warningRing],
-            alpha: { from: 0.1, to: 0.5 },
-            duration: 1000,
-            onComplete: () => {
-                warning.destroy();
-                warningRing.destroy();
-                if (!this.active) return;
+            targets: dangerZone,
+            scale: radius / 10, alpha: 0.25,
+            duration: 800, ease: 'Power2',
+        });
+        // Ring pulses 3 times (urgent warning)
+        this.scene.tweens.add({
+            targets: dangerRing,
+            alpha: { from: 0.3, to: 0.9 },
+            duration: 200, yoyo: true, repeat: 2,
+        });
+        // Warning icon pulses
+        this.scene.tweens.add({
+            targets: warnIcon,
+            alpha: { from: 0.5, to: 1 }, scale: { from: 0.8, to: 1.5 },
+            duration: 250, yoyo: true, repeat: 1,
+        });
+        // Crosshair lines fade in
+        this.scene.tweens.add({
+            targets: lines,
+            alpha: 0.6,
+            duration: 300,
+        });
 
-                // Slam visual
-                const slam = this.scene.add.sprite(slamX, slamY, 'proj_tusk')
-                    .setDepth(8).setScale(3);
-                this.scene.tweens.add({
-                    targets: slam,
-                    alpha: 0, scaleX: 5, scaleY: 5,
-                    duration: 400,
-                    onComplete: () => slam.destroy(),
-                });
+        this.scene.time.delayedCall(1000, () => {
+            dangerZone.destroy(); dangerRing.destroy();
+            warnIcon.destroy();
+            lines.forEach(l => l.destroy());
+            if (!this.active) return;
 
-                // Damage if player is still in area
-                const player = this.scene.player;
-                if (!player) return;
-                const d = Phaser.Math.Distance.Between(slamX, slamY, player.x, player.y);
-                if (d < radius) {
-                    player.takeDamage(Math.floor(this.attack * 1.3));
-                }
+            // Slam visual
+            const slam = this.scene.add.sprite(slamX, slamY, 'proj_tusk')
+                .setDepth(8).setScale(3);
+            this.scene.tweens.add({
+                targets: slam,
+                alpha: 0, scaleX: 5, scaleY: 5,
+                duration: 400,
+                onComplete: () => slam.destroy(),
+            });
 
-                this.scene.cameras.main.shake(300, 0.012);
-            },
+            // Damage if player is still in area
+            const player = this.scene.player;
+            if (!player) return;
+            const d = Phaser.Math.Distance.Between(slamX, slamY, player.x, player.y);
+            if (d < radius) {
+                player.takeDamage(Math.floor(this.attack * 1.3));
+            }
+
+            this.scene.cameras.main.shake(300, 0.012);
         });
     }
 
