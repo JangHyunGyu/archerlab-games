@@ -77,6 +77,8 @@ export class SoundManager {
             this._createPool('system', base + 'system.wav', 4);
             this._createPool('arise', base + 'arise.wav', 2);
             this._createPool('bossAppear', base + 'bossAppear.wav', 2);
+            this._createPool('bossKill', base + 'bossKill.wav', 2);
+            this._createPool('gameOver', base + 'gameOver.wav', 2);
             this._createPool('warning', base + 'warning.wav', 4);
             this._createPool('potion', base + 'potion.wav', 3);
             this._createPool('select', base + 'select.wav', 6);
@@ -125,7 +127,7 @@ export class SoundManager {
         hit: 0.7, kill: 0.7, playerHit: 0.8,
         xp: 0.5, levelup: 0.8, rankup: 0.85,
         system: 0.6, arise: 0.85, bossAppear: 0.8,
-        warning: 0.7, potion: 0.6, select: 0.5,
+        warning: 0.7, potion: 0.6, select: 0.5, bossKill: 0.85, gameOver: 0.8,
         quest: 0.7, dungeonBreak: 0.8,
     };
 
