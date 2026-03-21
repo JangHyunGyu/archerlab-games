@@ -246,7 +246,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         // HP text
         if (this.hpText) {
-            const percent = Math.max(0, Math.ceil(ratio * 100));
+            const percent = Math.max(0, Math.floor(ratio * 100));
             this.hpText.setText(`${this.hp} / ${this.maxHp}  (${percent}%)`);
             this.hpText.setPosition(this.x, barY + h / 2);
         }
