@@ -1592,6 +1592,57 @@ if (!lobbyContent.includes('setTimeout') || !lobbyContent.includes('show')) {
 }
 
 // ═══════════════════════════════════════════
+// this._prop 초기화 순서 검증 (constructor 내에서 사용 전 초기화 확인)
+// ═══════════════════════════════════════════
+for (const f of jsFiles) {
+    const src = allJsContent[f] || '';
+    const createMatch = src.match(/(?:create|constructor)\s*\([^)]*\)\s*\{/);
+    if (!createMatch) continue;
+    const createStart = createMatch.index;
+    let depth = 0, createEnd = -1;
+    for (let i = createStart + createMatch[0].length - 1; i < src.length; i++) {
+        if (src[i] === '{') depth++;
+        else if (src[i] === '}') { depth--; if (depth === 0) { createEnd = i; break; } }
+    }
+    if (createEnd === -1) continue;
+    const createBody = src.slice(createStart, createEnd + 1);
+    const initRegex = /this\.(_\w+)\s*=\s*\[/g;
+    const pushRegex = /this\.(_\w+)\.push\(/g;
+    const inits = {};
+    let m;
+    while ((m = initRegex.exec(createBody)) !== null) {
+        if (!(m[1] in inits)) inits[m[1]] = m.index;
+    }
+    while ((m = pushRegex.exec(createBody)) !== null) {
+        const prop = m[1];
+        if (prop in inits) continue;
+        const methodCallRegex = new RegExp('this\\.\\w+\\([^)]*\\)', 'g');
+        let mc;
+        while ((mc = methodCallRegex.exec(createBody)) !== null) {
+            const methodName = mc[0].match(/this\.(\w+)\(/)?.[1];
+            if (!methodName) continue;
+            const methodRegex = new RegExp(methodName + '\\s*\\([^)]*\\)\\s*\\{');
+            const methodMatch = src.match(methodRegex);
+            if (!methodMatch) continue;
+            const mStart = methodMatch.index;
+            let mDepth = 0, mEnd = -1;
+            for (let i = mStart + methodMatch[0].length - 1; i < src.length; i++) {
+                if (src[i] === '{') mDepth++;
+                else if (src[i] === '}') { mDepth--; if (mDepth === 0) { mEnd = i; break; } }
+            }
+            if (mEnd === -1) continue;
+            const methodBody = src.slice(mStart, mEnd + 1);
+            if (methodBody.includes(`this.${prop}.push(`)) {
+                const initPos = inits[prop];
+                if (initPos === undefined || mc.index < initPos) {
+                    errors.push(`[INIT_ORDER] ${f}: this.${prop} used in ${methodName}() before initialization`);
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
 // 결과 출력
 // ═══════════════════════════════════════════
 console.log('\n══════════ SLIME VOLLEY VALIDATION ══════════\n');
