@@ -33,8 +33,12 @@ export class MenuScene extends Phaser.Scene {
         const titleSize = isMobile ? 36 : 64;
         const subSize = isMobile ? 18 : 28;
 
+        // PC: 좌우 분할 레이아웃 / 모바일: 세로 중앙
+        const leftX = isMobile ? GAME_WIDTH / 2 : GAME_WIDTH * 0.35;
+        const rightX = isMobile ? GAME_WIDTH / 2 : GAME_WIDTH * 0.68;
+
         // Title glow
-        const titleGlow = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, t('title'), {
+        const titleGlow = this.add.text(leftX, GAME_HEIGHT * 0.18, t('title'), {
             fontSize: fs(titleSize),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -42,7 +46,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5).setAlpha(0.3).setScale(1.05);
 
         // Title
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.23, t('title'), {
+        this.add.text(leftX, GAME_HEIGHT * 0.18, t('title'), {
             fontSize: fs(titleSize),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -50,7 +54,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Subtitle
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.30, t('subtitle'), {
+        this.add.text(leftX, GAME_HEIGHT * 0.30, t('subtitle'), {
             fontSize: fs(subSize),
             fontFamily: 'Arial, sans-serif',
             letterSpacing: 8,
@@ -58,14 +62,15 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Shadow Monarch emblem
+        const emblemY = isMobile ? GAME_HEIGHT * 0.45 : GAME_HEIGHT * 0.55;
         const g = this.add.graphics();
         g.lineStyle(2, COLORS.SHADOW_PRIMARY, 0.6);
-        g.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT * 0.5, uv(60));
+        g.strokeCircle(leftX, emblemY, uv(60));
         g.lineStyle(1, COLORS.SHADOW_GLOW, 0.3);
-        g.strokeCircle(GAME_WIDTH / 2, GAME_HEIGHT * 0.5, uv(70));
+        g.strokeCircle(leftX, emblemY, uv(70));
 
         // "ARISE" text inside emblem
-        this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.5, 'ARISE', {
+        this.add.text(leftX, emblemY, 'ARISE', {
             fontSize: fs(20),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -73,11 +78,12 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Start button
-        const startBtn = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.65, uv(250), uv(55), 0x4a1a8a, 0.8)
+        const startBtnY = isMobile ? GAME_HEIGHT * 0.62 : GAME_HEIGHT * 0.38;
+        const startBtn = this.add.rectangle(rightX, startBtnY, uv(250), uv(55), 0x4a1a8a, 0.8)
             .setStrokeStyle(2, COLORS.SHADOW_GLOW)
             .setInteractive({ useHandCursor: true });
 
-        const startText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.65, t('startGame'), {
+        const startText = this.add.text(rightX, startBtnY, t('startGame'), {
             fontSize: fs(24),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -93,29 +99,25 @@ export class MenuScene extends Phaser.Scene {
             startText.setScale(1);
         });
         startBtn.on('pointerdown', async () => {
-            // Stop intro music
             if (this.game._soundManager) {
                 this.game._soundManager.stopIntroMusic();
             }
-
-            // Initialize audio on first user interaction (browsers require user gesture)
             if (!this.game._soundManager) {
                 this.game._soundManager = new SoundManager();
                 this.game._soundManager.init();
             }
             try { await Tone.start(); } catch (e) { /* */ }
-
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => this.scene.start('GameScene'));
         });
 
         // Hall of Fame button
-        const hofBtnY = GAME_HEIGHT * 0.73;
-        const hofBtn = this.add.rectangle(GAME_WIDTH / 2, hofBtnY, uv(200), uv(40), 0x3a2a0a, 0.8)
+        const hofBtnY = isMobile ? GAME_HEIGHT * 0.72 : startBtnY + uv(70);
+        const hofBtn = this.add.rectangle(rightX, hofBtnY, uv(200), uv(40), 0x3a2a0a, 0.8)
             .setStrokeStyle(2, 0xFFD600)
             .setInteractive({ useHandCursor: true });
 
-        this.add.text(GAME_WIDTH / 2, hofBtnY, `🏆 ${t('hallOfFame')}`, {
+        this.add.text(rightX, hofBtnY, `🏆 ${t('hallOfFame')}`, {
             fontSize: fs(isMobile ? 16 : 14),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -128,27 +130,27 @@ export class MenuScene extends Phaser.Scene {
 
         // Controls info
         if (isMobile) {
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.79, t('controlsMobile'), {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, t('controlsMobile'), {
                 fontSize: fs(16),
                 fontFamily: 'Arial, sans-serif',
                 fontStyle: 'bold',
                 color: '#8888bb',
             }).setOrigin(0.5);
 
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.83, t('controlsMobileAuto'), {
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.87, t('controlsMobileAuto'), {
                 fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
         } else {
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.80, t('controlsPC'), {
-                fontSize: fs(14),
+            this.add.text(rightX, hofBtnY + uv(50), t('controlsPC'), {
+                fontSize: fs(12),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
 
-            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.84, t('controlsPC2'), {
-                fontSize: fs(14),
+            this.add.text(rightX, hofBtnY + uv(70), t('controlsPC2'), {
+                fontSize: fs(12),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
@@ -163,7 +165,7 @@ export class MenuScene extends Phaser.Scene {
         this._createLanguageDropdown(isMobile);
 
         // Footer: contact + copyright
-        const footerY = GAME_HEIGHT * 0.92;
+        const footerY = GAME_HEIGHT * 0.93;
         const contactBtn = this.add.text(GAME_WIDTH / 2, footerY, t('contact'), {
             fontSize: fs(isMobile ? 14 : 12),
             fontFamily: 'Arial, sans-serif',
