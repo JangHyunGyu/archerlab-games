@@ -156,6 +156,9 @@ export class MenuScene extends Phaser.Scene {
 
         // ArcherLab link → HTML 버튼으로 이동 (canvas 외부)
 
+        this._modalElements = [];
+        this._dropdownElements = [];
+
         // Language dropdown (top-right)
         this._createLanguageDropdown(isMobile);
 
@@ -191,9 +194,6 @@ export class MenuScene extends Phaser.Scene {
         });
 
         this.cameras.main.fadeIn(500, 0, 0, 0);
-
-        this._modalElements = [];
-        this._dropdownElements = [];
 
         this.events.on('shutdown', () => {
             if (this.bgParticles) {
