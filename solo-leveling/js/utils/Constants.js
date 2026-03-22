@@ -79,7 +79,7 @@ export const PLAYER_BASE_STATS = {
     attack: 24,
     speed: 160,
     critRate: 0.05,
-    critDamage: 1.5,
+    critDamage: 2.0,
     xpMultiplier: 1.0,
     cooldownReduction: 0,
     pickupRange: 100,
@@ -291,6 +291,6 @@ export const PASSIVES = {
     strength:   { name: '힘 강화', description: '공격력 +8%', stat: 'attack', bonus: 0.08, icon: 0xff8844 },
     critMaster: { name: '치명타 달인', description: '치명타율 +8%', stat: 'critRate', bonus: 0.08, icon: 0xffff44 },
     scholar:    { name: '학습 능력', description: '경험치 +12%', stat: 'xpMultiplier', bonus: 0.12, icon: 0x44aaff },
-    hastening:  { name: '쿨타임 감소', description: '스킬 쿨타임 -8%', stat: 'cooldownReduction', bonus: 0.08, icon: 0xaa44ff },
+    hastening:  { name: '쿨타임 감소', description: '스킬 쿨타임 -6%', stat: 'cooldownReduction', bonus: 0.06, icon: 0xaa44ff },
     magnet:     { name: '자석', description: '아이템 픽업 범위 +25%', stat: 'pickupRange', bonus: 0.25, icon: 0x66ccff },
 };
