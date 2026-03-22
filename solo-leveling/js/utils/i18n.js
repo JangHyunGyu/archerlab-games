@@ -118,7 +118,7 @@ const TEXTS = {
             strength: { name: '힘 강화', desc: '공격력 +8%' },
             critMaster: { name: '치명타 달인', desc: '치명타율 +8%' },
             scholar: { name: '학습 능력', desc: '경험치 +12%' },
-            hastening: { name: '쿨타임 감소', desc: '스킬 쿨타임 -8%' },
+            hastening: { name: '쿨타임 감소', desc: '스킬 쿨타임 -6%' },
             magnet: { name: '자석', desc: '픽업 범위 +25%' },
         },
 
@@ -231,7 +231,7 @@ const TEXTS = {
             strength: { name: 'Strength', desc: 'Attack +12%' },
             critMaster: { name: 'Crit Master', desc: 'Crit rate +5%' },
             scholar: { name: 'Scholar', desc: 'XP gain +15%' },
-            hastening: { name: 'Haste', desc: 'Skill cooldown -8%' },
+            hastening: { name: 'Haste', desc: 'Skill cooldown -6%' },
         },
 
         items: {
