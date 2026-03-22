@@ -194,5 +194,9 @@ export class StatusWindow {
 
     destroy() {
         this.close();
+        if (this.tabKey) {
+            this.tabKey.off('down');
+            this.tabKey = null;
+        }
     }
 }

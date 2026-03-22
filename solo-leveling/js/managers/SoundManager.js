@@ -272,7 +272,9 @@ export class SoundManager {
         this._introNodes = [];
         this._introArpSynth = null;
         this._introGain = null;
-        setTimeout(() => {
+        if (this._introDisposeTimeout) clearTimeout(this._introDisposeTimeout);
+        this._introDisposeTimeout = setTimeout(() => {
+            this._introDisposeTimeout = null;
             nodes.forEach(node => {
                 try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
                 try { node.dispose(); } catch (e) { /* silent */ }
@@ -457,14 +459,52 @@ export class SoundManager {
             this._bgmNodes = [];
         }
         if (this._bgmGain) {
+            const bgmGain = this._bgmGain;
+            this._bgmGain = null;
             try {
-                this._bgmGain.volume.rampTo(-60, 0.5);
-                setTimeout(() => {
-                    try { this._bgmGain.dispose(); } catch (e) { /* silent */ }
+                bgmGain.volume.rampTo(-60, 0.5);
+                if (this._bgmDisposeTimeout) clearTimeout(this._bgmDisposeTimeout);
+                this._bgmDisposeTimeout = setTimeout(() => {
+                    this._bgmDisposeTimeout = null;
+                    try { bgmGain.dispose(); } catch (e) { /* silent */ }
                 }, 600);
             } catch (e) { /* silent */ }
-            this._bgmGain = null;
         }
+    }
+
+    destroy() {
+        this.stopIntroMusic();
+        this.stopGameBGM();
+
+        if (this._introDisposeTimeout) { clearTimeout(this._introDisposeTimeout); this._introDisposeTimeout = null; }
+        if (this._bgmDisposeTimeout) { clearTimeout(this._bgmDisposeTimeout); this._bgmDisposeTimeout = null; }
+
+        if (this._onVisibilityChange) {
+            document.removeEventListener('visibilitychange', this._onVisibilityChange);
+            this._onVisibilityChange = null;
+        }
+
+        for (const name in this._pools) {
+            const pool = this._pools[name];
+            for (let i = 0; i < pool.length; i++) {
+                if (pool[i] instanceof Audio) {
+                    pool[i].pause();
+                    pool[i].src = '';
+                    pool[i] = null;
+                }
+            }
+        }
+        this._pools = {};
+
+        try {
+            if (this._delay) { this._delay.dispose(); this._delay = null; }
+            if (this._reverb) { this._reverb.dispose(); this._reverb = null; }
+            if (this._comp) { this._comp.dispose(); this._comp = null; }
+            if (this._chorus) { this._chorus.dispose(); this._chorus = null; }
+            if (this._masterVol) { this._masterVol.dispose(); this._masterVol = null; }
+        } catch (e) { /* silent */ }
+
+        this._initialized = false;
     }
 
     toggleSound() {

@@ -235,6 +235,10 @@ class PeerJSManager {
     }
 
     destroy() {
+        for (const id in this._pingTimers) {
+            clearTimeout(this._pingTimers[id]);
+        }
+        this._pingTimers = {};
         for (const [, conn] of this.connections) {
             try { conn.close(); } catch (e) {}
         }

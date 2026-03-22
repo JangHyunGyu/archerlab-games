@@ -192,6 +192,20 @@ export class MenuScene extends Phaser.Scene {
 
         this.cameras.main.fadeIn(500, 0, 0, 0);
 
+        this._modalElements = [];
+        this._dropdownElements = [];
+
+        this.events.on('shutdown', () => {
+            if (this.bgParticles) {
+                this.bgParticles.forEach(p => { if (p.obj && p.obj.active) p.obj.destroy(); });
+                this.bgParticles = [];
+            }
+            this._dropdownElements.forEach(el => { if (el && el.active) el.destroy(); });
+            this._dropdownElements = [];
+            this._modalElements.forEach(el => { if (el && el.active) el.destroy(); });
+            this._modalElements = [];
+        });
+
         // AudioContext는 브라우저 정책상 사용자 제스처(클릭/터치) 후에만 시작 가능
         // SoundManager 생성(init) 자체가 AudioContext를 만들므로 반드시 사용자 제스처 안에서 수행
         this.input.once('pointerdown', async () => {
@@ -291,6 +305,8 @@ export class MenuScene extends Phaser.Scene {
         triggerBg.on('pointerout', () => { if (!dropdownOpen) triggerBg.setFillStyle(0x1a1a3e, 0.85); });
         triggerBg.on('pointerdown', () => { dropdownOpen ? closeDropdown() : openDropdown(); });
         dismissOverlay.on('pointerdown', closeDropdown);
+
+        this._dropdownElements.push(triggerBg, triggerText, dismissOverlay, ...dropdownItems);
     }
 
     _showContactModal() {
@@ -358,7 +374,11 @@ export class MenuScene extends Phaser.Scene {
         closeBtn.on('pointerover', () => closeBtn.setColor('#ffffff'));
         closeBtn.on('pointerout', () => closeBtn.setColor('#888888'));
 
-        const closeAll = () => elements.forEach(el => el.destroy());
+        this._modalElements.push(...elements);
+        const closeAll = () => {
+            elements.forEach(el => el.destroy());
+            this._modalElements = this._modalElements.filter(el => !elements.includes(el));
+        };
         closeBtn.on('pointerdown', closeAll);
         dim.on('pointerdown', closeAll);
     }
@@ -411,7 +431,11 @@ export class MenuScene extends Phaser.Scene {
         closeBtn.on('pointerover', () => closeBtn.setColor('#ffffff'));
         closeBtn.on('pointerout', () => closeBtn.setColor('#888888'));
 
-        const closeAll = () => elements.forEach(el => el.destroy());
+        this._modalElements.push(...elements);
+        const closeAll = () => {
+            elements.forEach(el => el.destroy());
+            this._modalElements = this._modalElements.filter(el => !elements.includes(el));
+        };
         closeBtn.on('pointerdown', closeAll);
         dim.on('pointerdown', closeAll);
 

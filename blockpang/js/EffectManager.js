@@ -1506,11 +1506,22 @@ class EffectManager {
         });
     }
 
+    trimPool(targetSize = 50) {
+        while (this._particlePool.length > targetSize) {
+            const gfx = this._particlePool.pop();
+            if (!gfx.destroyed) gfx.destroy();
+        }
+    }
+
     destroy() {
         this.game.app.ticker.remove(this.update, this);
         this.particles.forEach(p => p.gfx.destroy());
         this.particles = [];
         this.tweens = [];
+        this._particlePool.forEach(gfx => { if (!gfx.destroyed) gfx.destroy(); });
+        this._particlePool = [];
+        this._textPool.forEach(txt => { if (!txt.destroyed) txt.destroy(); });
+        this._textPool = [];
         this.container.destroy({ children: true });
     }
 }

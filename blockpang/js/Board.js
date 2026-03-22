@@ -173,17 +173,18 @@ class Board {
         cornerG.stroke({ width: 2, color: 0x5577ee, alpha: 0.4 });
         container.addChild(cornerG);
 
-        // Start border pulse ticker if not already running
-        if (!this._borderTickerAdded) {
-            this._borderTickerAdded = true;
-            this.app.ticker.add((ticker) => {
-                this._glowTime += 0.015;
-                if (this._borderGfx && !this._borderGfx.destroyed) {
-                    const pulse = 0.4 + Math.sin(this._glowTime) * 0.15;
-                    this._borderGfx.alpha = pulse;
-                }
-            });
+        // Start border pulse ticker
+        if (this._borderTickerFn) {
+            this.app.ticker.remove(this._borderTickerFn);
         }
+        this._borderTickerFn = (ticker) => {
+            this._glowTime += 0.015;
+            if (this._borderGfx && !this._borderGfx.destroyed) {
+                const pulse = 0.4 + Math.sin(this._glowTime) * 0.15;
+                this._borderGfx.alpha = pulse;
+            }
+        };
+        this.app.ticker.add(this._borderTickerFn);
 
         return container;
     }
@@ -654,6 +655,13 @@ class Board {
                     this.cellSprites[r][c].visible = false;
                 }
             }
+        }
+    }
+
+    destroy() {
+        if (this._borderTickerFn) {
+            this.app.ticker.remove(this._borderTickerFn);
+            this._borderTickerFn = null;
         }
     }
 

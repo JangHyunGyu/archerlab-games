@@ -23,6 +23,13 @@ export class GameOverScene extends Phaser.Scene {
         this._showNameInput(time, level, rank, kills, shadowCount);
 
         this.cameras.main.fadeIn(500, 0, 0, 0);
+
+        this.events.on('shutdown', () => {
+            if (this._nameInput && this._nameInput.parentNode) {
+                this._nameInput.parentNode.removeChild(this._nameInput);
+            }
+            this._nameInput = null;
+        });
     }
 
     _showNameInput(time, level, rank, kills, shadowCount) {
@@ -69,6 +76,7 @@ export class GameOverScene extends Phaser.Scene {
         const lastName = localStorage.getItem('shadow_player_name') || '';
         input.value = lastName;
         document.body.appendChild(input);
+        this._nameInput = input;
         setTimeout(() => input.focus(), 100);
 
         // Submit button
@@ -91,6 +99,7 @@ export class GameOverScene extends Phaser.Scene {
         const cleanup = () => {
             this.input.keyboard.enabled = true;
             if (input.parentNode) input.parentNode.removeChild(input);
+            this._nameInput = null;
             nameElements.forEach(el => { if (el && el.active) el.destroy(); });
         };
 

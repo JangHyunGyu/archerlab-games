@@ -301,6 +301,12 @@ class NetworkClient {
         this.connected = false;
     }
 
+    clearAllHandlers() {
+        for (const event in this.handlers) {
+            this.handlers[event] = [];
+        }
+    }
+
     ping() {
         this.send({ type: 'ping', t: Date.now() });
     }

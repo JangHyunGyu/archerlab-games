@@ -178,5 +178,11 @@ export class MobileControls {
         };
     }
 
-    destroy() {}
+    destroy() {
+        if (this.isMobile && this.scene && this.scene.input) {
+            this.scene.input.off('pointerdown');
+            this.scene.input.off('pointermove');
+            this.scene.input.off('pointerup');
+        }
+    }
 }

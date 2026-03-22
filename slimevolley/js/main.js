@@ -37,16 +37,17 @@ class SlimeVolleyGame {
     }
 
     setupInput() {
-        window.addEventListener('keydown', (e) => {
+        this._onKeyDown = (e) => {
             this.keys[e.code] = true;
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
                 if (this.running) e.preventDefault();
             }
-        });
-
-        window.addEventListener('keyup', (e) => {
+        };
+        this._onKeyUp = (e) => {
             this.keys[e.code] = false;
-        });
+        };
+        window.addEventListener('keydown', this._onKeyDown);
+        window.addEventListener('keyup', this._onKeyUp);
 
         this.setupMobileControls();
     }
@@ -71,13 +72,12 @@ class SlimeVolleyGame {
         const DEAD_ZONE = 3;
         const MAX_DRAG = 15; // 노브 최대 이동 범위
 
-        moveZone.addEventListener('touchstart', (e) => {
+        this._onMoveStart = (e) => {
             e.preventDefault();
             moveStartX = e.touches[0].clientX;
             moveZone.classList.add('active');
-        }, { passive: false });
-
-        moveZone.addEventListener('touchmove', (e) => {
+        };
+        this._onMoveMove = (e) => {
             e.preventDefault();
             if (moveStartX === null) return;
             const dx = e.touches[0].clientX - moveStartX;
@@ -88,9 +88,8 @@ class SlimeVolleyGame {
                 const clampedDx = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, dx));
                 joystickKnob.style.transform = `translateX(${clampedDx}px)`;
             }
-        }, { passive: false });
-
-        const stopMove = (e) => {
+        };
+        this._onMoveEnd = (e) => {
             e.preventDefault();
             moveStartX = null;
             this.keys['ArrowLeft'] = false;
@@ -98,23 +97,25 @@ class SlimeVolleyGame {
             moveZone.classList.remove('active');
             if (joystickKnob) joystickKnob.style.transform = '';
         };
-        moveZone.addEventListener('touchend', stopMove, { passive: false });
-        moveZone.addEventListener('touchcancel', stopMove, { passive: false });
+        moveZone.addEventListener('touchstart', this._onMoveStart, { passive: false });
+        moveZone.addEventListener('touchmove', this._onMoveMove, { passive: false });
+        moveZone.addEventListener('touchend', this._onMoveEnd, { passive: false });
+        moveZone.addEventListener('touchcancel', this._onMoveEnd, { passive: false });
 
         // 점프: 우측 영역 터치
-        jumpZone.addEventListener('touchstart', (e) => {
+        this._onJumpStart = (e) => {
             e.preventDefault();
             this.keys['ArrowUp'] = true;
             jumpZone.classList.add('active');
-        }, { passive: false });
-
-        const stopJump = (e) => {
+        };
+        this._onJumpEnd = (e) => {
             e.preventDefault();
             this.keys['ArrowUp'] = false;
             jumpZone.classList.remove('active');
         };
-        jumpZone.addEventListener('touchend', stopJump, { passive: false });
-        jumpZone.addEventListener('touchcancel', stopJump, { passive: false });
+        jumpZone.addEventListener('touchstart', this._onJumpStart, { passive: false });
+        jumpZone.addEventListener('touchend', this._onJumpEnd, { passive: false });
+        jumpZone.addEventListener('touchcancel', this._onJumpEnd, { passive: false });
     }
 
     getMyInput() {
@@ -514,6 +515,38 @@ class SlimeVolleyGame {
             this.renderer.clearSlimes();
             this.renderer.clearBall();
         }
+    }
+
+    destroy() {
+        this.backToLobby();
+        // Remove window-level input listeners
+        if (this._onKeyDown) {
+            window.removeEventListener('keydown', this._onKeyDown);
+        }
+        if (this._onKeyUp) {
+            window.removeEventListener('keyup', this._onKeyUp);
+        }
+        const moveZone = document.getElementById('touch-move-zone');
+        const jumpZone = document.getElementById('touch-jump-zone');
+        if (moveZone) {
+            if (this._onMoveStart) moveZone.removeEventListener('touchstart', this._onMoveStart);
+            if (this._onMoveMove) moveZone.removeEventListener('touchmove', this._onMoveMove);
+            if (this._onMoveEnd) {
+                moveZone.removeEventListener('touchend', this._onMoveEnd);
+                moveZone.removeEventListener('touchcancel', this._onMoveEnd);
+            }
+        }
+        if (jumpZone) {
+            if (this._onJumpStart) jumpZone.removeEventListener('touchstart', this._onJumpStart);
+            if (this._onJumpEnd) {
+                jumpZone.removeEventListener('touchend', this._onJumpEnd);
+                jumpZone.removeEventListener('touchcancel', this._onJumpEnd);
+            }
+        }
+        this.network.disconnect();
+        this.network.clearAllHandlers();
+        if (this.renderer) this.renderer.destroy();
+        this.sound.destroy();
     }
 
     // === Multiplayer ===

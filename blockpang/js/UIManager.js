@@ -158,6 +158,10 @@ class UIManager {
         this.game.app.ticker.add(this._updateScoreAnimation, this);
     }
 
+    destroy() {
+        this.game.app.ticker.remove(this._updateScoreAnimation, this);
+    }
+
     // ── HUD Visibility Toggle ──
     showGameHUD() {
         this.titleText.visible = true;
@@ -375,6 +379,7 @@ class UIManager {
         this.game.effects.tweens.push({
             elapsed: 0,
             duration: 99999,
+            _isTitleTween: true,
             update(dt) {
                 if (!logoParticles || logoParticles.destroyed) return true;
                 this.elapsed += dt;
@@ -737,6 +742,7 @@ class UIManager {
         this.game.effects.tweens.push({
             elapsed: 0,
             duration: 99999,
+            _isTitleTween: true,
             update(dt) {
                 if (!logo || logo.destroyed) return true;
                 this.elapsed += dt;
@@ -750,6 +756,7 @@ class UIManager {
         this.game.effects.tweens.push({
             elapsed: 0,
             duration: 99999,
+            _isTitleTween: true,
             _ready: false,
             update(dt) {
                 if (!startBtn || startBtn.destroyed) return true;
@@ -771,6 +778,7 @@ class UIManager {
 
     hideTitleScreen(onComplete) {
         this._activeButtons = [];
+        this.game.effects.tweens = this.game.effects.tweens.filter(t => !t._isTitleTween);
         if (!this.titleContainer) {
             if (onComplete) onComplete();
             return;
@@ -996,7 +1004,8 @@ class UIManager {
                         let life = 0;
                         const sparkTween = setInterval(() => {
                             life += 16;
-                            if (sparkRef.destroyed) { clearInterval(sparkTween); return; }
+                            if (!sparkRef || sparkRef.destroyed) { clearInterval(sparkTween); return; }
+                            if (!sparkRef.parent) { clearInterval(sparkTween); return; }
                             const t = life / 800;
                             sparkRef.y = startY - t * 30;
                             sparkRef.alpha = 1 - t;
