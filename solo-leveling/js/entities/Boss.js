@@ -256,7 +256,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         switch (this.bossKey) {
             case 'igris': this._igrisSlash(playerX, playerY); break;
             case 'tusk':
-                if (dist > 400) { this.specialTimer = this.phase === 2 ? 2000 : 3500; return; }
+                if (dist > 600) { this.specialTimer = this.phase === 2 ? 2000 : 3500; return; }
                 this._tuskGroundSlam(playerX, playerY);
                 break;
             case 'beru':  this._beruAcidSpit(playerX, playerY); break;
