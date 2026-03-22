@@ -74,8 +74,8 @@ export const RANKS = {
 export const RANK_ORDER = ['E', 'D', 'C', 'B', 'A', 'S'];
 
 export const PLAYER_BASE_STATS = {
-    hp: 100,
-    maxHp: 100,
+    hp: 150,
+    maxHp: 150,
     attack: 24,
     speed: 160,
     critRate: 0.05,
