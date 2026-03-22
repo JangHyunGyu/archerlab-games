@@ -345,6 +345,7 @@ class Game {
     }
 
     resize() {
+        if (this.input && this.input.dragging) return;
         const w = this.app.screen.width;
         const h = this.app.screen.height;
         const padding = Math.max(8, Math.min(w, h) * 0.025);
