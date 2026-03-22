@@ -133,8 +133,16 @@ export class HUD {
         const gap = uv(4);
 
         for (let i = 0; i < 6; i++) {
-            const x = this._margin + i * (slotSize + gap);
-            const y = GAME_HEIGHT - this._margin - slotSize;
+            let x, y;
+            if (this._isPortrait) {
+                const col = i % 3;
+                const row = Math.floor(i / 3);
+                x = this._margin + col * (slotSize + gap);
+                y = GAME_HEIGHT - this._margin - (2 - row) * (slotSize + gap);
+            } else {
+                x = this._margin + i * (slotSize + gap);
+                y = GAME_HEIGHT - this._margin - slotSize;
+            }
 
             const bg = this.scene.add.rectangle(x, y, slotSize, slotSize, 0x1a1a2e, 0.7)
                 .setOrigin(0, 0).setDepth(100).setScrollFactor(0)
@@ -165,11 +173,11 @@ export class HUD {
     }
 
     _createMinimap() {
-        const size = uv(90);
+        const size = this._isPortrait ? uv(70) : uv(90);
         const m = this._margin;
         this._mmSize = size;
         this._mmX = GAME_WIDTH - m - size;
-        this._mmY = GAME_HEIGHT - m - size;
+        this._mmY = this._isPortrait ? m : GAME_HEIGHT - m - size;
         this._mmScale = size / WORLD_SIZE;
 
         // Background
