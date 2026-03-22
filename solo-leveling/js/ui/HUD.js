@@ -5,6 +5,7 @@ export class HUD {
         this.scene = scene;
         this.elements = [];
         this._margin = uv(12);
+        this._isPortrait = GAME_WIDTH < GAME_HEIGHT;
 
         // Build left panel (HP, XP) with sequential positioning
         this._createLeftPanel();
@@ -69,42 +70,42 @@ export class HUD {
         this.xpFill = this.scene.add.rectangle(m + 1, y + 1, barW - 2, xpH - 2, COLORS.XP_PURPLE)
             .setOrigin(0, 0).setDepth(101).setScrollFactor(0);
         this.elements.push(this.xpBg, this.xpFill);
+        this._leftPanelBottom = y + xpH;
     }
 
     _createRightPanel() {
         const m = this._margin;
-        let y = m;
+        // 세로모드: HP바 아래 좌측에 배치 / 가로모드: 우상단
+        const panelX = this._isPortrait ? m : GAME_WIDTH - m;
+        const originX = this._isPortrait ? 0 : 1;
+        let y = this._isPortrait ? this._leftPanelBottom + uv(8) : m;
 
-        // Kill counter
-        this.killText = this.scene.add.text(GAME_WIDTH - m, y, 'KILLS: 0', {
+        this.killText = this.scene.add.text(panelX, y, 'KILLS: 0', {
             fontSize: fs(14), fontFamily: 'Arial', fontStyle: 'bold',
             color: '#ff6644', stroke: '#000000', strokeThickness: 2,
-        }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
+        }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.killText);
         y += this.killText.height + 3;
 
-        // Level
-        this.levelText = this.scene.add.text(GAME_WIDTH - m, y, 'Lv.1', {
+        this.levelText = this.scene.add.text(panelX, y, 'Lv.1', {
             fontSize: fs(12), fontFamily: 'Arial', fontStyle: 'bold',
             color: '#ffffff',
-        }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
+        }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.levelText);
         y += this.levelText.height + 2;
 
-        // Rank
-        this.rankText = this.scene.add.text(GAME_WIDTH - m, y, 'E-Rank', {
+        this.rankText = this.scene.add.text(panelX, y, 'E-Rank', {
             fontSize: fs(11), fontFamily: 'Arial',
             color: '#888888',
-        }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
+        }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.rankText);
         y += this.rankText.height + 8;
 
-        // Quest display
-        this.questText = this.scene.add.text(GAME_WIDTH - m, y, '', {
+        this.questText = this.scene.add.text(panelX, y, '', {
             fontSize: fs(10), fontFamily: 'Arial',
             color: '#66ccff',
-            align: 'right',
-        }).setOrigin(1, 0).setDepth(100).setScrollFactor(0);
+            align: this._isPortrait ? 'left' : 'right',
+        }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.questText);
     }
 
