@@ -69,27 +69,10 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-// Handle orientation/resize: adapt internal resolution to new aspect ratio
+// Handle orientation/resize: CSS scaling only (Phaser FIT mode handles the rest)
 function handleResize() {
     if (!game || !game.scale) return;
-    setTimeout(() => {
-        const newSize = calcGameSize();
-        if (Math.abs(newSize.w - GAME_WIDTH) < 10 && Math.abs(newSize.h - GAME_HEIGHT) < 10) {
-            game.scale.refresh();
-            return;
-        }
-        setGameDimensions(newSize.w, newSize.h);
-        game.scale.resize(newSize.w, newSize.h);
-        game.scale.refresh();
-        const activeScene = game.scene.getScenes(true)[0];
-        if (!activeScene) return;
-        const key = activeScene.scene.key;
-        if (key === 'GameScene') {
-            activeScene.events.emit('game-resize');
-        } else {
-            activeScene.scene.restart();
-        }
-    }, 300);
+    setTimeout(() => game.scale.refresh(), 200);
 }
 
 window.addEventListener('orientationchange', handleResize);
