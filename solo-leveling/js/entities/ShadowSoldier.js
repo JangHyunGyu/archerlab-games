@@ -78,7 +78,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         if (!this.active || !player) return;
 
         // Update damage and speed with current player stats
-        const playerAttack = player.stats.attack;
+        const playerAttack = player.stats.attack * (1 + (player._tempAtkBuff || 0));
         const multMap = { melee: 1.2, tank: 0.8, ranged: 1.5 };
         this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 1.2));
         this.speed = player.stats.speed * this.speedRatio;

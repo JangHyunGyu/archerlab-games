@@ -36,11 +36,10 @@ const ITEM_TYPES = {
         dropRate: 0.03,
         effect: (player, scene) => {
             // Temporary attack boost for 15 seconds
-            const originalAtk = player.stats.attack;
-            player.stats.attack = Math.floor(originalAtk * 1.5);
+            player._tempAtkBuff = (player._tempAtkBuff || 0) + 0.5;
             scene.systemMessage?.show('[시스템]', ['그림자 정수 흡수: 공격력 50% 증가 15초'], { duration: 1500, type: 'arise' });
             scene.time.delayedCall(15000, () => {
-                player.stats.attack = originalAtk;
+                player._tempAtkBuff = Math.max(0, (player._tempAtkBuff || 0) - 0.5);
             });
         },
     },

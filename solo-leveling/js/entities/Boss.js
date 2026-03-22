@@ -557,14 +557,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             const healAmount = Math.floor(player.stats.maxHp * 0.3);
             player.heal(healAmount);
 
-            // Temporary attack buff (20% for 15 seconds, additive)
-            const buffAmount = Math.floor(player.stats.attack * 0.2);
-            player.stats.attack += buffAmount;
-            player._attackBuffs = (player._attackBuffs || 0) + buffAmount;
+            // Temporary attack buff (20% for 15 seconds)
+            player._tempAtkBuff = (player._tempAtkBuff || 0) + 0.2;
             this.scene.time.delayedCall(15000, () => {
                 if (player && !player.isDead) {
-                    player.stats.attack = Math.max(1, player.stats.attack - buffAmount);
-                    player._attackBuffs = Math.max(0, (player._attackBuffs || 0) - buffAmount);
+                    player._tempAtkBuff = Math.max(0, (player._tempAtkBuff || 0) - 0.2);
                 }
             });
 
