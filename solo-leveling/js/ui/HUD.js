@@ -353,9 +353,23 @@ export class HUD {
         }
     }
 
+    rebuild() {
+        this.destroy();
+        this.elements = [];
+        this._margin = uv(12);
+        this._createLeftPanel();
+        this._createRightPanel();
+        this._createTimer();
+        this._createDungeonBreakDisplay();
+        this._createWeaponSlots();
+        this._createShadowArmyDisplay();
+        this._createMinimap();
+        this._createHomeButton();
+    }
+
     destroy() {
         for (const el of this.elements) {
-            el.destroy();
+            if (el && el.active) el.destroy();
         }
     }
 }

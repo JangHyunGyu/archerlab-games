@@ -103,6 +103,21 @@ export class GameScene extends Phaser.Scene {
         // Register shutdown cleanup
         this.events.on('shutdown', this.shutdown, this);
 
+        // Dynamic resize: reposition HUD, camera, UI
+        this.events.on('game-resize', () => {
+            this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
+            if (this.hud) this.hud.rebuild();
+            if (this.statusWindow && this.statusWindow.isOpen) {
+                this.statusWindow.close();
+                this.statusWindow.open();
+            }
+            if (this.mobileControls) this.mobileControls.updateLayout();
+            if (this._vignette) {
+                this._vignette.setPosition(this.cameras.main.width / 2, this.cameras.main.height / 2);
+                this._vignette.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+            }
+        });
+
         // Intro system messages (원작: 시스템 메시지)
         this.time.delayedCall(500, () => {
             this.systemMessage.show(t('sysSystem'), [

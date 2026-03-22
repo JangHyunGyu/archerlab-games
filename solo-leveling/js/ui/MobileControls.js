@@ -178,6 +178,11 @@ export class MobileControls {
         };
     }
 
+    updateLayout() {
+        // Buttons use GAME_WIDTH which is already updated via live binding
+        // Joystick is floating (spawns at touch position), no repositioning needed
+    }
+
     destroy() {
         if (this.isMobile && this.scene && this.scene.input) {
             this.scene.input.off('pointerdown');
