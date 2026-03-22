@@ -708,6 +708,7 @@ class GameRenderer {
     }
 
     destroy() {
+        this.clearMessages();
         // 풀 정리
         for (const g of this._trailPool) g.destroy();
         for (const g of this._particlePool) g.destroy();
@@ -716,5 +717,6 @@ class GameRenderer {
         if (this.app) {
             this.app.destroy(true);
         }
+        this.initialized = false;
     }
 }

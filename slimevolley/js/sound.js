@@ -268,6 +268,7 @@ class SoundManager {
                     if (typeof audio._index === 'undefined') {
                         audio.pause();
                         audio.src = '';
+                        audio.load();
                     }
                 }
             }

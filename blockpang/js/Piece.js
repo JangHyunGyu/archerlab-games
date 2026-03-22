@@ -117,6 +117,10 @@ class PieceTray {
         game.app.ticker.add(this._updateIdle, this);
     }
 
+    destroy() {
+        this.game.app.ticker.remove(this._updateIdle, this);
+    }
+
     _updateIdle(ticker) {
         const delta = ticker.deltaTime;
         this._idleTime += delta * (1000 / 60) * 0.002;

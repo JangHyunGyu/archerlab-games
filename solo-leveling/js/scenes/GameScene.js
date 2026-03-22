@@ -218,7 +218,7 @@ export class GameScene extends Phaser.Scene {
                 ).setDepth(1);
                 this._ambientFallback.push({ obj: p, sx: Phaser.Math.FloatBetween(-0.3, 0.3), sy: Phaser.Math.FloatBetween(-0.5, -0.1) });
             }
-            this.time.addEvent({ delay: 50, loop: true, callback: () => {
+            this._ambientFallbackTimer = this.time.addEvent({ delay: 50, loop: true, callback: () => {
                 for (const p of this._ambientFallback) {
                     p.obj.x += p.sx; p.obj.y += p.sy;
                     if (p.obj.y < 0) { p.obj.y = WORLD_SIZE; p.obj.x = Phaser.Math.Between(0, WORLD_SIZE); }
@@ -525,6 +525,7 @@ export class GameScene extends Phaser.Scene {
             if (this.xpOrbPool) this.xpOrbPool.destroy();
             if (this.enemyManager) this.enemyManager.destroy();
             if (this.statusWindow) this.statusWindow.destroy();
+            if (this.mobileControls) this.mobileControls.destroy();
 
             // Clean up filters
             try {
@@ -532,6 +533,12 @@ export class GameScene extends Phaser.Scene {
                 if (this._colorMatrix) this.cameras.main.filters.internal.remove(this._colorMatrix);
                 if (this._levelUpBlur) this.cameras.main.filters.internal.remove(this._levelUpBlur);
             } catch (e) { /* filters cleanup */ }
+
+            if (this._ambientFallbackTimer) { this._ambientFallbackTimer.destroy(); this._ambientFallbackTimer = null; }
+            if (this._ambientFallback) {
+                this._ambientFallback.forEach(p => { if (p.obj && p.obj.active) p.obj.destroy(); });
+                this._ambientFallback = null;
+            }
 
             if (this._vignetteOverlay) { this._vignetteOverlay.destroy(); this._vignetteOverlay = null; }
 

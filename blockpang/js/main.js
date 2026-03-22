@@ -38,8 +38,10 @@
     });
 
     // Handle orientation change
+    let orientTimer;
     window.addEventListener('orientationchange', () => {
-        setTimeout(() => {
+        clearTimeout(orientTimer);
+        orientTimer = setTimeout(() => {
             game.resize();
         }, 300);
     });

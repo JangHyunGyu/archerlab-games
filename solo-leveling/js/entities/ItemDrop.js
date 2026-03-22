@@ -177,10 +177,12 @@ export class ItemDropManager {
     }
 
     _destroyItem(item, index) {
-        if (item._glow) item._glow.destroy();
-        if (item._plusText) item._plusText.destroy();
         this.scene.tweens.killTweensOf(item);
-        if (item._glow) this.scene.tweens.killTweensOf(item._glow);
+        if (item._glow) {
+            this.scene.tweens.killTweensOf(item._glow);
+            item._glow.destroy();
+        }
+        if (item._plusText) item._plusText.destroy();
         item.destroy();
         this.items.splice(index, 1);
     }

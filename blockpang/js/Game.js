@@ -5,6 +5,7 @@ class Game {
         this.isGameOver = false;
         this.isAnimating = false;
         this.state = 'title'; // 'title' | 'playing' | 'gameover'
+        this._pendingTimeouts = [];
 
         // ── Containers (render order) ──
         this.zoomContainer = new PIXI.Container();
@@ -58,8 +59,19 @@ class Game {
         this.ui.showTitleScreen();
     }
 
+    destroy() {
+        this._clearPendingTimeouts();
+        this.app.ticker.remove(this._updateBackground, this);
+        this.effects.destroy();
+        this.ui.destroy();
+        this.tray.destroy();
+        this.board.destroy();
+        this.sound.destroy();
+    }
+
     // ── Start game from title screen ──
     startGame() {
+        this._clearPendingTimeouts();
         this.state = 'playing';
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = 'none';
@@ -97,6 +109,8 @@ class Game {
 
     // ── Return to title screen ──
     goToTitle() {
+        this._clearPendingTimeouts();
+        this.effects.trimPool();
         this.ui.hideGameOver();
         this.state = 'title';
         const alLink = document.getElementById('archerlab-link');
@@ -105,6 +119,17 @@ class Game {
         this.tray.container.visible = false;
         this.ui.hideGameHUD();
         this.ui.showTitleScreen();
+    }
+
+    _scheduleTimeout(fn, delay) {
+        const id = setTimeout(fn, delay);
+        this._pendingTimeouts.push(id);
+        return id;
+    }
+
+    _clearPendingTimeouts() {
+        this._pendingTimeouts.forEach(id => clearTimeout(id));
+        this._pendingTimeouts = [];
     }
 
     _createBackground() {
@@ -357,6 +382,8 @@ class Game {
     }
 
     newGame() {
+        this._clearPendingTimeouts();
+        this.effects.trimPool();
         this.state = 'playing';
         this.isGameOver = false;
         this.isAnimating = false;
@@ -403,7 +430,7 @@ class Game {
         const cy = boardPos.y + (gridY + piece.rows / 2) * this.cellSize;
         this.effects.playRingBurst(cx, cy, BLOCK_COLORS[piece.colorIndex].glow);
 
-        setTimeout(() => {
+        this._scheduleTimeout(() => {
             this._handleLineClear(() => {
                 this.ui.updateScore(this.scoreManager.score, this.scoreManager.bestScore);
                 this.ui.updateLevel(this.scoreManager.level, this.scoreManager.levelProgress);
@@ -434,7 +461,7 @@ class Game {
         if (combo > 1 && clearResult.lines >= 2) {
             // 콤보 + 멀티라인 동시: 유리 깨지는 소리 먼저 → 콤보 사운드
             this.sound.playClear(clearResult.lines);
-            setTimeout(() => this.sound.playCombo(combo), 150);
+            this._scheduleTimeout(() => this.sound.playCombo(combo), 150);
         } else if (combo > 1) {
             this.sound.playCombo(combo);
         } else {
@@ -507,11 +534,11 @@ class Game {
                     const mlY = clampY(popupY - this.cellSize * 2.5);
                     this.effects.showMultiLinePopup(popupX, mlY, clearResult.lines);
 
-                    setTimeout(() => {
+                    this._scheduleTimeout(() => {
                         this.effects.playComboEffect(combo, fxX, fxY, clearResult.lines);
                     }, 180);
 
-                    setTimeout(() => {
+                    this._scheduleTimeout(() => {
                         this.effects.showScorePopup(popupX, popupY, `+${pts}`);
                     }, 100);
 
@@ -540,7 +567,7 @@ class Game {
                     const pcBonus = this.scoreManager.addPerfectClearBonus();
                     this.sound.playPerfectClear();
                     this.effects.showPerfectClear();
-                    setTimeout(() => {
+                    this._scheduleTimeout(() => {
                         this.effects.showBonusPopup(
                             this.app.screen.width / 2,
                             boardPos.y + (GRID_SIZE * this.cellSize) / 2 + 40,
@@ -574,7 +601,7 @@ class Game {
         const finalScore = this.scoreManager.score;
         const bestScore = this.scoreManager.bestScore;
 
-        setTimeout(() => {
+        this._scheduleTimeout(() => {
             // Show name input first, then game over screen
             this.ui.showNameInput(finalScore, () => {
                 this.ui.showGameOver(finalScore, bestScore, isNewBest);

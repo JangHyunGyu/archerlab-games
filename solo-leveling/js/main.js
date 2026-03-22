@@ -92,6 +92,14 @@ if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', handleResize);
 }
 
+game.events.on('destroy', () => {
+    window.removeEventListener('orientationchange', handleResize);
+    window.removeEventListener('resize', handleResize);
+    if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+    }
+});
+
 // 【글로벌 에러 핸들러】
 (function() {
     var ERROR_ENDPOINT = 'https://chatbot-api.yama5993.workers.dev/error-logs';

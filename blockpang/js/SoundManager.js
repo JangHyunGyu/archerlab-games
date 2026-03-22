@@ -966,6 +966,25 @@ class SoundManager {
 
     // ── Toggle ──────────────────────────────────────────────────────
 
+    destroy() {
+        this.stopAmbient();
+        const synths = [this._membrane, this._bass, this._click, this._bell,
+                        this._poly, this._fm, this._am, this._metal, this._sweep, this._noise];
+        for (const s of synths) { try { if (s?.dispose) s.dispose(); } catch(e) {} }
+        for (const node of [this._reverb, this._compressor, this._limiter, this._dryChannel, this._wetChannel]) {
+            try { if (node?.dispose) node.dispose(); } catch(e) {}
+        }
+        for (const name in this._wavPools) {
+            const pool = this._wavPools[name];
+            for (let i = 0; i < pool.length; i++) {
+                if (typeof pool[i]._index !== 'undefined') continue;
+                pool[i].pause();
+                pool[i].src = '';
+            }
+        }
+        this._wavPools = {};
+    }
+
     toggle() {
         this.enabled = !this.enabled;
         if (typeof Tone !== 'undefined') {
