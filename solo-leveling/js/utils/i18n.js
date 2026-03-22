@@ -341,7 +341,7 @@ const TEXTS = {
             strength: { name: '力強化', desc: '攻撃力 +12%' },
             critMaster: { name: 'クリティカルの達人', desc: 'クリティカル率 +5%' },
             scholar: { name: '学習能力', desc: '経験値 +15%' },
-            hastening: { name: 'クールダウン減少', desc: 'スキルクールダウン -8%' },
+            hastening: { name: 'クールダウン減少', desc: 'スキルクールダウン -6%' },
         },
 
         items: {
