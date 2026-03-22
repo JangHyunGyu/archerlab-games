@@ -8,6 +8,7 @@ import { SoundManager } from '../managers/SoundManager.js';
 import { XPOrbPool } from '../entities/XPOrb.js';
 import { ItemDropManager } from '../entities/ItemDrop.js';
 import { Boss } from '../entities/Boss.js';
+import { Enemy } from '../entities/Enemy.js';
 import { HUD } from '../ui/HUD.js';
 import { SystemMessage } from '../ui/SystemMessage.js';
 import { StatusWindow } from '../ui/StatusWindow.js';
@@ -177,6 +178,9 @@ export class GameScene extends Phaser.Scene {
 
         // Update shadow army
         this.shadowArmyManager.update(time, delta);
+
+        // Update damage texts (pooled, no tween)
+        Enemy.updateDmgTexts(this, delta);
 
         // Update bosses
         this._updateBosses(time, delta);
