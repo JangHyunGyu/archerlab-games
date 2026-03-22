@@ -165,7 +165,10 @@ export class HUD {
 
     _createShadowArmyDisplay() {
         const slotSize = uv(32);
-        this.shadowText = this.scene.add.text(this._margin, GAME_HEIGHT - this._margin - slotSize - uv(25), '', {
+        const shadowY = this._isPortrait
+            ? GAME_HEIGHT - this._margin - slotSize * 2 - uv(30)
+            : GAME_HEIGHT - this._margin - slotSize - uv(25);
+        this.shadowText = this.scene.add.text(this._margin, shadowY, '', {
             fontSize: fs(11), fontFamily: 'Arial',
             color: COLORS.TEXT_PURPLE,
         }).setDepth(100).setScrollFactor(0);
