@@ -255,7 +255,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     _doSpecialAttack(playerX, playerY, dist) {
         switch (this.bossKey) {
             case 'igris': this._igrisSlash(playerX, playerY); break;
-            case 'tusk':  this._tuskGroundSlam(playerX, playerY); break;
+            case 'tusk':
+                if (dist > 400) { this.specialTimer = this.phase === 2 ? 2000 : 3500; return; }
+                this._tuskGroundSlam(playerX, playerY);
+                break;
             case 'beru':  this._beruAcidSpit(playerX, playerY); break;
         }
     }
@@ -342,14 +345,17 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const radius = 200;
 
         // ⚠ Danger zone fill (bright red, growing)
-        const dangerZone = this.scene.add.circle(slamX, slamY, 10, 0xff0000, 0.15)
+        const dangerZone = this.scene.add.circle(slamX, slamY, 10, 0xff0000, 0.35)
             .setDepth(3);
         // ⚠ Danger border (thick pulsing red ring)
         const dangerRing = this.scene.add.circle(slamX, slamY, radius, 0x000000, 0)
-            .setDepth(3).setStrokeStyle(5, 0xff2222, 0);
+            .setDepth(3).setStrokeStyle(6, 0xff0000, 0);
+        // ⚠ Inner ring (second ring for emphasis)
+        const innerRing = this.scene.add.circle(slamX, slamY, radius * 0.6, 0x000000, 0)
+            .setDepth(3).setStrokeStyle(3, 0xff4444, 0);
         // ⚠ Warning icon
         const warnIcon = this.scene.add.text(slamX, slamY, '⚠', {
-            fontSize: '36px',
+            fontSize: '44px',
         }).setOrigin(0.5).setDepth(4).setAlpha(0);
         // Crosshair lines (targeting indicator)
         const lines = [];
@@ -359,37 +365,43 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 slamX, slamY,
                 slamX + Math.cos(ang) * radius, slamY + Math.sin(ang) * radius,
                 0xff3333, 0
-            ).setDepth(3).setLineWidth(1.5);
+            ).setDepth(3).setLineWidth(2.5);
             lines.push(line);
         }
 
         // Danger zone expands to full radius
         this.scene.tweens.add({
             targets: dangerZone,
-            scale: radius / 10, alpha: 0.25,
-            duration: 800, ease: 'Power2',
+            scale: radius / 10, alpha: 0.45,
+            duration: 1000, ease: 'Power2',
         });
-        // Ring pulses 3 times (urgent warning)
+        // Ring pulses 4 times (urgent warning)
         this.scene.tweens.add({
             targets: dangerRing,
-            alpha: { from: 0.3, to: 0.9 },
-            duration: 200, yoyo: true, repeat: 2,
+            alpha: { from: 0.5, to: 1.0 },
+            duration: 180, yoyo: true, repeat: 3,
+        });
+        // Inner ring shrinks inward
+        this.scene.tweens.add({
+            targets: innerRing,
+            alpha: { from: 0.4, to: 0.8 }, scale: { from: 1, to: 0.3 },
+            duration: 1200, ease: 'Power2',
         });
         // Warning icon pulses
         this.scene.tweens.add({
             targets: warnIcon,
-            alpha: { from: 0.5, to: 1 }, scale: { from: 0.8, to: 1.5 },
-            duration: 250, yoyo: true, repeat: 1,
+            alpha: { from: 0.7, to: 1 }, scale: { from: 1.0, to: 1.8 },
+            duration: 300, yoyo: true, repeat: 1,
         });
         // Crosshair lines fade in
         this.scene.tweens.add({
             targets: lines,
-            alpha: 0.6,
+            alpha: 0.8,
             duration: 300,
         });
 
-        this.scene.time.delayedCall(1000, () => {
-            dangerZone.destroy(); dangerRing.destroy();
+        this.scene.time.delayedCall(1400, () => {
+            dangerZone.destroy(); dangerRing.destroy(); innerRing.destroy();
             warnIcon.destroy();
             lines.forEach(l => l.destroy());
             if (!this.active) return;
