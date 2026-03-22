@@ -286,17 +286,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.knockbackTimer = 150;
         }
 
-        // Damage number (throttled: accumulate hits within 200ms window)
-        this._dmgAccum = (this._dmgAccum || 0) + amount;
-        if (!this._dmgTextTimer) {
-            this._dmgTextTimer = this.scene.time.delayedCall(200, () => {
-                if (this.active || this._dmgAccum > 0) {
-                    this._showDamageNumber(this._dmgAccum);
-                }
-                this._dmgAccum = 0;
-                this._dmgTextTimer = null;
-            });
-        }
+        // Damage number (per hit)
+        this._showDamageNumber(amount);
 
         if (this.hp <= 0) {
             this.die();
@@ -312,16 +303,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     die() {
-        // 죽을 때 누적 데미지 즉시 표시
-        if (this._dmgTextTimer) {
-            this._dmgTextTimer.remove(false);
-            this._dmgTextTimer = null;
-        }
-        if (this._dmgAccum > 0) {
-            this._showDamageNumber(this._dmgAccum);
-            this._dmgAccum = 0;
-        }
-
         // Drop XP
         if (this.scene.xpOrbPool) {
             this.scene.xpOrbPool.spawn(this.x, this.y, this.xpValue);
@@ -385,29 +366,68 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    static _dmgTextPool = [];
+    static _activeTexts = [];
+    static MAX_DMG_TEXTS = 40;
+
     _showDamageNumber(value) {
-        // Show large numbers as "big hit" (over 50% of max HP)
+        // 1. 화면 밖이면 스킵
+        const cam = this.scene.cameras.main;
+        const cx = this.x - cam.scrollX;
+        const cy = this.y - cam.scrollY;
+        if (cx < -50 || cx > cam.width + 50 || cy < -50 || cy > cam.height + 50) return;
+
+        // 2. 같은 적에게 100ms 이내 재표시 방지
+        const now = this.scene.time.now;
+        if (this._lastDmgTextTime && now - this._lastDmgTextTime < 100) return;
+        this._lastDmgTextTime = now;
+
+        // 3. 동시 표시 상한
+        if (Enemy._activeTexts.length >= Enemy.MAX_DMG_TEXTS) return;
+
         const isCrit = value > this.maxHp * 0.5;
-        const text = this.scene.add.text(
-            this.x + Phaser.Math.Between(-10, 10),
-            this.y - 15,
-            isCrit ? value + '!' : String(value),
-            {
+        const x = this.x + Phaser.Math.Between(-10, 10);
+        const y = this.y - 15;
+
+        let text = Enemy._dmgTextPool.pop();
+        if (text && text.scene) {
+            text.setPosition(x, y);
+            text.setText(isCrit ? value + '!' : String(value));
+            text.setFontSize(isCrit ? '18px' : '14px');
+            text.setColor(isCrit ? COLORS.TEXT_GOLD : COLORS.TEXT_WHITE);
+            text.setAlpha(1).setVisible(true).setActive(true);
+        } else {
+            text = this.scene.add.text(x, y, isCrit ? value + '!' : String(value), {
                 fontSize: isCrit ? '18px' : '14px',
                 fontFamily: 'Arial',
                 fontStyle: 'bold',
                 color: isCrit ? COLORS.TEXT_GOLD : COLORS.TEXT_WHITE,
                 stroke: '#000000',
                 strokeThickness: 2,
-            }
-        ).setOrigin(0.5).setDepth(100);
+            }).setOrigin(0.5).setDepth(100);
+        }
 
-        this.scene.tweens.add({
-            targets: text,
-            y: text.y - 30,
-            alpha: 0,
-            duration: 600,
-            onComplete: () => text.destroy(),
-        });
+        text._startY = y;
+        text._elapsed = 0;
+        Enemy._activeTexts.push(text);
+    }
+
+    static updateDmgTexts(scene, delta) {
+        const pool = Enemy._dmgTextPool;
+        const active = Enemy._activeTexts;
+        for (let i = active.length - 1; i >= 0; i--) {
+            const t = active[i];
+            t._elapsed += delta;
+            const progress = t._elapsed / 500;
+            if (progress >= 1) {
+                t.setVisible(false).setActive(false);
+                active.splice(i, 1);
+                if (pool.length < 60) pool.push(t);
+                else t.destroy();
+            } else {
+                t.y = t._startY - 30 * progress;
+                t.alpha = 1 - progress;
+            }
+        }
     }
 }
