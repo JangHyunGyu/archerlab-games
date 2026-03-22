@@ -369,6 +369,7 @@ export class HUD {
         this.destroy();
         this.elements = [];
         this._margin = uv(12);
+        this._isPortrait = GAME_WIDTH < GAME_HEIGHT;
         this._createLeftPanel();
         this._createRightPanel();
         this._createTimer();
