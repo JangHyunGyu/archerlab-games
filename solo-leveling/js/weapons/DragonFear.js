@@ -60,6 +60,17 @@ export class DragonFear extends WeaponBase {
         super.update(time, delta);
         if (this.auraSprite && this.auraSprite.active) {
             this.auraSprite.setPosition(this.player.x, this.player.y);
+
+            const range = 200 + this.extraRange;
+            const slowAmount = 0.4 - this.extraSlow;
+            const enemies = this.player.getAllEnemies();
+            for (const enemy of enemies) {
+                if (!enemy.active) continue;
+                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+                if (dist < range) {
+                    if (enemy.applySlow) enemy.applySlow(slowAmount, 500);
+                }
+            }
         }
     }
 
