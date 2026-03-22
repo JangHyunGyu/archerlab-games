@@ -9,8 +9,7 @@ export class DragonFear extends WeaponBase {
 
     fire() {
         const range = 200 + this.extraRange;
-        const slowAmount = 0.4 - this.extraSlow; // Lower = slower
-        const slowDuration = 3500;
+        const slowAmount = 0.4 - this.extraSlow;
 
         // Visual aura effect (이전 트윈 확실히 정리)
         if (this.auraSprite) {
@@ -44,14 +43,19 @@ export class DragonFear extends WeaponBase {
 
         if (this.scene.soundManager) this.scene.soundManager.play('fear');
 
-        // Apply slow & damage to enemies in range
+        // Aura lasts ~2 seconds
+        this._auraEndTime = this.scene.time.now + 2000;
+        this._auraRange = range;
+        this._auraSlowAmount = slowAmount;
+
+        // Apply damage & slow to enemies currently in range
         const enemies = this.player.getAllEnemies();
         for (const enemy of enemies) {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
             if (dist < range) {
                 enemy.takeDamage(this.getDamage(), this.player.x, this.player.y);
-                if (enemy.applySlow) enemy.applySlow(slowAmount, slowDuration);
+                if (enemy.applySlow) enemy.applySlow(slowAmount, 2000);
             }
         }
     }
@@ -61,14 +65,15 @@ export class DragonFear extends WeaponBase {
         if (this.auraSprite && this.auraSprite.active) {
             this.auraSprite.setPosition(this.player.x, this.player.y);
 
-            const range = 200 + this.extraRange;
-            const slowAmount = 0.4 - this.extraSlow;
-            const enemies = this.player.getAllEnemies();
-            for (const enemy of enemies) {
-                if (!enemy.active) continue;
-                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-                if (dist < range) {
-                    if (enemy.applySlow) enemy.applySlow(slowAmount, 500);
+            if (this._auraEndTime && this.scene.time.now < this._auraEndTime) {
+                const remaining = this._auraEndTime - this.scene.time.now;
+                const enemies = this.player.getAllEnemies();
+                for (const enemy of enemies) {
+                    if (!enemy.active) continue;
+                    const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+                    if (dist < this._auraRange) {
+                        if (enemy.applySlow) enemy.applySlow(this._auraSlowAmount, remaining);
+                    }
                 }
             }
         }
