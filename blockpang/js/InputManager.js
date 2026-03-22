@@ -97,7 +97,7 @@ class InputManager {
     }
 
     onPointerMove(event) {
-        if (!this.dragging) return;
+        if (!this.dragging || !this.dragContainer || !this.dragPieceData) return;
 
         const pos = event.global;
         const x = pos.x;
@@ -205,9 +205,10 @@ class InputManager {
     }
 
     _updateGhost(screenX, screenY) {
+        const piece = this.dragPieceData;
+        if (!piece) return;
         const gridPos = this._screenToGrid(screenX, screenY);
         const board = this.game.board;
-        const piece = this.dragPieceData;
 
         if (!gridPos) {
             board.clearGhost();
@@ -233,9 +234,10 @@ class InputManager {
     }
 
     _screenToGrid(screenX, screenY) {
+        const piece = this.dragPieceData;
+        if (!piece) return null;
         const boardPos = this.game.board.getGlobalPosition();
         const cs = this.game.cellSize;
-        const piece = this.dragPieceData;
 
         // Center of piece → grid position for top-left
         const centerOffsetX = (piece.cols * cs) / 2;
