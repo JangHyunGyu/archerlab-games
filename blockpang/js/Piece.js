@@ -305,7 +305,7 @@ class PieceTray {
     }
 
     getSlotGlobalCenter(index) {
-        if (this.slotPositions.length === 0) return { x: 0, y: 0 };
+        if (index < 0 || index >= this.slotPositions.length) return { x: 0, y: 0 };
         const local = this.slotPositions[index];
         return this.container.toGlobal(new PIXI.Point(local.x, local.y));
     }
