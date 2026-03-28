@@ -111,12 +111,12 @@ export class MenuScene extends Phaser.Scene {
         });
 
         // Hall of Fame button
-        const hofBtnY = isMobile ? GAME_HEIGHT * 0.72 : startBtnY + uv(70);
-        const hofBtn = this.add.rectangle(rightX, hofBtnY, uv(200), uv(40), 0x3a2a0a, 0.8)
+        const hofBtnY = isMobile ? GAME_HEIGHT * 0.72 : GAME_HEIGHT * 0.73;
+        const hofBtn = this.add.rectangle(centerX, hofBtnY, uv(200), uv(40), 0x3a2a0a, 0.8)
             .setStrokeStyle(2, 0xFFD600)
             .setInteractive({ useHandCursor: true });
 
-        this.add.text(rightX, hofBtnY, `🏆 ${t('hallOfFame')}`, {
+        this.add.text(centerX, hofBtnY, `🏆 ${t('hallOfFame')}`, {
             fontSize: fs(isMobile ? 16 : 14),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -142,14 +142,14 @@ export class MenuScene extends Phaser.Scene {
                 color: '#666688',
             }).setOrigin(0.5);
         } else {
-            this.add.text(rightX, hofBtnY + uv(50), t('controlsPC'), {
-                fontSize: fs(12),
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.80, t('controlsPC'), {
+                fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
 
-            this.add.text(rightX, hofBtnY + uv(70), t('controlsPC2'), {
-                fontSize: fs(12),
+            this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.84, t('controlsPC2'), {
+                fontSize: fs(14),
                 fontFamily: 'Arial, sans-serif',
                 color: '#666688',
             }).setOrigin(0.5);
@@ -164,7 +164,7 @@ export class MenuScene extends Phaser.Scene {
         this._createLanguageDropdown(isMobile);
 
         // Footer: contact + copyright
-        const footerY = GAME_HEIGHT * 0.93;
+        const footerY = isMobile ? GAME_HEIGHT * 0.93 : GAME_HEIGHT * 0.92;
         const contactBtn = this.add.text(GAME_WIDTH / 2, footerY, t('contact'), {
             fontSize: fs(isMobile ? 14 : 12),
             fontFamily: 'Arial, sans-serif',
