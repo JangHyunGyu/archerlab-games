@@ -33,12 +33,11 @@ export class MenuScene extends Phaser.Scene {
         const titleSize = isMobile ? 36 : 64;
         const subSize = isMobile ? 18 : 28;
 
-        // PC: 좌우 분할 레이아웃 / 모바일: 세로 중앙
-        const leftX = isMobile ? GAME_WIDTH / 2 : GAME_WIDTH * 0.35;
-        const rightX = isMobile ? GAME_WIDTH / 2 : GAME_WIDTH * 0.68;
+        const centerX = GAME_WIDTH / 2;
+        const titleY = isMobile ? GAME_HEIGHT * 0.18 : GAME_HEIGHT * 0.23;
 
         // Title glow
-        const titleGlow = this.add.text(leftX, GAME_HEIGHT * 0.18, t('title'), {
+        const titleGlow = this.add.text(centerX, titleY, t('title'), {
             fontSize: fs(titleSize),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -46,7 +45,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5).setAlpha(0.3).setScale(1.05);
 
         // Title
-        this.add.text(leftX, GAME_HEIGHT * 0.18, t('title'), {
+        this.add.text(centerX, titleY, t('title'), {
             fontSize: fs(titleSize),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -54,7 +53,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Subtitle
-        this.add.text(leftX, GAME_HEIGHT * 0.30, t('subtitle'), {
+        this.add.text(centerX, GAME_HEIGHT * 0.30, t('subtitle'), {
             fontSize: fs(subSize),
             fontFamily: 'Arial, sans-serif',
             letterSpacing: 8,
