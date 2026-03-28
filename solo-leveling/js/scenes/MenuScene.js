@@ -61,15 +61,15 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Shadow Monarch emblem
-        const emblemY = isMobile ? GAME_HEIGHT * 0.45 : GAME_HEIGHT * 0.55;
+        const emblemY = isMobile ? GAME_HEIGHT * 0.45 : GAME_HEIGHT * 0.5;
         const g = this.add.graphics();
         g.lineStyle(2, COLORS.SHADOW_PRIMARY, 0.6);
-        g.strokeCircle(leftX, emblemY, uv(60));
+        g.strokeCircle(centerX, emblemY, uv(60));
         g.lineStyle(1, COLORS.SHADOW_GLOW, 0.3);
-        g.strokeCircle(leftX, emblemY, uv(70));
+        g.strokeCircle(centerX, emblemY, uv(70));
 
         // "ARISE" text inside emblem
-        this.add.text(leftX, emblemY, 'ARISE', {
+        this.add.text(centerX, emblemY, 'ARISE', {
             fontSize: fs(20),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
@@ -77,12 +77,12 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Start button
-        const startBtnY = isMobile ? GAME_HEIGHT * 0.62 : GAME_HEIGHT * 0.38;
-        const startBtn = this.add.rectangle(rightX, startBtnY, uv(250), uv(55), 0x4a1a8a, 0.8)
+        const startBtnY = isMobile ? GAME_HEIGHT * 0.62 : GAME_HEIGHT * 0.65;
+        const startBtn = this.add.rectangle(centerX, startBtnY, uv(250), uv(55), 0x4a1a8a, 0.8)
             .setStrokeStyle(2, COLORS.SHADOW_GLOW)
             .setInteractive({ useHandCursor: true });
 
-        const startText = this.add.text(rightX, startBtnY, t('startGame'), {
+        const startText = this.add.text(centerX, startBtnY, t('startGame'), {
             fontSize: fs(24),
             fontFamily: 'Arial, sans-serif',
             fontStyle: 'bold',
