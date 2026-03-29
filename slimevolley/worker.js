@@ -25,6 +25,7 @@ export default {
 
         const url = new URL(request.url);
         const path = url.pathname;
+        try {
 
         // Health check + 디버그 정보
         if (path === '/' || path === '/health') {
@@ -109,8 +110,22 @@ export default {
         }
 
         return new Response('Not Found', { status: 404 });
+        } catch (e) {
+            logErrorToCentral('slimevolley-server', e.message || String(e), e.stack || '', url?.pathname || '');
+            return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+        }
     },
 };
+
+function logErrorToCentral(appId, message, stack, url) {
+    try {
+        fetch('https://chatbot-api.yama5993.workers.dev/error-logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ appId, message: (message || '').substring(0, 500), stack: (stack || '').substring(0, 2000), url: (url || '').substring(0, 500) }),
+        }).catch(() => {});
+    } catch (_) {}
+}
 
 // --- Durable Object: GameLobby (방 목록 관리) ---
 export class GameLobby {
