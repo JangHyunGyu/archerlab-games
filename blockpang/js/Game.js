@@ -636,9 +636,7 @@ class Game {
         try {
             const raw = localStorage.getItem('blockpang_save');
             if (!raw) return false;
-            const data = JSON.parse(raw);
-            // 7일 이상 된 세이브는 무시
-            if (Date.now() - data.ts > 7 * 24 * 60 * 60 * 1000) return false;
+            JSON.parse(raw);
             return true;
         } catch (_) { return false; }
     }
