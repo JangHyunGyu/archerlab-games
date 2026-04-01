@@ -163,6 +163,7 @@ const I18N = {
         rankSubmitted: '등록 완료!',
         yourRank: '순위',
         loading: '로딩 중...',
+        continueGame: '이어하기',
     },
     en: {
         gameStart: 'GAME START',
@@ -189,6 +190,7 @@ const I18N = {
         rankSubmitted: 'Submitted!',
         yourRank: 'Rank',
         loading: 'Loading...',
+        continueGame: 'CONTINUE',
     },
     ja: {
         gameStart: 'ゲームスタート',
@@ -215,6 +217,7 @@ const I18N = {
         rankSubmitted: '登録完了！',
         yourRank: '順位',
         loading: '読み込み中...',
+        continueGame: '続きから',
     },
 };
 
