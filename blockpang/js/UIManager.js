@@ -1353,8 +1353,12 @@ class UIManager {
     }
 
     async _fetchRankings(overlay, centerX, startY, panelX, panelW, maxHeight, loadingText) {
+        const requestUrl = `${GAME_API_URL}/rankings?game_id=${GAME_ID_BLOCKPANG}&limit=20`;
         try {
-            const resp = await fetch(`${GAME_API_URL}/rankings?game_id=${GAME_ID_BLOCKPANG}&limit=20`);
+            const resp = await fetch(requestUrl);
+            if (!resp.ok) {
+                throw new Error(`Ranking request failed: ${resp.status}`);
+            }
             const data = await resp.json();
 
             if (loadingText && !loadingText.destroyed) loadingText.visible = false;
@@ -1439,7 +1443,15 @@ class UIManager {
             });
 
         } catch (e) {
-            if (window._sendGameError) window._sendGameError('RankingError', e.message || String(e), e.stack || '', 'UIManager.js:showHallOfFame');
+            if (window._sendGameError) {
+                window._sendGameError(
+                    'RankingError',
+                    e.message || String(e),
+                    e.stack || '',
+                    'UIManager.js:showHallOfFame',
+                    this.game.getErrorMetadata('rankings-fetch', { requestUrl })
+                );
+            }
             if (loadingText && !loadingText.destroyed) {
                 loadingText.text = 'Error loading rankings';
                 loadingText.style.fill = 0xFF4444;

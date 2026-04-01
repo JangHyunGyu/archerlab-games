@@ -27,6 +27,7 @@
 
     // Create game
     const game = new Game(app);
+    window.__blockpangGame = game;
 
     // Handle resize
     let resizeTimer;
@@ -87,6 +88,89 @@
     var _errorCount = 0;
     var _session = Math.random().toString(36).substring(2, 8);
 
+    function _trimString(value, maxLength) {
+        return String(value || '').substring(0, maxLength);
+    }
+
+    function _normalizeExtra(extra) {
+        if (extra === undefined || extra === null) return null;
+        if (typeof extra === 'string') return { note: extra };
+        if (typeof extra === 'object') {
+            try {
+                return JSON.parse(JSON.stringify(extra));
+            } catch (_) {
+                return { note: String(extra) };
+            }
+        }
+        return { value: String(extra) };
+    }
+
+    function _countFilledCells(grid) {
+        if (!Array.isArray(grid)) return null;
+        var count = 0;
+        for (var r = 0; r < grid.length; r++) {
+            if (!Array.isArray(grid[r])) continue;
+            for (var c = 0; c < grid[r].length; c++) {
+                if (grid[r][c] !== -1) count++;
+            }
+        }
+        return count;
+    }
+
+    function _getGameSnapshot() {
+        try {
+            var game = window.__blockpangGame;
+            if (!game) return null;
+
+            var trayFilledSlots = 0;
+            if (game.tray && Array.isArray(game.tray.slots)) {
+                for (var i = 0; i < game.tray.slots.length; i++) {
+                    if (game.tray.slots[i]) trayFilledSlots++;
+                }
+            }
+
+            return {
+                state: game.state || '',
+                isAnimating: !!game.isAnimating,
+                isGameOver: !!game.isGameOver,
+                placementToken: typeof game._placementAnimationToken === 'number' ? game._placementAnimationToken : null,
+                pendingTimeouts: Array.isArray(game._pendingTimeouts) ? game._pendingTimeouts.length : 0,
+                filledCells: _countFilledCells(game.board && game.board.grid),
+                trayFilledSlots: trayFilledSlots,
+                score: game.scoreManager ? game.scoreManager.score : null,
+                level: game.scoreManager ? game.scoreManager.level : null,
+                combo: game.scoreManager ? game.scoreManager.combo : null,
+            };
+        } catch (_) {
+            return { snapshotError: true };
+        }
+    }
+
+    function _getContext() {
+        try {
+            return {
+                sessionId: _session,
+                path: location.pathname,
+                href: location.href,
+                referrer: document.referrer || 'direct',
+                online: navigator.onLine,
+                language: navigator.language || '',
+                visibility: document.visibilityState || (document.hidden ? 'hidden' : 'visible'),
+                viewport: {
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                },
+                capturedAt: new Date().toISOString(),
+                game: _getGameSnapshot(),
+            };
+        } catch (_) {
+            return {
+                sessionId: _session,
+                contextError: true,
+            };
+        }
+    }
+
     function _classifyError(msg, stack, src) {
         if (!msg) return 'noise';
         if (msg === 'Script error.' && !stack) return 'noise';
@@ -99,29 +183,54 @@
         return 'app';
     }
 
-    function _sendError(type, msg, stack, src) {
+    function _sendPayload(payload) {
+        var body = JSON.stringify(payload);
+        try {
+            if (navigator.sendBeacon && navigator.sendBeacon(ERROR_ENDPOINT, body)) {
+                return;
+            }
+        } catch (_) {}
+
+        try {
+            fetch(ERROR_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body,
+                keepalive: true,
+            });
+        } catch (_) {}
+    }
+
+    function _sendError(type, msg, stack, src, extra) {
         var errClass = _classifyError(msg, stack, src);
         if (!msg) return;
-        var key = msg + '|' + src;
+        var key = type + '|' + msg + '|' + src;
         if (key === _lastError) { _errorCount++; if (_errorCount > 5) return; }
         else { _lastError = key; _errorCount = 1; }
 
-        var ctx = 'sess:' + _session + ' | path:' + location.pathname + ' | online:' + navigator.onLine + ' | vw:' + innerWidth + 'x' + innerHeight;
+        var context = _getContext();
+        var extraData = _normalizeExtra(extra);
         var payload = {
             appId: APP_ID, userId: '',
             message: ('[' + errClass + ':' + type + '] ' + (msg || '')).substring(0, 500),
-            stack: (
-                '[ctx] ' + ctx +
-                '\n[src] ' + (src || 'N/A') +
-                '\n[ua] ' + navigator.userAgent.substring(0, 150) +
-                '\n[ref] ' + (document.referrer || 'direct') +
-                '\n[time] ' + new Date().toISOString() +
-                '\n[trace]\n' + (stack || 'no stack')
-            ).substring(0, 2000),
-            url: (src || location.href).substring(0, 500)
+            stack: [
+                '[ctx] ' + _trimString(JSON.stringify(context), 1500),
+                '[src] ' + (src || 'N/A'),
+                '[extra] ' + (extraData ? _trimString(JSON.stringify(extraData), 1200) : 'null'),
+                '[ua] ' + navigator.userAgent.substring(0, 300),
+                '[trace]',
+                stack || 'no stack'
+            ].join('\n').substring(0, 4000),
+            url: _trimString(location.href, 500),
+            source: _trimString(src || 'N/A', 500),
+            errorType: _trimString(type || 'Error', 100),
+            errorClass: _trimString(errClass, 50),
+            sessionId: _trimString(_session, 32),
+            context: context,
+            extra: extraData,
         };
 
-        try { navigator.sendBeacon(ERROR_ENDPOINT, JSON.stringify(payload)); } catch (_) {}
+        _sendPayload(payload);
     }
 
     // 게임 코드에서 호출 가능하도록 전역 노출
@@ -129,12 +238,20 @@
 
     window.addEventListener('error', function(e) {
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
-        _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src);
+        _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src, {
+            handler: 'window.error',
+            filename: e.filename || '',
+            line: e.lineno || 0,
+            column: e.colno || 0,
+        });
     });
 
     window.addEventListener('unhandledrejection', function(e) {
         var reason = e.reason;
         var msg = reason?.message || String(reason || 'Unhandled rejection');
-        _sendError('UnhandledRejection', msg, reason?.stack || '', location.href);
+        _sendError('UnhandledRejection', msg, reason?.stack || '', location.href, {
+            handler: 'window.unhandledrejection',
+            reasonType: reason?.name || typeof reason,
+        });
     });
 })();
