@@ -23,6 +23,14 @@ class SoundManager {
 
         // WAV audio pools
         this._wavPools = {};
+
+        // 탭 복귀 시 AudioContext 자동 복구
+        this._visibilityHandler = () => {
+            if (!document.hidden && this.enabled && this._initialized) {
+                this.ensureContext();
+            }
+        };
+        document.addEventListener('visibilitychange', this._visibilityHandler);
     }
 
     // ── WAV Audio Pool System ─────────────────────────────────────
@@ -44,7 +52,15 @@ class SoundManager {
         pool._index = (pool._index + 1) % pool.length;
         audio.volume = Math.max(0, Math.min(1, this.volume * volumeMultiplier * 0.5));
         audio.currentTime = 0;
-        audio.play().catch(() => {});
+        const p = audio.play();
+        if (p && p.catch) {
+            p.catch((e) => {
+                // NotAllowedError: 모바일에서 사용자 제스처 없이 재생 시도
+                if (e.name === 'NotAllowedError') {
+                    this._needsUserGesture = true;
+                }
+            });
+        }
     }
 
     // ── Initialization ──────────────────────────────────────────────
@@ -304,6 +320,10 @@ class SoundManager {
     ensureContext() {
         if (typeof Tone !== 'undefined') {
             Tone.start().catch(() => {});
+            // 모바일에서 AudioContext suspended 상태 복구
+            if (Tone.context && Tone.context.state === 'suspended') {
+                Tone.context.resume().catch(() => {});
+            }
         }
         if (!this._initialized) {
             this.init();
@@ -967,6 +987,9 @@ class SoundManager {
     // ── Toggle ──────────────────────────────────────────────────────
 
     destroy() {
+        if (this._visibilityHandler) {
+            document.removeEventListener('visibilitychange', this._visibilityHandler);
+        }
         this.stopAmbient();
         const synths = [this._membrane, this._bass, this._click, this._bell,
                         this._poly, this._fm, this._am, this._metal, this._sweep, this._noise];
