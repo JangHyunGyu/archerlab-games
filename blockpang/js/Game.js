@@ -597,7 +597,7 @@ class Game {
                     }, 500);
                 }
             } catch (e) {
-                console.error('LineClear effect error:', e);
+                if (window._sendGameError) window._sendGameError('LineClearError', e.message || String(e), e.stack || '', 'Game.js:_handleLineClear');
             }
 
             onComplete();
@@ -691,6 +691,7 @@ class Game {
             this.sound.startAmbient();
             this._checkGameOver();
         } catch (e) {
+            if (window._sendGameError) window._sendGameError('ResumeError', e.message || String(e), e.stack || '', 'Game.js:resumeGame');
             this._clearSave();
             this.newGame();
         }

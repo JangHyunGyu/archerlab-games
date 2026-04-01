@@ -1439,6 +1439,7 @@ class UIManager {
             });
 
         } catch (e) {
+            if (window._sendGameError) window._sendGameError('RankingError', e.message || String(e), e.stack || '', 'UIManager.js:showHallOfFame');
             if (loadingText && !loadingText.destroyed) {
                 loadingText.text = 'Error loading rankings';
                 loadingText.style.fill = 0xFF4444;

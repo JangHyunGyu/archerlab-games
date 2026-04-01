@@ -288,7 +288,7 @@ class SoundManager {
 
             this._initialized = true;
         } catch (e) {
-            console.error('SoundManager init failed:', e);
+            if (window._sendGameError) window._sendGameError('SoundInitError', e.message || String(e), e.stack || '', 'SoundManager.js:init');
             this._initialized = true; // Still allow WAV playback
         }
     }
@@ -391,7 +391,7 @@ class SoundManager {
     playClear(lineCount) {
         if (!this._canPlay()) return;
         this.ensureContext();
-        try { this._playClearInner(lineCount); } catch (e) { console.warn('playClear error:', e); }
+        try { this._playClearInner(lineCount); } catch (e) { if (window._sendGameError) window._sendGameError('SoundError', 'playClear: ' + (e.message || String(e)), '', 'SoundManager.js'); }
     }
 
     _playClearInner(lineCount) {
@@ -542,7 +542,7 @@ class SoundManager {
     playCombo(level) {
         if (!this._canPlay()) return;
         this.ensureContext();
-        try { this._playComboInner(level); } catch (e) { console.warn('playCombo error:', e); }
+        try { this._playComboInner(level); } catch (e) { if (window._sendGameError) window._sendGameError('SoundError', 'playCombo: ' + (e.message || String(e)), '', 'SoundManager.js'); }
     }
 
     _playComboInner(level) {
