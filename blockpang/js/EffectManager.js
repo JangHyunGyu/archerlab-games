@@ -115,7 +115,19 @@ class EffectManager {
                 if (removedTween && removedTween._flashCallback) {
                     try { removedTween._flashCallback(); } catch (_) {}
                 }
-                if (window._sendGameError) window._sendGameError('TweenError', e.message || String(e), e.stack || '', 'EffectManager.js');
+                if (window._sendGameError) {
+                    window._sendGameError(
+                        'TweenError',
+                        e.message || String(e),
+                        e.stack || '',
+                        'EffectManager.js',
+                        this.game.getErrorMetadata('effect-tween', {
+                            tweenIndex: i,
+                            hasFlashCallback: !!(removedTween && removedTween._flashCallback),
+                            isHintPulse: !!(removedTween && removedTween._isHintPulse),
+                        })
+                    );
+                }
             }
         }
 
