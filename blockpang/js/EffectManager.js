@@ -115,7 +115,7 @@ class EffectManager {
                 if (removedTween && removedTween._flashCallback) {
                     try { removedTween._flashCallback(); } catch (_) {}
                 }
-                console.warn('Tween error (removed):', e);
+                if (window._sendGameError) window._sendGameError('TweenError', e.message || String(e), e.stack || '', 'EffectManager.js');
             }
         }
 
