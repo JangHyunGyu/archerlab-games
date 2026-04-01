@@ -109,7 +109,13 @@ class EffectManager {
                     this.tweens.splice(i, 1);
                 }
             } catch (e) {
+                const removedTween = this.tweens[i];
                 this.tweens.splice(i, 1);
+                // Flash effect tween이 에러로 죽으면 콜백 보장
+                if (removedTween && removedTween._flashCallback) {
+                    try { removedTween._flashCallback(); } catch (_) {}
+                }
+                console.warn('Tween error (removed):', e);
             }
         }
 
@@ -428,18 +434,36 @@ class EffectManager {
     playFlashEffect(cellSprites, onComplete) {
         let completed = 0;
         const total = cellSprites.length;
-        if (total === 0) { onComplete && onComplete(); return; }
+        let callbackFired = false;
+        const fireCallback = () => {
+            if (callbackFired) return;
+            callbackFired = true;
+            if (onComplete) onComplete();
+        };
+
+        if (total === 0) { fireCallback(); return; }
 
         cellSprites.forEach((sprite, idx) => {
-            if (!sprite) { completed++; return; }
+            if (!sprite || sprite.destroyed) {
+                completed++;
+                if (completed >= total) fireCallback();
+                return;
+            }
             const origTint = sprite.tint;
             this.tweens.push({
                 elapsed: 0,
                 duration: 400,
                 delay: 0,
+                _flashCallback: fireCallback,
                 update(dt) {
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
+
+                    if (sprite.destroyed) {
+                        completed++;
+                        if (completed >= total) fireCallback();
+                        return true;
+                    }
 
                     // Phase 1: bright flash (0-0.3)
                     // Phase 2: pulse (0.3-0.7)
@@ -467,7 +491,7 @@ class EffectManager {
                         sprite.tint = origTint;
                         sprite.scale.set(1);
                         completed++;
-                        if (completed >= total && onComplete) onComplete();
+                        if (completed >= total) fireCallback();
                         return true;
                     }
                     return false;
