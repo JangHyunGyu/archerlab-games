@@ -50,14 +50,21 @@ class SoundManager {
         if (!pool || !this.enabled) return;
         const audio = pool[pool._index];
         pool._index = (pool._index + 1) % pool.length;
+        // 이전 재생 확실히 정리 (모바일 동시 재생 제한 대응)
+        if (!audio.paused) {
+            audio.pause();
+        }
         audio.volume = Math.max(0, Math.min(1, this.volume * volumeMultiplier * 0.5));
         audio.currentTime = 0;
         const p = audio.play();
         if (p && p.catch) {
             p.catch((e) => {
-                // NotAllowedError: 모바일에서 사용자 제스처 없이 재생 시도
                 if (e.name === 'NotAllowedError') {
                     this._needsUserGesture = true;
+                } else if (e.name === 'AbortError') {
+                    // 무시: pause 직후 play 호출 시 정상적으로 발생
+                } else {
+                    if (window._sendGameError) window._sendGameError('WavPlayError', name + ': ' + (e.message || String(e)), '', 'SoundManager.js:_playWav');
                 }
             });
         }
@@ -70,19 +77,19 @@ class SoundManager {
 
         // Load WAV audio pools
         const soundBase = 'sounds/';
-        this._createPool('block_break', soundBase + 'block_break.wav', 8);
-        this._createPool('glass_shatter', soundBase + 'glass_shatter.wav', 4);
-        this._createPool('combo_hit', soundBase + 'combo_hit.wav', 6);
-        this._createPool('combo_escalate', soundBase + 'combo_escalate.wav', 4);
-        this._createPool('clear_single', soundBase + 'clear_single.wav', 4);
-        this._createPool('clear_double', soundBase + 'clear_double.wav', 3);
-        this._createPool('clear_triple', soundBase + 'clear_triple.wav', 3);
+        this._createPool('block_break', soundBase + 'block_break.wav', 3);
+        this._createPool('glass_shatter', soundBase + 'glass_shatter.wav', 2);
+        this._createPool('combo_hit', soundBase + 'combo_hit.wav', 2);
+        this._createPool('combo_escalate', soundBase + 'combo_escalate.wav', 2);
+        this._createPool('clear_single', soundBase + 'clear_single.wav', 2);
+        this._createPool('clear_double', soundBase + 'clear_double.wav', 2);
+        this._createPool('clear_triple', soundBase + 'clear_triple.wav', 2);
         this._createPool('clear_quad', soundBase + 'clear_quad.wav', 2);
-        this._createPool('impact_heavy', soundBase + 'impact_heavy.wav', 6);
-        this._createPool('sparkle', soundBase + 'sparkle.wav', 6);
-        this._createPool('whoosh', soundBase + 'whoosh.wav', 4);
-        this._createPool('place', soundBase + 'place.wav', 6);
-        this._createPool('pickup', soundBase + 'pickup.wav', 6);
+        this._createPool('impact_heavy', soundBase + 'impact_heavy.wav', 2);
+        this._createPool('sparkle', soundBase + 'sparkle.wav', 2);
+        this._createPool('whoosh', soundBase + 'whoosh.wav', 2);
+        this._createPool('place', soundBase + 'place.wav', 2);
+        this._createPool('pickup', soundBase + 'pickup.wav', 2);
 
         if (typeof Tone === 'undefined') {
             console.warn('SoundManager: Tone.js not loaded, using WAV-only mode.');
