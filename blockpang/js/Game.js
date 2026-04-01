@@ -70,7 +70,7 @@ class Game {
     }
 
     // ── Start game from title screen ──
-    startGame() {
+    startGame(resume = false) {
         this._clearPendingTimeouts();
         this.state = 'playing';
         const alLink = document.getElementById('archerlab-link');
@@ -103,7 +103,12 @@ class Game {
                 }
             });
 
-            this.newGame();
+            if (resume) {
+                this.resumeGame();
+            } else {
+                this._clearSave();
+                this.newGame();
+            }
         });
     }
 
@@ -455,6 +460,7 @@ class Game {
                     this._checkGameOver();
                 }
                 this.isAnimating = false;
+                this._autoSave();
             });
         }, 120);
     }
@@ -598,6 +604,100 @@ class Game {
         });
     }
 
+    // ── Auto-Save / Resume ──
+
+    _autoSave() {
+        try {
+            const data = {
+                grid: this.board.grid.map(row => [...row]),
+                slots: this.tray.slots.map(s => s ? {
+                    shape: s.shape,
+                    colorIndex: s.colorIndex,
+                    rows: s.rows,
+                    cols: s.cols,
+                    cellCount: s.cellCount,
+                } : null),
+                score: this.scoreManager.score,
+                combo: this.scoreManager.combo,
+                level: this.scoreManager.level,
+                linesCleared: this.scoreManager.linesCleared,
+                totalLinesForLevel: this.scoreManager.totalLinesForLevel,
+                ts: Date.now(),
+            };
+            localStorage.setItem('blockpang_save', JSON.stringify(data));
+        } catch (_) {}
+    }
+
+    _clearSave() {
+        localStorage.removeItem('blockpang_save');
+    }
+
+    static hasSavedGame() {
+        try {
+            const raw = localStorage.getItem('blockpang_save');
+            if (!raw) return false;
+            const data = JSON.parse(raw);
+            // 7일 이상 된 세이브는 무시
+            if (Date.now() - data.ts > 7 * 24 * 60 * 60 * 1000) return false;
+            return true;
+        } catch (_) { return false; }
+    }
+
+    static getSavedScore() {
+        try {
+            const data = JSON.parse(localStorage.getItem('blockpang_save'));
+            return data?.score || 0;
+        } catch (_) { return 0; }
+    }
+
+    resumeGame() {
+        try {
+            const raw = localStorage.getItem('blockpang_save');
+            if (!raw) { this.newGame(); return; }
+            const data = JSON.parse(raw);
+
+            this._clearPendingTimeouts();
+            this.effects.trimPool();
+            this.state = 'playing';
+            this.isGameOver = false;
+            this.isAnimating = false;
+
+            // Restore board
+            this.board.clearAll();
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const colorIdx = data.grid[r][c];
+                    this.board.grid[r][c] = colorIdx;
+                    if (colorIdx >= 0) {
+                        const sprite = this.board.cellSprites[r][c];
+                        sprite.texture = this.board.cellTextures[colorIdx];
+                        sprite.visible = true;
+                        sprite.alpha = 1;
+                    }
+                }
+            }
+
+            // Restore score
+            this.scoreManager.score = data.score;
+            this.scoreManager.combo = data.combo;
+            this.scoreManager.level = data.level;
+            this.scoreManager.linesCleared = data.linesCleared;
+            this.scoreManager.totalLinesForLevel = data.totalLinesForLevel;
+
+            this.ui.updateScore(data.score, this.scoreManager.bestScore);
+            this.ui.updateLevel(data.level, this.scoreManager.levelProgress);
+
+            // Restore tray pieces
+            this.tray.setPieces(data.slots.map(s => s || null));
+
+            this.sound.startAmbient();
+            this._checkGameOver();
+        } catch (e) {
+            this._clearSave();
+            this.newGame();
+        }
+    }
+
     _checkGameOver() {
         const pieces = this.tray.slots;
         for (let i = 0; i < 3; i++) {
@@ -608,6 +708,7 @@ class Game {
         this.state = 'gameover';
         this.isGameOver = true;
         this.scoreManager.finalize();
+        this._clearSave();
         this.sound.stopAmbient();
         this.sound.playGameOver();
 

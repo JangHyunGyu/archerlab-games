@@ -430,12 +430,68 @@ class UIManager {
             container.addChild(bestText);
         }
 
-        // ── "Game Start" Button ──
+        // ── "Continue" Button (if saved game exists) ──
+        const hasSave = Game.hasSavedGame();
         const btnW = Math.min(w * 0.65, 280);
         const btnH = Math.min(54, h * 0.075);
-        const startBtnY = h * 0.46;
+        const startBtnY = hasSave ? h * 0.52 : h * 0.46;
         const btnX = centerX - btnW / 2;
 
+        this._activeButtons = [];
+
+        if (hasSave) {
+            const savedScore = Game.getSavedScore();
+            const resumeBtnY = h * 0.42;
+            const resumeBtn = new PIXI.Graphics();
+            // Glow
+            resumeBtn.roundRect(btnX - 6, resumeBtnY - 6, btnW + 12, btnH + 12, 16).fill({ color: 0x76FF03, alpha: 0.1 });
+            // Body
+            resumeBtn.roundRect(btnX, resumeBtnY, btnW, btnH, 12).fill({ color: 0x76FF03 });
+            // Highlight
+            resumeBtn.roundRect(btnX + 2, resumeBtnY + 2, btnW - 4, btnH * 0.4, 10).fill({ color: 0xBBFF77, alpha: 0.4 });
+
+            resumeBtn.eventMode = 'static';
+            resumeBtn.cursor = 'pointer';
+            resumeBtn.hitArea = new PIXI.Rectangle(btnX - 10, resumeBtnY - 10, btnW + 20, btnH + 20);
+            resumeBtn.on('pointerover', () => { resumeBtn.tint = 0xDDFFDD; });
+            resumeBtn.on('pointerout', () => { resumeBtn.tint = 0xFFFFFF; });
+            let resumeTriggered = false;
+            const doResume = () => {
+                if (resumeTriggered) return;
+                resumeTriggered = true;
+                this.game.sound.ensureContext();
+                this.game.startGame(true);
+            };
+            resumeBtn.on('pointerdown', doResume);
+            resumeBtn.on('pointertap', doResume);
+            container.addChild(resumeBtn);
+
+            this._activeButtons.push({
+                x: btnX - 10, y: resumeBtnY - 10,
+                w: btnW + 20, h: btnH + 20,
+                action: doResume
+            });
+
+            const resumeLabel = savedScore > 0
+                ? `▶ ${getText('continueGame')}  (${savedScore.toLocaleString()})`
+                : `▶ ${getText('continueGame')}`;
+            const resumeBtnText = new PIXI.Text({
+                text: resumeLabel,
+                style: {
+                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                    fontSize: Math.min(18, w * 0.045) * sc,
+                    fill: 0x000000,
+                    fontWeight: '700',
+                    letterSpacing: 2,
+                },
+            });
+            resumeBtnText.anchor.set(0.5, 0.5);
+            resumeBtnText.position.set(centerX, resumeBtnY + btnH / 2);
+            resumeBtnText.eventMode = 'none';
+            resumeBtn.addChild(resumeBtnText);
+        }
+
+        // ── "Game Start" Button ──
         const startBtn = new PIXI.Graphics();
         // Glow
         startBtn.roundRect(btnX - 6, startBtnY - 6, btnW + 12, btnH + 12, 16).fill({ color: 0x00E5FF, alpha: 0.1 });
@@ -454,18 +510,17 @@ class UIManager {
             if (startTriggered) return;
             startTriggered = true;
             this.game.sound.ensureContext();
-            this.game.startGame();
+            this.game.startGame(false);
         };
         startBtn.on('pointerdown', doStart);
         startBtn.on('pointertap', doStart);
         container.addChild(startBtn);
 
-        // Register DOM fallback hit area
-        this._activeButtons = [{
+        this._activeButtons.push({
             x: btnX - 10, y: startBtnY - 10,
             w: btnW + 20, h: btnH + 20,
             action: doStart
-        }];
+        });
 
         const startBtnText = new PIXI.Text({
             text: getText('gameStart'),
@@ -485,7 +540,7 @@ class UIManager {
         // ── Bottom Button Row ──
         const smallBtnH = Math.min(38, h * 0.055);
         const gap = 8;
-        const bottomY = h * 0.62;
+        const bottomY = hasSave ? h * 0.67 : h * 0.62;
 
         const createSmallBtn = (label, color, action) => {
             const bw = Math.min((w - gap * 4) / 3, 110);
