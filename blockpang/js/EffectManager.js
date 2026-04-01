@@ -459,7 +459,7 @@ class EffectManager {
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
 
-                    if (sprite.destroyed) {
+                    if (!sprite || sprite.destroyed) {
                         completed++;
                         if (completed >= total) fireCallback();
                         return true;
