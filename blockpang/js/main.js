@@ -124,6 +124,9 @@
         try { navigator.sendBeacon(ERROR_ENDPOINT, JSON.stringify(payload)); } catch (_) {}
     }
 
+    // 게임 코드에서 호출 가능하도록 전역 노출
+    window._sendGameError = _sendError;
+
     window.addEventListener('error', function(e) {
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
         _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src);

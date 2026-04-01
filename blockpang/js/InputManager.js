@@ -23,6 +23,7 @@ class InputManager {
         game.app.stage.on('pointermove', this.onPointerMove.bind(this));
         game.app.stage.on('pointerup', this.onPointerUp.bind(this));
         game.app.stage.on('pointerupoutside', this.onPointerUp.bind(this));
+        game.app.stage.on('pointercancel', this.onPointerCancel.bind(this));
     }
 
     startDrag(slotIndex, event) {
@@ -177,6 +178,14 @@ class InputManager {
                 maxLife: 500,
             });
         }
+    }
+
+    onPointerCancel(event) {
+        if (!this.dragging) return;
+        if (window._sendGameError) window._sendGameError('PointerCancel', 'drag cancelled by browser', '', 'InputManager.js');
+        // 모바일에서 터치 취소 (알림, 제스처 등) — 원래 슬롯으로 복귀
+        this.game.board.clearGhost();
+        this._snapBack();
     }
 
     onPointerUp(event) {

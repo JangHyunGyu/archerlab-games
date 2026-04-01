@@ -421,7 +421,7 @@ class Game {
         // Safety: isAnimating 고착 방지 (최대 3초 후 자동 복구)
         this._scheduleTimeout(() => {
             if (this.isAnimating && this.state === 'playing') {
-                console.warn('isAnimating stuck — auto-recovering');
+                if (window._sendGameError) window._sendGameError('GameStuck', 'isAnimating stuck — auto-recovering', '', 'Game.js:placePiece');
                 this.isAnimating = false;
                 if (this.tray.allPlaced()) {
                     this.generatePieces();
