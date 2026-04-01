@@ -418,6 +418,19 @@ class Game {
 
         this.isAnimating = true;
 
+        // Safety: isAnimating 고착 방지 (최대 3초 후 자동 복구)
+        this._scheduleTimeout(() => {
+            if (this.isAnimating && this.state === 'playing') {
+                console.warn('isAnimating stuck — auto-recovering');
+                this.isAnimating = false;
+                if (this.tray.allPlaced()) {
+                    this.generatePieces();
+                } else {
+                    this._checkGameOver();
+                }
+            }
+        }, 3000);
+
         const result = this.board.place(piece.shape, gridX, gridY, piece.colorIndex);
         this.tray.removePiece(slotIndex);
 
