@@ -32,6 +32,9 @@ class InputManager {
         const piece = this.game.tray.slots[slotIndex];
         if (!piece) return;
 
+        // 유저 제스처 시점에 AudioContext 복구 (모바일 소리 끊김 방지)
+        this.game.sound.ensureContext();
+
         this.dragging = true;
         this.dragPieceIndex = slotIndex;
         this.dragPieceData = piece;
