@@ -295,6 +295,15 @@ class InputManager {
             elapsed: 0,
             duration: 300,
             update(dt) {
+                if (container.destroyed) {
+                    if (glow && !glow.destroyed) glow.destroy();
+                    tray.showPiece(slotIdx);
+                    self.dragPieceIndex = -1;
+                    self.dragPieceData = null;
+                    self.dragContainer = null;
+                    self.dragGlow = null;
+                    return true;
+                }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 const e = easeOutCubic(t);
@@ -302,7 +311,7 @@ class InputManager {
                 container.y = startY + (target.y - startY) * e;
                 container.alpha = 1 - t * 0.6;
                 container.scale.set(1 - t * 0.4);
-                if (glow) {
+                if (glow && !glow.destroyed) {
                     glow.x = container.x;
                     glow.y = container.y;
                     glow.alpha = 1 - t;
@@ -310,7 +319,7 @@ class InputManager {
 
                 if (t >= 1) {
                     container.destroy({ children: true });
-                    if (glow) glow.destroy();
+                    if (glow && !glow.destroyed) glow.destroy();
                     tray.showPiece(slotIdx);
                     self.dragPieceIndex = -1;
                     self.dragPieceData = null;

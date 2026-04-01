@@ -418,6 +418,7 @@ class EffectManager {
                 duration: 350,
                 delay: idx * 20,
                 update(dt) {
+                    if (!sprite || sprite.destroyed) return true;
                     if (this.delay > 0) { this.delay -= dt; return false; }
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
@@ -520,6 +521,7 @@ class EffectManager {
                 duration: 300,
                 delay: ri * 60,
                 update(dt) {
+                    if (g.destroyed) return true;
                     if (this.delay > 0) { this.delay -= dt; return false; }
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
@@ -545,6 +547,7 @@ class EffectManager {
                 duration: 300,
                 delay: ci * 60,
                 update(dt) {
+                    if (g.destroyed) return true;
                     if (this.delay > 0) { this.delay -= dt; return false; }
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
@@ -594,6 +597,7 @@ class EffectManager {
             elapsed: 0,
             duration: 1100,
             update(dt) {
+                if (txt.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -729,6 +733,8 @@ class EffectManager {
             elapsed: 0,
             duration,
             update(dt) {
+                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); return true; }
+                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -852,6 +858,8 @@ class EffectManager {
             elapsed: 0,
             duration,
             update(dt) {
+                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); return true; }
+                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -923,6 +931,7 @@ class EffectManager {
             elapsed: 0,
             duration,
             update(dt) {
+                if (flash.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 flash.alpha = (1 - easeOutCubic(t));
@@ -947,6 +956,7 @@ class EffectManager {
             elapsed: 0,
             duration,
             update(dt) {
+                if (flash.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -979,6 +989,7 @@ class EffectManager {
             elapsed: 0,
             duration,
             update(dt) {
+                if (zc.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 const scale = 1 + intensity * Math.sin(t * Math.PI) * (1 - t);
@@ -1010,6 +1021,7 @@ class EffectManager {
                 duration: 500 + Math.random() * 200,
                 delay: i * 20,
                 update(dt) {
+                    if (ray.destroyed) return true;
                     if (this.delay > 0) { this.delay -= dt; return false; }
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
@@ -1041,6 +1053,7 @@ class EffectManager {
                 duration: 500 + r * 80,
                 delay: r * 80,
                 update(dt) {
+                    if (wave.destroyed) return true;
                     if (this.delay > 0) { this.delay -= dt; return false; }
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
@@ -1105,6 +1118,7 @@ class EffectManager {
             elapsed: 0,
             duration: 600,
             update(dt) {
+                if (flash.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 flash.alpha = (1 - t) * 0.5;
@@ -1146,6 +1160,7 @@ class EffectManager {
             elapsed: 0,
             duration: 2000,
             update(dt) {
+                if (txt.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1223,6 +1238,7 @@ class EffectManager {
             elapsed: 0,
             duration: 600,
             update(dt) {
+                if (shimmer.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 shimmer.x = boardPos.x - 30 + easeOutQuart(t) * (boardTotal + 60);
@@ -1254,6 +1270,7 @@ class EffectManager {
             elapsed: 0,
             duration: 2500,
             update(dt) {
+                if (txt.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1296,6 +1313,7 @@ class EffectManager {
                 duration: 450 + r * 100,
                 delay: delayMs,
                 update(dt) {
+                    if (ring.destroyed) return true;
                     if (this.delay > 0) { this.delay -= dt; return false; }
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
@@ -1325,6 +1343,7 @@ class EffectManager {
             elapsed: 0,
             duration: 200,
             update(dt) {
+                if (flash.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 flash.scale.set(1 + easeOutCubic(t) * 1.5);
@@ -1417,6 +1436,7 @@ class EffectManager {
             elapsed: 0,
             duration: 650,
             update(dt) {
+                if (wave.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 const radius = easeOutQuart(t) * maxRadius;
@@ -1445,6 +1465,7 @@ class EffectManager {
                 duration: 450,
                 delay: 50,
                 update(dt) {
+                    if (wave2.destroyed) return true;
                     if (this.delay > 0) { this.delay -= dt; return false; }
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
@@ -1510,6 +1531,7 @@ class EffectManager {
             elapsed: 0,
             duration: 1500,
             update(dt) {
+                if (txt.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
