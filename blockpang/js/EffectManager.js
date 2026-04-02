@@ -444,6 +444,9 @@ class EffectManager {
 
         if (total === 0) { fireCallback(); return; }
 
+        // Safety: rAF가 throttle/pause되는 인앱 브라우저 대비 fallback
+        setTimeout(fireCallback, 600);
+
         cellSprites.forEach((sprite, idx) => {
             if (!sprite || sprite.destroyed) {
                 completed++;
