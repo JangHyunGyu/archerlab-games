@@ -185,7 +185,18 @@ class InputManager {
 
     onPointerCancel(event) {
         if (!this.dragging) return;
-        if (window._sendGameError) window._sendGameError('PointerCancel', 'drag cancelled by browser', '', 'InputManager.js');
+        if (window._sendGameError) {
+            window._sendGameError(
+                'PointerCancel',
+                'drag cancelled by browser',
+                '',
+                'InputManager.js',
+                this.game.getErrorMetadata('pointer-cancel', {
+                    pointerType: event && event.pointerType ? event.pointerType : '',
+                    dragPieceIndex: this.dragPieceIndex,
+                })
+            );
+        }
         // 모바일에서 터치 취소 (알림, 제스처 등) — 원래 슬롯으로 복귀
         this.game.board.clearGhost();
         this._snapBack();

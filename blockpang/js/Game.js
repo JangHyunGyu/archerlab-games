@@ -6,6 +6,8 @@ class Game {
         this.isAnimating = false;
         this.state = 'title'; // 'title' | 'playing' | 'gameover'
         this._pendingTimeouts = [];
+        this._placementAnimationToken = 0;
+        this._placementSafetyTimeoutId = null;
 
         // ── Containers (render order) ──
         this.zoomContainer = new PIXI.Container();
@@ -127,14 +129,116 @@ class Game {
     }
 
     _scheduleTimeout(fn, delay) {
-        const id = setTimeout(fn, delay);
+        let id = null;
+        id = setTimeout(() => {
+            this._pendingTimeouts = this._pendingTimeouts.filter(timeoutId => timeoutId !== id);
+            fn();
+        }, delay);
         this._pendingTimeouts.push(id);
         return id;
+    }
+
+    _cancelTimeout(id) {
+        if (id == null) return;
+        clearTimeout(id);
+        this._pendingTimeouts = this._pendingTimeouts.filter(timeoutId => timeoutId !== id);
     }
 
     _clearPendingTimeouts() {
         this._pendingTimeouts.forEach(id => clearTimeout(id));
         this._pendingTimeouts = [];
+        this._placementSafetyTimeoutId = null;
+    }
+
+    _getBoardFilledCellCount() {
+        if (!this.board || !Array.isArray(this.board.grid)) return null;
+        let count = 0;
+        for (let r = 0; r < this.board.grid.length; r++) {
+            const row = this.board.grid[r];
+            if (!Array.isArray(row)) continue;
+            for (let c = 0; c < row.length; c++) {
+                if (row[c] !== -1) count++;
+            }
+        }
+        return count;
+    }
+
+    getErrorMetadata(scope, extra = {}) {
+        const trayFilledSlots = this.tray && Array.isArray(this.tray.slots)
+            ? this.tray.slots.filter(Boolean).length
+            : null;
+
+        return {
+            scope,
+            state: this.state,
+            isAnimating: this.isAnimating,
+            isGameOver: this.isGameOver,
+            placementToken: this._placementAnimationToken,
+            pendingTimeouts: this._pendingTimeouts.length,
+            filledCells: this._getBoardFilledCellCount(),
+            trayFilledSlots,
+            score: this.scoreManager ? this.scoreManager.score : null,
+            level: this.scoreManager ? this.scoreManager.level : null,
+            combo: this.scoreManager ? this.scoreManager.combo : null,
+            screen: this.app && this.app.screen
+                ? { width: this.app.screen.width, height: this.app.screen.height }
+                : null,
+            extra,
+        };
+    }
+
+    _isCurrentPlacementAnimation(token) {
+        return this.isAnimating && token === this._placementAnimationToken;
+    }
+
+    _finishPlacementAnimation(token) {
+        if (token !== this._placementAnimationToken) return false;
+        this._cancelTimeout(this._placementSafetyTimeoutId);
+        this._placementSafetyTimeoutId = null;
+        this.isAnimating = false;
+        return true;
+    }
+
+    _armPlacementSafetyTimeout(token, delay = 3000) {
+        this._cancelTimeout(this._placementSafetyTimeoutId);
+        this._placementSafetyTimeoutId = this._scheduleTimeout(() => {
+            if (!this._isCurrentPlacementAnimation(token) || this.state !== 'playing') return;
+
+            if (document.hidden) {
+                this._armPlacementSafetyTimeout(token, 1000);
+                return;
+            }
+
+            if (window._sendGameError) {
+                window._sendGameError(
+                    'GameStuck',
+                    'isAnimating stuck — auto-recovering',
+                    '',
+                    'Game.js:placePiece',
+                    this.getErrorMetadata('placement-safety-timeout', {
+                        token,
+                        delayMs: delay,
+                        documentHidden: !!document.hidden,
+                        trayAllPlaced: this.tray.allPlaced(),
+                    })
+                );
+            }
+
+            if (this.tray.allPlaced()) {
+                this.generatePieces();
+            } else {
+                this._checkGameOver();
+            }
+
+            this._finishPlacementAnimation(token);
+        }, delay);
+    }
+
+    _beginPlacementAnimation() {
+        const token = ++this._placementAnimationToken;
+        this.isAnimating = true;
+        this._armPlacementSafetyTimeout(token);
+        return token;
     }
 
     _createBackground() {
@@ -421,20 +525,7 @@ class Game {
         const piece = this.tray.slots[slotIndex];
         if (!piece) return;
 
-        this.isAnimating = true;
-
-        // Safety: isAnimating 고착 방지 (최대 3초 후 자동 복구)
-        this._scheduleTimeout(() => {
-            if (this.isAnimating && this.state === 'playing') {
-                if (window._sendGameError) window._sendGameError('GameStuck', 'isAnimating stuck — auto-recovering', '', 'Game.js:placePiece');
-                this.isAnimating = false;
-                if (this.tray.allPlaced()) {
-                    this.generatePieces();
-                } else {
-                    this._checkGameOver();
-                }
-            }
-        }, 3000);
+        const animationToken = this._beginPlacementAnimation();
 
         const result = this.board.place(piece.shape, gridX, gridY, piece.colorIndex);
         this.tray.removePiece(slotIndex);
@@ -450,7 +541,11 @@ class Game {
         this.effects.playRingBurst(cx, cy, BLOCK_COLORS[piece.colorIndex].glow);
 
         this._scheduleTimeout(() => {
+            if (!this._isCurrentPlacementAnimation(animationToken)) return;
+
             this._handleLineClear(() => {
+                if (!this._isCurrentPlacementAnimation(animationToken)) return;
+
                 this.ui.updateScore(this.scoreManager.score, this.scoreManager.bestScore);
                 this.ui.updateLevel(this.scoreManager.level, this.scoreManager.levelProgress);
 
@@ -459,7 +554,8 @@ class Game {
                 } else {
                     this._checkGameOver();
                 }
-                this.isAnimating = false;
+
+                this._finishPlacementAnimation(animationToken);
                 this._autoSave();
             });
         }, 120);
@@ -597,7 +693,20 @@ class Game {
                     }, 500);
                 }
             } catch (e) {
-                if (window._sendGameError) window._sendGameError('LineClearError', e.message || String(e), e.stack || '', 'Game.js:_handleLineClear');
+                if (window._sendGameError) {
+                    window._sendGameError(
+                        'LineClearError',
+                        e.message || String(e),
+                        e.stack || '',
+                        'Game.js:_handleLineClear',
+                        this.getErrorMetadata('line-clear', {
+                            lines: clearResult.lines,
+                            clearedCells: clearResult.cells.length,
+                            rows: clearResult.rows || [],
+                            cols: clearResult.cols || [],
+                        })
+                    );
+                }
             }
 
             onComplete();
@@ -649,8 +758,9 @@ class Game {
     }
 
     resumeGame() {
+        let raw = null;
         try {
-            const raw = localStorage.getItem('blockpang_save');
+            raw = localStorage.getItem('blockpang_save');
             if (!raw) { this.newGame(); return; }
             const data = JSON.parse(raw);
 
@@ -691,7 +801,18 @@ class Game {
             this.sound.startAmbient();
             this._checkGameOver();
         } catch (e) {
-            if (window._sendGameError) window._sendGameError('ResumeError', e.message || String(e), e.stack || '', 'Game.js:resumeGame');
+            if (window._sendGameError) {
+                window._sendGameError(
+                    'ResumeError',
+                    e.message || String(e),
+                    e.stack || '',
+                    'Game.js:resumeGame',
+                    this.getErrorMetadata('resume-game', {
+                        hasSavedData: !!raw,
+                        savedDataLength: raw ? raw.length : 0,
+                    })
+                );
+            }
             this._clearSave();
             this.newGame();
         }

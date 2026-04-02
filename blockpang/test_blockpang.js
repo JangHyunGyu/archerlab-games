@@ -6,6 +6,13 @@
 // ── 브라우저 전역 변수 모킹 ──
 global.localStorage = { _data: {}, getItem(k) { return this._data[k] || null; }, setItem(k, v) { this._data[k] = v; } };
 global.navigator = { language: 'ko' };
+global.window = { _sendGameError: null };
+global.document = {
+    hidden: false,
+    getElementById() { return null; },
+    addEventListener() {},
+    removeEventListener() {},
+};
 
 // ── 소스 로드 (vm 모듈로 전역 컨텍스트에 주입) ──
 const fs = require('fs');
@@ -21,6 +28,7 @@ function loadIntoGlobal(filePath) {
 
 loadIntoGlobal(path.join(jsDir, 'constants.js'));
 loadIntoGlobal(path.join(jsDir, 'ScoreManager.js'));
+loadIntoGlobal(path.join(jsDir, 'Game.js'));
 
 // Piece.js에서 generateRandomPiece 함수만 추출
 {
@@ -502,6 +510,109 @@ test('시뮬레이션: 레벨 4에서 대형 피스가 나와야 한다', () => 
     }
     assert(bigPieceCount > 0, '레벨 4에서 5셀 이상 피스가 한 번도 안 나옴');
     console.log(`     → 1000회 중 5셀+ 피스 ${bigPieceCount}개`);
+});
+
+// ══════════════════════════════════════
+// 6. 배치 애니메이션 안전 타이머 회귀 검증
+// ══════════════════════════════════════
+console.log('\n⏱️  [6] 배치 안전 타이머 회귀 검증');
+
+function createPlacementAnimationHarness() {
+    const game = Object.create(Game.prototype);
+    const scheduled = new Map();
+    let nextId = 1;
+    let errorCount = 0;
+    let gameOverChecks = 0;
+    let generatedPieces = 0;
+
+    game.state = 'playing';
+    game.isAnimating = false;
+    game._pendingTimeouts = [];
+    game._placementAnimationToken = 0;
+    game._placementSafetyTimeoutId = null;
+    game.tray = { allPlaced: () => false };
+    game._checkGameOver = () => { gameOverChecks++; };
+    game.generatePieces = () => { generatedPieces++; };
+    game._scheduleTimeout = function(fn) {
+        const id = nextId++;
+        scheduled.set(id, fn);
+        this._pendingTimeouts.push(id);
+        return id;
+    };
+    game._cancelTimeout = function(id) {
+        if (id == null) return;
+        scheduled.delete(id);
+        this._pendingTimeouts = this._pendingTimeouts.filter(timeoutId => timeoutId !== id);
+    };
+
+    const prevSender = global.window._sendGameError;
+    global.window._sendGameError = () => { errorCount++; };
+
+    return {
+        game,
+        scheduled,
+        getErrorCount: () => errorCount,
+        getGameOverChecks: () => gameOverChecks,
+        getGeneratedPieces: () => generatedPieces,
+        restore() {
+            global.window._sendGameError = prevSender;
+            global.document.hidden = false;
+        },
+    };
+}
+
+test('이전 수의 safety 타이머는 현재 애니메이션을 끊지 않아야 한다', () => {
+    const harness = createPlacementAnimationHarness();
+    const { game, scheduled } = harness;
+
+    const firstToken = game._beginPlacementAnimation();
+    const firstSafetyId = game._placementSafetyTimeoutId;
+    const firstSafetyCallback = scheduled.get(firstSafetyId);
+
+    assert(firstSafetyCallback, '첫 safety 콜백이 등록되지 않음');
+    game._finishPlacementAnimation(firstToken);
+
+    const secondToken = game._beginPlacementAnimation();
+    assert(game.isAnimating, '두 번째 애니메이션이 시작되지 않음');
+
+    firstSafetyCallback();
+
+    assert(game.isAnimating, '이전 safety 타이머가 현재 애니메이션을 중단함');
+    assertEqual(game._placementAnimationToken, secondToken, '현재 토큰이 바뀜');
+    assertEqual(harness.getErrorCount(), 0, '오탐 에러 로그가 발생함');
+    assertEqual(harness.getGameOverChecks(), 0, '오래된 safety 타이머가 게임오버 체크를 실행함');
+    assertEqual(harness.getGeneratedPieces(), 0, '오래된 safety 타이머가 새 피스를 생성함');
+
+    harness.restore();
+});
+
+test('숨김 탭에서는 safety 타이머가 유예되고, 다시 보이면 복구를 수행해야 한다', () => {
+    const harness = createPlacementAnimationHarness();
+    const { game, scheduled } = harness;
+
+    const token = game._beginPlacementAnimation();
+    const initialSafetyId = game._placementSafetyTimeoutId;
+    const initialSafetyCallback = scheduled.get(initialSafetyId);
+
+    global.document.hidden = true;
+    initialSafetyCallback();
+
+    assert(game.isAnimating, '숨김 탭에서 애니메이션이 조기 종료됨');
+    assertEqual(harness.getErrorCount(), 0, '숨김 탭에서 에러 로그가 발생함');
+    assert(game._placementSafetyTimeoutId !== initialSafetyId, '숨김 탭 유예용 타이머가 다시 등록되지 않음');
+
+    const deferredSafetyCallback = scheduled.get(game._placementSafetyTimeoutId);
+    assert(deferredSafetyCallback, '유예된 safety 콜백이 없음');
+
+    global.document.hidden = false;
+    deferredSafetyCallback();
+
+    assert(!game.isAnimating, '가시 탭 복구 후에도 애니메이션이 끝나지 않음');
+    assertEqual(harness.getErrorCount(), 1, '가시 탭 복구 시 에러 로그가 한 번 남아야 함');
+    assertEqual(harness.getGameOverChecks(), 1, '복구 시 게임오버 체크가 실행되어야 함');
+    assertEqual(game._placementAnimationToken, token, '현재 토큰이 예상과 다름');
+
+    harness.restore();
 });
 
 // ══════════════════════════════════════
