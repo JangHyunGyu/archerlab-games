@@ -1,11 +1,11 @@
 import { WeaponBase } from './WeaponBase.js';
-import { WEAPONS, COLORS } from '../utils/Constants.js';
+import { WEAPONS } from '../utils/Constants.js';
 
 export class ShadowDagger extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, WEAPONS.shadowDagger);
-        this._activeDaggers = []; // 비행 중 단검 추적 (씬 종료 시 정리용)
-        this._trailPool = []; // Pool for trail circle objects
+        this._activeDaggers = [];
+        this._trailPool = [];
     }
 
     _getTrailCircle(x, y) {
@@ -48,68 +48,96 @@ export class ShadowDagger extends WeaponBase {
         const range = 1500;
         const endX = px + Math.cos(angle) * range;
         const endY = py + Math.sin(angle) * range;
-        const duration = 2500; // 600px/s * 2.5s = 1500px
+        const duration = 2500;
         const dmg = this.getDamage();
 
-        // 단검 스프라이트 생성 (physics body 없이)
         const dagger = this.scene.add.sprite(px, py, 'proj_dagger')
             .setDepth(8)
             .setScale(1.2)
             .setRotation(angle + Math.PI / 2);
 
-        let hasHit = false;
         let trailInterval = null;
         let collisionCheckCounter = 0;
+        const piercedTargets = new Set();
         const entry = { dagger, trailInterval: null };
         this._activeDaggers.push(entry);
 
+        const getTargetKey = (currentTarget) => {
+            if (currentTarget && currentTarget.spawnInstanceId) {
+                return `${currentTarget.isBoss ? 'boss' : 'enemy'}-${currentTarget.spawnInstanceId}`;
+            }
+            return currentTarget;
+        };
+
+        const tryPierceTarget = (currentTarget) => {
+            if (!currentTarget || !currentTarget.active) return false;
+            if (currentTarget.isBoss && currentTarget.isInvincible) return false;
+
+            const targetKey = getTargetKey(currentTarget);
+            if (piercedTargets.has(targetKey)) return false;
+
+            const hitRadius = Math.max(25, (currentTarget.body?.width || currentTarget.displayWidth || 50) * 0.35);
+            const dist = Phaser.Math.Distance.Between(dagger.x, dagger.y, currentTarget.x, currentTarget.y);
+            if (dist >= hitRadius) return false;
+
+            piercedTargets.add(targetKey);
+
+            if (currentTarget.isBoss) {
+                currentTarget.takeDamage(dmg);
+            } else {
+                currentTarget.takeDamage(dmg, dagger.x, dagger.y);
+            }
+
+            if (this.scene.soundManager) this.scene.soundManager.play('hit');
+
+            const spark = this.scene.add.circle(dagger.x, dagger.y, 6, 0xb366ff, 0.8).setDepth(9);
+            this.scene.tweens.add({
+                targets: spark,
+                alpha: 0,
+                scale: 3,
+                duration: 200,
+                onComplete: () => spark.destroy(),
+            });
+
+            return true;
+        };
+
         const cleanup = () => {
-            if (trailInterval) { trailInterval.destroy(); trailInterval = null; }
+            if (trailInterval) {
+                trailInterval.destroy();
+                trailInterval = null;
+            }
             entry.trailInterval = null;
             if (dagger.active) dagger.destroy();
-            // 추적 배열에서 제거
             const idx = this._activeDaggers.indexOf(entry);
             if (idx !== -1) this._activeDaggers.splice(idx, 1);
         };
 
-        // 트윈으로 직선 이동
         this.scene.tweens.add({
             targets: dagger,
             x: endX,
             y: endY,
-            duration: duration,
+            duration,
             ease: 'Linear',
             onUpdate: () => {
-                if (hasHit || !dagger.active) return;
-                // Throttle collision checks to every 3rd frame
+                if (!dagger.active) return;
+
                 collisionCheckCounter++;
                 if (collisionCheckCounter % 3 !== 0) return;
+
                 const enemies = this.player.getAllEnemies();
                 for (const enemy of enemies) {
-                    if (!enemy.active) continue;
-                    const dist = Phaser.Math.Distance.Between(dagger.x, dagger.y, enemy.x, enemy.y);
-                    if (dist < 25) {
-                        enemy.takeDamage(dmg, dagger.x, dagger.y);
-                        if (this.scene.soundManager) this.scene.soundManager.play('hit');
-                        hasHit = true;
-                        const sx = dagger.x, sy = dagger.y;
-                        // onUpdate 내에서 tween 조작하면 프리즈 → 숨기기만 하고 onComplete에서 정리
-                        dagger.setVisible(false);
-                        if (trailInterval) { trailInterval.destroy(); trailInterval = null; }
-                        entry.trailInterval = null;
-                        const spark = this.scene.add.circle(sx, sy, 6, 0xb366ff, 0.8).setDepth(9);
-                        this.scene.tweens.add({
-                            targets: spark, alpha: 0, scale: 3,
-                            duration: 200, onComplete: () => spark.destroy(),
-                        });
-                        return;
-                    }
+                    tryPierceTarget(enemy);
+                }
+
+                const bosses = this.scene.activeBosses || [];
+                for (const boss of bosses) {
+                    tryPierceTarget(boss);
                 }
             },
             onComplete: () => cleanup(),
         });
 
-        // 트레일 이펙트 (pooled circles)
         trailInterval = this.scene.time.addEvent({
             delay: 50,
             repeat: duration / 50,
@@ -117,8 +145,11 @@ export class ShadowDagger extends WeaponBase {
                 if (!dagger.active) return;
                 const trail = this._getTrailCircle(dagger.x, dagger.y);
                 this.scene.tweens.add({
-                    targets: trail, alpha: 0, scale: 0,
-                    duration: 180, onComplete: () => this._releaseTrailCircle(trail),
+                    targets: trail,
+                    alpha: 0,
+                    scale: 0,
+                    duration: 180,
+                    onComplete: () => this._releaseTrailCircle(trail),
                 });
             },
         });
@@ -126,7 +157,6 @@ export class ShadowDagger extends WeaponBase {
     }
 
     destroy() {
-        // 비행 중인 모든 단검 정리
         const tweens = this.scene?.tweens;
         for (const entry of this._activeDaggers) {
             if (entry.trailInterval) entry.trailInterval.destroy();

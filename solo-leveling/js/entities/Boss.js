@@ -12,6 +12,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         this.bossKey = bossKey;
         this.config = config;
         this.isBoss = true;
+        Boss._nextSpawnInstanceId = (Boss._nextSpawnInstanceId || 0) + 1;
+        this.spawnInstanceId = Boss._nextSpawnInstanceId;
 
         // Stats scaled by difficulty
         this._difficultyMult = difficultyMult;

@@ -95,6 +95,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.slowDuration = 0;
         this.isBoss = false;
         this.hpBar = null;
+        this.spawnInstanceId = 0;
     }
 
     spawn(typeKey, typeData, difficultyMult, x, y) {
@@ -105,6 +106,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this._eliteLabel) { this._eliteLabel.destroy(); this._eliteLabel = null; }
 
         this.enemyType = typeKey;
+        Enemy._nextSpawnInstanceId = (Enemy._nextSpawnInstanceId || 0) + 1;
+        this.spawnInstanceId = Enemy._nextSpawnInstanceId;
         this.setPosition(x, y);
         this.setActive(true);
         this.setVisible(true);
