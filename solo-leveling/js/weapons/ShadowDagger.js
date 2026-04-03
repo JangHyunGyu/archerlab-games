@@ -57,8 +57,9 @@ export class ShadowDagger extends WeaponBase {
             .setRotation(angle + Math.PI / 2);
 
         let trailInterval = null;
-        let collisionCheckCounter = 0;
         const piercedTargets = new Set();
+        let prevX = px;
+        let prevY = py;
         const entry = { dagger, trailInterval: null };
         this._activeDaggers.push(entry);
 
@@ -77,7 +78,23 @@ export class ShadowDagger extends WeaponBase {
             if (piercedTargets.has(targetKey)) return false;
 
             const hitRadius = Math.max(25, (currentTarget.body?.width || currentTarget.displayWidth || 50) * 0.35);
-            const dist = Phaser.Math.Distance.Between(dagger.x, dagger.y, currentTarget.x, currentTarget.y);
+            const dx = dagger.x - prevX;
+            const dy = dagger.y - prevY;
+            const segmentLengthSq = dx * dx + dy * dy;
+            let closestX = dagger.x;
+            let closestY = dagger.y;
+
+            if (segmentLengthSq > 0) {
+                const t = Phaser.Math.Clamp(
+                    ((currentTarget.x - prevX) * dx + (currentTarget.y - prevY) * dy) / segmentLengthSq,
+                    0,
+                    1
+                );
+                closestX = prevX + dx * t;
+                closestY = prevY + dy * t;
+            }
+
+            const dist = Phaser.Math.Distance.Between(closestX, closestY, currentTarget.x, currentTarget.y);
             if (dist >= hitRadius) return false;
 
             piercedTargets.add(targetKey);
@@ -122,9 +139,6 @@ export class ShadowDagger extends WeaponBase {
             onUpdate: () => {
                 if (!dagger.active) return;
 
-                collisionCheckCounter++;
-                if (collisionCheckCounter % 3 !== 0) return;
-
                 const enemies = this.player.getAllEnemies();
                 for (const enemy of enemies) {
                     tryPierceTarget(enemy);
@@ -134,6 +148,9 @@ export class ShadowDagger extends WeaponBase {
                 for (const boss of bosses) {
                     tryPierceTarget(boss);
                 }
+
+                prevX = dagger.x;
+                prevY = dagger.y;
             },
             onComplete: () => cleanup(),
         });
