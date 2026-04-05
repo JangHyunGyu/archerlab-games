@@ -180,7 +180,7 @@ export class HUD {
         const m = this._margin;
         this._mmSize = size;
         this._mmX = GAME_WIDTH - m - size;
-        this._mmY = this._isPortrait ? m : GAME_HEIGHT - m - size;
+        this._mmY = GAME_HEIGHT - m - size;
         this._mmScale = size / WORLD_SIZE;
 
         // Background
