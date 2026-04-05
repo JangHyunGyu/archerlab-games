@@ -305,14 +305,31 @@ class UIManager {
         this.scoreText.text = Math.round(this._displayScore).toLocaleString();
     }
 
+    _clearTitleTweens() {
+        if (!this.game || !this.game.effects || !Array.isArray(this.game.effects.tweens)) return;
+
+        const currentTitleRoot = this.titleContainer;
+        this.game.effects.tweens = this.game.effects.tweens.filter((tween) => {
+            if (!tween || !tween._isTitleTween) return true;
+
+            const root = tween._titleRoot;
+            if (root && root !== currentTitleRoot && !root.destroyed) {
+                root.destroy({ children: true });
+            }
+            return false;
+        });
+    }
+
     // ══════════════════════════════════════
     // ══  TITLE SCREEN
     // ══════════════════════════════════════
     showTitleScreen() {
+        this._clearTitleTweens();
         if (this.titleContainer) {
             this.titleContainer.destroy({ children: true });
             this.titleContainer = null;
         }
+        this._titleRefs = null;
 
         const container = new PIXI.Container();
         container.eventMode = 'static';
@@ -380,6 +397,7 @@ class UIManager {
             elapsed: 0,
             duration: 99999,
             _isTitleTween: true,
+            _titleRoot: container,
             update(dt) {
                 if (!logoParticles || logoParticles.destroyed) return true;
                 this.elapsed += dt;
@@ -754,7 +772,17 @@ class UIManager {
         this.game.effects.tweens.push({
             elapsed: 0,
             duration: 900,
+            _isTitleTween: true,
+            _titleRoot: container,
             update(dt) {
+                if (!container || container.destroyed) return true;
+                if (!logo || logo.destroyed || !logo.scale || typeof logo.scale.set !== 'function') return true;
+                if (!subtitle || subtitle.destroyed) return true;
+                if (!startBtn || startBtn.destroyed) return true;
+                if (!langBtn.btn || langBtn.btn.destroyed) return true;
+                if (!hofBtn.btn || hofBtn.btn.destroyed) return true;
+                if (!contactBtn.btn || contactBtn.btn.destroyed) return true;
+
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -798,8 +826,9 @@ class UIManager {
             elapsed: 0,
             duration: 99999,
             _isTitleTween: true,
+            _titleRoot: container,
             update(dt) {
-                if (!logo || logo.destroyed) return true;
+                if (!logo || logo.destroyed || !logo.scale || typeof logo.scale.set !== 'function') return true;
                 this.elapsed += dt;
                 const pulse = 1 + Math.sin(this.elapsed * 0.003) * 0.03;
                 logo.scale.set(pulse);
@@ -812,6 +841,7 @@ class UIManager {
             elapsed: 0,
             duration: 99999,
             _isTitleTween: true,
+            _titleRoot: container,
             _ready: false,
             update(dt) {
                 if (!startBtn || startBtn.destroyed) return true;
@@ -833,7 +863,7 @@ class UIManager {
 
     hideTitleScreen(onComplete) {
         this._activeButtons = [];
-        this.game.effects.tweens = this.game.effects.tweens.filter(t => !t._isTitleTween);
+        this._clearTitleTweens();
         if (!this.titleContainer) {
             if (onComplete) onComplete();
             return;
@@ -844,7 +874,13 @@ class UIManager {
         this.game.effects.tweens.push({
             elapsed: 0,
             duration: 400,
+            _isTitleTween: true,
+            _titleRoot: container,
             update(dt) {
+                if (!container || container.destroyed) {
+                    if (onComplete) onComplete();
+                    return true;
+                }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
                 container.alpha = 1 - easeOutCubic(t);
