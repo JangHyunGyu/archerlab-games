@@ -7,6 +7,8 @@ export class SoundManager {
     constructor() {
         this.enabled = true;
         this._initialized = false;
+        this._toneReady = false;
+        this._userActivated = false;
         this._lastPlayTime = {};
         this._throttleMs = {
             hit: 150, kill: 180, xp: 80, dagger: 150, daggerThrow: 120,
@@ -43,20 +45,11 @@ export class SoundManager {
 
     init() {
         try {
-            if (typeof Tone === 'undefined') { this.enabled = false; return; }
+            if (this._initialized) return;
 
-            try {
-                Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.1 }));
-            } catch (e) { /* silent */ }
+            // Tone graph is created lazily in resume(true) after a trusted gesture.
 
             // === Tone.js BGM 전용 이펙트 체인 ===
-            this._masterVol = new Tone.Volume(4).toDestination();
-            this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
-                .connect(this._masterVol).start();
-            this._comp = new Tone.Compressor(-24, 4).connect(this._chorus);
-            this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
-            this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
-
             // === WAV SFX 풀 로드 ===
             const base = 'sounds/';
             // 무기 (자주 발생 → 풀 크게)
@@ -88,28 +81,62 @@ export class SoundManager {
             this._initialized = true;
 
             // 탭 전환 시 자동 일시정지
-            this._onVisibilityChange = () => {
-                try {
-                    if (document.hidden) {
-                        Tone.getContext().rawContext.suspend();
-                    } else if (this.enabled) {
-                        Tone.getContext().rawContext.resume();
-                    }
-                } catch (e) { /* silent */ }
-            };
-            document.addEventListener('visibilitychange', this._onVisibilityChange);
+            if (this._toneReady && !this._onVisibilityChange) {
+                this._onVisibilityChange = () => {
+                    try {
+                        if (document.hidden) {
+                            Tone.getContext().rawContext.suspend();
+                        } else if (this.enabled) {
+                            Tone.getContext().rawContext.resume();
+                        }
+                    } catch (e) { /* silent */ }
+                };
+                document.addEventListener('visibilitychange', this._onVisibilityChange);
+            }
         } catch (e) {
             console.warn('SoundManager init failed:', e);
             this.enabled = false;
         }
     }
 
-    resume() {
+    async resume(userGesture = false) {
         try {
-            if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
-                Tone.start();
+            if (userGesture) this._userActivated = true;
+            if (!this.enabled || !this._initialized || !this._userActivated) return false;
+
+            if (!this._toneReady && typeof Tone !== 'undefined') {
+                try {
+                    Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.1 }));
+                } catch (e) { /* silent */ }
+
+                this._masterVol = new Tone.Volume(4).toDestination();
+                this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
+                    .connect(this._masterVol).start();
+                this._comp = new Tone.Compressor(-24, 4).connect(this._chorus);
+                this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
+                this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
+                this._toneReady = true;
+
+                if (!this._onVisibilityChange) {
+                    this._onVisibilityChange = () => {
+                        try {
+                            if (document.hidden) {
+                                Tone.getContext().rawContext.suspend();
+                            } else if (this.enabled) {
+                                Tone.getContext().rawContext.resume();
+                            }
+                        } catch (e) { /* silent */ }
+                    };
+                    document.addEventListener('visibilitychange', this._onVisibilityChange);
+                }
             }
+
+            if (typeof Tone !== 'undefined' && this._toneReady && Tone.context.state !== 'running') {
+                await Tone.start();
+            }
+            return typeof Tone !== 'undefined' && this._toneReady && Tone.context.state === 'running';
         } catch (e) { /* silent */ }
+        return false;
     }
 
     warmup() {
@@ -152,8 +179,8 @@ export class SoundManager {
 
     async playIntroMusic() {
         if (!this._initialized || !this.enabled) return;
-        try { await Tone.start(); } catch (e) { /* */ }
-        if (Tone.context.state !== 'running') return;
+        const audioReady = await this.resume();
+        if (!audioReady) return;
         this.stopIntroMusic();
         this._introNodes = [];
         this._introIntervals = [];
@@ -288,8 +315,8 @@ export class SoundManager {
 
     async startGameBGM() {
         if (!this._initialized || !this.enabled) return;
-        try { await Tone.start(); } catch (e) { /* */ }
-        if (Tone.context.state !== 'running') return;
+        const audioReady = await this.resume();
+        if (!audioReady) return;
         this.stopGameBGM();
         this._bgmNodes = [];
         this._bgmIntervals = [];
