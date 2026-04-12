@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1033"/>
+      <stop offset="100%" stop-color="#0f0a20"/>
+    </linearGradient>
+    <linearGradient id="pad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="50%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6" result="b"/><feComposite in="SourceGraphic" in2="b" operator="over"/></filter>
+    <filter id="shadow"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.4"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="180" fill="#8b5cf6" opacity="0.06"/>
+  <g filter="shadow">
+    <rect x="140" y="170" width="232" height="172" rx="24" fill="url(#pad)" opacity="0.95"/>
+    <rect x="155" y="185" width="202" height="142" rx="16" fill="#1a1033" opacity="0.4"/>
+  </g>
+  <g filter="glow">
+    <circle cx="205" cy="260" r="22" fill="none" stroke="#e0d4ff" stroke-width="4" opacity="0.8"/>
+    <line x1="205" y1="243" x2="205" y2="277" stroke="#e0d4ff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+    <line x1="188" y1="260" x2="222" y2="260" stroke="#e0d4ff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+    <circle cx="295" cy="248" r="11" fill="#f472b6"/>
+    <circle cx="325" cy="268" r="11" fill="#60a5fa"/>
+    <circle cx="295" cy="288" r="11" fill="#34d399"/>
+    <circle cx="265" cy="268" r="11" fill="#fbbf24"/>
+  </g>
+  <g fill="#a78bfa" opacity="0.4">
+    <path d="M110 140 L114 130 L118 140 L114 150Z"/>
+    <path d="M400 150 L404 140 L408 150 L404 160Z"/>
+    <circle cx="130" cy="380" r="3"/>
+    <circle cx="390" cy="370" r="2.5"/>
+  </g>
+</svg>
