@@ -290,6 +290,7 @@ class PieceTray {
                         duration: 400,
                         delay: i * 80,
                         update(dt) {
+                            if (!cont || cont.destroyed || !cont.scale) return true;
                             if (this.delay > 0) { this.delay -= dt; return false; }
                             this.elapsed += dt;
                             const t = Math.min(this.elapsed / this.duration, 1);
