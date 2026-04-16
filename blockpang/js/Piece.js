@@ -119,6 +119,7 @@ class PieceTray {
 
     destroy() {
         this.game.app.ticker.remove(this._updateIdle, this);
+        this._clearTrayTweens();
     }
 
     _updateIdle(ticker) {
@@ -126,14 +127,26 @@ class PieceTray {
         this._idleTime += delta * (1000 / 60) * 0.002;
         for (let i = 0; i < 3; i++) {
             const cont = this.slotContainers[i];
-            if (!cont || !cont.visible || cont.destroyed) continue;
+            const scale = cont && cont.scale;
+            if (!cont || !cont.visible || cont.destroyed || !scale || typeof scale.set !== 'function') continue;
             // Gentle floating bob
             const phase = this._idleTime + i * 2.1;
             const bobY = Math.sin(phase) * 3;
             const bobScale = 1 + Math.sin(phase * 1.3) * 0.015;
             cont.y = this._slotBaseY[i] + bobY;
-            cont.scale.set(bobScale);
+            scale.set(bobScale);
         }
+    }
+
+    _clearTrayTweens(slotIndex = null) {
+        const effects = this.game && this.game.effects;
+        if (!effects || !Array.isArray(effects.tweens) || effects.tweens.length === 0) return;
+
+        effects.tweens = effects.tweens.filter((tween) => {
+            if (!tween || !tween._isTraySlotTween) return true;
+            if (slotIndex !== null && tween._traySlotIndex !== slotIndex) return true;
+            return false;
+        });
     }
 
     resize(cellSize, areaWidth, areaHeight, x, y) {
@@ -208,6 +221,7 @@ class PieceTray {
 
     removePiece(index) {
         this.slots[index] = null;
+        this._clearTrayTweens(index);
         if (this.slotContainers[index]) {
             this.slotContainers[index].destroy({ children: true });
             this.slotContainers[index] = null;
@@ -232,6 +246,7 @@ class PieceTray {
 
     _rebuildSlotVisuals(animate = false) {
         // Remove old
+        this._clearTrayTweens();
         this.slotContainers.forEach(c => { if (c) c.destroy({ children: true }); });
         this.slotContainers = [null, null, null];
 
@@ -240,6 +255,7 @@ class PieceTray {
             const piece = this.slots[i];
             const cs = this.trayCellSize;
             const cont = createPieceContainer(piece, cs);
+            const trayRef = this;
 
             // Center in slot
             const pw = piece.cols * cs;
@@ -289,13 +305,17 @@ class PieceTray {
                         elapsed: 0,
                         duration: 400,
                         delay: i * 80,
+                        _isTraySlotTween: true,
+                        _traySlotIndex: i,
                         update(dt) {
-                            if (!cont || cont.destroyed || !cont.scale) return true;
+                            const scale = cont && cont.scale;
+                            if (!cont || cont.destroyed || !scale || typeof scale.set !== 'function') return true;
+                            if (trayRef.slotContainers[slotIdx] !== cont) return true;
                             if (this.delay > 0) { this.delay -= dt; return false; }
                             this.elapsed += dt;
                             const t = Math.min(this.elapsed / this.duration, 1);
                             cont.alpha = easeOutCubic(t);
-                            cont.scale.set(easeOutBack(t));
+                            scale.set(easeOutBack(t));
                             cont.y = targetY + 30 * (1 - easeOutCubic(t));
                             return t >= 1;
                         }
