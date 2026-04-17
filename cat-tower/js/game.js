@@ -574,13 +574,8 @@
           // 매 60프레임(약 1초)마다 NaN 감시 + 옵션으로 상태 스냅샷
           if (_frameCount % 60 === 0) {
             assertBodiesFinite('tick');
-            if (DBG) {
-              const catBodies = Composite.allBodies(world).filter(b => b.label === 'cat');
-              const fps = _lastFpsAt ? Math.round(1000 * _framesSinceFps / (ts - _lastFpsAt)) : 60;
-              log(`heartbeat fps=${fps} bodies=${catBodies.length} score=${score} paused=${paused}`);
-              _lastFpsAt = ts;
-              _framesSinceFps = 0;
-            }
+            _lastFpsAt = ts;
+            _framesSinceFps = 0;
           }
           _framesSinceFps++;
         }
