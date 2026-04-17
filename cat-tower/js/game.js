@@ -129,6 +129,9 @@
   let reachedFinal = false;     // 사바나(최종단계) 최초 달성 여부 — 축하 플래시 1회용
   let newRecordTimeoutId = null; // 신기록 팡파레 대기 setTimeout 핸들 (게임 전환 시 취소용)
   const mergeEffects = [];      // 합성 이펙트 파티클
+  const bonkCooldown = new Map(); // body.id → 마지막 bonk 시각 (ms) — 연속 충돌 스팸 방지
+  const BONK_COOLDOWN_MS = 140;
+  const BONK_MIN_SPEED = 2.2;     // Matter.js 속도 단위 — 이하면 정착 중으로 간주
 
   // DOM refs
   const $ = (id) => document.getElementById(id);
@@ -228,6 +231,8 @@
     // 접촉 유지 중에도 체크: 최초 접촉 시 merging 플래그로 스킵된 쌍이
     // 이후 정착 상태로 붙어있기만 하면 영원히 합쳐지지 않는 문제 방지
     Events.on(engine, 'collisionActive', handleCollision);
+    // bonk(부딪힘)는 start에만: Active에서 쏘면 매 프레임 중첩 재생됨
+    Events.on(engine, 'collisionStart', handleBonk);
     log('initEngine 완료: 벽/바닥 추가 + collisionStart/Active 핸들러 등록');
   }
 
@@ -323,6 +328,42 @@
         log(`최종단계 소멸 (tier ${tier}) +${TIERS[tier].score * 2}pt score=${score}`);
       }
       updateScoreUI();
+    }
+  }
+
+  // merge 아닌 충돌(바닥/벽/다른 티어)에만 짧은 "톡" 재생
+  function handleBonk(evt) {
+    if (!sound || paused || gameOver) return;
+    const now = performance.now();
+    for (const pair of evt.pairs) {
+      const a = pair.bodyA, b = pair.bodyB;
+      const aIsCat = a.label === 'cat' && !a.isStatic && a.cat;
+      const bIsCat = b.label === 'cat' && !b.isStatic && b.cat;
+      if (!aIsCat && !bIsCat) continue;
+      // 같은 티어 쌍은 merge로 처리됨 — bonk 스킵
+      if (aIsCat && bIsCat && a.cat.tier === b.cat.tier) continue;
+      // 드롭 직후는 drop 사운드와 겹침 방지
+      if (aIsCat && now - a.cat.spawnedAt < 60) continue;
+      if (bIsCat && now - b.cat.spawnedAt < 60) continue;
+
+      const vax = a.velocity?.x || 0, vay = a.velocity?.y || 0;
+      const vbx = b.velocity?.x || 0, vby = b.velocity?.y || 0;
+      const dvx = vax - vbx, dvy = vay - vby;
+      const speed = Math.sqrt(dvx * dvx + dvy * dvy);
+      if (speed < BONK_MIN_SPEED) continue;
+
+      const keyA = aIsCat ? a.id : -1;
+      const keyB = bIsCat ? b.id : -1;
+      const lastA = keyA >= 0 ? (bonkCooldown.get(keyA) || 0) : 0;
+      const lastB = keyB >= 0 ? (bonkCooldown.get(keyB) || 0) : 0;
+      if (now - lastA < BONK_COOLDOWN_MS && now - lastB < BONK_COOLDOWN_MS) continue;
+      if (keyA >= 0) bonkCooldown.set(keyA, now);
+      if (keyB >= 0) bonkCooldown.set(keyB, now);
+
+      // 2.2 ~ 11 → 0.2 ~ 1.0
+      const intensity = Math.min(1, (speed - BONK_MIN_SPEED) / 9 + 0.2);
+      const tier = aIsCat ? a.cat.tier : b.cat.tier;
+      sound.playBonk(intensity, tier);
     }
   }
 
@@ -605,6 +646,7 @@
     running = true;
     dropCooldown = false;
     mergeEffects.length = 0;
+    bonkCooldown.clear();
     nextTier = null;
     _frameCount = 0;
     _lastFpsAt = 0;
