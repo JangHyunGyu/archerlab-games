@@ -266,6 +266,7 @@ h1 {
   transition: transform 0.08s, box-shadow 0.08s;
 }
 .icon-btn:active { transform: translateY(3px); box-shadow: 0 0 0 0 var(--line); }
+.icon-btn.muted { color: var(--ink-soft); background: rgba(58, 41, 32, 0.06); opacity: 0.75; }
 
 .field-wrap {
   flex: 1;

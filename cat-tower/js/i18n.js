@@ -16,6 +16,8 @@
       'hud.score': '점수',
       'hud.next': '다음',
       'hud.hint': '좌우로 움직여 탭하면 드롭!',
+      'hud.soundAria': '사운드 켜기/끄기',
+      'hud.pauseAria': '일시정지',
 
       // 일시정지
       'pause.title': '일시정지',
@@ -86,6 +88,8 @@
       'hud.score': 'Score',
       'hud.next': 'Next',
       'hud.hint': 'Drag to move, tap to drop!',
+      'hud.soundAria': 'Toggle sound',
+      'hud.pauseAria': 'Pause',
 
       'pause.title': 'Paused',
       'pause.resume': 'Resume',
@@ -182,6 +186,9 @@
     });
     document.querySelectorAll('[data-i18n-ph]').forEach(el => {
       el.placeholder = t(el.getAttribute('data-i18n-ph'));
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+      el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
     });
     // title
     const titleEl = document.querySelector('title');
