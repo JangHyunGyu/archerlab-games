@@ -225,7 +225,10 @@
     ]);
 
     Events.on(engine, 'collisionStart', handleCollision);
-    log('initEngine 완료: 벽/바닥 추가 + collisionStart 핸들러 등록');
+    // 접촉 유지 중에도 체크: 최초 접촉 시 merging 플래그로 스킵된 쌍이
+    // 이후 정착 상태로 붙어있기만 하면 영원히 합쳐지지 않는 문제 방지
+    Events.on(engine, 'collisionActive', handleCollision);
+    log('initEngine 완료: 벽/바닥 추가 + collisionStart/Active 핸들러 등록');
   }
 
   // -------- 고양이 생성/충돌/합성 --------
@@ -904,6 +907,9 @@
         await CatAssets.preloadAll();
         log('에셋 프리로드 완료');
         buildTierPreview();
+        // 사운드 합성 그래프 선행 구축 — AudioContext는 suspended지만 노드/reverb IR 생성은 가능.
+        // 첫 플레이 시 Tone.js 초기화 블로킹으로 인한 100ms+ 히치 제거.
+        try { sound?.init(); log('SoundManager pre-init 완료'); } catch (e) { warn('SoundManager pre-init 실패:', e.message); }
         playBtn.disabled = false;
         playBtn.textContent = tt('menu.play');
       } catch (e) {
