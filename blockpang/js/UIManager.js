@@ -25,7 +25,7 @@ class UIManager {
     _build() {
         // Small wordmark (top center)
         this.titleText = new PIXI.Text({
-            text: '블럭팡',
+            text: getText('gameTitle'),
             style: {
                 fontFamily: FONT_DISPLAY,
                 fontSize: 22,
@@ -149,6 +149,7 @@ class UIManager {
 
     // ── HUD Visibility Toggle ──
     showGameHUD() {
+        this.titleText.text = getText('gameTitle');
         this.titleText.visible = true;
         this.scoreLabelText.visible = true;
         this.scoreText.visible = true;
@@ -345,7 +346,7 @@ class UIManager {
         // ── Logo: "블럭팡" / 한글/영문 반응 ──
         const logoFontSize = Math.min(64, w * 0.15) * sc;
         const logo = new PIXI.Text({
-            text: '블럭팡',
+            text: getText('gameTitle'),
             style: {
                 fontFamily: FONT_DISPLAY,
                 fontSize: logoFontSize,

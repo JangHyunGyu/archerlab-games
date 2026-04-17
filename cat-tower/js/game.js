@@ -10,14 +10,65 @@
   const _ts = () => `+${((performance.now() - T0) / 1000).toFixed(2)}s`;
   const log  = (...a) => { if (DBG) console.log('[CT]', _ts(), ...a); };
   const warn = (...a) => console.warn('[CT!]', _ts(), ...a);
-  const err  = (...a) => console.error('[CT✖]', _ts(), ...a);
+  const err  = (...a) => {
+    console.error('[CT✖]', _ts(), ...a);
+    try { _remoteError('AppError', a.map(x => typeof x === 'string' ? x : (x && x.message) || String(x)).join(' '), (a.find(x => x && x.stack) || {}).stack || '', location.href); } catch (_) {}
+  };
 
-  // 전역 에러 핸들러 — 게임 내 어떤 예외든 바로 캐치
+  // -------- 원격 오류 로그 (harem worker /error-logs) --------
+  // solo-leveling 패턴을 그대로 차용 — appId만 cat-tower로 분리
+  const ERROR_ENDPOINT = 'https://chatbot-api.yama5993.workers.dev/error-logs';
+  const ERROR_APP_ID_BASE = 'cat-tower';
+  const _errSession = Math.random().toString(36).substring(2, 8);
+  let _errLast = '';
+  let _errRepeat = 0;
+
+  function _classifyError(msg, stack, src) {
+    if (!msg) return 'noise';
+    if (msg === 'Script error.' && !stack) return 'noise';
+    if (/ResizeObserver loop/.test(msg)) return 'noise';
+    if (src && /googletagmanager|google-analytics|gtag\/js|cloudflare|chrome-extension|moz-extension|safari-extension/.test(src)) return 'external';
+    if (/Loading chunk|dynamically imported module|Failed to fetch/.test(msg)) return 'network';
+    return 'app';
+  }
+
+  function _remoteError(type, msg, stack, src) {
+    if (!msg) return;
+    const cls = _classifyError(msg, stack, src);
+    if (cls === 'noise') return;
+    const key = msg + '|' + src;
+    if (key === _errLast) { _errRepeat++; if (_errRepeat > 5) return; }
+    else { _errLast = key; _errRepeat = 1; }
+    const lang = (window.I18N && window.I18N.getLang && window.I18N.getLang()) || (document.documentElement.lang || 'ko').substring(0, 2);
+    const appId = lang === 'ko' ? ERROR_APP_ID_BASE : `${ERROR_APP_ID_BASE}-${lang}`;
+    const ctx = `sess:${_errSession} | path:${location.pathname} | online:${navigator.onLine} | vw:${innerWidth}x${innerHeight} | running=${typeof running !== 'undefined' ? running : '?'} | paused=${typeof paused !== 'undefined' ? paused : '?'} | score=${typeof score !== 'undefined' ? score : '?'}`;
+    const payload = {
+      appId, userId: '',
+      message: `[${cls}:${type}] ${msg}`.substring(0, 500),
+      stack: (
+        '[ctx] ' + ctx +
+        '\n[src] ' + (src || 'N/A') +
+        '\n[ua] ' + navigator.userAgent.substring(0, 150) +
+        '\n[ref] ' + (document.referrer || 'direct') +
+        '\n[time] ' + new Date().toISOString() +
+        '\n[trace]\n' + (stack || 'no stack')
+      ).substring(0, 2000),
+      url: (src || location.href).substring(0, 500),
+    };
+    try { navigator.sendBeacon(ERROR_ENDPOINT, JSON.stringify(payload)); } catch (_) {}
+  }
+
+  // 전역 에러 핸들러 — 게임 내 어떤 예외든 바로 캐치 + 원격 전송
   window.addEventListener('error', (e) => {
-    err('uncaught:', e.message, 'at', e.filename + ':' + e.lineno + ':' + e.colno, e.error?.stack || '');
+    const src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
+    console.error('[CT✖]', _ts(), 'uncaught:', e.message, 'at', src, e.error?.stack || '');
+    _remoteError(e.error?.name || 'Error', e.message, e.error?.stack || '', src);
   });
   window.addEventListener('unhandledrejection', (e) => {
-    err('unhandled promise:', e.reason?.message || e.reason, e.reason?.stack || '');
+    const reason = e.reason;
+    const msg = reason?.message || String(reason || 'Unhandled rejection');
+    console.error('[CT✖]', _ts(), 'unhandled promise:', msg, reason?.stack || '');
+    _remoteError('UnhandledRejection', msg, reason?.stack || '', location.href);
   });
 
   // NaN 바디 감지 — 물리가 터지면 즉시 알림
@@ -90,7 +141,6 @@
   // -------- 랭킹 API --------
   const RANK_API_BASE = 'https://chatbot-api.yama5993.workers.dev';
   const NICK_KEY = 'cat-tower.nick';
-  let currentScoreSubmitted = false;
 
   function tt(key, vars) { return (window.I18N && window.I18N.t(key, vars)) || key; }
 
@@ -669,7 +719,6 @@
     try {
       await submitScore(nick, score);
       try { localStorage.setItem(NICK_KEY, nick); } catch {}
-      currentScoreSubmitted = true;
       status.className = 'submit-status ok';
       status.textContent = tt('over.submitOk');
       log(`랭킹 등록 성공: ${nick} = ${score}`);
@@ -688,7 +737,6 @@
     const btn = $('submit-rank-btn');
     const status = $('submit-status');
     if (!row || !inp || !btn || !status) return;
-    currentScoreSubmitted = false;
     inp.disabled = false;
     btn.disabled = false;
     status.textContent = '';
