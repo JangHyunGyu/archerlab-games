@@ -226,6 +226,29 @@
         .slimevolley:hover {
             border-color: #4FC3F7;
         }
+        .cat-tower .game-thumb {
+            background: linear-gradient(135deg, #F5E9D4 0%, #FBF2E0 45%, #F4A15C 100%);
+            position: relative;
+        }
+        .cat-tower .game-thumb-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 100%;
+            font-size: 48px;
+            line-height: 1;
+        }
+        .cat-tower .ct-small { font-size: 32px; opacity: 0.85; }
+        .cat-tower .ct-large { font-size: 64px; }
+        .cat-tower .game-tag {
+            background: #E85A4F22;
+            color: #B73E35;
+            border: 1px solid #E85A4F55;
+        }
+        .cat-tower:hover {
+            border-color: #E85A4F;
+        }
     </style>
     <script type="application/ld+json">
     {"@context":"https://schema.org","@type":"WebSite","name":"Archerlab Games","url":"https://game.archerlab.dev/","description":"브라우저에서 바로 플레이할 수 있는 무료 웹게임 포털","inLanguage":"ko","publisher":{"@type":"Organization","name":"Archerlab","url":"https://archerlab.dev/"}}
@@ -258,6 +281,20 @@
                 <h2>그림자 서바이벌</h2>
                 <p>2D 던전 서바이벌 로그라이크 게임. 던전 몬스터를 처치하고 그림자 군단을 이끌어라!</p>
                 <span class="game-tag">Action / Survival</span>
+            </div>
+        </a>
+        <a href="cat-tower/" class="game-card cat-tower">
+            <div class="game-thumb">
+                <div class="game-thumb-content">
+                    <span class="ct-small">🐱</span>
+                    <span class="ct-large">😸</span>
+                    <span class="ct-small">🐈</span>
+                </div>
+            </div>
+            <div class="game-info">
+                <h2>고양이 타워</h2>
+                <p>같은 고양이 둘이 닿으면 진화! 새끼 고양이부터 전설의 사바나까지 10단계 합성 물리 퍼즐.</p>
+                <span class="game-tag">Puzzle / Merge</span>
             </div>
         </a>
         <a href="slimevolley/" class="game-card slimevolley">
