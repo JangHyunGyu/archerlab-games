@@ -49,6 +49,60 @@ body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+/* ---------- 상단 전역 바 ---------- */
+#topbar {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 30;
+}
+#topbar > * { pointer-events: auto; }
+.topbar-btn {
+  background: rgba(255, 251, 241, 0.92);
+  color: var(--ink);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  box-shadow: 0 2px 0 0 var(--line);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.topbar-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 0 0 var(--line); }
+.topbar-btn:active { transform: translateY(2px); box-shadow: none; }
+.lang-switch {
+  display: flex;
+  gap: 0;
+  background: rgba(255, 251, 241, 0.92);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 0 2px 0 0 var(--line);
+}
+.lang-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-family: inherit;
+  letter-spacing: 0.03em;
+}
+.lang-btn.active {
+  background: var(--accent);
+  color: #FFF5EC;
+}
+.lang-btn:not(.active):hover { background: rgba(58, 41, 32, 0.06); color: var(--ink); }
+
 .screen {
   width: 100%;
   max-width: 420px;
@@ -264,11 +318,27 @@ h1 {
 .combo-flash.pop {
   animation: comboPop 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.15) forwards;
 }
+.combo-flash.legend {
+  background: linear-gradient(135deg, #F2B43A 0%, #FFD46E 50%, #F2B43A 100%);
+  font-size: 30px;
+  padding: 12px 26px;
+  box-shadow: 0 5px 0 0 var(--line), 0 0 24px rgba(242, 180, 58, 0.65);
+}
+.combo-flash.legend.pop {
+  animation: legendPop 1.8s cubic-bezier(0.2, 0.9, 0.3, 1.15) forwards;
+}
 @keyframes comboPop {
   0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6) rotate(-5deg); }
   20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(3deg); }
   60%  { opacity: 1; transform: translate(-50%, -60%) scale(1) rotate(-1deg); }
   100% { opacity: 0; transform: translate(-50%, -85%) scale(0.95) rotate(0); }
+}
+@keyframes legendPop {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(-8deg); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.25) rotate(4deg); }
+  30%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05) rotate(-2deg); }
+  70%  { opacity: 1; transform: translate(-50%, -55%) scale(1.05) rotate(1deg); }
+  100% { opacity: 0; transform: translate(-50%, -80%) scale(1) rotate(0); }
 }
 
 /* ---------- 모달 ---------- */
@@ -354,6 +424,91 @@ h1 {
   top: 1px;
   font-size: 12px;
 }
+
+/* ---------- 랭킹 모달 ---------- */
+.rank-body { max-width: 400px; }
+.rank-content {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0;
+}
+.rank-loading, .rank-empty, .rank-error {
+  padding: 40px 10px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.rank-error { color: var(--accent-dark); }
+.rank-row {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-soft);
+  border: 2px solid rgba(58, 41, 32, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+.rank-row.top1 { background: #FFF4D6; border-color: var(--yellow); }
+.rank-row.top2 { background: #F2F2F2; border-color: #B5B5B5; }
+.rank-row.top3 { background: #FBE2D5; border-color: #D78A52; }
+.rank-row.me { border-color: var(--accent); background: #FFF0EC; }
+.rank-pos {
+  font-weight: 800;
+  font-size: 16px;
+  text-align: center;
+}
+.rank-name {
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.rank-score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* ---------- 랭킹 제출 (게임오버) ---------- */
+.rank-submit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 4px;
+  border-top: 1px dashed rgba(58, 41, 32, 0.15);
+  border-bottom: 1px dashed rgba(58, 41, 32, 0.15);
+  margin: 4px 0;
+}
+.rank-submit-row input {
+  font: inherit;
+  font-size: 15px;
+  padding: 10px 14px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--ink);
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.rank-submit-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.submit-status {
+  min-height: 18px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.submit-status.ok { color: var(--sage); }
+.submit-status.fail { color: var(--accent-dark); }
 
 .tier-preview {
   display: grid;

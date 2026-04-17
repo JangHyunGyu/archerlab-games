@@ -71,6 +71,7 @@
   let pointerActive = false;
   let comboCount = 0;
   let lastMergeAt = 0;
+  let reachedFinal = false;     // 사바나(최종단계) 최초 달성 여부 — 축하 플래시 1회용
   const mergeEffects = [];      // 합성 이펙트 파티클
 
   // DOM refs
@@ -83,7 +84,15 @@
     pause: $('pause-modal'),
     gameover: $('gameover-modal'),
     how: $('how-modal'),
+    rank: $('rank-modal'),
   };
+
+  // -------- 랭킹 API --------
+  const RANK_API_BASE = 'https://chatbot-api.yama5993.workers.dev';
+  const NICK_KEY = 'cat-tower.nick';
+  let currentScoreSubmitted = false;
+
+  function tt(key, vars) { return (window.I18N && window.I18N.t(key, vars)) || key; }
 
   function show(el) { el.classList.remove('hidden'); }
   function hide(el) { el.classList.add('hidden'); }
@@ -234,6 +243,13 @@
 
         mergeEffects.push({ x: midX, y: midY, r: TIERS[tier + 1].radius, age: 0, max: 22, color: '#FFB84D' });
         log(`merge tier ${tier}→${tier + 1}(${TIERS[tier + 1].name}) at (${midX.toFixed(1)}, ${midY.toFixed(1)}) score=${score}`);
+
+        // 최종단계(사바나) 최초 달성 축하 — 1게임당 한 번만
+        if (tier + 1 === TIERS.length - 1 && !reachedFinal) {
+          reachedFinal = true;
+          showFlash(tt('flash.legend'), true);
+          log('🏆 사바나 최초 달성!');
+        }
       } else {
         // 최종 단계 끼리 붙음 → 소멸 + 보너스
         score += TIERS[tier].score * 2;
@@ -245,10 +261,15 @@
   }
 
   function showComboFlash(n) {
+    showFlash(tt('flash.combo', { n }), false);
+  }
+
+  function showFlash(text, isLegend) {
     const el = $('combo-flash');
     if (!el) return;
-    el.textContent = n + '연쇄!';
-    el.classList.remove('pop');
+    el.textContent = text;
+    el.classList.remove('pop', 'legend');
+    if (isLegend) el.classList.add('legend');
     // reflow
     void el.offsetWidth;
     el.classList.add('pop');
@@ -377,6 +398,7 @@
     $('final-score').textContent = score.toLocaleString();
     const nr = $('new-record');
     if (isNew) nr.classList.remove('hidden'); else nr.classList.add('hidden');
+    resetRankSubmit();
     show(modals.gameover);
   }
 
@@ -503,6 +525,7 @@
     score = 0;
     comboCount = 0;
     lastMergeAt = 0;
+    reachedFinal = false;
     gameOver = false;
     paused = false;
     running = true;
@@ -551,8 +574,9 @@
   // -------- 조작법 모달 티어 프리뷰 --------
   function buildTierPreview() {
     const wrap = $('tier-preview');
+    if (!wrap) return;
     wrap.innerHTML = '';
-    TIERS.forEach((t, i) => {
+    TIERS.forEach((_tier, i) => {
       const cell = document.createElement('div');
       cell.className = 'tier-cell';
       const c = document.createElement('canvas');
@@ -562,16 +586,134 @@
       cell.appendChild(c);
       const label = document.createElement('div');
       label.className = 'tier-name';
-      label.textContent = (i + 1) + '. ' + t.name;
+      label.textContent = (i + 1) + '. ' + tt('cat.' + i);
       cell.appendChild(label);
       wrap.appendChild(cell);
     });
+  }
+
+  // -------- 랭킹 API --------
+  async function fetchTopRanks(limit) {
+    const res = await fetch(`${RANK_API_BASE}/cat-tower/top?limit=${limit || 10}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!Array.isArray(data.rows)) throw new Error('invalid response');
+    return data.rows;
+  }
+
+  async function submitScore(nickname, finalScore) {
+    const res = await fetch(`${RANK_API_BASE}/cat-tower/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, score: finalScore }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error('HTTP ' + res.status + ' ' + text);
+    }
+    return res.json();
+  }
+
+  async function openRankModal() {
+    const content = $('rank-content');
+    content.innerHTML = `<div class="rank-loading">${tt('rank.loading')}</div>`;
+    show(modals.rank);
+    try {
+      const rows = await fetchTopRanks(10);
+      renderRankRows(rows);
+    } catch (e) {
+      err('랭킹 조회 실패:', e.message);
+      content.innerHTML = `<div class="rank-error">${tt('rank.error')}</div>`;
+    }
+  }
+
+  function renderRankRows(rows) {
+    const content = $('rank-content');
+    if (!rows || rows.length === 0) {
+      content.innerHTML = `<div class="rank-empty">${tt('rank.empty')}</div>`;
+      return;
+    }
+    const myNick = (function () { try { return localStorage.getItem(NICK_KEY) || ''; } catch { return ''; } })();
+    const html = rows.map((r, i) => {
+      const pos = i + 1;
+      const isMe = myNick && r.nickname === myNick;
+      const cls = ['rank-row'];
+      if (pos === 1) cls.push('top1');
+      else if (pos === 2) cls.push('top2');
+      else if (pos === 3) cls.push('top3');
+      if (isMe) cls.push('me');
+      const nameEsc = String(r.nickname || '').replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
+      return `<div class="${cls.join(' ')}"><div class="rank-pos">${pos}</div><div class="rank-name">${nameEsc}</div><div class="rank-score">${Number(r.score).toLocaleString()}</div></div>`;
+    }).join('');
+    content.innerHTML = html;
+  }
+
+  async function handleSubmitRank() {
+    const inp = $('nickname-input');
+    const btn = $('submit-rank-btn');
+    const status = $('submit-status');
+    const nick = (inp.value || '').trim().slice(0, 8);
+    if (!nick) {
+      status.className = 'submit-status fail';
+      status.textContent = tt('over.nicknamePh');
+      inp.focus();
+      return;
+    }
+    btn.disabled = true;
+    inp.disabled = true;
+    status.className = 'submit-status';
+    status.textContent = tt('over.submitting');
+    try {
+      await submitScore(nick, score);
+      try { localStorage.setItem(NICK_KEY, nick); } catch {}
+      currentScoreSubmitted = true;
+      status.className = 'submit-status ok';
+      status.textContent = tt('over.submitOk');
+      log(`랭킹 등록 성공: ${nick} = ${score}`);
+    } catch (e) {
+      err('랭킹 등록 실패:', e.message);
+      status.className = 'submit-status fail';
+      status.textContent = tt('over.submitFail');
+      btn.disabled = false;
+      inp.disabled = false;
+    }
+  }
+
+  function resetRankSubmit() {
+    const row = $('rank-submit-row');
+    const inp = $('nickname-input');
+    const btn = $('submit-rank-btn');
+    const status = $('submit-status');
+    if (!row || !inp || !btn || !status) return;
+    currentScoreSubmitted = false;
+    inp.disabled = false;
+    btn.disabled = false;
+    status.textContent = '';
+    status.className = 'submit-status';
+    try { inp.value = localStorage.getItem(NICK_KEY) || ''; } catch { inp.value = ''; }
+    // 점수 0은 등록 의미 없음 — 입력 영역 숨김
+    row.style.display = score > 0 ? '' : 'none';
+  }
+
+  function updateLangButtons() {
+    const cur = window.I18N ? window.I18N.getLang() : 'ko';
+    document.querySelectorAll('.lang-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.lang === cur);
+    });
+    document.documentElement.lang = cur;
   }
 
   // -------- 초기화 --------
   async function boot() {
     try {
       log('DOM 준비됨, boot() 실행');
+
+      // i18n 초기 적용 — DOM 문자열을 현재 언어로 스왑
+      if (window.I18N) window.I18N.applyDom();
+
       setupCanvas();
       setupInput();
       bestScore = loadBest();
@@ -580,7 +722,9 @@
 
       // 필수 DOM 엘리먼트 검증 — 하나라도 누락되면 게임 자체가 동작 안 함
       const required = ['play-btn', 'how-btn', 'how-close', 'pause-btn', 'resume-btn',
-        'restart-btn', 'exit-btn', 'replay-btn', 'menu-btn', 'score', 'best-score',
+        'restart-btn', 'exit-btn', 'replay-btn', 'menu-btn', 'rank-btn', 'rank-close',
+        'rank-content', 'submit-rank-btn', 'nickname-input', 'submit-status',
+        'lang-ko', 'lang-en', 'score', 'best-score',
         'final-score', 'new-record', 'combo-flash', 'tier-preview'];
       for (const id of required) {
         if (!$(id)) err(`필수 엘리먼트 #${id} 누락`);
@@ -601,6 +745,34 @@
       $('replay-btn').addEventListener('click', () => { log('UI: 다시도전 클릭'); hide(modals.gameover); startGame(); });
       $('menu-btn').addEventListener('click', exitToMenu);
 
+      // 랭킹 모달
+      $('rank-btn').addEventListener('click', () => { log('UI: 랭킹 클릭'); openRankModal(); });
+      $('rank-close').addEventListener('click', () => hide(modals.rank));
+
+      // 게임오버 랭킹 등록
+      $('submit-rank-btn').addEventListener('click', handleSubmitRank);
+      $('nickname-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleSubmitRank(); }
+      });
+
+      // 언어 토글
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const l = btn.dataset.lang;
+          log(`UI: 언어 전환 → ${l}`);
+          if (window.I18N) window.I18N.setLang(l);
+        });
+      });
+      updateLangButtons();
+      window.addEventListener('cattower:langchange', () => {
+        updateLangButtons();
+        // 티어 프리뷰는 텍스트에 언어별 고양이 이름이 들어있어 재생성 필요
+        buildTierPreview();
+        // 플레이 버튼이 '불러오는 중…'이 아닐 때만 i18n 라벨 복원 (preload 실패 시 보존)
+        const pb = $('play-btn');
+        if (!pb.disabled) pb.textContent = tt('menu.play');
+      });
+
       playBtn.addEventListener('click', () => {
         log('UI: 플레이 클릭');
         hide(screens.menu);
@@ -615,7 +787,7 @@
         log('에셋 프리로드 완료');
         buildTierPreview();
         playBtn.disabled = false;
-        playBtn.textContent = '플레이';
+        playBtn.textContent = tt('menu.play');
       } catch (e) {
         err('에셋 로드 실패:', e.message, e.stack);
         playBtn.textContent = '불러오기 실패';
@@ -625,9 +797,12 @@
       window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           if (!modals.how.classList.contains('hidden')) hide(modals.how);
+          else if (!modals.rank.classList.contains('hidden')) hide(modals.rank);
           else if (running) togglePause();
         }
         if (e.key === ' ' && running && !paused && !gameOver) {
+          // 닉네임 입력 중 스페이스는 그대로 허용
+          if (document.activeElement && document.activeElement.id === 'nickname-input') return;
           e.preventDefault();
           dropCurrent();
         }

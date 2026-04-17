@@ -9,7 +9,7 @@ const page = await ctx.newPage();
 page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE_ERROR: ' + m.text()); });
 
-await page.goto('http://127.0.0.1:8766/index.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8767/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => {
     const btn = document.getElementById('play-btn');
     return btn && !btn.disabled;
