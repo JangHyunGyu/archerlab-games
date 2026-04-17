@@ -108,7 +108,8 @@
         <div class="stat-label" data-i18n="hud.next">다음</div>
         <canvas id="next-cat" width="72" height="72"></canvas>
       </div>
-      <button id="pause-btn" class="icon-btn" aria-label="일시정지">❚❚</button>
+      <button id="sound-btn" class="icon-btn" aria-label="사운드 토글" data-i18n-aria="hud.soundAria">🔊</button>
+      <button id="pause-btn" class="icon-btn" aria-label="일시정지" data-i18n-aria="hud.pauseAria">❚❚</button>
     </header>
     <div class="field-wrap">
       <canvas id="canvas"></canvas>
@@ -179,8 +180,10 @@
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/cats.js"></script>
+<script src="js/SoundManager.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

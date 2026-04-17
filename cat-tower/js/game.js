@@ -90,6 +90,10 @@
 
   log('boot 시작');
 
+  // -------- 사운드 매니저 (Tone.js) --------
+  const sound = (typeof SoundManager !== 'undefined') ? new SoundManager() : null;
+  if (!sound) warn('SoundManager 미로드 — 무음 모드');
+
   const { Engine, World, Bodies, Body, Composite, Events } = Matter;
   if (!Matter) err('Matter.js 로드 실패');
   const TIERS = CatAssets.TIERS;
@@ -291,7 +295,10 @@
           const bonus = Math.floor(TIERS[tier + 1].score * 0.25 * (comboCount - 1));
           score += bonus;
           showComboFlash(comboCount);
+          sound?.playCombo(comboCount);
           log(`콤보! ${comboCount}연쇄 +${bonus}pt`);
+        } else {
+          sound?.playMerge(tier + 1);
         }
 
         mergeEffects.push({ x: midX, y: midY, r: TIERS[tier + 1].radius, age: 0, max: 22, color: '#FFB84D' });
@@ -301,12 +308,14 @@
         if (tier + 1 === TIERS.length - 1 && !reachedFinal) {
           reachedFinal = true;
           showFlash(tt('flash.legend'), true);
+          sound?.playLegend();
           log('🏆 사바나 최초 달성!');
         }
       } else {
         // 최종 단계 끼리 붙음 → 소멸 + 보너스
         score += TIERS[tier].score * 2;
         mergeEffects.push({ x: midX, y: midY, r: TIERS[tier].radius * 1.3, age: 0, max: 32, color: '#F2B43A' });
+        sound?.playFinalMerge();
         log(`최종단계 소멸 (tier ${tier}) +${TIERS[tier].score * 2}pt score=${score}`);
       }
       updateScoreUI();
@@ -367,6 +376,7 @@
       err(`dropCurrent: setStatic(false) 후 mass 이상 mass=${currentCat.mass} invMass=${currentCat.inverseMass} — _original이 누락됐을 가능성 (createCat 수정 회귀?)`);
     }
     currentCat.cat.spawnedAt = performance.now();
+    sound?.playDrop(tier);
     log(`dropCurrent tier=${tier} at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`);
     currentCat = null;
     dropCooldown = true;
@@ -453,6 +463,8 @@
     if (isNew) nr.classList.remove('hidden'); else nr.classList.add('hidden');
     resetRankSubmit();
     show(modals.gameover);
+    sound?.playGameOver();
+    if (isNew) setTimeout(() => sound?.playNewRecord(), 1600);
   }
 
   // -------- 렌더링 --------
@@ -609,7 +621,16 @@
     if (gameOver) { log('togglePause skip: gameOver'); return; }
     paused = !paused;
     log(`togglePause → paused=${paused}`);
-    if (paused) show(modals.pause); else hide(modals.pause);
+    if (paused) { show(modals.pause); sound?.playPause(); }
+    else { hide(modals.pause); sound?.playResume(); }
+  }
+
+  // 사운드 토글 버튼 UI 반영
+  function updateSoundBtn() {
+    const btn = $('sound-btn');
+    if (!btn || !sound) return;
+    btn.textContent = sound.enabled ? '🔊' : '🔇';
+    btn.classList.toggle('muted', !sound.enabled);
   }
 
   function exitToMenu() {
@@ -799,23 +820,38 @@
       playBtn.disabled = true;
       playBtn.textContent = '불러오는 중…';
 
-      $('how-btn').addEventListener('click', () => { log('UI: how 열기'); show(modals.how); });
-      $('how-close').addEventListener('click', () => { log('UI: how 닫기'); hide(modals.how); });
+      $('how-btn').addEventListener('click', () => { sound?.playButton(); log('UI: how 열기'); show(modals.how); });
+      $('how-close').addEventListener('click', () => { sound?.playButton(); log('UI: how 닫기'); hide(modals.how); });
 
+      // pause 버튼 (HUD) — togglePause가 이미 pause/resume 사운드 처리
       $('pause-btn').addEventListener('click', togglePause);
       $('resume-btn').addEventListener('click', togglePause);
-      $('restart-btn').addEventListener('click', () => { log('UI: 재시작 클릭'); hide(modals.pause); startGame(); });
-      $('exit-btn').addEventListener('click', exitToMenu);
-      $('replay-btn').addEventListener('click', () => { log('UI: 다시도전 클릭'); hide(modals.gameover); startGame(); });
-      $('menu-btn').addEventListener('click', exitToMenu);
+      $('restart-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 재시작 클릭'); hide(modals.pause); startGame(); });
+      $('exit-btn').addEventListener('click', () => { sound?.playButton(); exitToMenu(); });
+      $('replay-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 다시도전 클릭'); hide(modals.gameover); startGame(); });
+      $('menu-btn').addEventListener('click', () => { sound?.playButton(); exitToMenu(); });
+
+      // 사운드 토글
+      const soundBtn = $('sound-btn');
+      if (soundBtn && sound) {
+        soundBtn.addEventListener('click', () => {
+          sound.ensureContext();
+          const wasOff = !sound.enabled;
+          sound.toggle();
+          updateSoundBtn();
+          // 켠 순간에만 피드백 — 끌 때는 무음이 자연스러움
+          if (wasOff && sound.enabled) sound.playButton();
+        });
+        updateSoundBtn();
+      }
 
       // 랭킹 모달
-      $('rank-btn').addEventListener('click', () => { log('UI: 랭킹 클릭'); openRankModal(); });
-      $('rank-close').addEventListener('click', () => hide(modals.rank));
+      $('rank-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 랭킹 클릭'); openRankModal(); });
+      $('rank-close').addEventListener('click', () => { sound?.playButton(); hide(modals.rank); });
 
       // 게임오버 랭킹 등록 / Skip
-      $('submit-rank-btn').addEventListener('click', handleSubmitRank);
-      $('skip-rank-btn').addEventListener('click', handleSkipRank);
+      $('submit-rank-btn').addEventListener('click', () => { sound?.playButton(); handleSubmitRank(); });
+      $('skip-rank-btn').addEventListener('click', () => { sound?.playButton(); handleSkipRank(); });
       $('nickname-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleSubmitRank(); }
       });
@@ -839,6 +875,9 @@
       });
 
       playBtn.addEventListener('click', () => {
+        // 첫 user gesture에서 AudioContext 초기화 (iOS/Safari 대응)
+        sound?.ensureContext();
+        sound?.playButton();
         log('UI: 플레이 클릭');
         hide(screens.menu);
         show(screens.game);
