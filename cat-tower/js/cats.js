@@ -77,7 +77,7 @@
       emoji: '1f63e', emojiScale: 0.70 },
 
     { id: 10, name: '사바나',        radius: 111, score: 10000,
-      fill: '#E8B559', stroke: '#8E6424', pattern: 'spots', patternColor: '#3A2A15',
+      fill: '#E8B559', stroke: '#8E6424', pattern: 'spots', patternColor: '#1F140A',
       emoji: '1f639', emojiScale: 0.68,
       aura: '#F2B43A' },
   ];
@@ -148,16 +148,26 @@
       ctx.arc(r * 0.38, r * 0.32, r * 0.42, 0, Math.PI * 2);
       ctx.fill();
     } else if (tier.pattern === 'spots') {
-      ctx.fillStyle = tier.patternColor;
+      // 사바나 로제트 — 실제 사바나 품종의 이중층 무늬 재현
+      // (어두운 중심 + 황금 후광). 이모지 얼굴 바깥쪽(r*0.55~0.90) 링에만 배치해서
+      // 얼굴에 가려지지 않고 가장자리에서 뚜렷하게 보이도록.
       const spots = [
-        [-0.45, -0.35, 0.17],
-        [ 0.35, -0.40, 0.15],
-        [-0.30,  0.30, 0.20],
-        [ 0.45,  0.20, 0.18],
-        [ 0.00, -0.10, 0.12],
-        [ 0.10,  0.50, 0.14],
+        [ 0.58, -0.60, 0.11],  // 우상
+        [ 0.82, -0.10, 0.13],  // 우
+        [ 0.68,  0.48, 0.12],  // 우하
+        [ 0.05,  0.82, 0.12],  // 하
+        [-0.55,  0.65, 0.13],  // 좌하
+        [-0.82,  0.08, 0.13],  // 좌
+        [-0.55, -0.62, 0.11],  // 좌상
       ];
       for (const [sx, sy, sr] of spots) {
+        // 외곽 황금 후광 (로제트)
+        ctx.fillStyle = 'rgba(242, 180, 58, 0.55)';
+        ctx.beginPath();
+        ctx.arc(sx * r, sy * r, sr * r * 1.35, 0, Math.PI * 2);
+        ctx.fill();
+        // 어두운 중심
+        ctx.fillStyle = tier.patternColor;
         ctx.beginPath();
         ctx.arc(sx * r, sy * r, sr * r, 0, Math.PI * 2);
         ctx.fill();
