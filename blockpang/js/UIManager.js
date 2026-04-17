@@ -544,7 +544,8 @@ class UIManager {
         const langFontSize = Math.max(11, Math.min(12, w * 0.03)) * sc;
         const langBtnW = Math.min(110, w * 0.28);
         const langBtnH = Math.min(32, h * 0.048);
-        const langX = 14, langY = 14;
+        // ArcherLab HTML 링크(~14px top, ~32px tall)가 좌상단에 있으므로 그 아래에 스택
+        const langX = 14, langY = 56;
 
         const langTrigger = new PIXI.Graphics();
         langTrigger.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)

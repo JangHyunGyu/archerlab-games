@@ -169,11 +169,13 @@ export class GameOverScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         const titleText = isVictory ? t('victoryTitle') : 'GAME  OVER';
-        this.add.text(cx, GAME_HEIGHT * 0.16, titleText, {
+        const titleObj = this.add.text(cx, GAME_HEIGHT * 0.16, titleText, {
             fontSize: fs(44), fontFamily: UI_FONT_KR, fontStyle: 'bold',
             color: isVictory ? SYSTEM.TEXT_GOLD : SYSTEM.TEXT_RED,
             stroke: '#000000', strokeThickness: 3, letterSpacing: 4,
         }).setOrigin(0.5);
+        const titleMaxW = GAME_WIDTH - uv(40);
+        if (titleObj.width > titleMaxW) titleObj.setScale(titleMaxW / titleObj.width);
 
         const ulG = this.add.graphics();
         ulG.lineStyle(1, isVictory ? SYSTEM.BORDER_GOLD : SYSTEM.BORDER_WARN, 0.6);

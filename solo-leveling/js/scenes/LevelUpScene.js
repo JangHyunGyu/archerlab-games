@@ -42,8 +42,10 @@ export class LevelUpScene extends Phaser.Scene {
             fontSize: fs(isMobile ? 36 : 34), fontFamily: UI_FONT_KR, fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT, letterSpacing: 3,
         }).setOrigin(0.5).setDepth(1);
+        const titleMaxW = GAME_WIDTH - uv(40);
+        if (title.width > titleMaxW) title.setScale(titleMaxW / title.width);
 
-        const uw = title.width;
+        const uw = title.displayWidth;
         const ul = this.add.graphics().setDepth(1);
         ul.lineStyle(1, SYSTEM.BORDER_GOLD, 0.7);
         ul.lineBetween(GAME_WIDTH / 2 - uw / 2, titleY + title.height / 2 + uv(4),
