@@ -10,6 +10,22 @@ page.on('console', m => {
     if (m.type() === 'error') errors.push('CONSOLE_ERROR: ' + m.text());
 });
 
+// Expose Phaser game instance on window
+await page.addInitScript(() => {
+    const origGame = window.Phaser;
+    const patch = () => {
+        if (!window.Phaser || !window.Phaser.Game) { setTimeout(patch, 50); return; }
+        const OrigGame = window.Phaser.Game;
+        window.Phaser.Game = function(...args) {
+            const g = new OrigGame(...args);
+            window.__game = g;
+            return g;
+        };
+        window.Phaser.Game.prototype = OrigGame.prototype;
+    };
+    patch();
+});
+
 // 1. Preload -> Menu
 await page.goto('http://127.0.0.1:8765/index.html', { waitUntil: 'load' });
 await page.waitForTimeout(100); // capture preload in transit if lucky
@@ -38,7 +54,7 @@ await page.evaluate(() => {
     const cvs = document.querySelector('canvas');
     if (!cvs) return;
     // The game instance often attaches to window; try a few paths
-    const inst = window.game || window.__game || window.Game;
+    const inst = window.__game || window.Game;
     if (inst) {
         const gs = inst.scene.getScene('GameScene');
         if (gs && gs.player) {
@@ -51,7 +67,7 @@ await page.screenshot({ path: 'c:/workspace/test-output/sl-05-levelup.png' });
 
 // 5. Force game over via console
 await page.evaluate(() => {
-    const inst = window.game || window.__game;
+    const inst = window.__game;
     if (inst) {
         const gs = inst.scene.getScene('GameScene');
         if (gs && gs.player) {
