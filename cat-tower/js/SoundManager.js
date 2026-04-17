@@ -326,6 +326,53 @@
       } catch (e) {}
     }
 
+    // ── BONK: 충돌 "톡" 2~3 레이어 — intensity 0~1, tier 0~9 ──
+    // 드롭 후 바닥/다른 티어 고양이와 부딪힐 때. 원작 수박게임 느낌.
+    playBonk(intensity, tier) {
+      if (!this._canPlay()) return;
+      this.ensureContext();
+      if (!this._hasTone()) return;
+      const now = Tone.now();
+      const i = Math.max(0.15, Math.min(1, intensity || 0.3));
+      const t = Math.max(0, Math.min(9, tier || 0));
+
+      try {
+        // 티어 커질수록 낮은 음 (A3 → B2)
+        const bonkNotes = ['A3', 'G3', 'F#3', 'F3', 'E3', 'D#3', 'D3', 'C#3', 'C3', 'B2'];
+        const freq = this._jitNote(bonkNotes[t], 0.03);
+
+        // L1: Membrane 짧은 톡 (Low) — 주역
+        this._membrane.pitchDecay = 0.04;
+        this._membrane.octaves = 2.2;
+        this._membrane.envelope.decay = 0.05 + t * 0.004;
+        this._membrane.volume.value = -20 + i * 12; // -20 ~ -8
+        this._membrane.triggerAttackRelease(freq, 0.05, now);
+
+        // L2: Click 짧은 가죽 액센트 (Mid)
+        this._at(this._timeJit(3), () => {
+          this._click.envelope.attack = 0.001;
+          this._click.envelope.decay = 0.012;
+          this._click.envelope.sustain = 0.02;
+          this._click.envelope.release = 0.02;
+          this._click.volume.value = -26 + i * 10;
+          this._click.triggerAttackRelease(
+            Tone.Frequency(freq * 2, 'hz').toNote(), 0.022, this._safeTime(now)
+          );
+        });
+
+        // L3: Noise pink 아주 미세한 공기 — 강한 충돌만
+        if (i >= 0.55) {
+          this._at(this._timeJit(2), () => {
+            this._noise.noise.type = 'pink';
+            this._noise.envelope.attack = 0.001;
+            this._noise.envelope.decay = 0.02;
+            this._noise.volume.value = -38 + i * 10;
+            this._noise.triggerAttackRelease('64n', this._safeTime(now));
+          });
+        }
+      } catch (e) {}
+    }
+
     // ── MERGE: 가죽 "뿅" + 유리 "딩" 5 레이어 (진화 단계별 음계) ──
     playMerge(newTier) {
       if (!this._canPlay()) return;
