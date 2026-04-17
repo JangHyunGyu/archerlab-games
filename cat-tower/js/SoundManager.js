@@ -83,8 +83,9 @@
           attack: 0.003, release: 0.12,
         }).connect(this._limiter);
 
+        // decay 1.5s — IR 버퍼 작게 해서 generate() 비용 감소 + 게임 중 convolution 부담 경감
         this._reverb = new Tone.Reverb({
-          decay: 2.2, wet: 0.22, preDelay: 0.012,
+          decay: 1.5, wet: 0.22, preDelay: 0.012,
         }).connect(this._compressor);
         this._reverb.generate();
 

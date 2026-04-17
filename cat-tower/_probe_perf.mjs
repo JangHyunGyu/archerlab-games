@@ -90,16 +90,32 @@ while (Date.now() - phaseBStart < 30000) {
 }
 marks.push(await mark('60s-phaseB-end'));
 
-console.log('\n▶ Phase C: 30초 더 (총 90초, 후반 스트레스)');
+console.log('\n▶ Phase C: 15초 더 (총 75초)');
 const phaseCStart = Date.now();
-while (Date.now() - phaseCStart < 30000) {
+while (Date.now() - phaseCStart < 15000) {
     const px = rect.x + rect.w * (0.25 + Math.random() * 0.5);
     await page.mouse.click(px, rect.y + rect.h * 0.1);
     dropCount++;
     await page.waitForTimeout(650);
 }
-marks.push(await mark('90s-phaseC-end'));
+marks.push(await mark('75s-phaseC-end'));
 console.log(`  총 드롭 수: ${dropCount}`);
+
+console.log('\n▶ Phase D: 재시작 3회 (매 replay 시 히치 있는지 확인)');
+for (let i = 0; i < 3; i++) {
+    await page.click('#pause-btn');
+    await page.waitForTimeout(250);
+    await page.click('#restart-btn');
+    await page.waitForTimeout(1000);
+    marks.push(await mark(`restart-${i+1}`));
+    // 몇 번 드롭
+    for (let k = 0; k < 5; k++) {
+        const px = rect.x + rect.w * 0.5;
+        await page.mouse.click(px, rect.y + rect.h * 0.1);
+        await page.waitForTimeout(650);
+    }
+}
+marks.push(await mark('restart-end'));
 
 // 프레임 타임 + heartbeat 수집
 const { frameTimes, frameTsAt } = await page.evaluate(() => ({
