@@ -53,7 +53,7 @@ export class ShadowDagger extends WeaponBase {
 
         const dagger = this.scene.add.sprite(px, py, 'proj_dagger')
             .setDepth(8)
-            .setScale(1.2)
+            .setScale(0.85)
             .setRotation(angle + Math.PI / 2);
 
         let trailInterval = null;
