@@ -501,6 +501,12 @@ h1 {
   outline: none;
   border-color: var(--accent);
 }
+.rank-submit-buttons {
+  display: flex;
+  gap: 8px;
+}
+.rank-submit-buttons .btn { flex: 1; padding: 10px 14px; font-size: 14px; }
+.rank-submit-buttons .btn-ghost { flex: 0 0 72px; }
 .submit-status {
   min-height: 18px;
   font-size: 12px;
