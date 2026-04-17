@@ -16,7 +16,7 @@ page.on('console', m => {
 });
 page.on('pageerror', e => errs.push('PAGE: ' + e.message));
 
-await page.goto('http://127.0.0.1:8767/index.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8768/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => {
     const btn = document.getElementById('play-btn');
     return btn && !btn.disabled;

@@ -21,7 +21,7 @@ function step(name) { STEPS.push(name); console.log('\n▶', name); }
 
 try {
     step('1. Load page');
-    await page.goto('http://127.0.0.1:8767/index.html', { waitUntil: 'load' });
+    await page.goto('http://127.0.0.1:8768/index.html', { waitUntil: 'load' });
     await page.waitForTimeout(500);
 
     step('2. Wait for play button to enable (preload)');
