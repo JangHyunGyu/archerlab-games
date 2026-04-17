@@ -228,19 +228,12 @@
         }
         .cat-tower .game-thumb {
             background: linear-gradient(135deg, #F5E9D4 0%, #FBF2E0 45%, #F4A15C 100%);
-            position: relative;
         }
-        .cat-tower .game-thumb-content {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+        .cat-tower .game-thumb img {
+            width: 100%;
             height: 100%;
-            font-size: 48px;
-            line-height: 1;
+            object-fit: cover;
         }
-        .cat-tower .ct-small { font-size: 32px; opacity: 0.85; }
-        .cat-tower .ct-large { font-size: 64px; }
         .cat-tower .game-tag {
             background: #E85A4F22;
             color: #B73E35;
@@ -285,11 +278,7 @@
         </a>
         <a href="cat-tower/" class="game-card cat-tower">
             <div class="game-thumb">
-                <div class="game-thumb-content">
-                    <span class="ct-small">🐱</span>
-                    <span class="ct-large">😸</span>
-                    <span class="ct-small">🐈</span>
-                </div>
+                <img src="cat-tower/cat-tower_link.png" alt="고양이 타워 - 합성 퍼즐 게임">
             </div>
             <div class="game-info">
                 <h2>고양이 타워</h2>
