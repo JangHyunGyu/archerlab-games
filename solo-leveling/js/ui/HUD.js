@@ -1,4 +1,9 @@
-import { GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE, COLORS, RANKS, fs, uv } from '../utils/Constants.js';
+import {
+    GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE,
+    COLORS, RANKS,
+    SYSTEM, UI_FONT_MONO, UI_FONT_KR,
+    fs, uv, drawSystemPanel, drawCornerBrackets,
+} from '../utils/Constants.js';
 
 export class HUD {
     constructor(scene) {
@@ -7,19 +12,13 @@ export class HUD {
         this._margin = uv(12);
         this._isPortrait = GAME_WIDTH < GAME_HEIGHT;
 
-        // Build left panel (HP, XP) with sequential positioning
         this._createLeftPanel();
-        // Build right panel (Kills, Level, Rank, Quest) with sequential positioning
         this._createRightPanel();
-        // Center elements
         this._createTimer();
         this._createDungeonBreakDisplay();
-        // Bottom elements
         this._createWeaponSlots();
         this._createShadowArmyDisplay();
-        // Minimap
         this._createMinimap();
-        // Home button
         this._createHomeButton();
     }
 
@@ -27,92 +26,100 @@ export class HUD {
         const m = this._margin;
         let y = m;
 
-        // HP label
-        const hpLabel = this.scene.add.text(m, y, 'HP', {
-            fontSize: fs(10), fontFamily: 'Arial', fontStyle: 'bold',
+        const hpLabel = this.scene.add.text(m, y, '[ HP ]', {
+            fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: '#ff6666',
         }).setDepth(100).setScrollFactor(0);
         this.elements.push(hpLabel);
         y += hpLabel.height + 2;
 
-        // HP bar
         const barW = Math.min(uv(180), GAME_WIDTH * 0.4);
         const hpH = uv(14);
         this._hpW = barW;
         this._hpH = hpH;
 
-        this.hpBg = this.scene.add.rectangle(m, y, barW, hpH, COLORS.HP_BG)
+        this.hpBg = this.scene.add.rectangle(m, y, barW, hpH, 0x1a0608)
             .setOrigin(0, 0).setDepth(100).setScrollFactor(0);
         this.hpFill = this.scene.add.rectangle(m + 1, y + 1, barW - 2, hpH - 2, COLORS.HP_RED)
             .setOrigin(0, 0).setDepth(101).setScrollFactor(0);
-        this.hpText = this.scene.add.text(m + barW / 2, y + hpH / 2, '', {
-            fontSize: fs(9), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#ffffff', stroke: '#000000', strokeThickness: 1,
-        }).setOrigin(0.5).setDepth(102).setScrollFactor(0);
-        this.elements.push(this.hpBg, this.hpFill, this.hpText);
-        y += hpH + 4;
 
-        // XP label
-        const xpLabel = this.scene.add.text(m, y, 'XP', {
-            fontSize: fs(9), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#9b59b6',
+        const hpFrame = this.scene.add.graphics().setDepth(102).setScrollFactor(0);
+        hpFrame.lineStyle(1, 0xff6666, 0.85);
+        hpFrame.strokeRect(m, y, barW, hpH);
+        drawCornerBrackets(hpFrame, m - 2, y - 2, barW + 4, hpH + 4, {
+            len: uv(5), color: 0xff6666, alpha: 1, lineWidth: 1,
+        });
+
+        this.hpText = this.scene.add.text(m + barW / 2, y + hpH / 2, '', {
+            fontSize: fs(9), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: '#ffffff', stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(103).setScrollFactor(0);
+        this.elements.push(this.hpBg, this.hpFill, hpFrame, this.hpText);
+        y += hpH + 8;
+
+        const xpLabel = this.scene.add.text(m, y, '[ EXP ]', {
+            fontSize: fs(9), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN,
         }).setDepth(100).setScrollFactor(0);
         this.elements.push(xpLabel);
         y += xpLabel.height + 2;
 
-        // XP bar
-        const xpH = uv(8);
+        const xpH = uv(6);
         this._xpW = barW;
         this._xpH = xpH;
 
-        this.xpBg = this.scene.add.rectangle(m, y, barW, xpH, COLORS.XP_BG)
+        this.xpBg = this.scene.add.rectangle(m, y, barW, xpH, 0x0a1520)
             .setOrigin(0, 0).setDepth(100).setScrollFactor(0);
-        this.xpFill = this.scene.add.rectangle(m + 1, y + 1, barW - 2, xpH - 2, COLORS.XP_PURPLE)
+        this.xpFill = this.scene.add.rectangle(m + 1, y + 1, barW - 2, xpH - 2, SYSTEM.BORDER)
             .setOrigin(0, 0).setDepth(101).setScrollFactor(0);
-        this.elements.push(this.xpBg, this.xpFill);
+
+        const xpFrame = this.scene.add.graphics().setDepth(102).setScrollFactor(0);
+        xpFrame.lineStyle(1, SYSTEM.BORDER, 0.8);
+        xpFrame.strokeRect(m, y, barW, xpH);
+
+        this.elements.push(this.xpBg, this.xpFill, xpFrame);
         this._leftPanelBottom = y + xpH;
     }
 
     _createRightPanel() {
         const m = this._margin;
-        // 세로모드: HP바 아래 좌측에 배치 / 가로모드: 우상단
         const panelX = this._isPortrait ? m : GAME_WIDTH - m;
         const originX = this._isPortrait ? 0 : 1;
-        let y = this._isPortrait ? this._leftPanelBottom + uv(8) : m;
+        let y = this._isPortrait ? this._leftPanelBottom + uv(10) : m;
 
-        this.killText = this.scene.add.text(panelX, y, 'KILLS: 0', {
-            fontSize: fs(14), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#ff6644', stroke: '#000000', strokeThickness: 2,
+        this.killText = this.scene.add.text(panelX, y, '▸ KILL  0000', {
+            fontSize: fs(13), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: '#ff9966', stroke: '#000000', strokeThickness: 2,
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.killText);
         y += this.killText.height + 3;
 
-        this.levelText = this.scene.add.text(panelX, y, 'Lv.1', {
-            fontSize: fs(12), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#ffffff',
+        this.levelText = this.scene.add.text(panelX, y, '▸ LV    01', {
+            fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT, stroke: '#000000', strokeThickness: 1,
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.levelText);
         y += this.levelText.height + 2;
 
-        this.rankText = this.scene.add.text(panelX, y, 'E-Rank', {
-            fontSize: fs(11), fontFamily: 'Arial',
+        this.rankText = this.scene.add.text(panelX, y, '▸ RANK  E', {
+            fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: '#888888',
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.rankText);
-        y += this.rankText.height + 8;
+        y += this.rankText.height + 10;
 
         this.questText = this.scene.add.text(panelX, y, '', {
-            fontSize: fs(10), fontFamily: 'Arial',
-            color: '#66ccff',
+            fontSize: fs(10), fontFamily: UI_FONT_KR,
+            color: SYSTEM.TEXT_CYAN,
             align: this._isPortrait ? 'left' : 'right',
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.questText);
     }
 
     _createTimer() {
-        this.timerText = this.scene.add.text(GAME_WIDTH / 2, this._margin, '00:00', {
-            fontSize: fs(20), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#ffffff', stroke: '#000000', strokeThickness: 2,
+        this.timerText = this.scene.add.text(GAME_WIDTH / 2, this._margin, '[ 00:00 ]', {
+            fontSize: fs(18), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT, stroke: '#000000', strokeThickness: 2,
         }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.timerText);
     }
@@ -120,8 +127,8 @@ export class HUD {
     _createDungeonBreakDisplay() {
         const y = this._margin + (this.timerText ? this.timerText.height + 5 : uv(25));
         this.breakText = this.scene.add.text(GAME_WIDTH / 2, y, '', {
-            fontSize: fs(11), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#ff4444', stroke: '#000000', strokeThickness: 1,
+            fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_RED, stroke: '#000000', strokeThickness: 1,
         }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.breakText);
     }
@@ -129,6 +136,9 @@ export class HUD {
     _createWeaponSlots() {
         this.weaponIcons = [];
         this.weaponTexts = [];
+        this.weaponSlotsGfx = this.scene.add.graphics().setDepth(100).setScrollFactor(0);
+        this.elements.push(this.weaponSlotsGfx);
+
         const slotSize = uv(32);
         const gap = uv(4);
 
@@ -144,22 +154,23 @@ export class HUD {
                 y = GAME_HEIGHT - this._margin - slotSize;
             }
 
-            const bg = this.scene.add.rectangle(x, y, slotSize, slotSize, 0x1a1a2e, 0.7)
-                .setOrigin(0, 0).setDepth(100).setScrollFactor(0)
-                .setStrokeStyle(1, 0x4a1a8a);
+            drawSystemPanel(this.weaponSlotsGfx, x, y, slotSize, slotSize, {
+                cut: uv(4),
+                fill: SYSTEM.BG_PANEL, fillAlpha: 0.75,
+                border: SYSTEM.BORDER_DIM, borderAlpha: 0.85, borderWidth: 1,
+            });
 
             const icon = this.scene.add.sprite(x + slotSize / 2, y + slotSize / 2, 'particle')
-                .setDepth(101).setScrollFactor(0)
-                .setVisible(false);
+                .setDepth(101).setScrollFactor(0).setVisible(false);
 
-            const lvText = this.scene.add.text(x + slotSize - 2, y + slotSize - 2, '', {
-                fontSize: fs(9), fontFamily: 'Arial', fontStyle: 'bold',
-                color: '#ffd700', stroke: '#000000', strokeThickness: 1,
+            const lvText = this.scene.add.text(x + slotSize - 3, y + slotSize - 3, '', {
+                fontSize: fs(9), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+                color: SYSTEM.TEXT_GOLD, stroke: '#000000', strokeThickness: 2,
             }).setOrigin(1, 1).setDepth(102).setScrollFactor(0);
 
             this.weaponIcons.push(icon);
             this.weaponTexts.push(lvText);
-            this.elements.push(bg, icon, lvText);
+            this.elements.push(icon, lvText);
         }
     }
 
@@ -169,8 +180,8 @@ export class HUD {
             ? GAME_HEIGHT - this._margin - slotSize * 2 - uv(30)
             : GAME_HEIGHT - this._margin - slotSize - uv(25);
         this.shadowText = this.scene.add.text(this._margin, shadowY, '', {
-            fontSize: fs(11), fontFamily: 'Arial',
-            color: COLORS.TEXT_PURPLE,
+            fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN,
         }).setDepth(100).setScrollFactor(0);
         this.elements.push(this.shadowText);
     }
@@ -183,16 +194,25 @@ export class HUD {
         this._mmY = GAME_HEIGHT - m - size;
         this._mmScale = size / WORLD_SIZE;
 
-        // Background
         this._mmBg = this.scene.add.rectangle(
-            this._mmX, this._mmY, size, size, 0x0a0a1a, 0.75
-        ).setOrigin(0, 0).setDepth(100).setScrollFactor(0)
-         .setStrokeStyle(1, 0x4a1a8a, 0.8);
+            this._mmX, this._mmY, size, size, SYSTEM.BG_DEEP, 0.7
+        ).setOrigin(0, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this._mmBg);
 
-        // Graphics layer for dots
-        this._mmGfx = this.scene.add.graphics()
-            .setDepth(101).setScrollFactor(0);
+        const frame = this.scene.add.graphics().setDepth(100).setScrollFactor(0);
+        // Subtle internal grid
+        frame.lineStyle(1, SYSTEM.BORDER_DIM, 0.22);
+        for (let i = 1; i < 4; i++) {
+            frame.lineBetween(this._mmX + (size / 4) * i, this._mmY, this._mmX + (size / 4) * i, this._mmY + size);
+            frame.lineBetween(this._mmX, this._mmY + (size / 4) * i, this._mmX + size, this._mmY + (size / 4) * i);
+        }
+        // Corner brackets
+        drawCornerBrackets(frame, this._mmX, this._mmY, size, size, {
+            len: uv(8), color: SYSTEM.BORDER, lineWidth: 2, alpha: 0.9,
+        });
+        this.elements.push(frame);
+
+        this._mmGfx = this.scene.add.graphics().setDepth(101).setScrollFactor(0);
         this.elements.push(this._mmGfx);
     }
 
@@ -206,75 +226,70 @@ export class HUD {
 
         gfx.clear();
 
-        // Camera viewport indicator
         const cam = this.scene.cameras.main;
         const vx = ox + (cam.scrollX * s);
         const vy = oy + (cam.scrollY * s);
         const vw = (cam.width / cam.zoom) * s;
         const vh = (cam.height / cam.zoom) * s;
-        gfx.lineStyle(1, 0x444466, 0.6);
+        gfx.lineStyle(1, SYSTEM.BORDER, 0.5);
         gfx.strokeRect(vx, vy, vw, vh);
 
-        // Enemies (small red dots)
         if (enemyManager) {
             const enemies = enemyManager.getActiveEnemies();
-            gfx.fillStyle(0xff4444, 0.7);
+            gfx.fillStyle(0xff4444, 0.8);
             for (const e of enemies) {
                 if (!e.active) continue;
                 const ex = ox + e.x * s;
                 const ey = oy + e.y * s;
                 if (e.isElite) {
-                    gfx.fillStyle(0xff8844, 0.9);
+                    gfx.fillStyle(0xff8844, 0.95);
                     gfx.fillRect(ex - 1.5, ey - 1.5, 3, 3);
-                    gfx.fillStyle(0xff4444, 0.7);
+                    gfx.fillStyle(0xff4444, 0.8);
                 } else {
                     gfx.fillRect(ex - 0.5, ey - 0.5, 1.5, 1.5);
                 }
             }
         }
 
-        // Bosses (large bright dots)
         const bosses = this.scene.activeBosses || [];
         for (const b of bosses) {
             if (!b.active) continue;
             const bx = ox + b.x * s;
             const by = oy + b.y * s;
-            gfx.fillStyle(0xff0000, 1);
+            gfx.fillStyle(0xff2222, 1);
             gfx.fillCircle(bx, by, 3);
-            gfx.lineStyle(1, 0xff6666, 0.8);
-            gfx.strokeCircle(bx, by, 4);
+            gfx.lineStyle(1, 0xff8888, 0.9);
+            gfx.strokeCircle(bx, by, 5);
         }
 
-        // Shadow soldiers (purple dots)
         if (shadowArmyManager) {
             const soldiers = shadowArmyManager.getSoldiers();
-            gfx.fillStyle(0xb366ff, 0.9);
+            gfx.fillStyle(SYSTEM.BORDER, 0.9);
             for (const sol of soldiers) {
                 if (!sol.active) continue;
                 gfx.fillRect(ox + sol.x * s - 1, oy + sol.y * s - 1, 2.5, 2.5);
             }
         }
 
-        // Player (bright white dot)
         const px = ox + player.x * s;
         const py = oy + player.y * s;
-        gfx.fillStyle(0x44ccff, 1);
-        gfx.fillCircle(px, py, 2.5);
+        gfx.fillStyle(SYSTEM.BORDER, 1);
+        gfx.fillCircle(px, py, 3);
         gfx.fillStyle(0xffffff, 1);
-        gfx.fillCircle(px, py, 1);
+        gfx.fillCircle(px, py, 1.2);
     }
 
     _createHomeButton() {
         const m = this._margin;
         const timerBottom = m + (this.timerText ? this.timerText.height : uv(20));
-        this.homeBtn = this.scene.add.text(GAME_WIDTH / 2, timerBottom + uv(5), '🏠', {
-            fontSize: fs(18),
-            fontFamily: 'Arial, sans-serif',
+        this.homeBtn = this.scene.add.text(GAME_WIDTH / 2, timerBottom + uv(6), '[ ◁  EXIT ]', {
+            fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN_DIM,
         }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0)
           .setInteractive({ useHandCursor: true });
 
-        this.homeBtn.on('pointerover', () => this.homeBtn.setAlpha(0.7));
-        this.homeBtn.on('pointerout', () => this.homeBtn.setAlpha(1));
+        this.homeBtn.on('pointerover', () => this.homeBtn.setColor(SYSTEM.TEXT_BRIGHT));
+        this.homeBtn.on('pointerout', () => this.homeBtn.setColor(SYSTEM.TEXT_CYAN_DIM));
         this.homeBtn.on('pointerdown', () => {
             this.scene.cameras.main.fadeOut(300, 0, 0, 0);
             this.scene.time.delayedCall(300, () => {
@@ -287,7 +302,6 @@ export class HUD {
     update(player, weaponManager, enemyManager, shadowArmyManager) {
         if (!player) return;
 
-        // HP
         const hpRatio = player.stats.hp / player.stats.maxHp;
         this.hpFill.width = (this._hpW - 2) * hpRatio;
         this.hpText.setText(`${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`);
@@ -300,35 +314,30 @@ export class HUD {
             this.hpFill.setFillStyle(COLORS.HP_RED);
         }
 
-        // XP
         const xpRatio = player.xpToNext > 0 ? player.xp / player.xpToNext : 0;
         this.xpFill.width = (this._xpW - 2) * xpRatio;
 
-        // Timer
         if (enemyManager) {
             const totalSeconds = Math.floor(enemyManager.getGameTime() / 1000);
             const min = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
             const sec = (totalSeconds % 60).toString().padStart(2, '0');
-            this.timerText.setText(`${min}:${sec}`);
+            this.timerText.setText(`[ ${min}:${sec} ]`);
         }
 
-        // Kills
-        this.killText.setText('KILLS: ' + player.kills);
+        this.killText.setText('▸ KILL  ' + String(player.kills).padStart(4, '0'));
+        this.levelText.setText('▸ LV    ' + String(player.level).padStart(2, '0'));
 
-        // Level & Rank
-        this.levelText.setText('Lv.' + player.level);
         const rank = RANKS[player.currentRank];
-        this.rankText.setText(rank.label);
+        this.rankText.setText('▸ RANK  ' + rank.name);
         this.rankText.setColor('#' + rank.color.toString(16).padStart(6, '0'));
 
-        // Weapon slots
         if (weaponManager) {
             const weapons = weaponManager.getOwnedWeapons();
             for (let i = 0; i < 6; i++) {
                 if (i < weapons.length) {
                     const w = weapons[i];
                     this.weaponIcons[i].setTexture('icon_' + w.key).setVisible(true);
-                    this.weaponTexts[i].setText('Lv.' + w.level);
+                    this.weaponTexts[i].setText(String(w.level));
                 } else {
                     this.weaponIcons[i].setVisible(false);
                     this.weaponTexts[i].setText('');
@@ -336,29 +345,29 @@ export class HUD {
             }
         }
 
-        // Shadow army
         if (shadowArmyManager) {
             const count = shadowArmyManager.getSoldierCount();
-            this.shadowText.setText(count > 0 ? `그림자 군단: ${count}/${shadowArmyManager.maxSoldiers}` : '');
+            this.shadowText.setText(
+                count > 0
+                    ? `▸ SHADOW  ${String(count).padStart(2, '0')} / ${String(shadowArmyManager.maxSoldiers).padStart(2, '0')}`
+                    : ''
+            );
         }
 
-        // Active quests
         if (enemyManager && this.questText) {
             const quests = enemyManager.getActiveQuests();
-            this.questText.setText(quests.length > 0 ? quests.map(q => `[퀘스트] ${q.description}`).join('\n') : '');
+            this.questText.setText(quests.length > 0 ? quests.map(q => `▷ ${q.description}`).join('\n') : '');
         }
 
-        // Minimap (throttled: update every 3 frames)
         this._mmFrameCounter = ((this._mmFrameCounter || 0) + 1) % 3;
         if (this._mmFrameCounter === 0) {
             this._updateMinimap(player, enemyManager, shadowArmyManager);
         }
 
-        // Dungeon break indicator
         if (enemyManager && this.breakText) {
             if (enemyManager.isDungeonBreakActive()) {
-                this.breakText.setText('⚠ 던전 브레이크 진행 중 ⚠');
-                this.breakText.setAlpha(0.6 + Math.sin(Date.now() * 0.005) * 0.4);
+                this.breakText.setText('⟨  DUNGEON BREAK · 진행 중  ⟩');
+                this.breakText.setAlpha(0.55 + Math.sin(Date.now() * 0.005) * 0.4);
             } else {
                 this.breakText.setText('');
             }

@@ -29,6 +29,71 @@ export function uv(base) {
     return Math.round(base * dimScale);
 }
 
+// ── System UI palette (Solo Leveling "The System" aesthetic) ──
+export const SYSTEM = {
+    BG_DEEP: 0x05070d,
+    BG_PANEL: 0x080c16,
+    BG_PANEL_HI: 0x0f1626,
+    BORDER: 0x4dd2ff,
+    BORDER_DIM: 0x1f5c8f,
+    BORDER_WARN: 0xff3344,
+    BORDER_GOLD: 0xe8b64a,
+    TEXT_BRIGHT: '#d9f4ff',
+    TEXT_CYAN: '#4dd2ff',
+    TEXT_CYAN_DIM: '#3a8bb8',
+    TEXT_MUTED: '#5a6c7a',
+    TEXT_RED: '#ff5a5a',
+    TEXT_GOLD: '#e8b64a',
+    SCAN_LINE: 0x0e2033,
+};
+
+export const UI_FONT_MONO = '"Courier New", Consolas, Menlo, monospace';
+export const UI_FONT_KR = '"Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+
+// Draw an angular-cut panel (System aesthetic). Corners are chamfered instead of rounded.
+export function drawSystemPanel(g, x, y, w, h, opts = {}) {
+    const {
+        cut = 8,
+        fill = 0x080c16,
+        fillAlpha = 0.85,
+        border = 0x4dd2ff,
+        borderAlpha = 1,
+        borderWidth = 1,
+        cutCorners = [true, true, true, true], // [TL, TR, BR, BL]
+    } = opts;
+    const [ctl, ctr, cbr, cbl] = cutCorners.map(c => c ? cut : 0);
+    g.fillStyle(fill, fillAlpha);
+    g.lineStyle(borderWidth, border, borderAlpha);
+    g.beginPath();
+    g.moveTo(x + ctl, y);
+    g.lineTo(x + w - ctr, y);
+    if (ctr) g.lineTo(x + w, y + ctr); else g.lineTo(x + w, y);
+    g.lineTo(x + w, y + h - cbr);
+    if (cbr) g.lineTo(x + w - cbr, y + h); else g.lineTo(x + w, y + h);
+    g.lineTo(x + cbl, y + h);
+    if (cbl) g.lineTo(x, y + h - cbl); else g.lineTo(x, y + h);
+    g.lineTo(x, y + ctl);
+    if (ctl) g.lineTo(x + ctl, y);
+    g.closePath();
+    g.fillPath();
+    g.strokePath();
+}
+
+// Corner brackets (tactical/HUD frame) — 4 L-shaped corners only.
+export function drawCornerBrackets(g, x, y, w, h, opts = {}) {
+    const {
+        len = 10,
+        color = 0x4dd2ff,
+        alpha = 1,
+        lineWidth = 2,
+    } = opts;
+    g.lineStyle(lineWidth, color, alpha);
+    g.beginPath(); g.moveTo(x, y + len); g.lineTo(x, y); g.lineTo(x + len, y); g.strokePath();
+    g.beginPath(); g.moveTo(x + w - len, y); g.lineTo(x + w, y); g.lineTo(x + w, y + len); g.strokePath();
+    g.beginPath(); g.moveTo(x + w, y + h - len); g.lineTo(x + w, y + h); g.lineTo(x + w - len, y + h); g.strokePath();
+    g.beginPath(); g.moveTo(x + len, y + h); g.lineTo(x, y + h); g.lineTo(x, y + h - len); g.strokePath();
+}
+
 export const COLORS = {
     SHADOW_PRIMARY: 0x7b2fff,
     SHADOW_DARK: 0x4a1a8a,
