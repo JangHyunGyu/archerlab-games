@@ -895,6 +895,13 @@
         // 첫 user gesture에서 AudioContext 초기화 (iOS/Safari 대응)
         sound?.ensureContext();
         sound?.playButton();
+        if (sound?.enabled) {
+          try {
+            const catSfx = new Audio('sound/stu9-cute-cat-352656.mp3');
+            catSfx.volume = 0.8;
+            catSfx.play().catch(() => {});
+          } catch (e) {}
+        }
         log('UI: 플레이 클릭');
         hide(screens.menu);
         show(screens.game);
