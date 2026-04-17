@@ -543,11 +543,13 @@ class UIManager {
         });
 
         // ── Language chip (top-left pill) ──
+        // ArcherLab HTML 링크(상단 중앙, padding 6px + font 0.78rem → 실측 약 26-28px)와
+        // 세로 중앙선을 맞추기 위해 칩 높이를 동일하게 ~27px로 고정. 이전 32px는 5px가량 더 커서
+        // 같은 top(14px)에 두면 세로 중앙이 어긋나 시각적으로 "칩이 더 아래"로 보였음.
         const langLabel = LANG_LABELS[currentLang] || '한국어';
+        const langBtnH = Math.round(Math.min(28, Math.max(24, h * 0.04)));
         const langFontSize = Math.max(11, Math.min(12, w * 0.03)) * sc;
         const langBtnW = Math.min(110, w * 0.28);
-        const langBtnH = Math.min(32, h * 0.048);
-        // ArcherLab HTML 링크는 상단 중앙에 있으므로 언어 칩은 좌상단 동일 높이에 배치
         const langX = 14, langY = 14;
 
         const langTrigger = new PIXI.Graphics();
