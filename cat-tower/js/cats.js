@@ -181,6 +181,8 @@
   }
 
   // ---------- 메인 드로우 ----------
+  // 구조: 회전 프레임(바디/패턴/이모지) + 역회전 프레임(그림자/광원/광택)
+  // → 고양이는 물리에 따라 굴러가지만 광원은 월드 좌상단 고정, 그림자는 바닥 고정.
   function drawCat(ctx, tierIdx, x, y, angle, radius) {
     const tier = CAT_TIERS[tierIdx];
     const r = radius || tier.radius;
@@ -189,45 +191,96 @@
     ctx.translate(x, y);
     if (angle) ctx.rotate(angle);
 
-    // 후광 (전설)
+    // 1) 후광 (전설)
     if (tier.aura) {
-      const grd = ctx.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 1.6);
+      const grd = ctx.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 1.7);
       grd.addColorStop(0.0, tier.aura + 'AA');
-      grd.addColorStop(0.5, tier.aura + '33');
+      grd.addColorStop(0.5, tier.aura + '44');
       grd.addColorStop(1.0, tier.aura + '00');
       ctx.fillStyle = grd;
-      ctx.fillRect(-r * 1.6, -r * 1.6, r * 3.2, r * 3.2);
+      ctx.fillRect(-r * 1.7, -r * 1.7, r * 3.4, r * 3.4);
     }
 
-    // 바닥 그림자 (회전 독립적으로 보이게, 역회전 처리)
+    // 2) 바닥 그림자 — 다층 소프트 (월드 바닥 고정, 역회전)
     ctx.save();
     if (angle) ctx.rotate(-angle);
-    ctx.fillStyle = 'rgba(58, 41, 32, 0.16)';
+    ctx.fillStyle = 'rgba(58, 41, 32, 0.10)';
     ctx.beginPath();
-    ctx.ellipse(0, r * 0.95, r * 0.85, r * 0.22, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, r * 1.02, r * 0.98, r * 0.26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(58, 41, 32, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.98, r * 0.74, r * 0.17, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // fluff는 바디 밖 털끝이라 먼저 그림
+    // 3) fluff는 바디 바깥 털이라 먼저 그림
     if (tier.pattern === 'fluff') drawPattern(ctx, tier, r);
 
-    // 바디 원
-    ctx.fillStyle = tier.fill;
+    // 4) 바디 — 레이디얼 그라데이션 (3D 구슬, 광원 좌상단 월드 고정 → 역회전)
+    ctx.save();
+    if (angle) ctx.rotate(-angle);
+    const bodyGrd = ctx.createRadialGradient(
+      -r * 0.30, -r * 0.40, r * 0.10,
+      0, 0, r * 1.05
+    );
+    bodyGrd.addColorStop(0.00, lighten(tier.fill, 0.22));
+    bodyGrd.addColorStop(0.55, tier.fill);
+    bodyGrd.addColorStop(1.00, darken(tier.fill, 0.15));
+    ctx.fillStyle = bodyGrd;
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
 
-    // 바디 내부 패턴
+    // 5) 바디 내부 패턴 (고양이 털 — 회전 따라감)
     if (tier.pattern && tier.pattern !== 'fluff') drawPattern(ctx, tier, r);
 
-    // 외곽선
+    // 6) 림 셰이딩 — 안쪽 가장자리 어둡게 (회전 무관, 구형 볼륨감)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, r - 0.5, 0, Math.PI * 2);
+    ctx.clip();
+    const rimGrd = ctx.createRadialGradient(0, 0, r * 0.65, 0, 0, r);
+    rimGrd.addColorStop(0.00, 'rgba(0, 0, 0, 0)');
+    rimGrd.addColorStop(0.85, 'rgba(0, 0, 0, 0.06)');
+    rimGrd.addColorStop(1.00, 'rgba(0, 0, 0, 0.22)');
+    ctx.fillStyle = rimGrd;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
+    ctx.restore();
+
+    // 7) 외곽선
     ctx.strokeStyle = tier.stroke;
     ctx.lineWidth = Math.max(1.5, r * 0.05);
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 이모지 얼굴 (로드된 경우에만)
+    // 8) 광택 하이라이트 (glossy — 월드 고정, 역회전)
+    ctx.save();
+    if (angle) ctx.rotate(-angle);
+    ctx.beginPath();
+    ctx.arc(0, 0, r - 1, 0, Math.PI * 2);
+    ctx.clip();
+    const specGrd = ctx.createRadialGradient(
+      -r * 0.38, -r * 0.42, 0,
+      -r * 0.35, -r * 0.40, r * 0.60
+    );
+    specGrd.addColorStop(0.0, 'rgba(255, 255, 255, 0.55)');
+    specGrd.addColorStop(0.5, 'rgba(255, 255, 255, 0.15)');
+    specGrd.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = specGrd;
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.38, -r * 0.42, r * 0.48, r * 0.32, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // 작은 포인트 하이라이트
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.70)';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.46, -r * 0.50, r * 0.11, r * 0.06, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 9) 이모지 얼굴 (회전 따라감 — 고양이 표정은 바디에 붙어 있음)
     const imgOrPromise = imageCache.get(tier.emoji);
     if (imgOrPromise instanceof Image && imgOrPromise.complete && imgOrPromise.naturalWidth > 0) {
       const er = r * (tier.emojiScale || 0.75);
