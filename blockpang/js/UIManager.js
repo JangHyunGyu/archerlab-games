@@ -111,6 +111,7 @@ class UIManager {
         this.soundBtn.anchor.set(1, 0);
         this.soundBtn.eventMode = 'static';
         this.soundBtn.cursor = 'pointer';
+        this.soundBtn.hitArea = new PIXI.Rectangle(-44, -12, 56, 56);
         this.soundBtn.on('pointerdown', () => {
             const enabled = this.game.sound.toggle();
             this.soundBtn.style.fill = enabled ? THEME.inkMuted : THEME.inkFaint;
@@ -132,6 +133,7 @@ class UIManager {
         this.homeBtn.anchor.set(0, 0);
         this.homeBtn.eventMode = 'static';
         this.homeBtn.cursor = 'pointer';
+        this.homeBtn.hitArea = new PIXI.Rectangle(-12, -12, 56, 56);
         this.homeBtn.on('pointerdown', () => {
             if (this.game.isAnimating) return;
             this.game.goToTitle();
