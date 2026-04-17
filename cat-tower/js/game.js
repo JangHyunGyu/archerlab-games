@@ -101,9 +101,9 @@
 
   // 내부 좌표계 (CSS로 스케일), 세로 비율 5:7
   const FIELD_W = 400;
-  const FIELD_H = 560;
-  const DANGER_LINE = 88;      // 이 선 위로 오래 머무르면 게임 오버
-  const SPAWN_Y = 48;           // 대기 고양이 Y 위치
+  const FIELD_H = 540;
+  const DANGER_LINE = 85;      // 이 선 위로 오래 머무르면 게임 오버
+  const SPAWN_Y = 46;           // 대기 고양이 Y 위치
   const GAME_OVER_GRACE_MS = 2000;
   const POST_DROP_GRACE_MS = 1400;
   const DROP_COOLDOWN_MS = 550;
