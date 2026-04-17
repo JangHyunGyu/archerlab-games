@@ -131,8 +131,9 @@
 
         // ── 유리 톤 신스 (wet 채널) ──
 
-        // Bell: 유리 구슬 "딩" — sine 깨끗
-        this._bell = new Tone.Synth({
+        // Bell: 유리 구슬 "딩" — PolySynth로 오버랩 시 클릭/찢어짐 방지
+        this._bell = new Tone.PolySynth(Tone.Synth, {
+          maxPolyphony: 16,
           oscillator: { type: 'sine' },
           envelope: { attack: 0.001, decay: 0.1, sustain: 0.25, release: 0.5 },
         }).connect(this._wetChannel);
@@ -147,8 +148,9 @@
         }).connect(this._wetChannel);
         this._poly.volume.value = -10;
 
-        // FMSynth: 하모닉 팡파레 (유리 배음)
-        this._fm = new Tone.FMSynth({
+        // FMSynth: 하모닉 팡파레 (유리 배음) — Poly
+        this._fm = new Tone.PolySynth(Tone.FMSynth, {
+          maxPolyphony: 8,
           harmonicity: 3,
           modulationIndex: 8,
           oscillator: { type: 'sine' },
@@ -158,8 +160,9 @@
         }).connect(this._wetChannel);
         this._fm.volume.value = -14;
 
-        // AMSynth: 트레몰로 꼬리 (여운)
-        this._am = new Tone.AMSynth({
+        // AMSynth: 트레몰로 꼬리 (여운) — Poly
+        this._am = new Tone.PolySynth(Tone.AMSynth, {
+          maxPolyphony: 6,
           harmonicity: 2,
           oscillator: { type: 'sine' },
           envelope: { attack: 0.012, decay: 0.25, sustain: 0.3, release: 0.6 },
@@ -179,8 +182,9 @@
         }).connect(this._wetChannel);
         this._metal.volume.value = -22;
 
-        // Sweep: 필터 스윕 (상승/하강 트랜지션)
-        this._sweep = new Tone.MonoSynth({
+        // Sweep: 필터 스윕 (상승/하강 트랜지션) — Poly
+        this._sweep = new Tone.PolySynth(Tone.MonoSynth, {
+          maxPolyphony: 4,
           oscillator: { type: 'sawtooth' },
           filter: { type: 'lowpass', frequency: 400, rolloff: -24, Q: 2.5 },
           envelope: { attack: 0.008, decay: 0.2, sustain: 0.1, release: 0.2 },
@@ -250,12 +254,11 @@
       if (!this._hasTone()) return;
       try {
         const now = Tone.now();
-        this._poly.releaseAll?.(now);
-        const monos = [this._membrane, this._bass, this._click, this._bell,
-                       this._fm, this._am, this._sweep];
-        for (const s of monos) {
-          try { s?.triggerRelease?.(now); } catch {}
-        }
+        // PolySynth: releaseAll, MonoSynth/Synth: triggerRelease
+        const polys = [this._poly, this._bell, this._fm, this._am, this._sweep];
+        for (const p of polys) { try { p?.releaseAll?.(now); } catch {} }
+        const monos = [this._membrane, this._bass, this._click];
+        for (const s of monos) { try { s?.triggerRelease?.(now); } catch {} }
       } catch {}
     }
 
@@ -396,18 +399,14 @@
 
         // L2: Bell 유리 딩 (Mid/Hi) — 주역
         this._at(0.008 + this._timeJit(4), () => {
-          this._bell.envelope.attack = 0.001;
-          this._bell.envelope.decay = 0.08;
-          this._bell.envelope.sustain = 0.3;
-          this._bell.envelope.release = 0.4;
+          this._bell.set({ envelope: { attack: 0.001, decay: 0.08, sustain: 0.3, release: 0.4 } });
           this._bell.volume.value = -6 - t * 0.2;
           this._bell.triggerAttackRelease(freq, 0.3, this._safeTime(now + 0.008));
         });
 
         // L3: FM 하모닉 블룸 (Body/Hi)
         this._at(0.02 + this._timeJit(5), () => {
-          this._fm.harmonicity.value = 3 + t * 0.2;
-          this._fm.modulationIndex.value = 6 + t * 0.8;
+          this._fm.set({ harmonicity: 3 + t * 0.2, modulationIndex: 6 + t * 0.8 });
           this._fm.volume.value = -16 - t * 0.2;
           this._fm.triggerAttackRelease(freq, 0.22, this._safeTime(now + 0.02));
         });
@@ -467,10 +466,7 @@
         arp.forEach((f, i) => {
           this._at(i * 0.04, () => {
             const note = Tone.Frequency(f * this._jitter(0.01), 'hz').toNote();
-            this._bell.envelope.attack = 0.001;
-            this._bell.envelope.decay = 0.07;
-            this._bell.envelope.sustain = 0.25;
-            this._bell.envelope.release = 0.25;
+            this._bell.set({ envelope: { attack: 0.001, decay: 0.07, sustain: 0.25, release: 0.25 } });
             this._bell.volume.value = -6;
             this._bell.triggerAttackRelease(note, 0.2, this._safeTime(now + i * 0.04));
           });
@@ -490,8 +486,7 @@
 
         // L3: FM 그리트 (Body) — 에너지
         this._at(0.015, () => {
-          this._fm.harmonicity.value = 2.5 + n * 0.25;
-          this._fm.modulationIndex.value = 5 + n * 1.5;
+          this._fm.set({ harmonicity: 2.5 + n * 0.25, modulationIndex: 5 + n * 1.5 });
           this._fm.volume.value = -14 + n * 0.4;
           this._fm.triggerAttackRelease(
             Tone.Frequency(baseFreq, 'hz').toNote(), 0.22, this._safeTime(now + 0.015)
@@ -501,7 +496,7 @@
         // L4: AM 트레몰로 (Body) — 진동감 (콤보 3+)
         if (n >= 3) {
           this._at(0.025, () => {
-            this._am.harmonicity.value = 2 + n * 0.15;
+            this._am.set({ harmonicity: 2 + n * 0.15 });
             this._am.volume.value = -16 + n * 0.5;
             this._am.triggerAttackRelease(
               Tone.Frequency(octaveFreq, 'hz').toNote(), 0.25, this._safeTime(now + 0.025)
@@ -512,7 +507,7 @@
         // L5: Sweep 필터 상승 (Body) — 고조감 (콤보 4+)
         if (n >= 4) {
           this._at(0.01, () => {
-            this._sweep.filterEnvelope.octaves = 3 + n * 0.3;
+            this._sweep.set({ filterEnvelope: { octaves: 3 + n * 0.3 } });
             this._sweep.volume.value = -18 + n * 0.5;
             this._sweep.triggerAttackRelease(
               Tone.Frequency(baseFreq / 2, 'hz').toNote(), 0.25, this._safeTime(now + 0.01)
@@ -551,10 +546,7 @@
         scale.forEach((note, i) => {
           this._at(0.04 + i * 0.05, () => {
             const jitNote = Tone.Frequency(this._jitNote(note, 0.01), 'hz').toNote();
-            this._bell.envelope.attack = 0.002;
-            this._bell.envelope.decay = 0.09;
-            this._bell.envelope.sustain = 0.4;
-            this._bell.envelope.release = 0.35;
+            this._bell.set({ envelope: { attack: 0.002, decay: 0.09, sustain: 0.4, release: 0.35 } });
             this._bell.volume.value = -6;
             this._bell.triggerAttackRelease(jitNote, 0.28, this._safeTime(now + 0.04 + i * 0.05));
           });
@@ -569,15 +561,14 @@
 
         // L5: FM 팡파레
         this._at(0.06, () => {
-          this._fm.harmonicity.value = 4;
-          this._fm.modulationIndex.value = 10;
+          this._fm.set({ harmonicity: 4, modulationIndex: 10 });
           this._fm.volume.value = -12;
           this._fm.triggerAttackRelease('G5', 0.5, this._safeTime(now + 0.06));
         });
 
         // L6: AM 꼬리 여운
         this._at(0.1, () => {
-          this._am.harmonicity.value = 2;
+          this._am.set({ harmonicity: 2 });
           this._am.volume.value = -14;
           this._am.triggerAttackRelease('C6', 0.9, this._safeTime(now + 0.1));
         });
@@ -619,10 +610,7 @@
         const scale = ['C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6'];
         scale.forEach((note, i) => {
           this._at(0.05 + i * 0.04, () => {
-            this._bell.envelope.attack = 0.001;
-            this._bell.envelope.decay = 0.1;
-            this._bell.envelope.sustain = 0.45;
-            this._bell.envelope.release = 0.4;
+            this._bell.set({ envelope: { attack: 0.001, decay: 0.1, sustain: 0.45, release: 0.4 } });
             this._bell.volume.value = -5;
             this._bell.triggerAttackRelease(
               Tone.Frequency(this._jitNote(note, 0.01), 'hz').toNote(),
@@ -640,21 +628,19 @@
 
         // L5: FM 영웅 팡파레
         this._at(0.08, () => {
-          this._fm.harmonicity.value = 5;
-          this._fm.modulationIndex.value = 14;
+          this._fm.set({ harmonicity: 5, modulationIndex: 14 });
           this._fm.volume.value = -10;
           this._fm.triggerAttackRelease('G5', 0.7, this._safeTime(now + 0.08));
         });
         this._at(0.25, () => {
-          this._fm.harmonicity.value = 3;
-          this._fm.modulationIndex.value = 8;
+          this._fm.set({ harmonicity: 3, modulationIndex: 8 });
           this._fm.volume.value = -12;
           this._fm.triggerAttackRelease('C6', 0.6, this._safeTime(now + 0.25));
         });
 
         // L6: AM 긴 여운
         this._at(0.12, () => {
-          this._am.harmonicity.value = 2.5;
+          this._am.set({ harmonicity: 2.5 });
           this._am.volume.value = -12;
           this._am.triggerAttackRelease('E6', 1.2, this._safeTime(now + 0.12));
         });
@@ -670,9 +656,7 @@
 
         // L8: Sweep 엔딩 필터 업
         this._at(0.4, () => {
-          this._sweep.filterEnvelope.octaves = 5;
-          this._sweep.envelope.decay = 0.6;
-          this._sweep.envelope.release = 0.4;
+          this._sweep.set({ filterEnvelope: { octaves: 5 }, envelope: { decay: 0.6, release: 0.4 } });
           this._sweep.volume.value = -14;
           this._sweep.triggerAttackRelease('C3', 0.6, this._safeTime(now + 0.4));
         });
@@ -728,15 +712,14 @@
 
         // L4: FM 다크 드론
         this._at(1.6, () => {
-          this._fm.harmonicity.value = 1.5;
-          this._fm.modulationIndex.value = 22;
+          this._fm.set({ harmonicity: 1.5, modulationIndex: 22 });
           this._fm.volume.value = -14;
           this._fm.triggerAttackRelease('A0', 1.6, this._safeTime(now + 1.6));
         });
 
         // L5: AM 짧은 꼬리
         this._at(1.4, () => {
-          this._am.harmonicity.value = 1.5;
+          this._am.set({ harmonicity: 1.5 });
           this._am.volume.value = -16;
           this._am.triggerAttackRelease('A2', 1.2, this._safeTime(now + 1.4));
         });
@@ -764,10 +747,7 @@
         const up = ['G5', 'C6', 'E6', 'G6'];
         up.forEach((note, i) => {
           this._at(i * 0.06, () => {
-            this._bell.envelope.attack = 0.001;
-            this._bell.envelope.decay = 0.08;
-            this._bell.envelope.sustain = 0.35;
-            this._bell.envelope.release = 0.3;
+            this._bell.set({ envelope: { attack: 0.001, decay: 0.08, sustain: 0.35, release: 0.3 } });
             this._bell.volume.value = -6;
             this._bell.triggerAttackRelease(note, 0.28, this._safeTime(now + i * 0.06));
           });
@@ -782,15 +762,14 @@
 
         // L3: FM shimmer
         this._at(0.15, () => {
-          this._fm.harmonicity.value = 3.5;
-          this._fm.modulationIndex.value = 7;
+          this._fm.set({ harmonicity: 3.5, modulationIndex: 7 });
           this._fm.volume.value = -12;
           this._fm.triggerAttackRelease('G6', 0.4, this._safeTime(now + 0.15));
         });
 
         // L4: AM 꼬리
         this._at(0.25, () => {
-          this._am.harmonicity.value = 2;
+          this._am.set({ harmonicity: 2 });
           this._am.volume.value = -14;
           this._am.triggerAttackRelease('E6', 0.6, this._safeTime(now + 0.25));
         });
@@ -818,10 +797,7 @@
 
         // L2: Bell 짧은 ting (wet)
         this._at(0.005, () => {
-          this._bell.envelope.attack = 0.001;
-          this._bell.envelope.decay = 0.03;
-          this._bell.envelope.sustain = 0.12;
-          this._bell.envelope.release = 0.08;
+          this._bell.set({ envelope: { attack: 0.001, decay: 0.03, sustain: 0.12, release: 0.08 } });
           this._bell.volume.value = -20;
           this._bell.triggerAttackRelease('E6', 0.05, this._safeTime(now + 0.005));
         });
@@ -835,8 +811,7 @@
       if (!this._hasTone()) return;
       const now = Tone.now();
       try {
-        this._sweep.filterEnvelope.octaves = 2.5;
-        this._sweep.envelope.decay = 0.15;
+        this._sweep.set({ filterEnvelope: { octaves: 2.5 }, envelope: { decay: 0.15 } });
         this._sweep.volume.value = -14;
         this._sweep.triggerAttackRelease('E3', 0.2, now);
       } catch (e) {}
@@ -847,8 +822,7 @@
       if (!this._hasTone()) return;
       const now = Tone.now();
       try {
-        this._sweep.filterEnvelope.octaves = 3.5;
-        this._sweep.envelope.decay = 0.12;
+        this._sweep.set({ filterEnvelope: { octaves: 3.5 }, envelope: { decay: 0.12 } });
         this._sweep.volume.value = -14;
         this._sweep.triggerAttackRelease('G3', 0.18, now);
       } catch (e) {}
@@ -863,16 +837,13 @@
       const now = Tone.now();
       try {
         // L1: Bell 반복 티크
-        this._bell.envelope.attack = 0.002;
-        this._bell.envelope.decay = 0.04;
-        this._bell.envelope.sustain = 0.1;
-        this._bell.envelope.release = 0.1;
+        this._bell.set({ envelope: { attack: 0.002, decay: 0.04, sustain: 0.1, release: 0.1 } });
         this._bell.volume.value = -16;
         this._bell.triggerAttackRelease('A5', 0.08, now);
 
         // L2: AM 긴장 드론
         this._at(0.008, () => {
-          this._am.harmonicity.value = 2.5;
+          this._am.set({ harmonicity: 2.5 });
           this._am.volume.value = -20;
           this._am.triggerAttackRelease('A3', 0.3, this._safeTime(now + 0.008));
         });
