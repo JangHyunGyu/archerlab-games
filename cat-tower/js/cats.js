@@ -11,50 +11,50 @@
   const TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/';
 
   // 각 단계 = 실제 고양이 품종. 바디 컬러와 패턴이 그 품종 정체성을 결정.
-  // radius: 필드 내부 원 반경(px, 400×560 좌표계)
+  // radius: 필드 내부 원 반경(px, 400×540 좌표계, Suika 체리~멜론 비율)
   // fill/stroke: 바디 기본색 / 외곽선
   // pattern: 'stripes' | 'tuxedo' | 'calico' | 'spots' | null
   // emoji: Twemoji 코드포인트 (얼굴 표정 매핑)
   // emojiScale: r 대비 이모지 얼굴 크기 (0.68~0.82)
   // aura: 전설 단계 후광 색
   const CAT_TIERS = [
-    { id: 1,  name: '새끼 고양이',   radius: 18,  score: 10,
+    { id: 1,  name: '새끼 고양이',   radius: 15,  score: 10,
       fill: '#FFD8B5', stroke: '#D89A6A', pattern: null,
       emoji: '1f431', emojiScale: 0.82 },
 
-    { id: 2,  name: '치즈',          radius: 24,  score: 25,
+    { id: 2,  name: '치즈',          radius: 21,  score: 25,
       fill: '#F4A15C', stroke: '#B76A28', pattern: 'stripes', patternColor: '#D97D2D',
       emoji: '1f63a', emojiScale: 0.80 },
 
-    { id: 3,  name: '턱시도',        radius: 32,  score: 55,
+    { id: 3,  name: '턱시도',        radius: 28,  score: 55,
       fill: '#2E2A28', stroke: '#121010', pattern: 'tuxedo',
       emoji: '1f408-200d-2b1b', emojiScale: 0.78 },
 
-    { id: 4,  name: '삼색이',        radius: 40,  score: 110,
+    { id: 4,  name: '삼색이',        radius: 36,  score: 110,
       fill: '#FAF0DA', stroke: '#B79E6E', pattern: 'calico',
       emoji: '1f63c', emojiScale: 0.76 },
 
-    { id: 5,  name: '고등어',        radius: 48,  score: 220,
+    { id: 5,  name: '고등어',        radius: 45,  score: 220,
       fill: '#ABB5C0', stroke: '#6E7985', pattern: 'stripes', patternColor: '#6E7985',
       emoji: '1f638', emojiScale: 0.74 },
 
-    { id: 6,  name: '러시안 블루',   radius: 58,  score: 440,
+    { id: 6,  name: '러시안 블루',   radius: 55,  score: 440,
       fill: '#8A9BA8', stroke: '#556470', pattern: null,
       emoji: '1f63b', emojiScale: 0.72 },
 
-    { id: 7,  name: '스코티시 폴드', radius: 70,  score: 880,
+    { id: 7,  name: '스코티시 폴드', radius: 65,  score: 880,
       fill: '#D9B884', stroke: '#9B7742', pattern: null,
       emoji: '1f63d', emojiScale: 0.72 },
 
-    { id: 8,  name: '페르시안',      radius: 82,  score: 1700,
+    { id: 8,  name: '페르시안',      radius: 77,  score: 1700,
       fill: '#FAF6ED', stroke: '#C9BE9E', pattern: 'fluff',
       emoji: '1f640', emojiScale: 0.68 },
 
-    { id: 9,  name: '메인쿤',        radius: 96,  score: 3500,
+    { id: 9,  name: '메인쿤',        radius: 90,  score: 3500,
       fill: '#8B6B4A', stroke: '#4E3721', pattern: 'stripes', patternColor: '#4E3721',
       emoji: '1f63e', emojiScale: 0.70 },
 
-    { id: 10, name: '사바나',        radius: 112, score: 10000,
+    { id: 10, name: '사바나',        radius: 111, score: 10000,
       fill: '#E8B559', stroke: '#8E6424', pattern: 'spots', patternColor: '#3A2A15',
       emoji: '1f639', emojiScale: 0.68,
       aura: '#F2B43A' },

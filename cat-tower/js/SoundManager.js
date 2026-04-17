@@ -134,9 +134,10 @@
         }).connect(this._wetChannel);
         this._bell.volume.value = -8;
 
-        // PolySynth: 메이저 코드 블룸
+        // PolySynth: 메이저 코드 블룸 — polyphony 여유있게 (연쇄 콤보 + legend 코드 대응)
+        // 32 = legend 5음 × 여러 번 release 꼬리 겹침 안전
         this._poly = new Tone.PolySynth(Tone.Synth, {
-          maxPolyphony: 10,
+          maxPolyphony: 32,
           oscillator: { type: 'sine' },
           envelope: { attack: 0.006, decay: 0.15, sustain: 0.35, release: 0.5 },
         }).connect(this._wetChannel);

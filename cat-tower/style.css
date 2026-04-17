@@ -278,7 +278,7 @@ h1 {
 #canvas {
   width: 100%;
   max-width: 400px;
-  aspect-ratio: 400 / 560;
+  aspect-ratio: 400 / 540;
   max-height: 100%;
   background: var(--bg-soft);
   border: 3px solid var(--line);
