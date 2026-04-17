@@ -10,6 +10,28 @@
 
   const TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/';
 
+  // 컬러 유틸 — hex → 밝게/어둡게 (구슬 그라데이션용)
+  function hexToRgb(hex) {
+    const h = hex.replace('#', '');
+    return [
+      parseInt(h.substring(0, 2), 16),
+      parseInt(h.substring(2, 4), 16),
+      parseInt(h.substring(4, 6), 16),
+    ];
+  }
+  function rgbToHex(r, g, b) {
+    const c = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+    return '#' + c(r) + c(g) + c(b);
+  }
+  function lighten(hex, amount) {
+    const [r, g, b] = hexToRgb(hex);
+    return rgbToHex(r + (255 - r) * amount, g + (255 - g) * amount, b + (255 - b) * amount);
+  }
+  function darken(hex, amount) {
+    const [r, g, b] = hexToRgb(hex);
+    return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
+  }
+
   // 각 단계 = 실제 고양이 품종. 바디 컬러와 패턴이 그 품종 정체성을 결정.
   // radius: 필드 내부 원 반경(px, 400×540 좌표계, Suika 체리~멜론 비율)
   // fill/stroke: 바디 기본색 / 외곽선

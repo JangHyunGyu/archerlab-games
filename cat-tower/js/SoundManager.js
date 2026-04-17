@@ -39,6 +39,9 @@
       this._dryChannel = null;   // 가죽: 직격
       this._wetChannel = null;   // 유리: 리버브 경로
 
+      // 활성 지연 타이머 추적 (_at으로 스케줄된 모든 setTimeout — stopAll에서 일괄 취소)
+      this._pendingTimeouts = new Set();
+
       this._visibilityHandler = () => {
         if (!document.hidden && this.enabled && this._initialized) {
           this.ensureContext();
@@ -230,8 +233,29 @@
       if (offsetSec <= 0.005) {
         try { fn(); } catch (e) {}
       } else {
-        setTimeout(() => { try { fn(); } catch (e) {} }, offsetSec * 1000);
+        const h = setTimeout(() => {
+          this._pendingTimeouts.delete(h);
+          try { fn(); } catch (e) {}
+        }, offsetSec * 1000);
+        this._pendingTimeouts.add(h);
       }
+    }
+
+    // 대기 중인 모든 레이어 취소 + 활성 신스 음소거
+    // (startGame / exitToMenu 호출 시 이전 게임 사운드 꼬리 끊기)
+    stopAll() {
+      for (const h of this._pendingTimeouts) clearTimeout(h);
+      this._pendingTimeouts.clear();
+      if (!this._hasTone()) return;
+      try {
+        const now = Tone.now();
+        this._poly.releaseAll?.(now);
+        const monos = [this._membrane, this._bass, this._click, this._bell,
+                       this._fm, this._am, this._sweep];
+        for (const s of monos) {
+          try { s?.triggerRelease?.(now); } catch {}
+        }
+      } catch {}
     }
 
     _safeTime(t) { return Math.max(t, Tone.now()); }

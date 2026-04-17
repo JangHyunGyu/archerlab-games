@@ -466,7 +466,13 @@
     resetRankSubmit();
     show(modals.gameover);
     sound?.playGameOver();
-    if (isNew) setTimeout(() => sound?.playNewRecord(), 1600);
+    if (isNew) {
+      if (newRecordTimeoutId) clearTimeout(newRecordTimeoutId);
+      newRecordTimeoutId = setTimeout(() => {
+        newRecordTimeoutId = null;
+        sound?.playNewRecord();
+      }, 1600);
+    }
   }
 
   // -------- 렌더링 --------
@@ -589,6 +595,9 @@
   // -------- 게임 제어 --------
   function startGame() {
     log('startGame 진입');
+    // 이전 게임의 pending 사운드/타이머 취소
+    if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
+    sound?.stopAll();
     score = 0;
     comboCount = 0;
     lastMergeAt = 0;
@@ -640,6 +649,9 @@
     running = false;
     paused = false;
     gameOver = false;
+    currentCat = null; // 이전 게임 참조 정리
+    if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
+    sound?.stopAll();
     hide(modals.pause);
     hide(modals.gameover);
     hide(screens.game);
