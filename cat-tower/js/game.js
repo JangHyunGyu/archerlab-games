@@ -127,6 +127,7 @@
   let comboCount = 0;
   let lastMergeAt = 0;
   let reachedFinal = false;     // 사바나(최종단계) 최초 달성 여부 — 축하 플래시 1회용
+  let newRecordTimeoutId = null; // 신기록 팡파레 대기 setTimeout 핸들 (게임 전환 시 취소용)
   const mergeEffects = [];      // 합성 이펙트 파티클
 
   // DOM refs
@@ -382,7 +383,8 @@
     dropCooldown = true;
     setTimeout(() => {
       dropCooldown = false;
-      if (!gameOver && !paused) spawnCurrent();
+      // running 체크 추가: 메뉴 이탈 후 stray 고양이 생성 방지
+      if (running && !gameOver && !paused) spawnCurrent();
     }, DROP_COOLDOWN_MS);
   }
 
