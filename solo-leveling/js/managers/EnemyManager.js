@@ -500,7 +500,7 @@ export class EnemyManager {
             this._dungeonBreakBorder.destroy();
             this._dungeonBreakBorder = null;
         }
-        // 엘리트 라벨 정리
+        // 엘리트 라벨 + 그림자 아우라 정리
         try {
             const children = this.pool?.getChildren?.();
             if (children) {
@@ -508,6 +508,10 @@ export class EnemyManager {
                     if (enemy._eliteLabel) {
                         enemy._eliteLabel.destroy();
                         enemy._eliteLabel = null;
+                    }
+                    if (enemy._aura) {
+                        enemy._aura.destroy();
+                        enemy._aura = null;
                     }
                 });
             }

@@ -78,6 +78,7 @@ export class SpriteFactory {
     // Scale an external CDN texture to target size and register under a new key
     // Uses nearest-neighbor scaling to keep pixel art crisp
     // Flips horizontally so sprites face right (DCSS tiles face left by default)
+    // Applies NEAREST filter so upscaled pixel tiles stay crisp instead of blurry
     static _scaleExtTexture(scene, extKey, targetKey, w, h) {
         if (!scene.textures.exists(extKey)) return false;
         try {
@@ -92,6 +93,13 @@ export class SpriteFactory {
             ctx.drawImage(src, 0, 0, w, h);
             if (scene.textures.exists(targetKey)) scene.textures.remove(targetKey);
             scene.textures.addCanvas(targetKey, canvas);
+            // Pixel-perfect upscale: keep sharp edges on retro tiles
+            try {
+                const tex = scene.textures.get(targetKey);
+                if (tex && tex.setFilter && Phaser.Textures?.FilterMode) {
+                    tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+                }
+            } catch (_) { /* filter mode optional */ }
             return true;
         } catch (e) { return false; }
     }
@@ -1850,18 +1858,20 @@ export class SpriteFactory {
         g.generateTexture('particle_ring', 16, 16);
         g.destroy();
 
-        // Vignette overlay texture (256x256, dark edges → transparent center)
+        // Vignette overlay texture (512x512, purple-tinted torch light around center)
+        // Wider gradient + stronger edges = "player carries a torch in dungeon" feel
         try {
-            const size = 256;
+            const size = 512;
             const canvas = document.createElement('canvas');
             canvas.width = size;
             canvas.height = size;
             const ctx = canvas.getContext('2d');
-            const gradient = ctx.createRadialGradient(size / 2, size / 2, size * 0.2, size / 2, size / 2, size * 0.52);
-            gradient.addColorStop(0, 'rgba(0,0,0,0)');
-            gradient.addColorStop(0.5, 'rgba(0,0,0,0.05)');
-            gradient.addColorStop(0.8, 'rgba(0,0,0,0.3)');
-            gradient.addColorStop(1, 'rgba(0,0,0,0.65)');
+            const gradient = ctx.createRadialGradient(size / 2, size / 2, size * 0.08, size / 2, size / 2, size * 0.62);
+            gradient.addColorStop(0,    'rgba(0,0,0,0)');
+            gradient.addColorStop(0.35, 'rgba(10,5,30,0.12)');
+            gradient.addColorStop(0.6,  'rgba(18,8,48,0.55)');
+            gradient.addColorStop(0.85, 'rgba(8,2,22,0.88)');
+            gradient.addColorStop(1,    'rgba(2,0,10,0.97)');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, size, size);
             scene.textures.addCanvas('vignette', canvas);

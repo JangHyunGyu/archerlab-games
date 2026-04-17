@@ -93,6 +93,7 @@ export class GameScene extends Phaser.Scene {
 
         // === Phaser 4 Filters (WebGL only) ===
         this._setupCameraFilters();
+        this._setupColorTint();
         this._setupVignette();
 
         // Camera fade in
@@ -113,9 +114,15 @@ export class GameScene extends Phaser.Scene {
                 this.statusWindow.open();
             }
             if (this.mobileControls) this.mobileControls.updateLayout();
-            if (this._vignette) {
-                this._vignette.setPosition(this.cameras.main.width / 2, this.cameras.main.height / 2);
-                this._vignette.setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+            if (this._vignetteOverlay) {
+                const cam = this.cameras.main;
+                this._vignetteOverlay.setPosition(cam.width / 2, cam.height / 2);
+                this._vignetteOverlay.setDisplaySize(cam.width * 1.15, cam.height * 1.15);
+            }
+            if (this._colorTint) {
+                const cam = this.cameras.main;
+                this._colorTint.setPosition(cam.width / 2, cam.height / 2);
+                this._colorTint.setSize(cam.width, cam.height);
             }
         });
 
@@ -156,6 +163,9 @@ export class GameScene extends Phaser.Scene {
                     if (this._bloomFilter) { this.cameras.main.filters.internal.remove(this._bloomFilter); this._bloomFilter = null; }
                     if (this._colorMatrix) { this.cameras.main.filters.internal.remove(this._colorMatrix); this._colorMatrix = null; }
                 } catch (e) {}
+                // Drop overlay intensity so pixel-fill cost falls but shadow mood stays
+                if (this._colorTint) this._colorTint.setAlpha(0.4);
+                if (this._vignetteOverlay) this._vignetteOverlay.setAlpha(0.5);
                 // Disable ambient particles
                 if (this.ambientEmitter) { this.ambientEmitter.destroy(); this.ambientEmitter = null; }
             }
@@ -458,60 +468,78 @@ export class GameScene extends Phaser.Scene {
 
             // Bloom effect via ParallelFilters (bright areas glow)
             this._bloomFilter = cam.filters.internal.addParallelFilters();
-            this._bloomFilter.top.addThreshold(0.6, 1);
-            this._bloomFilter.top.addBlur(0, 2, 2, 1);
+            this._bloomFilter.top.addThreshold(0.55, 1);
+            this._bloomFilter.top.addBlur(0, 2.5, 2.5, 1.2);
             this._bloomFilter.blend.blendMode = Phaser.BlendModes.ADD;
-            this._bloomFilter.blend.amount = 0.25;
+            this._bloomFilter.blend.amount = 0.35;
 
-            // ColorMatrix for dungeon atmosphere
+            // ColorMatrix for dungeon atmosphere — stronger cool/desaturated "shadow monarch" tone
             this._colorMatrix = cam.filters.internal.addColorMatrix();
-            this._colorMatrix.colorMatrix.brightness(0.92);
-            this._colorMatrix.colorMatrix.saturate(1.1);
+            this._colorMatrix.colorMatrix.brightness(0.88);
+            this._colorMatrix.colorMatrix.saturate(1.25);
+            // Slight hue shift toward blue/purple (if supported); silently ignored if unavailable
+            try { this._colorMatrix.colorMatrix.hue(-12); } catch (_) { /* hue optional */ }
         } catch (e) {
             console.warn('Camera filters not available:', e);
         }
     }
 
+    // Screen-space purple tint overlay — works on mobile too (no WebGL filters required)
+    // Keeps high-res AI sprites and retro DCSS tiles in the same "night dungeon" palette
+    _setupColorTint() {
+        try {
+            const cam = this.cameras.main;
+            this._colorTint = this.add.rectangle(
+                cam.width / 2, cam.height / 2, cam.width, cam.height,
+                0xd5b8ee  // soft lavender multiply: warm channels dimmed ~15-28%, blue preserved
+            )
+                .setScrollFactor(0)
+                .setDepth(88)
+                .setBlendMode(Phaser.BlendModes.MULTIPLY)
+                .setAlpha(1);
+        } catch (e) { /* tint overlay optional */ }
+    }
+
     _setupVignette() {
         try {
             if (!this.textures.exists('vignette')) return;
-            // Fixed-position vignette overlay
-            this._vignetteOverlay = this.add.image(
-                this.cameras.main.width / 2,
-                this.cameras.main.height / 2,
-                'vignette'
-            )
+            // Fixed-position vignette overlay — acts as player-centered torch light
+            // (camera follows player, so vignette center IS the player's screen position)
+            // Slight over-scaling so dark edges reach past the canvas corners on wide aspects
+            const cam = this.cameras.main;
+            const scale = 1.15;
+            this._vignetteOverlay = this.add.image(cam.width / 2, cam.height / 2, 'vignette')
                 .setScrollFactor(0)
                 .setDepth(90)
-                .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
-                .setAlpha(0.4);
+                .setDisplaySize(cam.width * scale, cam.height * scale)
+                .setAlpha(0.75);
         } catch (e) { /* vignette not available */ }
     }
 
     _updateVignette() {
         if (!this._vignetteOverlay || !this.player) return;
-        // Intensify vignette when HP is low
         const hpRatio = this.player.stats.hp / this.player.stats.maxHp;
         if (hpRatio < 0.4) {
-            // Low HP: stronger vignette (0.4 → 0.85 as HP drops to 0)
-            const intensity = 0.4 + (1 - hpRatio / 0.4) * 0.45;
+            // Low HP: vignette closes in (0.75 → 0.95) + red color tint
+            const intensity = 0.75 + (1 - hpRatio / 0.4) * 0.2;
             this._vignetteOverlay.setAlpha(intensity);
-            // Desaturate + redden camera when very low HP
+            if (this._colorTint) this._colorTint.fillColor = 0xeeb8a8;
             if (this._colorMatrix && hpRatio < 0.25) {
                 try {
                     this._colorMatrix.colorMatrix.reset();
-                    this._colorMatrix.colorMatrix.brightness(0.85);
-                    this._colorMatrix.colorMatrix.saturate(0.7);
+                    this._colorMatrix.colorMatrix.brightness(0.8);
+                    this._colorMatrix.colorMatrix.saturate(0.75);
                 } catch (e) { /* silent */ }
             }
         } else {
-            this._vignetteOverlay.setAlpha(0.4);
-            // Reset color matrix to normal
+            this._vignetteOverlay.setAlpha(0.75);
+            if (this._colorTint) this._colorTint.fillColor = 0xd5b8ee;
             if (this._colorMatrix) {
                 try {
                     this._colorMatrix.colorMatrix.reset();
-                    this._colorMatrix.colorMatrix.brightness(0.92);
-                    this._colorMatrix.colorMatrix.saturate(1.1);
+                    this._colorMatrix.colorMatrix.brightness(0.88);
+                    this._colorMatrix.colorMatrix.saturate(1.25);
+                    try { this._colorMatrix.colorMatrix.hue(-12); } catch (_) {}
                 } catch (e) { /* silent */ }
             }
         }
@@ -560,6 +588,7 @@ export class GameScene extends Phaser.Scene {
             }
 
             if (this._vignetteOverlay) { this._vignetteOverlay.destroy(); this._vignetteOverlay = null; }
+            if (this._colorTint) { this._colorTint.destroy(); this._colorTint = null; }
 
             if (this.activeBosses && this.physics?.world) {
                 for (const boss of this.activeBosses) {

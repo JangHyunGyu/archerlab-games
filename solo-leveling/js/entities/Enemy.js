@@ -96,6 +96,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.isBoss = false;
         this.hpBar = null;
         this.spawnInstanceId = 0;
+
+        // Shadow aura below sprite — purple halo that ties retro tiles to shadow theme
+        // Reuses particle_glow texture for cheap additive blending
+        try {
+            this._aura = scene.add.image(x, y, 'particle_glow')
+                .setDepth(4)
+                .setTint(COLORS.SHADOW_PRIMARY)
+                .setBlendMode(Phaser.BlendModes.ADD)
+                .setAlpha(0)
+                .setVisible(false);
+        } catch (_) { this._aura = null; }
     }
 
     spawn(typeKey, typeData, difficultyMult, x, y) {
@@ -140,10 +151,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this._meleeRange = s * 2 + 30; // 몹 크기 기반 근접 공격 사거리
         this.setAlpha(1);
         this.setTint(0xffffff);
+
+        // Activate shadow aura (sized to match enemy)
+        if (this._aura) {
+            // particle_glow is 16x16 → scale so aura diameter = enemy size * 2.6
+            const auraScale = (s * 2.6) / 16;
+            this._aura
+                .setPosition(x, y + s * 0.35)
+                .setScale(auraScale, auraScale * 0.55)
+                .setAlpha(0.35)
+                .setVisible(true)
+                .setActive(true);
+        }
     }
 
     update(time, delta, playerX, playerY) {
         if (!this.active) return;
+
+        // Sync shadow aura with enemy position (slight y-offset so it sits near feet)
+        if (this._aura && this._aura.active) {
+            this._aura.x = this.x;
+            this._aura.y = this.y + (this.displayHeight * 0.25);
+        }
 
         // Knockback
         if (this.knockbackTimer > 0) {
@@ -276,11 +305,48 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     takeDamage(amount, knockbackX, knockbackY) {
         this.hp -= amount;
 
-        // Flash red on hit, then restore
-        this.setTint(0xff0000);
-        this.scene.time.delayedCall(80, () => {
-            if (this.active) this.setTint(this.isElite ? 0xff6644 : 0xffffff);
+        const isCrit = amount > this.maxHp * 0.5;
+        const restoreTint = this.isElite ? 0xff6644 : 0xffffff;
+
+        // Impact feel: white pre-flash → red flash → restore
+        // (staged tint = "light flashes off metal then blood" feel)
+        this.setTint(0xffffff);
+        this.scene.time.delayedCall(35, () => {
+            if (this.active) this.setTint(0xff2233);
         });
+        this.scene.time.delayedCall(110, () => {
+            if (this.active) {
+                // Slow tint takes priority over idle tint
+                this.setTint(this.slowDuration > 0 ? 0x8888ff : restoreTint);
+            }
+        });
+
+        // Squash-and-stretch for hit punch (preserve spawn-time displaySize by scaling off current)
+        const _sx = this.scaleX, _sy = this.scaleY;
+        this.setScale(_sx * 1.15, _sy * 0.88);
+        this.scene.time.delayedCall(70, () => {
+            if (this.active) this.setScale(_sx, _sy);
+        });
+
+        // Crit: stronger kick — screen shake + white ring burst at hit location
+        if (isCrit && this.scene.cameras?.main) {
+            this.scene.cameras.main.shake(60, 0.0025);
+            try {
+                const ring = this.scene.add.image(this.x, this.y, 'particle_ring')
+                    .setDepth(16)
+                    .setBlendMode(Phaser.BlendModes.ADD)
+                    .setTint(0xffffff)
+                    .setScale(0.6);
+                this.scene.tweens.add({
+                    targets: ring,
+                    scale: 2.4,
+                    alpha: 0,
+                    duration: 220,
+                    ease: 'Quad.Out',
+                    onComplete: () => ring.destroy(),
+                });
+            } catch (_) { /* ring VFX optional */ }
+        }
 
         // Knockback
         if (knockbackX !== undefined) {
@@ -337,6 +403,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setActive(false);
         this.setVisible(false);
         this.body.enable = false;
+
+        // Hide aura with the enemy (pooling: kept alive for reuse on next spawn)
+        if (this._aura) {
+            this._aura.setVisible(false).setActive(false);
+        }
     }
 
     _deathEffect() {
