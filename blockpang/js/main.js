@@ -13,7 +13,7 @@
     const app = new PIXI.Application();
     await app.init({
         resizeTo: container,
-        backgroundColor: 0x030318,
+        backgroundColor: 0xF5ECDA,
         antialias: true,
         resolution: Math.min(window.devicePixelRatio || 1, 2),
         autoDensity: true,
@@ -77,7 +77,7 @@
         }
     }, { passive: true });
 
-    console.log('%c🎮 블럭팡 Premium Edition', 'color: #00E5FF; font-size: 14px; font-weight: bold;');
+    console.log('%c블럭팡', 'color: #E57A54; font-size: 14px; font-weight: bold;');
 })();
 
 // 【글로벌 에러 핸들러】

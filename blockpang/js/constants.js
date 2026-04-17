@@ -1,6 +1,40 @@
 // ─── Grid ───
 const GRID_SIZE = 10;
 
+// ─── UI Theme (warm, handcrafted casual-puzzle palette) ───
+const THEME = {
+    bg:          0xF5ECDA,   // page background: warm cream
+    bgDeep:      0xEDE0C5,   // slightly deeper cream (gradient base)
+    bgDim:       0xE3D3B4,   // board cell recess tone
+    surface:     0xFBF5E8,   // card / panel surface
+    surfaceAlt:  0xF0E5CE,   // nested panel / tray
+    divider:     0xE0CFB0,   // divider lines
+    inkStrong:   0x3A2F23,   // strong text (warm near-black)
+    ink:         0x4E4132,   // primary text
+    inkMuted:    0x8A7C68,   // secondary text
+    inkFaint:    0xB9AA8E,   // hint / disabled
+
+    accent:      0xE57A54,   // warm coral (primary CTA)
+    accentDeep:  0xC85E3A,   // pressed state
+    accentSoft:  0xF7C9B5,   // soft tint background
+
+    secondary:   0x6FA89A,   // muted sage (secondary CTA)
+    secondaryDp: 0x507F74,
+
+    gold:        0xC9922C,   // warm honey gold (best / new record)
+    goldSoft:    0xE8C98C,
+
+    rose:        0xBF5A66,   // game over rose (not alarming red)
+    leaf:        0x7A9A5A,   // level progress
+
+    white:       0xFFFFFF,
+    shadow:      0x2D2015,   // subtle warm shadow (used with low alpha)
+};
+
+// Font stacks — Gowun Dodum = friendly rounded display (KR), Pretendard = clean body
+const FONT_DISPLAY = "'Gowun Dodum', 'Zen Maru Gothic', 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', sans-serif";
+const FONT_BODY    = "'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif";
+
 // ─── Block Colors (premium neon palette with richer gradients) ───
 const BLOCK_COLORS = [
     { main: 0x00E5FF, light: 0x99F5FF, dark: 0x006B7A, glow: 0x00E5FF, particle: 0x66F0FF },   // Cyan

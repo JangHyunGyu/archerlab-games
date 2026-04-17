@@ -23,17 +23,14 @@ class UIManager {
     }
 
     _build() {
-        // Title with gradient
+        // Small wordmark (top center)
         this.titleText = new PIXI.Text({
-            text: 'BLOCKPANG',
+            text: '블럭팡',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: 28,
-                fill: 0x00E5FF,
-                fontWeight: '900',
-                letterSpacing: 6,
-                padding: 12,
-                dropShadow: { color: 0x000000, blur: 8, distance: 2 },
+                fontFamily: FONT_DISPLAY,
+                fontSize: 22,
+                fill: THEME.inkStrong,
+                fontWeight: '400',
             },
         });
         this.titleText.anchor.set(0.5, 0);
@@ -43,11 +40,11 @@ class UIManager {
         this.scoreLabelText = new PIXI.Text({
             text: 'SCORE',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_BODY,
                 fontSize: 10,
-                fill: 0x6677aa,
-                fontWeight: '400',
-                letterSpacing: 2,
+                fill: THEME.inkMuted,
+                fontWeight: '500',
+                letterSpacing: 1.5,
             },
         });
         this.scoreLabelText.anchor.set(0, 0.5);
@@ -57,11 +54,10 @@ class UIManager {
         this.scoreText = new PIXI.Text({
             text: '0',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_BODY,
                 fontSize: 22,
-                fill: 0x76FF03,
+                fill: THEME.inkStrong,
                 fontWeight: '700',
-                dropShadow: { color: 0x000000, blur: 4, distance: 1 },
             },
         });
         this.scoreText.anchor.set(0, 0.5);
@@ -71,11 +67,11 @@ class UIManager {
         this.bestText = new PIXI.Text({
             text: 'BEST 0',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_BODY,
                 fontSize: 12,
-                fill: 0xFFD600,
-                fontWeight: '400',
-                letterSpacing: 1,
+                fill: THEME.gold,
+                fontWeight: '600',
+                letterSpacing: 0.5,
             },
         });
         this.bestText.anchor.set(1, 0.5);
@@ -85,36 +81,31 @@ class UIManager {
         this.levelText = new PIXI.Text({
             text: 'LV.1',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_BODY,
                 fontSize: 11,
-                fill: 0x00E5FF,
-                fontWeight: '700',
-                letterSpacing: 1,
+                fill: THEME.inkMuted,
+                fontWeight: '600',
+                letterSpacing: 0.5,
             },
         });
         this.levelText.anchor.set(1, 0.5);
         this.container.addChild(this.levelText);
 
-        // Level progress bar background
         this.levelBarBg = new PIXI.Graphics();
         this.container.addChild(this.levelBarBg);
-
-        // Level progress bar glow
         this.levelBarGlow = new PIXI.Graphics();
         this.container.addChild(this.levelBarGlow);
-
-        // Level progress bar fill
         this.levelBarFill = new PIXI.Graphics();
         this.container.addChild(this.levelBarFill);
 
-        // Sound button
+        // Sound button (small pill)
         this.soundBtn = new PIXI.Text({
             text: '\u266A',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: 20,
-                fill: 0x6677aa,
-                fontWeight: '700',
+                fontFamily: FONT_BODY,
+                fontSize: 18,
+                fill: THEME.inkMuted,
+                fontWeight: '500',
             },
         });
         this.soundBtn.anchor.set(1, 0);
@@ -122,21 +113,20 @@ class UIManager {
         this.soundBtn.cursor = 'pointer';
         this.soundBtn.on('pointerdown', () => {
             const enabled = this.game.sound.toggle();
-            this.soundBtn.style.fill = enabled ? 0x6677aa : 0x333355;
+            this.soundBtn.style.fill = enabled ? THEME.inkMuted : THEME.inkFaint;
         });
-        this.soundBtn.on('pointerover', () => {
-            this.soundBtn.alpha = 0.7;
-        });
-        this.soundBtn.on('pointerout', () => {
-            this.soundBtn.alpha = 1;
-        });
+        this.soundBtn.on('pointerover', () => { this.soundBtn.alpha = 0.65; });
+        this.soundBtn.on('pointerout',  () => { this.soundBtn.alpha = 1; });
         this.container.addChild(this.soundBtn);
 
-        // Home button (go to title)
+        // Home button (back arrow icon, not emoji)
         this.homeBtn = new PIXI.Text({
-            text: '\uD83C\uDFE0',
+            text: '‹',
             style: {
-                fontSize: 20,
+                fontFamily: FONT_BODY,
+                fontSize: 28,
+                fill: THEME.inkMuted,
+                fontWeight: '400',
             },
         });
         this.homeBtn.anchor.set(0, 0);
@@ -146,15 +136,10 @@ class UIManager {
             if (this.game.isAnimating) return;
             this.game.goToTitle();
         });
-        this.homeBtn.on('pointerover', () => {
-            this.homeBtn.alpha = 0.7;
-        });
-        this.homeBtn.on('pointerout', () => {
-            this.homeBtn.alpha = 1;
-        });
+        this.homeBtn.on('pointerover', () => { this.homeBtn.alpha = 0.65; });
+        this.homeBtn.on('pointerout',  () => { this.homeBtn.alpha = 1; });
         this.container.addChild(this.homeBtn);
 
-        // Start score counter animation
         this.game.app.ticker.add(this._updateScoreAnimation, this);
     }
 
@@ -192,48 +177,48 @@ class UIManager {
     resize(screenWidth, scoreAreaHeight, padding) {
         const centerX = screenWidth / 2;
 
-        // Title
-        this.titleText.position.set(centerX, padding * 0.5);
-        this.titleText.style.fontSize = Math.max(16, Math.min(28, screenWidth * 0.06));
+        // Wordmark (top center)
+        this.titleText.position.set(centerX, padding * 0.4);
+        this.titleText.style.fontSize = Math.max(15, Math.min(22, screenWidth * 0.048));
 
-        const row2Y = this.titleText.y + this.titleText.height + 4;
+        const row2Y = this.titleText.y + this.titleText.height + 6;
 
-        // Score label + score (offset right to avoid overlapping home button)
-        const scoreX = padding + this.homeBtn.width + 8;
+        // Score block (left, with home gap)
+        const scoreX = padding + this.homeBtn.width + 10;
         this.scoreLabelText.position.set(scoreX, row2Y);
-        this.scoreLabelText.style.fontSize = Math.max(8, screenWidth * 0.022);
-        this.scoreText.position.set(scoreX, row2Y + this.scoreLabelText.height + 4);
-        this.scoreText.style.fontSize = Math.max(16, Math.min(26, screenWidth * 0.055));
+        this.scoreLabelText.style.fontSize = Math.max(9, screenWidth * 0.022);
+        this.scoreText.position.set(scoreX, row2Y + this.scoreLabelText.height + 6);
+        this.scoreText.style.fontSize = Math.max(18, Math.min(28, screenWidth * 0.058));
 
-        // Best
-        this.bestText.position.set(screenWidth - padding, row2Y + 8);
-        this.bestText.style.fontSize = Math.max(10, Math.min(14, screenWidth * 0.03));
+        // Best (right)
+        this.bestText.position.set(screenWidth - padding, row2Y + 6);
+        this.bestText.style.fontSize = Math.max(10, Math.min(13, screenWidth * 0.028));
 
-        // Level
-        this.levelText.position.set(screenWidth - padding, row2Y + 24);
-        this.levelText.style.fontSize = Math.max(9, Math.min(12, screenWidth * 0.028));
+        // Level (right, below best)
+        this.levelText.position.set(screenWidth - padding, row2Y + 22);
+        this.levelText.style.fontSize = Math.max(9, Math.min(11, screenWidth * 0.025));
 
         // Level bar
-        const barW = Math.min(120, screenWidth * 0.25);
-        const barH = 4;
+        const barW = Math.min(110, screenWidth * 0.25);
+        const barH = 3;
         const barX = screenWidth - padding - barW;
-        const barY = row2Y + 38;
+        const barY = row2Y + 36;
 
         this.levelBarBg.clear();
-        this.levelBarBg.roundRect(barX, barY, barW, barH, 2).fill({ color: 0x1a1a40, alpha: 0.8 });
+        this.levelBarBg.roundRect(barX, barY, barW, barH, barH / 2).fill({ color: THEME.divider, alpha: 1 });
 
         this._levelBarX = barX;
         this._levelBarY = barY;
         this._levelBarW = barW;
         this._levelBarH = barH;
 
-        // Sound button
-        this.soundBtn.position.set(screenWidth - padding, padding * 0.3);
-        this.soundBtn.style.fontSize = Math.max(16, Math.min(22, screenWidth * 0.045));
+        // Sound button (top right)
+        this.soundBtn.position.set(screenWidth - padding, padding * 0.25);
+        this.soundBtn.style.fontSize = Math.max(14, Math.min(20, screenWidth * 0.04));
 
-        // Home button (top-left)
-        this.homeBtn.position.set(padding, padding * 0.3);
-        this.homeBtn.style.fontSize = Math.max(16, Math.min(22, screenWidth * 0.045));
+        // Back arrow (top left)
+        this.homeBtn.position.set(padding, padding * 0.1);
+        this.homeBtn.style.fontSize = Math.max(22, Math.min(30, screenWidth * 0.065));
     }
 
     updateScore(score, bestScore) {
@@ -269,24 +254,10 @@ class UIManager {
             this.levelBarFill.clear();
             const fillW = this._levelBarW * Math.min(1, progress);
             if (fillW > 0) {
-                // Main fill
-                this.levelBarFill.roundRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH, 2)
-                    .fill({ color: 0x00E5FF, alpha: 0.9 });
-                // Top highlight (glass bar effect)
-                this.levelBarFill.roundRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH * 0.4, 1)
-                    .fill({ color: 0x66F0FF, alpha: 0.4 });
+                this.levelBarFill.roundRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH, this._levelBarH / 2)
+                    .fill({ color: THEME.accent, alpha: 1 });
             }
-
             this.levelBarGlow.clear();
-            if (fillW > 2) {
-                // Tip glow (larger, multi-layer)
-                this.levelBarGlow.circle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 8)
-                    .fill({ color: 0x00E5FF, alpha: 0.12 });
-                this.levelBarGlow.circle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 4)
-                    .fill({ color: 0x00E5FF, alpha: 0.35 });
-                this.levelBarGlow.circle(this._levelBarX + fillW, this._levelBarY + this._levelBarH / 2, 2)
-                    .fill({ color: 0xFFFFFF, alpha: 0.5 });
-            }
         }
     }
 
@@ -337,273 +308,219 @@ class UIManager {
         const h = this.game.app.screen.height;
         container.hitArea = new PIXI.Rectangle(0, 0, w, h);
 
-        // Semi-transparent overlay (starfield shows through)
-        const bg = new PIXI.Graphics();
-        bg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.3 });
-        container.addChild(bg);
-
         const centerX = w / 2;
         const isSmall = w < 380;
-        const sc = isSmall ? 0.8 : 1;
+        const sc = isSmall ? 0.9 : 1;
 
-        // ── Logo: "BLOCKPANG" ──
-        const logoFontSize = Math.min(44, w * 0.11) * sc;
+        // ── Small decorative block pictogram (a few stacked pieces above logo) ──
+        const deco = new PIXI.Graphics();
+        const dcs = Math.max(10, Math.min(14, w * 0.03));   // deco-cell size
+        const dcGap = 2;
+        // Layout: three small pieces side by side, each a 2x2, 1x2, 2x1
+        const decoColors = [0xE57A54, 0xC9922C, 0x6FA89A];
+        const pieces = [
+            [[1,1],[1,0]],
+            [[1],[1],[1]],
+            [[1,1],[0,1]],
+        ];
+        let dx = 0;
+        const pieceGap = dcs * 0.8;
+        pieces.forEach((shape, pi) => {
+            const pw = shape[0].length * (dcs + dcGap);
+            shape.forEach((row, ri) => {
+                row.forEach((v, ci) => {
+                    if (!v) return;
+                    deco.roundRect(dx + ci * (dcs + dcGap), ri * (dcs + dcGap), dcs, dcs, 3)
+                        .fill({ color: decoColors[pi], alpha: 0.9 });
+                });
+            });
+            dx += pw + pieceGap;
+        });
+        // total deco width for centering
+        const decoW = dx - pieceGap;
+        const decoY = h * 0.18 - dcs;
+        deco.position.set(centerX - decoW / 2, decoY);
+        container.addChild(deco);
+
+        // ── Logo: "블럭팡" / 한글/영문 반응 ──
+        const logoFontSize = Math.min(64, w * 0.15) * sc;
         const logo = new PIXI.Text({
-            text: 'BLOCKPANG',
+            text: '블럭팡',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_DISPLAY,
                 fontSize: logoFontSize,
-                fill: 0x00E5FF,
-                fontWeight: '900',
-                letterSpacing: 8 * sc,
-                dropShadow: { color: 0x000000, blur: 16, distance: 4 },
+                fill: THEME.inkStrong,
+                fontWeight: '400',
+                letterSpacing: 2,
             },
         });
         logo.anchor.set(0.5, 0.5);
-        logo.position.set(centerX, h * 0.2);
-
-        // Logo glow halo
-        const logoGlow = new PIXI.Graphics();
-        logoGlow.ellipse(0, 0, logoFontSize * 3.5, logoFontSize * 1.2)
-                .fill({ color: 0x00E5FF, alpha: 0.06 });
-        logoGlow.ellipse(0, 0, logoFontSize * 2.5, logoFontSize * 0.8)
-                .fill({ color: 0x00E5FF, alpha: 0.08 });
-        logoGlow.position.set(centerX, h * 0.2);
-        container.addChild(logoGlow);
+        logo.position.set(centerX, h * 0.28);
         container.addChild(logo);
-
-        // Floating particles around logo
-        const logoParticles = new PIXI.Container();
-        container.addChild(logoParticles);
-        const logoParticleData = [];
-        for (let i = 0; i < 12; i++) {
-            const pg = new PIXI.Graphics();
-            const pSize = 1 + Math.random() * 2.5;
-            const pColor = [0x00E5FF, 0x76FF03, 0xFFD600, 0xD500F9][Math.floor(Math.random() * 4)];
-            pg.circle(0, 0, pSize).fill({ color: pColor, alpha: 0.5 + Math.random() * 0.3 });
-            pg.circle(0, 0, pSize * 0.4).fill({ color: 0xFFFFFF, alpha: 0.4 });
-            const angle = (Math.PI * 2 * i) / 12;
-            const dist = logoFontSize * 2 + Math.random() * logoFontSize;
-            pg.position.set(
-                centerX + Math.cos(angle) * dist,
-                h * 0.2 + Math.sin(angle) * dist * 0.4
-            );
-            logoParticles.addChild(pg);
-            logoParticleData.push({ gfx: pg, angle, dist, speed: 0.0003 + Math.random() * 0.0005, phase: Math.random() * Math.PI * 2 });
-        }
-
-        // Animate logo particles
-        this.game.effects.tweens.push({
-            elapsed: 0,
-            duration: 99999,
-            _isTitleTween: true,
-            _titleRoot: container,
-            update(dt) {
-                if (!logoParticles || logoParticles.destroyed) return true;
-                this.elapsed += dt;
-                logoParticleData.forEach(p => {
-                    const t = this.elapsed * p.speed + p.phase;
-                    p.gfx.x = centerX + Math.cos(t) * p.dist;
-                    p.gfx.y = h * 0.2 + Math.sin(t) * p.dist * 0.4;
-                    p.gfx.alpha = 0.3 + Math.sin(t * 3) * 0.3;
-                });
-                // Glow pulse
-                if (logoGlow && !logoGlow.destroyed) {
-                    const glowPulse = 0.8 + Math.sin(this.elapsed * 0.003) * 0.2;
-                    logoGlow.alpha = glowPulse;
-                }
-                return false;
-            }
-        });
 
         // ── Subtitle ──
         const subtitle = new PIXI.Text({
             text: getText('blockPuzzle'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: Math.min(13, w * 0.035) * sc,
-                fill: 0x6677aa,
-                letterSpacing: 5,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(13, w * 0.033) * sc,
+                fill: THEME.inkMuted,
+                fontWeight: '500',
+                letterSpacing: 3,
             },
         });
         subtitle.anchor.set(0.5, 0);
-        subtitle.position.set(centerX, logo.y + logoFontSize / 2 + 14);
+        subtitle.position.set(centerX, logo.y + logoFontSize * 0.55);
         container.addChild(subtitle);
 
-        // ── Best Score ──
+        // ── Best Score pill ──
         const bestScore = this.game.scoreManager.bestScore;
         let bestText = null;
         if (bestScore > 0) {
+            const bestLabel = `${getText('best')}  ${bestScore.toLocaleString()}`;
             bestText = new PIXI.Text({
-                text: `BEST  ${bestScore.toLocaleString()}`,
+                text: bestLabel,
                 style: {
-                    fontFamily: 'Orbitron, sans-serif',
-                    fontSize: Math.min(14, w * 0.035) * sc,
-                    fill: 0xFFD600,
-                    letterSpacing: 2,
+                    fontFamily: FONT_BODY,
+                    fontSize: Math.min(13, w * 0.033) * sc,
+                    fill: THEME.gold,
+                    fontWeight: '600',
+                    letterSpacing: 1,
                 },
             });
             bestText.anchor.set(0.5, 0);
-            bestText.position.set(centerX, subtitle.y + subtitle.height + 16);
+
+            // Pill background (draw first, measure after)
+            const padX = 14, padY = 6;
+            const pillW = bestText.width + padX * 2;
+            const pillH = bestText.height + padY * 2;
+            const pillY = subtitle.y + subtitle.height + 18;
+            const pill = new PIXI.Graphics();
+            pill.roundRect(centerX - pillW / 2, pillY, pillW, pillH, pillH / 2)
+                .fill({ color: THEME.surface });
+            pill.roundRect(centerX - pillW / 2, pillY, pillW, pillH, pillH / 2)
+                .stroke({ width: 1, color: THEME.goldSoft, alpha: 1 });
+            container.addChild(pill);
+
+            bestText.position.set(centerX, pillY + padY);
             container.addChild(bestText);
         }
 
-        // ── "Continue" Button (if saved game exists) ──
+        // ── Buttons ──
         const hasSave = Game.hasSavedGame();
-        const btnW = Math.min(w * 0.65, 280);
-        const btnH = Math.min(54, h * 0.075);
-        const startBtnY = hasSave ? h * 0.52 : h * 0.46;
+        const btnW = Math.min(w * 0.7, 300);
+        const btnH = Math.min(56, h * 0.075);
+        const startBtnY = hasSave ? h * 0.56 : h * 0.5;
         const btnX = centerX - btnW / 2;
 
         this._activeButtons = [];
 
-        if (hasSave) {
-            const savedScore = Game.getSavedScore();
-            const resumeBtnY = h * 0.42;
-            const resumeBtn = new PIXI.Graphics();
-            // Glow
-            resumeBtn.roundRect(btnX - 6, resumeBtnY - 6, btnW + 12, btnH + 12, 16).fill({ color: 0x76FF03, alpha: 0.1 });
-            // Body
-            resumeBtn.roundRect(btnX, resumeBtnY, btnW, btnH, 12).fill({ color: 0x76FF03 });
-            // Highlight
-            resumeBtn.roundRect(btnX + 2, resumeBtnY + 2, btnW - 4, btnH * 0.4, 10).fill({ color: 0xBBFF77, alpha: 0.4 });
-
-            resumeBtn.eventMode = 'static';
-            resumeBtn.cursor = 'pointer';
-            resumeBtn.hitArea = new PIXI.Rectangle(btnX - 10, resumeBtnY - 10, btnW + 20, btnH + 20);
-            resumeBtn.on('pointerover', () => { resumeBtn.tint = 0xDDFFDD; });
-            resumeBtn.on('pointerout', () => { resumeBtn.tint = 0xFFFFFF; });
-            let resumeTriggered = false;
-            const doResume = () => {
-                if (resumeTriggered) return;
-                resumeTriggered = true;
-                this.game.sound.ensureContext();
-                this.game.startGame(true);
-            };
-            resumeBtn.on('pointerdown', doResume);
-            resumeBtn.on('pointertap', doResume);
-            container.addChild(resumeBtn);
-
-            this._activeButtons.push({
-                x: btnX - 10, y: resumeBtnY - 10,
-                w: btnW + 20, h: btnH + 20,
-                action: doResume
-            });
-
-            const resumeLabel = savedScore > 0
-                ? `▶ ${getText('continueGame')}  (${savedScore.toLocaleString()})`
-                : `▶ ${getText('continueGame')}`;
-            const resumeBtnText = new PIXI.Text({
-                text: resumeLabel,
-                style: {
-                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                    fontSize: Math.min(18, w * 0.045) * sc,
-                    fill: 0x000000,
-                    fontWeight: '700',
-                    letterSpacing: 2,
-                },
-            });
-            resumeBtnText.anchor.set(0.5, 0.5);
-            resumeBtnText.position.set(centerX, resumeBtnY + btnH / 2);
-            resumeBtnText.eventMode = 'none';
-            resumeBtn.addChild(resumeBtnText);
-        }
-
-        // ── "Game Start" Button ──
-        const startBtn = new PIXI.Graphics();
-        // Glow
-        startBtn.roundRect(btnX - 6, startBtnY - 6, btnW + 12, btnH + 12, 16).fill({ color: 0x00E5FF, alpha: 0.1 });
-        // Body
-        startBtn.roundRect(btnX, startBtnY, btnW, btnH, 12).fill({ color: 0x00E5FF });
-        // Highlight
-        startBtn.roundRect(btnX + 2, startBtnY + 2, btnW - 4, btnH * 0.4, 10).fill({ color: 0x66F0FF, alpha: 0.4 });
-
-        startBtn.eventMode = 'static';
-        startBtn.cursor = 'pointer';
-        startBtn.hitArea = new PIXI.Rectangle(btnX - 10, startBtnY - 10, btnW + 20, btnH + 20);
-        startBtn.on('pointerover', () => { startBtn.tint = 0xCCFFFF; });
-        startBtn.on('pointerout', () => { startBtn.tint = 0xFFFFFF; });
-        let startTriggered = false;
-        const doStart = () => {
-            if (startTriggered) return;
-            startTriggered = true;
-            this.game.sound.ensureContext();
-            this.game.startGame(false);
-        };
-        startBtn.on('pointerdown', doStart);
-        startBtn.on('pointertap', doStart);
-        container.addChild(startBtn);
-
-        this._activeButtons.push({
-            x: btnX - 10, y: startBtnY - 10,
-            w: btnW + 20, h: btnH + 20,
-            action: doStart
-        });
-
-        const startBtnText = new PIXI.Text({
-            text: getText('gameStart'),
-            style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: Math.min(20, w * 0.05) * sc,
-                fill: 0x000000,
-                fontWeight: '700',
-                letterSpacing: 3,
-            },
-        });
-        startBtnText.anchor.set(0.5, 0.5);
-        startBtnText.position.set(centerX, startBtnY + btnH / 2);
-        startBtnText.eventMode = 'none';
-        startBtn.addChild(startBtnText);
-
-        // ── Bottom Button Row ──
-        const smallBtnH = Math.min(38, h * 0.055);
-        const gap = 8;
-        const bottomY = hasSave ? h * 0.67 : h * 0.62;
-
-        const createSmallBtn = (label, color, action) => {
-            const bw = Math.min((w - gap * 4) / 3, 110);
+        // Helper: flat soft-shadow button (no highlight band)
+        const makePrimaryBtn = (x, y, width, height, fillColor, label, labelColor, action) => {
             const btn = new PIXI.Graphics();
-            btn.roundRect(0, 0, bw, smallBtnH, 8).fill({ color: color, alpha: 0.12 });
-            btn.roundRect(0, 0, bw, smallBtnH, 8).stroke({ width: 1, color: color, alpha: 0.35 });
+            // Soft drop shadow
+            btn.roundRect(x, y + 3, width, height, height / 2 + 2)
+               .fill({ color: THEME.shadow, alpha: 0.12 });
+            // Body
+            btn.roundRect(x, y, width, height, height / 2)
+               .fill({ color: fillColor });
 
             btn.eventMode = 'static';
             btn.cursor = 'pointer';
-            btn.hitArea = new PIXI.Rectangle(-5, -5, bw + 10, smallBtnH + 10);
-            btn.on('pointerover', () => { btn.tint = 0xCCDDFF; });
-            btn.on('pointerout', () => { btn.tint = 0xFFFFFF; });
-            btn.on('pointerdown', action);
+            btn.hitArea = new PIXI.Rectangle(x - 8, y - 8, width + 16, height + 16);
+            btn.on('pointerover', () => { btn.alpha = 0.9; });
+            btn.on('pointerout',  () => { btn.alpha = 1; });
+            let triggered = false;
+            const fire = () => { if (triggered) return; triggered = true; action(); };
+            btn.on('pointerdown', fire);
+            btn.on('pointertap',  fire);
+            container.addChild(btn);
 
             const txt = new PIXI.Text({
                 text: label,
                 style: {
-                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                    fontSize: Math.min(11, w * 0.028) * sc,
-                    fill: color,
+                    fontFamily: FONT_BODY,
+                    fontSize: Math.min(18, width * 0.07),
+                    fill: labelColor,
                     fontWeight: '700',
                     letterSpacing: 1,
                 },
             });
             txt.anchor.set(0.5, 0.5);
-            txt.position.set(bw / 2, smallBtnH / 2);
+            txt.position.set(x + width / 2, y + height / 2);
+            txt.eventMode = 'none';
             btn.addChild(txt);
 
+            this._activeButtons.push({ x: x - 8, y: y - 8, w: width + 16, h: height + 16, action: fire });
+            return { btn, txt };
+        };
+
+        // Continue (if saved)
+        let resumeBtn = null, resumeBtnText = null;
+        if (hasSave) {
+            const savedScore = Game.getSavedScore();
+            const resumeBtnY = h * 0.46;
+            const resumeLabel = savedScore > 0
+                ? `${getText('continueGame')}  ·  ${savedScore.toLocaleString()}`
+                : getText('continueGame');
+            const r = makePrimaryBtn(
+                btnX, resumeBtnY, btnW, btnH,
+                THEME.surface, resumeLabel, THEME.inkStrong,
+                () => { this.game.sound.ensureContext(); this.game.startGame(true); }
+            );
+            // Secondary style: add a border since fill is surface
+            r.btn.roundRect(btnX, resumeBtnY, btnW, btnH, btnH / 2)
+                 .stroke({ width: 1.5, color: THEME.divider, alpha: 1 });
+            resumeBtn = r.btn; resumeBtnText = r.txt;
+        }
+
+        // Start (primary coral)
+        const s = makePrimaryBtn(
+            btnX, startBtnY, btnW, btnH,
+            THEME.accent, getText('gameStart'), THEME.white,
+            () => { this.game.sound.ensureContext(); this.game.startGame(false); }
+        );
+        const startBtn = s.btn, startBtnText = s.txt;
+
+        // ── Bottom Row: Hall of Fame + Contact (ghost buttons) ──
+        const smallBtnH = Math.min(40, h * 0.058);
+        const gap = 10;
+        const bottomY = hasSave ? h * 0.7 : h * 0.65;
+
+        const makeGhostBtn = (label, action) => {
+            const bw = Math.min((w - gap * 4) / 3, 120);
+            const btn = new PIXI.Graphics();
+            btn.roundRect(0, 0, bw, smallBtnH, smallBtnH / 2)
+               .fill({ color: THEME.surface });
+            btn.roundRect(0, 0, bw, smallBtnH, smallBtnH / 2)
+               .stroke({ width: 1, color: THEME.divider, alpha: 1 });
+
+            btn.eventMode = 'static';
+            btn.cursor = 'pointer';
+            btn.hitArea = new PIXI.Rectangle(-5, -5, bw + 10, smallBtnH + 10);
+            btn.on('pointerover', () => { btn.alpha = 0.85; });
+            btn.on('pointerout',  () => { btn.alpha = 1; });
+            btn.on('pointerdown', action);
+
+            const txt = new PIXI.Text({
+                text: label,
+                style: {
+                    fontFamily: FONT_BODY,
+                    fontSize: Math.min(12, w * 0.03) * sc,
+                    fill: THEME.ink,
+                    fontWeight: '600',
+                },
+            });
+            txt.anchor.set(0.5, 0.5);
+            txt.position.set(bw / 2, smallBtnH / 2);
+            btn.addChild(txt);
             return { btn, txt, width: bw };
         };
 
-        // Hall of Fame button
-        const hofBtn = createSmallBtn(
-            `\uD83C\uDFC6 ${getText('hallOfFame')}`,
-            0xFFD600,
-            () => { this.showHallOfFame(); }
-        );
-        // Contact button
-        const contactBtn = createSmallBtn(
-            getText('contact'),
-            0x6677aa,
-            () => { window.open('mailto:contact@archerlab.dev', '_blank'); }
-        );
+        const hofBtn = makeGhostBtn(getText('hallOfFame'), () => this.showHallOfFame());
+        const contactBtn = makeGhostBtn(getText('contact'),
+            () => window.open('mailto:contact@archerlab.dev', '_blank'));
 
-        // Position: two buttons side by side
         const totalBtnW = hofBtn.width + gap + contactBtn.width;
         const btnStartX = centerX - totalBtnW / 2;
         hofBtn.btn.position.set(btnStartX, bottomY);
@@ -611,40 +528,53 @@ class UIManager {
         contactBtn.btn.position.set(btnStartX + hofBtn.width + gap, bottomY);
         container.addChild(contactBtn.btn);
 
-        // ── Language dropdown (top-left, emoji style) ──
-        const langLabel = LANG_LABELS[currentLang] || '\uD55C\uAD6D\uC5B4';
-        const langFontSize = Math.max(11, Math.min(13, w * 0.032)) * sc;
+        // Register ghost hit areas for DOM fallback
+        this._activeButtons.push({
+            x: btnStartX - 5, y: bottomY - 5, w: hofBtn.width + 10, h: smallBtnH + 10,
+            action: () => this.showHallOfFame(),
+        });
+        this._activeButtons.push({
+            x: btnStartX + hofBtn.width + gap - 5, y: bottomY - 5,
+            w: contactBtn.width + 10, h: smallBtnH + 10,
+            action: () => window.open('mailto:contact@archerlab.dev', '_blank'),
+        });
+
+        // ── Language chip (top-left pill) ──
+        const langLabel = LANG_LABELS[currentLang] || '한국어';
+        const langFontSize = Math.max(11, Math.min(12, w * 0.03)) * sc;
         const langBtnW = Math.min(110, w * 0.28);
-        const langBtnH = Math.min(30, h * 0.045);
+        const langBtnH = Math.min(32, h * 0.048);
+        const langX = 14, langY = 14;
 
         const langTrigger = new PIXI.Graphics();
-        langTrigger.roundRect(0, 0, langBtnW, langBtnH, 6).fill({ color: 0x1a1a3e, alpha: 0.85 });
-        langTrigger.roundRect(0, 0, langBtnW, langBtnH, 6).stroke({ width: 1, color: 0xD500F9, alpha: 0.5 });
-        langTrigger.position.set(14, 14);
+        langTrigger.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)
+                   .fill({ color: THEME.surface });
+        langTrigger.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)
+                   .stroke({ width: 1, color: THEME.divider, alpha: 1 });
+        langTrigger.position.set(langX, langY);
         langTrigger.eventMode = 'static';
         langTrigger.cursor = 'pointer';
         langTrigger.hitArea = new PIXI.Rectangle(-4, -4, langBtnW + 8, langBtnH + 8);
         container.addChild(langTrigger);
 
         const langTriggerText = new PIXI.Text({
-            text: `\uD83C\uDF10 ${langLabel} \u25BE`,
+            text: `${langLabel}  ▾`,
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', sans-serif",
+                fontFamily: FONT_BODY,
                 fontSize: langFontSize,
-                fill: 0xD500F9,
-                fontWeight: '700',
+                fill: THEME.ink,
+                fontWeight: '600',
             },
         });
         langTriggerText.anchor.set(0.5, 0.5);
         langTriggerText.position.set(langBtnW / 2, langBtnH / 2);
         langTrigger.addChild(langTriggerText);
 
-        // Dropdown items container
+        // Dropdown items
         const dropdownContainer = new PIXI.Container();
         dropdownContainer.visible = false;
         container.addChild(dropdownContainer);
 
-        // Dismiss overlay
         const dismissBg = new PIXI.Graphics();
         dismissBg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.01 });
         dismissBg.eventMode = 'static';
@@ -652,19 +582,21 @@ class UIManager {
 
         let dropdownOpen = false;
         const langItems = [
-            { code: 'ko', label: '\uD55C\uAD6D\uC5B4' },
+            { code: 'ko', label: '한국어' },
             { code: 'en', label: 'English' },
-            { code: 'ja', label: '\u65E5\u672C\u8A9E' },
+            { code: 'ja', label: '日本語' },
         ];
 
         langItems.forEach((lang, i) => {
-            const iy = 14 + langBtnH + 2 + i * (langBtnH + 2);
+            const iy = langY + langBtnH + 4 + i * (langBtnH + 3);
             const isActive = lang.code === currentLang;
 
             const itemBg = new PIXI.Graphics();
-            itemBg.roundRect(0, 0, langBtnW, langBtnH, 6).fill({ color: isActive ? 0x3a1a6e : 0x1a1a3e, alpha: 0.95 });
-            itemBg.roundRect(0, 0, langBtnW, langBtnH, 6).stroke({ width: 1, color: isActive ? 0xD500F9 : 0x333355, alpha: 0.6 });
-            itemBg.position.set(14, iy);
+            itemBg.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)
+                  .fill({ color: isActive ? THEME.accent : THEME.surface });
+            itemBg.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)
+                  .stroke({ width: 1, color: isActive ? THEME.accent : THEME.divider, alpha: 1 });
+            itemBg.position.set(langX, iy);
             itemBg.eventMode = 'static';
             itemBg.cursor = 'pointer';
             dropdownContainer.addChild(itemBg);
@@ -672,24 +604,18 @@ class UIManager {
             const itemText = new PIXI.Text({
                 text: lang.label,
                 style: {
-                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', sans-serif",
+                    fontFamily: FONT_BODY,
                     fontSize: langFontSize,
-                    fill: isActive ? 0xffffff : 0x9999bb,
-                    fontWeight: '700',
+                    fill: isActive ? THEME.white : THEME.ink,
+                    fontWeight: '600',
                 },
             });
             itemText.anchor.set(0.5, 0.5);
             itemText.position.set(langBtnW / 2, langBtnH / 2);
             itemBg.addChild(itemText);
 
-            itemBg.on('pointerover', () => {
-                if (!isActive) itemBg.tint = 0xCCCCFF;
-                itemText.style.fill = 0xffffff;
-            });
-            itemBg.on('pointerout', () => {
-                itemBg.tint = 0xFFFFFF;
-                if (!isActive) itemText.style.fill = 0x9999bb;
-            });
+            itemBg.on('pointerover', () => { if (!isActive) itemBg.alpha = 0.85; });
+            itemBg.on('pointerout',  () => { itemBg.alpha = 1; });
             itemBg.on('pointerdown', () => {
                 if (lang.code !== currentLang) {
                     setLanguage(lang.code);
@@ -700,160 +626,86 @@ class UIManager {
             });
         });
 
-        const openDropdown = () => {
-            dropdownOpen = true;
-            dropdownContainer.visible = true;
-            langTrigger.tint = 0xCCCCFF;
-        };
-        const closeDropdown = () => {
-            dropdownOpen = false;
-            dropdownContainer.visible = false;
-            langTrigger.tint = 0xFFFFFF;
-        };
+        const openDropdown  = () => { dropdownOpen = true;  dropdownContainer.visible = true; };
+        const closeDropdown = () => { dropdownOpen = false; dropdownContainer.visible = false; };
 
-        langTrigger.on('pointerover', () => { langTrigger.tint = 0xCCCCFF; });
-        langTrigger.on('pointerout', () => { if (!dropdownOpen) langTrigger.tint = 0xFFFFFF; });
+        langTrigger.on('pointerover', () => { langTrigger.alpha = 0.85; });
+        langTrigger.on('pointerout',  () => { langTrigger.alpha = 1; });
         langTrigger.on('pointerdown', () => { dropdownOpen ? closeDropdown() : openDropdown(); });
         dismissBg.on('pointerdown', closeDropdown);
 
         const langBtn = { btn: langTrigger, txt: langTriggerText };
 
-        // archerlab.dev link → HTML 버튼으로 이동 (canvas 외부)
-
-        // ── Sound toggle ──
+        // ── Top-right sound toggle ──
         const titleSoundBtn = new PIXI.Text({
             text: '\u266A',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.max(18, Math.min(24, w * 0.05)),
-                fill: this.game.sound.enabled ? 0x6677aa : 0x333355,
-                fontWeight: '700',
+                fontFamily: FONT_BODY,
+                fontSize: Math.max(16, Math.min(20, w * 0.045)),
+                fill: this.game.sound.enabled ? THEME.ink : THEME.inkFaint,
+                fontWeight: '500',
             },
         });
         titleSoundBtn.anchor.set(1, 0);
-        titleSoundBtn.position.set(w - 16, 16);
+        titleSoundBtn.position.set(w - 18, 18);
         titleSoundBtn.eventMode = 'static';
         titleSoundBtn.cursor = 'pointer';
         titleSoundBtn.on('pointerdown', () => {
             const enabled = this.game.sound.toggle();
-            titleSoundBtn.style.fill = enabled ? 0x6677aa : 0x333355;
+            titleSoundBtn.style.fill = enabled ? THEME.ink : THEME.inkFaint;
         });
-        titleSoundBtn.on('pointerover', () => { titleSoundBtn.alpha = 0.7; });
-        titleSoundBtn.on('pointerout', () => { titleSoundBtn.alpha = 1; });
+        titleSoundBtn.on('pointerover', () => { titleSoundBtn.alpha = 0.65; });
+        titleSoundBtn.on('pointerout',  () => { titleSoundBtn.alpha = 1; });
         container.addChild(titleSoundBtn);
 
-        // ── Version text ──
+        // ── Version text (footer) ──
         const versionText = new PIXI.Text({
-            text: 'v1.0  ArcherLab',
+            text: 'v1.0  ·  ArcherLab',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(9, w * 0.024),
-                fill: 0x334466,
-                letterSpacing: 1,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(10, w * 0.025),
+                fill: THEME.inkFaint,
+                fontWeight: '500',
+                letterSpacing: 0.5,
             },
         });
         versionText.anchor.set(0.5, 1);
-        versionText.position.set(centerX, h - 12);
+        versionText.position.set(centerX, h - 14);
         container.addChild(versionText);
 
-        // Store refs for language refresh
-        this._titleRefs = { logo, subtitle, startBtnText, langBtn, contactBtn, hofBtn, bestText };
+        this._titleRefs = { logo, subtitle, startBtnText, langBtn, contactBtn, hofBtn, bestText, resumeBtnText };
 
-        // ── Entrance Animation ──
+        // ── Entrance Animation ── (fade + gentle lift, no pop-scaling)
         container.alpha = 0;
-        logo.scale.set(0.3);
-        logo.alpha = 0;
-        subtitle.alpha = 0;
-        startBtn.alpha = 0;
-        langBtn.btn.alpha = 0;
-        hofBtn.btn.alpha = 0;
-        contactBtn.btn.alpha = 0;
+        const liftTargets = [deco, logo, subtitle, startBtn, hofBtn.btn, contactBtn.btn, langTrigger];
+        if (resumeBtn) liftTargets.push(resumeBtn);
+        liftTargets.forEach(el => { el.y += 16; el.alpha = 0; });
 
         this.game.effects.tweens.push({
             elapsed: 0,
-            duration: 900,
+            duration: 700,
             _isTitleTween: true,
             _titleRoot: container,
+            _lastLift: 0,
             update(dt) {
                 if (!container || container.destroyed) return true;
-                if (!logo || logo.destroyed || !logo.scale || typeof logo.scale.set !== 'function') return true;
-                if (!subtitle || subtitle.destroyed) return true;
-                if (!startBtn || startBtn.destroyed) return true;
-                if (!langBtn.btn || langBtn.btn.destroyed) return true;
-                if (!hofBtn.btn || hofBtn.btn.destroyed) return true;
-                if (!contactBtn.btn || contactBtn.btn.destroyed) return true;
-
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
+                container.alpha = easeOutCubic(Math.min(t / 0.4, 1));
 
-                // Overlay fade in
-                container.alpha = easeOutCubic(Math.min(t / 0.3, 1));
-
-                // Logo pop-in
-                if (t > 0.05) {
-                    const lt = Math.min((t - 0.05) / 0.45, 1);
-                    logo.alpha = easeOutCubic(lt);
-                    logo.scale.set(easeOutBack(lt));
-                }
-
-                // Subtitle
-                if (t > 0.25) {
-                    subtitle.alpha = easeOutCubic(Math.min((t - 0.25) / 0.3, 1));
-                }
-
-                // Start button
-                if (t > 0.35) {
-                    const bt = Math.min((t - 0.35) / 0.35, 1);
-                    startBtn.alpha = easeOutCubic(bt);
-                }
-
-                // Bottom buttons staggered
-                if (t > 0.45) {
-                    langBtn.btn.alpha = easeOutCubic(Math.min((t - 0.45) / 0.25, 1));
-                }
-                if (t > 0.48) {
-                    hofBtn.btn.alpha = easeOutCubic(Math.min((t - 0.48) / 0.25, 1));
-                }
-                if (t > 0.5) {
-                    contactBtn.btn.alpha = easeOutCubic(Math.min((t - 0.5) / 0.25, 1));
-                }
+                const lift = easeOutCubic(t) * 16;
+                const delta = lift - this._lastLift;
+                this._lastLift = lift;
+                liftTargets.forEach((el, i) => {
+                    if (!el || el.destroyed) return;
+                    // Stagger
+                    const stagger = i * 0.04;
+                    if (t < stagger) { el.alpha = 0; return; }
+                    const lt = Math.min((t - stagger) / (1 - stagger), 1);
+                    el.alpha = easeOutCubic(lt);
+                    el.y -= delta;
+                });
                 return t >= 1;
-            }
-        });
-
-        // Idle logo pulse
-        this.game.effects.tweens.push({
-            elapsed: 0,
-            duration: 99999,
-            _isTitleTween: true,
-            _titleRoot: container,
-            update(dt) {
-                if (!logo || logo.destroyed || !logo.scale || typeof logo.scale.set !== 'function') return true;
-                this.elapsed += dt;
-                const pulse = 1 + Math.sin(this.elapsed * 0.003) * 0.03;
-                logo.scale.set(pulse);
-                return false;
-            }
-        });
-
-        // Idle start button glow pulse (delayed until after entrance animation)
-        this.game.effects.tweens.push({
-            elapsed: 0,
-            duration: 99999,
-            _isTitleTween: true,
-            _titleRoot: container,
-            _ready: false,
-            update(dt) {
-                if (!startBtn || startBtn.destroyed) return true;
-                this.elapsed += dt;
-                if (!this._ready) {
-                    if (this.elapsed < 950) return false;
-                    this._ready = true;
-                    this.elapsed = 0;
-                }
-                const glow = 0.85 + Math.sin(this.elapsed * 0.004) * 0.15;
-                startBtn.alpha = glow;
-                return false;
             }
         });
 
@@ -899,11 +751,12 @@ class UIManager {
 
     _refreshTitleTexts() {
         if (!this._titleRefs) return;
-        const { subtitle, startBtnText, langBtn, contactBtn } = this._titleRefs;
+        const { subtitle, startBtnText, langBtn, contactBtn, hofBtn } = this._titleRefs;
         if (subtitle && !subtitle.destroyed) subtitle.text = getText('blockPuzzle');
         if (startBtnText && !startBtnText.destroyed) startBtnText.text = getText('gameStart');
-        if (langBtn && langBtn.txt && !langBtn.txt.destroyed) langBtn.txt.text = `\uD83C\uDF10 ${LANG_LABELS[currentLang] || '\uD55C\uAD6D\uC5B4'} \u25BE`;
+        if (langBtn && langBtn.txt && !langBtn.txt.destroyed) langBtn.txt.text = `${LANG_LABELS[currentLang] || '한국어'}  ▾`;
         if (contactBtn && contactBtn.txt && !contactBtn.txt.destroyed) contactBtn.txt.text = getText('contact');
+        if (hofBtn && hofBtn.txt && !hofBtn.txt.destroyed) hofBtn.txt.text = getText('hallOfFame');
     }
 
     // ══════════════════════════════════════
@@ -920,79 +773,78 @@ class UIManager {
         const h = this.game.app.screen.height;
         overlay.hitArea = new PIXI.Rectangle(0, 0, w, h);
 
-        // Dark background
+        // Warm scrim (paper, not dark)
         const bg = new PIXI.Graphics();
-        bg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.7 });
-        for (let i = 0; i < 3; i++) {
-            bg.rect(0, 0, w, h).fill({ color: 0x050520, alpha: 0.1 });
-        }
+        bg.rect(0, 0, w, h).fill({ color: THEME.bgDeep, alpha: 0.75 });
         overlay.addChild(bg);
 
         // Panel
-        const panelW = Math.min(w * 0.85, 380);
-        const panelH = Math.min(h * 0.65, 440);
+        const panelW = Math.min(w * 0.86, 380);
+        const panelH = Math.min(h * 0.62, 420);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
 
         const panel = new PIXI.Graphics();
-        for (let i = 2; i >= 0; i--) {
-            panel.roundRect(panelX - i * 4, panelY - i * 4, panelW + i * 8, panelH + i * 8, 18 + i * 2).fill({ color: 0x2244aa, alpha: 0.03 + i * 0.02 });
-        }
-        panel.roundRect(panelX, panelY, panelW, panelH, 16).fill({ color: 0x0a0a30, alpha: 0.97 });
-        panel.roundRect(panelX, panelY, panelW, panelH, 16).stroke({ width: 2, color: 0x3355cc, alpha: 0.5 });
-        panel.roundRect(panelX + 3, panelY + 3, panelW - 6, panelH - 6, 14).stroke({ width: 1, color: 0x4466dd, alpha: 0.15 });
+        // Soft shadow
+        panel.roundRect(panelX + 2, panelY + 6, panelW, panelH, 20)
+             .fill({ color: THEME.shadow, alpha: 0.12 });
+        // Card surface
+        panel.roundRect(panelX, panelY, panelW, panelH, 20)
+             .fill({ color: THEME.surface });
+        panel.roundRect(panelX, panelY, panelW, panelH, 20)
+             .stroke({ width: 1, color: THEME.divider, alpha: 1 });
         overlay.addChild(panel);
 
         const centerX = w / 2;
-        let yOff = panelY + 30;
+        let yOff = panelY + 36;
 
         // Game Over title
         const title = new PIXI.Text({
             text: getText('gameOver'),
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(30, panelW * 0.09),
-                fill: 0xFF1744,
-                fontWeight: '900',
-                letterSpacing: 4,
-                dropShadow: { color: 0x000000, blur: 8, distance: 2 },
+                fontFamily: FONT_DISPLAY,
+                fontSize: Math.min(30, panelW * 0.085),
+                fill: THEME.rose,
+                fontWeight: '400',
+                letterSpacing: 1,
             },
         });
         title.anchor.set(0.5, 0);
         title.position.set(centerX, yOff);
         overlay.addChild(title);
-        yOff += title.height + 20;
+        yOff += title.height + 22;
 
         // Divider
         const divider = new PIXI.Graphics();
-        divider.moveTo(panelX + 30, yOff).lineTo(panelX + panelW - 30, yOff).stroke({ width: 1, color: 0x3355cc, alpha: 0.3 });
+        divider.moveTo(panelX + 36, yOff).lineTo(panelX + panelW - 36, yOff)
+               .stroke({ width: 1, color: THEME.divider, alpha: 1 });
         overlay.addChild(divider);
-        yOff += 16;
+        yOff += 20;
 
         // Score label
         const scoreLabel = new PIXI.Text({
             text: getText('score'),
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(12, panelW * 0.035),
-                fill: 0x6677aa,
-                letterSpacing: 3,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(11, panelW * 0.032),
+                fill: THEME.inkMuted,
+                fontWeight: '500',
+                letterSpacing: 2,
             },
         });
         scoreLabel.anchor.set(0.5, 0);
         scoreLabel.position.set(centerX, yOff);
         overlay.addChild(scoreLabel);
-        yOff += scoreLabel.height + 4;
+        yOff += scoreLabel.height + 6;
 
-        // Score value (count-up animation)
+        // Score value
         const scoreVal = new PIXI.Text({
             text: '0',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(36, panelW * 0.1),
-                fill: 0x76FF03,
-                fontWeight: '900',
-                dropShadow: { color: 0x000000, blur: 6, distance: 2 },
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(40, panelW * 0.11),
+                fill: THEME.inkStrong,
+                fontWeight: '700',
             },
         });
         scoreVal.anchor.set(0.5, 0);
@@ -1027,98 +879,43 @@ class UIManager {
 
         yOff += scoreVal.height + 10;
 
-        // New best indicator
+        // New best indicator — a small honey-gold pill instead of glow+sparkles
         if (isNewBest) {
             const newBest = new PIXI.Text({
                 text: getText('newRecord'),
                 style: {
-                    fontFamily: 'Orbitron, sans-serif',
-                    fontSize: Math.min(16, panelW * 0.05),
-                    fill: 0xFFD600,
-                    fontWeight: '900',
-                    letterSpacing: 3,
-                    dropShadow: { color: 0x000000, blur: 6, distance: 2 },
+                    fontFamily: FONT_BODY,
+                    fontSize: Math.min(13, panelW * 0.038),
+                    fill: THEME.white,
+                    fontWeight: '700',
+                    letterSpacing: 1.5,
                 },
             });
             newBest.anchor.set(0.5, 0);
-            newBest.position.set(centerX, yOff);
+
+            const padX = 14, padY = 6;
+            const pillW = newBest.width + padX * 2;
+            const pillH = newBest.height + padY * 2;
+            const pill = new PIXI.Graphics();
+            pill.roundRect(centerX - pillW / 2, yOff, pillW, pillH, pillH / 2)
+                .fill({ color: THEME.gold });
+            overlay.addChild(pill);
+
+            newBest.position.set(centerX, yOff + padY);
             overlay.addChild(newBest);
 
-            // New record glow
-            const recordGlow = new PIXI.Graphics();
-            recordGlow.ellipse(0, 0, panelW * 0.3, 12)
-                      .fill({ color: 0xFFD600, alpha: 0.08 });
-            recordGlow.position.set(centerX, yOff + newBest.height / 2);
-            overlay.addChildAt(recordGlow, overlay.children.indexOf(newBest));
-
-            this.game.effects.tweens.push({
-                elapsed: 0,
-                duration: 99999,
-                update(dt) {
-                    if (newBest.destroyed) return true;
-                    this.elapsed += dt;
-                    const pulse = 1 + Math.sin(this.elapsed * 0.005) * 0.08;
-                    newBest.scale.set(pulse);
-                    if (recordGlow && !recordGlow.destroyed) {
-                        recordGlow.alpha = 0.6 + Math.sin(this.elapsed * 0.004) * 0.4;
-                    }
-                    return false;
-                }
-            });
-
-            // Gold sparkle particles around new record
-            this.game.effects.tweens.push({
-                elapsed: 0,
-                duration: 3000,
-                _timer: 0,
-                update(dt) {
-                    if (newBest.destroyed) return true;
-                    this.elapsed += dt;
-                    this._timer += dt;
-                    if (this._timer > 150 && this.elapsed < 2500) {
-                        this._timer = 0;
-                        const sx = centerX + (Math.random() - 0.5) * panelW * 0.5;
-                        const sy = yOff + (Math.random() - 0.5) * 20;
-                        const sparkle = new PIXI.Graphics();
-                        const ss = 1 + Math.random() * 2;
-                        sparkle.star(0, 0, 4, ss, ss * 0.4).fill({ color: 0xFFD600, alpha: 0.8 });
-                        sparkle.position.set(sx, sy);
-                        overlay.addChild(sparkle);
-
-                        const startY = sy;
-                        const sparkRef = sparkle;
-                        const game = overlay;
-                        setTimeout(() => {
-                            if (!sparkRef.destroyed) sparkRef.destroy();
-                        }, 800);
-
-                        let life = 0;
-                        const sparkTween = setInterval(() => {
-                            life += 16;
-                            if (!sparkRef || sparkRef.destroyed) { clearInterval(sparkTween); return; }
-                            if (!sparkRef.parent) { clearInterval(sparkTween); return; }
-                            const t = life / 800;
-                            sparkRef.y = startY - t * 30;
-                            sparkRef.alpha = 1 - t;
-                            sparkRef.rotation += 0.05;
-                            if (t >= 1) { clearInterval(sparkTween); if (!sparkRef.destroyed) sparkRef.destroy(); }
-                        }, 16);
-                    }
-                    return this.elapsed >= 3000;
-                }
-            });
-
-            yOff += newBest.height + 10;
+            yOff += pillH + 10;
         }
 
         // Best score
         const bestLabel = new PIXI.Text({
             text: `${getText('best')}  ${bestScore.toLocaleString()}`,
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(13, panelW * 0.038),
-                fill: 0xFFD600,
-                letterSpacing: 1,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(13, panelW * 0.036),
+                fill: THEME.gold,
+                fontWeight: '600',
+                letterSpacing: 0.5,
             },
         });
         bestLabel.anchor.set(0.5, 0);
@@ -1128,35 +925,37 @@ class UIManager {
 
         // Level & Lines
         const levelLabel = new PIXI.Text({
-            text: `${getText('level')} ${this.game.scoreManager.level}  |  ${getText('lines')} ${this.game.scoreManager.linesCleared}`,
+            text: `${getText('level')} ${this.game.scoreManager.level}  ·  ${getText('lines')} ${this.game.scoreManager.linesCleared}`,
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(10, panelW * 0.03),
-                fill: 0x5566aa,
-                letterSpacing: 1,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(11, panelW * 0.03),
+                fill: THEME.inkMuted,
+                fontWeight: '500',
+                letterSpacing: 0.5,
             },
         });
         levelLabel.anchor.set(0.5, 0);
         levelLabel.position.set(centerX, yOff);
         overlay.addChild(levelLabel);
-        yOff += levelLabel.height + 20;
+        yOff += levelLabel.height + 24;
 
         // ── Play Again button ──
-        const btnW = panelW * 0.6;
-        const btnH = 44;
+        const btnW = panelW * 0.7;
+        const btnH = 48;
         const btnX = centerX - btnW / 2;
         const btnY = Math.min(yOff, panelY + panelH - btnH * 2 - 40);
 
         const btn = new PIXI.Graphics();
-        btn.roundRect(btnX - 4, btnY - 4, btnW + 8, btnH + 8, 14).fill({ color: 0x2979FF, alpha: 0.15 });
-        btn.roundRect(btnX, btnY, btnW, btnH, 10).fill({ color: 0x2979FF });
-        btn.roundRect(btnX + 2, btnY + 2, btnW - 4, btnH * 0.4, 8).fill({ color: 0x5599FF, alpha: 0.4 });
+        btn.roundRect(btnX, btnY + 3, btnW, btnH, btnH / 2)
+           .fill({ color: THEME.shadow, alpha: 0.12 });
+        btn.roundRect(btnX, btnY, btnW, btnH, btnH / 2)
+           .fill({ color: THEME.accent });
 
         btn.eventMode = 'static';
         btn.cursor = 'pointer';
         btn.hitArea = new PIXI.Rectangle(btnX - 10, btnY - 10, btnW + 20, btnH + 20);
-        btn.on('pointerover', () => { btn.tint = 0xCCDDFF; });
-        btn.on('pointerout', () => { btn.tint = 0xFFFFFF; });
+        btn.on('pointerover', () => { btn.alpha = 0.92; });
+        btn.on('pointerout',  () => { btn.alpha = 1; });
         let restartTriggered = false;
         const doRestart = () => {
             if (restartTriggered) return;
@@ -1168,7 +967,6 @@ class UIManager {
         btn.on('pointertap', doRestart);
         overlay.addChild(btn);
 
-        // Register DOM fallback hit area
         this._activeButtons = [{
             x: btnX - 10, y: btnY - 10,
             w: btnW + 20, h: btnH + 20,
@@ -1178,11 +976,11 @@ class UIManager {
         const btnText = new PIXI.Text({
             text: getText('playAgain'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: Math.min(15, panelW * 0.045),
-                fill: 0xFFFFFF,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(16, panelW * 0.046),
+                fill: THEME.white,
                 fontWeight: '700',
-                letterSpacing: 3,
+                letterSpacing: 1.5,
             },
         });
         btnText.anchor.set(0.5, 0.5);
@@ -1190,17 +988,20 @@ class UIManager {
         btnText.eventMode = 'none';
         btn.addChild(btnText);
 
-        // ── Back to Title button ──
-        const titleBtnY = btnY + btnH + 12;
+        // ── Back to Title button (ghost) ──
+        const titleBtnH = 40;
+        const titleBtnY = btnY + btnH + 14;
         const titleBtn = new PIXI.Graphics();
-        titleBtn.roundRect(btnX, titleBtnY, btnW, btnH - 4, 10).fill({ color: 0x3355cc, alpha: 0.12 });
-        titleBtn.roundRect(btnX, titleBtnY, btnW, btnH - 4, 10).stroke({ width: 1, color: 0x3355cc, alpha: 0.35 });
+        titleBtn.roundRect(btnX, titleBtnY, btnW, titleBtnH, titleBtnH / 2)
+                .fill({ color: THEME.surface });
+        titleBtn.roundRect(btnX, titleBtnY, btnW, titleBtnH, titleBtnH / 2)
+                .stroke({ width: 1, color: THEME.divider, alpha: 1 });
 
         titleBtn.eventMode = 'static';
         titleBtn.cursor = 'pointer';
-        titleBtn.hitArea = new PIXI.Rectangle(btnX - 10, titleBtnY - 10, btnW + 20, btnH - 4 + 20);
-        titleBtn.on('pointerover', () => { titleBtn.tint = 0xCCDDFF; });
-        titleBtn.on('pointerout', () => { titleBtn.tint = 0xFFFFFF; });
+        titleBtn.hitArea = new PIXI.Rectangle(btnX - 10, titleBtnY - 10, btnW + 20, titleBtnH + 20);
+        titleBtn.on('pointerover', () => { titleBtn.alpha = 0.85; });
+        titleBtn.on('pointerout',  () => { titleBtn.alpha = 1; });
         let titleTriggered = false;
         const doTitle = () => {
             if (titleTriggered) return;
@@ -1211,25 +1012,24 @@ class UIManager {
         titleBtn.on('pointertap', doTitle);
         overlay.addChild(titleBtn);
 
-        // Add title button to DOM fallback
         this._activeButtons.push({
             x: btnX - 10, y: titleBtnY - 10,
-            w: btnW + 20, h: btnH - 4 + 20,
+            w: btnW + 20, h: titleBtnH + 20,
             action: doTitle
         });
 
         const titleBtnText = new PIXI.Text({
             text: getText('backToTitle'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: Math.min(13, panelW * 0.04),
-                fill: 0x6677aa,
-                fontWeight: '700',
-                letterSpacing: 2,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(13, panelW * 0.038),
+                fill: THEME.ink,
+                fontWeight: '600',
+                letterSpacing: 0.5,
             },
         });
         titleBtnText.anchor.set(0.5, 0.5);
-        titleBtnText.position.set(centerX, titleBtnY + (btnH - 4) / 2);
+        titleBtnText.position.set(centerX, titleBtnY + titleBtnH / 2);
         titleBtnText.eventMode = 'none';
         titleBtn.addChild(titleBtnText);
 
@@ -1293,9 +1093,9 @@ class UIManager {
         const h = this.game.app.screen.height;
         overlay.hitArea = new PIXI.Rectangle(0, 0, w, h);
 
-        // Dark background
+        // Warm scrim
         const bg = new PIXI.Graphics();
-        bg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.8 });
+        bg.rect(0, 0, w, h).fill({ color: THEME.bgDeep, alpha: 0.82 });
         bg.eventMode = 'static';
         bg.on('pointerdown', () => this._closeHallOfFame());
         overlay.addChild(bg);
@@ -1307,43 +1107,49 @@ class UIManager {
         const panelY = (h - panelH) / 2;
 
         const panel = new PIXI.Graphics();
-        panel.roundRect(panelX, panelY, panelW, panelH, 16).fill({ color: 0x0a0a30, alpha: 0.97 });
-        panel.roundRect(panelX, panelY, panelW, panelH, 16).stroke({ width: 2, color: 0xFFD600, alpha: 0.6 });
+        panel.roundRect(panelX + 2, panelY + 6, panelW, panelH, 20)
+             .fill({ color: THEME.shadow, alpha: 0.12 });
+        panel.roundRect(panelX, panelY, panelW, panelH, 20)
+             .fill({ color: THEME.surface });
+        panel.roundRect(panelX, panelY, panelW, panelH, 20)
+             .stroke({ width: 1, color: THEME.divider, alpha: 1 });
         panel.eventMode = 'static';
         overlay.addChild(panel);
 
         const centerX = w / 2;
-        let yOff = panelY + 20;
+        let yOff = panelY + 28;
 
         // Title
         const title = new PIXI.Text({
-            text: `\uD83C\uDFC6 ${getText('hallOfFame')}`,
+            text: getText('hallOfFame'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: Math.min(22, panelW * 0.06),
-                fill: 0xFFD600,
-                fontWeight: '900',
-                letterSpacing: 2,
+                fontFamily: FONT_DISPLAY,
+                fontSize: Math.min(24, panelW * 0.062),
+                fill: THEME.inkStrong,
+                fontWeight: '400',
+                letterSpacing: 1,
             },
         });
         title.anchor.set(0.5, 0);
         title.position.set(centerX, yOff);
         overlay.addChild(title);
-        yOff += title.height + 12;
+        yOff += title.height + 14;
 
         // Divider
         const divider = new PIXI.Graphics();
-        divider.moveTo(panelX + 20, yOff).lineTo(panelX + panelW - 20, yOff).stroke({ width: 1, color: 0xFFD600, alpha: 0.3 });
+        divider.moveTo(panelX + 28, yOff).lineTo(panelX + panelW - 28, yOff)
+               .stroke({ width: 1, color: THEME.divider, alpha: 1 });
         overlay.addChild(divider);
-        yOff += 10;
+        yOff += 12;
 
         // Loading text
         const loadingText = new PIXI.Text({
             text: getText('loading'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: 14,
-                fill: 0x6677aa,
+                fontFamily: FONT_BODY,
+                fontSize: 13,
+                fill: THEME.inkMuted,
+                fontWeight: '500',
             },
         });
         loadingText.anchor.set(0.5, 0);
@@ -1351,29 +1157,31 @@ class UIManager {
         overlay.addChild(loadingText);
 
         // Close button
-        const closeBtnY = panelY + panelH - 50;
-        const closeBtnW = panelW * 0.4;
-        const closeBtnH = 36;
+        const closeBtnY = panelY + panelH - 56;
+        const closeBtnW = panelW * 0.44;
+        const closeBtnH = 40;
         const closeBtnX = centerX - closeBtnW / 2;
 
         const closeBtn = new PIXI.Graphics();
-        closeBtn.roundRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8).fill({ color: 0x3355cc, alpha: 0.15 });
-        closeBtn.roundRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8).stroke({ width: 1, color: 0x3355cc, alpha: 0.4 });
+        closeBtn.roundRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, closeBtnH / 2)
+                .fill({ color: THEME.surfaceAlt });
+        closeBtn.roundRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, closeBtnH / 2)
+                .stroke({ width: 1, color: THEME.divider, alpha: 1 });
         closeBtn.eventMode = 'static';
         closeBtn.cursor = 'pointer';
         closeBtn.hitArea = new PIXI.Rectangle(closeBtnX - 5, closeBtnY - 5, closeBtnW + 10, closeBtnH + 10);
         closeBtn.on('pointerdown', () => this._closeHallOfFame());
-        closeBtn.on('pointerover', () => { closeBtn.tint = 0xCCDDFF; });
-        closeBtn.on('pointerout', () => { closeBtn.tint = 0xFFFFFF; });
+        closeBtn.on('pointerover', () => { closeBtn.alpha = 0.85; });
+        closeBtn.on('pointerout',  () => { closeBtn.alpha = 1; });
         overlay.addChild(closeBtn);
 
         const closeBtnText = new PIXI.Text({
             text: getText('close'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: 13,
-                fill: 0x6677aa,
-                fontWeight: '700',
+                fontFamily: FONT_BODY,
+                fontSize: 14,
+                fill: THEME.ink,
+                fontWeight: '600',
             },
         });
         closeBtnText.anchor.set(0.5, 0.5);
@@ -1404,9 +1212,10 @@ class UIManager {
                 const noData = new PIXI.Text({
                     text: getText('noRecords'),
                     style: {
-                        fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                        fontFamily: FONT_BODY,
                         fontSize: 14,
-                        fill: 0x6677aa,
+                        fill: THEME.inkMuted,
+                        fontWeight: '500',
                     },
                 });
                 noData.anchor.set(0.5, 0);
@@ -1415,64 +1224,65 @@ class UIManager {
                 return;
             }
 
-            const rowH = Math.min(22, maxHeight / Math.min(rankings.length + 1, 21));
+            const rowH = Math.min(24, maxHeight / Math.min(rankings.length + 1, 20));
             let y = startY;
 
             // Header
             const headerStyle = {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(10, rowH * 0.5),
-                fill: 0x6677aa,
-                letterSpacing: 1,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(10, rowH * 0.46),
+                fill: THEME.inkMuted,
+                fontWeight: '500',
+                letterSpacing: 1.5,
             };
             const hRank = new PIXI.Text({ text: '#', style: headerStyle });
-            hRank.position.set(panelX + 20, y);
+            hRank.position.set(panelX + 22, y);
             overlay.addChild(hRank);
             const hName = new PIXI.Text({ text: 'NAME', style: headerStyle });
-            hName.position.set(panelX + 50, y);
+            hName.position.set(panelX + 54, y);
             overlay.addChild(hName);
             const hScore = new PIXI.Text({ text: 'SCORE', style: headerStyle });
             hScore.anchor.set(1, 0);
-            hScore.position.set(panelX + panelW - 20, y);
+            hScore.position.set(panelX + panelW - 22, y);
             overlay.addChild(hScore);
             y += rowH;
 
             // Divider
             const hDiv = new PIXI.Graphics();
-            hDiv.moveTo(panelX + 15, y).lineTo(panelX + panelW - 15, y).stroke({ width: 1, color: 0x334466, alpha: 0.5 });
+            hDiv.moveTo(panelX + 18, y).lineTo(panelX + panelW - 18, y)
+                .stroke({ width: 1, color: THEME.divider, alpha: 1 });
             overlay.addChild(hDiv);
-            y += 4;
+            y += 6;
 
             rankings.forEach((entry, i) => {
                 if (y + rowH > startY + maxHeight) return;
-                const rankColors = [0xFFD600, 0xC0C0C0, 0xCD7F32];
-                const color = i < 3 ? rankColors[i] : 0x8899bb;
-                const medal = i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : '';
+
+                // Top-3 get warm honey-gold, rest warm ink
+                const isTop = i < 3;
+                const color = isTop ? THEME.gold : THEME.ink;
+                const rankLabel = isTop ? `${i + 1}` : `${i + 1}`;
 
                 const rowStyle = {
-                    fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                    fontSize: Math.min(12, rowH * 0.6),
+                    fontFamily: FONT_BODY,
+                    fontSize: Math.min(13, rowH * 0.58),
                     fill: color,
-                    fontWeight: i < 3 ? '700' : '400',
+                    fontWeight: isTop ? '700' : '500',
                 };
 
-                const rankText = new PIXI.Text({ text: `${medal}${i < 3 ? '' : (i + 1)}`, style: rowStyle });
-                rankText.position.set(panelX + 18, y);
+                const rankText = new PIXI.Text({ text: rankLabel, style: rowStyle });
+                rankText.position.set(panelX + 22, y);
                 overlay.addChild(rankText);
 
                 const nameText = new PIXI.Text({ text: entry.player_name, style: rowStyle });
-                nameText.position.set(panelX + 55, y);
+                nameText.position.set(panelX + 54, y);
                 overlay.addChild(nameText);
 
                 const scoreText = new PIXI.Text({
                     text: entry.score.toLocaleString(),
-                    style: {
-                        ...rowStyle,
-                        fontFamily: 'Orbitron, sans-serif',
-                    },
+                    style: { ...rowStyle },
                 });
                 scoreText.anchor.set(1, 0);
-                scoreText.position.set(panelX + panelW - 20, y);
+                scoreText.position.set(panelX + panelW - 22, y);
                 overlay.addChild(scoreText);
 
                 y += rowH;
@@ -1490,7 +1300,7 @@ class UIManager {
             }
             if (loadingText && !loadingText.destroyed) {
                 loadingText.text = 'Error loading rankings';
-                loadingText.style.fill = 0xFF4444;
+                loadingText.style.fill = THEME.rose;
             }
         }
     }
@@ -1517,33 +1327,37 @@ class UIManager {
         overlay.eventMode = 'static';
         overlay.hitArea = new PIXI.Rectangle(0, 0, w, h);
 
-        // Dark bg
+        // Warm scrim
         const bg = new PIXI.Graphics();
-        bg.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.85 });
+        bg.rect(0, 0, w, h).fill({ color: THEME.bgDeep, alpha: 0.85 });
         overlay.addChild(bg);
 
         // Panel
-        const panelW = Math.min(w * 0.85, 350);
-        const panelH = Math.min(230, h * 0.4);
+        const panelW = Math.min(w * 0.86, 360);
+        const panelH = Math.min(240, h * 0.42);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
 
         const panel = new PIXI.Graphics();
-        panel.roundRect(panelX, panelY, panelW, panelH, 16).fill({ color: 0x0a0a30, alpha: 0.97 });
-        panel.roundRect(panelX, panelY, panelW, panelH, 16).stroke({ width: 2, color: 0xFFD600, alpha: 0.5 });
+        panel.roundRect(panelX + 2, panelY + 6, panelW, panelH, 20)
+             .fill({ color: THEME.shadow, alpha: 0.12 });
+        panel.roundRect(panelX, panelY, panelW, panelH, 20)
+             .fill({ color: THEME.surface });
+        panel.roundRect(panelX, panelY, panelW, panelH, 20)
+             .stroke({ width: 1, color: THEME.divider, alpha: 1 });
         overlay.addChild(panel);
 
         const centerX = w / 2;
-        let yOff = panelY + 20;
+        let yOff = panelY + 24;
 
         // Title
         const titleText = new PIXI.Text({
-            text: `\uD83C\uDFC6 ${getText('nameInputTitle')}`,
+            text: getText('nameInputTitle'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
-                fontSize: Math.min(18, panelW * 0.055),
-                fill: 0xFFD600,
-                fontWeight: '900',
+                fontFamily: FONT_DISPLAY,
+                fontSize: Math.min(20, panelW * 0.058),
+                fill: THEME.inkStrong,
+                fontWeight: '400',
             },
         });
         titleText.anchor.set(0.5, 0);
@@ -1553,11 +1367,11 @@ class UIManager {
 
         // Score display
         const scoreDisp = new PIXI.Text({
-            text: `SCORE: ${score.toLocaleString()}`,
+            text: `${getText('score')}  ${score.toLocaleString()}`,
             style: {
-                fontFamily: 'Orbitron, sans-serif',
-                fontSize: Math.min(16, panelW * 0.05),
-                fill: 0x76FF03,
+                fontFamily: FONT_BODY,
+                fontSize: Math.min(15, panelW * 0.048),
+                fill: THEME.gold,
                 fontWeight: '700',
             },
         });
@@ -1566,7 +1380,7 @@ class UIManager {
         overlay.addChild(scoreDisp);
         yOff += scoreDisp.height + 14;
 
-        // Create HTML input for name entry
+        // HTML input for name entry (warm-themed)
         const input = document.createElement('input');
         input.type = 'text';
         input.maxLength = 20;
@@ -1576,20 +1390,23 @@ class UIManager {
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            width: ${Math.min(260, panelW * 0.7)}px;
-            padding: 10px 14px;
+            width: ${Math.min(270, panelW * 0.74)}px;
+            padding: 11px 16px;
             font-size: 16px;
-            font-family: 'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif;
-            background: #1a1a40;
-            border: 2px solid #FFD600;
-            border-radius: 8px;
-            color: #ffffff;
+            font-family: 'Pretendard Variable','Pretendard','Noto Sans KR','Noto Sans JP',sans-serif;
+            background: #FBF5E8;
+            border: 1.5px solid #E0CFB0;
+            border-radius: 10px;
+            color: #3A2F23;
             text-align: center;
             outline: none;
             z-index: 10000;
+            box-shadow: 0 4px 12px rgba(45, 32, 21, 0.08);
+            transition: border-color 0.15s;
         `;
+        input.addEventListener('focus', () => { input.style.borderColor = '#E57A54'; });
+        input.addEventListener('blur',  () => { input.style.borderColor = '#E0CFB0'; });
 
-        // Restore last used name
         const lastName = localStorage.getItem('blockpang_player_name') || '';
         input.value = lastName;
 
@@ -1597,26 +1414,32 @@ class UIManager {
         setTimeout(() => input.focus(), 100);
 
         // Buttons
-        const btnW = panelW * 0.35;
-        const btnH = 38;
-        const gap = 10;
-        const btnY = panelY + panelH - btnH - 20;
+        const btnW = panelW * 0.38;
+        const btnH = 42;
+        const gap = 12;
+        const btnY = panelY + panelH - btnH - 22;
 
-        // Submit button
+        // Submit button (primary coral)
         const submitBtn = new PIXI.Graphics();
-        submitBtn.roundRect(centerX - btnW - gap / 2, btnY, btnW, btnH, 8).fill({ color: 0xFFD600 });
+        submitBtn.roundRect(centerX - btnW - gap / 2, btnY + 3, btnW, btnH, btnH / 2)
+                 .fill({ color: THEME.shadow, alpha: 0.1 });
+        submitBtn.roundRect(centerX - btnW - gap / 2, btnY, btnW, btnH, btnH / 2)
+                 .fill({ color: THEME.accent });
         submitBtn.eventMode = 'static';
         submitBtn.cursor = 'pointer';
         submitBtn.hitArea = new PIXI.Rectangle(centerX - btnW - gap / 2 - 5, btnY - 5, btnW + 10, btnH + 10);
+        submitBtn.on('pointerover', () => { submitBtn.alpha = 0.92; });
+        submitBtn.on('pointerout',  () => { submitBtn.alpha = 1; });
         overlay.addChild(submitBtn);
 
         const submitText = new PIXI.Text({
             text: getText('submit'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontFamily: FONT_BODY,
                 fontSize: 14,
-                fill: 0x000000,
+                fill: THEME.white,
                 fontWeight: '700',
+                letterSpacing: 1,
             },
         });
         submitText.anchor.set(0.5, 0.5);
@@ -1624,22 +1447,26 @@ class UIManager {
         submitText.eventMode = 'none';
         overlay.addChild(submitText);
 
-        // Skip button
+        // Skip button (ghost)
         const skipBtn = new PIXI.Graphics();
-        skipBtn.roundRect(centerX + gap / 2, btnY, btnW, btnH, 8).fill({ color: 0x3355cc, alpha: 0.2 });
-        skipBtn.roundRect(centerX + gap / 2, btnY, btnW, btnH, 8).stroke({ width: 1, color: 0x3355cc, alpha: 0.4 });
+        skipBtn.roundRect(centerX + gap / 2, btnY, btnW, btnH, btnH / 2)
+               .fill({ color: THEME.surfaceAlt });
+        skipBtn.roundRect(centerX + gap / 2, btnY, btnW, btnH, btnH / 2)
+               .stroke({ width: 1, color: THEME.divider, alpha: 1 });
         skipBtn.eventMode = 'static';
         skipBtn.cursor = 'pointer';
         skipBtn.hitArea = new PIXI.Rectangle(centerX + gap / 2 - 5, btnY - 5, btnW + 10, btnH + 10);
+        skipBtn.on('pointerover', () => { skipBtn.alpha = 0.85; });
+        skipBtn.on('pointerout',  () => { skipBtn.alpha = 1; });
         overlay.addChild(skipBtn);
 
         const skipText = new PIXI.Text({
             text: getText('skip'),
             style: {
-                fontFamily: "'Noto Sans KR', 'Noto Sans JP', 'Orbitron', sans-serif",
+                fontFamily: FONT_BODY,
                 fontSize: 14,
-                fill: 0x6677aa,
-                fontWeight: '700',
+                fill: THEME.ink,
+                fontWeight: '600',
             },
         });
         skipText.anchor.set(0.5, 0.5);

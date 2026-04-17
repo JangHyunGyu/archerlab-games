@@ -126,8 +126,12 @@
             white-space: nowrap;
         }
         .archerlab-link:hover { color: #d9f4ff; border-color: #4dd2ff; background: rgba(15, 22, 38, 0.95); }
-        @media (max-width: 768px) {
-            .archerlab-link { left: 10px; transform: none; font-size: 0.68rem; padding: 3px 10px; }
+        @media (max-width: 768px), (max-height: 500px) {
+            .archerlab-link {
+                left: auto; right: 8px; top: auto; bottom: 6px;
+                transform: none; font-size: 0.62rem; padding: 2px 8px;
+                opacity: 0.75;
+            }
         }
     </style>
     <div id="game-container"></div>

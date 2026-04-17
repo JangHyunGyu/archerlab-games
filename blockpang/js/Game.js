@@ -248,7 +248,6 @@ class Game {
         this._stars = [];
         this._nebulae = [];
         this._shootingStars = [];
-        // Clear shooting star pool - old pooled objects may reference destroyed contexts
         if (this._shootingStarPool) {
             this._shootingStarPool.forEach(g => { if (!g.destroyed) g.destroy(); });
             this._shootingStarPool = [];
@@ -257,200 +256,58 @@ class Game {
         const w = this.app.screen.width;
         const h = this.app.screen.height;
 
-        // Base dark gradient
+        // Warm cream base (drawn first, behind everything)
         const baseBg = new PIXI.Graphics();
-        baseBg.rect(0, 0, w, h).fill({ color: 0x020215 });
-
-        // Multi-layer gradient for depth
-        const gradients = [
-            { color: 0x0a0a3a, alpha: 0.35, y: 0, h: h * 0.35 },
-            { color: 0x120a35, alpha: 0.2, y: h * 0.15, h: h * 0.35 },
-            { color: 0x1a0830, alpha: 0.15, y: h * 0.45, h: h * 0.35 },
-            { color: 0x0a1535, alpha: 0.12, y: h * 0.65, h: h * 0.35 },
-        ];
-        gradients.forEach(({ color, alpha, y: gy, h: gh }) => {
-            baseBg.rect(0, gy, w, gh).fill({ color, alpha });
-        });
-
+        baseBg.rect(0, 0, w, h).fill({ color: THEME.bg });
+        // Soft vignette — slightly deeper toward bottom
+        baseBg.rect(0, h * 0.55, w, h * 0.45).fill({ color: THEME.bgDeep, alpha: 0.55 });
+        baseBg.rect(0, h * 0.75, w, h * 0.25).fill({ color: THEME.bgDim, alpha: 0.35 });
         this.bgContainer.addChild(baseBg);
         this.bgBase = baseBg;
 
-        // Nebula blobs
-        const nebulaColors = [
-            { base: 0x2a0a5a, shift: 0x1a1a6a },
-            { base: 0x0a1a4a, shift: 0x0a2a5a },
-            { base: 0x3a0a3a, shift: 0x4a0a2a },
-            { base: 0x0a3a3a, shift: 0x0a2a4a },
-            { base: 0x1a0a5a, shift: 0x2a1a4a },
-        ];
-        for (let i = 0; i < 5; i++) {
+        // Two drifting soft "paper" blobs for organic warmth (drawn on top of base)
+        const blobColors = [0xE8D5A8, 0xF2CBB0];
+        for (let i = 0; i < 2; i++) {
             const g = new PIXI.Graphics();
-            const nx = Math.random() * w;
-            const ny = Math.random() * h;
-            const nr = 100 + Math.random() * 180;
-            const nc = nebulaColors[i % nebulaColors.length];
-
-            for (let j = 5; j >= 0; j--) {
-                g.ellipse(0, 0, nr + j * 25, (nr + j * 25) * (0.6 + Math.random() * 0.4))
-                 .fill({ color: nc.base, alpha: 0.015 + j * 0.008 });
+            const r = Math.min(w, h) * (0.5 + i * 0.2);
+            for (let j = 6; j >= 0; j--) {
+                g.circle(0, 0, r + j * 18)
+                 .fill({ color: blobColors[i], alpha: 0.022 });
             }
-
-            g.position.set(nx, ny);
-            g.rotation = Math.random() * Math.PI;
+            const bx = i === 0 ? w * 0.18 : w * 0.82;
+            const by = i === 0 ? h * 0.22 : h * 0.78;
+            g.position.set(bx, by);
             this.bgContainer.addChild(g);
             this._nebulae.push({
-                gfx: g,
-                baseX: nx,
-                baseY: ny,
-                speed: 0.00015 + Math.random() * 0.00025,
-                range: 25 + Math.random() * 40,
+                gfx: g, baseX: bx, baseY: by,
+                speed: 0.00012 + Math.random() * 0.00008,
+                range: 14 + Math.random() * 10,
                 phase: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 0.00003,
-                pulseSpeed: 0.0005 + Math.random() * 0.0005,
+                rotSpeed: 0,
+                pulseSpeed: 0.0004,
                 pulsePhase: Math.random() * Math.PI * 2,
             });
         }
 
-        // Stars
-        const starContainer = new PIXI.Container();
-        const starColors = [0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xCCDDFF, 0xFFDDCC, 0xDDCCFF];
-        for (let i = 0; i < 100; i++) {
-            const x = Math.random() * w;
-            const y = Math.random() * h;
-            const size = 0.3 + Math.random() * 2.2;
-            const alpha = 0.1 + Math.random() * 0.6;
-            const starColor = starColors[Math.floor(Math.random() * starColors.length)];
-
-            const g = new PIXI.Graphics();
-
-            if (size > 1.2) {
-                g.circle(0, 0, size * 5).fill({ color: starColor, alpha: alpha * 0.08 });
-                g.circle(0, 0, size * 3).fill({ color: starColor, alpha: alpha * 0.15 });
-            }
-
-            if (size > 1.5) {
-                g.rect(-size * 2, -0.5, size * 4, 1).fill({ color: starColor, alpha: alpha * 0.3 });
-                g.rect(-0.5, -size * 2, 1, size * 4).fill({ color: starColor, alpha: alpha * 0.3 });
-            }
-
-            g.circle(0, 0, size).fill({ color: starColor, alpha });
-
-            if (size > 0.8) {
-                g.circle(0, 0, size * 0.4).fill({ color: 0xFFFFFF, alpha: Math.min(1, alpha * 1.5) });
-            }
-
-            g.position.set(x, y);
-            starContainer.addChild(g);
-
-            this._stars.push({
-                gfx: g,
-                baseAlpha: alpha,
-                twinkleSpeed: 0.0008 + Math.random() * 0.004,
-                twinklePhase: Math.random() * Math.PI * 2,
-                size,
-            });
-        }
-        this.bgContainer.addChild(starContainer);
-        this._starContainer = starContainer;
-
+        // (Starfield and shooting stars removed — casual puzzle aesthetic)
+        this._starContainer = new PIXI.Container();
         this._shootingStarContainer = new PIXI.Container();
-        this.bgContainer.addChild(this._shootingStarContainer);
     }
 
-    _spawnShootingStar() {
-        const w = this.app.screen.width;
-        const h = this.app.screen.height;
-
-        const startX = Math.random() * w * 0.8;
-        const startY = Math.random() * h * 0.5;
-        const angle = 0.3 + Math.random() * 0.5;
-        const length = 60 + Math.random() * 100;
-        const speed = 4 + Math.random() * 6;
-
-        // Reuse from pool or create new
-        let g;
-        while (this._shootingStarPool && this._shootingStarPool.length > 0) {
-            const candidate = this._shootingStarPool.pop();
-            if (candidate.destroyed) continue;
-            g = candidate;
-            g.clear();
-            g.visible = true;
-            g.alpha = 1;
-            g.scale.set(1);
-            break;
-        }
-        if (!g) {
-            g = new PIXI.Graphics();
-        }
-
-        const trailLen = length;
-        for (let i = 0; i < 8; i++) {
-            const t = i / 8;
-            g.circle(-Math.cos(angle) * trailLen * t, -Math.sin(angle) * trailLen * t, 1.5 * (1 - t * 0.8))
-             .fill({ color: 0xFFFFFF, alpha: 0.5 * (1 - t) });
-        }
-
-        g.circle(0, 0, 2).fill({ color: 0xFFFFFF, alpha: 0.9 });
-        g.circle(0, 0, 4).fill({ color: 0xCCDDFF, alpha: 0.4 });
-
-        g.position.set(startX, startY);
-        this._shootingStarContainer.addChild(g);
-
-        this._shootingStars.push({
-            gfx: g,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            life: 800 + Math.random() * 400,
-            maxLife: 1200,
-        });
-    }
 
     _updateBackground(ticker) {
         const delta = ticker.deltaTime;
         const dt = delta * (1000 / 60);
         this._bgTime += dt;
 
-        this._stars.forEach(star => {
-            const t = this._bgTime * star.twinkleSpeed + star.twinklePhase;
-            const flicker = 0.55 + Math.sin(t) * 0.25 + Math.sin(t * 2.7) * 0.12 + Math.sin(t * 5.1) * 0.05;
-            star.gfx.alpha = star.baseAlpha * Math.max(0.1, flicker);
-        });
-
+        // Gentle blob drift for subtle life (no starfield / shooting stars)
         this._nebulae.forEach(neb => {
             const t = this._bgTime * neb.speed + neb.phase;
             neb.gfx.x = neb.baseX + Math.sin(t) * neb.range;
-            neb.gfx.y = neb.baseY + Math.cos(t * 0.7) * neb.range * 0.6;
-            neb.gfx.rotation += neb.rotSpeed * delta;
-
-            const pulse = 1 + Math.sin(this._bgTime * neb.pulseSpeed + neb.pulsePhase) * 0.08;
+            neb.gfx.y = neb.baseY + Math.cos(t * 0.7) * neb.range * 0.5;
+            const pulse = 1 + Math.sin(this._bgTime * neb.pulseSpeed + neb.pulsePhase) * 0.04;
             neb.gfx.scale.set(pulse);
         });
-
-        this._shootingStarTimer += dt;
-        if (this._shootingStarTimer > 3000 + Math.random() * 5000) {
-            this._shootingStarTimer = 0;
-            this._spawnShootingStar();
-        }
-
-        for (let i = this._shootingStars.length - 1; i >= 0; i--) {
-            const ss = this._shootingStars[i];
-            ss.life -= dt;
-            if (ss.life <= 0) {
-                ss.gfx.visible = false;
-                if (ss.gfx.parent) ss.gfx.parent.removeChild(ss.gfx);
-                if (this._shootingStarPool.length < 10) {
-                    this._shootingStarPool.push(ss.gfx);
-                } else {
-                    ss.gfx.destroy();
-                }
-                this._shootingStars.splice(i, 1);
-                continue;
-            }
-            const t = 1 - ss.life / ss.maxLife;
-            ss.gfx.x += ss.vx * delta;
-            ss.gfx.y += ss.vy * delta;
-            ss.gfx.alpha = t < 0.1 ? t * 10 : (t > 0.7 ? (1 - t) / 0.3 : 1);
-        }
     }
 
     resize() {

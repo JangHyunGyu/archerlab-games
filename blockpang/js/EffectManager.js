@@ -594,7 +594,7 @@ class EffectManager {
         const txt = new PIXI.Text({
             text,
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_BODY,
                 fontSize: size,
                 fill: color,
                 fontWeight: 'bold',
@@ -694,7 +694,7 @@ class EffectManager {
         const size = Math.max(26, this.game.cellSize * 1.0) * sizeMultiplier;
 
         const style = {
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_BODY,
             fontSize: size,
             fill: color,
             fontWeight: '900',
@@ -827,7 +827,7 @@ class EffectManager {
 
         const size = Math.max(28, this.game.cellSize * 1.0) * cfg.size;
         const style = {
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: FONT_BODY,
             fontSize: size,
             fill: cfg.color,
             fontWeight: '900',
@@ -1146,7 +1146,7 @@ class EffectManager {
         const txt = new PIXI.Text({
             text: `LEVEL ${level}`,
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_BODY,
                 fontSize: Math.max(30, this.game.cellSize * 1.2),
                 fill: 0xFFD600,
                 fontWeight: '900',
@@ -1267,7 +1267,7 @@ class EffectManager {
         const txt = new PIXI.Text({
             text: 'PERFECT CLEAR!',
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_BODY,
                 fontSize: Math.max(28, this.game.cellSize * 1.0),
                 fill: 0xFF4081,
                 fontWeight: '900',
@@ -1528,7 +1528,7 @@ class EffectManager {
         const txt = new PIXI.Text({
             text,
             style: {
-                fontFamily: 'Orbitron, sans-serif',
+                fontFamily: FONT_BODY,
                 fontSize: size,
                 fill: color,
                 fontWeight: '900',
