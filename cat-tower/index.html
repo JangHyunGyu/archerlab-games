@@ -137,8 +137,11 @@
         <div id="new-record" class="new-record hidden" data-i18n="over.newRecord">🏆 신기록!</div>
       </div>
       <div id="rank-submit-row" class="rank-submit-row">
-        <input id="nickname-input" type="text" maxlength="8" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-ph="over.nicknamePh" placeholder="닉네임 (8자)">
-        <button id="submit-rank-btn" class="btn btn-secondary" data-i18n="over.submitRank">🏆 랭킹 등록</button>
+        <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-ph="over.nicknamePh" placeholder="닉네임 (20자)">
+        <div class="rank-submit-buttons">
+          <button id="submit-rank-btn" class="btn btn-secondary" data-i18n="over.submitRank">🏆 랭킹 등록</button>
+          <button id="skip-rank-btn" class="btn btn-ghost" data-i18n="over.skipRank">Skip</button>
+        </div>
         <div id="submit-status" class="submit-status"></div>
       </div>
       <button id="replay-btn" class="btn btn-primary" data-i18n="over.replay">다시 도전</button>

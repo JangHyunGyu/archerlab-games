@@ -30,7 +30,8 @@
       'over.replay': '다시 도전',
       'over.menu': '메인 메뉴',
       'over.submitRank': '🏆 랭킹 등록',
-      'over.nicknamePh': '닉네임 (8자)',
+      'over.skipRank': 'Skip',
+      'over.nicknamePh': '닉네임 (20자)',
       'over.submitting': '등록 중...',
       'over.submitOk': '등록 완료!',
       'over.submitFail': '등록 실패 — 나중에 다시',
@@ -46,7 +47,7 @@
       'how.close': '닫기',
 
       // 랭킹 모달
-      'rank.title': '🏆 랭킹 TOP 10',
+      'rank.title': '🏆 랭킹 TOP 20',
       'rank.loading': '불러오는 중...',
       'rank.empty': '아직 기록이 없어요. 첫 번째 도전자가 되어보세요!',
       'rank.error': '랭킹을 불러오지 못했어요',
@@ -97,7 +98,8 @@
       'over.replay': 'Try Again',
       'over.menu': 'Main Menu',
       'over.submitRank': '🏆 Submit Score',
-      'over.nicknamePh': 'Nickname (8 chars)',
+      'over.skipRank': 'Skip',
+      'over.nicknamePh': 'Nickname (20 chars)',
       'over.submitting': 'Submitting...',
       'over.submitOk': 'Submitted!',
       'over.submitFail': 'Submit failed — try later',
@@ -111,7 +113,7 @@
       'how.tiers': 'Evolution Tiers',
       'how.close': 'Close',
 
-      'rank.title': '🏆 Ranking TOP 10',
+      'rank.title': '🏆 Ranking TOP 20',
       'rank.loading': 'Loading...',
       'rank.empty': 'No records yet. Be the first!',
       'rank.error': 'Could not load rankings',

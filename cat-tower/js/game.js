@@ -138,8 +138,11 @@
     rank: $('rank-modal'),
   };
 
-  // -------- 랭킹 API --------
-  const RANK_API_BASE = 'https://chatbot-api.yama5993.workers.dev';
+  // -------- 랭킹 API (blockpang과 공유하는 game-api-worker) --------
+  const RANK_API_BASE = 'https://game-api.yama5993.workers.dev';
+  const GAME_ID = 'cat-tower';
+  const RANK_LIMIT = 20;
+  const NICK_MAX = 20;
   const NICK_KEY = 'cat-tower.nick';
 
   function tt(key, vars) { return (window.I18N && window.I18N.t(key, vars)) || key; }
@@ -644,21 +647,23 @@
 
   // -------- 랭킹 API --------
   async function fetchTopRanks(limit) {
-    const res = await fetch(`${RANK_API_BASE}/cat-tower/top?limit=${limit || 10}`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-    });
+    const url = `${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${limit || RANK_LIMIT}`;
+    const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if (!Array.isArray(data.rows)) throw new Error('invalid response');
-    return data.rows;
+    if (!Array.isArray(data.rankings)) throw new Error('invalid response');
+    return data.rankings;
   }
 
-  async function submitScore(nickname, finalScore) {
-    const res = await fetch(`${RANK_API_BASE}/cat-tower/submit`, {
+  async function submitScore(playerName, finalScore) {
+    const res = await fetch(`${RANK_API_BASE}/rankings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, score: finalScore }),
+      body: JSON.stringify({
+        game_id: GAME_ID,
+        player_name: playerName,
+        score: finalScore,
+      }),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
@@ -672,7 +677,7 @@
     content.innerHTML = `<div class="rank-loading">${tt('rank.loading')}</div>`;
     show(modals.rank);
     try {
-      const rows = await fetchTopRanks(10);
+      const rows = await fetchTopRanks(RANK_LIMIT);
       renderRankRows(rows);
     } catch (e) {
       err('랭킹 조회 실패:', e.message);
@@ -686,16 +691,16 @@
       content.innerHTML = `<div class="rank-empty">${tt('rank.empty')}</div>`;
       return;
     }
-    const myNick = (function () { try { return localStorage.getItem(NICK_KEY) || ''; } catch { return ''; } })();
+    const myName = (function () { try { return localStorage.getItem(NICK_KEY) || ''; } catch { return ''; } })();
     const html = rows.map((r, i) => {
-      const pos = i + 1;
-      const isMe = myNick && r.nickname === myNick;
+      const pos = r.rank || (i + 1);
+      const isMe = myName && r.player_name === myName;
       const cls = ['rank-row'];
       if (pos === 1) cls.push('top1');
       else if (pos === 2) cls.push('top2');
       else if (pos === 3) cls.push('top3');
       if (isMe) cls.push('me');
-      const nameEsc = String(r.nickname || '').replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
+      const nameEsc = String(r.player_name || '').replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
       return `<div class="${cls.join(' ')}"><div class="rank-pos">${pos}</div><div class="rank-name">${nameEsc}</div><div class="rank-score">${Number(r.score).toLocaleString()}</div></div>`;
     }).join('');
     content.innerHTML = html;
@@ -704,41 +709,52 @@
   async function handleSubmitRank() {
     const inp = $('nickname-input');
     const btn = $('submit-rank-btn');
+    const skipBtn = $('skip-rank-btn');
     const status = $('submit-status');
-    const nick = (inp.value || '').trim().slice(0, 8);
-    if (!nick) {
+    const name = (inp.value || '').trim().slice(0, NICK_MAX);
+    if (!name) {
       status.className = 'submit-status fail';
       status.textContent = tt('over.nicknamePh');
       inp.focus();
       return;
     }
     btn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;
     inp.disabled = true;
     status.className = 'submit-status';
     status.textContent = tt('over.submitting');
     try {
-      await submitScore(nick, score);
-      try { localStorage.setItem(NICK_KEY, nick); } catch {}
+      const res = await submitScore(name, score);
+      try { localStorage.setItem(NICK_KEY, name); } catch {}
       status.className = 'submit-status ok';
-      status.textContent = tt('over.submitOk');
-      log(`랭킹 등록 성공: ${nick} = ${score}`);
+      status.textContent = tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');
+      log(`랭킹 등록 성공: ${name} = ${score} rank=${res && res.rank}`);
     } catch (e) {
       err('랭킹 등록 실패:', e.message);
       status.className = 'submit-status fail';
       status.textContent = tt('over.submitFail');
       btn.disabled = false;
+      if (skipBtn) skipBtn.disabled = false;
       inp.disabled = false;
     }
+  }
+
+  function handleSkipRank() {
+    const row = $('rank-submit-row');
+    if (row) row.style.display = 'none';
+    log('UI: 랭킹 등록 Skip');
   }
 
   function resetRankSubmit() {
     const row = $('rank-submit-row');
     const inp = $('nickname-input');
     const btn = $('submit-rank-btn');
+    const skipBtn = $('skip-rank-btn');
     const status = $('submit-status');
     if (!row || !inp || !btn || !status) return;
     inp.disabled = false;
     btn.disabled = false;
+    if (skipBtn) skipBtn.disabled = false;
     status.textContent = '';
     status.className = 'submit-status';
     try { inp.value = localStorage.getItem(NICK_KEY) || ''; } catch { inp.value = ''; }
@@ -771,7 +787,7 @@
       // 필수 DOM 엘리먼트 검증 — 하나라도 누락되면 게임 자체가 동작 안 함
       const required = ['play-btn', 'how-btn', 'how-close', 'pause-btn', 'resume-btn',
         'restart-btn', 'exit-btn', 'replay-btn', 'menu-btn', 'rank-btn', 'rank-close',
-        'rank-content', 'submit-rank-btn', 'nickname-input', 'submit-status',
+        'rank-content', 'submit-rank-btn', 'skip-rank-btn', 'nickname-input', 'submit-status',
         'lang-ko', 'lang-en', 'score', 'best-score',
         'final-score', 'new-record', 'combo-flash', 'tier-preview'];
       for (const id of required) {
@@ -797,8 +813,9 @@
       $('rank-btn').addEventListener('click', () => { log('UI: 랭킹 클릭'); openRankModal(); });
       $('rank-close').addEventListener('click', () => hide(modals.rank));
 
-      // 게임오버 랭킹 등록
+      // 게임오버 랭킹 등록 / Skip
       $('submit-rank-btn').addEventListener('click', handleSubmitRank);
+      $('skip-rank-btn').addEventListener('click', handleSkipRank);
       $('nickname-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); handleSubmitRank(); }
       });
