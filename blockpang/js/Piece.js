@@ -182,33 +182,13 @@ class PieceTray {
         }
         const g = new PIXI.Graphics();
 
-        // Outer glow
-        g.roundRect(6, -4, w - 12, h + 2, 16)
-         .fill({ color: 0x2244aa, alpha: 0.04 });
+        // Warm tray card — flat, rests on the cream page like a tray of tiles
+        g.roundRect(10, 2, w - 20, h - 8, 14)
+         .fill({ color: THEME.surface });
 
-        // Main glass panel
-        g.roundRect(10, 0, w - 20, h - 5, 12)
-         .fill({ color: 0x080828, alpha: 0.6 });
-
-        // Glass top highlight
-        g.roundRect(12, 1, w - 24, (h - 5) * 0.2, 11)
-         .fill({ color: 0x1a1a55, alpha: 0.2 });
-
-        // Neon top border glow (layered)
-        g.moveTo(40, 0).lineTo(w - 40, 0)
-         .stroke({ width: 2, color: 0x3355cc, alpha: 0.25 });
-        g.moveTo(60, -1).lineTo(w - 60, -1)
-         .stroke({ width: 1, color: 0x00E5FF, alpha: 0.1 });
-
-        // Side borders (subtle)
-        g.moveTo(10, 8).lineTo(10, h - 12)
-         .stroke({ width: 0.5, color: 0x3355cc, alpha: 0.1 });
-        g.moveTo(w - 10, 8).lineTo(w - 10, h - 12)
-         .stroke({ width: 0.5, color: 0x3355cc, alpha: 0.1 });
-
-        // Glass rim border
-        g.roundRect(10, 0, w - 20, h - 5, 12)
-         .stroke({ width: 1, color: 0x3355cc, alpha: 0.15 });
+        // Thin hairline border
+        g.roundRect(10, 2, w - 20, h - 8, 14)
+         .stroke({ width: 1, color: THEME.divider, alpha: 1 });
 
         this.trayBg = g;
         this.container.addChildAt(g, 0);

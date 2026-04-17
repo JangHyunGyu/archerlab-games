@@ -17,6 +17,8 @@ export class MenuScene extends Phaser.Scene {
 
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
             || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isPortrait = GAME_HEIGHT > GAME_WIDTH;
+        const isNarrow = GAME_WIDTH <= 1100;  // narrow phone, portrait
 
         this._modalElements = [];
         this._dropdownElements = [];
@@ -26,51 +28,73 @@ export class MenuScene extends Phaser.Scene {
         this._drawBackdrop();
 
         const centerX = GAME_WIDTH / 2;
+        const sidePad = uv(20);
+
+        // Content anchor — centered vertical block so layout doesn't spread on tall portrait
+        const contentH = Math.min(GAME_HEIGHT, uv(860));
+        const contentTop = (GAME_HEIGHT - contentH) / 2;
+        const cy = (pct) => contentTop + contentH * pct;
 
         // ── Top status line ─────────────────────
-        const topY = uv(22);
-        const sysTxt = this.add.text(uv(22), topY, '[ SYSTEM · ONLINE ]', {
-            fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
-        });
-        const cursor = this.add.text(uv(22) + sysTxt.width + 2, topY, '▋', {
-            fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
-        });
-        this.tweens.add({ targets: cursor, alpha: { from: 1, to: 0.25 }, duration: 600, yoyo: true, repeat: -1 });
+        // Skip on narrow/portrait to avoid colliding with HTML ArcherLab link
+        if (!isNarrow && !isPortrait) {
+            const topY = uv(22);
+            const sysTxt = this.add.text(uv(22), topY, '[ SYSTEM · ONLINE ]', {
+                fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
+            });
+            const cursor = this.add.text(uv(22) + sysTxt.width + 2, topY, '▋', {
+                fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
+            });
+            this.tweens.add({ targets: cursor, alpha: { from: 1, to: 0.25 }, duration: 600, yoyo: true, repeat: -1 });
 
-        const topLine = this.add.graphics();
-        topLine.lineStyle(1, SYSTEM.BORDER, 0.35);
-        topLine.lineBetween(uv(18), topY + uv(18), GAME_WIDTH - uv(140), topY + uv(18));
+            const topLine = this.add.graphics();
+            topLine.lineStyle(1, SYSTEM.BORDER, 0.35);
+            topLine.lineBetween(uv(18), topY + uv(18), GAME_WIDTH - uv(140), topY + uv(18));
+        }
 
         // ── Title block ─────────────────────────
-        const titleSize = isMobile ? 42 : 60;
-        const titleY = isMobile ? GAME_HEIGHT * 0.17 : GAME_HEIGHT * 0.20;
-        const titleText = this.add.text(centerX, titleY, t('title'), {
+        const titleSize = isPortrait ? 48 : (isMobile ? 42 : 60);
+        const titleText = this.add.text(centerX, cy(0.15), t('title'), {
             fontSize: fs(titleSize),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT,
         }).setOrigin(0.5);
 
-        const uw = titleText.width;
+        // Auto-shrink title if wider than available space
+        const titleMaxW = GAME_WIDTH - sidePad * 2;
+        if (titleText.width > titleMaxW) {
+            titleText.setScale(titleMaxW / titleText.width);
+        }
+
+        const uw = titleText.displayWidth;
         const ulG = this.add.graphics();
         ulG.lineStyle(2, SYSTEM.BORDER, 1);
-        const ulY = titleY + titleText.height / 2 + uv(6);
+        const ulY = cy(0.15) + titleText.displayHeight / 2 + uv(6);
         ulG.lineBetween(centerX - uw / 2, ulY, centerX + uw / 2, ulY);
         ulG.lineStyle(1, SYSTEM.BORDER_DIM, 0.55);
-        ulG.lineBetween(centerX - uw / 2 - uv(24), ulY + uv(4), centerX + uw / 2 + uv(24), ulY + uv(4));
+        const ulExt = Math.min(uv(24), (GAME_WIDTH - uw) / 2 - sidePad);
+        if (ulExt > 0) {
+            ulG.lineBetween(centerX - uw / 2 - ulExt, ulY + uv(4), centerX + uw / 2 + ulExt, ulY + uv(4));
+        }
 
-        this.add.text(centerX, ulY + uv(18), 'S H A D O W   ·   S U R V I V A L', {
-            fontSize: fs(isMobile ? 12 : 13),
-            fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_CYAN_DIM,
-            letterSpacing: 2,
-        }).setOrigin(0.5);
+        // Subtitle — skip on short landscape (phone) to save vertical space
+        const isLandscapePhone = isMobile && !isPortrait;
+        if (!isLandscapePhone) {
+            const subText = this.add.text(centerX, ulY + uv(18), 'S H A D O W   ·   S U R V I V A L', {
+                fontSize: fs(isNarrow ? 11 : 13),
+                fontFamily: UI_FONT_MONO,
+                color: SYSTEM.TEXT_CYAN_DIM,
+                letterSpacing: 2,
+            }).setOrigin(0.5);
+            if (subText.width > titleMaxW) subText.setScale(titleMaxW / subText.width);
+        }
 
         // ── System notification panel ──────────
-        const panelW = isMobile ? Math.min(uv(340), GAME_WIDTH - uv(40)) : uv(480);
-        const panelH = uv(106);
+        const panelW = Math.min(uv(520), GAME_WIDTH - sidePad * 2);
+        const panelH = uv(isNarrow ? 124 : 106);  // extra height for wrap
         const panelX = centerX - panelW / 2;
-        const panelY = isMobile ? GAME_HEIGHT * 0.36 : GAME_HEIGHT * 0.40;
+        const panelY = cy(0.34);
         const panelG = this.add.graphics();
         drawSystemPanel(panelG, panelX, panelY, panelW, panelH, {
             cut: uv(10),
@@ -79,38 +103,44 @@ export class MenuScene extends Phaser.Scene {
         });
 
         // Panel header tag
-        const headerLabel = ' SYSTEM · NOTICE ';
-        const headerTxt = this.add.text(panelX + uv(18), panelY - uv(9), headerLabel, {
+        this.add.text(panelX + uv(18), panelY - uv(9), ' SYSTEM · NOTICE ', {
             fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
             backgroundColor: '#05070d', padding: { left: 6, right: 6, top: 1, bottom: 1 },
         });
 
-        // Messages (typewriter)
-        const msgs = [
-            '▷ 플레이어 감지됨 ── 재야의 헌터',
-            '▷ 등급 평가: E - RANK',
-            '▷ 던전 균열 확인 ── 입장하시겠습니까?',
-        ];
-        const msgEls = msgs.map((m, i) =>
-            this.add.text(panelX + uv(22), panelY + uv(16) + i * uv(24), '', {
-                fontSize: fs(isMobile ? 13 : 14),
-                fontFamily: UI_FONT_KR,
-                color: SYSTEM.TEXT_BRIGHT,
-            })
-        );
+        // Messages (typewriter) — localized, auto-shrink if needed
+        const msgs = [t('menuMsg1'), t('menuMsg2'), t('menuMsg3')];
+        const msgStyle = {
+            fontSize: fs(isNarrow ? 10 : 14),
+            fontFamily: UI_FONT_KR,
+            color: SYSTEM.TEXT_BRIGHT,
+        };
+        const msgMaxW = panelW - uv(44);
+        // Safety factor — CJK font measurement is unreliable until webfont loads
+        const SAFETY = 0.82;
+        const msgEls = msgs.map((fullMsg, i) => {
+            const el = this.add.text(panelX + uv(22), panelY + uv(16) + i * uv(24), fullMsg, msgStyle);
+            const scale = Math.min(1, (msgMaxW * SAFETY) / Math.max(el.width, 1));
+            if (scale < 1) el.setScale(scale);
+            el.setText('');
+            return el;
+        });
+        msgs.forEach((m, i) => {
+            this.time.delayedCall(250 + i * 420, () => this._typewrite(msgEls[i], m));
+        });
         msgs.forEach((m, i) => {
             this.time.delayedCall(250 + i * 420, () => this._typewrite(msgEls[i], m));
         });
 
         // ── Main action button ──────────────────
-        const btnW = uv(isMobile ? 230 : 260);
+        const btnW = Math.min(uv(280), GAME_WIDTH - sidePad * 2);
         const btnH = uv(52);
-        const startY = isMobile ? GAME_HEIGHT * 0.62 : GAME_HEIGHT * 0.65;
+        const startY = cy(0.62);
         this._makeButton(centerX - btnW / 2, startY - btnH / 2, btnW, btnH, {
             label: `▶   ${t('startGame')}`,
             labelColor: SYSTEM.TEXT_BRIGHT,
             border: SYSTEM.BORDER,
-            labelSize: isMobile ? 17 : 19,
+            labelSize: isNarrow ? 16 : 19,
             labelFont: UI_FONT_KR,
             onClick: async () => {
                 if (!this.game._soundManager) {
@@ -126,7 +156,7 @@ export class MenuScene extends Phaser.Scene {
         });
 
         // ── Hall of Fame (secondary) ────────────
-        const hofW = uv(isMobile ? 180 : 200);
+        const hofW = Math.min(uv(210), GAME_WIDTH - sidePad * 2);
         const hofH = uv(36);
         const hofY = startY + btnH / 2 + uv(18);
         this._makeButton(centerX - hofW / 2, hofY, hofW, hofH, {
@@ -138,30 +168,34 @@ export class MenuScene extends Phaser.Scene {
             onClick: () => this._showHallOfFame(isMobile),
         });
 
-        // ── Controls hint ──────────────────────
-        const ctrlY = isMobile ? GAME_HEIGHT * 0.83 : GAME_HEIGHT * 0.82;
-        const ctrl = isMobile
-            ? `${t('controlsMobile')}   ·   ${t('controlsMobileAuto')}`
-            : `${t('controlsPC')}   ·   ${t('controlsPC2')}`;
-        this.add.text(centerX, ctrlY, ctrl, {
-            fontSize: fs(isMobile ? 11 : 11),
-            fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_MUTED,
-            align: 'center',
-        }).setOrigin(0.5);
+        // ── Footer ─────────────────────────────
+        // Anchor footer from bottom of screen so it's consistent across aspect ratios
+        const bottomPad = uv(18);
+        const copyrightY = GAME_HEIGHT - bottomPad;
+        this.add.text(centerX, copyrightY, 'ArcherLab   ·   © 2026', {
+            fontSize: fs(10), fontFamily: UI_FONT_MONO, color: '#3a4755',
+        }).setOrigin(0.5, 1);
 
-        // ── Footer ──────────────────────────────
-        const footerY = isMobile ? GAME_HEIGHT * 0.93 : GAME_HEIGHT * 0.92;
-        const contactBtn = this.add.text(centerX, footerY, `[ ${t('contact')} ]`, {
+        const contactBtn = this.add.text(centerX, copyrightY - uv(16), `[ ${t('contact')} ]`, {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        }).setOrigin(0.5, 1).setInteractive({ useHandCursor: true });
         contactBtn.on('pointerover', () => contactBtn.setColor(SYSTEM.TEXT_CYAN));
         contactBtn.on('pointerout', () => contactBtn.setColor(SYSTEM.TEXT_MUTED));
         contactBtn.on('pointerdown', () => this._showContactModal());
 
-        this.add.text(centerX, footerY + uv(20), 'ArcherLab   ·   © 2026', {
-            fontSize: fs(10), fontFamily: UI_FONT_MONO, color: '#3a4755',
-        }).setOrigin(0.5);
+        // ── Controls hint (above footer) ───────
+        const ctrlY = copyrightY - uv(46);
+        const ctrl = isMobile
+            ? `${t('controlsMobile')}   ·   ${t('controlsMobileAuto')}`
+            : `${t('controlsPC')}   ·   ${t('controlsPC2')}`;
+        const ctrlText = this.add.text(centerX, ctrlY, ctrl, {
+            fontSize: fs(isNarrow ? 10 : 11),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_MUTED,
+            align: 'center',
+        }).setOrigin(0.5, 1);
+        const ctrlMaxW = GAME_WIDTH - sidePad * 2;
+        if (ctrlText.width > ctrlMaxW) ctrlText.setScale(ctrlMaxW / ctrlText.width);
 
         // ── Language selector (top-right) ──────
         this._createLanguageDropdown(isMobile);

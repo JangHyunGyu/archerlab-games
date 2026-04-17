@@ -29,12 +29,17 @@ const TEXTS = {
         controlsMobileAuto: '공격은 자동 | 적을 처치하고 레벨업하세요',
         controlsPC: 'WASD / 방향키로 이동  |  자동 공격  |  TAB: 상태창  |  M: 사운드',
         controlsPC2: '적을 처치하고 경험치를 모아 스킬을 강화하세요',
-        contact: '💬 문의하기',
-        contactTitle: '💌 문의하기',
-        contactDesc: '궁금한 점이나 피드백을 보내주세요!',
-        contactKakao: '💬 카카오톡 오픈채팅',
-        contactEmail: '📧 hyungyu@archerlab.dev',
+        contact: '문의하기',
+        contactTitle: '문의하기',
+        contactDesc: '궁금한 점이나 피드백을 보내주세요.',
+        contactKakao: '카카오톡 오픈채팅',
+        contactEmail: 'hyungyu@archerlab.dev',
         close: '닫기',
+
+        // Menu system notice (typewriter)
+        menuMsg1: '▷ 플레이어 감지됨 ── 재야의 헌터',
+        menuMsg2: '▷ 등급 평가: E - RANK',
+        menuMsg3: '▷ 던전 균열 확인 ── 입장하시겠습니까?',
 
         // System messages
         sysEnterDungeon: '플레이어가 던전에 입장했습니다.',
@@ -151,12 +156,17 @@ const TEXTS = {
         controlsMobileAuto: 'Auto-attack | Kill enemies and level up!',
         controlsPC: 'WASD / Arrow keys to move  |  Auto-attack  |  TAB: Status  |  M: Sound',
         controlsPC2: 'Kill enemies and collect XP to upgrade your skills',
-        contact: '💬 Contact',
-        contactTitle: '💌 Contact Us',
-        contactDesc: 'Send us your questions or feedback!',
-        contactKakao: '💬 KakaoTalk Open Chat',
-        contactEmail: '📧 hyungyu@archerlab.dev',
+        contact: 'Contact',
+        contactTitle: 'Contact',
+        contactDesc: 'Send us your questions or feedback.',
+        contactKakao: 'KakaoTalk Open Chat',
+        contactEmail: 'hyungyu@archerlab.dev',
         close: 'Close',
+
+        // Menu system notice (typewriter)
+        menuMsg1: '▷ Player detected ── Unranked Hunter',
+        menuMsg2: '▷ Grade: E - RANK',
+        menuMsg3: '▷ Dungeon rift confirmed ── Do you wish to enter?',
 
         sysEnterDungeon: 'Player has entered the dungeon.',
         sysKillToLevel: 'Defeat monsters and level up.',
@@ -261,12 +271,17 @@ const TEXTS = {
         controlsMobileAuto: '攻撃は自動 | 敵を倒してレベルアップ！',
         controlsPC: 'WASD / 矢印キーで移動  |  自動攻撃  |  TAB: ステータス  |  M: サウンド',
         controlsPC2: '敵を倒して経験値を集め、スキルを強化しよう',
-        contact: '💬 お問い合わせ',
-        contactTitle: '💌 お問い合わせ',
-        contactDesc: 'ご質問やフィードバックをお送りください！',
-        contactKakao: '💬 カカオトーク オープンチャット',
-        contactEmail: '📧 hyungyu@archerlab.dev',
+        contact: 'お問い合わせ',
+        contactTitle: 'お問い合わせ',
+        contactDesc: 'ご質問やフィードバックをお送りください。',
+        contactKakao: 'カカオトーク オープンチャット',
+        contactEmail: 'hyungyu@archerlab.dev',
         close: '閉じる',
+
+        // Menu system notice (typewriter)
+        menuMsg1: '▷ プレイヤーを検出 ── 在野のハンター',
+        menuMsg2: '▷ 等級評価: E - RANK',
+        menuMsg3: '▷ ダンジョンの亀裂を確認 ── 入場しますか？',
 
         sysEnterDungeon: 'プレイヤーがダンジョンに入場しました。',
         sysKillToLevel: '魔獣を倒してレベルを上げましょう。',

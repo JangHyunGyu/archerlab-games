@@ -187,9 +187,9 @@ export class GameOverScene extends Phaser.Scene {
 
         // Stats card — angular panel
         const cardW = uv(420);
-        const cardH = uv(310);
+        const cardH = uv(280);
         const cardX = cx - cardW / 2;
-        const cardY = GAME_HEIGHT * 0.42 - cardH / 2;
+        const cardY = GAME_HEIGHT * 0.52 - cardH / 2;
         const cardG = this.add.graphics();
         drawSystemPanel(cardG, cardX, cardY, cardW, cardH, {
             cut: uv(14),

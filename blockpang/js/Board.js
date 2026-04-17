@@ -126,65 +126,34 @@ class Board {
 
         const g = new PIXI.Graphics();
 
-        // Outer glow (enhanced multi-layer)
-        for (let i = 5; i >= 0; i--) {
-            const expand = 8 + i * 4;
-            const alpha = 0.02 + i * 0.015;
-            g.roundRect(-expand, -expand, total + expand * 2, total + expand * 2, 14 + i * 2)
-             .fill({ color: 0x3355cc, alpha });
-        }
+        // Soft drop shadow (single warm layer, like a card resting on paper)
+        g.roundRect(-4, -2, total + 8, total + 10, 16)
+         .fill({ color: 0x3A2F23, alpha: 0.08 });
+        g.roundRect(-2, 0, total + 4, total + 6, 14)
+         .fill({ color: 0x3A2F23, alpha: 0.05 });
 
-        // Board background
-        g.roundRect(-6, -6, total + 12, total + 12, 10)
-         .fill({ color: 0x080825, alpha: 0.97 });
+        // Board card surface (surfaceAlt — slightly deeper than page)
+        g.roundRect(-8, -8, total + 16, total + 16, 14)
+         .fill({ color: THEME.surfaceAlt });
 
-        // Subtle gradient overlay (top lighter)
-        g.roundRect(-6, -6, total + 12, (total + 12) * 0.3, 10)
-         .fill({ color: 0x1a1a4a, alpha: 0.15 });
-
-        // Bottom gradient (darker)
-        g.roundRect(-6, total * 0.6, total + 12, total * 0.4 + 6, 10)
-         .fill({ color: 0x030315, alpha: 0.1 });
+        // Subtle inner warm highlight (top-left), adds just a touch of depth
+        g.roundRect(-8, -8, total + 16, 10, 14)
+         .fill({ color: THEME.surface, alpha: 0.5 });
 
         container.addChild(g);
 
-        // Animated pulsing border (separate graphic for ticker updates)
-        this._borderGfx = new PIXI.Graphics();
-        this._borderGfx.roundRect(-6, -6, total + 12, total + 12, 10)
-            .stroke({ width: 2, color: 0x3355cc, alpha: 0.5 });
-        this._borderGfx.roundRect(-3, -3, total + 6, total + 6, 8)
-            .stroke({ width: 1, color: 0x4466dd, alpha: 0.15 });
-        container.addChild(this._borderGfx);
+        // Thin hairline border
+        const border = new PIXI.Graphics();
+        border.roundRect(-8, -8, total + 16, total + 16, 14)
+              .stroke({ width: 1, color: THEME.divider, alpha: 1 });
+        container.addChild(border);
 
-        // Corner accents (premium detail)
-        const cornerG = new PIXI.Graphics();
-        const cornerLen = Math.min(20, cs * 0.8);
-        const corners = [
-            { x: -6, y: -6, dx: 1, dy: 1 },
-            { x: total + 6, y: -6, dx: -1, dy: 1 },
-            { x: -6, y: total + 6, dx: 1, dy: -1 },
-            { x: total + 6, y: total + 6, dx: -1, dy: -1 },
-        ];
-        corners.forEach(c => {
-            cornerG.moveTo(c.x, c.y + c.dy * cornerLen)
-                   .lineTo(c.x, c.y)
-                   .lineTo(c.x + c.dx * cornerLen, c.y);
-        });
-        cornerG.stroke({ width: 2, color: 0x5577ee, alpha: 0.4 });
-        container.addChild(cornerG);
-
-        // Start border pulse ticker
+        // No pulsing border — kept ticker-cleanup no-op for backward safety
+        this._borderGfx = border;
         if (this._borderTickerFn) {
             this.app.ticker.remove(this._borderTickerFn);
+            this._borderTickerFn = null;
         }
-        this._borderTickerFn = (ticker) => {
-            this._glowTime += 0.015;
-            if (this._borderGfx && !this._borderGfx.destroyed) {
-                const pulse = 0.4 + Math.sin(this._glowTime) * 0.15;
-                this._borderGfx.alpha = pulse;
-            }
-        };
-        this.app.ticker.add(this._borderTickerFn);
 
         return container;
     }
@@ -194,61 +163,33 @@ class Board {
         oldChildren.forEach(c => c.destroy({ children: true }));
         const total = cs * GRID_SIZE;
 
-        // Regular grid lines
+        // Hairline grid lines — subtle warm divider
         const g = new PIXI.Graphics();
         for (let i = 1; i < GRID_SIZE; i++) {
             g.moveTo(i * cs, 0).lineTo(i * cs, total);
             g.moveTo(0, i * cs).lineTo(total, i * cs);
         }
-        g.stroke({ width: 0.5, color: 0x2244bb, alpha: 0.1 });
+        g.stroke({ width: 0.5, color: THEME.divider, alpha: 0.8 });
         this.gridLineContainer.addChild(g);
 
-        // 5x5 section dividers (brighter, double line)
+        // 5x5 section dividers — slightly stronger
         const g2 = new PIXI.Graphics();
         g2.moveTo(cs * 5, 0).lineTo(cs * 5, total);
         g2.moveTo(0, cs * 5).lineTo(total, cs * 5);
-        g2.stroke({ width: 1.2, color: 0x3355cc, alpha: 0.18 });
+        g2.stroke({ width: 1, color: THEME.divider, alpha: 1 });
         this.gridLineContainer.addChild(g2);
-
-        // Subtle glow on 5x5 dividers
-        const g3 = new PIXI.Graphics();
-        g3.rect(cs * 5 - 2, 0, 4, total).fill({ color: 0x3355cc, alpha: 0.04 });
-        g3.rect(0, cs * 5 - 2, total, 4).fill({ color: 0x3355cc, alpha: 0.04 });
-        this.gridLineContainer.addChild(g3);
-
-        // Corner dots at intersections (every 5 cells)
-        const dots = new PIXI.Graphics();
-        dots.circle(cs * 5, cs * 5, 2).fill({ color: 0x4466dd, alpha: 0.2 });
-        this.gridLineContainer.addChild(dots);
     }
 
     _createEmptyTexture(size) {
         const g = new PIXI.Graphics();
         const s = size - 2;
-        const r = Math.max(2, s * 0.1);
+        const r = Math.max(3, s * 0.14);
 
-        // Outer recess shadow (pressed-in look)
-        g.roundRect(0, 0, s, s, r).fill({ color: 0x060618, alpha: 0.95 });
+        // Warm cream cell base (flat, slightly deeper than page)
+        g.roundRect(0, 0, s, s, r).fill({ color: 0xE8D9BC });
 
-        // Inner recessed surface
-        g.roundRect(1, 1, s - 2, s - 2, r - 1).fill({ color: 0x0c0c28, alpha: 0.9 });
-
-        // Top-left inner shadow (concave depth)
-        g.roundRect(1, 1, s - 2, 2, r - 1).fill({ color: 0x000000, alpha: 0.15 });
-        g.roundRect(1, 1, 2, s - 2, r - 1).fill({ color: 0x000000, alpha: 0.12 });
-
-        // Bottom-right inner light (concave reflected edge)
-        g.roundRect(1, s - 3, s - 2, 2, r - 1).fill({ color: 0x1a1a55, alpha: 0.15 });
-        g.roundRect(s - 3, 1, 2, s - 2, r - 1).fill({ color: 0x1a1a55, alpha: 0.12 });
-
-        // Subtle center gradient (slight warmth)
-        g.roundRect(3, 3, s - 6, s - 6, r - 2).fill({ color: 0x10103a, alpha: 0.3 });
-
-        // Very faint specular hint (glass floor feel)
-        g.roundRect(2, 2, s - 4, s * 0.2, r - 1).fill({ color: 0x18184a, alpha: 0.2 });
-
-        // Subtle border
-        g.roundRect(0.5, 0.5, s - 1, s - 1, r).stroke({ width: 0.5, color: 0x1a1a50, alpha: 0.5 });
+        // Very soft top-inner shadow for gentle depth (no harsh recess)
+        g.roundRect(1, 1, s - 2, 2, r - 1).fill({ color: 0x8A6E44, alpha: 0.08 });
 
         const tex = this.app.renderer.generateTexture({
             target: g,
@@ -462,7 +403,7 @@ class Board {
                 const g = this._getHintGfx(hintIdx);
                 g.clear();
                 const intensity = (4 - empty) * 0.06;
-                const color = empty === 1 ? 0x76FF03 : 0x44FF88;
+                const color = empty === 1 ? THEME.accent : THEME.accentSoft;
 
                 g.rect(0, r * cs, total, cs).fill({ color, alpha: intensity });
                 g.moveTo(0, r * cs).lineTo(total, r * cs).stroke({ width: 1, color, alpha: intensity * 2 });
@@ -487,7 +428,7 @@ class Board {
                 const g = this._getHintGfx(hintIdx);
                 g.clear();
                 const intensity = (4 - empty) * 0.06;
-                const color = empty === 1 ? 0x76FF03 : 0x44FF88;
+                const color = empty === 1 ? THEME.accent : THEME.accentSoft;
 
                 g.rect(c * cs, 0, cs, total).fill({ color, alpha: intensity });
                 g.moveTo(c * cs, 0).lineTo(c * cs, total).stroke({ width: 1, color, alpha: intensity * 2 });
@@ -574,7 +515,7 @@ class Board {
     showGhost(shape, gridX, gridY, isValid) {
         if (!this.ghostContainer) return;
         const cs = this.cellSize;
-        const color = isValid ? 0x44FF88 : 0xFF4444;
+        const color = isValid ? THEME.secondary : THEME.rose;
         const alpha = isValid ? 0.35 : 0.2;
         const r = Math.max(2, cs * 0.1);
 
