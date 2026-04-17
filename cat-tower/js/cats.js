@@ -61,20 +61,26 @@
       emoji: '1f638', emojiScale: 0.74 },
 
     { id: 6,  name: '러시안 블루',   radius: 55,  score: 440,
-      fill: '#8A9BA8', stroke: '#556470', pattern: null,
+      fill: '#5E7890', stroke: '#3E5568', pattern: null,
       emoji: '1f63b', emojiScale: 0.72 },
+      // 실버-블루 실제 품종 색 (고등어와 확실히 구분)
 
     { id: 7,  name: '스코티시 폴드', radius: 65,  score: 880,
       fill: '#D9B884', stroke: '#9B7742', pattern: null,
       emoji: '1f63d', emojiScale: 0.72 },
 
     { id: 8,  name: '페르시안',      radius: 77,  score: 1700,
-      fill: '#FAF6ED', stroke: '#C9BE9E', pattern: 'fluff',
+      fill: '#FAF6ED', stroke: '#C9BE9E', pattern: null,
+      longHairColor: '#E8E2D0',
       emoji: '1f640', emojiScale: 0.68 },
+      // pattern: 'fluff' → longHairColor로 재구조화 (메인쿤과 공유)
 
     { id: 9,  name: '메인쿤',        radius: 90,  score: 3500,
-      fill: '#8B6B4A', stroke: '#4E3721', pattern: 'stripes', patternColor: '#4E3721',
+      fill: '#B8946A', stroke: '#5A3E22',
+      pattern: 'stripes', patternColor: '#7A5A3C', patternWeight: 0.08, patternCount: 3, patternSpacing: 0.48,
+      longHairColor: '#9C7D5A',
       emoji: '1f63e', emojiScale: 0.70 },
+      // 밝은 탄 + 얇은 3줄 태비 + 긴 털 (호랑이 아닌 "젠틀 자이언트" 느낌)
 
     { id: 10, name: '사바나',        radius: 111, score: 10000,
       fill: '#E8B559', stroke: '#8E6424', pattern: 'spots', patternColor: '#1F140A',
@@ -112,25 +118,47 @@
     await Promise.all(CAT_TIERS.map((t) => loadImage(t.emoji)));
   }
 
+  // ---------- 긴 털 (fluff) — 바디 바깥쪽 털끝 ----------
+  // 페르시안(크림)·메인쿤(갈색) 등 장모종 공통 표현
+  function drawFluff(ctx, color, r) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.5, r * 0.06);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const inR = r * 0.94;
+      const outR = r * 1.10;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * inR, Math.sin(a) * inR);
+      ctx.lineTo(Math.cos(a) * outR, Math.sin(a) * outR);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // ---------- 패턴 ----------
   function drawPattern(ctx, tier, r) {
     if (!tier.pattern) return;
     ctx.save();
-    // 바디 원 안쪽에 클립 (fluff 제외 — fluff는 바디 밖 털)
-    if (tier.pattern !== 'fluff') {
-      ctx.beginPath();
-      ctx.arc(0, 0, r - 0.5, 0, Math.PI * 2);
-      ctx.clip();
-    }
+    // 바디 원 안쪽에 클립
+    ctx.beginPath();
+    ctx.arc(0, 0, r - 0.5, 0, Math.PI * 2);
+    ctx.clip();
 
     if (tier.pattern === 'stripes') {
+      // patternWeight: 두께, patternCount: 줄 수(홀수), patternSpacing: 간격
+      const weight = tier.patternWeight || 0.14;
+      const count = tier.patternCount || 5;
+      const spacing = tier.patternSpacing || 0.42;
       ctx.strokeStyle = tier.patternColor;
-      ctx.lineWidth = Math.max(2, r * 0.14);
+      ctx.lineWidth = Math.max(2, r * weight);
       ctx.lineCap = 'round';
-      for (let i = -2; i <= 2; i++) {
+      const half = Math.floor(count / 2);
+      for (let i = -half; i <= half; i++) {
         ctx.beginPath();
-        ctx.moveTo(-r * 1.2, i * r * 0.42);
-        ctx.quadraticCurveTo(0, i * r * 0.42 - r * 0.12, r * 1.2, i * r * 0.42);
+        ctx.moveTo(-r * 1.2, i * r * spacing);
+        ctx.quadraticCurveTo(0, i * r * spacing - r * 0.12, r * 1.2, i * r * spacing);
         ctx.stroke();
       }
     } else if (tier.pattern === 'tuxedo') {
@@ -172,20 +200,6 @@
         ctx.arc(sx * r, sy * r, sr * r, 0, Math.PI * 2);
         ctx.fill();
       }
-    } else if (tier.pattern === 'fluff') {
-      // 복슬복슬한 털끝 (바디 둘레 바깥쪽)
-      ctx.strokeStyle = '#E8E2D0';
-      ctx.lineWidth = Math.max(1.5, r * 0.06);
-      ctx.lineCap = 'round';
-      for (let i = 0; i < 24; i++) {
-        const a = (i / 24) * Math.PI * 2;
-        const inR = r * 0.94;
-        const outR = r * 1.10;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(a) * inR, Math.sin(a) * inR);
-        ctx.lineTo(Math.cos(a) * outR, Math.sin(a) * outR);
-        ctx.stroke();
-      }
     }
     ctx.restore();
   }
@@ -224,8 +238,8 @@
     ctx.fill();
     ctx.restore();
 
-    // 3) fluff는 바디 바깥 털이라 먼저 그림
-    if (tier.pattern === 'fluff') drawPattern(ctx, tier, r);
+    // 3) 긴 털 (fluff) — 바디 바깥쪽 털끝 (페르시안·메인쿤 등 장모종)
+    if (tier.longHairColor) drawFluff(ctx, tier.longHairColor, r);
 
     // 4) 바디 — 레이디얼 그라데이션 (3D 구슬, 광원 좌상단 월드 고정 → 역회전)
     ctx.save();
@@ -244,7 +258,7 @@
     ctx.restore();
 
     // 5) 바디 내부 패턴 (고양이 털 — 회전 따라감)
-    if (tier.pattern && tier.pattern !== 'fluff') drawPattern(ctx, tier, r);
+    if (tier.pattern) drawPattern(ctx, tier, r);
 
     // 6) 림 셰이딩 — 안쪽 가장자리 어둡게 (회전 무관, 구형 볼륨감)
     ctx.save();
