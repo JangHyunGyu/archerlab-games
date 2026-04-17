@@ -1,9 +1,12 @@
-import { GAME_WIDTH, GAME_HEIGHT, RANKS, COLORS, fs, uv } from '../utils/Constants.js';
+import {
+    GAME_WIDTH, GAME_HEIGHT, RANKS,
+    SYSTEM, UI_FONT_MONO, UI_FONT_KR,
+    fs, uv, drawSystemPanel,
+} from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
 
 /**
- * Tab 키로 토글하는 원작 스타일 스테이터스 창
- * 그림자 서바이벌의 파란색 상태 패널 재현
+ * TAB-key status window, System aesthetic.
  */
 export class StatusWindow {
     constructor(scene) {
@@ -11,17 +14,13 @@ export class StatusWindow {
         this.isOpen = false;
         this.elements = [];
 
-        // Tab key toggle
         this.tabKey = scene.input.keyboard.addKey('TAB');
         this.tabKey.on('down', () => this.toggle());
     }
 
     toggle() {
-        if (this.isOpen) {
-            this.close();
-        } else {
-            this.open();
-        }
+        if (this.isOpen) this.close();
+        else this.open();
     }
 
     open() {
@@ -33,141 +32,143 @@ export class StatusWindow {
 
         const cx = GAME_WIDTH / 2;
         const cy = GAME_HEIGHT / 2;
-        const w = uv(320);
-        const h = uv(480);
+        const w = uv(340);
+        const h = uv(500);
+        const px = cx - w / 2;
+        const py = cy - h / 2;
 
-        // Dim background
-        const dim = this.scene.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.5)
+        const dim = this.scene.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6)
             .setDepth(300).setScrollFactor(0).setInteractive();
         this.elements.push(dim);
 
-        // Main panel
-        const panel = this.scene.add.rectangle(cx, cy, w, h, 0x0a1228, 0.92)
-            .setDepth(301).setScrollFactor(0);
-        this.elements.push(panel);
-
-        // Border glow
-        const borderOuter = this.scene.add.rectangle(cx, cy, w + 4, h + 4, 0x3388cc, 0.3)
-            .setDepth(300).setScrollFactor(0);
-        this.elements.push(borderOuter);
-
-        // Top border line
-        const topLine = this.scene.add.rectangle(cx, cy - h / 2, w, 2, 0x3388cc, 0.8)
-            .setDepth(302).setScrollFactor(0);
-        const botLine = this.scene.add.rectangle(cx, cy + h / 2, w, 2, 0x3388cc, 0.8)
-            .setDepth(302).setScrollFactor(0);
-        this.elements.push(topLine, botLine);
-
-        // Corner diamonds
-        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([dx, dy]) => {
-            const d = this.scene.add.rectangle(cx + dx * w / 2, cy + dy * h / 2, 8, 8, 0x3388cc, 0.7)
-                .setDepth(302).setScrollFactor(0).setRotation(Math.PI / 4);
-            this.elements.push(d);
+        // Main angular panel
+        const panelG = this.scene.add.graphics().setDepth(301).setScrollFactor(0);
+        drawSystemPanel(panelG, px, py, w, h, {
+            cut: uv(14),
+            fill: SYSTEM.BG_PANEL, fillAlpha: 0.95,
+            border: SYSTEM.BORDER, borderAlpha: 0.9, borderWidth: 1,
         });
+        this.elements.push(panelG);
 
-        // Title: "상태창"
-        const title = this.scene.add.text(cx, cy - h / 2 + uv(25), t('statusTitle'), {
-            fontSize: fs(20), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#55aadd',
+        // Header tag
+        const tag = this.scene.add.text(px + uv(20), py - uv(9), '  STATUS  ', {
+            fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
+            backgroundColor: '#05070d', padding: { left: 6, right: 6, top: 1, bottom: 1 },
+        }).setDepth(303).setScrollFactor(0);
+        this.elements.push(tag);
+
+        // Title
+        const title = this.scene.add.text(cx, py + uv(26), t('statusTitle'), {
+            fontSize: fs(20), fontFamily: UI_FONT_KR, fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT, letterSpacing: 2,
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
         this.elements.push(title);
 
         // Title underline
-        const titleUL = this.scene.add.rectangle(cx, cy - h / 2 + uv(42), w - uv(40), 1, 0x3388cc, 0.5)
-            .setDepth(302).setScrollFactor(0);
-        this.elements.push(titleUL);
+        const ul = this.scene.add.graphics().setDepth(302).setScrollFactor(0);
+        ul.lineStyle(1, SYSTEM.BORDER, 0.55);
+        ul.lineBetween(px + uv(30), py + uv(50), px + w - uv(30), py + uv(50));
+        this.elements.push(ul);
 
-        // Player info section
         const rank = RANKS[player.currentRank];
         const rankColor = '#' + rank.color.toString(16).padStart(6, '0');
-        let yOff = cy - h / 2 + uv(65);
+        let yOff = py + uv(65);
 
-        // Name and title
-        this._addRow(t('statName'), t('playerName'), '#ffffff', yOff); yOff += uv(28);
-        this._addRow(t('statRank'), rank.label, rankColor, yOff); yOff += uv(28);
-        this._addRow(t('statLevel'), `${player.level}`, '#ffffff', yOff); yOff += uv(28);
+        // Profile block
+        this._addRow(px + uv(26), px + w - uv(26), yOff, t('statName'), t('playerName'), SYSTEM.TEXT_BRIGHT);
+        yOff += uv(26);
+        this._addRow(px + uv(26), px + w - uv(26), yOff, t('statRank'), rank.name + ' - RANK', rankColor);
+        yOff += uv(26);
+        this._addRow(px + uv(26), px + w - uv(26), yOff, t('statLevel'), String(player.level).padStart(2, '0'), SYSTEM.TEXT_BRIGHT);
+        yOff += uv(22);
 
-        // Divider
-        const div1 = this.scene.add.rectangle(cx, yOff, w - uv(50), 1, 0x3388cc, 0.3)
-            .setDepth(302).setScrollFactor(0);
+        const div1 = this.scene.add.graphics().setDepth(302).setScrollFactor(0);
+        div1.lineStyle(1, SYSTEM.BORDER_DIM, 0.45);
+        div1.lineBetween(px + uv(30), yOff, px + w - uv(30), yOff);
         this.elements.push(div1);
-        yOff += uv(15);
+        yOff += uv(14);
 
-        // Stats header
-        const statsHeader = this.scene.add.text(cx, yOff, t('statSection'), {
-            fontSize: fs(13), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#55aadd',
-        }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
+        // Stats section header
+        const statsHeader = this.scene.add.text(px + uv(26), yOff, '▸  ' + t('statSection'), {
+            fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN, letterSpacing: 1,
+        }).setDepth(303).setScrollFactor(0);
         this.elements.push(statsHeader);
-        yOff += uv(25);
+        yOff += uv(24);
 
-        // Stats
         const stats = [
             { label: t('statHP'), value: `${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`, color: '#ff6666' },
-            { label: t('statAttack'), value: `${player.stats.attack}`, color: '#ff8844' },
-            { label: t('statSpeed'), value: `${player.stats.speed}`, color: '#44ff88' },
-            { label: t('statCrit'), value: `${(player.stats.critRate * 100).toFixed(1)}%`, color: '#ffff44' },
-            { label: t('statCritDmg'), value: `${(player.stats.critDamage * 100).toFixed(0)}%`, color: '#ffaa44' },
-            { label: t('statXP'), value: `x${player.stats.xpMultiplier.toFixed(2)}`, color: '#aa88ff' },
-            { label: t('statCDR'), value: `${(player.stats.cooldownReduction * 100).toFixed(1)}%`, color: '#88aaff' },
+            { label: t('statAttack'), value: String(player.stats.attack), color: '#ff9966' },
+            { label: t('statSpeed'), value: String(player.stats.speed), color: '#66ff99' },
+            { label: t('statCrit'), value: (player.stats.critRate * 100).toFixed(1) + '%', color: '#ffe066' },
+            { label: t('statCritDmg'), value: (player.stats.critDamage * 100).toFixed(0) + '%', color: '#ffb066' },
+            { label: t('statXP'), value: 'x' + player.stats.xpMultiplier.toFixed(2), color: '#b080ff' },
+            { label: t('statCDR'), value: (player.stats.cooldownReduction * 100).toFixed(1) + '%', color: SYSTEM.TEXT_CYAN },
         ];
 
         stats.forEach(stat => {
-            this._addRow(stat.label, stat.value, stat.color, yOff);
-            yOff += uv(24);
+            this._addRow(px + uv(30), px + w - uv(30), yOff, stat.label, stat.value, stat.color);
+            yOff += uv(22);
         });
 
-        // Divider
-        const div2 = this.scene.add.rectangle(cx, yOff + uv(5), w - uv(50), 1, 0x3388cc, 0.3)
-            .setDepth(302).setScrollFactor(0);
+        yOff += uv(4);
+        const div2 = this.scene.add.graphics().setDepth(302).setScrollFactor(0);
+        div2.lineStyle(1, SYSTEM.BORDER_DIM, 0.45);
+        div2.lineBetween(px + uv(30), yOff, px + w - uv(30), yOff);
         this.elements.push(div2);
-        yOff += uv(20);
+        yOff += uv(14);
 
-        // Shadow army info
+        // Shadow army section
+        const shadowHeader = this.scene.add.text(px + uv(26), yOff, '▸  ' + t('statShadow'), {
+            fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN, letterSpacing: 1,
+        }).setDepth(303).setScrollFactor(0);
+        this.elements.push(shadowHeader);
+
         const shadowCount = this.scene.shadowArmyManager?.getSoldierCount() || 0;
-        const soldiers = this.scene.shadowArmyManager?.getSoldiers() || [];
-        this._addRow(t('statShadow'), `${shadowCount}${t('statUnit')}`, '#b366ff', yOff);
-        yOff += uv(24);
+        const shadowCountText = this.scene.add.text(px + w - uv(30), yOff,
+            String(shadowCount).padStart(2, '0') + (t('statUnit') || ''), {
+            fontSize: fs(13), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN,
+        }).setOrigin(1, 0).setDepth(303).setScrollFactor(0);
+        this.elements.push(shadowCountText);
+        yOff += uv(22);
 
+        const soldiers = this.scene.shadowArmyManager?.getSoldiers() || [];
         soldiers.forEach(s => {
-            this._addRow('  └ ' + s.bossName, s.soldierType, '#8855cc', yOff);
-            yOff += uv(20);
+            this._addRow(px + uv(40), px + w - uv(30), yOff, '└ ' + s.bossName, s.soldierType, SYSTEM.TEXT_CYAN_DIM, 11);
+            yOff += uv(18);
         });
 
         // Close hint
-        const hint = this.scene.add.text(cx, cy + h / 2 - uv(20), t('tabClose'), {
-            fontSize: fs(11), fontFamily: 'Arial',
-            color: '#556688',
+        const hint = this.scene.add.text(cx, py + h - uv(20), '[ TAB ]  ' + t('tabClose'), {
+            fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
         this.elements.push(hint);
 
-        // Animate in
+        // Fade in
         this.elements.forEach(el => {
             el.setAlpha(0);
             this.scene.tweens.add({
-                targets: el,
-                alpha: el === dim ? 0.5 : 1,
-                duration: 200,
+                targets: el, alpha: el === dim ? 0.6 : 1, duration: 180,
             });
         });
 
-        // Pause game
         if (this.scene.scene.isActive('GameScene')) {
             this.scene.physics.pause();
         }
     }
 
-    _addRow(label, value, valueColor, y) {
-        const cx = GAME_WIDTH / 2;
-        const labelText = this.scene.add.text(cx - uv(110), y, label, {
-            fontSize: fs(13), fontFamily: 'Arial',
-            color: '#7799aa',
-        }).setOrigin(0, 0.5).setDepth(303).setScrollFactor(0);
+    _addRow(labelX, valueX, y, label, value, valueColor, labelSize = 12) {
+        const labelText = this.scene.add.text(labelX, y, label, {
+            fontSize: fs(labelSize), fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+        }).setOrigin(0, 0).setDepth(303).setScrollFactor(0);
 
-        const valueText = this.scene.add.text(cx + uv(110), y, value, {
-            fontSize: fs(14), fontFamily: 'Arial', fontStyle: 'bold',
+        const valueText = this.scene.add.text(valueX, y, value, {
+            fontSize: fs(labelSize + 1), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: valueColor,
-        }).setOrigin(1, 0.5).setDepth(303).setScrollFactor(0);
+        }).setOrigin(1, 0).setDepth(303).setScrollFactor(0);
 
         this.elements.push(labelText, valueText);
     }
@@ -178,15 +179,12 @@ export class StatusWindow {
 
         this.elements.forEach(el => {
             this.scene.tweens.add({
-                targets: el,
-                alpha: 0,
-                duration: 150,
+                targets: el, alpha: 0, duration: 130,
                 onComplete: () => el.destroy(),
             });
         });
         this.elements = [];
 
-        // Resume game
         if (this.scene.scene.isActive('GameScene')) {
             this.scene.physics.resume();
         }

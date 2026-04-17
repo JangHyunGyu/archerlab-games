@@ -1,4 +1,5 @@
 import { SpriteFactory } from '../utils/SpriteFactory.js';
+import { SYSTEM, UI_FONT_MONO, drawSystemPanel } from '../utils/Constants.js';
 
 export class PreloadScene extends Phaser.Scene {
     constructor() {
@@ -6,67 +7,96 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     preload() {
-        // --- Loading bar UI ---
         const { width, height } = this.cameras.main;
         const cx = width / 2, cy = height / 2;
 
-        const barW = Math.min(320, width * 0.6);
-        const barH = 18;
+        // Deep background
+        this.add.rectangle(cx, cy, width, height, SYSTEM.BG_DEEP);
 
-        // Background box
-        this.add.rectangle(cx, cy, barW + 20, barH + 20, 0x1a1a2e)
-            .setStrokeStyle(2, 0x4a1a8a);
+        // Scanlines
+        const sg = this.add.graphics();
+        sg.lineStyle(1, SYSTEM.SCAN_LINE, 0.5);
+        for (let y = 0; y < height; y += 3) sg.lineBetween(0, y, width, y);
 
-        // Progress bar bg
-        const barBg = this.add.rectangle(cx - barW / 2, cy, barW, barH, 0x333344)
-            .setOrigin(0, 0.5);
+        // Bar geometry
+        const barW = Math.min(340, width * 0.6);
+        const barH = 16;
+        const barX = cx - barW / 2;
+        const barY = cy;
 
-        // Progress bar fill
-        const barFill = this.add.rectangle(cx - barW / 2, cy, 0, barH, 0x7b2fff)
-            .setOrigin(0, 0.5);
+        // Frame (angular panel)
+        const frame = this.add.graphics();
+        drawSystemPanel(frame, barX - 10, barY - barH / 2 - 10, barW + 20, barH + 20, {
+            cut: 8,
+            fill: SYSTEM.BG_PANEL, fillAlpha: 0.85,
+            border: SYSTEM.BORDER, borderAlpha: 0.85, borderWidth: 1,
+        });
 
-        // Loading text
-        const loadText = this.add.text(cx, cy - 30, '로딩 중...', {
-            fontSize: '14px', fontFamily: 'Arial', color: '#b366ff',
-            stroke: '#000000', strokeThickness: 2,
+        // Bar inner background
+        this.add.rectangle(barX, barY - barH / 2, barW, barH, 0x0a1520, 1).setOrigin(0, 0);
+
+        // Fill (grows with progress)
+        const barFill = this.add.rectangle(barX + 1, barY - barH / 2 + 1, 0, barH - 2, SYSTEM.BORDER, 1)
+            .setOrigin(0, 0);
+
+        // System tag above bar
+        this.add.text(cx, barY - barH / 2 - 34, '[ SYSTEM · INITIALIZING ]', {
+            fontSize: '12px', fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
+            letterSpacing: 2,
         }).setOrigin(0.5);
 
-        // Listen to load progress
+        // Loading label + percent readout
+        const baseLabel = '▷  LOADING';
+        const loadText = this.add.text(cx, barY - barH / 2 - 60, baseLabel, {
+            fontSize: '16px', fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT, letterSpacing: 2,
+        }).setOrigin(0.5);
+
+        const pctText = this.add.text(cx, barY + barH / 2 + 20, '000 %', {
+            fontSize: '11px', fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM, letterSpacing: 2,
+        }).setOrigin(0.5);
+
+        // Dots animation
+        let dotCount = 0;
+        this.time.addEvent({
+            delay: 320, loop: true,
+            callback: () => {
+                if (!loadText.active) return;
+                dotCount = (dotCount + 1) % 4;
+                loadText.setText(baseLabel + '.'.repeat(dotCount));
+            },
+        });
+
         this.load.on('progress', (value) => {
-            barFill.width = barW * value;
+            barFill.width = (barW - 2) * value;
+            pctText.setText(String(Math.floor(value * 100)).padStart(3, '0') + ' %');
         });
 
         this.load.on('complete', () => {
-            loadText.setText('완료!');
+            loadText.setText('▷  READY');
+            loadText.setColor(SYSTEM.TEXT_GOLD);
+            pctText.setText('100 %');
         });
 
-        // --- Try loading external assets (optional) ---
-        // If assets/ folder has sprite sheets, they'll be loaded here.
-        // Missing files are silently ignored via error handler.
         this._loadOptionalAssets();
     }
 
     create() {
-        // Generate procedural textures for any assets not loaded externally
         SpriteFactory.createAll(this);
         this.scene.start('MenuScene');
     }
 
     _loadOptionalAssets() {
-        // --- AI-generated player sprite (Imagen 4) ---
         this.load.image('ai_player_idle', 'assets/player/player_idle.png');
-
-        // --- AI-generated dungeon background ---
         this.load.image('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
 
         const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
 
-        // Silently ignore load failures — procedural fallback will be used
         this.load.on('loaderror', (file) => {
             console.warn('CDN asset not loaded (procedural fallback):', file.key);
         });
 
-        // --- Enemy sprites (DCSS 32x32 CC0 tiles) ---
         this.load.image('ext_enemy_goblin', CDN + 'mon/humanoids/goblin.png');
         this.load.image('ext_enemy_orc', CDN + 'mon/humanoids/orcs/orc_warrior.png');
         this.load.image('ext_enemy_iceBear', CDN + 'mon/animals/polar_bear.png');
@@ -76,12 +106,10 @@ export class PreloadScene extends Phaser.Scene {
         this.load.image('ext_enemy_ironKnight', CDN + 'mon/humanoids/humans/death_knight.png');
         this.load.image('ext_enemy_demonWarrior', CDN + 'mon/demons/executioner.png');
 
-        // --- Boss sprites ---
         this.load.image('ext_boss_igris', CDN + 'mon/humanoids/humans/death_knight.png');
         this.load.image('ext_boss_tusk', CDN + 'mon/humanoids/orcs/orc_warlord.png');
         this.load.image('ext_boss_beru', CDN + 'mon/animals/emperor_scorpion.png');
 
-        // --- Shadow soldier sprites ---
         this.load.image('ext_shadow_melee', CDN + 'mon/nonliving/shadows/shadow_human.png');
         this.load.image('ext_shadow_tank', CDN + 'mon/nonliving/shadows/shadow_dwarf.png');
         this.load.image('ext_shadow_ranged', CDN + 'mon/nonliving/shadows/shadow_elf.png');

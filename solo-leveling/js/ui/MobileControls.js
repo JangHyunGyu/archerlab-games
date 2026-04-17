@@ -1,11 +1,13 @@
-import { GAME_WIDTH, GAME_HEIGHT, fs, uv } from '../utils/Constants.js';
+import {
+    GAME_WIDTH, GAME_HEIGHT,
+    SYSTEM, UI_FONT_MONO,
+    fs, uv, drawSystemPanel,
+} from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
 
 /**
- * 모바일 터치 컨트롤
- * - 플로팅 조이스틱: 화면 어디든 터치하면 그 위치에 조이스틱 생성
- * - 조이스틱 상태는 매 프레임 Player가 직접 읽음 (입력 소실 방지)
- * - 우측 상단 상태/사운드 버튼
+ * Mobile touch controls — System aesthetic.
+ * Floating joystick spawns at touch, right-side action buttons.
  */
 export class MobileControls {
     constructor(scene) {
@@ -13,15 +15,14 @@ export class MobileControls {
         this.isMobile = this._detectMobile();
         this.joystick = { x: 0, y: 0, active: false };
         this.joystickBase = null;
-        this.joystickGlow = null;
+        this.joystickRing = null;
         this.joystickThumb = null;
         this.pointerId = null;
         this.padX = 0;
         this.padY = 0;
 
-        // Joystick config
         this.baseRadius = uv(70);
-        this.thumbRadius = uv(30);
+        this.thumbRadius = uv(28);
         this.maxDist = uv(70);
         this.deadZone = 0.05;
 
@@ -38,38 +39,40 @@ export class MobileControls {
     }
 
     _setupFloatingJoystick() {
-        // Create joystick elements (hidden initially)
-        this.joystickGlow = this.scene.add.circle(0, 0, this.baseRadius + 8, 0x4a1a8a, 0.25)
-            .setDepth(600).setScrollFactor(0).setVisible(false);
-
-        this.joystickBase = this.scene.add.circle(0, 0, this.baseRadius, 0x111133, 0.5)
+        // Dark translucent base
+        this.joystickBase = this.scene.add.circle(0, 0, this.baseRadius, SYSTEM.BG_DEEP, 0.55)
             .setDepth(600).setScrollFactor(0)
-            .setStrokeStyle(3, 0x6644aa, 0.7)
+            .setStrokeStyle(1, SYSTEM.BORDER, 0.55)
             .setVisible(false);
 
-        this.joystickThumb = this.scene.add.circle(0, 0, this.thumbRadius, 0x7755cc, 0.7)
+        // Thin cyan ring
+        this.joystickRing = this.scene.add.circle(0, 0, this.baseRadius + 4, 0x000000, 0)
+            .setDepth(600).setScrollFactor(0)
+            .setStrokeStyle(1, SYSTEM.BORDER, 0.35)
+            .setVisible(false);
+
+        // Thumb — small angular look via circle + inner dot
+        this.joystickThumb = this.scene.add.circle(0, 0, this.thumbRadius, SYSTEM.BG_PANEL_HI, 0.85)
             .setDepth(601).setScrollFactor(0)
-            .setStrokeStyle(2, 0xaa88ff, 0.8)
+            .setStrokeStyle(1, SYSTEM.BORDER, 0.9)
+            .setVisible(false);
+        this.joystickThumbDot = this.scene.add.circle(0, 0, 3, SYSTEM.BORDER, 1)
+            .setDepth(602).setScrollFactor(0)
             .setVisible(false);
 
-        // Touch handlers
         this.scene.input.on('pointerdown', (pointer) => {
             if (this.pointerId !== null) return;
-
-            // Ignore touches on the button area (right side)
             if (pointer.x > GAME_WIDTH - uv(80)) return;
 
             this.pointerId = pointer.id;
             this.joystick.active = true;
-
-            // Place joystick at touch position
             this.padX = pointer.x;
             this.padY = pointer.y;
 
-            this.joystickGlow.setPosition(this.padX, this.padY).setVisible(true).setAlpha(0.3);
-            this.joystickBase.setPosition(this.padX, this.padY).setVisible(true)
-                .setStrokeStyle(3, 0xaa88ff, 0.9);
+            this.joystickRing.setPosition(this.padX, this.padY).setVisible(true);
+            this.joystickBase.setPosition(this.padX, this.padY).setVisible(true);
             this.joystickThumb.setPosition(this.padX, this.padY).setVisible(true);
+            this.joystickThumbDot.setPosition(this.padX, this.padY).setVisible(true);
         });
 
         this.scene.input.on('pointermove', (pointer) => {
@@ -91,27 +94,28 @@ export class MobileControls {
         if (dist > this.maxDist) {
             this.joystick.x = dx / dist;
             this.joystick.y = dy / dist;
-            // Drag base along if finger moves far enough (common in mobile games)
             const overflow = dist - this.maxDist * 1.3;
             if (overflow > 0) {
                 const angle = Math.atan2(dy, dx);
                 this.padX += Math.cos(angle) * overflow;
                 this.padY += Math.sin(angle) * overflow;
                 this.joystickBase.setPosition(this.padX, this.padY);
-                this.joystickGlow.setPosition(this.padX, this.padY);
+                this.joystickRing.setPosition(this.padX, this.padY);
             }
-            this.joystickThumb.setPosition(
-                this.padX + (dx / dist) * this.maxDist,
-                this.padY + (dy / dist) * this.maxDist
-            );
+            const tx = this.padX + (dx / dist) * this.maxDist;
+            const ty = this.padY + (dy / dist) * this.maxDist;
+            this.joystickThumb.setPosition(tx, ty);
+            this.joystickThumbDot.setPosition(tx, ty);
         } else if (dist > 3) {
             this.joystick.x = dx / this.maxDist;
             this.joystick.y = dy / this.maxDist;
             this.joystickThumb.setPosition(px, py);
+            this.joystickThumbDot.setPosition(px, py);
         } else {
             this.joystick.x = 0;
             this.joystick.y = 0;
             this.joystickThumb.setPosition(this.padX, this.padY);
+            this.joystickThumbDot.setPosition(this.padX, this.padY);
         }
     }
 
@@ -121,44 +125,70 @@ export class MobileControls {
         this.joystick.y = 0;
         this.pointerId = null;
 
-        // Hide joystick
-        this.joystickGlow.setVisible(false);
+        this.joystickRing.setVisible(false);
         this.joystickBase.setVisible(false);
         this.joystickThumb.setVisible(false);
+        this.joystickThumbDot.setVisible(false);
     }
 
     _createButtons() {
-        const btnR = uv(22);
-        const btnX = GAME_WIDTH - uv(45);
+        const btnW = uv(52);
+        const btnH = uv(36);
+        const btnX = GAME_WIDTH - uv(12) - btnW;
+        const statusY = uv(70);
+        const soundY = statusY + btnH + uv(10);
 
         // Status button
-        const statusBtn = this.scene.add.circle(btnX, uv(90), btnR, 0x333355, 0.5)
-            .setDepth(600).setScrollFactor(0)
-            .setStrokeStyle(2, 0x5555aa, 0.6)
-            .setInteractive();
+        const statusG = this.scene.add.graphics().setDepth(600).setScrollFactor(0);
+        const drawStatus = (hover) => {
+            statusG.clear();
+            drawSystemPanel(statusG, btnX, statusY, btnW, btnH, {
+                cut: uv(6),
+                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL, fillAlpha: 0.85,
+                border: SYSTEM.BORDER, borderAlpha: 0.8, borderWidth: 1,
+            });
+        };
+        drawStatus(false);
 
-        this.scene.add.text(btnX, uv(90), t('hudStatus'), {
-            fontSize: fs(11), fontFamily: 'Arial', fontStyle: 'bold', color: '#bbbbee',
-        }).setOrigin(0.5).setDepth(601).setScrollFactor(0);
+        const statusHit = this.scene.add.rectangle(btnX + btnW / 2, statusY + btnH / 2, btnW, btnH, 0x000000, 0)
+            .setDepth(601).setScrollFactor(0).setInteractive();
+        this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
+            fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN,
+        }).setOrigin(0.5).setDepth(602).setScrollFactor(0);
 
-        statusBtn.on('pointerdown', () => {
+        statusHit.on('pointerover', () => drawStatus(true));
+        statusHit.on('pointerout', () => drawStatus(false));
+        statusHit.on('pointerdown', () => {
             if (this.scene.statusWindow) this.scene.statusWindow.toggle();
         });
 
         // Sound button
-        const soundBtn = this.scene.add.circle(btnX, uv(145), btnR, 0x333355, 0.5)
-            .setDepth(600).setScrollFactor(0)
-            .setStrokeStyle(2, 0x5555aa, 0.6)
-            .setInteractive();
+        const soundG = this.scene.add.graphics().setDepth(600).setScrollFactor(0);
+        const drawSound = (hover) => {
+            soundG.clear();
+            drawSystemPanel(soundG, btnX, soundY, btnW, btnH, {
+                cut: uv(6),
+                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL, fillAlpha: 0.85,
+                border: SYSTEM.BORDER, borderAlpha: 0.8, borderWidth: 1,
+            });
+        };
+        drawSound(false);
 
-        this.soundBtnText = this.scene.add.text(btnX, uv(145), 'SND', {
-            fontSize: fs(11), fontFamily: 'Arial', fontStyle: 'bold', color: '#bbbbee',
-        }).setOrigin(0.5).setDepth(601).setScrollFactor(0);
+        const soundHit = this.scene.add.rectangle(btnX + btnW / 2, soundY + btnH / 2, btnW, btnH, 0x000000, 0)
+            .setDepth(601).setScrollFactor(0).setInteractive();
+        this.soundBtnText = this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, 'SND', {
+            fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN,
+        }).setOrigin(0.5).setDepth(602).setScrollFactor(0);
 
-        soundBtn.on('pointerdown', () => {
+        soundHit.on('pointerover', () => drawSound(true));
+        soundHit.on('pointerout', () => drawSound(false));
+        soundHit.on('pointerdown', () => {
             if (this.scene.soundManager) {
                 const enabled = this.scene.soundManager.toggleSound();
                 this.soundBtnText.setText(enabled ? 'SND' : 'MUTE');
+                this.soundBtnText.setColor(enabled ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED);
             }
         });
     }
@@ -169,7 +199,6 @@ export class MobileControls {
         const mag = Math.sqrt(this.joystick.x * this.joystick.x + this.joystick.y * this.joystick.y);
         if (mag < this.deadZone) return { x: 0, y: 0 };
 
-        // Remap: dead zone~1.0 → 0~1.0 for smooth start
         const remapped = (mag - this.deadZone) / (1.0 - this.deadZone);
         const clamped = Math.min(remapped, 1.0);
         return {
@@ -179,8 +208,7 @@ export class MobileControls {
     }
 
     updateLayout() {
-        // Buttons use GAME_WIDTH which is already updated via live binding
-        // Joystick is floating (spawns at touch position), no repositioning needed
+        // Joystick floats; buttons use GAME_WIDTH live binding.
     }
 
     destroy() {

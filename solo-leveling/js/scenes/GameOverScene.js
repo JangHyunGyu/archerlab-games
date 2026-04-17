@@ -1,4 +1,9 @@
-import { GAME_WIDTH, GAME_HEIGHT, COLORS, RANKS, fs, uv } from '../utils/Constants.js';
+import {
+    GAME_WIDTH, GAME_HEIGHT,
+    RANKS,
+    SYSTEM, UI_FONT_MONO, UI_FONT_KR,
+    fs, uv, drawSystemPanel,
+} from '../utils/Constants.js';
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 
 export class GameOverScene extends Phaser.Scene {
@@ -12,14 +17,11 @@ export class GameOverScene extends Phaser.Scene {
 
     create() {
         const { level, rank, kills, time, shadowCount } = this.finalData;
-
-        // Calculate score: survival time in seconds (primary score for ranking)
         this.gameScore = time;
 
-        // Dark background
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0a0a1a, 0.95);
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP, 0.96);
+        this._drawScanlines();
 
-        // Show name input first, then stats
         this._showNameInput(time, level, rank, kills, shadowCount);
 
         this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -32,26 +34,39 @@ export class GameOverScene extends Phaser.Scene {
         });
     }
 
+    _drawScanlines() {
+        const g = this.add.graphics();
+        g.lineStyle(1, SYSTEM.SCAN_LINE, 0.45);
+        for (let y = 0; y < GAME_HEIGHT; y += 3) g.lineBetween(0, y, GAME_WIDTH, y);
+    }
+
     _showNameInput(time, level, rank, kills, shadowCount) {
         const cx = GAME_WIDTH / 2;
         const depth = 100;
         const nameElements = [];
+        const isVictory = this.finalData.victory;
 
-        // Title
-        const nTitle = this.add.text(cx, GAME_HEIGHT * 0.15, `🏆 ${t('nameInputTitle')}`, {
-            fontSize: fs(24), fontFamily: 'Arial', fontStyle: 'bold', color: '#ffd700',
+        // System tag
+        const tag = this.add.text(cx, GAME_HEIGHT * 0.12, isVictory ? '[ SYSTEM · CLEAR ]' : '[ SYSTEM · FAILED ]', {
+            fontSize: fs(12), fontFamily: UI_FONT_MONO,
+            color: isVictory ? SYSTEM.TEXT_GOLD : SYSTEM.TEXT_RED,
         }).setOrigin(0.5).setDepth(depth);
-        nameElements.push(nTitle);
+        nameElements.push(tag);
 
-        // Score display
+        const title = this.add.text(cx, GAME_HEIGHT * 0.18, t('nameInputTitle'), {
+            fontSize: fs(22), fontFamily: UI_FONT_KR, fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT,
+        }).setOrigin(0.5).setDepth(depth);
+        nameElements.push(title);
+
         const min = Math.floor(time / 60).toString().padStart(2, '0');
         const sec = (time % 60).toString().padStart(2, '0');
-        const scoreDisp = this.add.text(cx, GAME_HEIGHT * 0.23, `${t('timeLabel')}: ${min}:${sec}  |  Lv.${level}  |  ${kills} ${t('killLabel')}`, {
-            fontSize: fs(14), fontFamily: 'Arial', color: '#b366ff',
+        const scoreDisp = this.add.text(cx, GAME_HEIGHT * 0.24,
+            `▷ ${t('timeLabel')} ${min}:${sec}   ·   LV ${String(level).padStart(2, '0')}   ·   KILL ${kills}`, {
+            fontSize: fs(13), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
         }).setOrigin(0.5).setDepth(depth);
         nameElements.push(scoreDisp);
 
-        // HTML input
         const input = document.createElement('input');
         input.type = 'text';
         input.maxLength = 20;
@@ -63,15 +78,16 @@ export class GameOverScene extends Phaser.Scene {
             transform: translate(-50%, -50%);
             width: 240px;
             padding: 10px 14px;
-            font-size: 16px;
-            font-family: 'Noto Sans KR', 'Noto Sans JP', Arial, sans-serif;
-            background: #1a1a40;
-            border: 2px solid #FFD600;
-            border-radius: 8px;
-            color: #ffffff;
+            font-size: 15px;
+            font-family: "Courier New", Consolas, "Noto Sans KR", "Malgun Gothic", sans-serif;
+            background: rgba(8, 12, 22, 0.95);
+            border: 1px solid #4dd2ff;
+            border-radius: 0;
+            color: #d9f4ff;
             text-align: center;
             outline: none;
             z-index: 10000;
+            letter-spacing: 1px;
         `;
         const lastName = localStorage.getItem('shadow_player_name') || '';
         input.value = lastName;
@@ -79,22 +95,28 @@ export class GameOverScene extends Phaser.Scene {
         this._nameInput = input;
         setTimeout(() => input.focus(), 100);
 
-        // Submit button
         const submitBtnY = GAME_HEIGHT * 0.52;
-        const submitBtn = this.add.rectangle(cx - uv(70), submitBtnY, uv(120), uv(40), 0xFFD600, 1)
-            .setDepth(depth).setInteractive({ useHandCursor: true });
-        const submitText = this.add.text(cx - uv(70), submitBtnY, t('submitScore'), {
-            fontSize: fs(14), fontFamily: 'Arial', fontStyle: 'bold', color: '#000000',
-        }).setOrigin(0.5).setDepth(depth + 1);
-        nameElements.push(submitBtn, submitText);
-
-        // Skip button
-        const skipBtn = this.add.rectangle(cx + uv(70), submitBtnY, uv(120), uv(40), 0x2a2a4e, 0.8)
-            .setStrokeStyle(1, 0x4a4a6e).setDepth(depth).setInteractive({ useHandCursor: true });
-        const skipText = this.add.text(cx + uv(70), submitBtnY, t('skipScore'), {
-            fontSize: fs(14), fontFamily: 'Arial', color: '#8888aa',
-        }).setOrigin(0.5).setDepth(depth + 1);
-        nameElements.push(skipBtn, skipText);
+        const btnW = uv(130);
+        const btnH = uv(42);
+        const submit = this._makeButton(cx - uv(75) - btnW / 2, submitBtnY - btnH / 2, btnW, btnH, {
+            label: t('submitScore'),
+            labelColor: SYSTEM.TEXT_BRIGHT,
+            border: SYSTEM.BORDER,
+            labelSize: 13,
+            labelFont: UI_FONT_MONO,
+            depth,
+            onClick: () => doSubmit(),
+        });
+        const skip = this._makeButton(cx + uv(75) - btnW / 2, submitBtnY - btnH / 2, btnW, btnH, {
+            label: t('skipScore'),
+            labelColor: SYSTEM.TEXT_MUTED,
+            border: SYSTEM.BORDER_DIM,
+            labelSize: 13,
+            labelFont: UI_FONT_MONO,
+            depth,
+            onClick: () => doSkip(),
+        });
+        nameElements.push(submit.g, submit.hit, submit.txt, skip.g, skip.hit, skip.txt);
 
         const cleanup = () => {
             this.input.keyboard.enabled = true;
@@ -103,9 +125,7 @@ export class GameOverScene extends Phaser.Scene {
             nameElements.forEach(el => { if (el && el.active) el.destroy(); });
         };
 
-        const showStats = () => {
-            this._showStats(time, level, rank, kills, shadowCount);
-        };
+        const showStats = () => this._showStats(time, level, rank, kills, shadowCount);
 
         const doSubmit = async () => {
             const name = input.value.trim().slice(0, 20);
@@ -127,22 +147,9 @@ export class GameOverScene extends Phaser.Scene {
             showStats();
         };
 
-        const doSkip = () => {
-            cleanup();
-            showStats();
-        };
+        const doSkip = () => { cleanup(); showStats(); };
 
-        submitBtn.on('pointerover', () => submitBtn.setFillStyle(0xffe44d, 1));
-        submitBtn.on('pointerout', () => submitBtn.setFillStyle(0xFFD600, 1));
-        submitBtn.on('pointerdown', doSubmit);
-
-        skipBtn.on('pointerover', () => skipBtn.setFillStyle(0x3a3a5e, 0.9));
-        skipBtn.on('pointerout', () => skipBtn.setFillStyle(0x2a2a4e, 0.8));
-        skipBtn.on('pointerdown', doSkip);
-
-        // Phaser WASD 캡처 해제 → input에서 모든 키 입력 가능하도록
         this.input.keyboard.enabled = false;
-
         input.addEventListener('keydown', (e) => {
             e.stopPropagation();
             if (e.key === 'Enter') doSubmit();
@@ -154,133 +161,163 @@ export class GameOverScene extends Phaser.Scene {
         const cx = GAME_WIDTH / 2;
         const isVictory = this.finalData.victory;
 
-        // Title
-        this.add.text(cx, GAME_HEIGHT * 0.13, isVictory ? t('victoryTitle') : 'GAME OVER', {
-            fontSize: fs(48), fontFamily: 'Arial', fontStyle: 'bold',
-            color: isVictory ? '#ffd700' : '#ff3333',
-            stroke: '#000000', strokeThickness: 4,
+        // System tag
+        this.add.text(cx, GAME_HEIGHT * 0.09,
+            isVictory ? '[ SYSTEM · DUNGEON CLEAR ]' : '[ SYSTEM · HUNTER K.I.A. ]', {
+            fontSize: fs(12), fontFamily: UI_FONT_MONO,
+            color: isVictory ? SYSTEM.TEXT_GOLD : SYSTEM.TEXT_RED,
         }).setOrigin(0.5);
 
-        // Subtitle
-        this.add.text(cx, GAME_HEIGHT * 0.2, isVictory ? t('victorySub') : t('huntOver'), {
-            fontSize: fs(isVictory ? 16 : 18), fontFamily: 'Arial',
-            color: isVictory ? '#b366ff' : '#888888',
+        const titleText = isVictory ? t('victoryTitle') : 'GAME  OVER';
+        this.add.text(cx, GAME_HEIGHT * 0.16, titleText, {
+            fontSize: fs(44), fontFamily: UI_FONT_KR, fontStyle: 'bold',
+            color: isVictory ? SYSTEM.TEXT_GOLD : SYSTEM.TEXT_RED,
+            stroke: '#000000', strokeThickness: 3, letterSpacing: 4,
         }).setOrigin(0.5);
 
-        // Stats card
-        const cardY = GAME_HEIGHT * 0.42;
-        this.add.rectangle(cx, cardY, uv(400), uv(325), 0x1a1a3e, 0.9)
-            .setStrokeStyle(2, COLORS.SHADOW_DARK);
+        const ulG = this.add.graphics();
+        ulG.lineStyle(1, isVictory ? SYSTEM.BORDER_GOLD : SYSTEM.BORDER_WARN, 0.6);
+        ulG.lineBetween(cx - uv(160), GAME_HEIGHT * 0.22, cx + uv(160), GAME_HEIGHT * 0.22);
 
-        // Format time
+        this.add.text(cx, GAME_HEIGHT * 0.25, isVictory ? t('victorySub') : t('huntOver'), {
+            fontSize: fs(13), fontFamily: UI_FONT_MONO,
+            color: isVictory ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED,
+            letterSpacing: 2,
+        }).setOrigin(0.5);
+
+        // Stats card — angular panel
+        const cardW = uv(420);
+        const cardH = uv(310);
+        const cardX = cx - cardW / 2;
+        const cardY = GAME_HEIGHT * 0.42 - cardH / 2;
+        const cardG = this.add.graphics();
+        drawSystemPanel(cardG, cardX, cardY, cardW, cardH, {
+            cut: uv(14),
+            fill: SYSTEM.BG_PANEL, fillAlpha: 0.92,
+            border: isVictory ? SYSTEM.BORDER_GOLD : SYSTEM.BORDER,
+            borderAlpha: 0.9, borderWidth: 1,
+        });
+
+        // Card header tag
+        this.add.text(cardX + uv(18), cardY - uv(9), '  RESULT  ', {
+            fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
+            backgroundColor: '#05070d', padding: { left: 6, right: 6, top: 1, bottom: 1 },
+        });
+
         const min = Math.floor(time / 60).toString().padStart(2, '0');
         const sec = (time % 60).toString().padStart(2, '0');
-
         const rankData = RANKS[rank];
         const rankColor = '#' + rankData.color.toString(16).padStart(6, '0');
 
         const stats = [
-            { label: t('scoreLabel'), value: `${time.toLocaleString()}`, color: '#ffd700' },
-            { label: t('timeLabel'), value: `${min}:${sec}`, color: '#ffffff' },
-            { label: t('levelLabel'), value: `Lv.${level}`, color: '#ffffff' },
-            { label: t('rankLabel'), value: rankData.label, color: rankColor },
-            { label: t('killLabel'), value: `${kills}`, color: '#ff6644' },
-            { label: t('shadowLabel'), value: `${shadowCount}${t('statUnit') ? t('statUnit') : ''}`, color: COLORS.TEXT_PURPLE },
+            { label: t('scoreLabel'), value: String(time).padStart(4, '0'), color: SYSTEM.TEXT_GOLD },
+            { label: t('timeLabel'), value: `${min}:${sec}`, color: SYSTEM.TEXT_BRIGHT },
+            { label: t('levelLabel'), value: 'LV. ' + String(level).padStart(2, '0'), color: SYSTEM.TEXT_BRIGHT },
+            { label: t('rankLabel'), value: rankData.name + ' - RANK', color: rankColor },
+            { label: t('killLabel'), value: String(kills).padStart(4, '0'), color: '#ff9966' },
+            { label: t('shadowLabel'), value: String(shadowCount).padStart(2, '0') + (t('statUnit') || ''), color: SYSTEM.TEXT_CYAN },
         ];
 
+        const rowH = uv(38);
+        const innerPad = uv(28);
+        const firstY = cardY + uv(40);
         stats.forEach((stat, i) => {
-            const y = cardY - uv(100) + i * uv(45);
-            this.add.text(cx - uv(120), y, stat.label, {
-                fontSize: fs(16), fontFamily: 'Arial',
-                color: '#888888',
-            }).setDepth(1);
-
-            this.add.text(cx + uv(120), y, stat.value, {
-                fontSize: fs(20), fontFamily: 'Arial', fontStyle: 'bold',
-                color: stat.color,
-            }).setOrigin(1, 0).setDepth(1);
+            const y = firstY + i * rowH;
+            this.add.text(cardX + innerPad, y, '▸ ' + stat.label, {
+                fontSize: fs(13), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN_DIM,
+            }).setOrigin(0, 0);
+            this.add.text(cardX + cardW - innerPad, y, stat.value, {
+                fontSize: fs(16), fontFamily: UI_FONT_MONO, fontStyle: 'bold', color: stat.color,
+            }).setOrigin(1, 0);
         });
 
         // Retry button
-        const retryBtnY = GAME_HEIGHT * 0.68;
-        const retryBtn = this.add.rectangle(cx, retryBtnY, uv(200), uv(50), 0x4a1a8a, 0.9)
-            .setStrokeStyle(2, COLORS.SHADOW_GLOW)
-            .setInteractive({ useHandCursor: true });
-
-        this.add.text(cx, retryBtnY, t('retry'), {
-            fontSize: fs(20), fontFamily: 'Arial', fontStyle: 'bold',
-            color: '#ffffff',
-        }).setOrigin(0.5);
-
-        retryBtn.on('pointerover', () => retryBtn.setFillStyle(0x6b2fbf, 0.9));
-        retryBtn.on('pointerout', () => retryBtn.setFillStyle(0x4a1a8a, 0.9));
-        retryBtn.on('pointerdown', () => {
-            if (this._transitioning) return;
-            this._transitioning = true;
-            retryBtn.disableInteractive();
-            this._showTransition(t('loading'));
-            this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.time.delayedCall(500, () => this.scene.start('GameScene'));
-        });
-
-        // Menu button
-        const menuBtnY = GAME_HEIGHT * 0.76;
-        const menuBtn = this.add.rectangle(cx, menuBtnY, uv(200), uv(40), 0x2a2a4e, 0.7)
-            .setStrokeStyle(1, 0x4a4a6e)
-            .setInteractive({ useHandCursor: true });
-
-        this.add.text(cx, menuBtnY, t('toMenu'), {
-            fontSize: fs(16), fontFamily: 'Arial',
-            color: '#aaaacc',
-        }).setOrigin(0.5);
-
-        menuBtn.on('pointerover', () => menuBtn.setFillStyle(0x3a3a5e, 0.8));
-        menuBtn.on('pointerout', () => menuBtn.setFillStyle(0x2a2a4e, 0.7));
-        menuBtn.on('pointerdown', () => {
-            if (this._transitioning) return;
-            this._transitioning = true;
-            menuBtn.disableInteractive();
-            this._showTransition(t('loading'));
-            this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.time.delayedCall(500, () => this.scene.start('MenuScene'));
-        });
-    }
-
-    _showTransition(message) {
-        // Full-screen dark overlay with loading text (scrollFactor 0 = fixed to camera)
-        const cx = GAME_WIDTH / 2;
-        const cy = GAME_HEIGHT / 2;
-
-        this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.6)
-            .setDepth(200).setScrollFactor(0);
-
-        const dots = this.add.text(cx, cy, message || '로딩 중...', {
-            fontSize: fs(20),
-            fontFamily: 'Arial',
-            fontStyle: 'bold',
-            color: '#b366ff',
-            stroke: '#000000',
-            strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
-
-        // Animated dots
-        let dotCount = 0;
-        this.time.addEvent({
-            delay: 400,
-            loop: true,
-            callback: () => {
-                dotCount = (dotCount + 1) % 4;
-                dots.setText((message || '로딩 중') + '.'.repeat(dotCount));
+        const retryW = uv(220);
+        const retryH = uv(50);
+        const retryY = GAME_HEIGHT * 0.72 - retryH / 2;
+        const retryBtn = this._makeButton(cx - retryW / 2, retryY, retryW, retryH, {
+            label: `▶   ${t('retry')}`,
+            labelColor: SYSTEM.TEXT_BRIGHT,
+            border: SYSTEM.BORDER,
+            labelSize: 17,
+            labelFont: UI_FONT_KR,
+            onClick: () => {
+                if (this._transitioning) return;
+                this._transitioning = true;
+                retryBtn.hit.disableInteractive();
+                this._showTransition(t('loading'));
+                this.cameras.main.fadeOut(500, 0, 0, 0);
+                this.time.delayedCall(500, () => this.scene.start('GameScene'));
             },
         });
 
-        // Pulsing effect
+        // Menu button
+        const menuW = uv(200);
+        const menuH = uv(40);
+        const menuY = GAME_HEIGHT * 0.81 - menuH / 2;
+        const menuBtn = this._makeButton(cx - menuW / 2, menuY, menuW, menuH, {
+            label: t('toMenu'),
+            labelColor: SYSTEM.TEXT_MUTED,
+            border: SYSTEM.BORDER_DIM,
+            labelSize: 13,
+            labelFont: UI_FONT_MONO,
+            onClick: () => {
+                if (this._transitioning) return;
+                this._transitioning = true;
+                menuBtn.hit.disableInteractive();
+                this._showTransition(t('loading'));
+                this.cameras.main.fadeOut(500, 0, 0, 0);
+                this.time.delayedCall(500, () => this.scene.start('MenuScene'));
+            },
+        });
+    }
+
+    _makeButton(x, y, w, h, { label, labelColor, border, labelSize = 16, labelFont = UI_FONT_KR, depth = 0, onClick }) {
+        const g = this.add.graphics().setDepth(depth);
+        const redraw = (hover) => {
+            g.clear();
+            drawSystemPanel(g, x, y, w, h, {
+                cut: uv(8),
+                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
+                fillAlpha: hover ? 0.95 : 0.85,
+                border, borderAlpha: 1,
+                borderWidth: hover ? 2 : 1,
+            });
+        };
+        redraw(false);
+        const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
+            .setDepth(depth).setInteractive({ useHandCursor: true });
+        const txt = this.add.text(x + w / 2, y + h / 2, label, {
+            fontSize: fs(labelSize), fontFamily: labelFont, fontStyle: 'bold',
+            color: labelColor, letterSpacing: 1,
+        }).setOrigin(0.5).setDepth(depth + 1);
+        hit.on('pointerover', () => { redraw(true); txt.setScale(1.02); });
+        hit.on('pointerout', () => { redraw(false); txt.setScale(1); });
+        hit.on('pointerdown', () => onClick && onClick());
+        return { g, hit, txt };
+    }
+
+    _showTransition(message) {
+        const cx = GAME_WIDTH / 2;
+        const cy = GAME_HEIGHT / 2;
+
+        this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP, 0.75)
+            .setDepth(200).setScrollFactor(0);
+
+        const base = '▷  ' + (message || 'LOADING');
+        const txt = this.add.text(cx, cy, base, {
+            fontSize: fs(17), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN,
+        }).setOrigin(0.5).setDepth(201).setScrollFactor(0);
+
+        let n = 0;
+        this.time.addEvent({
+            delay: 380, loop: true,
+            callback: () => { n = (n + 1) % 4; txt.setText(base + '.'.repeat(n)); },
+        });
         this.tweens.add({
-            targets: dots,
-            alpha: { from: 1, to: 0.5 },
-            duration: 600,
-            yoyo: true,
-            repeat: -1,
+            targets: txt, alpha: { from: 1, to: 0.45 },
+            duration: 600, yoyo: true, repeat: -1,
         });
     }
 }
