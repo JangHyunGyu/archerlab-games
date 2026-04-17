@@ -343,8 +343,8 @@
 
   // -------- 스폰 로직 --------
   function pickNextTier() {
-    // 가중치: 낮은 단계일수록 자주
-    const weights = [40, 32, 18, 7, 3];
+    // 가중치: 원작 수박게임처럼 균등 분포 (5종 각 ~20%)
+    const weights = [20, 20, 20, 20, 20];
     const total = weights.reduce((s, w) => s + w, 0);
     let r = Math.random() * total;
     for (let i = 0; i <= MAX_SPAWN_TIER; i++) {
