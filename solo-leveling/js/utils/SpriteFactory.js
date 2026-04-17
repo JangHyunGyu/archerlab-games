@@ -1355,32 +1355,148 @@ export class SpriteFactory {
     //  PROJECTILE TEXTURES
     // =============================================
     static createProjectileTextures(scene) {
-        // Shadow Dagger (32x32 — 글로우 + 날카로운 블레이드)
+        // Shadow Dagger (32x64 — 고퀄리티 투척용 단검)
         const dg = scene.make.graphics({ add: false });
-        // 외곽 글로우
-        dg.fillStyle(COLORS.SHADOW_PRIMARY, 0.15);
-        dg.fillTriangle(4, 26, 16, -2, 28, 26);
-        // 보라색 오라
-        dg.fillStyle(COLORS.SHADOW_GLOW || 0xb366ff, 0.25);
-        dg.fillTriangle(6, 24, 16, 1, 26, 24);
-        // 메인 블레이드
-        dg.fillStyle(COLORS.DAGGER);
-        dg.fillTriangle(8, 22, 16, 3, 24, 22);
-        // 블레이드 엣지
-        dg.lineStyle(1.5, 0xccccdd, 0.6);
-        dg.beginPath(); dg.moveTo(8, 22); dg.lineTo(16, 3); dg.lineTo(24, 22); dg.strokePath();
-        // 손잡이
-        dg.fillStyle(0x888899);
-        dg.fillRect(12, 22, 8, 6);
-        dg.fillStyle(COLORS.SHADOW_PRIMARY, 0.5);
-        dg.fillRect(13, 22, 6, 5);
-        // 중앙 하이라이트
-        dg.fillStyle(0xffffff, 0.4);
-        dg.fillRect(15, 5, 2, 14);
-        // 끝부분 빛
-        dg.fillStyle(0xffffff, 0.6);
-        dg.fillCircle(16, 4, 2);
-        dg.generateTexture('proj_dagger', 32, 32);
+        const cx = 16;
+
+        // 외곽 보라 오라 (3단 그라데이션)
+        dg.fillStyle(COLORS.SHADOW_PRIMARY, 0.08);
+        dg.fillEllipse(cx, 32, 22, 58);
+        dg.fillStyle(COLORS.SHADOW_GLOW, 0.12);
+        dg.fillEllipse(cx, 30, 14, 48);
+        dg.fillStyle(COLORS.SHADOW_GLOW, 0.18);
+        dg.fillEllipse(cx, 24, 8, 38);
+
+        // 블레이드 외곽 (leaf 형태, 다크 엣지)
+        dg.fillStyle(0x15101e, 0.95);
+        dg.beginPath();
+        dg.moveTo(cx, 3);          // 팁
+        dg.lineTo(cx + 5, 14);
+        dg.lineTo(cx + 6, 27);     // 가장 넓은 지점
+        dg.lineTo(cx + 4, 37);
+        dg.lineTo(cx - 4, 37);
+        dg.lineTo(cx - 6, 27);
+        dg.lineTo(cx - 5, 14);
+        dg.closePath();
+        dg.fillPath();
+
+        // 블레이드 좌반부 (그림자면)
+        dg.fillStyle(0x555968, 0.95);
+        dg.beginPath();
+        dg.moveTo(cx, 4);
+        dg.lineTo(cx - 4.5, 14);
+        dg.lineTo(cx - 5.5, 27);
+        dg.lineTo(cx - 3.5, 37);
+        dg.lineTo(cx, 37);
+        dg.closePath();
+        dg.fillPath();
+
+        // 블레이드 우반부 (광택면 — 실버)
+        dg.fillStyle(0xced6e2, 1);
+        dg.beginPath();
+        dg.moveTo(cx, 4);
+        dg.lineTo(cx + 4.5, 14);
+        dg.lineTo(cx + 5.5, 27);
+        dg.lineTo(cx + 3.5, 37);
+        dg.lineTo(cx, 37);
+        dg.closePath();
+        dg.fillPath();
+
+        // 광택 하이라이트 (폴리시드 글림)
+        dg.fillStyle(0xf0f4fa, 0.7);
+        dg.beginPath();
+        dg.moveTo(cx + 0.5, 6);
+        dg.lineTo(cx + 2.5, 22);
+        dg.lineTo(cx + 2, 33);
+        dg.lineTo(cx + 1, 36);
+        dg.lineTo(cx + 0.5, 36);
+        dg.closePath();
+        dg.fillPath();
+
+        // 중앙 리지 (밝은 세로 라인)
+        dg.lineStyle(1, 0xffffff, 0.9);
+        dg.lineBetween(cx, 5, cx, 36);
+
+        // 우측 면도날 엣지 하이라이트
+        dg.lineStyle(0.7, 0xffffff, 0.8);
+        dg.beginPath();
+        dg.moveTo(cx + 0.3, 5);
+        dg.lineTo(cx + 4.8, 27);
+        dg.lineTo(cx + 3.3, 36);
+        dg.strokePath();
+
+        // 좌측 엣지 라인 (은은)
+        dg.lineStyle(0.5, 0xaab0c0, 0.55);
+        dg.beginPath();
+        dg.moveTo(cx - 0.3, 5);
+        dg.lineTo(cx - 4.8, 27);
+        dg.lineTo(cx - 3.3, 36);
+        dg.strokePath();
+
+        // 팁 스파클
+        dg.fillStyle(COLORS.SHADOW_GLOW, 0.55);
+        dg.fillCircle(cx, 3, 4);
+        dg.fillStyle(0xffffff, 0.9);
+        dg.fillCircle(cx, 3, 1.8);
+        dg.fillStyle(0xffffff, 0.5);
+        dg.fillCircle(cx + 0.5, 2.5, 0.8);
+
+        // 크로스가드 베이스 (다크)
+        dg.fillStyle(0x10101a);
+        dg.fillRoundedRect(cx - 8, 37, 16, 4, 1);
+        // 크로스가드 상단면 (금속)
+        dg.fillStyle(0x8890a0);
+        dg.fillRect(cx - 7.5, 37.3, 15, 1.5);
+        // 하이라이트
+        dg.fillStyle(0xf0f4fa, 0.75);
+        dg.fillRect(cx - 7, 37.4, 14, 0.5);
+        // 보라 언더글로우
+        dg.fillStyle(COLORS.SHADOW_GLOW, 0.35);
+        dg.fillRect(cx - 7, 40, 14, 0.8);
+        // 양끝 캡 (구체)
+        dg.fillStyle(0x666880);
+        dg.fillCircle(cx - 8, 39, 1.8);
+        dg.fillCircle(cx + 8, 39, 1.8);
+        dg.fillStyle(0xddddee, 0.6);
+        dg.fillCircle(cx - 8.2, 38.5, 0.8);
+        dg.fillCircle(cx + 7.8, 38.5, 0.8);
+
+        // 핸들 베이스 (다크 가죽 랩)
+        dg.fillStyle(0x17122a);
+        dg.fillRect(cx - 3, 41, 6, 18);
+        // 랩 바인딩 라인 (교차 패턴)
+        dg.fillStyle(0x000000, 0.55);
+        for (let y = 43; y < 59; y += 3) {
+            dg.fillRect(cx - 3, y, 6, 0.8);
+        }
+        // 랩 하이라이트
+        dg.fillStyle(0x4a3a6a, 0.5);
+        for (let y = 43.8; y < 59; y += 3) {
+            dg.fillRect(cx - 3, y, 6, 0.3);
+        }
+        // 좌측 섀도우
+        dg.fillStyle(0x000000, 0.45);
+        dg.fillRect(cx - 3, 41, 1.2, 18);
+        // 우측 보라 림라이트
+        dg.fillStyle(COLORS.SHADOW_GLOW, 0.3);
+        dg.fillRect(cx + 1.8, 41, 1.2, 18);
+
+        // 포멜 (자주색 젬 박힌 라운드 캡)
+        dg.fillStyle(0x10101a);
+        dg.fillCircle(cx, 60, 4);
+        dg.fillStyle(0x889099);
+        dg.fillCircle(cx, 60, 3.3);
+        dg.fillStyle(0xddddee, 0.75);
+        dg.fillCircle(cx - 0.9, 59.2, 1.1);
+        // 젬
+        dg.fillStyle(COLORS.SHADOW_PRIMARY);
+        dg.fillCircle(cx, 60.3, 1.7);
+        dg.fillStyle(COLORS.SHADOW_GLOW, 0.95);
+        dg.fillCircle(cx - 0.35, 60, 0.9);
+        dg.fillStyle(0xffffff, 0.8);
+        dg.fillCircle(cx - 0.6, 59.7, 0.4);
+
+        dg.generateTexture('proj_dagger', 32, 64);
         dg.destroy();
 
         // Shadow Slash arc
