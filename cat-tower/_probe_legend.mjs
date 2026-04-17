@@ -13,7 +13,7 @@ page.on('console', m => {
     if (t.includes('merge') || t.includes('사바나') || t.includes('legend')) console.log('> ' + t);
 });
 
-await page.goto('http://127.0.0.1:8767/index.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8768/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => { const b = document.getElementById('play-btn'); return b && !b.disabled; }, { timeout: 10000 });
 
 // Hook Matter to expose engine

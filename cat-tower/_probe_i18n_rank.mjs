@@ -10,26 +10,27 @@ page.on('pageerror', e => errs.push('PAGE: ' + e.message));
 page.on('console', m => { if (m.type()==='error') errs.push('ERR: ' + m.text()); });
 
 // 랭킹 API 요청은 원격에 실제 쏘지 말고 가짜 응답으로 가로챔 — 로컬 테스트 목적
-await page.route('**/cat-tower/top**', async (route) => {
-    await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true, rows: [
-            { nickname: 'alpha', score: 99999 },
-            { nickname: 'bravo', score: 50000 },
-            { nickname: 'charlie', score: 12345 },
-        ]}),
-    });
-});
-await page.route('**/cat-tower/submit', async (route) => {
-    await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true, updated: true, score: 100 }),
-    });
+// blockpang과 공유하는 game-api-worker의 /rankings 엔드포인트 스키마
+await page.route('**/rankings*', async (route) => {
+    const req = route.request();
+    if (req.method() === 'POST') {
+        await route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify({ success: true, rank: 4, in_top_20: true, player_name: 'me', score: 100 }),
+        });
+    } else {
+        await route.fulfill({
+            status: 200, contentType: 'application/json',
+            body: JSON.stringify({ game_id: 'cat-tower', rankings: [
+                { rank: 1, player_name: 'alpha', score: 99999 },
+                { rank: 2, player_name: 'bravo', score: 50000 },
+                { rank: 3, player_name: 'charlie', score: 12345 },
+            ]}),
+        });
+    }
 });
 
-await page.goto('http://127.0.0.1:8767/index.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8768/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => { const b = document.getElementById('play-btn'); return b && !b.disabled; }, { timeout: 10000 });
 await page.waitForTimeout(300);
 
@@ -117,10 +118,14 @@ const goState = await page.evaluate(() => ({
     hasNickInput: !!document.getElementById('nickname-input'),
     hasSubmitBtn: !!document.getElementById('submit-rank-btn'),
     submitLabel: document.getElementById('submit-rank-btn').textContent,
+    hasSkipBtn: !!document.getElementById('skip-rank-btn'),
+    nickMaxLen: document.getElementById('nickname-input').maxLength,
     nickPlaceholder: document.getElementById('nickname-input').placeholder,
 }));
 console.log('게임오버 UI:', goState);
 if (!goState.hasNickInput || !goState.hasSubmitBtn) { console.log('❌ 랭킹 제출 UI 부재'); process.exit(1); }
+if (!goState.hasSkipBtn) { console.log('❌ Skip 버튼 부재'); process.exit(1); }
+if (goState.nickMaxLen !== 20) { console.log(`❌ 닉네임 maxlength가 20이 아님: ${goState.nickMaxLen}`); process.exit(1); }
 
 await page.screenshot({ path: 'c:/workspace/test-output/cat-gameover-submit.png' });
 

@@ -8,7 +8,7 @@ const page = await ctx.newPage();
 page.on('pageerror', e => console.log('PAGEERROR:', e.message));
 page.on('console', m => { const t=m.type(); if (t==='error'||t==='warning'||t==='log') console.log(`[${t}]`, m.text()); });
 
-await page.goto('http://127.0.0.1:8767/index.html', { waitUntil: 'load' });
+await page.goto('http://127.0.0.1:8768/index.html', { waitUntil: 'load' });
 await page.waitForFunction(() => { const b = document.getElementById('play-btn'); return b && !b.disabled; }, { timeout: 10000 });
 
 // Hook into Matter engine + log every frame for cats that go NaN
