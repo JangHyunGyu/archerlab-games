@@ -62,6 +62,8 @@ body {
   z-index: 30;
 }
 #topbar > * { pointer-events: auto; }
+/* 게임 중에는 숨김 (ArcherLab 링크/언어 토글) — 몰입도 우선 */
+body:has(#game:not(.hidden)) #topbar { display: none; }
 .topbar-btn {
   background: rgba(255, 251, 241, 0.92);
   color: var(--ink);
