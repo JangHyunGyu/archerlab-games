@@ -173,6 +173,7 @@ const GAME_ID_BLOCKPANG = 'blockpang';
 
 const I18N = {
     ko: {
+        gameTitle: '블럭팡',
         gameStart: '게임 시작',
         language: '다국어',
         contact: '연락하기',
@@ -200,6 +201,7 @@ const I18N = {
         continueGame: '이어하기',
     },
     en: {
+        gameTitle: 'Blockpang',
         gameStart: 'GAME START',
         language: 'Language',
         contact: 'Contact',
@@ -227,6 +229,7 @@ const I18N = {
         continueGame: 'CONTINUE',
     },
     ja: {
+        gameTitle: 'ブロックパン',
         gameStart: 'ゲームスタート',
         language: '多言語',
         contact: 'お問い合わせ',
