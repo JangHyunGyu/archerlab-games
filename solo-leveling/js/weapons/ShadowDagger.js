@@ -159,7 +159,7 @@ export class ShadowDagger extends WeaponBase {
             delay: 50,
             repeat: duration / 50,
             callback: () => {
-                if (!dagger.active) return;
+                if (!dagger.active || !this.scene?.scene?.isActive()) return;
                 const trail = this._getTrailCircle(dagger.x, dagger.y);
                 this.scene.tweens.add({
                     targets: trail,

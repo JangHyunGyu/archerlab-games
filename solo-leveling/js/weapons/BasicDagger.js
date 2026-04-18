@@ -174,6 +174,7 @@ export class BasicDagger extends WeaponBase {
 
         // Damage at the moment of peak extension (narrow front cone, fits thrust shape)
         this.scene.time.delayedCall(90, () => {
+            if (!this.scene?.scene?.isActive() || !this.player?.active) return;
             const enemies = this.player.getAllEnemies();
             const hitAngleTol = 0.45; // ~52° cone
             for (const enemy of enemies) {

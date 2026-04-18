@@ -73,6 +73,7 @@ export class RulersAuthority extends WeaponBase {
 
         // Deal damage to enemies in range
         this.scene.time.delayedCall(200, () => {
+            if (!this.scene?.scene?.isActive()) return;
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
                 const dist = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y);

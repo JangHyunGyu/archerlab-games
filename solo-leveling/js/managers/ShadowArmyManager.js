@@ -96,6 +96,7 @@ export class ShadowArmyManager {
         // System message
         scene.time.delayedCall(300, () => {
             try {
+                if (!scene.scene?.isActive()) return;
                 if (scene.systemMessage) {
                     scene.systemMessage.show('[시스템]', [
                         '그림자 추출이 가능한 대상을 감지했습니다.',
@@ -354,6 +355,7 @@ export class ShadowArmyManager {
                                                 // Success message
                                                 scene.time.delayedCall(300, () => {
                                                     try {
+                                                        if (!scene.scene?.isActive()) return;
                                                         if (scene.systemMessage) {
                                                             scene.systemMessage.show('[시스템]', [
                                                                 '그림자 추출에 성공했습니다.',
@@ -366,6 +368,7 @@ export class ShadowArmyManager {
 
                                                 // Phase 6: Cleanup (delayed)
                                                 scene.time.delayedCall(1800, () => {
+                                                    if (!scene.scene?.isActive()) return;
                                                     this._cleanupArise();
                                                 });
                                             } catch (e) {

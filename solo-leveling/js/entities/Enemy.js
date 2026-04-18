@@ -248,19 +248,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const proj = this.scene.add.sprite(this.x, this.y, 'proj_darkMage')
             .setDepth(8).setScale(1.4);
-
-        // Red danger trail (clearly enemy attack)
-        const trailEvent = this.scene.time.addEvent({
-            delay: 60, repeat: -1,
-            callback: () => {
-                if (!proj.active) { trailEvent.destroy(); return; }
-                const trail = this.scene.add.circle(proj.x, proj.y, 4, 0xff3300, 0.5).setDepth(7);
-                this.scene.tweens.add({
-                    targets: trail, alpha: 0, scale: 0.2,
-                    duration: 250, onComplete: () => trail.destroy(),
-                });
-            },
-        });
         this.scene.physics.add.existing(proj, false);
         proj.body.setAllowGravity(false);
         proj.body.setCircle(6);
@@ -269,26 +256,43 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const speed = 150;
         proj.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
-        // Collision with player (store collider to remove on destroy)
+        // Red danger trail — bounded to projectile lifetime (no infinite repeat)
+        const trailEvent = this.scene.time.addEvent({
+            delay: 60, repeat: 58, // 58 * 60ms ≈ 3480ms (slightly under auto-destroy)
+            callback: () => {
+                if (!proj.active || !this.scene) return;
+                const trail = this.scene.add.circle(proj.x, proj.y, 4, 0xff3300, 0.5).setDepth(7);
+                this.scene.tweens.add({
+                    targets: trail, alpha: 0, scale: 0.2,
+                    duration: 250, onComplete: () => trail.destroy(),
+                });
+            },
+        });
+
+        // Collision with player
         const player = this.scene.player;
         let collider = null;
         if (player) {
             collider = this.scene.physics.add.overlap(proj, player, () => {
                 if (!proj.active) return;
                 player.takeDamage(this.attack);
-                if (collider) this.scene.physics.world.removeCollider(collider);
-                this.scene.tweens.killTweensOf(proj);
                 proj.destroy();
             });
         }
 
-        // Auto-destroy after 3.5 seconds
-        this.scene.time.delayedCall(3500, () => {
-            if (proj && proj.active) {
-                if (collider) this.scene.physics.world.removeCollider(collider);
-                this.scene.tweens.killTweensOf(proj);
-                proj.destroy();
+        // Auto-destroy after 3.5 seconds (only destroys if still alive)
+        const autoDestroyTimer = this.scene.time.delayedCall(3500, () => {
+            if (proj.active) proj.destroy();
+        });
+
+        // Centralized cleanup: fires on destroy() from any path (hit, timeout, scene shutdown)
+        proj.once('destroy', () => {
+            if (trailEvent) trailEvent.destroy();
+            if (autoDestroyTimer) autoDestroyTimer.destroy();
+            if (collider && this.scene?.physics?.world) {
+                this.scene.physics.world.removeCollider(collider);
             }
+            if (this.scene?.tweens) this.scene.tweens.killTweensOf(proj);
         });
 
         // Spin + pulsing glow for visibility
