@@ -408,7 +408,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             lines.forEach(l => l.destroy());
             if (!this.active) return;
 
-            // Slam visual
+            // Slam visual (brown impact mark)
             const slam = this.scene.add.sprite(slamX, slamY, 'proj_tusk')
                 .setDepth(8).setScale(3);
             this.scene.tweens.add({
@@ -418,15 +418,86 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 onComplete: () => slam.destroy(),
             });
 
-            // Damage if player is still in area
-            const player = this.scene.player;
-            if (!player) return;
-            const d = Phaser.Math.Distance.Between(slamX, slamY, player.x, player.y);
-            if (d < radius) {
-                player.takeDamage(Math.floor(this.attack * 1.3));
+            // White shockwave ring — fast expanding (tank impact feel, NOT blood)
+            const shockRing = this.scene.add.circle(slamX, slamY, 20, 0, 0)
+                .setDepth(9).setStrokeStyle(5, 0xffffff, 0.9);
+            this.scene.tweens.add({
+                targets: shockRing,
+                scale: radius / 20,
+                alpha: 0,
+                duration: 350, ease: 'Cubic.Out',
+                onComplete: () => shockRing.destroy(),
+            });
+            // Secondary gold ring (slower, heavier)
+            const goldRing = this.scene.add.circle(slamX, slamY, 20, 0, 0)
+                .setDepth(9).setStrokeStyle(3, 0xffbb33, 0.7);
+            this.scene.tweens.add({
+                targets: goldRing,
+                scale: radius / 20 * 0.85,
+                alpha: 0,
+                duration: 500, ease: 'Cubic.Out',
+                onComplete: () => goldRing.destroy(),
+            });
+
+            // Dust cloud (tan/brown puffs — distinctly NOT blood)
+            for (let i = 0; i < 18; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const dist = 20 + Math.random() * (radius * 0.5);
+                const size = 8 + Math.random() * 10;
+                const tan = [0xbb8855, 0x997744, 0xd4a870, 0x775533][Math.floor(Math.random() * 4)];
+                const puff = this.scene.add.circle(
+                    slamX + Math.cos(a) * 15,
+                    slamY + Math.sin(a) * 15,
+                    size, tan, 0.75
+                ).setDepth(7);
+                this.scene.tweens.add({
+                    targets: puff,
+                    x: slamX + Math.cos(a) * dist,
+                    y: slamY + Math.sin(a) * dist,
+                    scale: 1.8,
+                    alpha: 0,
+                    duration: 700 + Math.random() * 400,
+                    ease: 'Quad.Out',
+                    onComplete: () => puff.destroy(),
+                });
             }
 
-            this.scene.cameras.main.shake(300, 0.012);
+            // Radial ground cracks (gold/white lines)
+            for (let c = 0; c < 10; c++) {
+                const angle = (Math.PI * 2 / 10) * c + Math.random() * 0.2;
+                const len = radius * (0.7 + Math.random() * 0.3);
+                const crack = this.scene.add.line(0, 0,
+                    slamX, slamY,
+                    slamX + Math.cos(angle) * len,
+                    slamY + Math.sin(angle) * len,
+                    0xffcc66, 0
+                ).setDepth(6).setLineWidth(2.5);
+                this.scene.tweens.add({
+                    targets: crack,
+                    alpha: { from: 0.9, to: 0 },
+                    duration: 600, delay: c * 12, ease: 'Cubic.Out',
+                    onComplete: () => crack.destroy(),
+                });
+            }
+
+            // Bright center flash (single pulse, white — impact moment)
+            const flash = this.scene.add.circle(slamX, slamY, 40, 0xffffff, 0.85).setDepth(9);
+            this.scene.tweens.add({
+                targets: flash, scale: 2.5, alpha: 0,
+                duration: 220, onComplete: () => flash.destroy(),
+            });
+
+            // Damage if player is still in area
+            const player = this.scene.player;
+            if (player) {
+                const d = Phaser.Math.Distance.Between(slamX, slamY, player.x, player.y);
+                if (d < radius) {
+                    player.takeDamage(Math.floor(this.attack * 1.3));
+                }
+            }
+
+            // Heavier camera shake (tank slam, not blood burst)
+            this.scene.cameras.main.shake(500, 0.022);
         });
     }
 
