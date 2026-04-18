@@ -59,10 +59,8 @@ const saved = await page.evaluate(() => {
 console.log('3) localStorage 저장:', saved);
 if (!saved || saved.cats === 0) { errors.push('저장에 고양이가 없음'); }
 
-// 메뉴로 복귀
-await page.click('#pause-btn');
-await page.waitForTimeout(200);
-await page.click('#exit-btn');
+// 메뉴로 복귀 — 홈 버튼 한 번으로 바로 이탈
+await page.click('#home-btn');
 await page.waitForTimeout(400);
 
 // resume 버튼 보여야 함
