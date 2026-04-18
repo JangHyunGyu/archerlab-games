@@ -487,6 +487,37 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 duration: 220, onComplete: () => flash.destroy(),
             });
 
+            // Full-screen white flash (brief, emphasizes "something huge just happened")
+            const cam = this.scene.cameras.main;
+            const screenFlash = this.scene.add.rectangle(0, 0, cam.width, cam.height, 0xffffff, 0)
+                .setDepth(100).setScrollFactor(0).setOrigin(0, 0);
+            this.scene.tweens.add({
+                targets: screenFlash, alpha: 0.35,
+                duration: 60, yoyo: true,
+                onComplete: () => screenFlash.destroy(),
+            });
+
+            // Angular stone debris (rectangles — distinct from round blood droplets)
+            for (let i = 0; i < 14; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const dist = 60 + Math.random() * (radius * 0.8);
+                const w = 6 + Math.random() * 8;
+                const h = 4 + Math.random() * 6;
+                const tone = [0x886644, 0x664433, 0xaa8855, 0x998877][Math.floor(Math.random() * 4)];
+                const shard = this.scene.add.rectangle(slamX, slamY, w, h, tone, 0.95)
+                    .setDepth(8).setRotation(Math.random() * Math.PI * 2);
+                this.scene.tweens.add({
+                    targets: shard,
+                    x: slamX + Math.cos(a) * dist,
+                    y: slamY + Math.sin(a) * dist + 30, // slight gravity arc
+                    rotation: shard.rotation + (Math.random() - 0.5) * Math.PI * 4,
+                    alpha: 0,
+                    duration: 650 + Math.random() * 350,
+                    ease: 'Quad.Out',
+                    onComplete: () => shard.destroy(),
+                });
+            }
+
             // Damage if player is still in area
             const player = this.scene.player;
             if (player) {
