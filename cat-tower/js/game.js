@@ -160,6 +160,7 @@
 
   // -------- 로컬 스토리지 --------
   const STORAGE_KEY = 'cat-tower.v1';
+  const SAVE_KEY = 'cat-tower.save.v1';
   function loadBest() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -171,6 +172,52 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ best: v }));
     } catch {}
+  }
+
+  // ── 진행중 게임 스냅샷 저장/복원 ──
+  // 물리 상태(위치/속도/각속도)를 직렬화하므로 이어서하기는 비결정적(재개 후 경로가 약간 달라질 수 있음).
+  // 게임 체감상 문제 없음 — 중요 상태(점수/티어/필드 구성)는 완벽히 보존된다.
+  function autoSave() {
+    if (!running || paused || gameOver || !world) return;
+    try {
+      const bodies = Composite.allBodies(world)
+        .filter(b => b.label === 'cat' && !b.isStatic && b.cat && !b.cat.merging);
+      const snap = {
+        cats: bodies.map(b => ({
+          t: b.cat.tier,
+          x: b.position.x, y: b.position.y,
+          a: b.angle,
+          vx: b.velocity.x, vy: b.velocity.y,
+          av: b.angularVelocity,
+        })),
+        current: currentCat && currentCat.cat
+          ? { t: currentCat.cat.tier, x: currentCat.position.x }
+          : null,
+        nextTier,
+        score,
+        reachedFinal,
+        ts: Date.now(),
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
+    } catch (_) { /* quota / privacy mode */ }
+  }
+  function clearSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch {}
+  }
+  function hasSavedGame() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      // 진행도 없는 저장본은 이어서할 가치가 없음 — 버튼 감춤
+      return (data.score > 0) || (Array.isArray(data.cats) && data.cats.length > 0);
+    } catch { return false; }
+  }
+  function getSavedScore() {
+    try {
+      const data = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
+      return data.score || 0;
+    } catch { return 0; }
   }
 
   // -------- 캔버스 & 리사이즈 --------
@@ -542,6 +589,7 @@
     log(`triggerGameOver score=${score} best=${bestScore} newRecord=${isNew}`);
     gameOver = true;
     running = false;
+    clearSave();
     if (isNew) { bestScore = score; saveBest(bestScore); }
     $('final-score').textContent = score.toLocaleString();
     const nr = $('new-record');
@@ -659,6 +707,8 @@
             _lastFpsAt = ts;
             _framesSinceFps = 0;
           }
+          // 매 90프레임(약 1.5초)마다 이어서하기용 자동저장
+          if (_frameCount % 90 === 0) autoSave();
           _framesSinceFps++;
         }
         render();
@@ -709,6 +759,94 @@
     requestAnimationFrame(makeTick(loopToken));
   }
 
+  // 저장된 스냅샷에서 게임 복원. 실패 시 새 게임으로 폴백.
+  function resumeGame() {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) { log('resumeGame: 저장 데이터 없음 → 새 게임'); startGame(); return; }
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.cats)) throw new Error('invalid save format');
+
+      // 이전 게임 상태 정리 (startGame과 동일한 루틴)
+      if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
+      sound?.stopAll();
+      score = data.score || 0;
+      comboCount = 0;      // 콤보 체인은 performance.now 기반이라 리로드 후 의미 없음
+      lastMergeAt = 0;
+      reachedFinal = !!data.reachedFinal;
+      gameOver = false;
+      paused = false;
+      running = true;
+      dropCooldown = false;
+      mergeEffects.length = 0;
+      bonkCooldown.clear();
+      _frameCount = 0;
+      _lastFpsAt = 0;
+      _framesSinceFps = 0;
+
+      if (world) {
+        const existing = Composite.allBodies(world).filter(b => b.label === 'cat');
+        existing.forEach(b => World.remove(world, b));
+        log(`resumeGame: 기존 cat 바디 ${existing.length}개 제거`);
+      } else {
+        initEngine();
+      }
+
+      // 필드 고양이 복원 (위치/속도/각속도)
+      let restored = 0;
+      for (const c of data.cats) {
+        if (typeof c.t !== 'number' || !Number.isFinite(c.x) || !Number.isFinite(c.y)) continue;
+        const body = createCat(c.t, c.x, c.y, false);
+        if (!body) continue;
+        Body.setAngle(body, Number.isFinite(c.a) ? c.a : 0);
+        Body.setVelocity(body, {
+          x: Number.isFinite(c.vx) ? c.vx : 0,
+          y: Number.isFinite(c.vy) ? c.vy : 0,
+        });
+        Body.setAngularVelocity(body, Number.isFinite(c.av) ? c.av : 0);
+        restored++;
+      }
+
+      // 상단 대기 고양이 복원 (없으면 새로 스폰)
+      nextTier = (typeof data.nextTier === 'number') ? data.nextTier : pickNextTier();
+      if (data.current && typeof data.current.t === 'number') {
+        const curX = Number.isFinite(data.current.x) ? data.current.x : FIELD_W / 2;
+        const r = TIERS[data.current.t].radius;
+        const clampedX = Math.min(FIELD_W - r, Math.max(r, curX));
+        pointerX = clampedX;
+        currentCat = createCat(data.current.t, clampedX, SPAWN_Y, true);
+        drawNextPreview();
+      } else {
+        spawnCurrent();
+      }
+
+      updateScoreUI();
+      lastTs = 0;
+      loopToken++;
+      log(`resumeGame 완료 score=${score} restored=${restored} next=${nextTier} token=${loopToken}`);
+      requestAnimationFrame(makeTick(loopToken));
+    } catch (e) {
+      err('resumeGame 예외:', e.message, e.stack);
+      clearSave();
+      startGame();
+    }
+  }
+
+  // 메뉴의 '이어서 하기' 버튼 표시/갱신
+  function updateMenuResumeButton() {
+    const btn = $('resume-btn-menu');
+    if (!btn) return;
+    if (hasSavedGame()) {
+      const saved = getSavedScore();
+      const label = tt('menu.resume') + (saved > 0 ? `  ·  ${saved.toLocaleString()}` : '');
+      btn.textContent = label;
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+  }
+
   function togglePause() {
     if (gameOver) { log('togglePause skip: gameOver'); return; }
     paused = !paused;
@@ -738,6 +876,7 @@
     hide(screens.game);
     show(screens.menu);
     $('best-score').textContent = bestScore.toLocaleString();
+    updateMenuResumeButton();
   }
 
   // -------- 조작법 모달 티어 프리뷰 --------
@@ -901,7 +1040,7 @@
       log(`best 로드: ${bestScore}`);
 
       // 필수 DOM 엘리먼트 검증 — 하나라도 누락되면 게임 자체가 동작 안 함
-      const required = ['play-btn', 'how-btn', 'how-close', 'pause-btn', 'resume-btn',
+      const required = ['play-btn', 'resume-btn-menu', 'how-btn', 'how-close', 'pause-btn', 'resume-btn',
         'restart-btn', 'exit-btn', 'replay-btn', 'menu-btn', 'rank-btn', 'rank-close',
         'rank-content', 'submit-rank-btn', 'skip-rank-btn', 'nickname-input', 'submit-status',
         'lang-ko', 'lang-en', 'score', 'best-score',
@@ -967,7 +1106,18 @@
         // 플레이 버튼이 '불러오는 중…'이 아닐 때만 i18n 라벨 복원 (preload 실패 시 보존)
         const pb = $('play-btn');
         if (!pb.disabled) pb.textContent = tt('menu.play');
+        // 이어서 버튼은 점수 suffix가 붙어있어 applyDom 대신 직접 재갱신
+        updateMenuResumeButton();
       });
+
+      // 메뉴 진입 시 이어서 버튼 상태 반영
+      updateMenuResumeButton();
+
+      // 탭 숨김/종료 시 마지막 한 번 flush — 주기 저장 사이에 이탈해도 진행도 보존
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) autoSave();
+      });
+      window.addEventListener('pagehide', () => { autoSave(); });
 
       playBtn.addEventListener('click', () => {
         // 첫 user gesture에서 AudioContext 초기화 (iOS/Safari 대응)
@@ -985,6 +1135,19 @@
         show(screens.game);
         startGame();
       });
+
+      // 이어서 하기 버튼
+      const resumeMenuBtn = $('resume-btn-menu');
+      if (resumeMenuBtn) {
+        resumeMenuBtn.addEventListener('click', () => {
+          sound?.ensureContext();
+          sound?.playButton();
+          log('UI: 이어서 하기 클릭');
+          hide(screens.menu);
+          show(screens.game);
+          resumeGame();
+        });
+      }
 
       // 에셋 프리로드
       try {
