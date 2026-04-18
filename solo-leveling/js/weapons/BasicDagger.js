@@ -6,31 +6,7 @@ export class BasicDagger extends WeaponBase {
         super(scene, player, WEAPONS.basicDagger);
         this.attackRange = 225;
 
-        this._gfxPool = [];
         this._bladePool = [];
-    }
-
-    _getGfx() {
-        let gfx = this._gfxPool.pop();
-        if (!gfx || !gfx.scene) {
-            gfx = this.scene.add.graphics().setDepth(8);
-        } else {
-            gfx.clear();
-            gfx.setVisible(true);
-            gfx.setAlpha(1);
-        }
-        return gfx;
-    }
-
-    _releaseGfx(gfx) {
-        if (!gfx || !gfx.scene) return;
-        gfx.clear();
-        gfx.setVisible(false);
-        if (this._gfxPool.length < 6) {
-            this._gfxPool.push(gfx);
-        } else {
-            gfx.destroy();
-        }
     }
 
     _getBlade() {
@@ -216,13 +192,9 @@ export class BasicDagger extends WeaponBase {
     }
 
     destroy() {
-        for (const gfx of this._gfxPool) {
-            if (gfx && gfx.scene) gfx.destroy();
-        }
         for (const s of this._bladePool) {
             if (s && s.scene) s.destroy();
         }
-        this._gfxPool = [];
         this._bladePool = [];
     }
 }
