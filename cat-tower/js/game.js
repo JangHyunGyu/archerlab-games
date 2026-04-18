@@ -267,6 +267,60 @@
     return body;
   }
 
+  function mergePair(a, b, now) {
+    const tier = a.cat.tier;
+    a.cat.merging = true;
+    b.cat.merging = true;
+
+    const midX = (a.position.x + b.position.x) / 2;
+    const midY = (a.position.y + b.position.y) / 2;
+
+    World.remove(world, a);
+    World.remove(world, b);
+
+    if (tier < TIERS.length - 1) {
+      // 진화
+      const next = createCat(tier + 1, midX, midY, false);
+      if (!next) { err('merge: createCat가 null 반환 — tier 체인 손상'); return; }
+      // 합성 직후는 살짝 튀어오르는 느낌 (위로 소폭 임펄스)
+      Body.setVelocity(next, { x: 0, y: -0.8 });
+
+      score += TIERS[tier + 1].score;
+
+      // 콤보 (0.7초 이내 연쇄 시 배수)
+      if (now - lastMergeAt < 700) comboCount += 1;
+      else comboCount = 1;
+      lastMergeAt = now;
+      if (comboCount >= 2) {
+        const bonus = Math.floor(TIERS[tier + 1].score * 0.25 * (comboCount - 1));
+        score += bonus;
+        showComboFlash(comboCount);
+        sound?.playCombo(comboCount);
+        log(`콤보! ${comboCount}연쇄 +${bonus}pt`);
+      } else {
+        sound?.playMerge(tier + 1);
+      }
+
+      mergeEffects.push({ x: midX, y: midY, r: TIERS[tier + 1].radius, age: 0, max: 22, color: '#FFB84D' });
+      log(`merge tier ${tier}→${tier + 1}(${TIERS[tier + 1].name}) at (${midX.toFixed(1)}, ${midY.toFixed(1)}) score=${score}`);
+
+      // 최종단계(사바나) 최초 달성 축하 — 1게임당 한 번만
+      if (tier + 1 === TIERS.length - 1 && !reachedFinal) {
+        reachedFinal = true;
+        showFlash(tt('flash.legend'), true);
+        sound?.playLegend();
+        log('🏆 사바나 최초 달성!');
+      }
+    } else {
+      // 최종 단계 끼리 붙음 → 소멸 + 보너스
+      score += TIERS[tier].score * 2;
+      mergeEffects.push({ x: midX, y: midY, r: TIERS[tier].radius * 1.3, age: 0, max: 32, color: '#F2B43A' });
+      sound?.playFinalMerge();
+      log(`최종단계 소멸 (tier ${tier}) +${TIERS[tier].score * 2}pt score=${score}`);
+    }
+    updateScoreUI();
+  }
+
   function handleCollision(evt) {
     const now = performance.now();
     for (const pair of evt.pairs) {
@@ -276,58 +330,43 @@
       if (a.isStatic || b.isStatic) continue;
       if (a.cat.merging || b.cat.merging) continue;
       if (a.cat.tier !== b.cat.tier) continue;
+      mergePair(a, b, now);
+    }
+  }
 
-      const tier = a.cat.tier;
-      a.cat.merging = true;
-      b.cat.merging = true;
-
-      const midX = (a.position.x + b.position.x) / 2;
-      const midY = (a.position.y + b.position.y) / 2;
-
-      World.remove(world, a);
-      World.remove(world, b);
-
-      if (tier < TIERS.length - 1) {
-        // 진화
-        const next = createCat(tier + 1, midX, midY, false);
-        if (!next) { err('merge: createCat가 null 반환 — tier 체인 손상'); continue; }
-        // 합성 직후는 살짝 튀어오르는 느낌 (위로 소폭 임펄스)
-        Body.setVelocity(next, { x: 0, y: -0.8 });
-
-        score += TIERS[tier + 1].score;
-
-        // 콤보 (0.7초 이내 연쇄 시 배수)
-        if (now - lastMergeAt < 700) comboCount += 1;
-        else comboCount = 1;
-        lastMergeAt = now;
-        if (comboCount >= 2) {
-          const bonus = Math.floor(TIERS[tier + 1].score * 0.25 * (comboCount - 1));
-          score += bonus;
-          showComboFlash(comboCount);
-          sound?.playCombo(comboCount);
-          log(`콤보! ${comboCount}연쇄 +${bonus}pt`);
-        } else {
-          sound?.playMerge(tier + 1);
+  // Matter.js의 collision 이벤트는 두 바디가 slop 이상 겹쳐야 발사된다.
+  // 마찰로 천천히 미끄러져 들어와 "접촉 거리에 정착"하면 영원히 안 합쳐지는
+  // 케이스가 발생 — 주기적으로 같은 tier 인접쌍을 직접 검사해서 강제 merge.
+  function scanStuckMerges() {
+    if (!world) return;
+    const now = performance.now();
+    const cats = Composite.allBodies(world).filter(
+      (b) => b.label === 'cat' && !b.isStatic && b.cat && !b.cat.merging
+    );
+    const byTier = new Map();
+    for (const c of cats) {
+      if (!byTier.has(c.cat.tier)) byTier.set(c.cat.tier, []);
+      byTier.get(c.cat.tier).push(c);
+    }
+    for (const [tier, group] of byTier) {
+      if (group.length < 2) continue;
+      const threshold = TIERS[tier].radius * 2 + 1.0; // 접촉 + 1px slack
+      const t2 = threshold * threshold;
+      for (let i = 0; i < group.length; i++) {
+        const a = group[i];
+        if (a.cat.merging) continue;
+        for (let j = i + 1; j < group.length; j++) {
+          const b = group[j];
+          if (b.cat.merging) continue;
+          const dx = a.position.x - b.position.x;
+          const dy = a.position.y - b.position.y;
+          if (dx * dx + dy * dy < t2) {
+            log(`stuck merge 감지 tier=${tier} dist=${Math.sqrt(dx * dx + dy * dy).toFixed(2)}`);
+            mergePair(a, b, now);
+            break; // a 제거됨 — 다음 i로
+          }
         }
-
-        mergeEffects.push({ x: midX, y: midY, r: TIERS[tier + 1].radius, age: 0, max: 22, color: '#FFB84D' });
-        log(`merge tier ${tier}→${tier + 1}(${TIERS[tier + 1].name}) at (${midX.toFixed(1)}, ${midY.toFixed(1)}) score=${score}`);
-
-        // 최종단계(사바나) 최초 달성 축하 — 1게임당 한 번만
-        if (tier + 1 === TIERS.length - 1 && !reachedFinal) {
-          reachedFinal = true;
-          showFlash(tt('flash.legend'), true);
-          sound?.playLegend();
-          log('🏆 사바나 최초 달성!');
-        }
-      } else {
-        // 최종 단계 끼리 붙음 → 소멸 + 보너스
-        score += TIERS[tier].score * 2;
-        mergeEffects.push({ x: midX, y: midY, r: TIERS[tier].radius * 1.3, age: 0, max: 32, color: '#F2B43A' });
-        sound?.playFinalMerge();
-        log(`최종단계 소멸 (tier ${tier}) +${TIERS[tier].score * 2}pt score=${score}`);
       }
-      updateScoreUI();
     }
   }
 
@@ -612,6 +651,8 @@
           Engine.update(engine, dt);
           checkGameOver();
           _frameCount++;
+          // 매 30프레임(약 0.5초)마다 stuck merge 검사 — 정적 접촉으로 갇힌 쌍 구제
+          if (_frameCount % 30 === 0) scanStuckMerges();
           // 매 60프레임(약 1초)마다 NaN 감시 + 옵션으로 상태 스냅샷
           if (_frameCount % 60 === 0) {
             assertBodiesFinite('tick');
