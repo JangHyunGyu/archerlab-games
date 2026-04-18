@@ -95,9 +95,7 @@ for (let cycle = 1; cycle <= N_CYCLES; cycle++) {
 
 console.log('\n▶ 메뉴 나가기 → 다시 시작 사이클 5회');
 for (let cycle = 1; cycle <= 5; cycle++) {
-    await page.click('#pause-btn');
-    await page.waitForTimeout(200);
-    await page.click('#exit-btn');
+    await page.click('#home-btn');
     await page.waitForTimeout(400);
     await page.click('#play-btn');
     await page.waitForTimeout(600);

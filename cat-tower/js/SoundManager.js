@@ -464,11 +464,12 @@
         });
 
         // 상위 티어 보너스: Metal shimmer (Air)
+        // 볼륨 더 내리고 지속시간 짧게 — 뒤이어 combo 날 때 위상 간섭으로 "찢어짐" 나는 원인.
         if (t >= 5) {
           this._at(0.05 + this._timeJit(8), () => {
             this._metal.frequency.value = this._jitNote('E6', 0.03);
-            this._metal.volume.value = -28 + t * 0.5;
-            this._metal.triggerAttackRelease('E6', 0.1, this._safeTime(now + 0.05));
+            this._metal.volume.value = -36 + t * 0.5;
+            this._metal.triggerAttackRelease('E6', 0.06, this._safeTime(now + 0.05));
           });
         }
       } catch (e) {}
@@ -502,13 +503,24 @@
     _playComboImpl(n) {
       const now = Tone.now();
 
-      // 이전 combo/merge 보이스 즉시 해제 — 연쇄 콤보 간 누적으로 인한 리미터 포화/찢어짐 방지
+      // 이전 combo/merge 보이스 즉시 해제 — 연쇄 콤보 간 누적으로 인한 리미터 포화/찢어짐 방지.
+      // 이전 merge의 _at 꼬리(메탈 shimmer, 아르페지오)가 펜딩이면 취소까지 해야
+      // 새 콤보 트리거와 동시 발사되어 기포음을 내는 걸 막을 수 있다.
       try {
+        for (const h of this._pendingTimeouts) clearTimeout(h);
+        this._pendingTimeouts.clear();
         this._poly?.releaseAll?.(now);
         this._bell?.releaseAll?.(now);
         this._fm?.releaseAll?.(now);
         this._am?.releaseAll?.(now);
         this._sweep?.releaseAll?.(now);
+        // 모노 신스(membrane/metal/noise)도 꼬리 차단 — tier 5+ merge 직후 combo 시 metal shimmer가
+        // 가장 큰 충돌 원인이었음. bass/click은 combo에 안 쓰지만 drop 잔향 차단 겸 포함.
+        this._membrane?.triggerRelease?.(now);
+        this._metal?.triggerRelease?.(now);
+        this._noise?.triggerRelease?.(now);
+        this._bass?.triggerRelease?.(now);
+        this._click?.triggerRelease?.(now);
       } catch {}
 
       try {

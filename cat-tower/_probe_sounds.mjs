@@ -94,9 +94,7 @@ if (failed.length) {
 console.log('\n▶ Phase 2: Tier 10 충돌을 실제 game world에서 강제 트리거');
 
 // 메뉴로 돌아가서 다시 시작
-await page.click('#pause-btn');
-await page.waitForTimeout(300);
-await page.click('#exit-btn');
+await page.click('#home-btn');
 await page.waitForTimeout(400);
 await page.click('#play-btn');
 await page.waitForTimeout(1200);
