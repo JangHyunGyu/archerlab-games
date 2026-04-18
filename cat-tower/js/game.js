@@ -41,7 +41,7 @@
     else { _errLast = key; _errRepeat = 1; }
     const lang = (window.I18N && window.I18N.getLang && window.I18N.getLang()) || (document.documentElement.lang || 'ko').substring(0, 2);
     const appId = lang === 'ko' ? ERROR_APP_ID_BASE : `${ERROR_APP_ID_BASE}-${lang}`;
-    const ctx = `sess:${_errSession} | path:${location.pathname} | online:${navigator.onLine} | vw:${innerWidth}x${innerHeight} | running=${typeof running !== 'undefined' ? running : '?'} | paused=${typeof paused !== 'undefined' ? paused : '?'} | score=${typeof score !== 'undefined' ? score : '?'}`;
+    const ctx = `sess:${_errSession} | path:${location.pathname} | online:${navigator.onLine} | vw:${innerWidth}x${innerHeight} | running=${typeof running !== 'undefined' ? running : '?'} | score=${typeof score !== 'undefined' ? score : '?'}`;
     const payload = {
       appId, userId: '',
       message: `[${cls}:${type}] ${msg}`.substring(0, 500),
@@ -115,7 +115,6 @@
   let nextCanvas, nextCtx;
   let dpr = 1;
   let running = false;
-  let paused = false;
   let gameOver = false;
   let score = 0;
   let bestScore = 0;
@@ -140,7 +139,6 @@
     game: $('game'),
   };
   const modals = {
-    pause: $('pause-modal'),
     gameover: $('gameover-modal'),
     how: $('how-modal'),
     rank: $('rank-modal'),
@@ -178,7 +176,7 @@
   // 물리 상태(위치/속도/각속도)를 직렬화하므로 이어서하기는 비결정적(재개 후 경로가 약간 달라질 수 있음).
   // 게임 체감상 문제 없음 — 중요 상태(점수/티어/필드 구성)는 완벽히 보존된다.
   function autoSave() {
-    if (!running || paused || gameOver || !world) return;
+    if (!running || gameOver || !world) return;
     try {
       const bodies = Composite.allBodies(world)
         .filter(b => b.label === 'cat' && !b.isStatic && b.cat && !b.cat.merging);
@@ -419,7 +417,7 @@
 
   // merge 아닌 충돌(바닥/벽/다른 티어)에만 짧은 "톡" 재생
   function handleBonk(evt) {
-    if (!sound || paused || gameOver) return;
+    if (!sound || gameOver) return;
     const now = performance.now();
     for (const pair of evt.pairs) {
       const a = pair.bodyA, b = pair.bodyB;
@@ -497,7 +495,6 @@
   function dropCurrent() {
     if (!currentCat) { log('dropCurrent skip: currentCat 없음'); return; }
     if (dropCooldown) { log('dropCurrent skip: cooldown'); return; }
-    if (paused) { log('dropCurrent skip: paused'); return; }
     if (gameOver) { log('dropCurrent skip: gameOver'); return; }
     const tier = currentCat.cat.tier;
     const pos = { x: currentCat.position.x, y: currentCat.position.y };
@@ -514,7 +511,7 @@
     setTimeout(() => {
       dropCooldown = false;
       // running 체크 추가: 메뉴 이탈 후 stray 고양이 생성 방지
-      if (running && !gameOver && !paused) spawnCurrent();
+      if (running && !gameOver) spawnCurrent();
     }, DROP_COOLDOWN_MS);
   }
 
@@ -693,24 +690,22 @@
         return;
       }
       try {
-        if (!paused) {
-          const dt = Math.min(16.666, ts - lastTs || 16.666);
-          if (dt > 50) warn(`프레임 지연 감지 dt=${dt.toFixed(1)}ms (탭 백그라운드?)`);
-          Engine.update(engine, dt);
-          checkGameOver();
-          _frameCount++;
-          // 매 30프레임(약 0.5초)마다 stuck merge 검사 — 정적 접촉으로 갇힌 쌍 구제
-          if (_frameCount % 30 === 0) scanStuckMerges();
-          // 매 60프레임(약 1초)마다 NaN 감시 + 옵션으로 상태 스냅샷
-          if (_frameCount % 60 === 0) {
-            assertBodiesFinite('tick');
-            _lastFpsAt = ts;
-            _framesSinceFps = 0;
-          }
-          // 매 90프레임(약 1.5초)마다 이어서하기용 자동저장
-          if (_frameCount % 90 === 0) autoSave();
-          _framesSinceFps++;
+        const dt = Math.min(16.666, ts - lastTs || 16.666);
+        if (dt > 50) warn(`프레임 지연 감지 dt=${dt.toFixed(1)}ms (탭 백그라운드?)`);
+        Engine.update(engine, dt);
+        checkGameOver();
+        _frameCount++;
+        // 매 30프레임(약 0.5초)마다 stuck merge 검사 — 정적 접촉으로 갇힌 쌍 구제
+        if (_frameCount % 30 === 0) scanStuckMerges();
+        // 매 60프레임(약 1초)마다 NaN 감시 + 옵션으로 상태 스냅샷
+        if (_frameCount % 60 === 0) {
+          assertBodiesFinite('tick');
+          _lastFpsAt = ts;
+          _framesSinceFps = 0;
         }
+        // 매 90프레임(약 1.5초)마다 이어서하기용 자동저장
+        if (_frameCount % 90 === 0) autoSave();
+        _framesSinceFps++;
         render();
       } catch (e) {
         err('loop tick 예외:', e.message, e.stack);
@@ -733,7 +728,6 @@
     lastMergeAt = 0;
     reachedFinal = false;
     gameOver = false;
-    paused = false;
     running = true;
     dropCooldown = false;
     mergeEffects.length = 0;
@@ -776,7 +770,6 @@
       lastMergeAt = 0;
       reachedFinal = !!data.reachedFinal;
       gameOver = false;
-      paused = false;
       running = true;
       dropCooldown = false;
       mergeEffects.length = 0;
@@ -847,14 +840,6 @@
     }
   }
 
-  function togglePause() {
-    if (gameOver) { log('togglePause skip: gameOver'); return; }
-    paused = !paused;
-    log(`togglePause → paused=${paused}`);
-    if (paused) { show(modals.pause); sound?.playPause(); }
-    else { hide(modals.pause); sound?.playResume(); }
-  }
-
   // 사운드 토글 버튼 UI 반영
   function updateSoundBtn() {
     const btn = $('sound-btn');
@@ -865,13 +850,13 @@
 
   function exitToMenu() {
     log('exitToMenu');
+    // 게임 오버가 아니라 홈 이탈한 경우 한 번 flush — 주기 저장(1.5s) 사이 이탈해도 보존
+    if (running && !gameOver) autoSave();
     running = false;
-    paused = false;
     gameOver = false;
     currentCat = null; // 이전 게임 참조 정리
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
     sound?.stopAll();
-    hide(modals.pause);
     hide(modals.gameover);
     hide(screens.game);
     show(screens.menu);
@@ -1040,8 +1025,8 @@
       log(`best 로드: ${bestScore}`);
 
       // 필수 DOM 엘리먼트 검증 — 하나라도 누락되면 게임 자체가 동작 안 함
-      const required = ['play-btn', 'resume-btn-menu', 'how-btn', 'how-close', 'pause-btn', 'resume-btn',
-        'restart-btn', 'exit-btn', 'replay-btn', 'menu-btn', 'rank-btn', 'rank-close',
+      const required = ['play-btn', 'resume-btn-menu', 'how-btn', 'how-close', 'home-btn',
+        'replay-btn', 'menu-btn', 'rank-btn', 'rank-close',
         'rank-content', 'submit-rank-btn', 'skip-rank-btn', 'nickname-input', 'submit-status',
         'lang-ko', 'lang-en', 'score', 'best-score',
         'final-score', 'new-record', 'combo-flash', 'tier-preview'];
@@ -1057,11 +1042,8 @@
       $('how-btn').addEventListener('click', () => { sound?.playButton(); log('UI: how 열기'); show(modals.how); });
       $('how-close').addEventListener('click', () => { sound?.playButton(); log('UI: how 닫기'); hide(modals.how); });
 
-      // pause 버튼 (HUD) — togglePause가 이미 pause/resume 사운드 처리
-      $('pause-btn').addEventListener('click', togglePause);
-      $('resume-btn').addEventListener('click', togglePause);
-      $('restart-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 재시작 클릭'); hide(modals.pause); startGame(); });
-      $('exit-btn').addEventListener('click', () => { sound?.playButton(); exitToMenu(); });
+      // 홈 버튼 (HUD) — 바로 메인 메뉴로. 진행중이면 자동저장이 걸려있어 '이어서 하기'로 복귀 가능
+      $('home-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 홈 클릭'); exitToMenu(); });
       $('replay-btn').addEventListener('click', () => { sound?.playButton(); log('UI: 다시도전 클릭'); hide(modals.gameover); startGame(); });
       $('menu-btn').addEventListener('click', () => { sound?.playButton(); exitToMenu(); });
 
@@ -1170,9 +1152,8 @@
         if (e.key === 'Escape') {
           if (!modals.how.classList.contains('hidden')) hide(modals.how);
           else if (!modals.rank.classList.contains('hidden')) hide(modals.rank);
-          else if (running) togglePause();
         }
-        if (e.key === ' ' && running && !paused && !gameOver) {
+        if (e.key === ' ' && running && !gameOver) {
           // 닉네임 입력 중 스페이스는 그대로 허용
           if (document.activeElement && document.activeElement.id === 'nickname-input') return;
           e.preventDefault();
