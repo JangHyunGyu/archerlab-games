@@ -7,6 +7,7 @@ export class BasicDagger extends WeaponBase {
         this.attackRange = 225;
 
         this._bladePool = [];
+        this._activeThrusts = []; // in-flight { tween, blades } pairs for cleanup on destroy
     }
 
     _getBlade() {
@@ -53,7 +54,7 @@ export class BasicDagger extends WeaponBase {
 
         // Normal-sized dagger that TRANSLATES forward and back — position covers the range, not size.
         // proj_dagger is 64px tall, origin (0.5, 0.94) → blade tip is ≈60.16px from pommel.
-        const BLADE_SCALE = 1.0;
+        const BLADE_SCALE = 2.0;
         const bladeVisualLength = 60.16 * BLADE_SCALE; // ~84px
         const pommelRestDist = 14; // pommel near player at rest
         const pommelMaxDist = Math.max(pommelRestDist + 60, this.attackRange - bladeVisualLength);
@@ -73,8 +74,11 @@ export class BasicDagger extends WeaponBase {
 
         const history = [];
         const progress = { t: 0 };
+        const blades = [mainBlade, trail1, trail2, trail3];
+        const thrustEntry = { tween: null, blades };
+        this._activeThrusts.push(thrustEntry);
 
-        this.scene.tweens.add({
+        thrustEntry.tween = this.scene.tweens.add({
             targets: progress,
             t: 1,
             duration: 320,
@@ -137,6 +141,8 @@ export class BasicDagger extends WeaponBase {
                 this._releaseBlade(trail1);
                 this._releaseBlade(trail2);
                 this._releaseBlade(trail3);
+                const i = this._activeThrusts.indexOf(thrustEntry);
+                if (i !== -1) this._activeThrusts.splice(i, 1);
             },
         });
 
@@ -201,6 +207,16 @@ export class BasicDagger extends WeaponBase {
     }
 
     destroy() {
+        // Kill in-flight thrusts: stop their tweens and destroy all referenced blades
+        const tweens = this.scene?.tweens;
+        for (const entry of this._activeThrusts) {
+            if (entry.tween && tweens) tweens.remove(entry.tween);
+            for (const b of entry.blades) {
+                if (b && b.scene) b.destroy();
+            }
+        }
+        this._activeThrusts = [];
+        // Clean up pooled (inactive) blades
         for (const s of this._bladePool) {
             if (s && s.scene) s.destroy();
         }
