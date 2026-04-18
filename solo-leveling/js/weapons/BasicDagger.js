@@ -95,7 +95,6 @@ export class BasicDagger extends WeaponBase {
         trail2.setAlpha(0);
         trail3.setAlpha(0);
 
-        const gfx = this._getGfx();
         const history = [];
         const progress = { t: 0 };
 
@@ -147,10 +146,8 @@ export class BasicDagger extends WeaponBase {
                     }
                 }
 
-                gfx.clear();
             },
             onComplete: () => {
-                this._releaseGfx(gfx);
                 this._releaseBlade(mainBlade);
                 this._releaseBlade(trail1);
                 this._releaseBlade(trail2);
