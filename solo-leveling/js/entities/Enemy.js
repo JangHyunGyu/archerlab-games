@@ -138,6 +138,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const s = typeData.size;
         this.body.setSize(s * 1.2, s * 1.2);
         this.setDisplaySize(s * 2, s * 2);
+        // Cache resting scale AFTER setDisplaySize so squash-and-stretch doesn't drift
+        this._restScaleX = this.scaleX;
+        this._restScaleY = this.scaleY;
+        if (this._squashRestoreTimer) {
+            this._squashRestoreTimer.remove(false);
+            this._squashRestoreTimer = null;
+        }
 
         this.animFrame = 0;
         this.animTimer = 0;
@@ -323,11 +330,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         });
 
-        // Squash-and-stretch for hit punch (preserve spawn-time displaySize by scaling off current)
-        const _sx = this.scaleX, _sy = this.scaleY;
-        this.setScale(_sx * 1.15, _sy * 0.88);
-        this.scene.time.delayedCall(70, () => {
-            if (this.active) this.setScale(_sx, _sy);
+        // Squash-and-stretch for hit punch — always based on resting scale (prevents drift under rapid hits)
+        const restX = this._restScaleX ?? this.scaleX;
+        const restY = this._restScaleY ?? this.scaleY;
+        if (this._squashRestoreTimer) {
+            this._squashRestoreTimer.remove(false);
+            this._squashRestoreTimer = null;
+        }
+        this.setScale(restX * 1.15, restY * 0.88);
+        this._squashRestoreTimer = this.scene.time.delayedCall(70, () => {
+            this._squashRestoreTimer = null;
+            if (this.active) this.setScale(restX, restY);
         });
 
         // Crit: stronger kick — screen shake + white ring burst at hit location
