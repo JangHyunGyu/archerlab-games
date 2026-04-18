@@ -79,8 +79,10 @@ export class BasicDagger extends WeaponBase {
         const mainBlade = this._getBlade();
         const trail1 = this._getBlade();
         const trail2 = this._getBlade();
+        const trail3 = this._getBlade();
         trail1.setAlpha(0);
         trail2.setAlpha(0);
+        trail3.setAlpha(0);
 
         const gfx = this._getGfx();
         const history = [];
@@ -125,7 +127,7 @@ export class BasicDagger extends WeaponBase {
                 mainBlade.setAlpha(0.95);
 
                 // Afterimage trails (shadow clones of the blade)
-                const trails = [trail1, trail2];
+                const trails = [trail1, trail2, trail3];
                 for (let i = 0; i < trails.length; i++) {
                     const idx = history.length - 1 - (i + 1) * 2;
                     if (idx >= 0) {
@@ -134,7 +136,7 @@ export class BasicDagger extends WeaponBase {
                         trails[i].setPosition(h.hiltX, h.hiltY);
                         trails[i].setRotation(baseAngle + Math.PI / 2);
                         trails[i].setScale(ts);
-                        trails[i].setAlpha(h.reach * (0.35 - i * 0.12));
+                        trails[i].setAlpha(h.reach * (0.4 - i * 0.1));
                     } else {
                         trails[i].setAlpha(0);
                     }
@@ -166,6 +168,7 @@ export class BasicDagger extends WeaponBase {
                 this._releaseBlade(mainBlade);
                 this._releaseBlade(trail1);
                 this._releaseBlade(trail2);
+                this._releaseBlade(trail3);
             },
         });
 
