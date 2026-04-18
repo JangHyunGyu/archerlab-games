@@ -46,6 +46,11 @@
       this._pendingMergeTier = -1;
       this._mergeMicrotaskScheduled = false;
 
+      // 같은 tick의 combo 사운드 합치기용 — 최고 레벨 하나로 합쳐 보이스 적층/찢어짐 방지
+      // (연쇄 merge로 playCombo가 10ms 안에 여러 번 호출되면 전부 최고 레벨 한 번으로 축약)
+      this._pendingComboLevel = -1;
+      this._comboMicrotaskScheduled = false;
+
       this._visibilityHandler = () => {
         if (!document.hidden && this.enabled && this._initialized) {
           this.ensureContext();
@@ -256,6 +261,7 @@
       for (const h of this._pendingTimeouts) clearTimeout(h);
       this._pendingTimeouts.clear();
       this._pendingMergeTier = -1;
+      this._pendingComboLevel = -1;
       if (!this._hasTone()) return;
       try {
         const now = Tone.now();
@@ -468,74 +474,97 @@
       } catch (e) {}
     }
 
-    // ── COMBO: 상승 5 레이어 ─────────────────────────────────────
+    // ── COMBO: 상승 코드 — merge와 동일한 마이크로태스크 코얼레싱 ──
+    // 같은 tick에 연쇄 merge로 playCombo가 여러 번 호출되면 최고 레벨 하나로 합침.
+    // (벨 아르페지오 제거: 4음 × 40ms 간격 release 0.25s가 다음 combo와 겹쳐 찢어지던 원인)
     playCombo(level) {
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
       // 같은 tick에 큐된 merge 사운드는 combo가 흡수 — 적층 방지
       this._pendingMergeTier = -1;
-      const now = Tone.now();
+
       const n = Math.max(2, Math.min(8, level));
+      if (n > this._pendingComboLevel) this._pendingComboLevel = n;
+      if (this._comboMicrotaskScheduled) return;
+      this._comboMicrotaskScheduled = true;
+
+      Promise.resolve().then(() => {
+        this._comboMicrotaskScheduled = false;
+        const lvl = this._pendingComboLevel;
+        this._pendingComboLevel = -1;
+        if (lvl < 0) return;
+        if (!this._hasTone()) return;
+        this._playComboImpl(lvl);
+      });
+    }
+
+    _playComboImpl(n) {
+      const now = Tone.now();
+
+      // 이전 combo/merge 보이스 즉시 해제 — 연쇄 콤보 간 누적으로 인한 리미터 포화/찢어짐 방지
+      try {
+        this._poly?.releaseAll?.(now);
+        this._bell?.releaseAll?.(now);
+        this._fm?.releaseAll?.(now);
+        this._am?.releaseAll?.(now);
+        this._sweep?.releaseAll?.(now);
+      } catch {}
 
       try {
-        // 콤보 레벨마다 반음씩 상승
+        // 콤보 레벨마다 반음씩 상승 (C5 기준)
         const semitonesUp = n - 2;
-        const baseFreq = 523.25 * Math.pow(2, semitonesUp / 12); // C5 기준 상행
-        const thirdFreq = baseFreq * 1.26;
+        const baseFreq = 523.25 * Math.pow(2, semitonesUp / 12);
         const fifthFreq = baseFreq * 1.498;
         const octaveFreq = baseFreq * 2;
 
-        // L1: Bell 상행 아르페지오 (Mid/Hi)
-        const arp = [baseFreq, thirdFreq, fifthFreq, octaveFreq];
-        arp.forEach((f, i) => {
-          this._at(i * 0.04, () => {
-            const note = Tone.Frequency(f * this._jitter(0.01), 'hz').toNote();
-            this._bell.set({ envelope: { attack: 0.001, decay: 0.07, sustain: 0.25, release: 0.25 } });
-            this._bell.volume.value = -6;
-            this._bell.triggerAttackRelease(note, 0.2, this._safeTime(now + i * 0.04));
-          });
-        });
+        // L1: Poly 파워 코드 (Body) — 주역, 단발 tight 히트
+        const chord = [
+          Tone.Frequency(baseFreq, 'hz').toNote(),
+          Tone.Frequency(fifthFreq, 'hz').toNote(),
+          Tone.Frequency(octaveFreq, 'hz').toNote(),
+        ];
+        this._poly.set({ envelope: { attack: 0.003, decay: 0.1, sustain: 0.35, release: 0.18 } });
+        this._poly.volume.value = -10;
+        this._poly.triggerAttackRelease(chord, 0.22, now);
 
-        // L2: Poly 파워 코드 (Body)
+        // L2: Bell 단발 "딩" — 아르페지오 대신 최고음 한 번만 (꼬리 짧게)
         this._at(0.005, () => {
-          const chord = [
-            Tone.Frequency(baseFreq, 'hz').toNote(),
-            Tone.Frequency(fifthFreq, 'hz').toNote(),
-            Tone.Frequency(octaveFreq, 'hz').toNote(),
-          ];
-          this._poly.set({ envelope: { attack: 0.003, decay: 0.12, sustain: 0.4, release: 0.25 } });
-          this._poly.volume.value = -8;
-          this._poly.triggerAttackRelease(chord, 0.3, this._safeTime(now));
-        });
-
-        // L3: FM 그리트 (Body) — 에너지
-        this._at(0.015, () => {
-          this._fm.set({ harmonicity: 2.5 + n * 0.25, modulationIndex: 5 + n * 1.5 });
-          this._fm.volume.value = -14 + n * 0.4;
-          this._fm.triggerAttackRelease(
-            Tone.Frequency(baseFreq, 'hz').toNote(), 0.22, this._safeTime(now + 0.015)
+          this._bell.set({ envelope: { attack: 0.001, decay: 0.07, sustain: 0.2, release: 0.15 } });
+          this._bell.volume.value = -10;
+          this._bell.triggerAttackRelease(
+            Tone.Frequency(octaveFreq * this._jitter(0.01), 'hz').toNote(),
+            0.18, this._safeTime(now + 0.005)
           );
         });
 
-        // L4: AM 트레몰로 (Body) — 진동감 (콤보 3+)
+        // L3: FM 그리트 (Body) — 에너지
+        this._at(0.012, () => {
+          this._fm.set({ harmonicity: 2.5 + n * 0.25, modulationIndex: 5 + n * 1.5 });
+          this._fm.volume.value = -15 + n * 0.4;
+          this._fm.triggerAttackRelease(
+            Tone.Frequency(baseFreq, 'hz').toNote(), 0.18, this._safeTime(now + 0.012)
+          );
+        });
+
+        // L4: AM 트레몰로 (콤보 3+)
         if (n >= 3) {
-          this._at(0.025, () => {
+          this._at(0.02, () => {
             this._am.set({ harmonicity: 2 + n * 0.15 });
-            this._am.volume.value = -16 + n * 0.5;
+            this._am.volume.value = -17 + n * 0.5;
             this._am.triggerAttackRelease(
-              Tone.Frequency(octaveFreq, 'hz').toNote(), 0.25, this._safeTime(now + 0.025)
+              Tone.Frequency(octaveFreq, 'hz').toNote(), 0.2, this._safeTime(now + 0.02)
             );
           });
         }
 
-        // L5: Sweep 필터 상승 (Body) — 고조감 (콤보 4+)
+        // L5: Sweep 필터 (콤보 4+)
         if (n >= 4) {
-          this._at(0.01, () => {
+          this._at(0.008, () => {
             this._sweep.set({ filterEnvelope: { octaves: 3 + n * 0.3 } });
-            this._sweep.volume.value = -18 + n * 0.5;
+            this._sweep.volume.value = -19 + n * 0.5;
             this._sweep.triggerAttackRelease(
-              Tone.Frequency(baseFreq / 2, 'hz').toNote(), 0.25, this._safeTime(now + 0.01)
+              Tone.Frequency(baseFreq / 2, 'hz').toNote(), 0.2, this._safeTime(now + 0.008)
             );
           });
         }
