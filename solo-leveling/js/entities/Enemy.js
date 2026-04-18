@@ -19,12 +19,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Create new one
         try {
             const emitter = scene.add.particles(x, y, 'particle_glow', {
-                speed: { min: 40, max: 140 },
-                scale: { start: 0.8, end: 0 },
-                alpha: { start: 0.9, end: 0 },
-                lifespan: { min: 300, max: 600 },
-                tint: [COLORS.SHADOW_PRIMARY, 0x7b2fff, 0x4400aa],
-                blendMode: 'ADD',
+                speed: { min: 80, max: 220 },
+                scale: { start: 1.4, end: 0 },
+                alpha: { start: 0.95, end: 0 },
+                lifespan: { min: 400, max: 750 },
+                tint: [0xcc0011, 0xaa0010, 0x660008, 0xdd2020],
                 emitting: false,
             });
             emitter.setDepth(15);
@@ -45,12 +44,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         try {
             const sparks = scene.add.particles(x, y, 'particle_spark', {
-                speed: { min: 60, max: 180 },
-                scale: { start: 0.6, end: 0 },
+                speed: { min: 100, max: 260 },
+                scale: { start: 1.0, end: 0 },
                 alpha: { start: 1, end: 0 },
-                lifespan: { min: 200, max: 400 },
-                tint: 0xddaaff,
-                blendMode: 'ADD',
+                lifespan: { min: 300, max: 550 },
+                tint: [0xff3344, 0xdd1122, 0x990008],
                 emitting: false,
             });
             sparks.setDepth(15);
@@ -334,7 +332,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // Crit: stronger kick — screen shake + white ring burst at hit location
         if (isCrit && this.scene.cameras?.main) {
-            this.scene.cameras.main.shake(60, 0.0025);
+            this.scene.cameras.main.shake(90, 0.004);
             try {
                 const ring = this.scene.add.image(this.x, this.y, 'particle_ring')
                     .setDepth(16)
@@ -351,6 +349,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 });
             } catch (_) { /* ring VFX optional */ }
         }
+
+        // Blood spurt on every hit (bigger on crit)
+        this._spawnHitBlood(isCrit);
 
         // Knockback
         if (knockbackX !== undefined) {
@@ -414,31 +415,103 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    _spawnHitBlood(isCrit) {
+        if (!this.scene) return;
+        const count = isCrit ? 8 : 4;
+        const maxSpeed = isCrit ? 160 : 95;
+        for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const s = 45 + Math.random() * maxSpeed;
+            const r = 1.6 + Math.random() * 2.2;
+            const color = Math.random() < 0.4 ? 0x660008 : (Math.random() < 0.7 ? 0xcc1020 : 0xdd3030);
+            const drop = this.scene.add.circle(this.x, this.y, r, color, 0.95).setDepth(10);
+            this.scene.tweens.add({
+                targets: drop,
+                x: this.x + Math.cos(a) * s,
+                y: this.y + Math.sin(a) * s,
+                alpha: 0,
+                scale: 0.35,
+                duration: 280 + Math.random() * 220,
+                ease: 'Quad.easeOut',
+                onComplete: () => drop.destroy(),
+            });
+        }
+    }
+
     _deathEffect() {
         try {
-            // Shadow burst particles (pooled)
+            const sizeFactor = Math.max(1, (this.displayWidth || 30) / 30);
+            const isElite = this.isElite;
+
+            // Pooled red blood burst (main spray)
             const emitter = Enemy._getDeathEmitter(this.scene, this.x, this.y);
-            if (emitter) emitter.explode(this.isElite ? 15 : 8);
+            if (emitter) emitter.explode(isElite ? 28 : 16);
 
-            // Spark particles (pooled)
+            // Pooled sparks (gore flecks)
             const sparks = Enemy._getDeathSparks(this.scene, this.x, this.y);
-            if (sparks) sparks.explode(this.isElite ? 8 : 4);
+            if (sparks) sparks.explode(isElite ? 16 : 9);
 
-            this.scene.time.delayedCall(700, () => {
+            // Bright red core burst
+            const core = this.scene.add.circle(this.x, this.y, 9 * sizeFactor, 0xcc0011, 0.95).setDepth(10);
+            this.scene.tweens.add({
+                targets: core, scale: 3, alpha: 0,
+                duration: 360, onComplete: () => core.destroy(),
+            });
+
+            // Dark splash underlay
+            const splash = this.scene.add.circle(this.x, this.y, 13 * sizeFactor, 0x4a0006, 0.8).setDepth(4);
+            this.scene.tweens.add({
+                targets: splash, scale: 2.6, alpha: 0,
+                duration: 700, onComplete: () => splash.destroy(),
+            });
+
+            // Flying gore chunks (bigger, irregular)
+            const chunkCount = isElite ? 16 : 10;
+            for (let i = 0; i < chunkCount; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const s = 90 + Math.random() * 140;
+                const r = 2.8 + Math.random() * 3.2;
+                const color = [0x660008, 0xaa0010, 0xdd2020][Math.floor(Math.random() * 3)];
+                const chunk = this.scene.add.circle(this.x, this.y, r, color, 0.95).setDepth(10);
+                this.scene.tweens.add({
+                    targets: chunk,
+                    x: this.x + Math.cos(a) * s,
+                    y: this.y + Math.sin(a) * s + 20, // slight downward arc
+                    alpha: 0,
+                    scale: 0.4,
+                    duration: 550 + Math.random() * 450,
+                    ease: 'Quad.easeOut',
+                    onComplete: () => chunk.destroy(),
+                });
+            }
+
+            // Persistent blood pool on ground (elite = bigger)
+            const poolW = 28 * sizeFactor * (isElite ? 1.4 : 1);
+            const poolH = 10 * sizeFactor * (isElite ? 1.4 : 1);
+            const bloodPool = this.scene.add.ellipse(this.x, this.y + 6, poolW, poolH, 0x2a0006, 0.75).setDepth(3);
+            this.scene.tweens.add({
+                targets: bloodPool,
+                scaleX: 1.8, scaleY: 1.8,
+                alpha: 0,
+                duration: 2200,
+                onComplete: () => bloodPool.destroy(),
+            });
+
+            this.scene.time.delayedCall(800, () => {
                 Enemy._returnDeathEmitter(emitter);
                 Enemy._returnDeathSparks(sparks);
             });
         } catch (e) {
             // Fallback
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 6; i++) {
                 const p = this.scene.add.circle(
                     this.x + Phaser.Math.Between(-10, 10), this.y + Phaser.Math.Between(-10, 10),
-                    Phaser.Math.Between(2, 5), COLORS.SHADOW_PRIMARY, 0.7
+                    Phaser.Math.Between(2, 5), 0xcc0011, 0.85
                 ).setDepth(15);
                 this.scene.tweens.add({
                     targets: p, alpha: 0, scale: 0,
-                    x: p.x + Phaser.Math.Between(-30, 30), y: p.y + Phaser.Math.Between(-30, 30),
-                    duration: 400, onComplete: () => p.destroy(),
+                    x: p.x + Phaser.Math.Between(-40, 40), y: p.y + Phaser.Math.Between(-40, 40),
+                    duration: 500, onComplete: () => p.destroy(),
                 });
             }
         }
