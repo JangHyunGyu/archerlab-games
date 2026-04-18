@@ -82,10 +82,10 @@ for (let cycle = 1; cycle <= N_CYCLES; cycle++) {
         await page.waitForTimeout(450);
     }
 
-    // 일시정지 → 재시작 (startGame 재호출)
-    await page.click('#pause-btn');
+    // 홈 → 플레이 (startGame 재호출)
+    await page.click('#home-btn');
     await page.waitForTimeout(200);
-    await page.click('#restart-btn');
+    await page.click('#play-btn');
     await page.waitForTimeout(500);
 
     const s = await snapshot(`cycle-${cycle}`);

@@ -87,48 +87,24 @@ try {
     });
     console.log('  state2:', state2);
 
-    step('10. Test pause');
-    await page.click('#pause-btn');
-    await page.waitForTimeout(400);
-    const pauseVisible = await page.evaluate(() => {
-        return !document.getElementById('pause-modal').classList.contains('hidden');
-    });
-    console.log('  pause modal visible:', pauseVisible);
-
-    step('11. Resume');
-    await page.click('#resume-btn');
-    await page.waitForTimeout(400);
-
-    step('12. Test Escape key pauses');
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(400);
-    const pauseByEsc = await page.evaluate(() => {
-        return !document.getElementById('pause-modal').classList.contains('hidden');
-    });
-    console.log('  pause by ESC:', pauseByEsc);
-    await page.click('#resume-btn');
-    await page.waitForTimeout(300);
-
-    step('13. Space drop');
+    step('10. Space drop');
     await page.keyboard.press('Space');
     await page.waitForTimeout(800);
 
-    step('14. Exit to menu');
-    await page.click('#pause-btn');
-    await page.waitForTimeout(300);
-    await page.click('#exit-btn');
+    step('11. Exit to menu via home button');
+    await page.click('#home-btn');
     await page.waitForTimeout(400);
     const backToMenu = await page.evaluate(() => {
         return !document.getElementById('menu').classList.contains('hidden');
     });
     console.log('  back to menu:', backToMenu);
 
-    step('15. Replay — start game 2nd time');
+    step('12. Replay — start game 2nd time');
     await page.click('#play-btn');
     await page.waitForTimeout(1200);
     await page.screenshot({ path: 'c:/workspace/test-output/cat-05-replay.png' });
 
-    step('16. Drag pointer across canvas (mouse move)');
+    step('13. Drag pointer across canvas (mouse move)');
     await page.mouse.move(rect.x + rect.w * 0.2, rect.y + rect.h * 0.15);
     await page.waitForTimeout(100);
     await page.mouse.move(rect.x + rect.w * 0.8, rect.y + rect.h * 0.15);
@@ -136,7 +112,7 @@ try {
     await page.mouse.move(rect.x + rect.w * 0.5, rect.y + rect.h * 0.15);
     await page.waitForTimeout(300);
 
-    step('17. Force-trigger game over by stacking many cats at top');
+    step('14. Force-trigger game over by stacking many cats at top');
     await page.evaluate(() => {
         // Dispatch rapid drops to stack cats
         const canvas = document.getElementById('canvas');
@@ -150,7 +126,7 @@ try {
     }
     await page.screenshot({ path: 'c:/workspace/test-output/cat-06-stacked.png' });
 
-    step('18. Wait for potential gameover');
+    step('15. Wait for potential gameover');
     await page.waitForTimeout(4000);
     const gameOverState = await page.evaluate(() => {
         return {
@@ -162,7 +138,7 @@ try {
     await page.screenshot({ path: 'c:/workspace/test-output/cat-07-gameover.png' });
 
     if (gameOverState.gameoverVisible) {
-        step('19. Replay from gameover');
+        step('16. Replay from gameover');
         await page.click('#replay-btn');
         await page.waitForTimeout(1000);
     }
