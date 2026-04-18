@@ -30,9 +30,9 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
         const typeStats = {
-            melee:  { damageMult: 1.2, speedRatio: 1.0, range: 130, attackCD: 250 },
-            tank:   { damageMult: 0.8, speedRatio: 0.8, range: 150, attackCD: 450 },
-            ranged: { damageMult: 1.5, speedRatio: 0.85, range: 250, attackCD: 300 },
+            melee:  { damageMult: 1.4, speedRatio: 1.0, range: 130, attackCD: 250 },
+            tank:   { damageMult: 1.0, speedRatio: 0.8, range: 150, attackCD: 450 },
+            ranged: { damageMult: 1.75, speedRatio: 0.85, range: 250, attackCD: 300 },
         };
 
         const stats = typeStats[this.soldierType] || typeStats.melee;
@@ -79,8 +79,8 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
         // Update damage and speed with current player stats
         const playerAttack = player.stats.attack * (1 + (player._tempAtkBuff || 0));
-        const multMap = { melee: 1.2, tank: 0.8, ranged: 1.5 };
-        this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 1.2));
+        const multMap = { melee: 1.4, tank: 1.0, ranged: 1.75 };
+        this.damage = Math.floor(playerAttack * (multMap[this.soldierType] || 1.4));
         this.speed = player.stats.speed * this.speedRatio;
 
         // Guard mode: find enemy closest to SOLDIER within guard radius of player
@@ -221,24 +221,70 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    // Beru: ranged acid spit (shadow version)
+    // Beru: ranged acid spit (shadow version) — piercing projectile
     _beruAttack(target) {
         const proj = this.scene.add.sprite(this.x, this.y, 'proj_beru')
             .setDepth(8).setTint(COLORS.SHADOW_PRIMARY).setScale(1.3);
         const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
 
+        const travelDist = this.attackRange * 1.6;
+        const endX = this.x + Math.cos(angle) * travelDist;
+        const endY = this.y + Math.sin(angle) * travelDist;
+        const duration = 450;
+        const dmg = this.damage;
+
+        const pierced = new Set();
+        let prevX = this.x;
+        let prevY = this.y;
+
         this.scene.tweens.add({
             targets: proj,
-            x: target.x,
-            y: target.y,
+            x: endX,
+            y: endY,
             rotation: angle + Math.PI * 4,
-            duration: 350,
-            onComplete: () => {
-                if (target.active) {
-                    target.takeDamage(this.damage, this.x, this.y);
+            duration,
+            ease: 'Linear',
+            onUpdate: () => {
+                if (!proj.active) return;
+                const enemies = [
+                    ...(this.scene.enemyManager?.getActiveEnemies() || []),
+                    ...(this.scene.activeBosses?.filter(b => b.active) || []),
+                ];
+                for (const enemy of enemies) {
+                    if (!enemy || !enemy.active) continue;
+                    if (enemy.isBoss && enemy.isInvincible) continue;
+                    const key = enemy.spawnInstanceId
+                        ? `${enemy.isBoss ? 'boss' : 'enemy'}-${enemy.spawnInstanceId}`
+                        : enemy;
+                    if (pierced.has(key)) continue;
+
+                    const hitRadius = Math.max(25, (enemy.body?.width || enemy.displayWidth || 50) * 0.35);
+                    const dx = proj.x - prevX;
+                    const dy = proj.y - prevY;
+                    const segLenSq = dx * dx + dy * dy;
+                    let closestX = proj.x, closestY = proj.y;
+                    if (segLenSq > 0) {
+                        const t = Phaser.Math.Clamp(
+                            ((enemy.x - prevX) * dx + (enemy.y - prevY) * dy) / segLenSq,
+                            0, 1
+                        );
+                        closestX = prevX + dx * t;
+                        closestY = prevY + dy * t;
+                    }
+                    const dist = Phaser.Math.Distance.Between(closestX, closestY, enemy.x, enemy.y);
+                    if (dist < hitRadius) {
+                        pierced.add(key);
+                        if (enemy.isBoss) {
+                            enemy.takeDamage(dmg);
+                        } else {
+                            enemy.takeDamage(dmg, proj.x, proj.y);
+                        }
+                    }
                 }
-                proj.destroy();
+                prevX = proj.x;
+                prevY = proj.y;
             },
+            onComplete: () => proj.destroy(),
         });
     }
 
