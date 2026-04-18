@@ -42,14 +42,19 @@
       // 활성 지연 타이머 추적 (_at으로 스케줄된 모든 setTimeout — stopAll에서 일괄 취소)
       this._pendingTimeouts = new Set();
 
-      // 같은 tick의 merge 사운드 합치기용 (combo가 뒤따르면 취소되어 적층/찢어짐 방지)
+      // merge/combo 시간창 기반 coalescing — 마이크로태스크는 같은 tick만 잡음.
+      // 인접 프레임(70ms 간격)에 merge+combo가 연속 터지면 보이스+reverb 꼬리 누적 →
+      // limiter 지속 포화 → DC offset / convolution 포화 → 이후 전 사운드가 찌지직.
+      // 80ms 롤링 debounce로 가로질러 합침.
+      this._COALESCE_MS = 80;
       this._pendingMergeTier = -1;
-      this._mergeMicrotaskScheduled = false;
-
-      // 같은 tick의 combo 사운드 합치기용 — 최고 레벨 하나로 합쳐 보이스 적층/찢어짐 방지
-      // (연쇄 merge로 playCombo가 10ms 안에 여러 번 호출되면 전부 최고 레벨 한 번으로 축약)
+      this._mergeTimer = null;
       this._pendingComboLevel = -1;
-      this._comboMicrotaskScheduled = false;
+      this._comboTimer = null;
+
+      // 마지막 이벤트 시각 — watchdog이 idle 기간을 감지해 보이스 플러시.
+      this._lastEventAt = 0;
+      this._watchdogTimer = null;
 
       this._visibilityHandler = () => {
         if (!document.hidden && this.enabled && this._initialized) {
@@ -86,20 +91,24 @@
         Tone.Destination.mute = !this.enabled;
 
         // ── Effects chain ──
-        this._limiter = new Tone.Limiter(-1).toDestination();
+        // 헤드룸 확보: 마스터 -3dB, limiter -3dB, 컴프레서 강하게 — 보이스 누적 시 limiter가
+        // 터지면서 DC바이어스/지속 크랙을 유발하는 걸 차단한다.
+        Tone.Destination.volume.value = Math.min(volDb, -3);
+        this._limiter = new Tone.Limiter(-3).toDestination();
         this._compressor = new Tone.Compressor({
-          threshold: -18, knee: 24, ratio: 6,
-          attack: 0.003, release: 0.12,
+          threshold: -22, knee: 20, ratio: 8,
+          attack: 0.004, release: 0.18,
         }).connect(this._limiter);
 
-        // decay 1.5s — IR 버퍼 작게 해서 generate() 비용 감소 + 게임 중 convolution 부담 경감
+        // reverb 대폭 축소 — 이전(decay 1.5s, wet 0.22)은 연쇄 merge에서 꼬리 누적으로
+        // 리버브 입력이 포화, convolution 결과가 지속 왜곡의 원천이 됐다. 짧고 얇게.
         this._reverb = new Tone.Reverb({
-          decay: 1.5, wet: 0.22, preDelay: 0.012,
+          decay: 0.7, wet: 0.10, preDelay: 0.010,
         }).connect(this._compressor);
         this._reverb.generate();
 
-        this._dryChannel = new Tone.Channel({ volume: 0 }).connect(this._compressor);
-        this._wetChannel = new Tone.Channel({ volume: -2 }).connect(this._reverb);
+        this._dryChannel = new Tone.Channel({ volume: -2 }).connect(this._compressor);
+        this._wetChannel = new Tone.Channel({ volume: -6 }).connect(this._reverb);
 
         // ── 가죽 톤 신스 (dry 채널) ──
 
@@ -260,6 +269,9 @@
     stopAll() {
       for (const h of this._pendingTimeouts) clearTimeout(h);
       this._pendingTimeouts.clear();
+      if (this._mergeTimer) { clearTimeout(this._mergeTimer); this._mergeTimer = null; }
+      if (this._comboTimer) { clearTimeout(this._comboTimer); this._comboTimer = null; }
+      if (this._watchdogTimer) { clearTimeout(this._watchdogTimer); this._watchdogTimer = null; }
       this._pendingMergeTier = -1;
       this._pendingComboLevel = -1;
       if (!this._hasTone()) return;
@@ -387,9 +399,8 @@
       } catch (e) {}
     }
 
-    // ── MERGE: 가죽 "뿅" + 유리 "딩" 5 레이어 (진화 단계별 음계) ──
-    // 같은 tick에 여러 merge가 호출되면 가장 높은 티어 1번으로 합치고,
-    // 뒤이어 combo가 호출되면 큐에 든 merge는 취소(보이스 적층/리미터 포화 방지).
+    // ── MERGE: 시간창 기반 debounce(80ms) — 인접 프레임의 연쇄 merge를 전부 최고 티어 1회로 축약 ──
+    // 뒤이어 combo가 호출되면 큐에 든 merge는 취소됨(보이스 적층/리미터 포화 방지).
     playMerge(newTier) {
       if (!this._canPlay()) return;
       this.ensureContext();
@@ -397,21 +408,31 @@
 
       const t = Math.max(0, Math.min(9, newTier));
       if (t > this._pendingMergeTier) this._pendingMergeTier = t;
-      if (this._mergeMicrotaskScheduled) return;
-      this._mergeMicrotaskScheduled = true;
+      if (this._mergeTimer) return;
 
-      Promise.resolve().then(() => {
-        this._mergeMicrotaskScheduled = false;
+      this._mergeTimer = setTimeout(() => {
+        this._mergeTimer = null;
         const tier = this._pendingMergeTier;
         this._pendingMergeTier = -1;
         if (tier < 0) return; // combo가 취소함
         if (!this._hasTone()) return;
         this._playMergeImpl(tier);
-      });
+      }, this._COALESCE_MS);
     }
 
     _playMergeImpl(t) {
       const now = Tone.now();
+
+      // 이전 이벤트의 잔향/꼬리 즉시 차단 — 짧은 release로 누적 방지.
+      // (인접 merge/combo 사이 wet 경로가 사실상 리셋됨)
+      try {
+        this._poly?.releaseAll?.(now);
+        this._bell?.releaseAll?.(now);
+        this._fm?.releaseAll?.(now);
+        this._metal?.triggerRelease?.(now);
+      } catch {}
+      this._lastEventAt = performance.now();
+      this._armWatchdog();
 
       try {
         // C major pentatonic 상행 — 티어가 올라갈수록 높은 음
@@ -419,93 +440,68 @@
         const baseNote = mergeNotes[t];
         const freq = this._jitNote(baseNote, 0.015);
 
-        // L1: Membrane 가죽 뿅 (Low)
+        // L1: Membrane 가죽 뿅 (dry)
         this._membrane.pitchDecay = 0.05;
         this._membrane.octaves = 3;
         this._membrane.envelope.decay = 0.1;
-        this._membrane.volume.value = -6;
+        this._membrane.volume.value = -10;
         this._membrane.triggerAttackRelease(this._jitNote('G3', 0.02), 0.08, now);
 
-        // L2: Bell 유리 딩 (Mid/Hi) — 주역
+        // L2: Bell 유리 딩 — 주역 (release 짧게: 0.4→0.22)
         this._at(0.008 + this._timeJit(4), () => {
-          this._bell.set({ envelope: { attack: 0.001, decay: 0.08, sustain: 0.3, release: 0.4 } });
-          this._bell.volume.value = -6 - t * 0.2;
-          this._bell.triggerAttackRelease(freq, 0.3, this._safeTime(now + 0.008));
+          this._bell.set({ envelope: { attack: 0.001, decay: 0.07, sustain: 0.2, release: 0.22 } });
+          this._bell.volume.value = -10 - t * 0.2;
+          this._bell.triggerAttackRelease(freq, 0.22, this._safeTime(now + 0.008));
         });
 
-        // L3: FM 하모닉 블룸 (Body/Hi)
-        this._at(0.02 + this._timeJit(5), () => {
-          this._fm.set({ harmonicity: 3 + t * 0.2, modulationIndex: 6 + t * 0.8 });
-          this._fm.volume.value = -16 - t * 0.2;
-          this._fm.triggerAttackRelease(freq, 0.22, this._safeTime(now + 0.02));
-        });
-
-        // L4: PolySynth 메이저 3화음 (Body) — 진화감
+        // L3: Poly 3화음 — 진화감 (release 짧게: 0.45→0.25)
         this._at(0.012, () => {
-          const freqFifth = freq * 1.498;    // 완전5도
-          const freqThird = freq * 1.26;     // 장3도
+          const freqFifth = freq * 1.498;
+          const freqThird = freq * 1.26;
           const chord = [
             Tone.Frequency(freq, 'hz').toNote(),
             Tone.Frequency(freqThird, 'hz').toNote(),
             Tone.Frequency(freqFifth, 'hz').toNote(),
           ];
-          this._poly.set({ envelope: { attack: 0.004, decay: 0.14, sustain: 0.35, release: 0.45 } });
-          this._poly.volume.value = -12 - t * 0.2;
-          this._poly.triggerAttackRelease(chord, 0.32, this._safeTime(now + 0.012));
+          this._poly.set({ envelope: { attack: 0.004, decay: 0.12, sustain: 0.25, release: 0.25 } });
+          this._poly.volume.value = -16 - t * 0.2;
+          this._poly.triggerAttackRelease(chord, 0.22, this._safeTime(now + 0.012));
         });
 
-        // L5: Noise pink "파프" (Air) — 공기 질감
-        this._at(0.003, () => {
-          this._noise.noise.type = 'pink';
-          this._noise.envelope.attack = 0.001;
-          this._noise.envelope.decay = 0.06;
-          this._noise.volume.value = -24;
-          this._noise.triggerAttackRelease('16n', this._safeTime(now + 0.003));
-        });
-
-        // 상위 티어 보너스: Metal shimmer (Air)
-        // 볼륨 더 내리고 지속시간 짧게 — 뒤이어 combo 날 때 위상 간섭으로 "찢어짐" 나는 원인.
-        if (t >= 5) {
-          this._at(0.05 + this._timeJit(8), () => {
-            this._metal.frequency.value = this._jitNote('E6', 0.03);
-            this._metal.volume.value = -36 + t * 0.5;
-            this._metal.triggerAttackRelease('E6', 0.06, this._safeTime(now + 0.05));
-          });
-        }
+        // FM/Noise/Metal 레이어 제거 — 이전에 연쇄 merge에서 위상 간섭/리버브 포화의
+        // 주원인이었다. 3레이어로도 "뿅+딩+코드"의 진화감은 충분히 전달된다.
       } catch (e) {}
     }
 
-    // ── COMBO: 상승 코드 — merge와 동일한 마이크로태스크 코얼레싱 ──
-    // 같은 tick에 연쇄 merge로 playCombo가 여러 번 호출되면 최고 레벨 하나로 합침.
-    // (벨 아르페지오 제거: 4음 × 40ms 간격 release 0.25s가 다음 combo와 겹쳐 찢어지던 원인)
+    // ── COMBO: 시간창 기반 debounce(80ms) — 인접 프레임 연쇄도 최고 레벨 1회로 축약 ──
+    // 큐된 merge는 combo가 흡수(사운드 적층 방지). merge 타이머도 취소한다.
     playCombo(level) {
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      // 같은 tick에 큐된 merge 사운드는 combo가 흡수 — 적층 방지
+
       this._pendingMergeTier = -1;
+      if (this._mergeTimer) { clearTimeout(this._mergeTimer); this._mergeTimer = null; }
 
       const n = Math.max(2, Math.min(8, level));
       if (n > this._pendingComboLevel) this._pendingComboLevel = n;
-      if (this._comboMicrotaskScheduled) return;
-      this._comboMicrotaskScheduled = true;
+      if (this._comboTimer) return;
 
-      Promise.resolve().then(() => {
-        this._comboMicrotaskScheduled = false;
+      this._comboTimer = setTimeout(() => {
+        this._comboTimer = null;
         const lvl = this._pendingComboLevel;
         this._pendingComboLevel = -1;
         if (lvl < 0) return;
         if (!this._hasTone()) return;
         this._playComboImpl(lvl);
-      });
+      }, this._COALESCE_MS);
     }
 
     _playComboImpl(n) {
       const now = Tone.now();
 
-      // 이전 combo/merge 보이스 즉시 해제 — 연쇄 콤보 간 누적으로 인한 리미터 포화/찢어짐 방지.
-      // 이전 merge의 _at 꼬리(메탈 shimmer, 아르페지오)가 펜딩이면 취소까지 해야
-      // 새 콤보 트리거와 동시 발사되어 기포음을 내는 걸 막을 수 있다.
+      // 이전 모든 보이스 + 펜딩 타이머 강제 해제 — 연쇄 콤보/인접 merge 꼬리 누적으로 인한
+      // 리미터 지속 포화(= 이후 전 사운드가 찌지직거리는 근본 원인)를 차단.
       try {
         for (const h of this._pendingTimeouts) clearTimeout(h);
         this._pendingTimeouts.clear();
@@ -514,73 +510,73 @@
         this._fm?.releaseAll?.(now);
         this._am?.releaseAll?.(now);
         this._sweep?.releaseAll?.(now);
-        // 모노 신스(membrane/metal/noise)도 꼬리 차단 — tier 5+ merge 직후 combo 시 metal shimmer가
-        // 가장 큰 충돌 원인이었음. bass/click은 combo에 안 쓰지만 drop 잔향 차단 겸 포함.
         this._membrane?.triggerRelease?.(now);
         this._metal?.triggerRelease?.(now);
         this._noise?.triggerRelease?.(now);
         this._bass?.triggerRelease?.(now);
         this._click?.triggerRelease?.(now);
       } catch {}
+      this._lastEventAt = performance.now();
+      this._armWatchdog();
 
       try {
-        // 콤보 레벨마다 반음씩 상승 (C5 기준)
         const semitonesUp = n - 2;
         const baseFreq = 523.25 * Math.pow(2, semitonesUp / 12);
         const fifthFreq = baseFreq * 1.498;
         const octaveFreq = baseFreq * 2;
 
-        // L1: Poly 파워 코드 (Body) — 주역, 단발 tight 히트
+        // L1: Poly 파워 코드 — 주역 (release 0.18→0.14, 볼륨 -10→-12)
         const chord = [
           Tone.Frequency(baseFreq, 'hz').toNote(),
           Tone.Frequency(fifthFreq, 'hz').toNote(),
           Tone.Frequency(octaveFreq, 'hz').toNote(),
         ];
-        this._poly.set({ envelope: { attack: 0.003, decay: 0.1, sustain: 0.35, release: 0.18 } });
-        this._poly.volume.value = -10;
-        this._poly.triggerAttackRelease(chord, 0.22, now);
+        this._poly.set({ envelope: { attack: 0.003, decay: 0.09, sustain: 0.25, release: 0.14 } });
+        this._poly.volume.value = -12;
+        this._poly.triggerAttackRelease(chord, 0.18, now);
 
-        // L2: Bell 단발 "딩" — 아르페지오 대신 최고음 한 번만 (꼬리 짧게)
+        // L2: Bell 단발 "딩"
         this._at(0.005, () => {
-          this._bell.set({ envelope: { attack: 0.001, decay: 0.07, sustain: 0.2, release: 0.15 } });
-          this._bell.volume.value = -10;
+          this._bell.set({ envelope: { attack: 0.001, decay: 0.06, sustain: 0.15, release: 0.12 } });
+          this._bell.volume.value = -12;
           this._bell.triggerAttackRelease(
             Tone.Frequency(octaveFreq * this._jitter(0.01), 'hz').toNote(),
-            0.18, this._safeTime(now + 0.005)
+            0.15, this._safeTime(now + 0.005)
           );
         });
 
-        // L3: FM 그리트 (Body) — 에너지
+        // L3: FM 그리트 — 에너지 (레벨 스케일링 축소)
         this._at(0.012, () => {
-          this._fm.set({ harmonicity: 2.5 + n * 0.25, modulationIndex: 5 + n * 1.5 });
-          this._fm.volume.value = -15 + n * 0.4;
+          this._fm.set({ harmonicity: 2.5 + n * 0.2, modulationIndex: 5 + n * 1.0 });
+          this._fm.volume.value = -18 + n * 0.3;
           this._fm.triggerAttackRelease(
-            Tone.Frequency(baseFreq, 'hz').toNote(), 0.18, this._safeTime(now + 0.012)
+            Tone.Frequency(baseFreq, 'hz').toNote(), 0.16, this._safeTime(now + 0.012)
           );
         });
 
-        // L4: AM 트레몰로 (콤보 3+)
-        if (n >= 3) {
-          this._at(0.02, () => {
-            this._am.set({ harmonicity: 2 + n * 0.15 });
-            this._am.volume.value = -17 + n * 0.5;
-            this._am.triggerAttackRelease(
-              Tone.Frequency(octaveFreq, 'hz').toNote(), 0.2, this._safeTime(now + 0.02)
-            );
-          });
-        }
-
-        // L5: Sweep 필터 (콤보 4+)
-        if (n >= 4) {
-          this._at(0.008, () => {
-            this._sweep.set({ filterEnvelope: { octaves: 3 + n * 0.3 } });
-            this._sweep.volume.value = -19 + n * 0.5;
-            this._sweep.triggerAttackRelease(
-              Tone.Frequency(baseFreq / 2, 'hz').toNote(), 0.2, this._safeTime(now + 0.008)
-            );
-          });
-        }
+        // AM/Sweep 레이어 제거 — 콤보 3+에서 긴 release(0.5s) + 필터 스윕이 연쇄 콤보에서
+        // wet 경로에 지속 누적되며 찢어짐의 주범이었다. 레벨 차이는 Poly/FM의 피치 상승으로 표현.
       } catch (e) {}
+    }
+
+    // 이벤트 후 1초간 새 사운드가 없으면 모든 보이스를 강제 release — 지연된 꼬리/좀비
+    // 보이스가 쌓이며 이후 모든 사운드를 찌지직거리게 하는 걸 주기적으로 청소한다.
+    _armWatchdog() {
+      if (this._watchdogTimer) return;
+      this._watchdogTimer = setTimeout(() => {
+        this._watchdogTimer = null;
+        const idle = performance.now() - this._lastEventAt;
+        if (idle < 900) { this._armWatchdog(); return; }
+        if (!this._hasTone()) return;
+        try {
+          const now = Tone.now();
+          this._poly?.releaseAll?.(now);
+          this._bell?.releaseAll?.(now);
+          this._fm?.releaseAll?.(now);
+          this._am?.releaseAll?.(now);
+          this._sweep?.releaseAll?.(now);
+        } catch {}
+      }, 1000);
     }
 
     // ── FINAL MERGE (사바나 소멸): 7 레이어 피날레 ────────────────
