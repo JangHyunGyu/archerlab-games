@@ -103,9 +103,9 @@ console.log(`  총 드롭 수: ${dropCount}`);
 
 console.log('\n▶ Phase D: 재시작 3회 (매 replay 시 히치 있는지 확인)');
 for (let i = 0; i < 3; i++) {
-    await page.click('#pause-btn');
+    await page.click('#home-btn');
     await page.waitForTimeout(250);
-    await page.click('#restart-btn');
+    await page.click('#play-btn');
     await page.waitForTimeout(1000);
     marks.push(await mark(`restart-${i+1}`));
     // 몇 번 드롭

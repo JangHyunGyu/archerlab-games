@@ -33,9 +33,10 @@ for (let i = 0; i < 3; i++) {
     await page.mouse.click(rect.x + rect.w/2, rect.y + 50);
     await page.waitForTimeout(700);
 }
-await page.click('#pause-btn');
+// 홈으로 이탈 후 새 게임 시작 (이전의 pause→restart 플로우 대체)
+await page.click('#home-btn');
 await page.waitForTimeout(200);
-await page.click('#restart-btn');
+await page.click('#play-btn');
 await page.waitForTimeout(600);
 
 await browser.close();
