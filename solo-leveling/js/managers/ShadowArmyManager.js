@@ -132,6 +132,7 @@ export class ShadowArmyManager {
                 // Purple particles (reduced count for performance)
                 for (let i = 0; i < 12; i++) {
                     scene.time.delayedCall(i * 80, () => {
+                        if (!scene.scene?.isActive()) return;
                         try {
                             const px = bossX + Phaser.Math.Between(-50, 50);
                             const p = scene.add.circle(px, bossY + 20, Phaser.Math.Between(3, 7), COLORS.SHADOW_PRIMARY, 0.8)
@@ -202,6 +203,7 @@ export class ShadowArmyManager {
                                         // Multi-flash sequence (3 bursts)
                                         for (let f = 0; f < 3; f++) {
                                             scene.time.delayedCall(f * 150, () => {
+                                                if (!scene.scene?.isActive()) return;
                                                 try {
                                                     const fl = scene.add.rectangle(0, 0, camW, camH,
                                                         f === 1 ? 0x7b2fff : COLORS.SHADOW_PRIMARY, 0
@@ -253,6 +255,7 @@ export class ShadowArmyManager {
                                         // Shadow particle explosion (massive burst)
                                         for (let i = 0; i < 25; i++) {
                                             scene.time.delayedCall(i * 30, () => {
+                                                if (!scene.scene?.isActive()) return;
                                                 try {
                                                     const angle = Math.random() * Math.PI * 2;
                                                     const dist = 20 + Math.random() * 40;
@@ -278,6 +281,7 @@ export class ShadowArmyManager {
                                         // Shadow ring waves (expanding outward)
                                         for (let r = 0; r < 3; r++) {
                                             scene.time.delayedCall(r * 200, () => {
+                                                if (!scene.scene?.isActive()) return;
                                                 try {
                                                     const ring = scene.add.circle(bossX, bossY, 10,
                                                         0x7b2fff, 0
