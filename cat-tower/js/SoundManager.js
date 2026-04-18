@@ -42,6 +42,10 @@
       // 활성 지연 타이머 추적 (_at으로 스케줄된 모든 setTimeout — stopAll에서 일괄 취소)
       this._pendingTimeouts = new Set();
 
+      // 같은 tick의 merge 사운드 합치기용 (combo가 뒤따르면 취소되어 적층/찢어짐 방지)
+      this._pendingMergeTier = -1;
+      this._mergeMicrotaskScheduled = false;
+
       this._visibilityHandler = () => {
         if (!document.hidden && this.enabled && this._initialized) {
           this.ensureContext();
@@ -251,6 +255,7 @@
     stopAll() {
       for (const h of this._pendingTimeouts) clearTimeout(h);
       this._pendingTimeouts.clear();
+      this._pendingMergeTier = -1;
       if (!this._hasTone()) return;
       try {
         const now = Tone.now();
@@ -377,12 +382,30 @@
     }
 
     // ── MERGE: 가죽 "뿅" + 유리 "딩" 5 레이어 (진화 단계별 음계) ──
+    // 같은 tick에 여러 merge가 호출되면 가장 높은 티어 1번으로 합치고,
+    // 뒤이어 combo가 호출되면 큐에 든 merge는 취소(보이스 적층/리미터 포화 방지).
     playMerge(newTier) {
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+
       const t = Math.max(0, Math.min(9, newTier));
+      if (t > this._pendingMergeTier) this._pendingMergeTier = t;
+      if (this._mergeMicrotaskScheduled) return;
+      this._mergeMicrotaskScheduled = true;
+
+      Promise.resolve().then(() => {
+        this._mergeMicrotaskScheduled = false;
+        const tier = this._pendingMergeTier;
+        this._pendingMergeTier = -1;
+        if (tier < 0) return; // combo가 취소함
+        if (!this._hasTone()) return;
+        this._playMergeImpl(tier);
+      });
+    }
+
+    _playMergeImpl(t) {
+      const now = Tone.now();
 
       try {
         // C major pentatonic 상행 — 티어가 올라갈수록 높은 음
@@ -450,6 +473,8 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
+      // 같은 tick에 큐된 merge 사운드는 combo가 흡수 — 적층 방지
+      this._pendingMergeTier = -1;
       const now = Tone.now();
       const n = Math.max(2, Math.min(8, level));
 
