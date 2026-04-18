@@ -4,7 +4,7 @@ import { WEAPONS } from '../utils/Constants.js';
 export class BasicDagger extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, WEAPONS.basicDagger);
-        this.attackRange = 150;
+        this.attackRange = 225;
 
         this._gfxPool = [];
         this._bladePool = [];
