@@ -8,7 +8,7 @@ export class DragonFear extends WeaponBase {
     }
 
     fire() {
-        const range = 200 + this.extraRange;
+        const range = 230 + this.extraRange;
         const slowAmount = 0.4 - this.extraSlow;
 
         // Visual aura effect (이전 트윈 확실히 정리)
