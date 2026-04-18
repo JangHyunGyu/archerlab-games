@@ -74,12 +74,23 @@ export class BasicDagger extends WeaponBase {
 
         const px = this.player.x;
         const py = this.player.y;
-        const thrustRange = this.attackRange * 0.85;
+
+        // Normal-sized dagger that TRANSLATES forward and back — position covers the range, not size.
+        // proj_dagger is 64px tall, origin (0.5, 0.94) → blade tip is ≈60.16px from pommel.
+        const BLADE_SCALE = 1.4;
+        const bladeVisualLength = 60.16 * BLADE_SCALE; // ~84px
+        const pommelRestDist = 14; // pommel near player at rest
+        const pommelMaxDist = Math.max(pommelRestDist + 60, this.attackRange - bladeVisualLength);
+        const thrustTravel = pommelMaxDist - pommelRestDist;
 
         const mainBlade = this._getBlade();
         const trail1 = this._getBlade();
         const trail2 = this._getBlade();
         const trail3 = this._getBlade();
+        mainBlade.setScale(BLADE_SCALE);
+        trail1.setScale(BLADE_SCALE);
+        trail2.setScale(BLADE_SCALE);
+        trail3.setScale(BLADE_SCALE);
         trail1.setAlpha(0);
         trail2.setAlpha(0);
         trail3.setAlpha(0);
@@ -107,60 +118,46 @@ export class BasicDagger extends WeaponBase {
                     reach = 1 - (t - 0.5) / 0.5;
                 }
 
-                const hiltDist = 12;
-                const bladeDist = hiltDist + thrustRange * reach;
+                const pommelDist = pommelRestDist + thrustTravel * reach;
 
                 const cosA = Math.cos(baseAngle);
                 const sinA = Math.sin(baseAngle);
-                const hiltX = px + cosA * hiltDist;
-                const hiltY = py + sinA * hiltDist;
-                const tipX = px + cosA * bladeDist;
-                const tipY = py + sinA * bladeDist;
+                const pommelX = px + cosA * pommelDist;
+                const pommelY = py + sinA * pommelDist;
+                const tipX = pommelX + cosA * bladeVisualLength;
+                const tipY = pommelY + sinA * bladeVisualLength;
 
-                history.push({ hiltX, hiltY, tipX, tipY, reach });
+                history.push({ pommelX, pommelY, tipX, tipY, reach });
 
-                const scale = 1.2 + 0.7 * reach;
-
-                mainBlade.setPosition(hiltX, hiltY);
+                mainBlade.setPosition(pommelX, pommelY);
                 mainBlade.setRotation(baseAngle + Math.PI / 2);
-                mainBlade.setScale(scale);
                 mainBlade.setAlpha(0.95);
 
-                // Afterimage trails (shadow clones of the blade)
+                // Afterimage trails — SAME scale, older positions along the thrust line
                 const trails = [trail1, trail2, trail3];
                 for (let i = 0; i < trails.length; i++) {
                     const idx = history.length - 1 - (i + 1) * 2;
                     if (idx >= 0) {
                         const h = history[idx];
-                        const ts = 1.2 + 0.7 * h.reach;
-                        trails[i].setPosition(h.hiltX, h.hiltY);
+                        trails[i].setPosition(h.pommelX, h.pommelY);
                         trails[i].setRotation(baseAngle + Math.PI / 2);
-                        trails[i].setScale(ts);
                         trails[i].setAlpha(h.reach * (0.4 - i * 0.1));
                     } else {
                         trails[i].setAlpha(0);
                     }
                 }
 
-                // Motion streaks (forward thrust feel)
+                // Tip motion streak — short bright line ahead of the blade tip during extension
                 gfx.clear();
-                if (reach > 0.15 && t < 0.55) {
-                    const streakAlpha = reach * 0.55;
-                    const perpX = -sinA;
-                    const perpY = cosA;
-                    for (let s = 0; s < 5; s++) {
-                        const offset = (s - 2) * 3.5;
-                        const sx1 = hiltX + perpX * offset;
-                        const sy1 = hiltY + perpY * offset;
-                        const sx2 = tipX + perpX * offset * 0.35;
-                        const sy2 = tipY + perpY * offset * 0.35;
-                        const a = streakAlpha * (0.28 + Math.abs(offset) * 0.04);
-                        gfx.lineStyle(1.1, 0xccddee, a);
-                        gfx.lineBetween(sx1, sy1, sx2, sy2);
-                    }
-                    // Bright central streak
-                    gfx.lineStyle(2, 0xffffff, streakAlpha * 0.55);
-                    gfx.lineBetween(hiltX, hiltY, tipX, tipY);
+                if (reach > 0.2 && t < 0.5) {
+                    const streakAlpha = reach * 0.6;
+                    const sLen = 14 + 10 * reach;
+                    const sx = tipX + cosA * sLen;
+                    const sy = tipY + sinA * sLen;
+                    gfx.lineStyle(2, 0xffffff, streakAlpha * 0.7);
+                    gfx.lineBetween(tipX, tipY, sx, sy);
+                    gfx.lineStyle(3.5, 0xccddee, streakAlpha * 0.35);
+                    gfx.lineBetween(tipX, tipY, sx, sy);
                 }
             },
             onComplete: () => {
