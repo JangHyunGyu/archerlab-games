@@ -18,13 +18,7 @@
       'hud.next': '다음',
       'hud.hint': '좌우로 움직여 탭하면 드롭!',
       'hud.soundAria': '사운드 켜기/끄기',
-      'hud.pauseAria': '일시정지',
-
-      // 일시정지
-      'pause.title': '일시정지',
-      'pause.resume': '계속하기',
-      'pause.restart': '다시 시작',
-      'pause.exit': '메인 메뉴',
+      'hud.homeAria': '메인 메뉴로',
 
       // 게임오버
       'over.title': '게임 오버',
@@ -91,12 +85,7 @@
       'hud.next': 'Next',
       'hud.hint': 'Drag to move, tap to drop!',
       'hud.soundAria': 'Toggle sound',
-      'hud.pauseAria': 'Pause',
-
-      'pause.title': 'Paused',
-      'pause.resume': 'Resume',
-      'pause.restart': 'Restart',
-      'pause.exit': 'Main Menu',
+      'hud.homeAria': 'Main menu',
 
       'over.title': 'Game Over',
       'over.final': 'Final Score',
