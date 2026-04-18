@@ -444,6 +444,7 @@ export class EnemyManager {
         // Track label to update position
         enemy._eliteLabel = label;
         enemy._originalUpdate = enemy.update;
+        enemy._originalDie = enemy.die;
         const originalUpdate = enemy.update.bind(enemy);
         enemy.update = function(time, delta, px, py) {
             originalUpdate(time, delta, px, py);
@@ -452,14 +453,17 @@ export class EnemyManager {
             }
         };
 
-        // Clean up label on death
+        // Clean up label on death — restore BOTH update and die so pool reuse
+        // doesn't stack wrappers on repeated elite promotions.
         const originalDie = enemy.die.bind(enemy);
         enemy.die = function() {
             if (this._eliteLabel) { this._eliteLabel.destroy(); this._eliteLabel = null; }
             try { if (this._eliteGlow && this.filters) { this.filters.internal.remove(this._eliteGlow); this._eliteGlow = null; } } catch (e) { /* silent */ }
             this.isElite = false;
             this.update = this._originalUpdate || this.update;
+            this.die = this._originalDie || this.die;
             this._originalUpdate = null;
+            this._originalDie = null;
             originalDie();
         };
 
