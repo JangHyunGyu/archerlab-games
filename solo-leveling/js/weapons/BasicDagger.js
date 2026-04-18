@@ -77,7 +77,7 @@ export class BasicDagger extends WeaponBase {
 
         // Normal-sized dagger that TRANSLATES forward and back — position covers the range, not size.
         // proj_dagger is 64px tall, origin (0.5, 0.94) → blade tip is ≈60.16px from pommel.
-        const BLADE_SCALE = 1.4;
+        const BLADE_SCALE = 1.0;
         const bladeVisualLength = 60.16 * BLADE_SCALE; // ~84px
         const pommelRestDist = 14; // pommel near player at rest
         const pommelMaxDist = Math.max(pommelRestDist + 60, this.attackRange - bladeVisualLength);
@@ -147,18 +147,7 @@ export class BasicDagger extends WeaponBase {
                     }
                 }
 
-                // Tip motion streak — short bright line ahead of the blade tip during extension
                 gfx.clear();
-                if (reach > 0.2 && t < 0.5) {
-                    const streakAlpha = reach * 0.6;
-                    const sLen = 14 + 10 * reach;
-                    const sx = tipX + cosA * sLen;
-                    const sy = tipY + sinA * sLen;
-                    gfx.lineStyle(2, 0xffffff, streakAlpha * 0.7);
-                    gfx.lineBetween(tipX, tipY, sx, sy);
-                    gfx.lineStyle(3.5, 0xccddee, streakAlpha * 0.35);
-                    gfx.lineBetween(tipX, tipY, sx, sy);
-                }
             },
             onComplete: () => {
                 this._releaseGfx(gfx);
