@@ -140,8 +140,8 @@ export class BasicDagger extends WeaponBase {
             },
         });
 
-        // Damage at the moment of peak extension (narrow front cone, fits thrust shape)
-        this.scene.time.delayedCall(90, () => {
+        // Damage fires at peak extension of the thrust curve (visual-gameplay sync)
+        this.scene.time.delayedCall(165, () => {
             if (!this.scene?.scene?.isActive() || !this.player?.active) return;
             const enemies = this.player.getAllEnemies();
             const hitAngleTol = 0.45; // ~52° cone
