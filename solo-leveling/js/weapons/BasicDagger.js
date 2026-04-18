@@ -77,20 +77,29 @@ export class BasicDagger extends WeaponBase {
         this.scene.tweens.add({
             targets: progress,
             t: 1,
-            duration: 200,
+            duration: 320,
             ease: 'Linear',
             onUpdate: () => {
                 const t = progress.t;
 
-                // Thrust curve: extend fast (0→0.35), hold (0.35→0.5), retract (0.5→1)
+                // Thrust curve with windup:
+                //   0→0.15  : windup (pull back, reach 0 → -0.15)
+                //   0.15→0.5: extend forward (reach -0.15 → 1, easeOutCubic for snap)
+                //   0.5→0.6 : hold at peak
+                //   0.6→1.0 : retract (reach 1 → 0)
                 let reach;
-                if (t < 0.35) {
-                    const k = t / 0.35;
-                    reach = 1 - (1 - k) * (1 - k); // easeOutQuad
+                if (t < 0.15) {
+                    const k = t / 0.15;
+                    reach = -0.15 * k; // pull back
                 } else if (t < 0.5) {
+                    const k = (t - 0.15) / 0.35;
+                    const eased = 1 - Math.pow(1 - k, 3); // easeOutCubic
+                    reach = -0.15 + 1.15 * eased;
+                } else if (t < 0.6) {
                     reach = 1;
                 } else {
-                    reach = 1 - (t - 0.5) / 0.5;
+                    const k = (t - 0.6) / 0.4;
+                    reach = 1 - k;
                 }
 
                 const pommelDist = pommelRestDist + thrustTravel * reach;
@@ -106,7 +115,7 @@ export class BasicDagger extends WeaponBase {
 
                 mainBlade.setPosition(pommelX, pommelY);
                 mainBlade.setRotation(baseAngle + Math.PI / 2);
-                mainBlade.setAlpha(0.95);
+                mainBlade.setAlpha(1);
 
                 // Afterimage trails — SAME scale, older positions along the thrust line
                 const trails = [trail1, trail2, trail3];
@@ -116,7 +125,7 @@ export class BasicDagger extends WeaponBase {
                         const h = history[idx];
                         trails[i].setPosition(h.pommelX, h.pommelY);
                         trails[i].setRotation(baseAngle + Math.PI / 2);
-                        trails[i].setAlpha(h.reach * (0.4 - i * 0.1));
+                        trails[i].setAlpha(Math.max(0, h.reach) * (0.55 - i * 0.1));
                     } else {
                         trails[i].setAlpha(0);
                     }
