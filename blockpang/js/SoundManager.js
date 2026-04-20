@@ -21,8 +21,9 @@ class SoundManager {
         this._compressor = null;
         this._limiter = null;
 
-        // WAV audio pools
+        // WAV audio pools (HTMLAudioElement fallback) + decoded AudioBuffers (preferred)
         this._wavPools = {};
+        this._wavBuffers = {};
 
         // 탭 복귀 시 AudioContext 자동 복구
         this._visibilityHandler = () => {
@@ -36,6 +37,7 @@ class SoundManager {
     // ── WAV Audio Pool System ─────────────────────────────────────
 
     _createPool(name, src, poolSize = 4) {
+        // HTMLAudioElement pool serves as fallback until Web Audio decode completes
         this._wavPools[name] = [];
         for (let i = 0; i < poolSize; i++) {
             const audio = new Audio(src);
@@ -43,26 +45,62 @@ class SoundManager {
             this._wavPools[name].push(audio);
         }
         this._wavPools[name]._index = 0;
+
+        // Preferred path: pre-decode once, play via AudioBufferSourceNode (avoids
+        // mobile HTMLAudio state bugs that surface NotSupportedError on rapid reuse)
+        this._decodeWavBuffer(name, src);
+    }
+
+    _getAudioContext() {
+        if (typeof Tone === 'undefined') return null;
+        try {
+            const ctx = Tone.getContext ? Tone.getContext() : Tone.context;
+            return (ctx && ctx.rawContext) || ctx || null;
+        } catch (e) { return null; }
+    }
+
+    _decodeWavBuffer(name, src) {
+        const ctx = this._getAudioContext();
+        if (!ctx || !ctx.decodeAudioData) return;
+        fetch(src)
+            .then((r) => r.arrayBuffer())
+            .then((buf) => ctx.decodeAudioData(buf))
+            .then((audioBuffer) => { this._wavBuffers[name] = audioBuffer; })
+            .catch(() => { /* fall back to HTMLAudio pool */ });
     }
 
     _playWav(name, volumeMultiplier = 1) {
+        if (!this.enabled) return;
+        const volume = Math.max(0, Math.min(1, this.volume * volumeMultiplier * 0.5));
+
+        const buffer = this._wavBuffers[name];
+        const ctx = this._getAudioContext();
+        if (buffer && ctx) {
+            try {
+                const src = ctx.createBufferSource();
+                src.buffer = buffer;
+                const gain = ctx.createGain();
+                gain.gain.value = volume;
+                src.connect(gain).connect(ctx.destination);
+                src.start(0);
+                return;
+            } catch (e) { /* fall through to HTMLAudio */ }
+        }
+
         const pool = this._wavPools[name];
-        if (!pool || !this.enabled) return;
+        if (!pool) return;
         const audio = pool[pool._index];
         pool._index = (pool._index + 1) % pool.length;
-        // 이전 재생 확실히 정리 (모바일 동시 재생 제한 대응)
-        if (!audio.paused) {
-            audio.pause();
-        }
-        audio.volume = Math.max(0, Math.min(1, this.volume * volumeMultiplier * 0.5));
+        if (!audio.paused) audio.pause();
+        audio.volume = volume;
         audio.currentTime = 0;
         const p = audio.play();
         if (p && p.catch) {
             p.catch((e) => {
                 if (e.name === 'NotAllowedError') {
                     this._needsUserGesture = true;
-                } else if (e.name === 'AbortError') {
-                    // 무시: pause 직후 play 호출 시 정상적으로 발생
+                } else if (e.name === 'AbortError' || e.name === 'NotSupportedError') {
+                    // 모바일 브라우저에서 빠른 재사용 시 발생 — 다음 호출은 Web Audio 경로로 처리됨
                 } else {
                     if (window._sendGameError) window._sendGameError('WavPlayError', name + ': ' + (e.message || String(e)), '', 'SoundManager.js:_playWav');
                 }
@@ -1013,6 +1051,7 @@ class SoundManager {
             }
         }
         this._wavPools = {};
+        this._wavBuffers = {};
     }
 
     toggle() {
