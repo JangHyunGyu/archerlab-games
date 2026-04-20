@@ -429,13 +429,15 @@ h1 {
 }
 
 /* ---------- 랭킹 모달 ---------- */
-.rank-body { max-width: 400px; }
+.rank-body { max-width: 400px; max-height: calc(100vh - 48px); }
 .rank-content {
   min-height: 240px;
+  max-height: 60vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 4px 0;
+  padding: 4px 2px;
 }
 .rank-loading, .rank-empty, .rank-error {
   padding: 40px 10px;
