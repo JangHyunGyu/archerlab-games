@@ -50,79 +50,202 @@ class GameRenderer {
     }
 
     createBackground() {
-        // Sky gradient
+        // Sky — fake vertical gradient using layered bands
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, CONFIG.COURT_WIDTH, CONFIG.GROUND_Y);
-        bg.fill(CONFIG.SKY_TOP);
+        bg.fill(0x0c1020);
         this.gameContainer.addChild(bg);
 
-        // Stars
+        const skyBands = new PIXI.Graphics();
+        const bands = 20;
+        for (let i = 0; i < bands; i++) {
+            const t = i / bands;
+            // gradient: dusk blue -> warm horizon
+            const r = Math.round(12 + t * 30);
+            const g = Math.round(16 + t * 25);
+            const b = Math.round(32 + (1 - t) * 20);
+            const color = (r << 16) | (g << 8) | b;
+            skyBands.rect(
+                0,
+                (CONFIG.GROUND_Y / bands) * i,
+                CONFIG.COURT_WIDTH,
+                CONFIG.GROUND_Y / bands + 1
+            );
+            skyBands.fill({ color, alpha: 0.6 });
+        }
+        this.gameContainer.addChild(skyBands);
+
+        // Soft horizon glow
+        const glow = new PIXI.Graphics();
+        glow.ellipse(CONFIG.COURT_WIDTH / 2, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH * 0.6, 80);
+        glow.fill({ color: 0x4a5a88, alpha: 0.18 });
+        this.gameContainer.addChild(glow);
+
+        // Stars — fewer, more tasteful, varied
         const stars = new PIXI.Graphics();
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 35; i++) {
             const x = Math.random() * CONFIG.COURT_WIDTH;
-            const y = Math.random() * (CONFIG.GROUND_Y - 50);
-            const size = Math.random() * 2 + 0.5;
-            const alpha = Math.random() * 0.5 + 0.3;
+            const y = Math.random() * (CONFIG.GROUND_Y - 80);
+            const size = Math.random() * 1.3 + 0.35;
+            const alpha = Math.random() * 0.4 + 0.2;
             stars.circle(x, y, size);
             stars.fill({ color: 0xffffff, alpha });
         }
+        // A few brighter "twinkles"
+        for (let i = 0; i < 6; i++) {
+            const x = Math.random() * CONFIG.COURT_WIDTH;
+            const y = Math.random() * (CONFIG.GROUND_Y - 120);
+            stars.circle(x, y, 0.6);
+            stars.fill({ color: 0xffffff, alpha: 0.9 });
+            stars.circle(x, y, 2.4);
+            stars.fill({ color: 0xffffff, alpha: 0.08 });
+        }
         this.gameContainer.addChild(stars);
 
-        // Ground
+        // Ground base (sandy court)
         const ground = new PIXI.Graphics();
         ground.rect(0, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH, CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y);
-        ground.fill(CONFIG.GROUND_COLOR);
-        // Ground line
-        ground.rect(0, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH, 3);
-        ground.fill(0x4a8a2a);
-        // Ground stripes
-        for (let x = 0; x < CONFIG.COURT_WIDTH; x += 40) {
-            ground.rect(x, CONFIG.GROUND_Y + 3, 20, CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y - 3);
-            ground.fill({ color: CONFIG.GROUND_DARK, alpha: 0.3 });
+        ground.fill(0x3d2a1a);
+        // top layer — warmer sand
+        ground.rect(0, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH, (CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y) * 0.6);
+        ground.fill({ color: 0x6b4a2e, alpha: 0.85 });
+        // Subtle grain (small dots)
+        for (let i = 0; i < 90; i++) {
+            const x = Math.random() * CONFIG.COURT_WIDTH;
+            const y = CONFIG.GROUND_Y + Math.random() * (CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y);
+            ground.circle(x, y, Math.random() * 0.8 + 0.3);
+            ground.fill({ color: 0xffffff, alpha: Math.random() * 0.08 + 0.03 });
         }
+        for (let i = 0; i < 60; i++) {
+            const x = Math.random() * CONFIG.COURT_WIDTH;
+            const y = CONFIG.GROUND_Y + Math.random() * (CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y);
+            ground.circle(x, y, Math.random() * 0.8 + 0.3);
+            ground.fill({ color: 0x000000, alpha: Math.random() * 0.1 + 0.04 });
+        }
+        // Top highlight edge (sand ridge catching light)
+        ground.rect(0, CONFIG.GROUND_Y, CONFIG.COURT_WIDTH, 2);
+        ground.fill({ color: 0xf3d4a2, alpha: 0.35 });
+        ground.rect(0, CONFIG.GROUND_Y + 2, CONFIG.COURT_WIDTH, 1);
+        ground.fill({ color: 0x000000, alpha: 0.25 });
         this.gameContainer.addChild(ground);
 
         // Court center line (faint)
         const centerLine = new PIXI.Graphics();
         centerLine.rect(CONFIG.NET_X - 0.5, CONFIG.GROUND_Y, 1, CONFIG.COURT_HEIGHT - CONFIG.GROUND_Y);
-        centerLine.fill({ color: 0xffffff, alpha: 0.1 });
+        centerLine.fill({ color: 0xffffff, alpha: 0.08 });
         this.gameContainer.addChild(centerLine);
     }
 
     createNet() {
-        const netG = new PIXI.Graphics();
         const netTop = CONFIG.GROUND_Y - CONFIG.NET_HEIGHT;
+        const netX = CONFIG.NET_X;
+        const poleHalf = CONFIG.NET_WIDTH / 2;
+        const tapeHeight = 10;
+        const tapeY = netTop - tapeHeight * 0.5;
+        const meshTop = netTop + tapeHeight * 0.5;
+        const meshBottom = CONFIG.GROUND_Y;
+        const meshLeft = netX - poleHalf - 3;
+        const meshRight = netX + poleHalf + 3;
 
-        // Net pole
-        netG.rect(CONFIG.NET_X - CONFIG.NET_WIDTH / 2, netTop, CONFIG.NET_WIDTH, CONFIG.NET_HEIGHT);
-        netG.fill(CONFIG.NET_COLOR);
+        // Ground shadow under the net
+        const groundShadow = new PIXI.Graphics();
+        groundShadow.ellipse(netX, CONFIG.GROUND_Y + 3, 22, 3);
+        groundShadow.fill({ color: 0x000000, alpha: 0.28 });
+        this.gameContainer.addChild(groundShadow);
 
-        // Net top cap
-        netG.roundRect(
-            CONFIG.NET_X - CONFIG.NET_TOP_WIDTH / 2,
-            netTop - CONFIG.NET_TOP_HEIGHT / 2,
-            CONFIG.NET_TOP_WIDTH,
-            CONFIG.NET_TOP_HEIGHT,
-            4
-        );
-        netG.fill(0xeeeeee);
-
-        // Net mesh lines
+        // Net mesh — diamond weave (vertical + horizontal lines)
         const meshG = new PIXI.Graphics();
-        const meshLeft = CONFIG.NET_X - CONFIG.NET_WIDTH / 2 - 2;
-        const meshRight = CONFIG.NET_X + CONFIG.NET_WIDTH / 2 + 2;
-        for (let y = netTop + 10; y < CONFIG.GROUND_Y; y += 12) {
+        const meshColor = 0xf2f2ea;
+        const meshAlpha = 0.42;
+        const meshShadowAlpha = 0.18;
+
+        // Horizontal mesh rows (taut twine)
+        for (let y = meshTop + 4; y < meshBottom; y += 7) {
+            // subtle shadow line (below)
+            meshG.moveTo(meshLeft, y + 1);
+            meshG.lineTo(meshRight, y + 1);
+            meshG.stroke({ color: 0x000000, width: 1, alpha: meshShadowAlpha });
+            // main line
             meshG.moveTo(meshLeft, y);
             meshG.lineTo(meshRight, y);
-            meshG.stroke({ color: 0x999999, width: 1, alpha: 0.4 });
+            meshG.stroke({ color: meshColor, width: 1, alpha: meshAlpha });
         }
-        this.gameContainer.addChild(netG);
+
+        // Vertical mesh columns
+        for (let x = meshLeft + 3; x <= meshRight - 3; x += 4) {
+            meshG.moveTo(x, meshTop + 4);
+            meshG.lineTo(x, meshBottom);
+            meshG.stroke({ color: meshColor, width: 1, alpha: meshAlpha * 0.8 });
+        }
         this.gameContainer.addChild(meshG);
+
+        // Pole — shaded cylinder (dark side, mid, light rim)
+        const pole = new PIXI.Graphics();
+        // outer darker edge
+        pole.rect(netX - poleHalf, netTop, CONFIG.NET_WIDTH, CONFIG.NET_HEIGHT);
+        pole.fill(0x9c9c9c);
+        // mid shade
+        pole.rect(netX - poleHalf + 1, netTop, CONFIG.NET_WIDTH - 2, CONFIG.NET_HEIGHT);
+        pole.fill(0xbfbfbf);
+        // highlight stripe (specular on left side of the tube)
+        pole.rect(netX - poleHalf + 2, netTop + 2, 1.5, CONFIG.NET_HEIGHT - 4);
+        pole.fill({ color: 0xffffff, alpha: 0.55 });
+        // subtle shadow stripe on right
+        pole.rect(netX + poleHalf - 2, netTop + 2, 1, CONFIG.NET_HEIGHT - 4);
+        pole.fill({ color: 0x000000, alpha: 0.3 });
+        this.gameContainer.addChild(pole);
+
+        // Top tape band (white with subtle shading) — volleyball regulation look
+        const tape = new PIXI.Graphics();
+        // drop shadow
+        tape.roundRect(
+            netX - CONFIG.NET_TOP_WIDTH / 2,
+            tapeY + 2,
+            CONFIG.NET_TOP_WIDTH,
+            tapeHeight,
+            3
+        );
+        tape.fill({ color: 0x000000, alpha: 0.25 });
+        // tape body
+        tape.roundRect(
+            netX - CONFIG.NET_TOP_WIDTH / 2,
+            tapeY,
+            CONFIG.NET_TOP_WIDTH,
+            tapeHeight,
+            3
+        );
+        tape.fill(0xf7f7f1);
+        // top highlight
+        tape.roundRect(
+            netX - CONFIG.NET_TOP_WIDTH / 2 + 1,
+            tapeY + 1,
+            CONFIG.NET_TOP_WIDTH - 2,
+            2,
+            1.5
+        );
+        tape.fill({ color: 0xffffff, alpha: 0.9 });
+        // bottom stitch shadow
+        tape.rect(
+            netX - CONFIG.NET_TOP_WIDTH / 2 + 1,
+            tapeY + tapeHeight - 1.5,
+            CONFIG.NET_TOP_WIDTH - 2,
+            1
+        );
+        tape.fill({ color: 0x000000, alpha: 0.22 });
+        this.gameContainer.addChild(tape);
+
+        // Small ball-socket on top of the tape (metal finial)
+        const finial = new PIXI.Graphics();
+        finial.circle(netX, tapeY - 1, 3);
+        finial.fill(0xb8bcc4);
+        finial.circle(netX - 0.8, tapeY - 1.8, 1.2);
+        finial.fill({ color: 0xffffff, alpha: 0.85 });
+        this.gameContainer.addChild(finial);
     }
 
     createFpsDisplay() {
         const style = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, monospace',
+            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
             fontSize: 11,
             fill: 0xffffff,
         });
@@ -135,42 +258,60 @@ class GameRenderer {
     }
 
     createScoreDisplay() {
-        const style = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, monospace',
-            fontSize: 48,
-            fontWeight: 'bold',
-            fill: 0xffffff,
+        const styleA = new PIXI.TextStyle({
+            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
+            fontSize: 54,
+            fontWeight: '600',
+            letterSpacing: -2,
+            fill: 0xdfe6f4,
             dropShadow: {
                 color: 0x000000,
-                blur: 4,
+                blur: 6,
                 distance: 2,
+                alpha: 0.55,
+            },
+        });
+        const styleB = new PIXI.TextStyle({
+            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
+            fontSize: 54,
+            fontWeight: '600',
+            letterSpacing: -2,
+            fill: 0xdfe6f4,
+            dropShadow: {
+                color: 0x000000,
+                blur: 6,
+                distance: 2,
+                alpha: 0.55,
             },
         });
 
-        this.scoreTexts[0] = new PIXI.Text({ text: '0', style });
+        this.scoreTexts[0] = new PIXI.Text({ text: '0', style: styleA });
         this.scoreTexts[0].anchor.set(0.5);
         this.scoreTexts[0].x = CONFIG.COURT_WIDTH / 4;
-        this.scoreTexts[0].y = 40;
-        this.scoreTexts[0].alpha = 0.7;
+        this.scoreTexts[0].y = 42;
+        this.scoreTexts[0].alpha = 0.82;
         this.gameContainer.addChild(this.scoreTexts[0]);
 
-        this.scoreTexts[1] = new PIXI.Text({ text: '0', style });
+        this.scoreTexts[1] = new PIXI.Text({ text: '0', style: styleB });
         this.scoreTexts[1].anchor.set(0.5);
         this.scoreTexts[1].x = CONFIG.COURT_WIDTH * 3 / 4;
-        this.scoreTexts[1].y = 40;
-        this.scoreTexts[1].alpha = 0.7;
+        this.scoreTexts[1].y = 42;
+        this.scoreTexts[1].alpha = 0.82;
         this.gameContainer.addChild(this.scoreTexts[1]);
 
-        // VS text
+        // Center separator
         const vsStyle = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, monospace',
-            fontSize: 20,
-            fill: 0x666666,
+            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
+            fontSize: 14,
+            fontWeight: '500',
+            letterSpacing: 4,
+            fill: 0x5f6878,
         });
         const vs = new PIXI.Text({ text: 'VS', style: vsStyle });
         vs.anchor.set(0.5);
         vs.x = CONFIG.COURT_WIDTH / 2;
-        vs.y = 40;
+        vs.y = 42;
+        vs.alpha = 0.65;
         this.gameContainer.addChild(vs);
     }
 
@@ -180,47 +321,124 @@ class GameRenderer {
         const baseColor = colors[slime.colorIdx || 0];
         const r = CONFIG.SLIME_RADIUS;
 
-        // Shadow
+        // --- helpers: color shading ---
+        const shade = (hex, amt) => {
+            const rC = ((hex >> 16) & 0xff);
+            const gC = ((hex >> 8) & 0xff);
+            const bC = (hex & 0xff);
+            const mix = (c) => amt >= 0
+                ? Math.round(c + (255 - c) * amt)
+                : Math.round(c * (1 + amt));
+            return (mix(rC) << 16) | (mix(gC) << 8) | mix(bC);
+        };
+        const topColor = shade(baseColor, 0.28);
+        const bottomColor = shade(baseColor, -0.35);
+        const rimColor = shade(baseColor, 0.55);
+
+        // Body silhouette path (reusable)
+        const drawBody = (g, insetY = 0, insetX = 0) => {
+            g.moveTo(-r + insetX, -insetY);
+            g.bezierCurveTo(
+                -r + insetX, -r * 0.52 - insetY,
+                -r * 0.85 + insetX * 0.5, -r * 0.96 - insetY,
+                -r * 0.5, -r * 1.06 - insetY
+            );
+            g.bezierCurveTo(
+                -r * 0.2, -r * 1.15 - insetY,
+                r * 0.2, -r * 1.15 - insetY,
+                r * 0.5, -r * 1.06 - insetY
+            );
+            g.bezierCurveTo(
+                r * 0.85 - insetX * 0.5, -r * 0.96 - insetY,
+                r - insetX, -r * 0.52 - insetY,
+                r - insetX, -insetY
+            );
+            g.lineTo(-r + insetX, -insetY);
+            g.closePath();
+        };
+
+        // Soft ground shadow (feathered: 3 layered ellipses)
         const shadow = new PIXI.Graphics();
-        shadow.ellipse(0, 5, r * 0.8, 6);
-        shadow.fill({ color: 0x000000, alpha: 0.3 });
+        shadow.ellipse(0, 7, r * 1.05, 8);
+        shadow.fill({ color: 0x000000, alpha: 0.14 });
+        shadow.ellipse(0, 6, r * 0.9, 6);
+        shadow.fill({ color: 0x000000, alpha: 0.22 });
+        shadow.ellipse(0, 5, r * 0.7, 4);
+        shadow.fill({ color: 0x000000, alpha: 0.32 });
         container.addChild(shadow);
         container._shadow = shadow;
 
-        // Body (slime blob shape using bezier curves)
+        // Layer 1: dark base (gives bottom tone)
+        const base = new PIXI.Graphics();
+        drawBody(base);
+        base.fill(bottomColor);
+        container.addChild(base);
+
+        // Layer 2: main body, slightly inset upward (mid tone)
         const body = new PIXI.Graphics();
-        body.moveTo(-r, 0);
-        // 왼쪽 곡선 (약간 볼록)
-        body.bezierCurveTo(-r, -r * 0.5, -r * 0.85, -r * 0.95, -r * 0.5, -r * 1.05);
-        // 상단 곡선 (부드러운 돔)
-        body.bezierCurveTo(-r * 0.2, -r * 1.15, r * 0.2, -r * 1.15, r * 0.5, -r * 1.05);
-        // 오른쪽 곡선 (약간 볼록)
-        body.bezierCurveTo(r * 0.85, -r * 0.95, r, -r * 0.5, r, 0);
-        body.lineTo(-r, 0);
-        body.closePath();
+        drawBody(body, 1, 0);
         body.fill(baseColor);
-        // Highlight (젤리 반사광)
-        body.moveTo(-r * 0.6, -2);
-        body.bezierCurveTo(-r * 0.6, -r * 0.5, -r * 0.4, -r * 0.85, 0, -r * 0.9);
-        body.bezierCurveTo(r * 0.3, -r * 0.85, r * 0.5, -r * 0.5, r * 0.5, -2);
-        body.lineTo(-r * 0.6, -2);
-        body.closePath();
-        body.fill({ color: 0xffffff, alpha: 0.18 });
-        // 작은 하이라이트 점
-        body.circle(-r * 0.25, -r * 0.7, r * 0.12);
-        body.fill({ color: 0xffffff, alpha: 0.35 });
         container.addChild(body);
+
+        // Layer 3: top gradient wash (lighter dome)
+        const topWash = new PIXI.Graphics();
+        topWash.moveTo(-r * 0.95, -r * 0.15);
+        topWash.bezierCurveTo(-r * 0.95, -r * 0.6, -r * 0.75, -r * 0.95, -r * 0.4, -r * 1.02);
+        topWash.bezierCurveTo(-r * 0.15, -r * 1.1, r * 0.15, -r * 1.1, r * 0.4, -r * 1.02);
+        topWash.bezierCurveTo(r * 0.75, -r * 0.95, r * 0.95, -r * 0.6, r * 0.95, -r * 0.15);
+        topWash.lineTo(-r * 0.95, -r * 0.15);
+        topWash.closePath();
+        topWash.fill({ color: topColor, alpha: 0.55 });
+        container.addChild(topWash);
+
+        // Layer 4: inner dome (pushes light to the top center)
+        const dome = new PIXI.Graphics();
+        dome.ellipse(0, -r * 0.82, r * 0.55, r * 0.28);
+        dome.fill({ color: 0xffffff, alpha: 0.12 });
+        container.addChild(dome);
+
+        // Layer 5: rim light (thin arc on the top)
+        const rim = new PIXI.Graphics();
+        rim.moveTo(-r * 0.45, -r * 1.02);
+        rim.bezierCurveTo(-r * 0.18, -r * 1.12, r * 0.18, -r * 1.12, r * 0.45, -r * 1.02);
+        rim.stroke({ color: rimColor, width: 1.6, alpha: 0.7 });
+        container.addChild(rim);
+
+        // Layer 6: primary specular highlight (large soft)
+        const specSoft = new PIXI.Graphics();
+        specSoft.ellipse(-r * 0.32, -r * 0.78, r * 0.26, r * 0.18);
+        specSoft.fill({ color: 0xffffff, alpha: 0.28 });
+        container.addChild(specSoft);
+
+        // Layer 7: crisp white glint
+        const glint = new PIXI.Graphics();
+        glint.circle(-r * 0.28, -r * 0.82, r * 0.09);
+        glint.fill({ color: 0xffffff, alpha: 0.9 });
+        glint.circle(-r * 0.15, -r * 0.68, r * 0.045);
+        glint.fill({ color: 0xffffff, alpha: 0.75 });
+        container.addChild(glint);
+
+        // Layer 8: bottom contact darkening (subtle ambient occlusion)
+        const ao = new PIXI.Graphics();
+        ao.ellipse(0, -2, r * 0.85, 4);
+        ao.fill({ color: 0x000000, alpha: 0.18 });
+        container.addChild(ao);
 
         // Eye
         const eyeContainer = new PIXI.Container();
+        const eyeR = Math.max(7, r * 0.2);
         const eyeWhite = new PIXI.Graphics();
-        eyeWhite.circle(0, 0, 8);
+        eyeWhite.circle(0.5, 0.5, eyeR);
+        eyeWhite.fill({ color: 0x000000, alpha: 0.15 });
+        eyeWhite.circle(0, 0, eyeR);
         eyeWhite.fill(CONFIG.SLIME_EYE_COLOR);
         eyeContainer.addChild(eyeWhite);
 
         const pupil = new PIXI.Graphics();
-        pupil.circle(0, 0, 4);
+        pupil.circle(0, 0, eyeR * 0.5);
         pupil.fill(CONFIG.SLIME_PUPIL_COLOR);
+        pupil.circle(-eyeR * 0.18, -eyeR * 0.22, eyeR * 0.18);
+        pupil.fill({ color: 0xffffff, alpha: 0.85 });
         eyeContainer.addChild(pupil);
         container._pupil = pupil;
 
@@ -231,15 +449,17 @@ class GameRenderer {
 
         // Nickname label
         const nameStyle = new PIXI.TextStyle({
-            fontFamily: 'Orbitron, sans-serif',
+            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
             fontSize: 11,
+            fontWeight: '500',
+            letterSpacing: 0.2,
             fill: 0xffffff,
-            dropShadow: { color: 0x000000, blur: 2, distance: 1 },
+            dropShadow: { color: 0x000000, blur: 3, distance: 1, alpha: 0.8 },
         });
         const nameText = new PIXI.Text({ text: slime.nickname || '', style: nameStyle });
         nameText.anchor.set(0.5);
-        nameText.y = -r * 1.25;
-        nameText.alpha = 0.8;
+        nameText.y = -r * 1.3;
+        nameText.alpha = 0.85;
         container.addChild(nameText);
         container._nameText = nameText;
 
@@ -558,14 +778,16 @@ class GameRenderer {
     showMessage(text, duration) {
         if (!this._msgStyle) {
             this._msgStyle = new PIXI.TextStyle({
-                fontFamily: 'Orbitron, monospace',
-                fontSize: 36,
-                fontWeight: 'bold',
+                fontFamily: 'Space Grotesk, Pretendard, sans-serif',
+                fontSize: 38,
+                fontWeight: '600',
+                letterSpacing: -1,
                 fill: 0xffffff,
                 dropShadow: {
                     color: 0x000000,
-                    blur: 6,
+                    blur: 10,
                     distance: 3,
+                    alpha: 0.7,
                 },
             });
         }
@@ -606,14 +828,16 @@ class GameRenderer {
     showNotice(text, duration = 2000) {
         if (!this._noticeStyle) {
             this._noticeStyle = new PIXI.TextStyle({
-                fontFamily: 'Orbitron, monospace',
-                fontSize: 16,
-                fontWeight: 'bold',
-                fill: 0xffcc00,
+                fontFamily: 'Space Grotesk, Pretendard, sans-serif',
+                fontSize: 15,
+                fontWeight: '500',
+                letterSpacing: 0.3,
+                fill: 0xf0c067,
                 dropShadow: {
                     color: 0x000000,
-                    blur: 4,
+                    blur: 6,
                     distance: 2,
+                    alpha: 0.7,
                 },
             });
         }
