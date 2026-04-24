@@ -19,6 +19,7 @@
       this.enabled = this._loadEnabled();
       this.volume = 1.0;
       this._initialized = false;
+      this._SCHEDULE_LEAD_SEC = 0.006;
 
       // Synth references — 10종 전부 활용
       this._membrane = null; // 가죽 바운스 (Sub/Low)
@@ -45,8 +46,8 @@
       // merge/combo 시간창 기반 coalescing — 마이크로태스크는 같은 tick만 잡음.
       // 인접 프레임(70ms 간격)에 merge+combo가 연속 터지면 보이스+reverb 꼬리 누적 →
       // limiter 지속 포화 → DC offset / convolution 포화 → 이후 전 사운드가 찌지직.
-      // 80ms 롤링 debounce로 가로질러 합침.
-      this._COALESCE_MS = 80;
+      // 32ms 롤링 debounce로 같은 물리 프레임대의 이벤트만 가볍게 합침.
+      this._COALESCE_MS = 32;
       this._pendingMergeTier = -1;
       this._mergeTimer = null;
       this._pendingComboLevel = -1;
@@ -86,6 +87,8 @@
       }
 
       try {
+        this._configureLowLatency();
+
         const volDb = 20 * Math.log10(Math.max(0.01, this.volume));
         Tone.Destination.volume.value = volDb;
         Tone.Destination.mute = !this.enabled;
@@ -246,11 +249,35 @@
         Tone.context.resume().catch(() => {});
       }
       if (!this._initialized) this.init();
+      this._configureLowLatency();
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
     _canPlay() { return this.enabled && this._initialized; }
     _hasTone() { return this._canPlay() && this._membrane !== null; }
+
+    _configureLowLatency() {
+      if (typeof Tone === 'undefined') return;
+      try {
+        const ctx = (typeof Tone.getContext === 'function') ? Tone.getContext() : Tone.context;
+        if (!ctx) return;
+        if (typeof ctx.lookAhead === 'number') ctx.lookAhead = Math.min(ctx.lookAhead, 0.01);
+        if (typeof ctx.updateInterval === 'number') ctx.updateInterval = Math.min(ctx.updateInterval, 0.01);
+      } catch {}
+    }
+
+    _now() {
+      try {
+        if (typeof Tone.immediate === 'function') {
+          return Tone.immediate() + this._SCHEDULE_LEAD_SEC;
+        }
+        const raw = Tone.context && Tone.context.rawContext;
+        if (raw && typeof raw.currentTime === 'number') {
+          return raw.currentTime + this._SCHEDULE_LEAD_SEC;
+        }
+      } catch {}
+      return Tone.now();
+    }
 
     _at(offsetSec, fn) {
       if (offsetSec <= 0.005) {
@@ -276,7 +303,7 @@
       this._pendingComboLevel = -1;
       if (!this._hasTone()) return;
       try {
-        const now = Tone.now();
+        const now = this._now();
         // PolySynth: releaseAll, MonoSynth/Synth: triggerRelease
         const polys = [this._poly, this._bell, this._fm, this._am, this._sweep];
         for (const p of polys) { try { p?.releaseAll?.(now); } catch {} }
@@ -285,7 +312,7 @@
       } catch {}
     }
 
-    _safeTime(t) { return Math.max(t, Tone.now()); }
+    _safeTime(t) { return Math.max(t, this._now()); }
 
     // ±percent 피치 랜덤화 (cents 단위로 환산)
     _jitter(pct) {
@@ -313,7 +340,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
       const t = Math.max(0, Math.min(9, tier));
 
       try {
@@ -358,7 +385,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
       const i = Math.max(0.15, Math.min(1, intensity || 0.3));
       const t = Math.max(0, Math.min(9, tier || 0));
 
@@ -421,7 +448,7 @@
     }
 
     _playMergeImpl(t) {
-      const now = Tone.now();
+      const now = this._now();
 
       // 이전 이벤트의 잔향/꼬리 즉시 차단 — 짧은 release로 누적 방지.
       // (인접 merge/combo 사이 wet 경로가 사실상 리셋됨)
@@ -498,7 +525,7 @@
     }
 
     _playComboImpl(n) {
-      const now = Tone.now();
+      const now = this._now();
 
       // 이전 모든 보이스 + 펜딩 타이머 강제 해제 — 연쇄 콤보/인접 merge 꼬리 누적으로 인한
       // 리미터 지속 포화(= 이후 전 사운드가 찌지직거리는 근본 원인)를 차단.
@@ -569,7 +596,7 @@
         if (idle < 900) { this._armWatchdog(); return; }
         if (!this._hasTone()) return;
         try {
-          const now = Tone.now();
+          const now = this._now();
           this._poly?.releaseAll?.(now);
           this._bell?.releaseAll?.(now);
           this._fm?.releaseAll?.(now);
@@ -584,7 +611,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
 
       try {
         // L1: Membrane 대형 임팩트
@@ -649,7 +676,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
 
       try {
         // L1: Membrane 거대 임팩트
@@ -730,7 +757,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
 
       try {
         // L1: Poly 하강 마이너 진행 5단
@@ -802,7 +829,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
 
       try {
         // L1: Bell 상행
@@ -843,7 +870,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
 
       try {
         // L1: Click 가죽 톡 (dry)
@@ -871,7 +898,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
       try {
         this._sweep.set({ filterEnvelope: { octaves: 2.5 }, envelope: { decay: 0.15 } });
         this._sweep.volume.value = -14;
@@ -882,7 +909,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
       try {
         this._sweep.set({ filterEnvelope: { octaves: 3.5 }, envelope: { decay: 0.12 } });
         this._sweep.volume.value = -14;
@@ -896,7 +923,7 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
-      const now = Tone.now();
+      const now = this._now();
       try {
         // L1: Bell 반복 티크
         this._bell.set({ envelope: { attack: 0.002, decay: 0.04, sustain: 0.1, release: 0.1 } });

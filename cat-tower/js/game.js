@@ -129,8 +129,9 @@
   let newRecordTimeoutId = null; // 신기록 팡파레 대기 setTimeout 핸들 (게임 전환 시 취소용)
   const mergeEffects = [];      // 합성 이펙트 파티클
   const bonkCooldown = new Map(); // body.id → 마지막 bonk 시각 (ms) — 연속 충돌 스팸 방지
-  const BONK_COOLDOWN_MS = 140;
-  const BONK_MIN_SPEED = 2.2;     // Matter.js 속도 단위 — 이하면 정착 중으로 간주
+  const BONK_COOLDOWN_MS = 110;
+  const BONK_TRIGGER_SPEED = 1.35;
+  const BONK_DROP_GRACE_MS = 0;
 
   // DOM refs
   const $ = (id) => document.getElementById(id);
@@ -427,14 +428,14 @@
       // 같은 티어 쌍은 merge로 처리됨 — bonk 스킵
       if (aIsCat && bIsCat && a.cat.tier === b.cat.tier) continue;
       // 드롭 직후는 drop 사운드와 겹침 방지
-      if (aIsCat && now - a.cat.spawnedAt < 60) continue;
-      if (bIsCat && now - b.cat.spawnedAt < 60) continue;
+      if (aIsCat && now - a.cat.spawnedAt < BONK_DROP_GRACE_MS) continue;
+      if (bIsCat && now - b.cat.spawnedAt < BONK_DROP_GRACE_MS) continue;
 
       const vax = a.velocity?.x || 0, vay = a.velocity?.y || 0;
       const vbx = b.velocity?.x || 0, vby = b.velocity?.y || 0;
       const dvx = vax - vbx, dvy = vay - vby;
       const speed = Math.sqrt(dvx * dvx + dvy * dvy);
-      if (speed < BONK_MIN_SPEED) continue;
+      if (speed < BONK_TRIGGER_SPEED) continue;
 
       const keyA = aIsCat ? a.id : -1;
       const keyB = bIsCat ? b.id : -1;
@@ -444,8 +445,8 @@
       if (keyA >= 0) bonkCooldown.set(keyA, now);
       if (keyB >= 0) bonkCooldown.set(keyB, now);
 
-      // 2.2 ~ 11 → 0.2 ~ 1.0
-      const intensity = Math.min(1, (speed - BONK_MIN_SPEED) / 9 + 0.2);
+      // 1.35 ~ 10.35 -> 0.2 ~ 1.0
+      const intensity = Math.min(1, (speed - BONK_TRIGGER_SPEED) / 9 + 0.2);
       const tier = aIsCat ? a.cat.tier : b.cat.tier;
       sound.playBonk(intensity, tier);
     }
