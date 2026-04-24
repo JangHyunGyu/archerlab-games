@@ -48,11 +48,13 @@
 
     { id: 2, name: '치즈', radius: 21, score: 25,
       fill: '#F4A15C', stroke: '#B76A28', pattern: 'stripes', patternColor: '#C86F25',
-      eye: '#8AAE43', nose: '#C96C61', muzzle: '#FFE2C2', earInner: '#F4A099' },
+      eye: '#8AAE43', nose: '#C96C61', muzzle: '#FFE2C2', earInner: '#F4A099',
+      sprite: 'assets/cats/cheese.png', spriteScale: 2.15, spriteYOffset: 0.00 },
 
     { id: 3, name: '턱시도', radius: 28, score: 55,
       fill: '#2E2A28', stroke: '#121010', pattern: 'tuxedo',
-      eye: '#B7D66B', nose: '#D2A0A0', muzzle: '#FFF4E5', earInner: '#5A4743' },
+      eye: '#B7D66B', nose: '#D2A0A0', muzzle: '#FFF4E5', earInner: '#5A4743',
+      sprite: 'assets/cats/tuxedo.png', spriteScale: 2.12, spriteYOffset: 0.00 },
 
     { id: 4, name: '삼색이', radius: 36, score: 110,
       fill: '#FAF0DA', stroke: '#B79E6E', pattern: 'calico',
@@ -61,30 +63,36 @@
 
     { id: 5, name: '고등어', radius: 45, score: 220,
       fill: '#ABB5C0', stroke: '#6E7985', pattern: 'stripes', patternColor: '#66717C',
-      eye: '#9DBB58', nose: '#B98586', muzzle: '#E8EDF1', earInner: '#C6A2A0' },
+      eye: '#9DBB58', nose: '#B98586', muzzle: '#E8EDF1', earInner: '#C6A2A0',
+      sprite: 'assets/cats/mackerel.png', spriteScale: 2.14, spriteYOffset: 0.00 },
 
     { id: 6, name: '러시안 블루', radius: 55, score: 440,
       fill: '#5E7890', stroke: '#3E5568', pattern: null,
-      eye: '#A7C65D', nose: '#9097A6', muzzle: '#B7C6D1', earInner: '#778A9A' },
+      eye: '#A7C65D', nose: '#9097A6', muzzle: '#B7C6D1', earInner: '#778A9A',
+      sprite: 'assets/cats/russian-blue.png', spriteScale: 2.10, spriteYOffset: 0.00 },
 
     { id: 7, name: '스코티시 폴드', radius: 65, score: 880,
       fill: '#D9B884', stroke: '#9B7742', pattern: null, foldedEars: true,
-      eye: '#A4B552', nose: '#C77F75', muzzle: '#F5DEC0', earInner: '#D49B91' },
+      eye: '#A4B552', nose: '#C77F75', muzzle: '#F5DEC0', earInner: '#D49B91',
+      sprite: 'assets/cats/scottish-fold.png', spriteScale: 2.12, spriteYOffset: 0.00 },
 
     { id: 8, name: '페르시안', radius: 77, score: 1700,
       fill: '#FAF6ED', stroke: '#C9BE9E', pattern: null, longHairColor: '#E8E2D0', mane: true,
-      eye: '#76A98C', nose: '#C7938C', muzzle: '#FFF7ED', earInner: '#E4B7B0' },
+      eye: '#76A98C', nose: '#C7938C', muzzle: '#FFF7ED', earInner: '#E4B7B0',
+      sprite: 'assets/cats/persian.png', spriteScale: 2.18, spriteYOffset: 0.00 },
 
     { id: 9, name: '메인쿤', radius: 90, score: 3500,
       fill: '#B8946A', stroke: '#5A3E22',
       pattern: 'stripes', patternColor: '#745238', patternWeight: 0.075, patternCount: 5, patternSpacing: 0.34,
       longHairColor: '#9C7D5A', mane: true,
-      eye: '#C0B55C', nose: '#9F6E62', muzzle: '#D7BC91', earInner: '#B98678' },
+      eye: '#C0B55C', nose: '#9F6E62', muzzle: '#D7BC91', earInner: '#B98678',
+      sprite: 'assets/cats/maine-coon.png', spriteScale: 2.20, spriteYOffset: 0.00 },
 
     { id: 10, name: '사바나', radius: 111, score: 10000,
       fill: '#E8B559', stroke: '#8E6424', pattern: 'spots', patternColor: '#1F140A',
       eye: '#C7CB66', nose: '#6E4432', muzzle: '#F2D39A', earInner: '#C98960',
-      aura: '#F2B43A' },
+      aura: '#F2B43A',
+      sprite: 'assets/cats/savannah.png', spriteScale: 1.98, spriteYOffset: 0.00 },
   ];
 
   const spriteCache = new Map();
