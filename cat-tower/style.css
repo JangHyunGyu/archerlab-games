@@ -16,6 +16,7 @@
   --shadow-deep: 0 5px 0 0 var(--line);
   --radius: 14px;
   --radius-sm: 10px;
+  --mobile-browser-bottom-gap: 24px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,8 +42,8 @@ body {
 }
 
 #app {
-  height: 100dvh;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -211,7 +212,7 @@ h1 {
 
 /* ---------- 게임 화면 ---------- */
 #game {
-  padding: 10px 12px 6px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   gap: 8px;
 }
 
@@ -634,6 +635,12 @@ h1 {
   .game-tier-name { font-size: 7px; }
   .tier-preview { grid-template-columns: repeat(3, 1fr); }
   .tier-cell canvas { width: 40px; height: 40px; }
+}
+
+@media (orientation: portrait) and (max-width: 720px) {
+  #game {
+    padding-bottom: calc(var(--mobile-browser-bottom-gap) + env(safe-area-inset-bottom));
+  }
 }
 
 @media (min-width: 720px) {
