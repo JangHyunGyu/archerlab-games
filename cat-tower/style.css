@@ -213,7 +213,7 @@ h1 {
 /* ---------- 게임 화면 ---------- */
 #game {
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-  gap: 8px;
+  gap: 4px;
 }
 
 .hud {
@@ -315,6 +315,7 @@ h1 {
   border: 2px solid rgba(58, 41, 32, 0.28);
   border-radius: var(--radius-sm);
   box-shadow: 0 2px 0 rgba(58, 41, 32, 0.24);
+  margin-bottom: 0;
 }
 .game-tier-cell {
   min-width: 0;
