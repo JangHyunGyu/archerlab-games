@@ -43,7 +43,8 @@
   const CAT_TIERS = [
     { id: 1, name: '새끼 고양이', radius: 15, score: 10,
       fill: '#FFD8B5', stroke: '#D89A6A', pattern: null,
-      eye: '#7EAA55', nose: '#D9827C', muzzle: '#FFE8CF', earInner: '#F5AAA2', baby: true },
+      eye: '#7EAA55', nose: '#D9827C', muzzle: '#FFE8CF', earInner: '#F5AAA2', baby: true,
+      sprite: 'assets/cats/kitten.png', spriteScale: 1.86, spriteYOffset: 0.00 },
 
     { id: 2, name: '치즈', radius: 21, score: 25,
       fill: '#F4A15C', stroke: '#B76A28', pattern: 'stripes', patternColor: '#C86F25',
