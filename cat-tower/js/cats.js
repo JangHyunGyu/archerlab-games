@@ -171,18 +171,34 @@
   function drawLongHair(ctx, tier, r) {
     if (!tier.longHairColor) return;
     ctx.save();
-    ctx.strokeStyle = tier.longHairColor;
-    ctx.lineWidth = Math.max(1.5, r * 0.045);
     ctx.lineCap = 'round';
-    for (let i = 0; i < 32; i++) {
-      const a = (i / 32) * TAU;
-      const weight = a > Math.PI * 0.05 && a < Math.PI * 0.95 ? 1.15 : 0.92;
-      const inR = r * 0.70 * weight;
-      const outR = r * (tier.mane ? 0.98 : 0.90) * weight;
+    ctx.lineJoin = 'round';
+
+    const drawLock = (a, inner, outer, color, width) => {
+      const ix = Math.cos(a) * inner;
+      const iy = Math.sin(a) * inner + r * 0.05;
+      const ox = Math.cos(a) * outer;
+      const oy = Math.sin(a) * outer + r * 0.05;
+      const bend = Math.sin(a * 2.7 + tier.id) * r * 0.045;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
       ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * inR, Math.sin(a) * inR + r * 0.02);
-      ctx.lineTo(Math.cos(a) * outR, Math.sin(a) * outR + r * 0.02);
+      ctx.moveTo(ix, iy);
+      ctx.quadraticCurveTo((ix + ox) * 0.5 + bend, (iy + oy) * 0.5, ox, oy);
       ctx.stroke();
+    };
+
+    for (let i = 0; i < 36; i++) {
+      const t = i / 35;
+      const a = Math.PI * (0.16 + t * 0.72);
+      const wave = fract(Math.sin(tier.id * 17.1 + i * 5.77) * 9381.73);
+      const inner = r * (0.66 + wave * 0.04);
+      const outer = r * (0.88 + wave * 0.12);
+      const width = Math.max(0.9, r * (0.018 + wave * 0.012));
+      drawLock(a, inner, outer, alpha(tier.longHairColor, 0.72), width);
+      if (i % 3 === 0) {
+        drawLock(a + 0.025, inner * 0.96, outer * 1.02, alpha(lighten(tier.longHairColor, 0.20), 0.45), Math.max(0.55, width * 0.45));
+      }
     }
     ctx.restore();
   }
@@ -202,7 +218,7 @@
     catCorePath(ctx, tier, r);
     ctx.clip();
 
-    const count = r < 24 ? 10 : r < 56 ? 18 : 28;
+    const count = r < 24 ? 14 : r < 56 ? 30 : 54;
     const light = alpha(lighten(tier.fill, 0.32), tier.pattern === 'tuxedo' ? 0.10 : 0.22);
     const dark = alpha(darken(tier.fill, 0.30), tier.pattern === 'tuxedo' ? 0.16 : 0.18);
     ctx.lineCap = 'round';
@@ -212,13 +228,13 @@
       const px = (fract(Math.sin(seed) * 43758.5453) - 0.5) * r * 1.05;
       const py = (fract(Math.sin(seed + 11.7) * 24634.6345) - 0.5) * r * 1.42 + r * 0.03;
       if ((px * px) / (r * r * 0.58) + ((py - r * 0.03) * (py - r * 0.03)) / (r * r * 0.82) > 1.08) continue;
-      const len = r * (0.10 + fract(Math.sin(seed + 3.9) * 9182.12) * 0.08);
-      const tilt = -0.62 + fract(Math.sin(seed + 21.2) * 13771.3) * 0.40;
+      const len = r * (0.09 + fract(Math.sin(seed + 3.9) * 9182.12) * 0.12);
+      const tilt = -0.84 + fract(Math.sin(seed + 21.2) * 13771.3) * 0.54;
       ctx.strokeStyle = i % 2 ? light : dark;
-      ctx.lineWidth = Math.max(0.45, r * 0.009);
+      ctx.lineWidth = Math.max(0.45, r * 0.0075);
       ctx.beginPath();
       ctx.moveTo(px - Math.cos(tilt) * len * 0.48, py - Math.sin(tilt) * len * 0.48);
-      ctx.lineTo(px + Math.cos(tilt) * len * 0.52, py + Math.sin(tilt) * len * 0.52);
+      ctx.quadraticCurveTo(px, py - r * 0.018, px + Math.cos(tilt) * len * 0.52, py + Math.sin(tilt) * len * 0.52);
       ctx.stroke();
     }
 
@@ -235,6 +251,68 @@
         }
       }
     }
+    ctx.restore();
+  }
+
+  function drawEdgeFur(ctx, tier, r) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    const colors = [
+      alpha(lighten(tier.fill, 0.24), 0.36),
+      alpha(darken(tier.fill, 0.28), 0.24),
+    ];
+    for (let i = 0; i < 42; i++) {
+      const t = i / 41;
+      const a = Math.PI * (0.04 + t * 0.92);
+      const sideLift = Math.sin(t * Math.PI);
+      const base = r * (0.68 + sideLift * 0.04);
+      const out = r * (0.74 + sideLift * 0.08);
+      const x1 = Math.cos(a) * base;
+      const y1 = Math.sin(a) * base + r * 0.18;
+      const x2 = Math.cos(a) * out;
+      const y2 = Math.sin(a) * out + r * 0.18;
+      ctx.strokeStyle = colors[i % 2];
+      ctx.lineWidth = Math.max(0.45, r * 0.007);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    for (const side of [-1, 1]) {
+      ctx.strokeStyle = alpha(lighten(tier.fill, 0.22), 0.42);
+      ctx.lineWidth = Math.max(0.55, r * 0.010);
+      for (let i = 0; i < 7; i++) {
+        const y = -r * (0.33 - i * 0.055);
+        ctx.beginPath();
+        ctx.moveTo(side * r * 0.46, y);
+        ctx.lineTo(side * r * (0.57 + i * 0.006), y + r * (0.015 + i * 0.008));
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawSoftShading(ctx, tier, r) {
+    ctx.save();
+    catCorePath(ctx, tier, r);
+    ctx.clip();
+
+    const sideShadow = ctx.createLinearGradient(-r * 0.75, 0, r * 0.78, 0);
+    sideShadow.addColorStop(0, 'rgba(0, 0, 0, 0.10)');
+    sideShadow.addColorStop(0.38, 'rgba(0, 0, 0, 0.00)');
+    sideShadow.addColorStop(0.68, 'rgba(0, 0, 0, 0.00)');
+    sideShadow.addColorStop(1, 'rgba(0, 0, 0, 0.13)');
+    ctx.fillStyle = sideShadow;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
+
+    const belly = ctx.createRadialGradient(0, r * 0.44, r * 0.06, 0, r * 0.44, r * 0.56);
+    belly.addColorStop(0, alpha(lighten(tier.fill, 0.38), tier.pattern === 'tuxedo' ? 0.05 : 0.22));
+    belly.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = belly;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.48, r * 0.40, r * 0.36, 0, 0, TAU);
+    ctx.fill();
     ctx.restore();
   }
 
@@ -274,26 +352,26 @@
     ctx.clip();
 
     if (tier.pattern === 'stripes') {
-      const weight = tier.patternWeight || 0.105;
-      const count = tier.patternCount || 5;
-      const spacing = tier.patternSpacing || 0.30;
-      ctx.strokeStyle = alpha(tier.patternColor, 0.86);
-      ctx.lineWidth = Math.max(1.2, r * weight);
+      const count = tier.patternCount || 6;
+      ctx.strokeStyle = alpha(tier.patternColor, 0.78);
+      ctx.lineWidth = Math.max(0.9, r * (tier.patternWeight || 0.042));
       ctx.lineCap = 'round';
       for (let i = 0; i < count; i++) {
-        const y = -r * 0.05 + (i - (count - 1) / 2) * r * spacing;
+        const t = i / Math.max(1, count - 1);
+        const y = -r * 0.18 + t * r * 0.68;
+        const inset = Math.sin(t * Math.PI) * r * 0.08;
         ctx.beginPath();
-        ctx.moveTo(-r * 0.62, y);
-        ctx.quadraticCurveTo(0, y - r * 0.14, r * 0.62, y);
+        ctx.moveTo(-r * (0.56 - inset / r), y);
+        ctx.bezierCurveTo(-r * 0.22, y - r * 0.10, r * 0.18, y + r * 0.10, r * (0.56 - inset / r), y);
         ctx.stroke();
       }
-      ctx.lineWidth = Math.max(1, r * 0.04);
+      ctx.lineWidth = Math.max(0.8, r * 0.026);
       for (const side of [-1, 1]) {
-        for (let i = 0; i < 3; i++) {
-          const y = -r * (0.38 - i * 0.15);
+        for (let i = 0; i < 5; i++) {
+          const y = -r * (0.48 - i * 0.095);
           ctx.beginPath();
-          ctx.moveTo(side * r * 0.31, y);
-          ctx.lineTo(side * r * 0.50, y - r * 0.05);
+          ctx.moveTo(side * r * 0.24, y);
+          ctx.quadraticCurveTo(side * r * 0.37, y - r * 0.04, side * r * 0.51, y + r * 0.01);
           ctx.stroke();
         }
       }
@@ -421,6 +499,16 @@
     drawEye(ctx, -r * 0.22, -r * 0.41, r, tier.eye);
     drawEye(ctx, r * 0.22, -r * 0.41, r, tier.eye);
 
+    ctx.strokeStyle = alpha(darken(tier.fill, 0.45), 0.26);
+    ctx.lineWidth = Math.max(0.55, r * 0.010);
+    ctx.lineCap = 'round';
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.07, -r * 0.33);
+      ctx.quadraticCurveTo(side * r * 0.16, -r * 0.34, side * r * 0.29, -r * 0.31);
+      ctx.stroke();
+    }
+
     ctx.fillStyle = tier.nose;
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.285);
@@ -504,14 +592,14 @@
     ctx.clip();
     const rim = ctx.createRadialGradient(r * 0.02, -r * 0.03, r * 0.42, 0, 0, r * 1.05);
     rim.addColorStop(0.00, 'rgba(0, 0, 0, 0)');
-    rim.addColorStop(0.82, 'rgba(0, 0, 0, 0.04)');
-    rim.addColorStop(1.00, 'rgba(0, 0, 0, 0.18)');
+    rim.addColorStop(0.82, 'rgba(0, 0, 0, 0.035)');
+    rim.addColorStop(1.00, 'rgba(0, 0, 0, 0.13)');
     ctx.fillStyle = rim;
     ctx.fillRect(-r * 1.12, -r * 1.12, r * 2.24, r * 2.24);
 
     const gloss = ctx.createRadialGradient(-r * 0.35, -r * 0.60, 0, -r * 0.35, -r * 0.60, r * 0.50);
-    gloss.addColorStop(0.0, 'rgba(255, 255, 255, 0.42)');
-    gloss.addColorStop(0.65, 'rgba(255, 255, 255, 0.08)');
+    gloss.addColorStop(0.0, 'rgba(255, 255, 255, 0.26)');
+    gloss.addColorStop(0.65, 'rgba(255, 255, 255, 0.05)');
     gloss.addColorStop(1.0, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = gloss;
     ctx.beginPath();
@@ -522,8 +610,8 @@
 
   function drawOutlines(ctx, tier, r) {
     ctx.save();
-    ctx.strokeStyle = tier.stroke;
-    ctx.lineWidth = Math.max(1.2, r * 0.038);
+    ctx.strokeStyle = alpha(tier.stroke, 0.72);
+    ctx.lineWidth = Math.max(0.9, r * 0.022);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
@@ -562,8 +650,10 @@
     drawTail(ctx, tier, r);
     drawLongHair(ctx, tier, r);
     fillCore(ctx, tier, r);
+    drawSoftShading(ctx, tier, r);
     drawFurTexture(ctx, tier, r);
     drawCoatPattern(ctx, tier, r);
+    drawEdgeFur(ctx, tier, r);
     drawEarDetails(ctx, tier, r);
     drawPaws(ctx, tier, r);
     drawRimAndGloss(ctx, tier, r);
