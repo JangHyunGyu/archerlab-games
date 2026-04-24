@@ -105,13 +105,16 @@
       <div class="stat score-stat">
         <div class="stat-label" data-i18n="hud.score">점수</div>
         <div id="score" class="stat-value">0</div>
+        <div id="current-cat-name" class="cat-name-chip hidden"></div>
       </div>
       <div class="stat next-stat">
         <div class="stat-label" data-i18n="hud.next">다음</div>
         <canvas id="next-cat" width="72" height="72"></canvas>
+        <div id="next-cat-name" class="next-cat-name"></div>
       </div>
       <button id="sound-btn" class="icon-btn" aria-label="사운드 토글" data-i18n-aria="hud.soundAria">🔊</button>
     </header>
+    <div id="game-tier-strip" class="game-tier-strip" aria-label="진화 단계"></div>
     <div class="field-wrap">
       <canvas id="canvas"></canvas>
     </div>
