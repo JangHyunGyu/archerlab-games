@@ -77,6 +77,7 @@ class PhysicsEngine {
         this.ball.vx = team === 0 ? 0.8 : -0.8;
         this.ball.vy = 0;
         this.ball.lastHitBy = -1;
+        this.ball.lastHitSlimeId = -1;
         this.phase = 'playing';
     }
 
@@ -113,9 +114,15 @@ class PhysicsEngine {
 
         // Ball-slime collision
         let hitResult = null;
+        let bestCollision = null;
         for (const slime of this.slimes) {
-            const hit = this.checkBallSlimeCollision(slime);
-            if (hit) hitResult = { type: 'hit', slime: slime };
+            const collision = this.getBallSlimeCollision(slime);
+            if (collision && (!bestCollision || collision.penetration > bestCollision.penetration)) {
+                bestCollision = collision;
+            }
+        }
+        if (bestCollision && this.checkBallSlimeCollision(bestCollision.slime)) {
+            hitResult = { type: 'hit', slime: bestCollision.slime };
         }
 
         // Ball-net collision
@@ -123,6 +130,8 @@ class PhysicsEngine {
 
         // Ball-wall collision
         this.checkBallWallCollision();
+
+        this.clampBallSpeed();
 
         // Check scoring
         const scoreResult = this.checkScoring();
@@ -186,6 +195,10 @@ class PhysicsEngine {
         this.ball.x += this.ball.vx;
         this.ball.y += this.ball.vy;
 
+        this.clampBallSpeed();
+    }
+
+    clampBallSpeed() {
         const speed = Math.sqrt(this.ball.vx * this.ball.vx + this.ball.vy * this.ball.vy);
         if (speed > CONFIG.BALL_MAX_SPEED) {
             const scale = CONFIG.BALL_MAX_SPEED / speed;
@@ -195,21 +208,81 @@ class PhysicsEngine {
     }
 
     resolveSlimeCollisions() {
-        // 같은 팀 슬라임 충돌 없음 (겹침 허용)
+        // 같은 팀 슬라임끼리는 최소 간격을 유지한다.
+        const minSpacing = CONFIG.SLIME_RADIUS * 2;
+
+        for (let team = 0; team < 2; team++) {
+            const teamSlimes = this.slimes
+                .filter(slime => slime.team === team)
+                .sort((a, b) => a.x - b.x);
+
+            if (teamSlimes.length < 2) continue;
+
+            for (const slime of teamSlimes) {
+                this.clampSlimeX(slime);
+            }
+
+            for (let i = 1; i < teamSlimes.length; i++) {
+                const prev = teamSlimes[i - 1];
+                const curr = teamSlimes[i];
+                if (curr.x - prev.x < minSpacing) {
+                    curr.x = prev.x + minSpacing;
+                }
+                this.clampSlimeX(curr);
+            }
+
+            for (let i = teamSlimes.length - 2; i >= 0; i--) {
+                const curr = teamSlimes[i];
+                const next = teamSlimes[i + 1];
+                if (next.x - curr.x < minSpacing) {
+                    curr.x = next.x - minSpacing;
+                }
+                this.clampSlimeX(curr);
+            }
+        }
     }
 
-    checkBallSlimeCollision(slime) {
+    getSlimeBounds(slime) {
+        const halfW = CONFIG.COURT_WIDTH / 2;
+        const netGap = CONFIG.NET_WIDTH / 2 + CONFIG.SLIME_RADIUS;
+        return slime.team === 0
+            ? { min: CONFIG.SLIME_RADIUS, max: halfW - netGap }
+            : { min: halfW + netGap, max: CONFIG.COURT_WIDTH - CONFIG.SLIME_RADIUS };
+    }
+
+    clampSlimeX(slime) {
+        const bounds = this.getSlimeBounds(slime);
+        slime.x = Math.max(bounds.min, Math.min(bounds.max, slime.x));
+    }
+
+    getBallSlimeCollision(slime) {
         const dx = this.ball.x - slime.x;
         const dy = this.ball.y - slime.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const minDist = CONFIG.BALL_RADIUS + CONFIG.SLIME_RADIUS;
 
         if (dist < minDist && dist > 0 && dy <= CONFIG.SLIME_RADIUS * 0.3) {
-            const nx = dx / dist;
-            const ny = dy / dist;
+            return {
+                slime,
+                nx: dx / dist,
+                ny: dy / dist,
+                minDist,
+                penetration: minDist - dist,
+            };
+        }
 
-            this.ball.x = slime.x + nx * minDist;
-            this.ball.y = slime.y + ny * minDist;
+        return null;
+    }
+
+    checkBallSlimeCollision(slime) {
+        const collision = this.getBallSlimeCollision(slime);
+
+        if (collision) {
+            const nx = collision.nx;
+            const ny = collision.ny;
+
+            this.ball.x = slime.x + nx * collision.minDist;
+            this.ball.y = slime.y + ny * collision.minDist;
 
             const relVx = this.ball.vx - slime.vx;
             const relVy = this.ball.vy - slime.vy;
@@ -232,6 +305,7 @@ class PhysicsEngine {
             if (this.ball.vy > -3) {
                 this.ball.vy = -3;
             }
+            this.clampBallSpeed();
 
             // 리시브 판정: 상대가 마지막으로 쳤고, 내 팀에서 처음 받는 경우
             if (this.ball.lastHitBy !== -1 && this.ball.lastHitBy !== slime.team) {
@@ -251,9 +325,20 @@ class PhysicsEngine {
         const netRight = CONFIG.NET_X + CONFIG.NET_WIDTH / 2;
         const netTop = CONFIG.GROUND_Y - CONFIG.NET_HEIGHT;
         const br = CONFIG.BALL_RADIUS;
+        const topHalfWidth = (CONFIG.NET_TOP_WIDTH || CONFIG.NET_WIDTH) / 2;
+        const topLeft = CONFIG.NET_X - topHalfWidth;
+        const topRight = CONFIG.NET_X + topHalfWidth;
+
+        if (this.ball.x + br > topLeft && this.ball.x - br < topRight) {
+            if (this.ball.y + br > netTop && this.ball.y - br < netTop && this.ball.vy > 0) {
+                this.ball.y = netTop - br;
+                this.ball.vy = -this.ball.vy * CONFIG.BALL_BOUNCE_DAMPING;
+                return;
+            }
+        }
 
         // 공이 네트 높이 아래에 있을 때 (바닥까지 완전한 벽)
-        if (this.ball.y + br > netTop) {
+        if (this.ball.y + br > netTop && this.ball.y >= netTop) {
             // 왼쪽에서 오른쪽으로 관통 방지
             if (this.ball.x + br > netLeft && this.ball.x < CONFIG.NET_X) {
                 this.ball.x = netLeft - br;
@@ -277,8 +362,8 @@ class PhysicsEngine {
 
         // 네트 상단 모서리 (원형 충돌)
         const corners = [
-            { x: netLeft, y: netTop },
-            { x: netRight, y: netTop }
+            { x: topLeft, y: netTop },
+            { x: topRight, y: netTop }
         ];
         for (const corner of corners) {
             const dx = this.ball.x - corner.x;
@@ -614,6 +699,7 @@ class PhysicsEngine {
         this.ball.vx = state.ball.vx;
         this.ball.vy = state.ball.vy;
         this.ball.lastHitBy = state.ball.lastHitBy;
+        this.ball.lastHitSlimeId = state.ball.lastHitSlimeId ?? -1;
         for (const ss of state.slimes) {
             const slime = this.slimes.find(s => s.id === ss.id);
             if (slime) {
@@ -650,6 +736,7 @@ class PhysicsEngine {
             this.ball.vx = lerp(stateA.ball.vx, stateB.ball.vx, t);
             this.ball.vy = lerp(stateA.ball.vy, stateB.ball.vy, t);
             this.ball.lastHitBy = stateB.ball.lastHitBy;
+            this.ball.lastHitSlimeId = stateB.ball.lastHitSlimeId ?? -1;
         }
 
         // 슬라임 보간 (내 슬라임 제외)
