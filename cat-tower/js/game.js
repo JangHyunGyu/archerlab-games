@@ -467,6 +467,29 @@
     el.classList.add('pop');
   }
 
+  function catLabel(tierIdx) {
+    if (typeof tierIdx !== 'number') return '';
+    return `${tierIdx + 1}. ${tt('cat.' + tierIdx)}`;
+  }
+
+  function updateCurrentCatLabel(tierIdx) {
+    const el = $('current-cat-name');
+    if (!el) return;
+    if (typeof tierIdx !== 'number') {
+      el.textContent = '';
+      el.classList.add('hidden');
+      return;
+    }
+    el.textContent = `${tt('hud.current')}: ${catLabel(tierIdx)}`;
+    el.classList.remove('hidden');
+  }
+
+  function updateNextCatLabel() {
+    const el = $('next-cat-name');
+    if (!el) return;
+    el.textContent = (typeof nextTier === 'number') ? catLabel(nextTier) : '';
+  }
+
   // -------- 스폰 로직 --------
   function pickNextTier() {
     // 가중치: 원작 수박게임처럼 균등 분포 (5종 각 ~20%)
@@ -488,6 +511,7 @@
     const x = Math.min(FIELD_W - r, Math.max(r, pointerX));
     currentCat = createCat(tier, x, SPAWN_Y, true);
     if (!currentCat) { err('spawnCurrent: currentCat 생성 실패'); return; }
+    updateCurrentCatLabel(tier);
     nextTier = pickNextTier();
     drawNextPreview();
     log(`spawnCurrent tier=${tier}(${TIERS[tier].name}) next=${nextTier}`);
@@ -508,6 +532,7 @@
     sound?.playDrop(tier);
     log(`dropCurrent tier=${tier} at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`);
     currentCat = null;
+    updateCurrentCatLabel(null);
     dropCooldown = true;
     setTimeout(() => {
       dropCooldown = false;
@@ -587,6 +612,7 @@
     log(`triggerGameOver score=${score} best=${bestScore} newRecord=${isNew}`);
     gameOver = true;
     running = false;
+    updateCurrentCatLabel(null);
     clearSave();
     if (isNew) { bestScore = score; saveBest(bestScore); }
     $('final-score').textContent = score.toLocaleString();
@@ -605,6 +631,44 @@
   }
 
   // -------- 렌더링 --------
+  function roundedRectPath(g, x, y, w, h, radius) {
+    const r = Math.min(radius, w / 2, h / 2);
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.lineTo(x + w - r, y);
+    g.quadraticCurveTo(x + w, y, x + w, y + r);
+    g.lineTo(x + w, y + h - r);
+    g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    g.lineTo(x + r, y + h);
+    g.quadraticCurveTo(x, y + h, x, y + h - r);
+    g.lineTo(x, y + r);
+    g.quadraticCurveTo(x, y, x + r, y);
+  }
+
+  function drawTierMarker(body) {
+    const tierIdx = body.cat.tier;
+    const r = TIERS[tierIdx].radius;
+    const text = String(tierIdx + 1);
+    const w = text.length > 1 ? 21 : 17;
+    const h = 15;
+    const x = Math.max(w / 2 + 4, Math.min(FIELD_W - w / 2 - 4, body.position.x - r * 0.44));
+    const y = Math.max(h / 2 + 4, Math.min(FIELD_H - h / 2 - 4, body.position.y - r * 0.58));
+
+    ctx.save();
+    ctx.font = '800 10px Pretendard, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    roundedRectPath(ctx, x - w / 2, y - h / 2, w, h, 7);
+    ctx.fillStyle = body.isStatic ? '#E85A4F' : 'rgba(255, 251, 241, 0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(58, 41, 32, 0.52)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.fillStyle = body.isStatic ? '#FFF5EC' : '#2E1F17';
+    ctx.fillText(text, x, y + 0.2);
+    ctx.restore();
+  }
+
   function render() {
     // 배경 — 은은한 베이지 + 경계선
     ctx.clearRect(0, 0, FIELD_W, FIELD_H);
@@ -664,10 +728,16 @@
       }
       ctx.restore();
     }
+
+    for (const b of bodies) {
+      if (b.label !== 'cat' || !b.cat) continue;
+      drawTierMarker(b);
+    }
   }
 
   function drawNextPreview() {
     nextCtx.clearRect(0, 0, 72, 72);
+    updateNextCatLabel();
     if (nextTier == null) return;
     const r = Math.min(30, TIERS[nextTier].radius);
     CatAssets.drawCat(nextCtx, nextTier, 36, 36, 0, r);
@@ -810,6 +880,7 @@
         const clampedX = Math.min(FIELD_W - r, Math.max(r, curX));
         pointerX = clampedX;
         currentCat = createCat(data.current.t, clampedX, SPAWN_Y, true);
+        updateCurrentCatLabel(data.current.t);
         drawNextPreview();
       } else {
         spawnCurrent();
@@ -856,6 +927,7 @@
     running = false;
     gameOver = false;
     currentCat = null; // 이전 게임 참조 정리
+    updateCurrentCatLabel(null);
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
     sound?.stopAll();
     hide(modals.gameover);
@@ -882,6 +954,37 @@
       label.className = 'tier-name';
       label.textContent = (i + 1) + '. ' + tt('cat.' + i);
       cell.appendChild(label);
+      wrap.appendChild(cell);
+    });
+  }
+
+  function buildGameTierStrip() {
+    const wrap = $('game-tier-strip');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    TIERS.forEach((_tier, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'game-tier-cell';
+      cell.title = catLabel(i);
+
+      const c = document.createElement('canvas');
+      c.width = 36;
+      c.height = 36;
+      const cctx = c.getContext('2d');
+      CatAssets.drawCat(cctx, i, 18, 18, 0, 13);
+      cell.appendChild(c);
+
+      const text = document.createElement('div');
+      text.className = 'game-tier-text';
+      const num = document.createElement('div');
+      num.className = 'game-tier-num';
+      num.textContent = `${i + 1}`;
+      const name = document.createElement('div');
+      name.className = 'game-tier-name';
+      name.textContent = tt('cat.' + i);
+      text.appendChild(num);
+      text.appendChild(name);
+      cell.appendChild(text);
       wrap.appendChild(cell);
     });
   }
@@ -1030,7 +1133,8 @@
         'replay-btn', 'menu-btn', 'rank-btn', 'rank-close',
         'rank-content', 'submit-rank-btn', 'skip-rank-btn', 'nickname-input', 'submit-status',
         'lang-ko', 'lang-en', 'score', 'best-score',
-        'final-score', 'new-record', 'combo-flash', 'tier-preview'];
+        'final-score', 'new-record', 'combo-flash', 'tier-preview',
+        'current-cat-name', 'next-cat-name', 'game-tier-strip'];
       for (const id of required) {
         if (!$(id)) err(`필수 엘리먼트 #${id} 누락`);
       }
@@ -1086,11 +1190,14 @@
         updateLangButtons();
         // 티어 프리뷰는 텍스트에 언어별 고양이 이름이 들어있어 재생성 필요
         buildTierPreview();
+        buildGameTierStrip();
         // 플레이 버튼이 '불러오는 중…'이 아닐 때만 i18n 라벨 복원 (preload 실패 시 보존)
         const pb = $('play-btn');
         if (!pb.disabled) pb.textContent = tt('menu.play');
         // 이어서 버튼은 점수 suffix가 붙어있어 applyDom 대신 직접 재갱신
         updateMenuResumeButton();
+        updateCurrentCatLabel(currentCat?.cat?.tier);
+        updateNextCatLabel();
       });
 
       // 메뉴 진입 시 이어서 버튼 상태 반영
@@ -1138,6 +1245,7 @@
         await CatAssets.preloadAll();
         log('에셋 프리로드 완료');
         buildTierPreview();
+        buildGameTierStrip();
         // 사운드 합성 그래프 선행 구축 — AudioContext는 suspended지만 노드/reverb IR 생성은 가능.
         // 첫 플레이 시 Tone.js 초기화 블로킹으로 인한 100ms+ 히치 제거.
         try { sound?.init(); log('SoundManager pre-init 완료'); } catch (e) { warn('SoundManager pre-init 실패:', e.message); }

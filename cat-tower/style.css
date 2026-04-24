@@ -227,6 +227,25 @@ h1 {
 }
 .stat { display: flex; flex-direction: column; }
 .score-stat { flex: 1; }
+.cat-name-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 18px;
+  max-width: 148px;
+  margin-top: 3px;
+  padding: 2px 7px;
+  border: 1px solid rgba(58, 41, 32, 0.20);
+  border-radius: 999px;
+  background: rgba(251, 242, 224, 0.86);
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .stat-label {
   font-size: 10px;
   font-weight: 700;
@@ -249,6 +268,19 @@ h1 {
   border-radius: var(--radius-sm);
   margin-top: 2px;
 }
+.next-cat-name {
+  width: 64px;
+  min-height: 13px;
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .icon-btn {
   width: 42px;
@@ -269,6 +301,56 @@ h1 {
 }
 .icon-btn:active { transform: translateY(3px); box-shadow: 0 0 0 0 var(--line); }
 .icon-btn.muted { color: var(--ink-soft); background: rgba(58, 41, 32, 0.06); opacity: 0.75; }
+
+.game-tier-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  width: 100%;
+  max-width: 400px;
+  align-self: center;
+  padding: 6px;
+  background: rgba(255, 251, 241, 0.88);
+  border: 2px solid rgba(58, 41, 32, 0.28);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 0 rgba(58, 41, 32, 0.24);
+}
+.game-tier-cell {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 4px;
+  border: 1px solid rgba(58, 41, 32, 0.14);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+.game-tier-cell canvas {
+  width: 18px;
+  height: 18px;
+}
+.game-tier-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1;
+}
+.game-tier-num {
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 900;
+}
+.game-tier-name {
+  color: var(--ink-soft);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .field-wrap {
   flex: 1;
@@ -545,6 +627,11 @@ h1 {
   h1 { font-size: 34px; }
   .title-emoji { font-size: 60px; }
   .stat-value { font-size: 20px; }
+  .game-tier-strip { gap: 3px; padding: 5px; }
+  .game-tier-cell { grid-template-columns: 16px 1fr; gap: 2px; padding: 2px 3px; }
+  .game-tier-cell canvas { width: 16px; height: 16px; }
+  .game-tier-num { font-size: 8px; }
+  .game-tier-name { font-size: 7px; }
   .tier-preview { grid-template-columns: repeat(3, 1fr); }
   .tier-cell canvas { width: 40px; height: 40px; }
 }

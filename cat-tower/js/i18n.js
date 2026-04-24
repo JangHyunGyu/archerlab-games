@@ -15,6 +15,7 @@
 
       // HUD
       'hud.score': '점수',
+      'hud.current': '현재',
       'hud.next': '다음',
       'hud.hint': '좌우로 움직여 탭하면 드롭!',
       'hud.soundAria': '사운드 켜기/끄기',
@@ -82,6 +83,7 @@
       'menu.archerlab': '🏹 ArcherLab',
 
       'hud.score': 'Score',
+      'hud.current': 'Now',
       'hud.next': 'Next',
       'hud.hint': 'Drag to move, tap to drop!',
       'hud.soundAria': 'Toggle sound',
