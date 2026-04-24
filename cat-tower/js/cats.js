@@ -55,7 +55,8 @@
 
     { id: 4, name: '삼색이', radius: 36, score: 110,
       fill: '#FAF0DA', stroke: '#B79E6E', pattern: 'calico',
-      eye: '#89A94F', nose: '#D98981', muzzle: '#FFF2DD', earInner: '#E9A8A1' },
+      eye: '#89A94F', nose: '#D98981', muzzle: '#FFF2DD', earInner: '#E9A8A1',
+      sprite: 'assets/cats/calico.png', spriteScale: 2.28, spriteYOffset: 0.02 },
 
     { id: 5, name: '고등어', radius: 45, score: 220,
       fill: '#ABB5C0', stroke: '#6E7985', pattern: 'stripes', patternColor: '#66717C',
@@ -85,8 +86,35 @@
       aura: '#F2B43A' },
   ];
 
+  const spriteCache = new Map();
+
+  function loadSprite(src) {
+    if (!src) return Promise.resolve(null);
+    if (spriteCache.has(src)) {
+      const cached = spriteCache.get(src);
+      if (cached instanceof Image) return Promise.resolve(cached);
+      return cached;
+    }
+
+    const p = new Promise((resolve) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => {
+        spriteCache.set(src, img);
+        resolve(img);
+      };
+      img.onerror = () => {
+        console.warn('[cats] sprite load failed:', src);
+        resolve(null);
+      };
+      img.src = src;
+    });
+    spriteCache.set(src, p);
+    return p;
+  }
+
   function preloadAll() {
-    return Promise.resolve();
+    return Promise.all(CAT_TIERS.map((tier) => loadSprite(tier.sprite)));
   }
 
   function earPath(ctx, side, tier, r) {
@@ -166,6 +194,24 @@
       }
     }
     ctx.restore();
+  }
+
+  function drawSpriteCat(ctx, tier, r, angle) {
+    const img = spriteCache.get(tier.sprite);
+    if (!(img instanceof Image) || !img.complete || img.naturalWidth <= 0) return false;
+
+    drawGroundShadow(ctx, r, angle);
+
+    const targetW = r * (tier.spriteScale || 2.2);
+    const targetH = targetW * (img.naturalHeight / img.naturalWidth);
+    const y = -targetH * 0.50 + r * (tier.spriteYOffset || 0);
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, -targetW / 2, y, targetW, targetH);
+    ctx.restore();
+    return true;
   }
 
   function drawLongHair(ctx, tier, r) {
@@ -644,6 +690,11 @@
       grd.addColorStop(1.0, tier.aura + '00');
       ctx.fillStyle = grd;
       ctx.fillRect(-r * 1.7, -r * 1.7, r * 3.4, r * 3.4);
+    }
+
+    if (tier.sprite && drawSpriteCat(ctx, tier, r, angle)) {
+      ctx.restore();
+      return;
     }
 
     drawGroundShadow(ctx, r, angle);
