@@ -23,9 +23,49 @@ class SoundManager {
         for (let i = 0; i < poolSize; i++) {
             const audio = new Audio(src);
             audio.preload = 'auto';
+            audio.load();
             this.mp3Pools[name].push(audio);
         }
         this.mp3Pools[name]._index = 0;
+    }
+
+    _unlockMp3Pools() {
+        for (const name in this.mp3Pools) {
+            const audio = this.mp3Pools[name][0];
+            if (!audio || audio._unlocked) continue;
+
+            const previousMuted = audio.muted;
+            const previousVolume = audio.volume;
+            audio.muted = true;
+            audio.volume = 0;
+            audio.currentTime = 0;
+
+            const restore = () => {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = previousMuted;
+                audio.volume = previousVolume;
+            };
+
+            try {
+                const playAttempt = audio.play();
+                if (playAttempt && typeof playAttempt.then === 'function') {
+                    playAttempt
+                        .then(() => {
+                            restore();
+                            audio._unlocked = true;
+                        })
+                        .catch(() => {
+                            restore();
+                        });
+                } else {
+                    restore();
+                    audio._unlocked = true;
+                }
+            } catch (e) {
+                restore();
+            }
+        }
     }
 
     // MP3 풀에서 재생 (볼륨 적용, 라운드로빈)
@@ -60,6 +100,7 @@ class SoundManager {
             this.createMp3Pool('wall', soundBase + 'wall.wav', 4);
             this.createMp3Pool('net', soundBase + 'net.wav', 4);
             this.createMp3Pool('floor', soundBase + 'floor.wav', 4);
+            this._unlockMp3Pools();
 
             // === Tone.js 합성 사운드 (점프, 득점, 게임오버, UI) ===
 
