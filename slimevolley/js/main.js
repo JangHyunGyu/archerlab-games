@@ -25,11 +25,18 @@ class SlimeVolleyGame {
         this.renderer = new GameRenderer(document.getElementById('game-canvas-container'));
         this.lobby = new LobbyManager(this);
 
-        const initSound = async () => {
-            await this.sound.init();
+        let soundInitStarted = false;
+        const initSound = () => {
+            if (soundInitStarted) return;
+            soundInitStarted = true;
+            this.sound.init();
+            document.removeEventListener('pointerdown', initSound);
+            document.removeEventListener('touchstart', initSound);
             document.removeEventListener('click', initSound);
             document.removeEventListener('keydown', initSound);
         };
+        document.addEventListener('pointerdown', initSound, { passive: true });
+        document.addEventListener('touchstart', initSound, { passive: true });
         document.addEventListener('click', initSound);
         document.addEventListener('keydown', initSound);
 
@@ -797,10 +804,17 @@ class SlimeVolleyGame {
 
     // === Fullscreen ===
     enterFullscreen() {
+        // iPhone Safari only supports the Fullscreen API partially and generally
+        // cannot fullscreen non-media elements. Keep gameplay in normal viewport.
+        if (/iPhone|iPod/.test(navigator.userAgent || '')) return;
         if (document.fullscreenElement || document.webkitFullscreenElement) return;
         const el = document.documentElement;
-        const fn = el.requestFullscreen || el.webkitRequestFullscreen;
-        if (fn) fn.call(el).catch(() => {});
+        try {
+            const request = el.requestFullscreen
+                ? el.requestFullscreen({ navigationUI: 'hide' })
+                : el.webkitRequestFullscreen && el.webkitRequestFullscreen();
+            if (request && typeof request.catch === 'function') request.catch(() => {});
+        } catch (e) {}
     }
 
     // === Sound ===

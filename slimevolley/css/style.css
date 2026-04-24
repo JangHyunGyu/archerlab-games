@@ -1002,14 +1002,14 @@ kbd {
 }
 
 /* 터치 활성화 시 */
-.touch-zone-left.active .joystick-base {
+.touch-zone-left.active ~ .joystick-visual-left .joystick-base {
     border-color: rgba(122, 166, 255, 0.4);
 }
-.touch-zone-left.active .joystick-knob {
+.touch-zone-left.active ~ .joystick-visual-left .joystick-knob {
     background: rgba(122, 166, 255, 0.3);
     border-color: rgba(122, 166, 255, 0.55);
 }
-.touch-zone-right.active .jump-btn-visual {
+.touch-zone-right.active ~ .joystick-visual-right .jump-btn-visual {
     background: rgba(122, 166, 255, 0.15);
     border-color: rgba(122, 166, 255, 0.45);
     color: rgba(122, 166, 255, 0.75);

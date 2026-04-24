@@ -21,12 +21,13 @@ class GameRenderer {
 
     async init() {
         this.app = new PIXI.Application();
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
         await this.app.init({
             width: CONFIG.COURT_WIDTH,
             height: CONFIG.COURT_HEIGHT,
             backgroundColor: CONFIG.SKY_TOP,
             antialias: true,
-            resolution: window.devicePixelRatio || 1,
+            resolution: pixelRatio,
             autoDensity: true,
         });
         this.container.appendChild(this.app.canvas);
