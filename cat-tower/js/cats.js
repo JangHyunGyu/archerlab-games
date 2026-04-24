@@ -36,6 +36,10 @@
     return `rgba(${r}, ${g}, ${b}, ${amount})`;
   }
 
+  function fract(v) {
+    return v - Math.floor(v);
+  }
+
   const CAT_TIERS = [
     { id: 1, name: '새끼 고양이', radius: 15, score: 10,
       fill: '#FFD8B5', stroke: '#D89A6A', pattern: null,
@@ -193,6 +197,47 @@
     ctx.fill();
   }
 
+  function drawFurTexture(ctx, tier, r) {
+    ctx.save();
+    catCorePath(ctx, tier, r);
+    ctx.clip();
+
+    const count = r < 24 ? 10 : r < 56 ? 18 : 28;
+    const light = alpha(lighten(tier.fill, 0.32), tier.pattern === 'tuxedo' ? 0.10 : 0.22);
+    const dark = alpha(darken(tier.fill, 0.30), tier.pattern === 'tuxedo' ? 0.16 : 0.18);
+    ctx.lineCap = 'round';
+
+    for (let i = 0; i < count; i++) {
+      const seed = tier.id * 31.7 + i * 9.13;
+      const px = (fract(Math.sin(seed) * 43758.5453) - 0.5) * r * 1.05;
+      const py = (fract(Math.sin(seed + 11.7) * 24634.6345) - 0.5) * r * 1.42 + r * 0.03;
+      if ((px * px) / (r * r * 0.58) + ((py - r * 0.03) * (py - r * 0.03)) / (r * r * 0.82) > 1.08) continue;
+      const len = r * (0.10 + fract(Math.sin(seed + 3.9) * 9182.12) * 0.08);
+      const tilt = -0.62 + fract(Math.sin(seed + 21.2) * 13771.3) * 0.40;
+      ctx.strokeStyle = i % 2 ? light : dark;
+      ctx.lineWidth = Math.max(0.45, r * 0.009);
+      ctx.beginPath();
+      ctx.moveTo(px - Math.cos(tilt) * len * 0.48, py - Math.sin(tilt) * len * 0.48);
+      ctx.lineTo(px + Math.cos(tilt) * len * 0.52, py + Math.sin(tilt) * len * 0.52);
+      ctx.stroke();
+    }
+
+    if (r >= 28) {
+      ctx.strokeStyle = alpha(darken(tier.fill, 0.35), tier.pattern === 'tuxedo' ? 0.14 : 0.20);
+      ctx.lineWidth = Math.max(0.6, r * 0.011);
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < 4; i++) {
+          const y = -r * (0.47 - i * 0.09);
+          ctx.beginPath();
+          ctx.moveTo(side * r * 0.08, y);
+          ctx.quadraticCurveTo(side * r * 0.20, y - r * 0.03, side * r * 0.35, y - r * 0.01);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
   function drawBlob(ctx, x, y, rx, ry, color, rot) {
     ctx.save();
     ctx.translate(x, y);
@@ -317,26 +362,32 @@
   }
 
   function drawEye(ctx, x, y, r, color) {
-    const ew = r * 0.115;
-    const eh = r * 0.068;
+    const ew = r * 0.125;
+    const eh = r * 0.055;
     ctx.save();
-    ctx.fillStyle = '#F7F1C7';
-    ctx.strokeStyle = 'rgba(30, 20, 14, 0.58)';
+    ctx.fillStyle = '#F1EEC4';
+    ctx.strokeStyle = 'rgba(30, 20, 14, 0.66)';
     ctx.lineWidth = Math.max(0.8, r * 0.018);
     ctx.beginPath();
-    ctx.moveTo(x - ew, y);
-    ctx.quadraticCurveTo(x, y - eh, x + ew, y);
-    ctx.quadraticCurveTo(x, y + eh, x - ew, y);
+    ctx.moveTo(x - ew, y + eh * 0.05);
+    ctx.quadraticCurveTo(x - ew * 0.18, y - eh * 1.10, x + ew, y - eh * 0.08);
+    ctx.quadraticCurveTo(x + ew * 0.12, y + eh * 0.92, x - ew, y + eh * 0.05);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+
+    const iris = ctx.createRadialGradient(x - ew * 0.22, y - eh * 0.38, 0, x, y, ew * 0.78);
+    iris.addColorStop(0, lighten(color, 0.34));
+    iris.addColorStop(0.62, color);
+    iris.addColorStop(1, darken(color, 0.32));
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.ellipse(x, y, ew * 0.68, eh * 0.86, 0, 0, TAU);
+    ctx.ellipse(x, y, ew * 0.58, eh * 0.88, 0, 0, TAU);
+    ctx.fillStyle = iris;
     ctx.fill();
     ctx.fillStyle = '#17110D';
     ctx.beginPath();
-    ctx.ellipse(x, y, ew * 0.18, eh * 0.82, 0, 0, TAU);
+    ctx.ellipse(x, y, ew * 0.13, eh * 0.92, 0, 0, TAU);
     ctx.fill();
     ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.beginPath();
@@ -348,6 +399,17 @@
   function drawFace(ctx, tier, r) {
     ctx.save();
     const muzzle = tier.muzzle || lighten(tier.fill, 0.35);
+    const bridge = alpha(darken(tier.fill, 0.22), tier.pattern === 'tuxedo' ? 0.18 : 0.16);
+    ctx.strokeStyle = bridge;
+    ctx.lineWidth = Math.max(0.7, r * 0.015);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.58);
+    ctx.quadraticCurveTo(-r * 0.035, -r * 0.44, -r * 0.018, -r * 0.31);
+    ctx.moveTo(0, -r * 0.58);
+    ctx.quadraticCurveTo(r * 0.035, -r * 0.44, r * 0.018, -r * 0.31);
+    ctx.stroke();
+
     ctx.fillStyle = alpha(muzzle, 0.96);
     ctx.beginPath();
     ctx.moveTo(r * 0.05, -r * 0.22);
@@ -362,9 +424,13 @@
     ctx.fillStyle = tier.nose;
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.285);
-    ctx.lineTo(-r * 0.055, -r * 0.225);
-    ctx.lineTo(r * 0.055, -r * 0.225);
+    ctx.lineTo(-r * 0.062, -r * 0.225);
+    ctx.quadraticCurveTo(0, -r * 0.198, r * 0.062, -r * 0.225);
     ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.34)';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.020, -r * 0.246, r * 0.014, r * 0.008, -0.35, 0, TAU);
     ctx.fill();
 
     ctx.strokeStyle = 'rgba(31, 20, 13, 0.58)';
@@ -378,6 +444,15 @@
     ctx.moveTo(0, -r * 0.16);
     ctx.quadraticCurveTo(r * 0.07, -r * 0.12, r * 0.13, -r * 0.15);
     ctx.stroke();
+
+    ctx.fillStyle = 'rgba(43, 28, 18, 0.35)';
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(side * r * (0.17 + i * 0.055), -r * (0.20 - i * 0.035), Math.max(0.6, r * 0.010), 0, TAU);
+        ctx.fill();
+      }
+    }
 
     ctx.strokeStyle = 'rgba(31, 20, 13, 0.42)';
     ctx.lineWidth = Math.max(0.65, r * 0.012);
@@ -408,6 +483,16 @@
         ctx.lineTo(side * r * 0.50, -r * 0.55);
         ctx.closePath();
         ctx.fill();
+      }
+
+      ctx.strokeStyle = 'rgba(255, 245, 235, 0.50)';
+      ctx.lineWidth = Math.max(0.6, r * 0.012);
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(side * r * (0.36 + i * 0.035), -r * (0.64 + i * 0.035));
+        ctx.lineTo(side * r * (0.27 + i * 0.030), -r * (0.52 + i * 0.020));
+        ctx.stroke();
       }
     }
     ctx.restore();
@@ -477,6 +562,7 @@
     drawTail(ctx, tier, r);
     drawLongHair(ctx, tier, r);
     fillCore(ctx, tier, r);
+    drawFurTexture(ctx, tier, r);
     drawCoatPattern(ctx, tier, r);
     drawEarDetails(ctx, tier, r);
     drawPaws(ctx, tier, r);
