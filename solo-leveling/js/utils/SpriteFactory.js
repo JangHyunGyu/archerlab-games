@@ -1499,6 +1499,95 @@ export class SpriteFactory {
         dg.generateTexture('proj_dagger', 32, 64);
         dg.destroy();
 
+        // Close-range stab dagger: longer, narrower, and easier to read during a thrust.
+        const stabDg = scene.make.graphics({ add: false });
+        const scx = 19;
+
+        stabDg.fillStyle(COLORS.SHADOW_PRIMARY, 0.08);
+        stabDg.fillEllipse(scx, 40, 24, 78);
+        stabDg.fillStyle(COLORS.SHADOW_GLOW, 0.16);
+        stabDg.fillEllipse(scx, 31, 12, 62);
+
+        stabDg.fillStyle(0x0b0912, 0.98);
+        stabDg.beginPath();
+        stabDg.moveTo(scx, 2);
+        stabDg.lineTo(scx + 8, 20);
+        stabDg.lineTo(scx + 6.5, 49);
+        stabDg.lineTo(scx + 3, 58);
+        stabDg.lineTo(scx - 3, 58);
+        stabDg.lineTo(scx - 6.5, 49);
+        stabDg.lineTo(scx - 8, 20);
+        stabDg.closePath();
+        stabDg.fillPath();
+
+        stabDg.fillStyle(0x596171, 1);
+        stabDg.beginPath();
+        stabDg.moveTo(scx, 4);
+        stabDg.lineTo(scx - 6, 21);
+        stabDg.lineTo(scx - 4.5, 49);
+        stabDg.lineTo(scx, 57);
+        stabDg.closePath();
+        stabDg.fillPath();
+
+        stabDg.fillStyle(0xdce6f1, 1);
+        stabDg.beginPath();
+        stabDg.moveTo(scx, 4);
+        stabDg.lineTo(scx + 6, 21);
+        stabDg.lineTo(scx + 4.5, 49);
+        stabDg.lineTo(scx, 57);
+        stabDg.closePath();
+        stabDg.fillPath();
+
+        stabDg.fillStyle(0xf8fbff, 0.72);
+        stabDg.beginPath();
+        stabDg.moveTo(scx + 0.6, 6);
+        stabDg.lineTo(scx + 2.8, 26);
+        stabDg.lineTo(scx + 2.1, 48);
+        stabDg.lineTo(scx + 0.6, 55);
+        stabDg.closePath();
+        stabDg.fillPath();
+
+        stabDg.lineStyle(1, 0xffffff, 0.92);
+        stabDg.lineBetween(scx, 5, scx, 56);
+        stabDg.lineStyle(1, 0xb4bfce, 0.62);
+        stabDg.lineBetween(scx - 5.7, 22, scx - 3, 55);
+        stabDg.lineStyle(1, 0xffffff, 0.72);
+        stabDg.lineBetween(scx + 5.7, 22, scx + 3, 55);
+
+        stabDg.fillStyle(0xffffff, 0.92);
+        stabDg.fillCircle(scx, 3.5, 2.2);
+        stabDg.fillStyle(COLORS.SHADOW_GLOW, 0.5);
+        stabDg.fillCircle(scx, 4, 4.5);
+
+        stabDg.fillStyle(0x090911, 1);
+        stabDg.fillRoundedRect(scx - 13, 58, 26, 5, 1.5);
+        stabDg.fillStyle(0xb8c1d0, 0.9);
+        stabDg.fillRoundedRect(scx - 11, 58.4, 22, 1.8, 1);
+        stabDg.fillStyle(COLORS.SHADOW_GLOW, 0.35);
+        stabDg.fillRoundedRect(scx - 9, 62, 18, 1.1, 1);
+        stabDg.fillStyle(0x6d7485, 1);
+        stabDg.fillCircle(scx - 13, 60.5, 2.1);
+        stabDg.fillCircle(scx + 13, 60.5, 2.1);
+
+        stabDg.fillStyle(0x171126, 1);
+        stabDg.fillRoundedRect(scx - 4, 64, 8, 14, 2);
+        stabDg.fillStyle(0x050408, 0.55);
+        for (let y = 66; y < 78; y += 3) {
+            stabDg.fillRect(scx - 4, y, 8, 0.8);
+        }
+        stabDg.fillStyle(COLORS.SHADOW_GLOW, 0.28);
+        stabDg.fillRect(scx + 2, 64.5, 1.4, 13);
+
+        stabDg.fillStyle(0x090911, 1);
+        stabDg.fillCircle(scx, 79, 4.5);
+        stabDg.fillStyle(0x9ba4b2, 0.95);
+        stabDg.fillCircle(scx, 79, 3.4);
+        stabDg.fillStyle(COLORS.SHADOW_GLOW, 0.9);
+        stabDg.fillCircle(scx - 0.6, 78.4, 1.5);
+
+        stabDg.generateTexture('proj_dagger_stab', 38, 82);
+        stabDg.destroy();
+
         // Shadow Slash arc
         const sg = scene.make.graphics({ add: false });
         sg.fillStyle(COLORS.SLASH, 0.5);
