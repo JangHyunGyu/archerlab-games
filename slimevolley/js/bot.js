@@ -323,6 +323,9 @@ class BotAI {
         const netLeft = CONFIG.NET_X - CONFIG.NET_WIDTH / 2;
         const netRight = CONFIG.NET_X + CONFIG.NET_WIDTH / 2;
         const netTop = CONFIG.GROUND_Y - CONFIG.NET_HEIGHT;
+        const topHalfWidth = (CONFIG.NET_TOP_WIDTH || CONFIG.NET_WIDTH) / 2;
+        const topLeft = CONFIG.NET_X - topHalfWidth;
+        const topRight = CONFIG.NET_X + topHalfWidth;
 
         let landing = null;
         let intercept = null;
@@ -338,7 +341,14 @@ class BotAI {
             if (y < br) { y = br; vy = -vy * CONFIG.BALL_BOUNCE_DAMPING; }
 
             // 네트 충돌
-            if (y + br > netTop) {
+            if (x + br > topLeft && x - br < topRight) {
+                if (y + br > netTop && y - br < netTop && vy > 0) {
+                    y = netTop - br;
+                    vy = -vy * CONFIG.BALL_BOUNCE_DAMPING;
+                }
+            }
+
+            if (y + br > netTop && y >= netTop) {
                 if (x + br > netLeft && x < CONFIG.NET_X) {
                     vx = -Math.abs(vx) * CONFIG.BALL_BOUNCE_DAMPING;
                     x = netLeft - br;
@@ -354,6 +364,28 @@ class BotAI {
                 if (y + br > netTop && y - br < netTop && vy > 0) {
                     y = netTop - br;
                     vy = -vy * CONFIG.BALL_BOUNCE_DAMPING;
+                }
+            }
+
+            // 네트 상단 모서리 반사
+            const corners = [
+                { x: topLeft, y: netTop },
+                { x: topRight, y: netTop },
+            ];
+            for (const corner of corners) {
+                const cdx = x - corner.x;
+                const cdy = y - corner.y;
+                const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+                if (cdist < br && cdist > 0) {
+                    const nx = cdx / cdist;
+                    const ny = cdy / cdist;
+                    x = corner.x + nx * br;
+                    y = corner.y + ny * br;
+                    const dot = vx * nx + vy * ny;
+                    if (dot < 0) {
+                        vx -= 2 * dot * nx;
+                        vy -= 2 * dot * ny;
+                    }
                 }
             }
 
