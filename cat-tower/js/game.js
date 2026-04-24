@@ -631,44 +631,6 @@
   }
 
   // -------- 렌더링 --------
-  function roundedRectPath(g, x, y, w, h, radius) {
-    const r = Math.min(radius, w / 2, h / 2);
-    g.beginPath();
-    g.moveTo(x + r, y);
-    g.lineTo(x + w - r, y);
-    g.quadraticCurveTo(x + w, y, x + w, y + r);
-    g.lineTo(x + w, y + h - r);
-    g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    g.lineTo(x + r, y + h);
-    g.quadraticCurveTo(x, y + h, x, y + h - r);
-    g.lineTo(x, y + r);
-    g.quadraticCurveTo(x, y, x + r, y);
-  }
-
-  function drawTierMarker(body) {
-    const tierIdx = body.cat.tier;
-    const r = TIERS[tierIdx].radius;
-    const text = String(tierIdx + 1);
-    const w = text.length > 1 ? 21 : 17;
-    const h = 15;
-    const x = Math.max(w / 2 + 4, Math.min(FIELD_W - w / 2 - 4, body.position.x - r * 0.44));
-    const y = Math.max(h / 2 + 4, Math.min(FIELD_H - h / 2 - 4, body.position.y - r * 0.58));
-
-    ctx.save();
-    ctx.font = '800 10px Pretendard, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    roundedRectPath(ctx, x - w / 2, y - h / 2, w, h, 7);
-    ctx.fillStyle = body.isStatic ? '#E85A4F' : 'rgba(255, 251, 241, 0.92)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(58, 41, 32, 0.52)';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-    ctx.fillStyle = body.isStatic ? '#FFF5EC' : '#2E1F17';
-    ctx.fillText(text, x, y + 0.2);
-    ctx.restore();
-  }
-
   function render() {
     // 배경 — 은은한 베이지 + 경계선
     ctx.clearRect(0, 0, FIELD_W, FIELD_H);
@@ -729,10 +691,6 @@
       ctx.restore();
     }
 
-    for (const b of bodies) {
-      if (b.label !== 'cat' || !b.cat) continue;
-      drawTierMarker(b);
-    }
   }
 
   function drawNextPreview() {
