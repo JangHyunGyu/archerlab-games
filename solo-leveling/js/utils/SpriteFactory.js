@@ -171,23 +171,59 @@ export class SpriteFactory {
         if (!scene.textures.exists('ai_player_idle')) return false;
         const W = 96, H = 128;
 
-        // Scale AI image to game size
         const src = scene.textures.get('ai_player_idle').getSourceImage();
-        const makeFrame = () => {
+        const base = document.createElement('canvas');
+        base.width = W; base.height = H;
+        const baseCtx = base.getContext('2d');
+        baseCtx.imageSmoothingEnabled = true;
+        baseCtx.drawImage(src, 0, 0, W, H);
+
+        const imgData = baseCtx.getImageData(0, 0, W, H);
+        const d = imgData.data;
+        for (let p = 0; p < d.length; p += 4) {
+            const r = d[p], g = d[p + 1], b = d[p + 2];
+            if (g > 120 && g > r * 1.35 && g > b * 1.35) {
+                d[p + 3] = 0;
+            }
+        }
+        baseCtx.putImageData(imgData, 0, 0);
+
+        const makeFrame = ({ bob = 0, sway = 0, scaleX = 1, scaleY = 1, angle = 0 }) => {
             const c = document.createElement('canvas');
             c.width = W; c.height = H;
-            c.getContext('2d').drawImage(src, 0, 0, W, H);
+            const ctx = c.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.save();
+            ctx.translate(W / 2 + sway, H / 2 + bob);
+            ctx.rotate(angle);
+            ctx.scale(scaleX, scaleY);
+            ctx.drawImage(base, -W / 2, -H / 2, W, H);
+            ctx.restore();
             return c;
         };
 
-        // All idle + walk frames use the same image
-        // (walk animation handled programmatically in Player.js)
         for (let i = 0; i < 8; i++) {
-            for (const prefix of ['player_idle_', 'player_walk_']) {
-                const key = prefix + i;
-                if (scene.textures.exists(key)) scene.textures.remove(key);
-                scene.textures.addCanvas(key, makeFrame());
-            }
+            const phase = i * Math.PI / 4;
+            const breath = Math.sin(phase);
+            const idleKey = 'player_idle_' + i;
+            if (scene.textures.exists(idleKey)) scene.textures.remove(idleKey);
+            scene.textures.addCanvas(idleKey, makeFrame({
+                bob: -breath * 1.2,
+                scaleX: 1 - breath * 0.004,
+                scaleY: 1 + breath * 0.011,
+            }));
+
+            const step = Math.sin(phase);
+            const footfall = Math.abs(step);
+            const walkKey = 'player_walk_' + i;
+            if (scene.textures.exists(walkKey)) scene.textures.remove(walkKey);
+            scene.textures.addCanvas(walkKey, makeFrame({
+                bob: -footfall * 2.0,
+                sway: step * 1.8,
+                scaleX: 1 + footfall * 0.01,
+                scaleY: 1 - footfall * 0.014,
+                angle: step * 0.015,
+            }));
         }
 
         // Aura texture
@@ -201,7 +237,7 @@ export class SpriteFactory {
         sg.generateTexture('player_aura', 96, 96);
         sg.destroy();
 
-        console.log('[SpriteFactory] AI player sprite loaded (single image + programmatic anim)');
+        console.log('[SpriteFactory] AI player sprite loaded (single image + generated motion frames)');
         return true;
     }
 

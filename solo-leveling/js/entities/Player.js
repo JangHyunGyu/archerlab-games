@@ -27,6 +27,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.isMoving = false;
         this.animFrame = 0;
         this.animTimer = 0;
+        this.moveInputX = 0;
+        this.moveInputY = 0;
+        this.moveIntensity = 0;
+        this.lastMoveAngle = 0;
+        this._moveBlend = 0;
+        this._stepPhase = 0;
+        this._attackPose = {
+            active: false,
+            elapsed: 0,
+            duration: 0,
+            angle: 0,
+            side: 1,
+        };
+        this._hitReactTimer = 0;
+        this._hitReactDuration = 0;
 
         // Passive bonuses tracking
         this.passiveLevels = {};
@@ -86,7 +101,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     update(time, delta) {
         if (this.isDead) return;
         this._handleMovement();
-        this._updateAnimation();
+        this._updateAnimation(time, delta);
         this._updateInvincibility(delta);
         this._updateAura();
         this._checkRankUp();
@@ -144,12 +159,132 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             if (vx !== 0) this.facingRight = vx > 0;
         }
 
+        this.moveInputX = this.smoothVx;
+        this.moveInputY = this.smoothVy;
+        this.moveIntensity = Phaser.Math.Clamp(Math.hypot(this.moveInputX, this.moveInputY), 0, 1);
+        if (this.moveIntensity > 0.02) {
+            this.lastMoveAngle = Math.atan2(this.moveInputY, this.moveInputX);
+        }
+
         this.setFlipX(!this.facingRight);
     }
 
-    _updateAnimation() {
-        // Static image - just flip based on facing direction
+    playAttackMotion(angle, duration = 280, side = 1) {
+        if (!this.active || this.isDead) return;
+
+        const facing = Math.cos(angle);
+        if (Math.abs(facing) > 0.12) {
+            this.facingRight = facing > 0;
+        }
+
+        this._attackPose.active = true;
+        this._attackPose.elapsed = 0;
+        this._attackPose.duration = duration;
+        this._attackPose.angle = angle;
+        this._attackPose.side = side || 1;
         this.setFlipX(!this.facingRight);
+    }
+
+    _updateAnimation(time, delta) {
+        const dt = Math.min(delta || 16.67, 50);
+        const targetMove = this.isMoving ? this.moveIntensity : 0;
+        this._moveBlend += (targetMove - this._moveBlend) * Math.min(1, dt / 90);
+
+        const bodySpeed = Math.hypot(this.body.velocity.x, this.body.velocity.y);
+        const speedRatio = Phaser.Math.Clamp(bodySpeed / Math.max(1, this.stats.speed), 0, 1);
+        this._stepPhase += dt * (0.0085 + speedRatio * 0.0065);
+
+        const activeAnim = this._moveBlend > 0.08 ? 'player_walk' : 'player_idle';
+        if (this.anims?.currentAnim?.key !== activeAnim) {
+            this.play(activeAnim, true);
+        }
+
+        const step = Math.sin(this._stepPhase);
+        const footfall = Math.abs(step);
+        const idleBreath = Math.sin(time * 0.003);
+        const walkWeight = this._moveBlend;
+        const idleWeight = 1 - walkWeight;
+        const facingSign = this.facingRight ? 1 : -1;
+        const horizontalLean = this.moveInputX * 3.2;
+        const walkSway = step * 1.9 * walkWeight * facingSign;
+        const walkSquash = footfall * 0.032 * walkWeight;
+        const idleScaleY = idleBreath * 0.012 * idleWeight;
+        const idleScaleX = -idleBreath * 0.006 * idleWeight;
+
+        const attack = this._sampleAttackPose(dt);
+        const hitPulse = this._sampleHitReact(dt);
+
+        const scaleX = Phaser.Math.Clamp(
+            1 + idleScaleX + walkSquash * 0.45 + attack.scaleX - hitPulse * 0.11,
+            0.82,
+            1.18
+        );
+        const scaleY = Phaser.Math.Clamp(
+            1 + idleScaleY - walkSquash * 0.55 + attack.scaleY + hitPulse * 0.13,
+            0.84,
+            1.2
+        );
+        const angle = Phaser.Math.DegToRad(horizontalLean + walkSway + attack.lean + attack.twist);
+
+        this.setScale(scaleX, scaleY);
+        this.setRotation(angle);
+        this.setFlipX(!this.facingRight);
+    }
+
+    _sampleAttackPose(delta) {
+        const pose = this._attackPose;
+        if (!pose.active) {
+            return { lean: 0, twist: 0, scaleX: 0, scaleY: 0 };
+        }
+
+        pose.elapsed += delta;
+        const p = Phaser.Math.Clamp(pose.elapsed / Math.max(1, pose.duration), 0, 1);
+        const dirSign = Math.cos(pose.angle) >= 0 ? 1 : -1;
+        const side = pose.side || 1;
+        const easeOut = (v) => 1 - Math.pow(1 - Phaser.Math.Clamp(v, 0, 1), 3);
+        const easeIn = (v) => {
+            const k = Phaser.Math.Clamp(v, 0, 1);
+            return k * k;
+        };
+
+        let lean = 0;
+        let twist = 0;
+        let scaleX = 0;
+        let scaleY = 0;
+
+        if (p < 0.2) {
+            const k = easeOut(p / 0.2);
+            lean = -dirSign * 5.5 * k;
+            twist = -side * 1.8 * k;
+            scaleX = -0.018 * k;
+            scaleY = 0.038 * k;
+        } else if (p < 0.48) {
+            const k = easeOut((p - 0.2) / 0.28);
+            lean = dirSign * (-5.5 + 13.5 * k);
+            twist = side * 2.5 * (1 - k);
+            scaleX = 0.07 * k;
+            scaleY = -0.055 * k;
+        } else {
+            const k = easeIn((p - 0.48) / 0.52);
+            lean = dirSign * 8 * (1 - k);
+            twist = side * 1.2 * (1 - k);
+            scaleX = 0.07 * (1 - k);
+            scaleY = -0.055 * (1 - k);
+        }
+
+        if (p >= 1) {
+            pose.active = false;
+        }
+
+        return { lean, twist, scaleX, scaleY };
+    }
+
+    _sampleHitReact(delta) {
+        if (this._hitReactTimer <= 0) return 0;
+
+        this._hitReactTimer = Math.max(0, this._hitReactTimer - delta);
+        const elapsed = 1 - this._hitReactTimer / Math.max(1, this._hitReactDuration);
+        return Math.sin(Phaser.Math.Clamp(elapsed, 0, 1) * Math.PI);
     }
 
     _updateInvincibility(delta) {
@@ -423,15 +558,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             if (this.active && !this.isDead) this.clearTint();
         });
 
-        // Flinch: quick scale squash + recover
-        this.scene.tweens.add({
-            targets: this,
-            scaleX: 0.85,
-            scaleY: 1.15,
-            duration: 60,
-            yoyo: true,
-            ease: 'Power2',
-        });
+        this._hitReactDuration = 150;
+        this._hitReactTimer = this._hitReactDuration;
 
         // Knockback recoil (slight push away from damage source)
         const enemies = this.getAllEnemies();
