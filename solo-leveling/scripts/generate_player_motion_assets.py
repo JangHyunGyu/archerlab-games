@@ -50,6 +50,79 @@ def brighten(img, factor):
     return rgb
 
 
+def fade_alpha(img, factor):
+    out = img.copy()
+    alpha = out.getchannel("A").point(lambda v: int(v * factor))
+    out.putalpha(alpha)
+    return out
+
+
+def crop_piece(img, box):
+    return img.crop(box), box[0], box[1]
+
+
+def paste_piece(canvas, piece, x, y, angle=0, tx=0, ty=0, scale=1.0, alpha=1.0):
+    if scale != 1.0:
+        piece = piece.resize((round(piece.width * scale), round(piece.height * scale)), resample())
+    if alpha < 1.0:
+        piece = fade_alpha(piece, alpha)
+
+    rotated = piece.rotate(angle, resample=resample(), expand=True)
+    px = round(x + tx - (rotated.width - piece.width) / 2)
+    py = round(y + ty - (rotated.height - piece.height) / 2)
+    canvas.alpha_composite(rotated, (px, py))
+
+
+def make_core(base):
+    core = base.copy()
+    alpha = core.getchannel("A")
+    draw = ImageDraw.Draw(alpha)
+    for box in [(21, 35, 43, 90), (53, 35, 75, 90), (31, 70, 49, 126), (47, 70, 66, 126)]:
+        overlay = Image.new("L", (W, H), 0)
+        od = ImageDraw.Draw(overlay)
+        od.rounded_rectangle(box, radius=4, fill=255)
+        alpha = Image.composite(alpha.point(lambda v: int(v * 0.3)), alpha, overlay)
+    core.putalpha(alpha)
+    return core
+
+
+def front_stride_frame(base, step, direction="down"):
+    core = make_core(base)
+    canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+
+    left_arm, lax, lay = crop_piece(base, (20, 34, 43, 89))
+    right_arm, rax, ray = crop_piece(base, (53, 34, 76, 89))
+    left_leg, llx, lly = crop_piece(base, (30, 70, 49, 127))
+    right_leg, rlx, rly = crop_piece(base, (47, 70, 67, 127))
+
+    stride = math.sin(step)
+    contact = abs(stride)
+    rear_alpha = 0.74
+    left_forward = stride >= 0
+
+    # Back leg first, then core, then front leg and arms.
+    if left_forward:
+        paste_piece(canvas, right_leg, rlx, rly, angle=2.5, tx=1.2, ty=-1.2, scale=0.965, alpha=rear_alpha)
+        canvas.alpha_composite(core, (0, round(-contact * 0.55)))
+        paste_piece(canvas, left_leg, llx, lly, angle=-3.4, tx=-1.4, ty=1.5, scale=1.025)
+        paste_piece(canvas, left_arm, lax, lay, angle=5.0, tx=-1.1, ty=-0.8, alpha=0.86)
+        paste_piece(canvas, right_arm, rax, ray, angle=-7.0, tx=1.3, ty=1.4, scale=1.02)
+    else:
+        paste_piece(canvas, left_leg, llx, lly, angle=-2.5, tx=-1.2, ty=-1.2, scale=0.965, alpha=rear_alpha)
+        canvas.alpha_composite(core, (0, round(-contact * 0.55)))
+        paste_piece(canvas, right_leg, rlx, rly, angle=3.4, tx=1.4, ty=1.5, scale=1.025)
+        paste_piece(canvas, right_arm, rax, ray, angle=-5.0, tx=1.1, ty=-0.8, alpha=0.86)
+        paste_piece(canvas, left_arm, lax, lay, angle=7.0, tx=-1.3, ty=1.4, scale=1.02)
+
+    if abs(stride) < 0.08:
+        canvas = affine(base, scale_y=0.997, ty=0.2)
+
+    if direction == "up":
+        canvas = up_hint(brighten(canvas, 0.9))
+
+    return canvas
+
+
 def up_hint(img):
     out = img.copy()
     draw = ImageDraw.Draw(out, "RGBA")
@@ -61,9 +134,7 @@ def up_hint(img):
 
 def side_hint(img, direction):
     sign = 1 if direction == "right" else -1
-    out = affine(img, scale_x=0.9, scale_y=1.01, shear=-0.035 * sign, tx=2.0 * sign)
-    draw = ImageDraw.Draw(out, "RGBA")
-    draw.rectangle((39 if sign > 0 else 49, 18, 58 if sign > 0 else 56, 27), fill=(13, 17, 26, 110))
+    out = affine(img, scale_x=0.92, scale_y=1.0, shear=-0.018 * sign, tx=1.0 * sign)
     return out
 
 
@@ -93,27 +164,16 @@ def make_walk(base):
             phase = i * math.tau / 4
             step = math.sin(phase)
             footfall = abs(step)
-            sway = step * 1.9
-            bob = -footfall * 1.9
-            shear = step * 0.018
-            frame = affine(
-                base,
-                scale_x=1 + footfall * 0.012,
-                scale_y=1 - footfall * 0.015,
-                shear=shear,
-                rotate=step * 0.8,
-                tx=sway,
-                ty=bob,
-            )
+            frame = front_stride_frame(base, phase, "up" if direction == "up" else "down")
 
-            if direction == "up":
-                frame = up_hint(brighten(frame, 0.86))
-            elif direction in ("left", "right"):
+            if direction in ("left", "right"):
                 frame = side_hint(frame, direction)
+                side_shift = step * (1.2 if direction == "right" else -1.2)
+                frame = affine(frame, tx=side_shift, ty=-footfall * 0.25)
                 if direction == "left":
                     frame = frame.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
 
-            save(f"player_walk_{direction}_{i}.png", add_ground_shadow(frame, 62 + round(footfall * 8)))
+            save(f"player_walk_{direction}_{i}.png", add_ground_shadow(frame, 54 + round(footfall * 5)))
 
 
 def make_attack(base):
