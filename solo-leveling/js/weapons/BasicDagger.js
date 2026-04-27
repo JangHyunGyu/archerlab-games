@@ -60,6 +60,9 @@ export class BasicDagger extends WeaponBase {
 
         this._stabSide *= -1;
         const side = this._stabSide;
+        if (this.player.playAttackMotion) {
+            this.player.playAttackMotion(baseAngle, 280, side);
+        }
         const bladeScale = 1.25;
         const bladeTipFromOrigin = 82 * 0.94;
         const bladeVisualLength = bladeTipFromOrigin * bladeScale;
