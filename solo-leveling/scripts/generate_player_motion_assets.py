@@ -124,12 +124,7 @@ def front_stride_frame(base, step, direction="down"):
 
 
 def up_hint(img):
-    out = img.copy()
-    draw = ImageDraw.Draw(out, "RGBA")
-    draw.rectangle((35, 18, 61, 25), fill=(7, 10, 17, 148))
-    draw.polygon([(32, 31), (64, 31), (70, 45), (26, 45)], fill=(18, 24, 38, 70))
-    draw.line((35, 37, 61, 37), fill=(72, 91, 122, 82), width=1)
-    return out
+    return img
 
 
 def side_hint(img, direction):
