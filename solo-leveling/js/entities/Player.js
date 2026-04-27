@@ -93,12 +93,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             });
         };
 
-        create('player_idle', frames('player_idle_', 8), 6);
-        create('player_walk', frames('player_walk_', 8), 12);
-        create('player_walk_down', frames('player_walk_down_', 4), 10);
-        create('player_walk_right', frames('player_walk_right_', 4), 10);
-        create('player_walk_up', frames('player_walk_up_', 4), 10);
-        create('player_walk_left', frames('player_walk_left_', 4), 10);
+        create('player_idle', frames('player_idle_', 8), 5);
+        create('player_walk', frames('player_walk_', 8), 10);
+        create('player_walk_down', frames('player_walk_down_', 4), 8);
+        create('player_walk_right', frames('player_walk_right_', 4), 8);
+        create('player_walk_up', frames('player_walk_up_', 4), 8);
+        create('player_walk_left', frames('player_walk_left_', 4), 8);
         create('player_attack', frames('player_attack_', 6), 18, 0);
         create('player_hit', frames('player_hit_', 2), 12, 0);
     }
@@ -248,24 +248,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const walkWeight = this._moveBlend;
         const idleWeight = 1 - walkWeight;
         const facingSign = this.facingRight ? 1 : -1;
-        const horizontalLean = this.moveInputX * 3.2;
-        const walkSway = step * 1.9 * walkWeight * facingSign;
-        const walkSquash = footfall * 0.032 * walkWeight;
-        const idleScaleY = idleBreath * 0.012 * idleWeight;
-        const idleScaleX = -idleBreath * 0.006 * idleWeight;
+        const horizontalLean = this.moveInputX * 0.7;
+        const walkSway = step * 0.25 * walkWeight * facingSign;
+        const walkSquash = footfall * 0.007 * walkWeight;
+        const idleScaleY = idleBreath * 0.008 * idleWeight;
+        const idleScaleX = -idleBreath * 0.004 * idleWeight;
 
         const attack = this._sampleAttackPose(dt);
         const hitPulse = this._sampleHitReact(dt);
 
         const scaleX = Phaser.Math.Clamp(
             1 + idleScaleX + walkSquash * 0.45 + attack.scaleX - hitPulse * 0.11,
-            0.82,
-            1.18
+            0.9,
+            1.12
         );
         const scaleY = Phaser.Math.Clamp(
             1 + idleScaleY - walkSquash * 0.55 + attack.scaleY + hitPulse * 0.13,
-            0.84,
-            1.2
+            0.9,
+            1.14
         );
         const angle = Phaser.Math.DegToRad(horizontalLean + walkSway + attack.lean + attack.twist);
 
