@@ -150,8 +150,9 @@ export class SpriteFactory {
 
     static createAll(scene) {
         // Try AI-generated player sprites first (with chroma key background removal)
-        const aiPlayerLoaded = this._loadAIPlayerTextures(scene);
-        if (!aiPlayerLoaded) {
+        const motionPlayerLoaded = this._loadMotionPlayerTextures(scene);
+        const aiPlayerLoaded = motionPlayerLoaded || this._loadAIPlayerTextures(scene);
+        if (!motionPlayerLoaded && !aiPlayerLoaded) {
             this.createPlayerTextures(scene);
         }
         this.createEnemyTextures(scene);
@@ -165,6 +166,56 @@ export class SpriteFactory {
             this.createFloorTexture(scene);
         }
         this._createParticleTextures(scene);
+    }
+
+    static _copyTexture(scene, srcKey, destKey, w, h) {
+        const src = scene.textures.get(srcKey).getSourceImage();
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(src, 0, 0, w, h);
+        if (scene.textures.exists(destKey)) scene.textures.remove(destKey);
+        scene.textures.addCanvas(destKey, canvas);
+    }
+
+    static _createPlayerAuraTexture(scene) {
+        if (scene.textures.exists('player_aura')) scene.textures.remove('player_aura');
+        const sg = scene.make.graphics({ add: false });
+        sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.06);
+        sg.fillCircle(48, 48, 48);
+        sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.12);
+        sg.fillCircle(48, 48, 36);
+        sg.fillStyle(COLORS.SHADOW_GLOW, 0.06);
+        sg.fillCircle(48, 48, 24);
+        sg.generateTexture('player_aura', 96, 96);
+        sg.destroy();
+    }
+
+    static _loadMotionPlayerTextures(scene) {
+        const W = 96, H = 128;
+        const names = [
+            ...Array.from({ length: 4 }, (_, i) => `player_idle_${i}`),
+            ...['down', 'right', 'up', 'left'].flatMap(dir =>
+                Array.from({ length: 4 }, (_, i) => `player_walk_${dir}_${i}`)
+            ),
+            ...Array.from({ length: 6 }, (_, i) => `player_attack_${i}`),
+            ...Array.from({ length: 2 }, (_, i) => `player_hit_${i}`),
+        ];
+        if (!names.every(name => scene.textures.exists(`motion_${name}`))) {
+            return false;
+        }
+
+        for (const name of names) {
+            this._copyTexture(scene, `motion_${name}`, name, W, H);
+        }
+        for (let i = 0; i < 4; i++) {
+            this._copyTexture(scene, `motion_player_walk_down_${i}`, `player_walk_${i}`, W, H);
+        }
+        this._createPlayerAuraTexture(scene);
+
+        console.log('[SpriteFactory] Motion player sprite set loaded (28 frames)');
+        return true;
     }
 
     static _loadAIPlayerTextures(scene) {
@@ -226,16 +277,7 @@ export class SpriteFactory {
             }));
         }
 
-        // Aura texture
-        const sg = scene.make.graphics({ add: false });
-        sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.06);
-        sg.fillCircle(48, 48, 48);
-        sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.12);
-        sg.fillCircle(48, 48, 36);
-        sg.fillStyle(COLORS.SHADOW_GLOW, 0.06);
-        sg.fillCircle(48, 48, 24);
-        sg.generateTexture('player_aura', 96, 96);
-        sg.destroy();
+        this._createPlayerAuraTexture(scene);
 
         console.log('[SpriteFactory] AI player sprite loaded (single image + generated motion frames)');
         return true;
@@ -281,16 +323,7 @@ export class SpriteFactory {
             });
         }
 
-        // Player S-rank aura
-        const sg = scene.make.graphics({ add: false });
-        sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.06);
-        sg.fillCircle(48, 48, 48);
-        sg.fillStyle(COLORS.SHADOW_PRIMARY, 0.12);
-        sg.fillCircle(48, 48, 36);
-        sg.fillStyle(COLORS.SHADOW_GLOW, 0.06);
-        sg.fillCircle(48, 48, 24);
-        sg.generateTexture('player_aura', 96, 96);
-        sg.destroy();
+        this._createPlayerAuraTexture(scene);
     }
 
     static _drawPlayerCanvas(ctx, W, H, by, legSwing, armSwing, walking, frame) {

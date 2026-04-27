@@ -91,6 +91,19 @@ export class PreloadScene extends Phaser.Scene {
         this.load.image('ai_player_idle', 'assets/player/player_idle.png');
         this.load.image('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
 
+        const loadPlayerMotion = (name) => {
+            this.load.image(`motion_${name}`, `assets/player/motion/${name}.png`);
+        };
+        for (let i = 0; i < 4; i++) {
+            loadPlayerMotion(`player_idle_${i}`);
+            loadPlayerMotion(`player_walk_down_${i}`);
+            loadPlayerMotion(`player_walk_right_${i}`);
+            loadPlayerMotion(`player_walk_up_${i}`);
+            loadPlayerMotion(`player_walk_left_${i}`);
+        }
+        for (let i = 0; i < 6; i++) loadPlayerMotion(`player_attack_${i}`);
+        for (let i = 0; i < 2; i++) loadPlayerMotion(`player_hit_${i}`);
+
         const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
 
         this.load.on('loaderror', (file) => {
