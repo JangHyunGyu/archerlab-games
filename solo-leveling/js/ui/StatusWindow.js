@@ -15,7 +15,8 @@ export class StatusWindow {
         this.elements = [];
 
         this.tabKey = scene.input.keyboard.addKey('TAB');
-        this.tabKey.on('down', () => this.toggle());
+        this._onTabDown = () => this.toggle();
+        this.tabKey.on('down', this._onTabDown);
     }
 
     toggle() {
@@ -192,9 +193,10 @@ export class StatusWindow {
 
     destroy() {
         this.close();
-        if (this.tabKey) {
-            this.tabKey.off('down');
+        if (this.tabKey && this._onTabDown) {
+            this.tabKey.off('down', this._onTabDown);
             this.tabKey = null;
+            this._onTabDown = null;
         }
     }
 }

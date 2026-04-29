@@ -127,6 +127,7 @@
   let lastMergeAt = 0;
   let reachedFinal = false;     // 사바나(최종단계) 최초 달성 여부 — 축하 플래시 1회용
   let newRecordTimeoutId = null; // 신기록 팡파레 대기 setTimeout 핸들 (게임 전환 시 취소용)
+  let dropCooldownTimeoutId = null; // 이전 게임의 드롭 쿨다운 콜백이 새 게임에 끼어들지 않도록 추적
   const mergeEffects = [];      // 합성 이펙트 파티클
   const bonkCooldown = new Map(); // body.id → 마지막 bonk 시각 (ms) — 연속 충돌 스팸 방지
   const BONK_COOLDOWN_MS = 110;
@@ -323,6 +324,8 @@
 
     World.remove(world, a);
     World.remove(world, b);
+    bonkCooldown.delete(a.id);
+    bonkCooldown.delete(b.id);
 
     if (tier < TIERS.length - 1) {
       // 진화
@@ -452,6 +455,18 @@
     }
   }
 
+  function pruneBonkCooldown() {
+    if (!world || bonkCooldown.size === 0) return;
+    const activeCatIds = new Set(
+      Composite.allBodies(world)
+        .filter((b) => b.label === 'cat' && b.cat)
+        .map((b) => b.id)
+    );
+    for (const id of bonkCooldown.keys()) {
+      if (!activeCatIds.has(id)) bonkCooldown.delete(id);
+    }
+  }
+
   function showComboFlash(n) {
     showFlash(tt('flash.combo', { n }), false);
   }
@@ -534,7 +549,9 @@
     currentCat = null;
     updateCurrentCatLabel(null);
     dropCooldown = true;
-    setTimeout(() => {
+    if (dropCooldownTimeoutId) clearTimeout(dropCooldownTimeoutId);
+    dropCooldownTimeoutId = setTimeout(() => {
+      dropCooldownTimeoutId = null;
       dropCooldown = false;
       // running 체크 추가: 메뉴 이탈 후 stray 고양이 생성 방지
       if (running && !gameOver) spawnCurrent();
@@ -588,6 +605,7 @@
       if (b.position.y > FIELD_H + 200 || b.position.x < -100 || b.position.x > FIELD_W + 100) {
         warn(`off-canvas 바디 tier=${b.cat.tier} pos=(${b.position.x.toFixed(1)}, ${b.position.y.toFixed(1)}) — 제거`);
         World.remove(world, b);
+        bonkCooldown.delete(b.id);
         continue;
       }
       const r = TIERS[b.cat.tier].radius;
@@ -613,6 +631,7 @@
     gameOver = true;
     running = false;
     updateCurrentCatLabel(null);
+    if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
     clearSave();
     if (isNew) { bestScore = score; saveBest(bestScore); }
     $('final-score').textContent = score.toLocaleString();
@@ -729,6 +748,7 @@
         // 매 60프레임(약 1초)마다 NaN 감시 + 옵션으로 상태 스냅샷
         if (_frameCount % 60 === 0) {
           assertBodiesFinite('tick');
+          pruneBonkCooldown();
           _lastFpsAt = ts;
           _framesSinceFps = 0;
         }
@@ -751,6 +771,7 @@
     log('startGame 진입');
     // 이전 게임의 pending 사운드/타이머 취소
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
+    if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
     sound?.stopAll();
     score = 0;
     comboCount = 0;
@@ -793,6 +814,7 @@
 
       // 이전 게임 상태 정리 (startGame과 동일한 루틴)
       if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
+      if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
       sound?.stopAll();
       score = data.score || 0;
       comboCount = 0;      // 콤보 체인은 performance.now 기반이라 리로드 후 의미 없음
@@ -887,6 +909,7 @@
     currentCat = null; // 이전 게임 참조 정리
     updateCurrentCatLabel(null);
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
+    if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
     sound?.stopAll();
     hide(modals.gameover);
     hide(screens.game);

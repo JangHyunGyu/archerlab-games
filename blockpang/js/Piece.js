@@ -120,6 +120,15 @@ class PieceTray {
     destroy() {
         this.game.app.ticker.remove(this._updateIdle, this);
         this._clearTrayTweens();
+        this.slotContainers.forEach(c => { if (c && !c.destroyed) c.destroy({ children: true }); });
+        this.slotContainers = [null, null, null];
+        if (this.trayBg && !this.trayBg.destroyed) {
+            this.trayBg.destroy();
+            this.trayBg = null;
+        }
+        if (this.container && !this.container.destroyed) {
+            this.container.destroy({ children: true });
+        }
     }
 
     _updateIdle(ticker) {

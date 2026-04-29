@@ -26,12 +26,7 @@ export class GameOverScene extends Phaser.Scene {
 
         this.cameras.main.fadeIn(500, 0, 0, 0);
 
-        this.events.on('shutdown', () => {
-            if (this._nameInput && this._nameInput.parentNode) {
-                this._nameInput.parentNode.removeChild(this._nameInput);
-            }
-            this._nameInput = null;
-        });
+        this.events.once('shutdown', this._cleanupNameInput, this);
     }
 
     _drawScanlines() {
@@ -41,6 +36,7 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     _showNameInput(time, level, rank, kills, shadowCount) {
+        this._cleanupNameInput();
         const cx = GAME_WIDTH / 2;
         const depth = 100;
         const nameElements = [];
@@ -93,7 +89,10 @@ export class GameOverScene extends Phaser.Scene {
         input.value = lastName;
         document.body.appendChild(input);
         this._nameInput = input;
-        setTimeout(() => input.focus(), 100);
+        this._nameInputFocusTimer = setTimeout(() => {
+            this._nameInputFocusTimer = null;
+            if (input.parentNode) input.focus();
+        }, 100);
 
         const submitBtnY = GAME_HEIGHT * 0.52;
         const btnW = uv(130);
@@ -119,9 +118,7 @@ export class GameOverScene extends Phaser.Scene {
         nameElements.push(submit.g, submit.hit, submit.txt, skip.g, skip.hit, skip.txt);
 
         const cleanup = () => {
-            this.input.keyboard.enabled = true;
-            if (input.parentNode) input.parentNode.removeChild(input);
-            this._nameInput = null;
+            this._cleanupNameInput();
             nameElements.forEach(el => { if (el && el.active) el.destroy(); });
         };
 
@@ -150,11 +147,30 @@ export class GameOverScene extends Phaser.Scene {
         const doSkip = () => { cleanup(); showStats(); };
 
         this.input.keyboard.enabled = false;
-        input.addEventListener('keydown', (e) => {
+        this._nameInputKeydownHandler = (e) => {
             e.stopPropagation();
             if (e.key === 'Enter') doSubmit();
             if (e.key === 'Escape') doSkip();
-        });
+        };
+        input.addEventListener('keydown', this._nameInputKeydownHandler);
+    }
+
+    _cleanupNameInput() {
+        if (this._nameInputFocusTimer) {
+            clearTimeout(this._nameInputFocusTimer);
+            this._nameInputFocusTimer = null;
+        }
+        if (this._nameInput) {
+            if (this._nameInputKeydownHandler) {
+                this._nameInput.removeEventListener('keydown', this._nameInputKeydownHandler);
+            }
+            if (this._nameInput.parentNode) {
+                this._nameInput.parentNode.removeChild(this._nameInput);
+            }
+        }
+        if (this.input?.keyboard) this.input.keyboard.enabled = true;
+        this._nameInput = null;
+        this._nameInputKeydownHandler = null;
     }
 
     _showStats(time, level, rank, kills, shadowCount) {

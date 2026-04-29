@@ -9,6 +9,8 @@ class EffectManager {
         this.shakeDuration = 0;
         this.shakeIntensity = 0;
         this._time = 0;
+        this._timeouts = new Set();
+        this._destroyed = false;
 
         // ── Particle Graphics pool ──
         this._particlePool = [];
@@ -77,7 +79,19 @@ class EffectManager {
         }
     }
 
+    _scheduleTimeout(fn, delay) {
+        let id = null;
+        id = setTimeout(() => {
+            this._timeouts.delete(id);
+            if (this._destroyed) return;
+            fn();
+        }, delay);
+        this._timeouts.add(id);
+        return id;
+    }
+
     update(ticker) {
+        if (this._destroyed) return;
         const delta = ticker.deltaTime;
         const dt = delta * (1000 / 60);
         this._time += dt;
@@ -304,7 +318,7 @@ class EffectManager {
             const blockColor = BLOCK_COLORS[cell.colorIndex] || BLOCK_COLORS[0];
             const color = blockColor.particle || 0xFFFFFF;
 
-            setTimeout(() => {
+            this._scheduleTimeout(() => {
                 // ── 1. Sparkle/glow particles (more with higher line count) ──
                 this.spawnCellParticles(wx, wy, color, 6 + intensity * 3);
 
@@ -406,14 +420,14 @@ class EffectManager {
         // ── 5. Per-clear-size bonus effects ──
         if (intensity >= 2) {
             // Shockwave at center for 2+ lines
-            setTimeout(() => {
+            this._scheduleTimeout(() => {
                 this.playShockwave(cx, cy, intensity);
             }, sorted.length * 5);
         }
 
         if (intensity >= 3) {
             // Extra sparkle shower for 3+ lines
-            setTimeout(() => {
+            this._scheduleTimeout(() => {
                 this.spawnSparkles(cx, cy, 0xFFFFFF, 10 + intensity * 5);
             }, sorted.length * 8);
         }
@@ -457,7 +471,7 @@ class EffectManager {
         if (total === 0) { fireCallback(); return; }
 
         // Safety: rAF가 throttle/pause되는 인앱 브라우저 대비 fallback
-        setTimeout(fireCallback, 600);
+        this._scheduleTimeout(fireCallback, 600);
 
         cellSprites.forEach((sprite, idx) => {
             if (!sprite || sprite.destroyed) {
@@ -736,7 +750,7 @@ class EffectManager {
             this.spawnStarParticles(x, y, color, 16);
             this.spawnStarParticles(x, y, 0xFFD600, 8);
             // Delayed second sparkle burst
-            setTimeout(() => {
+            this._scheduleTimeout(() => {
                 this.spawnSparkles(x, y - 40, 0xFF1744, 15);
             }, 150);
         }
@@ -861,7 +875,7 @@ class EffectManager {
         }
         if (lineCount >= 4) {
             this.spawnStarParticles(x, y, 0xFFD600, 12);
-            setTimeout(() => {
+            this._scheduleTimeout(() => {
                 this.spawnSparkles(x, y - 30, 0xD500F9, 15);
                 this.playRingBurst(x, y, 0xFFD600, glowR * 0.4);
             }, 120);
@@ -1575,6 +1589,10 @@ class EffectManager {
     }
 
     destroy() {
+        if (this._destroyed) return;
+        this._destroyed = true;
+        this._timeouts.forEach(id => clearTimeout(id));
+        this._timeouts.clear();
         this.game.app.ticker.remove(this.update, this);
         this.particles.forEach(p => p.gfx.destroy());
         this.particles = [];

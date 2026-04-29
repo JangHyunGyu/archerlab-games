@@ -20,6 +20,10 @@ export class MobileControls {
         this.pointerId = null;
         this.padX = 0;
         this.padY = 0;
+        this.elements = [];
+        this._onPointerDown = null;
+        this._onPointerMove = null;
+        this._onPointerUp = null;
 
         this.baseRadius = uv(70);
         this.thumbRadius = uv(28);
@@ -59,8 +63,9 @@ export class MobileControls {
         this.joystickThumbDot = this.scene.add.circle(0, 0, 3, SYSTEM.BORDER, 1)
             .setDepth(602).setScrollFactor(0)
             .setVisible(false);
+        this.elements.push(this.joystickBase, this.joystickRing, this.joystickThumb, this.joystickThumbDot);
 
-        this.scene.input.on('pointerdown', (pointer) => {
+        this._onPointerDown = (pointer) => {
             if (this.pointerId !== null) return;
             if (pointer.x > GAME_WIDTH - uv(80)) return;
 
@@ -73,17 +78,21 @@ export class MobileControls {
             this.joystickBase.setPosition(this.padX, this.padY).setVisible(true);
             this.joystickThumb.setPosition(this.padX, this.padY).setVisible(true);
             this.joystickThumbDot.setPosition(this.padX, this.padY).setVisible(true);
-        });
+        };
 
-        this.scene.input.on('pointermove', (pointer) => {
+        this._onPointerMove = (pointer) => {
             if (!this.joystick.active || pointer.id !== this.pointerId) return;
             this._updateThumb(pointer.x, pointer.y);
-        });
+        };
 
-        this.scene.input.on('pointerup', (pointer) => {
+        this._onPointerUp = (pointer) => {
             if (pointer.id !== this.pointerId) return;
             this._resetJoystick();
-        });
+        };
+
+        this.scene.input.on('pointerdown', this._onPointerDown);
+        this.scene.input.on('pointermove', this._onPointerMove);
+        this.scene.input.on('pointerup', this._onPointerUp);
     }
 
     _updateThumb(px, py) {
@@ -152,10 +161,11 @@ export class MobileControls {
 
         const statusHit = this.scene.add.rectangle(btnX + btnW / 2, statusY + btnH / 2, btnW, btnH, 0x000000, 0)
             .setDepth(601).setScrollFactor(0).setInteractive();
-        this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
+        const statusText = this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN,
         }).setOrigin(0.5).setDepth(602).setScrollFactor(0);
+        this.elements.push(statusG, statusHit, statusText);
 
         statusHit.on('pointerover', () => drawStatus(true));
         statusHit.on('pointerout', () => drawStatus(false));
@@ -181,6 +191,7 @@ export class MobileControls {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN,
         }).setOrigin(0.5).setDepth(602).setScrollFactor(0);
+        this.elements.push(soundG, soundHit, this.soundBtnText);
 
         soundHit.on('pointerover', () => drawSound(true));
         soundHit.on('pointerout', () => drawSound(false));
@@ -213,9 +224,15 @@ export class MobileControls {
 
     destroy() {
         if (this.isMobile && this.scene && this.scene.input) {
-            this.scene.input.off('pointerdown');
-            this.scene.input.off('pointermove');
-            this.scene.input.off('pointerup');
+            if (this._onPointerDown) this.scene.input.off('pointerdown', this._onPointerDown);
+            if (this._onPointerMove) this.scene.input.off('pointermove', this._onPointerMove);
+            if (this._onPointerUp) this.scene.input.off('pointerup', this._onPointerUp);
         }
+        this.elements.forEach(el => { if (el && el.active) el.destroy(); });
+        this.elements = [];
+        this._onPointerDown = null;
+        this._onPointerMove = null;
+        this._onPointerUp = null;
+        this.scene = null;
     }
 }

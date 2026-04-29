@@ -70,9 +70,14 @@ const config = {
 const game = new Phaser.Game(config);
 
 // Handle orientation/resize: CSS scaling only (Phaser FIT mode handles the rest)
+let resizeRefreshTimer = null;
 function handleResize() {
     if (!game || !game.scale) return;
-    setTimeout(() => game.scale.refresh(), 200);
+    if (resizeRefreshTimer) clearTimeout(resizeRefreshTimer);
+    resizeRefreshTimer = setTimeout(() => {
+        resizeRefreshTimer = null;
+        if (game && game.scale) game.scale.refresh();
+    }, 200);
 }
 
 window.addEventListener('orientationchange', handleResize);
@@ -82,6 +87,10 @@ if (window.visualViewport) {
 }
 
 game.events.on('destroy', () => {
+    if (resizeRefreshTimer) {
+        clearTimeout(resizeRefreshTimer);
+        resizeRefreshTimer = null;
+    }
     window.removeEventListener('orientationchange', handleResize);
     window.removeEventListener('resize', handleResize);
     if (window.visualViewport) {

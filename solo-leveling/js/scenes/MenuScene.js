@@ -202,7 +202,7 @@ export class MenuScene extends Phaser.Scene {
 
         this.cameras.main.fadeIn(500, 0, 0, 0);
 
-        this.events.on('shutdown', () => {
+        this.events.once('shutdown', () => {
             this._dropdownElements.forEach(el => { if (el && el.active) el.destroy(); });
             this._dropdownElements = [];
             this._modalElements.forEach(el => { if (el && el.active) el.destroy(); });

@@ -604,6 +604,14 @@ class Board {
             this.app.ticker.remove(this._borderTickerFn);
             this._borderTickerFn = null;
         }
+        this.cellTextures.forEach(t => t.destroy(true));
+        this.cellTextures = [];
+        if (this.emptyTexture) { this.emptyTexture.destroy(true); this.emptyTexture = null; }
+        this._ghostPool = [];
+        this._hintPool = [];
+        if (this.container && !this.container.destroyed) {
+            this.container.destroy({ children: true });
+        }
     }
 
     getGlobalPosition() {

@@ -14,16 +14,19 @@ class InputManager {
         this._lastDragY = 0;
         this._lastGridCol = -1;
         this._lastGridRow = -1;
+        this._onPointerMove = this.onPointerMove.bind(this);
+        this._onPointerUp = this.onPointerUp.bind(this);
+        this._onPointerCancel = this.onPointerCancel.bind(this);
 
         game.app.stage.addChild(this.dragLayer);
 
         // Global pointer events
         game.app.stage.eventMode = 'static';
         game.app.stage.hitArea = game.app.screen;
-        game.app.stage.on('pointermove', this.onPointerMove.bind(this));
-        game.app.stage.on('pointerup', this.onPointerUp.bind(this));
-        game.app.stage.on('pointerupoutside', this.onPointerUp.bind(this));
-        game.app.stage.on('pointercancel', this.onPointerCancel.bind(this));
+        game.app.stage.on('pointermove', this._onPointerMove);
+        game.app.stage.on('pointerup', this._onPointerUp);
+        game.app.stage.on('pointerupoutside', this._onPointerUp);
+        game.app.stage.on('pointercancel', this._onPointerCancel);
     }
 
     startDrag(slotIndex, event) {
@@ -389,5 +392,21 @@ class InputManager {
         if (this.game.app.stage) {
             this.game.app.stage.hitArea = this.game.app.screen;
         }
+    }
+
+    destroy() {
+        const stage = this.game?.app?.stage;
+        if (stage) {
+            stage.off('pointermove', this._onPointerMove);
+            stage.off('pointerup', this._onPointerUp);
+            stage.off('pointerupoutside', this._onPointerUp);
+            stage.off('pointercancel', this._onPointerCancel);
+        }
+        this._cleanupDrag();
+        if (this.dragLayer && !this.dragLayer.destroyed) {
+            this.dragLayer.destroy({ children: true });
+        }
+        this.dragLayer = null;
+        this.game = null;
     }
 }

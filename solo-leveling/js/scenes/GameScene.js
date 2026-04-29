@@ -102,11 +102,12 @@ export class GameScene extends Phaser.Scene {
         // Game state
         this.isGameOver = false;
 
-        // Register shutdown cleanup
-        this.events.on('shutdown', this.shutdown, this);
+        // Register shutdown cleanup. Phaser reuses scene instances, so use once()
+        // and remove any per-create handlers in shutdown to avoid restart buildup.
+        this.events.once('shutdown', this.shutdown, this);
 
         // Dynamic resize: reposition HUD, camera, UI
-        this.events.on('game-resize', () => {
+        this._onGameResize = () => {
             this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
             if (this.hud) this.hud.rebuild();
             if (this.statusWindow && this.statusWindow.isOpen) {
@@ -124,7 +125,8 @@ export class GameScene extends Phaser.Scene {
                 this._colorTint.setPosition(cam.width / 2, cam.height / 2);
                 this._colorTint.setSize(cam.width, cam.height);
             }
-        });
+        };
+        this.events.on('game-resize', this._onGameResize, this);
 
         // Intro system messages (원작: 시스템 메시지)
         this.time.delayedCall(500, () => {
@@ -142,10 +144,12 @@ export class GameScene extends Phaser.Scene {
         });
 
         // Sound toggle key (M)
-        this.input.keyboard.addKey('M').on('down', () => {
+        this._soundToggleKey = this.input.keyboard.addKey('M');
+        this._soundToggleHandler = () => {
             const enabled = this.soundManager.toggleSound();
             this.systemMessage.show(t('sysSystem'), [enabled ? t('sysSoundOn') : t('sysSoundOff')], { duration: 1000 });
-        });
+        };
+        this._soundToggleKey.on('down', this._soundToggleHandler);
     }
 
     update(time, delta) {
@@ -564,6 +568,16 @@ export class GameScene extends Phaser.Scene {
 
     shutdown() {
         try {
+            if (this._onGameResize) {
+                this.events.off('game-resize', this._onGameResize, this);
+                this._onGameResize = null;
+            }
+            if (this._soundToggleKey && this._soundToggleHandler) {
+                this._soundToggleKey.off('down', this._soundToggleHandler);
+                this._soundToggleHandler = null;
+                this._soundToggleKey = null;
+            }
+
             // Stop game BGM
             if (this.soundManager) this.soundManager.stopGameBGM();
             if (this.weaponManager) this.weaponManager.destroy();
