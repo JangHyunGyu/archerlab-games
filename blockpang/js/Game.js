@@ -62,13 +62,19 @@ class Game {
     }
 
     destroy() {
+        if (this._destroyed) return;
+        this._destroyed = true;
         this._clearPendingTimeouts();
         this.app.ticker.remove(this._updateBackground, this);
+        if (this.input) this.input.destroy();
         this.effects.destroy();
         this.ui.destroy();
         this.tray.destroy();
         this.board.destroy();
         this.sound.destroy();
+        if (this.zoomContainer && !this.zoomContainer.destroyed) {
+            this.zoomContainer.destroy({ children: true });
+        }
     }
 
     // ── Start game from title screen ──

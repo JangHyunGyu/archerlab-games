@@ -17,6 +17,7 @@ export class SoundManager {
         };
         this._activeSounds = 0;
         this._maxActiveSounds = 5;
+        this._activeSoundTimers = new Set();
         // WAV Audio pools
         this._pools = {};
     }
@@ -169,7 +170,12 @@ export class SoundManager {
         }
         this._lastPlayTime[soundName] = now;
         this._activeSounds++;
-        setTimeout(() => { this._activeSounds = Math.max(0, this._activeSounds - 1); }, 100);
+        let releaseTimer = null;
+        releaseTimer = setTimeout(() => {
+            this._activeSoundTimers.delete(releaseTimer);
+            this._activeSounds = Math.max(0, this._activeSounds - 1);
+        }, 100);
+        this._activeSoundTimers.add(releaseTimer);
 
         const vol = this._sfxVolume[soundName] || 0.7;
         this._playFromPool(soundName, vol);
@@ -184,6 +190,8 @@ export class SoundManager {
         this.stopIntroMusic();
         this._introNodes = [];
         this._introIntervals = [];
+        this._introTimeouts = [];
+        this._introTransientNodes = [];
 
         try {
             const introGain = new Tone.Volume(-30).connect(this._comp);
@@ -274,9 +282,16 @@ export class SoundManager {
                     rVol.volume.rampTo(-60, 0.5, '+2');
                     rOsc.start();
                     rOsc.stop('+2.5');
-                    setTimeout(() => {
+                    this._introTransientNodes.push(rOsc, rFilter, rVol);
+                    let cleanupTimer = null;
+                    cleanupTimer = setTimeout(() => {
+                        this._introTimeouts = (this._introTimeouts || []).filter(id => id !== cleanupTimer);
+                        this._introTransientNodes = (this._introTransientNodes || []).filter(
+                            node => node !== rOsc && node !== rFilter && node !== rVol
+                        );
                         try { rOsc.dispose(); rFilter.dispose(); rVol.dispose(); } catch (e) { /* silent */ }
                     }, 3000);
+                    this._introTimeouts.push(cleanupTimer);
                 } catch (e) { /* silent */ }
             }, 8000);
             this._introIntervals.push(riserInterval);
@@ -285,30 +300,42 @@ export class SoundManager {
         }
     }
 
-    stopIntroMusic() {
+    stopIntroMusic(immediate = false) {
         if (this._introIntervals) {
             this._introIntervals.forEach(id => clearInterval(id));
             this._introIntervals = [];
+        }
+        if (this._introTimeouts) {
+            this._introTimeouts.forEach(id => clearTimeout(id));
+            this._introTimeouts = [];
         }
         if (this._introGain) {
             try { this._introGain.volume.rampTo(-60, 0.3); } catch (e) { /* silent */ }
         }
         const nodes = this._introNodes || [];
+        const transientNodes = this._introTransientNodes || [];
         const arpSynth = this._introArpSynth;
         const gain = this._introGain;
         this._introNodes = [];
+        this._introTransientNodes = [];
         this._introArpSynth = null;
         this._introGain = null;
         if (this._introDisposeTimeout) clearTimeout(this._introDisposeTimeout);
-        this._introDisposeTimeout = setTimeout(() => {
+        const disposeIntroNodes = () => {
             this._introDisposeTimeout = null;
             nodes.forEach(node => {
                 try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
                 try { node.dispose(); } catch (e) { /* silent */ }
             });
+            transientNodes.forEach(node => {
+                try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
+                try { node.dispose(); } catch (e) { /* silent */ }
+            });
             if (arpSynth) { try { arpSynth.dispose(); } catch (e) { /* silent */ } }
             if (gain) { try { gain.dispose(); } catch (e) { /* silent */ } }
-        }, 400);
+        };
+        if (immediate) disposeIntroNodes();
+        else this._introDisposeTimeout = setTimeout(disposeIntroNodes, 400);
     }
 
     // ========== IN-GAME BGM (Tone.js) ==========
@@ -469,7 +496,7 @@ export class SoundManager {
         }
     }
 
-    stopGameBGM() {
+    stopGameBGM(immediate = false) {
         if (this._bgmTimeouts) {
             this._bgmTimeouts.forEach(id => clearTimeout(id));
             this._bgmTimeouts = [];
@@ -489,19 +516,25 @@ export class SoundManager {
             const bgmGain = this._bgmGain;
             this._bgmGain = null;
             try {
-                bgmGain.volume.rampTo(-60, 0.5);
+                if (!immediate) bgmGain.volume.rampTo(-60, 0.5);
                 if (this._bgmDisposeTimeout) clearTimeout(this._bgmDisposeTimeout);
-                this._bgmDisposeTimeout = setTimeout(() => {
+                const disposeBgmGain = () => {
                     this._bgmDisposeTimeout = null;
                     try { bgmGain.dispose(); } catch (e) { /* silent */ }
-                }, 600);
+                };
+                if (immediate) disposeBgmGain();
+                else this._bgmDisposeTimeout = setTimeout(disposeBgmGain, 600);
             } catch (e) { /* silent */ }
         }
     }
 
     destroy() {
-        this.stopIntroMusic();
-        this.stopGameBGM();
+        if (this._activeSoundTimers) {
+            this._activeSoundTimers.forEach(id => clearTimeout(id));
+            this._activeSoundTimers.clear();
+        }
+        this.stopIntroMusic(true);
+        this.stopGameBGM(true);
 
         if (this._introDisposeTimeout) { clearTimeout(this._introDisposeTimeout); this._introDisposeTimeout = null; }
         if (this._bgmDisposeTimeout) { clearTimeout(this._bgmDisposeTimeout); this._bgmDisposeTimeout = null; }

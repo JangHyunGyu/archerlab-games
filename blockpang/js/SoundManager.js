@@ -24,6 +24,8 @@ class SoundManager {
         // WAV audio pools (HTMLAudioElement fallback) + decoded AudioBuffers (preferred)
         this._wavPools = {};
         this._wavBuffers = {};
+        this._pendingTimeouts = new Set();
+        this._destroyed = false;
 
         // 탭 복귀 시 AudioContext 자동 복구
         this._visibilityHandler = () => {
@@ -65,7 +67,9 @@ class SoundManager {
         fetch(src)
             .then((r) => r.arrayBuffer())
             .then((buf) => ctx.decodeAudioData(buf))
-            .then((audioBuffer) => { this._wavBuffers[name] = audioBuffer; })
+            .then((audioBuffer) => {
+                if (!this._destroyed) this._wavBuffers[name] = audioBuffer;
+            })
             .catch(() => { /* fall back to HTMLAudio pool */ });
     }
 
@@ -82,6 +86,10 @@ class SoundManager {
                 const gain = ctx.createGain();
                 gain.gain.value = volume;
                 src.connect(gain).connect(ctx.destination);
+                src.onended = () => {
+                    try { src.disconnect(); } catch (_) {}
+                    try { gain.disconnect(); } catch (_) {}
+                };
                 src.start(0);
                 return;
             } catch (e) { /* fall through to HTMLAudio */ }
@@ -390,10 +398,17 @@ class SoundManager {
      */
     _at(offsetSec, fn) {
         if (offsetSec <= 0.005) {
+            if (this._destroyed) return;
             try { fn(); } catch (e) { /* Tone scheduling drift */ }
         } else {
             const ms = offsetSec * 1000;
-            setTimeout(() => { try { fn(); } catch (e) { /* Tone scheduling drift */ } }, ms);
+            let id = null;
+            id = setTimeout(() => {
+                this._pendingTimeouts.delete(id);
+                if (this._destroyed) return;
+                try { fn(); } catch (e) { /* Tone scheduling drift */ }
+            }, ms);
+            this._pendingTimeouts.add(id);
         }
     }
 
@@ -1032,8 +1047,13 @@ class SoundManager {
     // ── Toggle ──────────────────────────────────────────────────────
 
     destroy() {
+        if (this._destroyed) return;
+        this._destroyed = true;
+        this._pendingTimeouts.forEach(id => clearTimeout(id));
+        this._pendingTimeouts.clear();
         if (this._visibilityHandler) {
             document.removeEventListener('visibilitychange', this._visibilityHandler);
+            this._visibilityHandler = null;
         }
         this.stopAmbient();
         const synths = [this._membrane, this._bass, this._click, this._bell,

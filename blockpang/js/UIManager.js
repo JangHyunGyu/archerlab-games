@@ -18,6 +18,11 @@ class UIManager {
         this._scoreAnimating = false;
         this._titleRefs = null;
         this._activeButtons = [];
+        this._nameInputElement = null;
+        this._nameInputFocusTimer = null;
+        this._nameInputFocusHandler = null;
+        this._nameInputBlurHandler = null;
+        this._nameInputKeydownHandler = null;
 
         this._build();
     }
@@ -147,6 +152,40 @@ class UIManager {
 
     destroy() {
         this.game.app.ticker.remove(this._updateScoreAnimation, this);
+        this._destroyNameInputDom();
+        this._closeHallOfFame();
+        if (this._nameInputOverlay) {
+            this._nameInputOverlay.destroy({ children: true });
+            this._nameInputOverlay = null;
+        }
+        if (this.gameOverOverlay) {
+            this.gameOverOverlay.destroy({ children: true });
+            this.gameOverOverlay = null;
+        }
+        if (this.titleContainer) {
+            this.titleContainer.destroy({ children: true });
+            this.titleContainer = null;
+        }
+        if (this.container && !this.container.destroyed) {
+            this.container.destroy({ children: true });
+        }
+    }
+
+    _destroyNameInputDom() {
+        if (this._nameInputFocusTimer) {
+            clearTimeout(this._nameInputFocusTimer);
+            this._nameInputFocusTimer = null;
+        }
+        const input = this._nameInputElement;
+        if (!input) return;
+        if (this._nameInputFocusHandler) input.removeEventListener('focus', this._nameInputFocusHandler);
+        if (this._nameInputBlurHandler) input.removeEventListener('blur', this._nameInputBlurHandler);
+        if (this._nameInputKeydownHandler) input.removeEventListener('keydown', this._nameInputKeydownHandler);
+        if (input.parentNode) input.parentNode.removeChild(input);
+        this._nameInputElement = null;
+        this._nameInputFocusHandler = null;
+        this._nameInputBlurHandler = null;
+        this._nameInputKeydownHandler = null;
     }
 
     // ── HUD Visibility Toggle ──
@@ -1326,6 +1365,7 @@ class UIManager {
     // ══════════════════════════════════════
 
     showNameInput(score, onComplete) {
+        this._destroyNameInputDom();
         if (this._nameInputOverlay) {
             this._nameInputOverlay.destroy({ children: true });
         }
@@ -1413,14 +1453,22 @@ class UIManager {
             box-shadow: 0 4px 12px rgba(45, 32, 21, 0.08);
             transition: border-color 0.15s;
         `;
-        input.addEventListener('focus', () => { input.style.borderColor = '#E57A54'; });
-        input.addEventListener('blur',  () => { input.style.borderColor = '#E0CFB0'; });
+        const onFocus = () => { input.style.borderColor = '#E57A54'; };
+        const onBlur = () => { input.style.borderColor = '#E0CFB0'; };
+        input.addEventListener('focus', onFocus);
+        input.addEventListener('blur', onBlur);
 
         const lastName = localStorage.getItem('blockpang_player_name') || '';
         input.value = lastName;
 
         document.body.appendChild(input);
-        setTimeout(() => input.focus(), 100);
+        this._nameInputElement = input;
+        this._nameInputFocusHandler = onFocus;
+        this._nameInputBlurHandler = onBlur;
+        this._nameInputFocusTimer = setTimeout(() => {
+            this._nameInputFocusTimer = null;
+            if (input.parentNode) input.focus();
+        }, 100);
 
         // Buttons
         const btnW = panelW * 0.38;
@@ -1484,7 +1532,7 @@ class UIManager {
         overlay.addChild(skipText);
 
         const cleanup = () => {
-            if (input.parentNode) input.parentNode.removeChild(input);
+            this._destroyNameInputDom();
             if (this._nameInputOverlay) {
                 this._nameInputOverlay.destroy({ children: true });
                 this._nameInputOverlay = null;
@@ -1522,10 +1570,12 @@ class UIManager {
         submitBtn.on('pointerdown', doSubmit);
         skipBtn.on('pointerdown', doSkip);
 
-        input.addEventListener('keydown', (e) => {
+        const onKeydown = (e) => {
             if (e.key === 'Enter') doSubmit();
             if (e.key === 'Escape') doSkip();
-        });
+        };
+        this._nameInputKeydownHandler = onKeydown;
+        input.addEventListener('keydown', onKeydown);
 
         this._nameInputOverlay = overlay;
         this.game.app.stage.addChild(overlay);
