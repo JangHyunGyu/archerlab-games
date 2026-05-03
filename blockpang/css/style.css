@@ -33,3 +33,23 @@ html, body {
 #game-container canvas {
     display: block;
 }
+
+.archerlab-link {
+    background: rgba(16, 26, 58, 0.82) !important;
+    border-color: rgba(45, 232, 255, 0.76) !important;
+    box-shadow:
+        0 10px 24px rgba(0, 3, 10, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+    color: #F7FCFF !important;
+    font-weight: 700 !important;
+}
+
+.archerlab-link::before {
+    content: '\2197' !important;
+    color: #21E7FF !important;
+}
+
+.archerlab-link:hover {
+    background: rgba(23, 41, 87, 0.96) !important;
+    color: #FFFFFF !important;
+}
