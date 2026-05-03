@@ -7,6 +7,7 @@ class UIManager {
         this.bestText = null;
         this.titleText = null;
         this.soundBtn = null;
+        this.hudBg = null;
         this.gameOverOverlay = null;
         this.titleContainer = null;
         this.levelText = null;
@@ -28,6 +29,9 @@ class UIManager {
     }
 
     _build() {
+        this.hudBg = new PIXI.Container();
+        this.container.addChild(this.hudBg);
+
         // Small wordmark (top center)
         this.titleText = new PIXI.Text({
             text: getText('gameTitle'),
@@ -36,6 +40,7 @@ class UIManager {
                 fontSize: 22,
                 fill: THEME.inkStrong,
                 fontWeight: '400',
+                dropShadow: { color: THEME.secondary, blur: 6, distance: 0, alpha: 0.45 },
             },
         });
         this.titleText.anchor.set(0.5, 0);
@@ -63,6 +68,7 @@ class UIManager {
                 fontSize: 22,
                 fill: THEME.inkStrong,
                 fontWeight: '700',
+                dropShadow: { color: THEME.secondary, blur: 5, distance: 0, alpha: 0.35 },
             },
         });
         this.scoreText.anchor.set(0, 0.5);
@@ -191,6 +197,7 @@ class UIManager {
     // ── HUD Visibility Toggle ──
     showGameHUD() {
         this.titleText.text = getText('gameTitle');
+        this.hudBg.visible = true;
         this.titleText.visible = true;
         this.scoreLabelText.visible = true;
         this.scoreText.visible = true;
@@ -204,6 +211,7 @@ class UIManager {
     }
 
     hideGameHUD() {
+        this.hudBg.visible = false;
         this.titleText.visible = false;
         this.scoreLabelText.visible = false;
         this.scoreText.visible = false;
@@ -219,8 +227,44 @@ class UIManager {
     resize(screenWidth, scoreAreaHeight, padding) {
         const centerX = screenWidth / 2;
 
+        if (this.hudBg) {
+            const oldHud = this.hudBg.removeChildren();
+            oldHud.forEach(c => c.destroy({ children: true }));
+            const hudX = padding;
+            const hudY = Math.max(6, padding * 0.35);
+            const hudW = Math.max(1, screenWidth - padding * 2);
+            const hudH = Math.max(54, scoreAreaHeight - hudY - 6);
+            const panelTexture = getBlockpangTexture('glassPanelFill') || getBlockpangTexture('glassPanel');
+
+            const shadow = new PIXI.Graphics();
+            shadow.roundRect(hudX, hudY + 4, hudW, hudH, 18)
+                  .fill({ color: THEME.shadow, alpha: 0.32 });
+            this.hudBg.addChild(shadow);
+
+            if (panelTexture) {
+                const panel = new PIXI.Sprite(panelTexture);
+                panel.position.set(hudX, hudY);
+                panel.width = hudW;
+                panel.height = hudH;
+                panel.alpha = 0.78;
+                this.hudBg.addChild(panel);
+            } else {
+                const panel = new PIXI.Graphics();
+                panel.roundRect(hudX, hudY, hudW, hudH, 18)
+                     .fill({ color: THEME.surface, alpha: 0.9 });
+                this.hudBg.addChild(panel);
+            }
+
+            const line = new PIXI.Graphics();
+            line.roundRect(hudX, hudY, hudW, hudH, 18)
+                .stroke({ width: 1.2, color: THEME.divider, alpha: 0.52 });
+            line.roundRect(hudX + 10, hudY + 6, Math.max(1, hudW - 20), 3, 2)
+                .fill({ color: THEME.secondary, alpha: 0.22 });
+            this.hudBg.addChild(line);
+        }
+
         // Wordmark (top center)
-        this.titleText.position.set(centerX, padding * 0.4);
+        this.titleText.position.set(centerX, Math.max(8, padding * 0.65));
         this.titleText.style.fontSize = Math.max(15, Math.min(22, screenWidth * 0.048));
 
         const row2Y = this.titleText.y + this.titleText.height + 6;
@@ -228,7 +272,7 @@ class UIManager {
         // Score block (left, with home gap)
         const scoreX = padding + this.homeBtn.width + 10;
         this.scoreLabelText.position.set(scoreX, row2Y);
-        this.scoreLabelText.style.fontSize = Math.max(9, screenWidth * 0.022);
+        this.scoreLabelText.style.fontSize = Math.max(9, Math.min(12, screenWidth * 0.022));
         this.scoreText.position.set(scoreX, row2Y + this.scoreLabelText.height + 6);
         this.scoreText.style.fontSize = Math.max(18, Math.min(28, screenWidth * 0.058));
 

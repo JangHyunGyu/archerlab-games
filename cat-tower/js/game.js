@@ -293,8 +293,8 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     fieldBgGradient = ctx.createLinearGradient(0, 0, 0, FIELD_H);
-    fieldBgGradient.addColorStop(0, '#FFF7EA');
-    fieldBgGradient.addColorStop(1, '#F9EAD3');
+    fieldBgGradient.addColorStop(0, '#EAF6F2');
+    fieldBgGradient.addColorStop(1, '#C5DDD7');
 
     const ndpr = window.devicePixelRatio || 1;
     nextCanvas.width = 72 * ndpr;
@@ -724,10 +724,15 @@
       const sw = FIELD_W / scale;
       const sh = FIELD_H / scale;
       ctx.drawImage(fieldBgImage, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, FIELD_W, FIELD_H);
-      ctx.fillStyle = 'rgba(255, 247, 234, 0.20)';
+      ctx.fillStyle = 'rgba(195, 225, 218, 0.62)';
       ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = 'rgba(137, 176, 168, 0.32)';
+      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      ctx.restore();
     } else {
-      ctx.fillStyle = fieldBgGradient || '#FFF7EA';
+      ctx.fillStyle = fieldBgGradient || '#DCECE7';
       ctx.fillRect(0, 0, FIELD_W, FIELD_H);
     }
 

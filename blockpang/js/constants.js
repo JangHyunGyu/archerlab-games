@@ -1,39 +1,86 @@
 // ─── Grid ───
 const GRID_SIZE = 10;
 
-// ─── UI Theme (warm, handcrafted casual-puzzle palette) ───
+// ─── UI Theme (neon crystal arcade palette) ───
 const THEME = {
-    bg:          0xF5ECDA,   // page background: warm cream
-    bgDeep:      0xEDE0C5,   // slightly deeper cream (gradient base)
-    bgDim:       0xE3D3B4,   // board cell recess tone
-    surface:     0xFBF5E8,   // card / panel surface
-    surfaceAlt:  0xF0E5CE,   // nested panel / tray
-    divider:     0xE0CFB0,   // divider lines
-    inkStrong:   0x3A2F23,   // strong text (warm near-black)
-    ink:         0x4E4132,   // primary text
-    inkMuted:    0x8A7C68,   // secondary text
-    inkFaint:    0xB9AA8E,   // hint / disabled
+    bg:          0x07091E,
+    bgDeep:      0x120C35,
+    bgDim:       0x1B164A,
+    surface:     0x101A3A,
+    surfaceAlt:  0x172957,
+    divider:     0x2DE8FF,
+    inkStrong:   0xF7FCFF,
+    ink:         0xCBEFFF,
+    inkMuted:    0x8BC7E6,
+    inkFaint:    0x526C91,
 
-    accent:      0xE57A54,   // warm coral (primary CTA)
-    accentDeep:  0xC85E3A,   // pressed state
-    accentSoft:  0xF7C9B5,   // soft tint background
+    accent:      0xFF3EA5,
+    accentDeep:  0xC81D76,
+    accentSoft:  0x53235C,
 
-    secondary:   0x6FA89A,   // muted sage (secondary CTA)
-    secondaryDp: 0x507F74,
+    secondary:   0x21E7FF,
+    secondaryDp: 0x0A91BB,
 
-    gold:        0xC9922C,   // warm honey gold (best / new record)
-    goldSoft:    0xE8C98C,
+    gold:        0xFFD66D,
+    goldSoft:    0xFFE9A6,
 
-    rose:        0xBF5A66,   // game over rose (not alarming red)
-    leaf:        0x7A9A5A,   // level progress
+    rose:        0xFF527A,
+    leaf:        0x69F071,
 
     white:       0xFFFFFF,
-    shadow:      0x2D2015,   // subtle warm shadow (used with low alpha)
+    shadow:      0x00030A,
 };
 
 // Font stacks — Gowun Dodum = friendly rounded display (KR), Pretendard = clean body
 const FONT_DISPLAY = "'Gowun Dodum', 'Zen Maru Gothic', 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', sans-serif";
 const FONT_BODY    = "'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif";
+
+const BLOCKPANG_ASSET_MANIFEST = {
+    arcadeBg: 'assets/ui/arcade-bg.webp',
+    boardPanel: 'assets/ui/board-panel.webp',
+    glassPanel: 'assets/ui/glass-panel.webp',
+    glassPanelFill: 'assets/ui/glass-panel-fill.webp',
+    crystalSheen: 'assets/ui/crystal-sheen.webp',
+    blockTile0: 'assets/ui/block-tile-0-cyan.webp',
+    blockTile1: 'assets/ui/block-tile-1-red.webp',
+    blockTile2: 'assets/ui/block-tile-2-green.webp',
+    blockTile3: 'assets/ui/block-tile-3-gold.webp',
+    blockTile4: 'assets/ui/block-tile-4-violet.webp',
+    blockTile5: 'assets/ui/block-tile-5-orange.webp',
+    blockTile6: 'assets/ui/block-tile-6-blue.webp',
+    blockTile7: 'assets/ui/block-tile-7-pink.webp',
+};
+
+const BLOCKPANG_PNG_TILE_FALLBACKS = {
+    blockTile0: 'assets/ui/block-tile-0-cyan.png',
+    blockTile1: 'assets/ui/block-tile-1-red.png',
+    blockTile2: 'assets/ui/block-tile-2-green.png',
+    blockTile3: 'assets/ui/block-tile-3-gold.png',
+    blockTile4: 'assets/ui/block-tile-4-violet.png',
+    blockTile5: 'assets/ui/block-tile-5-orange.png',
+    blockTile6: 'assets/ui/block-tile-6-blue.png',
+    blockTile7: 'assets/ui/block-tile-7-pink.png',
+};
+
+function getBlockpangAssetManifest(usePngTileFallback = false) {
+    return usePngTileFallback
+        ? { ...BLOCKPANG_ASSET_MANIFEST, ...BLOCKPANG_PNG_TILE_FALLBACKS }
+        : BLOCKPANG_ASSET_MANIFEST;
+}
+
+function getBlockpangTexture(key) {
+    if (typeof window === 'undefined') return null;
+    return window.BLOCKPANG_ASSETS && window.BLOCKPANG_ASSETS[key]
+        ? window.BLOCKPANG_ASSETS[key]
+        : null;
+}
+
+if (typeof window !== 'undefined') {
+    window.BLOCKPANG_ASSET_MANIFEST = BLOCKPANG_ASSET_MANIFEST;
+    window.BLOCKPANG_PNG_TILE_FALLBACKS = BLOCKPANG_PNG_TILE_FALLBACKS;
+    window.getBlockpangAssetManifest = getBlockpangAssetManifest;
+    window.getBlockpangTexture = getBlockpangTexture;
+}
 
 // ─── Block Colors (premium neon palette with richer gradients) ───
 const BLOCK_COLORS = [
