@@ -343,17 +343,23 @@ class Game {
         const h = this.app.screen.height;
         const padding = Math.max(8, Math.min(w, h) * 0.025);
 
-        const scoreAreaH = Math.max(65, h * 0.11);
+        const scoreAreaH = Math.max(82, h * 0.135);
         const availW = w - padding * 2;
         const availH = h - scoreAreaH - padding * 2;
-        const gridMaxH = availH * 0.62;
-        const gridSize = Math.min(availW, gridMaxH);
+        // Reserve room on the sides so the board panel asset's outer frame
+        // doesn't push the cells against the screen edges.
+        const frameMargin = Math.max(14, Math.min(w, h) * 0.025);
+        const gridMaxH = (availH - frameMargin * 2) * 0.62;
+        const gridMaxW = availW - frameMargin * 2;
+        const gridSize = Math.min(gridMaxW, gridMaxH);
         this.cellSize = Math.floor(gridSize / GRID_SIZE);
         const actualGrid = this.cellSize * GRID_SIZE;
+        const boardPanelExt = Math.max(20, Math.round(this.cellSize * 0.55));
 
         const boardX = Math.floor((w - actualGrid) / 2);
-        const boardY = Math.floor(scoreAreaH + padding);
-        const trayY = boardY + actualGrid + padding;
+        // Push the board down so the panel asset's top frame clears the header.
+        const boardY = Math.floor(scoreAreaH + padding + boardPanelExt * 0.6);
+        const trayY = boardY + actualGrid + padding + boardPanelExt * 0.4;
         const trayH = h - trayY - padding;
 
         this.board.resize(this.cellSize, boardX, boardY);

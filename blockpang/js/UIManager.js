@@ -226,13 +226,24 @@ class UIManager {
     resize(screenWidth, scoreAreaHeight, padding) {
         const centerX = screenWidth / 2;
 
+        // ── Panel geometry ──
+        const hudX = padding;
+        const hudY = Math.max(4, padding * 0.4);
+        const hudW = Math.max(1, screenWidth - padding * 2);
+        const hudH = Math.max(72, scoreAreaHeight - hudY - 4);
+
+        // Inner padding so contents stay clear of the asset border / corner brackets
+        const innerPadX = Math.max(14, hudW * 0.045);
+        const innerPadTop = Math.max(8, hudH * 0.12);
+        const innerPadBottom = Math.max(8, hudH * 0.14);
+        const innerLeft = hudX + innerPadX;
+        const innerRight = hudX + hudW - innerPadX;
+        const innerTop = hudY + innerPadTop;
+        const innerBottom = hudY + hudH - innerPadBottom;
+
         if (this.hudBg) {
             const oldHud = this.hudBg.removeChildren();
             oldHud.forEach(c => c.destroy({ children: true }));
-            const hudX = padding;
-            const hudY = Math.max(6, padding * 0.35);
-            const hudW = Math.max(1, screenWidth - padding * 2);
-            const hudH = Math.max(54, scoreAreaHeight - hudY - 6);
             const panelTexture = getBlockpangTexture('glassPanelFill') || getBlockpangTexture('glassPanel');
 
             const shadow = new PIXI.Graphics();
@@ -262,32 +273,33 @@ class UIManager {
             this.hudBg.addChild(line);
         }
 
-        // Wordmark (top center)
-        this.titleText.position.set(centerX, Math.max(8, padding * 0.65));
-        this.titleText.style.fontSize = Math.max(15, Math.min(22, screenWidth * 0.048));
+        // ── Title (top-center, inside panel) ──
+        this.titleText.style.fontSize = Math.max(13, Math.min(18, screenWidth * 0.04));
+        this.titleText.position.set(centerX, innerTop);
 
-        const row2Y = this.titleText.y + this.titleText.height + 6;
+        const titleBottom = innerTop + this.titleText.height;
+        const row2Y = titleBottom + Math.max(4, hudH * 0.06);
 
-        // Score block (left, with home gap)
-        const scoreX = padding + this.homeBtn.width + 10;
+        // ── Score block (left) ──
+        const scoreX = innerLeft;
+        this.scoreLabelText.style.fontSize = Math.max(8, Math.min(11, screenWidth * 0.022));
         this.scoreLabelText.position.set(scoreX, row2Y);
-        this.scoreLabelText.style.fontSize = Math.max(9, Math.min(12, screenWidth * 0.022));
-        this.scoreText.position.set(scoreX, row2Y + this.scoreLabelText.height + 6);
-        this.scoreText.style.fontSize = Math.max(18, Math.min(28, screenWidth * 0.058));
+        this.scoreText.style.fontSize = Math.max(15, Math.min(22, screenWidth * 0.05));
+        const scoreNumberY = row2Y + this.scoreLabelText.height + 5;
+        this.scoreText.position.set(scoreX, scoreNumberY);
 
-        // Best (right)
-        this.bestText.position.set(screenWidth - padding, row2Y + 6);
-        this.bestText.style.fontSize = Math.max(10, Math.min(13, screenWidth * 0.028));
+        // ── Best / Level (right) ──
+        this.bestText.style.fontSize = Math.max(9, Math.min(12, screenWidth * 0.026));
+        this.bestText.position.set(innerRight, row2Y + this.bestText.height * 0.5);
 
-        // Level (right, below best)
-        this.levelText.position.set(screenWidth - padding, row2Y + 22);
-        this.levelText.style.fontSize = Math.max(9, Math.min(11, screenWidth * 0.025));
+        this.levelText.style.fontSize = Math.max(8, Math.min(10, screenWidth * 0.023));
+        this.levelText.position.set(innerRight, row2Y + this.bestText.height + this.levelText.height * 0.5 + 2);
 
-        // Level bar
-        const barW = Math.min(110, screenWidth * 0.25);
+        // ── Level bar (right, hugging the inner-bottom of panel) ──
         const barH = 3;
-        const barX = screenWidth - padding - barW;
-        const barY = row2Y + 36;
+        const barW = Math.min(110, hudW * 0.32);
+        const barX = innerRight - barW;
+        const barY = Math.min(innerBottom - barH, this.levelText.y + this.levelText.height * 0.5 + 4);
 
         this.levelBarBg.clear();
         this.levelBarBg.roundRect(barX, barY, barW, barH, barH / 2).fill({ color: THEME.divider, alpha: 1 });
@@ -297,13 +309,13 @@ class UIManager {
         this._levelBarW = barW;
         this._levelBarH = barH;
 
-        // Sound button (top right)
-        this.soundBtn.position.set(screenWidth - padding, padding * 0.25);
-        this.soundBtn.style.fontSize = Math.max(14, Math.min(20, screenWidth * 0.04));
+        // ── Sound button (top-right, inside panel) ──
+        this.soundBtn.style.fontSize = Math.max(13, Math.min(17, screenWidth * 0.036));
+        this.soundBtn.position.set(innerRight, hudY + Math.max(3, innerPadTop * 0.35));
 
-        // Back arrow (top left)
-        this.homeBtn.position.set(padding, padding * 0.1);
-        this.homeBtn.style.fontSize = Math.max(22, Math.min(30, screenWidth * 0.065));
+        // ── Back arrow (top-left, inside panel) ──
+        this.homeBtn.style.fontSize = Math.max(20, Math.min(26, screenWidth * 0.058));
+        this.homeBtn.position.set(innerLeft - 4, hudY + Math.max(0, innerPadTop * 0.2));
     }
 
     updateScore(score, bestScore) {

@@ -129,10 +129,12 @@ class Board {
         const total = cs * GRID_SIZE;
 
         const panelTexture = getBlockpangTexture('boardPanel');
+        // Outer extension so the asset's corner brackets sit clear of the cells.
+        const ext = Math.max(20, Math.round(cs * 0.55));
         const g = new PIXI.Graphics();
 
         // Soft neon shadow underneath the asset panel.
-        g.roundRect(-8, -4, total + 16, total + 18, 18)
+        g.roundRect(-ext + 6, -ext + 10, total + (ext - 6) * 2, total + (ext - 10) * 2, 18)
          .fill({ color: THEME.shadow, alpha: panelTexture ? 0.34 : 0.38 });
 
         if (!panelTexture) {
@@ -144,9 +146,9 @@ class Board {
 
         if (panelTexture) {
             const panel = new PIXI.Sprite(panelTexture);
-            panel.position.set(-14, -14);
-            panel.width = total + 28;
-            panel.height = total + 28;
+            panel.position.set(-ext, -ext);
+            panel.width = total + ext * 2;
+            panel.height = total + ext * 2;
             panel.alpha = 0.96;
             container.addChild(panel);
         }
@@ -157,7 +159,7 @@ class Board {
          .fill({ color: THEME.secondary, alpha: 0.16 });
         container.addChild(overlay);
 
-        // Thin hairline border
+        // Thin hairline border (kept tight to the cell area, not the asset edge)
         const border = new PIXI.Graphics();
         border.roundRect(-8, -8, total + 16, total + 16, 14)
               .stroke({ width: 1.4, color: THEME.divider, alpha: 0.72 });
