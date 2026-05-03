@@ -487,6 +487,8 @@ class EffectManager {
                 return;
             }
             const origTint = sprite.tint;
+            const baseScaleX = sprite._blockpangBaseScaleX || sprite.scale.x || 1;
+            const baseScaleY = sprite._blockpangBaseScaleY || sprite.scale.y || 1;
             this.tweens.push({
                 elapsed: 0,
                 duration: 400,
@@ -507,26 +509,29 @@ class EffectManager {
                     // Phase 3: shrink out (0.7-1.0)
                     if (t < 0.3) {
                         const p = t / 0.3;
+                        const s = 1 + p * 0.1;
                         sprite.tint = 0xFFFFFF;
                         sprite.alpha = 1;
-                        sprite.scale.set(1 + p * 0.1);
+                        sprite.scale.set(baseScaleX * s, baseScaleY * s);
                     } else if (t < 0.7) {
                         const p = (t - 0.3) / 0.4;
                         const flash = Math.sin(p * Math.PI * 4) * 0.5 + 0.5;
+                        const s = 1.1 - p * 0.1;
                         sprite.tint = flash > 0.5 ? 0xFFFFFF : origTint;
                         sprite.alpha = 1;
-                        sprite.scale.set(1.1 - p * 0.1);
+                        sprite.scale.set(baseScaleX * s, baseScaleY * s);
                     } else {
                         const p = (t - 0.7) / 0.3;
+                        const s = 1 - p * 0.3;
                         sprite.tint = 0xFFFFFF;
                         sprite.alpha = 1 - easeOutCubic(p);
-                        sprite.scale.set(1 - p * 0.3);
+                        sprite.scale.set(baseScaleX * s, baseScaleY * s);
                     }
 
                     if (t >= 1) {
                         sprite.alpha = 1;
                         sprite.tint = origTint;
-                        sprite.scale.set(1);
+                        sprite.scale.set(baseScaleX, baseScaleY);
                         completed++;
                         if (completed >= total) fireCallback();
                         return true;

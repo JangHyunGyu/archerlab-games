@@ -322,7 +322,7 @@ if (BLOCK_COLORS.length < 2) {
 const classDefs = new Set();
 const classInsts = new Set();
 const builtins = new Set(['Map', 'Set', 'Array', 'Object', 'Promise', 'Error',
-    'Audio', 'Function', 'Uint8Array', 'Float32Array', 'Image']);
+    'Audio', 'Function', 'Uint8Array', 'Float32Array', 'Image', 'Date']);
 
 for (const [, content] of Object.entries(allJsContent)) {
     for (const m of content.matchAll(/class\s+(\w+)/g)) classDefs.add(m[1]);
@@ -1356,7 +1356,8 @@ if (gameJsContent.includes('clearResult.cells[')) {
 }
 
 // Game.js: PIXI container access after destroy
-if (gameJsContent.includes('.destroy()') && gameJsContent.includes('.getGlobalPosition')) {
+const hasSafeBoardGlobalPosition = /getGlobalPosition\s*\(\)\s*{[\s\S]{0,220}container\.destroyed/.test(boardContent);
+if (gameJsContent.includes('.destroy()') && gameJsContent.includes('.getGlobalPosition') && !hasSafeBoardGlobalPosition) {
     warnings.push(`[LIFECYCLE] Game.js: getGlobalPosition() may be called on destroyed PIXI object during rapid transitions`);
 }
 
