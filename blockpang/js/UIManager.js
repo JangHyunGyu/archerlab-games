@@ -110,14 +110,21 @@ class UIManager {
         this.levelBarFill = new PIXI.Graphics();
         this.container.addChild(this.levelBarFill);
 
-        // Sound button (small pill)
+        // Sound button (\u266A \u2014 bright with cyan glow for visibility against the panel)
         this.soundBtn = new PIXI.Text({
             text: '\u266A',
             style: {
                 fontFamily: FONT_BODY,
-                fontSize: 18,
-                fill: THEME.inkMuted,
-                fontWeight: '500',
+                fontSize: 22,
+                fill: THEME.inkStrong,
+                fontWeight: '700',
+                stroke: { color: THEME.secondaryDp, width: 3, alpha: 0.85 },
+                dropShadow: {
+                    color: THEME.secondary,
+                    alpha: 0.7,
+                    blur: 6,
+                    distance: 0,
+                },
             },
         });
         this.soundBtn.anchor.set(1, 0);
@@ -126,20 +133,28 @@ class UIManager {
         this.soundBtn.hitArea = new PIXI.Rectangle(-44, -12, 56, 56);
         this.soundBtn.on('pointerdown', () => {
             const enabled = this.game.sound.toggle();
-            this.soundBtn.style.fill = enabled ? THEME.inkMuted : THEME.inkFaint;
+            this.soundBtn.style.fill = enabled ? THEME.inkStrong : THEME.inkFaint;
+            this.soundBtn.alpha = enabled ? 1 : 0.55;
         });
-        this.soundBtn.on('pointerover', () => { this.soundBtn.alpha = 0.65; });
+        this.soundBtn.on('pointerover', () => { this.soundBtn.alpha = 0.75; });
         this.soundBtn.on('pointerout',  () => { this.soundBtn.alpha = 1; });
         this.container.addChild(this.soundBtn);
 
-        // Home button (back arrow icon, not emoji)
+        // Home button (← back arrow — bright with cyan glow)
         this.homeBtn = new PIXI.Text({
-            text: '‹',
+            text: '←',
             style: {
                 fontFamily: FONT_BODY,
-                fontSize: 28,
-                fill: THEME.inkMuted,
-                fontWeight: '400',
+                fontSize: 26,
+                fill: THEME.inkStrong,
+                fontWeight: '700',
+                stroke: { color: THEME.secondaryDp, width: 3, alpha: 0.85 },
+                dropShadow: {
+                    color: THEME.secondary,
+                    alpha: 0.7,
+                    blur: 6,
+                    distance: 0,
+                },
             },
         });
         this.homeBtn.anchor.set(0, 0);
@@ -150,7 +165,7 @@ class UIManager {
             if (this.game.isAnimating) return;
             this.game.goToTitle();
         });
-        this.homeBtn.on('pointerover', () => { this.homeBtn.alpha = 0.65; });
+        this.homeBtn.on('pointerover', () => { this.homeBtn.alpha = 0.75; });
         this.homeBtn.on('pointerout',  () => { this.homeBtn.alpha = 1; });
         this.container.addChild(this.homeBtn);
 
@@ -310,11 +325,11 @@ class UIManager {
         this._levelBarH = barH;
 
         // ── Sound button (top-right, inside panel) ──
-        this.soundBtn.style.fontSize = Math.max(13, Math.min(17, screenWidth * 0.036));
+        this.soundBtn.style.fontSize = Math.max(17, Math.min(22, screenWidth * 0.046));
         this.soundBtn.position.set(innerRight, hudY + Math.max(8, innerPadTop * 0.5));
 
         // ── Back arrow (top-left, inside panel) ──
-        this.homeBtn.style.fontSize = Math.max(20, Math.min(26, screenWidth * 0.058));
+        this.homeBtn.style.fontSize = Math.max(24, Math.min(32, screenWidth * 0.07));
         this.homeBtn.position.set(innerLeft, hudY + Math.max(4, innerPadTop * 0.3));
     }
 
