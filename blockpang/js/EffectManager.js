@@ -1588,6 +1588,43 @@ class EffectManager {
         }
     }
 
+    clearTransient({ trimPoolSize = 80 } = {}) {
+        this._timeouts.forEach(id => clearTimeout(id));
+        this._timeouts.clear();
+        this.tweens = [];
+
+        this.particles.forEach((p) => {
+            if (p && p.gfx && !p.gfx.destroyed) {
+                this._releaseParticleGfx(p.gfx);
+            }
+        });
+        this.particles = [];
+
+        const leftovers = this.container.removeChildren();
+        leftovers.forEach((child) => {
+            if (!child || child.destroyed) return;
+            if (this._particlePool.includes(child)) return;
+            child.destroy({ children: true });
+        });
+
+        this.shakeTime = 0;
+        this.shakeDuration = 0;
+        this.shakeIntensity = 0;
+        this.shakeOffset.x = 0;
+        this.shakeOffset.y = 0;
+
+        if (this.game && this.game.gameContainer && !this.game.gameContainer.destroyed) {
+            this.game.gameContainer.position.set(0, 0);
+        }
+        if (this.game && this.game.zoomContainer && !this.game.zoomContainer.destroyed) {
+            this.game.zoomContainer.scale.set(1);
+            this.game.zoomContainer.pivot.set(0, 0);
+            this.game.zoomContainer.position.set(0, 0);
+        }
+
+        this.trimPool(trimPoolSize);
+    }
+
     destroy() {
         if (this._destroyed) return;
         this._destroyed = true;

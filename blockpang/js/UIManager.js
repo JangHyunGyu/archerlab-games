@@ -494,30 +494,79 @@ class UIManager {
 
         // ── Buttons ──
         const hasSave = Game.hasSavedGame();
-        const btnW = Math.min(w * 0.7, 300);
-        const btnH = Math.min(56, h * 0.075);
-        const startBtnY = hasSave ? h * 0.56 : h * 0.5;
+        const btnW = Math.min(w * 0.72, 304);
+        const btnH = Math.min(56, Math.max(50, h * 0.073));
+        const actionGap = 13;
+        const startBtnY = hasSave ? h * 0.56 : h * 0.505;
         const btnX = centerX - btnW / 2;
 
         this._activeButtons = [];
 
-        // Helper: flat soft-shadow button (no highlight band)
-        const makePrimaryBtn = (x, y, width, height, fillColor, label, labelColor, action) => {
-            const btn = new PIXI.Graphics();
-            // Soft drop shadow
-            btn.roundRect(x, y + 3, width, height, height / 2 + 2)
-               .fill({ color: THEME.shadow, alpha: 0.12 });
-            // Body
-            btn.roundRect(x, y, width, height, height / 2)
-               .fill({ color: fillColor });
+        const fitButtonText = (text, maxWidth, minSize) => {
+            let size = text.style.fontSize;
+            while (text.width > maxWidth && size > minSize) {
+                size -= 1;
+                text.style.fontSize = size;
+            }
+        };
 
+        const makeTitleButton = (x, y, width, height, label, variant, action) => {
+            const btn = new PIXI.Container();
+            btn.position.set(x, y);
             btn.eventMode = 'static';
             btn.cursor = 'pointer';
-            btn.hitArea = new PIXI.Rectangle(x - 8, y - 8, width + 16, height + 16);
-            btn.on('pointerover', () => { btn.alpha = 0.9; });
-            btn.on('pointerout',  () => { btn.alpha = 1; });
-            let triggered = false;
-            const fire = () => { if (triggered) return; triggered = true; action(); };
+            btn.hitArea = new PIXI.Rectangle(-8, -8, width + 16, height + 16);
+
+            const bg = new PIXI.Graphics();
+            btn.addChild(bg);
+
+            const draw = (hovered = false) => {
+                const radius = Math.min(20, height / 2);
+                bg.clear();
+                bg.roundRect(0, 5, width, height, radius + 2)
+                  .fill({ color: THEME.shadow, alpha: hovered ? 0.34 : 0.24 });
+
+                if (variant === 'primary') {
+                    bg.roundRect(0, 0, width, height, radius)
+                      .fill({ color: THEME.accentDeep, alpha: 1 });
+                    bg.roundRect(2, 2, width - 4, height - 6, Math.max(8, radius - 2))
+                      .fill({ color: THEME.accent, alpha: hovered ? 1 : 0.94 });
+                    bg.roundRect(6, 5, width - 12, Math.max(8, height * 0.22), Math.max(6, radius - 6))
+                      .fill({ color: THEME.white, alpha: hovered ? 0.2 : 0.14 });
+                    bg.roundRect(0, 0, width, height, radius)
+                      .stroke({ width: 2, color: THEME.secondary, alpha: hovered ? 0.78 : 0.5 });
+                    bg.roundRect(2, height - 10, width - 4, 8, Math.max(5, radius - 4))
+                      .fill({ color: THEME.accentDeep, alpha: 0.38 });
+                } else if (variant === 'secondary') {
+                    bg.roundRect(0, 0, width, height, radius)
+                      .fill({ color: THEME.surface, alpha: 0.94 });
+                    bg.roundRect(3, 3, width - 6, height - 6, Math.max(8, radius - 3))
+                      .fill({ color: THEME.surfaceAlt, alpha: hovered ? 0.72 : 0.46 });
+                    bg.roundRect(0, 0, width, height, radius)
+                      .stroke({ width: 2, color: THEME.secondary, alpha: hovered ? 0.95 : 0.78 });
+                    bg.roundRect(5, 5, width - 10, Math.max(7, height * 0.18), Math.max(5, radius - 5))
+                      .fill({ color: THEME.white, alpha: 0.08 });
+                } else {
+                    bg.roundRect(0, 0, width, height, radius)
+                      .fill({ color: THEME.surface, alpha: hovered ? 0.92 : 0.78 });
+                    bg.roundRect(2, 2, width - 4, height - 5, Math.max(8, radius - 2))
+                      .fill({ color: THEME.surfaceAlt, alpha: hovered ? 0.42 : 0.24 });
+                    bg.roundRect(0, 0, width, height, radius)
+                      .stroke({ width: 1.5, color: THEME.secondary, alpha: hovered ? 0.88 : 0.66 });
+                }
+            };
+            draw(false);
+
+            btn.on('pointerover', () => draw(true));
+            btn.on('pointerout',  () => draw(false));
+
+            let lastFire = 0;
+            const fire = () => {
+                const now = performance.now();
+                if (now - lastFire < 280) return;
+                lastFire = now;
+                action();
+            };
             btn.on('pointerdown', fire);
             btn.on('pointertap',  fire);
             container.addChild(btn);
@@ -526,104 +575,59 @@ class UIManager {
                 text: label,
                 style: {
                     fontFamily: FONT_BODY,
-                    fontSize: Math.min(18, width * 0.07),
-                    fill: labelColor,
-                    fontWeight: '700',
-                    letterSpacing: 1,
+                    fontSize: variant === 'ghost'
+                        ? Math.min(12, w * 0.031) * sc
+                        : Math.min(18, width * 0.066),
+                    fill: variant === 'primary' ? THEME.white : THEME.inkStrong,
+                    fontWeight: '800',
+                    letterSpacing: variant === 'ghost' ? 0.3 : 0.8,
+                    dropShadow: variant === 'primary'
+                        ? { color: THEME.shadow, blur: 3, distance: 1, alpha: 0.28 }
+                        : false,
                 },
             });
             txt.anchor.set(0.5, 0.5);
-            txt.position.set(x + width / 2, y + height / 2);
+            txt.position.set(width / 2, height / 2 - 1);
             txt.eventMode = 'none';
             btn.addChild(txt);
+            fitButtonText(txt, width - (variant === 'ghost' ? 22 : 34), variant === 'ghost' ? 10 : 13);
 
             this._activeButtons.push({ x: x - 8, y: y - 8, w: width + 16, h: height + 16, action: fire });
-            return { btn, txt };
+            return { btn, txt, width, height };
         };
 
         // Continue (if saved)
         let resumeBtn = null, resumeBtnText = null;
         if (hasSave) {
             const savedScore = Game.getSavedScore();
-            const resumeBtnY = h * 0.46;
+            const resumeBtnY = startBtnY - btnH - actionGap;
             const resumeLabel = savedScore > 0
                 ? `${getText('continueGame')}  ·  ${savedScore.toLocaleString()}`
                 : getText('continueGame');
-            const r = makePrimaryBtn(
-                btnX, resumeBtnY, btnW, btnH,
-                THEME.surface, resumeLabel, THEME.inkStrong,
+            const r = makeTitleButton(
+                btnX, resumeBtnY, btnW, btnH, resumeLabel, 'secondary',
                 () => { this.game.sound.ensureContext(); this.game.startGame(true); }
             );
-            // Secondary style: add a border since fill is surface
-            r.btn.roundRect(btnX, resumeBtnY, btnW, btnH, btnH / 2)
-                 .stroke({ width: 1.5, color: THEME.divider, alpha: 1 });
             resumeBtn = r.btn; resumeBtnText = r.txt;
         }
 
-        // Start (primary coral)
-        const s = makePrimaryBtn(
-            btnX, startBtnY, btnW, btnH,
-            THEME.accent, getText('gameStart'), THEME.white,
+        // Start (primary)
+        const s = makeTitleButton(
+            btnX, startBtnY, btnW, btnH, getText('gameStart'), 'primary',
             () => { this.game.sound.ensureContext(); this.game.startGame(false); }
         );
         const startBtn = s.btn, startBtnText = s.txt;
 
         // ── Bottom Row: Hall of Fame + Contact (ghost buttons) ──
-        const smallBtnH = Math.min(40, h * 0.058);
-        const gap = 10;
-        const bottomY = hasSave ? h * 0.7 : h * 0.65;
+        const smallBtnH = Math.min(42, Math.max(38, h * 0.058));
+        const gap = 12;
+        const bottomY = startBtnY + btnH + (hasSave ? 42 : 46);
+        const smallBtnW = Math.min((btnW - gap) / 2, 132);
 
-        const makeGhostBtn = (label, action) => {
-            const bw = Math.min((w - gap * 4) / 3, 120);
-            const btn = new PIXI.Graphics();
-            btn.roundRect(0, 0, bw, smallBtnH, smallBtnH / 2)
-               .fill({ color: THEME.surface });
-            btn.roundRect(0, 0, bw, smallBtnH, smallBtnH / 2)
-               .stroke({ width: 1, color: THEME.divider, alpha: 1 });
-
-            btn.eventMode = 'static';
-            btn.cursor = 'pointer';
-            btn.hitArea = new PIXI.Rectangle(-5, -5, bw + 10, smallBtnH + 10);
-            btn.on('pointerover', () => { btn.alpha = 0.85; });
-            btn.on('pointerout',  () => { btn.alpha = 1; });
-            btn.on('pointerdown', action);
-
-            const txt = new PIXI.Text({
-                text: label,
-                style: {
-                    fontFamily: FONT_BODY,
-                    fontSize: Math.min(12, w * 0.03) * sc,
-                    fill: THEME.ink,
-                    fontWeight: '600',
-                },
-            });
-            txt.anchor.set(0.5, 0.5);
-            txt.position.set(bw / 2, smallBtnH / 2);
-            btn.addChild(txt);
-            return { btn, txt, width: bw };
-        };
-
-        const hofBtn = makeGhostBtn(getText('hallOfFame'), () => this.showHallOfFame());
-        const contactBtn = makeGhostBtn(getText('contact'),
+        const hofBtn = makeTitleButton(btnX, bottomY, smallBtnW, smallBtnH, getText('hallOfFame'), 'ghost',
+            () => this.showHallOfFame());
+        const contactBtn = makeTitleButton(btnX + smallBtnW + gap, bottomY, smallBtnW, smallBtnH, getText('contact'), 'ghost',
             () => window.open('mailto:contact@archerlab.dev', '_blank'));
-
-        const totalBtnW = hofBtn.width + gap + contactBtn.width;
-        const btnStartX = centerX - totalBtnW / 2;
-        hofBtn.btn.position.set(btnStartX, bottomY);
-        container.addChild(hofBtn.btn);
-        contactBtn.btn.position.set(btnStartX + hofBtn.width + gap, bottomY);
-        container.addChild(contactBtn.btn);
-
-        // Register ghost hit areas for DOM fallback
-        this._activeButtons.push({
-            x: btnStartX - 5, y: bottomY - 5, w: hofBtn.width + 10, h: smallBtnH + 10,
-            action: () => this.showHallOfFame(),
-        });
-        this._activeButtons.push({
-            x: btnStartX + hofBtn.width + gap - 5, y: bottomY - 5,
-            w: contactBtn.width + 10, h: smallBtnH + 10,
-            action: () => window.open('mailto:contact@archerlab.dev', '_blank'),
-        });
 
         // ── Language chip (top-left pill) ──
         // ArcherLab HTML 링크(상단 중앙)와 세로 중앙선을 정확히 맞추기 위해
@@ -639,10 +643,14 @@ class UIManager {
         const langY = archRect ? archRect.top : 14;
 
         const langTrigger = new PIXI.Graphics();
+        langTrigger.roundRect(0, 3, langBtnW, langBtnH, langBtnH / 2)
+                   .fill({ color: THEME.shadow, alpha: 0.22 });
         langTrigger.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)
-                   .fill({ color: THEME.surface });
+                   .fill({ color: THEME.surface, alpha: 0.82 });
+        langTrigger.roundRect(2, 2, langBtnW - 4, langBtnH - 5, Math.max(8, langBtnH / 2 - 2))
+                   .fill({ color: THEME.surfaceAlt, alpha: 0.28 });
         langTrigger.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)
-                   .stroke({ width: 1, color: THEME.divider, alpha: 1 });
+                   .stroke({ width: 1.5, color: THEME.secondary, alpha: 0.76 });
         langTrigger.position.set(langX, langY);
         langTrigger.eventMode = 'static';
         langTrigger.cursor = 'pointer';
@@ -654,8 +662,8 @@ class UIManager {
             style: {
                 fontFamily: FONT_BODY,
                 fontSize: langFontSize,
-                fill: THEME.ink,
-                fontWeight: '600',
+                fill: THEME.inkStrong,
+                fontWeight: '700',
             },
         });
         langTriggerText.anchor.set(0.5, 0.5);
@@ -684,10 +692,12 @@ class UIManager {
             const isActive = lang.code === currentLang;
 
             const itemBg = new PIXI.Graphics();
+            itemBg.roundRect(0, 2, langBtnW, langBtnH, langBtnH / 2)
+                  .fill({ color: THEME.shadow, alpha: 0.2 });
             itemBg.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)
-                  .fill({ color: isActive ? THEME.accent : THEME.surface });
+                  .fill({ color: isActive ? THEME.accent : THEME.surface, alpha: isActive ? 0.96 : 0.88 });
             itemBg.roundRect(0, 0, langBtnW, langBtnH, langBtnH / 2)
-                  .stroke({ width: 1, color: isActive ? THEME.accent : THEME.divider, alpha: 1 });
+                  .stroke({ width: 1.5, color: isActive ? THEME.secondary : THEME.secondary, alpha: isActive ? 0.78 : 0.62 });
             itemBg.position.set(langX, iy);
             itemBg.eventMode = 'static';
             itemBg.cursor = 'pointer';
@@ -698,8 +708,8 @@ class UIManager {
                 style: {
                     fontFamily: FONT_BODY,
                     fontSize: langFontSize,
-                    fill: isActive ? THEME.white : THEME.ink,
-                    fontWeight: '600',
+                    fill: isActive ? THEME.white : THEME.inkStrong,
+                    fontWeight: '700',
                 },
             });
             itemText.anchor.set(0.5, 0.5);
@@ -729,25 +739,48 @@ class UIManager {
         const langBtn = { btn: langTrigger, txt: langTriggerText };
 
         // ── Top-right sound toggle ──
-        const titleSoundBtn = new PIXI.Text({
+        const soundSize = langBtnH;
+        const titleSoundBtn = new PIXI.Container();
+        titleSoundBtn.position.set(w - 14 - soundSize, langY);
+        titleSoundBtn.eventMode = 'static';
+        titleSoundBtn.cursor = 'pointer';
+        titleSoundBtn.hitArea = new PIXI.Rectangle(-4, -4, soundSize + 8, soundSize + 8);
+
+        const soundBg = new PIXI.Graphics();
+        titleSoundBtn.addChild(soundBg);
+        const drawSoundBtn = (hovered = false) => {
+            soundBg.clear();
+            soundBg.roundRect(0, 3, soundSize, soundSize, soundSize / 2)
+                   .fill({ color: THEME.shadow, alpha: hovered ? 0.3 : 0.22 });
+            soundBg.roundRect(0, 0, soundSize, soundSize, soundSize / 2)
+                   .fill({ color: THEME.surface, alpha: hovered ? 0.92 : 0.82 });
+            soundBg.roundRect(2, 2, soundSize - 4, soundSize - 5, Math.max(8, soundSize / 2 - 2))
+                   .fill({ color: THEME.surfaceAlt, alpha: hovered ? 0.42 : 0.28 });
+            soundBg.roundRect(0, 0, soundSize, soundSize, soundSize / 2)
+                   .stroke({ width: 1.5, color: THEME.secondary, alpha: hovered ? 0.9 : 0.76 });
+        };
+        drawSoundBtn(false);
+
+        const titleSoundIcon = new PIXI.Text({
             text: '\u266A',
             style: {
                 fontFamily: FONT_BODY,
-                fontSize: Math.max(16, Math.min(20, w * 0.045)),
-                fill: this.game.sound.enabled ? THEME.ink : THEME.inkFaint,
-                fontWeight: '500',
+                fontSize: Math.max(15, Math.min(18, w * 0.043)),
+                fill: this.game.sound.enabled ? THEME.inkStrong : THEME.inkFaint,
+                fontWeight: '700',
             },
         });
-        titleSoundBtn.anchor.set(1, 0);
-        titleSoundBtn.position.set(w - 18, 18);
-        titleSoundBtn.eventMode = 'static';
-        titleSoundBtn.cursor = 'pointer';
+        titleSoundIcon.anchor.set(0.5, 0.5);
+        titleSoundIcon.position.set(soundSize / 2, soundSize / 2 - 1);
+        titleSoundIcon.eventMode = 'none';
+        titleSoundBtn.addChild(titleSoundIcon);
+
         titleSoundBtn.on('pointerdown', () => {
             const enabled = this.game.sound.toggle();
-            titleSoundBtn.style.fill = enabled ? THEME.ink : THEME.inkFaint;
+            titleSoundIcon.style.fill = enabled ? THEME.inkStrong : THEME.inkFaint;
         });
-        titleSoundBtn.on('pointerover', () => { titleSoundBtn.alpha = 0.65; });
-        titleSoundBtn.on('pointerout',  () => { titleSoundBtn.alpha = 1; });
+        titleSoundBtn.on('pointerover', () => drawSoundBtn(true));
+        titleSoundBtn.on('pointerout',  () => drawSoundBtn(false));
         container.addChild(titleSoundBtn);
 
         // ── Version text (footer) ──
@@ -769,7 +802,7 @@ class UIManager {
 
         // ── Entrance Animation ── (fade + gentle lift, no pop-scaling)
         container.alpha = 0;
-        const liftTargets = [deco, logo, subtitle, startBtn, hofBtn.btn, contactBtn.btn, langTrigger];
+        const liftTargets = [deco, logo, subtitle, startBtn, hofBtn.btn, contactBtn.btn, langTrigger, titleSoundBtn];
         if (resumeBtn) liftTargets.push(resumeBtn);
         liftTargets.forEach(el => { el.y += 16; el.alpha = 0; });
 

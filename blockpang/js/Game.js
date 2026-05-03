@@ -80,6 +80,7 @@ class Game {
     // ── Start game from title screen ──
     startGame(resume = false) {
         this._clearPendingTimeouts();
+        this.effects.clearTransient();
         this.state = 'playing';
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = 'none';
@@ -112,10 +113,10 @@ class Game {
             });
 
             if (resume) {
-                this.resumeGame();
+                this.resumeGame({ clearEffects: false });
             } else {
                 this._clearSave();
-                this.newGame();
+                this.newGame({ clearEffects: false });
             }
         });
     }
@@ -123,7 +124,7 @@ class Game {
     // ── Return to title screen ──
     goToTitle() {
         this._clearPendingTimeouts();
-        this.effects.trimPool();
+        this.effects.clearTransient();
         this.ui.hideGameOver();
         this.state = 'title';
         const alLink = document.getElementById('archerlab-link');
@@ -361,9 +362,13 @@ class Game {
         }
     }
 
-    newGame() {
+    newGame({ clearEffects = true } = {}) {
         this._clearPendingTimeouts();
-        this.effects.trimPool();
+        if (clearEffects) {
+            this.effects.clearTransient();
+        } else {
+            this.effects.trimPool();
+        }
         this.state = 'playing';
         this.isGameOver = false;
         this.isAnimating = false;
@@ -627,7 +632,7 @@ class Game {
         } catch (_) { return 0; }
     }
 
-    resumeGame() {
+    resumeGame({ clearEffects = true } = {}) {
         let raw = null;
         try {
             raw = localStorage.getItem('blockpang_save');
@@ -635,7 +640,11 @@ class Game {
             const data = JSON.parse(raw);
 
             this._clearPendingTimeouts();
-            this.effects.trimPool();
+            if (clearEffects) {
+                this.effects.clearTransient();
+            } else {
+                this.effects.trimPool();
+            }
             this.state = 'playing';
             this.isGameOver = false;
             this.isAnimating = false;
