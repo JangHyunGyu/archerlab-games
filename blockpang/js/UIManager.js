@@ -140,15 +140,15 @@ class UIManager {
         this.soundBtn.on('pointerout',  () => { this.soundBtn.alpha = 1; });
         this.container.addChild(this.soundBtn);
 
-        // Home button (← back arrow — bright with cyan glow)
+        // Home button (‹ chevron — bright with cyan glow, matches the neon UI palette)
         this.homeBtn = new PIXI.Text({
-            text: '←',
+            text: '‹',
             style: {
                 fontFamily: FONT_BODY,
-                fontSize: 26,
+                fontSize: 28,
                 fill: THEME.inkStrong,
                 fontWeight: '700',
-                stroke: { color: THEME.secondaryDp, width: 3, alpha: 0.85 },
+                stroke: { color: THEME.secondaryDp, width: 2.5, alpha: 0.85 },
                 dropShadow: {
                     color: THEME.secondary,
                     alpha: 0.7,
@@ -328,8 +328,8 @@ class UIManager {
         this.soundBtn.style.fontSize = Math.max(17, Math.min(22, screenWidth * 0.046));
         this.soundBtn.position.set(innerRight, hudY + Math.max(8, innerPadTop * 0.5));
 
-        // ── Back arrow (top-left, inside panel) ──
-        this.homeBtn.style.fontSize = Math.max(24, Math.min(32, screenWidth * 0.07));
+        // ── Back chevron (top-left, inside panel) ──
+        this.homeBtn.style.fontSize = Math.max(20, Math.min(26, screenWidth * 0.058));
         this.homeBtn.position.set(innerLeft, hudY + Math.max(4, innerPadTop * 0.3));
     }
 
