@@ -4,8 +4,8 @@
   'use strict';
 
   // -------- 디버그 로깅 --------
-  // URL에 ?debug=0 붙이면 일반 로그 숨김 (경고/에러는 항상 출력)
-  const DBG = new URLSearchParams(location.search).get('debug') !== '0';
+  // URL에 ?debug=1 붙였을 때만 일반 로그 출력 (경고/에러는 항상 출력)
+  const DBG = new URLSearchParams(location.search).get('debug') === '1';
   const T0 = performance.now();
   const _ts = () => `+${((performance.now() - T0) / 1000).toFixed(2)}s`;
   const log  = (...a) => { if (DBG) console.log('[CT]', _ts(), ...a); };
@@ -73,11 +73,11 @@
 
   // NaN 바디 감지 — 물리가 터지면 즉시 알림
   let _lastNanWarnAt = 0;
-  function assertBodiesFinite(label) {
+  function assertBodiesFinite(label, bodiesSnapshot = null) {
     if (!world) return;
     const now = performance.now();
     if (now - _lastNanWarnAt < 500) return; // 중복 알림 스팸 방지
-    for (const b of Composite.allBodies(world)) {
+    for (const b of (bodiesSnapshot || Composite.allBodies(world))) {
       if (b.label !== 'cat') continue;
       if (!Number.isFinite(b.position.x) || !Number.isFinite(b.position.y)
           || !Number.isFinite(b.velocity.x) || !Number.isFinite(b.velocity.y)) {
@@ -114,6 +114,7 @@
   let canvas, ctx;
   let nextCanvas, nextCtx;
   let dpr = 1;
+  let fieldBgGradient = null;
   let running = false;
   let gameOver = false;
   let score = 0;
@@ -128,6 +129,9 @@
   let reachedFinal = false;     // 사바나(최종단계) 최초 달성 여부 — 축하 플래시 1회용
   let newRecordTimeoutId = null; // 신기록 팡파레 대기 setTimeout 핸들 (게임 전환 시 취소용)
   let dropCooldownTimeoutId = null; // 이전 게임의 드롭 쿨다운 콜백이 새 게임에 끼어들지 않도록 추적
+  let saveDirty = false;
+  let lastAutoSaveAt = 0;
+  const AUTO_SAVE_INTERVAL_MS = 5000;
   const mergeEffects = [];      // 합성 이펙트 파티클
   const bonkCooldown = new Map(); // body.id → 마지막 bonk 시각 (ms) — 연속 충돌 스팸 방지
   const BONK_COOLDOWN_MS = 110;
@@ -202,10 +206,19 @@
   // ── 진행중 게임 스냅샷 저장/복원 ──
   // 물리 상태(위치/속도/각속도)를 직렬화하므로 이어서하기는 비결정적(재개 후 경로가 약간 달라질 수 있음).
   // 게임 체감상 문제 없음 — 중요 상태(점수/티어/필드 구성)는 완벽히 보존된다.
-  function autoSave() {
+  function markSaveDirty() {
+    saveDirty = true;
+  }
+
+  function autoSave(force = false, bodiesSnapshot = null) {
     if (!running || gameOver || !world) return;
+    const now = performance.now();
+    if (!force) {
+      if (!saveDirty) return;
+      if (now - lastAutoSaveAt < AUTO_SAVE_INTERVAL_MS) return;
+    }
     try {
-      const bodies = Composite.allBodies(world)
+      const bodies = (bodiesSnapshot || Composite.allBodies(world))
         .filter(b => b.label === 'cat' && !b.isStatic && b.cat && !b.cat.merging);
       const snap = {
         cats: bodies.map(b => ({
@@ -224,10 +237,14 @@
         ts: Date.now(),
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
+      lastAutoSaveAt = now;
+      saveDirty = false;
     } catch (_) { /* quota / privacy mode */ }
   }
   function clearSave() {
     try { localStorage.removeItem(SAVE_KEY); } catch {}
+    saveDirty = false;
+    lastAutoSaveAt = 0;
   }
   function hasSavedGame() {
     try {
@@ -272,6 +289,9 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    fieldBgGradient = ctx.createLinearGradient(0, 0, 0, FIELD_H);
+    fieldBgGradient.addColorStop(0, '#FFF7EA');
+    fieldBgGradient.addColorStop(1, '#F9EAD3');
 
     const ndpr = window.devicePixelRatio || 1;
     nextCanvas.width = 72 * ndpr;
@@ -400,6 +420,7 @@
       log(`최종단계 소멸 (tier ${tier}) +${TIERS[tier].score * 2}pt score=${score}`);
     }
     updateScoreUI();
+    markSaveDirty();
   }
 
   function handleCollision(evt) {
@@ -418,13 +439,14 @@
   // Matter.js의 collision 이벤트는 두 바디가 slop 이상 겹쳐야 발사된다.
   // 마찰로 천천히 미끄러져 들어와 "접촉 거리에 정착"하면 영원히 안 합쳐지는
   // 케이스가 발생 — 주기적으로 같은 tier 인접쌍을 직접 검사해서 강제 merge.
-  function scanStuckMerges() {
-    if (!world) return;
+  function scanStuckMerges(bodiesSnapshot = null) {
+    if (!world) return false;
     const now = performance.now();
-    const cats = Composite.allBodies(world).filter(
+    const cats = (bodiesSnapshot || Composite.allBodies(world)).filter(
       (b) => b.label === 'cat' && !b.isStatic && b.cat && !b.cat.merging
     );
     const byTier = new Map();
+    let merged = false;
     for (const c of cats) {
       if (!byTier.has(c.cat.tier)) byTier.set(c.cat.tier, []);
       byTier.get(c.cat.tier).push(c);
@@ -444,11 +466,13 @@
           if (dx * dx + dy * dy < t2) {
             log(`stuck merge 감지 tier=${tier} dist=${Math.sqrt(dx * dx + dy * dy).toFixed(2)}`);
             mergePair(a, b, now);
-            break; // a 제거됨 — 다음 i로
+            merged = true;
+            break;
           }
         }
       }
     }
+    return merged;
   }
 
   // merge 아닌 충돌(바닥/벽/다른 티어)에만 짧은 "톡" 재생
@@ -487,10 +511,10 @@
     }
   }
 
-  function pruneBonkCooldown() {
+  function pruneBonkCooldown(bodiesSnapshot = null) {
     if (!world || bonkCooldown.size === 0) return;
     const activeCatIds = new Set(
-      Composite.allBodies(world)
+      (bodiesSnapshot || Composite.allBodies(world))
         .filter((b) => b.label === 'cat' && b.cat)
         .map((b) => b.id)
     );
@@ -577,6 +601,7 @@
     }
     currentCat.cat.spawnedAt = performance.now();
     sound?.playDrop(tier);
+    markSaveDirty();
     log(`dropCurrent tier=${tier} at (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`);
     currentCat = null;
     updateCurrentCatLabel(null);
@@ -626,10 +651,11 @@
   }
 
   // -------- 게임 오버 판정 --------
-  function checkGameOver() {
-    if (gameOver) return;
+  function checkGameOver(bodiesSnapshot = null) {
+    if (gameOver) return false;
     const now = performance.now();
-    const bodies = Composite.allBodies(world);
+    const bodies = bodiesSnapshot || Composite.allBodies(world);
+    let changed = false;
     for (const b of bodies) {
       if (b.label !== 'cat' || b.isStatic || !b.cat) continue;
       if (now - b.cat.spawnedAt < POST_DROP_GRACE_MS) continue;
@@ -638,6 +664,7 @@
         warn(`off-canvas 바디 tier=${b.cat.tier} pos=(${b.position.x.toFixed(1)}, ${b.position.y.toFixed(1)}) — 제거`);
         World.remove(world, b);
         bonkCooldown.delete(b.id);
+        changed = true;
         continue;
       }
       const r = TIERS[b.cat.tier].radius;
@@ -649,12 +676,13 @@
         }
         if (now - b.cat.aboveSince > GAME_OVER_GRACE_MS) {
           triggerGameOver();
-          return;
+          return true;
         }
       } else {
         b.cat.aboveSince = 0;
       }
     }
+    return changed;
   }
 
   function triggerGameOver() {
@@ -682,14 +710,11 @@
   }
 
   // -------- 렌더링 --------
-  function render() {
+  function render(bodiesSnapshot = null) {
     // 배경 — 은은한 베이지 + 경계선
     ctx.clearRect(0, 0, FIELD_W, FIELD_H);
     // 필드 내부 부드러운 그라데이션 (AI 같지 않게 톤온톤 1.5단계)
-    const bg = ctx.createLinearGradient(0, 0, 0, FIELD_H);
-    bg.addColorStop(0, '#FFF7EA');
-    bg.addColorStop(1, '#F9EAD3');
-    ctx.fillStyle = bg;
+    ctx.fillStyle = fieldBgGradient || '#FFF7EA';
     ctx.fillRect(0, 0, FIELD_W, FIELD_H);
 
     // 위험선
@@ -709,7 +734,7 @@
     ctx.strokeRect(1.5, 1.5, FIELD_W - 3, FIELD_H - 3);
 
     // 고양이
-    const bodies = Composite.allBodies(world);
+    const bodies = bodiesSnapshot || Composite.allBodies(world);
     for (const b of bodies) {
       if (b.label !== 'cat' || !b.cat) continue;
       CatAssets.drawCat(ctx, b.cat.tier, b.position.x, b.position.y, b.angle, TIERS[b.cat.tier].radius);
@@ -773,21 +798,24 @@
         const dt = Math.min(16.666, ts - lastTs || 16.666);
         if (dt > 50) warn(`프레임 지연 감지 dt=${dt.toFixed(1)}ms (탭 백그라운드?)`);
         Engine.update(engine, dt);
-        checkGameOver();
+        let bodies = Composite.allBodies(world);
+        if (checkGameOver(bodies)) bodies = Composite.allBodies(world);
         _frameCount++;
         // 매 30프레임(약 0.5초)마다 stuck merge 검사 — 정적 접촉으로 갇힌 쌍 구제
-        if (_frameCount % 30 === 0) scanStuckMerges();
+        if (_frameCount % 30 === 0 && scanStuckMerges(bodies)) {
+          bodies = Composite.allBodies(world);
+        }
         // 매 60프레임(약 1초)마다 NaN 감시 + 옵션으로 상태 스냅샷
         if (_frameCount % 60 === 0) {
-          assertBodiesFinite('tick');
-          pruneBonkCooldown();
+          assertBodiesFinite('tick', bodies);
+          pruneBonkCooldown(bodies);
           _lastFpsAt = ts;
           _framesSinceFps = 0;
         }
         // 매 90프레임(약 1.5초)마다 이어서하기용 자동저장
-        if (_frameCount % 90 === 0) autoSave();
+        if (_frameCount % 180 === 0) autoSave(false, bodies);
         _framesSinceFps++;
-        render();
+        render(bodies);
       } catch (e) {
         err('loop tick 예외:', e.message, e.stack);
         running = false;
@@ -805,6 +833,7 @@
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
     if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
     sound?.stopAll();
+    clearSave();
     score = 0;
     comboCount = 0;
     lastMergeAt = 0;
@@ -812,6 +841,8 @@
     gameOver = false;
     running = true;
     dropCooldown = false;
+    saveDirty = false;
+    lastAutoSaveAt = 0;
     mergeEffects.length = 0;
     bonkCooldown.clear();
     nextTier = null;
@@ -856,6 +887,8 @@
       gameOver = false;
       running = true;
       dropCooldown = false;
+      saveDirty = false;
+      lastAutoSaveAt = 0;
       mergeEffects.length = 0;
       bonkCooldown.clear();
       _frameCount = 0;
@@ -937,7 +970,7 @@
   function exitToMenu() {
     log('exitToMenu');
     // 게임 오버가 아니라 홈 이탈한 경우 한 번 flush — 주기 저장(1.5s) 사이 이탈해도 보존
-    if (running && !gameOver) autoSave();
+    if (running && !gameOver) autoSave(true);
     running = false;
     gameOver = false;
     currentCat = null; // 이전 게임 참조 정리
@@ -1221,9 +1254,9 @@
 
       // 탭 숨김/종료 시 마지막 한 번 flush — 주기 저장 사이에 이탈해도 진행도 보존
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden) autoSave();
+        if (document.hidden) autoSave(true);
       });
-      window.addEventListener('pagehide', () => { autoSave(); });
+      window.addEventListener('pagehide', () => { autoSave(true); });
 
       playBtn.addEventListener('click', () => {
         // 첫 user gesture에서 AudioContext 초기화 (iOS/Safari 대응)
