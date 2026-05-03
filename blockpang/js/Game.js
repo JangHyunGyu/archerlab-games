@@ -81,6 +81,7 @@ class Game {
     startGame(resume = false) {
         this._clearPendingTimeouts();
         if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
+        if (this.board && typeof this.board.clearTransientOverlays === 'function') this.board.clearTransientOverlays();
         this.effects.clearTransient();
         if (this.ui && typeof this.ui.clearOrphanTitleScreens === 'function') {
             this.ui.clearOrphanTitleScreens({ keepCurrent: true });
@@ -129,6 +130,7 @@ class Game {
     goToTitle() {
         this._clearPendingTimeouts();
         if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
+        if (this.board && typeof this.board.clearTransientOverlays === 'function') this.board.clearTransientOverlays();
         this.effects.clearTransient();
         if (this.ui && typeof this.ui.clearOrphanTitleScreens === 'function') {
             this.ui.clearOrphanTitleScreens({ keepCurrent: true });
@@ -336,6 +338,7 @@ class Game {
         if (this.input && (this.input.dragging || this.input.dragReturning)) {
             this.input.cancelDrag({ animate: false, restorePiece: true });
         }
+        if (this.board && typeof this.board.clearTransientOverlays === 'function') this.board.clearTransientOverlays();
         const w = this.app.screen.width;
         const h = this.app.screen.height;
         const padding = Math.max(8, Math.min(w, h) * 0.025);
@@ -375,6 +378,7 @@ class Game {
     newGame({ clearEffects = true } = {}) {
         this._clearPendingTimeouts();
         if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
+        if (this.board && typeof this.board.clearTransientOverlays === 'function') this.board.clearTransientOverlays();
         if (clearEffects) {
             this.effects.clearTransient();
         } else {
@@ -410,6 +414,7 @@ class Game {
     placePiece(slotIndex, gridX, gridY) {
         const piece = this.tray.slots[slotIndex];
         if (!piece) return;
+        if (this.board && typeof this.board.clearTransientOverlays === 'function') this.board.clearTransientOverlays();
 
         const animationToken = this._beginPlacementAnimation();
 
@@ -652,6 +657,7 @@ class Game {
 
             this._clearPendingTimeouts();
             if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
+            if (this.board && typeof this.board.clearTransientOverlays === 'function') this.board.clearTransientOverlays();
             if (clearEffects) {
                 this.effects.clearTransient();
             } else {
