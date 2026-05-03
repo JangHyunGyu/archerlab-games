@@ -43,6 +43,7 @@
   --final-value-size: 48px;
   --rank-row-font-size: 14px;
   --field-max-width: 400px;
+  --field-fit-width: var(--field-max-width);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -265,7 +266,7 @@ h1 {
   --game-hint-font-size: 12px;
   padding: var(--game-pad-top) var(--game-pad-x) calc(var(--game-pad-bottom) + env(safe-area-inset-bottom));
   gap: var(--game-gap);
-  overflow-y: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
 }
 
@@ -408,15 +409,15 @@ h1 {
 }
 
 .field-wrap {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   min-height: 0;
 }
 #canvas {
-  width: 100%;
-  max-width: var(--field-max-width);
+  width: min(100%, var(--field-max-width), var(--field-fit-width));
+  height: auto;
   aspect-ratio: 400 / 540;
   background: var(--bg-soft);
   border: 3px solid var(--line);

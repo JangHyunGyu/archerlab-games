@@ -155,7 +155,32 @@
 
   function tt(key, vars) { return (window.I18N && window.I18N.t(key, vars)) || key; }
 
-  function show(el) { el.classList.remove('hidden'); }
+  let fitLayoutRaf = 0;
+  function scheduleFitGameLayout() {
+    if (fitLayoutRaf) cancelAnimationFrame(fitLayoutRaf);
+    fitLayoutRaf = requestAnimationFrame(() => {
+      fitLayoutRaf = 0;
+      fitGameLayout();
+    });
+  }
+
+  function fitGameLayout() {
+    const gameEl = $('game');
+    const field = document.querySelector('.field-wrap');
+    if (!gameEl || !field || gameEl.classList.contains('hidden')) return;
+
+    const fieldRect = field.getBoundingClientRect();
+    const fieldHeight = Math.floor(fieldRect.height);
+    if (!Number.isFinite(fieldHeight) || fieldHeight <= 0) return;
+
+    const fitWidth = Math.max(1, Math.floor(fieldHeight * FIELD_W / FIELD_H));
+    gameEl.style.setProperty('--field-fit-width', `${fitWidth}px`);
+  }
+
+  function show(el) {
+    el.classList.remove('hidden');
+    if (el && el.id === 'game') scheduleFitGameLayout();
+  }
   function hide(el) { el.classList.add('hidden'); }
 
   // -------- 로컬 스토리지 --------
@@ -229,7 +254,14 @@
     if (!canvas || !ctx) err('canvas 엘리먼트 또는 2d context 획득 실패');
     if (!nextCanvas || !nextCtx) err('next-cat canvas 획득 실패');
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', () => {
+      scheduleFitGameLayout();
+      resizeCanvas();
+    });
+    window.addEventListener('orientationchange', scheduleFitGameLayout);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scheduleFitGameLayout);
+    }
     log('setupCanvas 완료');
   }
 
@@ -797,6 +829,7 @@
     }
     updateScoreUI();
     spawnCurrent();
+    scheduleFitGameLayout();
     lastTs = 0;
     loopToken++;
     log(`새 루프 시작 (token=${loopToken})`);
@@ -867,6 +900,7 @@
       }
 
       updateScoreUI();
+      scheduleFitGameLayout();
       lastTs = 0;
       loopToken++;
       log(`resumeGame 완료 score=${score} restored=${restored} next=${nextTier} token=${loopToken}`);
@@ -968,6 +1002,7 @@
       cell.appendChild(text);
       wrap.appendChild(cell);
     });
+    scheduleFitGameLayout();
   }
 
   // -------- 랭킹 API --------
