@@ -437,7 +437,9 @@ class EffectManager {
     playPlaceEffect(cellSprites) {
         cellSprites.forEach((sprite, idx) => {
             if (!sprite) return;
-            sprite.scale.set(0.3);
+            const baseScaleX = sprite._blockpangBaseScaleX || sprite.scale.x || 1;
+            const baseScaleY = sprite._blockpangBaseScaleY || sprite.scale.y || 1;
+            sprite.scale.set(baseScaleX * 0.3, baseScaleY * 0.3);
             sprite.alpha = 0.6;
             this.tweens.push({
                 elapsed: 0,
@@ -449,8 +451,13 @@ class EffectManager {
                     this.elapsed += dt;
                     const t = Math.min(this.elapsed / this.duration, 1);
                     const s = easeOutElastic(t);
-                    sprite.scale.set(s);
+                    sprite.scale.set(baseScaleX * s, baseScaleY * s);
                     sprite.alpha = 0.6 + t * 0.4;
+                    if (t >= 1) {
+                        sprite.scale.set(baseScaleX, baseScaleY);
+                        sprite.alpha = 1;
+                        return true;
+                    }
                     return t >= 1;
                 }
             });
