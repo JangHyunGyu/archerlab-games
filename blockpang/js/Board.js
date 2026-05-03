@@ -130,7 +130,9 @@ class Board {
 
         const panelTexture = getBlockpangTexture('boardPanel');
         // Outer extension so the asset's corner brackets sit clear of the cells.
-        const ext = Math.max(20, Math.round(cs * 0.55));
+        // The board-panel.webp frame is ~11% of total side, so ext ≈ cs * 1.1
+        // keeps the cells fully inside the inner edge of the frame.
+        const ext = Math.max(28, Math.round(cs * 1.1));
         const g = new PIXI.Graphics();
 
         // Soft neon shadow underneath the asset panel.
@@ -188,13 +190,6 @@ class Board {
         }
         g.stroke({ width: 0.5, color: THEME.divider, alpha: 0.26 });
         this.gridLineContainer.addChild(g);
-
-        // 5x5 section dividers — slightly stronger
-        const g2 = new PIXI.Graphics();
-        g2.moveTo(cs * 5, 0).lineTo(cs * 5, total);
-        g2.moveTo(0, cs * 5).lineTo(total, cs * 5);
-        g2.stroke({ width: 1.5, color: THEME.secondary, alpha: 0.48 });
-        this.gridLineContainer.addChild(g2);
     }
 
     _createEmptyTexture(size) {
