@@ -262,26 +262,33 @@ class Game {
         const w = this.app.screen.width;
         const h = this.app.screen.height;
 
-        // Warm cream base (drawn first, behind everything)
+        const bgTexture = getBlockpangTexture('arcadeBg');
+        if (bgTexture) {
+            const bgSprite = new PIXI.Sprite(bgTexture);
+            bgSprite.width = w;
+            bgSprite.height = h;
+            this.bgContainer.addChild(bgSprite);
+        }
+
+        // Dark neon base (fallback plus a tint layer over the bitmap)
         const baseBg = new PIXI.Graphics();
-        baseBg.rect(0, 0, w, h).fill({ color: THEME.bg });
-        // Soft vignette — slightly deeper toward bottom
-        baseBg.rect(0, h * 0.55, w, h * 0.45).fill({ color: THEME.bgDeep, alpha: 0.55 });
-        baseBg.rect(0, h * 0.75, w, h * 0.25).fill({ color: THEME.bgDim, alpha: 0.35 });
+        baseBg.rect(0, 0, w, h).fill({ color: THEME.bg, alpha: bgTexture ? 0.18 : 1 });
+        baseBg.rect(0, h * 0.42, w, h * 0.58).fill({ color: THEME.bgDeep, alpha: bgTexture ? 0.18 : 0.75 });
+        baseBg.rect(0, h * 0.78, w, h * 0.22).fill({ color: THEME.accentSoft, alpha: 0.20 });
         this.bgContainer.addChild(baseBg);
         this.bgBase = baseBg;
 
-        // Two drifting soft "paper" blobs for organic warmth (drawn on top of base)
-        const blobColors = [0xE8D5A8, 0xF2CBB0];
-        for (let i = 0; i < 2; i++) {
+        // Drifting neon glow fields for a little life without heavy particle churn.
+        const blobColors = [THEME.secondary, THEME.accent, THEME.gold];
+        for (let i = 0; i < 3; i++) {
             const g = new PIXI.Graphics();
-            const r = Math.min(w, h) * (0.5 + i * 0.2);
+            const r = Math.min(w, h) * (0.36 + i * 0.12);
             for (let j = 6; j >= 0; j--) {
                 g.circle(0, 0, r + j * 18)
-                 .fill({ color: blobColors[i], alpha: 0.022 });
+                 .fill({ color: blobColors[i], alpha: 0.018 });
             }
-            const bx = i === 0 ? w * 0.18 : w * 0.82;
-            const by = i === 0 ? h * 0.22 : h * 0.78;
+            const bx = i === 0 ? w * 0.16 : i === 1 ? w * 0.84 : w * 0.5;
+            const by = i === 0 ? h * 0.25 : i === 1 ? h * 0.72 : h * 0.92;
             g.position.set(bx, by);
             this.bgContainer.addChild(g);
             this._nebulae.push({

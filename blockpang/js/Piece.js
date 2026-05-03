@@ -30,6 +30,7 @@ function generateRandomPiece(level = 99) {
 function createPieceContainer(piece, cellSize, alpha = 1) {
     const container = new PIXI.Container();
     const color = BLOCK_COLORS[piece.colorIndex];
+    const tileTexture = getBlockpangTexture(`blockTile${piece.colorIndex}`);
     const r = Math.max(1, cellSize * 0.12);
     const p = 2;
     const inner = cellSize - p * 2;
@@ -37,6 +38,16 @@ function createPieceContainer(piece, cellSize, alpha = 1) {
     for (let row = 0; row < piece.shape.length; row++) {
         for (let col = 0; col < piece.shape[row].length; col++) {
             if (!piece.shape[row][col]) continue;
+            if (tileTexture) {
+                const sprite = new PIXI.Sprite(tileTexture);
+                sprite.position.set(col * cellSize, row * cellSize);
+                sprite.width = cellSize;
+                sprite.height = cellSize;
+                sprite.alpha = alpha;
+                container.addChild(sprite);
+                continue;
+            }
+
             const g = new PIXI.Graphics();
 
             // 1. Drop shadow
@@ -166,8 +177,8 @@ class PieceTray {
         const maxDim = 5;
         this.trayCellSize = Math.min(
             (slotWidth * 0.7) / maxDim,
-            (areaHeight * 0.7) / maxDim,
-            cellSize * 0.65
+            (areaHeight * 0.76) / maxDim,
+            cellSize * 0.82
         );
 
         // Slot center positions
@@ -187,20 +198,41 @@ class PieceTray {
 
     _drawTrayBg(w, h) {
         if (this.trayBg) {
-            this.trayBg.destroy();
+            this.trayBg.destroy({ children: true });
         }
-        const g = new PIXI.Graphics();
+        const root = new PIXI.Container();
+        const panelTexture = getBlockpangTexture('glassPanelFill') || getBlockpangTexture('glassPanel');
+        const panelW = Math.max(1, w - 20);
+        const panelH = Math.max(1, h - 8);
 
-        // Warm tray card — flat, rests on the cream page like a tray of tiles
-        g.roundRect(10, 2, w - 20, h - 8, 14)
-         .fill({ color: THEME.surface });
+        const shadow = new PIXI.Graphics();
+        shadow.roundRect(10, 6, panelW, panelH, 18)
+         .fill({ color: THEME.shadow, alpha: 0.34 });
+        root.addChild(shadow);
 
-        // Thin hairline border
-        g.roundRect(10, 2, w - 20, h - 8, 14)
-         .stroke({ width: 1, color: THEME.divider, alpha: 1 });
+        if (panelTexture) {
+            const panel = new PIXI.Sprite(panelTexture);
+            panel.position.set(10, 2);
+            panel.width = panelW;
+            panel.height = panelH;
+            panel.alpha = 0.88;
+            root.addChild(panel);
+        } else {
+            const fallback = new PIXI.Graphics();
+            fallback.roundRect(10, 2, panelW, panelH, 14)
+             .fill({ color: THEME.surface });
+            root.addChild(fallback);
+        }
 
-        this.trayBg = g;
-        this.container.addChildAt(g, 0);
+        const border = new PIXI.Graphics();
+        border.roundRect(10, 2, panelW, panelH, 14)
+         .stroke({ width: 1.2, color: THEME.divider, alpha: 0.56 });
+        border.roundRect(16, 7, Math.max(1, panelW - 12), 3, 2)
+         .fill({ color: THEME.secondary, alpha: 0.22 });
+        root.addChild(border);
+
+        this.trayBg = root;
+        this.container.addChildAt(root, 0);
     }
 
     setPieces(pieces) {

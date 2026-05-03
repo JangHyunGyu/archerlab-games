@@ -25,6 +25,29 @@
     // Prevent context menu on long press (mobile)
     app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+    window.BLOCKPANG_ASSETS = {};
+    if (window.BLOCKPANG_ASSET_MANIFEST && PIXI.Assets) {
+        try {
+            const manifest = window.getBlockpangAssetManifest
+                ? window.getBlockpangAssetManifest(false)
+                : window.BLOCKPANG_ASSET_MANIFEST;
+            PIXI.Assets.addBundle('blockpang-ui', manifest);
+            window.BLOCKPANG_ASSETS = await PIXI.Assets.loadBundle('blockpang-ui');
+        } catch (e) {
+            console.warn('[Blockpang] WebP UI asset load failed; trying PNG tile fallback.', e);
+            try {
+                const fallbackManifest = window.getBlockpangAssetManifest
+                    ? window.getBlockpangAssetManifest(true)
+                    : window.BLOCKPANG_ASSET_MANIFEST;
+                PIXI.Assets.addBundle('blockpang-ui-png-fallback', fallbackManifest);
+                window.BLOCKPANG_ASSETS = await PIXI.Assets.loadBundle('blockpang-ui-png-fallback');
+            } catch (fallbackError) {
+                console.warn('[Blockpang] UI asset load failed; using vector fallback.', fallbackError);
+                window.BLOCKPANG_ASSETS = {};
+            }
+        }
+    }
+
     // Create game
     const game = new Game(app);
     window.__blockpangGame = game;

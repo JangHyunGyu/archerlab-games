@@ -97,7 +97,7 @@
 
   const spriteCache = new Map();
 
-  function loadSprite(src) {
+  function loadImage(src, warnOnError = true) {
     if (!src) return Promise.resolve(null);
     if (spriteCache.has(src)) {
       const cached = spriteCache.get(src);
@@ -113,10 +113,32 @@
         resolve(img);
       };
       img.onerror = () => {
-        console.warn('[cats] sprite load failed:', src);
+        if (warnOnError) console.warn('[cats] sprite load failed:', src);
+        spriteCache.delete(src);
         resolve(null);
       };
       img.src = src;
+    });
+    spriteCache.set(src, p);
+    return p;
+  }
+
+  function loadSprite(src) {
+    if (!src) return Promise.resolve(null);
+    if (spriteCache.has(src)) {
+      const cached = spriteCache.get(src);
+      if (cached instanceof Image) return Promise.resolve(cached);
+      return cached;
+    }
+
+    const webpSrc = /\.png$/i.test(src) ? src.replace(/\.png$/i, '.webp') : null;
+    const p = (webpSrc
+      ? loadImage(webpSrc, false).then((img) => img || loadImage(src, true))
+      : loadImage(src, true)
+    ).then((img) => {
+      if (img) spriteCache.set(src, img);
+      else spriteCache.delete(src);
+      return img;
     });
     spriteCache.set(src, p);
     return p;
@@ -218,6 +240,9 @@
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    ctx.shadowColor = 'rgba(42, 26, 16, 0.26)';
+    ctx.shadowBlur = Math.min(8, Math.max(2, r * 0.08));
+    ctx.shadowOffsetY = Math.min(4, Math.max(1, r * 0.04));
     ctx.drawImage(img, -targetW / 2, y, targetW, targetH);
     ctx.restore();
     return true;

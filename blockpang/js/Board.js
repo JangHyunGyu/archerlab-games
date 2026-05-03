@@ -57,9 +57,14 @@ class Board {
         // Clean up — destroy all children to free GPU memory
         const oldChildren = this.container.removeChildren();
         oldChildren.forEach(c => c.destroy({ children: true }));
-        this.cellTextures.forEach(t => t.destroy(true));
+        this.cellTextures.forEach(t => {
+            if (t && t._blockpangGenerated) t.destroy(true);
+        });
         this.cellTextures = [];
-        if (this.emptyTexture) { this.emptyTexture.destroy(true); this.emptyTexture = null; }
+        if (this.emptyTexture) {
+            if (this.emptyTexture._blockpangGenerated) this.emptyTexture.destroy(true);
+            this.emptyTexture = null;
+        }
 
         // Clear pools — old Graphics objects were destroyed with their containers
         this._ghostPool = [];
@@ -71,8 +76,8 @@ class Board {
 
         // Generate textures
         this.emptyTexture = this._createEmptyTexture(cs);
-        BLOCK_COLORS.forEach(color => {
-            this.cellTextures.push(this._createCellTexture(color, cs));
+        BLOCK_COLORS.forEach((color, index) => {
+            this.cellTextures.push(this._createCellTexture(color, cs, index));
         });
 
         // Background with glow border
@@ -124,28 +129,39 @@ class Board {
         const container = new PIXI.Container();
         const total = cs * GRID_SIZE;
 
+        const panelTexture = getBlockpangTexture('boardPanel');
         const g = new PIXI.Graphics();
 
-        // Soft drop shadow (single warm layer, like a card resting on paper)
-        g.roundRect(-4, -2, total + 8, total + 10, 16)
-         .fill({ color: 0x3A2F23, alpha: 0.08 });
-        g.roundRect(-2, 0, total + 4, total + 6, 14)
-         .fill({ color: 0x3A2F23, alpha: 0.05 });
+        // Soft neon shadow underneath the asset panel.
+        g.roundRect(-8, -4, total + 16, total + 18, 18)
+         .fill({ color: THEME.shadow, alpha: panelTexture ? 0.34 : 0.38 });
 
-        // Board card surface (surfaceAlt — slightly deeper than page)
-        g.roundRect(-8, -8, total + 16, total + 16, 14)
-         .fill({ color: THEME.surfaceAlt });
-
-        // Subtle inner warm highlight (top-left), adds just a touch of depth
-        g.roundRect(-8, -8, total + 16, 10, 14)
-         .fill({ color: THEME.surface, alpha: 0.5 });
+        if (!panelTexture) {
+            g.roundRect(-8, -8, total + 16, total + 16, 14)
+             .fill({ color: THEME.surfaceAlt });
+        }
 
         container.addChild(g);
+
+        if (panelTexture) {
+            const panel = new PIXI.Sprite(panelTexture);
+            panel.position.set(-14, -14);
+            panel.width = total + 28;
+            panel.height = total + 28;
+            panel.alpha = 0.96;
+            container.addChild(panel);
+        }
+
+        const overlay = new PIXI.Graphics();
+        // Subtle inner neon highlight.
+        overlay.roundRect(-8, -8, total + 16, 10, 14)
+         .fill({ color: THEME.secondary, alpha: 0.16 });
+        container.addChild(overlay);
 
         // Thin hairline border
         const border = new PIXI.Graphics();
         border.roundRect(-8, -8, total + 16, total + 16, 14)
-              .stroke({ width: 1, color: THEME.divider, alpha: 1 });
+              .stroke({ width: 1.4, color: THEME.divider, alpha: 0.72 });
         container.addChild(border);
 
         // No pulsing border — kept ticker-cleanup no-op for backward safety
@@ -163,20 +179,20 @@ class Board {
         oldChildren.forEach(c => c.destroy({ children: true }));
         const total = cs * GRID_SIZE;
 
-        // Hairline grid lines — subtle warm divider
+        // Hairline grid lines over the holographic board.
         const g = new PIXI.Graphics();
         for (let i = 1; i < GRID_SIZE; i++) {
             g.moveTo(i * cs, 0).lineTo(i * cs, total);
             g.moveTo(0, i * cs).lineTo(total, i * cs);
         }
-        g.stroke({ width: 0.5, color: THEME.divider, alpha: 0.8 });
+        g.stroke({ width: 0.5, color: THEME.divider, alpha: 0.26 });
         this.gridLineContainer.addChild(g);
 
         // 5x5 section dividers — slightly stronger
         const g2 = new PIXI.Graphics();
         g2.moveTo(cs * 5, 0).lineTo(cs * 5, total);
         g2.moveTo(0, cs * 5).lineTo(total, cs * 5);
-        g2.stroke({ width: 1, color: THEME.divider, alpha: 1 });
+        g2.stroke({ width: 1.5, color: THEME.secondary, alpha: 0.48 });
         this.gridLineContainer.addChild(g2);
     }
 
@@ -185,22 +201,28 @@ class Board {
         const s = size - 2;
         const r = Math.max(3, s * 0.14);
 
-        // Warm cream cell base (flat, slightly deeper than page)
-        g.roundRect(0, 0, s, s, r).fill({ color: 0xE8D9BC });
+        // Glassy empty recess, kept subtle so placed crystal blocks own the board.
+        g.roundRect(0, 0, s, s, r).fill({ color: 0x07142F, alpha: 0.68 });
 
-        // Very soft top-inner shadow for gentle depth (no harsh recess)
-        g.roundRect(1, 1, s - 2, 2, r - 1).fill({ color: 0x8A6E44, alpha: 0.08 });
+        g.roundRect(1, 1, s - 2, s - 2, r - 1)
+         .stroke({ width: 1, color: THEME.divider, alpha: 0.16 });
+        g.roundRect(2, 2, s - 4, s * 0.28, r - 1)
+         .fill({ color: 0xFFFFFF, alpha: 0.035 });
 
         const tex = this.app.renderer.generateTexture({
             target: g,
             resolution: Math.min(window.devicePixelRatio || 1, 2),
             scaleMode: 'linear',
         });
+        tex._blockpangGenerated = true;
         g.destroy();
         return tex;
     }
 
-    _createCellTexture(color, size) {
+    _createCellTexture(color, size, index = 0) {
+        const tileTexture = getBlockpangTexture(`blockTile${index}`);
+        if (tileTexture) return tileTexture;
+
         const g = new PIXI.Graphics();
         const s = size;
         const r = Math.max(2, s * 0.12);
@@ -264,6 +286,7 @@ class Board {
             resolution: Math.min(window.devicePixelRatio || 1, 2),
             scaleMode: 'linear',
         });
+        tex._blockpangGenerated = true;
         g.destroy();
         return tex;
     }
@@ -604,9 +627,14 @@ class Board {
             this.app.ticker.remove(this._borderTickerFn);
             this._borderTickerFn = null;
         }
-        this.cellTextures.forEach(t => t.destroy(true));
+        this.cellTextures.forEach(t => {
+            if (t && t._blockpangGenerated) t.destroy(true);
+        });
         this.cellTextures = [];
-        if (this.emptyTexture) { this.emptyTexture.destroy(true); this.emptyTexture = null; }
+        if (this.emptyTexture) {
+            if (this.emptyTexture._blockpangGenerated) this.emptyTexture.destroy(true);
+            this.emptyTexture = null;
+        }
         this._ghostPool = [];
         this._hintPool = [];
         if (this.container && !this.container.destroyed) {
