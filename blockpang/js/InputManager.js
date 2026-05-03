@@ -48,7 +48,7 @@ class InputManager {
 
         // Create drag visual at full board cell size
         const cs = this.game.cellSize;
-        this.dragContainer = createPieceContainer(piece, cs, 0.9);
+        this.dragContainer = createPieceContainer(piece, cs, 0.9, { tileScale: 0.88 });
         this.dragContainer.pivot.set(
             (piece.cols * cs) / 2,
             (piece.rows * cs) / 2

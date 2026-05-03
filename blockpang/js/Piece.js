@@ -27,10 +27,11 @@ function generateRandomPiece(level = 99) {
     };
 }
 
-function createPieceContainer(piece, cellSize, alpha = 1) {
+function createPieceContainer(piece, cellSize, alpha = 1, options = {}) {
     const container = new PIXI.Container();
     const color = BLOCK_COLORS[piece.colorIndex];
     const tileTexture = getBlockpangTexture(`blockTile${piece.colorIndex}`);
+    const tileScale = options.tileScale ?? 0.92;
     const r = Math.max(1, cellSize * 0.12);
     const p = 2;
     const inner = cellSize - p * 2;
@@ -40,10 +41,16 @@ function createPieceContainer(piece, cellSize, alpha = 1) {
             if (!piece.shape[row][col]) continue;
             if (tileTexture) {
                 const sprite = new PIXI.Sprite(tileTexture);
-                sprite.position.set(col * cellSize, row * cellSize);
-                sprite.width = cellSize;
-                sprite.height = cellSize;
+                const visualSize = cellSize * tileScale;
+                const textureSize = Math.max(tileTexture.width || 1, tileTexture.height || 1);
+                const scale = visualSize / textureSize;
+                sprite.scale.set(scale);
+                sprite.position.set(
+                    col * cellSize + (cellSize - visualSize) / 2,
+                    row * cellSize + (cellSize - visualSize) / 2
+                );
                 sprite.alpha = alpha;
+                sprite.eventMode = 'none';
                 container.addChild(sprite);
                 continue;
             }
@@ -293,20 +300,8 @@ class PieceTray {
             cont.cursor = 'pointer';
             cont.hitArea = new PIXI.Rectangle(-padX, -padY, pw + padX * 2, ph + padY * 2);
 
-            // 터치 영역 시각적 표시 (연한 테두리)
-            const touchBorder = new PIXI.Graphics();
-            touchBorder.roundRect(-padX, -padY, pw + padX * 2, ph + padY * 2, 8)
-                       .stroke({ width: 1, color: 0x4466aa, alpha: 0.25 });
-            cont.addChildAt(touchBorder, 0);
-            cont._touchBorder = touchBorder;
-
             const slotIdx = i;
             cont.on('pointerdown', (e) => {
-                // 터치 시 테두리 제거
-                if (cont._touchBorder && !cont._touchBorder.destroyed) {
-                    cont._touchBorder.destroy();
-                    cont._touchBorder = null;
-                }
                 if (this.game.input) {
                     this.game.input.startDrag(slotIdx, e);
                 }
