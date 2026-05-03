@@ -676,6 +676,7 @@ class Game {
                     if (colorIdx >= 0) {
                         const sprite = this.board.cellSprites[r][c];
                         sprite.texture = this.board.cellTextures[colorIdx];
+                        this.board.fitCellSprite(sprite, r, c);
                         sprite.visible = true;
                         sprite.alpha = 1;
                     }

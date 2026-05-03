@@ -106,15 +106,14 @@ class Board {
                 // Filled cell sprite (hidden by default)
                 const colorIdx = this.grid[r][c];
                 const sprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
-                sprite.position.set(c * cs, r * cs);
-                sprite.width = cs;
-                sprite.height = cs;
+                this.fitCellSprite(sprite, r, c);
                 sprite.visible = false;
                 this.container.addChild(sprite);
                 this.cellSprites[r][c] = sprite;
 
                 if (colorIdx >= 0) {
                     sprite.texture = this.cellTextures[colorIdx];
+                    this.fitCellSprite(sprite, r, c);
                     sprite.visible = true;
                 }
             }
@@ -217,6 +216,16 @@ class Board {
         tex._blockpangGenerated = true;
         g.destroy();
         return tex;
+    }
+
+    fitCellSprite(sprite, row, col) {
+        if (!sprite) return;
+        const cs = this.cellSize;
+        sprite.position.set(col * cs, row * cs);
+        sprite.width = cs;
+        sprite.height = cs;
+        sprite._blockpangBaseScaleX = sprite.scale.x;
+        sprite._blockpangBaseScaleY = sprite.scale.y;
     }
 
     _createCellTexture(color, size, index = 0) {
@@ -325,6 +334,7 @@ class Board {
                 this.grid[gr][gc] = colorIndex;
                 const sprite = this.cellSprites[gr][gc];
                 sprite.texture = this.cellTextures[colorIndex];
+                this.fitCellSprite(sprite, gr, gc);
                 sprite.visible = true;
                 sprite.alpha = 1;
                 placedCells.push({ row: gr, col: gc, colorIndex });
