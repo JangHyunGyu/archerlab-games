@@ -19,6 +19,7 @@ class UIManager {
         this._scoreAnimating = false;
         this._titleRefs = null;
         this._activeButtons = [];
+        this._titleSerial = 0;
         this._nameInputElement = null;
         this._nameInputFocusTimer = null;
         this._nameInputFocusHandler = null;
@@ -160,6 +161,8 @@ class UIManager {
         this.game.app.ticker.remove(this._updateScoreAnimation, this);
         this._destroyNameInputDom();
         this._closeHallOfFame();
+        this._clearTitleTweens();
+        this._destroyTitleRoots();
         if (this._nameInputOverlay) {
             this._nameInputOverlay.destroy({ children: true });
             this._nameInputOverlay = null;
@@ -167,10 +170,6 @@ class UIManager {
         if (this.gameOverOverlay) {
             this.gameOverOverlay.destroy({ children: true });
             this.gameOverOverlay = null;
-        }
-        if (this.titleContainer) {
-            this.titleContainer.destroy({ children: true });
-            this.titleContainer = null;
         }
         if (this.container && !this.container.destroyed) {
             this.container.destroy({ children: true });
@@ -377,18 +376,44 @@ class UIManager {
         });
     }
 
+    _destroyTitleRoots(except = null) {
+        const candidates = new Set();
+        if (this.titleContainer) candidates.add(this.titleContainer);
+
+        const stage = this.game && this.game.app && this.game.app.stage;
+        if (stage && Array.isArray(stage.children)) {
+            stage.children.forEach((child) => {
+                if (child && child._blockpangTitleRoot) candidates.add(child);
+            });
+        }
+
+        candidates.forEach((root) => {
+            if (!root || root === except || root.destroyed) return;
+            root.destroy({ children: true });
+        });
+
+        if (except && !except.destroyed) {
+            this.titleContainer = except;
+        } else if (!except || (this.titleContainer && this.titleContainer.destroyed)) {
+            this.titleContainer = null;
+        }
+    }
+
+    clearOrphanTitleScreens({ keepCurrent = true } = {}) {
+        this._destroyTitleRoots(keepCurrent ? this.titleContainer : null);
+    }
+
     // ══════════════════════════════════════
     // ══  TITLE SCREEN
     // ══════════════════════════════════════
     showTitleScreen() {
         this._clearTitleTweens();
-        if (this.titleContainer) {
-            this.titleContainer.destroy({ children: true });
-            this.titleContainer = null;
-        }
+        this._destroyTitleRoots();
         this._titleRefs = null;
 
         const container = new PIXI.Container();
+        container._blockpangTitleRoot = true;
+        container._blockpangTitleSerial = ++this._titleSerial;
         container.eventMode = 'static';
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
@@ -841,12 +866,27 @@ class UIManager {
     hideTitleScreen(onComplete) {
         this._activeButtons = [];
         this._clearTitleTweens();
-        if (!this.titleContainer) {
+        if (!this.titleContainer || this.titleContainer.destroyed) {
+            this.titleContainer = null;
+            this._destroyTitleRoots();
             if (onComplete) onComplete();
             return;
         }
 
         const container = this.titleContainer;
+        container._blockpangTitleHiding = true;
+        this._titleRefs = null;
+        const ui = this;
+        let completed = false;
+        const finish = () => {
+            if (completed) return;
+            completed = true;
+            if (ui.titleContainer === container) {
+                ui.titleContainer = null;
+                ui._titleRefs = null;
+            }
+            if (onComplete) onComplete();
+        };
 
         this.game.effects.tweens.push({
             elapsed: 0,
@@ -855,7 +895,7 @@ class UIManager {
             _titleRoot: container,
             update(dt) {
                 if (!container || container.destroyed) {
-                    if (onComplete) onComplete();
+                    finish();
                     return true;
                 }
                 this.elapsed += dt;
@@ -863,15 +903,12 @@ class UIManager {
                 container.alpha = 1 - easeOutCubic(t);
                 if (t >= 1) {
                     container.destroy({ children: true });
-                    if (onComplete) onComplete();
+                    finish();
                     return true;
                 }
                 return false;
             }
         });
-
-        this.titleContainer = null;
-        this._titleRefs = null;
     }
 
     _refreshTitleTexts() {
