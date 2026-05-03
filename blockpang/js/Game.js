@@ -349,12 +349,16 @@ class Game {
         // Reserve room on the sides so the board panel asset's outer frame
         // doesn't push the cells against the screen edges.
         const frameMargin = Math.max(14, Math.min(w, h) * 0.025);
-        const gridMaxH = (availH - frameMargin * 2) * 0.62;
-        const gridMaxW = availW - frameMargin * 2;
+        // Asset frame on board-panel.webp is ~11% of total panel side, so
+        // ext ≈ cs * 1.1 is needed to keep cells inside the inner edge of the frame.
+        // The panel-to-cell-area ratio is therefore (10 + 2*1.1) / 10 = 1.22.
+        const PANEL_RATIO = 1.22;
+        const gridMaxH = ((availH - frameMargin * 2) * 0.62) / PANEL_RATIO;
+        const gridMaxW = (availW - frameMargin * 2) / PANEL_RATIO;
         const gridSize = Math.min(gridMaxW, gridMaxH);
         this.cellSize = Math.floor(gridSize / GRID_SIZE);
         const actualGrid = this.cellSize * GRID_SIZE;
-        const boardPanelExt = Math.max(20, Math.round(this.cellSize * 0.55));
+        const boardPanelExt = Math.max(28, Math.round(this.cellSize * 1.1));
 
         const boardX = Math.floor((w - actualGrid) / 2);
         // Push the board down so the panel asset's top frame clears the header.

@@ -233,9 +233,9 @@ class UIManager {
         const hudH = Math.max(72, scoreAreaHeight - hudY - 4);
 
         // Inner padding so contents stay clear of the asset border / corner brackets
-        const innerPadX = Math.max(14, hudW * 0.045);
-        const innerPadTop = Math.max(8, hudH * 0.12);
-        const innerPadBottom = Math.max(8, hudH * 0.14);
+        const innerPadX = Math.max(28, hudW * 0.075);
+        const innerPadTop = Math.max(16, hudH * 0.2);
+        const innerPadBottom = Math.max(10, hudH * 0.16);
         const innerLeft = hudX + innerPadX;
         const innerRight = hudX + hudW - innerPadX;
         const innerTop = hudY + innerPadTop;
@@ -311,11 +311,11 @@ class UIManager {
 
         // ── Sound button (top-right, inside panel) ──
         this.soundBtn.style.fontSize = Math.max(13, Math.min(17, screenWidth * 0.036));
-        this.soundBtn.position.set(innerRight, hudY + Math.max(3, innerPadTop * 0.35));
+        this.soundBtn.position.set(innerRight, hudY + Math.max(8, innerPadTop * 0.5));
 
         // ── Back arrow (top-left, inside panel) ──
         this.homeBtn.style.fontSize = Math.max(20, Math.min(26, screenWidth * 0.058));
-        this.homeBtn.position.set(innerLeft - 4, hudY + Math.max(0, innerPadTop * 0.2));
+        this.homeBtn.position.set(innerLeft, hudY + Math.max(4, innerPadTop * 0.3));
     }
 
     updateScore(score, bestScore) {
