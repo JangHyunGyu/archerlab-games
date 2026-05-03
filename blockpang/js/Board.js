@@ -663,6 +663,9 @@ class Board {
     }
 
     getGlobalPosition() {
+        if (!this.container || this.container.destroyed) {
+            return { x: 0, y: 0 };
+        }
         return this.container.getGlobalPosition();
     }
 }
