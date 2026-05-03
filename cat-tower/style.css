@@ -887,3 +887,141 @@ h1 {
     z-index: 1000;
   }
 }
+
+/* ---------- Raster UI Skin ---------- */
+:root {
+  --ink: #2A1A10;
+  --ink-soft: #6A4328;
+  --line: #4A2B16;
+  --shadow: 0 3px 0 0 #2D1A0E;
+  --shadow-deep: 0 6px 0 0 #2D1A0E;
+  --ui-wood: url("assets/ui/wood-texture.webp");
+  --ui-paper: url("assets/ui/paper-texture.webp");
+  --ui-cushion: url("assets/ui/cushion-field.webp");
+}
+
+body {
+  background-color: #F4DFBE;
+  background-image:
+    radial-gradient(rgba(58, 41, 32, 0.07) 1px, transparent 1.2px),
+    radial-gradient(rgba(58, 41, 32, 0.05) 1px, transparent 1.2px),
+    linear-gradient(180deg, rgba(255, 247, 230, 0.86), rgba(238, 201, 154, 0.38)),
+    var(--ui-paper);
+  background-size: 22px 22px, 22px 22px, 100% 100%, 420px 420px;
+  background-position: 0 0, 11px 11px, 0 0, center;
+  background-blend-mode: normal, normal, normal, multiply;
+}
+
+.topbar-btn,
+.lang-switch,
+.best-card,
+.btn-secondary,
+.modal-body,
+.rank-submit-row input,
+.tier-cell,
+.cat-name-chip,
+.next-stat canvas,
+.icon-btn,
+.game-tier-cell {
+  background-color: var(--card);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(196, 117, 42, 0.07)), var(--ui-paper);
+  background-size: auto, 280px 280px;
+}
+
+.hud,
+.game-tier-strip {
+  background-color: #BF741F;
+  background-image: linear-gradient(180deg, rgba(255, 233, 165, 0.30), rgba(78, 38, 13, 0.14)), var(--ui-wood);
+  background-size: auto, cover;
+  border-color: var(--line);
+  box-shadow: 0 6px 0 0 #2D1A0E, inset 0 2px 0 rgba(255, 236, 173, 0.52), inset 0 -3px 0 rgba(83, 39, 15, 0.20);
+}
+
+.hud {
+  border-width: calc(var(--hud-border) + 1px);
+  border-radius: 22px;
+}
+
+.score-stat {
+  min-width: 0;
+  padding: 3px 10px;
+  border-radius: 14px;
+  background: rgba(255, 248, 223, 0.27);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -2px 0 rgba(75, 36, 15, 0.12);
+}
+
+.stat-label {
+  color: #FFF1C9;
+  text-shadow: 0 2px 0 rgba(70, 34, 13, 0.48);
+}
+
+.stat-value {
+  color: #FFF8DE;
+  text-shadow: 0 3px 0 rgba(63, 31, 13, 0.56);
+}
+
+.next-cat-name {
+  color: #FFF0C6;
+  text-shadow: 0 2px 0 rgba(70, 34, 13, 0.45);
+}
+
+.best-card,
+.btn,
+.modal-body,
+.icon-btn,
+.game-tier-strip,
+#canvas {
+  border-color: var(--line);
+}
+
+.best-card,
+.modal-body {
+  border-width: 4px;
+  border-radius: 18px;
+  box-shadow: 0 6px 0 0 #2D1A0E, inset 0 1px 0 rgba(255,255,255,0.38);
+}
+
+.btn {
+  border-width: 4px;
+  border-radius: 16px;
+}
+
+.btn-primary {
+  background-color: var(--accent);
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.24), rgba(133,38,20,0.20)), var(--ui-wood);
+  background-size: auto, 360px 360px;
+  color: #FFF5EC;
+  text-shadow: 0 2px 0 rgba(68, 35, 18, 0.42);
+}
+
+.icon-btn,
+.next-stat canvas {
+  border-width: calc(var(--hud-border) + 1px);
+  border-radius: 16px;
+}
+
+.game-tier-strip {
+  border-width: 3px;
+  border-radius: 16px;
+}
+
+.game-tier-cell {
+  border-color: rgba(74, 43, 22, 0.24);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.42);
+}
+
+#canvas {
+  background-color: var(--bg-soft);
+  background-image: var(--ui-cushion);
+  background-size: cover;
+  border-width: 5px;
+  border-radius: 24px;
+  box-shadow: 0 8px 0 0 #2D1A0E, 0 0 0 4px rgba(255, 226, 171, 0.42), inset 0 2px 0 rgba(255,255,255,0.35);
+}
+
+.combo-flash {
+  background-color: var(--yellow);
+  background-image: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(139,82,13,0.12)), var(--ui-paper);
+  background-size: auto, 220px 220px;
+}
