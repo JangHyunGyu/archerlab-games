@@ -80,7 +80,11 @@ class Game {
     // ── Start game from title screen ──
     startGame(resume = false) {
         this._clearPendingTimeouts();
+        if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
         this.effects.clearTransient();
+        if (this.ui && typeof this.ui.clearOrphanTitleScreens === 'function') {
+            this.ui.clearOrphanTitleScreens({ keepCurrent: true });
+        }
         this.state = 'playing';
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = 'none';
@@ -124,7 +128,11 @@ class Game {
     // ── Return to title screen ──
     goToTitle() {
         this._clearPendingTimeouts();
+        if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
         this.effects.clearTransient();
+        if (this.ui && typeof this.ui.clearOrphanTitleScreens === 'function') {
+            this.ui.clearOrphanTitleScreens({ keepCurrent: true });
+        }
         this.ui.hideGameOver();
         this.state = 'title';
         const alLink = document.getElementById('archerlab-link');
@@ -325,7 +333,9 @@ class Game {
     }
 
     resize() {
-        if (this.input && this.input.dragging) return;
+        if (this.input && (this.input.dragging || this.input.dragReturning)) {
+            this.input.cancelDrag({ animate: false, restorePiece: true });
+        }
         const w = this.app.screen.width;
         const h = this.app.screen.height;
         const padding = Math.max(8, Math.min(w, h) * 0.025);
@@ -364,6 +374,7 @@ class Game {
 
     newGame({ clearEffects = true } = {}) {
         this._clearPendingTimeouts();
+        if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
         if (clearEffects) {
             this.effects.clearTransient();
         } else {
@@ -640,6 +651,7 @@ class Game {
             const data = JSON.parse(raw);
 
             this._clearPendingTimeouts();
+            if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
             if (clearEffects) {
                 this.effects.clearTransient();
             } else {
