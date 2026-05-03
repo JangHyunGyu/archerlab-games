@@ -52,6 +52,7 @@ class InputManager {
         this.dragPieceIndex = slotIndex;
         this.dragPieceData = piece;
         this._trailTimer = 0;
+        this._clearDragTweens();
 
         // Hide the tray piece
         this.game.tray.hidePiece(slotIndex);
@@ -369,6 +370,12 @@ class InputManager {
         this.cancelDrag({ animate: true, restorePiece: true });
     }
 
+    _clearDragTweens() {
+        const effects = this.game && this.game.effects;
+        if (!effects || !Array.isArray(effects.tweens) || effects.tweens.length === 0) return;
+        effects.tweens = effects.tweens.filter(tween => !tween || !tween._isDragReturnTween);
+    }
+
     _snapBack() {
         const slotIdx = this.dragPieceIndex;
         const target = this.game.tray.getSlotGlobalCenter(slotIdx);
@@ -393,15 +400,18 @@ class InputManager {
         this.game.effects.tweens.push({
             elapsed: 0,
             duration: 300,
+            _isDragReturnTween: true,
             update(dt) {
                 if (container.destroyed) {
                     if (glow && !glow.destroyed) glow.destroy();
                     tray.showPiece(slotIdx);
-                    self.dragPieceIndex = -1;
-                    self.dragPieceData = null;
-                    self.dragContainer = null;
-                    self.dragGlow = null;
-                    self.dragReturning = false;
+                    if (self.dragContainer === container || self.dragGlow === glow) {
+                        self.dragPieceIndex = -1;
+                        self.dragPieceData = null;
+                        self.dragContainer = null;
+                        self.dragGlow = null;
+                        self.dragReturning = false;
+                    }
                     return true;
                 }
                 this.elapsed += dt;
@@ -421,11 +431,13 @@ class InputManager {
                     container.destroy({ children: true });
                     if (glow && !glow.destroyed) glow.destroy();
                     tray.showPiece(slotIdx);
-                    self.dragPieceIndex = -1;
-                    self.dragPieceData = null;
-                    self.dragContainer = null;
-                    self.dragGlow = null;
-                    self.dragReturning = false;
+                    if (self.dragContainer === container || self.dragGlow === glow) {
+                        self.dragPieceIndex = -1;
+                        self.dragPieceData = null;
+                        self.dragContainer = null;
+                        self.dragGlow = null;
+                        self.dragReturning = false;
+                    }
                     return true;
                 }
                 return false;
@@ -450,6 +462,7 @@ class InputManager {
     }
 
     _cleanupDrag() {
+        this._clearDragTweens();
         if (this.dragContainer) {
             this.dragContainer.destroy({ children: true });
             this.dragContainer = null;
