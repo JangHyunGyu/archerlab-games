@@ -504,10 +504,8 @@ class Board {
     }
 
     clearCompletionHints() {
-        for (let i = 0; i < this._hintActiveCount; i++) {
-            if (i < this._hintPool.length) {
-                this._hintPool[i].visible = false;
-            }
+        for (let i = 0; i < this._hintPool.length; i++) {
+            if (this._hintPool[i]) this._hintPool[i].visible = false;
         }
         this._hintActiveCount = 0;
         if (this.hintContainer) {
@@ -601,13 +599,25 @@ class Board {
     }
 
     clearGhost() {
-        for (let i = 0; i < this._ghostActiveCount; i++) {
-            if (i < this._ghostPool.length) {
-                this._ghostPool[i].visible = false;
-            }
+        for (let i = 0; i < this._ghostPool.length; i++) {
+            if (this._ghostPool[i]) this._ghostPool[i].visible = false;
         }
         this._ghostActiveCount = 0;
         this.clearCompletionHints();
+    }
+
+    clearTransientOverlays() {
+        this.clearGhost();
+        this.clearCompletionHints();
+        if (this.ghostContainer) {
+            this.ghostContainer.removeChildren();
+        }
+        if (this.hintContainer) {
+            this.hintContainer.removeChildren();
+            this.hintContainer.alpha = 1;
+        }
+        this._ghostActiveCount = 0;
+        this._hintActiveCount = 0;
     }
 
     // ── Clear board ──

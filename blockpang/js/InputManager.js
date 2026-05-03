@@ -15,15 +15,19 @@ class InputManager {
         this._lastDragY = 0;
         this._lastGridCol = -1;
         this._lastGridRow = -1;
+        this._dragLastSeenAt = 0;
         this._onPointerMove = this.onPointerMove.bind(this);
         this._onPointerUp = this.onPointerUp.bind(this);
         this._onPointerCancel = this.onPointerCancel.bind(this);
         this._onWindowPointerUp = this._handleWindowPointerUp.bind(this);
         this._onWindowPointerCancel = this._handleWindowPointerCancel.bind(this);
+        this._onWindowMouseUp = this._handleWindowPointerUp.bind(this);
+        this._onWindowTouchEnd = this._handleWindowTouchEnd.bind(this);
         this._onWindowBlur = this._handleWindowBlur.bind(this);
         this._onVisibilityChange = this._handleVisibilityChange.bind(this);
 
         game.app.stage.addChild(this.dragLayer);
+        game.app.ticker.add(this._updateDragWatchdog, this);
 
         // Global pointer events
         game.app.stage.eventMode = 'static';
@@ -35,6 +39,9 @@ class InputManager {
 
         window.addEventListener('pointerup', this._onWindowPointerUp, { passive: true });
         window.addEventListener('pointercancel', this._onWindowPointerCancel, { passive: true });
+        window.addEventListener('mouseup', this._onWindowMouseUp, { passive: true });
+        window.addEventListener('touchend', this._onWindowTouchEnd, { passive: true });
+        window.addEventListener('touchcancel', this._onWindowTouchEnd, { passive: true });
         window.addEventListener('blur', this._onWindowBlur);
         document.addEventListener('visibilitychange', this._onVisibilityChange);
     }
@@ -52,6 +59,7 @@ class InputManager {
         this.dragPieceIndex = slotIndex;
         this.dragPieceData = piece;
         this._trailTimer = 0;
+        this._dragLastSeenAt = performance.now();
         this._clearDragTweens();
 
         // Hide the tray piece
@@ -122,6 +130,7 @@ class InputManager {
         const clampedPos = this._clampDragPosition(pos.x, pos.y + this.dragOffsetY);
         const x = clampedPos.x;
         const y = clampedPos.y;
+        this._dragLastSeenAt = performance.now();
 
         this.dragContainer.position.set(x, y);
         if (this.dragGlow) {
@@ -225,6 +234,7 @@ class InputManager {
         const clampedPos = this._clampDragPosition(pos.x, pos.y + this.dragOffsetY);
         const x = clampedPos.x;
         const y = clampedPos.y;
+        this._dragLastSeenAt = performance.now();
 
         const gridPos = this._screenToGrid(x, y);
         const piece = this.dragPieceData;
@@ -360,6 +370,11 @@ class InputManager {
         this.cancelDrag({ animate: true, restorePiece: true });
     }
 
+    _handleWindowTouchEnd() {
+        if (!this.dragging && !this.dragReturning) return;
+        this.cancelDrag({ animate: true, restorePiece: true });
+    }
+
     _handleWindowBlur() {
         if (!this.dragging && !this.dragReturning) return;
         this.cancelDrag({ animate: true, restorePiece: true });
@@ -376,7 +391,30 @@ class InputManager {
         effects.tweens = effects.tweens.filter(tween => !tween || !tween._isDragReturnTween);
     }
 
+    _updateDragWatchdog() {
+        if (!this.game) return;
+
+        if (this.game.state !== 'playing' && (this.dragging || this.dragReturning || this._hasDragLayerChildren())) {
+            this.cancelDrag({ animate: false, restorePiece: true });
+            return;
+        }
+
+        if (!this.dragging && !this.dragReturning && this._hasDragLayerChildren()) {
+            this._cleanupDrag();
+            return;
+        }
+
+        if (this.dragging && performance.now() - this._dragLastSeenAt > 4500) {
+            this.cancelDrag({ animate: true, restorePiece: true });
+        }
+    }
+
+    _hasDragLayerChildren() {
+        return !!(this.dragLayer && !this.dragLayer.destroyed && this.dragLayer.children.length > 0);
+    }
+
     _snapBack() {
+        this._clearDragTweens();
         const slotIdx = this.dragPieceIndex;
         const target = this.game.tray.getSlotGlobalCenter(slotIdx);
 
@@ -446,8 +484,14 @@ class InputManager {
     }
 
     cancelDrag({ animate = false, restorePiece = true } = {}) {
-        if (!this.dragging && !this.dragReturning && !this.dragContainer && !this.dragGlow) return;
-        this.game.board.clearGhost();
+        if (!this.dragging && !this.dragReturning && !this.dragContainer && !this.dragGlow && !this._hasDragLayerChildren()) return;
+        if (this.game && this.game.board) {
+            if (typeof this.game.board.clearTransientOverlays === 'function') {
+                this.game.board.clearTransientOverlays();
+            } else {
+                this.game.board.clearGhost();
+            }
+        }
 
         if (animate && this.dragContainer && this.dragPieceIndex >= 0) {
             this._snapBack();
@@ -471,10 +515,17 @@ class InputManager {
             this.dragGlow.destroy();
             this.dragGlow = null;
         }
+        if (this.dragLayer && !this.dragLayer.destroyed && this.dragLayer.children.length > 0) {
+            const leftovers = this.dragLayer.removeChildren();
+            leftovers.forEach((child) => {
+                if (child && !child.destroyed) child.destroy({ children: true });
+            });
+        }
         this.dragging = false;
         this.dragReturning = false;
         this.dragPieceIndex = -1;
         this.dragPieceData = null;
+        this._dragLastSeenAt = 0;
     }
 
     _checkNearComplete(shape, gridX, gridY) {
@@ -520,8 +571,14 @@ class InputManager {
             stage.off('pointercancel', this._onPointerCancel);
         }
 
+        if (this.game && this.game.app && this.game.app.ticker) {
+            this.game.app.ticker.remove(this._updateDragWatchdog, this);
+        }
         window.removeEventListener('pointerup', this._onWindowPointerUp);
         window.removeEventListener('pointercancel', this._onWindowPointerCancel);
+        window.removeEventListener('mouseup', this._onWindowMouseUp);
+        window.removeEventListener('touchend', this._onWindowTouchEnd);
+        window.removeEventListener('touchcancel', this._onWindowTouchEnd);
         window.removeEventListener('blur', this._onWindowBlur);
         document.removeEventListener('visibilitychange', this._onVisibilityChange);
 
