@@ -115,6 +115,7 @@
   let nextCanvas, nextCtx;
   let dpr = 1;
   let fieldBgGradient = null;
+  let fieldBgImage = null;
   let running = false;
   let gameOver = false;
   let score = 0;
@@ -270,6 +271,8 @@
     nextCtx = nextCanvas.getContext('2d');
     if (!canvas || !ctx) err('canvas 엘리먼트 또는 2d context 획득 실패');
     if (!nextCanvas || !nextCtx) err('next-cat canvas 획득 실패');
+    fieldBgImage = new Image();
+    fieldBgImage.src = 'assets/ui/cushion-field.webp';
     resizeCanvas();
     window.addEventListener('resize', () => {
       scheduleFitGameLayout();
@@ -714,8 +717,19 @@
     // 배경 — 은은한 베이지 + 경계선
     ctx.clearRect(0, 0, FIELD_W, FIELD_H);
     // 필드 내부 부드러운 그라데이션 (AI 같지 않게 톤온톤 1.5단계)
-    ctx.fillStyle = fieldBgGradient || '#FFF7EA';
-    ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+    if (fieldBgImage && fieldBgImage.complete && fieldBgImage.naturalWidth > 0) {
+      const iw = fieldBgImage.naturalWidth;
+      const ih = fieldBgImage.naturalHeight;
+      const scale = Math.max(FIELD_W / iw, FIELD_H / ih);
+      const sw = FIELD_W / scale;
+      const sh = FIELD_H / scale;
+      ctx.drawImage(fieldBgImage, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, FIELD_W, FIELD_H);
+      ctx.fillStyle = 'rgba(255, 247, 234, 0.20)';
+      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+    } else {
+      ctx.fillStyle = fieldBgGradient || '#FFF7EA';
+      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+    }
 
     // 위험선
     ctx.save();
