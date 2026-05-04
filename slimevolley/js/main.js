@@ -307,10 +307,13 @@ class SlimeVolleyGame {
         const FIXED_DT = 1000 / 120; // 120fps 고정 물리 스텝
         this._remotePlayerInputs = new Map();
         this._hostInputBuffer = []; // 안 1: 공정성 지연용 호스트 입력 버퍼
-        const isNonHost = this.mode === 'multiplayer' && !this.network.isHost;
 
         this.gameLoop = (ticker) => {
             if (!this.running) return;
+
+            // 호스트 마이그레이션 대응: 매 틱마다 동적 평가
+            // (closure에 캡처하면 becomeHost 후에도 비호스트 모드로 남는 버그)
+            const isNonHost = this.mode === 'multiplayer' && !this.network.isHost;
 
             if (isNonHost) {
                 // 비호스트: 물리 안 돌림. 입력 전송 + 보간된 상태 렌더링.
@@ -608,7 +611,7 @@ class SlimeVolleyGame {
     }
 
     // === Multiplayer ===
-    becomeHost() {
+    async becomeHost() {
         this.network.isHost = true;
 
         // 모든 봇 슬라임에 대해 BotAI 생성
@@ -617,6 +620,34 @@ class SlimeVolleyGame {
                 this.botMap.set(slime.id, new BotAI('normal'));
             }
         }
+
+        // 호스트 전환 시 시뮬레이션 상태 초기화
+        // (비호스트 시절 받아둔 마지막 gameState가 이미 physics에 적용되어 있음)
+        this.physicsAccumulator = 0;
+        this._netSendCounter = 0;
+        this._hostInputBuffer = [];
+        this._interpPrev = null;
+        this._stateBuffer = []; // 비호스트용 보간 버퍼는 더 이상 불필요
+        this._remotePlayerInputs = new Map();
+
+        // 봇이 된 옛 호스트의 입력은 비우고 봇 AI가 채우도록
+        for (const slime of this.physics.slimes) {
+            if (slime.isBot) {
+                slime.input = { left: false, right: false, jump: false };
+            }
+        }
+
+        if (this.renderer) {
+            this.renderer.showNotice('You are the new host', 2500);
+        }
+
+        // P2P 재구성: 클라이언트 → 호스트로 역할 변경
+        try {
+            await this.network.migrateP2P(this.network.playerId);
+            console.log('[Migration] Successfully became P2P host');
+        } catch (e) {
+            console.error('[Migration] Failed to become P2P host:', e);
+        }
     }
 
     setupNetworkHandlers() {
@@ -624,7 +655,7 @@ class SlimeVolleyGame {
             this.lobby.showRoomScreen(msg.roomId, msg.players, true, msg.metadata);
             // 호스트: PeerJS Peer 미리 생성 (로비에서 P2P 핑 표시)
             try {
-                await this.network.initP2P();
+                await this.network.initP2P(this.network.playerId);
             } catch (e) {
                 console.warn('[P2P] Host peer creation failed:', e);
             }
@@ -633,8 +664,14 @@ class SlimeVolleyGame {
         this.network.on('joined', async (msg) => {
             this.lobby.showRoomScreen(msg.roomId, msg.players, false, msg.metadata);
             // 비호스트: 호스트에 PeerJS 연결 (로비에서 P2P 핑 표시)
+            const hostPlayer = (msg.players || []).find(p => p.isHost);
+            const hostPlayerId = hostPlayer ? hostPlayer.id : null;
+            if (!hostPlayerId) {
+                console.warn('[P2P] Cannot find host in player list');
+                return;
+            }
             try {
-                await this.network.initP2P();
+                await this.network.initP2P(hostPlayerId);
             } catch (e) {
                 console.warn('[P2P] Connect to host failed:', e);
             }
@@ -649,7 +686,7 @@ class SlimeVolleyGame {
             this.lobby.updatePlayerList(msg.players);
         });
 
-        this.network.on('playerLeft', (msg) => {
+        this.network.on('playerLeft', async (msg) => {
             // 로비 UI 업데이트
             this.lobby.updatePlayerList(msg.players);
 
@@ -662,9 +699,26 @@ class SlimeVolleyGame {
                     if (slime) leftName = slime.nickname;
                 }
 
-                // 호스트 이전: 내가 새 호스트인 경우
+                // 호스트 이전 처리
                 if (msg.newHostId === this.network.playerId && !this.network.isHost) {
-                    this.becomeHost();
+                    // 내가 새 호스트가 됨
+                    await this.becomeHost();
+                } else if (msg.newHostId && !this.network.isHost && msg.newHostId !== this.network.playerId) {
+                    // 나는 비호스트인데 호스트가 바뀜 → 새 호스트로 재연결
+                    if (this.renderer) {
+                        this.renderer.showNotice('Host migrating...', 2000);
+                    }
+                    try {
+                        await this.network.migrateP2P(msg.newHostId);
+                        if (this.renderer) {
+                            this.renderer.showNotice('Reconnected to new host', 1500);
+                        }
+                    } catch (e) {
+                        console.error('[Migration] Failed to migrate to new host:', e);
+                        if (this.renderer) {
+                            this.renderer.showNotice('Migration failed', 2500);
+                        }
+                    }
                 }
 
                 // 나간 유저의 슬라임을 봇으로 대체 (양쪽 모두)
