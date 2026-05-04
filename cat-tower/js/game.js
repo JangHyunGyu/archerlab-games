@@ -794,7 +794,7 @@
     nextCtx.clearRect(0, 0, 72, 72);
     updateNextCatLabel();
     if (nextTier == null) return;
-    const r = Math.min(30, TIERS[nextTier].radius);
+    const r = Math.min(27, TIERS[nextTier].radius);
     CatAssets.drawCat(nextCtx, nextTier, 36, 36, 0, r);
   }
 
@@ -1017,7 +1017,7 @@
       const c = document.createElement('canvas');
       c.width = 64; c.height = 64;
       const cctx = c.getContext('2d');
-      CatAssets.drawCat(cctx, i, 32, 32, 0, 24);
+      CatAssets.drawCat(cctx, i, 32, 32, 0, 22);
       cell.appendChild(c);
       const label = document.createElement('div');
       label.className = 'tier-name';
@@ -1040,7 +1040,7 @@
       c.width = 36;
       c.height = 36;
       const cctx = c.getContext('2d');
-      CatAssets.drawCat(cctx, i, 18, 18, 0, 13);
+      CatAssets.drawCat(cctx, i, 18, 18, 0, 12);
       cell.appendChild(c);
 
       const text = document.createElement('div');

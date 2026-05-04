@@ -57,6 +57,12 @@
       this._lastEventAt = 0;
       this._watchdogTimer = null;
 
+      // bonk 글로벌 throttle — 같은 프레임에 여러 쌍 충돌 시 mono membrane 재트리거 클릭 방지
+      this._lastBonkAt = 0;
+      this._BONK_GLOBAL_MS = 55;
+      // merge/combo 직전·중에는 bonk 일시 차단 — 보이스 누적 + 리미터 포화로 찌직거리는 원인
+      this._bonkLockUntil = 0;
+
       this._visibilityHandler = () => {
         if (!document.hidden && this.enabled && this._initialized) {
           this.ensureContext();
@@ -301,6 +307,8 @@
       if (this._watchdogTimer) { clearTimeout(this._watchdogTimer); this._watchdogTimer = null; }
       this._pendingMergeTier = -1;
       this._pendingComboLevel = -1;
+      this._bonkLockUntil = 0;
+      this._lastBonkAt = 0;
       if (!this._hasTone()) return;
       try {
         const now = this._now();
@@ -383,6 +391,11 @@
     // 드롭 후 바닥/다른 티어 고양이와 부딪힐 때. 원작 수박게임 느낌.
     playBonk(intensity, tier) {
       if (!this._canPlay()) return;
+      const nowMs = performance.now();
+      // merge/combo 진행 중이거나 같은 프레임에 다수 충돌 시 bonk 스킵
+      if (nowMs < this._bonkLockUntil) return;
+      if (nowMs - this._lastBonkAt < this._BONK_GLOBAL_MS) return;
+      this._lastBonkAt = nowMs;
       this.ensureContext();
       if (!this._hasTone()) return;
       const now = this._now();
@@ -432,6 +445,9 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
+
+      // merge 임박 — bonk 차단 (디바운스 32ms + 사운드 길이 ~250ms)
+      this._bonkLockUntil = performance.now() + 280;
 
       const t = Math.max(0, Math.min(9, newTier));
       if (t > this._pendingMergeTier) this._pendingMergeTier = t;
@@ -506,6 +522,9 @@
       if (!this._canPlay()) return;
       this.ensureContext();
       if (!this._hasTone()) return;
+
+      // 콤보 팡파레 길이만큼 bonk 차단 — 코드/벨/FM 위에 충돌음이 겹쳐 리미터 포화시키는 걸 방지
+      this._bonkLockUntil = performance.now() + 380;
 
       this._pendingMergeTier = -1;
       if (this._mergeTimer) { clearTimeout(this._mergeTimer); this._mergeTimer = null; }
