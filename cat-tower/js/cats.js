@@ -240,9 +240,9 @@
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.shadowColor = 'rgba(42, 26, 16, 0.26)';
-    ctx.shadowBlur = Math.min(8, Math.max(2, r * 0.08));
-    ctx.shadowOffsetY = Math.min(4, Math.max(1, r * 0.04));
+    ctx.shadowColor = 'rgba(34, 20, 12, 0.45)';
+    ctx.shadowBlur = Math.min(18, Math.max(4, r * 0.16));
+    ctx.shadowOffsetY = Math.min(5, Math.max(1, r * 0.05));
     ctx.drawImage(img, -targetW / 2, y, targetW, targetH);
     ctx.restore();
     return true;
