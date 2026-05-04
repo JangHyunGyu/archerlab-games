@@ -247,7 +247,15 @@ class SlimeVolleyGame {
         const baseState = this.physics.getState();
         if (!buf || buf.length < 2) return baseState;
 
-        const renderTime = performance.now() - CONFIG.INTERPOLATION_DELAY;
+        // 안 2: 동적 보간 지연 — 핑에 맞춰 자동 조정.
+        // 낮은 핑: 40~50ms (원래 80ms 대비 응답성 개선)
+        // 높은 핑: 최대 120ms까지 (jitter buffer ↑로 워프 방지)
+        // 30fps state 송신 간격(33ms) + jitter 여유 = 하한 40ms.
+        const ping = this.network.myPing || 0;
+        const adaptiveDelay = ping > 0
+            ? Math.max(40, Math.min(120, ping + 15))
+            : CONFIG.INTERPOLATION_DELAY;
+        const renderTime = performance.now() - adaptiveDelay;
 
         // renderTime을 둘러싼 두 스냅샷 찾기
         let i0 = 0, i1 = 1;
@@ -298,6 +306,7 @@ class SlimeVolleyGame {
 
         const FIXED_DT = 1000 / 120; // 120fps 고정 물리 스텝
         this._remotePlayerInputs = new Map();
+        this._hostInputBuffer = []; // 안 1: 공정성 지연용 호스트 입력 버퍼
         const isNonHost = this.mode === 'multiplayer' && !this.network.isHost;
 
         this.gameLoop = (ticker) => {
@@ -365,11 +374,53 @@ class SlimeVolleyGame {
         }
     }
 
+    // 안 1: 공정성 지연 — 호스트 자기 입력을 ping/2 만큼 지연시켜
+    // 비호스트가 겪는 round-trip 지연과 균형을 맞춤. "방장만 안 렉" 해소.
+    _getDelayedHostInput() {
+        const currentInput = this.getMyInput();
+
+        // 연습모드 또는 비호스트는 즉시 적용 (지연 불필요)
+        if (this.mode !== 'multiplayer' || !this.network.isHost) {
+            return currentInput;
+        }
+
+        const ping = this.network.myPing || 0;
+        if (ping <= 0) {
+            // 핑 측정 전 — 지연 없이 통과 (버퍼도 비움)
+            this._hostInputBuffer.length = 0;
+            return currentInput;
+        }
+
+        const FIXED_DT = 1000 / 120;
+        const fairnessDelayFrames = Math.min(
+            Math.max(0, Math.round((ping / 2) / FIXED_DT)),
+            15 // 최대 15프레임(~125ms) 캡 — 너무 답답해지지 않게
+        );
+
+        this._hostInputBuffer.push({
+            left: currentInput.left,
+            right: currentInput.right,
+            jump: currentInput.jump,
+        });
+
+        // 핑 감소로 버퍼가 너무 길면 앞쪽 잘라냄
+        while (this._hostInputBuffer.length > fairnessDelayFrames + 2) {
+            this._hostInputBuffer.shift();
+        }
+
+        if (this._hostInputBuffer.length > fairnessDelayFrames) {
+            return this._hostInputBuffer.shift();
+        }
+
+        // 버퍼가 아직 충분히 안 찼으면 정지 입력
+        return { left: false, right: false, jump: false };
+    }
+
     update() {
         // 호스트만 물리 실행 (비호스트는 gameLoop에서 return됨)
         const mySlime = this.physics.slimes.find(s => s.id === this.mySlimeId);
         if (mySlime && !mySlime.isBot) {
-            mySlime.input = this.getMyInput();
+            mySlime.input = this._getDelayedHostInput();
         }
 
         // 멀티플레이어: 원격 플레이어 입력 적용 (서버에서 브로드캐스트 받은 것)
