@@ -23,31 +23,7 @@ class NetworkClient {
         this.p2pReady = false;
         this.p2pPings = {};
 
-        // P2P 메시지 수신 → 이벤트 emit
-        this.peerjs.onMessage = (peerId, data) => {
-            this.emit(data.type, data);
-        };
-
-        this.peerjs.onPeerConnected = (peerId) => {
-            console.log(`%c[P2P] Peer connected: ${peerId}`, 'color: #66BB6A; font-weight: bold');
-            this.p2pReady = true;
-            this.emit('p2pReady');
-            // 즉시 핑 1회 측정 + 루프 시작
-            this.peerjs.pingPeer(peerId);
-            this._startP2PPingLoop();
-        };
-
-        this.peerjs.onPeerDisconnected = (peerId) => {
-            console.log(`%c[P2P] Peer disconnected: ${peerId}`, 'color: #EF5350');
-            this.p2pReady = this.peerjs.connected;
-        };
-
-        this.peerjs._onPingResult = (peerId, rtt) => {
-            this.p2pPings[peerId] = Math.round(rtt);
-            // P2P 핑을 서버에 보고 → 로비에 P2P 핑 표시
-            this.myPing = Math.round(rtt);
-            this.send({ type: 'reportPing', ping: this.myPing });
-        };
+        this._rebindPeerJSHandlers();
     }
 
     on(event, handler) {
@@ -168,19 +144,72 @@ class NetworkClient {
 
     // === PeerJS P2P 연결 ===
 
-    async initP2P() {
+    async initP2P(hostPlayerId) {
+        // hostPlayerId 미지정 시: 호스트면 자기 ID, 비호스트면 인자 필수
+        const hostId = hostPlayerId || (this.isHost ? this.playerId : null);
+        if (!hostId) {
+            throw new Error('initP2P: hostPlayerId required for non-host');
+        }
         try {
             if (this.isHost) {
-                await this.peerjs.createHost(this.roomId);
-                console.log('[P2P] Host peer created, waiting for connections...');
+                await this.peerjs.createHost(this.roomId, hostId);
+                console.log(`[P2P] Host peer created (host=${hostId}), waiting for connections...`);
             } else {
-                await this.peerjs.connectToHost(this.roomId);
-                console.log('[P2P] Connected to host!');
+                await this.peerjs.connectToHost(this.roomId, hostId);
+                console.log(`[P2P] Connected to host ${hostId}!`);
             }
         } catch (e) {
             console.error('[P2P] Connection failed:', e);
             throw e;
         }
+    }
+
+    // 호스트 마이그레이션: 옛 PeerJS 정리하고 새 호스트로 재구성
+    async migrateP2P(newHostPlayerId) {
+        console.log(`%c[P2P] Migrating to new host: ${newHostPlayerId}`, 'color: #FFB74D; font-weight: bold');
+
+        // 옛 PeerJS 완전 정리
+        if (this._p2pPingInterval) {
+            clearInterval(this._p2pPingInterval);
+            this._p2pPingInterval = null;
+        }
+        this.peerjs.destroy();
+        this.p2pReady = false;
+        this.p2pPings = {};
+        this.myPing = 0;
+
+        // 정리 시간 확보 (PeerJS 브로커 상태 갱신 대기)
+        await new Promise(r => setTimeout(r, 300));
+
+        // 새 PeerJSManager 인스턴스로 교체 (이벤트 핸들러 재바인딩)
+        this.peerjs = new PeerJSManager();
+        this._rebindPeerJSHandlers();
+
+        // 새 호스트로 또는 새 호스트 자체로 초기화
+        await this.initP2P(newHostPlayerId);
+    }
+
+    // PeerJS 이벤트 핸들러 바인딩 (생성자에서도 같은 핸들러 사용)
+    _rebindPeerJSHandlers() {
+        this.peerjs.onMessage = (peerId, data) => {
+            this.emit(data.type, data);
+        };
+        this.peerjs.onPeerConnected = (peerId) => {
+            console.log(`%c[P2P] Peer connected: ${peerId}`, 'color: #66BB6A; font-weight: bold');
+            this.p2pReady = true;
+            this.emit('p2pReady');
+            this.peerjs.pingPeer(peerId);
+            this._startP2PPingLoop();
+        };
+        this.peerjs.onPeerDisconnected = (peerId) => {
+            console.log(`%c[P2P] Peer disconnected: ${peerId}`, 'color: #EF5350');
+            this.p2pReady = this.peerjs.connected;
+        };
+        this.peerjs._onPingResult = (peerId, rtt) => {
+            this.p2pPings[peerId] = Math.round(rtt);
+            this.myPing = Math.round(rtt);
+            this.send({ type: 'reportPing', ping: this.myPing });
+        };
     }
 
     _startP2PPingLoop() {

@@ -37,10 +37,16 @@ class PeerJSManager {
         }
     }
 
+    // 호스트의 peer ID 생성 규칙 (마이그레이션 대비: 호스트별 고유 ID)
+    static makeHostPeerId(roomId, hostPlayerId) {
+        const safe = (roomId + '_h_' + hostPlayerId).replace(/[^a-zA-Z0-9_-]/g, '');
+        return 'sv_' + safe;
+    }
+
     // 호스트: 고정 ID로 Peer 생성, 연결 대기
-    createHost(roomId) {
+    createHost(roomId, hostPlayerId) {
         return new Promise(async (resolve, reject) => {
-            const id = 'sv_' + roomId.replace(/[^a-zA-Z0-9_-]/g, '');
+            const id = PeerJSManager.makeHostPeerId(roomId, hostPlayerId);
             const iceServers = await this._fetchIceServers();
 
             // 이전 peer가 있으면 정리
@@ -98,9 +104,32 @@ class PeerJSManager {
     }
 
     // 비호스트: 랜덤 ID로 Peer 생성, 호스트에 연결
-    connectToHost(roomId) {
+    // maxRetries: 호스트 마이그레이션 직후 새 호스트가 준비될 때까지 재시도
+    async connectToHost(roomId, hostPlayerId, maxRetries = 5) {
+        let lastErr = null;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await this._connectToHostOnce(roomId, hostPlayerId);
+            } catch (err) {
+                lastErr = err;
+                const retryable =
+                    err && (err.type === 'peer-unavailable' ||
+                            (err.message && err.message.includes('timeout')));
+                if (attempt < maxRetries && retryable) {
+                    const delay = 400 + attempt * 400;
+                    console.log(`[PeerJS] Connect retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
+                    await new Promise(r => setTimeout(r, delay));
+                    continue;
+                }
+                throw err;
+            }
+        }
+        throw lastErr || new Error('connectToHost failed');
+    }
+
+    _connectToHostOnce(roomId, hostPlayerId) {
         return new Promise(async (resolve, reject) => {
-            const hostId = 'sv_' + roomId.replace(/[^a-zA-Z0-9_-]/g, '');
+            const hostId = PeerJSManager.makeHostPeerId(roomId, hostPlayerId);
             const iceServers = await this._fetchIceServers();
 
             if (this.peer) {
