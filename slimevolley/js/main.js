@@ -610,6 +610,22 @@ class SlimeVolleyGame {
         this.sound.destroy();
     }
 
+    // === Host Migration UI ===
+    _showMigrationOverlay(title, subtitle) {
+        const el = document.getElementById('migration-overlay');
+        if (!el) return;
+        const t = document.getElementById('mig-title');
+        const s = document.getElementById('mig-subtitle');
+        if (t && title) t.textContent = title;
+        if (s && subtitle) s.textContent = subtitle;
+        el.classList.add('active');
+    }
+    _hideMigrationOverlay() {
+        const el = document.getElementById('migration-overlay');
+        if (!el) return;
+        el.classList.remove('active');
+    }
+
     // === Multiplayer ===
     async becomeHost() {
         this.network.isHost = true;
@@ -637,16 +653,23 @@ class SlimeVolleyGame {
             }
         }
 
-        if (this.renderer) {
-            this.renderer.showNotice('You are the new host', 2500);
-        }
+        // 마이그레이션 로딩 오버레이 표시
+        this._showMigrationOverlay('새 호스트로 전환 중...', '게임이 곧 재개됩니다');
 
         // P2P 재구성: 클라이언트 → 호스트로 역할 변경
         try {
             await this.network.migrateP2P(this.network.playerId);
             console.log('[Migration] Successfully became P2P host');
+            this._hideMigrationOverlay();
+            if (this.renderer) {
+                this.renderer.showNotice('당신이 새 호스트입니다', 2500);
+            }
         } catch (e) {
             console.error('[Migration] Failed to become P2P host:', e);
+            this._hideMigrationOverlay();
+            if (this.renderer) {
+                this.renderer.showNotice('호스트 전환 실패', 2500);
+            }
         }
     }
 
@@ -705,18 +728,18 @@ class SlimeVolleyGame {
                     await this.becomeHost();
                 } else if (msg.newHostId && !this.network.isHost && msg.newHostId !== this.network.playerId) {
                     // 나는 비호스트인데 호스트가 바뀜 → 새 호스트로 재연결
-                    if (this.renderer) {
-                        this.renderer.showNotice('Host migrating...', 2000);
-                    }
+                    this._showMigrationOverlay('호스트 이전 중...', '새 호스트에 연결하고 있습니다');
                     try {
                         await this.network.migrateP2P(msg.newHostId);
+                        this._hideMigrationOverlay();
                         if (this.renderer) {
-                            this.renderer.showNotice('Reconnected to new host', 1500);
+                            this.renderer.showNotice('새 호스트에 연결됨', 1500);
                         }
                     } catch (e) {
                         console.error('[Migration] Failed to migrate to new host:', e);
+                        this._hideMigrationOverlay();
                         if (this.renderer) {
-                            this.renderer.showNotice('Migration failed', 2500);
+                            this.renderer.showNotice('호스트 연결 실패 — 봇 모드로 진행', 3000);
                         }
                     }
                 }
