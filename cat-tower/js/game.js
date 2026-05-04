@@ -1247,14 +1247,16 @@
         if (e.key === 'Enter') { e.preventDefault(); handleSubmitRank(); }
       });
 
-      // 언어 토글
-      document.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const l = btn.dataset.lang;
-          log(`UI: 언어 전환 → ${l}`);
-          if (window.I18N) window.I18N.setLang(l);
+      // 언어 토글 — 버튼 전체 클릭 시 ko ↔ en 토글
+      const langToggle = $('lang-toggle');
+      if (langToggle) {
+        langToggle.addEventListener('click', () => {
+          const cur = window.I18N ? window.I18N.getLang() : 'ko';
+          const next = cur === 'ko' ? 'en' : 'ko';
+          log(`UI: 언어 전환 → ${next}`);
+          if (window.I18N) window.I18N.setLang(next);
         });
-      });
+      }
       updateLangButtons();
       window.addEventListener('cattower:langchange', () => {
         updateLangButtons();
