@@ -724,13 +724,15 @@
       const sw = FIELD_W / scale;
       const sh = FIELD_H / scale;
       ctx.drawImage(fieldBgImage, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, FIELD_W, FIELD_H);
-      ctx.fillStyle = 'rgba(195, 225, 218, 0.62)';
+      // 가장자리만 살짝 어두워지는 비네트 (전체 틴트 대신 — 고양이 가독성 유지)
+      const vignette = ctx.createRadialGradient(
+        FIELD_W / 2, FIELD_H / 2, Math.min(FIELD_W, FIELD_H) * 0.45,
+        FIELD_W / 2, FIELD_H / 2, Math.max(FIELD_W, FIELD_H) * 0.78
+      );
+      vignette.addColorStop(0, 'rgba(60, 40, 25, 0)');
+      vignette.addColorStop(1, 'rgba(60, 40, 25, 0.22)');
+      ctx.fillStyle = vignette;
       ctx.fillRect(0, 0, FIELD_W, FIELD_H);
-      ctx.save();
-      ctx.globalCompositeOperation = 'multiply';
-      ctx.fillStyle = 'rgba(137, 176, 168, 0.32)';
-      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
-      ctx.restore();
     } else {
       ctx.fillStyle = fieldBgGradient || '#DCECE7';
       ctx.fillRect(0, 0, FIELD_W, FIELD_H);
