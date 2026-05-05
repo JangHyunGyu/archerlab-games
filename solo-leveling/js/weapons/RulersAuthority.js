@@ -17,29 +17,43 @@ export class RulersAuthority extends WeaponBase {
 
         if (this.scene.soundManager) this.scene.soundManager.play('authority');
 
-        // Find a cluster of enemies, or default to player position
+        // Find a nearby enemy cluster, or default to player position if no threat is close.
         let targetX = this.player.x;
         let targetY = this.player.y;
 
         const enemies = this.player.getAllEnemies();
-        if (enemies.length > 0) {
-            // Target the densest cluster
-            let bestCount = 0;
-            for (const enemy of enemies) {
-                if (!enemy.active) continue;
-                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-                if (dist > 250) continue;
+        const acquireRange = Math.max(560, range * 3.25);
+        const candidates = enemies.filter((enemy) => {
+            if (!enemy.active) return false;
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+            return dist <= acquireRange;
+        });
 
-                let count = 0;
-                for (const other of enemies) {
-                    if (!other.active) continue;
-                    if (Phaser.Math.Distance.Between(enemy.x, enemy.y, other.x, other.y) < range) count++;
+        if (candidates.length > 0) {
+            let bestTarget = null;
+            let bestScore = -Infinity;
+            let bestDist = Infinity;
+            for (const enemy of candidates) {
+                const distToPlayer = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+                let score = 0;
+                for (const other of candidates) {
+                    const clusterDist = Phaser.Math.Distance.Between(enemy.x, enemy.y, other.x, other.y);
+                    if (clusterDist <= range) {
+                        score += 1 + (1 - clusterDist / range) * 0.6;
+                    }
                 }
-                if (count > bestCount) {
-                    bestCount = count;
-                    targetX = enemy.x;
-                    targetY = enemy.y;
+
+                score -= distToPlayer / acquireRange * 0.12;
+                if (score > bestScore || (score === bestScore && distToPlayer < bestDist)) {
+                    bestScore = score;
+                    bestDist = distToPlayer;
+                    bestTarget = enemy;
                 }
+            }
+
+            if (bestTarget) {
+                targetX = bestTarget.x;
+                targetY = bestTarget.y;
             }
         }
 

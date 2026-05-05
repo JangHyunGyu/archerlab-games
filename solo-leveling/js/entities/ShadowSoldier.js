@@ -155,7 +155,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
         // Face direction
         if (this.body.velocity.x !== 0) {
-            this.setFlipX(this.body.velocity.x < 0);
+            this.setFlipX(this.body.velocity.x > 0);
         }
 
         // Update name tag
