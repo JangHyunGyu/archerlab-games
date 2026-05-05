@@ -627,46 +627,65 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     // Beru: acid spit - 3 projectiles in spread, visible and dodgeable
     _beruAcidSpit(playerX, playerY) {
+        const scene = this.scene;
+        if (!scene?.physics?.world) return;
+
         const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
         const spreadCount = this.phase === 2 ? 5 : 3;
         const spreadAngle = 0.3;
+        const attackDamage = Math.floor(this.attack * 0.7);
 
         for (let i = 0; i < spreadCount; i++) {
             const offset = (i - (spreadCount - 1) / 2) * spreadAngle;
             const angle = baseAngle + offset;
 
-            const useEffectAsset = this.scene.textures.exists('effect_boss_beru_acid_0');
-            const proj = this.scene.add.sprite(this.x, this.y, useEffectAsset ? 'effect_boss_beru_acid_0' : 'proj_beru')
+            const useEffectAsset = scene.textures.exists('effect_boss_beru_acid_0');
+            const proj = scene.add.sprite(this.x, this.y, useEffectAsset ? 'effect_boss_beru_acid_0' : 'proj_beru')
                 .setDepth(8)
                 .setRotation(useEffectAsset ? angle : 0)
                 .setScale(useEffectAsset ? 0.24 : 1.5)
                 .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
-            this.scene.physics.add.existing(proj, false);
+            scene.physics.add.existing(proj, false);
             proj.body.setAllowGravity(false);
             proj.body.setCircle(useEffectAsset ? 9 : 6);
             const frameTimer = useEffectAsset
-                ? Boss._animateFrameSprite(this.scene, proj, 'effect_boss_beru_acid', 62)
+                ? Boss._animateFrameSprite(scene, proj, 'effect_boss_beru_acid', 62)
                 : null;
 
             const speed = 280;
             proj.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
             // Collision with player (store collider to clean up)
-            const player = this.scene.player;
+            const player = scene.player;
             let collider = null;
+            let autoDestroyTimer = null;
+            let cleanedUp = false;
+            const cleanupProjectile = () => {
+                if (cleanedUp) return;
+                cleanedUp = true;
+                if (collider && scene.physics?.world) {
+                    scene.physics.world.removeCollider(collider);
+                    collider = null;
+                }
+                if (frameTimer) frameTimer.destroy();
+                if (autoDestroyTimer) {
+                    autoDestroyTimer.destroy();
+                    autoDestroyTimer = null;
+                }
+                if (scene.tweens) scene.tweens.killTweensOf(proj);
+            };
+
             if (player) {
-                collider = this.scene.physics.add.overlap(proj, player, () => {
+                collider = scene.physics.add.overlap(proj, player, () => {
                     if (!proj.active) return;
-                    player.takeDamage(Math.floor(this.attack * 0.7));
-                    if (collider) this.scene.physics.world.removeCollider(collider);
-                    if (frameTimer) frameTimer.destroy();
-                    this.scene.tweens.killTweensOf(proj);
+                    player.takeDamage(attackDamage);
+                    cleanupProjectile();
                     proj.destroy();
                 });
             }
 
             if (!useEffectAsset) {
-                this.scene.tweens.add({
+                scene.tweens.add({
                     targets: proj,
                     rotation: proj.rotation + Math.PI * 6,
                     duration: 4000,
@@ -674,16 +693,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             }
 
             // Auto-destroy after 4s
-            this.scene.time.delayedCall(4000, () => {
+            autoDestroyTimer = scene.time.delayedCall(4000, () => {
                 if (proj && proj.active) {
-                    if (collider) this.scene.physics.world.removeCollider(collider);
-                    if (frameTimer) frameTimer.destroy();
-                    this.scene.tweens.killTweensOf(proj);
+                    cleanupProjectile();
                     proj.destroy();
                 }
             });
             proj.once('destroy', () => {
-                if (frameTimer) frameTimer.destroy();
+                cleanupProjectile();
             });
         }
     }
