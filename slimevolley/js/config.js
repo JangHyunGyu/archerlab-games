@@ -49,6 +49,7 @@ const CONFIG = {
         slimeEye: 'assets/images/slime-eye.png',
         slimePupil: 'assets/images/slime-pupil.png',
         hitSpark: 'assets/images/hit-spark.png',
+        slimesIncludeEyes: true,
         slimes: [
             [
                 'assets/images/slime-blue.png',

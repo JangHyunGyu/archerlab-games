@@ -92,9 +92,7 @@ class GameRenderer {
                 this.imageTextures.court &&
                 this.imageTextures.net &&
                 this.imageTextures.ball &&
-                this.imageTextures.slimeShadow &&
-                this.imageTextures.slimeEye &&
-                this.imageTextures.slimePupil
+                this.imageTextures.slimeShadow
             );
         } catch (error) {
             console.warn('[Renderer] Image asset load failed. Falling back to vector graphics.', error);
@@ -216,8 +214,8 @@ class GameRenderer {
             net.anchor.set(0.5, 1);
             net.x = CONFIG.NET_X;
             net.y = CONFIG.GROUND_Y + 7;
-            net.width = 96;
-            net.height = CONFIG.NET_HEIGHT + 30;
+            net.width = 132;
+            net.height = CONFIG.NET_HEIGHT + 34;
             this.gameContainer.addChild(net);
             this.netSprite = net;
             return;
@@ -421,32 +419,34 @@ class GameRenderer {
         container._shadow = shadow;
 
         const body = new PIXI.Sprite(bodyTexture);
-        body.anchor.set(0.5, 0.82);
+        body.anchor.set(0.5, 1);
         body.x = 0;
         body.y = 0;
-        body.width = r * 2.3;
-        body.height = r * 1.8;
+        body.width = r * 2.7;
+        body.height = r * 2.35;
         container.addChild(body);
         container._bodySprite = body;
 
-        const eyeContainer = new PIXI.Container();
-        const eye = new PIXI.Sprite(this.imageTextures.slimeEye);
-        eye.anchor.set(0.5);
-        eye.width = Math.max(18, r * 0.58);
-        eye.height = eye.width;
-        eyeContainer.addChild(eye);
+        if (!CONFIG.IMAGE_ASSETS.slimesIncludeEyes && this.imageTextures.slimeEye && this.imageTextures.slimePupil) {
+            const eyeContainer = new PIXI.Container();
+            const eye = new PIXI.Sprite(this.imageTextures.slimeEye);
+            eye.anchor.set(0.5);
+            eye.width = Math.max(18, r * 0.58);
+            eye.height = eye.width;
+            eyeContainer.addChild(eye);
 
-        const pupil = new PIXI.Sprite(this.imageTextures.slimePupil);
-        pupil.anchor.set(0.5);
-        pupil.width = Math.max(9, r * 0.28);
-        pupil.height = pupil.width;
-        eyeContainer.addChild(pupil);
-        container._pupil = pupil;
+            const pupil = new PIXI.Sprite(this.imageTextures.slimePupil);
+            pupil.anchor.set(0.5);
+            pupil.width = Math.max(9, r * 0.28);
+            pupil.height = pupil.width;
+            eyeContainer.addChild(pupil);
+            container._pupil = pupil;
 
-        eyeContainer.x = slime.team === 0 ? 10 : -10;
-        eyeContainer.y = -r * 0.45;
-        container.addChild(eyeContainer);
-        container._eyeContainer = eyeContainer;
+            eyeContainer.x = slime.team === 0 ? 10 : -10;
+            eyeContainer.y = -r * 0.45;
+            container.addChild(eyeContainer);
+            container._eyeContainer = eyeContainer;
+        }
 
         const nameStyle = new PIXI.TextStyle({
             fontFamily: 'Space Grotesk, Pretendard, sans-serif',
