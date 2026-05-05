@@ -31,8 +31,12 @@
             'difficulty.hard': '어려움',
             'common.back': '뒤로',
             'common.start': '시작!',
+            'common.ok': '확인',
             'common.soundOn': '사운드 ON',
             'common.soundOff': '사운드 OFF',
+            'room.startGame': '게임 시작',
+            'start.reason.needTwoTeams': '양 팀 모두 최소 1명 이상 있어야 시작할 수 있습니다.',
+            'start.reason.notReady': '아직 준비하지 않은 플레이어가 있습니다. 모든 플레이어가 Ready 상태여야 합니다.',
         },
         en: {
             'app.name': 'Slime Volley',
@@ -61,8 +65,12 @@
             'difficulty.hard': 'Hard',
             'common.back': 'Back',
             'common.start': 'Start!',
+            'common.ok': 'OK',
             'common.soundOn': 'Sound ON',
             'common.soundOff': 'Sound OFF',
+            'room.startGame': 'Start Game',
+            'start.reason.needTwoTeams': 'Both teams need at least one player before starting.',
+            'start.reason.notReady': 'Some players are not ready yet. Every player must be Ready.',
         },
     };
 

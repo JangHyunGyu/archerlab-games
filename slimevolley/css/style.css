@@ -386,6 +386,16 @@ body {
 }
 .btn-primary:active { transform: translateY(0); }
 .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-primary.is-disabled {
+    opacity: 0.55;
+    cursor: pointer;
+    box-shadow: none;
+}
+.btn-primary.is-disabled:hover {
+    background: var(--primary);
+    transform: none;
+    box-shadow: none;
+}
 
 .btn-secondary {
     background: var(--bg-elevated);

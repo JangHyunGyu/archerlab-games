@@ -993,6 +993,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     function _sendError(type, msg, stack, src) {
         var errClass = _classifyError(msg, stack, src);
         if (!msg) return;
+        if (errClass === 'noise') return;
         var key = msg + '|' + src;
         if (key === _lastError) { _errorCount++; if (_errorCount > 5) return; }
         else { _lastError = key; _errorCount = 1; }

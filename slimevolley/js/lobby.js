@@ -113,16 +113,10 @@ class LobbyManager {
         });
 
         document.getElementById('btn-start-game').addEventListener('click', () => {
-            // 시작 조건 재검증 + 알림
-            const teams = [[], []];
-            for (const p of this.roomPlayers) teams[p.team || 0].push(p);
-            if (teams[0].length === 0 || teams[1].length === 0) {
-                this.showError('양 팀 모두 최소 1명이 필요합니다');
-                return;
-            }
-            const allReady = this.roomPlayers.filter(p => !p.isHost).every(p => p.ready || p.isBot);
-            if (!allReady) {
-                this.showError('모든 플레이어가 Ready 상태여야 합니다');
+            const blockedReason = this.getStartBlockedReason();
+            if (blockedReason) {
+                this.game.sound.playUI('click');
+                this.showInfo(blockedReason);
                 return;
             }
             this.game.sound.playUI('start');
@@ -196,6 +190,10 @@ class LobbyManager {
         document.getElementById('btn-confirm-no').addEventListener('click', () => {
             this.hideConfirmModal();
         });
+
+        document.getElementById('btn-info-ok')?.addEventListener('click', () => {
+            this.hideInfo();
+        });
     }
 
     showScreen(screenId) {
@@ -223,6 +221,26 @@ class LobbyManager {
         const modal = document.getElementById('confirm-modal');
         if (modal) modal.style.display = 'none';
         this._confirmCallback = null;
+    }
+
+    showInfo(message) {
+        const modal = document.getElementById('info-modal');
+        if (!modal) {
+            this.showError(message);
+            return;
+        }
+        document.getElementById('info-message').textContent = message;
+        modal.style.display = '';
+    }
+
+    hideInfo() {
+        const modal = document.getElementById('info-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    t(key, fallback) {
+        const i18n = window.SlimeVolleyI18n;
+        return i18n ? i18n.t(key) : fallback;
     }
 
     getNameFromInput() {
@@ -504,10 +522,30 @@ class LobbyManager {
         }
 
         const allReady = players.filter(p => !p.isHost).every(p => p.ready || p.isBot);
-        const hasPlayers = players.length >= 2;
         const bothTeamsHavePlayers = teams[0].length > 0 && teams[1].length > 0;
         const startBtn = document.getElementById('btn-start-game');
-        startBtn.disabled = !allReady || !hasPlayers || !bothTeamsHavePlayers;
+        const blockedReason = !bothTeamsHavePlayers
+            ? this.t('start.reason.needTwoTeams', '양 팀 모두 최소 1명 이상 있어야 시작할 수 있습니다.')
+            : (!allReady ? this.t('start.reason.notReady', '아직 준비하지 않은 플레이어가 있습니다. 모든 플레이어가 Ready 상태여야 합니다.') : '');
+        startBtn.disabled = false;
+        startBtn.classList.toggle('is-disabled', !!blockedReason);
+        startBtn.setAttribute('aria-disabled', String(!!blockedReason));
+        startBtn.title = blockedReason;
+    }
+
+    getStartBlockedReason(players = this.roomPlayers) {
+        const teams = [[], []];
+        for (const p of players) teams[p.team || 0].push(p);
+        if (teams[0].length === 0 || teams[1].length === 0) {
+            return this.t('start.reason.needTwoTeams', '양 팀 모두 최소 1명 이상 있어야 시작할 수 있습니다.');
+        }
+
+        const notReadyPlayers = players.filter(p => !p.isHost && !(p.ready || p.isBot));
+        if (notReadyPlayers.length > 0) {
+            return this.t('start.reason.notReady', '아직 준비하지 않은 플레이어가 있습니다. 모든 플레이어가 Ready 상태여야 합니다.');
+        }
+
+        return '';
     }
 
     switchTeam() {
