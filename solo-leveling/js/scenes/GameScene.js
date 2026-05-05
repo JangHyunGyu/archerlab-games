@@ -587,6 +587,9 @@ export class GameScene extends Phaser.Scene {
             if (this.enemyManager) this.enemyManager.destroy();
             if (this.statusWindow) this.statusWindow.destroy();
             if (this.mobileControls) this.mobileControls.destroy();
+            if (this.systemMessage) this.systemMessage.destroy();
+            if (this.hud) this.hud.destroy();
+            if (this.player) this.player.destroy();
 
             // Clean up filters
             try {
@@ -600,6 +603,7 @@ export class GameScene extends Phaser.Scene {
                 this._ambientFallback.forEach(p => { if (p.obj && p.obj.active) p.obj.destroy(); });
                 this._ambientFallback = null;
             }
+            if (this.ambientEmitter) { this.ambientEmitter.destroy(); this.ambientEmitter = null; }
 
             if (this._vignetteOverlay) { this._vignetteOverlay.destroy(); this._vignetteOverlay = null; }
             if (this._colorTint) { this._colorTint.destroy(); this._colorTint = null; }
@@ -615,9 +619,23 @@ export class GameScene extends Phaser.Scene {
                     if (boss.hpBarGfx) { boss.hpBarGfx.destroy(); boss.hpBarGfx = null; }
                     if (boss.hpText) { boss.hpText.destroy(); boss.hpText = null; }
                     if (boss.nameText) { boss.nameText.destroy(); boss.nameText = null; }
+                    if (this.tweens) this.tweens.killTweensOf(boss);
+                    if (boss.scene) boss.destroy();
                 }
                 this.activeBosses = [];
             }
+
+            this.weaponManager = null;
+            this.shadowArmyManager = null;
+            this.itemDropManager = null;
+            this.xpOrbPool = null;
+            this.enemyManager = null;
+            this.statusWindow = null;
+            this.mobileControls = null;
+            this.systemMessage = null;
+            this.hud = null;
+            this.player = null;
+            this.bossesSpawned = [];
         } catch (e) {
             console.warn('GameScene shutdown error:', e);
         }

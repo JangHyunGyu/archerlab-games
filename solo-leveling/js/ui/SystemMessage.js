@@ -10,6 +10,9 @@ export class SystemMessage {
         this.queue = [];
         this.isShowing = false;
         this.currentMessage = null;
+        this.currentElements = [];
+        this._timers = new Set();
+        this._destroyed = false;
     }
 
     /**
@@ -19,6 +22,7 @@ export class SystemMessage {
      * @param {object} options - { duration, sound, type }
      */
     show(title, lines, options = {}) {
+        if (this._destroyed || !this.scene) return;
         const msg = {
             title: title || '[시스템]',
             lines: Array.isArray(lines) ? lines : [lines],
@@ -30,6 +34,7 @@ export class SystemMessage {
     }
 
     _showNext() {
+        if (this._destroyed || !this.scene) return;
         if (this.queue.length === 0) {
             this.isShowing = false;
             return;
@@ -49,6 +54,7 @@ export class SystemMessage {
 
         // Container for scroll factor
         const elements = [];
+        this.currentElements = elements;
 
         // Outer glow
         const outerGlow = this.scene.add.rectangle(cx, startY, boxW + 8, boxH + 8, colors.glow, 0.15)
@@ -114,9 +120,9 @@ export class SystemMessage {
         });
 
         // Glitch/flicker effect for cyberpunk feel
-        this.scene.time.delayedCall(100, () => {
+        this._delay(100, () => {
             bg.setAlpha(0.4);
-            this.scene.time.delayedCall(50, () => {
+            this._delay(50, () => {
                 bg.setAlpha(0.85);
             });
         });
@@ -130,7 +136,7 @@ export class SystemMessage {
         }
 
         // Auto-dismiss
-        this.scene.time.delayedCall(msg.duration, () => {
+        this._delay(msg.duration, () => {
             elements.forEach((el, idx) => {
                 this.scene.tweens.add({
                     targets: el,
@@ -140,8 +146,43 @@ export class SystemMessage {
                     onComplete: () => el.destroy(),
                 });
             });
-            this.scene.time.delayedCall(400, () => this._showNext());
+            this._delay(400, () => {
+                if (this.currentElements === elements) this.currentElements = [];
+                this._showNext();
+            });
         });
+    }
+
+    _delay(ms, callback) {
+        if (!this.scene?.time) return null;
+        const timer = this.scene.time.delayedCall(ms, () => {
+            this._timers.delete(timer);
+            if (!this._destroyed && this.scene) callback();
+        });
+        this._timers.add(timer);
+        return timer;
+    }
+
+    destroy() {
+        this._destroyed = true;
+        this.queue = [];
+        this.isShowing = false;
+        this.currentMessage = null;
+
+        for (const timer of this._timers) {
+            try { timer.remove(false); } catch (e) { /* already removed */ }
+        }
+        this._timers.clear();
+
+        const elements = this.currentElements || [];
+        for (const el of elements) {
+            try {
+                if (this.scene?.tweens) this.scene.tweens.killTweensOf(el);
+                if (el?.scene && el.destroy) el.destroy();
+            } catch (e) { /* already destroyed */ }
+        }
+        this.currentElements = [];
+        this.scene = null;
     }
 
     _getColors(type) {

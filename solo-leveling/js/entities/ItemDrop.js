@@ -195,5 +195,6 @@ export class ItemDropManager {
             item.destroy();
         });
         this.items = [];
+        this.scene = null;
     }
 }

@@ -135,5 +135,7 @@ export class XPOrbPool {
             }
             if (this.group) this.group.clear(true, true);
         } catch (e) { /* group already destroyed by scene shutdown */ }
+        this.group = null;
+        this.scene = null;
     }
 }

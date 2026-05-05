@@ -10,7 +10,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Try to reuse an existing emitter
         for (let i = Enemy._deathEmitterPool.length - 1; i >= 0; i--) {
             const em = Enemy._deathEmitterPool[i];
-            if (em && em.scene && !em.emitting) {
+            if (!Enemy._canPoolSceneObject(em)) {
+                Enemy._deathEmitterPool.splice(i, 1);
+                Enemy._disposeTransientObject(em, scene);
+                continue;
+            }
+            if (!em.emitting) {
                 Enemy._deathEmitterPool.splice(i, 1);
                 em.setPosition(x, y);
                 return em;
@@ -36,7 +41,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     static _getDeathSparks(scene, x, y) {
         for (let i = Enemy._deathSparkPool.length - 1; i >= 0; i--) {
             const em = Enemy._deathSparkPool[i];
-            if (em && em.scene && !em.emitting) {
+            if (!Enemy._canPoolSceneObject(em)) {
+                Enemy._deathSparkPool.splice(i, 1);
+                Enemy._disposeTransientObject(em, scene);
+                continue;
+            }
+            if (!em.emitting) {
                 Enemy._deathSparkPool.splice(i, 1);
                 em.setPosition(x, y);
                 return em;
@@ -59,7 +69,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     static _returnDeathEmitter(emitter) {
-        if (emitter && emitter.scene && Enemy._deathEmitterPool.length < Enemy.MAX_POOLED_EMITTERS) {
+        if (emitter && Enemy._canPoolSceneObject(emitter) && Enemy._deathEmitterPool.length < Enemy.MAX_POOLED_EMITTERS) {
             Enemy._deathEmitterPool.push(emitter);
         } else if (emitter && emitter.scene) {
             emitter.destroy();
@@ -67,11 +77,51 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     static _returnDeathSparks(sparks) {
-        if (sparks && sparks.scene && Enemy._deathSparkPool.length < Enemy.MAX_POOLED_EMITTERS) {
+        if (sparks && Enemy._canPoolSceneObject(sparks) && Enemy._deathSparkPool.length < Enemy.MAX_POOLED_EMITTERS) {
             Enemy._deathSparkPool.push(sparks);
         } else if (sparks && sparks.scene) {
             sparks.destroy();
         }
+    }
+
+    static _canPoolSceneObject(obj) {
+        if (!obj?.scene) return false;
+        try {
+            return obj.scene.sys?.isActive?.() !== false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    static _disposeTransientObject(obj, scene = null) {
+        if (!obj) return;
+        try {
+            const tweens = scene?.tweens || obj.scene?.tweens;
+            if (tweens) tweens.killTweensOf(obj);
+        } catch (e) { /* scene may already be shutting down */ }
+        try {
+            if (obj.scene && obj.destroy) obj.destroy();
+        } catch (e) { /* already destroyed */ }
+    }
+
+    static clearTransientPools(scene = null) {
+        for (const emitter of Enemy._deathEmitterPool) {
+            Enemy._disposeTransientObject(emitter, scene);
+        }
+        for (const sparks of Enemy._deathSparkPool) {
+            Enemy._disposeTransientObject(sparks, scene);
+        }
+        for (const text of Enemy._activeTexts) {
+            Enemy._disposeTransientObject(text, scene);
+        }
+        for (const text of Enemy._dmgTextPool) {
+            Enemy._disposeTransientObject(text, scene);
+        }
+
+        Enemy._deathEmitterPool = [];
+        Enemy._deathSparkPool = [];
+        Enemy._activeTexts = [];
+        Enemy._dmgTextPool = [];
     }
 
     static _playFrameVfx(scene, prefix, x, y, opts = {}) {
@@ -634,6 +684,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    destroy(fromScene) {
+        if (this._squashRestoreTimer) {
+            this._squashRestoreTimer.remove(false);
+            this._squashRestoreTimer = null;
+        }
+        if (this.scene?.tweens) {
+            this.scene.tweens.killTweensOf(this);
+            if (this._aura) this.scene.tweens.killTweensOf(this._aura);
+            if (this._eliteLabel) this.scene.tweens.killTweensOf(this._eliteLabel);
+        }
+        if (this._eliteLabel) {
+            this._eliteLabel.destroy();
+            this._eliteLabel = null;
+        }
+        if (this._aura) {
+            this._aura.destroy();
+            this._aura = null;
+        }
+        super.destroy(fromScene);
+    }
+
     static _dmgTextPool = [];
     static _activeTexts = [];
     static MAX_DMG_TEXTS = 40;
@@ -685,6 +756,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const active = Enemy._activeTexts;
         for (let i = active.length - 1; i >= 0; i--) {
             const t = active[i];
+            if (!t || !t.scene) {
+                active.splice(i, 1);
+                continue;
+            }
             t._elapsed += delta;
             const progress = t._elapsed / 500;
             if (progress >= 1) {

@@ -45,7 +45,7 @@ export class BasicDagger extends WeaponBase {
 
     fire() {
         for (let i = 0; i < this.count; i++) {
-            this.scene.time.delayedCall(i * 110, () => this._thrust());
+            this._delay(i * 110, () => this._thrust());
         }
     }
 
@@ -291,7 +291,7 @@ export class BasicDagger extends WeaponBase {
             },
         });
 
-        this.scene.time.delayedCall(132, () => {
+        this._delay(132, () => {
             if (!this.scene?.scene?.isActive() || !this.player?.active) return;
 
             const hitOriginX = this.player.x;
@@ -417,5 +417,6 @@ export class BasicDagger extends WeaponBase {
             if (blade && blade.scene) blade.destroy();
         }
         this._bladePool = [];
+        super.destroy();
     }
 }
