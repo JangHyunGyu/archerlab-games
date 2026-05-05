@@ -390,8 +390,11 @@ export class HUD {
     }
 
     destroy() {
+        const tweens = this.scene?.tweens;
         for (const el of this.elements) {
+            if (tweens) tweens.killTweensOf(el);
             if (el && el.active) el.destroy();
         }
+        this.elements = [];
     }
 }

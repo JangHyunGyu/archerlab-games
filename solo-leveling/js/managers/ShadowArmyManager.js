@@ -8,9 +8,11 @@ export class ShadowArmyManager {
         this.maxSoldiers = 5;
         this.isPerformingArise = false;
         this._ariseElements = []; // Track all created elements for cleanup
+        this._destroyed = false;
     }
 
     onBossKilled(boss) {
+        if (this._destroyed) return;
         if (this.soldiers.length >= this.maxSoldiers) return;
         if (this.isPerformingArise) return;
 
@@ -429,10 +431,12 @@ export class ShadowArmyManager {
     }
 
     destroy() {
+        this._destroyed = true;
         this._cleanupArise();
         for (const soldier of this.soldiers) {
             soldier.destroy();
         }
         this.soldiers = [];
+        this.scene = null;
     }
 }

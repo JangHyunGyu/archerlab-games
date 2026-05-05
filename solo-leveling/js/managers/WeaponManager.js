@@ -18,6 +18,7 @@ export class WeaponManager {
         this.player = player;
         this.weapons = new Map();
         this.maxSlots = 6;
+        this._colliders = [];
     }
 
     addWeapon(weaponKey) {
@@ -51,7 +52,7 @@ export class WeaponManager {
             const enemyGroup = this.scene.enemyManager?.getGroup();
 
             if (projGroup && enemyGroup) {
-                this.scene.physics.add.overlap(projGroup, enemyGroup, (proj, enemy) => {
+                const collider = this.scene.physics.add.overlap(projGroup, enemyGroup, (proj, enemy) => {
                     if (!proj.active || !enemy.active || !weapon) return;
                     const dmg = proj.damageAmount || weapon.getDamage();
                     enemy.takeDamage(dmg, proj.x, proj.y);
@@ -63,6 +64,7 @@ export class WeaponManager {
                         proj.body.enable = false;
                     }
                 });
+                this._colliders.push(collider);
             }
         }
     }
@@ -90,9 +92,17 @@ export class WeaponManager {
     }
 
     destroy() {
+        if (this.scene?.physics?.world && this._colliders) {
+            for (const collider of this._colliders) {
+                try { this.scene.physics.world.removeCollider(collider); } catch (e) { /* already removed */ }
+            }
+        }
+        this._colliders = [];
         for (const weapon of this.weapons.values()) {
             weapon.destroy();
         }
         this.weapons.clear();
+        this.player = null;
+        this.scene = null;
     }
 }

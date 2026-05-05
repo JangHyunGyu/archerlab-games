@@ -8,7 +8,7 @@ export class RulersAuthority extends WeaponBase {
 
     fire() {
         for (let i = 0; i < this.count; i++) {
-            this.scene.time.delayedCall(i * 300, () => this._blast());
+            this._delay(i * 300, () => this._blast());
         }
     }
 
@@ -88,7 +88,7 @@ export class RulersAuthority extends WeaponBase {
         });
 
         // Deal damage to enemies in range
-        this.scene.time.delayedCall(200, () => {
+        this._delay(200, () => {
             if (!this.scene?.scene?.isActive()) return;
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
@@ -100,5 +100,7 @@ export class RulersAuthority extends WeaponBase {
         });
     }
 
-    destroy() {}
+    destroy() {
+        super.destroy();
+    }
 }

@@ -192,11 +192,23 @@ export class StatusWindow {
     }
 
     destroy() {
-        this.close();
+        if (this.scene?.tweens) {
+            this.elements.forEach(el => this.scene.tweens.killTweensOf(el));
+        }
+        this.elements.forEach(el => {
+            try { if (el?.scene && el.destroy) el.destroy(); } catch (e) { /* already destroyed */ }
+        });
+        this.elements = [];
+        this.isOpen = false;
+        if (this.scene?.scene?.isActive('GameScene')) {
+            this.scene.physics.resume();
+        }
+
         if (this.tabKey && this._onTabDown) {
             this.tabKey.off('down', this._onTabDown);
             this.tabKey = null;
             this._onTabDown = null;
         }
+        this.scene = null;
     }
 }

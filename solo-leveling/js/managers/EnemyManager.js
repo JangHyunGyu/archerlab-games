@@ -52,7 +52,7 @@ export class EnemyManager {
         this._cachedActiveEnemies = null;
         this._activeEnemiesDirtyFrame = -1;
 
-        scene.time.delayedCall(320, () => this._spawnOpeningWave());
+        this._openingWaveTimer = scene.time.delayedCall(320, () => this._spawnOpeningWave());
     }
 
     update(time, delta) {
@@ -542,6 +542,11 @@ export class EnemyManager {
     }
 
     destroy() {
+        if (this._openingWaveTimer) {
+            this._openingWaveTimer.remove(false);
+            this._openingWaveTimer = null;
+        }
+
         // 던전 브레이크 보더 정리
         if (this._dungeonBreakBorder) {
             if (this.scene?.tweens) this.scene.tweens.killTweensOf(this._dungeonBreakBorder);
@@ -563,6 +568,12 @@ export class EnemyManager {
                     }
                 });
             }
+            if (this.pool) this.pool.clear(true, true);
         } catch (e) { /* pool already destroyed by scene shutdown */ }
+
+        Enemy.clearTransientPools(this.scene);
+        this._cachedActiveEnemies = null;
+        this.pool = null;
+        this.scene = null;
     }
 }

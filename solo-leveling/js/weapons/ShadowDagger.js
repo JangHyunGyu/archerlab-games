@@ -6,6 +6,7 @@ export class ShadowDagger extends WeaponBase {
         super(scene, player, WEAPONS.shadowDagger);
         this._activeDaggers = [];
         this._trailPool = [];
+        this._activeTrails = new Set();
     }
 
     _getTrailCircle(x, y) {
@@ -15,13 +16,17 @@ export class ShadowDagger extends WeaponBase {
             trail.setVisible(true);
             trail.setAlpha(0.4);
             trail.setScale(1);
+            this._activeTrails.add(trail);
             return trail;
         }
-        return this.scene.add.circle(x, y, 3, 0xb366ff, 0.4).setDepth(7);
+        trail = this.scene.add.circle(x, y, 3, 0xb366ff, 0.4).setDepth(7);
+        this._activeTrails.add(trail);
+        return trail;
     }
 
     _releaseTrailCircle(trail) {
         if (!trail || !trail.scene) return;
+        this._activeTrails.delete(trail);
         trail.setVisible(false);
         if (this._trailPool.length < 50) {
             this._trailPool.push(trail);
@@ -32,7 +37,7 @@ export class ShadowDagger extends WeaponBase {
 
     fire() {
         for (let i = 0; i < this.count; i++) {
-            this.scene.time.delayedCall(i * 100, () => this._throwDagger());
+            this._delay(i * 100, () => this._throwDagger());
         }
     }
 
@@ -180,8 +185,23 @@ export class ShadowDagger extends WeaponBase {
         for (const entry of this._activeDaggers) {
             if (entry.trailInterval) entry.trailInterval.destroy();
             if (tweens) tweens.killTweensOf(entry.dagger);
-            if (entry.dagger.active) entry.dagger.destroy();
+            if (entry.dagger?.scene) entry.dagger.destroy();
         }
         this._activeDaggers = [];
+        for (const trail of this._activeTrails) {
+            if (trail && trail.scene) {
+                if (tweens) tweens.killTweensOf(trail);
+                trail.destroy();
+            }
+        }
+        this._activeTrails.clear();
+        for (const trail of this._trailPool) {
+            if (trail && trail.scene) {
+                if (tweens) tweens.killTweensOf(trail);
+                trail.destroy();
+            }
+        }
+        this._trailPool = [];
+        super.destroy();
     }
 }

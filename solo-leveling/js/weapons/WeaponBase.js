@@ -10,6 +10,8 @@ export class WeaponBase {
         this.count = config.baseCount || 1;
         this.extraRange = 0;
         this.extraSlow = 0;
+        this._timers = new Set();
+        this._destroyed = false;
     }
 
     update(time, delta) {
@@ -49,7 +51,23 @@ export class WeaponBase {
         return Math.floor(dmg);
     }
 
+    _delay(ms, callback) {
+        if (!this.scene?.time) return null;
+        const timer = this.scene.time.delayedCall(ms, () => {
+            this._timers.delete(timer);
+            if (!this._destroyed && this.scene?.scene?.isActive()) callback();
+        });
+        this._timers.add(timer);
+        return timer;
+    }
+
     destroy() {
-        // Override for cleanup
+        this._destroyed = true;
+        for (const timer of this._timers) {
+            try { timer.remove(false); } catch (e) { /* already removed */ }
+        }
+        this._timers.clear();
+        this.player = null;
+        this.scene = null;
     }
 }

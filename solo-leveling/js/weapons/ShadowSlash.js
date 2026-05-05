@@ -6,6 +6,8 @@ export class ShadowSlash extends WeaponBase {
         super(scene, player, WEAPONS.shadowSlash);
         this.slashGroup = scene.physics.add.group();
         this._gfxPool = [];
+        this._activeGfx = new Set();
+        this._activeTweens = new Set();
     }
 
     _getGfx() {
@@ -17,10 +19,12 @@ export class ShadowSlash extends WeaponBase {
             gfx.setVisible(true);
             gfx.setAlpha(1);
         }
+        this._activeGfx.add(gfx);
         return gfx;
     }
 
     _releaseGfx(gfx) {
+        this._activeGfx.delete(gfx);
         gfx.clear();
         gfx.setVisible(false);
         if (this._gfxPool.length < 10) {
@@ -33,7 +37,7 @@ export class ShadowSlash extends WeaponBase {
     fire() {
         for (let i = 0; i < this.count; i++) {
             const angleOffset = this.count > 1 ? (i - (this.count - 1) / 2) * 0.8 : 0;
-            this.scene.time.delayedCall(i * 150, () => this._doSlash(angleOffset));
+            this._delay(i * 150, () => this._doSlash(angleOffset));
         }
     }
 
@@ -61,7 +65,8 @@ export class ShadowSlash extends WeaponBase {
         const swingEnd = angle + 0.8;
 
         let progress = { t: 0 };
-        this.scene.tweens.add({
+        let arcTween = null;
+        arcTween = this.scene.tweens.add({
             targets: progress,
             t: 1,
             duration: 280,
@@ -139,9 +144,11 @@ export class ShadowSlash extends WeaponBase {
                 }
             },
             onComplete: () => {
+                this._activeTweens.delete(arcTween);
                 this._releaseGfx(gfx);
             },
         });
+        this._activeTweens.add(arcTween);
 
         // Visual-only slash sprite (energy wave projection)
         const useEffectAsset = this.scene.textures.exists('effect_shadow_slash');
@@ -198,10 +205,26 @@ export class ShadowSlash extends WeaponBase {
     }
 
     destroy() {
-        this.slashGroup.destroy(true);
+        if (this.scene?.tweens) {
+            for (const tween of this._activeTweens) {
+                this.scene.tweens.remove(tween);
+            }
+            for (const gfx of this._activeGfx) {
+                this.scene.tweens.killTweensOf(gfx);
+            }
+        }
+        this._activeTweens.clear();
+
+        if (this.slashGroup) this.slashGroup.destroy(true);
+        for (const gfx of this._activeGfx) {
+            if (gfx && gfx.scene) gfx.destroy();
+        }
+        this._activeGfx.clear();
         for (const gfx of this._gfxPool) {
             if (gfx && gfx.scene) gfx.destroy();
         }
         this._gfxPool = [];
+        this.slashGroup = null;
+        super.destroy();
     }
 }

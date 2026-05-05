@@ -87,5 +87,6 @@ export class DragonFear extends WeaponBase {
             this.auraSprite.destroy();
             this.auraSprite = null;
         }
+        super.destroy();
     }
 }
