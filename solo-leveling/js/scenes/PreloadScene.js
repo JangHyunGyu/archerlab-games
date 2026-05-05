@@ -130,6 +130,16 @@ export class PreloadScene extends Phaser.Scene {
         ].forEach((key) => {
             this.load.image(`effect_${key}`, `assets/effects/${key}.png`);
         });
+        [
+            'basic_stab',
+            'monster_hit',
+            'monster_crit',
+            'monster_death',
+        ].forEach((key) => {
+            for (let i = 0; i < 6; i++) {
+                this.load.image(`effect_${key}_${i}`, `assets/effects/combat/${key}_${i}.png`);
+            }
+        });
 
         const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
 

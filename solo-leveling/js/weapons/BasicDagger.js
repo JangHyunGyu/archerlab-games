@@ -11,19 +11,22 @@ export class BasicDagger extends WeaponBase {
         this._stabSide = 1;
     }
 
-    _getBlade() {
+    _getBlade(textureKey = 'proj_dagger_stab') {
+        const isEffectStab = textureKey.startsWith('effect_basic_stab');
         let blade = this._bladePool.pop();
         if (blade && blade.scene) {
+            blade.setTexture(textureKey);
             blade.setVisible(true);
             blade.setAlpha(1);
             blade.setScale(1);
             blade.clearTint();
+            blade.setOrigin(0.5, isEffectStab ? 0.5 : 0.94);
             blade.setBlendMode(Phaser.BlendModes.NORMAL);
             return blade;
         }
 
-        return this.scene.add.sprite(0, 0, 'proj_dagger_stab')
-            .setOrigin(0.5, 0.94)
+        return this.scene.add.sprite(0, 0, textureKey)
+            .setOrigin(0.5, isEffectStab ? 0.5 : 0.94)
             .setDepth(13);
     }
 
@@ -65,7 +68,8 @@ export class BasicDagger extends WeaponBase {
         if (this.player.playAttackMotion) {
             this.player.playAttackMotion(baseAngle, 240, side);
         }
-        const bladeScale = 0.72;
+        const useEffectStab = this.scene.textures.exists('effect_basic_stab_0');
+        const bladeScale = useEffectStab ? 0.56 : 0.72;
         const bladeTipFromOrigin = 82 * 0.94;
         const bladeVisualLength = bladeTipFromOrigin * bladeScale;
         const pommelRestDist = 12;
@@ -75,11 +79,12 @@ export class BasicDagger extends WeaponBase {
         );
         const thrustTravel = pommelMaxDist - pommelRestDist;
 
-        const mainBlade = this._getBlade().setDepth(14).setScale(bladeScale);
-        const trail1 = this._getBlade();
-        const trail2 = this._getBlade();
-        const trail3 = this._getBlade();
-        const trails = [trail1, trail2, trail3];
+        const mainBlade = this._getBlade(useEffectStab ? 'effect_basic_stab_0' : 'proj_dagger_stab')
+            .setDepth(14)
+            .setScale(bladeScale);
+        const trails = useEffectStab
+            ? []
+            : [this._getBlade(), this._getBlade(), this._getBlade()];
 
         for (const trail of trails) {
             trail.setScale(bladeScale);
@@ -193,6 +198,7 @@ export class BasicDagger extends WeaponBase {
             fx.fillStyle(0xbda9ff, 0.55 * armAlpha);
             fx.fillCircle(pose.pommelX - pose.perpX * 1.4, pose.pommelY - pose.perpY * 1.4, 2.1);
 
+            if (useEffectStab) return;
             if (forwardAlpha <= 0.03) return;
 
             const streakTail = 34 + 82 * forwardAlpha;
@@ -241,13 +247,25 @@ export class BasicDagger extends WeaponBase {
 
                 drawThrustFx(pose, phase);
 
-                mainBlade.setPosition(pose.pommelX, pose.pommelY);
-                mainBlade.setRotation(pose.angle + Math.PI / 2);
-                mainBlade.setAlpha(phase.alpha);
-                mainBlade.setScale(
-                    bladeScale * (1 + phase.force * 0.04),
-                    bladeScale * (1 + phase.force * 0.06)
-                );
+                if (useEffectStab) {
+                    const frameIndex = Math.min(5, Math.floor(progress.t * 6));
+                    mainBlade.setTexture(`effect_basic_stab_${frameIndex}`);
+                    const centerDist = 28 + 58 * Phaser.Math.Clamp(phase.reach, 0, 1);
+                    const centerX = this.player.x + pose.cosA * centerDist + pose.perpX * side * 5;
+                    const centerY = this.player.y - 16 + pose.sinA * centerDist + pose.perpY * side * 5;
+                    mainBlade.setPosition(centerX, centerY);
+                    mainBlade.setRotation(pose.angle);
+                    mainBlade.setAlpha(phase.alpha);
+                    mainBlade.setScale(bladeScale * (1 + phase.force * 0.05));
+                } else {
+                    mainBlade.setPosition(pose.pommelX, pose.pommelY);
+                    mainBlade.setRotation(pose.angle + Math.PI / 2);
+                    mainBlade.setAlpha(phase.alpha);
+                    mainBlade.setScale(
+                        bladeScale * (1 + phase.force * 0.04),
+                        bladeScale * (1 + phase.force * 0.06)
+                    );
+                }
 
                 for (let i = 0; i < trails.length; i++) {
                     const idx = history.length - 1 - (i + 1) * 2;
@@ -280,27 +298,29 @@ export class BasicDagger extends WeaponBase {
             const hitOriginY = this.player.y - 16;
             const hitPose = getPose(1, 0);
 
-            impactFx.clear();
-            impactFx.lineStyle(2, 0xffffff, 0.95);
-            impactFx.lineBetween(
-                hitPose.tipX - hitPose.cosA * 18,
-                hitPose.tipY - hitPose.sinA * 18,
-                hitPose.tipX + hitPose.cosA * 9,
-                hitPose.tipY + hitPose.sinA * 9
-            );
-            impactFx.lineStyle(2, 0x9b79ff, 0.7);
-            impactFx.strokeCircle(hitPose.tipX, hitPose.tipY, 9);
-            this.scene.tweens.add({
-                targets: impactFx,
-                alpha: 0,
-                duration: 130,
-                onComplete: () => {
-                    if (impactFx.scene) {
-                        impactFx.clear();
-                        impactFx.setAlpha(1);
-                    }
-                },
-            });
+            if (!this.scene.textures.exists('effect_monster_hit_0')) {
+                impactFx.clear();
+                impactFx.lineStyle(2, 0xffffff, 0.95);
+                impactFx.lineBetween(
+                    hitPose.tipX - hitPose.cosA * 18,
+                    hitPose.tipY - hitPose.sinA * 18,
+                    hitPose.tipX + hitPose.cosA * 9,
+                    hitPose.tipY + hitPose.sinA * 9
+                );
+                impactFx.lineStyle(2, 0x9b79ff, 0.7);
+                impactFx.strokeCircle(hitPose.tipX, hitPose.tipY, 9);
+                this.scene.tweens.add({
+                    targets: impactFx,
+                    alpha: 0,
+                    duration: 130,
+                    onComplete: () => {
+                        if (impactFx.scene) {
+                            impactFx.clear();
+                            impactFx.setAlpha(1);
+                        }
+                    },
+                });
+            }
 
             const enemies = this.player.getAllEnemies();
             const hitAngleTol = 0.62;
@@ -317,7 +337,9 @@ export class BasicDagger extends WeaponBase {
                 enemy.takeDamage(this.getDamage(), hitPose.tipX, hitPose.tipY);
                 if (this.scene.soundManager) this.scene.soundManager.play('hit');
 
-                this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
+                if (!this.scene.textures.exists('effect_monster_hit_0')) {
+                    this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
+                }
             }
         });
 
