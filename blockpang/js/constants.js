@@ -75,11 +75,19 @@ function getBlockpangTexture(key) {
         : null;
 }
 
+function getBlockpangBoardPanelExt(cellSize, screenW, screenH) {
+    const isPortrait = Number(screenH) > Number(screenW) * 1.12;
+    return isPortrait
+        ? Math.max(18, Math.round(cellSize * 0.62))
+        : Math.max(28, Math.round(cellSize * 1.1));
+}
+
 if (typeof window !== 'undefined') {
     window.BLOCKPANG_ASSET_MANIFEST = BLOCKPANG_ASSET_MANIFEST;
     window.BLOCKPANG_PNG_TILE_FALLBACKS = BLOCKPANG_PNG_TILE_FALLBACKS;
     window.getBlockpangAssetManifest = getBlockpangAssetManifest;
     window.getBlockpangTexture = getBlockpangTexture;
+    window.getBlockpangBoardPanelExt = getBlockpangBoardPanelExt;
 }
 
 // ─── Block Colors (premium neon palette with richer gradients) ───

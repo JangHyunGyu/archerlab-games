@@ -348,7 +348,7 @@ class Game {
         const availH = h - scoreAreaH - padding * 2;
         const isPortrait = h > w * 1.12;
 
-        const panelExtForCell = (cell) => Math.max(28, Math.round(cell * 1.1));
+        const panelExtForCell = (cell) => getBlockpangBoardPanelExt(cell, w, h);
         const maxCellForVisualWidth = (maxWidth) => {
             for (let cell = 72; cell >= 8; cell--) {
                 const ext = panelExtForCell(cell);
@@ -367,14 +367,14 @@ class Game {
         // Reserve room on the sides so the board panel asset's outer frame
         // doesn't push the cells against the screen edges.
         const frameMargin = isPortrait
-            ? Math.max(4, Math.min(8, w * 0.016))
+            ? 4
             : Math.max(14, Math.min(w, h) * 0.025);
         // Asset frame on board-panel.webp is ~11% of total panel side, so
         // ext ≈ cs * 1.1 is needed to keep cells inside the inner edge of the frame.
         // The panel-to-cell-area ratio is therefore (10 + 2*1.1) / 10 = 1.22.
         const PANEL_RATIO = 1.22;
         if (isPortrait) {
-            const minTrayH = Math.max(176, Math.min(250, h * 0.3));
+            const minTrayH = Math.max(154, Math.min(220, h * 0.24));
             const maxBoardStack = h - scoreAreaH - padding * 3 - minTrayH;
             this.cellSize = Math.min(
                 maxCellForVisualWidth(w - frameMargin * 2),

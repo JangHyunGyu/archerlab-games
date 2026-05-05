@@ -159,7 +159,11 @@ class Board {
         // Outer extension so the asset's corner brackets sit clear of the cells.
         // The board-panel.webp frame is ~11% of total side, so ext ≈ cs * 1.1
         // keeps the cells fully inside the inner edge of the frame.
-        const ext = Math.max(28, Math.round(cs * 1.1));
+        const ext = getBlockpangBoardPanelExt(
+            cs,
+            this.app && this.app.screen ? this.app.screen.width : 0,
+            this.app && this.app.screen ? this.app.screen.height : 0
+        );
         const g = new PIXI.Graphics();
 
         // Soft neon shadow underneath the asset panel.
