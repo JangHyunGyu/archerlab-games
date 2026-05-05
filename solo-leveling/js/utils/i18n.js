@@ -25,6 +25,7 @@ const TEXTS = {
         title: '그림자 서바이벌',
         subtitle: 'S U R V I V O R S',
         startGame: '게임 시작',
+        continueGame: '이어서 하기',
         controlsMobile: '화면 왼쪽을 터치 & 드래그하여 이동',
         controlsMobileAuto: '공격은 자동 | 적을 처치하고 레벨업하세요',
         controlsPC: 'WASD / 방향키로 이동  |  자동 공격  |  TAB: 상태창  |  M: 사운드',
@@ -51,6 +52,7 @@ const TEXTS = {
         sysSystem: '[시스템]',
         sysWarning: '[경고]',
         sysQuest: '[퀘스트]',
+        resumeLoaded: '진행 데이터를 복구했습니다.',
 
         // Level up
         levelUp: 'LEVEL UP!',
@@ -152,6 +154,7 @@ const TEXTS = {
         title: 'Shadow Survival',
         subtitle: 'S U R V I V O R S',
         startGame: 'START GAME',
+        continueGame: 'CONTINUE',
         controlsMobile: 'Touch & drag the left side to move',
         controlsMobileAuto: 'Auto-attack | Kill enemies and level up!',
         controlsPC: 'WASD / Arrow keys to move  |  Auto-attack  |  TAB: Status  |  M: Sound',
@@ -177,6 +180,7 @@ const TEXTS = {
         sysSystem: '[SYSTEM]',
         sysWarning: '[WARNING]',
         sysQuest: '[QUEST]',
+        resumeLoaded: 'Progress restored.',
 
         levelUp: 'LEVEL UP!',
         levelUpMsg: 'Level increased!',
@@ -267,6 +271,7 @@ const TEXTS = {
         title: 'シャドウサバイバル',
         subtitle: 'S U R V I V O R S',
         startGame: 'ゲーム開始',
+        continueGame: '続きから',
         controlsMobile: '画面左側をタッチ＆ドラッグで移動',
         controlsMobileAuto: '攻撃は自動 | 敵を倒してレベルアップ！',
         controlsPC: 'WASD / 矢印キーで移動  |  自動攻撃  |  TAB: ステータス  |  M: サウンド',
@@ -292,6 +297,7 @@ const TEXTS = {
         sysSystem: '[システム]',
         sysWarning: '[警告]',
         sysQuest: '[クエスト]',
+        resumeLoaded: '進行データを復元しました。',
 
         levelUp: 'LEVEL UP!',
         levelUpMsg: 'レベルが上がりました！',
