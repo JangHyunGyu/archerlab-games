@@ -471,6 +471,8 @@ export class EnemyManager {
 
         // Elite visual: larger size + red tint + glow + name label
         enemy.setScale(enemy.scaleX * 1.5, enemy.scaleY * 1.5);
+        enemy._restScaleX = enemy.scaleX;
+        enemy._restScaleY = enemy.scaleY;
         enemy.setTint(0xff6644);
         try {
             enemy.enableFilters();
