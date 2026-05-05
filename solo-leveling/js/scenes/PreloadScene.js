@@ -140,6 +140,16 @@ export class PreloadScene extends Phaser.Scene {
                 this.load.image(`effect_${key}_${i}`, `assets/effects/combat/${key}_${i}.png`);
             }
         });
+        [
+            'dark_mage_orb',
+            'boss_igris_slash',
+            'boss_tusk_slam',
+            'boss_beru_acid',
+        ].forEach((key) => {
+            for (let i = 0; i < 6; i++) {
+                this.load.image(`effect_${key}_${i}`, `assets/effects/enemy_boss/${key}_${i}.png`);
+            }
+        });
 
         const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
 

@@ -1,6 +1,70 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 
 export class Boss extends Phaser.Physics.Arcade.Sprite {
+    static _playFrameVfx(scene, prefix, x, y, opts = {}) {
+        if (!scene?.textures?.exists(`${prefix}_0`)) return false;
+
+        const {
+            scale = 1,
+            rotation = 0,
+            depth = 8,
+            frameMs = 55,
+            alpha = 1,
+            blendMode = Phaser.BlendModes.ADD,
+        } = opts;
+
+        try {
+            const sprite = scene.add.sprite(x, y, `${prefix}_0`)
+                .setOrigin(0.5)
+                .setDepth(depth)
+                .setAlpha(alpha)
+                .setScale(scale)
+                .setRotation(rotation)
+                .setBlendMode(blendMode);
+
+            let frame = 0;
+            const timer = scene.time.addEvent({
+                delay: frameMs,
+                repeat: 5,
+                callback: () => {
+                    frame += 1;
+                    if (!sprite.scene || frame > 5) {
+                        if (sprite.scene) sprite.destroy();
+                        return;
+                    }
+                    sprite.setTexture(`${prefix}_${frame}`);
+                    if (frame >= 5) {
+                        scene.tweens.add({
+                            targets: sprite,
+                            alpha: 0,
+                            duration: frameMs,
+                            onComplete: () => sprite.destroy(),
+                        });
+                    }
+                },
+            });
+            sprite.once('destroy', () => timer.destroy());
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    static _animateFrameSprite(scene, sprite, prefix, frameMs = 60) {
+        if (!scene?.textures?.exists(`${prefix}_0`) || !sprite?.scene) return null;
+
+        let frame = 0;
+        return scene.time.addEvent({
+            delay: frameMs,
+            loop: true,
+            callback: () => {
+                if (!sprite.scene) return;
+                frame = (frame + 1) % 6;
+                sprite.setTexture(`${prefix}_${frame}`);
+            },
+        });
+    }
+
     constructor(scene, x, y, bossKey, difficultyMult = 1, hp = null, atkMult = 1) {
         const config = BOSS_TYPES[bossKey];
         super(scene, x, y, 'boss_' + bossKey + '_0');
@@ -314,15 +378,29 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             warnIcon.destroy(); countdown.destroy();
             if (!this.active) return;
 
-            // Slash visual
-            const slash = this.scene.add.sprite(slashX, slashY, 'proj_igris')
-                .setDepth(8).setRotation(angle).setScale(2.5);
-            this.scene.tweens.add({
-                targets: slash,
-                alpha: 0, scaleX: 3.5, scaleY: 3.5,
-                duration: 300,
-                onComplete: () => slash.destroy(),
-            });
+            const usedSlashAsset = Boss._playFrameVfx(
+                this.scene,
+                'effect_boss_igris_slash',
+                slashX,
+                slashY,
+                {
+                    scale: 0.82,
+                    rotation: angle,
+                    depth: 8,
+                    frameMs: 48,
+                    alpha: 0.96,
+                }
+            );
+            if (!usedSlashAsset) {
+                const slash = this.scene.add.sprite(slashX, slashY, 'proj_igris')
+                    .setDepth(8).setRotation(angle).setScale(2.5);
+                this.scene.tweens.add({
+                    targets: slash,
+                    alpha: 0, scaleX: 3.5, scaleY: 3.5,
+                    duration: 300,
+                    onComplete: () => slash.destroy(),
+                });
+            }
 
             // Damage player if in cone
             const player = this.scene.player;
@@ -408,15 +486,30 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             lines.forEach(l => l.destroy());
             if (!this.active) return;
 
-            // Slam visual (brown impact mark)
-            const slam = this.scene.add.sprite(slamX, slamY, 'proj_tusk')
-                .setDepth(8).setScale(3);
-            this.scene.tweens.add({
-                targets: slam,
-                alpha: 0, scaleX: 5, scaleY: 5,
-                duration: 400,
-                onComplete: () => slam.destroy(),
-            });
+            const usedSlamAsset = Boss._playFrameVfx(
+                this.scene,
+                'effect_boss_tusk_slam',
+                slamX,
+                slamY,
+                {
+                    scale: radius / 128,
+                    rotation: Phaser.Math.FloatBetween(-0.25, 0.25),
+                    depth: 8,
+                    frameMs: 62,
+                    alpha: 0.94,
+                    blendMode: Phaser.BlendModes.NORMAL,
+                }
+            );
+            if (!usedSlamAsset) {
+                const slam = this.scene.add.sprite(slamX, slamY, 'proj_tusk')
+                    .setDepth(8).setScale(3);
+                this.scene.tweens.add({
+                    targets: slam,
+                    alpha: 0, scaleX: 5, scaleY: 5,
+                    duration: 400,
+                    onComplete: () => slam.destroy(),
+                });
+            }
 
             // White shockwave ring — fast expanding (tank impact feel, NOT blood)
             const shockRing = this.scene.add.circle(slamX, slamY, 20, 0, 0)
@@ -542,11 +635,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             const offset = (i - (spreadCount - 1) / 2) * spreadAngle;
             const angle = baseAngle + offset;
 
-            const proj = this.scene.add.sprite(this.x, this.y, 'proj_beru')
-                .setDepth(8).setScale(1.5);
+            const useEffectAsset = this.scene.textures.exists('effect_boss_beru_acid_0');
+            const proj = this.scene.add.sprite(this.x, this.y, useEffectAsset ? 'effect_boss_beru_acid_0' : 'proj_beru')
+                .setDepth(8)
+                .setRotation(useEffectAsset ? angle : 0)
+                .setScale(useEffectAsset ? 0.24 : 1.5)
+                .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
             this.scene.physics.add.existing(proj, false);
             proj.body.setAllowGravity(false);
-            proj.body.setCircle(6);
+            proj.body.setCircle(useEffectAsset ? 9 : 6);
+            const frameTimer = useEffectAsset
+                ? Boss._animateFrameSprite(this.scene, proj, 'effect_boss_beru_acid', 62)
+                : null;
 
             const speed = 280;
             proj.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
@@ -559,25 +659,31 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                     if (!proj.active) return;
                     player.takeDamage(Math.floor(this.attack * 0.7));
                     if (collider) this.scene.physics.world.removeCollider(collider);
+                    if (frameTimer) frameTimer.destroy();
                     this.scene.tweens.killTweensOf(proj);
                     proj.destroy();
                 });
             }
 
-            // Trail particles
-            this.scene.tweens.add({
-                targets: proj,
-                rotation: proj.rotation + Math.PI * 6,
-                duration: 4000,
-            });
+            if (!useEffectAsset) {
+                this.scene.tweens.add({
+                    targets: proj,
+                    rotation: proj.rotation + Math.PI * 6,
+                    duration: 4000,
+                });
+            }
 
             // Auto-destroy after 4s
             this.scene.time.delayedCall(4000, () => {
                 if (proj && proj.active) {
                     if (collider) this.scene.physics.world.removeCollider(collider);
+                    if (frameTimer) frameTimer.destroy();
                     this.scene.tweens.killTweensOf(proj);
                     proj.destroy();
                 }
+            });
+            proj.once('destroy', () => {
+                if (frameTimer) frameTimer.destroy();
             });
         }
     }
