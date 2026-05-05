@@ -144,19 +144,21 @@ export class ShadowSlash extends WeaponBase {
         });
 
         // Visual-only slash sprite (energy wave projection)
-        const slash = this.scene.add.sprite(slashX, slashY, 'proj_slash')
+        const useEffectAsset = this.scene.textures.exists('effect_shadow_slash');
+        const slash = this.scene.add.sprite(slashX, slashY, useEffectAsset ? 'effect_shadow_slash' : 'proj_slash')
             .setDepth(8)
             .setRotation(angle)
-            .setAlpha(0.5)
-            .setScale(1.5 + this.extraRange / 60)
-            .setTint(0xbb77ff);
+            .setAlpha(useEffectAsset ? 0.82 : 0.5)
+            .setScale(useEffectAsset ? 0.48 + this.extraRange / 460 : 1.5 + this.extraRange / 60)
+            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+        if (!useEffectAsset) slash.setTint(0xbb77ff);
 
         this.scene.tweens.add({
             targets: slash,
             alpha: 0,
-            scaleX: slash.scaleX * 1.8,
-            scaleY: slash.scaleY * 1.8,
-            duration: 400,
+            scaleX: slash.scaleX * (useEffectAsset ? 1.28 : 1.8),
+            scaleY: slash.scaleY * (useEffectAsset ? 1.28 : 1.8),
+            duration: useEffectAsset ? 320 : 400,
             onComplete: () => slash.destroy(),
         });
 

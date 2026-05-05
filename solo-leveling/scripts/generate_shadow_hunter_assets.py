@@ -294,9 +294,6 @@ def main() -> None:
                 wisp_phase=i * 0.75 + reach,
                 wisp_power=1.2,
                 shadow_scale=1.08,
-                stab_angle=cfg["stab_angle"],
-                stab_power=reach,
-                stab_side=cfg["side"],
             ))
 
     hit_specs = [

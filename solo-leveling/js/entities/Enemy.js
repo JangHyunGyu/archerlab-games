@@ -228,8 +228,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Face direction
-        this.setFlipX(playerX < this.x);
+        // Face movement/target direction. The refreshed goblin source faces right;
+        // the other generated enemy sources face left, so their flip baseline differs.
+        const movingLeft = playerX < this.x;
+        const sourceFacesRight = this.enemyType === 'goblin';
+        this.setFlipX(sourceFacesRight ? movingLeft : !movingLeft);
 
         // Smooth 4-frame animation (skip for offscreen enemies to save texture swaps)
         if (dist < 800) {
