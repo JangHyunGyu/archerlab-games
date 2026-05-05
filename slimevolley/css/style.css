@@ -500,15 +500,17 @@ kbd {
 
 /* Panel */
 .panel {
-    background: var(--bg-panel);
+    background:
+        linear-gradient(145deg, rgba(22, 26, 38, 0.96), rgba(13, 16, 24, 0.96)),
+        var(--bg-panel);
     border: 1px solid var(--border-soft);
-    border-radius: 16px;
+    border-radius: 14px;
     padding: 32px 30px;
     max-width: 420px;
     width: 100%;
-    box-shadow: 0 24px 60px -20px rgba(0,0,0,0.5);
+    box-shadow: 0 28px 80px -26px rgba(0,0,0,0.68), inset 0 1px 0 rgba(255,255,255,0.035);
 }
-.panel-wide { max-width: 620px; }
+.panel-wide { max-width: 760px; }
 
 .panel h2 {
     font-family: var(--font-display);
@@ -518,6 +520,106 @@ kbd {
     color: var(--text);
     margin-bottom: 24px;
     text-align: center;
+}
+
+.setup-panel {
+    display: grid;
+    grid-template-columns: minmax(210px, 0.9fr) minmax(280px, 1fr);
+    gap: 14px 22px;
+    max-width: 760px;
+    padding: 28px;
+}
+
+.setup-panel h2 {
+    grid-column: 1 / -1;
+    margin-bottom: 2px;
+    text-align: left;
+}
+
+.setup-art {
+    grid-row: 2 / span 4;
+    display: grid;
+    grid-template-columns: 1fr 0.58fr 1fr;
+    align-items: end;
+    justify-items: center;
+    min-height: 218px;
+    padding: 22px 18px 18px;
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    background:
+        linear-gradient(180deg, rgba(122,166,255,0.08), rgba(11,13,18,0.58)),
+        url('../assets/images/court-bg.webp') center bottom / cover no-repeat;
+    overflow: hidden;
+}
+
+.setup-art img {
+    display: block;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 18px rgba(0,0,0,0.42));
+}
+
+.setup-art img:nth-child(1),
+.setup-art img:nth-child(3) {
+    width: 92px;
+}
+
+.setup-art img:nth-child(2) {
+    align-self: start;
+    width: 46px;
+    margin-top: 6px;
+    animation: logoBounce 2.2s ease-in-out infinite;
+}
+
+.setup-panel .form-group {
+    margin-bottom: 0;
+}
+
+.setup-panel .form-actions {
+    grid-column: 2;
+    margin-top: 2px;
+}
+
+.lobby-panel {
+    max-width: 820px;
+    padding: 26px;
+}
+
+.lobby-panel h2,
+.create-panel h2 {
+    text-align: left;
+    margin-bottom: 18px;
+}
+
+.lobby-panel .form-actions {
+    justify-content: flex-end;
+}
+
+.lobby-panel .form-actions .btn {
+    flex: 0 0 180px;
+}
+
+.create-panel {
+    max-width: 640px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 14px;
+}
+
+.create-panel h2,
+.create-panel #password-group,
+.create-panel .form-actions {
+    grid-column: 1 / -1;
+}
+
+.create-panel .form-actions {
+    justify-self: end;
+    width: min(340px, 100%);
+}
+
+.room-panel {
+    max-width: 900px;
+    padding: 28px;
 }
 
 .form-group {
@@ -842,6 +944,32 @@ kbd {
     font-weight: 600;
 }
 
+.room-panel .room-header-section {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 10px 16px;
+    margin-bottom: 18px;
+}
+
+.room-panel .room-header-section h2 {
+    text-align: left;
+    margin: 0;
+    font-size: 1.32rem;
+}
+
+.room-panel .room-type-display {
+    justify-self: end;
+    min-width: 130px;
+    margin: 0;
+}
+
+.room-panel .room-meta {
+    grid-column: 1 / -1;
+    text-align: left;
+    margin: -4px 0 0;
+}
+
 /* Player List */
 .player-list {
     display: grid;
@@ -855,6 +983,13 @@ kbd {
     border: 1px solid var(--border-soft);
     border-radius: 10px;
     padding: 12px;
+}
+
+.room-panel .team-group {
+    min-height: 292px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005)),
+        rgba(11, 13, 18, 0.56);
 }
 
 .team-label {
@@ -908,11 +1043,11 @@ kbd {
 
 /* Chat */
 .chat-section {
-    margin-top: 12px;
-    margin-bottom: 8px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 .chat-messages {
-    height: 100px;
+    height: 100%;
     overflow-y: auto;
     background: rgba(11, 13, 18, 0.5);
     border: 1px solid var(--border-soft);
@@ -1015,12 +1150,16 @@ kbd {
 
 /* Room Body Layout */
 .room-body {
+    display: grid;
+    grid-template-columns: minmax(420px, 1.45fr) minmax(260px, 0.9fr);
+    gap: 16px;
     flex: 1;
     min-height: 0;
 }
 .room-sidebar {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 .room-sidebar .chat-section {
     flex: 1;
@@ -1029,7 +1168,11 @@ kbd {
 }
 .room-sidebar .chat-messages {
     flex: 1;
-    min-height: 60px;
+    min-height: 228px;
+}
+
+.room-panel .form-actions {
+    margin-top: 18px;
 }
 
 /* Game Screen Layout */
@@ -1177,6 +1320,31 @@ kbd {
     .controls-guide { display: none !important; }
     .lobby-top { flex-direction: column; align-items: stretch; }
     .lobby-actions { justify-content: flex-end; }
+}
+
+@media (max-width: 900px) {
+    .setup-panel {
+        grid-template-columns: 1fr;
+        max-width: 560px;
+    }
+
+    .setup-art,
+    .setup-panel .form-actions {
+        grid-column: 1;
+    }
+
+    .setup-art {
+        grid-row: auto;
+        min-height: 160px;
+    }
+
+    .room-body {
+        grid-template-columns: 1fr;
+    }
+
+    .room-sidebar .chat-messages {
+        min-height: 120px;
+    }
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -1621,6 +1789,10 @@ kbd {
         border-radius: 12px;
     }
 
+    #practice-setup .setup-art {
+        display: none;
+    }
+
     #practice-setup .panel h2 {
         grid-column: 1 / -1;
         margin: 0 0 2px;
@@ -1640,6 +1812,10 @@ kbd {
         justify-self: center;
         width: min(390px, 100%);
         margin-top: 2px;
+    }
+
+    #room-screen .room-panel .team-group {
+        min-height: 0;
     }
 
     #practice-setup .form-actions .btn {

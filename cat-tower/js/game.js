@@ -1031,12 +1031,16 @@
     const wrap = $('game-tier-strip');
     if (!wrap) return;
     wrap.innerHTML = '';
+    wrap.setAttribute('role', 'list');
     TIERS.forEach((_tier, i) => {
       const cell = document.createElement('div');
       cell.className = 'game-tier-cell';
       cell.title = catLabel(i);
+      cell.setAttribute('role', 'listitem');
+      cell.setAttribute('aria-label', catLabel(i));
 
       const c = document.createElement('canvas');
+      c.setAttribute('aria-hidden', 'true');
       c.width = 36;
       c.height = 36;
       const cctx = c.getContext('2d');

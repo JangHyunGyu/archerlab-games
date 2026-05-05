@@ -546,6 +546,11 @@ class Game {
             this.effects.playLineSweep(clearResult.rows || [], clearResult.cols || [], boardPos);
         }
 
+        if (clearResult.lines >= 2) {
+            const pulse = Math.min(0.022, 0.008 + clearResult.lines * 0.004);
+            this.effects.playScreenZoomPulse(pulse, 240);
+        }
+
         this.effects.playFlashEffect(clearResult.sprites, () => {
             try {
                 clearResult.apply();
