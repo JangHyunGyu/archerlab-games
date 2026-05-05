@@ -60,6 +60,67 @@ export class SoundManager {
         this._pools[name]._index = 0;
     }
 
+    _ensureSfxBus() {
+        if (this._sfxGain || typeof Tone === 'undefined' || !this._toneReady) return;
+        try {
+            const ctx = Tone.getContext()?.rawContext;
+            if (!ctx) return;
+
+            this._sfxContext = ctx;
+            this._sfxGain = ctx.createGain();
+            this._sfxGain.gain.value = this.enabled ? this._sfxMaster : 0;
+
+            this._sfxComp = ctx.createDynamicsCompressor();
+            this._sfxComp.threshold.value = -18;
+            this._sfxComp.knee.value = 10;
+            this._sfxComp.ratio.value = 8;
+            this._sfxComp.attack.value = 0.003;
+            this._sfxComp.release.value = 0.18;
+
+            this._sfxGain.connect(this._sfxComp);
+            this._sfxComp.connect(ctx.destination);
+        } catch (e) { /* HTMLAudio fallback remains available */ }
+    }
+
+    _loadSfxBuffers() {
+        if (this._sfxLoadPromise || !this._sfxContext || typeof fetch === 'undefined') return this._sfxLoadPromise;
+        const entries = Object.entries(this._sfxSources);
+        this._sfxLoadPromise = Promise.all(entries.map(async ([name, src]) => {
+            if (this._sfxBuffers.has(name)) return;
+            try {
+                const response = await fetch(src);
+                if (!response.ok) return;
+                const data = await response.arrayBuffer();
+                const buffer = await this._sfxContext.decodeAudioData(data.slice(0));
+                this._sfxBuffers.set(name, buffer);
+            } catch (e) { /* pool playback handles fallback */ }
+        })).then(() => true).catch(() => false);
+        return this._sfxLoadPromise;
+    }
+
+    _playFromBuffer(name, volume = 0.7) {
+        const ctx = this._sfxContext;
+        const buffer = this._sfxBuffers.get(name);
+        if (!ctx || !buffer || !this._sfxGain || ctx.state !== 'running') return false;
+
+        try {
+            const source = ctx.createBufferSource();
+            const gain = ctx.createGain();
+            source.buffer = buffer;
+            gain.gain.value = Math.max(0, Math.min(1, volume));
+            source.connect(gain);
+            gain.connect(this._sfxGain);
+            source.onended = () => {
+                try { source.disconnect(); } catch (e) { /* silent */ }
+                try { gain.disconnect(); } catch (e) { /* silent */ }
+            };
+            source.start();
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     // WAV 풀에서 재생
     _playFromPool(name, volume = 0.7) {
         const pool = this._pools[name];
@@ -86,6 +147,11 @@ export class SoundManager {
         try { audio.currentTime = 0; } catch (e) { /* silent */ }
         audio.play().catch(() => { audio._inUse = false; });
         return true;
+    }
+
+    _playSfx(name, volume = 0.7) {
+        if (this._playFromBuffer(name, volume)) return true;
+        return this._playFromPool(name, volume);
     }
 
     init() {
@@ -179,6 +245,10 @@ export class SoundManager {
             if (typeof Tone !== 'undefined' && this._toneReady && Tone.context.state !== 'running') {
                 await Tone.start();
             }
+            if (typeof Tone !== 'undefined' && this._toneReady) {
+                this._ensureSfxBus();
+                this._loadSfxBuffers();
+            }
             return typeof Tone !== 'undefined' && this._toneReady && Tone.context.state === 'running';
         } catch (e) { /* silent */ }
         return false;
@@ -218,7 +288,7 @@ export class SoundManager {
         this._lastPlayTime[soundName] = now;
         const vol = this._sfxVolume[soundName] || 0.7;
         const congestionDuck = Math.max(0.42, 1 - this._activeSounds * 0.2);
-        if (!this._playFromPool(soundName, vol * congestionDuck)) return;
+        if (!this._playSfx(soundName, vol * congestionDuck)) return;
 
         this._activeSounds++;
         let releaseTimer = null;
@@ -605,6 +675,11 @@ export class SoundManager {
         this._pools = {};
 
         try {
+            if (this._sfxGain) { this._sfxGain.disconnect(); this._sfxGain = null; }
+            if (this._sfxComp) { this._sfxComp.disconnect(); this._sfxComp = null; }
+            this._sfxContext = null;
+            this._sfxBuffers.clear();
+            this._sfxLoadPromise = null;
             if (this._delay) { this._delay.dispose(); this._delay = null; }
             if (this._reverb) { this._reverb.dispose(); this._reverb = null; }
             if (this._comp) { this._comp.dispose(); this._comp = null; }
@@ -619,6 +694,9 @@ export class SoundManager {
         this.enabled = !this.enabled;
         if (this._masterVol) {
             this._masterVol.volume.value = this.enabled ? -7 : -Infinity;
+        }
+        if (this._sfxGain) {
+            this._sfxGain.gain.value = this.enabled ? this._sfxMaster : 0;
         }
         // WAV SFX 풀도 음소거/복원
         for (const name in this._pools) {
