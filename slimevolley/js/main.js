@@ -41,6 +41,7 @@ class SlimeVolleyGame {
         document.addEventListener('keydown', initSound);
 
         this.updateSoundButton();
+        window.addEventListener('slimevolley:languagechange', () => this.updateSoundButton());
     }
 
     setupInput() {
@@ -954,7 +955,9 @@ class SlimeVolleyGame {
     updateSoundButton() {
         const btn = document.getElementById('btn-sound');
         if (btn) {
-            btn.textContent = this.sound.muted ? 'Sound OFF' : 'Sound ON';
+            const i18n = window.SlimeVolleyI18n;
+            const key = this.sound.muted ? 'common.soundOff' : 'common.soundOn';
+            btn.textContent = i18n ? i18n.t(key) : (this.sound.muted ? 'Sound OFF' : 'Sound ON');
             btn.classList.toggle('muted', this.sound.muted);
         }
     }

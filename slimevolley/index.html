@@ -78,7 +78,7 @@
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <link rel="stylesheet" href="css/style.css?v=41">
+    <link rel="stylesheet" href="css/style.css?v=42">
     <script>
         // 모바일 주소창 높이를 반영한 실제 뷰포트 높이
         function setVH() {
@@ -100,9 +100,9 @@
     <div id="app">
         <!-- Header -->
         <header id="game-header">
-            <a href="../" class="back-link" id="header-back" title="Back to Games">&#8592;</a>
-            <h1>Slime Volley</h1>
-            <button id="btn-sound" class="icon-btn" title="Toggle Sound">Sound ON</button>
+            <a href="../" class="back-link" id="header-back" title="게임 목록으로 돌아가기" data-i18n-title="header.back">&#8592;</a>
+            <h1 data-i18n="app.name">슬라임 배구</h1>
+            <button id="btn-sound" class="icon-btn" title="사운드 켜기/끄기" data-i18n="common.soundOn" data-i18n-title="header.sound">사운드 ON</button>
         </header>
 
         <!-- Error Toast -->
@@ -112,31 +112,35 @@
         <div id="main-menu" class="screen active">
             <div class="menu-container">
                 <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" class="archerlab-link">🏹 ArcherLab</a>
+                <div class="language-switch" role="group" aria-label="언어 선택" data-i18n-aria-label="language.label">
+                    <button type="button" class="language-btn" data-lang-choice="ko" data-i18n="language.ko">한국어</button>
+                    <button type="button" class="language-btn" data-lang-choice="en" data-i18n="language.en">English</button>
+                </div>
                 <div class="game-logo game-logo-assets">
                     <img class="logo-slime-img logo-slime-blue" src="assets/images/slime-blue.png" alt="" aria-hidden="true">
                     <img class="logo-ball-img" src="assets/images/ball.png" alt="" aria-hidden="true">
                     <img class="logo-slime-img logo-slime-red" src="assets/images/slime-red.png" alt="" aria-hidden="true">
                 </div>
-                <h2 class="menu-title">Slime Volley</h2>
-                <p class="menu-subtitle">Classic Volleyball Battle</p>
+                <h2 class="menu-title" data-i18n="app.name">슬라임 배구</h2>
+                <p class="menu-subtitle" data-i18n="menu.subtitle">클래식 슬라임 배구 대전</p>
 
                 <div class="menu-buttons">
                     <button id="btn-practice" class="btn btn-primary btn-large">
                         <span class="btn-icon">&#9889;</span>
-                        <span>혼자 연습</span>
-                        <span class="btn-desc">봇 상대 연습 모드</span>
+                        <span data-i18n="menu.practice">혼자 연습</span>
+                        <span class="btn-desc" data-i18n="menu.practiceDesc">봇 상대 연습 모드</span>
                     </button>
                     <button id="btn-multiplayer" class="btn btn-secondary btn-large">
                         <span class="btn-icon">&#9775;</span>
-                        <span>다같이 시합</span>
-                        <span class="btn-desc">온라인 멀티플레이어</span>
+                        <span data-i18n="menu.multiplayer">다같이 시합</span>
+                        <span class="btn-desc" data-i18n="menu.multiplayerDesc">온라인 멀티플레이어</span>
                     </button>
                 </div>
 
                 <div class="controls-guide">
-                    <p><strong>Controls</strong></p>
-                    <p>Move: <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> or <kbd>A</kbd> <kbd>D</kbd></p>
-                    <p>Jump: <kbd>&#8593;</kbd> or <kbd>W</kbd> or <kbd>Space</kbd></p>
+                    <p><strong data-i18n="controls.title">조작법</strong></p>
+                    <p><span data-i18n="controls.move">이동</span>: <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> <span data-i18n="controls.or">또는</span> <kbd>A</kbd> <kbd>D</kbd></p>
+                    <p><span data-i18n="controls.jump">점프</span>: <kbd>&#8593;</kbd> <span data-i18n="controls.or">또는</span> <kbd>W</kbd> <span data-i18n="controls.or">또는</span> <kbd>Space</kbd></p>
                 </div>
             </div>
         </div>
@@ -144,18 +148,18 @@
         <!-- Practice Setup -->
         <div id="practice-setup" class="screen">
             <div class="panel">
-                <h2>Practice Mode</h2>
+                <h2 data-i18n="practice.title">연습 모드</h2>
                 <div class="form-group">
-                    <label>My Team Size</label>
+                    <label data-i18n="practice.myTeam">내 팀 인원</label>
                     <select id="practice-my-team" class="input-select">
-                        <option value="1" selected>1 (Solo)</option>
+                        <option value="1" selected data-i18n="practice.solo">1 (솔로)</option>
                         <option value="2">2</option>
                         <option value="3">3</option>
                         <option value="4">4</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Bot Team Size</label>
+                    <label data-i18n="practice.botTeam">봇 팀 인원</label>
                     <select id="practice-bot-team" class="input-select">
                         <option value="1" selected>1</option>
                         <option value="2">2</option>
@@ -164,16 +168,16 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Difficulty</label>
+                    <label data-i18n="practice.difficulty">난이도</label>
                     <select id="practice-difficulty" class="input-select">
-                        <option value="easy">Easy</option>
-                        <option value="normal" selected>Normal</option>
-                        <option value="hard">Hard</option>
+                        <option value="easy" data-i18n="difficulty.easy">쉬움</option>
+                        <option value="normal" selected data-i18n="difficulty.normal">보통</option>
+                        <option value="hard" data-i18n="difficulty.hard">어려움</option>
                     </select>
                 </div>
                 <div class="form-actions">
-                    <button id="btn-back-practice" class="btn btn-ghost">Back</button>
-                    <button id="btn-start-practice" class="btn btn-primary">Start!</button>
+                    <button id="btn-back-practice" class="btn btn-ghost" data-i18n="common.back">뒤로</button>
+                    <button id="btn-start-practice" class="btn btn-primary" data-i18n="common.start">시작!</button>
                 </div>
             </div>
         </div>
@@ -355,14 +359,15 @@
     <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
 
     <!-- Game Scripts -->
-    <script src="js/config.js?v=41"></script>
-    <script src="js/physics.js?v=41"></script>
-    <script src="js/renderer.js?v=41"></script>
-    <script src="js/bot.js?v=41"></script>
-    <script src="js/sound.js?v=41"></script>
-    <script src="js/webrtc.js?v=41"></script>
-    <script src="js/network.js?v=41"></script>
-    <script src="js/lobby.js?v=41"></script>
-    <script src="js/main.js?v=41"></script>
+    <script src="js/config.js?v=42"></script>
+    <script src="js/physics.js?v=42"></script>
+    <script src="js/renderer.js?v=42"></script>
+    <script src="js/bot.js?v=42"></script>
+    <script src="js/sound.js?v=42"></script>
+    <script src="js/webrtc.js?v=42"></script>
+    <script src="js/network.js?v=42"></script>
+    <script src="js/i18n.js?v=42"></script>
+    <script src="js/lobby.js?v=42"></script>
+    <script src="js/main.js?v=42"></script>
 </body>
 </html>

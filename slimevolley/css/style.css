@@ -191,6 +191,45 @@ body {
     width: 100%;
 }
 
+.language-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    margin: 0 0 18px;
+    background: rgba(11, 13, 18, 0.72);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.24);
+}
+
+.language-btn {
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    min-width: 74px;
+    min-height: 30px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.language-btn:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.07);
+}
+
+.language-btn.active {
+    background: var(--primary);
+    color: #0b0d12;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.26);
+}
+
 .game-logo {
     display: flex;
     align-items: flex-end;
