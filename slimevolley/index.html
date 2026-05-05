@@ -78,7 +78,7 @@
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <link rel="stylesheet" href="css/style.css?v=43">
+    <link rel="stylesheet" href="css/style.css?v=44">
     <script>
         // 모바일 주소창 높이를 반영한 실제 뷰포트 높이
         function setVH() {
@@ -185,22 +185,22 @@
         <!-- Multiplayer Lobby (방 목록) -->
         <div id="multiplayer-lobby" class="screen">
             <div class="panel panel-wide">
-                <h2>온라인 대전</h2>
+                <h2 data-i18n="lobby.title">온라인 대전</h2>
                 <div class="lobby-top">
                     <div class="form-group form-inline">
-                        <label>닉네임</label>
-                        <input type="text" class="player-name-input input-text" placeholder="이름 입력" maxlength="12">
+                        <label data-i18n="lobby.nickname">닉네임</label>
+                        <input type="text" class="player-name-input input-text" placeholder="이름 입력" data-i18n-placeholder="lobby.nicknamePlaceholder" maxlength="12">
                     </div>
                     <div class="lobby-actions">
-                        <button id="btn-refresh-rooms" class="btn btn-small">새로고침</button>
-                        <button id="btn-create-room" class="btn btn-primary btn-small-primary">방 만들기</button>
+                        <button id="btn-refresh-rooms" class="btn btn-small" data-i18n="lobby.refresh">새로고침</button>
+                        <button id="btn-create-room" class="btn btn-primary btn-small-primary" data-i18n="lobby.createRoom">방 만들기</button>
                     </div>
                 </div>
                 <div id="room-list" class="room-list">
-                    <div class="room-list-empty">방 목록을 불러오는 중...</div>
+                    <div class="room-list-empty" data-i18n="lobby.loading">방 목록을 불러오는 중...</div>
                 </div>
                 <div class="form-actions">
-                    <button id="btn-back-multiplayer" class="btn btn-ghost">Back</button>
+                    <button id="btn-back-multiplayer" class="btn btn-ghost" data-i18n="common.back">뒤로</button>
                 </div>
             </div>
         </div>
@@ -369,15 +369,15 @@
     <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
 
     <!-- Game Scripts -->
-    <script src="js/config.js?v=43"></script>
-    <script src="js/physics.js?v=43"></script>
-    <script src="js/renderer.js?v=43"></script>
-    <script src="js/bot.js?v=43"></script>
-    <script src="js/sound.js?v=43"></script>
-    <script src="js/webrtc.js?v=43"></script>
-    <script src="js/network.js?v=43"></script>
-    <script src="js/i18n.js?v=43"></script>
-    <script src="js/lobby.js?v=43"></script>
-    <script src="js/main.js?v=43"></script>
+    <script src="js/config.js?v=44"></script>
+    <script src="js/physics.js?v=44"></script>
+    <script src="js/renderer.js?v=44"></script>
+    <script src="js/bot.js?v=44"></script>
+    <script src="js/sound.js?v=44"></script>
+    <script src="js/webrtc.js?v=44"></script>
+    <script src="js/network.js?v=44"></script>
+    <script src="js/i18n.js?v=44"></script>
+    <script src="js/lobby.js?v=44"></script>
+    <script src="js/main.js?v=44"></script>
 </body>
 </html>
