@@ -256,18 +256,51 @@ class PhysicsEngine {
     }
 
     getBallSlimeCollision(slime) {
-        const dx = this.ball.x - slime.x;
-        const dy = this.ball.y - slime.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const minDist = CONFIG.BALL_RADIUS + CONFIG.SLIME_RADIUS;
+        const br = CONFIG.BALL_RADIUS;
+        const radiusX = (CONFIG.SLIME_COLLIDER_RADIUS_X || CONFIG.SLIME_RADIUS) + br;
+        const radiusY = (CONFIG.SLIME_COLLIDER_RADIUS_Y || CONFIG.SLIME_RADIUS) + br;
+        const cx = slime.x;
+        const cy = slime.y - (CONFIG.SLIME_COLLIDER_Y_OFFSET || 0);
+        const dx = this.ball.x - cx;
+        const dy = this.ball.y - cy;
 
-        if (dist < minDist && dist > 0 && dy <= CONFIG.SLIME_RADIUS * 0.3) {
+        if (this.ball.y > slime.y + br * 0.2) {
+            return null;
+        }
+
+        const sx = dx / radiusX;
+        const sy = dy / radiusY;
+        const scaledDist = Math.sqrt(sx * sx + sy * sy);
+
+        if (scaledDist < 1) {
+            let targetX;
+            let targetY;
+            let nx;
+            let ny;
+
+            if (scaledDist > 0.0001) {
+                targetX = cx + dx / scaledDist;
+                targetY = cy + dy / scaledDist;
+
+                const gradX = (targetX - cx) / (radiusX * radiusX);
+                const gradY = (targetY - cy) / (radiusY * radiusY);
+                const gradLen = Math.sqrt(gradX * gradX + gradY * gradY) || 1;
+                nx = gradX / gradLen;
+                ny = gradY / gradLen;
+            } else {
+                nx = 0;
+                ny = -1;
+                targetX = cx;
+                targetY = cy - radiusY;
+            }
+
             return {
                 slime,
-                nx: dx / dist,
-                ny: dy / dist,
-                minDist,
-                penetration: minDist - dist,
+                nx,
+                ny,
+                targetX,
+                targetY,
+                penetration: (1 - scaledDist) * Math.min(radiusX, radiusY),
             };
         }
 
@@ -281,8 +314,8 @@ class PhysicsEngine {
             const nx = collision.nx;
             const ny = collision.ny;
 
-            this.ball.x = slime.x + nx * collision.minDist;
-            this.ball.y = slime.y + ny * collision.minDist;
+            this.ball.x = collision.targetX;
+            this.ball.y = collision.targetY;
 
             const relVx = this.ball.vx - slime.vx;
             const relVy = this.ball.vy - slime.vy;

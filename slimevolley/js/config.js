@@ -14,6 +14,9 @@ const CONFIG = {
 
     // Slime
     SLIME_RADIUS: 38,
+    SLIME_COLLIDER_RADIUS_X: 51,
+    SLIME_COLLIDER_RADIUS_Y: 40,
+    SLIME_COLLIDER_Y_OFFSET: 30,
     SLIME_SPEED: 2,
     SLIME_JUMP_SPEED: -9,
 
@@ -43,7 +46,6 @@ const CONFIG = {
     // Image assets
     IMAGE_ASSETS: {
         court: 'assets/images/court-bg.webp',
-        net: 'assets/images/net.png',
         ball: 'assets/images/ball.png',
         slimeShadow: 'assets/images/slime-shadow.png',
         slimeEye: 'assets/images/slime-eye.png',

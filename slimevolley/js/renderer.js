@@ -65,7 +65,6 @@ class GameRenderer {
 
         const entries = [
             ['court', assets.court],
-            ['net', assets.net],
             ['ball', assets.ball],
             ['slimeShadow', assets.slimeShadow],
             ['slimeEye', assets.slimeEye],
@@ -90,7 +89,6 @@ class GameRenderer {
                 }));
             this.usingImageAssets = Boolean(
                 this.imageTextures.court &&
-                this.imageTextures.net &&
                 this.imageTextures.ball &&
                 this.imageTextures.slimeShadow
             );
@@ -209,18 +207,6 @@ class GameRenderer {
     }
 
     createNet() {
-        if (this.usingImageAssets && this.imageTextures.net) {
-            const net = new PIXI.Sprite(this.imageTextures.net);
-            net.anchor.set(0.5, 1);
-            net.x = CONFIG.NET_X;
-            net.y = CONFIG.GROUND_Y + 7;
-            net.width = 132;
-            net.height = CONFIG.NET_HEIGHT + 34;
-            this.gameContainer.addChild(net);
-            this.netSprite = net;
-            return;
-        }
-
         const netTop = CONFIG.GROUND_Y - CONFIG.NET_HEIGHT;
         const netX = CONFIG.NET_X;
         const poleHalf = CONFIG.NET_WIDTH / 2;
