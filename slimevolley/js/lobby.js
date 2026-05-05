@@ -286,7 +286,7 @@ class LobbyManager {
             const data = await this.game.network.fetchRooms(this.game.relayUrl);
             this.renderRoomList(data.rooms || []);
         } catch (e) {
-            listEl.innerHTML = '<div class="room-list-empty">서버 연결 실패</div>';
+            listEl.innerHTML = `<div class="room-list-empty">${this.t('lobby.loadFailed', '서버 연결 실패')}</div>`;
         }
     }
 
@@ -294,7 +294,7 @@ class LobbyManager {
         const listEl = document.getElementById('room-list');
 
         if (rooms.length === 0) {
-            listEl.innerHTML = '<div class="room-list-empty">열린 방이 없습니다. 새로 만들어보세요!</div>';
+            listEl.innerHTML = `<div class="room-list-empty">${this.t('lobby.empty', '열린 방이 없습니다. 새로 만들어보세요!')}</div>`;
             return;
         }
 

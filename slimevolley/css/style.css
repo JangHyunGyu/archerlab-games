@@ -1509,6 +1509,148 @@ kbd {
     }
 }
 
+@media (max-height: 450px) and (orientation: landscape) {
+    #practice-setup.screen,
+    #multiplayer-lobby.screen,
+    #create-room.screen {
+        align-items: center;
+        justify-content: center;
+        padding: 6px 14px;
+    }
+
+    #practice-setup .panel {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px 10px;
+        max-width: min(600px, calc(100vw - 68px));
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: 12px;
+    }
+
+    #practice-setup .panel h2 {
+        grid-column: 1 / -1;
+        margin: 0 0 2px;
+        font-size: 1rem;
+    }
+
+    #practice-setup .form-group {
+        margin: 0;
+    }
+
+    #practice-setup .input-select {
+        min-height: 34px;
+    }
+
+    #practice-setup .form-actions {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: min(390px, 100%);
+        margin-top: 2px;
+    }
+
+    #practice-setup .form-actions .btn {
+        min-height: 34px;
+    }
+
+    #multiplayer-lobby .panel-wide {
+        display: grid;
+        grid-template-rows: auto auto auto auto;
+        width: min(650px, calc(100vw - 36px));
+        max-width: none;
+        max-height: calc(100vh - 58px);
+        height: auto;
+        align-self: center;
+        padding: 12px 16px;
+        border-radius: 12px;
+    }
+
+    #multiplayer-lobby .panel-wide h2 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        text-align: left;
+    }
+
+    #multiplayer-lobby .lobby-top {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    #multiplayer-lobby .lobby-top .form-inline {
+        display: grid;
+        grid-template-columns: auto minmax(170px, 1fr);
+        align-items: center;
+        gap: 8px;
+    }
+
+    #multiplayer-lobby .lobby-top .form-group label {
+        color: var(--text-dim);
+        font-size: 0.72rem;
+    }
+
+    #multiplayer-lobby .input-text {
+        min-height: 34px;
+    }
+
+    #multiplayer-lobby .lobby-actions {
+        gap: 6px;
+    }
+
+    #multiplayer-lobby .btn-small,
+    #multiplayer-lobby .btn-small-primary {
+        min-height: 34px;
+        padding: 6px 10px;
+        font-size: 0.74rem;
+    }
+
+    #multiplayer-lobby .room-list {
+        min-height: 76px;
+        max-height: 124px;
+    }
+
+    #multiplayer-lobby .room-list-empty {
+        padding: 24px 12px;
+        font-size: 0.82rem;
+    }
+
+    #multiplayer-lobby .form-actions {
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+
+    #multiplayer-lobby .form-actions .btn {
+        flex: 0 0 160px;
+        min-height: 34px;
+    }
+}
+
+@media (max-height: 450px) and (orientation: landscape) and (max-width: 640px) {
+    #practice-setup .panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: calc(100vw - 40px);
+    }
+
+    #practice-setup .form-group:nth-of-type(3) {
+        grid-column: 1 / -1;
+    }
+
+    #multiplayer-lobby .lobby-top {
+        grid-template-columns: 1fr;
+    }
+
+    #multiplayer-lobby .lobby-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #multiplayer-lobby .form-actions .btn {
+        flex-basis: 100%;
+    }
+}
+
 /* Game Over */
 .game-over-panel { text-align: center; }
 
