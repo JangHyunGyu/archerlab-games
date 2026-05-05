@@ -102,7 +102,26 @@ export class PreloadScene extends Phaser.Scene {
             loadPlayerMotion(`player_walk_left_${i}`);
         }
         for (let i = 0; i < 6; i++) loadPlayerMotion(`player_attack_${i}`);
+        ['down', 'right', 'up', 'left'].forEach((dir) => {
+            for (let i = 0; i < 6; i++) loadPlayerMotion(`player_attack_${dir}_${i}`);
+        });
         for (let i = 0; i < 2; i++) loadPlayerMotion(`player_hit_${i}`);
+
+        [
+            'goblin',
+            'antSoldier',
+            'orc',
+            'iceBear',
+            'stoneGolem',
+            'darkMage',
+            'ironKnight',
+            'demonWarrior',
+        ].forEach((key) => {
+            this.load.image(`ai_enemy_${key}`, `assets/enemies/source/${key}.png`);
+        });
+        ['igris', 'tusk', 'beru'].forEach((key) => {
+            this.load.image(`ai_boss_${key}`, `assets/bosses/source/${key}.png`);
+        });
 
         const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
 

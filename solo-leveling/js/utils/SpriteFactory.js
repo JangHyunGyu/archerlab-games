@@ -104,6 +104,14 @@ export class SpriteFactory {
         } catch (e) { return false; }
     }
 
+    static _fitSourceToFrame(src, frameW, frameH, maxW = 0.95, maxH = 0.95) {
+        const scale = Math.min((frameW * maxW) / src.width, (frameH * maxH) / src.height);
+        return {
+            w: Math.max(1, Math.round(src.width * scale)),
+            h: Math.max(1, Math.round(src.height * scale)),
+        };
+    }
+
     // Pseudo-gradient 3D lighting overlay (for Phaser Graphics sprites)
     static _applyLighting(g, cx, cy, radius) {
         // Top-left highlight
@@ -200,6 +208,9 @@ export class SpriteFactory {
                 Array.from({ length: 4 }, (_, i) => `player_walk_${dir}_${i}`)
             ),
             ...Array.from({ length: 6 }, (_, i) => `player_attack_${i}`),
+            ...['down', 'right', 'up', 'left'].flatMap(dir =>
+                Array.from({ length: 6 }, (_, i) => `player_attack_${dir}_${i}`)
+            ),
             ...Array.from({ length: 2 }, (_, i) => `player_hit_${i}`),
         ];
         if (!names.every(name => scene.textures.exists(`motion_${name}`))) {
@@ -1205,6 +1216,8 @@ export class SpriteFactory {
     }
 
     static _createEnemySprite(scene, key, size, drawFn) {
+        if (this._loadAIEnemyTexture(scene, key, size)) return;
+
         // Try external CDN texture first
         const extKey = 'ext_enemy_' + key;
         if (scene.textures.exists(extKey)) {
@@ -1225,6 +1238,69 @@ export class SpriteFactory {
             this._applyLighting(g, s, s * 0.8, s * 0.85);
             g.generateTexture('enemy_' + key + '_' + i, size * 2, size * 2);
             g.destroy();
+        }
+    }
+
+    static _loadAIEnemyTexture(scene, key, size) {
+        const srcKey = 'ai_enemy_' + key;
+        if (!scene.textures.exists(srcKey)) return false;
+
+        try {
+            const src = scene.textures.get(srcKey).getSourceImage();
+            const frameW = size * 2;
+            const frameH = size * 2;
+            const fitted = this._fitSourceToFrame(src, frameW, frameH, 0.95, 0.94);
+
+            for (let i = 0; i < 4; i++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = frameW;
+                canvas.height = frameH;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+
+                const phase = i * Math.PI / 2;
+                const bob = Math.sin(phase) * Math.max(1, size * 0.035);
+                const lean = Math.sin(phase) * 0.045;
+                const squash = Math.abs(Math.sin(phase)) * 0.025;
+                const drawW = fitted.w * (1 + squash * 0.35);
+                const drawH = fitted.h * (1 - squash);
+                const x = frameW / 2;
+                const y = frameH * 0.96 + bob;
+
+                const shadowGrad = ctx.createRadialGradient(x, frameH * 0.88, 0, x, frameH * 0.88, size * 0.78);
+                shadowGrad.addColorStop(0, 'rgba(5, 0, 24, 0.42)');
+                shadowGrad.addColorStop(0.55, 'rgba(20, 0, 50, 0.18)');
+                shadowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = shadowGrad;
+                ctx.beginPath();
+                ctx.ellipse(x, frameH * 0.88, size * 0.78, size * 0.17, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.filter = 'blur(3px)';
+                ctx.drawImage(src, x - drawW / 2, y - drawH, drawW, drawH);
+                ctx.globalCompositeOperation = 'source-in';
+                ctx.fillStyle = 'rgba(123, 47, 255, 0.24)';
+                ctx.fillRect(0, 0, frameW, frameH);
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(lean);
+                ctx.filter = 'drop-shadow(0 2px 2px rgba(0,0,0,0.65)) contrast(1.04) saturate(1.05)';
+                ctx.drawImage(src, -drawW / 2, -drawH, drawW, drawH);
+                ctx.restore();
+
+                if (scene.textures.exists('enemy_' + key + '_' + i)) {
+                    scene.textures.remove('enemy_' + key + '_' + i);
+                }
+                scene.textures.addCanvas('enemy_' + key + '_' + i, canvas);
+            }
+            return true;
+        } catch (e) {
+            console.warn('[SpriteFactory] AI enemy texture failed:', key, e);
+            return false;
         }
     }
 
@@ -1395,6 +1471,8 @@ export class SpriteFactory {
     }
 
     static _createBossSprite(scene, key, config, drawFn) {
+        if (this._loadAIBossTexture(scene, key, config)) return;
+
         // Try external CDN texture first
         const extKey = 'ext_boss_' + key;
         if (scene.textures.exists(extKey)) {
@@ -1427,6 +1505,75 @@ export class SpriteFactory {
 
             g.generateTexture('boss_' + key + '_' + i, s * 2, s * 2);
             g.destroy();
+        }
+    }
+
+    static _loadAIBossTexture(scene, key, config) {
+        const srcKey = 'ai_boss_' + key;
+        if (!scene.textures.exists(srcKey)) return false;
+
+        try {
+            const src = scene.textures.get(srcKey).getSourceImage();
+            const s = config.size;
+            const frameW = s * 2;
+            const frameH = s * 2;
+            const fitted = this._fitSourceToFrame(src, frameW, frameH, 1.05, 0.98);
+
+            for (let i = 0; i < 4; i++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = frameW;
+                canvas.height = frameH;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+
+                const phase = i * Math.PI / 2;
+                const breathe = Math.sin(phase);
+                const drawW = fitted.w * (1 + Math.abs(breathe) * 0.02);
+                const drawH = fitted.h * (1 - Math.abs(breathe) * 0.012);
+                const x = frameW / 2;
+                const y = frameH * 0.98 + breathe * Math.max(1, s * 0.025);
+
+                const aura = ctx.createRadialGradient(x, frameH * 0.62, 0, x, frameH * 0.62, s * 1.25);
+                aura.addColorStop(0, 'rgba(123, 47, 255, 0.23)');
+                aura.addColorStop(0.45, 'rgba(80, 20, 160, 0.10)');
+                aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = aura;
+                ctx.fillRect(0, 0, frameW, frameH);
+
+                const shadow = ctx.createRadialGradient(x, frameH * 0.9, 0, x, frameH * 0.9, s * 0.95);
+                shadow.addColorStop(0, 'rgba(0, 0, 0, 0.48)');
+                shadow.addColorStop(0.55, 'rgba(30, 0, 60, 0.18)');
+                shadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = shadow;
+                ctx.beginPath();
+                ctx.ellipse(x, frameH * 0.9, s * 0.92, s * 0.18, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.save();
+                ctx.globalAlpha = 0.58;
+                ctx.filter = 'blur(4px)';
+                ctx.drawImage(src, x - drawW / 2, y - drawH, drawW, drawH);
+                ctx.globalCompositeOperation = 'source-in';
+                ctx.fillStyle = 'rgba(123, 47, 255, 0.24)';
+                ctx.fillRect(0, 0, frameW, frameH);
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(Math.sin(phase) * 0.025);
+                ctx.filter = 'drop-shadow(0 3px 3px rgba(0,0,0,0.72)) contrast(1.05) saturate(1.06)';
+                ctx.drawImage(src, -drawW / 2, -drawH, drawW, drawH);
+                ctx.restore();
+
+                if (scene.textures.exists('boss_' + key + '_' + i)) {
+                    scene.textures.remove('boss_' + key + '_' + i);
+                }
+                scene.textures.addCanvas('boss_' + key + '_' + i, canvas);
+            }
+            return true;
+        } catch (e) {
+            console.warn('[SpriteFactory] AI boss texture failed:', key, e);
+            return false;
         }
     }
 
