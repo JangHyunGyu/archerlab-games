@@ -225,7 +225,7 @@ export class SpriteFactory {
         }
         this._createPlayerAuraTexture(scene);
 
-        console.log('[SpriteFactory] Motion player sprite set loaded (28 frames)');
+        console.log(`[SpriteFactory] Motion player sprite set loaded (${names.length} frames)`);
         return true;
     }
 
