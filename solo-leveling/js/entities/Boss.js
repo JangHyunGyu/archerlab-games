@@ -1,6 +1,22 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 
 export class Boss extends Phaser.Physics.Arcade.Sprite {
+    static _sceneIsActive(scene) {
+        try {
+            return !!scene && scene.scene?.isActive?.() !== false && scene.sys?.isActive?.() !== false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    static _destroyIfAlive(obj) {
+        try {
+            if (obj?.scene && obj.destroy) obj.destroy();
+        } catch (e) {
+            // Object may already be gone during scene shutdown.
+        }
+    }
+
     static _playFrameVfx(scene, prefix, x, y, opts = {}) {
         if (!scene?.textures?.exists(`${prefix}_0`)) return false;
 
@@ -147,31 +163,34 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
     }
 
     _entranceEffect() {
-        this.scene.cameras.main.shake(500, 0.015);
+        const scene = this.scene;
+        if (!Boss._sceneIsActive(scene)) return;
+
+        scene.cameras.main.shake(500, 0.015);
 
         // Warning text
-        const cam = this.scene.cameras.main;
-        const warning = this.scene.add.text(
+        const cam = scene.cameras.main;
+        const warning = scene.add.text(
             cam.width / 2, cam.height * 0.26,
             `⚔ BOSS: ${this.config.name} ⚔`,
             { fontSize: '32px', fontFamily: 'Arial', fontStyle: 'bold', color: '#ff3333', stroke: '#000000', strokeThickness: 4 }
         ).setOrigin(0.5).setDepth(100).setScrollFactor(0);
 
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: warning, alpha: 0, scaleX: 1.5, scaleY: 1.5,
-            duration: 2000, onComplete: () => warning.destroy(),
+            duration: 2000, onComplete: () => Boss._destroyIfAlive(warning),
         });
 
         // Glow ring (original)
-        const ring = this.scene.add.circle(this.x, this.y, 10, this.config.color, 0.5).setDepth(3);
-        this.scene.tweens.add({
+        const ring = scene.add.circle(this.x, this.y, 10, this.config.color, 0.5).setDepth(3);
+        scene.tweens.add({
             targets: ring, scaleX: 8, scaleY: 8, alpha: 0,
-            duration: 1000, onComplete: () => ring.destroy(),
+            duration: 1000, onComplete: () => Boss._destroyIfAlive(ring),
         });
 
         // Particle burst — dramatic entrance
         try {
-            const burstEmitter = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+            const burstEmitter = scene.add.particles(this.x, this.y, 'particle_glow', {
                 speed: { min: 30, max: 120 },
                 scale: { start: 1.2, end: 0 },
                 alpha: { start: 0.8, end: 0 },
@@ -185,7 +204,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             burstEmitter.explode(25);
 
             // Rising energy particles
-            const riseEmitter = this.scene.add.particles(this.x, this.y, 'particle_spark', {
+            const riseEmitter = scene.add.particles(this.x, this.y, 'particle_spark', {
                 speed: { min: 20, max: 80 },
                 angle: { min: 250, max: 290 },
                 scale: { start: 0.8, end: 0 },
@@ -197,13 +216,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 quantity: 2,
             });
             riseEmitter.setDepth(4);
-            this.scene.time.delayedCall(1500, () => {
+            scene.time.delayedCall(1500, () => {
+                if (!Boss._sceneIsActive(scene) || !riseEmitter.scene) return;
                 riseEmitter.stop();
-                this.scene.time.delayedCall(1600, () => riseEmitter.destroy());
+                scene.time.delayedCall(1600, () => Boss._destroyIfAlive(riseEmitter));
             });
 
             // Ground smoke
-            const smoke = this.scene.add.particles(this.x, this.y + 20, 'particle_smoke', {
+            const smoke = scene.add.particles(this.x, this.y + 20, 'particle_smoke', {
                 speed: { min: 15, max: 50 },
                 angle: { min: 160, max: 380 },
                 scale: { start: 1.5, end: 0.3 },
@@ -215,7 +235,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             smoke.setDepth(3);
             smoke.explode(12);
 
-            this.scene.time.delayedCall(1300, () => { burstEmitter.destroy(); smoke.destroy(); });
+            scene.time.delayedCall(1300, () => {
+                Boss._destroyIfAlive(burstEmitter);
+                Boss._destroyIfAlive(smoke);
+            });
         } catch (e) { /* particle fallback not needed — ring already shown */ }
     }
 
@@ -331,55 +354,60 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
     // Igris: telegraphed sword slash - RED DANGER ZONE
     _igrisSlash(playerX, playerY) {
+        const scene = this.scene;
+        if (!Boss._sceneIsActive(scene)) return;
+
         const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
         const range = 250;
         const slashX = this.x + Math.cos(angle) * (range * 0.4);
         const slashY = this.y + Math.sin(angle) * (range * 0.4);
 
         // ⚠ Danger zone fill (bright red, pulsing)
-        const dangerZone = this.scene.add.circle(slashX, slashY, range * 0.6, 0xff0000, 0)
+        const dangerZone = scene.add.circle(slashX, slashY, range * 0.6, 0xff0000, 0)
             .setDepth(3);
         // ⚠ Danger border (thick red ring)
-        const dangerRing = this.scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
+        const dangerRing = scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
             .setDepth(3).setStrokeStyle(4, 0xff2222, 0);
         // ⚠ Warning icon
-        const warnIcon = this.scene.add.text(slashX, slashY - range * 0.3, '⚠', {
+        const warnIcon = scene.add.text(slashX, slashY - range * 0.3, '⚠', {
             fontSize: '28px',
         }).setOrigin(0.5).setDepth(4).setAlpha(0);
 
         // Pulsing danger animation (flashing red)
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: dangerZone,
             alpha: { from: 0.08, to: 0.3 },
             duration: 150, yoyo: true, repeat: 1,
         });
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: dangerRing,
             alpha: { from: 0.3, to: 0.9 },
             duration: 150, yoyo: true, repeat: 1,
         });
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: warnIcon,
             alpha: 1, scale: 1.3,
             duration: 200, yoyo: true,
         });
 
         // Shrinking countdown ring (fills inward)
-        const countdown = this.scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
+        const countdown = scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
             .setDepth(3).setStrokeStyle(3, 0xffaa00, 0.7);
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: countdown,
             scale: 0.1,
             duration: 600,
         });
 
-        this.scene.time.delayedCall(600, () => {
-            dangerZone.destroy(); dangerRing.destroy();
-            warnIcon.destroy(); countdown.destroy();
-            if (!this.active) return;
+        scene.time.delayedCall(600, () => {
+            Boss._destroyIfAlive(dangerZone);
+            Boss._destroyIfAlive(dangerRing);
+            Boss._destroyIfAlive(warnIcon);
+            Boss._destroyIfAlive(countdown);
+            if (!this.active || !Boss._sceneIsActive(scene)) return;
 
             const usedSlashAsset = Boss._playFrameVfx(
-                this.scene,
+                scene,
                 'effect_boss_igris_slash',
                 slashX,
                 slashY,
@@ -392,18 +420,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 }
             );
             if (!usedSlashAsset) {
-                const slash = this.scene.add.sprite(slashX, slashY, 'proj_igris')
+                const slash = scene.add.sprite(slashX, slashY, 'proj_igris')
                     .setDepth(8).setRotation(angle).setScale(2.5);
-                this.scene.tweens.add({
+                scene.tweens.add({
                     targets: slash,
                     alpha: 0, scaleX: 3.5, scaleY: 3.5,
                     duration: 300,
-                    onComplete: () => slash.destroy(),
+                    onComplete: () => Boss._destroyIfAlive(slash),
                 });
             }
 
             // Damage player if in cone
-            const player = this.scene.player;
+            const player = scene.player;
             if (!player) return;
             const d = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
             if (d < range) {
@@ -414,34 +442,37 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 }
             }
 
-            this.scene.cameras.main.shake(100, 0.005);
+            scene.cameras.main.shake(100, 0.005);
         });
     }
 
     // Tusk: ground slam - RED DANGER AoE
     _tuskGroundSlam(playerX, playerY) {
+        const scene = this.scene;
+        if (!Boss._sceneIsActive(scene)) return;
+
         const slamX = playerX;
         const slamY = playerY;
         const radius = 200;
 
         // ⚠ Danger zone fill (bright red, growing)
-        const dangerZone = this.scene.add.circle(slamX, slamY, 10, 0xff0000, 0.35)
+        const dangerZone = scene.add.circle(slamX, slamY, 10, 0xff0000, 0.35)
             .setDepth(3);
         // ⚠ Danger border (thick pulsing red ring)
-        const dangerRing = this.scene.add.circle(slamX, slamY, radius, 0x000000, 0)
+        const dangerRing = scene.add.circle(slamX, slamY, radius, 0x000000, 0)
             .setDepth(3).setStrokeStyle(6, 0xff0000, 0);
         // ⚠ Inner ring (second ring for emphasis)
-        const innerRing = this.scene.add.circle(slamX, slamY, radius * 0.6, 0x000000, 0)
+        const innerRing = scene.add.circle(slamX, slamY, radius * 0.6, 0x000000, 0)
             .setDepth(3).setStrokeStyle(3, 0xff4444, 0);
         // ⚠ Warning icon
-        const warnIcon = this.scene.add.text(slamX, slamY, '⚠', {
+        const warnIcon = scene.add.text(slamX, slamY, '⚠', {
             fontSize: '44px',
         }).setOrigin(0.5).setDepth(4).setAlpha(0);
         // Crosshair lines (targeting indicator)
         const lines = [];
         for (let a = 0; a < 4; a++) {
             const ang = a * Math.PI / 2;
-            const line = this.scene.add.line(0, 0,
+            const line = scene.add.line(0, 0,
                 slamX, slamY,
                 slamX + Math.cos(ang) * radius, slamY + Math.sin(ang) * radius,
                 0xff3333, 0
@@ -450,44 +481,46 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Danger zone expands to full radius
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: dangerZone,
             scale: radius / 10, alpha: 0.45,
             duration: 1000, ease: 'Power2',
         });
         // Ring pulses 4 times (urgent warning)
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: dangerRing,
             alpha: { from: 0.5, to: 1.0 },
             duration: 180, yoyo: true, repeat: 3,
         });
         // Inner ring shrinks inward
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: innerRing,
             alpha: { from: 0.4, to: 0.8 }, scale: { from: 1, to: 0.3 },
             duration: 1200, ease: 'Power2',
         });
         // Warning icon pulses
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: warnIcon,
             alpha: { from: 0.7, to: 1 }, scale: { from: 1.0, to: 1.8 },
             duration: 300, yoyo: true, repeat: 1,
         });
         // Crosshair lines fade in
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: lines,
             alpha: 0.8,
             duration: 300,
         });
 
-        this.scene.time.delayedCall(1400, () => {
-            dangerZone.destroy(); dangerRing.destroy(); innerRing.destroy();
-            warnIcon.destroy();
-            lines.forEach(l => l.destroy());
-            if (!this.active) return;
+        scene.time.delayedCall(1400, () => {
+            Boss._destroyIfAlive(dangerZone);
+            Boss._destroyIfAlive(dangerRing);
+            Boss._destroyIfAlive(innerRing);
+            Boss._destroyIfAlive(warnIcon);
+            lines.forEach(l => Boss._destroyIfAlive(l));
+            if (!this.active || !Boss._sceneIsActive(scene)) return;
 
             const usedSlamAsset = Boss._playFrameVfx(
-                this.scene,
+                scene,
                 'effect_boss_tusk_slam',
                 slamX,
                 slamY,
@@ -501,35 +534,35 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 }
             );
             if (!usedSlamAsset) {
-                const slam = this.scene.add.sprite(slamX, slamY, 'proj_tusk')
+                const slam = scene.add.sprite(slamX, slamY, 'proj_tusk')
                     .setDepth(8).setScale(3);
-                this.scene.tweens.add({
+                scene.tweens.add({
                     targets: slam,
                     alpha: 0, scaleX: 5, scaleY: 5,
                     duration: 400,
-                    onComplete: () => slam.destroy(),
+                    onComplete: () => Boss._destroyIfAlive(slam),
                 });
             }
 
             // White shockwave ring — fast expanding (tank impact feel, NOT blood)
-            const shockRing = this.scene.add.circle(slamX, slamY, 20, 0, 0)
+            const shockRing = scene.add.circle(slamX, slamY, 20, 0, 0)
                 .setDepth(9).setStrokeStyle(5, 0xffffff, 0.9);
-            this.scene.tweens.add({
+            scene.tweens.add({
                 targets: shockRing,
                 scale: radius / 20,
                 alpha: 0,
                 duration: 350, ease: 'Cubic.Out',
-                onComplete: () => shockRing.destroy(),
+                onComplete: () => Boss._destroyIfAlive(shockRing),
             });
             // Secondary gold ring (slower, heavier)
-            const goldRing = this.scene.add.circle(slamX, slamY, 20, 0, 0)
+            const goldRing = scene.add.circle(slamX, slamY, 20, 0, 0)
                 .setDepth(9).setStrokeStyle(3, 0xffbb33, 0.7);
-            this.scene.tweens.add({
+            scene.tweens.add({
                 targets: goldRing,
                 scale: radius / 20 * 0.85,
                 alpha: 0,
                 duration: 500, ease: 'Cubic.Out',
-                onComplete: () => goldRing.destroy(),
+                onComplete: () => Boss._destroyIfAlive(goldRing),
             });
 
             // Dust cloud (tan/brown puffs — distinctly NOT blood)
@@ -538,12 +571,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 const dist = 20 + Math.random() * (radius * 0.5);
                 const size = 8 + Math.random() * 10;
                 const tan = [0xbb8855, 0x997744, 0xd4a870, 0x775533][Math.floor(Math.random() * 4)];
-                const puff = this.scene.add.circle(
+                const puff = scene.add.circle(
                     slamX + Math.cos(a) * 15,
                     slamY + Math.sin(a) * 15,
                     size, tan, 0.75
                 ).setDepth(7);
-                this.scene.tweens.add({
+                scene.tweens.add({
                     targets: puff,
                     x: slamX + Math.cos(a) * dist,
                     y: slamY + Math.sin(a) * dist,
@@ -551,7 +584,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                     alpha: 0,
                     duration: 700 + Math.random() * 400,
                     ease: 'Quad.Out',
-                    onComplete: () => puff.destroy(),
+                    onComplete: () => Boss._destroyIfAlive(puff),
                 });
             }
 
@@ -559,35 +592,35 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             for (let c = 0; c < 10; c++) {
                 const angle = (Math.PI * 2 / 10) * c + Math.random() * 0.2;
                 const len = radius * (0.7 + Math.random() * 0.3);
-                const crack = this.scene.add.line(0, 0,
+                const crack = scene.add.line(0, 0,
                     slamX, slamY,
                     slamX + Math.cos(angle) * len,
                     slamY + Math.sin(angle) * len,
                     0xffcc66, 0
                 ).setDepth(6).setLineWidth(2.5);
-                this.scene.tweens.add({
+                scene.tweens.add({
                     targets: crack,
                     alpha: { from: 0.9, to: 0 },
                     duration: 600, delay: c * 12, ease: 'Cubic.Out',
-                    onComplete: () => crack.destroy(),
+                    onComplete: () => Boss._destroyIfAlive(crack),
                 });
             }
 
             // Bright center flash (single pulse, white — impact moment)
-            const flash = this.scene.add.circle(slamX, slamY, 40, 0xffffff, 0.85).setDepth(9);
-            this.scene.tweens.add({
+            const flash = scene.add.circle(slamX, slamY, 40, 0xffffff, 0.85).setDepth(9);
+            scene.tweens.add({
                 targets: flash, scale: 2.5, alpha: 0,
-                duration: 220, onComplete: () => flash.destroy(),
+                duration: 220, onComplete: () => Boss._destroyIfAlive(flash),
             });
 
             // Full-screen white flash (brief, emphasizes "something huge just happened")
-            const cam = this.scene.cameras.main;
-            const screenFlash = this.scene.add.rectangle(0, 0, cam.width, cam.height, 0xffffff, 0)
+            const cam = scene.cameras.main;
+            const screenFlash = scene.add.rectangle(0, 0, cam.width, cam.height, 0xffffff, 0)
                 .setDepth(100).setScrollFactor(0).setOrigin(0, 0);
-            this.scene.tweens.add({
+            scene.tweens.add({
                 targets: screenFlash, alpha: 0.35,
                 duration: 60, yoyo: true,
-                onComplete: () => screenFlash.destroy(),
+                onComplete: () => Boss._destroyIfAlive(screenFlash),
             });
 
             // Angular stone debris (rectangles — distinct from round blood droplets)
@@ -597,9 +630,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 const w = 6 + Math.random() * 8;
                 const h = 4 + Math.random() * 6;
                 const tone = [0x886644, 0x664433, 0xaa8855, 0x998877][Math.floor(Math.random() * 4)];
-                const shard = this.scene.add.rectangle(slamX, slamY, w, h, tone, 0.95)
+                const shard = scene.add.rectangle(slamX, slamY, w, h, tone, 0.95)
                     .setDepth(8).setRotation(Math.random() * Math.PI * 2);
-                this.scene.tweens.add({
+                scene.tweens.add({
                     targets: shard,
                     x: slamX + Math.cos(a) * dist,
                     y: slamY + Math.sin(a) * dist + 30, // slight gravity arc
@@ -607,12 +640,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                     alpha: 0,
                     duration: 650 + Math.random() * 350,
                     ease: 'Quad.Out',
-                    onComplete: () => shard.destroy(),
+                    onComplete: () => Boss._destroyIfAlive(shard),
                 });
             }
 
             // Damage if player is still in area
-            const player = this.scene.player;
+            const player = scene.player;
             if (player) {
                 const d = Phaser.Math.Distance.Between(slamX, slamY, player.x, player.y);
                 if (d < radius) {
@@ -621,7 +654,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             }
 
             // Heavier camera shake (tank slam, not blood burst)
-            this.scene.cameras.main.shake(500, 0.022);
+            scene.cameras.main.shake(500, 0.022);
         });
     }
 
@@ -854,7 +887,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             ring.explode(4);
 
             this.scene.time.delayedCall(1000, () => {
-                explosion.destroy(); sparks.destroy(); ring.destroy();
+                Boss._destroyIfAlive(explosion);
+                Boss._destroyIfAlive(sparks);
+                Boss._destroyIfAlive(ring);
             });
         } catch (e) {
             // Fallback
