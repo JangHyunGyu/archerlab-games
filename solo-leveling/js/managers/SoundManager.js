@@ -11,24 +11,41 @@ export class SoundManager {
         this._userActivated = false;
         this._lastPlayTime = {};
         this._throttleMs = {
-            hit: 130, kill: 220, xp: 120, dagger: 190, daggerThrow: 160,
-            slash: 240, authority: 240, fear: 280,
-            playerHit: 300, system: 280, warning: 380,
+            hit: 180, kill: 280, xp: 150, dagger: 230, daggerThrow: 220,
+            slash: 360, authority: 520, fear: 700,
+            playerHit: 400, system: 350, warning: 600,
+            quest: 600, dungeonBreak: 1000, bossAppear: 900,
+            levelup: 900, rankup: 1000, arise: 1000,
         };
         this._activeSounds = 0;
-        this._maxActiveSounds = 4;
+        this._maxActiveSounds = 3;
         this._activeSoundTimers = new Set();
-        this._sfxMaster = 0.68;
+        this._sfxMaster = 0.48;
         this._releaseMs = {
-            dagger: 260, daggerThrow: 280, hit: 240, kill: 260, xp: 170,
-            playerHit: 320, select: 160, system: 220, warning: 320,
+            dagger: 320, daggerThrow: 390, hit: 390, kill: 300, xp: 160,
+            playerHit: 390, select: 130, system: 190, warning: 340,
+            slash: 620, authority: 860, fear: 660,
+            levelup: 560, rankup: 860, arise: 860, bossAppear: 860,
+            bossKill: 1060, gameOver: 1250, quest: 390, dungeonBreak: 760,
+            potion: 280,
+        };
+        this._soundPriority = {
+            xp: 0, hit: 1, dagger: 1, daggerThrow: 1, kill: 1,
+            slash: 2, authority: 2, fear: 2, playerHit: 3,
+            system: 2, quest: 2, warning: 3, dungeonBreak: 3,
+            bossAppear: 3, bossKill: 3, levelup: 3, rankup: 3,
+            arise: 3, gameOver: 3, potion: 2, select: 1,
         };
         // WAV Audio pools
         this._pools = {};
+        this._sfxSources = {};
+        this._sfxBuffers = new Map();
+        this._sfxLoadPromise = null;
     }
 
     // WAV 오디오 풀 생성 (동시 재생 지원, 라운드로빈)
     _createPool(name, src, poolSize = 4) {
+        this._sfxSources[name] = src;
         this._pools[name] = [];
         for (let i = 0; i < poolSize; i++) {
             const audio = new Audio(src);
@@ -137,7 +154,7 @@ export class SoundManager {
                     Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.1 }));
                 } catch (e) { /* silent */ }
 
-                this._masterVol = new Tone.Volume(-5).toDestination();
+                this._masterVol = new Tone.Volume(-7).toDestination();
                 this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
                     .connect(this._masterVol).start();
                 this._comp = new Tone.Compressor(-20, 6).connect(this._chorus);
@@ -178,17 +195,20 @@ export class SoundManager {
 
     // SFX 볼륨 매핑 (사운드별 적절한 볼륨)
     _sfxVolume = {
-        dagger: 0.6, daggerThrow: 0.65, slash: 0.7, authority: 0.75, fear: 0.65,
-        hit: 0.7, kill: 0.7, playerHit: 0.8,
-        xp: 0.5, levelup: 0.8, rankup: 0.85,
-        system: 0.6, arise: 0.85, bossAppear: 0.8,
-        warning: 0.7, potion: 0.6, select: 0.5, bossKill: 0.85, gameOver: 0.8,
-        quest: 0.7, dungeonBreak: 0.8,
+        dagger: 0.48, daggerThrow: 0.5, slash: 0.52, authority: 0.56, fear: 0.5,
+        hit: 0.46, kill: 0.5, playerHit: 0.6,
+        xp: 0.36, levelup: 0.62, rankup: 0.66,
+        system: 0.45, arise: 0.66, bossAppear: 0.62,
+        warning: 0.56, potion: 0.46, select: 0.38, bossKill: 0.66, gameOver: 0.62,
+        quest: 0.52, dungeonBreak: 0.62,
     };
 
     play(soundName) {
         if (!this.enabled || !this._initialized) return;
-        if (this._activeSounds >= this._maxActiveSounds) return;
+        const priority = this._soundPriority[soundName] || 1;
+        if (this._activeSounds >= this._maxActiveSounds) {
+            if (priority < 3 || this._activeSounds >= this._maxActiveSounds + 1) return;
+        }
         const now = performance.now();
         const cooldown = this._throttleMs[soundName] || 0;
         if (cooldown > 0) {
@@ -197,7 +217,8 @@ export class SoundManager {
         }
         this._lastPlayTime[soundName] = now;
         const vol = this._sfxVolume[soundName] || 0.7;
-        if (!this._playFromPool(soundName, vol)) return;
+        const congestionDuck = Math.max(0.42, 1 - this._activeSounds * 0.2);
+        if (!this._playFromPool(soundName, vol * congestionDuck)) return;
 
         this._activeSounds++;
         let releaseTimer = null;
@@ -377,7 +398,7 @@ export class SoundManager {
 
         try {
             const bgmGain = new Tone.Volume(-60).connect(this._comp);
-            bgmGain.volume.rampTo(-17, 1.5);
+            bgmGain.volume.rampTo(-21, 1.5);
             this._bgmGain = bgmGain;
             this._bgmTimeouts = [];
 
@@ -597,7 +618,7 @@ export class SoundManager {
     toggleSound() {
         this.enabled = !this.enabled;
         if (this._masterVol) {
-            this._masterVol.volume.value = this.enabled ? -5 : -Infinity;
+            this._masterVol.volume.value = this.enabled ? -7 : -Infinity;
         }
         // WAV SFX 풀도 음소거/복원
         for (const name in this._pools) {
