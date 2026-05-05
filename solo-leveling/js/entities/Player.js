@@ -41,6 +41,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             duration: 0,
             angle: 0,
             side: 1,
+            direction: 'right',
         };
         this._hitReactTimer = 0;
         this._hitReactDuration = 0;
@@ -102,6 +103,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         create('player_walk_up', frames('player_walk_up_', 4), 8);
         create('player_walk_left', frames('player_walk_left_', 4), 8);
         create('player_attack', frames('player_attack_', 6), 18, 0);
+        create('player_attack_down', frames('player_attack_down_', 6), 20, 0);
+        create('player_attack_right', frames('player_attack_right_', 6), 20, 0);
+        create('player_attack_up', frames('player_attack_up_', 6), 20, 0);
+        create('player_attack_left', frames('player_attack_left_', 6), 20, 0);
         create('player_hit', frames('player_hit_', 2), 12, 0);
     }
 
@@ -170,7 +175,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        this.setFlipX(!this.facingRight);
+        this._applyFacingFlip();
     }
 
     playAttackMotion(angle, duration = 280, side = 1) {
@@ -186,14 +191,31 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._attackPose.duration = duration;
         this._attackPose.angle = angle;
         this._attackPose.side = side || 1;
-        if (this.scene.anims.exists('player_attack')) {
+        this._attackPose.direction = this._directionFromAngle(angle);
+        const animKey = `player_attack_${this._attackPose.direction}`;
+        if (this.scene.anims.exists(animKey)) {
+            this.play(animKey, false);
+        } else if (this.scene.anims.exists('player_attack')) {
             this.play('player_attack', false);
         }
-        this.setFlipX(!this.facingRight);
+        this._applyFlipForAnimation(animKey);
     }
 
     _animExists(key) {
         return this.scene.anims.exists(key);
+    }
+
+    _directionFromAngle(angle) {
+        const x = Math.cos(angle);
+        const y = Math.sin(angle);
+        if (Math.abs(y) > Math.abs(x) * 1.25) {
+            return y < 0 ? 'up' : 'down';
+        }
+        return x < 0 ? 'left' : 'right';
+    }
+
+    _applyFacingFlip() {
+        this.setFlipX(this.facingRight);
     }
 
     _getActiveAnimationKey() {
@@ -201,6 +223,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             return 'player_hit';
         }
         if (this._attackPose.active && this._animExists('player_attack')) {
+            const directionalAttack = `player_attack_${this._attackPose.direction || this._directionFromAngle(this._attackPose.angle)}`;
+            if (this._animExists(directionalAttack)) return directionalAttack;
             return 'player_attack';
         }
         if (this._moveBlend > 0.08) {
@@ -213,11 +237,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     _applyFlipForAnimation(animKey) {
         if (animKey === 'player_walk_left' || animKey === 'player_walk_right' ||
-            animKey === 'player_walk_up' || animKey === 'player_walk_down') {
+            animKey === 'player_walk_up' || animKey === 'player_walk_down' ||
+            animKey === 'player_attack_left' || animKey === 'player_attack_right' ||
+            animKey === 'player_attack_up' || animKey === 'player_attack_down') {
             this.setFlipX(false);
             return;
         }
-        this.setFlipX(!this.facingRight);
+        this._applyFacingFlip();
     }
 
     _updateAnimation(time, delta) {

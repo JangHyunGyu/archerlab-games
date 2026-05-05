@@ -161,45 +161,45 @@ export const ENEMY_TYPES = {
     goblin: {
         name: '고블린',
         hp: 90, attack: 8, speed: 85, xp: 5,
-        color: 0x4a7a3a, size: 28,
+        color: 0x4a7a3a, size: 32,
     },
     antSoldier: {
         name: '개미 병사',
         hp: 75, attack: 9, speed: 98, xp: 6,
-        color: 0x8b0000, size: 24,
+        color: 0x8b0000, size: 30,
     },
     // --- 중반 적 (1~5분) ---
     orc: {
         name: '오크',
         hp: 350, attack: 18, speed: 64, xp: 15,
-        color: 0x6b4423, size: 44,
+        color: 0x6b4423, size: 50,
     },
     iceBear: {
         name: '아이스 베어',
         hp: 400, attack: 15, speed: 55, xp: 12,
-        color: 0xaaccee, size: 40,
+        color: 0xaaccee, size: 48,
     },
     // --- 후반 적 (5분~) ---
     stoneGolem: {
         name: '스톤 골렘',
         hp: 900, attack: 22, speed: 55, xp: 45,
-        color: 0x666677, size: 60,
+        color: 0x666677, size: 66,
     },
     darkMage: {
         name: '다크 메이지',
         hp: 450, attack: 28, speed: 68, xp: 30,
-        color: 0x3a1a5e, size: 36,
+        color: 0x3a1a5e, size: 44,
     },
     // --- 최후반 적 (8분~) ---
     ironKnight: {
         name: '아이언 나이트',
         hp: 1800, attack: 30, speed: 60, xp: 55,
-        color: 0x8888aa, size: 52,
+        color: 0x8888aa, size: 56,
     },
     demonWarrior: {
         name: '마족 전사',
         hp: 3000, attack: 34, speed: 68, xp: 80,
-        color: 0x440022, size: 56,
+        color: 0x440022, size: 62,
     },
 };
 
