@@ -78,6 +78,7 @@ const CONFIG = {
     INTERPOLATION_DELAY: 80,
 
     // TURN (metered.ca)
+    METERED_TURN_ENABLED: false,
     METERED_APP: 'archerlab',
     METERED_API_KEY: 'dQ4eQfKPtsLEAx09BxG3WzqAWnQ418SXy0CP0-X6PzlC2aNV',
 };

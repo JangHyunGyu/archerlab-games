@@ -143,6 +143,9 @@ body {
 /* Archerlab Link */
 .archerlab-link {
     display: inline-block;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
     background: linear-gradient(135deg, #10b981, #3b82f6, #10b981);
     background-size: 200% 200%;
     animation: al-grad 3s ease infinite, al-glow 2s ease-in-out infinite;
@@ -154,7 +157,7 @@ body {
     font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.5px;
-    margin-bottom: 20px;
+    margin-bottom: 0;
     box-shadow: 0 0 20px rgba(16,185,129,0.5), 0 0 60px rgba(59,130,246,0.2), 0 4px 15px rgba(0,0,0,0.3);
     transition: transform 0.2s, box-shadow 0.2s;
     white-space: nowrap;
@@ -186,17 +189,33 @@ body {
 .menu-container {
     position: relative;
     z-index: 1;
-    text-align: center;
-    max-width: 420px;
+    display: grid;
+    grid-template-columns: minmax(260px, 0.85fr) minmax(360px, 1fr);
+    grid-template-rows: auto auto auto auto;
+    column-gap: 56px;
+    row-gap: 14px;
+    align-items: center;
+    text-align: left;
+    max-width: 980px;
     width: 100%;
+    padding: 34px 38px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(12, 15, 24, 0.52), rgba(12, 15, 24, 0.24));
+    box-shadow: 0 30px 90px rgba(0,0,0,0.28);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
 }
 
 .language-switch {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
     display: inline-flex;
     align-items: center;
     gap: 4px;
     padding: 4px;
-    margin: 0 0 18px;
+    margin: 0;
     background: rgba(11, 13, 18, 0.72);
     border: 1px solid rgba(255,255,255,0.16);
     border-radius: 8px;
@@ -231,33 +250,35 @@ body {
 }
 
 .game-logo {
+    grid-column: 1;
+    grid-row: 2 / span 2;
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    gap: 22px;
-    margin-bottom: 22px;
-    height: 84px;
+    gap: 24px;
+    margin: 8px 0 4px;
+    height: 148px;
 }
 
 .game-logo-assets {
-    gap: 16px;
-    height: 96px;
+    gap: 20px;
+    height: 148px;
 }
 
 .logo-slime-img {
     display: block;
-    width: 94px;
-    height: 65px;
+    width: 132px;
+    height: 94px;
     object-fit: contain;
     filter: drop-shadow(0 10px 18px rgba(0,0,0,0.36));
 }
 
 .logo-ball-img {
     display: block;
-    width: 46px;
-    height: 46px;
+    width: 64px;
+    height: 64px;
     object-fit: contain;
-    margin-bottom: 31px;
+    margin-bottom: 68px;
     filter: drop-shadow(0 7px 12px rgba(0,0,0,0.34));
     animation: logoBounce 2s ease-in-out infinite;
 }
@@ -312,27 +333,34 @@ body {
 }
 
 .menu-title {
+    grid-column: 2;
+    grid-row: 2;
     font-family: var(--font-display);
-    font-size: 2.4rem;
+    font-size: 3.35rem;
     font-weight: 600;
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
     color: var(--text);
-    margin-bottom: 6px;
+    margin: 0;
+    line-height: 1.05;
 }
 
 .menu-subtitle {
+    grid-column: 2;
+    grid-row: 3;
     color: var(--text-dim);
-    margin-bottom: 36px;
-    font-size: 0.92rem;
+    margin: -4px 0 8px;
+    font-size: 1rem;
     font-weight: 400;
     letter-spacing: 0.01em;
 }
 
 .menu-buttons {
+    grid-column: 2;
+    grid-row: 4;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-bottom: 32px;
+    gap: 12px;
+    margin: 0;
 }
 
 /* Buttons */
@@ -444,6 +472,9 @@ body {
 
 /* Controls Guide */
 .controls-guide {
+    grid-column: 1;
+    grid-row: 4;
+    align-self: stretch;
     background: rgba(20, 23, 32, 0.6);
     border: 1px solid var(--border-soft);
     border-radius: 12px;
@@ -1510,6 +1541,84 @@ kbd {
 }
 
 @media (max-height: 450px) and (orientation: landscape) {
+    #main-menu.screen {
+        padding: 8px 14px;
+    }
+
+    #main-menu .menu-container {
+        grid-template-columns: minmax(150px, 0.78fr) minmax(270px, 1fr);
+        column-gap: 18px;
+        row-gap: 8px;
+        max-width: min(760px, calc(100vw - 28px));
+        padding: 14px 16px;
+        border-radius: 12px;
+    }
+
+    #main-menu .archerlab-link {
+        font-size: 0.72rem;
+        padding: 6px 12px;
+        border-radius: 999px;
+    }
+
+    #main-menu .language-switch {
+        justify-self: end;
+        padding: 3px;
+        border-radius: 8px;
+    }
+
+    #main-menu .language-btn {
+        min-width: 66px;
+        min-height: 28px;
+        padding: 5px 10px;
+        font-size: 0.72rem;
+    }
+
+    #main-menu .game-logo,
+    #main-menu .game-logo-assets {
+        height: 78px;
+        gap: 10px;
+        margin: 2px 0;
+    }
+
+    #main-menu .logo-slime-img {
+        width: 72px;
+        height: 52px;
+    }
+
+    #main-menu .logo-ball-img {
+        width: 34px;
+        height: 34px;
+        margin-bottom: 38px;
+    }
+
+    #main-menu .menu-title {
+        font-size: 1.62rem;
+    }
+
+    #main-menu .menu-subtitle {
+        margin: -2px 0 2px;
+        font-size: 0.76rem;
+    }
+
+    #main-menu .menu-buttons {
+        gap: 8px;
+    }
+
+    #main-menu .btn-large {
+        min-height: 42px;
+        padding: 10px 16px;
+        border-radius: 9px;
+    }
+
+    #main-menu .btn-desc {
+        font-size: 0.62rem;
+        right: 14px;
+    }
+
+    #main-menu .controls-guide {
+        display: none;
+    }
+
     #practice-setup.screen,
     #multiplayer-lobby.screen,
     #create-room.screen {
@@ -1628,6 +1737,51 @@ kbd {
 }
 
 @media (max-height: 450px) and (orientation: landscape) and (max-width: 640px) {
+    #main-menu .menu-container {
+        grid-template-columns: minmax(118px, 0.62fr) minmax(230px, 1fr);
+        column-gap: 12px;
+        padding: 12px 14px;
+    }
+
+    #main-menu .archerlab-link {
+        font-size: 0.66rem;
+        padding: 5px 9px;
+    }
+
+    #main-menu .language-btn {
+        min-width: 58px;
+        padding-inline: 8px;
+    }
+
+    #main-menu .game-logo,
+    #main-menu .game-logo-assets {
+        height: 68px;
+    }
+
+    #main-menu .logo-slime-img {
+        width: 58px;
+        height: 43px;
+    }
+
+    #main-menu .logo-ball-img {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 34px;
+    }
+
+    #main-menu .menu-title {
+        font-size: 1.32rem;
+    }
+
+    #main-menu .btn-large {
+        min-height: 38px;
+        padding: 8px 13px;
+    }
+
+    #main-menu .btn-desc {
+        display: none;
+    }
+
     #practice-setup .panel {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         max-width: calc(100vw - 40px);
