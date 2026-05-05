@@ -40,6 +40,29 @@ const CONFIG = {
     SLIME_EYE_COLOR: 0xFFFFFF,
     SLIME_PUPIL_COLOR: 0x222222,
 
+    // Image assets
+    IMAGE_ASSETS: {
+        court: 'assets/images/court-bg.webp',
+        net: 'assets/images/net.png',
+        ball: 'assets/images/ball.png',
+        slimeShadow: 'assets/images/slime-shadow.png',
+        slimeEye: 'assets/images/slime-eye.png',
+        slimePupil: 'assets/images/slime-pupil.png',
+        hitSpark: 'assets/images/hit-spark.png',
+        slimes: [
+            [
+                'assets/images/slime-blue.png',
+                'assets/images/slime-azure.png',
+                'assets/images/slime-cyan.png',
+            ],
+            [
+                'assets/images/slime-red.png',
+                'assets/images/slime-crimson.png',
+                'assets/images/slime-pink.png',
+            ],
+        ],
+    },
+
     // Court visuals
     SKY_TOP: 0x1a1a2e,
     SKY_BOTTOM: 0x16213e,
