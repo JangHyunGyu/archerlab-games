@@ -19,7 +19,7 @@ class PeerJSManager {
             { urls: 'stun:stun1.l.google.com:19302' },
         ];
 
-        if (!CONFIG.METERED_APP || !CONFIG.METERED_API_KEY) {
+        if (!CONFIG.METERED_TURN_ENABLED || !CONFIG.METERED_APP || !CONFIG.METERED_API_KEY) {
             return fallback;
         }
 
