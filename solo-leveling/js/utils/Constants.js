@@ -238,12 +238,12 @@ export const BOSS_SCHEDULE = [
 ];
 
 export const WAVE_CONFIG = {
-    baseSpawnInterval: 1500,
-    minSpawnInterval: 350,
+    baseSpawnInterval: 1250,
+    minSpawnInterval: 280,
     spawnReductionPerMinute: 80,
-    baseEnemiesPerSpawn: 2,
+    baseEnemiesPerSpawn: 3,
     extraEnemiesPerMinute: 1.0,
-    maxEnemiesOnScreen: 100,
+    maxEnemiesOnScreen: 110,
     difficultyMultiplierPerMinute: 0.15,
 };
 

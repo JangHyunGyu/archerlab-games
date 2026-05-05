@@ -45,7 +45,7 @@ export class SystemMessage {
         const lineH = uv(24);
         const boxH = uv(60) + lineCount * lineH;
         const boxW = Math.min(uv(360), GAME_WIDTH - uv(40));
-        const startY = uv(150);
+        const startY = uv(118);
 
         // Container for scroll factor
         const elements = [];

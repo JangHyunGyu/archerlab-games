@@ -18,7 +18,7 @@ export class EnemyManager {
             this.pool.add(enemy);
         }
 
-        this.spawnTimer = 0;
+        this.spawnTimer = WAVE_CONFIG.baseSpawnInterval * 0.75;
         this.eliteTimer = 0;
         this.gameTime = 0;
         this.difficultyMultiplier = 1;
@@ -51,6 +51,8 @@ export class EnemyManager {
         // Cached arrays for getAllEnemies/getActiveEnemies (invalidated each frame)
         this._cachedActiveEnemies = null;
         this._activeEnemiesDirtyFrame = -1;
+
+        scene.time.delayedCall(320, () => this._spawnOpeningWave());
     }
 
     update(time, delta) {
@@ -318,12 +320,21 @@ export class EnemyManager {
     }
 
     // --- Spawning ---
+    _spawnOpeningWave() {
+        if (!this.scene?.player || this.scene.player.isDead) return;
+        const openingTypes = ['goblin', 'goblin', 'goblin', 'antSoldier', 'antSoldier'];
+        for (let i = 0; i < openingTypes.length; i++) {
+            const pos = this._getSpawnPosition(72, 140);
+            this._spawnEnemy(openingTypes[i], pos.x, pos.y);
+        }
+    }
+
     _spawnWave(minutes) {
         const count = Math.floor(WAVE_CONFIG.baseEnemiesPerSpawn + minutes * WAVE_CONFIG.extraEnemiesPerMinute);
         const activeCount = this.getActiveEnemies().length;
 
-        // Max enemies scales with time: 100 base, up to 175 at 15 min
-        const maxEnemies = Math.floor(WAVE_CONFIG.maxEnemiesOnScreen + minutes * 5);
+        // Max enemies scales with time: keep early screens lively, then open up.
+        const maxEnemies = Math.floor(WAVE_CONFIG.maxEnemiesOnScreen + minutes * 6);
         if (activeCount >= maxEnemies) return;
 
         const toSpawn = Math.min(count, maxEnemies - activeCount);
@@ -363,11 +374,42 @@ export class EnemyManager {
         return entries[0][0];
     }
 
-    _getSpawnPosition() {
+    _getSpawnPosition(bufferMin = 110, bufferMax = 220) {
+        const player = this.scene.player;
+        const cam = this.scene.cameras?.main;
+        if (player && cam) {
+            const halfW = cam.width / cam.zoom / 2;
+            const halfH = cam.height / cam.zoom / 2;
+            const buffer = Phaser.Math.Between(bufferMin, bufferMax);
+            const edge = Phaser.Math.Between(0, 3);
+            let x, y;
+            switch (edge) {
+                case 0:
+                    x = player.x + Phaser.Math.Between(-halfW, halfW);
+                    y = player.y - halfH - buffer;
+                    break;
+                case 1:
+                    x = player.x + Phaser.Math.Between(-halfW, halfW);
+                    y = player.y + halfH + buffer;
+                    break;
+                case 2:
+                    x = player.x - halfW - buffer;
+                    y = player.y + Phaser.Math.Between(-halfH, halfH);
+                    break;
+                default:
+                    x = player.x + halfW + buffer;
+                    y = player.y + Phaser.Math.Between(-halfH, halfH);
+                    break;
+            }
+            return {
+                x: Phaser.Math.Clamp(x, 60, WORLD_SIZE - 60),
+                y: Phaser.Math.Clamp(y, 60, WORLD_SIZE - 60),
+            };
+        }
+
         const margin = 60;
 
-        // Spawn from world map edges — fair for all screen sizes
-        // Mobs appear on minimap first, giving players advance warning
+        // Fallback: spawn from world map edges.
         const edge = Phaser.Math.Between(0, 3);
         let x, y;
         switch (edge) {
