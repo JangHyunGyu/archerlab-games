@@ -9,13 +9,17 @@ class GameRenderer {
         this.netSprite = null;
         this.particles = [];
         this.trailPoints = [];
+        this.sparkSprites = [];
         this.scoreTexts = [null, null];
         this.shakeAmount = 0;
         this.initialized = false;
+        this.imageTextures = {};
+        this.usingImageAssets = false;
 
         // 오브젝트 풀: trail과 particle Graphics 재사용
         this._trailPool = [];
         this._particlePool = [];
+        this._sparkPool = [];
         this._msgStyle = null; // showMessage TextStyle 캐시
     }
 
@@ -38,6 +42,7 @@ class GameRenderer {
         this.gameContainer = new PIXI.Container();
         this.app.stage.addChild(this.gameContainer);
 
+        await this.loadImageAssets();
         this.createBackground();
         this.createNet();
         this.createScoreDisplay();
@@ -50,8 +55,76 @@ class GameRenderer {
         this.initialized = true;
     }
 
+    async loadImageAssets() {
+        const assets = CONFIG.IMAGE_ASSETS;
+        if (!assets || !PIXI.Texture) return;
+        if (window.location.protocol === 'file:') {
+            console.info('[Renderer] file:// detected. Using vector fallback to avoid WebGL local image restrictions.');
+            return;
+        }
+
+        const entries = [
+            ['court', assets.court],
+            ['net', assets.net],
+            ['ball', assets.ball],
+            ['slimeShadow', assets.slimeShadow],
+            ['slimeEye', assets.slimeEye],
+            ['slimePupil', assets.slimePupil],
+            ['hitSpark', assets.hitSpark],
+        ];
+
+        if (Array.isArray(assets.slimes)) {
+            for (let team = 0; team < assets.slimes.length; team++) {
+                const teamAssets = assets.slimes[team] || [];
+                for (let colorIdx = 0; colorIdx < teamAssets.length; colorIdx++) {
+                    entries.push([`slime_${team}_${colorIdx}`, teamAssets[colorIdx]]);
+                }
+            }
+        }
+
+        try {
+            await Promise.all(entries
+                .filter(([, src]) => !!src)
+                .map(async ([key, src]) => {
+                    this.imageTextures[key] = await this.loadImageTexture(src);
+                }));
+            this.usingImageAssets = Boolean(
+                this.imageTextures.court &&
+                this.imageTextures.net &&
+                this.imageTextures.ball &&
+                this.imageTextures.slimeShadow &&
+                this.imageTextures.slimeEye &&
+                this.imageTextures.slimePupil
+            );
+        } catch (error) {
+            console.warn('[Renderer] Image asset load failed. Falling back to vector graphics.', error);
+            this.imageTextures = {};
+            this.usingImageAssets = false;
+        }
+    }
+
+    loadImageTexture(src) {
+        return new Promise((resolve, reject) => {
+            const img = document.createElement('img');
+            img.decoding = 'async';
+            img.onload = () => resolve(PIXI.Texture.from(img));
+            img.onerror = () => reject(new Error(`Failed to load image asset: ${src}`));
+            img.src = src;
+        });
+    }
+
     createBackground() {
-        // Sky — fake vertical gradient using layered bands
+        if (this.usingImageAssets && this.imageTextures.court) {
+            const court = new PIXI.Sprite(this.imageTextures.court);
+            court.x = 0;
+            court.y = 0;
+            court.width = CONFIG.COURT_WIDTH;
+            court.height = CONFIG.COURT_HEIGHT;
+            this.gameContainer.addChild(court);
+            return;
+        }
+
+        // Sky - fake vertical gradient using layered bands
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, CONFIG.COURT_WIDTH, CONFIG.GROUND_Y);
         bg.fill(0x0c1020);
@@ -138,6 +211,18 @@ class GameRenderer {
     }
 
     createNet() {
+        if (this.usingImageAssets && this.imageTextures.net) {
+            const net = new PIXI.Sprite(this.imageTextures.net);
+            net.anchor.set(0.5, 1);
+            net.x = CONFIG.NET_X;
+            net.y = CONFIG.GROUND_Y + 7;
+            net.width = 96;
+            net.height = CONFIG.NET_HEIGHT + 30;
+            this.gameContainer.addChild(net);
+            this.netSprite = net;
+            return;
+        }
+
         const netTop = CONFIG.GROUND_Y - CONFIG.NET_HEIGHT;
         const netX = CONFIG.NET_X;
         const poleHalf = CONFIG.NET_WIDTH / 2;
@@ -316,7 +401,78 @@ class GameRenderer {
         this.gameContainer.addChild(vs);
     }
 
+    createSlimeSpriteFromAssets(slime) {
+        const container = new PIXI.Container();
+        const r = CONFIG.SLIME_RADIUS;
+        const colorIdx = slime.colorIdx || 0;
+        const bodyTexture = this.imageTextures[`slime_${slime.team}_${colorIdx}`] ||
+            this.imageTextures[`slime_${slime.team}_0`];
+
+        if (!bodyTexture) return false;
+
+        const shadow = new PIXI.Sprite(this.imageTextures.slimeShadow);
+        shadow.anchor.set(0.5);
+        shadow.x = 0;
+        shadow.y = 7;
+        shadow.width = r * 2.32;
+        shadow.height = 26;
+        shadow.alpha = 0.8;
+        container.addChild(shadow);
+        container._shadow = shadow;
+
+        const body = new PIXI.Sprite(bodyTexture);
+        body.anchor.set(0.5, 0.82);
+        body.x = 0;
+        body.y = 0;
+        body.width = r * 2.3;
+        body.height = r * 1.8;
+        container.addChild(body);
+        container._bodySprite = body;
+
+        const eyeContainer = new PIXI.Container();
+        const eye = new PIXI.Sprite(this.imageTextures.slimeEye);
+        eye.anchor.set(0.5);
+        eye.width = Math.max(18, r * 0.58);
+        eye.height = eye.width;
+        eyeContainer.addChild(eye);
+
+        const pupil = new PIXI.Sprite(this.imageTextures.slimePupil);
+        pupil.anchor.set(0.5);
+        pupil.width = Math.max(9, r * 0.28);
+        pupil.height = pupil.width;
+        eyeContainer.addChild(pupil);
+        container._pupil = pupil;
+
+        eyeContainer.x = slime.team === 0 ? 10 : -10;
+        eyeContainer.y = -r * 0.45;
+        container.addChild(eyeContainer);
+        container._eyeContainer = eyeContainer;
+
+        const nameStyle = new PIXI.TextStyle({
+            fontFamily: 'Space Grotesk, Pretendard, sans-serif',
+            fontSize: 11,
+            fontWeight: '500',
+            letterSpacing: 0.2,
+            fill: 0xffffff,
+            dropShadow: { color: 0x000000, blur: 3, distance: 1, alpha: 0.8 },
+        });
+        const nameText = new PIXI.Text({ text: slime.nickname || '', style: nameStyle });
+        nameText.anchor.set(0.5);
+        nameText.y = -r * 1.3;
+        nameText.alpha = 0.85;
+        container.addChild(nameText);
+        container._nameText = nameText;
+
+        container.x = slime.x;
+        container.y = slime.y;
+        this.gameContainer.addChild(container);
+        this.slimeSprites[slime.id] = container;
+        return true;
+    }
+
     createSlimeSprite(slime) {
+        if (this.usingImageAssets && this.createSlimeSpriteFromAssets(slime)) return;
+
         const container = new PIXI.Container();
         const colors = CONFIG.TEAM_COLORS[slime.team];
         const baseColor = colors[slime.colorIdx || 0];
@@ -470,7 +626,35 @@ class GameRenderer {
         this.slimeSprites[slime.id] = container;
     }
 
+    createBallSpriteFromAssets() {
+        if (!this.imageTextures.ball || !this.imageTextures.slimeShadow) return false;
+
+        const container = new PIXI.Container();
+        const r = CONFIG.BALL_RADIUS;
+
+        const shadow = new PIXI.Sprite(this.imageTextures.slimeShadow);
+        shadow.anchor.set(0.5);
+        shadow.width = r * 1.75;
+        shadow.height = 12;
+        shadow.alpha = 0.52;
+        container.addChild(shadow);
+        container._shadow = shadow;
+
+        const ball = new PIXI.Sprite(this.imageTextures.ball);
+        ball.anchor.set(0.5);
+        ball.width = r * 2.35;
+        ball.height = r * 2.35;
+        container.addChild(ball);
+        container._spinSprite = ball;
+
+        this.gameContainer.addChild(container);
+        this.ballSprite = container;
+        return true;
+    }
+
     createBallSprite() {
+        if (this.usingImageAssets && this.createBallSpriteFromAssets()) return;
+
         const container = new PIXI.Container();
         const r = CONFIG.BALL_RADIUS;
 
@@ -574,6 +758,9 @@ class GameRenderer {
         this.ballSprite.y = ball.y;
 
         // Rotation based on velocity
+        if (this.ballSprite._spinSprite) {
+            this.ballSprite._spinSprite.rotation += ball.vx * 0.03;
+        }
         if (this.ballSprite._lines) {
             this.ballSprite._lines.rotation += ball.vx * 0.03;
         }
@@ -616,6 +803,39 @@ class GameRenderer {
     _releaseParticle(g) {
         g.visible = false;
         this._particlePool.push(g);
+    }
+
+    _getSpark() {
+        if (this._sparkPool.length > 0) {
+            return this._sparkPool.pop();
+        }
+        if (!this.imageTextures.hitSpark) return null;
+        const sprite = new PIXI.Sprite(this.imageTextures.hitSpark);
+        sprite.anchor.set(0.5);
+        sprite.blendMode = 'add';
+        return sprite;
+    }
+
+    _releaseSpark(sprite) {
+        sprite.visible = false;
+        this._sparkPool.push(sprite);
+    }
+
+    _spawnSpark(x, y) {
+        if (!this.usingImageAssets || !this.imageTextures.hitSpark) return;
+        const spark = this._getSpark();
+        if (!spark) return;
+        spark.x = x;
+        spark.y = y;
+        spark.rotation = Math.random() * Math.PI;
+        spark.scale.set(0.55);
+        spark.alpha = 0.9;
+        spark.visible = true;
+        spark._life = 12;
+        spark._maxLife = 12;
+        spark._rotSpeed = (Math.random() - 0.5) * 0.16;
+        this.particleContainer.addChild(spark);
+        this.sparkSprites.push(spark);
     }
 
     addTrailPoint(x, y, vx, vy) {
@@ -678,6 +898,7 @@ class GameRenderer {
 
     spawnHitParticles(x, y, color) {
         const baseColor = color || 0xFFEB3B;
+        this._spawnSpark(x, y);
 
         // 임팩트 링
         this._spawnParticle(x, y, 0, 0, 0, 0, 12, true);
@@ -712,6 +933,22 @@ class GameRenderer {
                 Math.random() * 4 + 2,
                 Math.cos(angle) * speed, Math.sin(angle) * speed - 3,
                 30 + Math.random() * 20, false);
+        }
+    }
+
+    updateSparks() {
+        for (let i = this.sparkSprites.length - 1; i >= 0; i--) {
+            const spark = this.sparkSprites[i];
+            spark._life--;
+            const progress = 1 - spark._life / spark._maxLife;
+            spark.alpha = Math.max(0, 1 - progress);
+            spark.rotation += spark._rotSpeed;
+            spark.scale.set(0.55 + progress * 1.25);
+            if (spark._life <= 0) {
+                this.particleContainer.removeChild(spark);
+                this._releaseSpark(spark);
+                this.sparkSprites.splice(i, 1);
+            }
         }
     }
 
@@ -765,6 +1002,7 @@ class GameRenderer {
         this.updateScores(state.scores);
         this.updateTrails();
         this.updateParticles();
+        this.updateSparks();
         this.updateShake();
         this.updateFps();
     }
@@ -923,12 +1161,22 @@ class GameRenderer {
         }
         this.particles.length = 0;
 
+        // 활성 spark 정리 → 풀로 반환
+        for (const s of this.sparkSprites) {
+            this.particleContainer.removeChild(s);
+            this._releaseSpark(s);
+        }
+        this.sparkSprites.length = 0;
+
         // 풀 크기 제한 (최대 50개씩)
         while (this._trailPool.length > 50) {
             this._trailPool.pop().destroy();
         }
         while (this._particlePool.length > 50) {
             this._particlePool.pop().destroy();
+        }
+        while (this._sparkPool.length > 20) {
+            this._sparkPool.pop().destroy();
         }
     }
 
@@ -937,8 +1185,10 @@ class GameRenderer {
         // 풀 정리
         for (const g of this._trailPool) g.destroy();
         for (const g of this._particlePool) g.destroy();
+        for (const s of this._sparkPool) s.destroy();
         this._trailPool = [];
         this._particlePool = [];
+        this._sparkPool = [];
         if (this.app) {
             this.app.destroy(true);
         }

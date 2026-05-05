@@ -167,7 +167,25 @@ body {
 @keyframes al-glow { 0%,100%{box-shadow:0 0 20px rgba(16,185,129,0.5),0 4px 15px rgba(0,0,0,0.3)} 50%{box-shadow:0 0 35px rgba(16,185,129,0.8),0 4px 15px rgba(0,0,0,0.3)} }
 
 /* Menu */
+#main-menu.screen {
+    position: relative;
+    overflow: hidden;
+}
+
+#main-menu.screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(11,13,18,0.36), rgba(11,13,18,0.82)),
+        url('../assets/images/court-bg.webp') center / cover no-repeat;
+    opacity: 0.92;
+    transform: scale(1.04);
+}
+
 .menu-container {
+    position: relative;
+    z-index: 1;
     text-align: center;
     max-width: 420px;
     width: 100%;
@@ -180,6 +198,29 @@ body {
     gap: 22px;
     margin-bottom: 22px;
     height: 84px;
+}
+
+.game-logo-assets {
+    gap: 16px;
+    height: 96px;
+}
+
+.logo-slime-img {
+    display: block;
+    width: 94px;
+    height: 65px;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 18px rgba(0,0,0,0.36));
+}
+
+.logo-ball-img {
+    display: block;
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+    margin-bottom: 31px;
+    filter: drop-shadow(0 7px 12px rgba(0,0,0,0.34));
+    animation: logoBounce 2s ease-in-out infinite;
 }
 
 .logo-slime {
@@ -1109,6 +1150,15 @@ kbd {
         height: 38px;
         margin-bottom: 6px;
         gap: 10px;
+    }
+    .logo-slime-img {
+        width: 48px;
+        height: 34px;
+    }
+    .logo-ball-img {
+        width: 22px;
+        height: 22px;
+        margin-bottom: 14px;
     }
     .logo-slime {
         width: 32px;
