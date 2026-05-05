@@ -123,6 +123,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    static _animateFrameSprite(scene, sprite, prefix, frameMs = 55) {
+        if (!scene?.textures?.exists(`${prefix}_0`) || !sprite?.scene) return null;
+
+        let frame = 0;
+        return scene.time.addEvent({
+            delay: frameMs,
+            loop: true,
+            callback: () => {
+                if (!sprite.scene) return;
+                frame = (frame + 1) % 6;
+                sprite.setTexture(`${prefix}_${frame}`);
+            },
+        });
+    }
+
     constructor(scene, x, y) {
         super(scene, x, y, 'enemy_goblin_0');
         scene.add.existing(this);
@@ -303,11 +318,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (this.active) this.setTint(0xffffff);
         });
 
-        const proj = this.scene.add.sprite(this.x, this.y, 'proj_darkMage')
-            .setDepth(8).setScale(1.4);
+        const useEffectAsset = this.scene.textures.exists('effect_dark_mage_orb_0');
+        const proj = this.scene.add.sprite(this.x, this.y, useEffectAsset ? 'effect_dark_mage_orb_0' : 'proj_darkMage')
+            .setDepth(8)
+            .setRotation(useEffectAsset ? angle : 0)
+            .setScale(useEffectAsset ? 0.25 : 1.4)
+            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
         this.scene.physics.add.existing(proj, false);
         proj.body.setAllowGravity(false);
-        proj.body.setCircle(6);
+        proj.body.setCircle(useEffectAsset ? 10 : 6);
+        const frameTimer = useEffectAsset
+            ? Enemy._animateFrameSprite(this.scene, proj, 'effect_dark_mage_orb', 58)
+            : null;
 
         // Slow enough to dodge (150 speed)
         const speed = 150;
@@ -318,7 +340,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             delay: 60, repeat: 58, // 58 * 60ms ≈ 3480ms (slightly under auto-destroy)
             callback: () => {
                 if (!proj.active || !this.scene) return;
-                const trail = this.scene.add.circle(proj.x, proj.y, 4, 0xff3300, 0.5).setDepth(7);
+                const trail = this.scene.add.circle(proj.x, proj.y, useEffectAsset ? 5 : 4, 0xff3300, useEffectAsset ? 0.32 : 0.5).setDepth(7);
                 this.scene.tweens.add({
                     targets: trail, alpha: 0, scale: 0.2,
                     duration: 250, onComplete: () => trail.destroy(),
@@ -344,6 +366,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // Centralized cleanup: fires on destroy() from any path (hit, timeout, scene shutdown)
         proj.once('destroy', () => {
+            if (frameTimer) frameTimer.destroy();
             if (trailEvent) trailEvent.destroy();
             if (autoDestroyTimer) autoDestroyTimer.destroy();
             if (collider && this.scene?.physics?.world) {
@@ -352,15 +375,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (this.scene?.tweens) this.scene.tweens.killTweensOf(proj);
         });
 
-        // Spin + pulsing glow for visibility
-        this.scene.tweens.add({
-            targets: proj,
-            rotation: proj.rotation + Math.PI * 6,
-            scaleX: { from: 1.4, to: 1.0 },
-            scaleY: { from: 1.4, to: 1.0 },
-            duration: 3500,
-            yoyo: true,
-        });
+        if (!useEffectAsset) {
+            // Spin + pulsing glow for visibility
+            this.scene.tweens.add({
+                targets: proj,
+                rotation: proj.rotation + Math.PI * 6,
+                scaleX: { from: 1.4, to: 1.0 },
+                scaleY: { from: 1.4, to: 1.0 },
+                duration: 3500,
+                yoyo: true,
+            });
+        }
     }
 
     takeDamage(amount, knockbackX, knockbackY) {
