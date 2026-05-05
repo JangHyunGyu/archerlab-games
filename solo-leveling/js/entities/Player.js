@@ -558,6 +558,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     die() {
         if (this.isDead) return;
+        const scene = this.scene;
+        if (!scene) return;
+
         this.isDead = true;
 
         // Stop movement
@@ -571,7 +574,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Shadow particles burst from body
         try {
             // Main shadow burst
-            const burst = this.scene.add.particles(this.x, this.y, 'particle_glow', {
+            const burst = scene.add.particles(this.x, this.y, 'particle_glow', {
                 speed: { min: 40, max: 180 },
                 scale: { start: 1.2, end: 0 },
                 alpha: { start: 0.9, end: 0 },
@@ -585,7 +588,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             burst.explode(25);
 
             // Rising wisps (soul leaving body)
-            const wisps = this.scene.add.particles(this.x, this.y - 10, 'particle_spark', {
+            const wisps = scene.add.particles(this.x, this.y - 10, 'particle_spark', {
                 speed: { min: 15, max: 60 },
                 angle: { min: 240, max: 300 },
                 scale: { start: 0.8, end: 0 },
@@ -597,27 +600,31 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                 quantity: 2,
             });
             wisps.setDepth(11);
-            this.scene.time.delayedCall(1200, () => {
+            scene.time.delayedCall(1200, () => {
+                if (!scene.scene?.isActive?.() || !wisps.scene) return;
                 wisps.stop();
-                this.scene.time.delayedCall(1600, () => { burst.destroy(); wisps.destroy(); });
+                scene.time.delayedCall(1600, () => {
+                    if (burst.scene) burst.destroy();
+                    if (wisps.scene) wisps.destroy();
+                });
             });
         } catch (e) {
             // Fallback
             for (let i = 0; i < 20; i++) {
-                const p = this.scene.add.circle(
+                const p = scene.add.circle(
                     this.x + Phaser.Math.Between(-10, 10), this.y + Phaser.Math.Between(-15, 10),
                     Phaser.Math.Between(3, 7), COLORS.SHADOW_PRIMARY, 0.8
                 ).setDepth(11);
-                this.scene.tweens.add({
+                scene.tweens.add({
                     targets: p, x: p.x + Phaser.Math.Between(-80, 80), y: p.y + Phaser.Math.Between(-100, 30),
                     alpha: 0, scale: 0, duration: Phaser.Math.Between(600, 1200),
-                    delay: Phaser.Math.Between(0, 300), onComplete: () => p.destroy(),
+                    delay: Phaser.Math.Between(0, 300), onComplete: () => { if (p.scene) p.destroy(); },
                 });
             }
         }
 
         // Player collapse animation: shrink + rotate + fade
-        this.scene.tweens.add({
+        scene.tweens.add({
             targets: this,
             scaleY: 0.3,
             scaleX: 2.5,
@@ -626,15 +633,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             duration: 600,
             ease: 'Power2',
             onComplete: () => {
+                if (!this.scene || !scene.scene?.isActive?.()) return;
                 // Dissolve into shadow
-                this.scene.tweens.add({
+                scene.tweens.add({
                     targets: this,
                     alpha: 0,
                     duration: 500,
                     onComplete: () => {
+                        if (!this.scene || !scene.scene?.isActive?.()) return;
                         // Hide aura
                         if (this.aura) this.aura.setAlpha(0);
-                        this.scene.onPlayerDeath();
+                        scene.onPlayerDeath();
                     },
                 });
             },
@@ -642,7 +651,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Aura flicker and fade
         if (this.aura) {
-            this.scene.tweens.add({
+            scene.tweens.add({
                 targets: this.aura,
                 alpha: 0,
                 duration: 800,
