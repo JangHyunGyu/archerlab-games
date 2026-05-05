@@ -130,9 +130,6 @@ export class MenuScene extends Phaser.Scene {
         msgs.forEach((m, i) => {
             this.time.delayedCall(250 + i * 420, () => this._typewrite(msgEls[i], m));
         });
-        msgs.forEach((m, i) => {
-            this.time.delayedCall(250 + i * 420, () => this._typewrite(msgEls[i], m));
-        });
 
         const startGame = async (resume = false) => {
             this._startingGame = true;
@@ -148,26 +145,31 @@ export class MenuScene extends Phaser.Scene {
         };
 
         // ── Main action buttons ─────────────────
-        const btnW = Math.min(uv(280), GAME_WIDTH - sidePad * 2);
-        const btnH = uv(52);
-        const startY = cy(0.62);
+        const hasSave = GameScene.hasSavedGame();
+        const btnW = Math.min(uv(isNarrow ? 330 : 300), GAME_WIDTH - sidePad * 2);
+        const startH = uv(52);
+        const resumeH = uv(64);
+        const actionGap = uv(12);
+        const actionTop = Math.max(
+            panelY + panelH + uv(isNarrow ? 44 : 36),
+            cy(hasSave ? 0.56 : 0.60)
+        );
+        let nextActionY = actionTop;
 
-        if (GameScene.hasSavedGame()) {
+        if (hasSave) {
             const summary = GameScene.getSavedSummary();
             const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
             const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
-            const resumeLabel = `↻   ${t('continueGame')} · LV.${String(summary?.level || 1).padStart(2, '0')} · ${min}:${sec}`;
-            this._makeButton(centerX - btnW / 2, startY - btnH - uv(12), btnW, btnH, {
-                label: resumeLabel,
-                labelColor: SYSTEM.TEXT_GOLD,
-                border: SYSTEM.BORDER_GOLD,
-                labelSize: isNarrow ? 12 : 14,
-                labelFont: UI_FONT_MONO,
+            this._makeResumeButton(centerX - btnW / 2, nextActionY, btnW, resumeH, {
+                title: t('continueGame'),
+                meta: `LV.${String(summary?.level || 1).padStart(2, '0')}  ·  ${min}:${sec}`,
+                isNarrow,
                 onClick: () => startGame(true),
             });
+            nextActionY += resumeH + actionGap;
         }
 
-        this._makeButton(centerX - btnW / 2, startY - btnH / 2, btnW, btnH, {
+        this._makeButton(centerX - btnW / 2, nextActionY, btnW, startH, {
             label: `▶   ${t('startGame')}`,
             labelColor: SYSTEM.TEXT_BRIGHT,
             border: SYSTEM.BORDER,
@@ -175,11 +177,12 @@ export class MenuScene extends Phaser.Scene {
             labelFont: UI_FONT_KR,
             onClick: () => startGame(false),
         });
+        nextActionY += startH;
 
         // ── Hall of Fame (secondary) ────────────
         const hofW = Math.min(uv(210), GAME_WIDTH - sidePad * 2);
         const hofH = uv(36);
-        const hofY = startY + btnH / 2 + uv(18);
+        const hofY = nextActionY + uv(hasSave ? 16 : 18);
         this._makeButton(centerX - hofW / 2, hofY, hofW, hofH, {
             label: t('hallOfFame'),
             labelColor: SYSTEM.TEXT_GOLD,
@@ -191,7 +194,7 @@ export class MenuScene extends Phaser.Scene {
 
         // ── Footer ─────────────────────────────
         // Anchor footer from bottom of screen so it's consistent across aspect ratios
-        const bottomPad = uv(18);
+        const bottomPad = uv(isNarrow ? 54 : 18);
         const copyrightY = GAME_HEIGHT - bottomPad;
         this.add.text(centerX, copyrightY, 'ArcherLab   ·   © 2026', {
             fontSize: fs(10), fontFamily: UI_FONT_MONO, color: '#3a4755',
@@ -281,6 +284,72 @@ export class MenuScene extends Phaser.Scene {
         step();
     }
 
+    _fitText(textObj, maxW, maxH = null) {
+        const sx = maxW ? Math.min(1, maxW / Math.max(textObj.width, 1)) : 1;
+        const sy = maxH ? Math.min(1, maxH / Math.max(textObj.height, 1)) : 1;
+        const scale = Math.min(sx, sy);
+        textObj.setScale(scale);
+        return scale;
+    }
+
+    _makeResumeButton(x, y, w, h, { title, meta, isNarrow = false, onClick }) {
+        const g = this.add.graphics();
+        const redraw = (hover) => {
+            g.clear();
+            drawSystemPanel(g, x, y, w, h, {
+                cut: uv(9),
+                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
+                fillAlpha: hover ? 0.98 : 0.88,
+                border: SYSTEM.BORDER_GOLD,
+                borderAlpha: hover ? 1 : 0.92,
+                borderWidth: hover ? 2 : 1,
+            });
+            g.lineStyle(1, SYSTEM.BORDER_GOLD, hover ? 0.45 : 0.25);
+            g.lineBetween(x + uv(48), y + uv(10), x + uv(48), y + h - uv(10));
+        };
+        redraw(false);
+
+        const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
+            .setInteractive({ useHandCursor: true });
+        const icon = this.add.text(x + uv(24), y + h / 2, '↻', {
+            fontSize: fs(isNarrow ? 15 : 16),
+            fontFamily: UI_FONT_MONO,
+            fontStyle: 'bold',
+            color: SYSTEM.TEXT_GOLD,
+        }).setOrigin(0.5);
+        const titleText = this.add.text(x + uv(64), y + h * 0.36, title, {
+            fontSize: fs(isNarrow ? 14 : 15),
+            fontFamily: UI_FONT_KR,
+            fontStyle: 'bold',
+            color: SYSTEM.TEXT_GOLD,
+        }).setOrigin(0, 0.5);
+        const metaText = this.add.text(x + uv(64), y + h * 0.68, meta, {
+            fontSize: fs(isNarrow ? 10 : 11),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+        }).setOrigin(0, 0.5);
+
+        const textMaxW = w - uv(82);
+        const titleScale = this._fitText(titleText, textMaxW, h * 0.38);
+        const metaScale = this._fitText(metaText, textMaxW, h * 0.28);
+        const iconScale = this._fitText(icon, uv(28), h * 0.54);
+
+        hit.on('pointerover', () => {
+            redraw(true);
+            icon.setScale(iconScale * 1.05);
+            titleText.setScale(titleScale * 1.03);
+            metaText.setScale(metaScale * 1.02);
+        });
+        hit.on('pointerout', () => {
+            redraw(false);
+            icon.setScale(iconScale);
+            titleText.setScale(titleScale);
+            metaText.setScale(metaScale);
+        });
+        hit.on('pointerdown', () => onClick && onClick());
+        return { g, hit, icon, titleText, metaText };
+    }
+
     _makeButton(x, y, w, h, { label, labelColor, border, labelSize = 16, labelFont = UI_FONT_KR, onClick }) {
         const g = this.add.graphics();
         const redraw = (hover) => {
@@ -299,11 +368,12 @@ export class MenuScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true });
         const txt = this.add.text(x + w / 2, y + h / 2, label, {
             fontSize: fs(labelSize), fontFamily: labelFont, fontStyle: 'bold',
-            color: labelColor, letterSpacing: 1,
+            color: labelColor,
         }).setOrigin(0.5);
+        const baseScale = this._fitText(txt, w - uv(24), h - uv(12));
 
-        hit.on('pointerover', () => { redraw(true); txt.setScale(1.02); });
-        hit.on('pointerout', () => { redraw(false); txt.setScale(1); });
+        hit.on('pointerover', () => { redraw(true); txt.setScale(baseScale * 1.02); });
+        hit.on('pointerout', () => { redraw(false); txt.setScale(baseScale); });
         hit.on('pointerdown', () => onClick && onClick());
         return { g, hit, txt };
     }
