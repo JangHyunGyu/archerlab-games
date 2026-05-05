@@ -193,7 +193,7 @@ export class SpriteFactory {
     }
 
     static _loadMotionPlayerTextures(scene) {
-        const W = 96, H = 128;
+        const W = 112, H = 144;
         const names = [
             ...Array.from({ length: 4 }, (_, i) => `player_idle_${i}`),
             ...['down', 'right', 'up', 'left'].flatMap(dir =>
@@ -291,7 +291,17 @@ export class SpriteFactory {
             const canvas = document.createElement('canvas');
             canvas.width = tileSize; canvas.height = tileSize;
             const ctx = canvas.getContext('2d');
+            ctx.filter = 'brightness(0.68) contrast(0.82) saturate(0.72)';
             ctx.drawImage(src, 0, 0, tileSize, tileSize);
+            ctx.filter = 'none';
+            ctx.fillStyle = 'rgba(5, 4, 18, 0.32)';
+            ctx.fillRect(0, 0, tileSize, tileSize);
+            const glow = ctx.createRadialGradient(tileSize * 0.5, tileSize * 0.48, 10, tileSize * 0.5, tileSize * 0.48, tileSize * 0.64);
+            glow.addColorStop(0, 'rgba(90, 74, 125, 0.12)');
+            glow.addColorStop(0.45, 'rgba(20, 18, 46, 0.02)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0.22)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, tileSize, tileSize);
             if (scene.textures.exists('floor_tile')) scene.textures.remove('floor_tile');
             scene.textures.addCanvas('floor_tile', canvas);
             console.log('[SpriteFactory] AI dungeon floor loaded (Imagen 4)');

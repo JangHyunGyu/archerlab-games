@@ -133,14 +133,14 @@ export class GameScene extends Phaser.Scene {
             this.systemMessage.show(t('sysSystem'), [
                 t('sysEnterDungeon'),
                 t('sysKillToLevel'),
-            ], { duration: 3000 });
+            ], { duration: 2400 });
         });
 
-        this.time.delayedCall(4000, () => {
+        this.time.delayedCall(3600, () => {
             this.systemMessage.show(t('sysSystem'), [
                 t('sysQuestComing'),
                 t('sysTabHint'),
-            ], { duration: 3000, type: 'quest' });
+            ], { duration: 2200, type: 'quest' });
         });
 
         // Sound toggle key (M)
@@ -500,7 +500,7 @@ export class GameScene extends Phaser.Scene {
                 .setScrollFactor(0)
                 .setDepth(88)
                 .setBlendMode(Phaser.BlendModes.MULTIPLY)
-                .setAlpha(1);
+                .setAlpha(0.82);
         } catch (e) { /* tint overlay optional */ }
     }
 
@@ -516,7 +516,7 @@ export class GameScene extends Phaser.Scene {
                 .setScrollFactor(0)
                 .setDepth(90)
                 .setDisplaySize(cam.width * scale, cam.height * scale)
-                .setAlpha(0.75);
+                .setAlpha(0.68);
         } catch (e) { /* vignette not available */ }
     }
 
@@ -536,7 +536,7 @@ export class GameScene extends Phaser.Scene {
                 } catch (e) { /* silent */ }
             }
         } else {
-            this._vignetteOverlay.setAlpha(0.75);
+            this._vignetteOverlay.setAlpha(0.68);
             if (this._colorTint) this._colorTint.fillColor = 0xd5b8ee;
             if (this._colorMatrix) {
                 try {

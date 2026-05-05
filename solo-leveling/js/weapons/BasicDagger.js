@@ -63,11 +63,14 @@ export class BasicDagger extends WeaponBase {
         if (this.player.playAttackMotion) {
             this.player.playAttackMotion(baseAngle, 280, side);
         }
-        const bladeScale = 1.25;
+        const bladeScale = 0.88;
         const bladeTipFromOrigin = 82 * 0.94;
         const bladeVisualLength = bladeTipFromOrigin * bladeScale;
         const pommelRestDist = 19;
-        const pommelMaxDist = Math.max(pommelRestDist + 62, this.attackRange - bladeVisualLength);
+        const pommelMaxDist = Math.max(
+            pommelRestDist + 72,
+            Math.min(this.attackRange - bladeVisualLength * 0.35, pommelRestDist + 106)
+        );
         const thrustTravel = pommelMaxDist - pommelRestDist;
 
         const mainBlade = this._getBlade().setDepth(14).setScale(bladeScale);

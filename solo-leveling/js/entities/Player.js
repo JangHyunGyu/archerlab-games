@@ -6,11 +6,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        this.visualBaseScale = 1.12;
         this.setDepth(10);
         this.setCollideWorldBounds(true);
-        this.setScale(1);
-        this.body.setSize(48, 72);
-        this.body.setOffset(24, 20);
+        this.setScale(this.visualBaseScale);
+        this.body.setSize(38, 56);
+        this.body.setOffset(37, 78);
 
         // Stats
         this.stats = { ...PLAYER_BASE_STATS };
@@ -43,6 +44,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         };
         this._hitReactTimer = 0;
         this._hitReactDuration = 0;
+        this._lastAfterimageAt = 0;
 
         // Passive bonuses tracking
         this.passiveLevels = {};
@@ -66,14 +68,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.aura = scene.add.sprite(x, y, 'player_aura')
             .setDepth(9)
             .setAlpha(0)
-            .setScale(2)
+            .setScale(1.5, 0.82)
             .setBlendMode(Phaser.BlendModes.ADD);
 
         // Glow filter (rank-based)
         try {
             this.enableFilters();
             this._glowFilter = this.filters.internal.addGlow(0x7b2fff, 2, 0, 1, false, 8, 8);
-            this._glowFilter.setActive(false); // Starts inactive, enabled on rank up
+            this._glowFilter.setActive(true);
         } catch (e) { /* filters not available */ }
 
         // Create animations
@@ -140,29 +142,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             vy *= 0.707;
         }
 
-        if (usingJoystick) {
-            // Lerp smoothing for mobile — fast response, no jitter
-            const lerpFactor = 0.35;
-            this.smoothVx += (vx - this.smoothVx) * lerpFactor;
-            this.smoothVy += (vy - this.smoothVy) * lerpFactor;
+        // Fast acceleration with a little inertia. This removes the "cardboard cutout"
+        // feel without making keyboard control sluggish.
+        const lerpFactor = usingJoystick ? 0.35 : 0.48;
+        this.smoothVx += (vx - this.smoothVx) * lerpFactor;
+        this.smoothVy += (vy - this.smoothVy) * lerpFactor;
 
-            // Snap to zero if very small to prevent drifting
-            if (Math.abs(this.smoothVx) < 0.01) this.smoothVx = 0;
-            if (Math.abs(this.smoothVy) < 0.01) this.smoothVy = 0;
+        if (Math.abs(this.smoothVx) < 0.015) this.smoothVx = 0;
+        if (Math.abs(this.smoothVy) < 0.015) this.smoothVy = 0;
 
-            this.body.setVelocity(this.smoothVx * speed, this.smoothVy * speed);
-            this.isMoving = Math.abs(this.smoothVx) > 0.01 || Math.abs(this.smoothVy) > 0.01;
+        this.body.setVelocity(this.smoothVx * speed, this.smoothVy * speed);
+        this.isMoving = Math.hypot(this.smoothVx, this.smoothVy) > 0.025;
 
-            if (Math.abs(this.smoothVx) > 0.1) this.facingRight = this.smoothVx > 0;
-        } else {
-            // Keyboard: instant response, reset smoothing
-            this.smoothVx = vx;
-            this.smoothVy = vy;
-            this.body.setVelocity(vx * speed, vy * speed);
-            this.isMoving = vx !== 0 || vy !== 0;
-
-            if (vx !== 0) this.facingRight = vx > 0;
-        }
+        if (Math.abs(this.smoothVx) > 0.08) this.facingRight = this.smoothVx > 0;
 
         this.moveInputX = this.smoothVx;
         this.moveInputY = this.smoothVy;
@@ -248,8 +240,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const walkWeight = this._moveBlend;
         const idleWeight = 1 - walkWeight;
         const facingSign = this.facingRight ? 1 : -1;
-        const horizontalLean = this.moveInputX * 0.7;
-        const walkSway = step * 0.25 * walkWeight * facingSign;
+        const horizontalLean = this.moveInputX * 2.2;
+        const verticalLean = this.moveInputY * 0.75;
+        const walkSway = step * 0.55 * walkWeight * facingSign;
         const walkSquash = footfall * 0.007 * walkWeight;
         const idleScaleY = idleBreath * 0.008 * idleWeight;
         const idleScaleX = -idleBreath * 0.004 * idleWeight;
@@ -267,11 +260,43 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             0.9,
             1.14
         );
-        const angle = Phaser.Math.DegToRad(horizontalLean + walkSway + attack.lean + attack.twist);
+        const angle = Phaser.Math.DegToRad(horizontalLean + verticalLean + walkSway + attack.lean + attack.twist);
 
-        this.setScale(scaleX, scaleY);
+        this.setScale(scaleX * this.visualBaseScale, scaleY * this.visualBaseScale);
         this.setRotation(angle);
         this._applyFlipForAnimation(activeAnim);
+        this._emitMovementAfterimage(time, speedRatio, walkWeight);
+    }
+
+    _emitMovementAfterimage(time, speedRatio, walkWeight) {
+        if (walkWeight < 0.55 || speedRatio < 0.45 || this._attackPose.active || this._hitReactTimer > 0) return;
+        if (time - this._lastAfterimageAt < 105) return;
+        this._lastAfterimageAt = time;
+
+        try {
+            const ghost = this.scene.add.sprite(
+                this.x - this.body.velocity.x * 0.035,
+                this.y - this.body.velocity.y * 0.035,
+                this.texture.key
+            )
+                .setDepth(this.depth - 1)
+                .setAlpha(0.18)
+                .setTint(0x7b2fff)
+                .setBlendMode(Phaser.BlendModes.ADD)
+                .setScale(this.scaleX * 0.99, this.scaleY * 0.99)
+                .setRotation(this.rotation)
+                .setFlipX(this.flipX);
+
+            this.scene.tweens.add({
+                targets: ghost,
+                alpha: 0,
+                scaleX: ghost.scaleX * 0.94,
+                scaleY: ghost.scaleY * 0.94,
+                duration: 220,
+                ease: 'Quad.Out',
+                onComplete: () => ghost.destroy(),
+            });
+        } catch (e) { /* afterimage optional */ }
     }
 
     _sampleAttackPose(delta) {
@@ -342,13 +367,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _updateAura() {
-        this.aura.setPosition(this.x, this.y);
+        this.aura.setPosition(this.x, this.y + this.displayHeight * 0.33);
         const rank = RANKS[this.currentRank];
-        if (rank.glowAlpha > 0) {
-            this.aura.setAlpha(rank.glowAlpha);
-            this.aura.setTint(rank.color);
-            this.aura.setScale(1 + Math.sin(this.scene.time.now * 0.002) * 0.1);
-        }
+        const pulse = Math.sin(this.scene.time.now * 0.002) * 0.08;
+        const baseAlpha = 0.16;
+        this.aura.setAlpha(Math.max(baseAlpha, rank.glowAlpha));
+        this.aura.setTint(rank.glowAlpha > 0 ? rank.color : COLORS.SHADOW_PRIMARY);
+        this.aura.setScale(1.45 + pulse, 0.78 + pulse * 0.35);
     }
 
     _checkRankUp() {

@@ -1084,7 +1084,7 @@ body {
     justify-content: center;
     gap: var(--strip-gap);
     min-height: 50px;
-    padding: 5px 18px 5px 10px;
+    padding: 5px 10px;
     overflow: visible;
     border-width: 3px;
     border-radius: 999px 18px 18px 999px;
@@ -1104,21 +1104,6 @@ body {
     border-radius: 999px;
     background: rgba(232, 90, 79, 0.58);
     box-shadow: 0 1px 0 rgba(255,255,255,0.55);
-  }
-
-  .game-tier-strip::after {
-    content: "";
-    position: absolute;
-    right: -7px;
-    top: 50%;
-    width: 30px;
-    height: 30px;
-    transform: translateY(-50%) rotate(45deg);
-    border-top: 4px solid rgba(255, 255, 255, 0.96);
-    border-right: 4px solid rgba(255, 255, 255, 0.96);
-    border-radius: 4px;
-    filter: drop-shadow(2px 2px 0 rgba(74, 43, 22, 0.50));
-    pointer-events: none;
   }
 
   .game-tier-cell {
