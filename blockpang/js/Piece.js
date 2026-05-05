@@ -182,10 +182,11 @@ class PieceTray {
         // Calculate tray cell size so pieces fit nicely
         const slotWidth = areaWidth / 3;
         const maxDim = 5;
+        const compact = areaWidth < 520;
         this.trayCellSize = Math.min(
-            (slotWidth * 0.7) / maxDim,
-            (areaHeight * 0.76) / maxDim,
-            cellSize * 0.82
+            (slotWidth * (compact ? 0.84 : 0.72)) / maxDim,
+            (areaHeight * 0.78) / maxDim,
+            cellSize * (compact ? 0.86 : 0.82)
         );
 
         // Slot center positions
@@ -193,7 +194,7 @@ class PieceTray {
         for (let i = 0; i < 3; i++) {
             this.slotPositions.push({
                 x: slotWidth * (i + 0.5),
-                y: areaHeight * 0.45,
+                y: areaHeight * (compact ? 0.43 : 0.45),
             });
         }
 
@@ -222,7 +223,7 @@ class PieceTray {
             panel.position.set(10, 2);
             panel.width = panelW;
             panel.height = panelH;
-            panel.alpha = 0.88;
+            panel.alpha = 0.68;
             root.addChild(panel);
         } else {
             const fallback = new PIXI.Graphics();
@@ -231,11 +232,26 @@ class PieceTray {
             root.addChild(fallback);
         }
 
+        const matte = new PIXI.Graphics();
+        matte.roundRect(18, 16, Math.max(1, panelW - 16), Math.max(1, panelH - 28), 12)
+             .fill({ color: 0x06142F, alpha: 0.34 });
+        root.addChild(matte);
+
+        const slotW = w / 3;
+        for (let i = 0; i < 3; i++) {
+            const slotX = slotW * i + slotW * 0.15;
+            const slotY = Math.max(22, panelH * 0.33);
+            const slotGlowW = slotW * 0.7;
+            const slotGlowH = Math.max(28, panelH * 0.14);
+            matte.roundRect(slotX, slotY, slotGlowW, slotGlowH, slotGlowH / 2)
+                 .fill({ color: THEME.secondary, alpha: 0.032 });
+        }
+
         const border = new PIXI.Graphics();
         border.roundRect(10, 2, panelW, panelH, 14)
-         .stroke({ width: 1.2, color: THEME.divider, alpha: 0.56 });
+         .stroke({ width: 1.2, color: THEME.divider, alpha: 0.42 });
         border.roundRect(16, 7, Math.max(1, panelW - 12), 3, 2)
-         .fill({ color: THEME.secondary, alpha: 0.22 });
+         .fill({ color: THEME.secondary, alpha: 0.14 });
         root.addChild(border);
 
         this.trayBg = root;

@@ -245,12 +245,13 @@ class UIManager {
         const hudX = padding;
         const hudY = Math.max(4, padding * 0.4);
         const hudW = Math.max(1, screenWidth - padding * 2);
-        const hudH = Math.max(72, scoreAreaHeight - hudY - 4);
+        const compact = screenWidth < 520;
+        const hudH = Math.max(compact ? 78 : 72, scoreAreaHeight - hudY - 4);
 
         // Inner padding so contents stay clear of the asset border / corner brackets
-        const innerPadX = Math.max(28, hudW * 0.075);
+        const innerPadX = compact ? Math.max(24, hudW * 0.07) : Math.max(28, hudW * 0.075);
         const innerPadTop = Math.max(16, hudH * 0.2);
-        const innerPadBottom = Math.max(10, hudH * 0.16);
+        const innerPadBottom = compact ? Math.max(5, hudH * 0.07) : Math.max(10, hudH * 0.16);
         const innerLeft = hudX + innerPadX;
         const innerRight = hudX + hudW - innerPadX;
         const innerTop = hudY + innerPadTop;
@@ -271,7 +272,7 @@ class UIManager {
                 panel.position.set(hudX, hudY);
                 panel.width = hudW;
                 panel.height = hudH;
-                panel.alpha = 0.78;
+                panel.alpha = compact ? 0.68 : 0.76;
                 this.hudBg.addChild(panel);
             } else {
                 const panel = new PIXI.Graphics();
@@ -282,14 +283,14 @@ class UIManager {
 
             const line = new PIXI.Graphics();
             line.roundRect(hudX, hudY, hudW, hudH, 18)
-                .stroke({ width: 1.2, color: THEME.divider, alpha: 0.52 });
+                .stroke({ width: 1.2, color: THEME.divider, alpha: compact ? 0.44 : 0.52 });
             line.roundRect(hudX + 10, hudY + 6, Math.max(1, hudW - 20), 3, 2)
-                .fill({ color: THEME.secondary, alpha: 0.22 });
+                .fill({ color: THEME.secondary, alpha: compact ? 0.16 : 0.22 });
             this.hudBg.addChild(line);
         }
 
         // ── Title (top-center, inside panel) ──
-        this.titleText.style.fontSize = Math.max(13, Math.min(18, screenWidth * 0.04));
+        this.titleText.style.fontSize = Math.max(14, Math.min(compact ? 17 : 18, screenWidth * 0.043));
         this.titleText.position.set(centerX, innerTop);
 
         const titleBottom = innerTop + this.titleText.height;
@@ -297,27 +298,30 @@ class UIManager {
 
         // ── Score block (left) ──
         const scoreX = innerLeft;
-        this.scoreLabelText.style.fontSize = Math.max(8, Math.min(11, screenWidth * 0.022));
+        this.scoreLabelText.style.fontSize = Math.max(8, Math.min(11, screenWidth * 0.024));
         this.scoreLabelText.position.set(scoreX, row2Y);
-        this.scoreText.style.fontSize = Math.max(15, Math.min(22, screenWidth * 0.05));
+        this.scoreText.style.fontSize = Math.max(18, Math.min(compact ? 25 : 22, screenWidth * 0.062));
         const scoreNumberY = row2Y + this.scoreLabelText.height + 5;
         this.scoreText.position.set(scoreX, scoreNumberY);
 
         // ── Best / Level (right) ──
-        this.bestText.style.fontSize = Math.max(9, Math.min(12, screenWidth * 0.026));
+        this.bestText.style.fontSize = Math.max(10, Math.min(12, screenWidth * 0.03));
         this.bestText.position.set(innerRight, row2Y + this.bestText.height * 0.5);
 
-        this.levelText.style.fontSize = Math.max(8, Math.min(10, screenWidth * 0.023));
-        this.levelText.position.set(innerRight, row2Y + this.bestText.height + this.levelText.height * 0.5 + 2);
+        this.levelText.style.fontSize = Math.max(9, Math.min(11, screenWidth * 0.026));
 
         // ── Level bar (right, hugging the inner-bottom of panel) ──
-        const barH = 3;
-        const barW = Math.min(110, hudW * 0.32);
+        const barH = compact ? 4 : 3;
+        const barW = Math.min(compact ? 132 : 110, hudW * 0.36);
         const barX = innerRight - barW;
-        const barY = Math.min(innerBottom - barH, this.levelText.y + this.levelText.height * 0.5 + 4);
+        const barY = innerBottom - barH - 4;
+        const levelY = compact
+            ? barY - this.levelText.height * 0.5 - 5
+            : barY + barH + this.levelText.height * 0.5 + 3;
+        this.levelText.position.set(innerRight, levelY);
 
         this.levelBarBg.clear();
-        this.levelBarBg.roundRect(barX, barY, barW, barH, barH / 2).fill({ color: THEME.divider, alpha: 1 });
+        this.levelBarBg.roundRect(barX, barY, barW, barH, barH / 2).fill({ color: THEME.secondaryDp, alpha: 0.56 });
 
         this._levelBarX = barX;
         this._levelBarY = barY;
@@ -325,11 +329,11 @@ class UIManager {
         this._levelBarH = barH;
 
         // ── Sound button (top-right, inside panel) ──
-        this.soundBtn.style.fontSize = Math.max(17, Math.min(22, screenWidth * 0.046));
+        this.soundBtn.style.fontSize = Math.max(18, Math.min(23, screenWidth * 0.052));
         this.soundBtn.position.set(innerRight, hudY + Math.max(8, innerPadTop * 0.5));
 
         // ── Back chevron (top-left, inside panel) ──
-        this.homeBtn.style.fontSize = Math.max(20, Math.min(26, screenWidth * 0.058));
+        this.homeBtn.style.fontSize = Math.max(21, Math.min(27, screenWidth * 0.062));
         this.homeBtn.position.set(innerLeft, hudY + Math.max(4, innerPadTop * 0.3));
     }
 
@@ -364,12 +368,14 @@ class UIManager {
 
         if (this.levelBarFill && this._levelBarW) {
             this.levelBarFill.clear();
+            this.levelBarGlow.clear();
             const fillW = this._levelBarW * Math.min(1, progress);
             if (fillW > 0) {
+                this.levelBarGlow.roundRect(this._levelBarX - 2, this._levelBarY - 2, fillW + 4, this._levelBarH + 4, this._levelBarH + 2)
+                    .fill({ color: THEME.accent, alpha: 0.16 });
                 this.levelBarFill.roundRect(this._levelBarX, this._levelBarY, fillW, this._levelBarH, this._levelBarH / 2)
                     .fill({ color: THEME.accent, alpha: 1 });
             }
-            this.levelBarGlow.clear();
         }
     }
 
