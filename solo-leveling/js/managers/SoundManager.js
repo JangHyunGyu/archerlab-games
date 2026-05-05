@@ -11,13 +11,18 @@ export class SoundManager {
         this._userActivated = false;
         this._lastPlayTime = {};
         this._throttleMs = {
-            hit: 150, kill: 180, xp: 80, dagger: 150, daggerThrow: 120,
-            slash: 200, authority: 200, fear: 250,
-            playerHit: 250, system: 250, warning: 350,
+            hit: 130, kill: 220, xp: 120, dagger: 190, daggerThrow: 160,
+            slash: 240, authority: 240, fear: 280,
+            playerHit: 300, system: 280, warning: 380,
         };
         this._activeSounds = 0;
-        this._maxActiveSounds = 5;
+        this._maxActiveSounds = 4;
         this._activeSoundTimers = new Set();
+        this._sfxMaster = 0.68;
+        this._releaseMs = {
+            dagger: 260, daggerThrow: 280, hit: 240, kill: 260, xp: 170,
+            playerHit: 320, select: 160, system: 220, warning: 320,
+        };
         // WAV Audio pools
         this._pools = {};
     }
@@ -28,6 +33,11 @@ export class SoundManager {
         for (let i = 0; i < poolSize; i++) {
             const audio = new Audio(src);
             audio.preload = 'auto';
+            audio._inUse = false;
+            audio.addEventListener('ended', () => { audio._inUse = false; });
+            audio.addEventListener('pause', () => {
+                if (audio.ended || audio.currentTime === 0) audio._inUse = false;
+            });
             this._pools[name].push(audio);
         }
         this._pools[name]._index = 0;
@@ -36,12 +46,29 @@ export class SoundManager {
     // WAV 풀에서 재생
     _playFromPool(name, volume = 0.7) {
         const pool = this._pools[name];
-        if (!pool) return;
-        const audio = pool[pool._index];
-        pool._index = (pool._index + 1) % pool.length;
-        audio.volume = Math.max(0, Math.min(1, volume));
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
+        if (!pool || pool.length === 0) return false;
+
+        const start = pool._index || 0;
+        let audio = null;
+        let pickedIndex = -1;
+        for (let i = 0; i < pool.length; i++) {
+            const idx = (start + i) % pool.length;
+            const candidate = pool[idx];
+            if (!candidate._inUse || candidate.paused || candidate.ended) {
+                audio = candidate;
+                pickedIndex = idx;
+                break;
+            }
+        }
+        if (!audio) return false;
+
+        pool._index = (pickedIndex + 1) % pool.length;
+        audio._inUse = true;
+        audio.muted = !this.enabled;
+        audio.volume = Math.max(0, Math.min(1, volume * this._sfxMaster));
+        try { audio.currentTime = 0; } catch (e) { /* silent */ }
+        audio.play().catch(() => { audio._inUse = false; });
+        return true;
     }
 
     init() {
@@ -110,10 +137,10 @@ export class SoundManager {
                     Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.1 }));
                 } catch (e) { /* silent */ }
 
-                this._masterVol = new Tone.Volume(4).toDestination();
+                this._masterVol = new Tone.Volume(-5).toDestination();
                 this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
                     .connect(this._masterVol).start();
-                this._comp = new Tone.Compressor(-24, 4).connect(this._chorus);
+                this._comp = new Tone.Compressor(-20, 6).connect(this._chorus);
                 this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
                 this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
                 this._toneReady = true;
@@ -169,16 +196,16 @@ export class SoundManager {
             if (now - last < cooldown) return;
         }
         this._lastPlayTime[soundName] = now;
+        const vol = this._sfxVolume[soundName] || 0.7;
+        if (!this._playFromPool(soundName, vol)) return;
+
         this._activeSounds++;
         let releaseTimer = null;
         releaseTimer = setTimeout(() => {
             this._activeSoundTimers.delete(releaseTimer);
             this._activeSounds = Math.max(0, this._activeSounds - 1);
-        }, 100);
+        }, this._releaseMs[soundName] || 220);
         this._activeSoundTimers.add(releaseTimer);
-
-        const vol = this._sfxVolume[soundName] || 0.7;
-        this._playFromPool(soundName, vol);
     }
 
     // ========== INTRO MUSIC (Tone.js) ==========

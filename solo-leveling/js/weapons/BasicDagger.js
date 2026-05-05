@@ -4,7 +4,7 @@ import { WEAPONS } from '../utils/Constants.js';
 export class BasicDagger extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, WEAPONS.basicDagger);
-        this.attackRange = 225;
+        this.attackRange = 165;
 
         this._bladePool = [];
         this._activeThrusts = [];
@@ -48,28 +48,30 @@ export class BasicDagger extends WeaponBase {
 
     _thrust() {
         const target = this.player.getClosestEnemy(this.attackRange + 50);
+        const fallbackAngle = this.player.moveIntensity > 0.12
+            ? this.player.lastMoveAngle
+            : (this.player.facingRight ? 0 : Math.PI);
         const baseAngle = target
             ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
-            : (this.player.facingRight ? 0 : Math.PI);
+            : fallbackAngle;
 
         const facing = Math.cos(baseAngle);
         if (Math.abs(facing) > 0.15) {
             this.player.facingRight = facing > 0;
-            this.player.setFlipX(!this.player.facingRight);
         }
 
         this._stabSide *= -1;
         const side = this._stabSide;
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, 280, side);
+            this.player.playAttackMotion(baseAngle, 240, side);
         }
-        const bladeScale = 0.88;
+        const bladeScale = 0.64;
         const bladeTipFromOrigin = 82 * 0.94;
         const bladeVisualLength = bladeTipFromOrigin * bladeScale;
-        const pommelRestDist = 19;
+        const pommelRestDist = 12;
         const pommelMaxDist = Math.max(
-            pommelRestDist + 72,
-            Math.min(this.attackRange - bladeVisualLength * 0.35, pommelRestDist + 106)
+            pommelRestDist + 48,
+            Math.min(this.attackRange - bladeVisualLength * 0.52, pommelRestDist + 70)
         );
         const thrustTravel = pommelMaxDist - pommelRestDist;
 
@@ -107,8 +109,8 @@ export class BasicDagger extends WeaponBase {
             if (t < 0.16) {
                 const k = easeOutCubic(t / 0.16);
                 return {
-                    reach: -0.2 * k,
-                    angleOffset: side * (0.38 - 0.1 * k),
+                    reach: -0.08 * k,
+                    angleOffset: side * (0.28 - 0.08 * k),
                     force: 0,
                     alpha: 0.82,
                 };
@@ -116,8 +118,8 @@ export class BasicDagger extends WeaponBase {
             if (t < 0.48) {
                 const k = easeOutCubic((t - 0.16) / 0.32);
                 return {
-                    reach: -0.2 + 1.23 * k,
-                    angleOffset: side * 0.28 * (1 - k),
+                    reach: -0.08 + 0.96 * k,
+                    angleOffset: side * 0.2 * (1 - k),
                     force: k,
                     alpha: 1,
                 };
@@ -125,7 +127,7 @@ export class BasicDagger extends WeaponBase {
             if (t < 0.58) {
                 const k = (t - 0.48) / 0.1;
                 return {
-                    reach: 1.03 - Math.sin(k * Math.PI) * 0.03,
+                    reach: 0.88 - Math.sin(k * Math.PI) * 0.025,
                     angleOffset: side * Math.sin(k * Math.PI * 4) * 0.025,
                     force: 1,
                     alpha: 1,
@@ -134,7 +136,7 @@ export class BasicDagger extends WeaponBase {
 
             const k = (t - 0.58) / 0.42;
             return {
-                reach: 1.03 - 1.03 * easeInQuad(k),
+                reach: 0.88 - 0.88 * easeInQuad(k),
                 angleOffset: -side * 0.1 * k,
                 force: 1 - k,
                 alpha: 1 - k * 0.8,
@@ -151,12 +153,12 @@ export class BasicDagger extends WeaponBase {
             const basePerpX = -baseSin;
             const basePerpY = baseCos;
             const originX = this.player.x;
-            const originY = this.player.y - 4;
+            const originY = this.player.y - 16;
             const clampedReach = Math.max(0, Math.min(1, reach));
-            const lateral = side * (10 - clampedReach * 6);
+            const lateral = side * (8 - clampedReach * 4);
             const pommelDist = pommelRestDist + thrustTravel * reach;
-            const shoulderX = originX + baseCos * 7 + basePerpX * side * 8;
-            const shoulderY = originY + baseSin * 7 + basePerpY * side * 8;
+            const shoulderX = originX + baseCos * 5 + basePerpX * side * 9;
+            const shoulderY = originY + baseSin * 5 + basePerpY * side * 9;
             const pommelX = originX + cosA * pommelDist + perpX * lateral;
             const pommelY = originY + sinA * pommelDist + perpY * lateral;
             const tipX = pommelX + cosA * bladeVisualLength;
@@ -301,7 +303,7 @@ export class BasicDagger extends WeaponBase {
             });
 
             const enemies = this.player.getAllEnemies();
-            const hitAngleTol = 0.42;
+            const hitAngleTol = 0.56;
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
 
