@@ -662,6 +662,7 @@ export class GameScene extends Phaser.Scene {
                 quests: JSON.parse(JSON.stringify(this.enemyManager?.quests || [])),
                 lastQuestTime: this.enemyManager?.lastQuestTime || 0,
                 killCounters: { ...(this.enemyManager?.killCounters || {}) },
+                activeEnemies: this.enemyManager?.getActiveEnemySnapshots?.() || [],
             },
             bossesSpawned: [...(this.bossesSpawned || [])],
             activeBosses: (this.activeBosses || []).filter(b => b?.active).map(boss => ({
@@ -691,6 +692,7 @@ export class GameScene extends Phaser.Scene {
         try {
             this._restorePlayer(data.player || {});
             this._restoreEnemyProgress(data.enemyManager || {});
+            this._restoreEnemies(data.enemyManager?.activeEnemies || []);
             this.bossesSpawned = Array.isArray(data.bossesSpawned)
                 ? data.bossesSpawned.filter(i => Number.isInteger(i))
                 : [];
@@ -753,6 +755,7 @@ export class GameScene extends Phaser.Scene {
     _restoreEnemyProgress(saved) {
         const manager = this.enemyManager;
         if (!manager) return;
+        manager.cancelOpeningWave?.();
         manager.gameTime = Math.max(0, Number(saved.gameTime) || 0);
         manager.difficultyMultiplier = Math.max(1, Number(saved.difficultyMultiplier) || 1);
         manager.spawnTimer = Math.max(0, Number(saved.spawnTimer) || 0);
@@ -767,6 +770,11 @@ export class GameScene extends Phaser.Scene {
         manager.activeDungeonBreak = activeBreak && Number(activeBreak.endTime) > seconds
             ? { ...activeBreak }
             : null;
+    }
+
+    _restoreEnemies(savedEnemies) {
+        if (!this.enemyManager?.restoreActiveEnemies) return;
+        this.enemyManager.restoreActiveEnemies(savedEnemies);
     }
 
     _restoreWeapons(savedWeapons) {
