@@ -69,6 +69,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.aura = scene.add.sprite(x, y, 'player_aura')
             .setDepth(9)
             .setAlpha(0)
+            .setVisible(false)
             .setScale(1.5, 0.82)
             .setBlendMode(Phaser.BlendModes.ADD);
 
@@ -393,6 +394,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _updateAura() {
+        if (this.aura) this.aura.setVisible(false).setAlpha(0);
+        return;
+
         this.aura.setPosition(this.x, this.y + this.displayHeight * 0.33);
         const rank = RANKS[this.currentRank];
         const pulse = Math.sin(this.scene.time.now * 0.002) * 0.08;

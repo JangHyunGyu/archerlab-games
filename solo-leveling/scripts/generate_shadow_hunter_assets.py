@@ -126,7 +126,6 @@ def render_frame(
 ) -> Image.Image:
     canvas = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
     back = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
-    draw_shadow(ImageDraw.Draw(back, "RGBA"), FRAME_W / 2 + dx * 0.28, FOOT_Y - 2, shadow_scale)
     draw_wisps(back, wisp_phase, wisp_power)
     canvas.alpha_composite(back)
 
