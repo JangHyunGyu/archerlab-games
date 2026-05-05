@@ -16,14 +16,16 @@ export class DragonFear extends WeaponBase {
             this.scene.tweens.killTweensOf(this.auraSprite);
             this.auraSprite.destroy();
         }
-        this.auraSprite = this.scene.add.sprite(this.player.x, this.player.y, 'proj_fear')
+        const useEffectAsset = this.scene.textures.exists('effect_dragon_fear');
+        this.auraSprite = this.scene.add.sprite(this.player.x, this.player.y, useEffectAsset ? 'effect_dragon_fear' : 'proj_fear')
             .setDepth(3)
             .setAlpha(0)
-            .setScale(range / 60);
+            .setScale(useEffectAsset ? (range * 2) / 614 : range / 60)
+            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
         this.scene.tweens.add({
             targets: this.auraSprite,
-            alpha: 0.6,
+            alpha: useEffectAsset ? 0.82 : 0.6,
             duration: 200,
         });
 

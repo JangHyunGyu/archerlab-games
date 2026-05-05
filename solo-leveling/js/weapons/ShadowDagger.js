@@ -50,11 +50,13 @@ export class ShadowDagger extends WeaponBase {
         const endY = py + Math.sin(angle) * range;
         const duration = 2500;
         const dmg = this.getDamage();
+        const useEffectAsset = this.scene.textures.exists('effect_shadow_dagger');
 
-        const dagger = this.scene.add.sprite(px, py, 'proj_dagger')
+        const dagger = this.scene.add.sprite(px, py, useEffectAsset ? 'effect_shadow_dagger' : 'proj_dagger')
             .setDepth(8)
-            .setScale(0.85)
-            .setRotation(angle + Math.PI / 2);
+            .setScale(useEffectAsset ? 0.22 : 0.85)
+            .setRotation(useEffectAsset ? angle : angle + Math.PI / 2)
+            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
         let trailInterval = null;
         const piercedTargets = new Set();

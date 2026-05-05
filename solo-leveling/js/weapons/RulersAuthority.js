@@ -44,16 +44,18 @@ export class RulersAuthority extends WeaponBase {
         }
 
         // Visual effect - expanding circle
-        const circle = this.scene.add.sprite(targetX, targetY, 'proj_ruler')
+        const useEffectAsset = this.scene.textures.exists('effect_ruler_authority');
+        const circle = this.scene.add.sprite(targetX, targetY, useEffectAsset ? 'effect_ruler_authority' : 'proj_ruler')
             .setDepth(7)
             .setAlpha(0)
-            .setScale(0.2);
+            .setScale(useEffectAsset ? 0.08 : 0.2)
+            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
         this.scene.tweens.add({
             targets: circle,
-            alpha: 0.8,
-            scaleX: range / 50,
-            scaleY: range / 50,
+            alpha: useEffectAsset ? 0.92 : 0.8,
+            scaleX: useEffectAsset ? (range * 2) / circle.width : range / 50,
+            scaleY: useEffectAsset ? (range * 2) / circle.width : range / 50,
             duration: 300,
             yoyo: true,
             hold: 100,

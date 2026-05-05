@@ -122,6 +122,14 @@ export class PreloadScene extends Phaser.Scene {
         ['igris', 'tusk', 'beru'].forEach((key) => {
             this.load.image(`ai_boss_${key}`, `assets/bosses/source/${key}.png`);
         });
+        [
+            'shadow_dagger',
+            'shadow_slash',
+            'ruler_authority',
+            'dragon_fear',
+        ].forEach((key) => {
+            this.load.image(`effect_${key}`, `assets/effects/${key}.png`);
+        });
 
         const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
 
