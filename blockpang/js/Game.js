@@ -346,19 +346,48 @@ class Game {
         const scoreAreaH = Math.max(82, h * 0.135);
         const availW = w - padding * 2;
         const availH = h - scoreAreaH - padding * 2;
+        const isPortrait = h > w * 1.12;
+
+        const panelExtForCell = (cell) => Math.max(28, Math.round(cell * 1.1));
+        const maxCellForVisualWidth = (maxWidth) => {
+            for (let cell = 72; cell >= 8; cell--) {
+                const ext = panelExtForCell(cell);
+                if (cell * GRID_SIZE + ext * 2 <= maxWidth) return cell;
+            }
+            return 8;
+        };
+        const maxCellForBoardStack = (maxStackHeight) => {
+            for (let cell = 72; cell >= 8; cell--) {
+                const ext = panelExtForCell(cell);
+                if (cell * GRID_SIZE + ext <= maxStackHeight) return cell;
+            }
+            return 8;
+        };
+
         // Reserve room on the sides so the board panel asset's outer frame
         // doesn't push the cells against the screen edges.
-        const frameMargin = Math.max(14, Math.min(w, h) * 0.025);
+        const frameMargin = isPortrait
+            ? Math.max(4, Math.min(8, w * 0.016))
+            : Math.max(14, Math.min(w, h) * 0.025);
         // Asset frame on board-panel.webp is ~11% of total panel side, so
         // ext ≈ cs * 1.1 is needed to keep cells inside the inner edge of the frame.
         // The panel-to-cell-area ratio is therefore (10 + 2*1.1) / 10 = 1.22.
         const PANEL_RATIO = 1.22;
-        const gridMaxH = ((availH - frameMargin * 2) * 0.62) / PANEL_RATIO;
-        const gridMaxW = (availW - frameMargin * 2) / PANEL_RATIO;
-        const gridSize = Math.min(gridMaxW, gridMaxH);
-        this.cellSize = Math.floor(gridSize / GRID_SIZE);
+        if (isPortrait) {
+            const minTrayH = Math.max(176, Math.min(250, h * 0.3));
+            const maxBoardStack = h - scoreAreaH - padding * 3 - minTrayH;
+            this.cellSize = Math.min(
+                maxCellForVisualWidth(w - frameMargin * 2),
+                maxCellForBoardStack(maxBoardStack)
+            );
+        } else {
+            const gridMaxH = ((availH - frameMargin * 2) * 0.62) / PANEL_RATIO;
+            const gridMaxW = (availW - frameMargin * 2) / PANEL_RATIO;
+            const gridSize = Math.min(gridMaxW, gridMaxH);
+            this.cellSize = Math.floor(gridSize / GRID_SIZE);
+        }
         const actualGrid = this.cellSize * GRID_SIZE;
-        const boardPanelExt = Math.max(28, Math.round(this.cellSize * 1.1));
+        const boardPanelExt = panelExtForCell(this.cellSize);
 
         const boardX = Math.floor((w - actualGrid) / 2);
         // Push the board down so the panel asset's top frame clears the header.
