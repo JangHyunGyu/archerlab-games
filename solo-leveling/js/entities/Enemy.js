@@ -227,6 +227,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.die = Enemy.prototype.die;
         this.isElite = false;
         if (this._eliteLabel) { this._eliteLabel.destroy(); this._eliteLabel = null; }
+        try {
+            if (this._eliteGlow && this.filters) this.filters.internal.remove(this._eliteGlow);
+        } catch (e) { /* filters may already be gone */ }
+        this._eliteGlow = null;
+        this._originalUpdate = null;
+        this._originalDie = null;
 
         this.enemyType = typeKey;
         Enemy._nextSpawnInstanceId = (Enemy._nextSpawnInstanceId || 0) + 1;
@@ -698,6 +704,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this._eliteLabel.destroy();
             this._eliteLabel = null;
         }
+        try {
+            if (this._eliteGlow && this.filters) this.filters.internal.remove(this._eliteGlow);
+        } catch (e) { /* filters may already be gone */ }
+        this._eliteGlow = null;
         if (this._aura) {
             this._aura.destroy();
             this._aura = null;

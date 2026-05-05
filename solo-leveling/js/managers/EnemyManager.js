@@ -1,6 +1,8 @@
 import { ENEMY_TYPES, WAVE_CONFIG, GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE } from '../utils/Constants.js';
 import { Enemy } from '../entities/Enemy.js';
 
+const MAX_RESTORED_ENEMIES = 500;
+
 export class EnemyManager {
     constructor(scene) {
         this.scene = scene;
@@ -52,7 +54,10 @@ export class EnemyManager {
         this._cachedActiveEnemies = null;
         this._activeEnemiesDirtyFrame = -1;
 
-        this._openingWaveTimer = scene.time.delayedCall(320, () => this._spawnOpeningWave());
+        this._openingWaveTimer = scene.time.delayedCall(320, () => {
+            this._openingWaveTimer = null;
+            this._spawnOpeningWave();
+        });
     }
 
     update(time, delta) {
@@ -109,14 +114,7 @@ export class EnemyManager {
                 }
                 const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
                 if (dist > this._despawnDist) {
-                    // Clean up elite label before despawning
-                    if (enemy._eliteLabel) {
-                        enemy._eliteLabel.destroy();
-                        enemy._eliteLabel = null;
-                    }
-                    enemy.setActive(false);
-                    enemy.setVisible(false);
-                    enemy.body.enable = false;
+                    this._deactivateEnemy(enemy);
                 }
             }
         });
@@ -435,6 +433,7 @@ export class EnemyManager {
     }
 
     _spawnEnemy(typeKey, x, y) {
+        if (!ENEMY_TYPES[typeKey]) return null;
         let enemy = this.pool.getChildren().find(e => !e.active);
 
         if (!enemy) {
@@ -443,6 +442,8 @@ export class EnemyManager {
         }
 
         enemy.spawn(typeKey, ENEMY_TYPES[typeKey], this.difficultyMultiplier, x, y);
+        this._cachedActiveEnemies = null;
+        return enemy;
     }
 
     _spawnElite(minutes) {
@@ -466,6 +467,7 @@ export class EnemyManager {
         // HP uses full 3x difficulty, but attack caps at 1.5x to prevent elites outdamaging bosses
         const eliteMult = this.difficultyMultiplier * 3;
         enemy.spawn(typeKey, ENEMY_TYPES[typeKey], eliteMult, pos.x, pos.y);
+        this._cachedActiveEnemies = null;
         enemy.attack = Math.floor(ENEMY_TYPES[typeKey].attack * (1 + (this.difficultyMultiplier * 1.5 - 1) * 0.3));
         enemy.isElite = true;
 
@@ -523,6 +525,159 @@ export class EnemyManager {
         }
     }
 
+    _applyEliteState(enemy) {
+        if (!enemy?.active || !ENEMY_TYPES[enemy.enemyType]) return;
+        this._clearEliteState(enemy);
+        enemy.isElite = true;
+
+        enemy.setScale(enemy.scaleX * 1.5, enemy.scaleY * 1.5);
+        enemy._restScaleX = enemy.scaleX;
+        enemy._restScaleY = enemy.scaleY;
+        enemy.setTint(0xff6644);
+        try {
+            enemy.enableFilters();
+            enemy._eliteGlow = enemy.filters.internal.addGlow(0xff4400, 4, 0, 1, false, 6, 6);
+        } catch (e) { /* filters not available */ }
+
+        const name = ENEMY_TYPES[enemy.enemyType].name;
+        const label = this.scene.add.text(enemy.x, enemy.y - 30, `??${name}`, {
+            fontSize: '12px', fontFamily: 'Arial', fontStyle: 'bold',
+            color: '#ff8844', stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(50).setScrollFactor(1);
+
+        enemy._eliteLabel = label;
+        enemy._originalUpdate = enemy.update;
+        enemy._originalDie = enemy.die;
+        const originalUpdate = enemy.update.bind(enemy);
+        enemy.update = function(time, delta, px, py) {
+            originalUpdate(time, delta, px, py);
+            if (this._eliteLabel) {
+                this._eliteLabel.setPosition(this.x, this.y - 30);
+            }
+        };
+
+        const originalDie = enemy.die.bind(enemy);
+        enemy.die = function() {
+            if (this._eliteLabel) { this._eliteLabel.destroy(); this._eliteLabel = null; }
+            try { if (this._eliteGlow && this.filters) { this.filters.internal.remove(this._eliteGlow); this._eliteGlow = null; } } catch (e) { /* silent */ }
+            this.isElite = false;
+            this.update = this._originalUpdate || this.update;
+            this.die = this._originalDie || this.die;
+            this._originalUpdate = null;
+            this._originalDie = null;
+            originalDie();
+        };
+    }
+
+    _clearEliteState(enemy) {
+        if (!enemy) return;
+        if (enemy._eliteLabel) {
+            enemy._eliteLabel.destroy();
+            enemy._eliteLabel = null;
+        }
+        try {
+            if (enemy._eliteGlow && enemy.filters) {
+                enemy.filters.internal.remove(enemy._eliteGlow);
+            }
+        } catch (e) { /* filters may already be gone */ }
+        enemy._eliteGlow = null;
+        enemy.isElite = false;
+        enemy.update = Enemy.prototype.update;
+        enemy.die = Enemy.prototype.die;
+        enemy._originalUpdate = null;
+        enemy._originalDie = null;
+    }
+
+    _deactivateEnemy(enemy) {
+        if (!enemy) return;
+        this._clearEliteState(enemy);
+        enemy.setActive(false);
+        enemy.setVisible(false);
+        if (enemy.body) {
+            enemy.body.enable = false;
+            enemy.body.setVelocity(0, 0);
+        }
+        if (enemy._aura) {
+            enemy._aura.setVisible(false).setActive(false);
+        }
+        this._cachedActiveEnemies = null;
+    }
+
+    cancelOpeningWave() {
+        if (this._openingWaveTimer) {
+            this._openingWaveTimer.remove(false);
+            this._openingWaveTimer = null;
+        }
+    }
+
+    getActiveEnemySnapshots() {
+        return this.getActiveEnemies()
+            .filter(enemy => enemy?.active && ENEMY_TYPES[enemy.enemyType])
+            .map(enemy => ({
+                typeKey: enemy.enemyType,
+                x: Math.round(enemy.x * 10) / 10,
+                y: Math.round(enemy.y * 10) / 10,
+                hp: Math.max(1, Math.round(enemy.hp || 1)),
+                maxHp: Math.max(1, Math.round(enemy.maxHp || 1)),
+                attack: Math.max(0, Math.round(enemy.attack || 0)),
+                speed: Math.max(0, Math.round((enemy.speed || 0) * 10) / 10),
+                xpValue: Math.max(0, Math.round(enemy.xpValue || 0)),
+                isElite: !!enemy.isElite,
+                slowMultiplier: Number.isFinite(enemy.slowMultiplier) ? enemy.slowMultiplier : 1,
+                slowDuration: Math.max(0, Math.round(enemy.slowDuration || 0)),
+                knockbackTimer: Math.max(0, Math.round(enemy.knockbackTimer || 0)),
+                rangedCooldown: Math.max(0, Math.round(enemy.rangedCooldown || 0)),
+                meleeCooldown: Math.max(0, Math.round(enemy.meleeCooldown || 0)),
+                vx: Math.round((enemy.body?.velocity?.x || 0) * 10) / 10,
+                vy: Math.round((enemy.body?.velocity?.y || 0) * 10) / 10,
+                flipX: !!enemy.flipX,
+            }));
+    }
+
+    restoreActiveEnemies(savedEnemies) {
+        this.cancelOpeningWave();
+        for (const enemy of this.pool.getChildren()) {
+            if (enemy.active) this._deactivateEnemy(enemy);
+        }
+
+        if (!Array.isArray(savedEnemies)) return 0;
+
+        let restored = 0;
+        for (const saved of savedEnemies.slice(0, MAX_RESTORED_ENEMIES)) {
+            if (!saved?.typeKey || !ENEMY_TYPES[saved.typeKey]) continue;
+            const x = Phaser.Math.Clamp(Number(saved.x) || WORLD_SIZE / 2, 60, WORLD_SIZE - 60);
+            const y = Phaser.Math.Clamp(Number(saved.y) || WORLD_SIZE / 2, 60, WORLD_SIZE - 60);
+            const enemy = this._spawnEnemy(saved.typeKey, x, y);
+            if (!enemy) continue;
+
+            enemy.maxHp = Math.max(1, Number(saved.maxHp) || enemy.maxHp || 1);
+            enemy.hp = Phaser.Math.Clamp(Number(saved.hp) || enemy.maxHp, 1, enemy.maxHp);
+            if (Number.isFinite(saved.attack)) enemy.attack = saved.attack;
+            if (Number.isFinite(saved.speed)) enemy.speed = saved.speed;
+            if (Number.isFinite(saved.xpValue)) enemy.xpValue = saved.xpValue;
+            enemy.slowMultiplier = Number.isFinite(saved.slowMultiplier) ? saved.slowMultiplier : 1;
+            enemy.slowDuration = Math.max(0, Number(saved.slowDuration) || 0);
+            enemy.knockbackTimer = Math.max(0, Number(saved.knockbackTimer) || 0);
+            enemy.rangedCooldown = Math.max(0, Number(saved.rangedCooldown) || 0);
+            enemy.meleeCooldown = Math.max(0, Number(saved.meleeCooldown) || 0);
+            enemy.setFlipX(!!saved.flipX);
+            if (enemy.body) {
+                enemy.body.enable = true;
+                enemy.body.setVelocity(Number(saved.vx) || 0, Number(saved.vy) || 0);
+            }
+
+            if (saved.isElite) {
+                this._applyEliteState(enemy);
+            } else if (enemy.slowDuration > 0) {
+                enemy.setTint(0x8888ff);
+            }
+
+            restored++;
+        }
+        this._cachedActiveEnemies = null;
+        return restored;
+    }
+
     getActiveEnemies() {
         // Cache the filtered result per frame to avoid creating new arrays on every call
         const currentFrame = this.scene.game.loop.frame;
@@ -543,8 +698,7 @@ export class EnemyManager {
 
     destroy() {
         if (this._openingWaveTimer) {
-            this._openingWaveTimer.remove(false);
-            this._openingWaveTimer = null;
+            this.cancelOpeningWave();
         }
 
         // 던전 브레이크 보더 정리
