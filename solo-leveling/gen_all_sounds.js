@@ -27,12 +27,39 @@ function writeWav(name, buf) {
     for (let i = 0; i < buf.length; i++) d.writeInt16LE(Math.floor(Math.max(-1, Math.min(1, buf[i])) * 32767), i * 2);
     fs.writeFileSync(path.join(OUT, name), Buffer.concat([h, d]));
 }
-function finalize(buf, lpFreq = 8000, hpFreq = 30, sat = 1.6) {
+function removeDc(buf) {
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i];
+    const dc = sum / Math.max(1, buf.length);
+    for (let i = 0; i < buf.length; i++) buf[i] -= dc;
+    return buf;
+}
+function fadeEdges(buf, attackMs = 3, releaseMs = 12) {
+    const attack = Math.min(buf.length, Math.floor(RATE * attackMs / 1000));
+    const release = Math.min(buf.length, Math.floor(RATE * releaseMs / 1000));
+    for (let i = 0; i < attack; i++) {
+        const g = i / Math.max(1, attack);
+        buf[i] *= g * g;
+    }
+    for (let i = 0; i < release; i++) {
+        const idx = buf.length - 1 - i;
+        const g = i / Math.max(1, release);
+        buf[idx] *= g * g;
+    }
+    return buf;
+}
+function normalizePeak(buf, target = 0.82) {
+    let mx = 0; for (let i = 0; i < buf.length; i++) mx = Math.max(mx, Math.abs(buf[i]));
+    if (mx > 0) for (let i = 0; i < buf.length; i++) buf[i] *= target / mx;
+    return buf;
+}
+function finalize(buf, lpFreq = 8000, hpFreq = 30, sat = 1.6, targetPeak = 0.82) {
     for (let i = 0; i < buf.length; i++) buf[i] = Math.tanh(buf[i] * sat) * 0.88;
     if (lpFreq < 20000) lp(buf, lpFreq);
-    let mx = 0; for (let i = 0; i < buf.length; i++) mx = Math.max(mx, Math.abs(buf[i]));
-    if (mx > 0) for (let i = 0; i < buf.length; i++) buf[i] *= 0.92 / mx;
     hp(buf, hpFreq);
+    removeDc(buf);
+    fadeEdges(buf);
+    normalizePeak(buf, targetPeak);
     return buf;
 }
 // Add N noise bands to buf
@@ -166,7 +193,7 @@ console.log('Generating all sounds (200 layers each)...\n');
     addNoiseBands(buf, 20, 100, 600, 0.3, 0.6,
         (p) => Math.pow(1 - p, 1), 0.004);
     addTones(buf, 20, (b) => 30 + b * 5, (p) => (p < 0.01 ? p / 0.01 : Math.pow(1 - p, 2.5)), 0.012);
-    finalize(buf, 4500, 25);
+    finalize(buf, 4500, 35, 1.45, 0.78);
     writeWav('kill.wav', buf);
     console.log('  kill.wav ✓');
 })();
@@ -209,7 +236,7 @@ console.log('Generating all sounds (200 layers each)...\n');
     addNoiseBands(buf, 25, 2000, 6000, 1.5, 2.5,
         (p) => (p < 0.02 ? p / 0.02 : Math.exp(-p * 12)), 0.005);
     addTones(buf, 25, (b) => 50 + b * 8, (p) => (p < 0.04 ? Math.pow(p / 0.04, 1) : Math.pow(1 - p, 2)), 0.01);
-    finalize(buf, 6000, 35);
+    finalize(buf, 5600, 80, 1.5, 0.68);
     writeWav('slash.wav', buf);
     console.log('  slash.wav ✓');
 })();
@@ -316,7 +343,7 @@ console.log('Generating all sounds (200 layers each)...\n');
         (p) => Math.pow(1 - p, 0.8), 0.003);
     addTones(buf, 20, (b) => [523, 659, 784, 1047][b % 4],
         (p) => { if (p < 0.15) return 0; return Math.exp(-(p - 0.15) * 5); }, 0.005);
-    finalize(buf, 7000, 50);
+    finalize(buf, 7000, 50, 1.45, 0.78);
     writeWav('levelup.wav', buf);
     console.log('  levelup.wav ✓');
 })();
