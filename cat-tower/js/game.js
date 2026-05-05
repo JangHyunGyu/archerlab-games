@@ -118,6 +118,7 @@
   let fieldBgImage = null;
   let running = false;
   let gameOver = false;
+  let dangerActive = false;
   let score = 0;
   let bestScore = 0;
   let currentCat = null;        // 위에서 조작중인 고양이 (isStatic)
@@ -159,6 +160,13 @@
   const NICK_KEY = 'cat-tower.nick';
 
   function tt(key, vars) { return (window.I18N && window.I18N.t(key, vars)) || key; }
+
+  function setDangerActive(active) {
+    if (dangerActive === active) return;
+    dangerActive = active;
+    const gameEl = $('game');
+    if (gameEl) gameEl.classList.toggle('danger', dangerActive);
+  }
 
   let fitLayoutRaf = 0;
   function scheduleFitGameLayout() {
@@ -659,6 +667,7 @@
     const now = performance.now();
     const bodies = bodiesSnapshot || Composite.allBodies(world);
     let changed = false;
+    let anyDanger = false;
     for (const b of bodies) {
       if (b.label !== 'cat' || b.isStatic || !b.cat) continue;
       if (now - b.cat.spawnedAt < POST_DROP_GRACE_MS) continue;
@@ -673,6 +682,7 @@
       const r = TIERS[b.cat.tier].radius;
       const top = b.position.y - r;
       if (top < DANGER_LINE) {
+        anyDanger = true;
         if (!b.cat.aboveSince) {
           b.cat.aboveSince = now;
           log(`danger 진입 tier=${b.cat.tier} top=${top.toFixed(1)} (DANGER_LINE=${DANGER_LINE})`);
@@ -685,6 +695,7 @@
         b.cat.aboveSince = 0;
       }
     }
+    setDangerActive(anyDanger);
     return changed;
   }
 
@@ -693,6 +704,7 @@
     log(`triggerGameOver score=${score} best=${bestScore} newRecord=${isNew}`);
     gameOver = true;
     running = false;
+    setDangerActive(false);
     updateCurrentCatLabel(null);
     if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
     clearSave();
@@ -739,10 +751,23 @@
     }
 
     // 위험선
+    const dangerPulse = dangerActive ? (0.65 + Math.sin(performance.now() * 0.012) * 0.35) : 0;
+    if (dangerActive) {
+      ctx.save();
+      const dangerWash = ctx.createLinearGradient(0, 0, 0, DANGER_LINE + 36);
+      dangerWash.addColorStop(0, `rgba(232, 90, 79, ${0.10 + dangerPulse * 0.05})`);
+      dangerWash.addColorStop(1, 'rgba(232, 90, 79, 0)');
+      ctx.fillStyle = dangerWash;
+      ctx.fillRect(0, 0, FIELD_W, DANGER_LINE + 36);
+      ctx.restore();
+    }
+
     ctx.save();
-    ctx.strokeStyle = 'rgba(232, 90, 79, 0.55)';
-    ctx.setLineDash([9, 7]);
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = dangerActive
+      ? `rgba(232, 90, 79, ${0.70 + dangerPulse * 0.25})`
+      : 'rgba(232, 90, 79, 0.55)';
+    ctx.setLineDash(dangerActive ? [10, 5] : [9, 7]);
+    ctx.lineWidth = dangerActive ? 2.5 : 2;
     ctx.beginPath();
     ctx.moveTo(6, DANGER_LINE);
     ctx.lineTo(FIELD_W - 6, DANGER_LINE);
@@ -840,6 +865,7 @@
       } catch (e) {
         err('loop tick 예외:', e.message, e.stack);
         running = false;
+        setDangerActive(false);
         return;
       }
       lastTs = ts;
@@ -860,6 +886,7 @@
     lastMergeAt = 0;
     reachedFinal = false;
     gameOver = false;
+    setDangerActive(false);
     running = true;
     dropCooldown = false;
     saveDirty = false;
@@ -906,6 +933,7 @@
       lastMergeAt = 0;
       reachedFinal = !!data.reachedFinal;
       gameOver = false;
+      setDangerActive(false);
       running = true;
       dropCooldown = false;
       saveDirty = false;
@@ -930,6 +958,7 @@
         if (typeof c.t !== 'number' || !Number.isFinite(c.x) || !Number.isFinite(c.y)) continue;
         const body = createCat(c.t, c.x, c.y, false);
         if (!body) continue;
+        body.cat.spawnedAt = performance.now() - POST_DROP_GRACE_MS - 1;
         Body.setAngle(body, Number.isFinite(c.a) ? c.a : 0);
         Body.setVelocity(body, {
           x: Number.isFinite(c.vx) ? c.vx : 0,
@@ -994,6 +1023,7 @@
     if (running && !gameOver) autoSave(true);
     running = false;
     gameOver = false;
+    setDangerActive(false);
     currentCat = null; // 이전 게임 참조 정리
     updateCurrentCatLabel(null);
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }

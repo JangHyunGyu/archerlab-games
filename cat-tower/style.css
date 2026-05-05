@@ -1052,6 +1052,24 @@ body {
   background-size: auto, 220px 220px;
 }
 
+#game.danger #canvas {
+  animation: dangerCanvasPulse 0.95s ease-in-out infinite;
+}
+
+#game.danger .game-hint {
+  color: var(--accent-dark);
+  opacity: 0.95;
+}
+
+@keyframes dangerCanvasPulse {
+  0%, 100% {
+    box-shadow: 0 8px 0 0 #2D1A0E, 0 0 0 4px rgba(255, 226, 171, 0.42), 0 0 0 0 rgba(232, 90, 79, 0), inset 0 2px 0 rgba(255,255,255,0.35);
+  }
+  50% {
+    box-shadow: 0 8px 0 0 #2D1A0E, 0 0 0 4px rgba(255, 226, 171, 0.42), 0 0 0 7px rgba(232, 90, 79, 0.22), inset 0 2px 0 rgba(255,255,255,0.35);
+  }
+}
+
 @media (orientation: portrait) and (max-width: 720px) {
   #game {
     --strip-gap: 0;
