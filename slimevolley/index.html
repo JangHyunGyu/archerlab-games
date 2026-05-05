@@ -70,6 +70,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        window.__slimeVolleyIgnoreError = function(message, source, lineno, colno, error) {
+            var hasSource = !!source;
+            var line = Number(lineno || 0);
+            var column = Number(colno || 0);
+            return message === 'Script error.' && !error && (!hasSource || (line === 0 && column === 0));
+        };
+        window.addEventListener('error', function(event) {
+            if (window.__slimeVolleyIgnoreError(event.message, event.filename, event.lineno, event.colno, event.error)) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
+    </script>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
     <script>
@@ -78,7 +92,7 @@
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <link rel="stylesheet" href="css/style.css?v=47">
+    <link rel="stylesheet" href="css/style.css?v=48">
     <script>
         // 모바일 주소창 높이를 반영한 실제 뷰포트 높이
         function setVH() {
@@ -373,15 +387,15 @@
     <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
 
     <!-- Game Scripts -->
-    <script src="js/config.js?v=47"></script>
-    <script src="js/physics.js?v=47"></script>
-    <script src="js/renderer.js?v=47"></script>
-    <script src="js/bot.js?v=47"></script>
-    <script src="js/sound.js?v=47"></script>
-    <script src="js/webrtc.js?v=47"></script>
-    <script src="js/network.js?v=47"></script>
-    <script src="js/i18n.js?v=47"></script>
-    <script src="js/lobby.js?v=47"></script>
-    <script src="js/main.js?v=47"></script>
+    <script src="js/config.js?v=48"></script>
+    <script src="js/physics.js?v=48"></script>
+    <script src="js/renderer.js?v=48"></script>
+    <script src="js/bot.js?v=48"></script>
+    <script src="js/sound.js?v=48"></script>
+    <script src="js/webrtc.js?v=48"></script>
+    <script src="js/network.js?v=48"></script>
+    <script src="js/i18n.js?v=48"></script>
+    <script src="js/lobby.js?v=48"></script>
+    <script src="js/main.js?v=48"></script>
 </body>
 </html>

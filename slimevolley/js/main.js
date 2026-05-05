@@ -1018,6 +1018,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     window.addEventListener('error', function(e) {
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
+        if (window.__slimeVolleyIgnoreError && window.__slimeVolleyIgnoreError(e.message, e.filename, e.lineno, e.colno, e.error)) return;
         _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src);
     });
 
