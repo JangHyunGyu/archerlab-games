@@ -222,7 +222,7 @@ export class SoundManager {
 
         try {
             const introGain = new Tone.Volume(-30).connect(this._comp);
-            introGain.volume.rampTo(-10, 4);
+            introGain.volume.rampTo(-16, 4);
             this._introGain = introGain;
 
             // 1. Low drone
@@ -288,7 +288,7 @@ export class SoundManager {
                 if (!this._initialized) return;
                 try {
                     percFilter.frequency.value = 600 + Math.random() * 400;
-                    percNoise.triggerAttackRelease('64n', Tone.now(), 0.15);
+                    percNoise.triggerAttackRelease('64n', Tone.now(), 0.08);
                 } catch (e) { /* silent */ }
             }, 2400);
             this._introIntervals.push(percInterval);
@@ -377,7 +377,7 @@ export class SoundManager {
 
         try {
             const bgmGain = new Tone.Volume(-60).connect(this._comp);
-            bgmGain.volume.rampTo(-10, 1.5);
+            bgmGain.volume.rampTo(-17, 1.5);
             this._bgmGain = bgmGain;
             this._bgmTimeouts = [];
 
@@ -438,14 +438,14 @@ export class SoundManager {
                         envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
                     });
                     const hatFilter = new Tone.Filter({ frequency: 8000, type: 'highpass' });
-                    const hatVol = new Tone.Volume(-24);
+                    const hatVol = new Tone.Volume(-34);
                     hatNoise.connect(hatFilter);
                     hatFilter.connect(hatVol);
                     hatVol.connect(bgmGain);
                     this._bgmNodes.push(hatNoise, hatFilter, hatVol);
 
                     let hatIdx = 0;
-                    const hatPattern = [0.3, 0.1, 0.2, 0.1];
+                    const hatPattern = [0.12, 0.04, 0.08, 0.04];
                     const hatInterval = setInterval(() => {
                         if (!this._initialized) return;
                         try {
@@ -597,7 +597,7 @@ export class SoundManager {
     toggleSound() {
         this.enabled = !this.enabled;
         if (this._masterVol) {
-            this._masterVol.volume.value = this.enabled ? 4 : -Infinity;
+            this._masterVol.volume.value = this.enabled ? -5 : -Infinity;
         }
         // WAV SFX 풀도 음소거/복원
         for (const name in this._pools) {

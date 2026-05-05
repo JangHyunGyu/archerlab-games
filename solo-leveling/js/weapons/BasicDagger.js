@@ -4,7 +4,7 @@ import { WEAPONS } from '../utils/Constants.js';
 export class BasicDagger extends WeaponBase {
     constructor(scene, player) {
         super(scene, player, WEAPONS.basicDagger);
-        this.attackRange = 165;
+        this.attackRange = 205;
 
         this._bladePool = [];
         this._activeThrusts = [];
@@ -65,13 +65,13 @@ export class BasicDagger extends WeaponBase {
         if (this.player.playAttackMotion) {
             this.player.playAttackMotion(baseAngle, 240, side);
         }
-        const bladeScale = 0.64;
+        const bladeScale = 0.72;
         const bladeTipFromOrigin = 82 * 0.94;
         const bladeVisualLength = bladeTipFromOrigin * bladeScale;
         const pommelRestDist = 12;
         const pommelMaxDist = Math.max(
-            pommelRestDist + 48,
-            Math.min(this.attackRange - bladeVisualLength * 0.52, pommelRestDist + 70)
+            pommelRestDist + 58,
+            Math.min(this.attackRange - bladeVisualLength * 0.45, pommelRestDist + 92)
         );
         const thrustTravel = pommelMaxDist - pommelRestDist;
 
@@ -277,7 +277,7 @@ export class BasicDagger extends WeaponBase {
             if (!this.scene?.scene?.isActive() || !this.player?.active) return;
 
             const hitOriginX = this.player.x;
-            const hitOriginY = this.player.y - 4;
+            const hitOriginY = this.player.y - 16;
             const hitPose = getPose(1, 0);
 
             impactFx.clear();
@@ -303,7 +303,7 @@ export class BasicDagger extends WeaponBase {
             });
 
             const enemies = this.player.getAllEnemies();
-            const hitAngleTol = 0.56;
+            const hitAngleTol = 0.62;
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
 

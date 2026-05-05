@@ -6,7 +6,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.visualBaseScale = 1.12;
+        this.visualBaseScale = 0.92;
         this.setDepth(10);
         this.setCollideWorldBounds(true);
         this.setScale(this.visualBaseScale);
@@ -397,9 +397,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const rank = RANKS[this.currentRank];
         const pulse = Math.sin(this.scene.time.now * 0.002) * 0.08;
         const baseAlpha = 0.16;
+        const auraScale = Phaser.Math.Clamp(this.visualBaseScale / 1.12, 0.72, 1);
         this.aura.setAlpha(Math.max(baseAlpha, rank.glowAlpha));
         this.aura.setTint(rank.glowAlpha > 0 ? rank.color : COLORS.SHADOW_PRIMARY);
-        this.aura.setScale(1.45 + pulse, 0.78 + pulse * 0.35);
+        this.aura.setScale((1.45 + pulse) * auraScale, (0.78 + pulse * 0.35) * auraScale);
     }
 
     _checkRankUp() {
