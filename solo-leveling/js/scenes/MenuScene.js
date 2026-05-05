@@ -5,6 +5,7 @@ import {
 } from '../utils/Constants.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
+import { GameScene } from './GameScene.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -133,28 +134,46 @@ export class MenuScene extends Phaser.Scene {
             this.time.delayedCall(250 + i * 420, () => this._typewrite(msgEls[i], m));
         });
 
-        // ── Main action button ──────────────────
+        const startGame = async (resume = false) => {
+            this._startingGame = true;
+            if (!this.game._soundManager) {
+                this.game._soundManager = new SoundManager();
+                this.game._soundManager.init();
+            }
+            const sm = this.game._soundManager;
+            sm.stopIntroMusic();
+            await sm.resume(true);
+            this.cameras.main.fadeOut(500, 0, 0, 0);
+            this.time.delayedCall(500, () => this.scene.start('GameScene', { resume }));
+        };
+
+        // ── Main action buttons ─────────────────
         const btnW = Math.min(uv(280), GAME_WIDTH - sidePad * 2);
         const btnH = uv(52);
         const startY = cy(0.62);
+
+        if (GameScene.hasSavedGame()) {
+            const summary = GameScene.getSavedSummary();
+            const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
+            const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
+            const resumeLabel = `↻   ${t('continueGame')} · LV.${String(summary?.level || 1).padStart(2, '0')} · ${min}:${sec}`;
+            this._makeButton(centerX - btnW / 2, startY - btnH - uv(12), btnW, btnH, {
+                label: resumeLabel,
+                labelColor: SYSTEM.TEXT_GOLD,
+                border: SYSTEM.BORDER_GOLD,
+                labelSize: isNarrow ? 12 : 14,
+                labelFont: UI_FONT_MONO,
+                onClick: () => startGame(true),
+            });
+        }
+
         this._makeButton(centerX - btnW / 2, startY - btnH / 2, btnW, btnH, {
             label: `▶   ${t('startGame')}`,
             labelColor: SYSTEM.TEXT_BRIGHT,
             border: SYSTEM.BORDER,
             labelSize: isNarrow ? 16 : 19,
             labelFont: UI_FONT_KR,
-            onClick: async () => {
-                this._startingGame = true;
-                if (!this.game._soundManager) {
-                    this.game._soundManager = new SoundManager();
-                    this.game._soundManager.init();
-                }
-                const sm = this.game._soundManager;
-                sm.stopIntroMusic();
-                await sm.resume(true);
-                this.cameras.main.fadeOut(500, 0, 0, 0);
-                this.time.delayedCall(500, () => this.scene.start('GameScene'));
-            },
+            onClick: () => startGame(false),
         });
 
         // ── Hall of Fame (secondary) ────────────

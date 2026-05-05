@@ -1,6 +1,7 @@
-import { GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE, COLORS, BOSS_SCHEDULE, BOSS_TYPES } from '../utils/Constants.js';
+import { GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE, COLORS, PLAYER_BASE_STATS, RANKS, BOSS_SCHEDULE, BOSS_TYPES } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
 import { Player } from '../entities/Player.js';
+import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 import { EnemyManager } from '../managers/EnemyManager.js';
 import { WeaponManager } from '../managers/WeaponManager.js';
 import { ShadowArmyManager } from '../managers/ShadowArmyManager.js';
@@ -14,9 +15,19 @@ import { SystemMessage } from '../ui/SystemMessage.js';
 import { StatusWindow } from '../ui/StatusWindow.js';
 import { MobileControls } from '../ui/MobileControls.js';
 
+const SAVE_KEY = 'shadow_survival_save_v1';
+const SAVE_VERSION = 1;
+const AUTO_SAVE_INTERVAL_MS = 2000;
+
 export class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
+    }
+
+    init(data = {}) {
+        this._resumeRequested = !!data.resume;
+        this._restoredFromSave = false;
+        this._lastAutoSaveAt = 0;
     }
 
     create() {
@@ -88,6 +99,14 @@ export class GameScene extends Phaser.Scene {
         // Player-Enemy collision (밀치기만, 데미지는 Enemy.update에서 거리 기반 처리)
         this.physics.add.collider(this.player, this.enemyManager.getGroup());
 
+        if (this._resumeRequested) {
+            this._restoredFromSave = this._restoreSavedGame();
+            if (!this._restoredFromSave) GameScene.clearSavedGame();
+        } else {
+            GameScene.clearSavedGame();
+        }
+        this._registerSaveHandlers();
+
         // Ambient particles
         this._createAmbientParticles();
 
@@ -128,20 +147,29 @@ export class GameScene extends Phaser.Scene {
         };
         this.events.on('game-resize', this._onGameResize, this);
 
-        // Intro system messages (원작: 시스템 메시지)
-        this.time.delayedCall(500, () => {
-            this.systemMessage.show(t('sysSystem'), [
-                t('sysEnterDungeon'),
-                t('sysKillToLevel'),
-            ], { duration: 2400 });
-        });
+        // Intro / resume system messages (원작: 시스템 메시지)
+        if (this._restoredFromSave) {
+            this.time.delayedCall(500, () => {
+                this.systemMessage.show(t('sysSystem'), [
+                    t('resumeLoaded'),
+                    `${t('levelLabel')} ${this.player.level} · ${t('killLabel')} ${this.player.kills}`,
+                ], { duration: 2400, type: 'quest' });
+            });
+        } else {
+            this.time.delayedCall(500, () => {
+                this.systemMessage.show(t('sysSystem'), [
+                    t('sysEnterDungeon'),
+                    t('sysKillToLevel'),
+                ], { duration: 2400 });
+            });
 
-        this.time.delayedCall(3600, () => {
-            this.systemMessage.show(t('sysSystem'), [
-                t('sysQuestComing'),
-                t('sysTabHint'),
-            ], { duration: 2200, type: 'quest' });
-        });
+            this.time.delayedCall(3600, () => {
+                this.systemMessage.show(t('sysSystem'), [
+                    t('sysQuestComing'),
+                    t('sysTabHint'),
+                ], { duration: 2200, type: 'quest' });
+            });
+        }
 
         // Sound toggle key (M)
         this._soundToggleKey = this.input.keyboard.addKey('M');
@@ -212,6 +240,8 @@ export class GameScene extends Phaser.Scene {
 
         // Update HUD
         this.hud.update(this.player, this.weaponManager, this.enemyManager, this.shadowArmyManager);
+
+        this._autoSave(false);
     }
 
     _createFloor() {
@@ -437,6 +467,7 @@ export class GameScene extends Phaser.Scene {
     onPlayerDeath() {
         if (this.isGameOver) return;
         this.isGameOver = true;
+        GameScene.clearSavedGame();
 
         if (this.soundManager) this.soundManager.play('gameOver');
 
@@ -566,8 +597,297 @@ export class GameScene extends Phaser.Scene {
         } catch (e) { /* silent */ }
     }
 
+    _registerSaveHandlers() {
+        this._saveOnPageHide = () => this._autoSave(true);
+        this._saveOnVisibilityChange = () => {
+            if (document.hidden) this._autoSave(true);
+        };
+        window.addEventListener('pagehide', this._saveOnPageHide);
+        document.addEventListener('visibilitychange', this._saveOnVisibilityChange);
+    }
+
+    _autoSave(force = false) {
+        if (this.isGameOver || !this.player || this.player.isDead) return;
+        const now = Date.now();
+        if (!force && now - this._lastAutoSaveAt < AUTO_SAVE_INTERVAL_MS) return;
+
+        try {
+            const snap = this._createSaveSnapshot(now);
+            localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
+            this._lastAutoSaveAt = now;
+        } catch (e) {
+            // Storage can fail in private mode or quota pressure.
+        }
+    }
+
+    _createSaveSnapshot(ts = Date.now()) {
+        const player = this.player;
+        const gameTime = this.enemyManager?.getGameTime?.() || 0;
+        const weaponEntries = this.weaponManager
+            ? Array.from(this.weaponManager.weapons.entries()).map(([key, weapon]) => ({
+                key,
+                level: weapon.level,
+                damage: weapon.damage,
+                cooldown: weapon.cooldown,
+                count: weapon.count,
+                cooldownTimer: weapon.cooldownTimer,
+                extraRange: weapon.extraRange || 0,
+                extraSlow: weapon.extraSlow || 0,
+            }))
+            : [];
+
+        return {
+            version: SAVE_VERSION,
+            ts,
+            player: {
+                x: player.x,
+                y: player.y,
+                level: player.level,
+                xp: player.xp,
+                xpToNext: player.xpToNext,
+                currentRank: player.currentRank,
+                rankUpCount: player.rankUpCount || 0,
+                hp: player.stats.hp,
+                kills: player.kills,
+                passiveLevels: { ...(player.passiveLevels || {}) },
+            },
+            weapons: weaponEntries,
+            enemyManager: {
+                gameTime,
+                difficultyMultiplier: this.enemyManager?.difficultyMultiplier || 1,
+                spawnTimer: this.enemyManager?.spawnTimer || 0,
+                eliteTimer: this.enemyManager?.eliteTimer || 0,
+                activeDungeonBreak: this.enemyManager?.activeDungeonBreak || null,
+                triggeredBreaks: [...(this.enemyManager?.triggeredBreaks || [])],
+                quests: JSON.parse(JSON.stringify(this.enemyManager?.quests || [])),
+                lastQuestTime: this.enemyManager?.lastQuestTime || 0,
+                killCounters: { ...(this.enemyManager?.killCounters || {}) },
+            },
+            bossesSpawned: [...(this.bossesSpawned || [])],
+            activeBosses: (this.activeBosses || []).filter(b => b?.active).map(boss => ({
+                bossKey: boss.bossKey,
+                x: boss.x,
+                y: boss.y,
+                hp: boss.hp,
+                maxHp: boss.maxHp,
+                attack: boss.attack,
+                speed: boss.speed,
+                phase: boss.phase,
+            })),
+            shadows: this.shadowArmyManager?.getSoldiers?.()
+                .filter(s => s?.active)
+                .map(soldier => ({
+                    bossKey: soldier.bossKey,
+                    x: soldier.x,
+                    y: soldier.y,
+                })) || [],
+        };
+    }
+
+    _restoreSavedGame() {
+        const data = GameScene.getSavedGameData();
+        if (!GameScene._hasMeaningfulProgress(data)) return false;
+
+        try {
+            this._restorePlayer(data.player || {});
+            this._restoreEnemyProgress(data.enemyManager || {});
+            this.bossesSpawned = Array.isArray(data.bossesSpawned)
+                ? data.bossesSpawned.filter(i => Number.isInteger(i))
+                : [];
+            this._restoreWeapons(data.weapons || []);
+            this._restoreShadows(data.shadows || []);
+            this._restoreBosses(data.activeBosses || []);
+            return true;
+        } catch (e) {
+            if (window._sendGameError) {
+                window._sendGameError(
+                    'ResumeError',
+                    e.message || String(e),
+                    e.stack || '',
+                    'GameScene:_restoreSavedGame',
+                    { hasSavedData: !!data, savedAt: data?.ts || null }
+                );
+            }
+            return false;
+        }
+    }
+
+    _restorePlayer(saved) {
+        const player = this.player;
+        player.setPosition(
+            Phaser.Math.Clamp(Number(saved.x) || WORLD_SIZE / 2, 80, WORLD_SIZE - 80),
+            Phaser.Math.Clamp(Number(saved.y) || WORLD_SIZE / 2, 80, WORLD_SIZE - 80)
+        );
+        if (player.body) {
+            player.body.enable = true;
+            player.body.setVelocity(0, 0);
+        }
+        player.isDead = false;
+        player.isInvincible = false;
+        player.invincibleTimer = 0;
+        player.setAlpha(1);
+        player.clearTint();
+
+        player.level = Phaser.Math.Clamp(Number(saved.level) || 1, 1, 30);
+        player.xp = Math.max(0, Number(saved.xp) || 0);
+        player.xpToNext = Math.max(1, Number(saved.xpToNext) || player.xpToNext);
+        player.currentRank = RANKS[saved.currentRank] ? saved.currentRank : 'E';
+        player.rankUpCount = Math.max(0, Number(saved.rankUpCount) || 0);
+        player.kills = Math.max(0, Number(saved.kills) || 0);
+        player.passiveLevels = { ...(saved.passiveLevels || {}) };
+
+        player.stats = { ...PLAYER_BASE_STATS };
+        for (const statKey of Object.keys(PLAYER_BASE_STATS)) {
+            if (statKey !== 'hp' && typeof player._recalcStat === 'function') {
+                player._recalcStat(statKey);
+            }
+        }
+        player.stats.hp = Phaser.Math.Clamp(
+            Number(saved.hp) || player.stats.maxHp,
+            1,
+            player.stats.maxHp
+        );
+        player._tempAtkBuff = 0;
+    }
+
+    _restoreEnemyProgress(saved) {
+        const manager = this.enemyManager;
+        if (!manager) return;
+        manager.gameTime = Math.max(0, Number(saved.gameTime) || 0);
+        manager.difficultyMultiplier = Math.max(1, Number(saved.difficultyMultiplier) || 1);
+        manager.spawnTimer = Math.max(0, Number(saved.spawnTimer) || 0);
+        manager.eliteTimer = Math.max(0, Number(saved.eliteTimer) || 0);
+        manager.triggeredBreaks = Array.isArray(saved.triggeredBreaks) ? [...saved.triggeredBreaks] : [];
+        manager.quests = Array.isArray(saved.quests) ? JSON.parse(JSON.stringify(saved.quests)) : [];
+        manager.lastQuestTime = Math.max(0, Number(saved.lastQuestTime) || 0);
+        manager.killCounters = { ...(saved.killCounters || {}) };
+
+        const activeBreak = saved.activeDungeonBreak;
+        const seconds = manager.gameTime / 1000;
+        manager.activeDungeonBreak = activeBreak && Number(activeBreak.endTime) > seconds
+            ? { ...activeBreak }
+            : null;
+    }
+
+    _restoreWeapons(savedWeapons) {
+        if (this.weaponManager) this.weaponManager.destroy();
+        this.weaponManager = new WeaponManager(this, this.player);
+
+        const list = Array.isArray(savedWeapons) ? [...savedWeapons] : [];
+        if (!list.some(w => w?.key === 'basicDagger')) list.unshift({ key: 'basicDagger' });
+
+        for (const saved of list) {
+            if (!saved?.key || !this.weaponManager.addWeapon(saved.key)) continue;
+            const weapon = this.weaponManager.weapons.get(saved.key);
+            if (!weapon) continue;
+            weapon.level = Phaser.Math.Clamp(Number(saved.level) || 1, 1, 10);
+            if (Number.isFinite(saved.damage)) weapon.damage = saved.damage;
+            if (Number.isFinite(saved.cooldown)) weapon.cooldown = saved.cooldown;
+            if (Number.isFinite(saved.count)) weapon.count = saved.count;
+            if (Number.isFinite(saved.cooldownTimer)) weapon.cooldownTimer = saved.cooldownTimer;
+            if (Number.isFinite(saved.extraRange)) weapon.extraRange = saved.extraRange;
+            if (Number.isFinite(saved.extraSlow)) weapon.extraSlow = saved.extraSlow;
+        }
+    }
+
+    _restoreShadows(savedShadows) {
+        if (!this.shadowArmyManager || !Array.isArray(savedShadows)) return;
+        this.shadowArmyManager.soldiers.forEach(s => { if (s?.scene) s.destroy(); });
+        this.shadowArmyManager.soldiers = [];
+
+        for (const saved of savedShadows.slice(0, this.shadowArmyManager.maxSoldiers)) {
+            if (!saved?.bossKey || !BOSS_TYPES[saved.bossKey]) continue;
+            const soldier = new ShadowSoldier(
+                this,
+                Phaser.Math.Clamp(Number(saved.x) || this.player.x, 80, WORLD_SIZE - 80),
+                Phaser.Math.Clamp(Number(saved.y) || this.player.y, 80, WORLD_SIZE - 80),
+                saved.bossKey
+            );
+            this.shadowArmyManager.soldiers.push(soldier);
+        }
+    }
+
+    _restoreBosses(savedBosses) {
+        if (!Array.isArray(savedBosses)) return;
+        for (const saved of savedBosses) {
+            if (!saved?.bossKey || !BOSS_TYPES[saved.bossKey]) continue;
+            const boss = new Boss(
+                this,
+                Phaser.Math.Clamp(Number(saved.x) || this.player.x, 80, WORLD_SIZE - 80),
+                Phaser.Math.Clamp(Number(saved.y) || this.player.y, 80, WORLD_SIZE - 80),
+                saved.bossKey,
+                1,
+                Math.max(1, Number(saved.maxHp) || Number(saved.hp) || BOSS_TYPES[saved.bossKey].hp)
+            );
+            boss.maxHp = Math.max(1, Number(saved.maxHp) || boss.maxHp);
+            boss.hp = Phaser.Math.Clamp(Number(saved.hp) || boss.maxHp, 1, boss.maxHp);
+            if (Number.isFinite(saved.attack)) boss.attack = saved.attack;
+            if (Number.isFinite(saved.speed)) boss.speed = saved.speed;
+            boss.phase = saved.phase === 2 ? 2 : 1;
+
+            const bossCollider = this.physics.add.overlap(this.player, boss, () => {
+                if (!boss.active || !this.player.active) return;
+                this.player.takeDamage(boss.attack);
+            });
+            boss._playerCollider = bossCollider;
+            this.activeBosses.push(boss);
+            this._setupWeaponBossCollisions(boss);
+        }
+    }
+
+    static clearSavedGame() {
+        try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    }
+
+    static getSavedGameData() {
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            return data?.version === SAVE_VERSION ? data : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    static _hasMeaningfulProgress(data) {
+        if (!data?.player) return false;
+        const timeSec = Math.floor((data.enemyManager?.gameTime || 0) / 1000);
+        return timeSec >= 5
+            || (data.player.kills || 0) > 0
+            || (data.player.level || 1) > 1
+            || (Array.isArray(data.weapons) && data.weapons.length > 1)
+            || (Array.isArray(data.shadows) && data.shadows.length > 0)
+            || (Array.isArray(data.activeBosses) && data.activeBosses.length > 0);
+    }
+
+    static hasSavedGame() {
+        return GameScene._hasMeaningfulProgress(GameScene.getSavedGameData());
+    }
+
+    static getSavedSummary() {
+        const data = GameScene.getSavedGameData();
+        if (!GameScene._hasMeaningfulProgress(data)) return null;
+        return {
+            level: data.player.level || 1,
+            kills: data.player.kills || 0,
+            timeSec: Math.floor((data.enemyManager?.gameTime || 0) / 1000),
+        };
+    }
+
     shutdown() {
         try {
+            if (!this.isGameOver) this._autoSave(true);
+
+            if (this._saveOnPageHide) {
+                window.removeEventListener('pagehide', this._saveOnPageHide);
+                this._saveOnPageHide = null;
+            }
+            if (this._saveOnVisibilityChange) {
+                document.removeEventListener('visibilitychange', this._saveOnVisibilityChange);
+                this._saveOnVisibilityChange = null;
+            }
+
             if (this._onGameResize) {
                 this.events.off('game-resize', this._onGameResize, this);
                 this._onGameResize = null;

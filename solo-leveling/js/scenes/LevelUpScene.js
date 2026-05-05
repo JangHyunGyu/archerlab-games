@@ -292,6 +292,7 @@ export class LevelUpScene extends Phaser.Scene {
             this.gameScene.removeLevelUpBlur();
         }
         if (this.gameScene) this.gameScene._levelUpActive = false;
+        if (this.gameScene?._autoSave) this.gameScene._autoSave(true);
 
         this.scene.resume('GameScene');
         this.scene.stop();
