@@ -20,7 +20,8 @@ export class SoundManager {
         this._activeSounds = 0;
         this._maxActiveSounds = 3;
         this._activeSoundTimers = new Set();
-        this._sfxMaster = 0.48;
+        this._sfxMaster = 0.4;
+        this._toneLeadTime = 0.035;
         this._releaseMs = {
             dagger: 320, daggerThrow: 380, hit: 500, kill: 300, xp: 160,
             playerHit: 390, select: 130, system: 190, warning: 340,
@@ -71,11 +72,11 @@ export class SoundManager {
             this._sfxGain.gain.value = this.enabled ? this._sfxMaster : 0;
 
             this._sfxComp = ctx.createDynamicsCompressor();
-            this._sfxComp.threshold.value = -18;
+            this._sfxComp.threshold.value = -22;
             this._sfxComp.knee.value = 10;
-            this._sfxComp.ratio.value = 8;
+            this._sfxComp.ratio.value = 10;
             this._sfxComp.attack.value = 0.003;
-            this._sfxComp.release.value = 0.18;
+            this._sfxComp.release.value = 0.16;
 
             this._sfxGain.connect(this._sfxComp);
             this._sfxComp.connect(ctx.destination);
@@ -107,14 +108,21 @@ export class SoundManager {
             const source = ctx.createBufferSource();
             const gain = ctx.createGain();
             source.buffer = buffer;
-            gain.gain.value = Math.max(0, Math.min(1, volume));
+            const safeVolume = Math.max(0, Math.min(0.88, volume));
+            const now = ctx.currentTime;
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(safeVolume, now + 0.006);
+            if (buffer.duration > 0.03) {
+                gain.gain.setValueAtTime(safeVolume, now + Math.max(0.006, buffer.duration - 0.018));
+                gain.gain.linearRampToValueAtTime(0, now + buffer.duration);
+            }
             source.connect(gain);
             gain.connect(this._sfxGain);
             source.onended = () => {
                 try { source.disconnect(); } catch (e) { /* silent */ }
                 try { gain.disconnect(); } catch (e) { /* silent */ }
             };
-            source.start();
+            source.start(now);
             return true;
         } catch (e) {
             return false;
@@ -143,7 +151,7 @@ export class SoundManager {
         pool._index = (pickedIndex + 1) % pool.length;
         audio._inUse = true;
         audio.muted = !this.enabled;
-        audio.volume = Math.max(0, Math.min(1, volume * this._sfxMaster));
+        audio.volume = Math.max(0, Math.min(0.72, volume * this._sfxMaster));
         try { audio.currentTime = 0; } catch (e) { /* silent */ }
         audio.play().catch(() => { audio._inUse = false; });
         return true;
@@ -265,8 +273,8 @@ export class SoundManager {
 
     // SFX 볼륨 매핑 (사운드별 적절한 볼륨)
     _sfxVolume = {
-        dagger: 0.48, daggerThrow: 0.5, slash: 0.52, authority: 0.56, fear: 0.5,
-        hit: 0.46, kill: 0.5, playerHit: 0.6,
+        dagger: 0.44, daggerThrow: 0.46, slash: 0.38, authority: 0.5, fear: 0.46,
+        hit: 0.4, kill: 0.42, playerHit: 0.52,
         xp: 0.36, levelup: 0.62, rankup: 0.66,
         system: 0.45, arise: 0.66, bossAppear: 0.62,
         warning: 0.56, potion: 0.46, select: 0.38, bossKill: 0.66, gameOver: 0.62,
@@ -303,9 +311,11 @@ export class SoundManager {
 
     async playIntroMusic() {
         if (!this._initialized || !this.enabled) return;
-        const audioReady = await this.resume();
-        if (!audioReady) return;
         this.stopIntroMusic();
+        const introToken = (this._introToken || 0) + 1;
+        this._introToken = introToken;
+        const audioReady = await this.resume();
+        if (!audioReady || introToken !== this._introToken) return;
         this._introNodes = [];
         this._introIntervals = [];
         this._introTimeouts = [];
@@ -357,9 +367,9 @@ export class SoundManager {
             const notes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4'];
             let noteIdx = 0;
             const arpInterval = setInterval(() => {
-                if (!this._initialized) return;
+                if (!this._initialized || introToken !== this._introToken) return;
                 try {
-                    arpSynth.triggerAttackRelease(notes[noteIdx % notes.length], '8n', Tone.now(), 0.25);
+                    arpSynth.triggerAttackRelease(notes[noteIdx % notes.length], '8n', Tone.now() + this._toneLeadTime, 0.25);
                     noteIdx++;
                 } catch (e) { /* silent */ }
             }, 600);
@@ -376,17 +386,17 @@ export class SoundManager {
             this._introNodes.push(percNoise, percFilter);
 
             const percInterval = setInterval(() => {
-                if (!this._initialized) return;
+                if (!this._initialized || introToken !== this._introToken) return;
                 try {
                     percFilter.frequency.value = 600 + Math.random() * 400;
-                    percNoise.triggerAttackRelease('64n', Tone.now(), 0.08);
+                    percNoise.triggerAttackRelease('64n', Tone.now() + this._toneLeadTime, 0.08);
                 } catch (e) { /* silent */ }
             }, 2400);
             this._introIntervals.push(percInterval);
 
             // 6. Tension riser
             const riserInterval = setInterval(() => {
-                if (!this._initialized) return;
+                if (!this._initialized || introToken !== this._introToken) return;
                 try {
                     const rOsc = new Tone.Oscillator({ type: 'sawtooth' });
                     const rFilter = new Tone.Filter({ frequency: 100, type: 'lowpass', Q: 3 });
@@ -419,6 +429,7 @@ export class SoundManager {
     }
 
     stopIntroMusic(immediate = false) {
+        this._introToken = (this._introToken || 0) + 1;
         if (this._introIntervals) {
             this._introIntervals.forEach(id => clearInterval(id));
             this._introIntervals = [];
@@ -460,9 +471,11 @@ export class SoundManager {
 
     async startGameBGM() {
         if (!this._initialized || !this.enabled) return;
-        const audioReady = await this.resume();
-        if (!audioReady) return;
         this.stopGameBGM();
+        const bgmToken = (this._bgmToken || 0) + 1;
+        this._bgmToken = bgmToken;
+        const audioReady = await this.resume();
+        if (!audioReady || bgmToken !== this._bgmToken) return;
         this._bgmNodes = [];
         this._bgmIntervals = [];
 
@@ -501,7 +514,7 @@ export class SoundManager {
 
             // === Phase 2: Kick + Hi-hat (500ms) ===
             this._bgmTimeouts.push(setTimeout(() => {
-                if (!this._initialized) return;
+                if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
                 try {
                     const kickSynth = new Tone.MembraneSynth({
                         pitchDecay: 0.03, octaves: 4,
@@ -515,10 +528,10 @@ export class SoundManager {
                     let beatIdx = 0;
                     const kickPattern = [1, 0, 0.6, 0, 1, 0, 0.4, 0.7];
                     const kickInterval = setInterval(() => {
-                        if (!this._initialized) return;
+                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
                         try {
                             const vel = kickPattern[beatIdx % kickPattern.length];
-                            if (vel > 0) kickSynth.triggerAttackRelease('C1', '32n', Tone.now(), vel * 0.35);
+                            if (vel > 0) kickSynth.triggerAttackRelease('C1', '32n', Tone.now() + this._toneLeadTime, vel * 0.28);
                             beatIdx++;
                         } catch (e) { /* silent */ }
                     }, beatMs / 2);
@@ -538,10 +551,10 @@ export class SoundManager {
                     let hatIdx = 0;
                     const hatPattern = [0.12, 0.04, 0.08, 0.04];
                     const hatInterval = setInterval(() => {
-                        if (!this._initialized) return;
+                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
                         try {
                             const vel = hatPattern[hatIdx % hatPattern.length];
-                            hatNoise.triggerAttackRelease('64n', Tone.now(), vel);
+                            hatNoise.triggerAttackRelease('64n', Tone.now() + this._toneLeadTime, vel);
                             hatIdx++;
                         } catch (e) { /* silent */ }
                     }, beatMs / 2);
@@ -551,7 +564,7 @@ export class SoundManager {
 
             // === Phase 3: Arpeggio + Pad (1200ms) ===
             this._bgmTimeouts.push(setTimeout(() => {
-                if (!this._initialized) return;
+                if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
                 try {
                     const arpSynth = new Tone.FMSynth({
                         harmonicity: 2, modulationIndex: 3,
@@ -566,9 +579,9 @@ export class SoundManager {
                     const arpNotes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4', 'Bb3', 'G3', 'Eb3'];
                     let arpIdx = 0;
                     const arpInterval = setInterval(() => {
-                        if (!this._initialized) return;
+                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
                         try {
-                            arpSynth.triggerAttackRelease(arpNotes[arpIdx % arpNotes.length], '16n', Tone.now(), 0.2);
+                            arpSynth.triggerAttackRelease(arpNotes[arpIdx % arpNotes.length], '16n', Tone.now() + this._toneLeadTime, 0.16);
                             arpIdx++;
                         } catch (e) { /* silent */ }
                     }, beatMs);
@@ -598,15 +611,15 @@ export class SoundManager {
                     ];
                     let padIdx = 0;
                     const padInterval = setInterval(() => {
-                        if (!this._initialized) return;
+                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
                         try {
                             const chord = padChords[padIdx % padChords.length];
-                            padSynth.triggerAttackRelease(chord, '1m', Tone.now(), 0.15);
+                            padSynth.triggerAttackRelease(chord, '1m', Tone.now() + this._toneLeadTime, 0.11);
                             padIdx++;
                         } catch (e) { /* silent */ }
                     }, beatMs * 8);
                     this._bgmIntervals.push(padInterval);
-                    try { padSynth.triggerAttackRelease(padChords[0], '1m', Tone.now(), 0.15); } catch (e) { /* silent */ }
+                    try { padSynth.triggerAttackRelease(padChords[0], '1m', Tone.now() + this._toneLeadTime, 0.11); } catch (e) { /* silent */ }
                 } catch (e) { /* silent */ }
             }, 1200));
         } catch (e) {
@@ -615,6 +628,7 @@ export class SoundManager {
     }
 
     stopGameBGM(immediate = false) {
+        this._bgmToken = (this._bgmToken || 0) + 1;
         if (this._bgmTimeouts) {
             this._bgmTimeouts.forEach(id => clearTimeout(id));
             this._bgmTimeouts = [];

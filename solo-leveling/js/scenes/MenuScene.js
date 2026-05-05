@@ -22,6 +22,7 @@ export class MenuScene extends Phaser.Scene {
 
         this._modalElements = [];
         this._dropdownElements = [];
+        this._startingGame = false;
 
         // Deep background + scanlines
         this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP);
@@ -143,6 +144,7 @@ export class MenuScene extends Phaser.Scene {
             labelSize: isNarrow ? 16 : 19,
             labelFont: UI_FONT_KR,
             onClick: async () => {
+                this._startingGame = true;
                 if (!this.game._soundManager) {
                     this.game._soundManager = new SoundManager();
                     this.game._soundManager.init();
@@ -210,6 +212,7 @@ export class MenuScene extends Phaser.Scene {
         });
 
         this.input.once('pointerdown', async () => {
+            if (this._startingGame) return;
             if (!this.game._soundManager) {
                 this.game._soundManager = new SoundManager();
                 this.game._soundManager.init();
