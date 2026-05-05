@@ -74,6 +74,55 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    static _playFrameVfx(scene, prefix, x, y, opts = {}) {
+        if (!scene?.textures?.exists(`${prefix}_0`)) return false;
+
+        const {
+            scale = 1,
+            rotation = 0,
+            depth = 16,
+            frameMs = 45,
+            alpha = 1,
+            blendMode = Phaser.BlendModes.NORMAL,
+        } = opts;
+
+        try {
+            const sprite = scene.add.sprite(x, y, `${prefix}_0`)
+                .setOrigin(0.5)
+                .setDepth(depth)
+                .setAlpha(alpha)
+                .setScale(scale)
+                .setRotation(rotation)
+                .setBlendMode(blendMode);
+
+            let frame = 0;
+            const timer = scene.time.addEvent({
+                delay: frameMs,
+                repeat: 5,
+                callback: () => {
+                    frame += 1;
+                    if (!sprite.scene || frame > 5) {
+                        if (sprite.scene) sprite.destroy();
+                        return;
+                    }
+                    sprite.setTexture(`${prefix}_${frame}`);
+                    if (frame >= 5) {
+                        scene.tweens.add({
+                            targets: sprite,
+                            alpha: 0,
+                            duration: frameMs,
+                            onComplete: () => sprite.destroy(),
+                        });
+                    }
+                },
+            });
+            sprite.once('destroy', () => timer.destroy());
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     constructor(scene, x, y) {
         super(scene, x, y, 'enemy_goblin_0');
         scene.add.existing(this);
@@ -433,8 +482,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     _spawnHitBlood(isCrit) {
         if (!this.scene) return;
-        const count = isCrit ? 8 : 4;
-        const maxSpeed = isCrit ? 160 : 95;
+        const sizeFactor = Phaser.Math.Clamp((this.displayWidth || 42) / 64, 0.75, 1.65);
+        const hitAngle = Phaser.Math.FloatBetween(-0.45, 0.45);
+        const usedAsset = Enemy._playFrameVfx(
+            this.scene,
+            isCrit ? 'effect_monster_crit' : 'effect_monster_hit',
+            this.x,
+            this.y - this.displayHeight * 0.08,
+            {
+                scale: (isCrit ? 0.5 : 0.42) * sizeFactor,
+                rotation: hitAngle,
+                depth: 18,
+                frameMs: isCrit ? 42 : 38,
+            }
+        );
+
+        const count = usedAsset ? (isCrit ? 12 : 8) : (isCrit ? 8 : 4);
+        const maxSpeed = usedAsset ? (isCrit ? 210 : 145) : (isCrit ? 160 : 95);
         for (let i = 0; i < count; i++) {
             const a = Math.random() * Math.PI * 2;
             const s = 45 + Math.random() * maxSpeed;
@@ -458,14 +522,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         try {
             const sizeFactor = Math.max(1, (this.displayWidth || 30) / 30);
             const isElite = this.isElite;
+            const usedDeathAsset = Enemy._playFrameVfx(
+                this.scene,
+                'effect_monster_death',
+                this.x,
+                this.y - this.displayHeight * 0.05,
+                {
+                    scale: Phaser.Math.Clamp(0.38 * sizeFactor, 0.42, isElite ? 1.25 : 0.95),
+                    rotation: Phaser.Math.FloatBetween(-0.5, 0.5),
+                    depth: 18,
+                    frameMs: 48,
+                }
+            );
 
             // Pooled red blood burst (main spray)
             const emitter = Enemy._getDeathEmitter(this.scene, this.x, this.y);
-            if (emitter) emitter.explode(isElite ? 28 : 16);
+            if (emitter) emitter.explode(usedDeathAsset ? (isElite ? 36 : 24) : (isElite ? 28 : 16));
 
             // Pooled sparks (gore flecks)
             const sparks = Enemy._getDeathSparks(this.scene, this.x, this.y);
-            if (sparks) sparks.explode(isElite ? 16 : 9);
+            if (sparks) sparks.explode(usedDeathAsset ? (isElite ? 22 : 13) : (isElite ? 16 : 9));
 
             // Bright red core burst
             const core = this.scene.add.circle(this.x, this.y, 9 * sizeFactor, 0xcc0011, 0.95).setDepth(10);
@@ -482,7 +558,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
 
             // Flying gore chunks (bigger, irregular)
-            const chunkCount = isElite ? 16 : 10;
+            const chunkCount = usedDeathAsset ? (isElite ? 20 : 14) : (isElite ? 16 : 10);
             for (let i = 0; i < chunkCount; i++) {
                 const a = Math.random() * Math.PI * 2;
                 const s = 90 + Math.random() * 140;
