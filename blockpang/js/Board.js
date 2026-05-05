@@ -10,6 +10,9 @@ class Board {
         this.cellTextures = [];
         this.emptyTexture = null;
         this.bgGraphics = null;
+        this.emptyCellContainer = null;
+        this.filledCellContainer = null;
+        this.cornerMatte = null;
         this.cellSprites = [];   // [row][col] PIXI.Sprite
         this.ghostContainer = null;
         this.hintContainer = null;
@@ -84,14 +87,25 @@ class Board {
         this.bgGraphics = this._drawBackground(cs);
         this.container.addChild(this.bgGraphics);
 
+        // Empty cells and decorative grid sit below filled blocks so the frame
+        // can shave their visual corners without affecting playable cells.
+        this.emptyCellContainer = new PIXI.Container();
+        this.container.addChild(this.emptyCellContainer);
+
         // Grid lines layer (subtle)
         this.gridLineContainer = new PIXI.Container();
         this._drawGridLines(cs);
         this.container.addChild(this.gridLineContainer);
 
+        this.cornerMatte = this._drawCornerMatte(cs);
+        this.container.addChild(this.cornerMatte);
+
         // Hint container for row/col near-completion
         this.hintContainer = new PIXI.Container();
         this.container.addChild(this.hintContainer);
+
+        this.filledCellContainer = new PIXI.Container();
+        this.container.addChild(this.filledCellContainer);
 
         // Cell sprites (empty cells + filled cells)
         for (let r = 0; r < GRID_SIZE; r++) {
@@ -101,14 +115,14 @@ class Board {
                 emptySprite.position.set(c * cs + 1, r * cs + 1);
                 emptySprite.width = cs - 2;
                 emptySprite.height = cs - 2;
-                this.container.addChild(emptySprite);
+                this.emptyCellContainer.addChild(emptySprite);
 
                 // Filled cell sprite (hidden by default)
                 const colorIdx = this.grid[r][c];
                 const sprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
                 this.fitCellSprite(sprite, r, c);
                 sprite.visible = false;
-                this.container.addChild(sprite);
+                this.filledCellContainer.addChild(sprite);
                 this.cellSprites[r][c] = sprite;
 
                 if (colorIdx >= 0) {
@@ -122,6 +136,19 @@ class Board {
         // Ghost container on top
         this.ghostContainer = new PIXI.Container();
         this.container.addChild(this.ghostContainer);
+    }
+
+    _drawChamferedPath(g, x, y, w, h, cut) {
+        const c = Math.max(0, Math.min(cut, w * 0.5, h * 0.5));
+        return g.moveTo(x + c, y)
+            .lineTo(x + w - c, y)
+            .lineTo(x + w, y + c)
+            .lineTo(x + w, y + h - c)
+            .lineTo(x + w - c, y + h)
+            .lineTo(x + c, y + h)
+            .lineTo(x, y + h - c)
+            .lineTo(x, y + c)
+            .closePath();
     }
 
     _drawBackground(cs) {
@@ -147,24 +174,57 @@ class Board {
         container.addChild(g);
 
         if (panelTexture) {
+            const panelLayer = new PIXI.Container();
             const panel = new PIXI.Sprite(panelTexture);
             panel.position.set(-ext, -ext);
             panel.width = total + ext * 2;
             panel.height = total + ext * 2;
             panel.alpha = 0.96;
-            container.addChild(panel);
+            panelLayer.addChild(panel);
+            container.addChild(panelLayer);
+
+            const panelMask = new PIXI.Graphics();
+            this._drawChamferedPath(
+                panelMask,
+                -ext + 1,
+                -ext + 1,
+                total + ext * 2 - 2,
+                total + ext * 2 - 2,
+                Math.max(16, Math.round(ext * 0.62))
+            ).fill({ color: 0xFFFFFF, alpha: 1 });
+            container.addChild(panelMask);
+            panelLayer.mask = panelMask;
         }
 
-        const overlay = new PIXI.Graphics();
-        // Subtle inner neon highlight.
-        overlay.roundRect(-8, -8, total + 16, 10, 14)
-         .fill({ color: THEME.secondary, alpha: 0.16 });
-        container.addChild(overlay);
+        const surface = new PIXI.Graphics();
+        const surfacePad = Math.max(2, Math.round(cs * 0.08));
+        const surfaceCut = Math.max(14, Math.round(cs * 0.48));
+        this._drawChamferedPath(
+            surface,
+            -surfacePad,
+            -surfacePad,
+            total + surfacePad * 2,
+            total + surfacePad * 2,
+            surfaceCut
+        ).fill({ color: 0x06142F, alpha: panelTexture ? 0.93 : 0.78 });
+        container.addChild(surface);
+
+        const sheen = getBlockpangTexture('crystalSheen');
+        if (sheen) {
+            const sheenSprite = new PIXI.Sprite(sheen);
+            sheenSprite.position.set(-surfacePad, -surfacePad);
+            sheenSprite.width = total + surfacePad * 2;
+            sheenSprite.height = total + surfacePad * 2;
+            sheenSprite.alpha = 0.13;
+            container.addChild(sheenSprite);
+        }
 
         // Thin hairline border (kept tight to the cell area, not the asset edge)
         const border = new PIXI.Graphics();
-        border.roundRect(-8, -8, total + 16, total + 16, 14)
-              .stroke({ width: 1.4, color: THEME.divider, alpha: 0.72 });
+        this._drawChamferedPath(border, -8, -8, total + 16, total + 16, Math.max(18, Math.round(cs * 0.56)))
+              .stroke({ width: 1.4, color: THEME.divider, alpha: 0.66 });
+        this._drawChamferedPath(border, -3, -3, total + 6, total + 6, Math.max(14, Math.round(cs * 0.42)))
+              .stroke({ width: 0.8, color: THEME.secondary, alpha: 0.22 });
         container.addChild(border);
 
         // No pulsing border — kept ticker-cleanup no-op for backward safety
@@ -175,6 +235,25 @@ class Board {
         }
 
         return container;
+    }
+
+    _drawCornerMatte(cs) {
+        const g = new PIXI.Graphics();
+        const total = cs * GRID_SIZE;
+        const cut = Math.max(14, Math.round(cs * 0.46));
+        const fill = { color: 0x06142F, alpha: 0.94 };
+        const rim = { width: 1, color: THEME.divider, alpha: 0.16 };
+
+        g.poly([0, 0, cut, 0, 0, cut], true).fill(fill);
+        g.poly([total, 0, total - cut, 0, total, cut], true).fill(fill);
+        g.poly([total, total, total - cut, total, total, total - cut], true).fill(fill);
+        g.poly([0, total, cut, total, 0, total - cut], true).fill(fill);
+
+        g.moveTo(cut, 0).lineTo(0, cut).stroke(rim);
+        g.moveTo(total - cut, 0).lineTo(total, cut).stroke(rim);
+        g.moveTo(total, total - cut).lineTo(total - cut, total).stroke(rim);
+        g.moveTo(cut, total).lineTo(0, total - cut).stroke(rim);
+        return g;
     }
 
     _drawGridLines(cs) {
