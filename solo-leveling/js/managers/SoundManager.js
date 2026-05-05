@@ -22,7 +22,7 @@ export class SoundManager {
         this._activeSoundTimers = new Set();
         this._sfxMaster = 0.48;
         this._releaseMs = {
-            dagger: 320, daggerThrow: 390, hit: 390, kill: 300, xp: 160,
+            dagger: 320, daggerThrow: 380, hit: 500, kill: 300, xp: 160,
             playerHit: 390, select: 130, system: 190, warning: 340,
             slash: 620, authority: 860, fear: 660,
             levelup: 560, rankup: 860, arise: 860, bossAppear: 860,
