@@ -3,8 +3,10 @@ import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, bossKey) {
         const config = BOSS_TYPES[bossKey];
-        // Use boss texture frame 0 with shadow tint
-        super(scene, x, y, 'boss_' + bossKey + '_0');
+        const soldierTexture = scene.textures.exists('shadow_' + config.shadowType)
+            ? 'shadow_' + config.shadowType
+            : 'boss_' + bossKey + '_0';
+        super(scene, x, y, soldierTexture);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -14,9 +16,14 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         this.bossName = config.name;
         this.soldierType = config.shadowType;
 
-        // Match boss original size
+        this._usesDedicatedSprite = soldierTexture.startsWith('shadow_');
+
+        // Match boss original footprint while allowing dedicated silhouettes.
         this.body.setSize(config.size * 1.4, config.size * 1.4);
-        this.setDisplaySize(config.size * 2, config.size * 2);
+        this.setDisplaySize(
+            config.size * (this._usesDedicatedSprite ? 1.65 : 2),
+            config.size * (this._usesDedicatedSprite ? 1.8 : 2)
+        );
 
         // Shadow appearance - undead tint per type (zombie/grotesque feel)
         const undeadTints = {
@@ -181,6 +188,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
     // Igris: fast melee slash (shadow version)
     _igrisAttack(target) {
+        if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSlash');
         target.takeDamage(this.damage, this.x, this.y);
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
@@ -196,6 +204,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
     // Tusk: ground slam AoE (shadow version)
     _tuskAttack(target) {
+        if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSlam');
         // Slam at target position, hits all nearby enemies
         const radius = 120;
         const slam = this.scene.add.circle(target.x, target.y, radius, COLORS.SHADOW_PRIMARY, 0.3)
@@ -223,6 +232,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
     // Beru: ranged acid spit (shadow version) — piercing projectile
     _beruAttack(target) {
+        if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSpit');
         const proj = this.scene.add.sprite(this.x, this.y, 'proj_beru')
             .setDepth(8).setTint(COLORS.SHADOW_PRIMARY).setScale(1.3);
         const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
@@ -290,6 +300,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
 
     // Fallback melee
     _meleeAttack(target) {
+        if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSlash');
         target.takeDamage(this.damage, this.x, this.y);
         const slash = this.scene.add.circle(target.x, target.y, 15, COLORS.SHADOW_PRIMARY, 0.5)
             .setDepth(8);

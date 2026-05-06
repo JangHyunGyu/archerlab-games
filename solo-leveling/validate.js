@@ -163,6 +163,11 @@ const expectedSounds = [
     'sounds/playerHit.wav', 'sounds/potion.wav', 'sounds/quest.wav',
     'sounds/rankup.wav', 'sounds/select.wav', 'sounds/slash.wav',
     'sounds/system.wav', 'sounds/warning.wav', 'sounds/xp.wav',
+    'sounds/boss_charge.wav', 'sounds/boss_slash.wav', 'sounds/ground_slam.wav',
+    'sounds/acid_shot.wav', 'sounds/acid_hit.wav', 'sounds/boss_rage.wav',
+    'sounds/shadow_soldier_slash.wav', 'sounds/shadow_soldier_slam.wav',
+    'sounds/shadow_soldier_spit.wav', 'sounds/mana.wav', 'sounds/essence.wav',
+    'sounds/crit_hit.wav', 'sounds/elite_kill.wav',
 ];
 
 for (const sf of expectedSounds) {

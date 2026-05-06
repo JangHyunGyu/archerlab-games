@@ -9,6 +9,8 @@ const ITEM_TYPES = {
     hpPotion: {
         name: 'HP 포션',
         color: 0xff4444,
+        asset: 'item_hp_potion',
+        sound: 'potion',
         dropRate: 0.08,
         effect: (player, scene) => {
             const healAmount = Math.floor(player.stats.maxHp * 0.08);
@@ -19,6 +21,8 @@ const ITEM_TYPES = {
     manaCrystal: {
         name: '마나 크리스탈',
         color: 0x4488ff,
+        asset: 'item_mana_crystal',
+        sound: 'mana',
         dropRate: 0.05,
         effect: (player, scene) => {
             // Temporary cooldown reduction for 10 seconds
@@ -33,6 +37,8 @@ const ITEM_TYPES = {
     shadowEssence: {
         name: '그림자 정수',
         color: 0x9b44ff,
+        asset: 'item_shadow_essence',
+        sound: 'essence',
         dropRate: 0.03,
         effect: (player, scene) => {
             // Temporary attack boost for 15 seconds
@@ -62,15 +68,18 @@ export class ItemDropManager {
 
     _spawnItem(x, y, key, config) {
         // Item visual
-        const item = this.scene.add.circle(x, y, 8, config.color, 0.9)
-            .setDepth(5);
+        const textureKey = config.asset;
+        const useAsset = textureKey && this.scene.textures.exists(textureKey);
+        const item = useAsset
+            ? this.scene.add.sprite(x, y, textureKey).setDepth(5).setDisplaySize(28, 28)
+            : this.scene.add.circle(x, y, 8, config.color, 0.9).setDepth(5);
 
         // Inner glow
         const glow = this.scene.add.circle(x, y, 12, config.color, 0.2)
             .setDepth(4);
 
         // Plus sign for HP potion
-        if (key === 'hpPotion') {
+        if (!useAsset && key === 'hpPotion') {
             const plus = this.scene.add.text(x, y, '+', {
                 fontSize: '12px', fontFamily: 'Arial', fontStyle: 'bold',
                 color: '#ffffff',
@@ -156,7 +165,7 @@ export class ItemDropManager {
                 item._config.effect(player, this.scene);
 
                 if (this.scene.soundManager) {
-                    this.scene.soundManager.play('potion');
+                    this.scene.soundManager.play(item._config.sound || 'potion');
                 }
 
                 // Collect effect

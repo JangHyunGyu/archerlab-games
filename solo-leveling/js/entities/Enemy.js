@@ -226,6 +226,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.update = Enemy.prototype.update;
         this.die = Enemy.prototype.die;
         this.isElite = false;
+        this._eliteDeathPending = false;
         if (this._eliteLabel) { this._eliteLabel.destroy(); this._eliteLabel = null; }
         try {
             if (this._eliteGlow && this.filters) this.filters.internal.remove(this._eliteGlow);
@@ -448,6 +449,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.hp -= amount;
 
         const isCrit = amount > this.maxHp * 0.5;
+        if (isCrit && this.scene.soundManager) this.scene.soundManager.play('critHit');
         const restoreTint = this.isElite ? 0xff6644 : 0xffffff;
 
         // Impact feel: white pre-flash → red flash → restore
@@ -523,6 +525,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     die() {
+        const wasElite = this.isElite || this._eliteDeathPending;
+        this._eliteDeathPending = wasElite;
+
         // Drop XP
         if (this.scene.xpOrbPool) {
             this.scene.xpOrbPool.spawn(this.x, this.y, this.xpValue);
@@ -540,7 +545,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // Sound
         if (this.scene.soundManager) {
-            this.scene.soundManager.play('kill');
+            this.scene.soundManager.play(wasElite ? 'eliteKill' : 'kill');
         }
 
         // Death effect
@@ -559,6 +564,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this._aura) {
             this._aura.setVisible(false).setActive(false);
         }
+        this._eliteDeathPending = false;
     }
 
     _spawnHitBlood(isCrit) {
@@ -602,7 +608,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     _deathEffect() {
         try {
             const sizeFactor = Math.max(1, (this.displayWidth || 30) / 30);
-            const isElite = this.isElite;
+            const isElite = this.isElite || this._eliteDeathPending;
             const usedDeathAsset = Enemy._playFrameVfx(
                 this.scene,
                 'effect_monster_death',

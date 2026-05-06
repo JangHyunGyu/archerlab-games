@@ -534,6 +534,7 @@ export class EnemyManager {
         // doesn't stack wrappers on repeated elite promotions.
         const originalDie = enemy.die.bind(enemy);
         enemy.die = function() {
+            this._eliteDeathPending = true;
             if (this._eliteLabel) { this._eliteLabel.destroy(); this._eliteLabel = null; }
             try { if (this._eliteGlow && this.filters) { this.filters.internal.remove(this._eliteGlow); this._eliteGlow = null; } } catch (e) { /* silent */ }
             this.isElite = false;
@@ -589,6 +590,7 @@ export class EnemyManager {
 
         const originalDie = enemy.die.bind(enemy);
         enemy.die = function() {
+            this._eliteDeathPending = true;
             if (this._eliteLabel) { this._eliteLabel.destroy(); this._eliteLabel = null; }
             try { if (this._eliteGlow && this.filters) { this.filters.internal.remove(this._eliteGlow); this._eliteGlow = null; } } catch (e) { /* silent */ }
             this.isElite = false;
@@ -613,6 +615,7 @@ export class EnemyManager {
         } catch (e) { /* filters may already be gone */ }
         enemy._eliteGlow = null;
         enemy.isElite = false;
+        enemy._eliteDeathPending = false;
         enemy.update = Enemy.prototype.update;
         enemy.die = Enemy.prototype.die;
         enemy._originalUpdate = null;

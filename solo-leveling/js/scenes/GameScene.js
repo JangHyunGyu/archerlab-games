@@ -51,6 +51,7 @@ export class GameScene extends Phaser.Scene {
         this.systemMessage = new SystemMessage(this);
         this._createStartupOverlay();
         this._createFloor();
+        this._createEnvironmentProps();
 
         this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
@@ -376,6 +377,55 @@ export class GameScene extends Phaser.Scene {
         border.lineStyle(4, COLORS.SHADOW_PRIMARY, 0.5);
         border.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
         border.setDepth(1);
+    }
+
+    _createEnvironmentProps() {
+        const propTypes = [
+            { key: 'env_cracked_pillar', count: 12, minScale: 0.75, maxScale: 1.25, alpha: 0.62 },
+            { key: 'env_rune_stone', count: 10, minScale: 0.7, maxScale: 1.15, alpha: 0.68 },
+            { key: 'env_shadow_portal', count: 6, minScale: 0.65, maxScale: 1.0, alpha: 0.48 },
+            { key: 'env_hanging_chain', count: 10, minScale: 0.6, maxScale: 1.1, alpha: 0.42 },
+        ].filter(p => this.textures.exists(p.key));
+
+        this.environmentProps = [];
+        if (propTypes.length === 0) return;
+
+        const center = WORLD_SIZE / 2;
+        for (const prop of propTypes) {
+            for (let i = 0; i < prop.count; i++) {
+                let x = Phaser.Math.Between(140, WORLD_SIZE - 140);
+                let y = Phaser.Math.Between(140, WORLD_SIZE - 140);
+
+                if (Phaser.Math.Distance.Between(x, y, center, center) < 330) {
+                    x += x < center ? -360 : 360;
+                    y += y < center ? -220 : 220;
+                    x = Phaser.Math.Clamp(x, 140, WORLD_SIZE - 140);
+                    y = Phaser.Math.Clamp(y, 140, WORLD_SIZE - 140);
+                }
+
+                const shadow = this.add.ellipse(x, y + 24, 58, 14, 0x000000, 0.18)
+                    .setDepth(1.8);
+                const sprite = this.add.image(x, y, prop.key)
+                    .setDepth(2)
+                    .setAlpha(prop.alpha)
+                    .setScale(Phaser.Math.FloatBetween(prop.minScale, prop.maxScale))
+                    .setRotation(prop.key === 'env_shadow_portal' ? Phaser.Math.FloatBetween(-0.3, 0.3) : 0);
+
+                if (prop.key === 'env_shadow_portal') {
+                    sprite.setBlendMode(Phaser.BlendModes.ADD);
+                    this.tweens.add({
+                        targets: sprite,
+                        alpha: prop.alpha + 0.16,
+                        scale: sprite.scaleX * 1.06,
+                        duration: Phaser.Math.Between(1400, 2200),
+                        yoyo: true,
+                        repeat: -1,
+                    });
+                }
+
+                this.environmentProps.push(sprite, shadow);
+            }
+        }
     }
 
     _createAmbientParticles() {
@@ -1080,6 +1130,13 @@ export class GameScene extends Phaser.Scene {
                 this._ambientFallback = null;
             }
             if (this.ambientEmitter) { this.ambientEmitter.destroy(); this.ambientEmitter = null; }
+            if (this.environmentProps) {
+                this.environmentProps.forEach(prop => {
+                    if (this.tweens) this.tweens.killTweensOf(prop);
+                    if (prop?.active) prop.destroy();
+                });
+                this.environmentProps = null;
+            }
 
             if (this._vignetteOverlay) { this._vignetteOverlay.destroy(); this._vignetteOverlay = null; }
             if (this._colorTint) { this._colorTint.destroy(); this._colorTint = null; }

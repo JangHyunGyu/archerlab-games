@@ -2005,6 +2005,12 @@ export class SpriteFactory {
         const sizes = [32, 40, 30];
 
         types.forEach((type, idx) => {
+            const localKey = 'asset_shadow_' + type;
+            if (scene.textures.exists(localKey)) {
+                this._copyTexture(scene, localKey, 'shadow_' + type, sizes[idx] * 2, sizes[idx] * 2);
+                return;
+            }
+
             // Try external CDN texture first
             const extKey = 'ext_shadow_' + type;
             const s = sizes[idx];
@@ -2128,6 +2134,11 @@ export class SpriteFactory {
         };
 
         for (const [key, drawFn] of Object.entries(icons)) {
+            const assetKey = 'asset_icon_' + key;
+            if (scene.textures.exists(assetKey)) {
+                this._copyTexture(scene, assetKey, 'icon_' + key, 32, 32);
+                continue;
+            }
             const g = scene.make.graphics({ add: false });
             g.fillStyle(0x2a1a4a, 0.8);
             g.fillRoundedRect(0, 0, 32, 32, 4);
@@ -2150,6 +2161,11 @@ export class SpriteFactory {
         };
 
         for (const [key, color] of Object.entries(passiveColors)) {
+            const assetKey = 'asset_icon_' + key;
+            if (scene.textures.exists(assetKey)) {
+                this._copyTexture(scene, assetKey, 'icon_' + key, 32, 32);
+                continue;
+            }
             const g = scene.make.graphics({ add: false });
             g.fillStyle(0x1a1a2e, 0.8);
             g.fillRoundedRect(0, 0, 32, 32, 4);
