@@ -527,14 +527,25 @@ export class GameScene extends Phaser.Scene {
     _setupColorTint() {
         try {
             const cam = this.cameras.main;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
             this._colorTint = this.add.rectangle(
                 cam.width / 2, cam.height / 2, cam.width, cam.height,
-                0xd5b8ee  // soft lavender multiply: warm channels dimmed ~15-28%, blue preserved
+                isMobile ? 0x6f4a9d : 0xd5b8ee
             )
                 .setScrollFactor(0)
                 .setDepth(88)
                 .setBlendMode(Phaser.BlendModes.MULTIPLY)
-                .setAlpha(0.82);
+                .setAlpha(isMobile ? 0.88 : 0.82);
+
+            if (isMobile) {
+                this._mobileDarken = this.add.rectangle(
+                    cam.width / 2, cam.height / 2, cam.width, cam.height,
+                    0x01030a, 0.45
+                )
+                    .setScrollFactor(0)
+                    .setDepth(89);
+            }
         } catch (e) { /* tint overlay optional */ }
     }
 

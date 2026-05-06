@@ -20,6 +20,8 @@ export class MenuScene extends Phaser.Scene {
             || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         const isPortrait = GAME_HEIGHT > GAME_WIDTH;
         const isNarrow = GAME_WIDTH <= 1100;  // narrow phone, portrait
+        const isShortLandscape = !isPortrait && GAME_HEIGHT <= 820 && GAME_WIDTH > 1180;
+        const isCompactMenu = isNarrow || isShortLandscape;
 
         this._modalElements = [];
         this._dropdownElements = [];
@@ -39,7 +41,7 @@ export class MenuScene extends Phaser.Scene {
 
         // ── Top status line ─────────────────────
         // Skip on narrow/portrait to avoid colliding with HTML ArcherLab link
-        if (!isNarrow && !isPortrait) {
+        if (!isCompactMenu && !isPortrait) {
             const topY = uv(22);
             const sysTxt = this.add.text(uv(22), topY, '[ SYSTEM · ONLINE ]', {
                 fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
@@ -55,8 +57,9 @@ export class MenuScene extends Phaser.Scene {
         }
 
         // ── Title block ─────────────────────────
-        const titleSize = isPortrait ? 48 : (isMobile ? 42 : 60);
-        const titleText = this.add.text(centerX, cy(0.15), t('title'), {
+        const titleSize = isShortLandscape ? 40 : (isPortrait ? 48 : (isMobile ? 42 : 60));
+        const titleY = cy(isShortLandscape ? 0.13 : 0.15);
+        const titleText = this.add.text(centerX, titleY, t('title'), {
             fontSize: fs(titleSize),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
@@ -72,7 +75,7 @@ export class MenuScene extends Phaser.Scene {
         const uw = titleText.displayWidth;
         const ulG = this.add.graphics();
         ulG.lineStyle(2, SYSTEM.BORDER, 1);
-        const ulY = cy(0.15) + titleText.displayHeight / 2 + uv(6);
+        const ulY = titleY + titleText.displayHeight / 2 + uv(6);
         ulG.lineBetween(centerX - uw / 2, ulY, centerX + uw / 2, ulY);
         ulG.lineStyle(1, SYSTEM.BORDER_DIM, 0.55);
         const ulExt = Math.min(uv(24), (GAME_WIDTH - uw) / 2 - sidePad);
@@ -82,7 +85,7 @@ export class MenuScene extends Phaser.Scene {
 
         // Subtitle — skip on short landscape (phone) to save vertical space
         const isLandscapePhone = isMobile && !isPortrait;
-        if (!isLandscapePhone) {
+        if (!isLandscapePhone && !isShortLandscape) {
             const subText = this.add.text(centerX, ulY + uv(18), 'S H A D O W   ·   S U R V I V A L', {
                 fontSize: fs(isNarrow ? 11 : 13),
                 fontFamily: UI_FONT_MONO,
@@ -94,9 +97,9 @@ export class MenuScene extends Phaser.Scene {
 
         // ── System notification panel ──────────
         const panelW = Math.min(uv(520), GAME_WIDTH - sidePad * 2);
-        const panelH = uv(isNarrow ? 124 : 106);  // extra height for wrap
+        const panelH = uv(isCompactMenu ? 96 : 106);  // extra height for wrap
         const panelX = centerX - panelW / 2;
-        const panelY = cy(0.34);
+        const panelY = cy(isShortLandscape ? 0.31 : 0.34);
         const panelG = this.add.graphics();
         drawSystemPanel(panelG, panelX, panelY, panelW, panelH, {
             cut: uv(10),
@@ -113,7 +116,7 @@ export class MenuScene extends Phaser.Scene {
         // Messages (typewriter) — localized, auto-shrink if needed
         const msgs = [t('menuMsg1'), t('menuMsg2'), t('menuMsg3')];
         const msgStyle = {
-            fontSize: fs(isNarrow ? 10 : 14),
+            fontSize: fs(isCompactMenu ? 10 : 14),
             fontFamily: UI_FONT_KR,
             color: SYSTEM.TEXT_BRIGHT,
         };
@@ -121,7 +124,7 @@ export class MenuScene extends Phaser.Scene {
         // Safety factor — CJK font measurement is unreliable until webfont loads
         const SAFETY = 0.82;
         const msgEls = msgs.map((fullMsg, i) => {
-            const el = this.add.text(panelX + uv(22), panelY + uv(16) + i * uv(24), fullMsg, msgStyle);
+            const el = this.add.text(panelX + uv(22), panelY + uv(16) + i * uv(isCompactMenu ? 20 : 24), fullMsg, msgStyle);
             const scale = Math.min(1, (msgMaxW * SAFETY) / Math.max(el.width, 1));
             if (scale < 1) el.setScale(scale);
             el.setText('');
@@ -147,11 +150,11 @@ export class MenuScene extends Phaser.Scene {
         // ── Main action buttons ─────────────────
         const hasSave = GameScene.hasSavedGame();
         const btnW = Math.min(uv(isNarrow ? 330 : 300), GAME_WIDTH - sidePad * 2);
-        const startH = uv(52);
-        const resumeH = uv(64);
-        const actionGap = uv(12);
+        const startH = uv(isShortLandscape ? 44 : 52);
+        const resumeH = uv(isShortLandscape ? 54 : 64);
+        const actionGap = uv(isShortLandscape ? 8 : 12);
         const actionTop = Math.max(
-            panelY + panelH + uv(isNarrow ? 44 : 36),
+            panelY + panelH + uv(isShortLandscape ? 20 : (isNarrow ? 44 : 36)),
             cy(hasSave ? 0.56 : 0.60)
         );
         let nextActionY = actionTop;
@@ -181,8 +184,8 @@ export class MenuScene extends Phaser.Scene {
 
         // ── Hall of Fame (secondary) ────────────
         const hofW = Math.min(uv(210), GAME_WIDTH - sidePad * 2);
-        const hofH = uv(36);
-        const hofY = nextActionY + uv(hasSave ? 16 : 18);
+        const hofH = uv(isShortLandscape ? 32 : 36);
+        const hofY = nextActionY + uv(isShortLandscape ? 10 : (hasSave ? 16 : 18));
         this._makeButton(centerX - hofW / 2, hofY, hofW, hofH, {
             label: t('hallOfFame'),
             labelColor: SYSTEM.TEXT_GOLD,
@@ -194,6 +197,7 @@ export class MenuScene extends Phaser.Scene {
 
         // ── Footer ─────────────────────────────
         // Anchor footer from bottom of screen so it's consistent across aspect ratios
+        if (!isShortLandscape) {
         const bottomPad = uv(isNarrow ? 54 : 18);
         const copyrightY = GAME_HEIGHT - bottomPad;
         this.add.text(centerX, copyrightY, 'ArcherLab   ·   © 2026', {
@@ -220,6 +224,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5, 1);
         const ctrlMaxW = GAME_WIDTH - sidePad * 2;
         if (ctrlText.width > ctrlMaxW) ctrlText.setScale(ctrlMaxW / ctrlText.width);
+        }
 
         // ── Language selector (top-right) ──────
         this._createLanguageDropdown(isMobile);

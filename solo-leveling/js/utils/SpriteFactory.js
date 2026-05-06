@@ -169,8 +169,9 @@ export class SpriteFactory {
         this.createEffectTextures(scene);
         this.createUITextures(scene);
         this.createShadowSoldierTextures(scene);
-        // Use AI dungeon floor if available, else procedural
-        if (!this._loadAIDungeonFloor(scene)) {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        if (isMobile || !this._loadAIDungeonFloor(scene)) {
             this.createFloorTexture(scene);
         }
         this._createParticleTextures(scene);
