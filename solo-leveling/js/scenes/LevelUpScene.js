@@ -2,7 +2,7 @@ import {
     GAME_WIDTH, GAME_HEIGHT,
     WEAPONS, PASSIVES,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
-    fs, uv, drawSystemPanel,
+    fs, uv, drawSystemPanel, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
 
@@ -15,11 +15,25 @@ export class LevelUpScene extends Phaser.Scene {
         this.gameScene = data.gameScene;
         this.player = data.player;
         this.weaponManager = data.weaponManager;
+        this._levelUpData = data;
     }
 
     create() {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        this._onGameResize = () => this._redraw();
+        this.events.on('game-resize', this._onGameResize, this);
+        this.events.once('shutdown', () => {
+            if (this._onGameResize) {
+                this.events.off('game-resize', this._onGameResize, this);
+                this._onGameResize = null;
+            }
+        });
+
+        this._redraw();
+    }
+
+    _redraw() {
+        this.children.removeAll(true);
+        const layout = this._getLayout();
 
         // Dim overlay
         this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP, 0.78)
@@ -30,35 +44,63 @@ export class LevelUpScene extends Phaser.Scene {
         sg.lineStyle(1, SYSTEM.SCAN_LINE, 0.4);
         for (let y = 0; y < GAME_HEIGHT; y += 3) sg.lineBetween(0, y, GAME_WIDTH, y);
 
-        const titleY = isMobile ? 60 : 80;
+        const titleY = layout.titleY;
 
         // System tag
-        this.add.text(GAME_WIDTH / 2, titleY - uv(26), '[ SYSTEM · LEVEL UP ]', {
+        const tag = padText(this.add.text(GAME_WIDTH / 2, Math.max(layout.safeTop, titleY - uv(30)), '[ SYSTEM · LEVEL UP ]', {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_GOLD,
-        }).setOrigin(0.5).setDepth(1);
+        }).setOrigin(0.5).setDepth(1), 2, 2);
+        fitText(tag, GAME_WIDTH - layout.sidePad * 2, 0, 0.75);
 
         // Title
-        const title = this.add.text(GAME_WIDTH / 2, titleY, t('levelUp'), {
-            fontSize: fs(isMobile ? 36 : 34), fontFamily: UI_FONT_KR, fontStyle: 'bold',
+        const title = padText(this.add.text(GAME_WIDTH / 2, titleY, t('levelUp'), {
+            fontSize: fs(layout.stack ? 36 : 34), fontFamily: UI_FONT_KR, fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT, letterSpacing: 3,
-        }).setOrigin(0.5).setDepth(1);
-        const titleMaxW = GAME_WIDTH - uv(40);
-        if (title.width > titleMaxW) title.setScale(titleMaxW / title.width);
+        }).setOrigin(0.5).setDepth(1), 4, 4);
+        fitText(title, GAME_WIDTH - layout.sidePad * 2, uv(70), 0.72);
 
         const uw = title.displayWidth;
         const ul = this.add.graphics().setDepth(1);
         ul.lineStyle(1, SYSTEM.BORDER_GOLD, 0.7);
-        ul.lineBetween(GAME_WIDTH / 2 - uw / 2, titleY + title.height / 2 + uv(4),
-                       GAME_WIDTH / 2 + uw / 2, titleY + title.height / 2 + uv(4));
+        ul.lineBetween(GAME_WIDTH / 2 - uw / 2, titleY + title.displayHeight / 2 + uv(4),
+                       GAME_WIDTH / 2 + uw / 2, titleY + title.displayHeight / 2 + uv(4));
 
         // Level display
-        this.add.text(GAME_WIDTH / 2, titleY + uv(34), `▷  LV. ${String(this.player.level).padStart(2, '0')}`, {
-            fontSize: fs(isMobile ? 16 : 15), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
+        const levelText = padText(this.add.text(GAME_WIDTH / 2, titleY + title.displayHeight / 2 + uv(24), `▷  LV. ${String(this.player.level).padStart(2, '0')}`, {
+            fontSize: fs(layout.stack ? 16 : 15), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
             letterSpacing: 2,
-        }).setOrigin(0.5).setDepth(1);
+        }).setOrigin(0.5).setDepth(1), 2, 2);
+        fitText(levelText, GAME_WIDTH - layout.sidePad * 2, 0, 0.75);
 
         const choices = this._generateChoices();
-        this._createCards(choices);
+        const cardsTop = levelText.y + levelText.displayHeight / 2 + uv(layout.stack ? 22 : 30);
+        this._createCards(choices, cardsTop, layout);
+    }
+
+    _detectTouch() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || ('ontouchstart' in window)
+            || (navigator.maxTouchPoints > 0);
+    }
+
+    _getLayout() {
+        const isPortrait = GAME_HEIGHT > GAME_WIDTH;
+        const isShort = GAME_HEIGHT <= 820;
+        const touch = this._detectTouch();
+        const stack = isPortrait || (touch && GAME_WIDTH < 1180);
+        const sidePad = uv(stack ? 28 : 34);
+        const safeTop = uv(isShort ? 26 : 38);
+
+        return {
+            touch,
+            stack,
+            isPortrait,
+            isShort,
+            sidePad,
+            safeTop,
+            bottomPad: uv(isShort ? 22 : 30),
+            titleY: safeTop + uv(isShort ? 38 : 46),
+        };
     }
 
     _generateChoices() {
@@ -121,28 +163,31 @@ export class LevelUpScene extends Phaser.Scene {
         return result;
     }
 
-    _createCards(choices) {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    _createCards(choices, cardsTop, layout) {
+        const bottomY = GAME_HEIGHT - layout.bottomPad;
+        const availableH = Math.max(uv(220), bottomY - cardsTop);
 
-        if (isMobile) {
-            const cardW = GAME_WIDTH * 0.86;
-            const cardH = uv(118);
-            const spacing = uv(15);
+        if (layout.stack) {
+            const spacing = Math.min(uv(16), Math.max(uv(8), Math.floor(availableH * 0.035)));
+            const fitH = Math.floor((availableH - (choices.length - 1) * spacing) / Math.max(choices.length, 1));
+            const cardH = Math.max(uv(94), Math.min(uv(138), fitH));
+            const cardW = Math.min(GAME_WIDTH - layout.sidePad * 2, uv(layout.isPortrait ? 720 : 640));
             const totalH = choices.length * cardH + (choices.length - 1) * spacing;
-            const startY = (GAME_HEIGHT - totalH) / 2 + 40;
+            const startY = cardsTop + Math.max(0, (availableH - totalH) / 2);
 
             choices.forEach((choice, i) => {
                 const y = startY + i * (cardH + spacing);
                 this._createMobileCard(GAME_WIDTH / 2 - cardW / 2, y, cardW, cardH, choice);
             });
         } else {
-            const cardW = uv(230);
-            const cardH = uv(290);
-            const spacing = uv(30);
+            const spacing = uv(GAME_WIDTH < 1200 ? 18 : 30);
+            const cardW = Math.max(uv(190), Math.min(uv(250),
+                Math.floor((GAME_WIDTH - layout.sidePad * 2 - (choices.length - 1) * spacing) / Math.max(choices.length, 1))
+            ));
+            const cardH = Math.max(uv(250), Math.min(uv(layout.isShort ? 278 : 300), availableH));
             const totalW = choices.length * cardW + (choices.length - 1) * spacing;
             const startX = (GAME_WIDTH - totalW) / 2;
-            const cardY = GAME_HEIGHT / 2 - cardH / 2 + 20;
+            const cardY = cardsTop + Math.max(0, (availableH - cardH) / 2);
 
             choices.forEach((choice, i) => {
                 const x = startX + i * (cardW + spacing);
@@ -176,47 +221,52 @@ export class LevelUpScene extends Phaser.Scene {
 
         // NEW tag (top-left)
         if (choice.isNew) {
-            this.add.text(x + uv(14), y - uv(9), '  NEW  ', {
+            padText(this.add.text(x + uv(14), y + uv(10), '  NEW  ', {
                 fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
                 color: SYSTEM.TEXT_GOLD, backgroundColor: '#05070d',
                 padding: { left: 6, right: 6, top: 1, bottom: 1 },
-            }).setDepth(3);
+            }).setDepth(3), 2, 2, 6, 6);
         }
         // Level badge (top-right)
         if (choice.level > 0) {
-            this.add.text(x + w - uv(14), y - uv(9), `  LV.${choice.level}  `, {
+            padText(this.add.text(x + w - uv(14), y + uv(10), `  LV.${choice.level}  `, {
                 fontSize: fs(10), fontFamily: UI_FONT_MONO,
                 color: SYSTEM.TEXT_CYAN_DIM, backgroundColor: '#05070d',
                 padding: { left: 6, right: 6, top: 1, bottom: 1 },
-            }).setOrigin(1, 0).setDepth(3);
+            }).setOrigin(1, 0).setDepth(3), 2, 2, 6, 6);
         }
 
         // Icon
-        const icon = this.add.sprite(x + w / 2, y + uv(60), choice.icon)
-            .setDepth(2).setScale(2);
+        const iconScale = Math.min(2, Math.max(1.35, h / uv(150)));
+        const icon = this.add.sprite(x + w / 2, y + h * 0.23, choice.icon)
+            .setDepth(2).setScale(iconScale);
 
         // Type label
         const typeColor = choice.type === 'weapon' ? '#ff9966' : SYSTEM.TEXT_CYAN;
         const typeLabel = choice.type === 'weapon' ? t('skillLabel') : t('passiveLabel');
-        this.add.text(x + w / 2, y + uv(120), `[ ${typeLabel} ]`, {
+        const typeText = padText(this.add.text(x + w / 2, y + h * 0.43, `[ ${typeLabel} ]`, {
             fontSize: fs(10), fontFamily: UI_FONT_MONO, color: typeColor,
             letterSpacing: 1,
-        }).setOrigin(0.5).setDepth(2);
+        }).setOrigin(0.5).setDepth(2), 2, 2);
+        fitText(typeText, w - uv(28), 0, 0.72);
 
         // Name
-        this.add.text(x + w / 2, y + uv(150), choice.name, {
+        const nameText = padText(this.add.text(x + w / 2, y + h * 0.54, choice.name, {
             fontSize: fs(18), fontFamily: UI_FONT_KR, fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT,
-        }).setOrigin(0.5).setDepth(2);
+        }).setOrigin(0.5).setDepth(2), 3, 3);
+        fitText(nameText, w - uv(28), uv(40), 0.62);
 
         // Description
-        this.add.text(x + w / 2, y + uv(200), choice.description, {
+        const descY = y + h * 0.68;
+        const descText = padText(this.add.text(x + w / 2, descY, choice.description, {
             fontSize: fs(12), fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_CYAN_DIM,
-            wordWrap: { width: w - uv(30) }, align: 'center', lineSpacing: 3,
-        }).setOrigin(0.5, 0).setDepth(2);
+            wordWrap: { width: w - uv(30), useAdvancedWrap: true }, align: 'center', lineSpacing: 5,
+        }).setOrigin(0.5, 0).setDepth(2), 3, 4);
+        fitText(descText, w - uv(30), Math.max(1, y + h - uv(16) - descY), 0.66);
 
-        hit.on('pointerover', () => { redraw(true); icon.setScale(2.18); });
-        hit.on('pointerout', () => { redraw(false); icon.setScale(2); });
+        hit.on('pointerover', () => { redraw(true); icon.setScale(iconScale * 1.08); });
+        hit.on('pointerout', () => { redraw(false); icon.setScale(iconScale); });
         hit.on('pointerdown', () => this._selectChoice(choice));
     }
 
@@ -238,42 +288,50 @@ export class LevelUpScene extends Phaser.Scene {
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
             .setDepth(1).setInteractive({ useHandCursor: true });
 
-        const iconX = x + uv(55);
+        const iconX = x + Math.min(uv(58), w * 0.17);
+        const iconScale = Math.min(2, Math.max(1.25, h / uv(70)));
         const icon = this.add.sprite(iconX, y + h / 2, choice.icon)
-            .setDepth(2).setScale(2);
+            .setDepth(2).setScale(iconScale);
 
         if (choice.isNew) {
-            this.add.text(iconX, y + h / 2 - uv(38), '  NEW  ', {
+            padText(this.add.text(x + w - uv(14), y + uv(10), '  NEW  ', {
                 fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
                 color: SYSTEM.TEXT_GOLD, backgroundColor: '#05070d',
                 padding: { left: 6, right: 6, top: 1, bottom: 1 },
-            }).setOrigin(0.5).setDepth(3);
+            }).setOrigin(1, 0).setDepth(3), 2, 2, 6, 6);
         }
         if (choice.level > 0) {
-            this.add.text(iconX, y + h / 2 + uv(38), `LV.${choice.level}`, {
+            padText(this.add.text(x + w - uv(14), y + uv(10), `  LV.${choice.level}  `, {
                 fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN_DIM,
-            }).setOrigin(0.5).setDepth(3);
+                backgroundColor: '#05070d',
+                padding: { left: 6, right: 6, top: 1, bottom: 1 },
+            }).setOrigin(1, 0).setDepth(3), 2, 2, 6, 6);
         }
 
-        const textX = x + uv(115);
+        const textX = x + Math.min(uv(118), w * 0.29);
+        const textW = Math.max(uv(120), x + w - uv(18) - textX);
         const typeColor = choice.type === 'weapon' ? '#ff9966' : SYSTEM.TEXT_CYAN;
         const typeLabel = choice.type === 'weapon' ? t('skillLabel') : t('passiveLabel');
 
-        this.add.text(textX, y + h / 2 - uv(22), `[ ${typeLabel} ]`, {
+        const typeText = padText(this.add.text(textX, y + Math.max(uv(14), h * 0.18), `[ ${typeLabel} ]`, {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, color: typeColor, letterSpacing: 1,
-        }).setOrigin(0, 0.5).setDepth(2);
+        }).setOrigin(0, 0).setDepth(2), 2, 2);
+        fitText(typeText, textW, 0, 0.68);
 
-        this.add.text(textX + uv(80), y + h / 2 - uv(22), choice.name, {
+        const nameText = padText(this.add.text(textX, y + Math.max(uv(39), h * 0.36), choice.name, {
             fontSize: fs(18), fontFamily: UI_FONT_KR, fontStyle: 'bold', color: SYSTEM.TEXT_BRIGHT,
-        }).setOrigin(0, 0.5).setDepth(2);
+        }).setOrigin(0, 0).setDepth(2), 3, 3);
+        fitText(nameText, textW, uv(36), 0.62);
 
-        this.add.text(textX, y + h / 2 + uv(18), choice.description, {
+        const descY = y + Math.max(uv(68), h * 0.63);
+        const descText = padText(this.add.text(textX, descY, choice.description, {
             fontSize: fs(13), fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_CYAN_DIM,
-            wordWrap: { width: w - uv(140) },
-        }).setOrigin(0, 0.5).setDepth(2);
+            wordWrap: { width: textW, useAdvancedWrap: true }, lineSpacing: 4,
+        }).setOrigin(0, 0).setDepth(2), 2, 4);
+        fitText(descText, textW, Math.max(1, y + h - uv(12) - descY), 0.62);
 
-        hit.on('pointerover', () => redraw(true));
-        hit.on('pointerout', () => redraw(false));
+        hit.on('pointerover', () => { redraw(true); icon.setScale(iconScale * 1.06); });
+        hit.on('pointerout', () => { redraw(false); icon.setScale(iconScale); });
         hit.on('pointerdown', () => this._selectChoice(choice));
     }
 

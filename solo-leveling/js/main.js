@@ -12,9 +12,16 @@ import { GameOverScene } from './scenes/GameOverScene.js';
 const MIN_W = 1024;
 const MIN_H = 768;
 
+function getViewportSize() {
+    const container = document.getElementById('game-container');
+    const viewport = window.visualViewport;
+    const w = Math.max(1, Math.round(container?.clientWidth || viewport?.width || window.innerWidth));
+    const h = Math.max(1, Math.round(container?.clientHeight || viewport?.height || window.innerHeight));
+    return { w, h };
+}
+
 function calcGameSize() {
-    const screenW = window.innerWidth;
-    const screenH = window.innerHeight;
+    const { w: screenW, h: screenH } = getViewportSize();
     const aspect = screenW / screenH;
     const designAspect = MIN_W / MIN_H;
 
@@ -34,7 +41,8 @@ function calcGameSize() {
 }
 
 const size = calcGameSize();
-setGameDimensions(size.w, size.h);
+const viewport = getViewportSize();
+setGameDimensions(size.w, size.h, viewport.w, viewport.h);
 
 const config = {
     type: Phaser.WEBGL,
@@ -76,7 +84,21 @@ function handleResize() {
     if (resizeRefreshTimer) clearTimeout(resizeRefreshTimer);
     resizeRefreshTimer = setTimeout(() => {
         resizeRefreshTimer = null;
-        if (game && game.scale) game.scale.refresh();
+        if (!game || !game.scale) return;
+
+        const nextViewport = getViewportSize();
+        const nextSize = calcGameSize();
+        const changed = nextSize.w !== GAME_WIDTH || nextSize.h !== GAME_HEIGHT;
+
+        setGameDimensions(nextSize.w, nextSize.h, nextViewport.w, nextViewport.h);
+        if (changed) {
+            game.scale.resize(nextSize.w, nextSize.h);
+            const scenes = game.scene.scenes || game.scene.getScenes();
+            scenes.forEach(scene => {
+                scene.events.emit('game-resize', nextSize);
+            });
+        }
+        game.scale.refresh();
     }, 200);
 }
 

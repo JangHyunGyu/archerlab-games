@@ -8,12 +8,12 @@ export const WORLD_SIZE = 3000;
 // Adaptive UI scale: auto-calculated so smallest text (11px) ≥ 13 CSS pixels
 export let UI_SCALE = 1.0;
 
-export function setGameDimensions(w, h) {
+export function setGameDimensions(w, h, viewportW = window.innerWidth, viewportH = window.innerHeight) {
     GAME_WIDTH = w;
     GAME_HEIGHT = h;
 
     // Calculate how many CSS pixels = 1 game unit
-    const cssPerUnit = Math.min(window.innerWidth / w, window.innerHeight / h);
+    const cssPerUnit = Math.min(viewportW / w, viewportH / h);
     const rawScale = 13 / (11 * cssPerUnit);
     UI_SCALE = Math.max(1.0, Math.min(rawScale, 3.0));
 }
@@ -27,6 +27,28 @@ export function fs(basePx) {
 export function uv(base) {
     const dimScale = 1 + (UI_SCALE - 1) * 0.4;
     return Math.round(base * dimScale);
+}
+
+export function padText(textObj, top = 2, bottom = 2, left = 0, right = 0) {
+    if (textObj && typeof textObj.setPadding === 'function') {
+        textObj.setPadding(left, top, right, bottom);
+    }
+    return textObj;
+}
+
+export function fitText(textObj, maxW, maxH = 0, minScale = 0.62) {
+    if (!textObj) return 1;
+
+    const width = Math.max(textObj.width || 1, 1);
+    const height = Math.max(textObj.height || 1, 1);
+    let scale = 1;
+
+    if (maxW > 0) scale = Math.min(scale, maxW / width);
+    if (maxH > 0) scale = Math.min(scale, maxH / height);
+
+    scale = Math.max(minScale, Math.min(1, scale));
+    textObj.setScale(scale);
+    return scale;
 }
 
 // ── System UI palette (Solo Leveling "The System" aesthetic) ──
