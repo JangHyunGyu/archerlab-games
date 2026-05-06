@@ -107,6 +107,53 @@ export class PreloadScene extends Phaser.Scene {
             this.load.image(key, `assets/ui/${key}.png`);
         });
 
+        [
+            'basicDagger',
+            'shadowDagger',
+            'shadowSlash',
+            'rulersAuthority',
+            'dragonFear',
+            'swiftness',
+            'vitality',
+            'strength',
+            'critMaster',
+            'scholar',
+            'hastening',
+            'magnet',
+        ].forEach((key) => {
+            this.load.image(`asset_icon_${key}`, `assets/ui/icons/${key}.png`);
+        });
+
+        [
+            'hp_potion',
+            'mana_crystal',
+            'shadow_essence',
+        ].forEach((key) => {
+            this.load.image(`item_${key}`, `assets/items/${key}.png`);
+        });
+
+        [
+            'warning_reticle',
+            'igris_slash_warning',
+            'ground_crack',
+            'acid_puddle',
+        ].forEach((key) => {
+            this.load.image(`telegraph_${key}`, `assets/effects/telegraphs/${key}.png`);
+        });
+
+        [
+            'cracked_pillar',
+            'rune_stone',
+            'shadow_portal',
+            'hanging_chain',
+        ].forEach((key) => {
+            this.load.image(`env_${key}`, `assets/environment/${key}.png`);
+        });
+
+        ['melee', 'tank', 'ranged'].forEach((key) => {
+            this.load.image(`asset_shadow_${key}`, `assets/shadows/shadow_${key}.png`);
+        });
+
         this.load.image('ai_player_idle', 'assets/player/player_idle.png');
         this.load.image('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
 

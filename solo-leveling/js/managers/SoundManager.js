@@ -16,9 +16,13 @@ export class SoundManager {
             playerHit: 400, system: 350, warning: 600,
             quest: 600, dungeonBreak: 1000, bossAppear: 900,
             levelup: 900, rankup: 1000, arise: 1000,
+            bossCharge: 700, bossSlash: 420, groundSlam: 700,
+            acidShot: 360, acidHit: 320, bossRage: 1000,
+            shadowSoldierSlash: 240, shadowSoldierSlam: 520, shadowSoldierSpit: 260,
+            mana: 260, essence: 420, critHit: 260, eliteKill: 650,
         };
         this._activeSounds = 0;
-        this._maxActiveSounds = 3;
+        this._maxActiveSounds = 4;
         this._activeSoundTimers = new Set();
         this._sfxMaster = 0.4;
         this._toneLeadTime = 0.035;
@@ -28,7 +32,11 @@ export class SoundManager {
             slash: 620, authority: 860, fear: 660,
             levelup: 560, rankup: 860, arise: 860, bossAppear: 860,
             bossKill: 1060, gameOver: 1250, quest: 390, dungeonBreak: 760,
-            potion: 280,
+            potion: 280, mana: 340, essence: 560,
+            bossCharge: 720, bossSlash: 420, groundSlam: 820,
+            acidShot: 390, acidHit: 470, bossRage: 940,
+            shadowSoldierSlash: 260, shadowSoldierSlam: 460, shadowSoldierSpit: 300,
+            critHit: 280, eliteKill: 760,
         };
         this._soundPriority = {
             xp: 0, hit: 1, dagger: 1, daggerThrow: 1, kill: 1,
@@ -36,6 +44,10 @@ export class SoundManager {
             system: 2, quest: 2, warning: 3, dungeonBreak: 3,
             bossAppear: 3, bossKill: 3, levelup: 3, rankup: 3,
             arise: 3, gameOver: 3, potion: 2, select: 1,
+            bossCharge: 3, bossSlash: 3, groundSlam: 3,
+            acidShot: 2, acidHit: 3, bossRage: 3,
+            shadowSoldierSlash: 1, shadowSoldierSlam: 2, shadowSoldierSpit: 1,
+            mana: 2, essence: 2, critHit: 2, eliteKill: 3,
         };
         // WAV Audio pools
         this._pools = {};
@@ -218,9 +230,20 @@ export class SoundManager {
             this._createPool('slash', base + 'slash.wav', 6);
             this._createPool('authority', base + 'authority.wav', 4);
             this._createPool('fear', base + 'fear.wav', 3);
+            this._createPool('bossCharge', base + 'boss_charge.wav', 3);
+            this._createPool('bossSlash', base + 'boss_slash.wav', 4);
+            this._createPool('groundSlam', base + 'ground_slam.wav', 3);
+            this._createPool('acidShot', base + 'acid_shot.wav', 4);
+            this._createPool('acidHit', base + 'acid_hit.wav', 4);
+            this._createPool('bossRage', base + 'boss_rage.wav', 2);
+            this._createPool('shadowSoldierSlash', base + 'shadow_soldier_slash.wav', 4);
+            this._createPool('shadowSoldierSlam', base + 'shadow_soldier_slam.wav', 3);
+            this._createPool('shadowSoldierSpit', base + 'shadow_soldier_spit.wav', 4);
             // 전투 (매우 빈번)
             this._createPool('hit', base + 'hit.wav', 8);
             this._createPool('kill', base + 'kill.wav', 6);
+            this._createPool('critHit', base + 'crit_hit.wav', 5);
+            this._createPool('eliteKill', base + 'elite_kill.wav', 3);
             this._createPool('playerHit', base + 'playerHit.wav', 4);
             // 보상
             this._createPool('xp', base + 'xp.wav', 8);
@@ -234,6 +257,8 @@ export class SoundManager {
             this._createPool('gameOver', base + 'gameOver.wav', 2);
             this._createPool('warning', base + 'warning.wav', 4);
             this._createPool('potion', base + 'potion.wav', 3);
+            this._createPool('mana', base + 'mana.wav', 3);
+            this._createPool('essence', base + 'essence.wav', 3);
             this._createPool('select', base + 'select.wav', 6);
             this._createPool('quest', base + 'quest.wav', 3);
             this._createPool('dungeonBreak', base + 'dungeonBreak.wav', 2);
@@ -302,6 +327,10 @@ export class SoundManager {
         system: 0.45, arise: 0.66, bossAppear: 0.62,
         warning: 0.56, potion: 0.46, select: 0.38, bossKill: 0.66, gameOver: 0.62,
         quest: 0.52, dungeonBreak: 0.62,
+        bossCharge: 0.5, bossSlash: 0.58, groundSlam: 0.64,
+        acidShot: 0.42, acidHit: 0.48, bossRage: 0.64,
+        shadowSoldierSlash: 0.3, shadowSoldierSlam: 0.38, shadowSoldierSpit: 0.3,
+        mana: 0.44, essence: 0.5, critHit: 0.5, eliteKill: 0.58,
     };
 
     play(soundName) {

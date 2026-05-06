@@ -278,6 +278,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this.speed *= 1.2;
             this.attack = Math.floor(this.attack * 1.1);
             this.setTint(0xff6666);
+            if (this.scene.soundManager) this.scene.soundManager.play('bossRage');
             this.scene.cameras.main.flash(200, 255, 50, 50);
             // Intensify glow in phase 2
             try {
@@ -362,16 +363,27 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const slashX = this.x + Math.cos(angle) * (range * 0.4);
         const slashY = this.y + Math.sin(angle) * (range * 0.4);
 
+        if (scene.soundManager) scene.soundManager.play('bossCharge');
+
         // ⚠ Danger zone fill (bright red, pulsing)
         const dangerZone = scene.add.circle(slashX, slashY, range * 0.6, 0xff0000, 0)
             .setDepth(3);
         // ⚠ Danger border (thick red ring)
         const dangerRing = scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
             .setDepth(3).setStrokeStyle(4, 0xff2222, 0);
-        // ⚠ Warning icon
-        const warnIcon = scene.add.text(slashX, slashY - range * 0.3, '⚠', {
-            fontSize: '28px',
-        }).setOrigin(0.5).setDepth(4).setAlpha(0);
+        const warnIcon = scene.textures.exists('telegraph_warning_reticle')
+            ? scene.add.image(slashX, slashY, 'telegraph_warning_reticle')
+                .setOrigin(0.5).setDepth(4).setAlpha(0).setScale(1.0)
+            : scene.add.text(slashX, slashY - range * 0.3, '!', {
+                fontSize: '28px',
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                color: '#ff3344',
+            }).setOrigin(0.5).setDepth(4).setAlpha(0);
+        const slashWarning = scene.textures.exists('telegraph_igris_slash_warning')
+            ? scene.add.image(slashX, slashY, 'telegraph_igris_slash_warning')
+                .setOrigin(0.5).setDepth(3).setAlpha(0).setRotation(angle).setScale(0.82)
+            : null;
 
         // Pulsing danger animation (flashing red)
         scene.tweens.add({
@@ -389,6 +401,15 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             alpha: 1, scale: 1.3,
             duration: 200, yoyo: true,
         });
+        if (slashWarning) {
+            scene.tweens.add({
+                targets: slashWarning,
+                alpha: { from: 0.2, to: 0.72 },
+                scale: 1.0,
+                duration: 550,
+                ease: 'Quad.Out',
+            });
+        }
 
         // Shrinking countdown ring (fills inward)
         const countdown = scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
@@ -403,8 +424,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             Boss._destroyIfAlive(dangerZone);
             Boss._destroyIfAlive(dangerRing);
             Boss._destroyIfAlive(warnIcon);
+            Boss._destroyIfAlive(slashWarning);
             Boss._destroyIfAlive(countdown);
             if (!this.active || !Boss._sceneIsActive(scene)) return;
+
+            if (scene.soundManager) scene.soundManager.play('bossSlash');
 
             const usedSlashAsset = Boss._playFrameVfx(
                 scene,
@@ -455,6 +479,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const slamY = playerY;
         const radius = 200;
 
+        if (scene.soundManager) scene.soundManager.play('bossCharge');
+
         // ⚠ Danger zone fill (bright red, growing)
         const dangerZone = scene.add.circle(slamX, slamY, 10, 0xff0000, 0.35)
             .setDepth(3);
@@ -464,10 +490,15 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         // ⚠ Inner ring (second ring for emphasis)
         const innerRing = scene.add.circle(slamX, slamY, radius * 0.6, 0x000000, 0)
             .setDepth(3).setStrokeStyle(3, 0xff4444, 0);
-        // ⚠ Warning icon
-        const warnIcon = scene.add.text(slamX, slamY, '⚠', {
-            fontSize: '44px',
-        }).setOrigin(0.5).setDepth(4).setAlpha(0);
+        const warnIcon = scene.textures.exists('telegraph_warning_reticle')
+            ? scene.add.image(slamX, slamY, 'telegraph_warning_reticle')
+                .setOrigin(0.5).setDepth(4).setAlpha(0).setScale(1.25)
+            : scene.add.text(slamX, slamY, '!', {
+                fontSize: '44px',
+                fontFamily: 'Arial',
+                fontStyle: 'bold',
+                color: '#ff3344',
+            }).setOrigin(0.5).setDepth(4).setAlpha(0);
         // Crosshair lines (targeting indicator)
         const lines = [];
         for (let a = 0; a < 4; a++) {
@@ -519,6 +550,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             lines.forEach(l => Boss._destroyIfAlive(l));
             if (!this.active || !Boss._sceneIsActive(scene)) return;
 
+            if (scene.soundManager) scene.soundManager.play('groundSlam');
+
             const usedSlamAsset = Boss._playFrameVfx(
                 scene,
                 'effect_boss_tusk_slam',
@@ -545,6 +578,23 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             }
 
             // White shockwave ring — fast expanding (tank impact feel, NOT blood)
+            if (scene.textures.exists('telegraph_ground_crack')) {
+                const crackDecal = scene.add.image(slamX, slamY, 'telegraph_ground_crack')
+                    .setDepth(6)
+                    .setAlpha(0.88)
+                    .setScale((radius * 2.1) / 256)
+                    .setRotation(Phaser.Math.FloatBetween(-0.3, 0.3))
+                    .setBlendMode(Phaser.BlendModes.ADD);
+                scene.tweens.add({
+                    targets: crackDecal,
+                    alpha: 0,
+                    scale: crackDecal.scaleX * 1.1,
+                    duration: 850,
+                    ease: 'Quad.Out',
+                    onComplete: () => Boss._destroyIfAlive(crackDecal),
+                });
+            }
+
             const shockRing = scene.add.circle(slamX, slamY, 20, 0, 0)
                 .setDepth(9).setStrokeStyle(5, 0xffffff, 0.9);
             scene.tweens.add({
@@ -668,6 +718,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const spreadAngle = 0.3;
         const attackDamage = Math.floor(this.attack * 0.7);
 
+        if (scene.soundManager) scene.soundManager.play('acidShot');
+
         for (let i = 0; i < spreadCount; i++) {
             const offset = (i - (spreadCount - 1) / 2) * spreadAngle;
             const angle = baseAngle + offset;
@@ -711,6 +763,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             if (player) {
                 collider = scene.physics.add.overlap(proj, player, () => {
                     if (!proj.active) return;
+                    if (scene.soundManager) scene.soundManager.play('acidHit');
+                    this._spawnAcidPuddle(proj.x, proj.y);
                     player.takeDamage(attackDamage);
                     cleanupProjectile();
                     proj.destroy();
@@ -738,6 +792,25 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    _spawnAcidPuddle(x, y) {
+        const scene = this.scene;
+        if (!Boss._sceneIsActive(scene) || !scene.textures.exists('telegraph_acid_puddle')) return;
+
+        const puddle = scene.add.image(x, y, 'telegraph_acid_puddle')
+            .setDepth(6)
+            .setAlpha(0.82)
+            .setScale(0.55)
+            .setBlendMode(Phaser.BlendModes.ADD);
+        scene.tweens.add({
+            targets: puddle,
+            alpha: 0,
+            scale: 0.9,
+            duration: 1200,
+            ease: 'Quad.Out',
+            onComplete: () => Boss._destroyIfAlive(puddle),
+        });
+    }
+
     takeDamage(amount) {
         if (!this.active) return false;
 
@@ -757,7 +830,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         });
 
         // Damage number
-        const isCrit = amount > 30;
+        const isCrit = amount >= Math.max(500, this.maxHp * 0.015);
+        if (isCrit && this.scene.soundManager) this.scene.soundManager.play('critHit');
         const text = this.scene.add.text(
             this.x + Phaser.Math.Between(-15, 15),
             this.y - 20,
