@@ -49,7 +49,6 @@ export const CHARACTER_BASIC_ATTACK_EFFECT_KEYS = [
     'tiger_claw_swipe',
     'flame_fireball',
     'sanctuary_mace_slam',
-    'sanctuary_mace_weapon',
 ];
 
 export const CHARACTER_SKILL_EFFECT_KEYS = [
