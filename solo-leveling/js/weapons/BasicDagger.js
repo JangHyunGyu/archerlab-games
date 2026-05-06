@@ -650,94 +650,53 @@ export class BasicDagger extends WeaponBase {
         const impactY = originY + sinA * targetDist;
         const effectColor = this.getEffectColor(0x66f2b0);
         const glowColor = this.getEffectGlowColor(0xe8fff5);
-        const darkColor = this.getEffectDarkColor(0x0d6543);
         const effectTexture = this._getConfiguredEffectTexture();
-        const fx = this.scene.add.graphics().setDepth(15);
-        const impactFx = this.scene.add.graphics().setDepth(14);
+        const impactFx = effectTexture ? null : this.scene.add.graphics().setDepth(14);
         const slamSprite = effectTexture
             ? this.scene.add.sprite(impactX, impactY, effectTexture)
-                .setDepth(13)
+                .setOrigin(0.5, 0.72)
+                .setDepth(16)
                 .setAlpha(0)
                 .setScale(0.14)
-                .setRotation(baseAngle + side * 0.08)
+                .setRotation(side * 0.05)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
-        const entryObjects = [fx, impactFx];
+        const entryObjects = [];
         if (slamSprite) entryObjects.push(slamSprite);
+        if (impactFx) entryObjects.push(impactFx);
         const entry = this._trackAttackObjects(entryObjects);
-        const handleStartX = originX + cosA * 20 - perpX * side * 14;
-        const handleStartY = originY + sinA * 20 - perpY * side * 14 - 10;
-        const windupX = originX + cosA * 48 - perpX * side * 30;
-        const windupY = originY + sinA * 48 - perpY * side * 30 - 38;
+        const baseScale = this.config.effectScale || 0.46;
 
         const draw = (t) => {
             const k = Phaser.Math.Clamp(t, 0, 1);
-            const wind = k < 0.34 ? Phaser.Math.Easing.Cubic.Out(k / 0.34) : 1;
-            const strikeRaw = k < 0.34 ? 0 : Phaser.Math.Clamp((k - 0.34) / 0.66, 0, 1);
-            const strike = Phaser.Math.Easing.Cubic.Out(strikeRaw);
-            const recovery = Phaser.Math.Clamp((k - 0.82) / 0.18, 0, 1);
-            const headX = Phaser.Math.Linear(windupX, impactX, strike);
-            const headY = Phaser.Math.Linear(windupY, impactY, strike) - Math.sin(Math.PI * strikeRaw) * 7;
-            const handleX = Phaser.Math.Linear(handleStartX, impactX - cosA * 28, strike);
-            const handleY = Phaser.Math.Linear(handleStartY, impactY - sinA * 28, strike);
+            const wind = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(k / 0.18, 0, 1));
+            const strikeRaw = k < 0.18 ? 0 : Phaser.Math.Clamp((k - 0.18) / 0.5, 0, 1);
+            const land = Phaser.Math.Easing.Cubic.In(strikeRaw);
+            const pulseRaw = k < 0.68 ? 0 : Phaser.Math.Clamp((k - 0.68) / 0.32, 0, 1);
+            const pulse = Phaser.Math.Easing.Cubic.Out(pulseRaw);
 
-            fx.clear();
-            const cueAlpha = 1 - recovery;
-            if (cueAlpha > 0.02) {
-                const liftedHeadX = Phaser.Math.Linear(handleStartX, windupX, wind);
-                const liftedHeadY = Phaser.Math.Linear(handleStartY - 4, windupY, wind);
-                const cueHeadX = strikeRaw > 0 ? headX : liftedHeadX;
-                const cueHeadY = strikeRaw > 0 ? headY : liftedHeadY;
-                const cueHandleX = strikeRaw > 0 ? handleX : handleStartX;
-                const cueHandleY = strikeRaw > 0 ? handleY : handleStartY;
+            if (slamSprite) {
+                const drop = 30 * (1 - land);
+                const lateral = side * 10 * (1 - land);
+                const alpha = pulseRaw > 0
+                    ? 0.94 * (1 - pulse * 0.86)
+                    : wind * (0.22 + 0.72 * land);
+                const scaleX = baseScale * (0.64 + land * 0.34 + pulse * 0.34);
+                const scaleY = baseScale * (0.48 + land * 0.58 + pulse * 0.18);
 
-                fx.lineStyle(11, darkColor, 0.24 * cueAlpha);
-                fx.lineBetween(cueHandleX, cueHandleY, cueHeadX, cueHeadY);
-                fx.lineStyle(4, glowColor, 0.62 * cueAlpha);
-                fx.lineBetween(cueHandleX, cueHandleY, cueHeadX, cueHeadY);
-
-                for (let i = 0; i < 3; i++) {
-                    const ghost = Phaser.Math.Clamp(strike - i * 0.1, 0, 1);
-                    if (ghost <= 0) continue;
-                    const ghostX = Phaser.Math.Linear(windupX, impactX, ghost);
-                    const ghostY = Phaser.Math.Linear(windupY, impactY, ghost);
-                    fx.fillStyle(glowColor, (0.16 - i * 0.04) * cueAlpha);
-                    fx.fillCircle(ghostX, ghostY, 13 - i * 3);
-                }
-
-                fx.fillStyle(darkColor, 0.72 * cueAlpha);
-                fx.fillCircle(cueHeadX, cueHeadY, 10 + strike * 5);
-                fx.fillStyle(effectColor, 0.72 * cueAlpha);
-                fx.fillCircle(cueHeadX, cueHeadY, 7 + strike * 4);
-                fx.fillStyle(glowColor, 0.9 * cueAlpha);
-                fx.fillCircle(cueHeadX - perpX * side * 2, cueHeadY - perpY * side * 2, 3 + strike * 2);
-            }
-
-            if (strikeRaw > 0.64) {
-                const pulse = Phaser.Math.Clamp((strikeRaw - 0.64) / 0.36, 0, 1);
+                slamSprite
+                    .setPosition(impactX - perpX * lateral, impactY - perpY * lateral - drop)
+                    .setAlpha(alpha)
+                    .setScale(scaleX, scaleY)
+                    .setRotation(side * (0.05 - land * 0.03));
+            } else if (impactFx) {
+                const pulse = Phaser.Math.Easing.Cubic.Out(k);
                 impactFx.clear();
-                impactFx.lineStyle(5, effectColor, 0.8 * (1 - pulse));
-                impactFx.strokeCircle(impactX, impactY, 24 + pulse * 38);
-                impactFx.lineStyle(2, glowColor, 0.85 * (1 - pulse));
-                impactFx.strokeCircle(impactX, impactY, 10 + pulse * 22);
-                for (let i = 0; i < 6; i++) {
-                    const a = baseAngle + (i - 2.5) * 0.34;
-                    impactFx.lineBetween(
-                        impactX + Math.cos(a) * 8,
-                        impactY + Math.sin(a) * 8,
-                        impactX + Math.cos(a) * (34 + pulse * 26),
-                        impactY + Math.sin(a) * (34 + pulse * 26)
-                    );
-                }
-                if (slamSprite) {
-                    slamSprite.setAlpha(0.92 * (1 - pulse * 0.72));
-                    slamSprite.setScale(0.22 + pulse * 0.34);
-                    slamSprite.setRotation(baseAngle + side * (0.08 - pulse * 0.05));
-                }
-            } else {
-                impactFx.clear();
-                if (slamSprite) slamSprite.setAlpha(0);
+                impactFx.lineStyle(5, effectColor, 0.78 * (1 - pulse));
+                impactFx.strokeCircle(impactX, impactY, 20 + pulse * 42);
+                impactFx.lineStyle(2, glowColor, 0.84 * (1 - pulse));
+                impactFx.strokeCircle(impactX, impactY, 8 + pulse * 24);
             }
         };
 
