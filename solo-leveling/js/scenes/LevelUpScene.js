@@ -2,9 +2,10 @@ import {
     GAME_WIDTH, GAME_HEIGHT,
     WEAPONS, PASSIVES,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
-    fs, uv, drawSystemPanel, fitText, padText,
+    fs, uv, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
+import { UIAssets } from '../ui/UIAssets.js';
 
 export class LevelUpScene extends Phaser.Scene {
     constructor() {
@@ -202,22 +203,26 @@ export class LevelUpScene extends Phaser.Scene {
 
     _createCard(x, y, w, h, choice) {
         const borderColor = this._cardBorder(choice);
-        const g = this.add.graphics().setDepth(1);
-        const redraw = (hover) => {
-            g.clear();
-            drawSystemPanel(g, x, y, w, h, {
-                cut: uv(12),
-                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
-                fillAlpha: hover ? 0.96 : 0.9,
-                border: hover ? SYSTEM.BORDER : borderColor,
-                borderAlpha: 1,
-                borderWidth: hover ? 2 : 1,
-            });
-        };
-        redraw(false);
+        const panel = UIAssets.createPanel(this, x, y, w, h, {
+            cut: uv(12),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0.9,
+            border: borderColor,
+            borderAlpha: 1,
+            borderWidth: 1,
+            accent: choice.type === 'weapon' ? 0xff9966 : SYSTEM.BORDER,
+            glow: choice.isNew ? 6 : 0,
+            depth: 1,
+            hover: {
+                fill: SYSTEM.BG_PANEL_HI,
+                fillAlpha: 0.96,
+                border: SYSTEM.BORDER,
+                borderWidth: 2,
+                glow: 7,
+            },
+        });
 
-        const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
-            .setDepth(1).setInteractive({ useHandCursor: true });
+        const hit = UIAssets.createHitArea(this, x, y, w, h, 1);
 
         // NEW tag (top-left)
         if (choice.isNew) {
@@ -265,28 +270,33 @@ export class LevelUpScene extends Phaser.Scene {
         }).setOrigin(0.5, 0).setDepth(2), 3, 4);
         fitText(descText, w - uv(30), Math.max(1, y + h - uv(16) - descY), 0.66);
 
-        hit.on('pointerover', () => { redraw(true); icon.setScale(iconScale * 1.08); });
-        hit.on('pointerout', () => { redraw(false); icon.setScale(iconScale); });
+        hit.on('pointerover', () => { panel.setUIState('hover'); icon.setScale(iconScale * 1.08); });
+        hit.on('pointerout', () => { panel.setUIState('normal'); icon.setScale(iconScale); });
         hit.on('pointerdown', () => this._selectChoice(choice));
     }
 
     _createMobileCard(x, y, w, h, choice) {
         const borderColor = this._cardBorder(choice);
-        const g = this.add.graphics().setDepth(1);
-        const redraw = (hover) => {
-            g.clear();
-            drawSystemPanel(g, x, y, w, h, {
-                cut: uv(10),
-                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
-                fillAlpha: hover ? 0.96 : 0.9,
-                border: hover ? SYSTEM.BORDER : borderColor,
-                borderAlpha: 1, borderWidth: hover ? 2 : 1,
-            });
-        };
-        redraw(false);
+        const panel = UIAssets.createPanel(this, x, y, w, h, {
+            cut: uv(10),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0.9,
+            border: borderColor,
+            borderAlpha: 1,
+            borderWidth: 1,
+            accent: choice.type === 'weapon' ? 0xff9966 : SYSTEM.BORDER,
+            glow: choice.isNew ? 5 : 0,
+            depth: 1,
+            hover: {
+                fill: SYSTEM.BG_PANEL_HI,
+                fillAlpha: 0.96,
+                border: SYSTEM.BORDER,
+                borderWidth: 2,
+                glow: 6,
+            },
+        });
 
-        const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
-            .setDepth(1).setInteractive({ useHandCursor: true });
+        const hit = UIAssets.createHitArea(this, x, y, w, h, 1);
 
         const iconX = x + Math.min(uv(58), w * 0.17);
         const iconScale = Math.min(2, Math.max(1.25, h / uv(70)));
@@ -330,8 +340,8 @@ export class LevelUpScene extends Phaser.Scene {
         }).setOrigin(0, 0).setDepth(2), 2, 4);
         fitText(descText, textW, Math.max(1, y + h - uv(12) - descY), 0.62);
 
-        hit.on('pointerover', () => { redraw(true); icon.setScale(iconScale * 1.06); });
-        hit.on('pointerout', () => { redraw(false); icon.setScale(iconScale); });
+        hit.on('pointerover', () => { panel.setUIState('hover'); icon.setScale(iconScale * 1.06); });
+        hit.on('pointerout', () => { panel.setUIState('normal'); icon.setScale(iconScale); });
         hit.on('pointerdown', () => this._selectChoice(choice));
     }
 
