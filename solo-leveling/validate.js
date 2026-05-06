@@ -190,11 +190,35 @@ const expectedSounds = [
     'sounds/shadow_soldier_slash.wav', 'sounds/shadow_soldier_slam.wav',
     'sounds/shadow_soldier_spit.wav', 'sounds/mana.wav', 'sounds/essence.wav',
     'sounds/crit_hit.wav', 'sounds/elite_kill.wav',
+    'sounds/light_sword_slash_sfx.wav', 'sounds/light_lance_sfx.wav',
+    'sounds/light_crescent_sfx.wav', 'sounds/light_judgment_sfx.wav',
+    'sounds/light_sanctum_sfx.wav', 'sounds/tiger_claw_sfx.wav',
+    'sounds/tiger_fang_sfx.wav', 'sounds/tiger_rend_sfx.wav',
+    'sounds/tiger_quake_sfx.wav', 'sounds/tiger_guard_sfx.wav',
+    'sounds/flame_spark_sfx.wav', 'sounds/flame_bolt_sfx.wav',
+    'sounds/flame_arc_sfx.wav', 'sounds/flame_meteor_sfx.wav',
+    'sounds/flame_inferno_sfx.wav', 'sounds/sanctuary_mace_sfx.wav',
+    'sounds/sanctuary_orb_sfx.wav', 'sounds/sanctuary_arc_sfx.wav',
+    'sounds/sanctuary_seal_sfx.wav', 'sounds/sanctuary_field_sfx.wav',
 ];
 
 for (const sf of expectedSounds) {
     if (!fileExists(sf)) {
         errors.push(`[SOUND] "${sf}" not found`);
+    }
+}
+
+const soundManagerContent = readFile('js/managers/SoundManager.js') || '';
+const registeredSoundKeys = new Set();
+for (const m of soundManagerContent.matchAll(/_createPool\(\s*['"]([^'"]+)['"]/g)) {
+    registeredSoundKeys.add(m[1]);
+}
+for (const m of soundManagerContent.matchAll(/^\s*([A-Za-z0-9_]+):\s*\{\s*file:\s*['"][^'"]+['"]/gm)) {
+    registeredSoundKeys.add(m[1]);
+}
+for (const [weaponKey, weapon] of Object.entries(WEAPONS)) {
+    if (weapon.soundKey && !registeredSoundKeys.has(weapon.soundKey)) {
+        errors.push(`[SOUND] WEAPONS.${weaponKey}.soundKey "${weapon.soundKey}" is not registered`);
     }
 }
 

@@ -457,7 +457,7 @@ export class BasicDagger extends WeaponBase {
             }
         });
 
-        if (this.scene.soundManager) this.scene.soundManager.play('dagger');
+        this.playConfiguredSound('dagger');
     }
 
     _swordSlash() {
@@ -546,7 +546,7 @@ export class BasicDagger extends WeaponBase {
             this._damageEnemiesInCone(baseAngle, this.attackRange + this.extraRange + 35, 0.92, hitX, hitY);
         });
 
-        if (this.scene.soundManager) this.scene.soundManager.play('slash');
+        this.playConfiguredSound('slash');
     }
 
     _clawSwipe() {
@@ -631,7 +631,7 @@ export class BasicDagger extends WeaponBase {
             this._damageEnemiesInCone(baseAngle, this.attackRange + this.extraRange, 0.78, hitX, hitY, { maxHits: 3 });
         });
 
-        if (this.scene.soundManager) this.scene.soundManager.play('slash');
+        this.playConfiguredSound('slash');
     }
 
     _maceSlam() {
@@ -755,7 +755,7 @@ export class BasicDagger extends WeaponBase {
             if (this.scene.cameras?.main) this.scene.cameras.main.shake(70, 0.0022);
         });
 
-        if (this.scene.soundManager) this.scene.soundManager.play('groundSlam');
+        this.playConfiguredSound('groundSlam');
     }
 
     _fireball() {
@@ -884,7 +884,7 @@ export class BasicDagger extends WeaponBase {
             },
         });
 
-        if (this.scene.soundManager) this.scene.soundManager.play('daggerThrow');
+        this.playConfiguredSound('daggerThrow');
     }
 
     _spawnBloodBurst(x, y, impactAngle) {
