@@ -466,15 +466,6 @@ export class MenuScene extends Phaser.Scene {
             }).setOrigin(0.5).setDepth(depth + 1);
             this._fitText(role, cardW - uv(12), uv(14));
 
-            if (!isShortLandscape) {
-                const skill = this.add.text(x + cardW / 2, y + cardH - uv(20), character.skillName, {
-                    fontSize: fs(isCompactMenu ? 8 : 9),
-                    fontFamily: UI_FONT_KR,
-                    color: SYSTEM.TEXT_CYAN_DIM,
-                }).setOrigin(0.5).setDepth(depth + 1);
-                this._fitText(skill, cardW - uv(12), uv(14));
-            }
-
             hit.on('pointerover', () => {
                 portrait.setScale(portrait.scaleX * 1.04, portrait.scaleY * 1.04);
                 if (this.selectedCharacterId !== character.id) {
