@@ -31,101 +31,219 @@ export class GameScene extends Phaser.Scene {
     }
 
     create() {
-        // Hide archerlab link during gameplay
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = 'none';
 
-        // World bounds
+        this.isGameOver = false;
+        this._isBooting = true;
+        this._startupTimers = [];
+
         this.physics.world.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-        // Sound Manager (global singleton)
         if (!this.game._soundManager) {
             this.game._soundManager = new SoundManager();
             this.game._soundManager.init();
         }
         this.soundManager = this.game._soundManager;
-        this.soundManager.resume();
-        // Stop intro music, start game BGM
-        // 씬 초기화(physics, sprites, enemies 등) CPU 부하와 BGM 시작이 겹치면 찌직거림 발생
-        // → 800ms 딜레이로 씬 안정화 후 BGM 시작 (BGM은 -60dB에서 시작하여 자체 페이드인)
         this.soundManager.stopIntroMusic();
-        this.time.delayedCall(800, () => {
-            this.soundManager.startGameBGM();
-        });
+        this.soundManager.resume();
 
-        // System Message UI
         this.systemMessage = new SystemMessage(this);
-
-        // Create floor
+        this._createStartupOverlay();
         this._createFloor();
 
-        // XP Orb Pool
-        this.xpOrbPool = new XPOrbPool(this);
-
-        // Item Drop Manager
-        this.itemDropManager = new ItemDropManager(this);
-
-        // Player
         this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2);
-
-        // Camera follows player
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.cameras.main.setZoom(1);
         this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-        // Boss tracking (must be before WeaponManager: addWeapon calls onWeaponAdded which iterates activeBosses)
         this.activeBosses = [];
         this.bossesSpawned = [];
 
-        // Enemy Manager
-        this.enemyManager = new EnemyManager(this);
-
-        // Weapon Manager - start with shadow slash (원작: 성진우는 단검을 근접으로 사용)
-        this.weaponManager = new WeaponManager(this, this.player);
-        this.weaponManager.addWeapon('basicDagger');
-
-        // Shadow Army Manager
-        this.shadowArmyManager = new ShadowArmyManager(this);
-
-        // Mobile Controls
-        this.mobileControls = new MobileControls(this);
-
-        // Status Window (Tab key)
-        this.statusWindow = new StatusWindow(this);
-
-        // HUD (must be last UI element)
-        this.hud = new HUD(this);
-
-        // Player-Enemy collision (밀치기만, 데미지는 Enemy.update에서 거리 기반 처리)
-        this.physics.add.collider(this.player, this.enemyManager.getGroup());
-
-        if (this._resumeRequested) {
-            this._restoredFromSave = this._restoreSavedGame();
-            if (!this._restoredFromSave) GameScene.clearSavedGame();
-        } else {
-            GameScene.clearSavedGame();
-        }
-        this._registerSaveHandlers();
-
-        // Ambient particles
-        this._createAmbientParticles();
-
-        // === Phaser 4 Filters (WebGL only) ===
-        this._setupCameraFilters();
-        this._setupColorTint();
-        this._setupVignette();
-
-        // Camera fade in
-        this.cameras.main.fadeIn(500, 0, 0, 0);
-
-        // Game state
-        this.isGameOver = false;
-
-        // Register shutdown cleanup. Phaser reuses scene instances, so use once()
-        // and remove any per-create handlers in shutdown to avoid restart buildup.
         this.events.once('shutdown', this.shutdown, this);
+        this._registerResizeHandler();
 
-        // Dynamic resize: reposition HUD, camera, UI
+        this._runStartupSequence([
+            {
+                label: 'ORB CACHE',
+                run: () => {
+                    this.xpOrbPool = new XPOrbPool(this, {
+                        initialSize: 24,
+                        warmSize: 80,
+                        batchSize: 12,
+                        batchDelay: 70,
+                        warmupDelay: 500,
+                    });
+                },
+            },
+            {
+                label: 'ITEMS',
+                run: () => {
+                    this.itemDropManager = new ItemDropManager(this);
+                },
+            },
+            {
+                label: 'ENEMIES',
+                run: () => {
+                    this.enemyManager = new EnemyManager(this, {
+                        initialPoolSize: 12,
+                        warmPoolSize: 50,
+                        warmBatchSize: 8,
+                        warmBatchDelay: 70,
+                        warmupDelay: 650,
+                        openingWaveDelay: this._resumeRequested ? null : 1400,
+                    });
+                },
+            },
+            {
+                label: 'WEAPONS',
+                run: () => {
+                    this.weaponManager = new WeaponManager(this, this.player);
+                    this.weaponManager.addWeapon('basicDagger');
+                    this.shadowArmyManager = new ShadowArmyManager(this);
+                },
+            },
+            {
+                label: 'INTERFACE',
+                run: () => {
+                    this.mobileControls = new MobileControls(this);
+                    this.statusWindow = new StatusWindow(this);
+                    this.hud = new HUD(this);
+                    this.physics.add.collider(this.player, this.enemyManager.getGroup());
+                },
+            },
+            {
+                label: 'SAVE DATA',
+                run: () => {
+                    if (this._resumeRequested) {
+                        this._restoredFromSave = this._restoreSavedGame();
+                        if (!this._restoredFromSave) GameScene.clearSavedGame();
+                    } else {
+                        GameScene.clearSavedGame();
+                    }
+                    this._registerSaveHandlers();
+                },
+            },
+            {
+                label: 'EFFECTS',
+                run: () => {
+                    this._createAmbientParticles();
+                    this._setupCameraFilters();
+                    this._setupColorTint();
+                    this._setupVignette();
+                },
+            },
+        ]);
+    }
+
+    _runStartupSequence(steps) {
+        let index = 0;
+        const total = steps.length;
+
+        const runNext = () => {
+            if (!this._isBooting) return;
+            if (index >= total) {
+                this._finishStartup();
+                return;
+            }
+
+            const step = steps[index];
+            this._setStartupProgress(index, total, step.label);
+            try {
+                step.run();
+            } catch (e) {
+                console.error('GameScene startup step failed:', step.label, e);
+                throw e;
+            }
+
+            index += 1;
+            this._setStartupProgress(index, total, step.label);
+            const timer = this.time.delayedCall(step.delay ?? 32, runNext);
+            this._startupTimers.push(timer);
+        };
+
+        const timer = this.time.delayedCall(0, runNext);
+        this._startupTimers.push(timer);
+    }
+
+    _finishStartup() {
+        if (!this._isBooting) return;
+        this._isBooting = false;
+        this._setStartupProgress(1, 1, 'READY');
+        this._destroyStartupOverlay();
+
+        this.cameras.main.fadeIn(500, 0, 0, 0);
+        this.time.delayedCall(700, () => {
+            if (this.soundManager && !this.isGameOver) this.soundManager.startGameBGM();
+        });
+
+        this._scheduleIntroMessages();
+        this._setupSoundToggle();
+    }
+
+    _createStartupOverlay() {
+        const cam = this.cameras.main;
+        const w = Math.min(320, cam.width - 48);
+        const h = 82;
+        const cx = cam.width / 2;
+        const cy = cam.height / 2;
+
+        const bg = this.add.rectangle(cx, cy, cam.width, cam.height, 0x020308, 0.88)
+            .setScrollFactor(0).setDepth(300);
+        const panel = this.add.rectangle(cx, cy, w, h, 0x07101a, 0.94)
+            .setScrollFactor(0).setDepth(301)
+            .setStrokeStyle(1, 0x55dfff, 0.65);
+        const title = this.add.text(cx, cy - 18, 'LOADING', {
+            fontSize: '16px',
+            fontFamily: 'Arial',
+            fontStyle: 'bold',
+            color: '#e8fbff',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
+        const label = this.add.text(cx, cy + 4, 'STARTUP', {
+            fontSize: '10px',
+            fontFamily: 'Arial',
+            color: '#7cdfff',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
+        const barW = w - 46;
+        const barBg = this.add.rectangle(cx - barW / 2, cy + 24, barW, 4, 0x0b2433, 0.95)
+            .setOrigin(0, 0.5).setScrollFactor(0).setDepth(302);
+        const barFill = this.add.rectangle(cx - barW / 2, cy + 24, 1, 4, 0x55dfff, 1)
+            .setOrigin(0, 0.5).setScrollFactor(0).setDepth(303);
+
+        this._startupOverlay = [bg, panel, title, label, barBg, barFill];
+        this._startupLabel = label;
+        this._startupProgressFill = barFill;
+        this._startupProgressWidth = barW;
+    }
+
+    _setStartupProgress(done, total, label) {
+        if (!this._startupProgressFill) return;
+        const progress = Phaser.Math.Clamp(total > 0 ? done / total : 1, 0.02, 1);
+        this._startupProgressFill.width = Math.max(1, this._startupProgressWidth * progress);
+        if (this._startupLabel && label) this._startupLabel.setText(label);
+    }
+
+    _destroyStartupOverlay() {
+        const elements = this._startupOverlay || [];
+        if (elements.length === 0) return;
+
+        this.tweens.add({
+            targets: elements,
+            alpha: 0,
+            duration: 180,
+            onComplete: () => {
+                elements.forEach(el => {
+                    if (el?.active) el.destroy();
+                });
+            },
+        });
+
+        this._startupOverlay = null;
+        this._startupLabel = null;
+        this._startupProgressFill = null;
+    }
+
+    _registerResizeHandler() {
         this._onGameResize = () => {
             this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
             if (this.hud) this.hud.rebuild();
@@ -149,13 +267,14 @@ export class GameScene extends Phaser.Scene {
             }
         };
         this.events.on('game-resize', this._onGameResize, this);
+    }
 
-        // Intro / resume system messages (원작: 시스템 메시지)
+    _scheduleIntroMessages() {
         if (this._restoredFromSave) {
             this.time.delayedCall(500, () => {
                 this.systemMessage.show(t('sysSystem'), [
                     t('resumeLoaded'),
-                    `${t('levelLabel')} ${this.player.level} · ${t('killLabel')} ${this.player.kills}`,
+                    `${t('levelLabel')} ${this.player.level} \u00b7 ${t('killLabel')} ${this.player.kills}`,
                 ], { duration: 2400, type: 'quest' });
             });
         } else {
@@ -173,8 +292,9 @@ export class GameScene extends Phaser.Scene {
                 ], { duration: 2200, type: 'quest' });
             });
         }
+    }
 
-        // Sound toggle key (M)
+    _setupSoundToggle() {
         this._soundToggleKey = this.input.keyboard.addKey('M');
         this._soundToggleHandler = () => {
             const enabled = this.soundManager.toggleSound();
@@ -184,7 +304,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     update(time, delta) {
-        if (this.isGameOver) return;
+        if (this.isGameOver || this._isBooting) return;
+        if (!this.player || !this.enemyManager || !this.weaponManager || !this.xpOrbPool || !this.itemDropManager || !this.shadowArmyManager || !this.hud) return;
 
         // Auto quality adjustment based on FPS
         this._fpsCheckTimer = (this._fpsCheckTimer || 0) + delta;
@@ -511,7 +632,7 @@ export class GameScene extends Phaser.Scene {
             this._bloomFilter.blend.blendMode = Phaser.BlendModes.ADD;
             this._bloomFilter.blend.amount = 0.35;
 
-            // ColorMatrix for dungeon atmosphere — stronger cool/desaturated "shadow monarch" tone
+            // ColorMatrix for a cool, desaturated shadow atmosphere.
             this._colorMatrix = cam.filters.internal.addColorMatrix();
             this._colorMatrix.colorMatrix.brightness(0.88);
             this._colorMatrix.colorMatrix.saturate(1.25);
@@ -522,7 +643,7 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    // Screen-space purple tint overlay — works on mobile too (no WebGL filters required)
+    // Screen-space purple tint overlay; mobile-safe and no WebGL filters required.
     // Keeps high-res AI sprites and retro DCSS tiles in the same "night dungeon" palette
     _setupColorTint() {
         try {
@@ -552,7 +673,7 @@ export class GameScene extends Phaser.Scene {
     _setupVignette() {
         try {
             if (!this.textures.exists('vignette')) return;
-            // Fixed-position vignette overlay — acts as player-centered torch light
+            // Fixed-position vignette overlay; acts as player-centered torch light.
             // (camera follows player, so vignette center IS the player's screen position)
             // Slight over-scaling so dark edges reach past the canvas corners on wide aspects
             const cam = this.cameras.main;
@@ -569,7 +690,7 @@ export class GameScene extends Phaser.Scene {
         if (!this._vignetteOverlay || !this.player) return;
         const hpRatio = this.player.stats.hp / this.player.stats.maxHp;
         if (hpRatio < 0.4) {
-            // Low HP: vignette closes in (0.75 → 0.95) + red color tint
+            // Low HP: vignette closes in and the tint warms.
             const intensity = 0.75 + (1 - hpRatio / 0.4) * 0.2;
             this._vignetteOverlay.setAlpha(intensity);
             if (this._colorTint) this._colorTint.fillColor = 0xeeb8a8;
@@ -621,7 +742,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     _autoSave(force = false) {
-        if (this.isGameOver || !this.player || this.player.isDead) return;
+        if (this.isGameOver || this._isBooting || !this.player || this.player.isDead) return;
         const now = Date.now();
         if (!force && now - this._lastAutoSaveAt < AUTO_SAVE_INTERVAL_MS) return;
 
@@ -900,6 +1021,19 @@ export class GameScene extends Phaser.Scene {
     shutdown() {
         try {
             if (!this.isGameOver) this._autoSave(true);
+
+            if (this._startupTimers) {
+                for (const timer of this._startupTimers) {
+                    try { timer.remove(false); } catch (e) { /* already removed */ }
+                }
+                this._startupTimers = [];
+            }
+            if (this._startupOverlay) {
+                this._startupOverlay.forEach(el => { if (el?.active) el.destroy(); });
+                this._startupOverlay = null;
+                this._startupLabel = null;
+                this._startupProgressFill = null;
+            }
 
             if (this._saveOnPageHide) {
                 window.removeEventListener('pagehide', this._saveOnPageHide);
