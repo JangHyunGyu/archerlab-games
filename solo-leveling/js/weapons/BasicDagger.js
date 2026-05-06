@@ -635,7 +635,7 @@ export class BasicDagger extends WeaponBase {
     }
 
     _maceSlam() {
-        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: 25, duration: 300 });
+        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: 25, duration: 285 });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
@@ -652,85 +652,70 @@ export class BasicDagger extends WeaponBase {
         const glowColor = this.getEffectGlowColor(0xe8fff5);
         const darkColor = this.getEffectDarkColor(0x0d6543);
         const effectTexture = this._getConfiguredEffectTexture();
-        const maceTexture = this.scene?.textures?.exists('basic_attack_sanctuary_mace_weapon')
-            ? 'basic_attack_sanctuary_mace_weapon'
-            : null;
         const fx = this.scene.add.graphics().setDepth(15);
         const impactFx = this.scene.add.graphics().setDepth(14);
-        const maceSprite = maceTexture
-            ? this.scene.add.sprite(originX, originY, maceTexture)
-                .setDepth(16)
-                .setOrigin(0.82, 0.5)
-                .setAlpha(0)
-                .setBlendMode(Phaser.BlendModes.NORMAL)
-            : null;
         const slamSprite = effectTexture
             ? this.scene.add.sprite(impactX, impactY, effectTexture)
                 .setDepth(13)
                 .setAlpha(0)
-                .setScale(0.16)
-                .setRotation(baseAngle)
+                .setScale(0.14)
+                .setRotation(baseAngle + side * 0.08)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
         const entryObjects = [fx, impactFx];
-        if (maceSprite) entryObjects.push(maceSprite);
         if (slamSprite) entryObjects.push(slamSprite);
         const entry = this._trackAttackObjects(entryObjects);
-        const maceScale = maceSprite
-            ? Phaser.Math.Clamp((targetDist - 8) / Math.max(1, (maceSprite.width || 480) * 0.64), 0.22, 0.32)
-            : 1;
+        const handleStartX = originX + cosA * 20 - perpX * side * 14;
+        const handleStartY = originY + sinA * 20 - perpY * side * 14 - 10;
+        const windupX = originX + cosA * 48 - perpX * side * 30;
+        const windupY = originY + sinA * 48 - perpY * side * 30 - 38;
 
         const draw = (t) => {
             const k = Phaser.Math.Clamp(t, 0, 1);
-            const wind = k < 0.42 ? Phaser.Math.Easing.Cubic.Out(k / 0.42) : 1;
-            const strike = k < 0.42 ? 0 : Phaser.Math.Easing.Cubic.Out((k - 0.42) / 0.58);
-            const handX = originX + cosA * (18 + strike * 5) - perpX * side * 7;
-            const handY = originY + sinA * (18 + strike * 5) - perpY * side * 7;
-            const windupX = originX + cosA * 42 - perpX * side * 18;
-            const windupY = originY + sinA * 42 - perpY * side * 18 - 30 * wind;
-            const headEase = Phaser.Math.Easing.Quadratic.Out(strike);
-            const headX = maceSprite
-                ? Phaser.Math.Linear(windupX, impactX, headEase)
-                : originX + cosA * (30 + targetDist * strike) + perpX * side * (34 * (1 - strike));
-            const headY = maceSprite
-                ? Phaser.Math.Linear(windupY, impactY, headEase) - Math.sin(Math.PI * strike) * 8
-                : originY + sinA * (30 + targetDist * strike) + perpY * side * (34 * (1 - strike)) - 38 * wind * (1 - strike);
-            const followThrough = k < 0.72 ? 0 : Phaser.Math.Easing.Cubic.Out((k - 0.72) / 0.28);
-            const weaponAngle = maceSprite
-                ? Phaser.Math.Angle.Between(handX, handY, headX, headY) + side * 0.08 * followThrough
-                : baseAngle;
+            const wind = k < 0.34 ? Phaser.Math.Easing.Cubic.Out(k / 0.34) : 1;
+            const strikeRaw = k < 0.34 ? 0 : Phaser.Math.Clamp((k - 0.34) / 0.66, 0, 1);
+            const strike = Phaser.Math.Easing.Cubic.Out(strikeRaw);
+            const recovery = Phaser.Math.Clamp((k - 0.82) / 0.18, 0, 1);
+            const headX = Phaser.Math.Linear(windupX, impactX, strike);
+            const headY = Phaser.Math.Linear(windupY, impactY, strike) - Math.sin(Math.PI * strikeRaw) * 7;
+            const handleX = Phaser.Math.Linear(handleStartX, impactX - cosA * 28, strike);
+            const handleY = Phaser.Math.Linear(handleStartY, impactY - sinA * 28, strike);
 
             fx.clear();
-            if (maceSprite) {
-                const reveal = Phaser.Math.Clamp((k - 0.18) / 0.22, 0, 1);
-                maceSprite.setPosition(headX, headY);
-                maceSprite.setRotation(weaponAngle);
-                maceSprite.setAlpha(reveal * (0.9 + strike * 0.1) * (1 - followThrough * 0.62));
-                maceSprite.setScale(maceScale * (1 + strike * 0.06));
+            const cueAlpha = 1 - recovery;
+            if (cueAlpha > 0.02) {
+                const liftedHeadX = Phaser.Math.Linear(handleStartX, windupX, wind);
+                const liftedHeadY = Phaser.Math.Linear(handleStartY - 4, windupY, wind);
+                const cueHeadX = strikeRaw > 0 ? headX : liftedHeadX;
+                const cueHeadY = strikeRaw > 0 ? headY : liftedHeadY;
+                const cueHandleX = strikeRaw > 0 ? handleX : handleStartX;
+                const cueHandleY = strikeRaw > 0 ? handleY : handleStartY;
 
-                fx.lineStyle(14, glowColor, 0.12 * (1 - strike * 0.25));
-                fx.lineBetween(
-                    handX + perpX * side * 5,
-                    handY + perpY * side * 5,
-                    headX - cosA * 8,
-                    headY - sinA * 8
-                );
-            } else {
-                fx.lineStyle(16, darkColor, 0.34);
-                fx.lineBetween(handX, handY, headX, headY);
-                fx.lineStyle(7, glowColor, 0.72);
-                fx.lineBetween(handX, handY, headX, headY);
-                fx.fillStyle(darkColor, 0.9);
-                fx.fillCircle(headX, headY, 16);
-                fx.fillStyle(effectColor, 0.78);
-                fx.fillCircle(headX, headY, 11);
-                fx.fillStyle(glowColor, 0.95);
-                fx.fillCircle(headX - perpX * 3, headY - perpY * 3, 5);
+                fx.lineStyle(11, darkColor, 0.24 * cueAlpha);
+                fx.lineBetween(cueHandleX, cueHandleY, cueHeadX, cueHeadY);
+                fx.lineStyle(4, glowColor, 0.62 * cueAlpha);
+                fx.lineBetween(cueHandleX, cueHandleY, cueHeadX, cueHeadY);
+
+                for (let i = 0; i < 3; i++) {
+                    const ghost = Phaser.Math.Clamp(strike - i * 0.1, 0, 1);
+                    if (ghost <= 0) continue;
+                    const ghostX = Phaser.Math.Linear(windupX, impactX, ghost);
+                    const ghostY = Phaser.Math.Linear(windupY, impactY, ghost);
+                    fx.fillStyle(glowColor, (0.16 - i * 0.04) * cueAlpha);
+                    fx.fillCircle(ghostX, ghostY, 13 - i * 3);
+                }
+
+                fx.fillStyle(darkColor, 0.72 * cueAlpha);
+                fx.fillCircle(cueHeadX, cueHeadY, 10 + strike * 5);
+                fx.fillStyle(effectColor, 0.72 * cueAlpha);
+                fx.fillCircle(cueHeadX, cueHeadY, 7 + strike * 4);
+                fx.fillStyle(glowColor, 0.9 * cueAlpha);
+                fx.fillCircle(cueHeadX - perpX * side * 2, cueHeadY - perpY * side * 2, 3 + strike * 2);
             }
 
-            if (strike > 0.78) {
-                const pulse = Phaser.Math.Clamp((strike - 0.78) / 0.22, 0, 1);
+            if (strikeRaw > 0.64) {
+                const pulse = Phaser.Math.Clamp((strikeRaw - 0.64) / 0.36, 0, 1);
                 impactFx.clear();
                 impactFx.lineStyle(5, effectColor, 0.8 * (1 - pulse));
                 impactFx.strokeCircle(impactX, impactY, 24 + pulse * 38);
@@ -746,17 +731,20 @@ export class BasicDagger extends WeaponBase {
                     );
                 }
                 if (slamSprite) {
-                    slamSprite.setAlpha(0.9 * (1 - pulse * 0.75));
-                    slamSprite.setScale(0.26 + pulse * 0.32);
-                    slamSprite.setRotation(baseAngle + pulse * 0.2);
+                    slamSprite.setAlpha(0.92 * (1 - pulse * 0.72));
+                    slamSprite.setScale(0.22 + pulse * 0.34);
+                    slamSprite.setRotation(baseAngle + side * (0.08 - pulse * 0.05));
                 }
+            } else {
+                impactFx.clear();
+                if (slamSprite) slamSprite.setAlpha(0);
             }
         };
 
         entry.tween = this.scene.tweens.add({
             targets: progress,
             t: 1,
-            duration: 310,
+            duration: 285,
             ease: 'Linear',
             onUpdate: () => draw(progress.t),
             onComplete: () => this._destroyAttackObjects(entry),
