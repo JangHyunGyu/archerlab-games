@@ -2,8 +2,8 @@ import { WeaponBase } from './WeaponBase.js';
 import { WEAPONS } from '../utils/Constants.js';
 
 export class ShadowDagger extends WeaponBase {
-    constructor(scene, player) {
-        super(scene, player, WEAPONS.shadowDagger);
+    constructor(scene, player, config = WEAPONS.shadowDagger) {
+        super(scene, player, config);
         this._activeDaggers = [];
         this._trailPool = [];
         this._activeTrails = new Set();
@@ -16,10 +16,11 @@ export class ShadowDagger extends WeaponBase {
             trail.setVisible(true);
             trail.setAlpha(0.4);
             trail.setScale(1);
+            trail.setFillStyle(this.getEffectColor(0xb366ff), 0.4);
             this._activeTrails.add(trail);
             return trail;
         }
-        trail = this.scene.add.circle(x, y, 3, 0xb366ff, 0.4).setDepth(7);
+        trail = this.scene.add.circle(x, y, 3, this.getEffectColor(0xb366ff), 0.4).setDepth(7);
         this._activeTrails.add(trail);
         return trail;
     }
@@ -55,13 +56,16 @@ export class ShadowDagger extends WeaponBase {
         const endY = py + Math.sin(angle) * range;
         const duration = 2500;
         const dmg = this.getDamage();
-        const useEffectAsset = this.scene.textures.exists('effect_shadow_dagger');
+        const effectTexture = this.getEffectTexture();
+        const useCharacterEffect = !!effectTexture;
+        const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_shadow_dagger');
+        const textureKey = effectTexture || (useEffectAsset ? 'effect_shadow_dagger' : 'proj_dagger');
 
-        const dagger = this.scene.add.sprite(px, py, useEffectAsset ? 'effect_shadow_dagger' : 'proj_dagger')
+        const dagger = this.scene.add.sprite(px, py, textureKey)
             .setDepth(8)
-            .setScale(useEffectAsset ? 0.22 : 0.85)
-            .setRotation(useEffectAsset ? angle : angle + Math.PI / 2)
-            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+            .setScale(useCharacterEffect ? (this.config.effectScale || 0.5) : (useEffectAsset ? 0.22 : 0.85))
+            .setRotation((useCharacterEffect || useEffectAsset) ? angle : angle + Math.PI / 2)
+            .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
         let trailInterval = null;
         const piercedTargets = new Set();
@@ -114,7 +118,7 @@ export class ShadowDagger extends WeaponBase {
 
             if (this.scene.soundManager) this.scene.soundManager.play('hit');
 
-            const spark = this.scene.add.circle(dagger.x, dagger.y, 6, 0xb366ff, 0.8).setDepth(9);
+            const spark = this.scene.add.circle(dagger.x, dagger.y, 6, this.getEffectColor(0xb366ff), 0.8).setDepth(9);
             this.scene.tweens.add({
                 targets: spark,
                 alpha: 0,

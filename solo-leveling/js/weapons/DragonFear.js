@@ -2,8 +2,8 @@ import { WeaponBase } from './WeaponBase.js';
 import { WEAPONS, COLORS } from '../utils/Constants.js';
 
 export class DragonFear extends WeaponBase {
-    constructor(scene, player) {
-        super(scene, player, WEAPONS.dragonFear);
+    constructor(scene, player, config = WEAPONS.dragonFear) {
+        super(scene, player, config);
         this.auraSprite = null;
     }
 
@@ -16,16 +16,18 @@ export class DragonFear extends WeaponBase {
             this.scene.tweens.killTweensOf(this.auraSprite);
             this.auraSprite.destroy();
         }
-        const useEffectAsset = this.scene.textures.exists('effect_dragon_fear');
-        this.auraSprite = this.scene.add.sprite(this.player.x, this.player.y, useEffectAsset ? 'effect_dragon_fear' : 'proj_fear')
+        const effectTexture = this.getEffectTexture();
+        const useCharacterEffect = !!effectTexture;
+        const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_dragon_fear');
+        this.auraSprite = this.scene.add.sprite(this.player.x, this.player.y, effectTexture || (useEffectAsset ? 'effect_dragon_fear' : 'proj_fear'))
             .setDepth(3)
             .setAlpha(0)
-            .setScale(useEffectAsset ? (range * 2) / 614 : range / 60)
-            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+            .setScale((useCharacterEffect || useEffectAsset) ? (range * 2) / this.auraSpriteWidth(effectTexture, useEffectAsset) : range / 60)
+            .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
         this.scene.tweens.add({
             targets: this.auraSprite,
-            alpha: useEffectAsset ? 0.82 : 0.6,
+            alpha: (useCharacterEffect || useEffectAsset) ? 0.82 : 0.6,
             duration: 200,
         });
 
@@ -79,6 +81,13 @@ export class DragonFear extends WeaponBase {
                 }
             }
         }
+    }
+
+    auraSpriteWidth(effectTexture, useEffectAsset) {
+        if (effectTexture && this.scene.textures.exists(effectTexture)) {
+            return this.scene.textures.get(effectTexture).getSourceImage().width || 320;
+        }
+        return useEffectAsset ? 614 : 320;
     }
 
     destroy() {

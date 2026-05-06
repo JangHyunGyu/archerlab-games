@@ -6,6 +6,7 @@ import {
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
 import { UIAssets } from '../ui/UIAssets.js';
+import { getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
 export class LevelUpScene extends Phaser.Scene {
     constructor() {
@@ -110,7 +111,11 @@ export class LevelUpScene extends Phaser.Scene {
         const upgradeOptions = [];
         const passiveOptions = [];
 
-        const weaponEntries = Object.entries(WEAPONS)
+        const characterWeaponKeys = getCharacterWeaponKeys(this.player.characterId);
+        const starterWeaponKey = getStarterWeaponKey(this.player.characterId);
+        const weaponEntries = characterWeaponKeys
+            .map(key => [key, WEAPONS[key]])
+            .filter(([, config]) => !!config)
             .sort(([, a], [, b]) => (a.unlockLevel || 1) - (b.unlockLevel || 1));
 
         for (const [key, config] of weaponEntries) {
@@ -119,7 +124,7 @@ export class LevelUpScene extends Phaser.Scene {
 
             const currentLevel = this.weaponManager.getWeaponLevel(key);
             if (currentLevel >= 10) continue;
-            if (key === 'basicDagger' && currentLevel === 0) continue;
+            if (key === starterWeaponKey && currentLevel === 0) continue;
 
             if (currentLevel === 0) {
                 if (this.weaponManager.getOwnedWeapons().length >= 6) continue;

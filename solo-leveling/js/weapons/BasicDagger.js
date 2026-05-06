@@ -2,8 +2,8 @@ import { WeaponBase } from './WeaponBase.js';
 import { WEAPONS } from '../utils/Constants.js';
 
 export class BasicDagger extends WeaponBase {
-    constructor(scene, player) {
-        super(scene, player, WEAPONS.basicDagger);
+    constructor(scene, player, config = WEAPONS.basicDagger) {
+        super(scene, player, config);
         this.attackRange = 205;
 
         this._bladePool = [];
@@ -12,7 +12,7 @@ export class BasicDagger extends WeaponBase {
     }
 
     _getBlade(textureKey = 'proj_dagger_stab') {
-        const isEffectStab = textureKey.startsWith('effect_basic_stab');
+        const isEffectStab = textureKey.startsWith('effect_basic_stab') || textureKey.startsWith('char_skill_');
         let blade = this._bladePool.pop();
         if (blade && blade.scene) {
             blade.setTexture(textureKey);
@@ -21,12 +21,13 @@ export class BasicDagger extends WeaponBase {
             blade.setScale(1);
             blade.clearTint();
             blade.setOrigin(0.5, isEffectStab ? 0.5 : 0.94);
-            blade.setBlendMode(Phaser.BlendModes.NORMAL);
+            blade.setBlendMode(textureKey.startsWith('char_skill_') ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
             return blade;
         }
 
         return this.scene.add.sprite(0, 0, textureKey)
             .setOrigin(0.5, isEffectStab ? 0.5 : 0.94)
+            .setBlendMode(textureKey.startsWith('char_skill_') ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
             .setDepth(13);
     }
 
@@ -68,8 +69,10 @@ export class BasicDagger extends WeaponBase {
         if (this.player.playAttackMotion) {
             this.player.playAttackMotion(baseAngle, 240, side);
         }
-        const useEffectStab = this.scene.textures.exists('effect_basic_stab_0');
-        const bladeScale = useEffectStab ? 0.56 : 0.72;
+        const effectTexture = this.getEffectTexture();
+        const useCharacterEffect = !!effectTexture;
+        const useEffectStab = !useCharacterEffect && this.scene.textures.exists('effect_basic_stab_0');
+        const bladeScale = useCharacterEffect ? (this.config.effectScale || 0.46) : (useEffectStab ? 0.56 : 0.72);
         const bladeTipFromOrigin = 82 * 0.94;
         const bladeVisualLength = bladeTipFromOrigin * bladeScale;
         const pommelRestDist = 12;
@@ -79,10 +82,10 @@ export class BasicDagger extends WeaponBase {
         );
         const thrustTravel = pommelMaxDist - pommelRestDist;
 
-        const mainBlade = this._getBlade(useEffectStab ? 'effect_basic_stab_0' : 'proj_dagger_stab')
+        const mainBlade = this._getBlade(effectTexture || (useEffectStab ? 'effect_basic_stab_0' : 'proj_dagger_stab'))
             .setDepth(14)
             .setScale(bladeScale);
-        const trails = useEffectStab
+        const trails = useEffectStab || useCharacterEffect
             ? []
             : [this._getBlade(), this._getBlade(), this._getBlade()];
 
@@ -90,7 +93,7 @@ export class BasicDagger extends WeaponBase {
             trail.setScale(bladeScale);
             trail.setAlpha(0);
             trail.setDepth(12);
-            trail.setTint(0x7f55ff);
+            trail.setTint(this.getEffectColor(0x7f55ff));
             trail.setBlendMode(Phaser.BlendModes.ADD);
         }
 
@@ -198,7 +201,7 @@ export class BasicDagger extends WeaponBase {
             fx.fillStyle(0xbda9ff, 0.55 * armAlpha);
             fx.fillCircle(pose.pommelX - pose.perpX * 1.4, pose.pommelY - pose.perpY * 1.4, 2.1);
 
-            if (useEffectStab) return;
+            if (useEffectStab || useCharacterEffect) return;
             if (forwardAlpha <= 0.03) return;
 
             const streakTail = 34 + 82 * forwardAlpha;
@@ -247,16 +250,16 @@ export class BasicDagger extends WeaponBase {
 
                 drawThrustFx(pose, phase);
 
-                if (useEffectStab) {
+                if (useEffectStab || useCharacterEffect) {
                     const frameIndex = Math.min(5, Math.floor(progress.t * 6));
-                    mainBlade.setTexture(`effect_basic_stab_${frameIndex}`);
+                    if (useEffectStab) mainBlade.setTexture(`effect_basic_stab_${frameIndex}`);
                     const centerDist = 28 + 58 * Phaser.Math.Clamp(phase.reach, 0, 1);
                     const centerX = this.player.x + pose.cosA * centerDist + pose.perpX * side * 5;
                     const centerY = this.player.y - 16 + pose.sinA * centerDist + pose.perpY * side * 5;
                     mainBlade.setPosition(centerX, centerY);
                     mainBlade.setRotation(pose.angle);
                     mainBlade.setAlpha(phase.alpha);
-                    mainBlade.setScale(bladeScale * (1 + phase.force * 0.05));
+                    mainBlade.setScale(bladeScale * (1 + phase.force * (useCharacterEffect ? 0.16 : 0.05)));
                 } else {
                     mainBlade.setPosition(pose.pommelX, pose.pommelY);
                     mainBlade.setRotation(pose.angle + Math.PI / 2);

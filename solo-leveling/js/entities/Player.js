@@ -1,12 +1,20 @@
 import { PLAYER_BASE_STATS, RANKS, RANK_ORDER, XP_TABLE, COLORS, WORLD_SIZE, PASSIVES } from '../utils/Constants.js';
+import { getCharacter } from '../utils/Characters.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y) {
-        super(scene, x, y, 'player_idle_0');
+    constructor(scene, x, y, characterId) {
+        const character = getCharacter(characterId);
+        const characterTexture = `${character.texturePrefix}_idle_0`;
+        const initialTexture = scene.textures.exists(characterTexture) ? characterTexture : 'player_idle_0';
+        super(scene, x, y, initialTexture);
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.visualBaseScale = 0.92;
+        this.character = character;
+        this.characterId = character.id;
+        this.texturePrefix = scene.textures.exists(characterTexture) ? character.texturePrefix : 'player';
+        this.baseStats = { ...PLAYER_BASE_STATS, ...(character.stats || {}) };
+        this.visualBaseScale = character.visualScale || 0.92;
         this.setDepth(10);
         this.setCollideWorldBounds(true);
         this.setScale(this.visualBaseScale);
@@ -14,7 +22,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.body.setOffset(37, 78);
 
         // Stats
-        this.stats = { ...PLAYER_BASE_STATS };
+        this.stats = { ...this.baseStats };
         this.level = 1;
         this.xp = 0;
         this.xpToNext = XP_TABLE[1] || 10;
@@ -51,6 +59,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.passiveLevels = {};
         // Rank-up count (percentage-based bonuses)
         this.rankUpCount = 0;
+        this._skillShield = 0;
+        this._skillShieldTimer = 0;
 
         // Input
         this.cursors = scene.input.keyboard.createCursorKeys();
@@ -85,9 +95,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _createAnimations(scene) {
-        const frames = (prefix, max) => Array.from({ length: max }, (_, i) => `${prefix}${i}`)
+        const textureKey = (name) => {
+            const preferred = `${this.texturePrefix}_${name}`;
+            if (scene.textures.exists(preferred)) return preferred;
+            const fallback = `player_${name}`;
+            return scene.textures.exists(fallback) ? fallback : preferred;
+        };
+        const frames = (prefix, max) => Array.from({ length: max }, (_, i) => textureKey(`${prefix}${i}`))
             .filter(key => scene.textures.exists(key));
-        const create = (key, frameKeys, frameRate, repeat = -1) => {
+        const create = (name, frameKeys, frameRate, repeat = -1) => {
+            const key = this._animKey(name);
             if (scene.anims.exists(key) || frameKeys.length === 0) return;
             scene.anims.create({
                 key,
@@ -97,18 +114,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             });
         };
 
-        create('player_idle', frames('player_idle_', 8), 5);
-        create('player_walk', frames('player_walk_', 8), 10);
-        create('player_walk_down', frames('player_walk_down_', 4), 8);
-        create('player_walk_right', frames('player_walk_right_', 4), 8);
-        create('player_walk_up', frames('player_walk_up_', 4), 8);
-        create('player_walk_left', frames('player_walk_left_', 4), 8);
-        create('player_attack', frames('player_attack_', 6), 18, 0);
-        create('player_attack_down', frames('player_attack_down_', 6), 20, 0);
-        create('player_attack_right', frames('player_attack_right_', 6), 20, 0);
-        create('player_attack_up', frames('player_attack_up_', 6), 20, 0);
-        create('player_attack_left', frames('player_attack_left_', 6), 20, 0);
-        create('player_hit', frames('player_hit_', 2), 12, 0);
+        create('idle', frames('idle_', 8), 5);
+        create('walk', frames('walk_', 8), 10);
+        create('walk_down', frames('walk_down_', 4), 8);
+        create('walk_right', frames('walk_right_', 4), 8);
+        create('walk_up', frames('walk_up_', 4), 8);
+        create('walk_left', frames('walk_left_', 4), 8);
+        create('attack', frames('attack_', 6), 18, 0);
+        create('attack_down', frames('attack_down_', 6), 20, 0);
+        create('attack_right', frames('attack_right_', 6), 20, 0);
+        create('attack_up', frames('attack_up_', 6), 20, 0);
+        create('attack_left', frames('attack_left_', 6), 20, 0);
+        create('hit', frames('hit_', 2), 12, 0);
+    }
+
+    _animKey(name) {
+        return `${this.texturePrefix}_${name}`;
+    }
+
+    _animName(animKey) {
+        const prefix = `${this.texturePrefix}_`;
+        return animKey?.startsWith(prefix) ? animKey.slice(prefix.length) : animKey;
     }
 
     update(time, delta) {
@@ -193,11 +219,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._attackPose.angle = angle;
         this._attackPose.side = side || 1;
         this._attackPose.direction = this._directionFromAngle(angle);
-        const animKey = `player_attack_${this._attackPose.direction}`;
+        const animKey = this._animKey(`attack_${this._attackPose.direction}`);
         if (this.scene.anims.exists(animKey)) {
             this.play(animKey, false);
-        } else if (this.scene.anims.exists('player_attack')) {
-            this.play('player_attack', false);
+        } else if (this.scene.anims.exists(this._animKey('attack'))) {
+            this.play(this._animKey('attack'), false);
         }
         this._applyFlipForAnimation(animKey);
     }
@@ -220,27 +246,28 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _getActiveAnimationKey() {
-        if (this._hitReactTimer > 0 && this._animExists('player_hit')) {
-            return 'player_hit';
+        if (this._hitReactTimer > 0 && this._animExists(this._animKey('hit'))) {
+            return this._animKey('hit');
         }
-        if (this._attackPose.active && this._animExists('player_attack')) {
-            const directionalAttack = `player_attack_${this._attackPose.direction || this._directionFromAngle(this._attackPose.angle)}`;
+        if (this._attackPose.active && this._animExists(this._animKey('attack'))) {
+            const directionalAttack = this._animKey(`attack_${this._attackPose.direction || this._directionFromAngle(this._attackPose.angle)}`);
             if (this._animExists(directionalAttack)) return directionalAttack;
-            return 'player_attack';
+            return this._animKey('attack');
         }
         if (this._moveBlend > 0.08) {
-            const directionalWalk = `player_walk_${this.moveDirection}`;
+            const directionalWalk = this._animKey(`walk_${this.moveDirection}`);
             if (this._animExists(directionalWalk)) return directionalWalk;
-            if (this._animExists('player_walk')) return 'player_walk';
+            if (this._animExists(this._animKey('walk'))) return this._animKey('walk');
         }
-        return 'player_idle';
+        return this._animKey('idle');
     }
 
     _applyFlipForAnimation(animKey) {
-        if (animKey === 'player_walk_left' || animKey === 'player_walk_right' ||
-            animKey === 'player_walk_up' || animKey === 'player_walk_down' ||
-            animKey === 'player_attack_left' || animKey === 'player_attack_right' ||
-            animKey === 'player_attack_up' || animKey === 'player_attack_down') {
+        const name = this._animName(animKey);
+        if (name === 'walk_left' || name === 'walk_right' ||
+            name === 'walk_up' || name === 'walk_down' ||
+            name === 'attack_left' || name === 'attack_right' ||
+            name === 'attack_up' || name === 'attack_down') {
             this.setFlipX(false);
             return;
         }
@@ -495,9 +522,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _updateRegen(delta) {
-        // Passive HP regen: 1.5 HP/sec
+        if (this._skillShieldTimer > 0) {
+            this._skillShieldTimer = Math.max(0, this._skillShieldTimer - delta);
+            if (this._skillShieldTimer <= 0) this._skillShield = 0;
+        }
+
+        // Passive HP regen: base plus character-specific support regen.
         if (this.stats.hp >= this.stats.maxHp) return;
-        this._regenAccum = (this._regenAccum || 0) + 1.5 * (delta / 1000);
+        const regenPerSec = 1.5 + (this.character?.regenPerSec || 0);
+        this._regenAccum = (this._regenAccum || 0) + regenPerSec * (delta / 1000);
         if (this._regenAccum >= 1) {
             const heal = Math.floor(this._regenAccum);
             this._regenAccum -= heal;
@@ -508,7 +541,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     takeDamage(amount) {
         if (this.isDead || this.isInvincible) return false;
 
-        const damage = Math.max(1, Math.floor(amount));
+        let damage = Math.max(1, Math.floor(amount * (this.character?.damageTakenMultiplier || 1)));
+        if (this._skillShield > 0) {
+            const absorbed = Math.min(damage, this._skillShield);
+            this._skillShield -= absorbed;
+            damage -= absorbed;
+            if (damage <= 0) {
+                this.isInvincible = true;
+                this.invincibleTimer = 450;
+                this._playHitRecoil(absorbed);
+                return false;
+            }
+        }
         this.stats.hp -= damage;
         this.isInvincible = true;
         this.invincibleTimer = 1000;
@@ -738,7 +782,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _recalcStat(statKey, bonusPerLevel) {
-        const base = PLAYER_BASE_STATS[statKey];
+        const base = this.baseStats?.[statKey] ?? PLAYER_BASE_STATS[statKey];
         const lvl = this.passiveLevels[statKey] || 0;
 
         // Diminishing returns: each stack is worth slightly less than the previous

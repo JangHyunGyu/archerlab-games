@@ -4,6 +4,7 @@ import { Player } from '../entities/Player.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 import { EnemyManager } from '../managers/EnemyManager.js';
 import { WeaponManager } from '../managers/WeaponManager.js';
+import { CharacterSkillManager } from '../managers/CharacterSkillManager.js';
 import { ShadowArmyManager } from '../managers/ShadowArmyManager.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { XPOrbPool } from '../entities/XPOrb.js';
@@ -14,6 +15,7 @@ import { HUD } from '../ui/HUD.js';
 import { SystemMessage } from '../ui/SystemMessage.js';
 import { StatusWindow } from '../ui/StatusWindow.js';
 import { MobileControls } from '../ui/MobileControls.js';
+import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
 const SAVE_KEY = 'shadow_survival_save_v1';
 const SAVE_VERSION = 1;
@@ -26,6 +28,8 @@ export class GameScene extends Phaser.Scene {
 
     init(data = {}) {
         this._resumeRequested = !!data.resume;
+        const savedData = this._resumeRequested ? GameScene.getSavedGameData() : null;
+        this._selectedCharacterId = savedData?.player?.characterId || data.characterId || DEFAULT_CHARACTER_ID;
         this._restoredFromSave = false;
         this._lastAutoSaveAt = 0;
     }
@@ -53,7 +57,7 @@ export class GameScene extends Phaser.Scene {
         this._createFloor();
         this._createEnvironmentProps();
 
-        this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2);
+        this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, this._selectedCharacterId);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.cameras.main.setZoom(1);
         this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
@@ -100,8 +104,9 @@ export class GameScene extends Phaser.Scene {
                 label: 'WEAPONS',
                 run: () => {
                     this.weaponManager = new WeaponManager(this, this.player);
-                    this.weaponManager.addWeapon('basicDagger');
+                    this.weaponManager.addWeapon(getStarterWeaponKey(this.player.characterId));
                     this.shadowArmyManager = new ShadowArmyManager(this);
+                    this.characterSkillManager = new CharacterSkillManager(this, this.player);
                 },
             },
             {
@@ -336,6 +341,9 @@ export class GameScene extends Phaser.Scene {
 
         // Update weapons
         this.weaponManager.update(time, delta);
+
+        // Update selected hunter's innate skill
+        this.characterSkillManager?.update(time, delta);
 
         // Update XP orbs
         this.xpOrbPool.update(this.player);
@@ -825,6 +833,7 @@ export class GameScene extends Phaser.Scene {
             version: SAVE_VERSION,
             ts,
             player: {
+                characterId: player.characterId,
                 x: player.x,
                 y: player.y,
                 level: player.level,
@@ -861,7 +870,7 @@ export class GameScene extends Phaser.Scene {
                 phase: boss.phase,
             })),
             shadows: this.shadowArmyManager?.getSoldiers?.()
-                .filter(s => s?.active)
+                .filter(s => s?.active && !s._temporary)
                 .map(soldier => ({
                     bossKey: soldier.bossKey,
                     x: soldier.x,
@@ -923,8 +932,8 @@ export class GameScene extends Phaser.Scene {
         player.kills = Math.max(0, Number(saved.kills) || 0);
         player.passiveLevels = { ...(saved.passiveLevels || {}) };
 
-        player.stats = { ...PLAYER_BASE_STATS };
-        for (const statKey of Object.keys(PLAYER_BASE_STATS)) {
+        player.stats = { ...(player.baseStats || PLAYER_BASE_STATS) };
+        for (const statKey of Object.keys(player.baseStats || PLAYER_BASE_STATS)) {
             if (statKey !== 'hp' && typeof player._recalcStat === 'function') {
                 player._recalcStat(statKey);
             }
@@ -935,6 +944,8 @@ export class GameScene extends Phaser.Scene {
             player.stats.maxHp
         );
         player._tempAtkBuff = 0;
+        player._skillShield = 0;
+        player._skillShieldTimer = 0;
     }
 
     _restoreEnemyProgress(saved) {
@@ -966,8 +977,12 @@ export class GameScene extends Phaser.Scene {
         if (this.weaponManager) this.weaponManager.destroy();
         this.weaponManager = new WeaponManager(this, this.player);
 
-        const list = Array.isArray(savedWeapons) ? [...savedWeapons] : [];
-        if (!list.some(w => w?.key === 'basicDagger')) list.unshift({ key: 'basicDagger' });
+        const allowedKeys = new Set(getCharacterWeaponKeys(this.player.characterId));
+        const starterKey = getStarterWeaponKey(this.player.characterId);
+        const list = Array.isArray(savedWeapons)
+            ? savedWeapons.filter(w => allowedKeys.has(w?.key))
+            : [];
+        if (!list.some(w => w?.key === starterKey)) list.unshift({ key: starterKey });
 
         for (const saved of list) {
             if (!saved?.key || !this.weaponManager.addWeapon(saved.key)) continue;
@@ -984,7 +999,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     _restoreShadows(savedShadows) {
-        if (!this.shadowArmyManager || !Array.isArray(savedShadows)) return;
+        if (!this.shadowArmyManager?.enabled || !Array.isArray(savedShadows)) return;
         this.shadowArmyManager.soldiers.forEach(s => { if (s?.scene) s.destroy(); });
         this.shadowArmyManager.soldiers = [];
 
@@ -1065,6 +1080,8 @@ export class GameScene extends Phaser.Scene {
             level: data.player.level || 1,
             kills: data.player.kills || 0,
             timeSec: Math.floor((data.enemyManager?.gameTime || 0) / 1000),
+            characterId: data.player.characterId || DEFAULT_CHARACTER_ID,
+            characterName: getCharacter(data.player.characterId).name,
         };
     }
 
@@ -1107,6 +1124,7 @@ export class GameScene extends Phaser.Scene {
             // Stop game BGM
             if (this.soundManager) this.soundManager.stopGameBGM();
             if (this.weaponManager) this.weaponManager.destroy();
+            if (this.characterSkillManager) this.characterSkillManager.destroy();
             if (this.shadowArmyManager) this.shadowArmyManager.destroy();
             if (this.itemDropManager) this.itemDropManager.destroy();
             if (this.xpOrbPool) this.xpOrbPool.destroy();
@@ -1159,6 +1177,7 @@ export class GameScene extends Phaser.Scene {
             }
 
             this.weaponManager = null;
+            this.characterSkillManager = null;
             this.shadowArmyManager = null;
             this.itemDropManager = null;
             this.xpOrbPool = null;
