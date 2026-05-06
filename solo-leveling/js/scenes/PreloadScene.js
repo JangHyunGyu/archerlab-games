@@ -88,6 +88,22 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     _loadOptionalAssets() {
+        [
+            'ui_panel_cyan',
+            'ui_panel_gold',
+            'ui_panel_red',
+            'ui_panel_purple',
+            'ui_card_cyan',
+            'ui_card_gold',
+            'ui_card_hover',
+            'ui_button_cyan',
+            'ui_button_hover',
+            'ui_slot',
+            'ui_minimap',
+        ].forEach((key) => {
+            this.load.image(key, `assets/ui/${key}.png`);
+        });
+
         this.load.image('ai_player_idle', 'assets/player/player_idle.png');
         this.load.image('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
 

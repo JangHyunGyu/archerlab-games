@@ -65,6 +65,7 @@ export class SystemMessage {
             boxW,
             boxH,
             {
+                asset: colors.asset,
                 cut: uv(8),
                 fill: colors.bg,
                 fillAlpha: 0.86,
@@ -197,26 +198,31 @@ export class SystemMessage {
         switch (type) {
             case 'warning':
                 return {
+                    asset: 'ui_panel_red',
                     bg: 0x2a0a0a, border: 0xff3333, glow: 0xff0000,
                     titleColor: '#ff4444', textColor: '#ffaaaa',
                 };
             case 'quest':
                 return {
+                    asset: 'ui_panel_cyan',
                     bg: 0x0a1a2a, border: 0x44aaff, glow: 0x2288ff,
                     titleColor: '#66ccff', textColor: '#ccddff',
                 };
             case 'levelup':
                 return {
+                    asset: 'ui_panel_purple',
                     bg: 0x0a0a2a, border: 0x7b2fff, glow: 0x6622ff,
                     titleColor: '#b366ff', textColor: '#ddccff',
                 };
             case 'arise':
                 return {
+                    asset: 'ui_panel_purple',
                     bg: 0x0f0020, border: 0x9b44ff, glow: 0x7b2fff,
                     titleColor: '#cc88ff', textColor: '#eeddff',
                 };
             default: // info
                 return {
+                    asset: 'ui_panel_cyan',
                     bg: 0x0a1a2a, border: 0x3388cc, glow: 0x2266aa,
                     titleColor: '#55aadd', textColor: '#aaccdd',
                 };

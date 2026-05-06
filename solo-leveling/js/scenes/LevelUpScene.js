@@ -204,6 +204,8 @@ export class LevelUpScene extends Phaser.Scene {
     _createCard(x, y, w, h, choice) {
         const borderColor = this._cardBorder(choice);
         const panel = UIAssets.createPanel(this, x, y, w, h, {
+            asset: choice.isNew ? 'ui_card_gold' : 'ui_card_cyan',
+            hoverAsset: 'ui_card_hover',
             cut: uv(12),
             fill: SYSTEM.BG_PANEL,
             fillAlpha: 0.9,
@@ -278,6 +280,8 @@ export class LevelUpScene extends Phaser.Scene {
     _createMobileCard(x, y, w, h, choice) {
         const borderColor = this._cardBorder(choice);
         const panel = UIAssets.createPanel(this, x, y, w, h, {
+            asset: choice.isNew ? 'ui_card_gold' : 'ui_card_cyan',
+            hoverAsset: 'ui_card_hover',
             cut: uv(10),
             fill: SYSTEM.BG_PANEL,
             fillAlpha: 0.9,

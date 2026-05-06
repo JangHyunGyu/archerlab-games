@@ -151,6 +151,8 @@ export class MobileControls {
 
         // Status button
         const statusPanel = UIAssets.createPanel(this.scene, btnX, statusY, btnW, btnH, {
+            asset: 'ui_button_cyan',
+            hoverAsset: 'ui_button_hover',
             cut: uv(6),
             fill: SYSTEM.BG_PANEL,
             fillAlpha: 0.85,
@@ -178,6 +180,8 @@ export class MobileControls {
 
         // Sound button
         const soundPanel = UIAssets.createPanel(this.scene, btnX, soundY, btnW, btnH, {
+            asset: 'ui_button_cyan',
+            hoverAsset: 'ui_button_hover',
             cut: uv(6),
             fill: SYSTEM.BG_PANEL,
             fillAlpha: 0.85,

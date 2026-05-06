@@ -179,6 +179,7 @@ export class HUD {
             const y = startY + row * (slotSize + gap);
 
             const slotPanel = UIAssets.createPanel(this.scene, x, y, slotSize, slotSize, {
+                asset: 'ui_slot',
                 cut: uv(4),
                 fill: SYSTEM.BG_PANEL, fillAlpha: 0.75,
                 border: SYSTEM.BORDER_DIM, borderAlpha: 0.85, borderWidth: 1,
@@ -223,6 +224,7 @@ export class HUD {
         this._mmScale = size / WORLD_SIZE;
 
         this._mmBg = UIAssets.createPanel(this.scene, this._mmX, this._mmY, size, size, {
+            asset: 'ui_minimap',
             cut: uv(6),
             fill: SYSTEM.BG_DEEP,
             fillAlpha: 0.72,

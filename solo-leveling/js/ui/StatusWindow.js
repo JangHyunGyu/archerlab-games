@@ -49,6 +49,7 @@ export class StatusWindow {
 
         // Main angular panel
         const panelG = UIAssets.createPanel(this.scene, px, py, w, h, {
+            asset: 'ui_panel_cyan',
             cut: uv(14),
             fill: SYSTEM.BG_PANEL, fillAlpha: 0.95,
             border: SYSTEM.BORDER, borderAlpha: 0.9, borderWidth: 1,
