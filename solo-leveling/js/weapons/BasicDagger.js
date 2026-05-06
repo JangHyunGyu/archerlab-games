@@ -678,7 +678,7 @@ export class BasicDagger extends WeaponBase {
         if (slamSprite) entryObjects.push(slamSprite);
         const entry = this._trackAttackObjects(entryObjects);
         const maceScale = maceSprite
-            ? Phaser.Math.Clamp((targetDist - 8) / Math.max(1, (maceSprite.width || 480) * 0.64), 0.24, 0.36)
+            ? Phaser.Math.Clamp((targetDist - 8) / Math.max(1, (maceSprite.width || 480) * 0.64), 0.22, 0.32)
             : 1;
 
         const draw = (t) => {
@@ -703,9 +703,10 @@ export class BasicDagger extends WeaponBase {
 
             fx.clear();
             if (maceSprite) {
+                const reveal = Phaser.Math.Clamp((k - 0.18) / 0.22, 0, 1);
                 maceSprite.setPosition(headX, headY);
                 maceSprite.setRotation(weaponAngle);
-                maceSprite.setAlpha((0.9 + strike * 0.1) * (1 - followThrough * 0.62));
+                maceSprite.setAlpha(reveal * (0.9 + strike * 0.1) * (1 - followThrough * 0.62));
                 maceSprite.setScale(maceScale * (1 + strike * 0.06));
 
                 fx.lineStyle(14, glowColor, 0.12 * (1 - strike * 0.25));
