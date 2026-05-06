@@ -12,8 +12,9 @@ class EffectManager {
         this._timeouts = new Set();
         this._destroyed = false;
 
-        // ── Particle Graphics pool ──
+        // ── Particle display pools ──
         this._particlePool = [];
+        this._spritePool = [];
         this._POOL_MAX = 400;
 
         // ── Text object pool for score/combo/bonus popups ──
@@ -49,6 +50,66 @@ class EffectManager {
         } else {
             gfx.destroy();
         }
+    }
+
+    _getEffectSprite(textureKey) {
+        const texture = getBlockpangTexture(textureKey);
+        if (!texture) return null;
+
+        let sprite = null;
+        while (this._spritePool.length > 0) {
+            const candidate = this._spritePool.pop();
+            if (!candidate.destroyed) {
+                sprite = candidate;
+                break;
+            }
+        }
+
+        if (!sprite) {
+            sprite = new PIXI.Sprite(texture);
+            sprite.anchor.set(0.5);
+            sprite.eventMode = 'none';
+            sprite._blockpangEffectSprite = true;
+        } else {
+            sprite.texture = texture;
+        }
+
+        sprite.visible = true;
+        sprite.alpha = 1;
+        sprite.tint = 0xFFFFFF;
+        sprite.scale.set(1);
+        sprite.rotation = 0;
+        sprite.position.set(0, 0);
+        return sprite;
+    }
+
+    _releaseEffectSprite(sprite) {
+        if (sprite.destroyed) return;
+        sprite.visible = false;
+        if (sprite.parent) sprite.parent.removeChild(sprite);
+        if (this._spritePool.length < this._POOL_MAX) {
+            this._spritePool.push(sprite);
+        } else {
+            sprite.destroy();
+        }
+    }
+
+    _releaseParticleDisplay(display) {
+        if (!display || display.destroyed) return;
+        if (display._blockpangEffectSprite) {
+            this._releaseEffectSprite(display);
+        } else {
+            this._releaseParticleGfx(display);
+        }
+    }
+
+    _createParticleDisplay(textureKey, fallbackDraw) {
+        const sprite = this._getEffectSprite(textureKey);
+        if (sprite) return sprite;
+
+        const gfx = this._getParticleGfx();
+        if (fallbackDraw) fallbackDraw(gfx);
+        return gfx;
     }
 
     // Get a Text object from pool or create new
@@ -101,7 +162,7 @@ class EffectManager {
             const p = this.particles[i];
             p.life -= dt;
             if (p.life <= 0) {
-                this._releaseParticleGfx(p.gfx);
+                this._releaseParticleDisplay(p.gfx);
                 this.particles.splice(i, 1);
                 continue;
             }
@@ -112,7 +173,10 @@ class EffectManager {
             p.gfx.alpha = p.fadeIn
                 ? (t < 0.1 ? t * 10 : 1 - easeInOutQuad((t - 0.1) / 0.9))
                 : 1 - easeInOutQuad(t);
-            p.gfx.scale.set(p.baseScale * (1 - t * (p.shrink || 0.6)));
+            const shrinkScale = 1 - t * (p.shrink || 0.6);
+            const baseScaleX = p.baseScaleX ?? p.baseScale;
+            const baseScaleY = p.baseScaleY ?? p.baseScale;
+            p.gfx.scale.set(baseScaleX * shrinkScale, baseScaleY * shrinkScale);
             p.gfx.rotation += (p.rotSpeed || 0) * delta;
         }
 
@@ -177,14 +241,13 @@ class EffectManager {
             const speed = 3 + Math.random() * 6;
             const size = 2 + Math.random() * (cellSize * 0.22);
 
-            const gfx = this._getParticleGfx();
-
-            // Outer glow (bigger, more vibrant)
-            gfx.circle(0, 0, size * 2.0).fill({ color, alpha: 0.25 });
-            // Main particle (slightly larger)
-            gfx.roundRect(-size / 2, -size / 2, size, size, size * 0.3).fill({ color });
-            // Bright white-hot center
-            gfx.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.85 });
+            const gfx = this._createParticleDisplay('effectShard', (g) => {
+                g.circle(0, 0, size * 2.0).fill({ color, alpha: 0.25 });
+                g.roundRect(-size / 2, -size / 2, size, size, size * 0.3).fill({ color });
+                g.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.85 });
+            });
+            const isSprite = !!gfx._blockpangEffectSprite;
+            if (isSprite) gfx.tint = color;
 
             gfx.position.set(cx, cy);
             this.container.addChild(gfx);
@@ -195,7 +258,7 @@ class EffectManager {
                 vy: Math.sin(angle) * speed - 3.5,
                 rotSpeed: (Math.random() - 0.5) * 0.35,
                 gravity: 0.14,
-                baseScale: 0.9 + Math.random() * 0.5,
+                baseScale: isSprite ? (size * (3.6 + Math.random() * 1.2)) / 64 : 0.9 + Math.random() * 0.5,
                 shrink: 0.65,
                 life: 600 + Math.random() * 500,
                 maxLife: 1100,
@@ -209,9 +272,12 @@ class EffectManager {
             const speed = 5 + Math.random() * 8;
             const size = 1 + Math.random() * 1.5;
 
-            const gfx = this._getParticleGfx();
-            gfx.circle(0, 0, size).fill({ color: 0xFFFFFF, alpha: 0.9 });
-            gfx.circle(0, 0, size * 2.5).fill({ color, alpha: 0.3 });
+            const gfx = this._createParticleDisplay('effectSoftCircle', (g) => {
+                g.circle(0, 0, size).fill({ color: 0xFFFFFF, alpha: 0.9 });
+                g.circle(0, 0, size * 2.5).fill({ color, alpha: 0.3 });
+            });
+            const isSprite = !!gfx._blockpangEffectSprite;
+            if (isSprite) gfx.tint = color;
 
             gfx.position.set(cx + (Math.random() - 0.5) * cellSize * 0.3,
                              cy + (Math.random() - 0.5) * cellSize * 0.3);
@@ -223,7 +289,7 @@ class EffectManager {
                 vy: Math.sin(angle) * speed - 2,
                 rotSpeed: 0,
                 gravity: 0.06,
-                baseScale: 0.6 + Math.random() * 0.5,
+                baseScale: isSprite ? (size * (4.5 + Math.random() * 1.8)) / 64 : 0.6 + Math.random() * 0.5,
                 shrink: 0.8,
                 life: 300 + Math.random() * 400,
                 maxLife: 700,
@@ -235,12 +301,13 @@ class EffectManager {
     spawnSparkles(worldX, worldY, color, count = 5) {
         for (let i = 0; i < count; i++) {
             const size = 1.5 + Math.random() * 3.5;
-            const gfx = this._getParticleGfx();
-
-            // Bright sparkle with outer glow
-            gfx.circle(0, 0, size * 0.6).fill({ color: 0xFFFFFF, alpha: 0.9 });
-            gfx.circle(0, 0, size * 1.5).fill({ color, alpha: 0.5 });
-            gfx.circle(0, 0, size * 2.5).fill({ color, alpha: 0.15 });
+            const gfx = this._createParticleDisplay('effectSparkle', (g) => {
+                g.circle(0, 0, size * 0.6).fill({ color: 0xFFFFFF, alpha: 0.9 });
+                g.circle(0, 0, size * 1.5).fill({ color, alpha: 0.5 });
+                g.circle(0, 0, size * 2.5).fill({ color, alpha: 0.15 });
+            });
+            const isSprite = !!gfx._blockpangEffectSprite;
+            if (isSprite) gfx.tint = color;
 
             gfx.position.set(
                 worldX + (Math.random() - 0.5) * 40,
@@ -254,7 +321,7 @@ class EffectManager {
                 vy: -1.5 - Math.random() * 2.5,
                 rotSpeed: 0,
                 gravity: -0.03, // Float upward faster
-                baseScale: 0.5 + Math.random() * 0.9,
+                baseScale: isSprite ? (size * (5.5 + Math.random() * 2.2)) / 64 : 0.5 + Math.random() * 0.9,
                 shrink: 0.45,
                 fadeIn: true,
                 life: 700 + Math.random() * 700,
@@ -269,12 +336,13 @@ class EffectManager {
             const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.6;
             const speed = 4 + Math.random() * 7;
             const size = 2.5 + Math.random() * 5;
-            const gfx = this._getParticleGfx();
-
-            // 4-pointed star shape with glow
-            gfx.star(0, 0, 4, size * 1.8, size * 0.5).fill({ color, alpha: 0.2 });
-            gfx.star(0, 0, 4, size, size * 0.4).fill({ color, alpha: 0.9 });
-            gfx.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.9 });
+            const gfx = this._createParticleDisplay('effectStar', (g) => {
+                g.star(0, 0, 4, size * 1.8, size * 0.5).fill({ color, alpha: 0.2 });
+                g.star(0, 0, 4, size, size * 0.4).fill({ color, alpha: 0.9 });
+                g.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.9 });
+            });
+            const isSprite = !!gfx._blockpangEffectSprite;
+            if (isSprite) gfx.tint = color;
 
             gfx.position.set(worldX, worldY);
             this.container.addChild(gfx);
@@ -285,7 +353,7 @@ class EffectManager {
                 vy: Math.sin(angle) * speed,
                 rotSpeed: (Math.random() - 0.5) * 0.4,
                 gravity: 0.04,
-                baseScale: 0.9 + Math.random() * 0.7,
+                baseScale: isSprite ? (size * (4.5 + Math.random() * 1.8)) / 64 : 0.9 + Math.random() * 0.7,
                 shrink: 0.55,
                 life: 700 + Math.random() * 600,
                 maxLife: 1300,
@@ -325,16 +393,19 @@ class EffectManager {
                 // ── 2. Cell flash: bright white flash at cell position ──
                 const cellCx = wx + cellSize / 2;
                 const cellCy = wy + cellSize / 2;
-                const flash = this._getParticleGfx();
                 const flashSize = cellSize * (0.6 + intensity * 0.15);
-                flash.circle(0, 0, flashSize).fill({ color: 0xFFFFFF, alpha: 0.7 });
-                flash.circle(0, 0, flashSize * 0.5).fill({ color, alpha: 0.5 });
+                const flash = this._createParticleDisplay('effectSoftCircle', (g) => {
+                    g.circle(0, 0, flashSize).fill({ color: 0xFFFFFF, alpha: 0.7 });
+                    g.circle(0, 0, flashSize * 0.5).fill({ color, alpha: 0.5 });
+                });
+                const flashIsSprite = !!flash._blockpangEffectSprite;
+                if (flashIsSprite) flash.tint = color;
                 flash.position.set(cellCx, cellCy);
                 this.container.addChild(flash);
                 this.particles.push({
                     gfx: flash,
                     vx: 0, vy: 0, rotSpeed: 0, gravity: 0,
-                    baseScale: 0.5,
+                    baseScale: flashIsSprite ? (flashSize * 2) / 64 : 0.5,
                     shrink: -1.5, // GROW then fade
                     life: 150 + intensity * 30,
                     maxLife: 150 + intensity * 30,
@@ -348,19 +419,18 @@ class EffectManager {
                 for (let d = 0; d < debrisCount; d++) {
                     const fragW = cellSize * (0.1 + Math.random() * 0.3);
                     const fragH = cellSize * (0.1 + Math.random() * 0.3);
-                    const frag = this._getParticleGfx();
-
-                    // Fragment with same block color
-                    frag.roundRect(-fragW / 2, -fragH / 2, fragW, fragH, 1)
-                        .fill({ color: blockColor.main });
-                    // Bright edge highlight (sharper, more visible)
-                    frag.roundRect(-fragW * 0.35, -fragH * 0.35, fragW * 0.7, fragH * 0.7, 1)
-                        .fill({ color: blockColor.light || 0xFFFFFF, alpha: 0.6 });
-                    // Hot white center
-                    if (Math.random() < 0.4) {
-                        frag.circle(0, 0, Math.min(fragW, fragH) * 0.2)
-                            .fill({ color: 0xFFFFFF, alpha: 0.5 });
-                    }
+                    const frag = this._createParticleDisplay('effectShard', (g) => {
+                        g.roundRect(-fragW / 2, -fragH / 2, fragW, fragH, 1)
+                            .fill({ color: blockColor.main });
+                        g.roundRect(-fragW * 0.35, -fragH * 0.35, fragW * 0.7, fragH * 0.7, 1)
+                            .fill({ color: blockColor.light || 0xFFFFFF, alpha: 0.6 });
+                        if (Math.random() < 0.4) {
+                            g.circle(0, 0, Math.min(fragW, fragH) * 0.2)
+                                .fill({ color: 0xFFFFFF, alpha: 0.5 });
+                        }
+                    });
+                    const fragIsSprite = !!frag._blockpangEffectSprite;
+                    if (fragIsSprite) frag.tint = blockColor.light || blockColor.main;
 
                     // Start from position within the cell
                     frag.position.set(
@@ -380,7 +450,9 @@ class EffectManager {
                         vy: Math.sin(angle) * speed * (0.7 + Math.random() * 0.6) - 4 - Math.random() * 3,
                         rotSpeed: (Math.random() - 0.5) * 0.6,
                         gravity: 0.2 + Math.random() * 0.1,
-                        baseScale: 0.5 + Math.random() * 0.6,
+                        baseScale: fragIsSprite ? 1 : 0.5 + Math.random() * 0.6,
+                        baseScaleX: fragIsSprite ? (fragW * (1.2 + Math.random() * 0.8)) / 64 : undefined,
+                        baseScaleY: fragIsSprite ? (fragH * (1.2 + Math.random() * 0.8)) / 64 : undefined,
                         shrink: 0.55,
                         life: 500 + Math.random() * 600,
                         maxLife: 1100,
@@ -390,9 +462,12 @@ class EffectManager {
                 // ── 4. Micro-debris dust cloud (tiny particles, lots) ──
                 const dustCount = 3 + intensity * 2;
                 for (let d = 0; d < dustCount; d++) {
-                    const dust = this._getParticleGfx();
                     const dustSize = 1 + Math.random() * 2;
-                    dust.circle(0, 0, dustSize).fill({ color: blockColor.light || color, alpha: 0.6 });
+                    const dust = this._createParticleDisplay('effectSoftCircle', (g) => {
+                        g.circle(0, 0, dustSize).fill({ color: blockColor.light || color, alpha: 0.6 });
+                    });
+                    const dustIsSprite = !!dust._blockpangEffectSprite;
+                    if (dustIsSprite) dust.tint = blockColor.light || color;
                     dust.position.set(
                         cellCx + (Math.random() - 0.5) * cellSize,
                         cellCy + (Math.random() - 0.5) * cellSize
@@ -407,7 +482,7 @@ class EffectManager {
                         vy: Math.sin(dAngle) * dSpeed - 1,
                         rotSpeed: 0,
                         gravity: 0.03,
-                        baseScale: 0.8 + Math.random() * 0.4,
+                        baseScale: dustIsSprite ? (dustSize * (4 + Math.random() * 1.5)) / 64 : 0.8 + Math.random() * 0.4,
                         shrink: 0.7,
                         fadeIn: true,
                         life: 400 + Math.random() * 500,
@@ -1085,10 +1160,14 @@ class EffectManager {
     playMultiRingWave(x, y, count, colors, maxRadius) {
         for (let r = 0; r < count; r++) {
             const ringColor = colors[r % colors.length];
-            const wave = new PIXI.Graphics();
+            const wave = this._getEffectSprite('effectRing') || new PIXI.Graphics();
+            const isSpriteWave = !!wave._blockpangEffectSprite;
+            if (isSpriteWave) wave.tint = ringColor;
             wave.position.set(x, y);
             this.container.addChild(wave);
 
+            const self = this;
+            const textureSize = isSpriteWave ? Math.max(wave.texture.width || 128, wave.texture.height || 128) : 1;
             this.tweens.push({
                 elapsed: 0,
                 duration: 500 + r * 80,
@@ -1102,11 +1181,21 @@ class EffectManager {
                     const alpha = (1 - t) * 0.6;
                     const thickness = (4 + count - r) * (1 - t * 0.6);
 
-                    wave.clear();
-                    wave.circle(0, 0, radius).stroke({ width: thickness, color: ringColor, alpha });
-                    wave.circle(0, 0, radius * 0.85).stroke({ width: thickness * 0.4, color: 0xFFFFFF, alpha: alpha * 0.4 });
+                    if (isSpriteWave) {
+                        const scale = (radius * 2) / textureSize;
+                        wave.scale.set(scale);
+                        wave.alpha = alpha;
+                    } else {
+                        wave.clear();
+                        wave.circle(0, 0, radius).stroke({ width: thickness, color: ringColor, alpha });
+                        wave.circle(0, 0, radius * 0.85).stroke({ width: thickness * 0.4, color: 0xFFFFFF, alpha: alpha * 0.4 });
+                    }
 
-                    if (t >= 1) { wave.destroy(); return true; }
+                    if (t >= 1) {
+                        if (isSpriteWave) self._releaseEffectSprite(wave);
+                        else wave.destroy();
+                        return true;
+                    }
                     return false;
                 }
             });
@@ -1121,9 +1210,12 @@ class EffectManager {
         for (let i = 0; i < count; i++) {
             const color = colors[Math.floor(Math.random() * colors.length)];
             const size = 1 + Math.random() * 3;
-            const gfx = this._getParticleGfx();
-            gfx.circle(0, 0, size).fill({ color, alpha: 0.8 });
-            gfx.circle(0, 0, size * 1.8).fill({ color, alpha: 0.3 });
+            const gfx = this._createParticleDisplay('effectSparkle', (g) => {
+                g.circle(0, 0, size).fill({ color, alpha: 0.8 });
+                g.circle(0, 0, size * 1.8).fill({ color, alpha: 0.3 });
+            });
+            const isSprite = !!gfx._blockpangEffectSprite;
+            if (isSprite) gfx.tint = color;
 
             gfx.position.set(Math.random() * w, -10 - Math.random() * 50);
             this.container.addChild(gfx);
@@ -1134,7 +1226,7 @@ class EffectManager {
                 vy: 1 + Math.random() * 3,
                 rotSpeed: (Math.random() - 0.5) * 0.1,
                 gravity: 0.03,
-                baseScale: 0.5 + Math.random() * 0.8,
+                baseScale: isSprite ? (size * (5 + Math.random() * 2)) / 64 : 0.5 + Math.random() * 0.8,
                 shrink: 0.4,
                 fadeIn: true,
                 life: 800 + Math.random() * 800,
@@ -1343,12 +1435,16 @@ class EffectManager {
     playRingBurst(x, y, color = 0x44FF88, baseRadius = 60) {
         const ringCount = 2;
         for (let r = 0; r < ringCount; r++) {
-            const ring = new PIXI.Graphics();
+            const ring = this._getEffectSprite('effectRing') || new PIXI.Graphics();
+            const isSpriteRing = !!ring._blockpangEffectSprite;
+            if (isSpriteRing) ring.tint = color;
             ring.position.set(x, y);
             this.container.addChild(ring);
 
             const delayMs = r * 80;
             const maxRadius = baseRadius + r * 30;
+            const textureSize = isSpriteRing ? Math.max(ring.texture.width || 128, ring.texture.height || 128) : 1;
+            const self = this;
             this.tweens.push({
                 elapsed: 0,
                 duration: 450 + r * 100,
@@ -1361,25 +1457,40 @@ class EffectManager {
                     const radius = 10 + easeOutCubic(t) * maxRadius;
                     const alpha = (1 - easeInOutQuad(t)) * 0.7;
                     const thickness = 3 * (1 - t * 0.7);
-                    ring.clear();
-                    ring.circle(0, 0, radius).stroke({ width: thickness, color, alpha });
-                    // Inner bright ring
-                    if (t < 0.5) {
-                        ring.circle(0, 0, radius - 2).stroke({ width: 1, color: 0xFFFFFF, alpha: alpha * 0.5 });
+                    if (isSpriteRing) {
+                        const scale = (radius * 2) / textureSize;
+                        ring.scale.set(scale);
+                        ring.alpha = alpha;
+                    } else {
+                        ring.clear();
+                        ring.circle(0, 0, radius).stroke({ width: thickness, color, alpha });
+                        // Inner bright ring
+                        if (t < 0.5) {
+                            ring.circle(0, 0, radius - 2).stroke({ width: 1, color: 0xFFFFFF, alpha: alpha * 0.5 });
+                        }
                     }
-                    if (t >= 1) { ring.destroy(); return true; }
+                    if (t >= 1) {
+                        if (isSpriteRing) self._releaseEffectSprite(ring);
+                        else ring.destroy();
+                        return true;
+                    }
                     return false;
                 }
             });
         }
 
         // Central flash
-        const flash = new PIXI.Graphics();
-        flash.circle(0, 0, 15).fill({ color: 0xFFFFFF, alpha: 0.5 });
-        flash.circle(0, 0, 25).fill({ color, alpha: 0.3 });
+        const flash = this._createParticleDisplay('effectSoftCircle', (g) => {
+            g.circle(0, 0, 15).fill({ color: 0xFFFFFF, alpha: 0.5 });
+            g.circle(0, 0, 25).fill({ color, alpha: 0.3 });
+        });
+        const isSpriteFlash = !!flash._blockpangEffectSprite;
+        if (isSpriteFlash) flash.tint = color;
         flash.position.set(x, y);
         this.container.addChild(flash);
 
+        const self = this;
+        const flashBaseScale = isSpriteFlash ? 0.8 : 1;
         this.tweens.push({
             elapsed: 0,
             duration: 200,
@@ -1387,9 +1498,12 @@ class EffectManager {
                 if (flash.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
-                flash.scale.set(1 + easeOutCubic(t) * 1.5);
+                flash.scale.set(flashBaseScale * (1 + easeOutCubic(t) * 1.5));
                 flash.alpha = 1 - easeOutCubic(t);
-                if (t >= 1) { flash.destroy(); return true; }
+                if (t >= 1) {
+                    self._releaseParticleDisplay(flash);
+                    return true;
+                }
                 return false;
             }
         });
@@ -1469,10 +1583,14 @@ class EffectManager {
         const maxRadius = 100 + intensity * 50;
 
         // Primary shockwave ring (bigger, brighter)
-        const wave = new PIXI.Graphics();
+        const wave = this._getEffectSprite('effectRing') || new PIXI.Graphics();
+        const isSpriteWave = !!wave._blockpangEffectSprite;
+        if (isSpriteWave) wave.tint = 0x44FF88;
         wave.position.set(x, y);
         this.container.addChild(wave);
 
+        const self = this;
+        const waveTextureSize = isSpriteWave ? Math.max(wave.texture.width || 128, wave.texture.height || 128) : 1;
         this.tweens.push({
             elapsed: 0,
             duration: 650,
@@ -1483,24 +1601,37 @@ class EffectManager {
                 const radius = easeOutQuart(t) * maxRadius;
                 const alpha = (1 - t) * 0.7;
                 const thickness = (5 + intensity * 1.5) * (1 - t * 0.5);
-                wave.clear();
-                // Outer ring (brighter)
-                wave.circle(0, 0, radius).stroke({ width: thickness, color: 0xFFFFFF, alpha: alpha * 0.5 });
-                // Inner bright ring
-                wave.circle(0, 0, radius * 0.85).stroke({ width: thickness * 0.6, color: 0x44FF88, alpha: alpha * 0.7 });
-                // Fill glow (more visible)
-                wave.circle(0, 0, radius).fill({ color: 0xFFFFFF, alpha: alpha * 0.05 });
-                if (t >= 1) { wave.destroy(); return true; }
+                if (isSpriteWave) {
+                    const scale = (radius * 2) / waveTextureSize;
+                    wave.scale.set(scale);
+                    wave.alpha = alpha;
+                } else {
+                    wave.clear();
+                    // Outer ring (brighter)
+                    wave.circle(0, 0, radius).stroke({ width: thickness, color: 0xFFFFFF, alpha: alpha * 0.5 });
+                    // Inner bright ring
+                    wave.circle(0, 0, radius * 0.85).stroke({ width: thickness * 0.6, color: 0x44FF88, alpha: alpha * 0.7 });
+                    // Fill glow (more visible)
+                    wave.circle(0, 0, radius).fill({ color: 0xFFFFFF, alpha: alpha * 0.05 });
+                }
+                if (t >= 1) {
+                    if (isSpriteWave) self._releaseEffectSprite(wave);
+                    else wave.destroy();
+                    return true;
+                }
                 return false;
             }
         });
 
         // Secondary inner shockwave (delayed, faster)
         if (intensity >= 2) {
-            const wave2 = new PIXI.Graphics();
+            const wave2 = this._getEffectSprite('effectRing') || new PIXI.Graphics();
+            const isSpriteWave2 = !!wave2._blockpangEffectSprite;
+            if (isSpriteWave2) wave2.tint = 0x00E5FF;
             wave2.position.set(x, y);
             this.container.addChild(wave2);
 
+            const wave2TextureSize = isSpriteWave2 ? Math.max(wave2.texture.width || 128, wave2.texture.height || 128) : 1;
             this.tweens.push({
                 elapsed: 0,
                 duration: 450,
@@ -1512,9 +1643,19 @@ class EffectManager {
                     const t = Math.min(this.elapsed / this.duration, 1);
                     const radius = easeOutQuart(t) * maxRadius * 0.7;
                     const alpha = (1 - t) * 0.5;
-                    wave2.clear();
-                    wave2.circle(0, 0, radius).stroke({ width: 3 * (1 - t), color: 0x00E5FF, alpha });
-                    if (t >= 1) { wave2.destroy(); return true; }
+                    if (isSpriteWave2) {
+                        const scale = (radius * 2) / wave2TextureSize;
+                        wave2.scale.set(scale);
+                        wave2.alpha = alpha;
+                    } else {
+                        wave2.clear();
+                        wave2.circle(0, 0, radius).stroke({ width: 3 * (1 - t), color: 0x00E5FF, alpha });
+                    }
+                    if (t >= 1) {
+                        if (isSpriteWave2) self._releaseEffectSprite(wave2);
+                        else wave2.destroy();
+                        return true;
+                    }
                     return false;
                 }
             });
@@ -1528,9 +1669,12 @@ class EffectManager {
             const size = 1.5 + Math.random() * 2.5;
             const pColor = i % 3 === 0 ? 0xFFFFFF : i % 3 === 1 ? 0x44FF88 : 0x00E5FF;
 
-            const gfx = this._getParticleGfx();
-            gfx.circle(0, 0, size).fill({ color: pColor, alpha: 0.9 });
-            gfx.circle(0, 0, size * 2.2).fill({ color: pColor, alpha: 0.3 });
+            const gfx = this._createParticleDisplay('effectSoftCircle', (g) => {
+                g.circle(0, 0, size).fill({ color: pColor, alpha: 0.9 });
+                g.circle(0, 0, size * 2.2).fill({ color: pColor, alpha: 0.3 });
+            });
+            const isSprite = !!gfx._blockpangEffectSprite;
+            if (isSprite) gfx.tint = pColor;
             gfx.position.set(x, y);
             this.container.addChild(gfx);
 
@@ -1540,7 +1684,7 @@ class EffectManager {
                 vy: Math.sin(angle) * speed,
                 rotSpeed: 0,
                 gravity: 0.02,
-                baseScale: 0.9 + Math.random() * 0.5,
+                baseScale: isSprite ? (size * (5 + Math.random() * 2)) / 64 : 0.9 + Math.random() * 0.5,
                 shrink: 0.75,
                 life: 450 + Math.random() * 350,
                 maxLife: 800,
@@ -1598,6 +1742,10 @@ class EffectManager {
             const gfx = this._particlePool.pop();
             if (!gfx.destroyed) gfx.destroy();
         }
+        while (this._spritePool.length > targetSize) {
+            const sprite = this._spritePool.pop();
+            if (!sprite.destroyed) sprite.destroy();
+        }
     }
 
     clearTransient({ trimPoolSize = 80 } = {}) {
@@ -1607,7 +1755,7 @@ class EffectManager {
 
         this.particles.forEach((p) => {
             if (p && p.gfx && !p.gfx.destroyed) {
-                this._releaseParticleGfx(p.gfx);
+                this._releaseParticleDisplay(p.gfx);
             }
         });
         this.particles = [];
@@ -1616,6 +1764,7 @@ class EffectManager {
         leftovers.forEach((child) => {
             if (!child || child.destroyed) return;
             if (this._particlePool.includes(child)) return;
+            if (this._spritePool.includes(child)) return;
             child.destroy({ children: true });
         });
 
@@ -1648,6 +1797,8 @@ class EffectManager {
         this.tweens = [];
         this._particlePool.forEach(gfx => { if (!gfx.destroyed) gfx.destroy(); });
         this._particlePool = [];
+        this._spritePool.forEach(sprite => { if (!sprite.destroyed) sprite.destroy(); });
+        this._spritePool = [];
         this._textPool.forEach(txt => { if (!txt.destroyed) txt.destroy(); });
         this._textPool = [];
         this.container.destroy({ children: true });
