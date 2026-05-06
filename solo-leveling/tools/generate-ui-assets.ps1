@@ -167,6 +167,9 @@ Draw-PanelAsset 'ui_panel_purple'   768 288 0xb366ff 0x7b2fff 0x180a2f 0x04020a 
 Draw-PanelAsset 'ui_card_cyan'      384 512 0x4dd2ff 0x4dd2ff 0x10243a 0x040814 30 22 2
 Draw-PanelAsset 'ui_card_gold'      384 512 0xe8b64a 0xffd36a 0x231808 0x050608 30 24 2
 Draw-PanelAsset 'ui_card_hover'     384 512 0x7be3ff 0x4dd2ff 0x162e48 0x050a16 30 26 3
+Draw-PanelAsset 'ui_choice_cyan'    960 272 0x4dd2ff 0x4dd2ff 0x10243a 0x040814 28 20 2
+Draw-PanelAsset 'ui_choice_gold'    960 272 0xe8b64a 0xffd36a 0x231808 0x050608 28 22 2
+Draw-PanelAsset 'ui_choice_hover'   960 272 0x7be3ff 0x4dd2ff 0x162e48 0x050a16 28 24 3
 Draw-PanelAsset 'ui_button_cyan'    224 96  0x4dd2ff 0x4dd2ff 0x102338 0x040814 18 16 2
 Draw-PanelAsset 'ui_button_hover'   224 96  0x8cecff 0x4dd2ff 0x183957 0x06101d 18 20 3
 Draw-PanelAsset 'ui_slot'           112 112 0x1f5c8f 0x4dd2ff 0x0b1725 0x02050a 12 12 2
