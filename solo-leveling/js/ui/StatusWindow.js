@@ -1,7 +1,7 @@
 import {
     GAME_WIDTH, GAME_HEIGHT, RANKS,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
-    fs, uv, drawSystemPanel,
+    fs, uv, drawSystemPanel, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
 
@@ -17,6 +17,10 @@ export class StatusWindow {
         this.tabKey = scene.input.keyboard.addKey('TAB');
         this._onTabDown = () => this.toggle();
         this.tabKey.on('down', this._onTabDown);
+    }
+
+    _text(x, y, value, style) {
+        return padText(this.scene.add.text(x, y, value, style), 2, 2);
     }
 
     toggle() {
@@ -52,17 +56,18 @@ export class StatusWindow {
         this.elements.push(panelG);
 
         // Header tag
-        const tag = this.scene.add.text(px + uv(20), py - uv(9), '  STATUS  ', {
+        const tag = this._text(px + uv(20), py + uv(8), '  STATUS  ', {
             fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
             backgroundColor: '#05070d', padding: { left: 6, right: 6, top: 1, bottom: 1 },
         }).setDepth(303).setScrollFactor(0);
         this.elements.push(tag);
 
         // Title
-        const title = this.scene.add.text(cx, py + uv(26), t('statusTitle'), {
+        const title = this._text(cx, py + uv(30), t('statusTitle'), {
             fontSize: fs(20), fontFamily: UI_FONT_KR, fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT, letterSpacing: 2,
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
+        fitText(title, w - uv(60), uv(44), 0.68);
         this.elements.push(title);
 
         // Title underline
@@ -90,7 +95,7 @@ export class StatusWindow {
         yOff += uv(14);
 
         // Stats section header
-        const statsHeader = this.scene.add.text(px + uv(26), yOff, '▸  ' + t('statSection'), {
+        const statsHeader = this._text(px + uv(26), yOff, '▸  ' + t('statSection'), {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN, letterSpacing: 1,
         }).setDepth(303).setScrollFactor(0);
@@ -120,14 +125,14 @@ export class StatusWindow {
         yOff += uv(14);
 
         // Shadow army section
-        const shadowHeader = this.scene.add.text(px + uv(26), yOff, '▸  ' + t('statShadow'), {
+        const shadowHeader = this._text(px + uv(26), yOff, '▸  ' + t('statShadow'), {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN, letterSpacing: 1,
         }).setDepth(303).setScrollFactor(0);
         this.elements.push(shadowHeader);
 
         const shadowCount = this.scene.shadowArmyManager?.getSoldierCount() || 0;
-        const shadowCountText = this.scene.add.text(px + w - uv(30), yOff,
+        const shadowCountText = this._text(px + w - uv(30), yOff,
             String(shadowCount).padStart(2, '0') + (t('statUnit') || ''), {
             fontSize: fs(13), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN,
@@ -142,9 +147,10 @@ export class StatusWindow {
         });
 
         // Close hint
-        const hint = this.scene.add.text(cx, py + h - uv(20), '[ TAB ]  ' + t('tabClose'), {
+        const hint = this._text(cx, py + h - uv(24), '[ TAB ]  ' + t('tabClose'), {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
+        fitText(hint, w - uv(40), 0, 0.72);
         this.elements.push(hint);
 
         // Fade in
@@ -161,15 +167,17 @@ export class StatusWindow {
     }
 
     _addRow(labelX, valueX, y, label, value, valueColor, labelSize = 12) {
-        const labelText = this.scene.add.text(labelX, y, label, {
+        const labelText = this._text(labelX, y, label, {
             fontSize: fs(labelSize), fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_CYAN_DIM,
         }).setOrigin(0, 0).setDepth(303).setScrollFactor(0);
 
-        const valueText = this.scene.add.text(valueX, y, value, {
+        const valueText = this._text(valueX, y, value, {
             fontSize: fs(labelSize + 1), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: valueColor,
         }).setOrigin(1, 0).setDepth(303).setScrollFactor(0);
+        fitText(labelText, Math.max(1, valueX - labelX - uv(64)), 0, 0.7);
+        fitText(valueText, uv(128), 0, 0.7);
 
         this.elements.push(labelText, valueText);
     }

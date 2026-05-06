@@ -1,4 +1,4 @@
-import { GAME_WIDTH, GAME_HEIGHT, fs, uv } from '../utils/Constants.js';
+import { GAME_WIDTH, GAME_HEIGHT, fs, uv, fitText, padText } from '../utils/Constants.js';
 
 /**
  * 그림자 서바이벌의 시스템 창 UI입니다.
@@ -81,12 +81,13 @@ export class SystemMessage {
         elements.push(diamondL, diamondR);
 
         // Title text
-        const titleText = this.scene.add.text(cx, startY - boxH / 2 + uv(18), msg.title, {
+        const titleText = padText(this.scene.add.text(cx, startY - boxH / 2 + uv(18), msg.title, {
             fontSize: fs(13),
             fontFamily: 'Arial',
             fontStyle: 'bold',
             color: colors.titleColor,
-        }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0);
+        }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
+        fitText(titleText, boxW - uv(30), 0, 0.72);
         elements.push(titleText);
 
         // Horizontal line under title
@@ -97,11 +98,12 @@ export class SystemMessage {
         // Body lines
         const bodyTexts = [];
         msg.lines.forEach((line, i) => {
-            const t = this.scene.add.text(cx, startY - boxH / 2 + uv(48) + i * lineH, line, {
+            const t = padText(this.scene.add.text(cx, startY - boxH / 2 + uv(48) + i * lineH, line, {
                 fontSize: fs(14),
                 fontFamily: 'Arial',
                 color: colors.textColor,
-            }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0);
+            }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
+            fitText(t, boxW - uv(34), lineH, 0.68);
             elements.push(t);
             bodyTexts.push(t);
         });

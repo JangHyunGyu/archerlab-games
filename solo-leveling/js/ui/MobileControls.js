@@ -1,7 +1,7 @@
 import {
     GAME_WIDTH, GAME_HEIGHT,
     SYSTEM, UI_FONT_MONO,
-    fs, uv, drawSystemPanel,
+    fs, uv, drawSystemPanel, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
 
@@ -141,10 +141,11 @@ export class MobileControls {
     }
 
     _createButtons() {
-        const btnW = uv(52);
+        const isPortrait = GAME_HEIGHT > GAME_WIDTH;
+        const btnW = uv(isPortrait ? 52 : 58);
         const btnH = uv(36);
         const btnX = GAME_WIDTH - uv(12) - btnW;
-        const statusY = uv(70);
+        const statusY = isPortrait ? uv(70) : uv(118);
         const soundY = statusY + btnH + uv(10);
 
         // Status button
@@ -161,10 +162,11 @@ export class MobileControls {
 
         const statusHit = this.scene.add.rectangle(btnX + btnW / 2, statusY + btnH / 2, btnW, btnH, 0x000000, 0)
             .setDepth(601).setScrollFactor(0).setInteractive();
-        const statusText = this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
+        const statusText = padText(this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN,
-        }).setOrigin(0.5).setDepth(602).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
+        fitText(statusText, btnW - uv(8), btnH - uv(4), 0.62);
         this.elements.push(statusG, statusHit, statusText);
 
         statusHit.on('pointerover', () => drawStatus(true));
@@ -187,10 +189,11 @@ export class MobileControls {
 
         const soundHit = this.scene.add.rectangle(btnX + btnW / 2, soundY + btnH / 2, btnW, btnH, 0x000000, 0)
             .setDepth(601).setScrollFactor(0).setInteractive();
-        this.soundBtnText = this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, 'SND', {
+        this.soundBtnText = padText(this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, 'SND', {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN,
-        }).setOrigin(0.5).setDepth(602).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
+        fitText(this.soundBtnText, btnW - uv(8), btnH - uv(4), 0.62);
         this.elements.push(soundG, soundHit, this.soundBtnText);
 
         soundHit.on('pointerover', () => drawSound(true));
@@ -200,6 +203,7 @@ export class MobileControls {
                 const enabled = this.scene.soundManager.toggleSound();
                 this.soundBtnText.setText(enabled ? 'SND' : 'MUTE');
                 this.soundBtnText.setColor(enabled ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED);
+                fitText(this.soundBtnText, btnW - uv(8), btnH - uv(4), 0.62);
             }
         });
     }

@@ -133,7 +133,10 @@ export class GameScene extends Phaser.Scene {
                 this.statusWindow.close();
                 this.statusWindow.open();
             }
-            if (this.mobileControls) this.mobileControls.updateLayout();
+            if (this.mobileControls) {
+                this.mobileControls.destroy();
+                this.mobileControls = new MobileControls(this);
+            }
             if (this._vignetteOverlay) {
                 const cam = this.cameras.main;
                 this._vignetteOverlay.setPosition(cam.width / 2, cam.height / 2);
