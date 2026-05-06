@@ -4,7 +4,7 @@ import { WEAPONS } from '../utils/Constants.js';
 export class BasicDagger extends WeaponBase {
     constructor(scene, player, config = WEAPONS.basicDagger) {
         super(scene, player, config);
-        this.attackRange = 205;
+        this.attackRange = config.attackRange || 205;
 
         this._bladePool = [];
         this._activeThrusts = [];
@@ -45,8 +45,118 @@ export class BasicDagger extends WeaponBase {
     }
 
     fire() {
+        const style = this.config.attackStyle || 'daggerThrust';
         for (let i = 0; i < this.count; i++) {
-            this._delay(i * 110, () => this._thrust());
+            this._delay(i * (style === 'fireball' ? 145 : 110), () => this._attackByStyle(style));
+        }
+    }
+
+    _attackByStyle(style) {
+        switch (style) {
+            case 'swordSlash':
+                this._swordSlash();
+                break;
+            case 'clawSwipe':
+                this._clawSwipe();
+                break;
+            case 'maceSlam':
+                this._maceSlam();
+                break;
+            case 'fireball':
+                this._fireball();
+                break;
+            default:
+                this._thrust();
+                break;
+        }
+    }
+
+    _getConfiguredEffectTexture(prop = 'basicAttackEffectKey') {
+        const key = this.config[prop] || this.config.effectKey;
+        const textureKey = key ? `char_skill_${key}` : null;
+        return textureKey && this.scene?.textures?.exists(textureKey) ? textureKey : null;
+    }
+
+    _getAttackSetup({ rangeBonus = 50, duration = 240 } = {}) {
+        const target = this.player.getClosestEnemy(this.attackRange + this.extraRange + rangeBonus);
+        const fallbackAngle = this.player.moveIntensity > 0.12
+            ? this.player.lastMoveAngle
+            : (this.player.facingRight ? 0 : Math.PI);
+        const baseAngle = target
+            ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
+            : fallbackAngle;
+
+        const facing = Math.cos(baseAngle);
+        if (Math.abs(facing) > 0.15) {
+            this.player.facingRight = facing > 0;
+        }
+
+        this._stabSide *= -1;
+        const side = this._stabSide;
+        if (this.player.playAttackMotion) {
+            this.player.playAttackMotion(baseAngle, duration, side);
+        }
+        return { target, baseAngle, side };
+    }
+
+    _trackAttackObjects(objects, tween = null) {
+        const entry = { tween, objects };
+        this._activeThrusts.push(entry);
+        return entry;
+    }
+
+    _untrackAttackObjects(entry) {
+        const index = this._activeThrusts.indexOf(entry);
+        if (index !== -1) this._activeThrusts.splice(index, 1);
+    }
+
+    _destroyAttackObjects(entry) {
+        for (const object of entry.objects) {
+            if (!object || !object.scene) continue;
+            object.destroy();
+        }
+        this._untrackAttackObjects(entry);
+    }
+
+    _damageEnemiesInCone(baseAngle, range, angleTol, hitX, hitY, { maxHits = Infinity } = {}) {
+        const hitOriginX = this.player.x;
+        const hitOriginY = this.player.y - 16;
+        let hits = 0;
+
+        for (const enemy of this.player.getAllEnemies()) {
+            if (!enemy.active) continue;
+
+            const dist = Phaser.Math.Distance.Between(hitOriginX, hitOriginY, enemy.x, enemy.y);
+            if (dist > range) continue;
+
+            const enemyAngle = Phaser.Math.Angle.Between(hitOriginX, hitOriginY, enemy.x, enemy.y);
+            const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - baseAngle));
+            if (angleDiff >= angleTol) continue;
+
+            enemy.takeDamage(this.getDamage(), hitX, hitY);
+            hits++;
+            if (this.scene.soundManager) this.scene.soundManager.play('hit');
+            if (!this.scene.textures.exists('effect_monster_hit_0')) {
+                this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
+            }
+            if (hits >= maxHits) break;
+        }
+    }
+
+    _damageEnemiesInRadius(x, y, radius, impactAngle, { maxHits = Infinity } = {}) {
+        let hits = 0;
+        for (const enemy of this.player.getAllEnemies()) {
+            if (!enemy.active) continue;
+            const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+            if (dist > radius) continue;
+
+            enemy.takeDamage(this.getDamage(), x, y);
+            hits++;
+            if (this.scene.soundManager) this.scene.soundManager.play('hit');
+            if (!this.scene.textures.exists('effect_monster_hit_0')) {
+                this._spawnBloodBurst(enemy.x, enemy.y, impactAngle);
+            }
+            if (hits >= maxHits) break;
         }
     }
 
@@ -347,6 +457,349 @@ export class BasicDagger extends WeaponBase {
         });
 
         if (this.scene.soundManager) this.scene.soundManager.play('dagger');
+    }
+
+    _swordSlash() {
+        const { baseAngle, side } = this._getAttackSetup({ rangeBonus: 65, duration: 260 });
+        const cosA = Math.cos(baseAngle);
+        const sinA = Math.sin(baseAngle);
+        const perpX = -sinA;
+        const perpY = cosA;
+        const originX = this.player.x;
+        const originY = this.player.y - 18;
+        const centerX = originX + cosA * 62;
+        const centerY = originY + sinA * 62;
+        const effectTexture = this._getConfiguredEffectTexture();
+        const effectColor = this.getEffectColor(0xffd86a);
+        const glowColor = this.getEffectGlowColor(0xffffff);
+        const darkColor = this.getEffectDarkColor(0x7a5d16);
+
+        const slash = effectTexture
+            ? this.scene.add.sprite(centerX, centerY, effectTexture)
+                .setDepth(14)
+                .setAlpha(0)
+                .setScale(this.config.effectScale || 0.44)
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : null;
+        const fx = this.scene.add.graphics().setDepth(15);
+        const progress = { t: 0 };
+        const objects = [fx];
+        if (slash) objects.push(slash);
+        const entry = this._trackAttackObjects(objects);
+
+        const draw = (t) => {
+            const eased = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(t, 0, 1));
+            fx.clear();
+            const sweep = 0.46 + eased * 0.58;
+            const reach = 46 + eased * 52;
+            const baseForward = 28 + eased * 34;
+            const points = [];
+            for (let i = 0; i < 7; i++) {
+                const p = i / 6;
+                const arc = (p - 0.5) * sweep * side;
+                const a = baseAngle + arc;
+                const r = baseForward + reach * Math.sin(p * Math.PI);
+                points.push({
+                    x: originX + Math.cos(a) * r,
+                    y: originY + Math.sin(a) * r,
+                });
+            }
+
+            fx.lineStyle(18, effectColor, 0.22 * (1 - t * 0.4));
+            for (let i = 1; i < points.length; i++) fx.lineBetween(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y);
+            fx.lineStyle(9, glowColor, 0.72 * (1 - t * 0.35));
+            for (let i = 1; i < points.length; i++) fx.lineBetween(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y);
+            fx.lineStyle(3, 0xffffff, 0.95 * (1 - t * 0.25));
+            for (let i = 1; i < points.length; i++) fx.lineBetween(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y);
+
+            fx.fillStyle(darkColor, 0.42 * (1 - t));
+            fx.fillTriangle(
+                originX + cosA * 18 + perpX * side * 12,
+                originY + sinA * 18 + perpY * side * 12,
+                originX + cosA * 88 + perpX * side * 26,
+                originY + sinA * 88 + perpY * side * 26,
+                originX + cosA * 92 - perpX * side * 16,
+                originY + sinA * 92 - perpY * side * 16
+            );
+
+            if (slash) {
+                slash.setPosition(centerX + cosA * 8 * eased, centerY + sinA * 8 * eased);
+                slash.setRotation(baseAngle + side * 0.55);
+                slash.setAlpha(Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.82);
+                slash.setScale((this.config.effectScale || 0.44) * (0.74 + eased * 0.38));
+            }
+        };
+
+        entry.tween = this.scene.tweens.add({
+            targets: progress,
+            t: 1,
+            duration: 250,
+            ease: 'Linear',
+            onUpdate: () => draw(progress.t),
+            onComplete: () => this._destroyAttackObjects(entry),
+        });
+
+        this._delay(118, () => {
+            const hitX = originX + cosA * 96;
+            const hitY = originY + sinA * 96;
+            this._damageEnemiesInCone(baseAngle, this.attackRange + this.extraRange + 35, 0.92, hitX, hitY);
+        });
+
+        if (this.scene.soundManager) this.scene.soundManager.play('slash');
+    }
+
+    _clawSwipe() {
+        const { baseAngle, side } = this._getAttackSetup({ rangeBonus: 35, duration: 245 });
+        const cosA = Math.cos(baseAngle);
+        const sinA = Math.sin(baseAngle);
+        const perpX = -sinA;
+        const perpY = cosA;
+        const originX = this.player.x;
+        const originY = this.player.y - 14;
+        const effectColor = this.getEffectColor(0xbfeaff);
+        const glowColor = this.getEffectGlowColor(0xffffff);
+        const fx = this.scene.add.graphics().setDepth(15);
+        const progress = { t: 0 };
+        const entry = this._trackAttackObjects([fx]);
+
+        const world = (forward, lateral) => ({
+            x: originX + cosA * forward + perpX * lateral,
+            y: originY + sinA * forward + perpY * lateral,
+        });
+
+        const draw = (t) => {
+            const eased = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(t, 0, 1));
+            fx.clear();
+            const alpha = Math.sin(Math.PI * Math.min(1, t * 1.08));
+
+            fx.fillStyle(0x0c1d29, 0.23 * alpha);
+            const shadowA = world(28, side * -38);
+            const shadowB = world(126, side * 30);
+            const shadowC = world(96, side * 54);
+            fx.fillTriangle(shadowA.x, shadowA.y, shadowB.x, shadowB.y, shadowC.x, shadowC.y);
+
+            for (let i = 0; i < 4; i++) {
+                const lane = side * (-24 + i * 16);
+                const start = world(20 + eased * 6, lane - side * 22);
+                const mid = world(68 + eased * 22, lane + side * 2);
+                const end = world(118 + eased * 8, lane + side * 20);
+                const lineAlpha = (0.9 - i * 0.08) * alpha;
+                fx.lineStyle(13, effectColor, 0.18 * lineAlpha);
+                fx.lineBetween(start.x, start.y, mid.x, mid.y);
+                fx.lineBetween(mid.x, mid.y, end.x, end.y);
+                fx.lineStyle(6, glowColor, 0.62 * lineAlpha);
+                fx.lineBetween(start.x, start.y, mid.x, mid.y);
+                fx.lineBetween(mid.x, mid.y, end.x, end.y);
+                fx.lineStyle(2, 0xffffff, 0.86 * lineAlpha);
+                fx.lineBetween(mid.x, mid.y, end.x, end.y);
+            }
+
+            const impact = world(118, side * 20);
+            fx.lineStyle(2, glowColor, 0.54 * alpha);
+            fx.strokeCircle(impact.x, impact.y, 18 + eased * 12);
+        };
+
+        entry.tween = this.scene.tweens.add({
+            targets: progress,
+            t: 1,
+            duration: 235,
+            ease: 'Linear',
+            onUpdate: () => draw(progress.t),
+            onComplete: () => this._destroyAttackObjects(entry),
+        });
+
+        this._delay(112, () => {
+            const hitX = originX + cosA * 110;
+            const hitY = originY + sinA * 110;
+            this._damageEnemiesInCone(baseAngle, this.attackRange + this.extraRange, 0.78, hitX, hitY, { maxHits: 3 });
+        });
+
+        if (this.scene.soundManager) this.scene.soundManager.play('slash');
+    }
+
+    _maceSlam() {
+        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: 25, duration: 300 });
+        const cosA = Math.cos(baseAngle);
+        const sinA = Math.sin(baseAngle);
+        const perpX = -sinA;
+        const perpY = cosA;
+        const originX = this.player.x;
+        const originY = this.player.y - 22;
+        const maxDist = this.attackRange + this.extraRange - 18;
+        const targetDist = target
+            ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y))
+            : Math.min(maxDist, 118);
+        const impactX = originX + cosA * targetDist;
+        const impactY = originY + sinA * targetDist;
+        const effectColor = this.getEffectColor(0x66f2b0);
+        const glowColor = this.getEffectGlowColor(0xe8fff5);
+        const darkColor = this.getEffectDarkColor(0x0d6543);
+        const fx = this.scene.add.graphics().setDepth(15);
+        const impactFx = this.scene.add.graphics().setDepth(14);
+        const progress = { t: 0 };
+        const entry = this._trackAttackObjects([fx, impactFx]);
+
+        const draw = (t) => {
+            const k = Phaser.Math.Clamp(t, 0, 1);
+            const wind = k < 0.42 ? Phaser.Math.Easing.Cubic.Out(k / 0.42) : 1;
+            const strike = k < 0.42 ? 0 : Phaser.Math.Easing.Cubic.Out((k - 0.42) / 0.58);
+            const headX = originX
+                + cosA * (30 + targetDist * strike)
+                + perpX * side * (34 * (1 - strike));
+            const headY = originY
+                + sinA * (30 + targetDist * strike)
+                + perpY * side * (34 * (1 - strike))
+                - 38 * wind * (1 - strike);
+            const gripX = originX + cosA * 22 - perpX * side * 8;
+            const gripY = originY + sinA * 22 - perpY * side * 8;
+
+            fx.clear();
+            fx.lineStyle(16, darkColor, 0.34);
+            fx.lineBetween(gripX, gripY, headX, headY);
+            fx.lineStyle(7, glowColor, 0.72);
+            fx.lineBetween(gripX, gripY, headX, headY);
+            fx.fillStyle(darkColor, 0.9);
+            fx.fillCircle(headX, headY, 16);
+            fx.fillStyle(effectColor, 0.78);
+            fx.fillCircle(headX, headY, 11);
+            fx.fillStyle(glowColor, 0.95);
+            fx.fillCircle(headX - perpX * 3, headY - perpY * 3, 5);
+
+            if (strike > 0.35) {
+                const pulse = (strike - 0.35) / 0.65;
+                impactFx.clear();
+                impactFx.lineStyle(5, effectColor, 0.8 * (1 - pulse));
+                impactFx.strokeCircle(impactX, impactY, 24 + pulse * 38);
+                impactFx.lineStyle(2, glowColor, 0.85 * (1 - pulse));
+                impactFx.strokeCircle(impactX, impactY, 10 + pulse * 22);
+                for (let i = 0; i < 6; i++) {
+                    const a = baseAngle + (i - 2.5) * 0.34;
+                    impactFx.lineBetween(
+                        impactX + Math.cos(a) * 8,
+                        impactY + Math.sin(a) * 8,
+                        impactX + Math.cos(a) * (34 + pulse * 26),
+                        impactY + Math.sin(a) * (34 + pulse * 26)
+                    );
+                }
+            }
+        };
+
+        entry.tween = this.scene.tweens.add({
+            targets: progress,
+            t: 1,
+            duration: 310,
+            ease: 'Linear',
+            onUpdate: () => draw(progress.t),
+            onComplete: () => this._destroyAttackObjects(entry),
+        });
+
+        this._delay(168, () => {
+            this._damageEnemiesInRadius(impactX, impactY, this.config.impactRadius || 56, baseAngle, { maxHits: 3 });
+            if (this.scene.cameras?.main) this.scene.cameras.main.shake(70, 0.0022);
+        });
+
+        if (this.scene.soundManager) this.scene.soundManager.play('groundSlam');
+    }
+
+    _fireball() {
+        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: 130, duration: 300 });
+        const cosA = Math.cos(baseAngle);
+        const sinA = Math.sin(baseAngle);
+        const perpX = -sinA;
+        const perpY = cosA;
+        const originX = this.player.x;
+        const originY = this.player.y - 18;
+        const maxDist = this.attackRange + this.extraRange + 80;
+        const targetDist = target
+            ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y) + 18)
+            : maxDist;
+        const startX = originX + cosA * 32 + perpX * side * 8;
+        const startY = originY + sinA * 32 + perpY * side * 8;
+        const endX = originX + cosA * targetDist;
+        const endY = originY + sinA * targetDist;
+        const effectTexture = this._getConfiguredEffectTexture();
+        const effectColor = this.getEffectColor(0xff7a34);
+        const glowColor = this.getEffectGlowColor(0xffd86a);
+        const projectile = effectTexture
+            ? this.scene.add.sprite(startX, startY, effectTexture)
+                .setDepth(14)
+                .setScale(this.config.effectScale || 0.32)
+                .setRotation(baseAngle)
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : this.scene.add.circle(startX, startY, 13, effectColor, 0.95).setDepth(14);
+        const trailFx = this.scene.add.graphics().setDepth(13);
+        const impactFx = this.scene.add.graphics().setDepth(15);
+        const hitEnemies = new Set();
+        const progress = { t: 0 };
+        const entry = this._trackAttackObjects([projectile, trailFx, impactFx]);
+
+        const spawnTrail = () => {
+            const x = projectile.x - cosA * 12 + Phaser.Math.Between(-3, 3);
+            const y = projectile.y - sinA * 12 + Phaser.Math.Between(-3, 3);
+            const ember = this.scene.add.circle(x, y, Phaser.Math.Between(3, 7), effectColor, 0.45)
+                .setDepth(12)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            entry.objects.push(ember);
+            this.scene.tweens.add({
+                targets: ember,
+                alpha: 0,
+                scale: 0.25,
+                duration: 170,
+                onComplete: () => {
+                    if (ember.scene) ember.destroy();
+                },
+            });
+        };
+
+        const checkHits = () => {
+            for (const enemy of this.player.getAllEnemies()) {
+                if (!enemy.active || hitEnemies.has(enemy)) continue;
+                const dist = Phaser.Math.Distance.Between(projectile.x, projectile.y, enemy.x, enemy.y);
+                if (dist > (this.config.impactRadius || 38)) continue;
+                hitEnemies.add(enemy);
+                enemy.takeDamage(this.getDamage(), projectile.x, projectile.y);
+                if (this.scene.soundManager) this.scene.soundManager.play('hit');
+                impactFx.clear();
+                impactFx.fillStyle(glowColor, 0.5);
+                impactFx.fillCircle(projectile.x, projectile.y, 24);
+                impactFx.lineStyle(3, effectColor, 0.86);
+                impactFx.strokeCircle(projectile.x, projectile.y, 32);
+                this.scene.tweens.add({
+                    targets: impactFx,
+                    alpha: 0,
+                    scale: 1.35,
+                    duration: 150,
+                    onComplete: () => {
+                        if (impactFx.scene) {
+                            impactFx.clear();
+                            impactFx.setAlpha(1);
+                            impactFx.setScale(1);
+                        }
+                    },
+                });
+                if (hitEnemies.size >= 2) break;
+            }
+        };
+
+        entry.tween = this.scene.tweens.add({
+            targets: projectile,
+            x: endX,
+            y: endY,
+            duration: Phaser.Math.Clamp(targetDist * 1.55, 230, 430),
+            ease: 'Quad.easeOut',
+            onUpdate: () => {
+                progress.t += 1;
+                if (progress.t % 2 === 0) spawnTrail();
+                if (projectile.setRotation) projectile.setRotation(baseAngle + Math.sin(progress.t * 0.28) * 0.08);
+                checkHits();
+            },
+            onComplete: () => {
+                checkHits();
+                this._destroyAttackObjects(entry);
+            },
+        });
+
+        if (this.scene.soundManager) this.scene.soundManager.play('daggerThrow');
     }
 
     _spawnBloodBurst(x, y, impactAngle) {

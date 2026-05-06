@@ -388,11 +388,13 @@ Object.assign(WEAPONS, {
     lightPierce: cloneWeapon('basicDagger', 'lightPierce', {
         name: '빛가름 찌르기',
         description: '가까운 적을 광휘의 검끝으로 빠르게 찌릅니다.',
+        attackStyle: 'swordSlash',
+        basicAttackEffectKey: 'light_crescent',
         effectKey: 'light_pierce',
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
         effectDarkColor: 0x7a5d16,
-        effectScale: 0.44,
+        effectScale: 0.42,
     }),
     lightLance: cloneWeapon('shadowDagger', 'lightLance', {
         name: '섬광 투척',
@@ -431,6 +433,8 @@ Object.assign(WEAPONS, {
     tigerPalm: cloneWeapon('basicDagger', 'tigerPalm', {
         name: '백호 장타',
         description: '근접 적에게 묵직한 손날 타격을 꽂아 넣습니다.',
+        attackStyle: 'clawSwipe',
+        basicAttackEffectKey: 'tiger_rend',
         effectKey: 'tiger_palm',
         effectColor: 0xbfeaff,
         effectGlowColor: 0xffffff,
@@ -474,11 +478,15 @@ Object.assign(WEAPONS, {
     flameSpark: cloneWeapon('basicDagger', 'flameSpark', {
         name: '화염 점화',
         description: '가까운 적을 짧은 화염 폭발로 태웁니다.',
+        attackStyle: 'fireball',
+        basicAttackEffectKey: 'flame_bolt',
+        attackRange: 310,
+        impactRadius: 40,
         effectKey: 'flame_spark',
         effectColor: 0xff7a34,
         effectGlowColor: 0xffd86a,
         effectDarkColor: 0x7a2108,
-        effectScale: 0.48,
+        effectScale: 0.3,
     }),
     flameBolt: cloneWeapon('shadowDagger', 'flameBolt', {
         name: '화염구',
@@ -517,6 +525,9 @@ Object.assign(WEAPONS, {
     sanctuaryStrike: cloneWeapon('basicDagger', 'sanctuaryStrike', {
         name: '성역 타격',
         description: '정화의 힘을 담은 짧은 타격으로 가까운 적을 밀어냅니다.',
+        attackStyle: 'maceSlam',
+        basicAttackEffectKey: 'sanctuary_strike',
+        impactRadius: 58,
         effectKey: 'sanctuary_strike',
         effectColor: 0x66f2b0,
         effectGlowColor: 0xe8fff5,
