@@ -45,7 +45,7 @@ export class DragonFear extends WeaponBase {
             },
         });
 
-        if (this.scene.soundManager) this.scene.soundManager.play('fear');
+        this.playConfiguredSound('fear');
 
         // Aura lasts ~2 seconds
         this._auraEndTime = this.scene.time.now + 2000;

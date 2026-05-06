@@ -390,6 +390,7 @@ Object.assign(WEAPONS, {
         description: '가까운 적을 광휘의 검끝으로 빠르게 찌릅니다.',
         attackStyle: 'swordSlash',
         basicAttackEffectKey: 'light_sword_slash',
+        soundKey: 'lightSwordSlash',
         effectKey: 'light_pierce',
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
@@ -399,6 +400,7 @@ Object.assign(WEAPONS, {
     lightLance: cloneWeapon('shadowDagger', 'lightLance', {
         name: '섬광 투척',
         description: '가장 가까운 적에게 빛의 창을 관통 투척합니다.',
+        soundKey: 'lightLance',
         effectKey: 'light_lance',
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
@@ -408,6 +410,7 @@ Object.assign(WEAPONS, {
     lightCrescent: cloneWeapon('shadowSlash', 'lightCrescent', {
         name: '광휘 참격',
         description: '전방에 넓은 빛의 검기를 휘둘러 적을 벱니다.',
+        soundKey: 'lightCrescent',
         effectKey: 'light_crescent',
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
@@ -417,6 +420,7 @@ Object.assign(WEAPONS, {
     lightJudgment: cloneWeapon('rulersAuthority', 'lightJudgment', {
         name: '심판의 낙광',
         description: '적 무리 위에 압축된 빛을 떨어뜨려 범위 피해를 줍니다.',
+        soundKey: 'lightJudgment',
         effectKey: 'light_judgment',
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
@@ -425,6 +429,7 @@ Object.assign(WEAPONS, {
     lightSanctum: cloneWeapon('dragonFear', 'lightSanctum', {
         name: '성광 압박',
         description: '찬란한 위압으로 주변 적에게 피해를 주고 움직임을 늦춥니다.',
+        soundKey: 'lightSanctum',
         effectKey: 'light_sanctum',
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
@@ -435,6 +440,7 @@ Object.assign(WEAPONS, {
         description: '근접 적에게 묵직한 손날 타격을 꽂아 넣습니다.',
         attackStyle: 'clawSwipe',
         basicAttackEffectKey: 'tiger_claw_swipe',
+        soundKey: 'tigerClaw',
         effectKey: 'tiger_palm',
         effectColor: 0xbfeaff,
         effectGlowColor: 0xffffff,
@@ -444,6 +450,7 @@ Object.assign(WEAPONS, {
     tigerFang: cloneWeapon('shadowDagger', 'tigerFang', {
         name: '백호 송곳니',
         description: '응축된 백호의 송곳니를 전방으로 날립니다.',
+        soundKey: 'tigerFang',
         effectKey: 'tiger_fang',
         effectColor: 0xbfeaff,
         effectGlowColor: 0xffffff,
@@ -453,6 +460,7 @@ Object.assign(WEAPONS, {
     tigerRend: cloneWeapon('shadowSlash', 'tigerRend', {
         name: '맹호 찢기',
         description: '날카로운 호랑이 발톱의 궤적으로 앞의 적을 찢습니다.',
+        soundKey: 'tigerRend',
         effectKey: 'tiger_rend',
         effectColor: 0xbfeaff,
         effectGlowColor: 0xffffff,
@@ -462,6 +470,7 @@ Object.assign(WEAPONS, {
     tigerQuake: cloneWeapon('rulersAuthority', 'tigerQuake', {
         name: '백호 진각',
         description: '땅을 짓밟아 충격파를 터뜨리고 적 무리를 무너뜨립니다.',
+        soundKey: 'tigerQuake',
         effectKey: 'tiger_quake',
         effectColor: 0xbfeaff,
         effectGlowColor: 0xffffff,
@@ -470,6 +479,7 @@ Object.assign(WEAPONS, {
     tigerGuard: cloneWeapon('dragonFear', 'tigerGuard', {
         name: '투왕 위압',
         description: '야수의 위압으로 주변 적에게 피해와 둔화를 겁니다.',
+        soundKey: 'tigerGuard',
         effectKey: 'tiger_guard',
         effectColor: 0xbfeaff,
         effectGlowColor: 0xffffff,
@@ -480,6 +490,7 @@ Object.assign(WEAPONS, {
         description: '가까운 적을 짧은 화염 폭발로 태웁니다.',
         attackStyle: 'fireball',
         basicAttackEffectKey: 'flame_fireball',
+        soundKey: 'flameSpark',
         attackRange: 310,
         impactRadius: 40,
         effectKey: 'flame_spark',
@@ -491,6 +502,7 @@ Object.assign(WEAPONS, {
     flameBolt: cloneWeapon('shadowDagger', 'flameBolt', {
         name: '화염구',
         description: '가장 가까운 적을 향해 불타는 화염구를 발사합니다.',
+        soundKey: 'flameBolt',
         effectKey: 'flame_bolt',
         effectColor: 0xff7a34,
         effectGlowColor: 0xffd86a,
@@ -500,6 +512,7 @@ Object.assign(WEAPONS, {
     flameArc: cloneWeapon('shadowSlash', 'flameArc', {
         name: '화염 호월',
         description: '부채꼴 화염 검기로 전방의 적을 쓸어냅니다.',
+        soundKey: 'flameArc',
         effectKey: 'flame_arc',
         effectColor: 0xff7a34,
         effectGlowColor: 0xffd86a,
@@ -509,6 +522,7 @@ Object.assign(WEAPONS, {
     flameMeteor: cloneWeapon('rulersAuthority', 'flameMeteor', {
         name: '유성 낙인',
         description: '적 무리에 유성 문장을 폭발시켜 광역 피해를 줍니다.',
+        soundKey: 'flameMeteor',
         effectKey: 'flame_meteor',
         effectColor: 0xff7a34,
         effectGlowColor: 0xffd86a,
@@ -517,6 +531,7 @@ Object.assign(WEAPONS, {
     flameInferno: cloneWeapon('dragonFear', 'flameInferno', {
         name: '화염 장막',
         description: '주변을 불길로 덮어 적에게 피해와 둔화를 남깁니다.',
+        soundKey: 'flameInferno',
         effectKey: 'flame_inferno',
         effectColor: 0xff7a34,
         effectGlowColor: 0xffd86a,
@@ -527,6 +542,7 @@ Object.assign(WEAPONS, {
         description: '정화의 힘을 담은 짧은 타격으로 가까운 적을 밀어냅니다.',
         attackStyle: 'maceSlam',
         basicAttackEffectKey: 'sanctuary_mace_slam',
+        soundKey: 'sanctuaryMace',
         impactRadius: 58,
         effectKey: 'sanctuary_strike',
         effectColor: 0x66f2b0,
@@ -537,6 +553,7 @@ Object.assign(WEAPONS, {
     sanctuaryOrb: cloneWeapon('shadowDagger', 'sanctuaryOrb', {
         name: '치유 성구',
         description: '정화 성구를 날려 적을 관통하고 성역의 빛을 남깁니다.',
+        soundKey: 'sanctuaryOrb',
         effectKey: 'sanctuary_orb',
         effectColor: 0x66f2b0,
         effectGlowColor: 0xe8fff5,
@@ -546,6 +563,7 @@ Object.assign(WEAPONS, {
     sanctuaryArc: cloneWeapon('shadowSlash', 'sanctuaryArc', {
         name: '정화의 호',
         description: '전방에 정화의 호선을 그어 적을 베어냅니다.',
+        soundKey: 'sanctuaryArc',
         effectKey: 'sanctuary_arc',
         effectColor: 0x66f2b0,
         effectGlowColor: 0xe8fff5,
@@ -555,6 +573,7 @@ Object.assign(WEAPONS, {
     sanctuarySeal: cloneWeapon('rulersAuthority', 'sanctuarySeal', {
         name: '성역 문장',
         description: '지면에 성역 문장을 펼쳐 적 무리에 범위 피해를 줍니다.',
+        soundKey: 'sanctuarySeal',
         effectKey: 'sanctuary_seal',
         effectColor: 0x66f2b0,
         effectGlowColor: 0xe8fff5,
@@ -563,6 +582,7 @@ Object.assign(WEAPONS, {
     sanctuaryField: cloneWeapon('dragonFear', 'sanctuaryField', {
         name: '수호 결계',
         description: '수호 결계를 펼쳐 주변 적을 약화시키고 피해를 줍니다.',
+        soundKey: 'sanctuaryField',
         effectKey: 'sanctuary_field',
         effectColor: 0x66f2b0,
         effectGlowColor: 0xe8fff5,

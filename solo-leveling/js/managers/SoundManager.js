@@ -3,10 +3,37 @@
  * SFX: 사전 생성된 WAV 파일을 Audio 풀로 재생 (실시간 합성 오버헤드 없음)
  * BGM: Tone.js 프로시저럴 합성 유지 (인트로 음악, 게임 BGM)
  */
+const CHARACTER_SFX_CONFIG = {
+    lightSwordSlash: { file: 'light_sword_slash_sfx.wav', pool: 6, throttle: 240, release: 380, volume: 0.46, priority: 2 },
+    lightLance: { file: 'light_lance_sfx.wav', pool: 5, throttle: 260, release: 500, volume: 0.48, priority: 2 },
+    lightCrescent: { file: 'light_crescent_sfx.wav', pool: 4, throttle: 360, release: 580, volume: 0.48, priority: 2 },
+    lightJudgment: { file: 'light_judgment_sfx.wav', pool: 3, throttle: 620, release: 820, volume: 0.56, priority: 3 },
+    lightSanctum: { file: 'light_sanctum_sfx.wav', pool: 2, throttle: 780, release: 980, volume: 0.52, priority: 3 },
+
+    tigerClaw: { file: 'tiger_claw_sfx.wav', pool: 6, throttle: 230, release: 360, volume: 0.5, priority: 2 },
+    tigerFang: { file: 'tiger_fang_sfx.wav', pool: 5, throttle: 260, release: 460, volume: 0.48, priority: 2 },
+    tigerRend: { file: 'tiger_rend_sfx.wav', pool: 4, throttle: 360, release: 560, volume: 0.5, priority: 2 },
+    tigerQuake: { file: 'tiger_quake_sfx.wav', pool: 3, throttle: 650, release: 820, volume: 0.62, priority: 3 },
+    tigerGuard: { file: 'tiger_guard_sfx.wav', pool: 2, throttle: 760, release: 900, volume: 0.54, priority: 3 },
+
+    flameSpark: { file: 'flame_spark_sfx.wav', pool: 6, throttle: 220, release: 420, volume: 0.48, priority: 2 },
+    flameBolt: { file: 'flame_bolt_sfx.wav', pool: 5, throttle: 250, release: 480, volume: 0.5, priority: 2 },
+    flameArc: { file: 'flame_arc_sfx.wav', pool: 4, throttle: 360, release: 580, volume: 0.52, priority: 2 },
+    flameMeteor: { file: 'flame_meteor_sfx.wav', pool: 3, throttle: 680, release: 980, volume: 0.62, priority: 3 },
+    flameInferno: { file: 'flame_inferno_sfx.wav', pool: 2, throttle: 820, release: 1040, volume: 0.58, priority: 3 },
+
+    sanctuaryMace: { file: 'sanctuary_mace_sfx.wav', pool: 5, throttle: 280, release: 480, volume: 0.5, priority: 2 },
+    sanctuaryOrb: { file: 'sanctuary_orb_sfx.wav', pool: 5, throttle: 280, release: 540, volume: 0.46, priority: 2 },
+    sanctuaryArc: { file: 'sanctuary_arc_sfx.wav', pool: 4, throttle: 380, release: 600, volume: 0.46, priority: 2 },
+    sanctuarySeal: { file: 'sanctuary_seal_sfx.wav', pool: 3, throttle: 660, release: 840, volume: 0.54, priority: 3 },
+    sanctuaryField: { file: 'sanctuary_field_sfx.wav', pool: 2, throttle: 820, release: 1060, volume: 0.52, priority: 3 },
+};
+
 export class SoundManager {
     constructor() {
         this.enabled = true;
         this._initialized = false;
+        this._destroyed = false;
         this._toneReady = false;
         this._userActivated = false;
         this._lastPlayTime = {};
@@ -55,6 +82,14 @@ export class SoundManager {
         this._sfxBuffers = new Map();
         this._sfxLoadPromise = null;
         this._sfxLoadTimer = null;
+        this._sfxLoadTimerType = null;
+
+        for (const [name, spec] of Object.entries(CHARACTER_SFX_CONFIG)) {
+            this._throttleMs[name] = spec.throttle;
+            this._releaseMs[name] = spec.release;
+            this._soundPriority[name] = spec.priority;
+            this._sfxVolume[name] = spec.volume;
+        }
     }
 
     // WAV 오디오 풀 생성 (동시 재생 지원, 라운드로빈)
@@ -98,6 +133,7 @@ export class SoundManager {
 
     _loadSfxBuffers() {
         if (this._sfxLoadPromise || !this._sfxContext || typeof fetch === 'undefined') return this._sfxLoadPromise;
+        const loadContext = this._sfxContext;
         const entries = Object.entries(this._sfxSources);
         this._sfxLoadPromise = Promise.all(entries.map(async ([name, src]) => {
             if (this._sfxBuffers.has(name)) return;
@@ -105,7 +141,8 @@ export class SoundManager {
                 const response = await fetch(src);
                 if (!response.ok) return;
                 const data = await response.arrayBuffer();
-                const buffer = await this._sfxContext.decodeAudioData(data.slice(0));
+                const buffer = await loadContext.decodeAudioData(data.slice(0));
+                if (this._destroyed || !this._initialized || this._sfxContext !== loadContext) return;
                 this._sfxBuffers.set(name, buffer);
             } catch (e) { /* pool playback handles fallback */ }
         })).then(() => true).catch(() => false);
@@ -122,8 +159,10 @@ export class SoundManager {
 
         if (typeof requestIdleCallback === 'function') {
             this._sfxLoadTimer = requestIdleCallback(load, { timeout: 2200 });
+            this._sfxLoadTimerType = 'idle';
         } else {
             this._sfxLoadTimer = setTimeout(load, 1400);
+            this._sfxLoadTimerType = 'timeout';
         }
     }
 
@@ -218,6 +257,7 @@ export class SoundManager {
     init() {
         try {
             if (this._initialized) return;
+            this._destroyed = false;
 
             // Tone graph is created lazily in resume(true) after a trusted gesture.
 
@@ -262,6 +302,9 @@ export class SoundManager {
             this._createPool('select', base + 'select.wav', 6);
             this._createPool('quest', base + 'quest.wav', 3);
             this._createPool('dungeonBreak', base + 'dungeonBreak.wav', 2);
+            for (const [name, spec] of Object.entries(CHARACTER_SFX_CONFIG)) {
+                this._createPool(name, base + spec.file, spec.pool);
+            }
 
             this._initialized = true;
 
@@ -713,15 +756,26 @@ export class SoundManager {
     }
 
     destroy() {
+        this._destroyed = true;
         if (this._activeSoundTimers) {
             this._activeSoundTimers.forEach(id => clearTimeout(id));
             this._activeSoundTimers.clear();
         }
+        this._activeSounds = 0;
         this.stopIntroMusic(true);
         this.stopGameBGM(true);
 
         if (this._introDisposeTimeout) { clearTimeout(this._introDisposeTimeout); this._introDisposeTimeout = null; }
         if (this._bgmDisposeTimeout) { clearTimeout(this._bgmDisposeTimeout); this._bgmDisposeTimeout = null; }
+        if (this._sfxLoadTimer) {
+            if (this._sfxLoadTimerType === 'idle' && typeof cancelIdleCallback === 'function') {
+                cancelIdleCallback(this._sfxLoadTimer);
+            } else {
+                clearTimeout(this._sfxLoadTimer);
+            }
+            this._sfxLoadTimer = null;
+            this._sfxLoadTimerType = null;
+        }
 
         if (this._onVisibilityChange) {
             document.removeEventListener('visibilitychange', this._onVisibilityChange);
@@ -739,6 +793,8 @@ export class SoundManager {
             }
         }
         this._pools = {};
+        this._sfxSources = {};
+        this._lastPlayTime = {};
 
         try {
             if (this._sfxGain) { this._sfxGain.disconnect(); this._sfxGain = null; }

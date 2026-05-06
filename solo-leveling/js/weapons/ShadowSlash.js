@@ -202,7 +202,7 @@ export class ShadowSlash extends WeaponBase {
         }
 
         // Sound
-        if (this.scene.soundManager) this.scene.soundManager.play('slash');
+        this.playConfiguredSound('slash');
     }
 
     getProjectileGroup() {

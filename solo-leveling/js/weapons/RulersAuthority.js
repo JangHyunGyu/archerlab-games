@@ -15,7 +15,7 @@ export class RulersAuthority extends WeaponBase {
     _blast() {
         const range = 160 + this.extraRange;
 
-        if (this.scene.soundManager) this.scene.soundManager.play('authority');
+        this.playConfiguredSound('authority');
 
         // Find a nearby enemy cluster, or default to player position if no threat is close.
         let targetX = this.player.x;

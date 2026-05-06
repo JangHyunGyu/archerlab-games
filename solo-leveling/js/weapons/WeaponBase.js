@@ -70,6 +70,13 @@ export class WeaponBase {
         return this.config.effectDarkColor ?? fallback;
     }
 
+    playConfiguredSound(fallback) {
+        const soundName = this.config.soundKey || fallback;
+        if (soundName && this.scene?.soundManager) {
+            this.scene.soundManager.play(soundName);
+        }
+    }
+
     _delay(ms, callback) {
         if (!this.scene?.time) return null;
         const timer = this.scene.time.delayedCall(ms, () => {
