@@ -42,6 +42,7 @@ export class SoundManager {
         this._sfxSources = {};
         this._sfxBuffers = new Map();
         this._sfxLoadPromise = null;
+        this._sfxLoadTimer = null;
     }
 
     // WAV 오디오 풀 생성 (동시 재생 지원, 라운드로빈)
@@ -97,6 +98,46 @@ export class SoundManager {
             } catch (e) { /* pool playback handles fallback */ }
         })).then(() => true).catch(() => false);
         return this._sfxLoadPromise;
+    }
+
+    _scheduleSfxBufferLoad() {
+        if (this._sfxLoadPromise || this._sfxLoadTimer || !this._sfxContext) return;
+
+        const load = () => {
+            this._sfxLoadTimer = null;
+            this._loadSfxBuffers();
+        };
+
+        if (typeof requestIdleCallback === 'function') {
+            this._sfxLoadTimer = requestIdleCallback(load, { timeout: 2200 });
+        } else {
+            this._sfxLoadTimer = setTimeout(load, 1400);
+        }
+    }
+
+    _ensureToneGraph() {
+        if (this._toneReady || typeof Tone === 'undefined') return;
+
+        this._masterVol = new Tone.Volume(-7).toDestination();
+        this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
+            .connect(this._masterVol).start();
+        this._comp = new Tone.Compressor(-20, 6).connect(this._chorus);
+        this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
+        this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
+        this._toneReady = true;
+
+        if (!this._onVisibilityChange) {
+            this._onVisibilityChange = () => {
+                try {
+                    if (document.hidden) {
+                        Tone.getContext().rawContext.suspend();
+                    } else if (this.enabled) {
+                        Tone.getContext().rawContext.resume();
+                    }
+                } catch (e) { /* silent */ }
+            };
+            document.addEventListener('visibilitychange', this._onVisibilityChange);
+        }
     }
 
     _playFromBuffer(name, volume = 0.7) {
@@ -227,35 +268,17 @@ export class SoundManager {
                 try {
                     Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.1 }));
                 } catch (e) { /* silent */ }
-
-                this._masterVol = new Tone.Volume(-7).toDestination();
-                this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
-                    .connect(this._masterVol).start();
-                this._comp = new Tone.Compressor(-20, 6).connect(this._chorus);
-                this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
-                this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
-                this._toneReady = true;
-
-                if (!this._onVisibilityChange) {
-                    this._onVisibilityChange = () => {
-                        try {
-                            if (document.hidden) {
-                                Tone.getContext().rawContext.suspend();
-                            } else if (this.enabled) {
-                                Tone.getContext().rawContext.resume();
-                            }
-                        } catch (e) { /* silent */ }
-                    };
-                    document.addEventListener('visibilitychange', this._onVisibilityChange);
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
                 }
-            }
-
-            if (typeof Tone !== 'undefined' && this._toneReady && Tone.context.state !== 'running') {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                this._ensureToneGraph();
+            } else if (typeof Tone !== 'undefined' && this._toneReady && Tone.context.state !== 'running') {
                 await Tone.start();
             }
             if (typeof Tone !== 'undefined' && this._toneReady) {
                 this._ensureSfxBus();
-                this._loadSfxBuffers();
+                this._scheduleSfxBufferLoad();
             }
             return typeof Tone !== 'undefined' && this._toneReady && Tone.context.state === 'running';
         } catch (e) { /* silent */ }

@@ -4,21 +4,18 @@ import { Enemy } from '../entities/Enemy.js';
 const MAX_RESTORED_ENEMIES = 500;
 
 export class EnemyManager {
-    constructor(scene) {
+    constructor(scene, options = {}) {
         this.scene = scene;
         this.pool = scene.physics.add.group({
             classType: Enemy,
             runChildUpdate: false,
         });
+        this._warmPoolTarget = options.warmPoolSize ?? 50;
+        this._warmBatchSize = options.warmBatchSize ?? 8;
+        this._warmBatchDelay = options.warmBatchDelay ?? 70;
+        this._warmPoolTimer = null;
 
-        // Pre-populate pool
-        for (let i = 0; i < 50; i++) {
-            const enemy = new Enemy(scene, -100, -100);
-            enemy.setActive(false);
-            enemy.setVisible(false);
-            enemy.body.enable = false;
-            this.pool.add(enemy);
-        }
+        this._createInactiveEnemies(Math.min(options.initialPoolSize ?? 50, this._warmPoolTarget));
 
         this.spawnTimer = WAVE_CONFIG.baseSpawnInterval * 0.75;
         this.eliteTimer = 0;
@@ -54,10 +51,46 @@ export class EnemyManager {
         this._cachedActiveEnemies = null;
         this._activeEnemiesDirtyFrame = -1;
 
-        this._openingWaveTimer = scene.time.delayedCall(320, () => {
+        if (this.pool.getLength() < this._warmPoolTarget) {
+            this._warmPoolTimer = scene.time.delayedCall(options.warmupDelay ?? 650, () => this._warmPool());
+        }
+
+        const openingWaveDelay = options.openingWaveDelay ?? 320;
+        if (Number.isFinite(openingWaveDelay) && openingWaveDelay >= 0) {
+            this._openingWaveTimer = scene.time.delayedCall(openingWaveDelay, () => {
+                this._openingWaveTimer = null;
+                this._spawnOpeningWave();
+            });
+        } else {
             this._openingWaveTimer = null;
-            this._spawnOpeningWave();
-        });
+        }
+    }
+
+    _createInactiveEnemy() {
+        const enemy = new Enemy(this.scene, -100, -100);
+        enemy.setActive(false);
+        enemy.setVisible(false);
+        enemy.body.enable = false;
+        this.pool.add(enemy);
+        return enemy;
+    }
+
+    _createInactiveEnemies(count) {
+        for (let i = 0; i < count; i++) {
+            this._createInactiveEnemy();
+        }
+    }
+
+    _warmPool() {
+        if (!this.scene || !this.pool) return;
+        const remaining = this._warmPoolTarget - this.pool.getLength();
+        if (remaining <= 0) {
+            this._warmPoolTimer = null;
+            return;
+        }
+
+        this._createInactiveEnemies(Math.min(this._warmBatchSize, remaining));
+        this._warmPoolTimer = this.scene.time.delayedCall(this._warmBatchDelay, () => this._warmPool());
     }
 
     update(time, delta) {
@@ -437,8 +470,7 @@ export class EnemyManager {
         let enemy = this.pool.getChildren().find(e => !e.active);
 
         if (!enemy) {
-            enemy = new Enemy(this.scene, x, y);
-            this.pool.add(enemy);
+            enemy = this._createInactiveEnemy();
         }
 
         enemy.spawn(typeKey, ENEMY_TYPES[typeKey], this.difficultyMultiplier, x, y);
@@ -459,8 +491,7 @@ export class EnemyManager {
 
         let enemy = this.pool.getChildren().find(e => !e.active);
         if (!enemy) {
-            enemy = new Enemy(this.scene, pos.x, pos.y);
-            this.pool.add(enemy);
+            enemy = this._createInactiveEnemy();
         }
 
         // Spawn with boosted stats (elite multiplier on top of difficulty)
@@ -699,6 +730,10 @@ export class EnemyManager {
     destroy() {
         if (this._openingWaveTimer) {
             this.cancelOpeningWave();
+        }
+        if (this._warmPoolTimer) {
+            this._warmPoolTimer.remove(false);
+            this._warmPoolTimer = null;
         }
 
         // 던전 브레이크 보더 정리

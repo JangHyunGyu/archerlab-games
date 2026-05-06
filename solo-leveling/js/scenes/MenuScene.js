@@ -142,7 +142,7 @@ export class MenuScene extends Phaser.Scene {
             }
             const sm = this.game._soundManager;
             sm.stopIntroMusic();
-            await sm.resume(true);
+            sm.resume(true);
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => this.scene.start('GameScene', { resume }));
         };
