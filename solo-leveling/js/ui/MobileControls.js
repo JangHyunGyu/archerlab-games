@@ -1,9 +1,10 @@
 import {
     GAME_WIDTH, GAME_HEIGHT,
     SYSTEM, UI_FONT_MONO,
-    fs, uv, drawSystemPanel, fitText, padText,
+    fs, uv, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
+import { UIAssets } from './UIAssets.js';
 
 /**
  * Mobile touch controls — System aesthetic.
@@ -149,55 +150,55 @@ export class MobileControls {
         const soundY = statusY + btnH + uv(10);
 
         // Status button
-        const statusG = this.scene.add.graphics().setDepth(600).setScrollFactor(0);
-        const drawStatus = (hover) => {
-            statusG.clear();
-            drawSystemPanel(statusG, btnX, statusY, btnW, btnH, {
-                cut: uv(6),
-                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL, fillAlpha: 0.85,
-                border: SYSTEM.BORDER, borderAlpha: 0.8, borderWidth: 1,
-            });
-        };
-        drawStatus(false);
-
-        const statusHit = this.scene.add.rectangle(btnX + btnW / 2, statusY + btnH / 2, btnW, btnH, 0x000000, 0)
-            .setDepth(601).setScrollFactor(0).setInteractive();
+        const statusPanel = UIAssets.createPanel(this.scene, btnX, statusY, btnW, btnH, {
+            cut: uv(6),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0.85,
+            border: SYSTEM.BORDER,
+            borderAlpha: 0.8,
+            borderWidth: 1,
+            accent: SYSTEM.BORDER,
+            depth: 600,
+            scrollFactor: 0,
+            hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.95, borderWidth: 2, glow: 4 },
+        });
+        const statusHit = UIAssets.createHitArea(this.scene, btnX, statusY, btnW, btnH, 601).setScrollFactor(0);
         const statusText = padText(this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN,
         }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
         fitText(statusText, btnW - uv(8), btnH - uv(4), 0.62);
-        this.elements.push(statusG, statusHit, statusText);
+        this.elements.push(statusPanel, statusHit, statusText);
 
-        statusHit.on('pointerover', () => drawStatus(true));
-        statusHit.on('pointerout', () => drawStatus(false));
+        statusHit.on('pointerover', () => statusPanel.setUIState('hover'));
+        statusHit.on('pointerout', () => statusPanel.setUIState('normal'));
         statusHit.on('pointerdown', () => {
             if (this.scene.statusWindow) this.scene.statusWindow.toggle();
         });
 
         // Sound button
-        const soundG = this.scene.add.graphics().setDepth(600).setScrollFactor(0);
-        const drawSound = (hover) => {
-            soundG.clear();
-            drawSystemPanel(soundG, btnX, soundY, btnW, btnH, {
-                cut: uv(6),
-                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL, fillAlpha: 0.85,
-                border: SYSTEM.BORDER, borderAlpha: 0.8, borderWidth: 1,
-            });
-        };
-        drawSound(false);
-
-        const soundHit = this.scene.add.rectangle(btnX + btnW / 2, soundY + btnH / 2, btnW, btnH, 0x000000, 0)
-            .setDepth(601).setScrollFactor(0).setInteractive();
+        const soundPanel = UIAssets.createPanel(this.scene, btnX, soundY, btnW, btnH, {
+            cut: uv(6),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0.85,
+            border: SYSTEM.BORDER,
+            borderAlpha: 0.8,
+            borderWidth: 1,
+            accent: SYSTEM.BORDER,
+            depth: 600,
+            scrollFactor: 0,
+            hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.95, borderWidth: 2, glow: 4 },
+        });
+        const soundHit = UIAssets.createHitArea(this.scene, btnX, soundY, btnW, btnH, 601).setScrollFactor(0);
         this.soundBtnText = padText(this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, 'SND', {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN,
         }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
         fitText(this.soundBtnText, btnW - uv(8), btnH - uv(4), 0.62);
-        this.elements.push(soundG, soundHit, this.soundBtnText);
+        this.elements.push(soundPanel, soundHit, this.soundBtnText);
 
-        soundHit.on('pointerover', () => drawSound(true));
-        soundHit.on('pointerout', () => drawSound(false));
+        soundHit.on('pointerover', () => soundPanel.setUIState('hover'));
+        soundHit.on('pointerout', () => soundPanel.setUIState('normal'));
         soundHit.on('pointerdown', () => {
             if (this.scene.soundManager) {
                 const enabled = this.scene.soundManager.toggleSound();

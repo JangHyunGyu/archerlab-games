@@ -1,9 +1,10 @@
 import {
     GAME_WIDTH, GAME_HEIGHT, RANKS,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
-    fs, uv, drawSystemPanel, fitText, padText,
+    fs, uv, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
+import { UIAssets } from './UIAssets.js';
 
 /**
  * TAB-key status window, System aesthetic.
@@ -47,11 +48,14 @@ export class StatusWindow {
         this.elements.push(dim);
 
         // Main angular panel
-        const panelG = this.scene.add.graphics().setDepth(301).setScrollFactor(0);
-        drawSystemPanel(panelG, px, py, w, h, {
+        const panelG = UIAssets.createPanel(this.scene, px, py, w, h, {
             cut: uv(14),
             fill: SYSTEM.BG_PANEL, fillAlpha: 0.95,
             border: SYSTEM.BORDER, borderAlpha: 0.9, borderWidth: 1,
+            accent: SYSTEM.BORDER,
+            glow: 6,
+            depth: 301,
+            scrollFactor: 0,
         });
         this.elements.push(panelG);
 

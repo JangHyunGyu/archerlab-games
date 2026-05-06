@@ -1,4 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, fs, uv, fitText, padText } from '../utils/Constants.js';
+import { UIAssets } from './UIAssets.js';
 
 /**
  * 그림자 서바이벌의 시스템 창 UI입니다.
@@ -56,22 +57,27 @@ export class SystemMessage {
         const elements = [];
         this.currentElements = elements;
 
-        // Outer glow
-        const outerGlow = this.scene.add.rectangle(cx, startY, boxW + 8, boxH + 8, colors.glow, 0.15)
-            .setDepth(200).setScrollFactor(0).setAlpha(0);
-        elements.push(outerGlow);
-
-        // Main window background
-        const bg = this.scene.add.rectangle(cx, startY, boxW, boxH, colors.bg, 0.85)
-            .setDepth(201).setScrollFactor(0).setAlpha(0);
+        // Generated panel texture: one reusable UI asset instead of several primitives.
+        const bg = UIAssets.createPanel(
+            this.scene,
+            cx - boxW / 2,
+            startY - boxH / 2,
+            boxW,
+            boxH,
+            {
+                cut: uv(8),
+                fill: colors.bg,
+                fillAlpha: 0.86,
+                border: colors.border,
+                borderAlpha: 0.9,
+                borderWidth: 1,
+                accent: colors.border,
+                glow: 6,
+                depth: 201,
+                scrollFactor: 0,
+            }
+        ).setAlpha(0);
         elements.push(bg);
-
-        // Border (top and bottom lines)
-        const borderTop = this.scene.add.rectangle(cx, startY - boxH / 2, boxW, 2, colors.border, 0.9)
-            .setDepth(202).setScrollFactor(0).setAlpha(0);
-        const borderBot = this.scene.add.rectangle(cx, startY + boxH / 2, boxW, 2, colors.border, 0.9)
-            .setDepth(202).setScrollFactor(0).setAlpha(0);
-        elements.push(borderTop, borderBot);
 
         // Side decorations (small diamonds)
         const diamondL = this.scene.add.rectangle(cx - boxW / 2 + 8, startY - boxH / 2, 6, 6, colors.border, 0.8)

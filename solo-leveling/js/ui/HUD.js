@@ -2,8 +2,9 @@ import {
     GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE,
     COLORS, RANKS,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
-    fs, uv, drawSystemPanel, drawCornerBrackets, fitText, padText,
+    fs, uv, drawCornerBrackets, fitText, padText,
 } from '../utils/Constants.js';
+import { UIAssets } from './UIAssets.js';
 
 export class HUD {
     constructor(scene) {
@@ -158,8 +159,6 @@ export class HUD {
     _createWeaponSlots() {
         this.weaponIcons = [];
         this.weaponTexts = [];
-        this.weaponSlotsGfx = this.scene.add.graphics().setDepth(100).setScrollFactor(0);
-        this.elements.push(this.weaponSlotsGfx);
 
         const slotSize = uv(32);
         const gap = uv(4);
@@ -179,11 +178,15 @@ export class HUD {
             const x = startX + col * (slotSize + gap);
             const y = startY + row * (slotSize + gap);
 
-            drawSystemPanel(this.weaponSlotsGfx, x, y, slotSize, slotSize, {
+            const slotPanel = UIAssets.createPanel(this.scene, x, y, slotSize, slotSize, {
                 cut: uv(4),
                 fill: SYSTEM.BG_PANEL, fillAlpha: 0.75,
                 border: SYSTEM.BORDER_DIM, borderAlpha: 0.85, borderWidth: 1,
+                accent: SYSTEM.BORDER,
+                depth: 100,
+                scrollFactor: 0,
             });
+            this.elements.push(slotPanel);
 
             const icon = this.scene.add.sprite(x + slotSize / 2, y + slotSize / 2, 'particle')
                 .setDepth(101).setScrollFactor(0).setVisible(false);
@@ -219,9 +222,18 @@ export class HUD {
         this._mmY = GAME_HEIGHT - m - size;
         this._mmScale = size / WORLD_SIZE;
 
-        this._mmBg = this.scene.add.rectangle(
-            this._mmX, this._mmY, size, size, SYSTEM.BG_DEEP, 0.7
-        ).setOrigin(0, 0).setDepth(100).setScrollFactor(0);
+        this._mmBg = UIAssets.createPanel(this.scene, this._mmX, this._mmY, size, size, {
+            cut: uv(6),
+            fill: SYSTEM.BG_DEEP,
+            fillAlpha: 0.72,
+            border: SYSTEM.BORDER,
+            borderAlpha: 0.9,
+            borderWidth: 1,
+            accent: SYSTEM.BORDER,
+            glow: 3,
+            depth: 100,
+            scrollFactor: 0,
+        });
         this.elements.push(this._mmBg);
 
         const frame = this.scene.add.graphics().setDepth(100).setScrollFactor(0);
@@ -231,10 +243,6 @@ export class HUD {
             frame.lineBetween(this._mmX + (size / 4) * i, this._mmY, this._mmX + (size / 4) * i, this._mmY + size);
             frame.lineBetween(this._mmX, this._mmY + (size / 4) * i, this._mmX + size, this._mmY + (size / 4) * i);
         }
-        // Corner brackets
-        drawCornerBrackets(frame, this._mmX, this._mmY, size, size, {
-            len: uv(8), color: SYSTEM.BORDER, lineWidth: 2, alpha: 0.9,
-        });
         this.elements.push(frame);
 
         this._mmGfx = this.scene.add.graphics().setDepth(101).setScrollFactor(0);
