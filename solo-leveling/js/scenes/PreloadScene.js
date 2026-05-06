@@ -166,6 +166,22 @@ export class PreloadScene extends Phaser.Scene {
         ].forEach((key) => {
             this._loadImage(`telegraph_${key}`, `assets/effects/telegraphs/${key}.png`);
         });
+        [
+            'charge_aura',
+            'igris_slash_impact',
+            'tusk_shockwave',
+            'tusk_dust_cloud',
+            'tusk_debris_burst',
+            'beru_acid_projectile',
+            'beru_acid_hit',
+            'entrance_burst',
+            'death_explosion',
+            'death_shock_ring',
+            'phase_rage_aura',
+            'smoke_wisp',
+        ].forEach((key) => {
+            this._loadImage(`boss_vfx_${key}`, `assets/effects/boss_support/${key}.png`);
+        });
 
         [
             'cracked_pillar',
