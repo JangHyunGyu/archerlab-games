@@ -59,8 +59,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.passiveLevels = {};
         // Rank-up count (percentage-based bonuses)
         this.rankUpCount = 0;
-        this._skillShield = 0;
-        this._skillShieldTimer = 0;
 
         // Input
         this.cursors = scene.input.keyboard.createCursorKeys();
@@ -522,15 +520,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _updateRegen(delta) {
-        if (this._skillShieldTimer > 0) {
-            this._skillShieldTimer = Math.max(0, this._skillShieldTimer - delta);
-            if (this._skillShieldTimer <= 0) this._skillShield = 0;
-        }
-
-        // Passive HP regen: base plus character-specific support regen.
+        // Passive HP regen.
         if (this.stats.hp >= this.stats.maxHp) return;
-        const regenPerSec = 1.5 + (this.character?.regenPerSec || 0);
-        this._regenAccum = (this._regenAccum || 0) + regenPerSec * (delta / 1000);
+        const hpRegenRate = 1.5;
+        this._regenAccum = (this._regenAccum || 0) + hpRegenRate * (delta / 1000);
         if (this._regenAccum >= 1) {
             const heal = Math.floor(this._regenAccum);
             this._regenAccum -= heal;
@@ -541,18 +534,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     takeDamage(amount) {
         if (this.isDead || this.isInvincible) return false;
 
-        let damage = Math.max(1, Math.floor(amount * (this.character?.damageTakenMultiplier || 1)));
-        if (this._skillShield > 0) {
-            const absorbed = Math.min(damage, this._skillShield);
-            this._skillShield -= absorbed;
-            damage -= absorbed;
-            if (damage <= 0) {
-                this.isInvincible = true;
-                this.invincibleTimer = 450;
-                this._playHitRecoil(absorbed);
-                return false;
-            }
-        }
+        const damage = Math.max(1, Math.floor(amount));
         this.stats.hp -= damage;
         this.isInvincible = true;
         this.invincibleTimer = 1000;

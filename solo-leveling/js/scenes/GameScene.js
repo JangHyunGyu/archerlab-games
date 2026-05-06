@@ -4,7 +4,6 @@ import { Player } from '../entities/Player.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 import { EnemyManager } from '../managers/EnemyManager.js';
 import { WeaponManager } from '../managers/WeaponManager.js';
-import { CharacterSkillManager } from '../managers/CharacterSkillManager.js';
 import { ShadowArmyManager } from '../managers/ShadowArmyManager.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { XPOrbPool } from '../entities/XPOrb.js';
@@ -106,7 +105,6 @@ export class GameScene extends Phaser.Scene {
                     this.weaponManager = new WeaponManager(this, this.player);
                     this.weaponManager.addWeapon(getStarterWeaponKey(this.player.characterId));
                     this.shadowArmyManager = new ShadowArmyManager(this);
-                    this.characterSkillManager = new CharacterSkillManager(this, this.player);
                 },
             },
             {
@@ -341,9 +339,6 @@ export class GameScene extends Phaser.Scene {
 
         // Update weapons
         this.weaponManager.update(time, delta);
-
-        // Update selected hunter's innate skill
-        this.characterSkillManager?.update(time, delta);
 
         // Update XP orbs
         this.xpOrbPool.update(this.player);
@@ -944,8 +939,6 @@ export class GameScene extends Phaser.Scene {
             player.stats.maxHp
         );
         player._tempAtkBuff = 0;
-        player._skillShield = 0;
-        player._skillShieldTimer = 0;
     }
 
     _restoreEnemyProgress(saved) {
@@ -1124,7 +1117,6 @@ export class GameScene extends Phaser.Scene {
             // Stop game BGM
             if (this.soundManager) this.soundManager.stopGameBGM();
             if (this.weaponManager) this.weaponManager.destroy();
-            if (this.characterSkillManager) this.characterSkillManager.destroy();
             if (this.shadowArmyManager) this.shadowArmyManager.destroy();
             if (this.itemDropManager) this.itemDropManager.destroy();
             if (this.xpOrbPool) this.xpOrbPool.destroy();
@@ -1177,7 +1169,6 @@ export class GameScene extends Phaser.Scene {
             }
 
             this.weaponManager = null;
-            this.characterSkillManager = null;
             this.shadowArmyManager = null;
             this.itemDropManager = null;
             this.xpOrbPool = null;
