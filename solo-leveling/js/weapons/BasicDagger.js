@@ -100,6 +100,31 @@ export class BasicDagger extends WeaponBase {
         return { target, baseAngle, side };
     }
 
+    _getMovementPriorityAttackSetup({ rangeBonus = 50, duration = 240 } = {}) {
+        const isMoving = this.player.moveIntensity > 0.12;
+        const target = isMoving
+            ? null
+            : this.player.getClosestEnemy(this.attackRange + this.extraRange + rangeBonus);
+        const fallbackAngle = isMoving
+            ? this.player.lastMoveAngle
+            : (this.player.facingRight ? 0 : Math.PI);
+        const baseAngle = target
+            ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
+            : fallbackAngle;
+
+        const facing = Math.cos(baseAngle);
+        if (Math.abs(facing) > 0.15) {
+            this.player.facingRight = facing > 0;
+        }
+
+        this._stabSide *= -1;
+        const side = this._stabSide;
+        if (this.player.playAttackMotion) {
+            this.player.playAttackMotion(baseAngle, duration, side);
+        }
+        return { target, baseAngle, side };
+    }
+
     _trackAttackObjects(objects, tween = null) {
         const entry = { tween, objects };
         this._activeThrusts.push(entry);
@@ -718,7 +743,7 @@ export class BasicDagger extends WeaponBase {
     }
 
     _fireball() {
-        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: 130, duration: 300 });
+        const { target, baseAngle, side } = this._getMovementPriorityAttackSetup({ rangeBonus: 130, duration: 300 });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
