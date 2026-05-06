@@ -5,9 +5,14 @@ import { CHARACTER_DEFS, CHARACTER_FRAME_NAMES, CHARACTER_SKILL_EFFECT_KEYS } fr
 export class PreloadScene extends Phaser.Scene {
     constructor() {
         super({ key: 'PreloadScene' });
+        this._preferWebP = true;
+        this._pngFallbacks = new Map();
     }
 
     preload() {
+        this._preferWebP = this._supportsWebP();
+        this._pngFallbacks.clear();
+
         const { width, height } = this.cameras.main;
         const cx = width / 2, cy = height / 2;
 
@@ -88,7 +93,40 @@ export class PreloadScene extends Phaser.Scene {
         this.scene.start('MenuScene');
     }
 
+    _supportsWebP() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            return canvas.toDataURL('image/webp').startsWith('data:image/webp');
+        } catch (e) {
+            return false;
+        }
+    }
+
+    _loadImage(key, pngPath) {
+        if (!this._preferWebP || !pngPath.endsWith('.png')) {
+            this.load.image(key, pngPath);
+            return;
+        }
+
+        const webpPath = pngPath.replace(/\.png$/i, '.webp');
+        this._pngFallbacks.set(key, pngPath);
+        this.load.image(key, webpPath);
+    }
+
     _loadOptionalAssets() {
+        this.load.on('loaderror', (file) => {
+            const fallback = this._pngFallbacks.get(file.key);
+            if (fallback) {
+                this._pngFallbacks.delete(file.key);
+                console.warn('WebP asset not loaded; falling back to PNG:', file.key);
+                this.load.image(file.key, fallback);
+                return;
+            }
+            console.warn('Asset not loaded (procedural fallback if available):', file.key);
+        });
+
         [
             'ui_panel_cyan',
             'ui_panel_gold',
@@ -105,11 +143,11 @@ export class PreloadScene extends Phaser.Scene {
             'ui_slot',
             'ui_minimap',
         ].forEach((key) => {
-            this.load.image(key, `assets/ui/${key}.png`);
+            this._loadImage(key, `assets/ui/${key}.png`);
         });
 
         [...Object.keys(WEAPONS), ...Object.keys(PASSIVES)].forEach((key) => {
-            this.load.image(`asset_icon_${key}`, `assets/ui/icons/${key}.png`);
+            this._loadImage(`asset_icon_${key}`, `assets/ui/icons/${key}.png`);
         });
 
         [
@@ -117,7 +155,7 @@ export class PreloadScene extends Phaser.Scene {
             'mana_crystal',
             'shadow_essence',
         ].forEach((key) => {
-            this.load.image(`item_${key}`, `assets/items/${key}.png`);
+            this._loadImage(`item_${key}`, `assets/items/${key}.png`);
         });
 
         [
@@ -126,7 +164,7 @@ export class PreloadScene extends Phaser.Scene {
             'ground_crack',
             'acid_puddle',
         ].forEach((key) => {
-            this.load.image(`telegraph_${key}`, `assets/effects/telegraphs/${key}.png`);
+            this._loadImage(`telegraph_${key}`, `assets/effects/telegraphs/${key}.png`);
         });
 
         [
@@ -135,21 +173,21 @@ export class PreloadScene extends Phaser.Scene {
             'shadow_portal',
             'hanging_chain',
         ].forEach((key) => {
-            this.load.image(`env_${key}`, `assets/environment/${key}.png`);
+            this._loadImage(`env_${key}`, `assets/environment/${key}.png`);
         });
 
         ['melee', 'tank', 'ranged'].forEach((key) => {
-            this.load.image(`asset_shadow_${key}`, `assets/shadows/shadow_${key}.png`);
+            this._loadImage(`asset_shadow_${key}`, `assets/shadows/shadow_${key}.png`);
         });
 
         Object.values(CHARACTER_DEFS).forEach((character) => {
-            this.load.image(
+            this._loadImage(
                 `char_${character.assetKey}_portrait`,
                 `assets/player/characters/${character.assetKey}/portrait.png`
             );
             if (character.usesExistingPlayerMotion) return;
             CHARACTER_FRAME_NAMES.forEach((frameName) => {
-                this.load.image(
+                this._loadImage(
                     `${character.texturePrefix}_${frameName}`,
                     `assets/player/characters/${character.assetKey}/motion/${frameName}.png`
                 );
@@ -157,14 +195,14 @@ export class PreloadScene extends Phaser.Scene {
         });
 
         CHARACTER_SKILL_EFFECT_KEYS.forEach((key) => {
-            this.load.image(`char_skill_${key}`, `assets/effects/character_skills/${key}.png`);
+            this._loadImage(`char_skill_${key}`, `assets/effects/character_skills/${key}.png`);
         });
 
-        this.load.image('ai_player_idle', 'assets/player/player_idle.png');
-        this.load.image('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
+        this._loadImage('ai_player_idle', 'assets/player/player_idle.png');
+        this._loadImage('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
 
         const loadPlayerMotion = (name) => {
-            this.load.image(`motion_${name}`, `assets/player/motion/${name}.png`);
+            this._loadImage(`motion_${name}`, `assets/player/motion/${name}.png`);
         };
         for (let i = 0; i < 4; i++) {
             loadPlayerMotion(`player_idle_${i}`);
@@ -189,10 +227,10 @@ export class PreloadScene extends Phaser.Scene {
             'ironKnight',
             'demonWarrior',
         ].forEach((key) => {
-            this.load.image(`ai_enemy_${key}`, `assets/enemies/source/${key}.png`);
+            this._loadImage(`ai_enemy_${key}`, `assets/enemies/source/${key}.png`);
         });
         ['igris', 'tusk', 'beru'].forEach((key) => {
-            this.load.image(`ai_boss_${key}`, `assets/bosses/source/${key}.png`);
+            this._loadImage(`ai_boss_${key}`, `assets/bosses/source/${key}.png`);
         });
         [
             'shadow_dagger',
@@ -200,7 +238,7 @@ export class PreloadScene extends Phaser.Scene {
             'ruler_authority',
             'dragon_fear',
         ].forEach((key) => {
-            this.load.image(`effect_${key}`, `assets/effects/${key}.png`);
+            this._loadImage(`effect_${key}`, `assets/effects/${key}.png`);
         });
         [
             'basic_stab',
@@ -209,7 +247,7 @@ export class PreloadScene extends Phaser.Scene {
             'monster_death',
         ].forEach((key) => {
             for (let i = 0; i < 6; i++) {
-                this.load.image(`effect_${key}_${i}`, `assets/effects/combat/${key}_${i}.png`);
+                this._loadImage(`effect_${key}_${i}`, `assets/effects/combat/${key}_${i}.png`);
             }
         });
         [
@@ -219,15 +257,11 @@ export class PreloadScene extends Phaser.Scene {
             'boss_beru_acid',
         ].forEach((key) => {
             for (let i = 0; i < 6; i++) {
-                this.load.image(`effect_${key}_${i}`, `assets/effects/enemy_boss/${key}_${i}.png`);
+                this._loadImage(`effect_${key}_${i}`, `assets/effects/enemy_boss/${key}_${i}.png`);
             }
         });
 
         const CDN = 'https://cdn.jsdelivr.net/gh/crawl/crawl@master/crawl-ref/source/rltiles/';
-
-        this.load.on('loaderror', (file) => {
-            console.warn('CDN asset not loaded (procedural fallback):', file.key);
-        });
 
         this.load.image('ext_enemy_goblin', CDN + 'mon/humanoids/goblin.png');
         this.load.image('ext_enemy_orc', CDN + 'mon/humanoids/orcs/orc_warrior.png');

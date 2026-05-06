@@ -6,6 +6,8 @@ import math
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
+from image_formats import save_png_and_webp
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_SHEET = ROOT / "assets" / "player" / "characters" / "generated_character_source_sheet.png"
@@ -696,13 +698,13 @@ def main() -> None:
         motion_dir = char_dir / "motion"
         motion_dir.mkdir(parents=True, exist_ok=True)
 
-        source.save(char_dir / "source.png")
+        save_png_and_webp(source, char_dir / "source.png")
         actor = fit_actor(source, cfg)
-        make_portrait(source, cfg).save(char_dir / "portrait.png")
+        save_png_and_webp(make_portrait(source, cfg), char_dir / "portrait.png")
 
         for frame_name in FRAMES:
             frame = render_frame(actor, cfg, frame_name)
-            frame.save(motion_dir / f"{frame_name}.png")
+            save_png_and_webp(frame, motion_dir / f"{frame_name}.png")
 
         print(f"generated original asset set: {cfg['id']} ({len(FRAMES)} frames)")
 

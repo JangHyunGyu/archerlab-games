@@ -53,6 +53,28 @@ function fileExists(relPath) {
     return fs.existsSync(path.join(ROOT, relPath));
 }
 
+function walkAssetPngs(dir, relPrefix = '') {
+    if (!fs.existsSync(dir)) return [];
+    const out = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const rel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            out.push(...walkAssetPngs(full, rel));
+        } else if (entry.name.endsWith('.png')) {
+            out.push(rel);
+        }
+    }
+    return out;
+}
+
+for (const relPng of walkAssetPngs(path.join(ROOT, 'assets'))) {
+    const relWebp = relPng.replace(/\.png$/i, '.webp');
+    if (!fileExists(`assets/${relWebp}`)) {
+        errors.push(`[WEBP] assets/${relPng} has no matching WebP primary asset`);
+    }
+}
+
 // ═══════════════════════════════════════════
 // Load Constants.js (ES Module → CommonJS 변환)
 // ═══════════════════════════════════════════
