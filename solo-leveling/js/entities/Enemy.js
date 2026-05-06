@@ -368,8 +368,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     _fireProjectile(targetX, targetY) {
         const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
 
-        // Brief cast animation (mage glows RED)
-        this.setTint(0xff4422);
+        // Brief cast animation (mage glows purple)
+        this.setTint(0xb044ff);
         this.scene.time.delayedCall(150, () => {
             if (this.active) this.setTint(0xffffff);
         });
@@ -391,12 +391,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const speed = 150;
         proj.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
-        // Red danger trail — bounded to projectile lifetime (no infinite repeat)
+        // Purple danger trail, bounded to projectile lifetime.
         const trailEvent = this.scene.time.addEvent({
             delay: 60, repeat: 58, // 58 * 60ms ≈ 3480ms (slightly under auto-destroy)
             callback: () => {
                 if (!proj.active || !this.scene) return;
-                const trail = this.scene.add.circle(proj.x, proj.y, useEffectAsset ? 5 : 4, 0xff3300, useEffectAsset ? 0.32 : 0.5).setDepth(7);
+                const trail = this.scene.add.circle(proj.x, proj.y, useEffectAsset ? 5 : 4, 0x9b35ff, useEffectAsset ? 0.32 : 0.5).setDepth(7);
                 this.scene.tweens.add({
                     targets: trail, alpha: 0, scale: 0.2,
                     duration: 250, onComplete: () => trail.destroy(),

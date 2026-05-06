@@ -1872,17 +1872,17 @@ export class SpriteFactory {
         spg.generateTexture('proj_shadow', 12, 12);
         spg.destroy();
 
-        // Dark Mage projectile (RED/ORANGE — enemy attack, distinct from player purple)
+        // Dark Mage projectile fallback (purple flame)
         const mg = scene.make.graphics({ add: false });
-        mg.fillStyle(0xff2200, 0.25);
+        mg.fillStyle(0x3d006d, 0.25);
         mg.fillCircle(8, 8, 8);
-        mg.fillStyle(0xff3300, 0.9);
+        mg.fillStyle(0x7a1fff, 0.9);
         mg.fillCircle(8, 8, 6);
-        mg.fillStyle(0xff6622, 0.7);
+        mg.fillStyle(0xb84dff, 0.75);
         mg.fillCircle(8, 8, 4);
-        mg.fillStyle(0xffcc44, 0.6);
+        mg.fillStyle(0xf0aaff, 0.65);
         mg.fillCircle(8, 8, 2.5);
-        mg.fillStyle(0xffffff, 0.5);
+        mg.fillStyle(0xffffff, 0.55);
         mg.fillCircle(7, 6, 1.5);
         mg.generateTexture('proj_darkMage', 16, 16);
         mg.destroy();

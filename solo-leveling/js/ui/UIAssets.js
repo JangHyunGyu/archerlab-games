@@ -54,6 +54,12 @@ function textureKey(prefix, w, h, opts) {
 }
 
 export class UIAssets {
+    static resolveAsset(scene, asset) {
+        if (!asset) return null;
+        const key = asset.startsWith('ui_') ? asset : `ui_${asset}`;
+        return scene.textures.exists(key) ? key : null;
+    }
+
     static ensurePanel(scene, w, h, opts = {}) {
         const width = Math.max(2, Math.ceil(w));
         const height = Math.max(2, Math.ceil(h));
@@ -129,10 +135,9 @@ export class UIAssets {
     }
 
     static createPanel(scene, x, y, w, h, opts = {}) {
-        const normal = this.ensurePanel(scene, w, h, opts);
-        const hover = opts.hover
-            ? this.ensurePanel(scene, w, h, { ...opts, ...opts.hover })
-            : normal;
+        const normal = this.resolveAsset(scene, opts.asset) || this.ensurePanel(scene, w, h, opts);
+        const hover = this.resolveAsset(scene, opts.hoverAsset)
+            || (opts.hover ? this.ensurePanel(scene, w, h, { ...opts, ...opts.hover }) : normal);
         const image = scene.add.image(x, y, normal).setOrigin(0, 0);
         image.setDisplaySize(w, h);
         if (opts.depth !== undefined) image.setDepth(opts.depth);
