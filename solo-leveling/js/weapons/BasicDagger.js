@@ -677,32 +677,40 @@ export class BasicDagger extends WeaponBase {
         if (maceSprite) entryObjects.push(maceSprite);
         if (slamSprite) entryObjects.push(slamSprite);
         const entry = this._trackAttackObjects(entryObjects);
+        const maceGripOrigin = 0.18;
+        const maceHeadReach = maceSprite ? (maceSprite.width || 480) * (0.8 - maceGripOrigin) : 0;
+        const maceScale = maceSprite
+            ? Phaser.Math.Clamp((targetDist - 18) / Math.max(1, maceHeadReach), 0.24, 0.38)
+            : 1;
 
         const draw = (t) => {
             const k = Phaser.Math.Clamp(t, 0, 1);
             const wind = k < 0.42 ? Phaser.Math.Easing.Cubic.Out(k / 0.42) : 1;
             const strike = k < 0.42 ? 0 : Phaser.Math.Easing.Cubic.Out((k - 0.42) / 0.58);
-            const headX = originX
-                + cosA * (30 + targetDist * strike)
-                + perpX * side * (34 * (1 - strike));
-            const headY = originY
-                + sinA * (30 + targetDist * strike)
-                + perpY * side * (34 * (1 - strike))
-                - 38 * wind * (1 - strike);
-            const gripX = originX + cosA * 22 - perpX * side * 8;
-            const gripY = originY + sinA * 22 - perpY * side * 8;
+            const swing = k < 0.42
+                ? Phaser.Math.Easing.Cubic.Out(k / 0.42) * 0.22
+                : 0.22 + Phaser.Math.Easing.Cubic.Out((k - 0.42) / 0.58) * 0.78;
+            const gripX = originX + cosA * (16 + strike * 8) - perpX * side * (12 - strike * 5);
+            const gripY = originY + sinA * (16 + strike * 8) - perpY * side * (12 - strike * 5);
+            const swingStart = baseAngle - side * 1.08;
+            const swingEnd = baseAngle + side * 0.08;
+            const followThrough = k < 0.72 ? 0 : Phaser.Math.Easing.Cubic.Out((k - 0.72) / 0.28);
+            const weaponAngle = swingStart
+                + Phaser.Math.Angle.Wrap(swingEnd - swingStart) * swing
+                + side * 0.16 * followThrough;
+            const headX = maceSprite
+                ? gripX + Math.cos(weaponAngle) * maceHeadReach * maceScale
+                : originX + cosA * (30 + targetDist * strike) + perpX * side * (34 * (1 - strike));
+            const headY = maceSprite
+                ? gripY + Math.sin(weaponAngle) * maceHeadReach * maceScale
+                : originY + sinA * (30 + targetDist * strike) + perpY * side * (34 * (1 - strike)) - 38 * wind * (1 - strike);
 
             fx.clear();
             if (maceSprite) {
-                const weaponAngle = Phaser.Math.Angle.Between(gripX, gripY, headX, headY);
-                const weaponDist = Phaser.Math.Distance.Between(gripX, gripY, headX, headY);
-                const visibleLength = (maceSprite.width || 480) * 0.78;
-                const weaponScale = Phaser.Math.Clamp(weaponDist / visibleLength, 0.28, 0.48);
-
                 maceSprite.setPosition(gripX, gripY);
                 maceSprite.setRotation(weaponAngle);
-                maceSprite.setAlpha(0.98);
-                maceSprite.setScale(weaponScale * (0.98 + strike * 0.08));
+                maceSprite.setAlpha((0.92 + strike * 0.08) * (1 - followThrough * 0.5));
+                maceSprite.setScale(maceScale * (1 + strike * 0.06));
 
                 fx.lineStyle(14, glowColor, 0.12 * (1 - strike * 0.25));
                 fx.lineBetween(
