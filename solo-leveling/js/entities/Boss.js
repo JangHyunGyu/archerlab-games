@@ -17,6 +17,46 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    static _addImageVfx(scene, textureKey, x, y, opts = {}) {
+        if (!scene?.textures?.exists(textureKey)) return null;
+
+        const {
+            depth = 8,
+            alpha = 1,
+            scale = 1,
+            scaleX = scale,
+            scaleY = scale,
+            rotation = 0,
+            blendMode = Phaser.BlendModes.ADD,
+            origin = 0.5,
+        } = opts;
+
+        try {
+            return scene.add.image(x, y, textureKey)
+                .setOrigin(origin)
+                .setDepth(depth)
+                .setAlpha(alpha)
+                .setScale(scaleX, scaleY)
+                .setRotation(rotation)
+                .setBlendMode(blendMode);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    static _addBossVfx(scene, key, x, y, opts = {}) {
+        return Boss._addImageVfx(scene, `boss_vfx_${key}`, x, y, opts);
+    }
+
+    static _tweenDestroy(scene, target, config) {
+        if (!target?.scene) return;
+        scene.tweens.add({
+            targets: target,
+            ...config,
+            onComplete: () => Boss._destroyIfAlive(target),
+        });
+    }
+
     static _playFrameVfx(scene, prefix, x, y, opts = {}) {
         if (!scene?.textures?.exists(`${prefix}_0`)) return false;
 
@@ -181,65 +221,53 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             duration: 2000, onComplete: () => Boss._destroyIfAlive(warning),
         });
 
-        // Glow ring (original)
-        const ring = scene.add.circle(this.x, this.y, 10, this.config.color, 0.5).setDepth(3);
-        scene.tweens.add({
-            targets: ring, scaleX: 8, scaleY: 8, alpha: 0,
-            duration: 1000, onComplete: () => Boss._destroyIfAlive(ring),
+        const auraScale = Math.max(0.72, this.config.size / 120);
+        const chargeAura = Boss._addBossVfx(scene, 'charge_aura', this.x, this.y + 10, {
+            depth: 3,
+            alpha: 0.78,
+            scale: auraScale,
         });
+        if (chargeAura) {
+            Boss._tweenDestroy(scene, chargeAura, {
+                alpha: 0,
+                scaleX: chargeAura.scaleX * 1.35,
+                scaleY: chargeAura.scaleY * 1.35,
+                duration: 1300,
+                ease: 'Cubic.Out',
+            });
+        }
 
-        // Particle burst — dramatic entrance
-        try {
-            const burstEmitter = scene.add.particles(this.x, this.y, 'particle_glow', {
-                speed: { min: 30, max: 120 },
-                scale: { start: 1.2, end: 0 },
-                alpha: { start: 0.8, end: 0 },
-                lifespan: { min: 600, max: 1200 },
-                angle: { min: 0, max: 360 },
-                tint: [this.config.color, 0xff3333, 0xff6600],
-                blendMode: 'ADD',
-                emitting: false,
+        const burst = Boss._addBossVfx(scene, 'entrance_burst', this.x, this.y, {
+            depth: 4,
+            alpha: 0.92,
+            scale: auraScale * 0.82,
+        });
+        if (burst) {
+            Boss._tweenDestroy(scene, burst, {
+                alpha: 0,
+                scaleX: burst.scaleX * 1.5,
+                scaleY: burst.scaleY * 1.5,
+                duration: 1050,
+                ease: 'Quad.Out',
             });
-            burstEmitter.setDepth(4);
-            burstEmitter.explode(25);
+        }
 
-            // Rising energy particles
-            const riseEmitter = scene.add.particles(this.x, this.y, 'particle_spark', {
-                speed: { min: 20, max: 80 },
-                angle: { min: 250, max: 290 },
-                scale: { start: 0.8, end: 0 },
-                alpha: { start: 1, end: 0 },
-                lifespan: { min: 800, max: 1500 },
-                tint: [this.config.color, 0xffaa00],
-                blendMode: 'ADD',
-                frequency: 40,
-                quantity: 2,
+        const smoke = Boss._addBossVfx(scene, 'smoke_wisp', this.x, this.y + 18, {
+            depth: 3,
+            alpha: 0.58,
+            scale: auraScale * 0.74,
+            blendMode: Phaser.BlendModes.NORMAL,
+        });
+        if (smoke) {
+            Boss._tweenDestroy(scene, smoke, {
+                alpha: 0,
+                scaleX: smoke.scaleX * 1.25,
+                scaleY: smoke.scaleY * 1.25,
+                y: smoke.y + 12,
+                duration: 1500,
+                ease: 'Sine.Out',
             });
-            riseEmitter.setDepth(4);
-            scene.time.delayedCall(1500, () => {
-                if (!Boss._sceneIsActive(scene) || !riseEmitter.scene) return;
-                riseEmitter.stop();
-                scene.time.delayedCall(1600, () => Boss._destroyIfAlive(riseEmitter));
-            });
-
-            // Ground smoke
-            const smoke = scene.add.particles(this.x, this.y + 20, 'particle_smoke', {
-                speed: { min: 15, max: 50 },
-                angle: { min: 160, max: 380 },
-                scale: { start: 1.5, end: 0.3 },
-                alpha: { start: 0.4, end: 0 },
-                lifespan: { min: 600, max: 1000 },
-                tint: 0x220000,
-                emitting: false,
-            });
-            smoke.setDepth(3);
-            smoke.explode(12);
-
-            scene.time.delayedCall(1300, () => {
-                Boss._destroyIfAlive(burstEmitter);
-                Boss._destroyIfAlive(smoke);
-            });
-        } catch (e) { /* particle fallback not needed — ring already shown */ }
+        }
     }
 
     update(time, delta, playerX, playerY) {
@@ -278,6 +306,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this.speed *= 1.2;
             this.attack = Math.floor(this.attack * 1.1);
             this.setTint(0xff6666);
+            const rageAura = Boss._addBossVfx(this.scene, 'phase_rage_aura', this.x, this.y, {
+                depth: 7,
+                alpha: 0.9,
+                scale: Math.max(0.72, this.config.size / 125),
+            });
+            if (rageAura) {
+                Boss._tweenDestroy(this.scene, rageAura, {
+                    alpha: 0,
+                    scaleX: rageAura.scaleX * 1.42,
+                    scaleY: rageAura.scaleY * 1.42,
+                    duration: 850,
+                    ease: 'Cubic.Out',
+                });
+            }
             if (this.scene.soundManager) this.scene.soundManager.play('bossRage');
             this.scene.cameras.main.flash(200, 255, 50, 50);
             // Intensify glow in phase 2
@@ -365,92 +407,72 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         if (scene.soundManager) scene.soundManager.play('bossCharge');
 
-        // ⚠ Danger zone fill (bright red, pulsing)
-        const dangerZone = scene.add.circle(slashX, slashY, range * 0.6, 0xff0000, 0)
-            .setDepth(3);
-        // ⚠ Danger border (thick red ring)
-        const dangerRing = scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
-            .setDepth(3).setStrokeStyle(4, 0xff2222, 0);
-        const warnIcon = scene.textures.exists('telegraph_warning_reticle')
-            ? scene.add.image(slashX, slashY, 'telegraph_warning_reticle')
-                .setOrigin(0.5).setDepth(4).setAlpha(0).setScale(1.0)
-            : scene.add.text(slashX, slashY - range * 0.3, '!', {
-                fontSize: '28px',
-                fontFamily: 'Arial',
-                fontStyle: 'bold',
-                color: '#ff3344',
-            }).setOrigin(0.5).setDepth(4).setAlpha(0);
-        const slashWarning = scene.textures.exists('telegraph_igris_slash_warning')
-            ? scene.add.image(slashX, slashY, 'telegraph_igris_slash_warning')
-                .setOrigin(0.5).setDepth(3).setAlpha(0).setRotation(angle).setScale(0.82)
-            : null;
+        const warnIcon = Boss._addImageVfx(scene, 'telegraph_warning_reticle', slashX, slashY, {
+            depth: 4,
+            alpha: 0,
+            scale: 1.05,
+        });
+        const slashWarning = Boss._addImageVfx(scene, 'telegraph_igris_slash_warning', slashX, slashY, {
+            depth: 3,
+            alpha: 0,
+            rotation: angle,
+            scale: 0.94,
+        });
+        const chargeCue = Boss._addBossVfx(scene, 'charge_aura', slashX, slashY, {
+            depth: 3,
+            alpha: 0,
+            scale: 0.58,
+        });
 
-        // Pulsing danger animation (flashing red)
-        scene.tweens.add({
-            targets: dangerZone,
-            alpha: { from: 0.08, to: 0.3 },
-            duration: 150, yoyo: true, repeat: 1,
-        });
-        scene.tweens.add({
-            targets: dangerRing,
-            alpha: { from: 0.3, to: 0.9 },
-            duration: 150, yoyo: true, repeat: 1,
-        });
-        scene.tweens.add({
-            targets: warnIcon,
-            alpha: 1, scale: 1.3,
-            duration: 200, yoyo: true,
-        });
+        if (warnIcon) {
+            scene.tweens.add({
+                targets: warnIcon,
+                alpha: { from: 0.2, to: 0.92 },
+                scale: 1.22,
+                duration: 220,
+                yoyo: true,
+            });
+        }
         if (slashWarning) {
             scene.tweens.add({
                 targets: slashWarning,
-                alpha: { from: 0.2, to: 0.72 },
-                scale: 1.0,
+                alpha: { from: 0.18, to: 0.74 },
+                scale: 1.08,
                 duration: 550,
                 ease: 'Quad.Out',
             });
         }
-
-        // Shrinking countdown ring (fills inward)
-        const countdown = scene.add.circle(slashX, slashY, range * 0.6, 0x000000, 0)
-            .setDepth(3).setStrokeStyle(3, 0xffaa00, 0.7);
-        scene.tweens.add({
-            targets: countdown,
-            scale: 0.1,
-            duration: 600,
-        });
+        if (chargeCue) {
+            scene.tweens.add({
+                targets: chargeCue,
+                alpha: { from: 0.18, to: 0.66 },
+                scale: 0.78,
+                duration: 600,
+                ease: 'Cubic.In',
+            });
+        }
 
         scene.time.delayedCall(600, () => {
-            Boss._destroyIfAlive(dangerZone);
-            Boss._destroyIfAlive(dangerRing);
             Boss._destroyIfAlive(warnIcon);
             Boss._destroyIfAlive(slashWarning);
-            Boss._destroyIfAlive(countdown);
+            Boss._destroyIfAlive(chargeCue);
             if (!this.active || !Boss._sceneIsActive(scene)) return;
 
             if (scene.soundManager) scene.soundManager.play('bossSlash');
 
-            const usedSlashAsset = Boss._playFrameVfx(
-                scene,
-                'effect_boss_igris_slash',
-                slashX,
-                slashY,
-                {
-                    scale: 0.82,
-                    rotation: angle,
-                    depth: 8,
-                    frameMs: 48,
-                    alpha: 0.96,
-                }
-            );
-            if (!usedSlashAsset) {
-                const slash = scene.add.sprite(slashX, slashY, 'proj_igris')
-                    .setDepth(8).setRotation(angle).setScale(2.5);
-                scene.tweens.add({
-                    targets: slash,
-                    alpha: 0, scaleX: 3.5, scaleY: 3.5,
-                    duration: 300,
-                    onComplete: () => Boss._destroyIfAlive(slash),
+            const slash = Boss._addBossVfx(scene, 'igris_slash_impact', slashX, slashY, {
+                depth: 8,
+                alpha: 0.96,
+                rotation: angle,
+                scale: 0.82,
+            });
+            if (slash) {
+                Boss._tweenDestroy(scene, slash, {
+                    alpha: 0,
+                    scaleX: slash.scaleX * 1.26,
+                    scaleY: slash.scaleY * 1.26,
+                    duration: 360,
+                    ease: 'Quad.Out',
                 });
             }
 
@@ -481,216 +503,121 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         if (scene.soundManager) scene.soundManager.play('bossCharge');
 
-        // ⚠ Danger zone fill (bright red, growing)
-        const dangerZone = scene.add.circle(slamX, slamY, 10, 0xff0000, 0.35)
-            .setDepth(3);
-        // ⚠ Danger border (thick pulsing red ring)
-        const dangerRing = scene.add.circle(slamX, slamY, radius, 0x000000, 0)
-            .setDepth(3).setStrokeStyle(6, 0xff0000, 0);
-        // ⚠ Inner ring (second ring for emphasis)
-        const innerRing = scene.add.circle(slamX, slamY, radius * 0.6, 0x000000, 0)
-            .setDepth(3).setStrokeStyle(3, 0xff4444, 0);
-        const warnIcon = scene.textures.exists('telegraph_warning_reticle')
-            ? scene.add.image(slamX, slamY, 'telegraph_warning_reticle')
-                .setOrigin(0.5).setDepth(4).setAlpha(0).setScale(1.25)
-            : scene.add.text(slamX, slamY, '!', {
-                fontSize: '44px',
-                fontFamily: 'Arial',
-                fontStyle: 'bold',
-                color: '#ff3344',
-            }).setOrigin(0.5).setDepth(4).setAlpha(0);
-        // Crosshair lines (targeting indicator)
-        const lines = [];
-        for (let a = 0; a < 4; a++) {
-            const ang = a * Math.PI / 2;
-            const line = scene.add.line(0, 0,
-                slamX, slamY,
-                slamX + Math.cos(ang) * radius, slamY + Math.sin(ang) * radius,
-                0xff3333, 0
-            ).setDepth(3).setLineWidth(2.5);
-            lines.push(line);
+        const warnIcon = Boss._addImageVfx(scene, 'telegraph_warning_reticle', slamX, slamY, {
+            depth: 4,
+            alpha: 0,
+            scale: 1.18,
+        });
+        const crackWarning = Boss._addImageVfx(scene, 'telegraph_ground_crack', slamX, slamY, {
+            depth: 3,
+            alpha: 0.22,
+            scale: 0.55,
+            rotation: Phaser.Math.FloatBetween(-0.25, 0.25),
+        });
+        const chargeCue = Boss._addBossVfx(scene, 'charge_aura', slamX, slamY, {
+            depth: 3,
+            alpha: 0.16,
+            scale: 0.62,
+        });
+
+        if (warnIcon) {
+            scene.tweens.add({
+                targets: warnIcon,
+                alpha: { from: 0.48, to: 0.96 },
+                scale: { from: 1.1, to: 1.72 },
+                duration: 330,
+                yoyo: true,
+                repeat: 1,
+            });
+        }
+        if (crackWarning) {
+            scene.tweens.add({
+                targets: crackWarning,
+                alpha: { from: 0.18, to: 0.82 },
+                scale: radius / 135,
+                duration: 1200,
+                ease: 'Power2',
+            });
+        }
+        if (chargeCue) {
+            scene.tweens.add({
+                targets: chargeCue,
+                alpha: { from: 0.18, to: 0.62 },
+                scale: radius / 150,
+                duration: 1200,
+                ease: 'Cubic.In',
+            });
         }
 
-        // Danger zone expands to full radius
-        scene.tweens.add({
-            targets: dangerZone,
-            scale: radius / 10, alpha: 0.45,
-            duration: 1000, ease: 'Power2',
-        });
-        // Ring pulses 4 times (urgent warning)
-        scene.tweens.add({
-            targets: dangerRing,
-            alpha: { from: 0.5, to: 1.0 },
-            duration: 180, yoyo: true, repeat: 3,
-        });
-        // Inner ring shrinks inward
-        scene.tweens.add({
-            targets: innerRing,
-            alpha: { from: 0.4, to: 0.8 }, scale: { from: 1, to: 0.3 },
-            duration: 1200, ease: 'Power2',
-        });
-        // Warning icon pulses
-        scene.tweens.add({
-            targets: warnIcon,
-            alpha: { from: 0.7, to: 1 }, scale: { from: 1.0, to: 1.8 },
-            duration: 300, yoyo: true, repeat: 1,
-        });
-        // Crosshair lines fade in
-        scene.tweens.add({
-            targets: lines,
-            alpha: 0.8,
-            duration: 300,
-        });
-
         scene.time.delayedCall(1400, () => {
-            Boss._destroyIfAlive(dangerZone);
-            Boss._destroyIfAlive(dangerRing);
-            Boss._destroyIfAlive(innerRing);
             Boss._destroyIfAlive(warnIcon);
-            lines.forEach(l => Boss._destroyIfAlive(l));
+            Boss._destroyIfAlive(crackWarning);
+            Boss._destroyIfAlive(chargeCue);
             if (!this.active || !Boss._sceneIsActive(scene)) return;
 
             if (scene.soundManager) scene.soundManager.play('groundSlam');
 
-            const usedSlamAsset = Boss._playFrameVfx(
-                scene,
-                'effect_boss_tusk_slam',
-                slamX,
-                slamY,
-                {
-                    scale: radius / 128,
-                    rotation: Phaser.Math.FloatBetween(-0.25, 0.25),
-                    depth: 8,
-                    frameMs: 62,
-                    alpha: 0.94,
-                    blendMode: Phaser.BlendModes.NORMAL,
-                }
-            );
-            if (!usedSlamAsset) {
-                const slam = scene.add.sprite(slamX, slamY, 'proj_tusk')
-                    .setDepth(8).setScale(3);
-                scene.tweens.add({
-                    targets: slam,
-                    alpha: 0, scaleX: 5, scaleY: 5,
-                    duration: 400,
-                    onComplete: () => Boss._destroyIfAlive(slam),
-                });
-            }
-
-            // White shockwave ring — fast expanding (tank impact feel, NOT blood)
-            if (scene.textures.exists('telegraph_ground_crack')) {
-                const crackDecal = scene.add.image(slamX, slamY, 'telegraph_ground_crack')
-                    .setDepth(6)
-                    .setAlpha(0.88)
-                    .setScale((radius * 2.1) / 256)
-                    .setRotation(Phaser.Math.FloatBetween(-0.3, 0.3))
-                    .setBlendMode(Phaser.BlendModes.ADD);
-                scene.tweens.add({
-                    targets: crackDecal,
+            const crackDecal = Boss._addImageVfx(scene, 'telegraph_ground_crack', slamX, slamY, {
+                depth: 6,
+                alpha: 0.86,
+                scale: radius / 150,
+                rotation: Phaser.Math.FloatBetween(-0.3, 0.3),
+            });
+            if (crackDecal) {
+                Boss._tweenDestroy(scene, crackDecal, {
                     alpha: 0,
-                    scale: crackDecal.scaleX * 1.1,
-                    duration: 850,
+                    scaleX: crackDecal.scaleX * 1.08,
+                    scaleY: crackDecal.scaleY * 1.08,
+                    duration: 900,
                     ease: 'Quad.Out',
-                    onComplete: () => Boss._destroyIfAlive(crackDecal),
                 });
             }
 
-            const shockRing = scene.add.circle(slamX, slamY, 20, 0, 0)
-                .setDepth(9).setStrokeStyle(5, 0xffffff, 0.9);
-            scene.tweens.add({
-                targets: shockRing,
-                scale: radius / 20,
-                alpha: 0,
-                duration: 350, ease: 'Cubic.Out',
-                onComplete: () => Boss._destroyIfAlive(shockRing),
+            const shockwave = Boss._addBossVfx(scene, 'tusk_shockwave', slamX, slamY, {
+                depth: 9,
+                alpha: 0.95,
+                scale: radius / 150,
             });
-            // Secondary gold ring (slower, heavier)
-            const goldRing = scene.add.circle(slamX, slamY, 20, 0, 0)
-                .setDepth(9).setStrokeStyle(3, 0xffbb33, 0.7);
-            scene.tweens.add({
-                targets: goldRing,
-                scale: radius / 20 * 0.85,
-                alpha: 0,
-                duration: 500, ease: 'Cubic.Out',
-                onComplete: () => Boss._destroyIfAlive(goldRing),
-            });
-
-            // Dust cloud (tan/brown puffs — distinctly NOT blood)
-            for (let i = 0; i < 18; i++) {
-                const a = Math.random() * Math.PI * 2;
-                const dist = 20 + Math.random() * (radius * 0.5);
-                const size = 8 + Math.random() * 10;
-                const tan = [0xbb8855, 0x997744, 0xd4a870, 0x775533][Math.floor(Math.random() * 4)];
-                const puff = scene.add.circle(
-                    slamX + Math.cos(a) * 15,
-                    slamY + Math.sin(a) * 15,
-                    size, tan, 0.75
-                ).setDepth(7);
-                scene.tweens.add({
-                    targets: puff,
-                    x: slamX + Math.cos(a) * dist,
-                    y: slamY + Math.sin(a) * dist,
-                    scale: 1.8,
+            if (shockwave) {
+                Boss._tweenDestroy(scene, shockwave, {
                     alpha: 0,
-                    duration: 700 + Math.random() * 400,
-                    ease: 'Quad.Out',
-                    onComplete: () => Boss._destroyIfAlive(puff),
+                    scaleX: shockwave.scaleX * 1.38,
+                    scaleY: shockwave.scaleY * 1.38,
+                    duration: 520,
+                    ease: 'Cubic.Out',
                 });
             }
 
-            // Radial ground cracks (gold/white lines)
-            for (let c = 0; c < 10; c++) {
-                const angle = (Math.PI * 2 / 10) * c + Math.random() * 0.2;
-                const len = radius * (0.7 + Math.random() * 0.3);
-                const crack = scene.add.line(0, 0,
-                    slamX, slamY,
-                    slamX + Math.cos(angle) * len,
-                    slamY + Math.sin(angle) * len,
-                    0xffcc66, 0
-                ).setDepth(6).setLineWidth(2.5);
-                scene.tweens.add({
-                    targets: crack,
-                    alpha: { from: 0.9, to: 0 },
-                    duration: 600, delay: c * 12, ease: 'Cubic.Out',
-                    onComplete: () => Boss._destroyIfAlive(crack),
-                });
-            }
-
-            // Bright center flash (single pulse, white — impact moment)
-            const flash = scene.add.circle(slamX, slamY, 40, 0xffffff, 0.85).setDepth(9);
-            scene.tweens.add({
-                targets: flash, scale: 2.5, alpha: 0,
-                duration: 220, onComplete: () => Boss._destroyIfAlive(flash),
+            const dust = Boss._addBossVfx(scene, 'tusk_dust_cloud', slamX, slamY, {
+                depth: 7,
+                alpha: 0.72,
+                scale: radius / 158,
+                blendMode: Phaser.BlendModes.NORMAL,
             });
-
-            // Full-screen white flash (brief, emphasizes "something huge just happened")
-            const cam = scene.cameras.main;
-            const screenFlash = scene.add.rectangle(0, 0, cam.width, cam.height, 0xffffff, 0)
-                .setDepth(100).setScrollFactor(0).setOrigin(0, 0);
-            scene.tweens.add({
-                targets: screenFlash, alpha: 0.35,
-                duration: 60, yoyo: true,
-                onComplete: () => Boss._destroyIfAlive(screenFlash),
-            });
-
-            // Angular stone debris (rectangles — distinct from round blood droplets)
-            for (let i = 0; i < 14; i++) {
-                const a = Math.random() * Math.PI * 2;
-                const dist = 60 + Math.random() * (radius * 0.8);
-                const w = 6 + Math.random() * 8;
-                const h = 4 + Math.random() * 6;
-                const tone = [0x886644, 0x664433, 0xaa8855, 0x998877][Math.floor(Math.random() * 4)];
-                const shard = scene.add.rectangle(slamX, slamY, w, h, tone, 0.95)
-                    .setDepth(8).setRotation(Math.random() * Math.PI * 2);
-                scene.tweens.add({
-                    targets: shard,
-                    x: slamX + Math.cos(a) * dist,
-                    y: slamY + Math.sin(a) * dist + 30, // slight gravity arc
-                    rotation: shard.rotation + (Math.random() - 0.5) * Math.PI * 4,
+            if (dust) {
+                Boss._tweenDestroy(scene, dust, {
                     alpha: 0,
-                    duration: 650 + Math.random() * 350,
+                    scaleX: dust.scaleX * 1.28,
+                    scaleY: dust.scaleY * 1.28,
+                    duration: 950,
+                    ease: 'Sine.Out',
+                });
+            }
+
+            const debris = Boss._addBossVfx(scene, 'tusk_debris_burst', slamX, slamY, {
+                depth: 8,
+                alpha: 0.9,
+                scale: radius / 165,
+                blendMode: Phaser.BlendModes.NORMAL,
+            });
+            if (debris) {
+                Boss._tweenDestroy(scene, debris, {
+                    alpha: 0,
+                    scaleX: debris.scaleX * 1.16,
+                    scaleY: debris.scaleY * 1.16,
+                    y: debris.y + 14,
+                    duration: 760,
                     ease: 'Quad.Out',
-                    onComplete: () => Boss._destroyIfAlive(shard),
                 });
             }
 
@@ -724,18 +651,16 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             const offset = (i - (spreadCount - 1) / 2) * spreadAngle;
             const angle = baseAngle + offset;
 
-            const useEffectAsset = scene.textures.exists('effect_boss_beru_acid_0');
-            const proj = scene.add.sprite(this.x, this.y, useEffectAsset ? 'effect_boss_beru_acid_0' : 'proj_beru')
+            if (!scene.textures.exists('boss_vfx_beru_acid_projectile')) continue;
+            const proj = scene.add.sprite(this.x, this.y, 'boss_vfx_beru_acid_projectile')
                 .setDepth(8)
-                .setRotation(useEffectAsset ? angle : 0)
-                .setScale(useEffectAsset ? 0.24 : 1.5)
-                .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+                .setRotation(angle)
+                .setScale(0.2)
+                .setBlendMode(Phaser.BlendModes.ADD);
             scene.physics.add.existing(proj, false);
             proj.body.setAllowGravity(false);
-            proj.body.setCircle(useEffectAsset ? 9 : 6);
-            const frameTimer = useEffectAsset
-                ? Boss._animateFrameSprite(scene, proj, 'effect_boss_beru_acid', 62)
-                : null;
+            proj.body.setCircle(9);
+            const frameTimer = null;
 
             const speed = 280;
             proj.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
@@ -764,18 +689,24 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 collider = scene.physics.add.overlap(proj, player, () => {
                     if (!proj.active) return;
                     if (scene.soundManager) scene.soundManager.play('acidHit');
+                    const splash = Boss._addBossVfx(scene, 'beru_acid_hit', proj.x, proj.y, {
+                        depth: 9,
+                        alpha: 0.92,
+                        scale: 0.42,
+                    });
+                    if (splash) {
+                        Boss._tweenDestroy(scene, splash, {
+                            alpha: 0,
+                            scaleX: splash.scaleX * 1.34,
+                            scaleY: splash.scaleY * 1.34,
+                            duration: 420,
+                            ease: 'Quad.Out',
+                        });
+                    }
                     this._spawnAcidPuddle(proj.x, proj.y);
                     player.takeDamage(attackDamage);
                     cleanupProjectile();
                     proj.destroy();
-                });
-            }
-
-            if (!useEffectAsset) {
-                scene.tweens.add({
-                    targets: proj,
-                    rotation: proj.rotation + Math.PI * 6,
-                    duration: 4000,
                 });
             }
 
@@ -919,65 +850,52 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this.scene.shadowArmyManager.onBossKilled(this);
         }
 
-        // Death explosion — enhanced with particle emitters
-        try {
-            // Main explosion burst
-            const explosion = this.scene.add.particles(this.x, this.y, 'particle_glow', {
-                speed: { min: 60, max: 250 },
-                scale: { start: 1.5, end: 0 },
-                alpha: { start: 1, end: 0 },
-                lifespan: { min: 400, max: 900 },
-                tint: [this.config.color, 0xff4444, 0xff8800, 0xffdd00],
-                blendMode: 'ADD',
-                emitting: false,
+        const deathScale = Math.max(0.86, this.config.size / 115);
+        const explosion = Boss._addBossVfx(this.scene, 'death_explosion', this.x, this.y, {
+            depth: 16,
+            alpha: 0.96,
+            scale: deathScale,
+        });
+        if (explosion) {
+            Boss._tweenDestroy(this.scene, explosion, {
+                alpha: 0,
+                scaleX: explosion.scaleX * 1.35,
+                scaleY: explosion.scaleY * 1.35,
+                duration: 760,
+                ease: 'Quad.Out',
             });
-            explosion.setDepth(15);
-            explosion.explode(15);
+        }
 
-            // Sparks shower
-            const sparks = this.scene.add.particles(this.x, this.y, 'particle_spark', {
-                speed: { min: 80, max: 300 },
-                scale: { start: 1, end: 0 },
-                alpha: { start: 1, end: 0 },
-                lifespan: { min: 300, max: 600 },
-                tint: [0xffffff, 0xffdd00, this.config.color],
-                blendMode: 'ADD',
-                emitting: false,
+        const ring = Boss._addBossVfx(this.scene, 'death_shock_ring', this.x, this.y, {
+            depth: 15,
+            alpha: 0.9,
+            scale: deathScale * 0.76,
+        });
+        if (ring) {
+            Boss._tweenDestroy(this.scene, ring, {
+                alpha: 0,
+                scaleX: ring.scaleX * 1.7,
+                scaleY: ring.scaleY * 1.7,
+                duration: 700,
+                ease: 'Cubic.Out',
             });
-            sparks.setDepth(16);
-            sparks.explode(10);
+        }
 
-            // Shockwave ring
-            const ring = this.scene.add.particles(this.x, this.y, 'particle_ring', {
-                speed: { min: 150, max: 250 },
-                scale: { start: 0.5, end: 2.5 },
-                alpha: { start: 0.8, end: 0 },
-                lifespan: 500,
-                tint: this.config.color,
-                blendMode: 'ADD',
-                emitting: false,
+        const smoke = Boss._addBossVfx(this.scene, 'smoke_wisp', this.x, this.y + 16, {
+            depth: 14,
+            alpha: 0.66,
+            scale: deathScale * 0.82,
+            blendMode: Phaser.BlendModes.NORMAL,
+        });
+        if (smoke) {
+            Boss._tweenDestroy(this.scene, smoke, {
+                alpha: 0,
+                scaleX: smoke.scaleX * 1.18,
+                scaleY: smoke.scaleY * 1.18,
+                y: smoke.y + 18,
+                duration: 1050,
+                ease: 'Sine.Out',
             });
-            ring.setDepth(15);
-            ring.explode(4);
-
-            this.scene.time.delayedCall(1000, () => {
-                Boss._destroyIfAlive(explosion);
-                Boss._destroyIfAlive(sparks);
-                Boss._destroyIfAlive(ring);
-            });
-        } catch (e) {
-            // Fallback
-            for (let i = 0; i < 8; i++) {
-                const p = this.scene.add.circle(
-                    this.x + Phaser.Math.Between(-20, 20), this.y + Phaser.Math.Between(-20, 20),
-                    Phaser.Math.Between(3, 8), this.config.color, 0.8
-                ).setDepth(15);
-                this.scene.tweens.add({
-                    targets: p, alpha: 0, scale: 0,
-                    x: p.x + Phaser.Math.Between(-60, 60), y: p.y + Phaser.Math.Between(-60, 60),
-                    duration: 600, onComplete: () => p.destroy(),
-                });
-            }
         }
 
         this.scene.cameras.main.shake(400, 0.02);
