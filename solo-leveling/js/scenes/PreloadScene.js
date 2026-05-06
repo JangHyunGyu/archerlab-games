@@ -1,6 +1,6 @@
 import { SpriteFactory } from '../utils/SpriteFactory.js';
 import { SYSTEM, UI_FONT_MONO, drawSystemPanel, WEAPONS, PASSIVES } from '../utils/Constants.js';
-import { CHARACTER_DEFS, CHARACTER_FRAME_NAMES, CHARACTER_SKILL_EFFECT_KEYS } from '../utils/Characters.js';
+import { CHARACTER_BASIC_ATTACK_EFFECT_KEYS, CHARACTER_DEFS, CHARACTER_FRAME_NAMES, CHARACTER_SKILL_EFFECT_KEYS } from '../utils/Characters.js';
 
 export class PreloadScene extends Phaser.Scene {
     constructor() {
@@ -196,6 +196,9 @@ export class PreloadScene extends Phaser.Scene {
 
         CHARACTER_SKILL_EFFECT_KEYS.forEach((key) => {
             this._loadImage(`char_skill_${key}`, `assets/effects/character_skills/${key}.png`);
+        });
+        CHARACTER_BASIC_ATTACK_EFFECT_KEYS.forEach((key) => {
+            this._loadImage(`basic_attack_${key}`, `assets/effects/basic_attacks/${key}.png`);
         });
 
         this._loadImage('ai_player_idle', 'assets/player/player_idle.png');

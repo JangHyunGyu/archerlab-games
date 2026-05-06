@@ -44,6 +44,13 @@ export const CHARACTER_WEAPON_EFFECT_KEYS = [
     'sanctuary_field',
 ];
 
+export const CHARACTER_BASIC_ATTACK_EFFECT_KEYS = [
+    'light_sword_slash',
+    'tiger_claw_swipe',
+    'flame_fireball',
+    'sanctuary_mace_slam',
+];
+
 export const CHARACTER_SKILL_EFFECT_KEYS = [
     ...CHARACTER_WEAPON_EFFECT_KEYS,
 ];

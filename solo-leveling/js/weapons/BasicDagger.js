@@ -72,8 +72,9 @@ export class BasicDagger extends WeaponBase {
     }
 
     _getConfiguredEffectTexture(prop = 'basicAttackEffectKey') {
-        const key = this.config[prop] || this.config.effectKey;
-        const textureKey = key ? `char_skill_${key}` : null;
+        const key = this.config[prop] || (prop === 'basicAttackEffectKey' ? null : this.config.effectKey);
+        const prefix = prop === 'basicAttackEffectKey' ? 'basic_attack_' : 'char_skill_';
+        const textureKey = key ? `${prefix}${key}` : null;
         return textureKey && this.scene?.textures?.exists(textureKey) ? textureKey : null;
     }
 
@@ -558,9 +559,18 @@ export class BasicDagger extends WeaponBase {
         const originY = this.player.y - 14;
         const effectColor = this.getEffectColor(0xbfeaff);
         const glowColor = this.getEffectGlowColor(0xffffff);
+        const effectTexture = this._getConfiguredEffectTexture();
         const fx = this.scene.add.graphics().setDepth(15);
+        const swipeSprite = effectTexture
+            ? this.scene.add.sprite(originX + cosA * 74, originY + sinA * 74, effectTexture)
+                .setDepth(16)
+                .setAlpha(0)
+                .setScale(this.config.effectScale || 0.42)
+                .setRotation(baseAngle)
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : null;
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects([fx]);
+        const entry = this._trackAttackObjects(swipeSprite ? [fx, swipeSprite] : [fx]);
 
         const world = (forward, lateral) => ({
             x: originX + cosA * forward + perpX * lateral,
@@ -597,6 +607,13 @@ export class BasicDagger extends WeaponBase {
             const impact = world(118, side * 20);
             fx.lineStyle(2, glowColor, 0.54 * alpha);
             fx.strokeCircle(impact.x, impact.y, 18 + eased * 12);
+
+            if (swipeSprite) {
+                swipeSprite.setPosition(originX + cosA * (70 + eased * 12), originY + sinA * (70 + eased * 12));
+                swipeSprite.setRotation(baseAngle + side * 0.08);
+                swipeSprite.setAlpha(alpha * 0.86);
+                swipeSprite.setScale((this.config.effectScale || 0.42) * (0.92 + eased * 0.18));
+            }
         };
 
         entry.tween = this.scene.tweens.add({
@@ -634,10 +651,19 @@ export class BasicDagger extends WeaponBase {
         const effectColor = this.getEffectColor(0x66f2b0);
         const glowColor = this.getEffectGlowColor(0xe8fff5);
         const darkColor = this.getEffectDarkColor(0x0d6543);
+        const effectTexture = this._getConfiguredEffectTexture();
         const fx = this.scene.add.graphics().setDepth(15);
         const impactFx = this.scene.add.graphics().setDepth(14);
+        const slamSprite = effectTexture
+            ? this.scene.add.sprite(impactX, impactY, effectTexture)
+                .setDepth(13)
+                .setAlpha(0)
+                .setScale(0.16)
+                .setRotation(baseAngle)
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : null;
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects([fx, impactFx]);
+        const entry = this._trackAttackObjects(slamSprite ? [fx, impactFx, slamSprite] : [fx, impactFx]);
 
         const draw = (t) => {
             const k = Phaser.Math.Clamp(t, 0, 1);
@@ -680,6 +706,11 @@ export class BasicDagger extends WeaponBase {
                         impactX + Math.cos(a) * (34 + pulse * 26),
                         impactY + Math.sin(a) * (34 + pulse * 26)
                     );
+                }
+                if (slamSprite) {
+                    slamSprite.setAlpha(0.9 * (1 - pulse * 0.75));
+                    slamSprite.setScale(0.26 + pulse * 0.32);
+                    slamSprite.setRotation(baseAngle + pulse * 0.2);
                 }
             }
         };
