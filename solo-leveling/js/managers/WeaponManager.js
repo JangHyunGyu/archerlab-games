@@ -3,6 +3,7 @@ import { ShadowDagger } from '../weapons/ShadowDagger.js';
 import { ShadowSlash } from '../weapons/ShadowSlash.js';
 import { RulersAuthority } from '../weapons/RulersAuthority.js';
 import { DragonFear } from '../weapons/DragonFear.js';
+import { WEAPONS } from '../utils/Constants.js';
 
 const WEAPON_CLASSES = {
     basicDagger: BasicDagger,
@@ -30,10 +31,12 @@ export class WeaponManager {
 
         if (this.weapons.size >= this.maxSlots) return false;
 
-        const WeaponClass = WEAPON_CLASSES[weaponKey];
+        const config = WEAPONS[weaponKey];
+        const WeaponClass = WEAPON_CLASSES[config?.classKey || weaponKey];
         if (!WeaponClass) return false;
 
-        const weapon = new WeaponClass(this.scene, this.player);
+        const weapon = new WeaponClass(this.scene, this.player, config);
+        weapon.key = weaponKey;
         this.weapons.set(weaponKey, weapon);
 
         // Set up collision for projectile weapons
@@ -58,7 +61,7 @@ export class WeaponManager {
                     enemy.takeDamage(dmg, proj.x, proj.y);
 
                     // Destroy projectile (daggers only)
-                    if (weaponKey === 'shadowDagger') {
+                    if ((weapon.baseWeaponKey || weaponKey) === 'shadowDagger') {
                         proj.setActive(false);
                         proj.setVisible(false);
                         proj.body.enable = false;

@@ -3,6 +3,8 @@ export class WeaponBase {
         this.scene = scene;
         this.player = player;
         this.config = config;
+        this.key = config.key;
+        this.baseWeaponKey = config.baseWeaponKey || config.key;
         this.level = 1;
         this.cooldownTimer = 0;
         this.damage = config.baseDamage;
@@ -49,6 +51,23 @@ export class WeaponBase {
             dmg = Math.floor(dmg * this.player.stats.critDamage);
         }
         return Math.floor(dmg);
+    }
+
+    getEffectTexture() {
+        const key = this.config.effectKey ? `char_skill_${this.config.effectKey}` : null;
+        return key && this.scene?.textures?.exists(key) ? key : null;
+    }
+
+    getEffectColor(fallback) {
+        return this.config.effectColor ?? fallback;
+    }
+
+    getEffectGlowColor(fallback) {
+        return this.config.effectGlowColor ?? fallback;
+    }
+
+    getEffectDarkColor(fallback) {
+        return this.config.effectDarkColor ?? fallback;
     }
 
     _delay(ms, callback) {

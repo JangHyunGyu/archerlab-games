@@ -1,4 +1,4 @@
-import { COLORS, ENEMY_TYPES, BOSS_TYPES } from './Constants.js';
+import { COLORS, ENEMY_TYPES, BOSS_TYPES, WEAPONS } from './Constants.js';
 
 export class SpriteFactory {
     // --- Color helpers ---
@@ -2133,16 +2133,17 @@ export class SpriteFactory {
             },
         };
 
-        for (const [key, drawFn] of Object.entries(icons)) {
+        for (const [key, config] of Object.entries(WEAPONS)) {
             const assetKey = 'asset_icon_' + key;
             if (scene.textures.exists(assetKey)) {
                 this._copyTexture(scene, assetKey, 'icon_' + key, 32, 32);
                 continue;
             }
+            const drawFn = icons[key] || icons[config.baseWeaponKey] || icons.basicDagger;
             const g = scene.make.graphics({ add: false });
-            g.fillStyle(0x2a1a4a, 0.8);
+            g.fillStyle(config.effectDarkColor || 0x2a1a4a, 0.8);
             g.fillRoundedRect(0, 0, 32, 32, 4);
-            g.lineStyle(1, 0x4a2a7a, 0.4);
+            g.lineStyle(1, config.effectColor || 0x4a2a7a, 0.4);
             g.strokeRoundedRect(0, 0, 32, 32, 4);
             drawFn(g);
             g.generateTexture('icon_' + key, 32, 32);

@@ -2,8 +2,8 @@ import { WeaponBase } from './WeaponBase.js';
 import { WEAPONS, COLORS } from '../utils/Constants.js';
 
 export class RulersAuthority extends WeaponBase {
-    constructor(scene, player) {
-        super(scene, player, WEAPONS.rulersAuthority);
+    constructor(scene, player, config = WEAPONS.rulersAuthority) {
+        super(scene, player, config);
     }
 
     fire() {
@@ -58,18 +58,20 @@ export class RulersAuthority extends WeaponBase {
         }
 
         // Visual effect - expanding circle
-        const useEffectAsset = this.scene.textures.exists('effect_ruler_authority');
-        const circle = this.scene.add.sprite(targetX, targetY, useEffectAsset ? 'effect_ruler_authority' : 'proj_ruler')
+        const effectTexture = this.getEffectTexture();
+        const useCharacterEffect = !!effectTexture;
+        const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_ruler_authority');
+        const circle = this.scene.add.sprite(targetX, targetY, effectTexture || (useEffectAsset ? 'effect_ruler_authority' : 'proj_ruler'))
             .setDepth(7)
             .setAlpha(0)
-            .setScale(useEffectAsset ? 0.08 : 0.2)
-            .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+            .setScale((useCharacterEffect || useEffectAsset) ? 0.08 : 0.2)
+            .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
         this.scene.tweens.add({
             targets: circle,
-            alpha: useEffectAsset ? 0.92 : 0.8,
-            scaleX: useEffectAsset ? (range * 2) / circle.width : range / 50,
-            scaleY: useEffectAsset ? (range * 2) / circle.width : range / 50,
+            alpha: (useCharacterEffect || useEffectAsset) ? 0.92 : 0.8,
+            scaleX: (useCharacterEffect || useEffectAsset) ? (range * 2) / circle.width : range / 50,
+            scaleY: (useCharacterEffect || useEffectAsset) ? (range * 2) / circle.width : range / 50,
             duration: 300,
             yoyo: true,
             hold: 100,
@@ -77,7 +79,7 @@ export class RulersAuthority extends WeaponBase {
         });
 
         // Ground crack effect
-        const crack = this.scene.add.circle(targetX, targetY, range * 0.3, COLORS.SHADOW_PRIMARY, 0.3)
+        const crack = this.scene.add.circle(targetX, targetY, range * 0.3, this.getEffectColor(COLORS.SHADOW_PRIMARY), 0.3)
             .setDepth(3);
         this.scene.tweens.add({
             targets: crack,

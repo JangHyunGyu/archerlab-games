@@ -6,6 +6,7 @@ import {
 import { SoundManager } from '../managers/SoundManager.js';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { GameScene } from './GameScene.js';
+import { CHARACTER_DEFS, getStoredCharacterId, setStoredCharacterId } from '../utils/Characters.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -26,6 +27,7 @@ export class MenuScene extends Phaser.Scene {
         this._modalElements = [];
         this._dropdownElements = [];
         this._startingGame = false;
+        this.selectedCharacterId = getStoredCharacterId();
 
         // Deep background + scanlines
         this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP);
@@ -136,6 +138,7 @@ export class MenuScene extends Phaser.Scene {
 
         const startGame = async (resume = false) => {
             this._startingGame = true;
+            const characterId = resume ? this.selectedCharacterId : setStoredCharacterId(this.selectedCharacterId);
             if (!this.game._soundManager) {
                 this.game._soundManager = new SoundManager();
                 this.game._soundManager.init();
@@ -144,8 +147,15 @@ export class MenuScene extends Phaser.Scene {
             sm.stopIntroMusic();
             sm.resume(true);
             this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.time.delayedCall(500, () => this.scene.start('GameScene', { resume }));
+            this.time.delayedCall(500, () => this.scene.start('GameScene', { resume, characterId }));
         };
+
+        const selectorTop = panelY + panelH + uv(isShortLandscape ? 10 : 16);
+        const selectorBottom = this._createCharacterSelector(centerX, selectorTop, {
+            sidePad,
+            isCompactMenu,
+            isShortLandscape,
+        });
 
         // ── Main action buttons ─────────────────
         const hasSave = GameScene.hasSavedGame();
@@ -154,7 +164,7 @@ export class MenuScene extends Phaser.Scene {
         const resumeH = uv(isShortLandscape ? 54 : 64);
         const actionGap = uv(isShortLandscape ? 8 : 12);
         const actionTop = Math.max(
-            panelY + panelH + uv(isShortLandscape ? 20 : (isNarrow ? 44 : 36)),
+            selectorBottom + uv(isShortLandscape ? 8 : 14),
             cy(hasSave ? 0.56 : 0.60)
         );
         let nextActionY = actionTop;
@@ -165,7 +175,7 @@ export class MenuScene extends Phaser.Scene {
             const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
             this._makeResumeButton(centerX - btnW / 2, nextActionY, btnW, resumeH, {
                 title: t('continueGame'),
-                meta: `LV.${String(summary?.level || 1).padStart(2, '0')}  ·  ${min}:${sec}`,
+                meta: `${summary?.characterName || ''}  LV.${String(summary?.level || 1).padStart(2, '0')}  ·  ${min}:${sec}`.trim(),
                 isNarrow,
                 onClick: () => startGame(true),
             });
@@ -381,6 +391,117 @@ export class MenuScene extends Phaser.Scene {
         hit.on('pointerout', () => { redraw(false); txt.setScale(baseScale); });
         hit.on('pointerdown', () => onClick && onClick());
         return { g, hit, txt };
+    }
+
+    _createCharacterSelector(centerX, topY, { sidePad, isCompactMenu = false, isShortLandscape = false } = {}) {
+        const characters = Object.values(CHARACTER_DEFS);
+        const gap = uv(isShortLandscape ? 6 : 8);
+        const availableW = GAME_WIDTH - sidePad * 2;
+        const cardW = Math.floor(Math.min(
+            uv(isShortLandscape ? 138 : 154),
+            (availableW - gap * (characters.length - 1)) / characters.length
+        ));
+        const cardH = uv(isShortLandscape ? 78 : (isCompactMenu ? 92 : 112));
+        const totalW = cardW * characters.length + gap * (characters.length - 1);
+        const startX = centerX - totalW / 2;
+        const depth = 8;
+        const cardRefs = [];
+
+        this.add.text(centerX, topY, '[ HUNTER SELECT ]', {
+            fontSize: fs(isShortLandscape ? 9 : 10),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+        }).setOrigin(0.5).setDepth(depth);
+        const cardTop = topY + uv(isShortLandscape ? 14 : 18);
+
+        const redraw = () => {
+            cardRefs.forEach(({ g, character }) => {
+                const selected = this.selectedCharacterId === character.id;
+                g.clear();
+                drawSystemPanel(g, g._x, g._y, cardW, cardH, {
+                    cut: uv(7),
+                    fill: selected ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
+                    fillAlpha: selected ? 0.98 : 0.82,
+                    border: selected ? character.accent : SYSTEM.BORDER_DIM,
+                    borderAlpha: selected ? 1 : 0.62,
+                    borderWidth: selected ? 2 : 1,
+                });
+                if (selected) {
+                    g.lineStyle(1, character.accent, 0.45);
+                    g.lineBetween(g._x + uv(10), g._y + cardH - uv(8), g._x + cardW - uv(10), g._y + cardH - uv(8));
+                }
+            });
+        };
+
+        characters.forEach((character, i) => {
+            const x = startX + i * (cardW + gap);
+            const y = cardTop;
+            const g = this.add.graphics().setDepth(depth);
+            g._x = x;
+            g._y = y;
+            cardRefs.push({ g, character });
+
+            const hit = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, 0x000000, 0)
+                .setDepth(depth + 2)
+                .setInteractive({ useHandCursor: true });
+
+            const portraitSize = uv(isShortLandscape ? 32 : (isCompactMenu ? 40 : 48));
+            const portrait = this.add.image(x + cardW / 2, y + uv(isShortLandscape ? 22 : 28), `char_${character.assetKey}_portrait`)
+                .setDepth(depth + 1)
+                .setDisplaySize(portraitSize, portraitSize)
+                .setOrigin(0.5);
+
+            const name = this.add.text(x + cardW / 2, y + uv(isShortLandscape ? 43 : 55), character.name, {
+                fontSize: fs(isShortLandscape ? 10 : 12),
+                fontFamily: UI_FONT_KR,
+                fontStyle: 'bold',
+                color: SYSTEM.TEXT_BRIGHT,
+            }).setOrigin(0.5).setDepth(depth + 1);
+            this._fitText(name, cardW - uv(12), uv(18));
+
+            const role = this.add.text(x + cardW / 2, y + uv(isShortLandscape ? 58 : 72), character.archetype, {
+                fontSize: fs(isShortLandscape ? 8 : 9),
+                fontFamily: UI_FONT_KR,
+                color: character.accentText,
+            }).setOrigin(0.5).setDepth(depth + 1);
+            this._fitText(role, cardW - uv(12), uv(14));
+
+            if (!isShortLandscape) {
+                const skill = this.add.text(x + cardW / 2, y + cardH - uv(20), character.skillName, {
+                    fontSize: fs(isCompactMenu ? 8 : 9),
+                    fontFamily: UI_FONT_KR,
+                    color: SYSTEM.TEXT_CYAN_DIM,
+                }).setOrigin(0.5).setDepth(depth + 1);
+                this._fitText(skill, cardW - uv(12), uv(14));
+            }
+
+            hit.on('pointerover', () => {
+                portrait.setScale(portrait.scaleX * 1.04, portrait.scaleY * 1.04);
+                if (this.selectedCharacterId !== character.id) {
+                    g.clear();
+                    drawSystemPanel(g, x, y, cardW, cardH, {
+                        cut: uv(7),
+                        fill: SYSTEM.BG_PANEL_HI,
+                        fillAlpha: 0.9,
+                        border: character.accent,
+                        borderAlpha: 0.8,
+                        borderWidth: 1,
+                    });
+                }
+            });
+            hit.on('pointerout', () => {
+                portrait.setDisplaySize(portraitSize, portraitSize);
+                redraw();
+            });
+            hit.on('pointerdown', () => {
+                this.selectedCharacterId = setStoredCharacterId(character.id);
+                if (this.game._soundManager) this.game._soundManager.play('select');
+                redraw();
+            });
+        });
+
+        redraw();
+        return cardTop + cardH;
     }
 
     _createLanguageDropdown(isMobile) {

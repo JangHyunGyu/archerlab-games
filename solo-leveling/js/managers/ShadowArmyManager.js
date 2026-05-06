@@ -6,13 +6,14 @@ export class ShadowArmyManager {
         this.scene = scene;
         this.soldiers = [];
         this.maxSoldiers = 5;
+        this.enabled = scene?.player?.characterId === 'shadowMonarch';
         this.isPerformingArise = false;
         this._ariseElements = []; // Track all created elements for cleanup
         this._destroyed = false;
     }
 
     onBossKilled(boss) {
-        if (this._destroyed) return;
+        if (!this.enabled || this._destroyed) return;
         if (this.soldiers.length >= this.maxSoldiers) return;
         if (this.isPerformingArise) return;
 
@@ -47,6 +48,49 @@ export class ShadowArmyManager {
             console.error('[ARISE] Error starting sequence:', e);
             this._cleanupArise();
         }
+    }
+
+    summonTemporary(bossKey = 'igris', opts = {}) {
+        if (!this.enabled || this._destroyed || !this.scene?.scene?.isActive()) return null;
+        if (this.soldiers.length >= this.maxSoldiers) return null;
+        if (!BOSS_TYPES[bossKey]) bossKey = 'igris';
+
+        const player = this.scene.player;
+        const x = opts.x ?? (player ? player.x : 0);
+        const y = opts.y ?? (player ? player.y : 0);
+        const lifetime = Math.max(3000, opts.lifetime || 12000);
+
+        const soldier = new ShadowSoldier(this.scene, x, y, bossKey);
+        soldier._temporary = true;
+        soldier.setAlpha(0);
+        const finalScale = soldier.scaleX;
+        soldier.setScale(finalScale * 0.3);
+        this.soldiers.push(soldier);
+
+        this.scene.tweens.add({
+            targets: soldier,
+            alpha: 0.78,
+            scaleX: finalScale * 0.92,
+            scaleY: finalScale * 0.92,
+            duration: 260,
+            ease: 'Back.easeOut',
+        });
+
+        this.scene.time.delayedCall(lifetime, () => {
+            if (!soldier.active || !soldier.scene) return;
+            this.scene.tweens.add({
+                targets: soldier,
+                alpha: 0,
+                scaleX: soldier.scaleX * 0.55,
+                scaleY: soldier.scaleY * 0.55,
+                duration: 320,
+                onComplete: () => {
+                    if (soldier.scene) soldier.destroy();
+                },
+            });
+        });
+
+        return soldier;
     }
 
     _cleanupArise() {
@@ -405,6 +449,7 @@ export class ShadowArmyManager {
     }
 
     update(time, delta) {
+        if (!this.enabled) return;
         const player = this.scene.player;
         const enemies = [
             ...(this.scene.enemyManager?.getActiveEnemies() || []),
@@ -423,11 +468,11 @@ export class ShadowArmyManager {
     }
 
     getSoldierCount() {
-        return this.soldiers.length;
+        return this.enabled ? this.soldiers.length : 0;
     }
 
     getSoldiers() {
-        return this.soldiers;
+        return this.enabled ? this.soldiers : [];
     }
 
     destroy() {

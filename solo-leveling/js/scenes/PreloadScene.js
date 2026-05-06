@@ -1,5 +1,6 @@
 import { SpriteFactory } from '../utils/SpriteFactory.js';
-import { SYSTEM, UI_FONT_MONO, drawSystemPanel } from '../utils/Constants.js';
+import { SYSTEM, UI_FONT_MONO, drawSystemPanel, WEAPONS, PASSIVES } from '../utils/Constants.js';
+import { CHARACTER_DEFS, CHARACTER_FRAME_NAMES, CHARACTER_SKILL_EFFECT_KEYS } from '../utils/Characters.js';
 
 export class PreloadScene extends Phaser.Scene {
     constructor() {
@@ -107,20 +108,7 @@ export class PreloadScene extends Phaser.Scene {
             this.load.image(key, `assets/ui/${key}.png`);
         });
 
-        [
-            'basicDagger',
-            'shadowDagger',
-            'shadowSlash',
-            'rulersAuthority',
-            'dragonFear',
-            'swiftness',
-            'vitality',
-            'strength',
-            'critMaster',
-            'scholar',
-            'hastening',
-            'magnet',
-        ].forEach((key) => {
+        [...Object.keys(WEAPONS), ...Object.keys(PASSIVES)].forEach((key) => {
             this.load.image(`asset_icon_${key}`, `assets/ui/icons/${key}.png`);
         });
 
@@ -152,6 +140,24 @@ export class PreloadScene extends Phaser.Scene {
 
         ['melee', 'tank', 'ranged'].forEach((key) => {
             this.load.image(`asset_shadow_${key}`, `assets/shadows/shadow_${key}.png`);
+        });
+
+        Object.values(CHARACTER_DEFS).forEach((character) => {
+            this.load.image(
+                `char_${character.assetKey}_portrait`,
+                `assets/player/characters/${character.assetKey}/portrait.png`
+            );
+            if (character.usesExistingPlayerMotion) return;
+            CHARACTER_FRAME_NAMES.forEach((frameName) => {
+                this.load.image(
+                    `${character.texturePrefix}_${frameName}`,
+                    `assets/player/characters/${character.assetKey}/motion/${frameName}.png`
+                );
+            });
+        });
+
+        CHARACTER_SKILL_EFFECT_KEYS.forEach((key) => {
+            this.load.image(`char_skill_${key}`, `assets/effects/character_skills/${key}.png`);
         });
 
         this.load.image('ai_player_idle', 'assets/player/player_idle.png');
