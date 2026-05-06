@@ -4,6 +4,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from image_formats import save_png_and_webp
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "bosses" / "source" / "boss_sheet_alpha.png"
@@ -48,7 +50,7 @@ def main() -> None:
     for key, box in zip(ORDER, boxes):
         crop = sheet.crop(box)
         crop = trim_alpha(clean_alpha(crop))
-        crop.save(OUT / f"{key}.png")
+        save_png_and_webp(crop, OUT / f"{key}.png")
         print(f"{key}: {crop.width}x{crop.height}")
 
 

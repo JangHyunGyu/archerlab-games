@@ -3,6 +3,8 @@ import math
 
 from PIL import Image, ImageDraw, ImageEnhance
 
+from image_formats import save_png_and_webp
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "player" / "player_idle.png"
@@ -142,7 +144,7 @@ def add_ground_shadow(img, strength=70):
 
 def save(name, img):
     OUT.mkdir(parents=True, exist_ok=True)
-    img.save(OUT / name)
+    save_png_and_webp(img, OUT / name)
 
 
 def make_idle(base):
@@ -209,7 +211,7 @@ def make_sheet():
     for idx, name in enumerate(files):
         frame = Image.open(OUT / name).convert("RGBA")
         sheet.alpha_composite(frame, ((idx % cols) * W, (idx // cols) * H))
-    sheet.save(SHEET)
+    save_png_and_webp(sheet, SHEET)
 
 
 def main():

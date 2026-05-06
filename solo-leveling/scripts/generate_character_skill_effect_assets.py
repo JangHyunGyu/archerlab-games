@@ -6,6 +6,8 @@ from random import Random
 
 from PIL import Image, ImageDraw, ImageFilter
 
+from image_formats import save_png_and_webp
+
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "assets" / "effects" / "character_skills"
@@ -21,7 +23,7 @@ def blank(size: int | tuple[int, int]) -> Image.Image:
 def save(img: Image.Image, name: str) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     img = cleanup_alpha(img)
-    img.save(OUT_DIR / f"{name}.png")
+    save_png_and_webp(img, OUT_DIR / f"{name}.png")
 
 
 def save_icon(effect_img: Image.Image, key: str, color: tuple[int, int, int], dark: tuple[int, int, int]) -> None:
@@ -38,7 +40,7 @@ def save_icon(effect_img: Image.Image, key: str, color: tuple[int, int, int], da
         scale = min(48 / subject.width, 48 / subject.height)
         subject = subject.resize((max(1, round(subject.width * scale)), max(1, round(subject.height * scale))), Image.Resampling.LANCZOS)
         icon.alpha_composite(subject, ((64 - subject.width) // 2, (64 - subject.height) // 2))
-    icon.save(ICON_DIR / f"{key}.png")
+    save_png_and_webp(icon, ICON_DIR / f"{key}.png")
 
 
 def cleanup_alpha(img: Image.Image) -> Image.Image:

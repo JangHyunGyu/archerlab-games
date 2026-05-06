@@ -6,6 +6,8 @@ import numpy as np
 from scipy import ndimage
 from PIL import Image
 
+from image_formats import save_png_and_webp
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "enemies" / "source" / "enemy_sheet_alpha.png"
@@ -87,7 +89,7 @@ def main() -> None:
         trimmed = sheet.crop(crop_box)
         trimmed = remove_dark_corner_noise(trimmed)
         trimmed = trim_alpha(trimmed, pad_ratio=0.03)
-        trimmed.save(OUT / f"{key}.png")
+        save_png_and_webp(trimmed, OUT / f"{key}.png")
         print(f"{key}: {trimmed.width}x{trimmed.height}")
 
 

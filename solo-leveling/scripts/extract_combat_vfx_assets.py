@@ -2,6 +2,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from image_formats import save_png_and_webp
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "effects" / "source" / "combat_vfx_sheet_black.png"
@@ -48,7 +50,7 @@ def main() -> None:
             ))
             out = black_to_alpha(cell)
             out_path = OUT_DIR / f"{row_name}_{col}.png"
-            out.save(out_path)
+            save_png_and_webp(out, out_path)
             print(f"{row_name}_{col}: {out.width}x{out.height}")
 
 

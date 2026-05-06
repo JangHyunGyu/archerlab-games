@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const RATE = 44100;
@@ -657,7 +658,15 @@ function generateImages() {
     generateShadowSprites();
     generateTelegraphs();
     generateEnvironment();
-    console.log('Generated PNG assets');
+    const webp = spawnSync('python', [path.join(ROOT, 'scripts', 'convert_png_to_webp.py')], {
+        cwd: ROOT,
+        stdio: 'inherit',
+    });
+    if (webp.status !== 0) {
+        console.warn('Generated PNG fallbacks, but WebP conversion did not complete');
+        return;
+    }
+    console.log('Generated WebP assets with PNG fallbacks');
 }
 
 generateSounds();

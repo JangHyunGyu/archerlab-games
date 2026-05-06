@@ -2,6 +2,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from image_formats import save_png_and_webp
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "effects" / "source" / "skill_effects_sheet_black.png"
@@ -53,7 +55,7 @@ def main() -> None:
         cell = sheet.crop((col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h))
         out = crop_visible(black_to_alpha(cell))
         out_path = OUT_DIR / f"{name}.png"
-        out.save(out_path)
+        save_png_and_webp(out, out_path)
         print(f"{name}: {out.width}x{out.height} -> {out_path}")
 
 

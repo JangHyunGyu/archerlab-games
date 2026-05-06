@@ -5,6 +5,8 @@ import math
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
+from image_formats import save_png_and_webp
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "player" / "source" / "shadow_hunter_source_alpha.png"
@@ -180,7 +182,7 @@ def render_frame(
         canvas.alpha_composite(fx)
 
     out = OUT_DIR / f"{name}.png"
-    canvas.save(out)
+    save_png_and_webp(canvas, out)
     return canvas
 
 
@@ -192,7 +194,7 @@ def build_sheet(frames: list[Image.Image]) -> None:
         x = (i % cols) * FRAME_W
         y = (i // cols) * FRAME_H
         sheet.alpha_composite(frame, (x, y))
-    sheet.save(SHEET)
+    save_png_and_webp(sheet, SHEET)
 
 
 def main() -> None:
@@ -303,7 +305,7 @@ def main() -> None:
     for i, spec in enumerate(hit_specs):
         frames.append(render_frame(actor, name=f"player_hit_{i}", wisp_phase=3 + i, wisp_power=0.5, **spec))
 
-    frames[0].save(PREVIEW)
+    save_png_and_webp(frames[0], PREVIEW)
     build_sheet(frames)
     print(f"Generated {len(frames)} frames at {OUT_DIR}")
 
