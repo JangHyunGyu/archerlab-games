@@ -76,6 +76,7 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+window.__shadowSurvivalGame = game;
 
 // Handle orientation/resize: CSS scaling only (Phaser FIT mode handles the rest)
 let resizeRefreshTimer = null;
