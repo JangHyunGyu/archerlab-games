@@ -759,10 +759,9 @@ export class BasicDagger extends WeaponBase {
                 .setBlendMode(Phaser.BlendModes.ADD)
             : this.scene.add.circle(startX, startY, 13, effectColor, 0.95).setDepth(14);
         const trailFx = this.scene.add.graphics().setDepth(13);
-        const impactFx = this.scene.add.graphics().setDepth(15);
         const hitEnemies = new Set();
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects([projectile, trailFx, impactFx]);
+        const entry = this._trackAttackObjects([projectile, trailFx]);
 
         const spawnTrail = () => {
             const x = projectile.x - cosA * 12 + Phaser.Math.Between(-3, 3);
@@ -782,6 +781,52 @@ export class BasicDagger extends WeaponBase {
             });
         };
 
+        const spawnImpactBurst = (x, y) => {
+            if (effectTexture) {
+                const burst = this.scene.add.sprite(x, y, effectTexture)
+                    .setDepth(15)
+                    .setAlpha(0.84)
+                    .setScale((this.config.effectScale || 0.32) * 0.72)
+                    .setRotation(baseAngle)
+                    .setBlendMode(Phaser.BlendModes.ADD);
+                entry.objects.push(burst);
+                this.scene.tweens.add({
+                    targets: burst,
+                    alpha: 0,
+                    scaleX: burst.scaleX * 1.32,
+                    scaleY: burst.scaleY * 1.32,
+                    duration: 140,
+                    ease: 'Quad.easeOut',
+                    onComplete: () => {
+                        if (burst.scene) burst.destroy();
+                    },
+                });
+            }
+
+            const sparkFx = this.scene.add.graphics().setDepth(16);
+            entry.objects.push(sparkFx);
+            sparkFx.lineStyle(3, glowColor, 0.82);
+            for (let i = 0; i < 7; i++) {
+                const spread = baseAngle + Phaser.Math.FloatBetween(-0.9, 0.9);
+                const inner = Phaser.Math.Between(8, 16);
+                const outer = Phaser.Math.Between(28, 48);
+                sparkFx.lineBetween(
+                    x + Math.cos(spread) * inner,
+                    y + Math.sin(spread) * inner,
+                    x + Math.cos(spread) * outer,
+                    y + Math.sin(spread) * outer
+                );
+            }
+            this.scene.tweens.add({
+                targets: sparkFx,
+                alpha: 0,
+                duration: 120,
+                onComplete: () => {
+                    if (sparkFx.scene) sparkFx.destroy();
+                },
+            });
+        };
+
         const checkHits = () => {
             for (const enemy of this.player.getAllEnemies()) {
                 if (!enemy.active || hitEnemies.has(enemy)) continue;
@@ -790,24 +835,7 @@ export class BasicDagger extends WeaponBase {
                 hitEnemies.add(enemy);
                 enemy.takeDamage(this.getDamage(), projectile.x, projectile.y);
                 if (this.scene.soundManager) this.scene.soundManager.play('hit');
-                impactFx.clear();
-                impactFx.fillStyle(glowColor, 0.5);
-                impactFx.fillCircle(projectile.x, projectile.y, 24);
-                impactFx.lineStyle(3, effectColor, 0.86);
-                impactFx.strokeCircle(projectile.x, projectile.y, 32);
-                this.scene.tweens.add({
-                    targets: impactFx,
-                    alpha: 0,
-                    scale: 1.35,
-                    duration: 150,
-                    onComplete: () => {
-                        if (impactFx.scene) {
-                            impactFx.clear();
-                            impactFx.setAlpha(1);
-                            impactFx.setScale(1);
-                        }
-                    },
-                });
+                spawnImpactBurst(projectile.x, projectile.y);
                 if (hitEnemies.size >= 2) break;
             }
         };
