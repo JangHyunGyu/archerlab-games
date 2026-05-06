@@ -652,8 +652,18 @@ export class BasicDagger extends WeaponBase {
         const glowColor = this.getEffectGlowColor(0xe8fff5);
         const darkColor = this.getEffectDarkColor(0x0d6543);
         const effectTexture = this._getConfiguredEffectTexture();
+        const maceTexture = this.scene?.textures?.exists('basic_attack_sanctuary_mace_weapon')
+            ? 'basic_attack_sanctuary_mace_weapon'
+            : null;
         const fx = this.scene.add.graphics().setDepth(15);
         const impactFx = this.scene.add.graphics().setDepth(14);
+        const maceSprite = maceTexture
+            ? this.scene.add.sprite(originX, originY, maceTexture)
+                .setDepth(16)
+                .setOrigin(0.18, 0.5)
+                .setAlpha(0)
+                .setBlendMode(Phaser.BlendModes.NORMAL)
+            : null;
         const slamSprite = effectTexture
             ? this.scene.add.sprite(impactX, impactY, effectTexture)
                 .setDepth(13)
@@ -663,7 +673,10 @@ export class BasicDagger extends WeaponBase {
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects(slamSprite ? [fx, impactFx, slamSprite] : [fx, impactFx]);
+        const entryObjects = [fx, impactFx];
+        if (maceSprite) entryObjects.push(maceSprite);
+        if (slamSprite) entryObjects.push(slamSprite);
+        const entry = this._trackAttackObjects(entryObjects);
 
         const draw = (t) => {
             const k = Phaser.Math.Clamp(t, 0, 1);
@@ -680,16 +693,36 @@ export class BasicDagger extends WeaponBase {
             const gripY = originY + sinA * 22 - perpY * side * 8;
 
             fx.clear();
-            fx.lineStyle(16, darkColor, 0.34);
-            fx.lineBetween(gripX, gripY, headX, headY);
-            fx.lineStyle(7, glowColor, 0.72);
-            fx.lineBetween(gripX, gripY, headX, headY);
-            fx.fillStyle(darkColor, 0.9);
-            fx.fillCircle(headX, headY, 16);
-            fx.fillStyle(effectColor, 0.78);
-            fx.fillCircle(headX, headY, 11);
-            fx.fillStyle(glowColor, 0.95);
-            fx.fillCircle(headX - perpX * 3, headY - perpY * 3, 5);
+            if (maceSprite) {
+                const weaponAngle = Phaser.Math.Angle.Between(gripX, gripY, headX, headY);
+                const weaponDist = Phaser.Math.Distance.Between(gripX, gripY, headX, headY);
+                const visibleLength = (maceSprite.width || 480) * 0.78;
+                const weaponScale = Phaser.Math.Clamp(weaponDist / visibleLength, 0.28, 0.48);
+
+                maceSprite.setPosition(gripX, gripY);
+                maceSprite.setRotation(weaponAngle);
+                maceSprite.setAlpha(0.98);
+                maceSprite.setScale(weaponScale * (0.98 + strike * 0.08));
+
+                fx.lineStyle(14, glowColor, 0.12 * (1 - strike * 0.25));
+                fx.lineBetween(
+                    gripX + perpX * side * 5,
+                    gripY + perpY * side * 5,
+                    headX - cosA * 8,
+                    headY - sinA * 8
+                );
+            } else {
+                fx.lineStyle(16, darkColor, 0.34);
+                fx.lineBetween(gripX, gripY, headX, headY);
+                fx.lineStyle(7, glowColor, 0.72);
+                fx.lineBetween(gripX, gripY, headX, headY);
+                fx.fillStyle(darkColor, 0.9);
+                fx.fillCircle(headX, headY, 16);
+                fx.fillStyle(effectColor, 0.78);
+                fx.fillCircle(headX, headY, 11);
+                fx.fillStyle(glowColor, 0.95);
+                fx.fillCircle(headX - perpX * 3, headY - perpY * 3, 5);
+            }
 
             if (strike > 0.35) {
                 const pulse = (strike - 0.35) / 0.65;
