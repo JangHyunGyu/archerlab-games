@@ -540,7 +540,7 @@ export class EnemyManager {
         } catch (e) { /* filters not available */ }
 
         const name = ENEMY_TYPES[enemy.enemyType].name;
-        const label = this.scene.add.text(enemy.x, enemy.y - 30, `??${name}`, {
+        const label = this.scene.add.text(enemy.x, enemy.y - 30, `ELITE ${name}`, {
             fontSize: '12px', fontFamily: 'Arial', fontStyle: 'bold',
             color: '#ff8844', stroke: '#000000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(50).setScrollFactor(1);
