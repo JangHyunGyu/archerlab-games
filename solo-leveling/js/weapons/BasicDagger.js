@@ -688,13 +688,13 @@ export class BasicDagger extends WeaponBase {
             const handX = originX + cosA * (18 + strike * 5) - perpX * side * 7;
             const handY = originY + sinA * (18 + strike * 5) - perpY * side * 7;
             const windupX = originX + cosA * 42 - perpX * side * 18;
-            const windupY = originY + sinA * 42 - perpY * side * 18 - 42 * wind;
-            const headEase = Phaser.Math.Easing.Quadratic.In(strike);
+            const windupY = originY + sinA * 42 - perpY * side * 18 - 30 * wind;
+            const headEase = Phaser.Math.Easing.Quadratic.Out(strike);
             const headX = maceSprite
                 ? Phaser.Math.Linear(windupX, impactX, headEase)
                 : originX + cosA * (30 + targetDist * strike) + perpX * side * (34 * (1 - strike));
             const headY = maceSprite
-                ? Phaser.Math.Linear(windupY, impactY, headEase) - Math.sin(Math.PI * strike) * 18
+                ? Phaser.Math.Linear(windupY, impactY, headEase) - Math.sin(Math.PI * strike) * 8
                 : originY + sinA * (30 + targetDist * strike) + perpY * side * (34 * (1 - strike)) - 38 * wind * (1 - strike);
             const followThrough = k < 0.72 ? 0 : Phaser.Math.Easing.Cubic.Out((k - 0.72) / 0.28);
             const weaponAngle = maceSprite
@@ -728,8 +728,8 @@ export class BasicDagger extends WeaponBase {
                 fx.fillCircle(headX - perpX * 3, headY - perpY * 3, 5);
             }
 
-            if (strike > 0.35) {
-                const pulse = (strike - 0.35) / 0.65;
+            if (strike > 0.78) {
+                const pulse = Phaser.Math.Clamp((strike - 0.78) / 0.22, 0, 1);
                 impactFx.clear();
                 impactFx.lineStyle(5, effectColor, 0.8 * (1 - pulse));
                 impactFx.strokeCircle(impactX, impactY, 24 + pulse * 38);
@@ -761,7 +761,7 @@ export class BasicDagger extends WeaponBase {
             onComplete: () => this._destroyAttackObjects(entry),
         });
 
-        this._delay(168, () => {
+        this._delay(220, () => {
             this._damageEnemiesInRadius(impactX, impactY, this.config.impactRadius || 56, baseAngle, { maxHits: 3 });
             if (this.scene.cameras?.main) this.scene.cameras.main.shake(70, 0.0022);
         });
