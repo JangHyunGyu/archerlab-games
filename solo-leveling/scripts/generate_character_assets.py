@@ -16,8 +16,8 @@ OUT_ROOT = ROOT / "assets" / "player" / "characters"
 FRAME_W = 112
 FRAME_H = 144
 FOOT_Y = 139
-BODY_H = 132
-MAX_BODY_W = 106
+BODY_H = 118
+MAX_BODY_W = 88
 
 FRAMES = [
     *[f"idle_{i}" for i in range(4)],
@@ -405,48 +405,66 @@ def draw_attack_effect(layer: Image.Image, cfg: dict, direction: str, power: flo
     py = vx
     cx = FRAME_W / 2
     cy = 82
-    start_x = cx - vx * 30 - px * 10
-    start_y = cy - vy * 28 - py * 10
-    mid_x = cx + vx * 10
-    mid_y = cy + vy * 8
-    end_x = cx + vx * 42 + px * 8
-    end_y = cy + vy * 38 + py * 8
+    start_x = cx - vx * 24 - px * 8
+    start_y = cy - vy * 22 - py * 8
+    mid_x = cx + vx * 8
+    mid_y = cy + vy * 7
+    end_x = cx + vx * 34 + px * 6
+    end_y = cy + vy * 31 + py * 6
 
     if effect == "flame":
+        cast_x = cx - vx * 18 - px * 10
+        cast_y = cy - vy * 10 - py * 10
+        ball_x = cx + vx * 38 + px * 7
+        ball_y = cy + vy * 36 + py * 7
         if direction in ("left", "right"):
             flame = [
-                (start_x - vx * 3, start_y + py * 18),
-                (mid_x + vx * 16 - px * 15, mid_y - py * 18),
-                (end_x + vx * 14, end_y - py * 7),
-                (mid_x + px * 16, mid_y + py * 22),
+                (cast_x - vx * 4, cast_y + py * 14),
+                (mid_x + vx * 10 - px * 13, mid_y - py * 16),
+                (ball_x + vx * 12, ball_y),
+                (mid_x + px * 12, mid_y + py * 18),
             ]
             d.polygon(flame, fill=(*accent, round(alpha * 0.55)))
-            motion_line(layer, [(start_x, start_y + 18), (mid_x, mid_y - 18), (end_x + vx * 18, end_y - 2)], cfg["glow"], 7, alpha, 2.2)
-            motion_line(layer, [(start_x, start_y + 26), (mid_x + vx * 16, mid_y + 10), (end_x + vx * 24, end_y + 10)], accent, 11, round(alpha * 0.58), 4.0)
+            motion_line(layer, [(cast_x, cast_y), (mid_x + vx * 8, mid_y - py * 14), (ball_x, ball_y)], cfg["glow"], 9, alpha, 2.4)
+            motion_line(layer, [(cast_x - vx * 8, cast_y + py * 18), (mid_x, mid_y + py * 12), (ball_x - vx * 6, ball_y + py * 6)], accent, 13, round(alpha * 0.54), 4.0)
         else:
-            d.ellipse([23, 42, 89, 126], outline=(*accent, alpha), width=5)
-            motion_line(layer, [(cx, cy - vy * 42), (mid_x + px * 16, mid_y), (cx, cy + vy * 46)], cfg["glow"], 8, alpha, 2.0)
-        d.ellipse([end_x - 13, end_y - 13, end_x + 13, end_y + 13], fill=(*cfg["glow"], round(alpha * 0.42)))
-        d.ellipse([end_x - 8, end_y - 8, end_x + 8, end_y + 8], fill=(255, 238, 138, round(alpha * 0.65)))
+            ball_x = cx + px * 6
+            ball_y = cy + vy * 43
+            d.ellipse([28, 44, 84, 120], outline=(*accent, round(alpha * 0.5)), width=4)
+            motion_line(layer, [(cx - px * 9, cy - vy * 25), (cx + px * 10, cy + vy * 8), (ball_x, ball_y)], cfg["glow"], 9, alpha, 2.2)
+        d.ellipse([ball_x - 15, ball_y - 15, ball_x + 15, ball_y + 15], fill=(*cfg["glow"], round(alpha * 0.44)))
+        d.ellipse([ball_x - 10, ball_y - 10, ball_x + 10, ball_y + 10], fill=(*accent, round(alpha * 0.82)))
+        d.ellipse([ball_x - 5, ball_y - 5, ball_x + 5, ball_y + 5], fill=(255, 245, 165, round(alpha * 0.9)))
         for i in range(9):
-            sx = mid_x + vx * (i * 6 - 8) + math.sin(i * 1.6) * 12
-            sy = mid_y + vy * (i * 5 - 8) + math.cos(i * 1.7) * 17
+            sx = cast_x + (ball_x - cast_x) * (i / 9) + math.sin(i * 1.6) * 8
+            sy = cast_y + (ball_y - cast_y) * (i / 9) + math.cos(i * 1.7) * 8
             d.polygon([(sx, sy), (sx + 3, sy - 12), (sx + 8, sy), (sx + 4, sy - 5)], fill=(*cfg["glow"], round(alpha * 0.58)))
     elif effect == "tiger":
         if direction in ("left", "right"):
-            for i, off in enumerate((-16, -5, 6, 17)):
+            for i, off in enumerate((-22, -8, 7, 22)):
                 a = round(alpha * (0.92 - i * 0.08))
                 motion_line(
                     layer,
                     [
-                        (start_x - px * off, start_y - py * off),
-                        (mid_x + vx * 16 - px * (off * 0.4), mid_y + py * (off * 0.4)),
-                        (end_x + vx * 10 + px * off, end_y + py * off),
+                        (start_x + vx * 2 - px * off, start_y - py * off - 6),
+                        (mid_x + vx * 20 - px * (off * 0.25), mid_y + py * (off * 0.35)),
+                        (end_x + vx * 12 + px * off, end_y + py * off + 4),
                     ],
                     cfg["glow"],
-                    4,
+                    5,
                     a,
                     0.7,
+                )
+                motion_line(
+                    layer,
+                    [
+                        (start_x + vx * 18 - px * off, start_y - py * off - 2),
+                        (end_x + vx * 16 + px * off, end_y + py * off + 5),
+                    ],
+                    (255, 255, 255),
+                    2,
+                    round(a * 0.7),
+                    0.15,
                 )
             d.ellipse([end_x - 18, end_y - 18, end_x + 18, end_y + 18], outline=(*accent, alpha), width=4)
             burst_lines(layer, end_x, end_y, cfg["glow"], round(alpha * 0.65), radius=23, rays=9, width=2)
@@ -467,19 +485,22 @@ def draw_attack_effect(layer: Image.Image, cfg: dict, direction: str, power: flo
             d.ellipse([24, 78, 88, 126], outline=(*accent, round(alpha * 0.72)), width=4)
             burst_lines(layer, cx, 103, cfg["glow"], round(alpha * 0.5), radius=23, rays=8, width=2)
     elif effect == "healer":
-        d.ellipse([20, 38, 96, 116], outline=(*accent, round(alpha * 0.72)), width=4)
-        d.ellipse([34, 52, 82, 100], outline=(*cfg["glow"], round(alpha * 0.55)), width=2)
+        handle_start = (cx - vx * 18 - px * 20, cy - vy * 20 - py * 20)
+        handle_mid = (cx + vx * 8 + px * 8, cy + vy * 12 + py * 8)
+        head = (cx + vx * 36 + px * 8, cy + vy * 42 + py * 8)
+        motion_line(layer, [handle_start, handle_mid, head], (236, 255, 191), 8, round(alpha * 0.8), 2.0)
+        d.line([handle_start, handle_mid, head], fill=(*cfg["glow"], round(alpha * 0.92)), width=4)
+        d.ellipse([head[0] - 14, head[1] - 14, head[0] + 14, head[1] + 14], fill=(*accent, round(alpha * 0.64)))
+        d.ellipse([head[0] - 8, head[1] - 8, head[0] + 8, head[1] + 8], fill=(*cfg["glow"], round(alpha * 0.88)))
+        d.ellipse([head[0] - 28, head[1] - 13, head[0] + 28, head[1] + 13], outline=(*accent, round(alpha * 0.65)), width=4)
         for ang in (0, 60, 120):
             r = math.radians(ang)
-            x1 = cx + math.cos(r) * 27
-            y1 = cy + math.sin(r) * 27
-            x2 = cx - math.cos(r) * 27
-            y2 = cy - math.sin(r) * 27
-            d.line([x1, y1, x2, y2], fill=(*cfg["glow"], round(alpha * 0.55)), width=2)
-        d.line([cx - 28, cy, cx + 28, cy], fill=(*cfg["glow"], round(alpha * 0.72)), width=3)
-        d.line([cx, cy - 28, cx, cy + 28], fill=(*cfg["glow"], round(alpha * 0.72)), width=3)
-        motion_line(layer, [(start_x, start_y), (mid_x + px * 16, mid_y + py * 16), (end_x, end_y)], (236, 255, 191), 5, round(alpha * 0.82), 1.4)
-        d.ellipse([end_x - 10, end_y - 10, end_x + 10, end_y + 10], fill=(*cfg["glow"], round(alpha * 0.45)))
+            x1 = head[0] + math.cos(r) * 20
+            y1 = head[1] + math.sin(r) * 20
+            x2 = head[0] - math.cos(r) * 20
+            y2 = head[1] - math.sin(r) * 20
+            d.line([x1, y1, x2, y2], fill=(*cfg["glow"], round(alpha * 0.52)), width=2)
+        burst_lines(layer, head[0], head[1], cfg["glow"], round(alpha * 0.48), radius=27, rays=8, width=2)
     elif effect == "light":
         for off, width, mul in ((-14, 6, 0.55), (0, 5, 0.95), (14, 3, 0.64)):
             motion_line(
@@ -494,6 +515,8 @@ def draw_attack_effect(layer: Image.Image, cfg: dict, direction: str, power: flo
                 round(alpha * mul),
                 1.0 if off else 0.55,
             )
+        d.line([start_x, start_y, end_x + vx * 20, end_y + vy * 10], fill=(255, 255, 244, round(alpha * 0.92)), width=3)
+        d.line([start_x + px * 4, start_y + py * 4, end_x + vx * 18 + px * 4, end_y + vy * 8 + py * 4], fill=(*accent, round(alpha * 0.52)), width=2)
         d.arc([14, 28, 100, 116], 205, 332, fill=(*accent, round(alpha * 0.7)), width=3)
         burst_lines(layer, end_x, end_y, (255, 255, 236), round(alpha * 0.5), radius=20, rays=8, width=2)
     else:
@@ -562,38 +585,38 @@ def render_frame(actor: Image.Image, cfg: dict, name: str) -> Image.Image:
     elif name.startswith("attack_"):
         if cfg["effect"] == "light":
             specs = [
-                (-7, 0, -10, 1.02, 0.99, 0.04),
-                (3, -2, 8, 0.98, 1.03, 0.32),
-                (12, -4, 17, 1.04, 0.97, 0.92),
-                (17, -3, 12, 1.06, 0.96, 1.00),
-                (7, -1, -4, 1.02, 0.99, 0.48),
+                (-8, 0, -12, 1.02, 0.99, 0.04),
+                (2, -3, 10, 0.98, 1.03, 0.35),
+                (10, -4, 20, 1.05, 0.96, 0.95),
+                (14, -2, 15, 1.07, 0.95, 1.00),
+                (5, -1, -6, 1.02, 0.99, 0.48),
                 (0, 0, 0, 1.0, 1.0, 0.05),
             ]
         elif cfg["effect"] == "tiger":
             specs = [
-                (-6, 1, -6, 1.08, 0.94, 0.04),
-                (4, -4, 8, 0.94, 1.07, 0.36),
-                (14, -5, 17, 1.12, 0.90, 0.96),
-                (18, -2, 7, 1.17, 0.87, 1.00),
-                (6, 1, -5, 1.06, 0.95, 0.44),
+                (-7, 2, -8, 1.08, 0.94, 0.04),
+                (2, -5, 10, 0.94, 1.08, 0.38),
+                (11, -5, 18, 1.12, 0.90, 0.98),
+                (15, -1, 8, 1.18, 0.86, 1.00),
+                (5, 1, -6, 1.06, 0.95, 0.48),
                 (0, 0, 0, 1.0, 1.0, 0.05),
             ]
         elif cfg["effect"] == "flame":
             specs = [
-                (-3, 0, -4, 1.01, 1.0, 0.06),
-                (1, -4, 6, 0.98, 1.03, 0.42),
-                (5, -7, -9, 1.02, 0.99, 0.88),
-                (8, -7, -13, 1.04, 0.97, 1.00),
-                (3, -3, 5, 1.01, 1.0, 0.52),
+                (-2, 0, -3, 1.0, 1.01, 0.08),
+                (0, -4, 5, 0.98, 1.04, 0.45),
+                (3, -7, -7, 1.02, 0.99, 0.9),
+                (4, -7, -11, 1.03, 0.98, 1.00),
+                (1, -3, 4, 1.0, 1.01, 0.52),
                 (0, 0, 0, 1.0, 1.0, 0.06),
             ]
         elif cfg["effect"] == "healer":
             specs = [
-                (-2, 0, -3, 1.0, 1.0, 0.06),
-                (0, -4, 4, 0.99, 1.03, 0.36),
-                (4, -7, 8, 1.01, 1.01, 0.82),
-                (7, -6, -7, 1.02, 0.99, 1.00),
-                (2, -3, 2, 1.0, 1.01, 0.50),
+                (-2, 0, -4, 1.0, 1.0, 0.06),
+                (-1, -6, 8, 0.99, 1.04, 0.36),
+                (3, -8, 12, 1.01, 1.01, 0.84),
+                (6, -3, -10, 1.04, 0.96, 1.00),
+                (2, -1, 3, 1.01, 1.0, 0.52),
                 (0, 0, 0, 1.0, 1.0, 0.07),
             ]
         else:
