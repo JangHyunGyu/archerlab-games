@@ -54,7 +54,7 @@ export class SoundManager {
         this._sfxMaster = 0.4;
         this._toneLeadTime = 0.035;
         this._releaseMs = {
-            dagger: 320, daggerThrow: 380, hit: 500, kill: 300, xp: 160,
+            dagger: 320, daggerThrow: 380, hit: 200, kill: 360, xp: 160,
             playerHit: 390, select: 130, system: 190, warning: 340,
             slash: 620, authority: 860, fear: 660,
             levelup: 560, rankup: 860, arise: 860, bossAppear: 860,
@@ -63,7 +63,7 @@ export class SoundManager {
             bossCharge: 720, bossSlash: 420, groundSlam: 820,
             acidShot: 390, acidHit: 470, bossRage: 940,
             shadowSoldierSlash: 260, shadowSoldierSlam: 460, shadowSoldierSpit: 300,
-            critHit: 280, eliteKill: 760,
+            critHit: 260, eliteKill: 700,
         };
         this._soundPriority = {
             xp: 0, hit: 1, dagger: 1, daggerThrow: 1, kill: 1,
@@ -83,6 +83,8 @@ export class SoundManager {
         this._sfxLoadPromise = null;
         this._sfxLoadTimer = null;
         this._sfxLoadTimerType = null;
+        this._introPendingDispose = null;
+        this._bgmPendingDispose = null;
 
         for (const [name, spec] of Object.entries(CHARACTER_SFX_CONFIG)) {
             this._throttleMs[name] = spec.throttle;
@@ -100,10 +102,12 @@ export class SoundManager {
             const audio = new Audio(src);
             audio.preload = 'auto';
             audio._inUse = false;
-            audio.addEventListener('ended', () => { audio._inUse = false; });
-            audio.addEventListener('pause', () => {
+            audio._onEnded = () => { audio._inUse = false; };
+            audio._onPause = () => {
                 if (audio.ended || audio.currentTime === 0) audio._inUse = false;
-            });
+            };
+            audio.addEventListener('ended', audio._onEnded);
+            audio.addEventListener('pause', audio._onPause);
             this._pools[name].push(audio);
         }
         this._pools[name]._index = 0;
@@ -520,10 +524,24 @@ export class SoundManager {
             this._introIntervals.push(riserInterval);
         } catch (e) {
             console.warn('Intro music error:', e);
+            this.stopIntroMusic(true);
+        }
+    }
+
+    _flushPendingIntroDispose() {
+        if (this._introDisposeTimeout) {
+            clearTimeout(this._introDisposeTimeout);
+            this._introDisposeTimeout = null;
+        }
+        if (this._introPendingDispose) {
+            const dispose = this._introPendingDispose;
+            this._introPendingDispose = null;
+            dispose();
         }
     }
 
     stopIntroMusic(immediate = false) {
+        this._flushPendingIntroDispose();
         this._introToken = (this._introToken || 0) + 1;
         if (this._introIntervals) {
             this._introIntervals.forEach(id => clearInterval(id));
@@ -544,9 +562,9 @@ export class SoundManager {
         this._introTransientNodes = [];
         this._introArpSynth = null;
         this._introGain = null;
-        if (this._introDisposeTimeout) clearTimeout(this._introDisposeTimeout);
         const disposeIntroNodes = () => {
             this._introDisposeTimeout = null;
+            this._introPendingDispose = null;
             nodes.forEach(node => {
                 try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
                 try { node.dispose(); } catch (e) { /* silent */ }
@@ -559,7 +577,10 @@ export class SoundManager {
             if (gain) { try { gain.dispose(); } catch (e) { /* silent */ } }
         };
         if (immediate) disposeIntroNodes();
-        else this._introDisposeTimeout = setTimeout(disposeIntroNodes, 400);
+        else {
+            this._introPendingDispose = disposeIntroNodes;
+            this._introDisposeTimeout = setTimeout(disposeIntroNodes, 400);
+        }
     }
 
     // ========== IN-GAME BGM (Tone.js) ==========
@@ -719,10 +740,24 @@ export class SoundManager {
             }, 1200));
         } catch (e) {
             console.warn('Game BGM error:', e);
+            this.stopGameBGM(true);
+        }
+    }
+
+    _flushPendingBgmDispose() {
+        if (this._bgmDisposeTimeout) {
+            clearTimeout(this._bgmDisposeTimeout);
+            this._bgmDisposeTimeout = null;
+        }
+        if (this._bgmPendingDispose) {
+            const dispose = this._bgmPendingDispose;
+            this._bgmPendingDispose = null;
+            dispose();
         }
     }
 
     stopGameBGM(immediate = false) {
+        this._flushPendingBgmDispose();
         this._bgmToken = (this._bgmToken || 0) + 1;
         if (this._bgmTimeouts) {
             this._bgmTimeouts.forEach(id => clearTimeout(id));
@@ -744,13 +779,16 @@ export class SoundManager {
             this._bgmGain = null;
             try {
                 if (!immediate) bgmGain.volume.rampTo(-60, 0.5);
-                if (this._bgmDisposeTimeout) clearTimeout(this._bgmDisposeTimeout);
                 const disposeBgmGain = () => {
                     this._bgmDisposeTimeout = null;
+                    this._bgmPendingDispose = null;
                     try { bgmGain.dispose(); } catch (e) { /* silent */ }
                 };
                 if (immediate) disposeBgmGain();
-                else this._bgmDisposeTimeout = setTimeout(disposeBgmGain, 600);
+                else {
+                    this._bgmPendingDispose = disposeBgmGain;
+                    this._bgmDisposeTimeout = setTimeout(disposeBgmGain, 600);
+                }
             } catch (e) { /* silent */ }
         }
     }
@@ -786,8 +824,14 @@ export class SoundManager {
             const pool = this._pools[name];
             for (let i = 0; i < pool.length; i++) {
                 if (pool[i] instanceof Audio) {
-                    pool[i].pause();
-                    pool[i].src = '';
+                    const audio = pool[i];
+                    if (audio._onEnded) audio.removeEventListener('ended', audio._onEnded);
+                    if (audio._onPause) audio.removeEventListener('pause', audio._onPause);
+                    audio.pause();
+                    audio.removeAttribute('src');
+                    try { audio.load(); } catch (e) { /* silent */ }
+                    audio._onEnded = null;
+                    audio._onPause = null;
                     pool[i] = null;
                 }
             }
@@ -810,6 +854,9 @@ export class SoundManager {
         } catch (e) { /* silent */ }
 
         this._initialized = false;
+        this._toneReady = false;
+        this._userActivated = false;
+        this._warmedUp = false;
     }
 
     toggleSound() {

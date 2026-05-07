@@ -90,6 +90,16 @@ export class SpriteFactory {
             // Flip horizontally so sprite faces right by default
             ctx.translate(w, 0);
             ctx.scale(-1, 1);
+            ctx.save();
+            ctx.globalAlpha = 0.75;
+            ctx.filter = 'brightness(1.8) saturate(1.25)';
+            ctx.shadowColor = 'rgba(194, 122, 255, 0.75)';
+            ctx.shadowBlur = Math.max(3, Math.round(Math.min(w, h) * 0.08));
+            const outline = Math.max(1, Math.round(Math.min(w, h) * 0.035));
+            for (const [ox, oy] of [[-outline, 0], [outline, 0], [0, -outline], [0, outline]]) {
+                ctx.drawImage(src, ox, oy, w, h);
+            }
+            ctx.restore();
             ctx.drawImage(src, 0, 0, w, h);
             if (scene.textures.exists(targetKey)) scene.textures.remove(targetKey);
             scene.textures.addCanvas(targetKey, canvas);
@@ -1289,7 +1299,20 @@ export class SpriteFactory {
                 ctx.save();
                 ctx.translate(x, y);
                 ctx.rotate(lean);
-                ctx.filter = 'drop-shadow(0 2px 2px rgba(0,0,0,0.65)) contrast(1.04) saturate(1.05)';
+                ctx.globalAlpha = 0.82;
+                ctx.filter = 'brightness(1.85) saturate(1.35)';
+                ctx.shadowColor = 'rgba(196, 126, 255, 0.78)';
+                ctx.shadowBlur = Math.max(4, size * 0.12);
+                const rim = Math.max(1.5, size * 0.035);
+                for (const [ox, oy] of [[-rim, 0], [rim, 0], [0, -rim], [0, rim], [-rim * 0.7, -rim * 0.7], [rim * 0.7, -rim * 0.7]]) {
+                    ctx.drawImage(src, -drawW / 2 + ox, -drawH + oy, drawW, drawH);
+                }
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(lean);
+                ctx.filter = 'drop-shadow(0 2px 2px rgba(0,0,0,0.46)) brightness(1.08) contrast(1.16) saturate(1.14)';
                 ctx.drawImage(src, -drawW / 2, -drawH, drawW, drawH);
                 ctx.restore();
 
@@ -1562,7 +1585,20 @@ export class SpriteFactory {
                 ctx.save();
                 ctx.translate(x, y);
                 ctx.rotate(Math.sin(phase) * 0.025);
-                ctx.filter = 'drop-shadow(0 3px 3px rgba(0,0,0,0.72)) contrast(1.05) saturate(1.06)';
+                ctx.globalAlpha = 0.9;
+                ctx.filter = 'brightness(1.75) saturate(1.28)';
+                ctx.shadowColor = 'rgba(255, 92, 116, 0.76)';
+                ctx.shadowBlur = Math.max(6, s * 0.11);
+                const rim = Math.max(2, s * 0.028);
+                for (const [ox, oy] of [[-rim, 0], [rim, 0], [0, -rim], [0, rim], [-rim * 0.7, -rim * 0.7], [rim * 0.7, -rim * 0.7]]) {
+                    ctx.drawImage(src, -drawW / 2 + ox, -drawH + oy, drawW, drawH);
+                }
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(Math.sin(phase) * 0.025);
+                ctx.filter = 'drop-shadow(0 3px 3px rgba(0,0,0,0.5)) brightness(1.08) contrast(1.16) saturate(1.14)';
                 ctx.drawImage(src, -drawW / 2, -drawH, drawW, drawH);
                 ctx.restore();
 
@@ -2317,10 +2353,10 @@ export class SpriteFactory {
             const ctx = canvas.getContext('2d');
             const gradient = ctx.createRadialGradient(size / 2, size / 2, size * 0.08, size / 2, size / 2, size * 0.62);
             gradient.addColorStop(0,    'rgba(0,0,0,0)');
-            gradient.addColorStop(0.35, 'rgba(10,5,30,0.12)');
-            gradient.addColorStop(0.6,  'rgba(18,8,48,0.55)');
-            gradient.addColorStop(0.85, 'rgba(8,2,22,0.88)');
-            gradient.addColorStop(1,    'rgba(2,0,10,0.97)');
+            gradient.addColorStop(0.42, 'rgba(10,5,30,0.08)');
+            gradient.addColorStop(0.68, 'rgba(18,8,48,0.38)');
+            gradient.addColorStop(0.9,  'rgba(8,2,22,0.74)');
+            gradient.addColorStop(1,    'rgba(2,0,10,0.88)');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, size, size);
             scene.textures.addCanvas('vignette', canvas);

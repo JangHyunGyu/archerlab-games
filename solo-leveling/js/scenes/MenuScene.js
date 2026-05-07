@@ -137,6 +137,7 @@ export class MenuScene extends Phaser.Scene {
         });
 
         const startGame = async (resume = false) => {
+            if (this._startingGame) return;
             this._startingGame = true;
             const characterId = resume ? this.selectedCharacterId : setStoredCharacterId(this.selectedCharacterId);
             if (!this.game._soundManager) {
@@ -145,7 +146,7 @@ export class MenuScene extends Phaser.Scene {
             }
             const sm = this.game._soundManager;
             sm.stopIntroMusic();
-            sm.resume(true);
+            await sm.resume(true);
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => this.scene.start('GameScene', { resume, characterId }));
         };
@@ -658,6 +659,11 @@ export class MenuScene extends Phaser.Scene {
 
     _showHallOfFame(isMobile) {
         const elements = [];
+        let closed = false;
+        const markClosed = () => { closed = true; };
+        const isClosed = () => closed || (this.scene?.isActive && !this.scene.isActive());
+        this.events.once('shutdown', markClosed);
+
         const cx = GAME_WIDTH / 2;
         const cy = GAME_HEIGHT / 2;
         const depth = 200;
@@ -703,6 +709,9 @@ export class MenuScene extends Phaser.Scene {
 
         this._modalElements.push(...elements);
         const closeAll = () => {
+            if (closed) return;
+            closed = true;
+            this.events.off('shutdown', markClosed);
             elements.forEach(el => el.destroy());
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
@@ -712,6 +721,7 @@ export class MenuScene extends Phaser.Scene {
         fetch(`${GAME_API_URL}/rankings?game_id=${GAME_ID_SHADOW}&limit=20`)
             .then(resp => resp.json())
             .then(data => {
+                if (isClosed()) return;
                 if (loadingText && loadingText.active) loadingText.setVisible(false);
                 const rankings = data.rankings || [];
                 if (rankings.length === 0) {
@@ -764,6 +774,7 @@ export class MenuScene extends Phaser.Scene {
                 });
             })
             .catch(() => {
+                if (isClosed()) return;
                 if (loadingText && loadingText.active) {
                     loadingText.setText('▶  SYSTEM · ERROR');
                     loadingText.setColor(SYSTEM.TEXT_RED);
