@@ -344,7 +344,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 const player = this.scene.player;
                 if (player && !player.isDead) {
                     player.takeDamage(this.attack);
-                    if (this.scene.soundManager) this.scene.soundManager.play('playerHit');
                 }
             }
         }

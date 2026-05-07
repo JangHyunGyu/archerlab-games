@@ -269,6 +269,11 @@ export class GameScene extends Phaser.Scene {
                 this._colorTint.setPosition(cam.width / 2, cam.height / 2);
                 this._colorTint.setSize(cam.width, cam.height);
             }
+            if (this._mobileDarken) {
+                const cam = this.cameras.main;
+                this._mobileDarken.setPosition(cam.width / 2, cam.height / 2);
+                this._mobileDarken.setSize(cam.width, cam.height);
+            }
         };
         this.events.on('game-resize', this._onGameResize, this);
     }
@@ -471,7 +476,6 @@ export class GameScene extends Phaser.Scene {
         if (!enemy.active || !player.active) return;
         if (enemy.isBoss) return;
         player.takeDamage(enemy.attack);
-        if (this.soundManager) this.soundManager.play('playerHit');
     }
 
     _checkBossSpawns() {
@@ -708,17 +712,17 @@ export class GameScene extends Phaser.Scene {
                 isMobile ? 0x6f4a9d : 0xd5b8ee
             )
                 .setScrollFactor(0)
-                .setDepth(88)
+                .setDepth(2.5)
                 .setBlendMode(Phaser.BlendModes.MULTIPLY)
-                .setAlpha(isMobile ? 0.88 : 0.82);
+                .setAlpha(isMobile ? 0.52 : 0.38);
 
             if (isMobile) {
                 this._mobileDarken = this.add.rectangle(
                     cam.width / 2, cam.height / 2, cam.width, cam.height,
-                    0x01030a, 0.45
+                    0x01030a, 0.22
                 )
                     .setScrollFactor(0)
-                    .setDepth(89);
+                    .setDepth(2.6);
             }
         } catch (e) { /* tint overlay optional */ }
     }
@@ -735,7 +739,7 @@ export class GameScene extends Phaser.Scene {
                 .setScrollFactor(0)
                 .setDepth(90)
                 .setDisplaySize(cam.width * scale, cam.height * scale)
-                .setAlpha(0.68);
+                .setAlpha(0.52);
         } catch (e) { /* vignette not available */ }
     }
 
@@ -744,7 +748,7 @@ export class GameScene extends Phaser.Scene {
         const hpRatio = this.player.stats.hp / this.player.stats.maxHp;
         if (hpRatio < 0.4) {
             // Low HP: vignette closes in and the tint warms.
-            const intensity = 0.75 + (1 - hpRatio / 0.4) * 0.2;
+            const intensity = 0.64 + (1 - hpRatio / 0.4) * 0.18;
             this._vignetteOverlay.setAlpha(intensity);
             if (this._colorTint) this._colorTint.fillColor = 0xeeb8a8;
             if (this._colorMatrix && hpRatio < 0.25) {
@@ -755,7 +759,7 @@ export class GameScene extends Phaser.Scene {
                 } catch (e) { /* silent */ }
             }
         } else {
-            this._vignetteOverlay.setAlpha(0.68);
+            this._vignetteOverlay.setAlpha(0.52);
             if (this._colorTint) this._colorTint.fillColor = 0xd5b8ee;
             if (this._colorMatrix) {
                 try {
