@@ -187,7 +187,7 @@ export class BasicDagger extends WeaponBase {
     }
 
     _thrust() {
-        const target = this.player.getClosestEnemy(this.attackRange + 50);
+        const target = this.player.getClosestEnemy(this.attackRange + this.extraRange + (this.config.targetRangeBonus ?? 50));
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
             : (this.player.facingRight ? 0 : Math.PI);
@@ -462,23 +462,28 @@ export class BasicDagger extends WeaponBase {
             }
 
             const enemies = this.player.getAllEnemies();
-            const hitAngleTol = 0.62;
+            const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
+            const hitAngleTol = this.config.hitAngle ?? 0.62;
+            const maxHits = this.config.maxHits ?? Infinity;
+            let hits = 0;
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
 
                 const dist = Phaser.Math.Distance.Between(hitOriginX, hitOriginY, enemy.x, enemy.y);
-                if (dist > this.attackRange) continue;
+                if (dist > hitRange) continue;
 
                 const enemyAngle = Phaser.Math.Angle.Between(hitOriginX, hitOriginY, enemy.x, enemy.y);
                 const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - baseAngle));
                 if (angleDiff >= hitAngleTol) continue;
 
                 enemy.takeDamage(this.getDamage(), hitPose.tipX, hitPose.tipY);
+                hits++;
                 if (this.scene.soundManager) this.scene.soundManager.play('hit');
 
                 if (!this.scene.textures.exists('effect_monster_hit_0')) {
                     this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
                 }
+                if (hits >= maxHits) break;
             }
         });
 
@@ -486,7 +491,7 @@ export class BasicDagger extends WeaponBase {
     }
 
     _swordSlash() {
-        const { baseAngle, side } = this._getAttackSetup({ rangeBonus: 65, duration: 260 });
+        const { baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 65, duration: 260 });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
@@ -568,14 +573,21 @@ export class BasicDagger extends WeaponBase {
         this._delay(118, () => {
             const hitX = originX + cosA * 96;
             const hitY = originY + sinA * 96;
-            this._damageEnemiesInCone(baseAngle, this.attackRange + this.extraRange + 35, 0.92, hitX, hitY);
+            this._damageEnemiesInCone(
+                baseAngle,
+                this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 35),
+                this.config.hitAngle ?? 0.92,
+                hitX,
+                hitY,
+                { maxHits: this.config.maxHits ?? Infinity }
+            );
         });
 
         this.playConfiguredSound('slash');
     }
 
     _clawSwipe() {
-        const { baseAngle, side } = this._getAttackSetup({ rangeBonus: 35, duration: 245 });
+        const { baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 35, duration: 245 });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
@@ -653,21 +665,28 @@ export class BasicDagger extends WeaponBase {
         this._delay(112, () => {
             const hitX = originX + cosA * 110;
             const hitY = originY + sinA * 110;
-            this._damageEnemiesInCone(baseAngle, this.attackRange + this.extraRange, 0.78, hitX, hitY, { maxHits: 3 });
+            this._damageEnemiesInCone(
+                baseAngle,
+                this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0),
+                this.config.hitAngle ?? 0.78,
+                hitX,
+                hitY,
+                { maxHits: this.config.maxHits ?? 3 }
+            );
         });
 
         this.playConfiguredSound('slash');
     }
 
     _maceSlam() {
-        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: 25, duration: 285 });
+        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 25, duration: 285 });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
         const perpY = cosA;
         const originX = this.player.x;
         const originY = this.player.y - 22;
-        const maxDist = this.attackRange + this.extraRange - 18;
+        const maxDist = this.attackRange + this.extraRange + (this.config.impactRangeBonus ?? -18);
         const targetDist = target
             ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y))
             : Math.min(maxDist, 118);
@@ -735,7 +754,13 @@ export class BasicDagger extends WeaponBase {
         });
 
         this._delay(220, () => {
-            this._damageEnemiesInRadius(impactX, impactY, this.config.impactRadius || 56, baseAngle, { maxHits: 3 });
+            this._damageEnemiesInRadius(
+                impactX,
+                impactY,
+                this.config.impactRadius ?? 56,
+                baseAngle,
+                { maxHits: this.config.maxHits ?? 3 }
+            );
             if (this.scene.cameras?.main) this.scene.cameras.main.shake(70, 0.0022);
         });
 
@@ -743,14 +768,14 @@ export class BasicDagger extends WeaponBase {
     }
 
     _fireball() {
-        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: 130, duration: 300 });
+        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 130, duration: 300 });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
         const perpY = cosA;
         const originX = this.player.x;
         const originY = this.player.y - 18;
-        const maxDist = this.attackRange + this.extraRange + 80;
+        const maxDist = this.attackRange + this.extraRange + (this.config.projectileRangeBonus ?? 80);
         const targetDist = target
             ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y) + 18)
             : maxDist;
@@ -770,6 +795,8 @@ export class BasicDagger extends WeaponBase {
             : this.scene.add.circle(startX, startY, 13, effectColor, 0.95).setDepth(14);
         const trailFx = this.scene.add.graphics().setDepth(13);
         const hitEnemies = new Set();
+        const impactRadius = this.config.impactRadius ?? 38;
+        const maxHits = this.config.maxHits ?? 2;
         const progress = { t: 0 };
         const entry = this._trackAttackObjects([projectile, trailFx]);
 
@@ -841,12 +868,12 @@ export class BasicDagger extends WeaponBase {
             for (const enemy of this.player.getAllEnemies()) {
                 if (!enemy.active || hitEnemies.has(enemy)) continue;
                 const dist = Phaser.Math.Distance.Between(projectile.x, projectile.y, enemy.x, enemy.y);
-                if (dist > (this.config.impactRadius || 38)) continue;
+                if (dist > impactRadius) continue;
                 hitEnemies.add(enemy);
                 enemy.takeDamage(this.getDamage(), projectile.x, projectile.y);
                 if (this.scene.soundManager) this.scene.soundManager.play('hit');
                 spawnImpactBurst(projectile.x, projectile.y);
-                if (hitEnemies.size >= 2) break;
+                if (hitEnemies.size >= maxHits) break;
             }
         };
 
