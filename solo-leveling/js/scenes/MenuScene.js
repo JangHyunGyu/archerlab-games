@@ -6,7 +6,7 @@ import {
 import { SoundManager } from '../managers/SoundManager.js';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { GameScene } from './GameScene.js';
-import { CHARACTER_DEFS, getStoredCharacterId, setStoredCharacterId } from '../utils/Characters.js';
+import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId } from '../utils/Characters.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -23,15 +23,14 @@ export class MenuScene extends Phaser.Scene {
         const isNarrow = GAME_WIDTH <= 1100;  // narrow phone, portrait
         const isShortLandscape = !isPortrait && GAME_HEIGHT <= 820 && GAME_WIDTH > 1180;
         const isCompactMenu = isNarrow || isShortLandscape;
+        const isLandscapePhone = isMobile && !isPortrait;
 
         this._modalElements = [];
         this._dropdownElements = [];
         this._startingGame = false;
         this.selectedCharacterId = getStoredCharacterId();
 
-        // Deep background + scanlines
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP);
-        this._drawBackdrop();
+        this._createMenuBackdrop({ isPortrait, isShortLandscape });
 
         const centerX = GAME_WIDTH / 2;
         const sidePad = uv(20);
@@ -40,6 +39,7 @@ export class MenuScene extends Phaser.Scene {
         const contentH = Math.min(GAME_HEIGHT, uv(860));
         const contentTop = (GAME_HEIGHT - contentH) / 2;
         const cy = (pct) => contentTop + contentH * pct;
+        this._createHeroFocus(centerX, cy, { isPortrait, isShortLandscape });
 
         // ── Top status line ─────────────────────
         // Skip on narrow/portrait to avoid colliding with HTML ArcherLab link
@@ -86,7 +86,6 @@ export class MenuScene extends Phaser.Scene {
         }
 
         // Subtitle — skip on short landscape (phone) to save vertical space
-        const isLandscapePhone = isMobile && !isPortrait;
         if (!isLandscapePhone && !isShortLandscape) {
             const subText = this.add.text(centerX, ulY + uv(18), 'S H A D O W   ·   S U R V I V A L', {
                 fontSize: fs(isNarrow ? 11 : 13),
@@ -189,6 +188,7 @@ export class MenuScene extends Phaser.Scene {
             border: SYSTEM.BORDER,
             labelSize: isNarrow ? 16 : 19,
             labelFont: UI_FONT_KR,
+            primary: true,
             onClick: () => startGame(false),
         });
         nextActionY += startH;
@@ -207,34 +207,28 @@ export class MenuScene extends Phaser.Scene {
         });
 
         // ── Footer ─────────────────────────────
-        // Anchor footer from bottom of screen so it's consistent across aspect ratios
-        if (!isShortLandscape) {
-        const bottomPad = uv(isNarrow ? 54 : 18);
-        const copyrightY = GAME_HEIGHT - bottomPad;
-        this.add.text(centerX, copyrightY, 'ArcherLab   ·   © 2026', {
-            fontSize: fs(10), fontFamily: UI_FONT_MONO, color: '#3a4755',
-        }).setOrigin(0.5, 1);
+        // Keep the mobile title screen clean; the fixed ArcherLab link remains available.
+        if (!isShortLandscape && !isPortrait) {
+            const footerY = GAME_HEIGHT - uv(18);
+            const ctrl = `${t('controlsPC')}   ·   ${t('controlsPC2')}`;
+            const ctrlText = this.add.text(sidePad, footerY, ctrl, {
+                fontSize: fs(10),
+                fontFamily: UI_FONT_MONO,
+                color: SYSTEM.TEXT_MUTED,
+                align: 'left',
+            }).setOrigin(0, 1);
+            this._fitText(ctrlText, GAME_WIDTH * 0.42, uv(18));
 
-        const contactBtn = this.add.text(centerX, copyrightY - uv(16), `[ ${t('contact')} ]`, {
-            fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
-        }).setOrigin(0.5, 1).setInteractive({ useHandCursor: true });
-        contactBtn.on('pointerover', () => contactBtn.setColor(SYSTEM.TEXT_CYAN));
-        contactBtn.on('pointerout', () => contactBtn.setColor(SYSTEM.TEXT_MUTED));
-        contactBtn.on('pointerdown', () => this._showContactModal());
+            const contactBtn = this.add.text(GAME_WIDTH - sidePad, footerY, `[ ${t('contact')} ]`, {
+                fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
+            }).setOrigin(1, 1).setInteractive({ useHandCursor: true });
+            contactBtn.on('pointerover', () => contactBtn.setColor(SYSTEM.TEXT_CYAN));
+            contactBtn.on('pointerout', () => contactBtn.setColor(SYSTEM.TEXT_MUTED));
+            contactBtn.on('pointerdown', () => this._showContactModal());
 
-        // ── Controls hint (above footer) ───────
-        const ctrlY = copyrightY - uv(46);
-        const ctrl = isMobile
-            ? `${t('controlsMobile')}   ·   ${t('controlsMobileAuto')}`
-            : `${t('controlsPC')}   ·   ${t('controlsPC2')}`;
-        const ctrlText = this.add.text(centerX, ctrlY, ctrl, {
-            fontSize: fs(isNarrow ? 10 : 11),
-            fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_MUTED,
-            align: 'center',
-        }).setOrigin(0.5, 1);
-        const ctrlMaxW = GAME_WIDTH - sidePad * 2;
-        if (ctrlText.width > ctrlMaxW) ctrlText.setScale(ctrlMaxW / ctrlText.width);
+            this.add.text(GAME_WIDTH - sidePad, footerY - uv(17), '© 2026 ArcherLab', {
+                fontSize: fs(9), fontFamily: UI_FONT_MONO, color: '#3a4755',
+            }).setOrigin(1, 1);
         }
 
         // ── Language selector (top-right) ──────
@@ -262,13 +256,148 @@ export class MenuScene extends Phaser.Scene {
         });
     }
 
+    _createMenuBackdrop({ isPortrait = false, isShortLandscape = false } = {}) {
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP)
+            .setDepth(-40);
+
+        if (this.textures.exists('ai_dungeon_floor')) {
+            this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 'ai_dungeon_floor')
+                .setDepth(-38)
+                .setAlpha(0.24)
+                .setTint(0x7788aa);
+        }
+
+        if (this.textures.exists('ai_dungeon_atmosphere')) {
+            this._coverImage('ai_dungeon_atmosphere', GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(-37)
+                .setAlpha(isPortrait ? 0.42 : 0.5)
+                .setTint(0xa8c4ff);
+        }
+
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02050d, isPortrait ? 0.55 : 0.46)
+            .setDepth(-36);
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.16, GAME_WIDTH, GAME_HEIGHT * 0.36, 0x02040a, 0.48)
+            .setDepth(-35);
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.76, GAME_WIDTH, GAME_HEIGHT * 0.5, 0x02040a, isPortrait ? 0.46 : 0.38)
+            .setDepth(-35);
+
+        if (!isPortrait && this.textures.exists('env_shadow_portal')) {
+            const portalY = isShortLandscape ? GAME_HEIGHT * 0.49 : GAME_HEIGHT * 0.53;
+            [
+                { x: GAME_WIDTH * 0.19, scale: 1.95, alpha: 0.16, rot: -0.12 },
+                { x: GAME_WIDTH * 0.81, scale: 1.6, alpha: 0.13, rot: 0.16 },
+            ].forEach((p) => {
+                const portal = this.add.image(p.x, portalY, 'env_shadow_portal')
+                    .setDepth(-30)
+                    .setAlpha(p.alpha)
+                    .setScale(p.scale)
+                    .setRotation(p.rot)
+                    .setBlendMode(Phaser.BlendModes.ADD);
+                this.tweens.add({
+                    targets: portal,
+                    alpha: p.alpha + 0.07,
+                    scale: p.scale * 1.06,
+                    duration: 2200,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+            });
+        }
+
+        if (this.textures.exists('particle_glow')) {
+            try {
+                this.add.particles(GAME_WIDTH / 2, GAME_HEIGHT * 0.55, 'particle_glow', {
+                    x: { min: -GAME_WIDTH * 0.46, max: GAME_WIDTH * 0.46 },
+                    y: { min: -GAME_HEIGHT * 0.22, max: GAME_HEIGHT * 0.24 },
+                    speed: { min: 4, max: 18 },
+                    angle: { min: 245, max: 292 },
+                    scale: { start: isPortrait ? 0.42 : 0.55, end: 0.05 },
+                    alpha: { start: 0.18, end: 0 },
+                    lifespan: { min: 2400, max: 5200 },
+                    tint: [SYSTEM.BORDER, 0x8b4dff, 0xe8b64a],
+                    blendMode: 'ADD',
+                    frequency: isPortrait ? 170 : 120,
+                    quantity: 1,
+                }).setDepth(-18);
+            } catch (e) { /* particles are decorative */ }
+        }
+
+        if (this.textures.exists('vignette')) {
+            this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'vignette')
+                .setDepth(-10)
+                .setDisplaySize(GAME_WIDTH * 1.24, GAME_HEIGHT * 1.24)
+                .setAlpha(isPortrait ? 0.72 : 0.64);
+        }
+
+        this._drawBackdrop();
+    }
+
+    _coverImage(key, x, y, w, h) {
+        const img = this.add.image(x, y, key).setOrigin(0.5);
+        const source = this.textures.get(key)?.getSourceImage?.();
+        const iw = Math.max(source?.width || w, 1);
+        const ih = Math.max(source?.height || h, 1);
+        img.setScale(Math.max(w / iw, h / ih));
+        return img;
+    }
+
+    _createHeroFocus(centerX, cy, { isPortrait = false, isShortLandscape = false } = {}) {
+        if (isPortrait || isShortLandscape) return;
+
+        const heroX = centerX + Math.min(GAME_WIDTH * 0.34, uv(430));
+        const heroY = cy(0.34);
+        const ringSize = Math.min(uv(330), GAME_HEIGHT * 0.42);
+
+        const aura = this.add.ellipse(heroX, heroY, ringSize * 1.02, ringSize * 1.02, SYSTEM.BORDER, 0.035)
+            .setDepth(-16)
+            .setStrokeStyle(1, SYSTEM.BORDER, 0.18);
+        const ring = this.add.ellipse(heroX, heroY, ringSize * 0.86, ringSize * 0.86, 0x000000, 0)
+            .setDepth(-15)
+            .setStrokeStyle(2, SYSTEM.BORDER_DIM, 0.25);
+
+        this._heroPreviewSprite = this.add.image(heroX, heroY, 'char_original_shadow_monarch_portrait')
+            .setDepth(-14)
+            .setAlpha(0.2)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setDisplaySize(ringSize * 0.74, ringSize * 0.74);
+        this._heroPreviewAura = aura;
+        this._heroPreviewRing = ring;
+        this._refreshHeroPreview();
+
+        this.tweens.add({
+            targets: [aura, ring],
+            alpha: { from: 0.2, to: 0.42 },
+            scale: { from: 1, to: 1.035 },
+            duration: 2400,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+    }
+
+    _refreshHeroPreview(character = getCharacter(this.selectedCharacterId)) {
+        const texture = `char_${character.assetKey}_portrait`;
+        if (this._heroPreviewSprite?.active && this.textures.exists(texture)) {
+            this._heroPreviewSprite.setTexture(texture);
+            this._heroPreviewSprite.setAlpha(0.2);
+        }
+        if (this._heroPreviewAura?.active) {
+            this._heroPreviewAura.setFillStyle(character.accent, 0.04);
+            this._heroPreviewAura.setStrokeStyle(1, character.accent, 0.2);
+        }
+        if (this._heroPreviewRing?.active) {
+            this._heroPreviewRing.setStrokeStyle(2, character.accent, 0.28);
+        }
+    }
+
     _drawBackdrop() {
-        const g = this.add.graphics();
+        const g = this.add.graphics().setDepth(-4);
         // Horizontal scanlines
-        g.lineStyle(1, SYSTEM.SCAN_LINE, 0.55);
+        g.lineStyle(1, SYSTEM.SCAN_LINE, 0.34);
         for (let y = 0; y < GAME_HEIGHT; y += 3) g.lineBetween(0, y, GAME_WIDTH, y);
         // Faint vertical grid
-        g.lineStyle(1, SYSTEM.BORDER, 0.04);
+        g.lineStyle(1, SYSTEM.BORDER, 0.035);
         for (let x = 0; x < GAME_WIDTH; x += 80) g.lineBetween(x, 0, x, GAME_HEIGHT);
         // Border bracket corners on the screen frame
         const pad = uv(10);
@@ -366,17 +495,28 @@ export class MenuScene extends Phaser.Scene {
         return { g, hit, icon, titleText, metaText };
     }
 
-    _makeButton(x, y, w, h, { label, labelColor, border, labelSize = 16, labelFont = UI_FONT_KR, onClick }) {
+    _makeButton(x, y, w, h, { label, labelColor, border, labelSize = 16, labelFont = UI_FONT_KR, primary = false, onClick }) {
         const g = this.add.graphics();
         const redraw = (hover) => {
             g.clear();
             drawSystemPanel(g, x, y, w, h, {
                 cut: uv(8),
-                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
-                fillAlpha: hover ? 0.95 : 0.8,
-                border, borderAlpha: 1,
+                fill: hover ? SYSTEM.BG_PANEL_HI : (primary ? 0x071723 : SYSTEM.BG_PANEL),
+                fillAlpha: hover ? 0.98 : (primary ? 0.9 : 0.82),
+                border, borderAlpha: hover ? 1 : (primary ? 0.98 : 0.86),
                 borderWidth: hover ? 2 : 1,
             });
+            if (primary) {
+                g.fillStyle(border, hover ? 0.18 : 0.1);
+                g.fillRect(x + uv(14), y + 1, w - uv(28), 2);
+                g.lineStyle(1, border, hover ? 0.55 : 0.32);
+                g.lineBetween(x + uv(18), y + h - uv(8), x + w - uv(18), y + h - uv(8));
+                g.lineStyle(1, 0xffffff, hover ? 0.18 : 0.08);
+                g.lineBetween(x + uv(18), y + uv(8), x + w - uv(18), y + uv(8));
+            } else {
+                g.lineStyle(1, border, hover ? 0.42 : 0.22);
+                g.lineBetween(x + uv(12), y + h - uv(7), x + w - uv(12), y + h - uv(7));
+            }
         };
         redraw(false);
 
@@ -385,6 +525,8 @@ export class MenuScene extends Phaser.Scene {
         const txt = this.add.text(x + w / 2, y + h / 2, label, {
             fontSize: fs(labelSize), fontFamily: labelFont, fontStyle: 'bold',
             color: labelColor,
+            stroke: '#02040a',
+            strokeThickness: primary ? 3 : 2,
         }).setOrigin(0.5);
         const baseScale = this._fitText(txt, w - uv(24), h - uv(12));
 
@@ -488,6 +630,7 @@ export class MenuScene extends Phaser.Scene {
             hit.on('pointerdown', () => {
                 this.selectedCharacterId = setStoredCharacterId(character.id);
                 if (this.game._soundManager) this.game._soundManager.play('select');
+                this._refreshHeroPreview(character);
                 redraw();
             });
         });
@@ -666,48 +809,100 @@ export class MenuScene extends Phaser.Scene {
 
         const cx = GAME_WIDTH / 2;
         const cy = GAME_HEIGHT / 2;
+        const isPortrait = GAME_HEIGHT > GAME_WIDTH;
         const depth = 200;
 
-        const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.88)
+        const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.84)
             .setDepth(depth).setInteractive();
         elements.push(dim);
 
-        const boxW = uv(400);
-        const boxH = uv(520);
+        if (this.textures.exists('env_shadow_portal')) {
+            const portal = this.add.image(cx, cy, 'env_shadow_portal')
+                .setDepth(depth + 1)
+                .setAlpha(0.16)
+                .setScale(isPortrait ? 3.2 : 2.45)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            elements.push(portal);
+        }
+
+        const boxW = isPortrait
+            ? GAME_WIDTH - uv(88)
+            : Math.min(uv(540), GAME_WIDTH - uv(72));
+        const boxH = isPortrait
+            ? Math.min(uv(1260), GAME_HEIGHT - uv(270))
+            : Math.min(uv(560), GAME_HEIGHT - uv(96));
         const bx = cx - boxW / 2;
         const by = cy - boxH / 2;
         const boxG = this.add.graphics().setDepth(depth + 1);
         drawSystemPanel(boxG, bx, by, boxW, boxH, {
             cut: uv(14),
-            fill: SYSTEM.BG_DEEP, fillAlpha: 0.98,
+            fill: SYSTEM.BG_DEEP, fillAlpha: 0.985,
             border: SYSTEM.BORDER_GOLD, borderWidth: 1,
         });
         elements.push(boxG);
 
-        const title = this.add.text(cx, by + uv(26), `[ ${t('hallOfFame')} ]`, {
-            fontSize: fs(isMobile ? 15 : 14),
+        const bodyShield = this.add.rectangle(cx, cy, boxW, boxH, 0x000000, 0)
+            .setDepth(depth + 2)
+            .setInteractive();
+        elements.push(bodyShield);
+
+        const headerTag = this.add.text(cx, by + uv(23), '[ SYSTEM · RANKING ]', {
+            fontSize: fs(isPortrait ? 10 : 10),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+            letterSpacing: 2,
+        }).setOrigin(0.5).setDepth(depth + 4);
+        elements.push(headerTag);
+
+        const title = this.add.text(cx, by + uv(isPortrait ? 58 : 52), t('hallOfFame'), {
+            fontSize: fs(isPortrait ? 24 : 20),
             fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_GOLD,
-        }).setOrigin(0.5).setDepth(depth + 2);
+            fontStyle: 'bold',
+            stroke: '#02040a',
+            strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(depth + 4);
+        this._fitText(title, boxW - uv(60), uv(52));
         elements.push(title);
 
         const divG = this.add.graphics().setDepth(depth + 2);
         divG.lineStyle(1, SYSTEM.BORDER_GOLD, 0.35);
-        divG.lineBetween(bx + uv(24), by + uv(52), bx + boxW - uv(24), by + uv(52));
+        divG.lineBetween(bx + uv(28), by + uv(isPortrait ? 90 : 82), bx + boxW - uv(28), by + uv(isPortrait ? 90 : 82));
+        divG.lineStyle(1, SYSTEM.BORDER_DIM, 0.26);
+        divG.lineBetween(bx + uv(46), by + uv(isPortrait ? 97 : 89), bx + boxW - uv(46), by + uv(isPortrait ? 97 : 89));
         elements.push(divG);
 
-        const loadingText = this.add.text(cx, cy, '▷  ' + t('loading'), {
+        const loadingText = this.add.text(cx, cy + uv(18), '▷  ' + t('loading'), {
             fontSize: fs(13), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
-        }).setOrigin(0.5).setDepth(depth + 2);
+        }).setOrigin(0.5).setDepth(depth + 4);
         elements.push(loadingText);
 
-        const closeBtn = this.add.text(cx, by + boxH - uv(24), `[ ${t('close')} ]`, {
-            fontSize: fs(12), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
-        }).setOrigin(0.5).setDepth(depth + 2).setInteractive({ useHandCursor: true });
-        elements.push(closeBtn);
-        closeBtn.on('pointerover', () => closeBtn.setColor(SYSTEM.TEXT_CYAN));
-        closeBtn.on('pointerout', () => closeBtn.setColor(SYSTEM.TEXT_MUTED));
+        const makeModalButton = (x, y, w, h, label, onClick) => {
+            const g = this.add.graphics().setDepth(depth + 3);
+            const redraw = (hover) => {
+                g.clear();
+                drawSystemPanel(g, x, y, w, h, {
+                    cut: uv(6),
+                    fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
+                    fillAlpha: hover ? 0.98 : 0.88,
+                    border: SYSTEM.BORDER,
+                    borderAlpha: hover ? 1 : 0.78,
+                    borderWidth: hover ? 2 : 1,
+                });
+            };
+            redraw(false);
+            const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
+                .setDepth(depth + 5)
+                .setInteractive({ useHandCursor: true });
+            const txt = this.add.text(x + w / 2, y + h / 2, label, {
+                fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_BRIGHT,
+                stroke: '#02040a', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(depth + 5);
+            hit.on('pointerover', () => redraw(true));
+            hit.on('pointerout', () => redraw(false));
+            hit.on('pointerdown', onClick);
+            elements.push(g, hit, txt);
+        };
 
-        this._modalElements.push(...elements);
         const closeAll = () => {
             if (closed) return;
             closed = true;
@@ -715,7 +910,8 @@ export class MenuScene extends Phaser.Scene {
             elements.forEach(el => el.destroy());
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
-        closeBtn.on('pointerdown', closeAll);
+        makeModalButton(cx - uv(48), by + boxH - uv(46), uv(96), uv(30), t('close'), closeAll);
+        this._modalElements.push(...elements);
         dim.on('pointerdown', closeAll);
 
         fetch(`${GAME_API_URL}/rankings?game_id=${GAME_ID_SHADOW}&limit=20`)
@@ -727,15 +923,69 @@ export class MenuScene extends Phaser.Scene {
                 if (rankings.length === 0) {
                     const noData = this.add.text(cx, cy, '▷  ' + t('noRecords'), {
                         fontSize: fs(13), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
-                    }).setOrigin(0.5).setDepth(depth + 2);
+                    }).setOrigin(0.5).setDepth(depth + 4);
                     elements.push(noData);
                     return;
                 }
 
-                const startY = by + uv(68);
-                const maxH = boxH - uv(110);
-                const rowH = Math.min(uv(22), maxH / Math.min(rankings.length + 1, 21));
+                const formatTime = (score) => {
+                    const safeScore = Math.max(0, Number(score) || 0);
+                    const mins = Math.floor(safeScore / 60).toString().padStart(2, '0');
+                    const secs = Math.floor(safeScore % 60).toString().padStart(2, '0');
+                    return `${mins}:${secs}`;
+                };
 
+                const topStartY = by + uv(isPortrait ? 112 : 102);
+                const pad = uv(24);
+                const gap = uv(8);
+                const topCardH = uv(isPortrait ? 148 : 104);
+                const topCardW = (boxW - pad * 2 - gap * 2) / 3;
+                const topColors = [SYSTEM.TEXT_GOLD, '#cfd8e8', '#d18b4a'];
+                const topBorders = [SYSTEM.BORDER_GOLD, SYSTEM.BORDER, 0xd18b4a];
+
+                rankings.slice(0, 3).forEach((entry, i) => {
+                    const cardX = bx + pad + i * (topCardW + gap);
+                    const cardY = topStartY;
+                    const color = topColors[i];
+                    const border = topBorders[i];
+                    const cardG = this.add.graphics().setDepth(depth + 3);
+                    drawSystemPanel(cardG, cardX, cardY, topCardW, topCardH, {
+                        cut: uv(8),
+                        fill: i === 0 ? 0x17110b : SYSTEM.BG_PANEL,
+                        fillAlpha: i === 0 ? 0.96 : 0.9,
+                        border,
+                        borderAlpha: i === 0 ? 1 : 0.78,
+                        borderWidth: i === 0 ? 2 : 1,
+                    });
+                    cardG.lineStyle(1, border, 0.26);
+                    cardG.lineBetween(cardX + uv(10), cardY + topCardH - uv(9), cardX + topCardW - uv(10), cardY + topCardH - uv(9));
+                    elements.push(cardG);
+
+                    const medal = this.add.text(cardX + topCardW / 2, cardY + uv(isPortrait ? 25 : 20), `#0${i + 1}`, {
+                        fontSize: fs(isPortrait ? 15 : 14),
+                        fontFamily: UI_FONT_MONO,
+                        fontStyle: 'bold',
+                        color,
+                    }).setOrigin(0.5).setDepth(depth + 4);
+                    const name = this.add.text(cardX + topCardW / 2, cardY + uv(isPortrait ? 66 : 50), entry.player_name || 'UNKNOWN', {
+                        fontSize: fs(isPortrait ? 11 : 11),
+                        fontFamily: UI_FONT_KR,
+                        fontStyle: i === 0 ? 'bold' : 'normal',
+                        color: i === 0 ? SYSTEM.TEXT_BRIGHT : color,
+                    }).setOrigin(0.5).setDepth(depth + 4);
+                    this._fitText(name, topCardW - uv(18), uv(26));
+                    const score = this.add.text(cardX + topCardW / 2, cardY + topCardH - uv(isPortrait ? 36 : 26), formatTime(entry.score), {
+                        fontSize: fs(isPortrait ? 13 : 12),
+                        fontFamily: UI_FONT_MONO,
+                        fontStyle: 'bold',
+                        color,
+                    }).setOrigin(0.5).setDepth(depth + 4);
+                    elements.push(medal, name, score);
+                });
+
+                const startY = topStartY + topCardH + uv(isPortrait ? 28 : 22);
+                const maxH = by + boxH - uv(88) - startY;
+                const rowH = Math.min(uv(isPortrait ? 44 : 24), maxH / Math.max(1, rankings.length - 2));
                 const hStyle = { fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN_DIM };
                 let y = startY;
                 const hR = this.add.text(bx + uv(26), y, 'RANK', hStyle).setDepth(depth + 2);
@@ -755,8 +1005,14 @@ export class MenuScene extends Phaser.Scene {
                     const colors = [SYSTEM.TEXT_GOLD, '#c8d0dc', '#d18b4a'];
                     const color = i < 3 ? colors[i] : SYSTEM.TEXT_CYAN_DIM;
                     const rankLabel = `#${String(i + 1).padStart(2, '0')}`;
-                    const fSize = fs(Math.min(12, rowH * 0.55));
+                    const fSize = fs(isPortrait ? 11 : Math.min(12, rowH * 0.55));
                     const bold = i < 3 ? 'bold' : 'normal';
+                    if (i % 2 === 0) {
+                        const rowG = this.add.graphics().setDepth(depth + 2);
+                        rowG.fillStyle(i < 3 ? 0x19120a : 0x07101a, i < 3 ? 0.26 : 0.18);
+                        rowG.fillRect(bx + uv(18), y - uv(2), boxW - uv(36), rowH);
+                        elements.push(rowG);
+                    }
 
                     const rT = this.add.text(bx + uv(26), y, rankLabel, {
                         fontSize: fSize, fontFamily: UI_FONT_MONO, fontStyle: bold, color,
@@ -764,9 +1020,8 @@ export class MenuScene extends Phaser.Scene {
                     const nT = this.add.text(bx + uv(72), y, entry.player_name, {
                         fontSize: fSize, fontFamily: UI_FONT_KR, fontStyle: bold, color,
                     }).setDepth(depth + 2);
-                    const sMins = Math.floor(entry.score / 60).toString().padStart(2, '0');
-                    const sSecs = (entry.score % 60).toString().padStart(2, '0');
-                    const sT = this.add.text(bx + boxW - uv(26), y, `${sMins}:${sSecs}`, {
+                    this._fitText(nT, boxW - uv(190), rowH);
+                    const sT = this.add.text(bx + boxW - uv(26), y, formatTime(entry.score), {
                         fontSize: fSize, fontFamily: UI_FONT_MONO, fontStyle: bold, color,
                     }).setOrigin(1, 0).setDepth(depth + 2);
                     elements.push(rT, nT, sT);
