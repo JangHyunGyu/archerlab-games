@@ -54,6 +54,7 @@ CHARACTERS = [
         "shadow": (36, 4, 0),
         "scale": 0.99,
         "effect": "flame",
+        "source_faces_right": True,
     },
     {
         "id": "sanctuary_healer",
@@ -547,7 +548,8 @@ def render_frame(actor: Image.Image, cfg: dict, name: str) -> Image.Image:
     draw_idle_effect(back, cfg, frame_idx * 0.8, 0.9)
     canvas.alpha_composite(back)
 
-    flip = direction == "right"
+    source_faces_right = bool(cfg.get("source_faces_right"))
+    flip = direction == ("left" if source_faces_right else "right")
     brightness = 0.88 if direction == "up" else 1.0
     contrast = 1.04
     dx = 0
