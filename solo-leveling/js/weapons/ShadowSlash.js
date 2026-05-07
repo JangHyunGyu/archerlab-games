@@ -35,14 +35,38 @@ export class ShadowSlash extends WeaponBase {
     }
 
     fire() {
-        for (let i = 0; i < this.count; i++) {
-            const angleOffset = this.count > 1 ? (i - (this.count - 1) / 2) * 0.8 : 0;
-            this._delay(i * 150, () => this._doSlash(angleOffset));
+        if (this.config.slashMode === 'linePierce') {
+            for (let i = 0; i < this.count; i++) {
+                this._delay(i * (this.config.patternDelay ?? 140), () => this._doLinePierce());
+            }
+            return;
+        }
+
+        if (this.config.slashMode === 'radialPulse') {
+            for (let i = 0; i < this.count; i++) {
+                this._delay(i * 180, () => this._doRadialPulse());
+            }
+            return;
+        }
+
+        const configuredOffsets = Array.isArray(this.config.arcOffsets) ? this.config.arcOffsets : null;
+        const patternOffsets = configuredOffsets || Array.from(
+            { length: this.count },
+            (_, i) => this.count > 1 ? (i - (this.count - 1) / 2) * 0.8 : 0
+        );
+        const repeats = configuredOffsets ? this.count : 1;
+        let sequence = 0;
+
+        for (let r = 0; r < repeats; r++) {
+            for (const angleOffset of patternOffsets) {
+                this._delay(sequence * 120, () => this._doSlash(angleOffset));
+                sequence++;
+            }
         }
     }
 
     _doSlash(angleOffset) {
-        const target = this.player.getClosestEnemy(360 + this.extraRange);
+        const target = this.player.getClosestEnemy((this.config.acquireRange || 360) + this.extraRange);
         let angle;
         if (target) {
             angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
@@ -51,8 +75,8 @@ export class ShadowSlash extends WeaponBase {
         }
         angle += angleOffset;
 
-        const range = 350 + this.extraRange;
-        const slashDist = range * 0.45;
+        const range = (this.config.slashRange || 350) + this.extraRange;
+        const slashDist = range * (this.config.slashDistanceRatio ?? 0.45);
         const slashX = this.player.x + Math.cos(angle) * slashDist;
         const slashY = this.player.y + Math.sin(angle) * slashDist;
 
@@ -61,11 +85,10 @@ export class ShadowSlash extends WeaponBase {
         const px = this.player.x;
         const py = this.player.y;
         const arcRadius = range;
-        const swingStart = angle - 0.8;
-        const swingEnd = angle + 0.8;
         const darkColor = this.getEffectDarkColor(0x4400aa);
         const color = this.getEffectColor(0x9944dd);
         const glowColor = this.getEffectGlowColor(0xddaaff);
+        const arcHalf = this.config.slashArc ?? 0.8;
 
         let progress = { t: 0 };
         let arcTween = null;
@@ -77,8 +100,8 @@ export class ShadowSlash extends WeaponBase {
             onUpdate: () => {
                 gfx.clear();
 
-                const curAngle = Phaser.Math.Linear(swingStart, swingEnd, progress.t);
-                const prevAngle = Phaser.Math.Linear(swingStart, swingEnd, Math.max(0, progress.t - 0.35));
+                const curAngle = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, progress.t);
+                const prevAngle = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, Math.max(0, progress.t - 0.35));
 
                 // Outer glow aura (wide, faint)
                 gfx.lineStyle(22, darkColor, 0.12 * (1 - progress.t));
@@ -99,7 +122,7 @@ export class ShadowSlash extends WeaponBase {
                 gfx.strokePath();
 
                 // Main slash arc (bright core)
-                const arcStart = Phaser.Math.Linear(swingStart, swingEnd, Math.max(0, progress.t - 0.15));
+                const arcStart = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, Math.max(0, progress.t - 0.15));
                 gfx.lineStyle(4, glowColor, 0.95 * (1 - progress.t * 0.3));
                 gfx.beginPath();
                 gfx.arc(px, py, arcRadius, arcStart, curAngle, false);
@@ -187,8 +210,12 @@ export class ShadowSlash extends WeaponBase {
             onComplete: () => flash.destroy(),
         });
 
-        // Hit enemies in arc (92 degree cone, range 200+)
+        // Hit enemies in arc
         const enemies = this.player.getAllEnemies();
+        const hitAngle = this.config.hitAngle ?? arcHalf;
+        const maxHits = this.config.maxHits ?? Infinity;
+        const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
+        let hits = 0;
         for (const enemy of enemies) {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
@@ -196,12 +223,184 @@ export class ShadowSlash extends WeaponBase {
 
             const enemyAngle = Phaser.Math.Angle.Between(px, py, enemy.x, enemy.y);
             const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - angle));
-            if (angleDiff < 0.8) {
-                enemy.takeDamage(this.getDamage(), px, py);
+            if (angleDiff < hitAngle) {
+                enemy.takeDamage(damage, px, py);
+                if (this.config.slowMultiplier !== undefined && enemy.applySlow) {
+                    enemy.applySlow(this.config.slowMultiplier, this.config.slowDuration || 1200);
+                }
+                hits++;
+                if (hits >= maxHits) break;
             }
         }
 
+        if (this.config.aftershockRadius) {
+            this._delay(this.config.aftershockDelay || 180, () => {
+                if (!this.scene?.scene?.isActive()) return;
+                const pulse = this.scene.add.circle(slashX, slashY, this.config.aftershockRadius * 0.35, color, 0.28)
+                    .setDepth(7)
+                    .setBlendMode(Phaser.BlendModes.ADD);
+                this.scene.tweens.add({
+                    targets: pulse,
+                    alpha: 0,
+                    scale: 2.8,
+                    duration: 260,
+                    onComplete: () => pulse.destroy(),
+                });
+
+                for (const enemy of this.player.getAllEnemies()) {
+                    if (!enemy.active) continue;
+                    const dist = Phaser.Math.Distance.Between(slashX, slashY, enemy.x, enemy.y);
+                    if (dist > this.config.aftershockRadius) continue;
+                    enemy.takeDamage(Math.floor(this.getDamage() * (this.config.aftershockDamageMult ?? 0.45)), slashX, slashY);
+                }
+            });
+        }
+
         // Sound
+        this.playConfiguredSound('slash');
+    }
+
+    _distanceToLineSegment(px, py, ax, ay, bx, by) {
+        const dx = bx - ax;
+        const dy = by - ay;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq <= 0) return Phaser.Math.Distance.Between(px, py, ax, ay);
+        const t = Phaser.Math.Clamp(((px - ax) * dx + (py - ay) * dy) / lenSq, 0, 1);
+        return Phaser.Math.Distance.Between(px, py, ax + dx * t, ay + dy * t);
+    }
+
+    _doLinePierce() {
+        const target = this.player.getClosestEnemy((this.config.acquireRange || 540) + this.extraRange);
+        let angle = this.player.facingRight ? 0 : Math.PI;
+        if (target) {
+            angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
+        }
+
+        const px = this.player.x;
+        const py = this.player.y - 8;
+        const range = (this.config.slashRange || 520) + this.extraRange;
+        const startX = px + Math.cos(angle) * 24;
+        const startY = py + Math.sin(angle) * 24;
+        const endX = px + Math.cos(angle) * range;
+        const endY = py + Math.sin(angle) * range;
+        const midX = (startX + endX) * 0.5;
+        const midY = (startY + endY) * 0.5;
+        const color = this.getEffectColor(0xffd86a);
+        const glowColor = this.getEffectGlowColor(0xffffff);
+        const lineWidth = this.config.lineWidth || 34;
+
+        const gfx = this._getGfx();
+        const progress = { t: 0 };
+        let lineTween = null;
+        lineTween = this.scene.tweens.add({
+            targets: progress,
+            t: 1,
+            duration: this.config.motionDuration || 210,
+            ease: 'Quad.easeOut',
+            onUpdate: () => {
+                const reach = Phaser.Math.Easing.Cubic.Out(progress.t);
+                const currentX = startX + (endX - startX) * reach;
+                const currentY = startY + (endY - startY) * reach;
+                gfx.clear();
+                gfx.lineStyle(lineWidth, color, 0.18 * (1 - progress.t * 0.35));
+                gfx.lineBetween(startX, startY, currentX, currentY);
+                gfx.lineStyle(Math.max(7, lineWidth * 0.38), glowColor, 0.72 * (1 - progress.t * 0.25));
+                gfx.lineBetween(startX, startY, currentX, currentY);
+                gfx.lineStyle(3, 0xffffff, 0.95 * (1 - progress.t * 0.2));
+                gfx.lineBetween(startX, startY, currentX, currentY);
+                gfx.fillStyle(glowColor, 0.75 * (1 - progress.t * 0.25));
+                gfx.fillCircle(currentX, currentY, 8 + 8 * reach);
+            },
+            onComplete: () => {
+                this._activeTweens.delete(lineTween);
+                this._releaseGfx(gfx);
+            },
+        });
+        this._activeTweens.add(lineTween);
+
+        const effectTexture = this.getEffectTexture();
+        if (effectTexture) {
+            const lance = this.scene.add.sprite(midX, midY, effectTexture)
+                .setDepth(9)
+                .setRotation(angle)
+                .setAlpha(0.88)
+                .setScale(this.config.effectScale || 0.58)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            this.scene.tweens.add({
+                targets: lance,
+                alpha: 0,
+                scaleX: lance.scaleX * 1.18,
+                scaleY: lance.scaleY * 0.74,
+                duration: 260,
+                ease: 'Quad.easeOut',
+                onComplete: () => lance.destroy(),
+            });
+        }
+
+        const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
+        const maxHits = this.config.maxHits ?? Infinity;
+        let hits = 0;
+        for (const enemy of this.player.getAllEnemies()) {
+            if (!enemy.active) continue;
+            const dist = this._distanceToLineSegment(enemy.x, enemy.y, startX, startY, endX, endY);
+            if (dist > lineWidth) continue;
+            enemy.takeDamage(damage, px, py);
+            hits++;
+            if (hits >= maxHits) break;
+        }
+
+        if (this.player.playAttackMotion) {
+            this.player.playAttackMotion(angle, 230, 1);
+        }
+        this.playConfiguredSound('slash');
+    }
+
+    _doRadialPulse() {
+        const range = (this.config.slashRange || 280) + this.extraRange;
+        const color = this.getEffectColor(0x66f2b0);
+        const glowColor = this.getEffectGlowColor(0xe8fff5);
+        const px = this.player.x;
+        const py = this.player.y;
+        const maxHits = this.config.maxHits ?? Infinity;
+        const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 0.85));
+        let hits = 0;
+
+        const pulse = this.scene.add.circle(px, py, range * 0.18, color, 0.24)
+            .setDepth(7)
+            .setBlendMode(Phaser.BlendModes.ADD);
+        const ring = this.scene.add.circle(px, py, range * 0.24, glowColor, 0)
+            .setDepth(8);
+        ring.setStrokeStyle(3, glowColor, 0.85);
+
+        this.scene.tweens.add({
+            targets: pulse,
+            alpha: 0,
+            scale: 5.2,
+            duration: 380,
+            ease: 'Quad.easeOut',
+            onComplete: () => pulse.destroy(),
+        });
+        this.scene.tweens.add({
+            targets: ring,
+            alpha: 0,
+            scale: 4.2,
+            duration: 420,
+            ease: 'Quad.easeOut',
+            onComplete: () => ring.destroy(),
+        });
+
+        for (const enemy of this.player.getAllEnemies()) {
+            if (!enemy.active) continue;
+            const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
+            if (dist > range) continue;
+            enemy.takeDamage(damage, px, py);
+            if (this.config.slowMultiplier !== undefined && enemy.applySlow) {
+                enemy.applySlow(this.config.slowMultiplier, this.config.slowDuration || 1500);
+            }
+            hits++;
+            if (hits >= maxHits) break;
+        }
+
         this.playConfiguredSound('slash');
     }
 

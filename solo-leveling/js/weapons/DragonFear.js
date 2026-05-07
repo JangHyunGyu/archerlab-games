@@ -8,8 +8,9 @@ export class DragonFear extends WeaponBase {
     }
 
     fire() {
-        const range = 230 + this.extraRange;
-        const slowAmount = 0.4 - this.extraSlow;
+        const range = (this.config.auraRange || 230) + this.extraRange;
+        const slowAmount = this.config.slowMultiplier ?? Math.max(0.1, 0.4 - this.extraSlow);
+        const auraDuration = this.config.auraDuration || 2000;
 
         // Visual aura effect (이전 트윈 확실히 정리)
         if (this.auraSprite) {
@@ -35,7 +36,7 @@ export class DragonFear extends WeaponBase {
             targets: this.auraSprite,
             alpha: 0,
             scale: this.auraSprite.scaleX * 1.3,
-            duration: 1500,
+            duration: Math.max(500, auraDuration - 500),
             delay: 500,
             onComplete: () => {
                 if (this.auraSprite) {
@@ -47,19 +48,37 @@ export class DragonFear extends WeaponBase {
 
         this.playConfiguredSound('fear');
 
-        // Aura lasts ~2 seconds
-        this._auraEndTime = this.scene.time.now + 2000;
+        if (this.config.healPercent && this.player?.heal) {
+            this.player.heal(Math.floor(this.player.stats.maxHp * this.config.healPercent));
+        }
+
+        this._auraEndTime = this.scene.time.now + auraDuration;
         this._auraRange = range;
         this._auraSlowAmount = slowAmount;
 
         // Apply damage & slow to enemies currently in range
+        this._damageEnemiesInAura(range, slowAmount, auraDuration, this.config.damageMult ?? 1);
+
+        const tickCount = Math.max(0, this.config.tickCount || 0);
+        const tickInterval = this.config.tickInterval || 600;
+        for (let i = 0; i < tickCount; i++) {
+            this._delay((i + 1) * tickInterval, () => {
+                if (!this.scene?.scene?.isActive() || !this.player?.active) return;
+                const remaining = Math.max(300, this._auraEndTime - this.scene.time.now);
+                this._damageEnemiesInAura(range, slowAmount, remaining, this.config.tickDamageMult ?? 0.35);
+            });
+        }
+    }
+
+    _damageEnemiesInAura(range, slowAmount, slowDuration, damageMult) {
         const enemies = this.player.getAllEnemies();
+        const damage = Math.floor(this.getDamage() * damageMult);
         for (const enemy of enemies) {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
             if (dist < range) {
-                enemy.takeDamage(this.getDamage(), this.player.x, this.player.y);
-                if (enemy.applySlow) enemy.applySlow(slowAmount, 2000);
+                if (damage > 0) enemy.takeDamage(damage, this.player.x, this.player.y);
+                if (enemy.applySlow) enemy.applySlow(slowAmount, slowDuration);
             }
         }
     }

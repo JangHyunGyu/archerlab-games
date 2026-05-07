@@ -38,32 +38,48 @@ export class ShadowDagger extends WeaponBase {
 
     fire() {
         for (let i = 0; i < this.count; i++) {
-            this._delay(i * 100, () => this._throwDagger());
+            this._delay(i * 100, () => this._firePattern());
         }
     }
 
-    _throwDagger() {
-        const target = this.player.getClosestEnemy(6000);
+    _firePattern() {
+        const fanCount = Math.max(1, this.config.fanCount || 1);
+        const fanSpread = this.config.fanSpread ?? 0.24;
+        for (let i = 0; i < fanCount; i++) {
+            const offset = (i - (fanCount - 1) / 2) * fanSpread;
+            this._throwDagger(offset, i === 0);
+        }
+    }
+
+    _throwDagger(angleOffset = 0, playSound = true) {
+        const target = this.player.getClosestEnemy(this.config.acquireRange || 6000);
         if (!target) return;
 
-        this.playConfiguredSound('daggerThrow');
+        if (playSound) this.playConfiguredSound('daggerThrow');
 
         const px = this.player.x;
         const py = this.player.y;
-        const angle = Phaser.Math.Angle.Between(px, py, target.x, target.y);
-        const range = 1500;
+        const angle = Phaser.Math.Angle.Between(px, py, target.x, target.y) + angleOffset;
+        const range = (this.config.projectileRange || 1500) + this.extraRange;
         const endX = px + Math.cos(angle) * range;
         const endY = py + Math.sin(angle) * range;
-        const duration = 2500;
-        const dmg = this.getDamage();
+        const duration = this.config.projectileDuration || Phaser.Math.Clamp(range * 1.25, 650, 2500);
+        const dmg = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_shadow_dagger');
         const textureKey = effectTexture || (useEffectAsset ? 'effect_shadow_dagger' : 'proj_dagger');
+        const maxPierces = this.config.maxPierces ?? Infinity;
+        const hitRadiusScale = this.config.hitRadiusScale ?? 0.35;
+        const minHitRadius = this.config.minHitRadius ?? 25;
+        const explosionRadius = this.config.explosionRadius || 0;
+        const explosionDamageMult = this.config.explosionDamageMult ?? 0.65;
+        const slowMultiplier = this.config.slowMultiplier;
+        const slowDuration = this.config.slowDuration || 1400;
 
         const dagger = this.scene.add.sprite(px, py, textureKey)
             .setDepth(8)
-            .setScale(useCharacterEffect ? (this.config.effectScale || 0.5) : (useEffectAsset ? 0.22 : 0.85))
+            .setScale(useCharacterEffect ? (this.config.projectileScale || this.config.effectScale || 0.5) : (useEffectAsset ? 0.22 : 0.85))
             .setRotation((useCharacterEffect || useEffectAsset) ? angle : angle + Math.PI / 2)
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
@@ -81,14 +97,47 @@ export class ShadowDagger extends WeaponBase {
             return currentTarget;
         };
 
+        const applySecondaryEffect = (currentTarget, durationOverride = slowDuration) => {
+            if (slowMultiplier !== undefined && currentTarget.applySlow) {
+                currentTarget.applySlow(slowMultiplier, durationOverride);
+            }
+        };
+
+        const explode = (x, y, sourceKey) => {
+            if (!explosionRadius) return;
+
+            const burst = this.scene.add.circle(x, y, explosionRadius * 0.35, this.getEffectColor(0xb366ff), 0.35)
+                .setDepth(8)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            this.scene.tweens.add({
+                targets: burst,
+                alpha: 0,
+                scale: 2.4,
+                duration: 220,
+                ease: 'Quad.easeOut',
+                onComplete: () => burst.destroy(),
+            });
+
+            for (const enemy of this.player.getAllEnemies()) {
+                if (!enemy || !enemy.active) continue;
+                const enemyKey = getTargetKey(enemy);
+                if (enemyKey === sourceKey) continue;
+                const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+                if (dist > explosionRadius) continue;
+                enemy.takeDamage(Math.floor(dmg * explosionDamageMult), x, y);
+                applySecondaryEffect(enemy, Math.floor(slowDuration * 0.7));
+            }
+        };
+
         const tryPierceTarget = (currentTarget) => {
             if (!currentTarget || !currentTarget.active) return false;
             if (currentTarget.isBoss && currentTarget.isInvincible) return false;
+            if (piercedTargets.size >= maxPierces) return false;
 
             const targetKey = getTargetKey(currentTarget);
             if (piercedTargets.has(targetKey)) return false;
 
-            const hitRadius = Math.max(25, (currentTarget.body?.width || currentTarget.displayWidth || 50) * 0.35);
+            const hitRadius = Math.max(minHitRadius, (currentTarget.body?.width || currentTarget.displayWidth || 50) * hitRadiusScale);
             const dx = dagger.x - prevX;
             const dy = dagger.y - prevY;
             const segmentLengthSq = dx * dx + dy * dy;
@@ -115,6 +164,8 @@ export class ShadowDagger extends WeaponBase {
             } else {
                 currentTarget.takeDamage(dmg, dagger.x, dagger.y);
             }
+            applySecondaryEffect(currentTarget);
+            explode(dagger.x, dagger.y, targetKey);
 
             if (this.scene.soundManager) this.scene.soundManager.play('hit');
 
@@ -153,11 +204,6 @@ export class ShadowDagger extends WeaponBase {
                 const enemies = this.player.getAllEnemies();
                 for (const enemy of enemies) {
                     tryPierceTarget(enemy);
-                }
-
-                const bosses = this.scene.activeBosses || [];
-                for (const boss of bosses) {
-                    tryPierceTarget(boss);
                 }
 
                 prevX = dagger.x;
