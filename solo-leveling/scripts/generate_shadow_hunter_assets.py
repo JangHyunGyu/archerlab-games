@@ -245,23 +245,23 @@ def main() -> None:
             )
 
     attack_specs = [
-        dict(dx=-4, dy=0, angle=-8, scale_x=1.02, scale_y=0.99, slash=0.0),
-        dict(dx=2, dy=-2, angle=7, scale_x=0.99, scale_y=1.02, slash=0.45),
-        dict(dx=8, dy=-3, angle=13, scale_x=1.02, scale_y=0.98, slash=0.9),
-        dict(dx=7, dy=-2, angle=8, scale_x=1.01, scale_y=0.99, slash=0.65),
-        dict(dx=1, dy=0, angle=-3, scale_x=1.00, scale_y=1.00, slash=0.25),
-        dict(dx=0, dy=0, angle=0, scale_x=1.00, scale_y=1.00, slash=0.0),
+        dict(dx=-6, dy=1, angle=-10, scale_x=1.04, scale_y=0.985, slash=0.0),
+        dict(dx=-2, dy=-3, angle=-13, scale_x=0.97, scale_y=1.04, slash=0.36),
+        dict(dx=7, dy=-5, angle=10, scale_x=1.03, scale_y=0.98, slash=0.82),
+        dict(dx=13, dy=-3, angle=18, scale_x=1.08, scale_y=0.94, slash=1.0),
+        dict(dx=7, dy=-1, angle=4, scale_x=1.03, scale_y=0.98, slash=0.55),
+        dict(dx=0, dy=0, angle=-1, scale_x=1.00, scale_y=1.00, slash=0.08),
     ]
     for i, spec in enumerate(attack_specs):
         frames.append(render_frame(actor, name=f"player_attack_{i}", wisp_phase=i, wisp_power=1.15, **spec))
 
     directional_attack_specs = [
-        dict(reach=0.10, dx=-3, dy=0, angle=-7, scale_x=1.01, scale_y=1.00),
-        dict(reach=0.34, dx=2, dy=-2, angle=5, scale_x=0.995, scale_y=1.018),
-        dict(reach=0.88, dx=8, dy=-3, angle=12, scale_x=1.035, scale_y=0.975),
-        dict(reach=1.00, dx=10, dy=-2, angle=9, scale_x=1.045, scale_y=0.970),
-        dict(reach=0.46, dx=3, dy=0, angle=-2, scale_x=1.010, scale_y=0.995),
-        dict(reach=0.05, dx=0, dy=0, angle=0, scale_x=1.000, scale_y=1.000),
+        dict(reach=0.06, dx=-5, dy=1, angle=-10, scale_x=1.025, scale_y=0.995, stab_power=0.08),
+        dict(reach=0.28, dx=-1, dy=-3, angle=-9, scale_x=0.970, scale_y=1.045, stab_power=0.36),
+        dict(reach=0.78, dx=8, dy=-5, angle=9, scale_x=1.035, scale_y=0.980, stab_power=0.78),
+        dict(reach=1.00, dx=14, dy=-3, angle=16, scale_x=1.085, scale_y=0.935, stab_power=1.00),
+        dict(reach=0.54, dx=7, dy=-1, angle=5, scale_x=1.035, scale_y=0.980, stab_power=0.58),
+        dict(reach=0.05, dx=0, dy=0, angle=-1, scale_x=1.000, scale_y=1.000, stab_power=0.12),
     ]
     attack_dirs = {
         "right": dict(stab_angle=0, flip=True, side=1, dx_mul=1, dy_mul=0, brightness=1.0),
@@ -296,6 +296,9 @@ def main() -> None:
                 wisp_phase=i * 0.75 + reach,
                 wisp_power=1.2,
                 shadow_scale=1.08,
+                stab_angle=cfg["stab_angle"],
+                stab_power=spec["stab_power"],
+                stab_side=cfg["side"],
             ))
 
     hit_specs = [
