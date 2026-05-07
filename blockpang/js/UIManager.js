@@ -454,14 +454,36 @@ class UIManager {
 
         const centerX = w / 2;
         const isSmall = w < 380;
+        const isLandscape = w > h * 1.08;
+        const isShort = h < 640;
         const sc = isSmall ? 0.9 : 1;
+
+        const splashTexture = getBlockpangTexture('titleSplash');
+        if (splashTexture) {
+            const splash = new PIXI.Sprite(splashTexture);
+            const tw = splashTexture.width || splashTexture.orig?.width || 1;
+            const th = splashTexture.height || splashTexture.orig?.height || 1;
+            const scale = Math.max(w / tw, h / th);
+            splash.anchor.set(0.5);
+            splash.scale.set(scale);
+            splash.position.set(centerX, h * (isLandscape ? 0.52 : 0.5));
+            splash.alpha = 0.94;
+            container.addChild(splash);
+        }
+
+        const artGrade = new PIXI.Graphics();
+        artGrade.rect(0, 0, w, h).fill({ color: THEME.bgDeep, alpha: splashTexture ? 0.08 : 0.2 });
+        artGrade.rect(0, 0, w, h * 0.26).fill({ color: THEME.shadow, alpha: 0.34 });
+        artGrade.rect(0, h * 0.58, w, h * 0.42).fill({ color: THEME.bg, alpha: 0.18 });
+        artGrade.rect(0, h * 0.82, w, h * 0.18).fill({ color: THEME.shadow, alpha: 0.36 });
+        container.addChild(artGrade);
 
         // ── Small decorative block pictogram (a few stacked pieces above logo) ──
         const deco = new PIXI.Graphics();
         const dcs = Math.max(10, Math.min(14, w * 0.03));   // deco-cell size
         const dcGap = 2;
         // Layout: three small pieces side by side, each a 2x2, 1x2, 2x1
-        const decoColors = [0xE57A54, 0xC9922C, 0x6FA89A];
+        const decoColors = [THEME.secondary, THEME.gold, THEME.accent];
         const pieces = [
             [[1,1],[1,0]],
             [[1],[1],[1]],
@@ -482,24 +504,39 @@ class UIManager {
         });
         // total deco width for centering
         const decoW = dx - pieceGap;
-        const decoY = h * 0.18 - dcs;
+        const decoY = h * (isLandscape ? 0.13 : 0.145) - dcs;
         deco.position.set(centerX - decoW / 2, decoY);
         container.addChild(deco);
 
         // ── Logo: "블럭팡" / 한글/영문 반응 ──
-        const logoFontSize = Math.min(64, w * 0.15) * sc;
+        const logoFontSize = Math.min(isLandscape ? 58 : 70, w * (isLandscape ? 0.13 : 0.17)) * sc;
         const logo = new PIXI.Text({
             text: getText('gameTitle'),
             style: {
-                fontFamily: FONT_DISPLAY,
+                fontFamily: FONT_BODY,
                 fontSize: logoFontSize,
                 fill: THEME.inkStrong,
-                fontWeight: '400',
-                letterSpacing: 2,
+                fontWeight: '900',
+                letterSpacing: 1.5,
+                stroke: { color: THEME.secondaryDp, width: Math.max(3, logoFontSize * 0.08), alpha: 0.82 },
+                dropShadow: { color: THEME.accent, blur: 14, distance: 0, alpha: 0.55 },
             },
         });
         logo.anchor.set(0.5, 0.5);
-        logo.position.set(centerX, h * 0.28);
+        logo.position.set(centerX, h * (isLandscape ? 0.22 : 0.225));
+
+        const logoPlateW = Math.min(w * 0.86, Math.max(250, logo.width + 76));
+        const logoPlateH = Math.max(70, logo.height + 26);
+        const logoPlate = new PIXI.Graphics();
+        logoPlate.roundRect(centerX - logoPlateW / 2, logo.y - logoPlateH / 2 + 5, logoPlateW, logoPlateH, 22)
+            .fill({ color: THEME.shadow, alpha: 0.34 });
+        logoPlate.roundRect(centerX - logoPlateW / 2, logo.y - logoPlateH / 2, logoPlateW, logoPlateH, 22)
+            .fill({ color: THEME.surface, alpha: 0.52 });
+        logoPlate.roundRect(centerX - logoPlateW / 2 + 6, logo.y - logoPlateH / 2 + 5, logoPlateW - 12, Math.max(12, logoPlateH * 0.24), 16)
+            .fill({ color: THEME.white, alpha: 0.08 });
+        logoPlate.roundRect(centerX - logoPlateW / 2, logo.y - logoPlateH / 2, logoPlateW, logoPlateH, 22)
+            .stroke({ width: 1.8, color: THEME.secondary, alpha: 0.74 });
+        container.addChild(logoPlate);
         container.addChild(logo);
 
         // ── Subtitle ──
@@ -507,14 +544,15 @@ class UIManager {
             text: getText('blockPuzzle'),
             style: {
                 fontFamily: FONT_BODY,
-                fontSize: Math.min(13, w * 0.033) * sc,
-                fill: THEME.inkMuted,
-                fontWeight: '500',
-                letterSpacing: 3,
+                fontSize: Math.min(14, w * 0.034) * sc,
+                fill: THEME.goldSoft,
+                fontWeight: '800',
+                letterSpacing: 2.2,
+                dropShadow: { color: THEME.shadow, blur: 4, distance: 1, alpha: 0.45 },
             },
         });
         subtitle.anchor.set(0.5, 0);
-        subtitle.position.set(centerX, logo.y + logoFontSize * 0.55);
+        subtitle.position.set(centerX, logo.y + logoPlateH * 0.5 + 10);
         container.addChild(subtitle);
 
         // ── Best Score pill ──
@@ -552,10 +590,13 @@ class UIManager {
 
         // ── Buttons ──
         const hasSave = Game.hasSavedGame();
-        const btnW = Math.min(w * 0.72, 304);
-        const btnH = Math.min(56, Math.max(50, h * 0.073));
-        const actionGap = 13;
-        const startBtnY = hasSave ? h * 0.56 : h * 0.505;
+        const btnW = Math.min(w * (isLandscape ? 0.45 : 0.76), 326);
+        const btnH = Math.min(58, Math.max(50, h * 0.07));
+        const actionGap = Math.max(10, Math.min(14, h * 0.015));
+        const startBaseY = isLandscape
+            ? (hasSave ? h * 0.57 : h * 0.545)
+            : (isShort ? (hasSave ? h * 0.61 : h * 0.59) : (hasSave ? h * 0.665 : h * 0.645));
+        const startBtnY = Math.min(startBaseY, h - (hasSave ? 178 : 132));
         const btnX = centerX - btnW / 2;
 
         this._activeButtons = [];
@@ -660,7 +701,7 @@ class UIManager {
             const savedScore = Game.getSavedScore();
             const resumeBtnY = startBtnY - btnH - actionGap;
             const resumeLabel = savedScore > 0
-                ? `${getText('continueGame')}  ·  ${savedScore.toLocaleString()}`
+                ? `${getText('continueGame')}  -  ${savedScore.toLocaleString()}`
                 : getText('continueGame');
             const r = makeTitleButton(
                 btnX, resumeBtnY, btnW, btnH, resumeLabel, 'secondary',
@@ -843,7 +884,7 @@ class UIManager {
 
         // ── Version text (footer) ──
         const versionText = new PIXI.Text({
-            text: 'v1.0  ·  ArcherLab',
+            text: 'v1.0  -  ArcherLab',
             style: {
                 fontFamily: FONT_BODY,
                 fontSize: Math.min(10, w * 0.025),
@@ -860,7 +901,7 @@ class UIManager {
 
         // ── Entrance Animation ── (fade + gentle lift, no pop-scaling)
         container.alpha = 0;
-        const liftTargets = [deco, logo, subtitle, startBtn, hofBtn.btn, contactBtn.btn, langTrigger, titleSoundBtn];
+        const liftTargets = [deco, logoPlate, logo, subtitle, startBtn, hofBtn.btn, contactBtn.btn, langTrigger, titleSoundBtn];
         if (resumeBtn) liftTargets.push(resumeBtn);
         liftTargets.forEach(el => { el.y += 16; el.alpha = 0; });
 
