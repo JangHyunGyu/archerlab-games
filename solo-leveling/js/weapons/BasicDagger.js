@@ -743,7 +743,7 @@ export class BasicDagger extends WeaponBase {
     }
 
     _fireball() {
-        const { target, baseAngle, side } = this._getMovementPriorityAttackSetup({ rangeBonus: 130, duration: 300 });
+        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: 130, duration: 300 });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
