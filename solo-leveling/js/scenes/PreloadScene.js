@@ -219,6 +219,7 @@ export class PreloadScene extends Phaser.Scene {
 
         this._loadImage('ai_player_idle', 'assets/player/player_idle.png');
         this._loadImage('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
+        this._loadImage('ai_dungeon_atmosphere', 'assets/background/bg_dungeon_atmosphere.png');
 
         const loadPlayerMotion = (name) => {
             this._loadImage(`motion_${name}`, `assets/player/motion/${name}.png`);
