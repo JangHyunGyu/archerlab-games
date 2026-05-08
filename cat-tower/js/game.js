@@ -274,11 +274,18 @@
   // -------- 캔버스 & 리사이즈 --------
   function setupCanvas() {
     canvas = $('canvas');
-    ctx = canvas.getContext('2d');
     nextCanvas = $('next-cat');
+    if (!canvas || typeof canvas.getContext !== 'function' || !nextCanvas || typeof nextCanvas.getContext !== 'function') {
+      err('required canvas elements missing');
+      return false;
+    }
+
+    ctx = canvas.getContext('2d');
     nextCtx = nextCanvas.getContext('2d');
-    if (!canvas || !ctx) err('canvas 엘리먼트 또는 2d context 획득 실패');
-    if (!nextCanvas || !nextCtx) err('next-cat canvas 획득 실패');
+    if (!ctx || !nextCtx) {
+      err('canvas 2d context 획득 실패');
+      return false;
+    }
     fieldBgImage = new Image();
     fieldBgImage.src = 'assets/ui/cushion-field.webp';
     resizeCanvas();
@@ -291,6 +298,7 @@
       window.visualViewport.addEventListener('resize', scheduleFitGameLayout);
     }
     log('setupCanvas 완료');
+    return true;
   }
 
   function resizeCanvas() {
@@ -1223,10 +1231,15 @@
     try {
       log('DOM 준비됨, boot() 실행');
 
+      if (window.__CAT_TOWER_EXTERNAL_BROWSER_REQUIRED) {
+        log('external browser guide active; skip game boot');
+        return;
+      }
+
       // i18n 초기 적용 — DOM 문자열을 현재 언어로 스왑
       if (window.I18N) window.I18N.applyDom();
 
-      setupCanvas();
+      if (!setupCanvas()) return;
       setupInput();
       bestScore = loadBest();
       $('best-score').textContent = bestScore.toLocaleString();

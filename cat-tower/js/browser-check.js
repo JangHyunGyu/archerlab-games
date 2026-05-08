@@ -14,6 +14,8 @@
     if (isWindows || isMac) return;
 
     if (isInApp) {
+        window.__CAT_TOWER_EXTERNAL_BROWSER_REQUIRED = true;
+
         if (isAndroid) {
             // Android: Chrome으로 강제 이동 (intent 방식)
             var url = location.href.replace(/https?:\/\//i, '');
