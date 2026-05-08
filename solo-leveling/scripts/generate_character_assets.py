@@ -18,10 +18,11 @@ FRAME_H = 144
 FOOT_Y = 139
 BODY_H = 118
 MAX_BODY_W = 88
+WALK_FRAME_COUNT = 8
 
 FRAMES = [
     *[f"idle_{i}" for i in range(4)],
-    *[f"walk_{d}_{i}" for d in ("down", "right", "up", "left") for i in range(4)],
+    *[f"walk_{d}_{i}" for d in ("down", "right", "up", "left") for i in range(WALK_FRAME_COUNT)],
     *[f"attack_{i}" for i in range(6)],
     *[f"attack_{d}_{i}" for d in ("down", "right", "up", "left") for i in range(6)],
     *[f"hit_{i}" for i in range(2)],
@@ -55,6 +56,7 @@ CHARACTERS = [
         "scale": 0.99,
         "effect": "flame",
         "source_faces_right": True,
+        "draw_glasses": True,
     },
     {
         "id": "sanctuary_healer",
@@ -285,6 +287,17 @@ def paste_center_bottom(canvas: Image.Image, img: Image.Image, dx: float = 0, dy
     canvas.alpha_composite(img, (x, y))
 
 
+def draw_flame_mage_glasses(layer: Image.Image, x: float, y: float, alpha: int = 220) -> None:
+    d = ImageDraw.Draw(layer, "RGBA")
+    color = (20, 7, 5, alpha)
+    shine = (255, 207, 128, round(alpha * 0.4))
+    d.rounded_rectangle([x - 8, y - 3, x - 2, y + 2], radius=2, outline=color, width=1)
+    d.rounded_rectangle([x + 2, y - 3, x + 8, y + 2], radius=2, outline=color, width=1)
+    d.line([x - 2, y - 1, x + 2, y - 1], fill=color, width=1)
+    d.line([x - 7, y - 2, x - 4, y - 2], fill=shine, width=1)
+    d.line([x + 3, y - 2, x + 6, y - 2], fill=shine, width=1)
+
+
 def tinted_copy(img: Image.Image, color: tuple[int, int, int], alpha: float) -> Image.Image:
     out = Image.new("RGBA", img.size, (0, 0, 0, 0))
     src = img.convert("RGBA")
@@ -325,6 +338,14 @@ def attack_vector(direction: str) -> tuple[float, float]:
     if direction == "down":
         return 0, 1
     return 1, 0
+
+
+def actor_flip_for_direction(cfg: dict, direction: str) -> bool:
+    if direction == "right":
+        return not bool(cfg.get("source_faces_right"))
+    if direction == "left":
+        return bool(cfg.get("source_faces_right"))
+    return False
 
 
 def burst_lines(
@@ -548,8 +569,7 @@ def render_frame(actor: Image.Image, cfg: dict, name: str) -> Image.Image:
     draw_idle_effect(back, cfg, frame_idx * 0.8, 0.9)
     canvas.alpha_composite(back)
 
-    source_faces_right = bool(cfg.get("source_faces_right"))
-    flip = direction == ("left" if source_faces_right else "right")
+    flip = actor_flip_for_direction(cfg, direction)
     brightness = 0.88 if direction == "up" else 1.0
     contrast = 1.04
     dx = 0
@@ -566,17 +586,22 @@ def render_frame(actor: Image.Image, cfg: dict, name: str) -> Image.Image:
         angle = [-0.5, 0.2, 0.5, -0.2][frame_idx % 4]
     elif name.startswith("walk_"):
         phases = [
-            (0, 0, -2.6, 1.018, 0.99),
-            (2, -2, 3.2, 0.99, 1.028),
-            (0, 0, 2.6, 1.018, 0.99),
-            (-2, -2, -3.2, 0.99, 1.028),
+            (0.0, 0.0, -2.1, 1.012, 0.996),
+            (1.3, -1.2, -3.4, 1.000, 1.016),
+            (2.2, -2.4, 2.8, 0.988, 1.030),
+            (1.2, -1.1, 3.6, 1.000, 1.016),
+            (0.0, 0.0, 2.1, 1.012, 0.996),
+            (-1.3, -1.2, 3.4, 1.000, 1.016),
+            (-2.2, -2.4, -2.8, 0.988, 1.030),
+            (-1.2, -1.1, -3.6, 1.000, 1.016),
         ]
-        dx, dy, angle, scale_x, scale_y = phases[frame_idx % 4]
+        dx, dy, angle, scale_x, scale_y = phases[frame_idx % WALK_FRAME_COUNT]
         if direction == "left":
-            flip = False
+            flip = actor_flip_for_direction(cfg, direction)
             dx = -dx - 2
             angle = -angle
         elif direction == "right":
+            flip = actor_flip_for_direction(cfg, direction)
             dx = dx + 2
         else:
             flip = False
@@ -633,9 +658,11 @@ def render_frame(actor: Image.Image, cfg: dict, name: str) -> Image.Image:
         reach, dy, angle, scale_x, scale_y, power = specs[frame_idx % 6]
         dx = reach
         if direction == "left":
-            flip = False
+            flip = actor_flip_for_direction(cfg, direction)
             dx = -reach
             angle = -angle
+        elif direction == "right":
+            flip = actor_flip_for_direction(cfg, direction)
         elif direction == "up":
             flip = False
             dy -= max(0, reach) * 0.72
@@ -682,6 +709,9 @@ def render_frame(actor: Image.Image, cfg: dict, name: str) -> Image.Image:
             paste_center_bottom(canvas, ghost2, dx - vx * (18 + frame_idx * 2), dy - vy * (12 + frame_idx * 2) + 2)
     paste_center_bottom(canvas, transformed, dx, dy)
 
+    if cfg.get("draw_glasses"):
+        draw_flame_mage_glasses(canvas, FRAME_W / 2 + dx * 0.22, 42 + dy * 0.2, 230)
+
     if name.startswith("attack_"):
         top = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
         draw_attack_effect(top, cfg, direction, 0.45 if frame_idx in (2, 3) else 0.18)
@@ -706,7 +736,11 @@ def make_portrait(src: Image.Image, cfg: dict) -> Image.Image:
     target_h = 224 if crop.height > crop.width * 1.2 else 206
     scale = min(target_h / crop.height, 216 / crop.width)
     actor = crop.resize((round(crop.width * scale), round(crop.height * scale)), Image.Resampling.LANCZOS)
-    bg.alpha_composite(actor, ((size - actor.width) // 2, size - actor.height - 10))
+    ox = (size - actor.width) // 2
+    oy = size - actor.height - 10
+    bg.alpha_composite(actor, (ox, oy))
+    if cfg.get("draw_glasses"):
+        draw_flame_mage_glasses(bg, size / 2, oy + actor.height * 0.19, 245)
     return bg
 
 

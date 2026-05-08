@@ -18,6 +18,7 @@ FRAME_W = 112
 FRAME_H = 144
 BASE_BODY_H = 132
 FOOT_Y = 139
+WALK_FRAME_COUNT = 8
 
 
 def alpha_bbox(img: Image.Image) -> tuple[int, int, int, int]:
@@ -212,10 +213,14 @@ def main() -> None:
         frames.append(render_frame(actor, name=f"player_idle_{i}", **spec))
 
     walk_phases = [
-        (0, 0, -2.5, 1.018, 0.990),
-        (2, -2, 3.2, 0.990, 1.028),
-        (0, 0, 2.5, 1.018, 0.990),
-        (-2, -2, -3.2, 0.990, 1.028),
+        (0.0, 0.0, -2.1, 1.012, 0.996),
+        (1.3, -1.2, -3.4, 1.000, 1.016),
+        (2.2, -2.4, 2.8, 0.988, 1.030),
+        (1.2, -1.1, 3.6, 1.000, 1.016),
+        (0.0, 0.0, 2.1, 1.012, 0.996),
+        (-1.3, -1.2, 3.4, 1.000, 1.016),
+        (-2.2, -2.4, -2.8, 0.988, 1.030),
+        (-1.2, -1.1, -3.6, 1.000, 1.016),
     ]
     for direction in ("down", "right", "up", "left"):
         for i, (dx, dy, ang, sx, sy) in enumerate(walk_phases):
@@ -245,15 +250,23 @@ def main() -> None:
             )
 
     attack_specs = [
-        dict(dx=-6, dy=1, angle=-10, scale_x=1.04, scale_y=0.985, slash=0.0),
-        dict(dx=-2, dy=-3, angle=-13, scale_x=0.97, scale_y=1.04, slash=0.36),
-        dict(dx=7, dy=-5, angle=10, scale_x=1.03, scale_y=0.98, slash=0.82),
-        dict(dx=13, dy=-3, angle=18, scale_x=1.08, scale_y=0.94, slash=1.0),
-        dict(dx=7, dy=-1, angle=4, scale_x=1.03, scale_y=0.98, slash=0.55),
-        dict(dx=0, dy=0, angle=-1, scale_x=1.00, scale_y=1.00, slash=0.08),
+        dict(dx=-5, dy=1, angle=-10, scale_x=1.025, scale_y=0.995, stab_power=0.08),
+        dict(dx=-1, dy=-3, angle=-9, scale_x=0.970, scale_y=1.045, stab_power=0.36),
+        dict(dx=8, dy=-5, angle=9, scale_x=1.035, scale_y=0.980, stab_power=0.78),
+        dict(dx=14, dy=-3, angle=16, scale_x=1.085, scale_y=0.935, stab_power=1.00),
+        dict(dx=7, dy=-1, angle=5, scale_x=1.035, scale_y=0.980, stab_power=0.58),
+        dict(dx=0, dy=0, angle=-1, scale_x=1.000, scale_y=1.000, stab_power=0.12),
     ]
     for i, spec in enumerate(attack_specs):
-        frames.append(render_frame(actor, name=f"player_attack_{i}", wisp_phase=i, wisp_power=1.15, **spec))
+        frames.append(render_frame(
+            actor,
+            name=f"player_attack_{i}",
+            wisp_phase=i,
+            wisp_power=1.15,
+            stab_angle=0,
+            stab_side=1,
+            **spec,
+        ))
 
     directional_attack_specs = [
         dict(reach=0.06, dx=-5, dy=1, angle=-10, scale_x=1.025, scale_y=0.995, stab_power=0.08),

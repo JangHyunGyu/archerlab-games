@@ -60,6 +60,9 @@ export class ShadowDagger extends WeaponBase {
         const px = this.player.x;
         const py = this.player.y;
         const angle = Phaser.Math.Angle.Between(px, py, target.x, target.y) + angleOffset;
+        if (playSound && this.player.playAttackMotion) {
+            this.player.playAttackMotion(angle, this.config.motionDuration || 190, 1);
+        }
         const range = (this.config.projectileRange || 1500) + this.extraRange;
         const endX = px + Math.cos(angle) * range;
         const endY = py + Math.sin(angle) * range;
