@@ -4,7 +4,7 @@ export const CHARACTER_STORAGE_KEY = 'shadow_survival_selected_character_v1';
 export const CHARACTER_FRAME_NAMES = [
     ...Array.from({ length: 4 }, (_, i) => `idle_${i}`),
     ...['down', 'right', 'up', 'left'].flatMap(dir =>
-        Array.from({ length: 4 }, (_, i) => `walk_${dir}_${i}`)
+        Array.from({ length: 8 }, (_, i) => `walk_${dir}_${i}`)
     ),
     ...Array.from({ length: 6 }, (_, i) => `attack_${i}`),
     ...['down', 'right', 'up', 'left'].flatMap(dir =>

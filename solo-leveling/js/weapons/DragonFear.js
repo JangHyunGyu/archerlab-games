@@ -11,6 +11,12 @@ export class DragonFear extends WeaponBase {
         const range = (this.config.auraRange || 230) + this.extraRange;
         const slowAmount = this.config.slowMultiplier ?? Math.max(0.1, 0.4 - this.extraSlow);
         const auraDuration = this.config.auraDuration || 2000;
+        if (this.player.playAttackMotion) {
+            const angle = this.player.moveIntensity > 0.12
+                ? this.player.lastMoveAngle
+                : (this.player.facingRight ? 0 : Math.PI);
+            this.player.playAttackMotion(angle, this.config.motionDuration || 280, 1);
+        }
 
         // Visual aura effect (이전 트윈 확실히 정리)
         if (this.auraSprite) {

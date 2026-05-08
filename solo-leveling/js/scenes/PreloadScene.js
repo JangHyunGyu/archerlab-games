@@ -224,8 +224,8 @@ export class PreloadScene extends Phaser.Scene {
         const loadPlayerMotion = (name) => {
             this._loadImage(`motion_${name}`, `assets/player/motion/${name}.png`);
         };
-        for (let i = 0; i < 4; i++) {
-            loadPlayerMotion(`player_idle_${i}`);
+        for (let i = 0; i < 4; i++) loadPlayerMotion(`player_idle_${i}`);
+        for (let i = 0; i < 8; i++) {
             loadPlayerMotion(`player_walk_down_${i}`);
             loadPlayerMotion(`player_walk_right_${i}`);
             loadPlayerMotion(`player_walk_up_${i}`);

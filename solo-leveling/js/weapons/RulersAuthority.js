@@ -76,6 +76,11 @@ export class RulersAuthority extends WeaponBase {
             targetY += Math.sin(offsetAngle) * offsetDist;
         }
 
+        if (strikeIndex === 0 && this.player.playAttackMotion) {
+            const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, targetX, targetY);
+            this.player.playAttackMotion(angle, this.config.motionDuration || 260, 1);
+        }
+
         // Visual effect - expanding circle
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;

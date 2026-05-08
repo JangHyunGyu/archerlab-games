@@ -216,7 +216,7 @@ export class SpriteFactory {
         const names = [
             ...Array.from({ length: 4 }, (_, i) => `player_idle_${i}`),
             ...['down', 'right', 'up', 'left'].flatMap(dir =>
-                Array.from({ length: 4 }, (_, i) => `player_walk_${dir}_${i}`)
+                Array.from({ length: 8 }, (_, i) => `player_walk_${dir}_${i}`)
             ),
             ...Array.from({ length: 6 }, (_, i) => `player_attack_${i}`),
             ...['down', 'right', 'up', 'left'].flatMap(dir =>
@@ -231,7 +231,7 @@ export class SpriteFactory {
         for (const name of names) {
             this._copyTexture(scene, `motion_${name}`, name, W, H);
         }
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 8; i++) {
             this._copyTexture(scene, `motion_player_walk_down_${i}`, `player_walk_${i}`, W, H);
         }
         this._createPlayerAuraTexture(scene);

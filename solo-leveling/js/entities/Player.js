@@ -114,10 +114,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         create('idle', frames('idle_', 8), 5);
         create('walk', frames('walk_', 8), 10);
-        create('walk_down', frames('walk_down_', 4), 8);
-        create('walk_right', frames('walk_right_', 4), 8);
-        create('walk_up', frames('walk_up_', 4), 8);
-        create('walk_left', frames('walk_left_', 4), 8);
+        create('walk_down', frames('walk_down_', 8), 12);
+        create('walk_right', frames('walk_right_', 8), 12);
+        create('walk_up', frames('walk_up_', 8), 12);
+        create('walk_left', frames('walk_left_', 8), 12);
         create('attack', frames('attack_', 6), 18, 0);
         create('attack_down', frames('attack_down_', 6), 20, 0);
         create('attack_right', frames('attack_right_', 6), 20, 0);
@@ -217,13 +217,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._attackPose.angle = angle;
         this._attackPose.side = side || 1;
         this._attackPose.direction = this._directionFromAngle(angle);
-        const animKey = this._animKey(`attack_${this._attackPose.direction}`);
-        if (this.scene.anims.exists(animKey)) {
-            this.play(animKey, false);
-        } else if (this.scene.anims.exists(this._animKey('attack'))) {
-            this.play(this._animKey('attack'), false);
+        const preferredAnimKey = this._animKey(`attack_${this._attackPose.direction}`);
+        const fallbackAnimKey = this._animKey('attack');
+        const activeAnimKey = this.scene.anims.exists(preferredAnimKey)
+            ? preferredAnimKey
+            : (this.scene.anims.exists(fallbackAnimKey) ? fallbackAnimKey : null);
+        if (activeAnimKey) {
+            this.play(activeAnimKey, false);
+            this._applyFlipForAnimation(activeAnimKey);
         }
-        this._applyFlipForAnimation(animKey);
     }
 
     _animExists(key) {
@@ -247,10 +249,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this._hitReactTimer > 0 && this._animExists(this._animKey('hit'))) {
             return this._animKey('hit');
         }
-        if (this._attackPose.active && this._animExists(this._animKey('attack'))) {
+        if (this._attackPose.active) {
             const directionalAttack = this._animKey(`attack_${this._attackPose.direction || this._directionFromAngle(this._attackPose.angle)}`);
             if (this._animExists(directionalAttack)) return directionalAttack;
-            return this._animKey('attack');
+            if (this._animExists(this._animKey('attack'))) return this._animKey('attack');
         }
         if (this._moveBlend > 0.08) {
             const directionalWalk = this._animKey(`walk_${this.moveDirection}`);
@@ -359,8 +361,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         pose.elapsed += delta;
         const p = Phaser.Math.Clamp(pose.elapsed / Math.max(1, pose.duration), 0, 1);
-        const dirSign = Math.cos(pose.angle) >= 0 ? 1 : -1;
         const side = pose.side || 1;
+        const direction = pose.direction || this._directionFromAngle(pose.angle);
+        const isVertical = direction === 'up' || direction === 'down';
+        const forwardSign = direction === 'left' || direction === 'up' ? -1 : 1;
+        const leanSign = isVertical ? side * (direction === 'up' ? -1 : 1) : forwardSign;
+        const prepLean = isVertical ? 3.2 : 5.5;
+        const strikeLean = isVertical ? 6.2 : 13.5;
+        const settleLean = isVertical ? 4.4 : 8;
+        const prepTwist = isVertical ? 2.8 : 1.8;
+        const strikeTwist = isVertical ? 3.6 : 2.5;
         const easeOut = (v) => 1 - Math.pow(1 - Phaser.Math.Clamp(v, 0, 1), 3);
         const easeIn = (v) => {
             const k = Phaser.Math.Clamp(v, 0, 1);
@@ -374,22 +384,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         if (p < 0.2) {
             const k = easeOut(p / 0.2);
-            lean = -dirSign * 5.5 * k;
-            twist = -side * 1.8 * k;
+            lean = -leanSign * prepLean * k;
+            twist = -side * prepTwist * k;
             scaleX = -0.018 * k;
             scaleY = 0.038 * k;
         } else if (p < 0.48) {
             const k = easeOut((p - 0.2) / 0.28);
-            lean = dirSign * (-5.5 + 13.5 * k);
-            twist = side * 2.5 * (1 - k);
-            scaleX = 0.07 * k;
-            scaleY = -0.055 * k;
+            lean = leanSign * (-prepLean + strikeLean * k);
+            twist = side * strikeTwist * (1 - k);
+            scaleX = (isVertical ? 0.045 : 0.07) * k;
+            scaleY = (isVertical ? -0.038 : -0.055) * k;
         } else {
             const k = easeIn((p - 0.48) / 0.52);
-            lean = dirSign * 8 * (1 - k);
-            twist = side * 1.2 * (1 - k);
-            scaleX = 0.07 * (1 - k);
-            scaleY = -0.055 * (1 - k);
+            lean = leanSign * settleLean * (1 - k);
+            twist = side * (isVertical ? 1.6 : 1.2) * (1 - k);
+            scaleX = (isVertical ? 0.045 : 0.07) * (1 - k);
+            scaleY = (isVertical ? -0.038 : -0.055) * (1 - k);
         }
 
         if (p >= 1) {
