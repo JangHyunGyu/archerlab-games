@@ -273,6 +273,7 @@ export class PreloadScene extends Phaser.Scene {
         });
         [
             'dark_mage_orb',
+            'boss_death_burst',
             'boss_igris_slash',
             'boss_tusk_slam',
             'boss_beru_acid',

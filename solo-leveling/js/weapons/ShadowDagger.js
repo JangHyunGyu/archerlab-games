@@ -170,7 +170,7 @@ export class ShadowDagger extends WeaponBase {
             applySecondaryEffect(currentTarget);
             explode(dagger.x, dagger.y, targetKey);
 
-            if (this.scene.soundManager) this.scene.soundManager.play('hit');
+            this.playHitSound();
 
             const spark = this.scene.add.circle(dagger.x, dagger.y, 6, this.getEffectColor(0xb366ff), 0.8).setDepth(9);
             this.scene.tweens.add({

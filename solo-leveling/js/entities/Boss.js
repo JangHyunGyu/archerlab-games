@@ -121,6 +121,38 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
+    static _spawnDeathFragments(scene, x, y, scale = 1) {
+        if (!scene?.add) return;
+        const count = Math.round(24 * scale);
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 85 + Math.random() * 260 * scale;
+            const fragment = scene.add.rectangle(
+                x + Math.cos(angle) * 8,
+                y + Math.sin(angle) * 8,
+                3 + Math.random() * 8 * scale,
+                2 + Math.random() * 6 * scale,
+                Math.random() < 0.45 ? 0x13091f : (Math.random() < 0.72 ? 0x66112c : 0xffbf55),
+                0.92
+            )
+                .setDepth(21)
+                .setRotation(Math.random() * Math.PI)
+                .setBlendMode(Phaser.BlendModes.ADD);
+
+            scene.tweens.add({
+                targets: fragment,
+                x: x + Math.cos(angle) * speed,
+                y: y + Math.sin(angle) * speed + Phaser.Math.FloatBetween(-24, 22),
+                rotation: fragment.rotation + Phaser.Math.FloatBetween(-3.2, 3.2),
+                alpha: 0,
+                scale: 0.18,
+                duration: 520 + Math.random() * 430,
+                ease: 'Cubic.easeOut',
+                onComplete: () => Boss._destroyIfAlive(fragment),
+            });
+        }
+    }
+
     constructor(scene, x, y, bossKey, difficultyMult = 1, hp = null, atkMult = 1) {
         const config = BOSS_TYPES[bossKey];
         super(scene, x, y, 'boss_' + bossKey + '_0');
@@ -850,56 +882,112 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             this.scene.shadowArmyManager.onBossKilled(this);
         }
 
-        const deathScale = Math.max(0.86, this.config.size / 115);
-        const explosion = Boss._addBossVfx(this.scene, 'death_explosion', this.x, this.y, {
-            depth: 16,
-            alpha: 0.96,
+        const deathScale = Phaser.Math.Clamp(this.config.size / 82, 1.0, 1.42);
+        const usedBossBurst = Boss._playFrameVfx(this.scene, 'effect_boss_death_burst', this.x, this.y - this.displayHeight * 0.02, {
+            depth: 22,
+            alpha: 1,
             scale: deathScale,
+            frameMs: 72,
+            blendMode: Phaser.BlendModes.ADD,
+        });
+
+        const coreFlash = this.scene.add.circle(this.x, this.y, 24 * deathScale, 0xffffff, 0.9)
+            .setDepth(23)
+            .setBlendMode(Phaser.BlendModes.ADD);
+        this.scene.tweens.add({
+            targets: coreFlash,
+            scale: 5.6,
+            alpha: 0,
+            duration: 520,
+            ease: 'Cubic.easeOut',
+            onComplete: () => Boss._destroyIfAlive(coreFlash),
+        });
+
+        Boss._spawnDeathFragments(this.scene, this.x, this.y, deathScale);
+
+        const explosion = Boss._addBossVfx(this.scene, 'death_explosion', this.x, this.y, {
+            depth: usedBossBurst ? 18 : 20,
+            alpha: usedBossBurst ? 0.78 : 1,
+            scale: deathScale * 1.08,
         });
         if (explosion) {
             Boss._tweenDestroy(this.scene, explosion, {
                 alpha: 0,
-                scaleX: explosion.scaleX * 1.35,
-                scaleY: explosion.scaleY * 1.35,
-                duration: 760,
+                scaleX: explosion.scaleX * 1.78,
+                scaleY: explosion.scaleY * 1.78,
+                duration: 920,
                 ease: 'Quad.Out',
             });
         }
 
         const ring = Boss._addBossVfx(this.scene, 'death_shock_ring', this.x, this.y, {
-            depth: 15,
-            alpha: 0.9,
-            scale: deathScale * 0.76,
+            depth: 17,
+            alpha: 1,
+            scale: deathScale * 0.94,
         });
         if (ring) {
             Boss._tweenDestroy(this.scene, ring, {
                 alpha: 0,
-                scaleX: ring.scaleX * 1.7,
-                scaleY: ring.scaleY * 1.7,
-                duration: 700,
+                scaleX: ring.scaleX * 2.55,
+                scaleY: ring.scaleY * 2.55,
+                duration: 980,
                 ease: 'Cubic.Out',
+            });
+        }
+
+        const afterRing = Boss._addBossVfx(this.scene, 'death_shock_ring', this.x, this.y, {
+            depth: 16,
+            alpha: 0.72,
+            scale: deathScale * 0.56,
+        });
+        if (afterRing) {
+            this.scene.time.delayedCall(140, () => {
+                Boss._tweenDestroy(this.scene, afterRing, {
+                    alpha: 0,
+                    scaleX: afterRing.scaleX * 3.25,
+                    scaleY: afterRing.scaleY * 3.25,
+                    duration: 860,
+                    ease: 'Cubic.Out',
+                });
             });
         }
 
         const smoke = Boss._addBossVfx(this.scene, 'smoke_wisp', this.x, this.y + 16, {
             depth: 14,
-            alpha: 0.66,
-            scale: deathScale * 0.82,
+            alpha: 0.82,
+            scale: deathScale * 1.15,
             blendMode: Phaser.BlendModes.NORMAL,
         });
         if (smoke) {
             Boss._tweenDestroy(this.scene, smoke, {
                 alpha: 0,
-                scaleX: smoke.scaleX * 1.18,
-                scaleY: smoke.scaleY * 1.18,
-                y: smoke.y + 18,
-                duration: 1050,
+                scaleX: smoke.scaleX * 1.48,
+                scaleY: smoke.scaleY * 1.48,
+                y: smoke.y + 28,
+                duration: 1350,
                 ease: 'Sine.Out',
             });
         }
 
-        this.scene.cameras.main.shake(400, 0.02);
-        this.scene.cameras.main.flash(200, 255, 100, 50);
+        const sparks = this.scene.add.particles(this.x, this.y, 'particle_spark', {
+            speed: { min: 150, max: 430 * deathScale },
+            scale: { start: 1.25, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: { min: 360, max: 820 },
+            tint: [0xffffff, 0xffd15c, 0xff3355, 0x8d35ff],
+            blendMode: 'ADD',
+            emitting: false,
+        });
+        sparks.setDepth(22);
+        sparks.explode(Math.round(34 * deathScale));
+        this.scene.time.delayedCall(1000, () => Boss._destroyIfAlive(sparks));
+
+        const deathCamera = this.scene.cameras.main;
+        deathCamera.shake(620, 0.028);
+        deathCamera.flash(280, 255, 180, 70);
+        this.scene.time.delayedCall(160, () => {
+            if (deathCamera?.scene?.sys?.isActive?.() !== false) deathCamera.shake(260, 0.012);
+        });
 
         this.destroy();
     }
