@@ -387,7 +387,7 @@ const TEXTS = {
 
 // Game API Config
 export const GAME_API_URL = 'https://game-api.yama5993.workers.dev';
-export const GAME_ID_SHADOW = 'shadow-survival';
+export const GAME_ID_SHADOW = 'shadow-survival-character-v1';
 
 export function t(key) {
     return TEXTS[LANG]?.[key] ?? TEXTS.ko[key] ?? key;
