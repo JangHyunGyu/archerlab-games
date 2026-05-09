@@ -667,6 +667,8 @@ export class GameScene extends Phaser.Scene {
                 kills: this.player.kills,
                 time: Math.floor(this.enemyManager.getGameTime() / 1000),
                 shadowCount: this.shadowArmyManager.getSoldierCount(),
+                characterId: this.player.characterId,
+                characterName: this.player.character?.name,
             });
         });
     }

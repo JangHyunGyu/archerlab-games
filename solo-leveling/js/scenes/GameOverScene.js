@@ -5,6 +5,7 @@ import {
     fs, uv, drawSystemPanel,
 } from '../utils/Constants.js';
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
+import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId } from '../utils/Characters.js';
 
 export class GameOverScene extends Phaser.Scene {
     constructor() {
@@ -17,6 +18,8 @@ export class GameOverScene extends Phaser.Scene {
 
     create() {
         const { level, rank, kills, time, shadowCount } = this.finalData;
+        this.finalData.characterId = this.finalData.characterId || DEFAULT_CHARACTER_ID;
+        this.finalData.characterName = this.finalData.characterName || getCharacter(this.finalData.characterId).name;
         this.gameScore = time;
 
         this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP, 0.96);
@@ -130,16 +133,24 @@ export class GameOverScene extends Phaser.Scene {
             localStorage.setItem('shadow_player_name', name);
             cleanup();
             try {
-                await fetch(`${GAME_API_URL}/rankings`, {
+                const characterId = this.finalData.characterId || DEFAULT_CHARACTER_ID;
+                const characterName = this.finalData.characterName || getCharacter(characterId).name;
+                const extraData = { level, rank, kills, shadowCount, characterId, characterName };
+                const gameIds = [
+                    GAME_ID_SHADOW,
+                    getCharacterRankingGameId(GAME_ID_SHADOW, characterId),
+                ];
+
+                await Promise.allSettled(gameIds.map(gameId => fetch(`${GAME_API_URL}/rankings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        game_id: GAME_ID_SHADOW,
+                        game_id: gameId,
                         player_name: name,
                         score: time,
-                        extra_data: { level, rank, kills, shadowCount },
+                        extra_data: extraData,
                     }),
-                });
+                })));
             } catch (e) { /* silent */ }
             showStats();
         };
@@ -265,7 +276,9 @@ export class GameOverScene extends Phaser.Scene {
                 retryBtn.hit.disableInteractive();
                 this._showTransition(t('loading'));
                 this.cameras.main.fadeOut(500, 0, 0, 0);
-                this.time.delayedCall(500, () => this.scene.start('GameScene'));
+                this.time.delayedCall(500, () => this.scene.start('GameScene', {
+                    characterId: this.finalData.characterId || DEFAULT_CHARACTER_ID,
+                }));
             },
         });
 
