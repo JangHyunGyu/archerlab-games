@@ -577,30 +577,106 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this._spawnHitBlood(isCrit);
     }
 
+    _getHitVfxProfile() {
+        const width = this.displayWidth || 64;
+        const elite = this.isElite || this._eliteDeathPending;
+        const tier = elite || width >= 112 ? 'large' : (width >= 84 ? 'medium' : 'small');
+        const base = Phaser.Math.Clamp(width / 64, 0.72, elite ? 2.25 : 1.95);
+
+        if (tier === 'large') {
+            return {
+                tier,
+                sizeFactor: base * (elite ? 1.15 : 1.05),
+                particleMult: elite ? 2.15 : 1.65,
+                speedMult: elite ? 1.35 : 1.18,
+                radiusMult: elite ? 1.25 : 1.12,
+                hitYOffset: 0.11,
+                ringRadius: width * (elite ? 0.48 : 0.42),
+                ringScale: elite ? 2.65 : 2.25,
+                ringAlpha: elite ? 0.48 : 0.34,
+                ringWidth: elite ? 4 : 3,
+                scorchScale: elite ? 1.8 : 1.45,
+                frameMsAdd: 8,
+            };
+        }
+
+        if (tier === 'medium') {
+            return {
+                tier,
+                sizeFactor: base,
+                particleMult: 1.18,
+                speedMult: 1.05,
+                radiusMult: 1,
+                hitYOffset: 0.08,
+                ringRadius: width * 0.32,
+                ringScale: 1.75,
+                ringAlpha: 0.22,
+                ringWidth: 2,
+                scorchScale: 1.16,
+                frameMsAdd: 2,
+            };
+        }
+
+        return {
+            tier,
+            sizeFactor: base * 0.88,
+            particleMult: 0.78,
+            speedMult: 0.9,
+            radiusMult: 0.86,
+            hitYOffset: 0.055,
+            ringRadius: 0,
+            ringScale: 1,
+            ringAlpha: 0,
+            ringWidth: 0,
+            scorchScale: 0.82,
+            frameMsAdd: -4,
+        };
+    }
+
+    _spawnHitRing(profile, color, yOffset = 0) {
+        if (!profile?.ringRadius || !this.scene) return;
+        const ring = this.scene.add.circle(this.x, this.y + yOffset, profile.ringRadius, color, 0)
+            .setDepth(17)
+            .setAlpha(profile.ringAlpha)
+            .setBlendMode(Phaser.BlendModes.ADD);
+        ring.setStrokeStyle(profile.ringWidth, color, profile.ringAlpha);
+        this.scene.tweens.add({
+            targets: ring,
+            scale: profile.ringScale,
+            alpha: 0,
+            duration: profile.tier === 'large' ? 360 : 260,
+            ease: 'Cubic.easeOut',
+            onComplete: () => ring.destroy(),
+        });
+    }
+
     _spawnHitBurn(isCrit) {
         if (!this.scene) return;
-        const sizeFactor = Phaser.Math.Clamp((this.displayWidth || 42) / 64, 0.75, 1.65);
+        if (this.scene.soundManager) this.scene.soundManager.play('burnHit');
+        const profile = this._getHitVfxProfile();
+        const sizeFactor = profile.sizeFactor;
         const usedAsset = Enemy._playFrameVfx(
             this.scene,
             'effect_flame_burn',
             this.x,
-            this.y - this.displayHeight * 0.1,
+            this.y - this.displayHeight * profile.hitYOffset,
             {
                 scale: (isCrit ? 0.56 : 0.46) * sizeFactor,
                 rotation: Phaser.Math.FloatBetween(-0.22, 0.22),
                 depth: 18,
-                frameMs: isCrit ? 48 : 42,
+                frameMs: (isCrit ? 48 : 42) + profile.frameMsAdd,
                 alpha: 0.95,
                 blendMode: Phaser.BlendModes.ADD,
             }
         );
+        this._spawnHitRing(profile, isCrit ? 0xffc45a : 0xff7a22, -this.displayHeight * 0.04);
 
-        const emberCount = usedAsset ? (isCrit ? 16 : 10) : (isCrit ? 12 : 7);
-        const maxSpeed = usedAsset ? (isCrit ? 185 : 120) : (isCrit ? 145 : 90);
+        const emberCount = Math.max(3, Math.round((usedAsset ? (isCrit ? 16 : 10) : (isCrit ? 12 : 7)) * profile.particleMult));
+        const maxSpeed = (usedAsset ? (isCrit ? 185 : 120) : (isCrit ? 145 : 90)) * profile.speedMult;
         for (let i = 0; i < emberCount; i++) {
             const a = Math.random() * Math.PI * 2;
             const s = 35 + Math.random() * maxSpeed;
-            const r = 1.2 + Math.random() * 2.4;
+            const r = (1.2 + Math.random() * 2.4) * profile.radiusMult;
             const color = [0xfff0a0, 0xffb347, 0xff6a18, 0x4a2a12][Math.floor(Math.random() * 4)];
             const ember = this.scene.add.circle(this.x, this.y - 4, r, color, 0.92).setDepth(11);
             ember.setBlendMode(Phaser.BlendModes.ADD);
@@ -619,17 +695,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const scorch = this.scene.add.ellipse(
             this.x,
             this.y + this.displayHeight * 0.18,
-            20 * sizeFactor,
-            8 * sizeFactor,
+            20 * sizeFactor * profile.scorchScale,
+            8 * sizeFactor * profile.scorchScale,
             0x1b1008,
-            0.55
+            profile.tier === 'small' ? 0.38 : 0.55
         ).setDepth(4);
         this.scene.tweens.add({
             targets: scorch,
-            scaleX: 1.7,
-            scaleY: 1.25,
+            scaleX: profile.tier === 'large' ? 2.15 : 1.7,
+            scaleY: profile.tier === 'large' ? 1.55 : 1.25,
             alpha: 0,
-            duration: 560,
+            duration: profile.tier === 'large' ? 760 : 560,
             ease: 'Quad.easeOut',
             onComplete: () => scorch.destroy(),
         });
@@ -637,27 +713,29 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     _spawnHitBlood(isCrit) {
         if (!this.scene) return;
-        const sizeFactor = Phaser.Math.Clamp((this.displayWidth || 42) / 64, 0.75, 1.65);
+        const profile = this._getHitVfxProfile();
+        const sizeFactor = profile.sizeFactor;
         const hitAngle = Phaser.Math.FloatBetween(-0.45, 0.45);
         const usedAsset = Enemy._playFrameVfx(
             this.scene,
             isCrit ? 'effect_monster_crit' : 'effect_monster_hit',
             this.x,
-            this.y - this.displayHeight * 0.08,
+            this.y - this.displayHeight * profile.hitYOffset,
             {
                 scale: (isCrit ? 0.5 : 0.42) * sizeFactor,
                 rotation: hitAngle,
                 depth: 18,
-                frameMs: isCrit ? 42 : 38,
+                frameMs: (isCrit ? 42 : 38) + profile.frameMsAdd,
             }
         );
+        this._spawnHitRing(profile, isCrit ? 0xff3344 : 0xcc1020, -this.displayHeight * 0.04);
 
-        const count = usedAsset ? (isCrit ? 12 : 8) : (isCrit ? 8 : 4);
-        const maxSpeed = usedAsset ? (isCrit ? 210 : 145) : (isCrit ? 160 : 95);
+        const count = Math.max(3, Math.round((usedAsset ? (isCrit ? 12 : 8) : (isCrit ? 8 : 4)) * profile.particleMult));
+        const maxSpeed = (usedAsset ? (isCrit ? 210 : 145) : (isCrit ? 160 : 95)) * profile.speedMult;
         for (let i = 0; i < count; i++) {
             const a = Math.random() * Math.PI * 2;
             const s = 45 + Math.random() * maxSpeed;
-            const r = 1.6 + Math.random() * 2.2;
+            const r = (1.6 + Math.random() * 2.2) * profile.radiusMult;
             const color = Math.random() < 0.4 ? 0x660008 : (Math.random() < 0.7 ? 0xcc1020 : 0xdd3030);
             const drop = this.scene.add.circle(this.x, this.y, r, color, 0.95).setDepth(10);
             this.scene.tweens.add({
@@ -669,6 +747,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 duration: 280 + Math.random() * 220,
                 ease: 'Quad.easeOut',
                 onComplete: () => drop.destroy(),
+            });
+        }
+
+        if (profile.tier === 'large') {
+            const bruise = this.scene.add.ellipse(
+                this.x,
+                this.y + this.displayHeight * 0.2,
+                18 * sizeFactor,
+                7 * sizeFactor,
+                0x330008,
+                0.42
+            ).setDepth(4);
+            this.scene.tweens.add({
+                targets: bruise,
+                scaleX: 1.8,
+                scaleY: 1.25,
+                alpha: 0,
+                duration: 520,
+                ease: 'Quad.easeOut',
+                onComplete: () => bruise.destroy(),
             });
         }
     }

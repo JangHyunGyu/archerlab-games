@@ -161,7 +161,7 @@ export class BasicDagger extends WeaponBase {
 
             this.applyDamage(enemy, this.getDamage(), hitX, hitY);
             hits++;
-            if (this.scene.soundManager) this.scene.soundManager.play('hit');
+            this.playHitSound();
             if (!this.scene.textures.exists('effect_monster_hit_0')) {
                 this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
             }
@@ -178,7 +178,7 @@ export class BasicDagger extends WeaponBase {
 
             this.applyDamage(enemy, this.getDamage(), x, y);
             hits++;
-            if (this.scene.soundManager) this.scene.soundManager.play('hit');
+            this.playHitSound();
             if (!this.scene.textures.exists('effect_monster_hit_0')) {
                 this._spawnBloodBurst(enemy.x, enemy.y, impactAngle);
             }
@@ -478,7 +478,7 @@ export class BasicDagger extends WeaponBase {
 
                 this.applyDamage(enemy, this.getDamage(), hitPose.tipX, hitPose.tipY);
                 hits++;
-                if (this.scene.soundManager) this.scene.soundManager.play('hit');
+                this.playHitSound();
 
                 if (!this.scene.textures.exists('effect_monster_hit_0')) {
                     this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
@@ -871,7 +871,7 @@ export class BasicDagger extends WeaponBase {
                 if (dist > impactRadius) continue;
                 hitEnemies.add(enemy);
                 this.applyDamage(enemy, this.getDamage(), projectile.x, projectile.y);
-                if (this.scene.soundManager) this.scene.soundManager.play('hit');
+                this.playHitSound();
                 spawnImpactBurst(projectile.x, projectile.y);
                 if (hitEnemies.size >= maxHits) break;
             }

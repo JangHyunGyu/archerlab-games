@@ -58,6 +58,11 @@ export class WeaponBase {
         return target.takeDamage(amount, x, y, this.config.hitEffect || null);
     }
 
+    playHitSound() {
+        if (this.config.hitEffect === 'burn') return;
+        if (this.scene?.soundManager) this.scene.soundManager.play('hit');
+    }
+
     getEffectTexture() {
         const key = this.config.effectKey ? `char_skill_${this.config.effectKey}` : null;
         return key && this.scene?.textures?.exists(key) ? key : null;

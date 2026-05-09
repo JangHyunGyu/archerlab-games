@@ -181,7 +181,7 @@ for (const { rel, full } of allJsFiles) {
 const expectedSounds = [
     'sounds/arise.wav', 'sounds/authority.wav', 'sounds/bossAppear.wav',
     'sounds/dagger.wav', 'sounds/dungeonBreak.wav', 'sounds/fear.wav',
-    'sounds/hit.wav', 'sounds/kill.wav', 'sounds/levelup.wav',
+    'sounds/hit.wav', 'sounds/burn_hit.wav', 'sounds/kill.wav', 'sounds/levelup.wav',
     'sounds/playerHit.wav', 'sounds/potion.wav', 'sounds/quest.wav',
     'sounds/rankup.wav', 'sounds/select.wav', 'sounds/slash.wav',
     'sounds/system.wav', 'sounds/warning.wav', 'sounds/xp.wav',

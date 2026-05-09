@@ -38,7 +38,7 @@ export class SoundManager {
         this._userActivated = false;
         this._lastPlayTime = {};
         this._throttleMs = {
-            hit: 180, kill: 280, xp: 150, dagger: 230, daggerThrow: 220,
+            hit: 180, burnHit: 170, kill: 280, xp: 150, dagger: 230, daggerThrow: 220,
             slash: 360, authority: 520, fear: 700,
             playerHit: 400, system: 350, warning: 600,
             quest: 600, dungeonBreak: 1000, bossAppear: 900,
@@ -54,7 +54,7 @@ export class SoundManager {
         this._sfxMaster = 0.4;
         this._toneLeadTime = 0.035;
         this._releaseMs = {
-            dagger: 320, daggerThrow: 380, hit: 200, kill: 360, xp: 160,
+            dagger: 320, daggerThrow: 380, hit: 200, burnHit: 320, kill: 360, xp: 160,
             playerHit: 390, select: 130, system: 190, warning: 340,
             slash: 620, authority: 860, fear: 660,
             levelup: 560, rankup: 860, arise: 860, bossAppear: 860,
@@ -66,7 +66,7 @@ export class SoundManager {
             critHit: 260, eliteKill: 700,
         };
         this._soundPriority = {
-            xp: 0, hit: 1, dagger: 1, daggerThrow: 1, kill: 1,
+            xp: 0, hit: 1, burnHit: 1, dagger: 1, daggerThrow: 1, kill: 1,
             slash: 2, authority: 2, fear: 2, playerHit: 3,
             system: 2, quest: 2, warning: 3, dungeonBreak: 3,
             bossAppear: 3, bossKill: 3, levelup: 3, rankup: 3,
@@ -285,6 +285,7 @@ export class SoundManager {
             this._createPool('shadowSoldierSpit', base + 'shadow_soldier_spit.wav', 4);
             // 전투 (매우 빈번)
             this._createPool('hit', base + 'hit.wav', 8);
+            this._createPool('burnHit', base + 'burn_hit.wav', 7);
             this._createPool('kill', base + 'kill.wav', 6);
             this._createPool('critHit', base + 'crit_hit.wav', 5);
             this._createPool('eliteKill', base + 'elite_kill.wav', 3);
@@ -369,7 +370,7 @@ export class SoundManager {
     // SFX 볼륨 매핑 (사운드별 적절한 볼륨)
     _sfxVolume = {
         dagger: 0.44, daggerThrow: 0.46, slash: 0.38, authority: 0.5, fear: 0.46,
-        hit: 0.4, kill: 0.42, playerHit: 0.52,
+        hit: 0.4, burnHit: 0.46, kill: 0.42, playerHit: 0.52,
         xp: 0.36, levelup: 0.62, rankup: 0.66,
         system: 0.45, arise: 0.66, bossAppear: 0.62,
         warning: 0.56, potion: 0.46, select: 0.38, bossKill: 0.66, gameOver: 0.62,
