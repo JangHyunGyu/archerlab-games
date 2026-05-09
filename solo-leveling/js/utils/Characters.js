@@ -171,6 +171,11 @@ export function getCharacterWeaponKeys(id) {
     return CHARACTER_WEAPON_LOADOUTS[id] || CHARACTER_WEAPON_LOADOUTS[DEFAULT_CHARACTER_ID];
 }
 
+export function getCharacterRankingGameId(baseGameId, id) {
+    const safeId = CHARACTER_DEFS[id] ? id : DEFAULT_CHARACTER_ID;
+    return `${baseGameId}-${safeId}`;
+}
+
 export function getStarterWeaponKey(id) {
     return getCharacterWeaponKeys(id)[0];
 }
