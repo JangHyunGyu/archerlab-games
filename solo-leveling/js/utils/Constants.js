@@ -572,6 +572,7 @@ Object.assign(WEAPONS, {
     flameSpark: cloneWeapon('basicDagger', 'flameSpark', {
         name: '화염 점화',
         description: '가까운 적을 짧은 화염 폭발로 태웁니다.',
+        hitEffect: 'burn',
         attackStyle: 'fireball',
         basicAttackEffectKey: 'flame_fireball',
         soundKey: 'flameSpark',
@@ -589,6 +590,7 @@ Object.assign(WEAPONS, {
     flameBolt: cloneWeapon('shadowDagger', 'flameBolt', {
         name: '화염구',
         description: '가장 가까운 적을 향해 불타는 화염구를 발사합니다.',
+        hitEffect: 'burn',
         soundKey: 'flameBolt',
         projectileRange: 1180,
         projectileDuration: 920,
@@ -607,6 +609,7 @@ Object.assign(WEAPONS, {
     flameArc: cloneWeapon('shadowSlash', 'flameArc', {
         name: '화염 호월',
         description: '부채꼴 화염 검기로 전방의 적을 쓸어냅니다.',
+        hitEffect: 'burn',
         soundKey: 'flameArc',
         acquireRange: 380,
         arcOffsets: [-0.42, 0, 0.42],
@@ -626,6 +629,7 @@ Object.assign(WEAPONS, {
     flameMeteor: cloneWeapon('rulersAuthority', 'flameMeteor', {
         name: '유성 낙인',
         description: '적 무리에 유성 문장을 폭발시켜 광역 피해를 줍니다.',
+        hitEffect: 'burn',
         soundKey: 'flameMeteor',
         targetMode: 'randomCluster',
         strikeCount: 4,
@@ -643,6 +647,7 @@ Object.assign(WEAPONS, {
     flameInferno: cloneWeapon('dragonFear', 'flameInferno', {
         name: '화염 장막',
         description: '주변을 불길로 덮어 적에게 피해와 둔화를 남깁니다.',
+        hitEffect: 'burn',
         soundKey: 'flameInferno',
         auraRange: 265,
         slowMultiplier: 0.55,

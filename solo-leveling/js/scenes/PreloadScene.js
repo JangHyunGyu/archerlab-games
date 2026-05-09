@@ -262,6 +262,7 @@ export class PreloadScene extends Phaser.Scene {
         });
         [
             'basic_stab',
+            'flame_burn',
             'monster_hit',
             'monster_crit',
             'monster_death',

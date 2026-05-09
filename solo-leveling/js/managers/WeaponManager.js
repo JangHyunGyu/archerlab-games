@@ -58,7 +58,11 @@ export class WeaponManager {
                 const collider = this.scene.physics.add.overlap(projGroup, enemyGroup, (proj, enemy) => {
                     if (!proj.active || !enemy.active || !weapon) return;
                     const dmg = proj.damageAmount || weapon.getDamage();
-                    enemy.takeDamage(dmg, proj.x, proj.y);
+                    if (weapon.applyDamage) {
+                        weapon.applyDamage(enemy, dmg, proj.x, proj.y);
+                    } else {
+                        enemy.takeDamage(dmg, proj.x, proj.y);
+                    }
 
                     // Destroy projectile (daggers only)
                     if ((weapon.baseWeaponKey || weaponKey) === 'shadowDagger') {
