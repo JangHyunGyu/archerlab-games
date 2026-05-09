@@ -222,7 +222,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         } catch (_) { this._aura = null; }
     }
 
-    spawn(typeKey, typeData, difficultyMult, x, y) {
+    spawn(typeKey, typeData, difficultyMult, x, y, statProfile = null) {
         // Reset any monkey-patched methods from elite spawns
         this.update = Enemy.prototype.update;
         this.die = Enemy.prototype.die;
@@ -246,14 +246,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1, 1);
 
         // Apply difficulty scaling (fewer enemies → each one is tougher)
-        this.maxHp = Math.floor(typeData.hp * difficultyMult);
+        const hpScale = statProfile?.hp ?? difficultyMult;
+        const attackScale = statProfile?.attack ?? (1 + (difficultyMult - 1) * 0.5);
+        const speedScale = statProfile?.speed ?? (1 + (difficultyMult - 1) * 0.15);
+        const xpScale = statProfile?.xp ?? (1 + (difficultyMult - 1) * 0.5);
+
+        // Apply time pressure scaling: durability rises hardest, speed rises gently.
+        this.maxHp = Math.floor(typeData.hp * hpScale);
         this.hp = this.maxHp;
-        // Attack scales at 50% of difficulty rate (fewer enemies, each hits harder)
-        this.attack = Math.floor(typeData.attack * (1 + (difficultyMult - 1) * 0.5));
-        // Speed scales at 15% of difficulty rate — player should outrun individuals
-        this.speed = typeData.speed * (1 + (difficultyMult - 1) * 0.15);
-        // XP scales at 50% (compensate for fewer kills)
-        this.xpValue = Math.floor(typeData.xp * (1 + (difficultyMult - 1) * 0.5));
+        this.attack = Math.floor(typeData.attack * attackScale);
+        this.speed = typeData.speed * speedScale;
+        this.xpValue = Math.floor(typeData.xp * xpScale);
 
         // Set texture and size
         this.setTexture('enemy_' + typeKey + '_0');

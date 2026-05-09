@@ -158,6 +158,25 @@ export class EnemyManager {
         return base * (1 + this._getPressureStepCount() * 0.035);
     }
 
+    _getEnemyStatProfile(minutes, { elite = false } = {}) {
+        const difficulty = this._getDifficultyMultiplier(minutes);
+        const steps = this._getPressureStepCount();
+        const lateMinutes = Math.max(0, minutes - 12);
+
+        const hp = difficulty * (1 + steps * 0.035 + lateMinutes * 0.012);
+        const attack = 1 + (difficulty - 1) * 0.42 + steps * 0.04 + lateMinutes * 0.018;
+        const speed = 1 + (difficulty - 1) * 0.045 + steps * 0.015 + lateMinutes * 0.004;
+        const xp = 1 + (difficulty - 1) * 0.52 + steps * 0.04;
+
+        if (!elite) return { hp, attack, speed, xp };
+        return {
+            hp: hp * 3,
+            attack: attack * 1.18,
+            speed: speed * 1.08,
+            xp: xp * 2.35,
+        };
+    }
+
     _getSpawnInterval(minutes) {
         const base = WAVE_CONFIG.baseSpawnInterval;
         const min = WAVE_CONFIG.minSpawnInterval;
@@ -507,7 +526,8 @@ export class EnemyManager {
             enemy = this._createInactiveEnemy();
         }
 
-        enemy.spawn(typeKey, ENEMY_TYPES[typeKey], this.difficultyMultiplier, x, y);
+        const minutes = this.gameTime / 60000;
+        enemy.spawn(typeKey, ENEMY_TYPES[typeKey], this.difficultyMultiplier, x, y, this._getEnemyStatProfile(minutes));
         this._cachedActiveEnemies = null;
         return enemy;
     }
@@ -528,12 +548,8 @@ export class EnemyManager {
             enemy = this._createInactiveEnemy();
         }
 
-        // Spawn with boosted stats (elite multiplier on top of difficulty)
-        // HP uses full 3x difficulty, but attack caps at 1.5x to prevent elites outdamaging bosses
-        const eliteMult = this.difficultyMultiplier * 3;
-        enemy.spawn(typeKey, ENEMY_TYPES[typeKey], eliteMult, pos.x, pos.y);
+        enemy.spawn(typeKey, ENEMY_TYPES[typeKey], this.difficultyMultiplier, pos.x, pos.y, this._getEnemyStatProfile(minutes, { elite: true }));
         this._cachedActiveEnemies = null;
-        enemy.attack = Math.floor(ENEMY_TYPES[typeKey].attack * (1 + (this.difficultyMultiplier * 1.5 - 1) * 0.3));
         enemy.isElite = true;
 
         // Elite visual: larger size + red tint + glow + name label
