@@ -136,12 +136,9 @@ export class GameOverScene extends Phaser.Scene {
                 const characterId = this.finalData.characterId || DEFAULT_CHARACTER_ID;
                 const characterName = this.finalData.characterName || getCharacter(characterId).name;
                 const extraData = { level, rank, kills, shadowCount, characterId, characterName };
-                const gameIds = [
-                    GAME_ID_SHADOW,
-                    getCharacterRankingGameId(GAME_ID_SHADOW, characterId),
-                ];
+                const gameId = getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
 
-                await Promise.allSettled(gameIds.map(gameId => fetch(`${GAME_API_URL}/rankings`, {
+                await fetch(`${GAME_API_URL}/rankings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -150,7 +147,7 @@ export class GameOverScene extends Phaser.Scene {
                         score: time,
                         extra_data: extraData,
                     }),
-                })));
+                });
             } catch (e) { /* silent */ }
             showStats();
         };

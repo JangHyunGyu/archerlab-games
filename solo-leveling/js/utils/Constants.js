@@ -228,21 +228,21 @@ export const ENEMY_TYPES = {
 export const BOSS_TYPES = {
     igris: {
         name: '이그리스',
-        hp: 8000, attack: 38, speed: 94, xp: 500,
+        hp: 24000, attack: 38, speed: 94, xp: 500,
         color: 0xcc0000, size: 80,
         shadowType: 'melee',
         shadowColor: 0x220000,
     },
     tusk: {
         name: '터스크',
-        hp: 32000, attack: 52, speed: 68, xp: 800,
+        hp: 96000, attack: 52, speed: 68, xp: 800,
         color: 0x5a3a1a, size: 100,
         shadowType: 'tank',
         shadowColor: 0x1a1000,
     },
     beru: {
         name: '베루',
-        hp: 45000, attack: 60, speed: 102, xp: 1200,
+        hp: 135000, attack: 60, speed: 102, xp: 1200,
         color: 0x660033, size: 90,
         shadowType: 'ranged',
         shadowColor: 0x110022,
@@ -250,13 +250,13 @@ export const BOSS_TYPES = {
 };
 
 export const BOSS_SCHEDULE = [
-    { time: 120, type: 'igris', hp: 5600 },       // 2분
-    { time: 420, type: 'tusk', hp: 32000 },       // 7분
-    { time: 780, type: 'beru', hp: 45000 },       // 13분
+    { time: 120, type: 'igris', hp: 16800 },      // 2분
+    { time: 420, type: 'tusk', hp: 96000 },       // 7분
+    { time: 780, type: 'beru', hp: 225000 },      // 13분
     // 후반 보스 재등장 (강화 버전)
-    { time: 1080, type: 'igris', hp: 64000, atkMult: 1.5 },   // 18분
-    { time: 1440, type: 'tusk', hp: 128000, atkMult: 1.2 },   // 24분
-    { time: 1800, type: 'beru', hp: 180000, atkMult: 1.2 },   // 30분
+    { time: 1080, type: 'igris', hp: 440000, atkMult: 1.5 },  // 18분
+    { time: 1440, type: 'tusk', hp: 470000, atkMult: 1.2 },   // 24분
+    { time: 1800, type: 'beru', hp: 560000, atkMult: 1.2 },   // 30분
 ];
 
 export const WAVE_CONFIG = {
@@ -614,9 +614,9 @@ Object.assign(WEAPONS, {
         slashArc: 0.62,
         hitAngle: 0.62,
         maxHits: 4,
-        damageMult: 0.72,
+        damageMult: 0.54,
         aftershockRadius: 92,
-        aftershockDamageMult: 0.34,
+        aftershockDamageMult: 0.2,
         effectKey: 'flame_arc',
         effectColor: 0xff7a34,
         effectGlowColor: 0xffd86a,
