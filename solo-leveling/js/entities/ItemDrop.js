@@ -29,8 +29,8 @@ const ITEM_TYPES = {
             const originalCDR = player.stats.cooldownReduction;
             player.stats.cooldownReduction = Math.min(0.5, originalCDR + 0.2);
             scene.systemMessage?.show('[시스템]', ['마나 크리스탈 사용: 쿨타임 감소 10초'], { duration: 1500 });
-            scene.time.delayedCall(10000, () => {
-                player.stats.cooldownReduction = originalCDR;
+            scene.itemDropManager?._delay(10000, () => {
+                if (player?.scene) player.stats.cooldownReduction = originalCDR;
             });
         },
     },
@@ -44,8 +44,8 @@ const ITEM_TYPES = {
             // Temporary attack boost for 15 seconds
             player._tempAtkBuff = (player._tempAtkBuff || 0) + 0.5;
             scene.systemMessage?.show('[시스템]', ['그림자 정수 흡수: 공격력 50% 증가 15초'], { duration: 1500, type: 'arise' });
-            scene.time.delayedCall(15000, () => {
-                player._tempAtkBuff = Math.max(0, (player._tempAtkBuff || 0) - 0.5);
+            scene.itemDropManager?._delay(15000, () => {
+                if (player?.scene) player._tempAtkBuff = Math.max(0, (player._tempAtkBuff || 0) - 0.5);
             });
         },
     },
@@ -55,6 +55,17 @@ export class ItemDropManager {
     constructor(scene) {
         this.scene = scene;
         this.items = [];
+        this._timers = new Set();
+    }
+
+    _delay(ms, callback) {
+        if (!this.scene?.time) return null;
+        const timer = this.scene.time.delayedCall(ms, () => {
+            this._timers.delete(timer);
+            if (this.scene?.scene?.isActive?.() !== false) callback();
+        });
+        this._timers.add(timer);
+        return timer;
     }
 
     tryDrop(x, y) {
@@ -196,6 +207,10 @@ export class ItemDropManager {
     }
 
     destroy() {
+        for (const timer of this._timers) {
+            try { timer.remove(false); } catch (e) { /* already removed */ }
+        }
+        this._timers.clear();
         const tweens = this.scene?.tweens;
         this.items.forEach(item => {
             if (tweens) tweens.killTweensOf(item);

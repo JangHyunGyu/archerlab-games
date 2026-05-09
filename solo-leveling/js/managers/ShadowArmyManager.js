@@ -9,6 +9,7 @@ export class ShadowArmyManager {
         this.enabled = scene?.player?.characterId === 'shadowMonarch';
         this.isPerformingArise = false;
         this._ariseElements = []; // Track all created elements for cleanup
+        this._ariseTimers = new Set();
         this._destroyed = false;
     }
 
@@ -33,9 +34,10 @@ export class ShadowArmyManager {
         console.log('[ARISE] Starting shadow extraction for:', bossData.config.name);
         this.isPerformingArise = true;
         this._ariseElements = [];
+        this._ariseTimers.clear();
 
         // Safety timeout: force reset after 12 seconds even if something goes wrong
-        this._ariseSafetyTimer = this.scene.time.delayedCall(12000, () => {
+        this._ariseSafetyTimer = this._delay(12000, () => {
             if (this.isPerformingArise) {
                 console.warn('[ARISE] Safety timeout - force cleanup');
                 this._cleanupArise();
@@ -64,6 +66,11 @@ export class ShadowArmyManager {
         this._ariseElements = [];
         this.isPerformingArise = false;
 
+        for (const timer of this._ariseTimers) {
+            try { timer.remove(false); } catch (e) { /* already removed */ }
+        }
+        this._ariseTimers.clear();
+
         if (this._ariseSafetyTimer) {
             this._ariseSafetyTimer.remove(false);
             this._ariseSafetyTimer = null;
@@ -73,6 +80,17 @@ export class ShadowArmyManager {
     _trackElement(el) {
         if (el) this._ariseElements.push(el);
         return el;
+    }
+
+    _delay(ms, callback) {
+        if (!this.scene?.time) return null;
+        const timer = this.scene.time.delayedCall(ms, () => {
+            this._ariseTimers.delete(timer);
+            if (this._destroyed || !this.isPerformingArise || !this.scene?.scene?.isActive?.()) return;
+            callback();
+        });
+        this._ariseTimers.add(timer);
+        return timer;
     }
 
     _performAriseSequence(bossData) {
@@ -97,7 +115,7 @@ export class ShadowArmyManager {
         });
 
         // System message
-        scene.time.delayedCall(300, () => {
+        this._delay(300, () => {
             try {
                 if (!scene.scene?.isActive()) return;
                 if (scene.systemMessage) {
@@ -110,7 +128,7 @@ export class ShadowArmyManager {
         });
 
         // Phase 2: Rune circle + ground shadows
-        scene.time.delayedCall(600, () => {
+        this._delay(600, () => {
             try {
                 if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
@@ -134,12 +152,14 @@ export class ShadowArmyManager {
 
                 // Purple particles (reduced count for performance)
                 for (let i = 0; i < 12; i++) {
-                    scene.time.delayedCall(i * 80, () => {
+                    this._delay(i * 80, () => {
                         if (!scene.scene?.isActive()) return;
                         try {
                             const px = bossX + Phaser.Math.Between(-50, 50);
-                            const p = scene.add.circle(px, bossY + 20, Phaser.Math.Between(3, 7), COLORS.SHADOW_PRIMARY, 0.8)
-                                .setDepth(52);
+                            const p = this._trackElement(
+                                scene.add.circle(px, bossY + 20, Phaser.Math.Between(3, 7), COLORS.SHADOW_PRIMARY, 0.8)
+                                    .setDepth(52)
+                            );
                             scene.tweens.add({
                                 targets: p,
                                 y: p.y - Phaser.Math.Between(80, 160),
@@ -152,7 +172,7 @@ export class ShadowArmyManager {
                 }
 
                 // Phase 3: Hand emerges
-                scene.time.delayedCall(800, () => {
+                this._delay(800, () => {
                     try {
                         if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
@@ -167,7 +187,7 @@ export class ShadowArmyManager {
                         });
 
                         // Command text
-                        scene.time.delayedCall(300, () => {
+                        this._delay(300, () => {
                             try {
                                 if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
@@ -188,7 +208,7 @@ export class ShadowArmyManager {
                                 });
 
                                 // Phase 4: ARISE!
-                                scene.time.delayedCall(600, () => {
+                                this._delay(600, () => {
                                     try {
                                         if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
@@ -205,12 +225,12 @@ export class ShadowArmyManager {
 
                                         // Multi-flash sequence (3 bursts)
                                         for (let f = 0; f < 3; f++) {
-                                            scene.time.delayedCall(f * 150, () => {
+                                            this._delay(f * 150, () => {
                                                 if (!scene.scene?.isActive()) return;
                                                 try {
-                                                    const fl = scene.add.rectangle(0, 0, camW, camH,
+                                                    const fl = this._trackElement(scene.add.rectangle(0, 0, camW, camH,
                                                         f === 1 ? 0x7b2fff : COLORS.SHADOW_PRIMARY, 0
-                                                    ).setDepth(53).setScrollFactor(0).setOrigin(0, 0);
+                                                    ).setDepth(53).setScrollFactor(0).setOrigin(0, 0));
                                                     scene.tweens.add({
                                                         targets: fl,
                                                         alpha: f === 1 ? 0.5 : 0.3,
@@ -241,12 +261,12 @@ export class ShadowArmyManager {
                                         for (let c = 0; c < 8; c++) {
                                             const angle = (Math.PI * 2 / 8) * c;
                                             const len = 80 + Math.random() * 60;
-                                            const crack = scene.add.line(0, 0,
+                                            const crack = this._trackElement(scene.add.line(0, 0,
                                                 bossX, bossY,
                                                 bossX + Math.cos(angle) * len,
                                                 bossY + Math.sin(angle) * len,
                                                 0x9944ee, 0
-                                            ).setDepth(51).setLineWidth(2);
+                                            ).setDepth(51).setLineWidth(2));
                                             scene.tweens.add({
                                                 targets: crack, alpha: 0.7,
                                                 duration: 200, delay: c * 30,
@@ -257,7 +277,7 @@ export class ShadowArmyManager {
 
                                         // Shadow particle explosion (massive burst)
                                         for (let i = 0; i < 25; i++) {
-                                            scene.time.delayedCall(i * 30, () => {
+                                            this._delay(i * 30, () => {
                                                 if (!scene.scene?.isActive()) return;
                                                 try {
                                                     const angle = Math.random() * Math.PI * 2;
@@ -265,10 +285,10 @@ export class ShadowArmyManager {
                                                     const px = bossX + Math.cos(angle) * dist;
                                                     const py = bossY + Math.sin(angle) * dist;
                                                     const size = 4 + Math.random() * 8;
-                                                    const p = scene.add.circle(px, py, size,
+                                                    const p = this._trackElement(scene.add.circle(px, py, size,
                                                         Math.random() > 0.5 ? 0x7b2fff : COLORS.SHADOW_PRIMARY,
                                                         0.8
-                                                    ).setDepth(52);
+                                                    ).setDepth(52));
                                                     scene.tweens.add({
                                                         targets: p,
                                                         y: py - 60 - Math.random() * 100,
@@ -283,12 +303,12 @@ export class ShadowArmyManager {
 
                                         // Shadow ring waves (expanding outward)
                                         for (let r = 0; r < 3; r++) {
-                                            scene.time.delayedCall(r * 200, () => {
+                                            this._delay(r * 200, () => {
                                                 if (!scene.scene?.isActive()) return;
                                                 try {
-                                                    const ring = scene.add.circle(bossX, bossY, 10,
+                                                    const ring = this._trackElement(scene.add.circle(bossX, bossY, 10,
                                                         0x7b2fff, 0
-                                                    ).setDepth(51).setStrokeStyle(3, 0x9944ee, 0.8);
+                                                    ).setDepth(51).setStrokeStyle(3, 0x9944ee, 0.8));
                                                     scene.tweens.add({
                                                         targets: ring,
                                                         scale: 8 + r * 3, alpha: 0,
@@ -337,7 +357,7 @@ export class ShadowArmyManager {
                                         });
 
                                         // Phase 5: Shadow soldier rises
-                                        scene.time.delayedCall(800, () => {
+                                        this._delay(800, () => {
                                             try {
                                                 if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
@@ -360,7 +380,7 @@ export class ShadowArmyManager {
                                                 });
 
                                                 // Success message
-                                                scene.time.delayedCall(300, () => {
+                                                this._delay(300, () => {
                                                     try {
                                                         if (!scene.scene?.isActive()) return;
                                                         if (scene.systemMessage) {
@@ -374,7 +394,7 @@ export class ShadowArmyManager {
                                                 });
 
                                                 // Phase 6: Cleanup (delayed)
-                                                scene.time.delayedCall(1800, () => {
+                                                this._delay(1800, () => {
                                                     if (!scene.scene?.isActive()) return;
                                                     this._cleanupArise();
                                                 });
