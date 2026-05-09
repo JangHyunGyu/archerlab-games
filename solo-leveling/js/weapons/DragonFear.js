@@ -83,7 +83,7 @@ export class DragonFear extends WeaponBase {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
             if (dist < range) {
-                if (damage > 0) enemy.takeDamage(damage, this.player.x, this.player.y);
+                if (damage > 0) this.applyDamage(enemy, damage, this.player.x, this.player.y);
                 if (enemy.applySlow) enemy.applySlow(slowAmount, slowDuration);
             }
         }

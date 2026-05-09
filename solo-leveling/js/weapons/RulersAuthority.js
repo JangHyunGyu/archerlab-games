@@ -122,7 +122,7 @@ export class RulersAuthority extends WeaponBase {
                 if (!enemy.active) continue;
                 const dist = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y);
                 if (dist <= range) {
-                    enemy.takeDamage(damage, targetX, targetY);
+                    this.applyDamage(enemy, damage, targetX, targetY);
                     if (this.config.slowMultiplier !== undefined && enemy.applySlow) {
                         enemy.applySlow(this.config.slowMultiplier, this.config.slowDuration || 1800);
                     }

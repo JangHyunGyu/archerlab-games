@@ -224,7 +224,7 @@ export class ShadowSlash extends WeaponBase {
             const enemyAngle = Phaser.Math.Angle.Between(px, py, enemy.x, enemy.y);
             const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(enemyAngle - angle));
             if (angleDiff < hitAngle) {
-                enemy.takeDamage(damage, px, py);
+                this.applyDamage(enemy, damage, px, py);
                 if (this.config.slowMultiplier !== undefined && enemy.applySlow) {
                     enemy.applySlow(this.config.slowMultiplier, this.config.slowDuration || 1200);
                 }
@@ -251,7 +251,7 @@ export class ShadowSlash extends WeaponBase {
                     if (!enemy.active) continue;
                     const dist = Phaser.Math.Distance.Between(slashX, slashY, enemy.x, enemy.y);
                     if (dist > this.config.aftershockRadius) continue;
-                    enemy.takeDamage(Math.floor(this.getDamage() * (this.config.aftershockDamageMult ?? 0.45)), slashX, slashY);
+                    this.applyDamage(enemy, Math.floor(this.getDamage() * (this.config.aftershockDamageMult ?? 0.45)), slashX, slashY);
                 }
             });
         }
@@ -344,7 +344,7 @@ export class ShadowSlash extends WeaponBase {
             if (!enemy.active) continue;
             const dist = this._distanceToLineSegment(enemy.x, enemy.y, startX, startY, endX, endY);
             if (dist > lineWidth) continue;
-            enemy.takeDamage(damage, px, py);
+            this.applyDamage(enemy, damage, px, py);
             hits++;
             if (hits >= maxHits) break;
         }
@@ -393,7 +393,7 @@ export class ShadowSlash extends WeaponBase {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
             if (dist > range) continue;
-            enemy.takeDamage(damage, px, py);
+            this.applyDamage(enemy, damage, px, py);
             if (this.config.slowMultiplier !== undefined && enemy.applySlow) {
                 enemy.applySlow(this.config.slowMultiplier, this.config.slowDuration || 1500);
             }

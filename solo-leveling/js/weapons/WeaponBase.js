@@ -53,6 +53,11 @@ export class WeaponBase {
         return Math.floor(dmg);
     }
 
+    applyDamage(target, amount, x, y) {
+        if (!target?.takeDamage) return false;
+        return target.takeDamage(amount, x, y, this.config.hitEffect || null);
+    }
+
     getEffectTexture() {
         const key = this.config.effectKey ? `char_skill_${this.config.effectKey}` : null;
         return key && this.scene?.textures?.exists(key) ? key : null;

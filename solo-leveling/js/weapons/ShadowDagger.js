@@ -127,7 +127,7 @@ export class ShadowDagger extends WeaponBase {
                 if (enemyKey === sourceKey) continue;
                 const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
                 if (dist > explosionRadius) continue;
-                enemy.takeDamage(Math.floor(dmg * explosionDamageMult), x, y);
+                this.applyDamage(enemy, Math.floor(dmg * explosionDamageMult), x, y);
                 applySecondaryEffect(enemy, Math.floor(slowDuration * 0.7));
             }
         };
@@ -163,9 +163,9 @@ export class ShadowDagger extends WeaponBase {
             piercedTargets.add(targetKey);
 
             if (currentTarget.isBoss) {
-                currentTarget.takeDamage(dmg);
+                this.applyDamage(currentTarget, dmg, dagger.x, dagger.y);
             } else {
-                currentTarget.takeDamage(dmg, dagger.x, dagger.y);
+                this.applyDamage(currentTarget, dmg, dagger.x, dagger.y);
             }
             applySecondaryEffect(currentTarget);
             explode(dagger.x, dagger.y, targetKey);

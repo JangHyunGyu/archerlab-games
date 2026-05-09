@@ -208,6 +208,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.isBoss = false;
         this.hpBar = null;
         this.spawnInstanceId = 0;
+        this._lastHitEffect = null;
 
         // Shadow aura below sprite — purple halo that ties retro tiles to shadow theme
         // Reuses particle_glow texture for cheap additive blending
@@ -272,6 +273,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.knockbackTimer = 0;
         this.slowMultiplier = 1;
         this.slowDuration = 0;
+        this._lastHitEffect = null;
         this.rangedCooldown = 0;
         this.meleeCooldown = 0;
         this._meleeRange = s * 2 + 30; // 몹 크기 기반 근접 공격 사거리
@@ -444,10 +446,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    takeDamage(amount, knockbackX, knockbackY) {
+    takeDamage(amount, knockbackX, knockbackY, hitEffect = null) {
         this.hp -= amount;
+        this._lastHitEffect = hitEffect || null;
 
         const isCrit = amount > this.maxHp * 0.5;
+        const isBurn = hitEffect === 'burn';
         if (isCrit && this.scene.soundManager) this.scene.soundManager.play('critHit');
         const restoreTint = this.isElite ? 0xff6644 : 0xffffff;
 
@@ -455,7 +459,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // (staged tint = "light flashes off metal then blood" feel)
         this.setTint(0xffffff);
         this.scene.time.delayedCall(35, () => {
-            if (this.active) this.setTint(0xff2233);
+            if (this.active) this.setTint(isBurn ? 0xff7a22 : 0xff2233);
         });
         this.scene.time.delayedCall(110, () => {
             if (this.active) {
@@ -497,8 +501,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             } catch (_) { /* ring VFX optional */ }
         }
 
-        // Blood spurt on every hit (bigger on crit)
-        this._spawnHitBlood(isCrit);
+        this._spawnHitEffect(isCrit, hitEffect);
 
         // Knockback
         if (knockbackX !== undefined) {
@@ -566,6 +569,72 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this._eliteDeathPending = false;
     }
 
+    _spawnHitEffect(isCrit, hitEffect) {
+        if (hitEffect === 'burn') {
+            this._spawnHitBurn(isCrit);
+            return;
+        }
+        this._spawnHitBlood(isCrit);
+    }
+
+    _spawnHitBurn(isCrit) {
+        if (!this.scene) return;
+        const sizeFactor = Phaser.Math.Clamp((this.displayWidth || 42) / 64, 0.75, 1.65);
+        const usedAsset = Enemy._playFrameVfx(
+            this.scene,
+            'effect_flame_burn',
+            this.x,
+            this.y - this.displayHeight * 0.1,
+            {
+                scale: (isCrit ? 0.56 : 0.46) * sizeFactor,
+                rotation: Phaser.Math.FloatBetween(-0.22, 0.22),
+                depth: 18,
+                frameMs: isCrit ? 48 : 42,
+                alpha: 0.95,
+                blendMode: Phaser.BlendModes.ADD,
+            }
+        );
+
+        const emberCount = usedAsset ? (isCrit ? 16 : 10) : (isCrit ? 12 : 7);
+        const maxSpeed = usedAsset ? (isCrit ? 185 : 120) : (isCrit ? 145 : 90);
+        for (let i = 0; i < emberCount; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const s = 35 + Math.random() * maxSpeed;
+            const r = 1.2 + Math.random() * 2.4;
+            const color = [0xfff0a0, 0xffb347, 0xff6a18, 0x4a2a12][Math.floor(Math.random() * 4)];
+            const ember = this.scene.add.circle(this.x, this.y - 4, r, color, 0.92).setDepth(11);
+            ember.setBlendMode(Phaser.BlendModes.ADD);
+            this.scene.tweens.add({
+                targets: ember,
+                x: this.x + Math.cos(a) * s,
+                y: this.y + Math.sin(a) * s - 8,
+                alpha: 0,
+                scale: 0.25,
+                duration: 300 + Math.random() * 260,
+                ease: 'Quad.easeOut',
+                onComplete: () => ember.destroy(),
+            });
+        }
+
+        const scorch = this.scene.add.ellipse(
+            this.x,
+            this.y + this.displayHeight * 0.18,
+            20 * sizeFactor,
+            8 * sizeFactor,
+            0x1b1008,
+            0.55
+        ).setDepth(4);
+        this.scene.tweens.add({
+            targets: scorch,
+            scaleX: 1.7,
+            scaleY: 1.25,
+            alpha: 0,
+            duration: 560,
+            ease: 'Quad.easeOut',
+            onComplete: () => scorch.destroy(),
+        });
+    }
+
     _spawnHitBlood(isCrit) {
         if (!this.scene) return;
         const sizeFactor = Phaser.Math.Clamp((this.displayWidth || 42) / 64, 0.75, 1.65);
@@ -606,6 +675,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     _deathEffect() {
         try {
+            if (this._lastHitEffect === 'burn') {
+                this._burnDeathEffect();
+                return;
+            }
+
             const sizeFactor = Math.max(1, (this.displayWidth || 30) / 30);
             const isElite = this.isElite || this._eliteDeathPending;
             const usedDeathAsset = Enemy._playFrameVfx(
@@ -693,6 +767,65 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 });
             }
         }
+    }
+
+    _burnDeathEffect() {
+        const sizeFactor = Math.max(1, (this.displayWidth || 30) / 30);
+        const isElite = this.isElite || this._eliteDeathPending;
+        const scale = Phaser.Math.Clamp(0.5 * sizeFactor, 0.55, isElite ? 1.35 : 1.05);
+
+        Enemy._playFrameVfx(
+            this.scene,
+            'effect_flame_burn',
+            this.x,
+            this.y - this.displayHeight * 0.05,
+            {
+                scale,
+                rotation: Phaser.Math.FloatBetween(-0.18, 0.18),
+                depth: 18,
+                frameMs: 50,
+                alpha: 1,
+                blendMode: Phaser.BlendModes.ADD,
+            }
+        );
+
+        const emberCount = isElite ? 30 : 18;
+        for (let i = 0; i < emberCount; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const s = 70 + Math.random() * (isElite ? 210 : 145);
+            const r = 1.5 + Math.random() * 3.2;
+            const color = [0xfff0a0, 0xffbc42, 0xff741f, 0x2f2114][Math.floor(Math.random() * 4)];
+            const ember = this.scene.add.circle(this.x, this.y, r, color, 0.94).setDepth(12);
+            ember.setBlendMode(Phaser.BlendModes.ADD);
+            this.scene.tweens.add({
+                targets: ember,
+                x: this.x + Math.cos(a) * s,
+                y: this.y + Math.sin(a) * s + Phaser.Math.Between(-26, 10),
+                alpha: 0,
+                scale: 0.25,
+                duration: 520 + Math.random() * 420,
+                ease: 'Quad.easeOut',
+                onComplete: () => ember.destroy(),
+            });
+        }
+
+        const scorch = this.scene.add.ellipse(
+            this.x,
+            this.y + 7,
+            30 * sizeFactor * (isElite ? 1.35 : 1),
+            12 * sizeFactor * (isElite ? 1.35 : 1),
+            0x1a0e07,
+            0.72
+        ).setDepth(3);
+        this.scene.tweens.add({
+            targets: scorch,
+            scaleX: 2.2,
+            scaleY: 1.7,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Quad.easeOut',
+            onComplete: () => scorch.destroy(),
+        });
     }
 
     destroy(fromScene) {
