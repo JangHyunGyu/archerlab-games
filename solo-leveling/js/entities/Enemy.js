@@ -5,6 +5,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     static _deathEmitterPool = [];
     static _deathSparkPool = [];
     static MAX_POOLED_EMITTERS = 8;
+    static _vfxBudgetFrame = -1;
+    static _vfxBudgetUsed = 0;
+    static MAX_VFX_BUDGET_PER_FRAME = 18;
+
+    static _consumeVfxBudget(scene, cost = 1) {
+        const frame = scene?.game?.loop?.frame ?? 0;
+        if (Enemy._vfxBudgetFrame !== frame) {
+            Enemy._vfxBudgetFrame = frame;
+            Enemy._vfxBudgetUsed = 0;
+        }
+        if (Enemy._vfxBudgetUsed + cost > Enemy.MAX_VFX_BUDGET_PER_FRAME) return false;
+        Enemy._vfxBudgetUsed += cost;
+        return true;
+    }
 
     static _getDeathEmitter(scene, x, y) {
         // Try to reuse an existing emitter
@@ -122,6 +136,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         Enemy._deathSparkPool = [];
         Enemy._activeTexts = [];
         Enemy._dmgTextPool = [];
+        Enemy._vfxBudgetFrame = -1;
+        Enemy._vfxBudgetUsed = 0;
     }
 
     static _playFrameVfx(scene, prefix, x, y, opts = {}) {
@@ -209,6 +225,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.hpBar = null;
         this.spawnInstanceId = 0;
         this._lastHitEffect = null;
+        this._hitFlashTimerA = null;
+        this._hitFlashTimerB = null;
 
         // Shadow aura below sprite — purple halo that ties retro tiles to shadow theme
         // Reuses particle_glow texture for cheap additive blending
@@ -235,6 +253,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this._eliteGlow = null;
         this._originalUpdate = null;
         this._originalDie = null;
+        if (this._hitFlashTimerA) {
+            this._hitFlashTimerA.remove(false);
+            this._hitFlashTimerA = null;
+        }
+        if (this._hitFlashTimerB) {
+            this._hitFlashTimerB.remove(false);
+            this._hitFlashTimerB = null;
+        }
 
         this.enemyType = typeKey;
         Enemy._nextSpawnInstanceId = (Enemy._nextSpawnInstanceId || 0) + 1;
@@ -460,11 +486,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // Impact feel: white pre-flash → red flash → restore
         // (staged tint = "light flashes off metal then blood" feel)
+        if (this._hitFlashTimerA) {
+            this._hitFlashTimerA.remove(false);
+            this._hitFlashTimerA = null;
+        }
+        if (this._hitFlashTimerB) {
+            this._hitFlashTimerB.remove(false);
+            this._hitFlashTimerB = null;
+        }
         this.setTint(0xffffff);
-        this.scene.time.delayedCall(35, () => {
+        this._hitFlashTimerA = this.scene.time.delayedCall(35, () => {
+            this._hitFlashTimerA = null;
             if (this.active) this.setTint(isBurn ? 0xff7a22 : 0xff2233);
         });
-        this.scene.time.delayedCall(110, () => {
+        this._hitFlashTimerB = this.scene.time.delayedCall(110, () => {
+            this._hitFlashTimerB = null;
             if (this.active) {
                 // Slow tint takes priority over idle tint
                 this.setTint(this.slowDuration > 0 ? 0x8888ff : restoreTint);
@@ -485,7 +521,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         });
 
         // Crit: stronger kick — screen shake + white ring burst at hit location
-        if (isCrit && this.scene.cameras?.main) {
+        if (isCrit && this.scene.cameras?.main && Enemy._consumeVfxBudget(this.scene, 2)) {
             this.scene.cameras.main.shake(90, 0.004);
             try {
                 const ring = this.scene.add.image(this.x, this.y, 'particle_ring')
@@ -573,6 +609,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     _spawnHitEffect(isCrit, hitEffect) {
+        if (!Enemy._consumeVfxBudget(this.scene, isCrit ? 2 : 1)) return;
         if (hitEffect === 'burn') {
             this._spawnHitBurn(isCrit);
             return;
@@ -776,13 +813,22 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     _deathEffect() {
         try {
+            const isElite = this.isElite || this._eliteDeathPending;
             if (this._lastHitEffect === 'burn') {
+                if (!Enemy._consumeVfxBudget(this.scene, isElite ? 5 : 3)) {
+                    this._minimalDeathEffect(0xff6a18);
+                    return;
+                }
                 this._burnDeathEffect();
                 return;
             }
 
+            if (!Enemy._consumeVfxBudget(this.scene, isElite ? 5 : 3)) {
+                this._minimalDeathEffect(0xcc1020);
+                return;
+            }
+
             const sizeFactor = Math.max(1, (this.displayWidth || 30) / 30);
-            const isElite = this.isElite || this._eliteDeathPending;
             const usedDeathAsset = Enemy._playFrameVfx(
                 this.scene,
                 'effect_monster_death',
@@ -870,6 +916,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    _minimalDeathEffect(color = 0xcc1020) {
+        if (!this.scene) return;
+        const sizeFactor = Math.max(1, (this.displayWidth || 30) / 42);
+        const burst = this.scene.add.circle(this.x, this.y, 7 * sizeFactor, color, 0.72).setDepth(12);
+        burst.setBlendMode(Phaser.BlendModes.ADD);
+        this.scene.tweens.add({
+            targets: burst,
+            alpha: 0,
+            scale: 2.4,
+            duration: 320,
+            ease: 'Quad.easeOut',
+            onComplete: () => burst.destroy(),
+        });
+    }
+
     _burnDeathEffect() {
         const sizeFactor = Math.max(1, (this.displayWidth || 30) / 30);
         const isElite = this.isElite || this._eliteDeathPending;
@@ -930,6 +991,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     destroy(fromScene) {
+        if (this._hitFlashTimerA) {
+            this._hitFlashTimerA.remove(false);
+            this._hitFlashTimerA = null;
+        }
+        if (this._hitFlashTimerB) {
+            this._hitFlashTimerB.remove(false);
+            this._hitFlashTimerB = null;
+        }
         if (this._squashRestoreTimer) {
             this._squashRestoreTimer.remove(false);
             this._squashRestoreTimer = null;

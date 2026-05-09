@@ -37,6 +37,13 @@ export class SoundManager {
         this._toneReady = false;
         this._userActivated = false;
         this._lastPlayTime = {};
+        this._activeSoundNames = {};
+        this._sameSoundLimit = {
+            xp: 1, hit: 1, burnHit: 1, critHit: 1,
+            shadowSoldierSlash: 1, shadowSoldierSpit: 1,
+            dagger: 2, daggerThrow: 2,
+            bossKill: 1, arise: 1, levelup: 1, rankup: 1,
+        };
         this._throttleMs = {
             hit: 180, burnHit: 170, kill: 280, xp: 150, dagger: 230, daggerThrow: 220,
             slash: 360, authority: 520, fear: 700,
@@ -51,7 +58,7 @@ export class SoundManager {
         this._activeSounds = 0;
         this._maxActiveSounds = 4;
         this._activeSoundTimers = new Set();
-        this._sfxMaster = 0.4;
+        this._sfxMaster = 0.36;
         this._toneLeadTime = 0.035;
         this._releaseMs = {
             dagger: 320, daggerThrow: 380, hit: 200, burnHit: 320, kill: 360, xp: 160,
@@ -100,7 +107,7 @@ export class SoundManager {
         this._pools[name] = [];
         for (let i = 0; i < poolSize; i++) {
             const audio = new Audio(src);
-            audio.preload = 'auto';
+            audio.preload = 'none';
             audio._inUse = false;
             audio._onEnded = () => { audio._inUse = false; };
             audio._onPause = () => {
@@ -387,6 +394,9 @@ export class SoundManager {
         if (this._activeSounds >= this._maxActiveSounds) {
             if (priority < 3 || this._activeSounds >= this._maxActiveSounds + 1) return;
         }
+        const activeSame = this._activeSoundNames[soundName] || 0;
+        const sameLimit = this._sameSoundLimit[soundName] ?? (priority >= 3 ? 2 : 1);
+        if (activeSame >= sameLimit) return;
         const now = performance.now();
         const cooldown = this._throttleMs[soundName] || 0;
         if (cooldown > 0) {
@@ -395,14 +405,16 @@ export class SoundManager {
         }
         this._lastPlayTime[soundName] = now;
         const vol = this._sfxVolume[soundName] || 0.7;
-        const congestionDuck = Math.max(0.42, 1 - this._activeSounds * 0.2);
+        const congestionDuck = Math.max(0.36, 1 - this._activeSounds * 0.18 - activeSame * 0.12);
         if (!this._playSfx(soundName, vol * congestionDuck)) return;
 
         this._activeSounds++;
+        this._activeSoundNames[soundName] = activeSame + 1;
         let releaseTimer = null;
         releaseTimer = setTimeout(() => {
             this._activeSoundTimers.delete(releaseTimer);
             this._activeSounds = Math.max(0, this._activeSounds - 1);
+            this._activeSoundNames[soundName] = Math.max(0, (this._activeSoundNames[soundName] || 1) - 1);
         }, this._releaseMs[soundName] || 220);
         this._activeSoundTimers.add(releaseTimer);
     }
@@ -768,13 +780,8 @@ export class SoundManager {
             this._bgmIntervals.forEach(id => clearInterval(id));
             this._bgmIntervals = [];
         }
-        if (this._bgmNodes) {
-            this._bgmNodes.forEach(node => {
-                try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
-                try { node.dispose(); } catch (e) { /* silent */ }
-            });
-            this._bgmNodes = [];
-        }
+        const nodes = this._bgmNodes || [];
+        this._bgmNodes = [];
         if (this._bgmGain) {
             const bgmGain = this._bgmGain;
             this._bgmGain = null;
@@ -783,6 +790,10 @@ export class SoundManager {
                 const disposeBgmGain = () => {
                     this._bgmDisposeTimeout = null;
                     this._bgmPendingDispose = null;
+                    nodes.forEach(node => {
+                        try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
+                        try { node.dispose(); } catch (e) { /* silent */ }
+                    });
                     try { bgmGain.dispose(); } catch (e) { /* silent */ }
                 };
                 if (immediate) disposeBgmGain();
@@ -791,6 +802,11 @@ export class SoundManager {
                     this._bgmDisposeTimeout = setTimeout(disposeBgmGain, 600);
                 }
             } catch (e) { /* silent */ }
+        } else {
+            nodes.forEach(node => {
+                try { if (node.stop) node.stop(); } catch (e) { /* silent */ }
+                try { node.dispose(); } catch (e) { /* silent */ }
+            });
         }
     }
 
@@ -801,6 +817,7 @@ export class SoundManager {
             this._activeSoundTimers.clear();
         }
         this._activeSounds = 0;
+        this._activeSoundNames = {};
         this.stopIntroMusic(true);
         this.stopGameBGM(true);
 
