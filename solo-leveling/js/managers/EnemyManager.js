@@ -26,8 +26,8 @@ export class EnemyManager {
         this.dungeonBreakSchedule = [
             { time: 90,  duration: 15, multiplier: 2.5, name: 'D급 게이트' },
             { time: 240, duration: 20, multiplier: 3.0, name: 'C급 게이트' },
-            { time: 420, duration: 25, multiplier: 4.0, name: 'B급 게이트' },
-            { time: 600, duration: 30, multiplier: 5.0, name: 'A급 게이트' },
+            { time: 480, duration: 25, multiplier: 4.0, name: 'B급 게이트' },
+            { time: 720, duration: 30, multiplier: 5.0, name: 'A급 게이트' },
         ];
         this.activeDungeonBreak = null;
         this.triggeredBreaks = [];
@@ -100,22 +100,11 @@ export class EnemyManager {
 
         // Update difficulty: linear base + late-game acceleration
         // Fewer enemies on screen → each one is individually tougher
-        this.difficultyMultiplier = 1 + minutes * 0.30 + Math.pow(minutes / 25, 2) * 3;
-
-        // Check dungeon break
         this._updateDungeonBreak(seconds);
-
-        // Active break multiplier
-        let spawnMult = 1;
-        if (this.activeDungeonBreak) {
-            spawnMult = this.activeDungeonBreak.multiplier;
-        }
+        this.difficultyMultiplier = this._getDifficultyMultiplier(minutes);
 
         // Spawn timer
-        const interval = Math.max(
-            WAVE_CONFIG.minSpawnInterval,
-            WAVE_CONFIG.baseSpawnInterval - minutes * WAVE_CONFIG.spawnReductionPerMinute
-        ) / spawnMult;
+        const interval = this._getSpawnInterval(minutes);
 
         this.spawnTimer += delta;
         if (this.spawnTimer >= interval) {
@@ -126,7 +115,7 @@ export class EnemyManager {
         // Elite enemy spawn (every 45 seconds after 3 minutes)
         if (minutes >= 3) {
             this.eliteTimer += delta;
-            const eliteInterval = Math.max(20000, 45000 - minutes * 2000);
+            const eliteInterval = this._getEliteInterval(minutes);
             if (this.eliteTimer >= eliteInterval) {
                 this.eliteTimer = 0;
                 this._spawnElite(minutes);
@@ -154,6 +143,51 @@ export class EnemyManager {
 
         // Update quests
         this._updateQuests(seconds);
+    }
+
+    _getPressureStepCount() {
+        return Array.isArray(this.triggeredBreaks) ? this.triggeredBreaks.length : 0;
+    }
+
+    _getProgressPressure(minutes) {
+        return 1 + this._getPressureStepCount() * 0.06 + minutes * 0.008;
+    }
+
+    _getDifficultyMultiplier(minutes) {
+        const base = 1 + minutes * 0.28 + Math.pow(minutes / 20, 2) * 2.2;
+        return base * (1 + this._getPressureStepCount() * 0.035);
+    }
+
+    _getSpawnInterval(minutes) {
+        const base = WAVE_CONFIG.baseSpawnInterval;
+        const min = WAVE_CONFIG.minSpawnInterval;
+        const smoothRamp = min + (base - min) / (1 + minutes * 0.21 + Math.pow(minutes / 18, 2) * 1.1);
+        return Math.max(220, smoothRamp / this._getProgressPressure(minutes));
+    }
+
+    _getWaveCount(minutes) {
+        const lateRamp = Math.max(0, minutes - 12) * 0.35;
+        return Math.max(1, Math.floor(
+            WAVE_CONFIG.baseEnemiesPerSpawn
+            + minutes * WAVE_CONFIG.extraEnemiesPerMinute
+            + lateRamp
+            + this._getPressureStepCount() * 0.5
+        ));
+    }
+
+    _getMaxEnemies(minutes) {
+        const lateRamp = Math.max(0, minutes - 12) * 3;
+        return Math.floor(
+            WAVE_CONFIG.maxEnemiesOnScreen
+            + minutes * 6
+            + lateRamp
+            + this._getPressureStepCount() * 4
+        );
+    }
+
+    _getEliteInterval(minutes) {
+        const ramp = 1 + Math.max(0, minutes - 3) * 0.09 + this._getPressureStepCount() * 0.035;
+        return Math.max(14000, 45000 / ramp);
     }
 
     // --- Dungeon Break System ---
@@ -361,11 +395,11 @@ export class EnemyManager {
     }
 
     _spawnWave(minutes) {
-        const count = Math.floor(WAVE_CONFIG.baseEnemiesPerSpawn + minutes * WAVE_CONFIG.extraEnemiesPerMinute);
+        const count = this._getWaveCount(minutes);
         const activeCount = this.getActiveEnemies().length;
 
         // Max enemies scales with time: keep early screens lively, then open up.
-        const maxEnemies = Math.floor(WAVE_CONFIG.maxEnemiesOnScreen + minutes * 6);
+        const maxEnemies = this._getMaxEnemies(minutes);
         if (activeCount >= maxEnemies) return;
 
         const toSpawn = Math.min(count, maxEnemies - activeCount);
