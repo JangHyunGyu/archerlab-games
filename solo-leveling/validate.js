@@ -221,6 +221,11 @@ const expectedSounds = [
     'sounds/effects/characters/flame_mage/flame_mage_flame_arc.wav',
     'sounds/effects/characters/flame_mage/flame_mage_flame_meteor.wav',
     'sounds/effects/characters/flame_mage/flame_mage_flame_inferno.wav',
+    'sounds/effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_strike.wav',
+    'sounds/effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_orb.wav',
+    'sounds/effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_arc.wav',
+    'sounds/effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_seal.wav',
+    'sounds/effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_field.wav',
 ];
 
 for (const sf of expectedSounds) {
