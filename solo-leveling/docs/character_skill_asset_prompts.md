@@ -52,7 +52,7 @@
 
 | 무기 키 | 실제 이미지 에셋 | 실제 사운드 에셋 | 프롬프트 핵심 |
 | --- | --- | --- | --- |
-| `lightPierce` | `assets/effects/basic_attacks/light_sword_slash.png`, `assets/effects/character_skills/light_pierce.png` | `sounds/effects/characters/light_swordswoman/light_swordswoman_light_pierce.wav` | 금빛 검 찌르기, 작은 별빛 파편, 선명한 직선 임팩트 |
+| `lightPierce` | `assets/effects/character_skills/light_pierce.png` | `sounds/effects/characters/light_swordswoman/light_swordswoman_light_pierce.wav` | 금빛 검 찌르기, 작은 별빛 파편, 선명한 직선 임팩트 |
 | `lightLance` | `assets/effects/character_skills/light_lance_pierce.png` | `sounds/effects/characters/light_swordswoman/light_swordswoman_light_lance.wav` | 직선으로 뻗는 빛의 창, 날카로운 창끝 |
 | `lightCrescent` | `assets/effects/character_skills/light_crescent.png` | `sounds/effects/characters/light_swordswoman/light_swordswoman_light_crescent.wav` | 넓은 금빛 초승달 검기, 부드러운 잔광 |
 | `lightJudgment` | `assets/effects/character_skills/light_judgment.png` | `sounds/effects/characters/light_swordswoman/light_swordswoman_light_judgment.wav` | 위에서 내려꽂히는 심판의 빛, 바닥의 성스러운 충격 |
