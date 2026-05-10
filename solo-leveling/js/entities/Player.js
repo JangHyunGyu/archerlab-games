@@ -749,7 +749,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     heal(amount) {
+        const before = this.stats.hp;
         this.stats.hp = Math.min(this.stats.hp + amount, this.stats.maxHp);
+        return this.stats.hp - before;
     }
 
     _showDamageNumber(value, color) {

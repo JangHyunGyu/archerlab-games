@@ -60,6 +60,20 @@ export class WeaponBase {
         return target.takeDamage(amount, x, y, this.config.hitEffect || null);
     }
 
+    healPlayerFromConfig() {
+        if (!this.config.healPercent || !this.player?.heal) return 0;
+
+        const now = this.scene?.time?.now ?? 0;
+        const healCooldownMs = this.config.healCooldownMs || 0;
+        if (healCooldownMs > 0 && this._lastConfigHealAt !== undefined && now - this._lastConfigHealAt < healCooldownMs) {
+            return 0;
+        }
+
+        this._lastConfigHealAt = now;
+        const amount = Math.max(1, Math.floor(this.player.stats.maxHp * this.config.healPercent));
+        return this.player.heal(amount);
+    }
+
     playHitSound() {
         if (this.config.hitEffect === 'burn') return;
         if (this.scene?.soundManager) this.scene.soundManager.play('hit');
