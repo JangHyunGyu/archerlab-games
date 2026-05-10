@@ -205,6 +205,22 @@ const expectedSounds = [
     'sounds/effects/characters/shadow_monarch/shadow_monarch_shadow_slash.wav',
     'sounds/effects/characters/shadow_monarch/shadow_monarch_rulers_authority.wav',
     'sounds/effects/characters/shadow_monarch/shadow_monarch_dragon_fear.wav',
+    'sounds/effects/characters/light_swordswoman/light_swordswoman_light_pierce.wav',
+    'sounds/effects/characters/light_swordswoman/light_swordswoman_light_lance.wav',
+    'sounds/effects/characters/light_swordswoman/light_swordswoman_light_crescent.wav',
+    'sounds/effects/characters/light_swordswoman/light_swordswoman_light_judgment.wav',
+    'sounds/effects/characters/light_swordswoman/light_swordswoman_light_sanctum.wav',
+    'sounds/effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_palm.wav',
+    'sounds/effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_fang.wav',
+    'sounds/effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_rend.wav',
+    'sounds/effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_quake.wav',
+    'sounds/effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_guard.wav',
+    'sounds/effects/characters/flame_mage/combat_burn_hit.wav',
+    'sounds/effects/characters/flame_mage/flame_mage_flame_spark.wav',
+    'sounds/effects/characters/flame_mage/flame_mage_flame_bolt.wav',
+    'sounds/effects/characters/flame_mage/flame_mage_flame_arc.wav',
+    'sounds/effects/characters/flame_mage/flame_mage_flame_meteor.wav',
+    'sounds/effects/characters/flame_mage/flame_mage_flame_inferno.wav',
 ];
 
 for (const sf of expectedSounds) {
