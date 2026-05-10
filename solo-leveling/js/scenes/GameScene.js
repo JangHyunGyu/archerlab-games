@@ -599,7 +599,8 @@ export class GameScene extends Phaser.Scene {
         for (let i = this.activeBosses.length - 1; i >= 0; i--) {
             const boss = this.activeBosses[i];
             if (boss.active) {
-                boss.update(time, delta, this.player.x, this.player.y);
+                const target = this.player.getHurtboxCenter?.() || this.player;
+                boss.update(time, delta, target.x, target.y);
             } else {
                 // Clean up colliders when boss is removed
                 if (boss._playerCollider) {

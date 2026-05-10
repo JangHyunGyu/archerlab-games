@@ -723,7 +723,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         const scene = this.scene;
         if (!scene?.physics?.world) return;
 
-        const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
+        const playerTarget = scene.player?.getHurtboxCenter?.();
+        const aimX = playerTarget?.x ?? playerX;
+        const aimY = playerTarget?.y ?? playerY;
+        const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY);
         const spreadCount = this.phase === 2 ? 5 : 3;
         const spreadAngle = 0.3;
         const attackDamage = Math.floor(this.attack * 0.7);
@@ -742,7 +745,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 .setBlendMode(Phaser.BlendModes.ADD);
             scene.physics.add.existing(proj, false);
             proj.body.setAllowGravity(false);
-            proj.body.setCircle(9);
+            const bodyRadius = 11;
+            proj.body.setCircle(bodyRadius);
+            proj.body.setOffset(
+                Math.max(0, (proj.width - bodyRadius * 2) * 0.5),
+                Math.max(0, (proj.height - bodyRadius * 2) * 0.5)
+            );
             const frameTimer = null;
 
             const speed = 280;
@@ -751,14 +759,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             // Collision with player (store collider to clean up)
             const player = scene.player;
             let collider = null;
+            let hitPoll = null;
             let autoDestroyTimer = null;
             let cleanedUp = false;
+            let hitResolved = false;
             const cleanupProjectile = () => {
                 if (cleanedUp) return;
                 cleanedUp = true;
                 if (collider && scene.physics?.world) {
                     scene.physics.world.removeCollider(collider);
                     collider = null;
+                }
+                if (hitPoll) {
+                    hitPoll.destroy();
+                    hitPoll = null;
                 }
                 if (frameTimer) frameTimer.destroy();
                 if (autoDestroyTimer) {
@@ -769,8 +783,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             };
 
             if (player) {
-                collider = scene.physics.add.overlap(proj, player, () => {
-                    if (!proj.active) return;
+                const hitPlayer = () => {
+                    if (!proj.active || hitResolved) return;
+                    hitResolved = true;
                     if (scene.soundManager) scene.soundManager.play('acidHit');
                     const splash = Boss._addBossVfx(scene, 'beru_acid_hit', proj.x, proj.y, {
                         depth: 9,
@@ -790,6 +805,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                     player.takeDamage(attackDamage);
                     cleanupProjectile();
                     proj.destroy();
+                };
+                collider = scene.physics.add.overlap(proj, player, hitPlayer);
+                hitPoll = scene.time.addEvent({
+                    delay: 16,
+                    loop: true,
+                    callback: () => {
+                        if (!proj.active || !player.active || player.isDead) return;
+                        const target = player.getHurtboxCenter?.() || player;
+                        const playerRadius = Math.max(player.body?.width || 38, player.body?.height || 56) * 0.5;
+                        const dist = Phaser.Math.Distance.Between(proj.x, proj.y, target.x, target.y);
+                        if (dist <= playerRadius + 18) hitPlayer();
+                    },
                 });
             }
 

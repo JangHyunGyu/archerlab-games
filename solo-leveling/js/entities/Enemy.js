@@ -397,7 +397,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     _fireProjectile(targetX, targetY) {
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+        const playerTarget = this.scene.player?.getHurtboxCenter?.();
+        const aimX = playerTarget?.x ?? targetX;
+        const aimY = playerTarget?.y ?? targetY;
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, aimX, aimY);
 
         // Brief cast animation (mage glows purple)
         this.setTint(0xb044ff);
@@ -413,7 +416,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             .setBlendMode(useEffectAsset ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
         this.scene.physics.add.existing(proj, false);
         proj.body.setAllowGravity(false);
-        proj.body.setCircle(useEffectAsset ? 10 : 6);
+        const bodyRadius = useEffectAsset ? 12 : 8;
+        proj.body.setCircle(bodyRadius);
+        proj.body.setOffset(
+            Math.max(0, (proj.width - bodyRadius * 2) * 0.5),
+            Math.max(0, (proj.height - bodyRadius * 2) * 0.5)
+        );
         const frameTimer = useEffectAsset
             ? Enemy._animateFrameSprite(this.scene, proj, 'effect_dark_mage_orb', 58)
             : null;
@@ -438,11 +446,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Collision with player
         const player = this.scene.player;
         let collider = null;
+        let hitPoll = null;
+        let hitResolved = false;
+        const hitPlayer = () => {
+            if (!proj.active || hitResolved) return;
+            hitResolved = true;
+            player.takeDamage(this.attack);
+            proj.destroy();
+        };
         if (player) {
-            collider = this.scene.physics.add.overlap(proj, player, () => {
-                if (!proj.active) return;
-                player.takeDamage(this.attack);
-                proj.destroy();
+            collider = this.scene.physics.add.overlap(proj, player, hitPlayer);
+            hitPoll = this.scene.time.addEvent({
+                delay: 16,
+                loop: true,
+                callback: () => {
+                    if (!proj.active || !player.active || player.isDead) return;
+                    const target = player.getHurtboxCenter?.() || player;
+                    const playerRadius = Math.max(player.body?.width || 38, player.body?.height || 56) * 0.5;
+                    const dist = Phaser.Math.Distance.Between(proj.x, proj.y, target.x, target.y);
+                    if (dist <= playerRadius + (useEffectAsset ? 18 : 12)) hitPlayer();
+                },
             });
         }
 
@@ -455,6 +478,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         proj.once('destroy', () => {
             if (frameTimer) frameTimer.destroy();
             if (trailEvent) trailEvent.destroy();
+            if (hitPoll) hitPoll.destroy();
             if (autoDestroyTimer) autoDestroyTimer.destroy();
             if (collider && this.scene?.physics?.world) {
                 this.scene.physics.world.removeCollider(collider);
