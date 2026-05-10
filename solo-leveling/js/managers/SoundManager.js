@@ -51,7 +51,7 @@ export class SoundManager {
             bossKill: 1, arise: 1, levelup: 1, rankup: 1,
         };
         this._throttleMs = {
-            hit: 180, burnHit: 170, kill: 280, xp: 150, dagger: 230, daggerThrow: 220,
+            hit: 180, burnHit: 170, kill: 280, xp: 190, dagger: 230, daggerThrow: 220,
             slash: 360, authority: 520, fear: 700,
             playerHit: 400, system: 350, warning: 600,
             quest: 600, dungeonBreak: 1000, bossAppear: 900,
@@ -67,7 +67,7 @@ export class SoundManager {
         this._sfxMaster = 0.36;
         this._toneLeadTime = 0.035;
         this._releaseMs = {
-            dagger: 320, daggerThrow: 380, hit: 200, burnHit: 420, kill: 360, xp: 160,
+            dagger: 320, daggerThrow: 380, hit: 200, burnHit: 420, kill: 620, xp: 360,
             playerHit: 390, select: 130, system: 190, warning: 340,
             slash: 620, authority: 860, fear: 660,
             levelup: 560, rankup: 860, arise: 860, bossAppear: 860,
@@ -76,7 +76,7 @@ export class SoundManager {
             bossCharge: 720, bossSlash: 420, groundSlam: 820,
             acidShot: 390, acidHit: 470, bossRage: 940,
             shadowSoldierSlash: 260, shadowSoldierSlam: 460, shadowSoldierSpit: 300,
-            critHit: 260, eliteKill: 700,
+            critHit: 460, eliteKill: 960,
         };
         this._soundPriority = {
             xp: 0, hit: 1, burnHit: 1, dagger: 1, daggerThrow: 1, kill: 1,
@@ -383,15 +383,15 @@ export class SoundManager {
     // SFX 볼륨 매핑 (사운드별 적절한 볼륨)
     _sfxVolume = {
         dagger: 0.44, daggerThrow: 0.46, slash: 0.38, authority: 0.5, fear: 0.46,
-        hit: 0.4, burnHit: 0.46, kill: 0.42, playerHit: 0.52,
-        xp: 0.36, levelup: 0.62, rankup: 0.66,
+        hit: 0.4, burnHit: 0.46, kill: 0.46, playerHit: 0.52,
+        xp: 0.3, levelup: 0.62, rankup: 0.66,
         system: 0.45, arise: 0.66, bossAppear: 0.62,
         warning: 0.56, potion: 0.46, select: 0.38, bossKill: 0.66, gameOver: 0.62,
         quest: 0.52, dungeonBreak: 0.62,
         bossCharge: 0.5, bossSlash: 0.58, groundSlam: 0.64,
         acidShot: 0.42, acidHit: 0.48, bossRage: 0.64,
         shadowSoldierSlash: 0.3, shadowSoldierSlam: 0.38, shadowSoldierSpit: 0.3,
-        mana: 0.44, essence: 0.5, critHit: 0.5, eliteKill: 0.58,
+        mana: 0.44, essence: 0.5, critHit: 0.52, eliteKill: 0.56,
     };
 
     play(soundName) {
