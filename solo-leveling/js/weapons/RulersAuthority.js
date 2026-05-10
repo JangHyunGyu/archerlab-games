@@ -84,7 +84,7 @@ export class RulersAuthority extends WeaponBase {
         // Visual effect - expanding circle
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
-        const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_ruler_authority');
+        const useEffectAsset = !useCharacterEffect && !this.config.imageOnlyVfx && this.scene.textures.exists('effect_ruler_authority');
         const circle = this.scene.add.sprite(targetX, targetY, effectTexture || (useEffectAsset ? 'effect_ruler_authority' : 'proj_ruler'))
             .setDepth(7)
             .setAlpha(0)
@@ -102,16 +102,18 @@ export class RulersAuthority extends WeaponBase {
             onComplete: () => circle.destroy(),
         });
 
-        // Ground crack effect
-        const crack = this.scene.add.circle(targetX, targetY, range * 0.3, this.getEffectColor(COLORS.SHADOW_PRIMARY), 0.3)
-            .setDepth(3);
-        this.scene.tweens.add({
-            targets: crack,
-            alpha: 0,
-            scale: 2,
-            duration: 500,
-            onComplete: () => crack.destroy(),
-        });
+        if (!this.config.imageOnlyVfx) {
+            // Ground crack effect
+            const crack = this.scene.add.circle(targetX, targetY, range * 0.3, this.getEffectColor(COLORS.SHADOW_PRIMARY), 0.3)
+                .setDepth(3);
+            this.scene.tweens.add({
+                targets: crack,
+                alpha: 0,
+                scale: 2,
+                duration: 500,
+                onComplete: () => crack.destroy(),
+            });
+        }
 
         // Deal damage to enemies in range
         this._delay(this.config.impactDelay ?? 200, () => {

@@ -80,8 +80,6 @@ export class ShadowSlash extends WeaponBase {
         const slashX = this.player.x + Math.cos(angle) * slashDist;
         const slashY = this.player.y + Math.sin(angle) * slashDist;
 
-        // Single graphics object for all arc layers (pooled)
-        const gfx = this._getGfx();
         const px = this.player.x;
         const py = this.player.y;
         const arcRadius = range;
@@ -89,97 +87,101 @@ export class ShadowSlash extends WeaponBase {
         const color = this.getEffectColor(0x9944dd);
         const glowColor = this.getEffectGlowColor(0xddaaff);
         const arcHalf = this.config.slashArc ?? 0.8;
-
-        let progress = { t: 0 };
-        let arcTween = null;
-        arcTween = this.scene.tweens.add({
-            targets: progress,
-            t: 1,
-            duration: 280,
-            ease: 'Power2',
-            onUpdate: () => {
-                gfx.clear();
-
-                const curAngle = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, progress.t);
-                const prevAngle = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, Math.max(0, progress.t - 0.35));
-
-                // Outer glow aura (wide, faint)
-                gfx.lineStyle(22, darkColor, 0.12 * (1 - progress.t));
-                gfx.beginPath();
-                gfx.arc(px, py, arcRadius + 8, prevAngle, curAngle, false);
-                gfx.strokePath();
-
-                // Secondary trail (energy afterimage)
-                gfx.lineStyle(14, color, 0.25 * (1 - progress.t));
-                gfx.beginPath();
-                gfx.arc(px, py, arcRadius, prevAngle, curAngle, false);
-                gfx.strokePath();
-
-                // Inner energy trail (brighter)
-                gfx.lineStyle(6, color, 0.4 * (1 - progress.t * 0.5));
-                gfx.beginPath();
-                gfx.arc(px, py, arcRadius - 4, prevAngle, curAngle, false);
-                gfx.strokePath();
-
-                // Main slash arc (bright core)
-                const arcStart = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, Math.max(0, progress.t - 0.15));
-                gfx.lineStyle(4, glowColor, 0.95 * (1 - progress.t * 0.3));
-                gfx.beginPath();
-                gfx.arc(px, py, arcRadius, arcStart, curAngle, false);
-                gfx.strokePath();
-
-                // White-hot core line
-                gfx.lineStyle(2, 0xffffff, 0.8 * (1 - progress.t * 0.5));
-                gfx.beginPath();
-                gfx.arc(px, py, arcRadius, arcStart, curAngle, false);
-                gfx.strokePath();
-
-                // Glowing tip
-                const tipX = px + Math.cos(curAngle) * arcRadius;
-                const tipY = py + Math.sin(curAngle) * arcRadius;
-
-                gfx.fillStyle(color, 0.4 * (1 - progress.t * 0.3));
-                gfx.fillCircle(tipX, tipY, 12);
-                gfx.fillStyle(glowColor, 0.8);
-                gfx.fillCircle(tipX, tipY, 6);
-                gfx.fillStyle(0xffffff, 0.9);
-                gfx.fillCircle(tipX, tipY, 2.5);
-
-                // Shadow energy wisps along trailing edge
-                if (progress.t > 0.1 && progress.t < 0.9) {
-                    gfx.fillStyle(color, 0.5);
-                    for (let w = 0; w < 2; w++) {
-                        const wAngle = Phaser.Math.FloatBetween(prevAngle, curAngle);
-                        const wR = arcRadius + Phaser.Math.Between(-8, 8);
-                        gfx.fillCircle(
-                            px + Math.cos(wAngle) * wR,
-                            py + Math.sin(wAngle) * wR,
-                            Phaser.Math.FloatBetween(1.5, 3)
-                        );
-                    }
-                }
-
-                // Energy radial lines from tip
-                if (progress.t > 0.2 && progress.t < 0.7) {
-                    for (let r = 0; r < 3; r++) {
-                        const lineAngle = curAngle + Phaser.Math.FloatBetween(-0.3, 0.3);
-                        const lineLen = Phaser.Math.FloatBetween(15, 35);
-                        gfx.lineStyle(1.5, glowColor, 0.6 * (1 - progress.t));
-                        gfx.lineBetween(tipX, tipY, tipX + Math.cos(lineAngle) * lineLen, tipY + Math.sin(lineAngle) * lineLen);
-                    }
-                }
-            },
-            onComplete: () => {
-                this._activeTweens.delete(arcTween);
-                this._releaseGfx(gfx);
-            },
-        });
-        this._activeTweens.add(arcTween);
-
-        // Visual-only slash sprite (energy wave projection)
+        const imageOnlyVfx = !!this.config.imageOnlyVfx;
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
-        const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_shadow_slash');
+        const useEffectAsset = !useCharacterEffect && !imageOnlyVfx && this.scene.textures.exists('effect_shadow_slash');
+
+        if (!imageOnlyVfx) {
+            const gfx = this._getGfx();
+            let progress = { t: 0 };
+            let arcTween = null;
+            arcTween = this.scene.tweens.add({
+                targets: progress,
+                t: 1,
+                duration: 280,
+                ease: 'Power2',
+                onUpdate: () => {
+                    gfx.clear();
+
+                    const curAngle = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, progress.t);
+                    const prevAngle = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, Math.max(0, progress.t - 0.35));
+
+                    // Outer glow aura (wide, faint)
+                    gfx.lineStyle(22, darkColor, 0.12 * (1 - progress.t));
+                    gfx.beginPath();
+                    gfx.arc(px, py, arcRadius + 8, prevAngle, curAngle, false);
+                    gfx.strokePath();
+
+                    // Secondary trail (energy afterimage)
+                    gfx.lineStyle(14, color, 0.25 * (1 - progress.t));
+                    gfx.beginPath();
+                    gfx.arc(px, py, arcRadius, prevAngle, curAngle, false);
+                    gfx.strokePath();
+
+                    // Inner energy trail (brighter)
+                    gfx.lineStyle(6, color, 0.4 * (1 - progress.t * 0.5));
+                    gfx.beginPath();
+                    gfx.arc(px, py, arcRadius - 4, prevAngle, curAngle, false);
+                    gfx.strokePath();
+
+                    // Main slash arc (bright core)
+                    const arcStart = Phaser.Math.Linear(angle - arcHalf, angle + arcHalf, Math.max(0, progress.t - 0.15));
+                    gfx.lineStyle(4, glowColor, 0.95 * (1 - progress.t * 0.3));
+                    gfx.beginPath();
+                    gfx.arc(px, py, arcRadius, arcStart, curAngle, false);
+                    gfx.strokePath();
+
+                    // White-hot core line
+                    gfx.lineStyle(2, 0xffffff, 0.8 * (1 - progress.t * 0.5));
+                    gfx.beginPath();
+                    gfx.arc(px, py, arcRadius, arcStart, curAngle, false);
+                    gfx.strokePath();
+
+                    // Glowing tip
+                    const tipX = px + Math.cos(curAngle) * arcRadius;
+                    const tipY = py + Math.sin(curAngle) * arcRadius;
+
+                    gfx.fillStyle(color, 0.4 * (1 - progress.t * 0.3));
+                    gfx.fillCircle(tipX, tipY, 12);
+                    gfx.fillStyle(glowColor, 0.8);
+                    gfx.fillCircle(tipX, tipY, 6);
+                    gfx.fillStyle(0xffffff, 0.9);
+                    gfx.fillCircle(tipX, tipY, 2.5);
+
+                    // Shadow energy wisps along trailing edge
+                    if (progress.t > 0.1 && progress.t < 0.9) {
+                        gfx.fillStyle(color, 0.5);
+                        for (let w = 0; w < 2; w++) {
+                            const wAngle = Phaser.Math.FloatBetween(prevAngle, curAngle);
+                            const wR = arcRadius + Phaser.Math.Between(-8, 8);
+                            gfx.fillCircle(
+                                px + Math.cos(wAngle) * wR,
+                                py + Math.sin(wAngle) * wR,
+                                Phaser.Math.FloatBetween(1.5, 3)
+                            );
+                        }
+                    }
+
+                    // Energy radial lines from tip
+                    if (progress.t > 0.2 && progress.t < 0.7) {
+                        for (let r = 0; r < 3; r++) {
+                            const lineAngle = curAngle + Phaser.Math.FloatBetween(-0.3, 0.3);
+                            const lineLen = Phaser.Math.FloatBetween(15, 35);
+                            gfx.lineStyle(1.5, glowColor, 0.6 * (1 - progress.t));
+                            gfx.lineBetween(tipX, tipY, tipX + Math.cos(lineAngle) * lineLen, tipY + Math.sin(lineAngle) * lineLen);
+                        }
+                    }
+                },
+                onComplete: () => {
+                    this._activeTweens.delete(arcTween);
+                    this._releaseGfx(gfx);
+                },
+            });
+            this._activeTweens.add(arcTween);
+        }
+
+        // Visual-only slash sprite (energy wave projection)
         const slashRotation = useCharacterEffect ? angle : (useEffectAsset ? angle + Math.PI : angle);
         const slash = this.scene.add.sprite(slashX, slashY, effectTexture || (useEffectAsset ? 'effect_shadow_slash' : 'proj_slash'))
             .setDepth(8)
@@ -198,17 +200,19 @@ export class ShadowSlash extends WeaponBase {
             onComplete: () => slash.destroy(),
         });
 
-        // Afterglow flash at slash center
-        const flash = this.scene.add.circle(slashX, slashY, 20, color, 0.4).setDepth(7);
-        this.scene.tweens.add({
-            targets: flash,
-            alpha: 0,
-            scaleX: 3,
-            scaleY: 3,
-            duration: 350,
-            ease: 'Power2',
-            onComplete: () => flash.destroy(),
-        });
+        if (!imageOnlyVfx) {
+            // Afterglow flash at slash center
+            const flash = this.scene.add.circle(slashX, slashY, 20, color, 0.4).setDepth(7);
+            this.scene.tweens.add({
+                targets: flash,
+                alpha: 0,
+                scaleX: 3,
+                scaleY: 3,
+                duration: 350,
+                ease: 'Power2',
+                onComplete: () => flash.destroy(),
+            });
+        }
 
         // Hit enemies in arc
         const enemies = this.player.getAllEnemies();
@@ -285,40 +289,43 @@ export class ShadowSlash extends WeaponBase {
         const endY = py + Math.sin(angle) * range;
         const midX = (startX + endX) * 0.5;
         const midY = (startY + endY) * 0.5;
-        const color = this.getEffectColor(0xffd86a);
-        const glowColor = this.getEffectGlowColor(0xffffff);
         const lineWidth = this.config.lineWidth || 34;
-
-        const gfx = this._getGfx();
-        const progress = { t: 0 };
-        let lineTween = null;
-        lineTween = this.scene.tweens.add({
-            targets: progress,
-            t: 1,
-            duration: this.config.motionDuration || 210,
-            ease: 'Quad.easeOut',
-            onUpdate: () => {
-                const reach = Phaser.Math.Easing.Cubic.Out(progress.t);
-                const currentX = startX + (endX - startX) * reach;
-                const currentY = startY + (endY - startY) * reach;
-                gfx.clear();
-                gfx.lineStyle(lineWidth, color, 0.18 * (1 - progress.t * 0.35));
-                gfx.lineBetween(startX, startY, currentX, currentY);
-                gfx.lineStyle(Math.max(7, lineWidth * 0.38), glowColor, 0.72 * (1 - progress.t * 0.25));
-                gfx.lineBetween(startX, startY, currentX, currentY);
-                gfx.lineStyle(3, 0xffffff, 0.95 * (1 - progress.t * 0.2));
-                gfx.lineBetween(startX, startY, currentX, currentY);
-                gfx.fillStyle(glowColor, 0.75 * (1 - progress.t * 0.25));
-                gfx.fillCircle(currentX, currentY, 8 + 8 * reach);
-            },
-            onComplete: () => {
-                this._activeTweens.delete(lineTween);
-                this._releaseGfx(gfx);
-            },
-        });
-        this._activeTweens.add(lineTween);
-
+        const imageOnlyVfx = !!this.config.imageOnlyVfx;
         const effectTexture = this.getEffectTexture();
+
+        if (!imageOnlyVfx) {
+            const color = this.getEffectColor(0xffd86a);
+            const glowColor = this.getEffectGlowColor(0xffffff);
+            const gfx = this._getGfx();
+            const progress = { t: 0 };
+            let lineTween = null;
+            lineTween = this.scene.tweens.add({
+                targets: progress,
+                t: 1,
+                duration: this.config.motionDuration || 210,
+                ease: 'Quad.easeOut',
+                onUpdate: () => {
+                    const reach = Phaser.Math.Easing.Cubic.Out(progress.t);
+                    const currentX = startX + (endX - startX) * reach;
+                    const currentY = startY + (endY - startY) * reach;
+                    gfx.clear();
+                    gfx.lineStyle(lineWidth, color, 0.18 * (1 - progress.t * 0.35));
+                    gfx.lineBetween(startX, startY, currentX, currentY);
+                    gfx.lineStyle(Math.max(7, lineWidth * 0.38), glowColor, 0.72 * (1 - progress.t * 0.25));
+                    gfx.lineBetween(startX, startY, currentX, currentY);
+                    gfx.lineStyle(3, 0xffffff, 0.95 * (1 - progress.t * 0.2));
+                    gfx.lineBetween(startX, startY, currentX, currentY);
+                    gfx.fillStyle(glowColor, 0.75 * (1 - progress.t * 0.25));
+                    gfx.fillCircle(currentX, currentY, 8 + 8 * reach);
+                },
+                onComplete: () => {
+                    this._activeTweens.delete(lineTween);
+                    this._releaseGfx(gfx);
+                },
+            });
+            this._activeTweens.add(lineTween);
+        }
+
         if (effectTexture) {
             const lance = this.scene.add.sprite(midX, midY, effectTexture)
                 .setDepth(9)
