@@ -4,6 +4,12 @@
  * BGM: Tone.js 프로시저럴 합성 유지 (인트로 음악, 게임 BGM)
  */
 const CHARACTER_SFX_CONFIG = {
+    shadowMonarchBasicDagger: { file: 'effects/characters/shadow_monarch/shadow_monarch_basic_dagger.wav', pool: 6, throttle: 220, release: 360, volume: 0.46, priority: 2 },
+    shadowMonarchShadowDagger: { file: 'effects/characters/shadow_monarch/shadow_monarch_shadow_dagger.wav', pool: 6, throttle: 240, release: 430, volume: 0.48, priority: 2 },
+    shadowMonarchShadowSlash: { file: 'effects/characters/shadow_monarch/shadow_monarch_shadow_slash.wav', pool: 5, throttle: 360, release: 650, volume: 0.5, priority: 2 },
+    shadowMonarchRulersAuthority: { file: 'effects/characters/shadow_monarch/shadow_monarch_rulers_authority.wav', pool: 4, throttle: 620, release: 1040, volume: 0.54, priority: 3 },
+    shadowMonarchDragonFear: { file: 'effects/characters/shadow_monarch/shadow_monarch_dragon_fear.wav', pool: 3, throttle: 900, release: 1780, volume: 0.5, priority: 3 },
+
     lightSwordSlash: { file: 'light_sword_slash_sfx.wav', pool: 6, throttle: 240, release: 380, volume: 0.46, priority: 2 },
     lightLance: { file: 'light_lance_sfx.wav', pool: 5, throttle: 260, release: 500, volume: 0.48, priority: 2 },
     lightCrescent: { file: 'light_crescent_sfx.wav', pool: 4, throttle: 360, release: 580, volume: 0.48, priority: 2 },
