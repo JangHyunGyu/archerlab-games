@@ -149,6 +149,7 @@ export const CHARACTER_DEFS = {
         archetype: '회복 / 보호막',
         accent: 0x66f2b0,
         accentText: '#9dffd0',
+        swapHorizontalWalkAnimations: true,
         stats: {
             hp: 174,
             maxHp: 174,
