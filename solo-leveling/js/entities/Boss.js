@@ -482,34 +482,36 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         if (!Boss._sceneIsActive(scene)) return;
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, playerX, playerY);
-        const range = 250;
-        const slashX = this.x + Math.cos(angle) * (range * 0.4);
-        const slashY = this.y + Math.sin(angle) * (range * 0.4);
+        const range = this.phase === 2 ? 370 : 330;
+        const coneAngle = this.phase === 2 ? 1.05 : 1.0;
+        const slashX = this.x + Math.cos(angle) * (range * 0.42);
+        const slashY = this.y + Math.sin(angle) * (range * 0.42);
+        const visualScale = range / 250;
 
         if (scene.soundManager) scene.soundManager.play('bossCharge');
 
         const warnIcon = Boss._addImageVfx(scene, 'telegraph_warning_reticle', slashX, slashY, {
             depth: 4,
             alpha: 0,
-            scale: 1.05,
+            scale: 1.05 * visualScale,
         });
         const slashWarning = Boss._addImageVfx(scene, 'telegraph_igris_slash_warning', slashX, slashY, {
             depth: 3,
             alpha: 0,
             rotation: angle,
-            scale: 0.94,
+            scale: 0.94 * visualScale,
         });
         const chargeCue = Boss._addBossVfx(scene, 'charge_aura', slashX, slashY, {
             depth: 3,
             alpha: 0,
-            scale: 0.58,
+            scale: 0.58 * visualScale,
         });
 
         if (warnIcon) {
             scene.tweens.add({
                 targets: warnIcon,
                 alpha: { from: 0.2, to: 0.92 },
-                scale: 1.22,
+                scale: 1.22 * visualScale,
                 duration: 220,
                 yoyo: true,
             });
@@ -518,7 +520,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             scene.tweens.add({
                 targets: slashWarning,
                 alpha: { from: 0.18, to: 0.74 },
-                scale: 1.08,
+                scale: 1.08 * visualScale,
                 duration: 550,
                 ease: 'Quad.Out',
             });
@@ -527,7 +529,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             scene.tweens.add({
                 targets: chargeCue,
                 alpha: { from: 0.18, to: 0.66 },
-                scale: 0.78,
+                scale: 0.78 * visualScale,
                 duration: 600,
                 ease: 'Cubic.In',
             });
@@ -545,7 +547,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
                 depth: 8,
                 alpha: 0.96,
                 rotation: angle,
-                scale: 0.82,
+                scale: 0.82 * visualScale,
             });
             if (slash) {
                 Boss._tweenDestroy(scene, slash, {
@@ -564,7 +566,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
             if (d < range) {
                 const pAngle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
                 const diff = Math.abs(Phaser.Math.Angle.Wrap(pAngle - angle));
-                if (diff < 1.0) {
+                if (diff < coneAngle) {
                     player.takeDamage(this.attack);
                 }
             }
