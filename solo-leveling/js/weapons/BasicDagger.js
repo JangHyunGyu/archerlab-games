@@ -501,6 +501,8 @@ export class BasicDagger extends WeaponBase {
         const centerX = originX + cosA * 62;
         const centerY = originY + sinA * 62;
         const effectTexture = this._getConfiguredEffectTexture();
+        const skillTexture = this._getConfiguredEffectTexture('effectKey');
+        const pierceTexture = skillTexture && skillTexture !== effectTexture ? skillTexture : null;
         const effectColor = this.getEffectColor(0xffd86a);
         const glowColor = this.getEffectGlowColor(0xffffff);
         const darkColor = this.getEffectDarkColor(0x7a5d16);
@@ -512,10 +514,19 @@ export class BasicDagger extends WeaponBase {
                 .setScale(this.config.effectScale || 0.44)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
+        const pierce = pierceTexture
+            ? this.scene.add.sprite(originX + cosA * 96, originY + sinA * 96, pierceTexture)
+                .setDepth(16)
+                .setAlpha(0)
+                .setScale((this.config.effectScale || 0.44) * 0.92)
+                .setRotation(baseAngle)
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : null;
         const fx = this.scene.add.graphics().setDepth(15);
         const progress = { t: 0 };
         const objects = [fx];
         if (slash) objects.push(slash);
+        if (pierce) objects.push(pierce);
         const entry = this._trackAttackObjects(objects);
 
         const draw = (t) => {
@@ -558,6 +569,14 @@ export class BasicDagger extends WeaponBase {
                 slash.setRotation(baseAngle + side * 0.55);
                 slash.setAlpha(Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.82);
                 slash.setScale((this.config.effectScale || 0.44) * (0.74 + eased * 0.38));
+            }
+
+            if (pierce) {
+                const alpha = Math.sin(Math.PI * Math.min(1, t * 1.08));
+                pierce.setPosition(originX + cosA * (82 + eased * 34), originY + sinA * (82 + eased * 34));
+                pierce.setRotation(baseAngle);
+                pierce.setAlpha(alpha * 0.78);
+                pierce.setScale((this.config.effectScale || 0.44) * (0.76 + eased * 0.3));
             }
         };
 
