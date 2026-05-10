@@ -200,6 +200,11 @@ const expectedSounds = [
     'sounds/flame_inferno_sfx.wav', 'sounds/sanctuary_mace_sfx.wav',
     'sounds/sanctuary_orb_sfx.wav', 'sounds/sanctuary_arc_sfx.wav',
     'sounds/sanctuary_seal_sfx.wav', 'sounds/sanctuary_field_sfx.wav',
+    'sounds/effects/characters/shadow_monarch/shadow_monarch_basic_dagger.wav',
+    'sounds/effects/characters/shadow_monarch/shadow_monarch_shadow_dagger.wav',
+    'sounds/effects/characters/shadow_monarch/shadow_monarch_shadow_slash.wav',
+    'sounds/effects/characters/shadow_monarch/shadow_monarch_rulers_authority.wav',
+    'sounds/effects/characters/shadow_monarch/shadow_monarch_dragon_fear.wav',
 ];
 
 for (const sf of expectedSounds) {
