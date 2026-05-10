@@ -10,23 +10,23 @@ const CHARACTER_SFX_CONFIG = {
     shadowMonarchRulersAuthority: { file: 'effects/characters/shadow_monarch/shadow_monarch_rulers_authority.wav', pool: 4, throttle: 620, release: 1040, volume: 0.49, priority: 3 },
     shadowMonarchDragonFear: { file: 'effects/characters/shadow_monarch/shadow_monarch_dragon_fear.wav', pool: 3, throttle: 900, release: 1780, volume: 0.34, priority: 3 },
 
-    lightSwordSlash: { file: 'light_sword_slash_sfx.wav', pool: 6, throttle: 240, release: 380, volume: 0.46, priority: 2 },
-    lightLance: { file: 'light_lance_sfx.wav', pool: 5, throttle: 260, release: 500, volume: 0.48, priority: 2 },
-    lightCrescent: { file: 'light_crescent_sfx.wav', pool: 4, throttle: 360, release: 580, volume: 0.48, priority: 2 },
-    lightJudgment: { file: 'light_judgment_sfx.wav', pool: 3, throttle: 620, release: 820, volume: 0.56, priority: 3 },
-    lightSanctum: { file: 'light_sanctum_sfx.wav', pool: 2, throttle: 780, release: 980, volume: 0.52, priority: 3 },
+    lightSwordSlash: { file: 'effects/characters/light_swordswoman/light_swordswoman_light_pierce.wav', pool: 6, throttle: 240, release: 420, volume: 0.42, priority: 2 },
+    lightLance: { file: 'effects/characters/light_swordswoman/light_swordswoman_light_lance.wav', pool: 5, throttle: 260, release: 860, volume: 0.68, priority: 2 },
+    lightCrescent: { file: 'effects/characters/light_swordswoman/light_swordswoman_light_crescent.wav', pool: 4, throttle: 360, release: 800, volume: 0.5, priority: 2 },
+    lightJudgment: { file: 'effects/characters/light_swordswoman/light_swordswoman_light_judgment.wav', pool: 3, throttle: 620, release: 1340, volume: 0.58, priority: 3 },
+    lightSanctum: { file: 'effects/characters/light_swordswoman/light_swordswoman_light_sanctum.wav', pool: 2, throttle: 780, release: 1500, volume: 0.78, priority: 3 },
 
-    tigerClaw: { file: 'tiger_claw_sfx.wav', pool: 6, throttle: 230, release: 360, volume: 0.5, priority: 2 },
-    tigerFang: { file: 'tiger_fang_sfx.wav', pool: 5, throttle: 260, release: 460, volume: 0.48, priority: 2 },
-    tigerRend: { file: 'tiger_rend_sfx.wav', pool: 4, throttle: 360, release: 560, volume: 0.5, priority: 2 },
-    tigerQuake: { file: 'tiger_quake_sfx.wav', pool: 3, throttle: 650, release: 820, volume: 0.62, priority: 3 },
-    tigerGuard: { file: 'tiger_guard_sfx.wav', pool: 2, throttle: 760, release: 900, volume: 0.54, priority: 3 },
+    tigerClaw: { file: 'effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_palm.wav', pool: 6, throttle: 230, release: 400, volume: 0.58, priority: 2 },
+    tigerFang: { file: 'effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_fang.wav', pool: 5, throttle: 260, release: 1540, volume: 0.6, priority: 2 },
+    tigerRend: { file: 'effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_rend.wav', pool: 4, throttle: 360, release: 1480, volume: 0.74, priority: 2 },
+    tigerQuake: { file: 'effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_quake.wav', pool: 3, throttle: 650, release: 1420, volume: 0.35, priority: 3 },
+    tigerGuard: { file: 'effects/characters/white_tiger_brawler/white_tiger_brawler_tiger_guard.wav', pool: 2, throttle: 760, release: 1620, volume: 0.28, priority: 3 },
 
-    flameSpark: { file: 'flame_spark_sfx.wav', pool: 6, throttle: 220, release: 420, volume: 0.48, priority: 2 },
-    flameBolt: { file: 'flame_bolt_sfx.wav', pool: 5, throttle: 250, release: 480, volume: 0.5, priority: 2 },
-    flameArc: { file: 'flame_arc_sfx.wav', pool: 4, throttle: 360, release: 580, volume: 0.52, priority: 2 },
-    flameMeteor: { file: 'flame_meteor_sfx.wav', pool: 3, throttle: 680, release: 980, volume: 0.62, priority: 3 },
-    flameInferno: { file: 'flame_inferno_sfx.wav', pool: 2, throttle: 820, release: 1040, volume: 0.58, priority: 3 },
+    flameSpark: { file: 'effects/characters/flame_mage/flame_mage_flame_spark.wav', pool: 6, throttle: 220, release: 720, volume: 0.36, priority: 2 },
+    flameBolt: { file: 'effects/characters/flame_mage/flame_mage_flame_bolt.wav', pool: 5, throttle: 250, release: 940, volume: 0.44, priority: 2 },
+    flameArc: { file: 'effects/characters/flame_mage/flame_mage_flame_arc.wav', pool: 4, throttle: 360, release: 680, volume: 0.43, priority: 2 },
+    flameMeteor: { file: 'effects/characters/flame_mage/flame_mage_flame_meteor.wav', pool: 3, throttle: 680, release: 1570, volume: 0.5, priority: 3 },
+    flameInferno: { file: 'effects/characters/flame_mage/flame_mage_flame_inferno.wav', pool: 2, throttle: 820, release: 1720, volume: 0.42, priority: 3 },
 
     sanctuaryMace: { file: 'sanctuary_mace_sfx.wav', pool: 5, throttle: 280, release: 480, volume: 0.5, priority: 2 },
     sanctuaryOrb: { file: 'sanctuary_orb_sfx.wav', pool: 5, throttle: 280, release: 540, volume: 0.46, priority: 2 },
@@ -67,7 +67,7 @@ export class SoundManager {
         this._sfxMaster = 0.36;
         this._toneLeadTime = 0.035;
         this._releaseMs = {
-            dagger: 320, daggerThrow: 380, hit: 200, burnHit: 320, kill: 360, xp: 160,
+            dagger: 320, daggerThrow: 380, hit: 200, burnHit: 420, kill: 360, xp: 160,
             playerHit: 390, select: 130, system: 190, warning: 340,
             slash: 620, authority: 860, fear: 660,
             levelup: 560, rankup: 860, arise: 860, bossAppear: 860,
@@ -298,7 +298,7 @@ export class SoundManager {
             this._createPool('shadowSoldierSpit', base + 'shadow_soldier_spit.wav', 4);
             // 전투 (매우 빈번)
             this._createPool('hit', base + 'hit.wav', 8);
-            this._createPool('burnHit', base + 'burn_hit.wav', 7);
+            this._createPool('burnHit', base + 'effects/characters/flame_mage/combat_burn_hit.wav', 7);
             this._createPool('kill', base + 'kill.wav', 6);
             this._createPool('critHit', base + 'crit_hit.wav', 5);
             this._createPool('eliteKill', base + 'elite_kill.wav', 3);

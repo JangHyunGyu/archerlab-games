@@ -17,6 +17,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         this.soldierType = config.shadowType;
 
         this._usesDedicatedSprite = soldierTexture.startsWith('shadow_');
+        this._usesLocalShadowSprite = scene.textures.exists('asset_shadow_' + this.soldierType);
 
         // Match boss original footprint while allowing dedicated silhouettes.
         this.body.setSize(config.size * 1.4, config.size * 1.4);
@@ -31,8 +32,10 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             tank:   0x3a4a2a,  // 터스크: 부패한 녹갈색 (썩은 좀비)
             ranged: 0x4a2244,  // 베루: 독기 자주색 (독충 언데드)
         };
-        this.setTint(undeadTints[this.soldierType] || 0x334455);
-        this.setAlpha(0.82);
+        if (!this._usesLocalShadowSprite) {
+            this.setTint(undeadTints[this.soldierType] || 0x334455);
+        }
+        this.setAlpha(this._usesLocalShadowSprite ? 0.92 : 0.82);
 
         // Stats based on boss type, scaled with player attack
         const playerAttack = scene.player ? scene.player.stats.attack : 24;
