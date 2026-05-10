@@ -22,9 +22,7 @@ export class RulersAuthority extends WeaponBase {
         const range = (this.config.blastRange || 160) + this.extraRange;
 
         this.playConfiguredSound('authority');
-        if (strikeIndex === 0 && this.config.healPercent && this.player?.heal) {
-            this.player.heal(Math.floor(this.player.stats.maxHp * this.config.healPercent));
-        }
+        if (strikeIndex === 0) this.healPlayerFromConfig();
 
         // Find a nearby enemy cluster, or default to player position if no threat is close.
         let targetX = this.player.x;

@@ -54,9 +54,7 @@ export class DragonFear extends WeaponBase {
 
         this.playConfiguredSound('fear');
 
-        if (this.config.healPercent && this.player?.heal) {
-            this.player.heal(Math.floor(this.player.stats.maxHp * this.config.healPercent));
-        }
+        this.healPlayerFromConfig();
 
         this._auraEndTime = this.scene.time.now + auraDuration;
         this._auraRange = range;
