@@ -1,4 +1,4 @@
-import { PLAYER_BASE_STATS, RANKS, RANK_ORDER, XP_TABLE, COLORS, WORLD_SIZE, PASSIVES } from '../utils/Constants.js';
+import { PLAYER_BASE_STATS, RANKS, RANK_ORDER, XP_TABLE, COLORS, WORLD_SIZE, PASSIVES, MAX_COOLDOWN_REDUCTION } from '../utils/Constants.js';
 import { getCharacter } from '../utils/Characters.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
@@ -798,7 +798,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         if (statKey === 'cooldownReduction') {
             // CDR: base + passive + rank (all additive)
-            this.stats[statKey] = base + bonusPerLevel * effectiveLevels + (this.rankUpCount || 0) * rankRate;
+            this.stats[statKey] = Math.min(
+                MAX_COOLDOWN_REDUCTION,
+                base + bonusPerLevel * effectiveLevels + (this.rankUpCount || 0) * rankRate
+            );
         } else if (statKey === 'critRate' || statKey === 'xpMultiplier') {
             this.stats[statKey] = base + bonusPerLevel * effectiveLevels;
         } else {
