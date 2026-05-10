@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Light Swordswoman Asset Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101216;
+      --panel: #171b21;
+      --panel-2: #20252e;
+      --line: #343b47;
+      --text: #eef2f7;
+      --muted: #9da7b5;
+      --accent: #f5c64a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1360px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    section {
+      margin-top: 28px;
+    }
+
+    h2 {
+      font-size: 17px;
+      letter-spacing: 0;
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+      margin: 18px 0 8px;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+      gap: 10px;
+    }
+
+    .wide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+    }
+
+    .asset {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .preview {
+      min-height: 138px;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      background:
+        linear-gradient(45deg, rgba(255,255,255,0.06) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,0.06) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.06) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.06) 75%),
+        var(--panel-2);
+      background-size: 22px 22px;
+      background-position: 0 0, 0 11px, 11px -11px, -11px 0;
+    }
+
+    .character .preview {
+      min-height: 240px;
+    }
+
+    .skill .preview {
+      min-height: 190px;
+    }
+
+    img {
+      max-width: 100%;
+      max-height: 220px;
+      image-rendering: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5));
+    }
+
+    .motion img {
+      max-height: 128px;
+    }
+
+    .caption {
+      min-height: 58px;
+      padding: 8px 10px 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .name {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .path {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+
+    .tag {
+      color: #111;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 720px) {
+      main { width: min(100vw - 20px, 1360px); padding-top: 14px; }
+      header { align-items: start; flex-direction: column; }
+      .grid, .wide-grid { grid-template-columns: repeat(auto-fill, minmax(134px, 1fr)); }
+      .preview { min-height: 124px; }
+      .skill .preview { min-height: 158px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Light Swordswoman Asset Preview</h1>
+        <p class="meta">Basic attack motion frames, basic attack effect, and skill effect PNG assets.</p>
+      </div>
+      <span class="tag">lightSwordswoman</span>
+    </header>
+
+    <section>
+      <h2>Character Reference</h2>
+      <div class="wide-grid">
+        <article class="asset character">
+          <div class="preview"><img src="assets/player/characters/light_swordswoman/portrait.png" alt="portrait"></div>
+          <div class="caption">
+            <span class="name">portrait.png</span>
+            <span class="path">assets/player/characters/light_swordswoman/portrait.png</span>
+          </div>
+        </article>
+        <article class="asset character">
+          <div class="preview"><img src="assets/player/characters/light_swordswoman/source.png" alt="source"></div>
+          <div class="caption">
+            <span class="name">source.png</span>
+            <span class="path">assets/player/characters/light_swordswoman/source.png</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Basic Attack Effect</h2>
+      <div class="wide-grid">
+        <article class="asset skill">
+          <div class="preview"><img src="assets/effects/basic_attacks/light_sword_slash.png" alt="light sword slash"></div>
+          <div class="caption">
+            <span class="name">light_sword_slash.png</span>
+            <span class="path">assets/effects/basic_attacks/light_sword_slash.png</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Skill Effects</h2>
+      <div class="wide-grid">
+        <article class="asset skill">
+          <div class="preview"><img src="assets/effects/character_skills/light_pierce.png" alt="light pierce"></div>
+          <div class="caption">
+            <span class="name">light_pierce.png</span>
+            <span class="path">assets/effects/character_skills/light_pierce.png</span>
+          </div>
+        </article>
+        <article class="asset skill">
+          <div class="preview"><img src="assets/effects/character_skills/light_lance_pierce.png" alt="light lance pierce"></div>
+          <div class="caption">
+            <span class="name">light_lance_pierce.png</span>
+            <span class="path">assets/effects/character_skills/light_lance_pierce.png</span>
+          </div>
+        </article>
+        <article class="asset skill">
+          <div class="preview"><img src="assets/effects/character_skills/light_crescent.png" alt="light crescent"></div>
+          <div class="caption">
+            <span class="name">light_crescent.png</span>
+            <span class="path">assets/effects/character_skills/light_crescent.png</span>
+          </div>
+        </article>
+        <article class="asset skill">
+          <div class="preview"><img src="assets/effects/character_skills/light_judgment.png" alt="light judgment"></div>
+          <div class="caption">
+            <span class="name">light_judgment.png</span>
+            <span class="path">assets/effects/character_skills/light_judgment.png</span>
+          </div>
+        </article>
+        <article class="asset skill">
+          <div class="preview"><img src="assets/effects/character_skills/light_sanctum.png" alt="light sanctum"></div>
+          <div class="caption">
+            <span class="name">light_sanctum.png</span>
+            <span class="path">assets/effects/character_skills/light_sanctum.png</span>
+          </div>
+        </article>
+        <article class="asset skill">
+          <div class="preview"><img src="assets/effects/character_skills/light_lance.png" alt="light lance helper"></div>
+          <div class="caption">
+            <span class="name">light_lance.png</span>
+            <span class="path">assets/effects/character_skills/light_lance.png</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <h2>Basic Attack Motion Frames</h2>
+
+      <h3>Forward</h3>
+      <div class="grid motion">
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_0.png" alt="attack 0"></div><div class="caption"><span class="name">attack_0.png</span><span class="path">motion/attack_0.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_1.png" alt="attack 1"></div><div class="caption"><span class="name">attack_1.png</span><span class="path">motion/attack_1.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_2.png" alt="attack 2"></div><div class="caption"><span class="name">attack_2.png</span><span class="path">motion/attack_2.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_3.png" alt="attack 3"></div><div class="caption"><span class="name">attack_3.png</span><span class="path">motion/attack_3.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_4.png" alt="attack 4"></div><div class="caption"><span class="name">attack_4.png</span><span class="path">motion/attack_4.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_5.png" alt="attack 5"></div><div class="caption"><span class="name">attack_5.png</span><span class="path">motion/attack_5.png</span></div></article>
+      </div>
+
+      <h3>Right</h3>
+      <div class="grid motion">
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_right_0.png" alt="attack right 0"></div><div class="caption"><span class="name">attack_right_0.png</span><span class="path">motion/attack_right_0.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_right_1.png" alt="attack right 1"></div><div class="caption"><span class="name">attack_right_1.png</span><span class="path">motion/attack_right_1.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_right_2.png" alt="attack right 2"></div><div class="caption"><span class="name">attack_right_2.png</span><span class="path">motion/attack_right_2.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_right_3.png" alt="attack right 3"></div><div class="caption"><span class="name">attack_right_3.png</span><span class="path">motion/attack_right_3.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_right_4.png" alt="attack right 4"></div><div class="caption"><span class="name">attack_right_4.png</span><span class="path">motion/attack_right_4.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_right_5.png" alt="attack right 5"></div><div class="caption"><span class="name">attack_right_5.png</span><span class="path">motion/attack_right_5.png</span></div></article>
+      </div>
+
+      <h3>Left</h3>
+      <div class="grid motion">
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_left_0.png" alt="attack left 0"></div><div class="caption"><span class="name">attack_left_0.png</span><span class="path">motion/attack_left_0.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_left_1.png" alt="attack left 1"></div><div class="caption"><span class="name">attack_left_1.png</span><span class="path">motion/attack_left_1.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_left_2.png" alt="attack left 2"></div><div class="caption"><span class="name">attack_left_2.png</span><span class="path">motion/attack_left_2.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_left_3.png" alt="attack left 3"></div><div class="caption"><span class="name">attack_left_3.png</span><span class="path">motion/attack_left_3.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_left_4.png" alt="attack left 4"></div><div class="caption"><span class="name">attack_left_4.png</span><span class="path">motion/attack_left_4.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_left_5.png" alt="attack left 5"></div><div class="caption"><span class="name">attack_left_5.png</span><span class="path">motion/attack_left_5.png</span></div></article>
+      </div>
+
+      <h3>Up</h3>
+      <div class="grid motion">
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_up_0.png" alt="attack up 0"></div><div class="caption"><span class="name">attack_up_0.png</span><span class="path">motion/attack_up_0.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_up_1.png" alt="attack up 1"></div><div class="caption"><span class="name">attack_up_1.png</span><span class="path">motion/attack_up_1.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_up_2.png" alt="attack up 2"></div><div class="caption"><span class="name">attack_up_2.png</span><span class="path">motion/attack_up_2.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_up_3.png" alt="attack up 3"></div><div class="caption"><span class="name">attack_up_3.png</span><span class="path">motion/attack_up_3.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_up_4.png" alt="attack up 4"></div><div class="caption"><span class="name">attack_up_4.png</span><span class="path">motion/attack_up_4.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_up_5.png" alt="attack up 5"></div><div class="caption"><span class="name">attack_up_5.png</span><span class="path">motion/attack_up_5.png</span></div></article>
+      </div>
+
+      <h3>Down</h3>
+      <div class="grid motion">
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_down_0.png" alt="attack down 0"></div><div class="caption"><span class="name">attack_down_0.png</span><span class="path">motion/attack_down_0.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_down_1.png" alt="attack down 1"></div><div class="caption"><span class="name">attack_down_1.png</span><span class="path">motion/attack_down_1.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_down_2.png" alt="attack down 2"></div><div class="caption"><span class="name">attack_down_2.png</span><span class="path">motion/attack_down_2.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_down_3.png" alt="attack down 3"></div><div class="caption"><span class="name">attack_down_3.png</span><span class="path">motion/attack_down_3.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_down_4.png" alt="attack down 4"></div><div class="caption"><span class="name">attack_down_4.png</span><span class="path">motion/attack_down_4.png</span></div></article>
+        <article class="asset"><div class="preview"><img src="assets/player/characters/light_swordswoman/motion/attack_down_5.png" alt="attack down 5"></div><div class="caption"><span class="name">attack_down_5.png</span><span class="path">motion/attack_down_5.png</span></div></article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
