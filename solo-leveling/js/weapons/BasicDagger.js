@@ -494,18 +494,11 @@ export class BasicDagger extends WeaponBase {
         const { baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 65, duration: 260 });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
-        const perpX = -sinA;
-        const perpY = cosA;
         const originX = this.player.x;
         const originY = this.player.y - 18;
         const centerX = originX + cosA * 62;
         const centerY = originY + sinA * 62;
         const effectTexture = this._getConfiguredEffectTexture();
-        const skillTexture = this._getConfiguredEffectTexture('effectKey');
-        const pierceTexture = skillTexture && skillTexture !== effectTexture ? skillTexture : null;
-        const effectColor = this.getEffectColor(0xffd86a);
-        const glowColor = this.getEffectGlowColor(0xffffff);
-        const darkColor = this.getEffectDarkColor(0x7a5d16);
 
         const slash = effectTexture
             ? this.scene.add.sprite(centerX, centerY, effectTexture)
@@ -514,69 +507,18 @@ export class BasicDagger extends WeaponBase {
                 .setScale(this.config.effectScale || 0.44)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
-        const pierce = pierceTexture
-            ? this.scene.add.sprite(originX + cosA * 96, originY + sinA * 96, pierceTexture)
-                .setDepth(16)
-                .setAlpha(0)
-                .setScale((this.config.effectScale || 0.44) * 0.92)
-                .setRotation(baseAngle)
-                .setBlendMode(Phaser.BlendModes.ADD)
-            : null;
-        const fx = this.scene.add.graphics().setDepth(15);
         const progress = { t: 0 };
-        const objects = [fx];
+        const objects = [];
         if (slash) objects.push(slash);
-        if (pierce) objects.push(pierce);
         const entry = this._trackAttackObjects(objects);
 
         const draw = (t) => {
             const eased = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(t, 0, 1));
-            fx.clear();
-            const sweep = 0.46 + eased * 0.58;
-            const reach = 46 + eased * 52;
-            const baseForward = 28 + eased * 34;
-            const points = [];
-            for (let i = 0; i < 7; i++) {
-                const p = i / 6;
-                const arc = (p - 0.5) * sweep * side;
-                const a = baseAngle + arc;
-                const r = baseForward + reach * Math.sin(p * Math.PI);
-                points.push({
-                    x: originX + Math.cos(a) * r,
-                    y: originY + Math.sin(a) * r,
-                });
-            }
-
-            fx.lineStyle(18, effectColor, 0.22 * (1 - t * 0.4));
-            for (let i = 1; i < points.length; i++) fx.lineBetween(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y);
-            fx.lineStyle(9, glowColor, 0.72 * (1 - t * 0.35));
-            for (let i = 1; i < points.length; i++) fx.lineBetween(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y);
-            fx.lineStyle(3, 0xffffff, 0.95 * (1 - t * 0.25));
-            for (let i = 1; i < points.length; i++) fx.lineBetween(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y);
-
-            fx.fillStyle(darkColor, 0.42 * (1 - t));
-            fx.fillTriangle(
-                originX + cosA * 18 + perpX * side * 12,
-                originY + sinA * 18 + perpY * side * 12,
-                originX + cosA * 88 + perpX * side * 26,
-                originY + sinA * 88 + perpY * side * 26,
-                originX + cosA * 92 - perpX * side * 16,
-                originY + sinA * 92 - perpY * side * 16
-            );
-
             if (slash) {
                 slash.setPosition(centerX + cosA * 8 * eased, centerY + sinA * 8 * eased);
                 slash.setRotation(baseAngle + side * 0.55);
                 slash.setAlpha(Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.82);
                 slash.setScale((this.config.effectScale || 0.44) * (0.74 + eased * 0.38));
-            }
-
-            if (pierce) {
-                const alpha = Math.sin(Math.PI * Math.min(1, t * 1.08));
-                pierce.setPosition(originX + cosA * (82 + eased * 34), originY + sinA * (82 + eased * 34));
-                pierce.setRotation(baseAngle);
-                pierce.setAlpha(alpha * 0.78);
-                pierce.setScale((this.config.effectScale || 0.44) * (0.76 + eased * 0.3));
             }
         };
 
