@@ -245,6 +245,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(this.facingRight);
     }
 
+    _walkDirectionForAnimation(direction) {
+        if (this.character?.swapHorizontalWalkAnimations && (direction === 'left' || direction === 'right')) {
+            return direction === 'left' ? 'right' : 'left';
+        }
+        return direction;
+    }
+
     _getActiveAnimationKey() {
         if (this._hitReactTimer > 0 && this._animExists(this._animKey('hit'))) {
             return this._animKey('hit');
@@ -255,7 +262,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             if (this._animExists(this._animKey('attack'))) return this._animKey('attack');
         }
         if (this._moveBlend > 0.08) {
-            const directionalWalk = this._animKey(`walk_${this.moveDirection}`);
+            const walkDirection = this._walkDirectionForAnimation(this.moveDirection);
+            const directionalWalk = this._animKey(`walk_${walkDirection}`);
             if (this._animExists(directionalWalk)) return directionalWalk;
             if (this._animExists(this._animKey('walk'))) return this._animKey('walk');
         }
