@@ -1,3 +1,5 @@
+import { MAX_COOLDOWN_REDUCTION } from '../utils/Constants.js';
+
 export class WeaponBase {
     constructor(scene, player, config) {
         this.scene = scene;
@@ -17,8 +19,8 @@ export class WeaponBase {
     }
 
     update(time, delta) {
-        const cdReduction = this.player.stats.cooldownReduction || 0;
-        const effectiveCooldown = this.cooldown * (1 - cdReduction);
+        const cdReduction = Math.max(0, Math.min(MAX_COOLDOWN_REDUCTION, this.player.stats.cooldownReduction || 0));
+        const effectiveCooldown = Math.max(240, this.cooldown * (1 - cdReduction));
 
         this.cooldownTimer -= delta;
         if (this.cooldownTimer <= 0) {

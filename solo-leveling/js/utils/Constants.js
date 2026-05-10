@@ -172,6 +172,8 @@ export const PLAYER_BASE_STATS = {
     pickupRange: 100,
 };
 
+export const MAX_COOLDOWN_REDUCTION = 0.55;
+
 export const XP_TABLE = [
     0, 25, 55, 90, 130, 175, 230, 290, 360, 440,
     530, 630, 680, 820, 980, 1160, 1360, 1580, 1820, 2100,
@@ -300,22 +302,22 @@ export const WEAPONS = {
         type: 'projectile',
         soundKey: 'shadowMonarchShadowDagger',
         unlockLevel: 5,
-        baseDamage: 160,
-        baseCooldown: 1000,
+        baseDamage: 135,
+        baseCooldown: 1200,
         baseCount: 1,
         projectileRange: 1500,
-        maxPierces: 5,
+        maxPierces: 4,
         minHitRadius: 24,
         levelBonuses: {
-            2: { damage: 12, cooldown: -50 },
-            3: { count: 1, damage: 12 },
-            4: { damage: 14, cooldown: -50 },
-            5: { damage: 14, cooldown: -50 },
-            6: { count: 1, cooldown: -50 },
-            7: { damage: 16, cooldown: -50 },
-            8: { damage: 16, cooldown: -50 },
+            2: { damage: 10 },
+            3: { damage: 12 },
+            4: { count: 1, damage: 12 },
+            5: { cooldown: -25 },
+            6: { damage: 14 },
+            7: { cooldown: -25, damage: 14 },
+            8: { damage: 16 },
             9: { count: 1, damage: 16 },
-            10: { damage: 18, cooldown: -75 },
+            10: { damage: 18, cooldown: -35 },
         },
     },
     shadowSlash: {
@@ -512,7 +514,7 @@ Object.assign(WEAPONS, {
         slashArc: 0.86,
         hitAngle: 0.9,
         maxHits: 5,
-        damageMult: 0.72,
+        damageMult: 0.54,
         levelBonuses: {
             2: { damage: 10 },
             3: { damage: 10 },
@@ -622,9 +624,9 @@ Object.assign(WEAPONS, {
         slashArc: 0.62,
         hitAngle: 0.62,
         maxHits: 4,
-        damageMult: 0.54,
+        damageMult: 0.42,
         aftershockRadius: 92,
-        aftershockDamageMult: 0.2,
+        aftershockDamageMult: 0.14,
         effectKey: 'flame_arc',
         effectColor: 0xff7a34,
         effectGlowColor: 0xffd86a,
