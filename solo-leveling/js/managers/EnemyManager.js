@@ -128,7 +128,8 @@ export class EnemyManager {
 
         this.pool.getChildren().forEach(enemy => {
             if (enemy.active) {
-                enemy.update(time, delta, player.x, player.y);
+                const target = player.getHurtboxCenter?.() || player;
+                enemy.update(time, delta, target.x, target.y);
 
                 // Despawn distance based on world size (mobs spawn from world edges)
                 if (!this._despawnDist) {

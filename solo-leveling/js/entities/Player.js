@@ -245,6 +245,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(this.facingRight);
     }
 
+    getHurtboxCenter() {
+        return {
+            x: this.body?.center?.x ?? this.x,
+            y: this.body?.center?.y ?? this.y,
+        };
+    }
+
     _walkDirectionForAnimation(direction) {
         if (this.character?.swapHorizontalWalkAnimations && (direction === 'left' || direction === 'right')) {
             return direction === 'left' ? 'right' : 'left';
