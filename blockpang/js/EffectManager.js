@@ -118,31 +118,6 @@ class EffectManager {
         return available[Math.floor(Math.random() * available.length)];
     }
 
-    _createBadgeSprite(textureKey, x, y, targetWidth) {
-        const texture = getBlockpangTexture(textureKey);
-        if (!texture) return null;
-        const sprite = new PIXI.Sprite(texture);
-        sprite.anchor.set(0.5);
-        sprite.eventMode = 'none';
-        sprite.position.set(x, y);
-        sprite.alpha = 0;
-        const baseScale = targetWidth / Math.max(texture.width || 1, 1);
-        sprite.scale.set(baseScale);
-        this.container.addChild(sprite);
-        return { sprite, baseScale };
-    }
-
-    _updateBadgeSprite(badge, alpha, scale = 1, y = null) {
-        if (!badge || !badge.sprite || badge.sprite.destroyed) return;
-        badge.sprite.alpha = alpha;
-        badge.sprite.scale.set(badge.baseScale * scale);
-        if (y !== null) badge.sprite.y = y;
-    }
-
-    _destroyBadgeSprite(badge) {
-        if (badge && badge.sprite && !badge.sprite.destroyed) badge.sprite.destroy();
-    }
-
     // Get a Text object from pool or create new
     _getTextObj(text, style) {
         if (this._textPool.length > 0) {
@@ -855,15 +830,6 @@ class EffectManager {
         glow.position.set(x, y);
         glow.alpha = 0;
         this.container.addChildAt(glow, this.container.children.indexOf(txt));
-        const badge = this._createBadgeSprite(
-            `comboBurst${tier}`,
-            x,
-            y,
-            Math.min(sw * 0.88, size * (tier === 3 ? 7.2 : tier === 2 ? 6.4 : 5.8))
-        );
-        if (badge) {
-            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(glow)));
-        }
 
         // ── Sparkles ──
         const sparkleCount = tier === 3 ? 40 : tier === 2 ? 25 : Math.min(comboLevel * 4, 18);
@@ -887,13 +853,12 @@ class EffectManager {
 
         const startY = y;
         const duration = 1600 + tier * 400;
-        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration,
             update(dt) {
-                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); self._destroyBadgeSprite(badge); return true; }
-                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); self._destroyBadgeSprite(badge); return true; }
+                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); return true; }
+                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -938,16 +903,12 @@ class EffectManager {
                 txt.y = startY - easeOutCubic(t) * floatDist;
                 glow.y = txt.y;
                 glow.x = x;
-                const badgeFade = t < 0.55 ? Math.min(1, t / 0.12) : Math.max(0, 1 - (t - 0.55) / 0.45);
-                self._updateBadgeSprite(badge, badgeFade * (0.72 + tier * 0.07), 0.92 + Math.sin(t * Math.PI) * 0.08, txt.y);
-
                 // Wobble rotation (more dramatic per tier)
                 txt.rotation = Math.sin(t * Math.PI * (8 + tier * 3)) * (0.03 + tier * 0.02) * (1 - t);
 
                 if (t >= 1) {
                     txt.destroy();
                     glow.destroy();
-                    self._destroyBadgeSprite(badge);
                     return true;
                 }
                 return false;
@@ -999,16 +960,6 @@ class EffectManager {
         this.container.addChildAt(glow, this.container.children.indexOf(txt));
 
         // ── Sparkles + effects ──
-        const badge = this._createBadgeSprite(
-            `clearBurst${Math.min(lineCount, 4)}`,
-            x,
-            y,
-            Math.min(sw * 0.9, size * 6.2)
-        );
-        if (badge) {
-            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(glow)));
-        }
-
         this.spawnSparkles(x, y, cfg.color, cfg.sparkles);
         this.playRingBurst(x, y, cfg.color, glowR * 0.6);
 
@@ -1026,13 +977,12 @@ class EffectManager {
 
         const startY = y;
         const duration = 1800 + intensity * 200;
-        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration,
             update(dt) {
-                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); self._destroyBadgeSprite(badge); return true; }
-                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); self._destroyBadgeSprite(badge); return true; }
+                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); return true; }
+                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1072,9 +1022,6 @@ class EffectManager {
 
                 txt.y = startY - easeOutCubic(t) * (80 + intensity * 25);
                 glow.y = txt.y;
-                const badgeFade = t < 0.6 ? Math.min(1, t / 0.14) : Math.max(0, 1 - (t - 0.6) / 0.4);
-                self._updateBadgeSprite(badge, badgeFade * 0.82, 0.9 + Math.sin(t * Math.PI) * 0.1, txt.y);
-
                 // Shake on slam (first 20%)
                 if (t < 0.2) {
                     const shake = (1 - t / 0.2) * 4 * intensity;
@@ -1087,7 +1034,6 @@ class EffectManager {
                 if (t >= 1) {
                     txt.destroy();
                     glow.destroy();
-                    self._destroyBadgeSprite(badge);
                     return true;
                 }
                 return false;
@@ -1338,11 +1284,6 @@ class EffectManager {
         txt.alpha = 0;
         this.container.addChild(txt);
 
-        const badge = this._createBadgeSprite('levelBadge', x, y, Math.min(w * 0.84, this.game.cellSize * 7.4));
-        if (badge) {
-            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(txt)));
-        }
-
         // Sparkle burst
         for (let i = 0; i < 20; i++) {
             const angle = (Math.PI * 2 * i / 20);
@@ -1354,12 +1295,11 @@ class EffectManager {
             );
         }
 
-        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration: 2000,
             update(dt) {
-                if (txt.destroyed) { self._destroyBadgeSprite(badge); return true; }
+                if (txt.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1379,10 +1319,7 @@ class EffectManager {
                 }
 
                 txt.y = y - Math.sin(t * Math.PI) * 20;
-                const badgeAlpha = t < 0.7 ? Math.min(1, t / 0.14) * 0.82 : Math.max(0, 1 - (t - 0.7) / 0.3) * 0.82;
-                self._updateBadgeSprite(badge, badgeAlpha, 0.92 + Math.sin(t * Math.PI) * 0.06, txt.y);
-
-                if (t >= 1) { txt.destroy(); self._destroyBadgeSprite(badge); return true; }
+                if (t >= 1) { txt.destroy(); return true; }
                 return false;
             }
         });
@@ -1466,17 +1403,11 @@ class EffectManager {
         txt.position.set(x, y);
         txt.alpha = 0;
         this.container.addChild(txt);
-        const badge = this._createBadgeSprite('perfectBadge', x, y, Math.min(w * 0.94, this.game.cellSize * 9.2));
-        if (badge) {
-            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(txt)));
-        }
-
-        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration: 2500,
             update(dt) {
-                if (txt.destroyed) { self._destroyBadgeSprite(badge); return true; }
+                if (txt.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1497,10 +1428,7 @@ class EffectManager {
                     txt.scale.set(1 + (t - 0.7) * 0.8);
                     txt.rotation = 0;
                 }
-                const badgeAlpha = t < 0.7 ? Math.min(1, t / 0.1) * 0.9 : Math.max(0, 1 - (t - 0.7) / 0.3) * 0.9;
-                self._updateBadgeSprite(badge, badgeAlpha, 0.92 + Math.sin(t * Math.PI) * 0.09, txt.y);
-
-                if (t >= 1) { txt.destroy(); self._destroyBadgeSprite(badge); return true; }
+                if (t >= 1) { txt.destroy(); return true; }
                 return false;
             }
         });
@@ -1785,18 +1713,13 @@ class EffectManager {
         txt.position.set(x, y);
         txt.alpha = 0;
         this.container.addChild(txt);
-        const badge = this._createBadgeSprite('bonusBadge', x, y, Math.max(size * 7.4, 260));
-        if (badge) {
-            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(txt)));
-        }
 
         const startY = y;
-        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration: 1500,
             update(dt) {
-                if (txt.destroyed) { self._destroyBadgeSprite(badge); return true; }
+                if (txt.destroyed) return true;
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1810,10 +1733,8 @@ class EffectManager {
                     txt.alpha = 1 - easeInOutQuad((t - 0.6) / 0.4);
                 }
                 txt.y = startY - easeOutCubic(t) * 80;
-                const badgeAlpha = t < 0.6 ? Math.min(1, t / 0.15) * 0.78 : Math.max(0, 1 - (t - 0.6) / 0.4) * 0.78;
-                self._updateBadgeSprite(badge, badgeAlpha, 0.96 + Math.sin(t * Math.PI) * 0.04, txt.y);
 
-                if (t >= 1) { txt.destroy(); self._destroyBadgeSprite(badge); return true; }
+                if (t >= 1) { txt.destroy(); return true; }
                 return false;
             }
         });
