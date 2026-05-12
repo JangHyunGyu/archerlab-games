@@ -339,22 +339,23 @@ export class MenuScene extends Phaser.Scene {
             this._fitText(notice, contentW, uv(24));
         }
 
-        const summaryW = Math.min(contentW, uv(isPortrait ? 360 : (isShortLandscape ? 330 : 370)));
-        const summaryH = uv(isShortLandscape ? 60 : (isPortrait ? 78 : 72));
+        const summaryW = Math.min(contentW, uv(isPortrait ? 370 : (isShortLandscape ? 330 : 370)));
+        const summaryH = uv(isShortLandscape ? 60 : (isPortrait ? 80 : 78));
+        const summaryX = isPortrait ? (GAME_WIDTH - summaryW) / 2 : contentX;
         const summaryY = isPortrait
             ? topY + uv(165)
             : (isShortLandscape ? topY + uv(98) : topY + uv(182));
-        this._createSelectedHunterSummary(contentX, summaryY, summaryW, summaryH, {
+        this._createSelectedHunterSummary(summaryX, summaryY, summaryW, summaryH, {
             isCompactMenu: isCompact,
             isShortLandscape,
         });
 
         const hasSave = GameScene.hasSavedGame();
-        const btnW = Math.min(contentW, uv(isCompact ? 420 : 340));
-        const btnX = contentX;
+        const btnW = Math.min(contentW, uv(isPortrait ? 430 : (isCompact ? 420 : 340)));
+        const btnX = isPortrait ? (GAME_WIDTH - btnW) / 2 : contentX;
         const primaryH = uv(isShortLandscape ? 42 : (isPortrait ? 58 : 62));
         const secondaryH = uv(isShortLandscape ? 34 : (isPortrait ? 44 : 46));
-        const resumeH = uv(isShortLandscape ? 50 : 58);
+        const resumeH = uv(isShortLandscape ? 48 : (isPortrait ? 66 : 68));
         const gap = uv(isShortLandscape ? 8 : 12);
         let actionY = isPortrait
             ? Math.min(GAME_HEIGHT - uv(330), summaryY + uv(210))
@@ -722,13 +723,13 @@ export class MenuScene extends Phaser.Scene {
     _createSelectedHunterSummary(x, y, w, h, { isCompactMenu = false, isShortLandscape = false } = {}) {
         const character = getCharacter(this.selectedCharacterId);
         this._addBitmapPanel(x, y, w, h, {
-            key: 'ui_card_cyan',
-            alpha: 0.88,
+            key: this.textures.exists('start_button_primary') ? 'start_button_primary' : 'ui_card_cyan',
+            alpha: 0.82,
             depth: 4,
-            tint: 0xd7f5ff,
+            tint: null,
         });
 
-        const portraitSize = Math.min(uv(isShortLandscape ? 48 : 66), h * 0.64);
+        const portraitSize = Math.min(uv(isShortLandscape ? 42 : 58), h * 0.58);
         const portraitX = x + uv(isCompactMenu ? 44 : 54);
         const portraitY = y + h / 2;
         const portraitKey = `char_${character.assetKey}_portrait`;
@@ -739,10 +740,10 @@ export class MenuScene extends Phaser.Scene {
                 .setOrigin(0.5);
         }
 
-        const textX = x + uv(isCompactMenu ? 86 : 104);
-        const textW = x + w - uv(18) - textX;
+        const textX = x + uv(isCompactMenu ? 86 : 108);
+        const textW = x + w - uv(34) - textX;
         if (!isCompactMenu) {
-            const tag = this.add.text(textX, y + uv(isShortLandscape ? 11 : 14), 'SELECTED HUNTER', {
+            const tag = this.add.text(textX, y + uv(isShortLandscape ? 11 : 16), 'SELECTED HUNTER', {
                 fontSize: fs(8),
                 fontFamily: UI_FONT_MONO,
                 color: SYSTEM.TEXT_CYAN_DIM,
@@ -751,8 +752,8 @@ export class MenuScene extends Phaser.Scene {
             this._fitText(tag, textW, uv(12));
         }
 
-        const name = this.add.text(textX, y + h * (isCompactMenu ? 0.38 : 0.48), character.name, {
-            fontSize: fs(isShortLandscape ? 13 : 17),
+        const name = this.add.text(textX, y + h * (isCompactMenu ? 0.4 : 0.5), character.name, {
+            fontSize: fs(isShortLandscape ? 12 : 16),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT,
@@ -768,38 +769,42 @@ export class MenuScene extends Phaser.Scene {
     }
 
     _makeMenuResumeButton(x, y, w, h, { title, meta, isNarrow = false, onClick }) {
+        const normalKey = this.textures.exists('start_button_primary') ? 'start_button_primary' : 'ui_panel_gold';
+        const hoverKey = this.textures.exists('start_button_primary_hover') ? 'start_button_primary_hover' : normalKey;
         const bg = this._addBitmapPanel(x, y, w, h, {
-            key: 'ui_panel_gold',
-            alpha: 0.9,
+            key: normalKey,
+            alpha: 0.98,
             depth: 5,
-            tint: 0xffe4a8,
+            tint: null,
         });
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
             .setDepth(8)
             .setInteractive({ useHandCursor: true });
-        const titleText = this.add.text(x + uv(24), y + h * 0.36, title, {
-            fontSize: fs(isNarrow ? 14 : 15),
+        const titleText = this.add.text(x + w / 2, y + h * 0.42, title, {
+            fontSize: fs(isNarrow ? 15 : 17),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
-            color: SYSTEM.TEXT_GOLD,
+            color: SYSTEM.TEXT_BRIGHT,
             stroke: '#02040a',
-            strokeThickness: 2,
-        }).setOrigin(0, 0.5).setDepth(7);
-        const metaText = this.add.text(x + uv(24), y + h * 0.68, meta, {
-            fontSize: fs(isNarrow ? 9 : 10),
+            strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(7);
+        const metaText = this.add.text(x + w / 2, y + h * 0.68, meta, {
+            fontSize: fs(isNarrow ? 8 : 9),
             fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_CYAN_DIM,
-        }).setOrigin(0, 0.5).setDepth(7);
-        const titleScale = this._fitText(titleText, w - uv(48), h * 0.38);
-        const metaScale = this._fitText(metaText, w - uv(48), h * 0.28);
+            color: SYSTEM.TEXT_CYAN,
+        }).setOrigin(0.5).setDepth(7);
+        const titleScale = this._fitText(titleText, w - uv(72), h * 0.38);
+        const metaScale = this._fitText(metaText, w - uv(82), h * 0.24);
 
         hit.on('pointerover', () => {
+            if (this.textures.exists(hoverKey)) bg.setTexture(hoverKey).setDisplaySize(w, h);
             bg.setAlpha(1);
             titleText.setScale(titleScale * 1.02);
             metaText.setScale(metaScale * 1.02);
         });
         hit.on('pointerout', () => {
-            bg.setAlpha(0.9);
+            bg.setTexture(normalKey).setDisplaySize(w, h);
+            bg.setAlpha(0.98);
             titleText.setScale(titleScale);
             metaText.setScale(metaScale);
         });
@@ -882,8 +887,6 @@ export class MenuScene extends Phaser.Scene {
         const leftShadeW = isPortrait ? GAME_WIDTH : GAME_WIDTH * 0.58;
         this.add.rectangle(leftShadeW / 2, GAME_HEIGHT / 2, leftShadeW, GAME_HEIGHT, 0x020611, isPortrait ? 0.48 : 0.42)
             .setDepth(-34);
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, GAME_WIDTH, GAME_HEIGHT * 0.44, 0x010309, isPortrait ? 0.58 : 0.42)
-            .setDepth(-33);
         this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.08, GAME_WIDTH, GAME_HEIGHT * 0.2, 0x010309, isShortLandscape ? 0.34 : 0.22)
             .setDepth(-33);
 
