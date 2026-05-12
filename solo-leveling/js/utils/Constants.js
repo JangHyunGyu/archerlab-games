@@ -29,15 +29,23 @@ export function uv(base) {
     return Math.round(base * dimScale);
 }
 
-export function padText(textObj, top = 2, bottom = 2, left = 0, right = 0) {
+export function padText(textObj, top = 4, bottom = 5, left = 2, right = 2) {
+    const safeTop = Math.max(top, 3);
+    const safeBottom = Math.max(bottom, 3);
     if (textObj && typeof textObj.setPadding === 'function') {
-        textObj.setPadding(left, top, right, bottom);
+        textObj.setPadding(left, safeTop, right, safeBottom);
+    }
+    if (textObj && typeof textObj.setResolution === 'function') {
+        textObj.setResolution(Math.max(textObj.resolution || 1, 2));
     }
     return textObj;
 }
 
 export function fitText(textObj, maxW, maxH = 0, minScale = 0.62) {
     if (!textObj) return 1;
+    if (typeof textObj.setResolution === 'function') {
+        textObj.setResolution(Math.max(textObj.resolution || 1, 2));
+    }
 
     const width = Math.max(textObj.width || 1, 1);
     const height = Math.max(textObj.height || 1, 1);

@@ -28,6 +28,28 @@ const UI_ASSET_KEYS = [
     'menu/start_button_primary_hover',
     'menu/start_button_secondary',
     'menu/start_button_secondary_hover',
+    'menu/start_button_primary_wide',
+    'menu/start_button_primary_wide_hover',
+    'menu/start_button_secondary_wide',
+    'menu/start_button_secondary_wide_hover',
+    'menu/hunter_card_normal',
+    'menu/hunter_card_selected',
+    'menu/modal_frame_cyan',
+    'menu/modal_frame_gold',
+    'menu/rank_card_1',
+    'menu/rank_card_2',
+    'menu/rank_card_3',
+    'menu/icon_play',
+    'menu/icon_resume',
+    'menu/icon_ranking',
+    'menu/icon_mail',
+    'menu/icon_kakao',
+    'menu/icon_loading_core',
+    'menu/icon_empty_record',
+    'menu/icon_error',
+    'menu/preload_core',
+    'menu/preload_bar_frame',
+    'menu/preload_bar_fill',
 ];
 
 const ITEM_KEYS = ['hp_potion', 'mana_crystal', 'shadow_essence'];
@@ -48,7 +70,6 @@ const BOSS_SUPPORT_KEYS = [
 ];
 const ENV_KEYS = ['cracked_pillar', 'rune_stone', 'shadow_portal', 'hanging_chain'];
 const SHADOW_KEYS = ['melee', 'tank', 'ranged'];
-const PICKUP_KEYS = ['xp_collect', 'xp_trail'];
 const ARISE_KEYS = ['arise_rune', 'arise_smoke', 'arise_hand'];
 const SHADOW_SOLDIER_VFX_KEYS = ['soldier_slash', 'soldier_slam', 'soldier_spit', 'soldier_trail'];
 const ENEMY_KEYS = ['goblin', 'antSoldier', 'orc', 'iceBear', 'stoneGolem', 'darkMage', 'ironKnight', 'demonWarrior'];
@@ -89,10 +110,16 @@ const frameAssets = (prefix, dir, names) => names.map(name => ({
 }));
 
 export function getCharacterPortraitAssets() {
-    return Object.values(CHARACTER_DEFS).map(character => ({
-        key: `char_${character.assetKey}_portrait`,
-        path: `assets/player/characters/${character.assetKey}/portrait.png`,
-    }));
+    return Object.values(CHARACTER_DEFS).flatMap(character => ([
+        {
+            key: `char_${character.assetKey}_portrait`,
+            path: `assets/player/characters/${character.assetKey}/portrait.png`,
+        },
+        {
+            key: `char_${character.assetKey}_menu_portrait`,
+            path: `assets/player/characters/${character.assetKey}/menu_portrait.png`,
+        },
+    ]));
 }
 
 export function getCharacterMotionAssets(characterId = getStoredCharacterId()) {
@@ -127,7 +154,6 @@ export function getGameplayAssetList(characterId = getStoredCharacterId()) {
         ...getCharacterMotionAssets(characterId),
         ...CHARACTER_SKILL_EFFECT_KEYS.map(key => ({ key: `char_skill_${key}`, path: `assets/effects/character_skills/${key}.png` })),
         ...CHARACTER_BASIC_ATTACK_EFFECT_KEYS.map(key => ({ key: `basic_attack_${key}`, path: `assets/effects/basic_attacks/${key}.png` })),
-        ...PICKUP_KEYS.map(key => ({ key: `pickup_${key}`, path: `assets/effects/pickups/${key}.png` })),
         ...ARISE_KEYS.map(key => ({ key: `asset_${key}`, path: `assets/effects/arise/${key}.png` })),
         ...SHADOW_SOLDIER_VFX_KEYS.map(key => ({ key: `shadow_vfx_${key}`, path: `assets/effects/shadow_soldiers/${key}.png` })),
         { key: 'ai_player_idle', path: 'assets/player/player_idle.png' },

@@ -2,7 +2,7 @@ import {
     GAME_WIDTH, GAME_HEIGHT,
     RANKS,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
-    fs, uv, drawSystemPanel,
+    fs, uv, drawSystemPanel, fitText, padText,
 } from '../utils/Constants.js';
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId } from '../utils/Characters.js';
@@ -196,7 +196,7 @@ export class GameOverScene extends Phaser.Scene {
         const titleObj = this.add.text(cx, GAME_HEIGHT * 0.16, titleText, {
             fontSize: fs(44), fontFamily: UI_FONT_KR, fontStyle: 'bold',
             color: isVictory ? SYSTEM.TEXT_GOLD : SYSTEM.TEXT_RED,
-            stroke: '#000000', strokeThickness: 3, letterSpacing: 4,
+            stroke: '#000000', strokeThickness: 3, letterSpacing: 0,
         }).setOrigin(0.5);
         const titleMaxW = GAME_WIDTH - uv(40);
         if (titleObj.width > titleMaxW) titleObj.setScale(titleMaxW / titleObj.width);
@@ -208,7 +208,7 @@ export class GameOverScene extends Phaser.Scene {
         this.add.text(cx, GAME_HEIGHT * 0.25, isVictory ? t('victorySub') : t('huntOver'), {
             fontSize: fs(13), fontFamily: UI_FONT_MONO,
             color: isVictory ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED,
-            letterSpacing: 2,
+            letterSpacing: 0,
         }).setOrigin(0.5);
 
         // Stats card — angular panel
@@ -317,10 +317,12 @@ export class GameOverScene extends Phaser.Scene {
             .setDepth(depth).setInteractive({ useHandCursor: true });
         const txt = this.add.text(x + w / 2, y + h / 2, label, {
             fontSize: fs(labelSize), fontFamily: labelFont, fontStyle: 'bold',
-            color: labelColor, letterSpacing: 1,
+            color: labelColor, letterSpacing: 0,
         }).setOrigin(0.5).setDepth(depth + 1);
-        hit.on('pointerover', () => { redraw(true); txt.setScale(1.02); });
-        hit.on('pointerout', () => { redraw(false); txt.setScale(1); });
+        padText(txt, 4, 5, 2, 2);
+        const baseScale = fitText(txt, w - uv(18), h - uv(8), 0.66);
+        hit.on('pointerover', () => { redraw(true); txt.setScale(baseScale * 1.02); });
+        hit.on('pointerout', () => { redraw(false); txt.setScale(baseScale); });
         hit.on('pointerdown', () => onClick && onClick());
         return { g, hit, txt };
     }

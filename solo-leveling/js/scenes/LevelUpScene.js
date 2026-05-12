@@ -57,7 +57,10 @@ export class LevelUpScene extends Phaser.Scene {
         // Title
         const title = padText(this.add.text(GAME_WIDTH / 2, titleY, t('levelUp'), {
             fontSize: fs(layout.stack ? 36 : 34), fontFamily: UI_FONT_KR, fontStyle: 'bold',
-            color: SYSTEM.TEXT_BRIGHT, letterSpacing: 3,
+            color: SYSTEM.TEXT_BRIGHT,
+            stroke: '#02040a',
+            strokeThickness: 3,
+            letterSpacing: 0,
         }).setOrigin(0.5).setDepth(1), 4, 4);
         fitText(title, GAME_WIDTH - layout.sidePad * 2, uv(70), 0.72);
 
@@ -70,7 +73,7 @@ export class LevelUpScene extends Phaser.Scene {
         // Level display
         const levelText = padText(this.add.text(GAME_WIDTH / 2, titleY + title.displayHeight / 2 + uv(24), `▷  LV. ${String(this.player.level).padStart(2, '0')}`, {
             fontSize: fs(layout.stack ? 16 : 15), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN,
-            letterSpacing: 2,
+            letterSpacing: 0,
         }).setOrigin(0.5).setDepth(1), 2, 2);
         fitText(levelText, GAME_WIDTH - layout.sidePad * 2, 0, 0.75);
 
@@ -258,7 +261,7 @@ export class LevelUpScene extends Phaser.Scene {
         const typeLabel = choice.type === 'weapon' ? t('skillLabel') : t('passiveLabel');
         const typeText = padText(this.add.text(x + w / 2, y + h * 0.43, `[ ${typeLabel} ]`, {
             fontSize: fs(10), fontFamily: UI_FONT_MONO, color: typeColor,
-            letterSpacing: 1,
+            letterSpacing: 0,
         }).setOrigin(0.5).setDepth(2), 2, 2);
         fitText(typeText, w - uv(28), 0, 0.72);
 
@@ -333,7 +336,7 @@ export class LevelUpScene extends Phaser.Scene {
         const typeLabel = choice.type === 'weapon' ? t('skillLabel') : t('passiveLabel');
 
         const typeText = padText(this.add.text(textX, y + Math.max(uv(14), h * 0.18), `[ ${typeLabel} ]`, {
-            fontSize: fs(12), fontFamily: UI_FONT_MONO, color: typeColor, letterSpacing: 1,
+            fontSize: fs(12), fontFamily: UI_FONT_MONO, color: typeColor, letterSpacing: 0,
         }).setOrigin(0, 0).setDepth(2), 2, 2);
         fitText(typeText, textW, 0, 0.68);
 

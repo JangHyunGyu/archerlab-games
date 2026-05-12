@@ -12,6 +12,8 @@
       'menu.how': '조작법 · 진화표',
       'menu.rank': '랭킹',
       'menu.archerlab': 'ArcherLab',
+      'rotate.title': '세로 모드로 돌려주세요',
+      'rotate.body': '고양이 타워는 세로 화면에 맞춰져 있어요.',
 
       // HUD
       'hud.score': '점수',
@@ -81,6 +83,8 @@
       'menu.how': 'How to Play · Tiers',
       'menu.rank': 'Ranking',
       'menu.archerlab': 'ArcherLab',
+      'rotate.title': 'Rotate to portrait',
+      'rotate.body': 'Cat Tower is tuned for a vertical screen.',
 
       'hud.score': 'Score',
       'hud.current': 'Now',

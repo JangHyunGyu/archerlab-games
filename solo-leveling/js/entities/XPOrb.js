@@ -1,5 +1,3 @@
-import { COLORS } from '../utils/Constants.js';
-
 export class XPOrbPool {
     constructor(scene, options = {}) {
         this.scene = scene;
@@ -135,12 +133,8 @@ export class XPOrbPool {
 
     _collect(orb, player) {
         const leveled = player.addXP(orb.xpValue);
-        const collectX = orb.x;
-        const collectY = orb.y;
 
         if (this.scene.soundManager) this.scene.soundManager.play('xp');
-
-        this._spawnCollectEffect(collectX, collectY, player);
 
         orb.setActive(false);
         orb.setVisible(false);
@@ -150,70 +144,6 @@ export class XPOrbPool {
         if (leveled) {
             this.scene.onLevelUp();
         }
-    }
-
-    _consumeCollectVfxBudget(cost = 1) {
-        const frame = this.scene?.game?.loop?.frame ?? 0;
-        if (this._collectVfxFrame !== frame) {
-            this._collectVfxFrame = frame;
-            this._collectVfxUsed = 0;
-        }
-
-        const fps = this.scene?.game?.loop?.actualFps || 60;
-        const children = this.scene?.children?.list?.length || 0;
-        const max = this.scene?._lowQuality || fps < 35 || children > 900
-            ? 3
-            : (fps < 48 || children > 650 ? 6 : 10);
-        if ((this._collectVfxUsed || 0) + cost > max) return false;
-        this._collectVfxUsed = (this._collectVfxUsed || 0) + cost;
-        return true;
-    }
-
-    _spawnCollectEffect(x, y, player) {
-        if (!this._consumeCollectVfxBudget(1)) return;
-
-        const hasCollectAsset = this.scene.textures.exists('pickup_xp_collect');
-        const flash = hasCollectAsset
-            ? this.scene.add.sprite(x, y, 'pickup_xp_collect')
-                .setDepth(15)
-                .setScale(0.42)
-                .setAlpha(0.95)
-                .setBlendMode(Phaser.BlendModes.ADD)
-            : this.scene.add.circle(x, y, 8, COLORS.XP_ORB, 0.6).setDepth(15);
-
-        this.scene.tweens.add({
-            targets: flash,
-            alpha: 0,
-            scaleX: hasCollectAsset ? 0.9 : 2,
-            scaleY: hasCollectAsset ? 0.9 : 2,
-            rotation: hasCollectAsset ? Math.PI * 0.55 : 0,
-            duration: 220,
-            ease: 'Quad.Out',
-            onComplete: () => flash.destroy(),
-        });
-
-        if (!player || !this.scene.textures.exists('pickup_xp_trail')) return;
-        if (!this._consumeCollectVfxBudget(2)) return;
-
-        const midX = (x + player.x) / 2;
-        const midY = (y + player.y) / 2;
-        const dist = Phaser.Math.Distance.Between(x, y, player.x, player.y);
-        const angle = Phaser.Math.Angle.Between(x, y, player.x, player.y);
-        const trail = this.scene.add.sprite(midX, midY, 'pickup_xp_trail')
-            .setDepth(14)
-            .setAlpha(0.72)
-            .setScale(Math.max(0.3, dist / 180), 0.32)
-            .setRotation(angle)
-            .setBlendMode(Phaser.BlendModes.ADD);
-
-        this.scene.tweens.add({
-            targets: trail,
-            alpha: 0,
-            scaleY: 0.08,
-            duration: 160,
-            ease: 'Quad.Out',
-            onComplete: () => trail.destroy(),
-        });
     }
 
     getGroup() {
@@ -237,7 +167,5 @@ export class XPOrbPool {
         } catch (e) { /* group already destroyed by scene shutdown */ }
         this.group = null;
         this.scene = null;
-        this._collectVfxFrame = -1;
-        this._collectVfxUsed = 0;
     }
 }

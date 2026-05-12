@@ -872,6 +872,9 @@ class UIManager {
         const isLandscape = w > h * 1.08;
         const isShort = h < 640;
         const sc = isSmall ? 0.9 : 1;
+        const uiScale = isLandscape
+            ? Math.min(1.45, Math.max(1, Math.min(w / 1280, h / 720)))
+            : Math.min(1.22, Math.max(1, w / 430));
 
         const splashTexture = getBlockpangTexture('titleBackdropClean') || getBlockpangTexture('titleSplash');
         if (splashTexture) {
@@ -925,7 +928,7 @@ class UIManager {
         container.addChild(deco);
 
         // ── Logo: "블럭팡" / 한글/영문 반응 ──
-        const logoFontSize = Math.min(isLandscape ? 54 : 64, w * (isLandscape ? 0.12 : 0.155)) * sc;
+        const logoFontSize = Math.min((isLandscape ? 54 : 64) * uiScale, w * (isLandscape ? 0.12 : 0.155)) * sc;
         const logo = new PIXI.Text({
             text: getText('gameTitle'),
             style: {
@@ -961,7 +964,7 @@ class UIManager {
             text: getText('blockPuzzle'),
             style: {
                 fontFamily: FONT_BODY,
-                fontSize: Math.min(13, w * 0.031) * sc,
+                fontSize: Math.min(13 * uiScale, w * 0.031) * sc,
                 fill: THEME.goldSoft,
                 fontWeight: '800',
                 letterSpacing: 1.4,
@@ -981,7 +984,7 @@ class UIManager {
                 text: bestLabel,
                 style: {
                     fontFamily: FONT_BODY,
-                    fontSize: Math.min(13, w * 0.033) * sc,
+                    fontSize: Math.min(13 * uiScale, w * 0.033) * sc,
                     fill: THEME.gold,
                     fontWeight: '600',
                     letterSpacing: 1,
@@ -1007,10 +1010,10 @@ class UIManager {
 
         // ── Buttons ──
         const hasSave = Game.hasSavedGame();
-        const btnW = Math.min(w * (isLandscape ? 0.38 : 0.78), isLandscape ? 320 : 344);
-        const btnH = Math.min(58, Math.max(50, h * 0.064));
-        const actionGap = Math.max(10, Math.min(14, h * 0.014));
-        const smallBtnH = Math.min(42, Math.max(38, h * 0.05));
+        const btnW = Math.min(w * (isLandscape ? 0.38 : 0.78), (isLandscape ? 320 : 344) * uiScale);
+        const btnH = Math.min(58 * uiScale, Math.max(50, h * 0.064));
+        const actionGap = Math.max(10, Math.min(14 * uiScale, h * 0.014));
+        const smallBtnH = Math.min(42 * uiScale, Math.max(38, h * 0.05));
         const safeBottom = Math.max(18, Math.min(32, h * 0.03));
         const actionStackH = hasSave
             ? btnH * 2 + actionGap + smallBtnH + 52
@@ -1033,8 +1036,8 @@ class UIManager {
                 variant,
                 icon,
                 fontSize: variant === 'ghost'
-                    ? Math.min(12, w * 0.031) * sc
-                    : Math.min(18, width * 0.062),
+                    ? Math.min(13 * uiScale, width * 0.09) * sc
+                    : Math.min(22 * uiScale, width * 0.064),
                 minFontSize: variant === 'ghost' ? 10 : 13,
                 onPress: action,
                 registerActive: true,
@@ -1068,7 +1071,7 @@ class UIManager {
         // ── Bottom Row: Hall of Fame + Contact (ghost buttons) ──
         const gap = 12;
         const bottomY = startBtnY + btnH + Math.max(18, h * 0.024);
-        const smallBtnW = Math.min((btnW - gap) / 2, 140);
+        const smallBtnW = Math.min((btnW - gap) / 2, 140 * uiScale);
 
         const hofBtn = makeTitleButton(btnX, bottomY, smallBtnW, smallBtnH, getText('hallOfFame'), 'ghost',
             () => this.showHallOfFame(), 'rank');
