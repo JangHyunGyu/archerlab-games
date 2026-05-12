@@ -3,10 +3,12 @@ import {
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
     fs, uv, drawSystemPanel,
 } from '../utils/Constants.js';
+import { SpriteFactory } from '../utils/SpriteFactory.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { GameScene } from './GameScene.js';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
+import { getGameplayAssetList } from '../utils/AssetManifest.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -14,7 +16,7 @@ export class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        this._createCommercialMenu();
+        this._createCleanMenu();
     }
 
     _createLegacyMenu() {
@@ -256,6 +258,166 @@ export class MenuScene extends Phaser.Scene {
         });
     }
 
+    _createCleanMenu() {
+        const alLink = document.getElementById('archerlab-link');
+        if (alLink) alLink.style.display = 'none';
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const viewportW = window.innerWidth || GAME_WIDTH;
+        const viewportH = window.innerHeight || GAME_HEIGHT;
+        const isPortrait = viewportH > viewportW || GAME_HEIGHT > GAME_WIDTH;
+        const isShortLandscape = !isPortrait && ((viewportH <= 620 && viewportW > viewportH) || GAME_HEIGHT <= 620);
+        const isCompact = isPortrait || GAME_WIDTH < 980 || isShortLandscape;
+
+        this._modalElements = [];
+        this._dropdownElements = [];
+        this._startingGame = false;
+        this._characterSelectOpen = false;
+        this.selectedCharacterId = getStoredCharacterId();
+
+        this._createMenuBackdrop({ isPortrait, isShortLandscape });
+
+        const safe = uv(isCompact ? 24 : 48);
+        const contentX = isCompact ? safe : Math.max(safe, GAME_WIDTH * 0.08);
+        const contentW = isCompact
+            ? GAME_WIDTH - safe * 2
+            : Math.min(uv(470), GAME_WIDTH * 0.38);
+        const topY = isPortrait ? uv(72) : (isShortLandscape ? uv(44) : GAME_HEIGHT * 0.16);
+
+        const startGame = async (resume = false, characterIdOverride = null) => {
+            if (this._startingGame) return;
+            this._startingGame = true;
+            const characterId = resume
+                ? (GameScene.getSavedSummary()?.characterId || characterIdOverride || this.selectedCharacterId)
+                : setStoredCharacterId(characterIdOverride || this.selectedCharacterId);
+            this.selectedCharacterId = characterId;
+            if (!this.game._soundManager) {
+                this.game._soundManager = new SoundManager();
+                this.game._soundManager.init();
+            }
+            const sm = this.game._soundManager;
+            sm.stopIntroMusic();
+            await sm.resume(true);
+            await this._ensureGameplayAssetsLoaded(characterId);
+            this.cameras.main.fadeOut(380, 0, 0, 0);
+            this.time.delayedCall(380, () => this.scene.start('GameScene', { resume, characterId }));
+        };
+
+        const tag = this.add.text(contentX, topY, '[ SYSTEM ONLINE ]', {
+            fontSize: fs(isCompact ? 9 : 10),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+            letterSpacing: 1,
+        }).setDepth(4);
+        this._fitText(tag, contentW, uv(18));
+
+        const title = this.add.text(contentX, topY + uv(isCompact ? 42 : 52), t('title'), {
+            fontSize: fs(isShortLandscape ? 30 : (isPortrait ? 44 : 58)),
+            fontFamily: UI_FONT_KR,
+            fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT,
+            stroke: '#02040a',
+            strokeThickness: 5,
+        }).setOrigin(0, 0.5).setDepth(4);
+        this._fitText(title, contentW, uv(isCompact ? 58 : 72));
+
+        const subtitle = this.add.text(contentX + uv(2), topY + uv(isCompact ? 86 : 104), t('subtitle'), {
+            fontSize: fs(isShortLandscape ? 10 : 12),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN,
+            letterSpacing: 4,
+        }).setDepth(4);
+        this._fitText(subtitle, contentW, uv(18));
+
+        if (!isShortLandscape) {
+            const notice = this.add.text(contentX, topY + uv(isPortrait ? 126 : 144), t('menuMsg3'), {
+                fontSize: fs(isPortrait ? 12 : 13),
+                fontFamily: UI_FONT_KR,
+                color: SYSTEM.TEXT_CYAN_DIM,
+            }).setDepth(4);
+            this._fitText(notice, contentW, uv(24));
+        }
+
+        const summaryW = Math.min(contentW, uv(isPortrait ? 360 : (isShortLandscape ? 330 : 370)));
+        const summaryH = uv(isShortLandscape ? 60 : (isPortrait ? 78 : 72));
+        const summaryY = isPortrait
+            ? topY + uv(165)
+            : (isShortLandscape ? topY + uv(98) : topY + uv(182));
+        this._createSelectedHunterSummary(contentX, summaryY, summaryW, summaryH, {
+            isCompactMenu: isCompact,
+            isShortLandscape,
+        });
+
+        const hasSave = GameScene.hasSavedGame();
+        const btnW = Math.min(contentW, uv(isCompact ? 420 : 340));
+        const btnX = contentX;
+        const primaryH = uv(isShortLandscape ? 42 : 52);
+        const secondaryH = uv(isShortLandscape ? 32 : 38);
+        const resumeH = uv(isShortLandscape ? 50 : 58);
+        const gap = uv(isShortLandscape ? 8 : 12);
+        let actionY = isPortrait
+            ? Math.min(GAME_HEIGHT - uv(330), summaryY + uv(210))
+            : (isShortLandscape ? topY + uv(184) : GAME_HEIGHT - uv(190));
+        if (isShortLandscape) {
+            const actionStackH = primaryH + gap + secondaryH;
+            actionY = Math.min(GAME_HEIGHT - uv(24) - actionStackH, summaryY + summaryH + uv(16));
+        }
+        if (hasSave) actionY -= resumeH + gap;
+
+        if (hasSave) {
+            const summary = GameScene.getSavedSummary();
+            const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
+            const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
+            this._makeMenuResumeButton(btnX, actionY, btnW, resumeH, {
+                title: t('continueGame'),
+                meta: `${summary?.characterName || ''}  LV.${String(summary?.level || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
+                isNarrow: isCompact,
+                onClick: () => startGame(true),
+            });
+            actionY += resumeH + gap;
+        }
+
+        this._makeMenuButton(btnX, actionY, btnW, primaryH, {
+            label: t('startGame'),
+            labelColor: SYSTEM.TEXT_BRIGHT,
+            labelSize: isShortLandscape ? 15 : 18,
+            labelFont: UI_FONT_KR,
+            primary: true,
+            onClick: () => this._showCharacterSelectModal((characterId) => startGame(false, characterId)),
+        });
+
+        this._makeMenuButton(btnX, actionY + primaryH + gap, btnW, secondaryH, {
+            label: t('hallOfFame'),
+            labelColor: SYSTEM.TEXT_GOLD,
+            labelSize: isShortLandscape ? 10 : 12,
+            labelFont: UI_FONT_MONO,
+            onClick: () => this._showHallOfFame(isMobile),
+        });
+
+        this._createLanguageDropdown(isMobile);
+        this.cameras.main.fadeIn(380, 0, 0, 0);
+
+        this.events.once('shutdown', () => {
+            this._dropdownElements.forEach(el => { if (el && el.active) el.destroy(); });
+            this._dropdownElements = [];
+            this._modalElements.forEach(el => { if (el && el.active) el.destroy(); });
+            this._modalElements = [];
+        });
+
+        this.input.once('pointerdown', async () => {
+            if (this._startingGame) return;
+            if (!this.game._soundManager) {
+                this.game._soundManager = new SoundManager();
+                this.game._soundManager.init();
+            }
+            const sm = this.game._soundManager;
+            await sm.resume(true);
+            sm.warmup();
+            sm.playIntroMusic();
+        });
+    }
+
     _createCommercialMenu() {
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = '';
@@ -475,6 +637,88 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(depth);
     }
 
+    _supportsWebP() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            return canvas.toDataURL('image/webp').startsWith('data:image/webp');
+        } catch (e) {
+            return false;
+        }
+    }
+
+    _queueRuntimeImage(key, pngPath, fallbackMap = null) {
+        if (this.textures.exists(key)) return false;
+        const useWebP = this._supportsWebP() && pngPath.endsWith('.png');
+        const path = useWebP ? pngPath.replace(/\.png$/i, '.webp') : pngPath;
+        if (useWebP && fallbackMap) fallbackMap.set(key, pngPath);
+        this.load.image(key, path);
+        return true;
+    }
+
+    _ensureGameplayAssetsLoaded(characterId) {
+        const fallbackMap = new Map();
+        const pendingKeys = new Set();
+        const queued = getGameplayAssetList(characterId)
+            .filter((asset) => {
+                if (this.textures.exists(asset.key) || pendingKeys.has(asset.key)) return false;
+                pendingKeys.add(asset.key);
+                return this._queueRuntimeImage(asset.key, asset.path, fallbackMap);
+            });
+
+        if (queued.length === 0) {
+            SpriteFactory.createAll(this);
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02040a, 0.58)
+                .setDepth(218)
+                .setInteractive();
+            const loading = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - uv(12), 'LOADING DUNGEON...', {
+                fontSize: fs(13),
+                fontFamily: UI_FONT_MONO,
+                color: SYSTEM.TEXT_CYAN,
+                stroke: '#02040a',
+                strokeThickness: 3,
+            }).setOrigin(0.5).setDepth(220);
+            const progress = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + uv(18), '000 %', {
+                fontSize: fs(10),
+                fontFamily: UI_FONT_MONO,
+                color: SYSTEM.TEXT_CYAN_DIM,
+            }).setOrigin(0.5).setDepth(220);
+
+            const onProgress = (value) => {
+                progress.setText(String(Math.floor(value * 100)).padStart(3, '0') + ' %');
+            };
+            const onError = (file) => {
+                const fallback = fallbackMap.get(file.key);
+                if (fallback) {
+                    fallbackMap.delete(file.key);
+                    console.warn('WebP asset not loaded; falling back to PNG:', file.key);
+                    this.load.image(file.key, fallback);
+                    return;
+                }
+                console.warn('Gameplay asset not loaded:', file.key);
+            };
+
+            this.load.once('complete', () => {
+                this.load.off('progress', onProgress);
+                this.load.off('loaderror', onError);
+                SpriteFactory.createAll(this);
+                if (dim.active) dim.destroy();
+                if (loading.active) loading.destroy();
+                if (progress.active) progress.destroy();
+                resolve();
+            });
+
+            this.load.on('progress', onProgress);
+            this.load.on('loaderror', onError);
+            this.load.start();
+        });
+    }
+
     _createSelectedHunterSummary(x, y, w, h, { isCompactMenu = false, isShortLandscape = false } = {}) {
         const character = getCharacter(this.selectedCharacterId);
         this._addBitmapPanel(x, y, w, h, {
@@ -497,15 +741,17 @@ export class MenuScene extends Phaser.Scene {
 
         const textX = x + uv(isCompactMenu ? 86 : 104);
         const textW = x + w - uv(18) - textX;
-        const tag = this.add.text(textX, y + uv(isShortLandscape ? 11 : 18), 'SELECTED HUNTER', {
-            fontSize: fs(isShortLandscape ? 8 : 9),
-            fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_CYAN_DIM,
-            letterSpacing: 1,
-        }).setDepth(6);
-        this._fitText(tag, textW, uv(14));
+        if (!isCompactMenu) {
+            const tag = this.add.text(textX, y + uv(isShortLandscape ? 11 : 14), 'SELECTED HUNTER', {
+                fontSize: fs(8),
+                fontFamily: UI_FONT_MONO,
+                color: SYSTEM.TEXT_CYAN_DIM,
+                letterSpacing: 1,
+            }).setDepth(6);
+            this._fitText(tag, textW, uv(12));
+        }
 
-        const name = this.add.text(textX, y + h * (isShortLandscape ? 0.46 : 0.48), character.name, {
+        const name = this.add.text(textX, y + h * (isCompactMenu ? 0.38 : 0.48), character.name, {
             fontSize: fs(isShortLandscape ? 13 : 17),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
@@ -513,7 +759,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0, 0.5).setDepth(6);
         this._fitText(name, textW, h * 0.3);
 
-        const meta = this.add.text(textX, y + h - uv(isShortLandscape ? 14 : 20), `${character.archetype}  |  HP ${character.stats.hp}  ATK ${character.stats.attack}`, {
+        const meta = this.add.text(textX, y + h * (isCompactMenu ? 0.68 : 0.76), `${character.archetype}  |  HP ${character.stats.hp}  ATK ${character.stats.attack}`, {
             fontSize: fs(isShortLandscape ? 8 : 10),
             fontFamily: UI_FONT_KR,
             color: character.accentText,
@@ -736,11 +982,6 @@ export class MenuScene extends Phaser.Scene {
     }
 
     _getCharacterHeroTexture(character) {
-        const motionKey = character.usesExistingPlayerMotion
-            ? 'player_idle_0'
-            : `${character.texturePrefix}_idle_0`;
-        if (this.textures.exists(motionKey)) return motionKey;
-
         const portraitKey = `char_${character.assetKey}_portrait`;
         return this.textures.exists(portraitKey) ? portraitKey : 'player_idle_0';
     }
