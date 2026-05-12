@@ -286,6 +286,8 @@ export class MenuScene extends Phaser.Scene {
             ? GAME_WIDTH - safe * 2
             : Math.min(uv(470), GAME_WIDTH * 0.38);
         const topY = isPortrait ? uv(72) : (isShortLandscape ? uv(44) : GAME_HEIGHT * 0.16);
+        const headerX = isPortrait ? GAME_WIDTH / 2 : contentX;
+        const headerOriginX = isPortrait ? 0.5 : 0;
 
         const startGame = async (resume = false, characterIdOverride = null) => {
             if (this._startingGame) return;
@@ -306,38 +308,42 @@ export class MenuScene extends Phaser.Scene {
             this.time.delayedCall(380, () => this.scene.start('GameScene', { resume, characterId }));
         };
 
-        const tag = this.add.text(contentX, topY, '[ SYSTEM ONLINE ]', {
+        const tag = this.add.text(headerX, topY, '[ SYSTEM ONLINE ]', {
             fontSize: fs(isCompact ? 9 : 10),
             fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_CYAN_DIM,
             letterSpacing: 1,
-        }).setDepth(4);
+            align: isPortrait ? 'center' : 'left',
+        }).setOrigin(headerOriginX, 0).setDepth(4);
         this._fitText(tag, contentW, uv(18));
 
-        const title = this.add.text(contentX, topY + uv(isCompact ? 42 : 52), t('title'), {
+        const title = this.add.text(headerX, topY + uv(isCompact ? 42 : 52), t('title'), {
             fontSize: fs(isShortLandscape ? 30 : (isPortrait ? 44 : 58)),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT,
             stroke: '#02040a',
             strokeThickness: 5,
-        }).setOrigin(0, 0.5).setDepth(4);
+            align: isPortrait ? 'center' : 'left',
+        }).setOrigin(headerOriginX, 0.5).setDepth(4);
         this._fitText(title, contentW, uv(isCompact ? 58 : 72));
 
-        const subtitle = this.add.text(contentX + uv(2), topY + uv(isCompact ? 86 : 104), t('subtitle'), {
+        const subtitle = this.add.text(headerX + (isPortrait ? 0 : uv(2)), topY + uv(isCompact ? 86 : 104), t('subtitle'), {
             fontSize: fs(isShortLandscape ? 10 : 12),
             fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_CYAN,
             letterSpacing: 4,
-        }).setDepth(4);
+            align: isPortrait ? 'center' : 'left',
+        }).setOrigin(headerOriginX, 0).setDepth(4);
         this._fitText(subtitle, contentW, uv(18));
 
         if (!isShortLandscape) {
-            const notice = this.add.text(contentX, topY + uv(isPortrait ? 126 : 144), t('menuMsg3'), {
+            const notice = this.add.text(headerX, topY + uv(isPortrait ? 126 : 144), t('menuMsg3'), {
                 fontSize: fs(isPortrait ? 12 : 13),
                 fontFamily: UI_FONT_KR,
                 color: SYSTEM.TEXT_CYAN_DIM,
-            }).setDepth(4);
+                align: isPortrait ? 'center' : 'left',
+            }).setOrigin(headerOriginX, 0).setDepth(4);
             this._fitText(notice, contentW, uv(24));
         }
 
@@ -362,7 +368,7 @@ export class MenuScene extends Phaser.Scene {
         let actionY;
         if (isPortrait) {
             const actionStackH = (hasSave ? resumeH + gap : 0) + primaryH + gap + secondaryH;
-            const targetY = GAME_HEIGHT * (hasSave ? 0.39 : 0.43);
+            const targetY = GAME_HEIGHT * (hasSave ? 0.45 : 0.48);
             const minY = summaryY + summaryH + uv(hasSave ? 145 : 185);
             actionY = Math.min(GAME_HEIGHT - uv(260) - actionStackH, Math.max(targetY, minY));
         } else if (isShortLandscape) {
