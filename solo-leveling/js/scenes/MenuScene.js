@@ -352,8 +352,8 @@ export class MenuScene extends Phaser.Scene {
         const hasSave = GameScene.hasSavedGame();
         const btnW = Math.min(contentW, uv(isCompact ? 420 : 340));
         const btnX = contentX;
-        const primaryH = uv(isShortLandscape ? 42 : 52);
-        const secondaryH = uv(isShortLandscape ? 32 : 38);
+        const primaryH = uv(isShortLandscape ? 42 : (isPortrait ? 58 : 62));
+        const secondaryH = uv(isShortLandscape ? 34 : (isPortrait ? 44 : 46));
         const resumeH = uv(isShortLandscape ? 50 : 58);
         const gap = uv(isShortLandscape ? 8 : 12);
         let actionY = isPortrait
@@ -807,12 +807,19 @@ export class MenuScene extends Phaser.Scene {
     }
 
     _makeMenuButton(x, y, w, h, { label, labelColor, labelSize = 16, labelFont = UI_FONT_KR, primary = false, onClick }) {
-        const normalKey = primary ? 'ui_button_cyan' : 'ui_panel_gold';
+        const preferredNormal = primary ? 'start_button_primary' : 'start_button_secondary';
+        const preferredHover = primary ? 'start_button_primary_hover' : 'start_button_secondary_hover';
+        const normalKey = this.textures.exists(preferredNormal)
+            ? preferredNormal
+            : (primary ? 'ui_button_cyan' : 'ui_panel_gold');
+        const hoverKey = this.textures.exists(preferredHover)
+            ? preferredHover
+            : (this.textures.exists('ui_button_hover') ? 'ui_button_hover' : normalKey);
         const bg = this._addBitmapPanel(x, y, w, h, {
             key: normalKey,
             alpha: primary ? 0.96 : 0.78,
             depth: 5,
-            tint: primary ? 0xd6f8ff : 0xffdda0,
+            tint: null,
         });
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
             .setDepth(8)
@@ -828,7 +835,7 @@ export class MenuScene extends Phaser.Scene {
         const baseScale = this._fitText(txt, w - uv(24), h - uv(12));
 
         hit.on('pointerover', () => {
-            if (this.textures.exists('ui_button_hover')) bg.setTexture('ui_button_hover').setDisplaySize(w, h);
+            if (this.textures.exists(hoverKey)) bg.setTexture(hoverKey).setDisplaySize(w, h);
             bg.setAlpha(1);
             txt.setScale(baseScale * 1.02);
         });
