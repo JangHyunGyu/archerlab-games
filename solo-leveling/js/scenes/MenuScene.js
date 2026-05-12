@@ -9,6 +9,7 @@ import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../ut
 import { GameScene } from './GameScene.js';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
 import { getGameplayAssetList } from '../utils/AssetManifest.js';
+import { getCharacterMenuLabels, getCharacterText } from '../utils/CharacterLocalization.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -173,11 +174,12 @@ export class MenuScene extends Phaser.Scene {
 
         if (hasSave) {
             const summary = GameScene.getSavedSummary();
+            const savedText = getCharacterText(getCharacter(summary?.characterId));
             const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
             const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
             this._makeResumeButton(centerX - btnW / 2, nextActionY, btnW, resumeH, {
                 title: t('continueGame'),
-                meta: `${summary?.characterName || ''}  LV.${String(summary?.level || 1).padStart(2, '0')}  ·  ${min}:${sec}`.trim(),
+                meta: `${savedText.name}  LV.${String(summary?.level || 1).padStart(2, '0')}  ·  ${min}:${sec}`.trim(),
                 isNarrow,
                 onClick: () => startGame(true),
             });
@@ -339,7 +341,7 @@ export class MenuScene extends Phaser.Scene {
             this._fitText(notice, contentW, uv(24));
         }
 
-        const summaryW = Math.min(contentW, uv(isPortrait ? 370 : (isShortLandscape ? 330 : 370)));
+        const summaryW = Math.min(contentW, uv(isPortrait ? 410 : (isShortLandscape ? 330 : 430)));
         const summaryH = uv(isShortLandscape ? 60 : (isPortrait ? 80 : 78));
         const summaryX = isPortrait ? (GAME_WIDTH - summaryW) / 2 : contentX;
         const summaryY = isPortrait
@@ -357,22 +359,29 @@ export class MenuScene extends Phaser.Scene {
         const secondaryH = uv(isShortLandscape ? 34 : (isPortrait ? 44 : 46));
         const resumeH = uv(isShortLandscape ? 48 : (isPortrait ? 66 : 68));
         const gap = uv(isShortLandscape ? 8 : 12);
-        let actionY = isPortrait
-            ? Math.min(GAME_HEIGHT - uv(330), summaryY + uv(210))
-            : (isShortLandscape ? topY + uv(184) : GAME_HEIGHT - uv(190));
-        if (isShortLandscape) {
+        let actionY;
+        if (isPortrait) {
+            const actionStackH = (hasSave ? resumeH + gap : 0) + primaryH + gap + secondaryH;
+            const targetY = GAME_HEIGHT * (hasSave ? 0.39 : 0.43);
+            const minY = summaryY + summaryH + uv(hasSave ? 145 : 185);
+            actionY = Math.min(GAME_HEIGHT - uv(260) - actionStackH, Math.max(targetY, minY));
+        } else if (isShortLandscape) {
             const actionStackH = primaryH + gap + secondaryH;
             actionY = Math.min(GAME_HEIGHT - uv(24) - actionStackH, summaryY + summaryH + uv(16));
+        } else {
+            actionY = GAME_HEIGHT - uv(190);
         }
         if (hasSave) actionY -= resumeH + gap;
 
         if (hasSave) {
             const summary = GameScene.getSavedSummary();
+            const savedCharacter = getCharacter(summary?.characterId);
+            const savedText = getCharacterText(savedCharacter);
             const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
             const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
             this._makeMenuResumeButton(btnX, actionY, btnW, resumeH, {
                 title: t('continueGame'),
-                meta: `${summary?.characterName || ''}  LV.${String(summary?.level || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
+                meta: `${savedText.name}  LV.${String(summary?.level || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
                 isNarrow: isCompact,
                 onClick: () => startGame(true),
             });
@@ -541,11 +550,12 @@ export class MenuScene extends Phaser.Scene {
 
         if (hasSave) {
             const summary = GameScene.getSavedSummary();
+            const savedText = getCharacterText(getCharacter(summary?.characterId));
             const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
             const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
             this._makeMenuResumeButton(btnX, actionY, btnW, resumeH, {
                 title: t('continueGame'),
-                meta: `${summary?.characterName || ''}  LV.${String(summary?.level || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
+                meta: `${savedText.name}  LV.${String(summary?.level || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
                 isNarrow: isCompactMenu,
                 onClick: () => startGame(true),
             });
@@ -722,6 +732,8 @@ export class MenuScene extends Phaser.Scene {
 
     _createSelectedHunterSummary(x, y, w, h, { isCompactMenu = false, isShortLandscape = false } = {}) {
         const character = getCharacter(this.selectedCharacterId);
+        const characterText = getCharacterText(character);
+        const labels = getCharacterMenuLabels();
         this._addBitmapPanel(x, y, w, h, {
             key: this.textures.exists('start_button_primary') ? 'start_button_primary' : 'ui_card_cyan',
             alpha: 0.82,
@@ -743,7 +755,7 @@ export class MenuScene extends Phaser.Scene {
         const textX = x + uv(isCompactMenu ? 86 : 108);
         const textW = x + w - uv(34) - textX;
         if (!isCompactMenu) {
-            const tag = this.add.text(textX, y + uv(isShortLandscape ? 11 : 16), 'SELECTED HUNTER', {
+            const tag = this.add.text(textX, y + uv(isShortLandscape ? 11 : 16), labels.selectedHunter, {
                 fontSize: fs(8),
                 fontFamily: UI_FONT_MONO,
                 color: SYSTEM.TEXT_CYAN_DIM,
@@ -752,7 +764,7 @@ export class MenuScene extends Phaser.Scene {
             this._fitText(tag, textW, uv(12));
         }
 
-        const name = this.add.text(textX, y + h * (isCompactMenu ? 0.4 : 0.5), character.name, {
+        const name = this.add.text(textX, y + h * (isCompactMenu ? 0.4 : 0.5), characterText.name, {
             fontSize: fs(isShortLandscape ? 12 : 16),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
@@ -760,7 +772,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0, 0.5).setDepth(6);
         this._fitText(name, textW, h * 0.3);
 
-        const meta = this.add.text(textX, y + h * (isCompactMenu ? 0.68 : 0.76), `${character.archetype}  |  HP ${character.stats.hp}  ATK ${character.stats.attack}`, {
+        const meta = this.add.text(textX, y + h * (isCompactMenu ? 0.68 : 0.76), `${characterText.archetype}  |  ${labels.hp} ${character.stats.hp}  ${labels.attack} ${character.stats.attack}`, {
             fontSize: fs(isShortLandscape ? 8 : 10),
             fontFamily: UI_FONT_KR,
             color: character.accentText,
@@ -789,7 +801,7 @@ export class MenuScene extends Phaser.Scene {
             strokeThickness: 3,
         }).setOrigin(0.5).setDepth(7);
         const metaText = this.add.text(x + w / 2, y + h * 0.68, meta, {
-            fontSize: fs(isNarrow ? 8 : 9),
+            fontSize: fs(isNarrow ? 9 : 10),
             fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_CYAN,
         }).setOrigin(0.5).setDepth(7);
@@ -885,9 +897,9 @@ export class MenuScene extends Phaser.Scene {
         }
 
         const leftShadeW = isPortrait ? GAME_WIDTH : GAME_WIDTH * 0.58;
-        this.add.rectangle(leftShadeW / 2, GAME_HEIGHT / 2, leftShadeW, GAME_HEIGHT, 0x020611, isPortrait ? 0.48 : 0.42)
+        this.add.rectangle(leftShadeW / 2, GAME_HEIGHT / 2, leftShadeW, GAME_HEIGHT, 0x020611, isPortrait ? 0.3 : 0.38)
             .setDepth(-34);
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.08, GAME_WIDTH, GAME_HEIGHT * 0.2, 0x010309, isShortLandscape ? 0.34 : 0.22)
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.08, GAME_WIDTH, GAME_HEIGHT * 0.2, 0x010309, isShortLandscape ? 0.28 : 0.14)
             .setDepth(-33);
 
         if (this.textures.exists('particle_glow')) {
@@ -1190,6 +1202,7 @@ export class MenuScene extends Phaser.Scene {
         };
 
         characters.forEach((character, i) => {
+            const characterText = getCharacterText(character);
             const x = startX + i * (cardW + gap);
             const y = cardTop;
             const g = this.add.graphics().setDepth(depth);
@@ -1207,7 +1220,7 @@ export class MenuScene extends Phaser.Scene {
                 .setDisplaySize(portraitSize, portraitSize)
                 .setOrigin(0.5);
 
-            const name = this.add.text(x + cardW / 2, y + uv(isShortLandscape ? 43 : 55), character.name, {
+            const name = this.add.text(x + cardW / 2, y + uv(isShortLandscape ? 43 : 55), characterText.name, {
                 fontSize: fs(isShortLandscape ? 10 : 12),
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
@@ -1215,7 +1228,7 @@ export class MenuScene extends Phaser.Scene {
             }).setOrigin(0.5).setDepth(depth + 1);
             this._fitText(name, cardW - uv(12), uv(18));
 
-            const role = this.add.text(x + cardW / 2, y + uv(isShortLandscape ? 58 : 72), character.archetype, {
+            const role = this.add.text(x + cardW / 2, y + uv(isShortLandscape ? 58 : 72), characterText.archetype, {
                 fontSize: fs(isShortLandscape ? 8 : 9),
                 fontFamily: UI_FONT_KR,
                 color: character.accentText,
@@ -1438,6 +1451,7 @@ export class MenuScene extends Phaser.Scene {
             }
         };
         const redrawCards = () => cardRefs.forEach(ref => redrawCard(ref, false));
+        const labels = getCharacterMenuLabels();
 
         const closeAll = () => {
             if (!this._characterSelectOpen) return;
@@ -1447,6 +1461,7 @@ export class MenuScene extends Phaser.Scene {
         };
 
         characters.forEach((character, i) => {
+            const characterText = getCharacterText(character);
             const col = i % columns;
             const row = Math.floor(i / columns);
             const x = startX + col * (cardW + gap);
@@ -1460,20 +1475,20 @@ export class MenuScene extends Phaser.Scene {
                 .setDepth(depth + 6)
                 .setDisplaySize(portraitSize, portraitSize)
                 .setOrigin(0.5);
-            const name = this.add.text(x + cardW / 2, y + cardH * 0.58, character.name, {
+            const name = this.add.text(x + cardW / 2, y + cardH * 0.58, characterText.name, {
                 fontSize: fs(isShortLandscape ? 10 : 12),
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
                 color: SYSTEM.TEXT_BRIGHT,
             }).setOrigin(0.5).setDepth(depth + 6);
             this._fitText(name, cardW - uv(14), cardH * 0.18);
-            const role = this.add.text(x + cardW / 2, y + cardH * 0.74, character.archetype, {
+            const role = this.add.text(x + cardW / 2, y + cardH * 0.74, characterText.archetype, {
                 fontSize: fs(isShortLandscape ? 8 : 9),
                 fontFamily: UI_FONT_KR,
                 color: character.accentText,
             }).setOrigin(0.5).setDepth(depth + 6);
             this._fitText(role, cardW - uv(14), cardH * 0.14);
-            const stat = this.add.text(x + cardW / 2, y + cardH * 0.88, `HP ${character.stats.hp}  ATK ${character.stats.attack}`, {
+            const stat = this.add.text(x + cardW / 2, y + cardH * 0.88, `${labels.hp} ${character.stats.hp}  ${labels.attack} ${character.stats.attack}`, {
                 fontSize: fs(isShortLandscape ? 7 : 8),
                 fontFamily: UI_FONT_MONO,
                 color: SYSTEM.TEXT_MUTED,
@@ -1697,12 +1712,13 @@ export class MenuScene extends Phaser.Scene {
         const redrawTabs = () => tabRefs.forEach(ref => drawTab(ref, false));
 
         characters.forEach((character, i) => {
+            const characterText = getCharacterText(character);
             const x = tabStartX + i * (tabW + tabGap);
             const g = this.add.graphics().setDepth(depth + 3);
             const hit = this.add.rectangle(x + tabW / 2, tabY + tabH / 2, tabW, tabH, 0x000000, 0)
                 .setDepth(depth + 5)
                 .setInteractive({ useHandCursor: true });
-            const txt = this.add.text(x + tabW / 2, tabY + tabH / 2, character.name, {
+            const txt = this.add.text(x + tabW / 2, tabY + tabH / 2, characterText.name, {
                 fontSize: fs(isPortrait ? 9 : 8),
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
