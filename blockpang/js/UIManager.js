@@ -21,6 +21,10 @@ class UIManager {
         this._scoreAnimating = false;
         this._titleRefs = null;
         this._activeButtons = [];
+        this._hudHomeBounds = null;
+        this._hudSoundBounds = null;
+        this._hudHomePress = null;
+        this._hudSoundPress = null;
         this._titleSerial = 0;
         this._nameInputElement = null;
         this._nameInputFocusTimer = null;
@@ -133,13 +137,9 @@ class UIManager {
         this.soundBtn.eventMode = 'static';
         this.soundBtn.cursor = 'pointer';
         this.soundBtn.hitArea = new PIXI.Rectangle(-44, -12, 56, 56);
-        this.soundBtn.on('pointerdown', () => {
-            const enabled = this.game.sound.toggle();
-            this.soundBtn.style.fill = enabled ? THEME.inkStrong : THEME.inkFaint;
-            this.soundBtn.alpha = enabled ? 1 : 0.55;
-        });
+        this.soundBtn.on('pointerdown', () => this._getHudSoundPress()());
         this.soundBtn.on('pointerover', () => { this.soundBtn.alpha = 0.75; });
-        this.soundBtn.on('pointerout',  () => { this.soundBtn.alpha = 1; });
+        this.soundBtn.on('pointerout',  () => this._syncHudSoundButton());
         this.container.addChild(this.soundBtn);
 
         // Home button (‹ chevron — bright with cyan glow, matches the neon UI palette)
@@ -163,10 +163,7 @@ class UIManager {
         this.homeBtn.eventMode = 'static';
         this.homeBtn.cursor = 'pointer';
         this.homeBtn.hitArea = new PIXI.Rectangle(-12, -12, 56, 56);
-        this.homeBtn.on('pointerdown', () => {
-            if (this.game.isAnimating) return;
-            this.game.goToTitle();
-        });
+        this.homeBtn.on('pointerdown', () => this._getHudHomePress()());
         this.homeBtn.on('pointerover', () => { this.homeBtn.alpha = 0.75; });
         this.homeBtn.on('pointerout',  () => { this.homeBtn.alpha = 1; });
         this.container.addChild(this.homeBtn);
@@ -184,16 +181,9 @@ class UIManager {
             this.soundIconSprite.eventMode = 'static';
             this.soundIconSprite.cursor = 'pointer';
             this.soundIconSprite.hitArea = new PIXI.Rectangle(-44, -12, 56, 56);
-            this.soundIconSprite.on('pointerdown', () => {
-                const enabled = this.game.sound.toggle();
-                const tex = getBlockpangTexture(enabled ? 'iconSoundOn' : 'iconSoundOff');
-                if (tex) this.soundIconSprite.texture = tex;
-                this.soundIconSprite.alpha = enabled ? 1 : 0.55;
-            });
+            this.soundIconSprite.on('pointerdown', () => this._getHudSoundPress()());
             this.soundIconSprite.on('pointerover', () => { this.soundIconSprite.alpha = 0.75; });
-            this.soundIconSprite.on('pointerout', () => {
-                this.soundIconSprite.alpha = this.game.sound.enabled ? 1 : 0.55;
-            });
+            this.soundIconSprite.on('pointerout', () => this._syncHudSoundButton());
             this.container.addChild(this.soundIconSprite);
             this.soundBtn.visible = false;
             this.soundBtn.eventMode = 'none';
@@ -206,16 +196,79 @@ class UIManager {
             this.homeIconSprite.eventMode = 'static';
             this.homeIconSprite.cursor = 'pointer';
             this.homeIconSprite.hitArea = new PIXI.Rectangle(-12, -12, 56, 56);
-            this.homeIconSprite.on('pointerdown', () => {
-                if (this.game.isAnimating) return;
-                this.game.goToTitle();
-            });
+            this.homeIconSprite.on('pointerdown', () => this._getHudHomePress()());
             this.homeIconSprite.on('pointerover', () => { this.homeIconSprite.alpha = 0.75; });
             this.homeIconSprite.on('pointerout', () => { this.homeIconSprite.alpha = 1; });
             this.container.addChild(this.homeIconSprite);
             this.homeBtn.visible = false;
             this.homeBtn.eventMode = 'none';
         }
+    }
+
+    _debounceHudPress(action) {
+        let lastFire = 0;
+        return () => {
+            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            if (now - lastFire < 260) return;
+            lastFire = now;
+            action();
+        };
+    }
+
+    _getHudHomePress() {
+        if (!this._hudHomePress) {
+            this._hudHomePress = this._debounceHudPress(() => this._goHomeFromHud());
+        }
+        return this._hudHomePress;
+    }
+
+    _getHudSoundPress() {
+        if (!this._hudSoundPress) {
+            this._hudSoundPress = this._debounceHudPress(() => this._toggleHudSound());
+        }
+        return this._hudSoundPress;
+    }
+
+    _goHomeFromHud() {
+        if (this.game.isAnimating) return;
+        this.game.goToTitle();
+    }
+
+    _toggleHudSound() {
+        const enabled = this.game.sound.toggle();
+        this._syncHudSoundButton(enabled);
+    }
+
+    _syncHudSoundButton(enabled = this.game.sound.enabled) {
+        if (this.soundBtn && !this.soundBtn.destroyed) {
+            this.soundBtn.style.fill = enabled ? THEME.inkStrong : THEME.inkFaint;
+            this.soundBtn.alpha = enabled ? 1 : 0.55;
+        }
+
+        if (this.soundIconSprite && !this.soundIconSprite.destroyed) {
+            const tex = getBlockpangTexture(enabled ? 'iconSoundOn' : 'iconSoundOff');
+            if (tex) this.soundIconSprite.texture = tex;
+            this.soundIconSprite.alpha = enabled ? 1 : 0.55;
+        }
+    }
+
+    _registerGameHudFallbackButtons() {
+        if (!this.game || this.game.state !== 'playing') return;
+
+        const buttons = [];
+        if (this._hudHomeBounds) {
+            buttons.push({
+                ...this._hudHomeBounds,
+                action: this._getHudHomePress(),
+            });
+        }
+        if (this._hudSoundBounds) {
+            buttons.push({
+                ...this._hudSoundBounds,
+                action: this._getHudSoundPress(),
+            });
+        }
+        this._activeButtons = buttons;
     }
 
     destroy() {
@@ -276,6 +329,8 @@ class UIManager {
             this.homeBtn.visible = false;
             this.homeIconSprite.visible = true;
         }
+        this._syncHudSoundButton();
+        this._registerGameHudFallbackButtons();
     }
 
     hideGameHUD() {
@@ -292,6 +347,7 @@ class UIManager {
         this.homeBtn.visible = false;
         if (this.soundIconSprite) this.soundIconSprite.visible = false;
         if (this.homeIconSprite) this.homeIconSprite.visible = false;
+        this._activeButtons = [];
     }
 
     resize(screenWidth, scoreAreaHeight, padding) {
@@ -385,24 +441,41 @@ class UIManager {
         this._levelBarH = barH;
 
         // ── Sound button (top-right, inside panel) ──
+        const soundButtonY = hudY + Math.max(8, innerPadTop * 0.5);
         this.soundBtn.style.fontSize = Math.max(18, Math.min(23, screenWidth * 0.052));
-        this.soundBtn.position.set(innerRight, hudY + Math.max(8, innerPadTop * 0.5));
+        this.soundBtn.position.set(innerRight, soundButtonY);
 
         // ── Back chevron (top-left, inside panel) ──
+        const homeButtonY = hudY + Math.max(4, innerPadTop * 0.3);
         this.homeBtn.style.fontSize = Math.max(21, Math.min(27, screenWidth * 0.062));
-        this.homeBtn.position.set(innerLeft, hudY + Math.max(4, innerPadTop * 0.3));
+        this.homeBtn.position.set(innerLeft, homeButtonY);
 
         const hudIconSize = Math.max(24, Math.min(32, screenWidth * 0.07));
         if (this.soundIconSprite) {
             this.soundIconSprite.width = hudIconSize;
             this.soundIconSprite.height = hudIconSize;
-            this.soundIconSprite.position.set(innerRight, hudY + Math.max(8, innerPadTop * 0.5));
+            this.soundIconSprite.position.set(innerRight, soundButtonY);
         }
         if (this.homeIconSprite) {
             this.homeIconSprite.width = hudIconSize;
             this.homeIconSprite.height = hudIconSize;
-            this.homeIconSprite.position.set(innerLeft, hudY + Math.max(4, innerPadTop * 0.3));
+            this.homeIconSprite.position.set(innerLeft, homeButtonY);
         }
+
+        const hudHitSize = Math.max(48, hudIconSize + 24);
+        this._hudHomeBounds = {
+            x: innerLeft - 12,
+            y: homeButtonY - 12,
+            w: hudHitSize,
+            h: hudHitSize,
+        };
+        this._hudSoundBounds = {
+            x: innerRight - hudHitSize + 12,
+            y: soundButtonY - 12,
+            w: hudHitSize,
+            h: hudHitSize,
+        };
+        this._registerGameHudFallbackButtons();
     }
 
     updateScore(score, bestScore) {
