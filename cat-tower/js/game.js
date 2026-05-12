@@ -116,6 +116,7 @@
   let dpr = 1;
   let fieldBgGradient = null;
   let fieldBgImage = null;
+  let mergeParticleImage = null;
   let running = false;
   let gameOver = false;
   let dangerActive = false;
@@ -138,6 +139,7 @@
   const bonkCooldown = new Map(); // body.id → 마지막 bonk 시각 (ms) — 연속 충돌 스팸 방지
   const BONK_COOLDOWN_MS = 110;
   const BONK_TRIGGER_SPEED = 1.35;
+  const MERGE_PARTICLE_CELL = 64;
   const BONK_DROP_GRACE_MS = 0;
 
   // DOM refs
@@ -288,6 +290,8 @@
     }
     fieldBgImage = new Image();
     fieldBgImage.src = 'assets/ui/cushion-field.webp';
+    mergeParticleImage = new Image();
+    mergeParticleImage.src = 'assets/ui/merge-particles.png';
     resizeCanvas();
     window.addEventListener('resize', () => {
       scheduleFitGameLayout();
@@ -385,6 +389,35 @@
     return body;
   }
 
+  function randomBetween(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function createMergeEffect(x, y, r, color, isFinal) {
+    const count = isFinal ? 20 : 12;
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i / count) + randomBetween(-0.18, 0.18);
+      const finalFrame = isFinal ? 5 : (i % 5);
+      particles.push({
+        frame: finalFrame,
+        angle,
+        distance: randomBetween(r * 0.30, r * (isFinal ? 1.90 : 1.35)),
+        size: randomBetween(isFinal ? 18 : 12, isFinal ? 34 : 24),
+        spin: randomBetween(-1.8, 1.8),
+        rot: randomBetween(-Math.PI, Math.PI),
+        delay: randomBetween(0, 0.16),
+      });
+    }
+    return {
+      x, y, r, color,
+      age: 0,
+      max: isFinal ? 34 : 26,
+      isFinal,
+      particles,
+    };
+  }
+
   function mergePair(a, b, now) {
     const tier = a.cat.tier;
     a.cat.merging = true;
@@ -421,7 +454,7 @@
         sound?.playMerge(tier + 1);
       }
 
-      mergeEffects.push({ x: midX, y: midY, r: TIERS[tier + 1].radius, age: 0, max: 22, color: '#FFB84D' });
+      mergeEffects.push(createMergeEffect(midX, midY, TIERS[tier + 1].radius, '#FFB84D', false));
       log(`merge tier ${tier}→${tier + 1}(${TIERS[tier + 1].name}) at (${midX.toFixed(1)}, ${midY.toFixed(1)}) score=${score}`);
 
       // 최종단계(사바나) 최초 달성 축하 — 1게임당 한 번만
@@ -429,12 +462,12 @@
         reachedFinal = true;
         showFlash(tt('flash.legend'), true);
         sound?.playLegend();
-        log('🏆 사바나 최초 달성!');
+        log('사바나 최초 달성!');
       }
     } else {
       // 최종 단계 끼리 붙음 → 소멸 + 보너스
       score += TIERS[tier].score * 2;
-      mergeEffects.push({ x: midX, y: midY, r: TIERS[tier].radius * 1.3, age: 0, max: 32, color: '#F2B43A' });
+      mergeEffects.push(createMergeEffect(midX, midY, TIERS[tier].radius * 1.3, '#F2B43A', true));
       sound?.playFinalMerge();
       log(`최종단계 소멸 (tier ${tier}) +${TIERS[tier].score * 2}pt score=${score}`);
     }
@@ -732,6 +765,50 @@
     }
   }
 
+  function drawFallbackParticle(frame, size, color) {
+    ctx.save();
+    ctx.fillStyle = frame === 3 ? '#FF8FA3' : color;
+    ctx.strokeStyle = 'rgba(58, 41, 32, 0.70)';
+    ctx.lineWidth = Math.max(1.2, size * 0.09);
+    if (frame === 1 || frame === 5) {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const r = (i % 2 === 0) ? size * 0.50 : size * 0.20;
+        const a = -Math.PI / 2 + i * Math.PI / 5;
+        const px = Math.cos(a) * r;
+        const py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawMergeParticle(frame, x, y, size, rotation, alpha) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    if (mergeParticleImage && mergeParticleImage.complete && mergeParticleImage.naturalWidth > 0) {
+      ctx.drawImage(
+        mergeParticleImage,
+        frame * MERGE_PARTICLE_CELL, 0, MERGE_PARTICLE_CELL, MERGE_PARTICLE_CELL,
+        -size / 2, -size / 2, size, size
+      );
+    } else {
+      drawFallbackParticle(frame, size, '#FFB84D');
+    }
+    ctx.restore();
+  }
+
   // -------- 렌더링 --------
   function render(bodiesSnapshot = null) {
     // 배경 — 은은한 베이지 + 경계선
@@ -800,25 +877,28 @@
       e.age++;
       if (e.age >= e.max) { mergeEffects.splice(i, 1); continue; }
       const t = e.age / e.max;
+      const ease = 1 - Math.pow(1 - t, 2);
       const alpha = 1 - t;
       ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = e.color;
-      ctx.lineWidth = 3 + (1 - t) * 2;
+      ctx.globalAlpha = alpha * (e.isFinal ? 0.78 : 0.62);
+      ctx.strokeStyle = e.isFinal ? '#F2B43A' : e.color;
+      ctx.lineWidth = e.isFinal ? 4 + (1 - t) * 3 : 3 + (1 - t) * 2;
       ctx.beginPath();
-      ctx.arc(e.x, e.y, e.r * (1 + t * 1.2), 0, Math.PI * 2);
+      ctx.arc(e.x, e.y, e.r * (0.74 + ease * (e.isFinal ? 1.45 : 1.05)), 0, Math.PI * 2);
       ctx.stroke();
-      // 중앙 스파클
-      ctx.fillStyle = e.color;
-      ctx.globalAlpha = alpha * 0.5;
-      for (let k = 0; k < 6; k++) {
-        const ang = (k / 6) * Math.PI * 2 + t * 2;
-        const dist = e.r * (0.6 + t * 0.8);
-        ctx.beginPath();
-        ctx.arc(e.x + Math.cos(ang) * dist, e.y + Math.sin(ang) * dist, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
       ctx.restore();
+
+      for (const p of e.particles || []) {
+        const localT = Math.max(0, Math.min(1, (t - p.delay) / (1 - p.delay)));
+        if (localT <= 0) continue;
+        const particleEase = 1 - Math.pow(1 - localT, 2);
+        const wobble = Math.sin(localT * Math.PI) * (e.isFinal ? 8 : 5);
+        const dist = p.distance * particleEase;
+        const px = e.x + Math.cos(p.angle) * dist + Math.cos(p.angle + Math.PI / 2) * wobble;
+        const py = e.y + Math.sin(p.angle) * dist + Math.sin(p.angle + Math.PI / 2) * wobble - e.r * 0.12 * localT;
+        const size = p.size * (0.72 + Math.sin(localT * Math.PI) * 0.36);
+        drawMergeParticle(p.frame, px, py, size, p.rot + p.spin * localT, alpha * (1 - p.delay * 0.5));
+      }
     }
 
   }
@@ -1021,7 +1101,7 @@
   function updateSoundBtn() {
     const btn = $('sound-btn');
     if (!btn || !sound) return;
-    btn.textContent = sound.enabled ? '🔊' : '🔇';
+    btn.textContent = '';
     btn.classList.toggle('muted', !sound.enabled);
   }
 
