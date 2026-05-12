@@ -391,7 +391,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // 근접 공격 (사거리 내일 때 쿨다운 기반)
             if (this.meleeCooldown > 0) this.meleeCooldown -= delta;
             if (dist < this._meleeRange && this.meleeCooldown <= 0) {
-                this.meleeCooldown = 800;
+                this.meleeCooldown = 560;
                 const player = this.scene.player;
                 if (player && !player.isDead) {
                     player.takeDamage(this.attack);
