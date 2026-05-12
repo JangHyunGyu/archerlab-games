@@ -2007,30 +2007,34 @@ export class SpriteFactory {
         dmg.generateTexture('dmg_bg', 40, 20);
         dmg.destroy();
 
-        // Arise rune circle
-        const ag = scene.make.graphics({ add: false });
-        ag.lineStyle(3, COLORS.SHADOW_PRIMARY, 0.8);
-        ag.strokeCircle(60, 60, 55);
-        ag.lineStyle(2, COLORS.SHADOW_GLOW, 0.5);
-        ag.strokeCircle(60, 60, 45);
-        ag.lineStyle(1.5, COLORS.SHADOW_LIGHT, 0.3);
-        ag.strokeCircle(60, 60, 35);
-        ag.lineStyle(1, COLORS.SHADOW_PRIMARY, 0.2);
-        ag.strokeCircle(60, 60, 25);
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
-            const x = 60 + Math.cos(angle) * 50;
-            const y = 60 + Math.sin(angle) * 50;
-            ag.fillStyle(COLORS.SHADOW_GLOW, 0.7);
-            ag.fillRect(x - 2, y - 5, 4, 10);
-            // Inner rune dots
-            const x2 = 60 + Math.cos(angle + 0.26) * 40;
-            const y2 = 60 + Math.sin(angle + 0.26) * 40;
-            ag.fillStyle(COLORS.SHADOW_PRIMARY, 0.5);
-            ag.fillCircle(x2, y2, 2);
+        if (scene.textures.exists('asset_arise_rune')) {
+            this._copyTexture(scene, 'asset_arise_rune', 'arise_rune', 160, 160);
+        } else {
+            // Arise rune circle
+            const ag = scene.make.graphics({ add: false });
+            ag.lineStyle(3, COLORS.SHADOW_PRIMARY, 0.8);
+            ag.strokeCircle(60, 60, 55);
+            ag.lineStyle(2, COLORS.SHADOW_GLOW, 0.5);
+            ag.strokeCircle(60, 60, 45);
+            ag.lineStyle(1.5, COLORS.SHADOW_LIGHT, 0.3);
+            ag.strokeCircle(60, 60, 35);
+            ag.lineStyle(1, COLORS.SHADOW_PRIMARY, 0.2);
+            ag.strokeCircle(60, 60, 25);
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const x = 60 + Math.cos(angle) * 50;
+                const y = 60 + Math.sin(angle) * 50;
+                ag.fillStyle(COLORS.SHADOW_GLOW, 0.7);
+                ag.fillRect(x - 2, y - 5, 4, 10);
+                // Inner rune dots
+                const x2 = 60 + Math.cos(angle + 0.26) * 40;
+                const y2 = 60 + Math.sin(angle + 0.26) * 40;
+                ag.fillStyle(COLORS.SHADOW_PRIMARY, 0.5);
+                ag.fillCircle(x2, y2, 2);
+            }
+            ag.generateTexture('arise_rune', 120, 120);
+            ag.destroy();
         }
-        ag.generateTexture('arise_rune', 120, 120);
-        ag.destroy();
     }
 
     // =============================================

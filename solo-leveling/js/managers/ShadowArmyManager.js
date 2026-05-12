@@ -141,6 +141,33 @@ export class ShadowArmyManager {
                     duration: 800, ease: 'Power2',
                 });
 
+                if (scene.textures.exists('asset_arise_smoke')) {
+                    const smoke = this._trackElement(
+                        scene.add.sprite(bossX, bossY + 20, 'asset_arise_smoke')
+                            .setDepth(50)
+                            .setAlpha(0)
+                            .setScale(0.55)
+                            .setBlendMode(Phaser.BlendModes.ADD)
+                    );
+                    scene.tweens.add({
+                        targets: smoke,
+                        alpha: { from: 0, to: 0.82 },
+                        scaleX: 1.45,
+                        scaleY: 1.05,
+                        duration: 780,
+                        ease: 'Power2',
+                    });
+                    scene.tweens.add({
+                        targets: smoke,
+                        alpha: 0,
+                        y: smoke.y - 18,
+                        delay: 860,
+                        duration: 720,
+                        ease: 'Quad.easeIn',
+                        onComplete: () => smoke.destroy(),
+                    });
+                }
+
                 const rune = this._trackElement(
                     scene.add.sprite(bossX, bossY, 'arise_rune').setDepth(51).setAlpha(0).setScale(0.2)
                 );
@@ -176,15 +203,35 @@ export class ShadowArmyManager {
                     try {
                         if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
-                        const handLine = this._trackElement(
-                            scene.add.rectangle(bossX, bossY + 10, 6, 0, 0x220044, 0.8)
-                                .setDepth(52).setOrigin(0.5, 1)
-                        );
-                        scene.tweens.add({
-                            targets: handLine,
-                            displayHeight: 40,
-                            duration: 500, ease: 'Power2',
-                        });
+                        if (scene.textures.exists('asset_arise_hand')) {
+                            const hand = this._trackElement(
+                                scene.add.sprite(bossX, bossY + 42, 'asset_arise_hand')
+                                    .setDepth(52)
+                                    .setOrigin(0.5, 1)
+                                    .setAlpha(0)
+                                    .setScale(0.54)
+                                    .setBlendMode(Phaser.BlendModes.ADD)
+                            );
+                            scene.tweens.add({
+                                targets: hand,
+                                y: bossY + 8,
+                                alpha: 0.88,
+                                scaleX: 0.76,
+                                scaleY: 0.76,
+                                duration: 520,
+                                ease: 'Back.Out',
+                            });
+                        } else {
+                            const handLine = this._trackElement(
+                                scene.add.rectangle(bossX, bossY + 10, 6, 0, 0x220044, 0.8)
+                                    .setDepth(52).setOrigin(0.5, 1)
+                            );
+                            scene.tweens.add({
+                                targets: handLine,
+                                displayHeight: 40,
+                                duration: 500, ease: 'Power2',
+                            });
+                        }
 
                         // Command text
                         this._delay(300, () => {

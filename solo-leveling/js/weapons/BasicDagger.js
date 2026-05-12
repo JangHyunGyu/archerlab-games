@@ -12,7 +12,9 @@ export class BasicDagger extends WeaponBase {
     }
 
     _getBlade(textureKey = 'proj_dagger_stab') {
-        const isEffectStab = textureKey.startsWith('effect_basic_stab') || textureKey.startsWith('char_skill_');
+        const isImageEffect = textureKey.startsWith('effect_basic_stab') ||
+            textureKey.startsWith('char_skill_') ||
+            textureKey.startsWith('basic_attack_');
         let blade = this._bladePool.pop();
         if (blade && blade.scene) {
             blade.setTexture(textureKey);
@@ -20,14 +22,14 @@ export class BasicDagger extends WeaponBase {
             blade.setAlpha(1);
             blade.setScale(1);
             blade.clearTint();
-            blade.setOrigin(0.5, isEffectStab ? 0.5 : 0.94);
-            blade.setBlendMode(textureKey.startsWith('char_skill_') ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+            blade.setOrigin(0.5, isImageEffect ? 0.5 : 0.94);
+            blade.setBlendMode(isImageEffect ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
             return blade;
         }
 
         return this.scene.add.sprite(0, 0, textureKey)
-            .setOrigin(0.5, isEffectStab ? 0.5 : 0.94)
-            .setBlendMode(textureKey.startsWith('char_skill_') ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+            .setOrigin(0.5, isImageEffect ? 0.5 : 0.94)
+            .setBlendMode(isImageEffect ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
             .setDepth(13);
     }
 
@@ -205,7 +207,7 @@ export class BasicDagger extends WeaponBase {
         if (this.player.playAttackMotion) {
             this.player.playAttackMotion(baseAngle, 240, side);
         }
-        const effectTexture = this.getEffectTexture();
+        const effectTexture = this._getConfiguredEffectTexture() || this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectStab = !useCharacterEffect && this.scene.textures.exists('effect_basic_stab_0');
         const bladeScale = useCharacterEffect ? (this.config.effectScale || 0.46) : (useEffectStab ? 0.56 : 0.72);

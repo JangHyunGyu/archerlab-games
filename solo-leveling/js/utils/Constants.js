@@ -282,6 +282,10 @@ export const WEAPONS = {
         baseCooldown: 650,
         baseCount: 1,
         attackRange: 205,
+        basicAttackEffectKey: 'shadow_dagger_slash',
+        effectScale: 0.5,
+        effectColor: 0x7b2fff,
+        effectGlowColor: 0xcaa7ff,
         hitAngle: 0.6,
         maxHits: 2,
         levelBonuses: {
