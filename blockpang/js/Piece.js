@@ -300,6 +300,8 @@ class PieceTray {
             const cs = this.trayCellSize;
             const cont = createPieceContainer(piece, cs);
             const trayRef = this;
+            const canPlacePiece = this.game.board && this.game.board.canPlaceAnywhere(piece.shape);
+            const slotTexture = getBlockpangTexture(canPlacePiece ? 'slotPadIdle' : 'slotPadDisabled');
 
             // Center in slot
             const pw = piece.cols * cs;
@@ -309,6 +311,19 @@ class PieceTray {
             cont.position.set(targetX, targetY);
             this._slotBaseY[i] = targetY;
 
+            if (slotTexture) {
+                const slotPad = new PIXI.Sprite(slotTexture);
+                slotPad.anchor.set(0.5);
+                slotPad.eventMode = 'none';
+                slotPad.alpha = canPlacePiece ? 0.92 : 0.72;
+                slotPad.width = Math.max(pw * 1.9, cs * 3.3);
+                slotPad.height = Math.max(ph * 1.15, cs * 1.55);
+                slotPad.position.set(pw / 2, ph / 2 + cs * 0.14);
+                slotPad._slotCanPlace = canPlacePiece;
+                cont.addChildAt(slotPad, 0);
+                cont._slotPadSprite = slotPad;
+            }
+
             // Interactive — 터치 영역을 넉넉하게 확보 (모바일 대응)
             const padX = Math.max(24, pw * 0.4);
             const padY = Math.max(24, ph * 0.4);
@@ -317,6 +332,20 @@ class PieceTray {
             cont.hitArea = new PIXI.Rectangle(-padX, -padY, pw + padX * 2, ph + padY * 2);
 
             const slotIdx = i;
+            cont.on('pointerover', () => {
+                const pad = cont._slotPadSprite;
+                if (!pad || !pad._slotCanPlace) return;
+                const tex = getBlockpangTexture('slotPadActive');
+                if (tex) pad.texture = tex;
+                pad.alpha = 1;
+            });
+            cont.on('pointerout', () => {
+                const pad = cont._slotPadSprite;
+                if (!pad) return;
+                const tex = getBlockpangTexture(pad._slotCanPlace ? 'slotPadIdle' : 'slotPadDisabled');
+                if (tex) pad.texture = tex;
+                pad.alpha = pad._slotCanPlace ? 0.92 : 0.72;
+            });
             cont.on('pointerdown', (e) => {
                 if (this.game.input) {
                     this.game.input.startDrag(slotIdx, e);

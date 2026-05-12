@@ -21,6 +21,7 @@ class Board {
 
         // Ghost preview pool (reuse Graphics instead of create/destroy)
         this._ghostPool = [];
+        this._ghostSpritePool = [];
         this._ghostActiveCount = 0;
 
         // Completion hint pool
@@ -71,6 +72,7 @@ class Board {
 
         // Clear pools — old Graphics objects were destroyed with their containers
         this._ghostPool = [];
+        this._ghostSpritePool = [];
         this._ghostActiveCount = 0;
         this._hintPool = [];
         this._hintActiveCount = 0;
@@ -623,12 +625,23 @@ class Board {
         return g;
     }
 
+    _getGhostSprite(index) {
+        if (index < this._ghostSpritePool.length) {
+            return this._ghostSpritePool[index];
+        }
+        const sprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
+        sprite.eventMode = 'none';
+        this._ghostSpritePool.push(sprite);
+        return sprite;
+    }
+
     showGhost(shape, gridX, gridY, isValid) {
         if (!this.ghostContainer) return;
         const cs = this.cellSize;
         const color = isValid ? THEME.secondary : THEME.rose;
         const alpha = isValid ? 0.35 : 0.2;
         const r = Math.max(2, cs * 0.1);
+        const ghostTexture = getBlockpangTexture(isValid ? 'ghostValidCell' : 'ghostInvalidCell');
 
         let idx = 0;
         for (let row = 0; row < shape.length; row++) {
@@ -636,6 +649,24 @@ class Board {
                 if (!shape[row][col]) continue;
                 const x = (gridX + col) * cs;
                 const y = (gridY + row) * cs;
+
+                if (ghostTexture) {
+                    const sprite = this._getGhostSprite(idx);
+                    sprite.texture = ghostTexture;
+                    sprite.position.set(x, y);
+                    sprite.width = cs;
+                    sprite.height = cs;
+                    sprite.alpha = isValid ? 0.62 : 0.78;
+                    sprite.visible = true;
+                    if (!sprite.parent) {
+                        this.ghostContainer.addChild(sprite);
+                    }
+                    if (idx < this._ghostPool.length) {
+                        this._ghostPool[idx].visible = false;
+                    }
+                    idx++;
+                    continue;
+                }
 
                 const g = this._getGhostGfx(idx);
                 g.clear();
@@ -677,6 +708,9 @@ class Board {
             if (i < this._ghostPool.length) {
                 this._ghostPool[i].visible = false;
             }
+            if (i < this._ghostSpritePool.length) {
+                this._ghostSpritePool[i].visible = false;
+            }
         }
         this._ghostActiveCount = idx;
 
@@ -691,6 +725,9 @@ class Board {
     clearGhost() {
         for (let i = 0; i < this._ghostPool.length; i++) {
             if (this._ghostPool[i]) this._ghostPool[i].visible = false;
+        }
+        for (let i = 0; i < this._ghostSpritePool.length; i++) {
+            if (this._ghostSpritePool[i]) this._ghostSpritePool[i].visible = false;
         }
         this._ghostActiveCount = 0;
         this.clearCompletionHints();
