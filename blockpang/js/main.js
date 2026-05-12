@@ -34,7 +34,7 @@
             PIXI.Assets.addBundle('blockpang-ui', manifest);
             window.BLOCKPANG_ASSETS = await PIXI.Assets.loadBundle('blockpang-ui');
         } catch (e) {
-            console.warn('[Blockpang] WebP UI asset load failed; trying PNG tile fallback.', e);
+            console.warn('[Blockpang] WebP UI asset load failed; trying PNG fallback.', e);
             try {
                 const fallbackManifest = window.getBlockpangAssetManifest
                     ? window.getBlockpangAssetManifest(true)

@@ -42,6 +42,49 @@ const BLOCKPANG_ASSET_MANIFEST = {
     glassPanel: 'assets/ui/glass-panel.webp',
     glassPanelFill: 'assets/ui/glass-panel-fill.webp',
     crystalSheen: 'assets/ui/crystal-sheen.webp',
+    effectSoftCircle: 'assets/ui/effect-soft-circle.webp',
+    effectShard: 'assets/ui/effect-shard.webp',
+    effectSparkle: 'assets/ui/effect-sparkle.webp',
+    effectStar: 'assets/ui/effect-star.webp',
+    effectRing: 'assets/ui/effect-ring.webp',
+    effectRingAlt: 'assets/ui/effect-ring-alt.webp',
+    effectSparkleAlt: 'assets/ui/effect-sparkle-alt.webp',
+    effectShardAlt: 'assets/ui/effect-shard-alt.webp',
+    effectDiamond: 'assets/ui/effect-diamond.webp',
+    effectSoftBurst: 'assets/ui/effect-soft-burst.webp',
+    vfxComboBurstSheet: 'assets/ui/vfx-combo-burst-sheet.webp',
+    vfxLineClearSheet: 'assets/ui/vfx-line-clear-sheet.webp',
+    vfxRewardNovaSheet: 'assets/ui/vfx-reward-nova-sheet.webp',
+    iconSoundOn: 'assets/ui/icon-sound-on.webp',
+    iconSoundOff: 'assets/ui/icon-sound-off.webp',
+    iconHome: 'assets/ui/icon-home.webp',
+    iconLanguage: 'assets/ui/icon-language.webp',
+    iconPlay: 'assets/ui/icon-play.webp',
+    iconContinue: 'assets/ui/icon-continue.webp',
+    iconRank: 'assets/ui/icon-rank.webp',
+    iconMail: 'assets/ui/icon-mail.webp',
+    iconClose: 'assets/ui/icon-close.webp',
+    iconCheck: 'assets/ui/icon-check.webp',
+    iconSkip: 'assets/ui/icon-skip.webp',
+    ghostValidCell: 'assets/ui/ghost-valid-cell.webp',
+    ghostInvalidCell: 'assets/ui/ghost-invalid-cell.webp',
+    blockTile0: 'assets/ui/block-tile-0-cyan.webp',
+    blockTile1: 'assets/ui/block-tile-1-red.webp',
+    blockTile2: 'assets/ui/block-tile-2-green.webp',
+    blockTile3: 'assets/ui/block-tile-3-gold.webp',
+    blockTile4: 'assets/ui/block-tile-4-violet.webp',
+    blockTile5: 'assets/ui/block-tile-5-orange.webp',
+    blockTile6: 'assets/ui/block-tile-6-blue.webp',
+    blockTile7: 'assets/ui/block-tile-7-pink.webp',
+};
+
+const BLOCKPANG_PNG_FALLBACKS = {
+    arcadeBg: 'assets/ui/arcade-bg.png',
+    titleSplash: 'assets/ui/title-splash.png',
+    boardPanel: 'assets/ui/board-panel.png',
+    glassPanel: 'assets/ui/glass-panel.png',
+    glassPanelFill: 'assets/ui/glass-panel-fill.png',
+    crystalSheen: 'assets/ui/crystal-sheen.png',
     effectSoftCircle: 'assets/ui/effect-soft-circle.png',
     effectShard: 'assets/ui/effect-shard.png',
     effectSparkle: 'assets/ui/effect-sparkle.png',
@@ -52,6 +95,9 @@ const BLOCKPANG_ASSET_MANIFEST = {
     effectShardAlt: 'assets/ui/effect-shard-alt.png',
     effectDiamond: 'assets/ui/effect-diamond.png',
     effectSoftBurst: 'assets/ui/effect-soft-burst.png',
+    vfxComboBurstSheet: 'assets/ui/vfx-combo-burst-sheet.png',
+    vfxLineClearSheet: 'assets/ui/vfx-line-clear-sheet.png',
+    vfxRewardNovaSheet: 'assets/ui/vfx-reward-nova-sheet.png',
     iconSoundOn: 'assets/ui/icon-sound-on.png',
     iconSoundOff: 'assets/ui/icon-sound-off.png',
     iconHome: 'assets/ui/icon-home.png',
@@ -65,18 +111,6 @@ const BLOCKPANG_ASSET_MANIFEST = {
     iconSkip: 'assets/ui/icon-skip.png',
     ghostValidCell: 'assets/ui/ghost-valid-cell.png',
     ghostInvalidCell: 'assets/ui/ghost-invalid-cell.png',
-    blockTile0: 'assets/ui/block-tile-0-cyan.webp',
-    blockTile1: 'assets/ui/block-tile-1-red.webp',
-    blockTile2: 'assets/ui/block-tile-2-green.webp',
-    blockTile3: 'assets/ui/block-tile-3-gold.webp',
-    blockTile4: 'assets/ui/block-tile-4-violet.webp',
-    blockTile5: 'assets/ui/block-tile-5-orange.webp',
-    blockTile6: 'assets/ui/block-tile-6-blue.webp',
-    blockTile7: 'assets/ui/block-tile-7-pink.webp',
-};
-
-const BLOCKPANG_PNG_TILE_FALLBACKS = {
-    titleSplash: 'assets/ui/title-splash.png',
     blockTile0: 'assets/ui/block-tile-0-cyan.png',
     blockTile1: 'assets/ui/block-tile-1-red.png',
     blockTile2: 'assets/ui/block-tile-2-green.png',
@@ -87,9 +121,11 @@ const BLOCKPANG_PNG_TILE_FALLBACKS = {
     blockTile7: 'assets/ui/block-tile-7-pink.png',
 };
 
-function getBlockpangAssetManifest(usePngTileFallback = false) {
-    return usePngTileFallback
-        ? { ...BLOCKPANG_ASSET_MANIFEST, ...BLOCKPANG_PNG_TILE_FALLBACKS }
+const BLOCKPANG_PNG_TILE_FALLBACKS = BLOCKPANG_PNG_FALLBACKS;
+
+function getBlockpangAssetManifest(usePngFallback = false) {
+    return usePngFallback
+        ? { ...BLOCKPANG_ASSET_MANIFEST, ...BLOCKPANG_PNG_FALLBACKS }
         : BLOCKPANG_ASSET_MANIFEST;
 }
 
@@ -109,6 +145,7 @@ function getBlockpangBoardPanelExt(cellSize, screenW, screenH) {
 
 if (typeof window !== 'undefined') {
     window.BLOCKPANG_ASSET_MANIFEST = BLOCKPANG_ASSET_MANIFEST;
+    window.BLOCKPANG_PNG_FALLBACKS = BLOCKPANG_PNG_FALLBACKS;
     window.BLOCKPANG_PNG_TILE_FALLBACKS = BLOCKPANG_PNG_TILE_FALLBACKS;
     window.getBlockpangAssetManifest = getBlockpangAssetManifest;
     window.getBlockpangTexture = getBlockpangTexture;
