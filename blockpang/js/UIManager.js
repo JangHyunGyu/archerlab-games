@@ -1012,7 +1012,7 @@ class UIManager {
         const hasSave = Game.hasSavedGame();
         const btnW = Math.min(w * (isLandscape ? 0.38 : 0.78), (isLandscape ? 320 : 344) * uiScale);
         const btnH = Math.min(58 * uiScale, Math.max(50, h * 0.064));
-        const actionGap = Math.max(10, Math.min(14 * uiScale, h * 0.014));
+        const actionGap = Math.max(18, Math.min(24 * uiScale, h * 0.024));
         const smallBtnH = Math.min(42 * uiScale, Math.max(38, h * 0.05));
         const safeBottom = Math.max(18, Math.min(32, h * 0.03));
         const actionStackH = hasSave
