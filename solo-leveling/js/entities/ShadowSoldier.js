@@ -189,17 +189,35 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    _addShadowVfx(key, x, y, opts = {}) {
+        const textureKey = `shadow_vfx_${key}`;
+        if (!this.scene?.textures?.exists(textureKey)) return null;
+
+        return this.scene.add.sprite(x, y, textureKey)
+            .setDepth(opts.depth ?? 8)
+            .setAlpha(opts.alpha ?? 0.9)
+            .setScale(opts.scale ?? 1)
+            .setRotation(opts.rotation ?? 0)
+            .setTint(opts.tint ?? COLORS.SHADOW_PRIMARY)
+            .setBlendMode(Phaser.BlendModes.ADD);
+    }
+
     // Igris: fast melee slash (shadow version)
     _igrisAttack(target) {
         if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSlash');
         target.takeDamage(this.damage, this.x, this.y);
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-        const slash = this.scene.add.sprite(target.x, target.y, 'proj_igris')
+        const slash = this._addShadowVfx('soldier_slash', target.x, target.y, {
+            rotation: angle,
+            scale: 0.52,
+            alpha: 0.86,
+            tint: 0xffffff,
+        }) || this.scene.add.sprite(target.x, target.y, 'proj_igris')
             .setDepth(8).setRotation(angle).setScale(1.5).setTint(COLORS.SHADOW_PRIMARY);
         this.scene.tweens.add({
             targets: slash,
-            alpha: 0, scaleX: 2.5, scaleY: 2.5,
+            alpha: 0, scaleX: slash.scaleX * 1.65, scaleY: slash.scaleY * 1.65,
             duration: 250,
             onComplete: () => slash.destroy(),
         });
@@ -210,14 +228,31 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSlam');
         // Slam at target position, hits all nearby enemies
         const radius = 120;
-        const slam = this.scene.add.circle(target.x, target.y, radius, COLORS.SHADOW_PRIMARY, 0.3)
-            .setDepth(8);
-        this.scene.tweens.add({
-            targets: slam,
-            alpha: 0, scale: 1.5,
-            duration: 400,
-            onComplete: () => slam.destroy(),
+        const slam = this._addShadowVfx('soldier_slam', target.x, target.y, {
+            scale: 0.75,
+            alpha: 0.76,
+            tint: 0xffffff,
         });
+        if (slam) {
+            this.scene.tweens.add({
+                targets: slam,
+                alpha: 0,
+                scaleX: 1.42,
+                scaleY: 1.12,
+                duration: 420,
+                ease: 'Quad.Out',
+                onComplete: () => slam.destroy(),
+            });
+        } else {
+            const fallbackSlam = this.scene.add.circle(target.x, target.y, radius, COLORS.SHADOW_PRIMARY, 0.3)
+                .setDepth(8);
+            this.scene.tweens.add({
+                targets: fallbackSlam,
+                alpha: 0, scale: 1.5,
+                duration: 400,
+                onComplete: () => fallbackSlam.destroy(),
+            });
+        }
 
         // Damage all enemies in range
         const enemies = [
@@ -236,9 +271,14 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
     // Beru: ranged acid spit (shadow version) — piercing projectile
     _beruAttack(target) {
         if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSpit');
-        const proj = this.scene.add.sprite(this.x, this.y, 'proj_beru')
-            .setDepth(8).setTint(COLORS.SHADOW_PRIMARY).setScale(1.3);
         const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+        const proj = this._addShadowVfx('soldier_spit', this.x, this.y, {
+            rotation: angle,
+            scale: 0.42,
+            alpha: 0.9,
+            tint: 0xffffff,
+        }) || this.scene.add.sprite(this.x, this.y, 'proj_beru')
+            .setDepth(8).setTint(COLORS.SHADOW_PRIMARY).setScale(1.3);
 
         const travelDist = this.attackRange * 1.6;
         const endX = this.x + Math.cos(angle) * travelDist;
@@ -259,6 +299,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             ease: 'Linear',
             onUpdate: () => {
                 if (!proj.active) return;
+                this._spawnProjectileTrail(proj.x, proj.y, angle);
                 const enemies = [
                     ...(this.scene.enemyManager?.getActiveEnemies() || []),
                     ...(this.scene.activeBosses?.filter(b => b.active) || []),
@@ -305,19 +346,53 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
     _meleeAttack(target) {
         if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSlash');
         target.takeDamage(this.damage, this.x, this.y);
-        const slash = this.scene.add.circle(target.x, target.y, 15, COLORS.SHADOW_PRIMARY, 0.5)
+        const slash = this._addShadowVfx('soldier_slash', target.x, target.y, {
+            scale: 0.42,
+            alpha: 0.78,
+            tint: 0xffffff,
+        }) || this.scene.add.circle(target.x, target.y, 15, COLORS.SHADOW_PRIMARY, 0.5)
             .setDepth(8);
         this.scene.tweens.add({
             targets: slash,
-            alpha: 0, scale: 2,
+            alpha: 0, scaleX: slash.scaleX * 2, scaleY: slash.scaleY * 2,
             duration: 200,
             onComplete: () => slash.destroy(),
         });
     }
 
+    _spawnProjectileTrail(x, y, angle) {
+        if (!this.scene?.textures?.exists('shadow_vfx_soldier_trail')) return;
+        if (Math.random() > 0.42) return;
+
+        const trail = this.scene.add.sprite(x - Math.cos(angle) * 12, y - Math.sin(angle) * 12, 'shadow_vfx_soldier_trail')
+            .setDepth(7)
+            .setRotation(angle)
+            .setScale(0.24)
+            .setAlpha(0.52)
+            .setTint(COLORS.SHADOW_PRIMARY)
+            .setBlendMode(Phaser.BlendModes.ADD);
+
+        this.scene.tweens.add({
+            targets: trail,
+            alpha: 0,
+            scaleX: 0.08,
+            scaleY: 0.08,
+            duration: 180,
+            ease: 'Quad.Out',
+            onComplete: () => trail.destroy(),
+        });
+    }
+
     _spawnTrail() {
-        const trail = this.scene.add.circle(this.x, this.y + 5, 6, this._glowColor || COLORS.SHADOW_PRIMARY, 0.25)
-            .setDepth(2);
+        const trail = this.scene.textures.exists('shadow_vfx_soldier_trail')
+            ? this.scene.add.sprite(this.x, this.y + 5, 'shadow_vfx_soldier_trail')
+                .setDepth(2)
+                .setScale(0.18)
+                .setAlpha(0.24)
+                .setTint(this._glowColor || COLORS.SHADOW_PRIMARY)
+                .setBlendMode(Phaser.BlendModes.ADD)
+            : this.scene.add.circle(this.x, this.y + 5, 6, this._glowColor || COLORS.SHADOW_PRIMARY, 0.25)
+                .setDepth(2);
         this.scene.tweens.add({
             targets: trail,
             alpha: 0,

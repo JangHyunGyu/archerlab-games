@@ -216,6 +216,27 @@ export class PreloadScene extends Phaser.Scene {
         CHARACTER_BASIC_ATTACK_EFFECT_KEYS.forEach((key) => {
             this._loadImage(`basic_attack_${key}`, `assets/effects/basic_attacks/${key}.png`);
         });
+        [
+            'xp_collect',
+            'xp_trail',
+        ].forEach((key) => {
+            this._loadImage(`pickup_${key}`, `assets/effects/pickups/${key}.png`);
+        });
+        [
+            'arise_rune',
+            'arise_smoke',
+            'arise_hand',
+        ].forEach((key) => {
+            this._loadImage(`asset_${key}`, `assets/effects/arise/${key}.png`);
+        });
+        [
+            'soldier_slash',
+            'soldier_slam',
+            'soldier_spit',
+            'soldier_trail',
+        ].forEach((key) => {
+            this._loadImage(`shadow_vfx_${key}`, `assets/effects/shadow_soldiers/${key}.png`);
+        });
 
         this._loadImage('ai_player_idle', 'assets/player/player_idle.png');
         this._loadImage('ai_dungeon_floor', 'assets/background/bg_dungeon_floor.png');
