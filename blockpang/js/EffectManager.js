@@ -112,6 +112,37 @@ class EffectManager {
         return gfx;
     }
 
+    _pickTextureKey(keys, fallback) {
+        const available = keys.filter(key => getBlockpangTexture(key));
+        if (available.length === 0) return fallback;
+        return available[Math.floor(Math.random() * available.length)];
+    }
+
+    _createBadgeSprite(textureKey, x, y, targetWidth) {
+        const texture = getBlockpangTexture(textureKey);
+        if (!texture) return null;
+        const sprite = new PIXI.Sprite(texture);
+        sprite.anchor.set(0.5);
+        sprite.eventMode = 'none';
+        sprite.position.set(x, y);
+        sprite.alpha = 0;
+        const baseScale = targetWidth / Math.max(texture.width || 1, 1);
+        sprite.scale.set(baseScale);
+        this.container.addChild(sprite);
+        return { sprite, baseScale };
+    }
+
+    _updateBadgeSprite(badge, alpha, scale = 1, y = null) {
+        if (!badge || !badge.sprite || badge.sprite.destroyed) return;
+        badge.sprite.alpha = alpha;
+        badge.sprite.scale.set(badge.baseScale * scale);
+        if (y !== null) badge.sprite.y = y;
+    }
+
+    _destroyBadgeSprite(badge) {
+        if (badge && badge.sprite && !badge.sprite.destroyed) badge.sprite.destroy();
+    }
+
     // Get a Text object from pool or create new
     _getTextObj(text, style) {
         if (this._textPool.length > 0) {
@@ -241,7 +272,8 @@ class EffectManager {
             const speed = 3 + Math.random() * 6;
             const size = 2 + Math.random() * (cellSize * 0.22);
 
-            const gfx = this._createParticleDisplay('effectShard', (g) => {
+            const textureKey = this._pickTextureKey(['effectShard', 'effectShardAlt', 'effectDiamond'], 'effectShard');
+            const gfx = this._createParticleDisplay(textureKey, (g) => {
                 g.circle(0, 0, size * 2.0).fill({ color, alpha: 0.25 });
                 g.roundRect(-size / 2, -size / 2, size, size, size * 0.3).fill({ color });
                 g.circle(0, 0, size * 0.35).fill({ color: 0xFFFFFF, alpha: 0.85 });
@@ -272,7 +304,8 @@ class EffectManager {
             const speed = 5 + Math.random() * 8;
             const size = 1 + Math.random() * 1.5;
 
-            const gfx = this._createParticleDisplay('effectSoftCircle', (g) => {
+            const textureKey = this._pickTextureKey(['effectSoftCircle', 'effectSoftBurst'], 'effectSoftCircle');
+            const gfx = this._createParticleDisplay(textureKey, (g) => {
                 g.circle(0, 0, size).fill({ color: 0xFFFFFF, alpha: 0.9 });
                 g.circle(0, 0, size * 2.5).fill({ color, alpha: 0.3 });
             });
@@ -301,7 +334,8 @@ class EffectManager {
     spawnSparkles(worldX, worldY, color, count = 5) {
         for (let i = 0; i < count; i++) {
             const size = 1.5 + Math.random() * 3.5;
-            const gfx = this._createParticleDisplay('effectSparkle', (g) => {
+            const textureKey = this._pickTextureKey(['effectSparkle', 'effectSparkleAlt'], 'effectSparkle');
+            const gfx = this._createParticleDisplay(textureKey, (g) => {
                 g.circle(0, 0, size * 0.6).fill({ color: 0xFFFFFF, alpha: 0.9 });
                 g.circle(0, 0, size * 1.5).fill({ color, alpha: 0.5 });
                 g.circle(0, 0, size * 2.5).fill({ color, alpha: 0.15 });
@@ -394,7 +428,7 @@ class EffectManager {
                 const cellCx = wx + cellSize / 2;
                 const cellCy = wy + cellSize / 2;
                 const flashSize = cellSize * (0.6 + intensity * 0.15);
-                const flash = this._createParticleDisplay('effectSoftCircle', (g) => {
+                const flash = this._createParticleDisplay(this._pickTextureKey(['effectSoftCircle', 'effectSoftBurst'], 'effectSoftCircle'), (g) => {
                     g.circle(0, 0, flashSize).fill({ color: 0xFFFFFF, alpha: 0.7 });
                     g.circle(0, 0, flashSize * 0.5).fill({ color, alpha: 0.5 });
                 });
@@ -419,7 +453,7 @@ class EffectManager {
                 for (let d = 0; d < debrisCount; d++) {
                     const fragW = cellSize * (0.1 + Math.random() * 0.3);
                     const fragH = cellSize * (0.1 + Math.random() * 0.3);
-                    const frag = this._createParticleDisplay('effectShard', (g) => {
+                    const frag = this._createParticleDisplay(this._pickTextureKey(['effectShard', 'effectShardAlt', 'effectDiamond'], 'effectShard'), (g) => {
                         g.roundRect(-fragW / 2, -fragH / 2, fragW, fragH, 1)
                             .fill({ color: blockColor.main });
                         g.roundRect(-fragW * 0.35, -fragH * 0.35, fragW * 0.7, fragH * 0.7, 1)
@@ -463,7 +497,7 @@ class EffectManager {
                 const dustCount = 3 + intensity * 2;
                 for (let d = 0; d < dustCount; d++) {
                     const dustSize = 1 + Math.random() * 2;
-                    const dust = this._createParticleDisplay('effectSoftCircle', (g) => {
+                    const dust = this._createParticleDisplay(this._pickTextureKey(['effectSoftCircle', 'effectSoftBurst'], 'effectSoftCircle'), (g) => {
                         g.circle(0, 0, dustSize).fill({ color: blockColor.light || color, alpha: 0.6 });
                     });
                     const dustIsSprite = !!dust._blockpangEffectSprite;
@@ -821,6 +855,15 @@ class EffectManager {
         glow.position.set(x, y);
         glow.alpha = 0;
         this.container.addChildAt(glow, this.container.children.indexOf(txt));
+        const badge = this._createBadgeSprite(
+            `comboBurst${tier}`,
+            x,
+            y,
+            Math.min(sw * 0.88, size * (tier === 3 ? 7.2 : tier === 2 ? 6.4 : 5.8))
+        );
+        if (badge) {
+            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(glow)));
+        }
 
         // ── Sparkles ──
         const sparkleCount = tier === 3 ? 40 : tier === 2 ? 25 : Math.min(comboLevel * 4, 18);
@@ -849,8 +892,8 @@ class EffectManager {
             elapsed: 0,
             duration,
             update(dt) {
-                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); return true; }
-                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); return true; }
+                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); self._destroyBadgeSprite(badge); return true; }
+                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); self._destroyBadgeSprite(badge); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -895,6 +938,8 @@ class EffectManager {
                 txt.y = startY - easeOutCubic(t) * floatDist;
                 glow.y = txt.y;
                 glow.x = x;
+                const badgeFade = t < 0.55 ? Math.min(1, t / 0.12) : Math.max(0, 1 - (t - 0.55) / 0.45);
+                self._updateBadgeSprite(badge, badgeFade * (0.72 + tier * 0.07), 0.92 + Math.sin(t * Math.PI) * 0.08, txt.y);
 
                 // Wobble rotation (more dramatic per tier)
                 txt.rotation = Math.sin(t * Math.PI * (8 + tier * 3)) * (0.03 + tier * 0.02) * (1 - t);
@@ -902,6 +947,7 @@ class EffectManager {
                 if (t >= 1) {
                     txt.destroy();
                     glow.destroy();
+                    self._destroyBadgeSprite(badge);
                     return true;
                 }
                 return false;
@@ -953,6 +999,16 @@ class EffectManager {
         this.container.addChildAt(glow, this.container.children.indexOf(txt));
 
         // ── Sparkles + effects ──
+        const badge = this._createBadgeSprite(
+            `clearBurst${Math.min(lineCount, 4)}`,
+            x,
+            y,
+            Math.min(sw * 0.9, size * 6.2)
+        );
+        if (badge) {
+            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(glow)));
+        }
+
         this.spawnSparkles(x, y, cfg.color, cfg.sparkles);
         this.playRingBurst(x, y, cfg.color, glowR * 0.6);
 
@@ -970,12 +1026,13 @@ class EffectManager {
 
         const startY = y;
         const duration = 1800 + intensity * 200;
+        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration,
             update(dt) {
-                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); return true; }
-                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); return true; }
+                if (txt.destroyed) { if (!glow.destroyed) glow.destroy(); self._destroyBadgeSprite(badge); return true; }
+                if (glow.destroyed) { if (!txt.destroyed) txt.destroy(); self._destroyBadgeSprite(badge); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1015,6 +1072,8 @@ class EffectManager {
 
                 txt.y = startY - easeOutCubic(t) * (80 + intensity * 25);
                 glow.y = txt.y;
+                const badgeFade = t < 0.6 ? Math.min(1, t / 0.14) : Math.max(0, 1 - (t - 0.6) / 0.4);
+                self._updateBadgeSprite(badge, badgeFade * 0.82, 0.9 + Math.sin(t * Math.PI) * 0.1, txt.y);
 
                 // Shake on slam (first 20%)
                 if (t < 0.2) {
@@ -1028,6 +1087,7 @@ class EffectManager {
                 if (t >= 1) {
                     txt.destroy();
                     glow.destroy();
+                    self._destroyBadgeSprite(badge);
                     return true;
                 }
                 return false;
@@ -1160,7 +1220,7 @@ class EffectManager {
     playMultiRingWave(x, y, count, colors, maxRadius) {
         for (let r = 0; r < count; r++) {
             const ringColor = colors[r % colors.length];
-            const wave = this._getEffectSprite('effectRing') || new PIXI.Graphics();
+            const wave = this._getEffectSprite(this._pickTextureKey(['effectRing', 'effectRingAlt'], 'effectRing')) || new PIXI.Graphics();
             const isSpriteWave = !!wave._blockpangEffectSprite;
             if (isSpriteWave) wave.tint = ringColor;
             wave.position.set(x, y);
@@ -1210,7 +1270,7 @@ class EffectManager {
         for (let i = 0; i < count; i++) {
             const color = colors[Math.floor(Math.random() * colors.length)];
             const size = 1 + Math.random() * 3;
-            const gfx = this._createParticleDisplay('effectSparkle', (g) => {
+            const gfx = this._createParticleDisplay(this._pickTextureKey(['effectSparkle', 'effectSparkleAlt'], 'effectSparkle'), (g) => {
                 g.circle(0, 0, size).fill({ color, alpha: 0.8 });
                 g.circle(0, 0, size * 1.8).fill({ color, alpha: 0.3 });
             });
@@ -1278,6 +1338,11 @@ class EffectManager {
         txt.alpha = 0;
         this.container.addChild(txt);
 
+        const badge = this._createBadgeSprite('levelBadge', x, y, Math.min(w * 0.84, this.game.cellSize * 7.4));
+        if (badge) {
+            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(txt)));
+        }
+
         // Sparkle burst
         for (let i = 0; i < 20; i++) {
             const angle = (Math.PI * 2 * i / 20);
@@ -1289,11 +1354,12 @@ class EffectManager {
             );
         }
 
+        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration: 2000,
             update(dt) {
-                if (txt.destroyed) return true;
+                if (txt.destroyed) { self._destroyBadgeSprite(badge); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1313,8 +1379,10 @@ class EffectManager {
                 }
 
                 txt.y = y - Math.sin(t * Math.PI) * 20;
+                const badgeAlpha = t < 0.7 ? Math.min(1, t / 0.14) * 0.82 : Math.max(0, 1 - (t - 0.7) / 0.3) * 0.82;
+                self._updateBadgeSprite(badge, badgeAlpha, 0.92 + Math.sin(t * Math.PI) * 0.06, txt.y);
 
-                if (t >= 1) { txt.destroy(); return true; }
+                if (t >= 1) { txt.destroy(); self._destroyBadgeSprite(badge); return true; }
                 return false;
             }
         });
@@ -1398,12 +1466,17 @@ class EffectManager {
         txt.position.set(x, y);
         txt.alpha = 0;
         this.container.addChild(txt);
+        const badge = this._createBadgeSprite('perfectBadge', x, y, Math.min(w * 0.94, this.game.cellSize * 9.2));
+        if (badge) {
+            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(txt)));
+        }
 
+        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration: 2500,
             update(dt) {
-                if (txt.destroyed) return true;
+                if (txt.destroyed) { self._destroyBadgeSprite(badge); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1424,8 +1497,10 @@ class EffectManager {
                     txt.scale.set(1 + (t - 0.7) * 0.8);
                     txt.rotation = 0;
                 }
+                const badgeAlpha = t < 0.7 ? Math.min(1, t / 0.1) * 0.9 : Math.max(0, 1 - (t - 0.7) / 0.3) * 0.9;
+                self._updateBadgeSprite(badge, badgeAlpha, 0.92 + Math.sin(t * Math.PI) * 0.09, txt.y);
 
-                if (t >= 1) { txt.destroy(); return true; }
+                if (t >= 1) { txt.destroy(); self._destroyBadgeSprite(badge); return true; }
                 return false;
             }
         });
@@ -1435,7 +1510,7 @@ class EffectManager {
     playRingBurst(x, y, color = 0x44FF88, baseRadius = 60) {
         const ringCount = 2;
         for (let r = 0; r < ringCount; r++) {
-            const ring = this._getEffectSprite('effectRing') || new PIXI.Graphics();
+            const ring = this._getEffectSprite(this._pickTextureKey(['effectRing', 'effectRingAlt'], 'effectRing')) || new PIXI.Graphics();
             const isSpriteRing = !!ring._blockpangEffectSprite;
             if (isSpriteRing) ring.tint = color;
             ring.position.set(x, y);
@@ -1480,7 +1555,7 @@ class EffectManager {
         }
 
         // Central flash
-        const flash = this._createParticleDisplay('effectSoftCircle', (g) => {
+        const flash = this._createParticleDisplay(this._pickTextureKey(['effectSoftCircle', 'effectSoftBurst'], 'effectSoftCircle'), (g) => {
             g.circle(0, 0, 15).fill({ color: 0xFFFFFF, alpha: 0.5 });
             g.circle(0, 0, 25).fill({ color, alpha: 0.3 });
         });
@@ -1583,7 +1658,7 @@ class EffectManager {
         const maxRadius = 100 + intensity * 50;
 
         // Primary shockwave ring (bigger, brighter)
-        const wave = this._getEffectSprite('effectRing') || new PIXI.Graphics();
+        const wave = this._getEffectSprite(this._pickTextureKey(['effectRing', 'effectRingAlt'], 'effectRing')) || new PIXI.Graphics();
         const isSpriteWave = !!wave._blockpangEffectSprite;
         if (isSpriteWave) wave.tint = 0x44FF88;
         wave.position.set(x, y);
@@ -1625,7 +1700,7 @@ class EffectManager {
 
         // Secondary inner shockwave (delayed, faster)
         if (intensity >= 2) {
-            const wave2 = this._getEffectSprite('effectRing') || new PIXI.Graphics();
+            const wave2 = this._getEffectSprite(this._pickTextureKey(['effectRing', 'effectRingAlt'], 'effectRing')) || new PIXI.Graphics();
             const isSpriteWave2 = !!wave2._blockpangEffectSprite;
             if (isSpriteWave2) wave2.tint = 0x00E5FF;
             wave2.position.set(x, y);
@@ -1669,7 +1744,7 @@ class EffectManager {
             const size = 1.5 + Math.random() * 2.5;
             const pColor = i % 3 === 0 ? 0xFFFFFF : i % 3 === 1 ? 0x44FF88 : 0x00E5FF;
 
-            const gfx = this._createParticleDisplay('effectSoftCircle', (g) => {
+            const gfx = this._createParticleDisplay(this._pickTextureKey(['effectSoftCircle', 'effectSoftBurst'], 'effectSoftCircle'), (g) => {
                 g.circle(0, 0, size).fill({ color: pColor, alpha: 0.9 });
                 g.circle(0, 0, size * 2.2).fill({ color: pColor, alpha: 0.3 });
             });
@@ -1710,13 +1785,18 @@ class EffectManager {
         txt.position.set(x, y);
         txt.alpha = 0;
         this.container.addChild(txt);
+        const badge = this._createBadgeSprite('bonusBadge', x, y, Math.max(size * 7.4, 260));
+        if (badge) {
+            this.container.setChildIndex(badge.sprite, Math.max(0, this.container.children.indexOf(txt)));
+        }
 
         const startY = y;
+        const self = this;
         this.tweens.push({
             elapsed: 0,
             duration: 1500,
             update(dt) {
-                if (txt.destroyed) return true;
+                if (txt.destroyed) { self._destroyBadgeSprite(badge); return true; }
                 this.elapsed += dt;
                 const t = Math.min(this.elapsed / this.duration, 1);
 
@@ -1730,8 +1810,10 @@ class EffectManager {
                     txt.alpha = 1 - easeInOutQuad((t - 0.6) / 0.4);
                 }
                 txt.y = startY - easeOutCubic(t) * 80;
+                const badgeAlpha = t < 0.6 ? Math.min(1, t / 0.15) * 0.78 : Math.max(0, 1 - (t - 0.6) / 0.4) * 0.78;
+                self._updateBadgeSprite(badge, badgeAlpha, 0.96 + Math.sin(t * Math.PI) * 0.04, txt.y);
 
-                if (t >= 1) { txt.destroy(); return true; }
+                if (t >= 1) { txt.destroy(); self._destroyBadgeSprite(badge); return true; }
                 return false;
             }
         });

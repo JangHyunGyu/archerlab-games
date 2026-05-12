@@ -7,7 +7,9 @@ class UIManager {
         this.bestText = null;
         this.titleText = null;
         this.soundBtn = null;
+        this.soundIconSprite = null;
         this.hudBg = null;
+        this.homeIconSprite = null;
         this.gameOverOverlay = null;
         this.titleContainer = null;
         this.levelText = null;
@@ -169,7 +171,51 @@ class UIManager {
         this.homeBtn.on('pointerout',  () => { this.homeBtn.alpha = 1; });
         this.container.addChild(this.homeBtn);
 
+        this._buildImageHudButtons();
+
         this.game.app.ticker.add(this._updateScoreAnimation, this);
+    }
+
+    _buildImageHudButtons() {
+        const soundTexture = getBlockpangTexture('iconSoundOn');
+        if (soundTexture) {
+            this.soundIconSprite = new PIXI.Sprite(soundTexture);
+            this.soundIconSprite.anchor.set(1, 0);
+            this.soundIconSprite.eventMode = 'static';
+            this.soundIconSprite.cursor = 'pointer';
+            this.soundIconSprite.hitArea = new PIXI.Rectangle(-44, -12, 56, 56);
+            this.soundIconSprite.on('pointerdown', () => {
+                const enabled = this.game.sound.toggle();
+                const tex = getBlockpangTexture(enabled ? 'iconSoundOn' : 'iconSoundOff');
+                if (tex) this.soundIconSprite.texture = tex;
+                this.soundIconSprite.alpha = enabled ? 1 : 0.55;
+            });
+            this.soundIconSprite.on('pointerover', () => { this.soundIconSprite.alpha = 0.75; });
+            this.soundIconSprite.on('pointerout', () => {
+                this.soundIconSprite.alpha = this.game.sound.enabled ? 1 : 0.55;
+            });
+            this.container.addChild(this.soundIconSprite);
+            this.soundBtn.visible = false;
+            this.soundBtn.eventMode = 'none';
+        }
+
+        const homeTexture = getBlockpangTexture('iconHome');
+        if (homeTexture) {
+            this.homeIconSprite = new PIXI.Sprite(homeTexture);
+            this.homeIconSprite.anchor.set(0, 0);
+            this.homeIconSprite.eventMode = 'static';
+            this.homeIconSprite.cursor = 'pointer';
+            this.homeIconSprite.hitArea = new PIXI.Rectangle(-12, -12, 56, 56);
+            this.homeIconSprite.on('pointerdown', () => {
+                if (this.game.isAnimating) return;
+                this.game.goToTitle();
+            });
+            this.homeIconSprite.on('pointerover', () => { this.homeIconSprite.alpha = 0.75; });
+            this.homeIconSprite.on('pointerout', () => { this.homeIconSprite.alpha = 1; });
+            this.container.addChild(this.homeIconSprite);
+            this.homeBtn.visible = false;
+            this.homeBtn.eventMode = 'none';
+        }
     }
 
     destroy() {
@@ -222,6 +268,14 @@ class UIManager {
         this.levelBarGlow.visible = true;
         this.soundBtn.visible = true;
         this.homeBtn.visible = true;
+        if (this.soundIconSprite) {
+            this.soundBtn.visible = false;
+            this.soundIconSprite.visible = true;
+        }
+        if (this.homeIconSprite) {
+            this.homeBtn.visible = false;
+            this.homeIconSprite.visible = true;
+        }
     }
 
     hideGameHUD() {
@@ -236,6 +290,8 @@ class UIManager {
         this.levelBarGlow.visible = false;
         this.soundBtn.visible = false;
         this.homeBtn.visible = false;
+        if (this.soundIconSprite) this.soundIconSprite.visible = false;
+        if (this.homeIconSprite) this.homeIconSprite.visible = false;
     }
 
     resize(screenWidth, scoreAreaHeight, padding) {
@@ -335,6 +391,18 @@ class UIManager {
         // ── Back chevron (top-left, inside panel) ──
         this.homeBtn.style.fontSize = Math.max(21, Math.min(27, screenWidth * 0.062));
         this.homeBtn.position.set(innerLeft, hudY + Math.max(4, innerPadTop * 0.3));
+
+        const hudIconSize = Math.max(24, Math.min(32, screenWidth * 0.07));
+        if (this.soundIconSprite) {
+            this.soundIconSprite.width = hudIconSize;
+            this.soundIconSprite.height = hudIconSize;
+            this.soundIconSprite.position.set(innerRight, hudY + Math.max(8, innerPadTop * 0.5));
+        }
+        if (this.homeIconSprite) {
+            this.homeIconSprite.width = hudIconSize;
+            this.homeIconSprite.height = hudIconSize;
+            this.homeIconSprite.position.set(innerLeft, hudY + Math.max(4, innerPadTop * 0.3));
+        }
     }
 
     updateScore(score, bestScore) {
@@ -581,6 +649,18 @@ class UIManager {
         }
     }
 
+    _getButtonIconTextureKey(icon) {
+        return {
+            play: 'iconPlay',
+            continue: 'iconContinue',
+            rank: 'iconRank',
+            mail: 'iconMail',
+            close: 'iconClose',
+            check: 'iconCheck',
+            skip: 'iconSkip',
+        }[icon] || null;
+    }
+
     _makeNeonButton(parent, {
         x,
         y,
@@ -604,8 +684,17 @@ class UIManager {
         const bg = new PIXI.Graphics();
         btn.addChild(bg);
 
-        const iconG = icon ? new PIXI.Graphics() : null;
-        if (iconG) btn.addChild(iconG);
+        const iconTextureKey = this._getButtonIconTextureKey(icon);
+        const iconTexture = iconTextureKey ? getBlockpangTexture(iconTextureKey) : null;
+        const iconG = icon
+            ? (iconTexture ? new PIXI.Sprite(iconTexture) : new PIXI.Graphics())
+            : null;
+        const iconIsSprite = !!(iconG && iconTexture);
+        if (iconG) {
+            iconG.eventMode = 'none';
+            if (iconIsSprite) iconG.anchor.set(0.5);
+            btn.addChild(iconG);
+        }
 
         const textColor = variant === 'primary' ? THEME.white : THEME.inkStrong;
         const txt = new PIXI.Text({
@@ -640,15 +729,24 @@ class UIManager {
             this._drawNeonButtonFrame(bg, width, height, variant, hovered);
             if (iconG) {
                 const iconColor = variant === 'primary' ? THEME.white : (variant === 'gold' ? THEME.gold : THEME.secondary);
-                this._drawButtonIcon(
-                    iconG,
-                    icon,
-                    iconX,
-                    (height - iconSize) / 2,
-                    iconSize,
-                    iconColor,
-                    hovered ? 1 : 0.82
-                );
+                const iconAlpha = hovered ? 1 : 0.88;
+                if (iconIsSprite) {
+                    iconG.width = iconSize * 1.28;
+                    iconG.height = iconSize * 1.28;
+                    iconG.position.set(iconX + iconSize * 0.5, height / 2);
+                    iconG.alpha = iconAlpha;
+                    iconG.tint = 0xFFFFFF;
+                } else {
+                    this._drawButtonIcon(
+                        iconG,
+                        icon,
+                        iconX,
+                        (height - iconSize) / 2,
+                        iconSize,
+                        iconColor,
+                        iconAlpha
+                    );
+                }
             }
         };
         draw(false);
@@ -938,6 +1036,17 @@ class UIManager {
         langTriggerText.anchor.set(0.5, 0.5);
         langTriggerText.position.set(langBtnW / 2, langBtnH / 2);
         langTrigger.addChild(langTriggerText);
+        const langIconTexture = getBlockpangTexture('iconLanguage');
+        if (langIconTexture) {
+            const langIcon = new PIXI.Sprite(langIconTexture);
+            langIcon.anchor.set(0.5);
+            langIcon.eventMode = 'none';
+            langIcon.width = langBtnH * 0.62;
+            langIcon.height = langBtnH * 0.62;
+            langIcon.position.set(langBtnH * 0.58, langBtnH / 2);
+            langTrigger.addChild(langIcon);
+            langTriggerText.position.set(langBtnW / 2 + langBtnH * 0.12, langBtnH / 2);
+        }
 
         // Dropdown items
         const dropdownContainer = new PIXI.Container();
@@ -1030,23 +1139,37 @@ class UIManager {
         };
         drawSoundBtn(false);
 
-        const titleSoundIcon = new PIXI.Text({
-            text: '\u266A',
-            style: {
-                fontFamily: FONT_BODY,
-                fontSize: Math.max(15, Math.min(18, w * 0.043)),
-                fill: this.game.sound.enabled ? THEME.inkStrong : THEME.inkFaint,
-                fontWeight: '700',
-            },
-        });
+        const titleSoundTexture = getBlockpangTexture(this.game.sound.enabled ? 'iconSoundOn' : 'iconSoundOff');
+        const titleSoundIcon = titleSoundTexture
+            ? new PIXI.Sprite(titleSoundTexture)
+            : new PIXI.Text({
+                text: '\u266A',
+                style: {
+                    fontFamily: FONT_BODY,
+                    fontSize: Math.max(15, Math.min(18, w * 0.043)),
+                    fill: this.game.sound.enabled ? THEME.inkStrong : THEME.inkFaint,
+                    fontWeight: '700',
+                },
+            });
         titleSoundIcon.anchor.set(0.5, 0.5);
         titleSoundIcon.position.set(soundSize / 2, soundSize / 2 - 1);
         titleSoundIcon.eventMode = 'none';
+        if (titleSoundTexture) {
+            titleSoundIcon.width = soundSize * 0.76;
+            titleSoundIcon.height = soundSize * 0.76;
+            titleSoundIcon.alpha = this.game.sound.enabled ? 1 : 0.55;
+        }
         titleSoundBtn.addChild(titleSoundIcon);
 
         titleSoundBtn.on('pointerdown', () => {
             const enabled = this.game.sound.toggle();
-            titleSoundIcon.style.fill = enabled ? THEME.inkStrong : THEME.inkFaint;
+            const nextTexture = getBlockpangTexture(enabled ? 'iconSoundOn' : 'iconSoundOff');
+            if (nextTexture && titleSoundIcon instanceof PIXI.Sprite) {
+                titleSoundIcon.texture = nextTexture;
+                titleSoundIcon.alpha = enabled ? 1 : 0.55;
+            } else if (titleSoundIcon.style) {
+                titleSoundIcon.style.fill = enabled ? THEME.inkStrong : THEME.inkFaint;
+            }
         });
         titleSoundBtn.on('pointerover', () => drawSoundBtn(true));
         titleSoundBtn.on('pointerout',  () => drawSoundBtn(false));
