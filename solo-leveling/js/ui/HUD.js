@@ -32,7 +32,9 @@ export class HUD {
     }
 
     _text(x, y, value, style) {
-        return padText(this.scene.add.text(x, y, value, style), 2, 2);
+        const text = padText(this.scene.add.text(x, y, value, style), 4, 5, 2, 2);
+        if (typeof text.setLineSpacing === 'function') text.setLineSpacing(3);
+        return text;
     }
 
     _createLeftPanel() {
@@ -44,7 +46,7 @@ export class HUD {
             color: '#ff6666',
         }).setDepth(100).setScrollFactor(0);
         this.elements.push(hpLabel);
-        y += hpLabel.height + 2;
+        y += hpLabel.displayHeight + uv(2);
 
         const barW = Math.min(uv(180), GAME_WIDTH * 0.4);
         const hpH = uv(14);
@@ -75,7 +77,7 @@ export class HUD {
             color: SYSTEM.TEXT_CYAN,
         }).setDepth(100).setScrollFactor(0);
         this.elements.push(xpLabel);
-        y += xpLabel.height + 2;
+        y += xpLabel.displayHeight + uv(2);
 
         const xpH = uv(6);
         this._xpW = barW;
@@ -107,7 +109,7 @@ export class HUD {
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         fitText(this.killText, panelW, 0, 0.72);
         this.elements.push(this.killText);
-        y += this.killText.displayHeight + 3;
+        y += this.killText.displayHeight + uv(5);
 
         this.levelText = this._text(panelX, y, '▸ LV    01', {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
@@ -115,7 +117,7 @@ export class HUD {
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         fitText(this.levelText, panelW, 0, 0.72);
         this.elements.push(this.levelText);
-        y += this.levelText.displayHeight + 2;
+        y += this.levelText.displayHeight + uv(5);
 
         this.rankText = this._text(panelX, y, '▸ RANK  E', {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
@@ -123,13 +125,14 @@ export class HUD {
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         fitText(this.rankText, panelW, 0, 0.72);
         this.elements.push(this.rankText);
-        y += this.rankText.displayHeight + 10;
+        y += this.rankText.displayHeight + uv(12);
 
         this.questText = this._text(panelX, y, '', {
             fontSize: fs(10), fontFamily: UI_FONT_KR,
             color: SYSTEM.TEXT_CYAN,
             align: this._isPortrait ? 'left' : 'right',
             wordWrap: { width: panelW, useAdvancedWrap: true },
+            lineSpacing: 5,
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.questText);
     }

@@ -21,7 +21,9 @@ export class StatusWindow {
     }
 
     _text(x, y, value, style) {
-        return padText(this.scene.add.text(x, y, value, style), 2, 2);
+        const text = padText(this.scene.add.text(x, y, value, style), 4, 5, 2, 2);
+        if (typeof text.setLineSpacing === 'function') text.setLineSpacing(3);
+        return text;
     }
 
     toggle() {
@@ -70,7 +72,10 @@ export class StatusWindow {
         // Title
         const title = this._text(cx, py + uv(30), t('statusTitle'), {
             fontSize: fs(20), fontFamily: UI_FONT_KR, fontStyle: 'bold',
-            color: SYSTEM.TEXT_BRIGHT, letterSpacing: 2,
+            color: SYSTEM.TEXT_BRIGHT,
+            stroke: '#02040a',
+            strokeThickness: 2,
+            letterSpacing: 0,
         }).setOrigin(0.5).setDepth(303).setScrollFactor(0);
         fitText(title, w - uv(60), uv(44), 0.68);
         this.elements.push(title);
@@ -102,7 +107,7 @@ export class StatusWindow {
         // Stats section header
         const statsHeader = this._text(px + uv(26), yOff, '▸  ' + t('statSection'), {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-            color: SYSTEM.TEXT_CYAN, letterSpacing: 1,
+            color: SYSTEM.TEXT_CYAN, letterSpacing: 0,
         }).setDepth(303).setScrollFactor(0);
         this.elements.push(statsHeader);
         yOff += uv(24);
@@ -132,7 +137,7 @@ export class StatusWindow {
         // Shadow army section
         const shadowHeader = this._text(px + uv(26), yOff, '▸  ' + t('statShadow'), {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-            color: SYSTEM.TEXT_CYAN, letterSpacing: 1,
+            color: SYSTEM.TEXT_CYAN, letterSpacing: 0,
         }).setDepth(303).setScrollFactor(0);
         this.elements.push(shadowHeader);
 

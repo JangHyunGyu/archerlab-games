@@ -1,4 +1,4 @@
-import { GAME_WIDTH, GAME_HEIGHT, fs, uv, fitText, padText } from '../utils/Constants.js';
+import { GAME_WIDTH, GAME_HEIGHT, UI_FONT_MONO, UI_FONT_KR, fs, uv, fitText, padText } from '../utils/Constants.js';
 import { UIAssets } from './UIAssets.js';
 
 /**
@@ -48,8 +48,8 @@ export class SystemMessage {
         const colors = this._getColors(msg.type);
         const cx = GAME_WIDTH / 2;
         const lineCount = msg.lines.length;
-        const lineH = uv(24);
-        const boxH = uv(60) + lineCount * lineH;
+        const lineH = uv(27);
+        const boxH = uv(66) + lineCount * lineH;
         const boxW = Math.min(uv(360), GAME_WIDTH - uv(40));
         const startY = uv(118);
 
@@ -90,10 +90,12 @@ export class SystemMessage {
         // Title text
         const titleText = padText(this.scene.add.text(cx, startY - boxH / 2 + uv(18), msg.title, {
             fontSize: fs(13),
-            fontFamily: 'Arial',
+            fontFamily: UI_FONT_MONO,
             fontStyle: 'bold',
             color: colors.titleColor,
-        }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
+            stroke: '#02040a',
+            strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 4, 5, 2, 2);
         fitText(titleText, boxW - uv(30), 0, 0.72);
         elements.push(titleText);
 
@@ -107,9 +109,12 @@ export class SystemMessage {
         msg.lines.forEach((line, i) => {
             const t = padText(this.scene.add.text(cx, startY - boxH / 2 + uv(48) + i * lineH, line, {
                 fontSize: fs(14),
-                fontFamily: 'Arial',
+                fontFamily: UI_FONT_KR,
                 color: colors.textColor,
-            }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
+                stroke: '#02040a',
+                strokeThickness: 2,
+                lineSpacing: 4,
+            }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 4, 5, 2, 2);
             fitText(t, boxW - uv(34), lineH, 0.68);
             elements.push(t);
             bodyTexts.push(t);
