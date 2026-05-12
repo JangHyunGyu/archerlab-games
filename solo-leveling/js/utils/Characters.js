@@ -110,6 +110,7 @@ export const CHARACTER_DEFS = {
         accent: 0xbfeaff,
         accentText: '#d6f4ff',
         visualScale: 0.98,
+        useDirectionalAttackAnimations: false,
         stats: {
             hp: 210,
             maxHp: 210,
