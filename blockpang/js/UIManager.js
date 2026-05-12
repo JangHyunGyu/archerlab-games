@@ -2042,46 +2042,113 @@ class UIManager {
             overlay.addChild(hDiv);
             y += 5;
 
+            const medalStyles = [
+                {
+                    row: 0x4D2D12,
+                    metal: 0xFFD66D,
+                    light: 0xFFF1A8,
+                    dark: 0x9A641F,
+                    ribbon: 0xFFB347,
+                    text: THEME.goldSoft,
+                    ink: 0x3A2508,
+                },
+                {
+                    row: 0x253454,
+                    metal: 0xDDE9F6,
+                    light: 0xFFFFFF,
+                    dark: 0x7788A0,
+                    ribbon: 0x9EB5D2,
+                    text: 0xEAF4FF,
+                    ink: 0x182033,
+                },
+                {
+                    row: 0x4A2A25,
+                    metal: 0xD9894D,
+                    light: 0xFFD0A3,
+                    dark: 0x81472B,
+                    ribbon: 0xB86238,
+                    text: 0xFFD0A3,
+                    ink: 0x2E180F,
+                },
+            ];
+
             rankings.forEach((entry, i) => {
                 if (y + rowH > startY + maxHeight) return;
 
                 const isTop = i < 3;
-                const color = isTop ? THEME.gold : THEME.ink;
+                const medal = isTop ? medalStyles[i] : null;
+                const color = medal ? medal.text : THEME.ink;
                 const rankLabel = `${i + 1}`;
 
                 const rowX = panelX + 18;
                 const rowW = panelW - 36;
                 const rowBg = new PIXI.Graphics();
                 rowBg.roundRect(rowX, y - 1, rowW, rowH - 4, 8)
-                    .fill({ color: isTop ? THEME.accentSoft : THEME.bgDim, alpha: isTop ? 0.68 : 0.44 });
+                    .fill({ color: medal ? medal.row : THEME.bgDim, alpha: medal ? 0.78 : 0.44 });
                 rowBg.roundRect(rowX, y - 1, rowW, rowH - 4, 8)
-                    .stroke({ width: 1.1, color: isTop ? THEME.gold : THEME.secondary, alpha: isTop ? 0.46 : 0.2 });
-                if (isTop) {
+                    .stroke({ width: 1.1, color: medal ? medal.metal : THEME.secondary, alpha: medal ? 0.58 : 0.2 });
+                if (medal) {
+                    rowBg.roundRect(rowX + 3, y + 2, rowW - 6, Math.max(4, rowH * 0.18), 6)
+                        .fill({ color: medal.light, alpha: 0.08 });
                     rowBg.roundRect(rowX + 4, y + 3, 3, rowH - 12, 2)
-                        .fill({ color: THEME.gold, alpha: 0.68 });
+                        .fill({ color: medal.metal, alpha: 0.78 });
                 }
                 overlay.addChild(rowBg);
 
-                const badgeW = Math.min(28, rowH + 3);
+                const badgeW = isTop ? Math.min(30, rowH + 5) : Math.min(28, rowH + 3);
                 const badgeH = Math.max(16, rowH - 9);
                 const badge = new PIXI.Graphics();
-                badge.roundRect(panelX + 25, y + (rowH - badgeH) / 2 - 2, badgeW, badgeH, badgeH / 2)
-                    .fill({ color: isTop ? THEME.gold : THEME.surfaceAlt, alpha: isTop ? 0.94 : 0.78 });
-                badge.roundRect(panelX + 25, y + (rowH - badgeH) / 2 - 2, badgeW, badgeH, badgeH / 2)
-                    .stroke({ width: 1, color: isTop ? THEME.white : THEME.secondary, alpha: isTop ? 0.32 : 0.34 });
+                const badgeCx = panelX + 25 + badgeW / 2;
+                const badgeCy = y + rowH / 2 - 2;
+                if (medal) {
+                    const r = Math.min(rowH * 0.42, 12.5);
+                    badge.poly([
+                        badgeCx - r * 0.64, badgeCy + r * 0.38,
+                        badgeCx - r * 0.24, badgeCy + r * 1.08,
+                        badgeCx + r * 0.02, badgeCy + r * 0.45,
+                    ], true).fill({ color: medal.ribbon, alpha: 0.76 });
+                    badge.poly([
+                        badgeCx + r * 0.64, badgeCy + r * 0.38,
+                        badgeCx + r * 0.24, badgeCy + r * 1.08,
+                        badgeCx - r * 0.02, badgeCy + r * 0.45,
+                    ], true).fill({ color: medal.dark, alpha: 0.78 });
+                    badge.circle(badgeCx, badgeCy + 1, r + 2)
+                        .fill({ color: THEME.shadow, alpha: 0.28 });
+                    badge.circle(badgeCx, badgeCy, r)
+                        .fill({ color: medal.dark, alpha: 1 });
+                    badge.circle(badgeCx, badgeCy, r * 0.82)
+                        .fill({ color: medal.metal, alpha: 1 });
+                    badge.circle(badgeCx - r * 0.28, badgeCy - r * 0.28, r * 0.23)
+                        .fill({ color: medal.light, alpha: 0.7 });
+                    badge.circle(badgeCx, badgeCy, r)
+                        .stroke({ width: 1.2, color: medal.light, alpha: 0.58 });
+                } else {
+                    badge.roundRect(panelX + 25, y + (rowH - badgeH) / 2 - 2, badgeW, badgeH, badgeH / 2)
+                        .fill({ color: THEME.surfaceAlt, alpha: 0.78 });
+                    badge.roundRect(panelX + 25, y + (rowH - badgeH) / 2 - 2, badgeW, badgeH, badgeH / 2)
+                        .stroke({ width: 1, color: THEME.secondary, alpha: 0.34 });
+                }
                 overlay.addChild(badge);
 
                 const rowStyle = {
                     fontFamily: FONT_BODY,
                     fontSize: Math.max(10, Math.min(13, rowH * 0.58)),
                     fill: color,
-                    fontWeight: isTop ? '700' : '500',
+                    fontWeight: medal ? '800' : '500',
                 };
 
-                const rankText = new PIXI.Text({ text: rankLabel, style: rowStyle });
+                const rankText = new PIXI.Text({
+                    text: rankLabel,
+                    style: {
+                        ...rowStyle,
+                        fontSize: Math.max(11, Math.min(14, rowH * 0.6)),
+                        fill: medal ? medal.ink : THEME.inkStrong,
+                        fontWeight: medal ? '900' : '700',
+                        stroke: medal ? { color: medal.light, width: 1, alpha: 0.28 } : undefined,
+                    },
+                });
                 rankText.anchor.set(0.5, 0.5);
-                rankText.style.fill = isTop ? THEME.bgDeep : THEME.inkStrong;
-                rankText.position.set(panelX + 25 + badgeW / 2, y + rowH / 2 - 2);
+                rankText.position.set(badgeCx, badgeCy);
                 overlay.addChild(rankText);
 
                 const nameText = new PIXI.Text({ text: entry.player_name, style: rowStyle });
