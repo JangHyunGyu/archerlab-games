@@ -117,6 +117,7 @@
   let fieldBgGradient = null;
   let fieldBgImage = null;
   let mergeParticleImage = null;
+  let mergeBurstImage = null;
   let running = false;
   let gameOver = false;
   let dangerActive = false;
@@ -140,6 +141,8 @@
   const BONK_COOLDOWN_MS = 110;
   const BONK_TRIGGER_SPEED = 1.35;
   const MERGE_PARTICLE_CELL = 64;
+  const MERGE_BURST_CELL = 192;
+  const MERGE_BURST_FRAMES = 8;
   const BONK_DROP_GRACE_MS = 0;
 
   // DOM refs
@@ -292,6 +295,8 @@
     fieldBgImage.src = 'assets/ui/cushion-field.webp';
     mergeParticleImage = new Image();
     mergeParticleImage.src = 'assets/ui/merge-particles.png';
+    mergeBurstImage = new Image();
+    mergeBurstImage.src = 'assets/ui/merge-burst-sheet.png';
     resizeCanvas();
     window.addEventListener('resize', () => {
       scheduleFitGameLayout();
@@ -393,8 +398,15 @@
     return min + Math.random() * (max - min);
   }
 
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
   function createMergeEffect(x, y, r, color, isFinal) {
     const count = isFinal ? 20 : 12;
+    const radiusScale = clamp(r / 55, 0.62, isFinal ? 1.85 : 1.45);
+    const particleMin = (isFinal ? 15 : 9) * radiusScale;
+    const particleMax = (isFinal ? 30 : 20) * radiusScale;
     const particles = [];
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i / count) + randomBetween(-0.18, 0.18);
@@ -403,7 +415,7 @@
         frame: finalFrame,
         angle,
         distance: randomBetween(r * 0.30, r * (isFinal ? 1.90 : 1.35)),
-        size: randomBetween(isFinal ? 18 : 12, isFinal ? 34 : 24),
+        size: randomBetween(particleMin, particleMax),
         spin: randomBetween(-1.8, 1.8),
         rot: randomBetween(-Math.PI, Math.PI),
         delay: randomBetween(0, 0.16),
@@ -809,6 +821,25 @@
     ctx.restore();
   }
 
+  function drawMergeBurst(effect, t) {
+    if (!mergeBurstImage || !mergeBurstImage.complete || mergeBurstImage.naturalWidth <= 0) return;
+    const frame = Math.min(MERGE_BURST_FRAMES - 1, Math.floor(t * MERGE_BURST_FRAMES));
+    const baseSize = effect.isFinal
+      ? clamp(effect.r * 1.95 + 34, 150, 286)
+      : clamp(effect.r * 2.22 + 24, 64, 226);
+    const pulse = 0.92 + Math.sin(Math.min(1, t) * Math.PI) * 0.14;
+    const lateFade = t < 0.72 ? 1 : Math.max(0, 1 - (t - 0.72) / 0.28);
+    const size = baseSize * pulse;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, lateFade * (effect.isFinal ? 0.96 : 0.88)));
+    ctx.drawImage(
+      mergeBurstImage,
+      frame * MERGE_BURST_CELL, 0, MERGE_BURST_CELL, MERGE_BURST_CELL,
+      effect.x - size / 2, effect.y - size / 2, size, size
+    );
+    ctx.restore();
+  }
+
   // -------- 렌더링 --------
   function render(bodiesSnapshot = null) {
     // 배경 — 은은한 베이지 + 경계선
@@ -879,6 +910,7 @@
       const t = e.age / e.max;
       const ease = 1 - Math.pow(1 - t, 2);
       const alpha = 1 - t;
+      drawMergeBurst(e, t);
       ctx.save();
       ctx.globalAlpha = alpha * (e.isFinal ? 0.78 : 0.62);
       ctx.strokeStyle = e.isFinal ? '#F2B43A' : e.color;
