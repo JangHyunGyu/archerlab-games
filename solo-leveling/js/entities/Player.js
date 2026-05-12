@@ -562,7 +562,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const damage = Math.max(1, Math.floor(amount));
         this.stats.hp -= damage;
         this.isInvincible = true;
-        this.invincibleTimer = 650;
+        this.invincibleTimer = 360;
 
         // Damage effect - camera shake (stronger based on damage ratio)
         const hpRatio = damage / this.stats.maxHp;
