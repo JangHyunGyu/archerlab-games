@@ -38,6 +38,7 @@ const FONT_BODY    = "'Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'Noto
 const BLOCKPANG_ASSET_MANIFEST = {
     arcadeBg: 'assets/ui/arcade-bg.webp',
     titleSplash: 'assets/ui/title-splash.webp',
+    titleBackdropClean: 'assets/ui/title-backdrop-clean.webp',
     boardPanel: 'assets/ui/board-panel.webp',
     glassPanel: 'assets/ui/glass-panel.webp',
     glassPanelFill: 'assets/ui/glass-panel-fill.webp',
@@ -81,6 +82,7 @@ const BLOCKPANG_ASSET_MANIFEST = {
 const BLOCKPANG_PNG_FALLBACKS = {
     arcadeBg: 'assets/ui/arcade-bg.png',
     titleSplash: 'assets/ui/title-splash.png',
+    titleBackdropClean: 'assets/ui/title-backdrop-clean.png',
     boardPanel: 'assets/ui/board-panel.png',
     glassPanel: 'assets/ui/glass-panel.png',
     glassPanelFill: 'assets/ui/glass-panel-fill.png',
