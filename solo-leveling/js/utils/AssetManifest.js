@@ -52,6 +52,16 @@ const UI_ASSET_KEYS = [
     'menu/preload_bar_fill',
 ];
 
+const UI_ASSET_OVERRIDES = {
+    'menu/hunter_card_normal': 'assets/ui/menu/hunter_card_normal_imagegen.png',
+    'menu/hunter_card_selected': 'assets/ui/menu/hunter_card_selected_imagegen.png',
+    'menu/modal_frame_cyan': 'assets/ui/menu/modal_frame_cyan_imagegen.png',
+    'menu/modal_frame_gold': 'assets/ui/menu/modal_frame_gold_imagegen.png',
+    'menu/rank_card_1': 'assets/ui/menu/rank_card_1_imagegen.png',
+    'menu/rank_card_2': 'assets/ui/menu/rank_card_2_imagegen.png',
+    'menu/rank_card_3': 'assets/ui/menu/rank_card_3_imagegen.png',
+};
+
 const ITEM_KEYS = ['hp_potion', 'mana_crystal', 'shadow_essence'];
 const TELEGRAPH_KEYS = ['warning_reticle', 'igris_slash_warning', 'ground_crack', 'acid_puddle'];
 const BOSS_SUPPORT_KEYS = [
@@ -101,7 +111,7 @@ const PLAYER_MOTION_NAMES = [
 
 const uiAsset = (key) => ({
     key: key.includes('/') ? key.split('/').pop() : key,
-    path: `assets/ui/${key}.png`,
+    path: UI_ASSET_OVERRIDES[key] || `assets/ui/${key}.png`,
 });
 
 const frameAssets = (prefix, dir, names) => names.map(name => ({
