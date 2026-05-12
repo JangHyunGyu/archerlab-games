@@ -135,6 +135,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         return animKey?.startsWith(prefix) ? animKey.slice(prefix.length) : animKey;
     }
 
+    _usesDirectionalAttackAnimations() {
+        return this.character?.useDirectionalAttackAnimations !== false;
+    }
+
     update(time, delta) {
         if (this.isDead) return;
         this._handleMovement();
@@ -217,9 +221,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._attackPose.angle = angle;
         this._attackPose.side = side || 1;
         this._attackPose.direction = this._directionFromAngle(angle);
-        const preferredAnimKey = this._animKey(`attack_${this._attackPose.direction}`);
+        const preferredAnimKey = this._usesDirectionalAttackAnimations()
+            ? this._animKey(`attack_${this._attackPose.direction}`)
+            : null;
         const fallbackAnimKey = this._animKey('attack');
-        const activeAnimKey = this.scene.anims.exists(preferredAnimKey)
+        const activeAnimKey = preferredAnimKey && this.scene.anims.exists(preferredAnimKey)
             ? preferredAnimKey
             : (this.scene.anims.exists(fallbackAnimKey) ? fallbackAnimKey : null);
         if (activeAnimKey) {
@@ -264,8 +270,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             return this._animKey('hit');
         }
         if (this._attackPose.active) {
-            const directionalAttack = this._animKey(`attack_${this._attackPose.direction || this._directionFromAngle(this._attackPose.angle)}`);
-            if (this._animExists(directionalAttack)) return directionalAttack;
+            if (this._usesDirectionalAttackAnimations()) {
+                const directionalAttack = this._animKey(`attack_${this._attackPose.direction || this._directionFromAngle(this._attackPose.angle)}`);
+                if (this._animExists(directionalAttack)) return directionalAttack;
+            }
             if (this._animExists(this._animKey('attack'))) return this._animKey('attack');
         }
         if (this._moveBlend > 0.08) {
