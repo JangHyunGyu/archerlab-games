@@ -24,6 +24,10 @@ const UI_ASSET_KEYS = [
     'ui_slot',
     'ui_minimap',
     'menu/shadow_gate_backdrop',
+    'menu/start_button_primary',
+    'menu/start_button_primary_hover',
+    'menu/start_button_secondary',
+    'menu/start_button_secondary_hover',
 ];
 
 const ITEM_KEYS = ['hp_potion', 'mana_crystal', 'shadow_essence'];
