@@ -873,7 +873,7 @@ class UIManager {
         const isShort = h < 640;
         const sc = isSmall ? 0.9 : 1;
 
-        const splashTexture = getBlockpangTexture('titleSplash');
+        const splashTexture = getBlockpangTexture('titleBackdropClean') || getBlockpangTexture('titleSplash');
         if (splashTexture) {
             const splash = new PIXI.Sprite(splashTexture);
             const tw = splashTexture.width || splashTexture.orig?.width || 1;
@@ -881,16 +881,16 @@ class UIManager {
             const scale = Math.max(w / tw, h / th);
             splash.anchor.set(0.5);
             splash.scale.set(scale);
-            splash.position.set(centerX, h * (isLandscape ? 0.52 : 0.5));
-            splash.alpha = 0.94;
+            splash.position.set(centerX, h * (isLandscape ? 0.5 : 0.5));
+            splash.alpha = 0.98;
             container.addChild(splash);
         }
 
         const artGrade = new PIXI.Graphics();
-        artGrade.rect(0, 0, w, h).fill({ color: THEME.bgDeep, alpha: splashTexture ? 0.08 : 0.2 });
-        artGrade.rect(0, 0, w, h * 0.26).fill({ color: THEME.shadow, alpha: 0.34 });
-        artGrade.rect(0, h * 0.58, w, h * 0.42).fill({ color: THEME.bg, alpha: 0.18 });
-        artGrade.rect(0, h * 0.82, w, h * 0.18).fill({ color: THEME.shadow, alpha: 0.36 });
+        artGrade.rect(0, 0, w, h).fill({ color: THEME.bgDeep, alpha: splashTexture ? 0.1 : 0.24 });
+        artGrade.rect(0, 0, w, h * 0.18).fill({ color: THEME.shadow, alpha: 0.2 });
+        artGrade.rect(0, h * 0.38, w, h * 0.34).fill({ color: THEME.bg, alpha: 0.18 });
+        artGrade.rect(0, h * 0.74, w, h * 0.26).fill({ color: THEME.shadow, alpha: 0.5 });
         container.addChild(artGrade);
 
         // ── Small decorative block pictogram (a few stacked pieces above logo) ──
@@ -921,10 +921,11 @@ class UIManager {
         const decoW = dx - pieceGap;
         const decoY = h * (isLandscape ? 0.13 : 0.145) - dcs;
         deco.position.set(centerX - decoW / 2, decoY);
+        deco.visible = false;
         container.addChild(deco);
 
         // ── Logo: "블럭팡" / 한글/영문 반응 ──
-        const logoFontSize = Math.min(isLandscape ? 58 : 70, w * (isLandscape ? 0.13 : 0.17)) * sc;
+        const logoFontSize = Math.min(isLandscape ? 54 : 64, w * (isLandscape ? 0.12 : 0.155)) * sc;
         const logo = new PIXI.Text({
             text: getText('gameTitle'),
             style: {
@@ -932,13 +933,13 @@ class UIManager {
                 fontSize: logoFontSize,
                 fill: THEME.inkStrong,
                 fontWeight: '900',
-                letterSpacing: 1.5,
-                stroke: { color: THEME.secondaryDp, width: Math.max(3, logoFontSize * 0.08), alpha: 0.82 },
-                dropShadow: { color: THEME.accent, blur: 14, distance: 0, alpha: 0.55 },
+                letterSpacing: 0.8,
+                stroke: { color: THEME.secondaryDp, width: Math.max(3, logoFontSize * 0.07), alpha: 0.74 },
+                dropShadow: { color: THEME.accent, blur: 18, distance: 0, alpha: 0.5 },
             },
         });
         logo.anchor.set(0.5, 0.5);
-        logo.position.set(centerX, h * (isLandscape ? 0.22 : 0.225));
+        logo.position.set(centerX, h * (isLandscape ? 0.22 : isShort ? 0.185 : 0.205));
 
         const logoPlateW = Math.min(w * 0.86, Math.max(250, logo.width + 76));
         const logoPlateH = Math.max(70, logo.height + 26);
@@ -951,6 +952,7 @@ class UIManager {
             .fill({ color: THEME.white, alpha: 0.08 });
         logoPlate.roundRect(centerX - logoPlateW / 2, logo.y - logoPlateH / 2, logoPlateW, logoPlateH, 22)
             .stroke({ width: 1.8, color: THEME.secondary, alpha: 0.74 });
+        logoPlate.visible = false;
         container.addChild(logoPlate);
         container.addChild(logo);
 
@@ -959,15 +961,15 @@ class UIManager {
             text: getText('blockPuzzle'),
             style: {
                 fontFamily: FONT_BODY,
-                fontSize: Math.min(14, w * 0.034) * sc,
+                fontSize: Math.min(13, w * 0.031) * sc,
                 fill: THEME.goldSoft,
                 fontWeight: '800',
-                letterSpacing: 2.2,
+                letterSpacing: 1.4,
                 dropShadow: { color: THEME.shadow, blur: 4, distance: 1, alpha: 0.45 },
             },
         });
         subtitle.anchor.set(0.5, 0);
-        subtitle.position.set(centerX, logo.y + logoPlateH * 0.5 + 10);
+        subtitle.position.set(centerX, logo.y + logo.height * 0.5 + 8);
         container.addChild(subtitle);
 
         // ── Best Score pill ──
@@ -1005,13 +1007,18 @@ class UIManager {
 
         // ── Buttons ──
         const hasSave = Game.hasSavedGame();
-        const btnW = Math.min(w * (isLandscape ? 0.42 : 0.7), 304);
-        const btnH = Math.min(58, Math.max(50, h * 0.066));
-        const actionGap = Math.max(10, Math.min(14, h * 0.015));
-        const startBaseY = isLandscape
-            ? (hasSave ? h * 0.57 : h * 0.545)
-            : (isShort ? (hasSave ? h * 0.61 : h * 0.59) : (hasSave ? h * 0.665 : h * 0.645));
-        const startBtnY = Math.min(startBaseY, h - (hasSave ? 178 : 132));
+        const btnW = Math.min(w * (isLandscape ? 0.38 : 0.78), isLandscape ? 320 : 344);
+        const btnH = Math.min(58, Math.max(50, h * 0.064));
+        const actionGap = Math.max(10, Math.min(14, h * 0.014));
+        const smallBtnH = Math.min(42, Math.max(38, h * 0.05));
+        const safeBottom = Math.max(18, Math.min(32, h * 0.03));
+        const actionStackH = hasSave
+            ? btnH * 2 + actionGap + smallBtnH + 52
+            : btnH + smallBtnH + 52;
+        const actionTop = isLandscape
+            ? Math.min(h - safeBottom - actionStackH, h * (h > 520 ? 0.56 : 0.52))
+            : Math.max(h * (isShort ? 0.48 : 0.54), h - safeBottom - actionStackH);
+        const startBtnY = hasSave ? actionTop + btnH + actionGap : actionTop + 18;
         const btnX = centerX - btnW / 2;
 
         this._activeButtons = [];
@@ -1059,15 +1066,32 @@ class UIManager {
         const startBtn = s.btn, startBtnText = s.txt;
 
         // ── Bottom Row: Hall of Fame + Contact (ghost buttons) ──
-        const smallBtnH = Math.min(42, Math.max(38, h * 0.052));
         const gap = 12;
-        const bottomY = startBtnY + btnH + (hasSave ? 36 : 40);
+        const bottomY = startBtnY + btnH + Math.max(18, h * 0.024);
         const smallBtnW = Math.min((btnW - gap) / 2, 140);
 
         const hofBtn = makeTitleButton(btnX, bottomY, smallBtnW, smallBtnH, getText('hallOfFame'), 'ghost',
             () => this.showHallOfFame(), 'rank');
         const contactBtn = makeTitleButton(btnX + smallBtnW + gap, bottomY, smallBtnW, smallBtnH, getText('contact'), 'ghost',
             () => window.open('mailto:contact@archerlab.dev', '_blank'), 'mail');
+
+        const panelPadX = Math.max(16, btnW * 0.06);
+        const panelPadTop = hasSave ? 14 : 12;
+        const panelX = btnX - panelPadX;
+        const panelY = (resumeBtn ? resumeBtn.y : startBtn.y) - panelPadTop;
+        const panelW = btnW + panelPadX * 2;
+        const panelH = bottomY + smallBtnH - panelY + 18;
+        const actionPanel = new PIXI.Graphics();
+        actionPanel.roundRect(panelX, panelY + 8, panelW, panelH, 24)
+            .fill({ color: THEME.shadow, alpha: 0.34 });
+        actionPanel.roundRect(panelX, panelY, panelW, panelH, 24)
+            .fill({ color: THEME.surface, alpha: 0.46 });
+        actionPanel.roundRect(panelX + 8, panelY + 7, panelW - 16, Math.max(16, panelH * 0.24), 18)
+            .fill({ color: THEME.white, alpha: 0.055 });
+        actionPanel.roundRect(panelX, panelY, panelW, panelH, 24)
+            .stroke({ width: 1.2, color: THEME.secondary, alpha: 0.46 });
+        container.addChild(actionPanel);
+        container.setChildIndex(actionPanel, Math.max(0, container.children.indexOf(resumeBtn || startBtn)));
 
         // ── Language chip (top-left pill) ──
         // ArcherLab HTML 링크(상단 중앙)와 세로 중앙선을 정확히 맞추기 위해
@@ -1267,7 +1291,7 @@ class UIManager {
 
         // ── Entrance Animation ── (fade + gentle lift, no pop-scaling)
         container.alpha = 0;
-        const liftTargets = [deco, logoPlate, logo, subtitle, startBtn, hofBtn.btn, contactBtn.btn, langTrigger, titleSoundBtn];
+        const liftTargets = [logo, subtitle, actionPanel, startBtn, hofBtn.btn, contactBtn.btn, langTrigger, titleSoundBtn];
         if (resumeBtn) liftTargets.push(resumeBtn);
         liftTargets.forEach(el => { el.y += 16; el.alpha = 0; });
 

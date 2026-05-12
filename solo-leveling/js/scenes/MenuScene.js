@@ -14,6 +14,10 @@ export class MenuScene extends Phaser.Scene {
     }
 
     create() {
+        this._createCommercialMenu();
+    }
+
+    _createLegacyMenu() {
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = '';
 
@@ -252,68 +256,397 @@ export class MenuScene extends Phaser.Scene {
         });
     }
 
+    _createCommercialMenu() {
+        const alLink = document.getElementById('archerlab-link');
+        if (alLink) alLink.style.display = '';
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isPortrait = GAME_HEIGHT > GAME_WIDTH;
+        const isShortLandscape = !isPortrait && GAME_HEIGHT <= 620;
+        const isCompactMenu = isPortrait || GAME_WIDTH < 920 || isShortLandscape;
+
+        this._modalElements = [];
+        this._dropdownElements = [];
+        this._startingGame = false;
+        this._characterSelectOpen = false;
+        this.selectedCharacterId = getStoredCharacterId();
+
+        this._createMenuBackdrop({ isPortrait, isShortLandscape });
+
+        const centerX = GAME_WIDTH / 2;
+        const safePad = uv(isCompactMenu ? 18 : 34);
+        const panelW = isCompactMenu
+            ? Math.min(GAME_WIDTH - safePad * 2, uv(540))
+            : Math.min(uv(500), GAME_WIDTH * 0.4);
+        const panelH = isShortLandscape
+            ? GAME_HEIGHT - uv(48)
+            : (isPortrait ? Math.min(GAME_HEIGHT - uv(138), uv(640)) : Math.min(GAME_HEIGHT - uv(118), uv(650)));
+        const panelX = isCompactMenu
+            ? centerX - panelW / 2
+            : Math.max(safePad, GAME_WIDTH * 0.065);
+        const panelY = isShortLandscape
+            ? uv(22)
+            : (isPortrait ? uv(48) : (GAME_HEIGHT - panelH) / 2);
+
+        this._addBitmapPanel(panelX, panelY, panelW, panelH, {
+            key: 'ui_panel_cyan',
+            alpha: isPortrait ? 0.88 : 0.82,
+            depth: 2,
+            tint: 0xb7ddff,
+        });
+        this.add.rectangle(panelX + panelW / 2, panelY + panelH / 2, panelW - uv(12), panelH - uv(12), 0x020713, 0.54)
+            .setDepth(2.2);
+
+        const topTag = this.add.text(panelX + uv(24), panelY + uv(18), '[ SYSTEM ONLINE ]', {
+            fontSize: fs(isCompactMenu ? 9 : 10),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+            letterSpacing: 1,
+        }).setDepth(4);
+        this._fitText(topTag, panelW - uv(48), uv(20));
+
+        const titleY = panelY + uv(isShortLandscape ? 48 : 72);
+        const titleText = this.add.text(panelX + uv(24), titleY, t('title'), {
+            fontSize: fs(isShortLandscape ? 30 : (isPortrait ? 42 : 50)),
+            fontFamily: UI_FONT_KR,
+            fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT,
+            stroke: '#02040a',
+            strokeThickness: 5,
+        }).setOrigin(0, 0.5).setDepth(4);
+        this._fitText(titleText, panelW - uv(48), uv(isShortLandscape ? 48 : 66));
+
+        const subText = this.add.text(panelX + uv(26), titleY + uv(isShortLandscape ? 31 : 44), t('subtitle'), {
+            fontSize: fs(isShortLandscape ? 10 : 12),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN,
+            letterSpacing: 3,
+        }).setDepth(4);
+        this._fitText(subText, panelW - uv(52), uv(18));
+
+        if (!isShortLandscape) {
+            const notice = this.add.text(panelX + uv(26), titleY + uv(isPortrait ? 78 : 84), t('menuMsg3'), {
+                fontSize: fs(isPortrait ? 12 : 13),
+                fontFamily: UI_FONT_KR,
+                color: SYSTEM.TEXT_CYAN_DIM,
+            }).setDepth(4);
+            this._fitText(notice, panelW - uv(52), uv(24));
+        }
+
+        const hasSave = GameScene.hasSavedGame();
+        const primaryH = uv(isShortLandscape ? 42 : 54);
+        const resumeH = uv(isShortLandscape ? 52 : 64);
+        const secondaryH = uv(isShortLandscape ? 32 : 38);
+        const gap = uv(isShortLandscape ? 8 : 11);
+        const btnW = panelW - uv(isCompactMenu ? 46 : 56);
+        const btnX = panelX + (panelW - btnW) / 2;
+        const bottomGuard = isPortrait ? uv(44) : uv(26);
+        const actionBottom = Math.min(panelY + panelH - uv(isShortLandscape ? 18 : 28), GAME_HEIGHT - bottomGuard);
+        let actionY = actionBottom - primaryH - gap - secondaryH;
+        if (hasSave) actionY -= resumeH + gap;
+
+        const summaryH = uv(isShortLandscape ? 72 : (isPortrait ? 104 : 116));
+        const summaryY = Math.min(
+            panelY + uv(isShortLandscape ? 96 : (isPortrait ? 176 : 188)),
+            actionY - summaryH - uv(isShortLandscape ? 10 : 16)
+        );
+        if (summaryY > panelY + uv(88)) {
+            this._createSelectedHunterSummary(panelX + uv(22), summaryY, panelW - uv(44), summaryH, {
+                isCompactMenu,
+                isShortLandscape,
+            });
+        }
+
+        const startGame = async (resume = false, characterIdOverride = null) => {
+            if (this._startingGame) return;
+            this._startingGame = true;
+            const characterId = resume
+                ? (characterIdOverride || this.selectedCharacterId)
+                : setStoredCharacterId(characterIdOverride || this.selectedCharacterId);
+            this.selectedCharacterId = characterId;
+            if (!this.game._soundManager) {
+                this.game._soundManager = new SoundManager();
+                this.game._soundManager.init();
+            }
+            const sm = this.game._soundManager;
+            sm.stopIntroMusic();
+            await sm.resume(true);
+            this.cameras.main.fadeOut(420, 0, 0, 0);
+            this.time.delayedCall(420, () => this.scene.start('GameScene', { resume, characterId }));
+        };
+
+        if (hasSave) {
+            const summary = GameScene.getSavedSummary();
+            const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
+            const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
+            this._makeMenuResumeButton(btnX, actionY, btnW, resumeH, {
+                title: t('continueGame'),
+                meta: `${summary?.characterName || ''}  LV.${String(summary?.level || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
+                isNarrow: isCompactMenu,
+                onClick: () => startGame(true),
+            });
+            actionY += resumeH + gap;
+        }
+
+        this._makeMenuButton(btnX, actionY, btnW, primaryH, {
+            label: t('startGame'),
+            labelColor: SYSTEM.TEXT_BRIGHT,
+            border: SYSTEM.BORDER,
+            labelSize: isShortLandscape ? 15 : 18,
+            labelFont: UI_FONT_KR,
+            primary: true,
+            onClick: () => this._showCharacterSelectModal((characterId) => startGame(false, characterId)),
+        });
+        actionY += primaryH + gap;
+
+        this._makeMenuButton(btnX, actionY, btnW, secondaryH, {
+            label: t('hallOfFame'),
+            labelColor: SYSTEM.TEXT_GOLD,
+            border: SYSTEM.BORDER_GOLD,
+            labelSize: isShortLandscape ? 10 : 12,
+            labelFont: UI_FONT_MONO,
+            onClick: () => this._showHallOfFame(isMobile),
+        });
+
+        if (!isCompactMenu) {
+            const controls = `${t('controlsPC')}  |  ${t('controlsPC2')}`;
+            const controlsText = this.add.text(panelX + uv(24), panelY + panelH - uv(14), controls, {
+                fontSize: fs(9),
+                fontFamily: UI_FONT_MONO,
+                color: SYSTEM.TEXT_MUTED,
+            }).setOrigin(0, 1).setDepth(4);
+            this._fitText(controlsText, panelW - uv(48), uv(16));
+        }
+
+        if (!isCompactMenu) {
+            this._createHeroFocus(centerX, (pct) => GAME_HEIGHT * pct, { isPortrait, isShortLandscape });
+        } else if (isPortrait) {
+            this._createMobileHeroPortrait(panelX + panelW / 2, summaryY + uv(150), { isShortLandscape });
+        } else if (isShortLandscape) {
+            this._createMobileHeroPortrait(panelX + panelW / 2, Math.max(panelY + uv(112), summaryY - uv(58)), { isShortLandscape });
+        }
+
+        if (!isPortrait && !isShortLandscape) {
+            const contactBtn = this.add.text(GAME_WIDTH - safePad, GAME_HEIGHT - uv(22), `[ ${t('contact')} ]`, {
+                fontSize: fs(10),
+                fontFamily: UI_FONT_MONO,
+                color: SYSTEM.TEXT_MUTED,
+            }).setOrigin(1, 1).setDepth(8).setInteractive({ useHandCursor: true });
+            contactBtn.on('pointerover', () => contactBtn.setColor(SYSTEM.TEXT_CYAN));
+            contactBtn.on('pointerout', () => contactBtn.setColor(SYSTEM.TEXT_MUTED));
+            contactBtn.on('pointerdown', () => this._showContactModal());
+        }
+
+        this._createLanguageDropdown(isMobile);
+        this.cameras.main.fadeIn(420, 0, 0, 0);
+
+        this.events.once('shutdown', () => {
+            this._dropdownElements.forEach(el => { if (el && el.active) el.destroy(); });
+            this._dropdownElements = [];
+            this._modalElements.forEach(el => { if (el && el.active) el.destroy(); });
+            this._modalElements = [];
+        });
+
+        this.input.once('pointerdown', async () => {
+            if (this._startingGame) return;
+            if (!this.game._soundManager) {
+                this.game._soundManager = new SoundManager();
+                this.game._soundManager.init();
+            }
+            const sm = this.game._soundManager;
+            await sm.resume(true);
+            sm.warmup();
+            sm.playIntroMusic();
+        });
+    }
+
+    _addBitmapPanel(x, y, w, h, { key = 'ui_panel_cyan', alpha = 1, depth = 0, tint = null } = {}) {
+        if (this.textures.exists(key)) {
+            const panel = this.add.image(x, y, key)
+                .setOrigin(0, 0)
+                .setDisplaySize(w, h)
+                .setAlpha(alpha)
+                .setDepth(depth);
+            if (tint !== null) panel.setTint(tint);
+            return panel;
+        }
+        return this.add.rectangle(x + w / 2, y + h / 2, w, h, SYSTEM.BG_PANEL, alpha)
+            .setDepth(depth);
+    }
+
+    _createSelectedHunterSummary(x, y, w, h, { isCompactMenu = false, isShortLandscape = false } = {}) {
+        const character = getCharacter(this.selectedCharacterId);
+        this._addBitmapPanel(x, y, w, h, {
+            key: 'ui_card_cyan',
+            alpha: 0.88,
+            depth: 4,
+            tint: 0xd7f5ff,
+        });
+
+        const portraitSize = Math.min(uv(isShortLandscape ? 48 : 66), h * 0.64);
+        const portraitX = x + uv(isCompactMenu ? 44 : 54);
+        const portraitY = y + h / 2;
+        const portraitKey = `char_${character.assetKey}_portrait`;
+        if (this.textures.exists(portraitKey)) {
+            this.add.image(portraitX, portraitY, portraitKey)
+                .setDepth(6)
+                .setDisplaySize(portraitSize, portraitSize)
+                .setOrigin(0.5);
+        }
+
+        const textX = x + uv(isCompactMenu ? 86 : 104);
+        const textW = x + w - uv(18) - textX;
+        const tag = this.add.text(textX, y + uv(isShortLandscape ? 11 : 18), 'SELECTED HUNTER', {
+            fontSize: fs(isShortLandscape ? 8 : 9),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+            letterSpacing: 1,
+        }).setDepth(6);
+        this._fitText(tag, textW, uv(14));
+
+        const name = this.add.text(textX, y + h * (isShortLandscape ? 0.46 : 0.48), character.name, {
+            fontSize: fs(isShortLandscape ? 13 : 17),
+            fontFamily: UI_FONT_KR,
+            fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT,
+        }).setOrigin(0, 0.5).setDepth(6);
+        this._fitText(name, textW, h * 0.3);
+
+        const meta = this.add.text(textX, y + h - uv(isShortLandscape ? 14 : 20), `${character.archetype}  |  HP ${character.stats.hp}  ATK ${character.stats.attack}`, {
+            fontSize: fs(isShortLandscape ? 8 : 10),
+            fontFamily: UI_FONT_KR,
+            color: character.accentText,
+        }).setOrigin(0, 0.5).setDepth(6);
+        this._fitText(meta, textW, h * 0.22);
+    }
+
+    _makeMenuResumeButton(x, y, w, h, { title, meta, isNarrow = false, onClick }) {
+        const bg = this._addBitmapPanel(x, y, w, h, {
+            key: 'ui_panel_gold',
+            alpha: 0.9,
+            depth: 5,
+            tint: 0xffe4a8,
+        });
+        const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
+            .setDepth(8)
+            .setInteractive({ useHandCursor: true });
+        const titleText = this.add.text(x + uv(24), y + h * 0.36, title, {
+            fontSize: fs(isNarrow ? 14 : 15),
+            fontFamily: UI_FONT_KR,
+            fontStyle: 'bold',
+            color: SYSTEM.TEXT_GOLD,
+            stroke: '#02040a',
+            strokeThickness: 2,
+        }).setOrigin(0, 0.5).setDepth(7);
+        const metaText = this.add.text(x + uv(24), y + h * 0.68, meta, {
+            fontSize: fs(isNarrow ? 9 : 10),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+        }).setOrigin(0, 0.5).setDepth(7);
+        const titleScale = this._fitText(titleText, w - uv(48), h * 0.38);
+        const metaScale = this._fitText(metaText, w - uv(48), h * 0.28);
+
+        hit.on('pointerover', () => {
+            bg.setAlpha(1);
+            titleText.setScale(titleScale * 1.02);
+            metaText.setScale(metaScale * 1.02);
+        });
+        hit.on('pointerout', () => {
+            bg.setAlpha(0.9);
+            titleText.setScale(titleScale);
+            metaText.setScale(metaScale);
+        });
+        hit.on('pointerdown', () => onClick && onClick());
+    }
+
+    _makeMenuButton(x, y, w, h, { label, labelColor, labelSize = 16, labelFont = UI_FONT_KR, primary = false, onClick }) {
+        const normalKey = primary ? 'ui_button_cyan' : 'ui_panel_gold';
+        const bg = this._addBitmapPanel(x, y, w, h, {
+            key: normalKey,
+            alpha: primary ? 0.96 : 0.78,
+            depth: 5,
+            tint: primary ? 0xd6f8ff : 0xffdda0,
+        });
+        const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
+            .setDepth(8)
+            .setInteractive({ useHandCursor: true });
+        const txt = this.add.text(x + w / 2, y + h / 2, label, {
+            fontSize: fs(labelSize),
+            fontFamily: labelFont,
+            fontStyle: 'bold',
+            color: labelColor,
+            stroke: '#02040a',
+            strokeThickness: primary ? 3 : 2,
+        }).setOrigin(0.5).setDepth(7);
+        const baseScale = this._fitText(txt, w - uv(24), h - uv(12));
+
+        hit.on('pointerover', () => {
+            if (this.textures.exists('ui_button_hover')) bg.setTexture('ui_button_hover').setDisplaySize(w, h);
+            bg.setAlpha(1);
+            txt.setScale(baseScale * 1.02);
+        });
+        hit.on('pointerout', () => {
+            bg.setTexture(normalKey).setDisplaySize(w, h);
+            bg.setAlpha(primary ? 0.96 : 0.78);
+            txt.setScale(baseScale);
+        });
+        hit.on('pointerdown', () => onClick && onClick());
+    }
+
+    _createMobileHeroPortrait(x, y, { isShortLandscape = false } = {}) {
+        const character = getCharacter(this.selectedCharacterId);
+        const heroKey = this._getCharacterHeroTexture(character);
+        if (!this.textures.exists(heroKey)) return;
+
+        const size = uv(isShortLandscape ? 86 : 150);
+        if (this.textures.exists('env_shadow_portal')) {
+            const glow = this.add.image(x, y, 'env_shadow_portal')
+                .setDepth(1)
+                .setAlpha(0.14)
+                .setScale(isShortLandscape ? 0.68 : 1.0)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            this._heroPreviewAura = glow;
+        }
+
+        this._heroPreviewSprite = this.add.image(x, y, heroKey)
+            .setDepth(3)
+            .setAlpha(isShortLandscape ? 0.78 : 0.42);
+        this._fitImageDisplay(this._heroPreviewSprite, heroKey, size, size * 1.12);
+    }
+
     _createMenuBackdrop({ isPortrait = false, isShortLandscape = false } = {}) {
         this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, SYSTEM.BG_DEEP)
             .setDepth(-40);
 
-        if (this.textures.exists('ai_dungeon_floor')) {
-            this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 'ai_dungeon_floor')
-                .setDepth(-38)
-                .setAlpha(0.24)
-                .setTint(0x7788aa);
+        const bgKey = this.textures.exists('shadow_gate_backdrop') ? 'shadow_gate_backdrop' : 'ai_dungeon_atmosphere';
+        if (this.textures.exists(bgKey)) {
+            this._coverImage(bgKey, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(-39)
+                .setAlpha(1);
         }
 
-        if (this.textures.exists('ai_dungeon_atmosphere')) {
-            this._coverImage('ai_dungeon_atmosphere', GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT)
-                .setDepth(-37)
-                .setAlpha(isPortrait ? 0.42 : 0.5)
-                .setTint(0xa8c4ff);
-        }
-
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02050d, isPortrait ? 0.55 : 0.46)
-            .setDepth(-36);
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.16, GAME_WIDTH, GAME_HEIGHT * 0.36, 0x02040a, 0.48)
-            .setDepth(-35);
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.76, GAME_WIDTH, GAME_HEIGHT * 0.5, 0x02040a, isPortrait ? 0.46 : 0.38)
-            .setDepth(-35);
-
-        if (!isPortrait && this.textures.exists('env_shadow_portal')) {
-            const portalY = isShortLandscape ? GAME_HEIGHT * 0.49 : GAME_HEIGHT * 0.53;
-            [
-                { x: GAME_WIDTH * 0.19, scale: 1.95, alpha: 0.16, rot: -0.12 },
-                { x: GAME_WIDTH * 0.81, scale: 1.6, alpha: 0.13, rot: 0.16 },
-            ].forEach((p) => {
-                const portal = this.add.image(p.x, portalY, 'env_shadow_portal')
-                    .setDepth(-30)
-                    .setAlpha(p.alpha)
-                    .setScale(p.scale)
-                    .setRotation(p.rot)
-                    .setBlendMode(Phaser.BlendModes.ADD);
-                this.tweens.add({
-                    targets: portal,
-                    alpha: p.alpha + 0.07,
-                    scale: p.scale * 1.06,
-                    duration: 2200,
-                    yoyo: true,
-                    repeat: -1,
-                    ease: 'Sine.easeInOut',
-                });
-            });
-        }
+        const leftShadeW = isPortrait ? GAME_WIDTH : GAME_WIDTH * 0.58;
+        this.add.rectangle(leftShadeW / 2, GAME_HEIGHT / 2, leftShadeW, GAME_HEIGHT, 0x020611, isPortrait ? 0.48 : 0.42)
+            .setDepth(-34);
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, GAME_WIDTH, GAME_HEIGHT * 0.44, 0x010309, isPortrait ? 0.58 : 0.42)
+            .setDepth(-33);
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.08, GAME_WIDTH, GAME_HEIGHT * 0.2, 0x010309, isShortLandscape ? 0.34 : 0.22)
+            .setDepth(-33);
 
         if (this.textures.exists('particle_glow')) {
             try {
-                this.add.particles(GAME_WIDTH / 2, GAME_HEIGHT * 0.55, 'particle_glow', {
-                    x: { min: -GAME_WIDTH * 0.46, max: GAME_WIDTH * 0.46 },
-                    y: { min: -GAME_HEIGHT * 0.22, max: GAME_HEIGHT * 0.24 },
-                    speed: { min: 4, max: 18 },
+                this.add.particles(GAME_WIDTH * (isPortrait ? 0.52 : 0.63), GAME_HEIGHT * 0.55, 'particle_glow', {
+                    x: { min: -GAME_WIDTH * 0.42, max: GAME_WIDTH * 0.38 },
+                    y: { min: -GAME_HEIGHT * 0.18, max: GAME_HEIGHT * 0.2 },
+                    speed: { min: 3, max: 14 },
                     angle: { min: 245, max: 292 },
-                    scale: { start: isPortrait ? 0.42 : 0.55, end: 0.05 },
-                    alpha: { start: 0.18, end: 0 },
-                    lifespan: { min: 2400, max: 5200 },
-                    tint: [SYSTEM.BORDER, 0x8b4dff, 0xe8b64a],
+                    scale: { start: isPortrait ? 0.34 : 0.42, end: 0.04 },
+                    alpha: { start: 0.14, end: 0 },
+                    lifespan: { min: 2200, max: 5000 },
+                    tint: [SYSTEM.BORDER, 0x7b5cff, 0xe8b64a],
                     blendMode: 'ADD',
-                    frequency: isPortrait ? 170 : 120,
+                    frequency: isPortrait ? 220 : 165,
                     quantity: 1,
                 }).setDepth(-18);
             } catch (e) { /* particles are decorative */ }
@@ -323,10 +656,8 @@ export class MenuScene extends Phaser.Scene {
             this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'vignette')
                 .setDepth(-10)
                 .setDisplaySize(GAME_WIDTH * 1.24, GAME_HEIGHT * 1.24)
-                .setAlpha(isPortrait ? 0.72 : 0.64);
+                .setAlpha(isPortrait ? 0.78 : 0.62);
         }
-
-        this._drawBackdrop();
     }
 
     _coverImage(key, x, y, w, h) {
@@ -341,30 +672,37 @@ export class MenuScene extends Phaser.Scene {
     _createHeroFocus(centerX, cy, { isPortrait = false, isShortLandscape = false } = {}) {
         if (isPortrait || isShortLandscape) return;
 
-        const heroX = centerX + Math.min(GAME_WIDTH * 0.34, uv(430));
-        const heroY = cy(0.34);
-        const ringSize = Math.min(uv(330), GAME_HEIGHT * 0.42);
+        const heroX = centerX + Math.min(GAME_WIDTH * 0.28, uv(390));
+        const heroY = cy(0.52);
+        const ringSize = Math.min(uv(440), GAME_HEIGHT * 0.56);
 
-        const aura = this.add.ellipse(heroX, heroY, ringSize * 1.02, ringSize * 1.02, SYSTEM.BORDER, 0.035)
-            .setDepth(-16)
-            .setStrokeStyle(1, SYSTEM.BORDER, 0.18);
-        const ring = this.add.ellipse(heroX, heroY, ringSize * 0.86, ringSize * 0.86, 0x000000, 0)
+        if (this.textures.exists('env_shadow_portal')) {
+            this._heroPreviewAura = this.add.image(heroX, heroY, 'env_shadow_portal')
+                .setDepth(-16)
+                .setAlpha(0.24)
+                .setScale(ringSize / uv(260))
+                .setBlendMode(Phaser.BlendModes.ADD);
+        }
+
+        this._heroPreviewRing = this.add.image(heroX, heroY + ringSize * 0.24, 'ui_minimap')
             .setDepth(-15)
-            .setStrokeStyle(2, SYSTEM.BORDER_DIM, 0.25);
+            .setAlpha(0.28)
+            .setDisplaySize(ringSize * 0.9, ringSize * 0.38)
+            .setTint(0x73dfff)
+            .setBlendMode(Phaser.BlendModes.ADD);
 
         this._heroPreviewSprite = this.add.image(heroX, heroY, 'char_original_shadow_monarch_portrait')
             .setDepth(-14)
-            .setAlpha(0.2)
-            .setBlendMode(Phaser.BlendModes.ADD)
-            .setDisplaySize(ringSize * 0.74, ringSize * 0.74);
-        this._heroPreviewAura = aura;
-        this._heroPreviewRing = ring;
+            .setAlpha(0.9)
+            .setDisplaySize(ringSize * 0.72, ringSize * 0.72);
+        this._heroPreviewMaxW = ringSize * 0.72;
+        this._heroPreviewMaxH = ringSize * 0.86;
         this._refreshHeroPreview();
 
         this.tweens.add({
-            targets: [aura, ring],
-            alpha: { from: 0.2, to: 0.42 },
-            scale: { from: 1, to: 1.035 },
+            targets: [this._heroPreviewAura, this._heroPreviewRing].filter(Boolean),
+            alpha: { from: 0.18, to: 0.32 },
+            scale: '+=0.035',
             duration: 2400,
             yoyo: true,
             repeat: -1,
@@ -373,18 +711,46 @@ export class MenuScene extends Phaser.Scene {
     }
 
     _refreshHeroPreview(character = getCharacter(this.selectedCharacterId)) {
-        const texture = `char_${character.assetKey}_portrait`;
+        const texture = this._getCharacterHeroTexture(character);
         if (this._heroPreviewSprite?.active && this.textures.exists(texture)) {
             this._heroPreviewSprite.setTexture(texture);
-            this._heroPreviewSprite.setAlpha(0.2);
+            this._heroPreviewSprite.setAlpha(0.9);
+            this._fitImageDisplay(
+                this._heroPreviewSprite,
+                texture,
+                this._heroPreviewMaxW || uv(280),
+                this._heroPreviewMaxH || uv(320)
+            );
         }
-        if (this._heroPreviewAura?.active) {
+        if (this._heroPreviewAura?.active && this._heroPreviewAura.setFillStyle) {
             this._heroPreviewAura.setFillStyle(character.accent, 0.04);
             this._heroPreviewAura.setStrokeStyle(1, character.accent, 0.2);
+        } else if (this._heroPreviewAura?.active && this._heroPreviewAura.setTint) {
+            this._heroPreviewAura.setTint(character.accent);
         }
-        if (this._heroPreviewRing?.active) {
+        if (this._heroPreviewRing?.active && this._heroPreviewRing.setStrokeStyle) {
             this._heroPreviewRing.setStrokeStyle(2, character.accent, 0.28);
+        } else if (this._heroPreviewRing?.active && this._heroPreviewRing.setTint) {
+            this._heroPreviewRing.setTint(character.accent);
         }
+    }
+
+    _getCharacterHeroTexture(character) {
+        const motionKey = character.usesExistingPlayerMotion
+            ? 'player_idle_0'
+            : `${character.texturePrefix}_idle_0`;
+        if (this.textures.exists(motionKey)) return motionKey;
+
+        const portraitKey = `char_${character.assetKey}_portrait`;
+        return this.textures.exists(portraitKey) ? portraitKey : 'player_idle_0';
+    }
+
+    _fitImageDisplay(image, textureKey, maxW, maxH) {
+        const source = this.textures.get(textureKey)?.getSourceImage?.();
+        const iw = Math.max(source?.width || maxW, 1);
+        const ih = Math.max(source?.height || maxH, 1);
+        const scale = Math.min(maxW / iw, maxH / ih);
+        image.setDisplaySize(iw * scale, ih * scale);
     }
 
     _drawBackdrop() {

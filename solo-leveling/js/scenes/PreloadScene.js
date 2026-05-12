@@ -142,8 +142,10 @@ export class PreloadScene extends Phaser.Scene {
             'ui_button_hover',
             'ui_slot',
             'ui_minimap',
+            'menu/shadow_gate_backdrop',
         ].forEach((key) => {
-            this._loadImage(key, `assets/ui/${key}.png`);
+            const textureKey = key.includes('/') ? key.split('/').pop() : key;
+            this._loadImage(textureKey, `assets/ui/${key}.png`);
         });
 
         [...Object.keys(WEAPONS), ...Object.keys(PASSIVES)].forEach((key) => {
