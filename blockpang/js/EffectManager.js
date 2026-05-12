@@ -16,6 +16,7 @@ class EffectManager {
         this._particlePool = [];
         this._spritePool = [];
         this._POOL_MAX = 400;
+        this._sheetFrameCache = new Map();
 
         // ── Text object pool for score/combo/bonus popups ──
         this._textPool = [];
@@ -116,6 +117,113 @@ class EffectManager {
         const available = keys.filter(key => getBlockpangTexture(key));
         if (available.length === 0) return fallback;
         return available[Math.floor(Math.random() * available.length)];
+    }
+
+    _getSpriteSheetFrames(textureKey, cols = 4, rows = 4) {
+        const cacheKey = `${textureKey}:${cols}x${rows}`;
+        if (this._sheetFrameCache.has(cacheKey)) {
+            return this._sheetFrameCache.get(cacheKey);
+        }
+
+        const texture = getBlockpangTexture(textureKey);
+        if (!texture || !PIXI.Texture || !PIXI.Rectangle) return null;
+
+        const source = texture.source || texture.baseTexture;
+        if (!source) return null;
+
+        const sheetFrame = texture.frame || { x: 0, y: 0, width: texture.width, height: texture.height };
+        const frameW = Math.floor(sheetFrame.width / cols);
+        const frameH = Math.floor(sheetFrame.height / rows);
+        if (frameW <= 0 || frameH <= 0) return null;
+
+        const frames = [];
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const frame = new PIXI.Rectangle(
+                    sheetFrame.x + col * frameW,
+                    sheetFrame.y + row * frameH,
+                    frameW,
+                    frameH
+                );
+                let frameTexture = null;
+                try {
+                    frameTexture = new PIXI.Texture({ source, frame });
+                } catch (_) {
+                    try {
+                        frameTexture = new PIXI.Texture(source, frame);
+                    } catch (_) {
+                        frameTexture = null;
+                    }
+                }
+                if (frameTexture) frames.push(frameTexture);
+            }
+        }
+
+        const result = frames.length > 0 ? frames : null;
+        this._sheetFrameCache.set(cacheKey, result);
+        return result;
+    }
+
+    playSpriteSheetEffect(textureKey, x, y, {
+        cols = 4,
+        rows = 4,
+        duration = 700,
+        targetWidth = null,
+        targetHeight = null,
+        alpha = 1,
+        fadeIn = 0.08,
+        fadeOut = 0.22,
+        startScale = 1,
+        endScale = 1,
+        rotation = 0,
+        blendMode = 'add',
+        tint = 0xFFFFFF,
+    } = {}) {
+        const frames = this._getSpriteSheetFrames(textureKey, cols, rows);
+        if (!frames || frames.length === 0) return null;
+
+        const sprite = new PIXI.Sprite(frames[0]);
+        sprite.anchor.set(0.5);
+        sprite.eventMode = 'none';
+        sprite.position.set(x, y);
+        sprite.rotation = rotation;
+        sprite.tint = tint;
+        sprite.alpha = 0;
+        if (blendMode) sprite.blendMode = blendMode;
+
+        const frameW = Math.max(frames[0].width || 1, 1);
+        const frameH = Math.max(frames[0].height || 1, 1);
+        const baseScaleX = targetWidth ? targetWidth / frameW : 1;
+        const baseScaleY = targetHeight ? targetHeight / frameH : baseScaleX;
+        sprite.scale.set(baseScaleX * startScale, baseScaleY * startScale);
+        this.container.addChild(sprite);
+
+        this.tweens.push({
+            elapsed: 0,
+            duration,
+            update(dt) {
+                if (!sprite || sprite.destroyed) return true;
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                const frameIndex = Math.min(frames.length - 1, Math.floor(t * frames.length));
+                sprite.texture = frames[frameIndex];
+
+                const fadeInAlpha = fadeIn > 0 ? Math.min(1, t / fadeIn) : 1;
+                const fadeOutAlpha = fadeOut > 0 ? Math.min(1, (1 - t) / fadeOut) : 1;
+                sprite.alpha = alpha * Math.min(fadeInAlpha, fadeOutAlpha);
+
+                const scaleT = startScale + (endScale - startScale) * easeOutCubic(t);
+                sprite.scale.set(baseScaleX * scaleT, baseScaleY * scaleT);
+
+                if (t >= 1) {
+                    sprite.destroy();
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        return sprite;
     }
 
     // Get a Text object from pool or create new
@@ -501,6 +609,21 @@ class EffectManager {
             }, idx * 10); // Slightly faster wave
         });
 
+        if (intensity >= 2) {
+            this._scheduleTimeout(() => {
+                this.playSpriteSheetEffect('vfxLineClearSheet', cx, cy, {
+                    duration: 620 + intensity * 70,
+                    targetWidth: Math.min(this.game.app.screen.width * 0.96, cellSize * GRID_SIZE * 1.18),
+                    targetHeight: cellSize * (2.0 + intensity * 0.35),
+                    alpha: 0.92,
+                    fadeIn: 0.05,
+                    fadeOut: 0.28,
+                    startScale: 0.92,
+                    endScale: 1.08,
+                });
+            }, Math.min(140, sorted.length * 5));
+        }
+
         // ── 5. Per-clear-size bonus effects ──
         if (intensity >= 2) {
             // Shockwave at center for 2+ lines
@@ -831,6 +954,19 @@ class EffectManager {
         glow.alpha = 0;
         this.container.addChildAt(glow, this.container.children.indexOf(txt));
 
+        const burst = this.playSpriteSheetEffect('vfxComboBurstSheet', x, y, {
+            duration: 700 + tier * 110,
+            targetWidth: Math.min(sw * 0.92, size * (tier === 3 ? 8.8 : tier === 2 ? 7.4 : 6.2)),
+            alpha: 0.96,
+            fadeIn: 0.05,
+            fadeOut: 0.32,
+            startScale: 0.78,
+            endScale: 1.14,
+        });
+        if (burst) {
+            this.container.setChildIndex(burst, Math.max(0, this.container.children.indexOf(glow)));
+        }
+
         // ── Sparkles ──
         const sparkleCount = tier === 3 ? 40 : tier === 2 ? 25 : Math.min(comboLevel * 4, 18);
         this.spawnSparkles(x, y, color, sparkleCount);
@@ -958,6 +1094,20 @@ class EffectManager {
         glow.position.set(x, y);
         glow.alpha = 0;
         this.container.addChildAt(glow, this.container.children.indexOf(txt));
+
+        const wave = this.playSpriteSheetEffect('vfxLineClearSheet', x, y, {
+            duration: 720 + intensity * 90,
+            targetWidth: Math.min(sw * 0.95, size * 8.2),
+            targetHeight: Math.min(sh * 0.34, size * 3.2),
+            alpha: 0.96,
+            fadeIn: 0.04,
+            fadeOut: 0.28,
+            startScale: 0.9,
+            endScale: 1.1,
+        });
+        if (wave) {
+            this.container.setChildIndex(wave, Math.max(0, this.container.children.indexOf(glow)));
+        }
 
         // ── Sparkles + effects ──
         this.spawnSparkles(x, y, cfg.color, cfg.sparkles);
@@ -1284,6 +1434,19 @@ class EffectManager {
         txt.alpha = 0;
         this.container.addChild(txt);
 
+        const nova = this.playSpriteSheetEffect('vfxRewardNovaSheet', x, y, {
+            duration: 1050,
+            targetWidth: Math.min(w * 0.88, this.game.cellSize * 9.2),
+            alpha: 0.92,
+            fadeIn: 0.04,
+            fadeOut: 0.3,
+            startScale: 0.82,
+            endScale: 1.12,
+        });
+        if (nova) {
+            this.container.setChildIndex(nova, Math.max(0, this.container.children.indexOf(txt)));
+        }
+
         // Sparkle burst
         for (let i = 0; i < 20; i++) {
             const angle = (Math.PI * 2 * i / 20);
@@ -1403,6 +1566,20 @@ class EffectManager {
         txt.position.set(x, y);
         txt.alpha = 0;
         this.container.addChild(txt);
+
+        const nova = this.playSpriteSheetEffect('vfxRewardNovaSheet', x, y, {
+            duration: 1200,
+            targetWidth: Math.min(w * 1.05, this.game.cellSize * 11.5),
+            alpha: 1,
+            fadeIn: 0.03,
+            fadeOut: 0.34,
+            startScale: 0.85,
+            endScale: 1.18,
+        });
+        if (nova) {
+            this.container.setChildIndex(nova, Math.max(0, this.container.children.indexOf(txt)));
+        }
+
         this.tweens.push({
             elapsed: 0,
             duration: 2500,
