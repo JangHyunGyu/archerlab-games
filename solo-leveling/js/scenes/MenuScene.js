@@ -377,35 +377,35 @@ export class MenuScene extends Phaser.Scene {
             this._fitText(notice, contentW, uv(30));
         }
 
-        const summaryW = Math.min(contentW, uv(isPortrait ? 410 : (isShortLandscape ? 330 : 430)));
-        const summaryH = uv(isShortLandscape ? 60 : (isPortrait ? 80 : 78));
-        const summaryX = isPortrait ? (GAME_WIDTH - summaryW) / 2 : contentX;
-        const summaryY = isPortrait
-            ? topY + uv(165)
-            : (isShortLandscape ? topY + uv(98) : topY + uv(182));
-        this._createSelectedHunterSummary(summaryX, summaryY, summaryW, summaryH, {
-            isCompactMenu: isCompact,
-            isShortLandscape,
-        });
-
         const hasSave = GameScene.hasSavedGame();
         const btnW = Math.min(contentW, uv(isPortrait ? 430 : (isCompact ? 420 : 340)));
         const btnX = isPortrait ? (GAME_WIDTH - btnW) / 2 : contentX;
-        const primaryH = uv(isShortLandscape ? 42 : (isPortrait ? 58 : 62));
-        const secondaryH = uv(isShortLandscape ? 34 : (isPortrait ? 44 : 46));
-        const resumeH = uv(isShortLandscape ? 48 : (isPortrait ? 66 : 68));
-        const gap = uv(isShortLandscape ? 8 : 12);
+        const secondaryW = Math.min(btnW * (isPortrait ? 0.88 : 0.84), uv(isPortrait ? 390 : 300));
+        const secondaryX = isPortrait ? (GAME_WIDTH - secondaryW) / 2 : contentX + (btnW - secondaryW) / 2;
+        const primaryH = Math.round(Math.min(
+            uv(isShortLandscape ? 74 : (isPortrait ? 116 : 94)),
+            Math.max(uv(isShortLandscape ? 52 : 76), btnW / 3.79)
+        ));
+        const secondaryH = Math.round(Math.min(
+            uv(isShortLandscape ? 52 : (isPortrait ? 86 : 72)),
+            Math.max(uv(isShortLandscape ? 38 : 54), secondaryW / 3.32)
+        ));
+        const resumeH = Math.round(Math.min(
+            uv(isShortLandscape ? 78 : (isPortrait ? 108 : 96)),
+            Math.max(uv(isShortLandscape ? 56 : 72), btnW / 3.79)
+        ));
+        const gap = uv(isShortLandscape ? 10 : 16);
         let actionY;
         if (isPortrait) {
             const actionStackH = (hasSave ? resumeH + gap : 0) + primaryH + gap + secondaryH;
-            const targetY = GAME_HEIGHT * (hasSave ? 0.43 : 0.45);
-            const minY = summaryY + summaryH + uv(hasSave ? 62 : 78);
+            const targetY = GAME_HEIGHT * (hasSave ? 0.39 : 0.47);
+            const minY = topY + uv(isShortLandscape ? 156 : 296);
             actionY = Math.min(GAME_HEIGHT - uv(260) - actionStackH, Math.max(targetY, minY));
         } else if (isShortLandscape) {
             const actionStackH = primaryH + gap + secondaryH;
-            actionY = Math.min(GAME_HEIGHT - uv(24) - actionStackH, summaryY + summaryH + uv(16));
+            actionY = Math.min(GAME_HEIGHT - uv(24) - actionStackH, topY + uv(128));
         } else {
-            actionY = GAME_HEIGHT - uv(190);
+            actionY = GAME_HEIGHT - uv(232);
         }
         if (hasSave) actionY -= resumeH + gap;
 
@@ -427,17 +427,17 @@ export class MenuScene extends Phaser.Scene {
         this._makeMenuButton(btnX, actionY, btnW, primaryH, {
             label: t('startGame'),
             labelColor: SYSTEM.TEXT_BRIGHT,
-            labelSize: isShortLandscape ? 15 : 18,
+            labelSize: isShortLandscape ? 16 : (isPortrait ? 21 : 19),
             labelFont: UI_FONT_KR,
             primary: true,
             onClick: () => this._showCharacterSelectModal((characterId) => startGame(false, characterId)),
         });
 
-        this._makeMenuButton(btnX, actionY + primaryH + gap, btnW, secondaryH, {
+        this._makeMenuButton(secondaryX, actionY + primaryH + gap, secondaryW, secondaryH, {
             label: t('hallOfFame'),
             labelColor: SYSTEM.TEXT_GOLD,
-            labelSize: isShortLandscape ? 10 : 12,
-            labelFont: UI_FONT_MONO,
+            labelSize: isShortLandscape ? 11 : (isPortrait ? 14 : 13),
+            labelFont: UI_FONT_KR,
             onClick: () => this._showHallOfFame(isMobile),
         });
 
@@ -846,12 +846,12 @@ export class MenuScene extends Phaser.Scene {
     }
 
     _makeMenuResumeButton(x, y, w, h, { title, meta, isNarrow = false, onClick }) {
-        const normalKey = this.textures.exists('start_button_primary_wide')
-            ? 'start_button_primary_wide'
-            : (this.textures.exists('start_button_primary') ? 'start_button_primary' : 'ui_panel_gold');
-        const hoverKey = this.textures.exists('start_button_primary_wide_hover')
-            ? 'start_button_primary_wide_hover'
-            : (this.textures.exists('start_button_primary_hover') ? 'start_button_primary_hover' : normalKey);
+        const normalKey = this.textures.exists('start_button_primary')
+            ? 'start_button_primary'
+            : (this.textures.exists('start_button_primary_wide') ? 'start_button_primary_wide' : 'ui_panel_gold');
+        const hoverKey = this.textures.exists('start_button_primary_hover')
+            ? 'start_button_primary_hover'
+            : (this.textures.exists('start_button_primary_wide_hover') ? 'start_button_primary_wide_hover' : normalKey);
         const bg = this._addBitmapPanel(x, y, w, h, {
             key: normalKey,
             alpha: 0.98,
@@ -861,10 +861,8 @@ export class MenuScene extends Phaser.Scene {
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
             .setDepth(8)
             .setInteractive({ useHandCursor: true });
-        const iconSize = Math.min(uv(isNarrow ? 26 : 30), h * 0.52);
-        const icon = this._addMenuIcon('icon_resume', x + uv(34), y + h / 2, iconSize, 7, 0.94);
-        const titleText = this.add.text(x + w / 2, y + h * 0.42, title, {
-            fontSize: fs(isNarrow ? 15 : 17),
+        const titleText = this.add.text(x + w / 2, y + h * 0.43, title, {
+            fontSize: fs(isNarrow ? 17 : 19),
             fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT,
@@ -872,24 +870,24 @@ export class MenuScene extends Phaser.Scene {
             strokeThickness: 3,
         }).setOrigin(0.5).setDepth(7);
         const metaText = this.add.text(x + w / 2, y + h * 0.68, meta, {
-            fontSize: fs(isNarrow ? 9 : 10),
+            fontSize: fs(isNarrow ? 10 : 11),
             fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_CYAN,
+            stroke: '#02040a',
+            strokeThickness: 2,
         }).setOrigin(0.5).setDepth(7);
-        const titleScale = this._fitText(titleText, w - uv(72), h * 0.38);
-        const metaScale = this._fitText(metaText, w - uv(82), h * 0.24);
+        const titleScale = this._fitText(titleText, w - uv(86), h * 0.36);
+        const metaScale = this._fitText(metaText, w - uv(104), h * 0.22);
 
         hit.on('pointerover', () => {
             if (this.textures.exists(hoverKey)) bg.setTexture(hoverKey).setDisplaySize(w, h);
             bg.setAlpha(1);
-            if (icon?.active) icon.setScale(icon.scaleX * 1.04, icon.scaleY * 1.04);
             titleText.setScale(titleScale * 1.02);
             metaText.setScale(metaScale * 1.02);
         });
         hit.on('pointerout', () => {
             bg.setTexture(normalKey).setDisplaySize(w, h);
             bg.setAlpha(0.98);
-            if (icon?.active) icon.setDisplaySize(iconSize, iconSize);
             titleText.setScale(titleScale);
             metaText.setScale(metaScale);
         });
@@ -897,50 +895,45 @@ export class MenuScene extends Phaser.Scene {
     }
 
     _makeMenuButton(x, y, w, h, { label, labelColor, labelSize = 16, labelFont = UI_FONT_KR, primary = false, onClick }) {
-        const preferredNormal = primary ? 'start_button_primary_wide' : 'start_button_secondary_wide';
-        const preferredHover = primary ? 'start_button_primary_wide_hover' : 'start_button_secondary_wide_hover';
+        const preferredNormal = primary ? 'start_button_primary' : 'start_button_secondary';
+        const preferredHover = primary ? 'start_button_primary_hover' : 'start_button_secondary_hover';
         const normalKey = this.textures.exists(preferredNormal)
             ? preferredNormal
-            : (this.textures.exists(primary ? 'start_button_primary' : 'start_button_secondary')
-                ? (primary ? 'start_button_primary' : 'start_button_secondary')
+            : (this.textures.exists(primary ? 'start_button_primary_wide' : 'start_button_secondary_wide')
+                ? (primary ? 'start_button_primary_wide' : 'start_button_secondary_wide')
                 : (primary ? 'ui_button_cyan' : 'ui_panel_gold'));
         const hoverKey = this.textures.exists(preferredHover)
             ? preferredHover
-            : (this.textures.exists(primary ? 'start_button_primary_hover' : 'start_button_secondary_hover')
-                ? (primary ? 'start_button_primary_hover' : 'start_button_secondary_hover')
+            : (this.textures.exists(primary ? 'start_button_primary_wide_hover' : 'start_button_secondary_wide_hover')
+                ? (primary ? 'start_button_primary_wide_hover' : 'start_button_secondary_wide_hover')
                 : (this.textures.exists('ui_button_hover') ? 'ui_button_hover' : normalKey));
         const bg = this._addBitmapPanel(x, y, w, h, {
             key: normalKey,
-            alpha: primary ? 0.96 : 0.78,
+            alpha: primary ? 0.99 : 0.94,
             depth: 5,
             tint: null,
         });
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
             .setDepth(8)
             .setInteractive({ useHandCursor: true });
-        const iconKey = primary ? 'icon_play' : 'icon_ranking';
-        const iconSize = Math.min(uv(primary ? 26 : 22), h * 0.56);
-        const icon = this._addMenuIcon(iconKey, x + uv(32), y + h / 2, iconSize, 7, primary ? 0.94 : 0.84);
         const txt = this.add.text(x + w / 2, y + h / 2, label, {
             fontSize: fs(labelSize),
             fontFamily: labelFont,
             fontStyle: 'bold',
             color: labelColor,
             stroke: '#02040a',
-            strokeThickness: primary ? 3 : 2,
+            strokeThickness: primary ? 4 : 3,
         }).setOrigin(0.5).setDepth(7);
-        const baseScale = this._fitText(txt, w - uv(24), h - uv(12));
+        const baseScale = this._fitText(txt, w - uv(primary ? 128 : 98), h * (primary ? 0.38 : 0.34));
 
         hit.on('pointerover', () => {
             if (this.textures.exists(hoverKey)) bg.setTexture(hoverKey).setDisplaySize(w, h);
             bg.setAlpha(1);
-            if (icon?.active) icon.setDisplaySize(iconSize * 1.04, iconSize * 1.04);
             txt.setScale(baseScale * 1.02);
         });
         hit.on('pointerout', () => {
             bg.setTexture(normalKey).setDisplaySize(w, h);
-            bg.setAlpha(primary ? 0.96 : 0.78);
-            if (icon?.active) icon.setDisplaySize(iconSize, iconSize);
+            bg.setAlpha(primary ? 0.99 : 0.94);
             txt.setScale(baseScale);
         });
         hit.on('pointerdown', () => onClick && onClick());
@@ -1760,11 +1753,11 @@ export class MenuScene extends Phaser.Scene {
         }
 
         const boxW = isPortrait
-            ? GAME_WIDTH - uv(88)
-            : Math.min(uv(540), GAME_WIDTH - uv(72));
+            ? GAME_WIDTH - uv(54)
+            : Math.min(uv(620), GAME_WIDTH - uv(72));
         const boxH = isPortrait
-            ? Math.min(uv(1260), GAME_HEIGHT - uv(270))
-            : Math.min(uv(560), GAME_HEIGHT - uv(96));
+            ? Math.min(uv(930), GAME_HEIGHT - uv(210))
+            : Math.min(uv(590), GAME_HEIGHT - uv(96));
         const bx = cx - boxW / 2;
         const by = cy - boxH / 2;
         let boxFrame;
@@ -1789,6 +1782,10 @@ export class MenuScene extends Phaser.Scene {
             .setInteractive();
         elements.push(bodyShield);
 
+        const innerShade = this.add.rectangle(cx, cy + uv(12), boxW - uv(62), boxH - uv(110), 0x02040a, 0.34)
+            .setDepth(depth + 2.2);
+        elements.push(innerShade);
+
         const headerTag = this.add.text(cx, by + uv(isPortrait ? 30 : 28), '[ SYSTEM · RANKING ]', {
             fontSize: fs(isPortrait ? 10 : 10),
             fontFamily: UI_FONT_MONO,
@@ -1800,9 +1797,9 @@ export class MenuScene extends Phaser.Scene {
         this._fitText(headerTag, boxW - uv(54), uv(24));
         elements.push(headerTag);
 
-        const title = this.add.text(cx, by + uv(isPortrait ? 68 : 64), t('hallOfFame'), {
-            fontSize: fs(isPortrait ? 24 : 20),
-            fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_GOLD,
+        const title = this.add.text(cx, by + uv(isPortrait ? 82 : 70), t('hallOfFame'), {
+            fontSize: fs(isPortrait ? 28 : 24),
+            fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_GOLD,
             fontStyle: 'bold',
             stroke: '#02040a',
             strokeThickness: 3,
@@ -1811,12 +1808,13 @@ export class MenuScene extends Phaser.Scene {
         elements.push(title);
 
         const characters = Object.values(CHARACTER_DEFS);
-        const tabGap = uv(5);
-        const tabY = by + uv(isPortrait ? 112 : 104);
-        const tabH = uv(isPortrait ? 34 : 28);
-        const tabAreaW = boxW - uv(48);
-        const tabW = Math.floor((tabAreaW - tabGap * (characters.length - 1)) / characters.length);
-        const tabStartX = cx - (tabW * characters.length + tabGap * (characters.length - 1)) / 2;
+        const tabGap = uv(isPortrait ? 7 : 5);
+        const tabTop = by + uv(isPortrait ? 132 : 112);
+        const tabH = uv(isPortrait ? 38 : 30);
+        const tabColumns = isPortrait ? 3 : characters.length;
+        const tabRows = Math.ceil(characters.length / tabColumns);
+        const tabAreaW = boxW - uv(isPortrait ? 64 : 48);
+        const tabW = Math.floor((tabAreaW - tabGap * (tabColumns - 1)) / tabColumns);
         const tabRefs = [];
         let activeCharacterId = CHARACTER_DEFS[this.selectedCharacterId] ? this.selectedCharacterId : characters[0].id;
         let requestSeq = 0;
@@ -1852,20 +1850,25 @@ export class MenuScene extends Phaser.Scene {
 
         characters.forEach((character, i) => {
             const characterText = getCharacterText(character);
-            const x = tabStartX + i * (tabW + tabGap);
+            const col = i % tabColumns;
+            const row = Math.floor(i / tabColumns);
+            const rowCount = Math.min(tabColumns, characters.length - row * tabColumns);
+            const rowStartX = cx - (tabW * rowCount + tabGap * (rowCount - 1)) / 2;
+            const x = rowStartX + col * (tabW + tabGap);
+            const y = tabTop + row * (tabH + tabGap);
             const g = this.add.graphics().setDepth(depth + 3);
-            const hit = this.add.rectangle(x + tabW / 2, tabY + tabH / 2, tabW, tabH, 0x000000, 0)
+            const hit = this.add.rectangle(x + tabW / 2, y + tabH / 2, tabW, tabH, 0x000000, 0)
                 .setDepth(depth + 5)
                 .setInteractive({ useHandCursor: true });
-            const txt = this.add.text(x + tabW / 2, tabY + tabH / 2, characterText.name, {
-                fontSize: fs(isPortrait ? 9 : 8),
+            const txt = this.add.text(x + tabW / 2, y + tabH / 2, characterText.name, {
+                fontSize: fs(isPortrait ? 10 : 8),
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
                 color: SYSTEM.TEXT_MUTED,
             }).setOrigin(0.5).setDepth(depth + 5);
             this._fitText(txt, tabW - uv(10), tabH - uv(8));
 
-            const ref = { g, hit, txt, character, x, y: tabY, w: tabW, h: tabH };
+            const ref = { g, hit, txt, character, x, y, w: tabW, h: tabH };
             tabRefs.push(ref);
             hit.on('pointerover', () => drawTab(ref, true));
             hit.on('pointerout', () => drawTab(ref, false));
@@ -1880,7 +1883,7 @@ export class MenuScene extends Phaser.Scene {
         redrawTabs();
 
         const divG = this.add.graphics().setDepth(depth + 2);
-        const divY = tabY + tabH + uv(10);
+        const divY = tabTop + tabRows * tabH + (tabRows - 1) * tabGap + uv(isPortrait ? 14 : 10);
         divG.lineStyle(1, SYSTEM.BORDER_GOLD, 0.35);
         divG.lineBetween(bx + uv(28), divY, bx + boxW - uv(28), divY);
         divG.lineStyle(1, SYSTEM.BORDER_DIM, 0.26);
@@ -1888,8 +1891,20 @@ export class MenuScene extends Phaser.Scene {
         elements.push(divG);
 
         const makeModalButton = (x, y, w, h, label, onClick) => {
-            const g = this.add.graphics().setDepth(depth + 3);
+            const normalKey = this.textures.exists('start_button_secondary_wide')
+                ? 'start_button_secondary_wide'
+                : (this.textures.exists('start_button_secondary') ? 'start_button_secondary' : null);
+            const hoverKey = this.textures.exists('start_button_secondary_wide_hover')
+                ? 'start_button_secondary_wide_hover'
+                : (this.textures.exists('start_button_secondary_hover') ? 'start_button_secondary_hover' : normalKey);
+            const g = normalKey
+                ? this._addBitmapPanel(x, y, w, h, { key: normalKey, alpha: 0.9, depth: depth + 3 })
+                : this.add.graphics().setDepth(depth + 3);
             const redraw = (hover) => {
+                if (g.setTexture) {
+                    g.setTexture(hover && hoverKey ? hoverKey : normalKey).setDisplaySize(w, h).setAlpha(hover ? 1 : 0.9);
+                    return;
+                }
                 g.clear();
                 drawSystemPanel(g, x, y, w, h, {
                     cut: uv(6),
@@ -1905,8 +1920,8 @@ export class MenuScene extends Phaser.Scene {
                 .setDepth(depth + 5)
                 .setInteractive({ useHandCursor: true });
             const txt = this.add.text(x + w / 2, y + h / 2, label, {
-                fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_BRIGHT,
-                stroke: '#02040a', strokeThickness: 2,
+                fontSize: fs(12), fontFamily: UI_FONT_KR, fontStyle: 'bold', color: SYSTEM.TEXT_BRIGHT,
+                stroke: '#02040a', strokeThickness: 3,
             }).setOrigin(0.5).setDepth(depth + 5);
             this._fitText(txt, w - uv(18), h - uv(8));
             hit.on('pointerover', () => redraw(true));
@@ -1922,7 +1937,7 @@ export class MenuScene extends Phaser.Scene {
             elements.forEach(el => el.destroy());
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
-        makeModalButton(cx - uv(48), by + boxH - uv(46), uv(96), uv(30), t('close'), closeAll);
+        makeModalButton(cx - uv(70), by + boxH - uv(54), uv(140), uv(38), t('close'), closeAll);
         this._modalElements.push(...elements);
         dim.on('pointerdown', closeAll);
 
@@ -1974,15 +1989,21 @@ export class MenuScene extends Phaser.Scene {
                     }
 
                     const topStartY = divY + uv(isPortrait ? 22 : 18);
-                    const pad = uv(24);
-                    const gap = uv(8);
-                    const topCardH = uv(isPortrait ? 148 : 104);
-                    const topCardW = (boxW - pad * 2 - gap * 2) / 3;
+                    const pad = uv(isPortrait ? 34 : 28);
+                    const gap = uv(isPortrait ? 12 : 10);
+                    const topCount = Math.min(3, rankings.length);
+                    const topCardH = uv(isPortrait ? 132 : 112);
+                    const topCardW = Math.min(
+                        uv(isPortrait ? 148 : 160),
+                        (boxW - pad * 2 - gap * 2) / 3
+                    );
+                    const topTotalW = topCardW * topCount + gap * Math.max(0, topCount - 1);
+                    const topStartX = cx - topTotalW / 2;
                     const topColors = [SYSTEM.TEXT_GOLD, '#cfd8e8', '#d18b4a'];
                     const topBorders = [SYSTEM.BORDER_GOLD, SYSTEM.BORDER, 0xd18b4a];
 
                     rankings.slice(0, 3).forEach((entry, i) => {
-                        const cardX = bx + pad + i * (topCardW + gap);
+                        const cardX = topStartX + i * (topCardW + gap);
                         const cardY = topStartY;
                         const color = topColors[i];
                         const border = topBorders[i];
@@ -2007,21 +2028,21 @@ export class MenuScene extends Phaser.Scene {
                             cardG.lineBetween(cardX + uv(10), cardY + topCardH - uv(9), cardX + topCardW - uv(10), cardY + topCardH - uv(9));
                         }
 
-                        const placeText = trackContent(this.add.text(cardX + topCardW / 2, cardY + uv(isPortrait ? 25 : 20), `#0${i + 1}`, {
+                        const placeText = trackContent(this.add.text(cardX + topCardW / 2, cardY + uv(isPortrait ? 23 : 22), `#0${i + 1}`, {
                             fontSize: fs(isPortrait ? 15 : 14),
                             fontFamily: UI_FONT_MONO,
                             fontStyle: 'bold',
                             color,
                         }).setOrigin(0.5).setDepth(depth + 4));
                         this._fitText(placeText, topCardW - uv(18), uv(28));
-                        const name = trackContent(this.add.text(cardX + topCardW / 2, cardY + uv(isPortrait ? 66 : 50), entry.player_name || 'UNKNOWN', {
-                            fontSize: fs(isPortrait ? 11 : 11),
+                        const name = trackContent(this.add.text(cardX + topCardW / 2, cardY + uv(isPortrait ? 61 : 54), entry.player_name || 'UNKNOWN', {
+                            fontSize: fs(isPortrait ? 12 : 11),
                             fontFamily: UI_FONT_KR,
                             fontStyle: i === 0 ? 'bold' : 'normal',
                             color: i === 0 ? SYSTEM.TEXT_BRIGHT : color,
                         }).setOrigin(0.5).setDepth(depth + 4));
                         this._fitText(name, topCardW - uv(18), uv(26));
-                        const scoreText = trackContent(this.add.text(cardX + topCardW / 2, cardY + topCardH - uv(isPortrait ? 36 : 26), formatTime(entry.score), {
+                        const scoreText = trackContent(this.add.text(cardX + topCardW / 2, cardY + topCardH - uv(isPortrait ? 31 : 28), formatTime(entry.score), {
                             fontSize: fs(isPortrait ? 13 : 12),
                             fontFamily: UI_FONT_MONO,
                             fontStyle: 'bold',
@@ -2030,9 +2051,13 @@ export class MenuScene extends Phaser.Scene {
                         this._fitText(scoreText, topCardW - uv(18), uv(26));
                     });
 
-                    const startY = topStartY + topCardH + uv(isPortrait ? 28 : 22);
-                    const maxH = by + boxH - uv(88) - startY;
-                    const rowH = Math.min(uv(isPortrait ? 44 : 24), maxH / Math.max(1, rankings.length - 2));
+                    const startY = topStartY + topCardH + uv(isPortrait ? 24 : 22);
+                    const maxH = by + boxH - uv(104) - startY;
+                    const visibleRowBudget = Math.min(rankings.length, isPortrait ? 8 : 10);
+                    const rowH = Math.max(
+                        uv(isPortrait ? 30 : 20),
+                        Math.min(uv(isPortrait ? 42 : 26), maxH / Math.max(1, visibleRowBudget + 1))
+                    );
                     const hStyle = { fontSize: fs(10), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN_DIM, stroke: '#02040a', strokeThickness: 1 };
                     let y = startY;
                     const rankHead = trackContent(this.add.text(bx + uv(26), y, 'RANK', hStyle).setDepth(depth + 2));
