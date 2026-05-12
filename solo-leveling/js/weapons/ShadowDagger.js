@@ -71,6 +71,8 @@ export class ShadowDagger extends WeaponBase {
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_shadow_dagger');
+        const usesImageEffect = useCharacterEffect || useEffectAsset;
+        const suppressTrailFx = this.config.imageOnlyVfx || usesImageEffect;
         const textureKey = effectTexture || (useEffectAsset ? 'effect_shadow_dagger' : 'proj_dagger');
         const maxPierces = this.config.maxPierces ?? Infinity;
         const hitRadiusScale = this.config.hitRadiusScale ?? 0.35;
@@ -109,17 +111,35 @@ export class ShadowDagger extends WeaponBase {
         const explode = (x, y, sourceKey) => {
             if (!explosionRadius) return;
 
-            const burst = this.scene.add.circle(x, y, explosionRadius * 0.35, this.getEffectColor(0xb366ff), 0.35)
-                .setDepth(8)
-                .setBlendMode(Phaser.BlendModes.ADD);
-            this.scene.tweens.add({
-                targets: burst,
-                alpha: 0,
-                scale: 2.4,
-                duration: 220,
-                ease: 'Quad.easeOut',
-                onComplete: () => burst.destroy(),
-            });
+            if (usesImageEffect) {
+                const burst = this.scene.add.sprite(x, y, textureKey)
+                    .setDepth(8)
+                    .setAlpha(0.62)
+                    .setScale((this.config.projectileScale || this.config.effectScale || 0.5) * 0.72)
+                    .setRotation(angle)
+                    .setBlendMode(Phaser.BlendModes.ADD);
+                this.scene.tweens.add({
+                    targets: burst,
+                    alpha: 0,
+                    scaleX: burst.scaleX * 1.65,
+                    scaleY: burst.scaleY * 1.65,
+                    duration: 220,
+                    ease: 'Quad.easeOut',
+                    onComplete: () => burst.destroy(),
+                });
+            } else {
+                const burst = this.scene.add.circle(x, y, explosionRadius * 0.35, this.getEffectColor(0xb366ff), 0.35)
+                    .setDepth(8)
+                    .setBlendMode(Phaser.BlendModes.ADD);
+                this.scene.tweens.add({
+                    targets: burst,
+                    alpha: 0,
+                    scale: 2.4,
+                    duration: 220,
+                    ease: 'Quad.easeOut',
+                    onComplete: () => burst.destroy(),
+                });
+            }
 
             for (const enemy of this.player.getAllEnemies()) {
                 if (!enemy || !enemy.active) continue;
@@ -172,14 +192,16 @@ export class ShadowDagger extends WeaponBase {
 
             this.playHitSound();
 
-            const spark = this.scene.add.circle(dagger.x, dagger.y, 6, this.getEffectColor(0xb366ff), 0.8).setDepth(9);
-            this.scene.tweens.add({
-                targets: spark,
-                alpha: 0,
-                scale: 3,
-                duration: 200,
-                onComplete: () => spark.destroy(),
-            });
+            if (!usesImageEffect) {
+                const spark = this.scene.add.circle(dagger.x, dagger.y, 6, this.getEffectColor(0xb366ff), 0.8).setDepth(9);
+                this.scene.tweens.add({
+                    targets: spark,
+                    alpha: 0,
+                    scale: 3,
+                    duration: 200,
+                    onComplete: () => spark.destroy(),
+                });
+            }
 
             return true;
         };
@@ -215,22 +237,24 @@ export class ShadowDagger extends WeaponBase {
             onComplete: () => cleanup(),
         });
 
-        trailInterval = this.scene.time.addEvent({
-            delay: 50,
-            repeat: duration / 50,
-            callback: () => {
-                if (!dagger.active || !this.scene?.scene?.isActive()) return;
-                const trail = this._getTrailCircle(dagger.x, dagger.y);
-                this.scene.tweens.add({
-                    targets: trail,
-                    alpha: 0,
-                    scale: 0,
-                    duration: 180,
-                    onComplete: () => this._releaseTrailCircle(trail),
-                });
-            },
-        });
-        entry.trailInterval = trailInterval;
+        if (!suppressTrailFx) {
+            trailInterval = this.scene.time.addEvent({
+                delay: 50,
+                repeat: duration / 50,
+                callback: () => {
+                    if (!dagger.active || !this.scene?.scene?.isActive()) return;
+                    const trail = this._getTrailCircle(dagger.x, dagger.y);
+                    this.scene.tweens.add({
+                        targets: trail,
+                        alpha: 0,
+                        scale: 0,
+                        duration: 180,
+                        onComplete: () => this._releaseTrailCircle(trail),
+                    });
+                },
+            });
+            entry.trailInterval = trailInterval;
+        }
     }
 
     destroy() {
