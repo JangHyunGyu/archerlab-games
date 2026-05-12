@@ -71,7 +71,7 @@
   <div id="topbar">
     <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer"
        class="topbar-btn archerlab-btn" aria-label="ArcherLab"
-       data-i18n="menu.archerlab">🏹 ArcherLab</a>
+       data-i18n="menu.archerlab">ArcherLab</a>
     <button id="lang-toggle" class="lang-switch" type="button" aria-label="language toggle">
       <span id="lang-ko" class="lang-btn" data-lang="ko">KO</span>
       <span id="lang-en" class="lang-btn" data-lang="en">EN</span>
@@ -106,7 +106,7 @@
   <!-- 게임 -->
   <section id="game" class="screen hidden">
     <header class="hud">
-      <button id="home-btn" class="icon-btn" aria-label="메인 메뉴로" data-i18n-aria="hud.homeAria">🏠</button>
+      <button id="home-btn" class="icon-btn icon-btn--home" aria-label="메인 메뉴로" data-i18n-aria="hud.homeAria"></button>
       <div class="stat score-stat">
         <div class="stat-label" data-i18n="hud.score">점수</div>
         <div id="score" class="stat-value">0</div>
@@ -117,7 +117,7 @@
         <canvas id="next-cat" width="72" height="72"></canvas>
         <div id="next-cat-name" class="next-cat-name"></div>
       </div>
-      <button id="sound-btn" class="icon-btn" aria-label="사운드 토글" data-i18n-aria="hud.soundAria">🔊</button>
+      <button id="sound-btn" class="icon-btn icon-btn--sound" aria-label="사운드 토글" data-i18n-aria="hud.soundAria"></button>
     </header>
     <div id="game-tier-strip" class="game-tier-strip" aria-label="진화 단계"></div>
     <div class="field-wrap">
@@ -129,17 +129,24 @@
 
   <!-- 게임 오버 -->
   <div id="gameover-modal" class="modal hidden">
-    <div class="modal-body">
+    <div class="modal-body gameover-body">
+      <div class="gameover-visual" aria-hidden="true"></div>
       <h2 data-i18n="over.title">게임 오버</h2>
       <div class="final-block">
         <div class="final-label" data-i18n="over.final">최종 점수</div>
         <div class="final-value" id="final-score">0</div>
-        <div id="new-record" class="new-record hidden" data-i18n="over.newRecord">🏆 신기록!</div>
+        <div id="new-record" class="new-record hidden">
+          <span class="new-record__medal" aria-hidden="true"></span>
+          <span data-i18n="over.newRecord">신기록!</span>
+        </div>
       </div>
       <div id="rank-submit-row" class="rank-submit-row">
         <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-ph="over.nicknamePh" placeholder="닉네임 (20자)">
         <div class="rank-submit-buttons">
-          <button id="submit-rank-btn" class="btn btn-secondary" data-i18n="over.submitRank">🏆 랭킹 등록</button>
+          <button id="submit-rank-btn" class="btn btn-secondary btn-with-icon">
+            <span class="ui-icon ui-icon--rank" aria-hidden="true"></span>
+            <span data-i18n="over.submitRank">랭킹 등록</span>
+          </button>
           <button id="skip-rank-btn" class="btn btn-ghost" data-i18n="over.skipRank">Skip</button>
         </div>
         <div id="submit-status" class="submit-status"></div>
@@ -169,7 +176,10 @@
   <!-- 랭킹 -->
   <div id="rank-modal" class="modal hidden">
     <div class="modal-body rank-body">
-      <h2 data-i18n="rank.title">🏆 랭킹 TOP 20</h2>
+      <h2 class="rank-title">
+        <span class="ui-icon ui-icon--rank" aria-hidden="true"></span>
+        <span data-i18n="rank.title">랭킹 TOP 20</span>
+      </h2>
       <div id="rank-content" class="rank-content">
         <div class="rank-loading" data-i18n="rank.loading">불러오는 중...</div>
       </div>

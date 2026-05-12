@@ -11,7 +11,7 @@
       'menu.resume': '이어서 하기',
       'menu.how': '조작법 · 진화표',
       'menu.rank': '랭킹',
-      'menu.archerlab': '🏹 ArcherLab',
+      'menu.archerlab': 'ArcherLab',
 
       // HUD
       'hud.score': '점수',
@@ -24,10 +24,10 @@
       // 게임오버
       'over.title': '게임 오버',
       'over.final': '최종 점수',
-      'over.newRecord': '🏆 신기록!',
+      'over.newRecord': '신기록!',
       'over.replay': '다시 도전',
       'over.menu': '메인 메뉴',
-      'over.submitRank': '🏆 랭킹 등록',
+      'over.submitRank': '랭킹 등록',
       'over.skipRank': 'Skip',
       'over.nicknamePh': '닉네임 (20자)',
       'over.submitting': '등록 중...',
@@ -45,7 +45,7 @@
       'how.close': '닫기',
 
       // 랭킹 모달
-      'rank.title': '🏆 랭킹 TOP 20',
+      'rank.title': '랭킹 TOP 20',
       'rank.loading': '불러오는 중...',
       'rank.empty': '아직 기록이 없어요. 첫 번째 도전자가 되어보세요!',
       'rank.error': '랭킹을 불러오지 못했어요',
@@ -56,7 +56,7 @@
 
       // 플래시
       'flash.combo': '{n}연쇄!',
-      'flash.legend': '🏆 전설의 사바나!',
+      'flash.legend': '전설의 사바나!',
 
       // 고양이 이름
       'cat.0': '새끼 고양이',
@@ -80,7 +80,7 @@
       'menu.resume': 'Continue',
       'menu.how': 'How to Play · Tiers',
       'menu.rank': 'Ranking',
-      'menu.archerlab': '🏹 ArcherLab',
+      'menu.archerlab': 'ArcherLab',
 
       'hud.score': 'Score',
       'hud.current': 'Now',
@@ -91,10 +91,10 @@
 
       'over.title': 'Game Over',
       'over.final': 'Final Score',
-      'over.newRecord': '🏆 New Record!',
+      'over.newRecord': 'New Record!',
       'over.replay': 'Try Again',
       'over.menu': 'Main Menu',
-      'over.submitRank': '🏆 Submit Score',
+      'over.submitRank': 'Submit Score',
       'over.skipRank': 'Skip',
       'over.nicknamePh': 'Nickname (20 chars)',
       'over.submitting': 'Submitting...',
@@ -110,7 +110,7 @@
       'how.tiers': 'Evolution Tiers',
       'how.close': 'Close',
 
-      'rank.title': '🏆 Ranking TOP 20',
+      'rank.title': 'Ranking TOP 20',
       'rank.loading': 'Loading...',
       'rank.empty': 'No records yet. Be the first!',
       'rank.error': 'Could not load rankings',
@@ -120,7 +120,7 @@
       'rank.score': 'Score',
 
       'flash.combo': '{n} Combo!',
-      'flash.legend': '🏆 Legendary Savannah!',
+      'flash.legend': 'Legendary Savannah!',
 
       'cat.0': 'Kitten',
       'cat.1': 'Cheese Tabby',
