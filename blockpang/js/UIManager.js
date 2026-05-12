@@ -31,6 +31,12 @@ class UIManager {
         this._nameInputFocusHandler = null;
         this._nameInputBlurHandler = null;
         this._nameInputKeydownHandler = null;
+        this._hofOverlay = null;
+        this._hofAbortController = null;
+        this._hofRequestToken = 0;
+        this._hofPreviousActiveButtons = null;
+        this._fallbackBlockedUntil = 0;
+        this._archerLabLinkState = null;
 
         this._build();
     }
@@ -305,6 +311,54 @@ class UIManager {
         this._nameInputFocusHandler = null;
         this._nameInputBlurHandler = null;
         this._nameInputKeydownHandler = null;
+    }
+
+    _consumePointerEvent(event) {
+        if (event && typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+
+        const nativeEvent = event && event.nativeEvent;
+        if (!nativeEvent) return;
+        if (typeof nativeEvent.stopImmediatePropagation === 'function') {
+            nativeEvent.stopImmediatePropagation();
+        } else if (typeof nativeEvent.stopPropagation === 'function') {
+            nativeEvent.stopPropagation();
+        }
+        if (typeof nativeEvent.preventDefault === 'function') {
+            nativeEvent.preventDefault();
+        }
+    }
+
+    _blockDomFallback(duration = 360) {
+        this._fallbackBlockedUntil = Math.max(this._fallbackBlockedUntil, performance.now() + duration);
+    }
+
+    shouldBlockDomFallback() {
+        return !!(
+            this._hofOverlay ||
+            this._nameInputOverlay ||
+            performance.now() < this._fallbackBlockedUntil
+        );
+    }
+
+    _suspendArcherLabLink() {
+        const link = document.getElementById('archerlab-link');
+        if (!link || this._archerLabLinkState) return;
+        this._archerLabLinkState = {
+            visibility: link.style.visibility,
+            pointerEvents: link.style.pointerEvents,
+        };
+        link.style.visibility = 'hidden';
+        link.style.pointerEvents = 'none';
+    }
+
+    _restoreArcherLabLink() {
+        const link = document.getElementById('archerlab-link');
+        if (!link || !this._archerLabLinkState) return;
+        link.style.visibility = this._archerLabLinkState.visibility;
+        link.style.pointerEvents = this._archerLabLinkState.pointerEvents;
+        this._archerLabLinkState = null;
     }
 
     // ── HUD Visibility Toggle ──
@@ -828,7 +882,8 @@ class UIManager {
         btn.on('pointerout',  () => draw(false));
 
         let lastFire = 0;
-        const fire = () => {
+        const fire = (event) => {
+            this._consumePointerEvent(event);
             const now = performance.now();
             if (now - lastFire < 280) return;
             lastFire = now;
@@ -1730,9 +1785,16 @@ class UIManager {
     // ══════════════════════════════════════
 
     showHallOfFame() {
-        if (this._hofOverlay) {
-            this._hofOverlay.destroy({ children: true });
-            this._hofOverlay = null;
+        this._blockDomFallback();
+        if (this._hofOverlay && !this._hofOverlay.destroyed) return;
+
+        this._hofPreviousActiveButtons = this._activeButtons ? [...this._activeButtons] : [];
+        this._activeButtons = [];
+        this._suspendArcherLabLink();
+
+        if (this._hofAbortController) {
+            this._hofAbortController.abort();
+            this._hofAbortController = null;
         }
 
         const overlay = new PIXI.Container();
@@ -1740,13 +1802,32 @@ class UIManager {
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
         overlay.hitArea = new PIXI.Rectangle(0, 0, w, h);
+        overlay.on('pointerdown', (event) => {
+            this._consumePointerEvent(event);
+            this._blockDomFallback();
+        });
+        overlay.on('pointerup', (event) => {
+            this._consumePointerEvent(event);
+            this._blockDomFallback();
+        });
+        overlay.on('pointertap', (event) => {
+            this._consumePointerEvent(event);
+            this._blockDomFallback();
+        });
 
         // Dark glass scrim
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, w, h).fill({ color: THEME.bgDeep, alpha: 0.76 });
         bg.rect(0, 0, w, h).fill({ color: THEME.shadow, alpha: 0.22 });
         bg.eventMode = 'static';
-        bg.on('pointerdown', () => this._closeHallOfFame());
+        bg.on('pointerdown', (event) => {
+            this._consumePointerEvent(event);
+            this._blockDomFallback();
+        });
+        bg.on('pointertap', (event) => {
+            this._consumePointerEvent(event);
+            this._blockDomFallback();
+        });
         overlay.addChild(bg);
 
         // Panel
@@ -1879,17 +1960,30 @@ class UIManager {
         this.game.app.stage.addChild(overlay);
 
         // Fetch rankings
-        this._fetchRankings(overlay, centerX, yOff, panelX, panelW, closeBtnY - yOff - 10, loadingText);
+        const requestToken = ++this._hofRequestToken;
+        this._hofAbortController = window.AbortController ? new window.AbortController() : null;
+        this._fetchRankings(
+            overlay,
+            centerX,
+            yOff,
+            panelX,
+            panelW,
+            closeBtnY - yOff - 10,
+            loadingText,
+            requestToken,
+            this._hofAbortController ? this._hofAbortController.signal : undefined
+        );
     }
 
-    async _fetchRankings(overlay, centerX, startY, panelX, panelW, maxHeight, loadingText) {
+    async _fetchRankings(overlay, centerX, startY, panelX, panelW, maxHeight, loadingText, requestToken, signal) {
         const requestUrl = `${GAME_API_URL}/rankings?game_id=${GAME_ID_BLOCKPANG}&limit=20`;
         try {
-            const resp = await fetch(requestUrl);
+            const resp = await fetch(requestUrl, signal ? { signal } : undefined);
             if (!resp.ok) {
                 throw new Error(`Ranking request failed: ${resp.status}`);
             }
             const data = await resp.json();
+            if (!this._isHallOfFameRequestCurrent(overlay, requestToken)) return;
 
             if (loadingText && !loadingText.destroyed) loadingText.visible = false;
 
@@ -2008,6 +2102,8 @@ class UIManager {
             });
 
         } catch (e) {
+            if (e && e.name === 'AbortError') return;
+            if (!this._isHallOfFameRequestCurrent(overlay, requestToken)) return;
             if (window._sendGameError) {
                 window._sendGameError(
                     'RankingError',
@@ -2024,10 +2120,33 @@ class UIManager {
         }
     }
 
+    _isHallOfFameRequestCurrent(overlay, requestToken) {
+        return !!(
+            overlay &&
+            !overlay.destroyed &&
+            this._hofOverlay === overlay &&
+            this._hofRequestToken === requestToken
+        );
+    }
+
     _closeHallOfFame() {
+        this._blockDomFallback();
+        this._hofRequestToken++;
+        if (this._hofAbortController) {
+            this._hofAbortController.abort();
+            this._hofAbortController = null;
+        }
         if (this._hofOverlay) {
             this._hofOverlay.destroy({ children: true });
             this._hofOverlay = null;
+        }
+        this._restoreArcherLabLink();
+        const previousButtons = this._hofPreviousActiveButtons;
+        this._hofPreviousActiveButtons = null;
+        if (this.game && this.game.state === 'title' && previousButtons) {
+            this._activeButtons = previousButtons;
+        } else if (this.game && this.game.state !== 'playing') {
+            this._activeButtons = [];
         }
     }
 

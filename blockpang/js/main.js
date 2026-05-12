@@ -86,6 +86,7 @@
 
     // DOM-level fallback for UI buttons (bypasses PixiJS event system)
     app.canvas.addEventListener('pointerdown', (e) => {
+        if (game.ui.shouldBlockDomFallback && game.ui.shouldBlockDomFallback()) return;
         if (!game.ui._activeButtons || game.ui._activeButtons.length === 0) return;
         const rect = app.canvas.getBoundingClientRect();
         const scaleX = app.screen.width / rect.width;
