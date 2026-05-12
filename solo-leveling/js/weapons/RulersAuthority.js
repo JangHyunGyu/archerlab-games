@@ -100,7 +100,7 @@ export class RulersAuthority extends WeaponBase {
             onComplete: () => circle.destroy(),
         });
 
-        if (!this.config.imageOnlyVfx) {
+        if (!this.config.imageOnlyVfx && !useCharacterEffect && !useEffectAsset) {
             // Ground crack effect
             const crack = this.scene.add.circle(targetX, targetY, range * 0.3, this.getEffectColor(COLORS.SHADOW_PRIMARY), 0.3)
                 .setDepth(3);

@@ -152,7 +152,26 @@ export class XPOrbPool {
         }
     }
 
+    _consumeCollectVfxBudget(cost = 1) {
+        const frame = this.scene?.game?.loop?.frame ?? 0;
+        if (this._collectVfxFrame !== frame) {
+            this._collectVfxFrame = frame;
+            this._collectVfxUsed = 0;
+        }
+
+        const fps = this.scene?.game?.loop?.actualFps || 60;
+        const children = this.scene?.children?.list?.length || 0;
+        const max = this.scene?._lowQuality || fps < 35 || children > 900
+            ? 3
+            : (fps < 48 || children > 650 ? 6 : 10);
+        if ((this._collectVfxUsed || 0) + cost > max) return false;
+        this._collectVfxUsed = (this._collectVfxUsed || 0) + cost;
+        return true;
+    }
+
     _spawnCollectEffect(x, y, player) {
+        if (!this._consumeCollectVfxBudget(1)) return;
+
         const hasCollectAsset = this.scene.textures.exists('pickup_xp_collect');
         const flash = hasCollectAsset
             ? this.scene.add.sprite(x, y, 'pickup_xp_collect')
@@ -174,6 +193,7 @@ export class XPOrbPool {
         });
 
         if (!player || !this.scene.textures.exists('pickup_xp_trail')) return;
+        if (!this._consumeCollectVfxBudget(2)) return;
 
         const midX = (x + player.x) / 2;
         const midY = (y + player.y) / 2;
@@ -217,5 +237,7 @@ export class XPOrbPool {
         } catch (e) { /* group already destroyed by scene shutdown */ }
         this.group = null;
         this.scene = null;
+        this._collectVfxFrame = -1;
+        this._collectVfxUsed = 0;
     }
 }

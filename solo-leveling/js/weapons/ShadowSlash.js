@@ -91,8 +91,9 @@ export class ShadowSlash extends WeaponBase {
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && !imageOnlyVfx && this.scene.textures.exists('effect_shadow_slash');
+        const suppressAuxiliaryFx = imageOnlyVfx || useCharacterEffect || useEffectAsset;
 
-        if (!imageOnlyVfx) {
+        if (!suppressAuxiliaryFx) {
             const gfx = this._getGfx();
             let progress = { t: 0 };
             let arcTween = null;
@@ -200,7 +201,7 @@ export class ShadowSlash extends WeaponBase {
             onComplete: () => slash.destroy(),
         });
 
-        if (!imageOnlyVfx) {
+        if (!suppressAuxiliaryFx) {
             // Afterglow flash at slash center
             const flash = this.scene.add.circle(slashX, slashY, 20, color, 0.4).setDepth(7);
             this.scene.tweens.add({
@@ -240,16 +241,18 @@ export class ShadowSlash extends WeaponBase {
         if (this.config.aftershockRadius) {
             this._delay(this.config.aftershockDelay || 180, () => {
                 if (!this.scene?.scene?.isActive()) return;
-                const pulse = this.scene.add.circle(slashX, slashY, this.config.aftershockRadius * 0.35, color, 0.28)
-                    .setDepth(7)
-                    .setBlendMode(Phaser.BlendModes.ADD);
-                this.scene.tweens.add({
-                    targets: pulse,
-                    alpha: 0,
-                    scale: 2.8,
-                    duration: 260,
-                    onComplete: () => pulse.destroy(),
-                });
+                if (!suppressAuxiliaryFx) {
+                    const pulse = this.scene.add.circle(slashX, slashY, this.config.aftershockRadius * 0.35, color, 0.28)
+                        .setDepth(7)
+                        .setBlendMode(Phaser.BlendModes.ADD);
+                    this.scene.tweens.add({
+                        targets: pulse,
+                        alpha: 0,
+                        scale: 2.8,
+                        duration: 260,
+                        onComplete: () => pulse.destroy(),
+                    });
+                }
 
                 for (const enemy of this.player.getAllEnemies()) {
                     if (!enemy.active) continue;
@@ -292,8 +295,9 @@ export class ShadowSlash extends WeaponBase {
         const lineWidth = this.config.lineWidth || 34;
         const imageOnlyVfx = !!this.config.imageOnlyVfx;
         const effectTexture = this.getEffectTexture();
+        const suppressAuxiliaryFx = imageOnlyVfx || !!effectTexture;
 
-        if (!imageOnlyVfx) {
+        if (!suppressAuxiliaryFx) {
             const color = this.getEffectColor(0xffd86a);
             const glowColor = this.getEffectGlowColor(0xffffff);
             const gfx = this._getGfx();
@@ -370,31 +374,49 @@ export class ShadowSlash extends WeaponBase {
         const py = this.player.y;
         const maxHits = this.config.maxHits ?? Infinity;
         const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 0.85));
+        const effectTexture = this.getEffectTexture();
         let hits = 0;
 
-        const pulse = this.scene.add.circle(px, py, range * 0.18, color, 0.24)
-            .setDepth(7)
-            .setBlendMode(Phaser.BlendModes.ADD);
-        const ring = this.scene.add.circle(px, py, range * 0.24, glowColor, 0)
-            .setDepth(8);
-        ring.setStrokeStyle(3, glowColor, 0.85);
+        if (effectTexture) {
+            const source = this.scene.textures.get(effectTexture).getSourceImage();
+            const pulse = this.scene.add.sprite(px, py, effectTexture)
+                .setDepth(8)
+                .setAlpha(0.84)
+                .setScale((range * 2) / (source?.width || 320))
+                .setBlendMode(Phaser.BlendModes.ADD);
+            this.scene.tweens.add({
+                targets: pulse,
+                alpha: 0,
+                scale: pulse.scaleX * 1.24,
+                duration: 420,
+                ease: 'Quad.easeOut',
+                onComplete: () => pulse.destroy(),
+            });
+        } else {
+            const pulse = this.scene.add.circle(px, py, range * 0.18, color, 0.24)
+                .setDepth(7)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            const ring = this.scene.add.circle(px, py, range * 0.24, glowColor, 0)
+                .setDepth(8);
+            ring.setStrokeStyle(3, glowColor, 0.85);
 
-        this.scene.tweens.add({
-            targets: pulse,
-            alpha: 0,
-            scale: 5.2,
-            duration: 380,
-            ease: 'Quad.easeOut',
-            onComplete: () => pulse.destroy(),
-        });
-        this.scene.tweens.add({
-            targets: ring,
-            alpha: 0,
-            scale: 4.2,
-            duration: 420,
-            ease: 'Quad.easeOut',
-            onComplete: () => ring.destroy(),
-        });
+            this.scene.tweens.add({
+                targets: pulse,
+                alpha: 0,
+                scale: 5.2,
+                duration: 380,
+                ease: 'Quad.easeOut',
+                onComplete: () => pulse.destroy(),
+            });
+            this.scene.tweens.add({
+                targets: ring,
+                alpha: 0,
+                scale: 4.2,
+                duration: 420,
+                ease: 'Quad.easeOut',
+                onComplete: () => ring.destroy(),
+            });
+        }
 
         for (const enemy of this.player.getAllEnemies()) {
             if (!enemy.active) continue;

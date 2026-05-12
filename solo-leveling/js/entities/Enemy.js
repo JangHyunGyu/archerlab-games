@@ -7,7 +7,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     static MAX_POOLED_EMITTERS = 8;
     static _vfxBudgetFrame = -1;
     static _vfxBudgetUsed = 0;
-    static MAX_VFX_BUDGET_PER_FRAME = 18;
+    static MAX_VFX_BUDGET_PER_FRAME = 12;
+
+    static _getVfxBudget(scene) {
+        const fps = scene?.game?.loop?.actualFps || 60;
+        const children = scene?.children?.list?.length || 0;
+        if (scene?._lowQuality || fps < 35 || children > 900) return 5;
+        if (fps < 48 || children > 650) return 8;
+        return Enemy.MAX_VFX_BUDGET_PER_FRAME;
+    }
+
+    static _isVfxConstrained(scene) {
+        const fps = scene?.game?.loop?.actualFps || 60;
+        const children = scene?.children?.list?.length || 0;
+        return !!scene?._lowQuality || fps < 42 || children > 760;
+    }
+
+    static _isVfxSaturated(scene) {
+        const fps = scene?.game?.loop?.actualFps || 60;
+        const children = scene?.children?.list?.length || 0;
+        return !!scene?._lowQuality || fps < 30 || children > 980;
+    }
 
     static _consumeVfxBudget(scene, cost = 1) {
         const frame = scene?.game?.loop?.frame ?? 0;
@@ -15,7 +35,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             Enemy._vfxBudgetFrame = frame;
             Enemy._vfxBudgetUsed = 0;
         }
-        if (Enemy._vfxBudgetUsed + cost > Enemy.MAX_VFX_BUDGET_PER_FRAME) return false;
+        if (Enemy._vfxBudgetUsed + cost > Enemy._getVfxBudget(scene)) return false;
         Enemy._vfxBudgetUsed += cost;
         return true;
     }
@@ -699,6 +719,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     _spawnHitRing(profile, color, yOffset = 0) {
         if (!profile?.ringRadius || !this.scene) return;
+        if (Enemy._isVfxConstrained(this.scene) && profile.tier !== 'large') return;
         const ring = this.scene.add.circle(this.x, this.y + yOffset, profile.ringRadius, color, 0)
             .setDepth(17)
             .setAlpha(profile.ringAlpha)
@@ -719,6 +740,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.soundManager) this.scene.soundManager.play('burnHit');
         const profile = this._getHitVfxProfile();
         const sizeFactor = profile.sizeFactor;
+        const constrained = Enemy._isVfxConstrained(this.scene);
         const usedAsset = Enemy._playFrameVfx(
             this.scene,
             'effect_flame_burn',
@@ -735,7 +757,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         );
         this._spawnHitRing(profile, isCrit ? 0xffc45a : 0xff7a22, -this.displayHeight * 0.04);
 
-        const emberCount = Math.max(3, Math.round((usedAsset ? (isCrit ? 16 : 10) : (isCrit ? 12 : 7)) * profile.particleMult));
+        const particleScale = constrained ? (isCrit ? 0.55 : 0.32) : 1;
+        const emberCount = Math.max(constrained ? 1 : 3, Math.round((usedAsset ? (isCrit ? 16 : 10) : (isCrit ? 12 : 7)) * profile.particleMult * particleScale));
         const maxSpeed = (usedAsset ? (isCrit ? 185 : 120) : (isCrit ? 145 : 90)) * profile.speedMult;
         for (let i = 0; i < emberCount; i++) {
             const a = Math.random() * Math.PI * 2;
@@ -756,23 +779,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        const scorch = this.scene.add.ellipse(
-            this.x,
-            this.y + this.displayHeight * 0.18,
-            20 * sizeFactor * profile.scorchScale,
-            8 * sizeFactor * profile.scorchScale,
-            0x1b1008,
-            profile.tier === 'small' ? 0.38 : 0.55
-        ).setDepth(4);
-        this.scene.tweens.add({
-            targets: scorch,
-            scaleX: profile.tier === 'large' ? 2.15 : 1.7,
-            scaleY: profile.tier === 'large' ? 1.55 : 1.25,
-            alpha: 0,
-            duration: profile.tier === 'large' ? 760 : 560,
-            ease: 'Quad.easeOut',
-            onComplete: () => scorch.destroy(),
-        });
+        if (!constrained || isCrit || profile.tier === 'large') {
+            const scorch = this.scene.add.ellipse(
+                this.x,
+                this.y + this.displayHeight * 0.18,
+                20 * sizeFactor * profile.scorchScale,
+                8 * sizeFactor * profile.scorchScale,
+                0x1b1008,
+                profile.tier === 'small' ? 0.38 : 0.55
+            ).setDepth(4);
+            this.scene.tweens.add({
+                targets: scorch,
+                scaleX: profile.tier === 'large' ? 2.15 : 1.7,
+                scaleY: profile.tier === 'large' ? 1.55 : 1.25,
+                alpha: 0,
+                duration: profile.tier === 'large' ? 760 : 560,
+                ease: 'Quad.easeOut',
+                onComplete: () => scorch.destroy(),
+            });
+        }
     }
 
     _spawnHitBlood(isCrit) {
@@ -780,6 +805,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const profile = this._getHitVfxProfile();
         const sizeFactor = profile.sizeFactor;
         const hitAngle = Phaser.Math.FloatBetween(-0.45, 0.45);
+        const constrained = Enemy._isVfxConstrained(this.scene);
         const usedAsset = Enemy._playFrameVfx(
             this.scene,
             isCrit ? 'effect_monster_crit' : 'effect_monster_hit',
@@ -794,7 +820,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         );
         this._spawnHitRing(profile, isCrit ? 0xff3344 : 0xcc1020, -this.displayHeight * 0.04);
 
-        const count = Math.max(3, Math.round((usedAsset ? (isCrit ? 12 : 8) : (isCrit ? 8 : 4)) * profile.particleMult));
+        const particleScale = constrained ? (isCrit ? 0.52 : 0.28) : 1;
+        const count = Math.max(constrained ? 1 : 3, Math.round((usedAsset ? (isCrit ? 12 : 8) : (isCrit ? 8 : 4)) * profile.particleMult * particleScale));
         const maxSpeed = (usedAsset ? (isCrit ? 210 : 145) : (isCrit ? 160 : 95)) * profile.speedMult;
         for (let i = 0; i < count; i++) {
             const a = Math.random() * Math.PI * 2;
@@ -814,7 +841,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        if (profile.tier === 'large') {
+        if (profile.tier === 'large' && !Enemy._isVfxSaturated(this.scene)) {
             const bruise = this.scene.add.ellipse(
                 this.x,
                 this.y + this.displayHeight * 0.2,
@@ -838,6 +865,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     _deathEffect() {
         try {
             const isElite = this.isElite || this._eliteDeathPending;
+            const constrained = Enemy._isVfxConstrained(this.scene);
+            const saturated = Enemy._isVfxSaturated(this.scene);
             if (this._lastHitEffect === 'burn') {
                 if (!Enemy._consumeVfxBudget(this.scene, isElite ? 5 : 3)) {
                     this._minimalDeathEffect(0xff6a18);
@@ -847,7 +876,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 return;
             }
 
-            if (!Enemy._consumeVfxBudget(this.scene, isElite ? 5 : 3)) {
+            if (saturated && !isElite) {
+                this._minimalDeathEffect(0xcc1020);
+                return;
+            }
+
+            if (!Enemy._consumeVfxBudget(this.scene, isElite ? 5 : (constrained ? 4 : 3))) {
                 this._minimalDeathEffect(0xcc1020);
                 return;
             }
@@ -889,7 +923,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
 
             // Flying gore chunks (bigger, irregular)
-            const chunkCount = usedDeathAsset ? (isElite ? 20 : 14) : (isElite ? 16 : 10);
+            const chunkScale = constrained ? (isElite ? 0.6 : 0.35) : 1;
+            const chunkCount = Math.max(constrained ? 2 : 6, Math.round((usedDeathAsset ? (isElite ? 20 : 14) : (isElite ? 16 : 10)) * chunkScale));
             for (let i = 0; i < chunkCount; i++) {
                 const a = Math.random() * Math.PI * 2;
                 const s = 90 + Math.random() * 140;
@@ -911,14 +946,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Persistent blood pool on ground (elite = bigger)
             const poolW = 28 * sizeFactor * (isElite ? 1.4 : 1);
             const poolH = 10 * sizeFactor * (isElite ? 1.4 : 1);
-            const bloodPool = this.scene.add.ellipse(this.x, this.y + 6, poolW, poolH, 0x2a0006, 0.75).setDepth(3);
-            this.scene.tweens.add({
-                targets: bloodPool,
-                scaleX: 1.8, scaleY: 1.8,
-                alpha: 0,
-                duration: 2200,
-                onComplete: () => bloodPool.destroy(),
-            });
+            if (!constrained || isElite) {
+                const bloodPool = this.scene.add.ellipse(this.x, this.y + 6, poolW, poolH, 0x2a0006, 0.75).setDepth(3);
+                this.scene.tweens.add({
+                    targets: bloodPool,
+                    scaleX: 1.8, scaleY: 1.8,
+                    alpha: 0,
+                    duration: constrained ? 1200 : 2200,
+                    onComplete: () => bloodPool.destroy(),
+                });
+            }
 
             this.scene.time.delayedCall(800, () => {
                 Enemy._returnDeathEmitter(emitter);
@@ -942,6 +979,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     _minimalDeathEffect(color = 0xcc1020) {
         if (!this.scene) return;
+        if (Enemy._isVfxSaturated(this.scene) && !this.isElite && !this._eliteDeathPending) return;
         const sizeFactor = Math.max(1, (this.displayWidth || 30) / 42);
         const burst = this.scene.add.circle(this.x, this.y, 7 * sizeFactor, color, 0.72).setDepth(12);
         burst.setBlendMode(Phaser.BlendModes.ADD);
@@ -958,6 +996,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     _burnDeathEffect() {
         const sizeFactor = Math.max(1, (this.displayWidth || 30) / 30);
         const isElite = this.isElite || this._eliteDeathPending;
+        const constrained = Enemy._isVfxConstrained(this.scene);
         const scale = Phaser.Math.Clamp(0.5 * sizeFactor, 0.55, isElite ? 1.35 : 1.05);
 
         Enemy._playFrameVfx(
@@ -975,7 +1014,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         );
 
-        const emberCount = isElite ? 30 : 18;
+        const emberCount = Math.max(constrained ? 3 : 8, Math.round((isElite ? 30 : 18) * (constrained ? (isElite ? 0.55 : 0.35) : 1)));
         for (let i = 0; i < emberCount; i++) {
             const a = Math.random() * Math.PI * 2;
             const s = 70 + Math.random() * (isElite ? 210 : 145);
@@ -995,23 +1034,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        const scorch = this.scene.add.ellipse(
-            this.x,
-            this.y + 7,
-            30 * sizeFactor * (isElite ? 1.35 : 1),
-            12 * sizeFactor * (isElite ? 1.35 : 1),
-            0x1a0e07,
-            0.72
-        ).setDepth(3);
-        this.scene.tweens.add({
-            targets: scorch,
-            scaleX: 2.2,
-            scaleY: 1.7,
-            alpha: 0,
-            duration: 1500,
-            ease: 'Quad.easeOut',
-            onComplete: () => scorch.destroy(),
-        });
+        if (!constrained || isElite) {
+            const scorch = this.scene.add.ellipse(
+                this.x,
+                this.y + 7,
+                30 * sizeFactor * (isElite ? 1.35 : 1),
+                12 * sizeFactor * (isElite ? 1.35 : 1),
+                0x1a0e07,
+                0.72
+            ).setDepth(3);
+            this.scene.tweens.add({
+                targets: scorch,
+                scaleX: 2.2,
+                scaleY: 1.7,
+                alpha: 0,
+                duration: constrained ? 900 : 1500,
+                ease: 'Quad.easeOut',
+                onComplete: () => scorch.destroy(),
+            });
+        }
     }
 
     destroy(fromScene) {

@@ -235,11 +235,14 @@ export class BasicDagger extends WeaponBase {
             trail.setBlendMode(Phaser.BlendModes.ADD);
         }
 
-        const fx = this.scene.add.graphics().setDepth(11);
-        const impactFx = this.scene.add.graphics().setDepth(15);
+        const usesImageEffect = useEffectStab || useCharacterEffect;
+        const fx = usesImageEffect ? null : this.scene.add.graphics().setDepth(11);
+        const impactFx = usesImageEffect || this.scene.textures.exists('effect_monster_hit_0')
+            ? null
+            : this.scene.add.graphics().setDepth(15);
         const history = [];
         const progress = { t: 0 };
-        const objects = [mainBlade, ...trails, fx, impactFx];
+        const objects = [mainBlade, ...trails, fx, impactFx].filter(Boolean);
         const thrustEntry = { tween: null, objects };
         this._activeThrusts.push(thrustEntry);
 
@@ -325,6 +328,7 @@ export class BasicDagger extends WeaponBase {
             };
         };
         const drawThrustFx = (pose, phase) => {
+            if (!fx) return;
             fx.clear();
 
             const forwardAlpha = Math.max(0, phase.force);
@@ -421,12 +425,12 @@ export class BasicDagger extends WeaponBase {
                 }
             },
             onComplete: () => {
-                fx.clear();
-                impactFx.clear();
+                if (fx) fx.clear();
+                if (impactFx) impactFx.clear();
                 this._releaseBlade(mainBlade);
                 for (const trail of trails) this._releaseBlade(trail);
-                fx.destroy();
-                impactFx.destroy();
+                if (fx) fx.destroy();
+                if (impactFx) impactFx.destroy();
                 const index = this._activeThrusts.indexOf(thrustEntry);
                 if (index !== -1) this._activeThrusts.splice(index, 1);
             },
@@ -439,7 +443,7 @@ export class BasicDagger extends WeaponBase {
             const hitOriginY = this.player.y - 16;
             const hitPose = getPose(1, 0);
 
-            if (!this.scene.textures.exists('effect_monster_hit_0')) {
+            if (impactFx && !this.scene.textures.exists('effect_monster_hit_0')) {
                 impactFx.clear();
                 impactFx.lineStyle(2, 0xffffff, 0.95);
                 impactFx.lineBetween(
@@ -560,7 +564,7 @@ export class BasicDagger extends WeaponBase {
         const effectColor = this.getEffectColor(0xbfeaff);
         const glowColor = this.getEffectGlowColor(0xffffff);
         const effectTexture = this._getConfiguredEffectTexture();
-        const fx = this.scene.add.graphics().setDepth(15);
+        const fx = effectTexture ? null : this.scene.add.graphics().setDepth(15);
         const swipeSprite = effectTexture
             ? this.scene.add.sprite(originX + cosA * 74, originY + sinA * 74, effectTexture)
                 .setDepth(16)
@@ -570,7 +574,7 @@ export class BasicDagger extends WeaponBase {
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects(swipeSprite ? [fx, swipeSprite] : [fx]);
+        const entry = this._trackAttackObjects([fx, swipeSprite].filter(Boolean));
 
         const world = (forward, lateral) => ({
             x: originX + cosA * forward + perpX * lateral,
@@ -579,34 +583,36 @@ export class BasicDagger extends WeaponBase {
 
         const draw = (t) => {
             const eased = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(t, 0, 1));
-            fx.clear();
             const alpha = Math.sin(Math.PI * Math.min(1, t * 1.08));
 
-            fx.fillStyle(0x0c1d29, 0.23 * alpha);
-            const shadowA = world(28, side * -38);
-            const shadowB = world(126, side * 30);
-            const shadowC = world(96, side * 54);
-            fx.fillTriangle(shadowA.x, shadowA.y, shadowB.x, shadowB.y, shadowC.x, shadowC.y);
+            if (fx) {
+                fx.clear();
+                fx.fillStyle(0x0c1d29, 0.23 * alpha);
+                const shadowA = world(28, side * -38);
+                const shadowB = world(126, side * 30);
+                const shadowC = world(96, side * 54);
+                fx.fillTriangle(shadowA.x, shadowA.y, shadowB.x, shadowB.y, shadowC.x, shadowC.y);
 
-            for (let i = 0; i < 4; i++) {
-                const lane = side * (-24 + i * 16);
-                const start = world(20 + eased * 6, lane - side * 22);
-                const mid = world(68 + eased * 22, lane + side * 2);
-                const end = world(118 + eased * 8, lane + side * 20);
-                const lineAlpha = (0.9 - i * 0.08) * alpha;
-                fx.lineStyle(13, effectColor, 0.18 * lineAlpha);
-                fx.lineBetween(start.x, start.y, mid.x, mid.y);
-                fx.lineBetween(mid.x, mid.y, end.x, end.y);
-                fx.lineStyle(6, glowColor, 0.62 * lineAlpha);
-                fx.lineBetween(start.x, start.y, mid.x, mid.y);
-                fx.lineBetween(mid.x, mid.y, end.x, end.y);
-                fx.lineStyle(2, 0xffffff, 0.86 * lineAlpha);
-                fx.lineBetween(mid.x, mid.y, end.x, end.y);
+                for (let i = 0; i < 4; i++) {
+                    const lane = side * (-24 + i * 16);
+                    const start = world(20 + eased * 6, lane - side * 22);
+                    const mid = world(68 + eased * 22, lane + side * 2);
+                    const end = world(118 + eased * 8, lane + side * 20);
+                    const lineAlpha = (0.9 - i * 0.08) * alpha;
+                    fx.lineStyle(13, effectColor, 0.18 * lineAlpha);
+                    fx.lineBetween(start.x, start.y, mid.x, mid.y);
+                    fx.lineBetween(mid.x, mid.y, end.x, end.y);
+                    fx.lineStyle(6, glowColor, 0.62 * lineAlpha);
+                    fx.lineBetween(start.x, start.y, mid.x, mid.y);
+                    fx.lineBetween(mid.x, mid.y, end.x, end.y);
+                    fx.lineStyle(2, 0xffffff, 0.86 * lineAlpha);
+                    fx.lineBetween(mid.x, mid.y, end.x, end.y);
+                }
+
+                const impact = world(118, side * 20);
+                fx.lineStyle(2, glowColor, 0.54 * alpha);
+                fx.strokeCircle(impact.x, impact.y, 18 + eased * 12);
             }
-
-            const impact = world(118, side * 20);
-            fx.lineStyle(2, glowColor, 0.54 * alpha);
-            fx.strokeCircle(impact.x, impact.y, 18 + eased * 12);
 
             if (swipeSprite) {
                 swipeSprite.setPosition(originX + cosA * (70 + eased * 12), originY + sinA * (70 + eased * 12));
@@ -747,6 +753,7 @@ export class BasicDagger extends WeaponBase {
         const endX = originX + cosA * targetDist;
         const endY = originY + sinA * targetDist;
         const effectTexture = this._getConfiguredEffectTexture();
+        const usesImageEffect = !!effectTexture;
         const effectColor = this.getEffectColor(0xff7a34);
         const glowColor = this.getEffectGlowColor(0xffd86a);
         const projectile = effectTexture
@@ -756,14 +763,15 @@ export class BasicDagger extends WeaponBase {
                 .setRotation(baseAngle)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : this.scene.add.circle(startX, startY, 13, effectColor, 0.95).setDepth(14);
-        const trailFx = this.scene.add.graphics().setDepth(13);
+        const trailFx = usesImageEffect ? null : this.scene.add.graphics().setDepth(13);
         const hitEnemies = new Set();
         const impactRadius = this.config.impactRadius ?? 38;
         const maxHits = this.config.maxHits ?? 2;
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects([projectile, trailFx]);
+        const entry = this._trackAttackObjects([projectile, trailFx].filter(Boolean));
 
         const spawnTrail = () => {
+            if (usesImageEffect) return;
             const x = projectile.x - cosA * 12 + Phaser.Math.Between(-3, 3);
             const y = projectile.y - sinA * 12 + Phaser.Math.Between(-3, 3);
             const ember = this.scene.add.circle(x, y, Phaser.Math.Between(3, 7), effectColor, 0.45)
@@ -802,6 +810,8 @@ export class BasicDagger extends WeaponBase {
                     },
                 });
             }
+
+            if (usesImageEffect) return;
 
             const sparkFx = this.scene.add.graphics().setDepth(16);
             entry.objects.push(sparkFx);
