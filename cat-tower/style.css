@@ -763,48 +763,129 @@ h1 {
 }
 
 /* ---------- 랭킹 모달 ---------- */
-.rank-body { max-width: 400px; max-height: calc(100vh - 48px); }
+.rank-body {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  max-width: 410px;
+  max-height: calc(100vh - 48px);
+  padding: 28px 22px 20px;
+  background-color: #FFF7E9;
+  background-image:
+    linear-gradient(180deg, rgba(255, 251, 241, 0.36), rgba(255, 247, 233, 0.72)),
+    url("assets/ui/rank-popup-frame.webp");
+  background-size: cover;
+  background-position: center;
+  border-color: var(--line);
+  box-shadow:
+    0 6px 0 0 var(--line),
+    0 16px 28px rgba(58, 41, 32, 0.24),
+    inset 0 1px 0 rgba(255,255,255,0.65);
+}
+.rank-body > * {
+  position: relative;
+  z-index: 1;
+}
+.rank-body::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 82px 19px 72px;
+  border: 2px solid rgba(58, 41, 32, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 251, 241, 0.58);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.58),
+    inset 0 -8px 18px rgba(232, 90, 79, 0.06);
+  pointer-events: none;
+}
 .rank-content {
   min-height: 240px;
   max-height: 60vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 4px 2px;
+  gap: 7px;
+  padding: 10px 8px;
+  border: 2px solid rgba(58, 41, 32, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 251, 241, 0.66);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(58, 41, 32, 0.28) transparent;
 }
 .rank-loading, .rank-empty, .rank-error {
-  padding: 40px 10px;
+  display: grid;
+  min-height: 168px;
+  place-items: center;
+  padding: 28px 12px;
   text-align: center;
   color: var(--ink-soft);
   font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
 }
 .rank-error { color: var(--accent-dark); }
 .rank-title {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  align-self: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 7px 18px 8px;
+  border: 2px solid rgba(58, 41, 32, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 244, 214, 0.82);
+  box-shadow:
+    0 3px 0 rgba(58, 41, 32, 0.16),
+    inset 0 1px 0 rgba(255,255,255,0.72);
 }
 .rank-row {
   display: grid;
-  grid-template-columns: 42px 1fr auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--bg-soft);
-  border: 2px solid rgba(58, 41, 32, 0.1);
-  border-radius: var(--radius-sm);
+  gap: 9px;
+  min-height: 42px;
+  padding: 8px 12px 8px 8px;
+  background: rgba(255, 251, 241, 0.88);
+  border: 2px solid rgba(58, 41, 32, 0.11);
+  border-radius: 12px;
   font-size: var(--rank-row-font-size);
+  box-shadow:
+    0 2px 0 rgba(58, 41, 32, 0.11),
+    inset 0 1px 0 rgba(255,255,255,0.65);
 }
-.rank-row.top1 { background: #FFF4D6; border-color: var(--yellow); }
-.rank-row.top2 { background: #F2F2F2; border-color: #B5B5B5; }
-.rank-row.top3 { background: #FBE2D5; border-color: #D78A52; }
-.rank-row.me { border-color: var(--accent); background: #FFF0EC; }
+.rank-row.top1 { background: rgba(255, 244, 214, 0.95); border-color: var(--yellow); }
+.rank-row.top2 { background: rgba(242, 245, 241, 0.95); border-color: #A9B7A2; }
+.rank-row.top3 { background: rgba(251, 226, 213, 0.95); border-color: #D78A52; }
+.rank-row.me { border-color: var(--accent); background: rgba(255, 240, 236, 0.96); }
 .rank-pos {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 28px;
+  margin-inline: auto;
+  border: 2px solid rgba(58, 41, 32, 0.18);
+  border-radius: 999px;
+  background: rgba(245, 233, 212, 0.82);
   font-weight: 800;
   font-size: 16px;
   text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
+}
+.rank-row.top1 .rank-pos {
+  width: 36px;
+  background: var(--yellow);
+  border-color: var(--line);
+  box-shadow: 0 2px 0 rgba(58, 41, 32, 0.2), inset 0 1px 0 rgba(255,255,255,0.42);
+}
+.rank-row.top2 .rank-pos { background: #DDE7D8; }
+.rank-row.top3 .rank-pos { background: #F1C0A4; }
+.rank-row.me .rank-pos { background: #FFD8D2; border-color: var(--accent); }
+.rank-row.top1 .rank-name,
+.rank-row.top1 .rank-score {
+  color: #3B2517;
 }
 .rank-name {
   font-weight: 700;
@@ -818,6 +899,7 @@ h1 {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   color: var(--ink);
+  padding-left: 8px;
 }
 
 /* ---------- 랭킹 제출 (게임오버) ---------- */
@@ -1196,6 +1278,19 @@ body {
   border-width: 4px;
   border-radius: 18px;
   box-shadow: 0 6px 0 0 #2D1A0E, inset 0 1px 0 rgba(255,255,255,0.38);
+}
+
+.rank-body {
+  background-color: #FFF7E9;
+  background-image:
+    linear-gradient(180deg, rgba(255, 251, 241, 0.36), rgba(255, 247, 233, 0.72)),
+    url("assets/ui/rank-popup-frame.webp");
+  background-size: cover;
+  background-position: center;
+  box-shadow:
+    0 6px 0 0 #2D1A0E,
+    0 16px 28px rgba(58, 41, 32, 0.24),
+    inset 0 1px 0 rgba(255,255,255,0.65);
 }
 
 .btn {

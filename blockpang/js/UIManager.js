@@ -1412,17 +1412,36 @@ class UIManager {
         const panelH = Math.min(h * 0.62, 420);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
+        const resultFrameTexture = getBlockpangTexture('rankPopupFrame');
 
-        const panel = new PIXI.Graphics();
-        // Soft shadow
-        panel.roundRect(panelX + 2, panelY + 6, panelW, panelH, 20)
-             .fill({ color: THEME.shadow, alpha: 0.12 });
-        // Card surface
-        panel.roundRect(panelX, panelY, panelW, panelH, 20)
-             .fill({ color: THEME.surface });
-        panel.roundRect(panelX, panelY, panelW, panelH, 20)
-             .stroke({ width: 1, color: THEME.divider, alpha: 1 });
+        let panel;
+        if (resultFrameTexture) {
+            panel = new PIXI.Sprite(resultFrameTexture);
+            panel.anchor.set(0.5);
+            panel.position.set(w / 2, panelY + panelH / 2);
+            panel.width = panelW + 30;
+            panel.height = panelH + 38;
+            panel.alpha = 0.98;
+            panel.eventMode = 'static';
+        } else {
+            panel = new PIXI.Graphics();
+            panel.roundRect(panelX + 2, panelY + 6, panelW, panelH, 20)
+                 .fill({ color: THEME.shadow, alpha: 0.12 });
+            panel.roundRect(panelX, panelY, panelW, panelH, 20)
+                 .fill({ color: THEME.surface });
+            panel.roundRect(panelX, panelY, panelW, panelH, 20)
+                 .stroke({ width: 1, color: THEME.divider, alpha: 1 });
+        }
         overlay.addChild(panel);
+
+        if (resultFrameTexture) {
+            const readable = new PIXI.Graphics();
+            readable.roundRect(panelX + 30, panelY + 70, panelW - 60, panelH - 150, 16)
+                .fill({ color: THEME.bgDeep, alpha: 0.28 });
+            readable.roundRect(panelX + 32, panelY + 72, panelW - 64, panelH - 154, 14)
+                .stroke({ width: 1, color: THEME.secondary, alpha: 0.18 });
+            overlay.addChild(readable);
+        }
 
         const centerX = w / 2;
         let yOff = panelY + 36;
@@ -1735,40 +1754,66 @@ class UIManager {
         const panelH = Math.min(h * 0.85, 600);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
-
-        const panel = new PIXI.Graphics();
-        panel.roundRect(panelX + 4, panelY + 10, panelW, panelH, 18)
-             .fill({ color: THEME.shadow, alpha: 0.42 });
-        panel.roundRect(panelX - 2, panelY - 2, panelW + 4, panelH + 4, 20)
-             .stroke({ width: 2, color: THEME.secondary, alpha: 0.22 });
-        panel.roundRect(panelX, panelY, panelW, panelH, 18)
-             .fill({ color: THEME.surface, alpha: 0.94 });
-        panel.roundRect(panelX + 4, panelY + 4, panelW - 8, Math.max(48, panelH * 0.13), 14)
-             .fill({ color: THEME.surfaceAlt, alpha: 0.46 });
-        panel.roundRect(panelX + 10, panelY + 8, panelW - 20, 4, 3)
-             .fill({ color: THEME.secondary, alpha: 0.28 });
-        panel.roundRect(panelX, panelY, panelW, panelH, 18)
-             .stroke({ width: 1.6, color: THEME.secondary, alpha: 0.72 });
-        const bracket = Math.min(36, panelW * 0.12);
-        const inset = 10;
-        panel.moveTo(panelX + inset, panelY + inset + 16)
-             .lineTo(panelX + inset, panelY + inset)
-             .lineTo(panelX + inset + bracket, panelY + inset)
-             .moveTo(panelX + panelW - inset - bracket, panelY + inset)
-             .lineTo(panelX + panelW - inset, panelY + inset)
-             .lineTo(panelX + panelW - inset, panelY + inset + 16)
-             .moveTo(panelX + inset, panelY + panelH - inset - 16)
-             .lineTo(panelX + inset, panelY + panelH - inset)
-             .lineTo(panelX + inset + bracket, panelY + panelH - inset)
-             .moveTo(panelX + panelW - inset - bracket, panelY + panelH - inset)
-             .lineTo(panelX + panelW - inset, panelY + panelH - inset)
-             .lineTo(panelX + panelW - inset, panelY + panelH - inset - 16)
-             .stroke({ width: 2.2, color: THEME.gold, alpha: 0.7 });
-        panel.eventMode = 'static';
-        overlay.addChild(panel);
-
         const centerX = w / 2;
-        let yOff = panelY + 26;
+        const rankFrameTexture = getBlockpangTexture('rankPopupFrame');
+
+        if (rankFrameTexture) {
+            const panelArtW = panelW + 26;
+            const panelArtH = panelH + 34;
+            const panelArt = new PIXI.Sprite(rankFrameTexture);
+            panelArt.anchor.set(0.5);
+            panelArt.position.set(centerX, panelY + panelH / 2);
+            panelArt.width = panelArtW;
+            panelArt.height = panelArtH;
+            panelArt.alpha = 0.98;
+            panelArt.eventMode = 'static';
+            panelArt.hitArea = new PIXI.Rectangle(-panelArtW / 2, -panelArtH / 2, panelArtW, panelArtH);
+            overlay.addChild(panelArt);
+
+            const readable = new PIXI.Graphics();
+            const innerPadX = Math.max(22, panelW * 0.06);
+            const innerY = panelY + Math.max(82, panelH * 0.15);
+            const innerBottom = panelY + panelH - 66;
+            const innerH = Math.max(140, innerBottom - innerY - 16);
+            readable.roundRect(panelX + innerPadX, innerY, panelW - innerPadX * 2, innerH, 16)
+                .fill({ color: THEME.bgDeep, alpha: 0.36 });
+            readable.roundRect(panelX + innerPadX + 2, innerY + 2, panelW - innerPadX * 2 - 4, innerH - 4, 14)
+                .stroke({ width: 1.2, color: THEME.secondary, alpha: 0.2 });
+            overlay.addChild(readable);
+        } else {
+            const panel = new PIXI.Graphics();
+            panel.roundRect(panelX + 4, panelY + 10, panelW, panelH, 18)
+                 .fill({ color: THEME.shadow, alpha: 0.42 });
+            panel.roundRect(panelX - 2, panelY - 2, panelW + 4, panelH + 4, 20)
+                 .stroke({ width: 2, color: THEME.secondary, alpha: 0.22 });
+            panel.roundRect(panelX, panelY, panelW, panelH, 18)
+                 .fill({ color: THEME.surface, alpha: 0.94 });
+            panel.roundRect(panelX + 4, panelY + 4, panelW - 8, Math.max(48, panelH * 0.13), 14)
+                 .fill({ color: THEME.surfaceAlt, alpha: 0.46 });
+            panel.roundRect(panelX + 10, panelY + 8, panelW - 20, 4, 3)
+                 .fill({ color: THEME.secondary, alpha: 0.28 });
+            panel.roundRect(panelX, panelY, panelW, panelH, 18)
+                 .stroke({ width: 1.6, color: THEME.secondary, alpha: 0.72 });
+            const bracket = Math.min(36, panelW * 0.12);
+            const inset = 10;
+            panel.moveTo(panelX + inset, panelY + inset + 16)
+                 .lineTo(panelX + inset, panelY + inset)
+                 .lineTo(panelX + inset + bracket, panelY + inset)
+                 .moveTo(panelX + panelW - inset - bracket, panelY + inset)
+                 .lineTo(panelX + panelW - inset, panelY + inset)
+                 .lineTo(panelX + panelW - inset, panelY + inset + 16)
+                 .moveTo(panelX + inset, panelY + panelH - inset - 16)
+                 .lineTo(panelX + inset, panelY + panelH - inset)
+                 .lineTo(panelX + inset + bracket, panelY + panelH - inset)
+                 .moveTo(panelX + panelW - inset - bracket, panelY + panelH - inset)
+                 .lineTo(panelX + panelW - inset, panelY + panelH - inset)
+                 .lineTo(panelX + panelW - inset, panelY + panelH - inset - 16)
+                 .stroke({ width: 2.2, color: THEME.gold, alpha: 0.7 });
+            panel.eventMode = 'static';
+            overlay.addChild(panel);
+        }
+
+        let yOff = panelY + (rankFrameTexture ? 32 : 26);
 
         // Title
         const title = new PIXI.Text({
@@ -2013,21 +2058,42 @@ class UIManager {
         const panelH = Math.min(240, h * 0.42);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
+        const nameFrameTexture = getBlockpangTexture('rankPopupFrame');
 
-        const panel = new PIXI.Graphics();
-        panel.roundRect(panelX + 4, panelY + 10, panelW, panelH, 18)
-             .fill({ color: THEME.shadow, alpha: 0.42 });
-        panel.roundRect(panelX - 2, panelY - 2, panelW + 4, panelH + 4, 20)
-             .stroke({ width: 2, color: THEME.secondary, alpha: 0.2 });
-        panel.roundRect(panelX, panelY, panelW, panelH, 18)
-             .fill({ color: THEME.surface, alpha: 0.95 });
-        panel.roundRect(panelX + 5, panelY + 5, panelW - 10, 46, 14)
-             .fill({ color: THEME.surfaceAlt, alpha: 0.44 });
-        panel.roundRect(panelX + 10, panelY + 8, panelW - 20, 4, 3)
-             .fill({ color: THEME.secondary, alpha: 0.26 });
-        panel.roundRect(panelX, panelY, panelW, panelH, 18)
-             .stroke({ width: 1.5, color: THEME.secondary, alpha: 0.68 });
+        let panel;
+        if (nameFrameTexture) {
+            panel = new PIXI.Sprite(nameFrameTexture);
+            panel.anchor.set(0.5);
+            panel.position.set(w / 2, panelY + panelH / 2);
+            panel.width = panelW + 28;
+            panel.height = panelH + 34;
+            panel.alpha = 0.98;
+            panel.eventMode = 'static';
+        } else {
+            panel = new PIXI.Graphics();
+            panel.roundRect(panelX + 4, panelY + 10, panelW, panelH, 18)
+                 .fill({ color: THEME.shadow, alpha: 0.42 });
+            panel.roundRect(panelX - 2, panelY - 2, panelW + 4, panelH + 4, 20)
+                 .stroke({ width: 2, color: THEME.secondary, alpha: 0.2 });
+            panel.roundRect(panelX, panelY, panelW, panelH, 18)
+                 .fill({ color: THEME.surface, alpha: 0.95 });
+            panel.roundRect(panelX + 5, panelY + 5, panelW - 10, 46, 14)
+                 .fill({ color: THEME.surfaceAlt, alpha: 0.44 });
+            panel.roundRect(panelX + 10, panelY + 8, panelW - 20, 4, 3)
+                 .fill({ color: THEME.secondary, alpha: 0.26 });
+            panel.roundRect(panelX, panelY, panelW, panelH, 18)
+                 .stroke({ width: 1.5, color: THEME.secondary, alpha: 0.68 });
+        }
         overlay.addChild(panel);
+
+        if (nameFrameTexture) {
+            const readable = new PIXI.Graphics();
+            readable.roundRect(panelX + 28, panelY + 62, panelW - 56, panelH - 132, 14)
+                .fill({ color: THEME.bgDeep, alpha: 0.32 });
+            readable.roundRect(panelX + 30, panelY + 64, panelW - 60, panelH - 136, 12)
+                .stroke({ width: 1, color: THEME.secondary, alpha: 0.16 });
+            overlay.addChild(readable);
+        }
 
         const centerX = w / 2;
         let yOff = panelY + 24;
