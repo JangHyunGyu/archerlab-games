@@ -314,7 +314,6 @@ export const WEAPONS = {
         baseCooldown: 1200,
         baseCount: 1,
         projectileRange: 1150,
-        maxPierces: 3,
         minHitRadius: 24,
         levelBonuses: {
             2: { damage: 10 },
@@ -627,7 +626,6 @@ Object.assign(WEAPONS, {
         baseCooldown: 1900,
         projectileRange: 950,
         projectileDuration: 920,
-        maxPierces: 1,
         minHitRadius: 30,
         explosionRadius: 80,
         explosionDamageMult: 0.32,
