@@ -65,15 +65,18 @@ export class ShadowSlash extends WeaponBase {
         }
     }
 
+    _getAimAngle(acquireRange) {
+        const target = this.player.getClosestEnemy(acquireRange);
+        const fallbackAngle = this.player.moveIntensity > 0.12
+            ? this.player.lastMoveAngle
+            : (this.player.facingRight ? 0 : Math.PI);
+        return target
+            ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
+            : fallbackAngle;
+    }
+
     _doSlash(angleOffset) {
-        const target = this.player.getClosestEnemy((this.config.acquireRange || 360) + this.extraRange);
-        let angle;
-        if (target) {
-            angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
-        } else {
-            angle = this.player.facingRight ? 0 : Math.PI;
-        }
-        angle += angleOffset;
+        const angle = this._getAimAngle((this.config.acquireRange || 360) + this.extraRange) + angleOffset;
 
         const range = (this.config.slashRange || 350) + this.extraRange;
         const slashDist = range * (this.config.slashDistanceRatio ?? 0.45);
@@ -277,11 +280,7 @@ export class ShadowSlash extends WeaponBase {
     }
 
     _doLinePierce() {
-        const target = this.player.getClosestEnemy((this.config.acquireRange || 540) + this.extraRange);
-        let angle = this.player.facingRight ? 0 : Math.PI;
-        if (target) {
-            angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
-        }
+        const angle = this._getAimAngle((this.config.acquireRange || 540) + this.extraRange);
 
         const px = this.player.x;
         const py = this.player.y - 8;
