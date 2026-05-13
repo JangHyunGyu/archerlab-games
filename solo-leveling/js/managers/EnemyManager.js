@@ -407,7 +407,7 @@ export class EnemyManager {
     // --- Spawning ---
     _spawnOpeningWave() {
         if (!this.scene?.player || this.scene.player.isDead) return;
-        const openingTypes = ['goblin', 'goblin', 'goblin', 'antSoldier', 'antSoldier'];
+        const openingTypes = ['goblin', 'goblin', 'antSoldier'];
         for (let i = 0; i < openingTypes.length; i++) {
             const pos = this._getSpawnPosition(72, 140);
             this._spawnEnemy(openingTypes[i], pos.x, pos.y);
