@@ -273,8 +273,8 @@ export const WAVE_CONFIG = {
     baseSpawnInterval: 1250,
     minSpawnInterval: 280,
     spawnReductionPerMinute: 80,
-    baseEnemiesPerSpawn: 3,
-    extraEnemiesPerMinute: 1.0,
+    baseEnemiesPerSpawn: 2,
+    extraEnemiesPerMinute: 0.85,
     maxEnemiesOnScreen: 110,
     difficultyMultiplierPerMinute: 0.15,
 };
