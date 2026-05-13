@@ -520,15 +520,25 @@ export class GameScene extends Phaser.Scene {
             `${bossConfig.name}${t('bossAppeared')}`,
         ], { duration: 3000, type: 'warning' });
 
-        // Boss-player collision (with active check, store collider for cleanup)
-        const bossCollider = this.physics.add.overlap(this.player, boss, () => {
-            if (!boss.active || !this.player.active) return;
-            this.player.takeDamage(boss.attack);
-        });
-        boss._playerCollider = bossCollider;
+        this._setupBossPlayerCollision(boss);
 
         // Weapon-boss collision for current weapons
         this._setupWeaponBossCollisions(boss);
+    }
+
+    _setupBossPlayerCollision(boss) {
+        if (!boss || !this.player) return;
+
+        boss._playerCollider = this.physics.add.collider(
+            this.player,
+            boss,
+            () => {
+                if (!boss.active || !this.player.active) return;
+                this.player.takeDamage(boss.attack);
+            },
+            () => boss.active && this.player.active,
+            this
+        );
     }
 
     _setupWeaponBossCollisions(boss) {
@@ -1033,11 +1043,7 @@ export class GameScene extends Phaser.Scene {
             if (Number.isFinite(saved.speed)) boss.speed = saved.speed;
             boss.phase = saved.phase === 2 ? 2 : 1;
 
-            const bossCollider = this.physics.add.overlap(this.player, boss, () => {
-                if (!boss.active || !this.player.active) return;
-                this.player.takeDamage(boss.attack);
-            });
-            boss._playerCollider = bossCollider;
+            this._setupBossPlayerCollision(boss);
             this.activeBosses.push(boss);
             this._setupWeaponBossCollisions(boss);
         }
