@@ -74,7 +74,6 @@ export class ShadowDagger extends WeaponBase {
         const usesImageEffect = useCharacterEffect || useEffectAsset;
         const suppressTrailFx = this.config.imageOnlyVfx || usesImageEffect;
         const textureKey = effectTexture || (useEffectAsset ? 'effect_shadow_dagger' : 'proj_dagger');
-        const maxPierces = this.config.maxPierces ?? Infinity;
         const hitRadiusScale = this.config.hitRadiusScale ?? 0.35;
         const minHitRadius = this.config.minHitRadius ?? 25;
         const explosionRadius = this.config.explosionRadius || 0;
@@ -155,7 +154,6 @@ export class ShadowDagger extends WeaponBase {
         const tryPierceTarget = (currentTarget) => {
             if (!currentTarget || !currentTarget.active) return false;
             if (currentTarget.isBoss && currentTarget.isInvincible) return false;
-            if (piercedTargets.size >= maxPierces) return false;
 
             const targetKey = getTargetKey(currentTarget);
             if (piercedTargets.has(targetKey)) return false;
