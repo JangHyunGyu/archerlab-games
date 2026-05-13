@@ -127,6 +127,15 @@
             inset: 0;
             opacity: 0.15;
         }
+        .game-thumb picture,
+        .game-thumb img {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .game-thumb img {
+            object-fit: cover;
+        }
         .game-info {
             padding: 20px;
         }
@@ -160,11 +169,6 @@
         .blockpang .game-thumb {
             background: linear-gradient(135deg, #0a1628 0%, #0d2847 50%, #1a0a2e 100%);
         }
-        .blockpang .game-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
         .blockpang .game-tag {
             background: #00e5ff22;
             color: #00e5ff;
@@ -176,11 +180,6 @@
         .solo-leveling .game-thumb {
             background: linear-gradient(135deg, #1a0a2e 0%, #2a1050 100%);
         }
-        .solo-leveling .game-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
         .solo-leveling .game-tag {
             background: #7b2fff22;
             color: #b366ff;
@@ -189,34 +188,6 @@
         .slimevolley .game-thumb {
             background: linear-gradient(135deg, #0a2e1a 0%, #1a4e2e 50%, #0a1a2e 100%);
             position: relative;
-        }
-        .slimevolley .game-thumb-content {
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 30px;
-            height: 100%;
-            padding-bottom: 30px;
-        }
-        .slimevolley .sv-slime {
-            width: 50px;
-            height: 25px;
-            border-radius: 50px 50px 0 0;
-        }
-        .slimevolley .sv-slime.blue { background: #4FC3F7; }
-        .slimevolley .sv-slime.red { background: #EF5350; }
-        .slimevolley .sv-ball {
-            width: 22px;
-            height: 22px;
-            background: #FFEB3B;
-            border-radius: 50%;
-            margin-bottom: 30px;
-        }
-        .slimevolley .sv-net {
-            width: 4px;
-            height: 60px;
-            background: #ccc;
-            align-self: flex-end;
         }
         .slimevolley .game-tag {
             background: #4FC3F722;
@@ -228,11 +199,6 @@
         }
         .cat-tower .game-thumb {
             background: linear-gradient(135deg, #F5E9D4 0%, #FBF2E0 45%, #F4A15C 100%);
-        }
-        .cat-tower .game-thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
         .cat-tower .game-tag {
             background: #E85A4F22;
@@ -257,7 +223,10 @@
     <div class="games-grid">
         <a href="blockpang/" class="game-card blockpang">
             <div class="game-thumb">
-                <img src="blockpang/blox_pang_link.png" alt="블럭팡 - 블록 퍼즐 게임">
+                <picture>
+                    <source srcset="https://archerlab.dev/assets/images/blox_pang_link.webp?v=1" type="image/webp">
+                    <img src="https://archerlab.dev/assets/images/blox_pang_link.png?v=1" alt="블럭팡 - 블록 퍼즐 게임" loading="lazy" decoding="async">
+                </picture>
             </div>
             <div class="game-info">
                 <h2>블럭팡</h2>
@@ -268,7 +237,10 @@
 
         <a href="solo-leveling/" class="game-card solo-leveling">
             <div class="game-thumb">
-                <img src="https://archerlab.dev/assets/images/solo-leveling_link.png" alt="그림자 서바이벌 - 2D 던전 서바이벌 게임">
+                <picture>
+                    <source srcset="https://archerlab.dev/assets/images/solo-leveling_link.webp?v=3" type="image/webp">
+                    <img src="https://archerlab.dev/assets/images/solo-leveling_link.png?v=3" alt="그림자 서바이벌 - 2D 던전 서바이벌 게임" loading="lazy" decoding="async">
+                </picture>
             </div>
             <div class="game-info">
                 <h2>그림자 서바이벌</h2>
@@ -278,7 +250,10 @@
         </a>
         <a href="cat-tower/" class="game-card cat-tower">
             <div class="game-thumb">
-                <img src="cat-tower/cat-tower_link.png" alt="고양이 타워 - 합성 퍼즐 게임">
+                <picture>
+                    <source srcset="https://archerlab.dev/assets/images/cat-tower_link.webp?v=3" type="image/webp">
+                    <img src="https://archerlab.dev/assets/images/cat-tower_link.png?v=3" alt="고양이 타워 - 합성 퍼즐 게임" loading="lazy" decoding="async">
+                </picture>
             </div>
             <div class="game-info">
                 <h2>고양이 타워</h2>
@@ -288,12 +263,10 @@
         </a>
         <a href="slimevolley/" class="game-card slimevolley">
             <div class="game-thumb">
-                <div class="game-thumb-content">
-                    <div class="sv-slime blue"></div>
-                    <div class="sv-ball"></div>
-                    <div class="sv-net"></div>
-                    <div class="sv-slime red"></div>
-                </div>
+                <picture>
+                    <source srcset="https://archerlab.dev/assets/images/slimevolley_link.webp" type="image/webp">
+                    <img src="https://archerlab.dev/assets/images/slimevolley_link.png" alt="Slime Volley - 슬라임 배구 멀티플레이어 게임" loading="lazy" decoding="async">
+                </picture>
             </div>
             <div class="game-info">
                 <h2>Slime Volley</h2>
