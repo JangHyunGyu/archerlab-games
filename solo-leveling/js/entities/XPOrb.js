@@ -9,8 +9,6 @@ export class XPOrbPool {
         this._batchSize = options.batchSize ?? 12;
         this._batchDelay = options.batchDelay ?? 70;
         this._warmTimer = null;
-        this._pickupFx = new Set();
-        this._nextTrailAt = 0;
 
         const initialSize = Math.min(options.initialSize ?? 80, this._targetWarmSize);
         this._createInactiveOrbs(initialSize);
@@ -75,7 +73,6 @@ export class XPOrbPool {
             orb.setVisible(true);
             orb.body.enable = true;
             orb.xpValue = xpPerOrb;
-            orb._lastTrailAt = 0;
             orb.setDepth(4);
             orb.setAlpha(0.9);
             orb.setScale(isLarge ? 1.2 : 0.8);
@@ -125,7 +122,6 @@ export class XPOrbPool {
                     Math.cos(angle) * speed,
                     Math.sin(angle) * speed
                 );
-                this._maybeSpawnTrail(orb, angle, dist, pickupRange);
             }
 
             // Collect
@@ -136,14 +132,9 @@ export class XPOrbPool {
     }
 
     _collect(orb, player) {
-        const collectX = orb.x;
-        const collectY = orb.y;
-        const collectScale = orb.xpValue >= 30 ? 0.46 : 0.34;
         const leveled = player.addXP(orb.xpValue);
 
         if (this.scene.soundManager) this.scene.soundManager.play('xp');
-
-        this._spawnCollectEffect(collectX, collectY, collectScale);
 
         orb.setActive(false);
         orb.setVisible(false);
@@ -153,78 +144,6 @@ export class XPOrbPool {
         if (leveled) {
             this.scene.onLevelUp();
         }
-    }
-
-    _maybeSpawnTrail(orb, angle, dist, pickupRange) {
-        if (dist < pickupRange * 1.15) return;
-        if (!this.scene?.textures?.exists('effect_pickup_xp_trail')) return;
-
-        const now = this.scene.time?.now ?? 0;
-        if (now < this._nextTrailAt) return;
-        if (orb._lastTrailAt && now - orb._lastTrailAt < 180) return;
-
-        this._nextTrailAt = now + 45;
-        orb._lastTrailAt = now;
-        this._spawnTrailEffect(orb.x, orb.y, angle);
-    }
-
-    _spawnTrailEffect(x, y, angle) {
-        const trail = this._createPickupFx(x, y, 'effect_pickup_xp_trail', {
-            depth: 3.8,
-            alpha: 0.36,
-            scale: 0.18,
-            rotation: angle,
-        });
-        if (!trail) return;
-
-        this.scene.tweens.add({
-            targets: trail,
-            alpha: 0,
-            scaleX: 0.08,
-            scaleY: 0.08,
-            duration: 210,
-            ease: 'Quad.easeOut',
-            onComplete: () => this._destroyPickupFx(trail),
-        });
-    }
-
-    _spawnCollectEffect(x, y, scale) {
-        const burst = this._createPickupFx(x, y, 'effect_pickup_xp_collect', {
-            depth: 15,
-            alpha: 0.9,
-            scale,
-            rotation: Phaser.Math.FloatBetween(-0.25, 0.25),
-        });
-        if (!burst) return;
-
-        this.scene.tweens.add({
-            targets: burst,
-            alpha: 0,
-            scaleX: scale * 1.45,
-            scaleY: scale * 1.45,
-            angle: burst.angle + Phaser.Math.Between(-18, 18),
-            duration: 260,
-            ease: 'Quad.easeOut',
-            onComplete: () => this._destroyPickupFx(burst),
-        });
-    }
-
-    _createPickupFx(x, y, textureKey, { depth, alpha, scale, rotation }) {
-        if (!this.scene?.textures?.exists(textureKey)) return null;
-        const sprite = this.scene.add.sprite(x, y, textureKey)
-            .setDepth(depth)
-            .setAlpha(alpha)
-            .setScale(scale)
-            .setRotation(rotation)
-            .setBlendMode(Phaser.BlendModes.ADD);
-        this._pickupFx.add(sprite);
-        return sprite;
-    }
-
-    _destroyPickupFx(sprite) {
-        if (!sprite) return;
-        this._pickupFx?.delete(sprite);
-        if (sprite.scene) sprite.destroy();
     }
 
     getGroup() {
@@ -244,16 +163,8 @@ export class XPOrbPool {
                     if (tweens) tweens.killTweensOf(orb);
                 });
             }
-            if (this._pickupFx) {
-                this._pickupFx.forEach(sprite => {
-                    if (tweens) tweens.killTweensOf(sprite);
-                    if (sprite?.scene) sprite.destroy();
-                });
-                this._pickupFx.clear();
-            }
             if (this.group) this.group.clear(true, true);
         } catch (e) { /* group already destroyed by scene shutdown */ }
-        this._pickupFx = null;
         this.group = null;
         this.scene = null;
     }
