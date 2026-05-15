@@ -1,6 +1,6 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 
-const DEFAULT_BOSS_SPECIAL_COOLDOWN = { phase1: 5200, phase2: 3800 };
+const DEFAULT_BOSS_SPECIAL_COOLDOWN = { phase1: 6400, phase2: 5000 };
 const BOSS_SPECIAL_RETRY_DELAY = 700;
 
 export class Boss extends Phaser.Physics.Arcade.Sprite {
