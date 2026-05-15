@@ -118,6 +118,7 @@
   let fieldBgImage = null;
   let mergeParticleImage = null;
   let mergeBurstImage = null;
+  let landingDustImage = null;
   let running = false;
   let gameOver = false;
   let dangerActive = false;
@@ -138,11 +139,15 @@
   const AUTO_SAVE_INTERVAL_MS = 5000;
   const mergeEffects = [];      // 합성 이펙트 파티클
   const bonkCooldown = new Map(); // body.id → 마지막 bonk 시각 (ms) — 연속 충돌 스팸 방지
+  const landingDustEffects = [];
   const BONK_COOLDOWN_MS = 110;
   const BONK_TRIGGER_SPEED = 1.35;
   const MERGE_PARTICLE_CELL = 64;
   const MERGE_BURST_CELL = 192;
   const MERGE_BURST_FRAMES = 8;
+  const LANDING_DUST_CELL = 64;
+  const LANDING_DUST_FRAMES = 6;
+  const LANDING_DUST_MAX = 20;
   const BONK_DROP_GRACE_MS = 0;
 
   // DOM refs
@@ -297,6 +302,8 @@
     mergeParticleImage.src = 'assets/ui/merge-particles.png';
     mergeBurstImage = new Image();
     mergeBurstImage.src = 'assets/ui/merge-burst-sheet.png';
+    landingDustImage = new Image();
+    landingDustImage.src = 'assets/ui/landing-dust-sheet.png';
     resizeCanvas();
     window.addEventListener('resize', () => {
       scheduleFitGameLayout();
@@ -400,6 +407,53 @@
 
   function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
+  }
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function getCollisionPoint(pair) {
+    const supports = pair.collision && pair.collision.supports;
+    if (supports && supports.length) {
+      const validSupports = supports.filter((p) => (
+        p && Number.isFinite(p.x) && Number.isFinite(p.y)
+      ));
+      if (!validSupports.length) {
+        return {
+          x: (pair.bodyA.position.x + pair.bodyB.position.x) / 2,
+          y: (pair.bodyA.position.y + pair.bodyB.position.y) / 2,
+        };
+      }
+      const sum = validSupports.reduce((acc, p) => {
+        acc.x += p.x;
+        acc.y += p.y;
+        return acc;
+      }, { x: 0, y: 0 });
+      return {
+        x: sum.x / validSupports.length,
+        y: sum.y / validSupports.length,
+      };
+    }
+    return {
+      x: (pair.bodyA.position.x + pair.bodyB.position.x) / 2,
+      y: (pair.bodyA.position.y + pair.bodyB.position.y) / 2,
+    };
+  }
+
+  function createLandingDustEffect(pair, intensity, tierIdx) {
+    if (prefersReducedMotion()) return;
+    const p = getCollisionPoint(pair);
+    const tierScale = typeof tierIdx === 'number' ? tierIdx * 0.035 : 0;
+    landingDustEffects.push({
+      x: clamp(p.x, 8, FIELD_W - 8),
+      y: clamp(p.y, 12, FIELD_H - 4),
+      age: 0,
+      max: 16,
+      scale: clamp(0.62 + intensity * 0.82 + tierScale, 0.72, 1.48),
+      flip: Math.random() < 0.5 ? -1 : 1,
+    });
+    if (landingDustEffects.length > LANDING_DUST_MAX) landingDustEffects.shift();
   }
 
   function createMergeEffect(x, y, r, color, isFinal) {
@@ -541,7 +595,7 @@
 
   // merge 아닌 충돌(바닥/벽/다른 티어)에만 짧은 "톡" 재생
   function handleBonk(evt) {
-    if (!sound || gameOver) return;
+    if (gameOver) return;
     const now = performance.now();
     for (const pair of evt.pairs) {
       const a = pair.bodyA, b = pair.bodyB;
@@ -571,7 +625,8 @@
       // 1.35 ~ 10.35 -> 0.2 ~ 1.0
       const intensity = Math.min(1, (speed - BONK_TRIGGER_SPEED) / 9 + 0.2);
       const tier = aIsCat ? a.cat.tier : b.cat.tier;
-      sound.playBonk(intensity, tier);
+      createLandingDustEffect(pair, intensity, tier);
+      sound?.playBonk(intensity, tier);
     }
   }
 
@@ -841,6 +896,46 @@
   }
 
   // -------- 렌더링 --------
+  function drawFallbackLandingDust(effect, t) {
+    const fade = 1 - t;
+    const spread = effect.scale * (0.84 + t * 0.42);
+    ctx.save();
+    ctx.globalAlpha = 0.55 * fade;
+    ctx.fillStyle = '#E0A55D';
+    ctx.beginPath();
+    ctx.ellipse(effect.x - 14 * spread, effect.y - 2, 10 * spread, 5 * spread, 0, 0, Math.PI * 2);
+    ctx.ellipse(effect.x + 1 * spread, effect.y - 5, 14 * spread, 7 * spread, 0, 0, Math.PI * 2);
+    ctx.ellipse(effect.x + 16 * spread, effect.y - 2, 9 * spread, 5 * spread, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.38 * fade;
+    ctx.fillStyle = '#FFF0C8';
+    ctx.beginPath();
+    ctx.ellipse(effect.x - 6 * spread, effect.y - 7, 11 * spread, 5 * spread, 0, 0, Math.PI * 2);
+    ctx.ellipse(effect.x + 10 * spread, effect.y - 7, 10 * spread, 5 * spread, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawLandingDustEffect(effect) {
+    const t = clamp(effect.age / effect.max, 0, 1);
+    if (!landingDustImage || !landingDustImage.complete || landingDustImage.naturalWidth <= 0) {
+      drawFallbackLandingDust(effect, t);
+      return;
+    }
+    const frame = Math.min(LANDING_DUST_FRAMES - 1, Math.floor(t * LANDING_DUST_FRAMES));
+    const size = LANDING_DUST_CELL * effect.scale * (0.9 + t * 0.12);
+    ctx.save();
+    ctx.translate(effect.x, effect.y);
+    ctx.scale(effect.flip, 1);
+    ctx.globalAlpha = Math.max(0, Math.min(1, (1 - t) * 0.78));
+    ctx.drawImage(
+      landingDustImage,
+      frame * LANDING_DUST_CELL, 0, LANDING_DUST_CELL, LANDING_DUST_CELL,
+      -size / 2, -size * 0.72, size, size
+    );
+    ctx.restore();
+  }
+
   function render(bodiesSnapshot = null) {
     // 배경 — 은은한 베이지 + 경계선
     ctx.clearRect(0, 0, FIELD_W, FIELD_H);
@@ -894,6 +989,13 @@
     ctx.strokeStyle = 'rgba(58, 41, 32, 0.12)';
     ctx.lineWidth = 3;
     ctx.strokeRect(1.5, 1.5, FIELD_W - 3, FIELD_H - 3);
+
+    for (let i = landingDustEffects.length - 1; i >= 0; i--) {
+      const e = landingDustEffects[i];
+      e.age++;
+      if (e.age >= e.max) { landingDustEffects.splice(i, 1); continue; }
+      drawLandingDustEffect(e);
+    }
 
     // 고양이
     const bodies = bodiesSnapshot || Composite.allBodies(world);
@@ -1012,6 +1114,7 @@
     saveDirty = false;
     lastAutoSaveAt = 0;
     mergeEffects.length = 0;
+    landingDustEffects.length = 0;
     bonkCooldown.clear();
     nextTier = null;
     _frameCount = 0;
@@ -1059,6 +1162,7 @@
       saveDirty = false;
       lastAutoSaveAt = 0;
       mergeEffects.length = 0;
+      landingDustEffects.length = 0;
       bonkCooldown.clear();
       _frameCount = 0;
       _lastFpsAt = 0;
@@ -1149,6 +1253,7 @@
     if (newRecordTimeoutId) { clearTimeout(newRecordTimeoutId); newRecordTimeoutId = null; }
     if (dropCooldownTimeoutId) { clearTimeout(dropCooldownTimeoutId); dropCooldownTimeoutId = null; }
     sound?.stopAll();
+    landingDustEffects.length = 0;
     hide(modals.gameover);
     hide(screens.game);
     show(screens.menu);
