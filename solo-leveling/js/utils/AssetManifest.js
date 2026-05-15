@@ -85,6 +85,7 @@ const SHADOW_SOLDIER_VFX_KEYS = ['soldier_slash', 'soldier_slam', 'soldier_spit'
 const ENEMY_KEYS = ['goblin', 'antSoldier', 'orc', 'iceBear', 'stoneGolem', 'darkMage', 'ironKnight', 'demonWarrior'];
 const BOSS_KEYS = ['igris', 'tusk', 'beru'];
 const BASE_EFFECT_KEYS = ['shadow_dagger', 'shadow_slash', 'ruler_authority', 'dragon_fear'];
+const PICKUP_EFFECT_KEYS = ['xp_collect', 'xp_trail'];
 const COMBAT_EFFECT_KEYS = ['basic_stab', 'flame_burn', 'monster_hit', 'monster_crit', 'monster_death'];
 const ENEMY_BOSS_EFFECT_KEYS = [
     'dark_mage_orb',
@@ -173,6 +174,7 @@ export function getGameplayAssetList(characterId = getStoredCharacterId()) {
         ...ENEMY_KEYS.map(key => ({ key: `ai_enemy_${key}`, path: `assets/enemies/source/${key}.png` })),
         ...BOSS_KEYS.map(key => ({ key: `ai_boss_${key}`, path: `assets/bosses/source/${key}.png` })),
         ...BASE_EFFECT_KEYS.map(key => ({ key: `effect_${key}`, path: `assets/effects/${key}.png` })),
+        ...PICKUP_EFFECT_KEYS.map(key => ({ key: `effect_pickup_${key}`, path: `assets/effects/pickups/${key}.png` })),
         ...COMBAT_EFFECT_KEYS.flatMap(key => (
             Array.from({ length: 6 }, (_, i) => ({ key: `effect_${key}_${i}`, path: `assets/effects/combat/${key}_${i}.png` }))
         )),

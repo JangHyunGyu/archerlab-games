@@ -284,11 +284,11 @@ class UIManager {
         this._clearTitleTweens();
         this._destroyTitleRoots();
         if (this._nameInputOverlay) {
-            this._nameInputOverlay.destroy({ children: true });
+            this._destroyDynamicTree(this._nameInputOverlay);
             this._nameInputOverlay = null;
         }
         if (this.gameOverOverlay) {
-            this.gameOverOverlay.destroy({ children: true });
+            this._destroyDynamicTree(this.gameOverOverlay);
             this.gameOverOverlay = null;
         }
         if (this.container && !this.container.destroyed) {
@@ -598,10 +598,26 @@ class UIManager {
 
             const root = tween._titleRoot;
             if (root && root !== currentTitleRoot && !root.destroyed) {
-                root.destroy({ children: true });
+                this._destroyDynamicTree(root);
             }
             return false;
         });
+    }
+
+    _destroyDynamicTree(root) {
+        if (!root || root.destroyed) return;
+
+        if (Array.isArray(root.children)) {
+            [...root.children].forEach((child) => this._destroyDynamicTree(child));
+        }
+
+        const isText = typeof PIXI !== 'undefined' && PIXI.Text && root instanceof PIXI.Text;
+        const destroyOptions = { children: false, context: true };
+        if (isText) {
+            root.destroy(true);
+        } else {
+            root.destroy(destroyOptions);
+        }
     }
 
     _destroyTitleRoots(except = null) {
@@ -617,7 +633,7 @@ class UIManager {
 
         candidates.forEach((root) => {
             if (!root || root === except || root.destroyed) return;
-            root.destroy({ children: true });
+            this._destroyDynamicTree(root);
         });
 
         if (except && !except.destroyed) {
@@ -1424,7 +1440,7 @@ class UIManager {
                 const t = Math.min(this.elapsed / this.duration, 1);
                 container.alpha = 1 - easeOutCubic(t);
                 if (t >= 1) {
-                    container.destroy({ children: true });
+                    ui._destroyDynamicTree(container);
                     finish();
                     return true;
                 }
@@ -1448,7 +1464,7 @@ class UIManager {
     // ══════════════════════════════════════
     showGameOver(score, bestScore, isNewBest) {
         if (this.gameOverOverlay) {
-            this.gameOverOverlay.destroy({ children: true });
+            this._destroyDynamicTree(this.gameOverOverlay);
         }
 
         const overlay = new PIXI.Container();
@@ -1775,7 +1791,7 @@ class UIManager {
     hideGameOver() {
         this._activeButtons = [];
         if (this.gameOverOverlay) {
-            this.gameOverOverlay.destroy({ children: true });
+            this._destroyDynamicTree(this.gameOverOverlay);
             this.gameOverOverlay = null;
         }
     }
@@ -2204,7 +2220,7 @@ class UIManager {
             this._hofAbortController = null;
         }
         if (this._hofOverlay) {
-            this._hofOverlay.destroy({ children: true });
+            this._destroyDynamicTree(this._hofOverlay);
             this._hofOverlay = null;
         }
         this._restoreArcherLabLink();
@@ -2224,7 +2240,8 @@ class UIManager {
     showNameInput(score, onComplete) {
         this._destroyNameInputDom();
         if (this._nameInputOverlay) {
-            this._nameInputOverlay.destroy({ children: true });
+            this._destroyDynamicTree(this._nameInputOverlay);
+            this._nameInputOverlay = null;
         }
 
         const w = this.game.app.screen.width;
@@ -2401,7 +2418,7 @@ class UIManager {
         const cleanup = () => {
             this._destroyNameInputDom();
             if (this._nameInputOverlay) {
-                this._nameInputOverlay.destroy({ children: true });
+                this._destroyDynamicTree(this._nameInputOverlay);
                 this._nameInputOverlay = null;
             }
         };

@@ -23,14 +23,26 @@ export class LevelUpScene extends Phaser.Scene {
     create() {
         this._onGameResize = () => this._redraw();
         this.events.on('game-resize', this._onGameResize, this);
-        this.events.once('shutdown', () => {
-            if (this._onGameResize) {
-                this.events.off('game-resize', this._onGameResize, this);
-                this._onGameResize = null;
-            }
-        });
+        this.events.once('shutdown', this._cleanupSceneRefs, this);
 
         this._redraw();
+    }
+
+    _cleanupSceneRefs() {
+        if (this._onGameResize) {
+            this.events.off('game-resize', this._onGameResize, this);
+            this._onGameResize = null;
+        }
+
+        if (this.gameScene) {
+            this.gameScene.removeLevelUpBlur?.();
+            this.gameScene._levelUpActive = false;
+        }
+
+        this.gameScene = null;
+        this.player = null;
+        this.weaponManager = null;
+        this._levelUpData = null;
     }
 
     _redraw() {

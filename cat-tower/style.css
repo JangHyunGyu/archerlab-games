@@ -1476,3 +1476,49 @@ body {
     height: 32px;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .title-emoji,
+  .rotate-lock__phone::before,
+  .modal,
+  .modal-body,
+  #game.danger #canvas {
+    animation: none !important;
+  }
+
+  .title-emoji {
+    transform: none !important;
+  }
+
+  .rotate-lock__phone::before {
+    transform: rotate(0deg);
+  }
+
+  .combo-flash.pop,
+  .combo-flash.legend.pop {
+    animation: reducedComboPop 0.42s ease-out forwards !important;
+  }
+
+  #game.danger #canvas {
+    box-shadow:
+      0 8px 0 0 #2D1A0E,
+      0 0 0 4px rgba(255, 226, 171, 0.42),
+      0 0 0 5px rgba(232, 90, 79, 0.18),
+      inset 0 2px 0 rgba(255,255,255,0.35);
+  }
+
+  @keyframes reducedComboPop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.98);
+    }
+    18%, 72% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+}

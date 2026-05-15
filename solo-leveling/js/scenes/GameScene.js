@@ -1163,6 +1163,7 @@ export class GameScene extends Phaser.Scene {
 
             if (this._vignetteOverlay) { this._vignetteOverlay.destroy(); this._vignetteOverlay = null; }
             if (this._colorTint) { this._colorTint.destroy(); this._colorTint = null; }
+            if (this._mobileDarken) { this._mobileDarken.destroy(); this._mobileDarken = null; }
 
             if (this.activeBosses && this.physics?.world) {
                 for (const boss of this.activeBosses) {
@@ -1192,6 +1193,7 @@ export class GameScene extends Phaser.Scene {
             this.hud = null;
             this.player = null;
             this.bossesSpawned = [];
+            this._levelUpActive = false;
         } catch (e) {
             console.warn('GameScene shutdown error:', e);
         }
