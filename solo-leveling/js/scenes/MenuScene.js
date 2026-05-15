@@ -1767,22 +1767,25 @@ export class MenuScene extends Phaser.Scene {
         }
 
         const isShortLandscape = !isPortrait && GAME_HEIGHT <= 820 && GAME_WIDTH > 1180;
+        const isCrampedLandscape = isShortLandscape && window.innerHeight <= 500;
         const boxW = isPortrait
             ? Math.min(GAME_WIDTH - uv(72), uv(560))
             : Math.min(uv(isShortLandscape ? 960 : 1040), GAME_WIDTH - uv(120));
         const boxH = isPortrait
             ? Math.min(uv(860), GAME_HEIGHT - uv(150))
-            : Math.min(uv(isShortLandscape ? 660 : 720), GAME_HEIGHT - uv(82));
+            : (isCrampedLandscape
+                ? GAME_HEIGHT - uv(42)
+                : Math.min(uv(isShortLandscape ? 660 : 720), GAME_HEIGHT - uv(82)));
         const bx = cx - boxW / 2;
         const by = cy - boxH / 2;
-        const safePadX = uv(isPortrait ? 72 : 116);
+        const safePadX = uv(isPortrait ? 72 : (isCrampedLandscape ? 82 : 116));
         const safeLeft = bx + safePadX;
         const safeRight = bx + boxW - safePadX;
         const safeW = safeRight - safeLeft;
         const safeTop = by + uv(isPortrait ? 100 : 78);
-        const closeBtnH = uv(isPortrait ? 38 : 40);
-        const closeBtnY = by + boxH - uv(isPortrait ? 86 : 78);
-        const contentBottom = closeBtnY - uv(isPortrait ? 30 : 26);
+        const closeBtnH = uv(isCrampedLandscape ? 26 : (isPortrait ? 38 : 40));
+        const closeBtnY = by + boxH - uv(isCrampedLandscape ? 28 : (isPortrait ? 86 : 78));
+        const contentBottom = closeBtnY - uv(isCrampedLandscape ? 8 : (isPortrait ? 30 : 26));
         let boxFrame;
         if (this.textures.exists('modal_frame_gold')) {
             boxFrame = this._addBitmapPanel(bx, by, boxW, boxH, {
@@ -1810,8 +1813,8 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(depth + 1.4);
         elements.push(innerShade);
 
-        const headerTag = this.add.text(cx, by + uv(isPortrait ? 104 : 82), '[ SYSTEM - RANKING ]', {
-            fontSize: fs(isPortrait ? 11 : 12),
+        const headerTag = this.add.text(cx, by + uv(isCrampedLandscape ? 40 : (isPortrait ? 104 : 82)), '[ SYSTEM - RANKING ]', {
+            fontSize: fs(isCrampedLandscape ? 10 : (isPortrait ? 11 : 12)),
             fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_CYAN,
             stroke: '#02040a',
@@ -1821,8 +1824,8 @@ export class MenuScene extends Phaser.Scene {
         this._fitText(headerTag, safeW * 0.82, uv(24));
         elements.push(headerTag);
 
-        const title = this.add.text(cx, by + uv(isPortrait ? 144 : 128), t('hallOfFame'), {
-            fontSize: fs(isPortrait ? 28 : 34),
+        const title = this.add.text(cx, by + uv(isCrampedLandscape ? 72 : (isPortrait ? 144 : 128)), t('hallOfFame'), {
+            fontSize: fs(isCrampedLandscape ? 22 : (isPortrait ? 28 : 34)),
             fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_GOLD,
             fontStyle: 'bold',
             stroke: '#02040a',
@@ -1832,9 +1835,9 @@ export class MenuScene extends Phaser.Scene {
         elements.push(title);
 
         const characters = Object.values(CHARACTER_DEFS);
-        const tabGap = uv(isPortrait ? 10 : 10);
-        const tabTop = by + uv(isPortrait ? 198 : 178);
-        const tabH = uv(isPortrait ? 40 : 38);
+        const tabGap = uv(isPortrait ? 10 : (isCrampedLandscape ? 6 : 10));
+        const tabTop = by + uv(isPortrait ? 198 : (isCrampedLandscape ? 122 : 178));
+        const tabH = uv(isPortrait ? 40 : (isCrampedLandscape ? 28 : 38));
         const tabColumns = isPortrait ? 2 : characters.length;
         const tabRows = Math.ceil(characters.length / tabColumns);
         const tabAreaW = safeW;
@@ -1843,6 +1846,7 @@ export class MenuScene extends Phaser.Scene {
         let activeCharacterId = CHARACTER_DEFS[this.selectedCharacterId] ? this.selectedCharacterId : characters[0].id;
         let requestSeq = 0;
         let contentElements = [];
+        const rankingDisplayLimit = 10;
 
         const trackContent = (el) => {
             contentElements.push(el);
@@ -1886,7 +1890,7 @@ export class MenuScene extends Phaser.Scene {
                 .setDepth(depth + 5)
                 .setInteractive({ useHandCursor: true });
             const txt = this.add.text(x + tabW / 2, y + tabH / 2, characterText.name, {
-                fontSize: fs(isPortrait ? 12 : 10),
+                fontSize: fs(isPortrait ? 12 : (isCrampedLandscape ? 9 : 10)),
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
                 color: SYSTEM.TEXT_BRIGHT,
@@ -1910,7 +1914,7 @@ export class MenuScene extends Phaser.Scene {
         redrawTabs();
 
         const divG = this.add.graphics().setDepth(depth + 2);
-        const divY = tabTop + tabRows * tabH + (tabRows - 1) * tabGap + uv(isPortrait ? 16 : 12);
+        const divY = tabTop + tabRows * tabH + (tabRows - 1) * tabGap + uv(isPortrait ? 16 : (isCrampedLandscape ? 8 : 12));
         divG.lineStyle(1, SYSTEM.BORDER_GOLD, 0.35);
         divG.lineBetween(safeLeft, divY, safeRight, divY);
         divG.lineStyle(1, SYSTEM.BORDER_DIM, 0.26);
@@ -1998,12 +2002,12 @@ export class MenuScene extends Phaser.Scene {
             this._fitText(loadingText, boxW - uv(60), uv(30));
 
             const gameId = getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
-            fetch(`${GAME_API_URL}/rankings?game_id=${encodeURIComponent(gameId)}&limit=20`)
+            fetch(`${GAME_API_URL}/rankings?game_id=${encodeURIComponent(gameId)}&limit=${rankingDisplayLimit}`)
                 .then(resp => resp.json())
                 .then(data => {
                     if (isClosed() || seq !== requestSeq) return;
                     clearContent();
-                    const rankings = data.rankings || [];
+                    const rankings = (data.rankings || []).slice(0, rankingDisplayLimit);
                     if (rankings.length === 0) {
                         const emptyIcon = this._addMenuIcon('icon_empty_record', cx, cy - uv(34), uv(54), depth + 4, 0.86);
                         if (emptyIcon) trackContent(emptyIcon);
@@ -2017,18 +2021,27 @@ export class MenuScene extends Phaser.Scene {
 
                     const topStartY = divY + uv(isPortrait ? 28 : 24);
                     const gap = uv(isPortrait ? 14 : 22);
-                    const topCount = isPortrait ? Math.min(1, rankings.length) : Math.min(3, rankings.length);
+                    const preferredTopCount = isPortrait ? Math.min(1, rankings.length) : Math.min(3, rankings.length);
                     const topCardW = Math.min(
                         uv(isPortrait ? 252 : 208),
-                        (safeW - gap * Math.max(0, topCount - 1)) / Math.max(1, topCount)
+                        (safeW - gap * Math.max(0, preferredTopCount - 1)) / Math.max(1, preferredTopCount)
                     );
                     const topCardH = Math.min(uv(isPortrait ? 134 : 124), topCardW * 0.58);
+                    const topStartTableY = topStartY + topCardH + uv(isPortrait ? 30 : 28);
+                    const topTableRows = rankings.length - preferredTopCount;
+                    const minTableRowH = uv(isPortrait ? 26 : 24);
+                    const topTableNeedsH = topTableRows > 0
+                        ? (topTableRows + 1) * minTableRowH + uv(4)
+                        : 0;
+                    const canShowTopCards = preferredTopCount > 0
+                        && (contentBottom - topStartTableY) >= topTableNeedsH;
+                    const topCount = canShowTopCards ? preferredTopCount : 0;
                     const topTotalW = topCardW * topCount + gap * Math.max(0, topCount - 1);
                     const topStartX = cx - topTotalW / 2;
                     const topColors = [SYSTEM.TEXT_GOLD, '#cfd8e8', '#d18b4a'];
                     const topBorders = [SYSTEM.BORDER_GOLD, SYSTEM.BORDER, 0xd18b4a];
 
-                    rankings.slice(0, topCount).forEach((entry, i) => {
+                    if (topCount > 0) rankings.slice(0, topCount).forEach((entry, i) => {
                         const cardX = topStartX + i * (topCardW + gap);
                         const cardY = topStartY;
                         const color = topColors[i];
@@ -2091,12 +2104,18 @@ export class MenuScene extends Phaser.Scene {
                         this._fitText(scoreText, cardLabelW * 0.74, uv(20));
                     });
 
-                    const startY = topStartY + topCardH + uv(isPortrait ? 30 : 28);
+                    const tableRankings = rankings.slice(topCount);
+                    const startY = topCount > 0
+                        ? topStartTableY
+                        : divY + uv(isPortrait ? 22 : (isCrampedLandscape ? 8 : 18));
                     const maxH = Math.max(uv(120), contentBottom - startY);
-                    const visibleRowBudget = Math.min(rankings.length, isPortrait ? 7 : 9);
+                    const visibleRowBudget = Math.max(1, tableRankings.length);
                     const rowH = Math.max(
-                        uv(isPortrait ? 34 : 30),
-                        Math.min(uv(isPortrait ? 42 : 36), maxH / Math.max(1, visibleRowBudget + 1))
+                        uv(isPortrait ? 22 : 20),
+                        Math.min(
+                            uv(isPortrait ? 36 : 32),
+                            (maxH - uv(4)) / Math.max(1, visibleRowBudget + 1)
+                        )
                     );
                     const hStyle = { fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN, stroke: '#02040a', strokeThickness: 2 };
                     let y = startY;
@@ -2125,16 +2144,17 @@ export class MenuScene extends Phaser.Scene {
                     hdiv.lineBetween(tableLeft, y, tableRight, y);
                     y += 4;
 
-                    rankings.forEach((entry, i) => {
+                    tableRankings.forEach((entry, i) => {
                         if (y + rowH > startY + maxH) return;
+                        const rankIndex = i + topCount;
                         const colors = [SYSTEM.TEXT_GOLD, '#c8d0dc', '#d18b4a'];
-                        const color = i < 3 ? colors[i] : SYSTEM.TEXT_BRIGHT;
-                        const rankLabel = `#${String(i + 1).padStart(2, '0')}`;
+                        const color = rankIndex < 3 ? colors[rankIndex] : SYSTEM.TEXT_BRIGHT;
+                        const rankLabel = `#${String(rankIndex + 1).padStart(2, '0')}`;
                         const fSize = fs(isPortrait ? 12 : Math.min(14, rowH * 0.6));
-                        const bold = i < 3 ? 'bold' : 'normal';
+                        const bold = rankIndex < 3 ? 'bold' : 'normal';
                         if (i % 2 === 0) {
                             const rowG = trackContent(this.add.graphics().setDepth(depth + 2));
-                            rowG.fillStyle(i < 3 ? 0x201506 : 0x07101a, i < 3 ? 0.42 : 0.34);
+                            rowG.fillStyle(rankIndex < 3 ? 0x201506 : 0x07101a, rankIndex < 3 ? 0.42 : 0.34);
                             rowG.fillRect(tableLeft, y - uv(2), tableW, rowH);
                         }
 
