@@ -40,6 +40,19 @@ function calcGameSize() {
     return { w, h };
 }
 
+function syncCanvasDisplaySize(viewport = getViewportSize()) {
+    const canvas = game?.canvas || document.querySelector('#game-container canvas');
+    if (!canvas) return;
+
+    const scale = Math.min(viewport.w / GAME_WIDTH, viewport.h / GAME_HEIGHT);
+    const displayW = Math.max(1, Math.round(GAME_WIDTH * scale));
+    const displayH = Math.max(1, Math.round(GAME_HEIGHT * scale));
+    canvas.style.width = `${displayW}px`;
+    canvas.style.height = `${displayH}px`;
+    canvas.style.maxWidth = '100%';
+    canvas.style.maxHeight = '100%';
+}
+
 const size = calcGameSize();
 const viewport = getViewportSize();
 setGameDimensions(size.w, size.h, viewport.w, viewport.h);
@@ -59,7 +72,9 @@ const config = {
     },
     scene: [BootScene, PreloadScene, MenuScene, GameScene, LevelUpScene, GameOverScene],
     scale: {
-        mode: Phaser.Scale.FIT,
+        // Phaser FIT can leave stale CSS dimensions after dynamic game-size changes.
+        // We resize the internal game buffer and the canvas display size together.
+        mode: Phaser.Scale.NONE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         expandParent: false,
     },
@@ -76,8 +91,9 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+requestAnimationFrame(() => syncCanvasDisplaySize(viewport));
 
-// Handle orientation/resize: CSS scaling only (Phaser FIT mode handles the rest)
+// Handle orientation/resize: keep internal game size and CSS canvas size in sync.
 let resizeRefreshTimer = null;
 function handleResize() {
     if (!game || !game.scale) return;
@@ -99,6 +115,8 @@ function handleResize() {
             });
         }
         game.scale.refresh();
+        syncCanvasDisplaySize(nextViewport);
+        requestAnimationFrame(() => syncCanvasDisplaySize());
     }, 200);
 }
 
