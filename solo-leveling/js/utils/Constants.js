@@ -242,7 +242,7 @@ export const BOSS_TYPES = {
         color: 0xcc0000, size: 80,
         shadowType: 'melee',
         shadowColor: 0x220000,
-        specialCooldown: { phase1: 5200, phase2: 3800 },
+        specialCooldown: { phase1: 6400, phase2: 5000 },
     },
     tusk: {
         name: '터스크',
@@ -250,7 +250,7 @@ export const BOSS_TYPES = {
         color: 0x5a3a1a, size: 100,
         shadowType: 'tank',
         shadowColor: 0x1a1000,
-        specialCooldown: { phase1: 6200, phase2: 4600 },
+        specialCooldown: { phase1: 7800, phase2: 6200 },
     },
     beru: {
         name: '베루',
@@ -258,7 +258,7 @@ export const BOSS_TYPES = {
         color: 0x660033, size: 90,
         shadowType: 'ranged',
         shadowColor: 0x110022,
-        specialCooldown: { phase1: 5000, phase2: 3700 },
+        specialCooldown: { phase1: 6200, phase2: 5000 },
     },
 };
 
