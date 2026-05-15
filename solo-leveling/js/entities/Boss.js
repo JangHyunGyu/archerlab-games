@@ -1,5 +1,8 @@
 import { COLORS, BOSS_TYPES } from '../utils/Constants.js';
 
+const DEFAULT_BOSS_SPECIAL_COOLDOWN = { phase1: 5200, phase2: 3800 };
+const BOSS_SPECIAL_RETRY_DELAY = 700;
+
 export class Boss extends Phaser.Physics.Arcade.Sprite {
     static _sceneIsActive(scene) {
         try {
@@ -414,11 +417,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
 
         // Special attack
         this.specialTimer += delta;
-        const cooldown = this.phase === 2 ? 2500 : 4000;
+        const cooldown = this._getSpecialCooldown();
         if (this.specialTimer >= cooldown) {
             this.specialTimer = 0;
             this._doSpecialAttack(playerX, playerY, dist);
         }
+    }
+
+    _getSpecialCooldown() {
+        const phaseKey = this.phase === 2 ? 'phase2' : 'phase1';
+        return this.config.specialCooldown?.[phaseKey] ?? DEFAULT_BOSS_SPECIAL_COOLDOWN[phaseKey];
+    }
+
+    _getSpecialRetryTimer() {
+        return Math.max(0, this._getSpecialCooldown() - BOSS_SPECIAL_RETRY_DELAY);
     }
 
     _drawHpBar() {
@@ -469,7 +481,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
         switch (this.bossKey) {
             case 'igris': this._igrisSlash(playerX, playerY); break;
             case 'tusk':
-                if (dist > 600) { this.specialTimer = this.phase === 2 ? 2000 : 3500; return; }
+                if (dist > 600) { this.specialTimer = this._getSpecialRetryTimer(); return; }
                 this._tuskGroundSlam(playerX, playerY);
                 break;
             case 'beru':  this._beruAcidSpit(playerX, playerY); break;
