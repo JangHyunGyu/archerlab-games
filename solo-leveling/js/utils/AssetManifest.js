@@ -86,6 +86,14 @@ const ENEMY_KEYS = ['goblin', 'antSoldier', 'orc', 'iceBear', 'stoneGolem', 'dar
 const BOSS_KEYS = ['igris', 'tusk', 'beru'];
 const BASE_EFFECT_KEYS = ['shadow_dagger', 'shadow_slash', 'ruler_authority', 'dragon_fear'];
 const COMBAT_EFFECT_KEYS = ['basic_stab', 'flame_burn', 'monster_hit', 'monster_crit', 'monster_death'];
+const COMBAT_EFFECT_FILE_PREFIXES = {
+    monster_hit: 'monster_hit_v2',
+    monster_crit: 'monster_crit_v2',
+};
+const COMBAT_EFFECT_FRAME_COUNTS = {
+    monster_hit: 12,
+    monster_crit: 16,
+};
 const ENEMY_BOSS_EFFECT_KEYS = [
     'dark_mage_orb',
     'boss_death_burst',
@@ -173,9 +181,11 @@ export function getGameplayAssetList(characterId = getStoredCharacterId()) {
         ...ENEMY_KEYS.map(key => ({ key: `ai_enemy_${key}`, path: `assets/enemies/source/${key}.png` })),
         ...BOSS_KEYS.map(key => ({ key: `ai_boss_${key}`, path: `assets/bosses/source/${key}.png` })),
         ...BASE_EFFECT_KEYS.map(key => ({ key: `effect_${key}`, path: `assets/effects/${key}.png` })),
-        ...COMBAT_EFFECT_KEYS.flatMap(key => (
-            Array.from({ length: 6 }, (_, i) => ({ key: `effect_${key}_${i}`, path: `assets/effects/combat/${key}_${i}.png` }))
-        )),
+        ...COMBAT_EFFECT_KEYS.flatMap(key => {
+            const filePrefix = COMBAT_EFFECT_FILE_PREFIXES[key] || key;
+            const frameCount = COMBAT_EFFECT_FRAME_COUNTS[key] || 6;
+            return Array.from({ length: frameCount }, (_, i) => ({ key: `effect_${key}_${i}`, path: `assets/effects/combat/${filePrefix}_${i}.png` }));
+        }),
         ...ENEMY_BOSS_EFFECT_KEYS.flatMap(key => (
             Array.from({ length: 6 }, (_, i) => ({ key: `effect_${key}_${i}`, path: `assets/effects/enemy_boss/${key}_${i}.png` }))
         )),

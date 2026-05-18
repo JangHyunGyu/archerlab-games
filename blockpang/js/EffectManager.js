@@ -528,6 +528,18 @@ class EffectManager {
                     maxLife: 150 + intensity * 30,
                 });
 
+                this.playSpriteSheetEffect('vfxBlockBreakSheet', cellCx, cellCy, {
+                    duration: 390 + intensity * 45,
+                    targetWidth: cellSize * (2.25 + intensity * 0.22),
+                    targetHeight: cellSize * (2.25 + intensity * 0.22),
+                    alpha: 0.82,
+                    fadeIn: 0.02,
+                    fadeOut: 0.42,
+                    startScale: 0.72,
+                    endScale: 1.06 + intensity * 0.03,
+                    rotation: (Math.random() - 0.5) * 0.28,
+                });
+
                 // ── 3. EXPLOSION DEBRIS: block shatters into many fragments ──
                 const debrisCount = 4 + intensity * 3; // Much more debris!
                 const dirX = cellCx - cx;
