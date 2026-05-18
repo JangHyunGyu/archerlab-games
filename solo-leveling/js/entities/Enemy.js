@@ -8,6 +8,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     static _vfxBudgetFrame = -1;
     static _vfxBudgetUsed = 0;
     static MAX_VFX_BUDGET_PER_FRAME = 12;
+    static _hitReactBudgetFrame = -1;
+    static _hitReactBudgetUsed = 0;
+    static MAX_HIT_REACTS_PER_FRAME = 28;
+    static _dmgTextBudgetFrame = -1;
+    static _dmgTextBudgetUsed = 0;
+    static MAX_DMG_TEXTS_PER_FRAME = 12;
 
     static _getVfxBudget(scene) {
         const fps = scene?.game?.loop?.actualFps || 60;
@@ -38,6 +44,65 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (Enemy._vfxBudgetUsed + cost > Enemy._getVfxBudget(scene)) return false;
         Enemy._vfxBudgetUsed += cost;
         return true;
+    }
+
+    static _getHitReactBudget(scene) {
+        const fps = scene?.game?.loop?.actualFps || 60;
+        const children = scene?.children?.list?.length || 0;
+        if (scene?._lowQuality || fps < 35 || children > 900) return 10;
+        if (fps < 48 || children > 650) return 18;
+        return Enemy.MAX_HIT_REACTS_PER_FRAME;
+    }
+
+    static _consumeHitReactBudget(scene, isCrit = false) {
+        const frame = scene?.game?.loop?.frame ?? 0;
+        if (Enemy._hitReactBudgetFrame !== frame) {
+            Enemy._hitReactBudgetFrame = frame;
+            Enemy._hitReactBudgetUsed = 0;
+        }
+        const budget = Enemy._getHitReactBudget(scene);
+        const cost = isCrit ? 2 : 1;
+        const cap = isCrit ? budget + 4 : budget;
+        if (Enemy._hitReactBudgetUsed + cost > cap) return false;
+        Enemy._hitReactBudgetUsed += cost;
+        return true;
+    }
+
+    static _getDmgTextBudget(scene) {
+        const fps = scene?.game?.loop?.actualFps || 60;
+        const children = scene?.children?.list?.length || 0;
+        if (scene?._lowQuality || fps < 35 || children > 900) return 4;
+        if (fps < 48 || children > 650) return 7;
+        return Enemy.MAX_DMG_TEXTS_PER_FRAME;
+    }
+
+    static _consumeDmgTextBudget(scene, isCrit = false) {
+        const frame = scene?.game?.loop?.frame ?? 0;
+        if (Enemy._dmgTextBudgetFrame !== frame) {
+            Enemy._dmgTextBudgetFrame = frame;
+            Enemy._dmgTextBudgetUsed = 0;
+        }
+        const budget = Enemy._getDmgTextBudget(scene);
+        const cost = isCrit ? 2 : 1;
+        const cap = isCrit ? budget + 3 : budget;
+        if (Enemy._dmgTextBudgetUsed + cost > cap) return false;
+        Enemy._dmgTextBudgetUsed += cost;
+        return true;
+    }
+
+    static _isNearCamera(scene, x, y, padding = 64) {
+        const cam = scene?.cameras?.main;
+        if (!cam) return true;
+        const view = cam.worldView;
+        if (view) {
+            return x >= view.x - padding &&
+                x <= view.right + padding &&
+                y >= view.y - padding &&
+                y <= view.bottom + padding;
+        }
+        const cx = x - cam.scrollX;
+        const cy = y - cam.scrollY;
+        return cx >= -padding && cx <= cam.width + padding && cy >= -padding && cy <= cam.height + padding;
     }
 
     static _getDeathEmitter(scene, x, y) {
@@ -158,6 +223,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         Enemy._dmgTextPool = [];
         Enemy._vfxBudgetFrame = -1;
         Enemy._vfxBudgetUsed = 0;
+        Enemy._hitReactBudgetFrame = -1;
+        Enemy._hitReactBudgetUsed = 0;
+        Enemy._dmgTextBudgetFrame = -1;
+        Enemy._dmgTextBudgetUsed = 0;
     }
 
     static _playFrameVfx(scene, prefix, x, y, opts = {}) {
@@ -247,6 +316,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.hpBar = null;
         this.spawnInstanceId = 0;
         this._lastHitEffect = null;
+        this._lastDmgTextTime = 0;
+        this._lastHitReactTime = 0;
         this._hitFlashTimerA = null;
         this._hitFlashTimerB = null;
 
@@ -325,6 +396,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.slowMultiplier = 1;
         this.slowDuration = 0;
         this._lastHitEffect = null;
+        this._lastDmgTextTime = 0;
+        this._lastHitReactTime = 0;
         this.rangedCooldown = 0;
         this.meleeCooldown = 0;
         this._meleeRange = s * 2 + 30; // 몹 크기 기반 근접 공격 사거리
@@ -529,6 +602,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const isBurn = hitEffect === 'burn';
         if (isCrit && this.scene.soundManager) this.scene.soundManager.play('critHit');
         const restoreTint = this.isElite ? 0xff6644 : 0xffffff;
+        const isOnCamera = Enemy._isNearCamera(this.scene, this.x, this.y, 96);
+        const now = this.scene?.time?.now ?? 0;
+        const canPlayHitReact = isOnCamera &&
+            (isCrit || !this._lastHitReactTime || now - this._lastHitReactTime >= 55) &&
+            Enemy._consumeHitReactBudget(this.scene, isCrit);
+
+        if (canPlayHitReact) {
+            this._lastHitReactTime = now;
 
         // Impact feel: white pre-flash → red flash → restore
         // (staged tint = "light flashes off metal then blood" feel)
@@ -565,9 +646,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this._squashRestoreTimer = null;
             if (this.active) this.setScale(restX, restY);
         });
+        }
 
         // Crit: stronger kick — screen shake + white ring burst at hit location
-        if (isCrit && this.scene.cameras?.main && Enemy._consumeVfxBudget(this.scene, 2)) {
+        if (isOnCamera && isCrit && this.scene.cameras?.main && Enemy._consumeVfxBudget(this.scene, 2)) {
             this.scene.cameras.main.shake(90, 0.004);
             try {
                 const ring = this.scene.add.image(this.x, this.y, 'particle_ring')
@@ -651,10 +733,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this._aura) {
             this._aura.setVisible(false).setActive(false);
         }
+        this.scene.enemyManager?.releaseInactiveEnemy?.(this);
         this._eliteDeathPending = false;
     }
 
     _spawnHitEffect(isCrit, hitEffect) {
+        if (!Enemy._isNearCamera(this.scene, this.x, this.y, 128)) return;
         if (!Enemy._consumeVfxBudget(this.scene, isCrit ? 2 : 1)) return;
         if (hitEffect === 'burn') {
             this._spawnHitBurn(isCrit);
@@ -1098,21 +1182,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     static MAX_DMG_TEXTS = 40;
 
     _showDamageNumber(value) {
-        // 1. 화면 밖이면 스킵
-        const cam = this.scene.cameras.main;
-        const cx = this.x - cam.scrollX;
-        const cy = this.y - cam.scrollY;
-        if (cx < -50 || cx > cam.width + 50 || cy < -50 || cy > cam.height + 50) return;
+        const isCrit = value > this.maxHp * 0.5;
+        if (!Enemy._isNearCamera(this.scene, this.x, this.y, 50)) return;
 
         // 2. 같은 적에게 100ms 이내 재표시 방지
         const now = this.scene.time.now;
         if (this._lastDmgTextTime && now - this._lastDmgTextTime < 100) return;
-        this._lastDmgTextTime = now;
 
         // 3. 동시 표시 상한
         if (Enemy._activeTexts.length >= Enemy.MAX_DMG_TEXTS) return;
+        if (!Enemy._consumeDmgTextBudget(this.scene, isCrit)) return;
+        this._lastDmgTextTime = now;
 
-        const isCrit = value > this.maxHp * 0.5;
         const x = this.x + Phaser.Math.Between(-10, 10);
         const y = this.y - 15;
 

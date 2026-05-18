@@ -54,6 +54,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._hitReactTimer = 0;
         this._hitReactDuration = 0;
         this._lastAfterimageAt = 0;
+        this._allEnemiesFrame = -1;
+        this._allEnemiesCache = [];
+        this._allEnemiesMergedCache = [];
 
         // Passive bonuses tracking
         this.passiveLevels = {};
@@ -837,9 +840,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     getAllEnemies() {
+        const frame = this.scene?.game?.loop?.frame ?? 0;
+        if (this._allEnemiesFrame === frame) return this._allEnemiesCache;
+
         const enemies = this.scene.enemyManager?.getActiveEnemies() || [];
         const bosses = this.scene.activeBosses || [];
-        return [...enemies, ...bosses.filter(b => b.active)];
+        if (!bosses.length) {
+            this._allEnemiesCache = enemies;
+            this._allEnemiesFrame = frame;
+            return this._allEnemiesCache;
+        }
+
+        const merged = this._allEnemiesMergedCache;
+        merged.length = 0;
+        for (const enemy of enemies) merged.push(enemy);
+        for (const boss of bosses) {
+            if (boss?.active) merged.push(boss);
+        }
+        this._allEnemiesCache = merged;
+        this._allEnemiesFrame = frame;
+        return this._allEnemiesCache;
     }
 
     getClosestEnemy(range) {

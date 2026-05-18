@@ -34,7 +34,19 @@ export class HUD {
     _text(x, y, value, style) {
         const text = padText(this.scene.add.text(x, y, value, style), 4, 5, 2, 2);
         if (typeof text.setLineSpacing === 'function') text.setLineSpacing(3);
+        text._hudTextValue = value;
         return text;
+    }
+
+    _setTextIfChanged(text, value) {
+        if (!text || text._hudTextValue === value) return false;
+        text._hudTextValue = value;
+        text.setText(value);
+        return true;
+    }
+
+    _setVisibleIfChanged(obj, visible) {
+        if (obj && obj.visible !== visible) obj.setVisible(visible);
     }
 
     _createLeftPanel() {
@@ -254,7 +266,7 @@ export class HUD {
         this.elements.push(this._mmGfx);
     }
 
-    _updateMinimap(player, enemyManager, shadowArmyManager) {
+    _updateMinimap(player, enemyManager, shadowArmyManager, activeEnemies = null) {
         if (!this._mmGfx || !player) return;
 
         const gfx = this._mmGfx;
@@ -273,9 +285,12 @@ export class HUD {
         gfx.strokeRect(vx, vy, vw, vh);
 
         if (enemyManager) {
-            const enemies = enemyManager.getActiveEnemies();
+            const enemies = activeEnemies || enemyManager.getActiveEnemies();
+            const maxDots = this.scene?._lowQuality ? 80 : (enemies.length > 300 ? 150 : 220);
+            const stride = Math.max(1, Math.ceil(enemies.length / maxDots));
             gfx.fillStyle(0xff4444, 0.8);
-            for (const e of enemies) {
+            for (let i = 0; i < enemies.length; i += stride) {
+                const e = enemies[i];
                 if (!e.active) continue;
                 const ex = ox + e.x * s;
                 const ey = oy + e.y * s;
@@ -285,6 +300,15 @@ export class HUD {
                     gfx.fillStyle(0xff4444, 0.8);
                 } else {
                     gfx.fillRect(ex - 0.5, ey - 0.5, 1.5, 1.5);
+                }
+            }
+            if (stride > 1) {
+                for (const e of enemies) {
+                    if (!e?.active || !e.isElite) continue;
+                    const ex = ox + e.x * s;
+                    const ey = oy + e.y * s;
+                    gfx.fillStyle(0xff8844, 0.95);
+                    gfx.fillRect(ex - 1.5, ey - 1.5, 3, 3);
                 }
             }
         }
@@ -340,27 +364,161 @@ export class HUD {
 
     update(player, weaponManager, enemyManager, shadowArmyManager) {
         if (!player) return;
+        return this._updateOptimized(player, weaponManager, enemyManager, shadowArmyManager);
+    }
+
+    _updateOptimized(player, weaponManager, enemyManager, shadowArmyManager) {
+        const now = this.scene?.time?.now ?? 0;
 
         const hpRatio = player.stats.hp / player.stats.maxHp;
-        this.hpFill.width = (this._hpW - 2) * hpRatio;
-        this.hpText.setText(`${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`);
+        const hpWidth = (this._hpW - 2) * hpRatio;
+        if (this.hpFill._hudWidth !== hpWidth) {
+            this.hpFill._hudWidth = hpWidth;
+            this.hpFill.width = hpWidth;
+        }
+        this._setTextIfChanged(this.hpText, `${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`);
 
-        if (hpRatio < 0.3) {
-            this.hpFill.setFillStyle(0xff0000);
-        } else if (hpRatio < 0.6) {
-            this.hpFill.setFillStyle(0xff6633);
-        } else {
-            this.hpFill.setFillStyle(COLORS.HP_RED);
+        let hpColor = COLORS.HP_RED;
+        if (hpRatio < 0.3) hpColor = 0xff0000;
+        else if (hpRatio < 0.6) hpColor = 0xff6633;
+        if (this.hpFill._hudFillColor !== hpColor) {
+            this.hpFill._hudFillColor = hpColor;
+            this.hpFill.setFillStyle(hpColor);
         }
 
         const xpRatio = player.xpToNext > 0 ? player.xp / player.xpToNext : 0;
-        this.xpFill.width = (this._xpW - 2) * xpRatio;
+        const xpWidth = (this._xpW - 2) * xpRatio;
+        if (this.xpFill._hudWidth !== xpWidth) {
+            this.xpFill._hudWidth = xpWidth;
+            this.xpFill.width = xpWidth;
+        }
 
+        let activeEnemies = null;
         if (enemyManager) {
             const totalSeconds = Math.floor(enemyManager.getGameTime() / 1000);
-            const min = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-            const sec = (totalSeconds % 60).toString().padStart(2, '0');
-            this.timerText.setText(`[ ${min}:${sec} ]`);
+            if (this._hudSeconds !== totalSeconds) {
+                this._hudSeconds = totalSeconds;
+                const min = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+                const sec = (totalSeconds % 60).toString().padStart(2, '0');
+                this._setTextIfChanged(this.timerText, `[ ${min}:${sec} ]`);
+            }
+            activeEnemies = enemyManager.getActiveEnemies();
+        }
+
+        if (!this._hudPrefixesReady) {
+            this._hudPrefixesReady = true;
+            this._hudKillPrefix = (this.killText.text || 'KILL  0000').replace(/[0-9]+$/, '');
+            this._hudLevelPrefix = (this.levelText.text || 'LV    01').replace(/[0-9]+$/, '');
+            this._hudRankPrefix = (this.rankText.text || 'RANK  E').replace(/\S+$/, '');
+        }
+
+        this._setTextIfChanged(this.killText, this._hudKillPrefix + String(player.kills).padStart(4, '0'));
+        this._setTextIfChanged(this.levelText, this._hudLevelPrefix + String(player.level).padStart(2, '0'));
+
+        const rank = RANKS[player.currentRank];
+        this._setTextIfChanged(this.rankText, this._hudRankPrefix + rank.name);
+        const rankColor = '#' + rank.color.toString(16).padStart(6, '0');
+        if (this._hudRankColor !== rankColor) {
+            this._hudRankColor = rankColor;
+            this.rankText.setColor(rankColor);
+        }
+
+        if (weaponManager) {
+            const weapons = weaponManager.getOwnedWeapons();
+            const signature = weapons.map(w => `${w.key}:${w.level}`).join('|');
+            if (this._hudWeaponSignature !== signature) {
+                this._hudWeaponSignature = signature;
+                for (let i = 0; i < 6; i++) {
+                    if (i < weapons.length) {
+                        const w = weapons[i];
+                        const icon = this.weaponIcons[i];
+                        const texture = 'icon_' + w.key;
+                        if (icon.texture?.key !== texture) icon.setTexture(texture);
+                        this._setVisibleIfChanged(icon, true);
+                        this._setTextIfChanged(this.weaponTexts[i], String(w.level));
+                    } else {
+                        this._setVisibleIfChanged(this.weaponIcons[i], false);
+                        this._setTextIfChanged(this.weaponTexts[i], '');
+                    }
+                }
+            }
+        }
+
+        if (shadowArmyManager) {
+            const count = shadowArmyManager.getSoldierCount();
+            const shadowText = count > 0
+                ? `SHADOW  ${String(count).padStart(2, '0')} / ${String(shadowArmyManager.maxSoldiers).padStart(2, '0')}`
+                : '';
+            if (this._setTextIfChanged(this.shadowText, shadowText)) {
+                fitText(this.shadowText, Math.min(uv(230), GAME_WIDTH * 0.38), 0, 0.7);
+            }
+        }
+
+        if (enemyManager && this.questText && (!this._questNextUpdateAt || now >= this._questNextUpdateAt)) {
+            this._questNextUpdateAt = now + 250;
+            const quests = enemyManager.getActiveQuests();
+            this._setTextIfChanged(this.questText, quests.length > 0 ? quests.slice(0, 3).map(q => `- ${q.description}`).join('\n') : '');
+        }
+
+        const enemyCount = activeEnemies?.length || 0;
+        const minimapModulo = enemyCount > 300 ? 10 : (enemyCount > 180 ? 6 : 3);
+        this._mmFrameCounter = ((this._mmFrameCounter || 0) + 1) % minimapModulo;
+        if (this._mmFrameCounter === 0) {
+            this._updateMinimap(player, enemyManager, shadowArmyManager, activeEnemies);
+        }
+
+        if (enemyManager && this.breakText) {
+            if (enemyManager.isDungeonBreakActive()) {
+                if (this._setTextIfChanged(this.breakText, 'DUNGEON BREAK')) {
+                    fitText(this.breakText, GAME_WIDTH - this._margin * 2, 0, 0.72);
+                }
+                this.breakText.setAlpha(0.55 + Math.sin(now * 0.005) * 0.4);
+            } else {
+                this._setTextIfChanged(this.breakText, '');
+            }
+        }
+    }
+
+    _updateLegacy(player, weaponManager, enemyManager, shadowArmyManager) {
+        if (!player) return;
+
+        const now = this.scene?.time?.now ?? 0;
+        const hpRatio = player.stats.hp / player.stats.maxHp;
+        const hpWidth = (this._hpW - 2) * hpRatio;
+        if (this.hpFill._hudWidth !== hpWidth) {
+            this.hpFill._hudWidth = hpWidth;
+            this.hpFill.width = hpWidth;
+        }
+        this._setTextIfChanged(this.hpText, `${Math.floor(player.stats.hp)} / ${player.stats.maxHp}`);
+
+        let hpColor = COLORS.HP_RED;
+        if (hpRatio < 0.3) {
+            hpColor = 0xff0000;
+        } else if (hpRatio < 0.6) {
+            hpColor = 0xff6633;
+        }
+        if (this.hpFill._hudFillColor !== hpColor) {
+            this.hpFill._hudFillColor = hpColor;
+            this.hpFill.setFillStyle(hpColor);
+        }
+
+        const xpRatio = player.xpToNext > 0 ? player.xp / player.xpToNext : 0;
+        const xpWidth = (this._xpW - 2) * xpRatio;
+        if (this.xpFill._hudWidth !== xpWidth) {
+            this.xpFill._hudWidth = xpWidth;
+            this.xpFill.width = xpWidth;
+        }
+
+        let activeEnemies = null;
+        if (enemyManager) {
+            const totalSeconds = Math.floor(enemyManager.getGameTime() / 1000);
+            if (this._hudSeconds !== totalSeconds) {
+                this._hudSeconds = totalSeconds;
+                const min = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+                const sec = (totalSeconds % 60).toString().padStart(2, '0');
+                this._setTextIfChanged(this.timerText, `[ ${min}:${sec} ]`);
+            }
+            activeEnemies = enemyManager.getActiveEnemies();
         }
 
         this.killText.setText('▸ KILL  ' + String(player.kills).padStart(4, '0'));

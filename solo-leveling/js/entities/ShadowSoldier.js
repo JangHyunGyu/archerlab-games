@@ -202,6 +202,10 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             .setBlendMode(Phaser.BlendModes.ADD);
     }
 
+    _getAttackTargets() {
+        return this.scene?.player?.getAllEnemies?.() || this.scene?.enemyManager?.getActiveEnemies?.() || [];
+    }
+
     // Igris: fast melee slash (shadow version)
     _igrisAttack(target) {
         if (this.scene.soundManager) this.scene.soundManager.play('shadowSoldierSlash');
@@ -255,10 +259,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Damage all enemies in range
-        const enemies = [
-            ...(this.scene.enemyManager?.getActiveEnemies() || []),
-            ...(this.scene.activeBosses?.filter(b => b.active) || []),
-        ];
+        const enemies = this._getAttackTargets();
         for (const enemy of enemies) {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(target.x, target.y, enemy.x, enemy.y);
@@ -300,10 +301,7 @@ export class ShadowSoldier extends Phaser.Physics.Arcade.Sprite {
             onUpdate: () => {
                 if (!proj.active) return;
                 this._spawnProjectileTrail(proj.x, proj.y, angle);
-                const enemies = [
-                    ...(this.scene.enemyManager?.getActiveEnemies() || []),
-                    ...(this.scene.activeBosses?.filter(b => b.active) || []),
-                ];
+                const enemies = this._getAttackTargets();
                 for (const enemy of enemies) {
                     if (!enemy || !enemy.active) continue;
                     if (enemy.isBoss && enemy.isInvincible) continue;

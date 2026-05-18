@@ -18,7 +18,9 @@ import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterWeaponKeys, getStarterW
 
 const SAVE_KEY = 'shadow_survival_save_v1';
 const SAVE_VERSION = 1;
-const AUTO_SAVE_INTERVAL_MS = 2000;
+const AUTO_SAVE_INTERVAL_MS = 10000;
+const AUTO_SAVE_ENEMY_LIMIT = 140;
+const FORCE_SAVE_ENEMY_LIMIT = 260;
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -817,7 +819,9 @@ export class GameScene extends Phaser.Scene {
         if (!force && now - this._lastAutoSaveAt < AUTO_SAVE_INTERVAL_MS) return;
 
         try {
-            const snap = this._createSaveSnapshot(now);
+            const snap = this._createSaveSnapshot(now, {
+                enemyLimit: force ? FORCE_SAVE_ENEMY_LIMIT : AUTO_SAVE_ENEMY_LIMIT,
+            });
             localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
             this._lastAutoSaveAt = now;
         } catch (e) {
@@ -825,9 +829,10 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    _createSaveSnapshot(ts = Date.now()) {
+    _createSaveSnapshot(ts = Date.now(), options = {}) {
         const player = this.player;
         const gameTime = this.enemyManager?.getGameTime?.() || 0;
+        const enemyLimit = options.enemyLimit ?? AUTO_SAVE_ENEMY_LIMIT;
         const weaponEntries = this.weaponManager
             ? Array.from(this.weaponManager.weapons.entries()).map(([key, weapon]) => ({
                 key,
@@ -868,7 +873,7 @@ export class GameScene extends Phaser.Scene {
                 quests: JSON.parse(JSON.stringify(this.enemyManager?.quests || [])),
                 lastQuestTime: this.enemyManager?.lastQuestTime || 0,
                 killCounters: { ...(this.enemyManager?.killCounters || {}) },
-                activeEnemies: this.enemyManager?.getActiveEnemySnapshots?.() || [],
+                activeEnemies: this.enemyManager?.getActiveEnemySnapshots?.(enemyLimit) || [],
             },
             bossesSpawned: [...(this.bossesSpawned || [])],
             activeBosses: (this.activeBosses || []).filter(b => b?.active).map(boss => ({
