@@ -118,6 +118,7 @@
   let fieldBgImage = null;
   let mergeParticleImage = null;
   let mergeBurstImage = null;
+  let mergeFinalBurstImage = null;
   let landingDustImage = null;
   let running = false;
   let gameOver = false;
@@ -144,7 +145,8 @@
   const BONK_TRIGGER_SPEED = 1.35;
   const MERGE_PARTICLE_CELL = 64;
   const MERGE_BURST_CELL = 192;
-  const MERGE_BURST_FRAMES = 8;
+  const MERGE_BURST_FRAMES = 16;
+  const MERGE_FINAL_BURST_FRAMES = 30;
   const LANDING_DUST_CELL = 64;
   const LANDING_DUST_FRAMES = 6;
   const LANDING_DUST_MAX = 20;
@@ -301,7 +303,9 @@
     mergeParticleImage = new Image();
     mergeParticleImage.src = 'assets/ui/merge-particles.png';
     mergeBurstImage = new Image();
-    mergeBurstImage.src = 'assets/ui/merge-burst-sheet-impact.png';
+    mergeBurstImage.src = 'assets/ui/merge-burst-sheet-16.png';
+    mergeFinalBurstImage = new Image();
+    mergeFinalBurstImage.src = 'assets/ui/merge-burst-final-sheet-30.png';
     landingDustImage = new Image();
     landingDustImage.src = 'assets/ui/landing-dust-sheet.png';
     resizeCanvas();
@@ -457,7 +461,7 @@
   }
 
   function createMergeEffect(x, y, r, color, isFinal) {
-    const count = isFinal ? 20 : 12;
+    const count = isFinal ? 32 : 16;
     const radiusScale = clamp(r / 55, 0.62, isFinal ? 1.85 : 1.45);
     const particleMin = (isFinal ? 15 : 9) * radiusScale;
     const particleMax = (isFinal ? 30 : 20) * radiusScale;
@@ -468,7 +472,7 @@
       particles.push({
         frame: finalFrame,
         angle,
-        distance: randomBetween(r * 0.30, r * (isFinal ? 1.90 : 1.35)),
+        distance: randomBetween(r * 0.30, r * (isFinal ? 2.15 : 1.45)),
         size: randomBetween(particleMin, particleMax),
         spin: randomBetween(-1.8, 1.8),
         rot: randomBetween(-Math.PI, Math.PI),
@@ -478,7 +482,7 @@
     return {
       x, y, r, color,
       age: 0,
-      max: isFinal ? 34 : 26,
+      max: isFinal ? 64 : 34,
       isFinal,
       particles,
     };
@@ -877,18 +881,25 @@
   }
 
   function drawMergeBurst(effect, t) {
-    if (!mergeBurstImage || !mergeBurstImage.complete || mergeBurstImage.naturalWidth <= 0) return;
-    const frame = Math.min(MERGE_BURST_FRAMES - 1, Math.floor(t * MERGE_BURST_FRAMES));
+    const useFinalSheet = effect.isFinal
+      && mergeFinalBurstImage
+      && mergeFinalBurstImage.complete
+      && mergeFinalBurstImage.naturalWidth > 0;
+    const burstImage = useFinalSheet ? mergeFinalBurstImage : mergeBurstImage;
+    if (!burstImage || !burstImage.complete || burstImage.naturalWidth <= 0) return;
+    const frameCount = useFinalSheet ? MERGE_FINAL_BURST_FRAMES : MERGE_BURST_FRAMES;
+    const frame = Math.min(frameCount - 1, Math.floor(t * frameCount));
     const baseSize = effect.isFinal
-      ? clamp(effect.r * 1.95 + 34, 150, 286)
-      : clamp(effect.r * 2.22 + 24, 64, 226);
-    const pulse = 0.92 + Math.sin(Math.min(1, t) * Math.PI) * 0.14;
-    const lateFade = t < 0.72 ? 1 : Math.max(0, 1 - (t - 0.72) / 0.28);
+      ? clamp(effect.r * 2.18 + 46, 172, 326)
+      : clamp(effect.r * 2.28 + 24, 68, 232);
+    const pulse = 0.92 + Math.sin(Math.min(1, t) * Math.PI) * (effect.isFinal ? 0.18 : 0.14);
+    const fadeStart = effect.isFinal ? 0.80 : 0.72;
+    const lateFade = t < fadeStart ? 1 : Math.max(0, 1 - (t - fadeStart) / (1 - fadeStart));
     const size = baseSize * pulse;
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, lateFade * (effect.isFinal ? 0.96 : 0.88)));
     ctx.drawImage(
-      mergeBurstImage,
+      burstImage,
       frame * MERGE_BURST_CELL, 0, MERGE_BURST_CELL, MERGE_BURST_CELL,
       effect.x - size / 2, effect.y - size / 2, size, size
     );
