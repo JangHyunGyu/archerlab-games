@@ -475,10 +475,7 @@ export class ShadowArmyManager {
     update(time, delta) {
         if (!this.enabled) return;
         const player = this.scene.player;
-        const enemies = [
-            ...(this.scene.enemyManager?.getActiveEnemies() || []),
-            ...(this.scene.activeBosses?.filter(b => b.active) || []),
-        ];
+        const enemies = player?.getAllEnemies?.() || this.scene.enemyManager?.getActiveEnemies() || [];
 
         for (let i = this.soldiers.length - 1; i >= 0; i--) {
             const soldier = this.soldiers[i];

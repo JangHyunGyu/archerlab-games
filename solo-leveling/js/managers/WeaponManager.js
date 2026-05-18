@@ -20,12 +20,15 @@ export class WeaponManager {
         this.weapons = new Map();
         this.maxSlots = 6;
         this._colliders = [];
+        this._ownedWeaponsCache = [];
+        this._ownedWeaponsCacheDirty = true;
     }
 
     addWeapon(weaponKey) {
         if (this.weapons.has(weaponKey)) {
             // Level up existing weapon
             this.weapons.get(weaponKey).levelUp();
+            this._ownedWeaponsCacheDirty = true;
             return true;
         }
 
@@ -38,6 +41,7 @@ export class WeaponManager {
         const weapon = new WeaponClass(this.scene, this.player, config);
         weapon.key = weaponKey;
         this.weapons.set(weaponKey, weapon);
+        this._ownedWeaponsCacheDirty = true;
 
         // Set up collision for projectile weapons
         this._setupCollision(weaponKey, weapon);
@@ -86,10 +90,14 @@ export class WeaponManager {
     }
 
     getOwnedWeapons() {
-        return Array.from(this.weapons.entries()).map(([key, w]) => ({
-            key,
-            level: w.level,
-        }));
+        if (this._ownedWeaponsCacheDirty) {
+            this._ownedWeaponsCache.length = 0;
+            for (const [key, w] of this.weapons.entries()) {
+                this._ownedWeaponsCache.push({ key, level: w.level });
+            }
+            this._ownedWeaponsCacheDirty = false;
+        }
+        return this._ownedWeaponsCache;
     }
 
     update(time, delta) {
@@ -109,6 +117,8 @@ export class WeaponManager {
             weapon.destroy();
         }
         this.weapons.clear();
+        this._ownedWeaponsCache = [];
+        this._ownedWeaponsCacheDirty = true;
         this.player = null;
         this.scene = null;
     }

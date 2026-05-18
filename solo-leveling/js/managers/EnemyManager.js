@@ -14,6 +14,7 @@ export class EnemyManager {
         this._warmBatchSize = options.warmBatchSize ?? 8;
         this._warmBatchDelay = options.warmBatchDelay ?? 70;
         this._warmPoolTimer = null;
+        this._inactiveEnemies = [];
 
         this._createInactiveEnemies(Math.min(options.initialPoolSize ?? 50, this._warmPoolTarget));
 
@@ -48,7 +49,7 @@ export class EnemyManager {
         this.killCounters = {};
 
         // Cached arrays for getAllEnemies/getActiveEnemies (invalidated each frame)
-        this._cachedActiveEnemies = null;
+        this._cachedActiveEnemies = [];
         this._activeEnemiesDirtyFrame = -1;
 
         if (this.pool.getLength() < this._warmPoolTarget) {
@@ -66,12 +67,14 @@ export class EnemyManager {
         }
     }
 
-    _createInactiveEnemy() {
+    _createInactiveEnemy(trackInactive = true) {
         const enemy = new Enemy(this.scene, -100, -100);
         enemy.setActive(false);
         enemy.setVisible(false);
         enemy.body.enable = false;
+        enemy._inInactiveStack = false;
         this.pool.add(enemy);
+        if (trackInactive) this.releaseInactiveEnemy(enemy);
         return enemy;
     }
 
@@ -79,6 +82,24 @@ export class EnemyManager {
         for (let i = 0; i < count; i++) {
             this._createInactiveEnemy();
         }
+    }
+
+    _getInactiveEnemy() {
+        while (this._inactiveEnemies.length > 0) {
+            const enemy = this._inactiveEnemies.pop();
+            if (enemy && !enemy.active && enemy.scene) {
+                enemy._inInactiveStack = false;
+                return enemy;
+            }
+        }
+        return this._createInactiveEnemy(false);
+    }
+
+    releaseInactiveEnemy(enemy) {
+        if (!enemy || enemy.active || enemy._inInactiveStack) return;
+        enemy._inInactiveStack = true;
+        this._inactiveEnemies.push(enemy);
+        this._activeEnemiesDirtyFrame = -1;
     }
 
     _warmPool() {
@@ -126,21 +147,26 @@ export class EnemyManager {
         const player = this.scene.player;
         if (!player) return;
 
-        this.pool.getChildren().forEach(enemy => {
+        const target = player.getHurtboxCenter?.() || player;
+        if (!this._despawnDist) {
+            this._despawnDist = WORLD_SIZE * 0.75;
+            this._despawnDistSq = this._despawnDist * this._despawnDist;
+        }
+
+        const children = this.pool.getChildren();
+        for (let i = 0; i < children.length; i++) {
+            const enemy = children[i];
             if (enemy.active) {
-                const target = player.getHurtboxCenter?.() || player;
                 enemy.update(time, delta, target.x, target.y);
 
                 // Despawn distance based on world size (mobs spawn from world edges)
-                if (!this._despawnDist) {
-                    this._despawnDist = WORLD_SIZE * 0.75;
-                }
-                const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y);
-                if (dist > this._despawnDist) {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                if (dx * dx + dy * dy > this._despawnDistSq) {
                     this._deactivateEnemy(enemy);
                 }
             }
-        });
+        }
 
         // Update quests
         this._updateQuests(seconds);
@@ -151,12 +177,17 @@ export class EnemyManager {
     }
 
     _getProgressPressure(minutes) {
-        return 1 + this._getPressureStepCount() * 0.06 + minutes * 0.008;
+        const lateMinutes = Math.max(0, minutes - 12);
+        return 1 + this._getPressureStepCount() * 0.08 + minutes * 0.012 + lateMinutes * 0.01;
     }
 
     _getDifficultyMultiplier(minutes) {
-        const base = 1 + minutes * 0.28 + Math.pow(minutes / 20, 2) * 2.2;
-        return base * (1 + this._getPressureStepCount() * 0.035);
+        const lateMinutes = Math.max(0, minutes - 12);
+        const base = 1
+            + minutes * 0.32
+            + Math.pow(minutes / 18, 2) * 2.7
+            + lateMinutes * 0.035;
+        return base * (1 + this._getPressureStepCount() * 0.045);
     }
 
     _getEnemyStatProfile(minutes, { elite = false } = {}) {
@@ -181,27 +212,28 @@ export class EnemyManager {
     _getSpawnInterval(minutes) {
         const base = WAVE_CONFIG.baseSpawnInterval;
         const min = WAVE_CONFIG.minSpawnInterval;
-        const smoothRamp = min + (base - min) / (1 + minutes * 0.21 + Math.pow(minutes / 18, 2) * 1.1);
-        return Math.max(220, smoothRamp / this._getProgressPressure(minutes));
+        const smoothRamp = min + (base - min) / (1 + minutes * 0.24 + Math.pow(minutes / 16, 2) * 1.2);
+        const floor = Math.max(175, 230 - minutes * 1.5);
+        return Math.max(floor, smoothRamp / this._getProgressPressure(minutes));
     }
 
     _getWaveCount(minutes) {
-        const lateRamp = Math.max(0, minutes - 12) * 0.35;
+        const lateRamp = Math.max(0, minutes - 10) * 0.45 + Math.max(0, minutes - 20) * 0.25;
         return Math.max(1, Math.floor(
             WAVE_CONFIG.baseEnemiesPerSpawn
             + minutes * WAVE_CONFIG.extraEnemiesPerMinute
             + lateRamp
-            + this._getPressureStepCount() * 0.5
+            + this._getPressureStepCount() * 0.75
         ));
     }
 
     _getMaxEnemies(minutes) {
-        const lateRamp = Math.max(0, minutes - 12) * 3;
+        const lateRamp = Math.max(0, minutes - 12) * 4 + Math.max(0, minutes - 22) * 2;
         return Math.floor(
             WAVE_CONFIG.maxEnemiesOnScreen
-            + minutes * 6
+            + minutes * 7
             + lateRamp
-            + this._getPressureStepCount() * 4
+            + this._getPressureStepCount() * 6
         );
     }
 
@@ -521,15 +553,12 @@ export class EnemyManager {
 
     _spawnEnemy(typeKey, x, y) {
         if (!ENEMY_TYPES[typeKey]) return null;
-        let enemy = this.pool.getChildren().find(e => !e.active);
-
-        if (!enemy) {
-            enemy = this._createInactiveEnemy();
-        }
+        const enemy = this._getInactiveEnemy();
 
         const minutes = this.gameTime / 60000;
         enemy.spawn(typeKey, ENEMY_TYPES[typeKey], this.difficultyMultiplier, x, y, this._getEnemyStatProfile(minutes));
-        this._cachedActiveEnemies = null;
+        enemy._inInactiveStack = false;
+        this._activeEnemiesDirtyFrame = -1;
         return enemy;
     }
 
@@ -544,13 +573,11 @@ export class EnemyManager {
         const typeKey = Phaser.Utils.Array.GetRandom(elitePool);
         const pos = this._getSpawnPosition();
 
-        let enemy = this.pool.getChildren().find(e => !e.active);
-        if (!enemy) {
-            enemy = this._createInactiveEnemy();
-        }
+        const enemy = this._getInactiveEnemy();
 
         enemy.spawn(typeKey, ENEMY_TYPES[typeKey], this.difficultyMultiplier, pos.x, pos.y, this._getEnemyStatProfile(minutes, { elite: true }));
-        this._cachedActiveEnemies = null;
+        enemy._inInactiveStack = false;
+        this._activeEnemiesDirtyFrame = -1;
         enemy.isElite = true;
 
         // Elite visual: larger size + red tint + glow + name label
@@ -685,7 +712,7 @@ export class EnemyManager {
         if (enemy._aura) {
             enemy._aura.setVisible(false).setActive(false);
         }
-        this._cachedActiveEnemies = null;
+        this.releaseInactiveEnemy(enemy);
     }
 
     cancelOpeningWave() {
@@ -695,10 +722,15 @@ export class EnemyManager {
         }
     }
 
-    getActiveEnemySnapshots() {
-        return this.getActiveEnemies()
-            .filter(enemy => enemy?.active && ENEMY_TYPES[enemy.enemyType])
-            .map(enemy => ({
+    getActiveEnemySnapshots(limit = Infinity) {
+        const max = Number.isFinite(limit) ? Math.max(0, limit) : Infinity;
+        const snapshots = [];
+        const enemies = this.getActiveEnemies();
+
+        for (let i = 0; i < enemies.length && snapshots.length < max; i++) {
+            const enemy = enemies[i];
+            if (!enemy?.active || !ENEMY_TYPES[enemy.enemyType]) continue;
+            snapshots.push({
                 typeKey: enemy.enemyType,
                 x: Math.round(enemy.x * 10) / 10,
                 y: Math.round(enemy.y * 10) / 10,
@@ -716,7 +748,10 @@ export class EnemyManager {
                 vx: Math.round((enemy.body?.velocity?.x || 0) * 10) / 10,
                 vy: Math.round((enemy.body?.velocity?.y || 0) * 10) / 10,
                 flipX: !!enemy.flipX,
-            }));
+            });
+        }
+
+        return snapshots;
     }
 
     restoreActiveEnemies(savedEnemies) {
@@ -759,15 +794,22 @@ export class EnemyManager {
 
             restored++;
         }
-        this._cachedActiveEnemies = null;
+        this._activeEnemiesDirtyFrame = -1;
         return restored;
     }
 
     getActiveEnemies() {
-        // Cache the filtered result per frame to avoid creating new arrays on every call
+        // Cache the filtered result per frame without allocating a new array every call.
         const currentFrame = this.scene.game.loop.frame;
         if (this._activeEnemiesDirtyFrame !== currentFrame || !this._cachedActiveEnemies) {
-            this._cachedActiveEnemies = this.pool.getChildren().filter(e => e.active);
+            const cache = this._cachedActiveEnemies || [];
+            cache.length = 0;
+            const children = this.pool.getChildren();
+            for (let i = 0; i < children.length; i++) {
+                const enemy = children[i];
+                if (enemy.active) cache.push(enemy);
+            }
+            this._cachedActiveEnemies = cache;
             this._activeEnemiesDirtyFrame = currentFrame;
         }
         return this._cachedActiveEnemies;
@@ -816,6 +858,7 @@ export class EnemyManager {
 
         Enemy.clearTransientPools(this.scene);
         this._cachedActiveEnemies = null;
+        this._inactiveEnemies = [];
         this.pool = null;
         this.scene = null;
     }
