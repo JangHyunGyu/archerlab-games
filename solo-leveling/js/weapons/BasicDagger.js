@@ -146,10 +146,9 @@ export class BasicDagger extends WeaponBase {
         this._untrackAttackObjects(entry);
     }
 
-    _damageEnemiesInCone(baseAngle, range, angleTol, hitX, hitY, { maxHits = Infinity } = {}) {
+    _damageEnemiesInCone(baseAngle, range, angleTol, hitX, hitY) {
         const hitOriginX = this.player.x;
         const hitOriginY = this.player.y - 16;
-        let hits = 0;
 
         for (const enemy of this.player.getAllEnemies()) {
             if (!enemy.active) continue;
@@ -162,29 +161,24 @@ export class BasicDagger extends WeaponBase {
             if (angleDiff >= angleTol) continue;
 
             this.applyDamage(enemy, this.getDamage(), hitX, hitY);
-            hits++;
             this.playHitSound();
             if (!this.scene.textures.exists('effect_monster_hit_0')) {
                 this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
             }
-            if (hits >= maxHits) break;
         }
     }
 
-    _damageEnemiesInRadius(x, y, radius, impactAngle, { maxHits = Infinity } = {}) {
-        let hits = 0;
+    _damageEnemiesInRadius(x, y, radius, impactAngle) {
         for (const enemy of this.player.getAllEnemies()) {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
             if (dist > radius) continue;
 
             this.applyDamage(enemy, this.getDamage(), x, y);
-            hits++;
             this.playHitSound();
             if (!this.scene.textures.exists('effect_monster_hit_0')) {
                 this._spawnBloodBurst(enemy.x, enemy.y, impactAngle);
             }
-            if (hits >= maxHits) break;
         }
     }
 
@@ -470,8 +464,6 @@ export class BasicDagger extends WeaponBase {
             const enemies = this.player.getAllEnemies();
             const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
             const hitAngleTol = this.config.hitAngle ?? 0.62;
-            const maxHits = this.config.maxHits ?? Infinity;
-            let hits = 0;
             for (const enemy of enemies) {
                 if (!enemy.active) continue;
 
@@ -483,13 +475,11 @@ export class BasicDagger extends WeaponBase {
                 if (angleDiff >= hitAngleTol) continue;
 
                 this.applyDamage(enemy, this.getDamage(), hitPose.tipX, hitPose.tipY);
-                hits++;
                 this.playHitSound();
 
                 if (!this.scene.textures.exists('effect_monster_hit_0')) {
                     this._spawnBloodBurst(enemy.x, enemy.y, baseAngle);
                 }
-                if (hits >= maxHits) break;
             }
         });
 
@@ -545,8 +535,7 @@ export class BasicDagger extends WeaponBase {
                 this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 35),
                 this.config.hitAngle ?? 0.92,
                 hitX,
-                hitY,
-                { maxHits: this.config.maxHits ?? Infinity }
+                hitY
             );
         });
 
@@ -639,8 +628,7 @@ export class BasicDagger extends WeaponBase {
                 this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0),
                 this.config.hitAngle ?? 0.78,
                 hitX,
-                hitY,
-                { maxHits: this.config.maxHits ?? 3 }
+                hitY
             );
         });
 
@@ -727,8 +715,7 @@ export class BasicDagger extends WeaponBase {
                 impactX,
                 impactY,
                 this.config.impactRadius ?? 56,
-                baseAngle,
-                { maxHits: this.config.maxHits ?? 3 }
+                baseAngle
             );
             if (this.scene.cameras?.main) this.scene.cameras.main.shake(70, 0.0022);
         });
@@ -766,7 +753,6 @@ export class BasicDagger extends WeaponBase {
         const trailFx = usesImageEffect ? null : this.scene.add.graphics().setDepth(13);
         const hitEnemies = new Set();
         const impactRadius = this.config.impactRadius ?? 38;
-        const maxHits = this.config.maxHits ?? 2;
         const progress = { t: 0 };
         const entry = this._trackAttackObjects([projectile, trailFx].filter(Boolean));
 
@@ -846,7 +832,6 @@ export class BasicDagger extends WeaponBase {
                 this.applyDamage(enemy, this.getDamage(), projectile.x, projectile.y);
                 this.playHitSound();
                 spawnImpactBurst(projectile.x, projectile.y);
-                if (hitEnemies.size >= maxHits) break;
             }
         };
 
