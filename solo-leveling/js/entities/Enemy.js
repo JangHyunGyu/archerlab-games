@@ -170,7 +170,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             frameMs = 45,
             alpha = 1,
             blendMode = Phaser.BlendModes.NORMAL,
+            frameCount = 6,
         } = opts;
+        const lastFrame = Math.max(0, frameCount - 1);
 
         try {
             const sprite = scene.add.sprite(x, y, `${prefix}_0`)
@@ -184,15 +186,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             let frame = 0;
             const timer = scene.time.addEvent({
                 delay: frameMs,
-                repeat: 5,
+                repeat: lastFrame,
                 callback: () => {
                     frame += 1;
-                    if (!sprite.scene || frame > 5) {
+                    if (!sprite.scene || frame > lastFrame) {
                         if (sprite.scene) sprite.destroy();
                         return;
                     }
                     sprite.setTexture(`${prefix}_${frame}`);
-                    if (frame >= 5) {
+                    if (frame >= lastFrame) {
                         scene.tweens.add({
                             targets: sprite,
                             alpha: 0,
@@ -209,7 +211,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    static _animateFrameSprite(scene, sprite, prefix, frameMs = 55) {
+    static _animateFrameSprite(scene, sprite, prefix, frameMs = 55, frameCount = 6) {
         if (!scene?.textures?.exists(`${prefix}_0`) || !sprite?.scene) return null;
 
         let frame = 0;
@@ -218,7 +220,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             loop: true,
             callback: () => {
                 if (!sprite.scene) return;
-                frame = (frame + 1) % 6;
+                frame = (frame + 1) % frameCount;
                 sprite.setTexture(`${prefix}_${frame}`);
             },
         });
@@ -815,7 +817,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 scale: (isCrit ? 0.5 : 0.42) * sizeFactor,
                 rotation: hitAngle,
                 depth: 18,
-                frameMs: (isCrit ? 42 : 38) + profile.frameMsAdd,
+                frameMs: Math.max(18, (isCrit ? 20 : 24) + profile.frameMsAdd),
+                frameCount: isCrit ? 16 : 12,
             }
         );
         this._spawnHitRing(profile, isCrit ? 0xff3344 : 0xcc1020, -this.displayHeight * 0.04);

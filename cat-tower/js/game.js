@@ -301,7 +301,7 @@
     mergeParticleImage = new Image();
     mergeParticleImage.src = 'assets/ui/merge-particles.png';
     mergeBurstImage = new Image();
-    mergeBurstImage.src = 'assets/ui/merge-burst-sheet.png';
+    mergeBurstImage.src = 'assets/ui/merge-burst-sheet-impact.png';
     landingDustImage = new Image();
     landingDustImage.src = 'assets/ui/landing-dust-sheet.png';
     resizeCanvas();
