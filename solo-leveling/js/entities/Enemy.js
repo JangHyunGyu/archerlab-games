@@ -752,7 +752,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 scale: (isCrit ? 0.56 : 0.46) * sizeFactor,
                 rotation: Phaser.Math.FloatBetween(-0.22, 0.22),
                 depth: 18,
-                frameMs: (isCrit ? 48 : 42) + profile.frameMsAdd,
+                frameMs: Math.max(18, (isCrit ? 22 : 24) + profile.frameMsAdd),
+                frameCount: 12,
                 alpha: 0.95,
                 blendMode: Phaser.BlendModes.ADD,
             }
@@ -1011,7 +1012,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 scale,
                 rotation: Phaser.Math.FloatBetween(-0.18, 0.18),
                 depth: 18,
-                frameMs: 50,
+                frameMs: 38,
+                frameCount: 12,
                 alpha: 1,
                 blendMode: Phaser.BlendModes.ADD,
             }

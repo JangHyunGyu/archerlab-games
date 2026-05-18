@@ -87,10 +87,12 @@ const BOSS_KEYS = ['igris', 'tusk', 'beru'];
 const BASE_EFFECT_KEYS = ['shadow_dagger', 'shadow_slash', 'ruler_authority', 'dragon_fear'];
 const COMBAT_EFFECT_KEYS = ['basic_stab', 'flame_burn', 'monster_hit', 'monster_crit', 'monster_death'];
 const COMBAT_EFFECT_FILE_PREFIXES = {
+    flame_burn: 'flame_burn_v2',
     monster_hit: 'monster_hit_v2',
     monster_crit: 'monster_crit_v2',
 };
 const COMBAT_EFFECT_FRAME_COUNTS = {
+    flame_burn: 12,
     monster_hit: 12,
     monster_crit: 16,
 };
