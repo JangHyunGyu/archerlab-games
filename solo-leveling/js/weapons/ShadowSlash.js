@@ -221,9 +221,7 @@ export class ShadowSlash extends WeaponBase {
         // Hit enemies in arc
         const enemies = this.player.getAllEnemies();
         const hitAngle = this.config.hitAngle ?? arcHalf;
-        const maxHits = this.config.maxHits ?? Infinity;
         const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
-        let hits = 0;
         for (const enemy of enemies) {
             if (!enemy.active) continue;
             const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
@@ -236,8 +234,6 @@ export class ShadowSlash extends WeaponBase {
                 if (this.config.slowMultiplier !== undefined && enemy.applySlow) {
                     enemy.applySlow(this.config.slowMultiplier, this.config.slowDuration || 1200);
                 }
-                hits++;
-                if (hits >= maxHits) break;
             }
         }
 
@@ -348,15 +344,11 @@ export class ShadowSlash extends WeaponBase {
         }
 
         const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
-        const maxHits = this.config.maxHits ?? Infinity;
-        let hits = 0;
         for (const enemy of this.player.getAllEnemies()) {
             if (!enemy.active) continue;
             const dist = this._distanceToLineSegment(enemy.x, enemy.y, startX, startY, endX, endY);
             if (dist > lineWidth) continue;
             this.applyDamage(enemy, damage, px, py);
-            hits++;
-            if (hits >= maxHits) break;
         }
 
         if (this.player.playAttackMotion) {
@@ -371,10 +363,8 @@ export class ShadowSlash extends WeaponBase {
         const glowColor = this.getEffectGlowColor(0xe8fff5);
         const px = this.player.x;
         const py = this.player.y;
-        const maxHits = this.config.maxHits ?? Infinity;
         const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 0.85));
         const effectTexture = this.getEffectTexture();
-        let hits = 0;
 
         if (effectTexture) {
             const source = this.scene.textures.get(effectTexture).getSourceImage();
@@ -425,8 +415,6 @@ export class ShadowSlash extends WeaponBase {
             if (this.config.slowMultiplier !== undefined && enemy.applySlow) {
                 enemy.applySlow(this.config.slowMultiplier, this.config.slowDuration || 1500);
             }
-            hits++;
-            if (hits >= maxHits) break;
         }
 
         this.playConfiguredSound('slash');
