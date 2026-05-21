@@ -31,6 +31,12 @@ function jsonResponse(data, status = 200) {
     });
 }
 
+function clampLimit(rawLimit) {
+    const parsed = parseInt(rawLimit || '20', 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 20;
+    return Math.min(parsed, 100);
+}
+
 async function initDB(db) {
     await db.prepare(`
         CREATE TABLE IF NOT EXISTS rankings (
@@ -76,11 +82,27 @@ export default {
                 if (!gameId) {
                     return jsonResponse({ error: 'game_id is required' }, 400);
                 }
-                const limit = Math.min(parseInt(url.searchParams.get('limit') || '20', 10), 100);
+                const limit = clampLimit(url.searchParams.get('limit'));
 
-                const result = await env.DB.prepare(
-                    'SELECT player_name, score, extra_data, created_at FROM rankings WHERE game_id = ? ORDER BY score DESC LIMIT ?'
-                ).bind(gameId, limit).all();
+                const result = await env.DB.prepare(`
+                    SELECT player_name, score, extra_data, created_at
+                    FROM (
+                        SELECT
+                            player_name,
+                            score,
+                            extra_data,
+                            created_at,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY LOWER(TRIM(player_name))
+                                ORDER BY score DESC, created_at ASC, id ASC
+                            ) AS name_rank
+                        FROM rankings
+                        WHERE game_id = ?
+                    )
+                    WHERE name_rank = 1
+                    ORDER BY score DESC, created_at ASC
+                    LIMIT ?
+                `).bind(gameId, limit).all();
 
                 return jsonResponse({
                     game_id: gameId,
@@ -116,22 +138,66 @@ export default {
 
                 const extraStr = extra_data ? JSON.stringify(extra_data) : null;
 
-                // Insert the score
+                // Insert the score. Exact duplicate records may be ignored when the DB has a uniqueness constraint.
                 await env.DB.prepare(
-                    'INSERT INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
+                    'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
                 ).bind(game_id, name, numScore, extraStr).run();
 
-                // Get current rank of this score
-                const rankResult = await env.DB.prepare(
-                    'SELECT COUNT(*) as rank FROM rankings WHERE game_id = ? AND score > ?'
-                ).bind(game_id, numScore).first();
+                // Get the displayed rank for this name after deduping by player name.
+                const rankResult = await env.DB.prepare(`
+                    WITH ranked_by_name AS (
+                        SELECT
+                            LOWER(TRIM(player_name)) AS name_key,
+                            score,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY LOWER(TRIM(player_name))
+                                ORDER BY score DESC, created_at ASC, id ASC
+                            ) AS name_rank
+                        FROM rankings
+                        WHERE game_id = ?
+                    ),
+                    best_scores AS (
+                        SELECT name_key, score
+                        FROM ranked_by_name
+                        WHERE name_rank = 1
+                    ),
+                    current_player AS (
+                        SELECT score
+                        FROM best_scores
+                        WHERE name_key = LOWER(TRIM(?))
+                        LIMIT 1
+                    )
+                    SELECT
+                        (SELECT score FROM current_player) AS best_score,
+                        (
+                            SELECT COUNT(*) + 1
+                            FROM best_scores
+                            WHERE score > (SELECT score FROM current_player)
+                        ) AS rank
+                `).bind(game_id, name).first();
 
-                const currentRank = (rankResult?.rank || 0) + 1;
+                const currentRank = rankResult?.rank || 1;
+                const bestScore = rankResult?.best_score ?? numScore;
 
-                // Cleanup: keep only top 100 per game to prevent table bloat
+                // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
                 await env.DB.prepare(`
                     DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
-                        SELECT id FROM rankings WHERE game_id = ? ORDER BY score DESC LIMIT 100
+                        SELECT id
+                        FROM (
+                            SELECT
+                                id,
+                                score,
+                                created_at,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY LOWER(TRIM(player_name))
+                                    ORDER BY score DESC, created_at ASC, id ASC
+                                ) AS name_rank
+                            FROM rankings
+                            WHERE game_id = ?
+                        )
+                        WHERE name_rank = 1
+                        ORDER BY score DESC, created_at ASC, id ASC
+                        LIMIT 100
                     )
                 `).bind(game_id, game_id).run();
 
@@ -140,6 +206,7 @@ export default {
                     rank: currentRank,
                     player_name: name,
                     score: numScore,
+                    best_score: bestScore,
                     in_top_20: currentRank <= 20,
                 });
             }
