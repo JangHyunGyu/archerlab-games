@@ -600,6 +600,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const isCrit = amount > this.maxHp * 0.5;
         const isBurn = hitEffect === 'burn';
+        const isSanctuary = hitEffect === 'sanctuary';
         if (isCrit && this.scene.soundManager) this.scene.soundManager.play('critHit');
         const restoreTint = this.isElite ? 0xff6644 : 0xffffff;
         const isOnCamera = Enemy._isNearCamera(this.scene, this.x, this.y, 96);
@@ -624,7 +625,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xffffff);
         this._hitFlashTimerA = this.scene.time.delayedCall(35, () => {
             this._hitFlashTimerA = null;
-            if (this.active) this.setTint(isBurn ? 0xff7a22 : 0xff2233);
+            if (this.active) this.setTint(isBurn ? 0xff7a22 : (isSanctuary ? 0x66f2b0 : 0xff2233));
         });
         this._hitFlashTimerB = this.scene.time.delayedCall(110, () => {
             this._hitFlashTimerB = null;
@@ -742,6 +743,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (!Enemy._consumeVfxBudget(this.scene, isCrit ? 2 : 1)) return;
         if (hitEffect === 'burn') {
             this._spawnHitBurn(isCrit);
+            return;
+        }
+        if (hitEffect === 'sanctuary') {
+            this._spawnHitSanctuary(isCrit);
             return;
         }
         this._spawnHitBlood(isCrit);
@@ -883,6 +888,75 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 duration: profile.tier === 'large' ? 760 : 560,
                 ease: 'Quad.easeOut',
                 onComplete: () => scorch.destroy(),
+            });
+        }
+    }
+
+    _spawnHitSanctuary(isCrit) {
+        if (!this.scene) return;
+        const profile = this._getHitVfxProfile();
+        const sizeFactor = profile.sizeFactor;
+        const constrained = Enemy._isVfxConstrained(this.scene);
+        const hitY = this.y - this.displayHeight * profile.hitYOffset;
+        const mainColor = isCrit ? 0xe8fff5 : 0x66f2b0;
+        const glowColor = isCrit ? 0xffffff : 0xb9ffe1;
+
+        this._spawnHitRing(profile, mainColor, -this.displayHeight * 0.04);
+
+        const halo = this.scene.add.circle(this.x, hitY, 10 * sizeFactor, mainColor, 0.22)
+            .setDepth(18)
+            .setBlendMode(Phaser.BlendModes.ADD);
+        halo.setStrokeStyle(Math.max(1, Math.round(2 * sizeFactor)), glowColor, 0.58);
+        this.scene.tweens.add({
+            targets: halo,
+            scale: isCrit ? 2.35 : 1.82,
+            alpha: 0,
+            duration: isCrit ? 320 : 240,
+            ease: 'Cubic.easeOut',
+            onComplete: () => halo.destroy(),
+        });
+
+        if (!constrained || isCrit || profile.tier !== 'small') {
+            const cross = this.scene.add.graphics()
+                .setPosition(this.x, hitY)
+                .setDepth(19)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            const arm = (isCrit ? 22 : 16) * sizeFactor;
+            cross.lineStyle(Math.max(2, Math.round(3 * sizeFactor)), glowColor, isCrit ? 0.95 : 0.78);
+            cross.lineBetween(-arm, 0, arm, 0);
+            cross.lineBetween(0, -arm, 0, arm);
+            cross.lineStyle(Math.max(1, Math.round(1.5 * sizeFactor)), mainColor, 0.72);
+            cross.strokeCircle(0, 0, arm * 0.54);
+            this.scene.tweens.add({
+                targets: cross,
+                scale: isCrit ? 1.35 : 1.18,
+                alpha: 0,
+                duration: isCrit ? 210 : 170,
+                ease: 'Quad.easeOut',
+                onComplete: () => cross.destroy(),
+            });
+        }
+
+        const particleScale = constrained ? (isCrit ? 0.5 : 0.28) : 1;
+        const count = Math.max(constrained ? 1 : 3, Math.round((isCrit ? 12 : 7) * profile.particleMult * particleScale));
+        const maxSpeed = (isCrit ? 155 : 95) * profile.speedMult;
+        for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const s = 28 + Math.random() * maxSpeed;
+            const r = (1.2 + Math.random() * 1.8) * profile.radiusMult;
+            const color = Math.random() < 0.45 ? 0xffffff : (Math.random() < 0.7 ? 0xb9ffe1 : 0x66f2b0);
+            const mote = this.scene.add.circle(this.x, hitY, r, color, 0.9)
+                .setDepth(12)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            this.scene.tweens.add({
+                targets: mote,
+                x: this.x + Math.cos(a) * s,
+                y: hitY + Math.sin(a) * s - 14,
+                alpha: 0,
+                scale: 0.18,
+                duration: 250 + Math.random() * 220,
+                ease: 'Quad.easeOut',
+                onComplete: () => mote.destroy(),
             });
         }
     }
