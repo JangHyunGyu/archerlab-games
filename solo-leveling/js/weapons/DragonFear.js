@@ -26,31 +26,62 @@ export class DragonFear extends WeaponBase {
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_dragon_fear');
+        const targetScale = (useCharacterEffect || useEffectAsset) ? (range * 2) / this.auraSpriteWidth(effectTexture, useEffectAsset) : range / 60;
         this.auraSprite = this.scene.add.sprite(this.player.x, this.player.y, effectTexture || (useEffectAsset ? 'effect_dragon_fear' : 'proj_fear'))
             .setDepth(3)
             .setAlpha(0)
-            .setScale((useCharacterEffect || useEffectAsset) ? (range * 2) / this.auraSpriteWidth(effectTexture, useEffectAsset) : range / 60)
+            .setScale(this.config.smoothVisual ? targetScale * (this.config.visualStartScaleRatio ?? 0.55) : targetScale)
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+        const auraSprite = this.auraSprite;
 
-        this.scene.tweens.add({
-            targets: this.auraSprite,
-            alpha: (useCharacterEffect || useEffectAsset) ? 0.82 : 0.6,
-            duration: 200,
-        });
+        if (this.config.smoothVisual) {
+            const fadeInDuration = this.config.visualFadeInDuration ?? 320;
+            const fadeOutDuration = this.config.visualFadeOutDuration ?? 430;
+            const holdDuration = Math.max(0, auraDuration - fadeInDuration - fadeOutDuration);
+            this.scene.tweens.add({
+                targets: auraSprite,
+                alpha: this.config.visualPeakAlpha ?? ((useCharacterEffect || useEffectAsset) ? 0.76 : 0.58),
+                scale: targetScale * (this.config.visualPeakScaleRatio ?? 1),
+                duration: fadeInDuration,
+                ease: 'Sine.easeOut',
+                onComplete: () => {
+                    this.scene.tweens.add({
+                        targets: auraSprite,
+                        alpha: 0,
+                        scale: targetScale * (this.config.visualEndScaleRatio ?? 1.22),
+                        duration: fadeOutDuration,
+                        delay: this.config.visualHoldDuration ?? holdDuration,
+                        ease: 'Sine.easeInOut',
+                        onComplete: () => {
+                            if (auraSprite?.active) auraSprite.destroy();
+                            if (this.auraSprite === auraSprite) {
+                                this.auraSprite = null;
+                            }
+                        },
+                    });
+                },
+            });
+        } else {
+            this.scene.tweens.add({
+                targets: auraSprite,
+                alpha: (useCharacterEffect || useEffectAsset) ? 0.82 : 0.6,
+                duration: 200,
+            });
 
-        this.scene.tweens.add({
-            targets: this.auraSprite,
-            alpha: 0,
-            scale: this.auraSprite.scaleX * 1.3,
-            duration: Math.max(500, auraDuration - 500),
-            delay: 500,
-            onComplete: () => {
-                if (this.auraSprite) {
-                    this.auraSprite.destroy();
-                    this.auraSprite = null;
-                }
-            },
-        });
+            this.scene.tweens.add({
+                targets: auraSprite,
+                alpha: 0,
+                scale: targetScale * 1.3,
+                duration: Math.max(500, auraDuration - 500),
+                delay: 500,
+                onComplete: () => {
+                    if (auraSprite?.active) auraSprite.destroy();
+                    if (this.auraSprite === auraSprite) {
+                        this.auraSprite = null;
+                    }
+                },
+            });
+        }
 
         this.playConfiguredSound('fear');
 

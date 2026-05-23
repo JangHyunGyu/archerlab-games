@@ -83,22 +83,49 @@ export class RulersAuthority extends WeaponBase {
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && !this.config.imageOnlyVfx && this.scene.textures.exists('effect_ruler_authority');
+        const targetScale = (useCharacterEffect || useEffectAsset) ? (range * 2) / this._effectSpriteWidth(effectTexture, useEffectAsset) : range / 50;
         const circle = this.scene.add.sprite(targetX, targetY, effectTexture || (useEffectAsset ? 'effect_ruler_authority' : 'proj_ruler'))
             .setDepth(7)
             .setAlpha(0)
-            .setScale((useCharacterEffect || useEffectAsset) ? 0.08 : 0.2)
+            .setScale(this.config.smoothVisual ? targetScale * (this.config.visualStartScaleRatio ?? 0.35) : ((useCharacterEffect || useEffectAsset) ? 0.08 : 0.2))
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
-        this.scene.tweens.add({
-            targets: circle,
-            alpha: (useCharacterEffect || useEffectAsset) ? 0.92 : 0.8,
-            scaleX: (useCharacterEffect || useEffectAsset) ? (range * 2) / circle.width : range / 50,
-            scaleY: (useCharacterEffect || useEffectAsset) ? (range * 2) / circle.width : range / 50,
-            duration: 300,
-            yoyo: true,
-            hold: 100,
-            onComplete: () => circle.destroy(),
-        });
+        if (this.config.smoothVisual) {
+            const peakAlpha = this.config.visualPeakAlpha ?? ((useCharacterEffect || useEffectAsset) ? 0.82 : 0.72);
+            const peakScale = targetScale * (this.config.visualPeakScaleRatio ?? 1);
+            const endScale = targetScale * (this.config.visualEndScaleRatio ?? 1.16);
+            this.scene.tweens.add({
+                targets: circle,
+                alpha: peakAlpha,
+                scaleX: peakScale,
+                scaleY: peakScale,
+                duration: this.config.visualFadeInDuration ?? 260,
+                ease: 'Sine.easeOut',
+                onComplete: () => {
+                    this.scene.tweens.add({
+                        targets: circle,
+                        alpha: 0,
+                        scaleX: endScale,
+                        scaleY: endScale,
+                        duration: this.config.visualFadeOutDuration ?? 420,
+                        delay: this.config.visualHoldDuration ?? 80,
+                        ease: 'Sine.easeInOut',
+                        onComplete: () => circle.destroy(),
+                    });
+                },
+            });
+        } else {
+            this.scene.tweens.add({
+                targets: circle,
+                alpha: (useCharacterEffect || useEffectAsset) ? 0.92 : 0.8,
+                scaleX: targetScale,
+                scaleY: targetScale,
+                duration: 300,
+                yoyo: true,
+                hold: 100,
+                onComplete: () => circle.destroy(),
+            });
+        }
 
         if (!this.config.imageOnlyVfx && !useCharacterEffect && !useEffectAsset) {
             // Ground crack effect
@@ -133,5 +160,13 @@ export class RulersAuthority extends WeaponBase {
 
     destroy() {
         super.destroy();
+    }
+
+    _effectSpriteWidth(effectTexture, useEffectAsset) {
+        const textureKey = effectTexture || (useEffectAsset ? 'effect_ruler_authority' : null);
+        if (textureKey && this.scene.textures.exists(textureKey)) {
+            return this.scene.textures.get(textureKey).getSourceImage().width || 320;
+        }
+        return 320;
     }
 }
