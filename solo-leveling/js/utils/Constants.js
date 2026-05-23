@@ -293,6 +293,7 @@ export const WEAPONS = {
         baseCooldown: 650,
         baseCount: 1,
         attackRange: 205,
+        targetAcquireMultiplier: 2,
         hitAngle: 0.6,
         levelBonuses: {
             2: { damage: 8 },
@@ -710,7 +711,7 @@ Object.assign(WEAPONS, {
         basicAttackEffectKey: 'sanctuary_mace_slam',
         soundKey: 'sanctuaryMace',
         baseDamage: 45,
-        attackRange: 205,
+        attackRange: 246,
         targetRangeBonus: 30,
         impactRangeBonus: -12,
         impactRadius: 66,

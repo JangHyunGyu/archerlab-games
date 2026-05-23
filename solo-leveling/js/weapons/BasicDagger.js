@@ -80,8 +80,13 @@ export class BasicDagger extends WeaponBase {
         return textureKey && this.scene?.textures?.exists(textureKey) ? textureKey : null;
     }
 
+    _getTargetAcquireRange(rangeBonus) {
+        const baseRange = this.attackRange + this.extraRange + rangeBonus;
+        return baseRange * (this.config.targetAcquireMultiplier ?? 1);
+    }
+
     _getAttackSetup({ rangeBonus = 50, duration = 240 } = {}) {
-        const target = this.player.getClosestEnemy(this.attackRange + this.extraRange + rangeBonus);
+        const target = this.player.getClosestEnemy(this._getTargetAcquireRange(rangeBonus));
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
             : (this.player.facingRight ? 0 : Math.PI);
@@ -106,7 +111,7 @@ export class BasicDagger extends WeaponBase {
         const isMoving = this.player.moveIntensity > 0.12;
         const target = isMoving
             ? null
-            : this.player.getClosestEnemy(this.attackRange + this.extraRange + rangeBonus);
+            : this.player.getClosestEnemy(this._getTargetAcquireRange(rangeBonus));
         const fallbackAngle = isMoving
             ? this.player.lastMoveAngle
             : (this.player.facingRight ? 0 : Math.PI);
@@ -183,7 +188,7 @@ export class BasicDagger extends WeaponBase {
     }
 
     _thrust() {
-        const target = this.player.getClosestEnemy(this.attackRange + this.extraRange + (this.config.targetRangeBonus ?? 50));
+        const target = this.player.getClosestEnemy(this._getTargetAcquireRange(this.config.targetRangeBonus ?? 50));
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
             : (this.player.facingRight ? 0 : Math.PI);
