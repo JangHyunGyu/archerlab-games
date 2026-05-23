@@ -52,7 +52,7 @@
     bestMoves: $("best-moves-label"),
     clearMoves: $("clear-moves"),
     nextLevel: $("next-level-label"),
-    clearScore: $("clear-score"),
+    clearLevel: $("clear-level"),
     clearTitle: $("clear-title"),
     play: $("play-btn"),
     continue: $("continue-btn"),
@@ -556,12 +556,12 @@
 
     completeLevel() {
       this.playTone("win");
-      const rankScore = calculateRankScore(this.level, this.moves, this.initialPieceCount);
+      const clearedLevel = calculateClearedLevel(this.level);
       this.lastClear = {
         level: this.level,
+        rankLevel: clearedLevel,
         moves: this.moves,
         lines: this.initialPieceCount,
-        score: rankScore,
         seed: this.levelSeed,
       };
       this.bestLevel = Math.max(this.bestLevel, this.level + 1);
@@ -574,7 +574,7 @@
       dom.clearTitle.textContent = `레벨 ${this.level} 클리어`;
       dom.clearMoves.textContent = String(this.moves);
       dom.nextLevel.textContent = String(this.level + 1);
-      dom.clearScore.textContent = rankScore.toLocaleString();
+      dom.clearLevel.textContent = `Lv ${clearedLevel.toLocaleString()}`;
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       dom.rankSubmitRow.classList.remove("hidden");
@@ -620,11 +620,10 @@
       dom.rankContent.innerHTML = rows.map((row, index) => {
         const rank = row.rank || index + 1;
         const extra = row.extra_data || {};
-        const level = Number(extra.level || Math.floor((Number(row.score) || 0) / 100));
+        const level = Number(extra.cleared_level || extra.level || row.score || 0);
         const moves = Number(extra.moves || 0);
         const lines = Number(extra.lines || 0);
         const meta = [
-          level ? `Lv ${level}` : "",
           moves ? `${moves} moves` : "",
           lines ? `${lines} lines` : "",
         ].filter(Boolean).join(" · ");
@@ -634,7 +633,7 @@
           <div class="${cls.join(" ")}">
             <div class="rank-pos">${rank}</div>
             <div class="rank-name">${escapeHtml(row.player_name || "PLAYER")}<span class="rank-meta">${escapeHtml(meta || "Arrow Puzzle")}</span></div>
-            <div class="rank-score">${Number(row.score || 0).toLocaleString()}</div>
+            <div class="rank-level">Lv ${Number(level || 0).toLocaleString()}</div>
           </div>
         `;
       }).join("");
@@ -663,9 +662,10 @@
           body: JSON.stringify({
             game_id: GAME_ID,
             player_name: name,
-            score: this.lastClear.score,
+            score: this.lastClear.rankLevel,
             extra_data: {
-              level: this.lastClear.level,
+              level: this.lastClear.rankLevel,
+              cleared_level: this.lastClear.rankLevel,
               moves: this.lastClear.moves,
               lines: this.lastClear.lines,
               seed: this.lastClear.seed,
@@ -1275,8 +1275,8 @@
       : 1 - Math.pow(-2 * value + 2, 3) / 2;
   }
 
-  function calculateRankScore(level, moves, lines) {
-    return Math.max(1, level | 0) * 100;
+  function calculateClearedLevel(level) {
+    return Math.max(1, level | 0);
   }
 
   function escapeHtml(value) {
