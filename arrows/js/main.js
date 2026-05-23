@@ -562,6 +562,7 @@
         moves: this.moves,
         lines: this.initialPieceCount,
         score: rankScore,
+        seed: this.levelSeed,
       };
       this.bestLevel = Math.max(this.bestLevel, this.level + 1);
       localStorage.setItem(STORAGE.bestLevel, String(this.bestLevel));
@@ -619,7 +620,7 @@
       dom.rankContent.innerHTML = rows.map((row, index) => {
         const rank = row.rank || index + 1;
         const extra = row.extra_data || {};
-        const level = Number(extra.level || Math.floor((Number(row.score) || 0) / 1000000));
+        const level = Number(extra.level || Math.floor((Number(row.score) || 0) / 100));
         const moves = Number(extra.moves || 0);
         const lines = Number(extra.lines || 0);
         const meta = [
@@ -667,6 +668,7 @@
               level: this.lastClear.level,
               moves: this.lastClear.moves,
               lines: this.lastClear.lines,
+              seed: this.lastClear.seed,
             },
           }),
         });
@@ -790,30 +792,29 @@
 
   function getLevelConfig(level) {
     const rawLevel = Math.max(1, level | 0);
-    const tunedLevel = Math.min(rawLevel, DESIGNED_LEVELS);
-    const early = clamp((tunedLevel - 1) / 90, 0, 1);
-    const full = clamp((tunedLevel - 1) / (DESIGNED_LEVELS - 1), 0, 1);
-    const late = Math.pow(full, 0.72);
-    const gridW = Math.min(19, 9 + Math.floor((tunedLevel - 1) / 11));
-    const gridH = Math.min(21, 11 + Math.floor((tunedLevel - 1) / 10));
-    const fillRatio = 0.43 + early * 0.12 + late * 0.08;
-    const maxLength = Math.min(15, Math.round(5 + early * 5 + late * 5));
+    const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
+    const progress = DIFFICULTY_CAP_LEVEL <= 1 ? 1 : clamp((tunedLevel - 1) / (DIFFICULTY_CAP_LEVEL - 1), 0, 1);
+    const curve = Math.pow(progress, 0.74);
+    const gridW = Math.min(19, 9 + Math.floor(progress * 10));
+    const gridH = Math.min(21, 11 + Math.floor(progress * 10));
+    const fillRatio = 0.43 + curve * 0.2;
+    const maxLength = Math.min(15, Math.round(5 + progress * 4 + curve * 6));
 
     return {
       gridW,
       gridH,
-      target: Math.min(54, Math.round(12 + early * 30 + late * 8)),
+      target: Math.min(54, Math.round(12 + progress * 26 + curve * 16)),
       targetCells: Math.round(gridW * gridH * fillRatio),
-      targetSlack: Math.floor(maxLength * late * 0.75),
-      minLength: tunedLevel < 50 ? 2 : tunedLevel < 150 ? 3 : 4,
+      targetSlack: Math.floor(maxLength * curve * 0.72),
+      minLength: progress < 0.48 ? 2 : progress < 0.78 ? 3 : 4,
       maxLength,
-      turnBias: 0.42 + late * 0.34,
-      attemptsPerPiece: 380 + Math.floor(late * 120),
+      turnBias: 0.42 + curve * 0.36,
+      attemptsPerPiece: 380 + Math.floor(curve * 130),
       minFillCompletion: 0.92,
-      stallLimit: 620 + Math.floor(late * 360),
-      placementTries: 11 + Math.floor(early * 5 + late * 5),
-      clusterBias: 0.76 + late * 0.18,
-      centerBias: 0.32 + late * 0.18,
+      stallLimit: 620 + Math.floor(curve * 360),
+      placementTries: 11 + Math.floor(progress * 5 + curve * 5),
+      clusterBias: 0.76 + curve * 0.18,
+      centerBias: 0.32 + curve * 0.18,
     };
   }
 
@@ -881,6 +882,17 @@
   function pickOccupiedCell(pieces, rng) {
     const piece = rng.pick(pieces);
     return rng.pick(piece.cells);
+  }
+
+  function createLevelSeed(level) {
+    const randomBuffer = new Uint32Array(1);
+    if (window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(randomBuffer);
+    } else {
+      randomBuffer[0] = Math.floor(Math.random() * 0xffffffff);
+    }
+    const timeSalt = (Date.now() ^ Math.floor(performance.now() * 1000)) >>> 0;
+    return (0x9e3779b9 ^ Math.imul(Math.max(1, level | 0), 2654435761) ^ randomBuffer[0] ^ timeSalt) >>> 0;
   }
 
   function makeShape(rng, length, turnBias = 0.5) {
@@ -1264,10 +1276,7 @@
   }
 
   function calculateRankScore(level, moves, lines) {
-    const progress = Math.max(1, level) * 1000000;
-    const efficiency = Math.max(0, 180000 - Math.max(0, moves) * 2800);
-    const density = Math.max(0, lines) * 375;
-    return progress + efficiency + density;
+    return Math.max(1, level | 0) * 100;
   }
 
   function escapeHtml(value) {
