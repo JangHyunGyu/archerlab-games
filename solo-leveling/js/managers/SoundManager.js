@@ -508,7 +508,8 @@ export class SoundManager {
 
         try {
             const introGain = new Tone.Volume(-30).connect(this._comp);
-            introGain.volume.rampTo(-16, 4);
+            this._introTargetVolume = -16;
+            introGain.volume.rampTo(this._introTargetVolume, 4);
             this._introGain = introGain;
 
             // 1. Low drone
@@ -683,7 +684,8 @@ export class SoundManager {
 
         try {
             const bgmGain = new Tone.Volume(-60).connect(this._comp);
-            bgmGain.volume.rampTo(-21, 1.5);
+            this._bgmTargetVolume = -21;
+            bgmGain.volume.rampTo(this._bgmTargetVolume, 1.5);
             this._bgmGain = bgmGain;
             this._bgmTimeouts = [];
 
@@ -730,7 +732,7 @@ export class SoundManager {
                     let beatIdx = 0;
                     const kickPattern = [1, 0, 0.6, 0, 1, 0, 0.4, 0.7];
                     const kickInterval = setInterval(() => {
-                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
+                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain || this._pageHidden) return;
                         try {
                             const vel = kickPattern[beatIdx % kickPattern.length];
                             if (vel > 0) kickSynth.triggerAttackRelease('C1', '32n', Tone.now() + this._toneLeadTime, vel * 0.28);
@@ -753,7 +755,7 @@ export class SoundManager {
                     let hatIdx = 0;
                     const hatPattern = [0.12, 0.04, 0.08, 0.04];
                     const hatInterval = setInterval(() => {
-                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
+                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain || this._pageHidden) return;
                         try {
                             const vel = hatPattern[hatIdx % hatPattern.length];
                             hatNoise.triggerAttackRelease('64n', Tone.now() + this._toneLeadTime, vel);
@@ -781,7 +783,7 @@ export class SoundManager {
                     const arpNotes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4', 'Bb3', 'G3', 'Eb3'];
                     let arpIdx = 0;
                     const arpInterval = setInterval(() => {
-                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
+                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain || this._pageHidden) return;
                         try {
                             arpSynth.triggerAttackRelease(arpNotes[arpIdx % arpNotes.length], '16n', Tone.now() + this._toneLeadTime, 0.16);
                             arpIdx++;
@@ -813,7 +815,7 @@ export class SoundManager {
                     ];
                     let padIdx = 0;
                     const padInterval = setInterval(() => {
-                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
+                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain || this._pageHidden) return;
                         try {
                             const chord = padChords[padIdx % padChords.length];
                             padSynth.triggerAttackRelease(chord, '1m', Tone.now() + this._toneLeadTime, 0.11);
@@ -821,7 +823,9 @@ export class SoundManager {
                         } catch (e) { /* silent */ }
                     }, beatMs * 8);
                     this._bgmIntervals.push(padInterval);
-                    try { padSynth.triggerAttackRelease(padChords[0], '1m', Tone.now() + this._toneLeadTime, 0.11); } catch (e) { /* silent */ }
+                    if (!this._pageHidden) {
+                        try { padSynth.triggerAttackRelease(padChords[0], '1m', Tone.now() + this._toneLeadTime, 0.11); } catch (e) { /* silent */ }
+                    }
                 } catch (e) { /* silent */ }
             }, 1200));
         } catch (e) {
@@ -885,6 +889,10 @@ export class SoundManager {
 
     destroy() {
         this._destroyed = true;
+        if (this._visibilityResumeTimer) {
+            clearTimeout(this._visibilityResumeTimer);
+            this._visibilityResumeTimer = null;
+        }
         if (this._activeSoundTimers) {
             this._activeSoundTimers.forEach(id => clearTimeout(id));
             this._activeSoundTimers.clear();
@@ -956,7 +964,7 @@ export class SoundManager {
             this._masterVol.volume.value = this.enabled ? -7 : -Infinity;
         }
         if (this._sfxGain) {
-            this._sfxGain.gain.value = this.enabled ? this._sfxMaster : 0;
+            this._sfxGain.gain.value = this.enabled && !this._pageHidden ? this._sfxMaster : 0;
         }
         // WAV SFX 풀도 음소거/복원
         for (const name in this._pools) {
