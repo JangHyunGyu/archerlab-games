@@ -272,9 +272,10 @@
       this.gridH = config.gridH;
       const target = config.target;
       const pieces = [];
+      let occupiedCells = 0;
       const maxAttempts = target * config.attemptsPerPiece;
 
-      for (let attempt = 0; attempt < maxAttempts && pieces.length < target; attempt++) {
+      for (let attempt = 0; attempt < maxAttempts && pieces.length < target && occupiedCells < config.targetCells; attempt++) {
         const length = rng.int(config.minLength, config.maxLength);
         const shape = makeShape(rng, length, config.turnBias);
         const bounds = getBounds(shape);
@@ -298,6 +299,7 @@
 
         if (!fits(candidate, pieces, this.gridW, this.gridH)) continue;
         pieces.push(candidate);
+        occupiedCells += candidate.cells.length;
       }
 
       this.pieces = pieces.map((piece, index) => ({
@@ -766,15 +768,19 @@
     const early = clamp((tunedLevel - 1) / 90, 0, 1);
     const full = clamp((tunedLevel - 1) / (DESIGNED_LEVELS - 1), 0, 1);
     const late = Math.pow(full, 0.72);
+    const gridW = Math.min(15, 9 + Math.floor((tunedLevel - 1) / 12));
+    const gridH = Math.min(17, 11 + Math.floor((tunedLevel - 1) / 14));
+    const fillRatio = 0.39 + early * 0.14 + late * 0.12;
 
     return {
-      gridW: Math.min(15, 9 + Math.floor((tunedLevel - 1) / 12)),
-      gridH: Math.min(17, 11 + Math.floor((tunedLevel - 1) / 14)),
+      gridW,
+      gridH,
       target: Math.min(50, Math.round(12 + early * 29 + late * 9)),
+      targetCells: Math.round(gridW * gridH * fillRatio),
       minLength: tunedLevel < 160 ? 2 : 3,
       maxLength: Math.min(11, Math.round(5 + early * 3 + late * 3)),
       turnBias: 0.42 + late * 0.34,
-      attemptsPerPiece: 560 + Math.floor(late * 260),
+      attemptsPerPiece: 380 + Math.floor(late * 120),
     };
   }
 
