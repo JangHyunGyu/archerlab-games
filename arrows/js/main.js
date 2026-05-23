@@ -282,23 +282,10 @@
         const bounds = getBounds(shape);
         if (bounds.w > this.gridW - 1 || bounds.h > this.gridH - 1) continue;
 
-        const x = rng.int(0, this.gridW - bounds.w);
-        const y = rng.int(0, this.gridH - bounds.h);
-        const cells = shape.map(cell => ({ x: cell.x + x, y: cell.y + y }));
-        const terminalDirs = rng.shuffle(getTerminalDirections(cells));
-        const chosenDir = terminalDirs.find(dir => {
-          const candidateForEscape = { cells, dir };
-          return this.canEscape(candidateForEscape, pieces).ok;
-        });
-        if (!chosenDir) continue;
-        const candidate = {
-          id: `p${level}-${pieces.length}-${attempt}`,
-          cells,
-          dir: chosenDir,
-          colorIndex: (pieces.length + rng.int(0, PALETTE.length - 1)) % PALETTE.length,
-        };
-
-        if (!fits(candidate, pieces, this.gridW, this.gridH)) continue;
+        const candidate = this.findDensePlacement(shape, bounds, pieces, rng, config);
+        if (!candidate) continue;
+        candidate.id = `p${level}-${pieces.length}-${attempt}`;
+        candidate.colorIndex = (pieces.length + rng.int(0, PALETTE.length - 1)) % PALETTE.length;
         pieces.push(candidate);
         occupiedCells += candidate.cells.length;
       }
@@ -314,6 +301,34 @@
         this.level += 1;
         this.generateLevel(this.level);
       }
+    }
+
+    findDensePlacement(shape, bounds, pieces, rng, config) {
+      let best = null;
+      const tries = pieces.length ? config.placementTries : Math.max(8, Math.floor(config.placementTries * 0.7));
+      for (let i = 0; i < tries; i++) {
+        const origin = chooseShapeOrigin(shape, bounds, pieces, this.gridW, this.gridH, rng, config);
+        const cells = shape.map(cell => ({ x: cell.x + origin.x, y: cell.y + origin.y }));
+        const draft = { cells };
+        if (!fits(draft, pieces, this.gridW, this.gridH)) continue;
+
+        const terminalDirs = rng.shuffle(getTerminalDirections(cells));
+        const chosenDir = terminalDirs.find(dir => this.canEscape({ cells, dir }, pieces).ok);
+        if (!chosenDir) continue;
+
+        const score = scorePlacement(cells, pieces, this.gridW, this.gridH, config) + rng.next() * 0.08;
+        if (!best || score > best.score) {
+          best = {
+            cells,
+            dir: chosenDir,
+            score,
+          };
+        }
+      }
+      return best ? {
+        cells: best.cells,
+        dir: best.dir,
+      } : null;
     }
 
     resize() {
@@ -784,7 +799,76 @@
       maxLength,
       turnBias: 0.42 + late * 0.34,
       attemptsPerPiece: 380 + Math.floor(late * 120),
+      placementTries: 9 + Math.floor(early * 4 + late * 5),
+      clusterBias: 0.62 + late * 0.26,
+      centerBias: 0.18 + late * 0.12,
     };
+  }
+
+  function chooseShapeOrigin(shape, bounds, pieces, gridW, gridH, rng, config) {
+    const maxX = gridW - bounds.w;
+    const maxY = gridH - bounds.h;
+    if (!pieces.length || !rng.chance(config.clusterBias)) {
+      const centerX = Math.round((gridW - bounds.w) / 2);
+      const centerY = Math.round((gridH - bounds.h) / 2);
+      if (rng.chance(config.centerBias)) {
+        return {
+          x: clamp(centerX + rng.int(-2, 2), 0, maxX),
+          y: clamp(centerY + rng.int(-2, 2), 0, maxY),
+        };
+      }
+      return {
+        x: rng.int(0, maxX),
+        y: rng.int(0, maxY),
+      };
+    }
+
+    const anchor = pickOccupiedCell(pieces, rng);
+    const source = rng.pick(shape);
+    const offset = rng.pick([
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+      { x: 0, y: 0 },
+    ]);
+    return {
+      x: clamp(anchor.x + offset.x - source.x, 0, maxX),
+      y: clamp(anchor.y + offset.y - source.y, 0, maxY),
+    };
+  }
+
+  function scorePlacement(cells, pieces, gridW, gridH, config) {
+    const occupied = makeOccupied(pieces);
+    const centerX = (gridW - 1) / 2;
+    const centerY = (gridH - 1) / 2;
+    let adjacent = 0;
+    let near = 0;
+    let centerDistance = 0;
+    let edgeTouches = 0;
+    for (const cell of cells) {
+      centerDistance += Math.abs(cell.x - centerX) / gridW + Math.abs(cell.y - centerY) / gridH;
+      if (cell.x === 0 || cell.x === gridW - 1 || cell.y === 0 || cell.y === gridH - 1) edgeTouches += 1;
+      for (const dir of DIR_KEYS) {
+        const step = DIRS[dir];
+        const neighbor = key(cell.x + step.x, cell.y + step.y);
+        if (occupied.has(neighbor)) adjacent += 1;
+      }
+      for (let y = cell.y - 2; y <= cell.y + 2; y++) {
+        for (let x = cell.x - 2; x <= cell.x + 2; x++) {
+          if (Math.abs(x - cell.x) + Math.abs(y - cell.y) > 2) continue;
+          if (occupied.has(key(x, y))) near += 1;
+        }
+      }
+    }
+    const compactness = adjacent * 4.2 + near * 0.72;
+    const centerPull = (cells.length - centerDistance) * (0.6 + config.centerBias);
+    return compactness + centerPull - edgeTouches * 0.34;
+  }
+
+  function pickOccupiedCell(pieces, rng) {
+    const piece = rng.pick(pieces);
+    return rng.pick(piece.cells);
   }
 
   function makeShape(rng, length, turnBias = 0.5) {
