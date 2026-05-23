@@ -271,11 +271,12 @@
       this.gridW = config.gridW;
       this.gridH = config.gridH;
       const target = config.target;
+      const targetCells = Math.max(1, config.targetCells - config.targetSlack);
       const pieces = [];
       let occupiedCells = 0;
       const maxAttempts = target * config.attemptsPerPiece;
 
-      for (let attempt = 0; attempt < maxAttempts && pieces.length < target && occupiedCells < config.targetCells; attempt++) {
+      for (let attempt = 0; attempt < maxAttempts && pieces.length < target && occupiedCells < targetCells; attempt++) {
         const length = rng.int(config.minLength, config.maxLength);
         const shape = makeShape(rng, length, config.turnBias);
         const bounds = getBounds(shape);
@@ -771,14 +772,16 @@
     const gridW = Math.min(15, 9 + Math.floor((tunedLevel - 1) / 12));
     const gridH = Math.min(17, 11 + Math.floor((tunedLevel - 1) / 14));
     const fillRatio = 0.39 + early * 0.14 + late * 0.12;
+    const maxLength = Math.min(11, Math.round(5 + early * 3 + late * 3));
 
     return {
       gridW,
       gridH,
       target: Math.min(50, Math.round(12 + early * 29 + late * 9)),
       targetCells: Math.round(gridW * gridH * fillRatio),
+      targetSlack: Math.floor(maxLength * late * 0.75),
       minLength: tunedLevel < 160 ? 2 : 3,
-      maxLength: Math.min(11, Math.round(5 + early * 3 + late * 3)),
+      maxLength,
       turnBias: 0.42 + late * 0.34,
       attemptsPerPiece: 380 + Math.floor(late * 120),
     };
