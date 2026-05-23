@@ -281,15 +281,20 @@
         const x = rng.int(0, this.gridW - bounds.w);
         const y = rng.int(0, this.gridH - bounds.h);
         const cells = shape.map(cell => ({ x: cell.x + x, y: cell.y + y }));
+        const terminalDirs = rng.shuffle(getTerminalDirections(cells));
+        const chosenDir = terminalDirs.find(dir => {
+          const candidateForEscape = { cells, dir };
+          return this.canEscape(candidateForEscape, pieces).ok;
+        });
+        if (!chosenDir) continue;
         const candidate = {
           id: `p${level}-${pieces.length}-${attempt}`,
           cells,
-          dir: rng.pick(DIR_KEYS),
+          dir: chosenDir,
           colorIndex: (pieces.length + rng.int(0, PALETTE.length - 1)) % PALETTE.length,
         };
 
         if (!fits(candidate, pieces, this.gridW, this.gridH)) continue;
-        if (!this.canEscape(candidate, pieces).ok) continue;
         pieces.push(candidate);
       }
 
@@ -394,14 +399,7 @@
       container.pieceId = piece.id;
       piece.container = container;
 
-      const bounds = getBounds(piece.cells);
-      const hitPad = this.cell * 0.5;
-      container.hitArea = new PIXI.Rectangle(
-        bounds.minX * this.cell - hitPad,
-        bounds.minY * this.cell - hitPad,
-        bounds.w * this.cell + hitPad * 2,
-        bounds.h * this.cell + hitPad * 2
-      );
+      container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(9, this.cell * 0.28));
 
       const glow = new PIXI.Graphics();
       drawPath(glow, piece.cells, this.cell, color.glow, this.cell * 0.54, 0.18);
@@ -795,6 +793,36 @@
     return cells.map(cell => ({ x: cell.x - bounds.minX, y: cell.y - bounds.minY }));
   }
 
+  class PathHitArea {
+    constructor(cells, cellSize, radius) {
+      this.cells = cells;
+      this.cellSize = cellSize;
+      this.radius = radius;
+    }
+
+    contains(x, y) {
+      const radiusSq = this.radius * this.radius;
+      for (let i = 0; i < this.cells.length; i++) {
+        const cell = this.cells[i];
+        const cx = (cell.x + 0.5) * this.cellSize;
+        const cy = (cell.y + 0.5) * this.cellSize;
+        const dx = x - cx;
+        const dy = y - cy;
+        if (dx * dx + dy * dy <= radiusSq) return true;
+      }
+      for (let i = 0; i < this.cells.length - 1; i++) {
+        const a = this.cells[i];
+        const b = this.cells[i + 1];
+        const ax = (a.x + 0.5) * this.cellSize;
+        const ay = (a.y + 0.5) * this.cellSize;
+        const bx = (b.x + 0.5) * this.cellSize;
+        const by = (b.y + 0.5) * this.cellSize;
+        if (distanceToSegmentSq(x, y, ax, ay, bx, by) <= radiusSq) return true;
+      }
+      return false;
+    }
+  }
+
   function drawPath(graphics, cells, cellSize, color, width, alpha) {
     if (!cells.length) return;
     graphics.moveTo((cells[0].x + 0.5) * cellSize, (cells[0].y + 0.5) * cellSize);
@@ -805,7 +833,7 @@
   }
 
   function drawArrow(graphics, piece, cellSize, color, dir) {
-    const front = getFrontCell(piece.cells, piece.dir);
+    const front = getArrowEndpoint(piece.cells, piece.dir);
     const cx = (front.x + 0.5) * cellSize;
     const cy = (front.y + 0.5) * cellSize;
     const size = cellSize * 0.28;
@@ -829,7 +857,22 @@
     }
   }
 
-  function getFrontCell(cells, dir) {
+  function getArrowEndpoint(cells, dir) {
+    if (cells.length >= 2) {
+      const first = cells[0];
+      const second = cells[1];
+      const firstDir = vectorToDir(first.x - second.x, first.y - second.y);
+      if (firstDir === dir) return first;
+
+      const last = cells[cells.length - 1];
+      const prev = cells[cells.length - 2];
+      const lastDir = vectorToDir(last.x - prev.x, last.y - prev.y);
+      if (lastDir === dir) return last;
+    }
+    return getDirectionalCell(cells, dir);
+  }
+
+  function getDirectionalCell(cells, dir) {
     const score = cell => {
       if (dir === "R") return cell.x;
       if (dir === "L") return -cell.x;
@@ -846,6 +889,49 @@
       x: point.x * cos - point.y * sin,
       y: point.x * sin + point.y * cos,
     };
+  }
+
+  function getTerminalDirections(cells) {
+    if (cells.length < 2) return DIR_KEYS.slice();
+    const first = cells[0];
+    const second = cells[1];
+    const last = cells[cells.length - 1];
+    const prev = cells[cells.length - 2];
+    return unique([
+      vectorToDir(first.x - second.x, first.y - second.y),
+      vectorToDir(last.x - prev.x, last.y - prev.y),
+    ].filter(Boolean));
+  }
+
+  function vectorToDir(x, y) {
+    if (x === 1 && y === 0) return "R";
+    if (x === -1 && y === 0) return "L";
+    if (x === 0 && y === 1) return "D";
+    if (x === 0 && y === -1) return "U";
+    return null;
+  }
+
+  function unique(values) {
+    return values.filter((value, index) => values.indexOf(value) === index);
+  }
+
+  function distanceToSegmentSq(px, py, ax, ay, bx, by) {
+    const vx = bx - ax;
+    const vy = by - ay;
+    const wx = px - ax;
+    const wy = py - ay;
+    const lenSq = vx * vx + vy * vy;
+    if (lenSq <= 0) {
+      const dx = px - ax;
+      const dy = py - ay;
+      return dx * dx + dy * dy;
+    }
+    const t = clamp((wx * vx + wy * vy) / lenSq, 0, 1);
+    const cx = ax + t * vx;
+    const cy = ay + t * vy;
+    const dx = px - cx;
+    const dy = py - cy;
+    return dx * dx + dy * dy;
   }
 
   function fits(piece, pieces, gridW, gridH) {
