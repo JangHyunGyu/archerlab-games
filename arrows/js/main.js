@@ -273,7 +273,7 @@
       const maxAttempts = target * 520;
 
       for (let attempt = 0; attempt < maxAttempts && pieces.length < target; attempt++) {
-        const length = rng.int(2, Math.min(7, 3 + Math.floor(level / 3)));
+        const length = rng.int(2, Math.min(9, 5 + Math.floor(level / 4)));
         const shape = makeShape(rng, length);
         const bounds = getBounds(shape);
         if (bounds.w > this.gridW - 1 || bounds.h > this.gridH - 1) continue;
@@ -409,7 +409,7 @@
       const line = new PIXI.Graphics();
       drawPath(line, piece.cells, this.cell, color.main, Math.max(2.6, this.cell * 0.085), 0.98);
       drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.1, this.cell * 0.025), 0.78);
-      drawArrow(line, piece, this.cell, color.hot, dir);
+      drawArrow(line, piece, this.cell, color.main, color.hot, dir);
       container.addChild(line);
 
       container.on("pointerdown", () => this.tapPiece(piece));
@@ -829,22 +829,21 @@
     graphics.stroke({ width, color, alpha, cap: "round", join: "round" });
   }
 
-  function drawArrow(graphics, piece, cellSize, color, dir) {
+  function drawArrow(graphics, piece, cellSize, color, accent, dir) {
     const front = getArrowEndpoint(piece.cells, piece.dir);
     const cx = (front.x + 0.5) * cellSize;
     const cy = (front.y + 0.5) * cellSize;
-    const size = cellSize * 0.16;
-    const len = cellSize * 0.34;
+    const size = cellSize * 0.12;
+    const len = cellSize * 0.27;
     const points = [
-      { x: len * 0.64, y: 0 },
-      { x: -len * 0.24, y: -size },
-      { x: -len * 0.04, y: 0 },
-      { x: -len * 0.24, y: size },
+      { x: len * 0.62, y: 0 },
+      { x: -len * 0.32, y: -size },
+      { x: -len * 0.32, y: size },
     ].map(point => rotate(point, dir.angle));
     graphics.poly(points.map(point => [cx + point.x, cy + point.y]).flat())
       .fill({ color, alpha: 0.98 });
     graphics.poly(points.map(point => [cx + point.x, cy + point.y]).flat())
-      .stroke({ width: Math.max(0.8, cellSize * 0.018), color: 0xffffff, alpha: 0.38, join: "round" });
+      .stroke({ width: Math.max(0.8, cellSize * 0.014), color: accent, alpha: 0.5, join: "round" });
   }
 
   function drawNodeCaps(graphics, cells, cellSize, color) {
@@ -900,7 +899,7 @@
     drawPolylinePoints(graphics, windowPoints, Math.max(3, cellSize * 0.12), color.main, 0.38 * alpha);
     drawPolylinePoints(graphics, windowPoints, Math.max(2.6, cellSize * 0.085), color.main, 0.98 * alpha);
     drawPolylinePoints(graphics, windowPoints, Math.max(1.1, cellSize * 0.026), color.hot, 0.86 * alpha);
-    drawFlowArrow(graphics, head, DIRS[dir], cellSize, color.hot, alpha);
+    drawFlowArrow(graphics, head, DIRS[dir], cellSize, color.main, color.hot, alpha);
   }
 
   function drawPolylinePoints(graphics, points, width, color, alpha) {
@@ -912,19 +911,20 @@
     graphics.stroke({ width, color, alpha, cap: "round", join: "round" });
   }
 
-  function drawFlowArrow(graphics, head, dir, cellSize, color, alpha) {
+  function drawFlowArrow(graphics, head, dir, cellSize, color, accent, alpha) {
     if (!head || alpha <= 0) return;
     const angle = dir.angle;
-    const size = cellSize * 0.15;
-    const len = cellSize * 0.32;
+    const size = cellSize * 0.12;
+    const len = cellSize * 0.27;
     const points = [
       { x: len * 0.62, y: 0 },
-      { x: -len * 0.24, y: -size },
-      { x: -len * 0.03, y: 0 },
-      { x: -len * 0.24, y: size },
+      { x: -len * 0.32, y: -size },
+      { x: -len * 0.32, y: size },
     ].map(point => rotate(point, angle));
     graphics.poly(points.map(point => [head.x + point.x, head.y + point.y]).flat())
       .fill({ color, alpha: 0.98 * alpha });
+    graphics.poly(points.map(point => [head.x + point.x, head.y + point.y]).flat())
+      .stroke({ width: Math.max(0.8, cellSize * 0.014), color: accent, alpha: 0.5 * alpha, join: "round" });
   }
 
   function slicePolyline(points, startDist, endDist) {
