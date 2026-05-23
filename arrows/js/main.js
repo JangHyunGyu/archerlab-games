@@ -272,8 +272,10 @@
       this.gridH = config.gridH;
       const target = config.target;
       const targetCells = Math.max(1, config.targetCells - config.targetSlack);
+      const minTargetCells = Math.floor(targetCells * config.minFillCompletion);
       const pieces = [];
       let occupiedCells = 0;
+      let missesSincePlace = 0;
       const maxAttempts = target * config.attemptsPerPiece;
 
       for (let attempt = 0; attempt < maxAttempts && pieces.length < target && occupiedCells < targetCells; attempt++) {
@@ -283,11 +285,16 @@
         if (bounds.w > this.gridW - 1 || bounds.h > this.gridH - 1) continue;
 
         const candidate = this.findDensePlacement(shape, bounds, pieces, rng, config);
-        if (!candidate) continue;
+        if (!candidate) {
+          missesSincePlace += 1;
+          if (missesSincePlace > config.stallLimit && occupiedCells >= minTargetCells) break;
+          continue;
+        }
         candidate.id = `p${level}-${pieces.length}-${attempt}`;
         candidate.colorIndex = (pieces.length + rng.int(0, PALETTE.length - 1)) % PALETTE.length;
         pieces.push(candidate);
         occupiedCells += candidate.cells.length;
+        missesSincePlace = 0;
       }
 
       this.pieces = pieces.map((piece, index) => ({
@@ -800,6 +807,8 @@
       maxLength,
       turnBias: 0.42 + late * 0.34,
       attemptsPerPiece: 380 + Math.floor(late * 120),
+      minFillCompletion: 0.92,
+      stallLimit: 620 + Math.floor(late * 360),
       placementTries: 11 + Math.floor(early * 5 + late * 5),
       clusterBias: 0.76 + late * 0.18,
       centerBias: 0.32 + late * 0.18,
