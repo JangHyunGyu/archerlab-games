@@ -16,6 +16,11 @@
     bestMoves: "archerlab-arrows-best-moves",
   };
 
+  const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
+  const GAME_ID = "arrows";
+  const RANK_LIMIT = 20;
+  const NICK_KEY = "archerlab-arrows-nick";
+
   const PALETTE = [
     { main: 0x8fefff, glow: 0x24d8ff, hot: 0xe7feff },
     { main: 0xbba0ff, glow: 0x8b65ff, hot: 0xf7f0ff },
@@ -46,15 +51,26 @@
     bestMoves: $("best-moves-label"),
     clearMoves: $("clear-moves"),
     nextLevel: $("next-level-label"),
+    clearScore: $("clear-score"),
     clearTitle: $("clear-title"),
     play: $("play-btn"),
     continue: $("continue-btn"),
+    rank: $("rank-btn"),
     next: $("next-btn"),
     home: $("home-btn"),
     modalMenu: $("modal-menu-btn"),
+    modalRank: $("modal-rank-btn"),
     retry: $("retry-btn"),
     undo: $("undo-btn"),
     hint: $("hint-btn"),
+    rankModal: $("rank-modal"),
+    rankContent: $("rank-content"),
+    rankClose: $("rank-close-btn"),
+    rankSubmitRow: $("rank-submit-row"),
+    nickname: $("nickname-input"),
+    submitRank: $("submit-rank-btn"),
+    skipRank: $("skip-rank-btn"),
+    submitStatus: $("submit-status"),
   };
 
   const app = new PIXI.Application();
@@ -122,7 +138,12 @@
       this.tweens = [];
       this.mode = "menu";
       this.animating = false;
-      this.audio = null;
+      this.initialPieceCount = 0;
+      this.lastClear = null;
+      this.sound = new (window.ArrowsSoundManager || class {
+        ensure() {}
+        play() {}
+      })();
 
       this.stage = new PIXI.Container();
       app.stage.addChild(this.stage);
@@ -162,9 +183,20 @@
       dom.next.addEventListener("click", () => this.start(this.level + 1));
       dom.home.addEventListener("click", () => this.showMenu());
       dom.modalMenu.addEventListener("click", () => this.showMenu());
+      dom.modalRank.addEventListener("click", () => this.openRankModal());
+      dom.rank.addEventListener("click", () => this.openRankModal());
+      dom.rankClose.addEventListener("click", () => {
+        this.playTone("button");
+        dom.rankModal.classList.add("hidden");
+      });
       dom.retry.addEventListener("click", () => this.start(this.level));
       dom.undo.addEventListener("click", () => this.undo());
       dom.hint.addEventListener("click", () => this.hint());
+      dom.submitRank.addEventListener("click", () => this.handleSubmitRank());
+      dom.skipRank.addEventListener("click", () => this.handleSkipRank());
+      dom.nickname.addEventListener("keydown", event => {
+        if (event.key === "Enter") this.handleSubmitRank();
+      });
     }
 
     createBackdrop() {
@@ -202,6 +234,7 @@
       this.animating = false;
       dom.menu.classList.add("hidden");
       dom.modal.classList.add("hidden");
+      dom.rankModal.classList.add("hidden");
       dom.hud.classList.remove("hidden");
       this.boardLayer.visible = true;
       this.generateLevel(this.level);
@@ -218,6 +251,7 @@
       this.boardLayer.visible = false;
       dom.hud.classList.add("hidden");
       dom.modal.classList.add("hidden");
+      dom.rankModal.classList.add("hidden");
       dom.menu.classList.remove("hidden");
       this.updateMenu();
     }
@@ -264,6 +298,7 @@
         colorIndex: index % PALETTE.length,
         container: null,
       }));
+      this.initialPieceCount = this.pieces.length;
 
       if (this.pieces.length < 6) {
         this.level += 1;
@@ -495,6 +530,13 @@
 
     completeLevel() {
       this.playTone("win");
+      const rankScore = calculateRankScore(this.level, this.moves, this.initialPieceCount);
+      this.lastClear = {
+        level: this.level,
+        moves: this.moves,
+        lines: this.initialPieceCount,
+        score: rankScore,
+      };
       this.bestLevel = Math.max(this.bestLevel, this.level + 1);
       localStorage.setItem(STORAGE.bestLevel, String(this.bestLevel));
       localStorage.setItem(STORAGE.level, String(this.level + 1));
@@ -505,6 +547,12 @@
       dom.clearTitle.textContent = `레벨 ${this.level} 클리어`;
       dom.clearMoves.textContent = String(this.moves);
       dom.nextLevel.textContent = String(this.level + 1);
+      dom.clearScore.textContent = rankScore.toLocaleString();
+      dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
+      dom.submitStatus.textContent = "";
+      dom.rankSubmitRow.classList.remove("hidden");
+      dom.submitRank.disabled = false;
+      dom.skipRank.disabled = false;
       dom.modal.classList.remove("hidden");
     }
 
@@ -514,6 +562,103 @@
       dom.left.textContent = String(this.pieces.length);
       dom.undo.disabled = this.history.length === 0;
       dom.hint.disabled = this.pieces.length === 0;
+    }
+
+    async openRankModal() {
+      this.playTone("button");
+      dom.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
+      dom.rankModal.classList.remove("hidden");
+      try {
+        const rows = await this.fetchRankings();
+        this.renderRankRows(rows);
+      } catch (error) {
+        dom.rankContent.innerHTML = `<div class="rank-error">랭킹을 불러오지 못했습니다</div>`;
+      }
+    }
+
+    async fetchRankings() {
+      const url = `${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${RANK_LIMIT}`;
+      const response = await fetch(url, { method: "GET" });
+      if (!response.ok) throw new Error(`rankings ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data.rankings)) throw new Error("invalid rankings response");
+      return data.rankings;
+    }
+
+    renderRankRows(rows) {
+      if (!rows.length) {
+        dom.rankContent.innerHTML = `<div class="rank-empty">아직 등록된 기록이 없습니다</div>`;
+        return;
+      }
+      dom.rankContent.innerHTML = rows.map((row, index) => {
+        const rank = row.rank || index + 1;
+        const extra = row.extra_data || {};
+        const level = Number(extra.level || Math.floor((Number(row.score) || 0) / 1000000));
+        const moves = Number(extra.moves || 0);
+        const lines = Number(extra.lines || 0);
+        const meta = [
+          level ? `Lv ${level}` : "",
+          moves ? `${moves} moves` : "",
+          lines ? `${lines} lines` : "",
+        ].filter(Boolean).join(" · ");
+        const cls = ["rank-row"];
+        if (rank <= 3) cls.push(`top${rank}`);
+        return `
+          <div class="${cls.join(" ")}">
+            <div class="rank-pos">${rank}</div>
+            <div class="rank-name">${escapeHtml(row.player_name || "PLAYER")}<span class="rank-meta">${escapeHtml(meta || "Arrow Puzzle")}</span></div>
+            <div class="rank-score">${Number(row.score || 0).toLocaleString()}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async handleSubmitRank() {
+      if (!this.lastClear) {
+        dom.submitStatus.textContent = "등록할 기록이 없습니다";
+        return;
+      }
+      const name = dom.nickname.value.trim().slice(0, 20);
+      if (!name) {
+        dom.submitStatus.textContent = "닉네임을 입력하세요";
+        dom.nickname.focus();
+        return;
+      }
+
+      dom.submitRank.disabled = true;
+      dom.skipRank.disabled = true;
+      dom.submitStatus.textContent = "등록 중...";
+
+      try {
+        const response = await fetch(`${RANK_API_BASE}/rankings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            game_id: GAME_ID,
+            player_name: name,
+            score: this.lastClear.score,
+            extra_data: {
+              level: this.lastClear.level,
+              moves: this.lastClear.moves,
+              lines: this.lastClear.lines,
+            },
+          }),
+        });
+        if (!response.ok) throw new Error(`submit ${response.status}`);
+        const result = await response.json();
+        localStorage.setItem(NICK_KEY, name);
+        dom.submitStatus.textContent = result.rank ? `등록 완료 #${result.rank}` : "등록 완료";
+        this.playTone("submit");
+      } catch (error) {
+        dom.submitStatus.textContent = "등록 실패";
+        dom.submitRank.disabled = false;
+        dom.skipRank.disabled = false;
+      }
+    }
+
+    handleSkipRank() {
+      this.playTone("button");
+      dom.rankSubmitRow.classList.add("hidden");
     }
 
     canEscape(piece, others) {
@@ -602,40 +747,11 @@
     }
 
     ensureAudio() {
-      if (this.audio) return;
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      this.audio = new AudioCtx();
+      if (this.sound && this.sound.ensure) this.sound.ensure();
     }
 
-    playTone(type) {
-      if (!this.audio) return;
-      const ctx = this.audio;
-      if (ctx.state === "suspended") ctx.resume();
-      const now = ctx.currentTime;
-      const gain = ctx.createGain();
-      gain.connect(ctx.destination);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(type === "blocked" ? 0.05 : 0.075, now + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + (type === "win" ? 0.42 : 0.18));
-
-      const notes = {
-        start: [392, 523],
-        clear: [660, 880],
-        blocked: [180, 135],
-        hint: [740, 988],
-        tap: [420],
-        win: [523, 659, 784, 1047],
-      }[type] || [480];
-
-      notes.forEach((freq, index) => {
-        const osc = ctx.createOscillator();
-        osc.type = type === "blocked" ? "triangle" : "sine";
-        osc.frequency.setValueAtTime(freq, now + index * 0.055);
-        osc.connect(gain);
-        osc.start(now + index * 0.055);
-        osc.stop(now + index * 0.055 + 0.16);
-      });
+    playTone(type, intensity = 1) {
+      if (this.sound && this.sound.play) this.sound.play(type, intensity);
     }
 
     cx(x) {
@@ -783,6 +899,22 @@
 
   function easeOutCubic(value) {
     return 1 - Math.pow(1 - value, 3);
+  }
+
+  function calculateRankScore(level, moves, lines) {
+    const progress = Math.max(1, level) * 1000000;
+    const efficiency = Math.max(0, 180000 - Math.max(0, moves) * 2800);
+    const density = Math.max(0, lines) * 375;
+    return progress + efficiency + density;
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   function readInt(name, fallback) {

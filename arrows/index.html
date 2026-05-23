@@ -102,9 +102,10 @@
             <strong id="best-moves-label">-</strong>
           </div>
         </div>
-        <div class="menu-actions">
+        <div class="menu-actions menu-actions--menu">
           <button id="play-btn" class="primary-btn" type="button">시작</button>
           <button id="continue-btn" class="secondary-btn" type="button">이어하기</button>
+          <button id="rank-btn" class="secondary-btn" type="button">랭킹</button>
         </div>
       </div>
     </section>
@@ -122,18 +123,44 @@
             <span>다음</span>
             <strong id="next-level-label">2</strong>
           </div>
+          <div>
+            <span>점수</span>
+            <strong id="clear-score">0</strong>
+          </div>
         </div>
-        <div class="menu-actions">
+        <div id="rank-submit-row" class="rank-submit-row">
+          <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="닉네임 (20자)">
+          <div class="rank-submit-buttons">
+            <button id="submit-rank-btn" class="secondary-btn" type="button">등록</button>
+            <button id="skip-rank-btn" class="secondary-btn secondary-btn--ghost" type="button">Skip</button>
+          </div>
+          <div id="submit-status" class="submit-status"></div>
+        </div>
+        <div class="menu-actions menu-actions--clear">
           <button id="next-btn" class="primary-btn" type="button">다음</button>
           <button id="modal-menu-btn" class="secondary-btn" type="button">메뉴</button>
+          <button id="modal-rank-btn" class="secondary-btn" type="button">랭킹</button>
         </div>
+      </div>
+    </section>
+
+    <section id="rank-modal" class="modal hidden" aria-live="polite">
+      <div class="modal-panel rank-panel">
+        <p class="brand-kicker">TOP 20</p>
+        <h2>랭킹</h2>
+        <div id="rank-content" class="rank-content">
+          <div class="rank-loading">불러오는 중...</div>
+        </div>
+        <button id="rank-close-btn" class="primary-btn" type="button">닫기</button>
       </div>
     </section>
 
     <div id="toast" class="toast hidden"></div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.18.1/dist/pixi.min.js" crossorigin="anonymous"></script>
+  <script src="js/SoundManager.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
