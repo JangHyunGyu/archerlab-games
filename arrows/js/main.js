@@ -20,6 +20,7 @@
   const GAME_ID = "arrows";
   const RANK_LIMIT = 20;
   const NICK_KEY = "archerlab-arrows-nick";
+  const DESIGNED_LEVELS = 1000;
 
   const PALETTE = [
     { main: 0xb9c9ff, glow: 0x5b78ff, hot: 0xf1f6ff },
@@ -266,15 +267,16 @@
 
     generateLevel(level) {
       const rng = new Random(0x9e3779b9 ^ Math.imul(level, 2654435761));
-      this.gridW = Math.min(15, 9 + Math.floor((level - 1) / 3));
-      this.gridH = Math.min(17, 11 + Math.floor((level - 1) / 2));
-      const target = Math.min(46, 10 + level * 3);
+      const config = getLevelConfig(level);
+      this.gridW = config.gridW;
+      this.gridH = config.gridH;
+      const target = config.target;
       const pieces = [];
-      const maxAttempts = target * 520;
+      const maxAttempts = target * config.attemptsPerPiece;
 
       for (let attempt = 0; attempt < maxAttempts && pieces.length < target; attempt++) {
-        const length = rng.int(2, Math.min(9, 5 + Math.floor(level / 4)));
-        const shape = makeShape(rng, length);
+        const length = rng.int(config.minLength, config.maxLength);
+        const shape = makeShape(rng, length, config.turnBias);
         const bounds = getBounds(shape);
         if (bounds.w > this.gridW - 1 || bounds.h > this.gridH - 1) continue;
 
@@ -758,7 +760,25 @@
     }
   }
 
-  function makeShape(rng, length) {
+  function getLevelConfig(level) {
+    const rawLevel = Math.max(1, level | 0);
+    const tunedLevel = Math.min(rawLevel, DESIGNED_LEVELS);
+    const early = clamp((tunedLevel - 1) / 90, 0, 1);
+    const full = clamp((tunedLevel - 1) / (DESIGNED_LEVELS - 1), 0, 1);
+    const late = Math.pow(full, 0.72);
+
+    return {
+      gridW: Math.min(15, 9 + Math.floor((tunedLevel - 1) / 12)),
+      gridH: Math.min(17, 11 + Math.floor((tunedLevel - 1) / 14)),
+      target: Math.min(50, Math.round(12 + early * 29 + late * 9)),
+      minLength: tunedLevel < 160 ? 2 : 3,
+      maxLength: Math.min(11, Math.round(5 + early * 3 + late * 3)),
+      turnBias: 0.42 + late * 0.34,
+      attemptsPerPiece: 560 + Math.floor(late * 260),
+    };
+  }
+
+  function makeShape(rng, length, turnBias = 0.5) {
     const dirs = [
       { x: 1, y: 0 },
       { x: -1, y: 0 },
@@ -768,12 +788,11 @@
     const cells = [{ x: 0, y: 0 }];
     let heading = rng.pick(dirs);
     for (let i = 1; i < length; i++) {
-      const choices = rng.shuffle([
-        heading,
-        { x: -heading.y, y: heading.x },
-        { x: heading.y, y: -heading.x },
-        rng.pick(dirs),
-      ]);
+      const left = { x: -heading.y, y: heading.x };
+      const right = { x: heading.y, y: -heading.x };
+      const choices = rng.chance(turnBias)
+        ? rng.shuffle([left, right, heading, rng.pick(dirs)])
+        : rng.shuffle([heading, left, right, rng.pick(dirs)]);
       let placed = false;
       for (const choice of choices) {
         const last = cells[cells.length - 1];
