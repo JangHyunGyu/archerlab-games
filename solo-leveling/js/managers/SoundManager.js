@@ -98,6 +98,11 @@ export class SoundManager {
         this._sfxLoadTimerType = null;
         this._introPendingDispose = null;
         this._bgmPendingDispose = null;
+        this._pageHidden = typeof document !== 'undefined' ? document.hidden : false;
+        this._resumeSfxMutedUntil = 0;
+        this._visibilityResumeTimer = null;
+        this._introTargetVolume = -16;
+        this._bgmTargetVolume = -21;
 
         for (const [name, spec] of Object.entries(CHARACTER_SFX_CONFIG)) {
             this._throttleMs[name] = spec.throttle;
@@ -183,7 +188,89 @@ export class SoundManager {
         }
     }
 
+    _attachVisibilityHandler() {
+        if (this._onVisibilityChange || typeof document === 'undefined') return;
+        this._pageHidden = document.hidden;
+        this._onVisibilityChange = () => this._handleVisibilityChange();
+        document.addEventListener('visibilitychange', this._onVisibilityChange);
+    }
+
+    _resetSfxRuntimeState() {
+        if (this._activeSoundTimers) {
+            this._activeSoundTimers.forEach(id => clearTimeout(id));
+            this._activeSoundTimers.clear();
+        }
+        this._activeSounds = 0;
+        this._activeSoundNames = {};
+    }
+
+    _stopHtmlAudioPoolPlayback() {
+        for (const name in this._pools) {
+            const pool = this._pools[name];
+            for (let i = 0; i < pool.length; i++) {
+                const audio = pool[i];
+                if (!audio || typeof audio.pause !== 'function') continue;
+                try { audio.pause(); } catch (e) { /* silent */ }
+                try { audio.currentTime = 0; } catch (e) { /* silent */ }
+                audio._inUse = false;
+            }
+        }
+    }
+
+    _rampActiveMusicGains(volume, duration) {
+        try { if (this._introGain) this._introGain.volume.rampTo(volume, duration); } catch (e) { /* silent */ }
+        try { if (this._bgmGain) this._bgmGain.volume.rampTo(volume, duration); } catch (e) { /* silent */ }
+    }
+
+    _restoreActiveMusicGains() {
+        try { if (this._introGain) this._introGain.volume.rampTo(this._introTargetVolume, 0.35); } catch (e) { /* silent */ }
+        try { if (this._bgmGain) this._bgmGain.volume.rampTo(this._bgmTargetVolume, 0.35); } catch (e) { /* silent */ }
+    }
+
+    _handleVisibilityChange() {
+        if (typeof document === 'undefined') return;
+        const hidden = document.hidden;
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        this._pageHidden = hidden;
+
+        if (this._visibilityResumeTimer) {
+            clearTimeout(this._visibilityResumeTimer);
+            this._visibilityResumeTimer = null;
+        }
+
+        this._resetSfxRuntimeState();
+        this._stopHtmlAudioPoolPlayback();
+
+        if (hidden) {
+            this._resumeSfxMutedUntil = now + 300;
+            if (this._sfxGain) this._sfxGain.gain.value = 0;
+            this._rampActiveMusicGains(-60, 0.12);
+            try {
+                if (typeof Tone !== 'undefined' && this._toneReady) {
+                    Tone.getContext().rawContext.suspend();
+                }
+            } catch (e) { /* silent */ }
+            return;
+        }
+
+        this._resumeSfxMutedUntil = now + 260;
+        this._visibilityResumeTimer = setTimeout(async () => {
+            this._visibilityResumeTimer = null;
+            if (this._pageHidden || !this.enabled || this._destroyed) return;
+            try {
+                if (typeof Tone !== 'undefined' && this._toneReady) {
+                    const rawContext = Tone.getContext()?.rawContext;
+                    if (rawContext && rawContext.state !== 'running') await rawContext.resume();
+                    if (Tone.context?.state !== 'running') await Tone.start();
+                }
+                if (this._sfxGain) this._sfxGain.gain.value = this.enabled ? this._sfxMaster : 0;
+                this._restoreActiveMusicGains();
+            } catch (e) { /* silent */ }
+        }, 80);
+    }
+
     _ensureToneGraph() {
+        this._attachVisibilityHandler();
         if (this._toneReady || typeof Tone === 'undefined') return;
 
         this._masterVol = new Tone.Volume(-7).toDestination();
@@ -193,22 +280,10 @@ export class SoundManager {
         this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
         this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
         this._toneReady = true;
-
-        if (!this._onVisibilityChange) {
-            this._onVisibilityChange = () => {
-                try {
-                    if (document.hidden) {
-                        Tone.getContext().rawContext.suspend();
-                    } else if (this.enabled) {
-                        Tone.getContext().rawContext.resume();
-                    }
-                } catch (e) { /* silent */ }
-            };
-            document.addEventListener('visibilitychange', this._onVisibilityChange);
-        }
     }
 
     _playFromBuffer(name, volume = 0.7) {
+        if (this._pageHidden) return false;
         const ctx = this._sfxContext;
         const buffer = this._sfxBuffers.get(name);
         if (!ctx || !buffer || !this._sfxGain || ctx.state !== 'running') return false;
@@ -240,6 +315,7 @@ export class SoundManager {
 
     // WAV 풀에서 재생
     _playFromPool(name, volume = 0.7) {
+        if (this._pageHidden) return false;
         const pool = this._pools[name];
         if (!pool || pool.length === 0) return false;
 
@@ -327,18 +403,7 @@ export class SoundManager {
             this._initialized = true;
 
             // 탭 전환 시 자동 일시정지
-            if (this._toneReady && !this._onVisibilityChange) {
-                this._onVisibilityChange = () => {
-                    try {
-                        if (document.hidden) {
-                            Tone.getContext().rawContext.suspend();
-                        } else if (this.enabled) {
-                            Tone.getContext().rawContext.resume();
-                        }
-                    } catch (e) { /* silent */ }
-                };
-                document.addEventListener('visibilitychange', this._onVisibilityChange);
-            }
+            this._attachVisibilityHandler();
         } catch (e) {
             console.warn('SoundManager init failed:', e);
             this.enabled = false;
@@ -349,6 +414,7 @@ export class SoundManager {
         try {
             if (userGesture) this._userActivated = true;
             if (!this.enabled || !this._initialized || !this._userActivated) return false;
+            if (this._pageHidden) return false;
 
             if (!this._toneReady && typeof Tone !== 'undefined') {
                 try {
@@ -396,6 +462,8 @@ export class SoundManager {
 
     play(soundName) {
         if (!this.enabled || !this._initialized) return;
+        const now = performance.now();
+        if (this._pageHidden || now < this._resumeSfxMutedUntil) return;
         const priority = this._soundPriority[soundName] || 1;
         if (this._activeSounds >= this._maxActiveSounds) {
             if (priority < 3 || this._activeSounds >= this._maxActiveSounds + 1) return;
@@ -403,7 +471,6 @@ export class SoundManager {
         const activeSame = this._activeSoundNames[soundName] || 0;
         const sameLimit = this._sameSoundLimit[soundName] ?? (priority >= 3 ? 2 : 1);
         if (activeSame >= sameLimit) return;
-        const now = performance.now();
         const cooldown = this._throttleMs[soundName] || 0;
         if (cooldown > 0) {
             const last = this._lastPlayTime[soundName] || 0;
@@ -485,7 +552,7 @@ export class SoundManager {
             const notes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4'];
             let noteIdx = 0;
             const arpInterval = setInterval(() => {
-                if (!this._initialized || introToken !== this._introToken) return;
+                if (!this._initialized || introToken !== this._introToken || this._pageHidden) return;
                 try {
                     arpSynth.triggerAttackRelease(notes[noteIdx % notes.length], '8n', Tone.now() + this._toneLeadTime, 0.25);
                     noteIdx++;
@@ -504,7 +571,7 @@ export class SoundManager {
             this._introNodes.push(percNoise, percFilter);
 
             const percInterval = setInterval(() => {
-                if (!this._initialized || introToken !== this._introToken) return;
+                if (!this._initialized || introToken !== this._introToken || this._pageHidden) return;
                 try {
                     percFilter.frequency.value = 600 + Math.random() * 400;
                     percNoise.triggerAttackRelease('64n', Tone.now() + this._toneLeadTime, 0.08);
@@ -514,7 +581,7 @@ export class SoundManager {
 
             // 6. Tension riser
             const riserInterval = setInterval(() => {
-                if (!this._initialized || introToken !== this._introToken) return;
+                if (!this._initialized || introToken !== this._introToken || this._pageHidden) return;
                 try {
                     const rOsc = new Tone.Oscillator({ type: 'sawtooth' });
                     const rFilter = new Tone.Filter({ frequency: 100, type: 'lowpass', Q: 3 });
