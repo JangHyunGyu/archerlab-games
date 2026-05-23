@@ -605,10 +605,18 @@ h2 {
 
 @media (max-width: 390px) {
   .stat-wide {
-    display: none;
+    display: block;
   }
 
   .hud {
-    grid-template-columns: 38px repeat(2, minmax(52px, 1fr)) repeat(3, 38px);
+    grid-template-columns: 38px repeat(3, minmax(40px, 1fr)) repeat(3, 38px);
+  }
+
+  .stat {
+    padding: 6px 5px;
+  }
+
+  .stat-wide span {
+    font-size: 0.48rem;
   }
 }
