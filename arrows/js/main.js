@@ -20,7 +20,7 @@
   const GAME_ID = "arrows";
   const RANK_LIMIT = 20;
   const NICK_KEY = "archerlab-arrows-nick";
-  const DESIGNED_LEVELS = 1000;
+  const DIFFICULTY_CAP_LEVEL = 100;
 
   const PALETTE = [
     { main: 0xb9c9ff, glow: 0x5b78ff, hot: 0xf1f6ff },
@@ -141,6 +141,7 @@
       this.animating = false;
       this.initialPieceCount = 0;
       this.lastClear = null;
+      this.levelSeed = 0;
       this.sound = new (window.ArrowsSoundManager || class {
         ensure() {}
         play() {}
@@ -266,7 +267,8 @@
     }
 
     generateLevel(level) {
-      const rng = new Random(0x9e3779b9 ^ Math.imul(level, 2654435761));
+      this.levelSeed = createLevelSeed(level);
+      const rng = new Random(this.levelSeed);
       const config = getLevelConfig(level);
       this.gridW = config.gridW;
       this.gridH = config.gridH;
