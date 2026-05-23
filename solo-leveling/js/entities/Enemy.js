@@ -900,23 +900,40 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const hitY = this.y - this.displayHeight * profile.hitYOffset;
         const mainColor = isCrit ? 0xe8fff5 : 0x66f2b0;
         const glowColor = isCrit ? 0xffffff : 0xb9ffe1;
+        const usedAsset = Enemy._playFrameVfx(
+            this.scene,
+            'effect_sanctuary_hit',
+            this.x,
+            hitY,
+            {
+                scale: (isCrit ? 0.56 : 0.46) * sizeFactor,
+                rotation: Phaser.Math.FloatBetween(-0.08, 0.08),
+                depth: 18,
+                frameMs: Math.max(15, (isCrit ? 16 : 18) + profile.frameMsAdd),
+                frameCount: 16,
+                alpha: 0.96,
+                blendMode: Phaser.BlendModes.ADD,
+            }
+        );
 
         this._spawnHitRing(profile, mainColor, -this.displayHeight * 0.04);
 
-        const halo = this.scene.add.circle(this.x, hitY, 10 * sizeFactor, mainColor, 0.22)
-            .setDepth(18)
-            .setBlendMode(Phaser.BlendModes.ADD);
-        halo.setStrokeStyle(Math.max(1, Math.round(2 * sizeFactor)), glowColor, 0.58);
-        this.scene.tweens.add({
-            targets: halo,
-            scale: isCrit ? 2.35 : 1.82,
-            alpha: 0,
-            duration: isCrit ? 320 : 240,
-            ease: 'Cubic.easeOut',
-            onComplete: () => halo.destroy(),
-        });
+        if (!usedAsset) {
+            const halo = this.scene.add.circle(this.x, hitY, 10 * sizeFactor, mainColor, 0.22)
+                .setDepth(18)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            halo.setStrokeStyle(Math.max(1, Math.round(2 * sizeFactor)), glowColor, 0.58);
+            this.scene.tweens.add({
+                targets: halo,
+                scale: isCrit ? 2.35 : 1.82,
+                alpha: 0,
+                duration: isCrit ? 320 : 240,
+                ease: 'Cubic.easeOut',
+                onComplete: () => halo.destroy(),
+            });
+        }
 
-        if (!constrained || isCrit || profile.tier !== 'small') {
+        if (!usedAsset && (!constrained || isCrit || profile.tier !== 'small')) {
             const cross = this.scene.add.graphics()
                 .setPosition(this.x, hitY)
                 .setDepth(19)
@@ -938,8 +955,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         const particleScale = constrained ? (isCrit ? 0.5 : 0.28) : 1;
-        const count = Math.max(constrained ? 1 : 3, Math.round((isCrit ? 12 : 7) * profile.particleMult * particleScale));
-        const maxSpeed = (isCrit ? 155 : 95) * profile.speedMult;
+        const count = Math.max(constrained ? 1 : 3, Math.round((usedAsset ? (isCrit ? 7 : 4) : (isCrit ? 12 : 7)) * profile.particleMult * particleScale));
+        const maxSpeed = (usedAsset ? (isCrit ? 105 : 70) : (isCrit ? 155 : 95)) * profile.speedMult;
         for (let i = 0; i < count; i++) {
             const a = Math.random() * Math.PI * 2;
             const s = 28 + Math.random() * maxSpeed;
