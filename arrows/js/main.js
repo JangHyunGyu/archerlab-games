@@ -788,15 +788,15 @@
     const gridW = Math.min(19, 9 + Math.floor((tunedLevel - 1) / 11));
     const gridH = Math.min(21, 11 + Math.floor((tunedLevel - 1) / 10));
     const fillRatio = 0.43 + early * 0.12 + late * 0.08;
-    const maxLength = Math.min(11, Math.round(5 + early * 3 + late * 3));
+    const maxLength = Math.min(15, Math.round(5 + early * 5 + late * 5));
 
     return {
       gridW,
       gridH,
-      target: Math.min(64, Math.round(13 + early * 37 + late * 14)),
+      target: Math.min(54, Math.round(12 + early * 30 + late * 8)),
       targetCells: Math.round(gridW * gridH * fillRatio),
       targetSlack: Math.floor(maxLength * late * 0.75),
-      minLength: tunedLevel < 160 ? 2 : 3,
+      minLength: tunedLevel < 50 ? 2 : tunedLevel < 150 ? 3 : 4,
       maxLength,
       turnBias: 0.42 + late * 0.34,
       attemptsPerPiece: 380 + Math.floor(late * 120),
