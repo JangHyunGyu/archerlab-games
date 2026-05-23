@@ -523,7 +523,7 @@ Object.assign(WEAPONS, {
         attackStyle: 'clawSwipe',
         basicAttackEffectKey: 'tiger_claw_swipe',
         soundKey: 'tigerClaw',
-        attackRange: 160,
+        attackRange: 192,
         targetRangeBonus: 30,
         hitRangeBonus: 0,
         hitAngle: 0.82,
