@@ -22,11 +22,11 @@
   const NICK_KEY = "archerlab-arrows-nick";
 
   const PALETTE = [
-    { main: 0x8fefff, glow: 0x24d8ff, hot: 0xe7feff },
-    { main: 0xbba0ff, glow: 0x8b65ff, hot: 0xf7f0ff },
-    { main: 0xffd36a, glow: 0xffa82d, hot: 0xfff1bd },
-    { main: 0x76ffd9, glow: 0x2effb3, hot: 0xe7fff8 },
-    { main: 0xff9eb1, glow: 0xff567d, hot: 0xffeef2 },
+    { main: 0xb9c9ff, glow: 0x5b78ff, hot: 0xf1f6ff },
+    { main: 0xaedfff, glow: 0x38c8ff, hot: 0xeeffff },
+    { main: 0xc6b6ff, glow: 0x9175ff, hot: 0xf4efff },
+    { main: 0xa9f2f3, glow: 0x26e7ff, hot: 0xedffff },
+    { main: 0xd0dcff, glow: 0x79a5ff, hot: 0xffffff },
   ];
 
   const DIRS = {
@@ -399,18 +399,17 @@
       container.pieceId = piece.id;
       piece.container = container;
 
-      container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(9, this.cell * 0.28));
+      container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(7, this.cell * 0.17));
 
       const glow = new PIXI.Graphics();
-      drawPath(glow, piece.cells, this.cell, color.glow, this.cell * 0.54, 0.18);
-      drawPath(glow, piece.cells, this.cell, color.main, this.cell * 0.38, 0.26);
+      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.2), 0.15);
+      drawPath(glow, piece.cells, this.cell, color.main, Math.max(3, this.cell * 0.12), 0.22);
       container.addChild(glow);
 
       const line = new PIXI.Graphics();
-      drawPath(line, piece.cells, this.cell, color.main, this.cell * 0.22, 0.98);
-      drawPath(line, piece.cells, this.cell, color.hot, Math.max(2, this.cell * 0.07), 0.72);
+      drawPath(line, piece.cells, this.cell, color.main, Math.max(2.6, this.cell * 0.085), 0.98);
+      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.1, this.cell * 0.025), 0.78);
       drawArrow(line, piece, this.cell, color.hot, dir);
-      drawNodeCaps(line, piece.cells, this.cell, color.hot);
       container.addChild(line);
 
       container.on("pointerdown", () => this.tapPiece(piece));
@@ -435,29 +434,28 @@
       this.playTone("clear");
 
       const dir = DIRS[piece.dir];
-      const bounds = getBounds(piece.cells);
-      let steps = 0;
-      if (piece.dir === "R") steps = this.gridW - bounds.maxX + 2;
-      if (piece.dir === "L") steps = bounds.minX + 2;
-      if (piece.dir === "D") steps = this.gridH - bounds.maxY + 2;
-      if (piece.dir === "U") steps = bounds.minY + 2;
-      const endX = dir.x * steps * this.cell;
-      const endY = dir.y * steps * this.cell;
+      const track = buildExitTrack(piece, this.cell, this.boardW, this.boardH);
+      const flow = new PIXI.Graphics();
+      this.fxLayer.addChild(flow);
+      piece.container.eventMode = "none";
 
       this.spawnTrail(piece, dir);
       this.tweens.push({
-        duration: 360,
+        duration: 620,
         elapsed: 0,
         update: dt => {
-          const t = clamp(dt / 360, 0, 1);
-          const eased = easeOutCubic(t);
-          piece.container.x = endX * eased;
-          piece.container.y = endY * eased;
-          piece.container.alpha = 1 - Math.max(0, (t - 0.55) / 0.45);
+          const t = clamp(dt / 620, 0, 1);
+          const eased = easeInOutCubic(t);
+          const start = track.totalLength * eased;
+          const end = Math.min(track.totalLength, start + track.pathLength);
+          piece.container.alpha = 1 - clamp(t / 0.16, 0, 1);
+          flow.clear();
+          drawFlowWindow(flow, track.points, start, end, this.cell, PALETTE[piece.colorIndex % PALETTE.length], piece.dir);
           return t >= 1;
         },
         done: () => {
           this.pieceLayer.removeChild(piece.container);
+          this.fxLayer.removeChild(flow);
           this.pieces = this.pieces.filter(other => other !== piece);
           this.animating = false;
           this.updateHud();
@@ -662,37 +660,36 @@
     canEscape(piece, others) {
       const occupied = makeOccupied(others);
       const dir = DIRS[piece.dir];
-      for (const cell of piece.cells) {
-        let x = cell.x + dir.x;
-        let y = cell.y + dir.y;
-        while (x >= 0 && x < this.gridW && y >= 0 && y < this.gridH) {
-          if (occupied.has(key(x, y))) return { ok: false, blocker: { x, y } };
-          x += dir.x;
-          y += dir.y;
-        }
+      const front = getArrowEndpoint(piece.cells, piece.dir);
+      let x = front.x + dir.x;
+      let y = front.y + dir.y;
+      while (x >= 0 && x < this.gridW && y >= 0 && y < this.gridH) {
+        if (occupied.has(key(x, y))) return { ok: false, blocker: { x, y } };
+        x += dir.x;
+        y += dir.y;
       }
       return { ok: true, blocker: null };
     }
 
     spawnTrail(piece, dir) {
       const color = PALETTE[piece.colorIndex % PALETTE.length];
-      const bounds = getBounds(piece.cells);
-      const x = this.cx((bounds.minX + bounds.maxX) / 2);
-      const y = this.cy((bounds.minY + bounds.maxY) / 2);
-      for (let i = 0; i < 16; i++) {
+      const front = getArrowEndpoint(piece.cells, piece.dir);
+      const x = this.cx(front.x);
+      const y = this.cy(front.y);
+      for (let i = 0; i < 10; i++) {
         const g = new PIXI.Graphics();
-        const size = Math.max(2, this.cell * (0.04 + Math.random() * 0.06));
-        g.roundRect(-size / 2, -size / 2, size, size, size * 0.3).fill({ color: color.main, alpha: 0.9 });
-        g.x = x - dir.x * this.cell * Math.random() * 0.8 + (Math.random() - 0.5) * this.cell * 0.7;
-        g.y = y - dir.y * this.cell * Math.random() * 0.8 + (Math.random() - 0.5) * this.cell * 0.7;
+        const size = Math.max(1.4, this.cell * (0.025 + Math.random() * 0.035));
+        g.circle(0, 0, size).fill({ color: color.hot, alpha: 0.78 });
+        g.x = x - dir.x * this.cell * Math.random() * 0.18 + (Math.random() - 0.5) * this.cell * 0.18;
+        g.y = y - dir.y * this.cell * Math.random() * 0.18 + (Math.random() - 0.5) * this.cell * 0.18;
         this.fxLayer.addChild(g);
         this.tweens.push({
           duration: 430 + Math.random() * 220,
           elapsed: 0,
           update: dt => {
             const t = clamp(dt / 620, 0, 1);
-            g.x -= dir.x * this.cell * 1.1 * t;
-            g.y -= dir.y * this.cell * 1.1 * t;
+            g.x += dir.x * this.cell * 1.05 * t;
+            g.y += dir.y * this.cell * 1.05 * t;
             g.alpha = 1 - t;
             return t >= 1;
           },
@@ -836,16 +833,18 @@
     const front = getArrowEndpoint(piece.cells, piece.dir);
     const cx = (front.x + 0.5) * cellSize;
     const cy = (front.y + 0.5) * cellSize;
-    const size = cellSize * 0.28;
-    const len = cellSize * 0.38;
+    const size = cellSize * 0.16;
+    const len = cellSize * 0.34;
     const points = [
-      { x: len * 0.58, y: 0 },
-      { x: -len * 0.34, y: -size * 0.72 },
-      { x: -len * 0.12, y: 0 },
-      { x: -len * 0.34, y: size * 0.72 },
+      { x: len * 0.64, y: 0 },
+      { x: -len * 0.24, y: -size },
+      { x: -len * 0.04, y: 0 },
+      { x: -len * 0.24, y: size },
     ].map(point => rotate(point, dir.angle));
     graphics.poly(points.map(point => [cx + point.x, cy + point.y]).flat())
       .fill({ color, alpha: 0.98 });
+    graphics.poly(points.map(point => [cx + point.x, cy + point.y]).flat())
+      .stroke({ width: Math.max(0.8, cellSize * 0.018), color: 0xffffff, alpha: 0.38, join: "round" });
   }
 
   function drawNodeCaps(graphics, cells, cellSize, color) {
@@ -855,6 +854,153 @@
       graphics.circle((cell.x + 0.5) * cellSize, (cell.y + 0.5) * cellSize, Math.max(2, cellSize * 0.075))
         .fill({ color, alpha: 0.92 });
     }
+  }
+
+  function buildExitTrack(piece, cellSize, boardW, boardH) {
+    const dir = DIRS[piece.dir];
+    const orderedCells = getOrderedCellsForExit(piece.cells, piece.dir);
+    const pathPoints = orderedCells.map(cell => ({
+      x: (cell.x + 0.5) * cellSize,
+      y: (cell.y + 0.5) * cellSize,
+    }));
+    const head = pathPoints[pathPoints.length - 1];
+    const pathLength = Math.max(polylineLength(pathPoints), cellSize * 0.35);
+    let distanceToEdge = cellSize;
+    if (piece.dir === "R") distanceToEdge = boardW - head.x;
+    if (piece.dir === "L") distanceToEdge = head.x;
+    if (piece.dir === "D") distanceToEdge = boardH - head.y;
+    if (piece.dir === "U") distanceToEdge = head.y;
+    const exitDistance = Math.max(cellSize * 2.2, distanceToEdge + pathLength + cellSize * 1.35);
+    const points = pathPoints.concat({
+      x: head.x + dir.x * exitDistance,
+      y: head.y + dir.y * exitDistance,
+    });
+    return {
+      points,
+      pathLength,
+      totalLength: polylineLength(points),
+    };
+  }
+
+  function getOrderedCellsForExit(cells, dir) {
+    const front = getArrowEndpoint(cells, dir);
+    if (sameCell(front, cells[0])) return cells.slice().reverse();
+    return cells.slice();
+  }
+
+  function drawFlowWindow(graphics, points, startDist, endDist, cellSize, color, dir) {
+    const windowPoints = slicePolyline(points, startDist, endDist);
+    if (windowPoints.length < 2) return;
+
+    const visible = Math.max(0, endDist - startDist);
+    const head = pointAtDistance(points, endDist);
+    const alpha = clamp(visible / (cellSize * 0.6), 0, 1);
+
+    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.21), color.glow, 0.2 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(3, cellSize * 0.12), color.main, 0.38 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(2.6, cellSize * 0.085), color.main, 0.98 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(1.1, cellSize * 0.026), color.hot, 0.86 * alpha);
+    drawFlowArrow(graphics, head, DIRS[dir], cellSize, color.hot, alpha);
+  }
+
+  function drawPolylinePoints(graphics, points, width, color, alpha) {
+    if (points.length < 2) return;
+    graphics.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      graphics.lineTo(points[i].x, points[i].y);
+    }
+    graphics.stroke({ width, color, alpha, cap: "round", join: "round" });
+  }
+
+  function drawFlowArrow(graphics, head, dir, cellSize, color, alpha) {
+    if (!head || alpha <= 0) return;
+    const angle = dir.angle;
+    const size = cellSize * 0.15;
+    const len = cellSize * 0.32;
+    const points = [
+      { x: len * 0.62, y: 0 },
+      { x: -len * 0.24, y: -size },
+      { x: -len * 0.03, y: 0 },
+      { x: -len * 0.24, y: size },
+    ].map(point => rotate(point, angle));
+    graphics.poly(points.map(point => [head.x + point.x, head.y + point.y]).flat())
+      .fill({ color, alpha: 0.98 * alpha });
+  }
+
+  function slicePolyline(points, startDist, endDist) {
+    const total = polylineLength(points);
+    const start = clamp(startDist, 0, total);
+    const end = clamp(endDist, 0, total);
+    if (end - start <= 0.1) return [];
+
+    const sliced = [];
+    let cursor = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i];
+      const b = points[i + 1];
+      const len = pointDistance(a, b);
+      if (len <= 0) continue;
+      const next = cursor + len;
+      if (end < cursor) break;
+      if (start <= next && end >= cursor) {
+        const from = clamp((start - cursor) / len, 0, 1);
+        const to = clamp((end - cursor) / len, 0, 1);
+        if (to > from) {
+          const p0 = lerpPoint(a, b, from);
+          const p1 = lerpPoint(a, b, to);
+          if (!sliced.length || !samePoint(sliced[sliced.length - 1], p0)) sliced.push(p0);
+          sliced.push(p1);
+        }
+      }
+      cursor = next;
+    }
+    return sliced;
+  }
+
+  function pointAtDistance(points, distance) {
+    const total = polylineLength(points);
+    const target = clamp(distance, 0, total);
+    let cursor = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i];
+      const b = points[i + 1];
+      const len = pointDistance(a, b);
+      if (len <= 0) continue;
+      if (target <= cursor + len) {
+        return lerpPoint(a, b, (target - cursor) / len);
+      }
+      cursor += len;
+    }
+    return points[points.length - 1] || null;
+  }
+
+  function polylineLength(points) {
+    let total = 0;
+    for (let i = 0; i < points.length - 1; i++) {
+      total += pointDistance(points[i], points[i + 1]);
+    }
+    return total;
+  }
+
+  function pointDistance(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function lerpPoint(a, b, t) {
+    return {
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+    };
+  }
+
+  function sameCell(a, b) {
+    return !!a && !!b && a.x === b.x && a.y === b.y;
+  }
+
+  function samePoint(a, b) {
+    return !!a && !!b && Math.abs(a.x - b.x) < 0.001 && Math.abs(a.y - b.y) < 0.001;
   }
 
   function getArrowEndpoint(cells, dir) {
@@ -985,6 +1131,12 @@
 
   function easeOutCubic(value) {
     return 1 - Math.pow(1 - value, 3);
+  }
+
+  function easeInOutCubic(value) {
+    return value < 0.5
+      ? 4 * value * value * value
+      : 1 - Math.pow(-2 * value + 2, 3) / 2;
   }
 
   function calculateRankScore(level, moves, lines) {
