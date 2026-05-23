@@ -353,7 +353,8 @@
       const side = width < 620 ? 18 : 44;
       const availableW = width - side * 2;
       const availableH = height - topSafe - bottomSafe;
-      this.cell = Math.max(22, Math.floor(Math.min(availableW / this.gridW, availableH / this.gridH)));
+      const minCell = width < 620 ? 18 : 22;
+      this.cell = Math.max(minCell, Math.floor(Math.min(availableW / this.gridW, availableH / this.gridH)));
       this.boardW = this.cell * this.gridW;
       this.boardH = this.cell * this.gridH;
       this.boardX = Math.round((width - this.boardW) / 2);
@@ -784,24 +785,24 @@
     const early = clamp((tunedLevel - 1) / 90, 0, 1);
     const full = clamp((tunedLevel - 1) / (DESIGNED_LEVELS - 1), 0, 1);
     const late = Math.pow(full, 0.72);
-    const gridW = Math.min(15, 9 + Math.floor((tunedLevel - 1) / 12));
-    const gridH = Math.min(17, 11 + Math.floor((tunedLevel - 1) / 14));
-    const fillRatio = 0.39 + early * 0.14 + late * 0.12;
+    const gridW = Math.min(19, 9 + Math.floor((tunedLevel - 1) / 11));
+    const gridH = Math.min(21, 11 + Math.floor((tunedLevel - 1) / 10));
+    const fillRatio = 0.43 + early * 0.12 + late * 0.08;
     const maxLength = Math.min(11, Math.round(5 + early * 3 + late * 3));
 
     return {
       gridW,
       gridH,
-      target: Math.min(50, Math.round(12 + early * 29 + late * 9)),
+      target: Math.min(64, Math.round(13 + early * 37 + late * 14)),
       targetCells: Math.round(gridW * gridH * fillRatio),
       targetSlack: Math.floor(maxLength * late * 0.75),
       minLength: tunedLevel < 160 ? 2 : 3,
       maxLength,
       turnBias: 0.42 + late * 0.34,
       attemptsPerPiece: 380 + Math.floor(late * 120),
-      placementTries: 9 + Math.floor(early * 4 + late * 5),
-      clusterBias: 0.62 + late * 0.26,
-      centerBias: 0.18 + late * 0.12,
+      placementTries: 11 + Math.floor(early * 5 + late * 5),
+      clusterBias: 0.76 + late * 0.18,
+      centerBias: 0.32 + late * 0.18,
     };
   }
 
