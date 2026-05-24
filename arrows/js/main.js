@@ -59,9 +59,6 @@
     home: $("home-btn"),
     modalMenu: $("modal-menu-btn"),
     modalRank: $("modal-rank-btn"),
-    retry: $("retry-btn"),
-    undo: $("undo-btn"),
-    hint: $("hint-btn"),
     rankModal: $("rank-modal"),
     rankContent: $("rank-content"),
     rankClose: $("rank-close-btn"),
@@ -191,9 +188,6 @@
         this.playTone("button");
         dom.rankModal.classList.add("hidden");
       });
-      dom.retry.addEventListener("click", () => this.start(this.level));
-      dom.undo.addEventListener("click", () => this.undo());
-      dom.hint.addEventListener("click", () => this.hint());
       dom.submitRank.addEventListener("click", () => this.handleSubmitRank());
       dom.skipRank.addEventListener("click", () => this.handleSkipRank());
       dom.nickname.addEventListener("keydown", event => {
@@ -672,8 +666,6 @@
       dom.level.textContent = String(this.level);
       dom.moves.textContent = String(this.moves);
       dom.left.textContent = String(this.pieces.length);
-      dom.undo.disabled = this.history.length === 0;
-      dom.hint.disabled = this.pieces.length === 0;
     }
 
     async openRankModal() {
