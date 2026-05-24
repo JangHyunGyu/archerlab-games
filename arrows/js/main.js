@@ -21,6 +21,8 @@
   const RANK_LIMIT = 20;
   const NICK_KEY = "archerlab-arrows-nick";
   const DIFFICULTY_CAP_LEVEL = 100;
+  const TEMPLATE_GENERATION_TARGET_MS = 3000;
+  const TEMPLATE_GENERATION_HARD_MS = 4800;
 
   const PALETTE = [
     { main: 0xd7e2f1, glow: 0x1b2230, hot: 0x10141d },
@@ -929,12 +931,15 @@
     const expansion = Math.sqrt(Math.max(0, mapLevel - 10));
     const gridW = snapTemplateSize(18 + earlyProgress * 6 + expansion * 2.4, 3);
     const gridH = snapTemplateSize(24 + earlyProgress * 9 + expansion * 3.3, 3);
-    const pieces = createWovenTemplatePieces(gridW, gridH, rawLevel);
+    const budget = createGenerationBudget();
+    const pieces = createWovenTemplatePieces(gridW, gridH, rawLevel, budget);
 
     const guaranteedDirs = pieces.map(piece => piece.dir);
     const config = getLevelConfig(level);
-    confuseExitDirections(pieces, gridW, gridH, config);
-    repairSolvability(pieces, guaranteedDirs, gridW, gridH);
+    if (!isGenerationBudgetHardExpired(budget, 250)) {
+      confuseExitDirections(pieces, gridW, gridH, config);
+      repairSolvability(pieces, guaranteedDirs, gridW, gridH);
+    }
     if (!isSolvableTemplate(pieces, gridW, gridH)) {
       for (let i = 0; i < pieces.length; i++) pieces[i].dir = guaranteedDirs[i];
     }
@@ -942,7 +947,7 @@
     return { gridW, gridH, pieces };
   }
 
-  function createWovenTemplatePieces(gridW, gridH, variant) {
+  function createWovenTemplatePieces(gridW, gridH, variant, budget) {
     const rng = new Random((createLevelSeed(variant) ^ 0x7f4a7c15) >>> 0);
     const occupied = new Set();
     const pieces = [];
@@ -954,11 +959,15 @@
     const maxAttempts = Math.max(900, boardCells * 5);
     const stallLimit = gridW >= 45 ? 24 : gridW >= 33 ? 36 : 42;
     const closeFill = targetFill - (gridW >= 45 ? 0.12 : 0.02);
+    const fallbackFill = gridW >= 45 ? 0.64 : gridW >= 33 ? 0.76 : 0.8;
     let occupiedCells = 0;
     let misses = 0;
 
     for (let attempt = 0; attempt < maxAttempts && occupiedCells / boardCells < targetFill; attempt++) {
-      const candidate = makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength);
+      const fill = occupiedCells / boardCells;
+      if (shouldStopForGenerationBudget(budget, fill, fallbackFill, pieces.length)) break;
+
+      const candidate = makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength, budget);
       if (!candidate) {
         misses += 1;
         if (misses > stallLimit && pieces.length >= minPieces && occupiedCells / boardCells >= closeFill) break;
@@ -987,13 +996,14 @@
     }
 
     const fillerTargetFill = gridW >= 45 ? Math.min(targetFill, 0.7) : targetFill;
-    if (occupiedCells / boardCells < fillerTargetFill) {
+    if (occupiedCells / boardCells < fillerTargetFill && !isGenerationBudgetSoftExpired(budget)) {
       const fillerMinLength = gridW >= 45 ? 24 : gridW >= 33 ? 18 : 16;
       const fillerMaxLength = Math.min(maxLength - 4, gridW >= 45 ? 44 : gridW >= 33 ? 40 : 32);
       let fillerMisses = 0;
       const fillerAttempts = Math.max(160, boardCells * 2);
       for (let attempt = 0; attempt < fillerAttempts && occupiedCells / boardCells < fillerTargetFill; attempt++) {
-        const candidate = makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, fillerMinLength, fillerMaxLength);
+        if (shouldStopForGenerationBudget(budget, occupiedCells / boardCells, fallbackFill, pieces.length)) break;
+        const candidate = makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, fillerMinLength, fillerMaxLength, budget);
         if (!candidate) {
           fillerMisses += 1;
           if (fillerMisses > stallLimit) break;
@@ -1021,16 +1031,48 @@
     return pieces;
   }
 
-  function makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength) {
+  function makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength, budget) {
     let best = null;
-    const samples = gridW >= 45 ? (pieces.length < 4 ? 36 : 48) : pieces.length < 4 ? 52 : 72;
+    let samples = gridW >= 45 ? (pieces.length < 4 ? 36 : 48) : pieces.length < 4 ? 52 : 72;
+    if (isGenerationBudgetSoftExpired(budget)) samples = Math.max(10, Math.floor(samples * 0.32));
+    else if (generationBudgetElapsed(budget) > TEMPLATE_GENERATION_TARGET_MS * 0.72) samples = Math.max(16, Math.floor(samples * 0.58));
     for (let i = 0; i < samples; i++) {
+      if (i > 0 && isGenerationBudgetHardExpired(budget)) break;
       const cells = makeWovenWalk(gridW, gridH, occupied, rng, minLength, maxLength);
       if (!cells || cells.length < minLength) continue;
       const score = scoreWovenWalk(cells, occupied, gridW, gridH) + rng.next() * 0.5;
       if (!best || score > best.score) best = { cells, score };
     }
     return best;
+  }
+
+  function createGenerationBudget() {
+    return {
+      startedAt: nowMs(),
+      targetMs: TEMPLATE_GENERATION_TARGET_MS,
+      hardMs: TEMPLATE_GENERATION_HARD_MS,
+    };
+  }
+
+  function nowMs() {
+    return typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+  }
+
+  function generationBudgetElapsed(budget) {
+    return nowMs() - budget.startedAt;
+  }
+
+  function isGenerationBudgetSoftExpired(budget) {
+    return generationBudgetElapsed(budget) >= budget.targetMs;
+  }
+
+  function isGenerationBudgetHardExpired(budget, reserveMs = 0) {
+    return generationBudgetElapsed(budget) >= budget.hardMs - reserveMs;
+  }
+
+  function shouldStopForGenerationBudget(budget, fill, fallbackFill, pieceCount) {
+    if (isGenerationBudgetHardExpired(budget)) return pieceCount >= 8;
+    return isGenerationBudgetSoftExpired(budget) && fill >= fallbackFill;
   }
 
   function makeWovenWalk(gridW, gridH, occupied, rng, minLength, maxLength) {
