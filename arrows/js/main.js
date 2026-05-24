@@ -21,7 +21,6 @@
   const RANK_LIMIT = 20;
   const NICK_KEY = "archerlab-arrows-nick";
   const DIFFICULTY_CAP_LEVEL = 100;
-  const MAP_SIZE_CAP_LEVEL = 1000;
 
   const PALETTE = [
     { main: 0xd7e2f1, glow: 0x1b2230, hot: 0x10141d },
@@ -925,7 +924,7 @@
 
   function createTemplateLevel(level) {
     const rawLevel = Math.max(1, level | 0);
-    const mapLevel = Math.min(rawLevel, MAP_SIZE_CAP_LEVEL);
+    const mapLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
     const earlyProgress = clamp((mapLevel - 1) / 9, 0, 1);
     const expansion = Math.sqrt(Math.max(0, mapLevel - 10));
     const gridW = snapTemplateSize(18 + earlyProgress * 6 + expansion * 2.4, 3);
@@ -951,10 +950,10 @@
     const targetFill = gridW >= 45 ? 0.82 : gridW >= 33 ? 0.87 : gridW >= 24 ? 0.9 : 0.85;
     const minLength = gridW >= 45 ? 26 : gridW >= 33 ? 22 : gridW >= 24 ? 18 : 10;
     const maxLength = Math.min(gridW >= 45 ? 64 : 90, Math.max(42, Math.round(Math.min(gridW, gridH) * 1.72)));
-    const minPieces = Math.max(14, Math.round((boardCells * targetFill) / (maxLength * 0.84)));
+    const minPieces = Math.max(14, Math.round((boardCells * targetFill) / (maxLength * (gridW >= 45 ? 0.95 : 0.84))));
     const maxAttempts = Math.max(900, boardCells * 5);
-    const stallLimit = gridW >= 45 ? 30 : gridW >= 33 ? 36 : 42;
-    const closeFill = targetFill - (gridW >= 45 ? 0.04 : 0.02);
+    const stallLimit = gridW >= 45 ? 24 : gridW >= 33 ? 36 : 42;
+    const closeFill = targetFill - (gridW >= 45 ? 0.12 : 0.02);
     let occupiedCells = 0;
     let misses = 0;
 
@@ -987,7 +986,7 @@
       misses = 0;
     }
 
-    const fillerTargetFill = gridW >= 45 ? Math.min(targetFill, 0.78) : targetFill;
+    const fillerTargetFill = gridW >= 45 ? Math.min(targetFill, 0.7) : targetFill;
     if (occupiedCells / boardCells < fillerTargetFill) {
       const fillerMinLength = gridW >= 45 ? 24 : gridW >= 33 ? 18 : 16;
       const fillerMaxLength = Math.min(maxLength - 4, gridW >= 45 ? 44 : gridW >= 33 ? 40 : 32);
