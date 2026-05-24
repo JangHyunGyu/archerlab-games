@@ -43,6 +43,7 @@
     container: $("game-container"),
     menu: $("menu"),
     hud: $("hud"),
+    loading: $("loading-screen"),
     modal: $("complete-modal"),
     toast: $("toast"),
     level: $("level-label"),
@@ -52,6 +53,7 @@
     bestMoves: $("best-moves-label"),
     clearMoves: $("clear-moves"),
     nextLevel: $("next-level-label"),
+    loadingLevel: $("loading-level-label"),
     clearLevel: $("clear-level"),
     clearTitle: $("clear-title"),
     play: $("play-btn"),
@@ -142,6 +144,7 @@
       this.initialPieceCount = 0;
       this.lastClear = null;
       this.levelSeed = 0;
+      this.startToken = 0;
       this.sound = new (window.ArrowsSoundManager || class {
         ensure() {}
         play() {}
@@ -226,20 +229,30 @@
       }
     }
 
-    start(level) {
+    async start(level) {
+      if (this.mode === "loading") return;
+      const token = ++this.startToken;
       this.level = Math.max(1, level | 0);
       localStorage.setItem(STORAGE.level, String(this.level));
       this.moves = 0;
       this.history = [];
       this.tweens = [];
-      this.mode = "playing";
+      this.mode = "loading";
       this.animating = false;
       dom.menu.classList.add("hidden");
       dom.modal.classList.add("hidden");
       dom.rankModal.classList.add("hidden");
+      dom.hud.classList.add("hidden");
+      this.boardLayer.visible = false;
+      this.showLoading(this.level);
+      await nextFrame();
+      await waitMs(30);
+      const ready = await this.generateLevel(this.level, token);
+      if (!ready || token !== this.startToken) return;
+      this.hideLoading();
+      this.mode = "playing";
       dom.hud.classList.remove("hidden");
       this.boardLayer.visible = true;
-      this.generateLevel(this.level);
       this.resize();
       this.renderBoard();
       this.updateHud();
@@ -247,10 +260,12 @@
     }
 
     showMenu() {
+      this.startToken += 1;
       this.mode = "menu";
       this.animating = false;
       this.tweens = [];
       this.boardLayer.visible = false;
+      this.hideLoading();
       dom.hud.classList.add("hidden");
       dom.modal.classList.add("hidden");
       dom.rankModal.classList.add("hidden");
@@ -266,7 +281,7 @@
       dom.continue.disabled = this.level <= 1 && this.bestLevel <= 1;
     }
 
-    generateLevel(level) {
+    async generateLevel(level, token) {
       this.levelSeed = createLevelSeed(level);
       const rng = new Random(this.levelSeed);
       const config = getLevelConfig(level);
@@ -283,7 +298,11 @@
       let missesSincePlace = 0;
       const maxAttempts = target * config.attemptsPerPiece;
       const generationStartedAt = performance.now();
-      const isOverBudget = () => occupiedCells >= budgetTargetCells && performance.now() - generationStartedAt > config.generationBudgetMs;
+      const isOverBudget = () => (
+        pieces.length >= minPieces &&
+        occupiedCells >= budgetTargetCells &&
+        performance.now() - generationStartedAt > config.generationBudgetMs
+      );
       const shouldStopAfterMiss = () => {
         if (isOverBudget()) return true;
         if (occupiedCells >= minTargetCells) return missesSincePlace > config.completedStallLimit;
@@ -292,6 +311,10 @@
 
       for (let attempt = 0; attempt < maxAttempts && pieces.length < target && (occupiedCells < targetCells || pieces.length < minPieces); attempt++) {
         if (isOverBudget()) break;
+        if (attempt > 0 && attempt % config.yieldEvery === 0) {
+          await nextFrame();
+          if (token !== this.startToken) return false;
+        }
         const shapeCandidate = makeShapeCandidate(rng, config);
         const length = shapeCandidate.length;
         const shape = shapeCandidate.shape;
@@ -331,8 +354,18 @@
 
       if (this.pieces.length < 6) {
         this.level += 1;
-        this.generateLevel(this.level);
+        return this.generateLevel(this.level, token);
       }
+      return true;
+    }
+
+    showLoading(level) {
+      if (dom.loadingLevel) dom.loadingLevel.textContent = String(level);
+      if (dom.loading) dom.loading.classList.remove("hidden");
+    }
+
+    hideLoading() {
+      if (dom.loading) dom.loading.classList.add("hidden");
     }
 
     findDensePlacement(shape, bounds, pieces, rng, config) {
@@ -460,13 +493,13 @@
       container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(5, this.cell * 0.18));
 
       const glow = new PIXI.Graphics();
-      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.26), 0.13);
-      drawPath(glow, piece.cells, this.cell, color.main, Math.max(3, this.cell * 0.16), 0.2);
+      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.34), 0.13);
+      drawPath(glow, piece.cells, this.cell, color.main, Math.max(3, this.cell * 0.23), 0.2);
       container.addChild(glow);
 
       const line = new PIXI.Graphics();
-      drawPath(line, piece.cells, this.cell, color.main, Math.max(2.8, this.cell * 0.13), 0.98);
-      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.1, this.cell * 0.034), 0.78);
+      drawPath(line, piece.cells, this.cell, color.main, Math.max(3.2, this.cell * 0.2), 0.98);
+      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.2, this.cell * 0.052), 0.78);
       drawArrow(line, piece, this.cell, color.main, color.hot, dir);
       container.addChild(line);
 
@@ -824,24 +857,25 @@
     const rawProgress = DIFFICULTY_CAP_LEVEL <= 1 ? 1 : clamp((tunedLevel - 1) / (DIFFICULTY_CAP_LEVEL - 1), 0, 1);
     const earlyProgress = clamp((rawLevel - 1) / 9, 0, 1);
     const lateProgress = clamp((tunedLevel - 10) / 90, 0, 1);
-    const size = Math.pow(earlyProgress, 0.62);
-    const pressure = 0.88 + Math.pow(earlyProgress, 0.72) * 0.1 + lateProgress * 0.02;
+    const entryProgress = 0.38 + earlyProgress * 0.62;
+    const size = Math.pow(entryProgress, 0.62);
+    const pressure = 0.88 + Math.pow(entryProgress, 0.72) * 0.1 + lateProgress * 0.02;
     const curve = Math.pow(pressure, 0.72);
-    const gridW = Math.min(27, Math.round(18 + size * 8 + lateProgress));
-    const gridH = Math.min(29, Math.round(21 + size * 8 + lateProgress));
+    const gridW = Math.min(21, Math.round(12 + size * 3 + lateProgress * 6));
+    const gridH = Math.min(29, Math.round(15 + size * 7 + lateProgress * 7));
     const activeW = Math.min(gridW, Math.round(gridW - (earlyProgress >= 1 ? 1 : 2)));
     const activeH = Math.min(gridH, Math.round(gridH - (earlyProgress >= 1 ? 1 : 2)));
     const clusterInsetX = Math.max(0, Math.floor((gridW - activeW) / 2));
     const clusterInsetY = Math.max(0, Math.floor((gridH - activeH) / 2));
-    const fillRatio = 0.9 + earlyProgress * 0.03 + lateProgress * 0.02;
-    const minLength = Math.round(4 + earlyProgress * 2 + lateProgress * 2);
-    const maxLength = Math.min(24, Math.round(9 + earlyProgress * 11 + lateProgress * 4));
+    const fillRatio = 0.72 + entryProgress * 0.12 + lateProgress * 0.05;
+    const minLength = Math.round(2 + lateProgress * 2);
+    const maxLength = Math.min(12, Math.round(4 + earlyProgress + lateProgress * 7));
 
     return {
       gridW,
       gridH,
-      target: Math.min(76, Math.round(38 + earlyProgress * 28 + lateProgress * 10)),
-      minPieces: Math.round(32 + earlyProgress * 24 + lateProgress * 6),
+      target: Math.min(94, Math.round(58 + entryProgress * 24 + lateProgress * 12)),
+      minPieces: Math.round(46 + entryProgress * 16 + lateProgress * 10),
       targetCells: Math.round(activeW * activeH * fillRatio),
       targetSlack: Math.floor(maxLength * 0.1),
       clusterInsetX,
@@ -851,22 +885,23 @@
       maxLength,
       lengthBias: 1.18 + pressure * 0.44,
       lengthCompletion: 0.54 + pressure * 0.08,
-      shapeRetries: 4 + Math.floor(earlyProgress * 2 + lateProgress),
-      turnBias: 0.74 + pressure * 0.17,
-      attemptsPerPiece: 420 + Math.floor(earlyProgress * 120 + lateProgress * 120),
+      shapeRetries: 3 + Math.floor(entryProgress * 2 + lateProgress),
+      turnBias: 0.78 + pressure * 0.15,
+      attemptsPerPiece: 190 + Math.floor(entryProgress * 70 + lateProgress * 70),
       minFillCompletion: 0.96,
       softFillCompletion: 0.9,
-      budgetFillCompletion: 0.92,
-      stallLimit: 320 + Math.floor(earlyProgress * 180 + lateProgress * 120),
-      completedStallLimit: 220 + Math.floor(earlyProgress * 130 + lateProgress * 120),
-      generationBudgetMs: 2500 + Math.floor(earlyProgress * 1600 + lateProgress * 1800),
-      placementTries: 42 + Math.floor(earlyProgress * 18 + lateProgress * 16),
+      budgetFillCompletion: 0.88,
+      stallLimit: 220 + Math.floor(entryProgress * 120 + lateProgress * 80),
+      completedStallLimit: 120 + Math.floor(entryProgress * 95 + lateProgress * 80),
+      generationBudgetMs: 2300 + Math.floor(entryProgress * 1700 + lateProgress * 1500),
+      placementTries: 26 + Math.floor(entryProgress * 10 + lateProgress * 10),
+      yieldEvery: 90,
       clusterBias: 0.992,
-      centerBias: 0.9 + earlyProgress * 0.07,
-      centerJitter: earlyProgress < 0.65 ? 1 : 2,
-      weaveBias: 3.1 + earlyProgress * 0.7 + lateProgress * 0.7,
-      blockingBias: 1.75 + earlyProgress * 0.65 + lateProgress * 0.55,
-      exitLaneBias: 1.35 + earlyProgress * 0.24 + lateProgress * 0.25,
+      centerBias: 0.9 + entryProgress * 0.07,
+      centerJitter: entryProgress < 0.65 ? 1 : 2,
+      weaveBias: 3.1 + entryProgress * 0.7 + lateProgress * 0.7,
+      blockingBias: 1.75 + entryProgress * 0.65 + lateProgress * 0.55,
+      exitLaneBias: 1.35 + entryProgress * 0.24 + lateProgress * 0.25,
     };
   }
 
@@ -1019,6 +1054,49 @@
       }
       piece.dir = best ? best.dir : piece.dir;
     }
+
+    const guaranteedDirs = pieces.map(piece => piece.dir);
+    confuseExitDirections(pieces, gridW, gridH, config);
+    repairSolvability(pieces, guaranteedDirs, gridW, gridH);
+  }
+
+  function confuseExitDirections(pieces, gridW, gridH, config) {
+    for (let index = 0; index < pieces.length; index++) {
+      const piece = pieces[index];
+      const others = pieces.filter((_, otherIndex) => otherIndex !== index);
+      const dirs = getTerminalDirections(piece.cells);
+      let best = null;
+      for (const dir of dirs) {
+        const score =
+          scoreInitialBlockage(piece.cells, dir, others, gridW, gridH, config) +
+          scoreExitDirection(piece.cells, dir, others, gridW, gridH, config) * 0.22;
+        if (!best || score > best.score) best = { dir, score };
+      }
+      if (best) piece.dir = best.dir;
+    }
+  }
+
+  function repairSolvability(pieces, guaranteedDirs, gridW, gridH) {
+    const remaining = pieces.map((_, index) => index);
+    let guard = pieces.length * 3;
+    while (remaining.length && guard-- > 0) {
+      const freeIndex = remaining.find(index => {
+        const piece = pieces[index];
+        const others = remaining
+          .filter(otherIndex => otherIndex !== index)
+          .map(otherIndex => pieces[otherIndex]);
+        return canPieceEscape(piece, others, gridW, gridH).ok;
+      });
+
+      if (freeIndex !== undefined) {
+        remaining.splice(remaining.indexOf(freeIndex), 1);
+        continue;
+      }
+
+      const fallbackIndex = remaining.reduce((best, index) => Math.max(best, index), -1);
+      if (fallbackIndex < 0) break;
+      pieces[fallbackIndex].dir = guaranteedDirs[fallbackIndex];
+    }
   }
 
   function chooseExitDirection(dirs, cells, pieces, gridW, gridH, rng, config) {
@@ -1056,11 +1134,13 @@
     }
 
     const frontCentrality = 1 - clamp((Math.abs(front.x - centerX) / gridW + Math.abs(front.y - centerY) / gridH) * 1.6, 0, 1);
+    const shortExit = Math.max(0, 12 - distance);
     return (
-      hotLane * 2.6 +
-      centerLane * 1.15 +
-      distance * 0.54 +
-      frontCentrality * 7.5
+      hotLane * 2.9 +
+      centerLane * 0.42 +
+      shortExit * 1.35 +
+      frontCentrality * 5.2 -
+      distance * 0.38
     ) * (config.exitLaneBias || 1);
   }
 
@@ -1316,10 +1396,10 @@
     const head = pointAtDistance(points, endDist);
     const alpha = clamp(visible / (cellSize * 0.6), 0, 1);
 
-    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.27), color.glow, 0.18 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(3, cellSize * 0.16), color.main, 0.34 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(2.8, cellSize * 0.13), color.main, 0.98 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(1.1, cellSize * 0.034), color.hot, 0.86 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.34), color.glow, 0.18 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(3, cellSize * 0.23), color.main, 0.34 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(3.2, cellSize * 0.2), color.main, 0.98 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(1.2, cellSize * 0.052), color.hot, 0.86 * alpha);
     drawFlowArrow(graphics, head, DIRS[dir], cellSize, color.main, color.hot, alpha);
   }
 
@@ -1576,6 +1656,14 @@
   function readInt(name, fallback) {
     const value = parseInt(localStorage.getItem(name) || "", 10);
     return Number.isFinite(value) && value > 0 ? value : fallback;
+  }
+
+  function nextFrame() {
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+  }
+
+  function waitMs(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   function coverSprite(sprite, width, height) {
