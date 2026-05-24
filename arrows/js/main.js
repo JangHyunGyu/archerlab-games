@@ -320,6 +320,8 @@
         missesSincePlace = 0;
       }
 
+      tightenExitDirections(pieces, this.gridW, this.gridH, config);
+
       this.pieces = pieces.map((piece, index) => ({
         ...clonePiece(piece),
         colorIndex: index % PALETTE.length,
@@ -458,13 +460,13 @@
       container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(5, this.cell * 0.18));
 
       const glow = new PIXI.Graphics();
-      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.2), 0.15);
-      drawPath(glow, piece.cells, this.cell, color.main, Math.max(3, this.cell * 0.12), 0.22);
+      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.26), 0.13);
+      drawPath(glow, piece.cells, this.cell, color.main, Math.max(3, this.cell * 0.16), 0.2);
       container.addChild(glow);
 
       const line = new PIXI.Graphics();
-      drawPath(line, piece.cells, this.cell, color.main, Math.max(2.6, this.cell * 0.085), 0.98);
-      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.1, this.cell * 0.025), 0.78);
+      drawPath(line, piece.cells, this.cell, color.main, Math.max(2.8, this.cell * 0.13), 0.98);
+      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.1, this.cell * 0.034), 0.78);
       drawArrow(line, piece, this.cell, color.main, color.hot, dir);
       container.addChild(line);
 
@@ -820,24 +822,26 @@
     const rawLevel = Math.max(1, level | 0);
     const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
     const rawProgress = DIFFICULTY_CAP_LEVEL <= 1 ? 1 : clamp((tunedLevel - 1) / (DIFFICULTY_CAP_LEVEL - 1), 0, 1);
-    const size = 0.34 + rawProgress * 0.66;
-    const pressure = 0.78 + rawProgress * 0.22;
+    const earlyProgress = clamp((rawLevel - 1) / 9, 0, 1);
+    const lateProgress = clamp((tunedLevel - 10) / 90, 0, 1);
+    const size = Math.pow(earlyProgress, 0.62);
+    const pressure = 0.88 + Math.pow(earlyProgress, 0.72) * 0.1 + lateProgress * 0.02;
     const curve = Math.pow(pressure, 0.72);
-    const gridW = Math.min(27, 12 + Math.floor(size * 15));
-    const gridH = Math.min(29, 14 + Math.floor(size * 15));
-    const activeW = Math.min(gridW, Math.round(9 + size * 10));
-    const activeH = Math.min(gridH, Math.round(11 + size * 11));
+    const gridW = Math.min(27, Math.round(18 + size * 8 + lateProgress));
+    const gridH = Math.min(29, Math.round(21 + size * 8 + lateProgress));
+    const activeW = Math.min(gridW, Math.round(gridW - (earlyProgress >= 1 ? 1 : 2)));
+    const activeH = Math.min(gridH, Math.round(gridH - (earlyProgress >= 1 ? 1 : 2)));
     const clusterInsetX = Math.max(0, Math.floor((gridW - activeW) / 2));
     const clusterInsetY = Math.max(0, Math.floor((gridH - activeH) / 2));
-    const fillRatio = 0.84 + pressure * 0.07;
-    const minLength = Math.round(4 + pressure * 2 + rawProgress * 1.5);
-    const maxLength = Math.min(24, Math.round(10 + pressure * 5 + rawProgress * 8));
+    const fillRatio = 0.9 + earlyProgress * 0.03 + lateProgress * 0.02;
+    const minLength = Math.round(4 + earlyProgress * 2 + lateProgress * 2);
+    const maxLength = Math.min(24, Math.round(9 + earlyProgress * 11 + lateProgress * 4));
 
     return {
       gridW,
       gridH,
-      target: Math.min(68, Math.round(28 + rawProgress * 24 + pressure * 10)),
-      minPieces: Math.round(24 + rawProgress * 14 + pressure * 6),
+      target: Math.min(76, Math.round(38 + earlyProgress * 28 + lateProgress * 10)),
+      minPieces: Math.round(32 + earlyProgress * 24 + lateProgress * 6),
       targetCells: Math.round(activeW * activeH * fillRatio),
       targetSlack: Math.floor(maxLength * 0.1),
       clusterInsetX,
@@ -847,22 +851,22 @@
       maxLength,
       lengthBias: 1.18 + pressure * 0.44,
       lengthCompletion: 0.54 + pressure * 0.08,
-      shapeRetries: 4 + Math.floor(rawProgress * 2),
+      shapeRetries: 4 + Math.floor(earlyProgress * 2 + lateProgress),
       turnBias: 0.74 + pressure * 0.17,
-      attemptsPerPiece: 360 + Math.floor(rawProgress * 150),
+      attemptsPerPiece: 420 + Math.floor(earlyProgress * 120 + lateProgress * 120),
       minFillCompletion: 0.96,
       softFillCompletion: 0.9,
-      budgetFillCompletion: 0.93,
-      stallLimit: 260 + Math.floor(rawProgress * 180),
-      completedStallLimit: 170 + Math.floor(rawProgress * 130),
-      generationBudgetMs: 1700 + Math.floor(rawProgress * 1300),
-      placementTries: 34 + Math.floor(rawProgress * 16 + pressure * 12),
-      clusterBias: 0.985,
-      centerBias: 0.86 + rawProgress * 0.1,
-      centerJitter: rawProgress < 0.45 ? 1 : 2,
-      weaveBias: 2.8 + rawProgress * 1.1,
-      blockingBias: 1.45 + rawProgress * 0.9,
-      exitLaneBias: 1.2 + rawProgress * 0.5,
+      budgetFillCompletion: 0.92,
+      stallLimit: 320 + Math.floor(earlyProgress * 180 + lateProgress * 120),
+      completedStallLimit: 220 + Math.floor(earlyProgress * 130 + lateProgress * 120),
+      generationBudgetMs: 2500 + Math.floor(earlyProgress * 1600 + lateProgress * 1800),
+      placementTries: 42 + Math.floor(earlyProgress * 18 + lateProgress * 16),
+      clusterBias: 0.992,
+      centerBias: 0.9 + earlyProgress * 0.07,
+      centerJitter: earlyProgress < 0.65 ? 1 : 2,
+      weaveBias: 3.1 + earlyProgress * 0.7 + lateProgress * 0.7,
+      blockingBias: 1.75 + earlyProgress * 0.65 + lateProgress * 0.55,
+      exitLaneBias: 1.35 + earlyProgress * 0.24 + lateProgress * 0.25,
     };
   }
 
@@ -997,6 +1001,26 @@
     return compactness + weave + centerPull - edgeTouches * 2.7 - countIslands(cells, own) * 0.6;
   }
 
+  function tightenExitDirections(pieces, gridW, gridH, config) {
+    for (let index = 0; index < pieces.length; index++) {
+      const piece = pieces[index];
+      const previous = pieces.slice(0, index);
+      const later = pieces.slice(index + 1);
+      const validDirs = getTerminalDirections(piece.cells)
+        .filter(dir => canPieceEscape({ cells: piece.cells, dir }, previous, gridW, gridH).ok);
+      if (!validDirs.length) continue;
+
+      let best = null;
+      for (const dir of validDirs) {
+        const score =
+          scoreInitialBlockage(piece.cells, dir, later, gridW, gridH, config) +
+          scoreExitDirection(piece.cells, dir, previous, gridW, gridH, config) * 0.35;
+        if (!best || score > best.score) best = { dir, score };
+      }
+      piece.dir = best ? best.dir : piece.dir;
+    }
+  }
+
   function chooseExitDirection(dirs, cells, pieces, gridW, gridH, rng, config) {
     let best = null;
     for (const dir of dirs) {
@@ -1071,6 +1095,46 @@
     }
 
     return (blockedRays * 18 + closeLocks * 11 + headCrowding * 3.2) * (config.blockingBias || 1);
+  }
+
+  function scoreInitialBlockage(cells, dir, laterPieces, gridW, gridH, config) {
+    if (!laterPieces.length) return 0;
+    const occupied = makeOccupied(laterPieces);
+    const step = DIRS[dir];
+    const front = getArrowEndpoint(cells, dir);
+    let x = front.x + step.x;
+    let y = front.y + step.y;
+    let distance = 1;
+    let laneCrowding = 0;
+
+    while (x >= 0 && x < gridW && y >= 0 && y < gridH) {
+      if (occupied.has(key(x, y))) {
+        return (110 + Math.max(0, 12 - distance) * 16 + laneCrowding * 4) * (config.blockingBias || 1);
+      }
+      for (const side of DIR_KEYS) {
+        const sideStep = DIRS[side];
+        if (occupied.has(key(x + sideStep.x, y + sideStep.y))) laneCrowding += 1;
+      }
+      x += step.x;
+      y += step.y;
+      distance += 1;
+    }
+
+    return laneCrowding * 2.2 * (config.blockingBias || 1);
+  }
+
+  function canPieceEscape(piece, others, gridW, gridH) {
+    const occupied = makeOccupied(others);
+    const dir = DIRS[piece.dir];
+    const front = getArrowEndpoint(piece.cells, piece.dir);
+    let x = front.x + dir.x;
+    let y = front.y + dir.y;
+    while (x >= 0 && x < gridW && y >= 0 && y < gridH) {
+      if (occupied.has(key(x, y))) return { ok: false, blocker: { x, y } };
+      x += dir.x;
+      y += dir.y;
+    }
+    return { ok: true, blocker: null };
   }
 
   function countIslands(cells, own) {
@@ -1190,8 +1254,8 @@
     const front = getArrowEndpoint(piece.cells, piece.dir);
     const cx = (front.x + 0.5) * cellSize;
     const cy = (front.y + 0.5) * cellSize;
-    const size = cellSize * 0.12;
-    const len = cellSize * 0.27;
+    const size = cellSize * 0.15;
+    const len = cellSize * 0.34;
     const points = [
       { x: len * 0.62, y: 0 },
       { x: -len * 0.32, y: -size },
@@ -1271,8 +1335,8 @@
   function drawFlowArrow(graphics, head, dir, cellSize, color, accent, alpha) {
     if (!head || alpha <= 0) return;
     const angle = dir.angle;
-    const size = cellSize * 0.12;
-    const len = cellSize * 0.27;
+    const size = cellSize * 0.15;
+    const len = cellSize * 0.34;
     const points = [
       { x: len * 0.62, y: 0 },
       { x: -len * 0.32, y: -size },
