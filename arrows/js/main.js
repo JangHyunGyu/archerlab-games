@@ -920,8 +920,8 @@
     const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
     const earlyProgress = clamp((rawLevel - 1) / 9, 0, 1);
     const lateProgress = clamp((tunedLevel - 10) / 90, 0, 1);
-    const gridW = makeOdd(Math.min(23, 15 + earlyProgress * 6 + lateProgress * 2));
-    const gridH = makeOdd(Math.min(31, 21 + earlyProgress * 8 + lateProgress * 2));
+    const gridW = snapTemplateSize(Math.min(21, 15 + earlyProgress * 6 + lateProgress * 3), 3);
+    const gridH = snapTemplateSize(Math.min(30, 21 + earlyProgress * 9 + lateProgress * 3), 3);
     const pieces = createDenseTemplatePieces(gridW, gridH, rawLevel);
 
     const guaranteedDirs = pieces.map(piece => piece.dir);
@@ -936,62 +936,60 @@
   }
 
   function createDenseTemplatePieces(gridW, gridH, variant) {
-    const patterns = [
-      [[0, 0], [1, 0], [1, 1]],
-      [[1, 0], [0, 0], [0, 1]],
-      [[0, 1], [0, 0], [1, 0]],
-      [[1, 1], [1, 0], [0, 0]],
-      [[0, 0], [0, 1], [1, 1]],
-      [[1, 0], [1, 1], [0, 1]],
-      [[0, 1], [1, 1], [1, 0]],
-      [[1, 1], [0, 1], [0, 0]],
+    const basePatterns = [
+      [[0, 0], [1, 0], [2, 0], [2, 1], [1, 1], [0, 1], [0, 2]],
+      [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1], [2, 1], [1, 1], [1, 2]],
+      [[0, 0], [0, 1], [1, 1], [2, 1], [2, 0], [3, 0], [4, 0]],
+      [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2], [3, 2], [3, 1], [4, 1]],
+      [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2], [2, 1], [3, 1], [3, 0]],
+      [[0, 1], [1, 1], [1, 0], [2, 0], [3, 0], [3, 1], [4, 1], [4, 0]],
+      [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2], [3, 2], [4, 2]],
+      [[0, 2], [0, 1], [1, 1], [1, 0], [2, 0], [3, 0], [3, 1], [4, 1]],
+      [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [3, 2], [4, 2], [4, 1]],
+      [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 1], [3, 1], [4, 1]],
+      [[0, 1], [0, 0], [1, 0], [2, 0], [2, 1]],
+      [[0, 0], [0, 1], [1, 1], [2, 1], [2, 0]],
     ];
-    const candidates = [];
-    const used = new Set();
-    const centerX = (gridW - 1) / 2;
-    const centerY = (gridH - 1) / 2;
-    const addCandidate = cells => {
-      const middle = cells.reduce((sum, cell) => ({
-        x: sum.x + cell.x / cells.length,
-        y: sum.y + cell.y / cells.length,
-      }), { x: 0, y: 0 });
-      candidates.push({
-        cells,
-        distance: Math.abs(middle.x - centerX) / gridW + Math.abs(middle.y - centerY) / gridH,
-        order: candidates.length,
-      });
-    };
-
-    for (let by = 0; by < gridH - 1; by += 2) {
-      for (let bx = 0; bx < gridW - 1; bx += 2) {
-        const index = (Math.floor(bx / 2) * 5 + Math.floor(by / 2) * 3 + variant) % patterns.length;
-        const cells = patterns[index].map(([x, y]) => ({ x: bx + x, y: by + y }));
-        addCandidate(cells);
-        for (const cell of cells) used.add(key(cell.x, cell.y));
+    const shapeMap = new Map();
+    for (const pattern of basePatterns) {
+      for (const shape of createTemplateShapeVariants(pattern)) {
+        shapeMap.set(shape.map(cell => key(cell.x, cell.y)).join(";"), shape);
       }
     }
+    const shapes = Array.from(shapeMap.values());
+    const candidates = [];
+    const centerX = (gridW - 1) / 2;
+    const centerY = (gridH - 1) / 2;
 
-    const dominoDirs = variant % 2 === 0
-      ? [[1, 0], [0, 1], [-1, 0], [0, -1]]
-      : [[0, 1], [1, 0], [0, -1], [-1, 0]];
-    for (let y = 0; y < gridH; y++) {
-      for (let x = 0; x < gridW; x++) {
-        if (used.has(key(x, y))) continue;
-        for (const [dx, dy] of dominoDirs) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || nx >= gridW || ny < 0 || ny >= gridH || used.has(key(nx, ny))) continue;
-          addCandidate([{ x, y }, { x: nx, y: ny }]);
-          used.add(key(x, y));
-          used.add(key(nx, ny));
-          break;
+    for (let shapeIndex = 0; shapeIndex < shapes.length; shapeIndex++) {
+      const shape = shapes[shapeIndex];
+      const maxX = Math.max(...shape.map(cell => cell.x));
+      const maxY = Math.max(...shape.map(cell => cell.y));
+      for (let y = 0; y <= gridH - maxY - 1; y++) {
+        for (let x = 0; x <= gridW - maxX - 1; x++) {
+          const cells = shape.map(cell => ({ x: x + cell.x, y: y + cell.y }));
+          const middle = cells.reduce((sum, cell) => ({
+            x: sum.x + cell.x / cells.length,
+            y: sum.y + cell.y / cells.length,
+          }), { x: 0, y: 0 });
+          const distance = Math.abs(middle.x - centerX) / gridW + Math.abs(middle.y - centerY) / gridH;
+          const noise = templateNoise((x + 1) * 73856093 ^ (y + 1) * 19349663 ^ (shapeIndex + variant) * 83492791);
+          candidates.push({
+            cells,
+            score: distance * 100 - cells.length * 2 + noise * 8,
+            order: candidates.length,
+          });
         }
       }
     }
 
-    candidates.sort((a, b) => a.distance - b.distance || a.order - b.order);
+    candidates.sort((a, b) => a.score - b.score || a.order - b.order);
     const pieces = [];
+    const used = new Set();
+    let occupiedCells = 0;
+    const targetFill = gridW >= 21 ? 0.72 : 0.82;
     for (const candidate of candidates) {
+      if (candidate.cells.some(cell => used.has(key(cell.x, cell.y)))) continue;
       const dir = chooseTemplateDirection(candidate.cells, pieces, gridW, gridH);
       if (!dir) continue;
       pieces.push({
@@ -1001,8 +999,41 @@
         cells: candidate.cells.map(cell => ({ x: cell.x, y: cell.y })),
         container: null,
       });
+      for (const cell of candidate.cells) used.add(key(cell.x, cell.y));
+      occupiedCells += candidate.cells.length;
+      if (occupiedCells / (gridW * gridH) >= targetFill && pieces.length >= 34) break;
     }
     return pieces;
+  }
+
+  function createTemplateShapeVariants(pattern) {
+    const variants = [];
+    for (let rotation = 0; rotation < 4; rotation++) {
+      for (const flip of [false, true]) {
+        let cells = pattern.map(([x, y]) => ({ x, y }));
+        for (let i = 0; i < rotation; i++) {
+          cells = cells.map(cell => ({ x: -cell.y, y: cell.x }));
+        }
+        if (flip) cells = cells.map(cell => ({ x: -cell.x, y: cell.y }));
+        variants.push(normalizeTemplateShape(cells));
+      }
+    }
+    return variants;
+  }
+
+  function normalizeTemplateShape(cells) {
+    const minX = Math.min(...cells.map(cell => cell.x));
+    const minY = Math.min(...cells.map(cell => cell.y));
+    return cells.map(cell => ({ x: cell.x - minX, y: cell.y - minY }));
+  }
+
+  function templateNoise(value) {
+    let n = value | 0;
+    n = Math.imul(n ^ 61, n ^ (n >>> 16));
+    n += n << 3;
+    n = Math.imul(n, n ^ (n >>> 4));
+    n = Math.imul(n, 0x27d4eb2d);
+    return ((n ^ (n >>> 15)) >>> 0) / 4294967295;
   }
 
   function chooseTemplateDirection(cells, placed, gridW, gridH) {
@@ -1044,9 +1075,8 @@
     return true;
   }
 
-  function makeOdd(value) {
-    const rounded = Math.max(5, Math.round(value));
-    return rounded % 2 === 1 ? rounded : rounded + 1;
+  function snapTemplateSize(value, step) {
+    return Math.max(step * 3, Math.round(value / step) * step);
   }
 
   function samplePieceLength(rng, config) {
