@@ -1316,10 +1316,10 @@
     const head = pointAtDistance(points, endDist);
     const alpha = clamp(visible / (cellSize * 0.6), 0, 1);
 
-    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.21), color.glow, 0.2 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(3, cellSize * 0.12), color.main, 0.38 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(2.6, cellSize * 0.085), color.main, 0.98 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(1.1, cellSize * 0.026), color.hot, 0.86 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.27), color.glow, 0.18 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(3, cellSize * 0.16), color.main, 0.34 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(2.8, cellSize * 0.13), color.main, 0.98 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(1.1, cellSize * 0.034), color.hot, 0.86 * alpha);
     drawFlowArrow(graphics, head, DIRS[dir], cellSize, color.main, color.hot, alpha);
   }
 
