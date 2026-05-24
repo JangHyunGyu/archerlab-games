@@ -362,7 +362,7 @@
       const side = width < 620 ? 18 : 44;
       const availableW = width - side * 2;
       const availableH = height - topSafe - bottomSafe;
-      const minCell = width < 620 ? 16 : 22;
+      const minCell = width < 620 ? 12 : 22;
       this.cell = Math.max(minCell, Math.floor(Math.min(availableW / this.gridW, availableH / this.gridH)));
       this.boardW = this.cell * this.gridW;
       this.boardH = this.cell * this.gridH;
@@ -429,7 +429,7 @@
       container.pieceId = piece.id;
       piece.container = container;
 
-      container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(7, this.cell * 0.17));
+      container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(5, this.cell * 0.18));
 
       const glow = new PIXI.Graphics();
       drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.2), 0.15);
@@ -795,24 +795,30 @@
     const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
     const progress = DIFFICULTY_CAP_LEVEL <= 1 ? 1 : clamp((tunedLevel - 1) / (DIFFICULTY_CAP_LEVEL - 1), 0, 1);
     const curve = Math.pow(progress, 0.74);
-    const gridW = Math.min(21, 9 + Math.floor(progress * 12));
-    const gridH = Math.min(23, 11 + Math.floor(progress * 12));
-    const fillRatio = 0.47 + curve * 0.2;
+    const gridW = Math.min(25, 9 + Math.floor(progress * 16));
+    const gridH = Math.min(27, 11 + Math.floor(progress * 16));
+    const clusterInsetX = Math.round(curve * 3);
+    const clusterInsetY = Math.round(curve * 3);
+    const activeW = gridW - clusterInsetX * 2;
+    const activeH = gridH - clusterInsetY * 2;
+    const fillRatio = 0.47 + curve * 0.26;
     const maxLength = Math.min(16, Math.round(5 + progress * 4 + curve * 7));
 
     return {
       gridW,
       gridH,
-      target: Math.min(68, Math.round(13 + progress * 36 + curve * 21)),
-      targetCells: Math.round(gridW * gridH * fillRatio),
+      target: Math.min(74, Math.round(13 + progress * 40 + curve * 23)),
+      targetCells: Math.round(activeW * activeH * fillRatio),
       targetSlack: Math.floor(maxLength * curve * 0.72),
+      clusterInsetX,
+      clusterInsetY,
       minLength: progress < 0.48 ? 2 : progress < 0.78 ? 3 : 4,
       maxLength,
       turnBias: 0.42 + curve * 0.36,
-      attemptsPerPiece: 380 + Math.floor(curve * 130),
-      minFillCompletion: 0.9,
-      stallLimit: 720 + Math.floor(curve * 460),
-      placementTries: 19 + Math.floor(progress * 8 + curve * 11),
+      attemptsPerPiece: 190 + Math.floor(curve * 70),
+      minFillCompletion: 0.86,
+      stallLimit: 360 + Math.floor(curve * 260),
+      placementTries: 15 + Math.floor(progress * 5 + curve * 6),
       clusterBias: 0.86 + curve * 0.11,
       centerBias: 0.44 + curve * 0.2,
       weaveBias: 1.1 + curve * 1.45,
@@ -820,20 +826,23 @@
   }
 
   function chooseShapeOrigin(shape, bounds, pieces, gridW, gridH, rng, config) {
-    const maxX = gridW - bounds.w;
-    const maxY = gridH - bounds.h;
+    const placement = getPlacementBounds(bounds, gridW, gridH, config);
+    const minX = placement.minX;
+    const minY = placement.minY;
+    const maxX = placement.maxX;
+    const maxY = placement.maxY;
     if (!pieces.length || !rng.chance(config.clusterBias)) {
-      const centerX = Math.round((gridW - bounds.w) / 2);
-      const centerY = Math.round((gridH - bounds.h) / 2);
+      const centerX = Math.round((minX + maxX) / 2);
+      const centerY = Math.round((minY + maxY) / 2);
       if (rng.chance(config.centerBias)) {
         return {
-          x: clamp(centerX + rng.int(-3, 3), 0, maxX),
-          y: clamp(centerY + rng.int(-3, 3), 0, maxY),
+          x: clamp(centerX + rng.int(-2, 2), minX, maxX),
+          y: clamp(centerY + rng.int(-2, 2), minY, maxY),
         };
       }
       return {
-        x: rng.int(0, maxX),
-        y: rng.int(0, maxY),
+        x: rng.int(minX, maxX),
+        y: rng.int(minY, maxY),
       };
     }
 
@@ -851,9 +860,19 @@
       { x: 0, y: 0 },
     ]);
     return {
-      x: clamp(anchor.x + offset.x - source.x, 0, maxX),
-      y: clamp(anchor.y + offset.y - source.y, 0, maxY),
+      x: clamp(anchor.x + offset.x - source.x, minX, maxX),
+      y: clamp(anchor.y + offset.y - source.y, minY, maxY),
     };
+  }
+
+  function getPlacementBounds(bounds, gridW, gridH, config) {
+    const insetX = Math.min(config.clusterInsetX || 0, Math.floor((gridW - bounds.w) / 2));
+    const insetY = Math.min(config.clusterInsetY || 0, Math.floor((gridH - bounds.h) / 2));
+    const minX = Math.max(0, insetX);
+    const minY = Math.max(0, insetY);
+    const maxX = Math.max(minX, gridW - bounds.w - insetX);
+    const maxY = Math.max(minY, gridH - bounds.h - insetY);
+    return { minX, minY, maxX, maxY };
   }
 
   function scorePlacement(cells, pieces, gridW, gridH, config) {
