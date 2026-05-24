@@ -770,6 +770,7 @@
       const occupied = makeOccupied(others);
       const dir = DIRS[piece.dir];
       const front = getArrowEndpoint(piece.cells, piece.dir);
+      for (const cell of piece.cells) occupied.add(key(cell.x, cell.y));
       let x = front.x + dir.x;
       let y = front.y + dir.y;
       while (x >= 0 && x < this.gridW && y >= 0 && y < this.gridH) {
@@ -1597,6 +1598,7 @@
     const occupied = makeOccupied(others);
     const dir = DIRS[piece.dir];
     const front = getArrowEndpoint(piece.cells, piece.dir);
+    for (const cell of piece.cells) occupied.add(key(cell.x, cell.y));
     let x = front.x + dir.x;
     let y = front.y + dir.y;
     while (x >= 0 && x < gridW && y >= 0 && y < gridH) {
