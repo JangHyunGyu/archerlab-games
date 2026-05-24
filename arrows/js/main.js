@@ -955,8 +955,8 @@
     const boardCells = gridW * gridH;
     const targetFill = gridW >= 45 ? 0.82 : gridW >= 33 ? 0.85 : gridW >= 24 ? 0.87 : 0.82;
     const minLength = gridW >= 45 ? 26 : gridW >= 33 ? 22 : gridW >= 24 ? 18 : 10;
-    const maxLength = Math.min(90, Math.max(42, Math.round(Math.min(gridW, gridH) * 1.72)));
-    const minPieces = gridW >= 45 ? Math.round(boardCells / 52) : gridW >= 33 ? Math.round(boardCells / 44) : gridW >= 24 ? Math.round(boardCells / 36) : 18;
+    const maxLength = Math.min(gridW >= 45 ? 64 : 90, Math.max(42, Math.round(Math.min(gridW, gridH) * 1.72)));
+    const minPieces = Math.max(12, Math.round((boardCells * targetFill) / (maxLength * 0.9)));
     const maxAttempts = Math.max(900, boardCells * 5);
     let occupiedCells = 0;
     let misses = 0;
@@ -990,7 +990,7 @@
 
   function makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength) {
     let best = null;
-    const samples = pieces.length < 4 ? 68 : 104;
+    const samples = gridW >= 45 ? (pieces.length < 4 ? 42 : 56) : pieces.length < 4 ? 68 : 104;
     for (let i = 0; i < samples; i++) {
       const cells = makeWovenWalk(gridW, gridH, occupied, rng, minLength, maxLength);
       if (!cells || cells.length < minLength) continue;
