@@ -23,11 +23,7 @@
   const DIFFICULTY_CAP_LEVEL = 100;
 
   const PALETTE = [
-    { main: 0xb9c9ff, glow: 0x5b78ff, hot: 0xf1f6ff },
-    { main: 0xaedfff, glow: 0x38c8ff, hot: 0xeeffff },
-    { main: 0xc6b6ff, glow: 0x9175ff, hot: 0xf4efff },
-    { main: 0xa9f2f3, glow: 0x26e7ff, hot: 0xedffff },
-    { main: 0xd0dcff, glow: 0x79a5ff, hot: 0xffffff },
+    { main: 0xd7e2f1, glow: 0x1b2230, hot: 0x10141d },
   ];
 
   const DIRS = {
@@ -283,6 +279,20 @@
 
     async generateLevel(level, token) {
       this.levelSeed = createLevelSeed(level);
+      const template = createTemplateLevel(level);
+      if (template) {
+        this.gridW = template.gridW;
+        this.gridH = template.gridH;
+        this.pieces = template.pieces.map((piece, index) => ({
+          ...clonePiece(piece),
+          id: `t${level}-${index}`,
+          colorIndex: 0,
+          container: null,
+        }));
+        this.initialPieceCount = this.pieces.length;
+        return true;
+      }
+
       const rng = new Random(this.levelSeed);
       const config = getLevelConfig(level);
       this.gridW = config.gridW;
@@ -337,7 +347,7 @@
           continue;
         }
         candidate.id = `p${level}-${pieces.length}-${attempt}`;
-        candidate.colorIndex = (pieces.length + rng.int(0, PALETTE.length - 1)) % PALETTE.length;
+        candidate.colorIndex = 0;
         pieces.push(candidate);
         occupiedCells += candidate.cells.length;
         missesSincePlace = 0;
@@ -347,7 +357,7 @@
 
       this.pieces = pieces.map((piece, index) => ({
         ...clonePiece(piece),
-        colorIndex: index % PALETTE.length,
+        colorIndex: 0,
         container: null,
       }));
       this.initialPieceCount = this.pieces.length;
@@ -493,13 +503,13 @@
       container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(5, this.cell * 0.18));
 
       const glow = new PIXI.Graphics();
-      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.34), 0.13);
-      drawPath(glow, piece.cells, this.cell, color.main, Math.max(3, this.cell * 0.23), 0.2);
+      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.38), 0.28);
+      drawPath(glow, piece.cells, this.cell, color.main, Math.max(4, this.cell * 0.3), 0.18);
       container.addChild(glow);
 
       const line = new PIXI.Graphics();
-      drawPath(line, piece.cells, this.cell, color.main, Math.max(3.2, this.cell * 0.2), 0.98);
-      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.2, this.cell * 0.052), 0.78);
+      drawPath(line, piece.cells, this.cell, color.main, Math.max(4.2, this.cell * 0.28), 0.98);
+      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.6, this.cell * 0.07), 0.86);
       drawArrow(line, piece, this.cell, color.main, color.hot, dir);
       container.addChild(line);
 
@@ -861,21 +871,21 @@
     const size = Math.pow(entryProgress, 0.62);
     const pressure = 0.88 + Math.pow(entryProgress, 0.72) * 0.1 + lateProgress * 0.02;
     const curve = Math.pow(pressure, 0.72);
-    const gridW = Math.min(21, Math.round(12 + size * 3 + lateProgress * 6));
-    const gridH = Math.min(29, Math.round(15 + size * 7 + lateProgress * 7));
+    const gridW = Math.min(21, Math.round(11 + size * 3 + lateProgress * 7));
+    const gridH = Math.min(29, Math.round(14 + size * 6 + lateProgress * 9));
     const activeW = Math.min(gridW, Math.round(gridW - (earlyProgress >= 1 ? 1 : 2)));
     const activeH = Math.min(gridH, Math.round(gridH - (earlyProgress >= 1 ? 1 : 2)));
     const clusterInsetX = Math.max(0, Math.floor((gridW - activeW) / 2));
     const clusterInsetY = Math.max(0, Math.floor((gridH - activeH) / 2));
-    const fillRatio = 0.72 + entryProgress * 0.12 + lateProgress * 0.05;
+    const fillRatio = 0.82 + entryProgress * 0.1 + lateProgress * 0.04;
     const minLength = Math.round(2 + lateProgress * 2);
     const maxLength = Math.min(12, Math.round(4 + earlyProgress + lateProgress * 7));
 
     return {
       gridW,
       gridH,
-      target: Math.min(94, Math.round(58 + entryProgress * 24 + lateProgress * 12)),
-      minPieces: Math.round(46 + entryProgress * 16 + lateProgress * 10),
+      target: Math.min(104, Math.round(66 + entryProgress * 24 + lateProgress * 14)),
+      minPieces: Math.round(54 + entryProgress * 16 + lateProgress * 12),
       targetCells: Math.round(activeW * activeH * fillRatio),
       targetSlack: Math.floor(maxLength * 0.1),
       clusterInsetX,
@@ -887,14 +897,14 @@
       lengthCompletion: 0.54 + pressure * 0.08,
       shapeRetries: 3 + Math.floor(entryProgress * 2 + lateProgress),
       turnBias: 0.78 + pressure * 0.15,
-      attemptsPerPiece: 190 + Math.floor(entryProgress * 70 + lateProgress * 70),
+      attemptsPerPiece: 250 + Math.floor(entryProgress * 90 + lateProgress * 90),
       minFillCompletion: 0.96,
       softFillCompletion: 0.9,
-      budgetFillCompletion: 0.88,
-      stallLimit: 220 + Math.floor(entryProgress * 120 + lateProgress * 80),
-      completedStallLimit: 120 + Math.floor(entryProgress * 95 + lateProgress * 80),
-      generationBudgetMs: 2300 + Math.floor(entryProgress * 1700 + lateProgress * 1500),
-      placementTries: 26 + Math.floor(entryProgress * 10 + lateProgress * 10),
+      budgetFillCompletion: 0.94,
+      stallLimit: 320 + Math.floor(entryProgress * 150 + lateProgress * 110),
+      completedStallLimit: 190 + Math.floor(entryProgress * 120 + lateProgress * 100),
+      generationBudgetMs: 3200 + Math.floor(entryProgress * 2200 + lateProgress * 1800),
+      placementTries: 34 + Math.floor(entryProgress * 12 + lateProgress * 12),
       yieldEvery: 90,
       clusterBias: 0.992,
       centerBias: 0.9 + entryProgress * 0.07,
@@ -903,6 +913,140 @@
       blockingBias: 1.75 + entryProgress * 0.65 + lateProgress * 0.55,
       exitLaneBias: 1.35 + entryProgress * 0.24 + lateProgress * 0.25,
     };
+  }
+
+  function createTemplateLevel(level) {
+    const rawLevel = Math.max(1, level | 0);
+    const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
+    const earlyProgress = clamp((rawLevel - 1) / 9, 0, 1);
+    const lateProgress = clamp((tunedLevel - 10) / 90, 0, 1);
+    const gridW = makeOdd(Math.min(23, 15 + earlyProgress * 6 + lateProgress * 2));
+    const gridH = makeOdd(Math.min(31, 21 + earlyProgress * 8 + lateProgress * 2));
+    const pieces = createDenseTemplatePieces(gridW, gridH, rawLevel);
+
+    const guaranteedDirs = pieces.map(piece => piece.dir);
+    const config = getLevelConfig(level);
+    confuseExitDirections(pieces, gridW, gridH, config);
+    repairSolvability(pieces, guaranteedDirs, gridW, gridH);
+    if (!isSolvableTemplate(pieces, gridW, gridH)) {
+      for (let i = 0; i < pieces.length; i++) pieces[i].dir = guaranteedDirs[i];
+    }
+
+    return { gridW, gridH, pieces };
+  }
+
+  function createDenseTemplatePieces(gridW, gridH, variant) {
+    const patterns = [
+      [[0, 0], [1, 0], [1, 1]],
+      [[1, 0], [0, 0], [0, 1]],
+      [[0, 1], [0, 0], [1, 0]],
+      [[1, 1], [1, 0], [0, 0]],
+      [[0, 0], [0, 1], [1, 1]],
+      [[1, 0], [1, 1], [0, 1]],
+      [[0, 1], [1, 1], [1, 0]],
+      [[1, 1], [0, 1], [0, 0]],
+    ];
+    const candidates = [];
+    const used = new Set();
+    const centerX = (gridW - 1) / 2;
+    const centerY = (gridH - 1) / 2;
+    const addCandidate = cells => {
+      const middle = cells.reduce((sum, cell) => ({
+        x: sum.x + cell.x / cells.length,
+        y: sum.y + cell.y / cells.length,
+      }), { x: 0, y: 0 });
+      candidates.push({
+        cells,
+        distance: Math.abs(middle.x - centerX) / gridW + Math.abs(middle.y - centerY) / gridH,
+        order: candidates.length,
+      });
+    };
+
+    for (let by = 0; by < gridH - 1; by += 2) {
+      for (let bx = 0; bx < gridW - 1; bx += 2) {
+        const index = (Math.floor(bx / 2) * 5 + Math.floor(by / 2) * 3 + variant) % patterns.length;
+        const cells = patterns[index].map(([x, y]) => ({ x: bx + x, y: by + y }));
+        addCandidate(cells);
+        for (const cell of cells) used.add(key(cell.x, cell.y));
+      }
+    }
+
+    const dominoDirs = variant % 2 === 0
+      ? [[1, 0], [0, 1], [-1, 0], [0, -1]]
+      : [[0, 1], [1, 0], [0, -1], [-1, 0]];
+    for (let y = 0; y < gridH; y++) {
+      for (let x = 0; x < gridW; x++) {
+        if (used.has(key(x, y))) continue;
+        for (const [dx, dy] of dominoDirs) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= gridW || ny < 0 || ny >= gridH || used.has(key(nx, ny))) continue;
+          addCandidate([{ x, y }, { x: nx, y: ny }]);
+          used.add(key(x, y));
+          used.add(key(nx, ny));
+          break;
+        }
+      }
+    }
+
+    candidates.sort((a, b) => a.distance - b.distance || a.order - b.order);
+    const pieces = [];
+    for (const candidate of candidates) {
+      const dir = chooseTemplateDirection(candidate.cells, pieces, gridW, gridH);
+      if (!dir) continue;
+      pieces.push({
+        id: `template-${pieces.length}`,
+        dir,
+        colorIndex: 0,
+        cells: candidate.cells.map(cell => ({ x: cell.x, y: cell.y })),
+        container: null,
+      });
+    }
+    return pieces;
+  }
+
+  function chooseTemplateDirection(cells, placed, gridW, gridH) {
+    const centerX = (gridW - 1) / 2;
+    const centerY = (gridH - 1) / 2;
+    let best = null;
+    for (const dir of getTerminalDirections(cells)) {
+      const piece = { cells, dir };
+      if (!canPieceEscape(piece, placed, gridW, gridH).ok) continue;
+      const front = getArrowEndpoint(cells, dir);
+      const step = DIRS[dir];
+      const outward = (front.x - centerX) * step.x + (front.y - centerY) * step.y;
+      let distance = 0;
+      let x = front.x + step.x;
+      let y = front.y + step.y;
+      while (x >= 0 && x < gridW && y >= 0 && y < gridH) {
+        distance += 1;
+        x += step.x;
+        y += step.y;
+      }
+      const score = outward * 10 - distance;
+      if (!best || score > best.score) best = { dir, score };
+    }
+    return best ? best.dir : null;
+  }
+
+  function isSolvableTemplate(pieces, gridW, gridH) {
+    let remaining = pieces.slice();
+    while (remaining.length) {
+      const next = remaining.find(piece => canPieceEscape(
+        piece,
+        remaining.filter(other => other !== piece),
+        gridW,
+        gridH
+      ).ok);
+      if (!next) return false;
+      remaining = remaining.filter(piece => piece !== next);
+    }
+    return true;
+  }
+
+  function makeOdd(value) {
+    const rounded = Math.max(5, Math.round(value));
+    return rounded % 2 === 1 ? rounded : rounded + 1;
   }
 
   function samplePieceLength(rng, config) {
@@ -1250,14 +1394,7 @@
   }
 
   function createLevelSeed(level) {
-    const randomBuffer = new Uint32Array(1);
-    if (window.crypto && window.crypto.getRandomValues) {
-      window.crypto.getRandomValues(randomBuffer);
-    } else {
-      randomBuffer[0] = Math.floor(Math.random() * 0xffffffff);
-    }
-    const timeSalt = (Date.now() ^ Math.floor(performance.now() * 1000)) >>> 0;
-    return (0x9e3779b9 ^ Math.imul(Math.max(1, level | 0), 2654435761) ^ randomBuffer[0] ^ timeSalt) >>> 0;
+    return (0x9e3779b9 ^ Math.imul(Math.max(1, level | 0), 2654435761)) >>> 0;
   }
 
   function makeShape(rng, length, turnBias = 0.5) {
@@ -1334,8 +1471,8 @@
     const front = getArrowEndpoint(piece.cells, piece.dir);
     const cx = (front.x + 0.5) * cellSize;
     const cy = (front.y + 0.5) * cellSize;
-    const size = cellSize * 0.15;
-    const len = cellSize * 0.34;
+    const size = cellSize * 0.19;
+    const len = cellSize * 0.42;
     const points = [
       { x: len * 0.62, y: 0 },
       { x: -len * 0.32, y: -size },
@@ -1396,10 +1533,10 @@
     const head = pointAtDistance(points, endDist);
     const alpha = clamp(visible / (cellSize * 0.6), 0, 1);
 
-    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.34), color.glow, 0.18 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(3, cellSize * 0.23), color.main, 0.34 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(3.2, cellSize * 0.2), color.main, 0.98 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(1.2, cellSize * 0.052), color.hot, 0.86 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.38), color.glow, 0.28 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(4, cellSize * 0.3), color.main, 0.26 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(4.2, cellSize * 0.28), color.main, 0.98 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(1.6, cellSize * 0.07), color.hot, 0.86 * alpha);
     drawFlowArrow(graphics, head, DIRS[dir], cellSize, color.main, color.hot, alpha);
   }
 
@@ -1415,8 +1552,8 @@
   function drawFlowArrow(graphics, head, dir, cellSize, color, accent, alpha) {
     if (!head || alpha <= 0) return;
     const angle = dir.angle;
-    const size = cellSize * 0.15;
-    const len = cellSize * 0.34;
+    const size = cellSize * 0.19;
+    const len = cellSize * 0.42;
     const points = [
       { x: len * 0.62, y: 0 },
       { x: -len * 0.32, y: -size },
