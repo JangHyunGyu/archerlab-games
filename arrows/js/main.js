@@ -273,23 +273,28 @@
       this.gridW = config.gridW;
       this.gridH = config.gridH;
       const target = config.target;
+      const minPieces = config.minPieces;
       const targetCells = Math.max(1, config.targetCells - config.targetSlack);
       const minTargetCells = Math.floor(targetCells * config.minFillCompletion);
       const softTargetCells = Math.floor(targetCells * config.softFillCompletion);
+      const budgetTargetCells = Math.floor(targetCells * config.budgetFillCompletion);
       const pieces = [];
       let occupiedCells = 0;
       let missesSincePlace = 0;
       const maxAttempts = target * config.attemptsPerPiece;
       const generationStartedAt = performance.now();
+      const isOverBudget = () => occupiedCells >= budgetTargetCells && performance.now() - generationStartedAt > config.generationBudgetMs;
       const shouldStopAfterMiss = () => {
+        if (isOverBudget()) return true;
         if (occupiedCells >= minTargetCells) return missesSincePlace > config.completedStallLimit;
         return occupiedCells >= softTargetCells && missesSincePlace > config.stallLimit;
       };
 
-      for (let attempt = 0; attempt < maxAttempts && pieces.length < target && occupiedCells < targetCells; attempt++) {
-        if (occupiedCells >= softTargetCells && performance.now() - generationStartedAt > config.generationBudgetMs) break;
-        const length = samplePieceLength(rng, config);
-        const shape = makeShape(rng, length, config.turnBias);
+      for (let attempt = 0; attempt < maxAttempts && pieces.length < target && (occupiedCells < targetCells || pieces.length < minPieces); attempt++) {
+        if (isOverBudget()) break;
+        const shapeCandidate = makeShapeCandidate(rng, config);
+        const length = shapeCandidate.length;
+        const shape = shapeCandidate.shape;
         if (shape.length < config.minActualLength || shape.length < Math.floor(length * config.lengthCompletion)) {
           missesSincePlace += 1;
           if (shouldStopAfterMiss()) break;
@@ -812,37 +817,40 @@
     const progress = DIFFICULTY_CAP_LEVEL <= 1 ? 1 : clamp((tunedLevel - 1) / (DIFFICULTY_CAP_LEVEL - 1), 0, 1);
     const curve = Math.pow(progress, 0.74);
     const growth = Math.pow(progress, 0.62);
-    const gridW = Math.min(25, 9 + Math.floor(progress * 16));
-    const gridH = Math.min(27, 11 + Math.floor(progress * 16));
-    const activeW = Math.min(gridW, Math.round(7 + growth * 10));
-    const activeH = Math.min(gridH, Math.round(9 + growth * 10));
+    const gridW = Math.min(27, 9 + Math.floor(progress * 18));
+    const gridH = Math.min(29, 11 + Math.floor(progress * 18));
+    const activeW = Math.min(gridW, Math.round(8 + growth * 13));
+    const activeH = Math.min(gridH, Math.round(10 + growth * 13));
     const clusterInsetX = Math.max(0, Math.floor((gridW - activeW) / 2));
     const clusterInsetY = Math.max(0, Math.floor((gridH - activeH) / 2));
-    const fillRatio = 0.58 + curve * 0.22;
-    const minLength = Math.round(2 + progress + curve * 2.5);
-    const maxLength = Math.min(18, Math.round(6 + progress * 4 + curve * 8));
+    const fillRatio = 0.62 + curve * 0.2;
+    const minLength = Math.round(2 + progress * 1.4 + curve * 3.2);
+    const maxLength = Math.min(24, Math.round(7 + progress * 6 + curve * 11));
 
     return {
       gridW,
       gridH,
-      target: Math.min(68, Math.round(12 + progress * 32 + curve * 24)),
+      target: Math.min(72, Math.round(13 + progress * 35 + curve * 24)),
+      minPieces: Math.round(10 + progress * 5 + curve * 7),
       targetCells: Math.round(activeW * activeH * fillRatio),
-      targetSlack: Math.floor(maxLength * curve * 0.42),
+      targetSlack: Math.floor(maxLength * curve * 0.36),
       clusterInsetX,
       clusterInsetY,
       minLength,
       minActualLength: Math.max(2, Math.round(minLength * 0.72)),
       maxLength,
-      lengthBias: 1.02 + curve * 0.32,
-      lengthCompletion: 0.42 + curve * 0.08,
-      turnBias: 0.46 + curve * 0.38,
-      attemptsPerPiece: 180 + Math.floor(curve * 70),
-      minFillCompletion: 0.9,
-      softFillCompletion: 0.76,
-      stallLimit: 130 + Math.floor(curve * 130),
-      completedStallLimit: 70 + Math.floor(curve * 90),
-      generationBudgetMs: 700 + Math.floor(curve * 650),
-      placementTries: 17 + Math.floor(progress * 4 + curve * 7),
+      lengthBias: 1.02 + curve * 0.45,
+      lengthCompletion: 0.48 + curve * 0.1,
+      shapeRetries: 2 + Math.floor(curve * 1.6),
+      turnBias: 0.48 + curve * 0.4,
+      attemptsPerPiece: 210 + Math.floor(curve * 90),
+      minFillCompletion: 0.86,
+      softFillCompletion: 0.7,
+      budgetFillCompletion: 0.64,
+      stallLimit: 120 + Math.floor(curve * 110),
+      completedStallLimit: 62 + Math.floor(curve * 80),
+      generationBudgetMs: 900 + Math.floor(curve * 650),
+      placementTries: 16 + Math.floor(progress * 4 + curve * 6),
       clusterBias: 0.9 + curve * 0.08,
       centerBias: 0.5 + curve * 0.22,
       weaveBias: 1.25 + curve * 1.75,
@@ -854,6 +862,22 @@
     const max = Math.max(min, config.maxLength);
     const t = Math.pow(rng.next(), 1 / Math.max(1, config.lengthBias || 1));
     return Math.round(min + (max - min) * t);
+  }
+
+  function makeShapeCandidate(rng, config) {
+    let best = null;
+    const tries = config.shapeRetries || 1;
+    for (let i = 0; i < tries; i++) {
+      const length = samplePieceLength(rng, config);
+      const shape = makeShape(rng, length, config.turnBias);
+      if (!best || shape.length / length > best.shape.length / best.length || shape.length > best.shape.length) {
+        best = { length, shape };
+      }
+      if (shape.length >= config.minActualLength && shape.length >= Math.floor(length * config.lengthCompletion)) {
+        return { length, shape };
+      }
+    }
+    return best;
   }
 
   function chooseShapeOrigin(shape, bounds, pieces, gridW, gridH, rng, config) {
