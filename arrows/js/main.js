@@ -21,6 +21,7 @@
   const RANK_LIMIT = 20;
   const NICK_KEY = "archerlab-arrows-nick";
   const DIFFICULTY_CAP_LEVEL = 100;
+  const MAP_SIZE_CAP_LEVEL = 1000;
 
   const PALETTE = [
     { main: 0xd7e2f1, glow: 0x1b2230, hot: 0x10141d },
@@ -924,8 +925,9 @@
 
   function createTemplateLevel(level) {
     const rawLevel = Math.max(1, level | 0);
-    const earlyProgress = clamp((rawLevel - 1) / 9, 0, 1);
-    const expansion = Math.sqrt(Math.max(0, rawLevel - 10));
+    const mapLevel = Math.min(rawLevel, MAP_SIZE_CAP_LEVEL);
+    const earlyProgress = clamp((mapLevel - 1) / 9, 0, 1);
+    const expansion = Math.sqrt(Math.max(0, mapLevel - 10));
     const gridW = snapTemplateSize(18 + earlyProgress * 6 + expansion * 2.4, 3);
     const gridH = snapTemplateSize(24 + earlyProgress * 9 + expansion * 3.3, 3);
     const pieces = createWovenTemplatePieces(gridW, gridH, rawLevel);
