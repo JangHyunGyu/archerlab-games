@@ -6,9 +6,10 @@
 
 html,
 body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  width: var(--game-width, 100%);
+  min-width: 100%;
+  min-height: 100%;
+  overflow: auto;
   background:
     linear-gradient(180deg, rgba(3, 7, 16, 0.2), rgba(2, 5, 11, 0.82)),
     url("../assets/ui/menu-bg.png") center / cover no-repeat,
@@ -17,7 +18,7 @@ body {
   font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  touch-action: none;
+  touch-action: pan-x pan-y;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -47,17 +48,27 @@ button:disabled {
   opacity: 0.44;
 }
 
-#game-shell,
+#game-shell {
+  position: relative;
+  width: var(--game-width, 100vw);
+  height: var(--game-height, 100vh);
+  min-width: 100vw;
+  min-height: 100vh;
+  overflow: visible;
+}
+
 #game-container {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
 #game-container canvas {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: var(--game-width, 100vw);
+  height: var(--game-height, 100vh);
 }
 
 .hidden {
