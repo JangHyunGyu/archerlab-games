@@ -74,7 +74,8 @@
 
   const app = new PIXI.Application();
   await app.init({
-    resizeTo: dom.container,
+    width: window.innerWidth,
+    height: window.innerHeight,
     backgroundAlpha: 0,
     antialias: true,
     resolution: Math.min(window.devicePixelRatio || 1, 2),
@@ -412,6 +413,28 @@
     }
 
     resize() {
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+      const topSafe = viewportW < 620 ? 104 : 124;
+      const bottomSafe = viewportW < 620 ? 30 : 42;
+      const side = viewportW < 620 ? 20 : 48;
+      const baseCell = viewportW < 620 ? 18 : 24;
+      this.cell = baseCell;
+      this.boardW = this.cell * this.gridW;
+      this.boardH = this.cell * this.gridH;
+
+      const contentW = Math.max(viewportW, this.boardW + side * 2);
+      const contentH = Math.max(viewportH, this.boardH + topSafe + bottomSafe);
+      if (app.screen.width !== contentW || app.screen.height !== contentH) {
+        app.renderer.resize(contentW, contentH);
+        app.canvas.style.width = `${contentW}px`;
+        app.canvas.style.height = `${contentH}px`;
+      }
+      dom.container.style.width = `${contentW}px`;
+      dom.container.style.height = `${contentH}px`;
+      document.documentElement.style.setProperty("--game-width", `${contentW}px`);
+      document.documentElement.style.setProperty("--game-height", `${contentH}px`);
+
       const width = app.screen.width;
       const height = app.screen.height;
 
@@ -428,17 +451,8 @@
         spark.y = spark.baseY * height;
       }
 
-      const topSafe = width < 620 ? 104 : 124;
-      const bottomSafe = width < 620 ? 26 : 34;
-      const side = width < 620 ? 18 : 44;
-      const availableW = width - side * 2;
-      const availableH = height - topSafe - bottomSafe;
-      const minCell = width < 620 ? 12 : 22;
-      this.cell = Math.max(minCell, Math.floor(Math.min(availableW / this.gridW, availableH / this.gridH)));
-      this.boardW = this.cell * this.gridW;
-      this.boardH = this.cell * this.gridH;
-      this.boardX = Math.round((width - this.boardW) / 2);
-      this.boardY = Math.round(topSafe + (availableH - this.boardH) / 2);
+      this.boardX = Math.round(Math.max(side, (width - this.boardW) / 2));
+      this.boardY = Math.round(topSafe + Math.max(0, (height - topSafe - bottomSafe - this.boardH) / 2));
       this.boardLayer.position.set(this.boardX, this.boardY);
 
       if (this.mode === "playing") {
@@ -503,13 +517,13 @@
       container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(5, this.cell * 0.18));
 
       const glow = new PIXI.Graphics();
-      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.38), 0.28);
-      drawPath(glow, piece.cells, this.cell, color.main, Math.max(4, this.cell * 0.3), 0.18);
+      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.46), 0.3);
+      drawPath(glow, piece.cells, this.cell, color.main, Math.max(4, this.cell * 0.36), 0.2);
       container.addChild(glow);
 
       const line = new PIXI.Graphics();
-      drawPath(line, piece.cells, this.cell, color.main, Math.max(4.2, this.cell * 0.28), 0.98);
-      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.6, this.cell * 0.07), 0.86);
+      drawPath(line, piece.cells, this.cell, color.main, Math.max(4.2, this.cell * 0.34), 0.98);
+      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.6, this.cell * 0.085), 0.86);
       drawArrow(line, piece, this.cell, color.main, color.hot, dir);
       container.addChild(line);
 
@@ -917,11 +931,10 @@
 
   function createTemplateLevel(level) {
     const rawLevel = Math.max(1, level | 0);
-    const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
     const earlyProgress = clamp((rawLevel - 1) / 9, 0, 1);
-    const lateProgress = clamp((tunedLevel - 10) / 90, 0, 1);
-    const gridW = snapTemplateSize(Math.min(24, 18 + earlyProgress * 6 + lateProgress * 3), 3);
-    const gridH = snapTemplateSize(Math.min(33, 24 + earlyProgress * 9 + lateProgress * 3), 3);
+    const expansion = Math.sqrt(Math.max(0, rawLevel - 10));
+    const gridW = snapTemplateSize(18 + earlyProgress * 6 + expansion * 2.4, 3);
+    const gridH = snapTemplateSize(24 + earlyProgress * 9 + expansion * 3.3, 3);
     const pieces = createDenseTemplatePieces(gridW, gridH, rawLevel);
 
     const guaranteedDirs = pieces.map(piece => piece.dir);
@@ -1500,8 +1513,8 @@
     const front = getArrowEndpoint(piece.cells, piece.dir);
     const cx = (front.x + 0.5) * cellSize;
     const cy = (front.y + 0.5) * cellSize;
-    const size = cellSize * 0.19;
-    const len = cellSize * 0.42;
+    const size = cellSize * 0.22;
+    const len = cellSize * 0.48;
     const points = [
       { x: len * 0.62, y: 0 },
       { x: -len * 0.32, y: -size },
@@ -1562,10 +1575,10 @@
     const head = pointAtDistance(points, endDist);
     const alpha = clamp(visible / (cellSize * 0.6), 0, 1);
 
-    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.38), color.glow, 0.28 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(4, cellSize * 0.3), color.main, 0.26 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(4.2, cellSize * 0.28), color.main, 0.98 * alpha);
-    drawPolylinePoints(graphics, windowPoints, Math.max(1.6, cellSize * 0.07), color.hot, 0.86 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(5, cellSize * 0.46), color.glow, 0.3 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(4, cellSize * 0.36), color.main, 0.26 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(4.2, cellSize * 0.34), color.main, 0.98 * alpha);
+    drawPolylinePoints(graphics, windowPoints, Math.max(1.6, cellSize * 0.085), color.hot, 0.86 * alpha);
     drawFlowArrow(graphics, head, DIRS[dir], cellSize, color.main, color.hot, alpha);
   }
 
@@ -1581,8 +1594,8 @@
   function drawFlowArrow(graphics, head, dir, cellSize, color, accent, alpha) {
     if (!head || alpha <= 0) return;
     const angle = dir.angle;
-    const size = cellSize * 0.19;
-    const len = cellSize * 0.42;
+    const size = cellSize * 0.22;
+    const len = cellSize * 0.48;
     const points = [
       { x: len * 0.62, y: 0 },
       { x: -len * 0.32, y: -size },
