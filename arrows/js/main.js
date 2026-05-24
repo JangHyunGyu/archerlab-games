@@ -517,13 +517,13 @@
       container.hitArea = new PathHitArea(piece.cells, this.cell, Math.max(5, this.cell * 0.18));
 
       const glow = new PIXI.Graphics();
-      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.46), 0.3);
-      drawPath(glow, piece.cells, this.cell, color.main, Math.max(4, this.cell * 0.36), 0.2);
+      drawPath(glow, piece.cells, this.cell, color.glow, Math.max(5, this.cell * 0.52), 0.3);
+      drawPath(glow, piece.cells, this.cell, color.main, Math.max(4, this.cell * 0.4), 0.2);
       container.addChild(glow);
 
       const line = new PIXI.Graphics();
-      drawPath(line, piece.cells, this.cell, color.main, Math.max(4.2, this.cell * 0.34), 0.98);
-      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.6, this.cell * 0.085), 0.86);
+      drawPath(line, piece.cells, this.cell, color.main, Math.max(4.6, this.cell * 0.39), 0.98);
+      drawPath(line, piece.cells, this.cell, color.hot, Math.max(1.4, this.cell * 0.06), 0.78);
       drawArrow(line, piece, this.cell, color.main, color.hot, dir);
       container.addChild(line);
 
@@ -953,11 +953,13 @@
     const occupied = new Set();
     const pieces = [];
     const boardCells = gridW * gridH;
-    const targetFill = gridW >= 45 ? 0.82 : gridW >= 33 ? 0.85 : gridW >= 24 ? 0.87 : 0.82;
+    const targetFill = gridW >= 45 ? 0.82 : gridW >= 33 ? 0.87 : gridW >= 24 ? 0.9 : 0.85;
     const minLength = gridW >= 45 ? 26 : gridW >= 33 ? 22 : gridW >= 24 ? 18 : 10;
     const maxLength = Math.min(gridW >= 45 ? 64 : 90, Math.max(42, Math.round(Math.min(gridW, gridH) * 1.72)));
-    const minPieces = Math.max(12, Math.round((boardCells * targetFill) / (maxLength * 0.9)));
+    const minPieces = Math.max(14, Math.round((boardCells * targetFill) / (maxLength * 0.84)));
     const maxAttempts = Math.max(900, boardCells * 5);
+    const stallLimit = gridW >= 45 ? 30 : gridW >= 33 ? 36 : 42;
+    const closeFill = targetFill - (gridW >= 45 ? 0.04 : 0.02);
     let occupiedCells = 0;
     let misses = 0;
 
@@ -965,12 +967,17 @@
       const candidate = makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength);
       if (!candidate) {
         misses += 1;
-        if (misses > 80 && pieces.length >= minPieces) break;
+        if (misses > stallLimit && pieces.length >= minPieces && occupiedCells / boardCells >= closeFill) break;
+        if (misses > stallLimit * 2 && occupiedCells / boardCells >= closeFill) break;
+        if (misses > stallLimit * 6 && pieces.length >= Math.floor(minPieces * 0.85)) break;
         continue;
       }
       const dir = chooseTemplateDirection(candidate.cells, pieces, gridW, gridH);
       if (!dir) {
         misses += 1;
+        if (misses > stallLimit && pieces.length >= minPieces && occupiedCells / boardCells >= closeFill) break;
+        if (misses > stallLimit * 2 && occupiedCells / boardCells >= closeFill) break;
+        if (misses > stallLimit * 6 && pieces.length >= Math.floor(minPieces * 0.85)) break;
         continue;
       }
       pieces.push({
@@ -985,12 +992,44 @@
       misses = 0;
     }
 
+    const fillerTargetFill = gridW >= 45 ? Math.min(targetFill, 0.78) : targetFill;
+    if (occupiedCells / boardCells < fillerTargetFill) {
+      const fillerMinLength = gridW >= 45 ? 24 : gridW >= 33 ? 18 : 16;
+      const fillerMaxLength = Math.min(maxLength - 4, gridW >= 45 ? 44 : gridW >= 33 ? 40 : 32);
+      let fillerMisses = 0;
+      const fillerAttempts = Math.max(160, boardCells * 2);
+      for (let attempt = 0; attempt < fillerAttempts && occupiedCells / boardCells < fillerTargetFill; attempt++) {
+        const candidate = makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, fillerMinLength, fillerMaxLength);
+        if (!candidate) {
+          fillerMisses += 1;
+          if (fillerMisses > stallLimit) break;
+          continue;
+        }
+        const dir = chooseTemplateDirection(candidate.cells, pieces, gridW, gridH);
+        if (!dir) {
+          fillerMisses += 1;
+          if (fillerMisses > stallLimit) break;
+          continue;
+        }
+        pieces.push({
+          id: `woven-${pieces.length}`,
+          dir,
+          colorIndex: 0,
+          cells: candidate.cells,
+          container: null,
+        });
+        for (const cell of candidate.cells) occupied.add(key(cell.x, cell.y));
+        occupiedCells += candidate.cells.length;
+        fillerMisses = 0;
+      }
+    }
+
     return pieces;
   }
 
   function makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength) {
     let best = null;
-    const samples = gridW >= 45 ? (pieces.length < 4 ? 42 : 56) : pieces.length < 4 ? 68 : 104;
+    const samples = gridW >= 45 ? (pieces.length < 4 ? 36 : 48) : pieces.length < 4 ? 52 : 72;
     for (let i = 0; i < samples; i++) {
       const cells = makeWovenWalk(gridW, gridH, occupied, rng, minLength, maxLength);
       if (!cells || cells.length < minLength) continue;
@@ -1025,7 +1064,7 @@
         .filter(Boolean)
         .sort((a, b) => b.score - a.score);
       if (!choices.length) break;
-      const pick = choices[Math.min(choices.length - 1, Math.floor(Math.pow(rng.next(), 1.85) * choices.length))];
+      const pick = choices[Math.min(choices.length - 1, Math.floor(Math.pow(rng.next(), 2.2) * choices.length))];
       cells.push(pick.cell);
       own.add(key(pick.cell.x, pick.cell.y));
       heading = pick.dir;
@@ -1059,8 +1098,8 @@
     const centerX = (gridW - 1) / 2;
     const centerY = (gridH - 1) / 2;
     const centerPull = 1 - clamp((Math.abs(cell.x - centerX) / gridW + Math.abs(cell.y - centerY) / gridH) * 1.4, 0, 1);
-    const lateHug = stepIndex > 4 ? occupiedAdj * 4.5 + occupiedNear * 0.85 : occupiedNear * 0.3;
-    return lateHug + selfAdj * 1.25 + turn + centerPull * 1.6 - edgeDistance * 0.05;
+    const lateHug = stepIndex > 4 ? occupiedAdj * 5.8 + occupiedNear * 1.1 : occupiedNear * 0.35;
+    return lateHug + selfAdj * 1.35 + turn + centerPull * 1.6 - edgeDistance * 0.05;
   }
 
   function scoreWovenWalk(cells, occupied, gridW, gridH) {
@@ -1073,7 +1112,7 @@
     }
     const turns = countPathTurns(cells);
     const span = bounds.w + bounds.h;
-    const wrap = adjacent * 8.5 + near * 1.05 + turns * 2.5 + span * 2.9;
+    const wrap = adjacent * 10.5 + near * 1.25 + turns * 2.5 + span * 2.9;
     return wrap + cells.length * 4.4 - countIslands(cells, new Set(cells.map(cell => key(cell.x, cell.y)))) * 0.7;
   }
 
