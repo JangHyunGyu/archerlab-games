@@ -275,21 +275,37 @@
       const target = config.target;
       const targetCells = Math.max(1, config.targetCells - config.targetSlack);
       const minTargetCells = Math.floor(targetCells * config.minFillCompletion);
+      const softTargetCells = Math.floor(targetCells * config.softFillCompletion);
       const pieces = [];
       let occupiedCells = 0;
       let missesSincePlace = 0;
       const maxAttempts = target * config.attemptsPerPiece;
+      const generationStartedAt = performance.now();
+      const shouldStopAfterMiss = () => {
+        if (occupiedCells >= minTargetCells) return missesSincePlace > config.completedStallLimit;
+        return occupiedCells >= softTargetCells && missesSincePlace > config.stallLimit;
+      };
 
       for (let attempt = 0; attempt < maxAttempts && pieces.length < target && occupiedCells < targetCells; attempt++) {
-        const length = rng.int(config.minLength, config.maxLength);
+        if (occupiedCells >= softTargetCells && performance.now() - generationStartedAt > config.generationBudgetMs) break;
+        const length = samplePieceLength(rng, config);
         const shape = makeShape(rng, length, config.turnBias);
+        if (shape.length < config.minActualLength || shape.length < Math.floor(length * config.lengthCompletion)) {
+          missesSincePlace += 1;
+          if (shouldStopAfterMiss()) break;
+          continue;
+        }
         const bounds = getBounds(shape);
-        if (bounds.w > this.gridW - 1 || bounds.h > this.gridH - 1) continue;
+        if (bounds.w > this.gridW - 1 || bounds.h > this.gridH - 1) {
+          missesSincePlace += 1;
+          if (shouldStopAfterMiss()) break;
+          continue;
+        }
 
         const candidate = this.findDensePlacement(shape, bounds, pieces, rng, config);
         if (!candidate) {
           missesSincePlace += 1;
-          if (missesSincePlace > config.stallLimit && occupiedCells >= minTargetCells) break;
+          if (shouldStopAfterMiss()) break;
           continue;
         }
         candidate.id = `p${level}-${pieces.length}-${attempt}`;
@@ -795,34 +811,49 @@
     const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
     const progress = DIFFICULTY_CAP_LEVEL <= 1 ? 1 : clamp((tunedLevel - 1) / (DIFFICULTY_CAP_LEVEL - 1), 0, 1);
     const curve = Math.pow(progress, 0.74);
+    const growth = Math.pow(progress, 0.62);
     const gridW = Math.min(25, 9 + Math.floor(progress * 16));
     const gridH = Math.min(27, 11 + Math.floor(progress * 16));
-    const clusterInsetX = Math.round(curve * 3);
-    const clusterInsetY = Math.round(curve * 3);
-    const activeW = gridW - clusterInsetX * 2;
-    const activeH = gridH - clusterInsetY * 2;
-    const fillRatio = 0.47 + curve * 0.26;
-    const maxLength = Math.min(16, Math.round(5 + progress * 4 + curve * 7));
+    const activeW = Math.min(gridW, Math.round(7 + growth * 10));
+    const activeH = Math.min(gridH, Math.round(9 + growth * 10));
+    const clusterInsetX = Math.max(0, Math.floor((gridW - activeW) / 2));
+    const clusterInsetY = Math.max(0, Math.floor((gridH - activeH) / 2));
+    const fillRatio = 0.58 + curve * 0.22;
+    const minLength = Math.round(2 + progress + curve * 2.5);
+    const maxLength = Math.min(18, Math.round(6 + progress * 4 + curve * 8));
 
     return {
       gridW,
       gridH,
-      target: Math.min(74, Math.round(13 + progress * 40 + curve * 23)),
+      target: Math.min(68, Math.round(12 + progress * 32 + curve * 24)),
       targetCells: Math.round(activeW * activeH * fillRatio),
-      targetSlack: Math.floor(maxLength * curve * 0.72),
+      targetSlack: Math.floor(maxLength * curve * 0.42),
       clusterInsetX,
       clusterInsetY,
-      minLength: progress < 0.48 ? 2 : progress < 0.78 ? 3 : 4,
+      minLength,
+      minActualLength: Math.max(2, Math.round(minLength * 0.72)),
       maxLength,
-      turnBias: 0.42 + curve * 0.36,
-      attemptsPerPiece: 190 + Math.floor(curve * 70),
-      minFillCompletion: 0.86,
-      stallLimit: 360 + Math.floor(curve * 260),
-      placementTries: 15 + Math.floor(progress * 5 + curve * 6),
-      clusterBias: 0.86 + curve * 0.11,
-      centerBias: 0.44 + curve * 0.2,
-      weaveBias: 1.1 + curve * 1.45,
+      lengthBias: 1.02 + curve * 0.32,
+      lengthCompletion: 0.42 + curve * 0.08,
+      turnBias: 0.46 + curve * 0.38,
+      attemptsPerPiece: 180 + Math.floor(curve * 70),
+      minFillCompletion: 0.9,
+      softFillCompletion: 0.76,
+      stallLimit: 130 + Math.floor(curve * 130),
+      completedStallLimit: 70 + Math.floor(curve * 90),
+      generationBudgetMs: 700 + Math.floor(curve * 650),
+      placementTries: 17 + Math.floor(progress * 4 + curve * 7),
+      clusterBias: 0.9 + curve * 0.08,
+      centerBias: 0.5 + curve * 0.22,
+      weaveBias: 1.25 + curve * 1.75,
     };
+  }
+
+  function samplePieceLength(rng, config) {
+    const min = config.minLength;
+    const max = Math.max(min, config.maxLength);
+    const t = Math.pow(rng.next(), 1 / Math.max(1, config.lengthBias || 1));
+    return Math.round(min + (max - min) * t);
   }
 
   function chooseShapeOrigin(shape, bounds, pieces, gridW, gridH, rng, config) {
@@ -846,7 +877,7 @@
       };
     }
 
-    const anchor = pickOccupiedCell(pieces, rng);
+    const anchor = pickOccupiedCell(pieces, rng, gridW, gridH, config);
     const source = rng.pick(shape);
     const offset = rng.pick([
       { x: 1, y: 0 },
@@ -940,9 +971,23 @@
     return looseEnds;
   }
 
-  function pickOccupiedCell(pieces, rng) {
-    const piece = rng.pick(pieces);
-    return rng.pick(piece.cells);
+  function pickOccupiedCell(pieces, rng, gridW, gridH, config) {
+    if (!gridW || !gridH) {
+      const piece = rng.pick(pieces);
+      return rng.pick(piece.cells);
+    }
+
+    const centerX = (gridW - 1) / 2;
+    const centerY = (gridH - 1) / 2;
+    const samples = 3 + Math.floor((config.centerBias || 0) * 5);
+    let best = null;
+    for (let i = 0; i < samples; i++) {
+      const piece = rng.pick(pieces);
+      const cell = rng.pick(piece.cells);
+      const score = -Math.abs(cell.x - centerX) - Math.abs(cell.y - centerY) + rng.next() * 1.8;
+      if (!best || score > best.score) best = { cell, score };
+    }
+    return best.cell;
   }
 
   function createLevelSeed(level) {
