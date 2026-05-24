@@ -362,7 +362,7 @@
       const side = width < 620 ? 18 : 44;
       const availableW = width - side * 2;
       const availableH = height - topSafe - bottomSafe;
-      const minCell = width < 620 ? 18 : 22;
+      const minCell = width < 620 ? 16 : 22;
       this.cell = Math.max(minCell, Math.floor(Math.min(availableW / this.gridW, availableH / this.gridH)));
       this.boardW = this.cell * this.gridW;
       this.boardH = this.cell * this.gridH;
@@ -795,24 +795,24 @@
     const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
     const progress = DIFFICULTY_CAP_LEVEL <= 1 ? 1 : clamp((tunedLevel - 1) / (DIFFICULTY_CAP_LEVEL - 1), 0, 1);
     const curve = Math.pow(progress, 0.74);
-    const gridW = Math.min(19, 9 + Math.floor(progress * 10));
-    const gridH = Math.min(21, 11 + Math.floor(progress * 10));
-    const fillRatio = 0.45 + curve * 0.24;
-    const maxLength = Math.min(15, Math.round(5 + progress * 4 + curve * 6));
+    const gridW = Math.min(21, 9 + Math.floor(progress * 12));
+    const gridH = Math.min(23, 11 + Math.floor(progress * 12));
+    const fillRatio = 0.47 + curve * 0.2;
+    const maxLength = Math.min(16, Math.round(5 + progress * 4 + curve * 7));
 
     return {
       gridW,
       gridH,
-      target: Math.min(54, Math.round(12 + progress * 26 + curve * 16)),
+      target: Math.min(68, Math.round(13 + progress * 36 + curve * 21)),
       targetCells: Math.round(gridW * gridH * fillRatio),
       targetSlack: Math.floor(maxLength * curve * 0.72),
       minLength: progress < 0.48 ? 2 : progress < 0.78 ? 3 : 4,
       maxLength,
       turnBias: 0.42 + curve * 0.36,
       attemptsPerPiece: 380 + Math.floor(curve * 130),
-      minFillCompletion: 0.92,
-      stallLimit: 620 + Math.floor(curve * 360),
-      placementTries: 16 + Math.floor(progress * 7 + curve * 9),
+      minFillCompletion: 0.9,
+      stallLimit: 720 + Math.floor(curve * 460),
+      placementTries: 19 + Math.floor(progress * 8 + curve * 11),
       clusterBias: 0.86 + curve * 0.11,
       centerBias: 0.44 + curve * 0.2,
       weaveBias: 1.1 + curve * 1.45,
@@ -902,10 +902,10 @@
         if (occupied.has(key(cell.x + sideB.x, cell.y + sideB.y)) || occupied.has(key(next.x + sideB.x, next.y + sideB.y))) parallelTouch += 1;
       }
     }
-    const compactness = adjacent * 3.7 + near * 0.52;
-    const weave = (squeezed * 8.5 + surrounded * 6.8 + parallelTouch * 3.2) * config.weaveBias;
-    const centerPull = (cells.length - centerDistance) * (0.82 + config.centerBias);
-    return compactness + weave + centerPull - edgeTouches * 1.1 - countIslands(cells, own) * 0.6;
+    const compactness = adjacent * 3.5 + near * 0.45;
+    const weave = (squeezed * 9.8 + surrounded * 7.8 + parallelTouch * 4.2) * config.weaveBias;
+    const centerPull = (cells.length - centerDistance) * (1.28 + config.centerBias * 1.45);
+    return compactness + weave + centerPull - edgeTouches * 2.7 - countIslands(cells, own) * 0.6;
   }
 
   function countIslands(cells, own) {
