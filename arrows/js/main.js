@@ -996,12 +996,21 @@
 
     candidates.sort((a, b) => a.score - b.score || a.order - b.order);
     const pieces = [];
-    const used = new Set();
-    let occupiedCells = 0;
-    const targetFill = gridW >= 24 ? 0.84 : 0.82;
-    const minPieces = gridW >= 24 ? 26 : 18;
+    const cellCounts = new Map();
+    let virtualCells = 0;
+    let uniqueCells = 0;
+    const boardCells = gridW * gridH;
+    const isHugeBoard = gridW >= 45;
+    const targetVirtualFill = isHugeBoard ? 0.9 : gridW >= 33 ? 1.08 : gridW >= 24 ? 1.35 : 0.96;
+    const targetUniqueFill = isHugeBoard ? 0.44 : gridW >= 33 ? 0.46 : gridW >= 24 ? 0.82 : 0.68;
+    const minPieces = isHugeBoard ? Math.round(boardCells / 32) : gridW >= 33 ? Math.round(boardCells / 24) : gridW >= 24 ? 56 : 26;
+    const maxPieces = isHugeBoard ? Math.round(boardCells / 20) : gridW >= 33 ? Math.round(boardCells / 18) : Math.round(boardCells / 10);
+    const maxCellStack = gridW >= 33 ? 3 : 2;
     for (const candidate of candidates) {
-      if (candidate.cells.some(cell => used.has(key(cell.x, cell.y)))) continue;
+      const overlap = getTemplateOverlap(candidate.cells, cellCounts);
+      if (overlap.maxStack >= maxCellStack) continue;
+      if (pieces.length > 0 && overlap.unique < Math.max(3, Math.floor(candidate.cells.length * 0.28))) continue;
+      if (pieces.length >= Math.floor(minPieces * 0.45) && overlap.shared < Math.floor(candidate.cells.length * 0.25)) continue;
       const dir = chooseTemplateDirection(candidate.cells, pieces, gridW, gridH);
       if (!dir) continue;
       pieces.push({
@@ -1011,11 +1020,31 @@
         cells: candidate.cells.map(cell => ({ x: cell.x, y: cell.y })),
         container: null,
       });
-      for (const cell of candidate.cells) used.add(key(cell.x, cell.y));
-      occupiedCells += candidate.cells.length;
-      if (occupiedCells / (gridW * gridH) >= targetFill && pieces.length >= minPieces) break;
+      for (const cell of candidate.cells) {
+        const cellKey = key(cell.x, cell.y);
+        if (!cellCounts.has(cellKey)) uniqueCells += 1;
+        cellCounts.set(cellKey, (cellCounts.get(cellKey) || 0) + 1);
+      }
+      virtualCells += candidate.cells.length;
+      const virtualFill = virtualCells / (gridW * gridH);
+      const uniqueFill = uniqueCells / (gridW * gridH);
+      if (virtualFill >= targetVirtualFill && uniqueFill >= targetUniqueFill && pieces.length >= minPieces) break;
+      if (pieces.length >= maxPieces && virtualFill >= targetVirtualFill * 0.92) break;
     }
     return pieces;
+  }
+
+  function getTemplateOverlap(cells, cellCounts) {
+    let shared = 0;
+    let unique = 0;
+    let maxStack = 0;
+    for (const cell of cells) {
+      const count = cellCounts.get(key(cell.x, cell.y)) || 0;
+      if (count > 0) shared += 1;
+      else unique += 1;
+      maxStack = Math.max(maxStack, count);
+    }
+    return { shared, unique, maxStack };
   }
 
   function createTemplateShapeVariants(pattern) {
