@@ -920,8 +920,8 @@
     const tunedLevel = Math.min(rawLevel, DIFFICULTY_CAP_LEVEL);
     const earlyProgress = clamp((rawLevel - 1) / 9, 0, 1);
     const lateProgress = clamp((tunedLevel - 10) / 90, 0, 1);
-    const gridW = snapTemplateSize(Math.min(21, 15 + earlyProgress * 6 + lateProgress * 3), 3);
-    const gridH = snapTemplateSize(Math.min(30, 21 + earlyProgress * 9 + lateProgress * 3), 3);
+    const gridW = snapTemplateSize(Math.min(24, 18 + earlyProgress * 6 + lateProgress * 3), 3);
+    const gridH = snapTemplateSize(Math.min(33, 24 + earlyProgress * 9 + lateProgress * 3), 3);
     const pieces = createDenseTemplatePieces(gridW, gridH, rawLevel);
 
     const guaranteedDirs = pieces.map(piece => piece.dir);
