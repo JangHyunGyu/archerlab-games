@@ -960,6 +960,18 @@
       [[0, 0], [0, 1], [0, 2], [1, 2], [1, 1], [2, 1], [3, 1], [3, 2], [2, 2], [2, 3], [3, 3], [4, 3], [5, 3], [5, 2], [4, 2], [4, 1]],
       [[0, 2], [0, 1], [1, 1], [1, 0], [2, 0], [3, 0], [3, 1], [2, 1], [2, 2], [3, 2], [4, 2], [5, 2], [5, 3], [4, 3], [3, 3]],
       [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [4, 1], [3, 1], [2, 1], [2, 2], [1, 2], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3], [4, 3]],
+      [[0, 0], [1, 0], [2, 0], [3, 0], [3, 1], [2, 1], [1, 1], [1, 2], [2, 2], [3, 2]],
+      [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 1], [1, 1], [1, 0], [2, 0], [3, 0]],
+      [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0], [4, 0], [4, 1], [3, 1], [3, 2], [4, 2], [5, 2]],
+      [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [3, 2], [2, 2], [2, 3], [3, 3], [4, 3]],
+      [[0, 2], [0, 1], [1, 1], [1, 0], [2, 0], [3, 0], [3, 1], [2, 1], [2, 2], [3, 2], [4, 2]],
+      [[0, 0], [0, 1], [1, 1], [2, 1], [2, 2], [3, 2], [4, 2], [4, 1], [3, 1], [3, 0]],
+      [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 3], [1, 3]],
+      [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 1], [2, 0], [3, 0], [4, 0]],
+      [[0, 0], [1, 0], [2, 0], [2, 1], [1, 1], [1, 2], [2, 2]],
+      [[0, 0], [0, 1], [0, 2], [1, 2], [1, 1], [2, 1], [2, 0]],
+      [[0, 1], [1, 1], [1, 0], [2, 0], [3, 0], [3, 1], [2, 1], [2, 2]],
+      [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [3, 2], [2, 2], [1, 2]],
     ];
     const shapeMap = new Map();
     for (const pattern of basePatterns) {
@@ -996,21 +1008,13 @@
 
     candidates.sort((a, b) => a.score - b.score || a.order - b.order);
     const pieces = [];
-    const cellCounts = new Map();
-    let virtualCells = 0;
-    let uniqueCells = 0;
+    const used = new Set();
+    let occupiedCells = 0;
     const boardCells = gridW * gridH;
-    const isHugeBoard = gridW >= 45;
-    const targetVirtualFill = isHugeBoard ? 0.9 : gridW >= 33 ? 1.08 : gridW >= 24 ? 1.35 : 0.96;
-    const targetUniqueFill = isHugeBoard ? 0.44 : gridW >= 33 ? 0.46 : gridW >= 24 ? 0.82 : 0.68;
-    const minPieces = isHugeBoard ? Math.round(boardCells / 32) : gridW >= 33 ? Math.round(boardCells / 24) : gridW >= 24 ? 56 : 26;
-    const maxPieces = isHugeBoard ? Math.round(boardCells / 20) : gridW >= 33 ? Math.round(boardCells / 18) : Math.round(boardCells / 10);
-    const maxCellStack = gridW >= 33 ? 3 : 2;
+    const targetFill = gridW >= 45 ? 0.78 : gridW >= 33 ? 0.82 : gridW >= 24 ? 0.88 : 0.84;
+    const minPieces = gridW >= 45 ? Math.round(boardCells / 34) : gridW >= 33 ? Math.round(boardCells / 28) : gridW >= 24 ? 54 : 26;
     for (const candidate of candidates) {
-      const overlap = getTemplateOverlap(candidate.cells, cellCounts);
-      if (overlap.maxStack >= maxCellStack) continue;
-      if (pieces.length > 0 && overlap.unique < Math.max(3, Math.floor(candidate.cells.length * 0.28))) continue;
-      if (pieces.length >= Math.floor(minPieces * 0.45) && overlap.shared < Math.floor(candidate.cells.length * 0.25)) continue;
+      if (candidate.cells.some(cell => used.has(key(cell.x, cell.y)))) continue;
       const dir = chooseTemplateDirection(candidate.cells, pieces, gridW, gridH);
       if (!dir) continue;
       pieces.push({
@@ -1020,31 +1024,11 @@
         cells: candidate.cells.map(cell => ({ x: cell.x, y: cell.y })),
         container: null,
       });
-      for (const cell of candidate.cells) {
-        const cellKey = key(cell.x, cell.y);
-        if (!cellCounts.has(cellKey)) uniqueCells += 1;
-        cellCounts.set(cellKey, (cellCounts.get(cellKey) || 0) + 1);
-      }
-      virtualCells += candidate.cells.length;
-      const virtualFill = virtualCells / (gridW * gridH);
-      const uniqueFill = uniqueCells / (gridW * gridH);
-      if (virtualFill >= targetVirtualFill && uniqueFill >= targetUniqueFill && pieces.length >= minPieces) break;
-      if (pieces.length >= maxPieces && virtualFill >= targetVirtualFill * 0.92) break;
+      for (const cell of candidate.cells) used.add(key(cell.x, cell.y));
+      occupiedCells += candidate.cells.length;
+      if (occupiedCells / boardCells >= targetFill && pieces.length >= minPieces) break;
     }
     return pieces;
-  }
-
-  function getTemplateOverlap(cells, cellCounts) {
-    let shared = 0;
-    let unique = 0;
-    let maxStack = 0;
-    for (const cell of cells) {
-      const count = cellCounts.get(key(cell.x, cell.y)) || 0;
-      if (count > 0) shared += 1;
-      else unique += 1;
-      maxStack = Math.max(maxStack, count);
-    }
-    return { shared, unique, maxStack };
   }
 
   function createTemplateShapeVariants(pattern) {
