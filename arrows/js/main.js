@@ -935,7 +935,7 @@
     const expansion = Math.sqrt(Math.max(0, rawLevel - 10));
     const gridW = snapTemplateSize(18 + earlyProgress * 6 + expansion * 2.4, 3);
     const gridH = snapTemplateSize(24 + earlyProgress * 9 + expansion * 3.3, 3);
-    const pieces = createDenseTemplatePieces(gridW, gridH, rawLevel);
+    const pieces = createWovenTemplatePieces(gridW, gridH, rawLevel);
 
     const guaranteedDirs = pieces.map(piece => piece.dir);
     const config = getLevelConfig(level);
@@ -946,6 +946,166 @@
     }
 
     return { gridW, gridH, pieces };
+  }
+
+  function createWovenTemplatePieces(gridW, gridH, variant) {
+    const rng = new Random((createLevelSeed(variant) ^ 0x7f4a7c15) >>> 0);
+    const occupied = new Set();
+    const pieces = [];
+    const boardCells = gridW * gridH;
+    const targetFill = gridW >= 45 ? 0.82 : gridW >= 33 ? 0.85 : gridW >= 24 ? 0.87 : 0.82;
+    const minLength = gridW >= 45 ? 26 : gridW >= 33 ? 22 : gridW >= 24 ? 18 : 10;
+    const maxLength = Math.min(90, Math.max(42, Math.round(Math.min(gridW, gridH) * 1.72)));
+    const minPieces = gridW >= 45 ? Math.round(boardCells / 52) : gridW >= 33 ? Math.round(boardCells / 44) : gridW >= 24 ? Math.round(boardCells / 36) : 18;
+    const maxAttempts = Math.max(900, boardCells * 5);
+    let occupiedCells = 0;
+    let misses = 0;
+
+    for (let attempt = 0; attempt < maxAttempts && occupiedCells / boardCells < targetFill; attempt++) {
+      const candidate = makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength);
+      if (!candidate) {
+        misses += 1;
+        if (misses > 80 && pieces.length >= minPieces) break;
+        continue;
+      }
+      const dir = chooseTemplateDirection(candidate.cells, pieces, gridW, gridH);
+      if (!dir) {
+        misses += 1;
+        continue;
+      }
+      pieces.push({
+        id: `woven-${pieces.length}`,
+        dir,
+        colorIndex: 0,
+        cells: candidate.cells,
+        container: null,
+      });
+      for (const cell of candidate.cells) occupied.add(key(cell.x, cell.y));
+      occupiedCells += candidate.cells.length;
+      misses = 0;
+    }
+
+    return pieces;
+  }
+
+  function makeBestWovenCandidate(gridW, gridH, occupied, pieces, rng, minLength, maxLength) {
+    let best = null;
+    const samples = pieces.length < 4 ? 68 : 104;
+    for (let i = 0; i < samples; i++) {
+      const cells = makeWovenWalk(gridW, gridH, occupied, rng, minLength, maxLength);
+      if (!cells || cells.length < minLength) continue;
+      const score = scoreWovenWalk(cells, occupied, gridW, gridH) + rng.next() * 0.5;
+      if (!best || score > best.score) best = { cells, score };
+    }
+    return best;
+  }
+
+  function makeWovenWalk(gridW, gridH, occupied, rng, minLength, maxLength) {
+    const start = pickWovenStart(gridW, gridH, occupied, rng);
+    if (!start) return null;
+
+    const cells = [start];
+    const own = new Set([key(start.x, start.y)]);
+    let heading = rng.pick(DIR_KEYS);
+    for (let stepIndex = 1; stepIndex < maxLength; stepIndex++) {
+      const last = cells[cells.length - 1];
+      const choices = DIR_KEYS
+        .map(dir => {
+          const step = DIRS[dir];
+          const cell = { x: last.x + step.x, y: last.y + step.y };
+          if (cell.x < 0 || cell.x >= gridW || cell.y < 0 || cell.y >= gridH) return null;
+          const cellKey = key(cell.x, cell.y);
+          if (occupied.has(cellKey) || own.has(cellKey)) return null;
+          return {
+            dir,
+            cell,
+            score: scoreWovenStep(cell, dir, heading, occupied, own, gridW, gridH, stepIndex),
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score);
+      if (!choices.length) break;
+      const pick = choices[Math.min(choices.length - 1, Math.floor(Math.pow(rng.next(), 1.85) * choices.length))];
+      cells.push(pick.cell);
+      own.add(key(pick.cell.x, pick.cell.y));
+      heading = pick.dir;
+    }
+    return cells.length >= minLength ? cells : null;
+  }
+
+  function pickWovenStart(gridW, gridH, occupied, rng) {
+    let best = null;
+    const sampleCount = occupied.size ? 64 : 24;
+    for (let i = 0; i < sampleCount; i++) {
+      const cell = { x: rng.int(0, gridW - 1), y: rng.int(0, gridH - 1) };
+      if (occupied.has(key(cell.x, cell.y))) continue;
+      const edgePull = Math.min(cell.x, gridW - 1 - cell.x, cell.y, gridH - 1 - cell.y);
+      const score =
+        countAdjacentSet(cell, occupied) * 8 +
+        countNearbySet(cell, occupied, 2) * 1.7 -
+        edgePull * (occupied.size ? 0.18 : -0.22) +
+        rng.next();
+      if (!best || score > best.score) best = { cell, score };
+    }
+    return best ? best.cell : null;
+  }
+
+  function scoreWovenStep(cell, dir, heading, occupied, own, gridW, gridH, stepIndex) {
+    const edgeDistance = Math.min(cell.x, gridW - 1 - cell.x, cell.y, gridH - 1 - cell.y);
+    const occupiedAdj = countAdjacentSet(cell, occupied);
+    const occupiedNear = countNearbySet(cell, occupied, 2);
+    const selfAdj = countAdjacentSet(cell, own);
+    const turn = dir === heading ? 1.35 : 1.85;
+    const centerX = (gridW - 1) / 2;
+    const centerY = (gridH - 1) / 2;
+    const centerPull = 1 - clamp((Math.abs(cell.x - centerX) / gridW + Math.abs(cell.y - centerY) / gridH) * 1.4, 0, 1);
+    const lateHug = stepIndex > 4 ? occupiedAdj * 4.5 + occupiedNear * 0.85 : occupiedNear * 0.3;
+    return lateHug + selfAdj * 1.25 + turn + centerPull * 1.6 - edgeDistance * 0.05;
+  }
+
+  function scoreWovenWalk(cells, occupied, gridW, gridH) {
+    const bounds = getBounds(cells);
+    let adjacent = 0;
+    let near = 0;
+    for (const cell of cells) {
+      adjacent += countAdjacentSet(cell, occupied);
+      near += countNearbySet(cell, occupied, 2);
+    }
+    const turns = countPathTurns(cells);
+    const span = bounds.w + bounds.h;
+    const wrap = adjacent * 8.5 + near * 1.05 + turns * 2.5 + span * 2.9;
+    return wrap + cells.length * 4.4 - countIslands(cells, new Set(cells.map(cell => key(cell.x, cell.y)))) * 0.7;
+  }
+
+  function countAdjacentSet(cell, cellSet) {
+    let count = 0;
+    for (const dir of DIR_KEYS) {
+      const step = DIRS[dir];
+      if (cellSet.has(key(cell.x + step.x, cell.y + step.y))) count += 1;
+    }
+    return count;
+  }
+
+  function countNearbySet(cell, cellSet, radius) {
+    let count = 0;
+    for (let y = cell.y - radius; y <= cell.y + radius; y++) {
+      for (let x = cell.x - radius; x <= cell.x + radius; x++) {
+        if (Math.abs(x - cell.x) + Math.abs(y - cell.y) > radius) continue;
+        if (cellSet.has(key(x, y))) count += 1;
+      }
+    }
+    return count;
+  }
+
+  function countPathTurns(cells) {
+    let turns = 0;
+    for (let i = 2; i < cells.length; i++) {
+      const prev = cells[i - 1];
+      const a = cells[i - 2];
+      const b = cells[i];
+      if (prev.x - a.x !== b.x - prev.x || prev.y - a.y !== b.y - prev.y) turns += 1;
+    }
+    return turns;
   }
 
   function createDenseTemplatePieces(gridW, gridH, variant) {
