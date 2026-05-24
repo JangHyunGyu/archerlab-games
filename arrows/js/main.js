@@ -797,7 +797,7 @@
     const curve = Math.pow(progress, 0.74);
     const gridW = Math.min(19, 9 + Math.floor(progress * 10));
     const gridH = Math.min(21, 11 + Math.floor(progress * 10));
-    const fillRatio = 0.43 + curve * 0.2;
+    const fillRatio = 0.45 + curve * 0.24;
     const maxLength = Math.min(15, Math.round(5 + progress * 4 + curve * 6));
 
     return {
@@ -812,9 +812,10 @@
       attemptsPerPiece: 380 + Math.floor(curve * 130),
       minFillCompletion: 0.92,
       stallLimit: 620 + Math.floor(curve * 360),
-      placementTries: 11 + Math.floor(progress * 5 + curve * 5),
-      clusterBias: 0.76 + curve * 0.18,
-      centerBias: 0.32 + curve * 0.18,
+      placementTries: 16 + Math.floor(progress * 7 + curve * 9),
+      clusterBias: 0.86 + curve * 0.11,
+      centerBias: 0.44 + curve * 0.2,
+      weaveBias: 1.1 + curve * 1.45,
     };
   }
 
@@ -826,8 +827,8 @@
       const centerY = Math.round((gridH - bounds.h) / 2);
       if (rng.chance(config.centerBias)) {
         return {
-          x: clamp(centerX + rng.int(-2, 2), 0, maxX),
-          y: clamp(centerY + rng.int(-2, 2), 0, maxY),
+          x: clamp(centerX + rng.int(-3, 3), 0, maxX),
+          y: clamp(centerY + rng.int(-3, 3), 0, maxY),
         };
       }
       return {
@@ -843,6 +844,10 @@
       { x: -1, y: 0 },
       { x: 0, y: 1 },
       { x: 0, y: -1 },
+      { x: 1, y: 1 },
+      { x: 1, y: -1 },
+      { x: -1, y: 1 },
+      { x: -1, y: -1 },
       { x: 0, y: 0 },
     ]);
     return {
@@ -857,26 +862,63 @@
     const centerY = (gridH - 1) / 2;
     let adjacent = 0;
     let near = 0;
+    let squeezed = 0;
+    let surrounded = 0;
+    let parallelTouch = 0;
     let centerDistance = 0;
     let edgeTouches = 0;
-    for (const cell of cells) {
+    const own = new Set(cells.map(cell => key(cell.x, cell.y)));
+    for (let index = 0; index < cells.length; index++) {
+      const cell = cells[index];
       centerDistance += Math.abs(cell.x - centerX) / gridW + Math.abs(cell.y - centerY) / gridH;
       if (cell.x === 0 || cell.x === gridW - 1 || cell.y === 0 || cell.y === gridH - 1) edgeTouches += 1;
+      let sides = 0;
       for (const dir of DIR_KEYS) {
         const step = DIRS[dir];
         const neighbor = key(cell.x + step.x, cell.y + step.y);
-        if (occupied.has(neighbor)) adjacent += 1;
+        if (occupied.has(neighbor)) {
+          adjacent += 1;
+          sides += 1;
+        }
       }
+      if (
+        occupied.has(key(cell.x - 1, cell.y)) && occupied.has(key(cell.x + 1, cell.y)) ||
+        occupied.has(key(cell.x, cell.y - 1)) && occupied.has(key(cell.x, cell.y + 1))
+      ) squeezed += 1;
+      if (sides >= 3) surrounded += 1;
       for (let y = cell.y - 2; y <= cell.y + 2; y++) {
         for (let x = cell.x - 2; x <= cell.x + 2; x++) {
           if (Math.abs(x - cell.x) + Math.abs(y - cell.y) > 2) continue;
           if (occupied.has(key(x, y))) near += 1;
         }
       }
+      const next = cells[index + 1];
+      if (next) {
+        const dx = Math.sign(next.x - cell.x);
+        const dy = Math.sign(next.y - cell.y);
+        const sideA = { x: -dy, y: dx };
+        const sideB = { x: dy, y: -dx };
+        if (occupied.has(key(cell.x + sideA.x, cell.y + sideA.y)) || occupied.has(key(next.x + sideA.x, next.y + sideA.y))) parallelTouch += 1;
+        if (occupied.has(key(cell.x + sideB.x, cell.y + sideB.y)) || occupied.has(key(next.x + sideB.x, next.y + sideB.y))) parallelTouch += 1;
+      }
     }
-    const compactness = adjacent * 4.2 + near * 0.72;
-    const centerPull = (cells.length - centerDistance) * (0.6 + config.centerBias);
-    return compactness + centerPull - edgeTouches * 0.34;
+    const compactness = adjacent * 3.7 + near * 0.52;
+    const weave = (squeezed * 8.5 + surrounded * 6.8 + parallelTouch * 3.2) * config.weaveBias;
+    const centerPull = (cells.length - centerDistance) * (0.82 + config.centerBias);
+    return compactness + weave + centerPull - edgeTouches * 1.1 - countIslands(cells, own) * 0.6;
+  }
+
+  function countIslands(cells, own) {
+    let looseEnds = 0;
+    for (const cell of cells) {
+      let links = 0;
+      for (const dir of DIR_KEYS) {
+        const step = DIRS[dir];
+        if (own.has(key(cell.x + step.x, cell.y + step.y))) links += 1;
+      }
+      if (links <= 1) looseEnds += 1;
+    }
+    return looseEnds;
   }
 
   function pickOccupiedCell(pieces, rng) {
