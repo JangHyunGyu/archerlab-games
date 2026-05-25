@@ -266,6 +266,7 @@
       this.gridH = config.size;
       this.exitRow = config.exitRow;
       this.exitSide = config.exitSide;
+      this.levelMetrics = puzzle.metrics || null;
       this.vehicles = puzzle.vehicles.map((vehicle, index) => ({
         ...cloneVehicle(vehicle),
         id: vehicle.id || `v${index}`,
@@ -775,27 +776,47 @@
   function getParkingConfig(level) {
     const rawLevel = Math.max(1, level | 0);
     const size = 6;
-    const progress = clamp((rawLevel - 1) / 40, 0, 1);
     const exitRow = 3;
     const exitSide = "left";
-    const vehicleCount = Math.min(13, 9 + Math.floor(progress * 4));
-    const scrambleMoves = Math.min(90, 22 + rawLevel * 2 + Math.floor(progress * 22));
-    return { size, exitRow, exitSide, vehicleCount, scrambleMoves, level: rawLevel };
+    const vehicleCount = rawLevel < 8 ? 9 : rawLevel < 16 ? 10 : rawLevel < 28 ? 11 : rawLevel < 40 ? 12 : 13;
+    const targetDepth = clamp(2 + Math.floor((rawLevel - 1) / 7), 2, 9);
+    const minBlockers = clamp(1 + Math.floor(rawLevel / 16), 1, 4);
+    const longVehicleRate = clamp(0.16 + rawLevel / 180, 0.18, 0.44);
+    const scrambleMoves = Math.min(120, 24 + rawLevel * 2);
+    const attempts = rawLevel < 16 ? 120 : rawLevel < 40 ? 170 : rawLevel < 80 ? 220 : 280;
+    const solverStateLimit = rawLevel < 40 ? 18000 : 26000;
+    return {
+      size,
+      exitRow,
+      exitSide,
+      vehicleCount,
+      targetDepth,
+      minBlockers,
+      longVehicleRate,
+      scrambleMoves,
+      attempts,
+      solverStateLimit,
+      level: rawLevel,
+    };
   }
 
   function createParkingPuzzle(config, seed) {
-    const rng = new Random(seed ^ 0x51f15eed);
     let best = null;
-    for (let attempt = 0; attempt < 80; attempt++) {
+    for (let attempt = 0; attempt < config.attempts; attempt++) {
+      const rng = new Random((seed ^ 0x51f15eed ^ Math.imul(attempt + 1, 0x9e3779b1)) >>> 0);
       const vehicles = createSolvedVehicleSet(config, rng, attempt);
       scrambleVehicles(vehicles, config, rng, config.scrambleMoves + attempt);
-      const score = scoreParkingPuzzle(vehicles, config);
-      if (!best || score > best.score) best = { vehicles: cloneVehicles(vehicles), score };
-      if (score >= 8 + Math.min(8, Math.floor(config.level / 10))) {
-        return { vehicles: cloneVehicles(vehicles) };
+      const metrics = measureParkingPuzzle(vehicles, config);
+      if (!metrics.valid) continue;
+      const score = scoreParkingCandidate(metrics, config);
+      if (!best || score < best.score) best = { vehicles: cloneVehicles(vehicles), metrics, score };
+      if (metrics.depth >= config.targetDepth && metrics.depth <= config.targetDepth + 1 && metrics.blockers >= config.minBlockers) {
+        return { vehicles: cloneVehicles(vehicles), metrics };
       }
     }
-    return { vehicles: best && best.score >= 3 ? best.vehicles : createFallbackPuzzle(config) };
+    if (best) return { vehicles: best.vehicles, metrics: best.metrics };
+    const fallback = createFallbackPuzzle(config);
+    return { vehicles: fallback, metrics: measureParkingPuzzle(fallback, config) };
   }
 
   function createSolvedVehicleSet(config, rng, attempt) {
@@ -813,8 +834,8 @@
     const tries = config.vehicleCount * 80 + attempt * 5;
     let colorCursor = 1;
     for (let i = 0; i < tries && vehicles.length < config.vehicleCount; i++) {
-      const axis = rng.chance(0.52) ? "V" : "H";
-      const length = rng.chance(config.level > 18 ? 0.28 : 0.14) ? 3 : 2;
+      const axis = rng.chance(0.58) ? "V" : "H";
+      const length = rng.chance(config.longVehicleRate) ? 3 : 2;
       const w = axis === "H" ? length : 1;
       const h = axis === "V" ? length : 1;
       const x = rng.int(0, config.size - w);
@@ -857,21 +878,80 @@
     }
   }
 
-  function scoreParkingPuzzle(vehicles, config) {
+  function measureParkingPuzzle(vehicles, config) {
     const target = vehicles.find(vehicle => vehicle.target);
-    if (!target) return 0;
+    if (!target) return { valid: false, depth: 0, blockers: 0, movable: 0, states: 0 };
     const occupied = makeVehicleOccupancy(vehicles, target.id);
     let blockers = 0;
     for (let x = 0; x < target.x; x++) {
       if (occupied.has(key(x, target.y))) blockers += 1;
     }
     const distance = target.x;
-    if (distance <= 0 || blockers <= 0) return 0;
     const movable = vehicles.filter(vehicle => {
       const range = getVehicleRange(vehicle, vehicles, config.size);
       return range.max > range.min;
     }).length;
-    return blockers * 7 + distance * 2 + movable * 0.35;
+    if (distance <= 0 || blockers <= 0) {
+      return { valid: false, depth: 0, blockers, movable, states: 0 };
+    }
+    const solution = solveParkingPuzzle(vehicles, config);
+    const valid = Number.isFinite(solution.depth) && solution.depth > 0;
+    return {
+      valid,
+      depth: valid ? solution.depth : 0,
+      blockers,
+      movable,
+      states: solution.states,
+      vehicles: vehicles.length,
+      distance,
+    };
+  }
+
+  function scoreParkingCandidate(metrics, config) {
+    const depthMiss = Math.max(0, config.targetDepth - metrics.depth);
+    const depthOver = Math.max(0, metrics.depth - config.targetDepth - 1);
+    const blockerMiss = Math.max(0, config.minBlockers - metrics.blockers);
+    const densityMiss = Math.max(0, config.vehicleCount - metrics.vehicles);
+    return depthMiss * 900
+      + depthOver * 60
+      + blockerMiss * 220
+      + densityMiss * 90
+      - metrics.depth * 18
+      - metrics.blockers * 6
+      - Math.min(metrics.states, 12000) / 1800;
+  }
+
+  function solveParkingPuzzle(vehicles, config) {
+    const start = cloneVehicles(vehicles);
+    const targetIndex = start.findIndex(vehicle => vehicle.target);
+    if (targetIndex < 0) return { depth: Infinity, states: 0 };
+
+    const queue = [{ vehicles: start, depth: 0 }];
+    const seen = new Set([encodeVehiclePositions(start)]);
+    for (let head = 0; head < queue.length && head < config.solverStateLimit; head++) {
+      const item = queue[head];
+      if (item.vehicles[targetIndex].x === 0) return { depth: item.depth, states: seen.size };
+
+      for (let i = 0; i < item.vehicles.length; i++) {
+        const vehicle = item.vehicles[i];
+        const range = getVehicleRange(vehicle, item.vehicles, config.size);
+        for (let pos = range.min; pos <= range.max; pos++) {
+          if ((vehicle.axis === "H" && pos === vehicle.x) || (vehicle.axis === "V" && pos === vehicle.y)) continue;
+          const next = cloneVehicles(item.vehicles);
+          if (vehicle.axis === "H") next[i].x = pos;
+          else next[i].y = pos;
+          const encoded = encodeVehiclePositions(next);
+          if (seen.has(encoded)) continue;
+          seen.add(encoded);
+          queue.push({ vehicles: next, depth: item.depth + 1 });
+        }
+      }
+    }
+    return { depth: Infinity, states: seen.size };
+  }
+
+  function encodeVehiclePositions(vehicles) {
+    return vehicles.map(vehicle => `${vehicle.x},${vehicle.y}`).join("|");
   }
 
   function createFallbackPuzzle(config) {
