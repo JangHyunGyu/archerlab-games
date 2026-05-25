@@ -145,7 +145,7 @@
       this.initialVehicleCount = 0;
       this.lastClear = null;
       this.startToken = 0;
-      this.sound = new ((window.ParkingSoundManager || window.ArrowsSoundManager) || class {
+      this.sound = new (window.ParkingSoundManager || class {
         ensure() {}
         play() {}
       })();
@@ -1202,5 +1202,4 @@
   }
 
   window.__parkingGame = new ParkingGame();
-  window.__arrowsGame = window.__parkingGame;
 })();
