@@ -1,7 +1,7 @@
 (function (global) {
   "use strict";
 
-  class ArrowsSoundManager {
+  class ParkingSoundManager {
     constructor() {
       this.enabled = true;
       this.ready = false;
@@ -152,6 +152,5 @@
     }
   }
 
-  global.ArrowsSoundManager = ArrowsSoundManager;
-  global.ParkingSoundManager = ArrowsSoundManager;
+  global.ParkingSoundManager = ParkingSoundManager;
 })(window);
