@@ -260,7 +260,6 @@
       dom.hud.classList.remove("hidden");
       this.boardLayer.visible = true;
       this.resize();
-      this.renderBoard();
       this.updateHud();
       this.playTone("start");
     }
@@ -374,14 +373,18 @@
       this.boardY = Math.round(topSafe + Math.max(0, (height - topSafe - bottomSafe - this.boardH) / 2));
       this.boardLayer.position.set(this.boardX, this.boardY);
 
-      if (this.mode === "playing") this.renderBoard();
+      if (this.mode === "playing" && !this.animating) {
+        this.cancelTweens({ clearFx: true });
+        this.renderBoard();
+      }
     }
 
     renderBoard() {
-      this.surfaceLayer.removeChildren();
-      this.gridLayer.removeChildren();
-      this.vehicleLayer.removeChildren();
-      this.fxLayer.removeChildren();
+      for (const vehicle of this.vehicles) vehicle.container = null;
+      clearLayer(this.surfaceLayer);
+      clearLayer(this.gridLayer);
+      clearLayer(this.vehicleLayer);
+      clearLayer(this.fxLayer);
 
       const hasCinematicBoard = !!textures[ASSETS.cinematicBoard];
       const pad = Math.round(this.cell * (hasCinematicBoard ? 1.16 : 0.34));
@@ -551,6 +554,25 @@
       app.stage.on("pointermove", this.boundMove || (this.boundMove = event => this.moveDrag(event)));
       app.stage.on("pointerup", this.boundEnd || (this.boundEnd = event => this.endDrag(event)));
       app.stage.on("pointerupoutside", this.boundEnd);
+    }
+
+    cancelDrag() {
+      if (!this.drag) return;
+      app.stage.off("pointermove", this.boundMove);
+      app.stage.off("pointerup", this.boundEnd);
+      app.stage.off("pointerupoutside", this.boundEnd);
+      const vehicle = this.drag.vehicle;
+      if (vehicle && vehicle.container && !vehicle.container.destroyed) {
+        vehicle.container.cursor = "grab";
+        vehicle.container.alpha = 1;
+        vehicle.container.zIndex = vehicle.target ? 10 : 1;
+      }
+      this.drag = null;
+    }
+
+    cancelTweens({ clearFx = false } = {}) {
+      this.tweens = [];
+      if (clearFx && this.fxLayer) clearLayer(this.fxLayer);
     }
 
     moveDrag(event) {
@@ -1285,6 +1307,13 @@
 
   function waitMs(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function clearLayer(layer) {
+    if (!layer) return;
+    for (const child of layer.removeChildren()) {
+      if (child && !child.destroyed) child.destroy({ children: true });
+    }
   }
 
   function coverSprite(sprite, width, height) {
