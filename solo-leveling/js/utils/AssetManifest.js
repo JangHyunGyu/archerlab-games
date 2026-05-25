@@ -90,12 +90,14 @@ const COMBAT_EFFECT_FILE_PREFIXES = {
     flame_burn: 'flame_burn_v2',
     monster_hit: 'monster_hit_v2',
     monster_crit: 'monster_crit_v2',
+    monster_death: 'monster_death_bloodburst',
     sanctuary_hit: 'sanctuary_hit_v2',
 };
 const COMBAT_EFFECT_FRAME_COUNTS = {
     flame_burn: 12,
     monster_hit: 12,
     monster_crit: 16,
+    monster_death: 16,
     sanctuary_hit: 16,
 };
 const ENEMY_BOSS_EFFECT_KEYS = [

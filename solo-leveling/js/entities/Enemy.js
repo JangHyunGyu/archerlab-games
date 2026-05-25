@@ -1072,10 +1072,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.x,
                 this.y - this.displayHeight * 0.05,
                 {
-                    scale: Phaser.Math.Clamp(0.38 * sizeFactor, 0.42, isElite ? 1.25 : 0.95),
+                    scale: Phaser.Math.Clamp(0.34 * sizeFactor, 0.38, isElite ? 1.08 : 0.84),
                     rotation: Phaser.Math.FloatBetween(-0.5, 0.5),
                     depth: 18,
-                    frameMs: 48,
+                    frameMs: 34,
+                    frameCount: 16,
                 }
             );
 
@@ -1086,20 +1087,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Pooled sparks (gore flecks)
             const sparks = Enemy._getDeathSparks(this.scene, this.x, this.y);
             if (sparks) sparks.explode(usedDeathAsset ? (isElite ? 22 : 13) : (isElite ? 16 : 9));
-
-            // Bright red core burst
-            const core = this.scene.add.circle(this.x, this.y, 9 * sizeFactor, 0xcc0011, 0.95).setDepth(10);
-            this.scene.tweens.add({
-                targets: core, scale: 3, alpha: 0,
-                duration: 360, onComplete: () => core.destroy(),
-            });
-
-            // Dark splash underlay
-            const splash = this.scene.add.circle(this.x, this.y, 13 * sizeFactor, 0x4a0006, 0.8).setDepth(4);
-            this.scene.tweens.add({
-                targets: splash, scale: 2.6, alpha: 0,
-                duration: 700, onComplete: () => splash.destroy(),
-            });
 
             // Flying gore chunks (bigger, irregular)
             const chunkScale = constrained ? (isElite ? 0.6 : 0.35) : 1;
@@ -1160,16 +1147,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (!this.scene) return;
         if (Enemy._isVfxSaturated(this.scene) && !this.isElite && !this._eliteDeathPending) return;
         const sizeFactor = Math.max(1, (this.displayWidth || 30) / 42);
-        const burst = this.scene.add.circle(this.x, this.y, 7 * sizeFactor, color, 0.72).setDepth(12);
-        burst.setBlendMode(Phaser.BlendModes.ADD);
-        this.scene.tweens.add({
-            targets: burst,
-            alpha: 0,
-            scale: 2.4,
-            duration: 320,
-            ease: 'Quad.easeOut',
-            onComplete: () => burst.destroy(),
-        });
+        const isElite = this.isElite || this._eliteDeathPending;
+        const count = isElite ? 10 : 5;
+        for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const distance = (18 + Math.random() * (isElite ? 60 : 38)) * sizeFactor;
+            const w = (3 + Math.random() * 5) * sizeFactor;
+            const h = (1.5 + Math.random() * 2.5) * sizeFactor;
+            const drop = this.scene.add.ellipse(this.x, this.y, w, h, color, 0.78)
+                .setDepth(12)
+                .setRotation(a);
+            this.scene.tweens.add({
+                targets: drop,
+                x: this.x + Math.cos(a) * distance,
+                y: this.y + Math.sin(a) * distance + 8 * sizeFactor,
+                alpha: 0,
+                scaleX: 0.45,
+                scaleY: 0.45,
+                duration: 300 + Math.random() * 220,
+                ease: 'Quad.easeOut',
+                onComplete: () => drop.destroy(),
+            });
+        }
     }
 
     _burnDeathEffect() {
