@@ -325,7 +325,7 @@
       this.boardW = this.cell * this.gridW;
       this.boardH = this.cell * this.gridH;
 
-      const contentW = Math.max(viewportW, this.boardW + side * 2 + this.cell * 0.9);
+      const contentW = Math.max(viewportW, this.boardW + side * 2 + this.cell * 1.1);
       const contentH = Math.max(viewportH, this.boardH + topSafe + bottomSafe);
       if (app.screen.width !== contentW || app.screen.height !== contentH) {
         app.renderer.resize(contentW, contentH);
@@ -349,7 +349,7 @@
         spark.y = spark.baseY * height;
       }
 
-      this.boardX = Math.round(Math.max(side, (width - this.boardW) / 2));
+      this.boardX = Math.round(Math.max(side + this.cell * 0.9, (width - this.boardW) / 2));
       this.boardY = Math.round(topSafe + Math.max(0, (height - topSafe - bottomSafe - this.boardH) / 2));
       this.boardLayer.position.set(this.boardX, this.boardY);
 
@@ -362,19 +362,21 @@
       this.vehicleLayer.removeChildren();
       this.fxLayer.removeChildren();
 
-      const pad = Math.round(this.cell * 0.58);
-      const surface = new PIXI.Graphics();
-      surface.roundRect(-pad * 1.22, -pad * 1.22, this.boardW + pad * 2.44, this.boardH + pad * 2.44, this.cell * 0.26)
-        .fill({ color: 0x74efff, alpha: 0.22 });
-      surface.roundRect(-pad, -pad, this.boardW + pad * 2, this.boardH + pad * 2, this.cell * 0.2)
-        .fill({ color: 0xf8fbff, alpha: 0.98 })
-        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0xffffff, alpha: 0.92 });
-      surface.roundRect(-pad * 0.55, -pad * 0.55, this.boardW + pad * 1.1, this.boardH + pad * 1.1, this.cell * 0.12)
-        .fill({ color: 0xe8edf3, alpha: 0.92 })
-        .stroke({ width: Math.max(1, this.cell * 0.018), color: 0x9aa8b6, alpha: 0.26 });
-      surface.roundRect(0, 0, this.boardW, this.boardH, this.cell * 0.08)
-        .fill({ color: 0xf9fbff, alpha: 0.98 });
-      this.surfaceLayer.addChild(surface);
+      const pad = Math.round(this.cell * 0.34);
+      if (textures[ASSETS.board]) {
+        const surface = new PIXI.Sprite(textures[ASSETS.board]);
+        surface.x = -pad;
+        surface.y = -pad;
+        surface.width = this.boardW + pad * 2;
+        surface.height = this.boardH + pad * 2;
+        surface.alpha = 0.92;
+        this.surfaceLayer.addChild(surface);
+      } else {
+        const fallback = new PIXI.Graphics();
+        fallback.roundRect(-pad, -pad, this.boardW + pad * 2, this.boardH + pad * 2, this.cell * 0.2)
+          .fill({ color: 0x111a24, alpha: 0.96 });
+        this.surfaceLayer.addChild(fallback);
+      }
 
       this.drawBoardChrome(pad);
       for (const vehicle of this.vehicles) this.drawVehicle(vehicle);
@@ -382,45 +384,38 @@
 
     drawBoardChrome(pad) {
       const g = new PIXI.Graphics();
-      const lineColor = 0x9fafbf;
+      const lineColor = 0xd9e7ed;
       const exitY = this.exitRow * this.cell;
       const exitGapY = exitY + this.cell * 0.08;
       const exitGapH = this.cell * 0.84;
-      const wallW = Math.max(8, this.cell * 0.16);
-      const wallColor = 0xf7fbff;
 
       g.roundRect(-pad, -pad, this.boardW + pad * 2, this.boardH + pad * 2, this.cell * 0.2)
-        .stroke({ width: Math.max(2, this.cell * 0.04), color: 0xffffff, alpha: 0.56 });
+        .stroke({ width: Math.max(2, this.cell * 0.04), color: 0x79eaff, alpha: 0.28 });
       g.roundRect(0, 0, this.boardW, this.boardH, this.cell * 0.08)
-        .fill({ color: 0xffffff, alpha: 0.18 })
-        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0x86a0b8, alpha: 0.42 });
+        .fill({ color: 0x07101b, alpha: 0.2 })
+        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0xf3f8ff, alpha: 0.3 });
 
       for (let x = 1; x < this.gridW; x++) {
         g.moveTo(x * this.cell, 0).lineTo(x * this.cell, this.boardH)
-          .stroke({ width: Math.max(1, this.cell * 0.012), color: lineColor, alpha: 0.28 });
+          .stroke({ width: Math.max(1, this.cell * 0.012), color: lineColor, alpha: 0.14 });
       }
       for (let y = 1; y < this.gridH; y++) {
         g.moveTo(0, y * this.cell).lineTo(this.boardW, y * this.cell)
-          .stroke({ width: Math.max(1, this.cell * 0.012), color: lineColor, alpha: 0.28 });
+          .stroke({ width: Math.max(1, this.cell * 0.012), color: lineColor, alpha: 0.14 });
       }
 
       for (let y = 0; y < this.gridH; y++) {
         for (let x = 0; x < this.gridW; x++) {
           g.roundRect(x * this.cell + this.cell * 0.1, y * this.cell + this.cell * 0.1, this.cell * 0.8, this.cell * 0.8, this.cell * 0.05)
-            .fill({ color: 0xffffff, alpha: 0.08 })
-            .stroke({ width: Math.max(1, this.cell * 0.01), color: 0x6f8294, alpha: 0.14 });
+            .stroke({ width: Math.max(1, this.cell * 0.01), color: 0xeff8ff, alpha: 0.1 });
         }
       }
 
-      g.rect(-pad * 0.58, -pad * 0.58, wallW, exitGapY + pad * 0.58)
-        .fill({ color: wallColor, alpha: 0.98 });
-      g.rect(-pad * 0.58, exitGapY + exitGapH, wallW, this.boardH - exitGapY - exitGapH + pad * 0.58)
-        .fill({ color: wallColor, alpha: 0.98 });
       g.rect(-this.cell * 0.16, exitGapY, this.cell * 0.2, exitGapH)
-        .fill({ color: 0x70efff, alpha: 0.26 });
+        .fill({ color: 0x07101b, alpha: 0.92 });
       g.roundRect(-this.cell * 0.76, exitY + this.cell * 0.12, this.cell * 0.64, this.cell * 0.76, this.cell * 0.12)
-        .fill({ color: 0xffffff, alpha: 0.68 })
-        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0x45c9e8, alpha: 0.86 });
+        .fill({ color: 0x0d2d35, alpha: 0.78 })
+        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0x68f5ff, alpha: 0.76 });
       g.moveTo(-this.cell * 0.24, exitY + this.cell * 0.5)
         .lineTo(-this.cell * 0.62, exitY + this.cell * 0.5)
         .stroke({ width: Math.max(3, this.cell * 0.055), color: 0xffd05a, alpha: 0.9, cap: "round" });
@@ -542,9 +537,9 @@
     canTargetExit() {
       const target = this.vehicles.find(vehicle => vehicle.target);
       if (!target || target.axis !== "H") return false;
-      if (target.x + target.w < this.gridW) return false;
+      if (target.x > 0) return false;
       const occupied = makeVehicleOccupancy(this.vehicles, target.id);
-      for (let x = target.x + target.w; x < this.gridW; x++) {
+      for (let x = 0; x < target.x; x++) {
         if (occupied.has(key(x, target.y))) return false;
       }
       return true;
@@ -554,7 +549,7 @@
       this.animating = true;
       vehicle.container.eventMode = "none";
       const startX = vehicle.container.x;
-      const endX = this.boardW + this.cell * 1.2;
+      const endX = -this.cell * 1.9;
       this.spawnExitGlow(vehicle);
       this.tweens.push({
         duration: 680,
@@ -582,9 +577,9 @@
         update: t => {
           g.clear();
           const alpha = 1 - t;
-          g.roundRect(this.boardW - this.cell * 0.35, y - this.cell * 0.42, this.cell * 1.45, this.cell * 0.84, this.cell * 0.16)
+          g.roundRect(-this.cell * 1.1, y - this.cell * 0.42, this.cell * 1.45, this.cell * 0.84, this.cell * 0.16)
             .fill({ color: 0xffd05a, alpha: 0.18 * alpha });
-          g.moveTo(this.boardW - this.cell * 0.2, y).lineTo(this.boardW + this.cell * 0.95, y)
+          g.moveTo(this.cell * 0.18, y).lineTo(-this.cell * 0.95, y)
             .stroke({ width: Math.max(4, this.cell * 0.08), color: 0xffd05a, alpha: 0.9 * alpha, cap: "round" });
           return t >= 1;
         },
@@ -780,10 +775,11 @@
     const rawLevel = Math.max(1, level | 0);
     const size = 6;
     const progress = clamp((rawLevel - 1) / 40, 0, 1);
-    const exitRow = 2;
+    const exitRow = 3;
+    const exitSide = "left";
     const vehicleCount = Math.min(13, 9 + Math.floor(progress * 4));
     const scrambleMoves = Math.min(90, 22 + rawLevel * 2 + Math.floor(progress * 22));
-    return { size, exitRow, vehicleCount, scrambleMoves, level: rawLevel };
+    return { size, exitRow, exitSide, vehicleCount, scrambleMoves, level: rawLevel };
   }
 
   function createParkingPuzzle(config, seed) {
@@ -806,7 +802,7 @@
       id: "goal",
       target: true,
       axis: "H",
-      x: config.size - 2,
+      x: 0,
       y: config.exitRow,
       w: 2,
       h: 1,
@@ -851,7 +847,10 @@
       if (targetItem && (step < 5 || rng.chance(0.18))) item = targetItem;
       const { vehicle, range } = item;
       let next = rng.int(range.min, range.max);
-      if (vehicle.target) next = rng.int(range.min, Math.max(range.min, vehicle.x - 1));
+      if (vehicle.target) {
+        const minTarget = Math.min(range.max, vehicle.x + 1);
+        next = rng.int(minTarget, range.max);
+      }
       if (vehicle.axis === "H") vehicle.x = next;
       else vehicle.y = next;
     }
