@@ -559,16 +559,19 @@
       app.stage.off("pointerupoutside", this.boundEnd);
 
       let moved = false;
+      let movedCells = 0;
       if (vehicle.axis === "H") {
         const nextX = clamp(Math.round(vehicle.container.x / this.cell), range.min, range.max);
         vehicle.x = nextX;
         vehicle.container.x = nextX * this.cell;
         moved = nextX !== originX;
+        movedCells = Math.abs(nextX - originX);
       } else {
         const nextY = clamp(Math.round(vehicle.container.y / this.cell), range.min, range.max);
         vehicle.y = nextY;
         vehicle.container.y = nextY * this.cell;
         moved = nextY !== originY;
+        movedCells = Math.abs(nextY - originY);
       }
 
       vehicle.container.cursor = "grab";
@@ -583,7 +586,7 @@
 
       this.moves += 1;
       this.updateHud();
-      this.playTone(vehicle.target ? "clear" : "button", 0.8);
+      this.playTone(vehicle.target ? "targetMove" : "move", clamp(0.26 + movedCells * 0.18, 0.35, 0.95));
 
       if (vehicle.target && this.canTargetExit()) {
         this.exitTarget(vehicle);
@@ -624,6 +627,7 @@
       const startX = vehicle.container.x;
       const endX = -this.cell * 1.9;
       this.spawnExitGlow(vehicle);
+      this.playTone("exit", 0.95);
       this.tweens.push({
         duration: 680,
         elapsed: 0,
@@ -951,7 +955,7 @@
       const { vehicle, range } = item;
       let next = rng.int(range.min, range.max);
       if (vehicle.target) {
-        const minTarget = Math.min(range.max, vehicle.x + 1);
+        const minTarget = Math.min(range.max, 1);
         next = rng.int(minTarget, range.max);
       }
       if (vehicle.axis === "H") vehicle.x = next;
