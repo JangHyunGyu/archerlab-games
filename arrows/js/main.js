@@ -128,7 +128,8 @@
       this.moves = 0;
       this.gridW = 6;
       this.gridH = 6;
-      this.exitRow = 2;
+      this.exitRow = 3;
+      this.exitSide = "left";
       this.cell = 68;
       this.boardX = 0;
       this.boardY = 0;
@@ -264,6 +265,7 @@
       this.gridW = config.size;
       this.gridH = config.size;
       this.exitRow = config.exitRow;
+      this.exitSide = config.exitSide;
       this.vehicles = puzzle.vehicles.map((vehicle, index) => ({
         ...cloneVehicle(vehicle),
         id: vehicle.id || `v${index}`,
@@ -360,21 +362,19 @@
       this.vehicleLayer.removeChildren();
       this.fxLayer.removeChildren();
 
-      const pad = Math.round(this.cell * 0.72);
-      if (textures[ASSETS.board]) {
-        const surface = new PIXI.Sprite(textures[ASSETS.board]);
-        surface.x = -pad;
-        surface.y = -pad;
-        surface.width = this.boardW + pad * 2;
-        surface.height = this.boardH + pad * 2;
-        surface.alpha = 1;
-        this.surfaceLayer.addChild(surface);
-      } else {
-        const fallback = new PIXI.Graphics();
-        fallback.roundRect(-pad, -pad, this.boardW + pad * 2, this.boardH + pad * 2, this.cell * 0.2)
-          .fill({ color: 0xf7fbff, alpha: 0.96 });
-        this.surfaceLayer.addChild(fallback);
-      }
+      const pad = Math.round(this.cell * 0.58);
+      const surface = new PIXI.Graphics();
+      surface.roundRect(-pad * 1.22, -pad * 1.22, this.boardW + pad * 2.44, this.boardH + pad * 2.44, this.cell * 0.26)
+        .fill({ color: 0x74efff, alpha: 0.22 });
+      surface.roundRect(-pad, -pad, this.boardW + pad * 2, this.boardH + pad * 2, this.cell * 0.2)
+        .fill({ color: 0xf8fbff, alpha: 0.98 })
+        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0xffffff, alpha: 0.92 });
+      surface.roundRect(-pad * 0.55, -pad * 0.55, this.boardW + pad * 1.1, this.boardH + pad * 1.1, this.cell * 0.12)
+        .fill({ color: 0xe8edf3, alpha: 0.92 })
+        .stroke({ width: Math.max(1, this.cell * 0.018), color: 0x9aa8b6, alpha: 0.26 });
+      surface.roundRect(0, 0, this.boardW, this.boardH, this.cell * 0.08)
+        .fill({ color: 0xf9fbff, alpha: 0.98 });
+      this.surfaceLayer.addChild(surface);
 
       this.drawBoardChrome(pad);
       for (const vehicle of this.vehicles) this.drawVehicle(vehicle);
@@ -383,8 +383,14 @@
     drawBoardChrome(pad) {
       const g = new PIXI.Graphics();
       const lineColor = 0x9fafbf;
+      const exitY = this.exitRow * this.cell;
+      const exitGapY = exitY + this.cell * 0.08;
+      const exitGapH = this.cell * 0.84;
+      const wallW = Math.max(8, this.cell * 0.16);
+      const wallColor = 0xf7fbff;
+
       g.roundRect(-pad, -pad, this.boardW + pad * 2, this.boardH + pad * 2, this.cell * 0.2)
-        .stroke({ width: Math.max(2, this.cell * 0.04), color: 0xffffff, alpha: 0.52 });
+        .stroke({ width: Math.max(2, this.cell * 0.04), color: 0xffffff, alpha: 0.56 });
       g.roundRect(0, 0, this.boardW, this.boardH, this.cell * 0.08)
         .fill({ color: 0xffffff, alpha: 0.18 })
         .stroke({ width: Math.max(2, this.cell * 0.035), color: 0x86a0b8, alpha: 0.42 });
@@ -406,18 +412,21 @@
         }
       }
 
-      const exitY = this.exitRow * this.cell;
-      g.rect(this.boardW - this.cell * 0.06, exitY + this.cell * 0.08, this.cell * 0.16, this.cell * 0.84)
-        .fill({ color: 0x6ceeff, alpha: 0.16 });
-      g.roundRect(this.boardW + this.cell * 0.04, exitY + this.cell * 0.12, this.cell * 0.64, this.cell * 0.76, this.cell * 0.12)
+      g.rect(-pad * 0.58, -pad * 0.58, wallW, exitGapY + pad * 0.58)
+        .fill({ color: wallColor, alpha: 0.98 });
+      g.rect(-pad * 0.58, exitGapY + exitGapH, wallW, this.boardH - exitGapY - exitGapH + pad * 0.58)
+        .fill({ color: wallColor, alpha: 0.98 });
+      g.rect(-this.cell * 0.16, exitGapY, this.cell * 0.2, exitGapH)
+        .fill({ color: 0x70efff, alpha: 0.26 });
+      g.roundRect(-this.cell * 0.76, exitY + this.cell * 0.12, this.cell * 0.64, this.cell * 0.76, this.cell * 0.12)
         .fill({ color: 0xffffff, alpha: 0.68 })
         .stroke({ width: Math.max(2, this.cell * 0.035), color: 0x45c9e8, alpha: 0.86 });
-      g.moveTo(this.boardW + this.cell * 0.16, exitY + this.cell * 0.5)
-        .lineTo(this.boardW + this.cell * 0.54, exitY + this.cell * 0.5)
+      g.moveTo(-this.cell * 0.24, exitY + this.cell * 0.5)
+        .lineTo(-this.cell * 0.62, exitY + this.cell * 0.5)
         .stroke({ width: Math.max(3, this.cell * 0.055), color: 0xffd05a, alpha: 0.9, cap: "round" });
-      g.moveTo(this.boardW + this.cell * 0.44, exitY + this.cell * 0.32)
-        .lineTo(this.boardW + this.cell * 0.58, exitY + this.cell * 0.5)
-        .lineTo(this.boardW + this.cell * 0.44, exitY + this.cell * 0.68)
+      g.moveTo(-this.cell * 0.52, exitY + this.cell * 0.32)
+        .lineTo(-this.cell * 0.68, exitY + this.cell * 0.5)
+        .lineTo(-this.cell * 0.52, exitY + this.cell * 0.68)
         .stroke({ width: Math.max(3, this.cell * 0.055), color: 0xffd05a, alpha: 0.9, cap: "round", join: "round" });
 
       this.gridLayer.addChild(g);
