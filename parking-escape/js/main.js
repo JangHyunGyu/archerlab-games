@@ -9,6 +9,7 @@
     menu: "assets/ui/menu-bg.png",
     board: "assets/ui/board-surface.png",
     cinematicBoard: "assets/ui/game-board-cinematic.png",
+    asphaltTile: "assets/ui/asphalt-tile.png",
   };
 
   const VEHICLE_ASSETS = [
@@ -95,7 +96,7 @@
 
   let textures = {};
   try {
-    textures = await PIXI.Assets.load([ASSETS.menu, ASSETS.board, ASSETS.cinematicBoard, ...VEHICLE_ASSETS]);
+    textures = await PIXI.Assets.load([ASSETS.menu, ASSETS.board, ASSETS.cinematicBoard, ASSETS.asphaltTile, ...VEHICLE_ASSETS]);
   } catch (error) {
     console.warn("[Parking] asset load failed; using vector fallback.", error);
   }
@@ -382,7 +383,7 @@
         surface.y = -pad;
         surface.width = this.boardW + pad * 2;
         surface.height = this.boardH + pad * 2;
-        surface.alpha = hasCinematicBoard ? 0.98 : 0.92;
+        surface.alpha = hasCinematicBoard ? 0.9 : 0.92;
         this.surfaceLayer.addChild(surface);
       } else {
         const fallback = new PIXI.Graphics();
@@ -391,8 +392,40 @@
         this.surfaceLayer.addChild(fallback);
       }
 
+      this.drawTileSurface(hasCinematicBoard);
       this.drawBoardChrome(pad, hasCinematicBoard);
       for (const vehicle of this.vehicles) this.drawVehicle(vehicle);
+    }
+
+    drawTileSurface(hasCinematicBoard = false) {
+      const base = new PIXI.Graphics();
+      base.roundRect(-this.cell * 0.02, -this.cell * 0.02, this.boardW + this.cell * 0.04, this.boardH + this.cell * 0.04, this.cell * 0.08)
+        .fill({ color: 0x071018, alpha: hasCinematicBoard ? 0.96 : 0.88 });
+      this.surfaceLayer.addChild(base);
+
+      const tileTexture = textures[ASSETS.asphaltTile];
+      for (let y = 0; y < this.gridH; y++) {
+        for (let x = 0; x < this.gridW; x++) {
+          const tx = x * this.cell + this.cell * 0.055;
+          const ty = y * this.cell + this.cell * 0.055;
+          const size = this.cell * 0.89;
+          if (tileTexture) {
+            const tile = new PIXI.Sprite(tileTexture);
+            tile.x = tx;
+            tile.y = ty;
+            tile.width = size;
+            tile.height = size;
+            tile.alpha = 0.94;
+            tile.tint = ((x + y) % 3 === 0) ? 0xf6fbff : ((x * 7 + y * 11) % 4 === 0 ? 0xe9f2f7 : 0xffffff);
+            this.surfaceLayer.addChild(tile);
+          } else {
+            const fallback = new PIXI.Graphics();
+            fallback.roundRect(tx, ty, size, size, this.cell * 0.05)
+              .fill({ color: 0x111a22, alpha: 0.96 });
+            this.surfaceLayer.addChild(fallback);
+          }
+        }
+      }
     }
 
     drawBoardChrome(pad, hasCinematicBoard = false) {
@@ -420,10 +453,17 @@
       for (let y = 0; y < this.gridH; y++) {
         for (let x = 0; x < this.gridW; x++) {
           g.roundRect(x * this.cell + this.cell * 0.1, y * this.cell + this.cell * 0.1, this.cell * 0.8, this.cell * 0.8, this.cell * 0.05)
-            .stroke({ width: Math.max(1, this.cell * 0.01), color: 0xeff8ff, alpha: hasCinematicBoard ? 0.06 : 0.1 });
+            .stroke({ width: Math.max(1, this.cell * 0.012), color: 0xdfe8ef, alpha: hasCinematicBoard ? 0.2 : 0.1 });
         }
       }
 
+      if (hasCinematicBoard) {
+        g.roundRect(-this.cell * 1.02, exitY + this.cell * 0.1, this.cell * 0.94, this.cell * 0.8, this.cell * 0.16)
+          .fill({ color: 0x110b04, alpha: 0.56 })
+          .stroke({ width: Math.max(1, this.cell * 0.02), color: 0xffc34a, alpha: 0.34 });
+        g.roundRect(-this.cell * 1.1, exitY + this.cell * 0.2, this.cell, this.cell * 0.6, this.cell * 0.18)
+          .fill({ color: 0xffb931, alpha: 0.11 });
+      }
       g.rect(-this.cell * 0.16, exitGapY, this.cell * 0.2, exitGapH)
         .fill({ color: 0x07101b, alpha: hasCinematicBoard ? 0.82 : 0.92 });
       g.roundRect(-this.cell * 0.86, exitY + this.cell * 0.1, this.cell * 0.72, this.cell * 0.8, this.cell * 0.12)
