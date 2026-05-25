@@ -190,7 +190,11 @@ export function getGameplayAssetList(characterId = getStoredCharacterId()) {
         ...COMBAT_EFFECT_KEYS.flatMap(key => {
             const filePrefix = COMBAT_EFFECT_FILE_PREFIXES[key] || key;
             const frameCount = COMBAT_EFFECT_FRAME_COUNTS[key] || 6;
-            return Array.from({ length: frameCount }, (_, i) => ({ key: `effect_${key}_${i}`, path: `assets/effects/combat/${filePrefix}_${i}.png` }));
+            return Array.from({ length: frameCount }, (_, i) => ({
+                key: `effect_${key}_${i}`,
+                path: `assets/effects/combat/${filePrefix}_${i}.png`,
+                preferPng: key === 'monster_death',
+            }));
         }),
         ...ENEMY_BOSS_EFFECT_KEYS.flatMap(key => (
             Array.from({ length: 6 }, (_, i) => ({ key: `effect_${key}_${i}`, path: `assets/effects/enemy_boss/${key}_${i}.png` }))

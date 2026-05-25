@@ -712,9 +712,9 @@ export class MenuScene extends Phaser.Scene {
         }
     }
 
-    _queueRuntimeImage(key, pngPath, fallbackMap = null) {
+    _queueRuntimeImage(key, pngPath, fallbackMap = null, options = {}) {
         if (this.textures.exists(key)) return false;
-        const useWebP = this._supportsWebP() && pngPath.endsWith('.png');
+        const useWebP = !options.preferPng && this._supportsWebP() && pngPath.endsWith('.png');
         const path = useWebP ? pngPath.replace(/\.png$/i, '.webp') : pngPath;
         if (useWebP && fallbackMap) fallbackMap.set(key, pngPath);
         this.load.image(key, path);
@@ -728,7 +728,7 @@ export class MenuScene extends Phaser.Scene {
             .filter((asset) => {
                 if (this.textures.exists(asset.key) || pendingKeys.has(asset.key)) return false;
                 pendingKeys.add(asset.key);
-                return this._queueRuntimeImage(asset.key, asset.path, fallbackMap);
+                return this._queueRuntimeImage(asset.key, asset.path, fallbackMap, asset);
             });
 
         if (queued.length === 0) {
