@@ -318,14 +318,15 @@
       const side = viewportW < 620 ? 14 : 46;
       const maxBoardW = viewportW - side * 2;
       const maxBoardH = viewportH - topSafe - bottomSafe;
-      const rawCell = Math.floor(Math.min(maxBoardW / this.gridW, maxBoardH / this.gridH));
+      const exitExtra = this.exitSide === "left" ? 0.9 : 0;
+      const rawCell = Math.floor(Math.min(maxBoardW / (this.gridW + exitExtra), maxBoardH / this.gridH));
       const minCell = viewportW < 390 ? 44 : viewportW < 620 ? 48 : 58;
       const maxCell = viewportW < 620 ? 66 : 86;
       this.cell = clamp(rawCell, minCell, maxCell);
       this.boardW = this.cell * this.gridW;
       this.boardH = this.cell * this.gridH;
 
-      const contentW = Math.max(viewportW, this.boardW + side * 2 + this.cell * 1.1);
+      const contentW = Math.max(viewportW, this.boardW + side * 2 + this.cell * 0.9);
       const contentH = Math.max(viewportH, this.boardH + topSafe + bottomSafe);
       if (app.screen.width !== contentW || app.screen.height !== contentH) {
         app.renderer.resize(contentW, contentH);
@@ -861,10 +862,10 @@
     if (!target) return 0;
     const occupied = makeVehicleOccupancy(vehicles, target.id);
     let blockers = 0;
-    for (let x = target.x + target.w; x < config.size; x++) {
+    for (let x = 0; x < target.x; x++) {
       if (occupied.has(key(x, target.y))) blockers += 1;
     }
-    const distance = config.size - (target.x + target.w);
+    const distance = target.x;
     if (distance <= 0 || blockers <= 0) return 0;
     const movable = vehicles.filter(vehicle => {
       const range = getVehicleRange(vehicle, vehicles, config.size);
@@ -976,7 +977,7 @@
       sprite.anchor.set(0.5);
       sprite.x = w * 0.5;
       sprite.y = h * 0.5;
-      sprite.rotation = vehicle.axis === "H" ? -Math.PI / 2 : 0;
+      sprite.rotation = vehicle.axis === "H" ? Math.PI / 2 : 0;
       if (vehicle.axis === "H") {
         sprite.scale.set(targetH / texW, targetW / texH);
       } else {
