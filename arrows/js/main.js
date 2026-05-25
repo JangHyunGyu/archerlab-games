@@ -779,7 +779,7 @@
     const exitRow = 3;
     const exitSide = "left";
     const vehicleCount = rawLevel < 8 ? 9 : rawLevel < 16 ? 10 : rawLevel < 28 ? 11 : rawLevel < 40 ? 12 : 13;
-    const targetDepth = clamp(2 + Math.floor((rawLevel - 1) / 7), 2, 9);
+    const targetDepth = getTargetSolutionDepth(rawLevel);
     const minBlockers = clamp(1 + Math.floor(rawLevel / 16), 1, 4);
     const longVehicleRate = clamp(0.16 + rawLevel / 180, 0.18, 0.44);
     const scrambleMoves = Math.min(120, 24 + rawLevel * 2);
@@ -817,6 +817,16 @@
     if (best) return { vehicles: best.vehicles, metrics: best.metrics };
     const fallback = createFallbackPuzzle(config);
     return { vehicles: fallback, metrics: measureParkingPuzzle(fallback, config) };
+  }
+
+  function getTargetSolutionDepth(level) {
+    if (level < 6) return 2;
+    if (level < 12) return 3;
+    if (level < 20) return 5;
+    if (level < 30) return 6;
+    if (level < 45) return 7;
+    if (level < 60) return 8;
+    return 9;
   }
 
   function createSolvedVehicleSet(config, rng, attempt) {
