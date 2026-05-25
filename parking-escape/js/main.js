@@ -425,12 +425,12 @@
       }
 
       g.rect(-this.cell * 0.16, exitGapY, this.cell * 0.2, exitGapH)
-        .fill({ color: 0x07101b, alpha: hasCinematicBoard ? 0.72 : 0.92 });
+        .fill({ color: 0x07101b, alpha: hasCinematicBoard ? 0.82 : 0.92 });
       g.roundRect(-this.cell * 0.86, exitY + this.cell * 0.1, this.cell * 0.72, this.cell * 0.8, this.cell * 0.12)
-        .fill({ color: 0x0d2d35, alpha: hasCinematicBoard ? 0.46 : 0.78 })
-        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0x68f5ff, alpha: hasCinematicBoard ? 0.62 : 0.76 });
-      g.roundRect(-this.cell * 1.08, exitY + this.cell * 0.18, this.cell * 0.96, this.cell * 0.64, this.cell * 0.18)
-        .fill({ color: 0xffb931, alpha: hasCinematicBoard ? 0.12 : 0.08 });
+        .fill({ color: hasCinematicBoard ? 0x1d1405 : 0x0d2d35, alpha: hasCinematicBoard ? 0.24 : 0.78 })
+        .stroke({ width: Math.max(2, this.cell * 0.03), color: hasCinematicBoard ? 0xffc34a : 0x68f5ff, alpha: hasCinematicBoard ? 0.48 : 0.76 });
+      g.roundRect(-this.cell * 1.16, exitY + this.cell * 0.18, this.cell * 1.04, this.cell * 0.64, this.cell * 0.18)
+        .fill({ color: 0xffb931, alpha: hasCinematicBoard ? 0.14 : 0.08 });
       for (let i = 0; i < 3; i++) {
         const cx = -this.cell * (0.52 + i * 0.22);
         g.moveTo(cx + this.cell * 0.08, exitY + this.cell * 0.3)
