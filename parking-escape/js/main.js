@@ -147,6 +147,8 @@
       this.initialVehicleCount = 0;
       this.lastClear = null;
       this.startToken = 0;
+      this.resizeQueued = false;
+      this.orientationTimer = null;
       this.sound = new (window.ParkingSoundManager || class {
         ensure() {}
         play() {}
@@ -180,8 +182,12 @@
       this.resize();
 
       app.ticker.add(ticker => this.update(ticker.deltaMS));
-      window.addEventListener("resize", () => this.resize(), { passive: true });
-      window.addEventListener("orientationchange", () => setTimeout(() => this.resize(), 250), { passive: true });
+      window.addEventListener("resize", () => this.queueResize(), { passive: true });
+      window.addEventListener("orientationchange", () => {
+        clearTimeout(this.orientationTimer);
+        this.orientationTimer = setTimeout(() => this.queueResize(), 250);
+      }, { passive: true });
+      window.addEventListener("blur", () => this.cancelDrag(), { passive: true });
       document.addEventListener("pointerdown", () => this.ensureAudio(), { once: true, passive: true });
     }
 
@@ -235,8 +241,8 @@
       this.level = Math.max(1, level | 0);
       localStorage.setItem(STORAGE.level, String(this.level));
       this.moves = 0;
-      this.tweens = [];
-      this.drag = null;
+      this.cancelDrag();
+      this.cancelTweens({ clearFx: true });
       this.mode = "loading";
       this.animating = false;
       dom.menu.classList.add("hidden");
@@ -283,8 +289,8 @@
       this.startToken += 1;
       this.mode = "menu";
       this.animating = false;
-      this.drag = null;
-      this.tweens = [];
+      this.cancelDrag();
+      this.cancelTweens({ clearFx: true });
       this.boardLayer.visible = false;
       dom.hud.classList.add("hidden");
       dom.modal.classList.add("hidden");
@@ -311,6 +317,16 @@
 
     hideLoading() {
       if (dom.loading) dom.loading.classList.add("hidden");
+    }
+
+    queueResize() {
+      if (this.resizeQueued) return;
+      this.resizeQueued = true;
+      requestAnimationFrame(() => {
+        this.resizeQueued = false;
+        this.cancelDrag();
+        this.resize();
+      });
     }
 
     resize() {
