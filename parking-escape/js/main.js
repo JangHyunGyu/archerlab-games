@@ -8,6 +8,7 @@
   const ASSETS = {
     menu: "assets/ui/menu-bg.png",
     board: "assets/ui/board-surface.png",
+    cinematicBoard: "assets/ui/game-board-cinematic.png",
   };
 
   const VEHICLE_ASSETS = [
@@ -94,7 +95,7 @@
 
   let textures = {};
   try {
-    textures = await PIXI.Assets.load([ASSETS.menu, ASSETS.board, ...VEHICLE_ASSETS]);
+    textures = await PIXI.Assets.load([ASSETS.menu, ASSETS.board, ASSETS.cinematicBoard, ...VEHICLE_ASSETS]);
   } catch (error) {
     console.warn("[Parking] asset load failed; using vector fallback.", error);
   }
@@ -324,11 +325,12 @@
       const minCell = viewportW < 390 ? 44 : viewportW < 620 ? 48 : 58;
       const maxCell = viewportW < 620 ? 66 : 86;
       this.cell = clamp(rawCell, minCell, maxCell);
+      const visualPad = Math.round((textures[ASSETS.cinematicBoard] ? 1.16 : 0.9) * this.cell);
       this.boardW = this.cell * this.gridW;
       this.boardH = this.cell * this.gridH;
 
-      const contentW = Math.max(viewportW, this.boardW + side * 2 + this.cell * 0.9);
-      const contentH = Math.max(viewportH, this.boardH + topSafe + bottomSafe);
+      const contentW = Math.max(viewportW, this.boardW + side * 2 + visualPad * 2);
+      const contentH = Math.max(viewportH, this.boardH + topSafe + bottomSafe + visualPad);
       if (app.screen.width !== contentW || app.screen.height !== contentH) {
         app.renderer.resize(contentW, contentH);
         app.canvas.style.width = `${contentW}px`;
@@ -351,7 +353,7 @@
         spark.y = spark.baseY * height;
       }
 
-      this.boardX = Math.round(Math.max(side + this.cell * 0.9, (width - this.boardW) / 2));
+      this.boardX = Math.round(Math.max(side + visualPad, (width - this.boardW) / 2));
       this.boardY = Math.round(topSafe + Math.max(0, (height - topSafe - bottomSafe - this.boardH) / 2));
       this.boardLayer.position.set(this.boardX, this.boardY);
 
@@ -364,14 +366,23 @@
       this.vehicleLayer.removeChildren();
       this.fxLayer.removeChildren();
 
-      const pad = Math.round(this.cell * 0.34);
-      if (textures[ASSETS.board]) {
-        const surface = new PIXI.Sprite(textures[ASSETS.board]);
+      const hasCinematicBoard = !!textures[ASSETS.cinematicBoard];
+      const pad = Math.round(this.cell * (hasCinematicBoard ? 1.16 : 0.34));
+
+      const platformShadow = new PIXI.Graphics();
+      platformShadow.roundRect(-pad * 0.66, -pad * 0.38, this.boardW + pad * 1.32, this.boardH + pad * 1.18, this.cell * 0.34)
+        .fill({ color: 0x000000, alpha: hasCinematicBoard ? 0.46 : 0.24 });
+      platformShadow.y = this.cell * 0.18;
+      this.surfaceLayer.addChild(platformShadow);
+
+      const boardTexture = textures[ASSETS.cinematicBoard] || textures[ASSETS.board];
+      if (boardTexture) {
+        const surface = new PIXI.Sprite(boardTexture);
         surface.x = -pad;
         surface.y = -pad;
         surface.width = this.boardW + pad * 2;
         surface.height = this.boardH + pad * 2;
-        surface.alpha = 0.92;
+        surface.alpha = hasCinematicBoard ? 0.98 : 0.92;
         this.surfaceLayer.addChild(surface);
       } else {
         const fallback = new PIXI.Graphics();
@@ -380,53 +391,73 @@
         this.surfaceLayer.addChild(fallback);
       }
 
-      this.drawBoardChrome(pad);
+      this.drawBoardChrome(pad, hasCinematicBoard);
       for (const vehicle of this.vehicles) this.drawVehicle(vehicle);
     }
 
-    drawBoardChrome(pad) {
+    drawBoardChrome(pad, hasCinematicBoard = false) {
       const g = new PIXI.Graphics();
       const lineColor = 0xd9e7ed;
       const exitY = this.exitRow * this.cell;
       const exitGapY = exitY + this.cell * 0.08;
       const exitGapH = this.cell * 0.84;
 
-      g.roundRect(-pad, -pad, this.boardW + pad * 2, this.boardH + pad * 2, this.cell * 0.2)
-        .stroke({ width: Math.max(2, this.cell * 0.04), color: 0x79eaff, alpha: 0.28 });
+      g.roundRect(-pad * 0.72, -pad * 0.46, this.boardW + pad * 1.44, this.boardH + pad * 1.1, this.cell * 0.22)
+        .stroke({ width: Math.max(2, this.cell * 0.04), color: 0x79eaff, alpha: hasCinematicBoard ? 0.2 : 0.28 });
       g.roundRect(0, 0, this.boardW, this.boardH, this.cell * 0.08)
-        .fill({ color: 0x07101b, alpha: 0.2 })
-        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0xf3f8ff, alpha: 0.3 });
+        .fill({ color: 0x07101b, alpha: hasCinematicBoard ? 0.08 : 0.2 })
+        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0xf3f8ff, alpha: hasCinematicBoard ? 0.18 : 0.3 });
 
       for (let x = 1; x < this.gridW; x++) {
         g.moveTo(x * this.cell, 0).lineTo(x * this.cell, this.boardH)
-          .stroke({ width: Math.max(1, this.cell * 0.012), color: lineColor, alpha: 0.14 });
+          .stroke({ width: Math.max(1, this.cell * 0.012), color: lineColor, alpha: hasCinematicBoard ? 0.08 : 0.14 });
       }
       for (let y = 1; y < this.gridH; y++) {
         g.moveTo(0, y * this.cell).lineTo(this.boardW, y * this.cell)
-          .stroke({ width: Math.max(1, this.cell * 0.012), color: lineColor, alpha: 0.14 });
+          .stroke({ width: Math.max(1, this.cell * 0.012), color: lineColor, alpha: hasCinematicBoard ? 0.08 : 0.14 });
       }
 
       for (let y = 0; y < this.gridH; y++) {
         for (let x = 0; x < this.gridW; x++) {
           g.roundRect(x * this.cell + this.cell * 0.1, y * this.cell + this.cell * 0.1, this.cell * 0.8, this.cell * 0.8, this.cell * 0.05)
-            .stroke({ width: Math.max(1, this.cell * 0.01), color: 0xeff8ff, alpha: 0.1 });
+            .stroke({ width: Math.max(1, this.cell * 0.01), color: 0xeff8ff, alpha: hasCinematicBoard ? 0.06 : 0.1 });
         }
       }
 
       g.rect(-this.cell * 0.16, exitGapY, this.cell * 0.2, exitGapH)
-        .fill({ color: 0x07101b, alpha: 0.92 });
-      g.roundRect(-this.cell * 0.76, exitY + this.cell * 0.12, this.cell * 0.64, this.cell * 0.76, this.cell * 0.12)
-        .fill({ color: 0x0d2d35, alpha: 0.78 })
-        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0x68f5ff, alpha: 0.76 });
-      g.moveTo(-this.cell * 0.24, exitY + this.cell * 0.5)
-        .lineTo(-this.cell * 0.62, exitY + this.cell * 0.5)
-        .stroke({ width: Math.max(3, this.cell * 0.055), color: 0xffd05a, alpha: 0.9, cap: "round" });
-      g.moveTo(-this.cell * 0.52, exitY + this.cell * 0.32)
-        .lineTo(-this.cell * 0.68, exitY + this.cell * 0.5)
-        .lineTo(-this.cell * 0.52, exitY + this.cell * 0.68)
-        .stroke({ width: Math.max(3, this.cell * 0.055), color: 0xffd05a, alpha: 0.9, cap: "round", join: "round" });
+        .fill({ color: 0x07101b, alpha: hasCinematicBoard ? 0.72 : 0.92 });
+      g.roundRect(-this.cell * 0.86, exitY + this.cell * 0.1, this.cell * 0.72, this.cell * 0.8, this.cell * 0.12)
+        .fill({ color: 0x0d2d35, alpha: hasCinematicBoard ? 0.46 : 0.78 })
+        .stroke({ width: Math.max(2, this.cell * 0.035), color: 0x68f5ff, alpha: hasCinematicBoard ? 0.62 : 0.76 });
+      g.roundRect(-this.cell * 1.08, exitY + this.cell * 0.18, this.cell * 0.96, this.cell * 0.64, this.cell * 0.18)
+        .fill({ color: 0xffb931, alpha: hasCinematicBoard ? 0.12 : 0.08 });
+      for (let i = 0; i < 3; i++) {
+        const cx = -this.cell * (0.52 + i * 0.22);
+        g.moveTo(cx + this.cell * 0.08, exitY + this.cell * 0.3)
+          .lineTo(cx - this.cell * 0.08, exitY + this.cell * 0.5)
+          .lineTo(cx + this.cell * 0.08, exitY + this.cell * 0.7)
+          .stroke({ width: Math.max(3, this.cell * 0.065), color: 0xffc34a, alpha: 0.94 - i * 0.12, cap: "round", join: "round" });
+      }
+
+      this.drawRimLights(g, pad);
 
       this.gridLayer.addChild(g);
+    }
+
+    drawRimLights(g, pad) {
+      const lightW = this.cell * 0.5;
+      const lightH = Math.max(3, this.cell * 0.06);
+      const amber = 0xffb63f;
+      const cyan = 0x5eeeff;
+      for (let i = 0; i < 4; i++) {
+        const x = this.boardW * (0.16 + i * 0.23);
+        g.roundRect(x, -pad * 0.76, lightW, lightH, lightH * 0.5).fill({ color: amber, alpha: 0.48 });
+        g.roundRect(x, this.boardH + pad * 0.62, lightW, lightH, lightH * 0.5).fill({ color: amber, alpha: 0.38 });
+      }
+      g.roundRect(-pad * 0.86, -pad * 0.6, lightW, lightH, lightH * 0.5).fill({ color: cyan, alpha: 0.48 });
+      g.roundRect(this.boardW + pad * 0.36, -pad * 0.6, lightW, lightH, lightH * 0.5).fill({ color: cyan, alpha: 0.42 });
+      g.roundRect(-pad * 0.86, this.boardH + pad * 0.48, lightW, lightH, lightH * 0.5).fill({ color: cyan, alpha: 0.42 });
+      g.roundRect(this.boardW + pad * 0.36, this.boardH + pad * 0.48, lightW, lightH, lightH * 0.5).fill({ color: cyan, alpha: 0.42 });
     }
 
     drawVehicle(vehicle) {
@@ -1048,13 +1079,17 @@
     const radius = cell * 0.16;
 
     const shadow = new PIXI.Graphics();
-    shadow.roundRect(inset * 0.6, inset * 1.2, w - inset * 0.3, h - inset * 0.1, radius)
-      .fill({ color: 0x000000, alpha: 0.34 });
+    shadow.roundRect(inset * 0.25, inset * 1.05, w - inset * 0.1, h - inset * 0.05, radius * 1.05)
+      .fill({ color: 0x000000, alpha: 0.44 });
+    shadow.roundRect(inset * 0.8, inset * 1.55, w - inset * 1.1, h - inset * 0.85, radius * 0.92)
+      .fill({ color: 0x000000, alpha: 0.28 });
     container.addChild(shadow);
 
     const glow = new PIXI.Graphics();
-    glow.roundRect(inset * 0.3, inset * 0.3, w - inset * 0.6, h - inset * 0.6, radius)
-      .stroke({ width: Math.max(2, cell * 0.045), color: vehicle.target ? 0xffe0a3 : palette.glow, alpha: vehicle.target ? 0.72 : 0.34 });
+    glow.roundRect(inset * 0.45, inset * 0.45, w - inset * 0.9, h - inset * 0.9, radius)
+      .stroke({ width: Math.max(1.5, cell * 0.026), color: vehicle.target ? 0xffd36b : palette.glow, alpha: vehicle.target ? 0.62 : 0.2 });
+    glow.roundRect(inset * 0.85, inset * 0.85, w - inset * 1.7, h - inset * 1.7, radius * 0.78)
+      .stroke({ width: Math.max(1, cell * 0.014), color: 0xffffff, alpha: vehicle.target ? 0.16 : 0.08 });
     container.addChild(glow);
 
     const spriteTexture = getVehicleTexture(vehicle);
@@ -1078,8 +1113,10 @@
 
       if (vehicle.target) {
         const targetGlow = new PIXI.Graphics();
-        targetGlow.roundRect(inset * 0.35, inset * 0.35, w - inset * 0.7, h - inset * 0.7, radius)
-          .stroke({ width: Math.max(2, cell * 0.04), color: 0xfff1b0, alpha: 0.75 });
+        targetGlow.roundRect(inset * 0.24, inset * 0.24, w - inset * 0.48, h - inset * 0.48, radius)
+          .stroke({ width: Math.max(2, cell * 0.032), color: 0xfff1b0, alpha: 0.68 });
+        targetGlow.roundRect(inset * 0.55, inset * 0.55, w - inset * 1.1, h - inset * 1.1, radius * 0.82)
+          .stroke({ width: Math.max(1, cell * 0.012), color: 0xffffff, alpha: 0.24 });
         container.addChild(targetGlow);
       }
       return;
