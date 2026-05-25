@@ -149,10 +149,10 @@ export class PreloadScene extends Phaser.Scene {
         }
     }
 
-    _loadImage(key, pngPath) {
+    _loadImage(key, pngPath, options = {}) {
         if (this.textures.exists(key) || this._queuedAssetKeys.has(key)) return;
         this._queuedAssetKeys.add(key);
-        if (!this._preferWebP || !pngPath.endsWith('.png')) {
+        if (options.preferPng || !this._preferWebP || !pngPath.endsWith('.png')) {
             this.load.image(key, pngPath);
             return;
         }
@@ -167,7 +167,7 @@ export class PreloadScene extends Phaser.Scene {
             { key: 'preload_core', path: 'assets/ui/menu/preload_core.png' },
             { key: 'preload_bar_frame', path: 'assets/ui/menu/preload_bar_frame.png' },
             { key: 'preload_bar_fill', path: 'assets/ui/menu/preload_bar_fill.png' },
-        ].forEach(asset => this._loadImage(asset.key, asset.path));
+        ].forEach(asset => this._loadImage(asset.key, asset.path, asset));
     }
 
     _loadOptionalAssets() {
@@ -182,6 +182,6 @@ export class PreloadScene extends Phaser.Scene {
             console.warn('Asset not loaded (procedural fallback if available):', file.key);
         });
 
-        getMenuAssetList().forEach(asset => this._loadImage(asset.key, asset.path));
+        getMenuAssetList().forEach(asset => this._loadImage(asset.key, asset.path, asset));
     }
 }
