@@ -4,20 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#080d1a">
-  <title>애로우 퍼즐 - 무료 네온 방향 퍼즐 게임 | ArcherLab Games</title>
-  <meta name="description" content="화살표 방향과 순서를 읽어 얽힌 라인을 하나씩 제거하는 무료 브라우저 퍼즐 게임. 설치 없이 PC와 모바일에서 바로 플레이하세요.">
-  <meta name="keywords" content="애로우 퍼즐, Arrow Puzzle, 방향 퍼즐, 네온 퍼즐, 무료 브라우저 게임, ArcherLab Games">
-  <meta property="og:title" content="애로우 퍼즐 - ArcherLab Games">
-  <meta property="og:description" content="얽힌 네온 화살표 라인을 올바른 순서로 제거하는 2D 논리 퍼즐.">
+  <title>주차 퍼즐 - 무료 주차장 탈출 퍼즐 게임 | ArcherLab Games</title>
+  <meta name="description" content="막힌 주차장에서 목표 차량을 출구까지 빼내는 무료 브라우저 퍼즐 게임. 설치 없이 PC와 모바일에서 바로 플레이하세요.">
+  <meta name="keywords" content="주차 퍼즐, Parking Puzzle, Rush Hour, Unblock Car, 주차장 탈출, 무료 브라우저 게임, ArcherLab Games">
+  <meta property="og:title" content="주차 퍼즐 - ArcherLab Games">
+  <meta property="og:description" content="차량을 가로세로로 밀어 목표 차량을 출구까지 빼내는 2D 주차장 탈출 퍼즐.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://game.archerlab.dev/arrows/">
-  <meta property="og:image" content="https://game.archerlab.dev/arrows/assets/ui/arrows-link.png">
+  <meta property="og:image" content="https://game.archerlab.dev/arrows/assets/ui/menu-bg.png">
   <meta property="og:locale" content="ko_KR">
   <meta property="og:site_name" content="ArcherLab Games">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="애로우 퍼즐 - ArcherLab Games">
-  <meta name="twitter:description" content="얽힌 네온 화살표 라인을 올바른 순서로 제거하는 2D 논리 퍼즐.">
-  <meta name="twitter:image" content="https://game.archerlab.dev/arrows/assets/ui/arrows-link.png">
+  <meta name="twitter:title" content="주차 퍼즐 - ArcherLab Games">
+  <meta name="twitter:description" content="차량을 가로세로로 밀어 목표 차량을 출구까지 빼내는 2D 주차장 탈출 퍼즐.">
+  <meta name="twitter:image" content="https://game.archerlab.dev/arrows/assets/ui/menu-bg.png">
   <link rel="canonical" href="https://game.archerlab.dev/arrows/">
   <meta name="robots" content="index, follow">
   <meta name="author" content="ArcherLab">
@@ -28,12 +28,12 @@
   {
     "@context": "https://schema.org",
     "@type": "VideoGame",
-    "name": "애로우 퍼즐",
-    "alternateName": "Arrow Puzzle",
-    "description": "화살표 방향과 순서를 읽어 얽힌 라인을 하나씩 제거하는 무료 브라우저 퍼즐 게임.",
+    "name": "주차 퍼즐",
+    "alternateName": "Parking Puzzle",
+    "description": "막힌 주차장에서 목표 차량을 출구까지 빼내는 무료 브라우저 퍼즐 게임.",
     "url": "https://game.archerlab.dev/arrows/",
-    "image": "https://game.archerlab.dev/arrows/assets/ui/arrows-link.png",
-    "genre": ["Puzzle", "Logic", "Brain"],
+    "image": "https://game.archerlab.dev/arrows/assets/ui/menu-bg.png",
+    "genre": ["Puzzle", "Logic", "Parking"],
     "gamePlatform": ["Web Browser", "Mobile Browser"],
     "applicationCategory": "Game",
     "operatingSystem": "Any",
@@ -66,7 +66,7 @@
   <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" class="archerlab-link" aria-label="ArcherLab 홈">ArcherLab</a>
 
   <main id="game-shell">
-    <div id="game-container" aria-label="애로우 퍼즐 게임 화면"></div>
+    <div id="game-container" aria-label="주차 퍼즐 게임 화면"></div>
 
     <header id="hud" class="hud hidden" aria-live="polite">
       <button id="home-btn" class="icon-btn icon-home" type="button" aria-label="메뉴" title="메뉴"><span class="icon-tooltip" aria-hidden="true">메뉴</span></button>
@@ -79,7 +79,7 @@
         <strong id="moves-label">0</strong>
       </div>
       <div class="stat stat-wide">
-        <span>남은 라인</span>
+        <span>차량</span>
         <strong id="left-label">0</strong>
       </div>
     </header>
@@ -88,7 +88,7 @@
       <div class="menu-art" aria-hidden="true"></div>
       <div class="menu-content">
         <p class="brand-kicker">ARCHERLAB GAMES</p>
-        <h1>애로우 퍼즐</h1>
+        <h1>주차 퍼즐</h1>
         <div class="record-row">
           <div>
             <span>최고 레벨</span>
@@ -109,8 +109,8 @@
 
     <section id="loading-screen" class="loading-screen hidden" aria-live="assertive" aria-label="레벨 생성 중">
       <div class="loading-panel">
-        <img class="loading-emblem" src="assets/ui/arrows-loading-badge.png" alt="" aria-hidden="true" decoding="async">
-        <p class="brand-kicker">GENERATING</p>
+        <img class="loading-emblem" src="assets/ui/parking-loading-badge.png" alt="" aria-hidden="true" decoding="async">
+        <p class="brand-kicker">PARKING LOT</p>
         <strong>Lv <span id="loading-level-label">1</span></strong>
         <div class="loading-orbit" aria-hidden="true">
           <span></span>

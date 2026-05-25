@@ -153,4 +153,5 @@
   }
 
   global.ArrowsSoundManager = ArrowsSoundManager;
+  global.ParkingSoundManager = ArrowsSoundManager;
 })(window);
