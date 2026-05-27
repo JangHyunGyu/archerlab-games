@@ -112,7 +112,7 @@ export class PreloadScene extends Phaser.Scene {
             },
         });
 
-        this.load.on('progress', (value) => {
+        const onProgress = (value) => {
             const fillW = (barW - 2) * value;
             barFill.width = fillW;
             if (barFillSkin) {
@@ -120,14 +120,28 @@ export class PreloadScene extends Phaser.Scene {
                 barFillSkin.setDisplaySize(Math.max(1, fillW), barH - 2);
             }
             pctText.setText(String(Math.floor(value * 100)).padStart(3, '0') + ' %');
-        });
+        };
 
-        this.load.on('complete', () => {
+        const cleanupLoadHandlers = () => {
             this.load.off('filecomplete', buildPreloadSkin);
+            this.load.off('progress', onProgress);
+            this.load.off('complete', onComplete);
+            if (this._onPreloadLoadError) {
+                this.load.off('loaderror', this._onPreloadLoadError);
+                this._onPreloadLoadError = null;
+            }
+            this.events.off('shutdown', cleanupLoadHandlers);
+        };
+        const onComplete = () => {
+            cleanupLoadHandlers();
             loadText.setText('SYSTEM READY');
             loadText.setColor(SYSTEM.TEXT_GOLD);
             pctText.setText('100 %');
-        });
+        };
+
+        this.load.on('progress', onProgress);
+        this.load.on('complete', onComplete);
+        this.events.once('shutdown', cleanupLoadHandlers);
 
         this._loadPreloadSkinAssets();
         this._loadOptionalAssets();
@@ -171,7 +185,7 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     _loadOptionalAssets() {
-        this.load.on('loaderror', (file) => {
+        this._onPreloadLoadError = (file) => {
             const fallback = this._pngFallbacks.get(file.key);
             if (fallback) {
                 this._pngFallbacks.delete(file.key);
@@ -180,7 +194,8 @@ export class PreloadScene extends Phaser.Scene {
                 return;
             }
             console.warn('Asset not loaded (procedural fallback if available):', file.key);
-        });
+        };
+        this.load.on('loaderror', this._onPreloadLoadError);
 
         getMenuAssetList().forEach(asset => this._loadImage(asset.key, asset.path, asset));
     }

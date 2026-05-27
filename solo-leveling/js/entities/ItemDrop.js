@@ -1,4 +1,4 @@
-import { COLORS, MAX_COOLDOWN_REDUCTION } from '../utils/Constants.js';
+import { COLORS } from '../utils/Constants.js';
 
 /**
  * 아이템 드롭 시스템
@@ -26,11 +26,14 @@ const ITEM_TYPES = {
         dropRate: 0.05,
         effect: (player, scene) => {
             // Temporary cooldown reduction for 10 seconds
-            const originalCDR = player.stats.cooldownReduction;
-            player.stats.cooldownReduction = Math.min(MAX_COOLDOWN_REDUCTION, originalCDR + 0.2);
+            const bonus = 0.2;
+            player._tempCooldownReduction = Math.max(0, (player._tempCooldownReduction || 0) + bonus);
+            player._recalcStat?.('cooldownReduction');
             scene.systemMessage?.show('[시스템]', ['마나 크리스탈 사용: 쿨타임 감소 10초'], { duration: 1500 });
             scene.itemDropManager?._delay(10000, () => {
-                if (player?.scene) player.stats.cooldownReduction = originalCDR;
+                if (!player?.scene) return;
+                player._tempCooldownReduction = Math.max(0, (player._tempCooldownReduction || 0) - bonus);
+                player._recalcStat?.('cooldownReduction');
             });
         },
     },

@@ -326,7 +326,11 @@ export class MenuScene extends Phaser.Scene {
             const sm = this.game._soundManager;
             sm.stopIntroMusic();
             await sm.resume(true);
-            await this._ensureGameplayAssetsLoaded(characterId);
+            const assetsReady = await this._ensureGameplayAssetsLoaded(characterId);
+            if (!assetsReady || !this.sys?.isActive?.()) {
+                this._startingGame = false;
+                return;
+            }
             this.cameras.main.fadeOut(380, 0, 0, 0);
             this.time.delayedCall(380, () => this.scene.start('GameScene', { resume, characterId }));
         };
@@ -778,17 +782,38 @@ export class MenuScene extends Phaser.Scene {
                 console.warn('Gameplay asset not loaded:', file.key);
             };
 
-            this.load.once('complete', () => {
+            let settled = false;
+            let onComplete = null;
+            let onShutdown = null;
+            const destroyLoadingUi = () => {
                 this.load.off('progress', onProgress);
                 this.load.off('loaderror', onError);
-                SpriteFactory.createAll(this);
+                if (onComplete) this.load.off('complete', onComplete);
+                if (onShutdown) this.events.off('shutdown', onShutdown);
+                if (loadingIcon?.active) this.tweens.killTweensOf(loadingIcon);
                 if (dim.active) dim.destroy();
                 if (loadingIcon?.active) loadingIcon.destroy();
                 if (loading.active) loading.destroy();
                 if (progress.active) progress.destroy();
-                resolve();
-            });
+            };
+            const finish = (assetsReady) => {
+                if (settled) return;
+                settled = true;
+                resolve(assetsReady);
+            };
 
+            onComplete = () => {
+                destroyLoadingUi();
+                SpriteFactory.createAll(this);
+                finish(true);
+            };
+            onShutdown = () => {
+                destroyLoadingUi();
+                finish(false);
+            };
+
+            this.load.once('complete', onComplete);
+            this.events.once('shutdown', onShutdown);
             this.load.on('progress', onProgress);
             this.load.on('loaderror', onError);
             this.load.start();
