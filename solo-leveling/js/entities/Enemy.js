@@ -814,15 +814,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const size = Math.max(width, height);
         const elite = this.isElite || this._eliteDeathPending;
         const ratio = Phaser.Math.Clamp(size / 64, 0.72, elite ? 3.35 : 2.35);
-        const burstDiameter = size * (elite ? 1.66 : 1.46);
-        const burnDiameter = size * (elite ? 1.74 : 1.54);
+        const burstDiameter = size * (elite ? 1.34 : 1.18);
+        const burnDiameter = size * (elite ? 1.42 : 1.24);
         const particleMult = Phaser.Math.Clamp(Math.pow(ratio, 0.86), 0.68, elite ? 2.95 : 2.08) * (elite ? 1.18 : 1);
 
         return {
             size,
             ratio,
-            frameScale: Phaser.Math.Clamp(burstDiameter / 314, 0.24, elite ? 1.18 : 0.74),
-            burnScale: Phaser.Math.Clamp(burnDiameter / 256, 0.34, elite ? 1.42 : 0.92),
+            frameScale: Phaser.Math.Clamp(burstDiameter / 314, 0.24, elite ? 0.96 : 0.62),
+            burnScale: Phaser.Math.Clamp(burnDiameter / 256, 0.34, elite ? 1.12 : 0.78),
             particleMult,
             sparkMult: Phaser.Math.Clamp(Math.pow(ratio, 0.72), 0.72, elite ? 2.45 : 1.85) * (elite ? 1.12 : 1),
             speedMult: Phaser.Math.Clamp(Math.pow(ratio, 0.66), 0.82, elite ? 2.0 : 1.65),
