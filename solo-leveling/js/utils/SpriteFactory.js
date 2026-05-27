@@ -187,6 +187,28 @@ export class SpriteFactory {
         this._createParticleTextures(scene);
     }
 
+    static _clearPlayerAnimations(scene) {
+        if (!scene?.anims) return;
+        const names = [
+            'idle',
+            'walk',
+            'walk_down',
+            'walk_right',
+            'walk_up',
+            'walk_left',
+            'attack',
+            'attack_down',
+            'attack_right',
+            'attack_up',
+            'attack_left',
+            'hit',
+        ];
+        for (const name of names) {
+            const key = `player_${name}`;
+            if (scene.anims.exists(key)) scene.anims.remove(key);
+        }
+    }
+
     static _copyTexture(scene, srcKey, destKey, w, h) {
         const src = scene.textures.get(srcKey).getSourceImage();
         const canvas = document.createElement('canvas');
@@ -228,6 +250,7 @@ export class SpriteFactory {
             return false;
         }
 
+        this._clearPlayerAnimations(scene);
         for (const name of names) {
             this._copyTexture(scene, `motion_${name}`, name, W, H);
         }
@@ -275,6 +298,7 @@ export class SpriteFactory {
             return c;
         };
 
+        this._clearPlayerAnimations(scene);
         for (let i = 0; i < 8; i++) {
             const phase = i * Math.PI / 4;
             const breath = Math.sin(phase);
@@ -336,6 +360,8 @@ export class SpriteFactory {
     // =============================================
     static createPlayerTextures(scene) {
         const W = 96, H = 104;
+
+        this._clearPlayerAnimations(scene);
 
         // Player idle frames (8 frames, high-res Canvas2D)
         for (let i = 0; i < 8; i++) {

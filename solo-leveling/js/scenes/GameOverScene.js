@@ -149,6 +149,7 @@ export class GameOverScene extends Phaser.Scene {
                     }),
                 });
             } catch (e) { /* silent */ }
+            if (!this.sys?.isActive?.()) return;
             showStats();
         };
 

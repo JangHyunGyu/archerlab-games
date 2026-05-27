@@ -68,7 +68,17 @@ function walkAssetPngs(dir, relPrefix = '') {
     return out;
 }
 
+const PNG_PRIMARY_ASSET_PATTERNS = [
+    /^effects\/combat\/monster_death_bloodburst_\d+\.png$/i,
+    /^effects\/source\//i,
+];
+
+function isPngPrimaryAsset(relPng) {
+    return PNG_PRIMARY_ASSET_PATTERNS.some(pattern => pattern.test(relPng.replace(/\\/g, '/')));
+}
+
 for (const relPng of walkAssetPngs(path.join(ROOT, 'assets'))) {
+    if (isPngPrimaryAsset(relPng)) continue;
     const relWebp = relPng.replace(/\.png$/i, '.webp');
     if (!fileExists(`assets/${relWebp}`)) {
         errors.push(`[WEBP] assets/${relPng} has no matching WebP primary asset`);

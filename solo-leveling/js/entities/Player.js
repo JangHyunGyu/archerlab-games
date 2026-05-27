@@ -57,6 +57,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._allEnemiesFrame = -1;
         this._allEnemiesCache = [];
         this._allEnemiesMergedCache = [];
+        this._tempCooldownReduction = 0;
 
         // Passive bonuses tracking
         this.passiveLevels = {};
@@ -826,9 +827,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         if (statKey === 'cooldownReduction') {
             // CDR: base + passive + rank (all additive)
+            const tempBonus = Math.max(0, this._tempCooldownReduction || 0);
             this.stats[statKey] = Math.min(
                 MAX_COOLDOWN_REDUCTION,
-                base + bonusPerLevel * effectiveLevels + (this.rankUpCount || 0) * rankRate
+                base + bonusPerLevel * effectiveLevels + (this.rankUpCount || 0) * rankRate + tempBonus
             );
         } else if (statKey === 'critRate' || statKey === 'xpMultiplier') {
             this.stats[statKey] = base + bonusPerLevel * effectiveLevels;

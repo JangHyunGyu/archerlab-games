@@ -948,6 +948,8 @@ export class GameScene extends Phaser.Scene {
         player.rankUpCount = Math.max(0, Number(saved.rankUpCount) || 0);
         player.kills = Math.max(0, Number(saved.kills) || 0);
         player.passiveLevels = { ...(saved.passiveLevels || {}) };
+        player._tempAtkBuff = 0;
+        player._tempCooldownReduction = 0;
 
         player.stats = { ...(player.baseStats || PLAYER_BASE_STATS) };
         for (const statKey of Object.keys(player.baseStats || PLAYER_BASE_STATS)) {
@@ -960,7 +962,6 @@ export class GameScene extends Phaser.Scene {
             1,
             player.stats.maxHp
         );
-        player._tempAtkBuff = 0;
     }
 
     _restoreEnemyProgress(saved) {
