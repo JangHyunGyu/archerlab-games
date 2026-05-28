@@ -2,6 +2,33 @@
 (async function () {
     'use strict';
 
+    function installWebGLStringResultGuards() {
+        if (typeof window === 'undefined') return;
+
+        const methods = ['getShaderSource', 'getShaderInfoLog', 'getProgramInfoLog'];
+        const constructors = [window.WebGLRenderingContext, window.WebGL2RenderingContext];
+
+        constructors.forEach((Ctor) => {
+            const proto = Ctor && Ctor.prototype;
+            if (!proto) return;
+
+            methods.forEach((method) => {
+                const original = proto[method];
+                const guardKey = `__blockpang_${method}_guarded`;
+                if (typeof original !== 'function' || original[guardKey]) return;
+
+                const guarded = function (...args) {
+                    const result = original.apply(this, args);
+                    return result == null ? '' : result;
+                };
+                guarded[guardKey] = true;
+                proto[method] = guarded;
+            });
+        });
+    }
+
+    installWebGLStringResultGuards();
+
     // Wait for DOM
     if (document.readyState === 'loading') {
         await new Promise(r => document.addEventListener('DOMContentLoaded', r));

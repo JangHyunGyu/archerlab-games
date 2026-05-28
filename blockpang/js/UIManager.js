@@ -612,11 +612,12 @@ class UIManager {
         }
 
         const isText = typeof PIXI !== 'undefined' && PIXI.Text && root instanceof PIXI.Text;
-        const destroyOptions = { children: false, context: true };
         if (isText) {
-            root.destroy(true);
+            root.destroy({ children: false, texture: true, textureSource: true, style: true });
+        } else if (typeof PIXI !== 'undefined' && PIXI.Graphics && root instanceof PIXI.Graphics) {
+            root.destroy({ children: false, context: true });
         } else {
-            root.destroy(destroyOptions);
+            root.destroy({ children: false });
         }
     }
 
