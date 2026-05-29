@@ -7,8 +7,8 @@ const GEM_VFX = Object.fromEntries(Object.keys(GEM_BY_ID).map((type) => {
     color: gem.color,
     rgb: hexToRgb(gem.color),
     glow: hexToRgba(gem.color, 0.72),
-    burst: `assets/images/effects/match-burst-${type}.png`,
-    shards: `assets/images/effects/jewel-shards-${type}.png`
+    burst: `assets/images/effects/gem-shatter-${type}.png`,
+    shards: `assets/images/effects/gem-shards-${type}.png`
   }];
 }));
 
