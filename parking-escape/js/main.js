@@ -149,6 +149,9 @@
       this.startToken = 0;
       this.resizeQueued = false;
       this.orientationTimer = null;
+      this.rankSessionId = null;
+      this.rankSessionPromise = null;
+      this.rankSyncFailed = false;
       this.sound = new (window.ParkingSoundManager || class {
         ensure() {}
         play() {}
@@ -189,6 +192,77 @@
       }, { passive: true });
       window.addEventListener("blur", () => this.cancelDrag(), { passive: true });
       document.addEventListener("pointerdown", () => this.ensureAudio(), { once: true, passive: true });
+    }
+
+    resetRankSessionState() {
+      this.rankSessionId = null;
+      this.rankSessionPromise = null;
+      this.rankSyncFailed = false;
+    }
+
+    async createRankSession() {
+      const response = await fetch(`${RANK_API_BASE}/score-sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ game_id: GAME_ID }),
+      });
+      if (!response.ok) throw new Error(`rank session ${response.status}`);
+      const data = await response.json();
+      if (!data || !data.session_id) throw new Error("invalid rank session response");
+      this.rankSessionId = data.session_id;
+      return this.rankSessionId;
+    }
+
+    startRankSession() {
+      this.resetRankSessionState();
+      this.rankSessionPromise = this.createRankSession().catch(error => {
+        this.rankSyncFailed = true;
+        console.warn("[Parking] rank session failed:", error.message);
+        return null;
+      });
+    }
+
+    ensureRankSession() {
+      if (this.rankSessionId) return Promise.resolve(this.rankSessionId);
+      if (!this.rankSessionPromise) {
+        this.rankSessionPromise = this.createRankSession().catch(error => {
+          this.rankSyncFailed = true;
+          throw error;
+        });
+      }
+      return this.rankSessionPromise;
+    }
+
+    async recordRankClear(clearData) {
+      if (this.rankSyncFailed || !clearData) return false;
+      try {
+        const sessionId = await this.ensureRankSession();
+        if (!sessionId) return false;
+        const response = await fetch(`${RANK_API_BASE}/score-events`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({
+            game_id: GAME_ID,
+            session_id: sessionId,
+            event: {
+              type: "level_clear",
+              score: clearData.rankLevel,
+              level: clearData.rankLevel,
+              cleared_level: clearData.rankLevel,
+              moves: clearData.moves,
+              vehicles: clearData.vehicles,
+            },
+          }),
+        });
+        if (!response.ok) throw new Error(`rank event ${response.status}`);
+        const data = await response.json().catch(() => null);
+        if (!data || data.success !== true) throw new Error("invalid rank event response");
+        return true;
+      } catch (error) {
+        this.rankSyncFailed = true;
+        console.warn("[Parking] rank sync failed:", error.message);
+        return false;
+      }
     }
 
     bindUI() {
@@ -238,6 +312,7 @@
     async start(level) {
       if (this.mode === "loading") return;
       const token = ++this.startToken;
+      if (level <= 1 || !this.rankSessionId || this.mode !== "complete") this.startRankSession();
       this.level = Math.max(1, level | 0);
       localStorage.setItem(STORAGE.level, String(this.level));
       this.moves = 0;
@@ -769,6 +844,7 @@
       dom.skipRank.disabled = false;
       dom.modal.classList.remove("hidden");
       this.mode = "complete";
+      this.recordRankClear(this.lastClear);
     }
 
     updateHud() {
@@ -805,7 +881,7 @@
       }
       dom.rankContent.innerHTML = rows.map((row, index) => {
         const rank = row.rank || index + 1;
-        const extra = row.extra || {};
+        const extra = row.extra_data || row.extra || {};
         const level = Number(extra.cleared_level || extra.level || row.score || 0);
         const moves = Number(extra.moves || 0);
         let meta = "";
@@ -837,6 +913,8 @@
       dom.skipRank.disabled = true;
       dom.submitStatus.textContent = "등록 중...";
       try {
+        const synced = await this.recordRankClear(this.lastClear);
+        if (!this.rankSessionId || !synced || this.rankSyncFailed) throw new Error("rank score sync failed");
         const response = await fetch(`${RANK_API_BASE}/rankings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -844,7 +922,9 @@
             game_id: GAME_ID,
             player_name: name,
             score: this.lastClear.rankLevel,
-            extra: {
+            session_id: this.rankSessionId,
+            extra_data: {
+              session_id: this.rankSessionId,
               level: this.lastClear.rankLevel,
               cleared_level: this.lastClear.rankLevel,
               moves: this.lastClear.moves,

@@ -135,7 +135,9 @@ export class GameOverScene extends Phaser.Scene {
             try {
                 const characterId = this.finalData.characterId || DEFAULT_CHARACTER_ID;
                 const characterName = this.finalData.characterName || getCharacter(characterId).name;
-                const extraData = { level, rank, kills, shadowCount, characterId, characterName };
+                const sessionId = this.finalData.rankSessionId || null;
+                if (!sessionId || this.finalData.rankSyncFailed) throw new Error('rank score sync failed');
+                const extraData = { level, rank, kills, shadowCount, characterId, characterName, session_id: sessionId };
                 const gameId = getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
 
                 await fetch(`${GAME_API_URL}/rankings`, {
@@ -145,6 +147,7 @@ export class GameOverScene extends Phaser.Scene {
                         game_id: gameId,
                         player_name: name,
                         score: time,
+                        session_id: sessionId,
                         extra_data: extraData,
                     }),
                 });
