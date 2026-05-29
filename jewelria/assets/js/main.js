@@ -108,12 +108,6 @@ function bindButtons() {
     audio.play('button');
     startStage(state?.stageIndex || 0);
   });
-  on('hint-btn', 'click', () => {
-    audio.play('button');
-    const hint = state?.board.findPossibleMove();
-    if (hint) ui.highlightHint(hint);
-    else ui.showToast('섞을 수 있는 보석을 찾는 중입니다.');
-  });
   on('rank-open-title', 'click', openRanks);
   on('rank-open-game', 'click', openRanks);
   on('rank-close', 'click', () => ui.hideModal(ui.refs.rankModal));
@@ -307,9 +301,20 @@ async function processMatches(initialMatches, originCells) {
     state.score += scoring.delta;
     ranking.queueScoreEvent(scoring.event);
     ui.updateHUD(state);
-    ui.showCombo(combo);
-    ui.spawnParticles(resolution.remove);
-    audio.play(resolution.activated.length ? 'special' : combo > 1 ? 'combo' : 'match', combo);
+    ui.showCombo(combo, resolution.lineCount, resolution.longest);
+    ui.spawnMatchEffects(resolution.remove, {
+      combo,
+      lineCount: resolution.lineCount,
+      longest: resolution.longest,
+      specialActivations: resolution.activated.length
+    });
+    vibrateMatch(combo, resolution);
+    audio.play(resolution.activated.length ? 'special' : combo > 1 ? 'combo' : 'match', combo, {
+      lineCount: resolution.lineCount,
+      longest: resolution.longest,
+      removedCount: removedGems.length,
+      specialActivations: resolution.activated.length
+    });
 
     await Promise.all([
       ui.markCells(resolution.remove, 'clearing', 320),
@@ -443,6 +448,22 @@ function saveCurrentGame() {
 
 function canPlay() {
   return !!state && state.status === 'playing' && !locked;
+}
+
+function vibrateMatch(combo, resolution) {
+  if (!navigator.vibrate) return;
+  const lineCount = Number(resolution?.lineCount || 1);
+  const longest = Number(resolution?.longest || 3);
+  const hasSpecial = (resolution?.activated?.length || 0) > 0;
+  let pattern = [28, 18, 46];
+
+  if (lineCount > 1 || longest >= 4) pattern = [38, 18, 58, 26, 74];
+  if (combo >= 2) pattern = [42, 20, 66, 28, 92, 36, Math.min(150, 84 + combo * 12)];
+  if (combo >= 4 || hasSpecial || longest >= 5) pattern = [58, 22, 92, 28, 132, 38, 172];
+
+  try {
+    navigator.vibrate(pattern);
+  } catch {}
 }
 
 function on(id, eventName, handler) {
