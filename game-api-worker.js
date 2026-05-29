@@ -24,6 +24,14 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+const CAT_TOWER_GAME_ID = 'cat-tower';
+const CAT_TOWER_SCORES = [10, 25, 55, 110, 220, 440, 880, 1700, 3500, 10000];
+const CAT_TOWER_MAX_SCORE = 500000;
+const CAT_TOWER_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
+const CAT_TOWER_FREE_EVENT_BURST = 30;
+const CAT_TOWER_MIN_MS_PER_EVENT = 150;
+const SCORE_EVENT_BATCH_LIMIT = 50;
+
 function jsonResponse(data, status = 200) {
     return new Response(JSON.stringify(data), {
         status,
@@ -35,6 +43,191 @@ function clampLimit(rawLimit) {
     const parsed = parseInt(rawLimit || '20', 10);
     if (!Number.isFinite(parsed) || parsed <= 0) return 20;
     return Math.min(parsed, 100);
+}
+
+function isPlainObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function parseInteger(value) {
+    if (typeof value === 'number') {
+        return Number.isInteger(value) ? value : NaN;
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+        return parseInt(value, 10);
+    }
+    return NaN;
+}
+
+function makeSessionId() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function validateCatTowerScoreEvent(event) {
+    if (!isPlainObject(event)) {
+        throw new Error('score event must be an object');
+    }
+
+    const type = String(event.type || 'merge');
+    const delta = parseInteger(event.delta);
+    if (!Number.isFinite(delta) || delta <= 0) {
+        throw new Error('score event delta must be positive');
+    }
+
+    if (type === 'merge') {
+        const createdTier = parseInteger(event.created_tier ?? event.tier_created ?? event.tier);
+        const combo = Math.max(1, parseInteger(event.combo ?? 1));
+        if (!Number.isFinite(createdTier) || createdTier < 1 || createdTier >= CAT_TOWER_SCORES.length) {
+            throw new Error('invalid cat-tower merge tier');
+        }
+        if (!Number.isFinite(combo) || combo < 1 || combo > 30) {
+            throw new Error('invalid cat-tower combo count');
+        }
+
+        const base = CAT_TOWER_SCORES[createdTier];
+        const bonus = combo >= 2 ? Math.floor(base * 0.25 * (combo - 1)) : 0;
+        const expected = base + bonus;
+        if (delta !== expected) {
+            throw new Error('cat-tower score event delta mismatch');
+        }
+        return delta;
+    }
+
+    if (type === 'final_merge') {
+        const tier = parseInteger(event.tier ?? CAT_TOWER_SCORES.length - 1);
+        const expected = CAT_TOWER_SCORES[CAT_TOWER_SCORES.length - 1] * 2;
+        if (tier !== CAT_TOWER_SCORES.length - 1 || delta !== expected) {
+            throw new Error('cat-tower final merge delta mismatch');
+        }
+        return delta;
+    }
+
+    throw new Error('unsupported cat-tower score event');
+}
+
+async function createCatTowerSession(db, gameId) {
+    if (gameId !== CAT_TOWER_GAME_ID) {
+        return jsonResponse({ error: 'unsupported game_id for score sessions' }, 400);
+    }
+
+    const now = Date.now();
+    const sessionId = makeSessionId();
+    await db.prepare(
+        'INSERT INTO ranking_sessions (session_id, game_id, score, event_count, started_at, updated_at) VALUES (?, ?, 0, 0, ?, ?)'
+    ).bind(sessionId, gameId, now, now).run();
+
+    await db.prepare('DELETE FROM ranking_sessions WHERE updated_at < ?')
+        .bind(now - CAT_TOWER_SESSION_TTL_MS)
+        .run();
+
+    return jsonResponse({
+        success: true,
+        game_id: gameId,
+        session_id: sessionId,
+    });
+}
+
+async function recordCatTowerScoreEvents(db, body) {
+    const gameId = body?.game_id;
+    const sessionId = String(body?.session_id || '').trim();
+    const events = Array.isArray(body?.events) ? body.events : (body?.event ? [body.event] : []);
+
+    if (gameId !== CAT_TOWER_GAME_ID) {
+        return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
+    }
+    if (!sessionId) {
+        return jsonResponse({ error: 'session_id is required' }, 400);
+    }
+    if (events.length === 0 || events.length > SCORE_EVENT_BATCH_LIMIT) {
+        return jsonResponse({ error: 'events must contain 1-50 items' }, 400);
+    }
+
+    const session = await db.prepare(
+        'SELECT session_id, game_id, score, event_count, started_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (!session || session.game_id !== gameId) {
+        return jsonResponse({ error: 'score session not found' }, 404);
+    }
+    if (session.submitted_at) {
+        return jsonResponse({ error: 'score session already submitted' }, 409);
+    }
+
+    const now = Date.now();
+    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
+        return jsonResponse({ error: 'score session expired' }, 410);
+    }
+
+    let deltaTotal = 0;
+    try {
+        for (const event of events) {
+            deltaTotal += validateCatTowerScoreEvent(event);
+        }
+    } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+    }
+
+    const projectedScore = Number(session.score) + deltaTotal;
+    const projectedEventCount = Number(session.event_count) + events.length;
+    if (projectedScore > CAT_TOWER_MAX_SCORE) {
+        return jsonResponse({ error: 'cat-tower score exceeds allowed maximum' }, 400);
+    }
+
+    const elapsedMs = now - Number(session.started_at);
+    const minElapsedMs = Math.max(0, projectedEventCount - CAT_TOWER_FREE_EVENT_BURST) * CAT_TOWER_MIN_MS_PER_EVENT;
+    if (elapsedMs < minElapsedMs) {
+        return jsonResponse({ error: 'cat-tower score events are too fast' }, 429);
+    }
+
+    await db.prepare(
+        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ? WHERE session_id = ?'
+    ).bind(projectedScore, projectedEventCount, now, sessionId).run();
+
+    return jsonResponse({
+        success: true,
+        game_id: gameId,
+        session_id: sessionId,
+        score: projectedScore,
+        event_count: projectedEventCount,
+    });
+}
+
+async function verifyCatTowerRankingSession(db, body, clientScore) {
+    const extraData = isPlainObject(body.extra_data) ? body.extra_data : {};
+    const sessionId = String(body.session_id || extraData.session_id || '').trim();
+    if (!sessionId) {
+        return { error: 'cat-tower ranking requires a score session', status: 400 };
+    }
+
+    const session = await db.prepare(
+        'SELECT session_id, game_id, score, started_at, updated_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (!session || session.game_id !== CAT_TOWER_GAME_ID) {
+        return { error: 'score session not found', status: 404 };
+    }
+    if (session.submitted_at) {
+        return { error: 'score session already submitted', status: 409 };
+    }
+
+    const now = Date.now();
+    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
+        return { error: 'score session expired', status: 410 };
+    }
+
+    const verifiedScore = Number(session.score);
+    if (!Number.isFinite(verifiedScore) || verifiedScore <= 0) {
+        return { error: 'verified score must be positive', status: 400 };
+    }
+    if (verifiedScore > CAT_TOWER_MAX_SCORE) {
+        return { error: 'verified score exceeds allowed maximum', status: 400 };
+    }
+    if (verifiedScore !== clientScore) {
+        return { error: 'client score does not match verified score', status: 400 };
+    }
+
+    return { sessionId, score: verifiedScore };
 }
 
 async function initDB(db) {
@@ -50,6 +243,20 @@ async function initDB(db) {
     `).run();
     await db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_rankings_game_score ON rankings(game_id, score DESC)
+    `).run();
+    await db.prepare(`
+        CREATE TABLE IF NOT EXISTS ranking_sessions (
+            session_id TEXT PRIMARY KEY,
+            game_id TEXT NOT NULL,
+            score INTEGER NOT NULL DEFAULT 0,
+            event_count INTEGER NOT NULL DEFAULT 0,
+            started_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            submitted_at INTEGER
+        )
+    `).run();
+    await db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_ranking_sessions_game_updated ON ranking_sessions(game_id, updated_at)
     `).run();
 }
 
@@ -117,9 +324,20 @@ export default {
             }
 
             // POST /rankings  { game_id, player_name, score, extra_data? }
+            if (path === '/score-sessions' && request.method === 'POST') {
+                const body = await request.json();
+                return createCatTowerSession(env.DB, body?.game_id);
+            }
+
+            if (path === '/score-events' && request.method === 'POST') {
+                const body = await request.json();
+                return recordCatTowerScoreEvents(env.DB, body);
+            }
+
             if (path === '/rankings' && request.method === 'POST') {
                 const body = await request.json();
-                const { game_id, player_name, score, extra_data } = body;
+                const { game_id, player_name, score } = body;
+                let { extra_data } = body;
 
                 if (!game_id || !player_name || score === undefined || score === null) {
                     return jsonResponse({ error: 'game_id, player_name, score are required' }, 400);
@@ -136,12 +354,32 @@ export default {
                     return jsonResponse({ error: 'score must be a non-negative number' }, 400);
                 }
 
+                let scoreForInsert = numScore;
+                if (game_id === CAT_TOWER_GAME_ID) {
+                    const verified = await verifyCatTowerRankingSession(env.DB, body, numScore);
+                    if (verified.error) {
+                        return jsonResponse({ error: verified.error }, verified.status || 400);
+                    }
+                    scoreForInsert = verified.score;
+                    const baseExtra = isPlainObject(extra_data) ? extra_data : {};
+                    extra_data = {
+                        ...baseExtra,
+                        session_id: verified.sessionId,
+                        client_score: numScore,
+                        verified_score: scoreForInsert,
+                        verified_at: new Date().toISOString(),
+                    };
+                    await env.DB.prepare(
+                        'UPDATE ranking_sessions SET submitted_at = ?, updated_at = ? WHERE session_id = ? AND submitted_at IS NULL'
+                    ).bind(Date.now(), Date.now(), verified.sessionId).run();
+                }
+
                 const extraStr = extra_data ? JSON.stringify(extra_data) : null;
 
                 // Insert the score. Exact duplicate records may be ignored when the DB has a uniqueness constraint.
                 await env.DB.prepare(
                     'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
-                ).bind(game_id, name, numScore, extraStr).run();
+                ).bind(game_id, name, scoreForInsert, extraStr).run();
 
                 // Get the displayed rank for this name after deduping by player name.
                 const rankResult = await env.DB.prepare(`
@@ -205,7 +443,7 @@ export default {
                     success: true,
                     rank: currentRank,
                     player_name: name,
-                    score: numScore,
+                    score: scoreForInsert,
                     best_score: bestScore,
                     in_top_20: currentRank <= 20,
                 });
