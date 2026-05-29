@@ -1241,6 +1241,11 @@ p {
     padding-right: 8px;
   }
 
+  .button::before,
+  .icon-button::before {
+    inset: -6px -8px;
+  }
+
   .game-hud {
     grid-template-columns: auto minmax(52px, 0.8fr) minmax(82px, 1fr) minmax(52px, 0.8fr) auto;
     gap: 5px;
@@ -1274,8 +1279,17 @@ p {
     padding: 9px;
   }
 
+  .objective-panel > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
   .objective-panel h2 {
     font-size: 16px;
+  }
+
+  .collect-goals {
+    flex: 0 0 auto;
   }
 
   .collect-pill {
@@ -1290,8 +1304,12 @@ p {
   }
 
   .board-frame {
-    width: min(96vw, 63svh);
-    padding: 14px;
+    width: min(92vw, 60svh);
+    padding: 12px;
+  }
+
+  .board-frame::after {
+    inset: -5px;
   }
 
   .board {
@@ -1349,7 +1367,7 @@ p {
   .game-hud,
   .objective-panel,
   .game-controls {
-    width: min(100%, 374px);
+    width: min(100%, 360px);
   }
 
   .game-hud {
@@ -1357,7 +1375,7 @@ p {
   }
 
   .board-frame {
-    width: min(96vw, 44svh, 374px);
+    width: min(92vw, 44svh, 352px);
   }
 }
 
@@ -1378,6 +1396,24 @@ p {
     padding-top: calc(8px + var(--safe-top));
   }
 
+  .button::before,
+  .icon-button::before {
+    inset: -5px -6px;
+  }
+
+  .icon-button {
+    min-width: 32px;
+    height: 34px;
+    padding: 0 5px;
+    font-size: 8px;
+  }
+
+  .game-hud,
+  .objective-panel,
+  .game-controls {
+    width: min(100%, 330px);
+  }
+
   .game-hud {
     grid-template-columns: auto 1fr 1.08fr 0.88fr auto;
   }
@@ -1395,7 +1431,16 @@ p {
   }
 
   .board-frame {
-    width: min(98vw, 58svh);
+    width: min(82vw, 50svh, 320px);
+    padding: 10px;
+  }
+
+  .board-frame::after {
+    inset: -4px;
+  }
+
+  .board {
+    gap: 3px;
   }
 
   .modal-card {
