@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelria-v0.1.2';
+const CACHE_NAME = 'jewelria-v0.1.3';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -28,6 +28,18 @@ const CORE_ASSETS = [
   './assets/images/gems/citrine.png',
   './assets/images/effects/match-burst-strip.png',
   './assets/images/effects/jewel-shard-atlas.png',
+  './assets/images/effects/match-burst-ruby.png',
+  './assets/images/effects/match-burst-sapphire.png',
+  './assets/images/effects/match-burst-emerald.png',
+  './assets/images/effects/match-burst-topaz.png',
+  './assets/images/effects/match-burst-amethyst.png',
+  './assets/images/effects/match-burst-citrine.png',
+  './assets/images/effects/jewel-shards-ruby.png',
+  './assets/images/effects/jewel-shards-sapphire.png',
+  './assets/images/effects/jewel-shards-emerald.png',
+  './assets/images/effects/jewel-shards-topaz.png',
+  './assets/images/effects/jewel-shards-amethyst.png',
+  './assets/images/effects/jewel-shards-citrine.png',
   './assets/sounds/clear_single.wav',
   './assets/sounds/clear_double.wav',
   './assets/sounds/clear_quad.wav',

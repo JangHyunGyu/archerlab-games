@@ -507,8 +507,8 @@ p {
   inset: -24%;
   border-radius: 50%;
   background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 10%, rgba(255, 230, 130, 0.72) 16%, rgba(47, 226, 255, 0.18) 38%, transparent 62%),
-    conic-gradient(from 0deg, transparent, rgba(255, 88, 184, 0.62), rgba(255, 234, 114, 0.72), rgba(57, 226, 255, 0.62), transparent);
+    radial-gradient(circle, rgba(255, 255, 255, 0.92) 0 10%, rgba(var(--cell-vfx-rgb, 255, 230, 130), 0.78) 16%, rgba(var(--cell-vfx-rgb, 255, 230, 130), 0.2) 38%, transparent 62%),
+    conic-gradient(from 0deg, transparent, rgba(var(--cell-vfx-rgb, 255, 230, 130), 0.68), rgba(255, 255, 255, 0.68), rgba(var(--cell-vfx-rgb, 255, 230, 130), 0.5), transparent);
   mix-blend-mode: screen;
   pointer-events: none;
   animation: cellImpactFlash 360ms ease-out forwards;
@@ -722,8 +722,8 @@ p {
   width: 8px;
   height: 8px;
   border-radius: 2px;
-  background: #fff4a8;
-  box-shadow: 0 0 12px rgba(255, 232, 131, 0.95);
+  background: var(--vfx-color, #fff4a8);
+  box-shadow: 0 0 12px var(--vfx-glow, rgba(255, 232, 131, 0.95));
   animation: sparkFly 620ms ease-out forwards;
 }
 
@@ -743,16 +743,19 @@ p {
   transform: none;
   background:
     radial-gradient(circle at 50% 48%, rgba(255, 255, 255, var(--flash-alpha, 0.32)), transparent 28%),
-    radial-gradient(circle at 50% 48%, rgba(255, 71, 184, 0.24), transparent 48%),
-    linear-gradient(90deg, rgba(58, 226, 255, 0.08), rgba(255, 232, 112, 0.12), rgba(255, 86, 157, 0.08));
+    radial-gradient(circle at 50% 48%, rgba(var(--vfx-rgb, 255, 71, 184), 0.26), transparent 48%),
+    linear-gradient(90deg, rgba(var(--vfx-rgb, 255, 71, 184), 0.08), rgba(255, 255, 255, 0.1), rgba(var(--vfx-rgb, 255, 71, 184), 0.08));
   animation: boardFlash 520ms ease-out forwards;
 }
 
 .vfx-burst {
   width: var(--size);
   height: var(--size);
-  background: url("../images/effects/match-burst-strip.png") 0 50% / 1600% 100% no-repeat;
-  filter: saturate(1.18) brightness(1.15) drop-shadow(0 0 18px rgba(255, 240, 168, 0.55));
+  background-image: url("../images/effects/match-burst-strip.png");
+  background-position: 0 50%;
+  background-size: 1600% 100%;
+  background-repeat: no-repeat;
+  filter: saturate(1.18) brightness(1.15) drop-shadow(0 0 18px var(--vfx-glow, rgba(255, 240, 168, 0.55)));
   animation: vfxBurst 780ms steps(15) forwards;
 }
 
@@ -760,31 +763,31 @@ p {
   filter:
     saturate(1.32)
     brightness(1.22)
-    drop-shadow(0 0 28px rgba(255, 240, 168, 0.72))
-    drop-shadow(0 0 38px rgba(48, 214, 198, 0.38));
+    drop-shadow(0 0 28px var(--vfx-glow, rgba(255, 240, 168, 0.72)))
+    drop-shadow(0 0 38px rgba(var(--vfx-rgb, 48, 214, 198), 0.38));
 }
 
 .vfx-ring {
   width: var(--size);
   height: var(--size);
-  border: max(2px, calc(var(--size) * 0.018)) solid rgba(255, 242, 176, 0.92);
+  border: max(2px, calc(var(--size) * 0.018)) solid rgba(var(--vfx-rgb, 255, 242, 176), 0.92);
   border-radius: 50%;
   box-shadow:
-    0 0 18px rgba(255, 232, 112, 0.8),
-    inset 0 0 18px rgba(48, 214, 198, 0.5);
+    0 0 18px var(--vfx-glow, rgba(255, 232, 112, 0.8)),
+    inset 0 0 18px rgba(var(--vfx-rgb, 48, 214, 198), 0.5);
   animation: ringBurst 620ms cubic-bezier(0.13, 0.86, 0.25, 1) forwards;
 }
 
 .vfx-ring.mega {
-  border-color: rgba(255, 84, 178, 0.88);
+  border-color: rgba(var(--vfx-rgb, 255, 84, 178), 0.88);
   box-shadow:
-    0 0 26px rgba(255, 84, 178, 0.82),
-    0 0 42px rgba(48, 214, 198, 0.56),
+    0 0 26px var(--vfx-glow, rgba(255, 84, 178, 0.82)),
+    0 0 42px rgba(var(--vfx-rgb, 48, 214, 198), 0.56),
     inset 0 0 22px rgba(255, 242, 176, 0.52);
 }
 
 .vfx-ring.screen {
-  border-color: rgba(73, 224, 255, 0.82);
+  border-color: rgba(var(--vfx-rgb, 73, 224, 255), 0.82);
   animation-duration: 740ms;
 }
 
@@ -797,7 +800,7 @@ p {
   filter:
     saturate(1.18)
     brightness(1.18)
-    drop-shadow(0 0 10px rgba(255, 255, 255, 0.55));
+    drop-shadow(0 0 10px var(--vfx-glow, rgba(255, 255, 255, 0.55)));
   animation: shardFly var(--dur, 720ms) cubic-bezier(0.08, 0.72, 0.18, 1) forwards;
 }
 

@@ -1,6 +1,17 @@
 import { GEM_BY_ID, getGemCssVars, getGemName } from './gem.js';
 import { STAGES, getGoalText } from './stage.js';
 
+const GEM_VFX = Object.fromEntries(Object.keys(GEM_BY_ID).map((type) => {
+  const gem = GEM_BY_ID[type];
+  return [type, {
+    color: gem.color,
+    rgb: hexToRgb(gem.color),
+    glow: hexToRgba(gem.color, 0.72),
+    burst: `assets/images/effects/match-burst-${type}.png`,
+    shards: `assets/images/effects/jewel-shards-${type}.png`
+  }];
+}));
+
 export class UI {
   constructor(lang = 'ko') {
     this.lang = lang;
@@ -140,9 +151,23 @@ export class UI {
   }
 
   markCells(cells, className, duration = 320) {
-    for (const cell of cells) this.getCellEl(cell)?.classList.add(className);
+    for (const cell of cells) {
+      const el = this.getCellEl(cell);
+      if (!el) continue;
+      if (className === 'clearing') this.applyVfxVars(el, cell.type || el.querySelector('.gem')?.dataset.type, 'cell');
+      el.classList.add(className);
+    }
     return delay(duration).then(() => {
-      for (const cell of cells) this.getCellEl(cell)?.classList.remove(className);
+      for (const cell of cells) {
+        const el = this.getCellEl(cell);
+        if (!el) continue;
+        el.classList.remove(className);
+        if (className === 'clearing') {
+          el.style.removeProperty('--cell-vfx-color');
+          el.style.removeProperty('--cell-vfx-rgb');
+          el.style.removeProperty('--cell-vfx-glow');
+        }
+      }
     });
   }
 
@@ -182,22 +207,24 @@ export class UI {
     const center = points.reduce((sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }), { x: 0, y: 0 });
     center.x /= points.length;
     center.y /= points.length;
+    const centerType = dominantType(points);
 
     this.pulseBoard(intensity);
-    this.spawnBoardFlash(intensity);
-    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 3.2, 170 * intensity), 'mega');
-    this.spawnRing(center.x, center.y, Math.max(points[0].size * 2.4, 130 * intensity), 'mega');
+    this.spawnBoardFlash(intensity, centerType);
+    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 3.2, 170 * intensity), 'mega', centerType);
+    this.spawnRing(center.x, center.y, Math.max(points[0].size * 2.4, 130 * intensity), 'mega', centerType);
 
     for (const point of points) {
-      this.spawnBurst(point.x, point.y, point.size * randomBetween(1.9, 2.55) * intensity, '');
-      this.spawnRing(point.x, point.y, point.size * randomBetween(1.35, 1.9) * intensity, '');
-      this.spawnShardSpray(point.x, point.y, 7 + Math.round(intensity * 4), point.size, intensity);
-      for (let i = 0; i < 5; i += 1) this.spawnSpark(point.x, point.y, point.size, intensity);
+      const type = point.type || centerType;
+      this.spawnBurst(point.x, point.y, point.size * randomBetween(1.9, 2.55) * intensity, '', type);
+      this.spawnRing(point.x, point.y, point.size * randomBetween(1.35, 1.9) * intensity, '', type);
+      this.spawnShardSpray(point.x, point.y, 7 + Math.round(intensity * 4), point.size, intensity, type);
+      for (let i = 0; i < 5; i += 1) this.spawnSpark(point.x, point.y, point.size, intensity, type);
     }
 
     if (combo >= 3 || hasSpecial || longest >= 5) {
-      this.spawnShardSpray(center.x, center.y, 30 + combo * 4, points[0].size * 1.2, intensity + 0.5);
-      this.spawnRing(center.x, center.y, Math.max(points[0].size * 4.2, 220 * intensity), 'screen');
+      this.spawnShardSpray(center.x, center.y, 30 + combo * 4, points[0].size * 1.2, intensity + 0.5, centerType);
+      this.spawnRing(center.x, center.y, Math.max(points[0].size * 4.2, 220 * intensity), 'screen', centerType);
     }
   }
 
@@ -212,7 +239,8 @@ export class UI {
     return {
       x: rect.left - layerRect.left + rect.width / 2,
       y: rect.top - layerRect.top + rect.height / 2,
-      size: Math.max(rect.width, rect.height)
+      size: Math.max(rect.width, rect.height),
+      type: cell.type || el.querySelector('.gem')?.dataset.type || null
     };
   }
 
@@ -233,17 +261,19 @@ export class UI {
     }, 520);
   }
 
-  spawnBoardFlash(intensity) {
+  spawnBoardFlash(intensity, type) {
     const flash = document.createElement('span');
     flash.className = 'vfx-board-flash';
+    this.applyVfxVars(flash, type);
     flash.style.setProperty('--flash-alpha', String(Math.min(0.6, 0.16 + intensity * 0.1)));
     this.refs.particleLayer.appendChild(flash);
     setTimeout(() => flash.remove(), 520);
   }
 
-  spawnBurst(x, y, size, extraClass = '') {
+  spawnBurst(x, y, size, extraClass = '', type = null) {
     const burst = document.createElement('span');
     burst.className = `vfx-burst ${extraClass}`.trim();
+    this.applyVfxVars(burst, type, 'burst');
     burst.style.left = `${x}px`;
     burst.style.top = `${y}px`;
     burst.style.setProperty('--size', `${Math.min(520, size)}px`);
@@ -252,9 +282,10 @@ export class UI {
     setTimeout(() => burst.remove(), 860);
   }
 
-  spawnRing(x, y, size, extraClass = '') {
+  spawnRing(x, y, size, extraClass = '', type = null) {
     const ring = document.createElement('span');
     ring.className = `vfx-ring ${extraClass}`.trim();
+    this.applyVfxVars(ring, type);
     ring.style.left = `${x}px`;
     ring.style.top = `${y}px`;
     ring.style.setProperty('--size', `${Math.min(620, size)}px`);
@@ -262,11 +293,12 @@ export class UI {
     setTimeout(() => ring.remove(), 740);
   }
 
-  spawnShardSpray(x, y, count, baseSize, intensity) {
+  spawnShardSpray(x, y, count, baseSize, intensity, type = null) {
     const capped = Math.min(58, count);
     for (let i = 0; i < capped; i += 1) {
       const shard = document.createElement('span');
       shard.className = 'vfx-shard';
+      this.applyVfxVars(shard, type, 'shard');
       shard.style.left = `${x}px`;
       shard.style.top = `${y}px`;
       const angle = (Math.PI * 2 * i / capped) + randomBetween(-0.28, 0.28);
@@ -286,9 +318,10 @@ export class UI {
     }
   }
 
-  spawnSpark(x, y, baseSize, intensity) {
+  spawnSpark(x, y, baseSize, intensity, type = null) {
     const spark = document.createElement('span');
     spark.className = 'spark';
+    this.applyVfxVars(spark, type);
     spark.style.left = `${x}px`;
     spark.style.top = `${y}px`;
     const angle = Math.random() * Math.PI * 2;
@@ -297,6 +330,17 @@ export class UI {
     spark.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
     this.refs.particleLayer.appendChild(spark);
     setTimeout(() => spark.remove(), 720);
+  }
+
+  applyVfxVars(el, type, asset = '') {
+    const meta = GEM_VFX[type] || GEM_VFX.ruby;
+    if (!meta) return;
+    const prefix = asset === 'cell' ? '--cell-vfx' : '--vfx';
+    el.style.setProperty(`${prefix}-color`, meta.color);
+    el.style.setProperty(`${prefix}-rgb`, meta.rgb);
+    el.style.setProperty(`${prefix}-glow`, meta.glow);
+    if (asset === 'burst') el.style.backgroundImage = `url("${meta.burst}")`;
+    if (asset === 'shard') el.style.backgroundImage = `url("${meta.shards}")`;
   }
 
   showStages(progress, isUnlocked, onSelect) {
@@ -410,4 +454,33 @@ export function delay(ms) {
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
+}
+
+function dominantType(points) {
+  const counts = new Map();
+  for (const point of points) {
+    if (!point.type) continue;
+    counts.set(point.type, (counts.get(point.type) || 0) + 1);
+  }
+  let bestType = points.find((point) => point.type)?.type || 'ruby';
+  let bestCount = -1;
+  counts.forEach((count, type) => {
+    if (count > bestCount) {
+      bestType = type;
+      bestCount = count;
+    }
+  });
+  return bestType;
+}
+
+function hexToRgb(hex) {
+  const value = hex.replace('#', '');
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `${r}, ${g}, ${b}`;
+}
+
+function hexToRgba(hex, alpha) {
+  return `rgba(${hexToRgb(hex)}, ${alpha})`;
 }

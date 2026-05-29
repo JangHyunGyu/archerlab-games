@@ -284,7 +284,11 @@ async function processMatches(initialMatches, originCells) {
   while (matches.length > 0 && guard < 14) {
     guard += 1;
     const resolution = state.board.buildResolution(matches, originCells);
-    const removedGems = resolution.remove.map((cell) => state.board.get(cell.row, cell.col)).filter(Boolean);
+    const removalCells = resolution.remove.map((cell) => {
+      const gem = state.board.get(cell.row, cell.col);
+      return { ...cell, type: gem?.type || null, special: gem?.special || null };
+    });
+    const removedGems = removalCells.filter((cell) => cell.type);
     if (removedGems.length === 0 && resolution.specials.length === 0) break;
 
     for (const gem of removedGems) {
@@ -302,7 +306,7 @@ async function processMatches(initialMatches, originCells) {
     ranking.queueScoreEvent(scoring.event);
     ui.updateHUD(state);
     ui.showCombo(combo, resolution.lineCount, resolution.longest);
-    ui.spawnMatchEffects(resolution.remove, {
+    ui.spawnMatchEffects(removalCells, {
       combo,
       lineCount: resolution.lineCount,
       longest: resolution.longest,
@@ -317,7 +321,7 @@ async function processMatches(initialMatches, originCells) {
     });
 
     await Promise.all([
-      ui.markCells(resolution.remove, 'clearing', 320),
+      ui.markCells(removalCells, 'clearing', 320),
       ui.markCells(resolution.specials, 'transforming', 360)
     ]);
     state.board.removeCells(resolution.remove);
