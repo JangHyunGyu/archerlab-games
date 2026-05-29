@@ -7,7 +7,9 @@ export class UI {
     this.refs = {
       title: document.getElementById('title-screen'),
       game: document.getElementById('game-screen'),
+      app: document.getElementById('app'),
       board: document.getElementById('board'),
+      boardFrame: document.querySelector('.board-frame'),
       comboLayer: document.getElementById('combo-layer'),
       particleLayer: document.getElementById('particle-layer'),
       titleProgress: document.getElementById('title-progress'),
@@ -148,40 +150,153 @@ export class UI {
     return this.refs.board.querySelector(`.cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
   }
 
-  showCombo(combo) {
-    if (combo <= 1) return;
+  showCombo(combo, lineCount = 1, longest = 3) {
+    const bigMatch = lineCount > 1 || longest >= 4;
+    if (combo <= 1 && !bigMatch) return;
     const pop = document.createElement('div');
     pop.className = 'combo-pop';
-    pop.textContent = `COMBO x${combo}`;
+    if (combo >= 5) pop.classList.add('mega');
+    if (combo >= 3 || longest >= 5 || lineCount >= 3) pop.classList.add('super');
+    pop.textContent = combo > 1
+      ? `${combo >= 5 ? 'LEGEND' : combo >= 3 ? 'MEGA' : 'COMBO'} x${combo}!`
+      : longest >= 5 ? 'PRISM!'
+        : lineCount >= 2 ? 'DOUBLE!'
+          : 'WOW!';
     this.refs.comboLayer.appendChild(pop);
-    setTimeout(() => pop.remove(), 850);
+    setTimeout(() => pop.remove(), 980);
   }
 
-  spawnParticles(cells) {
+  spawnMatchEffects(cells, options = {}) {
     const layerRect = this.refs.particleLayer.getBoundingClientRect();
-    for (const cell of cells.slice(0, 18)) {
-      const el = this.getCellEl(cell);
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      const cx = rect.left - layerRect.left + rect.width / 2;
-      const cy = rect.top - layerRect.top + rect.height / 2;
-      for (let i = 0; i < 4; i += 1) {
-        const spark = document.createElement('span');
-        spark.className = 'spark';
-        spark.style.left = `${cx}px`;
-        spark.style.top = `${cy}px`;
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 24 + Math.random() * 38;
-        spark.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
-        spark.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
-        this.refs.particleLayer.appendChild(spark);
-        setTimeout(() => spark.remove(), 680);
-      }
+    const points = cells
+      .slice(0, 28)
+      .map((cell) => this.getCellCenter(cell, layerRect))
+      .filter(Boolean);
+    if (!points.length) return;
+
+    const combo = Number(options.combo || 1);
+    const lineCount = Number(options.lineCount || 1);
+    const longest = Number(options.longest || 3);
+    const hasSpecial = Number(options.specialActivations || 0) > 0;
+    const intensity = Math.min(3.4, 1 + combo * 0.28 + Math.max(0, lineCount - 1) * 0.3 + Math.max(0, longest - 3) * 0.22 + (hasSpecial ? 0.55 : 0));
+    const center = points.reduce((sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }), { x: 0, y: 0 });
+    center.x /= points.length;
+    center.y /= points.length;
+
+    this.pulseBoard(intensity);
+    this.spawnBoardFlash(intensity);
+    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 3.2, 170 * intensity), 'mega');
+    this.spawnRing(center.x, center.y, Math.max(points[0].size * 2.4, 130 * intensity), 'mega');
+
+    for (const point of points) {
+      this.spawnBurst(point.x, point.y, point.size * randomBetween(1.9, 2.55) * intensity, '');
+      this.spawnRing(point.x, point.y, point.size * randomBetween(1.35, 1.9) * intensity, '');
+      this.spawnShardSpray(point.x, point.y, 7 + Math.round(intensity * 4), point.size, intensity);
+      for (let i = 0; i < 5; i += 1) this.spawnSpark(point.x, point.y, point.size, intensity);
+    }
+
+    if (combo >= 3 || hasSpecial || longest >= 5) {
+      this.spawnShardSpray(center.x, center.y, 30 + combo * 4, points[0].size * 1.2, intensity + 0.5);
+      this.spawnRing(center.x, center.y, Math.max(points[0].size * 4.2, 220 * intensity), 'screen');
     }
   }
 
-  highlightHint(pair) {
-    if (pair) this.markCells([pair.from, pair.to], 'hint', 1400);
+  spawnParticles(cells) {
+    this.spawnMatchEffects(cells);
+  }
+
+  getCellCenter(cell, layerRect) {
+    const el = this.getCellEl(cell);
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    return {
+      x: rect.left - layerRect.left + rect.width / 2,
+      y: rect.top - layerRect.top + rect.height / 2,
+      size: Math.max(rect.width, rect.height)
+    };
+  }
+
+  pulseBoard(intensity) {
+    const app = this.refs.app;
+    const frame = this.refs.boardFrame;
+    if (!app || !frame) return;
+    app.style.setProperty('--shake-power', `${Math.min(18, 7 + intensity * 5)}px`);
+    app.classList.remove('match-shake');
+    frame.classList.remove('match-impact');
+    void app.offsetWidth;
+    app.classList.add('match-shake');
+    frame.classList.add('match-impact');
+    clearTimeout(this.impactTimer);
+    this.impactTimer = setTimeout(() => {
+      app.classList.remove('match-shake');
+      frame.classList.remove('match-impact');
+    }, 520);
+  }
+
+  spawnBoardFlash(intensity) {
+    const flash = document.createElement('span');
+    flash.className = 'vfx-board-flash';
+    flash.style.setProperty('--flash-alpha', String(Math.min(0.6, 0.16 + intensity * 0.1)));
+    this.refs.particleLayer.appendChild(flash);
+    setTimeout(() => flash.remove(), 520);
+  }
+
+  spawnBurst(x, y, size, extraClass = '') {
+    const burst = document.createElement('span');
+    burst.className = `vfx-burst ${extraClass}`.trim();
+    burst.style.left = `${x}px`;
+    burst.style.top = `${y}px`;
+    burst.style.setProperty('--size', `${Math.min(520, size)}px`);
+    burst.style.setProperty('--spin', `${randomBetween(-18, 18).toFixed(1)}deg`);
+    this.refs.particleLayer.appendChild(burst);
+    setTimeout(() => burst.remove(), 860);
+  }
+
+  spawnRing(x, y, size, extraClass = '') {
+    const ring = document.createElement('span');
+    ring.className = `vfx-ring ${extraClass}`.trim();
+    ring.style.left = `${x}px`;
+    ring.style.top = `${y}px`;
+    ring.style.setProperty('--size', `${Math.min(620, size)}px`);
+    this.refs.particleLayer.appendChild(ring);
+    setTimeout(() => ring.remove(), 740);
+  }
+
+  spawnShardSpray(x, y, count, baseSize, intensity) {
+    const capped = Math.min(58, count);
+    for (let i = 0; i < capped; i += 1) {
+      const shard = document.createElement('span');
+      shard.className = 'vfx-shard';
+      shard.style.left = `${x}px`;
+      shard.style.top = `${y}px`;
+      const angle = (Math.PI * 2 * i / capped) + randomBetween(-0.28, 0.28);
+      const distance = randomBetween(baseSize * 0.7, baseSize * (2.3 + intensity));
+      const size = randomBetween(13, 30) * Math.min(1.45, 0.8 + intensity * 0.2);
+      const atlasX = Math.floor(Math.random() * 4) * 33.333;
+      const atlasY = Math.floor(Math.random() * 4) * 33.333;
+      shard.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+      shard.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+      shard.style.setProperty('--rot', `${randomBetween(-220, 220).toFixed(1)}deg`);
+      shard.style.setProperty('--size', `${size}px`);
+      shard.style.setProperty('--dur', `${randomBetween(560, 920)}ms`);
+      shard.style.setProperty('--atlas-x', `${atlasX}%`);
+      shard.style.setProperty('--atlas-y', `${atlasY}%`);
+      this.refs.particleLayer.appendChild(shard);
+      setTimeout(() => shard.remove(), 980);
+    }
+  }
+
+  spawnSpark(x, y, baseSize, intensity) {
+    const spark = document.createElement('span');
+    spark.className = 'spark';
+    spark.style.left = `${x}px`;
+    spark.style.top = `${y}px`;
+    const angle = Math.random() * Math.PI * 2;
+    const distance = randomBetween(baseSize * 0.5, baseSize * (1.7 + intensity));
+    spark.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+    this.refs.particleLayer.appendChild(spark);
+    setTimeout(() => spark.remove(), 720);
   }
 
   showStages(progress, isUnlocked, onSelect) {
@@ -291,4 +406,8 @@ export function starsText(stars) {
 
 export function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
 }

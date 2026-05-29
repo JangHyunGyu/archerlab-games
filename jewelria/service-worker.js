@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelria-v0.1.0';
+const CACHE_NAME = 'jewelria-v0.1.1';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -25,7 +25,17 @@ const CORE_ASSETS = [
   './assets/images/gems/emerald.png',
   './assets/images/gems/topaz.png',
   './assets/images/gems/amethyst.png',
-  './assets/images/gems/citrine.png'
+  './assets/images/gems/citrine.png',
+  './assets/images/effects/match-burst-strip.png',
+  './assets/images/effects/jewel-shard-atlas.png',
+  './assets/sounds/clear_single.wav',
+  './assets/sounds/clear_double.wav',
+  './assets/sounds/clear_quad.wav',
+  './assets/sounds/combo_hit.wav',
+  './assets/sounds/combo_escalate.wav',
+  './assets/sounds/impact_heavy.wav',
+  './assets/sounds/sparkle.wav',
+  './assets/sounds/whoosh.wav'
 ];
 
 self.addEventListener('install', (event) => {
