@@ -30,6 +30,9 @@ const CAT_TOWER_MAX_SCORE = 500000;
 const CAT_TOWER_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 const CAT_TOWER_FREE_EVENT_BURST = 30;
 const CAT_TOWER_MIN_MS_PER_EVENT = 150;
+const CAT_TOWER_FREE_SCORE_BURST = 2000;
+const CAT_TOWER_MAX_SCORE_PER_SECOND = 2000;
+const CAT_TOWER_FINAL_MERGE_MIN_MS = 60 * 1000;
 const SCORE_EVENT_BATCH_LIMIT = 50;
 
 function jsonResponse(data, status = 200) {
@@ -161,8 +164,10 @@ async function recordCatTowerScoreEvents(db, body) {
     }
 
     let deltaTotal = 0;
+    let hasFinalMerge = false;
     try {
         for (const event of events) {
+            if (String(event?.type || 'merge') === 'final_merge') hasFinalMerge = true;
             deltaTotal += validateCatTowerScoreEvent(event);
         }
     } catch (err) {
@@ -176,8 +181,12 @@ async function recordCatTowerScoreEvents(db, body) {
     }
 
     const elapsedMs = now - Number(session.started_at);
+    if (hasFinalMerge && elapsedMs < CAT_TOWER_FINAL_MERGE_MIN_MS) {
+        return jsonResponse({ error: 'cat-tower final merge is too early' }, 429);
+    }
     const minElapsedMs = Math.max(0, projectedEventCount - CAT_TOWER_FREE_EVENT_BURST) * CAT_TOWER_MIN_MS_PER_EVENT;
-    if (elapsedMs < minElapsedMs) {
+    const minScoreElapsedMs = (Math.max(0, projectedScore - CAT_TOWER_FREE_SCORE_BURST) / CAT_TOWER_MAX_SCORE_PER_SECOND) * 1000;
+    if (elapsedMs < Math.max(minElapsedMs, minScoreElapsedMs)) {
         return jsonResponse({ error: 'cat-tower score events are too fast' }, 429);
     }
 
