@@ -142,6 +142,18 @@ button {
   margin-top: auto;
   margin-bottom: min(5vh, 42px);
   text-align: center;
+  isolation: isolate;
+}
+
+.title-content::before {
+  content: "";
+  position: absolute;
+  inset: -18px -34px -24px;
+  z-index: -1;
+  background: url("../images/ui/ui-title-plaque.png") center / 100% 100% no-repeat;
+  opacity: 0.78;
+  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.34));
+  pointer-events: none;
 }
 
 .eyebrow {
@@ -211,6 +223,9 @@ p {
   min-width: 0;
   padding: 10px 8px;
   border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(15, 52, 61, 0.84), rgba(5, 20, 28, 0.9)),
+    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
   backdrop-filter: blur(10px);
 }
 
@@ -248,36 +263,47 @@ p {
   position: relative;
   border: 0;
   border-radius: var(--radius);
+  background: transparent;
   color: var(--ink);
   cursor: pointer;
+  isolation: isolate;
   user-select: none;
-  transition: transform 140ms ease, filter 140ms ease, border-color 140ms ease, background 140ms ease;
+  transition: transform 140ms ease, filter 140ms ease, border-color 140ms ease;
+}
+
+.button::before,
+.icon-button::before {
+  content: "";
+  position: absolute;
+  inset: -8px -12px;
+  z-index: -1;
+  background: var(--button-skin, url("../images/ui/ui-button-secondary.png")) center / 100% 100% no-repeat;
+  pointer-events: none;
+  transition: filter 140ms ease, opacity 140ms ease, transform 140ms ease;
 }
 
 .button {
   min-height: 44px;
   padding: 0 18px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
   font-size: 15px;
   font-weight: 900;
   letter-spacing: 0;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 10px 24px rgba(0, 0, 0, 0.28);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.28);
 }
 
 .button-primary {
-  background: linear-gradient(180deg, #ffe28a, #e3a83e);
+  --button-skin: url("../images/ui/ui-button-primary.png");
   color: #2d1805;
+  text-shadow: 0 1px 0 rgba(255, 246, 198, 0.45);
 }
 
 .button-secondary {
-  background: linear-gradient(180deg, rgba(42, 121, 128, 0.94), rgba(18, 73, 82, 0.94));
+  --button-skin: url("../images/ui/ui-button-secondary.png");
   color: #eafff9;
 }
 
 .button-ghost {
-  background: rgba(9, 35, 44, 0.72);
+  --button-skin: url("../images/ui/ui-button-ghost.png");
   color: var(--ink-soft);
 }
 
@@ -293,19 +319,28 @@ p {
   filter: brightness(1.06);
 }
 
+.button:not(:disabled):hover::before,
+.icon-button:not(:disabled):hover::before {
+  filter: saturate(1.08) brightness(1.06);
+}
+
 .button:not(:disabled):active,
 .icon-button:not(:disabled):active {
   transform: translateY(1px) scale(0.99);
 }
 
+.button:not(:disabled):active::before,
+.icon-button:not(:disabled):active::before {
+  transform: scale(0.985);
+}
+
 .icon-button {
+  --button-skin: url("../images/ui/ui-icon-button.png");
   display: inline-grid;
   place-items: center;
   min-width: 42px;
   height: 40px;
   padding: 0 10px;
-  border: 1px solid rgba(246, 205, 105, 0.34);
-  background: rgba(5, 22, 29, 0.76);
   color: var(--gold-2);
   font-size: 11px;
   font-weight: 900;
@@ -339,6 +374,9 @@ p {
   min-width: 0;
   padding: 8px 10px;
   border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(16, 56, 65, 0.84), rgba(4, 18, 25, 0.9)),
+    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
   text-align: center;
 }
 
@@ -362,6 +400,9 @@ p {
   margin: 0 auto;
   padding: 10px 12px;
   border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(10, 39, 49, 0.84), rgba(3, 15, 22, 0.92)),
+    url("../images/ui/ui-modal-panel.png") center / 100% 100% no-repeat;
 }
 
 .stage-label {
@@ -393,6 +434,9 @@ p {
   min-height: 34px;
   padding: 4px 8px;
   border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(14, 49, 58, 0.86), rgba(4, 18, 25, 0.9)),
+    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 900;
@@ -418,9 +462,9 @@ p {
   width: min(94vw, 74svh, 620px);
   max-width: 100%;
   aspect-ratio: 1;
-  padding: clamp(9px, 2vw, 16px);
+  padding: clamp(15px, 2.8vw, 24px);
   border-radius: var(--radius);
-  border-color: rgba(246, 205, 105, 0.54);
+  border-color: rgba(246, 205, 105, 0.22);
   background:
     linear-gradient(135deg, rgba(255, 230, 143, 0.28), transparent 24%, transparent 76%, rgba(48, 214, 198, 0.18)),
     linear-gradient(180deg, rgba(9, 36, 45, 0.94), rgba(2, 13, 19, 0.96));
@@ -432,6 +476,18 @@ p {
   inset: 5px;
   border: 1px solid rgba(255, 240, 168, 0.2);
   border-radius: 6px;
+  pointer-events: none;
+}
+
+.board-frame::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  z-index: 5;
+  background: url("../images/ui/ui-board-frame.png") center / 100% 100% no-repeat;
+  filter:
+    drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34))
+    drop-shadow(0 0 18px rgba(255, 221, 114, 0.15));
   pointer-events: none;
 }
 
@@ -751,12 +807,12 @@ p {
 .vfx-burst {
   width: var(--size);
   height: var(--size);
-  background-image: url("../images/effects/match-burst-strip.png");
+  background-image: url("../images/effects/gem-shatter-strip.png");
   background-position: 0 50%;
   background-size: 1600% 100%;
   background-repeat: no-repeat;
-  filter: saturate(1.18) brightness(1.15) drop-shadow(0 0 18px var(--vfx-glow, rgba(255, 240, 168, 0.55)));
-  animation: vfxBurst 780ms steps(15) forwards;
+  filter: saturate(1.2) brightness(1.18) drop-shadow(0 0 16px var(--vfx-glow, rgba(255, 240, 168, 0.55)));
+  animation: vfxBurst 820ms steps(15) forwards;
 }
 
 .vfx-burst.mega {
@@ -770,8 +826,11 @@ p {
 .vfx-ring {
   width: var(--size);
   height: var(--size);
-  border: max(2px, calc(var(--size) * 0.018)) solid rgba(var(--vfx-rgb, 255, 242, 176), 0.92);
-  border-radius: 50%;
+  border: max(2px, calc(var(--size) * 0.016)) solid rgba(var(--vfx-rgb, 255, 242, 176), 0.72);
+  border-radius: 2px;
+  clip-path: polygon(50% 0%, 78% 18%, 100% 50%, 79% 82%, 50% 100%, 20% 82%, 0 50%, 22% 18%);
+  background:
+    conic-gradient(from 22deg, transparent 0 7%, rgba(var(--vfx-rgb, 255, 242, 176), 0.28) 8% 11%, transparent 12% 24%, rgba(255, 255, 255, 0.22) 25% 28%, transparent 29% 48%, rgba(var(--vfx-rgb, 255, 242, 176), 0.22) 49% 52%, transparent 53% 100%);
   box-shadow:
     0 0 18px var(--vfx-glow, rgba(255, 232, 112, 0.8)),
     inset 0 0 18px rgba(var(--vfx-rgb, 48, 214, 198), 0.5);
@@ -779,7 +838,7 @@ p {
 }
 
 .vfx-ring.mega {
-  border-color: rgba(var(--vfx-rgb, 255, 84, 178), 0.88);
+  border-color: rgba(var(--vfx-rgb, 255, 84, 178), 0.78);
   box-shadow:
     0 0 26px var(--vfx-glow, rgba(255, 84, 178, 0.82)),
     0 0 42px rgba(var(--vfx-rgb, 48, 214, 198), 0.56),
@@ -794,12 +853,12 @@ p {
 .vfx-shard {
   width: var(--size);
   height: var(--size);
-  background-image: url("../images/effects/jewel-shard-atlas.png");
+  background-image: url("../images/effects/gem-shards-atlas.png");
   background-size: 400% 400%;
   background-position: var(--atlas-x, 0%) var(--atlas-y, 0%);
   filter:
-    saturate(1.18)
-    brightness(1.18)
+    saturate(1.22)
+    brightness(1.2)
     drop-shadow(0 0 10px var(--vfx-glow, rgba(255, 255, 255, 0.55)));
   animation: shardFly var(--dur, 720ms) cubic-bezier(0.08, 0.72, 0.18, 1) forwards;
 }
@@ -826,6 +885,9 @@ p {
   overflow: auto;
   padding: 18px;
   border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(12, 42, 52, 0.88), rgba(3, 15, 22, 0.94)),
+    url("../images/ui/ui-modal-panel.png") center / 100% 100% no-repeat;
 }
 
 .small-card {
@@ -859,6 +921,9 @@ p {
   min-height: 136px;
   padding: 12px;
   border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(13, 46, 56, 0.86), rgba(4, 18, 25, 0.92)),
+    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
   color: var(--ink);
   text-align: left;
   cursor: pointer;
@@ -916,6 +981,9 @@ p {
 .result-stats > div {
   padding: 10px 8px;
   border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(15, 52, 61, 0.84), rgba(5, 20, 28, 0.9)),
+    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
 }
 
 .rank-submit {
@@ -923,9 +991,10 @@ p {
   gap: 8px;
   margin: 12px 0 16px;
   padding: 12px;
-  border: 1px solid rgba(246, 205, 105, 0.28);
   border-radius: var(--radius);
-  background: rgba(3, 18, 24, 0.5);
+  background:
+    linear-gradient(180deg, rgba(10, 39, 49, 0.78), rgba(3, 15, 22, 0.88)),
+    url("../images/ui/ui-modal-panel.png") center / 100% 100% no-repeat;
 }
 
 .rank-submit label {
@@ -987,6 +1056,9 @@ p {
   min-height: 40px;
   padding: 6px 10px;
   border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(14, 49, 58, 0.86), rgba(4, 18, 25, 0.9)),
+    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
 }
 
 .rank-row.top1 {
@@ -1056,7 +1128,9 @@ p {
   padding: 10px 14px;
   border: 1px solid rgba(246, 205, 105, 0.34);
   border-radius: var(--radius);
-  background: rgba(4, 18, 24, 0.92);
+  background:
+    linear-gradient(180deg, rgba(10, 39, 49, 0.88), rgba(3, 15, 22, 0.94)),
+    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
   color: var(--ink);
   font-size: 13px;
   font-weight: 850;
@@ -1115,28 +1189,31 @@ p {
   0% {
     opacity: 0;
     background-position: 0 50%;
-    transform: translate(-50%, -50%) scale(0.55) rotate(var(--spin, 0deg));
+    transform: translate(-50%, -50%) scale(0.74) rotate(var(--spin, 0deg));
   }
-  10% { opacity: 1; }
-  76% { opacity: 1; }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02) rotate(calc(var(--spin, 0deg) * 0.3));
+  }
+  62% { opacity: 1; }
   100% {
     opacity: 0;
     background-position: 100% 50%;
-    transform: translate(-50%, -50%) scale(1.12) rotate(calc(var(--spin, 0deg) * -1));
+    transform: translate(-50%, -50%) scale(0.94) rotate(calc(var(--spin, 0deg) * -0.5));
   }
 }
 
 @keyframes ringBurst {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.15); }
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.42) rotate(-8deg); }
   20% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.55); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.28) rotate(16deg); }
 }
 
 @keyframes shardFly {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.38) rotate(0deg); }
   12% { opacity: 1; }
-  72% { opacity: 0.95; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.18) rotate(var(--rot)); }
+  64% { opacity: 0.96; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.22) rotate(var(--rot)); }
 }
 
 @keyframes invalidShake {
@@ -1214,7 +1291,7 @@ p {
 
   .board-frame {
     width: min(96vw, 63svh);
-    padding: 8px;
+    padding: 14px;
   }
 
   .board {
