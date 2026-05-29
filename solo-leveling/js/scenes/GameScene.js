@@ -1,5 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE, COLORS, PLAYER_BASE_STATS, RANKS, BOSS_SCHEDULE, BOSS_TYPES } from '../utils/Constants.js';
-import { t } from '../utils/i18n.js';
+import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { Player } from '../entities/Player.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 import { EnemyManager } from '../managers/EnemyManager.js';
@@ -14,7 +14,7 @@ import { HUD } from '../ui/HUD.js';
 import { SystemMessage } from '../ui/SystemMessage.js';
 import { StatusWindow } from '../ui/StatusWindow.js';
 import { MobileControls } from '../ui/MobileControls.js';
-import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
+import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
 const SAVE_KEY = 'shadow_survival_save_v1';
 const SAVE_VERSION = 1;
@@ -33,6 +33,9 @@ export class GameScene extends Phaser.Scene {
         this._selectedCharacterId = savedData?.player?.characterId || data.characterId || DEFAULT_CHARACTER_ID;
         this._restoredFromSave = false;
         this._lastAutoSaveAt = 0;
+        this._rankSessionId = savedData?.rankSessionId || null;
+        this._rankSessionPromise = null;
+        this._rankSyncFailed = false;
     }
 
     create() {
@@ -59,6 +62,7 @@ export class GameScene extends Phaser.Scene {
         this._createEnvironmentProps();
 
         this.player = new Player(this, WORLD_SIZE / 2, WORLD_SIZE / 2, this._selectedCharacterId);
+        this._initRankSession();
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.cameras.main.setZoom(1);
         this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
@@ -185,6 +189,36 @@ export class GameScene extends Phaser.Scene {
 
         this._scheduleIntroMessages();
         this._setupSoundToggle();
+    }
+
+    _initRankSession() {
+        if (this._rankSessionId) {
+            this._rankSessionPromise = Promise.resolve(this._rankSessionId);
+            return;
+        }
+        if (this._resumeRequested) {
+            this._rankSyncFailed = true;
+            return;
+        }
+        const gameId = getCharacterRankingGameId(GAME_ID_SHADOW, this._selectedCharacterId);
+        this._rankSessionPromise = fetch(`${GAME_API_URL}/score-sessions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ game_id: gameId }),
+        })
+            .then(async (res) => {
+                if (!res.ok) throw new Error(`rank session ${res.status}`);
+                const data = await res.json();
+                if (!data || !data.session_id) throw new Error('rank session response invalid');
+                this._rankSessionId = data.session_id;
+                this._autoSave(true);
+                return this._rankSessionId;
+            })
+            .catch((e) => {
+                this._rankSyncFailed = true;
+                console.warn('[ShadowSurvival] rank session failed:', e.message);
+                return null;
+            });
     }
 
     _createStartupOverlay() {
@@ -682,6 +716,8 @@ export class GameScene extends Phaser.Scene {
                 shadowCount: this.shadowArmyManager.getSoldierCount(),
                 characterId: this.player.characterId,
                 characterName: this.player.character?.name,
+                rankSessionId: this._rankSessionId,
+                rankSyncFailed: this._rankSyncFailed,
             });
         });
     }
@@ -849,6 +885,7 @@ export class GameScene extends Phaser.Scene {
         return {
             version: SAVE_VERSION,
             ts,
+            rankSessionId: this._rankSessionId,
             player: {
                 characterId: player.characterId,
                 x: player.x,

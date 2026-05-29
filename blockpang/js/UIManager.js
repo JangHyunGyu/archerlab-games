@@ -2428,8 +2428,10 @@ class UIManager {
             const name = input.value.trim().slice(0, 20);
             if (!name) { input.focus(); return; }
             localStorage.setItem('blockpang_player_name', name);
-            cleanup();
             try {
+                const synced = await this.game.flushRankEvents();
+                if (!this.game.rankSessionId || !synced || this.game.rankSyncFailed) throw new Error('rank score sync failed');
+                cleanup();
                 await fetch(`${GAME_API_URL}/rankings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2437,13 +2439,17 @@ class UIManager {
                         game_id: GAME_ID_BLOCKPANG,
                         player_name: name,
                         score: score,
+                        session_id: this.game.rankSessionId,
                         extra_data: {
+                            session_id: this.game.rankSessionId,
                             level: this.game.scoreManager.level,
                             lines: this.game.scoreManager.linesCleared,
                         },
                     }),
                 });
-            } catch (e) { /* silent */ }
+            } catch (e) {
+                cleanup();
+            }
             if (onComplete) onComplete();
         };
 
