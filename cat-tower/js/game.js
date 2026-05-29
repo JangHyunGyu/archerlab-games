@@ -170,6 +170,12 @@
   const RANK_LIMIT = 20;
   const NICK_MAX = 20;
   const NICK_KEY = 'cat-tower.nick';
+  const RANK_EVENT_BATCH_LIMIT = 20;
+  let rankSessionId = null;
+  let rankSessionPromise = null;
+  let rankEventQueue = [];
+  let rankFlushPromise = null;
+  let rankSyncFailed = false;
 
   function tt(key, vars) { return (window.I18N && window.I18N.t(key, vars)) || key; }
 
@@ -254,6 +260,7 @@
           : null,
         nextTier,
         score,
+        rankSessionId,
         reachedFinal,
         ts: Date.now(),
       };
@@ -284,6 +291,102 @@
   }
 
   // -------- 캔버스 & 리사이즈 --------
+  function resetRankSessionState() {
+    rankSessionId = null;
+    rankSessionPromise = null;
+    rankEventQueue = [];
+    rankFlushPromise = null;
+    rankSyncFailed = false;
+  }
+
+  async function createRankSession() {
+    const res = await fetch(`${RANK_API_BASE}/score-sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ game_id: GAME_ID }),
+    });
+    if (!res.ok) throw new Error('rank session HTTP ' + res.status);
+    const data = await res.json();
+    if (!data || !data.session_id) throw new Error('rank session response invalid');
+    rankSessionId = data.session_id;
+    markSaveDirty();
+    return rankSessionId;
+  }
+
+  function ensureRankSession() {
+    if (rankSessionId) return Promise.resolve(rankSessionId);
+    if (!rankSessionPromise) {
+      rankSessionPromise = createRankSession().catch((e) => {
+        rankSyncFailed = true;
+        warn('rank session create failed:', e.message);
+        throw e;
+      });
+    }
+    return rankSessionPromise;
+  }
+
+  function startRankSession() {
+    resetRankSessionState();
+    rankSessionPromise = createRankSession().catch((e) => {
+      rankSyncFailed = true;
+      warn('rank session start failed:', e.message);
+      return null;
+    });
+  }
+
+  function restoreRankSession(sessionId, restoredScore = 0) {
+    resetRankSessionState();
+    if (sessionId) {
+      rankSessionId = String(sessionId);
+      rankSessionPromise = Promise.resolve(rankSessionId);
+    } else if (restoredScore > 0) {
+      rankSyncFailed = true;
+    } else {
+      startRankSession();
+    }
+  }
+
+  function queueRankScoreEvent(event) {
+    if (rankSyncFailed || !event) return;
+    rankEventQueue.push(event);
+    flushRankEvents();
+  }
+
+  async function flushRankEvents() {
+    if (rankFlushPromise) return rankFlushPromise;
+    rankFlushPromise = (async () => {
+      if (rankSyncFailed) return false;
+      const sessionId = await ensureRankSession();
+      if (!sessionId) return false;
+      while (rankEventQueue.length > 0) {
+        const batch = rankEventQueue.splice(0, RANK_EVENT_BATCH_LIMIT);
+        const res = await fetch(`${RANK_API_BASE}/score-events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            game_id: GAME_ID,
+            session_id: sessionId,
+            events: batch,
+          }),
+        });
+        if (!res.ok) {
+          rankEventQueue = batch.concat(rankEventQueue);
+          throw new Error('rank event HTTP ' + res.status);
+        }
+        const data = await res.json().catch(() => null);
+        if (!data || data.success !== true) throw new Error('rank event response invalid');
+      }
+      return true;
+    })().catch((e) => {
+      rankSyncFailed = true;
+      warn('rank event sync failed:', e.message);
+      return false;
+    }).finally(() => {
+      rankFlushPromise = null;
+    });
+    return rankFlushPromise;
+  }
+
   function setupCanvas() {
     canvas = $('canvas');
     nextCanvas = $('next-cat');
@@ -508,14 +611,17 @@
       // 합성 직후는 살짝 튀어오르는 느낌 (위로 소폭 임펄스)
       Body.setVelocity(next, { x: 0, y: -0.8 });
 
-      score += TIERS[tier + 1].score;
+      const mergeScore = TIERS[tier + 1].score;
+      let scoreDelta = mergeScore;
+      score += mergeScore;
 
       // 콤보 (0.7초 이내 연쇄 시 배수)
       if (now - lastMergeAt < 700) comboCount += 1;
       else comboCount = 1;
       lastMergeAt = now;
       if (comboCount >= 2) {
-        const bonus = Math.floor(TIERS[tier + 1].score * 0.25 * (comboCount - 1));
+        const bonus = Math.floor(mergeScore * 0.25 * (comboCount - 1));
+        scoreDelta += bonus;
         score += bonus;
         showComboFlash(comboCount);
         sound?.playCombo(comboCount);
@@ -525,6 +631,7 @@
       }
 
       mergeEffects.push(createMergeEffect(midX, midY, TIERS[tier + 1].radius, '#FFB84D', false));
+      queueRankScoreEvent({ type: 'merge', created_tier: tier + 1, combo: comboCount, delta: scoreDelta });
       log(`merge tier ${tier}→${tier + 1}(${TIERS[tier + 1].name}) at (${midX.toFixed(1)}, ${midY.toFixed(1)}) score=${score}`);
 
       // 최종단계(사바나) 최초 달성 축하 — 1게임당 한 번만
@@ -536,8 +643,10 @@
       }
     } else {
       // 최종 단계 끼리 붙음 → 소멸 + 보너스
-      score += TIERS[tier].score * 2;
+      const scoreDelta = TIERS[tier].score * 2;
+      score += scoreDelta;
       mergeEffects.push(createMergeEffect(midX, midY, TIERS[tier].radius * 1.3, '#F2B43A', true));
+      queueRankScoreEvent({ type: 'final_merge', tier, delta: scoreDelta });
       sound?.playFinalMerge();
       log(`최종단계 소멸 (tier ${tier}) +${TIERS[tier].score * 2}pt score=${score}`);
     }
@@ -822,6 +931,7 @@
     clearSave();
     if (isNew) { bestScore = score; saveBest(bestScore); }
     $('final-score').textContent = score.toLocaleString();
+    flushRankEvents();
     const nr = $('new-record');
     if (isNew) nr.classList.remove('hidden'); else nr.classList.add('hidden');
     resetRankSubmit();
@@ -1131,6 +1241,7 @@
     _frameCount = 0;
     _lastFpsAt = 0;
     _framesSinceFps = 0;
+    startRankSession();
 
     // 기존 월드 초기화
     if (world) {
@@ -1178,6 +1289,7 @@
       _frameCount = 0;
       _lastFpsAt = 0;
       _framesSinceFps = 0;
+      restoreRankSession(data.rankSessionId, score);
 
       if (world) {
         const existing = Composite.allBodies(world).filter(b => b.label === 'cat');
@@ -1347,6 +1459,10 @@
         game_id: GAME_ID,
         player_name: playerName,
         score: finalScore,
+        session_id: rankSessionId,
+        extra_data: {
+          session_id: rankSessionId,
+        },
       }),
     });
     if (!res.ok) {
@@ -1408,6 +1524,8 @@
     status.className = 'submit-status';
     status.textContent = tt('over.submitting');
     try {
+      const synced = await flushRankEvents();
+      if (!rankSessionId || !synced || rankSyncFailed) throw new Error('rank score sync failed');
       const res = await submitScore(name, score);
       try { localStorage.setItem(NICK_KEY, name); } catch {}
       status.className = 'submit-status ok';
