@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#071a22">
+  <title>쥬얼리아 Jewelria - 무료 보석 매치3 퍼즐 게임 | ArcherLab Games</title>
+  <meta name="description" content="쥬얼리아는 8x8 보드에서 보석을 맞추고 연쇄 콤보를 노리는 무료 웹 매치3 퍼즐 게임입니다. PC와 모바일 브라우저에서 바로 플레이하세요.">
+  <meta name="keywords" content="쥬얼리아, Jewelria, 매치3, 보석 퍼즐, 무료 웹게임, 브라우저 게임, ArcherLab Games">
+  <meta property="og:title" content="쥬얼리아 Jewelria - ArcherLab Games">
+  <meta property="og:description" content="루비, 사파이어, 에메랄드를 스왑해 콤보를 터뜨리는 무료 보석 매치3 퍼즐.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://game.archerlab.dev/jewelria/">
+  <meta property="og:image" content="https://game.archerlab.dev/jewelria/assets/images/ui/og-image.png">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:site_name" content="ArcherLab Games">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="쥬얼리아 Jewelria - ArcherLab Games">
+  <meta name="twitter:description" content="보석을 스왑하고 연쇄 콤보를 터뜨리는 무료 웹 매치3 퍼즐.">
+  <meta name="twitter:image" content="https://game.archerlab.dev/jewelria/assets/images/ui/og-image.png">
+  <link rel="canonical" href="https://game.archerlab.dev/jewelria/">
+  <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/jewelria/">
+  <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/jewelria/index-en">
+  <link rel="alternate" hreflang="ja" href="https://game.archerlab.dev/jewelria/index-ja">
+  <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/jewelria/">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/images/ui/apple-touch-icon.png">
+  <link rel="preload" as="image" href="assets/images/ui/jewelria-splash.png">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "쥬얼리아",
+    "alternateName": "Jewelria",
+    "description": "8x8 보드에서 같은 보석 3개 이상을 맞춰 제거하는 무료 웹 매치3 퍼즐 게임.",
+    "url": "https://game.archerlab.dev/jewelria/",
+    "image": "https://game.archerlab.dev/jewelria/assets/images/ui/og-image.png",
+    "genre": ["Puzzle", "Match-3", "Casual"],
+    "gamePlatform": ["Web Browser", "Mobile Browser"],
+    "applicationCategory": "Game",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+    "author": { "@type": "Organization", "name": "ArcherLab", "url": "https://archerlab.dev/" },
+    "inLanguage": "ko",
+    "isAccessibleForFree": true,
+    "playMode": "SinglePlayer",
+    "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 }
+  }
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-66FS0YCEEM');
+  </script>
+</head>
+<body>
+  <a class="archerlab-link" href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" aria-label="ArcherLab로 이동">ArcherLab</a>
+
+  <main id="app" class="app-shell" data-lang="ko">
+    <section id="title-screen" class="screen title-screen is-active" aria-label="쥬얼리아 타이틀">
+      <picture class="title-bg" aria-hidden="true">
+        <img src="assets/images/ui/jewelria-splash.png" alt="" decoding="async">
+      </picture>
+      <div class="title-shade" aria-hidden="true"></div>
+
+      <header class="topbar">
+        <button id="sound-toggle-title" class="icon-button" type="button" aria-label="사운드 켜기/끄기" title="사운드">Sound</button>
+        <button id="rank-open-title" class="icon-button" type="button" aria-label="명예의 전당 열기" title="명예의 전당">Rank</button>
+      </header>
+
+      <div class="title-content">
+        <p class="eyebrow">ARCHERLAB GAMES</p>
+        <h1>쥬얼리아</h1>
+        <p class="subtitle">보석을 맞추고, 연쇄를 터뜨리고, 별빛 왕관을 모으세요.</p>
+        <div class="record-strip" aria-live="polite">
+          <div>
+            <span>진행</span>
+            <strong id="title-progress">Stage 1</strong>
+          </div>
+          <div>
+            <span>획득 별</span>
+            <strong id="title-stars">0</strong>
+          </div>
+          <div>
+            <span>최고 점수</span>
+            <strong id="title-best">0</strong>
+          </div>
+        </div>
+        <div class="title-actions">
+          <button id="play-btn" class="button button-primary" type="button">게임 시작</button>
+          <button id="continue-btn" class="button button-secondary" type="button">이어하기</button>
+          <button id="stage-btn" class="button button-secondary" type="button">스테이지</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="game-screen" class="screen game-screen" aria-label="쥬얼리아 게임 화면">
+      <header class="game-hud">
+        <button id="home-btn" class="icon-button" type="button" aria-label="타이틀로 돌아가기" title="타이틀">Home</button>
+        <div class="hud-stat">
+          <span>목표</span>
+          <strong id="hud-target">0</strong>
+        </div>
+        <div class="hud-stat hud-stat-score">
+          <span>점수</span>
+          <strong id="hud-score">0</strong>
+        </div>
+        <div class="hud-stat">
+          <span>이동</span>
+          <strong id="hud-moves">0</strong>
+        </div>
+        <button id="pause-btn" class="icon-button" type="button" aria-label="일시정지" title="일시정지">Pause</button>
+      </header>
+
+      <div class="objective-panel">
+        <div>
+          <p id="stage-label" class="stage-label">Stage 1</p>
+          <h2 id="objective-title">목표 점수 달성</h2>
+        </div>
+        <div id="collect-goals" class="collect-goals" aria-label="수집 목표"></div>
+      </div>
+
+      <section class="board-wrap" aria-label="게임 보드">
+        <div class="board-frame">
+          <div id="board" class="board" role="grid" aria-label="8 x 8 보석 보드" tabindex="0"></div>
+          <div id="combo-layer" class="combo-layer" aria-hidden="true"></div>
+          <div id="particle-layer" class="particle-layer" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <footer class="game-controls">
+        <button id="restart-btn" class="button button-ghost" type="button">다시하기</button>
+        <button id="hint-btn" class="button button-ghost" type="button">힌트</button>
+        <button id="rank-open-game" class="button button-ghost" type="button">명예의 전당</button>
+      </footer>
+    </section>
+  </main>
+
+  <section id="stage-modal" class="modal hidden" aria-modal="true" role="dialog" aria-labelledby="stage-modal-title">
+    <div class="modal-card stage-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">STAGE</p>
+          <h2 id="stage-modal-title">스테이지 선택</h2>
+        </div>
+        <button id="stage-close" class="icon-button" type="button" aria-label="닫기" title="닫기">Close</button>
+      </div>
+      <div id="stage-list" class="stage-list"></div>
+    </div>
+  </section>
+
+  <section id="pause-modal" class="modal hidden" aria-modal="true" role="dialog" aria-labelledby="pause-title">
+    <div class="modal-card small-card">
+      <p class="eyebrow">PAUSE</p>
+      <h2 id="pause-title">잠시 쉬어가기</h2>
+      <div class="modal-actions">
+        <button id="resume-btn" class="button button-primary" type="button">계속하기</button>
+        <button id="pause-restart-btn" class="button button-secondary" type="button">다시하기</button>
+        <button id="pause-home-btn" class="button button-secondary" type="button">타이틀</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="result-modal" class="modal hidden" aria-modal="true" role="dialog" aria-labelledby="result-title">
+    <div class="modal-card result-card">
+      <p id="result-kicker" class="eyebrow">CLEAR</p>
+      <h2 id="result-title">스테이지 클리어</h2>
+      <div id="result-stars" class="result-stars" aria-label="획득 별"></div>
+      <div class="result-stats">
+        <div>
+          <span>점수</span>
+          <strong id="result-score">0</strong>
+        </div>
+        <div>
+          <span>최고</span>
+          <strong id="result-best">0</strong>
+        </div>
+        <div>
+          <span>남은 이동</span>
+          <strong id="result-moves">0</strong>
+        </div>
+      </div>
+
+      <div id="rank-submit" class="rank-submit">
+        <label for="nickname-input">명예의 전당 등록</label>
+        <div class="rank-submit-row">
+          <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="닉네임 (20자)">
+          <button id="submit-rank-btn" class="button button-primary" type="button">등록</button>
+        </div>
+        <button id="skip-rank-btn" class="button button-ghost" type="button">건너뛰기</button>
+        <p id="submit-status" class="submit-status" aria-live="polite"></p>
+      </div>
+
+      <div class="modal-actions">
+        <button id="next-stage-btn" class="button button-primary" type="button">다음 스테이지</button>
+        <button id="retry-btn" class="button button-secondary" type="button">재도전</button>
+        <button id="result-home-btn" class="button button-secondary" type="button">타이틀</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="rank-modal" class="modal hidden" aria-modal="true" role="dialog" aria-labelledby="rank-title">
+    <div class="modal-card rank-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">HALL OF FAME</p>
+          <h2 id="rank-title">명예의 전당 TOP 20</h2>
+        </div>
+        <button id="rank-close" class="icon-button" type="button" aria-label="닫기" title="닫기">Close</button>
+      </div>
+      <div id="rank-content" class="rank-content">
+        <div class="rank-loading">불러오는 중...</div>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="assets/js/main.js"></script>
+</body>
+</html>

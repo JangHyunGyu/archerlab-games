@@ -42,6 +42,11 @@ const BLOCKPANG_PERFECT_CLEAR_BONUS = 500;
 const BLOCKPANG_MAX_SCORE = 500000;
 const BLOCKPANG_FREE_SCORE_BURST = 2000;
 const BLOCKPANG_MAX_SCORE_PER_SECOND = 3000;
+const JEWELRIA_GAME_ID = 'jewelria';
+const JEWELRIA_MAX_SCORE = 600000;
+const JEWELRIA_FREE_SCORE_BURST = 2500;
+const JEWELRIA_MAX_SCORE_PER_SECOND = 4500;
+const JEWELRIA_COMBO_MULTIPLIER = 0.5;
 const PARKING_GAME_ID = 'parking_escape';
 const PARKING_MIN_MS_PER_LEVEL = 10000;
 const PARKING_MAX_LEVEL_SCORE = 100000;
@@ -86,6 +91,7 @@ function makeSessionId() {
 function getProtectedGameKind(gameId) {
     if (gameId === CAT_TOWER_GAME_ID) return 'cat-tower';
     if (gameId === BLOCKPANG_GAME_ID) return 'blockpang';
+    if (gameId === JEWELRIA_GAME_ID) return 'jewelria';
     if (gameId === PARKING_GAME_ID) return 'parking';
     if (typeof gameId === 'string' && gameId.startsWith(SHADOW_GAME_PREFIX)) return 'shadow';
     return null;
@@ -348,6 +354,116 @@ async function recordBlockpangScoreEvents(db, body) {
     });
 }
 
+function validateJewelriaScoreEvent(event) {
+    if (!isPlainObject(event)) {
+        throw new Error('score event must be an object');
+    }
+
+    const type = String(event.type || '');
+    const delta = parseInteger(event.delta);
+    if (type !== 'match') {
+        throw new Error('unsupported jewelria score event');
+    }
+    if (!Number.isFinite(delta) || delta < 0) {
+        throw new Error('score event delta must be non-negative');
+    }
+
+    const removed = parseInteger(event.removed);
+    const longest = parseInteger(event.longest);
+    const lines = parseInteger(event.lines);
+    const special = parseInteger(event.special ?? 0);
+    const combo = parseInteger(event.combo);
+    if (!Number.isFinite(removed) || removed < 3 || removed > 64) {
+        throw new Error('invalid jewelria removed count');
+    }
+    if (!Number.isFinite(longest) || longest < 3 || longest > 8) {
+        throw new Error('invalid jewelria longest match');
+    }
+    if (!Number.isFinite(lines) || lines < 1 || lines > 16) {
+        throw new Error('invalid jewelria line count');
+    }
+    if (!Number.isFinite(special) || special < 0 || special > 16) {
+        throw new Error('invalid jewelria special count');
+    }
+    if (!Number.isFinite(combo) || combo < 1 || combo > 100) {
+        throw new Error('invalid jewelria combo count');
+    }
+
+    const lengthBonus = longest >= 5 ? 50 : longest >= 4 ? 20 : 0;
+    const multiLineBonus = Math.max(0, lines - 1) * 20;
+    const specialBonus = special * 50;
+    const base = removed * 10 + lengthBonus + multiLineBonus + specialBonus;
+    const expected = Math.floor(base * (1 + Math.max(0, combo - 1) * JEWELRIA_COMBO_MULTIPLIER));
+    if (delta !== expected) {
+        throw new Error('jewelria score event delta mismatch');
+    }
+    return delta;
+}
+
+async function recordJewelriaScoreEvents(db, body) {
+    const gameId = body?.game_id;
+    const sessionId = String(body?.session_id || '').trim();
+    const events = Array.isArray(body?.events) ? body.events : (body?.event ? [body.event] : []);
+
+    if (gameId !== JEWELRIA_GAME_ID) {
+        return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
+    }
+    if (!sessionId) {
+        return jsonResponse({ error: 'session_id is required' }, 400);
+    }
+    if (events.length === 0 || events.length > SCORE_EVENT_BATCH_LIMIT) {
+        return jsonResponse({ error: 'events must contain 1-50 items' }, 400);
+    }
+
+    const session = await db.prepare(
+        'SELECT session_id, game_id, score, event_count, started_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (!session || session.game_id !== gameId) {
+        return jsonResponse({ error: 'score session not found' }, 404);
+    }
+    if (session.submitted_at) {
+        return jsonResponse({ error: 'score session already submitted' }, 409);
+    }
+
+    const now = Date.now();
+    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
+        return jsonResponse({ error: 'score session expired' }, 410);
+    }
+
+    let deltaTotal = 0;
+    try {
+        for (const event of events) {
+            deltaTotal += validateJewelriaScoreEvent(event);
+        }
+    } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+    }
+
+    const projectedScore = Number(session.score) + deltaTotal;
+    const projectedEventCount = Number(session.event_count) + events.length;
+    if (projectedScore > JEWELRIA_MAX_SCORE) {
+        return jsonResponse({ error: 'jewelria score exceeds allowed maximum' }, 400);
+    }
+
+    const elapsedMs = now - Number(session.started_at);
+    const minScoreElapsedMs = (Math.max(0, projectedScore - JEWELRIA_FREE_SCORE_BURST) / JEWELRIA_MAX_SCORE_PER_SECOND) * 1000;
+    if (elapsedMs < minScoreElapsedMs) {
+        return jsonResponse({ error: 'jewelria score events are too fast' }, 429);
+    }
+
+    await db.prepare(
+        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ? WHERE session_id = ?'
+    ).bind(projectedScore, projectedEventCount, now, sessionId).run();
+
+    return jsonResponse({
+        success: true,
+        game_id: gameId,
+        session_id: sessionId,
+        score: projectedScore,
+        event_count: projectedEventCount,
+    });
+}
+
 async function recordParkingScoreEvents(db, body) {
     const gameId = body?.game_id;
     const sessionId = String(body?.session_id || '').trim();
@@ -413,6 +529,7 @@ async function recordScoreEvents(db, body) {
     const kind = getProtectedGameKind(body?.game_id);
     if (kind === 'cat-tower') return recordCatTowerScoreEvents(db, body);
     if (kind === 'blockpang') return recordBlockpangScoreEvents(db, body);
+    if (kind === 'jewelria') return recordJewelriaScoreEvents(db, body);
     if (kind === 'parking') return recordParkingScoreEvents(db, body);
     return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
 }
@@ -528,6 +645,10 @@ async function verifyRankingSession(db, body, clientScore) {
     if (kind === 'blockpang') return verifyStoredScoreRankingSession(db, body, clientScore, {
         label: 'blockpang',
         maxScore: BLOCKPANG_MAX_SCORE,
+    });
+    if (kind === 'jewelria') return verifyStoredScoreRankingSession(db, body, clientScore, {
+        label: 'jewelria',
+        maxScore: JEWELRIA_MAX_SCORE,
     });
     if (kind === 'parking') return verifyStoredScoreRankingSession(db, body, clientScore, {
         label: 'parking escape',
