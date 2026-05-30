@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelria-v0.1.9';
+const CACHE_NAME = 'jewelria-v0.1.10';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -57,6 +57,14 @@ const CORE_ASSETS = [
   './assets/sounds/impact_heavy.wav',
   './assets/sounds/sparkle.wav',
   './assets/sounds/whoosh.wav',
+  './assets/sounds/swap_slide.wav',
+  './assets/sounds/invalid_swap.wav',
+  './assets/sounds/ui_button.wav',
+  './assets/sounds/gem_drop_soft.wav',
+  './assets/sounds/gem_land_sparkle.wav',
+  './assets/sounds/cascade_rush.wav',
+  './assets/sounds/stage_clear_fanfare.wav',
+  './assets/sounds/stage_fail_stinger.wav',
   './assets/sounds/bgm_main_loop.mp3',
   './assets/sounds/bgm_game_loop.mp3'
 ];

@@ -329,6 +329,7 @@ async function processMatches(initialMatches, originCells) {
     state.board.placeSpecials(resolution.specials);
     const fallMoves = state.board.collapseAndRefill();
     ui.renderBoard(state.board.grid, null, fallMoves);
+    if (fallMoves.length) audio.play('cascade', combo, { fallCount: fallMoves.length });
     saveCurrentGame();
     await delay(getFallAnimationWait(fallMoves));
 

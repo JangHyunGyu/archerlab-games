@@ -8,7 +8,15 @@ const SOUND_ASSETS = {
   comboEscalate: 'assets/sounds/combo_escalate.wav',
   impactHeavy: 'assets/sounds/impact_heavy.wav',
   sparkle: 'assets/sounds/sparkle.wav',
-  whoosh: 'assets/sounds/whoosh.wav'
+  whoosh: 'assets/sounds/whoosh.wav',
+  swapSlide: 'assets/sounds/swap_slide.wav',
+  invalidSwap: 'assets/sounds/invalid_swap.wav',
+  uiButton: 'assets/sounds/ui_button.wav',
+  gemDropSoft: 'assets/sounds/gem_drop_soft.wav',
+  gemLandSparkle: 'assets/sounds/gem_land_sparkle.wav',
+  cascadeRush: 'assets/sounds/cascade_rush.wav',
+  stageClearFanfare: 'assets/sounds/stage_clear_fanfare.wav',
+  stageFailStinger: 'assets/sounds/stage_fail_stinger.wav'
 };
 
 const MUSIC_ASSETS = {
@@ -92,6 +100,7 @@ export class AudioManager {
       if (name === 'match') this.playMatch(now, level, detail);
       if (name === 'combo') this.playCombo(now, level, detail);
       if (name === 'special') this.playSpecial(now, level, detail);
+      if (name === 'cascade') this.playCascade(now, level, detail);
       if (name === 'clear') this.playClear(now);
       if (name === 'fail') this.playFail(now);
       if (name === 'button') this.playButton(now);
@@ -99,13 +108,13 @@ export class AudioManager {
   }
 
   playSwap(now) {
-    this.tone(now, 420, 0.045, 'triangle', 0.14);
-    this.tone(now + 0.026, 620, 0.04, 'sine', 0.08);
+    this.playBuffer('swapSlide', 0.56);
+    this.tone(now + 0.018, 620, 0.045, 'triangle', 0.06);
   }
 
   playInvalid(now) {
-    this.tone(now, 170, 0.08, 'sawtooth', 0.08);
-    this.tone(now + 0.045, 118, 0.07, 'triangle', 0.06);
+    this.playBuffer('invalidSwap', 0.56);
+    this.tone(now + 0.018, 140, 0.09, 'triangle', 0.05);
   }
 
   playMatch(now, level, detail) {
@@ -146,20 +155,32 @@ export class AudioManager {
     this.crystalRun(now + 0.04, [420, 840, 1260, 1680, 2100, 2520], 0.036, 0.16);
   }
 
+  playCascade(now, level, detail) {
+    const fallCount = Math.max(1, Number(detail.fallCount || 1));
+    const strength = Math.min(1, fallCount / 28);
+    const landDelay = Math.min(0.48, 0.22 + fallCount * 0.006);
+    this.playBuffer('cascadeRush', 0.32 + strength * 0.2, 0, 1 + Math.min(0.06, level * 0.01));
+    this.playBuffer('gemDropSoft', 0.22 + strength * 0.1, 0.018);
+    this.playBuffer('gemLandSparkle', 0.24 + strength * 0.14, landDelay, 1 + Math.min(0.08, level * 0.015));
+    if (level >= 2) this.playBuffer('sparkle', 0.2 + strength * 0.08, landDelay + 0.05, 1.06);
+  }
+
   playClear(now) {
-    this.playBuffer('clearQuad', 0.78);
-    this.playBuffer('sparkle', 0.64, 0.08);
-    this.crystalRun(now, [523, 659, 784, 1046, 1318], 0.07, 0.16);
+    this.playBuffer('stageClearFanfare', 0.74);
+    this.playBuffer('clearQuad', 0.54, 0.01);
+    this.playBuffer('sparkle', 0.48, 0.16);
+    this.crystalRun(now + 0.06, [523, 659, 784, 1046, 1318], 0.07, 0.11);
   }
 
   playFail(now) {
-    this.crystalRun(now, [330, 260, 196], 0.11, 0.1);
-    this.noiseBurst(now + 0.08, 0.2, 0.06, 'brown');
+    this.playBuffer('stageFailStinger', 0.62);
+    this.crystalRun(now + 0.03, [330, 260, 196], 0.11, 0.055);
+    this.noiseBurst(now + 0.08, 0.2, 0.035, 'brown');
   }
 
   playButton(now) {
-    this.tone(now, 620, 0.042, 'sine', 0.075);
-    this.tone(now + 0.018, 880, 0.035, 'triangle', 0.04);
+    this.playBuffer('uiButton', 0.58);
+    this.tone(now + 0.012, 880, 0.035, 'triangle', 0.025);
   }
 
   startAmbient(track = 'main') {
