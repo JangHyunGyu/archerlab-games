@@ -230,7 +230,7 @@ export class UI {
   spawnMatchEffects(cells, options = {}) {
     const layerRect = this.refs.particleLayer.getBoundingClientRect();
     const points = cells
-      .slice(0, 28)
+      .slice(0, 36)
       .map((cell) => this.getCellCenter(cell, layerRect))
       .filter(Boolean);
     if (!points.length) return;
@@ -239,7 +239,7 @@ export class UI {
     const lineCount = Number(options.lineCount || 1);
     const longest = Number(options.longest || 3);
     const hasSpecial = Number(options.specialActivations || 0) > 0;
-    const intensity = Math.min(3.4, 1 + combo * 0.28 + Math.max(0, lineCount - 1) * 0.3 + Math.max(0, longest - 3) * 0.22 + (hasSpecial ? 0.55 : 0));
+    const intensity = Math.min(5.2, 1.32 + combo * 0.42 + Math.max(0, lineCount - 1) * 0.46 + Math.max(0, longest - 3) * 0.34 + (hasSpecial ? 0.85 : 0));
     const center = points.reduce((sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }), { x: 0, y: 0 });
     center.x /= points.length;
     center.y /= points.length;
@@ -247,20 +247,30 @@ export class UI {
 
     this.pulseBoard(intensity);
     this.spawnBoardFlash(intensity, centerType);
-    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 3.2, 170 * intensity), 'mega', centerType);
-    this.spawnRing(center.x, center.y, Math.max(points[0].size * 2.4, 130 * intensity), 'mega', centerType);
+    this.spawnBoardFlash(intensity * 0.72, centerType, 'white-hot');
+    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 4.4, 230 * intensity), 'mega', centerType);
+    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 3.1, 150 * intensity), 'flash', centerType);
+    this.spawnRing(center.x, center.y, Math.max(points[0].size * 3.4, 180 * intensity), 'mega shock', centerType);
+    this.spawnRaySpray(center.x, center.y, 18 + Math.round(intensity * 8), points[0].size * 1.3, intensity + 0.4, centerType);
+    this.spawnGlint(center.x, center.y, points[0].size * (2.4 + intensity * 0.32), intensity, centerType, 'major');
 
     for (const point of points) {
       const type = point.type || centerType;
-      this.spawnBurst(point.x, point.y, point.size * randomBetween(1.9, 2.55) * intensity, '', type);
-      this.spawnRing(point.x, point.y, point.size * randomBetween(1.35, 1.9) * intensity, '', type);
-      this.spawnShardSpray(point.x, point.y, 7 + Math.round(intensity * 4), point.size, intensity, type);
-      for (let i = 0; i < 5; i += 1) this.spawnSpark(point.x, point.y, point.size, intensity, type);
+      this.spawnBurst(point.x, point.y, point.size * randomBetween(2.55, 3.45) * intensity, '', type);
+      this.spawnBurst(point.x, point.y, point.size * randomBetween(1.65, 2.2) * intensity, 'flash', type);
+      this.spawnRing(point.x, point.y, point.size * randomBetween(1.9, 2.7) * intensity, '', type);
+      this.spawnShardSpray(point.x, point.y, 15 + Math.round(intensity * 7), point.size, intensity, type);
+      this.spawnRaySpray(point.x, point.y, 5 + Math.round(intensity * 3), point.size, intensity, type);
+      this.spawnGlint(point.x, point.y, point.size * randomBetween(1.25, 1.8), intensity, type);
+      const sparkCount = 8 + Math.round(intensity * 3);
+      for (let i = 0; i < sparkCount; i += 1) this.spawnSpark(point.x, point.y, point.size, intensity, type);
     }
 
     if (combo >= 3 || hasSpecial || longest >= 5) {
-      this.spawnShardSpray(center.x, center.y, 30 + combo * 4, points[0].size * 1.2, intensity + 0.5, centerType);
-      this.spawnRing(center.x, center.y, Math.max(points[0].size * 4.2, 220 * intensity), 'screen', centerType);
+      this.spawnShardSpray(center.x, center.y, 48 + combo * 8, points[0].size * 1.45, intensity + 0.8, centerType);
+      this.spawnRaySpray(center.x, center.y, 34 + combo * 6, points[0].size * 1.7, intensity + 0.9, centerType);
+      this.spawnRing(center.x, center.y, Math.max(points[0].size * 5.4, 300 * intensity), 'screen shock', centerType);
+      this.spawnGlint(center.x, center.y, points[0].size * (3.2 + intensity * 0.42), intensity + 0.8, centerType, 'major');
     }
   }
 
@@ -284,7 +294,7 @@ export class UI {
     const app = this.refs.app;
     const frame = this.refs.boardFrame;
     if (!app || !frame) return;
-    app.style.setProperty('--shake-power', `${Math.min(18, 7 + intensity * 5)}px`);
+    app.style.setProperty('--shake-power', `${Math.min(28, 8 + intensity * 6.2)}px`);
     app.classList.remove('match-shake');
     frame.classList.remove('match-impact');
     void app.offsetWidth;
@@ -294,16 +304,16 @@ export class UI {
     this.impactTimer = setTimeout(() => {
       app.classList.remove('match-shake');
       frame.classList.remove('match-impact');
-    }, 520);
+    }, 680);
   }
 
-  spawnBoardFlash(intensity, type) {
+  spawnBoardFlash(intensity, type, extraClass = '') {
     const flash = document.createElement('span');
-    flash.className = 'vfx-board-flash';
+    flash.className = `vfx-board-flash ${extraClass}`.trim();
     this.applyVfxVars(flash, type);
-    flash.style.setProperty('--flash-alpha', String(Math.min(0.6, 0.16 + intensity * 0.1)));
+    flash.style.setProperty('--flash-alpha', String(Math.min(0.86, 0.22 + intensity * 0.12)));
     this.refs.particleLayer.appendChild(flash);
-    setTimeout(() => flash.remove(), 520);
+    setTimeout(() => flash.remove(), 660);
   }
 
   spawnBurst(x, y, size, extraClass = '', type = null) {
@@ -312,10 +322,10 @@ export class UI {
     this.applyVfxVars(burst, type, 'burst');
     burst.style.left = `${x}px`;
     burst.style.top = `${y}px`;
-    burst.style.setProperty('--size', `${Math.min(520, size)}px`);
+    burst.style.setProperty('--size', `${Math.min(780, size)}px`);
     burst.style.setProperty('--spin', `${randomBetween(-18, 18).toFixed(1)}deg`);
     this.refs.particleLayer.appendChild(burst);
-    setTimeout(() => burst.remove(), 860);
+    setTimeout(() => burst.remove(), 1080);
   }
 
   spawnRing(x, y, size, extraClass = '', type = null) {
@@ -324,13 +334,13 @@ export class UI {
     this.applyVfxVars(ring, type);
     ring.style.left = `${x}px`;
     ring.style.top = `${y}px`;
-    ring.style.setProperty('--size', `${Math.min(620, size)}px`);
+    ring.style.setProperty('--size', `${Math.min(920, size)}px`);
     this.refs.particleLayer.appendChild(ring);
-    setTimeout(() => ring.remove(), 740);
+    setTimeout(() => ring.remove(), 940);
   }
 
   spawnShardSpray(x, y, count, baseSize, intensity, type = null) {
-    const capped = Math.min(58, count);
+    const capped = Math.min(96, count);
     for (let i = 0; i < capped; i += 1) {
       const shard = document.createElement('span');
       shard.className = 'vfx-shard';
@@ -338,19 +348,19 @@ export class UI {
       shard.style.left = `${x}px`;
       shard.style.top = `${y}px`;
       const angle = (Math.PI * 2 * i / capped) + randomBetween(-0.28, 0.28);
-      const distance = randomBetween(baseSize * 0.7, baseSize * (2.3 + intensity));
-      const size = randomBetween(13, 30) * Math.min(1.45, 0.8 + intensity * 0.2);
+      const distance = randomBetween(baseSize * 0.9, baseSize * (3.25 + intensity * 0.82));
+      const size = randomBetween(16, 42) * Math.min(1.85, 0.9 + intensity * 0.22);
       const atlasX = Math.floor(Math.random() * 4) * 33.333;
       const atlasY = Math.floor(Math.random() * 4) * 33.333;
       shard.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
       shard.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
-      shard.style.setProperty('--rot', `${randomBetween(-220, 220).toFixed(1)}deg`);
+      shard.style.setProperty('--rot', `${randomBetween(-420, 420).toFixed(1)}deg`);
       shard.style.setProperty('--size', `${size}px`);
-      shard.style.setProperty('--dur', `${randomBetween(560, 920)}ms`);
+      shard.style.setProperty('--dur', `${randomBetween(720, 1180)}ms`);
       shard.style.setProperty('--atlas-x', `${atlasX}%`);
       shard.style.setProperty('--atlas-y', `${atlasY}%`);
       this.refs.particleLayer.appendChild(shard);
-      setTimeout(() => shard.remove(), 980);
+      setTimeout(() => shard.remove(), 1240);
     }
   }
 
@@ -361,11 +371,48 @@ export class UI {
     spark.style.left = `${x}px`;
     spark.style.top = `${y}px`;
     const angle = Math.random() * Math.PI * 2;
-    const distance = randomBetween(baseSize * 0.5, baseSize * (1.7 + intensity));
+    const distance = randomBetween(baseSize * 0.7, baseSize * (2.4 + intensity * 0.7));
+    spark.style.setProperty('--size', `${randomBetween(7, 15) * Math.min(1.55, 0.9 + intensity * 0.16)}px`);
     spark.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
     spark.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+    spark.style.setProperty('--rot', `${randomBetween(-220, 220).toFixed(1)}deg`);
+    spark.style.setProperty('--dur', `${randomBetween(620, 980)}ms`);
     this.refs.particleLayer.appendChild(spark);
-    setTimeout(() => spark.remove(), 720);
+    setTimeout(() => spark.remove(), 1040);
+  }
+
+  spawnRaySpray(x, y, count, baseSize, intensity, type = null) {
+    const capped = Math.min(76, Math.max(0, count));
+    for (let i = 0; i < capped; i += 1) {
+      const ray = document.createElement('span');
+      ray.className = 'vfx-ray';
+      this.applyVfxVars(ray, type);
+      ray.style.left = `${x}px`;
+      ray.style.top = `${y}px`;
+      const angle = (Math.PI * 2 * i / capped) + randomBetween(-0.42, 0.42);
+      const distance = randomBetween(baseSize * 1.05, baseSize * (3.8 + intensity * 0.75));
+      ray.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
+      ray.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
+      ray.style.setProperty('--rot', `${(angle * 180 / Math.PI).toFixed(1)}deg`);
+      ray.style.setProperty('--width', `${randomBetween(baseSize * 0.42, baseSize * (0.9 + intensity * 0.18))}px`);
+      ray.style.setProperty('--height', `${randomBetween(3, 7)}px`);
+      ray.style.setProperty('--dur', `${randomBetween(560, 920)}ms`);
+      this.refs.particleLayer.appendChild(ray);
+      setTimeout(() => ray.remove(), 980);
+    }
+  }
+
+  spawnGlint(x, y, size, intensity, type = null, extraClass = '') {
+    const glint = document.createElement('span');
+    glint.className = `vfx-glint ${extraClass}`.trim();
+    this.applyVfxVars(glint, type);
+    glint.style.left = `${x}px`;
+    glint.style.top = `${y}px`;
+    glint.style.setProperty('--size', `${Math.min(260, size)}px`);
+    glint.style.setProperty('--rot', `${randomBetween(-28, 28).toFixed(1)}deg`);
+    glint.style.setProperty('--dur', `${randomBetween(520, 780) + intensity * 24}ms`);
+    this.refs.particleLayer.appendChild(glint);
+    setTimeout(() => glint.remove(), 940);
   }
 
   applyVfxVars(el, type, asset = '') {

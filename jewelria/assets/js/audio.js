@@ -122,12 +122,13 @@ export class AudioManager {
     const pan = rnd(-0.35, 0.35);
 
     // 보석 3개 이상이 깨지는 소리가 주인공. 매치 규모만큼 더 크고 파편이 많아진다.
-    const shatterPower = huge ? 1.6 : big ? 1.25 : 0.95;
+    const shatterPower = huge ? 1.7 : big ? 1.3 : 1.0;
     this.glassShatter(now, shatterPower, pan);
-    // 깨짐 직후의 보석 잔향 종소리(은은하게 받쳐줌).
-    this.gemBell(now + 0.012, base, huge ? 0.5 : big ? 0.4 : 0.32, huge ? 0.16 : big ? 0.13 : 0.1, pan, huge ? 0.5 : big ? 0.38 : 0.26);
-    this.subImpact(now, big ? 1.2 : 0.82);
-    this.sparkleTail(now + 0.02, huge ? 12 : big ? 8 : 5, huge ? 0.55 : big ? 0.42 : 0.32, pan);
+    // 깨짐 직후의 보석 잔향 종소리(고역에서 은은하게 받쳐줌).
+    this.gemBell(now + 0.014, base * 1.5, huge ? 0.42 : big ? 0.34 : 0.26, huge ? 0.1 : big ? 0.08 : 0.06, pan, huge ? 0.5 : big ? 0.4 : 0.3);
+    // 저역 펀치는 아주 약하게만(유리는 베이스가 거의 없음).
+    if (huge) this.subImpact(now, 0.5);
+    this.sparkleTail(now + 0.02, huge ? 12 : big ? 8 : 5, huge ? 0.5 : big ? 0.4 : 0.3, pan);
     if (big) this.gemBell(now + 0.05, base * 1.5, 0.3, 0.075, pan, 0.5);
   }
 
@@ -303,45 +304,47 @@ export class AudioManager {
 
   // 유리/보석 깨짐: 날카로운 크랙 트랜지언트 + 잘게 흩어지는 파편 짤랑임.
   glassShatter(start, power = 1, pan = 0, color = 'pink') {
-    // 1) 초기 크랙 — 아주 짧고 밝은 파열 트랜지언트.
-    this.glassNoise(start, 0.018, 0.34 * power, 3600, 'highpass', pan, 'white');
-    // 2) 바디 — 유리가 쪼개지는 중역 바디.
-    this.glassNoise(start + 0.004, 0.07 + power * 0.04, 0.12 * power, 1700, 'bandpass', -pan * 0.6, color);
-    // 3) 공명 스냅 — 깨질 때의 짧은 금속/유리 링.
-    this.partial(start + 0.002, rnd(2400, 3200) * (0.9 + power * 0.15), 0.05, 0.1 * power, 'triangle', pan, 0.2, 0);
-    // 4) 파편 짤랑임 — 진짜 "깨지는 소리"의 핵심.
-    const shardCount = Math.round((6 + power * 12));
-    this.glassShards(start + 0.012, shardCount, 0.1 + power * 0.22, 0.16 * power, pan);
+    // 1) 초기 크랙 — 아주 짧고 밝은 고역 파열(저음 없음).
+    this.glassNoise(start, 0.012, 0.3 * power, 5200, 'highpass', pan, 'white');
+    // 2) 쪼개짐 — 짧은 고역 노이즈 바디.
+    this.glassNoise(start + 0.004, 0.04 + power * 0.02, 0.1 * power, 3200, 'highpass', -pan * 0.5, 'white');
+    // 3) 파편 짤랑임 — 진짜 "깨지는 소리"의 핵심.
+    const shardCount = Math.round(8 + power * 14);
+    this.glassShards(start + 0.006, shardCount, 0.12 + power * 0.26, 0.18 * power, pan);
   }
 
-  // 깨진 파편이 사방으로 튀며 짤랑이는 소리(고역 공명 핑 무리).
+  // 깨진 파편이 사방으로 튀며 짤랑이는 소리.
+  // 톤이 아니라 노이즈를 고Q 밴드패스로 울려 유리 특유의 "쨍/클링"을 만든다.
   glassShards(start, count, spread, amount, pan = 0) {
     if (!this.ctx || !this.master) return;
     const n = Math.max(2, Math.round(count));
+    // 짧은 화이트 노이즈 버퍼 1개를 공유해 각 파편의 여기(excitation)로 사용.
+    const len = Math.max(1, Math.floor(this.ctx.sampleRate * 0.05));
+    const buffer = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i += 1) data[i] = Math.random() * 2 - 1;
     for (let i = 0; i < n; i += 1) {
       // 초반에 몰리고 뒤로 갈수록 듬성해지는 자연스러운 흩어짐.
-      const t = start + Math.pow(Math.random(), 1.6) * spread;
-      const freq = rnd(2600, 8200);
-      const dur = rnd(0.04, 0.13);
-      const peak = amount * rnd(0.04, 0.12);
-      const out = this.voiceOut(pan + rnd(-0.6, 0.6), 0.6);
-      const osc = this.ctx.createOscillator();
+      const t = start + Math.pow(Math.random(), 1.7) * spread;
+      const freq = rnd(3200, 9500);
+      const dur = rnd(0.025, 0.085);
+      const peak = amount * rnd(0.05, 0.14);
+      const out = this.voiceOut(pan + rnd(-0.7, 0.7), 0.55);
+      const source = this.ctx.createBufferSource();
       const filter = this.ctx.createBiquadFilter();
       const gain = this.ctx.createGain();
-      osc.type = Math.random() < 0.5 ? 'triangle' : 'sine';
-      osc.frequency.setValueAtTime(freq * rnd(1.0, 1.3), t);
-      osc.frequency.exponentialRampToValueAtTime(freq, t + dur);
+      source.buffer = buffer;
       filter.type = 'bandpass';
       filter.frequency.value = freq;
-      filter.Q.value = rnd(6, 14);
+      filter.Q.value = rnd(18, 38); // 고Q → 유리/금속성 "쨍" 링
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), t + 0.004);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), t + 0.002);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(filter);
+      source.connect(filter);
       filter.connect(gain);
       gain.connect(out);
-      osc.start(t);
-      osc.stop(t + dur + 0.03);
+      source.start(t);
+      source.stop(t + dur + 0.02);
     }
   }
 
