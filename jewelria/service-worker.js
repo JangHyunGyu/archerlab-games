@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelria-v0.1.7';
+const CACHE_NAME = 'jewelria-v0.1.8';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -40,6 +40,7 @@ const CORE_ASSETS = [
   './assets/images/effects/gem-shards-topaz.png',
   './assets/images/effects/gem-shards-amethyst.png',
   './assets/images/effects/gem-shards-citrine.png',
+  './assets/images/effects/gem-land-sparkle-strip.png',
   './assets/images/ui/ui-board-frame.png',
   './assets/images/ui/ui-hud-panel.png',
   './assets/images/ui/ui-modal-panel.png',

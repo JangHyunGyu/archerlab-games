@@ -608,6 +608,28 @@ p {
   will-change: transform, opacity, filter;
 }
 
+.landing-vfx {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  width: 138%;
+  height: 138%;
+  background-image: url("../images/effects/gem-land-sparkle-strip.png");
+  background-position: 0 50%;
+  background-repeat: no-repeat;
+  background-size: 1600% 100%;
+  filter:
+    saturate(1.18)
+    brightness(1.12)
+    drop-shadow(0 0 10px rgba(255, 238, 166, 0.56));
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(var(--landing-scale, 1));
+  animation: landingSparkle 520ms steps(15) var(--landing-delay, 0ms) both;
+}
+
 .cell:hover .gem {
   transform: translateY(-2px) scale(1.03);
   filter: drop-shadow(0 10px 9px rgba(0, 0, 0, 0.36)) drop-shadow(0 0 10px var(--gem-glow));
@@ -1263,6 +1285,25 @@ p {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: drop-shadow(0 8px 7px rgba(0, 0, 0, 0.35)) brightness(1);
+  }
+}
+
+@keyframes landingSparkle {
+  0% {
+    opacity: 0;
+    background-position: 0 50%;
+    transform: translate(-50%, -50%) scale(calc(var(--landing-scale, 1) * 0.74));
+  }
+  12% {
+    opacity: 1;
+  }
+  78% {
+    opacity: 0.96;
+  }
+  100% {
+    opacity: 0;
+    background-position: 100% 50%;
+    transform: translate(-50%, -50%) scale(calc(var(--landing-scale, 1) * 1.08));
   }
 }
 
