@@ -244,6 +244,7 @@ export class UI {
     center.x /= points.length;
     center.y /= points.length;
     const centerType = dominantType(points);
+    const pointDensity = Math.max(0.38, Math.min(1, 6 / points.length));
 
     this.pulseBoard(intensity);
     this.spawnBoardFlash(intensity, centerType);
@@ -259,10 +260,10 @@ export class UI {
       this.spawnBurst(point.x, point.y, point.size * randomBetween(1.2, 1.62) * (1 + intensity * 0.24), '', type);
       this.spawnBurst(point.x, point.y, point.size * randomBetween(0.92, 1.24) * (1 + intensity * 0.18), 'flash', type);
       this.spawnRing(point.x, point.y, point.size * randomBetween(1.9, 2.7) * intensity, '', type);
-      this.spawnShardSpray(point.x, point.y, 15 + Math.round(intensity * 7), point.size, intensity, type);
-      this.spawnRaySpray(point.x, point.y, 5 + Math.round(intensity * 3), point.size, intensity, type);
+      this.spawnShardSpray(point.x, point.y, Math.round((15 + intensity * 7) * pointDensity), point.size, intensity, type);
+      this.spawnRaySpray(point.x, point.y, Math.round((5 + intensity * 3) * pointDensity), point.size, intensity, type);
       this.spawnGlint(point.x, point.y, point.size * randomBetween(1.25, 1.8), intensity, type);
-      const sparkCount = 8 + Math.round(intensity * 3);
+      const sparkCount = Math.round((8 + intensity * 3) * pointDensity);
       for (let i = 0; i < sparkCount; i += 1) this.spawnSpark(point.x, point.y, point.size, intensity, type);
     }
 

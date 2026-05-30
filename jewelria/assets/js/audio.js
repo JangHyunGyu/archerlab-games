@@ -139,11 +139,11 @@ export class AudioManager {
     // 저역 펀치는 큰 콤보에서만 아주 약하게(유리는 베이스가 거의 없음).
     if (level >= 4) this.subImpact(now, 0.45);
     this.sweep(now, 480 + level * 30, 2400 + level * 240, 0.26, 0.1, pan);
-    // 콤보 단계만큼 음정이 올라가는 반짝이는 아르페지오.
-    const root = 392 * Math.pow(2, Math.min(level, 9) / 12);
+    // 콤보 단계만큼 음정이 올라가는 반짝이는 아르페지오(밝은 고음역).
+    const root = 659.25 * Math.pow(2, Math.min(level, 9) / 12);
     for (let i = 0; i < steps; i += 1) {
       const t = now + 0.02 + i * 0.045;
-      this.gemBell(t, root * Math.pow(2, i / 7), 0.32, 0.12 - i * 0.008, pan, 0.42);
+      this.gemBell(t, root * Math.pow(2, i / 7), 0.3, 0.1 - i * 0.006, pan, 0.42);
     }
     this.sparkleTail(now + 0.05, 8 + level, 0.6, pan);
     if (level >= 3) this.glide(now + 0.04, root, root * 2, 0.4, 'triangle', 0.07, pan);
@@ -228,12 +228,17 @@ export class AudioManager {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = i === 0 ? 'sine' : i < 3 ? 'triangle' : 'sine';
-      osc.frequency.value = Math.max(20, baseFreq * ratio * rnd(0.998, 1.002));
-      const partialPeak = Math.max(0.0001, peak * Math.pow(0.62, i));
-      const partialDur = duration * (1 - i * 0.07);
+      const freq = Math.max(20, baseFreq * ratio * rnd(0.998, 1.002));
+      osc.frequency.value = freq;
+      // 기음을 약하게(0.45) 시작해 저음 "퍽" 느낌을 줄이고 배음의 영롱함을 살린다.
+      const weight = i === 0 ? 0.45 : Math.pow(0.7, i - 1);
+      const partialPeak = Math.max(0.0001, peak * weight);
+      const partialDur = duration * (1 - i * 0.06);
+      // 낮은 음일수록 어택을 부드럽게 → 타악기성 "퍽" 제거.
+      const attack = Math.min(0.045, Math.max(0.006, 90 / freq));
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(partialPeak, start + 0.006);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.05, partialDur));
+      gain.gain.linearRampToValueAtTime(partialPeak, start + attack);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.06, partialDur));
       osc.connect(gain);
       gain.connect(out);
       osc.start(start);
