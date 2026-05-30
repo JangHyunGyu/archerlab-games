@@ -102,8 +102,9 @@ export class UI {
     }
   }
 
-  renderBoard(grid, selected = null) {
+  renderBoard(grid, selected = null, fallMoves = []) {
     const frag = document.createDocumentFragment();
+    const fallMap = new Map(fallMoves.map((move) => [`${move.to.row}:${move.to.col}`, move]));
     for (let r = 0; r < grid.length; r += 1) {
       for (let c = 0; c < grid[r].length; c += 1) {
         const cell = document.createElement('button');
@@ -115,7 +116,12 @@ export class UI {
         cell.setAttribute('aria-label', `${r + 1}행 ${c + 1}열`);
         if (selected && selected.row === r && selected.col === c) cell.classList.add('selected');
         const gem = grid[r][c];
-        if (gem) cell.appendChild(this.createGemEl(gem));
+        if (gem) {
+          const gemEl = this.createGemEl(gem);
+          const fallMove = fallMap.get(`${r}:${c}`);
+          if (fallMove) this.applyFallAnimation(gemEl, fallMove);
+          cell.appendChild(gemEl);
+        }
         frag.appendChild(cell);
       }
     }
@@ -148,6 +154,24 @@ export class UI {
     core.className = 'gem-core';
     el.appendChild(core);
     return el;
+  }
+
+  applyFallAnimation(el, move) {
+    const fromRow = Number(move.from?.row ?? move.to.row);
+    const toRow = Number(move.to?.row ?? fromRow);
+    const distance = Math.max(1, fromRow < 0 ? toRow + 1.6 : toRow - fromRow);
+    const duration = Math.min(680, 260 + distance * 58);
+    const delay = Math.min(130, Number(move.to?.col || 0) * 10 + Math.max(0, 7 - toRow) * 3);
+    el.classList.add('falling');
+    el.style.setProperty('--fall-offset', `${Math.min(10, distance) * -112}%`);
+    el.style.setProperty('--fall-duration', `${duration}ms`);
+    el.style.setProperty('--fall-delay', `${delay}ms`);
+    el.addEventListener('animationend', () => {
+      el.classList.remove('falling');
+      el.style.removeProperty('--fall-offset');
+      el.style.removeProperty('--fall-duration');
+      el.style.removeProperty('--fall-delay');
+    }, { once: true });
   }
 
   markCells(cells, className, duration = 320) {
