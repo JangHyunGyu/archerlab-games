@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelria-v0.1.8';
+const CACHE_NAME = 'jewelria-v0.1.9';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -56,7 +56,9 @@ const CORE_ASSETS = [
   './assets/sounds/combo_escalate.wav',
   './assets/sounds/impact_heavy.wav',
   './assets/sounds/sparkle.wav',
-  './assets/sounds/whoosh.wav'
+  './assets/sounds/whoosh.wav',
+  './assets/sounds/bgm_main_loop.mp3',
+  './assets/sounds/bgm_game_loop.mp3'
 ];
 
 self.addEventListener('install', (event) => {
