@@ -1,28 +1,16 @@
 import { loadSoundEnabled, saveSoundEnabled } from './storage.js';
 
-const SOUND_ASSETS = {
-  clearSingle: 'assets/sounds/clear_single.wav',
-  clearDouble: 'assets/sounds/clear_double.wav',
-  clearQuad: 'assets/sounds/clear_quad.wav',
-  comboHit: 'assets/sounds/combo_hit.wav',
-  comboEscalate: 'assets/sounds/combo_escalate.wav',
-  impactHeavy: 'assets/sounds/impact_heavy.wav',
-  sparkle: 'assets/sounds/sparkle.wav',
-  whoosh: 'assets/sounds/whoosh.wav',
-  swapSlide: 'assets/sounds/swap_slide.wav',
-  invalidSwap: 'assets/sounds/invalid_swap.wav',
-  uiButton: 'assets/sounds/ui_button.wav',
-  gemDropSoft: 'assets/sounds/gem_drop_soft.wav',
-  gemLandSparkle: 'assets/sounds/gem_land_sparkle.wav',
-  cascadeRush: 'assets/sounds/cascade_rush.wav',
-  stageClearFanfare: 'assets/sounds/stage_clear_fanfare.wav',
-  stageFailStinger: 'assets/sounds/stage_fail_stinger.wav'
-};
-
+// 쥬얼리아 효과음은 전부 WebAudio 실시간 합성(tones)으로 생성한다.
+// 바이너리 SFX 에셋 의존 없음 → 0바이트, 무한 변주, 무한 튜닝.
+// BGM 루프만 mp3 파일을 사용한다.
 const MUSIC_ASSETS = {
   main: 'assets/sounds/bgm_main_loop.mp3',
   game: 'assets/sounds/bgm_game_loop.mp3'
 };
+
+// 보석/크리스털 질감을 만드는 비정수배(inharmonic) 배음 비율.
+const GEM_PARTIALS = [1, 2.01, 3.03, 4.18, 5.47, 6.83, 8.21];
+const rnd = (min, max) => min + Math.random() * (max - min);
 
 export class AudioManager {
   constructor() {
@@ -30,6 +18,7 @@ export class AudioManager {
     this.ctx = null;
     this.master = null;
     this.compressor = null;
+    this.shimmerIn = null;
     this.music = null;
     this.desiredMusic = null;
     this.buffers = new Map();
@@ -42,24 +31,346 @@ export class AudioManager {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
       this.ctx = new AudioContext();
-      this.master = this.ctx.createGain();
-      this.master.gain.value = 0.34;
-      this.compressor = this.ctx.createDynamicsCompressor();
-      this.compressor.threshold.value = -18;
-      this.compressor.knee.value = 24;
-      this.compressor.ratio.value = 8;
-      this.compressor.attack.value = 0.003;
-      this.compressor.release.value = 0.16;
-      this.master.connect(this.compressor);
-      this.compressor.connect(this.ctx.destination);
-      this.preloadAssets();
+      this.buildGraph();
     }
     if (this.ctx.state === 'suspended') await this.ctx.resume().catch(() => {});
   }
 
-  preloadAssets() {
-    Object.entries(SOUND_ASSETS).forEach(([name, url]) => this.loadBuffer(name, url));
+  buildGraph() {
+    const ctx = this.ctx;
+    // 마스터 → 컴프레서(리미터 역할) → 출력
+    this.master = ctx.createGain();
+    this.master.gain.value = 0.4;
+    this.compressor = ctx.createDynamicsCompressor();
+    this.compressor.threshold.value = -16;
+    this.compressor.knee.value = 26;
+    this.compressor.ratio.value = 9;
+    this.compressor.attack.value = 0.003;
+    this.compressor.release.value = 0.18;
+    this.master.connect(this.compressor);
+    this.compressor.connect(ctx.destination);
+
+    // 크리스털 잔향(shimmer) 센드: 피드백 딜레이 + 하이패스 → 공기감 있는 꼬리.
+    this.shimmerIn = ctx.createGain();
+    this.shimmerIn.gain.value = 1;
+    const delay = ctx.createDelay(0.5);
+    delay.delayTime.value = 0.16;
+    const feedback = ctx.createGain();
+    feedback.gain.value = 0.34;
+    const tone = ctx.createBiquadFilter();
+    tone.type = 'highpass';
+    tone.frequency.value = 1300;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.16;
+    this.shimmerIn.connect(delay);
+    delay.connect(feedback);
+    feedback.connect(delay);
+    delay.connect(tone);
+    tone.connect(wet);
+    wet.connect(this.master);
   }
+
+  toggle() {
+    this.enabled = !this.enabled;
+    saveSoundEnabled(this.enabled);
+    if (!this.enabled) this.fadeOutMusic(0.34);
+    else if (this.desiredMusic) this.startAmbient(this.desiredMusic);
+    return this.enabled;
+  }
+
+  play(name, intensity = 1, detail = {}) {
+    if (!this.enabled) return;
+    this.unlock().then(() => {
+      if (!this.ctx || !this.master) return;
+      const now = this.ctx.currentTime + 0.005;
+      const level = Math.max(1, Number(intensity) || 1);
+      switch (name) {
+        case 'swap': return this.playSwap(now);
+        case 'invalid': return this.playInvalid(now);
+        case 'match': return this.playMatch(now, level, detail);
+        case 'combo': return this.playCombo(now, level, detail);
+        case 'special': return this.playSpecial(now, level, detail);
+        case 'cascade': return this.playCascade(now, level, detail);
+        case 'clear': return this.playClear(now);
+        case 'fail': return this.playFail(now);
+        case 'button': return this.playButton(now);
+        default: return undefined;
+      }
+    });
+  }
+
+  // ---- 이벤트별 사운드 디자인 -------------------------------------------
+
+  playSwap(now) {
+    this.glassNoise(now, 0.13, 0.05, 5200, 'highpass');
+    this.glide(now + 0.005, 520, 660, 0.09, 'triangle', 0.05, rnd(-0.3, 0.3));
+  }
+
+  playInvalid(now) {
+    this.partial(now, 196, 0.16, 0.075, 'sawtooth', -0.1, 0, 520);
+    this.partial(now + 0.04, 150, 0.2, 0.06, 'triangle', 0.1);
+    this.glassNoise(now, 0.08, 0.02, 800, 'lowpass');
+  }
+
+  playMatch(now, level, detail) {
+    const lineCount = Number(detail.lineCount || 1);
+    const longest = Number(detail.longest || 3);
+    const big = lineCount > 1 || longest >= 4;
+    const huge = lineCount >= 3 || longest >= 5;
+    const base = rnd(498, 542) * (huge ? 1.18 : big ? 1.08 : 1);
+    const pan = rnd(-0.35, 0.35);
+
+    this.glassShatter(now, huge ? 1.25 : big ? 0.95 : 0.7, pan);
+    this.gemBell(now + 0.008, base, huge ? 0.62 : big ? 0.5 : 0.4, huge ? 0.2 : big ? 0.17 : 0.14, pan, huge ? 0.55 : big ? 0.4 : 0.28);
+    this.subImpact(now, big ? 1.15 : 0.78);
+    this.sparkleTail(now + 0.02, huge ? 9 : big ? 6 : 4, huge ? 0.5 : big ? 0.4 : 0.3, pan);
+    if (big) this.gemBell(now + 0.05, base * 1.5, 0.34, 0.09, pan, 0.5);
+  }
+
+  playCombo(now, level, detail) {
+    const pan = rnd(-0.3, 0.3);
+    const steps = Math.min(8, 2 + level);
+    this.glassShatter(now, 1.15 + level * 0.06, pan);
+    this.subImpact(now, 1.2 + level * 0.14);
+    this.sweep(now, 480 + level * 30, 2400 + level * 240, 0.26, 0.12, pan);
+    // 콤보 단계만큼 음정이 올라가는 반짝이는 아르페지오.
+    const root = 392 * Math.pow(2, Math.min(level, 9) / 12);
+    for (let i = 0; i < steps; i += 1) {
+      const t = now + 0.02 + i * 0.045;
+      this.gemBell(t, root * Math.pow(2, i / 7), 0.32, 0.12 - i * 0.008, pan, 0.42);
+    }
+    this.sparkleTail(now + 0.05, 8 + level, 0.6, pan);
+    if (level >= 3) this.glide(now + 0.04, root, root * 2, 0.4, 'triangle', 0.07, pan);
+  }
+
+  playSpecial(now, level, detail) {
+    const pan = rnd(-0.2, 0.2);
+    this.glassShatter(now, 1.6, pan, 'white');
+    this.subImpact(now, 1.75 + level * 0.12);
+    this.sweep(now, 320, 3600, 0.34, 0.16, pan);
+    this.sweep(now + 0.16, 3600, 700, 0.3, 0.09, -pan);
+    // 프리즘: 6음 화려한 상승 + 긴 반짝임 블룸.
+    const root = rnd(414, 430);
+    [0, 4, 7, 12, 16, 19].forEach((semi, i) => {
+      this.gemBell(now + 0.03 + i * 0.05, root * Math.pow(2, semi / 12), 0.6, 0.15 - i * 0.012, pan, 0.6);
+    });
+    this.sparkleTail(now + 0.06, 18, 0.95, pan);
+  }
+
+  playCascade(now, level, detail) {
+    const fallCount = Math.max(1, Number(detail.fallCount || 1));
+    const strength = Math.min(1, fallCount / 28);
+    const landDelay = Math.min(0.46, 0.2 + fallCount * 0.006);
+    // 가벼운 하강 스윽 + 보석 착지 딸깍/반짝임.
+    this.glide(now, 720, 360, 0.22 + strength * 0.12, 'triangle', 0.045 + strength * 0.03, rnd(-0.4, 0.4));
+    const drops = Math.min(5, 2 + Math.round(strength * 4));
+    for (let i = 0; i < drops; i += 1) {
+      const t = now + landDelay + i * 0.035;
+      this.partial(t, rnd(680, 1080), 0.12, 0.05 + strength * 0.03, 'sine', rnd(-0.5, 0.5), 0.18);
+    }
+    this.sparkleTail(now + landDelay, 3 + Math.round(strength * 4), 0.3 + strength * 0.2, 0);
+  }
+
+  playClear(now) {
+    // 짧은 승리 팡파르: 메이저 상승 아르페지오 + 반짝임 블룸.
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+    notes.forEach((freq, i) => {
+      this.gemBell(now + 0.05 + i * 0.085, freq, 0.7, 0.16 - i * 0.012, rnd(-0.3, 0.3), 0.55);
+    });
+    this.subImpact(now + 0.04, 1.0);
+    this.glassShatter(now + 0.02, 0.8, 0);
+    this.sparkleTail(now + 0.18, 16, 1.1, 0);
+  }
+
+  playFail(now) {
+    // 너무 우울하지 않은 하강 스팅어.
+    const notes = [392, 311.1, 261.6];
+    notes.forEach((freq, i) => {
+      this.gemBell(now + 0.04 + i * 0.13, freq, 0.5, 0.12 - i * 0.02, rnd(-0.2, 0.2), 0.22);
+    });
+    this.glassNoise(now + 0.08, 0.24, 0.03, 520, 'lowpass');
+  }
+
+  playButton(now) {
+    this.partial(now, 880, 0.09, 0.06, 'triangle', rnd(-0.2, 0.2), 0.12);
+    this.partial(now + 0.012, 1320, 0.06, 0.035, 'sine', 0, 0.1);
+    this.glassNoise(now, 0.04, 0.015, 4200, 'highpass');
+  }
+
+  // ---- 합성 빌딩 블록 ----------------------------------------------------
+
+  voiceOut(pan, send) {
+    const ctx = this.ctx;
+    const node = (typeof ctx.createStereoPanner === 'function') ? ctx.createStereoPanner() : ctx.createGain();
+    if (node.pan) node.pan.value = Math.max(-1, Math.min(1, pan || 0));
+    node.connect(this.master);
+    if (send > 0 && this.shimmerIn) {
+      const tap = ctx.createGain();
+      tap.gain.value = send;
+      node.connect(tap);
+      tap.connect(this.shimmerIn);
+    }
+    return node;
+  }
+
+  // 비정수배 배음으로 만든 보석/크리스털 종소리.
+  gemBell(start, baseFreq, duration, peak, pan = 0, send = 0) {
+    if (!this.ctx || !this.master) return;
+    const out = this.voiceOut(pan, send);
+    GEM_PARTIALS.forEach((ratio, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = i === 0 ? 'sine' : i < 3 ? 'triangle' : 'sine';
+      osc.frequency.value = Math.max(20, baseFreq * ratio * rnd(0.998, 1.002));
+      const partialPeak = Math.max(0.0001, peak * Math.pow(0.62, i));
+      const partialDur = duration * (1 - i * 0.07);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(partialPeak, start + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.05, partialDur));
+      osc.connect(gain);
+      gain.connect(out);
+      osc.start(start);
+      osc.stop(start + partialDur + 0.05);
+    });
+  }
+
+  // 단일 배음 톤.
+  partial(start, freq, duration, peak, type = 'sine', pan = 0, send = 0, filterFreq = 0) {
+    if (!this.ctx || !this.master) return;
+    const out = this.voiceOut(pan, send);
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = Math.max(20, freq);
+    const safe = Math.max(0.0001, Math.min(0.6, peak));
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(safe, start + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    if (filterFreq > 0) {
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = filterFreq;
+      osc.connect(filter);
+      filter.connect(gain);
+    } else {
+      osc.connect(gain);
+    }
+    gain.connect(out);
+    osc.start(start);
+    osc.stop(start + duration + 0.05);
+  }
+
+  // 음정이 미끄러지는 글라이드 톤.
+  glide(start, from, to, duration, type = 'triangle', peak = 0.06, pan = 0) {
+    if (!this.ctx || !this.master) return;
+    const out = this.voiceOut(pan, 0);
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(Math.max(20, from), start);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(21, to), start + duration);
+    const safe = Math.max(0.0001, Math.min(0.6, peak));
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(safe, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(start);
+    osc.stop(start + duration + 0.05);
+  }
+
+  // 저역 바디 임팩트(피치 드롭).
+  subImpact(start, power = 1) {
+    if (!this.ctx || !this.master) return;
+    const out = this.voiceOut(0, 0);
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, start);
+    osc.frequency.exponentialRampToValueAtTime(48, start + 0.14);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.min(0.5, 0.26 * power), start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.2);
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(start);
+    osc.stop(start + 0.26);
+  }
+
+  // 유리 깨짐 트랜지언트(필터된 노이즈 버스트).
+  glassShatter(start, power = 1, pan = 0, color = 'pink') {
+    this.glassNoise(start, 0.06 + power * 0.05, 0.08 * power, 2600, 'highpass', pan, color);
+    this.glassNoise(start + 0.01, 0.1 + power * 0.06, 0.05 * power, 1400, 'bandpass', -pan, color);
+  }
+
+  glassNoise(start, duration, peak, freq, type = 'highpass', pan = 0, color = 'white') {
+    if (!this.ctx || !this.master) return;
+    const length = Math.max(1, Math.floor(this.ctx.sampleRate * duration));
+    const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < length; i += 1) {
+      const white = Math.random() * 2 - 1;
+      if (color === 'pink') {
+        last = 0.82 * last + 0.18 * white;
+        data[i] = last * 1.4;
+      } else {
+        data[i] = white;
+      }
+    }
+    const out = this.voiceOut(pan, 0);
+    const source = this.ctx.createBufferSource();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+    source.buffer = buffer;
+    filter.type = type;
+    filter.frequency.value = freq;
+    filter.Q.value = type === 'bandpass' ? 1.6 : 0.7;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, Math.min(0.5, peak)), start + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(out);
+    source.start(start);
+    source.stop(start + duration + 0.02);
+  }
+
+  // 고역 반짝임 꼬리(랜덤 사인 그레인).
+  sparkleTail(start, density, amount = 0.5, pan = 0) {
+    const count = Math.max(1, Math.round(density));
+    for (let i = 0; i < count; i += 1) {
+      const t = start + i * rnd(0.012, 0.05);
+      const freq = rnd(1800, 5200);
+      this.partial(t, freq, rnd(0.08, 0.18), amount * rnd(0.02, 0.05), 'sine', pan + rnd(-0.4, 0.4), 0.5);
+    }
+  }
+
+  // 필터 스윕(에너지 상승감).
+  sweep(start, from, to, duration, peak, pan = 0) {
+    if (!this.ctx || !this.master) return;
+    const out = this.voiceOut(pan, 0.3);
+    const osc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(Math.max(20, from), start);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(21, to), start + duration);
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(Math.max(80, from * 1.4), start);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(100, to * 1.1), start + duration);
+    filter.Q.value = 3.4;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, Math.min(0.5, peak)), start + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(out);
+    osc.start(start);
+    osc.stop(start + duration + 0.05);
+  }
+
+  // ---- BGM (mp3 루프) ----------------------------------------------------
 
   loadBuffer(name, url) {
     if (!url) return Promise.resolve(null);
@@ -76,111 +387,6 @@ export class AudioManager {
       .finally(() => this.loading.delete(name));
     this.loading.set(name, promise);
     return promise;
-  }
-
-  toggle() {
-    this.enabled = !this.enabled;
-    saveSoundEnabled(this.enabled);
-    if (!this.enabled) this.fadeOutMusic(0.34);
-    else {
-      this.preloadAssets();
-      if (this.desiredMusic) this.startAmbient(this.desiredMusic);
-    }
-    return this.enabled;
-  }
-
-  play(name, intensity = 1, detail = {}) {
-    if (!this.enabled) return;
-    this.unlock().then(() => {
-      if (!this.ctx || !this.master) return;
-      const now = this.ctx.currentTime;
-      const level = Math.max(1, Number(intensity) || 1);
-      if (name === 'swap') this.playSwap(now);
-      if (name === 'invalid') this.playInvalid(now);
-      if (name === 'match') this.playMatch(now, level, detail);
-      if (name === 'combo') this.playCombo(now, level, detail);
-      if (name === 'special') this.playSpecial(now, level, detail);
-      if (name === 'cascade') this.playCascade(now, level, detail);
-      if (name === 'clear') this.playClear(now);
-      if (name === 'fail') this.playFail(now);
-      if (name === 'button') this.playButton(now);
-    });
-  }
-
-  playSwap(now) {
-    this.playBuffer('swapSlide', 0.56);
-    this.tone(now + 0.018, 620, 0.045, 'triangle', 0.06);
-  }
-
-  playInvalid(now) {
-    this.playBuffer('invalidSwap', 0.56);
-    this.tone(now + 0.018, 140, 0.09, 'triangle', 0.05);
-  }
-
-  playMatch(now, level, detail) {
-    const lineCount = Number(detail.lineCount || 1);
-    const longest = Number(detail.longest || 3);
-    const big = lineCount > 1 || longest >= 4;
-    const huge = lineCount >= 3 || longest >= 5;
-    this.playBuffer(huge ? 'clearQuad' : big ? 'clearDouble' : 'clearSingle', big ? 0.72 : 0.58);
-    this.playBuffer('sparkle', 0.42, 0.02, 1 + Math.min(0.18, level * 0.02));
-    if (big) this.playBuffer('impactHeavy', huge ? 0.68 : 0.46);
-    this.impact(now, big ? 1.25 : 0.86);
-    this.noiseBurst(now + 0.012, big ? 0.12 : 0.075, big ? 0.13 : 0.07, 'pink');
-    this.sweep(now + 0.018, 740, huge ? 2600 : 1900, big ? 0.19 : 0.13, big ? 0.1 : 0.065);
-    this.crystalRun(now + 0.025, huge ? [740, 980, 1320, 1760, 2200] : big ? [620, 820, 1120, 1480] : [520, 660, 880], 0.034, big ? 0.14 : 0.1);
-  }
-
-  playCombo(now, level, detail) {
-    this.playBuffer('comboHit', 0.58 + Math.min(0.24, level * 0.035));
-    this.playBuffer('impactHeavy', 0.38 + Math.min(0.28, level * 0.04));
-    this.playBuffer('whoosh', 0.32 + Math.min(0.18, level * 0.025), 0.01);
-    if (level >= 3) this.playBuffer('comboEscalate', 0.5 + Math.min(0.25, level * 0.035), 0.035);
-    this.impact(now, 1.2 + level * 0.16);
-    this.noiseBurst(now, 0.14, 0.13 + level * 0.014, 'white');
-    this.sweep(now + 0.005, 520 + level * 24, 2500 + level * 220, 0.24, 0.13);
-    const base = 520 * Math.pow(2, Math.min(level, 8) / 12);
-    this.crystalRun(now + 0.018, [base, base * 1.25, base * 1.5, base * 2, base * 2.5], 0.032, 0.14);
-    this.tone(now + 0.035, base * 0.5, 0.22, 'triangle', 0.12);
-  }
-
-  playSpecial(now, level, detail) {
-    this.playBuffer('clearQuad', 0.86);
-    this.playBuffer('impactHeavy', 0.78);
-    this.playBuffer('whoosh', 0.52, 0.012);
-    this.playBuffer('sparkle', 0.62, 0.05, 1.08);
-    this.impact(now, 1.65 + level * 0.12);
-    this.noiseBurst(now + 0.005, 0.18, 0.18, 'white');
-    this.sweep(now, 360, 3400, 0.32, 0.18);
-    this.crystalRun(now + 0.04, [420, 840, 1260, 1680, 2100, 2520], 0.036, 0.16);
-  }
-
-  playCascade(now, level, detail) {
-    const fallCount = Math.max(1, Number(detail.fallCount || 1));
-    const strength = Math.min(1, fallCount / 28);
-    const landDelay = Math.min(0.48, 0.22 + fallCount * 0.006);
-    this.playBuffer('cascadeRush', 0.32 + strength * 0.2, 0, 1 + Math.min(0.06, level * 0.01));
-    this.playBuffer('gemDropSoft', 0.22 + strength * 0.1, 0.018);
-    this.playBuffer('gemLandSparkle', 0.24 + strength * 0.14, landDelay, 1 + Math.min(0.08, level * 0.015));
-    if (level >= 2) this.playBuffer('sparkle', 0.2 + strength * 0.08, landDelay + 0.05, 1.06);
-  }
-
-  playClear(now) {
-    this.playBuffer('stageClearFanfare', 0.74);
-    this.playBuffer('clearQuad', 0.54, 0.01);
-    this.playBuffer('sparkle', 0.48, 0.16);
-    this.crystalRun(now + 0.06, [523, 659, 784, 1046, 1318], 0.07, 0.11);
-  }
-
-  playFail(now) {
-    this.playBuffer('stageFailStinger', 0.62);
-    this.crystalRun(now + 0.03, [330, 260, 196], 0.11, 0.055);
-    this.noiseBurst(now + 0.08, 0.2, 0.035, 'brown');
-  }
-
-  playButton(now) {
-    this.playBuffer('uiButton', 0.58);
-    this.tone(now + 0.012, 880, 0.035, 'triangle', 0.025);
   }
 
   startAmbient(track = 'main') {
@@ -229,112 +435,5 @@ export class AudioManager {
     gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
     try { source.stop(stopAt + 0.03); } catch {}
     this.music = null;
-  }
-
-  playBuffer(name, volume = 0.5, delay = 0, rate = 1) {
-    const buffer = this.buffers.get(name);
-    if (!buffer || !this.ctx || !this.master) {
-      this.loadBuffer(name, SOUND_ASSETS[name]);
-      return false;
-    }
-    const start = this.ctx.currentTime + delay;
-    const source = this.ctx.createBufferSource();
-    const gain = this.ctx.createGain();
-    source.buffer = buffer;
-    source.playbackRate.value = rate;
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), start + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.05, buffer.duration / rate));
-    source.connect(gain);
-    gain.connect(this.master);
-    source.onended = () => {
-      try { source.disconnect(); } catch {}
-      try { gain.disconnect(); } catch {}
-    };
-    source.start(start);
-    return true;
-  }
-
-  impact(start, power = 1) {
-    this.tone(start, 92, 0.11, 'sine', 0.22 * power);
-    this.tone(start + 0.012, 46, 0.18, 'triangle', 0.13 * power);
-    this.tone(start + 0.025, 185, 0.08, 'square', 0.045 * power);
-  }
-
-  tone(start, freq, duration, type, volume) {
-    if (!this.ctx || !this.master) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = Math.max(20, freq);
-    const safeVolume = Math.max(0.0001, Math.min(0.7, volume));
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(safeVolume, start + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    osc.connect(gain);
-    gain.connect(this.master);
-    osc.start(start);
-    osc.stop(start + duration + 0.03);
-  }
-
-  crystalRun(start, notes, step, volume) {
-    notes.forEach((freq, index) => {
-      this.tone(start + index * step, freq, step * 2.2, index % 2 ? 'triangle' : 'sine', volume * (1 - index * 0.05));
-    });
-  }
-
-  sweep(start, from, to, duration, volume) {
-    if (!this.ctx || !this.master) return;
-    const osc = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(Math.max(20, from), start);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(21, to), start + duration);
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(Math.max(80, from * 1.4), start);
-    filter.frequency.exponentialRampToValueAtTime(Math.max(100, to * 1.1), start + duration);
-    filter.Q.value = 3.2;
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(volume, start + 0.018);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.master);
-    osc.start(start);
-    osc.stop(start + duration + 0.03);
-  }
-
-  noiseBurst(start, duration, volume, color = 'white') {
-    if (!this.ctx || !this.master) return;
-    const length = Math.max(1, Math.floor(this.ctx.sampleRate * duration));
-    const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < length; i += 1) {
-      const white = Math.random() * 2 - 1;
-      if (color === 'brown') {
-        last = (last + 0.02 * white) / 1.02;
-        data[i] = last * 3.5;
-      } else if (color === 'pink') {
-        last = 0.82 * last + 0.18 * white;
-        data[i] = last;
-      } else {
-        data[i] = white;
-      }
-    }
-    const source = this.ctx.createBufferSource();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-    source.buffer = buffer;
-    filter.type = color === 'brown' ? 'lowpass' : 'highpass';
-    filter.frequency.value = color === 'brown' ? 380 : 1500;
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), start + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.master);
-    source.start(start);
   }
 }
