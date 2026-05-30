@@ -248,16 +248,16 @@ export class UI {
     this.pulseBoard(intensity);
     this.spawnBoardFlash(intensity, centerType);
     this.spawnBoardFlash(intensity * 0.72, centerType, 'white-hot');
-    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 4.4, 230 * intensity), 'mega', centerType);
-    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 3.1, 150 * intensity), 'flash', centerType);
+    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 2.35, 96 * intensity), 'mega', centerType);
+    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 1.6, 62 * intensity), 'flash', centerType);
     this.spawnRing(center.x, center.y, Math.max(points[0].size * 3.4, 180 * intensity), 'mega shock', centerType);
     this.spawnRaySpray(center.x, center.y, 18 + Math.round(intensity * 8), points[0].size * 1.3, intensity + 0.4, centerType);
     this.spawnGlint(center.x, center.y, points[0].size * (2.4 + intensity * 0.32), intensity, centerType, 'major');
 
     for (const point of points) {
       const type = point.type || centerType;
-      this.spawnBurst(point.x, point.y, point.size * randomBetween(2.55, 3.45) * intensity, '', type);
-      this.spawnBurst(point.x, point.y, point.size * randomBetween(1.65, 2.2) * intensity, 'flash', type);
+      this.spawnBurst(point.x, point.y, point.size * randomBetween(1.2, 1.62) * (1 + intensity * 0.24), '', type);
+      this.spawnBurst(point.x, point.y, point.size * randomBetween(0.92, 1.24) * (1 + intensity * 0.18), 'flash', type);
       this.spawnRing(point.x, point.y, point.size * randomBetween(1.9, 2.7) * intensity, '', type);
       this.spawnShardSpray(point.x, point.y, 15 + Math.round(intensity * 7), point.size, intensity, type);
       this.spawnRaySpray(point.x, point.y, 5 + Math.round(intensity * 3), point.size, intensity, type);
@@ -322,7 +322,8 @@ export class UI {
     this.applyVfxVars(burst, type, 'burst');
     burst.style.left = `${x}px`;
     burst.style.top = `${y}px`;
-    burst.style.setProperty('--size', `${Math.min(780, size)}px`);
+    const cap = extraClass.includes('mega') ? 360 : extraClass.includes('flash') ? 230 : 260;
+    burst.style.setProperty('--size', `${Math.min(cap, size)}px`);
     burst.style.setProperty('--spin', `${randomBetween(-18, 18).toFixed(1)}deg`);
     this.refs.particleLayer.appendChild(burst);
     setTimeout(() => burst.remove(), 1080);

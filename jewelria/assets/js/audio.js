@@ -135,9 +135,10 @@ export class AudioManager {
   playCombo(now, level, detail) {
     const pan = rnd(-0.3, 0.3);
     const steps = Math.min(8, 2 + level);
-    this.glassShatter(now, 1.15 + level * 0.06, pan);
-    this.subImpact(now, 1.2 + level * 0.14);
-    this.sweep(now, 480 + level * 30, 2400 + level * 240, 0.26, 0.12, pan);
+    this.glassShatter(now, 1.2 + level * 0.08, pan);
+    // 저역 펀치는 큰 콤보에서만 아주 약하게(유리는 베이스가 거의 없음).
+    if (level >= 4) this.subImpact(now, 0.45);
+    this.sweep(now, 480 + level * 30, 2400 + level * 240, 0.26, 0.1, pan);
     // 콤보 단계만큼 음정이 올라가는 반짝이는 아르페지오.
     const root = 392 * Math.pow(2, Math.min(level, 9) / 12);
     for (let i = 0; i < steps; i += 1) {
@@ -150,10 +151,11 @@ export class AudioManager {
 
   playSpecial(now, level, detail) {
     const pan = rnd(-0.2, 0.2);
-    this.glassShatter(now, 1.6, pan, 'white');
-    this.subImpact(now, 1.75 + level * 0.12);
-    this.sweep(now, 320, 3600, 0.34, 0.16, pan);
-    this.sweep(now + 0.16, 3600, 700, 0.3, 0.09, -pan);
+    this.glassShatter(now, 1.75, pan, 'white');
+    // 특수 보석은 화려함이 핵심 — 저역은 살짝만.
+    this.subImpact(now, 0.6);
+    this.sweep(now, 320, 3600, 0.34, 0.14, pan);
+    this.sweep(now + 0.16, 3600, 700, 0.3, 0.08, -pan);
     // 프리즘: 6음 화려한 상승 + 긴 반짝임 블룸.
     const root = rnd(414, 430);
     [0, 4, 7, 12, 16, 19].forEach((semi, i) => {

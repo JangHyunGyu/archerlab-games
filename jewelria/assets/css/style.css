@@ -851,10 +851,13 @@ p {
 .vfx-burst {
   width: var(--size);
   height: var(--size);
+  opacity: 0.74;
   background-image: url("../images/effects/gem-shatter-strip.png");
   background-position: 0 50%;
   background-size: 1600% 100%;
   background-repeat: no-repeat;
+  mask-image: radial-gradient(circle, #000 0 52%, rgba(0, 0, 0, 0.82) 62%, transparent 78%);
+  -webkit-mask-image: radial-gradient(circle, #000 0 52%, rgba(0, 0, 0, 0.82) 62%, transparent 78%);
   filter:
     saturate(1.52)
     brightness(1.38)
@@ -865,6 +868,7 @@ p {
 }
 
 .vfx-burst.mega {
+  opacity: 0.82;
   filter:
     saturate(1.72)
     brightness(1.52)
@@ -874,7 +878,7 @@ p {
 }
 
 .vfx-burst.flash {
-  opacity: 0.92;
+  opacity: 0.54;
   filter:
     saturate(1.9)
     brightness(1.86)
