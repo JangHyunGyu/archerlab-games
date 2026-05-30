@@ -53,6 +53,7 @@ function boot() {
   bindButtons();
   ui.updateSoundButtons(audio.enabled);
   renderTitle();
+  audio.startAmbient('main');
   const stageParam = Number(query.get('stage'));
   if (Number.isInteger(stageParam) && stageParam >= 1 && stageParam <= STAGES.length && isStageUnlocked(progress, stageParam)) {
     startStage(stageParam - 1);
@@ -155,7 +156,7 @@ function startStage(stageIndex) {
   };
   clearSavedGame();
   ranking.startSession();
-  audio.startAmbient();
+  audio.startAmbient('game');
   ui.setScreen('game');
   ui.updateHUD(state);
   ui.renderBoard(board.grid, selected);
@@ -191,7 +192,7 @@ function resumeSavedGame() {
     collections: saved.collections || {}
   };
   ranking.restore(saved.rankSessionId, saved.rankUnsupported);
-  audio.startAmbient();
+  audio.startAmbient('game');
   ui.setScreen('game');
   ui.updateHUD(state);
   ui.renderBoard(board.grid, selected);
@@ -204,11 +205,11 @@ function goTitle() {
   locked = false;
   selected = null;
   input.setEnabled(false);
-  audio.stopAmbient();
   ui.hidePause();
   ui.hideResult();
   ui.setScreen('title');
   renderTitle();
+  audio.startAmbient('main');
 }
 
 function handleTap(cell) {
@@ -386,7 +387,7 @@ function endStage(cleared) {
   progress = updateStageProgress(state.stage.id, state.score, stars);
   clearSavedGame();
   audio.play(cleared ? 'clear' : 'fail');
-  audio.stopAmbient();
+  audio.startAmbient('main');
   trackEvent(cleared ? 'jewelria_stage_clear' : 'jewelria_stage_fail', {
     stage_id: state.stage.id,
     score: state.score,

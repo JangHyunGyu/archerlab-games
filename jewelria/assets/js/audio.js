@@ -11,13 +11,19 @@ const SOUND_ASSETS = {
   whoosh: 'assets/sounds/whoosh.wav'
 };
 
+const MUSIC_ASSETS = {
+  main: 'assets/sounds/bgm_main_loop.mp3',
+  game: 'assets/sounds/bgm_game_loop.mp3'
+};
+
 export class AudioManager {
   constructor() {
     this.enabled = loadSoundEnabled();
     this.ctx = null;
     this.master = null;
     this.compressor = null;
-    this.ambient = null;
+    this.music = null;
+    this.desiredMusic = null;
     this.buffers = new Map();
     this.loading = new Map();
   }
@@ -48,6 +54,7 @@ export class AudioManager {
   }
 
   loadBuffer(name, url) {
+    if (!url) return Promise.resolve(null);
     if (!this.ctx || this.buffers.has(name)) return Promise.resolve(this.buffers.get(name));
     if (this.loading.has(name)) return this.loading.get(name);
     const promise = fetch(url)
@@ -66,8 +73,11 @@ export class AudioManager {
   toggle() {
     this.enabled = !this.enabled;
     saveSoundEnabled(this.enabled);
-    if (!this.enabled) this.stopAmbient();
-    else this.preloadAssets();
+    if (!this.enabled) this.fadeOutMusic(0.34);
+    else {
+      this.preloadAssets();
+      if (this.desiredMusic) this.startAmbient(this.desiredMusic);
+    }
     return this.enabled;
   }
 
@@ -152,43 +162,52 @@ export class AudioManager {
     this.tone(now + 0.018, 880, 0.035, 'triangle', 0.04);
   }
 
-  startAmbient() {
-    if (!this.enabled || this.ambient) return;
-    this.unlock().then(() => {
-      if (!this.ctx || !this.master || this.ambient) return;
-      const gain = this.ctx.createGain();
-      gain.gain.value = 0.014;
-      gain.connect(this.master);
-      const oscA = this.ctx.createOscillator();
-      const oscB = this.ctx.createOscillator();
-      const shimmer = this.ctx.createOscillator();
-      oscA.type = 'sine';
-      oscB.type = 'triangle';
-      shimmer.type = 'sine';
-      oscA.frequency.value = 196;
-      oscB.frequency.value = 293.66;
-      shimmer.frequency.value = 987.77;
-      oscA.connect(gain);
-      oscB.connect(gain);
-      shimmer.connect(gain);
-      oscA.start();
-      oscB.start();
-      shimmer.start();
-      this.ambient = { gain, oscA, oscB, shimmer };
-    });
+  startAmbient(track = 'main') {
+    const musicKey = MUSIC_ASSETS[track] ? track : 'main';
+    this.desiredMusic = musicKey;
+    if (!this.enabled) return;
+    this.unlock().then(() => this.playMusic(musicKey));
   }
 
   stopAmbient() {
-    if (!this.ambient || !this.ctx) return;
-    const { gain, oscA, oscB, shimmer } = this.ambient;
+    this.desiredMusic = null;
+    this.fadeOutMusic(0.34);
+  }
+
+  async playMusic(track) {
+    if (!this.ctx || !this.master || !this.enabled) return;
+    if (this.music?.track === track) return;
+    const buffer = await this.loadBuffer(`music:${track}`, MUSIC_ASSETS[track]);
+    if (!buffer || !this.ctx || !this.master || !this.enabled || this.desiredMusic !== track) return;
     const now = this.ctx.currentTime;
+    this.fadeOutMusic(0.52);
+    const source = this.ctx.createBufferSource();
+    const gain = this.ctx.createGain();
+    const targetVolume = track === 'game' ? 0.105 : 0.088;
+    source.buffer = buffer;
+    source.loop = true;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(targetVolume, now + 0.9);
+    source.connect(gain);
+    gain.connect(this.master);
+    source.start(now);
+    source.onended = () => {
+      try { source.disconnect(); } catch {}
+      try { gain.disconnect(); } catch {}
+    };
+    this.music = { track, source, gain };
+  }
+
+  fadeOutMusic(duration = 0.42) {
+    if (!this.music || !this.ctx) return;
+    const { source, gain } = this.music;
+    const now = this.ctx.currentTime;
+    const stopAt = now + Math.max(0.08, duration);
     gain.gain.cancelScheduledValues(now);
-    gain.gain.setValueAtTime(gain.gain.value, now);
-    gain.gain.linearRampToValueAtTime(0, now + 0.22);
-    oscA.stop(now + 0.24);
-    oscB.stop(now + 0.24);
-    shimmer.stop(now + 0.24);
-    this.ambient = null;
+    gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+    try { source.stop(stopAt + 0.03); } catch {}
+    this.music = null;
   }
 
   playBuffer(name, volume = 0.5, delay = 0, rate = 1) {
