@@ -603,6 +603,11 @@ p {
   opacity: 0;
 }
 
+.gem.falling {
+  animation: gemDrop var(--fall-duration, 440ms) cubic-bezier(0.15, 0.82, 0.18, 1) var(--fall-delay, 0ms) both;
+  will-change: transform, opacity, filter;
+}
+
 .cell:hover .gem {
   transform: translateY(-2px) scale(1.03);
   filter: drop-shadow(0 10px 9px rgba(0, 0, 0, 0.36)) drop-shadow(0 0 10px var(--gem-glow));
@@ -1240,6 +1245,27 @@ p {
   100% { transform: scale(1); }
 }
 
+@keyframes gemDrop {
+  0% {
+    opacity: 0;
+    transform: translateY(var(--fall-offset)) scale(0.92);
+    filter: drop-shadow(0 18px 10px rgba(0, 0, 0, 0.18)) brightness(1.28);
+  }
+  58% {
+    opacity: 1;
+    transform: translateY(6%) scale(1.04);
+    filter: drop-shadow(0 9px 8px rgba(0, 0, 0, 0.34)) brightness(1.08);
+  }
+  78% {
+    transform: translateY(-3%) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 8px 7px rgba(0, 0, 0, 0.35)) brightness(1);
+  }
+}
+
 @media (max-width: 720px) {
   .game-screen {
     gap: 8px;
@@ -1384,6 +1410,24 @@ p {
     --board-frame-shift-x: clamp(-16px, -3vw, -8px);
     --board-frame-shift-y: clamp(-12px, -2.3vw, -6px);
     width: min(92vw, 44svh, 352px);
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1366px) and (orientation: portrait) {
+  .board-frame {
+    --board-frame-outset: clamp(90px, 6vw, 74px);
+    --board-frame-shift-x: clamp(-7px, -1.8vw, -12px);
+    --board-frame-shift-y: clamp(-80px, -1.2vw, -8px);
+    width: min(80vw, 74svh, 620px);
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1366px) and (orientation: landscape) {
+  .board-frame {
+    --board-frame-outset: clamp(28px, 5vw, 50px);
+    --board-frame-shift-x: clamp(-14px, -2.2vw, -8px);
+    --board-frame-shift-y: clamp(-10px, -1.8vw, -6px);
+    width: min(74vw, 72svh, 620px);
   }
 }
 

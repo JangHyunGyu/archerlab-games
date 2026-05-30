@@ -326,10 +326,10 @@ async function processMatches(initialMatches, originCells) {
     ]);
     state.board.removeCells(resolution.remove);
     state.board.placeSpecials(resolution.specials);
-    state.board.collapseAndRefill();
-    ui.renderBoard(state.board.grid, null);
+    const fallMoves = state.board.collapseAndRefill();
+    ui.renderBoard(state.board.grid, null, fallMoves);
     saveCurrentGame();
-    await delay(190);
+    await delay(getFallAnimationWait(fallMoves));
 
     matches = state.board.findMatches();
     originCells = [];
@@ -362,6 +362,20 @@ function finishTurn() {
 function unlockBoard() {
   locked = false;
   input.setEnabled(true);
+}
+
+function getFallAnimationWait(moves) {
+  if (!moves?.length) return 190;
+  let longest = 0;
+  for (const move of moves) {
+    const fromRow = Number(move.from?.row ?? move.to.row);
+    const toRow = Number(move.to?.row ?? fromRow);
+    const distance = Math.max(1, fromRow < 0 ? toRow + 1.6 : toRow - fromRow);
+    const duration = Math.min(680, 260 + distance * 58);
+    const stagger = Math.min(130, Number(move.to?.col || 0) * 10 + Math.max(0, 7 - toRow) * 3);
+    longest = Math.max(longest, duration + stagger);
+  }
+  return Math.min(840, Math.max(360, longest + 40));
 }
 
 function endStage(cleared) {
