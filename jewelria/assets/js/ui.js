@@ -229,8 +229,15 @@ export class UI {
 
   spawnMatchEffects(cells, options = {}) {
     const layerRect = this.refs.particleLayer.getBoundingClientRect();
+    const vfxLimit = window.matchMedia('(max-width: 640px)').matches ? 180 : 360;
+    const activeVfx = this.refs.particleLayer.childElementCount;
+    const loadRatio = activeVfx / vfxLimit;
+    const queueScale = loadRatio > 1.15 ? 0.28 : loadRatio > 0.82 ? 0.48 : loadRatio > 0.46 ? 0.72 : 1;
+    const eventScale = cells.length > 18 ? 0.42 : cells.length > 10 ? 0.52 : cells.length > 6 ? 0.7 : 1;
+    const loadScale = Math.min(queueScale, eventScale);
+    const maxPoints = loadScale <= 0.35 ? 8 : loadScale <= 0.55 ? 14 : loadScale < 0.8 ? 22 : 32;
     const points = cells
-      .slice(0, 36)
+      .slice(0, maxPoints)
       .map((cell) => this.getCellCenter(cell, layerRect))
       .filter(Boolean);
     if (!points.length) return;
@@ -244,35 +251,36 @@ export class UI {
     center.x /= points.length;
     center.y /= points.length;
     const centerType = dominantType(points);
-    const pointDensity = Math.max(0.38, Math.min(1, 6 / points.length));
+    const pointDensity = Math.max(0.14, Math.min(1, 4.8 / points.length) * loadScale);
 
     this.pulseBoard(intensity);
     this.spawnBoardFlash(intensity, centerType);
-    this.spawnBoardFlash(intensity * 0.72, centerType, 'white-hot');
+    if (loadScale > 0.55) this.spawnBoardFlash(intensity * 0.72, centerType, 'white-hot');
     this.spawnBurst(center.x, center.y, Math.max(points[0].size * 2.35, 96 * intensity), 'mega', centerType);
-    this.spawnBurst(center.x, center.y, Math.max(points[0].size * 1.6, 62 * intensity), 'flash', centerType);
+    if (loadScale > 0.5) this.spawnBurst(center.x, center.y, Math.max(points[0].size * 1.6, 62 * intensity), 'flash', centerType);
     this.spawnRing(center.x, center.y, Math.max(points[0].size * 3.4, 180 * intensity), 'mega shock', centerType);
-    this.spawnRaySpray(center.x, center.y, 18 + Math.round(intensity * 8), points[0].size * 1.3, intensity + 0.4, centerType);
-    this.spawnGlint(center.x, center.y, points[0].size * (2.4 + intensity * 0.32), intensity, centerType, 'major');
+    this.spawnRaySpray(center.x, center.y, Math.round((18 + intensity * 8) * loadScale), points[0].size * 1.3, intensity + 0.4, centerType);
+    if (loadScale > 0.5) this.spawnGlint(center.x, center.y, points[0].size * (2.4 + intensity * 0.32), intensity, centerType, 'major');
 
     for (const point of points) {
       const type = point.type || centerType;
-      this.spawnBurst(point.x, point.y, point.size * randomBetween(1.2, 1.62) * (1 + intensity * 0.24), '', type);
-      this.spawnBurst(point.x, point.y, point.size * randomBetween(0.92, 1.24) * (1 + intensity * 0.18), 'flash', type);
-      this.spawnRing(point.x, point.y, point.size * randomBetween(1.9, 2.7) * intensity, '', type);
+      if (loadScale > 0.62) this.spawnBurst(point.x, point.y, point.size * randomBetween(1.2, 1.62) * (1 + intensity * 0.24), '', type);
+      if (loadScale > 0.72) this.spawnBurst(point.x, point.y, point.size * randomBetween(0.92, 1.24) * (1 + intensity * 0.18), 'flash', type);
+      if (loadScale > 0.62) this.spawnRing(point.x, point.y, point.size * randomBetween(1.9, 2.7) * intensity, '', type);
       this.spawnShardSpray(point.x, point.y, Math.round((15 + intensity * 7) * pointDensity), point.size, intensity, type);
       this.spawnRaySpray(point.x, point.y, Math.round((5 + intensity * 3) * pointDensity), point.size, intensity, type);
-      this.spawnGlint(point.x, point.y, point.size * randomBetween(1.25, 1.8), intensity, type);
+      if (loadScale > 0.62) this.spawnGlint(point.x, point.y, point.size * randomBetween(1.25, 1.8), intensity, type);
       const sparkCount = Math.round((8 + intensity * 3) * pointDensity);
       for (let i = 0; i < sparkCount; i += 1) this.spawnSpark(point.x, point.y, point.size, intensity, type);
     }
 
     if (combo >= 3 || hasSpecial || longest >= 5) {
-      this.spawnShardSpray(center.x, center.y, 48 + combo * 8, points[0].size * 1.45, intensity + 0.8, centerType);
-      this.spawnRaySpray(center.x, center.y, 34 + combo * 6, points[0].size * 1.7, intensity + 0.9, centerType);
+      this.spawnShardSpray(center.x, center.y, Math.round((48 + combo * 8) * loadScale), points[0].size * 1.45, intensity + 0.8, centerType);
+      this.spawnRaySpray(center.x, center.y, Math.round((34 + combo * 6) * loadScale), points[0].size * 1.7, intensity + 0.9, centerType);
       this.spawnRing(center.x, center.y, Math.max(points[0].size * 5.4, 300 * intensity), 'screen shock', centerType);
-      this.spawnGlint(center.x, center.y, points[0].size * (3.2 + intensity * 0.42), intensity + 0.8, centerType, 'major');
+      if (loadScale > 0.5) this.spawnGlint(center.x, center.y, points[0].size * (3.2 + intensity * 0.42), intensity + 0.8, centerType, 'major');
     }
+    this.trimParticleLayer(vfxLimit);
   }
 
   spawnParticles(cells) {
@@ -415,6 +423,12 @@ export class UI {
     glint.style.setProperty('--dur', `${randomBetween(520, 780) + intensity * 24}ms`);
     this.refs.particleLayer.appendChild(glint);
     setTimeout(() => glint.remove(), 940);
+  }
+
+  trimParticleLayer(limit) {
+    const layer = this.refs.particleLayer;
+    const max = Math.max(120, Math.floor(limit));
+    while (layer.childElementCount > max) layer.firstElementChild?.remove();
   }
 
   applyVfxVars(el, type, asset = '') {
