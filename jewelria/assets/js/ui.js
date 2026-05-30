@@ -119,7 +119,10 @@ export class UI {
         if (gem) {
           const gemEl = this.createGemEl(gem);
           const fallMove = fallMap.get(`${r}:${c}`);
-          if (fallMove) this.applyFallAnimation(gemEl, fallMove);
+          if (fallMove) {
+            const timing = this.applyFallAnimation(gemEl, fallMove);
+            cell.appendChild(this.createLandingVfx(timing));
+          }
           cell.appendChild(gemEl);
         }
         frag.appendChild(cell);
@@ -172,6 +175,15 @@ export class UI {
       el.style.removeProperty('--fall-duration');
       el.style.removeProperty('--fall-delay');
     }, { once: true });
+    return { duration, delay, distance };
+  }
+
+  createLandingVfx({ duration, delay, distance }) {
+    const vfx = document.createElement('span');
+    vfx.className = 'landing-vfx';
+    vfx.style.setProperty('--landing-delay', `${Math.max(0, delay + duration * 0.62)}ms`);
+    vfx.style.setProperty('--landing-scale', String(Math.min(1.45, 0.9 + distance * 0.08)));
+    return vfx;
   }
 
   markCells(cells, className, duration = 320) {
