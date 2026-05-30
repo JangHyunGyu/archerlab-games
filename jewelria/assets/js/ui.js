@@ -160,8 +160,8 @@ export class UI {
     const fromRow = Number(move.from?.row ?? move.to.row);
     const toRow = Number(move.to?.row ?? fromRow);
     const distance = Math.max(1, fromRow < 0 ? toRow + 1.6 : toRow - fromRow);
-    const duration = Math.min(680, 260 + distance * 58);
-    const delay = Math.min(130, Number(move.to?.col || 0) * 10 + Math.max(0, 7 - toRow) * 3);
+    const duration = Math.min(920, 380 + distance * 72);
+    const delay = Math.min(160, Number(move.to?.col || 0) * 12 + Math.max(0, 7 - toRow) * 4);
     el.classList.add('falling');
     el.style.setProperty('--fall-offset', `${Math.min(10, distance) * -112}%`);
     el.style.setProperty('--fall-duration', `${duration}ms`);

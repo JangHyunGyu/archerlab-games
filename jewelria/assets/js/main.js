@@ -371,11 +371,11 @@ function getFallAnimationWait(moves) {
     const fromRow = Number(move.from?.row ?? move.to.row);
     const toRow = Number(move.to?.row ?? fromRow);
     const distance = Math.max(1, fromRow < 0 ? toRow + 1.6 : toRow - fromRow);
-    const duration = Math.min(680, 260 + distance * 58);
-    const stagger = Math.min(130, Number(move.to?.col || 0) * 10 + Math.max(0, 7 - toRow) * 3);
+    const duration = Math.min(920, 380 + distance * 72);
+    const stagger = Math.min(160, Number(move.to?.col || 0) * 12 + Math.max(0, 7 - toRow) * 4);
     longest = Math.max(longest, duration + stagger);
   }
-  return Math.min(840, Math.max(360, longest + 40));
+  return Math.min(1120, Math.max(520, longest + 70));
 }
 
 function endStage(cleared) {
