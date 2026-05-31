@@ -142,7 +142,7 @@ function renderTitle() {
     progress,
     totalStars: getTotalStars(progress),
     bestScore: getBestScore(progress),
-    savedGame: !!loadSavedGame()
+    savedGame: loadSavedGame()
   });
 }
 

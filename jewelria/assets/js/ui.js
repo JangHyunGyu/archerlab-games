@@ -67,7 +67,40 @@ export class UI {
     this.refs.titleProgress.textContent = `Stage ${Math.min(progress.currentStage || 1, STAGES.length)}`;
     this.refs.titleStars.textContent = String(totalStars || 0);
     this.refs.titleBest.textContent = Number(bestScore || 0).toLocaleString();
-    this.refs.continueBtn.disabled = !savedGame;
+    this._renderContinueButton(savedGame);
+  }
+
+  // 이어하기 버튼에 저장된 진행(스테이지·남은 이동 수)을 함께 표기해 "새로 시작"과 구분한다.
+  _renderContinueButton(savedGame) {
+    const btn = this.refs.continueBtn;
+    if (!btn) return;
+    btn.disabled = !savedGame;
+    if (!btn.dataset.label) btn.dataset.label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').trim();
+    const label = btn.dataset.label;
+    if (!savedGame) {
+      btn.textContent = label;
+      return;
+    }
+    const labelEl = document.createElement('span');
+    labelEl.className = 'btn-label';
+    labelEl.textContent = label;
+    const subEl = document.createElement('small');
+    subEl.className = 'btn-sub';
+    subEl.textContent = this._savedGameLabel(savedGame);
+    btn.replaceChildren(labelEl, subEl);
+  }
+
+  _savedGameLabel(saved) {
+    const stageId = Number(saved.stageId) || 1;
+    const moves = Math.max(0, Number(saved.moves) || 0);
+    const lang = (this.lang || 'ko').slice(0, 2);
+    const movesText = {
+      ko: `${moves}수 남음`,
+      ja: `残り${moves}手`,
+      es: `${moves} mov. rest.`,
+      en: `${moves} moves left`
+    }[lang] || `${moves} moves left`;
+    return `Stage ${stageId} · ${movesText}`;
   }
 
   updateSoundButtons(enabled) {

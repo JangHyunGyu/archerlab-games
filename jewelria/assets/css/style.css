@@ -307,6 +307,21 @@ p {
   text-shadow: 0 1px 0 rgba(255, 246, 198, 0.45);
 }
 
+.button .btn-label {
+  display: block;
+  line-height: 1.15;
+}
+
+.button .btn-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  opacity: 0.82;
+  letter-spacing: 0;
+}
+
 .button-secondary {
   --button-skin: url("../images/ui/ui-button-secondary.png");
   color: #eafff9;
@@ -472,25 +487,41 @@ p {
 .collect-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 4px 8px;
+  gap: 7px;
+  min-height: 38px;
+  padding: 4px 9px 4px 6px;
   border-radius: var(--radius);
+  border: 1px solid rgba(92, 204, 212, 0.24);
   background:
     linear-gradient(180deg, rgba(14, 49, 58, 0.86), rgba(4, 18, 25, 0.9)),
     url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .mini-gem {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  background: var(--gem-bg);
-  clip-path: var(--gem-shape);
-  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.6), 0 2px 5px rgba(0, 0, 0, 0.3);
+  display: block;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.38)) drop-shadow(0 0 5px rgba(255, 236, 168, 0.18));
+}
+
+.collect-label {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.collect-count {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.01em;
 }
 
 .collect-pill--score {
@@ -1522,18 +1553,25 @@ p {
   }
 
   .collect-goals {
-    flex: 0 0 auto;
+    flex: 0 0 100%;
+    justify-content: flex-start;
   }
 
   .collect-pill {
-    min-height: 29px;
+    min-height: 31px;
     padding: 3px 6px;
-    font-size: 12px;
+    gap: 5px;
   }
 
   .mini-gem {
-    width: 15px;
-    height: 15px;
+    flex-basis: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .collect-label,
+  .collect-count {
+    font-size: 11px;
   }
 
   .board-frame {
