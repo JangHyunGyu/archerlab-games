@@ -44,6 +44,7 @@ const BLOCKPANG_FREE_SCORE_BURST = 2000;
 const BLOCKPANG_MAX_SCORE_PER_SECOND = 3000;
 const JEWELRIA_GAME_ID = 'jewelria';
 const JEWELRIA_MAX_SCORE = 600000;
+const JEWELRIA_MAX_STAGE = 8;
 const JEWELRIA_FREE_SCORE_BURST = 2500;
 const JEWELRIA_MAX_SCORE_PER_SECOND = 4500;
 const JEWELRIA_COMBO_MULTIPLIER = 0.5;
@@ -352,6 +353,20 @@ async function recordBlockpangScoreEvents(db, body) {
         score: projectedScore,
         event_count: projectedEventCount,
     });
+}
+
+function normalizeJewelriaExtraData(extraData, score) {
+    const base = isPlainObject(extraData) ? extraData : {};
+    const rawStage = parseInteger(base.highest_stage ?? base.stage ?? 1);
+    const highestStage = Math.max(1, Math.min(JEWELRIA_MAX_STAGE, Number.isFinite(rawStage) ? rawStage : 1));
+    const rawStageScore = parseInteger(base.stage_score);
+    return {
+        ...base,
+        highest_stage: highestStage,
+        stage: highestStage,
+        run_score: Math.max(0, Math.floor(score || 0)),
+        stage_score: Number.isFinite(rawStageScore) ? Math.max(0, rawStageScore) : undefined,
+    };
 }
 
 function validateJewelriaScoreEvent(event) {
@@ -719,25 +734,50 @@ export default {
                 }
                 const limit = clampLimit(url.searchParams.get('limit'));
 
-                const result = await env.DB.prepare(`
-                    SELECT player_name, score, extra_data, created_at
-                    FROM (
-                        SELECT
-                            player_name,
-                            score,
-                            extra_data,
-                            created_at,
-                            ROW_NUMBER() OVER (
-                                PARTITION BY LOWER(TRIM(player_name))
-                                ORDER BY score DESC, created_at ASC, id ASC
-                            ) AS name_rank
-                        FROM rankings
-                        WHERE game_id = ?
-                    )
-                    WHERE name_rank = 1
-                    ORDER BY score DESC, created_at ASC
-                    LIMIT ?
-                `).bind(gameId, limit).all();
+                const result = gameId === JEWELRIA_GAME_ID
+                    ? await env.DB.prepare(`
+                        SELECT player_name, score, extra_data, created_at, rank_stage
+                        FROM (
+                            SELECT
+                                player_name,
+                                score,
+                                extra_data,
+                                created_at,
+                                CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) AS rank_stage,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY LOWER(TRIM(player_name))
+                                    ORDER BY
+                                        CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) DESC,
+                                        score DESC,
+                                        created_at ASC,
+                                        id ASC
+                                ) AS name_rank
+                            FROM rankings
+                            WHERE game_id = ?
+                        )
+                        WHERE name_rank = 1
+                        ORDER BY rank_stage DESC, score DESC, created_at ASC
+                        LIMIT ?
+                    `).bind(gameId, limit).all()
+                    : await env.DB.prepare(`
+                        SELECT player_name, score, extra_data, created_at
+                        FROM (
+                            SELECT
+                                player_name,
+                                score,
+                                extra_data,
+                                created_at,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY LOWER(TRIM(player_name))
+                                    ORDER BY score DESC, created_at ASC, id ASC
+                                ) AS name_rank
+                            FROM rankings
+                            WHERE game_id = ?
+                        )
+                        WHERE name_rank = 1
+                        ORDER BY score DESC, created_at ASC
+                        LIMIT ?
+                    `).bind(gameId, limit).all();
 
                 return jsonResponse({
                     game_id: gameId,
@@ -804,70 +844,154 @@ export default {
                     ).bind(Date.now(), Date.now(), verified.sessionId).run();
                 }
 
+                if (game_id === JEWELRIA_GAME_ID) {
+                    extra_data = normalizeJewelriaExtraData(extra_data, scoreForInsert);
+                }
+
                 const extraStr = extra_data ? JSON.stringify(extra_data) : null;
 
                 // Insert the score. Exact duplicate records may be ignored when the DB has a uniqueness constraint.
                 await env.DB.prepare(
                     'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
                 ).bind(game_id, name, scoreForInsert, extraStr).run();
+                if (game_id === JEWELRIA_GAME_ID) {
+                    await env.DB.prepare(`
+                        UPDATE rankings
+                        SET extra_data = ?
+                        WHERE game_id = ?
+                          AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
+                          AND score = ?
+                          AND CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) < ?
+                    `).bind(extraStr, game_id, name, scoreForInsert, extra_data.highest_stage).run();
+                }
 
                 // Get the displayed rank for this name after deduping by player name.
-                const rankResult = await env.DB.prepare(`
-                    WITH ranked_by_name AS (
-                        SELECT
-                            LOWER(TRIM(player_name)) AS name_key,
-                            score,
-                            ROW_NUMBER() OVER (
-                                PARTITION BY LOWER(TRIM(player_name))
-                                ORDER BY score DESC, created_at ASC, id ASC
-                            ) AS name_rank
-                        FROM rankings
-                        WHERE game_id = ?
-                    ),
-                    best_scores AS (
-                        SELECT name_key, score
-                        FROM ranked_by_name
-                        WHERE name_rank = 1
-                    ),
-                    current_player AS (
-                        SELECT score
-                        FROM best_scores
-                        WHERE name_key = LOWER(TRIM(?))
-                        LIMIT 1
-                    )
-                    SELECT
-                        (SELECT score FROM current_player) AS best_score,
-                        (
-                            SELECT COUNT(*) + 1
-                            FROM best_scores
-                            WHERE score > (SELECT score FROM current_player)
-                        ) AS rank
-                `).bind(game_id, name).first();
-
-                const currentRank = rankResult?.rank || 1;
-                const bestScore = rankResult?.best_score ?? scoreForInsert;
-
-                // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
-                await env.DB.prepare(`
-                    DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
-                        SELECT id
-                        FROM (
+                const rankResult = game_id === JEWELRIA_GAME_ID
+                    ? await env.DB.prepare(`
+                        WITH ranked_by_name AS (
                             SELECT
-                                id,
+                                LOWER(TRIM(player_name)) AS name_key,
                                 score,
-                                created_at,
+                                CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) AS rank_stage,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY LOWER(TRIM(player_name))
+                                    ORDER BY
+                                        CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) DESC,
+                                        score DESC,
+                                        created_at ASC,
+                                        id ASC
+                                ) AS name_rank
+                            FROM rankings
+                            WHERE game_id = ?
+                        ),
+                        best_scores AS (
+                            SELECT name_key, score, rank_stage
+                            FROM ranked_by_name
+                            WHERE name_rank = 1
+                        ),
+                        current_player AS (
+                            SELECT score, rank_stage
+                            FROM best_scores
+                            WHERE name_key = LOWER(TRIM(?))
+                            LIMIT 1
+                        )
+                        SELECT
+                            (SELECT score FROM current_player) AS best_score,
+                            (SELECT rank_stage FROM current_player) AS best_stage,
+                            (
+                                SELECT COUNT(*) + 1
+                                FROM best_scores
+                                WHERE rank_stage > (SELECT rank_stage FROM current_player)
+                                   OR (
+                                        rank_stage = (SELECT rank_stage FROM current_player)
+                                        AND score > (SELECT score FROM current_player)
+                                   )
+                            ) AS rank
+                    `).bind(game_id, name).first()
+                    : await env.DB.prepare(`
+                        WITH ranked_by_name AS (
+                            SELECT
+                                LOWER(TRIM(player_name)) AS name_key,
+                                score,
                                 ROW_NUMBER() OVER (
                                     PARTITION BY LOWER(TRIM(player_name))
                                     ORDER BY score DESC, created_at ASC, id ASC
                                 ) AS name_rank
                             FROM rankings
                             WHERE game_id = ?
+                        ),
+                        best_scores AS (
+                            SELECT name_key, score
+                            FROM ranked_by_name
+                            WHERE name_rank = 1
+                        ),
+                        current_player AS (
+                            SELECT score
+                            FROM best_scores
+                            WHERE name_key = LOWER(TRIM(?))
+                            LIMIT 1
                         )
-                        WHERE name_rank = 1
-                        ORDER BY score DESC, created_at ASC, id ASC
-                        LIMIT 100
-                    )
-                `).bind(game_id, game_id).run();
+                        SELECT
+                            (SELECT score FROM current_player) AS best_score,
+                            (
+                                SELECT COUNT(*) + 1
+                                FROM best_scores
+                                WHERE score > (SELECT score FROM current_player)
+                            ) AS rank
+                    `).bind(game_id, name).first();
+
+                const currentRank = rankResult?.rank || 1;
+                const bestScore = rankResult?.best_score ?? scoreForInsert;
+
+                // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
+                if (game_id === JEWELRIA_GAME_ID) {
+                    await env.DB.prepare(`
+                        DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
+                            SELECT id
+                            FROM (
+                                SELECT
+                                    id,
+                                    score,
+                                    created_at,
+                                    CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) AS rank_stage,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY LOWER(TRIM(player_name))
+                                        ORDER BY
+                                            CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) DESC,
+                                            score DESC,
+                                            created_at ASC,
+                                            id ASC
+                                    ) AS name_rank
+                                FROM rankings
+                                WHERE game_id = ?
+                            )
+                            WHERE name_rank = 1
+                            ORDER BY rank_stage DESC, score DESC, created_at ASC, id ASC
+                            LIMIT 100
+                        )
+                    `).bind(game_id, game_id).run();
+                } else {
+                    await env.DB.prepare(`
+                        DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
+                            SELECT id
+                            FROM (
+                                SELECT
+                                    id,
+                                    score,
+                                    created_at,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY LOWER(TRIM(player_name))
+                                        ORDER BY score DESC, created_at ASC, id ASC
+                                    ) AS name_rank
+                                FROM rankings
+                                WHERE game_id = ?
+                            )
+                            WHERE name_rank = 1
+                            ORDER BY score DESC, created_at ASC, id ASC
+                            LIMIT 100
+                        )
+                    `).bind(game_id, game_id).run();
+                }
 
                 return jsonResponse({
                     success: true,
@@ -875,6 +999,7 @@ export default {
                     player_name: name,
                     score: scoreForInsert,
                     best_score: bestScore,
+                    best_stage: rankResult?.best_stage ?? (game_id === JEWELRIA_GAME_ID ? extra_data?.highest_stage : undefined),
                     in_top_20: currentRank <= 20,
                 });
             }

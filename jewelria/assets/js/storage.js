@@ -103,9 +103,9 @@ export function saveLocalRank(name, score, extra = {}) {
   for (const row of rows) {
     const key = row.player_name.trim().toLowerCase();
     const prev = bestByName.get(key);
-    if (!prev || row.score > prev.score) bestByName.set(key, row);
+    if (!prev || compareRankRows(row, prev) < 0) bestByName.set(key, row);
   }
-  const sorted = [...bestByName.values()].sort((a, b) => b.score - a.score || a.created_at.localeCompare(b.created_at)).slice(0, 20);
+  const sorted = [...bestByName.values()].sort(compareRankRows).slice(0, 20);
   try { localStorage.setItem(LOCAL_RANK_KEY, JSON.stringify(sorted)); } catch {}
   return sorted;
 }
@@ -122,4 +122,16 @@ export function loadLocalRanks() {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function rankStage(row) {
+  const extra = row?.extra_data || {};
+  const raw = Number(extra.highest_stage ?? extra.stage ?? 1);
+  return Number.isFinite(raw) ? Math.max(1, raw) : 1;
+}
+
+function compareRankRows(a, b) {
+  return rankStage(b) - rankStage(a)
+    || Number(b.score || 0) - Number(a.score || 0)
+    || String(a.created_at || '').localeCompare(String(b.created_at || ''));
 }

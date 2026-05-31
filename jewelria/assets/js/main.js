@@ -57,7 +57,7 @@ async function boot() {
   audio.startAmbient('main');
   const stageParam = Number(query.get('stage'));
   if (Number.isInteger(stageParam) && stageParam >= 1 && stageParam <= STAGES.length && isStageUnlocked(progress, stageParam)) {
-    startStage(stageParam - 1);
+    startStage(stageParam - 1, 0, stageParam === 1);
   }
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('./service-worker.js').catch(() => {});
@@ -70,7 +70,7 @@ async function boot() {
 function bindButtons() {
   on('play-btn', 'click', () => {
     audio.play('button');
-    startStage(0);
+    startStage(0, 0, true);
   });
   on('continue-btn', 'click', () => {
     audio.play('button');
@@ -80,7 +80,7 @@ function bindButtons() {
     audio.play('button');
     ui.showStages(progress, (stageId) => isStageUnlocked(progress, stageId), (index) => {
       ui.hideModal(ui.refs.stageModal);
-      startStage(index);
+      startStage(index, 0, index === 0);
     });
   });
   on('stage-close', 'click', () => ui.hideModal(ui.refs.stageModal));
@@ -102,12 +102,14 @@ function bindButtons() {
   on('pause-restart-btn', 'click', () => {
     audio.play('button');
     ui.hidePause();
-    startStage(state?.stageIndex || 0);
+    const stageIndex = state?.stageIndex || 0;
+    startStage(stageIndex, 0, stageIndex === 0);
   });
   on('pause-home-btn', 'click', goTitle);
   on('restart-btn', 'click', () => {
     audio.play('button');
-    startStage(state?.stageIndex || 0);
+    const stageIndex = state?.stageIndex || 0;
+    startStage(stageIndex, 0, stageIndex === 0);
   });
   on('rank-open-title', 'click', openRanks);
   on('rank-open-game', 'click', openRanks);
@@ -119,12 +121,13 @@ function bindButtons() {
     // 다음 스테이지로 이어갈 때는 이전까지의 누적 점수를 이어받는다.
     const carry = (state?.runScore || 0) + (state?.score || 0);
     ui.hideResult();
-    startStage(nextIndex, carry);
+    startStage(nextIndex, carry, state?.rankEligible !== false);
   });
   on('retry-btn', 'click', () => {
     audio.play('button');
     ui.hideResult();
-    startStage(state?.stageIndex || 0);
+    const stageIndex = state?.stageIndex || 0;
+    startStage(stageIndex, 0, stageIndex === 0);
   });
   on('result-home-btn', 'click', goTitle);
   on('submit-rank-btn', 'click', submitRank);
@@ -145,7 +148,7 @@ function renderTitle() {
   });
 }
 
-function startStage(stageIndex, carryScore = 0) {
+function startStage(stageIndex, carryScore = 0, rankEligible = stageIndex === 0 && carryScore === 0) {
   const stage = getStage(stageIndex);
   const board = new BoardModel(BOARD_SIZE);
   board.generateInitial();
@@ -159,10 +162,16 @@ function startStage(stageIndex, carryScore = 0) {
     moves: stage.moves,
     score: 0,
     runScore: carryScore,
+    rankEligible,
     collections: Object.fromEntries(stage.goals.map((goal) => [goal.type, 0]))
   };
   clearSavedGame();
-  ranking.startSession();
+  if (rankEligible) {
+    if (carryScore <= 0) ranking.startSession();
+    else ranking.ensureSession();
+  } else {
+    ranking.disable();
+  }
   audio.startAmbient('game');
   ui.setScreen('game');
   ui.updateHUD(state);
@@ -198,9 +207,11 @@ function resumeSavedGame() {
     moves: saved.moves,
     score: saved.score,
     runScore: saved.runScore || 0,
+    rankEligible: saved.rankEligible ?? (Number(saved.runScore || 0) > 0 || stageIndex === 0),
     collections: saved.collections || {}
   };
-  ranking.restore(saved.rankSessionId, saved.rankUnsupported);
+  if (state.rankEligible) ranking.restore(saved.rankSessionId, saved.rankUnsupported);
+  else ranking.disable();
   audio.startAmbient('game');
   ui.setScreen('game');
   ui.updateHUD(state);
@@ -314,7 +325,7 @@ async function processMatches(initialMatches, originCells) {
       combo
     });
     state.score += scoring.delta;
-    ranking.queueScoreEvent(scoring.event);
+    if (state.rankEligible !== false) ranking.queueScoreEvent(scoring.event);
     ui.updateHUD(state);
     ui.showCombo(combo, resolution.lineCount, resolution.longest);
     // 한 번에 여러 보석이 매치되면 중심에서 바깥으로 순차적으로 깨지게 한다.
@@ -427,8 +438,9 @@ function endStage(cleared) {
   progress = updateStageProgress(state.stage.id, state.score, stars);
   clearSavedGame();
   const canNext = state.stageIndex < STAGES.length - 1;
-  // 런 종료 = 게임 오버(실패) 또는 마지막 스테이지 클리어. 이때만 누적 총점을 랭킹에 등록.
-  const runEnded = !cleared || !canNext;
+  // 공식 런(Stage 1부터 시작) 종료 시에만 누적 총점을 랭킹에 등록한다.
+  const rankEligible = state.rankEligible !== false;
+  const runEnded = rankEligible && (!cleared || !canNext);
   const runTotal = (state.runScore || 0) + state.score;
   if (runEnded) progress = updateRunBest(runTotal);
   audio.play(cleared ? 'clear' : 'fail');
@@ -469,7 +481,10 @@ async function submitRank() {
   const runTotal = (state.runScore || 0) + state.score;
   try {
     const result = await ranking.submit(name, runTotal, {
+      highest_stage: state.stage.id,
       stage: state.stage.id,
+      stage_score: state.score,
+      run_score: runTotal,
       stars: getStarsForScore(state.stage, state.score, isStageCleared(state)),
       moves_left: Math.max(0, state.moves)
     });
@@ -512,6 +527,7 @@ function saveCurrentGame() {
     moves: state.moves,
     score: state.score,
     runScore: state.runScore,
+    rankEligible: state.rankEligible !== false,
     collections: state.collections,
     rankSessionId: ranking.sessionId,
     rankUnsupported: ranking.unsupported
@@ -545,8 +561,20 @@ function on(id, eventName, handler) {
 
 function localRowsWithRank() {
   return loadLocalRanks()
-    .sort((a, b) => b.score - a.score || String(a.created_at).localeCompare(String(b.created_at)))
+    .sort(compareRankingRows)
     .map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+function getRankStage(row) {
+  const extra = row?.extra_data || row?.extra || {};
+  const raw = Number(extra.highest_stage ?? extra.stage ?? 1);
+  return Number.isFinite(raw) ? Math.max(1, raw) : 1;
+}
+
+function compareRankingRows(a, b) {
+  return getRankStage(b) - getRankStage(a)
+    || Number(b.score || 0) - Number(a.score || 0)
+    || String(a.created_at || '').localeCompare(String(b.created_at || ''));
 }
 
 class RankingClient {
@@ -590,6 +618,15 @@ class RankingClient {
     this.queue = [];
     this.flushPromise = null;
     this.sessionPromise = this.sessionId ? Promise.resolve(this.sessionId) : null;
+  }
+
+  disable() {
+    this.sessionId = null;
+    this.sessionPromise = null;
+    this.queue = [];
+    this.flushPromise = null;
+    this.unsupported = true;
+    this.syncFailed = false;
   }
 
   queueScoreEvent(event) {

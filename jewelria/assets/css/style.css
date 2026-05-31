@@ -1304,9 +1304,22 @@ p {
 }
 
 .rank-score {
-  color: var(--gold-2);
-  font-weight: 950;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
   white-space: nowrap;
+}
+
+.rank-stage {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.rank-points {
+  color: var(--gold-2);
+  font-size: 13px;
+  font-weight: 950;
 }
 
 .rank-loading,

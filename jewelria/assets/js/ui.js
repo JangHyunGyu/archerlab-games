@@ -271,7 +271,13 @@ export class UI {
       name.textContent = row.player_name || 'Player';
       const score = document.createElement('div');
       score.className = 'rank-score';
-      score.textContent = Number(row.score || 0).toLocaleString();
+      const stage = document.createElement('span');
+      stage.className = 'rank-stage';
+      stage.textContent = `Stage ${getRankStage(row)}`;
+      const points = document.createElement('span');
+      points.className = 'rank-points';
+      points.textContent = `${Number(row.score || 0).toLocaleString()}점`;
+      score.append(stage, points);
       item.append(pos, name, score);
       this.refs.rankContent.appendChild(item);
     });
@@ -313,4 +319,10 @@ export function starsText(stars) {
 
 export function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getRankStage(row) {
+  const extra = row?.extra_data || row?.extra || {};
+  const raw = Number(extra.highest_stage ?? extra.stage ?? 1);
+  return Number.isFinite(raw) ? Math.max(1, raw) : 1;
 }
