@@ -228,19 +228,54 @@ export class PixiBoard {
     container._visual = visual;
 
     if (gem.special) {
-      const bar = new PIXI.Graphics();
-      const len = this.cell * 0.74;
-      const thick = Math.max(3, this.cell * 0.07);
-      if (gem.special === 'row') {
-        bar.roundRect(-len / 2, -thick / 2, len, thick, thick / 2);
-      } else {
-        bar.roundRect(-thick / 2, -len / 2, thick, len, thick / 2);
-      }
-      bar.fill({ color: 0xffffff, alpha: 0.85 });
-      container.addChild(bar);
-      container._specialBar = bar;
+      const marker = this._makeSpecialMarker(gem.special, gem.type);
+      container.addChild(marker);
+      container._specialMarker = marker;
     }
     return container;
+  }
+
+  // 특수 보석 마커: 보석색 발광 오라 + 어두운 대비 베이스 + 밝은 에너지 코어 +
+  // 양끝 방향 화살표로 "이 줄을 쓸어버린다"는 걸 직관적으로 보여준다. row=가로, col=세로.
+  _makeSpecialMarker(direction, gemType) {
+    const color = TYPE_COLORS[gemType] || 0xffffff;
+    const m = new PIXI.Container();
+    const len = this.cell * 0.64;
+    const half = len / 2;
+    const glowThick = this.cell * 0.36;
+    const baseThick = this.cell * 0.185;
+    const coreThick = this.cell * 0.10;
+    const aw = this.cell * 0.13; // 화살표 길이
+    const ah = this.cell * 0.145; // 화살표 절반 높이
+
+    // 1) 보석색 발광 오라(에너지가 흐르는 느낌)
+    const glow = new PIXI.Graphics();
+    glow.roundRect(-half, -glowThick / 2, len, glowThick, glowThick / 2).fill({ color, alpha: 0.26 });
+    glow.roundRect(-half, -glowThick * 0.32, len, glowThick * 0.64, glowThick * 0.32).fill({ color, alpha: 0.34 });
+    m.addChild(glow);
+
+    // 2) 어두운 베이스 — 주황/노랑 같은 밝은 보석 위에서도 또렷하게 보이도록 대비.
+    const base = new PIXI.Graphics();
+    base.roundRect(-half, -baseThick / 2, len, baseThick, baseThick / 2).fill({ color: 0x06121a, alpha: 0.58 });
+    m.addChild(base);
+
+    // 3) 밝은 에너지 코어 + 중앙 발광 점.
+    const core = new PIXI.Graphics();
+    core.roundRect(-half, -coreThick / 2, len, coreThick, coreThick / 2).fill({ color: 0xffffff, alpha: 0.96 });
+    core.ellipse(0, 0, coreThick * 1.1, coreThick * 0.85).fill({ color: 0xffffff, alpha: 0.92 });
+    m.addChild(core);
+
+    // 4) 양끝 화살표 — 클리어 방향(가로/세로)을 한눈에.
+    const arrows = new PIXI.Graphics();
+    arrows.poly([half, -ah, half + aw, 0, half, ah]).fill({ color: 0xffffff, alpha: 0.96 });
+    arrows.poly([-half, -ah, -half - aw, 0, -half, ah]).fill({ color: 0xffffff, alpha: 0.96 });
+    m.addChild(arrows);
+
+    // col(세로) 특수는 90° 회전해 세로 줄무늬로.
+    if (direction !== 'row') m.rotation = Math.PI / 2;
+    m._glow = glow;
+    m._phase = Math.random() * Math.PI * 2; // 보석마다 펄스 위상을 달리해 자연스럽게.
+    return m;
   }
 
   /** main.js가 호출: 보드 상태를 화면에 반영(스왑/낙하/선택 포함) */
@@ -775,6 +810,16 @@ export class PixiBoard {
     if (this.selectGfx.visible) {
       this._pulse = (this._pulse || 0) + dt * 0.005;
       this.selectGfx.alpha = 0.7 + Math.sin(this._pulse) * 0.3;
+    }
+
+    // 특수 보석 마커 펄스(은은하게 커졌다 작아지며 빛나 "특별함"을 강조)
+    this._clock = (this._clock || 0) + dt;
+    for (const entry of this.sprites.values()) {
+      const m = entry.sprite && entry.sprite._specialMarker;
+      if (!m) continue;
+      const w = Math.sin(this._clock * 0.005 + m._phase);
+      m.scale.set(1 + w * 0.07);
+      if (m._glow) m._glow.alpha = 0.7 + w * 0.3;
     }
 
     // stage shake
