@@ -24,15 +24,17 @@ export function getStarsForScore(stage, score, cleared) {
 
 export function isStageCleared(state) {
   if (!state || !state.stage) return false;
-  // 수집 목표가 있는 스테이지는 목표 달성만으로 클리어(점수는 별점 기준으로만 사용).
+  const scoreOk = state.score >= state.stage.targetScore;
+  // 수집 목표가 있는 스테이지는 목표 점수 + 보석 수집을 모두 달성해야 클리어.
   if (state.stage.goals.length) {
-    return state.stage.goals.every((goal) => (state.collections[goal.type] || 0) >= goal.count);
+    const goalsOk = state.stage.goals.every((goal) => (state.collections[goal.type] || 0) >= goal.count);
+    return scoreOk && goalsOk;
   }
   // 목표가 없는 스테이지는 목표 점수 달성으로 클리어.
-  return state.score >= state.stage.targetScore;
+  return scoreOk;
 }
 
 export function getGoalText(stage) {
   if (!stage.goals.length) return `${stage.targetScore.toLocaleString()}점 달성`;
-  return '보석 수집';
+  return '점수 + 보석 수집';
 }
