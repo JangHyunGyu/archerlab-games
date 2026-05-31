@@ -276,7 +276,7 @@ async function attemptSwap(from, to) {
   state.moves -= 1;
   ui.updateHUD(state);
   await processMatches(matches, [from, to]);
-  await ensurePlayableBoard();
+  if (!isStageCleared(state) && state.moves > 0) await ensurePlayableBoard();
   finishTurn();
 }
 
