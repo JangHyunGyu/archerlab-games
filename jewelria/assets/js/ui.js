@@ -91,16 +91,34 @@ export class UI {
     }
     this.refs.stageLabel.textContent = `Stage ${stage.id} · ${stage.name}`;
     this.refs.objectiveTitle.textContent = getGoalText(stage);
-    this.renderGoals(stage, state.collections);
+    this.renderGoals(stage, state.collections, state.score);
   }
 
-  renderGoals(stage, collections = {}) {
+  renderGoals(stage, collections = {}, score = 0) {
     this.refs.collectGoals.replaceChildren();
+    // 점수 목표도 클리어 조건이므로 미션으로 함께 표기(예: 1,000/1,900).
+    const targetScore = Number(stage.targetScore) || 0;
+    if (targetScore > 0) {
+      const current = Math.min(Number(score) || 0, targetScore);
+      const pill = document.createElement('div');
+      pill.className = 'collect-pill collect-pill--score';
+      if (current >= targetScore) pill.classList.add('is-done');
+      const icon = document.createElement('span');
+      icon.className = 'mini-score';
+      icon.textContent = '★';
+      icon.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.textContent = `${current.toLocaleString()}/${targetScore.toLocaleString()}`;
+      pill.title = `점수 ${current.toLocaleString()}/${targetScore.toLocaleString()}`;
+      pill.append(icon, label);
+      this.refs.collectGoals.appendChild(pill);
+    }
     for (const goal of stage.goals) {
       const gem = GEM_BY_ID[goal.type];
       const current = Math.min(collections[goal.type] || 0, goal.count);
       const pill = document.createElement('div');
       pill.className = 'collect-pill';
+      if (current >= goal.count) pill.classList.add('is-done');
       const icon = document.createElement('span');
       icon.className = 'mini-gem';
       icon.style.cssText = getGemCssVars(goal.type);
