@@ -1,5 +1,4 @@
 import { BoardModel } from './board.js';
-import { InputController } from './input.js';
 import { scoreBatch } from './score.js';
 import { STAGES, getStage, getStarsForScore, isStageCleared } from './stage.js';
 import {
@@ -41,10 +40,11 @@ let locked = false;
 
 queueMicrotask(boot);
 
-function boot() {
+async function boot() {
   ranking = new RankingClient();
   if (!checkBrowserSupport()) ui.showToast('이 브라우저에서는 일부 기능이 제한될 수 있습니다.', 2600);
-  input = new InputController(ui.refs.board, {
+  await ui.initBoard();
+  input = ui.createInput({
     tap: handleTap,
     swipe: handleSwipe,
     keyboardMove: handleKeyboardMove
