@@ -37,8 +37,18 @@ export function getTotalStars(progress) {
   return Object.values(progress?.stages || {}).reduce((sum, item) => sum + (item.stars || 0), 0);
 }
 
+// 한 판(run) 누적 총점의 최고 기록을 갱신한다. (A안: 글로벌 랭킹 기준 점수)
+export function updateRunBest(total) {
+  const progress = loadProgress();
+  progress.bestRun = Math.max(Number(progress.bestRun || 0), Number(total || 0));
+  saveProgress(progress);
+  return progress;
+}
+
 export function getBestScore(progress) {
-  return Object.values(progress?.stages || {}).reduce((best, item) => Math.max(best, item.bestScore || 0), 0);
+  const runBest = Number(progress?.bestRun || 0);
+  const stageBest = Object.values(progress?.stages || {}).reduce((best, item) => Math.max(best, item.bestScore || 0), 0);
+  return Math.max(runBest, stageBest);
 }
 
 export function isStageUnlocked(progress, stageId) {
