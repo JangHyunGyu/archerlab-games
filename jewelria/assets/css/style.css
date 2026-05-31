@@ -772,11 +772,11 @@ p {
 }
 
 .gem-topaz {
-  --gem-main: #ffc51c;
-  --gem-light: #fff3a4;
-  --gem-dark: #9d6400;
-  --gem-glow: rgba(255, 206, 58, 0.6);
-  --gem-shape: polygon(50% 0%, 96% 30%, 82% 92%, 18% 92%, 4% 30%);
+  --gem-main: #ffe52a;
+  --gem-light: #fff9b6;
+  --gem-dark: #9b7600;
+  --gem-glow: rgba(255, 232, 62, 0.62);
+  --gem-shape: polygon(50% 0%, 92% 34%, 78% 96%, 22% 96%, 8% 34%);
 }
 
 .gem-amethyst {
@@ -788,11 +788,11 @@ p {
 }
 
 .gem-citrine {
-  --gem-main: #ff8619;
-  --gem-light: #ffd28b;
-  --gem-dark: #8d3600;
-  --gem-glow: rgba(255, 147, 38, 0.56);
-  --gem-shape: polygon(50% 0%, 79% 11%, 98% 39%, 93% 72%, 68% 96%, 32% 96%, 7% 72%, 2% 39%, 21% 11%);
+  --gem-main: #ff5a12;
+  --gem-light: #ffc06c;
+  --gem-dark: #8d2200;
+  --gem-glow: rgba(255, 97, 24, 0.58);
+  --gem-shape: polygon(50% 0%, 90% 24%, 99% 78%, 50% 100%, 1% 78%, 10% 24%);
 }
 
 .combo-layer,
