@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelria-v0.1.25';
+const CACHE_NAME = 'jewelria-v0.1.26';
 const CORE_ASSETS = [
   './',
   './index.html',
