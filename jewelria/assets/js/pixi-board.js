@@ -383,20 +383,27 @@ export class PixiBoard {
   }
 
   /** main.js가 호출: clearing/invalid/transforming 표시 */
-  markCells(cells, className, duration = 320) {
+  markCells(cells, className, duration = 320, stagger = 0) {
     if (!this._ready) return Promise.resolve();
     if (className === 'clearing') {
-      for (const cell of cells) {
+      const ordered = stagger > 0 ? this._staggerOrder(cells) : cells;
+      ordered.forEach((cell, i) => {
         const entry = this._entryAt(cell.row, cell.col);
-        if (!entry) continue;
-        const s = entry.sprite;
-        const color = TYPE_COLORS[cell.type] || 0xfff0a8;
-        this._spawnFlash(this.cellX(cell.col), this.cellY(cell.row), color, 1.8);
-        this._spawnRing(this.cellX(cell.col), this.cellY(cell.row), color, 1.45);
-        this._tween(s, { scale: 1.42 }, duration * 0.38, easeOutCubic);
-        this._tween(s, { alpha: 0 }, duration, easeInQuad);
-        setTimeout(() => this._tween(s, { scale: 0 }, duration * 0.5, easeInQuad), duration * 0.38);
-      }
+        if (!entry) return;
+        const run = () => {
+          const s = entry.sprite;
+          const color = TYPE_COLORS[cell.type] || 0xfff0a8;
+          this._spawnFlash(this.cellX(cell.col), this.cellY(cell.row), color, 1.8);
+          this._spawnRing(this.cellX(cell.col), this.cellY(cell.row), color, 1.45);
+          this._tween(s, { scale: 1.42 }, duration * 0.38, easeOutCubic);
+          this._tween(s, { alpha: 0 }, duration, easeInQuad);
+          setTimeout(() => this._tween(s, { scale: 0 }, duration * 0.5, easeInQuad), duration * 0.38);
+        };
+        const wait = stagger > 0 ? i * stagger : 0;
+        if (wait > 0) setTimeout(run, wait); else run();
+      });
+      const total = duration + (stagger > 0 ? Math.max(0, ordered.length - 1) * stagger : 0);
+      return new Promise((resolve) => setTimeout(resolve, total));
     } else if (className === 'invalid') {
       for (const cell of cells) {
         const entry = this._entryAt(cell.row, cell.col);
@@ -414,6 +421,20 @@ export class PixiBoard {
     return new Promise((resolve) => setTimeout(resolve, duration));
   }
 
+  /** 매치 셀을 중심에서 바깥쪽으로 퍼지는 순서로 정렬해 순차적으로 깨지게 한다. */
+  _staggerOrder(cells) {
+    if (!cells.length) return cells;
+    let cx = 0;
+    let cy = 0;
+    for (const cell of cells) { cx += cell.col; cy += cell.row; }
+    cx /= cells.length;
+    cy /= cells.length;
+    return cells
+      .map((cell) => ({ cell, d: (cell.col - cx) ** 2 + (cell.row - cy) ** 2 }))
+      .sort((a, b) => a.d - b.d)
+      .map((o) => o.cell);
+  }
+
   _entryAt(row, col) {
     for (const entry of this.sprites.values()) {
       if (entry.row === row && entry.col === col) return entry;
@@ -428,22 +449,30 @@ export class PixiBoard {
     const longest = Number(options.longest || 3);
     const lineCount = Number(options.lineCount || 1);
     const hasSpecial = Number(options.specialActivations || 0) > 0;
+    const stagger = Number(options.stagger || 0);
     const intensity = Math.min(5, 1.2 + combo * 0.4 + Math.max(0, lineCount - 1) * 0.4 + Math.max(0, longest - 3) * 0.3 + (hasSpecial ? 0.8 : 0));
 
+    // 중심점 / 대표 색상 선계산
     let cx = 0;
     let cy = 0;
     let dominant = null;
     const counts = {};
     for (const cell of cells) {
+      cx += this.cellX(cell.col);
+      cy += this.cellY(cell.row);
+      if (cell.type) {
+        counts[cell.type] = (counts[cell.type] || 0) + 1;
+        if (!dominant || counts[cell.type] > counts[dominant]) dominant = cell.type;
+      }
+    }
+    cx /= cells.length;
+    cy /= cells.length;
+
+    const ordered = stagger > 0 ? this._staggerOrder(cells) : cells;
+    const burstCell = (cell) => {
       const x = this.cellX(cell.col);
       const y = this.cellY(cell.row);
-      cx += x;
-      cy += y;
       const type = cell.type;
-      if (type) {
-        counts[type] = (counts[type] || 0) + 1;
-        if (!dominant || counts[type] > counts[dominant]) dominant = type;
-      }
       const color = TYPE_COLORS[type] || 0xfff0a8;
       if (this.fxFrames[`shards-${type}`]) {
         // 이미지 에셋 기반 파편 + 폭발(저비용, GPU)
@@ -457,9 +486,12 @@ export class PixiBoard {
       }
       this._spawnRing(x, y, color, intensity * 0.9);
       this._spawnShockwave(x, y, color, intensity * 0.7);
-    }
-    cx /= cells.length;
-    cy /= cells.length;
+    };
+    ordered.forEach((cell, i) => {
+      const wait = stagger > 0 ? i * stagger : 0;
+      if (wait > 0) setTimeout(() => burstCell(cell), wait); else burstCell(cell);
+    });
+
     const centerColor = TYPE_COLORS[dominant] || 0xfff0a8;
     this._spawnFlash(cx, cy, centerColor, intensity * 1.25);
     this._spawnRing(cx, cy, centerColor, intensity * 1.8);

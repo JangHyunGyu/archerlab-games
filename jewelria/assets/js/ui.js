@@ -118,8 +118,8 @@ export class UI {
     this.pixi?.renderBoard(grid, selected, fallMoves);
   }
 
-  markCells(cells, className, duration = 320) {
-    return this.pixi ? this.pixi.markCells(cells, className, duration) : delay(duration);
+  markCells(cells, className, duration = 320, stagger = 0) {
+    return this.pixi ? this.pixi.markCells(cells, className, duration, stagger) : delay(duration);
   }
 
   showCombo(combo, lineCount = 1, longest = 3) {
