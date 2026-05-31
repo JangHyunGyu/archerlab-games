@@ -168,7 +168,10 @@ export class UI {
     this.refs.resultScore.textContent = Number(score).toLocaleString();
     this.refs.resultBest.textContent = Number(bestScore).toLocaleString();
     this.refs.resultMoves.textContent = String(Math.max(0, moves));
-    this.refs.rankSubmit.classList.toggle('hidden', score <= 0);
+    // 랭킹 등록은 "런이 끝난 시점"에만: 게임 오버(실패) 또는 마지막 스테이지 클리어.
+    // 중간 스테이지를 클리어하고 다음으로 진행하는 경우엔 노출하지 않는다.
+    const runOver = !cleared || !canNext;
+    this.refs.rankSubmit.classList.toggle('hidden', score <= 0 || !runOver);
     this.refs.nextStageBtn.classList.toggle('hidden', !cleared || !canNext);
     this.refs.nicknameInput.value = nickname || '';
     this.refs.submitStatus.textContent = '';
