@@ -2,17 +2,6 @@ import { GEM_BY_ID, getGemCssVars, getGemName } from './gem.js';
 import { STAGES, getGoalText } from './stage.js';
 import { PixiBoard } from './pixi-board.js';
 
-const GEM_VFX = Object.fromEntries(Object.keys(GEM_BY_ID).map((type) => {
-  const gem = GEM_BY_ID[type];
-  return [type, {
-    color: gem.color,
-    rgb: hexToRgb(gem.color),
-    glow: hexToRgba(gem.color, 0.72),
-    burst: `assets/images/effects/gem-shatter-${type}.png`,
-    shards: `assets/images/effects/gem-shards-${type}.png`
-  }];
-}));
-
 export class UI {
   constructor(lang = 'ko') {
     this.lang = lang;
@@ -246,46 +235,4 @@ export function starsText(stars) {
 
 export function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
-}
-
-function dominantType(points) {
-  const counts = new Map();
-  for (const point of points) {
-    if (!point.type) continue;
-    counts.set(point.type, (counts.get(point.type) || 0) + 1);
-  }
-  let bestType = points.find((point) => point.type)?.type || 'ruby';
-  let bestCount = -1;
-  counts.forEach((count, type) => {
-    if (count > bestCount) {
-      bestType = type;
-      bestCount = count;
-    }
-  });
-  return bestType;
-}
-
-function getFallTiming(move) {
-  const fromRow = Number(move.from?.row ?? move.to.row);
-  const toRow = Number(move.to?.row ?? fromRow);
-  const distance = Math.max(1, fromRow < 0 ? toRow + 1.6 : toRow - fromRow);
-  const duration = Math.min(920, 380 + distance * 72);
-  const delay = Math.min(160, Number(move.to?.col || 0) * 12 + Math.max(0, 7 - toRow) * 4);
-  return { duration, delay, distance };
-}
-
-function hexToRgb(hex) {
-  const value = hex.replace('#', '');
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  return `${r}, ${g}, ${b}`;
-}
-
-function hexToRgba(hex, alpha) {
-  return `rgba(${hexToRgb(hex)}, ${alpha})`;
 }
