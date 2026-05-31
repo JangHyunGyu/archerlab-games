@@ -325,12 +325,21 @@ async function processMatches(initialMatches, originCells) {
       specialActivations: resolution.activated.length
     });
     vibrateMatch(combo, resolution);
-    audio.play(resolution.activated.length ? 'special' : combo > 1 ? 'combo' : 'match', combo, {
+    const sfxDetail = {
       lineCount: resolution.lineCount,
       longest: resolution.longest,
       removedCount: removedGems.length,
       specialActivations: resolution.activated.length
-    });
+    };
+    if (resolution.activated.length) {
+      audio.play('special', combo, sfxDetail);
+    } else if (combo > 1) {
+      // 콤보 사운드 위에 매치 효과음을 레이어로 함께 재생
+      audio.play('match', combo, sfxDetail);
+      audio.play('combo', combo, sfxDetail);
+    } else {
+      audio.play('match', combo, sfxDetail);
+    }
 
     await Promise.all([
       ui.markCells(removalCells, 'clearing', 320),
