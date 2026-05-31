@@ -11,8 +11,19 @@ const MUSIC_ASSETS = {
 // 외부 실음원 SFX. 파일이 있으면 합성 대신 이 샘플을 재생하고,
 // 로드 실패 시 해당 이벤트는 자동으로 기존 합성으로 폴백한다.
 const SFX_ASSETS = {
-  clear: 'assets/sounds/sfx/clear.mp3'
+  swap: 'assets/sounds/sfx/swap.mp3',
+  invalid: 'assets/sounds/sfx/invalid.mp3',
+  match: 'assets/sounds/sfx/match.mp3',
+  combo: 'assets/sounds/sfx/combo.mp3',
+  special: 'assets/sounds/sfx/special.mp3',
+  cascade: 'assets/sounds/sfx/cascade.mp3',
+  clear: 'assets/sounds/sfx/clear.mp3',
+  fail: 'assets/sounds/sfx/fail.mp3',
+  button: 'assets/sounds/sfx/button.mp3'
 };
+
+// 강도에 따라 음량이 커지는 이벤트(샘플 재생 시 게인 스케일).
+const DYNAMIC_SFX = new Set(['match', 'combo', 'special', 'cascade']);
 
 // 보석/크리스털 질감을 만드는 비정수배(inharmonic) 배음 비율.
 const GEM_PARTIALS = [1, 2.01, 3.03, 4.18, 5.47, 6.83, 8.21];
@@ -207,7 +218,11 @@ export class AudioManager {
       const now = this.ctx.currentTime + 0.005;
       const level = Math.max(1, Number(intensity) || 1);
       // 외부 샘플이 로드돼 있으면 합성 대신 실음원을 재생.
-      if (this.sfxBuffers.has(name)) return this.playSample(name, now);
+      if (this.sfxBuffers.has(name)) {
+        // 강도 이벤트는 규모에 따라 조금 더 크게(최대 1.0), 나머지는 고정.
+        const gain = DYNAMIC_SFX.has(name) ? Math.min(1.0, 0.72 + (level - 1) * 0.05) : 0.9;
+        return this.playSample(name, now, { gain });
+      }
       switch (name) {
         case 'swap': return this.playSwap(now);
         case 'invalid': return this.playInvalid(now);
