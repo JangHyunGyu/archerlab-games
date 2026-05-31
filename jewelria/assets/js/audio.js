@@ -38,36 +38,117 @@ export class AudioManager {
 
   buildGraph() {
     const ctx = this.ctx;
-    // 마스터 → 컴프레서(리미터 역할) → 출력
+    // 시그널 체인: 마스터 → 에어(고역 쉘프) → 글루 컴프레서 → 출력 리미터 → 출력
     this.master = ctx.createGain();
     this.master.gain.value = 0.4;
-    this.compressor = ctx.createDynamicsCompressor();
-    this.compressor.threshold.value = -16;
-    this.compressor.knee.value = 26;
-    this.compressor.ratio.value = 9;
-    this.compressor.attack.value = 0.003;
-    this.compressor.release.value = 0.18;
-    this.master.connect(this.compressor);
-    this.compressor.connect(ctx.destination);
 
-    // 크리스털 잔향(shimmer) 센드: 피드백 딜레이 + 하이패스 → 공기감 있는 꼬리.
+    // "에어": 상단을 살짝 들어 보석 특유의 영롱한 광택을 더한다.
+    const air = ctx.createBiquadFilter();
+    air.type = 'highshelf';
+    air.frequency.value = 7200;
+    air.gain.value = 4.5;
+
+    // 글루 컴프레서: 전체를 부드럽게 묶어준다(과하지 않게).
+    this.compressor = ctx.createDynamicsCompressor();
+    this.compressor.threshold.value = -18;
+    this.compressor.knee.value = 28;
+    this.compressor.ratio.value = 6;
+    this.compressor.attack.value = 0.004;
+    this.compressor.release.value = 0.2;
+
+    // 출력 리미터: 피크를 잡아 클리핑을 막고 라우드니스를 안정화.
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -2;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.08;
+
+    this.master.connect(air);
+    air.connect(this.compressor);
+    this.compressor.connect(limiter);
+    limiter.connect(ctx.destination);
+
+    // ---- 공간계: 진짜 컨볼루션 리버브 + 크리스털 shimmer 딜레이 ----
+    // 모든 보이스는 voiceOut(pan, send)에서 shimmerIn으로 센드된다.
     this.shimmerIn = ctx.createGain();
     this.shimmerIn.gain.value = 1;
-    const delay = ctx.createDelay(0.5);
-    delay.delayTime.value = 0.16;
+
+    // 센드단 하이패스: 저역 진흙을 빼 리버브를 맑고 영롱하게 유지.
+    const sendHP = ctx.createBiquadFilter();
+    sendHP.type = 'highpass';
+    sendHP.frequency.value = 700;
+    this.shimmerIn.connect(sendHP);
+
+    // 1) 절차적 임펄스 응답으로 만든 스테레오 컨볼루션 홀.
+    const reverb = ctx.createConvolver();
+    reverb.buffer = this._makeReverbIR(2.4, 2.6);
+    const reverbWet = ctx.createGain();
+    reverbWet.gain.value = 0.34;
+    sendHP.connect(reverb);
+    reverb.connect(reverbWet);
+    reverbWet.connect(this.master);
+
+    // 2) shimmer 딜레이: 피드백 루프에 고역 통과 + 미세 디튠으로 반짝이는 꼬리.
+    const delayL = ctx.createDelay(0.6);
+    const delayR = ctx.createDelay(0.6);
+    delayL.delayTime.value = 0.13;
+    delayR.delayTime.value = 0.17; // 좌우 다른 탭 → 스테레오 확산
     const feedback = ctx.createGain();
-    feedback.gain.value = 0.34;
+    feedback.gain.value = 0.36;
     const tone = ctx.createBiquadFilter();
     tone.type = 'highpass';
-    tone.frequency.value = 1300;
-    const wet = ctx.createGain();
-    wet.gain.value = 0.16;
-    this.shimmerIn.connect(delay);
-    delay.connect(feedback);
-    feedback.connect(delay);
-    delay.connect(tone);
-    tone.connect(wet);
-    wet.connect(this.master);
+    tone.frequency.value = 1600;
+    const merge = ctx.createChannelMerger(2);
+    const shimmerWet = ctx.createGain();
+    shimmerWet.gain.value = 0.12;
+    sendHP.connect(delayL);
+    sendHP.connect(delayR);
+    delayL.connect(merge, 0, 0);
+    delayR.connect(merge, 0, 1);
+    merge.connect(tone);
+    tone.connect(feedback);
+    feedback.connect(delayL);
+    feedback.connect(delayR);
+    merge.connect(shimmerWet);
+    shimmerWet.connect(this.master);
+
+    // 느린 LFO로 딜레이 타임을 미세하게 흔들어 코러스/shimmer 효과.
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.18;
+    lfoGain.gain.value = 0.0016;
+    lfo.connect(lfoGain);
+    lfoGain.connect(delayL.delayTime);
+    lfoGain.connect(delayR.delayTime);
+    lfo.start();
+  }
+
+  // 절차적 임펄스 응답(IR): 지수 감쇠하는 필터드 노이즈로 만든 스테레오 홀.
+  // 초반은 고역이 많고 꼬리로 갈수록 어두워지는 자연스러운 잔향.
+  _makeReverbIR(seconds = 2.4, decay = 2.6) {
+    const ctx = this.ctx;
+    const rate = ctx.sampleRate;
+    const length = Math.max(1, Math.floor(rate * seconds));
+    const ir = ctx.createBuffer(2, length, rate);
+    for (let ch = 0; ch < 2; ch += 1) {
+      const data = ir.getChannelData(ch);
+      let lp = 0;
+      // 짧은 프리딜레이로 공간을 더 넓게 느끼게.
+      const preDelay = Math.floor(rate * (ch === 0 ? 0.012 : 0.017));
+      for (let i = 0; i < length; i += 1) {
+        if (i < preDelay) { data[i] = 0; continue; }
+        const t = (i - preDelay) / length;
+        const env = Math.pow(1 - t, decay);
+        const white = Math.random() * 2 - 1;
+        // 1차 로우패스 → 꼬리가 점점 어두워지게(공기 흡수 모사).
+        lp = lp * (0.18 + 0.5 * t) + white * (1 - (0.18 + 0.5 * t));
+        // 초반 고역 디테일을 위해 노이즈와 필터드 성분을 섞는다.
+        data[i] = (white * (1 - t) * 0.55 + lp * 0.85) * env;
+      }
+    }
+    return ir;
   }
 
   toggle() {
@@ -315,9 +396,45 @@ export class AudioManager {
     this.glassNoise(start, 0.012, 0.3 * power, 5200, 'highpass', pan, 'white');
     // 2) 쪼개짐 — 짧은 고역 노이즈 바디.
     this.glassNoise(start + 0.004, 0.04 + power * 0.02, 0.1 * power, 3200, 'highpass', -pan * 0.5, 'white');
-    // 3) 파편 짤랑임 — 진짜 "깨지는 소리"의 핵심.
-    const shardCount = Math.round(8 + power * 14);
-    this.glassShards(start + 0.006, shardCount, 0.12 + power * 0.26, 0.18 * power, pan);
+    // 3) 크리스털 링 — 크랙 직후 고Q 공진으로 울리는 영롱한 "팅"(고급 크리스털 질감).
+    this.crystalRing(start + 0.002, power, pan);
+    // 4) 파편 짤랑임 — 진짜 "깨지는 소리"의 핵심.
+    const shardCount = Math.round(10 + power * 16);
+    this.glassShards(start + 0.006, shardCount, 0.14 + power * 0.28, 0.18 * power, pan);
+  }
+
+  // 크리스털 공진 링: 짧은 노이즈 임펄스를 여러 고Q 밴드패스로 울려
+  // 유리잔을 톡 친 듯한 비정수배 "팅~" 잔향을 만든다.
+  crystalRing(start, power = 1, pan = 0) {
+    if (!this.ctx || !this.master) return;
+    const len = Math.max(1, Math.floor(this.ctx.sampleRate * 0.02));
+    const buffer = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    // 유리잔 특유의 비정수배 모드 비율.
+    const baseFreq = rnd(2400, 3200);
+    const modes = [1, 2.76, 5.4, 8.93];
+    modes.forEach((ratio, i) => {
+      const freq = baseFreq * ratio * rnd(0.99, 1.01);
+      const dur = (0.5 - i * 0.09) * (0.7 + power * 0.5);
+      const peak = 0.12 * power * Math.pow(0.62, i);
+      const out = this.voiceOut(pan + rnd(-0.25, 0.25), 0.6);
+      const source = this.ctx.createBufferSource();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+      source.buffer = buffer;
+      filter.type = 'bandpass';
+      filter.frequency.value = freq;
+      filter.Q.value = 60 + i * 30; // 매우 높은 Q → 길고 맑은 링
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak), start + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.08, dur));
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(out);
+      source.start(start);
+      source.stop(start + dur + 0.05);
+    });
   }
 
   // 깨진 파편이 사방으로 튀며 짤랑이는 소리.
