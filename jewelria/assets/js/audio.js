@@ -25,6 +25,24 @@ const SFX_ASSETS = {
 // 강도에 따라 음량이 커지는 이벤트(샘플 재생 시 게인 스케일).
 const DYNAMIC_SFX = new Set(['match', 'combo', 'special', 'cascade']);
 
+// 샘플 재생을 더 풍성하게: 이벤트별 리버브 센드 + 스테레오 더블링 폭 +
+// 샘플 위에 얹는 합성 악센트(반짝임/크리스털 링/서브 임팩트) 설정.
+// width: 살짝 디튠된 좌우 복사본 게인(두께·공간감). sparkle: 반짝임 그레인 수.
+// crystal/sub: 해당 power, crystalMin/subMin: 발동 최소 강도 레벨.
+const SFX_RICH = {
+  swap:    { send: 0.16, width: 0.18 },
+  invalid: { send: 0.10, width: 0.10 },
+  match:   { send: 0.22, width: 0.30, sparkle: 6, sparkleAmt: 0.30, crystal: 0.55, crystalMin: 2, sub: 0.4, subMin: 3 },
+  combo:   { send: 0.28, width: 0.34, sparkle: 9, sparkleAmt: 0.40, crystal: 0.7, crystalMin: 2, sub: 0.4, subMin: 4 },
+  special: { send: 0.36, width: 0.42, sparkle: 16, sparkleAmt: 0.60, crystal: 0.9, crystalMin: 1, sub: 0.55, subMin: 1 },
+  cascade: { send: 0.18, width: 0.26, sparkle: 5, sparkleAmt: 0.26 },
+  clear:   { send: 0.32, width: 0.30, sparkle: 14, sparkleAmt: 0.55, crystal: 0.7, crystalMin: 1 },
+  fail:    { send: 0.24, width: 0.18 },
+  button:  { send: 0.10, width: 0.14 }
+};
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
 // 보석/크리스털 질감을 만드는 비정수배(inharmonic) 배음 비율.
 const GEM_PARTIALS = [1, 2.01, 3.03, 4.18, 5.47, 6.83, 8.21];
 const rnd = (min, max) => min + Math.random() * (max - min);
@@ -159,22 +177,50 @@ export class AudioManager {
     });
   }
 
-  // 외부 SFX 샘플 원샷 재생(마스터 에어/컴프/리미터 + 약한 리버브 센드 경유).
-  playSample(name, when, { gain = 0.9, send = 0.1, pan = 0 } = {}) {
+  // 외부 SFX 샘플 원샷 재생(마스터 에어/컴프/리미터 + 리버브 센드 경유).
+  // width>0이면 살짝 디튠된 좌우 복사본을 깔아 두께와 스테레오 폭을 더한다.
+  playSample(name, when, { gain = 0.9, send = 0.1, pan = 0, width = 0, rate = 1 } = {}) {
     const buffer = this.sfxBuffers.get(name);
     if (!buffer || !this.ctx || !this.master) return;
-    const out = this.voiceOut(pan, send);
-    const src = this.ctx.createBufferSource();
-    const g = this.ctx.createGain();
-    src.buffer = buffer;
-    g.gain.value = gain;
-    src.connect(g);
-    g.connect(out);
-    src.start(when);
-    src.onended = () => {
-      try { src.disconnect(); } catch {}
-      try { g.disconnect(); } catch {}
+    const one = (p, g, r) => {
+      const out = this.voiceOut(p, send);
+      const src = this.ctx.createBufferSource();
+      const gn = this.ctx.createGain();
+      src.buffer = buffer;
+      src.playbackRate.value = r;
+      gn.gain.value = g;
+      src.connect(gn);
+      gn.connect(out);
+      src.start(when);
+      src.onended = () => {
+        try { src.disconnect(); } catch {}
+        try { gn.disconnect(); } catch {}
+      };
     };
+    one(pan, gain, rate);
+    // 스테레오 더블링: 좌우로 벌린 미세 디튠 복사본 → 코러스 두께 + 공간감.
+    if (width > 0) {
+      one(clamp(pan - 0.55, -1, 1), gain * width, rate * 0.994);
+      one(clamp(pan + 0.55, -1, 1), gain * width, rate * 1.006);
+    }
+  }
+
+  // 샘플을 메인으로 깔고 그 위에 합성 악센트(반짝임/크리스털 링/서브 임팩트)를
+  // 규모에 맞춰 얹어 더 풍성하고 입체적으로 들리게 한다.
+  playSampleRich(name, now, level, detail) {
+    const cfg = SFX_RICH[name] || {};
+    const dyn = DYNAMIC_SFX.has(name);
+    const lv = Math.max(1, Number(level) || 1);
+    const gain = dyn ? Math.min(1.0, 0.72 + (lv - 1) * 0.05) : 0.9;
+    const pan = rnd(-0.28, 0.28);
+    this.playSample(name, now, { gain, send: cfg.send || 0.12, width: cfg.width || 0, pan: pan * 0.4 });
+    // --- 합성 sweetener 레이어(게인 낮게, 리미터가 클리핑 방지) ---
+    if (cfg.sparkle) {
+      const dens = Math.round(cfg.sparkle * (dyn ? (1 + (lv - 1) * 0.22) : 1));
+      this.sparkleTail(now + 0.02, dens, cfg.sparkleAmt || 0.3, pan);
+    }
+    if (cfg.crystal && lv >= (cfg.crystalMin || 1)) this.crystalRing(now + 0.012, cfg.crystal, pan);
+    if (cfg.sub && lv >= (cfg.subMin || 1)) this.subImpact(now, cfg.sub);
   }
 
   // 절차적 임펄스 응답(IR): 지수 감쇠하는 필터드 노이즈로 만든 스테레오 홀.
@@ -217,11 +263,9 @@ export class AudioManager {
       if (!this.ctx || !this.master) return;
       const now = this.ctx.currentTime + 0.005;
       const level = Math.max(1, Number(intensity) || 1);
-      // 외부 샘플이 로드돼 있으면 합성 대신 실음원을 재생.
+      // 외부 샘플이 로드돼 있으면 합성 대신 실음원을 풍성하게 재생.
       if (this.sfxBuffers.has(name)) {
-        // 강도 이벤트는 규모에 따라 조금 더 크게(최대 1.0), 나머지는 고정.
-        const gain = DYNAMIC_SFX.has(name) ? Math.min(1.0, 0.72 + (level - 1) * 0.05) : 0.9;
-        return this.playSample(name, now, { gain });
+        return this.playSampleRich(name, now, level, detail);
       }
       switch (name) {
         case 'swap': return this.playSwap(now);
