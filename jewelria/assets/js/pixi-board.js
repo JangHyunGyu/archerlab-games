@@ -36,7 +36,8 @@ export class PixiBoard {
     this.size = size;
     this.app = null;
     this.textures = {};
-    this.fxTextures = {}; // 'shatter-<type>' / 'shards-<type>' -> Texture
+    this.fxFrames = {}; // 'shatter-<type>' -> [Texture...] (애니 프레임), 'shards-<type>' -> [Texture...] (조각 프레임)
+    this.fxReady = false;
     this.sprites = new Map(); // gem.id -> { sprite, row, col, base }
     this.tweens = new Set();
     this.particles = new Set();
@@ -91,6 +92,9 @@ export class PixiBoard {
     this.app.ticker.add((ticker) => this._update(ticker.deltaMS));
     this.app.renderer.on('resize', () => this._onResize());
     this._ready = true;
+
+    // 대형 VFX(폭발/조각 스트립)는 첫 렌더를 막지 않도록 백그라운드 지연 로드
+    this._preloadEffects().catch((err) => console.warn('[Jewelria] 이펙트 프리로드 실패, 벡터 폴백 사용', err));
   }
 
   async _loadTextures() {
@@ -105,22 +109,50 @@ export class PixiBoard {
     } catch (err) {
       console.warn('[Jewelria] 보석 텍스처 로드 실패, 벡터 폴백 사용', err);
     }
+  }
 
-    // 이펙트 이미지 에셋(파편/폭발) — GPU 스프라이트로 렌더링
+  /** 이펙트 스트립/아틀라스를 지연 로드 후 프레임으로 슬라이스 (첫 렌더 비차단) */
+  async _preloadEffects() {
     const fxAssets = [];
     for (const g of GEM_TYPES) {
       fxAssets.push({ alias: `fx-shatter-${g.id}`, src: `assets/images/effects/gem-shatter-${g.id}.png` });
       fxAssets.push({ alias: `fx-shards-${g.id}`, src: `assets/images/effects/gem-shards-${g.id}.png` });
     }
-    try {
-      const fx = await PIXI.Assets.load(fxAssets);
-      for (const g of GEM_TYPES) {
-        if (fx[`fx-shatter-${g.id}`]) this.fxTextures[`shatter-${g.id}`] = fx[`fx-shatter-${g.id}`];
-        if (fx[`fx-shards-${g.id}`]) this.fxTextures[`shards-${g.id}`] = fx[`fx-shards-${g.id}`];
-      }
-    } catch (err) {
-      console.warn('[Jewelria] 이펙트 텍스처 로드 실패, 벡터 폴백 사용', err);
+    const fx = await PIXI.Assets.load(fxAssets);
+    for (const g of GEM_TYPES) {
+      const shatterTex = fx[`fx-shatter-${g.id}`];
+      if (shatterTex) this.fxFrames[`shatter-${g.id}`] = this._sliceStrip(shatterTex);
+      const shardsTex = fx[`fx-shards-${g.id}`];
+      if (shardsTex) this.fxFrames[`shards-${g.id}`] = this._sliceGrid(shardsTex, 4, 4);
     }
+    this.fxReady = true;
+  }
+
+  /** 가로 애니메이션 스트립을 정사각 프레임 배열로 분할 */
+  _sliceStrip(tex) {
+    const src = tex.source;
+    const fh = src.height;
+    const count = Math.max(1, Math.round(src.width / fh));
+    const fw = src.width / count;
+    const frames = [];
+    for (let i = 0; i < count; i += 1) {
+      frames.push(new PIXI.Texture({ source: src, frame: new PIXI.Rectangle(i * fw, 0, fw, fh) }));
+    }
+    return frames;
+  }
+
+  /** 아틀라스를 cols×rows 그리드 조각으로 분할 (각 조각 = 보석 파편 묶음) */
+  _sliceGrid(tex, cols, rows) {
+    const src = tex.source;
+    const fw = src.width / cols;
+    const fh = src.height / rows;
+    const frames = [];
+    for (let r = 0; r < rows; r += 1) {
+      for (let c = 0; c < cols; c += 1) {
+        frames.push(new PIXI.Texture({ source: src, frame: new PIXI.Rectangle(c * fw, r * fh, fw, fh) }));
+      }
+    }
+    return frames;
   }
 
   _computeGeometry() {
@@ -378,7 +410,7 @@ export class PixiBoard {
         if (!dominant || counts[type] > counts[dominant]) dominant = type;
       }
       const color = TYPE_COLORS[type] || 0xfff0a8;
-      if (this.fxTextures[`shards-${type}`]) {
+      if (this.fxFrames[`shards-${type}`]) {
         // 이미지 에셋 기반 파편 + 폭발(저비용, GPU)
         const n = Math.round(6 + intensity * 2.6);
         for (let i = 0; i < n; i += 1) this._spawnShardSprite(x, y, type, intensity);
@@ -419,38 +451,41 @@ export class PixiBoard {
     this.particles.add(gfx);
   }
 
-  /** 이미지 에셋(gem-shatter-<type>.png) 기반 폭발 스프라이트 */
+  /** gem-shatter-<type>.png 스트립을 프레임 애니메이션으로 재생하는 폭발 스프라이트 */
   _spawnBurstSprite(x, y, type, intensity) {
-    const tex = this.fxTextures[`shatter-${type}`];
-    if (!tex) return false;
-    const s = new PIXI.Sprite(tex);
+    const frames = this.fxFrames[`shatter-${type}`];
+    if (!frames || !frames.length) return false;
+    const s = new PIXI.Sprite(frames[0]);
     s.anchor.set(0.5);
     s.position.set(x, y);
-    s.rotation = Math.random() * Math.PI * 2;
+    s.rotation = (Math.random() - 0.5) * 0.5;
     s.blendMode = 'add';
-    const base = this.cell * (1.5 + intensity * 0.24);
+    const base = this.cell * (1.4 + intensity * 0.2);
     s.width = base;
     s.height = base;
     const bsx = s.scale.x;
     const bsy = s.scale.y;
-    const spin = (Math.random() - 0.5) * 0.03;
-    this._spawnParticle(s, 420 + intensity * 40, (p, dt, t) => {
-      const k = 0.5 + easeOutCubic(t) * 1.25;
+    const fc = frames.length;
+    let cur = -1;
+    this._spawnParticle(s, 440 + intensity * 40, (p, dt, t) => {
+      const idx = Math.min(fc - 1, Math.floor(t * fc));
+      if (idx !== cur) { cur = idx; p.texture = frames[idx]; }
+      const k = 1 + t * 0.35; // 살짝 커지며 퍼짐
       p.scale.set(bsx * k, bsy * k);
-      p.rotation += spin * dt;
-      p.alpha = (1 - t) * 0.98;
+      p.alpha = t < 0.8 ? 1 : 1 - (t - 0.8) / 0.2;
     });
     return true;
   }
 
-  /** 이미지 에셋(gem-shards-<type>.png) 기반 파편 스프라이트 */
+  /** gem-shards-<type>.png 아틀라스에서 조각 하나를 골라 날리는 파편 스프라이트 */
   _spawnShardSprite(x, y, type, intensity) {
-    const tex = this.fxTextures[`shards-${type}`];
-    if (!tex) return false;
+    const frames = this.fxFrames[`shards-${type}`];
+    if (!frames || !frames.length) return false;
+    const tex = frames[(Math.random() * frames.length) | 0];
     const s = new PIXI.Sprite(tex);
     s.anchor.set(0.5);
     s.position.set(x, y);
-    const size = this.cell * (0.5 + Math.random() * 0.45);
+    const size = this.cell * (0.46 + Math.random() * 0.36);
     s.width = size;
     s.height = size;
     const bsx = s.scale.x;
@@ -608,27 +643,38 @@ export class PixiBoard {
       : longest >= 5 ? 'PRISM!'
         : lineCount >= 2 ? 'DOUBLE!'
           : 'WOW!';
-    const size = combo >= 5 ? 0.5 : combo >= 3 ? 0.42 : 0.34;
+    const size = combo >= 5 ? 0.19 : combo >= 3 ? 0.155 : 0.125;
+    const isLegend = combo >= 5;
+    const fill = isLegend
+      ? new PIXI.FillGradient({ type: 'linear', start: { x: 0, y: 0 }, end: { x: 0, y: 1 },
+          colorStops: [{ offset: 0, color: 0xfff6c8 }, { offset: 0.5, color: 0xffd24a }, { offset: 1, color: 0xff8c2a }] })
+      : combo >= 3
+        ? new PIXI.FillGradient({ type: 'linear', start: { x: 0, y: 0 }, end: { x: 0, y: 1 },
+            colorStops: [{ offset: 0, color: 0xffffff }, { offset: 1, color: 0xffd86a }] })
+        : 0xffffff;
     const text = new PIXI.Text({
       text: label,
       style: {
         fontFamily: 'Pretendard Variable, Pretendard, sans-serif',
         fontSize: Math.round(this.boardSize * size),
-        fontWeight: '800',
-        fill: combo >= 5 ? 0xffe07c : 0xffffff,
-        stroke: { color: 0x1a0f2e, width: Math.max(3, this.boardSize * 0.012) }
+        fontWeight: '900',
+        letterSpacing: 1,
+        fill,
+        stroke: { color: 0x3a1b5e, width: Math.max(3, this.boardSize * 0.009), join: 'round' },
+        dropShadow: { color: 0x1a0a2e, alpha: 0.55, blur: 6, distance: Math.max(2, this.boardSize * 0.006), angle: Math.PI / 2 }
       }
     });
     text.anchor.set(0.5);
-    text.position.set(this.offsetX + this.boardSize / 2, this.offsetY + this.boardSize / 2);
+    text.position.set(this.offsetX + this.boardSize / 2, this.offsetY + this.boardSize * 0.42);
     text.scale.set(0.4);
     this.comboLayer.addChild(text);
-    text._life = 900;
+    text._life = 850;
     text._age = 0;
     text._update = (p, dt, t) => {
-      if (t < 0.2) p.scale.set(0.4 + easeOutBack(t / 0.2) * 0.6);
-      else p.scale.set(1 + (t - 0.2) * 0.3);
-      p.alpha = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+      if (t < 0.18) p.scale.set(0.4 + easeOutBack(t / 0.18) * 0.62);
+      else p.scale.set(1.02 - (t - 0.18) * 0.06);
+      p.y -= dt * 0.012; // 살짝 떠오름
+      p.alpha = t < 0.65 ? 1 : 1 - (t - 0.65) / 0.35;
     };
     this.combos.add(text);
   }
