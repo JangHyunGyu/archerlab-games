@@ -8,6 +8,12 @@ const MUSIC_ASSETS = {
   game: 'assets/sounds/bgm_game_loop.mp3'
 };
 
+// 외부 실음원 SFX. 파일이 있으면 합성 대신 이 샘플을 재생하고,
+// 로드 실패 시 해당 이벤트는 자동으로 기존 합성으로 폴백한다.
+const SFX_ASSETS = {
+  clear: 'assets/sounds/sfx/clear.mp3'
+};
+
 // 보석/크리스털 질감을 만드는 비정수배(inharmonic) 배음 비율.
 const GEM_PARTIALS = [1, 2.01, 3.03, 4.18, 5.47, 6.83, 8.21];
 const rnd = (min, max) => min + Math.random() * (max - min);
@@ -23,6 +29,7 @@ export class AudioManager {
     this.desiredMusic = null;
     this.buffers = new Map();
     this.loading = new Map();
+    this.sfxBuffers = new Map(); // 이벤트명 -> 디코드된 AudioBuffer
   }
 
   async unlock() {
@@ -123,6 +130,40 @@ export class AudioManager {
     lfoGain.connect(delayL.delayTime);
     lfoGain.connect(delayR.delayTime);
     lfo.start();
+
+    // 외부 SFX 샘플을 백그라운드로 프리로드(첫 렌더/재생 비차단).
+    this._preloadSfx();
+  }
+
+  // 외부 SFX 파일을 디코드해 캐시. 실패(파일 없음)는 조용히 무시 → 합성 폴백.
+  _preloadSfx() {
+    if (!this.ctx) return;
+    Object.entries(SFX_ASSETS).forEach(([name, url]) => {
+      if (this.sfxBuffers.has(name)) return;
+      fetch(url)
+        .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error('no sfx'))))
+        .then((data) => this.ctx.decodeAudioData(data))
+        .then((buf) => { this.sfxBuffers.set(name, buf); })
+        .catch(() => {});
+    });
+  }
+
+  // 외부 SFX 샘플 원샷 재생(마스터 에어/컴프/리미터 + 약한 리버브 센드 경유).
+  playSample(name, when, { gain = 0.9, send = 0.1, pan = 0 } = {}) {
+    const buffer = this.sfxBuffers.get(name);
+    if (!buffer || !this.ctx || !this.master) return;
+    const out = this.voiceOut(pan, send);
+    const src = this.ctx.createBufferSource();
+    const g = this.ctx.createGain();
+    src.buffer = buffer;
+    g.gain.value = gain;
+    src.connect(g);
+    g.connect(out);
+    src.start(when);
+    src.onended = () => {
+      try { src.disconnect(); } catch {}
+      try { g.disconnect(); } catch {}
+    };
   }
 
   // 절차적 임펄스 응답(IR): 지수 감쇠하는 필터드 노이즈로 만든 스테레오 홀.
@@ -165,6 +206,8 @@ export class AudioManager {
       if (!this.ctx || !this.master) return;
       const now = this.ctx.currentTime + 0.005;
       const level = Math.max(1, Number(intensity) || 1);
+      // 외부 샘플이 로드돼 있으면 합성 대신 실음원을 재생.
+      if (this.sfxBuffers.has(name)) return this.playSample(name, now);
       switch (name) {
         case 'swap': return this.playSwap(now);
         case 'invalid': return this.playInvalid(now);
