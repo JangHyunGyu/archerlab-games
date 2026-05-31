@@ -313,9 +313,13 @@ export class PixiBoard {
         } else {
           // 특수 변환으로 외형이 바뀐 경우 스프라이트 교체
           if ((entry.special || null) !== (gem.special || null)) {
-            this.gemLayer.removeChild(entry.sprite);
+            const oldSprite = entry.sprite;
+            const px = oldSprite.x;
+            const py = oldSprite.y;
+            this.gemLayer.removeChild(oldSprite);
+            oldSprite.destroy({ children: true });
             const sprite = this._makeGemSprite(gem);
-            sprite.position.set(entry.sprite.x, entry.sprite.y);
+            sprite.position.set(px, py);
             this.gemLayer.addChild(sprite);
             entry.sprite = sprite;
             entry.special = gem.special || null;
@@ -338,6 +342,7 @@ export class PixiBoard {
     for (const [id, entry] of this.sprites) {
       if (!present.has(id)) {
         this.gemLayer.removeChild(entry.sprite);
+        entry.sprite.destroy({ children: true });
         this.sprites.delete(id);
       }
     }
@@ -794,6 +799,11 @@ export class PixiBoard {
   _update(dt) {
     // tween
     for (const tween of this.tweens) {
+      // 파괴된 스프라이트를 가리키는 트윈은 즉시 제거(파괴 후 속성 접근 방지).
+      if (!tween.custom && tween.target && tween.target.destroyed) {
+        this.tweens.delete(tween);
+        continue;
+      }
       if (tween.custom) {
         tween.tick();
         if (tween.done) this.tweens.delete(tween);
@@ -968,7 +978,10 @@ export class PixiBoard {
   }
 
   clear() {
-    for (const entry of this.sprites.values()) this.gemLayer.removeChild(entry.sprite);
+    for (const entry of this.sprites.values()) {
+      this.gemLayer.removeChild(entry.sprite);
+      entry.sprite.destroy({ children: true });
+    }
     this.sprites.clear();
     for (const p of this.particles) { this.fxLayer.removeChild(p); p.destroy(); }
     this.particles.clear();
