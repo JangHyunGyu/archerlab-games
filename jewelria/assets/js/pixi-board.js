@@ -26,6 +26,9 @@ function easeOutBack(t) {
 function easeInQuad(t) {
   return t * t;
 }
+function randomBetweenLocal(min, max) {
+  return min + Math.random() * (max - min);
+}
 
 export class PixiBoard {
   constructor(mountEl, { size = 8 } = {}) {
@@ -121,6 +124,19 @@ export class PixiBoard {
   }
   cellY(row) {
     return this.offsetY + this.pad + row * (this.cell + this.gap) + this.cell / 2;
+  }
+
+  getCellMetrics(cell, layerRect = null) {
+    if (!this._ready || !cell) return null;
+    const canvasRect = this.app.canvas.getBoundingClientRect();
+    const x = this.cellX(cell.col);
+    const y = this.cellY(cell.row);
+    return {
+      x: layerRect ? canvasRect.left - layerRect.left + x : x,
+      y: layerRect ? canvasRect.top - layerRect.top + y : y,
+      size: this.cell,
+      type: cell.type || null
+    };
   }
 
   _drawBackground() {
@@ -254,6 +270,16 @@ export class PixiBoard {
     const delay = Math.min(150, col * 10 + Math.max(0, 7 - row) * 4);
     sprite.x = tx;
     this._tween(sprite, { y: ty }, dur, easeOutCubic, delay);
+    const landDelay = delay + dur * 0.76;
+    setTimeout(() => {
+      if (!sprite.parent || sprite.destroyed) return;
+      this._spawnLandingPulse(tx, ty, distance);
+      this._tween(sprite, { scale: 1.1 }, 70, easeOutCubic);
+      setTimeout(() => {
+        if (!sprite.parent || sprite.destroyed) return;
+        this._tween(sprite, { scale: 1 }, 180, easeOutBack);
+      }, 72);
+    }, landDelay);
   }
 
   _updateSelection() {
@@ -280,9 +306,12 @@ export class PixiBoard {
         const entry = this._entryAt(cell.row, cell.col);
         if (!entry) continue;
         const s = entry.sprite;
-        this._tween(s, { scale: 1.32 }, duration * 0.4, easeOutCubic);
+        const color = TYPE_COLORS[cell.type] || 0xfff0a8;
+        this._spawnFlash(this.cellX(cell.col), this.cellY(cell.row), color, 1.8);
+        this._spawnRing(this.cellX(cell.col), this.cellY(cell.row), color, 1.45);
+        this._tween(s, { scale: 1.42 }, duration * 0.38, easeOutCubic);
         this._tween(s, { alpha: 0 }, duration, easeInQuad);
-        setTimeout(() => this._tween(s, { scale: 0 }, duration * 0.5, easeInQuad), duration * 0.4);
+        setTimeout(() => this._tween(s, { scale: 0 }, duration * 0.5, easeInQuad), duration * 0.38);
       }
     } else if (className === 'invalid') {
       for (const cell of cells) {
@@ -416,6 +445,41 @@ export class PixiBoard {
       p.alpha = (1 - t) * 0.8;
       p.scale.set(0.6 + t * 0.8);
     });
+  }
+
+  _spawnLandingPulse(x, y, distance = 1) {
+    const g = new PIXI.Graphics();
+    g.position.set(x, y);
+    g.blendMode = 'add';
+    const strength = Math.min(2.1, 0.9 + distance * 0.12);
+    this._spawnParticle(g, 460, (p, dt, t) => {
+      const ring = this.cell * (0.32 + strength * 0.34) * easeOutCubic(t);
+      p.clear();
+      p.ellipse(0, this.cell * 0.18, ring * 1.2, ring * 0.32)
+        .stroke({ color: 0xffe8a8, alpha: (1 - t) * 0.65, width: Math.max(1.5, 3.5 * (1 - t)) });
+      p.circle(0, 0, this.cell * (0.18 + t * 0.34))
+        .fill({ color: 0xffffff, alpha: (1 - t) * 0.24 });
+    });
+
+    const sparks = Math.round(5 + strength * 4);
+    for (let i = 0; i < sparks; i += 1) {
+      const s = new PIXI.Graphics();
+      const len = this.cell * randomBetweenLocal(0.09, 0.18);
+      s.roundRect(-len / 2, -1.1, len, 2.2, 1.1).fill({ color: 0xffffff, alpha: 0.88 });
+      s.position.set(x, y + this.cell * randomBetweenLocal(0.05, 0.2));
+      const angle = -Math.PI / 2 + randomBetweenLocal(-1.25, 1.25);
+      s.rotation = angle;
+      const speed = randomBetweenLocal(1.2, 2.4) * strength;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      s.blendMode = 'add';
+      this._spawnParticle(s, 360 + Math.random() * 140, (p, dt, t) => {
+        p.x += vx * dt * 0.06;
+        p.y += vy * dt * 0.06 + t * t * 4;
+        p.alpha = 1 - t;
+        p.scale.x = 1 - t * 0.45;
+      });
+    }
   }
 
   // ─── 콤보 텍스트 ───
