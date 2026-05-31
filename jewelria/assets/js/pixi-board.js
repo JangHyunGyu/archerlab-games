@@ -380,26 +380,34 @@ export class PixiBoard {
       const color = TYPE_COLORS[type] || 0xfff0a8;
       if (this.fxTextures[`shards-${type}`]) {
         // 이미지 에셋 기반 파편 + 폭발(저비용, GPU)
-        const n = Math.round(3 + intensity * 1.4);
+        const n = Math.round(6 + intensity * 2.6);
         for (let i = 0; i < n; i += 1) this._spawnShardSprite(x, y, type, intensity);
         this._spawnBurstSprite(x, y, type, intensity);
+        if (intensity > 2.2) this._spawnBurstSprite(x, y, type, intensity * 0.7);
       } else {
-        const shardCount = Math.round(6 + intensity * 2.4);
+        const shardCount = Math.round(9 + intensity * 3.2);
         for (let i = 0; i < shardCount; i += 1) this._spawnShard(x, y, color, intensity);
       }
       this._spawnRing(x, y, color, intensity * 0.9);
+      this._spawnShockwave(x, y, color, intensity * 0.7);
     }
     cx /= cells.length;
     cy /= cells.length;
     const centerColor = TYPE_COLORS[dominant] || 0xfff0a8;
-    this._spawnFlash(cx, cy, centerColor, intensity);
+    this._spawnFlash(cx, cy, centerColor, intensity * 1.25);
     this._spawnRing(cx, cy, centerColor, intensity * 1.8);
-    const rays = Math.round(8 + intensity * 4);
-    for (let i = 0; i < rays; i += 1) this._spawnSpark(cx, cy, centerColor, intensity * 1.3);
+    // 중앙 대형 파동(shockwave)
+    this._spawnShockwave(cx, cy, centerColor, intensity * 1.6);
+    const rays = Math.round(12 + intensity * 6);
+    for (let i = 0; i < rays; i += 1) this._spawnSpark(cx, cy, centerColor, intensity * 1.5);
+
+    // 진동: 모든 매치에 기본 진동, 콤보/대형 매치일수록 강하게
+    this._shakeStage(Math.min(26, 4 + intensity * 3.4), 360 + intensity * 40);
 
     if (combo >= 3 || hasSpecial || longest >= 5) {
-      this._shakeStage(Math.min(14, 5 + intensity * 2));
+      this._spawnShockwave(cx, cy, 0xffffff, intensity * 2.2);
       this._spawnRing(cx, cy, 0xffffff, intensity * 2.4);
+      this._spawnBigFlash(intensity);
     }
   }
 
@@ -420,17 +428,17 @@ export class PixiBoard {
     s.position.set(x, y);
     s.rotation = Math.random() * Math.PI * 2;
     s.blendMode = 'add';
-    const base = this.cell * (1.1 + intensity * 0.14);
+    const base = this.cell * (1.5 + intensity * 0.24);
     s.width = base;
     s.height = base;
     const bsx = s.scale.x;
     const bsy = s.scale.y;
-    const spin = (Math.random() - 0.5) * 0.02;
-    this._spawnParticle(s, 360 + intensity * 30, (p, dt, t) => {
-      const k = 0.55 + t * 0.85;
+    const spin = (Math.random() - 0.5) * 0.03;
+    this._spawnParticle(s, 420 + intensity * 40, (p, dt, t) => {
+      const k = 0.5 + easeOutCubic(t) * 1.25;
       p.scale.set(bsx * k, bsy * k);
       p.rotation += spin * dt;
-      p.alpha = (1 - t) * 0.95;
+      p.alpha = (1 - t) * 0.98;
     });
     return true;
   }
@@ -442,14 +450,14 @@ export class PixiBoard {
     const s = new PIXI.Sprite(tex);
     s.anchor.set(0.5);
     s.position.set(x, y);
-    const size = this.cell * (0.4 + Math.random() * 0.34);
+    const size = this.cell * (0.5 + Math.random() * 0.45);
     s.width = size;
     s.height = size;
     const bsx = s.scale.x;
     const bsy = s.scale.y;
     s.rotation = Math.random() * Math.PI * 2;
     const angle = Math.random() * Math.PI * 2;
-    const speed = (2.2 + Math.random() * 2.6) * intensity;
+    const speed = (3 + Math.random() * 3.4) * intensity;
     const vx = Math.cos(angle) * speed;
     const vy = Math.sin(angle) * speed - 1.4 * intensity;
     const spin = (Math.random() - 0.5) * 0.24;
@@ -521,6 +529,37 @@ export class PixiBoard {
     this._spawnParticle(g, 260, (p, dt, t) => {
       p.alpha = (1 - t) * 0.8;
       p.scale.set(0.6 + t * 0.8);
+    });
+  }
+
+  /** 확장하는 파동(shockwave) — 밝은 이중 링 + 옅은 충격 디스크 */
+  _spawnShockwave(x, y, color, intensity) {
+    const g = new PIXI.Graphics();
+    g.position.set(x, y);
+    g.blendMode = 'add';
+    const maxR = this.cell * (1.3 + intensity * 0.95);
+    this._spawnParticle(g, 480 + intensity * 60, (p, dt, t) => {
+      const e = easeOutCubic(t);
+      const r = maxR * e;
+      const w = Math.max(2, this.cell * 0.42 * (1 - t));
+      p.clear();
+      p.circle(0, 0, r).fill({ color, alpha: (1 - t) * 0.12 });
+      p.circle(0, 0, r).stroke({ color, alpha: (1 - t) * 0.85, width: w });
+      p.circle(0, 0, r * 0.8).stroke({ color: 0xffffff, alpha: (1 - t) * 0.5, width: w * 0.5 });
+    });
+  }
+
+  /** 큰 콤보 시 보드 전체를 덮는 화면 플래시 */
+  _spawnBigFlash(intensity) {
+    const g = new PIXI.Graphics();
+    g.position.set(this.offsetX + this.boardSize / 2, this.offsetY + this.boardSize / 2);
+    g.blendMode = 'add';
+    const r = this.boardSize * 0.85;
+    g.circle(0, 0, r).fill({ color: 0xffffff });
+    const peak = Math.min(0.5, 0.18 + intensity * 0.06);
+    this._spawnParticle(g, 280, (p, dt, t) => {
+      p.alpha = (t < 0.25 ? t / 0.25 : 1 - (t - 0.25) / 0.75) * peak;
+      p.scale.set(0.85 + t * 0.3);
     });
   }
 
@@ -635,8 +674,8 @@ export class PixiBoard {
     this.tweens.add(tween);
   }
 
-  _shakeStage(power) {
-    this._stageShake = { power, start: performance.now(), dur: 420 };
+  _shakeStage(power, dur = 420) {
+    this._stageShake = { power, start: performance.now(), dur };
   }
 
   _update(dt) {
@@ -700,10 +739,11 @@ export class PixiBoard {
         this.app.stage.position.set(0, 0);
         this._stageShake = null;
       } else {
-        const decay = (1 - t) * s.power;
+        const decay = (1 - t) * (1 - t) * s.power;
+        const ang = Math.random() * Math.PI * 2;
         this.app.stage.position.set(
-          (Math.random() - 0.5) * decay,
-          (Math.random() - 0.5) * decay
+          Math.cos(ang) * decay,
+          Math.sin(ang) * decay
         );
       }
     }
