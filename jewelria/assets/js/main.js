@@ -70,8 +70,7 @@ async function boot() {
 function bindButtons() {
   on('play-btn', 'click', () => {
     audio.play('button');
-    const stageIndex = Math.max(0, Math.min((progress.currentStage || 1) - 1, STAGES.length - 1));
-    startStage(stageIndex);
+    startStage(0);
   });
   on('continue-btn', 'click', () => {
     audio.play('button');
