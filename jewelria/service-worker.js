@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelria-v0.1.16';
+const CACHE_NAME = 'jewelria-v0.1.17';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -50,7 +50,8 @@ const CORE_ASSETS = [
   './assets/images/ui/ui-button-ghost.png',
   './assets/images/ui/ui-icon-button.png',
   './assets/sounds/bgm_main_loop.mp3',
-  './assets/sounds/bgm_game_loop.mp3'
+  './assets/sounds/bgm_game_loop.mp3',
+  './assets/sounds/sfx/clear.mp3'
 ];
 
 self.addEventListener('install', (event) => {
