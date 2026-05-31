@@ -81,6 +81,13 @@ export class UI {
     this.refs.hudTarget.textContent = Number(stage.targetScore).toLocaleString();
     this.refs.hudScore.textContent = Number(state.score).toLocaleString();
     this.refs.hudMoves.textContent = String(state.moves);
+    // 남은 이동이 적으면 경고 깜빡임(3 이하=위급/빨강, 5 이하=주의/노랑).
+    const movesStat = this.refs.hudMoves.closest('.hud-stat');
+    if (movesStat) {
+      const left = Number(state.moves);
+      movesStat.classList.toggle('moves-critical', left > 0 && left <= 3);
+      movesStat.classList.toggle('moves-warn', left > 3 && left <= 5);
+    }
     this.refs.stageLabel.textContent = `Stage ${stage.id} · ${stage.name}`;
     this.refs.objectiveTitle.textContent = getGoalText(stage);
     this.renderGoals(stage, state.collections);
@@ -152,8 +159,11 @@ export class UI {
   }
 
   showResult({ cleared, score, bestScore, moves, stars, canNext, nickname }) {
-    this.refs.resultKicker.textContent = cleared ? 'CLEAR' : 'TRY AGAIN';
-    this.refs.resultTitle.textContent = cleared ? '스테이지 클리어' : '목표까지 조금 남았어요';
+    this.refs.resultKicker.textContent = cleared ? 'CLEAR' : 'GAME OVER';
+    this.refs.resultTitle.textContent = cleared ? '스테이지 클리어' : '게임 오버';
+    // 실패 시 빨간 계열로 "게임이 끝났다"는 걸 확실히 인지시킨다.
+    this.refs.resultKicker.classList.toggle('is-gameover', !cleared);
+    this.refs.resultTitle.classList.toggle('is-gameover', !cleared);
     this.refs.resultStars.textContent = starsText(stars);
     this.refs.resultScore.textContent = Number(score).toLocaleString();
     this.refs.resultBest.textContent = Number(bestScore).toLocaleString();

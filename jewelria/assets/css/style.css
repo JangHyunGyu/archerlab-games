@@ -166,6 +166,16 @@ button {
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.48);
 }
 
+/* 게임 오버(실패) 시 빨간 계열로 명확히 구분 */
+.eyebrow.is-gameover {
+  color: #ff7d7d;
+  text-shadow: 0 1px 10px rgba(255, 60, 60, 0.5);
+}
+#result-title.is-gameover {
+  color: #ffd6d6;
+  text-shadow: 0 2px 16px rgba(255, 60, 60, 0.35);
+}
+
 h1,
 h2,
 p {
@@ -388,6 +398,38 @@ p {
 
 .hud-stat-score strong {
   color: #fff7cf;
+}
+
+/* 남은 이동 경고: 적으면 깜빡이며 주의를 끌어다 */
+.hud-stat.moves-warn {
+  --warn-glow: rgba(255, 198, 80, 0.75);
+  animation: movesWarnPulse 0.9s ease-in-out infinite;
+}
+.hud-stat.moves-warn strong {
+  color: #ffd86a;
+}
+.hud-stat.moves-critical {
+  --warn-glow: rgba(255, 80, 80, 0.9);
+  animation: movesWarnPulse 0.5s ease-in-out infinite;
+}
+.hud-stat.moves-critical strong {
+  color: #ff7a7a;
+}
+@keyframes movesWarnPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 14px var(--warn-glow);
+    transform: scale(1.06);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-stat.moves-warn,
+  .hud-stat.moves-critical {
+    animation: none;
+  }
 }
 
 .objective-panel {
