@@ -36,6 +36,7 @@ export class PixiBoard {
     this.size = size;
     this.app = null;
     this.textures = {};
+    this.fxTextures = {}; // 'shatter-<type>' / 'shards-<type>' -> Texture
     this.sprites = new Map(); // gem.id -> { sprite, row, col, base }
     this.tweens = new Set();
     this.particles = new Set();
@@ -103,6 +104,22 @@ export class PixiBoard {
       }
     } catch (err) {
       console.warn('[Jewelria] 보석 텍스처 로드 실패, 벡터 폴백 사용', err);
+    }
+
+    // 이펙트 이미지 에셋(파편/폭발) — GPU 스프라이트로 렌더링
+    const fxAssets = [];
+    for (const g of GEM_TYPES) {
+      fxAssets.push({ alias: `fx-shatter-${g.id}`, src: `assets/images/effects/gem-shatter-${g.id}.png` });
+      fxAssets.push({ alias: `fx-shards-${g.id}`, src: `assets/images/effects/gem-shards-${g.id}.png` });
+    }
+    try {
+      const fx = await PIXI.Assets.load(fxAssets);
+      for (const g of GEM_TYPES) {
+        if (fx[`fx-shatter-${g.id}`]) this.fxTextures[`shatter-${g.id}`] = fx[`fx-shatter-${g.id}`];
+        if (fx[`fx-shards-${g.id}`]) this.fxTextures[`shards-${g.id}`] = fx[`fx-shards-${g.id}`];
+      }
+    } catch (err) {
+      console.warn('[Jewelria] 이펙트 텍스처 로드 실패, 벡터 폴백 사용', err);
     }
   }
 
@@ -361,8 +378,15 @@ export class PixiBoard {
         if (!dominant || counts[type] > counts[dominant]) dominant = type;
       }
       const color = TYPE_COLORS[type] || 0xfff0a8;
-      const shardCount = Math.round(6 + intensity * 2.4);
-      for (let i = 0; i < shardCount; i += 1) this._spawnShard(x, y, color, intensity);
+      if (this.fxTextures[`shards-${type}`]) {
+        // 이미지 에셋 기반 파편 + 폭발(저비용, GPU)
+        const n = Math.round(3 + intensity * 1.4);
+        for (let i = 0; i < n; i += 1) this._spawnShardSprite(x, y, type, intensity);
+        this._spawnBurstSprite(x, y, type, intensity);
+      } else {
+        const shardCount = Math.round(6 + intensity * 2.4);
+        for (let i = 0; i < shardCount; i += 1) this._spawnShard(x, y, color, intensity);
+      }
       this._spawnRing(x, y, color, intensity * 0.9);
     }
     cx /= cells.length;
@@ -385,6 +409,59 @@ export class PixiBoard {
     gfx._update = update;
     this.fxLayer.addChild(gfx);
     this.particles.add(gfx);
+  }
+
+  /** 이미지 에셋(gem-shatter-<type>.png) 기반 폭발 스프라이트 */
+  _spawnBurstSprite(x, y, type, intensity) {
+    const tex = this.fxTextures[`shatter-${type}`];
+    if (!tex) return false;
+    const s = new PIXI.Sprite(tex);
+    s.anchor.set(0.5);
+    s.position.set(x, y);
+    s.rotation = Math.random() * Math.PI * 2;
+    s.blendMode = 'add';
+    const base = this.cell * (1.1 + intensity * 0.14);
+    s.width = base;
+    s.height = base;
+    const bsx = s.scale.x;
+    const bsy = s.scale.y;
+    const spin = (Math.random() - 0.5) * 0.02;
+    this._spawnParticle(s, 360 + intensity * 30, (p, dt, t) => {
+      const k = 0.55 + t * 0.85;
+      p.scale.set(bsx * k, bsy * k);
+      p.rotation += spin * dt;
+      p.alpha = (1 - t) * 0.95;
+    });
+    return true;
+  }
+
+  /** 이미지 에셋(gem-shards-<type>.png) 기반 파편 스프라이트 */
+  _spawnShardSprite(x, y, type, intensity) {
+    const tex = this.fxTextures[`shards-${type}`];
+    if (!tex) return false;
+    const s = new PIXI.Sprite(tex);
+    s.anchor.set(0.5);
+    s.position.set(x, y);
+    const size = this.cell * (0.4 + Math.random() * 0.34);
+    s.width = size;
+    s.height = size;
+    const bsx = s.scale.x;
+    const bsy = s.scale.y;
+    s.rotation = Math.random() * Math.PI * 2;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (2.2 + Math.random() * 2.6) * intensity;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed - 1.4 * intensity;
+    const spin = (Math.random() - 0.5) * 0.24;
+    this._spawnParticle(s, 560 + Math.random() * 220, (p, dt, t) => {
+      p.x += vx * dt * 0.06;
+      p.y += vy * dt * 0.06 + t * t * 7;
+      p.rotation += spin;
+      p.alpha = 1 - t;
+      const k = 1 - t * 0.35;
+      p.scale.set(bsx * k, bsy * k);
+    });
+    return true;
   }
 
   _spawnShard(x, y, color, intensity) {
