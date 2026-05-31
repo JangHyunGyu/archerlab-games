@@ -1,4 +1,4 @@
-import { GEM_BY_ID, getGemCssVars, getGemName } from './gem.js';
+import { GEM_BY_ID, getGemName } from './gem.js';
 import { STAGES, getGoalText } from './stage.js';
 import { PixiBoard } from './pixi-board.js';
 
@@ -119,14 +119,22 @@ export class UI {
       const pill = document.createElement('div');
       pill.className = 'collect-pill';
       if (current >= goal.count) pill.classList.add('is-done');
-      const icon = document.createElement('span');
+      const icon = document.createElement('img');
       icon.className = 'mini-gem';
-      icon.style.cssText = getGemCssVars(goal.type);
+      icon.src = gem?.image || '';
+      icon.alt = '';
+      icon.decoding = 'async';
       icon.setAttribute('aria-hidden', 'true');
+      const gemName = getGemName(goal.type, this.lang);
       const label = document.createElement('span');
-      label.textContent = `${current}/${goal.count}`;
-      pill.title = `${getGemName(goal.type, this.lang)} ${current}/${goal.count}`;
-      pill.append(icon, label);
+      label.className = 'collect-label';
+      label.textContent = gemName;
+      const count = document.createElement('strong');
+      count.className = 'collect-count';
+      count.textContent = `${current}/${goal.count}`;
+      pill.title = `${gemName} ${current}/${goal.count}`;
+      pill.setAttribute('aria-label', `${gemName} ${current}/${goal.count}`);
+      pill.append(icon, label, count);
       if (gem) pill.style.borderColor = `${gem.color}66`;
       this.refs.collectGoals.appendChild(pill);
     }
