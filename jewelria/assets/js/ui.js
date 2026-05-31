@@ -35,6 +35,7 @@ export class UI {
       nicknameInput: document.getElementById('nickname-input'),
       submitStatus: document.getElementById('submit-status'),
       nextStageBtn: document.getElementById('next-stage-btn'),
+      resultActions: document.getElementById('result-actions'),
       rankModal: document.getElementById('rank-modal'),
       rankContent: document.getElementById('rank-content'),
       toast: document.getElementById('toast')
@@ -158,7 +159,7 @@ export class UI {
     this.showModal(this.refs.stageModal);
   }
 
-  showResult({ cleared, score, bestScore, moves, stars, canNext, nickname }) {
+  showResult({ cleared, runEnded, score, bestScore, moves, stars, canNext, nickname }) {
     this.refs.resultKicker.textContent = cleared ? 'CLEAR' : 'GAME OVER';
     this.refs.resultTitle.textContent = cleared ? '스테이지 클리어' : '게임 오버';
     // 실패 시 빨간 계열로 "게임이 끝났다"는 걸 확실히 인지시킨다.
@@ -168,15 +169,22 @@ export class UI {
     this.refs.resultScore.textContent = Number(score).toLocaleString();
     this.refs.resultBest.textContent = Number(bestScore).toLocaleString();
     this.refs.resultMoves.textContent = String(Math.max(0, moves));
-    // 랭킹 등록은 "런이 끝난 시점"에만: 게임 오버(실패) 또는 마지막 스테이지 클리어.
-    // 중간 스테이지를 클리어하고 다음으로 진행하는 경우엔 노출하지 않는다.
-    const runOver = !cleared || !canNext;
-    this.refs.rankSubmit.classList.toggle('hidden', score <= 0 || !runOver);
+    // 랭킹 등록은 "런이 끝난 시점"(게임 오버 또는 최종 스테이지 클리어)에서만.
+    const showRank = !!runEnded && score > 0;
+    this.refs.rankSubmit.classList.toggle('hidden', !showRank);
     this.refs.nextStageBtn.classList.toggle('hidden', !cleared || !canNext);
+    // 등록/건너뛰기를 결정하기 전엔 재도전/타이틀 버튼을 숨긴다.
+    if (this.refs.resultActions) {
+      this.refs.resultActions.classList.toggle('hidden', showRank);
+    }
     this.refs.nicknameInput.value = nickname || '';
     this.refs.submitStatus.textContent = '';
     this.refs.submitStatus.className = 'submit-status';
     this.showModal(this.refs.resultModal);
+  }
+
+  revealResultActions() {
+    if (this.refs.resultActions) this.refs.resultActions.classList.remove('hidden');
   }
 
   renderRanks(rows, myName = '') {

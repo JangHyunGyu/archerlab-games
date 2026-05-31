@@ -13,6 +13,7 @@ import {
   saveGame,
   saveLocalRank,
   saveNickname,
+  updateRunBest,
   updateStageProgress
 } from './storage.js';
 import { AudioManager } from './audio.js';
@@ -116,8 +117,10 @@ function bindButtons() {
   on('next-stage-btn', 'click', () => {
     audio.play('button');
     const nextIndex = Math.min((state?.stageIndex || 0) + 1, STAGES.length - 1);
+    // 다음 스테이지로 이어갈 때는 이전까지의 누적 점수를 이어받는다.
+    const carry = (state?.runScore || 0) + (state?.score || 0);
     ui.hideResult();
-    startStage(nextIndex);
+    startStage(nextIndex, carry);
   });
   on('retry-btn', 'click', () => {
     audio.play('button');
@@ -126,7 +129,11 @@ function bindButtons() {
   });
   on('result-home-btn', 'click', goTitle);
   on('submit-rank-btn', 'click', submitRank);
-  on('skip-rank-btn', 'click', () => ui.refs.rankSubmit.classList.add('hidden'));
+  on('skip-rank-btn', 'click', () => {
+    ui.refs.rankSubmit.classList.add('hidden');
+    // 등록을 건너뛰었으니 재도전/타이틀 버튼을 노출한다.
+    ui.revealResultActions();
+  });
 }
 
 function renderTitle() {
@@ -139,7 +146,7 @@ function renderTitle() {
   });
 }
 
-function startStage(stageIndex) {
+function startStage(stageIndex, carryScore = 0) {
   const stage = getStage(stageIndex);
   const board = new BoardModel(BOARD_SIZE);
   board.generateInitial();
@@ -152,6 +159,7 @@ function startStage(stageIndex) {
     board,
     moves: stage.moves,
     score: 0,
+    runScore: carryScore,
     collections: Object.fromEntries(stage.goals.map((goal) => [goal.type, 0]))
   };
   clearSavedGame();
@@ -190,6 +198,7 @@ function resumeSavedGame() {
     board,
     moves: saved.moves,
     score: saved.score,
+    runScore: saved.runScore || 0,
     collections: saved.collections || {}
   };
   ranking.restore(saved.rankSessionId, saved.rankUnsupported);
@@ -404,20 +413,30 @@ function endStage(cleared) {
   const stars = getStarsForScore(state.stage, state.score, cleared);
   progress = updateStageProgress(state.stage.id, state.score, stars);
   clearSavedGame();
+  const canNext = state.stageIndex < STAGES.length - 1;
+  // 런 종료 = 게임 오버(실패) 또는 마지막 스테이지 클리어. 이때만 누적 총점을 랭킹에 등록.
+  const runEnded = !cleared || !canNext;
+  const runTotal = (state.runScore || 0) + state.score;
+  if (runEnded) progress = updateRunBest(runTotal);
   audio.play(cleared ? 'clear' : 'fail');
   audio.startAmbient('main');
   trackEvent(cleared ? 'jewelria_stage_clear' : 'jewelria_stage_fail', {
     stage_id: state.stage.id,
     score: state.score,
+    run_score: runTotal,
     stars
   });
   ui.showResult({
     cleared,
-    score: state.score,
-    bestScore: progress.stages[String(state.stage.id)]?.bestScore || state.score,
+    runEnded,
+    // 런 종료 시엔 등록될 누적 총점을, 중간 클리어 시엔 해당 스테이지 점수를 보여준다.
+    score: runEnded ? runTotal : state.score,
+    bestScore: runEnded
+      ? getBestScore(progress)
+      : (progress.stages[String(state.stage.id)]?.bestScore || state.score),
     moves: state.moves,
     stars,
-    canNext: state.stageIndex < STAGES.length - 1,
+    canNext,
     nickname: loadNickname()
   });
 }
@@ -434,8 +453,9 @@ async function submitRank() {
   ui.refs.nicknameInput.disabled = true;
   document.getElementById('submit-rank-btn').disabled = true;
   ui.setSubmitStatus('등록 중...', '');
+  const runTotal = (state.runScore || 0) + state.score;
   try {
-    const result = await ranking.submit(name, state.score, {
+    const result = await ranking.submit(name, runTotal, {
       stage: state.stage.id,
       stars: getStarsForScore(state.stage, state.score, isStageCleared(state)),
       moves_left: Math.max(0, state.moves)
@@ -446,6 +466,8 @@ async function submitRank() {
   } finally {
     ui.refs.nicknameInput.disabled = false;
     document.getElementById('submit-rank-btn').disabled = false;
+    // 등록을 마쳤으니 재도전/타이틀 버튼을 노출한다.
+    ui.revealResultActions();
   }
 }
 
@@ -476,6 +498,7 @@ function saveCurrentGame() {
     grid: state.board.toJSON(),
     moves: state.moves,
     score: state.score,
+    runScore: state.runScore,
     collections: state.collections,
     rankSessionId: ranking.sessionId,
     rankUnsupported: ranking.unsupported
