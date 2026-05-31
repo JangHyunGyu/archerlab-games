@@ -318,11 +318,16 @@ async function processMatches(initialMatches, originCells) {
     ranking.queueScoreEvent(scoring.event);
     ui.updateHUD(state);
     ui.showCombo(combo, resolution.lineCount, resolution.longest);
+    // 한 번에 여러 보석이 매치되면 중심에서 바깥으로 순차적으로 깨지게 한다.
+    const breakStagger = removalCells.length > 3
+      ? Math.min(70, Math.max(28, Math.round(240 / removalCells.length)))
+      : 0;
     ui.spawnMatchEffects(removalCells, {
       combo,
       lineCount: resolution.lineCount,
       longest: resolution.longest,
-      specialActivations: resolution.activated.length
+      specialActivations: resolution.activated.length,
+      stagger: breakStagger
     });
     vibrateMatch(combo, resolution);
     const sfxDetail = {
@@ -342,7 +347,7 @@ async function processMatches(initialMatches, originCells) {
     }
 
     await Promise.all([
-      ui.markCells(removalCells, 'clearing', 320),
+      ui.markCells(removalCells, 'clearing', 320, breakStagger),
       ui.markCells(resolution.specials, 'transforming', 360)
     ]);
     state.board.removeCells(resolution.remove);
