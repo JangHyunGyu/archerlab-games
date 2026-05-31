@@ -160,6 +160,7 @@ function startStage(stageIndex) {
   ui.setScreen('game');
   ui.updateHUD(state);
   ui.renderBoard(board.grid, selected);
+  repairPlayableBoard({ announce: false });
   input.setEnabled(true);
   saveCurrentGame();
   trackEvent('jewelria_stage_start', { stage_id: stage.id });
@@ -196,6 +197,7 @@ function resumeSavedGame() {
   ui.setScreen('game');
   ui.updateHUD(state);
   ui.renderBoard(board.grid, selected);
+  if (repairPlayableBoard({ announce: true })) saveCurrentGame();
   input.setEnabled(true);
 }
 
@@ -340,15 +342,30 @@ async function processMatches(initialMatches, originCells) {
 }
 
 async function ensurePlayableBoard() {
-  if (state.board.findMatches().length > 0) return;
-  if (state.board.findPossibleMove()) return;
-  ui.showToast('가능한 이동이 없어 보드를 섞었습니다.');
-  for (let guard = 0; guard < 24; guard += 1) {
+  if (!repairPlayableBoard({ announce: true })) return;
+  saveCurrentGame();
+  await delay(220);
+}
+
+function repairPlayableBoard({ announce = true } = {}) {
+  if (!state?.board) return false;
+  if (state.board.findMatches().length > 0) return false;
+  if (state.board.findPossibleMove()) return false;
+
+  if (announce) ui.showToast('가능한 이동이 없어 보드를 섞었습니다.');
+  for (let guard = 0; guard < 80; guard += 1) {
     state.board.shuffle();
     if (state.board.findMatches().length === 0 && state.board.findPossibleMove()) break;
   }
+  if (!state.board.findPossibleMove()) {
+    for (let guard = 0; guard < 80; guard += 1) {
+      state.board.shuffle({ preserveSpecials: false });
+      if (state.board.findMatches().length === 0 && state.board.findPossibleMove()) break;
+    }
+  }
+  selected = null;
   ui.renderBoard(state.board.grid, null);
-  await delay(220);
+  return true;
 }
 
 function finishTurn() {
