@@ -1538,7 +1538,10 @@ p {
   }
 
   .objective-panel {
+    display: grid;
+    grid-template-columns: 1fr;
     align-items: flex-start;
+    gap: 8px;
     min-height: 58px;
     padding: 9px;
   }
@@ -1553,7 +1556,6 @@ p {
   }
 
   .collect-goals {
-    flex: 0 0 100%;
     justify-content: flex-start;
   }
 
