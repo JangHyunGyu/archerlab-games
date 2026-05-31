@@ -11,8 +11,6 @@ export class UI {
       app: document.getElementById('app'),
       board: document.getElementById('board'),
       boardFrame: document.querySelector('.board-frame'),
-      comboLayer: document.getElementById('combo-layer'),
-      particleLayer: document.getElementById('particle-layer'),
       titleProgress: document.getElementById('title-progress'),
       titleStars: document.getElementById('title-stars'),
       titleBest: document.getElementById('title-best'),
