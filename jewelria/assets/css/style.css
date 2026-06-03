@@ -563,8 +563,10 @@ p {
   width: min(90vw, 62svh, 560px);
   max-width: 100%;
   aspect-ratio: 1;
-  /* 장식 프레임이 위아래 HUD·버튼과 겹치지 않도록 돌출량만큼 여백 확보 */
-  margin-block: var(--board-frame-outset);
+  /* 장식 프레임이 위아래 HUD·버튼과 겹치지 않도록 돌출량만큼 여백 확보
+     (아래쪽은 shift-y 보정분만큼 추가) */
+  margin-top: var(--board-frame-outset);
+  margin-bottom: calc(var(--board-frame-outset) - var(--board-frame-shift-y));
   padding: clamp(15px, 2.8vw, 24px);
   border-radius: var(--radius);
   border-color: rgba(246, 205, 105, 0.22);
@@ -585,10 +587,15 @@ p {
 .board-frame::after {
   content: "";
   position: absolute;
-  inset: calc(var(--board-frame-outset) * -1);
+  /* shift-y로 프레임을 위로 올리는 만큼 아래쪽 inset을 같이 늘려
+     프레임 하단 테두리가 보드 밖으로 잘려 보이지 않게 보정한다. */
+  top: calc(var(--board-frame-outset) * -1);
+  left: calc(var(--board-frame-outset) * -1);
+  right: calc(var(--board-frame-outset) * -1);
+  bottom: calc(var(--board-frame-outset) * -1 + var(--board-frame-shift-y));
   z-index: 5;
   background: url("../images/ui/ui-board-frame.png") center / 100% 100% no-repeat;
-  transform: translate(var(--board-frame-shift-x), var(--board-frame-shift-y));
+  transform: translateX(var(--board-frame-shift-x));
   filter:
     drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34))
     drop-shadow(0 0 18px rgba(255, 221, 114, 0.15));
