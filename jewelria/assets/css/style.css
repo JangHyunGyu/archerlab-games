@@ -136,16 +136,33 @@ button {
 .title-content {
   position: relative;
   z-index: 2;
-  display: grid;
-  justify-items: center;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   width: min(92vw, 560px);
-  margin-top: clamp(24px, 10vh, 96px);
-  margin-bottom: auto;
+  margin: 0 auto;
+  padding-top: clamp(24px, 10vh, 96px);
   text-align: center;
   isolation: isolate;
 }
 
-.title-content::before {
+.title-headline {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  isolation: isolate;
+}
+
+.title-bottom {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  margin-top: auto;
+}
+
+.title-headline::before {
   content: "";
   position: absolute;
   inset: -18px -34px -24px;
@@ -1620,8 +1637,7 @@ p {
   }
 
   .title-content {
-    margin-top: clamp(16px, 7vh, 64px);
-    margin-bottom: auto;
+    padding-top: clamp(16px, 7vh, 64px);
   }
 
   .record-strip {
