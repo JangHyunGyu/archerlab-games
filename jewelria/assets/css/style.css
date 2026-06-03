@@ -140,7 +140,7 @@ button {
   justify-items: center;
   width: min(92vw, 560px);
   margin-top: auto;
-  margin-bottom: min(5vh, 42px);
+  margin-bottom: clamp(48px, 14vh, 140px);
   text-align: center;
   isolation: isolate;
 }
@@ -1610,7 +1610,7 @@ p {
   }
 
   .title-content {
-    margin-bottom: 2vh;
+    margin-bottom: clamp(40px, 12vh, 120px);
   }
 
   .record-strip {
