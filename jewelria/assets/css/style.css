@@ -566,7 +566,12 @@ p {
      (절대배치 ::after의 %는 보드 박스 크기에 비례 → 모든 해상도에서 동일 비율) */
   --board-frame-outset: 8.5%;
   position: relative;
-  width: min(88vw, 56svh, 520px);
+  /* 모든 기기 공통 단일 공식.
+     - 82vw: 프레임이 양옆 8.5%씩 더 커지므로(약 96vw) 가로로 잘리지 않게 제한
+     - 66svh: 프레임 높이(약 77svh)가 HUD·버튼 공간을 침범하지 않게 제한
+     - 560px: 큰 화면 상한
+     디바이스별 width 오버라이드를 두지 않아 경계마다 크기가 튀지 않는다. */
+  width: min(82vw, 66svh, 560px);
   max-width: 100%;
   aspect-ratio: 1;
   /* 프레임 돌출분만큼 위아래 여백 확보(HUD·버튼과 겹침 방지) */
@@ -1602,11 +1607,6 @@ p {
     font-size: 11px;
   }
 
-  .board-frame {
-    width: min(92vw, 56svh);
-    padding: 6%;
-  }
-
   .board {
     gap: 4px;
   }
@@ -1664,22 +1664,6 @@ p {
   .game-hud {
     grid-template-columns: auto minmax(72px, 1fr) minmax(88px, 1.2fr) auto;
   }
-
-  .board-frame {
-    width: min(92vw, 62svh);
-  }
-}
-
-@media (min-width: 721px) and (max-width: 1366px) and (orientation: portrait) {
-  .board-frame {
-    width: min(80vw, 58svh, 580px);
-  }
-}
-
-@media (min-width: 721px) and (max-width: 1366px) and (orientation: landscape) {
-  .board-frame {
-    width: min(68vw, 52svh, 540px);
-  }
 }
 
 @media (max-width: 390px), (max-height: 680px) {
@@ -1733,10 +1717,6 @@ p {
     font-size: 14px;
   }
 
-  .board-frame {
-    width: min(82vw, 46svh, 320px);
-  }
-
   .board {
     gap: 3px;
   }
@@ -1771,7 +1751,10 @@ p {
   }
 
   .board-frame {
-    width: min(57vw, 80svh);
+    /* 가로형 분할 레이아웃 전용: 오른쪽 컬럼 안에서 높이 우선으로 맞춘다.
+       프레임이 1.17배 커지므로 70svh로 제한해 위아래로 잘리지 않게 한다. */
+    width: min(52vw, 70svh, 460px);
+    margin: clamp(10px, 2vw, 24px) auto;
   }
 
   .game-controls {
