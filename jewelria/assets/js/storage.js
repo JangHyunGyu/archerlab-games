@@ -1,78 +1,18 @@
 const PREFIX = 'jewelria';
-const PROGRESS_KEY = `${PREFIX}.progress.v1`;
-const SAVE_KEY = `${PREFIX}.save.v1`;
+const BEST_KEY = `${PREFIX}.best.v1`;
 const SOUND_KEY = `${PREFIX}.sound`;
 const NICK_KEY = `${PREFIX}.nick`;
 const LOCAL_RANK_KEY = `${PREFIX}.localRanks.v1`;
 
-const DEFAULT_PROGRESS = { currentStage: 1, stages: {} };
-
-export function loadProgress() {
-  try {
-    const raw = localStorage.getItem(PROGRESS_KEY);
-    if (!raw) return clone(DEFAULT_PROGRESS);
-    return { ...clone(DEFAULT_PROGRESS), ...JSON.parse(raw) };
-  } catch {
-    return clone(DEFAULT_PROGRESS);
-  }
+export function getBestScore() {
+  try { return Math.max(0, Math.floor(Number(localStorage.getItem(BEST_KEY)) || 0)); } catch { return 0; }
 }
 
-export function saveProgress(progress) {
-  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch {}
-}
-
-export function updateStageProgress(stageId, score, stars) {
-  const progress = loadProgress();
-  const prev = progress.stages[String(stageId)] || { bestScore: 0, stars: 0 };
-  progress.stages[String(stageId)] = {
-    bestScore: Math.max(prev.bestScore || 0, score || 0),
-    stars: Math.max(prev.stars || 0, stars || 0)
-  };
-  if (stars > 0) progress.currentStage = Math.max(progress.currentStage || 1, stageId + 1);
-  saveProgress(progress);
-  return progress;
-}
-
-export function getTotalStars(progress) {
-  return Object.values(progress?.stages || {}).reduce((sum, item) => sum + (item.stars || 0), 0);
-}
-
-// 한 판(run) 누적 총점의 최고 기록을 갱신한다. (A안: 글로벌 랭킹 기준 점수)
-export function updateRunBest(total) {
-  const progress = loadProgress();
-  progress.bestRun = Math.max(Number(progress.bestRun || 0), Number(total || 0));
-  saveProgress(progress);
-  return progress;
-}
-
-export function getBestScore(progress) {
-  const runBest = Number(progress?.bestRun || 0);
-  const stageBest = Object.values(progress?.stages || {}).reduce((best, item) => Math.max(best, item.bestScore || 0), 0);
-  return Math.max(runBest, stageBest);
-}
-
-export function isStageUnlocked(progress, stageId) {
-  if (stageId <= 1) return true;
-  return !!progress?.stages?.[String(stageId - 1)]?.stars;
-}
-
-export function saveGame(snapshot) {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...snapshot, savedAt: Date.now() })); } catch {}
-}
-
-export function loadSavedGame() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && parsed.stageId ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-export function clearSavedGame() {
-  try { localStorage.removeItem(SAVE_KEY); } catch {}
+// 타임 어택 최고 점수를 갱신하고 갱신된 값을 반환한다.
+export function updateBestScore(score) {
+  const best = Math.max(getBestScore(), Math.floor(Number(score) || 0));
+  try { localStorage.setItem(BEST_KEY, String(best)); } catch {}
+  return best;
 }
 
 export function loadSoundEnabled() {
@@ -120,18 +60,7 @@ export function loadLocalRanks() {
   }
 }
 
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
-
-function rankStage(row) {
-  const extra = row?.extra_data || {};
-  const raw = Number(extra.highest_stage ?? extra.stage ?? 1);
-  return Number.isFinite(raw) ? Math.max(1, raw) : 1;
-}
-
 function compareRankRows(a, b) {
-  return rankStage(b) - rankStage(a)
-    || Number(b.score || 0) - Number(a.score || 0)
+  return Number(b.score || 0) - Number(a.score || 0)
     || String(a.created_at || '').localeCompare(String(b.created_at || ''));
 }

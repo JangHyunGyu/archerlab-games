@@ -374,7 +374,7 @@ p {
 }
 
 .game-screen {
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px;
   padding: calc(44px + var(--safe-top)) clamp(10px, 2.4vw, 26px) calc(10px + var(--safe-bottom));
   background:
@@ -388,7 +388,7 @@ p {
 
 .game-hud {
   display: grid;
-  grid-template-columns: auto minmax(68px, 0.75fr) minmax(104px, 1.1fr) minmax(62px, 0.75fr) auto;
+  grid-template-columns: auto minmax(96px, 1fr) minmax(120px, 1.2fr) auto;
   gap: 8px;
   align-items: stretch;
   width: min(100%, 820px);

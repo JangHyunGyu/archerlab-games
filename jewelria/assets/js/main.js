@@ -1,20 +1,13 @@
 import { BoardModel } from './board.js';
 import { scoreBatch } from './score.js';
-import { STAGES, getStage, getStarsForScore, isStageCleared } from './stage.js';
+import { TIME_ATTACK, TIME_LIMIT, BOARD_SIZE } from './stage.js';
 import {
-  clearSavedGame,
   getBestScore,
-  getTotalStars,
-  isStageUnlocked,
   loadLocalRanks,
   loadNickname,
-  loadProgress,
-  loadSavedGame,
-  saveGame,
   saveLocalRank,
   saveNickname,
-  updateRunBest,
-  updateStageProgress
+  updateBestScore
 } from './storage.js';
 import { AudioManager } from './audio.js';
 import { UI, delay } from './ui.js';
@@ -23,7 +16,6 @@ import { checkBrowserSupport } from './browser-check.js';
 
 const GAME_ID = 'jewelria';
 const RANK_API_BASE = 'https://game-api.yama5993.workers.dev';
-const BOARD_SIZE = 8;
 const RANK_LIMIT = 20;
 
 const query = new URLSearchParams(location.search);
@@ -33,11 +25,11 @@ document.documentElement.lang = lang.slice(0, 2);
 const audio = new AudioManager();
 const ui = new UI(lang);
 let ranking = null;
-let progress = loadProgress();
 let input = null;
 let state = null;
 let selected = null;
 let locked = false;
+let timerId = null;
 
 queueMicrotask(boot);
 
@@ -55,42 +47,27 @@ async function boot() {
   ui.updateSoundButtons(audio.enabled);
   renderTitle();
   audio.startAmbient('main');
-  const stageParam = Number(query.get('stage'));
-  if (Number.isInteger(stageParam) && stageParam >= 1 && stageParam <= STAGES.length && isStageUnlocked(progress, stageParam)) {
-    startStage(stageParam - 1, 0, stageParam === 1);
-  }
+  if (query.get('start') === '1') startGame();
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('./service-worker.js').catch(() => {});
   }
   window.addEventListener('pagehide', () => {
-    if (state?.status === 'playing') saveCurrentGame();
+    if (state?.status === 'playing') pauseTimer();
   });
 }
 
 function bindButtons() {
   on('play-btn', 'click', () => {
     audio.play('button');
-    startStage(0, 0, true);
+    startGame();
   });
-  on('continue-btn', 'click', () => {
-    audio.play('button');
-    resumeSavedGame();
-  });
-  on('stage-btn', 'click', () => {
-    audio.play('button');
-    ui.showStages(progress, (stageId) => isStageUnlocked(progress, stageId), (index) => {
-      ui.hideModal(ui.refs.stageModal);
-      startStage(index, 0, index === 0);
-    });
-  });
-  on('stage-close', 'click', () => ui.hideModal(ui.refs.stageModal));
   on('home-btn', 'click', goTitle);
   on('pause-btn', 'click', () => {
     if (!state || state.status !== 'playing') return;
     audio.play('button');
     locked = true;
     input.setEnabled(false);
-    saveCurrentGame();
+    pauseTimer();
     ui.showPause();
   });
   on('resume-btn', 'click', () => {
@@ -98,36 +75,26 @@ function bindButtons() {
     ui.hidePause();
     locked = false;
     input.setEnabled(true);
+    resumeTimer();
   });
   on('pause-restart-btn', 'click', () => {
     audio.play('button');
     ui.hidePause();
-    const stageIndex = state?.stageIndex || 0;
-    startStage(stageIndex, 0, stageIndex === 0);
+    startGame();
   });
   on('pause-home-btn', 'click', goTitle);
   on('restart-btn', 'click', () => {
     audio.play('button');
-    const stageIndex = state?.stageIndex || 0;
-    startStage(stageIndex, 0, stageIndex === 0);
+    startGame();
   });
   on('rank-open-title', 'click', openRanks);
   on('rank-open-game', 'click', openRanks);
   on('rank-close', 'click', () => ui.hideModal(ui.refs.rankModal));
   on('sound-toggle-title', 'click', toggleSound);
-  on('next-stage-btn', 'click', () => {
-    audio.play('button');
-    const nextIndex = Math.min((state?.stageIndex || 0) + 1, STAGES.length - 1);
-    // 다음 스테이지로 이어갈 때는 이전까지의 누적 점수를 이어받는다.
-    const carry = (state?.runScore || 0) + (state?.score || 0);
-    ui.hideResult();
-    startStage(nextIndex, carry, state?.rankEligible !== false);
-  });
   on('retry-btn', 'click', () => {
     audio.play('button');
     ui.hideResult();
-    const stageIndex = state?.stageIndex || 0;
-    startStage(stageIndex, 0, stageIndex === 0);
+    startGame();
   });
   on('result-home-btn', 'click', goTitle);
   on('submit-rank-btn', 'click', submitRank);
@@ -139,92 +106,76 @@ function bindButtons() {
 }
 
 function renderTitle() {
-  progress = loadProgress();
-  ui.renderTitle({
-    progress,
-    totalStars: getTotalStars(progress),
-    bestScore: getBestScore(progress),
-    savedGame: loadSavedGame()
-  });
+  ui.renderTitle({ bestScore: getBestScore() });
 }
 
-function startStage(stageIndex, carryScore = 0, rankEligible = stageIndex === 0 && carryScore === 0) {
-  const stage = getStage(stageIndex);
+function startGame() {
+  clearTimer();
   const board = new BoardModel(BOARD_SIZE);
   board.generateInitial();
   selected = null;
   locked = false;
   state = {
     status: 'playing',
-    stageIndex,
-    stage,
+    stage: TIME_ATTACK,
     board,
-    moves: stage.moves,
     score: 0,
-    runScore: carryScore,
-    rankEligible,
-    collections: Object.fromEntries(stage.goals.map((goal) => [goal.type, 0]))
+    timeLeft: TIME_LIMIT
   };
-  clearSavedGame();
-  if (rankEligible) {
-    if (carryScore <= 0) ranking.startSession();
-    else ranking.ensureSession();
-  } else {
-    ranking.disable();
-  }
+  ranking.startSession();
   audio.startAmbient('game');
   ui.setScreen('game');
   ui.updateHUD(state);
   ui.renderBoard(board.grid, selected);
   repairPlayableBoard({ announce: false });
   input.setEnabled(true);
-  saveCurrentGame();
-  trackEvent('jewelria_stage_start', { stage_id: stage.id });
+  startTimer();
+  trackEvent('jewelria_game_start', { mode: 'time_attack' });
 }
 
-function resumeSavedGame() {
-  const saved = loadSavedGame();
-  if (!saved) {
-    ui.showToast('이어할 게임이 없습니다.');
-    renderTitle();
-    return;
+function startTimer() {
+  clearTimer();
+  state.lastTick = Date.now();
+  timerId = setInterval(tickTimer, 250);
+}
+
+function tickTimer() {
+  if (!state || state.status !== 'playing') return;
+  const now = Date.now();
+  const elapsed = (now - state.lastTick) / 1000;
+  state.lastTick = now;
+  state.timeLeft = Math.max(0, state.timeLeft - elapsed);
+  ui.updateTime(state.timeLeft);
+  if (state.timeLeft <= 0) {
+    clearTimer();
+    if (!locked) endGame();
+    else state.timeUp = true; // 보드 연쇄 처리 중이면 처리 완료 후 종료
   }
-  const stageIndex = STAGES.findIndex((stage) => stage.id === saved.stageId);
-  const board = new BoardModel(BOARD_SIZE);
-  if (stageIndex < 0 || !board.fromJSON(saved.grid)) {
-    clearSavedGame();
-    ui.showToast('저장된 게임을 불러오지 못했습니다.');
-    renderTitle();
-    return;
+}
+
+function pauseTimer() {
+  if (state && state.status === 'playing') tickTimer();
+  clearTimer();
+}
+
+function resumeTimer() {
+  if (!state || state.status !== 'playing') return;
+  startTimer();
+}
+
+function clearTimer() {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = null;
   }
-  selected = null;
-  locked = false;
-  state = {
-    status: 'playing',
-    stageIndex,
-    stage: getStage(stageIndex),
-    board,
-    moves: saved.moves,
-    score: saved.score,
-    runScore: saved.runScore || 0,
-    rankEligible: saved.rankEligible ?? (Number(saved.runScore || 0) > 0 || stageIndex === 0),
-    collections: saved.collections || {}
-  };
-  if (state.rankEligible) ranking.restore(saved.rankSessionId, saved.rankUnsupported);
-  else ranking.disable();
-  audio.startAmbient('game');
-  ui.setScreen('game');
-  ui.updateHUD(state);
-  ui.renderBoard(board.grid, selected);
-  if (repairPlayableBoard({ announce: true })) saveCurrentGame();
-  input.setEnabled(true);
 }
 
 function goTitle() {
   audio.play('button');
-  if (state?.status === 'playing') saveCurrentGame();
+  clearTimer();
   locked = false;
   selected = null;
+  state = null;
   input.setEnabled(false);
   ui.hidePause();
   ui.hideResult();
@@ -292,10 +243,9 @@ async function attemptSwap(from, to) {
   }
 
   audio.play('swap');
-  state.moves -= 1;
   ui.updateHUD(state);
   await processMatches(matches, [from, to]);
-  if (!isStageCleared(state) && state.moves > 0) await ensurePlayableBoard();
+  await ensurePlayableBoard();
   finishTurn();
 }
 
@@ -313,10 +263,6 @@ async function processMatches(initialMatches, originCells) {
     const removedGems = removalCells.filter((cell) => cell.type);
     if (removedGems.length === 0 && resolution.specials.length === 0) break;
 
-    for (const gem of removedGems) {
-      if (Object.prototype.hasOwnProperty.call(state.collections, gem.type)) state.collections[gem.type] += 1;
-    }
-
     const scoring = scoreBatch({
       removedCount: removedGems.length,
       longest: resolution.longest,
@@ -325,7 +271,7 @@ async function processMatches(initialMatches, originCells) {
       combo
     });
     state.score += scoring.delta;
-    if (state.rankEligible !== false) ranking.queueScoreEvent(scoring.event);
+    ranking.queueScoreEvent(scoring.event);
     ui.updateHUD(state);
     ui.showCombo(combo, resolution.lineCount, resolution.longest);
     // 한 번에 여러 보석이 매치되면 중심에서 바깥으로 순차적으로 깨지게 한다.
@@ -365,7 +311,6 @@ async function processMatches(initialMatches, originCells) {
     const fallMoves = state.board.collapseAndRefill();
     ui.renderBoard(state.board.grid, null, fallMoves);
     if (fallMoves.length) audio.play('cascade', combo, { fallCount: fallMoves.length });
-    saveCurrentGame();
     await delay(getFallAnimationWait(fallMoves));
 
     matches = state.board.findMatches();
@@ -376,7 +321,6 @@ async function processMatches(initialMatches, originCells) {
 
 async function ensurePlayableBoard() {
   if (!repairPlayableBoard({ announce: true })) return;
-  saveCurrentGame();
   await delay(220);
 }
 
@@ -402,16 +346,20 @@ function repairPlayableBoard({ announce = true } = {}) {
 }
 
 function finishTurn() {
-  const cleared = isStageCleared(state);
-  if (cleared || state.moves <= 0) {
-    endStage(cleared);
+  // 연쇄 처리 중 제한시간이 끝났다면 처리 완료 후 종료한다.
+  if (state.timeUp || state.timeLeft <= 0) {
+    endGame();
     return;
   }
-  saveCurrentGame();
   unlockBoard();
 }
 
 function unlockBoard() {
+  // 보드 처리 중 제한시간이 끝났다면 잠금 해제 대신 게임을 종료한다.
+  if (state && (state.timeUp || state.timeLeft <= 0)) {
+    endGame();
+    return;
+  }
   locked = false;
   input.setEnabled(true);
 }
@@ -430,38 +378,23 @@ function getFallAnimationWait(moves) {
   return Math.min(1120, Math.max(520, longest + 70));
 }
 
-function endStage(cleared) {
+function endGame() {
+  if (!state || state.status === 'result') return;
+  clearTimer();
   locked = true;
   input.setEnabled(false);
   state.status = 'result';
-  const stars = getStarsForScore(state.stage, state.score, cleared);
-  progress = updateStageProgress(state.stage.id, state.score, stars);
-  clearSavedGame();
-  const canNext = state.stageIndex < STAGES.length - 1;
-  // 공식 런(Stage 1부터 시작) 종료 시에만 누적 총점을 랭킹에 등록한다.
-  const rankEligible = state.rankEligible !== false;
-  const runEnded = rankEligible && (!cleared || !canNext);
-  const runTotal = (state.runScore || 0) + state.score;
-  if (runEnded) progress = updateRunBest(runTotal);
-  audio.play(cleared ? 'clear' : 'fail');
+  state.timeLeft = 0;
+  const bestScore = updateBestScore(state.score);
+  audio.play('clear');
   audio.startAmbient('main');
-  trackEvent(cleared ? 'jewelria_stage_clear' : 'jewelria_stage_fail', {
-    stage_id: state.stage.id,
-    score: state.score,
-    run_score: runTotal,
-    stars
+  trackEvent('jewelria_game_over', {
+    mode: 'time_attack',
+    score: state.score
   });
   ui.showResult({
-    cleared,
-    runEnded,
-    // 런 종료 시엔 등록될 누적 총점을, 중간 클리어 시엔 해당 스테이지 점수를 보여준다.
-    score: runEnded ? runTotal : state.score,
-    bestScore: runEnded
-      ? getBestScore(progress)
-      : (progress.stages[String(state.stage.id)]?.bestScore || state.score),
-    moves: state.moves,
-    stars,
-    canNext,
+    score: state.score,
+    bestScore,
     nickname: loadNickname()
   });
 }
@@ -478,15 +411,10 @@ async function submitRank() {
   ui.refs.nicknameInput.disabled = true;
   document.getElementById('submit-rank-btn').disabled = true;
   ui.setSubmitStatus('등록 중...', '');
-  const runTotal = (state.runScore || 0) + state.score;
   try {
-    const result = await ranking.submit(name, runTotal, {
-      highest_stage: state.stage.id,
-      stage: state.stage.id,
-      stage_score: state.score,
-      run_score: runTotal,
-      stars: getStarsForScore(state.stage, state.score, isStageCleared(state)),
-      moves_left: Math.max(0, state.moves)
+    const result = await ranking.submit(name, state.score, {
+      mode: 'time_attack',
+      time_limit: TIME_LIMIT
     });
     ui.setSubmitStatus(`등록 완료${result?.rank ? ` (#${result.rank})` : ''}`, 'ok');
   } catch {
@@ -519,22 +447,6 @@ function toggleSound() {
   if (enabled) audio.play('button');
 }
 
-function saveCurrentGame() {
-  if (!state || state.status !== 'playing') return;
-  saveGame({
-    stageId: state.stage.id,
-    grid: state.board.toJSON(),
-    moves: state.moves,
-    score: state.score,
-    runScore: state.runScore,
-    rankEligible: state.rankEligible !== false,
-    collections: state.collections,
-    rankSessionId: ranking.sessionId,
-    rankUnsupported: ranking.unsupported
-  });
-  renderTitle();
-}
-
 function canPlay() {
   return !!state && state.status === 'playing' && !locked;
 }
@@ -565,15 +477,8 @@ function localRowsWithRank() {
     .map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
-function getRankStage(row) {
-  const extra = row?.extra_data || row?.extra || {};
-  const raw = Number(extra.highest_stage ?? extra.stage ?? 1);
-  return Number.isFinite(raw) ? Math.max(1, raw) : 1;
-}
-
 function compareRankingRows(a, b) {
-  return getRankStage(b) - getRankStage(a)
-    || Number(b.score || 0) - Number(a.score || 0)
+  return Number(b.score || 0) - Number(a.score || 0)
     || String(a.created_at || '').localeCompare(String(b.created_at || ''));
 }
 

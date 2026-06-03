@@ -1,5 +1,5 @@
 import { GEM_BY_ID, getGemName } from './gem.js';
-import { STAGES, getGoalText } from './stage.js';
+import { formatTime } from './stage.js';
 import { PixiBoard } from './pixi-board.js';
 
 export class UI {
@@ -11,30 +11,19 @@ export class UI {
       app: document.getElementById('app'),
       board: document.getElementById('board'),
       boardFrame: document.querySelector('.board-frame'),
-      titleProgress: document.getElementById('title-progress'),
-      titleStars: document.getElementById('title-stars'),
+      titleTime: document.getElementById('title-time'),
       titleBest: document.getElementById('title-best'),
-      continueBtn: document.getElementById('continue-btn'),
-      hudTarget: document.getElementById('hud-target'),
+      hudTime: document.getElementById('hud-time'),
       hudScore: document.getElementById('hud-score'),
-      hudMoves: document.getElementById('hud-moves'),
-      stageLabel: document.getElementById('stage-label'),
-      objectiveTitle: document.getElementById('objective-title'),
-      collectGoals: document.getElementById('collect-goals'),
-      stageModal: document.getElementById('stage-modal'),
-      stageList: document.getElementById('stage-list'),
       pauseModal: document.getElementById('pause-modal'),
       resultModal: document.getElementById('result-modal'),
       resultKicker: document.getElementById('result-kicker'),
       resultTitle: document.getElementById('result-title'),
-      resultStars: document.getElementById('result-stars'),
       resultScore: document.getElementById('result-score'),
       resultBest: document.getElementById('result-best'),
-      resultMoves: document.getElementById('result-moves'),
       rankSubmit: document.getElementById('rank-submit'),
       nicknameInput: document.getElementById('nickname-input'),
       submitStatus: document.getElementById('submit-status'),
-      nextStageBtn: document.getElementById('next-stage-btn'),
       resultActions: document.getElementById('result-actions'),
       rankModal: document.getElementById('rank-modal'),
       rankContent: document.getElementById('rank-content'),
@@ -63,44 +52,9 @@ export class UI {
     }
   }
 
-  renderTitle({ progress, totalStars, bestScore, savedGame }) {
-    this.refs.titleProgress.textContent = `Stage ${Math.min(progress.currentStage || 1, STAGES.length)}`;
-    this.refs.titleStars.textContent = String(totalStars || 0);
+  renderTitle({ bestScore }) {
+    if (this.refs.titleTime) this.refs.titleTime.textContent = formatTime(180);
     this.refs.titleBest.textContent = Number(bestScore || 0).toLocaleString();
-    this._renderContinueButton(savedGame);
-  }
-
-  // 이어하기 버튼에 저장된 진행(스테이지·남은 이동 수)을 함께 표기해 "새로 시작"과 구분한다.
-  _renderContinueButton(savedGame) {
-    const btn = this.refs.continueBtn;
-    if (!btn) return;
-    btn.disabled = !savedGame;
-    if (!btn.dataset.label) btn.dataset.label = (btn.querySelector('.btn-label')?.textContent || btn.textContent || '').trim();
-    const label = btn.dataset.label;
-    if (!savedGame) {
-      btn.textContent = label;
-      return;
-    }
-    const labelEl = document.createElement('span');
-    labelEl.className = 'btn-label';
-    labelEl.textContent = label;
-    const subEl = document.createElement('small');
-    subEl.className = 'btn-sub';
-    subEl.textContent = this._savedGameLabel(savedGame);
-    btn.replaceChildren(labelEl, subEl);
-  }
-
-  _savedGameLabel(saved) {
-    const stageId = Number(saved.stageId) || 1;
-    const moves = Math.max(0, Number(saved.moves) || 0);
-    const lang = (this.lang || 'ko').slice(0, 2);
-    const movesText = {
-      ko: `${moves}수 남음`,
-      ja: `残り${moves}手`,
-      es: `${moves} mov. rest.`,
-      en: `${moves} moves left`
-    }[lang] || `${moves} moves left`;
-    return `Stage ${stageId} · ${movesText}`;
   }
 
   updateSoundButtons(enabled) {
@@ -111,65 +65,18 @@ export class UI {
   }
 
   updateHUD(state) {
-    const stage = state.stage;
-    this.refs.hudTarget.textContent = Number(stage.targetScore).toLocaleString();
     this.refs.hudScore.textContent = Number(state.score).toLocaleString();
-    this.refs.hudMoves.textContent = String(state.moves);
-    // 남은 이동이 적으면 경고 깜빡임(3 이하=위급/빨강, 5 이하=주의/노랑).
-    const movesStat = this.refs.hudMoves.closest('.hud-stat');
-    if (movesStat) {
-      const left = Number(state.moves);
-      movesStat.classList.toggle('moves-critical', left > 0 && left <= 3);
-      movesStat.classList.toggle('moves-warn', left > 3 && left <= 5);
-    }
-    this.refs.stageLabel.textContent = `Stage ${stage.id} · ${stage.name}`;
-    this.refs.objectiveTitle.textContent = getGoalText(stage);
-    this.renderGoals(stage, state.collections, state.score);
+    this.updateTime(state.timeLeft);
   }
 
-  renderGoals(stage, collections = {}, score = 0) {
-    this.refs.collectGoals.replaceChildren();
-    // 점수 목표도 클리어 조건이므로 미션으로 함께 표기(예: 1,000/1,900).
-    const targetScore = Number(stage.targetScore) || 0;
-    if (targetScore > 0) {
-      const current = Math.min(Number(score) || 0, targetScore);
-      const pill = document.createElement('div');
-      pill.className = 'collect-pill collect-pill--score';
-      if (current >= targetScore) pill.classList.add('is-done');
-      const icon = document.createElement('span');
-      icon.className = 'mini-score';
-      icon.textContent = '★';
-      icon.setAttribute('aria-hidden', 'true');
-      const label = document.createElement('span');
-      label.textContent = `${current.toLocaleString()}/${targetScore.toLocaleString()}`;
-      pill.title = `점수 ${current.toLocaleString()}/${targetScore.toLocaleString()}`;
-      pill.append(icon, label);
-      this.refs.collectGoals.appendChild(pill);
-    }
-    for (const goal of stage.goals) {
-      const gem = GEM_BY_ID[goal.type];
-      const current = Math.min(collections[goal.type] || 0, goal.count);
-      const pill = document.createElement('div');
-      pill.className = 'collect-pill';
-      if (current >= goal.count) pill.classList.add('is-done');
-      const icon = document.createElement('img');
-      icon.className = 'mini-gem';
-      icon.src = gem?.image || '';
-      icon.alt = '';
-      icon.decoding = 'async';
-      icon.setAttribute('aria-hidden', 'true');
-      const gemName = getGemName(goal.type, this.lang);
-      const label = document.createElement('span');
-      label.className = 'collect-label';
-      label.textContent = gemName;
-      const count = document.createElement('strong');
-      count.className = 'collect-count';
-      count.textContent = `${current}/${goal.count}`;
-      pill.title = `${gemName} ${current}/${goal.count}`;
-      pill.setAttribute('aria-label', `${gemName} ${current}/${goal.count}`);
-      pill.append(icon, label, count);
-      if (gem) pill.style.borderColor = `${gem.color}66`;
-      this.refs.collectGoals.appendChild(pill);
+  // 남은 시간을 갱신하고 막바지(10초 이하)에는 경고 표시를 준다.
+  updateTime(timeLeft) {
+    const left = Math.max(0, Number(timeLeft) || 0);
+    if (this.refs.hudTime) this.refs.hudTime.textContent = formatTime(left);
+    const timeStat = this.refs.hudTime?.closest('.hud-stat');
+    if (timeStat) {
+      timeStat.classList.toggle('moves-critical', left > 0 && left <= 10);
+      timeStat.classList.toggle('moves-warn', left > 10 && left <= 30);
     }
   }
 
@@ -193,46 +100,15 @@ export class UI {
     this.pixi?.spawnMatchEffects(cells);
   }
 
-  showStages(progress, isUnlocked, onSelect) {
-    this.refs.stageList.replaceChildren();
-    for (const stage of STAGES) {
-      const unlocked = isUnlocked(stage.id);
-      const data = progress.stages[String(stage.id)] || { stars: 0, bestScore: 0 };
-      const item = document.createElement('button');
-      item.type = 'button';
-      item.className = `stage-item${unlocked ? '' : ' locked'}`;
-      item.disabled = !unlocked;
-      const label = document.createElement('span');
-      label.textContent = `STAGE ${stage.id}`;
-      const name = document.createElement('strong');
-      name.textContent = stage.name;
-      const meta = document.createElement('span');
-      meta.textContent = `${stage.moves} moves · ${stage.targetScore.toLocaleString()} pts`;
-      const stars = document.createElement('div');
-      stars.className = 'stage-stars';
-      stars.textContent = starsText(data.stars || 0);
-      item.append(label, name, meta, stars);
-      item.addEventListener('click', () => onSelect(stage.id - 1));
-      this.refs.stageList.appendChild(item);
-    }
-    this.showModal(this.refs.stageModal);
-  }
-
-  showResult({ cleared, runEnded, score, bestScore, moves, stars, canNext, nickname }) {
-    this.refs.resultKicker.textContent = cleared ? 'CLEAR' : 'GAME OVER';
-    this.refs.resultTitle.textContent = cleared ? '스테이지 클리어' : '게임 오버';
-    // 실패 시 빨간 계열로 "게임이 끝났다"는 걸 확실히 인지시킨다.
-    this.refs.resultKicker.classList.toggle('is-gameover', !cleared);
-    this.refs.resultTitle.classList.toggle('is-gameover', !cleared);
-    this.refs.resultStars.textContent = starsText(stars);
+  showResult({ score, bestScore, nickname }) {
+    this.refs.resultKicker.textContent = 'TIME UP';
+    this.refs.resultTitle.textContent = '타임 어택 종료';
     this.refs.resultScore.textContent = Number(score).toLocaleString();
     this.refs.resultBest.textContent = Number(bestScore).toLocaleString();
-    this.refs.resultMoves.textContent = String(Math.max(0, moves));
-    // 랭킹 등록은 "런이 끝난 시점"(게임 오버 또는 최종 스테이지 클리어)에서만.
-    const showRank = !!runEnded && score > 0;
+    // 점수가 0보다 크면 명예의 전당 등록 폼을 노출한다.
+    const showRank = score > 0;
     this.refs.rankSubmit.classList.toggle('hidden', !showRank);
-    this.refs.nextStageBtn.classList.toggle('hidden', !cleared || !canNext);
-    // 등록/건너뛰기를 결정하기 전엔 재도전/타이틀 버튼을 숨긴다.
+    // 등록/건너뛰기를 결정하기 전엔 다시하기/타이틀 버튼을 숨긴다.
     if (this.refs.resultActions) {
       this.refs.resultActions.classList.toggle('hidden', showRank);
     }
@@ -271,13 +147,10 @@ export class UI {
       name.textContent = row.player_name || 'Player';
       const score = document.createElement('div');
       score.className = 'rank-score';
-      const stage = document.createElement('span');
-      stage.className = 'rank-stage';
-      stage.textContent = `Stage ${getRankStage(row)}`;
       const points = document.createElement('span');
       points.className = 'rank-points';
       points.textContent = `${Number(row.score || 0).toLocaleString()}점`;
-      score.append(stage, points);
+      score.append(points);
       item.append(pos, name, score);
       this.refs.rankContent.appendChild(item);
     });
@@ -312,17 +185,6 @@ export class UI {
   }
 }
 
-export function starsText(stars) {
-  const full = Math.max(0, Math.min(3, stars || 0));
-  return '★'.repeat(full) + '☆'.repeat(3 - full);
-}
-
 export function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function getRankStage(row) {
-  const extra = row?.extra_data || row?.extra || {};
-  const raw = Number(extra.highest_stage ?? extra.stage ?? 1);
-  return Number.isFinite(raw) ? Math.max(1, raw) : 1;
 }
