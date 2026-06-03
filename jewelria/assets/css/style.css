@@ -562,18 +562,17 @@ p {
 }
 
 .board-frame {
-  --board-frame-outset: clamp(22px, 4vw, 44px);
-  --board-frame-shift-x: clamp(-7px, -1.8vw, -12px);
-  --board-frame-shift-y: clamp(-14px, -1vw, -6px);
+  /* 프레임 PNG가 보드 대비 항상 같은 비율을 유지하도록 % 기반으로 고정.
+     (절대배치 ::after의 %는 보드 박스 크기에 비례 → 모든 해상도에서 동일 비율) */
+  --board-frame-outset: 8.5%;
   position: relative;
   width: min(88vw, 56svh, 520px);
   max-width: 100%;
   aspect-ratio: 1;
-  /* 장식 프레임이 위아래 HUD·버튼과 겹치지 않도록 돌출량만큼 여백 확보
-     (아래쪽은 shift-y 보정분만큼 추가) */
-  margin-top: var(--board-frame-outset);
-  margin-bottom: calc(var(--board-frame-outset) - var(--board-frame-shift-y));
-  padding: clamp(15px, 2.8vw, 24px);
+  /* 프레임 돌출분만큼 위아래 여백 확보(HUD·버튼과 겹침 방지) */
+  margin: clamp(30px, 5.5vw, 52px) auto;
+  /* 보석이 프레임 안쪽 테두리에 가려지지 않도록 충분한 안전 여백(비율 고정) */
+  padding: 6%;
   border-radius: var(--radius);
   border-color: rgba(246, 205, 105, 0.22);
   background:
@@ -593,15 +592,11 @@ p {
 .board-frame::after {
   content: "";
   position: absolute;
-  /* shift-y로 프레임을 위로 올리는 만큼 아래쪽 inset을 같이 늘려
-     프레임 하단 테두리가 보드 밖으로 잘려 보이지 않게 보정한다. */
-  top: calc(var(--board-frame-outset) * -1);
-  left: calc(var(--board-frame-outset) * -1);
-  right: calc(var(--board-frame-outset) * -1);
-  bottom: calc(var(--board-frame-outset) * -1 + var(--board-frame-shift-y));
+  /* 보드 박스 기준 대칭(중앙 정렬) % 돌출 → 어떤 화면 비율에서도 프레임이
+     보드를 한쪽으로 침범하지 않고 항상 같은 비율로 보석 바깥을 감싼다. */
+  inset: calc(var(--board-frame-outset) * -1);
   z-index: 5;
   background: url("../images/ui/ui-board-frame.png") center / 100% 100% no-repeat;
-  transform: translate(var(--board-frame-shift-x), clamp(-16px, -1.4vw, -8px));
   filter:
     drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34))
     drop-shadow(0 0 18px rgba(255, 221, 114, 0.15));
@@ -1608,11 +1603,8 @@ p {
   }
 
   .board-frame {
-    --board-frame-outset: clamp(22px, 4.5vw, 40px);
-    --board-frame-shift-x: clamp(-12px, -2.4vw, -6px);
-    --board-frame-shift-y: clamp(-10px, -1.4vw, -4px);
     width: min(92vw, 56svh);
-    padding: 12px;
+    padding: 6%;
   }
 
   .board {
@@ -1674,27 +1666,18 @@ p {
   }
 
   .board-frame {
-    --board-frame-outset: clamp(22px, 5vw, 40px);
-    --board-frame-shift-x: clamp(-14px, -3vw, -7px);
-    --board-frame-shift-y: clamp(-10px, -2vw, -5px);
     width: min(92vw, 44svh, 352px);
   }
 }
 
 @media (min-width: 721px) and (max-width: 1366px) and (orientation: portrait) {
   .board-frame {
-    --board-frame-outset: clamp(30px, 4.4vw, 50px);
-    --board-frame-shift-x: clamp(-12px, -1.8vw, -7px);
-    --board-frame-shift-y: clamp(-10px, -1.2vw, -6px);
     width: min(80vw, 58svh, 580px);
   }
 }
 
 @media (min-width: 721px) and (max-width: 1366px) and (orientation: landscape) {
   .board-frame {
-    --board-frame-outset: clamp(22px, 3.6vw, 40px);
-    --board-frame-shift-x: clamp(-14px, -2.2vw, -8px);
-    --board-frame-shift-y: clamp(-8px, -1vw, -5px);
     width: min(68vw, 52svh, 540px);
   }
 }
@@ -1751,11 +1734,7 @@ p {
   }
 
   .board-frame {
-    --board-frame-outset: 32px;
-    --board-frame-shift-x: -5px;
-    --board-frame-shift-y: -8px;
     width: min(82vw, 46svh, 320px);
-    padding: 10px;
   }
 
   .board {
@@ -1792,9 +1771,6 @@ p {
   }
 
   .board-frame {
-    --board-frame-outset: clamp(24px, 4vw, 42px);
-    --board-frame-shift-x: clamp(-12px, -2vw, -7px);
-    --board-frame-shift-y: clamp(-8px, -1.4vw, -4px);
     width: min(57vw, 80svh);
   }
 
