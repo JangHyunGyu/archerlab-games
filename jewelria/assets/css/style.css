@@ -139,8 +139,8 @@ button {
   display: grid;
   justify-items: center;
   width: min(92vw, 560px);
-  margin-top: auto;
-  margin-bottom: clamp(48px, 14vh, 140px);
+  margin-top: clamp(24px, 10vh, 96px);
+  margin-bottom: auto;
   text-align: center;
   isolation: isolate;
 }
@@ -1613,7 +1613,8 @@ p {
   }
 
   .title-content {
-    margin-bottom: clamp(40px, 12vh, 120px);
+    margin-top: clamp(16px, 7vh, 64px);
+    margin-bottom: auto;
   }
 
   .record-strip {
