@@ -74,15 +74,11 @@
       <div class="title-content">
         <p class="eyebrow">ARCHERLAB GAMES</p>
         <h1>쥬얼리아</h1>
-        <p class="subtitle">보석을 맞추고, 연쇄를 터뜨리고, 별빛 왕관을 모으세요.</p>
+        <p class="subtitle">3분 안에 보석을 맞추고 콤보를 터뜨려 최고 점수에 도전하세요.</p>
         <div class="record-strip" aria-live="polite">
           <div>
-            <span>진행</span>
-            <strong id="title-progress">Stage 1</strong>
-          </div>
-          <div>
-            <span>획득 별</span>
-            <strong id="title-stars">0</strong>
+            <span>제한시간</span>
+            <strong id="title-time">3:00</strong>
           </div>
           <div>
             <span>최고 점수</span>
@@ -91,8 +87,6 @@
         </div>
         <div class="title-actions">
           <button id="play-btn" class="button button-primary" type="button">게임 시작</button>
-          <button id="continue-btn" class="button button-secondary" type="button">이어하기</button>
-          <button id="stage-btn" class="button button-secondary" type="button">스테이지</button>
         </div>
       </div>
     </section>
@@ -100,28 +94,16 @@
     <section id="game-screen" class="screen game-screen" aria-label="쥬얼리아 게임 화면">
       <header class="game-hud">
         <button id="home-btn" class="icon-button" type="button" aria-label="타이틀로 돌아가기" title="타이틀">Home</button>
-        <div class="hud-stat">
-          <span>목표</span>
-          <strong id="hud-target">0</strong>
+        <div class="hud-stat hud-stat-time">
+          <span>남은 시간</span>
+          <strong id="hud-time">3:00</strong>
         </div>
         <div class="hud-stat hud-stat-score">
           <span>점수</span>
           <strong id="hud-score">0</strong>
         </div>
-        <div class="hud-stat">
-          <span>이동</span>
-          <strong id="hud-moves">0</strong>
-        </div>
         <button id="pause-btn" class="icon-button" type="button" aria-label="일시정지" title="일시정지">Pause</button>
       </header>
-
-      <div class="objective-panel">
-        <div>
-          <p id="stage-label" class="stage-label">Stage 1</p>
-          <h2 id="objective-title">목표 점수 달성</h2>
-        </div>
-        <div id="collect-goals" class="collect-goals" aria-label="수집 목표"></div>
-      </div>
 
       <section class="board-wrap" aria-label="게임 보드">
         <div class="board-frame">
@@ -138,19 +120,6 @@
     </section>
   </main>
 
-  <section id="stage-modal" class="modal hidden" aria-modal="true" role="dialog" aria-labelledby="stage-modal-title">
-    <div class="modal-card stage-card">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">STAGE</p>
-          <h2 id="stage-modal-title">스테이지 선택</h2>
-        </div>
-        <button id="stage-close" class="icon-button" type="button" aria-label="닫기" title="닫기">Close</button>
-      </div>
-      <div id="stage-list" class="stage-list"></div>
-    </div>
-  </section>
-
   <section id="pause-modal" class="modal hidden" aria-modal="true" role="dialog" aria-labelledby="pause-title">
     <div class="modal-card small-card">
       <p class="eyebrow">PAUSE</p>
@@ -165,9 +134,8 @@
 
   <section id="result-modal" class="modal hidden" aria-modal="true" role="dialog" aria-labelledby="result-title">
     <div class="modal-card result-card">
-      <p id="result-kicker" class="eyebrow">CLEAR</p>
-      <h2 id="result-title">스테이지 클리어</h2>
-      <div id="result-stars" class="result-stars" aria-label="획득 별"></div>
+      <p id="result-kicker" class="eyebrow">TIME UP</p>
+      <h2 id="result-title">타임 어택 종료</h2>
       <div class="result-stats">
         <div>
           <span>점수</span>
@@ -176,10 +144,6 @@
         <div>
           <span>최고</span>
           <strong id="result-best">0</strong>
-        </div>
-        <div>
-          <span>남은 이동</span>
-          <strong id="result-moves">0</strong>
         </div>
       </div>
 
@@ -194,8 +158,7 @@
       </div>
 
       <div id="result-actions" class="modal-actions">
-        <button id="next-stage-btn" class="button button-primary" type="button">다음 스테이지</button>
-        <button id="retry-btn" class="button button-secondary" type="button">재도전</button>
+        <button id="retry-btn" class="button button-primary" type="button">다시하기</button>
         <button id="result-home-btn" class="button button-secondary" type="button">타이틀</button>
       </div>
     </div>
