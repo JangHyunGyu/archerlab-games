@@ -100,16 +100,22 @@ button {
 .title-screen {
   place-items: center;
   padding: calc(48px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
-  background:
-    radial-gradient(120% 90% at 50% 0%, rgba(18, 64, 78, 0.55), transparent 60%),
-    linear-gradient(180deg, #06222d 0%, #04141c 100%);
 }
 
+.title-bg,
+.title-bg img,
 .title-shade {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.title-bg img {
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(1.05) contrast(1.03);
+  transform: scale(1.015);
 }
 
 .title-shade {
@@ -154,17 +160,6 @@ button {
   justify-items: center;
   width: 100%;
   margin-top: auto;
-}
-
-.title-headline::before {
-  content: "";
-  position: absolute;
-  inset: -18px -34px -24px;
-  z-index: -1;
-  background: url("../images/ui/ui-title-plaque.png") center / 100% 100% no-repeat;
-  opacity: 0.78;
-  filter: drop-shadow(0 20px 34px rgba(0, 0, 0, 0.34));
-  pointer-events: none;
 }
 
 .eyebrow {
