@@ -556,7 +556,10 @@ p {
 
 .board-wrap {
   display: grid;
-  place-items: center;
+  /* 세로로 긴 화면에서 정사각 보드가 한가운데 떠 HUD와 큰 간격이 생기지 않도록
+     보드를 영역 위쪽(HUD 바로 아래)에 붙인다. 가로는 중앙 정렬 유지. */
+  align-content: start;
+  justify-items: center;
   min-height: 0;
   overflow: visible;
 }
