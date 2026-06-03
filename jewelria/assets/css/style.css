@@ -1666,7 +1666,7 @@ p {
   }
 
   .board-frame {
-    width: min(92vw, 44svh, 352px);
+    width: min(92vw, 62svh);
   }
 }
 
