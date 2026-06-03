@@ -568,7 +568,10 @@ p {
      개구부 사각형에 절대 배치한다. 개구부는 픽셀 측정값(L11.2 R9.5 T16 B10.3%)
      기반이라 어떤 해상도에서도 보석이 프레임 안쪽에 정확히 들어맞는다. */
   position: relative;
-  width: min(94vw, 62svh, 600px);
+  /* 가용 세로 공간(화면 - HUD/버튼/여백 약 240px)에 프레임 '전체 높이'가 들어가도록
+     너비를 제한한다. 높이 = 너비 * 620/590 이므로 (가용높이 * 590/620)으로 캡을 건다.
+     → 프레임 하단 장식이 .screen(overflow:hidden)에 잘리지 않는다. */
+  width: min(94vw, 600px, calc((100svh - 240px) * 0.9516));
   max-width: 100%;
   aspect-ratio: 590 / 620;
   margin: clamp(8px, 2vw, 20px) auto;
