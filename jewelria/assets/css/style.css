@@ -573,11 +573,11 @@ p {
 }
 
 .board-frame {
-  --board-frame-outset: clamp(26px, 4.5vw, 52px);
+  --board-frame-outset: clamp(22px, 4vw, 44px);
   --board-frame-shift-x: clamp(-7px, -1.8vw, -12px);
-  --board-frame-shift-y: clamp(-23px, -1.2vw, -8px);
+  --board-frame-shift-y: clamp(-14px, -1vw, -6px);
   position: relative;
-  width: min(90vw, 62svh, 560px);
+  width: min(88vw, 56svh, 520px);
   max-width: 100%;
   aspect-ratio: 1;
   /* 장식 프레임이 위아래 HUD·버튼과 겹치지 않도록 돌출량만큼 여백 확보
@@ -1100,7 +1100,7 @@ p {
   position: relative;
   z-index: 8;
   width: min(100%, 820px);
-  margin: 0 auto;
+  margin: 6px auto 0;
 }
 
 .modal {
@@ -1694,19 +1694,19 @@ p {
 
 @media (min-width: 721px) and (max-width: 1366px) and (orientation: portrait) {
   .board-frame {
-    --board-frame-outset: clamp(36px, 5vw, 56px);
+    --board-frame-outset: clamp(30px, 4.4vw, 50px);
     --board-frame-shift-x: clamp(-12px, -1.8vw, -7px);
-    --board-frame-shift-y: clamp(-12px, -1.4vw, -6px);
-    width: min(82vw, 60svh, 600px);
+    --board-frame-shift-y: clamp(-10px, -1.2vw, -6px);
+    width: min(80vw, 58svh, 580px);
   }
 }
 
 @media (min-width: 721px) and (max-width: 1366px) and (orientation: landscape) {
   .board-frame {
-    --board-frame-outset: clamp(28px, 5vw, 50px);
+    --board-frame-outset: clamp(22px, 3.6vw, 40px);
     --board-frame-shift-x: clamp(-14px, -2.2vw, -8px);
-    --board-frame-shift-y: clamp(-10px, -1.8vw, -6px);
-    width: min(72vw, 64svh, 600px);
+    --board-frame-shift-y: clamp(-8px, -1vw, -5px);
+    width: min(68vw, 52svh, 540px);
   }
 }
 
