@@ -552,16 +552,19 @@ p {
   display: grid;
   place-items: center;
   min-height: 0;
+  overflow: visible;
 }
 
 .board-frame {
-  --board-frame-outset: clamp(34px, 6vw, 74px);
+  --board-frame-outset: clamp(26px, 4.5vw, 52px);
   --board-frame-shift-x: clamp(-7px, -1.8vw, -12px);
   --board-frame-shift-y: clamp(-23px, -1.2vw, -8px);
   position: relative;
-  width: min(94vw, 74svh, 620px);
+  width: min(90vw, 62svh, 560px);
   max-width: 100%;
   aspect-ratio: 1;
+  /* 장식 프레임이 위아래 HUD·버튼과 겹치지 않도록 돌출량만큼 여백 확보 */
+  margin-block: var(--board-frame-outset);
   padding: clamp(15px, 2.8vw, 24px);
   border-radius: var(--radius);
   border-color: rgba(246, 205, 105, 0.22);
@@ -1592,10 +1595,10 @@ p {
   }
 
   .board-frame {
-    --board-frame-outset: clamp(28px, 7vw, 48px);
-    --board-frame-shift-x: clamp(-16px, -3vw, -8px);
-    --board-frame-shift-y: clamp(-12px, -2.3vw, -6px);
-    width: min(92vw, 60svh);
+    --board-frame-outset: clamp(22px, 4.5vw, 40px);
+    --board-frame-shift-x: clamp(-12px, -2.4vw, -6px);
+    --board-frame-shift-y: clamp(-10px, -1.4vw, -4px);
+    width: min(92vw, 56svh);
     padding: 12px;
   }
 
@@ -1658,19 +1661,19 @@ p {
   }
 
   .board-frame {
-    --board-frame-outset: clamp(28px, 6vw, 46px);
-    --board-frame-shift-x: clamp(-16px, -3vw, -8px);
-    --board-frame-shift-y: clamp(-12px, -2.3vw, -6px);
+    --board-frame-outset: clamp(22px, 5vw, 40px);
+    --board-frame-shift-x: clamp(-14px, -3vw, -7px);
+    --board-frame-shift-y: clamp(-10px, -2vw, -5px);
     width: min(92vw, 44svh, 352px);
   }
 }
 
 @media (min-width: 721px) and (max-width: 1366px) and (orientation: portrait) {
   .board-frame {
-    --board-frame-outset: clamp(90px, 6vw, 74px);
-    --board-frame-shift-x: clamp(-7px, -1.8vw, -12px);
-    --board-frame-shift-y: clamp(-80px, -1.2vw, -8px);
-    width: min(80vw, 74svh, 620px);
+    --board-frame-outset: clamp(36px, 5vw, 56px);
+    --board-frame-shift-x: clamp(-12px, -1.8vw, -7px);
+    --board-frame-shift-y: clamp(-12px, -1.4vw, -6px);
+    width: min(82vw, 60svh, 600px);
   }
 }
 
@@ -1679,7 +1682,7 @@ p {
     --board-frame-outset: clamp(28px, 5vw, 50px);
     --board-frame-shift-x: clamp(-14px, -2.2vw, -8px);
     --board-frame-shift-y: clamp(-10px, -1.8vw, -6px);
-    width: min(74vw, 72svh, 620px);
+    width: min(72vw, 64svh, 600px);
   }
 }
 
@@ -1735,10 +1738,10 @@ p {
   }
 
   .board-frame {
-    --board-frame-outset: 40px;
+    --board-frame-outset: 32px;
     --board-frame-shift-x: -5px;
-    --board-frame-shift-y: -10px;
-    width: min(82vw, 50svh, 320px);
+    --board-frame-shift-y: -8px;
+    width: min(82vw, 46svh, 320px);
     padding: 10px;
   }
 
@@ -1776,10 +1779,10 @@ p {
   }
 
   .board-frame {
-    --board-frame-outset: clamp(28px, 5vw, 50px);
-    --board-frame-shift-x: clamp(-14px, -2.2vw, -8px);
-    --board-frame-shift-y: clamp(-10px, -1.8vw, -6px);
-    width: min(57vw, 86svh);
+    --board-frame-outset: clamp(24px, 4vw, 42px);
+    --board-frame-shift-x: clamp(-12px, -2vw, -7px);
+    --board-frame-shift-y: clamp(-8px, -1.4vw, -4px);
+    width: min(57vw, 80svh);
   }
 
   .game-controls {
