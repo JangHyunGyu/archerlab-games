@@ -381,7 +381,7 @@ p {
 .game-screen {
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px;
-  padding: calc(44px + var(--safe-top)) clamp(10px, 2.4vw, 26px) calc(10px + var(--safe-bottom));
+  padding: calc(44px + var(--safe-top)) clamp(10px, 2.4vw, 26px) calc(clamp(20px, 3.5vh, 40px) + var(--safe-bottom));
   background:
     linear-gradient(180deg, rgba(7, 26, 34, 0.88), rgba(5, 15, 21, 0.94)),
     url("../images/ui/jewelria-splash.png") center / cover no-repeat;
