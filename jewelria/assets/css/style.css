@@ -564,10 +564,10 @@ p {
 .board-frame {
   /* 프레임 PNG가 보드 대비 항상 같은 비율을 유지하도록 % 기반으로 고정.
      (절대배치 ::after의 %는 보드 박스 크기에 비례 → 모든 해상도에서 동일 비율) */
-  --board-frame-outset: 5%;
+  --board-frame-outset: 6%;
   position: relative;
   /* 모든 기기 공통 단일 공식.
-     - 86vw: 프레임이 양옆 5%씩 더 커지므로(약 96vw) 가로로 잘리지 않게 제한
+     - 86vw: 프레임이 양옆 6%씩 더 커지므로(약 96vw) 가로로 잘리지 않게 제한
      - 72svh: 프레임 높이(약 80svh)가 HUD·버튼 공간을 침범하지 않게 제한
      - 620px: 큰 화면 상한
      디바이스별 width 오버라이드를 두지 않아 경계마다 크기가 튀지 않는다. */
@@ -577,7 +577,7 @@ p {
   /* 프레임 돌출분만큼 위아래 여백 확보(HUD·버튼과 겹침 방지) */
   margin: clamp(26px, 4.5vw, 44px) auto;
   /* 보석이 프레임 안쪽 테두리에 가려지지 않도록 안전 여백(비율 고정) */
-  padding: 3.2%;
+  padding: 4%;
   border-radius: var(--radius);
   border-color: rgba(246, 205, 105, 0.22);
   background:
