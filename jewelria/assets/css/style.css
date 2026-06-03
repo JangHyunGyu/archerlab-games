@@ -207,8 +207,8 @@ p {
 
 .record-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: min(100%, 480px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 420px);
   gap: 8px;
   margin-bottom: 18px;
 }
@@ -393,6 +393,8 @@ p {
   align-items: stretch;
   width: min(100%, 820px);
   margin: 0 auto;
+  position: relative;
+  z-index: 6;
 }
 
 .hud-stat {
@@ -1179,7 +1181,7 @@ p {
 
 .result-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -1632,10 +1634,6 @@ p {
     width: min(100%, 360px);
   }
 
-  .record-strip > div:nth-child(3) {
-    grid-column: 1 / -1;
-  }
-
   .title-actions {
     width: min(100%, 360px);
   }
@@ -1656,7 +1654,7 @@ p {
   }
 
   .game-hud {
-    grid-template-columns: auto minmax(56px, 1fr) minmax(74px, 1.1fr) minmax(52px, 0.9fr) auto;
+    grid-template-columns: auto minmax(72px, 1fr) minmax(88px, 1.2fr) auto;
   }
 
   .board-frame {
