@@ -338,23 +338,93 @@
     ctx.restore();
   }
 
-  function createTextures(scene) {
-    makeCanvasTexture(scene, "bullet", 18, 34, (ctx) => {
-      ctx.save();
-      ctx.translate(9, 17);
-      const gradient = ctx.createLinearGradient(0, -16, 0, 16);
-      gradient.addColorStop(0, "#fff69a");
-      gradient.addColorStop(0.45, "#ffe647");
-      gradient.addColorStop(1, "rgba(255,190,53,0)");
+  function drawProjectile(ctx, width, height, type) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    ctx.shadowColor = "rgba(255, 238, 128, .65)";
+    ctx.shadowBlur = 10;
+
+    if (type === "rifle") {
+      const gradient = ctx.createLinearGradient(0, -42, 0, 42);
+      gradient.addColorStop(0, "rgba(129, 238, 255, 0)");
+      gradient.addColorStop(0.26, "#b6fbff");
+      gradient.addColorStop(0.5, "#ffffff");
+      gradient.addColorStop(0.74, "#49d7ff");
+      gradient.addColorStop(1, "rgba(73, 215, 255, 0)");
       ctx.fillStyle = gradient;
-      roundedRect(ctx, -4, -16, 8, 32, 4);
+      roundedRect(ctx, -4, -42, 8, 84, 4);
       ctx.fill();
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = "#ffffff";
+      roundedRect(ctx, -1.5, -30, 3, 60, 2);
+      ctx.fill();
+    } else if (type === "pistol") {
+      const gradient = ctx.createLinearGradient(0, -19, 0, 19);
+      gradient.addColorStop(0, "#fff8ad");
+      gradient.addColorStop(0.45, "#ffe13d");
+      gradient.addColorStop(1, "rgba(255, 175, 40, 0)");
+      ctx.fillStyle = gradient;
+      roundedRect(ctx, -4, -19, 8, 38, 4);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.arc(0, -12, 3, 0, Math.PI * 2);
+      ctx.arc(0, -13, 3, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
-    });
+    } else if (type === "frost") {
+      const gradient = ctx.createRadialGradient(0, -12, 2, 0, 0, 30);
+      gradient.addColorStop(0, "#ffffff");
+      gradient.addColorStop(0.4, "#86f4ff");
+      gradient.addColorStop(1, "rgba(51, 165, 255, 0)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(0, -36);
+      ctx.lineTo(14, -5);
+      ctx.lineTo(5, 34);
+      ctx.lineTo(-12, 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#d8fbff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else if (type === "support") {
+      const gradient = ctx.createRadialGradient(0, 0, 2, 0, 0, 26);
+      gradient.addColorStop(0, "#ffffff");
+      gradient.addColorStop(0.42, "#73ff9b");
+      gradient.addColorStop(1, "rgba(115, 255, 155, 0)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#baffce";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, -21);
+      ctx.lineTo(0, 21);
+      ctx.moveTo(-21, 0);
+      ctx.lineTo(21, 0);
+      ctx.stroke();
+    } else if (type === "shock") {
+      ctx.strokeStyle = "#ff8fbd";
+      ctx.lineWidth = 8;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(0, 20, 38, Math.PI * 1.12, Math.PI * 1.88);
+      ctx.stroke();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 20, 25, Math.PI * 1.18, Math.PI * 1.82);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function createTextures(scene) {
+    makeCanvasTexture(scene, "projectile-pistol", 20, 44, (ctx) => drawProjectile(ctx, 20, 44, "pistol"));
+    makeCanvasTexture(scene, "projectile-rifle", 18, 92, (ctx) => drawProjectile(ctx, 18, 92, "rifle"));
+    makeCanvasTexture(scene, "projectile-frost", 48, 84, (ctx) => drawProjectile(ctx, 48, 84, "frost"));
+    makeCanvasTexture(scene, "projectile-support", 48, 48, (ctx) => drawProjectile(ctx, 48, 48, "support"));
+    makeCanvasTexture(scene, "projectile-shock", 96, 64, (ctx) => drawProjectile(ctx, 96, 64, "shock"));
 
     makeCanvasTexture(scene, "zombie-girl", 78, 124, (ctx) => drawZombie(ctx, 78, 124, {
       skin: "#9fb2a3",
@@ -573,21 +643,25 @@
         .setDepth(143);
 
       const positions = [
-        [84, 787, 0.54, "rally"],
-        [188, 779, 0.74, "barrage"],
-        [276, 773, 1, "player"],
-        [374, 779, 0.66, "frost"],
-        [470, 786, 0.6, "repair"]
+        { x: 84, y: 787, muzzleX: 96, muzzleY: 720, damageScale: 0.42, role: "rally", projectile: "projectile-shock", speed: 620, rate: 1.28 },
+        { x: 188, y: 779, muzzleX: 207, muzzleY: 704, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 980, rate: 0.92 },
+        { x: 276, y: 773, muzzleX: 269, muzzleY: 680, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 840, rate: 0.33 },
+        { x: 374, y: 779, muzzleX: 385, muzzleY: 687, damageScale: 0.78, role: "frost", projectile: "projectile-frost", speed: 760, rate: 1.08 },
+        { x: 470, y: 786, muzzleX: 458, muzzleY: 696, damageScale: 0.62, role: "repair", projectile: "projectile-support", speed: 700, rate: 1.18 }
       ];
-      positions.forEach(([x, y, damageScale, role]) => {
+      positions.forEach((defender) => {
         this.defenders.push({
-          x,
-          y,
+          x: defender.x,
+          y: defender.y,
+          muzzleX: defender.muzzleX,
+          muzzleY: defender.muzzleY,
           sprite: null,
-          role,
-          rate: role === "player" ? 0.33 : rand(0.8, 1.2),
+          role: defender.role,
+          rate: defender.rate,
           timer: rand(0.15, 0.65),
-          damageScale
+          damageScale: defender.damageScale,
+          projectile: defender.projectile,
+          speed: defender.speed
         });
       });
     }
@@ -1000,15 +1074,19 @@
         defender.timer -= dt;
         if (defender.timer <= 0) {
           defender.timer = defender.rate * rand(0.75, 1.2);
-          const target = this.findTarget(defender.x, defender.role === "barrage" ? 160 : 85);
+          const target = this.findTarget(defender.x, defender.role === "barrage" ? 180 : 95);
           if (target) {
-            this.fireBullet(defender.x, defender.y, target, this.damage * defender.damageScale, 760, 0);
+            this.fireBullet(defender, target, this.damage * defender.damageScale, defender.speed, 0);
           }
         }
       });
     }
 
     firePlayerBurst(isManual) {
+      const player = this.defenders.find((defender) => defender.role === "player");
+      if (!player) {
+        return;
+      }
       const target = this.findTarget(this.focusPoint ? this.focusPoint.x : 270, this.focusPoint ? 210 : 999);
       const rateBonus = this.rallyTimer > 0 ? 0.58 : 1;
       this.playerFireTimer = this.fireRate * rateBonus * (isManual ? 0.45 : 1);
@@ -1018,8 +1096,16 @@
 
       const count = this.rallyTimer > 0 ? 2 : 1;
       for (let i = 0; i < count; i += 1) {
-        const originX = 272 + (i - (count - 1) / 2) * 14;
-        this.fireBullet(originX, 770, target, this.damage, 840, this.pierce);
+        this.fireBullet(
+          {
+            ...player,
+            muzzleX: player.muzzleX + (i - (count - 1) / 2) * 12
+          },
+          target,
+          this.damage,
+          player.speed,
+          this.pierce
+        );
       }
 
       this.shotsSinceRocket += 1;
@@ -1057,27 +1143,41 @@
       }, null);
     }
 
-    fireBullet(x, y, target, damage, speed, pierce) {
+    fireBullet(defender, target, damage, speed, pierce) {
       if (!target || !target.active) {
         return;
       }
+      const x = defender.muzzleX;
+      const y = defender.muzzleY;
       const tx = target.x + rand(-8, 8);
       const ty = target.y + rand(-10, 10);
       const angle = Math.atan2(ty - y, tx - x);
-      const sprite = this.add.image(x, y, "bullet").setScale(0.8).setRotation(angle + Math.PI / 2).setDepth(190);
+      const sprite = this.add.image(x, y, defender.projectile)
+        .setScale(defender.projectile === "projectile-rifle" ? 0.72 : defender.projectile === "projectile-shock" ? 0.62 : 0.78)
+        .setRotation(angle + Math.PI / 2)
+        .setDepth(190);
       this.bullets.push({
         sprite,
         damage,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: 1.55,
+        life: defender.projectile === "projectile-shock" ? 0.72 : 1.55,
         pierce
       });
-      this.createMuzzle(x, y, angle);
+      this.createMuzzle(x, y, angle, defender.projectile);
     }
 
-    createMuzzle(x, y, angle) {
-      const flash = this.add.circle(x + Math.cos(angle) * 16, y + Math.sin(angle) * 16, 7, 0xfff3a4, 0.95).setDepth(191);
+    createMuzzle(x, y, angle, projectile) {
+      const color = projectile === "projectile-rifle"
+        ? 0x8ff6ff
+        : projectile === "projectile-frost"
+          ? 0xa6fbff
+          : projectile === "projectile-support"
+            ? 0x80ff9b
+            : projectile === "projectile-shock"
+              ? 0xff8fbd
+              : 0xfff3a4;
+      const flash = this.add.circle(x + Math.cos(angle) * 16, y + Math.sin(angle) * 16, 7, color, 0.95).setDepth(191);
       this.tweens.add({
         targets: flash,
         scale: 1.8,
