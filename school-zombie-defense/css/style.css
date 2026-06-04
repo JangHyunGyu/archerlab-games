@@ -1,0 +1,100 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #0b0d10;
+  color: #f6f7fb;
+  font-family: "Pretendard Variable", Pretendard, "Segoe UI", Arial, sans-serif;
+  overflow: hidden;
+  touch-action: none;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  place-items: center;
+}
+
+.archerlab-link {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(10px, env(safe-area-inset-left));
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(10, 14, 18, 0.72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: 0;
+  backdrop-filter: blur(10px);
+}
+
+#game-shell {
+  position: relative;
+  width: min(100vw, calc(100dvh * 0.5625));
+  height: min(100dvh, calc(100vw * 1.7777778));
+  max-width: 540px;
+  max-height: 960px;
+  background: #101418;
+  overflow: hidden;
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.7);
+}
+
+#game-root,
+#game-root canvas {
+  width: 100%;
+  height: 100%;
+}
+
+#game-root canvas {
+  display: block;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #d7e7ec;
+  font-size: 14px;
+  font-weight: 800;
+  background: radial-gradient(circle at 50% 35%, #263f46 0, #101418 48%, #090b0f 100%);
+}
+
+noscript {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 4;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #201319;
+  color: #ffd6dc;
+  font-size: 14px;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .archerlab-link {
+    transform: scale(0.92);
+    transform-origin: top left;
+  }
+
+  #game-shell {
+    box-shadow: none;
+  }
+}

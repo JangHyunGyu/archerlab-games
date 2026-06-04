@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#101418">
+  <title>스쿨 언데드 디펜스 - ArcherLab Games</title>
+  <meta name="description" content="무너진 학교 복도에서 바리케이드를 지키는 세로형 좀비 디펜스 웹게임. Phaser 4 기반으로 브라우저에서 바로 플레이하세요.">
+  <meta name="keywords" content="좀비 디펜스, 학교 디펜스, 세로형 웹게임, Phaser 4, 브라우저 게임, ArcherLab Games">
+  <meta property="og:title" content="스쿨 언데드 디펜스 - ArcherLab Games">
+  <meta property="og:description" content="하단 방어선을 지키며 몰려오는 언데드와 스킬 선택을 버티는 모바일형 디펜스 게임.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://game.archerlab.dev/school-zombie-defense/">
+  <meta property="og:image" content="https://game.archerlab.dev/school-zombie-defense/assets/ui/school-zombie-defense-link.svg">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:site_name" content="ArcherLab Games">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="스쿨 언데드 디펜스">
+  <meta name="twitter:description" content="학교 복도 바리케이드에서 살아남는 세로형 좀비 디펜스.">
+  <meta name="twitter:image" content="https://game.archerlab.dev/school-zombie-defense/assets/ui/school-zombie-defense-link.svg">
+  <link rel="canonical" href="https://game.archerlab.dev/school-zombie-defense/">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="ArcherLab">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "스쿨 언데드 디펜스",
+    "alternateName": "School Undead Defense",
+    "description": "무너진 학교 복도에서 바리케이드를 지키는 세로형 좀비 디펜스 웹게임.",
+    "url": "https://game.archerlab.dev/school-zombie-defense/",
+    "image": "https://game.archerlab.dev/school-zombie-defense/assets/ui/school-zombie-defense-link.svg",
+    "genre": ["Tower Defense", "Survival", "Action"],
+    "gamePlatform": ["Web Browser", "Mobile Browser"],
+    "applicationCategory": "Game",
+    "operatingSystem": "Any",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "KRW",
+      "availability": "https://schema.org/InStock"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "ArcherLab",
+      "url": "https://archerlab.dev/"
+    },
+    "inLanguage": "ko",
+    "isAccessibleForFree": true,
+    "playMode": "SinglePlayer",
+    "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 }
+  }
+  </script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-66FS0YCEEM');
+  </script>
+</head>
+<body>
+  <a class="archerlab-link" href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" aria-label="ArcherLab">ArcherLab</a>
+  <main id="game-shell" aria-label="스쿨 언데드 디펜스 게임 화면">
+    <div id="game-root">
+      <div class="loading">Loading Phaser 4...</div>
+    </div>
+  </main>
+  <noscript>이 게임을 플레이하려면 JavaScript가 필요합니다.</noscript>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@4.1.0/dist/phaser.min.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
