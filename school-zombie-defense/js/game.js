@@ -381,6 +381,12 @@
       super("BootScene");
     }
 
+    preload() {
+      this.load.image("bg-corridor", "assets/images/corridor-battlefield.png");
+      this.load.image("survivor-line", "assets/images/survivor-line.png");
+      this.load.image("zombie-horde", "assets/images/zombie-horde.png");
+    }
+
     create() {
       const loading = document.querySelector(".loading");
       if (loading) {
@@ -479,56 +485,20 @@
     }
 
     drawBackground() {
-      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x111820).setDepth(0);
-      this.add.rectangle(22, GAME_HEIGHT / 2, 44, GAME_HEIGHT, 0x2b2933).setAlpha(0.95).setDepth(1);
-      this.add.rectangle(518, GAME_HEIGHT / 2, 44, GAME_HEIGHT, 0x303236).setAlpha(0.95).setDepth(1);
+      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0b0d10).setDepth(0);
+      this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "bg-corridor")
+        .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+        .setDepth(1);
 
-      const floor = this.add.graphics().setDepth(2);
-      floor.fillStyle(0xa9c2bf, 1);
-      floor.fillRect(38, 72, 464, 832);
-      floor.fillStyle(0xd4ddd6, 0.78);
-      floor.fillRect(58, 632, 424, 274);
-      floor.fillStyle(0x6ebbc2, 0.18);
-      floor.fillRect(44, 74, 452, 538);
-      floor.lineStyle(2, 0x456269, 0.28);
-      for (let y = 92; y < 905; y += 48) {
-        floor.lineBetween(44, y, 498, y);
-      }
-      for (let x = 68; x < 498; x += 74) {
-        floor.lineBetween(x, 76, x, 904);
-      }
-
-      floor.lineStyle(4, 0x98e7ee, 0.45);
-      floor.strokeRect(48, 82, 444, 536);
-      floor.fillStyle(0x5dc8d4, 0.12);
-      floor.fillRect(49, 83, 442, 534);
-      floor.fillStyle(0x11202c, 0.38);
-      floor.fillRect(49, 83, 442, 536);
-
-      floor.lineStyle(10, COLORS.rail, 0.78);
-      [150, 274, 394, 514].forEach((y) => {
-        floor.lineBetween(54, y, 486, y);
-        floor.lineStyle(2, 0xa9eff2, 0.28);
-        floor.lineBetween(60, y - 7, 480, y - 7);
-        floor.lineStyle(10, COLORS.rail, 0.78);
-      });
-
-      floor.lineStyle(4, 0x24323c, 0.7);
-      floor.lineBetween(80, 72, 80, 620);
-      floor.lineBetween(468, 72, 468, 620);
-      floor.lineStyle(3, 0xe6fbff, 0.35);
-      floor.lineBetween(102, 88, 60, 255);
-      floor.lineBetween(444, 90, 488, 260);
-      floor.lineBetween(314, 296, 484, 604);
-
-      this.drawCrack(floor, 334, 593, 1);
-      this.drawCrack(floor, 211, 636, 0.9);
-      this.drawCrack(floor, 418, 450, 0.74);
-      this.drawBlood(floor, 91, 604, 0.65);
-      this.drawBlood(floor, 118, 804, 0.36);
-      this.drawBlood(floor, 443, 727, 0.28);
-
-      this.drawBarricade();
+      const atmosphere = this.add.graphics().setDepth(2);
+      atmosphere.fillStyle(0x061015, 0.2);
+      atmosphere.fillRect(0, 0, GAME_WIDTH, 96);
+      atmosphere.fillStyle(0x061015, 0.34);
+      atmosphere.fillRect(0, 870, GAME_WIDTH, 90);
+      atmosphere.fillStyle(0x7bdce2, 0.08);
+      atmosphere.fillRect(44, 76, 448, 548);
+      atmosphere.lineStyle(3, 0xc4fbff, 0.26);
+      atmosphere.strokeRect(52, 84, 436, 532);
     }
 
     drawCrack(graphics, x, y, scale) {
@@ -566,19 +536,23 @@
     }
 
     createCharacters() {
+      this.add.image(270, 927, "survivor-line")
+        .setOrigin(0.5, 1)
+        .setDisplaySize(575, 323)
+        .setDepth(143);
+
       const positions = [
-        ["defender-pink", 88, 828, 0.98, 0.54, "rally"],
-        ["defender-blonde", 188, 818, 1.08, 0.74, "barrage"],
-        ["defender-center", 276, 820, 1.12, 1, "player"],
-        ["defender-purple", 374, 820, 1.04, 0.66, "frost"],
-        ["defender-brown", 466, 824, 1.0, 0.6, "repair"]
+        [84, 787, 0.54, "rally"],
+        [188, 779, 0.74, "barrage"],
+        [276, 773, 1, "player"],
+        [374, 779, 0.66, "frost"],
+        [470, 786, 0.6, "repair"]
       ];
-      positions.forEach(([texture, x, y, scale, damageScale, role]) => {
-        const sprite = this.add.image(x, y, texture).setScale(scale).setDepth(130 + y / 10);
+      positions.forEach(([x, y, damageScale, role]) => {
         this.defenders.push({
           x,
-          y: y - 44,
-          sprite,
+          y,
+          sprite: null,
           role,
           rate: role === "player" ? 0.33 : rand(0.8, 1.2),
           timer: rand(0.15, 0.65),
@@ -958,16 +932,25 @@
           return;
         }
         const eliteRoll = this.level >= 5 && Math.random() < Math.min(0.07 + this.level * 0.008, 0.22);
-        const texture = eliteRoll ? "zombie-elite" : choose(["zombie-girl", "zombie-boy", "zombie-girl"]);
         const x = rand(this.bounds.left + 28, this.bounds.right - 28);
         const y = rand(-65, 46);
-        const scale = eliteRoll ? rand(0.92, 1.08) : rand(0.74, 0.94);
+        const cropWidth = eliteRoll ? rand(330, 430) : rand(230, 330);
+        const cropHeight = eliteRoll ? rand(620, 760) : rand(520, 690);
+        const cropX = rand(40, 1694 - cropWidth - 40);
+        const cropY = rand(64, 928 - cropHeight - 24);
+        const displayHeight = eliteRoll ? rand(200, 245) : rand(142, 184);
+        const displayWidth = displayHeight * (cropWidth / cropHeight);
         const hp = Math.round((eliteRoll ? 120 : 58) + this.level * (eliteRoll ? 23 : 13) + rand(-8, 10));
-        const zombie = this.add.image(x, y, texture).setScale(scale).setDepth(60);
+        const zombie = this.add.image(x, y, "zombie-horde")
+          .setOrigin(0.5, 0.62)
+          .setCrop(cropX, cropY, cropWidth, cropHeight)
+          .setDisplaySize(displayWidth, displayHeight)
+          .setFlipX(Math.random() < 0.5)
+          .setDepth(60);
         zombie.hp = hp;
         zombie.maxHp = hp;
         zombie.speed = rand(25, 41) + this.level * 2.1 + (eliteRoll ? -4 : 0);
-        zombie.hitRadius = eliteRoll ? 34 : 27;
+        zombie.hitRadius = eliteRoll ? 42 : 32;
         zombie.attack = (eliteRoll ? 44 : 20) + this.level * 2.5;
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
