@@ -695,11 +695,11 @@
 
     createCharacters() {
       const positions = [
-        { id: "a", x: 73, y: 926, height: 252, damageScale: 0.42, role: "rally", projectile: "projectile-shock", speed: 620, rate: 1.28, muzzle: { left: [-28, -194], up: [10, -216], right: [42, -188] } },
-        { id: "b", x: 178, y: 922, height: 264, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 980, rate: 0.92, muzzle: { left: [-28, -190], up: [2, -205], right: [42, -188] } },
-        { id: "c", x: 275, y: 925, height: 284, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 840, rate: 0.33, muzzle: { left: [-28, -228], up: [0, -242], right: [28, -228] } },
-        { id: "d", x: 377, y: 925, height: 276, damageScale: 0.78, role: "frost", projectile: "projectile-frost", speed: 760, rate: 1.08, muzzle: { left: [-44, -222], up: [8, -258], right: [52, -224] } },
-        { id: "e", x: 468, y: 923, height: 246, damageScale: 0.62, role: "repair", projectile: "projectile-support", speed: 700, rate: 1.18, muzzle: { left: [-28, -204], up: [0, -220], right: [30, -204] } }
+        { id: "a", x: 58, y: 926, height: 232, damageScale: 0.42, role: "rally", projectile: "projectile-shock", speed: 620, rate: 1.28, muzzle: { left: [-26, -178], up: [9, -198], right: [39, -173] } },
+        { id: "b", x: 158, y: 922, height: 244, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 980, rate: 0.92, muzzle: { left: [-26, -175], up: [2, -189], right: [39, -174] } },
+        { id: "c", x: 270, y: 925, height: 270, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 840, rate: 0.33, muzzle: { left: [-27, -216], up: [0, -230], right: [27, -216] } },
+        { id: "d", x: 374, y: 925, height: 252, damageScale: 0.78, role: "frost", projectile: "projectile-frost", speed: 760, rate: 1.08, muzzle: { left: [-40, -203], up: [7, -235], right: [48, -204] } },
+        { id: "e", x: 448, y: 923, height: 220, damageScale: 0.62, role: "repair", projectile: "projectile-support", speed: 700, rate: 1.18, muzzle: { left: [-25, -183], up: [0, -197], right: [27, -183] } }
       ];
       positions.forEach((defender) => {
         const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-idle`)
@@ -813,7 +813,7 @@
       }).setOrigin(0.5).setDepth(316);
 
       this.add.image(86, 118, "ui-hero-panel").setDisplaySize(150, 68).setDepth(310);
-      this.add.image(50, 119, "portrait-barrage").setScale(0.72).setDepth(311);
+      this.add.image(50, 123, "character-c-idle").setDisplaySize(38, 64).setDepth(311);
       this.ui.hero = this.add.text(22, 140, "Lv.1        30/30", {
         fontFamily: "Arial, sans-serif",
         fontSize: 18,
@@ -843,13 +843,13 @@
       });
 
       [
-        ["frost", "portrait-frost", 431],
-        ["barrage", "portrait-barrage", 487],
-        ["rally", "portrait-rally", 543],
-        ["repair", "portrait-repair", 599]
+        ["frost", "character-d-idle", 431],
+        ["barrage", "character-b-idle", 487],
+        ["rally", "character-a-idle", 543],
+        ["repair", "character-e-idle", 599]
       ].forEach(([id, texture, y]) => {
         const bg = this.add.image(36, y, "ui-skill-button").setDisplaySize(66, 66).setDepth(312);
-        const icon = this.add.image(36, y, texture).setScale(0.82).setDepth(313);
+        const icon = this.add.image(36, y + 6, texture).setDisplaySize(35, 62).setDepth(313);
         const cdText = this.add.text(58, y + 22, "", {
           fontFamily: "Arial, sans-serif",
           fontSize: 17,
@@ -874,7 +874,7 @@
     }
 
     createStatusPanel() {
-      this.add.image(488, 775, "ui-resource-panel").setDisplaySize(98, 146).setDepth(309);
+      this.add.image(502, 775, "ui-resource-panel").setDisplaySize(80, 146).setAlpha(0.84).setDepth(309);
       this.add.circle(500, 676, 33, 0x101820, 0.74).setStrokeStyle(2, 0xffffff, 0.24).setDepth(310);
       this.add.text(500, 676, "💬", {
         fontFamily: "Arial, sans-serif",
