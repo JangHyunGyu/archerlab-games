@@ -1591,7 +1591,7 @@
 
       const upgrades = this.pickUpgrades();
       const xs = [102, 270, 438];
-      upgrades.forEach((upgrade, index) => this.addSkillCard(xs[index], 510, upgrade));
+      upgrades.forEach((upgrade, index) => this.addSkillCard(xs[index], 545, upgrade));
       items.push(this.add.text(270, 828, "<눌러서 선택>", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 22,
@@ -1693,6 +1693,9 @@
     }
 
     addSkillCard(x, y, upgrade) {
+      const characterKey = this.getUpgradeCharacterKey(upgrade.id);
+      const character = this.add.image(x, y - 108, characterKey).setOrigin(0.5, 1).setDepth(520.8);
+      this.fitSpriteHeight(character, 174);
       const card = this.add.image(x, y, "ui-skill-card").setDisplaySize(156, 322).setDepth(524);
       const icon = this.add.image(x, y - 153, upgrade.icon).setScale(1.08).setDepth(527);
       const title = this.add.text(x, y - 107, upgrade.title, {
@@ -1712,11 +1715,24 @@
         wordWrap: { width: 126, useAdvancedWrap: true }
       }).setOrigin(0.5).setDepth(528);
       const stain = this.add.circle(x + 42, y + 120, 18, COLORS.blood, 0.18).setDepth(527);
-      [card, icon, title, desc, stain].forEach((item) => this.overlayObjects.push(item));
+      [character, card, icon, title, desc, stain].forEach((item) => this.overlayObjects.push(item));
       card.setInteractive({ useHandCursor: true });
       card.on("pointerdown", () => this.applyUpgrade(upgrade));
       icon.setInteractive({ useHandCursor: true });
       icon.on("pointerdown", () => this.applyUpgrade(upgrade));
+    }
+
+    getUpgradeCharacterKey(id) {
+      const map = {
+        barrage: "character-b-up",
+        barrel: "character-b-right",
+        frost: "character-d-up",
+        pierce: "character-c-up",
+        rally: "character-a-up",
+        repair: "character-e-right",
+        squad: "character-d-right"
+      };
+      return map[id] || "character-c-up";
     }
 
     applyUpgrade(upgrade) {
