@@ -699,7 +699,7 @@
         { id: "b", x: 158, y: 922, height: 244, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 980, rate: 0.92, muzzle: { left: [-26, -175], up: [2, -189], right: [39, -174] } },
         { id: "c", x: 270, y: 925, height: 270, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 840, rate: 0.33, muzzle: { left: [-27, -216], up: [0, -230], right: [27, -216] } },
         { id: "d", x: 374, y: 925, height: 252, damageScale: 0.78, role: "frost", projectile: "projectile-frost", speed: 760, rate: 1.08, muzzle: { left: [-40, -203], up: [7, -235], right: [48, -204] } },
-        { id: "e", x: 448, y: 923, height: 220, damageScale: 0.62, role: "repair", projectile: "projectile-support", speed: 700, rate: 1.18, muzzle: { left: [-25, -183], up: [0, -197], right: [27, -183] } }
+        { id: "e", x: 430, y: 923, height: 220, damageScale: 0.62, role: "repair", projectile: "projectile-support", speed: 700, rate: 1.18, muzzle: { left: [-25, -183], up: [0, -197], right: [27, -183] } }
       ];
       positions.forEach((defender) => {
         const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-idle`)
@@ -874,14 +874,14 @@
     }
 
     createStatusPanel() {
-      this.add.image(502, 775, "ui-resource-panel").setDisplaySize(80, 146).setAlpha(0.84).setDepth(309);
+      this.add.image(502, 775, "ui-resource-panel").setDisplaySize(80, 146).setAlpha(0.68).setDepth(309);
       this.add.circle(500, 676, 33, 0x101820, 0.74).setStrokeStyle(2, 0xffffff, 0.24).setDepth(310);
       this.add.text(500, 676, "💬", {
         fontFamily: "Arial, sans-serif",
         fontSize: 26
       }).setOrigin(0.5).setDepth(311);
 
-      this.ui.morale = this.add.text(500, 724, "100%", {
+      this.ui.morale = this.add.text(512, 724, "100%", {
         fontFamily: "Arial, sans-serif",
         fontSize: 19,
         fontStyle: "900",
@@ -889,7 +889,7 @@
         stroke: "#111",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(312);
-      this.ui.core = this.add.text(492, 755, "3000", {
+      this.ui.core = this.add.text(506, 755, "3000", {
         fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -897,7 +897,7 @@
         stroke: "#111",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(312);
-      this.ui.coins = this.add.text(492, 785, "0", {
+      this.ui.coins = this.add.text(506, 785, "0", {
         fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -905,7 +905,7 @@
         stroke: "#111",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(312);
-      this.ui.shield = this.add.text(492, 815, "0", {
+      this.ui.shield = this.add.text(506, 815, "0", {
         fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
