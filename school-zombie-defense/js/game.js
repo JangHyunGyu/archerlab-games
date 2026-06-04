@@ -50,6 +50,55 @@
   }
 
   function createZombieSpriteTextures(scene) {
+    const source = scene.textures.get("zombie-walk").getSourceImage();
+    const cellWidth = Math.floor(source.width / 4);
+    const cellHeight = Math.floor(source.height / 4);
+    for (let variant = 0; variant < 4; variant += 1) {
+      for (let frame = 0; frame < 4; frame += 1) {
+        makeImageSliceTexture(
+          scene,
+          "zombie-walk",
+          `zombie-walk-${variant}-${frame}`,
+          frame * cellWidth,
+          variant * cellHeight,
+          cellWidth,
+          cellHeight
+        );
+      }
+    }
+  }
+
+  function createCharacterSpriteTextures(scene) {
+    ["a", "b", "c", "d", "e"].forEach((id) => {
+      const sourceKey = `character-${id}`;
+      const source = scene.textures.get(sourceKey).getSourceImage();
+      const cellWidth = Math.floor(source.width / 4);
+      const cellHeight = source.height;
+      ["idle", "left", "up", "right"].forEach((pose, index) => {
+        makeImageSliceTexture(
+          scene,
+          sourceKey,
+          `character-${id}-${pose}`,
+          index * cellWidth,
+          0,
+          cellWidth,
+          cellHeight
+        );
+      });
+    });
+  }
+
+  function createUiTextures(scene) {
+    makeImageSliceTexture(scene, "ui-frame-sheet", "ui-top-hud", 42, 70, 1688, 230);
+    makeImageSliceTexture(scene, "ui-frame-sheet", "ui-hero-panel", 50, 328, 1110, 250);
+    makeImageSliceTexture(scene, "ui-frame-sheet", "ui-skill-button", 72, 610, 284, 276);
+    makeImageSliceTexture(scene, "ui-frame-sheet", "ui-pause-circle", 490, 610, 275, 276);
+    makeImageSliceTexture(scene, "ui-frame-sheet", "ui-speed-circle", 810, 610, 275, 276);
+    makeImageSliceTexture(scene, "ui-frame-sheet", "ui-resource-panel", 1185, 382, 565, 472);
+    makeImageSliceTexture(scene, "skill-card-sheet", "ui-skill-card", 45, 64, 440, 890);
+  }
+
+  function createLegacyZombieSpriteTextures(scene) {
     const cellSize = 512;
     for (let index = 0; index < 6; index += 1) {
       makeImageSliceTexture(
@@ -483,8 +532,14 @@
 
     preload() {
       this.load.image("bg-corridor", "assets/images/corridor-battlefield.png");
-      this.load.image("survivor-line", "assets/images/survivor-line.png");
-      this.load.image("zombie-sheet", "assets/images/zombie-sheet.png");
+      this.load.image("character-a", "assets/images/character-a.png");
+      this.load.image("character-b", "assets/images/character-b.png");
+      this.load.image("character-c", "assets/images/character-c.png");
+      this.load.image("character-d", "assets/images/character-d.png");
+      this.load.image("character-e", "assets/images/character-e.png");
+      this.load.image("zombie-walk", "assets/images/zombie-walk.png");
+      this.load.image("ui-frame-sheet", "assets/images/ui-frame-sheet.png");
+      this.load.image("skill-card-sheet", "assets/images/skill-card-sheet.png");
     }
 
     create() {
@@ -493,6 +548,8 @@
         loading.remove();
       }
       createZombieSpriteTextures(this);
+      createCharacterSpriteTextures(this);
+      createUiTextures(this);
       createTextures(this);
       this.scene.start("GameScene");
     }
@@ -637,25 +694,27 @@
     }
 
     createCharacters() {
-      this.add.image(270, 927, "survivor-line")
-        .setOrigin(0.5, 1)
-        .setDisplaySize(575, 323)
-        .setDepth(143);
-
       const positions = [
-        { x: 84, y: 787, muzzleX: 96, muzzleY: 720, damageScale: 0.42, role: "rally", projectile: "projectile-shock", speed: 620, rate: 1.28 },
-        { x: 188, y: 779, muzzleX: 207, muzzleY: 704, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 980, rate: 0.92 },
-        { x: 276, y: 773, muzzleX: 269, muzzleY: 680, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 840, rate: 0.33 },
-        { x: 374, y: 779, muzzleX: 385, muzzleY: 687, damageScale: 0.78, role: "frost", projectile: "projectile-frost", speed: 760, rate: 1.08 },
-        { x: 470, y: 786, muzzleX: 458, muzzleY: 696, damageScale: 0.62, role: "repair", projectile: "projectile-support", speed: 700, rate: 1.18 }
+        { id: "a", x: 73, y: 926, height: 252, damageScale: 0.42, role: "rally", projectile: "projectile-shock", speed: 620, rate: 1.28, muzzle: { left: [-28, -194], up: [10, -216], right: [42, -188] } },
+        { id: "b", x: 178, y: 922, height: 264, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 980, rate: 0.92, muzzle: { left: [-28, -190], up: [2, -205], right: [42, -188] } },
+        { id: "c", x: 275, y: 925, height: 284, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 840, rate: 0.33, muzzle: { left: [-28, -228], up: [0, -242], right: [28, -228] } },
+        { id: "d", x: 377, y: 925, height: 276, damageScale: 0.78, role: "frost", projectile: "projectile-frost", speed: 760, rate: 1.08, muzzle: { left: [-44, -222], up: [8, -258], right: [52, -224] } },
+        { id: "e", x: 468, y: 923, height: 246, damageScale: 0.62, role: "repair", projectile: "projectile-support", speed: 700, rate: 1.18, muzzle: { left: [-28, -204], up: [0, -220], right: [30, -204] } }
       ];
       positions.forEach((defender) => {
+        const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-idle`)
+          .setOrigin(0.5, 1)
+          .setDepth(142 + defender.y / 10);
+        this.fitSpriteHeight(sprite, defender.height);
         this.defenders.push({
           x: defender.x,
           y: defender.y,
-          muzzleX: defender.muzzleX,
-          muzzleY: defender.muzzleY,
-          sprite: null,
+          height: defender.height,
+          muzzle: defender.muzzle,
+          pose: "idle",
+          firePoseTimer: 0,
+          id: defender.id,
+          sprite,
           role: defender.role,
           rate: defender.rate,
           timer: rand(0.15, 0.65),
@@ -666,14 +725,47 @@
       });
     }
 
+    fitSpriteHeight(sprite, height) {
+      const texture = sprite.texture.getSourceImage();
+      const ratio = texture.width / texture.height;
+      sprite.setDisplaySize(height * ratio, height);
+    }
+
+    setDefenderPose(defender, pose) {
+      if (!defender.sprite || defender.pose === pose) {
+        return;
+      }
+      defender.pose = pose;
+      defender.sprite.setTexture(`character-${defender.id}-${pose}`);
+      this.fitSpriteHeight(defender.sprite, defender.height);
+    }
+
+    getAttackPose(defender, target) {
+      const dx = target.x - defender.x;
+      if (dx < -42) {
+        return "left";
+      }
+      if (dx > 42) {
+        return "right";
+      }
+      return "up";
+    }
+
+    getDefenderMuzzle(defender, pose) {
+      const offset = defender.muzzle[pose] || defender.muzzle.up;
+      return {
+        x: defender.x + offset[0],
+        y: defender.y + offset[1]
+      };
+    }
+
     createHud() {
       this.ui = {};
-      this.add.rectangle(270, 44, 520, 60, 0x101820, 0.72).setDepth(300);
-      this.add.rectangle(270, 74, 520, 6, 0x020405, 0.7).setDepth(301);
-      this.progressBack = this.add.rectangle(270, 74, 508, 6, 0x030404, 0.82).setOrigin(0.5).setDepth(302);
-      this.progressBar = this.add.rectangle(16, 74, 1, 6, COLORS.gold, 1).setOrigin(0, 0.5).setDepth(303);
+      this.add.image(270, 41, "ui-top-hud").setDisplaySize(530, 72).setDepth(300);
+      this.progressBack = this.add.rectangle(270, 75, 508, 6, 0x030404, 0.82).setOrigin(0.5).setDepth(302);
+      this.progressBar = this.add.rectangle(16, 75, 1, 6, COLORS.gold, 1).setOrigin(0, 0.5).setDepth(303);
 
-      this.pauseCircle = this.add.circle(34, 42, 25, 0x1b232a, 0.8).setStrokeStyle(2, 0xffffff, 0.28).setDepth(315);
+      this.pauseCircle = this.add.image(34, 42, "ui-pause-circle").setDisplaySize(58, 58).setDepth(315);
       this.pauseCircle.setInteractive({ useHandCursor: true });
       this.pauseCircle.on("pointerdown", () => this.togglePause());
       this.ui.pauseText = this.add.text(34, 42, "II", {
@@ -708,7 +800,7 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(316);
 
-      this.speedCircle = this.add.circle(493, 42, 27, 0x1b232a, 0.65).setStrokeStyle(2, 0xffffff, 0.25).setDepth(315);
+      this.speedCircle = this.add.image(493, 42, "ui-speed-circle").setDisplaySize(60, 60).setDepth(315);
       this.speedCircle.setInteractive({ useHandCursor: true });
       this.speedCircle.on("pointerdown", () => this.toggleSpeed());
       this.ui.speed = this.add.text(493, 42, "x1.0", {
@@ -720,7 +812,7 @@
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(316);
 
-      this.add.rectangle(86, 118, 138, 62, 0x9f3f3f, 0.88).setStrokeStyle(3, 0xe8edf0, 0.82).setDepth(310);
+      this.add.image(86, 118, "ui-hero-panel").setDisplaySize(150, 68).setDepth(310);
       this.add.image(50, 119, "portrait-barrage").setScale(0.72).setDepth(311);
       this.ui.hero = this.add.text(22, 140, "Lv.1        30/30", {
         fontFamily: "Arial, sans-serif",
@@ -741,7 +833,7 @@
         [34, 352, "▦"]
       ];
       utility.forEach(([x, y, label]) => {
-        this.add.circle(x, y, 27, 0x101820, 0.58).setStrokeStyle(2, 0xffffff, 0.45).setDepth(310);
+        this.add.image(x, y, "ui-skill-button").setDisplaySize(58, 58).setDepth(310);
         this.add.text(x, y, label, {
           fontFamily: "Arial, sans-serif",
           fontSize: 28,
@@ -756,7 +848,7 @@
         ["rally", "portrait-rally", 543],
         ["repair", "portrait-repair", 599]
       ].forEach(([id, texture, y]) => {
-        const bg = this.add.circle(36, y, 33, 0x050708, 0.74).setStrokeStyle(2, 0xffffff, 0.28).setDepth(312);
+        const bg = this.add.image(36, y, "ui-skill-button").setDisplaySize(66, 66).setDepth(312);
         const icon = this.add.image(36, y, texture).setScale(0.82).setDepth(313);
         const cdText = this.add.text(58, y + 22, "", {
           fontFamily: "Arial, sans-serif",
@@ -782,6 +874,7 @@
     }
 
     createStatusPanel() {
+      this.add.image(488, 775, "ui-resource-panel").setDisplaySize(98, 146).setDepth(309);
       this.add.circle(500, 676, 33, 0x101820, 0.74).setStrokeStyle(2, 0xffffff, 0.24).setDepth(310);
       this.add.text(500, 676, "💬", {
         fontFamily: "Arial, sans-serif",
@@ -1010,10 +1103,22 @@
       }
       this.updateSkillCooldowns(dt);
       this.updateSpawning(dt);
+      this.updateDefenderAnimations(dt);
       this.updateDefenders(dt);
       this.updateBullets(dt);
       this.updateZombies(dt);
       this.updateHud();
+    }
+
+    updateDefenderAnimations(dt) {
+      this.defenders.forEach((defender) => {
+        if (defender.firePoseTimer > 0) {
+          defender.firePoseTimer -= dt;
+          if (defender.firePoseTimer <= 0) {
+            this.setDefenderPose(defender, "idle");
+          }
+        }
+      });
     }
 
     updateSpawning(dt) {
@@ -1039,11 +1144,12 @@
         const eliteRoll = this.level >= 5 && Math.random() < Math.min(0.07 + this.level * 0.008, 0.22);
         const x = rand(this.bounds.left + 28, this.bounds.right - 28);
         const y = rand(-65, 46);
-        const variant = Math.floor(rand(0, 6));
+        const variant = Math.floor(rand(0, 4));
+        const frame = Math.floor(rand(0, 4));
         const displayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
         const displayWidth = displayHeight;
         const hp = Math.round((eliteRoll ? 120 : 58) + this.level * (eliteRoll ? 23 : 13) + rand(-8, 10));
-        const zombie = this.add.image(x, y, `zombie-sprite-${variant}`)
+        const zombie = this.add.image(x, y, `zombie-walk-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
           .setDisplaySize(displayWidth, displayHeight)
           .setFlipX(Math.random() < 0.5)
@@ -1056,6 +1162,11 @@
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
         zombie.wobble = rand(0, Math.PI * 2);
+        zombie.animTimer = rand(0, 1);
+        zombie.animFrame = frame;
+        zombie.variant = variant;
+        zombie.displayW = displayWidth;
+        zombie.displayH = displayHeight;
         zombie.elite = eliteRoll;
         this.zombies.push(zombie);
       });
@@ -1147,8 +1258,22 @@
       if (!target || !target.active) {
         return;
       }
-      const x = defender.muzzleX;
-      const y = defender.muzzleY;
+      const pose = this.getAttackPose(defender, target);
+      this.setDefenderPose(defender, pose);
+      defender.firePoseTimer = 0.18;
+      if (defender.sprite) {
+        this.tweens.killTweensOf(defender.sprite);
+        this.tweens.add({
+          targets: defender.sprite,
+          y: defender.y + 3,
+          yoyo: true,
+          duration: 65,
+          ease: "Sine.easeOut"
+        });
+      }
+      const muzzle = this.getDefenderMuzzle(defender, pose);
+      const x = muzzle.x;
+      const y = muzzle.y;
       const tx = target.x + rand(-8, 8);
       const ty = target.y + rand(-10, 10);
       const angle = Math.atan2(ty - y, tx - x);
@@ -1307,10 +1432,17 @@
       for (let i = this.zombies.length - 1; i >= 0; i -= 1) {
         const zombie = this.zombies[i];
         if (!zombie.active) {
-          this.zombies.splice(i, 1);
+        this.zombies.splice(i, 1);
           continue;
         }
         zombie.wobble += dt * 4.2;
+        zombie.animTimer += dt * (zombie.elite ? 5.2 : 6.8);
+        const nextFrame = Math.floor(zombie.animTimer) % 4;
+        if (nextFrame !== zombie.animFrame) {
+          zombie.animFrame = nextFrame;
+          zombie.setTexture(`zombie-walk-${zombie.variant}-${nextFrame}`);
+          zombie.setDisplaySize(zombie.displayW, zombie.displayH);
+        }
         const crowdShift = Math.sin(zombie.wobble) * 7 * dt;
         zombie.x = clamp(zombie.x + crowdShift, this.bounds.left, this.bounds.right);
         zombie.setDepth(70 + zombie.y / 5);
