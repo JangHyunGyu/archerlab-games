@@ -34,6 +34,36 @@
     scene.textures.addCanvas(key, canvas);
   }
 
+  function makeImageSliceTexture(scene, sourceKey, key, sx, sy, sw, sh) {
+    if (scene.textures.exists(key)) {
+      scene.textures.remove(key);
+    }
+
+    const source = scene.textures.get(sourceKey).getSourceImage();
+    const canvas = document.createElement("canvas");
+    canvas.width = sw;
+    canvas.height = sh;
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+    scene.textures.addCanvas(key, canvas);
+  }
+
+  function createZombieSpriteTextures(scene) {
+    const cellSize = 512;
+    for (let index = 0; index < 6; index += 1) {
+      makeImageSliceTexture(
+        scene,
+        "zombie-sheet",
+        `zombie-sprite-${index}`,
+        (index % 3) * cellSize,
+        Math.floor(index / 3) * cellSize,
+        cellSize,
+        cellSize
+      );
+    }
+  }
+
   function roundedRect(ctx, x, y, width, height, radius) {
     const r = Math.min(radius, width / 2, height / 2);
     ctx.beginPath();
@@ -392,6 +422,7 @@
       if (loading) {
         loading.remove();
       }
+      createZombieSpriteTextures(this);
       createTextures(this);
       this.scene.start("GameScene");
     }
@@ -935,15 +966,11 @@
         const x = rand(this.bounds.left + 28, this.bounds.right - 28);
         const y = rand(-65, 46);
         const variant = Math.floor(rand(0, 6));
-        const cellSize = 512;
-        const cropX = (variant % 3) * cellSize;
-        const cropY = Math.floor(variant / 3) * cellSize;
-        const displayHeight = eliteRoll ? rand(184, 218) : rand(132, 166);
+        const displayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
         const displayWidth = displayHeight;
         const hp = Math.round((eliteRoll ? 120 : 58) + this.level * (eliteRoll ? 23 : 13) + rand(-8, 10));
-        const zombie = this.add.image(x, y, "zombie-sheet")
-          .setOrigin(0.5, 0.58)
-          .setCrop(cropX, cropY, cellSize, cellSize)
+        const zombie = this.add.image(x, y, `zombie-sprite-${variant}`)
+          .setOrigin(0.5, 0.56)
           .setDisplaySize(displayWidth, displayHeight)
           .setFlipX(Math.random() < 0.5)
           .setDepth(60);
