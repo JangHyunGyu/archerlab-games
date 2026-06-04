@@ -384,7 +384,7 @@
     preload() {
       this.load.image("bg-corridor", "assets/images/corridor-battlefield.png");
       this.load.image("survivor-line", "assets/images/survivor-line.png");
-      this.load.image("zombie-horde", "assets/images/zombie-horde.png");
+      this.load.image("zombie-sheet", "assets/images/zombie-sheet.png");
     }
 
     create() {
@@ -934,16 +934,16 @@
         const eliteRoll = this.level >= 5 && Math.random() < Math.min(0.07 + this.level * 0.008, 0.22);
         const x = rand(this.bounds.left + 28, this.bounds.right - 28);
         const y = rand(-65, 46);
-        const cropWidth = eliteRoll ? rand(330, 430) : rand(230, 330);
-        const cropHeight = eliteRoll ? rand(620, 760) : rand(520, 690);
-        const cropX = rand(40, 1694 - cropWidth - 40);
-        const cropY = rand(64, 928 - cropHeight - 24);
-        const displayHeight = eliteRoll ? rand(200, 245) : rand(142, 184);
-        const displayWidth = displayHeight * (cropWidth / cropHeight);
+        const variant = Math.floor(rand(0, 6));
+        const cellSize = 512;
+        const cropX = (variant % 3) * cellSize;
+        const cropY = Math.floor(variant / 3) * cellSize;
+        const displayHeight = eliteRoll ? rand(184, 218) : rand(132, 166);
+        const displayWidth = displayHeight;
         const hp = Math.round((eliteRoll ? 120 : 58) + this.level * (eliteRoll ? 23 : 13) + rand(-8, 10));
-        const zombie = this.add.image(x, y, "zombie-horde")
-          .setOrigin(0.5, 0.62)
-          .setCrop(cropX, cropY, cropWidth, cropHeight)
+        const zombie = this.add.image(x, y, "zombie-sheet")
+          .setOrigin(0.5, 0.58)
+          .setCrop(cropX, cropY, cellSize, cellSize)
           .setDisplaySize(displayWidth, displayHeight)
           .setFlipX(Math.random() < 0.5)
           .setDepth(60);
