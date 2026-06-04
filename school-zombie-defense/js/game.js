@@ -1693,9 +1693,7 @@
     }
 
     addSkillCard(x, y, upgrade) {
-      const card = this.add.rectangle(x, y, 150, 310, 0xf4f6f0, 0.97).setStrokeStyle(4, 0x6a3007, 1).setDepth(524);
-      const top = this.add.rectangle(x, y - 111, 150, 68, 0x4a1606, 1).setDepth(525);
-      const ribbon = this.add.rectangle(x, y - 95, 150, 10, 0xe0aa23, 1).setDepth(526);
+      const card = this.add.image(x, y, "ui-skill-card").setDisplaySize(156, 322).setDepth(524);
       const icon = this.add.image(x, y - 153, upgrade.icon).setScale(1.08).setDepth(527);
       const title = this.add.text(x, y - 107, upgrade.title, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
@@ -1714,7 +1712,7 @@
         wordWrap: { width: 126, useAdvancedWrap: true }
       }).setOrigin(0.5).setDepth(528);
       const stain = this.add.circle(x + 42, y + 120, 18, COLORS.blood, 0.18).setDepth(527);
-      [card, top, ribbon, icon, title, desc, stain].forEach((item) => this.overlayObjects.push(item));
+      [card, icon, title, desc, stain].forEach((item) => this.overlayObjects.push(item));
       card.setInteractive({ useHandCursor: true });
       card.on("pointerdown", () => this.applyUpgrade(upgrade));
       icon.setInteractive({ useHandCursor: true });
