@@ -190,7 +190,9 @@ export class PixiBoard {
 
   _drawBackground() {
     const g = this.bgLayer;
-    g.removeChildren();
+    for (const child of g.removeChildren()) {
+      child.destroy({ children: true });
+    }
     const board = new PIXI.Graphics();
     board.roundRect(this.offsetX, this.offsetY, this.boardSize, this.boardSize, 8).fill({ color: BG_COLOR, alpha: 0.94 });
     g.addChild(board);

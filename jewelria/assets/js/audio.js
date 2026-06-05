@@ -192,10 +192,7 @@ export class AudioManager {
       src.connect(gn);
       gn.connect(out);
       src.start(when);
-      src.onended = () => {
-        try { src.disconnect(); } catch {}
-        try { gn.disconnect(); } catch {}
-      };
+      this.cleanupOnEnded(src, [src, gn], out);
     };
     one(pan, gain, rate);
     // 스테레오 더블링: 좌우로 벌린 미세 디튠 복사본 → 코러스 두께 + 공간감.
@@ -399,8 +396,38 @@ export class AudioManager {
       tap.gain.value = send;
       node.connect(tap);
       tap.connect(this.shimmerIn);
+      node._sendTap = tap;
     }
     return node;
+  }
+
+  disconnectNodes(nodes) {
+    for (const node of nodes) {
+      try { node?.disconnect?.(); } catch {}
+    }
+  }
+
+  retainVoice(out) {
+    if (!out) return;
+    out._voiceRefs = (out._voiceRefs || 0) + 1;
+  }
+
+  releaseVoice(out) {
+    if (!out) return;
+    out._voiceRefs = Math.max(0, (out._voiceRefs || 1) - 1);
+    if (out._voiceRefs > 0) return;
+    this.disconnectNodes([out._sendTap, out]);
+    out._sendTap = null;
+  }
+
+  cleanupOnEnded(source, nodes, out = null) {
+    if (!source) return;
+    if (out) this.retainVoice(out);
+    source.onended = () => {
+      source.onended = null;
+      this.disconnectNodes(nodes);
+      if (out) this.releaseVoice(out);
+    };
   }
 
   // 비정수배 배음으로 만든 보석/크리스털 종소리.
@@ -426,6 +453,7 @@ export class AudioManager {
       gain.connect(out);
       osc.start(start);
       osc.stop(start + partialDur + 0.05);
+      this.cleanupOnEnded(osc, [osc, gain], out);
     });
   }
 
@@ -441,8 +469,9 @@ export class AudioManager {
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(safe, start + 0.006);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    let filter = null;
     if (filterFreq > 0) {
-      const filter = this.ctx.createBiquadFilter();
+      filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.value = filterFreq;
       osc.connect(filter);
@@ -453,6 +482,7 @@ export class AudioManager {
     gain.connect(out);
     osc.start(start);
     osc.stop(start + duration + 0.05);
+    this.cleanupOnEnded(osc, filter ? [osc, filter, gain] : [osc, gain], out);
   }
 
   // 음정이 미끄러지는 글라이드 톤.
@@ -472,6 +502,7 @@ export class AudioManager {
     gain.connect(out);
     osc.start(start);
     osc.stop(start + duration + 0.05);
+    this.cleanupOnEnded(osc, [osc, gain], out);
   }
 
   // 저역 바디 임팩트(피치 드롭).
@@ -490,6 +521,7 @@ export class AudioManager {
     gain.connect(out);
     osc.start(start);
     osc.stop(start + 0.26);
+    this.cleanupOnEnded(osc, [osc, gain], out);
   }
 
   // 유리/보석 깨짐: 날카로운 크랙 트랜지언트 + 잘게 흩어지는 파편 짤랑임.
@@ -536,6 +568,7 @@ export class AudioManager {
       gain.connect(out);
       source.start(start);
       source.stop(start + dur + 0.05);
+      this.cleanupOnEnded(source, [source, filter, gain], out);
     });
   }
 
@@ -571,6 +604,7 @@ export class AudioManager {
       gain.connect(out);
       source.start(t);
       source.stop(t + dur + 0.02);
+      this.cleanupOnEnded(source, [source, filter, gain], out);
     }
   }
 
@@ -606,6 +640,7 @@ export class AudioManager {
     gain.connect(out);
     source.start(start);
     source.stop(start + duration + 0.02);
+    this.cleanupOnEnded(source, [source, filter, gain], out);
   }
 
   // 고역 반짝임 꼬리(랜덤 사인 그레인).
@@ -640,6 +675,7 @@ export class AudioManager {
     gain.connect(out);
     osc.start(start);
     osc.stop(start + duration + 0.05);
+    this.cleanupOnEnded(osc, [osc, filter, gain], out);
   }
 
   // ---- BGM (mp3 루프) ----------------------------------------------------
@@ -691,8 +727,8 @@ export class AudioManager {
     gain.connect(this.master);
     source.start(now);
     source.onended = () => {
-      try { source.disconnect(); } catch {}
-      try { gain.disconnect(); } catch {}
+      source.onended = null;
+      this.disconnectNodes([source, gain]);
     };
     this.music = { track, source, gain };
   }
