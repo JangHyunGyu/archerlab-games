@@ -19,6 +19,49 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rand = (min, max) => Math.random() * (max - min) + min;
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
+  const AIM_POSES = [
+    { key: "aim-10", angle: -Math.PI * 5 / 6 },
+    { key: "aim-1030", angle: -Math.PI * 3 / 4 },
+    { key: "aim-11", angle: -Math.PI * 2 / 3 },
+    { key: "aim-1130", angle: -Math.PI * 7 / 12 },
+    { key: "aim-12", angle: -Math.PI / 2 },
+    { key: "aim-1230", angle: -Math.PI * 5 / 12 },
+    { key: "aim-13", angle: -Math.PI / 3 },
+    { key: "aim-1330", angle: -Math.PI / 4 },
+    { key: "aim-14", angle: -Math.PI / 6 }
+  ];
+  const AIM_POSE_KEYS = AIM_POSES.map((pose) => pose.key);
+  const AIM_POSE_BY_KEY = Object.fromEntries(AIM_POSES.map((pose) => [pose.key, pose]));
+  const AIM_ALIASES = {
+    idle: "aim-12",
+    left: "aim-1030",
+    up: "aim-12",
+    right: "aim-1330"
+  };
+  const PROJECTILE_SCALES = {
+    "projectile-arrow": 0.72,
+    "projectile-pistol": 0.78,
+    "projectile-rifle": 0.7,
+    "projectile-rocket": 0.82,
+    "projectile-sniper": 0.68,
+    "projectile-frost": 0.78,
+    "projectile-support": 0.78,
+    "projectile-shock": 0.62
+  };
+
+  function getAimPose(key) {
+    return AIM_POSE_BY_KEY[key] || AIM_POSE_BY_KEY["aim-12"];
+  }
+
+  function angleDistance(a, b) {
+    return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  }
+
+  function getNearestAimPose(angle) {
+    return AIM_POSES.reduce((closest, pose) => {
+      return angleDistance(angle, pose.angle) < angleDistance(angle, closest.angle) ? pose : closest;
+    }, AIM_POSES[4]);
+  }
 
   function makeCanvasTexture(scene, key, width, height, draw) {
     if (scene.textures.exists(key)) {
@@ -72,13 +115,25 @@
     ["a", "b", "c", "d", "e"].forEach((id) => {
       const sourceKey = `character-${id}`;
       const source = scene.textures.get(sourceKey).getSourceImage();
-      const cellWidth = Math.floor(source.width / 4);
+      const cellWidth = Math.floor(source.width / AIM_POSE_KEYS.length);
       const cellHeight = source.height;
-      ["idle", "left", "up", "right"].forEach((pose, index) => {
+      AIM_POSE_KEYS.forEach((pose, index) => {
         makeImageSliceTexture(
           scene,
           sourceKey,
           `character-${id}-${pose}`,
+          index * cellWidth,
+          0,
+          cellWidth,
+          cellHeight
+        );
+      });
+      Object.entries(AIM_ALIASES).forEach(([alias, pose]) => {
+        const index = AIM_POSE_KEYS.indexOf(pose);
+        makeImageSliceTexture(
+          scene,
+          sourceKey,
+          `character-${id}-${alias}`,
           index * cellWidth,
           0,
           cellWidth,
@@ -394,7 +449,31 @@
     ctx.shadowColor = "rgba(255, 238, 128, .65)";
     ctx.shadowBlur = 10;
 
-    if (type === "rifle") {
+    if (type === "arrow") {
+      ctx.shadowColor = "rgba(255, 245, 160, .55)";
+      ctx.strokeStyle = "#f8f3d0";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(0, 34);
+      ctx.lineTo(0, -30);
+      ctx.stroke();
+      ctx.fillStyle = "#fff6a8";
+      ctx.beginPath();
+      ctx.moveTo(0, -42);
+      ctx.lineTo(8, -25);
+      ctx.lineTo(0, -30);
+      ctx.lineTo(-8, -25);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#ad7a30";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-7, 31);
+      ctx.lineTo(0, 22);
+      ctx.lineTo(7, 31);
+      ctx.stroke();
+    } else if (type === "rifle") {
       const gradient = ctx.createLinearGradient(0, -42, 0, 42);
       gradient.addColorStop(0, "rgba(129, 238, 255, 0)");
       gradient.addColorStop(0.26, "#b6fbff");
@@ -418,6 +497,46 @@
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
       ctx.arc(0, -13, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (type === "rocket") {
+      ctx.shadowColor = "rgba(255, 110, 64, .65)";
+      const gradient = ctx.createLinearGradient(0, -34, 0, 36);
+      gradient.addColorStop(0, "#e9f0f1");
+      gradient.addColorStop(0.5, "#51616b");
+      gradient.addColorStop(1, "#1d252b");
+      ctx.fillStyle = gradient;
+      roundedRect(ctx, -9, -28, 18, 58, 7);
+      ctx.fill();
+      ctx.fillStyle = "#ffdf71";
+      ctx.beginPath();
+      ctx.moveTo(0, -44);
+      ctx.lineTo(11, -28);
+      ctx.lineTo(-11, -28);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#ff7d3e";
+      ctx.beginPath();
+      ctx.moveTo(-11, 18);
+      ctx.lineTo(-22, 36);
+      ctx.lineTo(-4, 28);
+      ctx.closePath();
+      ctx.moveTo(11, 18);
+      ctx.lineTo(22, 36);
+      ctx.lineTo(4, 28);
+      ctx.closePath();
+      ctx.fill();
+    } else if (type === "sniper") {
+      const gradient = ctx.createLinearGradient(0, -54, 0, 54);
+      gradient.addColorStop(0, "rgba(255, 244, 180, 0)");
+      gradient.addColorStop(0.22, "#fff7b8");
+      gradient.addColorStop(0.52, "#ffffff");
+      gradient.addColorStop(0.82, "#91e8ff");
+      gradient.addColorStop(1, "rgba(80, 220, 255, 0)");
+      ctx.fillStyle = gradient;
+      roundedRect(ctx, -3, -54, 6, 108, 3);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      roundedRect(ctx, -1, -42, 2, 82, 1);
       ctx.fill();
     } else if (type === "frost") {
       const gradient = ctx.createRadialGradient(0, -12, 2, 0, 0, 30);
@@ -469,8 +588,11 @@
   }
 
   function createTextures(scene) {
+    makeCanvasTexture(scene, "projectile-arrow", 24, 96, (ctx) => drawProjectile(ctx, 24, 96, "arrow"));
     makeCanvasTexture(scene, "projectile-pistol", 20, 44, (ctx) => drawProjectile(ctx, 20, 44, "pistol"));
     makeCanvasTexture(scene, "projectile-rifle", 18, 92, (ctx) => drawProjectile(ctx, 18, 92, "rifle"));
+    makeCanvasTexture(scene, "projectile-rocket", 48, 96, (ctx) => drawProjectile(ctx, 48, 96, "rocket"));
+    makeCanvasTexture(scene, "projectile-sniper", 16, 116, (ctx) => drawProjectile(ctx, 16, 116, "sniper"));
     makeCanvasTexture(scene, "projectile-frost", 48, 84, (ctx) => drawProjectile(ctx, 48, 84, "frost"));
     makeCanvasTexture(scene, "projectile-support", 48, 48, (ctx) => drawProjectile(ctx, 48, 48, "support"));
     makeCanvasTexture(scene, "projectile-shock", 96, 64, (ctx) => drawProjectile(ctx, 96, 64, "shock"));
@@ -695,14 +817,14 @@
 
     createCharacters() {
       const positions = [
-        { id: "a", x: 58, y: 926, height: 232, damageScale: 0.42, role: "rally", projectile: "projectile-shock", speed: 620, rate: 1.28, muzzle: { left: [-26, -178], up: [9, -198], right: [39, -173] } },
-        { id: "b", x: 158, y: 922, height: 244, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 980, rate: 0.92, muzzle: { left: [-26, -175], up: [2, -189], right: [39, -174] } },
-        { id: "c", x: 270, y: 925, height: 270, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 840, rate: 0.33, muzzle: { left: [-27, -216], up: [0, -230], right: [27, -216] } },
-        { id: "d", x: 374, y: 925, height: 252, damageScale: 0.78, role: "frost", projectile: "projectile-frost", speed: 760, rate: 1.08, muzzle: { left: [-40, -203], up: [7, -235], right: [48, -204] } },
-        { id: "e", x: 430, y: 923, height: 220, damageScale: 0.62, role: "repair", projectile: "projectile-support", speed: 700, rate: 1.18, muzzle: { left: [-25, -183], up: [0, -197], right: [27, -183] } }
+        { id: "a", x: 58, y: 926, height: 232, damageScale: 0.42, role: "rally", projectile: "projectile-arrow", speed: 860, rate: 1.08, aim: { pivot: [4, -152], reach: 82 } },
+        { id: "b", x: 158, y: 922, height: 244, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 1020, rate: 0.78, aim: { pivot: [4, -162], reach: 88 } },
+        { id: "c", x: 270, y: 925, height: 270, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 900, rate: 0.33, aim: { pivot: [0, -184], reach: 76 } },
+        { id: "d", x: 374, y: 925, height: 252, damageScale: 0.78, role: "frost", projectile: "projectile-rocket", speed: 720, rate: 1.16, aim: { pivot: [3, -172], reach: 98 } },
+        { id: "e", x: 430, y: 923, height: 220, damageScale: 0.72, role: "repair", projectile: "projectile-sniper", speed: 1180, rate: 1.24, aim: { pivot: [2, -150], reach: 112 } }
       ];
       positions.forEach((defender) => {
-        const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-idle`)
+        const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-aim-12`)
           .setOrigin(0.5, 1)
           .setDepth(142 + defender.y / 10);
         this.fitSpriteHeight(sprite, defender.height);
@@ -710,8 +832,8 @@
           x: defender.x,
           y: defender.y,
           height: defender.height,
-          muzzle: defender.muzzle,
-          pose: "idle",
+          aim: defender.aim,
+          pose: "aim-12",
           firePoseTimer: 0,
           id: defender.id,
           sprite,
@@ -741,21 +863,17 @@
     }
 
     getAttackPose(defender, target) {
-      const dx = target.x - defender.x;
-      if (dx < -42) {
-        return "left";
-      }
-      if (dx > 42) {
-        return "right";
-      }
-      return "up";
+      const pivot = defender.aim?.pivot || [0, -160];
+      const angle = Math.atan2(target.y - (defender.y + pivot[1]), target.x - (defender.x + pivot[0]));
+      return getNearestAimPose(angle).key;
     }
 
     getDefenderMuzzle(defender, pose) {
-      const offset = defender.muzzle[pose] || defender.muzzle.up;
+      const aim = defender.aim || { pivot: [0, -160], reach: 84 };
+      const poseInfo = getAimPose(pose);
       return {
-        x: defender.x + offset[0],
-        y: defender.y + offset[1]
+        x: defender.x + aim.pivot[0] + Math.cos(poseInfo.angle) * aim.reach,
+        y: defender.y + aim.pivot[1] + Math.sin(poseInfo.angle) * aim.reach
       };
     }
 
@@ -874,73 +992,29 @@
     }
 
     createStatusPanel() {
-      this.add.image(502, 775, "ui-resource-panel").setDisplaySize(80, 146).setAlpha(0.68).setDepth(309);
-      this.add.circle(500, 676, 33, 0x101820, 0.74).setStrokeStyle(2, 0xffffff, 0.24).setDepth(310);
-      this.add.text(500, 676, "💬", {
+      const statStyle = {
         fontFamily: "Arial, sans-serif",
-        fontSize: 26
-      }).setOrigin(0.5).setDepth(311);
-
-      this.ui.morale = this.add.text(512, 724, "100%", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 19,
-        fontStyle: "900",
-        color: "#4dff67",
-        stroke: "#111",
-        strokeThickness: 4
-      }).setOrigin(0.5).setDepth(312);
-      this.ui.core = this.add.text(506, 755, "3000", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 14,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#111",
-        strokeThickness: 4
-      }).setOrigin(0.5).setDepth(312);
-      this.ui.coins = this.add.text(506, 785, "0", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 18,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#111",
-        strokeThickness: 4
-      }).setOrigin(0.5).setDepth(312);
-      this.ui.shield = this.add.text(506, 815, "0", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 18,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#111",
-        strokeThickness: 4
-      }).setOrigin(0.5).setDepth(312);
-
-      this.add.text(458, 755, "♥", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 17,
-        fontStyle: "900",
-        color: "#2ee35b",
-        stroke: "#fff",
-        strokeThickness: 2
-      }).setDepth(312);
-      this.add.text(458, 785, "✦", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 17,
-        fontStyle: "900",
-        color: "#ffc83d",
-        stroke: "#fff",
-        strokeThickness: 2
-      }).setDepth(312);
-      this.add.text(458, 815, "◆", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 17,
-        fontStyle: "900",
-        color: "#62c7ff",
-        stroke: "#fff",
-        strokeThickness: 2
-      }).setDepth(312);
-
-      this.coreBack = this.add.rectangle(270, 915, 320, 12, 0x000000, 0.9).setStrokeStyle(2, 0x0f1010, 1).setDepth(311);
-      this.coreBar = this.add.rectangle(110, 915, 320, 10, COLORS.green, 1).setOrigin(0, 0.5).setDepth(312);
+        strokeThickness: 3
+      };
+      this.ui.morale = this.add.text(378, 65, "M100%", {
+        ...statStyle,
+        color: "#4dff67"
+      }).setOrigin(0, 0.5).setDepth(316);
+      this.ui.core = this.add.text(378, 84, "HP3000", statStyle).setOrigin(0, 0.5).setDepth(316);
+      this.ui.coins = this.add.text(445, 65, "$0", {
+        ...statStyle,
+        color: "#ffd75c"
+      }).setOrigin(0, 0.5).setDepth(316);
+      this.ui.shield = this.add.text(445, 84, "S0", {
+        ...statStyle,
+        color: "#62c7ff"
+      }).setOrigin(0, 0.5).setDepth(316);
+      this.coreBack = this.add.rectangle(270, 88, 300, 8, 0x000000, 0.78).setStrokeStyle(1, 0xffffff, 0.18).setDepth(311);
+      this.coreBar = this.add.rectangle(120, 88, 300, 6, COLORS.green, 1).setOrigin(0, 0.5).setDepth(312);
     }
 
     bindInput() {
@@ -1115,7 +1189,7 @@
         if (defender.firePoseTimer > 0) {
           defender.firePoseTimer -= dt;
           if (defender.firePoseTimer <= 0) {
-            this.setDefenderPose(defender, "idle");
+            this.setDefenderPose(defender, "aim-12");
           }
         }
       });
@@ -1278,7 +1352,7 @@
       const ty = target.y + rand(-10, 10);
       const angle = Math.atan2(ty - y, tx - x);
       const sprite = this.add.image(x, y, defender.projectile)
-        .setScale(defender.projectile === "projectile-rifle" ? 0.72 : defender.projectile === "projectile-shock" ? 0.62 : 0.78)
+        .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
         .setRotation(angle + Math.PI / 2)
         .setDepth(190);
       this.bullets.push({
@@ -1286,22 +1360,28 @@
         damage,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: defender.projectile === "projectile-shock" ? 0.72 : 1.55,
+        life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
         pierce
       });
       this.createMuzzle(x, y, angle, defender.projectile);
     }
 
     createMuzzle(x, y, angle, projectile) {
-      const color = projectile === "projectile-rifle"
-        ? 0x8ff6ff
-        : projectile === "projectile-frost"
-          ? 0xa6fbff
-          : projectile === "projectile-support"
-            ? 0x80ff9b
-            : projectile === "projectile-shock"
-              ? 0xff8fbd
-              : 0xfff3a4;
+      const color = projectile === "projectile-arrow"
+        ? 0xfff4a0
+        : projectile === "projectile-rifle"
+          ? 0x8ff6ff
+          : projectile === "projectile-rocket"
+            ? 0xff8d42
+            : projectile === "projectile-sniper"
+              ? 0xbef6ff
+              : projectile === "projectile-frost"
+                ? 0xa6fbff
+                : projectile === "projectile-support"
+                  ? 0x80ff9b
+                  : projectile === "projectile-shock"
+                    ? 0xff8fbd
+                    : 0xfff3a4;
       const flash = this.add.circle(x + Math.cos(angle) * 16, y + Math.sin(angle) * 16, 7, color, 0.95).setDepth(191);
       this.tweens.add({
         targets: flash,
@@ -1801,16 +1881,16 @@
       this.ui.stage.setText(`St.${this.stage} - ${stageName}`);
       this.ui.level.setText(`Lv.${this.level}`);
       this.ui.hero.setText(`Lv.${Math.max(1, Math.floor(this.level / 3))}        ${Math.ceil(this.coreHp / 100)}/${Math.ceil(this.maxCoreHp / 100)}`);
-      this.ui.morale.setText(`${this.morale}%`);
+      this.ui.morale.setText(`M${this.morale}%`);
       this.ui.morale.setColor(this.morale < 35 ? "#ff524f" : this.morale < 70 ? "#ffd75c" : "#4dff67");
-      this.ui.core.setText(String(Math.round(this.coreHp)));
-      this.ui.coins.setText(String(this.coins));
-      this.ui.shield.setText(String(Math.round(this.shield)));
+      this.ui.core.setText(`HP${Math.round(this.coreHp)}`);
+      this.ui.coins.setText(`$${this.coins}`);
+      this.ui.shield.setText(`S${Math.round(this.shield)}`);
       const progress = clamp(this.killsInLevel / this.levelNeed, 0, 1);
       this.progressBar.setSize(508 * progress, 6);
       this.progressBar.setFillStyle(this.mode === "skill" ? COLORS.gold : 0xe0ab26, 1);
       const hpRate = clamp(this.coreHp / this.maxCoreHp, 0, 1);
-      this.coreBar.setSize(320 * hpRate, 10);
+      this.coreBar.setSize(300 * hpRate, 6);
       this.coreBar.setFillStyle(hpRate < 0.35 ? COLORS.red : hpRate < 0.68 ? COLORS.gold : COLORS.green, 1);
     }
   }
