@@ -39,11 +39,11 @@
     right: "aim-1330"
   };
   const PROJECTILE_SCALES = {
-    "projectile-arrow": 0.72,
-    "projectile-pistol": 0.78,
-    "projectile-rifle": 0.7,
-    "projectile-rocket": 0.82,
-    "projectile-sniper": 0.68,
+    "projectile-arrow": 0.38,
+    "projectile-pistol": 0.32,
+    "projectile-rifle": 0.34,
+    "projectile-rocket": 0.38,
+    "projectile-sniper": 0.34,
     "projectile-frost": 0.78,
     "projectile-support": 0.78,
     "projectile-shock": 0.62
@@ -588,11 +588,6 @@
   }
 
   function createTextures(scene) {
-    makeCanvasTexture(scene, "projectile-arrow", 24, 96, (ctx) => drawProjectile(ctx, 24, 96, "arrow"));
-    makeCanvasTexture(scene, "projectile-pistol", 20, 44, (ctx) => drawProjectile(ctx, 20, 44, "pistol"));
-    makeCanvasTexture(scene, "projectile-rifle", 18, 92, (ctx) => drawProjectile(ctx, 18, 92, "rifle"));
-    makeCanvasTexture(scene, "projectile-rocket", 48, 96, (ctx) => drawProjectile(ctx, 48, 96, "rocket"));
-    makeCanvasTexture(scene, "projectile-sniper", 16, 116, (ctx) => drawProjectile(ctx, 16, 116, "sniper"));
     makeCanvasTexture(scene, "projectile-frost", 48, 84, (ctx) => drawProjectile(ctx, 48, 84, "frost"));
     makeCanvasTexture(scene, "projectile-support", 48, 48, (ctx) => drawProjectile(ctx, 48, 48, "support"));
     makeCanvasTexture(scene, "projectile-shock", 96, 64, (ctx) => drawProjectile(ctx, 96, 64, "shock"));
@@ -659,6 +654,11 @@
       this.load.image("character-c", "assets/images/character-c.png");
       this.load.image("character-d", "assets/images/character-d.png");
       this.load.image("character-e", "assets/images/character-e.png");
+      this.load.image("projectile-arrow", "assets/images/projectile-arrow.png");
+      this.load.image("projectile-pistol", "assets/images/projectile-pistol.png");
+      this.load.image("projectile-rifle", "assets/images/projectile-rifle.png");
+      this.load.image("projectile-rocket", "assets/images/projectile-rocket.png");
+      this.load.image("projectile-sniper", "assets/images/projectile-sniper.png");
       this.load.image("zombie-walk", "assets/images/zombie-walk.png");
       this.load.image("ui-frame-sheet", "assets/images/ui-frame-sheet.png");
       this.load.image("skill-card-sheet", "assets/images/skill-card-sheet.png");
@@ -817,11 +817,11 @@
 
     createCharacters() {
       const positions = [
-        { id: "a", x: 58, y: 926, height: 232, damageScale: 0.42, role: "rally", projectile: "projectile-arrow", speed: 860, rate: 1.08, aim: { pivot: [4, -152], reach: 82 } },
-        { id: "b", x: 158, y: 922, height: 244, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 1020, rate: 0.78, aim: { pivot: [4, -162], reach: 88 } },
-        { id: "c", x: 270, y: 925, height: 270, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 900, rate: 0.33, aim: { pivot: [0, -184], reach: 76 } },
-        { id: "d", x: 374, y: 925, height: 252, damageScale: 0.78, role: "frost", projectile: "projectile-rocket", speed: 720, rate: 1.16, aim: { pivot: [3, -172], reach: 98 } },
-        { id: "e", x: 430, y: 923, height: 220, damageScale: 0.72, role: "repair", projectile: "projectile-sniper", speed: 1180, rate: 1.24, aim: { pivot: [2, -150], reach: 112 } }
+        { id: "a", x: 52, y: 926, height: 222, damageScale: 0.42, role: "rally", projectile: "projectile-arrow", speed: 860, rate: 1.08, aim: { pivot: [0, -146], reach: 78 } },
+        { id: "b", x: 158, y: 924, height: 230, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 1020, rate: 0.78, aim: { pivot: [3, -154], reach: 82 } },
+        { id: "c", x: 270, y: 925, height: 248, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 900, rate: 0.33, aim: { pivot: [0, -170], reach: 72 } },
+        { id: "d", x: 382, y: 925, height: 226, damageScale: 0.78, role: "frost", projectile: "projectile-rocket", speed: 720, rate: 1.16, aim: { pivot: [2, -154], reach: 88 } },
+        { id: "e", x: 488, y: 924, height: 205, damageScale: 0.72, role: "repair", projectile: "projectile-sniper", speed: 1180, rate: 1.24, aim: { pivot: [2, -140], reach: 98 } }
       ];
       positions.forEach((defender) => {
         const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-aim-12`)
@@ -1352,11 +1352,14 @@
       const ty = target.y + rand(-10, 10);
       const angle = Math.atan2(ty - y, tx - x);
       const sprite = this.add.image(x, y, defender.projectile)
+        .setOrigin(0.5, 1)
         .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
         .setRotation(angle + Math.PI / 2)
         .setDepth(190);
       this.bullets.push({
         sprite,
+        angle,
+        hitOffset: sprite.displayHeight * 0.72,
         damage,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
@@ -1434,8 +1437,10 @@
         if (!zombie.active || zombie.hp <= 0) {
           continue;
         }
-        const dx = bullet.sprite.x - zombie.x;
-        const dy = bullet.sprite.y - zombie.y;
+        const hitX = bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset;
+        const hitY = bullet.sprite.y + Math.sin(bullet.angle) * bullet.hitOffset;
+        const dx = hitX - zombie.x;
+        const dy = hitY - zombie.y;
         if (dx * dx + dy * dy < zombie.hitRadius * zombie.hitRadius) {
           return zombie;
         }
