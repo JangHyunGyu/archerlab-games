@@ -817,11 +817,11 @@
 
     createCharacters() {
       const positions = [
-        { id: "a", x: 52, y: 926, height: 222, damageScale: 0.42, role: "rally", projectile: "projectile-arrow", speed: 860, rate: 1.08, aim: { pivot: [0, -146], reach: 78 } },
-        { id: "b", x: 158, y: 924, height: 230, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 1020, rate: 0.78, aim: { pivot: [3, -154], reach: 82 } },
-        { id: "c", x: 270, y: 925, height: 248, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 900, rate: 0.33, aim: { pivot: [0, -170], reach: 72 } },
-        { id: "d", x: 382, y: 925, height: 226, damageScale: 0.78, role: "frost", projectile: "projectile-rocket", speed: 720, rate: 1.16, aim: { pivot: [2, -154], reach: 88 } },
-        { id: "e", x: 488, y: 924, height: 205, damageScale: 0.72, role: "repair", projectile: "projectile-sniper", speed: 1180, rate: 1.24, aim: { pivot: [2, -140], reach: 98 } }
+        { id: "a", x: 52, y: 926, height: 222, damageScale: 0.42, role: "rally", projectile: "projectile-arrow", speed: 860, rate: 1.08, aim: { pivot: [0, -134], reach: 38 } },
+        { id: "b", x: 158, y: 924, height: 230, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 1020, rate: 0.78, aim: { pivot: [2, -146], reach: 52 } },
+        { id: "c", x: 270, y: 925, height: 248, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 900, rate: 0.33, aim: { pivot: [0, -158], reach: 48 } },
+        { id: "d", x: 382, y: 925, height: 226, damageScale: 0.78, role: "frost", projectile: "projectile-rocket", speed: 720, rate: 1.16, aim: { pivot: [2, -145], reach: 56 } },
+        { id: "e", x: 488, y: 924, height: 205, damageScale: 0.72, role: "repair", projectile: "projectile-sniper", speed: 1180, rate: 1.24, aim: { pivot: [2, -132], reach: 64 } }
       ];
       positions.forEach((defender) => {
         const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-aim-12`)
@@ -1385,7 +1385,8 @@
                   : projectile === "projectile-shock"
                     ? 0xff8fbd
                     : 0xfff3a4;
-      const flash = this.add.circle(x + Math.cos(angle) * 16, y + Math.sin(angle) * 16, 7, color, 0.95).setDepth(191);
+      const flashOffset = projectile === "projectile-arrow" ? 0 : 4;
+      const flash = this.add.circle(x + Math.cos(angle) * flashOffset, y + Math.sin(angle) * flashOffset, 7, color, 0.95).setDepth(191);
       this.tweens.add({
         targets: flash,
         scale: 1.8,
