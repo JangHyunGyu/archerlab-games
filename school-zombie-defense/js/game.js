@@ -75,7 +75,7 @@
     elite: { texture: "zombie-death-elite", width: 280, duration: 820, alpha: 0.97, scalePeak: 1.05 }
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
-  const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 3;
+  const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
@@ -912,7 +912,7 @@
         left: 40,
         right: 500,
         top: 70,
-        autoEngageTop: 92,
+        autoEngageTop: 120,
         barricade: 704,
         survivorLine: 824,
         bottom: 920
