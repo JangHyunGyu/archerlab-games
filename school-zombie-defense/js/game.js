@@ -1493,12 +1493,12 @@
         const displayWidth = displayHeight;
         const levelCurve = Math.pow(this.level, 1.04);
         const lateLevelBonus = Math.max(0, this.level - 10);
-        const hp = Math.round(
+        const baseHp =
           (eliteRoll ? 165 : 86)
           + levelCurve * (eliteRoll ? 24.5 : 13.8)
           + lateLevelBonus * (eliteRoll ? 4.4 : 2.8)
-          + rand(-6, 12)
-        );
+          + rand(-6, 12);
+        const hp = Math.round(baseHp * 3);
         const zombie = this.add.image(x, y, `zombie-walk-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
           .setDisplaySize(displayWidth, displayHeight)
