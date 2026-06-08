@@ -50,6 +50,24 @@
   };
   const STARTING_LEVEL_NEED = 12;
   const STARTING_SPAWN_TIMER = 1.15;
+  const SKILL_ACCENTS = {
+    pierce: 0xbef6ff,
+    barrel: 0xffc768,
+    rally: 0xff7fb7,
+    repair: 0x7dff8d,
+    barrage: 0xff8d42,
+    squad: 0xc38dff,
+    frost: 0x91f7ff
+  };
+  const SKILL_ACCENT_HEX = {
+    pierce: "#bef6ff",
+    barrel: "#ffc768",
+    rally: "#ff7fb7",
+    repair: "#7dff8d",
+    barrage: "#ff8d42",
+    squad: "#c38dff",
+    frost: "#91f7ff"
+  };
 
   function getAimPose(key) {
     return AIM_POSE_BY_KEY[key] || AIM_POSE_BY_KEY["aim-12"];
@@ -651,6 +669,8 @@
 
     preload() {
       this.load.image("bg-corridor", "assets/images/corridor-battlefield.png");
+      this.load.image("skill-choice-backdrop", "assets/images/skill-choice-backdrop.png");
+      this.load.image("premium-skill-card", "assets/images/premium-skill-card.png");
       this.load.image("character-a", "assets/images/character-a.png");
       this.load.image("character-b", "assets/images/character-b.png");
       this.load.image("character-c", "assets/images/character-c.png");
@@ -1036,44 +1056,98 @@
       });
     }
 
+    addOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
+      const shadow = this.add.rectangle(x, y + 7, width, height, 0x000000, 0.35).setDepth(depth);
+      const outer = this.add.rectangle(x, y, width, height, accent, 0.95)
+        .setStrokeStyle(2, 0xffffff, 0.55)
+        .setDepth(depth + 0.1);
+      const inner = this.add.rectangle(x, y, width - 12, height - 12, 0x111820, 0.86)
+        .setStrokeStyle(1, accent, 0.65)
+        .setDepth(depth + 0.2);
+      const text = this.add.text(x, y, label, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 24,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#090b0d",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(depth + 0.3);
+
+      [outer, inner, text].forEach((item) => {
+        item.setInteractive({ useHandCursor: true });
+        item.on("pointerdown", onClick);
+        item.on("pointerover", () => {
+          outer.setAlpha(1);
+          inner.setFillStyle(0x1f2b32, 0.95);
+        });
+        item.on("pointerout", () => {
+          outer.setAlpha(0.95);
+          inner.setFillStyle(0x111820, 0.86);
+        });
+      });
+
+      this.overlayObjects.push(shadow, outer, inner, text);
+      return { shadow, outer, inner, text };
+    }
+
+    showToast(message, color = COLORS.gold) {
+      const panel = this.add.rectangle(270, 158, 330, 48, 0x0b1014, 0.88)
+        .setStrokeStyle(2, color, 0.9)
+        .setDepth(430);
+      const text = this.add.text(270, 158, message, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 20,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(431);
+
+      this.tweens.add({
+        targets: [panel, text],
+        y: "-=18",
+        alpha: 0,
+        delay: 720,
+        duration: 420,
+        ease: "Cubic.easeIn",
+        onComplete: () => {
+          panel.destroy();
+          text.destroy();
+        }
+      });
+    }
+
     showMenu() {
       this.clearOverlay();
       this.mode = "menu";
       const items = this.overlayObjects;
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x040608, 0.34).setDepth(500));
-      items.push(this.add.rectangle(270, 315, 450, 210, 0x101820, 0.86).setStrokeStyle(2, 0xf1c553, 0.7).setDepth(501));
-      items.push(this.add.text(270, 245, "스쿨 언데드 디펜스", {
+      items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setAlpha(0.82).setDepth(500));
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.42).setDepth(501));
+      items.push(this.add.rectangle(270, 300, 430, 214, 0x0d151b, 0.82).setStrokeStyle(2, 0xe7bb54, 0.72).setDepth(502));
+      items.push(this.add.rectangle(270, 207, 372, 4, 0xffd86b, 0.88).setDepth(503));
+      items.push(this.add.text(270, 248, "스쿨 언데드 디펜스", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 34,
+        fontSize: 36,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#111820",
+        stroke: "#06090b",
         strokeThickness: 6
-      }).setOrigin(0.5).setDepth(502));
-      items.push(this.add.text(270, 291, "몰려오는 감염 학생들을 막고 교실 방어선을 지키세요", {
+      }).setOrigin(0.5).setDepth(504));
+      items.push(this.add.text(270, 294, "무너진 복도에서 교실 방어선을 사수하세요", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 16,
         fontStyle: "800",
         color: "#d9eef0"
-      }).setOrigin(0.5).setDepth(502));
-      const start = this.add.rectangle(270, 365, 190, 52, 0xd49b22, 1).setStrokeStyle(3, 0xfff1a5, 0.8).setDepth(502);
-      const startText = this.add.text(270, 365, "출격", {
-        fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 25,
-        fontStyle: "900",
-        color: "#1b1205"
-      }).setOrigin(0.5).setDepth(503);
-      start.setInteractive({ useHandCursor: true });
-      startText.setInteractive({ useHandCursor: true });
-      start.on("pointerdown", () => this.startRun());
-      startText.on("pointerdown", () => this.startRun());
-      items.push(start, startText);
-      items.push(this.add.text(270, 424, "탭해서 조준 · 왼쪽 원형 아이콘으로 스킬 사용", {
+      }).setOrigin(0.5).setDepth(504));
+      this.addOverlayButton(270, 365, 204, 54, "출격", 505, () => this.startRun(), COLORS.gold);
+      items.push(this.add.text(270, 424, "탭해서 조준 · 왼쪽 스킬 버튼으로 전술 사용", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 14,
         fontStyle: "800",
-        color: "#ffffff"
-      }).setOrigin(0.5).setDepth(502));
+        color: "#f8fbff",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(504));
     }
 
     startRun() {
@@ -1133,27 +1207,23 @@
 
     showPauseOverlay() {
       this.clearOverlay();
-      this.overlayObjects.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.48).setDepth(520));
-      this.overlayObjects.push(this.add.text(270, 430, "일시정지", {
+      this.overlayObjects.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.58).setDepth(520));
+      this.overlayObjects.push(this.add.rectangle(270, 426, 300, 122, 0x0d151b, 0.88).setStrokeStyle(2, 0xe7bb54, 0.75).setDepth(521));
+      this.overlayObjects.push(this.add.text(270, 394, "일시정지", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 38,
+        fontSize: 36,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#111",
+        stroke: "#050607",
         strokeThickness: 5
       }).setOrigin(0.5).setDepth(521));
-      const resume = this.add.rectangle(270, 495, 180, 52, 0xd49b22, 1).setStrokeStyle(3, 0xfff1a5, 0.85).setDepth(522);
-      const text = this.add.text(270, 495, "계속", {
+      this.overlayObjects.push(this.add.text(270, 432, "전열을 정비합니다", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 24,
-        fontStyle: "900",
-        color: "#1b1205"
-      }).setOrigin(0.5).setDepth(523);
-      resume.setInteractive({ useHandCursor: true });
-      text.setInteractive({ useHandCursor: true });
-      resume.on("pointerdown", () => this.togglePause());
-      text.on("pointerdown", () => this.togglePause());
-      this.overlayObjects.push(resume, text);
+        fontSize: 15,
+        fontStyle: "800",
+        color: "#cfe8ea"
+      }).setOrigin(0.5).setDepth(522));
+      this.addOverlayButton(270, 498, 184, 52, "계속", 523, () => this.togglePause(), COLORS.gold);
     }
 
     toggleSpeed() {
@@ -1669,28 +1739,40 @@
       this.clearOverlay();
 
       const items = this.overlayObjects;
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.64).setDepth(520));
-      items.push(this.add.rectangle(270, 264, 540, 45, 0x6d3c08, 0.86).setStrokeStyle(2, 0xe4a72e, 0.8).setDepth(521));
-      items.push(this.add.text(270, 264, "스킬 선택", {
+      items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setDepth(520));
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.26).setDepth(521));
+      items.push(this.add.rectangle(270, 538, 492, 520, 0x010204, 0.18).setDepth(522));
+      items.push(this.add.ellipse(270, 552, 450, 570, COLORS.gold, 0.05).setDepth(522.2));
+      items.push(this.add.rectangle(270, 180, 432, 92, 0x0a1116, 0.82).setStrokeStyle(2, 0xeac15b, 0.76).setDepth(523));
+      items.push(this.add.rectangle(270, 130, 320, 4, 0xffd86b, 0.95).setDepth(524));
+      items.push(this.add.text(270, 160, "스킬 선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 28,
+        fontSize: 38,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#251606",
-        strokeThickness: 5
-      }).setOrigin(0.5).setDepth(522));
+        stroke: "#050607",
+        strokeThickness: 6
+      }).setOrigin(0.5).setDepth(525));
+      items.push(this.add.text(270, 202, `Lv.${this.level} 보급 승인 - 전술 하나를 선택하세요`, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 16,
+        fontStyle: "900",
+        color: "#f6d985",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(525));
 
       const upgrades = this.pickUpgrades();
-      const xs = [102, 270, 438];
-      upgrades.forEach((upgrade, index) => this.addSkillCard(xs[index], 545, upgrade));
-      items.push(this.add.text(270, 828, "<눌러서 선택>", {
+      const xs = [92, 270, 448];
+      upgrades.forEach((upgrade, index) => this.addSkillCard(xs[index], 548, upgrade, index));
+      items.push(this.add.text(270, 810, "카드를 눌러 즉시 적용", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 22,
+        fontSize: 18,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#111",
-        strokeThickness: 5
-      }).setOrigin(0.5).setDepth(530));
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(535));
     }
 
     pickUpgrades() {
@@ -1698,8 +1780,9 @@
         {
           id: "pierce",
           icon: "skill-pierce",
-          title: "참격 탄두",
-          desc: "탄환 관통 +1, 기본 피해 +12%",
+          tag: "공격",
+          title: "관통 탄심",
+          desc: "탄환 관통 +1\n기본 피해 +12%",
           apply: () => {
             this.pierce += 1;
             this.damage *= 1.12;
@@ -1708,18 +1791,20 @@
         {
           id: "barrel",
           icon: "skill-barrel",
-          title: "고압 배럴",
-          desc: "기본 피해 +28%, 사격 간격 +8%",
+          tag: "무기",
+          title: "강화 총열",
+          desc: "기본 피해 +28%\n사격 간격 -8%",
           apply: () => {
             this.damage *= 1.28;
-            this.fireRate *= 1.08;
+            this.fireRate *= 0.92;
           }
         },
         {
           id: "rally",
           icon: "skill-rally",
+          tag: "지휘",
           title: "응급 지휘",
-          desc: "치명타 확률 +10%, 사기 회복",
+          desc: "치명타 확률 +10%\n체력 즉시 회복",
           apply: () => {
             this.critChance += 0.1;
             this.coreHp = clamp(this.coreHp + 220, 0, this.maxCoreHp);
@@ -1728,8 +1813,9 @@
         {
           id: "repair",
           icon: "skill-repair",
+          tag: "방어",
           title: "책상 방벽",
-          desc: "최대 체력 +450, 방어막 +300",
+          desc: "최대 체력 +450\n방어막 +300",
           apply: () => {
             this.maxCoreHp += 450;
             this.coreHp += 450;
@@ -1739,8 +1825,9 @@
         {
           id: "barrage",
           icon: "skill-barrage",
-          title: "유탄 연사",
-          desc: "8발마다 작은 폭발 발생",
+          tag: "폭발",
+          title: "폭발 연계",
+          desc: "8발마다\n추가 폭발 발생",
           apply: () => {
             this.rocketEvery = this.rocketEvery === 0 ? 8 : Math.max(4, this.rocketEvery - 1);
           }
@@ -1748,8 +1835,9 @@
         {
           id: "squad",
           icon: "skill-squad",
+          tag: "지원",
           title: "구조대 합류",
-          desc: "지원 사격 속도 +18%, 스킬 쿨타임 -10%",
+          desc: "지원 사격 +18%\n스킬 쿨다운 -10%",
           apply: () => {
             this.defenders.forEach((defender) => {
               if (defender.role !== "player") {
@@ -1764,8 +1852,9 @@
         {
           id: "frost",
           icon: "skill-frost",
+          tag: "제어",
           title: "냉각 조명탄",
-          desc: "감속 스킬 쿨타임 -25%, 피해 +20",
+          desc: "감속 쿨다운 -25%\n기본 피해 +20",
           apply: () => {
             const frost = this.skillButtons.find((button) => button.id === "frost");
             if (frost) {
@@ -1783,34 +1872,104 @@
       return chosen;
     }
 
-    addSkillCard(x, y, upgrade) {
-      const characterKey = this.getUpgradeCharacterKey(upgrade.id);
-      const character = this.add.image(x, y - 108, characterKey).setOrigin(0.5, 1).setDepth(520.8);
-      this.fitSpriteHeight(character, 174);
-      const card = this.add.image(x, y, "ui-skill-card").setDisplaySize(156, 322).setDepth(524);
-      const icon = this.add.image(x, y - 153, upgrade.icon).setScale(1.08).setDepth(527);
-      const title = this.add.text(x, y - 107, upgrade.title, {
+    addSkillCard(x, y, upgrade, index = 0) {
+      const accent = SKILL_ACCENTS[upgrade.id] || COLORS.gold;
+      const accentHex = SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
+      const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
+      const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
+      const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
+      const watermark = this.add.image(x, y - 44, upgrade.icon).setScale(1.65).setAlpha(0.1).setDepth(525);
+      const iconHalo = this.add.circle(x, y - 112, 40, 0x000000, 0.58).setStrokeStyle(2, accent, 0.9).setDepth(527);
+      const icon = this.add.image(x, y - 112, upgrade.icon).setScale(0.92).setDepth(528);
+      const tagBg = this.add.rectangle(x, y + 24, 76, 24, accent, 0.2)
+        .setStrokeStyle(1, accent, 0.78)
+        .setDepth(528);
+      const tagText = this.add.text(x, y + 24, upgrade.tag || "전술", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 12,
+        fontStyle: "900",
+        color: accentHex,
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(529);
+      const title = this.add.text(x, y + 58, upgrade.title, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 19,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#1a0703",
+        stroke: "#050607",
         strokeThickness: 4
-      }).setOrigin(0.5).setDepth(528);
-      const desc = this.add.text(x, y + 34, upgrade.desc, {
+      }).setOrigin(0.5).setDepth(529);
+      const desc = this.add.text(x, y + 101, upgrade.desc, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 17,
+        fontSize: 14,
         fontStyle: "900",
-        color: "#53585c",
+        color: "#d8e6e8",
         align: "center",
+        lineSpacing: 4,
         wordWrap: { width: 126, useAdvancedWrap: true }
-      }).setOrigin(0.5).setDepth(528);
-      const stain = this.add.circle(x + 42, y + 120, 18, COLORS.blood, 0.18).setDepth(527);
-      [character, card, icon, title, desc, stain].forEach((item) => this.overlayObjects.push(item));
-      card.setInteractive({ useHandCursor: true });
-      card.on("pointerdown", () => this.applyUpgrade(upgrade));
-      icon.setInteractive({ useHandCursor: true });
-      icon.on("pointerdown", () => this.applyUpgrade(upgrade));
+      }).setOrigin(0.5).setDepth(529);
+      const chooseBg = this.add.rectangle(x, y + 148, 104, 30, 0x101820, 0.9)
+        .setStrokeStyle(1, accent, 0.85)
+        .setDepth(529);
+      const chooseText = this.add.text(x, y + 148, "선택", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 14,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(530);
+      const hit = this.add.rectangle(x, y, 166, 336, 0x000000, 0).setDepth(531);
+      const animated = [
+        shadow,
+        glow,
+        card,
+        watermark,
+        iconHalo,
+        icon,
+        tagBg,
+        tagText,
+        title,
+        desc,
+        chooseBg,
+        chooseText
+      ];
+
+      animated.forEach((item) => {
+        item.y += 24;
+      });
+      this.tweens.add({
+        targets: animated,
+        y: "-=24",
+        duration: 360,
+        delay: index * 90,
+        ease: "Cubic.easeOut"
+      });
+
+      const selectUpgrade = () => this.applyUpgrade(upgrade);
+      const setHover = (active) => {
+        glow.setAlpha(active ? 0.26 : 0.1);
+        watermark.setAlpha(active ? 0.18 : 0.1);
+        chooseBg.setFillStyle(active ? accent : 0x101820, active ? 0.34 : 0.9);
+        if (active) {
+          card.setTint(0xfff1c0);
+        } else {
+          card.clearTint();
+        }
+      };
+
+      hit.setInteractive({ useHandCursor: true });
+      hit.on("pointerdown", selectUpgrade);
+      hit.on("pointerover", () => setHover(true));
+      hit.on("pointerout", () => setHover(false));
+      [icon, chooseBg, chooseText].forEach((item) => {
+        item.setInteractive({ useHandCursor: true });
+        item.on("pointerdown", selectUpgrade);
+        item.on("pointerover", () => setHover(true));
+        item.on("pointerout", () => setHover(false));
+      });
+      [...animated, hit].forEach((item) => this.overlayObjects.push(item));
     }
 
     getUpgradeCharacterKey(id) {
@@ -1833,7 +1992,8 @@
       upgrade.apply();
       this.clearOverlay();
       this.mode = "playing";
-      this.createScreenPulse(COLORS.gold);
+      this.createScreenPulse(SKILL_ACCENTS[upgrade.id] || COLORS.gold);
+      this.showToast(`${upgrade.title} 적용`, SKILL_ACCENTS[upgrade.id] || COLORS.gold);
       this.updateHud();
     }
 
@@ -1844,35 +2004,27 @@
       this.mode = "gameover";
       this.clearOverlay();
       const items = this.overlayObjects;
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.68).setDepth(540));
-      items.push(this.add.text(270, 360, "방어선 붕괴", {
+      items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setAlpha(0.72).setDepth(540));
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.64).setDepth(541));
+      items.push(this.add.rectangle(270, 405, 392, 192, 0x0d151b, 0.9).setStrokeStyle(2, 0xff6b68, 0.8).setDepth(542));
+      items.push(this.add.rectangle(270, 326, 300, 4, 0xff6b68, 0.9).setDepth(543));
+      items.push(this.add.text(270, 366, "방어선 붕괴", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 42,
         fontStyle: "900",
         color: "#ff6b68",
-        stroke: "#111",
+        stroke: "#050607",
         strokeThickness: 6
-      }).setOrigin(0.5).setDepth(541));
-      items.push(this.add.text(270, 418, `Lv.${this.level} · 처치 ${this.kills}`, {
+      }).setOrigin(0.5).setDepth(544));
+      items.push(this.add.text(270, 424, `Lv.${this.level} · 처치 ${this.kills}`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 24,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#111",
+        stroke: "#050607",
         strokeThickness: 4
-      }).setOrigin(0.5).setDepth(541));
-      const retry = this.add.rectangle(270, 500, 200, 54, 0xd49b22, 1).setStrokeStyle(3, 0xfff1a5, 0.8).setDepth(542);
-      const text = this.add.text(270, 500, "다시 방어", {
-        fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 24,
-        fontStyle: "900",
-        color: "#1b1205"
-      }).setOrigin(0.5).setDepth(543);
-      retry.setInteractive({ useHandCursor: true });
-      text.setInteractive({ useHandCursor: true });
-      retry.on("pointerdown", () => this.startRun());
-      text.on("pointerdown", () => this.startRun());
-      items.push(retry, text);
+      }).setOrigin(0.5).setDepth(544));
+      this.addOverlayButton(270, 512, 208, 54, "다시 방어", 545, () => this.startRun(), COLORS.gold);
     }
 
     clearOverlay() {
