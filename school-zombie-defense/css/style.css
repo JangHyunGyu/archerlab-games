@@ -2,9 +2,15 @@
   box-sizing: border-box;
 }
 
+:root {
+  --game-viewport-width: 100vw;
+  --game-viewport-height: 100dvh;
+}
+
 html,
 body {
   margin: 0;
+  width: var(--game-viewport-width);
   min-height: 100%;
   background: #0b0d10;
   color: #f6f7fb;
@@ -14,9 +20,7 @@ body {
 }
 
 body {
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  height: var(--game-viewport-height);
   display: grid;
   place-items: center;
 }
@@ -44,8 +48,8 @@ body {
 
 #game-shell {
   position: relative;
-  width: min(100vw, calc(100dvh * 0.5625));
-  height: min(100dvh, calc(100vw * 1.7777778));
+  width: min(var(--game-viewport-width), calc(var(--game-viewport-height) * 0.5625));
+  height: min(var(--game-viewport-height), calc(var(--game-viewport-width) * 1.7777778));
   max-width: 540px;
   max-height: 960px;
   background: #101418;

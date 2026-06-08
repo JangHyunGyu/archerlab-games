@@ -2511,6 +2511,66 @@
     return;
   }
 
+  function installResponsiveViewport(game) {
+    const rootStyle = document.documentElement.style;
+    const shell = document.getElementById("game-shell");
+    let raf = 0;
+
+    const getViewportSize = () => {
+      const viewport = window.visualViewport;
+      return {
+        width: Math.max(1, Math.round(viewport?.width || window.innerWidth || document.documentElement.clientWidth || GAME_WIDTH)),
+        height: Math.max(1, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight || GAME_HEIGHT))
+      };
+    };
+
+    const apply = () => {
+      raf = 0;
+      const { width, height } = getViewportSize();
+      rootStyle.setProperty("--game-viewport-width", `${width}px`);
+      rootStyle.setProperty("--game-viewport-height", `${height}px`);
+
+      requestAnimationFrame(() => {
+        const canvas = game.canvas || game.scale?.canvas || document.querySelector("#game-root canvas");
+        if (!canvas?.style) {
+          window.setTimeout(schedule, 80);
+          return;
+        }
+        if (game.scale?.refresh) {
+          try {
+            game.scale.refresh();
+          } catch (error) {
+            window.setTimeout(schedule, 120);
+          }
+        }
+      });
+    };
+
+    const schedule = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+      }
+      raf = requestAnimationFrame(apply);
+    };
+
+    const scheduleSettled = () => {
+      schedule();
+      [90, 240, 520].forEach((delay) => window.setTimeout(schedule, delay));
+    };
+
+    scheduleSettled();
+    window.addEventListener("resize", scheduleSettled, { passive: true });
+    window.addEventListener("orientationchange", scheduleSettled, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", scheduleSettled, { passive: true });
+      window.visualViewport.addEventListener("scroll", schedule, { passive: true });
+    }
+    if (shell && window.ResizeObserver) {
+      window.__schoolZombieResizeObserver = new ResizeObserver(schedule);
+      window.__schoolZombieResizeObserver.observe(shell);
+    }
+  }
+
   const config = {
     type: Phaser.AUTO,
     parent: "game-root",
@@ -2533,4 +2593,5 @@
 
   window.__schoolZombiePhaserVersion = Phaser.VERSION;
   window.__schoolZombieDefense = new Phaser.Game(config);
+  installResponsiveViewport(window.__schoolZombieDefense);
 })();
