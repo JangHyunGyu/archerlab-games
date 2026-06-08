@@ -1400,6 +1400,46 @@
       this.playSfx(map[projectile] || "pistol");
     }
 
+    shakeCamera(duration = 70, intensity = 0.004) {
+      const camera = this.cameras?.main;
+      if (camera && camera.shake) {
+        camera.shake(duration, intensity);
+      }
+    }
+
+    requestHitStop(duration = 0.025) {
+      this.hitStopTimer = Math.max(this.hitStopTimer || 0, clamp(duration, 0, 0.055));
+    }
+
+    restoreZombieTint(zombie) {
+      if (!zombie || !zombie.active) {
+        return;
+      }
+      if (zombie.slowTimer > 0) {
+        zombie.setTint(0x99f4ff);
+      } else if (zombie.baseTint) {
+        zombie.setTint(zombie.baseTint);
+      } else {
+        zombie.clearTint();
+      }
+    }
+
+    applyZombieKnockback(zombie, hitType, crit = false) {
+      if (!zombie || !zombie.active) {
+        return;
+      }
+      const base = hitType === "explosion" || hitType === "projectile-rocket"
+        ? 18
+        : hitType === "projectile-sniper"
+          ? 12
+          : crit
+            ? 9
+            : 5;
+      const amount = base * (zombie.knockbackScale || 1);
+      zombie.y = Math.max(-48, zombie.y - amount);
+      zombie.x = clamp(zombie.x + rand(-amount * 0.34, amount * 0.34), this.bounds.left, this.bounds.right);
+    }
+
     addOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
       const shadow = this.add.rectangle(x, y + 7, width, height, 0x000000, 0.35).setDepth(depth);
       const outer = this.add.rectangle(x, y, width, height, accent, 0.95)
@@ -1498,6 +1538,8 @@
     }
 
     startRun() {
+      this.unlockAudio();
+      this.playSfx("start");
       this.clearOverlay();
       this.resetRun();
       this.mode = "playing";
@@ -1528,6 +1570,7 @@
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
       this.focusPoint = null;
+      this.hitStopTimer = 0;
       this.recruitedDefenders = new Set(["c"]);
       this.defenders.forEach((defender) => {
         defender.rate = defender.baseRate;
@@ -1593,7 +1636,12 @@
         return;
       }
 
-      const dt = Math.min(delta, 50) / 1000 * this.speedMultiplier;
+      const rawDt = Math.min(delta, 50) / 1000;
+      if (this.hitStopTimer > 0) {
+        this.hitStopTimer -= rawDt;
+        return;
+      }
+      const dt = rawDt * this.speedMultiplier;
       this.elapsed += dt;
       if (this.focusPoint) {
         this.focusPoint.timer -= dt;
@@ -1866,6 +1914,7 @@
         hitTargets: new Set()
       });
       this.createMuzzle(x, y, angle, defender.projectile);
+      this.playWeaponSfx(defender.projectile);
     }
 
     createMuzzle(x, y, angle, projectile) {
@@ -2065,10 +2114,18 @@
       const damage = Math.round(amount * markMultiplier * (crit ? 1.85 : 1));
       this.createZombieHitEffect(zombie, hitType, crit);
       zombie.hp -= damage;
+      this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
+      this.applyZombieKnockback(zombie, hitType, crit);
+      if (crit || hitType === "projectile-sniper") {
+        this.requestHitStop(crit ? 0.04 : 0.025);
+        this.shakeCamera(55, crit ? 0.0038 : 0.0025);
+      } else if (hitType === "projectile-rocket" || hitType === "explosion") {
+        this.requestHitStop(0.03);
+      }
       zombie.setTint(crit ? 0xfff2a5 : 0xff7777);
       this.time.delayedCall(70, () => {
         if (zombie.active) {
-          zombie.clearTint();
+          this.restoreZombieTint(zombie);
         }
       });
       this.showDamageText(zombie.x + rand(-8, 8), zombie.y - rand(8, 24), damage, crit, marked);
@@ -2085,11 +2142,12 @@
       const y = zombie.y;
       this.clearWeakMark(zombie);
       this.createDeathBurst(x, y, zombie);
+      this.playSfx("death", zombie.elite ? 1.35 : 1);
       zombie.destroy();
       this.zombies = this.zombies.filter((item) => item !== zombie);
       this.kills += 1;
       this.killsInLevel += 1;
-      this.coins += zombie.elite ? 4 : 1;
+      this.coins += zombie.reward || (zombie.elite ? 4 : 1);
 
       if (this.killsInLevel >= this.levelNeed) {
         this.openSkillChoice();
@@ -2195,6 +2253,10 @@
       }
       this.coreHp = clamp(this.coreHp - amount, 0, this.maxCoreHp);
       this.morale = Math.round((this.coreHp / this.maxCoreHp) * 100);
+      if (amount > 0) {
+        this.playSfx("core");
+        this.shakeCamera(120, 0.006);
+      }
       if (this.coreHp <= 0) {
         this.gameOver();
       }
@@ -2212,6 +2274,9 @@
     }
 
     createExplosion(x, y, radius, damage, slowDuration = 0) {
+      this.playSfx("explosion", clamp(radius / 82, 0.75, 1.35));
+      this.shakeCamera(130, clamp(radius / 22000, 0.004, 0.009));
+      this.requestHitStop(0.045);
       const ring = this.add.circle(x, y, 18, 0xffd35a, 0.46).setStrokeStyle(4, 0xffffff, 0.55).setDepth(221);
       this.tweens.add({
         targets: ring,
@@ -2577,6 +2642,8 @@
       if (this.mode !== "skill") {
         return;
       }
+      this.unlockAudio();
+      this.playSfx("skill");
       upgrade.apply();
       this.clearOverlay();
       this.mode = "playing";
