@@ -401,9 +401,12 @@ h2 {
   gap: 10px;
 }
 
-.menu-actions--menu,
-.menu-actions--clear {
+.menu-actions--menu {
   grid-template-columns: 1.15fr 1fr 1fr;
+}
+
+.menu-actions--clear {
+  grid-template-columns: 1fr;
 }
 
 .loading-screen {
@@ -820,11 +823,7 @@ h2 {
   }
 
   .menu-actions--clear {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .menu-actions--clear .primary-btn {
-    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -834,7 +833,7 @@ h2 {
   }
 
   .hud {
-    grid-template-columns: 38px repeat(3, minmax(40px, 1fr));
+    grid-template-columns: 38px repeat(4, minmax(38px, 1fr));
   }
 
   .stat {
