@@ -1028,7 +1028,7 @@
           desc: defender.recruit.desc,
           accent: SKILL_ACCENTS[`recruit-${defender.id}`],
           accentHex: SKILL_ACCENT_HEX[`recruit-${defender.id}`],
-          toast: `${defender.recruit.title} 영입`,
+          toast: `${defender.recruit.title} 완료`,
           apply: () => this.recruitDefender(defender.id)
         }));
     }
