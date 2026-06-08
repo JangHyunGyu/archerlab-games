@@ -57,7 +57,11 @@
     repair: 0x7dff8d,
     barrage: 0xff8d42,
     squad: 0xc38dff,
-    frost: 0x91f7ff
+    frost: 0x91f7ff,
+    "recruit-a": 0xff7fb7,
+    "recruit-b": 0xff8d42,
+    "recruit-d": 0x91f7ff,
+    "recruit-e": 0x7dff8d
   };
   const SKILL_ACCENT_HEX = {
     pierce: "#bef6ff",
@@ -66,7 +70,103 @@
     repair: "#7dff8d",
     barrage: "#ff8d42",
     squad: "#c38dff",
-    frost: "#91f7ff"
+    frost: "#91f7ff",
+    "recruit-a": "#ff7fb7",
+    "recruit-b": "#ff8d42",
+    "recruit-d": "#91f7ff",
+    "recruit-e": "#7dff8d"
+  };
+  const DEFENDER_ROSTER = [
+    {
+      id: "a",
+      x: 52,
+      y: 926,
+      height: 222,
+      damageScale: 0.42,
+      role: "rally",
+      projectile: "projectile-arrow",
+      speed: 860,
+      rate: 1.08,
+      aim: { pivot: [0, -134], reach: 38 },
+      recruit: {
+        icon: "portrait-rally",
+        tag: "영입",
+        title: "양궁부 합류",
+        desc: "좌측 후방에서\n화살 지원 사격"
+      }
+    },
+    {
+      id: "b",
+      x: 158,
+      y: 924,
+      height: 230,
+      damageScale: 0.86,
+      role: "barrage",
+      projectile: "projectile-rifle",
+      speed: 1020,
+      rate: 0.78,
+      aim: { pivot: [2, -146], reach: 52 },
+      recruit: {
+        icon: "portrait-barrage",
+        tag: "영입",
+        title: "소총수 합류",
+        desc: "중앙 화력 지원\n유탄 스킬 해금"
+      }
+    },
+    {
+      id: "c",
+      x: 270,
+      y: 925,
+      height: 248,
+      damageScale: 1,
+      role: "player",
+      projectile: "projectile-pistol",
+      speed: 900,
+      rate: 0.33,
+      aim: { pivot: [0, -158], reach: 48 }
+    },
+    {
+      id: "d",
+      x: 382,
+      y: 925,
+      height: 226,
+      damageScale: 0.78,
+      role: "frost",
+      projectile: "projectile-rocket",
+      speed: 720,
+      rate: 1.16,
+      aim: { pivot: [2, -145], reach: 56 },
+      recruit: {
+        icon: "portrait-frost",
+        tag: "영입",
+        title: "공병 합류",
+        desc: "로켓 지원 사격\n냉각 스킬 해금"
+      }
+    },
+    {
+      id: "e",
+      x: 488,
+      y: 924,
+      height: 205,
+      damageScale: 0.72,
+      role: "repair",
+      projectile: "projectile-sniper",
+      speed: 1180,
+      rate: 1.24,
+      aim: { pivot: [2, -132], reach: 64 },
+      recruit: {
+        icon: "portrait-repair",
+        tag: "영입",
+        title: "의무반 합류",
+        desc: "저격 지원 사격\n수리 스킬 해금"
+      }
+    }
+  ];
+  const SKILL_OWNER_BY_ID = {
+    rally: "a",
+    barrage: "b",
+    frost: "d",
+    repair: "e"
   };
 
   function getAimPose(key) {
@@ -721,6 +821,7 @@
       this.defenders = [];
       this.skillButtons = [];
       this.overlayObjects = [];
+      this.recruitedDefenders = new Set(["c"]);
       this.mode = "menu";
       this.elapsed = 0;
       this.stage = 1;
@@ -838,18 +939,13 @@
     }
 
     createCharacters() {
-      const positions = [
-        { id: "a", x: 52, y: 926, height: 222, damageScale: 0.42, role: "rally", projectile: "projectile-arrow", speed: 860, rate: 1.08, aim: { pivot: [0, -134], reach: 38 } },
-        { id: "b", x: 158, y: 924, height: 230, damageScale: 0.86, role: "barrage", projectile: "projectile-rifle", speed: 1020, rate: 0.78, aim: { pivot: [2, -146], reach: 52 } },
-        { id: "c", x: 270, y: 925, height: 248, damageScale: 1, role: "player", projectile: "projectile-pistol", speed: 900, rate: 0.33, aim: { pivot: [0, -158], reach: 48 } },
-        { id: "d", x: 382, y: 925, height: 226, damageScale: 0.78, role: "frost", projectile: "projectile-rocket", speed: 720, rate: 1.16, aim: { pivot: [2, -145], reach: 56 } },
-        { id: "e", x: 488, y: 924, height: 205, damageScale: 0.72, role: "repair", projectile: "projectile-sniper", speed: 1180, rate: 1.24, aim: { pivot: [2, -132], reach: 64 } }
-      ];
-      positions.forEach((defender) => {
+      DEFENDER_ROSTER.forEach((defender) => {
+        const recruited = this.recruitedDefenders.has(defender.id);
         const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-aim-12`)
           .setOrigin(0.5, 1)
           .setDepth(142 + defender.y / 10);
         this.fitSpriteHeight(sprite, defender.height);
+        sprite.setVisible(recruited).setAlpha(recruited ? 1 : 0);
         this.defenders.push({
           x: defender.x,
           y: defender.y,
@@ -861,12 +957,80 @@
           sprite,
           role: defender.role,
           rate: defender.rate,
+          baseRate: defender.rate,
+          recruited,
           timer: rand(0.15, 0.65),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
           speed: defender.speed
         });
       });
+    }
+
+    setDefenderRecruited(id, recruited, animate = false) {
+      const defender = this.defenders.find((item) => item.id === id);
+      if (!defender) {
+        return;
+      }
+
+      defender.recruited = recruited;
+      if (recruited) {
+        this.recruitedDefenders.add(id);
+        defender.sprite.setVisible(true).clearTint();
+        this.setDefenderPose(defender, "aim-12");
+        if (animate) {
+          defender.sprite.setAlpha(0).setY(defender.y + 46);
+          this.tweens.add({
+            targets: defender.sprite,
+            y: defender.y,
+            alpha: 1,
+            duration: 460,
+            ease: "Back.easeOut"
+          });
+          const ring = this.add.circle(defender.x, defender.y - defender.height * 0.48, 26, 0xffffff, 0)
+            .setStrokeStyle(4, COLORS.gold, 0.9)
+            .setDepth(230);
+          this.tweens.add({
+            targets: ring,
+            scale: 2.2,
+            alpha: 0,
+            duration: 560,
+            ease: "Cubic.easeOut",
+            onComplete: () => ring.destroy()
+          });
+        } else {
+          defender.sprite.setAlpha(1).setY(defender.y);
+        }
+      } else {
+        this.recruitedDefenders.delete(id);
+        defender.sprite.setVisible(false).setAlpha(0).setY(defender.y);
+      }
+      this.updateSkillButtonLocks();
+    }
+
+    recruitDefender(id) {
+      const roster = DEFENDER_ROSTER.find((item) => item.id === id);
+      if (!roster || this.recruitedDefenders.has(id)) {
+        return;
+      }
+      this.setDefenderRecruited(id, true, true);
+      this.createScreenPulse(SKILL_ACCENTS[`recruit-${id}`] || COLORS.gold);
+    }
+
+    getRecruitUpgrades() {
+      return DEFENDER_ROSTER
+        .filter((defender) => defender.role !== "player" && !this.recruitedDefenders.has(defender.id))
+        .map((defender) => ({
+          id: `recruit-${defender.id}`,
+          icon: defender.recruit.icon,
+          tag: defender.recruit.tag,
+          title: defender.recruit.title,
+          desc: defender.recruit.desc,
+          accent: SKILL_ACCENTS[`recruit-${defender.id}`],
+          accentHex: SKILL_ACCENT_HEX[`recruit-${defender.id}`],
+          toast: `${defender.recruit.title} 영입`,
+          apply: () => this.recruitDefender(defender.id)
+        }));
     }
 
     fitSpriteHeight(sprite, height) {
@@ -1008,9 +1172,47 @@
           icon,
           cdText,
           cooldown: 0,
-          maxCooldown: id === "repair" ? 13 : id === "barrage" ? 9 : 11
+          maxCooldown: id === "repair" ? 13 : id === "barrage" ? 9 : 11,
+          baseMaxCooldown: id === "repair" ? 13 : id === "barrage" ? 9 : 11,
+          unlocked: this.isSkillUnlocked(id)
         });
       });
+      this.updateSkillButtonLocks();
+    }
+
+    isSkillUnlocked(id) {
+      const owner = SKILL_OWNER_BY_ID[id];
+      return !owner || this.recruitedDefenders.has(owner);
+    }
+
+    updateSkillButtonLocks() {
+      this.skillButtons.forEach((button) => {
+        button.unlocked = this.isSkillUnlocked(button.id);
+        if (!button.unlocked) {
+          button.cooldown = 0;
+        }
+        this.renderSkillButton(button);
+      });
+    }
+
+    renderSkillButton(button) {
+      if (!button) {
+        return;
+      }
+      if (!button.unlocked) {
+        button.bg.setAlpha(0.28);
+        button.icon.setAlpha(0.2);
+        button.cdText.setText("잠김");
+        button.cdText.setFontSize(12);
+        button.cdText.setColor("#c2cbcf");
+        return;
+      }
+
+      button.cdText.setFontSize(17);
+      button.cdText.setColor("#ffffff");
+      button.cdText.setText(button.cooldown > 0 ? Math.ceil(button.cooldown) : "");
+      button.bg.setAlpha(button.cooldown > 0 ? 0.45 : 0.82);
+      button.icon.setAlpha(button.cooldown > 0 ? 0.52 : 1);
     }
 
     createStatusPanel() {
@@ -1184,12 +1386,18 @@
       this.shotsSinceRocket = 0;
       this.rallyTimer = 0;
       this.focusPoint = null;
+      this.recruitedDefenders = new Set(["c"]);
       this.skillButtons.forEach((button) => {
         button.cooldown = 0;
+        button.maxCooldown = button.baseMaxCooldown;
       });
       this.defenders.forEach((defender) => {
+        defender.rate = defender.baseRate;
         defender.timer = rand(0.1, defender.rate);
+        defender.firePoseTimer = 0;
+        this.setDefenderRecruited(defender.id, defender.role === "player", false);
       });
+      this.updateSkillButtonLocks();
       this.updateHud();
     }
 
@@ -1258,6 +1466,9 @@
 
     updateDefenderAnimations(dt) {
       this.defenders.forEach((defender) => {
+        if (!defender.recruited) {
+          return;
+        }
         if (defender.firePoseTimer > 0) {
           defender.firePoseTimer -= dt;
           if (defender.firePoseTimer <= 0) {
@@ -1328,7 +1539,7 @@
       }
 
       this.defenders.forEach((defender) => {
-        if (defender.role === "player") {
+        if (!defender.recruited || defender.role === "player") {
           return;
         }
         defender.timer -= dt;
@@ -1658,10 +1869,11 @@
 
     updateSkillCooldowns(dt) {
       this.skillButtons.forEach((button) => {
-        button.cooldown = Math.max(0, button.cooldown - dt);
-        button.cdText.setText(button.cooldown > 0 ? Math.ceil(button.cooldown) : "");
-        button.bg.setAlpha(button.cooldown > 0 ? 0.45 : 0.82);
-        button.icon.setAlpha(button.cooldown > 0 ? 0.52 : 1);
+        button.unlocked = this.isSkillUnlocked(button.id);
+        if (button.unlocked) {
+          button.cooldown = Math.max(0, button.cooldown - dt);
+        }
+        this.renderSkillButton(button);
       });
     }
 
@@ -1670,7 +1882,10 @@
         return;
       }
       const button = this.skillButtons.find((item) => item.id === id);
-      if (!button || button.cooldown > 0) {
+      if (!button || !button.unlocked || button.cooldown > 0) {
+        if (button && !button.unlocked) {
+          this.showToast("동료 영입 필요", 0x7d8790);
+        }
         return;
       }
       button.cooldown = button.maxCooldown;
@@ -1776,6 +1991,7 @@
     }
 
     pickUpgrades() {
+      const recruitPool = this.getRecruitUpgrades();
       const pool = [
         {
           id: "pierce",
@@ -1836,11 +2052,11 @@
           id: "squad",
           icon: "skill-squad",
           tag: "지원",
-          title: "구조대 합류",
-          desc: "지원 사격 +18%\n스킬 쿨다운 -10%",
+          title: "합동 교전",
+          desc: "영입 동료 사격 +18%\n스킬 쿨다운 -10%",
           apply: () => {
             this.defenders.forEach((defender) => {
-              if (defender.role !== "player") {
+              if (defender.recruited && defender.role !== "player") {
                 defender.rate *= 0.82;
               }
             });
@@ -1864,17 +2080,24 @@
           }
         }
       ];
+      const hasRecruitedSupport = this.defenders.some((defender) => defender.recruited && defender.role !== "player");
+      const availablePool = pool.filter((upgrade) => upgrade.id !== "squad" || hasRecruitedSupport);
       const chosen = [];
-      while (chosen.length < 3 && pool.length > 0) {
-        const index = Math.floor(Math.random() * pool.length);
-        chosen.push(pool.splice(index, 1)[0]);
+      const recruitOffers = Math.min(recruitPool.length, this.level <= 5 ? 2 : 1);
+      while (chosen.length < recruitOffers && recruitPool.length > 0) {
+        const index = Math.floor(Math.random() * recruitPool.length);
+        chosen.push(recruitPool.splice(index, 1)[0]);
+      }
+      while (chosen.length < 3 && availablePool.length > 0) {
+        const index = Math.floor(Math.random() * availablePool.length);
+        chosen.push(availablePool.splice(index, 1)[0]);
       }
       return chosen;
     }
 
     addSkillCard(x, y, upgrade, index = 0) {
-      const accent = SKILL_ACCENTS[upgrade.id] || COLORS.gold;
-      const accentHex = SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
+      const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
+      const accentHex = upgrade.accentHex || SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
       const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
       const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
       const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
@@ -1992,8 +2215,9 @@
       upgrade.apply();
       this.clearOverlay();
       this.mode = "playing";
-      this.createScreenPulse(SKILL_ACCENTS[upgrade.id] || COLORS.gold);
-      this.showToast(`${upgrade.title} 적용`, SKILL_ACCENTS[upgrade.id] || COLORS.gold);
+      const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
+      this.createScreenPulse(accent);
+      this.showToast(upgrade.toast || `${upgrade.title} 적용`, accent);
       this.updateHud();
     }
 
