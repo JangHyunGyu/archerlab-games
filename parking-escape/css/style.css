@@ -115,11 +115,11 @@ button:disabled {
   top: max(52px, calc(env(safe-area-inset-top) + 50px));
   z-index: 20;
   display: grid;
-  grid-template-columns: 42px repeat(3, minmax(70px, auto));
+  grid-template-columns: 42px repeat(4, minmax(64px, auto));
   gap: 8px;
   align-items: center;
   transform: translateX(-50%);
-  width: min(560px, calc(100vw - 22px));
+  width: min(640px, calc(100vw - 22px));
   padding: 8px;
   border: 1px solid rgba(129, 222, 255, 0.28);
   border-radius: 20px;
@@ -158,6 +158,21 @@ button:disabled {
   font-size: 1rem;
   line-height: 1;
   text-shadow: 0 0 14px rgba(103, 234, 255, 0.42);
+}
+
+.stat-time strong {
+  color: #fff3c9;
+  text-shadow: 0 0 16px rgba(255, 210, 92, 0.46);
+}
+
+.stat-time.is-low {
+  border-color: rgba(255, 100, 92, 0.42);
+  background: rgba(55, 12, 20, 0.56);
+}
+
+.stat-time.is-low strong {
+  color: #ff8b7e;
+  text-shadow: 0 0 18px rgba(255, 90, 78, 0.72);
 }
 
 .icon-btn {
@@ -727,7 +742,7 @@ h2 {
 @media (max-width: 620px) {
   .hud {
     top: max(48px, calc(env(safe-area-inset-top) + 46px));
-    grid-template-columns: 38px repeat(3, minmax(48px, 1fr));
+    grid-template-columns: 38px repeat(4, minmax(42px, 1fr));
     gap: 5px;
     padding: 6px;
     border-radius: 17px;

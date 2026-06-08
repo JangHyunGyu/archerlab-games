@@ -33,6 +33,7 @@
   const GAME_ID = "parking_escape";
   const RANK_LIMIT = 20;
   const NICK_KEY = "archerlab-parking-nick";
+  const LEVEL_TIME_LIMIT = 30;
 
   const CAR_PALETTE = [
     { body: 0xff334a, dark: 0x8c1422, light: 0xffd5d9, glass: 0x10243d, glow: 0xff5064 },
@@ -54,6 +55,8 @@
     modal: $("complete-modal"),
     toast: $("toast"),
     level: $("level-label"),
+    time: $("time-label"),
+    timeStat: $("time-stat"),
     moves: $("moves-label"),
     left: $("left-label"),
     bestLevel: $("best-level-label"),
@@ -128,6 +131,7 @@
       this.bestLevel = readInt(STORAGE.bestLevel, 1);
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
       this.moves = 0;
+      this.timeLeft = LEVEL_TIME_LIMIT;
       this.gridW = 6;
       this.gridH = 6;
       this.exitRow = 3;
@@ -146,6 +150,9 @@
       this.levelSeed = 0;
       this.initialVehicleCount = 0;
       this.lastClear = null;
+      this.runMoves = 0;
+      this.runRecord = null;
+      this.nextLevelTarget = this.level + 1;
       this.startToken = 0;
       this.resizeQueued = false;
       this.orientationTimer = null;
@@ -250,7 +257,11 @@
               level: clearData.rankLevel,
               cleared_level: clearData.rankLevel,
               moves: clearData.moves,
+              level_moves: clearData.levelMoves,
               vehicles: clearData.vehicles,
+              cleared_before_timeout: clearData.clearedBeforeTimeout || null,
+              failed_level: clearData.failedLevel || null,
+              timed_out: !!clearData.timedOut,
             },
           }),
         });
@@ -268,7 +279,7 @@
     bindUI() {
       dom.play.addEventListener("click", () => this.start(1));
       dom.continue.addEventListener("click", () => this.start(this.level));
-      dom.next.addEventListener("click", () => this.start(this.level + 1));
+      dom.next.addEventListener("click", () => this.start(this.nextLevelTarget || this.level + 1));
       dom.home.addEventListener("click", () => this.showMenu());
       dom.modalMenu.addEventListener("click", () => this.showMenu());
       dom.modalRank.addEventListener("click", () => this.openRankModal());
@@ -312,10 +323,18 @@
     async start(level) {
       if (this.mode === "loading") return;
       const token = ++this.startToken;
-      if (level <= 1 || !this.rankSessionId || this.mode !== "complete") this.startRankSession();
-      this.level = Math.max(1, level | 0);
+      const targetLevel = Math.max(1, level | 0);
+      const continuesRun = this.mode === "complete" && targetLevel === this.nextLevelTarget && !!this.runRecord;
+      if (targetLevel <= 1 || !this.rankSessionId || !continuesRun) this.startRankSession();
+      this.level = targetLevel;
       localStorage.setItem(STORAGE.level, String(this.level));
       this.moves = 0;
+      this.timeLeft = LEVEL_TIME_LIMIT;
+      this.lastClear = null;
+      if (!continuesRun) {
+        this.runMoves = 0;
+        this.runRecord = null;
+      }
       this.cancelDrag();
       this.cancelTweens({ clearFx: true });
       this.mode = "loading";
@@ -813,19 +832,31 @@
           this.tweens.splice(i, 1);
         }
       }
+
+      if (this.mode === "playing" && !this.animating) {
+        this.timeLeft = Math.max(0, this.timeLeft - deltaMS / 1000);
+        this.updateHud();
+        if (this.timeLeft <= 0) {
+          this.failLevel();
+        }
+      }
     }
 
     completeLevel() {
       this.playTone("win");
       this.animating = false;
+      this.nextLevelTarget = this.level + 1;
       const clearedLevel = calculateClearedLevel(this.level);
-      this.lastClear = {
+      this.runMoves += this.moves;
+      this.runRecord = {
         level: this.level,
         rankLevel: clearedLevel,
-        moves: this.moves,
+        moves: this.runMoves,
+        levelMoves: this.moves,
         vehicles: this.initialVehicleCount,
         seed: this.levelSeed,
       };
+      this.lastClear = this.runRecord;
       this.bestLevel = Math.max(this.bestLevel, this.level + 1);
       localStorage.setItem(STORAGE.bestLevel, String(this.bestLevel));
       localStorage.setItem(STORAGE.level, String(this.level + 1));
@@ -837,18 +868,53 @@
       dom.clearMoves.textContent = String(this.moves);
       dom.nextLevel.textContent = String(this.level + 1);
       dom.clearLevel.textContent = `Lv ${clearedLevel.toLocaleString()}`;
+      dom.next.textContent = "NEXT";
+      dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
+      dom.submitStatus.textContent = "";
+      dom.rankSubmitRow.classList.add("hidden");
+      dom.modal.classList.remove("hidden");
+      this.mode = "complete";
+    }
+
+    failLevel() {
+      if (this.mode !== "playing") return;
+      this.mode = "timeout";
+      this.animating = false;
+      this.nextLevelTarget = this.level;
+      this.timeLeft = 0;
+      this.cancelDrag();
+      this.cancelTweens({ clearFx: true });
+      this.lastClear = {
+        ...(this.runRecord || {}),
+        level: this.level,
+        rankLevel: this.level,
+        moves: this.runMoves + this.moves,
+        levelMoves: this.moves,
+        vehicles: this.initialVehicleCount,
+        seed: this.levelSeed,
+        clearedBeforeTimeout: this.runRecord ? this.runRecord.rankLevel : 0,
+        failedLevel: this.level,
+        timedOut: true,
+      };
+      dom.clearTitle.textContent = "TIME UP";
+      dom.clearMoves.textContent = String(this.moves);
+      dom.nextLevel.textContent = String(this.level);
+      dom.clearLevel.textContent = `Lv ${this.lastClear.rankLevel.toLocaleString()}`;
+      dom.next.textContent = "RETRY";
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       dom.rankSubmitRow.classList.remove("hidden");
       dom.submitRank.disabled = false;
       dom.skipRank.disabled = false;
       dom.modal.classList.remove("hidden");
-      this.mode = "complete";
-      this.recordRankClear(this.lastClear);
+      this.updateHud();
+      this.playTone("blocked");
     }
 
     updateHud() {
       dom.level.textContent = String(this.level);
+      if (dom.time) dom.time.textContent = formatTime(this.timeLeft);
+      if (dom.timeStat) dom.timeStat.classList.toggle("is-low", this.mode === "playing" && this.timeLeft <= 5);
       dom.moves.textContent = String(this.moves);
       dom.left.textContent = String(this.vehicles.length);
     }
@@ -934,8 +1000,12 @@
               level: this.lastClear.rankLevel,
               cleared_level: this.lastClear.rankLevel,
               moves: this.lastClear.moves,
+              level_moves: this.lastClear.levelMoves,
               vehicles: this.lastClear.vehicles,
               seed: this.lastClear.seed,
+              cleared_before_timeout: this.lastClear.clearedBeforeTimeout || null,
+              failed_level: this.lastClear.failedLevel || null,
+              timed_out: !!this.lastClear.timedOut,
             },
           }),
         });
@@ -1371,6 +1441,10 @@
 
   function calculateClearedLevel(level) {
     return Math.max(1, level | 0);
+  }
+
+  function formatTime(seconds) {
+    return String(Math.ceil(Math.max(0, seconds))).padStart(2, "0");
   }
 
   function getRankExtra(row) {
