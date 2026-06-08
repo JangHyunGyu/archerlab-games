@@ -801,6 +801,10 @@ h2 {
   overscroll-behavior: contain;
 }
 
+.modal-clear {
+  align-items: center;
+}
+
 .rank-submit-row {
   display: grid;
   gap: 10px;
