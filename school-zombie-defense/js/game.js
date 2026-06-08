@@ -19,6 +19,7 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rand = (min, max) => Math.random() * (max - min) + min;
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
+  const BASE_CRIT_CHANCE = 0.08;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -840,7 +841,7 @@
       this.fireRate = 0.33;
       this.playerFireTimer = 0;
       this.pierce = 0;
-      this.critChance = 0.08;
+      this.critChance = BASE_CRIT_CHANCE;
       this.rocketEvery = 0;
       this.shotsSinceRocket = 0;
       this.rallyTimer = 0;
@@ -959,6 +960,12 @@
           rate: defender.rate,
           baseRate: defender.rate,
           recruited,
+          damageBoost: 1,
+          pierce: 0,
+          critChance: BASE_CRIT_CHANCE,
+          rocketEvery: 0,
+          shotsSinceRocket: 0,
+          skillPower: 1,
           timer: rand(0.15, 0.65),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
@@ -1381,7 +1388,7 @@
       this.fireRate = 0.33;
       this.playerFireTimer = 0;
       this.pierce = 0;
-      this.critChance = 0.08;
+      this.critChance = BASE_CRIT_CHANCE;
       this.rocketEvery = 0;
       this.shotsSinceRocket = 0;
       this.rallyTimer = 0;
@@ -1393,6 +1400,12 @@
       });
       this.defenders.forEach((defender) => {
         defender.rate = defender.baseRate;
+        defender.damageBoost = 1;
+        defender.pierce = 0;
+        defender.critChance = BASE_CRIT_CHANCE;
+        defender.rocketEvery = 0;
+        defender.shotsSinceRocket = 0;
+        defender.skillPower = 1;
         defender.timer = rand(0.1, defender.rate);
         defender.firePoseTimer = 0;
         this.setDefenderRecruited(defender.id, defender.role === "player", false);
@@ -1547,7 +1560,15 @@
           defender.timer = defender.rate * rand(0.75, 1.2);
           const target = this.findTarget(defender.x, defender.role === "barrage" ? 180 : 95);
           if (target) {
-            this.fireBullet(defender, target, this.damage * defender.damageScale, defender.speed, 0);
+            const damage = this.getDefenderDamage(defender);
+            this.fireBullet(defender, target, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
+            if (defender.rocketEvery > 0) {
+              defender.shotsSinceRocket += 1;
+              if (defender.shotsSinceRocket >= defender.rocketEvery) {
+                defender.shotsSinceRocket = 0;
+                this.createExplosion(target.x, target.y, 68, damage * 1.35);
+              }
+            }
           }
         }
       });
@@ -1560,7 +1581,7 @@
       }
       const target = this.findTarget(this.focusPoint ? this.focusPoint.x : 270, this.focusPoint ? 210 : 999);
       const rateBonus = this.rallyTimer > 0 ? 0.58 : 1;
-      this.playerFireTimer = this.fireRate * rateBonus * (isManual ? 0.45 : 1);
+      this.playerFireTimer = player.rate * rateBonus * (isManual ? 0.45 : 1);
       if (!target) {
         return;
       }
@@ -1573,16 +1594,19 @@
             muzzleX: player.muzzleX + (i - (count - 1) / 2) * 12
           },
           target,
-          this.damage,
+          this.getDefenderDamage(player),
           player.speed,
-          this.pierce
+          player.pierce || 0,
+          player.critChance || BASE_CRIT_CHANCE
         );
       }
 
-      this.shotsSinceRocket += 1;
-      if (this.rocketEvery > 0 && this.shotsSinceRocket >= this.rocketEvery) {
-        this.shotsSinceRocket = 0;
-        this.createExplosion(target.x, target.y, 72, this.damage * 1.5);
+      if (player.rocketEvery > 0) {
+        player.shotsSinceRocket += 1;
+        if (player.shotsSinceRocket >= player.rocketEvery) {
+          player.shotsSinceRocket = 0;
+          this.createExplosion(target.x, target.y, 72, this.getDefenderDamage(player) * 1.5);
+        }
       }
     }
 
@@ -1614,7 +1638,15 @@
       }, null);
     }
 
-    fireBullet(defender, target, damage, speed, pierce) {
+    getDefenderDamage(defender) {
+      return this.damage * (defender.damageScale || 1) * (defender.damageBoost || 1);
+    }
+
+    getDefenderById(id) {
+      return this.defenders.find((defender) => defender.id === id);
+    }
+
+    fireBullet(defender, target, damage, speed, pierce, critChance = BASE_CRIT_CHANCE) {
       if (!target || !target.active) {
         return;
       }
@@ -1650,7 +1682,8 @@
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
-        pierce
+        pierce,
+        critChance
       });
       this.createMuzzle(x, y, angle, defender.projectile);
     }
@@ -1707,7 +1740,7 @@
 
         const hit = this.findBulletHit(bullet);
         if (hit) {
-          this.damageZombie(hit, bullet.damage);
+          this.damageZombie(hit, bullet.damage, bullet.critChance);
           if (bullet.pierce > 0) {
             bullet.pierce -= 1;
           } else {
@@ -1735,8 +1768,8 @@
       return null;
     }
 
-    damageZombie(zombie, amount) {
-      const crit = Math.random() < this.critChance;
+    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE) {
+      const crit = Math.random() < critChance;
       const damage = Math.round(amount * (crit ? 1.85 : 1));
       zombie.hp -= damage;
       zombie.setTint(crit ? 0xfff2a5 : 0xff7777);
@@ -1990,8 +2023,161 @@
       }).setOrigin(0.5).setDepth(535));
     }
 
+    getCharacterUpgrades() {
+      const upgrades = [];
+      const add = (ownerId, upgrade) => {
+        const defender = this.getDefenderById(ownerId);
+        if (!defender || !defender.recruited) {
+          return;
+        }
+        upgrades.push(upgrade);
+      };
+
+      add("c", {
+        id: "c-pierce",
+        icon: "skill-pierce",
+        tag: "권총",
+        title: "관통 탄심",
+        desc: "주인공 관통 +1\n권총 피해 +12%",
+        apply: () => {
+          const defender = this.getDefenderById("c");
+          defender.pierce += 1;
+          defender.damageBoost *= 1.12;
+        }
+      });
+      add("c", {
+        id: "c-barrel",
+        icon: "skill-barrel",
+        tag: "권총",
+        title: "강화 총열",
+        desc: "주인공 피해 +24%\n권총 사격 -8%",
+        apply: () => {
+          const defender = this.getDefenderById("c");
+          defender.damageBoost *= 1.24;
+          defender.rate *= 0.92;
+        }
+      });
+      add("a", {
+        id: "a-rally",
+        icon: "skill-rally",
+        tag: "양궁",
+        title: "응원 지휘",
+        desc: "양궁부 치명 +12%\n격려 지속 증가",
+        apply: () => {
+          const defender = this.getDefenderById("a");
+          defender.critChance += 0.12;
+          defender.skillPower += 0.2;
+        }
+      });
+      add("a", {
+        id: "a-archery",
+        icon: "skill-pierce",
+        tag: "양궁",
+        title: "속사 훈련",
+        desc: "양궁부 피해 +24%\n지원 사격 -12%",
+        apply: () => {
+          const defender = this.getDefenderById("a");
+          defender.damageBoost *= 1.24;
+          defender.rate *= 0.88;
+        }
+      });
+      add("b", {
+        id: "b-barrage",
+        icon: "skill-barrage",
+        tag: "소총",
+        title: "유탄 연계",
+        desc: "소총수 8발마다\n추가 폭발 발생",
+        apply: () => {
+          const defender = this.getDefenderById("b");
+          defender.rocketEvery = defender.rocketEvery === 0 ? 8 : Math.max(4, defender.rocketEvery - 1);
+        }
+      });
+      add("b", {
+        id: "b-rifle",
+        icon: "skill-barrel",
+        tag: "소총",
+        title: "탄창 개조",
+        desc: "소총수 피해 +22%\n지원 사격 -10%",
+        apply: () => {
+          const defender = this.getDefenderById("b");
+          defender.damageBoost *= 1.22;
+          defender.rate *= 0.9;
+        }
+      });
+      add("d", {
+        id: "d-frost",
+        icon: "skill-frost",
+        tag: "공병",
+        title: "냉각 조명탄",
+        desc: "냉각 피해 +25%\n냉각 쿨다운 -15%",
+        apply: () => {
+          const defender = this.getDefenderById("d");
+          const frost = this.skillButtons.find((button) => button.id === "frost");
+          defender.skillPower += 0.25;
+          if (frost) {
+            frost.maxCooldown *= 0.85;
+          }
+        }
+      });
+      add("d", {
+        id: "d-rocket",
+        icon: "skill-barrage",
+        tag: "공병",
+        title: "로켓 추진제",
+        desc: "공병 피해 +28%\n지원 사격 -10%",
+        apply: () => {
+          const defender = this.getDefenderById("d");
+          defender.damageBoost *= 1.28;
+          defender.rate *= 0.9;
+        }
+      });
+      add("e", {
+        id: "e-repair",
+        icon: "skill-repair",
+        tag: "의무",
+        title: "응급 처치",
+        desc: "수리량 +25%\n수리 쿨다운 -15%",
+        apply: () => {
+          const defender = this.getDefenderById("e");
+          const repair = this.skillButtons.find((button) => button.id === "repair");
+          defender.skillPower += 0.25;
+          if (repair) {
+            repair.maxCooldown *= 0.85;
+          }
+        }
+      });
+      add("e", {
+        id: "e-sniper",
+        icon: "skill-pierce",
+        tag: "의무",
+        title: "정밀 엄호",
+        desc: "의무반 피해 +28%\n치명타 확률 +10%",
+        apply: () => {
+          const defender = this.getDefenderById("e");
+          defender.damageBoost *= 1.28;
+          defender.critChance += 0.1;
+        }
+      });
+      return upgrades;
+    }
+
     pickUpgrades() {
       const recruitPool = this.getRecruitUpgrades();
+      const availablePool = this.getCharacterUpgrades();
+      const chosen = [];
+      const recruitOffers = Math.min(recruitPool.length, this.level <= 5 ? 2 : 1);
+      while (chosen.length < recruitOffers && recruitPool.length > 0) {
+        const index = Math.floor(Math.random() * recruitPool.length);
+        chosen.push(recruitPool.splice(index, 1)[0]);
+      }
+      while (chosen.length < 3 && availablePool.length > 0) {
+        const index = Math.floor(Math.random() * availablePool.length);
+        chosen.push(availablePool.splice(index, 1)[0]);
+      }
+      return chosen;
+    }
+
+    pickUpgradesLegacy() {
       const pool = [
         {
           id: "pierce",
