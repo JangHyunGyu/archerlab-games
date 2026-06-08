@@ -236,6 +236,13 @@
       }
     }
   ];
+  const DEFENDER_FORMATION_SLOTS = [
+    { x: 270, y: 925 },
+    { x: 158, y: 924 },
+    { x: 382, y: 925 },
+    { x: 52, y: 926 },
+    { x: 488, y: 924 }
+  ];
   function getAimPose(key) {
     return AIM_POSE_BY_KEY[key] || AIM_POSE_BY_KEY["aim-12"];
   }
