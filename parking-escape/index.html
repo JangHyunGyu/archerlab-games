@@ -124,21 +124,26 @@
       </div>
     </section>
 
-    <section id="complete-modal" class="modal hidden" aria-live="polite">
-      <div class="modal-panel">
-        <p class="brand-kicker">CLEAR</p>
+    <section id="complete-modal" class="modal modal-clear hidden" aria-live="polite">
+      <div class="modal-panel clear-panel">
+        <div class="clear-gate" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <p id="clear-kicker" class="brand-kicker">PARKING EXIT</p>
         <h2 id="clear-title">레벨 클리어</h2>
         <div class="clear-stats">
           <div>
-            <span>이동</span>
+            <span id="clear-moves-label">MOVE</span>
             <strong id="clear-moves">0</strong>
           </div>
           <div>
-            <span>다음</span>
+            <span id="next-level-caption">NEXT</span>
             <strong id="next-level-label">2</strong>
           </div>
           <div>
-            <span>통과 레벨</span>
+            <span id="clear-level-caption">REACHED</span>
             <strong id="clear-level">0</strong>
           </div>
         </div>
