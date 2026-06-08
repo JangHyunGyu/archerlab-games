@@ -86,6 +86,33 @@
     volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, tint: 0xffa35f, deathExplosion: true },
     elite: { id: "elite", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4, tint: 0xffd36a }
   };
+
+  function pickZombieType(level, eliteRoll) {
+    if (eliteRoll) {
+      return ZOMBIE_TYPE_CONFIGS.elite;
+    }
+    const entries = [
+      { type: ZOMBIE_TYPE_CONFIGS.normal, weight: 100 }
+    ];
+    if (level >= 2) {
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.runner, weight: Math.min(34, 14 + level * 1.5) });
+    }
+    if (level >= 4) {
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.brute, weight: Math.min(22, 8 + (level - 4) * 1.2) });
+    }
+    if (level >= 6) {
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.volatile, weight: Math.min(18, 6 + (level - 6) * 1.1) });
+    }
+    const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
+    let roll = Math.random() * total;
+    for (const entry of entries) {
+      roll -= entry.weight;
+      if (roll <= 0) {
+        return entry.type;
+      }
+    }
+    return ZOMBIE_TYPE_CONFIGS.normal;
+  }
   const SKILL_ACCENTS = {
     pierce: 0xbef6ff,
     barrel: 0xffc768,
@@ -1700,7 +1727,9 @@
         const y = rand(-65, 46);
         const variant = Math.floor(rand(0, 4));
         const frame = Math.floor(rand(0, 4));
-        const displayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
+        const typeConfig = pickZombieType(this.level, eliteRoll);
+        const baseDisplayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
+        const displayHeight = baseDisplayHeight * typeConfig.sizeScale;
         const displayWidth = displayHeight;
         const levelCurve = Math.pow(this.level, 1.04);
         const lateLevelBonus = Math.max(0, this.level - 10);
@@ -1709,17 +1738,20 @@
           + levelCurve * (eliteRoll ? 24.5 : 13.8)
           + lateLevelBonus * (eliteRoll ? 4.4 : 2.8)
           + rand(-6, 12);
-        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER);
+        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale);
         const zombie = this.add.image(x, y, `zombie-walk-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
           .setDisplaySize(displayWidth, displayHeight)
           .setFlipX(Math.random() < 0.5)
           .setDepth(60);
+        if (typeConfig.tint) {
+          zombie.setTint(typeConfig.tint);
+        }
         zombie.hp = hp;
         zombie.maxHp = hp;
-        zombie.speed = rand(19, 31) + this.level * 0.95 + lateLevelBonus * 0.22 + (eliteRoll ? -6 : 0);
-        zombie.hitRadius = eliteRoll ? 42 : 32;
-        zombie.attack = (eliteRoll ? 40 : 18) + this.level * 2;
+        zombie.speed = (rand(19, 31) + this.level * 0.95 + lateLevelBonus * 0.22 + (eliteRoll ? -6 : 0)) * typeConfig.speedScale;
+        zombie.hitRadius = (eliteRoll ? 42 : 32) * typeConfig.hitRadiusScale;
+        zombie.attack = ((eliteRoll ? 40 : 18) + this.level * 2) * typeConfig.attackScale;
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
         zombie.weakMarkTimer = 0;
@@ -1732,6 +1764,12 @@
         zombie.displayW = displayWidth;
         zombie.displayH = displayHeight;
         zombie.elite = eliteRoll;
+        zombie.type = typeConfig.id;
+        zombie.baseTint = typeConfig.tint || 0;
+        zombie.animRate = typeConfig.animRate;
+        zombie.knockbackScale = typeConfig.knockbackScale;
+        zombie.reward = typeConfig.reward;
+        zombie.deathExplosion = Boolean(typeConfig.deathExplosion);
         this.zombies.push(zombie);
       });
     }
@@ -2143,11 +2181,18 @@
       this.clearWeakMark(zombie);
       this.createDeathBurst(x, y, zombie);
       this.playSfx("death", zombie.elite ? 1.35 : 1);
+      if (zombie.elite || zombie.type === "brute") {
+        this.shakeCamera(90, 0.0045);
+      }
+      const shouldExplode = zombie.deathExplosion;
       zombie.destroy();
       this.zombies = this.zombies.filter((item) => item !== zombie);
       this.kills += 1;
       this.killsInLevel += 1;
       this.coins += zombie.reward || (zombie.elite ? 4 : 1);
+      if (shouldExplode && this.mode === "playing") {
+        this.createExplosion(x, y, 74, this.damage * 1.05, 0.35);
+      }
 
       if (this.killsInLevel >= this.levelNeed) {
         this.openSkillChoice();
@@ -2210,7 +2255,7 @@
         }
         this.updateWeakMark(zombie, dt);
         zombie.wobble += dt * 4.2;
-        zombie.animTimer += dt * (zombie.elite ? 5.2 : 6.8);
+        zombie.animTimer += dt * (zombie.animRate || (zombie.elite ? 5.2 : 6.8));
         const nextFrame = Math.floor(zombie.animTimer) % 4;
         if (nextFrame !== zombie.animFrame) {
           zombie.animFrame = nextFrame;
@@ -2225,7 +2270,7 @@
           zombie.slowTimer -= dt;
           zombie.setTint(0x99f4ff);
         } else if (zombie.tintTopLeft === 0x99f4ff) {
-          zombie.clearTint();
+          this.restoreZombieTint(zombie);
         }
 
         const slowFactor = zombie.slowTimer > 0 ? 0.34 : 1;
