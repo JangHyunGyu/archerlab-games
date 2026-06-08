@@ -399,7 +399,7 @@
       this.bestLevel = Math.max(this.bestLevel, readInt(STORAGE.bestLevel, 1));
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
       dom.bestLevel.textContent = String(this.bestLevel);
-      dom.bestMoves.textContent = this.bestMoves > 0 ? String(this.bestMoves) : "-";
+      dom.bestMoves.textContent = `${LEVEL_TIME_LIMIT}s`;
       dom.continue.disabled = this.level <= 1 && this.bestLevel <= 1;
     }
 

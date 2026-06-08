@@ -91,22 +91,31 @@
     <section id="menu" class="menu-screen">
       <div class="menu-art" aria-hidden="true"></div>
       <div class="menu-content">
-        <p class="brand-kicker">ARCHERLAB GAMES</p>
-        <h1>주차 퍼즐</h1>
-        <div class="record-row">
-          <div>
-            <span>최고 레벨</span>
-            <strong id="best-level-label">1</strong>
-          </div>
-          <div>
-            <span>최소 이동</span>
-            <strong id="best-moves-label">-</strong>
+        <div class="menu-title-block">
+          <p class="brand-kicker">ARCHERLAB GAMES</p>
+          <h1><span>PARKING</span><span>ESCAPE</span></h1>
+          <div class="menu-lane" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
           </div>
         </div>
-        <div class="menu-actions menu-actions--menu">
-          <button id="play-btn" class="primary-btn" type="button">시작</button>
-          <button id="continue-btn" class="secondary-btn" type="button">이어하기</button>
-          <button id="rank-btn" class="secondary-btn" type="button">랭킹</button>
+        <div class="menu-control-bar">
+          <div class="record-row">
+            <div>
+              <span>BEST LV</span>
+              <strong id="best-level-label">1</strong>
+            </div>
+            <div>
+              <span>LIMIT</span>
+              <strong id="best-moves-label">30s</strong>
+            </div>
+          </div>
+          <div class="menu-actions menu-actions--menu">
+            <button id="play-btn" class="primary-btn" type="button">START</button>
+            <button id="continue-btn" class="secondary-btn" type="button">CONTINUE</button>
+            <button id="rank-btn" class="secondary-btn" type="button">RANKING</button>
+          </div>
         </div>
       </div>
     </section>
