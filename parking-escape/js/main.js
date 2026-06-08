@@ -879,23 +879,29 @@
         dom.rankContent.innerHTML = `<div class="rank-empty">아직 등록된 기록이 없습니다</div>`;
         return;
       }
-      dom.rankContent.innerHTML = rows.map((row, index) => {
-        const rank = row.rank || index + 1;
-        const extra = row.extra_data || row.extra || {};
-        const level = Number(extra.cleared_level || extra.level || row.score || 0);
-        const moves = Number(extra.moves || 0);
+      const sortedRows = rows.slice().sort((a, b) => {
+        const levelDiff = getRankLevel(b) - getRankLevel(a);
+        if (levelDiff !== 0) return levelDiff;
+        const movesA = getRankMoves(a);
+        const movesB = getRankMoves(b);
+        if (movesA !== movesB) return movesA - movesB;
+        return getRankTime(a) - getRankTime(b);
+      });
+      dom.rankContent.innerHTML = sortedRows.map((row, index) => {
+        const rank = index + 1;
+        const level = getRankLevel(row);
         let meta = "";
-        if (moves > 0) meta = `${moves} 이동`;
         if (row.created_at) {
           const date = new Date(row.created_at);
-          if (!Number.isNaN(date.getTime())) meta += `${meta ? " · " : ""}${date.toLocaleDateString("ko-KR")}`;
+          if (!Number.isNaN(date.getTime())) meta = date.toLocaleDateString("ko-KR");
         }
         const cls = ["rank-row"];
         if (rank <= 3) cls.push(`top${rank}`);
+        const metaHtml = meta ? `<span class="rank-meta">${escapeHtml(meta)}</span>` : "";
         return `
           <div class="${cls.join(" ")}">
             <div class="rank-pos">${rank}</div>
-            <div class="rank-name">${escapeHtml(row.player_name || "PLAYER")}<span class="rank-meta">${escapeHtml(meta || "Parking Puzzle")}</span></div>
+            <div class="rank-name">${escapeHtml(row.player_name || "PLAYER")}${metaHtml}</div>
             <div class="rank-level">Lv ${Number(level || 0).toLocaleString()}</div>
           </div>
         `;
@@ -1365,6 +1371,34 @@
 
   function calculateClearedLevel(level) {
     return Math.max(1, level | 0);
+  }
+
+  function getRankExtra(row) {
+    const extra = row.extra_data || row.extra || {};
+    if (typeof extra === "string") {
+      try {
+        return JSON.parse(extra) || {};
+      } catch (error) {
+        return {};
+      }
+    }
+    return extra;
+  }
+
+  function getRankLevel(row) {
+    const extra = getRankExtra(row);
+    return Number(extra.cleared_level || extra.level || row.score || 0);
+  }
+
+  function getRankMoves(row) {
+    const extra = getRankExtra(row);
+    const moves = Number(extra.moves || 0);
+    return moves > 0 ? moves : Number.POSITIVE_INFINITY;
+  }
+
+  function getRankTime(row) {
+    const time = row.created_at ? new Date(row.created_at).getTime() : Number.POSITIVE_INFINITY;
+    return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
   }
 
   function escapeHtml(value) {
