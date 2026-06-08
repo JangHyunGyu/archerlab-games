@@ -79,10 +79,12 @@
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
+  const RECRUIT_UNLOCK_LEVELS = [3, 6, 9, 12];
+  const getUnlockedRecruitSlots = (level) => RECRUIT_UNLOCK_LEVELS.filter((unlockLevel) => level >= unlockLevel).length;
   const ZOMBIE_TYPE_CONFIGS = {
     normal: { id: "normal", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 1, animRate: 6.8, reward: 1 },
     runner: { id: "runner", hpScale: 0.72, speedScale: 1.72, sizeScale: 0.82, attackScale: 0.76, hitRadiusScale: 0.86, knockbackScale: 1.18, animRate: 9.4, reward: 1 },
-    brute: { id: "brute", hpScale: 1.85, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
+    brute: { id: "brute", hpScale: 3.7, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
     volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, deathExplosion: true },
     elite: { id: "elite", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
@@ -2404,7 +2406,7 @@
       }).setOrigin(0.5).setDepth(525));
 
       const upgrades = this.pickUpgrades();
-      const xs = [92, 270, 448];
+      const xs = upgrades.length === 1 ? [270] : upgrades.length === 2 ? [174, 366] : [92, 270, 448];
       upgrades.forEach((upgrade, index) => this.addSkillCard(xs[index], 548, upgrade, index));
       items.push(this.add.text(270, 810, "카드를 눌러 즉시 적용", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
@@ -2554,7 +2556,11 @@
       const recruitPool = this.getRecruitUpgrades();
       const availablePool = this.getCharacterUpgrades();
       const chosen = [];
-      const recruitOffers = Math.min(recruitPool.length, this.level <= 5 ? 2 : 1);
+      const recruitedNonPlayerCount = [...this.recruitedDefenders]
+        .filter((id) => id !== "c")
+        .length;
+      const openRecruitSlots = Math.max(0, getUnlockedRecruitSlots(this.level) - recruitedNonPlayerCount);
+      const recruitOffers = Math.min(recruitPool.length, openRecruitSlots > 0 ? 1 : 0);
       while (chosen.length < recruitOffers && recruitPool.length > 0) {
         const index = Math.floor(Math.random() * recruitPool.length);
         chosen.push(recruitPool.splice(index, 1)[0]);
