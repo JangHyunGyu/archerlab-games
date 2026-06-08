@@ -71,8 +71,6 @@
     rank: $("rank-btn"),
     next: $("next-btn"),
     home: $("home-btn"),
-    modalMenu: $("modal-menu-btn"),
-    modalRank: $("modal-rank-btn"),
     rankModal: $("rank-modal"),
     rankContent: $("rank-content"),
     rankClose: $("rank-close-btn"),
@@ -281,8 +279,6 @@
       dom.continue.addEventListener("click", () => this.start(this.level));
       dom.next.addEventListener("click", () => this.start(this.nextLevelTarget || this.level + 1));
       dom.home.addEventListener("click", () => this.showMenu());
-      dom.modalMenu.addEventListener("click", () => this.showMenu());
-      dom.modalRank.addEventListener("click", () => this.openRankModal());
       dom.rank.addEventListener("click", () => this.openRankModal());
       dom.rankClose.addEventListener("click", () => {
         this.playTone("button");
