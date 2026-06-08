@@ -2046,8 +2046,9 @@
       const displayWidth = effect.width * sizeScale;
       const displayHeight = displayWidth * texture.height / texture.width;
       const effectX = clamp(x, displayWidth / 2 + 8, GAME_WIDTH - displayWidth / 2 - 8);
-      const burst = this.add.image(effectX, y + (zombie.displayH || 170) * 0.04, effect.texture)
-        .setOrigin(0.5)
+      const effectY = y - (zombie.displayH || 170) * 0.06;
+      const burst = this.add.image(effectX, effectY, effect.texture)
+        .setOrigin(0.5, 0.64)
         .setDisplaySize(displayWidth, displayHeight)
         .setRotation(rand(-0.12, 0.12))
         .setAlpha(effect.alpha)
