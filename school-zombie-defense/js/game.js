@@ -1630,7 +1630,7 @@
 
     findTarget(preferX, radius) {
       let best = null;
-      let bestScore = Infinity;
+      let bestXBias = Infinity;
       this.zombies.forEach((zombie) => {
         if (!zombie.active || zombie.hp <= 0) {
           return;
@@ -1639,10 +1639,9 @@
         if (radius !== 999 && xBias > radius) {
           return;
         }
-        const score = xBias * 1.2 + (this.bounds.barricade - zombie.y) * 0.22 - zombie.y * 0.18;
-        if (score < bestScore) {
+        if (!best || zombie.y > best.y + 8 || (Math.abs(zombie.y - best.y) <= 8 && xBias < bestXBias)) {
           best = zombie;
-          bestScore = score;
+          bestXBias = xBias;
         }
       });
       return best || this.zombies.reduce((closest, zombie) => {
