@@ -43,7 +43,7 @@
     right: "aim-1330"
   };
   const PROJECTILE_SCALES = {
-    "projectile-arrow": 0.16,
+    "projectile-arrow": 0.19,
     "projectile-pistol": 0.14,
     "projectile-rifle": 0.16,
     "projectile-rocket": 0.19,
@@ -58,6 +58,20 @@
     "projectile-rifle": { texture: "muzzle-rifle", width: 48, duration: 120, alpha: 0.95, scalePeak: 1.16 },
     "projectile-sniper": { texture: "muzzle-sniper", width: 58, duration: 135, alpha: 0.9, scalePeak: 1.12 },
     "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08 }
+  };
+  const ZOMBIE_HIT_EFFECTS = {
+    "projectile-arrow": { texture: "zombie-hit-arrow", width: 31, duration: 260, alpha: 0.9, scalePeak: 1.18, rotation: 0.15 },
+    "projectile-pistol": { texture: "zombie-hit-pistol", width: 42, duration: 240, alpha: 0.92, scalePeak: 1.14, rotation: 0.2 },
+    "projectile-rifle": { texture: "zombie-hit-rifle", width: 50, duration: 220, alpha: 0.92, scalePeak: 1.13, rotation: 0.35 },
+    "projectile-sniper": { texture: "zombie-hit-sniper", width: 58, duration: 250, alpha: 0.92, scalePeak: 1.16, rotation: 0.4 },
+    "projectile-rocket": { texture: "zombie-hit-rocket", width: 78, duration: 330, alpha: 0.95, scalePeak: 1.12, rotation: 0.25 },
+    explosion: { texture: "zombie-hit-rocket", width: 88, duration: 340, alpha: 0.9, scalePeak: 1.16, rotation: 0.45 },
+    default: { texture: "zombie-hit-pistol", width: 40, duration: 230, alpha: 0.88, scalePeak: 1.12, rotation: 0.28 }
+  };
+  const ZOMBIE_DEATH_EFFECTS = {
+    small: { texture: "zombie-death-small", width: 92, duration: 520, alpha: 0.92, scalePeak: 1.1 },
+    normal: { texture: "zombie-death-normal", width: 132, duration: 620, alpha: 0.94, scalePeak: 1.08 },
+    elite: { texture: "zombie-death-elite", width: 190, duration: 720, alpha: 0.96, scalePeak: 1.06 }
   };
   const STARTING_LEVEL_NEED = 12;
   const STARTING_SPAWN_TIMER = 1.15;
@@ -805,6 +819,14 @@
       this.load.image("muzzle-rifle", "assets/images/muzzle-rifle.png");
       this.load.image("muzzle-rocket", "assets/images/muzzle-rocket.png");
       this.load.image("muzzle-sniper", "assets/images/muzzle-sniper.png");
+      this.load.image("zombie-hit-arrow", "assets/images/zombie-hit-arrow.png");
+      this.load.image("zombie-hit-pistol", "assets/images/zombie-hit-pistol.png");
+      this.load.image("zombie-hit-rifle", "assets/images/zombie-hit-rifle.png");
+      this.load.image("zombie-hit-rocket", "assets/images/zombie-hit-rocket.png");
+      this.load.image("zombie-hit-sniper", "assets/images/zombie-hit-sniper.png");
+      this.load.image("zombie-death-small", "assets/images/zombie-death-small.png");
+      this.load.image("zombie-death-normal", "assets/images/zombie-death-normal.png");
+      this.load.image("zombie-death-elite", "assets/images/zombie-death-elite.png");
       this.load.image("zombie-walk", "assets/images/zombie-walk.png");
       this.load.image("ui-frame-sheet", "assets/images/ui-frame-sheet.png");
       this.load.image("skill-card-sheet", "assets/images/skill-card-sheet.png");
@@ -1158,14 +1180,14 @@
 
       this.add.image(86, 118, "ui-hero-panel").setDisplaySize(150, 68).setDepth(310);
       this.add.image(50, 123, "character-c-idle").setDisplaySize(38, 64).setDepth(311);
-      this.ui.hero = this.add.text(22, 140, "Lv.1        30/30", {
+      this.ui.hero = this.add.text(82, 141, "Lv.1", {
         fontFamily: "Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 20,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#111",
         strokeThickness: 4
-      }).setDepth(312);
+      }).setOrigin(0.5).setDepth(312);
 
       this.createSideButtons();
       this.createStatusPanel();
@@ -1273,7 +1295,6 @@
         ...statStyle,
         color: "#4dff67"
       }).setOrigin(0, 0.5).setDepth(316);
-      this.ui.core = this.add.text(378, 84, "HP3000", statStyle).setOrigin(0, 0.5).setDepth(316);
       this.ui.coins = this.add.text(445, 65, "$0", {
         ...statStyle,
         color: "#ffd75c"
@@ -1282,8 +1303,13 @@
         ...statStyle,
         color: "#62c7ff"
       }).setOrigin(0, 0.5).setDepth(316);
-      this.coreBack = this.add.rectangle(270, 88, 300, 8, 0x000000, 0.78).setStrokeStyle(1, 0xffffff, 0.18).setDepth(311);
-      this.coreBar = this.add.rectangle(120, 88, 300, 6, COLORS.green, 1).setOrigin(0, 0.5).setDepth(312);
+      this.add.rectangle(270, 918, 220, 24, 0x050709, 0.68).setStrokeStyle(1, 0xffffff, 0.14).setDepth(316);
+      this.ui.core = this.add.text(270, 918, "HP 3000 / 3000", {
+        ...statStyle,
+        fontSize: 15
+      }).setOrigin(0.5).setDepth(317);
+      this.coreBack = this.add.rectangle(270, 940, 330, 8, 0x000000, 0.78).setStrokeStyle(1, 0xffffff, 0.18).setDepth(316);
+      this.coreBar = this.add.rectangle(105, 940, 330, 6, COLORS.green, 1).setOrigin(0, 0.5).setDepth(317);
     }
 
     bindInput() {
@@ -1603,7 +1629,7 @@
         defender.timer -= dt;
         if (defender.timer <= 0) {
           defender.timer = defender.rate * rand(0.75, 1.2);
-          const target = this.findTarget(defender.x, defender.role === "barrage" ? 180 : 95);
+          const target = this.findTarget(defender.x, 999);
           if (target) {
             const burstCount = defender.burstCount || 1;
             for (let shot = 0; shot < burstCount; shot += 1) {
@@ -1736,6 +1762,7 @@
         life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
         pierce,
         critChance,
+        projectile: defender.projectile,
         splashRadius: (defender.splashRadius || 0) * (defender.splashRadiusBoost || 1),
         splashDamageScale: (defender.splashDamageScale || 0) * (defender.splashDamageBoost || 1),
         markDuration: defender.markDuration || 0,
@@ -1804,7 +1831,7 @@
         const hit = this.findBulletHit(bullet);
         if (hit) {
           bullet.hitTargets.add(hit);
-          this.damageZombie(hit, bullet.damage, bullet.critChance);
+          this.damageZombie(hit, bullet.damage, bullet.critChance, bullet.projectile);
           if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && hit.active) {
             this.applyWeakMark(hit, bullet.markDuration, bullet.markDamageBonus);
           }
@@ -1900,11 +1927,44 @@
       }
     }
 
-    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE) {
+    getZombieEffectScale(zombie) {
+      return clamp((zombie.displayH || 170) / 172, 0.72, zombie.elite ? 1.48 : 1.24);
+    }
+
+    createZombieHitEffect(zombie, hitType = "default", crit = false) {
+      const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
+      const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
+      const texture = this.textures.get(effect.texture).getSourceImage();
+      const displayWidth = effect.width * sizeScale;
+      const displayHeight = displayWidth * texture.height / texture.width;
+      const impact = this.add.image(
+        zombie.x + rand(-zombie.hitRadius * 0.18, zombie.hitRadius * 0.18),
+        zombie.y - (zombie.displayH || 170) * 0.08 + rand(-zombie.hitRadius * 0.12, zombie.hitRadius * 0.1),
+        effect.texture
+      )
+        .setOrigin(0.5)
+        .setDisplaySize(displayWidth, displayHeight)
+        .setRotation(rand(-effect.rotation, effect.rotation))
+        .setAlpha(effect.alpha)
+        .setDepth(229 + zombie.y / 5);
+
+      this.tweens.add({
+        targets: impact,
+        scaleX: impact.scaleX * effect.scalePeak,
+        scaleY: impact.scaleY * effect.scalePeak,
+        alpha: 0,
+        duration: effect.duration,
+        ease: "Cubic.easeOut",
+        onComplete: () => impact.destroy()
+      });
+    }
+
+    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE, hitType = "default") {
       const crit = Math.random() < critChance;
       const marked = zombie.weakMarkTimer > 0 && zombie.weakMarkBonus > 0;
       const markMultiplier = marked ? 1 + zombie.weakMarkBonus : 1;
       const damage = Math.round(amount * markMultiplier * (crit ? 1.85 : 1));
+      this.createZombieHitEffect(zombie, hitType, crit);
       zombie.hp -= damage;
       zombie.setTint(crit ? 0xfff2a5 : 0xff7777);
       this.time.delayedCall(70, () => {
@@ -1925,12 +1985,12 @@
       const x = zombie.x;
       const y = zombie.y;
       this.clearWeakMark(zombie);
+      this.createDeathBurst(x, y, zombie);
       zombie.destroy();
       this.zombies = this.zombies.filter((item) => item !== zombie);
       this.kills += 1;
       this.killsInLevel += 1;
       this.coins += zombie.elite ? 4 : 1;
-      this.createDeathBurst(x, y, zombie.elite ? 1.25 : 1);
 
       if (this.killsInLevel >= this.levelNeed) {
         this.openSkillChoice();
@@ -1957,13 +2017,26 @@
       });
     }
 
-    createDeathBurst(x, y, scale) {
-      const burst = this.add.circle(x, y, 10, COLORS.blood, 0.35).setDepth(58);
+    createDeathBurst(x, y, zombie) {
+      const sizeScale = this.getZombieEffectScale(zombie);
+      const tier = zombie.elite ? "elite" : sizeScale < 0.95 ? "small" : "normal";
+      const effect = ZOMBIE_DEATH_EFFECTS[tier];
+      const texture = this.textures.get(effect.texture).getSourceImage();
+      const displayWidth = effect.width * sizeScale;
+      const displayHeight = displayWidth * texture.height / texture.width;
+      const burst = this.add.image(x, y + (zombie.displayH || 170) * 0.04, effect.texture)
+        .setOrigin(0.5)
+        .setDisplaySize(displayWidth, displayHeight)
+        .setRotation(rand(-0.12, 0.12))
+        .setAlpha(effect.alpha)
+        .setDepth(232);
       this.tweens.add({
         targets: burst,
-        scale: 3.4 * scale,
+        scaleX: burst.scaleX * effect.scalePeak,
+        scaleY: burst.scaleY * effect.scalePeak,
         alpha: 0,
-        duration: 340,
+        duration: effect.duration,
+        ease: "Cubic.easeOut",
         onComplete: () => burst.destroy()
       });
     }
@@ -2099,7 +2172,7 @@
         const dx = zombie.x - x;
         const dy = zombie.y - y;
         if (dx * dx + dy * dy <= radius * radius) {
-          this.damageZombie(zombie, damage * (1 - Math.sqrt(dx * dx + dy * dy) / radius * 0.35), 0);
+          this.damageZombie(zombie, damage * (1 - Math.sqrt(dx * dx + dy * dy) / radius * 0.35), 0, "explosion");
         }
       });
     }
@@ -2506,17 +2579,17 @@
       const stageName = ["교문", "복도", "교실", "옥상"][Math.min(3, this.stage - 1)];
       this.ui.stage.setText(`St.${this.stage} - ${stageName}`);
       this.ui.level.setText(`Lv.${this.level}`);
-      this.ui.hero.setText(`Lv.${Math.max(1, Math.floor(this.level / 3))}        ${Math.ceil(this.coreHp / 100)}/${Math.ceil(this.maxCoreHp / 100)}`);
+      this.ui.hero.setText(`Lv.${Math.max(1, Math.floor(this.level / 3))}`);
       this.ui.morale.setText(`M${this.morale}%`);
       this.ui.morale.setColor(this.morale < 35 ? "#ff524f" : this.morale < 70 ? "#ffd75c" : "#4dff67");
-      this.ui.core.setText(`HP${Math.round(this.coreHp)}`);
+      this.ui.core.setText(`HP ${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
       this.ui.coins.setText(`$${this.coins}`);
       this.ui.shield.setText(`S${Math.round(this.shield)}`);
       const progress = clamp(this.killsInLevel / this.levelNeed, 0, 1);
       this.progressBar.setSize(508 * progress, 6);
       this.progressBar.setFillStyle(this.mode === "skill" ? COLORS.gold : 0xe0ab26, 1);
       const hpRate = clamp(this.coreHp / this.maxCoreHp, 0, 1);
-      this.coreBar.setSize(300 * hpRate, 6);
+      this.coreBar.setSize(330 * hpRate, 6);
       this.coreBar.setFillStyle(hpRate < 0.35 ? COLORS.red : hpRate < 0.68 ? COLORS.gold : COLORS.green, 1);
     }
   }
