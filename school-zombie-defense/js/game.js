@@ -106,12 +106,14 @@
       projectile: "projectile-rifle",
       speed: 1020,
       rate: 0.78,
+      burstCount: 3,
+      burstDelay: 70,
       aim: { pivot: [2, -146], reach: 52 },
       recruit: {
         icon: "portrait-barrage",
         tag: "소총",
         title: "소총 지원 합류",
-        desc: "연사 지원 사격\n유탄 스킬 해금"
+        desc: "3연발 지원 사격\n유탄 스킬 해금"
       }
     },
     {
@@ -136,12 +138,14 @@
       projectile: "projectile-rocket",
       speed: 720,
       rate: 1.16,
+      splashRadius: 78,
+      splashDamageScale: 0.78,
       aim: { pivot: [2, -145], reach: 56 },
       recruit: {
         icon: "portrait-frost",
         tag: "로켓",
         title: "로켓 지원 합류",
-        desc: "로켓 지원 사격\n냉각 스킬 해금"
+        desc: "폭발 로켓 사격\n냉각 스킬 해금"
       }
     },
     {
@@ -154,12 +158,13 @@
       projectile: "projectile-sniper",
       speed: 1180,
       rate: 1.24,
+      pierce: 2,
       aim: { pivot: [2, -132], reach: 64 },
       recruit: {
         icon: "portrait-repair",
         tag: "저격",
         title: "저격 지원 합류",
-        desc: "저격 지원 사격\n수리 스킬 해금"
+        desc: "관통 저격 사격\n수리 스킬 해금"
       }
     }
   ];
@@ -956,11 +961,16 @@
           baseRate: defender.rate,
           recruited,
           damageBoost: 1,
-          pierce: 0,
+          pierce: defender.pierce || 0,
+          basePierce: defender.pierce || 0,
           critChance: BASE_CRIT_CHANCE,
           rocketEvery: 0,
           shotsSinceRocket: 0,
           skillPower: 1,
+          burstCount: defender.burstCount || 1,
+          burstDelay: defender.burstDelay || 0,
+          splashRadius: defender.splashRadius || 0,
+          splashDamageScale: defender.splashDamageScale || 0,
           timer: rand(0.15, 0.65),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
@@ -1397,7 +1407,7 @@
       this.defenders.forEach((defender) => {
         defender.rate = defender.baseRate;
         defender.damageBoost = 1;
-        defender.pierce = 0;
+        defender.pierce = defender.basePierce || 0;
         defender.critChance = BASE_CRIT_CHANCE;
         defender.rocketEvery = 0;
         defender.shotsSinceRocket = 0;
@@ -1556,14 +1566,22 @@
           defender.timer = defender.rate * rand(0.75, 1.2);
           const target = this.findTarget(defender.x, defender.role === "barrage" ? 180 : 95);
           if (target) {
-            const damage = this.getDefenderDamage(defender);
-            this.fireBullet(defender, target, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
-            if (defender.rocketEvery > 0) {
-              defender.shotsSinceRocket += 1;
-              if (defender.shotsSinceRocket >= defender.rocketEvery) {
-                defender.shotsSinceRocket = 0;
-                this.createExplosion(target.x, target.y, 68, damage * 1.35);
-              }
+            const burstCount = defender.burstCount || 1;
+            for (let shot = 0; shot < burstCount; shot += 1) {
+              this.time.delayedCall(shot * (defender.burstDelay || 0), () => {
+                if (this.mode !== "playing" || !defender.recruited || !target.active) {
+                  return;
+                }
+                const damage = this.getDefenderDamage(defender);
+                this.fireBullet(defender, target, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
+                if (defender.rocketEvery > 0) {
+                  defender.shotsSinceRocket += 1;
+                  if (defender.shotsSinceRocket >= defender.rocketEvery) {
+                    defender.shotsSinceRocket = 0;
+                    this.createExplosion(target.x, target.y, 68, damage * 1.35);
+                  }
+                }
+              });
             }
           }
         }
@@ -1679,7 +1697,10 @@
         vy: Math.sin(angle) * speed,
         life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
         pierce,
-        critChance
+        critChance,
+        splashRadius: defender.splashRadius || 0,
+        splashDamageScale: defender.splashDamageScale || 0,
+        hitTargets: new Set()
       });
       this.createMuzzle(x, y, angle, defender.projectile);
     }
@@ -1736,7 +1757,11 @@
 
         const hit = this.findBulletHit(bullet);
         if (hit) {
+          bullet.hitTargets.add(hit);
           this.damageZombie(hit, bullet.damage, bullet.critChance);
+          if (bullet.splashRadius > 0) {
+            this.createExplosion(hit.x, hit.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75));
+          }
           if (bullet.pierce > 0) {
             bullet.pierce -= 1;
           } else {
@@ -1751,6 +1776,9 @@
       for (let i = 0; i < this.zombies.length; i += 1) {
         const zombie = this.zombies[i];
         if (!zombie.active || zombie.hp <= 0) {
+          continue;
+        }
+        if (bullet.hitTargets && bullet.hitTargets.has(zombie)) {
           continue;
         }
         const hitX = bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset;
@@ -2122,7 +2150,7 @@
         icon: "skill-barrage",
         tag: "로켓",
         title: "로켓 추진제",
-        desc: "로켓 피해 +28%\n지원 사격 -10%",
+        desc: "폭발 피해 +28%\n로켓 사격 -10%",
         apply: () => {
           const defender = this.getDefenderById("d");
           defender.damageBoost *= 1.28;
