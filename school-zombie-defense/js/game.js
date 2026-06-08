@@ -792,7 +792,10 @@
     });
 
     ["frost", "barrage", "rally", "repair", "pierce", "barrel", "squad"].forEach((type) => {
-      makeCanvasTexture(scene, `skill-${type}`, 72, 72, (ctx) => drawSkillIcon(ctx, 72, 72, type));
+      const key = `skill-${type}`;
+      if (!scene.textures.exists(key)) {
+        makeCanvasTexture(scene, key, 72, 72, (ctx) => drawSkillIcon(ctx, 72, 72, type));
+      }
     });
   }
 
