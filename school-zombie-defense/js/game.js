@@ -1414,6 +1414,8 @@
         defender.rocketEvery = 0;
         defender.shotsSinceRocket = 0;
         defender.skillPower = 1;
+        defender.splashRadiusBoost = 1;
+        defender.splashDamageBoost = 1;
         defender.timer = rand(0.1, defender.rate);
         defender.firePoseTimer = 0;
         this.setDefenderRecruited(defender.id, defender.role === "player", false);
@@ -1700,8 +1702,8 @@
         life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
         pierce,
         critChance,
-        splashRadius: defender.splashRadius || 0,
-        splashDamageScale: defender.splashDamageScale || 0,
+        splashRadius: (defender.splashRadius || 0) * (defender.splashRadiusBoost || 1),
+        splashDamageScale: (defender.splashDamageScale || 0) * (defender.splashDamageBoost || 1),
         hitTargets: new Set()
       });
       this.createMuzzle(x, y, angle, defender.projectile);
@@ -2065,8 +2067,8 @@
         id: "c-pierce",
         icon: "skill-pierce",
         tag: "권총",
-        title: "관통 탄심",
-        desc: "주인공 관통 +1\n권총 피해 +12%",
+        title: "정조준 탄",
+        desc: "권총 관통 +1\n명중 피해 +12%",
         apply: () => {
           const defender = this.getDefenderById("c");
           defender.pierce += 1;
@@ -2077,44 +2079,44 @@
         id: "c-barrel",
         icon: "skill-barrel",
         tag: "권총",
-        title: "강화 총열",
-        desc: "주인공 피해 +24%\n권총 사격 -8%",
+        title: "퀵드로우",
+        desc: "권총 사격 -12%\n권총 피해 +14%",
         apply: () => {
           const defender = this.getDefenderById("c");
-          defender.damageBoost *= 1.24;
-          defender.rate *= 0.92;
+          defender.damageBoost *= 1.14;
+          defender.rate *= 0.88;
         }
       });
       add("a", {
         id: "a-rally",
         icon: "skill-rally",
-        tag: "양궁",
-        title: "응원 지휘",
-        desc: "양궁부 치명 +12%\n격려 지속 증가",
+        tag: "활",
+        title: "집중 호흡",
+        desc: "활 치명 +14%\n격려 지속 증가",
         apply: () => {
           const defender = this.getDefenderById("a");
-          defender.critChance += 0.12;
+          defender.critChance += 0.14;
           defender.skillPower += 0.2;
         }
       });
       add("a", {
         id: "a-archery",
         icon: "skill-pierce",
-        tag: "양궁",
-        title: "속사 훈련",
-        desc: "양궁부 피해 +24%\n지원 사격 -12%",
+        tag: "활",
+        title: "관통 화살",
+        desc: "활 관통 +1\n화살 피해 +18%",
         apply: () => {
           const defender = this.getDefenderById("a");
-          defender.damageBoost *= 1.24;
-          defender.rate *= 0.88;
+          defender.pierce += 1;
+          defender.damageBoost *= 1.18;
         }
       });
       add("b", {
         id: "b-barrage",
         icon: "skill-barrage",
         tag: "소총",
-        title: "유탄 연계",
-        desc: "소총수 8발마다\n추가 폭발 발생",
+        title: "유탄 장전",
+        desc: "소총 8발마다\n소형 폭발 발생",
         apply: () => {
           const defender = this.getDefenderById("b");
           defender.rocketEvery = defender.rocketEvery === 0 ? 8 : Math.max(4, defender.rocketEvery - 1);
@@ -2124,19 +2126,19 @@
         id: "b-rifle",
         icon: "skill-barrel",
         tag: "소총",
-        title: "탄창 개조",
-        desc: "소총수 피해 +22%\n지원 사격 -10%",
+        title: "확장 탄창",
+        desc: "소총 점사 +1발\n연발 간격 -10%",
         apply: () => {
           const defender = this.getDefenderById("b");
-          defender.damageBoost *= 1.22;
-          defender.rate *= 0.9;
+          defender.burstCount = Math.min(6, defender.burstCount + 1);
+          defender.burstDelay = Math.max(45, defender.burstDelay * 0.9);
         }
       });
       add("d", {
         id: "d-frost",
         icon: "skill-frost",
         tag: "로켓",
-        title: "냉각 조명탄",
+        title: "냉각 탄두",
         desc: "냉각 피해 +25%\n냉각 쿨다운 -15%",
         apply: () => {
           const defender = this.getDefenderById("d");
@@ -2151,19 +2153,19 @@
         id: "d-rocket",
         icon: "skill-barrage",
         tag: "로켓",
-        title: "로켓 추진제",
-        desc: "폭발 피해 +28%\n로켓 사격 -10%",
+        title: "고폭 탄두",
+        desc: "폭발 반경 +18%\n폭발 피해 +22%",
         apply: () => {
           const defender = this.getDefenderById("d");
-          defender.damageBoost *= 1.28;
-          defender.rate *= 0.9;
+          defender.splashRadiusBoost *= 1.18;
+          defender.splashDamageBoost *= 1.22;
         }
       });
       add("e", {
         id: "e-repair",
         icon: "skill-repair",
         tag: "수리",
-        title: "바리케이드 수리",
+        title: "원격 수리탄",
         desc: "수리량 +25%\n수리 쿨다운 -15%",
         apply: () => {
           const defender = this.getDefenderById("e");
@@ -2178,12 +2180,12 @@
         id: "e-sniper",
         icon: "skill-pierce",
         tag: "저격",
-        title: "정밀 엄호",
-        desc: "저격 피해 +28%\n치명타 확률 +10%",
+        title: "철갑 저격",
+        desc: "저격 관통 +1\n저격 피해 +18%",
         apply: () => {
           const defender = this.getDefenderById("e");
-          defender.damageBoost *= 1.28;
-          defender.critChance += 0.1;
+          defender.pierce += 1;
+          defender.damageBoost *= 1.18;
         }
       });
       return upgrades;
