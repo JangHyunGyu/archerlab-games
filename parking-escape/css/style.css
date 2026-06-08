@@ -290,8 +290,13 @@ button:disabled {
 
 .menu-screen {
   position: fixed;
-  inset: 0;
+  left: 0;
+  top: 0;
   z-index: 15;
+  width: var(--game-width, 100vw);
+  min-width: 100vw;
+  height: var(--game-height, 100dvh);
+  min-height: 100dvh;
   display: grid;
   align-items: stretch;
   padding: max(80px, calc(env(safe-area-inset-top) + 76px)) 28px max(26px, env(safe-area-inset-bottom));
