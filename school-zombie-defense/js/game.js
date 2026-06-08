@@ -971,6 +971,8 @@
           burstDelay: defender.burstDelay || 0,
           splashRadius: defender.splashRadius || 0,
           splashDamageScale: defender.splashDamageScale || 0,
+          splashRadiusBoost: 1,
+          splashDamageBoost: 1,
           timer: rand(0.15, 0.65),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
