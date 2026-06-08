@@ -81,11 +81,12 @@
   const STARTING_SPAWN_TIMER = 1.15;
   const ZOMBIE_TYPE_CONFIGS = {
     normal: { id: "normal", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 1, animRate: 6.8, reward: 1 },
-    runner: { id: "runner", hpScale: 0.72, speedScale: 1.72, sizeScale: 0.82, attackScale: 0.76, hitRadiusScale: 0.86, knockbackScale: 1.18, animRate: 9.4, reward: 1, tint: 0xa7ff8f },
-    brute: { id: "brute", hpScale: 1.85, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2, tint: 0xb8a1ff },
-    volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, tint: 0xffa35f, deathExplosion: true },
-    elite: { id: "elite", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4, tint: 0xffd36a }
+    runner: { id: "runner", hpScale: 0.72, speedScale: 1.72, sizeScale: 0.82, attackScale: 0.76, hitRadiusScale: 0.86, knockbackScale: 1.18, animRate: 9.4, reward: 1 },
+    brute: { id: "brute", hpScale: 1.85, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
+    volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, deathExplosion: true },
+    elite: { id: "elite", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
+  const ZOMBIE_TEXTURE_TYPES = ["normal", "runner", "brute", "volatile", "elite"];
 
   function pickZombieType(level, eliteRoll) {
     if (eliteRoll) {
@@ -277,22 +278,29 @@
   }
 
   function createZombieSpriteTextures(scene) {
-    const source = scene.textures.get("zombie-walk").getSourceImage();
-    const cellWidth = Math.floor(source.width / 4);
-    const cellHeight = Math.floor(source.height / 4);
-    for (let variant = 0; variant < 4; variant += 1) {
-      for (let frame = 0; frame < 4; frame += 1) {
-        makeImageSliceTexture(
-          scene,
-          "zombie-walk",
-          `zombie-walk-${variant}-${frame}`,
-          frame * cellWidth,
-          variant * cellHeight,
-          cellWidth,
-          cellHeight
-        );
+    const sliceSheet = (sourceKey, keyPrefix) => {
+      const source = scene.textures.get(sourceKey).getSourceImage();
+      const cellWidth = Math.floor(source.width / 4);
+      const cellHeight = Math.floor(source.height / 4);
+      for (let variant = 0; variant < 4; variant += 1) {
+        for (let frame = 0; frame < 4; frame += 1) {
+          makeImageSliceTexture(
+            scene,
+            sourceKey,
+            `${keyPrefix}-${variant}-${frame}`,
+            frame * cellWidth,
+            variant * cellHeight,
+            cellWidth,
+            cellHeight
+          );
+        }
       }
-    }
+    };
+
+    sliceSheet("zombie-walk", "zombie-walk");
+    ZOMBIE_TEXTURE_TYPES.forEach((type) => {
+      sliceSheet(`zombie-walk-${type}`, `zombie-walk-${type}`);
+    });
   }
 
   function createCharacterSpriteTextures(scene) {
@@ -871,6 +879,11 @@
       this.load.image("zombie-death-normal", "assets/images/zombie-death-normal.png");
       this.load.image("zombie-death-elite", "assets/images/zombie-death-elite.png");
       this.load.image("zombie-walk", "assets/images/zombie-walk.png");
+      this.load.image("zombie-walk-normal", "assets/images/zombie-walk-normal.png");
+      this.load.image("zombie-walk-runner", "assets/images/zombie-walk-runner.png");
+      this.load.image("zombie-walk-brute", "assets/images/zombie-walk-brute.png");
+      this.load.image("zombie-walk-volatile", "assets/images/zombie-walk-volatile.png");
+      this.load.image("zombie-walk-elite", "assets/images/zombie-walk-elite.png");
       this.load.image("ui-frame-sheet", "assets/images/ui-frame-sheet.png");
       this.load.image("skill-card-sheet", "assets/images/skill-card-sheet.png");
     }
@@ -1739,14 +1752,12 @@
           + lateLevelBonus * (eliteRoll ? 4.4 : 2.8)
           + rand(-6, 12);
         const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale);
-        const zombie = this.add.image(x, y, `zombie-walk-${variant}-${frame}`)
+        const textureBase = `zombie-walk-${typeConfig.id}`;
+        const zombie = this.add.image(x, y, `${textureBase}-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
           .setDisplaySize(displayWidth, displayHeight)
           .setFlipX(Math.random() < 0.5)
           .setDepth(60);
-        if (typeConfig.tint) {
-          zombie.setTint(typeConfig.tint);
-        }
         zombie.hp = hp;
         zombie.maxHp = hp;
         zombie.speed = (rand(19, 31) + this.level * 0.95 + lateLevelBonus * 0.22 + (eliteRoll ? -6 : 0)) * typeConfig.speedScale;
@@ -1765,7 +1776,8 @@
         zombie.displayH = displayHeight;
         zombie.elite = eliteRoll;
         zombie.type = typeConfig.id;
-        zombie.baseTint = typeConfig.tint || 0;
+        zombie.textureBase = textureBase;
+        zombie.baseTint = 0;
         zombie.animRate = typeConfig.animRate;
         zombie.knockbackScale = typeConfig.knockbackScale;
         zombie.reward = typeConfig.reward;
@@ -2259,7 +2271,7 @@
         const nextFrame = Math.floor(zombie.animTimer) % 4;
         if (nextFrame !== zombie.animFrame) {
           zombie.animFrame = nextFrame;
-          zombie.setTexture(`zombie-walk-${zombie.variant}-${nextFrame}`);
+          zombie.setTexture(`${zombie.textureBase || "zombie-walk"}-${zombie.variant}-${nextFrame}`);
           zombie.setDisplaySize(zombie.displayW, zombie.displayH);
         }
         const crowdShift = Math.sin(zombie.wobble) * 7 * dt;
