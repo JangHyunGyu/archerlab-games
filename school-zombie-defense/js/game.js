@@ -43,11 +43,11 @@
     right: "aim-1330"
   };
   const PROJECTILE_SCALES = {
-    "projectile-arrow": 0.38,
-    "projectile-pistol": 0.32,
-    "projectile-rifle": 0.34,
-    "projectile-rocket": 0.38,
-    "projectile-sniper": 0.34,
+    "projectile-arrow": 0.24,
+    "projectile-pistol": 0.2,
+    "projectile-rifle": 0.22,
+    "projectile-rocket": 0.26,
+    "projectile-sniper": 0.22,
     "projectile-frost": 0.78,
     "projectile-support": 0.78,
     "projectile-shock": 0.62
