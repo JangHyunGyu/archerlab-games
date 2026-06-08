@@ -823,6 +823,15 @@
       this.load.image("muzzle-rifle", "assets/images/muzzle-rifle.png");
       this.load.image("muzzle-rocket", "assets/images/muzzle-rocket.png");
       this.load.image("muzzle-sniper", "assets/images/muzzle-sniper.png");
+      this.load.image("skill-pierce", "assets/images/skill-pierce.png");
+      this.load.image("skill-multishot", "assets/images/skill-multishot.png");
+      this.load.image("skill-rally", "assets/images/skill-rally.png");
+      this.load.image("skill-mark", "assets/images/skill-mark.png");
+      this.load.image("skill-barrage", "assets/images/skill-barrage.png");
+      this.load.image("skill-rocket", "assets/images/skill-rocket.png");
+      this.load.image("skill-frost", "assets/images/skill-frost.png");
+      this.load.image("skill-repair", "assets/images/skill-repair.png");
+      this.load.image("skill-sniper", "assets/images/skill-sniper.png");
       this.load.image("zombie-hit-arrow", "assets/images/zombie-hit-arrow.png");
       this.load.image("zombie-hit-pistol", "assets/images/zombie-hit-pistol.png");
       this.load.image("zombie-hit-rifle", "assets/images/zombie-hit-rifle.png");
@@ -1597,9 +1606,9 @@
         const levelCurve = Math.pow(this.level, 1.04);
         const lateLevelBonus = Math.max(0, this.level - 10);
         const hp = Math.round(
-          (eliteRoll ? 142 : 72)
-          + levelCurve * (eliteRoll ? 20.5 : 11.2)
-          + lateLevelBonus * (eliteRoll ? 3.5 : 2.2)
+          (eliteRoll ? 165 : 86)
+          + levelCurve * (eliteRoll ? 24.5 : 13.8)
+          + lateLevelBonus * (eliteRoll ? 4.4 : 2.8)
           + rand(-6, 12)
         );
         const zombie = this.add.image(x, y, `zombie-walk-${variant}-${frame}`)
@@ -1609,7 +1618,7 @@
           .setDepth(60);
         zombie.hp = hp;
         zombie.maxHp = hp;
-        zombie.speed = rand(24, 38) + this.level * 1.45 + lateLevelBonus * 0.35 + (eliteRoll ? -5 : 0);
+        zombie.speed = rand(19, 31) + this.level * 0.95 + lateLevelBonus * 0.22 + (eliteRoll ? -6 : 0);
         zombie.hitRadius = eliteRoll ? 42 : 32;
         zombie.attack = (eliteRoll ? 40 : 18) + this.level * 2;
         zombie.attackTimer = rand(0.2, 0.7);
@@ -1677,12 +1686,12 @@
         return;
       }
 
-      const count = this.rallyTimer > 0 ? 2 : 1;
+      const count = (player.burstCount || 1) + (this.rallyTimer > 0 ? 1 : 0);
       for (let i = 0; i < count; i += 1) {
         this.fireBullet(
           {
             ...player,
-            muzzleX: player.muzzleX + (i - (count - 1) / 2) * 12
+            shotOffset: (i - (count - 1) / 2) * 12
           },
           target,
           this.getDefenderDamage(player),
@@ -1754,7 +1763,7 @@
         });
       }
       const muzzle = this.getDefenderMuzzle(defender, pose);
-      const x = muzzle.x;
+      const x = muzzle.x + (defender.shotOffset || 0);
       const y = muzzle.y;
       const tx = target.x + rand(-8, 8);
       const ty = target.y + rand(-10, 10);
@@ -2272,15 +2281,15 @@
         }
       });
       add("c", {
-        id: "c-barrel",
-        icon: "skill-barrel",
+        id: "c-multishot",
+        icon: "skill-multishot",
         tag: "권총",
-        title: "퀵드로우",
-        desc: "권총 사격 -12%\n권총 피해 +14%",
+        title: "더블 탭",
+        desc: "권총 동시 사격 +1\n권총 피해 +8%",
         apply: () => {
           const defender = this.getDefenderById("c");
-          defender.damageBoost *= 1.14;
-          defender.rate *= 0.88;
+          defender.burstCount = Math.min(4, defender.burstCount + 1);
+          defender.damageBoost *= 1.08;
         }
       });
       add("a", {
@@ -2297,7 +2306,7 @@
       });
       add("a", {
         id: "a-mark",
-        icon: "skill-rally",
+        icon: "skill-mark",
         tag: "활",
         title: "약점 표식",
         desc: "표식 추가 피해 +7%\n표식 지속 +1.5초",
@@ -2311,9 +2320,9 @@
       });
       add("b", {
         id: "b-barrage",
-        icon: "skill-barrage",
+        icon: "skill-rocket",
         tag: "소총",
-        title: "유탄 장전",
+        title: "하부 유탄",
         desc: "소총 8발마다\n소형 폭발 발생",
         apply: () => {
           const defender = this.getDefenderById("b");
@@ -2322,10 +2331,10 @@
       });
       add("b", {
         id: "b-rifle",
-        icon: "skill-barrel",
+        icon: "skill-barrage",
         tag: "소총",
-        title: "확장 탄창",
-        desc: "소총 점사 +1발\n연발 간격 -10%",
+        title: "연발 제어",
+        desc: "소총 연사 +1발\n연발 간격 -10%",
         apply: () => {
           const defender = this.getDefenderById("b");
           defender.burstCount = Math.min(6, defender.burstCount + 1);
@@ -2349,7 +2358,7 @@
       });
       add("d", {
         id: "d-rocket",
-        icon: "skill-barrage",
+        icon: "skill-rocket",
         tag: "로켓",
         title: "고폭 탄두",
         desc: "폭발 반경 +18%\n폭발 피해 +22%",
@@ -2376,7 +2385,7 @@
       });
       add("e", {
         id: "e-sniper",
-        icon: "skill-pierce",
+        icon: "skill-sniper",
         tag: "저격",
         title: "철갑 저격",
         desc: "저격 관통 +1\n저격 피해 +18%",
@@ -2418,7 +2427,7 @@
       if (isRecruit) {
         this.fitSpriteHeight(watermark, 205);
       } else {
-        watermark.setScale(1.65);
+        watermark.setDisplaySize(150, 150);
       }
       const iconHalo = isRecruit
         ? this.add.ellipse(x, y - 70, 82, 112, accent, 0.16).setStrokeStyle(2, accent, 0.55).setDepth(527)
@@ -2428,7 +2437,7 @@
         icon.setOrigin(0.5, 1);
         this.fitSpriteHeight(icon, 138);
       } else {
-        icon.setScale(0.92);
+        icon.setDisplaySize(74, 74);
       }
       const tagBg = this.add.rectangle(x, y + 24, 76, 24, accent, 0.2)
         .setStrokeStyle(1, accent, 0.78)
