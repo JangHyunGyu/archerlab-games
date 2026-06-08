@@ -121,7 +121,7 @@
         icon: "portrait-rally",
         tag: "활",
         title: "활 지원 합류",
-        desc: "화살 지원 사격\n격려 스킬 해금"
+        desc: "화살 지원 사격\n치명/표식 성장 해금"
       }
     },
     {
@@ -141,7 +141,7 @@
         icon: "portrait-barrage",
         tag: "소총",
         title: "소총 지원 합류",
-        desc: "3연발 지원 사격\n유탄 스킬 해금"
+        desc: "3연발 지원 사격\n유탄 패시브 해금"
       }
     },
     {
@@ -173,7 +173,7 @@
         icon: "portrait-frost",
         tag: "로켓",
         title: "로켓 지원 합류",
-        desc: "폭발 로켓 사격\n냉각 스킬 해금"
+        desc: "폭발 로켓 사격\n냉각 탄두 성장"
       }
     },
     {
@@ -192,17 +192,10 @@
         icon: "portrait-repair",
         tag: "저격",
         title: "저격 지원 합류",
-        desc: "관통 저격 사격\n수리 스킬 해금"
+        desc: "관통 저격 사격\n방어 보강 성장"
       }
     }
   ];
-  const SKILL_OWNER_BY_ID = {
-    rally: "a",
-    barrage: "b",
-    frost: "d",
-    repair: "e"
-  };
-
   function getAimPose(key) {
     return AIM_POSE_BY_KEY[key] || AIM_POSE_BY_KEY["aim-12"];
   }
@@ -878,7 +871,6 @@
       this.bullets = [];
       this.effects = [];
       this.defenders = [];
-      this.skillButtons = [];
       this.overlayObjects = [];
       this.recruitedDefenders = new Set(["c"]);
       this.mode = "menu";
@@ -897,7 +889,6 @@
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
-      this.rallyTimer = 0;
       this.focusPoint = null;
       this.speedMultiplier = 1;
       this.pausedByButton = false;
@@ -1020,7 +1011,6 @@
           baseCritChance: defender.critChance || BASE_CRIT_CHANCE,
           rocketEvery: 0,
           shotsSinceRocket: 0,
-          skillPower: 1,
           burstCount: defender.burstCount || 1,
           baseBurstCount: defender.burstCount || 1,
           burstDelay: defender.burstDelay || 0,
@@ -1033,6 +1023,8 @@
           baseMarkDuration: defender.markDuration || 0,
           markDamageBonus: defender.markDamageBonus || 0,
           baseMarkDamageBonus: defender.markDamageBonus || 0,
+          slowDuration: defender.slowDuration || 0,
+          baseSlowDuration: defender.slowDuration || 0,
           timer: rand(0.15, 0.65),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
@@ -1079,7 +1071,6 @@
         this.recruitedDefenders.delete(id);
         defender.sprite.setVisible(false).setAlpha(0).setY(defender.y);
       }
-      this.updateSkillButtonLocks();
     }
 
     recruitDefender(id) {
@@ -1202,97 +1193,7 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(312);
 
-      this.createSideButtons();
       this.createStatusPanel();
-    }
-
-    createSideButtons() {
-      const utility = [
-        [34, 302, "▥"],
-        [34, 352, "▦"]
-      ];
-      utility.forEach(([x, y, label]) => {
-        this.add.image(x, y, "ui-skill-button").setDisplaySize(58, 58).setDepth(310);
-        this.add.text(x, y, label, {
-          fontFamily: "Arial, sans-serif",
-          fontSize: 28,
-          fontStyle: "900",
-          color: "#ffffff"
-        }).setOrigin(0.5).setDepth(311);
-      });
-
-      [
-        ["frost", "character-d-idle", 431],
-        ["barrage", "character-b-idle", 487],
-        ["rally", "character-a-idle", 543],
-        ["repair", "character-e-idle", 599]
-      ].forEach(([id, texture, y]) => {
-        const bg = this.add.image(36, y, "ui-skill-button").setDisplaySize(66, 66).setDepth(312);
-        const icon = this.add.image(36, y + 6, texture).setDisplaySize(35, 62).setDepth(313);
-        const cdText = this.add.text(58, y + 22, "", {
-          fontFamily: "Arial, sans-serif",
-          fontSize: 17,
-          fontStyle: "900",
-          color: "#ffffff",
-          stroke: "#111",
-          strokeThickness: 4
-        }).setOrigin(0.5).setDepth(314);
-        bg.setInteractive({ useHandCursor: true });
-        icon.setInteractive({ useHandCursor: true });
-        bg.on("pointerdown", () => this.castSkill(id));
-        icon.on("pointerdown", () => this.castSkill(id));
-        this.skillButtons.push({
-          id,
-          bg,
-          icon,
-          cdText,
-          cooldown: 0,
-          maxCooldown: id === "repair" ? 13 : id === "barrage" ? 9 : 11,
-          baseMaxCooldown: id === "repair" ? 13 : id === "barrage" ? 9 : 11,
-          unlocked: this.isSkillUnlocked(id)
-        });
-      });
-      this.updateSkillButtonLocks();
-    }
-
-    isSkillUnlocked(id) {
-      const owner = SKILL_OWNER_BY_ID[id];
-      return !owner || this.recruitedDefenders.has(owner);
-    }
-
-    getSkillOwnerDefender(id) {
-      const owner = SKILL_OWNER_BY_ID[id];
-      return owner ? this.getDefenderById(owner) : null;
-    }
-
-    updateSkillButtonLocks() {
-      this.skillButtons.forEach((button) => {
-        button.unlocked = this.isSkillUnlocked(button.id);
-        if (!button.unlocked) {
-          button.cooldown = 0;
-        }
-        this.renderSkillButton(button);
-      });
-    }
-
-    renderSkillButton(button) {
-      if (!button) {
-        return;
-      }
-      if (!button.unlocked) {
-        button.bg.setAlpha(0.28);
-        button.icon.setAlpha(0.2);
-        button.cdText.setText("잠김");
-        button.cdText.setFontSize(12);
-        button.cdText.setColor("#c2cbcf");
-        return;
-      }
-
-      button.cdText.setFontSize(17);
-      button.cdText.setColor("#ffffff");
-      button.cdText.setText(button.cooldown > 0 ? Math.ceil(button.cooldown) : "");
-      button.bg.setAlpha(button.cooldown > 0 ? 0.45 : 0.82);
-      button.icon.setAlpha(button.cooldown > 0 ? 0.52 : 1);
     }
 
     createStatusPanel() {
@@ -1328,9 +1229,6 @@
     bindInput() {
       this.input.on("pointerdown", (pointer) => {
         if (this.mode !== "playing") {
-          return;
-        }
-        if (pointer.x < 76 && pointer.y > 390 && pointer.y < 640) {
           return;
         }
         if (pointer.y < 84 || pointer.y > this.bounds.barricade) {
@@ -1426,7 +1324,7 @@
         color: "#d9eef0"
       }).setOrigin(0.5).setDepth(504));
       this.addOverlayButton(270, 365, 204, 54, "출격", 505, () => this.startRun(), COLORS.gold);
-      items.push(this.add.text(270, 424, "탭해서 조준 · 왼쪽 스킬 버튼으로 전술 사용", {
+      items.push(this.add.text(270, 424, "탭해서 조준 · 레벨업마다 동료와 무기 스킬 선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 14,
         fontStyle: "800",
@@ -1466,13 +1364,8 @@
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
-      this.rallyTimer = 0;
       this.focusPoint = null;
       this.recruitedDefenders = new Set(["c"]);
-      this.skillButtons.forEach((button) => {
-        button.cooldown = 0;
-        button.maxCooldown = button.baseMaxCooldown;
-      });
       this.defenders.forEach((defender) => {
         defender.rate = defender.baseRate;
         defender.damageBoost = 1;
@@ -1480,18 +1373,17 @@
         defender.critChance = defender.baseCritChance || BASE_CRIT_CHANCE;
         defender.rocketEvery = 0;
         defender.shotsSinceRocket = 0;
-        defender.skillPower = 1;
         defender.burstCount = defender.baseBurstCount || 1;
         defender.burstDelay = defender.baseBurstDelay || 0;
         defender.splashRadiusBoost = 1;
         defender.splashDamageBoost = 1;
         defender.markDuration = defender.baseMarkDuration || 0;
         defender.markDamageBonus = defender.baseMarkDamageBonus || 0;
+        defender.slowDuration = defender.baseSlowDuration || 0;
         defender.timer = rand(0.1, defender.rate);
         defender.firePoseTimer = 0;
         this.setDefenderRecruited(defender.id, defender.role === "player", false);
       });
-      this.updateSkillButtonLocks();
       this.updateHud();
     }
 
@@ -1546,10 +1438,6 @@
           this.focusPoint = null;
         }
       }
-      if (this.rallyTimer > 0) {
-        this.rallyTimer -= dt;
-      }
-      this.updateSkillCooldowns(dt);
       this.updateSpawning(dt);
       this.updateDefenderAnimations(dt);
       this.updateDefenders(dt);
@@ -1680,13 +1568,12 @@
         return;
       }
       const target = this.findTarget(this.focusPoint ? this.focusPoint.x : 270, this.focusPoint ? 210 : 999);
-      const rateBonus = this.rallyTimer > 0 ? 0.58 : 1;
-      this.playerFireTimer = player.rate * rateBonus * (isManual ? 0.45 : 1);
+      this.playerFireTimer = player.rate * (isManual ? 0.45 : 1);
       if (!target) {
         return;
       }
 
-      const count = (player.burstCount || 1) + (this.rallyTimer > 0 ? 1 : 0);
+      const count = player.burstCount || 1;
       const usedTargets = new Set();
       for (let i = 0; i < count; i += 1) {
         const shotOffset = (i - (count - 1) / 2) * 12;
@@ -1804,6 +1691,7 @@
         splashDamageScale: (defender.splashDamageScale || 0) * (defender.splashDamageBoost || 1),
         markDuration: defender.markDuration || 0,
         markDamageBonus: defender.markDamageBonus || 0,
+        slowDuration: defender.slowDuration || 0,
         hitTargets: new Set()
       });
       this.createMuzzle(x, y, angle, defender.projectile);
@@ -1869,11 +1757,14 @@
         if (hit) {
           bullet.hitTargets.add(hit);
           this.damageZombie(hit, bullet.damage, bullet.critChance, bullet.projectile);
+          if (bullet.slowDuration > 0 && hit.active) {
+            hit.slowTimer = Math.max(hit.slowTimer || 0, bullet.slowDuration);
+          }
           if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && hit.active) {
             this.applyWeakMark(hit, bullet.markDuration, bullet.markDamageBonus);
           }
           if (bullet.splashRadius > 0) {
-            this.createExplosion(hit.x, hit.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75));
+            this.createExplosion(hit.x, hit.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75), bullet.slowDuration);
           }
           if (bullet.pierce > 0) {
             bullet.pierce -= 1;
@@ -2149,53 +2040,7 @@
       });
     }
 
-    updateSkillCooldowns(dt) {
-      this.skillButtons.forEach((button) => {
-        button.unlocked = this.isSkillUnlocked(button.id);
-        if (button.unlocked) {
-          button.cooldown = Math.max(0, button.cooldown - dt);
-        }
-        this.renderSkillButton(button);
-      });
-    }
-
-    castSkill(id) {
-      if (this.mode !== "playing") {
-        return;
-      }
-      const button = this.skillButtons.find((item) => item.id === id);
-      if (!button || !button.unlocked || button.cooldown > 0) {
-        if (button && !button.unlocked) {
-          this.showToast("동료 영입 필요", 0x7d8790);
-        }
-        return;
-      }
-      button.cooldown = button.maxCooldown;
-      const owner = this.getSkillOwnerDefender(id);
-      const skillPower = owner?.skillPower || 1;
-
-      if (id === "frost") {
-        this.zombies.forEach((zombie) => {
-          zombie.slowTimer = Math.max(zombie.slowTimer, 3.4);
-          this.damageZombie(zombie, (12 + this.level * 2) * skillPower, 0);
-        });
-        this.createScreenPulse(0x8ff7ff);
-      } else if (id === "barrage") {
-        const points = [150, 270, 405].map((x) => ({ x: x + rand(-25, 25), y: rand(250, 610) }));
-        points.forEach((point, index) => {
-          this.time.delayedCall(index * 140, () => this.createExplosion(point.x, point.y, 92, (85 + this.level * 9) * skillPower));
-        });
-      } else if (id === "rally") {
-        this.rallyTimer = 7.5 * skillPower;
-        this.createScreenPulse(0xff7fb7);
-      } else if (id === "repair") {
-        this.coreHp = clamp(this.coreHp + (480 + this.level * 30) * skillPower, 0, this.maxCoreHp);
-        this.shield += (220 + this.level * 25) * skillPower;
-        this.createScreenPulse(0x7dff8d);
-      }
-    }
-
-    createExplosion(x, y, radius, damage) {
+    createExplosion(x, y, radius, damage, slowDuration = 0) {
       const ring = this.add.circle(x, y, 18, 0xffd35a, 0.46).setStrokeStyle(4, 0xffffff, 0.55).setDepth(221);
       this.tweens.add({
         targets: ring,
@@ -2212,6 +2057,9 @@
         const dy = zombie.y - y;
         if (dx * dx + dy * dy <= radius * radius) {
           this.damageZombie(zombie, damage * (1 - Math.sqrt(dx * dx + dy * dy) / radius * 0.35), 0, "explosion");
+          if (slowDuration > 0 && zombie.active) {
+            zombie.slowTimer = Math.max(zombie.slowTimer || 0, slowDuration);
+          }
         }
       });
     }
@@ -2313,11 +2161,11 @@
         icon: "skill-rally",
         tag: "활",
         title: "집중 호흡",
-        desc: "활 치명 +14%\n격려 지속 증가",
+        desc: "활 치명 +14%\n활 피해 +10%",
         apply: () => {
           const defender = this.getDefenderById("a");
           defender.critChance += 0.14;
-          defender.skillPower += 0.2;
+          defender.damageBoost *= 1.1;
         }
       });
       add("a", {
@@ -2362,14 +2210,11 @@
         icon: "skill-frost",
         tag: "로켓",
         title: "냉각 탄두",
-        desc: "냉각 피해 +25%\n냉각 쿨다운 -15%",
+        desc: "폭발 둔화 +1.2초\n로켓 피해 +12%",
         apply: () => {
           const defender = this.getDefenderById("d");
-          const frost = this.skillButtons.find((button) => button.id === "frost");
-          defender.skillPower += 0.25;
-          if (frost) {
-            frost.maxCooldown *= 0.85;
-          }
+          defender.slowDuration += 1.2;
+          defender.damageBoost *= 1.12;
         }
       });
       add("d", {
@@ -2387,16 +2232,14 @@
       add("e", {
         id: "e-repair",
         icon: "skill-repair",
-        tag: "수리",
-        title: "원격 수리탄",
-        desc: "수리량 +25%\n수리 쿨다운 -15%",
+        tag: "방어",
+        title: "방어 정비",
+        desc: "코어 내구 +180\n저격 피해 +12%",
         apply: () => {
           const defender = this.getDefenderById("e");
-          const repair = this.skillButtons.find((button) => button.id === "repair");
-          defender.skillPower += 0.25;
-          if (repair) {
-            repair.maxCooldown *= 0.85;
-          }
+          defender.damageBoost *= 1.12;
+          this.maxCoreHp += 180;
+          this.coreHp = clamp(this.coreHp + 180, 0, this.maxCoreHp);
         }
       });
       add("e", {
