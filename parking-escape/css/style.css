@@ -1148,6 +1148,10 @@ h2 {
     grid-template-columns: 1fr;
     align-content: end;
     gap: 18px;
+    justify-self: start;
+    width: calc(100vw - 32px);
+    max-width: 420px;
+    margin: 0;
   }
 
   .menu-title-block {
