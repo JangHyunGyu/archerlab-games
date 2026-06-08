@@ -91,9 +91,9 @@
       aim: { pivot: [0, -134], reach: 38 },
       recruit: {
         icon: "portrait-rally",
-        tag: "영입",
-        title: "양궁부 합류",
-        desc: "좌측 후방에서\n화살 지원 사격"
+        tag: "활",
+        title: "활 지원 합류",
+        desc: "화살 지원 사격\n격려 스킬 해금"
       }
     },
     {
@@ -109,9 +109,9 @@
       aim: { pivot: [2, -146], reach: 52 },
       recruit: {
         icon: "portrait-barrage",
-        tag: "영입",
-        title: "소총수 합류",
-        desc: "중앙 화력 지원\n유탄 스킬 해금"
+        tag: "소총",
+        title: "소총 지원 합류",
+        desc: "연사 지원 사격\n유탄 스킬 해금"
       }
     },
     {
@@ -139,8 +139,8 @@
       aim: { pivot: [2, -145], reach: 56 },
       recruit: {
         icon: "portrait-frost",
-        tag: "영입",
-        title: "공병 합류",
+        tag: "로켓",
+        title: "로켓 지원 합류",
         desc: "로켓 지원 사격\n냉각 스킬 해금"
       }
     },
@@ -157,8 +157,8 @@
       aim: { pivot: [2, -132], reach: 64 },
       recruit: {
         icon: "portrait-repair",
-        tag: "영입",
-        title: "의무반 합류",
+        tag: "저격",
+        title: "저격 지원 합류",
         desc: "저격 지원 사격\n수리 스킬 해금"
       }
     }
@@ -838,12 +838,7 @@
       this.coins = 0;
       this.shield = 0;
       this.damage = 28;
-      this.fireRate = 0.33;
       this.playerFireTimer = 0;
-      this.pierce = 0;
-      this.critChance = BASE_CRIT_CHANCE;
-      this.rocketEvery = 0;
-      this.shotsSinceRocket = 0;
       this.rallyTimer = 0;
       this.focusPoint = null;
       this.speedMultiplier = 1;
@@ -1030,6 +1025,7 @@
         .map((defender) => ({
           id: `recruit-${defender.id}`,
           icon: defender.recruit.icon,
+          characterTexture: `character-${defender.id}-idle`,
           tag: defender.recruit.tag,
           title: defender.recruit.title,
           desc: defender.recruit.desc,
@@ -1190,6 +1186,11 @@
     isSkillUnlocked(id) {
       const owner = SKILL_OWNER_BY_ID[id];
       return !owner || this.recruitedDefenders.has(owner);
+    }
+
+    getSkillOwnerDefender(id) {
+      const owner = SKILL_OWNER_BY_ID[id];
+      return owner ? this.getDefenderById(owner) : null;
     }
 
     updateSkillButtonLocks() {
@@ -1385,12 +1386,7 @@
       this.coins = 0;
       this.shield = 0;
       this.damage = 28;
-      this.fireRate = 0.33;
       this.playerFireTimer = 0;
-      this.pierce = 0;
-      this.critChance = BASE_CRIT_CHANCE;
-      this.rocketEvery = 0;
-      this.shotsSinceRocket = 0;
       this.rallyTimer = 0;
       this.focusPoint = null;
       this.recruitedDefenders = new Set(["c"]);
@@ -1922,24 +1918,26 @@
         return;
       }
       button.cooldown = button.maxCooldown;
+      const owner = this.getSkillOwnerDefender(id);
+      const skillPower = owner?.skillPower || 1;
 
       if (id === "frost") {
         this.zombies.forEach((zombie) => {
           zombie.slowTimer = Math.max(zombie.slowTimer, 3.4);
-          this.damageZombie(zombie, 12 + this.level * 2);
+          this.damageZombie(zombie, (12 + this.level * 2) * skillPower, 0);
         });
         this.createScreenPulse(0x8ff7ff);
       } else if (id === "barrage") {
         const points = [150, 270, 405].map((x) => ({ x: x + rand(-25, 25), y: rand(250, 610) }));
         points.forEach((point, index) => {
-          this.time.delayedCall(index * 140, () => this.createExplosion(point.x, point.y, 92, 85 + this.level * 9));
+          this.time.delayedCall(index * 140, () => this.createExplosion(point.x, point.y, 92, (85 + this.level * 9) * skillPower));
         });
       } else if (id === "rally") {
-        this.rallyTimer = 7.5;
+        this.rallyTimer = 7.5 * skillPower;
         this.createScreenPulse(0xff7fb7);
       } else if (id === "repair") {
-        this.coreHp = clamp(this.coreHp + 480 + this.level * 30, 0, this.maxCoreHp);
-        this.shield += 220 + this.level * 25;
+        this.coreHp = clamp(this.coreHp + (480 + this.level * 30) * skillPower, 0, this.maxCoreHp);
+        this.shield += (220 + this.level * 25) * skillPower;
         this.createScreenPulse(0x7dff8d);
       }
     }
@@ -1960,7 +1958,7 @@
         const dx = zombie.x - x;
         const dy = zombie.y - y;
         if (dx * dx + dy * dy <= radius * radius) {
-          this.damageZombie(zombie, damage * (1 - Math.sqrt(dx * dx + dy * dy) / radius * 0.35));
+          this.damageZombie(zombie, damage * (1 - Math.sqrt(dx * dx + dy * dy) / radius * 0.35), 0);
         }
       });
     }
@@ -2107,7 +2105,7 @@
       add("d", {
         id: "d-frost",
         icon: "skill-frost",
-        tag: "공병",
+        tag: "로켓",
         title: "냉각 조명탄",
         desc: "냉각 피해 +25%\n냉각 쿨다운 -15%",
         apply: () => {
@@ -2122,9 +2120,9 @@
       add("d", {
         id: "d-rocket",
         icon: "skill-barrage",
-        tag: "공병",
+        tag: "로켓",
         title: "로켓 추진제",
-        desc: "공병 피해 +28%\n지원 사격 -10%",
+        desc: "로켓 피해 +28%\n지원 사격 -10%",
         apply: () => {
           const defender = this.getDefenderById("d");
           defender.damageBoost *= 1.28;
@@ -2134,8 +2132,8 @@
       add("e", {
         id: "e-repair",
         icon: "skill-repair",
-        tag: "의무",
-        title: "응급 처치",
+        tag: "수리",
+        title: "바리케이드 수리",
         desc: "수리량 +25%\n수리 쿨다운 -15%",
         apply: () => {
           const defender = this.getDefenderById("e");
@@ -2149,9 +2147,9 @@
       add("e", {
         id: "e-sniper",
         icon: "skill-pierce",
-        tag: "의무",
+        tag: "저격",
         title: "정밀 엄호",
-        desc: "의무반 피해 +28%\n치명타 확률 +10%",
+        desc: "저격 피해 +28%\n치명타 확률 +10%",
         apply: () => {
           const defender = this.getDefenderById("e");
           defender.damageBoost *= 1.28;
@@ -2177,119 +2175,31 @@
       return chosen;
     }
 
-    pickUpgradesLegacy() {
-      const pool = [
-        {
-          id: "pierce",
-          icon: "skill-pierce",
-          tag: "공격",
-          title: "관통 탄심",
-          desc: "탄환 관통 +1\n기본 피해 +12%",
-          apply: () => {
-            this.pierce += 1;
-            this.damage *= 1.12;
-          }
-        },
-        {
-          id: "barrel",
-          icon: "skill-barrel",
-          tag: "무기",
-          title: "강화 총열",
-          desc: "기본 피해 +28%\n사격 간격 -8%",
-          apply: () => {
-            this.damage *= 1.28;
-            this.fireRate *= 0.92;
-          }
-        },
-        {
-          id: "rally",
-          icon: "skill-rally",
-          tag: "지휘",
-          title: "응급 지휘",
-          desc: "치명타 확률 +10%\n체력 즉시 회복",
-          apply: () => {
-            this.critChance += 0.1;
-            this.coreHp = clamp(this.coreHp + 220, 0, this.maxCoreHp);
-          }
-        },
-        {
-          id: "repair",
-          icon: "skill-repair",
-          tag: "방어",
-          title: "책상 방벽",
-          desc: "최대 체력 +450\n방어막 +300",
-          apply: () => {
-            this.maxCoreHp += 450;
-            this.coreHp += 450;
-            this.shield += 300;
-          }
-        },
-        {
-          id: "barrage",
-          icon: "skill-barrage",
-          tag: "폭발",
-          title: "폭발 연계",
-          desc: "8발마다\n추가 폭발 발생",
-          apply: () => {
-            this.rocketEvery = this.rocketEvery === 0 ? 8 : Math.max(4, this.rocketEvery - 1);
-          }
-        },
-        {
-          id: "squad",
-          icon: "skill-squad",
-          tag: "지원",
-          title: "합동 교전",
-          desc: "영입 동료 사격 +18%\n스킬 쿨다운 -10%",
-          apply: () => {
-            this.defenders.forEach((defender) => {
-              if (defender.recruited && defender.role !== "player") {
-                defender.rate *= 0.82;
-              }
-            });
-            this.skillButtons.forEach((button) => {
-              button.maxCooldown *= 0.9;
-            });
-          }
-        },
-        {
-          id: "frost",
-          icon: "skill-frost",
-          tag: "제어",
-          title: "냉각 조명탄",
-          desc: "감속 쿨다운 -25%\n기본 피해 +20",
-          apply: () => {
-            const frost = this.skillButtons.find((button) => button.id === "frost");
-            if (frost) {
-              frost.maxCooldown *= 0.75;
-            }
-            this.damage += 20;
-          }
-        }
-      ];
-      const hasRecruitedSupport = this.defenders.some((defender) => defender.recruited && defender.role !== "player");
-      const availablePool = pool.filter((upgrade) => upgrade.id !== "squad" || hasRecruitedSupport);
-      const chosen = [];
-      const recruitOffers = Math.min(recruitPool.length, this.level <= 5 ? 2 : 1);
-      while (chosen.length < recruitOffers && recruitPool.length > 0) {
-        const index = Math.floor(Math.random() * recruitPool.length);
-        chosen.push(recruitPool.splice(index, 1)[0]);
-      }
-      while (chosen.length < 3 && availablePool.length > 0) {
-        const index = Math.floor(Math.random() * availablePool.length);
-        chosen.push(availablePool.splice(index, 1)[0]);
-      }
-      return chosen;
-    }
-
     addSkillCard(x, y, upgrade, index = 0) {
       const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
       const accentHex = upgrade.accentHex || SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
+      const isRecruit = Boolean(upgrade.characterTexture);
       const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
       const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
       const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
-      const watermark = this.add.image(x, y - 44, upgrade.icon).setScale(1.65).setAlpha(0.1).setDepth(525);
-      const iconHalo = this.add.circle(x, y - 112, 40, 0x000000, 0.58).setStrokeStyle(2, accent, 0.9).setDepth(527);
-      const icon = this.add.image(x, y - 112, upgrade.icon).setScale(0.92).setDepth(528);
+      const watermark = this.add.image(x, y - 44, isRecruit ? upgrade.characterTexture : upgrade.icon)
+        .setAlpha(isRecruit ? 0.08 : 0.1)
+        .setDepth(525);
+      if (isRecruit) {
+        this.fitSpriteHeight(watermark, 205);
+      } else {
+        watermark.setScale(1.65);
+      }
+      const iconHalo = isRecruit
+        ? this.add.ellipse(x, y - 70, 82, 112, accent, 0.16).setStrokeStyle(2, accent, 0.55).setDepth(527)
+        : this.add.circle(x, y - 112, 40, 0x000000, 0.58).setStrokeStyle(2, accent, 0.9).setDepth(527);
+      const icon = this.add.image(x, isRecruit ? y - 24 : y - 112, isRecruit ? upgrade.characterTexture : upgrade.icon).setDepth(528);
+      if (isRecruit) {
+        icon.setOrigin(0.5, 1);
+        this.fitSpriteHeight(icon, 138);
+      } else {
+        icon.setScale(0.92);
+      }
       const tagBg = this.add.rectangle(x, y + 24, 76, 24, accent, 0.2)
         .setStrokeStyle(1, accent, 0.78)
         .setDepth(528);
