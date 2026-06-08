@@ -1701,7 +1701,7 @@
           {
             ...player,
             shotOffset,
-            angleOffset: reusingTarget ? shotOffset * 0.006 : 0
+            angleOffset: reusingTarget ? clamp(shotOffset * 0.012, -0.1, 0.1) : 0
           },
           shotTarget,
           this.getDefenderDamage(player),
