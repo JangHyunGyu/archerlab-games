@@ -19,6 +19,7 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rand = (min, max) => Math.random() * (max - min) + min;
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
+  const getTeamDamageForLevel = (level) => Math.round(28 + Math.max(0, level - 1) * 2.1);
   const BASE_CRIT_CHANCE = 0.08;
   const BOW_BASE_CRIT_CHANCE = 0.22;
   const BOW_MARK_DURATION = 4.25;
@@ -69,9 +70,9 @@
     default: { texture: "zombie-hit-pistol", width: 40, duration: 230, alpha: 0.88, scalePeak: 1.12, rotation: 0.28 }
   };
   const ZOMBIE_DEATH_EFFECTS = {
-    small: { texture: "zombie-death-small", width: 92, duration: 520, alpha: 0.92, scalePeak: 1.1 },
-    normal: { texture: "zombie-death-normal", width: 132, duration: 620, alpha: 0.94, scalePeak: 1.08 },
-    elite: { texture: "zombie-death-elite", width: 190, duration: 720, alpha: 0.96, scalePeak: 1.06 }
+    small: { texture: "zombie-death-small", width: 150, duration: 620, alpha: 0.94, scalePeak: 1.08 },
+    normal: { texture: "zombie-death-normal", width: 210, duration: 720, alpha: 0.96, scalePeak: 1.07 },
+    elite: { texture: "zombie-death-elite", width: 280, duration: 820, alpha: 0.97, scalePeak: 1.05 }
   };
   const STARTING_LEVEL_NEED = 12;
   const STARTING_SPAWN_TIMER = 1.15;
@@ -882,7 +883,7 @@
       this.morale = 100;
       this.coins = 0;
       this.shield = 0;
-      this.damage = 28;
+      this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
       this.rallyTimer = 0;
       this.focusPoint = null;
@@ -1451,7 +1452,7 @@
       this.morale = 100;
       this.coins = 0;
       this.shield = 0;
-      this.damage = 28;
+      this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
       this.rallyTimer = 0;
       this.focusPoint = null;
@@ -1565,13 +1566,14 @@
         return;
       }
 
-      const levelPressure = Math.min(0.78, this.level * 0.035);
-      const earlyDelayBonus = Math.max(0, (5 - this.level) * 0.08);
-      const baseDelay = clamp(0.88 - levelPressure + earlyDelayBonus, 0.14, 1.15);
-      const delayMin = this.level < 5 ? 0.65 : 0.55;
-      const delayMax = this.level < 5 ? 1.15 : 1.1;
-      this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax);
-      const burst = this.level >= 9 ? 3 : this.level >= 5 ? 2 : 1;
+      const levelPressure = Math.min(0.58, this.level * 0.024);
+      const earlyDelayBonus = Math.max(0, (6 - this.level) * 0.07);
+      const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.28, 1.18);
+      const delayMin = this.level < 7 ? 0.72 : 0.64;
+      const delayMax = this.level < 7 ? 1.2 : 1.16;
+      const burst = this.level >= 16 ? 3 : this.level >= 10 ? 2 : 1;
+      const burstPacing = burst > 1 ? 1 + (burst - 1) * 0.38 : 1;
+      this.spawnTimer = rand(baseDelay * delayMin * burstPacing, baseDelay * delayMax * burstPacing);
       for (let i = 0; i < burst; i += 1) {
         this.spawnZombie(i * rand(0.04, 0.11));
       }
@@ -1582,14 +1584,21 @@
         if (this.mode !== "playing") {
           return;
         }
-        const eliteRoll = this.level >= 5 && Math.random() < Math.min(0.07 + this.level * 0.008, 0.22);
+        const eliteRoll = this.level >= 6 && Math.random() < Math.min(0.045 + this.level * 0.0055, 0.16);
         const x = rand(this.bounds.left + 28, this.bounds.right - 28);
         const y = rand(-65, 46);
         const variant = Math.floor(rand(0, 4));
         const frame = Math.floor(rand(0, 4));
         const displayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
         const displayWidth = displayHeight;
-        const hp = Math.round((eliteRoll ? 150 : 78) + this.level * (eliteRoll ? 28 : 16) + rand(-6, 12));
+        const levelCurve = Math.pow(this.level, 1.04);
+        const lateLevelBonus = Math.max(0, this.level - 10);
+        const hp = Math.round(
+          (eliteRoll ? 142 : 72)
+          + levelCurve * (eliteRoll ? 20.5 : 11.2)
+          + lateLevelBonus * (eliteRoll ? 3.5 : 2.2)
+          + rand(-6, 12)
+        );
         const zombie = this.add.image(x, y, `zombie-walk-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
           .setDisplaySize(displayWidth, displayHeight)
@@ -1597,9 +1606,9 @@
           .setDepth(60);
         zombie.hp = hp;
         zombie.maxHp = hp;
-        zombie.speed = rand(25, 41) + this.level * 2.1 + (eliteRoll ? -4 : 0);
+        zombie.speed = rand(24, 38) + this.level * 1.45 + lateLevelBonus * 0.35 + (eliteRoll ? -5 : 0);
         zombie.hitRadius = eliteRoll ? 42 : 32;
-        zombie.attack = (eliteRoll ? 44 : 20) + this.level * 2.5;
+        zombie.attack = (eliteRoll ? 40 : 18) + this.level * 2;
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
         zombie.weakMarkTimer = 0;
@@ -2195,7 +2204,8 @@
       this.level += 1;
       this.stage = Math.floor((this.level - 1) / 4) + 1;
       this.killsInLevel = 0;
-      this.levelNeed = Math.round(16 + this.level * 5.2);
+      this.levelNeed = Math.round(15 + this.level * 4.4);
+      this.damage = getTeamDamageForLevel(this.level);
       this.clearOverlay();
 
       const items = this.overlayObjects;
