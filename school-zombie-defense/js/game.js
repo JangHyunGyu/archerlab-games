@@ -79,6 +79,13 @@
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
+  const ZOMBIE_TYPE_CONFIGS = {
+    normal: { id: "normal", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 1, animRate: 6.8, reward: 1 },
+    runner: { id: "runner", hpScale: 0.72, speedScale: 1.72, sizeScale: 0.82, attackScale: 0.76, hitRadiusScale: 0.86, knockbackScale: 1.18, animRate: 9.4, reward: 1, tint: 0xa7ff8f },
+    brute: { id: "brute", hpScale: 1.85, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2, tint: 0xb8a1ff },
+    volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, tint: 0xffa35f, deathExplosion: true },
+    elite: { id: "elite", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4, tint: 0xffd36a }
+  };
   const SKILL_ACCENTS = {
     pierce: 0xbef6ff,
     barrel: 0xffc768,
@@ -894,6 +901,11 @@
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
       this.focusPoint = null;
+      this.audioCtx = null;
+      this.masterGain = null;
+      this.noiseBuffer = null;
+      this.sfxLastPlayed = {};
+      this.hitStopTimer = 0;
       this.speedMultiplier = 1;
       this.pausedByButton = false;
 
@@ -1235,6 +1247,7 @@
         if (this.mode !== "playing") {
           return;
         }
+        this.unlockAudio();
         if (pointer.y < 84 || pointer.y > this.bounds.barricade) {
           return;
         }
@@ -1242,6 +1255,149 @@
         this.createAimFlash(pointer.x, pointer.y);
         this.firePlayerBurst(true);
       });
+    }
+
+    unlockAudio() {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) {
+        return null;
+      }
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioContext();
+        this.masterGain = this.audioCtx.createGain();
+        this.masterGain.gain.value = 0.26;
+        this.masterGain.connect(this.audioCtx.destination);
+      }
+      if (this.audioCtx.state === "suspended") {
+        this.audioCtx.resume().catch(() => {});
+      }
+      return this.audioCtx;
+    }
+
+    getNoiseBuffer(ctx) {
+      if (this.noiseBuffer) {
+        return this.noiseBuffer;
+      }
+      const length = Math.floor(ctx.sampleRate * 0.36);
+      const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < length; i += 1) {
+        data[i] = rand(-1, 1) * (1 - i / length);
+      }
+      this.noiseBuffer = buffer;
+      return buffer;
+    }
+
+    playTone(startFreq, endFreq, duration, gainValue = 0.12, type = "triangle") {
+      const ctx = this.unlockAudio();
+      if (!ctx || !this.masterGain) {
+        return;
+      }
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(Math.max(20, startFreq), now);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(gainValue, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.connect(gain).connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + duration + 0.025);
+    }
+
+    playNoise(duration, gainValue = 0.1, frequency = 1800, type = "bandpass") {
+      const ctx = this.unlockAudio();
+      if (!ctx || !this.masterGain) {
+        return;
+      }
+      const now = ctx.currentTime;
+      const source = ctx.createBufferSource();
+      const filter = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+      source.buffer = this.getNoiseBuffer(ctx);
+      filter.type = type;
+      filter.frequency.setValueAtTime(frequency, now);
+      filter.Q.value = 0.9;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(gainValue, now + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      source.connect(filter).connect(gain).connect(this.masterGain);
+      source.start(now);
+      source.stop(now + duration + 0.025);
+    }
+
+    playSfx(name, intensity = 1) {
+      const ctx = this.unlockAudio();
+      if (!ctx) {
+        return;
+      }
+      const minGap = {
+        hit: 0.045,
+        crit: 0.05,
+        death: 0.075,
+        explosion: 0.12,
+        core: 0.16,
+        pistol: 0.035,
+        rifle: 0.032,
+        sniper: 0.08,
+        rocket: 0.12,
+        arrow: 0.06,
+        skill: 0.18
+      }[name] || 0.04;
+      const last = this.sfxLastPlayed[name] || 0;
+      if (ctx.currentTime - last < minGap) {
+        return;
+      }
+      this.sfxLastPlayed[name] = ctx.currentTime;
+
+      if (name === "pistol") {
+        this.playNoise(0.055, 0.1 * intensity, 2400);
+        this.playTone(210, 92, 0.07, 0.045 * intensity, "square");
+      } else if (name === "rifle") {
+        this.playNoise(0.045, 0.085 * intensity, 3100);
+        this.playTone(260, 120, 0.045, 0.035 * intensity, "square");
+      } else if (name === "sniper") {
+        this.playNoise(0.095, 0.18 * intensity, 1700);
+        this.playTone(120, 46, 0.16, 0.13 * intensity, "sawtooth");
+      } else if (name === "rocket") {
+        this.playNoise(0.18, 0.16 * intensity, 520, "lowpass");
+        this.playTone(95, 36, 0.22, 0.12 * intensity, "sawtooth");
+      } else if (name === "arrow") {
+        this.playNoise(0.09, 0.055 * intensity, 4200);
+        this.playTone(620, 390, 0.055, 0.035 * intensity, "triangle");
+      } else if (name === "hit") {
+        this.playNoise(0.07, 0.05 * intensity, 950, "lowpass");
+      } else if (name === "crit") {
+        this.playNoise(0.095, 0.08 * intensity, 1200, "bandpass");
+        this.playTone(520, 180, 0.09, 0.06 * intensity, "triangle");
+      } else if (name === "death") {
+        this.playNoise(0.16, 0.085 * intensity, 420, "lowpass");
+        this.playTone(150, 58, 0.2, 0.07 * intensity, "sawtooth");
+      } else if (name === "explosion") {
+        this.playNoise(0.24, 0.18 * intensity, 280, "lowpass");
+        this.playTone(82, 28, 0.28, 0.12 * intensity, "sawtooth");
+      } else if (name === "core") {
+        this.playNoise(0.11, 0.11 * intensity, 700, "lowpass");
+        this.playTone(190, 70, 0.14, 0.075 * intensity, "square");
+      } else if (name === "skill") {
+        this.playTone(420, 760, 0.12, 0.055 * intensity, "triangle");
+        this.time.delayedCall(72, () => this.playTone(620, 980, 0.14, 0.05 * intensity, "triangle"));
+      } else if (name === "start") {
+        this.playTone(220, 440, 0.14, 0.05 * intensity, "triangle");
+      }
+    }
+
+    playWeaponSfx(projectile) {
+      const map = {
+        "projectile-arrow": "arrow",
+        "projectile-pistol": "pistol",
+        "projectile-rifle": "rifle",
+        "projectile-sniper": "sniper",
+        "projectile-rocket": "rocket"
+      };
+      this.playSfx(map[projectile] || "pistol");
     }
 
     addOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
@@ -1263,7 +1419,10 @@
 
       [outer, inner, text].forEach((item) => {
         item.setInteractive({ useHandCursor: true });
-        item.on("pointerdown", onClick);
+        item.on("pointerdown", () => {
+          this.unlockAudio();
+          onClick();
+        });
         item.on("pointerover", () => {
           outer.setAlpha(1);
           inner.setFillStyle(0x1f2b32, 0.95);
