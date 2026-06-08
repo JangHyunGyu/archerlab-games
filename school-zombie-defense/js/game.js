@@ -1687,13 +1687,23 @@
       }
 
       const count = (player.burstCount || 1) + (this.rallyTimer > 0 ? 1 : 0);
+      const usedTargets = new Set();
       for (let i = 0; i < count; i += 1) {
+        const shotOffset = (i - (count - 1) / 2) * 12;
+        const preferredX = (this.focusPoint ? this.focusPoint.x : 270) + shotOffset * 2.5;
+        const radius = this.focusPoint ? 210 : 999;
+        const shotTarget = i === 0
+          ? target
+          : this.findTarget(preferredX, radius, usedTargets) || target;
+        const reusingTarget = usedTargets.has(shotTarget);
+        usedTargets.add(shotTarget);
         this.fireBullet(
           {
             ...player,
-            shotOffset: (i - (count - 1) / 2) * 12
+            shotOffset,
+            angleOffset: reusingTarget ? shotOffset * 0.006 : 0
           },
-          target,
+          shotTarget,
           this.getDefenderDamage(player),
           player.speed,
           player.pierce || 0,
@@ -1710,11 +1720,14 @@
       }
     }
 
-    findTarget(preferX, radius) {
+    findTarget(preferX, radius, ignoredTargets = null) {
       let best = null;
       let bestXBias = Infinity;
       this.zombies.forEach((zombie) => {
         if (!zombie.active || zombie.hp <= 0) {
+          return;
+        }
+        if (ignoredTargets && ignoredTargets.has(zombie)) {
           return;
         }
         const xBias = Math.abs(zombie.x - preferX);
@@ -1728,6 +1741,9 @@
       });
       return best || this.zombies.reduce((closest, zombie) => {
         if (!zombie.active || zombie.hp <= 0) {
+          return closest;
+        }
+        if (ignoredTargets && ignoredTargets.has(zombie)) {
           return closest;
         }
         if (!closest || zombie.y > closest.y) {
@@ -1767,7 +1783,7 @@
       const y = muzzle.y;
       const tx = target.x + rand(-8, 8);
       const ty = target.y + rand(-10, 10);
-      const angle = Math.atan2(ty - y, tx - x);
+      const angle = Math.atan2(ty - y, tx - x) + (defender.angleOffset || 0);
       const sprite = this.add.image(x, y, defender.projectile)
         .setOrigin(0.5, 1)
         .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
@@ -2285,12 +2301,11 @@
         id: "c-multishot",
         icon: "skill-multishot",
         tag: "권총",
-        title: "더블 탭",
-        desc: "권총 동시 사격 +1\n권총 피해 +8%",
+        title: "분산 사격",
+        desc: "권총 동시 사격 +1\n다른 좀비 우선",
         apply: () => {
           const defender = this.getDefenderById("c");
           defender.burstCount = Math.min(4, defender.burstCount + 1);
-          defender.damageBoost *= 1.08;
         }
       });
       add("a", {
