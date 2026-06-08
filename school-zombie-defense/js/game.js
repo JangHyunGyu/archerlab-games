@@ -48,6 +48,8 @@
     "projectile-support": 0.78,
     "projectile-shock": 0.62
   };
+  const STARTING_LEVEL_NEED = 12;
+  const STARTING_SPAWN_TIMER = 1.15;
 
   function getAimPose(key) {
     return AIM_POSE_BY_KEY[key] || AIM_POSE_BY_KEY["aim-12"];
@@ -705,8 +707,8 @@
       this.level = 1;
       this.kills = 0;
       this.killsInLevel = 0;
-      this.levelNeed = 16;
-      this.spawnTimer = 0.6;
+      this.levelNeed = STARTING_LEVEL_NEED;
+      this.spawnTimer = STARTING_SPAWN_TIMER;
       this.spawnBurst = 1;
       this.maxCoreHp = 3000;
       this.coreHp = this.maxCoreHp;
@@ -1091,8 +1093,8 @@
       this.level = 1;
       this.kills = 0;
       this.killsInLevel = 0;
-      this.levelNeed = 16;
-      this.spawnTimer = 0.6;
+      this.levelNeed = STARTING_LEVEL_NEED;
+      this.spawnTimer = STARTING_SPAWN_TIMER;
       this.spawnBurst = 1;
       this.maxCoreHp = 3000;
       this.coreHp = this.maxCoreHp;
@@ -1202,8 +1204,11 @@
       }
 
       const levelPressure = Math.min(0.78, this.level * 0.035);
-      const baseDelay = clamp(0.88 - levelPressure, 0.14, 0.9);
-      this.spawnTimer = rand(baseDelay * 0.55, baseDelay * 1.1);
+      const earlyDelayBonus = Math.max(0, (5 - this.level) * 0.08);
+      const baseDelay = clamp(0.88 - levelPressure + earlyDelayBonus, 0.14, 1.15);
+      const delayMin = this.level < 5 ? 0.65 : 0.55;
+      const delayMax = this.level < 5 ? 1.15 : 1.1;
+      this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax);
       const burst = this.level >= 9 ? 3 : this.level >= 5 ? 2 : 1;
       for (let i = 0; i < burst; i += 1) {
         this.spawnZombie(i * rand(0.04, 0.11));
@@ -1222,7 +1227,7 @@
         const frame = Math.floor(rand(0, 4));
         const displayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
         const displayWidth = displayHeight;
-        const hp = Math.round((eliteRoll ? 120 : 58) + this.level * (eliteRoll ? 23 : 13) + rand(-8, 10));
+        const hp = Math.round((eliteRoll ? 150 : 78) + this.level * (eliteRoll ? 28 : 16) + rand(-6, 12));
         const zombie = this.add.image(x, y, `zombie-walk-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
           .setDisplaySize(displayWidth, displayHeight)
