@@ -62,9 +62,13 @@
     bestLevel: $("best-level-label"),
     bestMoves: $("best-moves-label"),
     clearMoves: $("clear-moves"),
+    clearMovesLabel: $("clear-moves-label"),
     nextLevel: $("next-level-label"),
+    nextLevelCaption: $("next-level-caption"),
     loadingLevel: $("loading-level-label"),
     clearLevel: $("clear-level"),
+    clearLevelCaption: $("clear-level-caption"),
+    clearKicker: $("clear-kicker"),
     clearTitle: $("clear-title"),
     play: $("play-btn"),
     continue: $("continue-btn"),
@@ -861,13 +865,19 @@
         localStorage.setItem(STORAGE.bestMoves, String(this.bestMoves));
       }
       dom.clearTitle.textContent = `레벨 ${this.level} 클리어`;
+      dom.clearKicker.textContent = "PARKING EXIT";
+      dom.clearMovesLabel.textContent = "MOVE";
       dom.clearMoves.textContent = String(this.moves);
+      dom.nextLevelCaption.textContent = "NEXT";
       dom.nextLevel.textContent = String(this.level + 1);
+      dom.clearLevelCaption.textContent = "CLEARED";
       dom.clearLevel.textContent = `Lv ${clearedLevel.toLocaleString()}`;
       dom.next.textContent = "NEXT";
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       dom.rankSubmitRow.classList.add("hidden");
+      dom.modal.classList.remove("is-timeout");
+      dom.modal.classList.add("is-clear");
       dom.modal.classList.remove("hidden");
       this.mode = "complete";
     }
@@ -893,8 +903,12 @@
         timedOut: true,
       };
       dom.clearTitle.textContent = "TIME UP";
+      dom.clearKicker.textContent = "TIME LIMIT";
+      dom.clearMovesLabel.textContent = "MOVE";
       dom.clearMoves.textContent = String(this.moves);
+      dom.nextLevelCaption.textContent = "RETRY";
       dom.nextLevel.textContent = String(this.level);
+      dom.clearLevelCaption.textContent = "REACHED";
       dom.clearLevel.textContent = `Lv ${this.lastClear.rankLevel.toLocaleString()}`;
       dom.next.textContent = "RETRY";
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
@@ -902,6 +916,8 @@
       dom.rankSubmitRow.classList.remove("hidden");
       dom.submitRank.disabled = false;
       dom.skipRank.disabled = false;
+      dom.modal.classList.remove("is-clear");
+      dom.modal.classList.add("is-timeout");
       dom.modal.classList.remove("hidden");
       this.updateHud();
       this.playTone("blocked");
