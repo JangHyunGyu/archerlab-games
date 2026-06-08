@@ -862,6 +862,7 @@
         left: 40,
         right: 500,
         top: 70,
+        autoEngageTop: 92,
         barricade: 704,
         survivorLine: 824,
         bottom: 920
@@ -1538,7 +1539,7 @@
         defender.timer -= dt;
         if (defender.timer <= 0) {
           defender.timer = defender.rate * rand(0.75, 1.2);
-          const target = this.findTarget(defender.x, 999);
+          const target = this.findTarget(defender.x, 999, null, this.bounds.autoEngageTop);
           if (target) {
             const burstCount = defender.burstCount || 1;
             for (let shot = 0; shot < burstCount; shot += 1) {
@@ -1567,7 +1568,9 @@
       if (!player) {
         return;
       }
-      const target = this.findTarget(this.focusPoint ? this.focusPoint.x : 270, this.focusPoint ? 210 : 999);
+      const hasFocus = Boolean(this.focusPoint);
+      const minTargetY = hasFocus ? this.bounds.top : this.bounds.autoEngageTop;
+      const target = this.findTarget(hasFocus ? this.focusPoint.x : 270, hasFocus ? 210 : 999, null, minTargetY);
       this.playerFireTimer = player.rate * (isManual ? 0.45 : 1);
       if (!target) {
         return;
@@ -1577,11 +1580,11 @@
       const usedTargets = new Set();
       for (let i = 0; i < count; i += 1) {
         const shotOffset = (i - (count - 1) / 2) * 12;
-        const preferredX = (this.focusPoint ? this.focusPoint.x : 270) + shotOffset * 2.5;
-        const radius = this.focusPoint ? 210 : 999;
+        const preferredX = (hasFocus ? this.focusPoint.x : 270) + shotOffset * 2.5;
+        const radius = hasFocus ? 210 : 999;
         const shotTarget = i === 0
           ? target
-          : this.findTarget(preferredX, radius, usedTargets) || target;
+          : this.findTarget(preferredX, radius, usedTargets, minTargetY) || target;
         const reusingTarget = usedTargets.has(shotTarget);
         usedTargets.add(shotTarget);
         this.fireBullet(
@@ -1607,11 +1610,14 @@
       }
     }
 
-    findTarget(preferX, radius, ignoredTargets = null) {
+    findTarget(preferX, radius, ignoredTargets = null, minY = -Infinity) {
       let best = null;
       let bestXBias = Infinity;
       this.zombies.forEach((zombie) => {
         if (!zombie.active || zombie.hp <= 0) {
+          return;
+        }
+        if (zombie.y < minY) {
           return;
         }
         if (ignoredTargets && ignoredTargets.has(zombie)) {
@@ -1628,6 +1634,9 @@
       });
       return best || this.zombies.reduce((closest, zombie) => {
         if (!zombie.active || zombie.hp <= 0) {
+          return closest;
+        }
+        if (zombie.y < minY) {
           return closest;
         }
         if (ignoredTargets && ignoredTargets.has(zombie)) {
