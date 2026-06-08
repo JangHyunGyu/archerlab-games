@@ -74,7 +74,10 @@
     normal: { texture: "zombie-death-normal", width: 210, duration: 720, alpha: 0.96, scalePeak: 1.07 },
     elite: { texture: "zombie-death-elite", width: 280, duration: 820, alpha: 0.97, scalePeak: 1.05 }
   };
-  const STARTING_LEVEL_NEED = 12;
+  const ZOMBIE_HP_MULTIPLIER = 3;
+  const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 3;
+  const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
+  const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
   const SKILL_ACCENTS = {
     pierce: 0xbef6ff,
@@ -1474,7 +1477,7 @@
       const delayMax = this.level < 7 ? 1.2 : 1.16;
       const burst = this.level >= 16 ? 3 : this.level >= 10 ? 2 : 1;
       const burstPacing = burst > 1 ? 1 + (burst - 1) * 0.38 : 1;
-      this.spawnTimer = rand(baseDelay * delayMin * burstPacing, baseDelay * delayMax * burstPacing);
+      this.spawnTimer = rand(baseDelay * delayMin * burstPacing, baseDelay * delayMax * burstPacing) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER;
       for (let i = 0; i < burst; i += 1) {
         this.spawnZombie(i * rand(0.04, 0.11));
       }
@@ -1499,7 +1502,7 @@
           + levelCurve * (eliteRoll ? 24.5 : 13.8)
           + lateLevelBonus * (eliteRoll ? 4.4 : 2.8)
           + rand(-6, 12);
-        const hp = Math.round(baseHp * 3);
+        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER);
         const zombie = this.add.image(x, y, `zombie-walk-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
           .setDisplaySize(displayWidth, displayHeight)
@@ -2091,7 +2094,7 @@
       this.level += 1;
       this.stage = Math.floor((this.level - 1) / 4) + 1;
       this.killsInLevel = 0;
-      this.levelNeed = Math.round(15 + this.level * 4.4);
+      this.levelNeed = getLevelNeedForLevel(this.level);
       this.damage = getTeamDamageForLevel(this.level);
       this.clearOverlay();
 
