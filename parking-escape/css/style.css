@@ -778,7 +778,7 @@ h2 {
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 25;
+  z-index: 45;
   display: grid;
   align-items: start;
   justify-items: center;

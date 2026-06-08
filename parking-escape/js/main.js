@@ -864,7 +864,7 @@
         this.bestMoves = this.moves;
         localStorage.setItem(STORAGE.bestMoves, String(this.bestMoves));
       }
-      dom.clearTitle.textContent = `레벨 ${this.level} 클리어`;
+      dom.clearTitle.textContent = `LEVEL ${this.level} CLEAR`;
       dom.clearKicker.textContent = "PARKING EXIT";
       dom.clearMovesLabel.textContent = "MOVE";
       dom.clearMoves.textContent = String(this.moves);
