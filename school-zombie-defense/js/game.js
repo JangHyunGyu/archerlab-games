@@ -933,6 +933,7 @@
       this.defenders = [];
       this.overlayObjects = [];
       this.recruitedDefenders = new Set(["c"]);
+      this.recruitOrder = ["c"];
       this.mode = "menu";
       this.elapsed = 0;
       this.stage = 1;
@@ -1059,6 +1060,8 @@
         this.defenders.push({
           x: defender.x,
           y: defender.y,
+          baseX: defender.x,
+          baseY: defender.y,
           height: defender.height,
           aim: defender.aim,
           pose: "aim-12",
@@ -1098,6 +1101,39 @@
       });
     }
 
+    getDefenderFormationOrder() {
+      const order = ["c"];
+      (this.recruitOrder || []).forEach((id) => {
+        if (id !== "c" && this.recruitedDefenders.has(id) && !order.includes(id)) {
+          order.push(id);
+        }
+      });
+      this.defenders.forEach((defender) => {
+        if (defender.recruited && defender.role !== "player" && !order.includes(defender.id)) {
+          order.push(defender.id);
+        }
+      });
+      return order;
+    }
+
+    syncDefenderFormation() {
+      this.getDefenderFormationOrder().forEach((id, index) => {
+        const defender = this.getDefenderById(id);
+        if (!defender) {
+          return;
+        }
+        const slot = DEFENDER_FORMATION_SLOTS[index] || { x: defender.baseX, y: defender.baseY };
+        defender.x = slot.x;
+        defender.y = slot.y;
+        if (defender.sprite) {
+          defender.sprite.setX(slot.x).setDepth(142 + slot.y / 10);
+          if (!defender.sprite.visible || defender.sprite.alpha >= 1) {
+            defender.sprite.setY(slot.y);
+          }
+        }
+      });
+    }
+
     setDefenderRecruited(id, recruited, animate = false) {
       const defender = this.defenders.find((item) => item.id === id);
       if (!defender) {
@@ -1106,7 +1142,14 @@
 
       defender.recruited = recruited;
       if (recruited) {
+        if (!this.recruitOrder) {
+          this.recruitOrder = ["c"];
+        }
+        if (!this.recruitOrder.includes(id)) {
+          this.recruitOrder.push(id);
+        }
         this.recruitedDefenders.add(id);
+        this.syncDefenderFormation();
         defender.sprite.setVisible(true).clearTint();
         this.setDefenderPose(defender, "aim-12");
         if (animate) {
@@ -1134,6 +1177,10 @@
         }
       } else {
         this.recruitedDefenders.delete(id);
+        if (this.recruitOrder) {
+          this.recruitOrder = this.recruitOrder.filter((orderId) => id === "c" || orderId !== id);
+        }
+        this.syncDefenderFormation();
         defender.sprite.setVisible(false).setAlpha(0).setY(defender.y);
       }
     }
@@ -1621,6 +1668,7 @@
       this.focusPoint = null;
       this.hitStopTimer = 0;
       this.recruitedDefenders = new Set(["c"]);
+      this.recruitOrder = ["c"];
       this.defenders.forEach((defender) => {
         defender.rate = defender.baseRate;
         defender.damageBoost = 1;
@@ -2432,7 +2480,11 @@
         if (!defender || !defender.recruited) {
           return;
         }
-        upgrades.push(upgrade);
+        upgrades.push({
+          ownerId,
+          ownerCharacterTexture: `character-${ownerId}-idle`,
+          ...upgrade
+        });
       };
 
       add("c", {
@@ -2583,26 +2635,40 @@
       const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
       const accentHex = upgrade.accentHex || SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
       const isRecruit = Boolean(upgrade.characterTexture);
+      const ownerTexture = upgrade.ownerCharacterTexture;
+      const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit);
       const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
       const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
       const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
-      const watermark = this.add.image(x, y - 44, isRecruit ? upgrade.characterTexture : upgrade.icon)
-        .setAlpha(isRecruit ? 0.08 : 0.1)
+      const watermarkTexture = isRecruit ? upgrade.characterTexture : hasOwnerCharacter ? ownerTexture : upgrade.icon;
+      const watermark = this.add.image(x + (hasOwnerCharacter ? 34 : 0), y - 44, watermarkTexture)
+        .setAlpha(isRecruit ? 0.08 : hasOwnerCharacter ? 0.075 : 0.1)
         .setDepth(525);
-      if (isRecruit) {
-        this.fitSpriteHeight(watermark, 205);
+      if (isRecruit || hasOwnerCharacter) {
+        watermark.setOrigin(0.5, 1);
+        this.fitSpriteHeight(watermark, isRecruit ? 205 : 188);
       } else {
         watermark.setDisplaySize(150, 150);
       }
+      const iconX = hasOwnerCharacter ? x - 26 : x;
       const iconHalo = isRecruit
         ? this.add.ellipse(x, y - 70, 82, 112, accent, 0.16).setStrokeStyle(2, accent, 0.55).setDepth(527)
-        : this.add.circle(x, y - 112, 40, 0x000000, 0.58).setStrokeStyle(2, accent, 0.9).setDepth(527);
-      const icon = this.add.image(x, isRecruit ? y - 24 : y - 112, isRecruit ? upgrade.characterTexture : upgrade.icon).setDepth(528);
+        : this.add.circle(iconX, y - 112, 40, 0x000000, 0.58).setStrokeStyle(2, accent, 0.9).setDepth(527);
+      const ownerHalo = hasOwnerCharacter
+        ? this.add.ellipse(x + 49, y - 86, 56, 98, accent, 0.16).setStrokeStyle(2, accent, 0.55).setDepth(527)
+        : null;
+      const ownerCharacter = hasOwnerCharacter
+        ? this.add.image(x + 49, y - 45, ownerTexture).setOrigin(0.5, 1).setAlpha(0.94).setDepth(528)
+        : null;
+      if (ownerCharacter) {
+        this.fitSpriteHeight(ownerCharacter, 116);
+      }
+      const icon = this.add.image(iconX, isRecruit ? y - 24 : y - 112, isRecruit ? upgrade.characterTexture : upgrade.icon).setDepth(528);
       if (isRecruit) {
         icon.setOrigin(0.5, 1);
         this.fitSpriteHeight(icon, 138);
       } else {
-        icon.setDisplaySize(74, 74);
+        icon.setDisplaySize(hasOwnerCharacter ? 66 : 74, hasOwnerCharacter ? 66 : 74);
       }
       const tagBg = this.add.rectangle(x, y + 24, 76, 24, accent, 0.2)
         .setStrokeStyle(1, accent, 0.78)
@@ -2650,6 +2716,8 @@
         card,
         watermark,
         iconHalo,
+        ownerHalo,
+        ownerCharacter,
         icon,
         tagBg,
         tagText,
@@ -2657,7 +2725,7 @@
         desc,
         chooseBg,
         chooseText
-      ];
+      ].filter(Boolean);
 
       animated.forEach((item) => {
         item.y += 24;
@@ -2673,7 +2741,10 @@
       const selectUpgrade = () => this.applyUpgrade(upgrade);
       const setHover = (active) => {
         glow.setAlpha(active ? 0.26 : 0.1);
-        watermark.setAlpha(active ? 0.18 : 0.1);
+        watermark.setAlpha(active ? 0.18 : isRecruit ? 0.08 : hasOwnerCharacter ? 0.075 : 0.1);
+        if (ownerCharacter) {
+          ownerCharacter.setAlpha(active ? 1 : 0.94);
+        }
         chooseBg.setFillStyle(active ? accent : 0x101820, active ? 0.34 : 0.9);
         if (active) {
           card.setTint(0xfff1c0);
