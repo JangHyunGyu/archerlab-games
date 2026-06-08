@@ -52,6 +52,13 @@
     "projectile-support": 0.78,
     "projectile-shock": 0.62
   };
+  const MUZZLE_EFFECTS = {
+    "projectile-arrow": { texture: "muzzle-arrow", width: 42, duration: 150, alpha: 0.78, scalePeak: 1.12 },
+    "projectile-pistol": { texture: "muzzle-pistol", width: 36, duration: 130, alpha: 0.92, scalePeak: 1.18 },
+    "projectile-rifle": { texture: "muzzle-rifle", width: 48, duration: 120, alpha: 0.95, scalePeak: 1.16 },
+    "projectile-sniper": { texture: "muzzle-sniper", width: 58, duration: 135, alpha: 0.9, scalePeak: 1.12 },
+    "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08 }
+  };
   const STARTING_LEVEL_NEED = 12;
   const STARTING_SPAWN_TIMER = 1.15;
   const SKILL_ACCENTS = {
@@ -793,6 +800,11 @@
       this.load.image("projectile-rifle", "assets/images/projectile-rifle.png");
       this.load.image("projectile-rocket", "assets/images/projectile-rocket.png");
       this.load.image("projectile-sniper", "assets/images/projectile-sniper.png");
+      this.load.image("muzzle-arrow", "assets/images/muzzle-arrow.png");
+      this.load.image("muzzle-pistol", "assets/images/muzzle-pistol.png");
+      this.load.image("muzzle-rifle", "assets/images/muzzle-rifle.png");
+      this.load.image("muzzle-rocket", "assets/images/muzzle-rocket.png");
+      this.load.image("muzzle-sniper", "assets/images/muzzle-sniper.png");
       this.load.image("zombie-walk", "assets/images/zombie-walk.png");
       this.load.image("ui-frame-sheet", "assets/images/ui-frame-sheet.png");
       this.load.image("skill-card-sheet", "assets/images/skill-card-sheet.png");
@@ -1734,28 +1746,34 @@
     }
 
     createMuzzle(x, y, angle, projectile) {
-      const color = projectile === "projectile-arrow"
-        ? 0xfff4a0
-        : projectile === "projectile-rifle"
-          ? 0x8ff6ff
-          : projectile === "projectile-rocket"
-            ? 0xff8d42
-            : projectile === "projectile-sniper"
-              ? 0xbef6ff
-              : projectile === "projectile-frost"
-                ? 0xa6fbff
-                : projectile === "projectile-support"
-                  ? 0x80ff9b
-                  : projectile === "projectile-shock"
-                    ? 0xff8fbd
-                    : 0xfff3a4;
-      const flashOffset = projectile === "projectile-arrow" ? 0 : 4;
-      const flash = this.add.circle(x + Math.cos(angle) * flashOffset, y + Math.sin(angle) * flashOffset, 7, color, 0.95).setDepth(191);
+      const effect = MUZZLE_EFFECTS[projectile];
+      if (!effect) {
+        const flash = this.add.circle(x, y, 5, 0xfff3a4, 0.8).setDepth(191);
+        this.tweens.add({
+          targets: flash,
+          scale: 1.6,
+          alpha: 0,
+          duration: 110,
+          onComplete: () => flash.destroy()
+        });
+        return;
+      }
+
+      const texture = this.textures.get(effect.texture).getSourceImage();
+      const displayHeight = effect.width * texture.height / texture.width;
+      const flash = this.add.image(x, y, effect.texture)
+        .setOrigin(0.08, 0.5)
+        .setDisplaySize(effect.width, displayHeight)
+        .setRotation(angle)
+        .setAlpha(effect.alpha)
+        .setDepth(projectile === "projectile-rocket" ? 188 : 191);
       this.tweens.add({
         targets: flash,
-        scale: 1.8,
+        scaleX: flash.scaleX * effect.scalePeak,
+        scaleY: flash.scaleY * effect.scalePeak,
         alpha: 0,
-        duration: 120,
+        duration: effect.duration,
+        ease: "Cubic.easeOut",
         onComplete: () => flash.destroy()
       });
     }
