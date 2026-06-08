@@ -1766,7 +1766,7 @@
         .setDisplaySize(effect.width, displayHeight)
         .setRotation(angle)
         .setAlpha(effect.alpha)
-        .setDepth(projectile === "projectile-rocket" ? 188 : 191);
+        .setDepth(238);
       this.tweens.add({
         targets: flash,
         scaleX: flash.scaleX * effect.scalePeak,
