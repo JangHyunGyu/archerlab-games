@@ -20,6 +20,9 @@
   const rand = (min, max) => Math.random() * (max - min) + min;
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
   const BASE_CRIT_CHANCE = 0.08;
+  const BOW_BASE_CRIT_CHANCE = 0.22;
+  const BOW_MARK_DURATION = 4.25;
+  const BOW_MARK_DAMAGE_BONUS = 0.18;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -88,6 +91,9 @@
       projectile: "projectile-arrow",
       speed: 860,
       rate: 1.08,
+      critChance: BOW_BASE_CRIT_CHANCE,
+      markDuration: BOW_MARK_DURATION,
+      markDamageBonus: BOW_MARK_DAMAGE_BONUS,
       aim: { pivot: [0, -134], reach: 38 },
       recruit: {
         icon: "portrait-rally",
@@ -963,16 +969,23 @@
           damageBoost: 1,
           pierce: defender.pierce || 0,
           basePierce: defender.pierce || 0,
-          critChance: BASE_CRIT_CHANCE,
+          critChance: defender.critChance || BASE_CRIT_CHANCE,
+          baseCritChance: defender.critChance || BASE_CRIT_CHANCE,
           rocketEvery: 0,
           shotsSinceRocket: 0,
           skillPower: 1,
           burstCount: defender.burstCount || 1,
+          baseBurstCount: defender.burstCount || 1,
           burstDelay: defender.burstDelay || 0,
+          baseBurstDelay: defender.burstDelay || 0,
           splashRadius: defender.splashRadius || 0,
           splashDamageScale: defender.splashDamageScale || 0,
           splashRadiusBoost: 1,
           splashDamageBoost: 1,
+          markDuration: defender.markDuration || 0,
+          baseMarkDuration: defender.markDuration || 0,
+          markDamageBonus: defender.markDamageBonus || 0,
+          baseMarkDamageBonus: defender.markDamageBonus || 0,
           timer: rand(0.15, 0.65),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
@@ -1379,7 +1392,10 @@
     }
 
     resetRun() {
-      this.zombies.forEach((zombie) => zombie.destroy());
+      this.zombies.forEach((zombie) => {
+        this.clearWeakMark(zombie);
+        zombie.destroy();
+      });
       this.bullets.forEach((bullet) => bullet.sprite.destroy());
       this.zombies = [];
       this.bullets = [];
@@ -1410,12 +1426,16 @@
         defender.rate = defender.baseRate;
         defender.damageBoost = 1;
         defender.pierce = defender.basePierce || 0;
-        defender.critChance = BASE_CRIT_CHANCE;
+        defender.critChance = defender.baseCritChance || BASE_CRIT_CHANCE;
         defender.rocketEvery = 0;
         defender.shotsSinceRocket = 0;
         defender.skillPower = 1;
+        defender.burstCount = defender.baseBurstCount || 1;
+        defender.burstDelay = defender.baseBurstDelay || 0;
         defender.splashRadiusBoost = 1;
         defender.splashDamageBoost = 1;
+        defender.markDuration = defender.baseMarkDuration || 0;
+        defender.markDamageBonus = defender.baseMarkDamageBonus || 0;
         defender.timer = rand(0.1, defender.rate);
         defender.firePoseTimer = 0;
         this.setDefenderRecruited(defender.id, defender.role === "player", false);
@@ -1544,6 +1564,9 @@
         zombie.attack = (eliteRoll ? 44 : 20) + this.level * 2.5;
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
+        zombie.weakMarkTimer = 0;
+        zombie.weakMarkBonus = 0;
+        zombie.weakMarkFx = null;
         zombie.wobble = rand(0, Math.PI * 2);
         zombie.animTimer = rand(0, 1);
         zombie.animFrame = frame;
@@ -1703,6 +1726,8 @@
         critChance,
         splashRadius: (defender.splashRadius || 0) * (defender.splashRadiusBoost || 1),
         splashDamageScale: (defender.splashDamageScale || 0) * (defender.splashDamageBoost || 1),
+        markDuration: defender.markDuration || 0,
+        markDamageBonus: defender.markDamageBonus || 0,
         hitTargets: new Set()
       });
       this.createMuzzle(x, y, angle, defender.projectile);
@@ -1762,6 +1787,9 @@
         if (hit) {
           bullet.hitTargets.add(hit);
           this.damageZombie(hit, bullet.damage, bullet.critChance);
+          if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && hit.active) {
+            this.applyWeakMark(hit, bullet.markDuration, bullet.markDamageBonus);
+          }
           if (bullet.splashRadius > 0) {
             this.createExplosion(hit.x, hit.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75));
           }
@@ -1795,9 +1823,70 @@
       return null;
     }
 
+    applyWeakMark(zombie, duration, damageBonus) {
+      if (!zombie || !zombie.active) {
+        return;
+      }
+      zombie.weakMarkTimer = Math.max(zombie.weakMarkTimer || 0, duration);
+      zombie.weakMarkBonus = Math.max(zombie.weakMarkBonus || 0, damageBonus);
+      if (zombie.weakMarkFx) {
+        return;
+      }
+
+      const markerY = zombie.y - zombie.displayH * 0.62;
+      const marker = this.add.container(zombie.x, markerY).setDepth(230);
+      const halo = this.add.circle(0, 0, 15, 0xffe18a, 0.16).setStrokeStyle(2, 0xfff0a5, 0.92);
+      const vertical = this.add.rectangle(0, 0, 2, 25, 0xfff5bf, 0.88);
+      const horizontal = this.add.rectangle(0, 0, 25, 2, 0xfff5bf, 0.88);
+      const center = this.add.circle(0, 0, 3, 0xffffff, 0.92);
+      marker.add([halo, vertical, horizontal, center]);
+      marker.setScale(0.82);
+      zombie.weakMarkFx = marker;
+      this.tweens.add({
+        targets: marker,
+        scale: 1.08,
+        yoyo: true,
+        repeat: -1,
+        duration: 420,
+        ease: "Sine.easeInOut"
+      });
+    }
+
+    clearWeakMark(zombie) {
+      if (!zombie) {
+        return;
+      }
+      if (zombie.weakMarkFx) {
+        this.tweens.killTweensOf(zombie.weakMarkFx);
+        zombie.weakMarkFx.destroy();
+      }
+      zombie.weakMarkFx = null;
+      zombie.weakMarkTimer = 0;
+      zombie.weakMarkBonus = 0;
+    }
+
+    updateWeakMark(zombie, dt) {
+      if (!zombie.weakMarkTimer) {
+        return;
+      }
+      zombie.weakMarkTimer -= dt;
+      if (zombie.weakMarkTimer <= 0) {
+        this.clearWeakMark(zombie);
+        return;
+      }
+      if (zombie.weakMarkFx) {
+        zombie.weakMarkFx
+          .setPosition(zombie.x, zombie.y - zombie.displayH * 0.62)
+          .setDepth(226 + zombie.y / 5)
+          .setAlpha(clamp(zombie.weakMarkTimer / 0.45, 0.35, 1));
+      }
+    }
+
     damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE) {
       const crit = Math.random() < critChance;
-      const damage = Math.round(amount * (crit ? 1.85 : 1));
+      const marked = zombie.weakMarkTimer > 0 && zombie.weakMarkBonus > 0;
+      const markMultiplier = marked ? 1 + zombie.weakMarkBonus : 1;
+      const damage = Math.round(amount * markMultiplier * (crit ? 1.85 : 1));
       zombie.hp -= damage;
       zombie.setTint(crit ? 0xfff2a5 : 0xff7777);
       this.time.delayedCall(70, () => {
@@ -1805,7 +1894,7 @@
           zombie.clearTint();
         }
       });
-      this.showDamageText(zombie.x + rand(-8, 8), zombie.y - rand(8, 24), damage, crit);
+      this.showDamageText(zombie.x + rand(-8, 8), zombie.y - rand(8, 24), damage, crit, marked);
       if (zombie.hp <= 0) {
         this.killZombie(zombie);
       }
@@ -1817,6 +1906,7 @@
       }
       const x = zombie.x;
       const y = zombie.y;
+      this.clearWeakMark(zombie);
       zombie.destroy();
       this.zombies = this.zombies.filter((item) => item !== zombie);
       this.kills += 1;
@@ -1829,13 +1919,13 @@
       }
     }
 
-    showDamageText(x, y, damage, crit) {
+    showDamageText(x, y, damage, crit, marked = false) {
       const text = this.add.text(x, y, String(damage), {
         fontFamily: "Arial, sans-serif",
-        fontSize: crit ? 31 : 23,
+        fontSize: crit ? 31 : marked ? 26 : 23,
         fontStyle: "900",
-        color: crit ? "#fff0a5" : "#ffffff",
-        stroke: crit ? "#811010" : "#40191b",
+        color: crit ? "#fff0a5" : marked ? "#ffe29a" : "#ffffff",
+        stroke: crit ? "#811010" : marked ? "#5a310e" : "#40191b",
         strokeThickness: 5
       }).setOrigin(0.5).setRotation(rand(-0.18, 0.18)).setDepth(250);
       this.tweens.add({
@@ -1864,9 +1954,11 @@
       for (let i = this.zombies.length - 1; i >= 0; i -= 1) {
         const zombie = this.zombies[i];
         if (!zombie.active) {
-        this.zombies.splice(i, 1);
+          this.clearWeakMark(zombie);
+          this.zombies.splice(i, 1);
           continue;
         }
+        this.updateWeakMark(zombie, dt);
         zombie.wobble += dt * 4.2;
         zombie.animTimer += dt * (zombie.elite ? 5.2 : 6.8);
         const nextFrame = Math.floor(zombie.animTimer) % 4;
@@ -2099,15 +2191,17 @@
         }
       });
       add("a", {
-        id: "a-archery",
-        icon: "skill-pierce",
+        id: "a-mark",
+        icon: "skill-rally",
         tag: "활",
-        title: "관통 화살",
-        desc: "활 관통 +1\n화살 피해 +18%",
+        title: "약점 표식",
+        desc: "표식 추가 피해 +7%\n표식 지속 +1.5초",
+        accent: 0xffd978,
+        accentHex: "#ffd978",
         apply: () => {
           const defender = this.getDefenderById("a");
-          defender.pierce += 1;
-          defender.damageBoost *= 1.18;
+          defender.markDamageBonus += 0.07;
+          defender.markDuration += 1.5;
         }
       });
       add("b", {
