@@ -342,7 +342,8 @@ button:disabled {
     0 0 34px rgba(88, 226, 255, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
   isolation: isolate;
-  overflow: hidden auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .clear-panel > * {
@@ -367,10 +368,10 @@ button:disabled {
 .clear-panel::after {
   content: "";
   position: absolute;
-  right: -42px;
-  bottom: 18px;
+  right: 18px;
+  bottom: 16px;
   z-index: 0;
-  width: 190px;
+  width: 132px;
   height: 16px;
   border-radius: 999px;
   background: repeating-linear-gradient(135deg, #ffd35c 0 16px, #17202c 16px 30px);
@@ -1007,6 +1008,43 @@ h2 {
     max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 
+  .clear-panel {
+    padding: 18px;
+  }
+
+  .clear-panel::after {
+    right: 12px;
+    bottom: 12px;
+    width: 108px;
+    height: 12px;
+  }
+
+  .clear-gate {
+    height: 30px;
+    gap: 7px;
+    margin-bottom: 12px;
+  }
+
+  .clear-gate span::before {
+    inset: 7px 10px;
+  }
+
+  .clear-panel .clear-stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 16px 0;
+  }
+
+  .clear-panel .clear-stats div {
+    min-height: 64px;
+    padding: 12px;
+  }
+
+  .clear-panel .clear-stats strong {
+    margin-top: 6px;
+    font-size: 1.28rem;
+  }
+
   .clear-stats {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -1069,6 +1107,49 @@ h2 {
 
   .modal-panel h2 {
     font-size: clamp(1.45rem, 7vw, 2.1rem);
+  }
+
+  .clear-panel {
+    padding: 14px;
+  }
+
+  .clear-gate {
+    height: 24px;
+    margin-bottom: 8px;
+  }
+
+  .clear-gate span::before {
+    inset: 6px 9px;
+  }
+
+  .clear-gate span::after {
+    bottom: -10px;
+    height: 10px;
+  }
+
+  .clear-panel .clear-stats {
+    gap: 7px;
+    margin: 12px 0;
+  }
+
+  .clear-panel .clear-stats div {
+    min-height: 54px;
+    padding: 10px 12px;
+  }
+
+  .clear-panel .clear-stats span {
+    font-size: 0.66rem;
+  }
+
+  .clear-panel .clear-stats strong {
+    margin-top: 4px;
+    font-size: 1.12rem;
+  }
+
+  .clear-panel .rank-submit-row {
+    gap: 7px;
+    margin-bottom: 10px;
+    padding-top: 10px;
   }
 
   .clear-stats {
