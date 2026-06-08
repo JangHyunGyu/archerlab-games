@@ -394,40 +394,38 @@ button:disabled {
 
 .menu-control-bar {
   align-self: end;
-  width: 100%;
-  padding: 12px;
-  border: 1px solid rgba(127, 226, 255, 0.22);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(11, 25, 45, 0.74), rgba(3, 8, 16, 0.84)),
-    rgba(3, 8, 16, 0.64);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow:
-    0 22px 60px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  width: min(430px, 100%);
+  display: grid;
+  gap: 10px;
 }
 
 .menu-control-bar .record-row {
-  margin: 0 0 10px;
+  margin: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .menu-control-bar .record-row div {
-  min-height: 66px;
-  border-radius: 12px;
-  background:
-    linear-gradient(180deg, rgba(15, 35, 58, 0.82), rgba(4, 12, 24, 0.78));
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .menu-control-bar .record-row span {
-  color: #9ac7d6;
+  color: #91d8e8;
+  font-size: 0.72rem;
   letter-spacing: 0.08em;
+  text-shadow: 0 0 14px rgba(18, 32, 48, 0.9);
 }
 
 .menu-control-bar .record-row strong {
   color: #fff7cf;
-  font-size: 1.32rem;
+  font-size: 1.5rem;
+  text-shadow:
+    0 0 18px rgba(255, 211, 92, 0.5),
+    0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
 .menu-control-bar .menu-actions--menu {
@@ -1177,21 +1175,21 @@ h2 {
   }
 
   .menu-control-bar {
-    padding: 10px;
-    border-radius: 15px;
+    width: 100%;
+    padding: 0;
   }
 
   .menu-control-bar .record-row {
-    gap: 8px;
+    gap: 12px;
   }
 
   .menu-control-bar .record-row div {
-    min-height: 58px;
-    padding: 11px;
+    min-height: 0;
+    padding: 0;
   }
 
   .menu-control-bar .record-row strong {
-    font-size: 1.18rem;
+    font-size: 1.36rem;
   }
 
   .menu-control-bar .menu-actions--menu {
