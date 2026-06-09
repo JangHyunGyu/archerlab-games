@@ -1208,11 +1208,15 @@
 
       this.zombies = [];
       this.bullets = [];
-      this.effects = [];
       this.defenders = [];
       this.overlayObjects = [];
+      this.transientObjects = new Set();
+      this.runTimers = new Set();
+      this.sceneTimers = new Set();
       this.recruitedDefenders = new Set(["c"]);
       this.recruitOrder = ["c"];
+      this.runId = 0;
+      this.disposed = false;
       this.mode = "menu";
       this.elapsed = 0;
       this.stage = 1;
@@ -1244,6 +1248,8 @@
       this.speedMultiplier = 1;
       this.pausedByButton = false;
 
+      this.events.once("shutdown", () => this.disposeScene());
+      this.events.once("destroy", () => this.disposeScene());
       this.drawBackground();
       this.createCharacters();
       this.createHud();
@@ -1258,7 +1264,7 @@
         return;
       }
 
-      this.time.delayedCall(250, () => {
+      this.scheduleSceneDelay(250, () => {
         if (this.mode === "menu") {
           this.startRun();
         }
@@ -1274,7 +1280,7 @@
           }
         }
         if (params.has("debugSkill")) {
-          this.time.delayedCall(550, () => {
+          this.scheduleSceneDelay(550, () => {
             if (this.mode === "playing") {
               this.openSkillChoice();
             }
@@ -1449,16 +1455,16 @@
             duration: 460,
             ease: "Back.easeOut"
           });
-          const ring = this.add.circle(defender.x, defender.y - defender.height * 0.48, 26, 0xffffff, 0)
+          const ring = this.trackTransient(this.add.circle(defender.x, defender.y - defender.height * 0.48, 26, 0xffffff, 0)
             .setStrokeStyle(4, COLORS.gold, 0.9)
-            .setDepth(230);
+            .setDepth(230));
           this.tweens.add({
             targets: ring,
             scale: 2.2,
             alpha: 0,
             duration: 560,
             ease: "Cubic.easeOut",
-            onComplete: () => ring.destroy()
+            onComplete: () => this.destroyTransientObject(ring, false)
           });
         } else {
           defender.sprite.setAlpha(1).setY(defender.y);
@@ -1605,6 +1611,143 @@
           this.startBgm("menu");
         }
       });
+    }
+
+    scheduleSceneDelay(delayMs, callback) {
+      let event = null;
+      event = this.time.delayedCall(delayMs, () => {
+        this.sceneTimers.delete(event);
+        if (this.disposed) {
+          return;
+        }
+        callback();
+      });
+      this.sceneTimers.add(event);
+      return event;
+    }
+
+    scheduleRunDelay(delayMs, callback) {
+      const runId = this.runId;
+      let event = null;
+      event = this.time.delayedCall(delayMs, () => {
+        this.runTimers.delete(event);
+        if (this.disposed || runId !== this.runId || this.mode !== "playing") {
+          return;
+        }
+        callback();
+      });
+      this.runTimers.add(event);
+      return event;
+    }
+
+    cancelTimerEvent(event) {
+      if (!event) {
+        return;
+      }
+      if (typeof event.remove === "function") {
+        event.remove(false);
+      } else if (this.time && typeof this.time.removeEvent === "function") {
+        this.time.removeEvent(event);
+      } else if (typeof event.destroy === "function") {
+        event.destroy();
+      }
+    }
+
+    cancelTimerSet(timers) {
+      timers.forEach((event) => this.cancelTimerEvent(event));
+      timers.clear();
+    }
+
+    cancelRunTimers() {
+      this.cancelTimerSet(this.runTimers);
+    }
+
+    cancelSceneTimers() {
+      this.cancelTimerSet(this.sceneTimers);
+    }
+
+    trackTransient(object) {
+      if (object) {
+        this.transientObjects.add(object);
+      }
+      return object;
+    }
+
+    destroyGameObject(object, killTweens = true) {
+      if (!object) {
+        return;
+      }
+      if (killTweens && this.tweens && typeof this.tweens.killTweensOf === "function") {
+        this.tweens.killTweensOf(object);
+      }
+      if (typeof object.removeAllListeners === "function") {
+        object.removeAllListeners();
+      }
+      if (typeof object.destroy === "function" && !object.destroyed) {
+        object.destroy();
+      }
+    }
+
+    destroyTransientObject(object, killTweens = true) {
+      this.transientObjects.delete(object);
+      this.destroyGameObject(object, killTweens);
+    }
+
+    clearTransientObjects() {
+      Array.from(this.transientObjects).forEach((object) => this.destroyTransientObject(object));
+      this.transientObjects.clear();
+    }
+
+    clearRunEntities() {
+      this.zombies.forEach((zombie) => {
+        this.clearWeakMark(zombie);
+        this.destroyGameObject(zombie);
+      });
+      this.bullets.forEach((bullet) => this.destroyGameObject(bullet.sprite));
+      this.zombies = [];
+      this.bullets = [];
+    }
+
+    cleanupAudio() {
+      if (this.bgmTracks) {
+        Object.values(this.bgmTracks).forEach((track) => {
+          track.pause();
+          track.removeAttribute("src");
+          if (typeof track.load === "function") {
+            track.load();
+          }
+        });
+      }
+      this.bgmTracks = null;
+      this.currentBgm = null;
+      this.sfxBuffers.clear();
+      if (this.masterGain && typeof this.masterGain.disconnect === "function") {
+        this.masterGain.disconnect();
+      }
+      this.masterGain = null;
+      if (this.audioCtx && typeof this.audioCtx.close === "function") {
+        this.audioCtx.close().catch(() => {});
+      }
+      this.audioCtx = null;
+      this.sfxPreloadStarted = false;
+    }
+
+    disposeScene() {
+      if (this.disposed) {
+        return;
+      }
+      this.disposed = true;
+      this.cancelRunTimers();
+      this.cancelSceneTimers();
+      this.clearOverlay();
+      this.clearTransientObjects();
+      this.clearRunEntities();
+      this.defenders.forEach((defender) => this.destroyGameObject(defender.sprite));
+      this.defenders = [];
+      this.cleanupAudio();
+      if (window.__schoolZombieGame === this) {
+        window.__schoolZombieGame = null;
+      }
     }
 
     unlockAudio() {
@@ -1867,17 +2010,17 @@
     }
 
     showToast(message, color = COLORS.gold) {
-      const panel = this.add.rectangle(270, 158, 330, 48, 0x0b1014, 0.88)
+      const panel = this.trackTransient(this.add.rectangle(270, 158, 330, 48, 0x0b1014, 0.88)
         .setStrokeStyle(2, color, 0.9)
-        .setDepth(430);
-      const text = this.add.text(270, 158, message, {
+        .setDepth(430));
+      const text = this.trackTransient(this.add.text(270, 158, message, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 20,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
         strokeThickness: 4
-      }).setOrigin(0.5).setDepth(431);
+      }).setOrigin(0.5).setDepth(431));
 
       this.tweens.add({
         targets: [panel, text],
@@ -1887,8 +2030,8 @@
         duration: 420,
         ease: "Cubic.easeIn",
         onComplete: () => {
-          panel.destroy();
-          text.destroy();
+          this.destroyTransientObject(panel, false);
+          this.destroyTransientObject(text, false);
         }
       });
     }
@@ -2251,14 +2394,11 @@
     }
 
     resetRun() {
-      this.zombies.forEach((zombie) => {
-        this.clearWeakMark(zombie);
-        zombie.destroy();
-      });
-      this.bullets.forEach((bullet) => bullet.sprite.destroy());
-      this.zombies = [];
-      this.bullets = [];
-      this.effects = [];
+      this.runId += 1;
+      this.cancelRunTimers();
+      this.cancelSceneTimers();
+      this.clearTransientObjects();
+      this.clearRunEntities();
       this.elapsed = 0;
       this.stage = 1;
       this.level = 1;
@@ -2409,10 +2549,7 @@
     }
 
     spawnZombie(delay) {
-      this.time.delayedCall(delay * 1000 / this.speedMultiplier, () => {
-        if (this.mode !== "playing") {
-          return;
-        }
+      this.scheduleRunDelay(delay * 1000 / this.speedMultiplier, () => {
         const eliteRoll = this.level >= 6 && Math.random() < Math.min(0.045 + this.level * 0.0055, 0.16);
         const x = rand(this.bounds.left + 28, this.bounds.right - 28);
         const y = rand(-65, 46);
@@ -2483,8 +2620,8 @@
           if (target) {
             const usedTargets = new Set();
             for (let shot = 0; shot < burstCount; shot += 1) {
-              this.time.delayedCall(shot * shotDelay, () => {
-                if (this.mode !== "playing" || !defender.recruited) {
+              this.scheduleRunDelay(shot * shotDelay, () => {
+                if (!defender.recruited) {
                   return;
                 }
                 const shotTarget = this.findChainShotTarget(defender.x, 999, usedTargets, this.bounds.autoEngageTop);
@@ -2528,8 +2665,8 @@
         const shotOffset = (i - (count - 1) / 2) * 12;
         const preferredX = (hasFocus ? this.focusPoint.x : 270) + shotOffset * 2.5;
         const radius = hasFocus ? 210 : 999;
-        this.time.delayedCall(i * shotDelay, () => {
-          if (this.mode !== "playing" || !player.recruited) {
+        this.scheduleRunDelay(i * shotDelay, () => {
+          if (!player.recruited) {
             return;
           }
           const shotTarget = this.findChainShotTarget(preferredX, radius, usedTargets, minTargetY);
@@ -2672,25 +2809,25 @@
     createMuzzle(x, y, angle, projectile) {
       const effect = MUZZLE_EFFECTS[projectile];
       if (!effect) {
-        const flash = this.add.circle(x, y, 5, 0xfff3a4, 0.8).setDepth(191);
+        const flash = this.trackTransient(this.add.circle(x, y, 5, 0xfff3a4, 0.8).setDepth(191));
         this.tweens.add({
           targets: flash,
           scale: 1.6,
           alpha: 0,
           duration: 110,
-          onComplete: () => flash.destroy()
+          onComplete: () => this.destroyTransientObject(flash, false)
         });
         return;
       }
 
       const texture = this.textures.get(effect.texture).getSourceImage();
       const displayHeight = effect.width * texture.height / texture.width;
-      const flash = this.add.image(x, y, effect.texture)
+      const flash = this.trackTransient(this.add.image(x, y, effect.texture)
         .setOrigin(0.08, 0.5)
         .setDisplaySize(effect.width, displayHeight)
         .setRotation(angle)
         .setAlpha(effect.alpha)
-        .setDepth(238);
+        .setDepth(238));
       this.tweens.add({
         targets: flash,
         scaleX: flash.scaleX * effect.scalePeak,
@@ -2698,18 +2835,18 @@
         alpha: 0,
         duration: effect.duration,
         ease: "Cubic.easeOut",
-        onComplete: () => flash.destroy()
+        onComplete: () => this.destroyTransientObject(flash, false)
       });
     }
 
     createAimFlash(x, y) {
-      const ring = this.add.circle(x, y, 22, 0xffffff, 0).setStrokeStyle(3, 0xffec80, 0.9).setDepth(200);
+      const ring = this.trackTransient(this.add.circle(x, y, 22, 0xffffff, 0).setStrokeStyle(3, 0xffec80, 0.9).setDepth(200));
       this.tweens.add({
         targets: ring,
         scale: 1.7,
         alpha: 0,
         duration: 250,
-        onComplete: () => ring.destroy()
+        onComplete: () => this.destroyTransientObject(ring, false)
       });
     }
 
@@ -2720,7 +2857,7 @@
         bullet.sprite.x += bullet.vx * dt;
         bullet.sprite.y += bullet.vy * dt;
         if (bullet.life <= 0 || bullet.sprite.x < -30 || bullet.sprite.x > 570 || bullet.sprite.y < -60 || bullet.sprite.y > 980) {
-          bullet.sprite.destroy();
+          this.destroyGameObject(bullet.sprite);
           this.bullets.splice(i, 1);
           continue;
         }
@@ -2741,7 +2878,7 @@
           if (bullet.pierce > 0) {
             bullet.pierce -= 1;
           } else {
-            bullet.sprite.destroy();
+            this.destroyGameObject(bullet.sprite);
             this.bullets.splice(i, 1);
           }
         }
@@ -2803,7 +2940,7 @@
       }
       if (zombie.weakMarkFx) {
         this.tweens.killTweensOf(zombie.weakMarkFx);
-        zombie.weakMarkFx.destroy();
+        this.destroyGameObject(zombie.weakMarkFx, false);
       }
       zombie.weakMarkFx = null;
       zombie.weakMarkTimer = 0;
@@ -2837,7 +2974,7 @@
       const texture = this.textures.get(effect.texture).getSourceImage();
       const displayWidth = effect.width * sizeScale;
       const displayHeight = displayWidth * texture.height / texture.width;
-      const impact = this.add.image(
+      const impact = this.trackTransient(this.add.image(
         zombie.x + rand(-zombie.hitRadius * 0.18, zombie.hitRadius * 0.18),
         zombie.y - (zombie.displayH || 170) * 0.08 + rand(-zombie.hitRadius * 0.12, zombie.hitRadius * 0.1),
         effect.texture
@@ -2846,7 +2983,7 @@
         .setDisplaySize(displayWidth, displayHeight)
         .setRotation(rand(-effect.rotation, effect.rotation))
         .setAlpha(effect.alpha)
-        .setDepth(229 + zombie.y / 5);
+        .setDepth(229 + zombie.y / 5));
 
       this.tweens.add({
         targets: impact,
@@ -2855,7 +2992,7 @@
         alpha: 0,
         duration: effect.duration,
         ease: "Cubic.easeOut",
-        onComplete: () => impact.destroy()
+        onComplete: () => this.destroyTransientObject(impact, false)
       });
     }
 
@@ -2875,7 +3012,7 @@
         this.requestHitStop(0.03);
       }
       zombie.setTint(crit ? 0xfff2a5 : 0xff7777);
-      this.time.delayedCall(70, () => {
+      this.scheduleSceneDelay(70, () => {
         if (zombie.active) {
           this.restoreZombieTint(zombie);
         }
@@ -2899,7 +3036,7 @@
         this.shakeCamera(90, 0.0045);
       }
       const shouldExplode = zombie.deathExplosion;
-      zombie.destroy();
+      this.destroyGameObject(zombie);
       this.zombies = this.zombies.filter((item) => item !== zombie);
       this.kills += 1;
       this.killsInLevel += 1;
@@ -2914,14 +3051,14 @@
     }
 
     showDamageText(x, y, damage, crit, marked = false) {
-      const text = this.add.text(x, y, String(damage), {
+      const text = this.trackTransient(this.add.text(x, y, String(damage), {
         fontFamily: "Arial, sans-serif",
         fontSize: crit ? 31 : marked ? 26 : 23,
         fontStyle: "900",
         color: crit ? "#fff0a5" : marked ? "#ffe29a" : "#ffffff",
         stroke: crit ? "#811010" : marked ? "#5a310e" : "#40191b",
         strokeThickness: 5
-      }).setOrigin(0.5).setRotation(rand(-0.18, 0.18)).setDepth(250);
+      }).setOrigin(0.5).setRotation(rand(-0.18, 0.18)).setDepth(250));
       this.tweens.add({
         targets: text,
         y: y - rand(26, 44),
@@ -2929,7 +3066,7 @@
         scale: crit ? 1.18 : 1,
         duration: 650,
         ease: "Cubic.easeOut",
-        onComplete: () => text.destroy()
+        onComplete: () => this.destroyTransientObject(text, false)
       });
     }
 
@@ -2942,12 +3079,12 @@
       const displayHeight = displayWidth * texture.height / texture.width;
       const effectX = clamp(x, displayWidth / 2 + 8, GAME_WIDTH - displayWidth / 2 - 8);
       const effectY = y - (zombie.displayH || 170) * 0.06;
-      const burst = this.add.image(effectX, effectY, effect.texture)
+      const burst = this.trackTransient(this.add.image(effectX, effectY, effect.texture)
         .setOrigin(0.5, 0.64)
         .setDisplaySize(displayWidth, displayHeight)
         .setRotation(rand(-0.12, 0.12))
         .setAlpha(effect.alpha)
-        .setDepth(232);
+        .setDepth(232));
       this.tweens.add({
         targets: burst,
         scaleX: burst.scaleX * effect.scalePeak,
@@ -2955,7 +3092,7 @@
         alpha: 0,
         duration: effect.duration,
         ease: "Cubic.easeOut",
-        onComplete: () => burst.destroy()
+        onComplete: () => this.destroyTransientObject(burst, false)
       });
     }
 
@@ -2996,6 +3133,9 @@
           if (zombie.attackTimer <= 0) {
             zombie.attackTimer = rand(0.55, 1);
             this.takeDamage(zombie.attack);
+            if (this.mode !== "playing") {
+              return;
+            }
             zombie.y = Math.max(zombie.y - 6, this.bounds.barricade - 20);
             this.createHitAtBarricade(zombie.x);
           }
@@ -3030,14 +3170,14 @@
       const effectHeight = effectWidth * texture.height / texture.width;
       const effectX = clamp(x, effectWidth / 2 + 8, GAME_WIDTH - effectWidth / 2 - 8);
       const effectY = this.bounds.barricade + 38;
-      const impact = this.add.image(effectX, effectY, "barricade-impact")
+      const impact = this.trackTransient(this.add.image(effectX, effectY, "barricade-impact")
         .setOrigin(0.5, 0.55)
         .setDisplaySize(effectWidth, effectHeight)
         .setRotation(rand(-0.035, 0.035))
         .setAlpha(0.98)
-        .setDepth(225);
-      const flash = this.add.rectangle(270, this.bounds.barricade + 46, 540, 86, 0xff3b22, 0.18).setDepth(224);
-      const sparks = this.add.circle(x, this.bounds.barricade + rand(10, 30), 11, 0xffd86b, 0.86).setDepth(226);
+        .setDepth(225));
+      const flash = this.trackTransient(this.add.rectangle(270, this.bounds.barricade + 46, 540, 86, 0xff3b22, 0.18).setDepth(224));
+      const sparks = this.trackTransient(this.add.circle(x, this.bounds.barricade + rand(10, 30), 11, 0xffd86b, 0.86).setDepth(226));
       this.tweens.add({
         targets: impact,
         scaleX: impact.scaleX * 1.08,
@@ -3045,21 +3185,21 @@
         alpha: 0,
         duration: 330,
         ease: "Cubic.easeOut",
-        onComplete: () => impact.destroy()
+        onComplete: () => this.destroyTransientObject(impact, false)
       });
       this.tweens.add({
         targets: flash,
         alpha: 0,
         duration: 150,
         ease: "Cubic.easeOut",
-        onComplete: () => flash.destroy()
+        onComplete: () => this.destroyTransientObject(flash, false)
       });
       this.tweens.add({
         targets: sparks,
         scale: 2.8,
         alpha: 0,
         duration: 240,
-        onComplete: () => sparks.destroy()
+        onComplete: () => this.destroyTransientObject(sparks, false)
       });
     }
 
@@ -3067,13 +3207,13 @@
       this.playSfx("explosion", clamp(radius / 82, 0.75, 1.35));
       this.shakeCamera(130, clamp(radius / 22000, 0.004, 0.009));
       this.requestHitStop(0.045);
-      const ring = this.add.circle(x, y, 18, 0xffd35a, 0.46).setStrokeStyle(4, 0xffffff, 0.55).setDepth(221);
+      const ring = this.trackTransient(this.add.circle(x, y, 18, 0xffd35a, 0.46).setStrokeStyle(4, 0xffffff, 0.55).setDepth(221));
       this.tweens.add({
         targets: ring,
         scale: radius / 18,
         alpha: 0,
         duration: 260,
-        onComplete: () => ring.destroy()
+        onComplete: () => this.destroyTransientObject(ring, false)
       });
       this.zombies.slice().forEach((zombie) => {
         if (!zombie.active) {
@@ -3091,12 +3231,12 @@
     }
 
     createScreenPulse(color) {
-      const pulse = this.add.rectangle(270, 480, 540, 960, color, 0.16).setDepth(240);
+      const pulse = this.trackTransient(this.add.rectangle(270, 480, 540, 960, color, 0.16).setDepth(240));
       this.tweens.add({
         targets: pulse,
         alpha: 0,
         duration: 420,
-        onComplete: () => pulse.destroy()
+        onComplete: () => this.destroyTransientObject(pulse, false)
       });
     }
 
@@ -3105,6 +3245,7 @@
         return;
       }
       this.mode = "skill";
+      this.cancelRunTimers();
       this.level += 1;
       this.stage = Math.floor((this.level - 1) / 4) + 1;
       this.killsInLevel = 0;
@@ -3626,8 +3767,12 @@
         return;
       }
       this.mode = "gameover";
+      this.cancelRunTimers();
+      this.cancelSceneTimers();
+      this.clearTransientObjects();
       this.startBgm("menu");
       const earnedCoins = this.bankRunCoins();
+      this.clearRunEntities();
       this.clearOverlay();
       const items = this.overlayObjects;
       items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setAlpha(0.72).setDepth(540));
@@ -3664,9 +3809,7 @@
 
     clearOverlay() {
       this.overlayObjects.forEach((item) => {
-        if (item && item.destroy) {
-          item.destroy();
-        }
+        this.destroyGameObject(item);
       });
       this.overlayObjects = [];
     }
@@ -3701,9 +3844,15 @@
   }
 
   function installResponsiveViewport(game) {
+    if (typeof window.__schoolZombieViewportCleanup === "function") {
+      window.__schoolZombieViewportCleanup();
+    }
     const rootStyle = document.documentElement.style;
     const shell = document.getElementById("game-shell");
     let raf = 0;
+    let refreshRaf = 0;
+    const settleTimers = new Set();
+    let observer = null;
 
     const getViewportSize = () => {
       const viewport = window.visualViewport;
@@ -3713,23 +3862,36 @@
       };
     };
 
+    const scheduleTimer = (callback, delay) => {
+      const timer = window.setTimeout(() => {
+        settleTimers.delete(timer);
+        callback();
+      }, delay);
+      settleTimers.add(timer);
+      return timer;
+    };
+
     const apply = () => {
       raf = 0;
       const { width, height } = getViewportSize();
       rootStyle.setProperty("--game-viewport-width", `${width}px`);
       rootStyle.setProperty("--game-viewport-height", `${height}px`);
 
-      requestAnimationFrame(() => {
+      if (refreshRaf) {
+        cancelAnimationFrame(refreshRaf);
+      }
+      refreshRaf = requestAnimationFrame(() => {
+        refreshRaf = 0;
         const canvas = game.canvas || game.scale?.canvas || document.querySelector("#game-root canvas");
         if (!canvas?.style) {
-          window.setTimeout(schedule, 80);
+          scheduleTimer(schedule, 80);
           return;
         }
         if (game.scale?.refresh) {
           try {
             game.scale.refresh();
           } catch (error) {
-            window.setTimeout(schedule, 120);
+            scheduleTimer(schedule, 120);
           }
         }
       });
@@ -3744,7 +3906,7 @@
 
     const scheduleSettled = () => {
       schedule();
-      [90, 240, 520].forEach((delay) => window.setTimeout(schedule, delay));
+      [90, 240, 520].forEach((delay) => scheduleTimer(schedule, delay));
     };
 
     scheduleSettled();
@@ -3755,9 +3917,34 @@
       window.visualViewport.addEventListener("scroll", schedule, { passive: true });
     }
     if (shell && window.ResizeObserver) {
-      window.__schoolZombieResizeObserver = new ResizeObserver(schedule);
-      window.__schoolZombieResizeObserver.observe(shell);
+      observer = new ResizeObserver(schedule);
+      observer.observe(shell);
     }
+    window.__schoolZombieResizeObserver = observer;
+    window.__schoolZombieViewportCleanup = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+      if (refreshRaf) {
+        cancelAnimationFrame(refreshRaf);
+        refreshRaf = 0;
+      }
+      settleTimers.forEach((timer) => window.clearTimeout(timer));
+      settleTimers.clear();
+      window.removeEventListener("resize", scheduleSettled);
+      window.removeEventListener("orientationchange", scheduleSettled);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", scheduleSettled);
+        window.visualViewport.removeEventListener("scroll", schedule);
+      }
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
+      window.__schoolZombieResizeObserver = null;
+      window.__schoolZombieViewportCleanup = null;
+    };
   }
 
   const config = {
