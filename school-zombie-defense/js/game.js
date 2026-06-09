@@ -21,7 +21,8 @@
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
   const getTeamDamageForLevel = (level) => Math.round(28 + Math.max(0, level - 1) * 2.1);
   const BASE_CRIT_CHANCE = 0.08;
-  const BOW_BASE_CRIT_CHANCE = 0.22;
+  const DEFAULT_CRIT_MULTIPLIER = 1.85;
+  const BOW_BASE_CRIT_CHANCE = 0.3;
   const BOW_MARK_DURATION = 4.25;
   const BOW_MARK_DAMAGE_BONUS = 0.18;
   const AIM_POSES = [
@@ -157,12 +158,13 @@
       x: 52,
       y: 926,
       height: 222,
-      damageScale: 0.42,
+      damageScale: 0.92,
       role: "rally",
       projectile: "projectile-arrow",
       speed: 860,
-      rate: 1.08,
+      rate: 1.02,
       critChance: BOW_BASE_CRIT_CHANCE,
+      critMultiplier: 2.05,
       markDuration: BOW_MARK_DURATION,
       markDamageBonus: BOW_MARK_DAMAGE_BONUS,
       aim: { pivot: [0, -134], reach: 38 },
@@ -178,11 +180,13 @@
       x: 158,
       y: 924,
       height: 230,
-      damageScale: 0.86,
+      damageScale: 0.42,
       role: "barrage",
       projectile: "projectile-rifle",
       speed: 1020,
-      rate: 0.78,
+      rate: 0.86,
+      critChance: 0.07,
+      critMultiplier: 1.45,
       burstCount: 3,
       burstDelay: 70,
       aim: { pivot: [2, -146], reach: 52 },
@@ -198,11 +202,13 @@
       x: 270,
       y: 925,
       height: 248,
-      damageScale: 1,
+      damageScale: 0.72,
       role: "player",
       projectile: "projectile-pistol",
       speed: 900,
-      rate: 0.33,
+      rate: 0.4,
+      critChance: 0.12,
+      critMultiplier: 1.6,
       aim: { pivot: [0, -158], reach: 48 }
     },
     {
@@ -210,13 +216,15 @@
       x: 382,
       y: 925,
       height: 226,
-      damageScale: 0.78,
+      damageScale: 1.25,
       role: "frost",
       projectile: "projectile-rocket",
       speed: 720,
-      rate: 1.16,
-      splashRadius: 78,
-      splashDamageScale: 0.78,
+      rate: 1.55,
+      critChance: 0.04,
+      critMultiplier: 1.35,
+      splashRadius: 88,
+      splashDamageScale: 0.7,
       aim: { pivot: [2, -145], reach: 56 },
       recruit: {
         icon: "portrait-frost",
@@ -230,12 +238,14 @@
       x: 488,
       y: 924,
       height: 205,
-      damageScale: 0.72,
+      damageScale: 2.15,
       role: "repair",
       projectile: "projectile-sniper",
       speed: 1180,
-      rate: 1.24,
-      pierce: 2,
+      rate: 1.8,
+      critChance: 0.24,
+      critMultiplier: 2.35,
+      pierce: 3,
       aim: { pivot: [2, -132], reach: 64 },
       recruit: {
         icon: "portrait-repair",
@@ -1169,6 +1179,8 @@
           basePierce: defender.pierce || 0,
           critChance: defender.critChance || BASE_CRIT_CHANCE,
           baseCritChance: defender.critChance || BASE_CRIT_CHANCE,
+          critMultiplier: defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
+          baseCritMultiplier: defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
           rocketEvery: 0,
           shotsSinceRocket: 0,
           burstCount: defender.burstCount || 1,
@@ -1766,6 +1778,7 @@
         defender.damageBoost = 1;
         defender.pierce = defender.basePierce || 0;
         defender.critChance = defender.baseCritChance || BASE_CRIT_CHANCE;
+        defender.critMultiplier = defender.baseCritMultiplier || DEFAULT_CRIT_MULTIPLIER;
         defender.rocketEvery = 0;
         defender.shotsSinceRocket = 0;
         defender.burstCount = defender.baseBurstCount || 1;
@@ -2121,6 +2134,7 @@
         life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
         pierce,
         critChance,
+        critMultiplier: defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
         projectile: defender.projectile,
         splashRadius: (defender.splashRadius || 0) * (defender.splashRadiusBoost || 1),
         splashDamageScale: (defender.splashDamageScale || 0) * (defender.splashDamageBoost || 1),
@@ -2192,7 +2206,7 @@
         const hit = this.findBulletHit(bullet);
         if (hit) {
           bullet.hitTargets.add(hit);
-          this.damageZombie(hit, bullet.damage, bullet.critChance, bullet.projectile);
+          this.damageZombie(hit, bullet.damage, bullet.critChance, bullet.projectile, bullet.critMultiplier);
           if (bullet.slowDuration > 0 && hit.active) {
             hit.slowTimer = Math.max(hit.slowTimer || 0, bullet.slowDuration);
           }
@@ -2323,11 +2337,11 @@
       });
     }
 
-    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE, hitType = "default") {
+    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE, hitType = "default", critMultiplier = DEFAULT_CRIT_MULTIPLIER) {
       const crit = Math.random() < critChance;
       const marked = zombie.weakMarkTimer > 0 && zombie.weakMarkBonus > 0;
       const markMultiplier = marked ? 1 + zombie.weakMarkBonus : 1;
-      const damage = Math.round(amount * markMultiplier * (crit ? 1.85 : 1));
+      const damage = Math.round(amount * markMultiplier * (crit ? critMultiplier : 1));
       this.createZombieHitEffect(zombie, hitType, crit);
       zombie.hp -= damage;
       this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
