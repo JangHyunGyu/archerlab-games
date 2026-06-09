@@ -981,6 +981,11 @@
       this.load.image("skill-frost", "assets/images/skill-frost.png");
       this.load.image("skill-repair", "assets/images/skill-repair.png");
       this.load.image("skill-sniper", "assets/images/skill-sniper.png");
+      this.load.image("skill-pistol-rapid", "assets/images/skill-pistol-rapid.png");
+      this.load.image("skill-arrow-pin", "assets/images/skill-arrow-pin.png");
+      this.load.image("skill-rifle-grenade", "assets/images/skill-rifle-grenade.png");
+      this.load.image("skill-rocket-impact", "assets/images/skill-rocket-impact.png");
+      this.load.image("skill-sniper-weakpoint", "assets/images/skill-sniper-weakpoint.png");
       this.load.image("zombie-hit-arrow", "assets/images/zombie-hit-arrow.png");
       this.load.image("zombie-hit-pistol", "assets/images/zombie-hit-pistol.png");
       this.load.image("zombie-hit-rifle", "assets/images/zombie-hit-rifle.png");
@@ -2646,7 +2651,7 @@
 
       add("c", {
         id: "c-rapid",
-        icon: "skill-barrage",
+        icon: "skill-pistol-rapid",
         tag: "권총",
         title: "권총 속사",
         desc: "가까이 붙은 적을\n더 빠르게 끊어냅니다.",
@@ -2700,7 +2705,7 @@
       });
       add("a", {
         id: "a-pin",
-        icon: "skill-frost",
+        icon: "skill-arrow-pin",
         tag: "활",
         title: "속박 화살",
         desc: "맞은 좀비의 발을\n잠시 묶어둡니다.",
@@ -2713,7 +2718,7 @@
       });
       add("b", {
         id: "b-barrage",
-        icon: "skill-rocket",
+        icon: "skill-rifle-grenade",
         tag: "소총",
         title: "하부 유탄",
         desc: "연발 중간마다\n소형 폭발을 섞습니다.",
@@ -2768,7 +2773,7 @@
       });
       add("d", {
         id: "d-impact",
-        icon: "skill-rocket",
+        icon: "skill-rocket-impact",
         tag: "로켓",
         title: "직격 장약",
         desc: "정면으로 맞은 대상에게\n더 묵직하게 박힙니다.",
@@ -2780,7 +2785,7 @@
       });
       add("e", {
         id: "e-weakpoint",
-        icon: "skill-sniper",
+        icon: "skill-sniper-weakpoint",
         tag: "저격",
         title: "약점 조준",
         desc: "큰 위협을 노릴 때\n한 발의 위력이 커집니다.",
