@@ -1076,6 +1076,8 @@
 
     preload() {
       this.load.image("bg-corridor", "assets/images/corridor-battlefield.png");
+      this.load.image("title-keyart", "assets/images/title-keyart.png");
+      this.load.image("ui-title-button", "assets/images/ui-title-button.png");
       this.load.image("skill-choice-backdrop", "assets/images/skill-choice-backdrop.png");
       this.load.image("shop-blackmarket", "assets/images/shop-blackmarket.png");
       this.load.image("premium-skill-card", "assets/images/premium-skill-card.png");
@@ -1773,6 +1775,10 @@
     }
 
     addOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
+      if (width >= 150 && this.textures.exists("ui-title-button")) {
+        return this.addPremiumOverlayButton(x, y, width, height, label, depth, onClick, accent);
+      }
+
       const shadow = this.add.rectangle(x, y + 7, width, height, 0x000000, 0.35).setDepth(depth);
       const outer = this.add.rectangle(x, y, width, height, accent, 0.95)
         .setStrokeStyle(2, 0xffffff, 0.55)
@@ -1809,6 +1815,54 @@
       return { shadow, outer, inner, text };
     }
 
+    addPremiumOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
+      const isBlue = accent === COLORS.blue;
+      const shadow = this.add.ellipse(x, y + Math.max(8, height * 0.16), width * 0.86, height * 0.5, 0x000000, 0.46)
+        .setDepth(depth);
+      const glow = this.add.image(x, y, "ui-title-button")
+        .setDisplaySize(width + 14, height + 12)
+        .setTint(isBlue ? COLORS.blue : COLORS.gold)
+        .setAlpha(isBlue ? 0.16 : 0.13)
+        .setDepth(depth + 0.05);
+      const plate = this.add.image(x, y, "ui-title-button")
+        .setDisplaySize(width, height)
+        .setDepth(depth + 0.1);
+      const shine = this.add.rectangle(x, y - height * 0.28, width * 0.76, Math.max(2, height * 0.05), 0xffffff, 0.2)
+        .setDepth(depth + 0.2);
+      const text = this.add.text(x, y - 1, label, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: Math.max(20, Math.round(height * 0.45)),
+        fontStyle: "900",
+        color: isBlue ? "#e8fbff" : "#fff8dc",
+        stroke: "#050607",
+        strokeThickness: Math.max(4, Math.round(height * 0.09))
+      }).setOrigin(0.5).setDepth(depth + 0.3);
+      text.setShadow(0, 3, "#000000", 8, true, true);
+
+      const hit = this.add.rectangle(x, y, width, height, 0xffffff, 0)
+        .setDepth(depth + 0.4)
+        .setInteractive({ useHandCursor: true });
+      const setHover = (hovered) => {
+        plate.setDisplaySize(width * (hovered ? 1.018 : 1), height * (hovered ? 1.018 : 1));
+        glow.setDisplaySize(width * (hovered ? 1.06 : 1) + 14, height * (hovered ? 1.06 : 1) + 12);
+        text.setScale(hovered ? 1.025 : 1);
+        glow.setAlpha(hovered ? 0.25 : isBlue ? 0.14 : 0.12);
+        shine.setAlpha(hovered ? 0.32 : 0.2);
+      };
+      [hit, plate, text].forEach((item) => {
+        item.setInteractive({ useHandCursor: true });
+        item.on("pointerdown", () => {
+          this.unlockAudio();
+          onClick();
+        });
+        item.on("pointerover", () => setHover(true));
+        item.on("pointerout", () => setHover(false));
+      });
+
+      this.overlayObjects.push(shadow, glow, plate, shine, text, hit);
+      return { shadow, glow, plate, shine, text, hit };
+    }
+
     showToast(message, color = COLORS.gold) {
       const panel = this.add.rectangle(270, 158, 330, 48, 0x0b1014, 0.88)
         .setStrokeStyle(2, color, 0.9)
@@ -1841,39 +1895,47 @@
       this.mode = "menu";
       this.meta = loadMetaSave();
       const items = this.overlayObjects;
-      items.push(this.add.image(270, 480, "bg-corridor").setDisplaySize(540, 960).setDepth(500));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.34).setDepth(501));
-      items.push(this.add.rectangle(270, 166, 540, 250, 0x030608, 0.62).setDepth(502));
-      items.push(this.add.rectangle(270, 774, 540, 372, 0x020304, 0.72).setDepth(502));
-      items.push(this.add.rectangle(270, 204, 442, 2, 0xffd86b, 0.78).setDepth(503));
-      items.push(this.add.rectangle(270, 676, 520, 4, 0xc4fbff, 0.18).setDepth(503));
-      items.push(this.add.text(270, 84, "SCHOOL UNDEAD", {
+      const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
+      const source = titleArt.texture.getSourceImage();
+      const ratio = source.width / source.height;
+      titleArt.setDisplaySize(Math.max(GAME_WIDTH, GAME_HEIGHT * ratio), Math.max(GAME_HEIGHT, GAME_WIDTH / ratio));
+      items.push(titleArt);
+      items.push(this.add.rectangle(270, 118, 540, 236, 0x020304, 0.56).setDepth(501));
+      items.push(this.add.rectangle(270, 842, 540, 244, 0x020304, 0.7).setDepth(501));
+      items.push(this.add.rectangle(270, 208, 430, 2, 0xffd86b, 0.75).setDepth(502));
+      items.push(this.add.rectangle(270, 666, 540, 4, 0x57e5ff, 0.18).setDepth(502));
+      const eyebrow = this.add.text(270, 72, "SCHOOL UNDEAD", {
         fontFamily: "Arial, sans-serif",
         fontSize: 15,
         fontStyle: "900",
-        color: "#ffd86b",
+        color: "#ffdf7a",
         stroke: "#050607",
         strokeThickness: 3
-      }).setOrigin(0.5).setDepth(504));
-      items.push(this.add.text(270, 134, "스쿨 언데드 디펜스", {
+      }).setOrigin(0.5).setDepth(504);
+      eyebrow.setShadow(0, 2, "#000000", 8, true, true);
+      items.push(eyebrow);
+      const title = this.add.text(270, 126, "스쿨 언데드 디펜스", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 38,
+        fontSize: 39,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#06090b",
-        strokeThickness: 7
-      }).setOrigin(0.5).setDepth(504));
-      items.push(this.add.text(270, 176, "무너진 복도, 마지막 방어선", {
+        stroke: "#030607",
+        strokeThickness: 8
+      }).setOrigin(0.5).setDepth(504);
+      title.setShadow(0, 5, "#000000", 10, true, true);
+      items.push(title);
+      const subtitle = this.add.text(270, 174, "무너진 복도, 마지막 방어선", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 16,
-        fontStyle: "800",
+        fontStyle: "900",
         color: "#d9eef0",
         stroke: "#050607",
         strokeThickness: 3
-      }).setOrigin(0.5).setDepth(504));
-      this.addMenuSquadHero(items);
-      items.push(this.add.rectangle(270, 724, 250, 34, 0x05080a, 0.74).setStrokeStyle(1, 0xe7bb54, 0.56).setDepth(526));
-      items.push(this.add.text(270, 724, `보유 코인 $${this.meta.coins}`, {
+      }).setOrigin(0.5).setDepth(504);
+      subtitle.setShadow(0, 3, "#000000", 7, true, true);
+      items.push(subtitle);
+      items.push(this.add.rectangle(270, 708, 262, 36, 0x05080a, 0.78).setStrokeStyle(1, 0xe7bb54, 0.58).setDepth(526));
+      items.push(this.add.text(270, 708, `보유 코인 $${this.meta.coins}`, {
         fontFamily: "Arial, sans-serif",
         fontSize: 16,
         fontStyle: "900",
@@ -1881,51 +1943,8 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(527));
-      this.addOverlayButton(270, 798, 356, 58, "출격", 530, () => this.startRun(), COLORS.gold);
-      this.addOverlayButton(270, 872, 356, 58, "상점", 530, () => this.showShop(), COLORS.blue);
-    }
-
-    addMenuSquadHero(items) {
-      const squad = [
-        { id: "a", pose: "left", x: 82, y: 674, height: 218, alpha: 0.78, depth: 510 },
-        { id: "b", pose: "left", x: 174, y: 682, height: 238, alpha: 0.86, depth: 512 },
-        { id: "c", pose: "idle", x: 270, y: 700, height: 312, alpha: 1, depth: 516 },
-        { id: "d", pose: "right", x: 366, y: 682, height: 236, alpha: 0.86, depth: 512 },
-        { id: "e", pose: "right", x: 458, y: 674, height: 214, alpha: 0.78, depth: 510 }
-      ];
-      const zombies = [
-        { key: "zombie-walk-runner-1-1", x: 96, y: 324, height: 86, alpha: 0.24 },
-        { key: "zombie-walk-brute-2-2", x: 446, y: 352, height: 112, alpha: 0.2 },
-        { key: "zombie-walk-volatile-0-3", x: 282, y: 310, height: 92, alpha: 0.18 }
-      ];
-
-      zombies.forEach((zombie) => {
-        if (!this.textures.exists(zombie.key)) {
-          return;
-        }
-        const sprite = this.add.image(zombie.x, zombie.y, zombie.key)
-          .setOrigin(0.5, 1)
-          .setAlpha(zombie.alpha)
-          .setTint(0x6f8b90)
-          .setDepth(504);
-        this.fitSpriteHeight(sprite, zombie.height);
-        items.push(sprite);
-      });
-
-      squad.forEach((member) => {
-        const textureKey = `character-${member.id}-${member.pose}`;
-        if (!this.textures.exists(textureKey)) {
-          return;
-        }
-        const shadow = this.add.ellipse(member.x, member.y - 8, member.height * 0.44, 24, 0x000000, 0.42)
-          .setDepth(member.depth - 1);
-        const sprite = this.add.image(member.x, member.y, textureKey)
-          .setOrigin(0.5, 1)
-          .setAlpha(member.alpha)
-          .setDepth(member.depth);
-        this.fitSpriteHeight(sprite, member.height);
-        items.push(shadow, sprite);
-      });
+      this.addOverlayButton(270, 790, 390, 72, "출격", 530, () => this.startRun(), COLORS.gold);
+      this.addOverlayButton(270, 874, 390, 72, "상점", 530, () => this.showShop(), COLORS.blue);
     }
 
     showShop(selectedId = this.shopSelectedCharacter || "c") {
