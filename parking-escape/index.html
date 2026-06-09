@@ -113,7 +113,6 @@
           </div>
           <div class="menu-actions menu-actions--menu">
             <button id="play-btn" class="primary-btn" type="button">START</button>
-            <button id="continue-btn" class="secondary-btn" type="button">CONTINUE</button>
             <button id="rank-btn" class="secondary-btn" type="button">RANKING</button>
           </div>
         </div>
@@ -163,6 +162,9 @@
             <button id="skip-rank-btn" class="secondary-btn secondary-btn--ghost" type="button">Skip</button>
           </div>
           <div id="submit-status" class="submit-status"></div>
+          <div id="rank-submit-progress" class="rank-submit-progress hidden" role="progressbar" aria-label="랭킹 등록 중">
+            <span></span>
+          </div>
         </div>
         <div class="menu-actions menu-actions--clear">
           <button id="next-btn" class="primary-btn" type="button">다음</button>
@@ -187,6 +189,6 @@
   <script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.18.1/dist/pixi.min.js" crossorigin="anonymous"></script>
   <script src="js/SoundManager.js"></script>
-  <script src="js/main.js?v=20260608-time-limit"></script>
+  <script src="js/main.js?v=20260609-rank-flow"></script>
 </body>
 </html>
