@@ -99,8 +99,11 @@
     crit: "assets/sounds/sfx/crit.wav",
     death: "assets/sounds/sfx/death.mp3",
     explosion: "assets/sounds/sfx/explosion.wav",
-    rocket: "assets/sounds/sfx/rocket.wav",
-    arrow: "assets/sounds/sfx/arrow.wav",
+    pistol: "assets/sounds/sfx/pistol.mp3",
+    rifle: "assets/sounds/sfx/rifle.mp3",
+    sniper: "assets/sounds/sfx/sniper.mp3",
+    rocket: "assets/sounds/sfx/rocket.mp3",
+    arrow: "assets/sounds/sfx/arrow.mp3",
     button: "assets/sounds/sfx/button.mp3",
     denied: "assets/sounds/sfx/denied.mp3",
     recruit: "assets/sounds/sfx/recruit.mp3",
@@ -109,6 +112,11 @@
     coin: "assets/sounds/sfx/coin.wav",
     pause: "assets/sounds/sfx/pause.wav"
   };
+  const BGM_ASSETS = {
+    menu: "assets/sounds/bgm/menu_loop.mp3",
+    game: "assets/sounds/bgm/game_loop.mp3"
+  };
+  const BGM_VOLUME = 0.14;
   const MAX_CORE_HP_SKILL_CAP = 6000;
   const MAX_CORE_HP_SKILL_RATE = 0.12;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
@@ -1231,6 +1239,8 @@
       this.noiseBuffer = null;
       this.sfxBuffers = new Map();
       this.sfxPreloadStarted = false;
+      this.bgmTracks = null;
+      this.currentBgm = null;
       this.sfxLastPlayed = {};
       this.hitStopTimer = 0;
       this.speedMultiplier = 1;
@@ -1638,6 +1648,42 @@
       });
     }
 
+    ensureBgmTracks() {
+      if (this.bgmTracks) {
+        return;
+      }
+      this.bgmTracks = {};
+      Object.entries(BGM_ASSETS).forEach(([name, url]) => {
+        const track = new Audio(url);
+        track.loop = true;
+        track.preload = "auto";
+        track.volume = BGM_VOLUME;
+        this.bgmTracks[name] = track;
+      });
+    }
+
+    startBgm(name) {
+      this.ensureBgmTracks();
+      const next = this.bgmTracks?.[name];
+      if (!next) {
+        return;
+      }
+      Object.entries(this.bgmTracks).forEach(([trackName, track]) => {
+        if (trackName !== name) {
+          track.pause();
+        }
+      });
+      if (this.currentBgm === name && !next.paused) {
+        return;
+      }
+      this.currentBgm = name;
+      next.volume = BGM_VOLUME;
+      const playPromise = next.play();
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(() => {});
+      }
+    }
+
     getNoiseBuffer(ctx) {
       if (this.noiseBuffer) {
         return this.noiseBuffer;
@@ -1949,6 +1995,7 @@
     showMenu() {
       this.clearOverlay();
       this.mode = "menu";
+      this.startBgm("menu");
       this.meta = loadMetaSave();
       const items = this.overlayObjects;
       const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
@@ -2009,6 +2056,7 @@
     showShop(selectedId = this.shopSelectedCharacter || "c") {
       this.clearOverlay();
       this.mode = "shop";
+      this.startBgm("menu");
       this.meta = loadMetaSave();
       const selectedCharacter = SHOP_CHARACTERS.find((character) => character.id === selectedId) || SHOP_CHARACTERS[0];
       this.shopSelectedCharacter = selectedCharacter.id;
@@ -2233,6 +2281,7 @@
     startRun() {
       this.unlockAudio();
       this.playSfx("start");
+      this.startBgm("game");
       this.clearOverlay();
       this.resetRun();
       this.mode = "playing";
@@ -3676,6 +3725,7 @@
         return;
       }
       this.mode = "gameover";
+      this.startBgm("menu");
       const earnedCoins = this.bankRunCoins();
       this.clearOverlay();
       const items = this.overlayObjects;
