@@ -1451,17 +1451,11 @@
     }
 
     bindInput() {
-      this.input.on("pointerdown", (pointer) => {
+      this.input.on("pointerdown", () => {
         if (this.mode !== "playing") {
           return;
         }
         this.unlockAudio();
-        if (pointer.y < 84 || pointer.y > this.bounds.barricade) {
-          return;
-        }
-        this.focusPoint = { x: pointer.x, y: pointer.y, timer: 2.2 };
-        this.createAimFlash(pointer.x, pointer.y);
-        this.firePlayerBurst(true);
       });
     }
 
@@ -1735,7 +1729,7 @@
         color: "#d9eef0"
       }).setOrigin(0.5).setDepth(504));
       this.addOverlayButton(270, 365, 204, 54, "출격", 505, () => this.startRun(), COLORS.gold);
-      items.push(this.add.text(270, 424, "탭해서 조준 · 레벨업마다 동료와 무기 스킬 선택", {
+      items.push(this.add.text(270, 424, "자동 사격 · 레벨업마다 동료와 무기 스킬 선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 14,
         fontStyle: "800",
@@ -2667,7 +2661,7 @@
         icon: "skill-multishot",
         tag: "권총",
         title: "연속 사격",
-        desc: "한 번의 사격 명령을\n빠르게 이어 쏩니다.",
+        desc: "한 번의 자동 사격을\n빠르게 이어 쏩니다.",
         stat: `연속 사격 ${pistol.burstCount}회 → ${Math.min(4, pistol.burstCount + 1)}회`,
         available: pistol.burstCount < 4,
         apply: () => {
