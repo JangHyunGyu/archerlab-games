@@ -83,6 +83,35 @@
   const STARTING_SPAWN_TIMER = 1.15;
   const CHARACTER_FIRE_COOLDOWN_MULTIPLIER = 1.3;
   const SFX_MASTER_VOLUME = 0.44;
+  const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
+  const SHOP_MAX_LEVEL = 10;
+  const SHOP_UPGRADES = [
+    {
+      id: "gun",
+      title: "총과 총알",
+      subtitle: "권총 · 소총 · 저격",
+      icon: "skill-pistol-rapid",
+      desc: "총기 계열 피해와 사격 반응을 영구 강화합니다.",
+      accent: 0xf2b84b
+    },
+    {
+      id: "bow",
+      title: "활과 화살",
+      subtitle: "활 · 표식 · 치명",
+      icon: "skill-arrow-pin",
+      desc: "화살 피해, 치명률, 표식 보조력을 영구 강화합니다.",
+      accent: 0xff80b6
+    },
+    {
+      id: "launcher",
+      title: "런처와 로켓",
+      subtitle: "직격 · 폭발 · 범위",
+      icon: "skill-rocket-impact",
+      desc: "로켓 직격 피해와 폭발 성능을 영구 강화합니다.",
+      accent: 0x91f7ff
+    }
+  ];
+  const getShopUpgradeCost = (level) => level >= SHOP_MAX_LEVEL ? 0 : Math.round(18 + level * 12 + level * level * 2);
   const DEFAULT_CHAIN_SHOT_DELAY = 125;
   const WEAPON_CHAIN_SHOT_DELAYS = {
     "projectile-pistol": 110,
@@ -101,6 +130,45 @@
     elite: { id: "elite", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
   const ZOMBIE_TEXTURE_TYPES = ["normal", "runner", "brute", "volatile", "elite"];
+
+  function createDefaultMetaSave() {
+    return {
+      coins: 0,
+      upgrades: {
+        gun: 0,
+        bow: 0,
+        launcher: 0
+      }
+    };
+  }
+
+  function normalizeMetaSave(save) {
+    const defaults = createDefaultMetaSave();
+    const next = {
+      coins: Math.max(0, Math.floor(Number(save?.coins) || 0)),
+      upgrades: { ...defaults.upgrades }
+    };
+    Object.keys(defaults.upgrades).forEach((id) => {
+      next.upgrades[id] = clamp(Math.floor(Number(save?.upgrades?.[id]) || 0), 0, SHOP_MAX_LEVEL);
+    });
+    return next;
+  }
+
+  function loadMetaSave() {
+    try {
+      return normalizeMetaSave(JSON.parse(window.localStorage.getItem(META_SAVE_KEY) || "{}"));
+    } catch (error) {
+      return createDefaultMetaSave();
+    }
+  }
+
+  function saveMetaSave(save) {
+    try {
+      window.localStorage.setItem(META_SAVE_KEY, JSON.stringify(normalizeMetaSave(save)));
+    } catch (error) {
+      // Storage can be unavailable in private or embedded browser modes.
+    }
+  }
 
   function pickZombieType(level, eliteRoll) {
     if (eliteRoll) {
@@ -951,6 +1019,7 @@
     preload() {
       this.load.image("bg-corridor", "assets/images/corridor-battlefield.png");
       this.load.image("skill-choice-backdrop", "assets/images/skill-choice-backdrop.png");
+      this.load.image("shop-blackmarket", "assets/images/shop-blackmarket.png");
       this.load.image("premium-skill-card", "assets/images/premium-skill-card.png");
       this.load.image("character-a", "assets/images/character-a.png");
       this.load.image("character-b", "assets/images/character-b.png");
@@ -1055,6 +1124,8 @@
       this.coreHp = this.maxCoreHp;
       this.morale = 100;
       this.coins = 0;
+      this.meta = loadMetaSave();
+      this.runCoinsBanked = false;
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
@@ -1709,12 +1780,13 @@
     showMenu() {
       this.clearOverlay();
       this.mode = "menu";
+      this.meta = loadMetaSave();
       const items = this.overlayObjects;
       items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setAlpha(0.82).setDepth(500));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.42).setDepth(501));
-      items.push(this.add.rectangle(270, 300, 430, 214, 0x0d151b, 0.82).setStrokeStyle(2, 0xe7bb54, 0.72).setDepth(502));
-      items.push(this.add.rectangle(270, 207, 372, 4, 0xffd86b, 0.88).setDepth(503));
-      items.push(this.add.text(270, 248, "스쿨 언데드 디펜스", {
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.54).setDepth(501));
+      items.push(this.add.rectangle(270, 284, 430, 270, 0x0d151b, 0.86).setStrokeStyle(2, 0xe7bb54, 0.72).setDepth(502));
+      items.push(this.add.rectangle(270, 166, 372, 4, 0xffd86b, 0.88).setDepth(503));
+      items.push(this.add.text(270, 212, "스쿨 언데드 디펜스", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 36,
         fontStyle: "900",
@@ -1722,14 +1794,24 @@
         stroke: "#06090b",
         strokeThickness: 6
       }).setOrigin(0.5).setDepth(504));
-      items.push(this.add.text(270, 294, "무너진 복도에서 교실 방어선을 사수하세요", {
+      items.push(this.add.text(270, 258, "무너진 복도에서 교실 방어선을 사수하세요", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 16,
         fontStyle: "800",
         color: "#d9eef0"
       }).setOrigin(0.5).setDepth(504));
-      this.addOverlayButton(270, 365, 204, 54, "출격", 505, () => this.startRun(), COLORS.gold);
-      items.push(this.add.text(270, 424, "자동 사격 · 레벨업마다 동료와 무기 스킬 선택", {
+      items.push(this.add.rectangle(270, 304, 220, 30, 0x05080a, 0.7).setStrokeStyle(1, 0xe7bb54, 0.48).setDepth(504));
+      items.push(this.add.text(270, 304, `보유 코인 $${this.meta.coins}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 16,
+        fontStyle: "900",
+        color: "#ffd86b",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(505));
+      this.addOverlayButton(204, 374, 148, 52, "출격", 505, () => this.startRun(), COLORS.gold);
+      this.addOverlayButton(356, 374, 148, 52, "상점", 505, () => this.showShop(), COLORS.blue);
+      items.push(this.add.text(270, 444, "자동 사격 · 레벨업마다 동료와 무기 스킬 선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 14,
         fontStyle: "800",
@@ -1739,12 +1821,184 @@
       }).setOrigin(0.5).setDepth(504));
     }
 
+    showShop() {
+      this.clearOverlay();
+      this.mode = "shop";
+      this.meta = loadMetaSave();
+      const items = this.overlayObjects;
+      items.push(this.add.image(270, 480, "shop-blackmarket").setDisplaySize(540, 960).setDepth(500));
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.26).setDepth(501));
+      items.push(this.add.rectangle(270, 94, 430, 86, 0x070c10, 0.78).setStrokeStyle(2, 0xe7bb54, 0.72).setDepth(502));
+      items.push(this.add.rectangle(270, 48, 320, 4, 0xffd86b, 0.9).setDepth(503));
+      items.push(this.add.text(270, 78, "암시장 상점", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 34,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 6
+      }).setOrigin(0.5).setDepth(504));
+      items.push(this.add.text(270, 118, `보유 코인 $${this.meta.coins}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 18,
+        fontStyle: "900",
+        color: "#ffd86b",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(504));
+
+      SHOP_UPGRADES.forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, 270, 520 + index * 116));
+      this.addOverlayButton(142, 890, 172, 50, "뒤로", 560, () => this.showMenu(), COLORS.gold);
+      this.addOverlayButton(398, 890, 172, 50, "출격", 560, () => this.startRun(), COLORS.blue);
+    }
+
+    getMetaUpgradeLevel(id) {
+      return clamp(Math.floor(Number(this.meta?.upgrades?.[id]) || 0), 0, SHOP_MAX_LEVEL);
+    }
+
+    getShopUpgradeEffectLine(id, level) {
+      if (id === "gun") {
+        return `피해 +${Math.round(level * 2.5)}% · 간격 -${Math.round(level * 0.8)}%`;
+      }
+      if (id === "bow") {
+        return `피해 +${Math.round(level * 2.2)}% · 치명 +${Math.round(level * 0.6)}%`;
+      }
+      return `직격 +${Math.round(level * 2.6)}% · 폭발 +${Math.round(level * 1.2)}%`;
+    }
+
+    getShopUpgradeStatText(upgrade, level) {
+      if (level >= SHOP_MAX_LEVEL) {
+        return `${this.getShopUpgradeEffectLine(upgrade.id, level)}\n최대 강화 완료`;
+      }
+      return `${this.getShopUpgradeEffectLine(upgrade.id, level)}\n다음: ${this.getShopUpgradeEffectLine(upgrade.id, level + 1)}`;
+    }
+
+    addShopUpgradeCard(upgrade, x, y) {
+      const level = this.getMetaUpgradeLevel(upgrade.id);
+      const cost = getShopUpgradeCost(level);
+      const maxed = level >= SHOP_MAX_LEVEL;
+      const canAfford = this.meta.coins >= cost;
+      const accent = upgrade.accent || COLORS.gold;
+      const objects = [];
+      objects.push(this.add.rectangle(x, y, 468, 104, 0x071015, 0.78).setStrokeStyle(2, accent, 0.55).setDepth(520));
+      objects.push(this.add.rectangle(x, y + 43, 444, 1, accent, 0.28).setDepth(521));
+      objects.push(this.add.circle(x - 198, y - 16, 40, 0x020406, 0.78).setStrokeStyle(2, accent, 0.75).setDepth(522));
+      objects.push(this.add.image(x - 198, y - 16, upgrade.icon).setDisplaySize(64, 64).setDepth(523));
+      objects.push(this.add.text(x - 144, y - 37, upgrade.title, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 19,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0, 0.5).setDepth(523));
+      objects.push(this.add.text(x - 144, y - 13, upgrade.subtitle, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 12,
+        fontStyle: "900",
+        color: "#d6e9ed",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0, 0.5).setDepth(523));
+      objects.push(this.add.text(x - 144, y + 18, this.getShopUpgradeStatText(upgrade, level), {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 12,
+        fontStyle: "900",
+        color: "#ffd86b",
+        align: "left",
+        lineSpacing: 3,
+        wordWrap: { width: 242, useAdvancedWrap: true }
+      }).setOrigin(0, 0.5).setDepth(523));
+      objects.push(this.add.text(x + 158, y - 36, `Lv.${level}/${SHOP_MAX_LEVEL}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 14,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(523));
+      for (let i = 0; i < SHOP_MAX_LEVEL; i += 1) {
+        objects.push(this.add.rectangle(x + 96 + i * 12, y - 15, 8, 18, i < level ? accent : 0x15222b, i < level ? 0.95 : 0.72)
+          .setStrokeStyle(1, 0x000000, 0.35)
+          .setDepth(523));
+      }
+      this.overlayObjects.push(...objects);
+      const label = maxed ? "MAX" : `$${cost}`;
+      this.addOverlayButton(x + 154, y + 30, 112, 36, label, 524, () => this.buyShopUpgrade(upgrade.id), maxed ? 0x5b646b : canAfford ? COLORS.gold : 0x6f3333);
+    }
+
+    buyShopUpgrade(id) {
+      const upgrade = SHOP_UPGRADES.find((item) => item.id === id);
+      if (!upgrade) {
+        return;
+      }
+      this.unlockAudio();
+      this.meta = loadMetaSave();
+      const level = this.getMetaUpgradeLevel(id);
+      if (level >= SHOP_MAX_LEVEL) {
+        this.showToast("이미 최대 강화입니다", COLORS.gold);
+        return;
+      }
+      const cost = getShopUpgradeCost(level);
+      if (this.meta.coins < cost) {
+        this.playSfx("core", 0.65);
+        this.showToast("코인이 부족합니다", COLORS.red);
+        return;
+      }
+      this.meta.coins -= cost;
+      this.meta.upgrades[id] = level + 1;
+      this.saveMeta();
+      this.playSfx("skill");
+      this.showShop();
+      this.showToast(`${upgrade.title} Lv.${level + 1}`, upgrade.accent);
+    }
+
+    saveMeta() {
+      this.meta = normalizeMetaSave(this.meta);
+      saveMetaSave(this.meta);
+    }
+
     startRun() {
       this.unlockAudio();
       this.playSfx("start");
       this.clearOverlay();
       this.resetRun();
       this.mode = "playing";
+    }
+
+    bankRunCoins() {
+      if (this.runCoinsBanked || this.coins <= 0) {
+        return 0;
+      }
+      const earned = Math.floor(this.coins);
+      this.meta = loadMetaSave();
+      this.meta.coins += earned;
+      this.runCoinsBanked = true;
+      this.saveMeta();
+      return earned;
+    }
+
+    applyMetaUpgrades() {
+      this.meta = loadMetaSave();
+      const gunLevel = this.getMetaUpgradeLevel("gun");
+      const bowLevel = this.getMetaUpgradeLevel("bow");
+      const launcherLevel = this.getMetaUpgradeLevel("launcher");
+      this.defenders.forEach((defender) => {
+        if (["c", "b", "e"].includes(defender.id) && gunLevel > 0) {
+          defender.damageBoost *= 1 + gunLevel * 0.025;
+          defender.rate *= Math.max(0.88, 1 - gunLevel * 0.008);
+        }
+        if (defender.id === "a" && bowLevel > 0) {
+          defender.damageBoost *= 1 + bowLevel * 0.022;
+          defender.critChance = Math.min(0.72, defender.critChance + bowLevel * 0.006);
+          defender.markDamageBonus += bowLevel * 0.006;
+        }
+        if (defender.id === "d" && launcherLevel > 0) {
+          defender.damageBoost *= 1 + launcherLevel * 0.026;
+          defender.splashRadiusBoost *= 1 + launcherLevel * 0.012;
+          defender.splashDamageBoost *= 1 + launcherLevel * 0.012;
+        }
+      });
     }
 
     resetRun() {
@@ -1768,6 +2022,7 @@
       this.coreHp = this.maxCoreHp;
       this.morale = 100;
       this.coins = 0;
+      this.runCoinsBanked = false;
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
@@ -1792,6 +2047,10 @@
         defender.slowDuration = defender.baseSlowDuration || 0;
         defender.timer = rand(0.1, defender.rate);
         defender.firePoseTimer = 0;
+      });
+      this.applyMetaUpgrades();
+      this.defenders.forEach((defender) => {
+        defender.timer = rand(0.1, defender.rate);
         this.setDefenderRecruited(defender.id, defender.role === "player", false);
       });
       this.updateHud();
@@ -3025,11 +3284,12 @@
         return;
       }
       this.mode = "gameover";
+      const earnedCoins = this.bankRunCoins();
       this.clearOverlay();
       const items = this.overlayObjects;
       items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setAlpha(0.72).setDepth(540));
       items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.64).setDepth(541));
-      items.push(this.add.rectangle(270, 405, 392, 192, 0x0d151b, 0.9).setStrokeStyle(2, 0xff6b68, 0.8).setDepth(542));
+      items.push(this.add.rectangle(270, 412, 392, 224, 0x0d151b, 0.9).setStrokeStyle(2, 0xff6b68, 0.8).setDepth(542));
       items.push(this.add.rectangle(270, 326, 300, 4, 0xff6b68, 0.9).setDepth(543));
       items.push(this.add.text(270, 366, "방어선 붕괴", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
@@ -3039,7 +3299,7 @@
         stroke: "#050607",
         strokeThickness: 6
       }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 424, `Lv.${this.level} · 처치 ${this.kills}`, {
+      items.push(this.add.text(270, 418, `Lv.${this.level} · 처치 ${this.kills}`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 24,
         fontStyle: "900",
@@ -3047,7 +3307,16 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544));
-      this.addOverlayButton(270, 512, 208, 54, "다시 방어", 545, () => this.startRun(), COLORS.gold);
+      items.push(this.add.text(270, 462, `획득 $${earnedCoins} · 보유 $${this.meta.coins}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 18,
+        fontStyle: "900",
+        color: "#ffd86b",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(544));
+      this.addOverlayButton(164, 532, 164, 50, "다시 방어", 545, () => this.startRun(), COLORS.gold);
+      this.addOverlayButton(376, 532, 164, 50, "상점", 545, () => this.showShop(), COLORS.blue);
     }
 
     clearOverlay() {
