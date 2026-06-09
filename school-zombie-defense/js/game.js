@@ -1967,17 +1967,17 @@
           defender.timer = defender.rate * rand(0.75, 1.2) + (burstCount - 1) * shotDelay / 1000;
           const target = this.findTarget(defender.x, 999, null, this.bounds.autoEngageTop);
           if (target) {
+            const usedTargets = new Set();
             for (let shot = 0; shot < burstCount; shot += 1) {
               this.time.delayedCall(shot * shotDelay, () => {
                 if (this.mode !== "playing" || !defender.recruited) {
                   return;
                 }
-                const shotTarget = target.active
-                  ? target
-                  : this.findTarget(defender.x, 999, null, this.bounds.autoEngageTop);
+                const shotTarget = this.findChainShotTarget(defender.x, 999, usedTargets, this.bounds.autoEngageTop);
                 if (!shotTarget) {
                   return;
                 }
+                usedTargets.add(shotTarget);
                 const damage = this.getDefenderDamage(defender);
                 this.fireBullet(defender, shotTarget, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
                 if (defender.rocketEvery > 0) {
@@ -2014,15 +2014,16 @@
         const shotOffset = (i - (count - 1) / 2) * 12;
         const preferredX = (hasFocus ? this.focusPoint.x : 270) + shotOffset * 2.5;
         const radius = hasFocus ? 210 : 999;
-        const shotTarget = i === 0
-          ? target
-          : this.findTarget(preferredX, radius, usedTargets, minTargetY) || target;
-        const reusingTarget = usedTargets.has(shotTarget);
-        usedTargets.add(shotTarget);
         this.time.delayedCall(i * shotDelay, () => {
-          if (this.mode !== "playing" || !player.recruited || !shotTarget.active) {
+          if (this.mode !== "playing" || !player.recruited) {
             return;
           }
+          const shotTarget = this.findChainShotTarget(preferredX, radius, usedTargets, minTargetY);
+          if (!shotTarget) {
+            return;
+          }
+          const reusingTarget = usedTargets.has(shotTarget);
+          usedTargets.add(shotTarget);
           this.fireBullet(
             {
               ...player,
@@ -2045,6 +2046,11 @@
           this.createExplosion(target.x, target.y, 72, this.getDefenderDamage(player) * 1.5);
         }
       }
+    }
+
+    findChainShotTarget(preferX, radius, usedTargets, minY) {
+      return this.findTarget(preferX, radius, usedTargets, minY)
+        || this.findTarget(preferX, radius, null, minY);
     }
 
     findTarget(preferX, radius, ignoredTargets = null, minY = -Infinity) {
