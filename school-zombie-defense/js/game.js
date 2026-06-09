@@ -1609,10 +1609,14 @@
 
     bindInput() {
       this.input.on("pointerdown", () => {
-        if (this.mode !== "playing") {
+        this.unlockAudio();
+        if (this.mode === "playing") {
+          this.startBgm("game");
           return;
         }
-        this.unlockAudio();
+        if (this.mode === "menu" || this.mode === "shop" || this.mode === "gameover") {
+          this.startBgm("menu");
+        }
       });
     }
 
