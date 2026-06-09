@@ -79,6 +79,8 @@
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
+  const CHARACTER_FIRE_COOLDOWN_MULTIPLIER = 1.3;
+  const PISTOL_CHAIN_SHOT_DELAY = 110;
   const RECRUIT_UNLOCK_LEVELS = [3, 6, 9, 12];
   const getUnlockedRecruitSlots = (level) => RECRUIT_UNLOCK_LEVELS.filter((unlockLevel) => level >= unlockLevel).length;
   const ZOMBIE_TYPE_CONFIGS = {
@@ -1134,6 +1136,7 @@
     createCharacters() {
       DEFENDER_ROSTER.forEach((defender) => {
         const recruited = this.recruitedDefenders.has(defender.id);
+        const fireRate = defender.rate * CHARACTER_FIRE_COOLDOWN_MULTIPLIER;
         const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-aim-12`)
           .setOrigin(0.5, 1)
           .setDepth(142 + defender.y / 10);
@@ -1151,8 +1154,8 @@
           id: defender.id,
           sprite,
           role: defender.role,
-          rate: defender.rate,
-          baseRate: defender.rate,
+          rate: fireRate,
+          baseRate: fireRate,
           recruited,
           damageBoost: 1,
           pierce: defender.pierce || 0,
@@ -1175,7 +1178,7 @@
           baseMarkDamageBonus: defender.markDamageBonus || 0,
           slowDuration: defender.slowDuration || 0,
           baseSlowDuration: defender.slowDuration || 0,
-          timer: rand(0.15, 0.65),
+          timer: rand(0.15, fireRate),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
           speed: defender.speed
@@ -1970,12 +1973,13 @@
       const hasFocus = Boolean(this.focusPoint);
       const minTargetY = hasFocus ? this.bounds.top : this.bounds.autoEngageTop;
       const target = this.findTarget(hasFocus ? this.focusPoint.x : 270, hasFocus ? 210 : 999, null, minTargetY);
-      this.playerFireTimer = player.rate * (isManual ? 0.45 : 1);
+      const count = player.burstCount || 1;
+      const shotDelay = count > 1 ? PISTOL_CHAIN_SHOT_DELAY : 0;
+      this.playerFireTimer = player.rate * (isManual ? 0.45 : 1) + (count - 1) * shotDelay / 1000;
       if (!target) {
         return;
       }
 
-      const count = player.burstCount || 1;
       const usedTargets = new Set();
       for (let i = 0; i < count; i += 1) {
         const shotOffset = (i - (count - 1) / 2) * 12;
@@ -1986,18 +1990,23 @@
           : this.findTarget(preferredX, radius, usedTargets, minTargetY) || target;
         const reusingTarget = usedTargets.has(shotTarget);
         usedTargets.add(shotTarget);
-        this.fireBullet(
-          {
-            ...player,
-            shotOffset,
-            angleOffset: reusingTarget ? clamp(shotOffset * 0.012, -0.1, 0.1) : 0
-          },
-          shotTarget,
-          this.getDefenderDamage(player),
-          player.speed,
-          player.pierce || 0,
-          player.critChance || BASE_CRIT_CHANCE
-        );
+        this.time.delayedCall(i * shotDelay, () => {
+          if (this.mode !== "playing" || !player.recruited || !shotTarget.active) {
+            return;
+          }
+          this.fireBullet(
+            {
+              ...player,
+              shotOffset: count > 1 ? 0 : shotOffset,
+              angleOffset: reusingTarget ? clamp(shotOffset * 0.012, -0.1, 0.1) : 0
+            },
+            shotTarget,
+            this.getDefenderDamage(player),
+            player.speed,
+            player.pierce || 0,
+            player.critChance || BASE_CRIT_CHANCE
+          );
+        });
       }
 
       if (player.rocketEvery > 0) {
@@ -2585,8 +2594,8 @@
         id: "c-multishot",
         icon: "skill-multishot",
         tag: "권총",
-        title: "분산 사격",
-        desc: "권총 동시 사격 +1\n다른 좀비 우선",
+        title: "연속 사격",
+        desc: "빠른 추가 사격 +1\n다른 좀비 우선",
         apply: () => {
           const defender = this.getDefenderById("c");
           defender.burstCount = Math.min(4, defender.burstCount + 1);
