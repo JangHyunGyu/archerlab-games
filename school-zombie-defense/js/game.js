@@ -2719,6 +2719,11 @@
       const isRecruit = Boolean(upgrade.characterTexture);
       const ownerTexture = upgrade.ownerCharacterTexture;
       const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit && this.textures.exists(ownerTexture));
+      const isOwnerSkill = hasOwnerCharacter && !isRecruit;
+      const tagY = isOwnerSkill ? y - 42 : y + 24;
+      const titleY = isOwnerSkill ? y - 9 : y + 58;
+      const descY = isOwnerSkill ? y + 58 : y + 101;
+      const chooseY = isOwnerSkill ? y + 144 : y + 148;
       const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
       const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
       const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
@@ -2752,10 +2757,15 @@
       } else {
         icon.setDisplaySize(hasOwnerCharacter ? 66 : 74, hasOwnerCharacter ? 66 : 74);
       }
-      const tagBg = this.add.rectangle(x, y + 24, 76, 24, accent, 0.2)
+      const infoPanel = isOwnerSkill
+        ? this.add.rectangle(x, y + 58, 132, 88, 0x071015, 0.58)
+          .setStrokeStyle(1, accent, 0.28)
+          .setDepth(527)
+        : null;
+      const tagBg = this.add.rectangle(x, tagY, isOwnerSkill ? 84 : 76, 24, accent, 0.2)
         .setStrokeStyle(1, accent, 0.78)
         .setDepth(528);
-      const tagText = this.add.text(x, y + 24, upgrade.tag || "전술", {
+      const tagText = this.add.text(x, tagY, upgrade.tag || "전술", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 12,
         fontStyle: "900",
@@ -2763,27 +2773,27 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(529);
-      const title = this.add.text(x, y + 58, upgrade.title, {
+      const title = this.add.text(x, titleY, upgrade.title, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 19,
+        fontSize: isOwnerSkill ? 18 : 19,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(529);
-      const desc = this.add.text(x, y + 101, upgrade.desc, {
+      const desc = this.add.text(x, descY, upgrade.desc, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 14,
         fontStyle: "900",
         color: "#d8e6e8",
         align: "center",
-        lineSpacing: 4,
+        lineSpacing: isOwnerSkill ? 6 : 4,
         wordWrap: { width: 126, useAdvancedWrap: true }
       }).setOrigin(0.5).setDepth(529);
-      const chooseBg = this.add.rectangle(x, y + 148, 104, 30, 0x101820, 0.9)
+      const chooseBg = this.add.rectangle(x, chooseY, 104, 30, 0x101820, 0.9)
         .setStrokeStyle(1, accent, 0.85)
         .setDepth(529);
-      const chooseText = this.add.text(x, y + 148, "선택", {
+      const chooseText = this.add.text(x, chooseY, "선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 14,
         fontStyle: "900",
@@ -2801,6 +2811,7 @@
         ownerHalo,
         ownerCharacter,
         icon,
+        infoPanel,
         tagBg,
         tagText,
         title,
