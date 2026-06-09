@@ -1887,7 +1887,7 @@
       const delayMax = this.level < 7 ? 1.2 : 1.16;
       const burst = this.level >= 16 ? 3 : this.level >= 10 ? 2 : 1;
       const burstPacing = burst > 1 ? 1 + (burst - 1) * 0.38 : 1;
-      this.spawnTimer = rand(baseDelay * delayMin * burstPacing, baseDelay * delayMax * burstPacing) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER;
+      this.spawnTimer = rand(baseDelay * delayMin * burstPacing, baseDelay * delayMax * burstPacing) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
       for (let i = 0; i < burst; i += 1) {
         this.spawnZombie(i * rand(0.04, 0.11));
       }
