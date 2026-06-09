@@ -128,6 +128,10 @@
   const MAX_CORE_HP_SKILL_CAP = 6000;
   const MAX_CORE_HP_SKILL_RATE = 0.12;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
+  const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
+  const RANK_GAME_ID = "school-zombie-defense";
+  const RANK_LIMIT = 20;
+  const RANK_NAME_KEY = "schoolZombieDefenseRankNameV1";
   const SHOP_MAX_LEVEL = 10;
   const SHOP_CHARACTERS = [
     {
@@ -1237,6 +1241,7 @@
       this.elapsed = 0;
       this.stage = 1;
       this.level = 1;
+      this.highestClearedStage = 0;
       this.kills = 0;
       this.killsInLevel = 0;
       this.levelNeed = STARTING_LEVEL_NEED;
@@ -1248,6 +1253,8 @@
       this.coins = 0;
       this.meta = loadMetaSave();
       this.runCoinsBanked = false;
+      this.lastRankableRun = null;
+      this.rankRequestId = 0;
       this.shopSelectedCharacter = "c";
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
@@ -2075,6 +2082,230 @@
       });
     }
 
+    getStoredRankName() {
+      try {
+        return String(window.localStorage.getItem(RANK_NAME_KEY) || "").trim().slice(0, 20);
+      } catch (error) {
+        return "";
+      }
+    }
+
+    saveStoredRankName(name) {
+      try {
+        window.localStorage.setItem(RANK_NAME_KEY, name);
+      } catch (error) {
+        // Storage can be unavailable in private or embedded browser modes.
+      }
+    }
+
+    getRankSnapshot(earnedCoins = this.coins) {
+      const clearedStage = Math.max(0, Math.floor(Number(this.highestClearedStage) || 0));
+      return {
+        score: clearedStage,
+        reachedStage: Math.max(1, Math.floor(Number(this.stage) || 1)),
+        level: Math.max(1, Math.floor(Number(this.level) || 1)),
+        kills: Math.max(0, Math.floor(Number(this.kills) || 0)),
+        coins: Math.max(0, Math.floor(Number(earnedCoins) || 0)),
+        survivedSeconds: Math.max(0, Math.floor(Number(this.elapsed) || 0))
+      };
+    }
+
+    async fetchRankRows() {
+      const url = `${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(RANK_GAME_ID)}&limit=${RANK_LIMIT}`;
+      const response = await fetch(url, { method: "GET" });
+      if (!response.ok) {
+        throw new Error(`rankings ${response.status}`);
+      }
+      const data = await response.json();
+      if (!Array.isArray(data.rankings)) {
+        throw new Error("invalid rankings response");
+      }
+      return data.rankings;
+    }
+
+    showRankings() {
+      const requestId = (this.rankRequestId || 0) + 1;
+      this.rankRequestId = requestId;
+      this.renderRankingsScreen([], "랭킹을 불러오는 중...");
+      this.fetchRankRows()
+        .then((rows) => {
+          if (this.rankRequestId === requestId && this.mode === "ranking") {
+            this.renderRankingsScreen(rows);
+          }
+        })
+        .catch(() => {
+          if (this.rankRequestId === requestId && this.mode === "ranking") {
+            this.renderRankingsScreen([], "랭킹을 불러오지 못했습니다");
+          }
+        });
+    }
+
+    renderRankingsScreen(rows = [], status = "") {
+      this.clearOverlay();
+      this.mode = "ranking";
+      this.startBgm("menu");
+      const items = this.overlayObjects;
+      const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
+      const source = titleArt.texture.getSourceImage();
+      const ratio = source.width / source.height;
+      titleArt.setDisplaySize(Math.max(GAME_WIDTH, GAME_HEIGHT * ratio), Math.max(GAME_HEIGHT, GAME_WIDTH / ratio));
+      items.push(titleArt);
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.72).setDepth(501));
+      items.push(this.add.rectangle(270, 118, 430, 108, 0x070c10, 0.84).setStrokeStyle(2, 0xe7bb54, 0.78).setDepth(502));
+      items.push(this.add.rectangle(270, 70, 320, 4, 0xffd86b, 0.92).setDepth(503));
+      items.push(this.add.text(270, 106, "스테이지 랭킹", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 34,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 6
+      }).setOrigin(0.5).setDepth(504));
+      items.push(this.add.text(270, 148, "클리어한 스테이지 기준", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 17,
+        fontStyle: "900",
+        color: "#ffd86b",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(504));
+      items.push(this.add.rectangle(270, 486, 448, 552, 0x071015, 0.88).setStrokeStyle(2, 0x45d7ff, 0.52).setDepth(502));
+
+      const visibleRows = rows.slice(0, 11);
+      if (!visibleRows.length) {
+        items.push(this.add.text(270, 480, status || "아직 등록된 기록이 없습니다", {
+          fontFamily: "Pretendard Variable, Arial, sans-serif",
+          fontSize: 20,
+          fontStyle: "900",
+          color: "#dceff3",
+          stroke: "#050607",
+          strokeThickness: 4,
+          align: "center"
+        }).setOrigin(0.5).setDepth(505));
+      } else {
+        items.push(this.add.text(92, 248, "순위", {
+          fontFamily: "Arial, sans-serif",
+          fontSize: 14,
+          fontStyle: "900",
+          color: "#8deeff"
+        }).setDepth(505));
+        items.push(this.add.text(168, 248, "이름", {
+          fontFamily: "Pretendard Variable, Arial, sans-serif",
+          fontSize: 14,
+          fontStyle: "900",
+          color: "#8deeff"
+        }).setDepth(505));
+        items.push(this.add.text(398, 248, "클리어", {
+          fontFamily: "Pretendard Variable, Arial, sans-serif",
+          fontSize: 14,
+          fontStyle: "900",
+          color: "#8deeff"
+        }).setOrigin(1, 0).setDepth(505));
+        visibleRows.forEach((row, index) => {
+          const y = 292 + index * 42;
+          const rank = Math.max(1, Math.floor(Number(row.rank) || index + 1));
+          const score = Math.max(0, Math.floor(Number(row.score) || 0));
+          const name = String(row.player_name || "DEFENDER").trim().slice(0, 14) || "DEFENDER";
+          const extra = row.extra_data && typeof row.extra_data === "object" ? row.extra_data : {};
+          const level = Math.max(1, Math.floor(Number(extra.level) || 1));
+          const kills = Math.max(0, Math.floor(Number(extra.kills) || 0));
+          items.push(this.add.rectangle(270, y, 408, 34, index % 2 ? 0x0c1920 : 0x101f28, 0.82)
+            .setStrokeStyle(1, 0x254653, 0.48)
+            .setDepth(503));
+          items.push(this.add.text(92, y, `${rank}`, {
+            fontFamily: "Arial, sans-serif",
+            fontSize: 20,
+            fontStyle: "900",
+            color: rank <= 3 ? "#ffd86b" : "#ffffff",
+            stroke: "#050607",
+            strokeThickness: 3
+          }).setOrigin(0, 0.5).setDepth(505));
+          items.push(this.add.text(168, y - 5, name.length > 10 ? `${name.slice(0, 10)}...` : name, {
+            fontFamily: "Pretendard Variable, Arial, sans-serif",
+            fontSize: 17,
+            fontStyle: "900",
+            color: "#ffffff",
+            stroke: "#050607",
+            strokeThickness: 3
+          }).setOrigin(0, 0.5).setDepth(505));
+          items.push(this.add.text(168, y + 10, `Lv.${level} · 처치 ${kills}`, {
+            fontFamily: "Pretendard Variable, Arial, sans-serif",
+            fontSize: 12,
+            fontStyle: "800",
+            color: "#a9c7cf",
+            stroke: "#050607",
+            strokeThickness: 2
+          }).setOrigin(0, 0.5).setDepth(505));
+          items.push(this.add.text(404, y, `St.${score}`, {
+            fontFamily: "Arial, sans-serif",
+            fontSize: 22,
+            fontStyle: "900",
+            color: "#ffd86b",
+            stroke: "#050607",
+            strokeThickness: 4
+          }).setOrigin(1, 0.5).setDepth(505));
+        });
+      }
+
+      const canRegister = this.lastRankableRun && this.lastRankableRun.score > 0;
+      this.addOverlayButton(canRegister ? 142 : 270, 888, 172, 50, "뒤로", 560, () => this.showMenu(), COLORS.gold);
+      if (canRegister) {
+        this.addOverlayButton(398, 888, 172, 50, "기록 등록", 560, () => this.submitRankScore(), COLORS.blue);
+      }
+    }
+
+    async submitRankScore(snapshot = this.lastRankableRun) {
+      const run = snapshot || this.getRankSnapshot();
+      if (!run || run.score <= 0) {
+        this.showToast("클리어한 스테이지가 없습니다", COLORS.red);
+        return;
+      }
+      const defaultName = this.getStoredRankName() || "DEFENDER";
+      const rawName = typeof window.prompt === "function"
+        ? window.prompt("랭킹 이름을 입력하세요", defaultName)
+        : defaultName;
+      if (rawName === null) {
+        return;
+      }
+      const name = String(rawName).trim().replace(/\s+/g, " ").slice(0, 20);
+      if (!name) {
+        this.showToast("이름을 입력하세요", COLORS.red);
+        return;
+      }
+
+      this.showToast("랭킹 등록 중...", COLORS.gold);
+      try {
+        const response = await fetch(`${RANK_API_BASE}/rankings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            game_id: RANK_GAME_ID,
+            player_name: name,
+            score: run.score,
+            extra_data: {
+              cleared_stage: run.score,
+              highest_stage: run.score,
+              stage: run.score,
+              reached_stage: run.reachedStage,
+              level: run.level,
+              kills: run.kills,
+              coins: run.coins,
+              survived_seconds: run.survivedSeconds
+            }
+          })
+        });
+        if (!response.ok) {
+          throw new Error(`rank submit ${response.status}`);
+        }
+        this.saveStoredRankName(name);
+        this.lastRankableRun = null;
+        this.showToast("랭킹 등록 완료", COLORS.green);
+        this.showRankings();
+      } catch (error) {
+        this.showToast("랭킹 등록 실패", COLORS.red);
+      }
+    }
+
     showMenu() {
       this.clearOverlay();
       this.mode = "menu";
@@ -2132,8 +2363,9 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(527));
-      this.addOverlayButton(270, 790, 390, 72, "출격", 530, () => this.startRun(), COLORS.gold);
-      this.addOverlayButton(270, 874, 390, 72, "상점", 530, () => this.showShop(), COLORS.blue);
+      this.addOverlayButton(270, 784, 390, 68, "출격", 530, () => this.startRun(), COLORS.gold);
+      this.addOverlayButton(164, 874, 172, 56, "랭킹", 530, () => this.showRankings(), COLORS.gold);
+      this.addOverlayButton(376, 874, 172, 56, "상점", 530, () => this.showShop(), COLORS.blue);
     }
 
     showShop(selectedId = this.shopSelectedCharacter || "c") {
@@ -2441,6 +2673,8 @@
       this.elapsed = 0;
       this.stage = 1;
       this.level = 1;
+      this.highestClearedStage = 0;
+      this.lastRankableRun = null;
       this.kills = 0;
       this.killsInLevel = 0;
       this.levelNeed = STARTING_LEVEL_NEED;
@@ -3369,8 +3603,12 @@
       }
       this.mode = "skill";
       this.cancelRunTimers();
+      const previousStage = this.stage;
       this.level += 1;
       this.stage = Math.floor((this.level - 1) / 4) + 1;
+      if (this.stage > previousStage) {
+        this.highestClearedStage = Math.max(this.highestClearedStage || 0, previousStage);
+      }
       this.killsInLevel = 0;
       this.levelNeed = getLevelNeedForLevel(this.level);
       this.damage = getTeamDamageForLevel(this.level);
@@ -3895,12 +4133,14 @@
       this.clearTransientObjects();
       this.startBgm("menu");
       const earnedCoins = this.bankRunCoins();
+      const rankSnapshot = this.getRankSnapshot(earnedCoins);
+      this.lastRankableRun = rankSnapshot.score > 0 ? rankSnapshot : null;
       this.clearRunEntities();
       this.clearOverlay();
       const items = this.overlayObjects;
       items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setAlpha(0.72).setDepth(540));
       items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.64).setDepth(541));
-      items.push(this.add.rectangle(270, 412, 392, 224, 0x0d151b, 0.9).setStrokeStyle(2, 0xff6b68, 0.8).setDepth(542));
+      items.push(this.add.rectangle(270, 430, 392, 284, 0x0d151b, 0.9).setStrokeStyle(2, 0xff6b68, 0.8).setDepth(542));
       items.push(this.add.rectangle(270, 326, 300, 4, 0xff6b68, 0.9).setDepth(543));
       items.push(this.add.text(270, 366, "방어선 붕괴", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
@@ -3918,7 +4158,15 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 462, `획득 $${earnedCoins} · 보유 $${this.meta.coins}`, {
+      items.push(this.add.text(270, 462, `클리어 St.${rankSnapshot.score} · 도달 St.${rankSnapshot.reachedStage}`, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 19,
+        fontStyle: "900",
+        color: "#8deeff",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(544));
+      items.push(this.add.text(270, 500, `획득 $${earnedCoins} · 보유 $${this.meta.coins}`, {
         fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -3926,8 +4174,11 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544));
-      this.addOverlayButton(164, 532, 164, 50, "다시 방어", 545, () => this.startRun(), COLORS.gold);
-      this.addOverlayButton(376, 532, 164, 50, "상점", 545, () => this.showShop(), COLORS.blue);
+      this.addOverlayButton(164, 570, 164, 50, "다시 방어", 545, () => this.startRun(), COLORS.gold);
+      this.addOverlayButton(376, 570, 164, 50, "상점", 545, () => this.showShop(), COLORS.blue);
+      if (this.lastRankableRun) {
+        this.addOverlayButton(270, 636, 220, 48, "랭킹 등록", 545, () => this.submitRankScore(), COLORS.blue);
+      }
     }
 
     clearOverlay() {
