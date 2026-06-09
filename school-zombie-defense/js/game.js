@@ -2647,20 +2647,32 @@
         if (defender.timer <= 0) {
           const burstCount = defender.burstCount || 1;
           const shotDelay = burstCount > 1 ? this.getChainShotDelay(defender) : 0;
+          const targetGroupSize = this.getBurstTargetGroupSize(defender);
           defender.timer = defender.rate * rand(0.75, 1.2) + (burstCount - 1) * shotDelay / 1000;
           const target = this.findTarget(defender.x, 999, null, this.bounds.autoEngageTop);
           if (target) {
             const usedTargets = new Set();
+            const groupTargets = [];
             for (let shot = 0; shot < burstCount; shot += 1) {
+              const groupIndex = Math.floor(shot / targetGroupSize);
               this.scheduleRunDelay(shot * shotDelay, () => {
                 if (!defender.recruited) {
                   return;
                 }
-                const shotTarget = this.findChainShotTarget(defender.x, 999, usedTargets, this.bounds.autoEngageTop);
+                let shotTarget = groupTargets[groupIndex];
+                if (!shotTarget) {
+                  shotTarget = this.findChainShotTarget(defender.x, 999, usedTargets, this.bounds.autoEngageTop);
+                  if (shotTarget) {
+                    groupTargets[groupIndex] = shotTarget;
+                    usedTargets.add(shotTarget);
+                  }
+                }
                 if (!shotTarget) {
                   return;
                 }
-                usedTargets.add(shotTarget);
+                if (!shotTarget.active || shotTarget.hp <= 0) {
+                  return;
+                }
                 const damage = this.getDefenderDamage(defender);
                 this.fireBullet(defender, shotTarget, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
                 if (defender.rocketEvery > 0) {
@@ -2794,6 +2806,12 @@
 
     getChainShotDelay(defender) {
       return defender.burstDelay || WEAPON_CHAIN_SHOT_DELAYS[defender.projectile] || DEFAULT_CHAIN_SHOT_DELAY;
+    }
+
+    getBurstTargetGroupSize(defender) {
+      return defender.role === "barrage"
+        ? Math.max(1, defender.baseBurstCount || 3)
+        : 1;
     }
 
     getDefenderById(id) {
@@ -3510,11 +3528,11 @@
         tag: "소총",
         title: "연발 제어",
         desc: "여러 적에게\n탄막을 짧게 끊어 쏩니다.",
-        stat: `연사 ${rifle.burstCount}회 → ${Math.min(6, rifle.burstCount + 1)}회\n간격 ${this.formatMs(rifle.burstDelay)} → ${this.formatMs(Math.max(45, rifle.burstDelay * 0.9))}`,
+        stat: `연사 ${rifle.burstCount}회 → ${Math.min(6, rifle.burstCount + (rifle.baseBurstCount || 3))}회\n간격 ${this.formatMs(rifle.burstDelay)} → ${this.formatMs(Math.max(45, rifle.burstDelay * 0.9))}`,
         available: rifle.burstCount < 6 || rifle.burstDelay > 45,
         apply: () => {
           const defender = this.getDefenderById("b");
-          defender.burstCount = Math.min(6, defender.burstCount + 1);
+          defender.burstCount = Math.min(6, defender.burstCount + (defender.baseBurstCount || 3));
           defender.burstDelay = Math.max(45, defender.burstDelay * 0.9);
         }
       });
