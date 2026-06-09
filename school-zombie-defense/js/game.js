@@ -2683,18 +2683,31 @@
           }
           const reusingTarget = usedTargets.has(shotTarget);
           usedTargets.add(shotTarget);
-          this.fireBullet(
-            {
-              ...player,
-              shotOffset: count > 1 ? 0 : shotOffset,
-              angleOffset: reusingTarget ? clamp(shotOffset * 0.012, -0.1, 0.1) : 0
-            },
-            shotTarget,
-            this.getDefenderDamage(player),
-            player.speed,
-            player.pierce || 0,
-            player.critChance || BASE_CRIT_CHANCE
-          );
+          const previousShotOffset = player.shotOffset;
+          const previousAngleOffset = player.angleOffset;
+          player.shotOffset = count > 1 ? 0 : shotOffset;
+          player.angleOffset = reusingTarget ? clamp(shotOffset * 0.012, -0.1, 0.1) : 0;
+          try {
+            this.fireBullet(
+              player,
+              shotTarget,
+              this.getDefenderDamage(player),
+              player.speed,
+              player.pierce || 0,
+              player.critChance || BASE_CRIT_CHANCE
+            );
+          } finally {
+            if (previousShotOffset === undefined) {
+              delete player.shotOffset;
+            } else {
+              player.shotOffset = previousShotOffset;
+            }
+            if (previousAngleOffset === undefined) {
+              delete player.angleOffset;
+            } else {
+              player.angleOffset = previousAngleOffset;
+            }
+          }
         });
       }
 
