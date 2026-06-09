@@ -1255,6 +1255,10 @@
       this.runCoinsBanked = false;
       this.lastRankableRun = null;
       this.rankRequestId = 0;
+      this.rankSessionId = null;
+      this.rankSessionPromise = null;
+      this.rankStageSyncPromises = [];
+      this.rankSyncFailed = false;
       this.shopSelectedCharacter = "c";
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
@@ -2110,6 +2114,106 @@
       };
     }
 
+    resetRankSessionState() {
+      this.rankSessionId = null;
+      this.rankSessionPromise = null;
+      this.rankStageSyncPromises = [];
+      this.rankSyncFailed = false;
+    }
+
+    async createRankSession() {
+      const response = await fetch(`${RANK_API_BASE}/score-sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ game_id: RANK_GAME_ID })
+      });
+      if (!response.ok) {
+        throw new Error(`rank session ${response.status}`);
+      }
+      const data = await response.json();
+      if (!data || !data.session_id) {
+        throw new Error("invalid rank session response");
+      }
+      this.rankSessionId = data.session_id;
+      return this.rankSessionId;
+    }
+
+    startRankSession() {
+      this.resetRankSessionState();
+      this.rankSessionPromise = this.createRankSession().catch((error) => {
+        this.rankSyncFailed = true;
+        console.warn("[SchoolZombie] rank session failed:", error.message);
+        return null;
+      });
+    }
+
+    ensureRankSession() {
+      if (this.rankSessionId) {
+        return Promise.resolve(this.rankSessionId);
+      }
+      if (!this.rankSessionPromise) {
+        this.rankSessionPromise = this.createRankSession().catch((error) => {
+          this.rankSyncFailed = true;
+          throw error;
+        });
+      }
+      return this.rankSessionPromise;
+    }
+
+    recordRankStageClear(clearedStage) {
+      if (this.rankSyncFailed || !Number.isFinite(clearedStage) || clearedStage <= 0) {
+        return;
+      }
+      const snapshot = this.getRankSnapshot();
+      const sync = (async () => {
+        const sessionId = await this.ensureRankSession();
+        if (!sessionId) {
+          throw new Error("rank session unavailable");
+        }
+        const response = await fetch(`${RANK_API_BASE}/score-events`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({
+            game_id: RANK_GAME_ID,
+            session_id: sessionId,
+            event: {
+              type: "stage_clear",
+              cleared_stage: Math.floor(clearedStage),
+              reached_stage: snapshot.reachedStage,
+              level: snapshot.level,
+              kills: snapshot.kills,
+              survived_seconds: snapshot.survivedSeconds
+            }
+          })
+        });
+        if (!response.ok) {
+          throw new Error(`rank event ${response.status}`);
+        }
+        const data = await response.json().catch(() => null);
+        if (!data || data.success !== true) {
+          throw new Error("invalid rank event response");
+        }
+        return true;
+      })().catch((error) => {
+        this.rankSyncFailed = true;
+        console.warn("[SchoolZombie] rank sync failed:", error.message);
+        return false;
+      });
+      this.rankStageSyncPromises.push(sync);
+    }
+
+    async ensureRankStagesRecorded() {
+      if (this.rankSyncFailed || !this.rankSessionPromise) {
+        return false;
+      }
+      const sessionId = await this.ensureRankSession();
+      if (!sessionId) {
+        return false;
+      }
+      const results = await Promise.all(this.rankStageSyncPromises);
+      return results.every(Boolean);
+    }
+
     async fetchRankRows() {
       const url = `${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(RANK_GAME_ID)}&limit=${RANK_LIMIT}`;
       const response = await fetch(url, { method: "GET" });
@@ -2260,6 +2364,12 @@
         this.showToast("클리어한 스테이지가 없습니다", COLORS.red);
         return;
       }
+      this.showToast("랭킹 검증 중...", COLORS.gold);
+      const synced = await this.ensureRankStagesRecorded().catch(() => false);
+      if (!this.rankSessionId || !synced || this.rankSyncFailed) {
+        this.showToast("랭킹 검증 실패", COLORS.red);
+        return;
+      }
       const defaultName = this.getStoredRankName() || "DEFENDER";
       const rawName = typeof window.prompt === "function"
         ? window.prompt("랭킹 이름을 입력하세요", defaultName)
@@ -2282,7 +2392,9 @@
             game_id: RANK_GAME_ID,
             player_name: name,
             score: run.score,
+            session_id: this.rankSessionId,
             extra_data: {
+              session_id: this.rankSessionId,
               cleared_stage: run.score,
               highest_stage: run.score,
               stage: run.score,
@@ -2599,6 +2711,7 @@
       this.startBgm("game");
       this.clearOverlay();
       this.resetRun();
+      this.startRankSession();
       this.mode = "playing";
     }
 
@@ -2675,6 +2788,7 @@
       this.level = 1;
       this.highestClearedStage = 0;
       this.lastRankableRun = null;
+      this.resetRankSessionState();
       this.kills = 0;
       this.killsInLevel = 0;
       this.levelNeed = STARTING_LEVEL_NEED;
@@ -3608,6 +3722,7 @@
       this.stage = Math.floor((this.level - 1) / 4) + 1;
       if (this.stage > previousStage) {
         this.highestClearedStage = Math.max(this.highestClearedStage || 0, previousStage);
+        this.recordRankStageClear(previousStage);
       }
       this.killsInLevel = 0;
       this.levelNeed = getLevelNeedForLevel(this.level);
