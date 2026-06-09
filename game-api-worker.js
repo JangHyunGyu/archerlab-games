@@ -52,6 +52,9 @@ const PARKING_GAME_ID = 'parking_escape';
 const PARKING_FREE_LEVEL_BURST = 3;
 const PARKING_MIN_MS_PER_LEVEL = 1800;
 const PARKING_MAX_LEVEL_SCORE = 100000;
+const SCHOOL_ZOMBIE_GAME_ID = 'school-zombie-defense';
+const SCHOOL_ZOMBIE_MAX_CLEAR_STAGE = 1000;
+const SCHOOL_ZOMBIE_MIN_MS_PER_STAGE = 12000;
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
 const SHADOW_MAX_SCORE = 7200;
 const SHADOW_SCORE_GRACE_SECONDS = 15;
@@ -95,6 +98,7 @@ function getProtectedGameKind(gameId) {
     if (gameId === BLOCKPANG_GAME_ID) return 'blockpang';
     if (gameId === JEWELRIA_GAME_ID) return 'jewelria';
     if (gameId === PARKING_GAME_ID) return 'parking';
+    if (gameId === SCHOOL_ZOMBIE_GAME_ID) return 'school-zombie';
     if (typeof gameId === 'string' && gameId.startsWith(SHADOW_GAME_PREFIX)) return 'shadow';
     return null;
 }
@@ -558,12 +562,105 @@ async function recordParkingScoreEvents(db, body) {
     });
 }
 
+function getSchoolZombieMinKillsForClearedStage(stage) {
+    let total = 0;
+    const maxLevel = stage * 4;
+    for (let level = 1; level <= maxLevel; level += 1) {
+        const rawNeed = level === 1 ? 12 : 15 + level * 4.4;
+        total += Math.max(4, Math.round(rawNeed / 2.4));
+    }
+    return total;
+}
+
+async function recordSchoolZombieScoreEvents(db, body) {
+    const gameId = body?.game_id;
+    const sessionId = String(body?.session_id || '').trim();
+    const events = Array.isArray(body?.events) ? body.events : (body?.event ? [body.event] : []);
+
+    if (gameId !== SCHOOL_ZOMBIE_GAME_ID) {
+        return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
+    }
+    if (!sessionId) {
+        return jsonResponse({ error: 'session_id is required' }, 400);
+    }
+    if (events.length === 0 || events.length > SCORE_EVENT_BATCH_LIMIT) {
+        return jsonResponse({ error: 'events must contain 1-50 items' }, 400);
+    }
+
+    const session = await db.prepare(
+        'SELECT session_id, game_id, score, event_count, started_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (!session || session.game_id !== gameId) {
+        return jsonResponse({ error: 'score session not found' }, 404);
+    }
+    if (session.submitted_at) {
+        return jsonResponse({ error: 'score session already submitted' }, 409);
+    }
+
+    const currentScore = Number(session.score);
+    try {
+        events.forEach((event, index) => {
+            if (!isPlainObject(event) || String(event.type || '') !== 'stage_clear') {
+                throw new Error('school zombie score event must be stage_clear');
+            }
+            if (event.score !== undefined || event.delta !== undefined || event.highest_stage !== undefined) {
+                throw new Error('school zombie score event cannot set score');
+            }
+            const clearedStage = parseInteger(event.cleared_stage ?? event.clearedStage);
+            const reachedStage = parseInteger(event.reached_stage ?? event.reachedStage);
+            const level = parseInteger(event.level);
+            const kills = parseInteger(event.kills);
+            const expectedStage = currentScore + index + 1;
+            if (!Number.isFinite(clearedStage) || clearedStage !== expectedStage || clearedStage < 1 || clearedStage > SCHOOL_ZOMBIE_MAX_CLEAR_STAGE) {
+                throw new Error('invalid school zombie cleared stage sequence');
+            }
+            if (!Number.isFinite(reachedStage) || reachedStage !== clearedStage + 1) {
+                throw new Error('invalid school zombie reached stage');
+            }
+            if (!Number.isFinite(level) || level < clearedStage * 4 + 1) {
+                throw new Error('invalid school zombie level for stage clear');
+            }
+            if (!Number.isFinite(kills) || kills < getSchoolZombieMinKillsForClearedStage(clearedStage)) {
+                throw new Error('invalid school zombie kill count for stage clear');
+            }
+        });
+    } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+    }
+
+    const projectedScore = currentScore + events.length;
+    const projectedEventCount = Number(session.event_count) + events.length;
+    if (projectedScore > SCHOOL_ZOMBIE_MAX_CLEAR_STAGE) {
+        return jsonResponse({ error: 'school zombie score exceeds allowed maximum' }, 400);
+    }
+
+    const now = Date.now();
+    const elapsedMs = now - Number(session.started_at);
+    const minElapsedMs = projectedScore * SCHOOL_ZOMBIE_MIN_MS_PER_STAGE;
+    if (elapsedMs < minElapsedMs) {
+        return jsonResponse({ error: 'school zombie stage clears are too fast' }, 429);
+    }
+
+    await db.prepare(
+        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ? WHERE session_id = ?'
+    ).bind(projectedScore, projectedEventCount, now, sessionId).run();
+
+    return jsonResponse({
+        success: true,
+        game_id: gameId,
+        session_id: sessionId,
+        score: projectedScore,
+        event_count: projectedEventCount,
+    });
+}
+
 async function recordScoreEvents(db, body) {
     const kind = getProtectedGameKind(body?.game_id);
     if (kind === 'cat-tower') return recordCatTowerScoreEvents(db, body);
     if (kind === 'blockpang') return recordBlockpangScoreEvents(db, body);
     if (kind === 'jewelria') return recordJewelriaScoreEvents(db, body);
     if (kind === 'parking') return recordParkingScoreEvents(db, body);
+    if (kind === 'school-zombie') return recordSchoolZombieScoreEvents(db, body);
     return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
 }
 
@@ -686,6 +783,10 @@ async function verifyRankingSession(db, body, clientScore) {
     if (kind === 'parking') return verifyStoredScoreRankingSession(db, body, clientScore, {
         label: 'parking escape',
         maxScore: PARKING_MAX_LEVEL_SCORE,
+    });
+    if (kind === 'school-zombie') return verifyStoredScoreRankingSession(db, body, clientScore, {
+        label: 'school zombie defense',
+        maxScore: SCHOOL_ZOMBIE_MAX_CLEAR_STAGE,
     });
     if (kind === 'shadow') return verifyShadowRankingSession(db, body, clientScore);
     return null;
