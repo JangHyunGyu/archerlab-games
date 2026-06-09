@@ -49,7 +49,8 @@ const JEWELRIA_FREE_SCORE_BURST = 2500;
 const JEWELRIA_MAX_SCORE_PER_SECOND = 4500;
 const JEWELRIA_COMBO_MULTIPLIER = 0.5;
 const PARKING_GAME_ID = 'parking_escape';
-const PARKING_MIN_MS_PER_LEVEL = 10000;
+const PARKING_FREE_LEVEL_BURST = 3;
+const PARKING_MIN_MS_PER_LEVEL = 1800;
 const PARKING_MAX_LEVEL_SCORE = 100000;
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
 const SHADOW_MAX_SCORE = 7200;
@@ -147,9 +148,10 @@ async function createScoreSession(db, gameId) {
 
     const now = Date.now();
     const sessionId = makeSessionId();
+    const initialScore = gameId === PARKING_GAME_ID ? 1 : 0;
     await db.prepare(
-        'INSERT INTO ranking_sessions (session_id, game_id, score, event_count, started_at, updated_at) VALUES (?, ?, 0, 0, ?, ?)'
-    ).bind(sessionId, gameId, now, now).run();
+        'INSERT INTO ranking_sessions (session_id, game_id, score, event_count, started_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)'
+    ).bind(sessionId, gameId, initialScore, now, now).run();
 
     await db.prepare('DELETE FROM ranking_sessions WHERE updated_at < ?')
         .bind(now - CAT_TOWER_SESSION_TTL_MS)
@@ -482,7 +484,7 @@ async function recordJewelriaScoreEvents(db, body) {
 async function recordParkingScoreEvents(db, body) {
     const gameId = body?.game_id;
     const sessionId = String(body?.session_id || '').trim();
-    const event = Array.isArray(body?.events) ? body.events[0] : body?.event;
+    const events = Array.isArray(body?.events) ? body.events : (body?.event ? [body.event] : []);
 
     if (gameId !== PARKING_GAME_ID) {
         return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
@@ -490,8 +492,8 @@ async function recordParkingScoreEvents(db, body) {
     if (!sessionId) {
         return jsonResponse({ error: 'session_id is required' }, 400);
     }
-    if (!isPlainObject(event) || String(event.type || '') !== 'level_clear') {
-        return jsonResponse({ error: 'parking score event must be level_clear' }, 400);
+    if (events.length === 0 || events.length > SCORE_EVENT_BATCH_LIMIT) {
+        return jsonResponse({ error: 'events must contain 1-50 items' }, 400);
     }
 
     const session = await db.prepare(
@@ -504,39 +506,55 @@ async function recordParkingScoreEvents(db, body) {
         return jsonResponse({ error: 'score session already submitted' }, 409);
     }
 
-    const score = parseInteger(event.score ?? event.cleared_level ?? event.level);
-    const moves = parseInteger(event.moves);
-    const vehicles = parseInteger(event.vehicles);
-    if (!Number.isFinite(score) || score < 1 || score > PARKING_MAX_LEVEL_SCORE) {
-        return jsonResponse({ error: 'invalid parking level score' }, 400);
+    try {
+        for (const event of events) {
+            if (!isPlainObject(event) || String(event.type || '') !== 'level_clear') {
+                throw new Error('parking score event must be level_clear');
+            }
+            if (event.score !== undefined || event.level !== undefined || event.cleared_level !== undefined) {
+                throw new Error('parking score event cannot set score');
+            }
+            const moves = parseInteger(event.moves);
+            const levelMoves = parseInteger(event.level_moves ?? event.levelMoves ?? event.moves);
+            const vehicles = parseInteger(event.vehicles);
+            if (!Number.isFinite(moves) || moves < 1 || moves > 10000) {
+                throw new Error('invalid parking move count');
+            }
+            if (!Number.isFinite(levelMoves) || levelMoves < 1 || levelMoves > 10000) {
+                throw new Error('invalid parking level move count');
+            }
+            if (!Number.isFinite(vehicles) || vehicles < 1 || vehicles > 200) {
+                throw new Error('invalid parking vehicle count');
+            }
+        }
+    } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
     }
-    if (!Number.isFinite(moves) || moves < 1 || moves > 10000) {
-        return jsonResponse({ error: 'invalid parking move count' }, 400);
-    }
-    if (!Number.isFinite(vehicles) || vehicles < 1 || vehicles > 200) {
-        return jsonResponse({ error: 'invalid parking vehicle count' }, 400);
-    }
-    if (score < Number(session.score)) {
-        return jsonResponse({ error: 'parking score cannot go backwards' }, 400);
+
+    const projectedScore = Number(session.score) + events.length;
+    const projectedEventCount = Number(session.event_count) + events.length;
+    if (projectedScore > PARKING_MAX_LEVEL_SCORE) {
+        return jsonResponse({ error: 'parking score exceeds allowed maximum' }, 400);
     }
 
     const now = Date.now();
     const elapsedMs = now - Number(session.started_at);
-    const maxLevelByElapsed = 1 + Math.floor(elapsedMs / PARKING_MIN_MS_PER_LEVEL);
-    if (score > maxLevelByElapsed) {
+    const clearedLevels = Math.max(0, projectedScore - 1);
+    const minElapsedMs = Math.max(0, clearedLevels - PARKING_FREE_LEVEL_BURST) * PARKING_MIN_MS_PER_LEVEL;
+    if (elapsedMs < minElapsedMs) {
         return jsonResponse({ error: 'parking level clears are too fast' }, 429);
     }
 
     await db.prepare(
         'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ? WHERE session_id = ?'
-    ).bind(score, Number(session.event_count) + 1, now, sessionId).run();
+    ).bind(projectedScore, projectedEventCount, now, sessionId).run();
 
     return jsonResponse({
         success: true,
         game_id: gameId,
         session_id: sessionId,
-        score,
-        event_count: Number(session.event_count) + 1,
+        score: projectedScore,
+        event_count: projectedEventCount,
     });
 }
 
@@ -789,50 +807,25 @@ export default {
                 }
                 const limit = clampLimit(url.searchParams.get('limit'));
 
-                const result = gameId === JEWELRIA_GAME_ID
-                    ? await env.DB.prepare(`
-                        SELECT player_name, score, extra_data, created_at, rank_stage
-                        FROM (
-                            SELECT
-                                player_name,
-                                score,
-                                extra_data,
-                                created_at,
-                                CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) AS rank_stage,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY LOWER(TRIM(player_name))
-                                    ORDER BY
-                                        CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) DESC,
-                                        score DESC,
-                                        created_at ASC,
-                                        id ASC
-                                ) AS name_rank
-                            FROM rankings
-                            WHERE game_id = ?
-                        )
-                        WHERE name_rank = 1
-                        ORDER BY rank_stage DESC, score DESC, created_at ASC
-                        LIMIT ?
-                    `).bind(gameId, limit).all()
-                    : await env.DB.prepare(`
-                        SELECT player_name, score, extra_data, created_at
-                        FROM (
-                            SELECT
-                                player_name,
-                                score,
-                                extra_data,
-                                created_at,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY LOWER(TRIM(player_name))
-                                    ORDER BY score DESC, created_at ASC, id ASC
-                                ) AS name_rank
-                            FROM rankings
-                            WHERE game_id = ?
-                        )
-                        WHERE name_rank = 1
-                        ORDER BY score DESC, created_at ASC
-                        LIMIT ?
-                    `).bind(gameId, limit).all();
+                const result = await env.DB.prepare(`
+                    SELECT player_name, score, extra_data, created_at
+                    FROM (
+                        SELECT
+                            player_name,
+                            score,
+                            extra_data,
+                            created_at,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY LOWER(TRIM(player_name))
+                                ORDER BY score DESC, created_at ASC, id ASC
+                            ) AS name_rank
+                        FROM rankings
+                        WHERE game_id = ?
+                    )
+                    WHERE name_rank = 1
+                    ORDER BY score DESC, created_at ASC
+                    LIMIT ?
+                `).bind(gameId, limit).all();
 
                 return jsonResponse({
                     game_id: gameId,
@@ -926,132 +919,62 @@ export default {
                 }
 
                 // Get the displayed rank for this name after deduping by player name.
-                const rankResult = game_id === JEWELRIA_GAME_ID
-                    ? await env.DB.prepare(`
-                        WITH ranked_by_name AS (
-                            SELECT
-                                LOWER(TRIM(player_name)) AS name_key,
-                                score,
-                                CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) AS rank_stage,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY LOWER(TRIM(player_name))
-                                    ORDER BY
-                                        CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) DESC,
-                                        score DESC,
-                                        created_at ASC,
-                                        id ASC
-                                ) AS name_rank
-                            FROM rankings
-                            WHERE game_id = ?
-                        ),
-                        best_scores AS (
-                            SELECT name_key, score, rank_stage
-                            FROM ranked_by_name
-                            WHERE name_rank = 1
-                        ),
-                        current_player AS (
-                            SELECT score, rank_stage
-                            FROM best_scores
-                            WHERE name_key = LOWER(TRIM(?))
-                            LIMIT 1
-                        )
+                const rankResult = await env.DB.prepare(`
+                    WITH ranked_by_name AS (
                         SELECT
-                            (SELECT score FROM current_player) AS best_score,
-                            (SELECT rank_stage FROM current_player) AS best_stage,
-                            (
-                                SELECT COUNT(*) + 1
-                                FROM best_scores
-                                WHERE rank_stage > (SELECT rank_stage FROM current_player)
-                                   OR (
-                                        rank_stage = (SELECT rank_stage FROM current_player)
-                                        AND score > (SELECT score FROM current_player)
-                                   )
-                            ) AS rank
-                    `).bind(game_id, name).first()
-                    : await env.DB.prepare(`
-                        WITH ranked_by_name AS (
+                            LOWER(TRIM(player_name)) AS name_key,
+                            score,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY LOWER(TRIM(player_name))
+                                ORDER BY score DESC, created_at ASC, id ASC
+                            ) AS name_rank
+                        FROM rankings
+                        WHERE game_id = ?
+                    ),
+                    best_scores AS (
+                        SELECT name_key, score
+                        FROM ranked_by_name
+                        WHERE name_rank = 1
+                    ),
+                    current_player AS (
+                        SELECT score
+                        FROM best_scores
+                        WHERE name_key = LOWER(TRIM(?))
+                        LIMIT 1
+                    )
+                    SELECT
+                        (SELECT score FROM current_player) AS best_score,
+                        (
+                            SELECT COUNT(*) + 1
+                            FROM best_scores
+                            WHERE score > (SELECT score FROM current_player)
+                        ) AS rank
+                `).bind(game_id, name).first();
+
+                const currentRank = rankResult?.rank || 1;
+                const bestScore = rankResult?.best_score ?? savedScore;
+
+                // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
+                await env.DB.prepare(`
+                    DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
+                        SELECT id
+                        FROM (
                             SELECT
-                                LOWER(TRIM(player_name)) AS name_key,
+                                id,
                                 score,
+                                created_at,
                                 ROW_NUMBER() OVER (
                                     PARTITION BY LOWER(TRIM(player_name))
                                     ORDER BY score DESC, created_at ASC, id ASC
                                 ) AS name_rank
                             FROM rankings
                             WHERE game_id = ?
-                        ),
-                        best_scores AS (
-                            SELECT name_key, score
-                            FROM ranked_by_name
-                            WHERE name_rank = 1
-                        ),
-                        current_player AS (
-                            SELECT score
-                            FROM best_scores
-                            WHERE name_key = LOWER(TRIM(?))
-                            LIMIT 1
                         )
-                        SELECT
-                            (SELECT score FROM current_player) AS best_score,
-                            (
-                                SELECT COUNT(*) + 1
-                                FROM best_scores
-                                WHERE score > (SELECT score FROM current_player)
-                            ) AS rank
-                    `).bind(game_id, name).first();
-
-                const currentRank = rankResult?.rank || 1;
-                const bestScore = rankResult?.best_score ?? savedScore;
-
-                // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
-                if (game_id === JEWELRIA_GAME_ID) {
-                    await env.DB.prepare(`
-                        DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
-                            SELECT id
-                            FROM (
-                                SELECT
-                                    id,
-                                    score,
-                                    created_at,
-                                    CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) AS rank_stage,
-                                    ROW_NUMBER() OVER (
-                                        PARTITION BY LOWER(TRIM(player_name))
-                                        ORDER BY
-                                            CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) DESC,
-                                            score DESC,
-                                            created_at ASC,
-                                            id ASC
-                                    ) AS name_rank
-                                FROM rankings
-                                WHERE game_id = ?
-                            )
-                            WHERE name_rank = 1
-                            ORDER BY rank_stage DESC, score DESC, created_at ASC, id ASC
-                            LIMIT 100
-                        )
-                    `).bind(game_id, game_id).run();
-                } else {
-                    await env.DB.prepare(`
-                        DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
-                            SELECT id
-                            FROM (
-                                SELECT
-                                    id,
-                                    score,
-                                    created_at,
-                                    ROW_NUMBER() OVER (
-                                        PARTITION BY LOWER(TRIM(player_name))
-                                        ORDER BY score DESC, created_at ASC, id ASC
-                                    ) AS name_rank
-                                FROM rankings
-                                WHERE game_id = ?
-                            )
-                            WHERE name_rank = 1
-                            ORDER BY score DESC, created_at ASC, id ASC
-                            LIMIT 100
-                        )
-                    `).bind(game_id, game_id).run();
-                }
+                        WHERE name_rank = 1
+                        ORDER BY score DESC, created_at ASC, id ASC
+                        LIMIT 100
+                    )
+                `).bind(game_id, game_id).run();
 
                 return jsonResponse({
                     success: true,
@@ -1059,7 +982,7 @@ export default {
                     player_name: name,
                     score: savedScore,
                     best_score: bestScore,
-                    best_stage: rankResult?.best_stage ?? (game_id === JEWELRIA_GAME_ID ? extra_data?.highest_stage : undefined),
+                    best_stage: game_id === JEWELRIA_GAME_ID ? extra_data?.highest_stage : undefined,
                     in_top_20: currentRank <= 20,
                 });
             }

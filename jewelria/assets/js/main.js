@@ -418,7 +418,7 @@ async function submitRank() {
     });
     ui.setSubmitStatus(`등록 완료${result?.rank ? ` (#${result.rank})` : ''}`, 'ok');
   } catch {
-    ui.setSubmitStatus('로컬 기록으로 저장했습니다.', 'ok');
+    ui.setSubmitStatus('등록 실패. 다시 시도해 주세요.', 'fail');
   } finally {
     ui.refs.nicknameInput.disabled = false;
     document.getElementById('submit-rank-btn').disabled = false;
@@ -577,28 +577,33 @@ class RankingClient {
   }
 
   async submit(playerName, score, extraData = {}) {
-    saveLocalRank(playerName, score, extraData);
     await this.ensureSession();
     const canVerify = this.sessionId && !this.unsupported && !this.syncFailed;
-    if (canVerify) await this.flush();
+    if (!canVerify) throw new Error('rank verification unavailable');
+    const flushed = await this.flush();
+    if (!flushed || this.syncFailed) throw new Error('rank score sync failed');
+    const submittedScore = Math.max(0, Math.floor(score || 0));
     const body = {
       game_id: GAME_ID,
       player_name: playerName,
-      score: Math.max(0, Math.floor(score || 0)),
+      score: submittedScore,
       extra_data: {
         ...extraData,
-        session_id: canVerify ? this.sessionId : undefined,
-        verification_mode: canVerify ? 'session' : 'direct'
+        session_id: this.sessionId,
+        verification_mode: 'session'
       }
     };
-    if (canVerify) body.session_id = this.sessionId;
+    body.session_id = this.sessionId;
     const res = await fetch(`${RANK_API_BASE}/rankings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error(`rank submit ${res.status}`);
-    return res.json();
+    const result = await res.json();
+    const verifiedScore = Number(result?.score ?? result?.best_score ?? submittedScore);
+    saveLocalRank(playerName, Number.isFinite(verifiedScore) ? verifiedScore : submittedScore, extraData);
+    return result;
   }
 
   async fetchTopRanks(limit = RANK_LIMIT) {

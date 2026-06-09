@@ -160,7 +160,7 @@
       this.rankSessionId = null;
       this.rankSessionPromise = null;
       this.rankSyncFailed = false;
-      this.rankClearRecordedFor = null;
+      this.rankClearSyncPromises = [];
       this.rankReturnTimer = null;
       this.sound = new (window.ParkingSoundManager || class {
         ensure() {}
@@ -208,7 +208,7 @@
       this.rankSessionId = null;
       this.rankSessionPromise = null;
       this.rankSyncFailed = false;
-      this.rankClearRecordedFor = null;
+      this.rankClearSyncPromises = [];
     }
 
     async createRankSession() {
@@ -257,15 +257,10 @@
             session_id: sessionId,
             event: {
               type: "level_clear",
-              score: clearData.rankLevel,
-              level: clearData.rankLevel,
-              cleared_level: clearData.rankLevel,
               moves: clearData.moves,
               level_moves: clearData.levelMoves,
               vehicles: clearData.vehicles,
-              cleared_before_timeout: clearData.clearedBeforeTimeout || null,
-              failed_level: clearData.failedLevel || null,
-              timed_out: !!clearData.timedOut,
+              seed: clearData.seed,
             },
           }),
         });
@@ -284,17 +279,8 @@
       if (!clearData) return false;
       const sessionId = await this.ensureRankSession();
       if (!sessionId) return false;
-      const recordKey = [
-        sessionId,
-        clearData.rankLevel,
-        clearData.moves,
-        clearData.levelMoves,
-        clearData.timedOut ? 1 : 0,
-      ].join(":");
-      if (this.rankClearRecordedFor === recordKey) return true;
-      const synced = await this.recordRankClear(clearData);
-      if (synced) this.rankClearRecordedFor = recordKey;
-      return synced;
+      const results = await Promise.all(this.rankClearSyncPromises);
+      return results.every(Boolean);
     }
 
     bindUI() {
@@ -877,6 +863,7 @@
         seed: this.levelSeed,
       };
       this.lastClear = this.runRecord;
+      this.rankClearSyncPromises.push(this.recordRankClear(this.runRecord));
       this.bestLevel = Math.max(this.bestLevel, this.level + 1);
       localStorage.setItem(STORAGE.bestLevel, String(this.bestLevel));
       if (this.bestMoves === 0 || this.moves < this.bestMoves) {
