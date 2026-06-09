@@ -91,6 +91,24 @@
   const STARTING_SPAWN_TIMER = 1.15;
   const CHARACTER_FIRE_COOLDOWN_MULTIPLIER = 1.3;
   const SFX_MASTER_VOLUME = 0.44;
+  const SFX_ASSETS = {
+    start: "assets/sounds/sfx/start.wav",
+    skill: "assets/sounds/sfx/skill.wav",
+    core: "assets/sounds/sfx/core.wav",
+    hit: "assets/sounds/sfx/hit.wav",
+    crit: "assets/sounds/sfx/crit.wav",
+    death: "assets/sounds/sfx/death.mp3",
+    explosion: "assets/sounds/sfx/explosion.wav",
+    rocket: "assets/sounds/sfx/rocket.wav",
+    arrow: "assets/sounds/sfx/arrow.wav",
+    button: "assets/sounds/sfx/button.mp3",
+    denied: "assets/sounds/sfx/denied.mp3",
+    recruit: "assets/sounds/sfx/recruit.mp3",
+    wave_clear: "assets/sounds/sfx/wave_clear.mp3",
+    game_over: "assets/sounds/sfx/game_over.mp3",
+    coin: "assets/sounds/sfx/coin.wav",
+    pause: "assets/sounds/sfx/pause.wav"
+  };
   const MAX_CORE_HP_SKILL_CAP = 6000;
   const MAX_CORE_HP_SKILL_RATE = 0.12;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
@@ -1211,6 +1229,8 @@
       this.audioCtx = null;
       this.masterGain = null;
       this.noiseBuffer = null;
+      this.sfxBuffers = new Map();
+      this.sfxPreloadStarted = false;
       this.sfxLastPlayed = {};
       this.hitStopTimer = 0;
       this.speedMultiplier = 1;
@@ -1597,10 +1617,25 @@
         this.masterGain.gain.value = SFX_MASTER_VOLUME;
         this.masterGain.connect(this.audioCtx.destination);
       }
+      this.preloadSfxAssets();
       if (this.audioCtx.state === "suspended") {
         this.audioCtx.resume().catch(() => {});
       }
       return this.audioCtx;
+    }
+
+    preloadSfxAssets() {
+      if (!this.audioCtx || this.sfxPreloadStarted) {
+        return;
+      }
+      this.sfxPreloadStarted = true;
+      Object.entries(SFX_ASSETS).forEach(([name, url]) => {
+        fetch(url)
+          .then((response) => response.ok ? response.arrayBuffer() : Promise.reject(new Error(`sfx ${response.status}`)))
+          .then((data) => this.audioCtx.decodeAudioData(data))
+          .then((buffer) => this.sfxBuffers.set(name, buffer))
+          .catch(() => {});
+      });
     }
 
     getNoiseBuffer(ctx) {
@@ -1657,6 +1692,21 @@
       source.stop(now + duration + 0.025);
     }
 
+    playSampleSfx(name, intensity = 1) {
+      const ctx = this.audioCtx;
+      const buffer = this.sfxBuffers.get(name);
+      if (!ctx || !this.masterGain || !buffer) {
+        return false;
+      }
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      source.buffer = buffer;
+      gain.gain.value = clamp(0.72 * intensity, 0.05, 1.45);
+      source.connect(gain).connect(this.masterGain);
+      source.start(ctx.currentTime);
+      return true;
+    }
+
     playSfx(name, intensity = 1) {
       const ctx = this.unlockAudio();
       if (!ctx) {
@@ -1680,6 +1730,10 @@
         return;
       }
       this.sfxLastPlayed[name] = ctx.currentTime;
+
+      if (this.playSampleSfx(name, intensity)) {
+        return;
+      }
 
       if (name === "pistol") {
         this.playNoise(0.055, 0.1 * intensity, 2400);
