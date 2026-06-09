@@ -1945,8 +1945,11 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(527));
-      this.addOverlayButton(270, 790, 390, 72, "출격", 530, () => this.startRun(), COLORS.gold);
-      this.addOverlayButton(270, 874, 390, 72, "상점", 530, () => this.showShop(), COLORS.blue);
+      this.addOverlayButton(270, 754, 390, 60, "출격", 530, () => this.startRun(), COLORS.gold);
+      this.addOverlayButton(270, 830, 390, 60, "상점", 530, () => this.showShop(), COLORS.blue);
+      this.addOverlayButton(270, 906, 390, 60, "ArcherLab 이동", 530, () => {
+        window.location.href = "https://game.archerlab.dev/";
+      }, COLORS.gold);
     }
 
     showShop(selectedId = this.shopSelectedCharacter || "c") {
