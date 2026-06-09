@@ -2645,6 +2645,17 @@
           defender.markDuration += 1.5;
         }
       });
+      add("a", {
+        id: "a-volley",
+        icon: "skill-multishot",
+        tag: "활",
+        title: "연속 화살",
+        desc: "빠른 추가 발사 +1\n표식 대상 압박",
+        apply: () => {
+          const defender = this.getDefenderById("a");
+          defender.burstCount = Math.min(3, defender.burstCount + 1);
+        }
+      });
       add("b", {
         id: "b-barrage",
         icon: "skill-rocket",
@@ -2692,6 +2703,17 @@
           defender.splashDamageBoost *= 1.22;
         }
       });
+      add("d", {
+        id: "d-salvo",
+        icon: "skill-multishot",
+        tag: "로켓",
+        title: "연속 포격",
+        desc: "추가 로켓 발사 +1\n폭발 압박 강화",
+        apply: () => {
+          const defender = this.getDefenderById("d");
+          defender.burstCount = Math.min(2, defender.burstCount + 1);
+        }
+      });
       add("e", {
         id: "e-repair",
         icon: "skill-repair",
@@ -2715,6 +2737,17 @@
           const defender = this.getDefenderById("e");
           defender.pierce += 1;
           defender.damageBoost *= 1.18;
+        }
+      });
+      add("e", {
+        id: "e-chain",
+        icon: "skill-multishot",
+        tag: "저격",
+        title: "연속 저격",
+        desc: "빠른 추가 사격 +1\n관통 압박 강화",
+        apply: () => {
+          const defender = this.getDefenderById("e");
+          defender.burstCount = Math.min(3, defender.burstCount + 1);
         }
       });
       return upgrades;
