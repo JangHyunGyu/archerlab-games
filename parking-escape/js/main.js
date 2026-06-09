@@ -1016,15 +1016,13 @@
         dom.submitStatus.textContent = "닉네임을 입력하세요";
         return;
       }
-      dom.submitRank.disabled = true;
-      dom.skipRank.disabled = true;
-      dom.submitStatus.textContent = "등록 중...";
+      this.setRankSubmitLoading(true, "등록 중...");
       try {
-        const synced = await this.recordRankClear(this.lastClear);
+        const synced = await this.ensureRankClearRecorded(this.lastClear);
         if (!this.rankSessionId || !synced || this.rankSyncFailed) throw new Error("rank score sync failed");
         const response = await fetch(`${RANK_API_BASE}/rankings`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({
             game_id: GAME_ID,
             player_name: name,
@@ -1044,21 +1042,45 @@
             },
           }),
         });
-        if (!response.ok) throw new Error(`submit ${response.status}`);
-        const result = await response.json();
+        const result = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(result?.error || `submit ${response.status}`);
         localStorage.setItem(NICK_KEY, name);
+        this.setRankSubmitLoading(false);
+        dom.submitRank.disabled = true;
+        dom.skipRank.disabled = true;
         dom.submitStatus.textContent = result.rank ? `등록 완료 #${result.rank}` : "등록 완료";
         this.playTone("submit");
+        this.returnToMenuAfterRank();
       } catch (error) {
-        dom.submitStatus.textContent = "등록 실패";
-        dom.submitRank.disabled = false;
-        dom.skipRank.disabled = false;
+        console.warn("[Parking] rank submit failed:", error.message);
+        this.setRankSubmitLoading(false, "등록 실패. 다시 시도하거나 Skip하세요");
       }
     }
 
     handleSkipRank() {
       this.playTone("button");
-      dom.rankSubmitRow.classList.add("hidden");
+      this.setRankSubmitLoading(false);
+      dom.submitRank.disabled = true;
+      dom.skipRank.disabled = true;
+      dom.submitStatus.textContent = "등록을 건너뛰었습니다";
+      this.returnToMenuAfterRank(180);
+    }
+
+    setRankSubmitLoading(isLoading, message) {
+      dom.rankSubmitRow.classList.toggle("is-submitting", isLoading);
+      if (dom.submitProgress) dom.submitProgress.classList.toggle("hidden", !isLoading);
+      dom.submitRank.disabled = isLoading;
+      dom.skipRank.disabled = isLoading;
+      dom.nickname.disabled = isLoading;
+      if (message !== undefined) dom.submitStatus.textContent = message;
+    }
+
+    returnToMenuAfterRank(delay = 650) {
+      clearTimeout(this.rankReturnTimer);
+      this.rankReturnTimer = setTimeout(() => {
+        this.rankReturnTimer = null;
+        this.showMenu({ playSound: false });
+      }, delay);
     }
 
     showToast(text) {
