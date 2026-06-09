@@ -608,7 +608,6 @@
 
   function createUiTextures(scene) {
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-top-hud", 42, 70, 1688, 230);
-    makeImageSliceTexture(scene, "ui-frame-sheet", "ui-hero-panel", 50, 328, 1110, 250);
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-skill-button", 72, 610, 284, 276);
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-pause-circle", 490, 610, 275, 276);
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-speed-circle", 810, 610, 275, 276);
@@ -1561,17 +1560,6 @@
         stroke: "#1a2228",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(316);
-
-      this.add.image(86, 118, "ui-hero-panel").setDisplaySize(150, 68).setDepth(310);
-      this.add.image(50, 123, "character-c-idle").setDisplaySize(38, 64).setDepth(311);
-      this.ui.hero = this.add.text(82, 141, "Lv.1", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 20,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#111",
-        strokeThickness: 4
-      }).setOrigin(0.5).setDepth(312);
 
       this.createStatusPanel();
     }
@@ -3690,7 +3678,6 @@
       const stageName = ["교문", "복도", "교실", "옥상"][Math.min(3, this.stage - 1)];
       this.ui.stage.setText(`St.${this.stage} - ${stageName}`);
       this.ui.level.setText(`Lv.${this.level}`);
-      this.ui.hero.setText(`Lv.${Math.max(1, Math.floor(this.level / 3))}`);
       this.ui.morale.setText(`M${this.morale}%`);
       this.ui.morale.setColor(this.morale < 35 ? "#ff524f" : this.morale < 70 ? "#ffd75c" : "#4dff67");
       this.ui.core.setText(`HP ${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
