@@ -1988,7 +1988,7 @@
       const minTargetY = hasFocus ? this.bounds.top : this.bounds.autoEngageTop;
       const target = this.findTarget(hasFocus ? this.focusPoint.x : 270, hasFocus ? 210 : 999, null, minTargetY);
       const count = player.burstCount || 1;
-      const shotDelay = count > 1 ? PISTOL_CHAIN_SHOT_DELAY : 0;
+      const shotDelay = count > 1 ? this.getChainShotDelay(player) : 0;
       this.playerFireTimer = player.rate * (isManual ? 0.45 : 1) + (count - 1) * shotDelay / 1000;
       if (!target) {
         return;
