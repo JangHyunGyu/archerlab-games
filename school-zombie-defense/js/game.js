@@ -1919,7 +1919,7 @@
       const base = hitType === "explosion" || hitType === "projectile-rocket"
         ? 18
         : hitType === "projectile-sniper"
-          ? 12
+          ? 15
           : crit
             ? 9
             : 5;
