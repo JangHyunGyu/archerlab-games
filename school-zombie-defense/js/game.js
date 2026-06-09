@@ -3320,14 +3320,15 @@
       if (this.coreHp < this.maxCoreHp - 1) {
         upgrades.push({
           id: "core-full-repair",
+          common: true,
           icon: "skill-full-repair",
           tag: "공용",
-          title: "방어선 완전복구",
-          desc: "파괴된 방어선을\n즉시 최대치까지 수리합니다.",
+          title: "완전 복구",
+          desc: "방어선을 즉시\n최대 HP까지 수리",
           stat: `HP ${currentHp}/${maxHp} → ${maxHp}/${maxHp}`,
           accent: SKILL_ACCENTS["core-full-repair"],
           accentHex: SKILL_ACCENT_HEX["core-full-repair"],
-          toast: "방어선 완전복구",
+          toast: "방어선 완전 복구",
           apply: () => {
             this.coreHp = this.maxCoreHp;
             this.morale = 100;
@@ -3341,10 +3342,11 @@
       if (appliedBonus > 0) {
         upgrades.push({
           id: "core-max-hp",
+          common: true,
           icon: "skill-max-hp",
           tag: "공용",
           title: "방벽 증축",
-          desc: "이번 방어 중\n방어선 최대 HP를 늘립니다.",
+          desc: "이번 방어 중\n최대 HP 확장",
           stat: `최대 HP ${maxHp} → ${nextMaxHp}\n현재 HP +${appliedBonus}`,
           accent: SKILL_ACCENTS["core-max-hp"],
           accentHex: SKILL_ACCENT_HEX["core-max-hp"],
@@ -3391,14 +3393,15 @@
       const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
       const accentHex = upgrade.accentHex || SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
       const isRecruit = Boolean(upgrade.characterTexture);
+      const isCommonSkill = upgrade.common === true;
       const ownerTexture = upgrade.ownerCharacterTexture;
       const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit && this.textures.exists(ownerTexture));
       const isOwnerSkill = hasOwnerCharacter && !isRecruit;
-      const tagY = isOwnerSkill ? y - 42 : y + 24;
-      const titleY = isOwnerSkill ? y - 9 : y + 58;
-      const descY = isOwnerSkill ? y + 52 : y + 90;
-      const statY = isOwnerSkill ? y + 112 : y + 123;
-      const chooseY = isOwnerSkill ? y + 150 : y + 153;
+      const tagY = isOwnerSkill ? y - 42 : isCommonSkill ? y + 18 : y + 24;
+      const titleY = isOwnerSkill ? y - 9 : isCommonSkill ? y + 48 : y + 58;
+      const descY = isOwnerSkill ? y + 52 : isCommonSkill ? y + 84 : y + 90;
+      const statY = isOwnerSkill ? y + 112 : isCommonSkill ? y + 128 : y + 123;
+      const chooseY = isOwnerSkill ? y + 150 : isCommonSkill ? y + 158 : y + 153;
       const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
       const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
       const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
@@ -3450,7 +3453,7 @@
       }).setOrigin(0.5).setDepth(529);
       const title = this.add.text(x, titleY, upgrade.title, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: isOwnerSkill ? 18 : 19,
+        fontSize: isOwnerSkill ? 18 : isCommonSkill ? 17 : 19,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
@@ -3458,11 +3461,11 @@
       }).setOrigin(0.5).setDepth(529);
       const desc = this.add.text(x, descY, upgrade.desc, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 13,
+        fontSize: isCommonSkill ? 12 : 13,
         fontStyle: "900",
         color: "#d8e6e8",
         align: "center",
-        lineSpacing: isOwnerSkill ? 6 : 4,
+        lineSpacing: isOwnerSkill ? 6 : isCommonSkill ? 3 : 4,
         wordWrap: { width: 126, useAdvancedWrap: true }
       }).setOrigin(0.5).setDepth(529);
       const statLines = upgrade.stat ? String(upgrade.stat).split("\n").length : 0;
