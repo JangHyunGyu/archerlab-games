@@ -80,7 +80,14 @@
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
   const CHARACTER_FIRE_COOLDOWN_MULTIPLIER = 1.3;
-  const PISTOL_CHAIN_SHOT_DELAY = 110;
+  const DEFAULT_CHAIN_SHOT_DELAY = 125;
+  const WEAPON_CHAIN_SHOT_DELAYS = {
+    "projectile-pistol": 110,
+    "projectile-arrow": 140,
+    "projectile-rifle": 70,
+    "projectile-rocket": 190,
+    "projectile-sniper": 170
+  };
   const RECRUIT_UNLOCK_LEVELS = [3, 6, 9, 12];
   const getUnlockedRecruitSlots = (level) => RECRUIT_UNLOCK_LEVELS.filter((unlockLevel) => level >= unlockLevel).length;
   const ZOMBIE_TYPE_CONFIGS = {
@@ -1940,22 +1947,29 @@
         }
         defender.timer -= dt;
         if (defender.timer <= 0) {
-          defender.timer = defender.rate * rand(0.75, 1.2);
+          const burstCount = defender.burstCount || 1;
+          const shotDelay = burstCount > 1 ? this.getChainShotDelay(defender) : 0;
+          defender.timer = defender.rate * rand(0.75, 1.2) + (burstCount - 1) * shotDelay / 1000;
           const target = this.findTarget(defender.x, 999, null, this.bounds.autoEngageTop);
           if (target) {
-            const burstCount = defender.burstCount || 1;
             for (let shot = 0; shot < burstCount; shot += 1) {
-              this.time.delayedCall(shot * (defender.burstDelay || 0), () => {
-                if (this.mode !== "playing" || !defender.recruited || !target.active) {
+              this.time.delayedCall(shot * shotDelay, () => {
+                if (this.mode !== "playing" || !defender.recruited) {
+                  return;
+                }
+                const shotTarget = target.active
+                  ? target
+                  : this.findTarget(defender.x, 999, null, this.bounds.autoEngageTop);
+                if (!shotTarget) {
                   return;
                 }
                 const damage = this.getDefenderDamage(defender);
-                this.fireBullet(defender, target, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
+                this.fireBullet(defender, shotTarget, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
                 if (defender.rocketEvery > 0) {
                   defender.shotsSinceRocket += 1;
                   if (defender.shotsSinceRocket >= defender.rocketEvery) {
                     defender.shotsSinceRocket = 0;
-                    this.createExplosion(target.x, target.y, 68, damage * 1.35);
+                    this.createExplosion(shotTarget.x, shotTarget.y, 68, damage * 1.35);
                   }
                 }
               });
@@ -2059,6 +2073,10 @@
 
     getDefenderDamage(defender) {
       return this.damage * (defender.damageScale || 1) * (defender.damageBoost || 1);
+    }
+
+    getChainShotDelay(defender) {
+      return defender.burstDelay || WEAPON_CHAIN_SHOT_DELAYS[defender.projectile] || DEFAULT_CHAIN_SHOT_DELAY;
     }
 
     getDefenderById(id) {
