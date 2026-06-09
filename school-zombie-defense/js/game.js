@@ -165,7 +165,7 @@
     ]
   };
   const getAllShopUpgradeIds = () => Object.values(SHOP_CHARACTER_UPGRADES).flat().map((upgrade) => upgrade.id);
-  const getShopUpgradeCost = (level) => level >= SHOP_MAX_LEVEL ? 0 : Math.round(12 + level * 7 + level * level * 1.6);
+  const getShopUpgradeCost = (level) => level >= SHOP_MAX_LEVEL ? 0 : 200 * Math.pow(2, level);
   const DEFAULT_CHAIN_SHOT_DELAY = 125;
   const WEAPON_CHAIN_SHOT_DELAYS = {
     "projectile-pistol": 110,
@@ -1906,6 +1906,9 @@
       items.push(this.add.rectangle(270, 842, 540, 244, 0x020304, 0.7).setDepth(501));
       items.push(this.add.rectangle(270, 208, 430, 2, 0xffd86b, 0.75).setDepth(502));
       items.push(this.add.rectangle(270, 666, 540, 4, 0x57e5ff, 0.18).setDepth(502));
+      this.addOverlayButton(270, 34, 244, 40, "ArcherLab 이동", 530, () => {
+        window.location.href = "https://game.archerlab.dev/";
+      }, COLORS.gold);
       const eyebrow = this.add.text(270, 72, "SCHOOL UNDEAD", {
         fontFamily: "Arial, sans-serif",
         fontSize: 15,
@@ -1945,11 +1948,8 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(527));
-      this.addOverlayButton(270, 754, 390, 60, "출격", 530, () => this.startRun(), COLORS.gold);
-      this.addOverlayButton(270, 830, 390, 60, "상점", 530, () => this.showShop(), COLORS.blue);
-      this.addOverlayButton(270, 906, 390, 60, "ArcherLab 이동", 530, () => {
-        window.location.href = "https://game.archerlab.dev/";
-      }, COLORS.gold);
+      this.addOverlayButton(270, 790, 390, 72, "출격", 530, () => this.startRun(), COLORS.gold);
+      this.addOverlayButton(270, 874, 390, 72, "상점", 530, () => this.showShop(), COLORS.blue);
     }
 
     showShop(selectedId = this.shopSelectedCharacter || "c") {
