@@ -243,6 +243,13 @@
     { x: 52, y: 926 },
     { x: 488, y: 924 }
   ];
+  const OWNER_SKILL_PORTRAITS = {
+    c: "portrait-pistol",
+    a: "portrait-rally",
+    b: "portrait-barrage",
+    d: "portrait-frost",
+    e: "portrait-repair"
+  };
   function getAimPose(key) {
     return AIM_POSE_BY_KEY[key] || AIM_POSE_BY_KEY["aim-12"];
   }
@@ -341,6 +348,74 @@
           cellHeight
         );
       });
+    });
+  }
+
+  function createCharacterBadgeTextures(scene) {
+    ["a", "b", "c", "d", "e"].forEach((id) => {
+      const sourceKey = `character-${id}-idle`;
+      const targetKey = `character-${id}-badge`;
+      if (!scene.textures.exists(sourceKey)) {
+        return;
+      }
+      if (scene.textures.exists(targetKey)) {
+        scene.textures.remove(targetKey);
+      }
+
+      const source = scene.textures.get(sourceKey).getSourceImage();
+      const scanCanvas = document.createElement("canvas");
+      scanCanvas.width = source.width;
+      scanCanvas.height = source.height;
+      const scanCtx = scanCanvas.getContext("2d");
+      scanCtx.drawImage(source, 0, 0);
+      const pixels = scanCtx.getImageData(0, 0, source.width, source.height).data;
+      let minX = source.width;
+      let minY = source.height;
+      let maxX = 0;
+      let maxY = 0;
+      for (let y = 0; y < source.height; y += 1) {
+        for (let x = 0; x < source.width; x += 1) {
+          if (pixels[(y * source.width + x) * 4 + 3] > 20) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+      }
+
+      if (minX > maxX || minY > maxY) {
+        return;
+      }
+
+      const bodyW = maxX - minX + 1;
+      const bodyH = maxY - minY + 1;
+      const cropH = Math.min(source.height, Math.round(bodyH * 0.66));
+      const cropW = Math.min(source.width, Math.max(Math.round(bodyW * 1.45), Math.round(cropH * 0.78)));
+      const centerX = Math.round((minX + maxX) / 2);
+      const cropX = clamp(Math.round(centerX - cropW / 2), 0, source.width - cropW);
+      const cropY = clamp(Math.round(minY + bodyH * 0.02), 0, source.height - cropH);
+      const outputSize = 128;
+      const output = document.createElement("canvas");
+      output.width = outputSize;
+      output.height = outputSize;
+      const ctx = output.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      const scale = Math.min(112 / cropW, 120 / cropH);
+      const drawW = cropW * scale;
+      const drawH = cropH * scale;
+      ctx.drawImage(
+        source,
+        cropX,
+        cropY,
+        cropW,
+        cropH,
+        (outputSize - drawW) / 2,
+        outputSize - drawH - 4,
+        drawW,
+        drawH
+      );
+      scene.textures.addCanvas(targetKey, output);
     });
   }
 
@@ -830,6 +905,7 @@
     });
 
     [
+      ["portrait-pistol", { glow: "#8fdfff", dark: "#10243a", skin: "#c89d75", hair: "#2b211c", body: "#252d34" }, "1"],
       ["portrait-frost", { glow: "#a6f6ff", dark: "#123c6c", skin: "#d0a886", hair: "#493b83", body: "#eef5f4" }, "3"],
       ["portrait-barrage", { glow: "#ffd07a", dark: "#7d241a", skin: "#e2aa76", hair: "#d5b243", body: "#eaeef0" }, "3"],
       ["portrait-rally", { glow: "#ff9ac3", dark: "#792644", skin: "#efb8a8", hair: "#e46d91", body: "#edf3ef" }, "3"],
@@ -904,6 +980,7 @@
       }
       createZombieSpriteTextures(this);
       createCharacterSpriteTextures(this);
+      createCharacterBadgeTextures(this);
       createUiTextures(this);
       createTextures(this);
       this.scene.start("GameScene");
@@ -2482,7 +2559,7 @@
         }
         upgrades.push({
           ownerId,
-          ownerCharacterTexture: `character-${ownerId}-idle`,
+          ownerCharacterTexture: OWNER_SKILL_PORTRAITS[ownerId] || `character-${ownerId}-badge`,
           ...upgrade
         });
       };
@@ -2636,17 +2713,17 @@
       const accentHex = upgrade.accentHex || SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
       const isRecruit = Boolean(upgrade.characterTexture);
       const ownerTexture = upgrade.ownerCharacterTexture;
-      const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit);
+      const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit && this.textures.exists(ownerTexture));
       const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
       const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
       const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
-      const watermarkTexture = isRecruit ? upgrade.characterTexture : hasOwnerCharacter ? ownerTexture : upgrade.icon;
-      const watermark = this.add.image(x + (hasOwnerCharacter ? 34 : 0), y - 44, watermarkTexture)
-        .setAlpha(isRecruit ? 0.08 : hasOwnerCharacter ? 0.075 : 0.1)
+      const watermarkTexture = isRecruit ? upgrade.characterTexture : upgrade.icon;
+      const watermark = this.add.image(x, y - 44, watermarkTexture)
+        .setAlpha(isRecruit ? 0.08 : 0.1)
         .setDepth(525);
-      if (isRecruit || hasOwnerCharacter) {
+      if (isRecruit) {
         watermark.setOrigin(0.5, 1);
-        this.fitSpriteHeight(watermark, isRecruit ? 205 : 188);
+        this.fitSpriteHeight(watermark, 205);
       } else {
         watermark.setDisplaySize(150, 150);
       }
@@ -2655,13 +2732,13 @@
         ? this.add.ellipse(x, y - 70, 82, 112, accent, 0.16).setStrokeStyle(2, accent, 0.55).setDepth(527)
         : this.add.circle(iconX, y - 112, 40, 0x000000, 0.58).setStrokeStyle(2, accent, 0.9).setDepth(527);
       const ownerHalo = hasOwnerCharacter
-        ? this.add.ellipse(x + 49, y - 86, 56, 98, accent, 0.16).setStrokeStyle(2, accent, 0.55).setDepth(527)
+        ? this.add.circle(x + 49, y - 104, 33, 0x000000, 0.54).setStrokeStyle(2, accent, 0.65).setDepth(527)
         : null;
       const ownerCharacter = hasOwnerCharacter
-        ? this.add.image(x + 49, y - 45, ownerTexture).setOrigin(0.5, 1).setAlpha(0.94).setDepth(528)
+        ? this.add.image(x + 49, y - 104, ownerTexture).setAlpha(0.96).setDepth(528)
         : null;
       if (ownerCharacter) {
-        this.fitSpriteHeight(ownerCharacter, 116);
+        ownerCharacter.setDisplaySize(62, 62);
       }
       const icon = this.add.image(iconX, isRecruit ? y - 24 : y - 112, isRecruit ? upgrade.characterTexture : upgrade.icon).setDepth(528);
       if (isRecruit) {
@@ -2741,9 +2818,9 @@
       const selectUpgrade = () => this.applyUpgrade(upgrade);
       const setHover = (active) => {
         glow.setAlpha(active ? 0.26 : 0.1);
-        watermark.setAlpha(active ? 0.18 : isRecruit ? 0.08 : hasOwnerCharacter ? 0.075 : 0.1);
+        watermark.setAlpha(active ? 0.18 : isRecruit ? 0.08 : 0.1);
         if (ownerCharacter) {
-          ownerCharacter.setAlpha(active ? 1 : 0.94);
+          ownerCharacter.setAlpha(active ? 1 : 0.96);
         }
         chooseBg.setFillStyle(active ? accent : 0x101820, active ? 0.34 : 0.9);
         if (active) {
