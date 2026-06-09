@@ -1523,7 +1523,12 @@
 
     getAttackPose(defender, target) {
       const pivot = defender.aim?.pivot || [0, -160];
-      const angle = Math.atan2(target.y - (defender.y + pivot[1]), target.x - (defender.x + pivot[0]));
+      const dx = target.x - (defender.x + pivot[0]);
+      const dy = target.y - (defender.y + pivot[1]);
+      if (dy < 0 && Math.abs(dx) <= Math.max(36, Math.abs(dy) * 0.36)) {
+        return "aim-12";
+      }
+      const angle = Math.atan2(dy, dx);
       return getNearestAimPose(angle).key;
     }
 
