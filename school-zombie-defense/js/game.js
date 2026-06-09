@@ -2294,12 +2294,16 @@
     togglePause() {
       if (this.mode === "playing") {
         this.mode = "paused";
-        this.ui.pauseText.setText("▶");
+        if (this.ui.pauseText) {
+          this.ui.pauseText.setText("▶");
+        }
         this.showPauseOverlay();
       } else if (this.mode === "paused") {
         this.clearOverlay();
         this.mode = "playing";
-        this.ui.pauseText.setText("II");
+        if (this.ui.pauseText) {
+          this.ui.pauseText.setText("II");
+        }
       }
     }
 
@@ -2326,7 +2330,9 @@
 
     toggleSpeed() {
       this.speedMultiplier = this.speedMultiplier === 1 ? 1.5 : 1;
-      this.ui.speed.setText(this.speedMultiplier === 1 ? "x1.0" : "x1.5");
+      if (this.ui.speed) {
+        this.ui.speed.setText(this.speedMultiplier === 1 ? "x1.0" : "x1.5");
+      }
     }
 
     update(time, delta) {
