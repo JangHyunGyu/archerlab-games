@@ -1236,7 +1236,6 @@
       this.focusPoint = null;
       this.audioCtx = null;
       this.masterGain = null;
-      this.noiseBuffer = null;
       this.sfxBuffers = new Map();
       this.sfxPreloadStarted = false;
       this.bgmTracks = null;
@@ -1688,60 +1687,6 @@
       }
     }
 
-    getNoiseBuffer(ctx) {
-      if (this.noiseBuffer) {
-        return this.noiseBuffer;
-      }
-      const length = Math.floor(ctx.sampleRate * 0.36);
-      const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < length; i += 1) {
-        data[i] = rand(-1, 1) * (1 - i / length);
-      }
-      this.noiseBuffer = buffer;
-      return buffer;
-    }
-
-    playTone(startFreq, endFreq, duration, gainValue = 0.12, type = "triangle") {
-      const ctx = this.unlockAudio();
-      if (!ctx || !this.masterGain) {
-        return;
-      }
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(Math.max(20, startFreq), now);
-      osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(gainValue, now + 0.008);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-      osc.connect(gain).connect(this.masterGain);
-      osc.start(now);
-      osc.stop(now + duration + 0.025);
-    }
-
-    playNoise(duration, gainValue = 0.1, frequency = 1800, type = "bandpass") {
-      const ctx = this.unlockAudio();
-      if (!ctx || !this.masterGain) {
-        return;
-      }
-      const now = ctx.currentTime;
-      const source = ctx.createBufferSource();
-      const filter = ctx.createBiquadFilter();
-      const gain = ctx.createGain();
-      source.buffer = this.getNoiseBuffer(ctx);
-      filter.type = type;
-      filter.frequency.setValueAtTime(frequency, now);
-      filter.Q.value = 0.9;
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(gainValue, now + 0.006);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-      source.connect(filter).connect(gain).connect(this.masterGain);
-      source.start(now);
-      source.stop(now + duration + 0.025);
-    }
-
     playSampleSfx(name, intensity = 1) {
       const ctx = this.audioCtx;
       const buffer = this.sfxBuffers.get(name);
@@ -1762,6 +1707,9 @@
       if (!ctx) {
         return;
       }
+      if (!this.sfxBuffers.has(name)) {
+        return;
+      }
       const minGap = {
         hit: 0.045,
         crit: 0.05,
@@ -1780,46 +1728,7 @@
         return;
       }
       this.sfxLastPlayed[name] = ctx.currentTime;
-
-      if (this.playSampleSfx(name, intensity)) {
-        return;
-      }
-
-      if (name === "pistol") {
-        this.playNoise(0.055, 0.1 * intensity, 2400);
-        this.playTone(210, 92, 0.07, 0.045 * intensity, "square");
-      } else if (name === "rifle") {
-        this.playNoise(0.045, 0.085 * intensity, 3100);
-        this.playTone(260, 120, 0.045, 0.035 * intensity, "square");
-      } else if (name === "sniper") {
-        this.playNoise(0.095, 0.18 * intensity, 1700);
-        this.playTone(120, 46, 0.16, 0.13 * intensity, "sawtooth");
-      } else if (name === "rocket") {
-        this.playNoise(0.18, 0.16 * intensity, 520, "lowpass");
-        this.playTone(95, 36, 0.22, 0.12 * intensity, "sawtooth");
-      } else if (name === "arrow") {
-        this.playNoise(0.09, 0.055 * intensity, 4200);
-        this.playTone(620, 390, 0.055, 0.035 * intensity, "triangle");
-      } else if (name === "hit") {
-        this.playNoise(0.07, 0.05 * intensity, 950, "lowpass");
-      } else if (name === "crit") {
-        this.playNoise(0.095, 0.08 * intensity, 1200, "bandpass");
-        this.playTone(520, 180, 0.09, 0.06 * intensity, "triangle");
-      } else if (name === "death") {
-        this.playNoise(0.16, 0.085 * intensity, 420, "lowpass");
-        this.playTone(150, 58, 0.2, 0.07 * intensity, "sawtooth");
-      } else if (name === "explosion") {
-        this.playNoise(0.24, 0.18 * intensity, 280, "lowpass");
-        this.playTone(82, 28, 0.28, 0.12 * intensity, "sawtooth");
-      } else if (name === "core") {
-        this.playNoise(0.11, 0.11 * intensity, 700, "lowpass");
-        this.playTone(190, 70, 0.14, 0.075 * intensity, "square");
-      } else if (name === "skill") {
-        this.playTone(420, 760, 0.12, 0.055 * intensity, "triangle");
-        this.time.delayedCall(72, () => this.playTone(620, 980, 0.14, 0.05 * intensity, "triangle"));
-      } else if (name === "start") {
-        this.playTone(220, 440, 0.14, 0.05 * intensity, "triangle");
-      }
+      this.playSampleSfx(name, intensity);
     }
 
     playWeaponSfx(projectile) {
