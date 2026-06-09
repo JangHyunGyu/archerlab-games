@@ -703,6 +703,61 @@ async function initDB(db) {
     `).run();
 }
 
+async function saveParkingRankingRecord(db, gameId, name, score, extraStr) {
+    const existing = await db.prepare(`
+        SELECT id, score
+        FROM rankings
+        WHERE game_id = ?
+          AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
+        ORDER BY score DESC, created_at ASC, id ASC
+        LIMIT 1
+    `).bind(gameId, name).first();
+
+    if (existing) {
+        const existingScore = Number(existing.score);
+        if (Number.isFinite(existingScore) && score > existingScore) {
+            await db.prepare(`
+                UPDATE rankings
+                SET player_name = ?, score = ?, extra_data = ?, created_at = datetime('now')
+                WHERE id = ?
+            `).bind(name, score, extraStr, existing.id).run();
+            return { saved_score: score, updated: true };
+        }
+        return { saved_score: Number.isFinite(existingScore) ? existingScore : score, duplicate_name: true };
+    }
+
+    const insertResult = await db.prepare(
+        'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
+    ).bind(gameId, name, score, extraStr).run();
+
+    const changes = Number(insertResult?.meta?.changes ?? insertResult?.changes ?? 0);
+    if (changes > 0) {
+        return { saved_score: score, inserted: true };
+    }
+
+    const fallback = await db.prepare(`
+        SELECT score
+        FROM rankings
+        WHERE game_id = ?
+          AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
+        ORDER BY score DESC, created_at ASC, id ASC
+        LIMIT 1
+    `).bind(gameId, name).first();
+
+    return { saved_score: Number(fallback?.score ?? score), duplicate_name: !!fallback };
+}
+
+async function saveRankingRecord(db, gameId, name, score, extraStr) {
+    if (gameId === PARKING_GAME_ID) {
+        return saveParkingRankingRecord(db, gameId, name, score, extraStr);
+    }
+
+    await db.prepare(
+        'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
+    ).bind(gameId, name, score, extraStr).run();
+    return { saved_score: score };
+}
+
 export default {
     async fetch(request, env) {
         // Handle CORS preflight
@@ -823,6 +878,7 @@ export default {
                 }
 
                 let scoreForInsert = numScore;
+                let verifiedSessionId = null;
                 const protectedKind = getProtectedGameKind(game_id);
                 if (protectedKind) {
                     const verified = await verifyRankingSession(env.DB, body, numScore);
@@ -830,6 +886,7 @@ export default {
                         return jsonResponse({ error: verified.error }, verified.status || 400);
                     }
                     scoreForInsert = verified.score;
+                    verifiedSessionId = verified.sessionId;
                     const baseExtra = isPlainObject(extra_data) ? extra_data : (isPlainObject(body.extra) ? body.extra : {});
                     extra_data = {
                         ...baseExtra,
@@ -839,9 +896,6 @@ export default {
                         verification_kind: protectedKind,
                         verified_at: new Date().toISOString(),
                     };
-                    await env.DB.prepare(
-                        'UPDATE ranking_sessions SET submitted_at = ?, updated_at = ? WHERE session_id = ? AND submitted_at IS NULL'
-                    ).bind(Date.now(), Date.now(), verified.sessionId).run();
                 }
 
                 if (game_id === JEWELRIA_GAME_ID) {
@@ -850,10 +904,16 @@ export default {
 
                 const extraStr = extra_data ? JSON.stringify(extra_data) : null;
 
-                // Insert the score. Exact duplicate records may be ignored when the DB has a uniqueness constraint.
-                await env.DB.prepare(
-                    'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
-                ).bind(game_id, name, scoreForInsert, extraStr).run();
+                // Store the score. Parking Escape keeps one best record per visible name, so the
+                // same nickname can submit again without tripping older uniqueness constraints.
+                const saveResult = await saveRankingRecord(env.DB, game_id, name, scoreForInsert, extraStr);
+                const savedScore = Number(saveResult?.saved_score ?? scoreForInsert);
+                if (verifiedSessionId) {
+                    const now = Date.now();
+                    await env.DB.prepare(
+                        'UPDATE ranking_sessions SET submitted_at = ?, updated_at = ? WHERE session_id = ? AND submitted_at IS NULL'
+                    ).bind(now, now, verifiedSessionId).run();
+                }
                 if (game_id === JEWELRIA_GAME_ID) {
                     await env.DB.prepare(`
                         UPDATE rankings
@@ -941,7 +1001,7 @@ export default {
                     `).bind(game_id, name).first();
 
                 const currentRank = rankResult?.rank || 1;
-                const bestScore = rankResult?.best_score ?? scoreForInsert;
+                const bestScore = rankResult?.best_score ?? savedScore;
 
                 // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
                 if (game_id === JEWELRIA_GAME_ID) {
@@ -997,7 +1057,7 @@ export default {
                     success: true,
                     rank: currentRank,
                     player_name: name,
-                    score: scoreForInsert,
+                    score: savedScore,
                     best_score: bestScore,
                     best_stage: rankResult?.best_stage ?? (game_id === JEWELRIA_GAME_ID ? extra_data?.highest_stage : undefined),
                     in_top_20: currentRank <= 20,
