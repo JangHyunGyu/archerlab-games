@@ -1713,6 +1713,19 @@
       this.embeddedArrows = [];
     }
 
+    clearEmbeddedArrowsForZombie(zombie) {
+      if (!zombie || !this.embeddedArrows?.length) {
+        return;
+      }
+      for (let i = this.embeddedArrows.length - 1; i >= 0; i -= 1) {
+        const arrow = this.embeddedArrows[i];
+        if (arrow.zombie === zombie) {
+          this.destroyGameObject(arrow.sprite);
+          this.embeddedArrows.splice(i, 1);
+        }
+      }
+    }
+
     clearRunEntities() {
       this.clearEmbeddedArrows();
       this.zombies.forEach((zombie) => {
@@ -3109,6 +3122,7 @@
       const x = zombie.x;
       const y = zombie.y;
       this.clearWeakMark(zombie);
+      this.clearEmbeddedArrowsForZombie(zombie);
       this.createDeathBurst(x, y, zombie);
       this.playSfx("death", zombie.elite ? 1.35 : 1);
       if (zombie.elite || zombie.type === "brute") {
