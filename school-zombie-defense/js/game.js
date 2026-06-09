@@ -33,6 +33,7 @@
   const BOW_BASE_CRIT_CHANCE = 0.3;
   const BOW_MARK_DURATION = 4.25;
   const BOW_MARK_DAMAGE_BONUS = 0.18;
+  const ARROW_EMBED_DURATION = 2.8;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -1215,6 +1216,7 @@
 
       this.zombies = [];
       this.bullets = [];
+      this.embeddedArrows = [];
       this.defenders = [];
       this.overlayObjects = [];
       this.transientObjects = new Set();
@@ -1706,7 +1708,13 @@
       this.transientObjects.clear();
     }
 
+    clearEmbeddedArrows() {
+      (this.embeddedArrows || []).forEach((arrow) => this.destroyGameObject(arrow.sprite));
+      this.embeddedArrows = [];
+    }
+
     clearRunEntities() {
+      this.clearEmbeddedArrows();
       this.zombies.forEach((zombie) => {
         this.clearWeakMark(zombie);
         this.destroyGameObject(zombie);
@@ -1918,6 +1926,8 @@
       }
       const base = hitType === "explosion" || hitType === "projectile-rocket"
         ? 18
+        : hitType === "projectile-arrow"
+          ? 20
         : hitType === "projectile-sniper"
           ? 15
           : crit
@@ -2520,6 +2530,7 @@
       this.updateDefenders(dt);
       this.updateBullets(dt);
       this.updateZombies(dt);
+      this.updateEmbeddedArrows(dt);
       this.updateHud();
     }
 
@@ -2892,6 +2903,9 @@
         const hit = this.findBulletHit(bullet);
         if (hit) {
           bullet.hitTargets.add(hit);
+          if (bullet.projectile === "projectile-arrow") {
+            this.createEmbeddedArrow(hit, bullet);
+          }
           this.damageZombie(hit, bullet.damage, bullet.critChance, bullet.projectile, bullet.critMultiplier);
           if (bullet.slowDuration > 0 && hit.active) {
             hit.slowTimer = Math.max(hit.slowTimer || 0, bullet.slowDuration);
@@ -2909,6 +2923,44 @@
             this.bullets.splice(i, 1);
           }
         }
+      }
+    }
+
+    createEmbeddedArrow(zombie, bullet) {
+      if (!zombie || !zombie.active || !bullet?.sprite) {
+        return;
+      }
+      const hitX = bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset;
+      const hitY = bullet.sprite.y + Math.sin(bullet.angle) * bullet.hitOffset;
+      const sprite = this.add.image(hitX, hitY, "projectile-arrow")
+        .setOrigin(0.5, 1)
+        .setScale(PROJECTILE_SCALES["projectile-arrow"] || 0.19)
+        .setRotation(bullet.angle + Math.PI / 2)
+        .setAlpha(0.95)
+        .setDepth((zombie.depth || 70) + 1);
+      this.embeddedArrows.push({
+        sprite,
+        zombie,
+        offsetX: hitX - zombie.x,
+        offsetY: hitY - zombie.y,
+        life: ARROW_EMBED_DURATION
+      });
+    }
+
+    updateEmbeddedArrows(dt) {
+      for (let i = (this.embeddedArrows || []).length - 1; i >= 0; i -= 1) {
+        const arrow = this.embeddedArrows[i];
+        const zombie = arrow.zombie;
+        arrow.life -= dt;
+        if (arrow.life <= 0 || !zombie || !zombie.active || zombie.destroyed) {
+          this.destroyGameObject(arrow.sprite);
+          this.embeddedArrows.splice(i, 1);
+          continue;
+        }
+        arrow.sprite
+          .setPosition(zombie.x + arrow.offsetX, zombie.y + arrow.offsetY)
+          .setDepth((zombie.depth || 70) + 1)
+          .setAlpha(clamp(arrow.life / 0.45, 0, 0.95));
       }
     }
 
@@ -3528,7 +3580,7 @@
           id: "core-full-repair",
           common: true,
           icon: "skill-full-repair",
-          tag: "공용",
+          tag: "방어",
           title: "완전 복구",
           desc: "방어선을 즉시\n최대 HP까지 수리",
           stat: `HP ${currentHp}/${maxHp} → ${maxHp}/${maxHp}`,
@@ -3550,7 +3602,7 @@
           id: "core-max-hp",
           common: true,
           icon: "skill-max-hp",
-          tag: "공용",
+          tag: "방어",
           title: "방벽 증축",
           desc: "이번 방어 중\n최대 HP 확장",
           stat: `최대 HP ${maxHp} → ${nextMaxHp}\n현재 HP +${appliedBonus}`,
@@ -3602,11 +3654,11 @@
       const ownerTexture = upgrade.ownerCharacterTexture;
       const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit && this.textures.exists(ownerTexture));
       const isOwnerSkill = hasOwnerCharacter && !isRecruit;
-      const tagY = isOwnerSkill ? y - 42 : isCommonSkill ? y + 18 : y + 24;
-      const titleY = isOwnerSkill ? y - 9 : isCommonSkill ? y + 48 : y + 58;
-      const descY = isOwnerSkill ? y + 52 : isCommonSkill ? y + 84 : y + 90;
-      const statY = isOwnerSkill ? y + 112 : isCommonSkill ? y + 128 : y + 123;
-      const chooseY = isOwnerSkill ? y + 150 : isCommonSkill ? y + 158 : y + 153;
+      const tagY = isOwnerSkill ? y - 42 : isCommonSkill ? y - 8 : y + 24;
+      const titleY = isOwnerSkill ? y - 9 : isCommonSkill ? y + 24 : y + 58;
+      const descY = isOwnerSkill ? y + 52 : isCommonSkill ? y + 66 : y + 90;
+      const statY = isOwnerSkill ? y + 112 : isCommonSkill ? y + 122 : y + 123;
+      const chooseY = isOwnerSkill ? y + 150 : isCommonSkill ? y + 156 : y + 153;
       const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
       const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
       const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
