@@ -83,6 +83,8 @@
   const STARTING_SPAWN_TIMER = 1.15;
   const CHARACTER_FIRE_COOLDOWN_MULTIPLIER = 1.3;
   const SFX_MASTER_VOLUME = 0.44;
+  const MAX_CORE_HP_SKILL_CAP = 6000;
+  const MAX_CORE_HP_SKILL_RATE = 0.12;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
   const SHOP_MAX_LEVEL = 10;
   const SHOP_CHARACTERS = [
@@ -262,6 +264,8 @@
     barrage: 0xff8d42,
     squad: 0xc38dff,
     frost: 0x91f7ff,
+    "core-full-repair": 0x7dffdf,
+    "core-max-hp": 0x91f7ff,
     "recruit-a": 0xff7fb7,
     "recruit-b": 0xff8d42,
     "recruit-d": 0x91f7ff,
@@ -275,6 +279,8 @@
     barrage: "#ff8d42",
     squad: "#c38dff",
     frost: "#91f7ff",
+    "core-full-repair": "#7dffdf",
+    "core-max-hp": "#91f7ff",
     "recruit-a": "#ff7fb7",
     "recruit-b": "#ff8d42",
     "recruit-d": "#91f7ff",
@@ -1109,6 +1115,8 @@
       this.load.image("skill-rocket", "assets/images/skill-rocket.png");
       this.load.image("skill-frost", "assets/images/skill-frost.png");
       this.load.image("skill-repair", "assets/images/skill-repair.png");
+      this.load.image("skill-full-repair", "assets/images/skill-full-repair.png");
+      this.load.image("skill-max-hp", "assets/images/skill-max-hp.png");
       this.load.image("skill-sniper", "assets/images/skill-sniper.png");
       this.load.image("skill-pistol-rapid", "assets/images/skill-pistol-rapid.png");
       this.load.image("skill-arrow-pin", "assets/images/skill-arrow-pin.png");
@@ -3305,9 +3313,57 @@
       return upgrades;
     }
 
+    getCommonUpgrades() {
+      const upgrades = [];
+      const currentHp = Math.round(this.coreHp);
+      const maxHp = Math.round(this.maxCoreHp);
+      if (this.coreHp < this.maxCoreHp - 1) {
+        upgrades.push({
+          id: "core-full-repair",
+          icon: "skill-full-repair",
+          tag: "공용",
+          title: "방어선 완전복구",
+          desc: "파괴된 방어선을\n즉시 최대치까지 수리합니다.",
+          stat: `HP ${currentHp}/${maxHp} → ${maxHp}/${maxHp}`,
+          accent: SKILL_ACCENTS["core-full-repair"],
+          accentHex: SKILL_ACCENT_HEX["core-full-repair"],
+          toast: "방어선 완전복구",
+          apply: () => {
+            this.coreHp = this.maxCoreHp;
+            this.morale = 100;
+          }
+        });
+      }
+
+      const hpBonus = Math.max(240, Math.round(this.maxCoreHp * MAX_CORE_HP_SKILL_RATE));
+      const nextMaxHp = Math.min(MAX_CORE_HP_SKILL_CAP, Math.round(this.maxCoreHp + hpBonus));
+      const appliedBonus = nextMaxHp - maxHp;
+      if (appliedBonus > 0) {
+        upgrades.push({
+          id: "core-max-hp",
+          icon: "skill-max-hp",
+          tag: "공용",
+          title: "방벽 증축",
+          desc: "이번 방어 중\n방어선 최대 HP를 늘립니다.",
+          stat: `최대 HP ${maxHp} → ${nextMaxHp}\n현재 HP +${appliedBonus}`,
+          accent: SKILL_ACCENTS["core-max-hp"],
+          accentHex: SKILL_ACCENT_HEX["core-max-hp"],
+          toast: "방어선 최대 HP 증가",
+          apply: () => {
+            const bonus = Math.max(0, nextMaxHp - Math.round(this.maxCoreHp));
+            this.maxCoreHp = Math.round(this.maxCoreHp + bonus);
+            this.coreHp = clamp(this.coreHp + bonus, 0, this.maxCoreHp);
+            this.morale = Math.round((this.coreHp / this.maxCoreHp) * 100);
+          }
+        });
+      }
+      return upgrades;
+    }
+
     pickUpgrades() {
       const recruitPool = this.getRecruitUpgrades();
-      const availablePool = this.getCharacterUpgrades();
+      const commonPool = this.getCommonUpgrades();
+      const characterPool = this.getCharacterUpgrades();
       const chosen = [];
       const recruitedNonPlayerCount = [...this.recruitedDefenders]
         .filter((id) => id !== "c")
@@ -3318,6 +3374,12 @@
         const index = Math.floor(Math.random() * recruitPool.length);
         chosen.push(recruitPool.splice(index, 1)[0]);
       }
+      const shouldOfferCommon = this.coreHp < this.maxCoreHp * 0.55 || Math.random() < 0.45;
+      if (chosen.length < 3 && commonPool.length > 0 && shouldOfferCommon) {
+        const index = Math.floor(Math.random() * commonPool.length);
+        chosen.push(commonPool.splice(index, 1)[0]);
+      }
+      const availablePool = [...characterPool, ...commonPool];
       while (chosen.length < 3 && availablePool.length > 0) {
         const index = Math.floor(Math.random() * availablePool.length);
         chosen.push(availablePool.splice(index, 1)[0]);
