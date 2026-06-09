@@ -71,13 +71,13 @@
     "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08 }
   };
   const ZOMBIE_HIT_EFFECTS = {
-    "projectile-arrow": { texture: "zombie-hit-arrow", width: 31, duration: 260, alpha: 0.9, scalePeak: 1.18, rotation: 0.15 },
-    "projectile-pistol": { texture: "zombie-hit-pistol", width: 42, duration: 240, alpha: 0.92, scalePeak: 1.14, rotation: 0.2 },
-    "projectile-rifle": { texture: "zombie-hit-rifle", width: 50, duration: 220, alpha: 0.92, scalePeak: 1.13, rotation: 0.35 },
-    "projectile-sniper": { texture: "zombie-hit-sniper", width: 58, duration: 250, alpha: 0.92, scalePeak: 1.16, rotation: 0.4 },
-    "projectile-rocket": { texture: "zombie-hit-rocket", width: 78, duration: 330, alpha: 0.95, scalePeak: 1.12, rotation: 0.25 },
-    explosion: { texture: "zombie-hit-rocket", width: 88, duration: 340, alpha: 0.9, scalePeak: 1.16, rotation: 0.45 },
-    default: { texture: "zombie-hit-pistol", width: 40, duration: 230, alpha: 0.88, scalePeak: 1.12, rotation: 0.28 }
+    "projectile-arrow": { texture: "zombie-hit-arrow", width: 44, duration: 280, alpha: 0.92, scalePeak: 1.22, rotation: 0.15 },
+    "projectile-pistol": { texture: "zombie-hit-pistol", width: 58, duration: 260, alpha: 0.94, scalePeak: 1.18, rotation: 0.2 },
+    "projectile-rifle": { texture: "zombie-hit-rifle", width: 70, duration: 245, alpha: 0.94, scalePeak: 1.17, rotation: 0.35 },
+    "projectile-sniper": { texture: "zombie-hit-sniper", width: 82, duration: 275, alpha: 0.94, scalePeak: 1.2, rotation: 0.4 },
+    "projectile-rocket": { texture: "zombie-hit-rocket", width: 106, duration: 355, alpha: 0.96, scalePeak: 1.16, rotation: 0.25 },
+    explosion: { texture: "zombie-hit-rocket", width: 120, duration: 365, alpha: 0.92, scalePeak: 1.2, rotation: 0.45 },
+    default: { texture: "zombie-hit-pistol", width: 56, duration: 250, alpha: 0.9, scalePeak: 1.16, rotation: 0.28 }
   };
   const ZOMBIE_DEATH_EFFECTS = {
     small: { texture: "zombie-death-small", width: 150, duration: 620, alpha: 0.94, scalePeak: 1.08 },
