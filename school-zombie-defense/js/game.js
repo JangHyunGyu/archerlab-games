@@ -95,7 +95,7 @@
     start: "assets/sounds/sfx/start.wav",
     skill: "assets/sounds/sfx/skill.wav",
     core: "assets/sounds/sfx/core.wav",
-    hit: "assets/sounds/sfx/hit.wav",
+    hit: "assets/sounds/sfx/hit.mp3",
     crit: "assets/sounds/sfx/crit.wav",
     death: "assets/sounds/sfx/death.mp3",
     explosion: "assets/sounds/sfx/explosion.wav",
