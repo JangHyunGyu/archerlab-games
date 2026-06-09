@@ -451,6 +451,13 @@
     }, AIM_POSES[4]);
   }
 
+  function getShotAimPoseKey(angle) {
+    if (angleDistance(angle, AIM_POSE_BY_KEY["aim-12"].angle) <= Math.atan(0.36)) {
+      return "aim-12";
+    }
+    return getNearestAimPose(angle).key;
+  }
+
   function makeCanvasTexture(scene, key, width, height, draw) {
     if (scene.textures.exists(key)) {
       scene.textures.remove(key);
@@ -1525,11 +1532,7 @@
       const pivot = defender.aim?.pivot || [0, -160];
       const dx = target.x - (defender.x + pivot[0]);
       const dy = target.y - (defender.y + pivot[1]);
-      if (dy < 0 && Math.abs(dx) <= Math.max(36, Math.abs(dy) * 0.36)) {
-        return "aim-12";
-      }
-      const angle = Math.atan2(dy, dx);
-      return getNearestAimPose(angle).key;
+      return getShotAimPoseKey(Math.atan2(dy, dx));
     }
 
     getDefenderMuzzle(defender, pose) {
@@ -2764,7 +2767,15 @@
       if (!target || !target.active) {
         return;
       }
-      const pose = this.getAttackPose(defender, target);
+      const tx = target.x + rand(-8, 8);
+      const ty = target.y + rand(-10, 10);
+      const shotOffset = defender.shotOffset || 0;
+      const angleOffset = defender.angleOffset || 0;
+      const initialPose = this.getAttackPose(defender, target);
+      const initialMuzzle = this.getDefenderMuzzle(defender, initialPose);
+      const initialX = initialMuzzle.x + shotOffset;
+      const initialAngle = Math.atan2(ty - initialMuzzle.y, tx - initialX) + angleOffset;
+      const pose = getShotAimPoseKey(initialAngle);
       this.setDefenderPose(defender, pose);
       defender.firePoseTimer = 0.18;
       if (defender.sprite) {
@@ -2778,11 +2789,9 @@
         });
       }
       const muzzle = this.getDefenderMuzzle(defender, pose);
-      const x = muzzle.x + (defender.shotOffset || 0);
+      const x = muzzle.x + shotOffset;
       const y = muzzle.y;
-      const tx = target.x + rand(-8, 8);
-      const ty = target.y + rand(-10, 10);
-      const angle = Math.atan2(ty - y, tx - x) + (defender.angleOffset || 0);
+      const angle = Math.atan2(ty - y, tx - x) + angleOffset;
       const sprite = this.add.image(x, y, defender.projectile)
         .setOrigin(0.5, 1)
         .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
