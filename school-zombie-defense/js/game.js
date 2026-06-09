@@ -1310,6 +1310,7 @@
           tag: defender.recruit.tag,
           title: defender.recruit.title,
           desc: defender.recruit.desc,
+          stat: "전투 인원 +1",
           accent: SKILL_ACCENTS[`recruit-${defender.id}`],
           accentHex: SKILL_ACCENT_HEX[`recruit-${defender.id}`],
           toast: `${defender.recruit.title} 완료`,
@@ -2604,11 +2605,30 @@
       }).setOrigin(0.5).setDepth(535));
     }
 
+    formatPercent(value) {
+      return `${Math.round(value * 100)}%`;
+    }
+
+    formatBonus(value) {
+      return `+${Math.round(value * 100)}%`;
+    }
+
+    formatSeconds(value) {
+      return `${value.toFixed(2)}초`;
+    }
+
+    formatMs(value) {
+      return `${Math.round(value)}ms`;
+    }
+
     getCharacterUpgrades() {
       const upgrades = [];
       const add = (ownerId, upgrade) => {
         const defender = this.getDefenderById(ownerId);
         if (!defender || !defender.recruited) {
+          return;
+        }
+        if (upgrade.available === false) {
           return;
         }
         upgrades.push({
@@ -2618,16 +2638,23 @@
         });
       };
 
+      const pistol = this.getDefenderById("c");
+      const bow = this.getDefenderById("a");
+      const rifle = this.getDefenderById("b");
+      const rocket = this.getDefenderById("d");
+      const sniper = this.getDefenderById("e");
+
       add("c", {
-        id: "c-pierce",
-        icon: "skill-pierce",
+        id: "c-rapid",
+        icon: "skill-barrage",
         tag: "권총",
-        title: "정조준 탄",
-        desc: "권총 관통 +1\n명중 피해 +12%",
+        title: "권총 속사",
+        desc: "가까이 붙은 적을\n더 빠르게 끊어냅니다.",
+        stat: `공격 간격 ${this.formatSeconds(pistol.rate)} → ${this.formatSeconds(Math.max(pistol.baseRate * 0.65, pistol.rate * 0.88))}`,
+        available: pistol.rate > pistol.baseRate * 0.66,
         apply: () => {
           const defender = this.getDefenderById("c");
-          defender.pierce += 1;
-          defender.damageBoost *= 1.12;
+          defender.rate = Math.max(defender.baseRate * 0.65, defender.rate * 0.88);
         }
       });
       add("c", {
@@ -2635,7 +2662,9 @@
         icon: "skill-multishot",
         tag: "권총",
         title: "연속 사격",
-        desc: "빠른 추가 사격 +1\n다른 좀비 우선",
+        desc: "한 번의 사격 명령을\n빠르게 이어 쏩니다.",
+        stat: `연속 사격 ${pistol.burstCount}회 → ${Math.min(4, pistol.burstCount + 1)}회`,
+        available: pistol.burstCount < 4,
         apply: () => {
           const defender = this.getDefenderById("c");
           defender.burstCount = Math.min(4, defender.burstCount + 1);
@@ -2646,11 +2675,12 @@
         icon: "skill-rally",
         tag: "활",
         title: "집중 호흡",
-        desc: "활 치명 +14%\n활 피해 +10%",
+        desc: "활시위를 당길수록\n치명타가 날카로워집니다.",
+        stat: `치명률 ${this.formatPercent(bow.critChance)} → ${this.formatPercent(Math.min(0.65, bow.critChance + 0.1))}\n치명 피해 ${this.formatPercent(bow.critMultiplier)} → ${this.formatPercent(bow.critMultiplier + 0.15)}`,
         apply: () => {
           const defender = this.getDefenderById("a");
-          defender.critChance += 0.14;
-          defender.damageBoost *= 1.1;
+          defender.critChance = Math.min(0.65, defender.critChance + 0.1);
+          defender.critMultiplier += 0.15;
         }
       });
       add("a", {
@@ -2658,7 +2688,8 @@
         icon: "skill-mark",
         tag: "활",
         title: "약점 표식",
-        desc: "표식 추가 피해 +7%\n표식 지속 +1.5초",
+        desc: "표식이 붙은 적이\n더 큰 피해를 받습니다.",
+        stat: `표식 피해 ${this.formatBonus(bow.markDamageBonus)} → ${this.formatBonus(bow.markDamageBonus + 0.07)}\n표식 지속 ${this.formatSeconds(bow.markDuration)} → ${this.formatSeconds(bow.markDuration + 1.5)}`,
         accent: 0xffd978,
         accentHex: "#ffd978",
         apply: () => {
@@ -2668,14 +2699,16 @@
         }
       });
       add("a", {
-        id: "a-volley",
-        icon: "skill-multishot",
+        id: "a-pin",
+        icon: "skill-frost",
         tag: "활",
-        title: "연속 화살",
-        desc: "빠른 추가 발사 +1\n표식 대상 압박",
+        title: "속박 화살",
+        desc: "맞은 좀비의 발을\n잠시 묶어둡니다.",
+        stat: `둔화 ${this.formatSeconds(bow.slowDuration)} → ${this.formatSeconds(bow.slowDuration + 0.55)}\n표식 지속 ${this.formatSeconds(bow.markDuration)} → ${this.formatSeconds(bow.markDuration + 0.75)}`,
         apply: () => {
           const defender = this.getDefenderById("a");
-          defender.burstCount = Math.min(3, defender.burstCount + 1);
+          defender.slowDuration += 0.55;
+          defender.markDuration += 0.75;
         }
       });
       add("b", {
@@ -2683,7 +2716,11 @@
         icon: "skill-rocket",
         tag: "소총",
         title: "하부 유탄",
-        desc: "소총 8발마다\n소형 폭발 발생",
+        desc: "연발 중간마다\n소형 폭발을 섞습니다.",
+        stat: rifle.rocketEvery === 0
+          ? "유탄 없음 → 8발마다"
+          : `유탄 ${rifle.rocketEvery}발마다 → ${Math.max(4, rifle.rocketEvery - 1)}발마다`,
+        available: rifle.rocketEvery !== 4,
         apply: () => {
           const defender = this.getDefenderById("b");
           defender.rocketEvery = defender.rocketEvery === 0 ? 8 : Math.max(4, defender.rocketEvery - 1);
@@ -2694,7 +2731,9 @@
         icon: "skill-barrage",
         tag: "소총",
         title: "연발 제어",
-        desc: "소총 연사 +1발\n연발 간격 -10%",
+        desc: "여러 적에게\n탄막을 짧게 끊어 쏩니다.",
+        stat: `연사 ${rifle.burstCount}회 → ${Math.min(6, rifle.burstCount + 1)}회\n간격 ${this.formatMs(rifle.burstDelay)} → ${this.formatMs(Math.max(45, rifle.burstDelay * 0.9))}`,
+        available: rifle.burstCount < 6 || rifle.burstDelay > 45,
         apply: () => {
           const defender = this.getDefenderById("b");
           defender.burstCount = Math.min(6, defender.burstCount + 1);
@@ -2706,7 +2745,8 @@
         icon: "skill-frost",
         tag: "로켓",
         title: "냉각 탄두",
-        desc: "폭발 둔화 +1.2초\n로켓 피해 +12%",
+        desc: "폭발에 휘말린 적을\n느리게 만듭니다.",
+        stat: `둔화 ${this.formatSeconds(rocket.slowDuration)} → ${this.formatSeconds(rocket.slowDuration + 1.2)}\n직격 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.12)}`,
         apply: () => {
           const defender = this.getDefenderById("d");
           defender.slowDuration += 1.2;
@@ -2718,7 +2758,8 @@
         icon: "skill-rocket",
         tag: "로켓",
         title: "고폭 탄두",
-        desc: "폭발 반경 +18%\n폭발 피해 +22%",
+        desc: "몰려 있는 좀비를\n더 넓게 쓸어냅니다.",
+        stat: `반경 ${Math.round(rocket.splashRadius * rocket.splashRadiusBoost)} → ${Math.round(rocket.splashRadius * rocket.splashRadiusBoost * 1.18)}\n폭발 피해 ${this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost)} → ${this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost * 1.22)}`,
         apply: () => {
           const defender = this.getDefenderById("d");
           defender.splashRadiusBoost *= 1.18;
@@ -2726,27 +2767,28 @@
         }
       });
       add("d", {
-        id: "d-salvo",
-        icon: "skill-multishot",
+        id: "d-impact",
+        icon: "skill-rocket",
         tag: "로켓",
-        title: "연속 포격",
-        desc: "추가 로켓 발사 +1\n폭발 압박 강화",
+        title: "직격 장약",
+        desc: "정면으로 맞은 대상에게\n더 묵직하게 박힙니다.",
+        stat: `직격 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.18)}`,
         apply: () => {
           const defender = this.getDefenderById("d");
-          defender.burstCount = Math.min(2, defender.burstCount + 1);
+          defender.damageBoost *= 1.18;
         }
       });
       add("e", {
-        id: "e-repair",
-        icon: "skill-repair",
-        tag: "방어",
-        title: "방어 정비",
-        desc: "코어 내구 +180\n저격 피해 +12%",
+        id: "e-weakpoint",
+        icon: "skill-sniper",
+        tag: "저격",
+        title: "약점 조준",
+        desc: "큰 위협을 노릴 때\n한 발의 위력이 커집니다.",
+        stat: `치명률 ${this.formatPercent(sniper.critChance)} → ${this.formatPercent(Math.min(0.7, sniper.critChance + 0.06))}\n치명 피해 ${this.formatPercent(sniper.critMultiplier)} → ${this.formatPercent(sniper.critMultiplier + 0.3)}`,
         apply: () => {
           const defender = this.getDefenderById("e");
-          defender.damageBoost *= 1.12;
-          this.maxCoreHp += 180;
-          this.coreHp = clamp(this.coreHp + 180, 0, this.maxCoreHp);
+          defender.critChance = Math.min(0.7, defender.critChance + 0.06);
+          defender.critMultiplier += 0.3;
         }
       });
       add("e", {
@@ -2754,22 +2796,12 @@
         icon: "skill-sniper",
         tag: "저격",
         title: "철갑 저격",
-        desc: "저격 관통 +1\n저격 피해 +18%",
+        desc: "앞줄을 꿰뚫고\n뒤쪽 위협까지 노립니다.",
+        stat: `관통 ${sniper.pierce} → ${sniper.pierce + 1}\n저격 피해 ${this.formatPercent(sniper.damageBoost)} → ${this.formatPercent(sniper.damageBoost * 1.18)}`,
         apply: () => {
           const defender = this.getDefenderById("e");
           defender.pierce += 1;
           defender.damageBoost *= 1.18;
-        }
-      });
-      add("e", {
-        id: "e-chain",
-        icon: "skill-multishot",
-        tag: "저격",
-        title: "연속 저격",
-        desc: "빠른 추가 사격 +1\n관통 압박 강화",
-        apply: () => {
-          const defender = this.getDefenderById("e");
-          defender.burstCount = Math.min(3, defender.burstCount + 1);
         }
       });
       return upgrades;
@@ -2804,8 +2836,9 @@
       const isOwnerSkill = hasOwnerCharacter && !isRecruit;
       const tagY = isOwnerSkill ? y - 42 : y + 24;
       const titleY = isOwnerSkill ? y - 9 : y + 58;
-      const descY = isOwnerSkill ? y + 58 : y + 101;
-      const chooseY = isOwnerSkill ? y + 144 : y + 148;
+      const descY = isOwnerSkill ? y + 52 : y + 90;
+      const statY = isOwnerSkill ? y + 112 : y + 123;
+      const chooseY = isOwnerSkill ? y + 150 : y + 153;
       const shadow = this.add.rectangle(x, y + 15, 154, 320, 0x000000, 0.44).setDepth(523);
       const glow = this.add.ellipse(x, y - 74, 138, 206, accent, 0.1).setDepth(523.5);
       const card = this.add.image(x, y, "premium-skill-card").setDisplaySize(170, 342).setDepth(524);
@@ -2840,7 +2873,7 @@
         icon.setDisplaySize(hasOwnerCharacter ? 66 : 74, hasOwnerCharacter ? 66 : 74);
       }
       const infoPanel = isOwnerSkill
-        ? this.add.rectangle(x, y + 58, 132, 88, 0x071015, 0.58)
+        ? this.add.rectangle(x, y + 64, 134, 114, 0x071015, 0.58)
           .setStrokeStyle(1, accent, 0.28)
           .setDepth(527)
         : null;
@@ -2865,13 +2898,30 @@
       }).setOrigin(0.5).setDepth(529);
       const desc = this.add.text(x, descY, upgrade.desc, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 14,
+        fontSize: 13,
         fontStyle: "900",
         color: "#d8e6e8",
         align: "center",
         lineSpacing: isOwnerSkill ? 6 : 4,
         wordWrap: { width: 126, useAdvancedWrap: true }
       }).setOrigin(0.5).setDepth(529);
+      const statLines = upgrade.stat ? String(upgrade.stat).split("\n").length : 0;
+      const statBg = upgrade.stat
+        ? this.add.rectangle(x, statY, 132, statLines > 1 ? 38 : 27, 0x05090d, 0.78)
+          .setStrokeStyle(1, accent, 0.48)
+          .setDepth(529)
+        : null;
+      const statText = upgrade.stat
+        ? this.add.text(x, statY, upgrade.stat, {
+          fontFamily: "Pretendard Variable, Arial, sans-serif",
+          fontSize: statLines > 1 ? 11 : 12,
+          fontStyle: "900",
+          color: accentHex,
+          align: "center",
+          lineSpacing: 2,
+          wordWrap: { width: 124, useAdvancedWrap: true }
+        }).setOrigin(0.5).setDepth(530)
+        : null;
       const chooseBg = this.add.rectangle(x, chooseY, 104, 30, 0x101820, 0.9)
         .setStrokeStyle(1, accent, 0.85)
         .setDepth(529);
@@ -2898,6 +2948,8 @@
         tagText,
         title,
         desc,
+        statBg,
+        statText,
         chooseBg,
         chooseText
       ].filter(Boolean);
