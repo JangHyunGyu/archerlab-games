@@ -82,6 +82,7 @@
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
   const CHARACTER_FIRE_COOLDOWN_MULTIPLIER = 1.3;
+  const SFX_MASTER_VOLUME = 0.44;
   const DEFAULT_CHAIN_SHOT_DELAY = 125;
   const WEAPON_CHAIN_SHOT_DELAYS = {
     "projectile-pistol": 110,
@@ -1466,7 +1467,7 @@
       if (!this.audioCtx) {
         this.audioCtx = new AudioContext();
         this.masterGain = this.audioCtx.createGain();
-        this.masterGain.gain.value = 0.26;
+        this.masterGain.gain.value = SFX_MASTER_VOLUME;
         this.masterGain.connect(this.audioCtx.destination);
       }
       if (this.audioCtx.state === "suspended") {
