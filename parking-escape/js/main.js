@@ -24,7 +24,6 @@
   ];
 
   const STORAGE = {
-    level: "archerlab-parking-level",
     bestLevel: "archerlab-parking-best-level",
     bestMoves: "archerlab-parking-best-moves",
   };
@@ -71,7 +70,6 @@
     clearKicker: $("clear-kicker"),
     clearTitle: $("clear-title"),
     play: $("play-btn"),
-    continue: $("continue-btn"),
     rank: $("rank-btn"),
     next: $("next-btn"),
     home: $("home-btn"),
@@ -83,6 +81,7 @@
     submitRank: $("submit-rank-btn"),
     skipRank: $("skip-rank-btn"),
     submitStatus: $("submit-status"),
+    submitProgress: $("rank-submit-progress"),
   };
 
   const app = new PIXI.Application();
@@ -129,7 +128,7 @@
 
   class ParkingGame {
     constructor() {
-      this.level = readInt(STORAGE.level, 1);
+      this.level = 1;
       this.bestLevel = readInt(STORAGE.bestLevel, 1);
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
       this.moves = 0;
@@ -161,6 +160,8 @@
       this.rankSessionId = null;
       this.rankSessionPromise = null;
       this.rankSyncFailed = false;
+      this.rankClearRecordedFor = null;
+      this.rankReturnTimer = null;
       this.sound = new (window.ParkingSoundManager || class {
         ensure() {}
         play() {}
@@ -207,6 +208,7 @@
       this.rankSessionId = null;
       this.rankSessionPromise = null;
       this.rankSyncFailed = false;
+      this.rankClearRecordedFor = null;
     }
 
     async createRankSession() {
@@ -278,9 +280,25 @@
       }
     }
 
+    async ensureRankClearRecorded(clearData) {
+      if (!clearData) return false;
+      const sessionId = await this.ensureRankSession();
+      if (!sessionId) return false;
+      const recordKey = [
+        sessionId,
+        clearData.rankLevel,
+        clearData.moves,
+        clearData.levelMoves,
+        clearData.timedOut ? 1 : 0,
+      ].join(":");
+      if (this.rankClearRecordedFor === recordKey) return true;
+      const synced = await this.recordRankClear(clearData);
+      if (synced) this.rankClearRecordedFor = recordKey;
+      return synced;
+    }
+
     bindUI() {
       dom.play.addEventListener("click", () => this.start(1));
-      dom.continue.addEventListener("click", () => this.start(this.level));
       dom.next.addEventListener("click", () => this.start(this.nextLevelTarget || this.level + 1));
       dom.home.addEventListener("click", () => this.showMenu());
       dom.rank.addEventListener("click", () => this.openRankModal());
@@ -322,12 +340,13 @@
 
     async start(level) {
       if (this.mode === "loading") return;
+      clearTimeout(this.rankReturnTimer);
+      this.rankReturnTimer = null;
       const token = ++this.startToken;
       const targetLevel = Math.max(1, level | 0);
       const continuesRun = this.mode === "complete" && targetLevel === this.nextLevelTarget && !!this.runRecord;
       if (targetLevel <= 1 || !this.rankSessionId || !continuesRun) this.startRankSession();
       this.level = targetLevel;
-      localStorage.setItem(STORAGE.level, String(this.level));
       this.moves = 0;
       this.timeLeft = LEVEL_TIME_LIMIT;
       this.lastClear = null;
@@ -378,7 +397,9 @@
       return true;
     }
 
-    showMenu() {
+    showMenu({ playSound = true } = {}) {
+      clearTimeout(this.rankReturnTimer);
+      this.rankReturnTimer = null;
       this.startToken += 1;
       this.mode = "menu";
       this.animating = false;
@@ -391,7 +412,7 @@
       dom.loading.classList.add("hidden");
       dom.menu.classList.remove("hidden");
       this.updateMenu();
-      this.playTone("button");
+      if (playSound) this.playTone("button");
       this.resize();
     }
 
@@ -400,7 +421,6 @@
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
       dom.bestLevel.textContent = String(this.bestLevel);
       dom.bestMoves.textContent = `${LEVEL_TIME_LIMIT}s`;
-      dom.continue.disabled = this.level <= 1 && this.bestLevel <= 1;
     }
 
     showLoading(level) {
@@ -859,7 +879,6 @@
       this.lastClear = this.runRecord;
       this.bestLevel = Math.max(this.bestLevel, this.level + 1);
       localStorage.setItem(STORAGE.bestLevel, String(this.bestLevel));
-      localStorage.setItem(STORAGE.level, String(this.level + 1));
       if (this.bestMoves === 0 || this.moves < this.bestMoves) {
         this.bestMoves = this.moves;
         localStorage.setItem(STORAGE.bestMoves, String(this.bestMoves));
@@ -875,7 +894,9 @@
       dom.next.textContent = "NEXT";
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
+      this.setRankSubmitLoading(false);
       dom.rankSubmitRow.classList.add("hidden");
+      if (dom.next.parentElement) dom.next.parentElement.classList.remove("hidden");
       dom.modal.classList.remove("is-timeout");
       dom.modal.classList.add("is-clear");
       dom.modal.classList.remove("hidden");
@@ -913,9 +934,11 @@
       dom.next.textContent = "RETRY";
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
+      this.setRankSubmitLoading(false);
       dom.rankSubmitRow.classList.remove("hidden");
       dom.submitRank.disabled = false;
       dom.skipRank.disabled = false;
+      if (dom.next.parentElement) dom.next.parentElement.classList.add("hidden");
       dom.modal.classList.remove("is-clear");
       dom.modal.classList.add("is-timeout");
       dom.modal.classList.remove("hidden");

@@ -980,6 +980,40 @@ h2 {
   font-weight: 800;
 }
 
+.rank-submit-progress {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(126, 239, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(4, 11, 24, 0.72);
+  box-shadow: inset 0 0 16px rgba(41, 153, 185, 0.18);
+}
+
+.rank-submit-progress span {
+  position: absolute;
+  inset: -1px auto -1px 0;
+  width: 42%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, #65f1ff 28%, #ffe07a 72%, transparent);
+  filter: drop-shadow(0 0 10px rgba(126, 239, 255, 0.7));
+  animation: rankSubmitBar 0.92s ease-in-out infinite;
+}
+
+.rank-submit-row.is-submitting input {
+  opacity: 0.68;
+}
+
+@keyframes rankSubmitBar {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(260%);
+  }
+}
+
 .rank-panel {
   width: min(520px, calc(100vw - 32px));
 }
