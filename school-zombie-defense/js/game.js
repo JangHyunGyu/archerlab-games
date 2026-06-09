@@ -85,33 +85,77 @@
   const SFX_MASTER_VOLUME = 0.44;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
   const SHOP_MAX_LEVEL = 10;
-  const SHOP_UPGRADES = [
+  const SHOP_CHARACTERS = [
     {
-      id: "gun",
-      title: "총과 총알",
-      subtitle: "권총 · 소총 · 저격",
+      id: "c",
+      name: "권총 주인공",
+      weapon: "권총",
+      portrait: "avatar-pistol",
       icon: "skill-pistol-rapid",
-      desc: "총기 계열 피해와 사격 반응을 영구 강화합니다.",
       accent: 0xf2b84b
     },
     {
-      id: "bow",
-      title: "활과 화살",
-      subtitle: "활 · 표식 · 치명",
+      id: "a",
+      name: "활 지원",
+      weapon: "활",
+      portrait: "avatar-bow",
       icon: "skill-arrow-pin",
-      desc: "화살 피해, 치명률, 표식 보조력을 영구 강화합니다.",
       accent: 0xff80b6
     },
     {
-      id: "launcher",
-      title: "런처와 로켓",
-      subtitle: "직격 · 폭발 · 범위",
+      id: "b",
+      name: "소총 지원",
+      weapon: "소총",
+      portrait: "avatar-rifle",
+      icon: "skill-rifle-grenade",
+      accent: 0xf6b04f
+    },
+    {
+      id: "d",
+      name: "로켓 지원",
+      weapon: "로켓",
+      portrait: "avatar-rocket",
       icon: "skill-rocket-impact",
-      desc: "로켓 직격 피해와 폭발 성능을 영구 강화합니다.",
       accent: 0x91f7ff
+    },
+    {
+      id: "e",
+      name: "저격 지원",
+      weapon: "저격총",
+      portrait: "avatar-sniper",
+      icon: "skill-sniper-weakpoint",
+      accent: 0x91ff9a
     }
   ];
-  const getShopUpgradeCost = (level) => level >= SHOP_MAX_LEVEL ? 0 : Math.round(18 + level * 12 + level * level * 2);
+  const SHOP_CHARACTER_UPGRADES = {
+    c: [
+      { id: "c_power", title: "권총 정비", subtitle: "피해", icon: "skill-pistol-rapid" },
+      { id: "c_speed", title: "속사 훈련", subtitle: "공격 간격", icon: "skill-multishot" },
+      { id: "c_crit", title: "급소 사격", subtitle: "치명", icon: "skill-pierce" }
+    ],
+    a: [
+      { id: "a_power", title: "강화 화살", subtitle: "피해", icon: "skill-arrow-pin" },
+      { id: "a_mark", title: "표식 연마", subtitle: "표식", icon: "skill-mark" },
+      { id: "a_crit", title: "집중 호흡", subtitle: "치명", icon: "skill-rally" }
+    ],
+    b: [
+      { id: "b_power", title: "소총 탄약", subtitle: "피해", icon: "skill-barrage" },
+      { id: "b_control", title: "연발 제어", subtitle: "연발 간격", icon: "skill-barrage" },
+      { id: "b_grenade", title: "하부 유탄", subtitle: "유탄 주기", icon: "skill-rifle-grenade" }
+    ],
+    d: [
+      { id: "d_charge", title: "직격 장약", subtitle: "직격 피해", icon: "skill-rocket-impact" },
+      { id: "d_radius", title: "고폭 탄두", subtitle: "폭발 반경", icon: "skill-rocket" },
+      { id: "d_slow", title: "냉각 탄두", subtitle: "둔화", icon: "skill-frost" }
+    ],
+    e: [
+      { id: "e_power", title: "대구경 탄", subtitle: "피해", icon: "skill-sniper" },
+      { id: "e_focus", title: "약점 조준", subtitle: "치명", icon: "skill-sniper-weakpoint" },
+      { id: "e_pierce", title: "철갑 탄심", subtitle: "관통", icon: "skill-pierce" }
+    ]
+  };
+  const getAllShopUpgradeIds = () => Object.values(SHOP_CHARACTER_UPGRADES).flat().map((upgrade) => upgrade.id);
+  const getShopUpgradeCost = (level) => level >= SHOP_MAX_LEVEL ? 0 : Math.round(12 + level * 7 + level * level * 1.6);
   const DEFAULT_CHAIN_SHOT_DELAY = 125;
   const WEAPON_CHAIN_SHOT_DELAYS = {
     "projectile-pistol": 110,
@@ -132,14 +176,14 @@
   const ZOMBIE_TEXTURE_TYPES = ["normal", "runner", "brute", "volatile", "elite"];
 
   function createDefaultMetaSave() {
-    return {
+    const save = {
       coins: 0,
-      upgrades: {
-        gun: 0,
-        bow: 0,
-        launcher: 0
-      }
+      upgrades: {}
     };
+    getAllShopUpgradeIds().forEach((id) => {
+      save.upgrades[id] = 0;
+    });
+    return save;
   }
 
   function normalizeMetaSave(save) {
@@ -151,6 +195,20 @@
     Object.keys(defaults.upgrades).forEach((id) => {
       next.upgrades[id] = clamp(Math.floor(Number(save?.upgrades?.[id]) || 0), 0, SHOP_MAX_LEVEL);
     });
+    const oldGunLevel = clamp(Math.floor(Number(save?.upgrades?.gun) || 0), 0, SHOP_MAX_LEVEL);
+    const oldBowLevel = clamp(Math.floor(Number(save?.upgrades?.bow) || 0), 0, SHOP_MAX_LEVEL);
+    const oldLauncherLevel = clamp(Math.floor(Number(save?.upgrades?.launcher) || 0), 0, SHOP_MAX_LEVEL);
+    if (oldGunLevel > 0) {
+      ["c_power", "b_power", "e_power"].forEach((id) => {
+        next.upgrades[id] = Math.max(next.upgrades[id], oldGunLevel);
+      });
+    }
+    if (oldBowLevel > 0) {
+      next.upgrades.a_power = Math.max(next.upgrades.a_power, oldBowLevel);
+    }
+    if (oldLauncherLevel > 0) {
+      next.upgrades.d_charge = Math.max(next.upgrades.d_charge, oldLauncherLevel);
+    }
     return next;
   }
 
@@ -1126,6 +1184,7 @@
       this.coins = 0;
       this.meta = loadMetaSave();
       this.runCoinsBanked = false;
+      this.shopSelectedCharacter = "c";
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
@@ -1821,10 +1880,12 @@
       }).setOrigin(0.5).setDepth(504));
     }
 
-    showShop() {
+    showShop(selectedId = this.shopSelectedCharacter || "c") {
       this.clearOverlay();
       this.mode = "shop";
       this.meta = loadMetaSave();
+      const selectedCharacter = SHOP_CHARACTERS.find((character) => character.id === selectedId) || SHOP_CHARACTERS[0];
+      this.shopSelectedCharacter = selectedCharacter.id;
       const items = this.overlayObjects;
       items.push(this.add.image(270, 480, "shop-blackmarket").setDisplaySize(540, 960).setDepth(500));
       items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.26).setDepth(501));
@@ -1847,9 +1908,69 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(504));
 
-      SHOP_UPGRADES.forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, 270, 520 + index * 116));
+      items.push(this.add.text(270, 330, "강화할 캐릭터 선택", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 18,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(521));
+      SHOP_CHARACTERS.forEach((character, index) => {
+        this.addShopCharacterButton(character, 62 + index * 104, 402, character.id === selectedCharacter.id);
+      });
+      items.push(this.add.rectangle(270, 490, 430, 44, 0x071015, 0.78).setStrokeStyle(1, selectedCharacter.accent, 0.58).setDepth(520));
+      items.push(this.add.text(270, 490, `${selectedCharacter.name} · ${selectedCharacter.weapon} 강화`, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 20,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(521));
+      this.getCharacterShopUpgrades(selectedCharacter.id).forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, selectedCharacter, 270, 566 + index * 104));
       this.addOverlayButton(142, 890, 172, 50, "뒤로", 560, () => this.showMenu(), COLORS.gold);
       this.addOverlayButton(398, 890, 172, 50, "출격", 560, () => this.startRun(), COLORS.blue);
+    }
+
+    addShopCharacterButton(character, x, y, selected) {
+      const accent = character.accent || COLORS.gold;
+      const objects = [];
+      objects.push(this.add.rectangle(x, y, 92, 104, selected ? 0x10202a : 0x071015, selected ? 0.88 : 0.72)
+        .setStrokeStyle(selected ? 3 : 1, accent, selected ? 0.95 : 0.42)
+        .setDepth(522));
+      objects.push(this.add.circle(x, y - 19, 32, 0x020406, 0.78).setStrokeStyle(2, accent, selected ? 0.95 : 0.55).setDepth(523));
+      objects.push(this.add.image(x, y - 19, character.portrait).setDisplaySize(58, 58).setDepth(524));
+      objects.push(this.add.text(x, y + 29, character.weapon, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 12,
+        fontStyle: "900",
+        color: selected ? "#ffffff" : "#d5e4e7",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(524));
+      objects.push(this.add.text(x, y + 47, this.getCharacterTotalUpgradeLevel(character.id), {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 11,
+        fontStyle: "900",
+        color: "#ffd86b",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(524));
+      const hit = this.add.rectangle(x, y, 94, 106, 0x000000, 0).setDepth(526);
+      hit.setInteractive({ useHandCursor: true });
+      hit.on("pointerdown", () => this.showShop(character.id));
+      [...objects, hit].forEach((item) => this.overlayObjects.push(item));
+    }
+
+    getCharacterShopUpgrades(characterId) {
+      return SHOP_CHARACTER_UPGRADES[characterId] || [];
+    }
+
+    getCharacterTotalUpgradeLevel(characterId) {
+      const total = this.getCharacterShopUpgrades(characterId)
+        .reduce((sum, upgrade) => sum + this.getMetaUpgradeLevel(upgrade.id), 0);
+      return `합계 Lv.${total}`;
     }
 
     getMetaUpgradeLevel(id) {
@@ -1857,13 +1978,27 @@
     }
 
     getShopUpgradeEffectLine(id, level) {
-      if (id === "gun") {
-        return `피해 +${Math.round(level * 2.5)}% · 간격 -${Math.round(level * 0.8)}%`;
+      const percent = (value) => `${Math.round(value * 10) / 10}%`;
+      if (id === "c_power") return `피해 +${percent(level * 2.2)}`;
+      if (id === "c_speed") return `공격 간격 -${percent(level * 0.9)}`;
+      if (id === "c_crit") return `치명 +${percent(level * 0.6)} · 치명피해 +${percent(level * 1)}`;
+      if (id === "a_power") return `피해 +${percent(level * 2)}`;
+      if (id === "a_mark") return `표식 피해 +${percent(level * 0.6)} · 지속 +${(level * 0.06).toFixed(2)}초`;
+      if (id === "a_crit") return `치명 +${percent(level * 0.7)} · 치명피해 +${percent(level * 1)}`;
+      if (id === "b_power") return `피해 +${percent(level * 2)}`;
+      if (id === "b_control") return `연발 간격 -${percent(level * 1)} · 사격 간격 -${percent(level * 0.4)}`;
+      if (id === "b_grenade") {
+        return level <= 0 ? "유탄 없음" : `유탄 ${Math.max(6, 10 - Math.floor(level * 0.4))}발마다`;
       }
-      if (id === "bow") {
-        return `피해 +${Math.round(level * 2.2)}% · 치명 +${Math.round(level * 0.6)}%`;
+      if (id === "d_charge") return `직격 피해 +${percent(level * 2.4)}`;
+      if (id === "d_radius") return `폭발 반경 +${percent(level * 1.3)} · 폭발 피해 +${percent(level * 1)}`;
+      if (id === "d_slow") return `둔화 +${(level * 0.09).toFixed(2)}초`;
+      if (id === "e_power") return `피해 +${percent(level * 2.3)}`;
+      if (id === "e_focus") return `치명 +${percent(level * 0.6)} · 치명피해 +${percent(level * 2.5)}`;
+      if (id === "e_pierce") {
+        return `관통 +${Math.floor(level / 5)} · 피해 +${percent(level * 0.8)}`;
       }
-      return `직격 +${Math.round(level * 2.6)}% · 폭발 +${Math.round(level * 1.2)}%`;
+      return `강화 +${percent(level * 2)}`;
     }
 
     getShopUpgradeStatText(upgrade, level) {
@@ -1873,26 +2008,26 @@
       return `${this.getShopUpgradeEffectLine(upgrade.id, level)}\n다음: ${this.getShopUpgradeEffectLine(upgrade.id, level + 1)}`;
     }
 
-    addShopUpgradeCard(upgrade, x, y) {
+    addShopUpgradeCard(upgrade, character, x, y) {
       const level = this.getMetaUpgradeLevel(upgrade.id);
       const cost = getShopUpgradeCost(level);
       const maxed = level >= SHOP_MAX_LEVEL;
       const canAfford = this.meta.coins >= cost;
-      const accent = upgrade.accent || COLORS.gold;
+      const accent = character.accent || COLORS.gold;
       const objects = [];
-      objects.push(this.add.rectangle(x, y, 468, 104, 0x071015, 0.78).setStrokeStyle(2, accent, 0.55).setDepth(520));
-      objects.push(this.add.rectangle(x, y + 43, 444, 1, accent, 0.28).setDepth(521));
+      objects.push(this.add.rectangle(x, y, 468, 96, 0x071015, 0.78).setStrokeStyle(2, accent, 0.55).setDepth(520));
+      objects.push(this.add.rectangle(x, y + 38, 444, 1, accent, 0.28).setDepth(521));
       objects.push(this.add.circle(x - 198, y - 16, 40, 0x020406, 0.78).setStrokeStyle(2, accent, 0.75).setDepth(522));
       objects.push(this.add.image(x - 198, y - 16, upgrade.icon).setDisplaySize(64, 64).setDepth(523));
-      objects.push(this.add.text(x - 144, y - 37, upgrade.title, {
+      objects.push(this.add.text(x - 144, y - 34, upgrade.title, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 19,
+        fontSize: 18,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0, 0.5).setDepth(523));
-      objects.push(this.add.text(x - 144, y - 13, upgrade.subtitle, {
+      objects.push(this.add.text(x - 144, y - 11, upgrade.subtitle, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 12,
         fontStyle: "900",
@@ -1907,9 +2042,9 @@
         color: "#ffd86b",
         align: "left",
         lineSpacing: 3,
-        wordWrap: { width: 242, useAdvancedWrap: true }
+        wordWrap: { width: 250, useAdvancedWrap: true }
       }).setOrigin(0, 0.5).setDepth(523));
-      objects.push(this.add.text(x + 158, y - 36, `Lv.${level}/${SHOP_MAX_LEVEL}`, {
+      objects.push(this.add.text(x + 158, y - 34, `Lv.${level}/${SHOP_MAX_LEVEL}`, {
         fontFamily: "Arial, sans-serif",
         fontSize: 14,
         fontStyle: "900",
@@ -1918,17 +2053,18 @@
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(523));
       for (let i = 0; i < SHOP_MAX_LEVEL; i += 1) {
-        objects.push(this.add.rectangle(x + 96 + i * 12, y - 15, 8, 18, i < level ? accent : 0x15222b, i < level ? 0.95 : 0.72)
+        objects.push(this.add.rectangle(x + 96 + i * 12, y - 12, 8, 16, i < level ? accent : 0x15222b, i < level ? 0.95 : 0.72)
           .setStrokeStyle(1, 0x000000, 0.35)
           .setDepth(523));
       }
       this.overlayObjects.push(...objects);
       const label = maxed ? "MAX" : `$${cost}`;
-      this.addOverlayButton(x + 154, y + 30, 112, 36, label, 524, () => this.buyShopUpgrade(upgrade.id), maxed ? 0x5b646b : canAfford ? COLORS.gold : 0x6f3333);
+      this.addOverlayButton(x + 154, y + 27, 112, 34, label, 524, () => this.buyShopUpgrade(upgrade.id), maxed ? 0x5b646b : canAfford ? COLORS.gold : 0x6f3333);
     }
 
     buyShopUpgrade(id) {
-      const upgrade = SHOP_UPGRADES.find((item) => item.id === id);
+      const character = SHOP_CHARACTERS.find((item) => this.getCharacterShopUpgrades(item.id).some((upgrade) => upgrade.id === id));
+      const upgrade = character ? this.getCharacterShopUpgrades(character.id).find((item) => item.id === id) : null;
       if (!upgrade) {
         return;
       }
@@ -1949,8 +2085,8 @@
       this.meta.upgrades[id] = level + 1;
       this.saveMeta();
       this.playSfx("skill");
-      this.showShop();
-      this.showToast(`${upgrade.title} Lv.${level + 1}`, upgrade.accent);
+      this.showShop(character.id);
+      this.showToast(`${upgrade.title} Lv.${level + 1}`, character.accent);
     }
 
     saveMeta() {
@@ -1980,23 +2116,50 @@
 
     applyMetaUpgrades() {
       this.meta = loadMetaSave();
-      const gunLevel = this.getMetaUpgradeLevel("gun");
-      const bowLevel = this.getMetaUpgradeLevel("bow");
-      const launcherLevel = this.getMetaUpgradeLevel("launcher");
       this.defenders.forEach((defender) => {
-        if (["c", "b", "e"].includes(defender.id) && gunLevel > 0) {
-          defender.damageBoost *= 1 + gunLevel * 0.025;
-          defender.rate *= Math.max(0.88, 1 - gunLevel * 0.008);
-        }
-        if (defender.id === "a" && bowLevel > 0) {
-          defender.damageBoost *= 1 + bowLevel * 0.022;
-          defender.critChance = Math.min(0.72, defender.critChance + bowLevel * 0.006);
-          defender.markDamageBonus += bowLevel * 0.006;
-        }
-        if (defender.id === "d" && launcherLevel > 0) {
-          defender.damageBoost *= 1 + launcherLevel * 0.026;
-          defender.splashRadiusBoost *= 1 + launcherLevel * 0.012;
-          defender.splashDamageBoost *= 1 + launcherLevel * 0.012;
+        if (defender.id === "c") {
+          const power = this.getMetaUpgradeLevel("c_power");
+          const speed = this.getMetaUpgradeLevel("c_speed");
+          const crit = this.getMetaUpgradeLevel("c_crit");
+          defender.damageBoost *= 1 + power * 0.022;
+          defender.rate *= Math.max(0.9, 1 - speed * 0.009);
+          defender.critChance = Math.min(0.72, defender.critChance + crit * 0.006);
+          defender.critMultiplier += crit * 0.01;
+        } else if (defender.id === "a") {
+          const power = this.getMetaUpgradeLevel("a_power");
+          const mark = this.getMetaUpgradeLevel("a_mark");
+          const crit = this.getMetaUpgradeLevel("a_crit");
+          defender.damageBoost *= 1 + power * 0.02;
+          defender.markDamageBonus += mark * 0.006;
+          defender.markDuration += mark * 0.06;
+          defender.critChance = Math.min(0.72, defender.critChance + crit * 0.007);
+          defender.critMultiplier += crit * 0.01;
+        } else if (defender.id === "b") {
+          const power = this.getMetaUpgradeLevel("b_power");
+          const control = this.getMetaUpgradeLevel("b_control");
+          const grenade = this.getMetaUpgradeLevel("b_grenade");
+          defender.damageBoost *= 1 + power * 0.02;
+          defender.burstDelay = Math.max(45, defender.burstDelay * Math.max(0.88, 1 - control * 0.01));
+          defender.rate *= Math.max(0.94, 1 - control * 0.004);
+          if (grenade > 0) {
+            defender.rocketEvery = Math.max(6, 10 - Math.floor(grenade * 0.4));
+          }
+        } else if (defender.id === "d") {
+          const charge = this.getMetaUpgradeLevel("d_charge");
+          const radius = this.getMetaUpgradeLevel("d_radius");
+          const slow = this.getMetaUpgradeLevel("d_slow");
+          defender.damageBoost *= 1 + charge * 0.024;
+          defender.splashRadiusBoost *= 1 + radius * 0.013;
+          defender.splashDamageBoost *= 1 + radius * 0.01;
+          defender.slowDuration += slow * 0.09;
+        } else if (defender.id === "e") {
+          const power = this.getMetaUpgradeLevel("e_power");
+          const focus = this.getMetaUpgradeLevel("e_focus");
+          const pierce = this.getMetaUpgradeLevel("e_pierce");
+          defender.damageBoost *= 1 + power * 0.023 + pierce * 0.008;
+          defender.critChance = Math.min(0.76, defender.critChance + focus * 0.006);
+          defender.critMultiplier += focus * 0.025;
+          defender.pierce += Math.floor(pierce / 5);
         }
       });
     }
