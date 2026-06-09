@@ -77,7 +77,7 @@
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
-  const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.9;
+  const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
