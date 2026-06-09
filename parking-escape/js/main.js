@@ -927,11 +927,11 @@
       dom.clearKicker.textContent = "TIME LIMIT";
       dom.clearMovesLabel.textContent = "MOVE";
       dom.clearMoves.textContent = String(this.moves);
-      dom.nextLevelCaption.textContent = "RETRY";
+      dom.nextLevelCaption.textContent = "FAILED";
       dom.nextLevel.textContent = String(this.level);
       dom.clearLevelCaption.textContent = "REACHED";
       dom.clearLevel.textContent = `Lv ${this.lastClear.rankLevel.toLocaleString()}`;
-      dom.next.textContent = "RETRY";
+      dom.next.textContent = "MAIN";
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       this.setRankSubmitLoading(false);
@@ -1048,6 +1048,7 @@
         this.setRankSubmitLoading(false);
         dom.submitRank.disabled = true;
         dom.skipRank.disabled = true;
+        dom.nickname.disabled = true;
         dom.submitStatus.textContent = result.rank ? `등록 완료 #${result.rank}` : "등록 완료";
         this.playTone("submit");
         this.returnToMenuAfterRank();
@@ -1062,6 +1063,7 @@
       this.setRankSubmitLoading(false);
       dom.submitRank.disabled = true;
       dom.skipRank.disabled = true;
+      dom.nickname.disabled = true;
       dom.submitStatus.textContent = "등록을 건너뛰었습니다";
       this.returnToMenuAfterRank(180);
     }
