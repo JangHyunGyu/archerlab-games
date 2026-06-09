@@ -2971,17 +2971,21 @@
       }
       const hitX = bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset;
       const hitY = bullet.sprite.y + Math.sin(bullet.angle) * bullet.hitOffset;
-      const sprite = this.add.image(hitX, hitY, "projectile-arrow")
+      const arrowLength = bullet.sprite.displayHeight || 42;
+      const embedDepth = clamp(arrowLength * 0.28, 8, 14);
+      const tailX = hitX - Math.cos(bullet.angle) * (arrowLength - embedDepth);
+      const tailY = hitY - Math.sin(bullet.angle) * (arrowLength - embedDepth);
+      const sprite = this.add.image(tailX, tailY, "projectile-arrow")
         .setOrigin(0.5, 1)
         .setScale(PROJECTILE_SCALES["projectile-arrow"] || 0.19)
         .setRotation(bullet.angle + Math.PI / 2)
         .setAlpha(0.95)
-        .setDepth((zombie.depth || 70) + 1);
+        .setDepth((zombie.depth || 70) - 0.5);
       this.embeddedArrows.push({
         sprite,
         zombie,
-        offsetX: hitX - zombie.x,
-        offsetY: hitY - zombie.y,
+        offsetX: tailX - zombie.x,
+        offsetY: tailY - zombie.y,
         life: ARROW_EMBED_DURATION
       });
     }
@@ -2998,7 +3002,7 @@
         }
         arrow.sprite
           .setPosition(zombie.x + arrow.offsetX, zombie.y + arrow.offsetY)
-          .setDepth((zombie.depth || 70) + 1)
+          .setDepth((zombie.depth || 70) - 0.5)
           .setAlpha(clamp(arrow.life / 0.45, 0, 0.95));
       }
     }
