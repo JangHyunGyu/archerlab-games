@@ -19,6 +19,14 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rand = (min, max) => Math.random() * (max - min) + min;
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
+  const shuffleItems = (items) => {
+    const copy = [...items];
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  };
   const getTeamDamageForLevel = (level) => Math.round(28 + Math.max(0, level - 1) * 2.1);
   const BASE_CRIT_CHANCE = 0.08;
   const DEFAULT_CRIT_MULTIPLIER = 1.85;
@@ -1128,6 +1136,7 @@
       this.load.image("zombie-hit-rifle", "assets/images/zombie-hit-rifle.png");
       this.load.image("zombie-hit-rocket", "assets/images/zombie-hit-rocket.png");
       this.load.image("zombie-hit-sniper", "assets/images/zombie-hit-sniper.png");
+      this.load.image("barricade-impact", "assets/images/barricade-impact.png");
       this.load.image("zombie-death-small", "assets/images/zombie-death-small.png");
       this.load.image("zombie-death-normal", "assets/images/zombie-death-normal.png");
       this.load.image("zombie-death-elite", "assets/images/zombie-death-elite.png");
@@ -1499,16 +1508,6 @@
       this.progressBack = this.add.rectangle(270, 75, 508, 6, 0x030404, 0.82).setOrigin(0.5).setDepth(302);
       this.progressBar = this.add.rectangle(16, 75, 1, 6, COLORS.gold, 1).setOrigin(0, 0.5).setDepth(303);
 
-      this.pauseCircle = this.add.image(34, 42, "ui-pause-circle").setDisplaySize(58, 58).setDepth(315);
-      this.pauseCircle.setInteractive({ useHandCursor: true });
-      this.pauseCircle.on("pointerdown", () => this.togglePause());
-      this.ui.pauseText = this.add.text(34, 42, "II", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 23,
-        fontStyle: "900",
-        color: "#ffffff"
-      }).setOrigin(0.5).setDepth(316);
-
       this.ui.timer = this.add.text(82, 42, "00:00", {
         fontFamily: "Arial, sans-serif",
         fontSize: 21,
@@ -1532,18 +1531,6 @@
         color: "#ffffff",
         stroke: "#1a2228",
         strokeThickness: 4
-      }).setOrigin(0.5).setDepth(316);
-
-      this.speedCircle = this.add.image(493, 42, "ui-speed-circle").setDisplaySize(60, 60).setDepth(315);
-      this.speedCircle.setInteractive({ useHandCursor: true });
-      this.speedCircle.on("pointerdown", () => this.toggleSpeed());
-      this.ui.speed = this.add.text(493, 42, "x1.0", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 18,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#111",
-        strokeThickness: 3
       }).setOrigin(0.5).setDepth(316);
 
       this.add.image(86, 118, "ui-hero-panel").setDisplaySize(150, 68).setDepth(310);
