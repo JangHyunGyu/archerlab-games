@@ -244,11 +244,11 @@
     { x: 488, y: 924 }
   ];
   const OWNER_SKILL_PORTRAITS = {
-    c: "portrait-pistol",
-    a: "portrait-rally",
-    b: "portrait-barrage",
-    d: "portrait-frost",
-    e: "portrait-repair"
+    c: "avatar-pistol",
+    a: "avatar-bow",
+    b: "avatar-rifle",
+    d: "avatar-rocket",
+    e: "avatar-sniper"
   };
   function getAimPose(key) {
     return AIM_POSE_BY_KEY[key] || AIM_POSE_BY_KEY["aim-12"];
@@ -936,6 +936,11 @@
       this.load.image("character-c", "assets/images/character-c.png");
       this.load.image("character-d", "assets/images/character-d.png");
       this.load.image("character-e", "assets/images/character-e.png");
+      this.load.image("avatar-pistol", "assets/images/avatar-pistol.png");
+      this.load.image("avatar-bow", "assets/images/avatar-bow.png");
+      this.load.image("avatar-rifle", "assets/images/avatar-rifle.png");
+      this.load.image("avatar-rocket", "assets/images/avatar-rocket.png");
+      this.load.image("avatar-sniper", "assets/images/avatar-sniper.png");
       this.load.image("projectile-arrow", "assets/images/projectile-arrow.png");
       this.load.image("projectile-pistol", "assets/images/projectile-pistol.png");
       this.load.image("projectile-rifle", "assets/images/projectile-rifle.png");
