@@ -25,27 +25,6 @@ body {
   place-items: center;
 }
 
-.archerlab-link {
-  position: fixed;
-  top: max(10px, env(safe-area-inset-top));
-  left: max(10px, env(safe-area-inset-left));
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-  background: rgba(10, 14, 18, 0.72);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  text-decoration: none;
-  letter-spacing: 0;
-  backdrop-filter: blur(10px);
-}
-
 #game-shell {
   position: relative;
   width: min(var(--game-viewport-width), calc(var(--game-viewport-height) * 0.5625));
@@ -93,11 +72,6 @@ noscript {
 }
 
 @media (max-width: 720px) {
-  .archerlab-link {
-    transform: scale(0.92);
-    transform-origin: top left;
-  }
-
   #game-shell {
     box-shadow: none;
   }

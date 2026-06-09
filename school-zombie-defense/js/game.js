@@ -1736,6 +1736,13 @@
       }
     }
 
+    vibrateImpact(pattern = [60, 28, 80]) {
+      const vibrate = window.navigator?.vibrate;
+      if (typeof vibrate === "function") {
+        vibrate.call(window.navigator, pattern);
+      }
+    }
+
     requestHitStop(duration = 0.025) {
       this.hitStopTimer = Math.max(this.hitStopTimer || 0, clamp(duration, 0, 0.055));
     }
@@ -2998,9 +3005,12 @@
       }
       this.coreHp = clamp(this.coreHp - amount, 0, this.maxCoreHp);
       this.morale = Math.round((this.coreHp / this.maxCoreHp) * 100);
-      if (amount > 0) {
+      if (rawAmount > 0) {
         this.playSfx("core");
-        this.shakeCamera(120, 0.006);
+        const severity = clamp(rawAmount / 46, 1, 1.9);
+        this.shakeCamera(260, 0.014 * severity);
+        this.requestHitStop(0.055);
+        this.vibrateImpact(severity > 1.45 ? [90, 35, 125] : [62, 28, 86]);
       }
       if (this.coreHp <= 0) {
         this.gameOver();
@@ -3008,12 +3018,40 @@
     }
 
     createHitAtBarricade(x) {
-      const sparks = this.add.circle(x, this.bounds.barricade + rand(8, 28), 8, 0xffd86b, 0.8).setDepth(220);
+      const effectWidth = 520;
+      const texture = this.textures.get("barricade-impact").getSourceImage();
+      const effectHeight = effectWidth * texture.height / texture.width;
+      const effectX = clamp(x, effectWidth / 2 + 8, GAME_WIDTH - effectWidth / 2 - 8);
+      const effectY = this.bounds.barricade + 38;
+      const impact = this.add.image(effectX, effectY, "barricade-impact")
+        .setOrigin(0.5, 0.55)
+        .setDisplaySize(effectWidth, effectHeight)
+        .setRotation(rand(-0.035, 0.035))
+        .setAlpha(0.98)
+        .setDepth(225);
+      const flash = this.add.rectangle(270, this.bounds.barricade + 46, 540, 86, 0xff3b22, 0.18).setDepth(224);
+      const sparks = this.add.circle(x, this.bounds.barricade + rand(10, 30), 11, 0xffd86b, 0.86).setDepth(226);
+      this.tweens.add({
+        targets: impact,
+        scaleX: impact.scaleX * 1.08,
+        scaleY: impact.scaleY * 1.08,
+        alpha: 0,
+        duration: 330,
+        ease: "Cubic.easeOut",
+        onComplete: () => impact.destroy()
+      });
+      this.tweens.add({
+        targets: flash,
+        alpha: 0,
+        duration: 150,
+        ease: "Cubic.easeOut",
+        onComplete: () => flash.destroy()
+      });
       this.tweens.add({
         targets: sparks,
-        scale: 2.2,
+        scale: 2.8,
         alpha: 0,
-        duration: 230,
+        duration: 240,
         onComplete: () => sparks.destroy()
       });
     }
@@ -3356,7 +3394,7 @@
     }
 
     pickUpgrades() {
-      const recruitPool = this.getRecruitUpgrades();
+      const recruitPool = shuffleItems(this.getRecruitUpgrades());
       const commonPool = this.getCommonUpgrades();
       const characterPool = this.getCharacterUpgrades();
       const chosen = [];
@@ -3366,8 +3404,7 @@
       const openRecruitSlots = Math.max(0, getUnlockedRecruitSlots(this.level) - recruitedNonPlayerCount);
       const recruitOffers = Math.min(recruitPool.length, openRecruitSlots > 0 ? 1 : 0);
       while (chosen.length < recruitOffers && recruitPool.length > 0) {
-        const index = Math.floor(Math.random() * recruitPool.length);
-        chosen.push(recruitPool.splice(index, 1)[0]);
+        chosen.push(recruitPool.pop());
       }
       const shouldOfferCommon = this.coreHp < this.maxCoreHp * 0.55 || Math.random() < 0.45;
       if (chosen.length < 3 && commonPool.length > 0 && shouldOfferCommon) {
