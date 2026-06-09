@@ -113,6 +113,13 @@
     coin: "assets/sounds/sfx/coin.wav",
     pause: "assets/sounds/sfx/pause.wav"
   };
+  const WEAPON_SFX_INTENSITY = {
+    pistol: 0.78,
+    rifle: 1,
+    sniper: 1,
+    rocket: 1,
+    arrow: 1
+  };
   const BGM_ASSETS = {
     menu: "assets/sounds/bgm/menu_loop.mp3",
     game: "assets/sounds/bgm/game_loop.mp3"
@@ -1899,7 +1906,8 @@
         "projectile-sniper": "sniper",
         "projectile-rocket": "rocket"
       };
-      this.playSfx(map[projectile] || "pistol");
+      const sfx = map[projectile] || "pistol";
+      this.playSfx(sfx, WEAPON_SFX_INTENSITY[sfx] || 1);
     }
 
     shakeCamera(duration = 70, intensity = 0.004) {
