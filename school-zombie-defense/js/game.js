@@ -129,29 +129,29 @@
   ];
   const SHOP_CHARACTER_UPGRADES = {
     c: [
-      { id: "c_power", title: "권총 정비", subtitle: "피해", icon: "skill-pistol-rapid" },
-      { id: "c_speed", title: "속사 훈련", subtitle: "공격 간격", icon: "skill-multishot" },
-      { id: "c_crit", title: "급소 사격", subtitle: "치명", icon: "skill-pierce" }
+      { id: "c_power", title: "강화 총열", subtitle: "권총 부품", part: "총열 내구와 탄속 보정", icon: "skill-pistol-rapid" },
+      { id: "c_speed", title: "반동 스프링", subtitle: "권총 부품", part: "슬라이드 복귀 속도 개선", icon: "skill-multishot" },
+      { id: "c_crit", title: "정밀 조준기", subtitle: "권총 부품", part: "급소 조준 보정 모듈", icon: "skill-pierce" }
     ],
     a: [
-      { id: "a_power", title: "강화 화살", subtitle: "피해", icon: "skill-arrow-pin" },
-      { id: "a_mark", title: "표식 연마", subtitle: "표식", icon: "skill-mark" },
-      { id: "a_crit", title: "집중 호흡", subtitle: "치명", icon: "skill-rally" }
+      { id: "a_power", title: "복합 활대", subtitle: "활 부품", part: "장력과 화살 속도 강화", icon: "skill-arrow-pin" },
+      { id: "a_mark", title: "표식 화살촉", subtitle: "화살 부품", part: "약점 표식 각인 강화", icon: "skill-mark" },
+      { id: "a_crit", title: "균형 깃털", subtitle: "화살 부품", part: "비행 안정성과 치명 보정", icon: "skill-rally" }
     ],
     b: [
-      { id: "b_power", title: "소총 탄약", subtitle: "피해", icon: "skill-barrage" },
-      { id: "b_control", title: "연발 제어", subtitle: "연발 간격", icon: "skill-barrage" },
-      { id: "b_grenade", title: "하부 유탄", subtitle: "유탄 주기", icon: "skill-rifle-grenade" }
+      { id: "b_power", title: "강선 총열", subtitle: "소총 부품", part: "탄속과 관통 안정성 강화", icon: "skill-barrage" },
+      { id: "b_control", title: "가스 피스톤", subtitle: "소총 부품", part: "연발 반동 제어 장치", icon: "skill-barrage" },
+      { id: "b_grenade", title: "하부 유탄장치", subtitle: "소총 부품", part: "소형 유탄 발사 모듈", icon: "skill-rifle-grenade" }
     ],
     d: [
-      { id: "d_charge", title: "직격 장약", subtitle: "직격 피해", icon: "skill-rocket-impact" },
-      { id: "d_radius", title: "고폭 탄두", subtitle: "폭발 반경", icon: "skill-rocket" },
-      { id: "d_slow", title: "냉각 탄두", subtitle: "둔화", icon: "skill-frost" }
+      { id: "d_charge", title: "성형작약 탄두", subtitle: "로켓 부품", part: "직격 관통 폭압 집중", icon: "skill-rocket-impact" },
+      { id: "d_radius", title: "확산 노즐", subtitle: "로켓 부품", part: "폭발 확산각 조정", icon: "skill-rocket" },
+      { id: "d_slow", title: "냉각 연료캡슐", subtitle: "로켓 부품", part: "냉각 연소재 혼합", icon: "skill-frost" }
     ],
     e: [
-      { id: "e_power", title: "대구경 탄", subtitle: "피해", icon: "skill-sniper" },
-      { id: "e_focus", title: "약점 조준", subtitle: "치명", icon: "skill-sniper-weakpoint" },
-      { id: "e_pierce", title: "철갑 탄심", subtitle: "관통", icon: "skill-pierce" }
+      { id: "e_power", title: "대구경 총열", subtitle: "저격 부품", part: "고압탄 대응 총열 강화", icon: "skill-sniper" },
+      { id: "e_focus", title: "약점 스코프", subtitle: "저격 부품", part: "취약부위 자동 보정", icon: "skill-sniper-weakpoint" },
+      { id: "e_pierce", title: "철갑 탄심", subtitle: "저격 탄약", part: "장갑 관통 탄심 교체", icon: "skill-pierce" }
     ]
   };
   const getAllShopUpgradeIds = () => Object.values(SHOP_CHARACTER_UPGRADES).flat().map((upgrade) => upgrade.id);
@@ -1908,7 +1908,7 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(504));
 
-      items.push(this.add.text(270, 330, "강화할 캐릭터 선택", {
+      items.push(this.add.text(270, 330, "정비할 장비 선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -1920,7 +1920,7 @@
         this.addShopCharacterButton(character, 62 + index * 104, 402, character.id === selectedCharacter.id);
       });
       items.push(this.add.rectangle(270, 490, 430, 44, 0x071015, 0.78).setStrokeStyle(1, selectedCharacter.accent, 0.58).setDepth(520));
-      items.push(this.add.text(270, 490, `${selectedCharacter.name} · ${selectedCharacter.weapon} 강화`, {
+      items.push(this.add.text(270, 490, `${selectedCharacter.name} · ${selectedCharacter.weapon} 정비`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 20,
         fontStyle: "900",
@@ -2015,8 +2015,8 @@
       const canAfford = this.meta.coins >= cost;
       const accent = character.accent || COLORS.gold;
       const objects = [];
-      objects.push(this.add.rectangle(x, y, 468, 96, 0x071015, 0.78).setStrokeStyle(2, accent, 0.55).setDepth(520));
-      objects.push(this.add.rectangle(x, y + 38, 444, 1, accent, 0.28).setDepth(521));
+      objects.push(this.add.rectangle(x, y, 468, 100, 0x071015, 0.78).setStrokeStyle(2, accent, 0.55).setDepth(520));
+      objects.push(this.add.rectangle(x, y + 43, 444, 1, accent, 0.22).setDepth(521));
       objects.push(this.add.circle(x - 198, y - 16, 40, 0x020406, 0.78).setStrokeStyle(2, accent, 0.75).setDepth(522));
       objects.push(this.add.image(x - 198, y - 16, upgrade.icon).setDisplaySize(64, 64).setDepth(523));
       objects.push(this.add.text(x - 144, y - 34, upgrade.title, {
@@ -2027,22 +2027,32 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0, 0.5).setDepth(523));
-      objects.push(this.add.text(x - 144, y - 11, upgrade.subtitle, {
+      objects.push(this.add.text(x - 144, y - 14, upgrade.subtitle, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 12,
+        fontSize: 11,
         fontStyle: "900",
         color: "#d6e9ed",
         stroke: "#050607",
-        strokeThickness: 3
+        strokeThickness: 3,
+        wordWrap: { width: 228, useAdvancedWrap: true }
       }).setOrigin(0, 0.5).setDepth(523));
-      objects.push(this.add.text(x - 144, y + 18, this.getShopUpgradeStatText(upgrade, level), {
+      objects.push(this.add.text(x - 144, y + 4, upgrade.part || "정비 부품", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 12,
+        fontSize: 11,
+        fontStyle: "800",
+        color: "#b8c8cc",
+        stroke: "#050607",
+        strokeThickness: 3,
+        wordWrap: { width: 228, useAdvancedWrap: true }
+      }).setOrigin(0, 0.5).setDepth(523));
+      objects.push(this.add.text(x - 144, y + 29, this.getShopUpgradeStatText(upgrade, level), {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 11,
         fontStyle: "900",
         color: "#ffd86b",
         align: "left",
-        lineSpacing: 3,
-        wordWrap: { width: 250, useAdvancedWrap: true }
+        lineSpacing: 2,
+        wordWrap: { width: 228, useAdvancedWrap: true }
       }).setOrigin(0, 0.5).setDepth(523));
       objects.push(this.add.text(x + 158, y - 34, `Lv.${level}/${SHOP_MAX_LEVEL}`, {
         fontFamily: "Arial, sans-serif",
