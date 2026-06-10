@@ -1271,6 +1271,8 @@
       this.rankSessionPromise = null;
       this.rankStageSyncPromises = [];
       this.rankSyncFailed = false;
+      this.rankNameLayer = null;
+      this.rankSubmitInFlight = false;
       this.shopSelectedCharacter = "c";
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
@@ -2410,28 +2412,117 @@
       }
     }
 
-    async submitRankScore(snapshot = this.lastRankableRun) {
+    removeRankNameLayer() {
+      if (this.rankNameLayer && this.rankNameLayer.parentNode) {
+        this.rankNameLayer.parentNode.removeChild(this.rankNameLayer);
+      }
+      this.rankNameLayer = null;
+      this.rankSubmitInFlight = false;
+    }
+
+    returnToGameStart() {
+      this.removeRankNameLayer();
+      this.lastRankableRun = null;
+      this.showMenu();
+    }
+
+    showRankNameLayer(snapshot = this.lastRankableRun, options = {}) {
       const run = snapshot || this.getRankSnapshot();
       if (!run || run.score <= 0) {
         this.showToast("클리어한 스테이지가 없습니다", COLORS.red);
+        return;
+      }
+      this.removeRankNameLayer();
+
+      const shell = document.getElementById("game-shell") || document.body;
+      const layer = document.createElement("div");
+      layer.className = "school-zombie-rank-layer";
+      layer.innerHTML = `
+        <form class="school-zombie-rank-dialog" autocomplete="off">
+          <div class="school-zombie-rank-kicker">RANKING</div>
+          <div class="school-zombie-rank-title">랭킹 등록</div>
+          <div class="school-zombie-rank-score">클리어 St.${run.score} · 처치 ${run.kills}</div>
+          <input class="school-zombie-rank-input" name="playerName" maxlength="20" aria-label="랭킹 이름" />
+          <div class="school-zombie-rank-actions">
+            <button class="school-zombie-rank-submit" type="submit">등록</button>
+            <button class="school-zombie-rank-skip" type="button">SKIP</button>
+          </div>
+        </form>
+      `;
+      const form = layer.querySelector("form");
+      const input = layer.querySelector("input");
+      const submitButton = layer.querySelector(".school-zombie-rank-submit");
+      const skipButton = layer.querySelector(".school-zombie-rank-skip");
+      input.value = this.getStoredRankName() || "DEFENDER";
+
+      const stopGameInput = (event) => {
+        event.stopPropagation();
+      };
+      layer.addEventListener("pointerdown", stopGameInput);
+      layer.addEventListener("touchstart", stopGameInput, { passive: true });
+      layer.addEventListener("mousedown", stopGameInput);
+
+      const submit = () => {
+        if (this.rankSubmitInFlight) {
+          return;
+        }
+        const name = input.value;
+        submitButton.disabled = true;
+        skipButton.disabled = true;
+        submitButton.textContent = "등록 중";
+        this.rankSubmitInFlight = true;
+        this.submitRankScore(run, name, options).finally(() => {
+          if (this.rankNameLayer === layer) {
+            this.rankSubmitInFlight = false;
+            submitButton.disabled = false;
+            skipButton.disabled = false;
+            submitButton.textContent = "등록";
+          }
+        });
+      };
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        submit();
+      });
+      skipButton.addEventListener("click", () => {
+        this.returnToGameStart();
+      });
+      layer.addEventListener("keydown", (event) => {
+        event.stopPropagation();
+        if (event.key === "Escape") {
+          event.preventDefault();
+          this.returnToGameStart();
+        }
+      });
+
+      shell.appendChild(layer);
+      this.rankNameLayer = layer;
+      requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+      });
+    }
+
+    async submitRankScore(snapshot = this.lastRankableRun, rawName = null, options = {}) {
+      const run = snapshot || this.getRankSnapshot();
+      if (!run || run.score <= 0) {
+        this.showToast("클리어한 스테이지가 없습니다", COLORS.red);
+        return;
+      }
+      if (rawName === null) {
+        this.showRankNameLayer(run, options);
+        return;
+      }
+      const name = String(rawName).trim().replace(/\s+/g, " ").slice(0, 20);
+      if (!name) {
+        this.showToast("이름을 입력하세요", COLORS.red);
         return;
       }
       this.showToast("랭킹 검증 중...", COLORS.gold);
       const synced = await this.ensureRankStagesRecorded().catch(() => false);
       if (!this.rankSessionId || !synced || this.rankSyncFailed) {
         this.showToast("랭킹 검증 실패", COLORS.red);
-        return;
-      }
-      const defaultName = this.getStoredRankName() || "DEFENDER";
-      const rawName = typeof window.prompt === "function"
-        ? window.prompt("랭킹 이름을 입력하세요", defaultName)
-        : defaultName;
-      if (rawName === null) {
-        return;
-      }
-      const name = String(rawName).trim().replace(/\s+/g, " ").slice(0, 20);
-      if (!name) {
-        this.showToast("이름을 입력하세요", COLORS.red);
         return;
       }
 
@@ -2463,8 +2554,13 @@
         }
         this.saveStoredRankName(name);
         this.lastRankableRun = null;
+        this.removeRankNameLayer();
         this.showToast("랭킹 등록 완료", COLORS.green);
-        this.showRankings();
+        if (options.returnToMenuOnSuccess) {
+          this.showMenu();
+        } else {
+          this.showRankings();
+        }
       } catch (error) {
         this.showToast("랭킹 등록 실패", COLORS.red);
       }
@@ -4330,11 +4426,10 @@
       this.clearOverlay();
       const items = this.overlayObjects;
       items.push(this.add.image(270, 480, "gameover-last-stand").setDisplaySize(540, 960).setDepth(540));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.38).setDepth(541));
-      items.push(this.add.rectangle(270, 708, 540, 330, 0x070203, 0.32).setDepth(541));
-      items.push(this.add.rectangle(270, 430, 392, 284, 0x0d151b, 0.78).setStrokeStyle(2, 0xff6b68, 0.82).setDepth(542));
-      items.push(this.add.rectangle(270, 326, 300, 4, 0xff6b68, 0.9).setDepth(543));
-      items.push(this.add.text(270, 366, "방어선 붕괴", {
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.14).setDepth(541));
+      items.push(this.add.rectangle(270, 166, 424, 236, 0x0d151b, 0.5).setStrokeStyle(2, 0xff6b68, 0.74).setDepth(542));
+      items.push(this.add.rectangle(270, 62, 300, 4, 0xff6b68, 0.9).setDepth(543));
+      items.push(this.add.text(270, 98, "방어선 붕괴", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 42,
         fontStyle: "900",
@@ -4342,15 +4437,15 @@
         stroke: "#050607",
         strokeThickness: 6
       }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 418, `Lv.${this.level} · 처치 ${this.kills}`, {
+      items.push(this.add.text(270, 146, `Lv.${this.level} · 처치 ${this.kills}`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 24,
+        fontSize: 22,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 462, `클리어 St.${rankSnapshot.score} · 도달 St.${rankSnapshot.reachedStage}`, {
+      items.push(this.add.text(270, 182, `클리어 St.${rankSnapshot.score} · 도달 St.${rankSnapshot.reachedStage}`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 19,
         fontStyle: "900",
@@ -4358,7 +4453,7 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 500, `획득 $${earnedCoins} · 보유 $${this.meta.coins}`, {
+      items.push(this.add.text(270, 216, `획득 $${earnedCoins} · 보유 $${this.meta.coins}`, {
         fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -4366,14 +4461,14 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544));
-      this.addOverlayButton(164, 570, 164, 50, "다시 방어", 545, () => this.startRun(), COLORS.gold);
-      this.addOverlayButton(376, 570, 164, 50, "상점", 545, () => this.showShop(), COLORS.blue);
-      if (this.lastRankableRun) {
-        this.addOverlayButton(270, 636, 220, 48, "랭킹 등록", 545, () => this.submitRankScore(), COLORS.blue);
-      }
+      this.addOverlayButton(162, 286, 184, 52, "랭킹 등록", 545, () => {
+        this.submitRankScore(this.lastRankableRun, null, { returnToMenuOnSuccess: true });
+      }, COLORS.blue);
+      this.addOverlayButton(378, 286, 150, 52, "SKIP", 545, () => this.returnToGameStart(), COLORS.gold);
     }
 
     clearOverlay() {
+      this.removeRankNameLayer();
       this.overlayObjects.forEach((item) => {
         this.destroyGameObject(item);
       });
