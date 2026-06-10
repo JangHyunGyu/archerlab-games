@@ -91,9 +91,9 @@
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
   const ZOMBIE_CORPSE_EFFECTS = {
-    small: { stainWidth: 104, stainHeight: 44, fall: 250, hold: 3100, fade: 1350 },
-    normal: { stainWidth: 138, stainHeight: 56, fall: 285, hold: 3600, fade: 1550 },
-    elite: { stainWidth: 188, stainHeight: 76, fall: 340, hold: 4300, fade: 1800 }
+    small: { stainWidth: 104, stainHeight: 44, fall: 250, corpseHold: 2000, corpseFade: 650, stainHold: 5000, stainFade: 1500 },
+    normal: { stainWidth: 138, stainHeight: 56, fall: 285, corpseHold: 2000, corpseFade: 700, stainHold: 5000, stainFade: 1600 },
+    elite: { stainWidth: 188, stainHeight: 76, fall: 340, corpseHold: 2200, corpseFade: 800, stainHold: 5200, stainFade: 1750 }
   };
   const ZOMBIE_CORPSE_TYPES = ["normal", "runner", "brute", "volatile", "elite"];
   const ZOMBIE_CORPSE_TEXTURES = Object.fromEntries(
@@ -3928,23 +3928,32 @@
           }
         }
       });
-      this.scheduleSceneDelay(effect.hold, () => {
+      this.scheduleSceneDelay(effect.corpseHold, () => {
         const corpseTarget = corpseImage && !corpseImage.destroyed
           ? corpseImage
           : zombie && !zombie.destroyed ? zombie : null;
-        const fadeTargets = [corpseTarget, stain, shadow, smear].filter((target) => target && !target.destroyed);
-        if (!fadeTargets.length) {
+        if (!corpseTarget) {
           return;
         }
         this.tweens.add({
-          targets: fadeTargets,
+          targets: corpseTarget,
           alpha: 0,
-          duration: effect.fade,
+          duration: effect.corpseFade,
+          ease: "Sine.easeInOut",
+          onComplete: () => this.destroyTransientObject(corpseTarget, false)
+        });
+      });
+      this.scheduleSceneDelay(effect.stainHold, () => {
+        const stainTargets = [stain, shadow, smear].filter((target) => target && !target.destroyed);
+        if (!stainTargets.length) {
+          return;
+        }
+        this.tweens.add({
+          targets: stainTargets,
+          alpha: 0,
+          duration: effect.stainFade,
           ease: "Sine.easeInOut",
           onComplete: () => {
-            if (corpseTarget) {
-              this.destroyTransientObject(corpseTarget, false);
-            }
             this.destroyTransientObject(stain, false);
             this.destroyTransientObject(shadow, false);
             this.destroyTransientObject(smear, false);
