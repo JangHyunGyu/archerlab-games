@@ -3761,12 +3761,23 @@
       const displayH = zombie.displayH || 170;
       const displayW = zombie.displayW || displayH;
       const corpseDepth = 58 + y / 5;
-      const fallDir = zombie.flipX ? -1 : 1;
+      const fallProfiles = [
+        { angle: -rand(76, 104), x: -rand(0.14, 0.27), y: rand(0.12, 0.25) },
+        { angle: rand(76, 104), x: rand(0.14, 0.27), y: rand(0.12, 0.25) },
+        { angle: -rand(48, 68), x: -rand(0.2, 0.34), y: rand(0.2, 0.34) },
+        { angle: rand(48, 68), x: rand(0.2, 0.34), y: rand(0.2, 0.34) },
+        { angle: -rand(116, 142), x: -rand(0.04, 0.15), y: rand(0.08, 0.2) },
+        { angle: rand(116, 142), x: rand(0.04, 0.15), y: rand(0.08, 0.2) },
+        { angle: (Math.random() < 0.5 ? -1 : 1) * rand(150, 168), x: rand(-0.08, 0.08), y: rand(0.04, 0.16) }
+      ];
+      const fall = choose(fallProfiles);
       const corpseX = clamp(x, this.bounds.left + 26, this.bounds.right - 26);
       const corpseY = y + displayH * 0.18;
-      const landingX = clamp(corpseX + fallDir * rand(displayH * 0.12, displayH * 0.22), this.bounds.left + 28, this.bounds.right - 28);
-      const landingY = clamp(corpseY + rand(12, 26), -20, this.bounds.barricade + 22);
-      const finalAngle = fallDir * rand(78, 98);
+      const landingX = clamp(corpseX + displayH * fall.x + rand(-6, 6), this.bounds.left + 28, this.bounds.right - 28);
+      const landingY = clamp(corpseY + displayH * fall.y + rand(-5, 8), -20, this.bounds.barricade + 22);
+      const finalAngle = fall.angle + rand(-5, 5);
+      const stumbleX = clamp(corpseX + displayH * fall.x * 0.22, this.bounds.left + 24, this.bounds.right - 24);
+      const stumbleY = y + displayH * (0.06 + fall.y * 0.16);
 
       this.tweens.killTweensOf(zombie);
       this.trackTransient(zombie);
@@ -3844,9 +3855,10 @@
       });
       this.tweens.add({
         targets: zombie,
-        angle: finalAngle * 0.22,
-        y: y + displayH * 0.08,
-        duration: 82,
+        angle: finalAngle * rand(0.16, 0.28),
+        x: stumbleX,
+        y: stumbleY,
+        duration: rand(70, 112),
         ease: "Quad.easeOut"
       });
       this.tweens.add({
