@@ -1137,6 +1137,7 @@
       this.load.image("title-keyart", "assets/images/title-keyart.png");
       this.load.image("ui-title-button", "assets/images/ui-title-button.png");
       this.load.image("skill-choice-backdrop", "assets/images/skill-choice-backdrop.png");
+      this.load.image("gameover-last-stand", "assets/images/gameover-last-stand.png");
       this.load.image("shop-blackmarket", "assets/images/shop-blackmarket.png");
       this.load.image("premium-skill-card", "assets/images/premium-skill-card.png");
       this.load.image("character-a", "assets/images/character-a.png");
@@ -4317,9 +4318,10 @@
       this.clearRunEntities();
       this.clearOverlay();
       const items = this.overlayObjects;
-      items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setAlpha(0.72).setDepth(540));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.64).setDepth(541));
-      items.push(this.add.rectangle(270, 430, 392, 284, 0x0d151b, 0.9).setStrokeStyle(2, 0xff6b68, 0.8).setDepth(542));
+      items.push(this.add.image(270, 480, "gameover-last-stand").setDisplaySize(540, 960).setDepth(540));
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.38).setDepth(541));
+      items.push(this.add.rectangle(270, 708, 540, 330, 0x070203, 0.32).setDepth(541));
+      items.push(this.add.rectangle(270, 430, 392, 284, 0x0d151b, 0.78).setStrokeStyle(2, 0xff6b68, 0.82).setDepth(542));
       items.push(this.add.rectangle(270, 326, 300, 4, 0xff6b68, 0.9).setDepth(543));
       items.push(this.add.text(270, 366, "방어선 붕괴", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
