@@ -105,11 +105,11 @@
     ])
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
-    normal: { corpseWidth: 0.95, deathSize: 0.9 },
-    runner: { corpseWidth: 0.86, deathSize: 0.84 },
-    brute: { corpseWidth: 1.05, deathSize: 0.98 },
-    volatile: { corpseWidth: 0.96, deathSize: 0.9 },
-    elite: { corpseWidth: 1.08, deathSize: 0.98 }
+    normal: { corpseWidth: 0.95, deathStartSize: 0.89, deathEndSize: 1.18 },
+    runner: { corpseWidth: 0.86, deathStartSize: 1.02, deathEndSize: 0.99 },
+    brute: { corpseWidth: 1.05, deathStartSize: 1.2, deathEndSize: 1.29 },
+    volatile: { corpseWidth: 0.96, deathStartSize: 0.98, deathEndSize: 0.92 },
+    elite: { corpseWidth: 1.08, deathStartSize: 1.04, deathEndSize: 1.18 }
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
@@ -3884,7 +3884,11 @@
       const hasDeathTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists(deathTexture);
-      const deathDisplaySize = displayH * renderScale.deathSize;
+      const deathStartSize = renderScale.deathStartSize || renderScale.deathSize || 0.9;
+      const deathEndSize = renderScale.deathEndSize || deathStartSize;
+      const deathDisplaySize = displayH * deathStartSize;
+      const deathEndDisplaySize = displayH * deathEndSize;
+      const deathScaleToCorpse = deathDisplaySize > 0 ? deathEndDisplaySize / deathDisplaySize : 1;
       const deathSprite = hasDeathTexture
         ? this.trackTransient(this.add.sprite(corpseX, y + displayH * 0.04, deathTexture, 0)
           .setOrigin(0.5)
@@ -3937,8 +3941,8 @@
           x: landingX,
           y: landingY,
           angle: finalAngle * 0.08,
-          scaleX: deathBaseScaleX * 1.02,
-          scaleY: deathBaseScaleY * 1.02,
+          scaleX: deathBaseScaleX * deathScaleToCorpse,
+          scaleY: deathBaseScaleY * deathScaleToCorpse,
           duration: effect.fall + 260,
           ease: "Quad.easeInOut",
           onComplete: () => {
