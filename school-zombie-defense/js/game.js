@@ -90,11 +90,12 @@
     explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
-  const ZOMBIE_DEATH_EFFECTS = {
-    small: { texture: "zombie-death-small-sheet", width: 150, duration: 620, alpha: 0.96, scalePeak: 1.04, frameWidth: 190, frameHeight: 220, frames: 18 },
-    normal: { texture: "zombie-death-normal-sheet", width: 210, duration: 720, alpha: 0.97, scalePeak: 1.035, frameWidth: 260, frameHeight: 270, frames: 22 },
-    elite: { texture: "zombie-death-elite-sheet", width: 280, duration: 820, alpha: 0.98, scalePeak: 1.03, frameWidth: 360, frameHeight: 320, frames: 26 }
+  const BLOOD_BURST_EFFECTS = {
+    small: { core: 34, spread: 62, droplets: 16, mist: 10, duration: 780, pop: 145 },
+    normal: { core: 48, spread: 84, droplets: 24, mist: 16, duration: 940, pop: 165 },
+    elite: { core: 70, spread: 118, droplets: 34, mist: 24, duration: 1120, pop: 185 }
   };
+  const BLOOD_BURST_COLORS = [COLORS.blood, 0x99151c, 0xb91f23, 0x5c080d, 0xdf3030];
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
@@ -1193,9 +1194,6 @@
       this.load.spritesheet("zombie-hit-rocket-sheet", imageAsset("assets/images/zombie-hit-rocket-sheet.png"), { frameWidth: 160, frameHeight: 130 });
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
-      this.load.spritesheet("zombie-death-small-sheet", imageAsset("assets/images/zombie-death-small-sheet.png"), { frameWidth: 190, frameHeight: 220 });
-      this.load.spritesheet("zombie-death-normal-sheet", imageAsset("assets/images/zombie-death-normal-sheet.png"), { frameWidth: 260, frameHeight: 270 });
-      this.load.spritesheet("zombie-death-elite-sheet", imageAsset("assets/images/zombie-death-elite-sheet.png"), { frameWidth: 360, frameHeight: 320 });
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
       this.load.image("zombie-walk-runner", imageAsset("assets/images/zombie-walk-runner.png"));
@@ -3758,39 +3756,123 @@
     createDeathBurst(x, y, zombie) {
       const sizeScale = this.getZombieEffectScale(zombie);
       const tier = zombie.elite ? "elite" : sizeScale < 0.95 ? "small" : "normal";
-      const effect = ZOMBIE_DEATH_EFFECTS[tier];
-      const displayWidth = effect.width * sizeScale;
-      const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
-      const effectX = clamp(x, displayWidth / 2 + 8, GAME_WIDTH - displayWidth / 2 - 8);
-      const effectY = y - (zombie.displayH || 170) * 0.06;
-      const burst = this.trackTransient(this.add.sprite(effectX, effectY, effect.texture, 0)
-        .setOrigin(0.5, 0.64)
-        .setDisplaySize(displayWidth, displayHeight)
-        .setRotation(rand(-0.12, 0.12))
-        .setAlpha(effect.alpha)
-        .setDepth(232));
-      const baseScaleX = burst.scaleX;
-      const baseScaleY = burst.scaleY;
-      const popDuration = Math.max(120, Math.round(effect.duration * 0.24));
-      burst.setScale(baseScaleX * 0.72, baseScaleY * 0.72);
-      this.playTransientSpriteFrames(burst, effect.frames, effect.duration);
+      const effect = BLOOD_BURST_EFFECTS[tier];
+      const burstScale = sizeScale * (zombie.type === "brute" ? 1.08 : 1);
+      const coreRadius = effect.core * burstScale;
+      const spread = effect.spread * burstScale;
+      const effectX = clamp(x, spread + 8, GAME_WIDTH - spread - 8);
+      const effectY = y - (zombie.displayH || 170) * 0.16;
+      const burst = this.trackTransient(this.add.container(effectX, effectY).setDepth(232));
+      const popDuration = effect.pop;
+
+      const addCircle = (offsetX, offsetY, radius, color, alpha) => {
+        const circle = this.add.circle(offsetX, offsetY, radius, color, alpha);
+        burst.add(circle);
+        return circle;
+      };
+      const addEllipse = (offsetX, offsetY, width, height, color, alpha) => {
+        const ellipse = this.add.ellipse(offsetX, offsetY, width, height, color, alpha);
+        burst.add(ellipse);
+        return ellipse;
+      };
+
+      const floorSplat = addEllipse(0, coreRadius * 0.48, coreRadius * 1.45, coreRadius * 0.38, 0x2b0206, 0.32)
+        .setRotation(rand(-0.08, 0.08))
+        .setScale(0.14);
+      const shockRing = addCircle(0, 0, Math.max(14, coreRadius * 0.54), 0xffffff, 0)
+        .setStrokeStyle(Math.max(2, 3 * burstScale), 0xb91f23, 0.72)
+        .setScale(0.24);
+
+      const corePieces = [
+        floorSplat,
+        addCircle(0, 0, coreRadius, 0x8d1119, 0.88).setScale(0.1)
+      ];
+      for (let i = 0; i < 6; i += 1) {
+        const angle = Math.PI * 2 * i / 6 + rand(-0.34, 0.34);
+        const distance = coreRadius * rand(0.08, 0.28);
+        corePieces.push(addEllipse(
+          Math.cos(angle) * distance,
+          Math.sin(angle) * distance * 0.72,
+          coreRadius * rand(0.86, 1.28),
+          coreRadius * rand(0.56, 1.02),
+          choose(BLOOD_BURST_COLORS),
+          rand(0.58, 0.86)
+        )
+          .setRotation(angle + rand(-0.85, 0.85))
+          .setScale(0.1));
+      }
+      corePieces.push(addCircle(-coreRadius * 0.2, -coreRadius * 0.18, Math.max(4, coreRadius * 0.13), 0xff6b48, 0.36)
+        .setScale(0.08));
+
       this.tweens.add({
-        targets: burst,
-        scaleX: baseScaleX * effect.scalePeak,
-        scaleY: baseScaleY * effect.scalePeak,
+        targets: shockRing,
+        scale: spread / Math.max(14, coreRadius * 0.54),
+        alpha: 0,
+        duration: popDuration + 115,
+        ease: "Cubic.easeOut"
+      });
+      this.tweens.add({
+        targets: corePieces,
+        scaleX: 1.15,
+        scaleY: 1.08,
         duration: popDuration,
         ease: "Back.easeOut"
       });
       this.tweens.add({
-        targets: burst,
-        scaleX: baseScaleX * 0.34,
-        scaleY: baseScaleY * 0.34,
+        targets: corePieces,
+        scaleX: 0.18,
+        scaleY: 0.18,
         alpha: 0,
-        delay: popDuration,
-        duration: Math.max(180, effect.duration - popDuration),
-        ease: "Cubic.easeIn",
-        onComplete: () => this.destroyTransientObject(burst, false)
+        delay: popDuration + 130,
+        duration: Math.max(280, effect.duration - popDuration - 130),
+        ease: "Sine.easeInOut"
       });
+
+      for (let i = 0; i < effect.droplets; i += 1) {
+        const angle = rand(-Math.PI, Math.PI);
+        const distance = rand(coreRadius * 0.48, spread) * (i % 5 === 0 ? rand(1.05, 1.22) : 1);
+        const radius = rand(3.5, 9.5) * burstScale * (i % 6 === 0 ? 1.25 : 1);
+        const drop = addCircle(rand(-2, 2), rand(-2, 2), radius, choose(BLOOD_BURST_COLORS), rand(0.72, 0.96))
+          .setScale(0.08);
+        const travelDuration = Math.round(rand(popDuration * 0.72, popDuration * 1.36));
+        const settleDelay = Math.round(travelDuration + rand(90, 240));
+        this.tweens.add({
+          targets: drop,
+          x: Math.cos(angle) * distance,
+          y: Math.sin(angle) * distance * 0.7 + rand(-8, 14),
+          scaleX: rand(0.78, 1.34),
+          scaleY: rand(0.62, 1.12),
+          duration: travelDuration,
+          ease: "Cubic.easeOut"
+        });
+        this.tweens.add({
+          targets: drop,
+          scaleX: 0.05,
+          scaleY: 0.05,
+          alpha: 0,
+          delay: settleDelay,
+          duration: Math.max(260, effect.duration - settleDelay),
+          ease: "Sine.easeIn"
+        });
+      }
+
+      for (let i = 0; i < effect.mist; i += 1) {
+        const angle = rand(-Math.PI, Math.PI);
+        const distance = rand(spread * 0.42, spread * 1.18);
+        const speck = addCircle(0, 0, rand(1.4, 3.8) * burstScale, choose(BLOOD_BURST_COLORS), rand(0.38, 0.7))
+          .setScale(0.1);
+        this.tweens.add({
+          targets: speck,
+          x: Math.cos(angle) * distance,
+          y: Math.sin(angle) * distance * 0.74 + rand(-14, 18),
+          scale: rand(0.55, 1.05),
+          alpha: 0,
+          duration: Math.round(rand(effect.duration * 0.46, effect.duration * 0.82)),
+          ease: "Cubic.easeOut"
+        });
+      }
+
+      this.scheduleSceneDelay(effect.duration + 80, () => this.destroyTransientObject(burst, false));
     }
 
     updateZombies(dt) {
