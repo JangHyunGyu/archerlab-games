@@ -95,7 +95,13 @@
     normal: { stainWidth: 138, stainHeight: 56, fall: 285, hold: 3600, fade: 1550 },
     elite: { stainWidth: 188, stainHeight: 76, fall: 340, hold: 4300, fade: 1800 }
   };
-  const ZOMBIE_CORPSE_TEXTURES = ["zombie-corpse-1", "zombie-corpse-2", "zombie-corpse-3"];
+  const ZOMBIE_CORPSE_TYPES = ["normal", "runner", "brute", "volatile", "elite"];
+  const ZOMBIE_CORPSE_TEXTURES = Object.fromEntries(
+    ZOMBIE_CORPSE_TYPES.map((type) => [
+      type,
+      [1, 2, 3].map((index) => `zombie-corpse-${type}-${index}`)
+    ])
+  );
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
@@ -1195,7 +1201,9 @@
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
       this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
-      ZOMBIE_CORPSE_TEXTURES.forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
+      Object.values(ZOMBIE_CORPSE_TEXTURES)
+        .flat()
+        .forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
       this.load.image("zombie-walk-runner", imageAsset("assets/images/zombie-walk-runner.png"));
@@ -3835,7 +3843,9 @@
         .setAlpha(0)
         .setDepth(corpseDepth - 0.2));
 
-      const corpseTexture = choose(ZOMBIE_CORPSE_TEXTURES);
+      const corpseType = zombie.elite ? "elite" : zombie.type || "normal";
+      const corpseTexturePool = ZOMBIE_CORPSE_TEXTURES[corpseType] || ZOMBIE_CORPSE_TEXTURES.normal;
+      const corpseTexture = choose(corpseTexturePool);
       const hasCorpseTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists(corpseTexture);
