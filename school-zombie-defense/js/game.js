@@ -95,6 +95,8 @@
     normal: { stainWidth: 138, stainHeight: 56, fall: 285, corpseHold: 2000, corpseFade: 700, stainHold: 5000, stainFade: 1600 },
     elite: { stainWidth: 188, stainHeight: 76, fall: 340, corpseHold: 2200, corpseFade: 800, stainHold: 5200, stainFade: 1750 }
   };
+  const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
+  const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
   const ZOMBIE_CORPSE_TYPES = ["normal", "runner", "brute", "volatile", "elite"];
   const ZOMBIE_CORPSE_TEXTURES = Object.fromEntries(
     ZOMBIE_CORPSE_TYPES.map((type) => [
@@ -1204,6 +1206,11 @@
       Object.values(ZOMBIE_CORPSE_TEXTURES)
         .flat()
         .forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
+      ZOMBIE_CORPSE_TYPES.forEach((type) => this.load.spritesheet(
+        `zombie-death-${type}-sheet`,
+        imageAsset(`assets/images/zombie-death-${type}-sheet.png`),
+        { frameWidth: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE, frameHeight: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE }
+      ));
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
       this.load.image("zombie-walk-runner", imageAsset("assets/images/zombie-walk-runner.png"));
