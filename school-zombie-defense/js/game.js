@@ -3798,7 +3798,7 @@
       const corpseX = clamp(x, this.bounds.left + 26, this.bounds.right - 26);
       const corpseY = y + displayH * 0.18;
       const landingX = clamp(corpseX + displayH * fall.x + rand(-6, 6), this.bounds.left + 28, this.bounds.right - 28);
-      const landingY = clamp(corpseY + displayH * fall.y + rand(-5, 8), -20, this.bounds.barricade + 22);
+      const landingY = clamp(corpseY + displayH * fall.y + rand(-5, 8), -20, this.bounds.barricade - displayH * 0.1);
       const finalAngle = fall.angle + rand(-5, 5);
       const stumbleX = clamp(corpseX + displayH * fall.x * 0.22, this.bounds.left + 24, this.bounds.right - 24);
       const stumbleY = y + displayH * (0.06 + fall.y * 0.16);
@@ -4063,14 +4063,14 @@
           zombie.y = Math.min(attackLine, zombie.y + zombie.speed * slowFactor * dt);
         } else {
           zombie.attackTimer -= dt;
-          zombie.y = clamp(zombie.y + Math.sin(zombie.wobble) * 6 * dt, attackLine - 4, attackLine + 7);
+          zombie.y = clamp(zombie.y + Math.sin(zombie.wobble) * 6 * dt, attackLine - 8, attackLine + 2);
           if (zombie.attackTimer <= 0) {
             zombie.attackTimer = rand(0.55, 1);
             this.takeDamage(zombie.attack);
             if (this.mode !== "playing") {
               return;
             }
-            zombie.y = clamp(zombie.y - 8, attackLine - 6, attackLine);
+            zombie.y = clamp(zombie.y - 8, attackLine - 10, attackLine - 2);
             this.createHitAtBarricade(zombie.x);
           }
         }
@@ -4079,7 +4079,7 @@
 
     getZombieBarricadeContactY(zombie) {
       const displayHeight = zombie?.displayH || 170;
-      return this.bounds.barricade - clamp(displayHeight * 0.28, 38, 64);
+      return this.bounds.barricade - clamp(displayHeight * 0.44, 56, 104);
     }
 
     takeDamage(rawAmount) {
