@@ -3751,13 +3751,26 @@
         .setRotation(rand(-0.12, 0.12))
         .setAlpha(effect.alpha)
         .setDepth(232));
+      const baseScaleX = burst.scaleX;
+      const baseScaleY = burst.scaleY;
+      const popDuration = Math.max(120, Math.round(effect.duration * 0.24));
+      burst.setScale(baseScaleX * 0.72, baseScaleY * 0.72);
       this.playTransientSpriteFrames(burst, effect.frames, effect.duration);
       this.tweens.add({
         targets: burst,
-        scaleX: burst.scaleX * effect.scalePeak,
-        scaleY: burst.scaleY * effect.scalePeak,
-        duration: effect.duration,
-        ease: "Cubic.easeOut",
+        scaleX: baseScaleX * effect.scalePeak,
+        scaleY: baseScaleY * effect.scalePeak,
+        duration: popDuration,
+        ease: "Back.easeOut"
+      });
+      this.tweens.add({
+        targets: burst,
+        scaleX: baseScaleX * 0.34,
+        scaleY: baseScaleY * 0.34,
+        alpha: 0,
+        delay: popDuration,
+        duration: Math.max(180, effect.duration - popDuration),
+        ease: "Cubic.easeIn",
         onComplete: () => this.destroyTransientObject(burst, false)
       });
     }
