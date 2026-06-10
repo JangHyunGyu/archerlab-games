@@ -1569,6 +1569,7 @@
       this.add.image(270, 41, "ui-top-hud").setDisplaySize(530, 72).setDepth(300);
       this.progressBack = this.add.rectangle(270, 75, 508, 6, 0x030404, 0.82).setOrigin(0.5).setDepth(302);
       this.progressBar = this.add.rectangle(16, 75, 1, 6, COLORS.gold, 1).setOrigin(0, 0.5).setDepth(303);
+      this.createHomeButton();
 
       this.ui.timer = this.add.text(82, 42, "00:00", {
         fontFamily: "Arial, sans-serif",
@@ -1596,6 +1597,46 @@
       }).setOrigin(0.5).setDepth(316);
 
       this.createStatusPanel();
+    }
+
+    createHomeButton() {
+      const x = 34;
+      const y = 42;
+      const base = this.add.rectangle(x, y, 44, 34, 0x091319, 0.92)
+        .setStrokeStyle(2, COLORS.gold, 0.76)
+        .setDepth(318);
+      const glow = this.add.rectangle(x, y, 52, 42, COLORS.gold, 0.08)
+        .setDepth(317);
+      const icon = this.add.graphics().setDepth(319);
+      const hit = this.add.zone(x, y, 52, 42)
+        .setDepth(320)
+        .setInteractive({ useHandCursor: true });
+      const drawIcon = (hovered = false) => {
+        base.setFillStyle(hovered ? 0x142632 : 0x091319, hovered ? 0.98 : 0.92);
+        base.setStrokeStyle(2, hovered ? 0xffffff : COLORS.gold, hovered ? 0.9 : 0.76);
+        glow.setAlpha(hovered ? 0.16 : 0.08);
+        icon.clear();
+        icon.fillStyle(COLORS.gold, 0.96);
+        icon.beginPath();
+        icon.moveTo(x - 14, y - 2);
+        icon.lineTo(x, y - 15);
+        icon.lineTo(x + 14, y - 2);
+        icon.closePath();
+        icon.fillPath();
+        icon.fillRect(x - 10, y - 2, 20, 15);
+        icon.fillStyle(0x091319, 1);
+        icon.fillRect(x - 3, y + 5, 6, 8);
+      };
+      drawIcon(false);
+      hit.on("pointerdown", (pointer, localX, localY, event) => {
+        if (event && typeof event.stopPropagation === "function") {
+          event.stopPropagation();
+        }
+        this.returnToMenuFromRun();
+      });
+      hit.on("pointerover", () => drawIcon(true));
+      hit.on("pointerout", () => drawIcon(false));
+      this.ui.homeButton = { base, glow, icon, hit };
     }
 
     createStatusPanel() {
@@ -2265,7 +2306,7 @@
         stroke: "#050607",
         strokeThickness: 6
       }).setOrigin(0.5).setDepth(504));
-      items.push(this.add.text(270, 148, "클리어한 스테이지 기준", {
+      items.push(this.add.text(270, 148, "클리어 스테이지 · 처치 수 기준", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 17,
         fontStyle: "900",
@@ -2311,7 +2352,6 @@
           const score = Math.max(0, Math.floor(Number(row.score) || 0));
           const name = String(row.player_name || "DEFENDER").trim().slice(0, 14) || "DEFENDER";
           const extra = row.extra_data && typeof row.extra_data === "object" ? row.extra_data : {};
-          const level = Math.max(1, Math.floor(Number(extra.level) || 1));
           const kills = Math.max(0, Math.floor(Number(extra.kills) || 0));
           items.push(this.add.rectangle(270, y, 408, 34, index % 2 ? 0x0c1920 : 0x101f28, 0.82)
             .setStrokeStyle(1, 0x254653, 0.48)
@@ -2332,7 +2372,7 @@
             stroke: "#050607",
             strokeThickness: 3
           }).setOrigin(0, 0.5).setDepth(505));
-          items.push(this.add.text(168, y + 10, `Lv.${level} · 처치 ${kills}`, {
+          items.push(this.add.text(168, y + 10, `처치 ${kills}`, {
             fontFamily: "Pretendard Variable, Arial, sans-serif",
             fontSize: 12,
             fontStyle: "800",
@@ -2713,6 +2753,24 @@
       this.resetRun();
       this.startRankSession();
       this.mode = "playing";
+    }
+
+    returnToMenuFromRun() {
+      if (this.mode !== "playing" && this.mode !== "paused") {
+        return;
+      }
+      this.unlockAudio();
+      this.playSfx("button", 0.85);
+      this.speedMultiplier = 1;
+      if (this.ui.speed) {
+        this.ui.speed.setText("x1.0");
+      }
+      if (this.ui.pauseText) {
+        this.ui.pauseText.setText("II");
+      }
+      this.clearOverlay();
+      this.resetRun();
+      this.showMenu();
     }
 
     bankRunCoins() {

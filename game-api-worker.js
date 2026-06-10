@@ -55,6 +55,7 @@ const PARKING_MAX_LEVEL_SCORE = 100000;
 const SCHOOL_ZOMBIE_GAME_ID = 'school-zombie-defense';
 const SCHOOL_ZOMBIE_MAX_CLEAR_STAGE = 1000;
 const SCHOOL_ZOMBIE_MIN_MS_PER_STAGE = 12000;
+const SCHOOL_ZOMBIE_KILLS_SQL = "CAST(COALESCE(CASE WHEN json_valid(extra_data) THEN json_extract(extra_data, '$.kills') END, 0) AS INTEGER)";
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
 const SHADOW_MAX_SCORE = 7200;
 const SHADOW_SCORE_GRACE_SECONDS = 15;
@@ -84,6 +85,21 @@ function parseInteger(value) {
         return parseInt(value, 10);
     }
     return NaN;
+}
+
+function parseExtraData(extraStr) {
+    if (!extraStr || typeof extraStr !== 'string') return {};
+    try {
+        const parsed = JSON.parse(extraStr);
+        return isPlainObject(parsed) ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function getSchoolZombieKillsFromExtra(extraStr) {
+    const kills = parseInteger(parseExtraData(extraStr).kills);
+    return Number.isFinite(kills) && kills > 0 ? kills : 0;
 }
 
 function makeSessionId() {
@@ -870,11 +886,49 @@ async function saveRankingRecord(db, gameId, name, score, extraStr) {
     if (gameId === PARKING_GAME_ID) {
         return saveParkingRankingRecord(db, gameId, name, score, extraStr);
     }
+    if (gameId === SCHOOL_ZOMBIE_GAME_ID) {
+        return saveSchoolZombieRankingRecord(db, gameId, name, score, extraStr);
+    }
 
     await db.prepare(
         'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
     ).bind(gameId, name, score, extraStr).run();
     return { saved_score: score };
+}
+
+async function saveSchoolZombieRankingRecord(db, gameId, name, score, extraStr) {
+    const kills = getSchoolZombieKillsFromExtra(extraStr);
+    const existing = await db.prepare(`
+        SELECT id, score, ${SCHOOL_ZOMBIE_KILLS_SQL} AS kills
+        FROM rankings
+        WHERE game_id = ?
+          AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
+        ORDER BY score DESC, kills DESC, created_at ASC, id ASC
+        LIMIT 1
+    `).bind(gameId, name).first();
+
+    if (existing) {
+        const existingScore = Number(existing.score);
+        const existingKills = Number(existing.kills || 0);
+        if (score > existingScore || (score === existingScore && kills > existingKills)) {
+            await db.prepare(`
+                UPDATE rankings
+                SET player_name = ?, score = ?, extra_data = ?, created_at = datetime('now')
+                WHERE id = ?
+            `).bind(name, score, extraStr, existing.id).run();
+            return { saved_score: score, saved_kills: kills, updated: true };
+        }
+        return {
+            saved_score: Number.isFinite(existingScore) ? existingScore : score,
+            saved_kills: Number.isFinite(existingKills) ? existingKills : kills,
+            duplicate_name: true,
+        };
+    }
+
+    await db.prepare(
+        'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
+    ).bind(gameId, name, score, extraStr).run();
+    return { saved_score: score, saved_kills: kills };
 }
 
 export default {
@@ -908,25 +962,46 @@ export default {
                 }
                 const limit = clampLimit(url.searchParams.get('limit'));
 
-                const result = await env.DB.prepare(`
-                    SELECT player_name, score, extra_data, created_at
-                    FROM (
-                        SELECT
-                            player_name,
-                            score,
-                            extra_data,
-                            created_at,
-                            ROW_NUMBER() OVER (
-                                PARTITION BY LOWER(TRIM(player_name))
-                                ORDER BY score DESC, created_at ASC, id ASC
-                            ) AS name_rank
-                        FROM rankings
-                        WHERE game_id = ?
-                    )
-                    WHERE name_rank = 1
-                    ORDER BY score DESC, created_at ASC
-                    LIMIT ?
-                `).bind(gameId, limit).all();
+                const result = gameId === SCHOOL_ZOMBIE_GAME_ID
+                    ? await env.DB.prepare(`
+                        SELECT player_name, score, extra_data, created_at
+                        FROM (
+                            SELECT
+                                player_name,
+                                score,
+                                extra_data,
+                                created_at,
+                                ${SCHOOL_ZOMBIE_KILLS_SQL} AS sort_kills,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY LOWER(TRIM(player_name))
+                                    ORDER BY score DESC, ${SCHOOL_ZOMBIE_KILLS_SQL} DESC, created_at ASC, id ASC
+                                ) AS name_rank
+                            FROM rankings
+                            WHERE game_id = ?
+                        )
+                        WHERE name_rank = 1
+                        ORDER BY score DESC, sort_kills DESC, created_at ASC
+                        LIMIT ?
+                    `).bind(gameId, limit).all()
+                    : await env.DB.prepare(`
+                        SELECT player_name, score, extra_data, created_at
+                        FROM (
+                            SELECT
+                                player_name,
+                                score,
+                                extra_data,
+                                created_at,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY LOWER(TRIM(player_name))
+                                    ORDER BY score DESC, created_at ASC, id ASC
+                                ) AS name_rank
+                            FROM rankings
+                            WHERE game_id = ?
+                        )
+                        WHERE name_rank = 1
+                        ORDER BY score DESC, created_at ASC
+                        LIMIT ?
+                    `).bind(gameId, limit).all();
 
                 return jsonResponse({
                     game_id: gameId,
@@ -934,7 +1009,7 @@ export default {
                         rank: i + 1,
                         player_name: row.player_name,
                         score: row.score,
-                        extra_data: row.extra_data ? JSON.parse(row.extra_data) : null,
+                        extra_data: row.extra_data ? parseExtraData(row.extra_data) : null,
                         created_at: row.created_at,
                     })),
                 });
@@ -1020,62 +1095,123 @@ export default {
                 }
 
                 // Get the displayed rank for this name after deduping by player name.
-                const rankResult = await env.DB.prepare(`
-                    WITH ranked_by_name AS (
-                        SELECT
-                            LOWER(TRIM(player_name)) AS name_key,
-                            score,
-                            ROW_NUMBER() OVER (
-                                PARTITION BY LOWER(TRIM(player_name))
-                                ORDER BY score DESC, created_at ASC, id ASC
-                            ) AS name_rank
-                        FROM rankings
-                        WHERE game_id = ?
-                    ),
-                    best_scores AS (
-                        SELECT name_key, score
-                        FROM ranked_by_name
-                        WHERE name_rank = 1
-                    ),
-                    current_player AS (
-                        SELECT score
-                        FROM best_scores
-                        WHERE name_key = LOWER(TRIM(?))
-                        LIMIT 1
-                    )
-                    SELECT
-                        (SELECT score FROM current_player) AS best_score,
-                        (
-                            SELECT COUNT(*) + 1
-                            FROM best_scores
-                            WHERE score > (SELECT score FROM current_player)
-                        ) AS rank
-                `).bind(game_id, name).first();
-
-                const currentRank = rankResult?.rank || 1;
-                const bestScore = rankResult?.best_score ?? savedScore;
-
-                // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
-                await env.DB.prepare(`
-                    DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
-                        SELECT id
-                        FROM (
+                const rankResult = game_id === SCHOOL_ZOMBIE_GAME_ID
+                    ? await env.DB.prepare(`
+                        WITH ranked_by_name AS (
                             SELECT
-                                id,
+                                LOWER(TRIM(player_name)) AS name_key,
                                 score,
-                                created_at,
+                                ${SCHOOL_ZOMBIE_KILLS_SQL} AS kills,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY LOWER(TRIM(player_name))
+                                    ORDER BY score DESC, ${SCHOOL_ZOMBIE_KILLS_SQL} DESC, created_at ASC, id ASC
+                                ) AS name_rank
+                            FROM rankings
+                            WHERE game_id = ?
+                        ),
+                        best_scores AS (
+                            SELECT name_key, score, kills
+                            FROM ranked_by_name
+                            WHERE name_rank = 1
+                        ),
+                        current_player AS (
+                            SELECT score, kills
+                            FROM best_scores
+                            WHERE name_key = LOWER(TRIM(?))
+                            LIMIT 1
+                        )
+                        SELECT
+                            (SELECT score FROM current_player) AS best_score,
+                            (
+                                SELECT COUNT(*) + 1
+                                FROM best_scores
+                                WHERE score > (SELECT score FROM current_player)
+                                   OR (
+                                     score = (SELECT score FROM current_player)
+                                     AND kills > (SELECT kills FROM current_player)
+                                   )
+                            ) AS rank
+                    `).bind(game_id, name).first()
+                    : await env.DB.prepare(`
+                        WITH ranked_by_name AS (
+                            SELECT
+                                LOWER(TRIM(player_name)) AS name_key,
+                                score,
                                 ROW_NUMBER() OVER (
                                     PARTITION BY LOWER(TRIM(player_name))
                                     ORDER BY score DESC, created_at ASC, id ASC
                                 ) AS name_rank
                             FROM rankings
                             WHERE game_id = ?
+                        ),
+                        best_scores AS (
+                            SELECT name_key, score
+                            FROM ranked_by_name
+                            WHERE name_rank = 1
+                        ),
+                        current_player AS (
+                            SELECT score
+                            FROM best_scores
+                            WHERE name_key = LOWER(TRIM(?))
+                            LIMIT 1
                         )
-                        WHERE name_rank = 1
-                        ORDER BY score DESC, created_at ASC, id ASC
-                        LIMIT 100
-                    )
-                `).bind(game_id, game_id).run();
+                        SELECT
+                            (SELECT score FROM current_player) AS best_score,
+                            (
+                                SELECT COUNT(*) + 1
+                                FROM best_scores
+                                WHERE score > (SELECT score FROM current_player)
+                            ) AS rank
+                    `).bind(game_id, name).first();
+
+                const currentRank = rankResult?.rank || 1;
+                const bestScore = rankResult?.best_score ?? savedScore;
+
+                // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
+                if (game_id === SCHOOL_ZOMBIE_GAME_ID) {
+                    await env.DB.prepare(`
+                        DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
+                            SELECT id
+                            FROM (
+                                SELECT
+                                    id,
+                                    score,
+                                    ${SCHOOL_ZOMBIE_KILLS_SQL} AS sort_kills,
+                                    created_at,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY LOWER(TRIM(player_name))
+                                        ORDER BY score DESC, ${SCHOOL_ZOMBIE_KILLS_SQL} DESC, created_at ASC, id ASC
+                                    ) AS name_rank
+                                FROM rankings
+                                WHERE game_id = ?
+                            )
+                            WHERE name_rank = 1
+                            ORDER BY score DESC, sort_kills DESC, created_at ASC, id ASC
+                            LIMIT 100
+                        )
+                    `).bind(game_id, game_id).run();
+                } else {
+                    await env.DB.prepare(`
+                        DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
+                            SELECT id
+                            FROM (
+                                SELECT
+                                    id,
+                                    score,
+                                    created_at,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY LOWER(TRIM(player_name))
+                                        ORDER BY score DESC, created_at ASC, id ASC
+                                    ) AS name_rank
+                                FROM rankings
+                                WHERE game_id = ?
+                            )
+                            WHERE name_rank = 1
+                            ORDER BY score DESC, created_at ASC, id ASC
+                            LIMIT 100
+                        )
+                    `).bind(game_id, game_id).run();
+                }
 
                 return jsonResponse({
                     success: true,
