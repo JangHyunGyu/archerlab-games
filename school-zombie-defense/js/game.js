@@ -104,6 +104,13 @@
       [1, 2, 3].map((index) => `zombie-corpse-${type}-${index}`)
     ])
   );
+  const ZOMBIE_DEATH_RENDER_SCALES = {
+    normal: { corpseWidth: 1.28, deathSize: 1.28 },
+    runner: { corpseWidth: 1.18, deathSize: 1.2 },
+    brute: { corpseWidth: 1.38, deathSize: 1.38 },
+    volatile: { corpseWidth: 1.3, deathSize: 1.3 },
+    elite: { corpseWidth: 1.42, deathSize: 1.42 }
+  };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
@@ -3853,10 +3860,11 @@
       const corpseType = zombie.elite ? "elite" : zombie.type || "normal";
       const corpseTexturePool = ZOMBIE_CORPSE_TEXTURES[corpseType] || ZOMBIE_CORPSE_TEXTURES.normal;
       const corpseTexture = choose(corpseTexturePool);
+      const renderScale = ZOMBIE_DEATH_RENDER_SCALES[corpseType] || ZOMBIE_DEATH_RENDER_SCALES.normal;
       const hasCorpseTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists(corpseTexture);
-      const corpseDisplayWidth = displayH * (zombie.elite ? 2.05 : 1.76);
+      const corpseDisplayWidth = displayH * renderScale.corpseWidth;
       const corpseDisplayHeight = corpseDisplayWidth * 360 / 512;
       const corpseImage = hasCorpseTexture
         ? this.trackTransient(this.add.image(landingX, landingY, corpseTexture)
@@ -3876,7 +3884,7 @@
       const hasDeathTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists(deathTexture);
-      const deathDisplaySize = displayH * (zombie.elite ? 2.08 : zombie.type === "brute" ? 1.96 : 1.74);
+      const deathDisplaySize = displayH * renderScale.deathSize;
       const deathSprite = hasDeathTexture
         ? this.trackTransient(this.add.sprite(corpseX, y + displayH * 0.04, deathTexture, 0)
           .setOrigin(0.5)
