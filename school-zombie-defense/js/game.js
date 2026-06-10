@@ -105,11 +105,11 @@
     ])
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
-    normal: { corpseWidth: 0.95, deathStartSize: 0.89, deathEndSize: 1.18 },
-    runner: { corpseWidth: 0.86, deathStartSize: 1.02, deathEndSize: 0.99 },
-    brute: { corpseWidth: 1.05, deathStartSize: 1.2, deathEndSize: 1.29 },
-    volatile: { corpseWidth: 0.96, deathStartSize: 0.98, deathEndSize: 0.92 },
-    elite: { corpseWidth: 1.08, deathStartSize: 1.04, deathEndSize: 1.18 }
+    normal: { corpseWidth: 0.88, deathStartSize: 0.85, deathEndSize: 1.1 },
+    runner: { corpseWidth: 0.8, deathStartSize: 0.98, deathEndSize: 0.92 },
+    brute: { corpseWidth: 0.98, deathStartSize: 1.15, deathEndSize: 1.2 },
+    volatile: { corpseWidth: 0.89, deathStartSize: 0.94, deathEndSize: 0.86 },
+    elite: { corpseWidth: 1, deathStartSize: 1, deathEndSize: 1.1 }
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
