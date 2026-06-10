@@ -82,18 +82,18 @@
     "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08 }
   };
   const ZOMBIE_HIT_EFFECTS = {
-    "projectile-arrow": { texture: "zombie-hit-arrow", width: 44, duration: 280, alpha: 0.92, scalePeak: 1.22, rotation: 0.15 },
-    "projectile-pistol": { texture: "zombie-hit-pistol", width: 58, duration: 260, alpha: 0.94, scalePeak: 1.18, rotation: 0.2 },
-    "projectile-rifle": { texture: "zombie-hit-rifle", width: 70, duration: 245, alpha: 0.94, scalePeak: 1.17, rotation: 0.35 },
-    "projectile-sniper": { texture: "zombie-hit-sniper", width: 82, duration: 275, alpha: 0.94, scalePeak: 1.2, rotation: 0.4 },
-    "projectile-rocket": { texture: "zombie-hit-rocket", width: 106, duration: 355, alpha: 0.96, scalePeak: 1.16, rotation: 0.25 },
-    explosion: { texture: "zombie-hit-rocket", width: 120, duration: 365, alpha: 0.92, scalePeak: 1.2, rotation: 0.45 },
-    default: { texture: "zombie-hit-pistol", width: 56, duration: 250, alpha: 0.9, scalePeak: 1.16, rotation: 0.28 }
+    "projectile-arrow": { texture: "zombie-hit-arrow-sheet", width: 44, duration: 240, alpha: 0.96, scalePeak: 1.08, rotation: 0.15, frameWidth: 96, frameHeight: 96, frames: 16 },
+    "projectile-pistol": { texture: "zombie-hit-pistol-sheet", width: 58, duration: 250, alpha: 0.98, scalePeak: 1.08, rotation: 0.2, frameWidth: 112, frameHeight: 96, frames: 16 },
+    "projectile-rifle": { texture: "zombie-hit-rifle-sheet", width: 70, duration: 260, alpha: 0.98, scalePeak: 1.08, rotation: 0.35, frameWidth: 140, frameHeight: 100, frames: 16 },
+    "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 82, duration: 280, alpha: 0.98, scalePeak: 1.1, rotation: 0.4, frameWidth: 150, frameHeight: 104, frames: 16 },
+    "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 106, duration: 320, alpha: 0.98, scalePeak: 1.1, rotation: 0.25, frameWidth: 160, frameHeight: 130, frames: 18 },
+    explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
+    default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
   const ZOMBIE_DEATH_EFFECTS = {
-    small: { texture: "zombie-death-small", width: 150, duration: 620, alpha: 0.94, scalePeak: 1.08 },
-    normal: { texture: "zombie-death-normal", width: 210, duration: 720, alpha: 0.96, scalePeak: 1.07 },
-    elite: { texture: "zombie-death-elite", width: 280, duration: 820, alpha: 0.97, scalePeak: 1.05 }
+    small: { texture: "zombie-death-small-sheet", width: 150, duration: 620, alpha: 0.96, scalePeak: 1.04, frameWidth: 190, frameHeight: 220, frames: 18 },
+    normal: { texture: "zombie-death-normal-sheet", width: 210, duration: 720, alpha: 0.97, scalePeak: 1.035, frameWidth: 260, frameHeight: 270, frames: 22 },
+    elite: { texture: "zombie-death-elite-sheet", width: 280, duration: 820, alpha: 0.98, scalePeak: 1.03, frameWidth: 360, frameHeight: 320, frames: 26 }
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
@@ -1187,15 +1187,15 @@
       this.load.image("skill-rifle-grenade", imageAsset("assets/images/skill-rifle-grenade.png"));
       this.load.image("skill-rocket-impact", imageAsset("assets/images/skill-rocket-impact.png"));
       this.load.image("skill-sniper-weakpoint", imageAsset("assets/images/skill-sniper-weakpoint.png"));
-      this.load.image("zombie-hit-arrow", imageAsset("assets/images/zombie-hit-arrow.png"));
-      this.load.image("zombie-hit-pistol", imageAsset("assets/images/zombie-hit-pistol.png"));
-      this.load.image("zombie-hit-rifle", imageAsset("assets/images/zombie-hit-rifle.png"));
-      this.load.image("zombie-hit-rocket", imageAsset("assets/images/zombie-hit-rocket.png"));
-      this.load.image("zombie-hit-sniper", imageAsset("assets/images/zombie-hit-sniper.png"));
+      this.load.spritesheet("zombie-hit-arrow-sheet", imageAsset("assets/images/zombie-hit-arrow-sheet.png"), { frameWidth: 96, frameHeight: 96 });
+      this.load.spritesheet("zombie-hit-pistol-sheet", imageAsset("assets/images/zombie-hit-pistol-sheet.png"), { frameWidth: 112, frameHeight: 96 });
+      this.load.spritesheet("zombie-hit-rifle-sheet", imageAsset("assets/images/zombie-hit-rifle-sheet.png"), { frameWidth: 140, frameHeight: 100 });
+      this.load.spritesheet("zombie-hit-rocket-sheet", imageAsset("assets/images/zombie-hit-rocket-sheet.png"), { frameWidth: 160, frameHeight: 130 });
+      this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
-      this.load.image("zombie-death-small", imageAsset("assets/images/zombie-death-small.png"));
-      this.load.image("zombie-death-normal", imageAsset("assets/images/zombie-death-normal.png"));
-      this.load.image("zombie-death-elite", imageAsset("assets/images/zombie-death-elite.png"));
+      this.load.spritesheet("zombie-death-small-sheet", imageAsset("assets/images/zombie-death-small-sheet.png"), { frameWidth: 190, frameHeight: 220 });
+      this.load.spritesheet("zombie-death-normal-sheet", imageAsset("assets/images/zombie-death-normal-sheet.png"), { frameWidth: 260, frameHeight: 270 });
+      this.load.spritesheet("zombie-death-elite-sheet", imageAsset("assets/images/zombie-death-elite-sheet.png"), { frameWidth: 360, frameHeight: 320 });
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
       this.load.image("zombie-walk-runner", imageAsset("assets/images/zombie-walk-runner.png"));
@@ -3604,28 +3604,55 @@
       return clamp((zombie.displayH || 170) / 172, 0.72, zombie.elite ? 1.48 : 1.24);
     }
 
+    playTransientSpriteFrames(sprite, frameCount, duration) {
+      if (!sprite || frameCount <= 1 || typeof sprite.setFrame !== "function") {
+        return null;
+      }
+      let frame = 0;
+      let event = null;
+      const frameDelay = Math.max(16, Math.round(duration / frameCount));
+      event = this.time.addEvent({
+        delay: frameDelay,
+        repeat: frameCount - 2,
+        callback: () => {
+          if (this.disposed || !sprite || sprite.destroyed) {
+            this.sceneTimers.delete(event);
+            this.cancelTimerEvent(event);
+            return;
+          }
+          frame += 1;
+          sprite.setFrame(Math.min(frame, frameCount - 1));
+          if (frame >= frameCount - 1) {
+            this.sceneTimers.delete(event);
+          }
+        }
+      });
+      this.sceneTimers.add(event);
+      return event;
+    }
+
     createZombieHitEffect(zombie, hitType = "default", crit = false) {
       const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
-      const texture = this.textures.get(effect.texture).getSourceImage();
       const displayWidth = effect.width * sizeScale;
-      const displayHeight = displayWidth * texture.height / texture.width;
-      const impact = this.trackTransient(this.add.image(
+      const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
+      const impact = this.trackTransient(this.add.sprite(
         zombie.x + rand(-zombie.hitRadius * 0.18, zombie.hitRadius * 0.18),
         zombie.y - (zombie.displayH || 170) * 0.08 + rand(-zombie.hitRadius * 0.12, zombie.hitRadius * 0.1),
-        effect.texture
+        effect.texture,
+        0
       )
         .setOrigin(0.5)
         .setDisplaySize(displayWidth, displayHeight)
         .setRotation(rand(-effect.rotation, effect.rotation))
         .setAlpha(effect.alpha)
         .setDepth(229 + zombie.y / 5));
+      this.playTransientSpriteFrames(impact, effect.frames, effect.duration);
 
       this.tweens.add({
         targets: impact,
         scaleX: impact.scaleX * effect.scalePeak,
         scaleY: impact.scaleY * effect.scalePeak,
-        alpha: 0,
         duration: effect.duration,
         ease: "Cubic.easeOut",
         onComplete: () => this.destroyTransientObject(impact, false)
@@ -3641,11 +3668,14 @@
       zombie.hp -= damage;
       this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
       this.applyZombieKnockback(zombie, hitType, crit);
-      if (crit || hitType === "projectile-sniper") {
-        this.requestHitStop(crit ? 0.04 : 0.025);
-        this.shakeCamera(55, crit ? 0.0038 : 0.0025);
+      if (crit) {
+        this.requestHitStop(0.055);
+        this.shakeCamera(55, 0.0038);
+      } else if (hitType === "projectile-sniper") {
+        this.requestHitStop(0.035);
+        this.shakeCamera(55, 0.0025);
       } else if (hitType === "projectile-rocket" || hitType === "explosion") {
-        this.requestHitStop(0.03);
+        this.requestHitStop(0.045);
       }
       zombie.setTint(crit ? 0xfff2a5 : 0xff7777);
       this.scheduleSceneDelay(70, () => {
@@ -3711,22 +3741,21 @@
       const sizeScale = this.getZombieEffectScale(zombie);
       const tier = zombie.elite ? "elite" : sizeScale < 0.95 ? "small" : "normal";
       const effect = ZOMBIE_DEATH_EFFECTS[tier];
-      const texture = this.textures.get(effect.texture).getSourceImage();
       const displayWidth = effect.width * sizeScale;
-      const displayHeight = displayWidth * texture.height / texture.width;
+      const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
       const effectX = clamp(x, displayWidth / 2 + 8, GAME_WIDTH - displayWidth / 2 - 8);
       const effectY = y - (zombie.displayH || 170) * 0.06;
-      const burst = this.trackTransient(this.add.image(effectX, effectY, effect.texture)
+      const burst = this.trackTransient(this.add.sprite(effectX, effectY, effect.texture, 0)
         .setOrigin(0.5, 0.64)
         .setDisplaySize(displayWidth, displayHeight)
         .setRotation(rand(-0.12, 0.12))
         .setAlpha(effect.alpha)
         .setDepth(232));
+      this.playTransientSpriteFrames(burst, effect.frames, effect.duration);
       this.tweens.add({
         targets: burst,
         scaleX: burst.scaleX * effect.scalePeak,
         scaleY: burst.scaleY * effect.scalePeak,
-        alpha: 0,
         duration: effect.duration,
         ease: "Cubic.easeOut",
         onComplete: () => this.destroyTransientObject(burst, false)
