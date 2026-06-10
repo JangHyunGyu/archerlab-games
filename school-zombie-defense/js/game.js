@@ -90,12 +90,11 @@
     explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
-  const BLOOD_BURST_EFFECTS = {
-    small: { core: 34, spread: 62, droplets: 16, mist: 10, duration: 780, pop: 145 },
-    normal: { core: 48, spread: 84, droplets: 24, mist: 16, duration: 940, pop: 165 },
-    elite: { core: 70, spread: 118, droplets: 34, mist: 24, duration: 1120, pop: 185 }
+  const ZOMBIE_CORPSE_EFFECTS = {
+    small: { stainWidth: 104, stainHeight: 44, fall: 250, hold: 3100, fade: 1350 },
+    normal: { stainWidth: 138, stainHeight: 56, fall: 285, hold: 3600, fade: 1550 },
+    elite: { stainWidth: 188, stainHeight: 76, fall: 340, hold: 4300, fade: 1800 }
   };
-  const BLOOD_BURST_COLORS = [COLORS.blood, 0x99151c, 0xb91f23, 0x5c080d, 0xdf3030];
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
@@ -3707,21 +3706,22 @@
     }
 
     killZombie(zombie) {
-      if (!zombie.active) {
+      if (!zombie.active || zombie.dying) {
         return;
       }
       const x = zombie.x;
       const y = zombie.y;
+      zombie.dying = true;
+      zombie.hp = 0;
       this.clearWeakMark(zombie);
       this.clearEmbeddedArrowsForZombie(zombie);
-      this.createDeathBurst(x, y, zombie);
       this.playSfx("death", zombie.elite ? 1.35 : 1);
       if (zombie.elite || zombie.type === "brute") {
         this.shakeCamera(90, 0.0045);
       }
       const shouldExplode = zombie.deathExplosion;
-      this.destroyGameObject(zombie);
       this.zombies = this.zombies.filter((item) => item !== zombie);
+      this.createZombieCorpse(x, y, zombie);
       this.kills += 1;
       this.killsInLevel += 1;
       this.coins += zombie.reward || (zombie.elite ? 4 : 1);
@@ -3754,157 +3754,131 @@
       });
     }
 
-    createDeathBurst(x, y, zombie) {
+    createZombieCorpse(x, y, zombie) {
       const sizeScale = this.getZombieEffectScale(zombie);
       const tier = zombie.elite ? "elite" : sizeScale < 0.95 ? "small" : "normal";
-      const effect = BLOOD_BURST_EFFECTS[tier];
-      const burstScale = sizeScale * (zombie.type === "brute" ? 1.08 : 1);
-      const coreRadius = effect.core * burstScale;
-      const spread = effect.spread * burstScale;
-      const effectX = clamp(x, spread + 8, GAME_WIDTH - spread - 8);
-      const effectY = y - (zombie.displayH || 170) * 0.16;
-      const burst = this.trackTransient(this.add.container(effectX, effectY).setDepth(232));
-      const popDuration = effect.pop;
+      const effect = ZOMBIE_CORPSE_EFFECTS[tier];
+      const displayH = zombie.displayH || 170;
+      const displayW = zombie.displayW || displayH;
+      const corpseDepth = 58 + y / 5;
+      const fallDir = zombie.flipX ? -1 : 1;
+      const corpseX = clamp(x, this.bounds.left + 26, this.bounds.right - 26);
+      const corpseY = y + displayH * 0.18;
+      const landingX = clamp(corpseX + fallDir * rand(displayH * 0.12, displayH * 0.22), this.bounds.left + 28, this.bounds.right - 28);
+      const landingY = clamp(corpseY + rand(12, 26), -20, this.bounds.barricade + 22);
+      const finalAngle = fallDir * rand(78, 98);
 
-      const addCircle = (offsetX, offsetY, radius, color, alpha) => {
-        const circle = this.add.circle(offsetX, offsetY, radius, color, alpha);
-        burst.add(circle);
-        return circle;
-      };
-      const addEllipse = (offsetX, offsetY, width, height, color, alpha) => {
-        const ellipse = this.add.ellipse(offsetX, offsetY, width, height, color, alpha);
-        burst.add(ellipse);
-        return ellipse;
-      };
+      this.tweens.killTweensOf(zombie);
+      this.trackTransient(zombie);
+      zombie.setActive(false)
+        .setPosition(corpseX, y)
+        .setOrigin(0.5, 0.58)
+        .setDisplaySize(displayW, displayH)
+        .setDepth(corpseDepth + 0.8)
+        .setAlpha(1);
+      if (typeof zombie.clearTint === "function") {
+        zombie.clearTint();
+      }
+      zombie.setTint(0x9b8f88);
 
-      const floorSplat = addEllipse(0, coreRadius * 0.48, coreRadius * 1.45, coreRadius * 0.38, 0x2b0206, 0.32)
-        .setRotation(rand(-0.08, 0.08))
-        .setScale(0.14);
-      const shockRing = addCircle(0, 0, Math.max(14, coreRadius * 0.54), 0xffffff, 0)
-        .setStrokeStyle(Math.max(2, 3 * burstScale), 0xb91f23, 0.72)
-        .setScale(0.24);
-
-      const corePieces = [floorSplat];
       const hasBloodTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists("blood-burst-core");
-      const texturedCore = hasBloodTexture
-        ? this.add.image(0, 0, "blood-burst-core")
+      const stainY = landingY + displayH * 0.18;
+      const stain = this.trackTransient(hasBloodTexture
+        ? this.add.image(landingX, stainY, "blood-burst-core")
           .setOrigin(0.5)
-          .setDisplaySize(coreRadius * 3.8, coreRadius * 3.8)
-          .setRotation(rand(-0.18, 0.18))
-          .setAlpha(0.96)
-        : null;
-      if (texturedCore) {
-        burst.add(texturedCore);
-        const textureBaseScaleX = texturedCore.scaleX;
-        const textureBaseScaleY = texturedCore.scaleY;
-        texturedCore.setScale(textureBaseScaleX * 0.08, textureBaseScaleY * 0.08);
-        this.tweens.add({
-          targets: texturedCore,
-          scaleX: textureBaseScaleX * 1.08,
-          scaleY: textureBaseScaleY * 1.08,
-          duration: popDuration,
-          ease: "Back.easeOut"
-        });
-        this.tweens.add({
-          targets: texturedCore,
-          scaleX: textureBaseScaleX * 0.16,
-          scaleY: textureBaseScaleY * 0.16,
-          alpha: 0,
-          delay: popDuration + 155,
-          duration: Math.max(320, effect.duration - popDuration - 155),
-          ease: "Sine.easeInOut"
-        });
-      } else {
-        corePieces.push(addCircle(0, 0, coreRadius, 0x8d1119, 0.88).setScale(0.1));
-        for (let i = 0; i < 6; i += 1) {
-          const angle = Math.PI * 2 * i / 6 + rand(-0.34, 0.34);
-          const distance = coreRadius * rand(0.08, 0.28);
-          corePieces.push(addEllipse(
-            Math.cos(angle) * distance,
-            Math.sin(angle) * distance * 0.72,
-            coreRadius * rand(0.86, 1.28),
-            coreRadius * rand(0.56, 1.02),
-            choose(BLOOD_BURST_COLORS),
-            rand(0.58, 0.86)
-          )
-            .setRotation(angle + rand(-0.85, 0.85))
-            .setScale(0.1));
-        }
-      }
-      corePieces.push(addCircle(-coreRadius * 0.2, -coreRadius * 0.18, Math.max(4, coreRadius * 0.13), 0xff6b48, 0.36)
-        .setScale(0.08));
+          .setDisplaySize(effect.stainWidth * sizeScale, effect.stainHeight * sizeScale)
+          .setRotation(rand(-0.26, 0.26))
+          .setTint(0x9b1216)
+        : this.add.ellipse(landingX, stainY, effect.stainWidth * sizeScale, effect.stainHeight * sizeScale, COLORS.blood, 0.72)
+          .setRotation(rand(-0.18, 0.18)));
+      stain.setAlpha(0).setDepth(corpseDepth);
+      const stainBaseScaleX = stain.scaleX;
+      const stainBaseScaleY = stain.scaleY;
+      stain.setScale(stainBaseScaleX * 0.18, stainBaseScaleY * 0.18);
+
+      const shadow = this.trackTransient(this.add.ellipse(
+        landingX,
+        landingY + displayH * 0.2,
+        displayH * 0.76,
+        displayH * 0.22,
+        0x050101,
+        0.38
+      )
+        .setRotation(finalAngle * Math.PI / 180)
+        .setAlpha(0)
+        .setDepth(corpseDepth - 0.4));
+
+      const smear = this.trackTransient(this.add.ellipse(
+        (corpseX + landingX) / 2,
+        stainY - displayH * 0.04,
+        effect.stainWidth * sizeScale * 0.5,
+        effect.stainHeight * sizeScale * 0.42,
+        0x3b0307,
+        0.36
+      )
+        .setRotation(finalAngle * Math.PI / 180 + rand(-0.16, 0.16))
+        .setAlpha(0)
+        .setDepth(corpseDepth - 0.2));
 
       this.tweens.add({
-        targets: shockRing,
-        scale: spread / Math.max(14, coreRadius * 0.54),
-        alpha: 0,
-        duration: popDuration + 115,
+        targets: stain,
+        scaleX: stainBaseScaleX,
+        scaleY: stainBaseScaleY,
+        alpha: 0.72,
+        duration: 180,
         ease: "Cubic.easeOut"
       });
       this.tweens.add({
-        targets: corePieces,
-        scaleX: 1.15,
-        scaleY: 1.08,
-        duration: popDuration,
-        ease: "Back.easeOut"
+        targets: smear,
+        alpha: 0.36,
+        duration: 220,
+        ease: "Cubic.easeOut"
       });
       this.tweens.add({
-        targets: corePieces,
-        scaleX: 0.18,
-        scaleY: 0.18,
-        alpha: 0,
-        delay: popDuration + 130,
-        duration: Math.max(280, effect.duration - popDuration - 130),
-        ease: "Sine.easeInOut"
+        targets: shadow,
+        alpha: 0.38,
+        duration: effect.fall,
+        ease: "Cubic.easeOut"
       });
-
-      for (let i = 0; i < effect.droplets; i += 1) {
-        const angle = rand(-Math.PI, Math.PI);
-        const distance = rand(coreRadius * 0.48, spread) * (i % 5 === 0 ? rand(1.05, 1.22) : 1);
-        const radius = rand(3.5, 9.5) * burstScale * (i % 6 === 0 ? 1.25 : 1);
-        const drop = addCircle(rand(-2, 2), rand(-2, 2), radius, choose(BLOOD_BURST_COLORS), rand(0.72, 0.96))
-          .setScale(0.08);
-        const travelDuration = Math.round(rand(popDuration * 0.72, popDuration * 1.36));
-        const settleDelay = Math.round(travelDuration + rand(90, 240));
-        this.tweens.add({
-          targets: drop,
-          x: Math.cos(angle) * distance,
-          y: Math.sin(angle) * distance * 0.7 + rand(-8, 14),
-          scaleX: rand(0.78, 1.34),
-          scaleY: rand(0.62, 1.12),
-          duration: travelDuration,
-          ease: "Cubic.easeOut"
-        });
-        this.tweens.add({
-          targets: drop,
-          scaleX: 0.05,
-          scaleY: 0.05,
-          alpha: 0,
-          delay: settleDelay,
-          duration: Math.max(260, effect.duration - settleDelay),
-          ease: "Sine.easeIn"
-        });
-      }
-
-      for (let i = 0; i < effect.mist; i += 1) {
-        const angle = rand(-Math.PI, Math.PI);
-        const distance = rand(spread * 0.42, spread * 1.18);
-        const speck = addCircle(0, 0, rand(1.4, 3.8) * burstScale, choose(BLOOD_BURST_COLORS), rand(0.38, 0.7))
-          .setScale(0.1);
-        this.tweens.add({
-          targets: speck,
-          x: Math.cos(angle) * distance,
-          y: Math.sin(angle) * distance * 0.74 + rand(-14, 18),
-          scale: rand(0.55, 1.05),
-          alpha: 0,
-          duration: Math.round(rand(effect.duration * 0.46, effect.duration * 0.82)),
-          ease: "Cubic.easeOut"
-        });
-      }
-
-      this.scheduleSceneDelay(effect.duration + 80, () => this.destroyTransientObject(burst, false));
+      this.tweens.add({
+        targets: zombie,
+        angle: finalAngle * 0.22,
+        y: y + displayH * 0.08,
+        duration: 82,
+        ease: "Quad.easeOut"
+      });
+      this.tweens.add({
+        targets: zombie,
+        x: landingX,
+        y: landingY,
+        angle: finalAngle,
+        scaleX: zombie.scaleX * 1.02,
+        scaleY: zombie.scaleY * 0.96,
+        delay: 70,
+        duration: effect.fall,
+        ease: "Quad.easeIn",
+        onComplete: () => {
+          zombie.setDepth(corpseDepth + 0.4);
+          if (zombie.elite || zombie.type === "brute") {
+            this.shakeCamera(70, 0.0035);
+          }
+        }
+      });
+      this.tweens.add({
+        targets: [zombie, stain, shadow, smear],
+        alpha: 0,
+        delay: effect.hold,
+        duration: effect.fade,
+        ease: "Sine.easeInOut",
+        onComplete: () => {
+          this.destroyTransientObject(zombie, false);
+          this.destroyTransientObject(stain, false);
+          this.destroyTransientObject(shadow, false);
+          this.destroyTransientObject(smear, false);
+        }
+      });
     }
 
     updateZombies(dt) {
