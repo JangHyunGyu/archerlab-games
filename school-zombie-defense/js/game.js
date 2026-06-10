@@ -3872,6 +3872,34 @@
       if (corpseImage) {
         corpseImage.setScale(corpseBaseScaleX * 0.94, corpseBaseScaleY * 0.94);
       }
+      const deathTexture = `zombie-death-${corpseType}-sheet`;
+      const hasDeathTexture = this.textures
+        && typeof this.textures.exists === "function"
+        && this.textures.exists(deathTexture);
+      const deathDisplaySize = displayH * (zombie.elite ? 2.08 : zombie.type === "brute" ? 1.96 : 1.74);
+      const deathSprite = hasDeathTexture
+        ? this.trackTransient(this.add.sprite(corpseX, y + displayH * 0.04, deathTexture, 0)
+          .setOrigin(0.5)
+          .setDisplaySize(deathDisplaySize, deathDisplaySize)
+          .setFlipX(finalAngle < 0)
+          .setAlpha(1)
+          .setDepth(corpseDepth + 0.9))
+        : null;
+      const deathBaseScaleX = deathSprite ? deathSprite.scaleX : 1;
+      const deathBaseScaleY = deathSprite ? deathSprite.scaleY : 1;
+      const revealCorpseImage = () => {
+        if (!corpseImage || corpseImage.destroyed) {
+          return;
+        }
+        this.tweens.add({
+          targets: corpseImage,
+          alpha: 0.96,
+          scaleX: corpseBaseScaleX,
+          scaleY: corpseBaseScaleY,
+          duration: 130,
+          ease: "Cubic.easeOut"
+        });
+      };
 
       this.tweens.add({
         targets: stain,
@@ -3893,52 +3921,76 @@
         duration: effect.fall,
         ease: "Cubic.easeOut"
       });
-      this.tweens.add({
-        targets: zombie,
-        angle: finalAngle * rand(0.16, 0.28),
-        x: stumbleX,
-        y: stumbleY,
-        duration: rand(70, 112),
-        ease: "Quad.easeOut"
-      });
-      this.tweens.add({
-        targets: zombie,
-        x: landingX,
-        y: landingY,
-        angle: finalAngle,
-        scaleX: zombie.scaleX * 1.02,
-        scaleY: zombie.scaleY * 0.96,
-        delay: 70,
-        duration: effect.fall,
-        ease: "Quad.easeIn",
-        onComplete: () => {
-          zombie.setDepth(corpseDepth + 0.4);
-          if (corpseImage) {
+      if (deathSprite) {
+        this.destroyTransientObject(zombie, false);
+        this.playTransientSpriteFrames(deathSprite, ZOMBIE_DEATH_ANIMATION_FRAMES, effect.fall + 260);
+        this.tweens.add({
+          targets: deathSprite,
+          x: landingX,
+          y: landingY,
+          angle: finalAngle * 0.08,
+          scaleX: deathBaseScaleX * 1.02,
+          scaleY: deathBaseScaleY * 1.02,
+          duration: effect.fall + 260,
+          ease: "Quad.easeInOut",
+          onComplete: () => {
+            revealCorpseImage();
             this.tweens.add({
-              targets: corpseImage,
-              alpha: 0.96,
-              scaleX: corpseBaseScaleX,
-              scaleY: corpseBaseScaleY,
-              duration: 130,
-              ease: "Cubic.easeOut"
-            });
-            this.tweens.add({
-              targets: zombie,
+              targets: deathSprite,
               alpha: 0,
-              duration: 110,
+              duration: 120,
               ease: "Cubic.easeOut",
-              onComplete: () => this.destroyTransientObject(zombie, false)
+              onComplete: () => this.destroyTransientObject(deathSprite, false)
             });
+            if (zombie.elite || zombie.type === "brute") {
+              this.shakeCamera(70, 0.0035);
+            }
           }
-          if (zombie.elite || zombie.type === "brute") {
-            this.shakeCamera(70, 0.0035);
+        });
+      } else {
+        this.tweens.add({
+          targets: zombie,
+          angle: finalAngle * rand(0.16, 0.28),
+          x: stumbleX,
+          y: stumbleY,
+          duration: rand(70, 112),
+          ease: "Quad.easeOut"
+        });
+        this.tweens.add({
+          targets: zombie,
+          x: landingX,
+          y: landingY,
+          angle: finalAngle,
+          scaleX: zombie.scaleX * 1.02,
+          scaleY: zombie.scaleY * 0.96,
+          delay: 70,
+          duration: effect.fall,
+          ease: "Quad.easeIn",
+          onComplete: () => {
+            zombie.setDepth(corpseDepth + 0.4);
+            if (corpseImage) {
+              revealCorpseImage();
+              this.tweens.add({
+                targets: zombie,
+                alpha: 0,
+                duration: 110,
+                ease: "Cubic.easeOut",
+                onComplete: () => this.destroyTransientObject(zombie, false)
+              });
+            }
+            if (zombie.elite || zombie.type === "brute") {
+              this.shakeCamera(70, 0.0035);
+            }
           }
-        }
-      });
-      this.scheduleSceneDelay(effect.corpseHold, () => {
+        });
+      }
+      const corpseFadeDelay = effect.corpseHold + (deathSprite ? effect.fall + 260 : 0);
+      this.scheduleSceneDelay(corpseFadeDelay, () => {
         const corpseTarget = corpseImage && !corpseImage.destroyed
           ? corpseImage
-          : zombie && !zombie.destroyed ? zombie : null;
+          : deathSprite && !deathSprite.destroyed
+            ? deathSprite
+            : zombie && !zombie.destroyed ? zombie : null;
         if (!corpseTarget) {
           return;
         }
