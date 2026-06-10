@@ -18,6 +18,17 @@
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rand = (min, max) => Math.random() * (max - min) + min;
+  const SUPPORTS_WEBP = (() => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      return canvas.toDataURL("image/webp").startsWith("data:image/webp");
+    } catch {
+      return false;
+    }
+  })();
+  const imageAsset = (path) => SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
   const shuffleItems = (items) => {
     const copy = [...items];
@@ -1133,66 +1144,66 @@
     }
 
     preload() {
-      this.load.image("bg-corridor", "assets/images/corridor-battlefield.png");
-      this.load.image("title-keyart", "assets/images/title-keyart.png");
-      this.load.image("ui-title-button", "assets/images/ui-title-button.png");
-      this.load.image("skill-choice-backdrop", "assets/images/skill-choice-backdrop.png");
-      this.load.image("gameover-last-stand", "assets/images/gameover-last-stand.png");
-      this.load.image("shop-blackmarket", "assets/images/shop-blackmarket.png");
-      this.load.image("premium-skill-card", "assets/images/premium-skill-card.png");
-      this.load.image("character-a", "assets/images/character-a.png");
-      this.load.image("character-b", "assets/images/character-b.png");
-      this.load.image("character-c", "assets/images/character-c.png");
-      this.load.image("character-d", "assets/images/character-d.png");
-      this.load.image("character-e", "assets/images/character-e.png");
-      this.load.image("avatar-pistol", "assets/images/avatar-pistol.png");
-      this.load.image("avatar-bow", "assets/images/avatar-bow.png");
-      this.load.image("avatar-rifle", "assets/images/avatar-rifle.png");
-      this.load.image("avatar-rocket", "assets/images/avatar-rocket.png");
-      this.load.image("avatar-sniper", "assets/images/avatar-sniper.png");
-      this.load.image("projectile-arrow", "assets/images/projectile-arrow.png");
-      this.load.image("projectile-pistol", "assets/images/projectile-pistol.png");
-      this.load.image("projectile-rifle", "assets/images/projectile-rifle.png");
-      this.load.image("projectile-rocket", "assets/images/projectile-rocket.png");
-      this.load.image("projectile-sniper", "assets/images/projectile-sniper.png");
-      this.load.image("muzzle-arrow", "assets/images/muzzle-arrow.png");
-      this.load.image("muzzle-pistol", "assets/images/muzzle-pistol.png");
-      this.load.image("muzzle-rifle", "assets/images/muzzle-rifle.png");
-      this.load.image("muzzle-rocket", "assets/images/muzzle-rocket.png");
-      this.load.image("muzzle-sniper", "assets/images/muzzle-sniper.png");
-      this.load.image("skill-pierce", "assets/images/skill-pierce.png");
-      this.load.image("skill-multishot", "assets/images/skill-multishot.png");
-      this.load.image("skill-rally", "assets/images/skill-rally.png");
-      this.load.image("skill-mark", "assets/images/skill-mark.png");
-      this.load.image("skill-barrage", "assets/images/skill-barrage.png");
-      this.load.image("skill-rocket", "assets/images/skill-rocket.png");
-      this.load.image("skill-frost", "assets/images/skill-frost.png");
-      this.load.image("skill-repair", "assets/images/skill-repair.png");
-      this.load.image("skill-full-repair", "assets/images/skill-full-repair.png");
-      this.load.image("skill-max-hp", "assets/images/skill-max-hp.png");
-      this.load.image("skill-sniper", "assets/images/skill-sniper.png");
-      this.load.image("skill-pistol-rapid", "assets/images/skill-pistol-rapid.png");
-      this.load.image("skill-arrow-pin", "assets/images/skill-arrow-pin.png");
-      this.load.image("skill-rifle-grenade", "assets/images/skill-rifle-grenade.png");
-      this.load.image("skill-rocket-impact", "assets/images/skill-rocket-impact.png");
-      this.load.image("skill-sniper-weakpoint", "assets/images/skill-sniper-weakpoint.png");
-      this.load.image("zombie-hit-arrow", "assets/images/zombie-hit-arrow.png");
-      this.load.image("zombie-hit-pistol", "assets/images/zombie-hit-pistol.png");
-      this.load.image("zombie-hit-rifle", "assets/images/zombie-hit-rifle.png");
-      this.load.image("zombie-hit-rocket", "assets/images/zombie-hit-rocket.png");
-      this.load.image("zombie-hit-sniper", "assets/images/zombie-hit-sniper.png");
-      this.load.image("barricade-impact", "assets/images/barricade-impact.png");
-      this.load.image("zombie-death-small", "assets/images/zombie-death-small.png");
-      this.load.image("zombie-death-normal", "assets/images/zombie-death-normal.png");
-      this.load.image("zombie-death-elite", "assets/images/zombie-death-elite.png");
-      this.load.image("zombie-walk", "assets/images/zombie-walk.png");
-      this.load.image("zombie-walk-normal", "assets/images/zombie-walk-normal.png");
-      this.load.image("zombie-walk-runner", "assets/images/zombie-walk-runner.png");
-      this.load.image("zombie-walk-brute", "assets/images/zombie-walk-brute.png");
-      this.load.image("zombie-walk-volatile", "assets/images/zombie-walk-volatile.png");
-      this.load.image("zombie-walk-elite", "assets/images/zombie-walk-elite.png");
-      this.load.image("ui-frame-sheet", "assets/images/ui-frame-sheet.png");
-      this.load.image("skill-card-sheet", "assets/images/skill-card-sheet.png");
+      this.load.image("bg-corridor", imageAsset("assets/images/corridor-battlefield.png"));
+      this.load.image("title-keyart", imageAsset("assets/images/title-keyart.png"));
+      this.load.image("ui-title-button", imageAsset("assets/images/ui-title-button.png"));
+      this.load.image("skill-choice-backdrop", imageAsset("assets/images/skill-choice-backdrop.png"));
+      this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
+      this.load.image("shop-blackmarket", imageAsset("assets/images/shop-blackmarket.png"));
+      this.load.image("premium-skill-card", imageAsset("assets/images/premium-skill-card.png"));
+      this.load.image("character-a", imageAsset("assets/images/character-a.png"));
+      this.load.image("character-b", imageAsset("assets/images/character-b.png"));
+      this.load.image("character-c", imageAsset("assets/images/character-c.png"));
+      this.load.image("character-d", imageAsset("assets/images/character-d.png"));
+      this.load.image("character-e", imageAsset("assets/images/character-e.png"));
+      this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
+      this.load.image("avatar-bow", imageAsset("assets/images/avatar-bow.png"));
+      this.load.image("avatar-rifle", imageAsset("assets/images/avatar-rifle.png"));
+      this.load.image("avatar-rocket", imageAsset("assets/images/avatar-rocket.png"));
+      this.load.image("avatar-sniper", imageAsset("assets/images/avatar-sniper.png"));
+      this.load.image("projectile-arrow", imageAsset("assets/images/projectile-arrow.png"));
+      this.load.image("projectile-pistol", imageAsset("assets/images/projectile-pistol.png"));
+      this.load.image("projectile-rifle", imageAsset("assets/images/projectile-rifle.png"));
+      this.load.image("projectile-rocket", imageAsset("assets/images/projectile-rocket.png"));
+      this.load.image("projectile-sniper", imageAsset("assets/images/projectile-sniper.png"));
+      this.load.image("muzzle-arrow", imageAsset("assets/images/muzzle-arrow.png"));
+      this.load.image("muzzle-pistol", imageAsset("assets/images/muzzle-pistol.png"));
+      this.load.image("muzzle-rifle", imageAsset("assets/images/muzzle-rifle.png"));
+      this.load.image("muzzle-rocket", imageAsset("assets/images/muzzle-rocket.png"));
+      this.load.image("muzzle-sniper", imageAsset("assets/images/muzzle-sniper.png"));
+      this.load.image("skill-pierce", imageAsset("assets/images/skill-pierce.png"));
+      this.load.image("skill-multishot", imageAsset("assets/images/skill-multishot.png"));
+      this.load.image("skill-rally", imageAsset("assets/images/skill-rally.png"));
+      this.load.image("skill-mark", imageAsset("assets/images/skill-mark.png"));
+      this.load.image("skill-barrage", imageAsset("assets/images/skill-barrage.png"));
+      this.load.image("skill-rocket", imageAsset("assets/images/skill-rocket.png"));
+      this.load.image("skill-frost", imageAsset("assets/images/skill-frost.png"));
+      this.load.image("skill-repair", imageAsset("assets/images/skill-repair.png"));
+      this.load.image("skill-full-repair", imageAsset("assets/images/skill-full-repair.png"));
+      this.load.image("skill-max-hp", imageAsset("assets/images/skill-max-hp.png"));
+      this.load.image("skill-sniper", imageAsset("assets/images/skill-sniper.png"));
+      this.load.image("skill-pistol-rapid", imageAsset("assets/images/skill-pistol-rapid.png"));
+      this.load.image("skill-arrow-pin", imageAsset("assets/images/skill-arrow-pin.png"));
+      this.load.image("skill-rifle-grenade", imageAsset("assets/images/skill-rifle-grenade.png"));
+      this.load.image("skill-rocket-impact", imageAsset("assets/images/skill-rocket-impact.png"));
+      this.load.image("skill-sniper-weakpoint", imageAsset("assets/images/skill-sniper-weakpoint.png"));
+      this.load.image("zombie-hit-arrow", imageAsset("assets/images/zombie-hit-arrow.png"));
+      this.load.image("zombie-hit-pistol", imageAsset("assets/images/zombie-hit-pistol.png"));
+      this.load.image("zombie-hit-rifle", imageAsset("assets/images/zombie-hit-rifle.png"));
+      this.load.image("zombie-hit-rocket", imageAsset("assets/images/zombie-hit-rocket.png"));
+      this.load.image("zombie-hit-sniper", imageAsset("assets/images/zombie-hit-sniper.png"));
+      this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
+      this.load.image("zombie-death-small", imageAsset("assets/images/zombie-death-small.png"));
+      this.load.image("zombie-death-normal", imageAsset("assets/images/zombie-death-normal.png"));
+      this.load.image("zombie-death-elite", imageAsset("assets/images/zombie-death-elite.png"));
+      this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
+      this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
+      this.load.image("zombie-walk-runner", imageAsset("assets/images/zombie-walk-runner.png"));
+      this.load.image("zombie-walk-brute", imageAsset("assets/images/zombie-walk-brute.png"));
+      this.load.image("zombie-walk-volatile", imageAsset("assets/images/zombie-walk-volatile.png"));
+      this.load.image("zombie-walk-elite", imageAsset("assets/images/zombie-walk-elite.png"));
+      this.load.image("ui-frame-sheet", imageAsset("assets/images/ui-frame-sheet.png"));
+      this.load.image("skill-card-sheet", imageAsset("assets/images/skill-card-sheet.png"));
     }
 
     create() {
