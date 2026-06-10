@@ -95,6 +95,7 @@
     normal: { stainWidth: 138, stainHeight: 56, fall: 285, hold: 3600, fade: 1550 },
     elite: { stainWidth: 188, stainHeight: 76, fall: 340, hold: 4300, fade: 1800 }
   };
+  const ZOMBIE_CORPSE_TEXTURES = ["zombie-corpse-1", "zombie-corpse-2", "zombie-corpse-3"];
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
@@ -1194,6 +1195,7 @@
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
       this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
+      ZOMBIE_CORPSE_TEXTURES.forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
       this.load.image("zombie-walk-runner", imageAsset("assets/images/zombie-walk-runner.png"));
@@ -3833,6 +3835,27 @@
         .setAlpha(0)
         .setDepth(corpseDepth - 0.2));
 
+      const corpseTexture = choose(ZOMBIE_CORPSE_TEXTURES);
+      const hasCorpseTexture = this.textures
+        && typeof this.textures.exists === "function"
+        && this.textures.exists(corpseTexture);
+      const corpseDisplayWidth = displayH * (zombie.elite ? 2.05 : 1.76);
+      const corpseDisplayHeight = corpseDisplayWidth * 360 / 512;
+      const corpseImage = hasCorpseTexture
+        ? this.trackTransient(this.add.image(landingX, landingY, corpseTexture)
+          .setOrigin(0.5)
+          .setDisplaySize(corpseDisplayWidth, corpseDisplayHeight)
+          .setFlipX(Math.random() < 0.5)
+          .setAngle(finalAngle * rand(0.1, 0.18) + rand(-7, 7))
+          .setAlpha(0)
+          .setDepth(corpseDepth + 0.45))
+        : null;
+      const corpseBaseScaleX = corpseImage ? corpseImage.scaleX : 1;
+      const corpseBaseScaleY = corpseImage ? corpseImage.scaleY : 1;
+      if (corpseImage) {
+        corpseImage.setScale(corpseBaseScaleX * 0.94, corpseBaseScaleY * 0.94);
+      }
+
       this.tweens.add({
         targets: stain,
         scaleX: stainBaseScaleX,
@@ -3873,23 +3896,50 @@
         ease: "Quad.easeIn",
         onComplete: () => {
           zombie.setDepth(corpseDepth + 0.4);
+          if (corpseImage) {
+            this.tweens.add({
+              targets: corpseImage,
+              alpha: 0.96,
+              scaleX: corpseBaseScaleX,
+              scaleY: corpseBaseScaleY,
+              duration: 130,
+              ease: "Cubic.easeOut"
+            });
+            this.tweens.add({
+              targets: zombie,
+              alpha: 0,
+              duration: 110,
+              ease: "Cubic.easeOut",
+              onComplete: () => this.destroyTransientObject(zombie, false)
+            });
+          }
           if (zombie.elite || zombie.type === "brute") {
             this.shakeCamera(70, 0.0035);
           }
         }
       });
-      this.tweens.add({
-        targets: [zombie, stain, shadow, smear],
-        alpha: 0,
-        delay: effect.hold,
-        duration: effect.fade,
-        ease: "Sine.easeInOut",
-        onComplete: () => {
-          this.destroyTransientObject(zombie, false);
-          this.destroyTransientObject(stain, false);
-          this.destroyTransientObject(shadow, false);
-          this.destroyTransientObject(smear, false);
+      this.scheduleSceneDelay(effect.hold, () => {
+        const corpseTarget = corpseImage && !corpseImage.destroyed
+          ? corpseImage
+          : zombie && !zombie.destroyed ? zombie : null;
+        const fadeTargets = [corpseTarget, stain, shadow, smear].filter((target) => target && !target.destroyed);
+        if (!fadeTargets.length) {
+          return;
         }
+        this.tweens.add({
+          targets: fadeTargets,
+          alpha: 0,
+          duration: effect.fade,
+          ease: "Sine.easeInOut",
+          onComplete: () => {
+            if (corpseTarget) {
+              this.destroyTransientObject(corpseTarget, false);
+            }
+            this.destroyTransientObject(stain, false);
+            this.destroyTransientObject(shadow, false);
+            this.destroyTransientObject(smear, false);
+          }
+        });
       });
     }
 
