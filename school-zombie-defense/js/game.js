@@ -1194,6 +1194,7 @@
       this.load.spritesheet("zombie-hit-rocket-sheet", imageAsset("assets/images/zombie-hit-rocket-sheet.png"), { frameWidth: 160, frameHeight: 130 });
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
+      this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
       this.load.image("zombie-walk-runner", imageAsset("assets/images/zombie-walk-runner.png"));
@@ -3783,23 +3784,54 @@
         .setStrokeStyle(Math.max(2, 3 * burstScale), 0xb91f23, 0.72)
         .setScale(0.24);
 
-      const corePieces = [
-        floorSplat,
-        addCircle(0, 0, coreRadius, 0x8d1119, 0.88).setScale(0.1)
-      ];
-      for (let i = 0; i < 6; i += 1) {
-        const angle = Math.PI * 2 * i / 6 + rand(-0.34, 0.34);
-        const distance = coreRadius * rand(0.08, 0.28);
-        corePieces.push(addEllipse(
-          Math.cos(angle) * distance,
-          Math.sin(angle) * distance * 0.72,
-          coreRadius * rand(0.86, 1.28),
-          coreRadius * rand(0.56, 1.02),
-          choose(BLOOD_BURST_COLORS),
-          rand(0.58, 0.86)
-        )
-          .setRotation(angle + rand(-0.85, 0.85))
-          .setScale(0.1));
+      const corePieces = [floorSplat];
+      const hasBloodTexture = this.textures
+        && typeof this.textures.exists === "function"
+        && this.textures.exists("blood-burst-core");
+      const texturedCore = hasBloodTexture
+        ? this.add.image(0, 0, "blood-burst-core")
+          .setOrigin(0.5)
+          .setDisplaySize(coreRadius * 3.8, coreRadius * 3.8)
+          .setRotation(rand(-0.18, 0.18))
+          .setAlpha(0.96)
+        : null;
+      if (texturedCore) {
+        burst.add(texturedCore);
+        const textureBaseScaleX = texturedCore.scaleX;
+        const textureBaseScaleY = texturedCore.scaleY;
+        texturedCore.setScale(textureBaseScaleX * 0.08, textureBaseScaleY * 0.08);
+        this.tweens.add({
+          targets: texturedCore,
+          scaleX: textureBaseScaleX * 1.08,
+          scaleY: textureBaseScaleY * 1.08,
+          duration: popDuration,
+          ease: "Back.easeOut"
+        });
+        this.tweens.add({
+          targets: texturedCore,
+          scaleX: textureBaseScaleX * 0.16,
+          scaleY: textureBaseScaleY * 0.16,
+          alpha: 0,
+          delay: popDuration + 155,
+          duration: Math.max(320, effect.duration - popDuration - 155),
+          ease: "Sine.easeInOut"
+        });
+      } else {
+        corePieces.push(addCircle(0, 0, coreRadius, 0x8d1119, 0.88).setScale(0.1));
+        for (let i = 0; i < 6; i += 1) {
+          const angle = Math.PI * 2 * i / 6 + rand(-0.34, 0.34);
+          const distance = coreRadius * rand(0.08, 0.28);
+          corePieces.push(addEllipse(
+            Math.cos(angle) * distance,
+            Math.sin(angle) * distance * 0.72,
+            coreRadius * rand(0.86, 1.28),
+            coreRadius * rand(0.56, 1.02),
+            choose(BLOOD_BURST_COLORS),
+            rand(0.58, 0.86)
+          )
+            .setRotation(angle + rand(-0.85, 0.85))
+            .setScale(0.1));
+        }
       }
       corePieces.push(addCircle(-coreRadius * 0.2, -coreRadius * 0.18, Math.max(4, coreRadius * 0.13), 0xff6b48, 0.36)
         .setScale(0.08));
