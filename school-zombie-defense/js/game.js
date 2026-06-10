@@ -3604,6 +3604,23 @@
       return clamp((zombie.displayH || 170) / 172, 0.72, zombie.elite ? 1.48 : 1.24);
     }
 
+    getZombieHitPoint(zombie, hitType = "default", crit = false) {
+      const height = zombie.displayH || 170;
+      const radius = zombie.hitRadius || 32;
+      const headWeight = crit || hitType === "projectile-sniper" ? 0.42 : 0.26;
+      const chestWeight = 0.42;
+      const roll = Math.random();
+      const zone = roll < headWeight
+        ? { y: -0.38, xSpread: 0.42, ySpread: 0.045 }
+        : roll < headWeight + chestWeight
+          ? { y: -0.22, xSpread: 0.56, ySpread: 0.06 }
+          : { y: -0.06, xSpread: 0.62, ySpread: 0.065 };
+      return {
+        x: zombie.x + rand(-radius * zone.xSpread, radius * zone.xSpread),
+        y: zombie.y + height * zone.y + rand(-height * zone.ySpread, height * zone.ySpread)
+      };
+    }
+
     playTransientSpriteFrames(sprite, frameCount, duration) {
       if (!sprite || frameCount <= 1 || typeof sprite.setFrame !== "function") {
         return null;
@@ -3636,9 +3653,10 @@
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
       const displayWidth = effect.width * sizeScale;
       const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
+      const hitPoint = this.getZombieHitPoint(zombie, hitType, crit);
       const impact = this.trackTransient(this.add.sprite(
-        zombie.x + rand(-zombie.hitRadius * 0.18, zombie.hitRadius * 0.18),
-        zombie.y - (zombie.displayH || 170) * 0.08 + rand(-zombie.hitRadius * 0.12, zombie.hitRadius * 0.1),
+        hitPoint.x,
+        hitPoint.y,
         effect.texture,
         0
       )
