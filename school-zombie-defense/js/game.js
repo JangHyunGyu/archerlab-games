@@ -3654,22 +3654,28 @@
         }
 
         const slowFactor = zombie.slowTimer > 0 ? 0.34 : 1;
-        if (zombie.y < this.bounds.barricade - 30) {
-          zombie.y += zombie.speed * slowFactor * dt;
+        const attackLine = this.getZombieBarricadeContactY(zombie);
+        if (zombie.y < attackLine) {
+          zombie.y = Math.min(attackLine, zombie.y + zombie.speed * slowFactor * dt);
         } else {
           zombie.attackTimer -= dt;
-          zombie.y += Math.sin(zombie.wobble) * 6 * dt;
+          zombie.y = clamp(zombie.y + Math.sin(zombie.wobble) * 6 * dt, attackLine - 4, attackLine + 7);
           if (zombie.attackTimer <= 0) {
             zombie.attackTimer = rand(0.55, 1);
             this.takeDamage(zombie.attack);
             if (this.mode !== "playing") {
               return;
             }
-            zombie.y = Math.max(zombie.y - 6, this.bounds.barricade - 20);
+            zombie.y = clamp(zombie.y - 8, attackLine - 6, attackLine);
             this.createHitAtBarricade(zombie.x);
           }
         }
       }
+    }
+
+    getZombieBarricadeContactY(zombie) {
+      const displayHeight = zombie?.displayH || 170;
+      return this.bounds.barricade - clamp(displayHeight * 0.28, 38, 64);
     }
 
     takeDamage(rawAmount) {
@@ -3698,15 +3704,15 @@
       const texture = this.textures.get("barricade-impact").getSourceImage();
       const effectHeight = effectWidth * texture.height / texture.width;
       const effectX = clamp(x, effectWidth / 2 + 8, GAME_WIDTH - effectWidth / 2 - 8);
-      const effectY = this.bounds.barricade + 38;
+      const effectY = this.bounds.barricade + 8;
       const impact = this.trackTransient(this.add.image(effectX, effectY, "barricade-impact")
         .setOrigin(0.5, 0.55)
         .setDisplaySize(effectWidth, effectHeight)
         .setRotation(rand(-0.035, 0.035))
         .setAlpha(0.98)
         .setDepth(225));
-      const flash = this.trackTransient(this.add.rectangle(270, this.bounds.barricade + 46, 540, 86, 0xff3b22, 0.18).setDepth(224));
-      const sparks = this.trackTransient(this.add.circle(x, this.bounds.barricade + rand(10, 30), 11, 0xffd86b, 0.86).setDepth(226));
+      const flash = this.trackTransient(this.add.rectangle(270, this.bounds.barricade + 14, 540, 78, 0xff3b22, 0.18).setDepth(224));
+      const sparks = this.trackTransient(this.add.circle(x, this.bounds.barricade + rand(-8, 14), 11, 0xffd86b, 0.86).setDepth(226));
       this.tweens.add({
         targets: impact,
         scaleX: impact.scaleX * 1.08,
