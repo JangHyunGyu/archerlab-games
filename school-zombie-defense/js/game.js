@@ -2561,7 +2561,7 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(504));
 
-      items.push(this.add.text(270, 330, "정비할 장비 선택", {
+      items.push(this.add.text(270, 330, "정비할 캐릭터 선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
