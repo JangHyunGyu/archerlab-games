@@ -2434,7 +2434,7 @@
       items.push(this.add.rectangle(270, 208, 430, 2, 0xffd86b, 0.75).setDepth(502));
       items.push(this.add.rectangle(270, 666, 540, 4, 0x57e5ff, 0.18).setDepth(502));
       this.addOverlayButton(270, 34, 244, 40, "ArcherLab 이동", 530, () => {
-        window.location.href = "https://game.archerlab.dev/";
+        window.location.href = "https://archerlab.dev/";
       }, COLORS.gold);
       const eyebrow = this.add.text(270, 72, "SCHOOL UNDEAD", {
         fontFamily: "Arial, sans-serif",
