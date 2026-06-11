@@ -4051,7 +4051,7 @@
           zombie.y = Math.min(attackLine, zombie.y + zombie.speed * slowFactor * dt);
         } else {
           zombie.attackTimer -= dt;
-          zombie.y = clamp(zombie.y + Math.sin(zombie.wobble) * 6 * dt, attackLine - 8, attackLine + 2);
+          zombie.y = clamp(zombie.y + Math.sin(zombie.wobble) * 6 * dt, attackLine - 8, attackLine);
           if (zombie.attackTimer <= 0) {
             zombie.attackTimer = rand(0.55, 1);
             this.takeDamage(zombie.attack);
@@ -4067,7 +4067,7 @@
 
     getZombieBarricadeContactY(zombie) {
       const displayHeight = zombie?.displayH || 170;
-      return this.bounds.barricade - clamp(displayHeight * 0.44, 56, 104);
+      return this.bounds.barricade - clamp(displayHeight * 0.56, 76, 128);
     }
 
     takeDamage(rawAmount) {
