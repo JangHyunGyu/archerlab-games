@@ -1308,6 +1308,7 @@
       this.rankSessionPromise = null;
       this.rankStageSyncPromises = [];
       this.rankSyncFailed = false;
+      this.rankSyncToken = 0;
       this.rankNameLayer = null;
       this.rankSubmitInFlight = false;
       this.shopSelectedCharacter = "c";
@@ -2222,13 +2223,14 @@
     }
 
     resetRankSessionState() {
+      this.rankSyncToken = (this.rankSyncToken || 0) + 1;
       this.rankSessionId = null;
       this.rankSessionPromise = null;
       this.rankStageSyncPromises = [];
       this.rankSyncFailed = false;
     }
 
-    async createRankSession() {
+    async createRankSession(syncToken = this.rankSyncToken) {
       const response = await fetch(`${RANK_API_BASE}/score-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -2241,15 +2243,21 @@
       if (!data || !data.session_id) {
         throw new Error("invalid rank session response");
       }
+      if (this.disposed || syncToken !== this.rankSyncToken) {
+        return null;
+      }
       this.rankSessionId = data.session_id;
       return this.rankSessionId;
     }
 
     startRankSession() {
       this.resetRankSessionState();
-      this.rankSessionPromise = this.createRankSession().catch((error) => {
-        this.rankSyncFailed = true;
-        console.warn("[SchoolZombie] rank session failed:", error.message);
+      const syncToken = this.rankSyncToken;
+      this.rankSessionPromise = this.createRankSession(syncToken).catch((error) => {
+        if (!this.disposed && syncToken === this.rankSyncToken) {
+          this.rankSyncFailed = true;
+          console.warn("[SchoolZombie] rank session failed:", error.message);
+        }
         return null;
       });
     }
@@ -2259,8 +2267,11 @@
         return Promise.resolve(this.rankSessionId);
       }
       if (!this.rankSessionPromise) {
-        this.rankSessionPromise = this.createRankSession().catch((error) => {
-          this.rankSyncFailed = true;
+        const syncToken = this.rankSyncToken;
+        this.rankSessionPromise = this.createRankSession(syncToken).catch((error) => {
+          if (!this.disposed && syncToken === this.rankSyncToken) {
+            this.rankSyncFailed = true;
+          }
           throw error;
         });
       }
@@ -2272,8 +2283,12 @@
         return;
       }
       const snapshot = this.getRankSnapshot();
+      const syncToken = this.rankSyncToken;
       const sync = (async () => {
         const sessionId = await this.ensureRankSession();
+        if (this.disposed || syncToken !== this.rankSyncToken) {
+          return true;
+        }
         if (!sessionId) {
           throw new Error("rank session unavailable");
         }
@@ -2302,11 +2317,18 @@
         }
         return true;
       })().catch((error) => {
-        this.rankSyncFailed = true;
-        console.warn("[SchoolZombie] rank sync failed:", error.message);
+        if (!this.disposed && syncToken === this.rankSyncToken) {
+          this.rankSyncFailed = true;
+          console.warn("[SchoolZombie] rank sync failed:", error.message);
+        }
         return false;
       });
       this.rankStageSyncPromises.push(sync);
+      sync.finally(() => {
+        if (!this.disposed && syncToken === this.rankSyncToken) {
+          this.rankStageSyncPromises = this.rankStageSyncPromises.filter((promise) => promise !== sync);
+        }
+      });
     }
 
     async ensureRankStagesRecorded() {
@@ -2317,8 +2339,9 @@
       if (!sessionId) {
         return false;
       }
-      const results = await Promise.all(this.rankStageSyncPromises);
-      return results.every(Boolean);
+      const pendingStageSyncs = this.rankStageSyncPromises.slice();
+      const results = await Promise.all(pendingStageSyncs);
+      return !this.rankSyncFailed && results.every(Boolean);
     }
 
     async fetchRankRows() {
