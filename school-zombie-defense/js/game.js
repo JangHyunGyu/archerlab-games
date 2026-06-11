@@ -1341,6 +1341,7 @@
       this.speedMultiplier = 1;
       this.pausedByButton = false;
       this.ensureSfxFallbackTracks();
+      this.ensureBgmTracks();
 
       this.events.once("shutdown", () => this.disposeScene());
       this.events.once("destroy", () => this.disposeScene());
@@ -1995,6 +1996,9 @@
         track.preload = "auto";
         track.volume = BGM_VOLUME;
         this.bgmTracks[name] = track;
+        if (typeof track.load === "function") {
+          track.load();
+        }
       });
     }
 
