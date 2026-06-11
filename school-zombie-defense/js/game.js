@@ -169,7 +169,11 @@
     menu: "assets/sounds/bgm/menu_loop.mp3",
     game: "assets/sounds/bgm/game_loop.mp3"
   };
+  const AMBIENT_ASSETS = {
+    zombie: "assets/sounds/bgm/zombie_ambient.mp3"
+  };
   const BGM_VOLUME = 0.18;
+  const ZOMBIE_AMBIENT_VOLUME = 0.1;
   const MAX_CORE_HP_SKILL_CAP = 6000;
   const MAX_CORE_HP_SKILL_RATE = 0.12;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
@@ -1254,6 +1258,7 @@
       this.load.image("skill-card-sheet", imageAsset("assets/images/skill-card-sheet.png"));
       Object.entries(SFX_ASSETS).forEach(([name, url]) => this.load.audio(`sfx-preload-${name}`, url));
       Object.entries(BGM_ASSETS).forEach(([name, url]) => this.load.audio(`bgm-preload-${name}`, url));
+      Object.entries(AMBIENT_ASSETS).forEach(([name, url]) => this.load.audio(`ambient-preload-${name}`, url));
     }
 
     create() {
@@ -1339,6 +1344,7 @@
       this.sfxPreloadToken = 0;
       this.bgmTracks = null;
       this.currentBgm = null;
+      this.ambientTracks = null;
       this.sfxLastPlayed = {};
       this.boundHandlePointerDown = null;
       this.hitStopTimer = 0;
@@ -1346,6 +1352,7 @@
       this.pausedByButton = false;
       this.ensureSfxFallbackTracks();
       this.ensureBgmTracks();
+      this.ensureAmbientTracks();
 
       this.events.once("shutdown", () => this.disposeScene());
       this.events.once("destroy", () => this.disposeScene());
@@ -1878,6 +1885,16 @@
       }
       this.bgmTracks = null;
       this.currentBgm = null;
+      if (this.ambientTracks) {
+        Object.values(this.ambientTracks).forEach((track) => {
+          track.pause();
+          track.removeAttribute("src");
+          if (typeof track.load === "function") {
+            track.load();
+          }
+        });
+      }
+      this.ambientTracks = null;
       this.sfxBuffers.clear();
       this.activeFallbackSfx.forEach((track) => {
         track.pause();
@@ -2006,11 +2023,31 @@
       });
     }
 
+    ensureAmbientTracks() {
+      if (this.ambientTracks) {
+        return;
+      }
+      this.ambientTracks = {};
+      Object.entries(AMBIENT_ASSETS).forEach(([name, url]) => {
+        const track = new Audio(url);
+        track.loop = true;
+        track.preload = "auto";
+        track.volume = name === "zombie" ? ZOMBIE_AMBIENT_VOLUME : 0.08;
+        this.ambientTracks[name] = track;
+        if (typeof track.load === "function") {
+          track.load();
+        }
+      });
+    }
+
     startBgm(name) {
       this.ensureBgmTracks();
       const next = this.bgmTracks?.[name];
       if (!next) {
         return;
+      }
+      if (name !== "game") {
+        this.stopZombieAmbient();
       }
       Object.entries(this.bgmTracks).forEach(([trackName, track]) => {
         if (trackName !== name) {
@@ -2025,6 +2062,38 @@
       const playPromise = next.play();
       if (playPromise && playPromise.catch) {
         playPromise.catch(() => {});
+      }
+      if (name === "game") {
+        this.startZombieAmbient();
+      }
+    }
+
+    startZombieAmbient() {
+      this.ensureAmbientTracks();
+      const track = this.ambientTracks?.zombie;
+      if (!track) {
+        return;
+      }
+      track.volume = ZOMBIE_AMBIENT_VOLUME;
+      if (!track.paused) {
+        return;
+      }
+      const playPromise = track.play();
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(() => {});
+      }
+    }
+
+    stopZombieAmbient() {
+      const track = this.ambientTracks?.zombie;
+      if (!track) {
+        return;
+      }
+      track.pause();
+      try {
+        track.currentTime = 0;
+      } catch (error) {
+        // Some browsers can reject seeking while metadata is still loading.
       }
     }
 
