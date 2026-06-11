@@ -65,7 +65,7 @@
     right: "aim-1330"
   };
   const PROJECTILE_SCALES = {
-    "projectile-arrow": 0.19,
+    "projectile-arrow": 0.228,
     "projectile-pistol": 0.14,
     "projectile-rifle": 0.16,
     "projectile-rocket": 0.19,
@@ -106,7 +106,7 @@
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
     normal: { corpseWidth: 0.74, deathSize: 0.92 },
-    student: { corpseWidth: 1.05, deathSize: 1.05 },
+    student: { corpseWidth: 0.92, deathSize: 0.96 },
     runner: { corpseWidth: 0.84, deathSize: 0.96 },
     brute: { corpseWidth: 0.95, deathSize: 1.16 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
@@ -3395,8 +3395,9 @@
       if (!target || !target.active) {
         return;
       }
-      const tx = target.x + rand(-8, 8);
-      const ty = target.y + rand(-10, 10);
+      const aimPoint = this.getZombieHitPoint(target, defender.projectile);
+      const tx = aimPoint.x;
+      const ty = aimPoint.y;
       const shotOffset = defender.shotOffset || 0;
       const angleOffset = defender.angleOffset || 0;
       const initialPose = this.getAttackPose(defender, target);
@@ -3442,6 +3443,9 @@
         markDuration: defender.markDuration || 0,
         markDamageBonus: defender.markDamageBonus || 0,
         slowDuration: defender.slowDuration || 0,
+        aimTarget: target,
+        aimOffsetX: aimPoint.x - target.x,
+        aimOffsetY: aimPoint.y - target.y,
         hitTargets: new Set()
       });
       this.createMuzzle(x, y, angle, defender.projectile);
@@ -3506,19 +3510,21 @@
 
         const hit = this.findBulletHit(bullet);
         if (hit) {
-          bullet.hitTargets.add(hit);
+          const zombie = hit.zombie;
+          const impactPoint = hit.point;
+          bullet.hitTargets.add(zombie);
           if (bullet.projectile === "projectile-arrow") {
-            this.createEmbeddedArrow(hit, bullet);
+            this.createEmbeddedArrow(zombie, bullet, impactPoint);
           }
-          this.damageZombie(hit, bullet.damage, bullet.critChance, bullet.projectile, bullet.critMultiplier);
-          if (bullet.slowDuration > 0 && hit.active) {
-            hit.slowTimer = Math.max(hit.slowTimer || 0, bullet.slowDuration);
+          this.damageZombie(zombie, bullet.damage, bullet.critChance, bullet.projectile, bullet.critMultiplier, impactPoint);
+          if (bullet.slowDuration > 0 && zombie.active) {
+            zombie.slowTimer = Math.max(zombie.slowTimer || 0, bullet.slowDuration);
           }
-          if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && hit.active) {
-            this.applyWeakMark(hit, bullet.markDuration, bullet.markDamageBonus);
+          if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && zombie.active) {
+            this.applyWeakMark(zombie, bullet.markDuration, bullet.markDamageBonus);
           }
           if (bullet.splashRadius > 0) {
-            this.createExplosion(hit.x, hit.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75), bullet.slowDuration);
+            this.createExplosion(impactPoint.x, impactPoint.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75), bullet.slowDuration);
           }
           if (bullet.pierce > 0) {
             bullet.pierce -= 1;
@@ -3530,12 +3536,20 @@
       }
     }
 
-    createEmbeddedArrow(zombie, bullet) {
+    getBulletTip(bullet) {
+      return {
+        x: bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset,
+        y: bullet.sprite.y + Math.sin(bullet.angle) * bullet.hitOffset
+      };
+    }
+
+    createEmbeddedArrow(zombie, bullet, impactPoint = null) {
       if (!zombie || !zombie.active || !bullet?.sprite) {
         return;
       }
-      const hitX = bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset;
-      const hitY = bullet.sprite.y + Math.sin(bullet.angle) * bullet.hitOffset;
+      const hitPoint = impactPoint || this.getBulletTip(bullet);
+      const hitX = hitPoint.x;
+      const hitY = hitPoint.y;
       const arrowLength = bullet.sprite.displayHeight || 42;
       const embedDepth = clamp(arrowLength * 0.28, 8, 14);
       const tailX = hitX - Math.cos(bullet.angle) * (arrowLength - embedDepth);
@@ -3573,6 +3587,7 @@
     }
 
     findBulletHit(bullet) {
+      const tip = this.getBulletTip(bullet);
       for (let i = 0; i < this.zombies.length; i += 1) {
         const zombie = this.zombies[i];
         if (!zombie.active || zombie.hp <= 0) {
@@ -3581,12 +3596,20 @@
         if (bullet.hitTargets && bullet.hitTargets.has(zombie)) {
           continue;
         }
-        const hitX = bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset;
-        const hitY = bullet.sprite.y + Math.sin(bullet.angle) * bullet.hitOffset;
-        const dx = hitX - zombie.x;
-        const dy = hitY - zombie.y;
+        if (bullet.aimTarget === zombie) {
+          const aimX = zombie.x + (bullet.aimOffsetX || 0);
+          const aimY = zombie.y + (bullet.aimOffsetY || 0);
+          const aimDx = tip.x - aimX;
+          const aimDy = tip.y - aimY;
+          const aimRadius = clamp((zombie.hitRadius || 32) * 0.7, 18, 34);
+          if (aimDx * aimDx + aimDy * aimDy < aimRadius * aimRadius) {
+            return { zombie, point: tip };
+          }
+        }
+        const dx = tip.x - zombie.x;
+        const dy = tip.y - zombie.y;
         if (dx * dx + dy * dy < zombie.hitRadius * zombie.hitRadius) {
-          return zombie;
+          return { zombie, point: tip };
         }
       }
       return null;
@@ -3699,12 +3722,12 @@
       return event;
     }
 
-    createZombieHitEffect(zombie, hitType = "default", crit = false) {
+    createZombieHitEffect(zombie, hitType = "default", crit = false, impactPoint = null) {
       const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
       const displayWidth = effect.width * sizeScale;
       const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
-      const hitPoint = this.getZombieHitPoint(zombie, hitType, crit);
+      const hitPoint = impactPoint || this.getZombieHitPoint(zombie, hitType, crit);
       const impact = this.trackTransient(this.add.sprite(
         hitPoint.x,
         hitPoint.y,
@@ -3728,12 +3751,12 @@
       });
     }
 
-    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE, hitType = "default", critMultiplier = DEFAULT_CRIT_MULTIPLIER) {
+    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE, hitType = "default", critMultiplier = DEFAULT_CRIT_MULTIPLIER, impactPoint = null) {
       const crit = Math.random() < critChance;
       const marked = zombie.weakMarkTimer > 0 && zombie.weakMarkBonus > 0;
       const markMultiplier = marked ? 1 + zombie.weakMarkBonus : 1;
       const damage = Math.round(amount * markMultiplier * (crit ? critMultiplier : 1));
-      this.createZombieHitEffect(zombie, hitType, crit);
+      this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       zombie.hp -= damage;
       this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
       this.applyZombieKnockback(zombie, hitType, crit);
