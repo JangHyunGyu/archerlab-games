@@ -106,7 +106,7 @@
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
     normal: { corpseWidth: 0.74, deathSize: 0.92 },
-    student: { corpseWidth: 0.88, deathSize: 0.88 },
+    student: { corpseWidth: 1.05, deathSize: 1.05 },
     runner: { corpseWidth: 0.84, deathSize: 0.96 },
     brute: { corpseWidth: 0.95, deathSize: 1.16 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
