@@ -148,11 +148,11 @@
     pause: "assets/sounds/sfx/pause.wav"
   };
   const WEAPON_SFX_INTENSITY = {
-    pistol: 0.48,
+    pistol: 0.38,
     rifle: 1,
-    sniper: 1,
+    sniper: 1.18,
     rocket: 1,
-    arrow: 1
+    arrow: 1.18
   };
   const BGM_ASSETS = {
     menu: "assets/sounds/bgm/menu_loop.mp3",
