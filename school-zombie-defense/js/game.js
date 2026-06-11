@@ -3847,7 +3847,7 @@
       const hasBloodTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists("blood-burst-core");
-      const stainY = landingY + displayH * 0.18;
+      const stainY = landingY + displayH * 0.04;
       const stain = this.trackTransient(hasBloodTexture
         ? this.add.image(landingX, stainY, "blood-burst-core")
           .setOrigin(0.5)
@@ -3863,7 +3863,7 @@
 
       const shadow = this.trackTransient(this.add.ellipse(
         landingX,
-        landingY + displayH * 0.2,
+        landingY + displayH * 0.08,
         displayH * 0.76,
         displayH * 0.22,
         0x050101,
@@ -3874,8 +3874,8 @@
         .setDepth(corpseDepth - 0.4));
 
       const smear = this.trackTransient(this.add.ellipse(
-        (corpseX + landingX) / 2,
-        stainY - displayH * 0.04,
+        landingX - displayH * fall.x * 0.08,
+        landingY + displayH * 0.02,
         effect.stainWidth * sizeScale * 0.5,
         effect.stainHeight * sizeScale * 0.42,
         0x3b0307,
