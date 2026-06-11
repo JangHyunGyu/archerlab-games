@@ -91,9 +91,9 @@
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
   const ZOMBIE_CORPSE_EFFECTS = {
-    small: { stainWidth: 104, stainHeight: 44, fall: 250, corpseHold: 15000, corpseFade: 650, stainHold: 20000, stainFade: 1500 },
-    normal: { stainWidth: 138, stainHeight: 56, fall: 285, corpseHold: 15000, corpseFade: 700, stainHold: 20000, stainFade: 1600 },
-    elite: { stainWidth: 188, stainHeight: 76, fall: 340, corpseHold: 15000, corpseFade: 800, stainHold: 20000, stainFade: 1750 }
+    small: { stainWidth: 104, stainHeight: 44, fall: 250, corpseHold: 24000, corpseFade: 650, stainHold: 36000, stainFade: 1500 },
+    normal: { stainWidth: 138, stainHeight: 56, fall: 285, corpseHold: 24000, corpseFade: 700, stainHold: 36000, stainFade: 1600 },
+    elite: { stainWidth: 188, stainHeight: 76, fall: 340, corpseHold: 24000, corpseFade: 800, stainHold: 36000, stainFade: 1750 }
   };
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
@@ -114,7 +114,7 @@
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
     normal: { corpseWidth: 0.74, deathSize: 0.92 },
-    student: { corpseWidth: 0.92, deathSize: 0.96 },
+    student: { corpseWidth: 0.78, deathSize: 0.84 },
     runner: { corpseWidth: 0.84, deathSize: 0.96 },
     brute: { corpseWidth: 1.16, deathSize: 1.22 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },

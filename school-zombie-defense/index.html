@@ -65,7 +65,19 @@
 <body>
   <main id="game-shell" aria-label="스쿨 언데드 디펜스 게임 화면">
     <div id="game-root">
-      <div class="loading">Loading Phaser 4...</div>
+      <div class="loading" role="status" aria-live="polite">
+        <div class="loading__content">
+          <div class="loading__signal" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="loading__kicker">SCHOOL UNDEAD DEFENSE</div>
+          <div class="loading__title">방어선 구축 중</div>
+          <div class="loading__text">탄창 확인 · 바리케이드 보강 · 복도 정찰</div>
+          <div class="loading__bar" aria-hidden="true"><span></span></div>
+        </div>
+      </div>
     </div>
   </main>
   <noscript>이 게임을 플레이하려면 JavaScript가 필요합니다.</noscript>
