@@ -105,11 +105,11 @@
     ])
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
-    normal: { corpseWidth: 0.88, deathStartSize: 0.85, deathEndSize: 1.1 },
-    runner: { corpseWidth: 0.8, deathStartSize: 0.98, deathEndSize: 0.92 },
-    brute: { corpseWidth: 0.98, deathStartSize: 1.15, deathEndSize: 1.2 },
-    volatile: { corpseWidth: 0.89, deathStartSize: 0.94, deathEndSize: 0.86 },
-    elite: { corpseWidth: 1, deathStartSize: 1, deathEndSize: 1.1 }
+    normal: { corpseWidth: 0.74, deathSize: 0.92 },
+    runner: { corpseWidth: 0.84, deathSize: 0.96 },
+    brute: { corpseWidth: 0.95, deathSize: 1.16 },
+    volatile: { corpseWidth: 0.94, deathSize: 0.89 },
+    elite: { corpseWidth: 0.96, deathSize: 1.05 }
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
@@ -3874,20 +3874,11 @@
           .setAlpha(0)
           .setDepth(corpseDepth + 0.45))
         : null;
-      const corpseBaseScaleX = corpseImage ? corpseImage.scaleX : 1;
-      const corpseBaseScaleY = corpseImage ? corpseImage.scaleY : 1;
-      if (corpseImage) {
-        corpseImage.setScale(corpseBaseScaleX * 0.94, corpseBaseScaleY * 0.94);
-      }
       const deathTexture = `zombie-death-${corpseType}-sheet`;
       const hasDeathTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists(deathTexture);
-      const deathStartSize = renderScale.deathStartSize || renderScale.deathSize || 0.9;
-      const deathEndSize = renderScale.deathEndSize || deathStartSize;
-      const deathDisplaySize = displayH * deathStartSize;
-      const deathEndDisplaySize = displayH * deathEndSize;
-      const deathScaleToCorpse = deathDisplaySize > 0 ? deathEndDisplaySize / deathDisplaySize : 1;
+      const deathDisplaySize = displayH * (renderScale.deathSize || 0.9);
       const deathSprite = hasDeathTexture
         ? this.trackTransient(this.add.sprite(corpseX, y + displayH * 0.04, deathTexture, 0)
           .setOrigin(0.5)
@@ -3896,8 +3887,6 @@
           .setAlpha(1)
           .setDepth(corpseDepth + 0.9))
         : null;
-      const deathBaseScaleX = deathSprite ? deathSprite.scaleX : 1;
-      const deathBaseScaleY = deathSprite ? deathSprite.scaleY : 1;
       const revealCorpseImage = () => {
         if (!corpseImage || corpseImage.destroyed) {
           return;
@@ -3905,8 +3894,6 @@
         this.tweens.add({
           targets: corpseImage,
           alpha: 0.96,
-          scaleX: corpseBaseScaleX,
-          scaleY: corpseBaseScaleY,
           duration: 130,
           ease: "Cubic.easeOut"
         });
@@ -3940,8 +3927,6 @@
           x: landingX,
           y: landingY,
           angle: finalAngle * 0.08,
-          scaleX: deathBaseScaleX * deathScaleToCorpse,
-          scaleY: deathBaseScaleY * deathScaleToCorpse,
           duration: effect.fall + 260,
           ease: "Quad.easeInOut",
           onComplete: () => {
