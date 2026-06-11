@@ -68,6 +68,7 @@
     "projectile-arrow": 0.228,
     "projectile-pistol": 0.14,
     "projectile-rifle": 0.16,
+    "projectile-grenade": 0.24,
     "projectile-rocket": 0.19,
     "projectile-sniper": 0.16,
     "projectile-frost": 0.78,
@@ -1201,6 +1202,7 @@
       this.load.image("projectile-arrow", imageAsset("assets/images/projectile-arrow.png"));
       this.load.image("projectile-pistol", imageAsset("assets/images/projectile-pistol.png"));
       this.load.image("projectile-rifle", imageAsset("assets/images/projectile-rifle.png"));
+      this.load.image("projectile-grenade", imageAsset("assets/images/projectile-grenade.png"));
       this.load.image("projectile-rocket", imageAsset("assets/images/projectile-rocket.png"));
       this.load.image("projectile-sniper", imageAsset("assets/images/projectile-sniper.png"));
       this.load.image("muzzle-arrow", imageAsset("assets/images/muzzle-arrow.png"));
@@ -1250,6 +1252,8 @@
       this.load.image("zombie-walk-elite", imageAsset("assets/images/zombie-walk-elite.png"));
       this.load.image("ui-frame-sheet", imageAsset("assets/images/ui-frame-sheet.png"));
       this.load.image("skill-card-sheet", imageAsset("assets/images/skill-card-sheet.png"));
+      Object.entries(SFX_ASSETS).forEach(([name, url]) => this.load.audio(`sfx-preload-${name}`, url));
+      Object.entries(BGM_ASSETS).forEach(([name, url]) => this.load.audio(`bgm-preload-${name}`, url));
     }
 
     create() {
@@ -3370,7 +3374,7 @@
                   defender.shotsSinceRocket += 1;
                   if (defender.shotsSinceRocket >= defender.rocketEvery) {
                     defender.shotsSinceRocket = 0;
-                    this.createExplosion(shotTarget.x, shotTarget.y, 68, damage * 1.35);
+                    this.fireGrenade(defender, shotTarget, damage * 1.35, 68);
                   }
                 }
               });
@@ -3507,6 +3511,81 @@
 
     getDefenderById(id) {
       return this.defenders.find((defender) => defender.id === id);
+    }
+
+    fireGrenade(defender, target, damage, radius = 68, slowDuration = 0) {
+      if (!defender || !target || !target.active) {
+        return;
+      }
+      const aimPoint = this.getZombieHitPoint(target, "projectile-rocket");
+      const aimOffsetX = aimPoint.x - target.x;
+      const aimOffsetY = aimPoint.y - target.y;
+      let impactX = aimPoint.x;
+      let impactY = aimPoint.y;
+      const initialPose = this.getAttackPose(defender, target);
+      const initialMuzzle = this.getDefenderMuzzle(defender, initialPose);
+      const initialAngle = Math.atan2(aimPoint.y - initialMuzzle.y, aimPoint.x - initialMuzzle.x);
+      const pose = getShotAimPoseKey(initialAngle);
+      this.setDefenderPose(defender, pose);
+      defender.firePoseTimer = 0.18;
+      const muzzle = this.getDefenderMuzzle(defender, pose);
+      const startX = muzzle.x;
+      const startY = muzzle.y;
+      const sprite = this.trackTransient(this.add.image(startX, startY, "projectile-grenade")
+        .setOrigin(0.5, 1)
+        .setScale(PROJECTILE_SCALES["projectile-grenade"])
+        .setDepth(192));
+      const shadow = this.trackTransient(this.add.ellipse(startX, startY + 10, 18, 7, 0x000000, 0.32)
+        .setDepth(78));
+      sprite.arcT = 0;
+      const distance = Phaser.Math.Distance.Between(startX, startY, aimPoint.x, aimPoint.y);
+      const duration = clamp(distance / 1.55, 330, 620);
+      const arcHeight = clamp(distance * 0.28, 72, 152);
+      this.createMuzzle(startX, startY, initialAngle, defender.projectile);
+      this.playSfx("rocket", 0.58);
+      this.tweens.add({
+        targets: sprite,
+        arcT: 1,
+        duration,
+        ease: "Sine.easeInOut",
+        onUpdate: () => {
+          if (this.disposed || sprite.destroyed) {
+            return;
+          }
+          const t = sprite.arcT;
+          if (target.active && target.hp > 0) {
+            impactX = target.x + aimOffsetX;
+            impactY = target.y + aimOffsetY;
+          }
+          const groundX = startX + (impactX - startX) * t;
+          const groundY = startY + (impactY - startY) * t;
+          const lift = Math.sin(Math.PI * t) * arcHeight;
+          const nextT = clamp(t + 0.012, 0, 1);
+          const nextLift = Math.sin(Math.PI * nextT) * arcHeight;
+          const nextGroundX = startX + (impactX - startX) * nextT;
+          const nextGroundY = startY + (impactY - startY) * nextT;
+          const nextX = nextGroundX;
+          const nextY = nextGroundY - nextLift;
+          sprite
+            .setPosition(groundX, groundY - lift)
+            .setRotation(Math.atan2(nextY - sprite.y, nextX - sprite.x) + Math.PI / 2)
+            .setScale(PROJECTILE_SCALES["projectile-grenade"] * (1 + Math.sin(Math.PI * t) * 0.16))
+            .setDepth(188 + groundY / 6);
+          if (shadow && !shadow.destroyed) {
+            shadow
+              .setPosition(groundX, groundY + 7)
+              .setScale(0.72 + t * 0.42, 0.72 + t * 0.2)
+              .setAlpha(0.1 + t * 0.24);
+          }
+        },
+        onComplete: () => {
+          if (!this.disposed && this.mode === "playing") {
+            this.createExplosion(impactX, impactY, radius, damage, slowDuration);
+          }
+          this.destroyTransientObject(sprite, false);
+          this.destroyTransientObject(shadow, false);
+        }
+      });
     }
 
     fireBullet(defender, target, damage, speed, pierce, critChance = BASE_CRIT_CHANCE) {
