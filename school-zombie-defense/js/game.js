@@ -2440,6 +2440,9 @@
       }
       this.rankNameLayer = null;
       this.rankSubmitInFlight = false;
+      if (typeof window.__schoolZombieViewportRefresh === "function") {
+        window.__schoolZombieViewportRefresh();
+      }
     }
 
     returnToGameStart() {
@@ -2520,6 +2523,9 @@
 
       shell.appendChild(layer);
       this.rankNameLayer = layer;
+      if (typeof window.__schoolZombieViewportRefresh === "function") {
+        window.__schoolZombieViewportRefresh();
+      }
       requestAnimationFrame(() => {
         input.focus();
         input.select();
@@ -4798,13 +4804,28 @@
     let refreshRaf = 0;
     const settleTimers = new Set();
     let observer = null;
+    let stableViewportSize = null;
 
-    const getViewportSize = () => {
+    const readViewportSize = () => {
       const viewport = window.visualViewport;
       return {
         width: Math.max(1, Math.round(viewport?.width || window.innerWidth || document.documentElement.clientWidth || GAME_WIDTH)),
         height: Math.max(1, Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight || GAME_HEIGHT))
       };
+    };
+
+    const isRankEntryOpen = () => Boolean(document.querySelector(".school-zombie-rank-layer"));
+
+    const getViewportSize = () => {
+      const size = readViewportSize();
+      if (!isRankEntryOpen()) {
+        stableViewportSize = size;
+        return size;
+      }
+      if (!stableViewportSize) {
+        stableViewportSize = size;
+      }
+      return stableViewportSize;
     };
 
     const scheduleTimer = (callback, delay) => {
@@ -4856,7 +4877,11 @@
 
     scheduleSettled();
     window.addEventListener("resize", scheduleSettled, { passive: true });
-    window.addEventListener("orientationchange", scheduleSettled, { passive: true });
+    const handleOrientationChange = () => {
+      stableViewportSize = null;
+      scheduleSettled();
+    };
+    window.addEventListener("orientationchange", handleOrientationChange, { passive: true });
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", scheduleSettled, { passive: true });
       window.visualViewport.addEventListener("scroll", schedule, { passive: true });
@@ -4866,6 +4891,7 @@
       observer.observe(shell);
     }
     window.__schoolZombieResizeObserver = observer;
+    window.__schoolZombieViewportRefresh = scheduleSettled;
     window.__schoolZombieViewportCleanup = () => {
       if (raf) {
         cancelAnimationFrame(raf);
@@ -4878,7 +4904,7 @@
       settleTimers.forEach((timer) => window.clearTimeout(timer));
       settleTimers.clear();
       window.removeEventListener("resize", scheduleSettled);
-      window.removeEventListener("orientationchange", scheduleSettled);
+      window.removeEventListener("orientationchange", handleOrientationChange);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener("resize", scheduleSettled);
         window.visualViewport.removeEventListener("scroll", schedule);
@@ -4888,6 +4914,7 @@
         observer = null;
       }
       window.__schoolZombieResizeObserver = null;
+      window.__schoolZombieViewportRefresh = null;
       window.__schoolZombieViewportCleanup = null;
     };
   }
