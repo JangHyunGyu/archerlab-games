@@ -97,7 +97,7 @@
   };
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
-  const ZOMBIE_CORPSE_TYPES = ["normal", "runner", "brute", "volatile", "elite"];
+  const ZOMBIE_CORPSE_TYPES = ["normal", "student", "runner", "brute", "volatile", "elite"];
   const ZOMBIE_CORPSE_TEXTURES = Object.fromEntries(
     ZOMBIE_CORPSE_TYPES.map((type) => [
       type,
@@ -106,6 +106,7 @@
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
     normal: { corpseWidth: 0.74, deathSize: 0.92 },
+    student: { corpseWidth: 0.88, deathSize: 0.88 },
     runner: { corpseWidth: 0.84, deathSize: 0.96 },
     brute: { corpseWidth: 0.95, deathSize: 1.16 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
@@ -113,6 +114,7 @@
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,
+    student: 0.395,
     runner: 0.392,
     brute: 0.414,
     volatile: 0.392,
@@ -250,12 +252,13 @@
   const getUnlockedRecruitSlots = (level) => RECRUIT_UNLOCK_LEVELS.filter((unlockLevel) => level >= unlockLevel).length;
   const ZOMBIE_TYPE_CONFIGS = {
     normal: { id: "normal", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 1, animRate: 6.8, reward: 1 },
+    student: { id: "student", hpScale: 0.86, speedScale: 1.16, sizeScale: 0.9, attackScale: 0.9, hitRadiusScale: 0.9, knockbackScale: 1.08, animRate: 7.7, reward: 1 },
     runner: { id: "runner", hpScale: 0.72, speedScale: 1.72, sizeScale: 0.82, attackScale: 0.76, hitRadiusScale: 0.86, knockbackScale: 1.18, animRate: 9.4, reward: 1 },
     brute: { id: "brute", hpScale: 3.7, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
     volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, deathExplosion: true },
     elite: { id: "elite", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
-  const ZOMBIE_TEXTURE_TYPES = ["normal", "runner", "brute", "volatile", "elite"];
+  const ZOMBIE_TEXTURE_TYPES = ["normal", "student", "runner", "brute", "volatile", "elite"];
 
   function createDefaultMetaSave() {
     const save = {
@@ -317,6 +320,9 @@
     const entries = [
       { type: ZOMBIE_TYPE_CONFIGS.normal, weight: 100 }
     ];
+    if (level >= 2) {
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.student, weight: Math.min(28, 12 + level * 1.3) });
+    }
     if (level >= 2) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.runner, weight: Math.min(34, 14 + level * 1.5) });
     }
@@ -1227,6 +1233,7 @@
       ));
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
+      this.load.image("zombie-walk-student", imageAsset("assets/images/zombie-walk-student.png"));
       this.load.image("zombie-walk-runner", imageAsset("assets/images/zombie-walk-runner.png"));
       this.load.image("zombie-walk-brute", imageAsset("assets/images/zombie-walk-brute.png"));
       this.load.image("zombie-walk-volatile", imageAsset("assets/images/zombie-walk-volatile.png"));
