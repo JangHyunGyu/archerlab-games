@@ -1329,6 +1329,8 @@
       this.audioCtx = null;
       this.masterGain = null;
       this.sfxBuffers = new Map();
+      this.sfxFallbackTracks = new Map();
+      this.activeFallbackSfx = new Set();
       this.sfxPreloadStarted = false;
       this.sfxPreloadToken = 0;
       this.bgmTracks = null;
@@ -1338,6 +1340,7 @@
       this.hitStopTimer = 0;
       this.speedMultiplier = 1;
       this.pausedByButton = false;
+      this.ensureSfxFallbackTracks();
 
       this.events.once("shutdown", () => this.disposeScene());
       this.events.once("destroy", () => this.disposeScene());
@@ -1871,6 +1874,22 @@
       this.bgmTracks = null;
       this.currentBgm = null;
       this.sfxBuffers.clear();
+      this.activeFallbackSfx.forEach((track) => {
+        track.pause();
+        track.removeAttribute("src");
+        if (typeof track.load === "function") {
+          track.load();
+        }
+      });
+      this.activeFallbackSfx.clear();
+      this.sfxFallbackTracks.forEach((track) => {
+        track.pause();
+        track.removeAttribute("src");
+        if (typeof track.load === "function") {
+          track.load();
+        }
+      });
+      this.sfxFallbackTracks.clear();
       if (this.masterGain && typeof this.masterGain.disconnect === "function") {
         this.masterGain.disconnect();
       }
@@ -1947,6 +1966,24 @@
       });
     }
 
+    ensureSfxFallbackTracks() {
+      if (this.sfxFallbackTracks?.size) {
+        return;
+      }
+      if (!this.sfxFallbackTracks) {
+        this.sfxFallbackTracks = new Map();
+      }
+      Object.entries(SFX_ASSETS).forEach(([name, url]) => {
+        const track = new Audio(url);
+        track.preload = "auto";
+        track.volume = 0;
+        this.sfxFallbackTracks.set(name, track);
+        if (typeof track.load === "function") {
+          track.load();
+        }
+      });
+    }
+
     ensureBgmTracks() {
       if (this.bgmTracks) {
         return;
@@ -1998,14 +2035,31 @@
       return true;
     }
 
+    playFallbackSfx(name, intensity = 1) {
+      this.ensureSfxFallbackTracks();
+      const template = this.sfxFallbackTracks.get(name);
+      if (!template) {
+        return false;
+      }
+      const track = template.cloneNode(true);
+      track.volume = clamp(SFX_MASTER_VOLUME * 0.72 * intensity, 0.03, 1);
+      const cleanup = () => {
+        this.activeFallbackSfx.delete(track);
+        track.removeEventListener("ended", cleanup);
+        track.removeEventListener("error", cleanup);
+      };
+      track.addEventListener("ended", cleanup);
+      track.addEventListener("error", cleanup);
+      this.activeFallbackSfx.add(track);
+      const playPromise = track.play();
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(cleanup);
+      }
+      return true;
+    }
+
     playSfx(name, intensity = 1) {
       const ctx = this.unlockAudio();
-      if (!ctx) {
-        return;
-      }
-      if (!this.sfxBuffers.has(name)) {
-        return;
-      }
       const minGap = {
         hit: 0.045,
         crit: 0.05,
@@ -2019,12 +2073,16 @@
         arrow: 0.06,
         skill: 0.18
       }[name] || 0.04;
+      const now = ctx?.currentTime || performance.now() / 1000;
       const last = this.sfxLastPlayed[name] || 0;
-      if (ctx.currentTime - last < minGap) {
+      if (now - last < minGap) {
         return;
       }
-      this.sfxLastPlayed[name] = ctx.currentTime;
-      this.playSampleSfx(name, intensity);
+      this.sfxLastPlayed[name] = now;
+      if (ctx && this.sfxBuffers.has(name) && this.playSampleSfx(name, intensity)) {
+        return;
+      }
+      this.playFallbackSfx(name, intensity);
     }
 
     playWeaponSfx(projectile) {
