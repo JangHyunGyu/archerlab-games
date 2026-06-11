@@ -1319,9 +1319,11 @@
       this.masterGain = null;
       this.sfxBuffers = new Map();
       this.sfxPreloadStarted = false;
+      this.sfxPreloadToken = 0;
       this.bgmTracks = null;
       this.currentBgm = null;
       this.sfxLastPlayed = {};
+      this.boundHandlePointerDown = null;
       this.hitStopTimer = 0;
       this.speedMultiplier = 1;
       this.pausedByButton = false;
@@ -1717,7 +1719,7 @@
     }
 
     bindInput() {
-      this.input.on("pointerdown", () => {
+      this.boundHandlePointerDown = () => {
         this.unlockAudio();
         if (this.mode === "playing") {
           this.startBgm("game");
@@ -1726,7 +1728,8 @@
         if (this.mode === "menu" || this.mode === "shop" || this.mode === "gameover") {
           this.startBgm("menu");
         }
-      });
+      };
+      this.input.on("pointerdown", this.boundHandlePointerDown);
     }
 
     scheduleSceneDelay(delayMs, callback) {
@@ -1844,6 +1847,7 @@
     }
 
     cleanupAudio() {
+      this.sfxPreloadToken = (this.sfxPreloadToken || 0) + 1;
       if (this.bgmTracks) {
         Object.values(this.bgmTracks).forEach((track) => {
           track.pause();
@@ -1874,6 +1878,10 @@
       this.disposed = true;
       this.cancelRunTimers();
       this.cancelSceneTimers();
+      if (this.input && this.boundHandlePointerDown && typeof this.input.off === "function") {
+        this.input.off("pointerdown", this.boundHandlePointerDown);
+      }
+      this.boundHandlePointerDown = null;
       this.clearOverlay();
       this.clearTransientObjects();
       this.clearRunEntities();
@@ -1908,11 +1916,22 @@
         return;
       }
       this.sfxPreloadStarted = true;
+      const ctx = this.audioCtx;
+      const preloadToken = this.sfxPreloadToken;
       Object.entries(SFX_ASSETS).forEach(([name, url]) => {
         fetch(url)
           .then((response) => response.ok ? response.arrayBuffer() : Promise.reject(new Error(`sfx ${response.status}`)))
-          .then((data) => this.audioCtx.decodeAudioData(data))
-          .then((buffer) => this.sfxBuffers.set(name, buffer))
+          .then((data) => {
+            if (this.disposed || this.audioCtx !== ctx || this.sfxPreloadToken !== preloadToken) {
+              throw new Error("stale sfx preload");
+            }
+            return ctx.decodeAudioData(data);
+          })
+          .then((buffer) => {
+            if (!this.disposed && this.audioCtx === ctx && this.sfxPreloadToken === preloadToken) {
+              this.sfxBuffers.set(name, buffer);
+            }
+          })
           .catch(() => {});
       });
     }
