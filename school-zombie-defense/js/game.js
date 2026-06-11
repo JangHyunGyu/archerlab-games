@@ -111,6 +111,13 @@
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 }
   };
+  const ZOMBIE_FOOT_OFFSET_RATIOS = {
+    normal: 0.386,
+    runner: 0.392,
+    brute: 0.414,
+    volatile: 0.392,
+    elite: 0.402
+  };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
@@ -1255,6 +1262,7 @@
         top: 70,
         autoEngageTop: 120,
         barricade: 704,
+        zombieFootLine: 642,
         survivorLine: 824,
         bottom: 920
       };
@@ -4085,7 +4093,9 @@
 
     getZombieBarricadeContactY(zombie) {
       const displayHeight = zombie?.displayH || 170;
-      return this.bounds.barricade - clamp(displayHeight * 0.56, 76, 128);
+      const type = zombie?.elite ? "elite" : zombie?.type || "normal";
+      const footOffset = displayHeight * (ZOMBIE_FOOT_OFFSET_RATIOS[type] || ZOMBIE_FOOT_OFFSET_RATIOS.normal);
+      return (this.bounds.zombieFootLine || this.bounds.barricade) - footOffset;
     }
 
     takeDamage(rawAmount) {
