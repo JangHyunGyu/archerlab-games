@@ -169,7 +169,7 @@
     menu: "assets/sounds/bgm/menu_loop.mp3",
     game: "assets/sounds/bgm/game_loop.mp3"
   };
-  const BGM_VOLUME = 0.14;
+  const BGM_VOLUME = 0.18;
   const MAX_CORE_HP_SKILL_CAP = 6000;
   const MAX_CORE_HP_SKILL_RATE = 0.12;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
