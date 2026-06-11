@@ -104,11 +104,19 @@
       [1, 2, 3].map((index) => `zombie-corpse-${type}-${index}`)
     ])
   );
+  const ZOMBIE_DEATH_TEXTURES = Object.fromEntries(
+    ZOMBIE_CORPSE_TYPES.map((type) => [
+      type,
+      type === "student"
+        ? [1, 2, 3].map((index) => `zombie-death-student-${index}-sheet`)
+        : [`zombie-death-${type}-sheet`]
+    ])
+  );
   const ZOMBIE_DEATH_RENDER_SCALES = {
     normal: { corpseWidth: 0.74, deathSize: 0.92 },
     student: { corpseWidth: 0.92, deathSize: 0.96 },
     runner: { corpseWidth: 0.84, deathSize: 0.96 },
-    brute: { corpseWidth: 0.95, deathSize: 1.16 },
+    brute: { corpseWidth: 1.16, deathSize: 1.22 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 }
   };
@@ -1226,11 +1234,13 @@
       Object.values(ZOMBIE_CORPSE_TEXTURES)
         .flat()
         .forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
-      ZOMBIE_CORPSE_TYPES.forEach((type) => this.load.spritesheet(
-        `zombie-death-${type}-sheet`,
-        imageAsset(`assets/images/zombie-death-${type}-sheet.png`),
-        { frameWidth: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE, frameHeight: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE }
-      ));
+      Object.values(ZOMBIE_DEATH_TEXTURES)
+        .flat()
+        .forEach((key) => this.load.spritesheet(
+          key,
+          imageAsset(`assets/images/${key}.png`),
+          { frameWidth: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE, frameHeight: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE }
+        ));
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       this.load.image("zombie-walk-normal", imageAsset("assets/images/zombie-walk-normal.png"));
       this.load.image("zombie-walk-student", imageAsset("assets/images/zombie-walk-student.png"));
@@ -2592,7 +2602,11 @@
       }
       if (autoFocus) {
         requestAnimationFrame(() => {
-          input.focus();
+          try {
+            input.focus({ preventScroll: true });
+          } catch {
+            input.focus();
+          }
           input.select();
         });
       }
@@ -3911,7 +3925,10 @@
 
       const corpseType = zombie.elite ? "elite" : zombie.type || "normal";
       const corpseTexturePool = ZOMBIE_CORPSE_TEXTURES[corpseType] || ZOMBIE_CORPSE_TEXTURES.normal;
-      const corpseTexture = choose(corpseTexturePool);
+      const corpseVariantIndex = Math.floor(rand(0, corpseTexturePool.length));
+      const corpseTexture = corpseTexturePool[corpseVariantIndex] || choose(corpseTexturePool);
+      const deathTexturePool = ZOMBIE_DEATH_TEXTURES[corpseType] || ZOMBIE_DEATH_TEXTURES.normal;
+      const deathTexture = deathTexturePool[corpseVariantIndex % deathTexturePool.length] || deathTexturePool[0];
       const renderScale = ZOMBIE_DEATH_RENDER_SCALES[corpseType] || ZOMBIE_DEATH_RENDER_SCALES.normal;
       const hasCorpseTexture = this.textures
         && typeof this.textures.exists === "function"
@@ -3972,7 +3989,6 @@
           .setAlpha(0)
           .setDepth(corpseDepth + 0.45))
         : null;
-      const deathTexture = `zombie-death-${corpseType}-sheet`;
       const hasDeathTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists(deathTexture);
@@ -4847,7 +4863,7 @@
       }).setOrigin(0.5).setDepth(544));
       if (this.lastRankableRun) {
         this.showRankNameLayer(this.lastRankableRun, {
-          autoFocus: false,
+          autoFocus: true,
           inlineGameOver: true,
           returnToMenuOnSuccess: true
         });
