@@ -86,6 +86,11 @@ noscript {
   -webkit-overflow-scrolling: touch;
 }
 
+.school-zombie-rank-layer--gameover {
+  padding: 250px 42px 0;
+  background: transparent;
+}
+
 .school-zombie-rank-dialog {
   flex: 0 0 auto;
   width: min(100%, 424px);
@@ -101,6 +106,16 @@ noscript {
   overflow-y: auto;
   backdrop-filter: blur(3px);
   -webkit-overflow-scrolling: touch;
+}
+
+.school-zombie-rank-dialog--gameover {
+  width: min(100%, 388px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: visible;
 }
 
 .school-zombie-rank-kicker {

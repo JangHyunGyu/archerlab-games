@@ -2459,15 +2459,19 @@
       }
       this.removeRankNameLayer();
 
+      const inlineGameOver = Boolean(options.inlineGameOver);
+      const autoFocus = options.autoFocus !== false;
       const shell = document.getElementById("game-shell") || document.body;
       const layer = document.createElement("div");
-      layer.className = "school-zombie-rank-layer";
+      layer.className = `school-zombie-rank-layer${inlineGameOver ? " school-zombie-rank-layer--gameover" : ""}`;
       layer.innerHTML = `
-        <form class="school-zombie-rank-dialog" autocomplete="off">
-          <div class="school-zombie-rank-kicker">RANKING</div>
-          <div class="school-zombie-rank-title">랭킹 등록</div>
-          <div class="school-zombie-rank-score">클리어 St.${run.score} · 처치 ${run.kills}</div>
-          <input class="school-zombie-rank-input" name="playerName" maxlength="20" aria-label="랭킹 이름" />
+        <form class="school-zombie-rank-dialog${inlineGameOver ? " school-zombie-rank-dialog--gameover" : ""}" autocomplete="off">
+          ${inlineGameOver ? "" : `
+            <div class="school-zombie-rank-kicker">RANKING</div>
+            <div class="school-zombie-rank-title">랭킹 등록</div>
+            <div class="school-zombie-rank-score">클리어 St.${run.score} · 처치 ${run.kills}</div>
+          `}
+          <input class="school-zombie-rank-input" name="playerName" maxlength="20" aria-label="랭킹 이름" placeholder="닉네임 입력" />
           <div class="school-zombie-rank-actions">
             <button class="school-zombie-rank-submit" type="submit">등록</button>
             <button class="school-zombie-rank-skip" type="button">SKIP</button>
@@ -2478,7 +2482,7 @@
       const input = layer.querySelector("input");
       const submitButton = layer.querySelector(".school-zombie-rank-submit");
       const skipButton = layer.querySelector(".school-zombie-rank-skip");
-      input.value = this.getStoredRankName() || "DEFENDER";
+      input.value = this.getStoredRankName() || (inlineGameOver ? "" : "DEFENDER");
 
       const stopGameInput = (event) => {
         event.stopPropagation();
@@ -2487,8 +2491,15 @@
       layer.addEventListener("touchstart", stopGameInput, { passive: true });
       layer.addEventListener("mousedown", stopGameInput);
 
+      const updateSubmitState = () => {
+        submitButton.disabled = this.rankSubmitInFlight || input.value.trim().length <= 0;
+      };
+      input.addEventListener("input", updateSubmitState);
+      updateSubmitState();
+
       const submit = () => {
-        if (this.rankSubmitInFlight) {
+        if (this.rankSubmitInFlight || input.value.trim().length <= 0) {
+          updateSubmitState();
           return;
         }
         const name = input.value;
@@ -2499,7 +2510,7 @@
         this.submitRankScore(run, name, options).finally(() => {
           if (this.rankNameLayer === layer) {
             this.rankSubmitInFlight = false;
-            submitButton.disabled = false;
+            updateSubmitState();
             skipButton.disabled = false;
             submitButton.textContent = "등록";
           }
@@ -2526,10 +2537,12 @@
       if (typeof window.__schoolZombieViewportRefresh === "function") {
         window.__schoolZombieViewportRefresh();
       }
-      requestAnimationFrame(() => {
-        input.focus();
-        input.select();
-      });
+      if (autoFocus) {
+        requestAnimationFrame(() => {
+          input.focus();
+          input.select();
+        });
+      }
     }
 
     async submitRankScore(snapshot = this.lastRankableRun, rawName = null, options = {}) {
@@ -2706,8 +2719,7 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(521));
       this.getCharacterShopUpgrades(selectedCharacter.id).forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, selectedCharacter, 270, 566 + index * 104));
-      this.addOverlayButton(142, 890, 172, 50, "뒤로", 560, () => this.showMenu(), COLORS.gold);
-      this.addOverlayButton(398, 890, 172, 50, "출격", 560, () => this.startRun(), COLORS.blue);
+      this.addOverlayButton(270, 890, 172, 50, "뒤로", 560, () => this.showMenu(), COLORS.gold);
     }
 
     addShopCharacterButton(character, x, y, selected) {
@@ -4751,10 +4763,15 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544));
-      this.addOverlayButton(162, 286, 184, 52, "랭킹 등록", 545, () => {
-        this.submitRankScore(this.lastRankableRun, null, { returnToMenuOnSuccess: true });
-      }, COLORS.blue);
-      this.addOverlayButton(378, 286, 150, 52, "SKIP", 545, () => this.returnToGameStart(), COLORS.gold);
+      if (this.lastRankableRun) {
+        this.showRankNameLayer(this.lastRankableRun, {
+          autoFocus: false,
+          inlineGameOver: true,
+          returnToMenuOnSuccess: true
+        });
+      } else {
+        this.addOverlayButton(270, 286, 184, 52, "메뉴", 545, () => this.returnToGameStart(), COLORS.gold);
+      }
     }
 
     clearOverlay() {
