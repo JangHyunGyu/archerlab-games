@@ -3844,47 +3844,6 @@
       }
       zombie.setTint(0x9b8f88);
 
-      const hasBloodTexture = this.textures
-        && typeof this.textures.exists === "function"
-        && this.textures.exists("blood-burst-core");
-      const stainY = landingY + displayH * 0.04;
-      const stain = this.trackTransient(hasBloodTexture
-        ? this.add.image(landingX, stainY, "blood-burst-core")
-          .setOrigin(0.5)
-          .setDisplaySize(effect.stainWidth * sizeScale, effect.stainHeight * sizeScale)
-          .setRotation(rand(-0.26, 0.26))
-          .setTint(0x9b1216)
-        : this.add.ellipse(landingX, stainY, effect.stainWidth * sizeScale, effect.stainHeight * sizeScale, COLORS.blood, 0.72)
-          .setRotation(rand(-0.18, 0.18)));
-      stain.setAlpha(0).setDepth(corpseDepth);
-      const stainBaseScaleX = stain.scaleX;
-      const stainBaseScaleY = stain.scaleY;
-      stain.setScale(stainBaseScaleX * 0.18, stainBaseScaleY * 0.18);
-
-      const shadow = this.trackTransient(this.add.ellipse(
-        landingX,
-        landingY + displayH * 0.08,
-        displayH * 0.76,
-        displayH * 0.22,
-        0x050101,
-        0.38
-      )
-        .setRotation(finalAngle * Math.PI / 180)
-        .setAlpha(0)
-        .setDepth(corpseDepth - 0.4));
-
-      const smear = this.trackTransient(this.add.ellipse(
-        landingX - displayH * fall.x * 0.08,
-        landingY + displayH * 0.02,
-        effect.stainWidth * sizeScale * 0.5,
-        effect.stainHeight * sizeScale * 0.42,
-        0x3b0307,
-        0.36
-      )
-        .setRotation(finalAngle * Math.PI / 180 + rand(-0.16, 0.16))
-        .setAlpha(0)
-        .setDepth(corpseDepth - 0.2));
-
       const corpseType = zombie.elite ? "elite" : zombie.type || "normal";
       const corpseTexturePool = ZOMBIE_CORPSE_TEXTURES[corpseType] || ZOMBIE_CORPSE_TEXTURES.normal;
       const corpseTexture = choose(corpseTexturePool);
@@ -3894,6 +3853,51 @@
         && this.textures.exists(corpseTexture);
       const corpseDisplayWidth = displayH * renderScale.corpseWidth;
       const corpseDisplayHeight = corpseDisplayWidth * 360 / 512;
+      const corpseRotation = finalAngle * Math.PI / 180;
+      const bloodWidth = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.96);
+      const bloodHeight = Math.max(effect.stainHeight * sizeScale, corpseDisplayHeight * 0.54);
+      const bloodX = landingX;
+      const bloodY = landingY + corpseDisplayHeight * 0.06;
+      const hasBloodTexture = this.textures
+        && typeof this.textures.exists === "function"
+        && this.textures.exists("blood-burst-core");
+      const stain = this.trackTransient(hasBloodTexture
+        ? this.add.image(bloodX, bloodY, "blood-burst-core")
+          .setOrigin(0.5)
+          .setDisplaySize(bloodWidth, bloodHeight)
+          .setRotation(corpseRotation + rand(-0.16, 0.16))
+          .setTint(0x9b1216)
+        : this.add.ellipse(bloodX, bloodY, bloodWidth, bloodHeight, COLORS.blood, 0.72)
+          .setRotation(corpseRotation + rand(-0.14, 0.14)));
+      stain.setAlpha(0).setDepth(corpseDepth);
+      const stainBaseScaleX = stain.scaleX;
+      const stainBaseScaleY = stain.scaleY;
+      stain.setScale(stainBaseScaleX * 0.18, stainBaseScaleY * 0.18);
+
+      const shadow = this.trackTransient(this.add.ellipse(
+        bloodX,
+        bloodY + corpseDisplayHeight * 0.04,
+        bloodWidth * 0.78,
+        Math.max(bloodHeight * 0.42, corpseDisplayHeight * 0.18),
+        0x050101,
+        0.38
+      )
+        .setRotation(corpseRotation)
+        .setAlpha(0)
+        .setDepth(corpseDepth - 0.4));
+
+      const smear = this.trackTransient(this.add.ellipse(
+        bloodX - displayH * fall.x * 0.05,
+        bloodY - corpseDisplayHeight * 0.02,
+        bloodWidth * 0.56,
+        bloodHeight * 0.52,
+        0x3b0307,
+        0.36
+      )
+        .setRotation(corpseRotation + rand(-0.12, 0.12))
+        .setAlpha(0)
+        .setDepth(corpseDepth - 0.2));
+
       const corpseImage = hasCorpseTexture
         ? this.trackTransient(this.add.image(landingX, landingY, corpseTexture)
           .setOrigin(0.5)
