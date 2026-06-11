@@ -430,7 +430,7 @@
       x: 382,
       y: 925,
       height: 226,
-      damageScale: 1.55,
+      damageScale: 1.35,
       role: "frost",
       projectile: "projectile-rocket",
       speed: 720,
@@ -438,7 +438,7 @@
       critChance: 0.04,
       critMultiplier: 1.35,
       splashRadius: 88,
-      splashDamageScale: 0.65,
+      splashDamageScale: 0.55,
       aim: { pivot: [2, -145], reach: 56 },
       recruit: {
         icon: "portrait-frost",
@@ -452,7 +452,7 @@
       x: 488,
       y: 924,
       height: 205,
-      damageScale: 1.9,
+      damageScale: 2.25,
       role: "repair",
       projectile: "projectile-sniper",
       speed: 1180,
@@ -1371,10 +1371,6 @@
       atmosphere.fillRect(0, 0, GAME_WIDTH, 96);
       atmosphere.fillStyle(0x061015, 0.34);
       atmosphere.fillRect(0, 870, GAME_WIDTH, 90);
-      atmosphere.fillStyle(0x7bdce2, 0.08);
-      atmosphere.fillRect(44, 76, 448, 548);
-      atmosphere.lineStyle(3, 0xc4fbff, 0.26);
-      atmosphere.strokeRect(52, 84, 436, 532);
     }
 
     drawCrack(graphics, x, y, scale) {
