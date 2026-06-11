@@ -141,7 +141,7 @@
     pause: "assets/sounds/sfx/pause.wav"
   };
   const WEAPON_SFX_INTENSITY = {
-    pistol: 0.78,
+    pistol: 0.48,
     rifle: 1,
     sniper: 1,
     rocket: 1,
@@ -1971,7 +1971,7 @@
         death: 0.075,
         explosion: 0.12,
         core: 0.16,
-        pistol: 0.035,
+        pistol: 0.065,
         rifle: 0.032,
         sniper: 0.08,
         rocket: 0.12,
