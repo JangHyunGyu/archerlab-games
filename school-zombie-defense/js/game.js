@@ -3786,22 +3786,21 @@
       const displayW = zombie.displayW || displayH;
       const corpseDepth = 58 + y / 5;
       const fallProfiles = [
-        { angle: -rand(76, 104), x: -rand(0.14, 0.27), y: rand(0.12, 0.25) },
-        { angle: rand(76, 104), x: rand(0.14, 0.27), y: rand(0.12, 0.25) },
-        { angle: -rand(48, 68), x: -rand(0.2, 0.34), y: rand(0.2, 0.34) },
-        { angle: rand(48, 68), x: rand(0.2, 0.34), y: rand(0.2, 0.34) },
-        { angle: -rand(116, 142), x: -rand(0.04, 0.15), y: rand(0.08, 0.2) },
-        { angle: rand(116, 142), x: rand(0.04, 0.15), y: rand(0.08, 0.2) },
-        { angle: (Math.random() < 0.5 ? -1 : 1) * rand(150, 168), x: rand(-0.08, 0.08), y: rand(0.04, 0.16) }
+        { angle: -rand(76, 104), x: -rand(0.14, 0.27), y: rand(0.02, 0.08) },
+        { angle: rand(76, 104), x: rand(0.14, 0.27), y: rand(0.02, 0.08) },
+        { angle: -rand(48, 68), x: -rand(0.2, 0.34), y: rand(0.04, 0.1) },
+        { angle: rand(48, 68), x: rand(0.2, 0.34), y: rand(0.04, 0.1) },
+        { angle: -rand(116, 142), x: -rand(0.04, 0.15), y: rand(0, 0.06) },
+        { angle: rand(116, 142), x: rand(0.04, 0.15), y: rand(0, 0.06) },
+        { angle: (Math.random() < 0.5 ? -1 : 1) * rand(150, 168), x: rand(-0.08, 0.08), y: rand(-0.01, 0.05) }
       ];
       const fall = choose(fallProfiles);
       const corpseX = clamp(x, this.bounds.left + 26, this.bounds.right - 26);
-      const corpseY = y + displayH * 0.18;
       const landingX = clamp(corpseX + displayH * fall.x + rand(-6, 6), this.bounds.left + 28, this.bounds.right - 28);
-      const landingY = clamp(corpseY + displayH * fall.y + rand(-5, 8), -20, this.bounds.barricade - displayH * 0.1);
+      const landingY = clamp(y + displayH * fall.y + rand(-4, 5), -20, this.bounds.barricade - displayH * 0.1);
       const finalAngle = fall.angle + rand(-5, 5);
       const stumbleX = clamp(corpseX + displayH * fall.x * 0.22, this.bounds.left + 24, this.bounds.right - 24);
-      const stumbleY = y + displayH * (0.06 + fall.y * 0.16);
+      const stumbleY = y + displayH * (0.02 + fall.y * 0.18);
 
       this.tweens.killTweensOf(zombie);
       this.trackTransient(zombie);
