@@ -135,7 +135,10 @@
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
-  const CHARACTER_FIRE_COOLDOWN_MULTIPLIER = 1.3;
+  const WEAPON_FIRE_INTERVAL_MULTIPLIER = 2;
+  const CHARACTER_FIRE_COOLDOWN_MULTIPLIER = 1.3 * WEAPON_FIRE_INTERVAL_MULTIPLIER;
+  const CHARACTER_DAMAGE_MULTIPLIER = WEAPON_FIRE_INTERVAL_MULTIPLIER;
+  const scaleWeaponInterval = (value) => value * WEAPON_FIRE_INTERVAL_MULTIPLIER;
   const SFX_MASTER_VOLUME = 0.44;
   const SFX_ASSETS = {
     start: "assets/sounds/sfx/start.wav",
@@ -276,6 +279,7 @@
     return `${Number(value.toFixed(digits))}${unit.suffix}`;
   };
   const DEFAULT_CHAIN_SHOT_DELAY = 125;
+  const MIN_CHAIN_SHOT_DELAY = scaleWeaponInterval(45);
   const WEAPON_CHAIN_SHOT_DELAYS = {
     "projectile-pistol": 110,
     "projectile-arrow": 140,
@@ -1479,6 +1483,7 @@
       DEFENDER_ROSTER.forEach((defender) => {
         const recruited = this.recruitedDefenders.has(defender.id);
         const fireRate = defender.rate * CHARACTER_FIRE_COOLDOWN_MULTIPLIER;
+        const burstDelay = defender.burstDelay ? scaleWeaponInterval(defender.burstDelay) : 0;
         const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-aim-12`)
           .setOrigin(0.5, 1)
           .setDepth(142 + defender.y / 10);
@@ -1512,8 +1517,8 @@
           shotsSinceRocket: 0,
           burstCount: defender.burstCount || 1,
           baseBurstCount: defender.burstCount || 1,
-          burstDelay: defender.burstDelay || 0,
-          baseBurstDelay: defender.burstDelay || 0,
+          burstDelay,
+          baseBurstDelay: burstDelay,
           splashRadius: defender.splashRadius || 0,
           splashDamageScale: defender.splashDamageScale || 0,
           splashRadiusBoost: 1,
@@ -1524,7 +1529,7 @@
           baseMarkDamageBonus: defender.markDamageBonus || 0,
           slowDuration: defender.slowDuration || 0,
           baseSlowDuration: defender.slowDuration || 0,
-          timer: rand(0.15, fireRate),
+          timer: rand(scaleWeaponInterval(0.15), fireRate),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
           speed: defender.speed
@@ -3201,7 +3206,7 @@
           const control = this.getMetaUpgradeLevel("b_control");
           const grenade = this.getMetaUpgradeLevel("b_grenade");
           defender.damageBoost *= 1 + power * 0.03;
-          defender.burstDelay = Math.max(45, defender.burstDelay * Math.max(0.5, 1 - control * 0.01));
+          defender.burstDelay = Math.max(MIN_CHAIN_SHOT_DELAY, defender.burstDelay * Math.max(0.5, 1 - control * 0.01));
           defender.rate *= Math.max(0.5, 1 - control * 0.004);
           if (grenade > 0) {
             defender.rocketEvery = getRifleGrenadeEveryForLevel(grenade);
@@ -3272,12 +3277,12 @@
         defender.markDuration = defender.baseMarkDuration || 0;
         defender.markDamageBonus = defender.baseMarkDamageBonus || 0;
         defender.slowDuration = defender.baseSlowDuration || 0;
-        defender.timer = rand(0.1, defender.rate);
+        defender.timer = rand(scaleWeaponInterval(0.1), defender.rate);
         defender.firePoseTimer = 0;
       });
       this.applyMetaUpgrades();
       this.defenders.forEach((defender) => {
-        defender.timer = rand(0.1, defender.rate);
+        defender.timer = rand(scaleWeaponInterval(0.1), defender.rate);
         this.setDefenderRecruited(defender.id, defender.role === "player", false);
       });
       this.updateHud();
@@ -3624,11 +3629,14 @@
     }
 
     getDefenderDamage(defender) {
-      return this.damage * (defender.damageScale || 1) * (defender.damageBoost || 1);
+      return this.damage * CHARACTER_DAMAGE_MULTIPLIER * (defender.damageScale || 1) * (defender.damageBoost || 1);
     }
 
     getChainShotDelay(defender) {
-      return defender.burstDelay || WEAPON_CHAIN_SHOT_DELAYS[defender.projectile] || DEFAULT_CHAIN_SHOT_DELAY;
+      if (defender.burstDelay) {
+        return defender.burstDelay;
+      }
+      return scaleWeaponInterval(WEAPON_CHAIN_SHOT_DELAYS[defender.projectile] || DEFAULT_CHAIN_SHOT_DELAY);
     }
 
     getBurstTargetGroupSize(defender) {
@@ -4867,12 +4875,12 @@
         tag: "소총",
         title: "연발 제어",
         desc: "여러 적에게\n탄막을 짧게 끊어 쏩니다.",
-        stat: `연사 ${rifle.burstCount}회 → ${Math.min(6, rifle.burstCount + rifleBurstGain)}회\n간격 ${this.formatMs(rifle.burstDelay)} → ${this.formatMs(Math.max(45, rifle.burstDelay * 0.86))}`,
-        available: rifle.burstCount < 6 || rifle.burstDelay > 45,
+        stat: `연사 ${rifle.burstCount}회 → ${Math.min(6, rifle.burstCount + rifleBurstGain)}회\n간격 ${this.formatMs(rifle.burstDelay)} → ${this.formatMs(Math.max(MIN_CHAIN_SHOT_DELAY, rifle.burstDelay * 0.86))}`,
+        available: rifle.burstCount < 6 || rifle.burstDelay > MIN_CHAIN_SHOT_DELAY,
         apply: () => {
           const defender = this.getDefenderById("b");
           defender.burstCount = Math.min(6, defender.burstCount + rifleBurstGain);
-          defender.burstDelay = Math.max(45, defender.burstDelay * 0.86);
+          defender.burstDelay = Math.max(MIN_CHAIN_SHOT_DELAY, defender.burstDelay * 0.86);
         }
       });
       add("b", {
