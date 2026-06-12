@@ -4728,6 +4728,20 @@
           defender.burstCount = Math.min(4, defender.burstCount + 1);
         }
       });
+      add("c", {
+        id: "c-pierce",
+        icon: "skill-pierce",
+        tag: "권총",
+        title: "관통 탄환",
+        desc: "앞줄을 뚫고\n뒤쪽 좀비까지 맞춥니다.",
+        stat: `관통 ${pistol.pierce} → ${pistol.pierce + 1}\n피해 ${this.formatPercent(pistol.damageBoost)} → ${this.formatPercent(pistol.damageBoost * 1.08)}`,
+        available: pistol.pierce < 2,
+        apply: () => {
+          const defender = this.getDefenderById("c");
+          defender.pierce += 1;
+          defender.damageBoost *= 1.08;
+        }
+      });
       add("a", {
         id: "a-rally",
         icon: "skill-rally",
@@ -4771,6 +4785,21 @@
           defender.damageBoost *= 1.08;
         }
       });
+      add("a", {
+        id: "a-pierce",
+        icon: "skill-arrow-pin",
+        tag: "활",
+        title: "관통 화살",
+        desc: "화살이 깊게 박혀\n일렬의 적을 꿰뚫습니다.",
+        stat: `관통 ${bow.pierce} → ${bow.pierce + 1}\n피해 ${this.formatPercent(bow.damageBoost)} → ${this.formatPercent(bow.damageBoost * 1.1)}`,
+        available: bow.pierce < 3,
+        apply: () => {
+          const defender = this.getDefenderById("a");
+          defender.pierce += 1;
+          defender.damageBoost *= 1.1;
+          defender.markDuration += 0.6;
+        }
+      });
       add("b", {
         id: "b-barrage",
         icon: "skill-rifle-grenade",
@@ -4800,6 +4829,20 @@
           const defender = this.getDefenderById("b");
           defender.burstCount = Math.min(6, defender.burstCount + rifleBurstGain);
           defender.burstDelay = Math.max(45, defender.burstDelay * 0.86);
+        }
+      });
+      add("b", {
+        id: "b-suppress",
+        icon: "skill-barrage",
+        tag: "소총",
+        title: "제압 사격",
+        desc: "연발 탄막으로\n전진 속도를 끊습니다.",
+        stat: `둔화 ${this.formatSeconds(rifle.slowDuration)} → ${this.formatSeconds(rifle.slowDuration + 0.22)}\n피해 ${this.formatPercent(rifle.damageBoost)} → ${this.formatPercent(rifle.damageBoost * 1.08)}`,
+        available: rifle.slowDuration < 0.66,
+        apply: () => {
+          const defender = this.getDefenderById("b");
+          defender.slowDuration += 0.22;
+          defender.damageBoost *= 1.08;
         }
       });
       add("d", {
@@ -4840,6 +4883,19 @@
           defender.damageBoost *= 1.28;
         }
       });
+      add("d", {
+        id: "d-reload",
+        icon: "skill-rocket-impact",
+        tag: "로켓",
+        title: "고속 장전",
+        desc: "무거운 탄두를\n더 빠르게 밀어 넣습니다.",
+        stat: `공격 간격 ${this.formatSeconds(rocket.rate)} → ${this.formatSeconds(Math.max(rocket.baseRate * 0.58, rocket.rate * 0.82))}`,
+        available: rocket.rate > rocket.baseRate * 0.6,
+        apply: () => {
+          const defender = this.getDefenderById("d");
+          defender.rate = Math.max(defender.baseRate * 0.58, defender.rate * 0.82);
+        }
+      });
       add("e", {
         id: "e-weakpoint",
         icon: "skill-sniper-weakpoint",
@@ -4864,6 +4920,19 @@
           const defender = this.getDefenderById("e");
           defender.pierce += 1;
           defender.damageBoost *= 1.16;
+        }
+      });
+      add("e", {
+        id: "e-reload",
+        icon: "skill-sniper",
+        tag: "저격",
+        title: "정밀 재장전",
+        desc: "조준을 유지한 채\n다음 탄을 빠르게 올립니다.",
+        stat: `공격 간격 ${this.formatSeconds(sniper.rate)} → ${this.formatSeconds(Math.max(sniper.baseRate * 0.58, sniper.rate * 0.82))}`,
+        available: sniper.rate > sniper.baseRate * 0.6,
+        apply: () => {
+          const defender = this.getDefenderById("e");
+          defender.rate = Math.max(defender.baseRate * 0.58, defender.rate * 0.82);
         }
       });
       return upgrades;
@@ -4931,15 +5000,20 @@
       while (chosen.length < recruitOffers && recruitPool.length > 0) {
         chosen.push(recruitPool.pop());
       }
-      const shouldOfferCommon = this.coreHp < this.maxCoreHp * 0.55 || Math.random() < 0.45;
+      const urgentCommon = this.coreHp < this.maxCoreHp * 0.45;
+      const shouldOfferCommon = urgentCommon || Math.random() < 0.22;
       if (chosen.length < 3 && commonPool.length > 0 && shouldOfferCommon) {
         const index = Math.floor(Math.random() * commonPool.length);
         chosen.push(commonPool.splice(index, 1)[0]);
       }
-      const availablePool = [...characterPool, ...commonPool];
+      const availablePool = [...characterPool, ...(urgentCommon ? commonPool : [])];
       while (chosen.length < 3 && availablePool.length > 0) {
         const index = Math.floor(Math.random() * availablePool.length);
         chosen.push(availablePool.splice(index, 1)[0]);
+      }
+      while (chosen.length < 3 && commonPool.length > 0) {
+        const index = Math.floor(Math.random() * commonPool.length);
+        chosen.push(commonPool.splice(index, 1)[0]);
       }
       return chosen;
     }
