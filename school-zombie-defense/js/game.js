@@ -68,7 +68,7 @@
     "projectile-arrow": 0.228,
     "projectile-pistol": 0.028,
     "projectile-rifle": 0.08,
-    "projectile-grenade": 0.24,
+    "projectile-grenade": 0.168,
     "projectile-rocket": 0.19,
     "projectile-sniper": 0.16,
     "projectile-frost": 0.78,
@@ -277,6 +277,13 @@
     "projectile-sniper": 170
   };
   const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4;
+  const RIFLE_GRENADE_INTERVAL_SCALE = 3;
+  const RIFLE_GRENADE_INITIAL_INTERVAL = 8 * RIFLE_GRENADE_INTERVAL_SCALE;
+  const RIFLE_GRENADE_MIN_INTERVAL = 4 * RIFLE_GRENADE_INTERVAL_SCALE;
+  const getRifleGrenadeEveryForLevel = (level) => Math.max(6, 10 - Math.floor(level * 0.4)) * RIFLE_GRENADE_INTERVAL_SCALE;
+  const getNextRifleGrenadeEvery = (current) => current === 0
+    ? RIFLE_GRENADE_INITIAL_INTERVAL
+    : Math.max(RIFLE_GRENADE_MIN_INTERVAL, current - RIFLE_GRENADE_INTERVAL_SCALE);
   const RECRUIT_UNLOCK_LEVELS = [3, 6, 9, 12];
   const getUnlockedRecruitSlots = (level) => RECRUIT_UNLOCK_LEVELS.filter((unlockLevel) => level >= unlockLevel).length;
   const ZOMBIE_TYPE_CONFIGS = {
@@ -2995,7 +3002,7 @@
       if (id === "b_power") return `피해 +${percent(level * 2)}`;
       if (id === "b_control") return `연발 간격 -${percent(level * 1)} · 사격 간격 -${percent(level * 0.4)}`;
       if (id === "b_grenade") {
-        return level <= 0 ? "유탄 없음" : `유탄 ${Math.max(6, 10 - Math.floor(level * 0.4))}발마다`;
+        return level <= 0 ? "유탄 없음" : `유탄 ${getRifleGrenadeEveryForLevel(level)}발마다`;
       }
       if (id === "d_charge") return `직격 피해 +${percent(level * 2.4)}`;
       if (id === "d_radius") return `폭발 반경 +${percent(level * 1.3)} · 폭발 피해 +${percent(level * 1)}`;
@@ -3181,7 +3188,7 @@
           defender.burstDelay = Math.max(45, defender.burstDelay * Math.max(0.88, 1 - control * 0.01));
           defender.rate *= Math.max(0.94, 1 - control * 0.004);
           if (grenade > 0) {
-            defender.rocketEvery = Math.max(6, 10 - Math.floor(grenade * 0.4));
+            defender.rocketEvery = getRifleGrenadeEveryForLevel(grenade);
           }
         } else if (defender.id === "d") {
           const charge = this.getMetaUpgradeLevel("d_charge");
@@ -3600,6 +3607,30 @@
       return this.defenders.find((defender) => defender.id === id);
     }
 
+    getGrenadeArcHeight(distance) {
+      return clamp(distance * 0.34, 88, 190);
+    }
+
+    getGrenadeArcPoint(startX, startY, endX, endY, arcHeight, progress) {
+      const t = clamp(progress, 0, 1);
+      const groundX = startX + (endX - startX) * t;
+      const groundY = startY + (endY - startY) * t;
+      const lift = Math.sin(Math.PI * t) * arcHeight;
+      return {
+        x: groundX,
+        y: groundY - lift,
+        groundX,
+        groundY
+      };
+    }
+
+    getGrenadeArcAngle(startX, startY, endX, endY, arcHeight, progress) {
+      const t = clamp(progress, 0, 1);
+      const dx = endX - startX;
+      const dy = endY - startY - Math.PI * arcHeight * Math.cos(Math.PI * t);
+      return Math.atan2(dy, dx);
+    }
+
     fireGrenade(defender, target, damage, radius = 68, slowDuration = 0, flightTimeScale = 1) {
       if (!defender || !target || !target.active) {
         return;
@@ -3611,24 +3642,28 @@
       let impactY = aimPoint.y;
       const initialPose = this.getAttackPose(defender, target);
       const initialMuzzle = this.getDefenderMuzzle(defender, initialPose);
-      const initialAngle = Math.atan2(aimPoint.y - initialMuzzle.y, aimPoint.x - initialMuzzle.x);
+      const initialDistance = Phaser.Math.Distance.Between(initialMuzzle.x, initialMuzzle.y, aimPoint.x, aimPoint.y);
+      const initialArcHeight = this.getGrenadeArcHeight(initialDistance);
+      const initialAngle = this.getGrenadeArcAngle(initialMuzzle.x, initialMuzzle.y, aimPoint.x, aimPoint.y, initialArcHeight, 0);
       const pose = getShotAimPoseKey(initialAngle);
       this.setDefenderPose(defender, pose);
       defender.firePoseTimer = 0.18;
       const muzzle = this.getDefenderMuzzle(defender, pose);
       const startX = muzzle.x;
       const startY = muzzle.y;
+      const distance = Phaser.Math.Distance.Between(startX, startY, aimPoint.x, aimPoint.y);
+      const arcHeight = this.getGrenadeArcHeight(distance);
+      const launchAngle = this.getGrenadeArcAngle(startX, startY, aimPoint.x, aimPoint.y, arcHeight, 0);
       const sprite = this.trackTransient(this.add.image(startX, startY, "projectile-grenade")
-        .setOrigin(0.5, 1)
+        .setOrigin(0.5)
         .setScale(PROJECTILE_SCALES["projectile-grenade"])
+        .setRotation(launchAngle + Math.PI / 2)
         .setDepth(192));
       const shadow = this.trackTransient(this.add.ellipse(startX, startY + 10, 18, 7, 0x000000, 0.32)
         .setDepth(78));
       sprite.arcT = 0;
-      const distance = Phaser.Math.Distance.Between(startX, startY, aimPoint.x, aimPoint.y);
       const duration = clamp(distance / 1.55, 330, 620) * flightTimeScale;
-      const arcHeight = clamp(distance * 0.28, 72, 152);
-      this.createMuzzle(startX, startY, initialAngle, defender.projectile);
+      this.createMuzzle(startX, startY, launchAngle, defender.projectile);
       this.playSfx("rocket", 0.58);
       this.tweens.add({
         targets: sprite,
@@ -3644,23 +3679,16 @@
             impactX = target.x + aimOffsetX;
             impactY = target.y + aimOffsetY;
           }
-          const groundX = startX + (impactX - startX) * t;
-          const groundY = startY + (impactY - startY) * t;
-          const lift = Math.sin(Math.PI * t) * arcHeight;
-          const nextT = clamp(t + 0.012, 0, 1);
-          const nextLift = Math.sin(Math.PI * nextT) * arcHeight;
-          const nextGroundX = startX + (impactX - startX) * nextT;
-          const nextGroundY = startY + (impactY - startY) * nextT;
-          const nextX = nextGroundX;
-          const nextY = nextGroundY - nextLift;
+          const arcPoint = this.getGrenadeArcPoint(startX, startY, impactX, impactY, arcHeight, t);
+          const arcAngle = this.getGrenadeArcAngle(startX, startY, impactX, impactY, arcHeight, t);
           sprite
-            .setPosition(groundX, groundY - lift)
-            .setRotation(Math.atan2(nextY - sprite.y, nextX - sprite.x) + Math.PI / 2)
+            .setPosition(arcPoint.x, arcPoint.y)
+            .setRotation(arcAngle + Math.PI / 2)
             .setScale(PROJECTILE_SCALES["projectile-grenade"] * (1 + Math.sin(Math.PI * t) * 0.16))
-            .setDepth(188 + groundY / 6);
+            .setDepth(188 + arcPoint.groundY / 6);
           if (shadow && !shadow.destroyed) {
             shadow
-              .setPosition(groundX, groundY + 7)
+              .setPosition(arcPoint.groundX, arcPoint.groundY + 7)
               .setScale(0.72 + t * 0.42, 0.72 + t * 0.2)
               .setAlpha(0.1 + t * 0.24);
           }
@@ -4697,12 +4725,12 @@
         title: "하부 유탄",
         desc: "연발 중간마다\n소형 폭발을 섞습니다.",
         stat: rifle.rocketEvery === 0
-          ? "유탄 없음 → 8발마다"
-          : `유탄 ${rifle.rocketEvery}발마다 → ${Math.max(4, rifle.rocketEvery - 1)}발마다`,
-        available: rifle.rocketEvery !== 4,
+          ? `유탄 없음 → ${RIFLE_GRENADE_INITIAL_INTERVAL}발마다`
+          : `유탄 ${rifle.rocketEvery}발마다 → ${getNextRifleGrenadeEvery(rifle.rocketEvery)}발마다`,
+        available: rifle.rocketEvery !== RIFLE_GRENADE_MIN_INTERVAL,
         apply: () => {
           const defender = this.getDefenderById("b");
-          defender.rocketEvery = defender.rocketEvery === 0 ? 8 : Math.max(4, defender.rocketEvery - 1);
+          defender.rocketEvery = getNextRifleGrenadeEvery(defender.rocketEvery);
         }
       });
       add("b", {
