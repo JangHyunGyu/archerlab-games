@@ -66,7 +66,7 @@
   };
   const PROJECTILE_SCALES = {
     "projectile-arrow": 0.228,
-    "projectile-pistol": 0.07,
+    "projectile-pistol": 0.028,
     "projectile-rifle": 0.08,
     "projectile-grenade": 0.24,
     "projectile-rocket": 0.19,
@@ -276,6 +276,7 @@
     "projectile-rocket": 190,
     "projectile-sniper": 170
   };
+  const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4;
   const RECRUIT_UNLOCK_LEVELS = [3, 6, 9, 12];
   const getUnlockedRecruitSlots = (level) => RECRUIT_UNLOCK_LEVELS.filter((unlockLevel) => level >= unlockLevel).length;
   const ZOMBIE_TYPE_CONFIGS = {
@@ -3460,7 +3461,7 @@
                   defender.shotsSinceRocket += 1;
                   if (defender.shotsSinceRocket >= defender.rocketEvery) {
                     defender.shotsSinceRocket = 0;
-                    this.fireGrenade(defender, shotTarget, damage * 1.35, 68);
+                    this.fireGrenade(defender, shotTarget, damage * 1.35, 68, 0, RIFLE_GRENADE_FLIGHT_TIME_SCALE);
                   }
                 }
               });
@@ -3599,7 +3600,7 @@
       return this.defenders.find((defender) => defender.id === id);
     }
 
-    fireGrenade(defender, target, damage, radius = 68, slowDuration = 0) {
+    fireGrenade(defender, target, damage, radius = 68, slowDuration = 0, flightTimeScale = 1) {
       if (!defender || !target || !target.active) {
         return;
       }
@@ -3625,7 +3626,7 @@
         .setDepth(78));
       sprite.arcT = 0;
       const distance = Phaser.Math.Distance.Between(startX, startY, aimPoint.x, aimPoint.y);
-      const duration = clamp(distance / 1.55, 330, 620);
+      const duration = clamp(distance / 1.55, 330, 620) * flightTimeScale;
       const arcHeight = clamp(distance * 0.28, 72, 152);
       this.createMuzzle(startX, startY, initialAngle, defender.projectile);
       this.playSfx("rocket", 0.58);
