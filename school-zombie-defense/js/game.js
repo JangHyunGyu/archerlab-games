@@ -175,7 +175,7 @@
   const BGM_VOLUME = 0.18;
   const ZOMBIE_AMBIENT_VOLUME = 0.1;
   const MAX_CORE_HP_SKILL_CAP = 6000;
-  const MAX_CORE_HP_SKILL_RATE = 0.12;
+  const MAX_CORE_HP_SKILL_RATE = 0.18;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
   const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
   const RANK_GAME_ID = "school-zombie-defense";
@@ -1507,6 +1507,8 @@
           critMultiplier: defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
           baseCritMultiplier: defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
           rocketEvery: 0,
+          rocketDamageBoost: 1,
+          rocketRadiusBoost: 1,
           shotsSinceRocket: 0,
           burstCount: defender.burstCount || 1,
           baseBurstCount: defender.burstCount || 1,
@@ -3256,6 +3258,8 @@
         defender.critChance = defender.baseCritChance || BASE_CRIT_CHANCE;
         defender.critMultiplier = defender.baseCritMultiplier || DEFAULT_CRIT_MULTIPLIER;
         defender.rocketEvery = 0;
+        defender.rocketDamageBoost = 1;
+        defender.rocketRadiusBoost = 1;
         defender.shotsSinceRocket = 0;
         defender.burstCount = defender.baseBurstCount || 1;
         defender.burstDelay = defender.baseBurstDelay || 0;
@@ -3487,7 +3491,14 @@
                 }
                 if (grenadeReadyForBurst && !grenadeFiredForBurst) {
                   grenadeFiredForBurst = true;
-                  this.fireGrenade(defender, shotTarget, damage * 1.35, 68, 0, RIFLE_GRENADE_FLIGHT_TIME_SCALE);
+                  this.fireGrenade(
+                    defender,
+                    shotTarget,
+                    damage * 1.35 * (defender.rocketDamageBoost || 1),
+                    68 * (defender.rocketRadiusBoost || 1),
+                    0,
+                    RIFLE_GRENADE_FLIGHT_TIME_SCALE
+                  );
                 }
               });
             }
@@ -4687,6 +4698,9 @@
       const rifle = this.getDefenderById("b");
       const rocket = this.getDefenderById("d");
       const sniper = this.getDefenderById("e");
+      const rifleBurstGain = 2;
+      const rifleGrenadeDamageBoost = rifle.rocketDamageBoost || 1;
+      const rifleGrenadeRadiusBoost = rifle.rocketRadiusBoost || 1;
 
       add("c", {
         id: "c-rapid",
@@ -4694,11 +4708,11 @@
         tag: "권총",
         title: "권총 속사",
         desc: "가까이 붙은 적을\n더 빠르게 끊어냅니다.",
-        stat: `공격 간격 ${this.formatSeconds(pistol.rate)} → ${this.formatSeconds(Math.max(pistol.baseRate * 0.65, pistol.rate * 0.88))}`,
-        available: pistol.rate > pistol.baseRate * 0.66,
+        stat: `공격 간격 ${this.formatSeconds(pistol.rate)} → ${this.formatSeconds(Math.max(pistol.baseRate * 0.52, pistol.rate * 0.82))}`,
+        available: pistol.rate > pistol.baseRate * 0.54,
         apply: () => {
           const defender = this.getDefenderById("c");
-          defender.rate = Math.max(defender.baseRate * 0.65, defender.rate * 0.88);
+          defender.rate = Math.max(defender.baseRate * 0.52, defender.rate * 0.82);
         }
       });
       add("c", {
@@ -4720,11 +4734,11 @@
         tag: "활",
         title: "집중 호흡",
         desc: "활시위를 당길수록\n치명타가 날카로워집니다.",
-        stat: `치명률 ${this.formatPercent(bow.critChance)} → ${this.formatPercent(Math.min(0.65, bow.critChance + 0.1))}\n치명 피해 ${this.formatPercent(bow.critMultiplier)} → ${this.formatPercent(bow.critMultiplier + 0.15)}`,
+        stat: `치명률 ${this.formatPercent(bow.critChance)} → ${this.formatPercent(Math.min(0.72, bow.critChance + 0.14))}\n치명 피해 ${this.formatPercent(bow.critMultiplier)} → ${this.formatPercent(bow.critMultiplier + 0.35)}`,
         apply: () => {
           const defender = this.getDefenderById("a");
-          defender.critChance = Math.min(0.65, defender.critChance + 0.1);
-          defender.critMultiplier += 0.15;
+          defender.critChance = Math.min(0.72, defender.critChance + 0.14);
+          defender.critMultiplier += 0.35;
         }
       });
       add("a", {
@@ -4733,13 +4747,13 @@
         tag: "활",
         title: "약점 표식",
         desc: "표식이 붙은 적이\n더 큰 피해를 받습니다.",
-        stat: `표식 피해 ${this.formatBonus(bow.markDamageBonus)} → ${this.formatBonus(bow.markDamageBonus + 0.07)}\n표식 지속 ${this.formatSeconds(bow.markDuration)} → ${this.formatSeconds(bow.markDuration + 1.5)}`,
+        stat: `표식 피해 ${this.formatBonus(bow.markDamageBonus)} → ${this.formatBonus(bow.markDamageBonus + 0.12)}\n표식 지속 ${this.formatSeconds(bow.markDuration)} → ${this.formatSeconds(bow.markDuration + 1.8)}`,
         accent: 0xffd978,
         accentHex: "#ffd978",
         apply: () => {
           const defender = this.getDefenderById("a");
-          defender.markDamageBonus += 0.07;
-          defender.markDuration += 1.5;
+          defender.markDamageBonus += 0.12;
+          defender.markDuration += 1.8;
         }
       });
       add("a", {
@@ -4748,11 +4762,13 @@
         tag: "활",
         title: "속박 화살",
         desc: "맞은 좀비의 발을\n잠시 묶어둡니다.",
-        stat: `둔화 ${this.formatSeconds(bow.slowDuration)} → ${this.formatSeconds(bow.slowDuration + 0.55)}\n표식 지속 ${this.formatSeconds(bow.markDuration)} → ${this.formatSeconds(bow.markDuration + 0.75)}`,
+        stat: `둔화 ${this.formatSeconds(bow.slowDuration)} → ${this.formatSeconds(bow.slowDuration + 0.75)}\n표식 피해 ${this.formatBonus(bow.markDamageBonus)} → ${this.formatBonus(bow.markDamageBonus + 0.04)}`,
         apply: () => {
           const defender = this.getDefenderById("a");
-          defender.slowDuration += 0.55;
-          defender.markDuration += 0.75;
+          defender.slowDuration += 0.75;
+          defender.markDuration += 1;
+          defender.markDamageBonus += 0.04;
+          defender.damageBoost *= 1.08;
         }
       });
       add("b", {
@@ -4762,12 +4778,14 @@
         title: "하부 유탄",
         desc: "연발 중간마다\n소형 폭발을 섞습니다.",
         stat: rifle.rocketEvery === 0
-          ? `유탄 없음 → ${RIFLE_GRENADE_INITIAL_INTERVAL}세트마다`
-          : `유탄 ${rifle.rocketEvery}세트마다 → ${getNextRifleGrenadeEvery(rifle.rocketEvery)}세트마다`,
+          ? `유탄 없음 → ${RIFLE_GRENADE_INITIAL_INTERVAL}세트\n폭발 ${this.formatPercent(rifleGrenadeDamageBoost)}→${this.formatPercent(rifleGrenadeDamageBoost * 1.2)} · 범위 ${this.formatPercent(rifleGrenadeRadiusBoost)}→${this.formatPercent(rifleGrenadeRadiusBoost * 1.1)}`
+          : `유탄 ${rifle.rocketEvery}→${getNextRifleGrenadeEvery(rifle.rocketEvery)}세트\n폭발 ${this.formatPercent(rifleGrenadeDamageBoost)}→${this.formatPercent(rifleGrenadeDamageBoost * 1.2)} · 범위 ${this.formatPercent(rifleGrenadeRadiusBoost)}→${this.formatPercent(rifleGrenadeRadiusBoost * 1.1)}`,
         available: rifle.rocketEvery !== RIFLE_GRENADE_MIN_INTERVAL,
         apply: () => {
           const defender = this.getDefenderById("b");
           defender.rocketEvery = getNextRifleGrenadeEvery(defender.rocketEvery);
+          defender.rocketDamageBoost = (defender.rocketDamageBoost || 1) * 1.2;
+          defender.rocketRadiusBoost = (defender.rocketRadiusBoost || 1) * 1.1;
         }
       });
       add("b", {
@@ -4776,12 +4794,12 @@
         tag: "소총",
         title: "연발 제어",
         desc: "여러 적에게\n탄막을 짧게 끊어 쏩니다.",
-        stat: `연사 ${rifle.burstCount}회 → ${Math.min(6, rifle.burstCount + (rifle.baseBurstCount || 3))}회\n간격 ${this.formatMs(rifle.burstDelay)} → ${this.formatMs(Math.max(45, rifle.burstDelay * 0.9))}`,
+        stat: `연사 ${rifle.burstCount}회 → ${Math.min(6, rifle.burstCount + rifleBurstGain)}회\n간격 ${this.formatMs(rifle.burstDelay)} → ${this.formatMs(Math.max(45, rifle.burstDelay * 0.86))}`,
         available: rifle.burstCount < 6 || rifle.burstDelay > 45,
         apply: () => {
           const defender = this.getDefenderById("b");
-          defender.burstCount = Math.min(6, defender.burstCount + (defender.baseBurstCount || 3));
-          defender.burstDelay = Math.max(45, defender.burstDelay * 0.9);
+          defender.burstCount = Math.min(6, defender.burstCount + rifleBurstGain);
+          defender.burstDelay = Math.max(45, defender.burstDelay * 0.86);
         }
       });
       add("d", {
@@ -4790,11 +4808,11 @@
         tag: "로켓",
         title: "냉각 탄두",
         desc: "폭발에 휘말린 적을\n느리게 만듭니다.",
-        stat: `둔화 ${this.formatSeconds(rocket.slowDuration)} → ${this.formatSeconds(rocket.slowDuration + 1.2)}\n직격 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.12)}`,
+        stat: `둔화 ${this.formatSeconds(rocket.slowDuration)} → ${this.formatSeconds(rocket.slowDuration + 1.4)}\n직격 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.22)}`,
         apply: () => {
           const defender = this.getDefenderById("d");
-          defender.slowDuration += 1.2;
-          defender.damageBoost *= 1.12;
+          defender.slowDuration += 1.4;
+          defender.damageBoost *= 1.22;
         }
       });
       add("d", {
@@ -4803,11 +4821,11 @@
         tag: "로켓",
         title: "고폭 탄두",
         desc: "몰려 있는 좀비를\n더 넓게 쓸어냅니다.",
-        stat: `반경 ${Math.round(rocket.splashRadius * rocket.splashRadiusBoost)} → ${Math.round(rocket.splashRadius * rocket.splashRadiusBoost * 1.18)}\n폭발 피해 ${this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost)} → ${this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost * 1.22)}`,
+        stat: `반경 ${Math.round(rocket.splashRadius * rocket.splashRadiusBoost)} → ${Math.round(rocket.splashRadius * rocket.splashRadiusBoost * 1.12)}\n폭발 피해 ${this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost)} → ${this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost * 1.16)}`,
         apply: () => {
           const defender = this.getDefenderById("d");
-          defender.splashRadiusBoost *= 1.18;
-          defender.splashDamageBoost *= 1.22;
+          defender.splashRadiusBoost *= 1.12;
+          defender.splashDamageBoost *= 1.16;
         }
       });
       add("d", {
@@ -4816,10 +4834,10 @@
         tag: "로켓",
         title: "직격 장약",
         desc: "정면으로 맞은 대상에게\n더 묵직하게 박힙니다.",
-        stat: `직격 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.18)}`,
+        stat: `직격 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.28)}`,
         apply: () => {
           const defender = this.getDefenderById("d");
-          defender.damageBoost *= 1.18;
+          defender.damageBoost *= 1.28;
         }
       });
       add("e", {
@@ -4828,11 +4846,11 @@
         tag: "저격",
         title: "약점 조준",
         desc: "큰 위협을 노릴 때\n한 발의 위력이 커집니다.",
-        stat: `치명률 ${this.formatPercent(sniper.critChance)} → ${this.formatPercent(Math.min(0.7, sniper.critChance + 0.06))}\n치명 피해 ${this.formatPercent(sniper.critMultiplier)} → ${this.formatPercent(sniper.critMultiplier + 0.3)}`,
+        stat: `치명률 ${this.formatPercent(sniper.critChance)} → ${this.formatPercent(Math.min(0.78, sniper.critChance + 0.1))}\n치명 피해 ${this.formatPercent(sniper.critMultiplier)} → ${this.formatPercent(sniper.critMultiplier + 0.45)}`,
         apply: () => {
           const defender = this.getDefenderById("e");
-          defender.critChance = Math.min(0.7, defender.critChance + 0.06);
-          defender.critMultiplier += 0.3;
+          defender.critChance = Math.min(0.78, defender.critChance + 0.1);
+          defender.critMultiplier += 0.45;
         }
       });
       add("e", {
@@ -4841,11 +4859,11 @@
         tag: "저격",
         title: "철갑 저격",
         desc: "앞줄을 꿰뚫고\n뒤쪽 위협까지 노립니다.",
-        stat: `관통 ${sniper.pierce} → ${sniper.pierce + 1}\n저격 피해 ${this.formatPercent(sniper.damageBoost)} → ${this.formatPercent(sniper.damageBoost * 1.18)}`,
+        stat: `관통 ${sniper.pierce} → ${sniper.pierce + 1}\n저격 피해 ${this.formatPercent(sniper.damageBoost)} → ${this.formatPercent(sniper.damageBoost * 1.16)}`,
         apply: () => {
           const defender = this.getDefenderById("e");
           defender.pierce += 1;
-          defender.damageBoost *= 1.18;
+          defender.damageBoost *= 1.16;
         }
       });
       return upgrades;
@@ -4874,7 +4892,7 @@
         });
       }
 
-      const hpBonus = Math.max(240, Math.round(this.maxCoreHp * MAX_CORE_HP_SKILL_RATE));
+      const hpBonus = Math.max(360, Math.round(this.maxCoreHp * MAX_CORE_HP_SKILL_RATE));
       const nextMaxHp = Math.min(MAX_CORE_HP_SKILL_CAP, Math.round(this.maxCoreHp + hpBonus));
       const appliedBonus = nextMaxHp - maxHp;
       if (appliedBonus > 0) {
