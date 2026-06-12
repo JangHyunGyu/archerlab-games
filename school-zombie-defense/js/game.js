@@ -1685,7 +1685,7 @@
         stroke: "#1a2228",
         strokeThickness: 5
       }).setOrigin(0.5).setDepth(316);
-      this.ui.level = this.add.text(270, 65, "Lv.1", {
+      this.ui.level = this.add.text(270, 65, "웨이브 1", {
         fontFamily: "Arial, sans-serif",
         fontSize: 17,
         fontStyle: "900",
@@ -3361,7 +3361,7 @@
       const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.28, 1.18);
       const delayMin = this.level < 7 ? 0.72 : 0.64;
       const delayMax = this.level < 7 ? 1.2 : 1.16;
-      const burst = this.level >= 16 ? 3 : this.level >= 10 ? 2 : 1;
+      const burst = this.level >= 17 ? 3 : this.level >= 12 ? 2 : 1;
       const burstPacing = burst > 1 ? 1 + (burst - 1) * 0.38 : 1;
       this.spawnTimer = rand(baseDelay * delayMin * burstPacing, baseDelay * delayMax * burstPacing) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
       for (let i = 0; i < burst; i += 1) {
@@ -4617,7 +4617,7 @@
         stroke: "#050607",
         strokeThickness: 6
       }).setOrigin(0.5).setDepth(525));
-      items.push(this.add.text(270, 202, `Lv.${this.level} 보급 승인 - 전술 하나를 선택하세요`, {
+      items.push(this.add.text(270, 202, `웨이브 ${this.level} 보급 승인 - 전술 하나를 선택하세요`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 16,
         fontStyle: "900",
@@ -5138,7 +5138,7 @@
         stroke: "#050607",
         strokeThickness: 6
       }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 146, `Lv.${this.level} · 처치 ${this.kills}`, {
+      items.push(this.add.text(270, 146, `웨이브 ${this.level} · 처치 ${this.kills}`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 22,
         fontStyle: "900",
@@ -5187,7 +5187,7 @@
       this.ui.timer.setText(`${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`);
       const stageName = ["교문", "복도", "교실", "옥상"][Math.min(3, this.stage - 1)];
       this.ui.stage.setText(`St.${this.stage} - ${stageName}`);
-      this.ui.level.setText(`Lv.${this.level}`);
+      this.ui.level.setText(`웨이브 ${this.level}`);
       this.ui.morale.setText(`M${this.morale}%`);
       this.ui.morale.setColor(this.morale < 35 ? "#ff524f" : this.morale < 70 ? "#ffd75c" : "#4dff67");
       this.ui.core.setText(`HP ${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
