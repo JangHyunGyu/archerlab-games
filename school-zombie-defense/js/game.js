@@ -66,8 +66,8 @@
   };
   const PROJECTILE_SCALES = {
     "projectile-arrow": 0.228,
-    "projectile-pistol": 0.14,
-    "projectile-rifle": 0.16,
+    "projectile-pistol": 0.07,
+    "projectile-rifle": 0.08,
     "projectile-grenade": 0.24,
     "projectile-rocket": 0.19,
     "projectile-sniper": 0.16,
