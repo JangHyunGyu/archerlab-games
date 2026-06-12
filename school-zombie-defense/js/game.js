@@ -3002,7 +3002,7 @@
       if (id === "b_power") return `피해 +${percent(level * 2)}`;
       if (id === "b_control") return `연발 간격 -${percent(level * 1)} · 사격 간격 -${percent(level * 0.4)}`;
       if (id === "b_grenade") {
-        return level <= 0 ? "유탄 없음" : `유탄 ${getRifleGrenadeEveryForLevel(level)}발마다`;
+        return level <= 0 ? "유탄 없음" : `유탄 ${getRifleGrenadeEveryForLevel(level)}세트마다`;
       }
       if (id === "d_charge") return `직격 피해 +${percent(level * 2.4)}`;
       if (id === "d_radius") return `폭발 반경 +${percent(level * 1.3)} · 폭발 피해 +${percent(level * 1)}`;
@@ -3442,6 +3442,9 @@
           if (target) {
             const usedTargets = new Set();
             const groupTargets = [];
+            let grenadeCountedForBurst = false;
+            let grenadeReadyForBurst = false;
+            let grenadeFiredForBurst = false;
             for (let shot = 0; shot < burstCount; shot += 1) {
               const groupIndex = Math.floor(shot / targetGroupSize);
               this.scheduleRunDelay(shot * shotDelay, () => {
@@ -3464,12 +3467,17 @@
                 }
                 const damage = this.getDefenderDamage(defender);
                 this.fireBullet(defender, shotTarget, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
-                if (defender.rocketEvery > 0) {
+                if (defender.rocketEvery > 0 && !grenadeCountedForBurst) {
+                  grenadeCountedForBurst = true;
                   defender.shotsSinceRocket += 1;
                   if (defender.shotsSinceRocket >= defender.rocketEvery) {
                     defender.shotsSinceRocket = 0;
-                    this.fireGrenade(defender, shotTarget, damage * 1.35, 68, 0, RIFLE_GRENADE_FLIGHT_TIME_SCALE);
+                    grenadeReadyForBurst = true;
                   }
+                }
+                if (grenadeReadyForBurst && !grenadeFiredForBurst) {
+                  grenadeFiredForBurst = true;
+                  this.fireGrenade(defender, shotTarget, damage * 1.35, 68, 0, RIFLE_GRENADE_FLIGHT_TIME_SCALE);
                 }
               });
             }
@@ -3855,6 +3863,24 @@
       };
     }
 
+    getBulletAimPointForZombie(bullet, zombie) {
+      if (!bullet || bullet.aimTarget !== zombie) {
+        return null;
+      }
+      return {
+        x: zombie.x + (bullet.aimOffsetX || 0),
+        y: zombie.y + (bullet.aimOffsetY || 0)
+      };
+    }
+
+    getBulletImpactPoint(bullet, zombie, tip) {
+      return this.getZombieBodyHitPoint(
+        zombie,
+        this.getBulletAimPointForZombie(bullet, zombie) || tip,
+        bullet?.projectile
+      );
+    }
+
     createEmbeddedArrow(zombie, bullet, impactPoint = null) {
       if (!zombie || !zombie.active || !bullet?.sprite) {
         return;
@@ -3909,19 +3935,20 @@
           continue;
         }
         if (bullet.aimTarget === zombie) {
-          const aimX = zombie.x + (bullet.aimOffsetX || 0);
-          const aimY = zombie.y + (bullet.aimOffsetY || 0);
+          const aimPoint = this.getBulletAimPointForZombie(bullet, zombie);
+          const aimX = aimPoint.x;
+          const aimY = aimPoint.y;
           const aimDx = tip.x - aimX;
           const aimDy = tip.y - aimY;
           const aimRadius = clamp((zombie.hitRadius || 32) * 0.7, 18, 34);
           if (aimDx * aimDx + aimDy * aimDy < aimRadius * aimRadius) {
-            return { zombie, point: tip };
+            return { zombie, point: this.getBulletImpactPoint(bullet, zombie, tip) };
           }
         }
         const dx = tip.x - zombie.x;
         const dy = tip.y - zombie.y;
         if (dx * dx + dy * dy < zombie.hitRadius * zombie.hitRadius) {
-          return { zombie, point: tip };
+          return { zombie, point: this.getBulletImpactPoint(bullet, zombie, tip) };
         }
       }
       return null;
@@ -4725,8 +4752,8 @@
         title: "하부 유탄",
         desc: "연발 중간마다\n소형 폭발을 섞습니다.",
         stat: rifle.rocketEvery === 0
-          ? `유탄 없음 → ${RIFLE_GRENADE_INITIAL_INTERVAL}발마다`
-          : `유탄 ${rifle.rocketEvery}발마다 → ${getNextRifleGrenadeEvery(rifle.rocketEvery)}발마다`,
+          ? `유탄 없음 → ${RIFLE_GRENADE_INITIAL_INTERVAL}세트마다`
+          : `유탄 ${rifle.rocketEvery}세트마다 → ${getNextRifleGrenadeEvery(rifle.rocketEvery)}세트마다`,
         available: rifle.rocketEvery !== RIFLE_GRENADE_MIN_INTERVAL,
         apply: () => {
           const defender = this.getDefenderById("b");
