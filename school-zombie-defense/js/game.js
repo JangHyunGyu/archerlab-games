@@ -183,6 +183,8 @@
   const RANK_NAME_KEY = "schoolZombieDefenseRankNameV1";
   const SHOP_MAX_LEVEL = 30;
   const SHOP_LEVEL_PIPS_PER_ROW = 15;
+  const SHOP_COST_GROWTH = 1.16;
+  const SHOP_COST_ROUNDING = 10;
   const SHOP_CHARACTERS = [
     {
       id: "c",
@@ -253,7 +255,12 @@
     ]
   };
   const getAllShopUpgradeIds = () => Object.values(SHOP_CHARACTER_UPGRADES).flat().map((upgrade) => upgrade.id);
-  const getShopUpgradeCost = (level) => level >= SHOP_MAX_LEVEL ? 0 : 200 * Math.pow(2, level);
+  const getShopUpgradeCost = (level) => {
+    if (level >= SHOP_MAX_LEVEL) {
+      return 0;
+    }
+    return Math.round((200 * Math.pow(SHOP_COST_GROWTH, level)) / SHOP_COST_ROUNDING) * SHOP_COST_ROUNDING;
+  };
   const formatShopCost = (cost) => {
     if (cost < 100000) {
       return String(cost);
@@ -280,7 +287,10 @@
   const RIFLE_GRENADE_INTERVAL_SCALE = 3;
   const RIFLE_GRENADE_INITIAL_INTERVAL = 8 * RIFLE_GRENADE_INTERVAL_SCALE;
   const RIFLE_GRENADE_MIN_INTERVAL = 4 * RIFLE_GRENADE_INTERVAL_SCALE;
-  const getRifleGrenadeEveryForLevel = (level) => Math.max(6, 10 - Math.floor(level * 0.4)) * RIFLE_GRENADE_INTERVAL_SCALE;
+  const getRifleGrenadeEveryForLevel = (level) => {
+    const progress = clamp((Math.max(1, level) - 1) / (SHOP_MAX_LEVEL - 1), 0, 1);
+    return Math.round(10 - progress * 6) * RIFLE_GRENADE_INTERVAL_SCALE;
+  };
   const getNextRifleGrenadeEvery = (current) => current === 0
     ? RIFLE_GRENADE_INITIAL_INTERVAL
     : Math.max(RIFLE_GRENADE_MIN_INTERVAL, current - RIFLE_GRENADE_INTERVAL_SCALE);
@@ -2993,21 +3003,21 @@
 
     getShopUpgradeEffectLine(id, level) {
       const percent = (value) => `${Math.round(value * 10) / 10}%`;
-      if (id === "c_power") return `피해 +${percent(level * 2.2)}`;
+      if (id === "c_power") return `피해 +${percent(level * 3.2)}`;
       if (id === "c_speed") return `공격 간격 -${percent(level * 0.9)}`;
       if (id === "c_crit") return `치명 +${percent(level * 0.6)} · 치명피해 +${percent(level * 1)}`;
-      if (id === "a_power") return `피해 +${percent(level * 2)}`;
+      if (id === "a_power") return `피해 +${percent(level * 3)}`;
       if (id === "a_mark") return `표식 피해 +${percent(level * 0.6)} · 지속 +${(level * 0.06).toFixed(2)}초`;
       if (id === "a_crit") return `치명 +${percent(level * 0.7)} · 치명피해 +${percent(level * 1)}`;
-      if (id === "b_power") return `피해 +${percent(level * 2)}`;
+      if (id === "b_power") return `피해 +${percent(level * 3)}`;
       if (id === "b_control") return `연발 간격 -${percent(level * 1)} · 사격 간격 -${percent(level * 0.4)}`;
       if (id === "b_grenade") {
         return level <= 0 ? "유탄 없음" : `유탄 ${getRifleGrenadeEveryForLevel(level)}세트마다`;
       }
-      if (id === "d_charge") return `직격 피해 +${percent(level * 2.4)}`;
+      if (id === "d_charge") return `직격 피해 +${percent(level * 3.4)}`;
       if (id === "d_radius") return `폭발 반경 +${percent(level * 1.3)} · 폭발 피해 +${percent(level * 1)}`;
       if (id === "d_slow") return `둔화 +${(level * 0.09).toFixed(2)}초`;
-      if (id === "e_power") return `피해 +${percent(level * 2.3)}`;
+      if (id === "e_power") return `피해 +${percent(level * 3.2)}`;
       if (id === "e_focus") return `치명 +${percent(level * 0.6)} · 치명피해 +${percent(level * 2.5)}`;
       if (id === "e_pierce") {
         return `관통 +${Math.floor(level / 5)} · 피해 +${percent(level * 0.8)}`;
@@ -3167,15 +3177,15 @@
           const power = this.getMetaUpgradeLevel("c_power");
           const speed = this.getMetaUpgradeLevel("c_speed");
           const crit = this.getMetaUpgradeLevel("c_crit");
-          defender.damageBoost *= 1 + power * 0.022;
-          defender.rate *= Math.max(0.9, 1 - speed * 0.009);
+          defender.damageBoost *= 1 + power * 0.032;
+          defender.rate *= Math.max(0.5, 1 - speed * 0.009);
           defender.critChance = Math.min(0.72, defender.critChance + crit * 0.006);
           defender.critMultiplier += crit * 0.01;
         } else if (defender.id === "a") {
           const power = this.getMetaUpgradeLevel("a_power");
           const mark = this.getMetaUpgradeLevel("a_mark");
           const crit = this.getMetaUpgradeLevel("a_crit");
-          defender.damageBoost *= 1 + power * 0.02;
+          defender.damageBoost *= 1 + power * 0.03;
           defender.markDamageBonus += mark * 0.006;
           defender.markDuration += mark * 0.06;
           defender.critChance = Math.min(0.72, defender.critChance + crit * 0.007);
@@ -3184,9 +3194,9 @@
           const power = this.getMetaUpgradeLevel("b_power");
           const control = this.getMetaUpgradeLevel("b_control");
           const grenade = this.getMetaUpgradeLevel("b_grenade");
-          defender.damageBoost *= 1 + power * 0.02;
-          defender.burstDelay = Math.max(45, defender.burstDelay * Math.max(0.88, 1 - control * 0.01));
-          defender.rate *= Math.max(0.94, 1 - control * 0.004);
+          defender.damageBoost *= 1 + power * 0.03;
+          defender.burstDelay = Math.max(45, defender.burstDelay * Math.max(0.5, 1 - control * 0.01));
+          defender.rate *= Math.max(0.5, 1 - control * 0.004);
           if (grenade > 0) {
             defender.rocketEvery = getRifleGrenadeEveryForLevel(grenade);
           }
@@ -3194,7 +3204,7 @@
           const charge = this.getMetaUpgradeLevel("d_charge");
           const radius = this.getMetaUpgradeLevel("d_radius");
           const slow = this.getMetaUpgradeLevel("d_slow");
-          defender.damageBoost *= 1 + charge * 0.024;
+          defender.damageBoost *= 1 + charge * 0.034;
           defender.splashRadiusBoost *= 1 + radius * 0.013;
           defender.splashDamageBoost *= 1 + radius * 0.01;
           defender.slowDuration += slow * 0.09;
@@ -3202,7 +3212,7 @@
           const power = this.getMetaUpgradeLevel("e_power");
           const focus = this.getMetaUpgradeLevel("e_focus");
           const pierce = this.getMetaUpgradeLevel("e_pierce");
-          defender.damageBoost *= 1 + power * 0.023 + pierce * 0.008;
+          defender.damageBoost *= 1 + power * 0.032 + pierce * 0.008;
           defender.critChance = Math.min(0.76, defender.critChance + focus * 0.006);
           defender.critMultiplier += focus * 0.025;
           defender.pierce += Math.floor(pierce / 5);
