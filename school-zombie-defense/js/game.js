@@ -1267,6 +1267,11 @@
       this.load.image("skill-rifle-grenade", imageAsset("assets/images/skill-rifle-grenade.png"));
       this.load.image("skill-rocket-impact", imageAsset("assets/images/skill-rocket-impact.png"));
       this.load.image("skill-sniper-weakpoint", imageAsset("assets/images/skill-sniper-weakpoint.png"));
+      this.load.image("skill-pistol-pierce", imageAsset("assets/images/skill-pistol-pierce.png"));
+      this.load.image("skill-arrow-pierce", imageAsset("assets/images/skill-arrow-pierce.png"));
+      this.load.image("skill-rifle-suppress", imageAsset("assets/images/skill-rifle-suppress.png"));
+      this.load.image("skill-rocket-reload", imageAsset("assets/images/skill-rocket-reload.png"));
+      this.load.image("skill-sniper-reload", imageAsset("assets/images/skill-sniper-reload.png"));
       this.load.spritesheet("zombie-hit-arrow-sheet", imageAsset("assets/images/zombie-hit-arrow-sheet.png"), { frameWidth: 96, frameHeight: 96 });
       this.load.spritesheet("zombie-hit-pistol-sheet", imageAsset("assets/images/zombie-hit-pistol-sheet.png"), { frameWidth: 112, frameHeight: 96 });
       this.load.spritesheet("zombie-hit-rifle-sheet", imageAsset("assets/images/zombie-hit-rifle-sheet.png"), { frameWidth: 140, frameHeight: 100 });
@@ -4782,7 +4787,7 @@
       });
       add("c", {
         id: "c-pierce",
-        icon: "skill-pierce",
+        icon: "skill-pistol-pierce",
         tag: "권총",
         title: "관통 탄환",
         desc: "앞줄을 뚫고\n뒤쪽 좀비까지 맞춥니다.",
@@ -4839,7 +4844,7 @@
       });
       add("a", {
         id: "a-pierce",
-        icon: "skill-arrow-pin",
+        icon: "skill-arrow-pierce",
         tag: "활",
         title: "관통 화살",
         desc: "화살이 깊게 박혀\n일렬의 적을 꿰뚫습니다.",
@@ -4885,7 +4890,7 @@
       });
       add("b", {
         id: "b-suppress",
-        icon: "skill-barrage",
+        icon: "skill-rifle-suppress",
         tag: "소총",
         title: "제압 사격",
         desc: "연발 탄막으로\n전진 속도를 끊습니다.",
@@ -4937,7 +4942,7 @@
       });
       add("d", {
         id: "d-reload",
-        icon: "skill-rocket-impact",
+        icon: "skill-rocket-reload",
         tag: "로켓",
         title: "고속 장전",
         desc: "무거운 탄두를\n더 빠르게 밀어 넣습니다.",
@@ -4976,7 +4981,7 @@
       });
       add("e", {
         id: "e-reload",
-        icon: "skill-sniper",
+        icon: "skill-sniper-reload",
         tag: "저격",
         title: "정밀 재장전",
         desc: "조준을 유지한 채\n다음 탄을 빠르게 올립니다.",
