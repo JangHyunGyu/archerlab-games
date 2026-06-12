@@ -181,7 +181,8 @@
   const RANK_GAME_ID = "school-zombie-defense";
   const RANK_LIMIT = 20;
   const RANK_NAME_KEY = "schoolZombieDefenseRankNameV1";
-  const SHOP_MAX_LEVEL = 10;
+  const SHOP_MAX_LEVEL = 30;
+  const SHOP_LEVEL_PIPS_PER_ROW = 15;
   const SHOP_CHARACTERS = [
     {
       id: "c",
@@ -253,6 +254,20 @@
   };
   const getAllShopUpgradeIds = () => Object.values(SHOP_CHARACTER_UPGRADES).flat().map((upgrade) => upgrade.id);
   const getShopUpgradeCost = (level) => level >= SHOP_MAX_LEVEL ? 0 : 200 * Math.pow(2, level);
+  const formatShopCost = (cost) => {
+    if (cost < 100000) {
+      return String(cost);
+    }
+    const units = [
+      { value: 1000000000, suffix: "B" },
+      { value: 1000000, suffix: "M" },
+      { value: 1000, suffix: "K" }
+    ];
+    const unit = units.find((item) => cost >= item.value);
+    const value = cost / unit.value;
+    const digits = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+    return `${Number(value.toFixed(digits))}${unit.suffix}`;
+  };
   const DEFAULT_CHAIN_SHOT_DELAY = 125;
   const WEAPON_CHAIN_SHOT_DELAYS = {
     "projectile-pistol": 110,
@@ -3054,12 +3069,14 @@
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(523));
       for (let i = 0; i < SHOP_MAX_LEVEL; i += 1) {
-        objects.push(this.add.rectangle(x + 96 + i * 12, y - 12, 8, 16, i < level ? accent : 0x15222b, i < level ? 0.95 : 0.72)
+        const row = Math.floor(i / SHOP_LEVEL_PIPS_PER_ROW);
+        const col = i % SHOP_LEVEL_PIPS_PER_ROW;
+        objects.push(this.add.rectangle(x + 86 + col * 7, y - 17 + row * 10, 5, 7, i < level ? accent : 0x15222b, i < level ? 0.95 : 0.72)
           .setStrokeStyle(1, 0x000000, 0.35)
           .setDepth(523));
       }
       this.overlayObjects.push(...objects);
-      const label = maxed ? "MAX" : `$${cost}`;
+      const label = maxed ? "MAX" : `$${formatShopCost(cost)}`;
       this.addOverlayButton(x + 154, y + 27, 112, 34, label, 524, () => this.buyShopUpgrade(upgrade.id), maxed ? 0x5b646b : canAfford ? COLORS.gold : 0x6f3333);
     }
 
@@ -3813,7 +3830,7 @@
       if (!zombie || !zombie.active || !bullet?.sprite) {
         return;
       }
-      const hitPoint = impactPoint || this.getBulletTip(bullet);
+      const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint || this.getBulletTip(bullet), bullet.projectile);
       const hitX = hitPoint.x;
       const hitY = hitPoint.y;
       const arrowLength = bullet.sprite.displayHeight || 42;
@@ -3961,6 +3978,24 @@
       };
     }
 
+    getZombieBodyHitPoint(zombie, point = null, hitType = "default", crit = false) {
+      const fallback = this.getZombieHitPoint(zombie, hitType, crit);
+      const source = point || fallback;
+      const height = zombie.displayH || 170;
+      const radius = zombie.hitRadius || 32;
+      const top = zombie.y - height * 0.44;
+      const bottom = zombie.y + height * 0.08;
+      const y = clamp(source.y, top, bottom);
+      const bodyCenterY = zombie.y - height * 0.2;
+      const verticalRatio = clamp(Math.abs(y - bodyCenterY) / (height * 0.34), 0, 1);
+      const widthFactor = clamp(1 - verticalRatio * 0.46, 0.42, 1);
+      const halfWidth = clamp(radius * 0.62 * widthFactor, 10, height * 0.18);
+      return {
+        x: clamp(source.x, zombie.x - halfWidth, zombie.x + halfWidth),
+        y
+      };
+    }
+
     playTransientSpriteFrames(sprite, frameCount, duration) {
       if (!sprite || frameCount <= 1 || typeof sprite.setFrame !== "function") {
         return null;
@@ -3993,7 +4028,7 @@
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
       const displayWidth = effect.width * sizeScale;
       const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
-      const hitPoint = impactPoint || this.getZombieHitPoint(zombie, hitType, crit);
+      const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, hitType, crit);
       const impact = this.trackTransient(this.add.sprite(
         hitPoint.x,
         hitPoint.y,
