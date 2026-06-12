@@ -162,6 +162,9 @@
     coin: "assets/sounds/sfx/coin.wav",
     pause: "assets/sounds/sfx/pause.wav"
   };
+  const GAMEPLAY_TIMING_SFX = ["hit", "crit", "explosion", "pistol", "rifle", "sniper", "rocket", "arrow"];
+  const GAMEPLAY_TIMING_SFX_SET = new Set(GAMEPLAY_TIMING_SFX);
+  const GAME_START_SFX_READY_TIMEOUT = 240;
   const WEAPON_SFX_INTENSITY = {
     pistol: 0.38,
     rifle: 1,
@@ -1381,6 +1384,7 @@
       this.audioCtx = null;
       this.masterGain = null;
       this.sfxBuffers = new Map();
+      this.sfxLoadPromises = new Map();
       this.sfxFallbackTracks = new Map();
       this.activeFallbackSfx = new Set();
       this.sfxPreloadStarted = false;
@@ -1945,6 +1949,7 @@
       }
       this.ambientTracks = null;
       this.sfxBuffers.clear();
+      this.sfxLoadPromises.clear();
       this.activeFallbackSfx.forEach((track) => {
         track.pause();
         track.removeAttribute("src");
@@ -2006,35 +2011,76 @@
         this.masterGain.connect(this.audioCtx.destination);
       }
       this.preloadSfxAssets();
-      if (this.audioCtx.state === "suspended") {
-        this.audioCtx.resume().catch(() => {});
-      }
+      this.resumeAudioContext();
       return this.audioCtx;
     }
 
+    resumeAudioContext() {
+      if (!this.audioCtx || this.audioCtx.state !== "suspended") {
+        return Promise.resolve();
+      }
+      return this.audioCtx.resume().catch(() => {});
+    }
+
     preloadSfxAssets() {
-      if (!this.audioCtx || this.sfxPreloadStarted) {
-        return;
+      if (!this.audioCtx) {
+        return Promise.resolve([]);
       }
       this.sfxPreloadStarted = true;
       const ctx = this.audioCtx;
       const preloadToken = this.sfxPreloadToken;
-      Object.entries(SFX_ASSETS).forEach(([name, url]) => {
-        fetch(url)
-          .then((response) => response.ok ? response.arrayBuffer() : Promise.reject(new Error(`sfx ${response.status}`)))
-          .then((data) => {
-            if (this.disposed || this.audioCtx !== ctx || this.sfxPreloadToken !== preloadToken) {
-              throw new Error("stale sfx preload");
-            }
-            return ctx.decodeAudioData(data);
-          })
-          .then((buffer) => {
-            if (!this.disposed && this.audioCtx === ctx && this.sfxPreloadToken === preloadToken) {
-              this.sfxBuffers.set(name, buffer);
-            }
-          })
-          .catch(() => {});
-      });
+      return Promise.allSettled(
+        Object.entries(SFX_ASSETS).map(([name, url]) => this.ensureSfxBuffer(name, url, ctx, preloadToken))
+      );
+    }
+
+    ensureSfxBuffer(name, url = SFX_ASSETS[name], ctx = this.audioCtx, preloadToken = this.sfxPreloadToken) {
+      if (!ctx || !url) {
+        return Promise.resolve(null);
+      }
+      if (this.sfxBuffers.has(name)) {
+        return Promise.resolve(this.sfxBuffers.get(name));
+      }
+      const existing = this.sfxLoadPromises.get(name);
+      if (existing) {
+        return existing;
+      }
+      const loadPromise = fetch(url)
+        .then((response) => response.ok ? response.arrayBuffer() : Promise.reject(new Error(`sfx ${response.status}`)))
+        .then((data) => {
+          if (this.disposed || this.audioCtx !== ctx || this.sfxPreloadToken !== preloadToken) {
+            throw new Error("stale sfx preload");
+          }
+          return ctx.decodeAudioData(data);
+        })
+        .then((buffer) => {
+          if (!this.disposed && this.audioCtx === ctx && this.sfxPreloadToken === preloadToken) {
+            this.sfxBuffers.set(name, buffer);
+            return buffer;
+          }
+          return null;
+        })
+        .catch(() => null)
+        .finally(() => {
+          if (this.sfxLoadPromises.get(name) === loadPromise) {
+            this.sfxLoadPromises.delete(name);
+          }
+        });
+      this.sfxLoadPromises.set(name, loadPromise);
+      return loadPromise;
+    }
+
+    waitForGameplaySfxReady(timeoutMs = GAME_START_SFX_READY_TIMEOUT) {
+      const ctx = this.unlockAudio();
+      if (!ctx || GAMEPLAY_TIMING_SFX.every((name) => this.sfxBuffers.has(name))) {
+        return Promise.resolve();
+      }
+      const loadPromise = Promise.allSettled(
+        GAMEPLAY_TIMING_SFX.map((name) => this.ensureSfxBuffer(name))
+      );
+      const readyPromise = Promise.all([this.resumeAudioContext(), loadPromise]);
+      const timeoutPromise = new Promise((resolve) => window.setTimeout(resolve, timeoutMs));
+      return Promise.race([readyPromise, timeoutPromise]).then(() => undefined);
     }
 
     ensureSfxFallbackTracks() {
@@ -2149,7 +2195,7 @@
     playSampleSfx(name, intensity = 1) {
       const ctx = this.audioCtx;
       const buffer = this.sfxBuffers.get(name);
-      if (!ctx || !this.masterGain || !buffer) {
+      if (!ctx || ctx.state !== "running" || !this.masterGain || !buffer) {
         return false;
       }
       const source = ctx.createBufferSource();
@@ -2204,11 +2250,17 @@
       if (now - last < minGap) {
         return;
       }
-      this.sfxLastPlayed[name] = now;
       if (ctx && this.sfxBuffers.has(name) && this.playSampleSfx(name, intensity)) {
+        this.sfxLastPlayed[name] = now;
         return;
       }
-      this.playFallbackSfx(name, intensity);
+      if (GAMEPLAY_TIMING_SFX_SET.has(name)) {
+        this.ensureSfxBuffer(name);
+        return;
+      }
+      if (this.playFallbackSfx(name, intensity)) {
+        this.sfxLastPlayed[name] = now;
+      }
     }
 
     playWeaponSfx(projectile) {
@@ -3147,13 +3199,21 @@
       saveMetaSave(this.meta);
     }
 
-    startRun() {
+    async startRun() {
+      if (this.mode === "starting") {
+        return;
+      }
       this.unlockAudio();
       this.playSfx("start");
       this.startBgm("game");
       this.clearOverlay();
+      this.mode = "starting";
       this.resetRun();
       this.startRankSession();
+      await this.waitForGameplaySfxReady();
+      if (this.disposed || this.mode !== "starting") {
+        return;
+      }
       this.mode = "playing";
     }
 
