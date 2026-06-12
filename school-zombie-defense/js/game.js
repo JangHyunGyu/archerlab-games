@@ -3974,11 +3974,15 @@
     }
 
     getBulletImpactPoint(bullet, zombie, tip) {
-      return this.getZombieBodyHitPoint(
+      const hitPoint = this.getZombieBodyHitPoint(
         zombie,
         this.getBulletAimPointForZombie(bullet, zombie) || tip,
         bullet?.projectile
       );
+      if (Number.isFinite(bullet?.angle)) {
+        hitPoint.angle = bullet.angle;
+      }
+      return hitPoint;
     }
 
     createEmbeddedArrow(zombie, bullet, impactPoint = null) {
@@ -4217,6 +4221,10 @@
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, hitType, crit);
       const followOffsetX = hitPoint.x - zombie.x;
       const followOffsetY = hitPoint.y - zombie.y;
+      const impactAngle = Number.isFinite(impactPoint?.angle) ? impactPoint.angle : null;
+      const rotation = impactAngle === null
+        ? rand(-effect.rotation, effect.rotation)
+        : impactAngle + rand(-effect.rotation * 0.36, effect.rotation * 0.36);
       const impact = this.trackTransient(this.add.sprite(
         hitPoint.x,
         hitPoint.y,
@@ -4225,7 +4233,7 @@
       )
         .setOrigin(0.5)
         .setDisplaySize(displayWidth, displayHeight)
-        .setRotation(rand(-effect.rotation, effect.rotation))
+        .setRotation(rotation)
         .setAlpha(effect.alpha)
         .setDepth(229 + zombie.y / 5));
       impact.followZombie = zombie;
