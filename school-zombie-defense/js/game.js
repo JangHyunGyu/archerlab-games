@@ -1869,6 +1869,9 @@
     }
 
     destroyTransientObject(object, killTweens = true) {
+      if (object?.followZombie?.hitEffects) {
+        object.followZombie.hitEffects.delete(object);
+      }
       this.transientObjects.delete(object);
       this.destroyGameObject(object, killTweens);
     }
@@ -2256,6 +2259,7 @@
       const amount = base * (zombie.knockbackScale || 1);
       zombie.y = Math.max(-48, zombie.y - amount);
       zombie.x = clamp(zombie.x + rand(-amount * 0.34, amount * 0.34), this.bounds.left, this.bounds.right);
+      this.updateFollowingHitEffectsForZombie(zombie);
     }
 
     addOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
@@ -3346,6 +3350,7 @@
       this.updateDefenders(dt);
       this.updateBullets(dt);
       this.updateZombies(dt);
+      this.updateFollowingHitEffects();
       this.updateEmbeddedArrows(dt);
       this.updateHud();
     }
@@ -3945,6 +3950,36 @@
       }
     }
 
+    updateFollowingHitEffects() {
+      Array.from(this.transientObjects || []).forEach((object) => {
+        if (!object?.followZombie) {
+          return;
+        }
+        this.updateFollowingHitEffect(object);
+      });
+    }
+
+    updateFollowingHitEffectsForZombie(zombie) {
+      if (!zombie?.hitEffects) {
+        return;
+      }
+      Array.from(zombie.hitEffects).forEach((object) => {
+        this.updateFollowingHitEffect(object);
+      });
+    }
+
+    updateFollowingHitEffect(object) {
+      const zombie = object?.followZombie;
+      if (!object || object.destroyed || !zombie || !zombie.active || zombie.dying) {
+        return;
+      }
+      object.setPosition(
+        zombie.x + (object.followOffsetX || 0),
+        zombie.y + (object.followOffsetY || 0)
+      );
+      object.setDepth(229 + zombie.y / 5);
+    }
+
     findBulletHit(bullet) {
       const tip = this.getBulletTip(bullet);
       for (let i = 0; i < this.zombies.length; i += 1) {
@@ -4106,6 +4141,8 @@
       const displayWidth = effect.width * sizeScale;
       const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, hitType, crit);
+      const followOffsetX = hitPoint.x - zombie.x;
+      const followOffsetY = hitPoint.y - zombie.y;
       const impact = this.trackTransient(this.add.sprite(
         hitPoint.x,
         hitPoint.y,
@@ -4117,6 +4154,13 @@
         .setRotation(rand(-effect.rotation, effect.rotation))
         .setAlpha(effect.alpha)
         .setDepth(229 + zombie.y / 5));
+      impact.followZombie = zombie;
+      impact.followOffsetX = followOffsetX;
+      impact.followOffsetY = followOffsetY;
+      if (!zombie.hitEffects) {
+        zombie.hitEffects = new Set();
+      }
+      zombie.hitEffects.add(impact);
       this.playTransientSpriteFrames(impact, effect.frames, effect.duration);
 
       this.tweens.add({
