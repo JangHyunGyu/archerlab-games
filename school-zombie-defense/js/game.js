@@ -515,7 +515,7 @@
       damageScale: 2.25,
       role: "repair",
       projectile: "projectile-sniper",
-      speed: 1180,
+      speed: 1600,
       rate: 1.8,
       critChance: 0.24,
       critMultiplier: 2.35,
