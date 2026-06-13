@@ -68,7 +68,7 @@
     "projectile-arrow": 0.228,
     "projectile-pistol": 0.032,
     "projectile-rifle": 0.08,
-    "projectile-grenade": 0.168,
+    "projectile-grenade": 0.23,
     "projectile-rocket": 0.19,
     "projectile-sniper": 0.16,
     "projectile-frost": 0.78,
@@ -3771,6 +3771,12 @@
         .setDepth(192));
       const shadow = this.trackTransient(this.add.ellipse(startX, startY + 10, 18, 7, 0x000000, 0.32)
         .setDepth(78));
+      const glow = this.trackTransient(this.add.circle(startX, startY, 12, 0xffd36b, 0.38)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(191));
+      const trail = this.trackTransient(this.add.ellipse(startX, startY, 28, 10, 0xff7d2a, 0.28)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(190));
       sprite.arcT = 0;
       const duration = clamp(distance / 1.55, 330, 620) * flightTimeScale;
       this.createMuzzle(startX, startY, launchAngle, defender.projectile);
@@ -3791,11 +3797,27 @@
           }
           const arcPoint = this.getGrenadeArcPoint(startX, startY, impactX, impactY, arcHeight, t);
           const arcAngle = this.getGrenadeArcAngle(startX, startY, impactX, impactY, arcHeight, t);
+          const flightDepth = 188 + arcPoint.groundY / 6;
           sprite
             .setPosition(arcPoint.x, arcPoint.y)
             .setRotation(arcAngle + Math.PI / 2)
             .setScale(PROJECTILE_SCALES["projectile-grenade"] * (1 + Math.sin(Math.PI * t) * 0.16))
-            .setDepth(188 + arcPoint.groundY / 6);
+            .setDepth(flightDepth);
+          if (glow && !glow.destroyed) {
+            glow
+              .setPosition(arcPoint.x, arcPoint.y)
+              .setScale(0.78 + Math.sin(Math.PI * t) * 0.34)
+              .setAlpha(0.26 + Math.sin(Math.PI * t) * 0.2)
+              .setDepth(flightDepth - 0.5);
+          }
+          if (trail && !trail.destroyed) {
+            trail
+              .setPosition(arcPoint.x - Math.cos(arcAngle) * 15, arcPoint.y - Math.sin(arcAngle) * 15)
+              .setRotation(arcAngle)
+              .setScale(0.82 + Math.sin(Math.PI * t) * 0.18, 0.72)
+              .setAlpha(0.16 + Math.sin(Math.PI * t) * 0.16)
+              .setDepth(flightDepth - 1);
+          }
           if (shadow && !shadow.destroyed) {
             shadow
               .setPosition(arcPoint.groundX, arcPoint.groundY + 7)
@@ -3809,6 +3831,8 @@
           }
           this.destroyTransientObject(sprite, false);
           this.destroyTransientObject(shadow, false);
+          this.destroyTransientObject(glow, false);
+          this.destroyTransientObject(trail, false);
         }
       });
     }
