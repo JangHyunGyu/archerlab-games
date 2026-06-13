@@ -92,9 +92,9 @@
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
   const ZOMBIE_CORPSE_EFFECTS = {
-    small: { stainWidth: 54, stainHeight: 34, fall: 250, corpseHold: 24000, corpseFade: 650, stainHold: 36000, stainFade: 1500 },
-    normal: { stainWidth: 70, stainHeight: 42, fall: 285, corpseHold: 24000, corpseFade: 700, stainHold: 36000, stainFade: 1600 },
-    elite: { stainWidth: 90, stainHeight: 54, fall: 340, corpseHold: 24000, corpseFade: 800, stainHold: 36000, stainFade: 1750 }
+    small: { stainWidth: 54, stainHeight: 34, fall: 250, corpseHold: 24000, corpseFade: 650 },
+    normal: { stainWidth: 70, stainHeight: 42, fall: 285, corpseHold: 24000, corpseFade: 700 },
+    elite: { stainWidth: 90, stainHeight: 54, fall: 340, corpseHold: 24000, corpseFade: 800 }
   };
   const BLOOD_STAIN_TEXTURES = [
     "blood-stain-pool-1",
@@ -4705,7 +4705,7 @@
           onComplete: () => this.destroyTransientObject(corpseTarget, false)
         });
       });
-      this.scheduleSceneDelay(effect.stainHold, () => {
+      this.scheduleSceneDelay(corpseFadeDelay, () => {
         const stainTargets = [stain, shadow, poolShade].filter((target) => target && !target.destroyed);
         if (!stainTargets.length) {
           return;
@@ -4713,7 +4713,7 @@
         this.tweens.add({
           targets: stainTargets,
           alpha: 0,
-          duration: effect.stainFade,
+          duration: effect.corpseFade,
           ease: "Sine.easeInOut",
           onComplete: () => {
             this.destroyTransientObject(stain, false);
