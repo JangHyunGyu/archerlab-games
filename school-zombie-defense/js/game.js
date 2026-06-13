@@ -66,7 +66,7 @@
   };
   const PROJECTILE_SCALES = {
     "projectile-arrow": 0.228,
-    "projectile-pistol": 0.028,
+    "projectile-pistol": 0.032,
     "projectile-rifle": 0.08,
     "projectile-grenade": 0.168,
     "projectile-rocket": 0.19,
@@ -457,7 +457,7 @@
       damageScale: 0.46,
       role: "barrage",
       projectile: "projectile-rifle",
-      speed: 1020,
+      speed: 1000,
       rate: 0.86,
       critChance: 0.07,
       critMultiplier: 1.45,
@@ -479,7 +479,7 @@
       damageScale: 0.58,
       role: "player",
       projectile: "projectile-pistol",
-      speed: 900,
+      speed: 1000,
       rate: 0.4,
       critChance: 0.12,
       critMultiplier: 1.6,
