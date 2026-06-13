@@ -4013,16 +4013,14 @@
     updateBullets(dt) {
       for (let i = this.bullets.length - 1; i >= 0; i -= 1) {
         const bullet = this.bullets[i];
+        const previousTip = this.getBulletTip(bullet);
         bullet.life -= dt;
         bullet.sprite.x += bullet.vx * dt;
         bullet.sprite.y += bullet.vy * dt;
+        bullet.previousTip = previousTip;
         this.updateBulletVisuals(bullet);
-        if (bullet.life <= 0 || bullet.sprite.x < -30 || bullet.sprite.x > 570 || bullet.sprite.y < -60 || bullet.sprite.y > 980) {
-          this.destroyBullet(bullet);
-          this.bullets.splice(i, 1);
-          continue;
-        }
 
+        const shouldRemove = bullet.life <= 0 || bullet.sprite.x < -30 || bullet.sprite.x > 570 || bullet.sprite.y < -60 || bullet.sprite.y > 980;
         const hit = this.findBulletHit(bullet);
         if (hit) {
           const zombie = hit.zombie;
@@ -4041,12 +4039,15 @@
           if (bullet.splashRadius > 0) {
             this.createExplosion(impactPoint.x, impactPoint.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75), bullet.slowDuration);
           }
-          if (bullet.pierce > 0) {
+          if (bullet.pierce > 0 && !shouldRemove) {
             bullet.pierce -= 1;
           } else {
             this.destroyBullet(bullet);
             this.bullets.splice(i, 1);
           }
+        } else if (shouldRemove) {
+          this.destroyBullet(bullet);
+          this.bullets.splice(i, 1);
         }
       }
     }
@@ -4055,6 +4056,26 @@
       return {
         x: bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset,
         y: bullet.sprite.y + Math.sin(bullet.angle) * bullet.hitOffset
+      };
+    }
+
+    getSegmentPointDistance(start, end, point) {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const lengthSq = dx * dx + dy * dy;
+      const t = lengthSq > 0
+        ? clamp(((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSq, 0, 1)
+        : 1;
+      const closest = {
+        x: start.x + dx * t,
+        y: start.y + dy * t
+      };
+      const distX = point.x - closest.x;
+      const distY = point.y - closest.y;
+      return {
+        point: closest,
+        t,
+        distanceSq: distX * distX + distY * distY
       };
     }
 
@@ -4155,6 +4176,9 @@
 
     findBulletHit(bullet) {
       const tip = this.getBulletTip(bullet);
+      const segmentStart = bullet.previousTip || tip;
+      let bestHit = null;
+      let bestT = Infinity;
       for (let i = 0; i < this.zombies.length; i += 1) {
         const zombie = this.zombies[i];
         if (!zombie.active || zombie.hp <= 0) {
@@ -4165,22 +4189,20 @@
         }
         if (bullet.aimTarget === zombie) {
           const aimPoint = this.getBulletAimPointForZombie(bullet, zombie);
-          const aimX = aimPoint.x;
-          const aimY = aimPoint.y;
-          const aimDx = tip.x - aimX;
-          const aimDy = tip.y - aimY;
           const aimRadius = clamp((zombie.hitRadius || 32) * 0.7, 18, 34);
-          if (aimDx * aimDx + aimDy * aimDy < aimRadius * aimRadius) {
-            return { zombie, point: this.getBulletImpactPoint(bullet, zombie, tip) };
+          const aimSweep = this.getSegmentPointDistance(segmentStart, tip, aimPoint);
+          if (aimSweep.distanceSq <= aimRadius * aimRadius && aimSweep.t < bestT) {
+            bestT = aimSweep.t;
+            bestHit = { zombie, point: this.getBulletImpactPoint(bullet, zombie, aimSweep.point) };
           }
         }
-        const dx = tip.x - zombie.x;
-        const dy = tip.y - zombie.y;
-        if (dx * dx + dy * dy < zombie.hitRadius * zombie.hitRadius) {
-          return { zombie, point: this.getBulletImpactPoint(bullet, zombie, tip) };
+        const bodySweep = this.getSegmentPointDistance(segmentStart, tip, zombie);
+        if (bodySweep.distanceSq <= zombie.hitRadius * zombie.hitRadius && bodySweep.t < bestT) {
+          bestT = bodySweep.t;
+          bestHit = { zombie, point: this.getBulletImpactPoint(bullet, zombie, bodySweep.point) };
         }
       }
-      return null;
+      return bestHit;
     }
 
     applyWeakMark(zombie, duration, damageBonus) {
