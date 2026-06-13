@@ -2331,6 +2331,14 @@
       const amount = base * (zombie.knockbackScale || 1);
       const targetY = Math.max(-48, zombie.y - amount);
       const targetX = clamp(zombie.x + rand(-amount * 0.34, amount * 0.34), this.bounds.left, this.bounds.right);
+      const duration = clamp(95 + amount * 1.8, 110, 210);
+      const knockback = {
+        amount,
+        dx: targetX - zombie.x,
+        dy: targetY - zombie.y,
+        duration
+      };
+      zombie.lastKnockback = knockback;
       if (zombie.knockbackTween && typeof zombie.knockbackTween.stop === "function") {
         zombie.knockbackTween.stop();
       }
@@ -2339,7 +2347,7 @@
         targets: zombie,
         x: targetX,
         y: targetY,
-        duration: clamp(95 + amount * 1.8, 110, 210),
+        duration,
         ease: "Cubic.easeOut",
         onUpdate: () => this.updateFollowingHitEffectsForZombie(zombie),
         onComplete: () => {
@@ -2348,6 +2356,7 @@
           this.updateFollowingHitEffectsForZombie(zombie);
         }
       });
+      return knockback;
     }
 
     addOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
@@ -4381,7 +4390,7 @@
       this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       zombie.hp -= damage;
       this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
-      this.applyZombieKnockback(zombie, hitType, crit);
+      const knockback = this.applyZombieKnockback(zombie, hitType, crit);
       if (crit) {
         this.requestHitStop(0.055);
         this.shakeCamera(55, 0.0038);
@@ -4399,17 +4408,18 @@
       });
       this.showDamageText(zombie.x + rand(-8, 8), zombie.y - rand(8, 24), damage, crit, marked);
       if (zombie.hp <= 0) {
-        this.killZombie(zombie);
+        this.killZombie(zombie, knockback);
       }
     }
 
-    killZombie(zombie) {
+    killZombie(zombie, deathKnockback = null) {
       if (!zombie.active || zombie.dying) {
         return;
       }
       const x = zombie.x;
       const y = zombie.y;
       zombie.dying = true;
+      zombie.lastKnockback = null;
       zombie.hp = 0;
       this.clearWeakMark(zombie);
       this.clearEmbeddedArrowsForZombie(zombie);
@@ -4419,7 +4429,7 @@
       }
       const shouldExplode = zombie.deathExplosion;
       this.zombies = this.zombies.filter((item) => item !== zombie);
-      this.createZombieCorpse(x, y, zombie);
+      this.createZombieCorpse(x, y, zombie, deathKnockback);
       this.kills += 1;
       this.killsInLevel += 1;
       this.coins += zombie.reward || (zombie.elite ? 4 : 1);
@@ -4452,7 +4462,7 @@
       });
     }
 
-    createZombieCorpse(x, y, zombie) {
+    createZombieCorpse(x, y, zombie, deathKnockback = null) {
       const sizeScale = this.getZombieEffectScale(zombie);
       const tier = zombie.elite ? "elite" : sizeScale < 0.95 ? "small" : "normal";
       const effect = ZOMBIE_CORPSE_EFFECTS[tier];
@@ -4470,11 +4480,18 @@
       ];
       const fall = choose(fallProfiles);
       const corpseX = clamp(x, this.bounds.left + 26, this.bounds.right - 26);
-      const landingX = clamp(corpseX + displayH * fall.x + rand(-6, 6), this.bounds.left + 28, this.bounds.right - 28);
-      const landingY = clamp(y + displayH * fall.y + rand(-4, 5), -20, this.bounds.barricade - displayH * 0.1);
+      const knockbackDx = Number.isFinite(deathKnockback?.dx) ? deathKnockback.dx : 0;
+      const knockbackDy = Number.isFinite(deathKnockback?.dy) ? deathKnockback.dy : 0;
+      const shoveX = clamp(corpseX + knockbackDx, this.bounds.left + 28, this.bounds.right - 28);
+      const shoveY = clamp(y + knockbackDy, -48, this.bounds.barricade - displayH * 0.14);
+      const landingX = clamp(shoveX + displayH * fall.x + rand(-6, 6), this.bounds.left + 28, this.bounds.right - 28);
+      const landingY = clamp(shoveY + displayH * fall.y + rand(-4, 5), -20, this.bounds.barricade - displayH * 0.1);
       const finalAngle = fall.angle + rand(-5, 5);
-      const stumbleX = clamp(corpseX + displayH * fall.x * 0.22, this.bounds.left + 24, this.bounds.right - 24);
-      const stumbleY = y + displayH * (0.02 + fall.y * 0.18);
+      const stumbleX = clamp(corpseX + (shoveX - corpseX) * 0.62 + displayH * fall.x * 0.16, this.bounds.left + 24, this.bounds.right - 24);
+      const stumbleY = y + (shoveY - y) * 0.62 + displayH * (0.02 + fall.y * 0.14);
+      const deathPushDuration = deathKnockback
+        ? clamp((deathKnockback.duration || 110) * 0.62, 72, 140)
+        : rand(70, 112);
 
       this.tweens.killTweensOf(zombie);
       zombie.knockbackTweening = false;
@@ -4629,26 +4646,37 @@
       if (deathSprite) {
         this.destroyTransientObject(zombie, false);
         this.playTransientSpriteFrames(deathSprite, ZOMBIE_DEATH_ANIMATION_FRAMES, effect.fall + 260);
+        const finishDeathFall = () => {
+          this.tweens.add({
+            targets: deathSprite,
+            x: landingX,
+            y: landingY,
+            angle: finalAngle * 0.08,
+            duration: effect.fall + 210,
+            ease: "Quad.easeInOut",
+            onComplete: () => {
+              revealCorpseImage();
+              this.tweens.add({
+                targets: deathSprite,
+                alpha: 0,
+                duration: 120,
+                ease: "Cubic.easeOut",
+                onComplete: () => this.destroyTransientObject(deathSprite, false)
+              });
+              if (zombie.elite || zombie.type === "brute") {
+                this.shakeCamera(70, 0.0035);
+              }
+            }
+          });
+        };
         this.tweens.add({
           targets: deathSprite,
-          x: landingX,
-          y: landingY,
-          angle: finalAngle * 0.08,
-          duration: effect.fall + 260,
-          ease: "Quad.easeInOut",
-          onComplete: () => {
-            revealCorpseImage();
-            this.tweens.add({
-              targets: deathSprite,
-              alpha: 0,
-              duration: 120,
-              ease: "Cubic.easeOut",
-              onComplete: () => this.destroyTransientObject(deathSprite, false)
-            });
-            if (zombie.elite || zombie.type === "brute") {
-              this.shakeCamera(70, 0.0035);
-            }
-          }
+          x: stumbleX,
+          y: stumbleY + displayH * 0.04,
+          angle: finalAngle * 0.025,
+          duration: deathPushDuration,
+          ease: "Cubic.easeOut",
+          onComplete: finishDeathFall
         });
       } else {
         this.tweens.add({
@@ -4656,7 +4684,7 @@
           angle: finalAngle * rand(0.16, 0.28),
           x: stumbleX,
           y: stumbleY,
-          duration: rand(70, 112),
+          duration: deathPushDuration,
           ease: "Quad.easeOut"
         });
         this.tweens.add({
