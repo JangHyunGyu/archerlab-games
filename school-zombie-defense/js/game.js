@@ -3472,12 +3472,13 @@
         const displayWidth = displayHeight;
         const levelCurve = Math.pow(this.level, 1.04);
         const lateLevelBonus = Math.max(0, this.level - 10);
+        const earlyHpScale = clamp(0.84 + Math.max(0, this.level - 1) * 0.04, 0.84, 1);
         const baseHp =
           (eliteRoll ? 165 : 48)
           + levelCurve * (eliteRoll ? 24.5 : 13.8)
           + lateLevelBonus * (eliteRoll ? 4.4 : 2.8)
           + rand(-6, 12);
-        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale);
+        const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale * earlyHpScale);
         const textureBase = `zombie-walk-${typeConfig.id}`;
         const zombie = this.add.image(x, y, `${textureBase}-${variant}-${frame}`)
           .setOrigin(0.5, 0.56)
