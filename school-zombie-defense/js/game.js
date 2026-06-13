@@ -92,9 +92,9 @@
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
   const ZOMBIE_CORPSE_EFFECTS = {
-    small: { stainWidth: 108, stainHeight: 58, fall: 250, corpseHold: 24000, corpseFade: 650, stainHold: 36000, stainFade: 1500 },
-    normal: { stainWidth: 146, stainHeight: 76, fall: 285, corpseHold: 24000, corpseFade: 700, stainHold: 36000, stainFade: 1600 },
-    elite: { stainWidth: 198, stainHeight: 108, fall: 340, corpseHold: 24000, corpseFade: 800, stainHold: 36000, stainFade: 1750 }
+    small: { stainWidth: 76, stainHeight: 38, fall: 250, corpseHold: 24000, corpseFade: 650, stainHold: 36000, stainFade: 1500 },
+    normal: { stainWidth: 96, stainHeight: 48, fall: 285, corpseHold: 24000, corpseFade: 700, stainHold: 36000, stainFade: 1600 },
+    elite: { stainWidth: 116, stainHeight: 58, fall: 340, corpseHold: 24000, corpseFade: 800, stainHold: 36000, stainFade: 1750 }
   };
   const BLOOD_STAIN_TEXTURES = [
     "blood-stain-pool-1",
@@ -103,14 +103,6 @@
     "blood-stain-splatter-1",
     "blood-stain-direction-1",
     "blood-stain-heavy-1"
-  ];
-  const REGULAR_BLOOD_STAIN_TEXTURES = BLOOD_STAIN_TEXTURES.filter((key) => key !== "blood-stain-heavy-1");
-  const HEAVY_BLOOD_STAIN_TEXTURES = [
-    "blood-stain-heavy-1",
-    "blood-stain-heavy-1",
-    "blood-stain-pool-2",
-    "blood-stain-direction-1",
-    "blood-stain-splatter-1"
   ];
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
@@ -1299,7 +1291,7 @@
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
       this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
-      BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, `assets/images/${key}.png`));
+      BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
       Object.values(ZOMBIE_CORPSE_TEXTURES)
         .flat()
         .forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
@@ -2337,9 +2329,25 @@
             ? 9
             : 5;
       const amount = base * (zombie.knockbackScale || 1);
-      zombie.y = Math.max(-48, zombie.y - amount);
-      zombie.x = clamp(zombie.x + rand(-amount * 0.34, amount * 0.34), this.bounds.left, this.bounds.right);
-      this.updateFollowingHitEffectsForZombie(zombie);
+      const targetY = Math.max(-48, zombie.y - amount);
+      const targetX = clamp(zombie.x + rand(-amount * 0.34, amount * 0.34), this.bounds.left, this.bounds.right);
+      if (zombie.knockbackTween && typeof zombie.knockbackTween.stop === "function") {
+        zombie.knockbackTween.stop();
+      }
+      zombie.knockbackTweening = true;
+      zombie.knockbackTween = this.tweens.add({
+        targets: zombie,
+        x: targetX,
+        y: targetY,
+        duration: clamp(95 + amount * 1.8, 110, 210),
+        ease: "Cubic.easeOut",
+        onUpdate: () => this.updateFollowingHitEffectsForZombie(zombie),
+        onComplete: () => {
+          zombie.knockbackTweening = false;
+          zombie.knockbackTween = null;
+          this.updateFollowingHitEffectsForZombie(zombie);
+        }
+      });
     }
 
     addOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
@@ -4495,15 +4503,12 @@
       const corpseDisplayWidth = displayH * renderScale.corpseWidth;
       const corpseDisplayHeight = corpseDisplayWidth * 360 / 512;
       const corpseRotation = finalAngle * Math.PI / 180;
-      const bloodWidth = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.96) * rand(0.92, 1.12);
-      const bloodHeight = Math.max(effect.stainHeight * sizeScale, corpseDisplayHeight * 0.58) * rand(0.9, 1.14);
+      const bloodWidth = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.58) * rand(0.88, 1.04);
+      const bloodHeight = Math.max(effect.stainHeight * sizeScale, corpseDisplayHeight * 0.42) * rand(0.86, 1.08);
       const bloodX = landingX;
       const bloodY = landingY + corpseDisplayHeight * 0.06;
-      const bloodTexturePool = zombie.elite || corpseType === "brute"
-        ? HEAVY_BLOOD_STAIN_TEXTURES
-        : REGULAR_BLOOD_STAIN_TEXTURES;
       const availableBloodTextures = this.textures && typeof this.textures.exists === "function"
-        ? bloodTexturePool.filter((key) => this.textures.exists(key))
+        ? BLOOD_STAIN_TEXTURES.filter((key) => this.textures.exists(key))
         : [];
       const bloodTexture = availableBloodTextures.length > 0
         ? choose(availableBloodTextures)
@@ -4686,7 +4691,7 @@
         });
       });
       this.scheduleSceneDelay(effect.stainHold, () => {
-        const stainTargets = [stain, shadow, smear].filter((target) => target && !target.destroyed);
+        const stainTargets = [stain, shadow, poolShade].filter((target) => target && !target.destroyed);
         if (!stainTargets.length) {
           return;
         }
@@ -4698,7 +4703,7 @@
           onComplete: () => {
             this.destroyTransientObject(stain, false);
             this.destroyTransientObject(shadow, false);
-            this.destroyTransientObject(smear, false);
+            this.destroyTransientObject(poolShade, false);
           }
         });
       });
@@ -4730,6 +4735,11 @@
           zombie.setTint(0x99f4ff);
         } else if (zombie.tintTopLeft === 0x99f4ff) {
           this.restoreZombieTint(zombie);
+        }
+
+        if (zombie.knockbackTweening) {
+          this.updateFollowingHitEffectsForZombie(zombie);
+          continue;
         }
 
         const slowFactor = zombie.slowTimer > 0 ? 0.34 : 1;
