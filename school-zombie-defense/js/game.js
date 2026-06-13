@@ -92,9 +92,9 @@
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
   const ZOMBIE_CORPSE_EFFECTS = {
-    small: { stainWidth: 76, stainHeight: 38, fall: 250, corpseHold: 24000, corpseFade: 650, stainHold: 36000, stainFade: 1500 },
-    normal: { stainWidth: 96, stainHeight: 48, fall: 285, corpseHold: 24000, corpseFade: 700, stainHold: 36000, stainFade: 1600 },
-    elite: { stainWidth: 116, stainHeight: 58, fall: 340, corpseHold: 24000, corpseFade: 800, stainHold: 36000, stainFade: 1750 }
+    small: { stainWidth: 54, stainHeight: 34, fall: 250, corpseHold: 24000, corpseFade: 650, stainHold: 36000, stainFade: 1500 },
+    normal: { stainWidth: 70, stainHeight: 42, fall: 285, corpseHold: 24000, corpseFade: 700, stainHold: 36000, stainFade: 1600 },
+    elite: { stainWidth: 90, stainHeight: 54, fall: 340, corpseHold: 24000, corpseFade: 800, stainHold: 36000, stainFade: 1750 }
   };
   const BLOOD_STAIN_TEXTURES = [
     "blood-stain-pool-1",
@@ -4505,8 +4505,7 @@
       const corpseDisplayWidth = displayH * renderScale.corpseWidth;
       const corpseDisplayHeight = corpseDisplayWidth * 360 / 512;
       const corpseRotation = finalAngle * Math.PI / 180;
-      const bloodWidth = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.58) * rand(0.88, 1.04);
-      const bloodHeight = Math.max(effect.stainHeight * sizeScale, corpseDisplayHeight * 0.42) * rand(0.86, 1.08);
+      const bloodMaxSide = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.46) * rand(0.84, 1);
       const bloodX = landingX;
       const bloodY = landingY + corpseDisplayHeight * 0.06;
       const availableBloodTextures = this.textures && typeof this.textures.exists === "function"
@@ -4518,18 +4517,33 @@
       const hasBloodFallback = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists("blood-burst-core");
-      const stain = this.trackTransient(bloodTexture
-        ? this.add.image(bloodX, bloodY, bloodTexture)
+      let bloodWidth = bloodMaxSide;
+      let bloodHeight = bloodMaxSide;
+      const createBloodStainImage = (textureKey, tint = null) => {
+        const image = this.add.image(bloodX, bloodY, textureKey)
           .setOrigin(0.5)
-          .setDisplaySize(bloodWidth, bloodHeight)
-          .setRotation(corpseRotation + rand(-0.16, 0.16))
+          .setRotation(corpseRotation + rand(-0.16, 0.16));
+        const frameWidth = image.frame?.realWidth || image.frame?.width || bloodMaxSide;
+        const frameHeight = image.frame?.realHeight || image.frame?.height || bloodMaxSide;
+        const aspect = frameWidth / Math.max(1, frameHeight);
+        if (aspect >= 1) {
+          bloodWidth = bloodMaxSide;
+          bloodHeight = bloodMaxSide / aspect;
+        } else {
+          bloodWidth = bloodMaxSide * aspect;
+          bloodHeight = bloodMaxSide;
+        }
+        image.setDisplaySize(bloodWidth, bloodHeight);
+        if (tint !== null) {
+          image.setTint(tint);
+        }
+        return image;
+      };
+      const stain = this.trackTransient(bloodTexture
+        ? createBloodStainImage(bloodTexture)
         : hasBloodFallback
-          ? this.add.image(bloodX, bloodY, "blood-burst-core")
-            .setOrigin(0.5)
-            .setDisplaySize(bloodWidth, bloodHeight)
-            .setRotation(corpseRotation + rand(-0.16, 0.16))
-            .setTint(0x9b1216)
-        : this.add.ellipse(bloodX, bloodY, bloodWidth, bloodHeight, COLORS.blood, 0.72)
+          ? createBloodStainImage("blood-burst-core", 0x9b1216)
+        : this.add.ellipse(bloodX, bloodY, bloodMaxSide, Math.max(effect.stainHeight * sizeScale, bloodMaxSide * 0.58), COLORS.blood, 0.72)
           .setRotation(corpseRotation + rand(-0.14, 0.14)));
       stain.setAlpha(0).setDepth(corpseDepth);
       const stainBaseScaleX = stain.scaleX;
