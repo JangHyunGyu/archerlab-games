@@ -92,10 +92,26 @@
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
   const ZOMBIE_CORPSE_EFFECTS = {
-    small: { stainWidth: 104, stainHeight: 44, fall: 250, corpseHold: 24000, corpseFade: 650, stainHold: 36000, stainFade: 1500 },
-    normal: { stainWidth: 138, stainHeight: 56, fall: 285, corpseHold: 24000, corpseFade: 700, stainHold: 36000, stainFade: 1600 },
-    elite: { stainWidth: 188, stainHeight: 76, fall: 340, corpseHold: 24000, corpseFade: 800, stainHold: 36000, stainFade: 1750 }
+    small: { stainWidth: 108, stainHeight: 58, fall: 250, corpseHold: 24000, corpseFade: 650, stainHold: 36000, stainFade: 1500 },
+    normal: { stainWidth: 146, stainHeight: 76, fall: 285, corpseHold: 24000, corpseFade: 700, stainHold: 36000, stainFade: 1600 },
+    elite: { stainWidth: 198, stainHeight: 108, fall: 340, corpseHold: 24000, corpseFade: 800, stainHold: 36000, stainFade: 1750 }
   };
+  const BLOOD_STAIN_TEXTURES = [
+    "blood-stain-pool-1",
+    "blood-stain-pool-2",
+    "blood-stain-smear-1",
+    "blood-stain-splatter-1",
+    "blood-stain-direction-1",
+    "blood-stain-heavy-1"
+  ];
+  const REGULAR_BLOOD_STAIN_TEXTURES = BLOOD_STAIN_TEXTURES.filter((key) => key !== "blood-stain-heavy-1");
+  const HEAVY_BLOOD_STAIN_TEXTURES = [
+    "blood-stain-heavy-1",
+    "blood-stain-heavy-1",
+    "blood-stain-pool-2",
+    "blood-stain-direction-1",
+    "blood-stain-splatter-1"
+  ];
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
   const ZOMBIE_CORPSE_TYPES = ["normal", "student", "runner", "brute", "volatile", "elite"];
@@ -1283,6 +1299,7 @@
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
       this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
+      BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, `assets/images/${key}.png`));
       Object.values(ZOMBIE_CORPSE_TEXTURES)
         .flat()
         .forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
@@ -4478,19 +4495,33 @@
       const corpseDisplayWidth = displayH * renderScale.corpseWidth;
       const corpseDisplayHeight = corpseDisplayWidth * 360 / 512;
       const corpseRotation = finalAngle * Math.PI / 180;
-      const bloodWidth = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.96);
-      const bloodHeight = Math.max(effect.stainHeight * sizeScale, corpseDisplayHeight * 0.54);
+      const bloodWidth = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.96) * rand(0.92, 1.12);
+      const bloodHeight = Math.max(effect.stainHeight * sizeScale, corpseDisplayHeight * 0.58) * rand(0.9, 1.14);
       const bloodX = landingX;
       const bloodY = landingY + corpseDisplayHeight * 0.06;
-      const hasBloodTexture = this.textures
+      const bloodTexturePool = zombie.elite || corpseType === "brute"
+        ? HEAVY_BLOOD_STAIN_TEXTURES
+        : REGULAR_BLOOD_STAIN_TEXTURES;
+      const availableBloodTextures = this.textures && typeof this.textures.exists === "function"
+        ? bloodTexturePool.filter((key) => this.textures.exists(key))
+        : [];
+      const bloodTexture = availableBloodTextures.length > 0
+        ? choose(availableBloodTextures)
+        : null;
+      const hasBloodFallback = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists("blood-burst-core");
-      const stain = this.trackTransient(hasBloodTexture
-        ? this.add.image(bloodX, bloodY, "blood-burst-core")
+      const stain = this.trackTransient(bloodTexture
+        ? this.add.image(bloodX, bloodY, bloodTexture)
           .setOrigin(0.5)
           .setDisplaySize(bloodWidth, bloodHeight)
           .setRotation(corpseRotation + rand(-0.16, 0.16))
-          .setTint(0x9b1216)
+        : hasBloodFallback
+          ? this.add.image(bloodX, bloodY, "blood-burst-core")
+            .setOrigin(0.5)
+            .setDisplaySize(bloodWidth, bloodHeight)
+            .setRotation(corpseRotation + rand(-0.16, 0.16))
+            .setTint(0x9b1216)
         : this.add.ellipse(bloodX, bloodY, bloodWidth, bloodHeight, COLORS.blood, 0.72)
           .setRotation(corpseRotation + rand(-0.14, 0.14)));
       stain.setAlpha(0).setDepth(corpseDepth);
@@ -4510,15 +4541,15 @@
         .setAlpha(0)
         .setDepth(corpseDepth - 0.4));
 
-      const smear = this.trackTransient(this.add.ellipse(
-        bloodX - displayH * fall.x * 0.05,
-        bloodY - corpseDisplayHeight * 0.02,
-        bloodWidth * 0.56,
-        bloodHeight * 0.52,
+      const poolShade = this.trackTransient(this.add.ellipse(
+        bloodX,
+        bloodY,
+        bloodWidth * 0.48,
+        bloodHeight * 0.5,
         0x3b0307,
-        0.36
+        0.28
       )
-        .setRotation(corpseRotation + rand(-0.12, 0.12))
+        .setRotation(corpseRotation + rand(-0.08, 0.08))
         .setAlpha(0)
         .setDepth(corpseDepth - 0.2));
 
@@ -4564,8 +4595,8 @@
         ease: "Cubic.easeOut"
       });
       this.tweens.add({
-        targets: smear,
-        alpha: 0.36,
+        targets: poolShade,
+        alpha: 0.28,
         duration: 220,
         ease: "Cubic.easeOut"
       });
