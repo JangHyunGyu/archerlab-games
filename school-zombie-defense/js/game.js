@@ -291,7 +291,7 @@
     "projectile-rocket": 190,
     "projectile-sniper": 170
   };
-  const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4;
+  const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4.6;
   const RIFLE_GRENADE_INTERVAL_SCALE = 3;
   const RIFLE_GRENADE_INITIAL_INTERVAL = 8 * RIFLE_GRENADE_INTERVAL_SCALE;
   const RIFLE_GRENADE_MIN_INTERVAL = 4 * RIFLE_GRENADE_INTERVAL_SCALE;
@@ -1920,7 +1920,7 @@
         this.clearWeakMark(zombie);
         this.destroyGameObject(zombie);
       });
-      this.bullets.forEach((bullet) => this.destroyGameObject(bullet.sprite));
+      this.bullets.forEach((bullet) => this.destroyBullet(bullet));
       this.zombies = [];
       this.bullets = [];
     }
@@ -3872,8 +3872,12 @@
         .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
         .setRotation(angle + Math.PI / 2)
         .setDepth(190);
+      const visualEffects = defender.projectile === "projectile-sniper"
+        ? this.createSniperBulletGlow(sprite, angle)
+        : null;
       this.bullets.push({
         sprite,
+        visualEffects,
         angle,
         hitOffset: sprite.displayHeight * 0.72,
         damage,
@@ -3896,6 +3900,50 @@
       });
       this.createMuzzle(x, y, angle, defender.projectile);
       this.playWeaponSfx(defender.projectile);
+    }
+
+    createSniperBulletGlow(sprite, angle) {
+      const glow = this.add.ellipse(sprite.x, sprite.y, 58, 14, 0x8ff8ff, 0.42)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setRotation(angle)
+        .setDepth(189.5);
+      const trail = this.add.ellipse(sprite.x, sprite.y, 82, 9, 0x4fd8ff, 0.26)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setRotation(angle)
+        .setDepth(189);
+      return { glow, trail };
+    }
+
+    updateBulletVisuals(bullet) {
+      if (!bullet?.visualEffects || !bullet.sprite || bullet.sprite.destroyed) {
+        return;
+      }
+      const { glow, trail } = bullet.visualEffects;
+      const tipX = bullet.sprite.x + Math.cos(bullet.angle) * bullet.hitOffset * 0.48;
+      const tipY = bullet.sprite.y + Math.sin(bullet.angle) * bullet.hitOffset * 0.48;
+      if (glow && !glow.destroyed) {
+        glow
+          .setPosition(tipX, tipY)
+          .setRotation(bullet.angle)
+          .setDepth((bullet.sprite.depth || 190) - 0.5);
+      }
+      if (trail && !trail.destroyed) {
+        trail
+          .setPosition(tipX - Math.cos(bullet.angle) * 22, tipY - Math.sin(bullet.angle) * 22)
+          .setRotation(bullet.angle)
+          .setDepth((bullet.sprite.depth || 190) - 1);
+      }
+    }
+
+    destroyBullet(bullet) {
+      if (!bullet) {
+        return;
+      }
+      if (bullet.visualEffects) {
+        this.destroyGameObject(bullet.visualEffects.glow);
+        this.destroyGameObject(bullet.visualEffects.trail);
+      }
+      this.destroyGameObject(bullet.sprite);
     }
 
     createMuzzle(x, y, angle, projectile) {
@@ -3948,8 +3996,9 @@
         bullet.life -= dt;
         bullet.sprite.x += bullet.vx * dt;
         bullet.sprite.y += bullet.vy * dt;
+        this.updateBulletVisuals(bullet);
         if (bullet.life <= 0 || bullet.sprite.x < -30 || bullet.sprite.x > 570 || bullet.sprite.y < -60 || bullet.sprite.y > 980) {
-          this.destroyGameObject(bullet.sprite);
+          this.destroyBullet(bullet);
           this.bullets.splice(i, 1);
           continue;
         }
@@ -3975,7 +4024,7 @@
           if (bullet.pierce > 0) {
             bullet.pierce -= 1;
           } else {
-            this.destroyGameObject(bullet.sprite);
+            this.destroyBullet(bullet);
             this.bullets.splice(i, 1);
           }
         }
