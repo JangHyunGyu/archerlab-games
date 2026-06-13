@@ -3648,12 +3648,11 @@
           if (!shotTarget) {
             return;
           }
-          const reusingTarget = shotTarget === previousTarget;
           previousTarget = shotTarget;
           const previousShotOffset = player.shotOffset;
           const previousAngleOffset = player.angleOffset;
-          player.shotOffset = count > 1 ? 0 : shotOffset;
-          player.angleOffset = reusingTarget ? clamp(shotOffset * 0.012, -0.1, 0.1) : 0;
+          player.shotOffset = count > 1 ? shotOffset * 0.35 : shotOffset;
+          player.angleOffset = 0;
           try {
             this.fireBullet(
               player,
