@@ -3527,35 +3527,26 @@
         if (defender.timer <= 0) {
           const burstCount = defender.burstCount || 1;
           const shotDelay = burstCount > 1 ? this.getChainShotDelay(defender) : 0;
-          const targetGroupSize = this.getBurstTargetGroupSize(defender);
           defender.timer = defender.rate * rand(0.75, 1.2) + (burstCount - 1) * shotDelay / 1000;
           const target = this.findTarget(defender.x, 999, null, this.bounds.autoEngageTop);
           if (target) {
-            const usedTargets = new Set();
-            const groupTargets = [];
+            let previousTarget = target;
             let grenadeCountedForBurst = false;
             let grenadeReadyForBurst = false;
             let grenadeFiredForBurst = false;
             for (let shot = 0; shot < burstCount; shot += 1) {
-              const groupIndex = Math.floor(shot / targetGroupSize);
               this.scheduleRunDelay(shot * shotDelay, () => {
                 if (!defender.recruited) {
                   return;
                 }
-                let shotTarget = groupTargets[groupIndex];
-                if (!shotTarget) {
-                  shotTarget = this.findChainShotTarget(defender.x, 999, usedTargets, this.bounds.autoEngageTop);
-                  if (shotTarget) {
-                    groupTargets[groupIndex] = shotTarget;
-                    usedTargets.add(shotTarget);
-                  }
-                }
+                const shotTarget = this.findChainShotTarget(defender.x, 999, previousTarget, this.bounds.autoEngageTop);
                 if (!shotTarget) {
                   return;
                 }
                 if (!shotTarget.active || shotTarget.hp <= 0) {
                   return;
                 }
+                previousTarget = shotTarget;
                 const damage = this.getDefenderDamage(defender);
                 this.fireBullet(defender, shotTarget, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
                 if (defender.rocketEvery > 0 && !grenadeCountedForBurst) {
@@ -3599,7 +3590,7 @@
         return;
       }
 
-      const usedTargets = new Set();
+      let previousTarget = target;
       for (let i = 0; i < count; i += 1) {
         const shotOffset = (i - (count - 1) / 2) * 12;
         const preferredX = (hasFocus ? this.focusPoint.x : 270) + shotOffset * 2.5;
@@ -3608,12 +3599,12 @@
           if (!player.recruited) {
             return;
           }
-          const shotTarget = this.findChainShotTarget(preferredX, radius, usedTargets, minTargetY);
+          const shotTarget = this.findChainShotTarget(preferredX, radius, previousTarget, minTargetY);
           if (!shotTarget) {
             return;
           }
-          const reusingTarget = usedTargets.has(shotTarget);
-          usedTargets.add(shotTarget);
+          const reusingTarget = shotTarget === previousTarget;
+          previousTarget = shotTarget;
           const previousShotOffset = player.shotOffset;
           const previousAngleOffset = player.angleOffset;
           player.shotOffset = count > 1 ? 0 : shotOffset;
@@ -3651,9 +3642,25 @@
       }
     }
 
-    findChainShotTarget(preferX, radius, usedTargets, minY) {
-      return this.findTarget(preferX, radius, usedTargets, minY)
-        || this.findTarget(preferX, radius, null, minY);
+    isChainShotTargetValid(target, preferX, radius, minY) {
+      if (!target || !target.active || target.hp <= 0 || target.y < minY) {
+        return false;
+      }
+      return radius === 999 || Math.abs(target.x - preferX) <= radius;
+    }
+
+    findChainShotTarget(preferX, radius, previousTarget, minY) {
+      const lowestTarget = this.findTarget(preferX, radius, null, minY);
+      if (!lowestTarget) {
+        return this.isChainShotTargetValid(previousTarget, preferX, radius, minY) ? previousTarget : null;
+      }
+      if (
+        this.isChainShotTargetValid(previousTarget, preferX, radius, minY)
+        && Math.abs(previousTarget.y - lowestTarget.y) <= 8
+      ) {
+        return previousTarget;
+      }
+      return lowestTarget;
     }
 
     findTarget(preferX, radius, ignoredTargets = null, minY = -Infinity) {
@@ -3704,12 +3711,6 @@
         return defender.burstDelay;
       }
       return scaleWeaponInterval(WEAPON_CHAIN_SHOT_DELAYS[defender.projectile] || DEFAULT_CHAIN_SHOT_DELAY);
-    }
-
-    getBurstTargetGroupSize(defender) {
-      return defender.role === "barrage"
-        ? Math.max(1, defender.baseBurstCount || 3)
-        : 1;
     }
 
     getDefenderById(id) {
