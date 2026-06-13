@@ -4478,6 +4478,8 @@
       const stumbleY = y + displayH * (0.02 + fall.y * 0.18);
 
       this.tweens.killTweensOf(zombie);
+      zombie.knockbackTweening = false;
+      zombie.knockbackTween = null;
       this.trackTransient(zombie);
       zombie.setActive(false)
         .setPosition(corpseX, y)
