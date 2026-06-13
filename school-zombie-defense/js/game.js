@@ -42,7 +42,7 @@
   const BASE_CRIT_CHANCE = 0.08;
   const DEFAULT_CRIT_MULTIPLIER = 1.85;
   const BOW_BASE_CRIT_CHANCE = 0.3;
-  const BOW_MARK_DURATION = 4.25;
+  const BOW_MARK_DURATION = 6.5;
   const BOW_MARK_DAMAGE_BONUS = 0.18;
   const ARROW_EMBED_DURATION = 2.8;
   const AIM_POSES = [
@@ -2313,7 +2313,7 @@
       const base = hitType === "explosion" || hitType === "projectile-rocket"
         ? 18
         : hitType === "projectile-arrow"
-          ? 20
+          ? 64
         : hitType === "projectile-sniper"
           ? 50
           : crit
