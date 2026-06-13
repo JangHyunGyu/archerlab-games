@@ -2772,6 +2772,15 @@
             <div class="school-zombie-rank-score">클리어 St.${run.score} · 처치 ${run.kills}</div>
           `}
           <input class="school-zombie-rank-input" name="playerName" maxlength="20" aria-label="랭킹 이름" placeholder="닉네임 입력" />
+          <div class="school-zombie-rank-loader" role="status" aria-live="polite" aria-hidden="true">
+            <div class="school-zombie-rank-loader__signal" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="school-zombie-rank-loader__label">랭킹 신호 송신 중</div>
+            <div class="school-zombie-rank-loader__bar" aria-hidden="true"><span></span></div>
+          </div>
           <div class="school-zombie-rank-actions">
             <button class="school-zombie-rank-submit" type="submit">등록</button>
             <button class="school-zombie-rank-skip" type="button">SKIP</button>
@@ -2805,11 +2814,22 @@
         const name = input.value;
         submitButton.disabled = true;
         skipButton.disabled = true;
+        input.disabled = true;
+        form.classList.add("is-submitting");
+        const loader = layer.querySelector(".school-zombie-rank-loader");
+        if (loader) {
+          loader.setAttribute("aria-hidden", "false");
+        }
         submitButton.textContent = "등록 중";
         this.rankSubmitInFlight = true;
         this.submitRankScore(run, name, options).finally(() => {
           if (this.rankNameLayer === layer) {
             this.rankSubmitInFlight = false;
+            form.classList.remove("is-submitting");
+            if (loader) {
+              loader.setAttribute("aria-hidden", "true");
+            }
+            input.disabled = false;
             updateSubmitState();
             skipButton.disabled = false;
             submitButton.textContent = "등록";
