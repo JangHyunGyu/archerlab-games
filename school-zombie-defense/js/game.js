@@ -161,7 +161,7 @@
     athlete: { corpseWidth: 1.1, deathSize: 1.1 },
     janitor: { corpseWidth: 1.34, deathSize: 1.12 },
     guard: { corpseWidth: 1.32, deathSize: 1.1 },
-    crawler: { corpseWidth: 1.42, deathSize: 0.96 },
+    crawler: { corpseWidth: 1.72, deathSize: 1.32 },
     screamer: { corpseWidth: 0.86, deathSize: 0.98 },
     spider: { corpseWidth: 1.16, deathSize: 0.94 },
     bloom: { corpseWidth: 0.94, deathSize: 1.04 }
