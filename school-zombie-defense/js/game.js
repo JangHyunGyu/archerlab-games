@@ -78,15 +78,19 @@
     "projectile-rocket": 0.19,
     "projectile-sniper": 0.16,
     "projectile-frost": 0.78,
-    "projectile-support": 0.78,
-    "projectile-shock": 0.62
+    "projectile-firebomb": 0.26,
+    "projectile-shock": 0.62,
+    "projectile-nail": 0.12
   };
   const MUZZLE_EFFECTS = {
     "projectile-arrow": { texture: "muzzle-arrow", width: 42, duration: 150, alpha: 0.78, scalePeak: 1.12 },
     "projectile-pistol": { texture: "muzzle-pistol", width: 36, duration: 130, alpha: 0.92, scalePeak: 1.18 },
     "projectile-rifle": { texture: "muzzle-rifle", width: 48, duration: 120, alpha: 0.95, scalePeak: 1.16 },
     "projectile-sniper": { texture: "muzzle-sniper", width: 58, duration: 135, alpha: 0.9, scalePeak: 1.12 },
-    "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08 }
+    "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08 },
+    "projectile-firebomb": { texture: "muzzle-rocket", width: 58, duration: 170, alpha: 0.86, scalePeak: 1.1 },
+    "projectile-shock": { texture: "muzzle-rifle", width: 52, duration: 115, alpha: 0.9, scalePeak: 1.18 },
+    "projectile-nail": { texture: "muzzle-rifle", width: 34, duration: 95, alpha: 0.9, scalePeak: 1.12 }
   };
   const ZOMBIE_HIT_EFFECTS = {
     "projectile-arrow": { texture: "zombie-hit-arrow-sheet", width: 44, duration: 240, alpha: 0.96, scalePeak: 1.08, rotation: 0.15, frameWidth: 96, frameHeight: 96, frames: 16 },
@@ -94,6 +98,9 @@
     "projectile-rifle": { texture: "zombie-hit-rifle-sheet", width: 70, duration: 260, alpha: 0.98, scalePeak: 1.08, rotation: 0.35, frameWidth: 140, frameHeight: 100, frames: 16 },
     "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 150, duration: 300, alpha: 0.98, scalePeak: 1.16, rotation: 0.42, frameWidth: 150, frameHeight: 104, frames: 16 },
     "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 106, duration: 320, alpha: 0.98, scalePeak: 1.1, rotation: 0.25, frameWidth: 160, frameHeight: 130, frames: 18 },
+    "projectile-firebomb": { texture: "zombie-hit-rocket-sheet", width: 92, duration: 300, alpha: 0.94, scalePeak: 1.12, rotation: 0.32, frameWidth: 160, frameHeight: 130, frames: 18 },
+    "projectile-shock": { texture: "zombie-hit-rifle-sheet", width: 78, duration: 240, alpha: 0.98, scalePeak: 1.14, rotation: 0.48, frameWidth: 140, frameHeight: 100, frames: 16 },
+    "projectile-nail": { texture: "zombie-hit-rifle-sheet", width: 48, duration: 210, alpha: 0.96, scalePeak: 1.08, rotation: 0.28, frameWidth: 140, frameHeight: 100, frames: 16 },
     explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
@@ -180,6 +187,9 @@
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
+  const ZOMBIE_BODY_DEPTH_BASE = 70;
+  const ZOMBIE_CORPSE_DEPTH_BASE = 34;
+  const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
@@ -337,7 +347,11 @@
     "projectile-arrow": 140,
     "projectile-rifle": 70,
     "projectile-rocket": 190,
-    "projectile-sniper": 170
+    "projectile-sniper": 170,
+    "projectile-firebomb": 190,
+    "projectile-shock": 150,
+    "projectile-frost": 170,
+    "projectile-nail": 85
   };
   const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4.6;
   const RIFLE_GRENADE_INTERVAL_SCALE = 1;
@@ -497,12 +511,18 @@
     barrage: 0xff8d42,
     squad: 0xc38dff,
     frost: 0x91f7ff,
+    fire: 0xff7a22,
+    shock: 0xff9ad6,
+    engineer: 0xffd166,
     "core-full-repair": 0x7dffdf,
     "core-max-hp": 0x91f7ff,
     "recruit-a": 0xff7fb7,
     "recruit-b": 0xff8d42,
     "recruit-d": 0x91f7ff,
-    "recruit-e": 0x7dff8d
+    "recruit-e": 0x7dff8d,
+    "recruit-f": 0xff7a22,
+    "recruit-g": 0xff9ad6,
+    "recruit-h": 0xffd166
   };
   const SKILL_ACCENT_HEX = {
     pierce: "#bef6ff",
@@ -512,12 +532,18 @@
     barrage: "#ff8d42",
     squad: "#c38dff",
     frost: "#91f7ff",
+    fire: "#ff9a45",
+    shock: "#ff9ad6",
+    engineer: "#ffd166",
     "core-full-repair": "#7dffdf",
     "core-max-hp": "#91f7ff",
     "recruit-a": "#ff7fb7",
     "recruit-b": "#ff8d42",
     "recruit-d": "#91f7ff",
-    "recruit-e": "#7dff8d"
+    "recruit-e": "#7dff8d",
+    "recruit-f": "#ff9a45",
+    "recruit-g": "#ff9ad6",
+    "recruit-h": "#ffd166"
   };
   const DEFENDER_ROSTER = [
     {
@@ -628,6 +654,80 @@
         desc: "관통 저격 사격\n방어 보강 성장",
         line: "숨 고르세요. 뒤는 제가 봅니다."
       }
+    },
+    {
+      id: "f",
+      x: 270,
+      y: 925,
+      height: 214,
+      damageScale: 0.42,
+      role: "fire",
+      projectile: "projectile-firebomb",
+      speed: 980,
+      rate: 1.65,
+      critChance: 0.05,
+      critMultiplier: 1.45,
+      fireZoneRadius: 72,
+      fireZoneDuration: 3.2,
+      fireZoneDamageScale: 0.22,
+      aim: { pivot: [0, -132], reach: 42 },
+      recruit: {
+        icon: "avatar-fire",
+        portrait: "avatar-fire",
+        tag: "화염",
+        title: "화염병 지원 합류",
+        desc: "화염병 투척\n지속 피해 구역 생성",
+        line: "불길은 제가 막아둘게요."
+      }
+    },
+    {
+      id: "g",
+      x: 270,
+      y: 925,
+      height: 222,
+      damageScale: 0.74,
+      role: "shock",
+      projectile: "projectile-shock",
+      speed: 1380,
+      rate: 1.18,
+      critChance: 0.1,
+      critMultiplier: 1.6,
+      pierce: 1,
+      slowDuration: 0.45,
+      chainJumps: 1,
+      chainRadius: 118,
+      chainDamageScale: 0.36,
+      aim: { pivot: [1, -138], reach: 48 },
+      recruit: {
+        icon: "avatar-shock",
+        portrait: "avatar-shock",
+        tag: "전기",
+        title: "전기 지원 합류",
+        desc: "전격 지원 사격\n관통/둔화 성장 해금",
+        line: "전원 올렸어요. 복도는 제 쪽입니다."
+      }
+    },
+    {
+      id: "h",
+      x: 270,
+      y: 925,
+      height: 226,
+      damageScale: 0.34,
+      role: "engineer",
+      projectile: "projectile-nail",
+      speed: 1750,
+      rate: 0.96,
+      critChance: 0.07,
+      critMultiplier: 1.45,
+      aim: { pivot: [0, -142], reach: 44 },
+      recruit: {
+        icon: "avatar-engineer",
+        portrait: "avatar-engineer",
+        tag: "공병",
+        title: "엔지니어 합류",
+        desc: "터렛·가시철조망\n바리케이드 보강 해금",
+        line: "설치만 끝나면 복도가 우리 편입니다."
+      }
     }
   ];
   const DEFENDER_FORMATION_SLOTS = [
@@ -642,7 +742,45 @@
     a: "avatar-bow",
     b: "avatar-rifle",
     d: "avatar-rocket",
-    e: "avatar-sniper"
+    e: "avatar-sniper",
+    f: "avatar-fire",
+    g: "avatar-shock",
+    h: "avatar-engineer"
+  };
+  const GENERATED_DEFENDER_PROFILES = {
+    f: {
+      label: "F",
+      gender: "female",
+      body: "#f2ede8",
+      vest: "#8f2e2a",
+      skin: "#e5b18c",
+      hair: "#4b2220",
+      weapon: "#ffc86b",
+      accent: "#ff9a45",
+      portrait: { glow: "#ffbc6f", dark: "#6f241c", skin: "#e5b18c", hair: "#4b2220", body: "#f2ede8" }
+    },
+    g: {
+      label: "E",
+      gender: "male",
+      body: "#e9edf4",
+      vest: "#59306f",
+      skin: "#d8aa86",
+      hair: "#35254f",
+      weapon: "#ffd4ef",
+      accent: "#ff9ad6",
+      portrait: { glow: "#ffb3de", dark: "#4b214d", skin: "#d8aa86", hair: "#35254f", body: "#eef0f6" }
+    },
+    h: {
+      label: "T",
+      gender: "male",
+      body: "#e7ece5",
+      vest: "#6c5533",
+      skin: "#d8a178",
+      hair: "#2b241d",
+      weapon: "#ffd166",
+      accent: "#ffd166",
+      portrait: { glow: "#ffe08a", dark: "#4f381a", skin: "#d8a178", hair: "#2b241d", body: "#e7ece5" }
+    }
   };
   function getAimPose(key) {
     return AIM_POSE_BY_KEY[key] || AIM_POSE_BY_KEY["aim-12"];
@@ -720,9 +858,139 @@
     });
   }
 
+  function drawGeneratedDefenderPose(ctx, width, height, profile, poseKey) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.save();
+    ctx.translate(width / 2, height - 22);
+    const aimAngle = getAimPose(poseKey).angle;
+    const facing = Math.cos(aimAngle) < -0.08 ? -1 : 1;
+    const lean = clamp(Math.cos(aimAngle) * 6, -5, 5);
+    const isFemale = profile.gender === "female";
+    const torsoW = isFemale ? 56 : 64;
+    const torsoX = -torsoW / 2 + lean * 0.2;
+
+    ctx.fillStyle = "rgba(0,0,0,.34)";
+    ctx.beginPath();
+    ctx.ellipse(0, -4, 43, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#20252a";
+    ctx.lineWidth = isFemale ? 17 : 20;
+    ctx.beginPath();
+    ctx.moveTo(-14, -78);
+    ctx.lineTo(-23, -20);
+    ctx.moveTo(14, -78);
+    ctx.lineTo(23, -20);
+    ctx.stroke();
+
+    ctx.fillStyle = profile.body;
+    roundedRect(ctx, torsoX, -162, torsoW, 86, 14);
+    ctx.fill();
+    ctx.strokeStyle = "#0b1116";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.fillStyle = profile.vest;
+    roundedRect(ctx, -20 + lean * 0.2, -152, 40, 62, 9);
+    ctx.fill();
+    ctx.fillStyle = profile.accent;
+    ctx.globalAlpha = 0.88;
+    roundedRect(ctx, -4 + lean * 0.2, -146, 8, 48, 4);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = profile.skin;
+    ctx.beginPath();
+    ctx.arc(lean * 0.18, -198, 25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = profile.hair;
+    ctx.beginPath();
+    ctx.arc(lean * 0.18, -205, isFemale ? 32 : 29, Math.PI * 0.9, Math.PI * 2.12);
+    ctx.lineTo((isFemale ? 27 : 24) + lean * 0.18, isFemale ? -166 : -178);
+    ctx.quadraticCurveTo(0 + lean * 0.18, isFemale ? -182 : -188, (isFemale ? -28 : -25) + lean * 0.18, isFemale ? -166 : -178);
+    ctx.closePath();
+    ctx.fill();
+
+    if (isFemale) {
+      ctx.fillStyle = profile.body;
+      ctx.beginPath();
+      ctx.moveTo(-27 + lean * 0.2, -83);
+      ctx.lineTo(27 + lean * 0.2, -83);
+      ctx.lineTo(35 + lean * 0.2, -49);
+      ctx.lineTo(-35 + lean * 0.2, -49);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#0b1116";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    const shoulderX = facing * 15 + lean * 0.3;
+    const shoulderY = -143;
+    ctx.strokeStyle = profile.skin;
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(-facing * 19 + lean * 0.2, -137);
+    ctx.lineTo(shoulderX, shoulderY);
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(shoulderX, shoulderY);
+    ctx.rotate(aimAngle);
+    ctx.strokeStyle = "#10171d";
+    ctx.lineWidth = 15;
+    ctx.beginPath();
+    ctx.moveTo(-12, 0);
+    ctx.lineTo(78, 0);
+    ctx.stroke();
+    ctx.strokeStyle = profile.weapon;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(-5, 0);
+    ctx.lineTo(82, 0);
+    ctx.stroke();
+    ctx.strokeStyle = profile.accent;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(36, -7);
+    ctx.lineTo(66, -7);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = "#f7fbff";
+    ctx.beginPath();
+    ctx.arc(-8 + lean * 0.18, -196, 3.2, 0, Math.PI * 2);
+    ctx.arc(9 + lean * 0.18, -196, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function createGeneratedDefenderTextures(scene) {
+    const cellWidth = 256;
+    const cellHeight = 384;
+    Object.entries(GENERATED_DEFENDER_PROFILES).forEach(([id, profile]) => {
+      makeCanvasTexture(scene, `character-${id}`, cellWidth * AIM_POSE_KEYS.length, cellHeight, (ctx) => {
+        AIM_POSE_KEYS.forEach((pose, index) => {
+          ctx.save();
+          ctx.translate(index * cellWidth, 0);
+          drawGeneratedDefenderPose(ctx, cellWidth, cellHeight, profile, pose);
+          ctx.restore();
+        });
+      });
+      makeCanvasTexture(scene, OWNER_SKILL_PORTRAITS[id], 128, 128, (ctx) => {
+        drawPortrait(ctx, 128, 128, profile.portrait, profile.label);
+      });
+    });
+  }
+
   function createCharacterSpriteTextures(scene) {
-    ["a", "b", "c", "d", "e"].forEach((id) => {
+    DEFENDER_ROSTER.map((defender) => defender.id).forEach((id) => {
       const sourceKey = `character-${id}`;
+      if (!scene.textures.exists(sourceKey)) {
+        return;
+      }
       const source = scene.textures.get(sourceKey).getSourceImage();
       const cellWidth = Math.floor(source.width / AIM_POSE_KEYS.length);
       const cellHeight = source.height;
@@ -753,7 +1021,7 @@
   }
 
   function createCharacterBadgeTextures(scene) {
-    ["a", "b", "c", "d", "e"].forEach((id) => {
+    DEFENDER_ROSTER.map((defender) => defender.id).forEach((id) => {
       const sourceKey = `character-${id}-idle`;
       const targetKey = `character-${id}-badge`;
       if (!scene.textures.exists(sourceKey)) {
@@ -1230,23 +1498,33 @@
       ctx.strokeStyle = "#d8fbff";
       ctx.lineWidth = 2;
       ctx.stroke();
-    } else if (type === "support") {
-      const gradient = ctx.createRadialGradient(0, 0, 2, 0, 0, 26);
-      gradient.addColorStop(0, "#ffffff");
-      gradient.addColorStop(0.42, "#73ff9b");
-      gradient.addColorStop(1, "rgba(115, 255, 155, 0)");
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    } else if (type === "firebomb") {
+      ctx.shadowColor = "rgba(255, 110, 34, .78)";
+      ctx.rotate(-0.18);
+      const glass = ctx.createLinearGradient(-10, -30, 10, 34);
+      glass.addColorStop(0, "#f4e0bd");
+      glass.addColorStop(0.48, "#8d5a2e");
+      glass.addColorStop(1, "#2b1710");
+      ctx.fillStyle = glass;
+      roundedRect(ctx, -10, -22, 20, 44, 7);
       ctx.fill();
-      ctx.strokeStyle = "#baffce";
+      ctx.strokeStyle = "#2b1710";
       ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(0, -21);
-      ctx.lineTo(0, 21);
-      ctx.moveTo(-21, 0);
-      ctx.lineTo(21, 0);
       ctx.stroke();
+      ctx.fillStyle = "#f4eee1";
+      roundedRect(ctx, -5, -36, 10, 16, 3);
+      ctx.fill();
+      const flame = ctx.createRadialGradient(0, -44, 1, 0, -38, 18);
+      flame.addColorStop(0, "#ffffff");
+      flame.addColorStop(0.34, "#ffe56f");
+      flame.addColorStop(0.72, "#ff7a22");
+      flame.addColorStop(1, "rgba(255, 75, 20, 0)");
+      ctx.fillStyle = flame;
+      ctx.beginPath();
+      ctx.moveTo(0, -62);
+      ctx.quadraticCurveTo(17, -40, 3, -26);
+      ctx.quadraticCurveTo(-15, -38, 0, -62);
+      ctx.fill();
     } else if (type === "shock") {
       ctx.strokeStyle = "#ff8fbd";
       ctx.lineWidth = 8;
@@ -1259,14 +1537,31 @@
       ctx.beginPath();
       ctx.arc(0, 20, 25, Math.PI * 1.18, Math.PI * 1.82);
       ctx.stroke();
+    } else if (type === "nail") {
+      const gradient = ctx.createLinearGradient(0, -38, 0, 38);
+      gradient.addColorStop(0, "#ffffff");
+      gradient.addColorStop(0.55, "#ffd166");
+      gradient.addColorStop(1, "rgba(255, 209, 102, 0)");
+      ctx.fillStyle = gradient;
+      roundedRect(ctx, -3, -38, 6, 76, 3);
+      ctx.fill();
+      ctx.strokeStyle = "#2a2112";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-9, -30);
+      ctx.lineTo(9, -30);
+      ctx.moveTo(-7, -21);
+      ctx.lineTo(7, -21);
+      ctx.stroke();
     }
     ctx.restore();
   }
 
   function createTextures(scene) {
     makeCanvasTexture(scene, "projectile-frost", 48, 84, (ctx) => drawProjectile(ctx, 48, 84, "frost"));
-    makeCanvasTexture(scene, "projectile-support", 48, 48, (ctx) => drawProjectile(ctx, 48, 48, "support"));
+    makeCanvasTexture(scene, "projectile-firebomb", 62, 92, (ctx) => drawProjectile(ctx, 62, 92, "firebomb"));
     makeCanvasTexture(scene, "projectile-shock", 96, 64, (ctx) => drawProjectile(ctx, 96, 64, "shock"));
+    makeCanvasTexture(scene, "projectile-nail", 34, 90, (ctx) => drawProjectile(ctx, 34, 90, "nail"));
 
     makeCanvasTexture(scene, "zombie-girl", 78, 124, (ctx) => drawZombie(ctx, 78, 124, {
       skin: "#9fb2a3",
@@ -1412,6 +1707,7 @@
         loading.remove();
       }
       createZombieSpriteTextures(this);
+      createGeneratedDefenderTextures(this);
       createCharacterSpriteTextures(this);
       createCharacterBadgeTextures(this);
       createUiTextures(this);
@@ -1441,6 +1737,9 @@
       this.zombies = [];
       this.bullets = [];
       this.embeddedArrows = [];
+      this.fireZones = [];
+      this.turrets = [];
+      this.barbedWire = null;
       this.defenders = [];
       this.overlayObjects = [];
       this.transientObjects = new Set();
@@ -1632,6 +1931,22 @@
           splashDamageScale: defender.splashDamageScale || 0,
           splashRadiusBoost: 1,
           splashDamageBoost: 1,
+          fireZoneRadius: defender.fireZoneRadius || 0,
+          baseFireZoneRadius: defender.fireZoneRadius || 0,
+          fireZoneDuration: defender.fireZoneDuration || 0,
+          baseFireZoneDuration: defender.fireZoneDuration || 0,
+          fireZoneDamageScale: defender.fireZoneDamageScale || 0,
+          baseFireZoneDamageScale: defender.fireZoneDamageScale || 0,
+          chainJumps: defender.chainJumps || 0,
+          baseChainJumps: defender.chainJumps || 0,
+          chainRadius: defender.chainRadius || 0,
+          baseChainRadius: defender.chainRadius || 0,
+          chainDamageScale: defender.chainDamageScale || 0,
+          baseChainDamageScale: defender.chainDamageScale || 0,
+          turretDamageBoost: 1,
+          turretRateBoost: 1,
+          wireDamageBoost: 1,
+          wireSlowBoost: 1,
           markDuration: defender.markDuration || 0,
           baseMarkDuration: defender.markDuration || 0,
           markDamageBonus: defender.markDamageBonus || 0,
@@ -2114,6 +2429,13 @@
 
     clearRunEntities() {
       this.clearEmbeddedArrows();
+      (this.fireZones || []).forEach((zone) => {
+        (zone.objects || []).forEach((object) => this.destroyTransientObject(object, false));
+      });
+      (this.turrets || []).forEach((turret) => this.destroyTransientObject(turret.container, false));
+      if (this.barbedWire) {
+        (this.barbedWire.objects || []).forEach((object) => this.destroyTransientObject(object, false));
+      }
       this.zombies.forEach((zombie) => {
         this.clearWeakMark(zombie);
         this.destroyGameObject(zombie);
@@ -2121,6 +2443,9 @@
       this.bullets.forEach((bullet) => this.destroyBullet(bullet));
       this.zombies = [];
       this.bullets = [];
+      this.fireZones = [];
+      this.turrets = [];
+      this.barbedWire = null;
     }
 
     cleanupAudio() {
@@ -2486,7 +2811,11 @@
         "projectile-pistol": "pistol",
         "projectile-rifle": "rifle",
         "projectile-sniper": "sniper",
-        "projectile-rocket": "rocket"
+        "projectile-rocket": "rocket",
+        "projectile-firebomb": "rocket",
+        "projectile-shock": "rifle",
+        "projectile-frost": "sniper",
+        "projectile-nail": "rifle"
       };
       const sfx = map[projectile] || "pistol";
       this.playSfx(sfx, WEAPON_SFX_INTENSITY[sfx] || 1);
@@ -3604,6 +3933,16 @@
         defender.burstDelay = defender.baseBurstDelay || 0;
         defender.splashRadiusBoost = 1;
         defender.splashDamageBoost = 1;
+        defender.fireZoneRadius = defender.baseFireZoneRadius || 0;
+        defender.fireZoneDuration = defender.baseFireZoneDuration || 0;
+        defender.fireZoneDamageScale = defender.baseFireZoneDamageScale || 0;
+        defender.chainJumps = defender.baseChainJumps || 0;
+        defender.chainRadius = defender.baseChainRadius || 0;
+        defender.chainDamageScale = defender.baseChainDamageScale || 0;
+        defender.turretDamageBoost = 1;
+        defender.turretRateBoost = 1;
+        defender.wireDamageBoost = 1;
+        defender.wireSlowBoost = 1;
         defender.markDuration = defender.baseMarkDuration || 0;
         defender.markDamageBonus = defender.baseMarkDamageBonus || 0;
         defender.slowDuration = defender.baseSlowDuration || 0;
@@ -3683,7 +4022,9 @@
       this.updateSpawning(dt);
       this.updateDefenderAnimations(dt);
       this.updateDefenders(dt);
+      this.updateTurrets(dt);
       this.updateBullets(dt);
+      this.updateFireZones(dt);
       this.updateZombies(dt);
       this.updateFollowingHitEffects();
       this.updateEmbeddedArrows(dt);
@@ -3834,6 +4175,166 @@
           }
         }
       });
+    }
+
+    createEngineerTurret(engineer) {
+      if (!this.turrets) {
+        this.turrets = [];
+      }
+      if (this.turrets.length >= 3) {
+        this.turrets.forEach((turret) => {
+          turret.damageScale *= 1.14;
+          turret.rate = Math.max(0.42, turret.rate * 0.9);
+          if (turret.container && !turret.container.destroyed) {
+            this.tweens.add({
+              targets: turret.container,
+              scale: 1.12,
+              yoyo: true,
+              duration: 130,
+              ease: "Sine.easeOut"
+            });
+          }
+        });
+        this.showToast("터렛 출력 강화", SKILL_ACCENTS.engineer);
+        return;
+      }
+
+      const positions = [
+        { x: 116, y: 764 },
+        { x: 424, y: 764 },
+        { x: 270, y: 746 }
+      ];
+      const position = positions[this.turrets.length] || { x: rand(100, 440), y: 760 };
+      const container = this.trackTransient(this.add.container(position.x, position.y).setDepth(228));
+      const shadow = this.add.ellipse(0, 18, 58, 18, 0x000000, 0.34);
+      const stand = this.add.rectangle(0, 10, 16, 36, 0x2f3b40, 0.96).setStrokeStyle(2, 0x0b1116, 0.9);
+      const body = this.add.rectangle(0, -10, 46, 28, 0x57401d, 0.98).setStrokeStyle(2, SKILL_ACCENTS.engineer, 0.78);
+      const barrel = this.add.rectangle(27, -10, 44, 8, 0xd7e4e8, 0.96).setOrigin(0, 0.5).setStrokeStyle(1, 0x151a1e, 0.9);
+      const lens = this.add.circle(-16, -14, 5, SKILL_ACCENTS.engineer, 0.96);
+      container.add([shadow, stand, body, barrel, lens]);
+
+      const turret = {
+        x: position.x,
+        y: position.y,
+        container,
+        barrel,
+        projectile: "projectile-rifle",
+        speed: 1850,
+        rate: Math.max(0.46, 0.82 / (engineer?.turretRateBoost || 1)),
+        timer: rand(0.18, 0.5),
+        damageScale: 0.34 * (engineer?.turretDamageBoost || 1),
+        pierce: 0,
+        critChance: 0.05,
+        critMultiplier: 1.35,
+        aim: { pivot: [0, -12], reach: 30 },
+        sprite: null
+      };
+      this.turrets.push(turret);
+      this.createScreenPulse(SKILL_ACCENTS.engineer);
+    }
+
+    updateTurrets(dt) {
+      if (!this.turrets?.length) {
+        return;
+      }
+      this.turrets.forEach((turret) => {
+        if (!turret || turret.container?.destroyed) {
+          return;
+        }
+        turret.timer -= dt;
+        const target = this.findTarget(turret.x, 999, null, this.bounds.autoEngageTop);
+        if (target && turret.barrel && !turret.barrel.destroyed) {
+          turret.barrel.setRotation(Math.atan2(target.y - (turret.y - 12), target.x - turret.x));
+        }
+        if (turret.timer > 0 || !target) {
+          return;
+        }
+        turret.timer = turret.rate * rand(0.82, 1.18);
+        this.fireBullet(
+          turret,
+          target,
+          this.damage * CHARACTER_DAMAGE_MULTIPLIER * turret.damageScale,
+          turret.speed,
+          turret.pierce || 0,
+          turret.critChance || 0
+        );
+      });
+    }
+
+    reinforceBarbedWire(engineer) {
+      const y = this.bounds.zombieFootLine + 10;
+      if (!this.barbedWire) {
+        const wire = this.trackTransient(this.add.graphics().setDepth(226));
+        const glow = this.trackTransient(this.add.rectangle(270, y, 492, 20, 0x3d4a4f, 0.16).setDepth(225));
+        this.barbedWire = {
+          y,
+          damageScale: 0.34 * (engineer?.wireDamageBoost || 1),
+          slowDuration: 0.72 * (engineer?.wireSlowBoost || 1),
+          objects: [wire, glow]
+        };
+        this.drawBarbedWire();
+      } else {
+        this.barbedWire.damageScale *= 1.22;
+        this.barbedWire.slowDuration += 0.18;
+        this.drawBarbedWire();
+        this.barbedWire.objects.forEach((object) => {
+          if (object && !object.destroyed) {
+            this.tweens.add({
+              targets: object,
+              alpha: 0.96,
+              yoyo: true,
+              duration: 140,
+              ease: "Sine.easeOut"
+            });
+          }
+        });
+      }
+      this.createScreenPulse(SKILL_ACCENTS.engineer);
+    }
+
+    drawBarbedWire() {
+      const wire = this.barbedWire?.objects?.[0];
+      if (!wire || wire.destroyed) {
+        return;
+      }
+      const y = this.barbedWire.y;
+      wire.clear();
+      wire.lineStyle(4, 0x11181c, 0.86);
+      wire.beginPath();
+      wire.moveTo(24, y);
+      wire.lineTo(516, y);
+      wire.strokePath();
+      wire.lineStyle(2, SKILL_ACCENTS.engineer, 0.9);
+      for (let x = 32; x < 512; x += 24) {
+        wire.beginPath();
+        wire.moveTo(x, y - 10);
+        wire.lineTo(x + 16, y + 10);
+        wire.moveTo(x + 16, y - 10);
+        wire.lineTo(x, y + 10);
+        wire.strokePath();
+      }
+    }
+
+    applyBarbedWireToZombie(zombie, dt) {
+      if (!this.barbedWire || !zombie?.active) {
+        return;
+      }
+      zombie.wireCooldown = Math.max(0, (zombie.wireCooldown || 0) - dt);
+      const footY = zombie.y + (zombie.displayH || 170) * 0.04;
+      if (Math.abs(footY - this.barbedWire.y) > 34 || zombie.wireCooldown > 0) {
+        return;
+      }
+      zombie.wireCooldown = 0.78;
+      this.damageZombie(
+        zombie,
+        this.damage * CHARACTER_DAMAGE_MULTIPLIER * this.barbedWire.damageScale,
+        0,
+        "projectile-nail",
+        1
+      );
+      if (zombie.active) {
+        zombie.slowTimer = Math.max(zombie.slowTimer || 0, this.barbedWire.slowDuration);
+      }
     }
 
     firePlayerBurst(isManual) {
@@ -4132,6 +4633,12 @@
         markDuration: defender.markDuration || 0,
         markDamageBonus: defender.markDamageBonus || 0,
         slowDuration: defender.slowDuration || 0,
+        fireZoneRadius: defender.fireZoneRadius || 0,
+        fireZoneDuration: defender.fireZoneDuration || 0,
+        fireZoneDamageScale: defender.fireZoneDamageScale || 0,
+        chainJumps: defender.chainJumps || 0,
+        chainRadius: defender.chainRadius || 0,
+        chainDamageScale: defender.chainDamageScale || 0,
         aimTarget: target,
         aimOffsetX: aimPoint.x - target.x,
         aimOffsetY: aimPoint.y - target.y,
@@ -4347,6 +4854,19 @@
           if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && zombie.active) {
             this.applyWeakMark(zombie, bullet.markDuration, bullet.markDamageBonus);
           }
+          if (bullet.fireZoneRadius > 0 && bullet.fireZoneDuration > 0 && bullet.fireZoneDamageScale > 0) {
+            this.createFireZone(
+              impactPoint.x,
+              impactPoint.y,
+              bullet.fireZoneRadius,
+              bullet.damage * bullet.fireZoneDamageScale,
+              bullet.fireZoneDuration,
+              bullet.slowDuration
+            );
+          }
+          if (bullet.chainJumps > 0 && bullet.chainRadius > 0 && bullet.chainDamageScale > 0) {
+            this.createShockChain(zombie, impactPoint, bullet);
+          }
           if (bullet.splashRadius > 0) {
             this.createExplosion(impactPoint.x, impactPoint.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75), bullet.slowDuration);
           }
@@ -4359,6 +4879,193 @@
         } else if (shouldRemove) {
           this.destroyBullet(bullet);
           this.bullets.splice(i, 1);
+        }
+      }
+    }
+
+    createFireZone(x, y, radius, damagePerTick, duration, slowDuration = 0) {
+      if (!this.fireZones) {
+        this.fireZones = [];
+      }
+      const zoneX = clamp(x, this.bounds.left + 10, this.bounds.right - 10);
+      const zoneY = clamp(y + 10, this.bounds.top + 12, this.bounds.barricade - 24);
+      const glow = this.trackTransient(this.add.ellipse(zoneX, zoneY, radius * 1.82, radius * 0.78, 0xff5b22, 0.18)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(67 + zoneY / 15));
+      const edge = this.trackTransient(this.add.ellipse(zoneX, zoneY, radius * 1.9, radius * 0.82, 0xff2200, 0.05)
+        .setStrokeStyle(3, 0xffd36b, 0.7)
+        .setDepth(68 + zoneY / 15));
+      const core = this.trackTransient(this.add.ellipse(zoneX, zoneY, radius * 1.02, radius * 0.44, 0xffd66a, 0.26)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(69 + zoneY / 15));
+      const embers = [];
+      for (let i = 0; i < 5; i += 1) {
+        const ember = this.trackTransient(this.add.circle(
+          zoneX + rand(-radius * 0.62, radius * 0.62),
+          zoneY + rand(-radius * 0.2, radius * 0.18),
+          rand(3, 6),
+          choose([0xfff0a0, 0xff9a36, 0xff5330]),
+          rand(0.48, 0.78)
+        )
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(70 + zoneY / 15));
+        embers.push(ember);
+      }
+      this.fireZones.push({
+        x: zoneX,
+        y: zoneY,
+        radius,
+        damagePerTick: Math.max(1, damagePerTick),
+        duration,
+        life: duration,
+        tickTimer: 0.12,
+        tickInterval: 0.34,
+        slowDuration,
+        pulseOffset: rand(0, Math.PI * 2),
+        objects: [glow, edge, core, ...embers],
+        embers
+      });
+      this.playSfx("explosion", 0.62);
+    }
+
+    updateFireZones(dt) {
+      if (!this.fireZones?.length) {
+        return;
+      }
+      for (let i = this.fireZones.length - 1; i >= 0; i -= 1) {
+        const zone = this.fireZones[i];
+        zone.life -= dt;
+        const progress = clamp(1 - zone.life / Math.max(0.01, zone.duration), 0, 1);
+        const fade = clamp(zone.life / 0.45, 0, 1);
+        const pulse = 1 + Math.sin((this.elapsed || 0) * 8 + zone.pulseOffset) * 0.055;
+        const [glow, edge, core] = zone.objects || [];
+        if (glow && !glow.destroyed) {
+          glow.setScale(pulse, 1 + (pulse - 1) * 0.45).setAlpha(0.2 * fade);
+        }
+        if (edge && !edge.destroyed) {
+          edge.setScale(1 + progress * 0.08, 1 + progress * 0.03).setAlpha(0.75 * fade);
+        }
+        if (core && !core.destroyed) {
+          core.setScale(1 + Math.sin((this.elapsed || 0) * 11 + zone.pulseOffset) * 0.08).setAlpha(0.26 * fade);
+        }
+        (zone.embers || []).forEach((ember, index) => {
+          if (!ember || ember.destroyed) {
+            return;
+          }
+          const bob = Math.sin((this.elapsed || 0) * (5.5 + index) + zone.pulseOffset) * 3;
+          ember.setY(zone.y + bob + rand(-0.2, 0.2));
+          ember.setAlpha((0.4 + Math.sin((this.elapsed || 0) * 8 + index) * 0.22) * fade);
+        });
+
+        zone.tickTimer -= dt;
+        if (zone.tickTimer <= 0) {
+          zone.tickTimer += zone.tickInterval;
+          const radiusSq = zone.radius * zone.radius;
+          this.zombies.slice().forEach((zombie) => {
+            if (!zombie.active || zombie.hp <= 0 || this.mode !== "playing") {
+              return;
+            }
+            const dx = zombie.x - zone.x;
+            const dy = (zombie.y - (zombie.displayH || 170) * 0.08) - zone.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq > radiusSq) {
+              return;
+            }
+            const falloff = 1 - Math.sqrt(distSq) / zone.radius * 0.28;
+            this.damageZombie(zombie, zone.damagePerTick * falloff, 0, "projectile-firebomb", 1, { x: zombie.x, y: zombie.y - (zombie.displayH || 170) * 0.2 });
+            if (zombie.active && zone.slowDuration > 0) {
+              zombie.slowTimer = Math.max(zombie.slowTimer || 0, zone.slowDuration * 0.55);
+            }
+          });
+        }
+
+        if (zone.life <= 0) {
+          (zone.objects || []).forEach((object) => this.destroyTransientObject(object, false));
+          this.fireZones.splice(i, 1);
+        }
+      }
+    }
+
+    findShockChainTarget(origin, ignoredTargets, radius) {
+      let best = null;
+      let bestDistanceSq = radius * radius;
+      this.zombies.forEach((zombie) => {
+        if (!zombie.active || zombie.hp <= 0 || ignoredTargets.has(zombie)) {
+          return;
+        }
+        const dx = zombie.x - origin.x;
+        const dy = zombie.y - origin.y;
+        const distanceSq = dx * dx + dy * dy;
+        if (distanceSq <= bestDistanceSq) {
+          best = zombie;
+          bestDistanceSq = distanceSq;
+        }
+      });
+      return best;
+    }
+
+    createShockArc(start, end, alpha = 0.88) {
+      const arc = this.trackTransient(this.add.graphics().setDepth(233));
+      const segments = 5;
+      const points = [];
+      for (let i = 0; i <= segments; i += 1) {
+        const t = i / segments;
+        const jitter = i === 0 || i === segments ? 0 : rand(-13, 13);
+        points.push({
+          x: start.x + (end.x - start.x) * t + rand(-5, 5),
+          y: start.y + (end.y - start.y) * t + jitter
+        });
+      }
+      const drawLine = (width, color, lineAlpha) => {
+        arc.lineStyle(width, color, lineAlpha);
+        arc.beginPath();
+        arc.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) {
+          arc.lineTo(points[i].x, points[i].y);
+        }
+        arc.strokePath();
+      };
+      drawLine(7, SKILL_ACCENTS.shock, alpha * 0.5);
+      drawLine(3, 0xffffff, alpha);
+      this.tweens.add({
+        targets: arc,
+        alpha: 0,
+        duration: 170,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(arc, false)
+      });
+    }
+
+    createShockChain(sourceZombie, impactPoint, bullet) {
+      const ignoredTargets = new Set(bullet.hitTargets || []);
+      ignoredTargets.add(sourceZombie);
+      let origin = {
+        x: impactPoint?.x || sourceZombie.x,
+        y: impactPoint?.y || sourceZombie.y
+      };
+      const jumps = Math.max(0, Math.floor(bullet.chainJumps || 0));
+      for (let jump = 0; jump < jumps; jump += 1) {
+        const target = this.findShockChainTarget(origin, ignoredTargets, bullet.chainRadius || 0);
+        if (!target) {
+          break;
+        }
+        const hitPoint = this.getZombieHitPoint(target, "projectile-shock");
+        this.createShockArc(origin, hitPoint, 0.92 - jump * 0.12);
+        this.damageZombie(
+          target,
+          bullet.damage * (bullet.chainDamageScale || 0.35) * Math.pow(0.82, jump),
+          0,
+          "projectile-shock",
+          1,
+          hitPoint
+        );
+        if (target.active && bullet.slowDuration > 0) {
+          target.slowTimer = Math.max(target.slowTimer || 0, bullet.slowDuration * 0.85);
+        }
+        ignoredTargets.add(target);
+        origin = hitPoint;
+        if (this.mode !== "playing") {
+          break;
         }
       }
     }
@@ -4769,7 +5476,8 @@
       const effect = ZOMBIE_CORPSE_EFFECTS[tier];
       const displayH = zombie.displayH || 170;
       const displayW = zombie.displayW || displayH;
-      const corpseDepth = 58 + y / 5;
+      const bodyDepth = ZOMBIE_BODY_DEPTH_BASE + y / 5;
+      const corpseDepth = ZOMBIE_CORPSE_DEPTH_BASE + clamp(y / GAME_HEIGHT, 0, 1) * ZOMBIE_CORPSE_DEPTH_RANGE;
       const fallProfiles = [
         { angle: -rand(76, 104), x: -rand(0.14, 0.27), y: rand(0.02, 0.08) },
         { angle: rand(76, 104), x: rand(0.14, 0.27), y: rand(0.02, 0.08) },
@@ -4802,7 +5510,7 @@
         .setPosition(corpseX, y)
         .setOrigin(0.5, 0.58)
         .setDisplaySize(displayW, displayH)
-        .setDepth(corpseDepth + 0.8)
+        .setDepth(bodyDepth + 0.8)
         .setAlpha(1);
       if (typeof zombie.clearTint === "function") {
         zombie.clearTint();
@@ -4910,7 +5618,7 @@
           .setDisplaySize(deathDisplaySize, deathDisplaySize)
           .setFlipX(finalAngle < 0)
           .setAlpha(1)
-          .setDepth(corpseDepth + 0.9))
+          .setDepth(bodyDepth + 0.9))
         : null;
       const revealCorpseImage = () => {
         if (!corpseImage || corpseImage.destroyed) {
@@ -5062,6 +5770,10 @@
           continue;
         }
         this.updateWeakMark(zombie, dt);
+        this.applyBarbedWireToZombie(zombie, dt);
+        if (!zombie.active) {
+          continue;
+        }
         zombie.wobble += dt * 4.2;
         zombie.animTimer += dt * (zombie.animRate || (zombie.elite ? 5.2 : 6.8));
         const nextFrame = Math.floor(zombie.animTimer) % 4;
@@ -5072,7 +5784,7 @@
         }
         const crowdShift = Math.sin(zombie.wobble) * 7 * dt;
         zombie.x = clamp(zombie.x + crowdShift, this.bounds.left, this.bounds.right);
-        zombie.setDepth(70 + zombie.y / 5);
+        zombie.setDepth(ZOMBIE_BODY_DEPTH_BASE + zombie.y / 5);
 
         if (zombie.slowTimer > 0) {
           zombie.slowTimer -= dt;
@@ -5303,6 +6015,9 @@
       const rifle = this.getDefenderById("b");
       const rocket = this.getDefenderById("d");
       const sniper = this.getDefenderById("e");
+      const fire = this.getDefenderById("f");
+      const shock = this.getDefenderById("g");
+      const engineer = this.getDefenderById("h");
       const rifleBurstGain = 2;
       const rifleGrenadeDamageBoost = rifle.rocketDamageBoost || 1;
       const rifleGrenadeRadiusBoost = rifle.rocketRadiusBoost || 1;
@@ -5538,6 +6253,155 @@
         apply: () => {
           const defender = this.getDefenderById("e");
           defender.rate = Math.max(defender.baseRate * 0.58, defender.rate * 0.82);
+        }
+      });
+      add("f", {
+        id: "f-zone",
+        icon: "skill-rocket",
+        tag: "화염",
+        title: "번지는 불길",
+        desc: "화염병이 남기는 불길이\n더 넓게 번집니다.",
+        stat: `반경 ${Math.round(fire.fireZoneRadius)} → ${Math.round(fire.fireZoneRadius + 12)}\n구역 피해 ${this.formatPercent(fire.fireZoneDamageScale)} → ${this.formatPercent(fire.fireZoneDamageScale + 0.03)}`,
+        accent: SKILL_ACCENTS.fire,
+        accentHex: SKILL_ACCENT_HEX.fire,
+        apply: () => {
+          const defender = this.getDefenderById("f");
+          defender.fireZoneRadius += 12;
+          defender.fireZoneDuration += 0.5;
+          defender.fireZoneDamageScale += 0.03;
+        }
+      });
+      add("f", {
+        id: "f-bottle",
+        icon: "skill-rocket-impact",
+        tag: "화염",
+        title: "농축 화염병",
+        desc: "직격 피해를 높이고\n투척 간격을 줄입니다.",
+        stat: `피해 ${this.formatPercent(fire.damageBoost)} → ${this.formatPercent(fire.damageBoost * 1.14)}\n공격 간격 ${this.formatSeconds(fire.rate)} → ${this.formatSeconds(Math.max(fire.baseRate * 0.62, fire.rate * 0.86))}`,
+        available: fire.rate > fire.baseRate * 0.64 || fire.damageBoost < 2,
+        accent: SKILL_ACCENTS.fire,
+        accentHex: SKILL_ACCENT_HEX.fire,
+        apply: () => {
+          const defender = this.getDefenderById("f");
+          defender.damageBoost *= 1.14;
+          defender.rate = Math.max(defender.baseRate * 0.62, defender.rate * 0.86);
+        }
+      });
+      add("f", {
+        id: "f-sticky",
+        icon: "skill-frost",
+        tag: "화염",
+        title: "끈적한 연소",
+        desc: "불길에 붙은 좀비가\n잠시 발이 묶입니다.",
+        stat: `둔화 ${this.formatSeconds(fire.slowDuration)} → ${this.formatSeconds(fire.slowDuration + 0.35)}\n지속 ${this.formatSeconds(fire.fireZoneDuration)} → ${this.formatSeconds(fire.fireZoneDuration + 0.45)}`,
+        available: fire.slowDuration < 1.4,
+        accent: SKILL_ACCENTS.fire,
+        accentHex: SKILL_ACCENT_HEX.fire,
+        apply: () => {
+          const defender = this.getDefenderById("f");
+          defender.slowDuration += 0.35;
+          defender.fireZoneDuration += 0.45;
+          defender.fireZoneDamageScale += 0.02;
+        }
+      });
+      add("g", {
+        id: "g-voltage",
+        icon: "skill-frost",
+        tag: "전기",
+        title: "고전압 코일",
+        desc: "전격탄이 더 오래 물고 늘어져\n전진 속도를 늦춥니다.",
+        stat: `둔화 ${this.formatSeconds(shock.slowDuration)} → ${this.formatSeconds(shock.slowDuration + 0.35)}\n연쇄 피해 ${this.formatPercent(shock.chainDamageScale)} → ${this.formatPercent(shock.chainDamageScale + 0.05)}`,
+        accent: SKILL_ACCENTS.shock,
+        accentHex: SKILL_ACCENT_HEX.shock,
+        apply: () => {
+          const defender = this.getDefenderById("g");
+          defender.slowDuration += 0.35;
+          defender.chainDamageScale += 0.05;
+          defender.damageBoost *= 1.06;
+        }
+      });
+      add("g", {
+        id: "g-chain",
+        icon: "skill-pierce",
+        tag: "전기",
+        title: "연쇄 전도",
+        desc: "전격이 근처 좀비로\n한 번 더 튀어 오릅니다.",
+        stat: `연쇄 ${shock.chainJumps}회 → ${shock.chainJumps + 1}회\n전도 반경 ${Math.round(shock.chainRadius)} → ${Math.round(shock.chainRadius + 18)}`,
+        available: shock.chainJumps < 4,
+        accent: SKILL_ACCENTS.shock,
+        accentHex: SKILL_ACCENT_HEX.shock,
+        apply: () => {
+          const defender = this.getDefenderById("g");
+          defender.chainJumps += 1;
+          defender.chainRadius += 18;
+          defender.rate = Math.max(defender.baseRate * 0.66, defender.rate * 0.9);
+        }
+      });
+      add("g", {
+        id: "g-overload",
+        icon: "skill-barrage",
+        tag: "전기",
+        title: "과부하 방전",
+        desc: "전격탄의 급소 확률과\n치명 피해가 증가합니다.",
+        stat: `치명률 ${this.formatPercent(shock.critChance)} → ${this.formatPercent(Math.min(0.64, shock.critChance + 0.09))}\n치명 피해 ${this.formatPercent(shock.critMultiplier)} → ${this.formatPercent(shock.critMultiplier + 0.3)}`,
+        accent: SKILL_ACCENTS.shock,
+        accentHex: SKILL_ACCENT_HEX.shock,
+        apply: () => {
+          const defender = this.getDefenderById("g");
+          defender.critChance = Math.min(0.64, defender.critChance + 0.09);
+          defender.critMultiplier += 0.3;
+          defender.damageBoost *= 1.08;
+        }
+      });
+      add("h", {
+        id: "h-turret",
+        icon: "skill-barrage",
+        tag: "공병",
+        title: (this.turrets?.length || 0) >= 3 ? "터렛 출력 강화" : "휴대 터렛",
+        desc: "방어선 앞에 자동 터렛을\n설치하거나 강화합니다.",
+        stat: `터렛 ${(this.turrets?.length || 0)}/3 → ${Math.min(3, (this.turrets?.length || 0) + 1)}/3\n출력 ${this.formatPercent(engineer.turretDamageBoost)} → ${this.formatPercent(engineer.turretDamageBoost * 1.08)}`,
+        accent: SKILL_ACCENTS.engineer,
+        accentHex: SKILL_ACCENT_HEX.engineer,
+        apply: () => {
+          const defender = this.getDefenderById("h");
+          defender.turretDamageBoost *= 1.08;
+          defender.turretRateBoost *= 1.05;
+          this.createEngineerTurret(defender);
+        }
+      });
+      add("h", {
+        id: "h-wire",
+        icon: "skill-pierce",
+        tag: "공병",
+        title: this.barbedWire ? "철조망 보강" : "가시철조망",
+        desc: "진입로에 철조망을 깔아\n접근한 좀비를 늦춥니다.",
+        stat: `피해 ${this.formatPercent(engineer.wireDamageBoost)} → ${this.formatPercent(engineer.wireDamageBoost * 1.12)}\n둔화 ${this.formatPercent(engineer.wireSlowBoost)} → ${this.formatPercent(engineer.wireSlowBoost * 1.08)}`,
+        accent: SKILL_ACCENTS.engineer,
+        accentHex: SKILL_ACCENT_HEX.engineer,
+        apply: () => {
+          const defender = this.getDefenderById("h");
+          defender.wireDamageBoost *= 1.12;
+          defender.wireSlowBoost *= 1.08;
+          this.reinforceBarbedWire(defender);
+        }
+      });
+      const barricadeRepair = Math.round(this.maxCoreHp * 0.1);
+      const barricadeShield = Math.round(this.maxCoreHp * 0.08);
+      add("h", {
+        id: "h-barricade",
+        icon: "skill-max-hp",
+        tag: "공병",
+        title: "바리케이드 보강",
+        desc: "방어선에 장갑판과\n임시 보호막을 덧댑니다.",
+        stat: `HP ${Math.round(this.coreHp)}/${Math.round(this.maxCoreHp)} → ${Math.min(Math.round(this.maxCoreHp), Math.round(this.coreHp + barricadeRepair))}/${Math.round(this.maxCoreHp)}\n보호막 ${Math.round(this.shield)} → ${Math.round(this.shield + barricadeShield)}`,
+        accent: SKILL_ACCENTS.engineer,
+        accentHex: SKILL_ACCENT_HEX.engineer,
+        apply: () => {
+          const defender = this.getDefenderById("h");
+          this.coreHp = clamp(this.coreHp + barricadeRepair, 0, this.maxCoreHp);
+          this.shield += barricadeShield;
+          this.morale = Math.round((this.coreHp / this.maxCoreHp) * 100);
+          defender.damageBoost *= 1.06;
         }
       });
       return upgrades;
@@ -5798,7 +6662,10 @@
         pierce: "character-c-up",
         rally: "character-a-up",
         repair: "character-e-right",
-        squad: "character-d-right"
+        squad: "character-d-right",
+        fire: "character-f-up",
+        shock: "character-g-up",
+        engineer: "character-h-up"
       };
       return map[id] || "character-c-up";
     }
