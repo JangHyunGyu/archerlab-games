@@ -28,7 +28,7 @@
       return false;
     }
   })();
-  const PNG_ONLY_ZOMBIE_ASSETS = /assets\/images\/(?:effect-fire-zone-sheet|zombie-(?:walk-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)|death-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-sheet|corpse-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-[1-3]|hit-(?:firebomb|shock|nail)-sheet))\.png$/i;
+  const PNG_ONLY_ZOMBIE_ASSETS = /assets\/images\/(?:character-a-attack-[0-3]|effect-fire-zone-sheet|zombie-(?:walk-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)|death-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-sheet|corpse-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-[1-3]|hit-(?:firebomb|shock|nail)-sheet))\.png$/i;
   const imageAsset = (path) => {
     const normalizedPath = path.replace(/\\/g, "/");
     return SUPPORTS_WEBP && !PNG_ONLY_ZOMBIE_ASSETS.test(normalizedPath)
