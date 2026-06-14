@@ -698,7 +698,7 @@
       id: "f",
       x: 270,
       y: 925,
-      height: 214,
+      height: 196,
       damageScale: 0.42,
       role: "fire",
       projectile: "projectile-firebomb",
@@ -709,7 +709,7 @@
       fireZoneRadius: 72,
       fireZoneDuration: 3.2,
       fireZoneDamageScale: 0.22,
-      aim: { pivot: [0, -132], reach: 42 },
+      aim: { pivot: [0, -121], reach: 39 },
       recruit: {
         icon: "avatar-fire",
         portrait: "avatar-fire",
