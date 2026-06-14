@@ -122,10 +122,10 @@
     ])
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
-    normal: { corpseWidth: 0.74, deathSize: 0.92 },
+    normal: { corpseWidth: 0.82, deathSize: 0.92 },
     student: { corpseWidth: 0.78, deathSize: 0.84 },
     runner: { corpseWidth: 0.84, deathSize: 0.96 },
-    brute: { corpseWidth: 1.16, deathSize: 1.22 },
+    brute: { corpseWidth: 1.06, deathSize: 1.22 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 }
   };
@@ -1768,6 +1768,7 @@
           accent: SKILL_ACCENTS[`recruit-${defender.id}`],
           accentHex: SKILL_ACCENT_HEX[`recruit-${defender.id}`],
           sfx: "recruit",
+          suppressToast: true,
           toast: `${defender.recruit.title} 완료`,
           apply: () => this.recruitDefender(defender.id)
         }));
@@ -5640,7 +5641,9 @@
       this.mode = "playing";
       const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
       this.createScreenPulse(accent);
-      this.showToast(upgrade.toast || `${upgrade.title} 적용`, accent);
+      if (!upgrade.suppressToast) {
+        this.showToast(upgrade.toast || `${upgrade.title} 적용`, accent);
+      }
       this.updateHud();
     }
 
