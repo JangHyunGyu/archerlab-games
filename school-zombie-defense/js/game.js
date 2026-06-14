@@ -68,10 +68,7 @@
     up: "aim-12",
     right: "aim-1330"
   };
-  const CHARACTER_ATTACK_ACTIONS = {
-    a: "attack",
-    f: "throw"
-  };
+  const CHARACTER_ATTACK_ACTIONS = {};
   const PROJECTILE_SCALES = {
     "projectile-arrow": 0.228,
     "projectile-pistol": 0.032,
@@ -1762,15 +1759,7 @@
 
     loadManualCharacterAssets() {
       const assets = [
-        ["character-a-attack-0", "assets/images/character-a-attack-0.png"],
-        ["character-a-attack-1", "assets/images/character-a-attack-1.png"],
-        ["character-a-attack-2", "assets/images/character-a-attack-2.png"],
-        ["character-a-attack-3", "assets/images/character-a-attack-3.png"],
         ["character-f", "assets/images/character-f.png"],
-        ["character-f-throw-0", "assets/images/character-f-throw-0.png"],
-        ["character-f-throw-1", "assets/images/character-f-throw-1.png"],
-        ["character-f-throw-2", "assets/images/character-f-throw-2.png"],
-        ["character-f-throw-3", "assets/images/character-f-throw-3.png"],
         ["character-g", "assets/images/character-g.png"],
         ["character-h", "assets/images/character-h.png"],
         ["avatar-fire", "assets/images/avatar-fire.png"],
@@ -1798,15 +1787,7 @@
       this.load.image("character-c", imageAsset("assets/images/character-c.png"));
       this.load.image("character-d", imageAsset("assets/images/character-d.png"));
       this.load.image("character-e", imageAsset("assets/images/character-e.png"));
-      this.load.image("character-a-attack-0", imageAsset("assets/images/character-a-attack-0.png"));
-      this.load.image("character-a-attack-1", imageAsset("assets/images/character-a-attack-1.png"));
-      this.load.image("character-a-attack-2", imageAsset("assets/images/character-a-attack-2.png"));
-      this.load.image("character-a-attack-3", imageAsset("assets/images/character-a-attack-3.png"));
       this.load.image("character-f", imageAsset("assets/images/character-f.png"));
-      this.load.image("character-f-throw-0", imageAsset("assets/images/character-f-throw-0.png"));
-      this.load.image("character-f-throw-1", imageAsset("assets/images/character-f-throw-1.png"));
-      this.load.image("character-f-throw-2", imageAsset("assets/images/character-f-throw-2.png"));
-      this.load.image("character-f-throw-3", imageAsset("assets/images/character-f-throw-3.png"));
       this.load.image("character-g", imageAsset("assets/images/character-g.png"));
       this.load.image("character-h", imageAsset("assets/images/character-h.png"));
       this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
