@@ -2445,11 +2445,13 @@
         return;
       }
       const base = hitType === "explosion" || hitType === "projectile-rocket"
-        ? 18
+        ? 36
         : hitType === "projectile-arrow"
           ? 64
         : hitType === "projectile-sniper"
           ? 50
+        : hitType === "projectile-pistol" || hitType === "projectile-rifle"
+          ? crit ? 18 : 10
           : crit
             ? 9
             : 5;
