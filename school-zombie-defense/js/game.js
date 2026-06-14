@@ -28,7 +28,7 @@
       return false;
     }
   })();
-  const PNG_ONLY_ZOMBIE_ASSETS = /assets\/images\/zombie-(?:walk-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)|death-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-sheet|corpse-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-[1-3])\.png$/i;
+  const PNG_ONLY_ZOMBIE_ASSETS = /assets\/images\/(?:effect-fire-zone-sheet|zombie-(?:walk-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)|death-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-sheet|corpse-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-[1-3]|hit-(?:firebomb|shock|nail)-sheet))\.png$/i;
   const imageAsset = (path) => {
     const normalizedPath = path.replace(/\\/g, "/");
     return SUPPORTS_WEBP && !PNG_ONLY_ZOMBIE_ASSETS.test(normalizedPath)
@@ -64,11 +64,17 @@
   ];
   const AIM_POSE_KEYS = AIM_POSES.map((pose) => pose.key);
   const AIM_POSE_BY_KEY = Object.fromEntries(AIM_POSES.map((pose) => [pose.key, pose]));
+  const THROW_ANIMATION_FRAMES = 4;
+  const THROW_ANIMATION_FRAME_DURATION = 0.075;
   const AIM_ALIASES = {
     idle: "aim-12",
     left: "aim-1030",
     up: "aim-12",
     right: "aim-1330"
+  };
+  const CHARACTER_ATTACK_ACTIONS = {
+    a: "attack",
+    f: "throw"
   };
   const PROJECTILE_SCALES = {
     "projectile-arrow": 0.228,
@@ -78,9 +84,9 @@
     "projectile-rocket": 0.19,
     "projectile-sniper": 0.16,
     "projectile-frost": 0.78,
-    "projectile-firebomb": 0.26,
-    "projectile-shock": 0.62,
-    "projectile-nail": 0.12
+    "projectile-firebomb": 0.32,
+    "projectile-shock": 0.48,
+    "projectile-nail": 0.34
   };
   const MUZZLE_EFFECTS = {
     "projectile-arrow": { texture: "muzzle-arrow", width: 42, duration: 150, alpha: 0.78, scalePeak: 1.12 },
@@ -98,9 +104,9 @@
     "projectile-rifle": { texture: "zombie-hit-rifle-sheet", width: 70, duration: 260, alpha: 0.98, scalePeak: 1.08, rotation: 0.35, frameWidth: 140, frameHeight: 100, frames: 16 },
     "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 150, duration: 300, alpha: 0.98, scalePeak: 1.16, rotation: 0.42, frameWidth: 150, frameHeight: 104, frames: 16 },
     "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 106, duration: 320, alpha: 0.98, scalePeak: 1.1, rotation: 0.25, frameWidth: 160, frameHeight: 130, frames: 18 },
-    "projectile-firebomb": { texture: "zombie-hit-rocket-sheet", width: 92, duration: 300, alpha: 0.94, scalePeak: 1.12, rotation: 0.32, frameWidth: 160, frameHeight: 130, frames: 18 },
-    "projectile-shock": { texture: "zombie-hit-rifle-sheet", width: 78, duration: 240, alpha: 0.98, scalePeak: 1.14, rotation: 0.48, frameWidth: 140, frameHeight: 100, frames: 16 },
-    "projectile-nail": { texture: "zombie-hit-rifle-sheet", width: 48, duration: 210, alpha: 0.96, scalePeak: 1.08, rotation: 0.28, frameWidth: 140, frameHeight: 100, frames: 16 },
+    "projectile-firebomb": { texture: "zombie-hit-firebomb-sheet", width: 104, duration: 260, alpha: 0.96, scalePeak: 1.12, rotation: 0.18, frameWidth: 140, frameHeight: 140, frames: 4 },
+    "projectile-shock": { texture: "zombie-hit-shock-sheet", width: 92, duration: 235, alpha: 0.98, scalePeak: 1.14, rotation: 0.34, frameWidth: 144, frameHeight: 144, frames: 4 },
+    "projectile-nail": { texture: "zombie-hit-nail-sheet", width: 68, duration: 210, alpha: 0.96, scalePeak: 1.1, rotation: 0.26, frameWidth: 128, frameHeight: 128, frames: 4 },
     explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
@@ -290,6 +296,30 @@
       portrait: "avatar-sniper",
       icon: "skill-sniper-weakpoint",
       accent: 0x91ff9a
+    },
+    {
+      id: "f",
+      name: "화염병 지원",
+      weapon: "화염병",
+      portrait: "avatar-fire",
+      icon: "skill-rocket",
+      accent: 0xff7a22
+    },
+    {
+      id: "g",
+      name: "전기 지원",
+      weapon: "전격 제어",
+      portrait: "avatar-shock",
+      icon: "skill-frost",
+      accent: 0xff9ad6
+    },
+    {
+      id: "h",
+      name: "엔지니어",
+      weapon: "공병 장비",
+      portrait: "avatar-engineer",
+      icon: "skill-barrage",
+      accent: 0xffd166
     }
   ];
   const SHOP_CHARACTER_UPGRADES = {
@@ -317,6 +347,21 @@
       { id: "e_power", title: "대구경 총열", subtitle: "저격 부품", part: "고압탄 대응 총열 강화", icon: "skill-sniper" },
       { id: "e_focus", title: "약점 스코프", subtitle: "저격 부품", part: "취약부위 자동 보정", icon: "skill-sniper-weakpoint" },
       { id: "e_pierce", title: "철갑 탄심", subtitle: "저격 탄약", part: "장갑 관통 탄심 교체", icon: "skill-pierce" }
+    ],
+    f: [
+      { id: "f_burn", title: "고농도 연료", subtitle: "화염병 재료", part: "연소 온도와 직격 피해 강화", icon: "skill-rocket-impact" },
+      { id: "f_area", title: "확산 심지", subtitle: "화염병 부품", part: "불길 확산 범위와 지속시간 증가", icon: "skill-rocket" },
+      { id: "f_throw", title: "투척 훈련", subtitle: "화염병 전술", part: "투척 동작과 장전 루틴 단축", icon: "skill-barrage" }
+    ],
+    g: [
+      { id: "g_voltage", title: "고전압 배터리", subtitle: "전격 부품", part: "전격 피해와 둔화 지속 강화", icon: "skill-frost" },
+      { id: "g_chain", title: "전도 코일", subtitle: "전격 부품", part: "연쇄 전도 반경과 횟수 보정", icon: "skill-pierce" },
+      { id: "g_control", title: "절연 손잡이", subtitle: "전격 제어", part: "방전 간격과 급소 방전 안정화", icon: "skill-barrage" }
+    ],
+    h: [
+      { id: "h_turret", title: "터렛 모터", subtitle: "공병 장비", part: "휴대 터렛 출력과 회전 속도 강화", icon: "skill-barrage" },
+      { id: "h_wire", title: "강화 철조망", subtitle: "공병 장비", part: "철조망 피해와 저지력 강화", icon: "skill-pierce" },
+      { id: "h_barricade", title: "장갑 플레이트", subtitle: "바리케이드 부품", part: "보강 수리량과 보호막 품질 증가", icon: "skill-max-hp" }
     ]
   };
   const getAllShopUpgradeIds = () => Object.values(SHOP_CHARACTER_UPGRADES).flat().map((upgrade) => upgrade.id);
@@ -354,6 +399,7 @@
     "projectile-nail": 85
   };
   const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4.6;
+  const FIREBOMB_FLIGHT_TIME_SCALE = 2;
   const RIFLE_GRENADE_INTERVAL_SCALE = 1;
   const RIFLE_GRENADE_INITIAL_INTERVAL = 10 * RIFLE_GRENADE_INTERVAL_SCALE;
   const RIFLE_GRENADE_MIN_INTERVAL = 2 * RIFLE_GRENADE_INTERVAL_SCALE;
@@ -971,17 +1017,21 @@
     const cellWidth = 256;
     const cellHeight = 384;
     Object.entries(GENERATED_DEFENDER_PROFILES).forEach(([id, profile]) => {
-      makeCanvasTexture(scene, `character-${id}`, cellWidth * AIM_POSE_KEYS.length, cellHeight, (ctx) => {
-        AIM_POSE_KEYS.forEach((pose, index) => {
-          ctx.save();
-          ctx.translate(index * cellWidth, 0);
-          drawGeneratedDefenderPose(ctx, cellWidth, cellHeight, profile, pose);
-          ctx.restore();
+      if (!scene.textures.exists(`character-${id}`)) {
+        makeCanvasTexture(scene, `character-${id}`, cellWidth * AIM_POSE_KEYS.length, cellHeight, (ctx) => {
+          AIM_POSE_KEYS.forEach((pose, index) => {
+            ctx.save();
+            ctx.translate(index * cellWidth, 0);
+            drawGeneratedDefenderPose(ctx, cellWidth, cellHeight, profile, pose);
+            ctx.restore();
+          });
         });
-      });
-      makeCanvasTexture(scene, OWNER_SKILL_PORTRAITS[id], 128, 128, (ctx) => {
-        drawPortrait(ctx, 128, 128, profile.portrait, profile.label);
-      });
+      }
+      if (!scene.textures.exists(OWNER_SKILL_PORTRAITS[id])) {
+        makeCanvasTexture(scene, OWNER_SKILL_PORTRAITS[id], 128, 128, (ctx) => {
+          drawPortrait(ctx, 128, 128, profile.portrait, profile.label);
+        });
+      }
     });
   }
 
@@ -1017,6 +1067,52 @@
           cellHeight
         );
       });
+    });
+  }
+
+  function createCharacterAttackTextures(scene) {
+    Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
+      for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
+        const sourceKey = `character-${id}-${action}-${frame}`;
+        if (!scene.textures.exists(sourceKey)) {
+          continue;
+        }
+        const source = scene.textures.get(sourceKey).getSourceImage();
+        const cellWidth = Math.floor(source.width / AIM_POSE_KEYS.length);
+        const cellHeight = source.height;
+        AIM_POSE_KEYS.forEach((pose, index) => {
+          makeImageSliceTexture(
+            scene,
+            sourceKey,
+            `character-${id}-${action}-${pose}-${frame}`,
+            index * cellWidth,
+            0,
+            cellWidth,
+            cellHeight
+          );
+        });
+      }
+    });
+  }
+
+  function createTurretAimTextures(scene) {
+    const sourceKey = "engineer-turret-aim";
+    if (!scene.textures.exists(sourceKey)) {
+      return;
+    }
+    const source = scene.textures.get(sourceKey).getSourceImage();
+    const cellWidth = Math.floor(source.width / AIM_POSE_KEYS.length);
+    const cellHeight = source.height;
+    AIM_POSE_KEYS.forEach((pose, index) => {
+      makeImageSliceTexture(
+        scene,
+        sourceKey,
+        `engineer-turret-${pose}`,
+        index * cellWidth,
+        0,
+        cellWidth,
+        cellHeight
+      );
     });
   }
 
@@ -1558,10 +1654,18 @@
   }
 
   function createTextures(scene) {
-    makeCanvasTexture(scene, "projectile-frost", 48, 84, (ctx) => drawProjectile(ctx, 48, 84, "frost"));
-    makeCanvasTexture(scene, "projectile-firebomb", 62, 92, (ctx) => drawProjectile(ctx, 62, 92, "firebomb"));
-    makeCanvasTexture(scene, "projectile-shock", 96, 64, (ctx) => drawProjectile(ctx, 96, 64, "shock"));
-    makeCanvasTexture(scene, "projectile-nail", 34, 90, (ctx) => drawProjectile(ctx, 34, 90, "nail"));
+    if (!scene.textures.exists("projectile-frost")) {
+      makeCanvasTexture(scene, "projectile-frost", 48, 84, (ctx) => drawProjectile(ctx, 48, 84, "frost"));
+    }
+    if (!scene.textures.exists("projectile-firebomb")) {
+      makeCanvasTexture(scene, "projectile-firebomb", 62, 92, (ctx) => drawProjectile(ctx, 62, 92, "firebomb"));
+    }
+    if (!scene.textures.exists("projectile-shock")) {
+      makeCanvasTexture(scene, "projectile-shock", 96, 64, (ctx) => drawProjectile(ctx, 96, 64, "shock"));
+    }
+    if (!scene.textures.exists("projectile-nail")) {
+      makeCanvasTexture(scene, "projectile-nail", 34, 90, (ctx) => drawProjectile(ctx, 34, 90, "nail"));
+    }
 
     makeCanvasTexture(scene, "zombie-girl", 78, 124, (ctx) => drawZombie(ctx, 78, 124, {
       skin: "#9fb2a3",
@@ -1622,6 +1726,69 @@
       super("BootScene");
     }
 
+    loadManualImage(path) {
+      return new Promise((resolve) => {
+        const candidates = [imageAsset(path), path]
+          .map((candidate) => new URL(candidate, window.location.href).href)
+          .filter((candidate, index, items) => items.indexOf(candidate) === index);
+        const tryLoad = (index) => {
+          if (index >= candidates.length) {
+            resolve(null);
+            return;
+          }
+          const image = new Image();
+          image.crossOrigin = "anonymous";
+          image.onload = () => resolve(image);
+          image.onerror = () => tryLoad(index + 1);
+          image.src = candidates[index];
+        };
+        tryLoad(0);
+      });
+    }
+
+    loadManualTexture(key, path) {
+      if (this.textures.exists(key)) {
+        return Promise.resolve();
+      }
+      return this.loadManualImage(path).then((image) => {
+        if (!image || this.textures.exists(key)) {
+          return;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth || image.width;
+        canvas.height = image.naturalHeight || image.height;
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(image, 0, 0);
+        this.textures.addCanvas(key, canvas);
+      });
+    }
+
+    loadManualCharacterAssets() {
+      const assets = [
+        ["character-a-attack-0", "assets/images/character-a-attack-0.png"],
+        ["character-a-attack-1", "assets/images/character-a-attack-1.png"],
+        ["character-a-attack-2", "assets/images/character-a-attack-2.png"],
+        ["character-a-attack-3", "assets/images/character-a-attack-3.png"],
+        ["character-f", "assets/images/character-f.png"],
+        ["character-f-throw-0", "assets/images/character-f-throw-0.png"],
+        ["character-f-throw-1", "assets/images/character-f-throw-1.png"],
+        ["character-f-throw-2", "assets/images/character-f-throw-2.png"],
+        ["character-f-throw-3", "assets/images/character-f-throw-3.png"],
+        ["character-g", "assets/images/character-g.png"],
+        ["character-h", "assets/images/character-h.png"],
+        ["avatar-fire", "assets/images/avatar-fire.png"],
+        ["avatar-shock", "assets/images/avatar-shock.png"],
+        ["avatar-engineer", "assets/images/avatar-engineer.png"],
+        ["projectile-firebomb", "assets/images/projectile-firebomb.png"],
+        ["projectile-shock", "assets/images/projectile-shock.png"],
+        ["projectile-nail", "assets/images/projectile-nail.png"],
+        ["engineer-turret", "assets/images/engineer-turret.png"],
+        ["engineer-turret-aim", "assets/images/engineer-turret-aim.png"]
+      ];
+      return Promise.all(assets.map(([key, path]) => this.loadManualTexture(key, path)));
+    }
+
     preload() {
       this.load.image("bg-corridor", imageAsset("assets/images/corridor-battlefield.png"));
       this.load.image("title-keyart", imageAsset("assets/images/title-keyart.png"));
@@ -1635,17 +1802,34 @@
       this.load.image("character-c", imageAsset("assets/images/character-c.png"));
       this.load.image("character-d", imageAsset("assets/images/character-d.png"));
       this.load.image("character-e", imageAsset("assets/images/character-e.png"));
+      this.load.image("character-a-attack-0", imageAsset("assets/images/character-a-attack-0.png"));
+      this.load.image("character-a-attack-1", imageAsset("assets/images/character-a-attack-1.png"));
+      this.load.image("character-a-attack-2", imageAsset("assets/images/character-a-attack-2.png"));
+      this.load.image("character-a-attack-3", imageAsset("assets/images/character-a-attack-3.png"));
+      this.load.image("character-f", imageAsset("assets/images/character-f.png"));
+      this.load.image("character-f-throw-0", imageAsset("assets/images/character-f-throw-0.png"));
+      this.load.image("character-f-throw-1", imageAsset("assets/images/character-f-throw-1.png"));
+      this.load.image("character-f-throw-2", imageAsset("assets/images/character-f-throw-2.png"));
+      this.load.image("character-f-throw-3", imageAsset("assets/images/character-f-throw-3.png"));
+      this.load.image("character-g", imageAsset("assets/images/character-g.png"));
+      this.load.image("character-h", imageAsset("assets/images/character-h.png"));
       this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
       this.load.image("avatar-bow", imageAsset("assets/images/avatar-bow.png"));
       this.load.image("avatar-rifle", imageAsset("assets/images/avatar-rifle.png"));
       this.load.image("avatar-rocket", imageAsset("assets/images/avatar-rocket.png"));
       this.load.image("avatar-sniper", imageAsset("assets/images/avatar-sniper.png"));
+      this.load.image("avatar-fire", imageAsset("assets/images/avatar-fire.png"));
+      this.load.image("avatar-shock", imageAsset("assets/images/avatar-shock.png"));
+      this.load.image("avatar-engineer", imageAsset("assets/images/avatar-engineer.png"));
       this.load.image("projectile-arrow", imageAsset("assets/images/projectile-arrow.png"));
       this.load.image("projectile-pistol", imageAsset("assets/images/projectile-pistol.png"));
       this.load.image("projectile-rifle", imageAsset("assets/images/projectile-rifle.png"));
       this.load.image("projectile-grenade", imageAsset("assets/images/projectile-grenade.png"));
       this.load.image("projectile-rocket", imageAsset("assets/images/projectile-rocket.png"));
       this.load.image("projectile-sniper", imageAsset("assets/images/projectile-sniper.png"));
+      this.load.image("projectile-firebomb", imageAsset("assets/images/projectile-firebomb.png"));
+      this.load.image("projectile-shock", imageAsset("assets/images/projectile-shock.png"));
+      this.load.image("projectile-nail", imageAsset("assets/images/projectile-nail.png"));
       this.load.image("muzzle-arrow", imageAsset("assets/images/muzzle-arrow.png"));
       this.load.image("muzzle-pistol", imageAsset("assets/images/muzzle-pistol.png"));
       this.load.image("muzzle-rifle", imageAsset("assets/images/muzzle-rifle.png"));
@@ -1677,6 +1861,12 @@
       this.load.spritesheet("zombie-hit-rifle-sheet", imageAsset("assets/images/zombie-hit-rifle-sheet.png"), { frameWidth: 140, frameHeight: 100 });
       this.load.spritesheet("zombie-hit-rocket-sheet", imageAsset("assets/images/zombie-hit-rocket-sheet.png"), { frameWidth: 160, frameHeight: 130 });
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
+      this.load.spritesheet("zombie-hit-firebomb-sheet", imageAsset("assets/images/zombie-hit-firebomb-sheet.png"), { frameWidth: 140, frameHeight: 140 });
+      this.load.spritesheet("zombie-hit-shock-sheet", imageAsset("assets/images/zombie-hit-shock-sheet.png"), { frameWidth: 144, frameHeight: 144 });
+      this.load.spritesheet("zombie-hit-nail-sheet", imageAsset("assets/images/zombie-hit-nail-sheet.png"), { frameWidth: 128, frameHeight: 128 });
+      this.load.spritesheet("effect-fire-zone-sheet", imageAsset("assets/images/effect-fire-zone-sheet.png"), { frameWidth: 256, frameHeight: 160 });
+      this.load.image("engineer-turret", imageAsset("assets/images/engineer-turret.png"));
+      this.load.image("engineer-turret-aim", imageAsset("assets/images/engineer-turret-aim.png"));
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
       this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
       BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
@@ -1707,12 +1897,16 @@
         loading.remove();
       }
       createZombieSpriteTextures(this);
-      createGeneratedDefenderTextures(this);
-      createCharacterSpriteTextures(this);
-      createCharacterBadgeTextures(this);
-      createUiTextures(this);
-      createTextures(this);
-      this.scene.start("GameScene");
+      this.loadManualCharacterAssets().then(() => {
+        createGeneratedDefenderTextures(this);
+        createCharacterSpriteTextures(this);
+        createCharacterAttackTextures(this);
+        createTurretAimTextures(this);
+        createCharacterBadgeTextures(this);
+        createUiTextures(this);
+        createTextures(this);
+        this.scene.start("GameScene");
+      });
     }
   }
 
@@ -1906,6 +2100,7 @@
           aim: defender.aim,
           pose: "aim-12",
           firePoseTimer: 0,
+          attackAnimation: null,
           id: defender.id,
           sprite,
           role: defender.role,
@@ -1947,6 +2142,8 @@
           turretRateBoost: 1,
           wireDamageBoost: 1,
           wireSlowBoost: 1,
+          barricadeRepairBoost: 1,
+          barricadeShieldBoost: 1,
           markDuration: defender.markDuration || 0,
           baseMarkDuration: defender.markDuration || 0,
           markDamageBonus: defender.markDamageBonus || 0,
@@ -2178,12 +2375,39 @@
     }
 
     setDefenderPose(defender, pose) {
-      if (!defender.sprite || defender.pose === pose) {
+      if (!defender.sprite) {
         return;
       }
+      const textureKey = `character-${defender.id}-${pose}`;
+      if (!defender.attackAnimation && defender.pose === pose && defender.sprite.texture?.key === textureKey) {
+        return;
+      }
+      defender.attackAnimation = null;
       defender.pose = pose;
-      defender.sprite.setTexture(`character-${defender.id}-${pose}`);
+      defender.sprite.setTexture(textureKey);
       this.fitSpriteHeight(defender.sprite, defender.height);
+    }
+
+    startDefenderAttackAnimation(defender, pose) {
+      const action = CHARACTER_ATTACK_ACTIONS[defender.id];
+      const firstAttackFrame = action ? `character-${defender.id}-${action}-${pose}-0` : null;
+      if (action && defender.sprite && this.textures.exists(firstAttackFrame)) {
+        defender.pose = pose;
+        defender.attackAnimation = {
+          action,
+          pose,
+          frame: 0,
+          frames: THROW_ANIMATION_FRAMES,
+          timer: THROW_ANIMATION_FRAME_DURATION,
+          frameDuration: THROW_ANIMATION_FRAME_DURATION
+        };
+        defender.sprite.setTexture(firstAttackFrame);
+        this.fitSpriteHeight(defender.sprite, defender.height);
+        defender.firePoseTimer = THROW_ANIMATION_FRAMES * THROW_ANIMATION_FRAME_DURATION;
+        return;
+      }
+      this.setDefenderPose(defender, pose);
+      defender.firePoseTimer = 0.18;
     }
 
     getAttackPose(defender, target) {
@@ -3595,7 +3819,7 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(504));
 
-      items.push(this.add.text(270, 330, "정비할 캐릭터 선택", {
+      items.push(this.add.text(270, 304, "정비할 캐릭터 선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -3604,10 +3828,12 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(521));
       SHOP_CHARACTERS.forEach((character, index) => {
-        this.addShopCharacterButton(character, 62 + index * 104, 402, character.id === selectedCharacter.id);
+        const col = index % 4;
+        const row = Math.floor(index / 4);
+        this.addShopCharacterButton(character, 78 + col * 128, 372 + row * 104, character.id === selectedCharacter.id);
       });
-      items.push(this.add.rectangle(270, 490, 430, 44, 0x071015, 0.78).setStrokeStyle(1, selectedCharacter.accent, 0.58).setDepth(520));
-      items.push(this.add.text(270, 490, `${selectedCharacter.name} · ${selectedCharacter.weapon} 정비`, {
+      items.push(this.add.rectangle(270, 548, 430, 44, 0x071015, 0.78).setStrokeStyle(1, selectedCharacter.accent, 0.58).setDepth(520));
+      items.push(this.add.text(270, 548, `${selectedCharacter.name} · ${selectedCharacter.weapon} 정비`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 20,
         fontStyle: "900",
@@ -3615,8 +3841,8 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(521));
-      this.getCharacterShopUpgrades(selectedCharacter.id).forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, selectedCharacter, 270, 566 + index * 104));
-      this.addOverlayButton(270, 890, 172, 50, "뒤로", 560, () => this.showMenu(), COLORS.gold);
+      this.getCharacterShopUpgrades(selectedCharacter.id).forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, selectedCharacter, 270, 626 + index * 100));
+      this.addOverlayButton(270, 924, 172, 46, "뒤로", 560, () => this.showMenu(), COLORS.gold);
     }
 
     addShopCharacterButton(character, x, y, selected) {
@@ -3684,6 +3910,15 @@
       if (id === "e_pierce") {
         return `관통 +${Math.floor(level / 5)} · 피해 +${percent(level * 0.8)}`;
       }
+      if (id === "f_burn") return `직격 +${percent(level * 2.6)} · 구역피해 +${percent(level * 0.6)}`;
+      if (id === "f_area") return `반경 +${Math.round(level * 1.5)} · 지속 +${(level * 0.05).toFixed(2)}초`;
+      if (id === "f_throw") return `공격 간격 -${percent(level * 0.8)} · 피해 +${percent(level * 0.8)}`;
+      if (id === "g_voltage") return `피해 +${percent(level * 2.2)} · 둔화 +${(level * 0.03).toFixed(2)}초`;
+      if (id === "g_chain") return `전도 반경 +${Math.round(level * 2)} · 연쇄 +${Math.floor(level / 10)}`;
+      if (id === "g_control") return `공격 간격 -${percent(level * 0.6)} · 치명 +${percent(level * 0.35)}`;
+      if (id === "h_turret") return `터렛 출력 +${percent(level * 3.5)} · 속도 +${percent(level * 1.8)}`;
+      if (id === "h_wire") return `철조망 피해 +${percent(level * 3.2)} · 둔화 +${percent(level * 1.8)}`;
+      if (id === "h_barricade") return `보강량 +${percent(level * 2)} · 보호막 +${percent(level * 2.5)}`;
       return `강화 +${percent(level * 2)}`;
     }
 
@@ -3886,6 +4121,37 @@
           defender.critChance = Math.min(0.76, defender.critChance + focus * 0.006);
           defender.critMultiplier += focus * 0.025;
           defender.pierce += Math.floor(pierce / 5);
+        } else if (defender.id === "f") {
+          const burn = this.getMetaUpgradeLevel("f_burn");
+          const area = this.getMetaUpgradeLevel("f_area");
+          const throwTraining = this.getMetaUpgradeLevel("f_throw");
+          defender.damageBoost *= 1 + burn * 0.026 + throwTraining * 0.008;
+          defender.fireZoneDamageScale += burn * 0.006;
+          defender.fireZoneRadius += area * 1.5;
+          defender.fireZoneDuration += area * 0.05;
+          defender.rate *= Math.max(0.55, 1 - throwTraining * 0.008);
+        } else if (defender.id === "g") {
+          const voltage = this.getMetaUpgradeLevel("g_voltage");
+          const chain = this.getMetaUpgradeLevel("g_chain");
+          const control = this.getMetaUpgradeLevel("g_control");
+          defender.damageBoost *= 1 + voltage * 0.022;
+          defender.slowDuration += voltage * 0.03;
+          defender.chainDamageScale += voltage * 0.006;
+          defender.chainRadius += chain * 2;
+          defender.chainJumps += Math.floor(chain / 10);
+          defender.rate *= Math.max(0.58, 1 - control * 0.006);
+          defender.critChance = Math.min(0.64, defender.critChance + control * 0.0035);
+        } else if (defender.id === "h") {
+          const turret = this.getMetaUpgradeLevel("h_turret");
+          const wire = this.getMetaUpgradeLevel("h_wire");
+          const barricade = this.getMetaUpgradeLevel("h_barricade");
+          defender.damageBoost *= 1 + turret * 0.012 + barricade * 0.008;
+          defender.turretDamageBoost *= 1 + turret * 0.035;
+          defender.turretRateBoost *= 1 + turret * 0.018;
+          defender.wireDamageBoost *= 1 + wire * 0.032;
+          defender.wireSlowBoost *= 1 + wire * 0.018;
+          defender.barricadeRepairBoost = 1 + barricade * 0.02;
+          defender.barricadeShieldBoost = 1 + barricade * 0.025;
         }
       });
     }
@@ -3943,11 +4209,14 @@
         defender.turretRateBoost = 1;
         defender.wireDamageBoost = 1;
         defender.wireSlowBoost = 1;
+        defender.barricadeRepairBoost = 1;
+        defender.barricadeShieldBoost = 1;
         defender.markDuration = defender.baseMarkDuration || 0;
         defender.markDamageBonus = defender.baseMarkDamageBonus || 0;
         defender.slowDuration = defender.baseSlowDuration || 0;
         defender.timer = rand(scaleWeaponInterval(0.1), defender.rate);
         defender.firePoseTimer = 0;
+        defender.attackAnimation = null;
       });
       this.applyMetaUpgrades();
       this.defenders.forEach((defender) => {
@@ -4034,6 +4303,26 @@
     updateDefenderAnimations(dt) {
       this.defenders.forEach((defender) => {
         if (!defender.recruited) {
+          return;
+        }
+        if (defender.attackAnimation) {
+          const animation = defender.attackAnimation;
+          animation.timer -= dt;
+          if (animation.timer <= 0) {
+            animation.frame += 1;
+            animation.timer += animation.frameDuration;
+            if (animation.frame >= animation.frames) {
+              defender.attackAnimation = null;
+              defender.firePoseTimer = 0;
+              this.setDefenderPose(defender, "aim-12");
+              return;
+            }
+            const textureKey = `character-${defender.id}-${animation.action}-${animation.pose}-${animation.frame}`;
+            if (defender.sprite && this.textures.exists(textureKey)) {
+              defender.sprite.setTexture(textureKey);
+              this.fitSpriteHeight(defender.sprite, defender.height);
+            }
+          }
           return;
         }
         if (defender.firePoseTimer > 0) {
@@ -4150,7 +4439,11 @@
                 }
                 previousTarget = shotTarget;
                 const damage = this.getDefenderDamage(defender);
-                this.fireBullet(defender, shotTarget, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
+                if (defender.projectile === "projectile-firebomb") {
+                  this.fireGrenade(defender, shotTarget, damage, 0, defender.slowDuration || 0, FIREBOMB_FLIGHT_TIME_SCALE);
+                } else {
+                  this.fireBullet(defender, shotTarget, damage, defender.speed, defender.pierce || 0, defender.critChance || BASE_CRIT_CHANCE);
+                }
                 if (defender.rocketEvery > 0 && !grenadeCountedForBurst) {
                   grenadeCountedForBurst = true;
                   defender.shotsSinceRocket += 1;
@@ -4181,10 +4474,12 @@
       if (!this.turrets) {
         this.turrets = [];
       }
+      this.turrets = this.turrets.filter((turret) => turret && !turret.container?.destroyed);
       if (this.turrets.length >= 3) {
         this.turrets.forEach((turret) => {
           turret.damageScale *= 1.14;
           turret.rate = Math.max(0.42, turret.rate * 0.9);
+          turret.life = Math.min(turret.duration, turret.life + 3.5);
           if (turret.container && !turret.container.destroyed) {
             this.tweens.add({
               targets: turret.container,
@@ -4199,34 +4494,49 @@
         return;
       }
 
-      const positions = [
-        { x: 116, y: 764 },
-        { x: 424, y: 764 },
-        { x: 270, y: 746 }
-      ];
-      const position = positions[this.turrets.length] || { x: rand(100, 440), y: 760 };
+      const offsets = [-72, 72, 0];
+      const index = this.turrets.length;
+      const position = {
+        x: clamp((engineer?.x || 270) + (offsets[index] || 0), this.bounds.left + 58, this.bounds.right - 58),
+        y: clamp((engineer?.y || this.bounds.survivorLine) - 104 - index * 16, this.bounds.zombieFootLine + 24, this.bounds.survivorLine - 58)
+      };
       const container = this.trackTransient(this.add.container(position.x, position.y).setDepth(228));
-      const shadow = this.add.ellipse(0, 18, 58, 18, 0x000000, 0.34);
-      const stand = this.add.rectangle(0, 10, 16, 36, 0x2f3b40, 0.96).setStrokeStyle(2, 0x0b1116, 0.9);
-      const body = this.add.rectangle(0, -10, 46, 28, 0x57401d, 0.98).setStrokeStyle(2, SKILL_ACCENTS.engineer, 0.78);
-      const barrel = this.add.rectangle(27, -10, 44, 8, 0xd7e4e8, 0.96).setOrigin(0, 0.5).setStrokeStyle(1, 0x151a1e, 0.9);
-      const lens = this.add.circle(-16, -14, 5, SKILL_ACCENTS.engineer, 0.96);
-      container.add([shadow, stand, body, barrel, lens]);
+      const shadow = this.add.ellipse(0, 26, 88, 28, 0x000000, 0.34);
+      const initialTurretTexture = this.textures.exists("engineer-turret-aim-12")
+        ? "engineer-turret-aim-12"
+        : "engineer-turret";
+      const turretSprite = this.add.image(0, 0, initialTurretTexture)
+        .setOrigin(0.5, 0.58);
+      turretSprite.setDisplaySize(150, 150);
+      container.add([shadow, turretSprite]);
+      container.setAlpha(0).setScale(0.72);
+      this.tweens.add({
+        targets: container,
+        alpha: 1,
+        scale: 1,
+        duration: 180,
+        ease: "Back.easeOut"
+      });
+
+      const duration = 12.5;
+      const rifleDefender = this.getDefenderById("b");
 
       const turret = {
         x: position.x,
         y: position.y,
         container,
-        barrel,
+        turretSprite,
         projectile: "projectile-rifle",
-        speed: 1850,
+        speed: rifleDefender?.speed || 1800,
         rate: Math.max(0.46, 0.82 / (engineer?.turretRateBoost || 1)),
         timer: rand(0.18, 0.5),
         damageScale: 0.34 * (engineer?.turretDamageBoost || 1),
+        duration,
+        life: duration,
         pierce: 0,
         critChance: 0.05,
         critMultiplier: 1.35,
-        aim: { pivot: [0, -12], reach: 30 },
+        aim: { pivot: [0, -12], reach: 42 },
         sprite: null
       };
       this.turrets.push(turret);
@@ -4237,17 +4547,45 @@
       if (!this.turrets?.length) {
         return;
       }
-      this.turrets.forEach((turret) => {
+      for (let i = this.turrets.length - 1; i >= 0; i -= 1) {
+        const turret = this.turrets[i];
         if (!turret || turret.container?.destroyed) {
-          return;
+          this.turrets.splice(i, 1);
+          continue;
+        }
+        turret.life -= dt;
+        if (turret.life <= 0) {
+          this.tweens.add({
+            targets: turret.container,
+            alpha: 0,
+            scale: 0.78,
+            duration: 180,
+            ease: "Sine.easeIn",
+            onComplete: () => this.destroyTransientObject(turret.container, false)
+          });
+          this.turrets.splice(i, 1);
+          continue;
         }
         turret.timer -= dt;
         const target = this.findTarget(turret.x, 999, null, this.bounds.autoEngageTop);
-        if (target && turret.barrel && !turret.barrel.destroyed) {
-          turret.barrel.setRotation(Math.atan2(target.y - (turret.y - 12), target.x - turret.x));
+        if (target && turret.turretSprite && !turret.turretSprite.destroyed) {
+          const targetAngle = Math.atan2(target.y - (turret.y - 12), target.x - turret.x);
+          const aimTexture = `engineer-turret-${getShotAimPoseKey(targetAngle)}`;
+          if (this.textures.exists(aimTexture)) {
+            if (turret.turretSprite.texture?.key !== aimTexture) {
+              turret.turretSprite.setTexture(aimTexture);
+            }
+            turret.turretSprite
+              .setDisplaySize(150, 150)
+              .setRotation(0);
+          } else {
+            turret.turretSprite
+              .setDisplaySize(150, 150)
+              .setRotation(targetAngle + Math.PI / 2);
+          }
         }
         if (turret.timer > 0 || !target) {
-          return;
+          continue;
         }
         turret.timer = turret.rate * rand(0.82, 1.18);
         this.fireBullet(
@@ -4258,7 +4596,7 @@
           turret.pierce || 0,
           turret.critChance || 0
         );
-      });
+      }
     }
 
     reinforceBarbedWire(engineer) {
@@ -4506,7 +4844,9 @@
       if (!defender || !target || !target.active) {
         return;
       }
-      const aimPoint = this.getZombieHitPoint(target, "projectile-rocket");
+      const isFirebomb = defender.projectile === "projectile-firebomb";
+      const projectileKey = isFirebomb ? "projectile-firebomb" : "projectile-grenade";
+      const aimPoint = this.getZombieHitPoint(target, isFirebomb ? "projectile-firebomb" : "projectile-rocket");
       const aimOffsetX = aimPoint.x - target.x;
       const aimOffsetY = aimPoint.y - target.y;
       let impactX = aimPoint.x;
@@ -4517,17 +4857,16 @@
       const initialArcHeight = this.getGrenadeArcHeight(initialDistance);
       const initialAngle = this.getGrenadeArcAngle(initialMuzzle.x, initialMuzzle.y, aimPoint.x, aimPoint.y, initialArcHeight, 0);
       const pose = getShotAimPoseKey(initialAngle);
-      this.setDefenderPose(defender, pose);
-      defender.firePoseTimer = 0.18;
+      this.startDefenderAttackAnimation(defender, pose);
       const muzzle = this.getDefenderMuzzle(defender, pose);
       const startX = muzzle.x;
       const startY = muzzle.y;
       const distance = Phaser.Math.Distance.Between(startX, startY, aimPoint.x, aimPoint.y);
       const arcHeight = this.getGrenadeArcHeight(distance);
       const launchAngle = this.getGrenadeArcAngle(startX, startY, aimPoint.x, aimPoint.y, arcHeight, 0);
-      const sprite = this.trackTransient(this.add.image(startX, startY, "projectile-grenade")
+      const sprite = this.trackTransient(this.add.image(startX, startY, projectileKey)
         .setOrigin(0.5)
-        .setScale(PROJECTILE_SCALES["projectile-grenade"])
+        .setScale(PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"])
         .setRotation(launchAngle + Math.PI / 2)
         .setDepth(192));
       const shadow = this.trackTransient(this.add.ellipse(startX, startY + 10, 18, 7, 0x000000, 0.32)
@@ -4556,7 +4895,7 @@
           sprite
             .setPosition(arcPoint.x, arcPoint.y)
             .setRotation(arcAngle + Math.PI / 2)
-            .setScale(PROJECTILE_SCALES["projectile-grenade"] * (1 + Math.sin(Math.PI * t) * 0.16))
+            .setScale((PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"]) * (1 + Math.sin(Math.PI * t) * 0.16))
             .setDepth(flightDepth);
           if (shadow && !shadow.destroyed) {
             shadow
@@ -4566,7 +4905,34 @@
           }
         },
         onComplete: () => {
-          if (!this.disposed && this.mode === "playing") {
+          if (!this.disposed && this.mode === "playing" && isFirebomb) {
+            const hitTarget = target.active && target.hp > 0
+              ? target
+              : this.findTarget(impactX, 92, null, this.bounds.autoEngageTop);
+            if (hitTarget && hitTarget.active) {
+              this.damageZombie(
+                hitTarget,
+                damage,
+                defender.critChance || BASE_CRIT_CHANCE,
+                "projectile-firebomb",
+                defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
+                { x: impactX, y: impactY, angle: launchAngle }
+              );
+              if (slowDuration > 0 && hitTarget.active) {
+                hitTarget.slowTimer = Math.max(hitTarget.slowTimer || 0, slowDuration);
+              }
+            }
+            if (defender.fireZoneRadius > 0 && defender.fireZoneDuration > 0 && defender.fireZoneDamageScale > 0) {
+              this.createFireZone(
+                impactX,
+                impactY,
+                defender.fireZoneRadius,
+                damage * defender.fireZoneDamageScale,
+                defender.fireZoneDuration,
+                slowDuration
+              );
+            }
+          } else if (!this.disposed && this.mode === "playing") {
             this.createExplosion(impactX, impactY, radius, damage, slowDuration);
           }
           this.destroyTransientObject(sprite, false);
@@ -4589,8 +4955,7 @@
       const initialX = initialMuzzle.x + shotOffset;
       const initialAngle = Math.atan2(ty - initialMuzzle.y, tx - initialX) + angleOffset;
       const pose = getShotAimPoseKey(initialAngle);
-      this.setDefenderPose(defender, pose);
-      defender.firePoseTimer = 0.18;
+      this.startDefenderAttackAnimation(defender, pose);
       if (defender.sprite) {
         this.tweens.killTweensOf(defender.sprite);
         this.tweens.add({
@@ -4892,14 +5257,14 @@
       const glow = this.trackTransient(this.add.ellipse(zoneX, zoneY, radius * 1.82, radius * 0.78, 0xff5b22, 0.18)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(67 + zoneY / 15));
-      const edge = this.trackTransient(this.add.ellipse(zoneX, zoneY, radius * 1.9, radius * 0.82, 0xff2200, 0.05)
-        .setStrokeStyle(3, 0xffd36b, 0.7)
-        .setDepth(68 + zoneY / 15));
-      const core = this.trackTransient(this.add.ellipse(zoneX, zoneY, radius * 1.02, radius * 0.44, 0xffd66a, 0.26)
+      const firePatch = this.trackTransient(this.add.sprite(zoneX, zoneY, "effect-fire-zone-sheet", 0)
+        .setOrigin(0.5, 0.62)
+        .setDisplaySize(radius * 2.25, radius * 1.22)
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(69 + zoneY / 15));
+        .setAlpha(0.95)
+        .setDepth(70 + zoneY / 15));
       const embers = [];
-      for (let i = 0; i < 5; i += 1) {
+      for (let i = 0; i < 4; i += 1) {
         const ember = this.trackTransient(this.add.circle(
           zoneX + rand(-radius * 0.62, radius * 0.62),
           zoneY + rand(-radius * 0.2, radius * 0.18),
@@ -4921,8 +5286,12 @@
         tickTimer: 0.12,
         tickInterval: 0.34,
         slowDuration,
+        frame: 0,
+        frameTimer: 0,
+        frameDuration: 0.12,
         pulseOffset: rand(0, Math.PI * 2),
-        objects: [glow, edge, core, ...embers],
+        sprite: firePatch,
+        objects: [glow, firePatch, ...embers],
         embers
       });
       this.playSfx("explosion", 0.62);
@@ -4938,15 +5307,20 @@
         const progress = clamp(1 - zone.life / Math.max(0.01, zone.duration), 0, 1);
         const fade = clamp(zone.life / 0.45, 0, 1);
         const pulse = 1 + Math.sin((this.elapsed || 0) * 8 + zone.pulseOffset) * 0.055;
-        const [glow, edge, core] = zone.objects || [];
+        const [glow] = zone.objects || [];
         if (glow && !glow.destroyed) {
           glow.setScale(pulse, 1 + (pulse - 1) * 0.45).setAlpha(0.2 * fade);
         }
-        if (edge && !edge.destroyed) {
-          edge.setScale(1 + progress * 0.08, 1 + progress * 0.03).setAlpha(0.75 * fade);
-        }
-        if (core && !core.destroyed) {
-          core.setScale(1 + Math.sin((this.elapsed || 0) * 11 + zone.pulseOffset) * 0.08).setAlpha(0.26 * fade);
+        if (zone.sprite && !zone.sprite.destroyed) {
+          zone.frameTimer -= dt;
+          if (zone.frameTimer <= 0) {
+            zone.frameTimer += zone.frameDuration;
+            zone.frame = (zone.frame + 1) % 4;
+            zone.sprite.setFrame(zone.frame);
+          }
+          zone.sprite
+            .setDisplaySize(zone.radius * 2.25 * (1 + progress * 0.08) * pulse, zone.radius * 1.22 * (1 + progress * 0.03))
+            .setAlpha(0.95 * fade);
         }
         (zone.embers || []).forEach((ember, index) => {
           if (!ember || ember.destroyed) {
@@ -6385,8 +6759,8 @@
           this.reinforceBarbedWire(defender);
         }
       });
-      const barricadeRepair = Math.round(this.maxCoreHp * 0.1);
-      const barricadeShield = Math.round(this.maxCoreHp * 0.08);
+      const barricadeRepair = Math.round(this.maxCoreHp * 0.1 * (engineer.barricadeRepairBoost || 1));
+      const barricadeShield = Math.round(this.maxCoreHp * 0.08 * (engineer.barricadeShieldBoost || 1));
       add("h", {
         id: "h-barricade",
         icon: "skill-max-hp",
