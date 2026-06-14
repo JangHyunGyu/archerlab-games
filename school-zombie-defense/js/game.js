@@ -5346,7 +5346,15 @@
               return;
             }
             const falloff = 1 - Math.sqrt(distSq) / zone.radius * 0.28;
-            this.damageZombie(zombie, zone.damagePerTick * falloff, 0, "projectile-firebomb", 1, { x: zombie.x, y: zombie.y - (zombie.displayH || 170) * 0.2 });
+            this.damageZombie(
+              zombie,
+              zone.damagePerTick * falloff,
+              0,
+              "projectile-firebomb",
+              1,
+              { x: zombie.x, y: zombie.y - (zombie.displayH || 170) * 0.2 },
+              { applyKnockback: false }
+            );
             if (zombie.active && zone.slowDuration > 0) {
               zombie.slowTimer = Math.max(zombie.slowTimer || 0, zone.slowDuration * 0.55);
             }
@@ -5764,7 +5772,7 @@
       });
     }
 
-    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE, hitType = "default", critMultiplier = DEFAULT_CRIT_MULTIPLIER, impactPoint = null) {
+    damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE, hitType = "default", critMultiplier = DEFAULT_CRIT_MULTIPLIER, impactPoint = null, options = {}) {
       const crit = Math.random() < critChance;
       const marked = zombie.weakMarkTimer > 0 && zombie.weakMarkBonus > 0;
       const markMultiplier = marked ? 1 + zombie.weakMarkBonus : 1;
@@ -5772,7 +5780,9 @@
       this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       zombie.hp -= damage;
       this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
-      const knockback = this.applyZombieKnockback(zombie, hitType, crit);
+      const knockback = options.applyKnockback === false
+        ? null
+        : this.applyZombieKnockback(zombie, hitType, crit);
       if (crit) {
         this.requestHitStop(0.055);
         this.shakeCamera(55, 0.0038);
