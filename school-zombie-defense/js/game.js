@@ -499,38 +499,38 @@
       return ZOMBIE_TYPE_CONFIGS.elite;
     }
     const entries = [
-      { type: ZOMBIE_TYPE_CONFIGS.normal, weight: 100 }
+      { type: ZOMBIE_TYPE_CONFIGS.normal, weight: Math.max(48, 100 - Math.max(0, level - 5) * 4) }
     ];
     if (level >= 2) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.student, weight: Math.min(28, 12 + level * 1.3) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.student, weight: Math.min(34, 12 + level * 1.7) });
     }
     if (level >= 2) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.runner, weight: Math.min(34, 14 + level * 1.5) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.runner, weight: Math.min(42, 14 + level * 2) });
     }
     if (level >= 4) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.brute, weight: Math.min(22, 8 + (level - 4) * 1.2) });
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.screamer, weight: Math.min(18, 7 + (level - 4) * 0.9) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.brute, weight: Math.min(28, 8 + (level - 4) * 1.6) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.screamer, weight: Math.min(24, 7 + (level - 4) * 1.25) });
     }
     if (level >= 3) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.nurse, weight: Math.min(20, 8 + level * 0.9) });
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.athlete, weight: Math.min(24, 9 + level) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.nurse, weight: Math.min(28, 8 + level * 1.3) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.athlete, weight: Math.min(32, 9 + level * 1.4) });
     }
     if (level >= 5) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.teacher, weight: Math.min(20, 7 + (level - 5) * 1) });
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.janitor, weight: Math.min(18, 6 + (level - 5) * 0.9) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.teacher, weight: Math.min(26, 7 + (level - 5) * 1.35) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.janitor, weight: Math.min(24, 6 + (level - 5) * 1.25) });
     }
     if (level >= 6) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.volatile, weight: Math.min(18, 6 + (level - 6) * 1.1) });
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.spider, weight: Math.min(16, 6 + (level - 6) * 0.8) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.volatile, weight: Math.min(24, 6 + (level - 6) * 1.45) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.spider, weight: Math.min(22, 6 + (level - 6) * 1.15) });
     }
     if (level >= 7) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.crawler, weight: Math.min(22, 8 + (level - 7) * 1) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.crawler, weight: Math.min(30, 8 + (level - 7) * 1.5) });
     }
     if (level >= 8) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.guard, weight: Math.min(14, 5 + (level - 8) * 0.8) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.guard, weight: Math.min(20, 5 + (level - 8) * 1.1) });
     }
     if (level >= 9) {
-      entries.push({ type: ZOMBIE_TYPE_CONFIGS.bloom, weight: Math.min(12, 4 + (level - 9) * 0.7) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.bloom, weight: Math.min(18, 4 + (level - 9) * 1) });
     }
     const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
     let roll = Math.random() * total;
@@ -4317,12 +4317,12 @@
         return;
       }
 
-      const levelPressure = Math.min(0.58, this.level * 0.024);
-      const lateFrequencyPressure = Math.max(0, this.level - 8) * 0.035;
-      const earlyDelayBonus = Math.max(0, (6 - this.level) * 0.07);
-      const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.28, 1.18) / (1 + lateFrequencyPressure);
-      const delayMin = this.level < 7 ? 0.72 : 0.64;
-      const delayMax = this.level < 7 ? 1.2 : 1.16;
+      const levelPressure = Math.min(0.66, this.level * 0.033);
+      const lateFrequencyPressure = Math.min(0.45, Math.max(0, this.level - 7) * 0.045);
+      const earlyDelayBonus = Math.max(0, (5 - this.level) * 0.055);
+      const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.34, 1.12) / (1 + lateFrequencyPressure);
+      const delayMin = this.level < 7 ? 0.68 : 0.58;
+      const delayMax = this.level < 7 ? 1.12 : 1.02;
       this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
       this.spawnZombie(0);
     }
@@ -4338,13 +4338,13 @@
         const baseDisplayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
         const displayHeight = baseDisplayHeight * typeConfig.sizeScale;
         const displayWidth = displayHeight;
-        const levelCurve = Math.pow(this.level, 1.04);
+        const levelCurve = Math.pow(this.level, 1.06);
         const lateLevelBonus = Math.max(0, this.level - 10);
         const earlyHpScale = clamp(0.84 + Math.max(0, this.level - 1) * 0.04, 0.84, 1);
         const baseHp =
           (eliteRoll ? 165 : 48)
           + levelCurve * (eliteRoll ? 24.5 : 13.8)
-          + lateLevelBonus * (eliteRoll ? 4.4 : 2.8)
+          + lateLevelBonus * (eliteRoll ? 5.2 : 3)
           + rand(-6, 12);
         const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale * earlyHpScale);
         const textureBase = `zombie-walk-${typeConfig.id}`;
