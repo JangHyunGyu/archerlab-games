@@ -3629,16 +3629,13 @@
       }
 
       const levelPressure = Math.min(0.58, this.level * 0.024);
+      const lateFrequencyPressure = Math.min(0.2, Math.max(0, this.level - 8) * 0.012);
       const earlyDelayBonus = Math.max(0, (6 - this.level) * 0.07);
-      const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.28, 1.18);
+      const baseDelay = clamp(0.96 - levelPressure - lateFrequencyPressure + earlyDelayBonus, 0.28, 1.18);
       const delayMin = this.level < 7 ? 0.72 : 0.64;
       const delayMax = this.level < 7 ? 1.2 : 1.16;
-      const burst = this.level >= 17 ? 3 : this.level >= 12 ? 2 : 1;
-      const burstPacing = burst > 1 ? 1 + (burst - 1) * 0.38 : 1;
-      this.spawnTimer = rand(baseDelay * delayMin * burstPacing, baseDelay * delayMax * burstPacing) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
-      for (let i = 0; i < burst; i += 1) {
-        this.spawnZombie(i * rand(0.04, 0.11));
-      }
+      this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
+      this.spawnZombie(0);
     }
 
     spawnZombie(delay) {
