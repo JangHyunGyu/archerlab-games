@@ -157,7 +157,7 @@
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 },
     teacher: { corpseWidth: 0.84, deathSize: 0.96 },
-    nurse: { corpseWidth: 0.78, deathSize: 0.88 },
+    nurse: { corpseWidth: 1, deathSize: 1.02 },
     athlete: { corpseWidth: 1.1, deathSize: 0.94 },
     janitor: { corpseWidth: 1.34, deathSize: 1.12 },
     guard: { corpseWidth: 1.32, deathSize: 1.1 },
