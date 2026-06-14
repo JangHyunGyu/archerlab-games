@@ -311,6 +311,7 @@
     ? RIFLE_GRENADE_INITIAL_INTERVAL
     : Math.max(RIFLE_GRENADE_MIN_INTERVAL, current - RIFLE_GRENADE_INTERVAL_SCALE);
   const RECRUIT_UNLOCK_LEVELS = [3, 6, 9, 12];
+  const RECRUIT_CUTIN_HOLD_MS = 3200;
   const getUnlockedRecruitSlots = (level) => RECRUIT_UNLOCK_LEVELS.filter((unlockLevel) => level >= unlockLevel).length;
   const ZOMBIE_TYPE_CONFIGS = {
     normal: { id: "normal", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 1, animRate: 6.8, reward: 1 },
@@ -1738,7 +1739,7 @@
         repeat: 1,
         ease: "Cubic.easeIn"
       });
-      this.scheduleSceneDelay(1500, () => {
+      this.scheduleSceneDelay(RECRUIT_CUTIN_HOLD_MS, () => {
         if (!panel.active) {
           return;
         }
@@ -3629,9 +3630,9 @@
       }
 
       const levelPressure = Math.min(0.58, this.level * 0.024);
-      const lateFrequencyPressure = Math.min(0.2, Math.max(0, this.level - 8) * 0.012);
+      const lateFrequencyPressure = Math.max(0, this.level - 8) * 0.035;
       const earlyDelayBonus = Math.max(0, (6 - this.level) * 0.07);
-      const baseDelay = clamp(0.96 - levelPressure - lateFrequencyPressure + earlyDelayBonus, 0.28, 1.18);
+      const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.28, 1.18) / (1 + lateFrequencyPressure);
       const delayMin = this.level < 7 ? 0.72 : 0.64;
       const delayMax = this.level < 7 ? 1.2 : 1.16;
       this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
@@ -4029,7 +4030,9 @@
         .setDepth(190);
       const visualEffects = defender.projectile === "projectile-sniper"
         ? this.createSniperBulletGlow(sprite, angle)
-        : null;
+        : defender.projectile === "projectile-rocket"
+          ? this.createRocketProjectileGlow(sprite, angle)
+          : null;
       this.bullets.push({
         sprite,
         visualEffects,
@@ -4051,7 +4054,8 @@
         aimTarget: target,
         aimOffsetX: aimPoint.x - target.x,
         aimOffsetY: aimPoint.y - target.y,
-        hitTargets: new Set()
+        hitTargets: new Set(),
+        trailTimer: 0
       });
       this.createMuzzle(x, y, angle, defender.projectile);
       this.playWeaponSfx(defender.projectile);
@@ -4066,11 +4070,46 @@
         .setBlendMode(Phaser.BlendModes.ADD)
         .setRotation(angle)
         .setDepth(189);
-      return { glow, trail };
+      return { type: "sniper", glow, trail };
+    }
+
+    createRocketProjectileGlow(sprite, angle) {
+      const tailX = sprite.x - Math.cos(angle) * 5;
+      const tailY = sprite.y - Math.sin(angle) * 5;
+      const glow = this.add.ellipse(tailX, tailY, 36, 14, 0xff7a22, 0.22)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setRotation(angle)
+        .setDepth(188);
+      const flame = this.add.ellipse(tailX, tailY, 20, 8, 0xfff0a0, 0.72)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setRotation(angle)
+        .setDepth(188.5);
+      return { type: "rocket", glow, flame };
     }
 
     updateBulletVisuals(bullet) {
       if (!bullet?.visualEffects || !bullet.sprite || bullet.sprite.destroyed) {
+        return;
+      }
+      if (bullet.visualEffects.type === "rocket") {
+        const { glow, flame } = bullet.visualEffects;
+        const tailX = bullet.sprite.x - Math.cos(bullet.angle) * 7;
+        const tailY = bullet.sprite.y - Math.sin(bullet.angle) * 7;
+        const depth = (bullet.sprite.depth || 190) - 1.5;
+        if (glow && !glow.destroyed) {
+          glow
+            .setPosition(tailX - Math.cos(bullet.angle) * 8, tailY - Math.sin(bullet.angle) * 8)
+            .setRotation(bullet.angle)
+            .setDepth(depth);
+        }
+        if (flame && !flame.destroyed) {
+          const pulse = 0.9 + Math.sin((this.elapsed || 0) * 34) * 0.12;
+          flame
+            .setPosition(tailX - Math.cos(bullet.angle) * 4, tailY - Math.sin(bullet.angle) * 4)
+            .setRotation(bullet.angle)
+            .setScale(pulse, 0.88 + pulse * 0.1)
+            .setDepth(depth + 0.5);
+        }
         return;
       }
       const { glow, trail } = bullet.visualEffects;
@@ -4090,13 +4129,68 @@
       }
     }
 
+    spawnRocketTrailParticles(bullet, dt) {
+      if (!bullet?.sprite || bullet.sprite.destroyed || bullet.projectile !== "projectile-rocket") {
+        return;
+      }
+      bullet.trailTimer = (bullet.trailTimer || 0) - dt;
+      if (bullet.trailTimer > 0) {
+        return;
+      }
+      bullet.trailTimer = 0.026;
+      const backX = Math.cos(bullet.angle);
+      const backY = Math.sin(bullet.angle);
+      const sideX = -Math.sin(bullet.angle);
+      const sideY = Math.cos(bullet.angle);
+      const tailX = bullet.sprite.x - backX * rand(4, 9) + sideX * rand(-2.5, 2.5);
+      const tailY = bullet.sprite.y - backY * rand(4, 9) + sideY * rand(-2.5, 2.5);
+      const baseDepth = (bullet.sprite.depth || 190) - 2;
+
+      const flame = this.trackTransient(this.add.ellipse(tailX, tailY, rand(12, 19), rand(5, 9), 0xff9b2f, 0.66)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setRotation(bullet.angle)
+        .setDepth(baseDepth + 0.4));
+      this.tweens.add({
+        targets: flame,
+        x: tailX - backX * rand(18, 28) + sideX * rand(-4, 4),
+        y: tailY - backY * rand(18, 28) + sideY * rand(-4, 4),
+        scaleX: 0.35,
+        scaleY: 0.28,
+        alpha: 0,
+        duration: 170,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(flame, false)
+      });
+
+      const smoke = this.trackTransient(this.add.circle(
+        tailX - backX * 8 + sideX * rand(-3, 3),
+        tailY - backY * 8 + sideY * rand(-3, 3),
+        rand(4, 7),
+        0x5f5a52,
+        0.2
+      ).setDepth(baseDepth));
+      this.tweens.add({
+        targets: smoke,
+        x: smoke.x - backX * rand(24, 40) + sideX * rand(-8, 8),
+        y: smoke.y - backY * rand(20, 34) - rand(2, 8),
+        scale: rand(2.0, 3.0),
+        alpha: 0,
+        duration: rand(360, 520),
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(smoke, false)
+      });
+    }
+
     destroyBullet(bullet) {
       if (!bullet) {
         return;
       }
       if (bullet.visualEffects) {
-        this.destroyGameObject(bullet.visualEffects.glow);
-        this.destroyGameObject(bullet.visualEffects.trail);
+        Object.values(bullet.visualEffects).forEach((effect) => {
+          if (effect && typeof effect.destroy === "function") {
+            this.destroyGameObject(effect);
+          }
+        });
       }
       this.destroyGameObject(bullet.sprite);
     }
@@ -4154,6 +4248,7 @@
         bullet.sprite.y += bullet.vy * dt;
         bullet.previousTip = previousTip;
         this.updateBulletVisuals(bullet);
+        this.spawnRocketTrailParticles(bullet, dt);
 
         const shouldRemove = bullet.life <= 0 || bullet.sprite.x < -30 || bullet.sprite.x > 570 || bullet.sprite.y < -60 || bullet.sprite.y > 980;
         const hit = this.findBulletHit(bullet);
