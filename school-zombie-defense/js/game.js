@@ -98,8 +98,8 @@
     "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 150, duration: 300, alpha: 0.98, scalePeak: 1.16, rotation: 0.42, frameWidth: 150, frameHeight: 104, frames: 16 },
     "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 106, duration: 320, alpha: 0.98, scalePeak: 1.1, rotation: 0.25, frameWidth: 160, frameHeight: 130, frames: 18 },
     "projectile-firebomb": { texture: "zombie-hit-firebomb-sheet", width: 104, duration: 260, alpha: 0.96, scalePeak: 1.12, rotation: 0.18, frameWidth: 140, frameHeight: 140, frames: 4 },
-    "projectile-shock": { texture: "zombie-hit-shock-sheet", width: 92, duration: 235, alpha: 0.98, scalePeak: 1.14, rotation: 0.34, frameWidth: 144, frameHeight: 144, frames: 4 },
-    "projectile-nail": { texture: "zombie-hit-nail-sheet", width: 68, duration: 210, alpha: 0.96, scalePeak: 1.1, rotation: 0.26, frameWidth: 128, frameHeight: 128, frames: 4 },
+    "projectile-shock": { texture: "zombie-hit-shock-sheet", width: 92, duration: 235, alpha: 0.98, scalePeak: 1.14, rotation: 0.12, alignToImpact: false, frameWidth: 144, frameHeight: 144, frames: 4 },
+    "projectile-nail": { texture: "zombie-hit-nail-sheet", width: 68, duration: 210, alpha: 0.96, scalePeak: 1.1, rotation: 0.1, alignToImpact: false, frameWidth: 128, frameHeight: 128, frames: 4 },
     explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
@@ -5716,7 +5716,7 @@
       const followOffsetX = hitPoint.x - zombie.x;
       const followOffsetY = hitPoint.y - zombie.y;
       const impactAngle = Number.isFinite(impactPoint?.angle) ? impactPoint.angle : null;
-      const rotation = impactAngle === null
+      const rotation = effect.alignToImpact === false || impactAngle === null
         ? rand(-effect.rotation, effect.rotation)
         : impactAngle + rand(-effect.rotation * 0.36, effect.rotation * 0.36);
       const impact = this.trackTransient(this.add.sprite(
