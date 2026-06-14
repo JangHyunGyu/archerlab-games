@@ -451,10 +451,12 @@
       markDamageBonus: BOW_MARK_DAMAGE_BONUS,
       aim: { pivot: [0, -134], reach: 38 },
       recruit: {
-        icon: "portrait-rally",
+        icon: "avatar-bow",
+        portrait: "avatar-bow",
         tag: "활",
         title: "활 지원 합류",
-        desc: "화살 지원 사격\n치명/표식 성장 해금"
+        desc: "화살 지원 사격\n치명/표식 성장 해금",
+        line: "표식은 내가 잡을게."
       }
     },
     {
@@ -473,10 +475,12 @@
       burstDelay: 70,
       aim: { pivot: [2, -146], reach: 52 },
       recruit: {
-        icon: "portrait-barrage",
+        icon: "avatar-rifle",
+        portrait: "avatar-rifle",
         tag: "소총",
         title: "소총 지원 합류",
-        desc: "3연발 지원 사격\n유탄 패시브 해금"
+        desc: "3연발 지원 사격\n유탄 패시브 해금",
+        line: "탄창 충분해. 길 열어줄게."
       }
     },
     {
@@ -509,10 +513,12 @@
       splashDamageScale: 0.55,
       aim: { pivot: [2, -145], reach: 56 },
       recruit: {
-        icon: "portrait-frost",
+        icon: "avatar-rocket",
+        portrait: "avatar-rocket",
         tag: "로켓",
         title: "로켓 지원 합류",
-        desc: "폭발 로켓 사격\n냉각 탄두 성장"
+        desc: "폭발 로켓 사격\n냉각 탄두 성장",
+        line: "한 발이면 복도째 정리돼."
       }
     },
     {
@@ -530,10 +536,12 @@
       pierce: 2,
       aim: { pivot: [2, -132], reach: 64 },
       recruit: {
-        icon: "portrait-repair",
+        icon: "avatar-sniper",
+        portrait: "avatar-sniper",
         tag: "저격",
         title: "저격 지원 합류",
-        desc: "관통 저격 사격\n방어 보강 성장"
+        desc: "관통 저격 사격\n방어 보강 성장",
+        line: "숨 고르세요. 뒤는 제가 봅니다."
       }
     }
   ];
@@ -1647,6 +1655,102 @@
       }
       this.setDefenderRecruited(id, true, true);
       this.createScreenPulse(SKILL_ACCENTS[`recruit-${id}`] || COLORS.gold);
+      this.showRecruitCutIn(roster);
+    }
+
+    showRecruitCutIn(roster) {
+      const recruit = roster?.recruit;
+      if (!recruit) {
+        return;
+      }
+      const accent = SKILL_ACCENTS[`recruit-${roster.id}`] || COLORS.gold;
+      const accentHex = SKILL_ACCENT_HEX[`recruit-${roster.id}`] || "#f6d985";
+      const portrait = recruit.portrait || recruit.icon || OWNER_SKILL_PORTRAITS[roster.id];
+      const panel = this.trackTransient(this.add.container(GAME_WIDTH + 260, 178).setDepth(346).setAlpha(0).setScale(0.96));
+      const shadow = this.add.rectangle(4, 12, 430, 132, 0x000000, 0.46);
+      const frame = this.add.rectangle(0, 0, 426, 124, 0x071015, 0.9)
+        .setStrokeStyle(2, accent, 0.72);
+      const topLine = this.add.rectangle(0, -59, 418, 4, accent, 0.96);
+      const scan = this.add.rectangle(36, 30, 320, 2, 0xffffff, 0.18);
+      const portraitGlow = this.add.circle(-154, -4, 66, accent, 0.16)
+        .setStrokeStyle(2, accent, 0.68);
+      const portraitImage = this.add.image(-154, -2, portrait)
+        .setDisplaySize(132, 132);
+      const kicker = this.add.text(-58, -34, "NEW ALLY", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 13,
+        fontStyle: "900",
+        color: accentHex,
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0, 0.5);
+      const title = this.add.text(-58, -7, recruit.title || "지원 합류", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 25,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 5
+      }).setOrigin(0, 0.5);
+      const line = this.add.text(-58, 26, recruit.line || "전열 합류 완료", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 15,
+        fontStyle: "900",
+        color: "#dff6f8",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0, 0.5);
+      const tag = this.add.text(164, 43, recruit.tag || "지원", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 13,
+        fontStyle: "900",
+        color: "#050607",
+        backgroundColor: accentHex,
+        padding: { left: 9, right: 9, top: 4, bottom: 4 }
+      }).setOrigin(0.5);
+
+      panel.add([
+        shadow,
+        frame,
+        topLine,
+        scan,
+        portraitGlow,
+        portraitImage,
+        kicker,
+        title,
+        line,
+        tag
+      ]);
+
+      this.tweens.add({
+        targets: panel,
+        x: GAME_WIDTH / 2,
+        alpha: 1,
+        scale: 1,
+        duration: 340,
+        ease: "Cubic.easeOut"
+      });
+      this.tweens.add({
+        targets: scan,
+        x: 150,
+        alpha: 0,
+        duration: 780,
+        repeat: 1,
+        ease: "Cubic.easeIn"
+      });
+      this.scheduleSceneDelay(1500, () => {
+        if (!panel.active) {
+          return;
+        }
+        this.tweens.add({
+          targets: panel,
+          x: -280,
+          alpha: 0,
+          duration: 320,
+          ease: "Cubic.easeIn",
+          onComplete: () => this.destroyTransientObject(panel, false)
+        });
+      });
     }
 
     getRecruitUpgrades() {
@@ -1656,12 +1760,14 @@
           id: `recruit-${defender.id}`,
           icon: defender.recruit.icon,
           characterTexture: `character-${defender.id}-idle`,
+          portraitTexture: defender.recruit.portrait || defender.recruit.icon,
           tag: defender.recruit.tag,
           title: defender.recruit.title,
           desc: defender.recruit.desc,
           stat: "전투 인원 +1",
           accent: SKILL_ACCENTS[`recruit-${defender.id}`],
           accentHex: SKILL_ACCENT_HEX[`recruit-${defender.id}`],
+          sfx: "recruit",
           toast: `${defender.recruit.title} 완료`,
           apply: () => this.recruitDefender(defender.id)
         }));
@@ -5345,6 +5451,7 @@
       const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
       const accentHex = upgrade.accentHex || SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
       const isRecruit = Boolean(upgrade.characterTexture);
+      const recruitPortraitTexture = isRecruit ? (upgrade.portraitTexture || upgrade.icon || upgrade.characterTexture) : null;
       const isCommonSkill = upgrade.common === true;
       const ownerTexture = upgrade.ownerCharacterTexture;
       const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit && this.textures.exists(ownerTexture));
@@ -5369,7 +5476,7 @@
       }
       const iconX = hasOwnerCharacter ? x - 26 : x;
       const iconHalo = isRecruit
-        ? this.add.ellipse(x, y - 70, 82, 112, accent, 0.16).setStrokeStyle(2, accent, 0.55).setDepth(527)
+        ? this.add.circle(x, y - 74, 58, accent, 0.16).setStrokeStyle(2, accent, 0.62).setDepth(527)
         : this.add.circle(iconX, y - 112, 40, 0x000000, 0.58).setStrokeStyle(2, accent, 0.9).setDepth(527);
       const ownerHalo = hasOwnerCharacter
         ? this.add.circle(x + 49, y - 104, 33, 0x000000, 0.54).setStrokeStyle(2, accent, 0.65).setDepth(527)
@@ -5380,10 +5487,9 @@
       if (ownerCharacter) {
         ownerCharacter.setDisplaySize(62, 62);
       }
-      const icon = this.add.image(iconX, isRecruit ? y - 24 : y - 112, isRecruit ? upgrade.characterTexture : upgrade.icon).setDepth(528);
+      const icon = this.add.image(iconX, isRecruit ? y - 74 : y - 112, isRecruit ? recruitPortraitTexture : upgrade.icon).setDepth(528);
       if (isRecruit) {
-        icon.setOrigin(0.5, 1);
-        this.fitSpriteHeight(icon, 138);
+        icon.setDisplaySize(118, 118);
       } else {
         icon.setDisplaySize(hasOwnerCharacter ? 66 : 74, hasOwnerCharacter ? 66 : 74);
       }
@@ -5526,7 +5632,7 @@
         return;
       }
       this.unlockAudio();
-      this.playSfx("skill");
+      this.playSfx(upgrade.sfx || "skill");
       upgrade.apply();
       this.clearOverlay();
       this.mode = "playing";
