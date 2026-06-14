@@ -28,12 +28,8 @@
       return false;
     }
   })();
-  const PNG_ONLY_ZOMBIE_ASSETS = /assets\/images\/(?:character-a-attack-[0-3]|effect-fire-zone-sheet|zombie-(?:walk-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)|death-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-sheet|corpse-(?:teacher|nurse|athlete|janitor|guard|crawler|screamer|spider|bloom)-[1-3]|hit-(?:firebomb|shock|nail)-sheet))\.png$/i;
   const imageAsset = (path) => {
-    const normalizedPath = path.replace(/\\/g, "/");
-    return SUPPORTS_WEBP && !PNG_ONLY_ZOMBIE_ASSETS.test(normalizedPath)
-      ? path.replace(/\.png$/i, ".webp")
-      : path;
+    return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
   const shuffleItems = (items) => {
@@ -5842,7 +5838,7 @@
         color: crit ? "#fff0a5" : marked ? "#ffe29a" : "#ffffff",
         stroke: crit ? "#811010" : marked ? "#5a310e" : "#40191b",
         strokeThickness: 5
-      }).setOrigin(0.5).setRotation(rand(-0.18, 0.18)).setDepth(250));
+      }).setOrigin(0.5).setRotation(rand(-0.18, 0.18)).setDepth(Math.max(250, 270 + y / 5)));
       this.tweens.add({
         targets: text,
         y: y - rand(26, 44),
