@@ -2211,8 +2211,27 @@
       const gain = ctx.createGain();
       source.buffer = buffer;
       gain.gain.value = clamp(0.72 * intensity, 0.05, 1.45);
+      const cleanup = () => {
+        source.onended = null;
+        try {
+          source.disconnect();
+        } catch (error) {
+          // Audio nodes may already be detached after playback.
+        }
+        try {
+          gain.disconnect();
+        } catch (error) {
+          // Audio nodes may already be detached after playback.
+        }
+      };
+      source.onended = cleanup;
       source.connect(gain).connect(this.masterGain);
-      source.start(ctx.currentTime);
+      try {
+        source.start(ctx.currentTime);
+      } catch (error) {
+        cleanup();
+        return false;
+      }
       return true;
     }
 
@@ -5762,6 +5781,13 @@
   };
 
   window.__schoolZombiePhaserVersion = Phaser.VERSION;
+  if (window.__schoolZombieDefense && typeof window.__schoolZombieDefense.destroy === "function") {
+    try {
+      window.__schoolZombieDefense.destroy(true);
+    } catch (error) {
+      // Keep reloads resilient if Phaser is already mid-shutdown.
+    }
+  }
   window.__schoolZombieDefense = new Phaser.Game(config);
   installResponsiveViewport(window.__schoolZombieDefense);
 })();
