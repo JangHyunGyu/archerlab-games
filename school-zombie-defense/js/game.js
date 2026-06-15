@@ -6380,7 +6380,7 @@
       this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       zombie.hp -= damage;
       this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
-      const knockback = options.applyKnockback === false
+      const knockback = options.applyKnockback === false || hitType === "projectile-shock"
         ? null
         : this.applyZombieKnockback(zombie, hitType, crit);
       if (crit) {
