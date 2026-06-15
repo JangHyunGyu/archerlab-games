@@ -714,7 +714,7 @@
       role: "fire",
       projectile: "projectile-firebomb",
       speed: 980,
-      rate: 1.65,
+      rate: 3 / CHARACTER_FIRE_COOLDOWN_MULTIPLIER,
       critChance: 0.05,
       critMultiplier: 1.45,
       fireZoneRadius: 72,
