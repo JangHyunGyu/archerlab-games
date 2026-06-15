@@ -21,6 +21,7 @@ const SAVE_VERSION = 1;
 const AUTO_SAVE_INTERVAL_MS = 10000;
 const AUTO_SAVE_ENEMY_LIMIT = 140;
 const FORCE_SAVE_ENEMY_LIMIT = 260;
+const RANK_PROGRESS_SYNC_INTERVAL_MS = 5000;
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -33,9 +34,12 @@ export class GameScene extends Phaser.Scene {
         this._selectedCharacterId = savedData?.player?.characterId || data.characterId || DEFAULT_CHARACTER_ID;
         this._restoredFromSave = false;
         this._lastAutoSaveAt = 0;
-        this._rankSessionId = savedData?.rankSessionId || null;
+        this._rankSessionId = null;
         this._rankSessionPromise = null;
         this._rankSyncFailed = false;
+        this._rankSyncedScore = 0;
+        this._rankLastSyncGameTime = 0;
+        this._rankSyncInFlight = null;
     }
 
     create() {
@@ -192,12 +196,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     _initRankSession() {
-        if (this._rankSessionId) {
-            this._rankSessionPromise = Promise.resolve(this._rankSessionId);
-            return;
-        }
         if (this._resumeRequested) {
             this._rankSyncFailed = true;
+            return;
+        }
+        if (this._rankSessionId) {
+            this._rankSessionPromise = Promise.resolve(this._rankSessionId);
             return;
         }
         const gameId = getCharacterRankingGameId(GAME_ID_SHADOW, this._selectedCharacterId);
@@ -219,6 +223,89 @@ export class GameScene extends Phaser.Scene {
                 console.warn('[ShadowSurvival] rank session failed:', e.message);
                 return null;
             });
+    }
+
+    async _ensureRankSession() {
+        if (this._rankSyncFailed) return null;
+        if (this._rankSessionId) return this._rankSessionId;
+        if (!this._rankSessionPromise) this._initRankSession();
+        return this._rankSessionPromise;
+    }
+
+    _getRankGameId() {
+        const characterId = this.player?.characterId || this._selectedCharacterId || DEFAULT_CHARACTER_ID;
+        return getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
+    }
+
+    _getRankProgressEvent(score) {
+        return {
+            type: 'progress',
+            survived_seconds: Math.max(0, Math.floor(score || 0)),
+            level: Math.max(1, Math.floor(this.player?.level || 1)),
+            rank: this.player?.currentRank || 'E',
+            kills: Math.max(0, Math.floor(this.player?.kills || 0)),
+            shadow_count: Math.max(0, Math.floor(this.shadowArmyManager?.getSoldierCount?.() || 0)),
+        };
+    }
+
+    _updateRankProgressSync() {
+        if (this._rankSyncFailed || !this.enemyManager || this.isGameOver || this._isBooting) return;
+        const gameTime = this.enemyManager.getGameTime?.() || 0;
+        if (gameTime - this._rankLastSyncGameTime < RANK_PROGRESS_SYNC_INTERVAL_MS) return;
+        this._rankLastSyncGameTime = gameTime;
+        this._syncRankProgress(false);
+    }
+
+    async _syncRankProgress(force = false) {
+        if (this._rankSyncInFlight) {
+            if (!force) return this._rankSyncInFlight;
+            await this._rankSyncInFlight;
+        }
+        if (this._rankSyncFailed) return null;
+
+        const score = Math.max(0, Math.floor((this.enemyManager?.getGameTime?.() || 0) / 1000));
+        if (score <= 0 || (!force && score <= this._rankSyncedScore)) {
+            return this._rankSyncedScore;
+        }
+
+        const syncPromise = (async () => {
+            const sessionId = await this._ensureRankSession();
+            if (!sessionId) throw new Error('rank session unavailable');
+
+            const response = await fetch(`${GAME_API_URL}/score-events`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    game_id: this._getRankGameId(),
+                    session_id: sessionId,
+                    event: this._getRankProgressEvent(score),
+                }),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data || data.success !== true) {
+                throw new Error(data?.error || `rank progress ${response.status}`);
+            }
+
+            const verifiedScore = Number(data.score);
+            this._rankSyncedScore = Number.isFinite(verifiedScore) ? verifiedScore : score;
+            return this._rankSyncedScore;
+        })();
+
+        this._rankSyncInFlight = syncPromise;
+        try {
+            return await syncPromise;
+        } catch (e) {
+            this._rankSyncFailed = true;
+            console.warn('[ShadowSurvival] rank progress sync failed:', e.message);
+            return null;
+        } finally {
+            if (this._rankSyncInFlight === syncPromise) this._rankSyncInFlight = null;
+        }
+    }
+
+    async _flushRankProgress() {
+        if (this._rankSyncInFlight) await this._rankSyncInFlight;
+        return this._syncRankProgress(true);
     }
 
     _createStartupOverlay() {
@@ -411,6 +498,7 @@ export class GameScene extends Phaser.Scene {
         this.hud.update(this.player, this.weaponManager, this.enemyManager, this.shadowArmyManager);
 
         this._autoSave(false);
+        this._updateRankProgressSync();
     }
 
     _createFloor() {
@@ -707,17 +795,26 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.shake(500, 0.02);
         this.cameras.main.fadeOut(1500, 20, 0, 0);
 
-        this.time.delayedCall(1500, () => {
+        this.time.delayedCall(1500, async () => {
+            const finalScore = Math.floor(this.enemyManager.getGameTime() / 1000);
+            let rankSyncFailed = this._rankSyncFailed;
+            let rankVerifiedScore = this._rankSyncedScore;
+            if (!rankSyncFailed) {
+                rankVerifiedScore = await this._flushRankProgress();
+                if (rankVerifiedScore !== finalScore) rankSyncFailed = true;
+            }
+
             this.scene.start('GameOverScene', {
                 level: this.player.level,
                 rank: this.player.currentRank,
                 kills: this.player.kills,
-                time: Math.floor(this.enemyManager.getGameTime() / 1000),
+                time: finalScore,
                 shadowCount: this.shadowArmyManager.getSoldierCount(),
                 characterId: this.player.characterId,
                 characterName: this.player.character?.name,
                 rankSessionId: this._rankSessionId,
-                rankSyncFailed: this._rankSyncFailed,
+                rankSyncFailed,
+                rankVerifiedScore,
             });
         });
     }
@@ -885,7 +982,7 @@ export class GameScene extends Phaser.Scene {
         return {
             version: SAVE_VERSION,
             ts,
-            rankSessionId: this._rankSessionId,
+            rankSessionId: null,
             player: {
                 characterId: player.characterId,
                 x: player.x,

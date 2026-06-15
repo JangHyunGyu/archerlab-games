@@ -137,10 +137,12 @@ export class GameOverScene extends Phaser.Scene {
                 const characterName = this.finalData.characterName || getCharacter(characterId).name;
                 const sessionId = this.finalData.rankSessionId || null;
                 if (!sessionId || this.finalData.rankSyncFailed) throw new Error('rank score sync failed');
+                const verifiedScore = Number(this.finalData.rankVerifiedScore);
+                if (!Number.isFinite(verifiedScore) || verifiedScore !== time) throw new Error('rank score verification mismatch');
                 const extraData = { level, rank, kills, shadowCount, characterId, characterName, session_id: sessionId };
                 const gameId = getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
 
-                await fetch(`${GAME_API_URL}/rankings`, {
+                const response = await fetch(`${GAME_API_URL}/rankings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -151,6 +153,7 @@ export class GameOverScene extends Phaser.Scene {
                         extra_data: extraData,
                     }),
                 });
+                if (!response.ok) throw new Error(`rank submit ${response.status}`);
             } catch (e) { /* silent */ }
             if (!this.sys?.isActive?.()) return;
             showStats();

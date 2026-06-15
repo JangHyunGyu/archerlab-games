@@ -59,6 +59,9 @@ const SCHOOL_ZOMBIE_KILLS_SQL = "CAST(COALESCE(CASE WHEN json_valid(extra_data) 
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
 const SHADOW_MAX_SCORE = 7200;
 const SHADOW_SCORE_GRACE_SECONDS = 15;
+const SHADOW_FIRST_EVENT_MAX_SCORE = 30;
+const SHADOW_PROGRESS_SYNC_GRACE_SECONDS = 8;
+const SHADOW_PROGRESS_EVENT_INTERVAL_SECONDS = 5;
 const CENTRAL_ERROR_LOG_ENDPOINT = 'https://chatbot-api.yama5993.workers.dev/error-logs';
 
 function jsonResponse(data, status = 200) {
@@ -715,6 +718,123 @@ async function recordSchoolZombieScoreEvents(db, body) {
     });
 }
 
+function validateShadowScoreEvent(event) {
+    if (!isPlainObject(event)) {
+        throw new Error('score event must be an object');
+    }
+
+    const type = String(event.type || '');
+    if (type !== 'progress') {
+        throw new Error('shadow survival score event must be progress');
+    }
+    if (event.score !== undefined || event.delta !== undefined) {
+        throw new Error('shadow survival score event cannot set score');
+    }
+
+    const survivedSeconds = parseInteger(event.survived_seconds ?? event.survivedSeconds ?? event.time);
+    const level = parseInteger(event.level);
+    const kills = parseInteger(event.kills);
+    const shadowCount = parseInteger(event.shadow_count ?? event.shadowCount ?? 0);
+
+    if (!Number.isFinite(survivedSeconds) || survivedSeconds <= 0 || survivedSeconds > SHADOW_MAX_SCORE) {
+        throw new Error('invalid shadow survival progress time');
+    }
+    if (!Number.isFinite(level) || level < 1 || level > 30) {
+        throw new Error('invalid shadow survival level');
+    }
+    if (!Number.isFinite(kills) || kills < 0 || kills > 100000) {
+        throw new Error('invalid shadow survival kill count');
+    }
+    if (!Number.isFinite(shadowCount) || shadowCount < 0 || shadowCount > 1000) {
+        throw new Error('invalid shadow survival shadow count');
+    }
+
+    return survivedSeconds;
+}
+
+async function recordShadowScoreEvents(db, body) {
+    const gameId = body?.game_id;
+    const sessionId = String(body?.session_id || '').trim();
+    const events = Array.isArray(body?.events) ? body.events : (body?.event ? [body.event] : []);
+
+    if (getProtectedGameKind(gameId) !== 'shadow') {
+        return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
+    }
+    if (!sessionId) {
+        return jsonResponse({ error: 'session_id is required' }, 400);
+    }
+    if (events.length === 0 || events.length > SCORE_EVENT_BATCH_LIMIT) {
+        return jsonResponse({ error: 'events must contain 1-50 items' }, 400);
+    }
+
+    const session = await db.prepare(
+        'SELECT session_id, game_id, score, event_count, started_at, updated_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (!session || session.game_id !== gameId) {
+        return jsonResponse({ error: 'score session not found' }, 404);
+    }
+    if (session.submitted_at) {
+        return jsonResponse({ error: 'score session already submitted' }, 409);
+    }
+
+    const now = Date.now();
+    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
+        return jsonResponse({ error: 'score session expired' }, 410);
+    }
+
+    const currentScore = Math.max(0, Number(session.score) || 0);
+    let projectedScore = currentScore;
+    try {
+        for (const event of events) {
+            projectedScore = Math.max(projectedScore, validateShadowScoreEvent(event));
+        }
+    } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+    }
+
+    const currentEventCount = Math.max(0, Number(session.event_count) || 0);
+    const projectedEventCount = currentEventCount + events.length;
+    if (projectedScore <= currentScore) {
+        return jsonResponse({
+            success: true,
+            game_id: gameId,
+            session_id: sessionId,
+            score: currentScore,
+            event_count: currentEventCount,
+        });
+    }
+
+    const elapsedSinceStartSeconds = Math.floor((now - Number(session.started_at)) / 1000) + SHADOW_SCORE_GRACE_SECONDS;
+    if (projectedScore > elapsedSinceStartSeconds) {
+        return jsonResponse({ error: 'shadow survival progress exceeds session time' }, 429);
+    }
+    if (currentEventCount === 0 && projectedScore > SHADOW_FIRST_EVENT_MAX_SCORE) {
+        return jsonResponse({ error: 'shadow survival first progress event is too late' }, 429);
+    }
+
+    const elapsedSinceUpdateSeconds = Math.floor((now - Number(session.updated_at)) / 1000) + SHADOW_PROGRESS_SYNC_GRACE_SECONDS;
+    if (projectedScore - currentScore > elapsedSinceUpdateSeconds) {
+        return jsonResponse({ error: 'shadow survival progress jump is too large' }, 429);
+    }
+
+    const minEventCount = Math.max(1, Math.floor(projectedScore / SHADOW_PROGRESS_EVENT_INTERVAL_SECONDS) - 6);
+    if (projectedEventCount < minEventCount) {
+        return jsonResponse({ error: 'shadow survival progress events are too sparse' }, 429);
+    }
+
+    await db.prepare(
+        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ? WHERE session_id = ?'
+    ).bind(projectedScore, projectedEventCount, now, sessionId).run();
+
+    return jsonResponse({
+        success: true,
+        game_id: gameId,
+        session_id: sessionId,
+        score: projectedScore,
+        event_count: projectedEventCount,
+    });
+}
+
 async function recordScoreEvents(db, body) {
     const kind = getProtectedGameKind(body?.game_id);
     if (kind === 'cat-tower') return recordCatTowerScoreEvents(db, body);
@@ -722,6 +842,7 @@ async function recordScoreEvents(db, body) {
     if (kind === 'jewelria') return recordJewelriaScoreEvents(db, body);
     if (kind === 'parking') return recordParkingScoreEvents(db, body);
     if (kind === 'school-zombie') return recordSchoolZombieScoreEvents(db, body);
+    if (kind === 'shadow') return recordShadowScoreEvents(db, body);
     return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
 }
 
@@ -798,36 +919,10 @@ async function verifyStoredScoreRankingSession(db, body, clientScore, options) {
 }
 
 async function verifyShadowRankingSession(db, body, clientScore) {
-    const extraData = isPlainObject(body.extra_data) ? body.extra_data : {};
-    const sessionId = String(body.session_id || extraData.session_id || '').trim();
-    if (!sessionId) {
-        return { error: 'shadow survival ranking requires a score session', status: 400 };
-    }
-
-    const session = await db.prepare(
-        'SELECT session_id, game_id, started_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
-    ).bind(sessionId).first();
-    if (!session || session.game_id !== body.game_id) {
-        return { error: 'score session not found', status: 404 };
-    }
-    if (session.submitted_at) {
-        return { error: 'score session already submitted', status: 409 };
-    }
-
-    const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return { error: 'score session expired', status: 410 };
-    }
-
-    if (!Number.isFinite(clientScore) || clientScore <= 0 || clientScore > SHADOW_MAX_SCORE) {
-        return { error: 'invalid shadow survival score', status: 400 };
-    }
-    const elapsedSeconds = Math.floor((now - Number(session.started_at)) / 1000) + SHADOW_SCORE_GRACE_SECONDS;
-    if (clientScore > elapsedSeconds) {
-        return { error: 'shadow survival score exceeds session time', status: 400 };
-    }
-
-    return { sessionId, score: clientScore };
+    return verifyStoredScoreRankingSession(db, body, clientScore, {
+        label: 'shadow survival',
+        maxScore: SHADOW_MAX_SCORE,
+    });
 }
 
 async function verifyRankingSession(db, body, clientScore) {
@@ -1099,23 +1194,24 @@ export default {
                 let scoreForInsert = numScore;
                 let verifiedSessionId = null;
                 const protectedKind = getProtectedGameKind(game_id);
-                if (protectedKind) {
-                    const verified = await verifyRankingSession(env.DB, body, numScore);
-                    if (verified.error) {
-                        return jsonResponse({ error: verified.error }, verified.status || 400);
-                    }
-                    scoreForInsert = verified.score;
-                    verifiedSessionId = verified.sessionId;
-                    const baseExtra = isPlainObject(extra_data) ? extra_data : (isPlainObject(body.extra) ? body.extra : {});
-                    extra_data = {
-                        ...baseExtra,
-                        session_id: verified.sessionId,
-                        client_score: numScore,
-                        verified_score: scoreForInsert,
-                        verification_kind: protectedKind,
-                        verified_at: new Date().toISOString(),
-                    };
+                if (!protectedKind) {
+                    return jsonResponse({ error: 'unsupported game_id for rankings' }, 400);
                 }
+                const verified = await verifyRankingSession(env.DB, body, numScore);
+                if (verified.error) {
+                    return jsonResponse({ error: verified.error }, verified.status || 400);
+                }
+                scoreForInsert = verified.score;
+                verifiedSessionId = verified.sessionId;
+                const baseExtra = isPlainObject(extra_data) ? extra_data : (isPlainObject(body.extra) ? body.extra : {});
+                extra_data = {
+                    ...baseExtra,
+                    session_id: verified.sessionId,
+                    client_score: numScore,
+                    verified_score: scoreForInsert,
+                    verification_kind: protectedKind,
+                    verified_at: new Date().toISOString(),
+                };
 
                 if (game_id === JEWELRIA_GAME_ID) {
                     extra_data = normalizeJewelriaExtraData(extra_data, scoreForInsert);
