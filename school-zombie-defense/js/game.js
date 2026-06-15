@@ -102,7 +102,6 @@
     "projectile-rifle": { texture: "zombie-hit-rifle-sheet", width: 70, duration: 260, alpha: 0.98, scalePeak: 1.08, rotation: 0.35, frameWidth: 140, frameHeight: 100, frames: 16 },
     "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 150, duration: 300, alpha: 0.98, scalePeak: 1.16, rotation: 0.42, frameWidth: 150, frameHeight: 104, frames: 16 },
     "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 106, duration: 320, alpha: 0.98, scalePeak: 1.1, rotation: 0.25, frameWidth: 160, frameHeight: 130, frames: 18 },
-    "projectile-shock": { texture: "zombie-hit-shock-sheet", width: 92, duration: 235, alpha: 0.98, scalePeak: 1.14, rotation: 0.12, alignToImpact: false, frameWidth: 144, frameHeight: 144, frames: 4 },
     "projectile-nail": { texture: "zombie-hit-nail-sheet", width: 68, duration: 210, alpha: 0.96, scalePeak: 1.1, rotation: 0.1, alignToImpact: false, frameWidth: 128, frameHeight: 128, frames: 4 },
     explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
@@ -1843,7 +1842,6 @@
       this.load.spritesheet("zombie-hit-rifle-sheet", imageAsset("assets/images/zombie-hit-rifle-sheet.png"), { frameWidth: 140, frameHeight: 100 });
       this.load.spritesheet("zombie-hit-rocket-sheet", imageAsset("assets/images/zombie-hit-rocket-sheet.png"), { frameWidth: 160, frameHeight: 130 });
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
-      this.load.spritesheet("zombie-hit-shock-sheet", imageAsset("assets/images/zombie-hit-shock-sheet.png"), { frameWidth: 144, frameHeight: 144 });
       this.load.spritesheet("zombie-hit-nail-sheet", imageAsset("assets/images/zombie-hit-nail-sheet.png"), { frameWidth: 128, frameHeight: 128 });
       this.load.spritesheet("effect-fire-zone-sheet", imageAsset("assets/images/effect-fire-zone-sheet.png"), { frameWidth: 256, frameHeight: 160 });
       this.load.image("engineer-turret", imageAsset("assets/images/engineer-turret.png"));
@@ -6027,9 +6025,109 @@
       }
     }
 
+    createShockHitEffect(zombie, crit = false, impactPoint = null) {
+      const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.14 : 1);
+      const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, "projectile-shock", crit);
+      const depth = 232 + zombie.y / 5;
+      const addFollow = (object) => {
+        if (!object) {
+          return object;
+        }
+        object.followZombie = zombie;
+        object.followOffsetX = hitPoint.x - zombie.x;
+        object.followOffsetY = hitPoint.y - zombie.y;
+        if (!zombie.hitEffects) {
+          zombie.hitEffects = new Set();
+        }
+        zombie.hitEffects.add(object);
+        return this.trackTransient(object);
+      };
+
+      const pulse = addFollow(this.add.circle(hitPoint.x, hitPoint.y, 18 * sizeScale, 0xffffff, 0.22)
+        .setStrokeStyle(3 * sizeScale, 0xffffff, 0.9)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(depth + 0.2));
+      this.tweens.add({
+        targets: pulse,
+        scale: crit ? 2.25 : 1.9,
+        alpha: 0,
+        duration: crit ? 260 : 220,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(pulse, false)
+      });
+
+      const bolt = addFollow(this.add.graphics({ x: hitPoint.x, y: hitPoint.y })
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(depth + 0.6));
+      const drawBolt = (lineWidth, color, alpha) => {
+        bolt.lineStyle(lineWidth * sizeScale, color, alpha);
+        const branches = crit ? 7 : 5;
+        for (let branch = 0; branch < branches; branch += 1) {
+          const angle = -Math.PI / 2 + branch * (Math.PI * 2 / branches) + rand(-0.34, 0.34);
+          const length = rand(22, crit ? 58 : 48) * sizeScale;
+          bolt.beginPath();
+          bolt.moveTo(0, 0);
+          let x = 0;
+          let y = 0;
+          const segments = 3 + Math.floor(rand(0, 3));
+          for (let i = 1; i <= segments; i += 1) {
+            const t = i / segments;
+            x = Math.cos(angle) * length * t + rand(-7, 7) * sizeScale;
+            y = Math.sin(angle) * length * t + rand(-7, 7) * sizeScale;
+            bolt.lineTo(x, y);
+          }
+          bolt.strokePath();
+          if (Math.random() < 0.55) {
+            bolt.beginPath();
+            bolt.moveTo(x * 0.58, y * 0.58);
+            bolt.lineTo(x * 0.58 + rand(-13, 13) * sizeScale, y * 0.58 + rand(-13, 13) * sizeScale);
+            bolt.strokePath();
+          }
+        }
+      };
+      drawBolt(7, 0x9fefff, 0.28);
+      drawBolt(2.4, 0xffffff, 0.98);
+      this.tweens.add({
+        targets: bolt,
+        scale: crit ? 1.18 : 1.08,
+        alpha: 0,
+        duration: crit ? 250 : 210,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(bolt, false)
+      });
+
+      const sparkCount = crit ? 9 : 6;
+      for (let i = 0; i < sparkCount; i += 1) {
+        const angle = rand(-Math.PI, Math.PI);
+        const spark = this.trackTransient(this.add.circle(
+          hitPoint.x + Math.cos(angle) * rand(4, 10) * sizeScale,
+          hitPoint.y + Math.sin(angle) * rand(4, 10) * sizeScale,
+          rand(1.6, crit ? 3.8 : 3.1) * sizeScale,
+          0xffffff,
+          rand(0.7, 0.96)
+        )
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(depth + 0.9));
+        this.tweens.add({
+          targets: spark,
+          x: spark.x + Math.cos(angle) * rand(14, crit ? 44 : 34) * sizeScale,
+          y: spark.y + Math.sin(angle) * rand(14, crit ? 44 : 34) * sizeScale,
+          scale: 0.2,
+          alpha: 0,
+          duration: rand(150, 250),
+          ease: "Cubic.easeOut",
+          onComplete: () => this.destroyTransientObject(spark, false)
+        });
+      }
+    }
+
     createZombieHitEffect(zombie, hitType = "default", crit = false, impactPoint = null) {
       if (hitType === "projectile-firebomb") {
         this.createFirebombHitEffect(zombie, crit, impactPoint);
+        return;
+      }
+      if (hitType === "projectile-shock") {
+        this.createShockHitEffect(zombie, crit, impactPoint);
         return;
       }
       const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
