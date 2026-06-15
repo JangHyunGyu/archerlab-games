@@ -5411,7 +5411,8 @@
         zone.tickTimer -= dt;
         if (zone.damageLife > 0 && zone.tickTimer <= 0) {
           zone.tickTimer += zone.tickInterval;
-          const radiusSq = zone.radius * zone.radius;
+          const hitRadius = zone.visualRadius || zone.radius;
+          const radiusSq = hitRadius * hitRadius;
           this.zombies.slice().forEach((zombie) => {
             if (!zombie.active || zombie.hp <= 0 || this.mode !== "playing") {
               return;
@@ -5422,7 +5423,7 @@
             if (distSq > radiusSq) {
               return;
             }
-            const falloff = 1 - Math.sqrt(distSq) / zone.radius * 0.28;
+            const falloff = 1 - Math.sqrt(distSq) / hitRadius * 0.28;
             this.damageZombie(
               zombie,
               zone.damagePerTick * falloff,
