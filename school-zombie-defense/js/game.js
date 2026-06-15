@@ -49,6 +49,7 @@
   const ARROW_EMBED_DURATION = 2.8;
   const SHOCK_STUN_TINT = 0xbdfaff;
   const DEFAULT_SHOCK_STUN_DURATION = 3;
+  const FIRE_ZONE_VISUAL_DURATION_MULTIPLIER = 5;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -709,7 +710,7 @@
       critChance: 0.05,
       critMultiplier: 1.45,
       fireZoneRadius: 72,
-      fireZoneDuration: 16,
+      fireZoneDuration: 3.2,
       fireZoneDamageScale: 0.22,
       aim: { pivot: [0, -121], reach: 39 },
       recruit: {
@@ -4188,7 +4189,7 @@
           defender.damageBoost *= 1 + burn * 0.026 + throwTraining * 0.008;
           defender.fireZoneDamageScale += burn * 0.006;
           defender.fireZoneRadius += area * 1.5;
-          defender.fireZoneDuration += area * 0.25;
+          defender.fireZoneDuration += area * 0.05;
           defender.rate *= Math.max(0.55, 1 - throwTraining * 0.008);
         } else if (defender.id === "g") {
           const voltage = this.getMetaUpgradeLevel("g_voltage");
@@ -5320,6 +5321,8 @@
       if (!this.fireZones) {
         this.fireZones = [];
       }
+      const damageDuration = Math.max(0.01, duration);
+      const visualDuration = damageDuration * FIRE_ZONE_VISUAL_DURATION_MULTIPLIER;
       const zoneX = clamp(x, this.bounds.left + 10, this.bounds.right - 10);
       const zoneY = clamp(y + 10, this.bounds.top + 12, this.bounds.barricade - 24);
       const glow = this.trackTransient(this.add.ellipse(zoneX, zoneY, radius * 1.82, radius * 0.78, 0xff5b22, 0.18)
@@ -5349,8 +5352,10 @@
         y: zoneY,
         radius,
         damagePerTick: Math.max(1, damagePerTick),
-        duration,
-        life: duration,
+        duration: visualDuration,
+        life: visualDuration,
+        damageDuration,
+        damageLife: damageDuration,
         tickTimer: 0.12,
         tickInterval: 0.34,
         slowDuration,
@@ -5372,6 +5377,7 @@
       for (let i = this.fireZones.length - 1; i >= 0; i -= 1) {
         const zone = this.fireZones[i];
         zone.life -= dt;
+        zone.damageLife = Math.max(0, (zone.damageLife || 0) - dt);
         const progress = clamp(1 - zone.life / Math.max(0.01, zone.duration), 0, 1);
         const fade = clamp(zone.life / 0.45, 0, 1);
         const pulse = 1 + Math.sin((this.elapsed || 0) * 8 + zone.pulseOffset) * 0.055;
@@ -5400,7 +5406,7 @@
         });
 
         zone.tickTimer -= dt;
-        if (zone.tickTimer <= 0) {
+        if (zone.damageLife > 0 && zone.tickTimer <= 0) {
           zone.tickTimer += zone.tickInterval;
           const radiusSq = zone.radius * zone.radius;
           this.zombies.slice().forEach((zombie) => {
@@ -6742,7 +6748,7 @@
         apply: () => {
           const defender = this.getDefenderById("f");
           defender.fireZoneRadius += 12;
-          defender.fireZoneDuration += 2.5;
+          defender.fireZoneDuration += 0.5;
           defender.fireZoneDamageScale += 0.03;
         }
       });
@@ -6768,14 +6774,14 @@
         tag: "화염",
         title: "끈적한 연소",
         desc: "불길에 붙은 좀비가\n잠시 발이 묶입니다.",
-        stat: `둔화 ${this.formatSeconds(fire.slowDuration)} → ${this.formatSeconds(fire.slowDuration + 0.35)}\n지속 ${this.formatSeconds(fire.fireZoneDuration)} → ${this.formatSeconds(fire.fireZoneDuration + 2.25)}`,
+        stat: `둔화 ${this.formatSeconds(fire.slowDuration)} → ${this.formatSeconds(fire.slowDuration + 0.35)}\n지속 ${this.formatSeconds(fire.fireZoneDuration)} → ${this.formatSeconds(fire.fireZoneDuration + 0.45)}`,
         available: fire.slowDuration < 1.4,
         accent: SKILL_ACCENTS.fire,
         accentHex: SKILL_ACCENT_HEX.fire,
         apply: () => {
           const defender = this.getDefenderById("f");
           defender.slowDuration += 0.35;
-          defender.fireZoneDuration += 2.25;
+          defender.fireZoneDuration += 0.45;
           defender.fireZoneDamageScale += 0.02;
         }
       });
