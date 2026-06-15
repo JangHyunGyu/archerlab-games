@@ -84,7 +84,7 @@
     "projectile-frost": 0.78,
     "projectile-firebomb": 0.32,
     "projectile-shock": 0.48,
-    "projectile-nail": 0.34
+    "projectile-nail": 0.52
   };
   const MUZZLE_EFFECTS = {
     "projectile-arrow": { texture: "muzzle-arrow", width: 42, duration: 150, alpha: 0.78, scalePeak: 1.12 },
