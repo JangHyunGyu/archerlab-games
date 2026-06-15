@@ -59,6 +59,12 @@ const SCHOOL_ZOMBIE_KILLS_SQL = "CAST(COALESCE(CASE WHEN json_valid(extra_data) 
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
 const SHADOW_MAX_SCORE = 7200;
 const SHADOW_SCORE_GRACE_SECONDS = 15;
+const CLIENT_ERROR_MESSAGE_LIMIT = 1000;
+const CLIENT_ERROR_STACK_LIMIT = 6000;
+const CLIENT_ERROR_CONTEXT_LIMIT = 4000;
+const CLIENT_ERROR_SOURCE_LIMIT = 600;
+const CLIENT_ERROR_URL_LIMIT = 1000;
+const CLIENT_ERROR_USER_AGENT_LIMIT = 500;
 
 function jsonResponse(data, status = 200) {
     return new Response(JSON.stringify(data), {
@@ -95,6 +101,91 @@ function parseExtraData(extraStr) {
     } catch {
         return {};
     }
+}
+
+function limitText(value, maxLength) {
+    if (value === undefined || value === null) return null;
+    const text = String(value);
+    return text.length > maxLength ? text.slice(0, maxLength) : text;
+}
+
+function normalizeClientErrorGameId(value) {
+    const gameId = limitText(String(value || '').trim(), 80);
+    if (!gameId || !/^[a-z0-9_.:-]+$/i.test(gameId)) return null;
+    return gameId;
+}
+
+function normalizeOptionalInteger(value) {
+    const parsed = parseInteger(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return null;
+    return parsed;
+}
+
+function normalizeClientErrorContext(value) {
+    if (value === undefined || value === null) return null;
+    try {
+        return limitText(JSON.stringify(value), CLIENT_ERROR_CONTEXT_LIMIT);
+    } catch {
+        return limitText(String(value), CLIENT_ERROR_CONTEXT_LIMIT);
+    }
+}
+
+async function recordClientError(db, request, body) {
+    if (!isPlainObject(body)) {
+        return jsonResponse({ error: 'invalid client error payload' }, 400);
+    }
+
+    const gameId = normalizeClientErrorGameId(body.game_id || body.gameId);
+    if (!gameId) {
+        return jsonResponse({ error: 'valid game_id is required' }, 400);
+    }
+
+    const fallbackMessage = body.stack || body.reason || 'Unknown client error';
+    const message = limitText(String(body.message || fallbackMessage).trim(), CLIENT_ERROR_MESSAGE_LIMIT);
+    if (!message) {
+        return jsonResponse({ error: 'message is required' }, 400);
+    }
+
+    const errorType = limitText(String(body.error_type || body.type || 'error').trim(), 80) || 'error';
+    const source = limitText(body.source || body.filename || null, CLIENT_ERROR_SOURCE_LIMIT);
+    const lineno = normalizeOptionalInteger(body.lineno ?? body.line);
+    const colno = normalizeOptionalInteger(body.colno ?? body.column);
+    const stack = limitText(body.stack || null, CLIENT_ERROR_STACK_LIMIT);
+    const url = limitText(body.url || null, CLIENT_ERROR_URL_LIMIT);
+    const appVersion = limitText(body.app_version || body.version || null, 120);
+    const context = normalizeClientErrorContext(body.context);
+    const userAgent = limitText(request.headers.get('User-Agent') || body.user_agent || null, CLIENT_ERROR_USER_AGENT_LIMIT);
+
+    await db.prepare(`
+        INSERT INTO client_errors (
+            game_id,
+            error_type,
+            message,
+            source,
+            lineno,
+            colno,
+            stack,
+            url,
+            app_version,
+            context,
+            user_agent
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        gameId,
+        errorType,
+        message,
+        source,
+        lineno,
+        colno,
+        stack,
+        url,
+        appVersion,
+        context,
+        userAgent
+    ).run();
+
+    return jsonResponse({ success: true });
 }
 
 function getSchoolZombieKillsFromExtra(extraStr) {
@@ -836,6 +927,29 @@ async function initDB(db) {
     await db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_ranking_sessions_game_updated ON ranking_sessions(game_id, updated_at)
     `).run();
+    await db.prepare(`
+        CREATE TABLE IF NOT EXISTS client_errors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id TEXT NOT NULL,
+            error_type TEXT NOT NULL,
+            message TEXT NOT NULL,
+            source TEXT,
+            lineno INTEGER,
+            colno INTEGER,
+            stack TEXT,
+            url TEXT,
+            app_version TEXT,
+            context TEXT,
+            user_agent TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    `).run();
+    await db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_client_errors_game_created ON client_errors(game_id, created_at DESC)
+    `).run();
+    await db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_client_errors_created ON client_errors(created_at DESC)
+    `).run();
 }
 
 async function saveParkingRankingRecord(db, gameId, name, score, extraStr) {
@@ -953,6 +1067,11 @@ export default {
         try {
             // Auto-init DB table
             await initDB(env.DB);
+
+            if (path === '/client-errors' && request.method === 'POST') {
+                const body = await request.json().catch(() => null);
+                return recordClientError(env.DB, request, body);
+            }
 
             // GET /rankings?game_id=blockpang&limit=20
             if (path === '/rankings' && request.method === 'GET') {
