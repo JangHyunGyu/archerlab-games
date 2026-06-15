@@ -48,7 +48,7 @@
   const BOW_MARK_DAMAGE_BONUS = 0.18;
   const ARROW_EMBED_DURATION = 2.8;
   const SHOCK_STUN_TINT = 0xbdfaff;
-  const DEFAULT_SHOCK_STUN_DURATION = 3;
+  const DEFAULT_SHOCK_STUN_DURATION = 2;
   const FIRE_ZONE_VISUAL_DURATION_MULTIPLIER = 3.125;
   const FIRE_ZONE_VISUAL_SIZE_MULTIPLIER = 1.5;
   const FIRE_ZONE_MIN_BURN_DURATION = 0.65;
@@ -711,7 +711,7 @@
       critMultiplier: 1.45,
       fireZoneRadius: 72,
       fireZoneDuration: 3.2,
-      fireZoneDamageScale: 0.22,
+      fireZoneDamageScale: 0.25,
       aim: { pivot: [0, -121], reach: 39 },
       recruit: {
         icon: "avatar-fire",
