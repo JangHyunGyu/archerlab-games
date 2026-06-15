@@ -709,7 +709,7 @@
       critChance: 0.05,
       critMultiplier: 1.45,
       fireZoneRadius: 72,
-      fireZoneDuration: 3.2,
+      fireZoneDuration: 16,
       fireZoneDamageScale: 0.22,
       aim: { pivot: [0, -121], reach: 39 },
       recruit: {
@@ -4188,7 +4188,7 @@
           defender.damageBoost *= 1 + burn * 0.026 + throwTraining * 0.008;
           defender.fireZoneDamageScale += burn * 0.006;
           defender.fireZoneRadius += area * 1.5;
-          defender.fireZoneDuration += area * 0.05;
+          defender.fireZoneDuration += area * 0.25;
           defender.rate *= Math.max(0.55, 1 - throwTraining * 0.008);
         } else if (defender.id === "g") {
           const voltage = this.getMetaUpgradeLevel("g_voltage");
@@ -4559,16 +4559,16 @@
 
       const position = {
         x: clamp(engineer?.x || 270, this.bounds.left + 58, this.bounds.right - 58),
-        y: clamp((engineer?.y || this.bounds.survivorLine) - 104, this.bounds.zombieFootLine + 24, this.bounds.survivorLine - 58)
+        y: clamp((engineer?.y || this.bounds.survivorLine) - 72, this.bounds.zombieFootLine + 24, this.bounds.survivorLine - 24)
       };
       const container = this.trackTransient(this.add.container(position.x, position.y).setDepth(228));
-      const shadow = this.add.ellipse(0, 26, 88, 28, 0x000000, 0.34);
+      const shadow = this.add.ellipse(0, 13, 44, 14, 0x000000, 0.34);
       const initialTurretTexture = this.textures.exists("engineer-turret-aim-12")
         ? "engineer-turret-aim-12"
         : "engineer-turret";
       const turretSprite = this.add.image(0, 0, initialTurretTexture)
         .setOrigin(0.5, 0.58);
-      turretSprite.setDisplaySize(150, 150);
+      turretSprite.setDisplaySize(75, 75);
       container.add([shadow, turretSprite]);
       container.setAlpha(0).setScale(0.72);
       this.tweens.add({
@@ -4594,7 +4594,7 @@
         pierce: 0,
         critChance: 0.05,
         critMultiplier: 1.35,
-        aim: { pivot: [0, -12], reach: 42 },
+        aim: { pivot: [0, -6], reach: 21 },
         sprite: null
       };
       this.turrets.push(turret);
@@ -4621,11 +4621,11 @@
               turret.turretSprite.setTexture(aimTexture);
             }
             turret.turretSprite
-              .setDisplaySize(150, 150)
+              .setDisplaySize(75, 75)
               .setRotation(0);
           } else {
             turret.turretSprite
-              .setDisplaySize(150, 150)
+              .setDisplaySize(75, 75)
               .setRotation(targetAngle + Math.PI / 2);
           }
         }
@@ -6742,7 +6742,7 @@
         apply: () => {
           const defender = this.getDefenderById("f");
           defender.fireZoneRadius += 12;
-          defender.fireZoneDuration += 0.5;
+          defender.fireZoneDuration += 2.5;
           defender.fireZoneDamageScale += 0.03;
         }
       });
@@ -6768,14 +6768,14 @@
         tag: "화염",
         title: "끈적한 연소",
         desc: "불길에 붙은 좀비가\n잠시 발이 묶입니다.",
-        stat: `둔화 ${this.formatSeconds(fire.slowDuration)} → ${this.formatSeconds(fire.slowDuration + 0.35)}\n지속 ${this.formatSeconds(fire.fireZoneDuration)} → ${this.formatSeconds(fire.fireZoneDuration + 0.45)}`,
+        stat: `둔화 ${this.formatSeconds(fire.slowDuration)} → ${this.formatSeconds(fire.slowDuration + 0.35)}\n지속 ${this.formatSeconds(fire.fireZoneDuration)} → ${this.formatSeconds(fire.fireZoneDuration + 2.25)}`,
         available: fire.slowDuration < 1.4,
         accent: SKILL_ACCENTS.fire,
         accentHex: SKILL_ACCENT_HEX.fire,
         apply: () => {
           const defender = this.getDefenderById("f");
           defender.slowDuration += 0.35;
-          defender.fireZoneDuration += 0.45;
+          defender.fireZoneDuration += 2.25;
           defender.fireZoneDamageScale += 0.02;
         }
       });
