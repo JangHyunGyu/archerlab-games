@@ -6000,53 +6000,53 @@
         return this.trackTransient(object);
       };
 
-      const flash = addFollow(this.add.circle(hitPoint.x, hitPoint.y, 15 * sizeScale, 0xfff1a1, 0.74)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(depth + 0.8));
-      const bloom = addFollow(this.add.ellipse(hitPoint.x, hitPoint.y, 56 * sizeScale, 34 * sizeScale, 0xff6b22, 0.42)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setRotation(rand(-0.45, 0.45))
-        .setDepth(depth + 0.45));
-      const ring = addFollow(this.add.circle(hitPoint.x, hitPoint.y, 20 * sizeScale, 0xff8a2a, 0)
-        .setStrokeStyle(4 * sizeScale, 0xffd66a, 0.78)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(depth + 0.6));
-
-      this.tweens.add({
-        targets: flash,
-        scale: 1.95,
-        alpha: 0,
-        duration: crit ? 320 : 260,
-        ease: "Cubic.easeOut",
-        onComplete: () => this.destroyTransientObject(flash, false)
-      });
-      this.tweens.add({
-        targets: bloom,
-        scaleX: bloom.scaleX * 1.45,
-        scaleY: bloom.scaleY * 1.22,
-        alpha: 0,
-        duration: 300,
-        ease: "Sine.easeOut",
-        onComplete: () => this.destroyTransientObject(bloom, false)
-      });
-      this.tweens.add({
-        targets: ring,
-        scale: crit ? 2.45 : 2.05,
-        alpha: 0,
-        duration: 290,
-        ease: "Cubic.easeOut",
-        onComplete: () => this.destroyTransientObject(ring, false)
+      const flame = addFollow(this.add.container(hitPoint.x, hitPoint.y).setDepth(depth + 0.95));
+      const baseGlow = this.add.ellipse(0, 8 * sizeScale, 58 * sizeScale, 27 * sizeScale, 0xff5f1d, 0.34)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      flame.add(baseGlow);
+      [
+        { x: 0, y: 6, width: 20, height: 64, color: 0xff5c19, alpha: 0.82, rotation: -0.03 },
+        { x: -12, y: 10, width: 12, height: 46, color: 0xff8c24, alpha: 0.78, rotation: -0.32 },
+        { x: 13, y: 11, width: 11, height: 42, color: 0xff7030, alpha: 0.72, rotation: 0.28 },
+        { x: 2, y: 12, width: 9, height: 41, color: 0xfff0a5, alpha: 0.9, rotation: 0.06 }
+      ].forEach((shape) => {
+        const tongue = this.add.graphics()
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setRotation(shape.rotation);
+        const x = shape.x * sizeScale;
+        const y = shape.y * sizeScale;
+        const width = shape.width * sizeScale;
+        const height = shape.height * sizeScale;
+        tongue.fillStyle(shape.color, shape.alpha);
+        tongue.beginPath();
+        tongue.moveTo(x, y - height);
+        tongue.bezierCurveTo(x - width * 0.95, y - height * 0.54, x - width * 0.72, y + height * 0.1, x, y + height * 0.26);
+        tongue.bezierCurveTo(x + width * 0.78, y + height * 0.08, x + width * 0.82, y - height * 0.56, x, y - height);
+        tongue.closePath();
+        tongue.fillPath();
+        flame.add(tongue);
       });
 
-      const sparkCount = crit ? 8 : 5;
+      this.tweens.add({
+        targets: flame,
+        y: hitPoint.y - 8 * sizeScale,
+        scaleX: crit ? 1.26 : 1.14,
+        scaleY: crit ? 1.34 : 1.2,
+        alpha: 0,
+        duration: crit ? 390 : 320,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(flame, false)
+      });
+
+      const sparkCount = crit ? 10 : 7;
       for (let i = 0; i < sparkCount; i += 1) {
-        const angle = rand(-Math.PI, Math.PI);
-        const distance = rand(18, crit ? 54 : 42) * sizeScale;
+        const angle = rand(-Math.PI * 0.92, -Math.PI * 0.08);
+        const distance = rand(18, crit ? 58 : 44) * sizeScale;
         const spark = this.trackTransient(this.add.circle(
           hitPoint.x + Math.cos(angle) * rand(2, 8),
           hitPoint.y + Math.sin(angle) * rand(2, 8),
-          rand(2.4, crit ? 5.8 : 4.6) * sizeScale,
-          choose([0xfff4a8, 0xffb743, 0xff5a24]),
+          rand(2.2, crit ? 5.2 : 4.2) * sizeScale,
+          choose([0xfff4a8, 0xffc247, 0xff6a22, 0xff3f16]),
           rand(0.62, 0.9)
         )
           .setBlendMode(Phaser.BlendModes.ADD)
@@ -6054,10 +6054,10 @@
         this.tweens.add({
           targets: spark,
           x: hitPoint.x + Math.cos(angle) * distance,
-          y: hitPoint.y + Math.sin(angle) * distance - rand(4, 18) * sizeScale,
+          y: hitPoint.y + Math.sin(angle) * distance - rand(16, 34) * sizeScale,
           scale: 0.25,
           alpha: 0,
-          duration: rand(210, 340),
+          duration: rand(230, 380),
           ease: "Cubic.easeOut",
           onComplete: () => this.destroyTransientObject(spark, false)
         });
