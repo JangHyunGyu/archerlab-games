@@ -102,7 +102,6 @@
     "projectile-rifle": { texture: "zombie-hit-rifle-sheet", width: 70, duration: 260, alpha: 0.98, scalePeak: 1.08, rotation: 0.35, frameWidth: 140, frameHeight: 100, frames: 16 },
     "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 150, duration: 300, alpha: 0.98, scalePeak: 1.16, rotation: 0.42, frameWidth: 150, frameHeight: 104, frames: 16 },
     "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 106, duration: 320, alpha: 0.98, scalePeak: 1.1, rotation: 0.25, frameWidth: 160, frameHeight: 130, frames: 18 },
-    "projectile-firebomb": { texture: "zombie-hit-firebomb-sheet", width: 104, duration: 260, alpha: 0.96, scalePeak: 1.12, rotation: 0.18, frameWidth: 140, frameHeight: 140, frames: 4 },
     "projectile-shock": { texture: "zombie-hit-shock-sheet", width: 92, duration: 235, alpha: 0.98, scalePeak: 1.14, rotation: 0.12, alignToImpact: false, frameWidth: 144, frameHeight: 144, frames: 4 },
     "projectile-nail": { texture: "zombie-hit-nail-sheet", width: 68, duration: 210, alpha: 0.96, scalePeak: 1.1, rotation: 0.1, alignToImpact: false, frameWidth: 128, frameHeight: 128, frames: 4 },
     explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
@@ -1844,7 +1843,6 @@
       this.load.spritesheet("zombie-hit-rifle-sheet", imageAsset("assets/images/zombie-hit-rifle-sheet.png"), { frameWidth: 140, frameHeight: 100 });
       this.load.spritesheet("zombie-hit-rocket-sheet", imageAsset("assets/images/zombie-hit-rocket-sheet.png"), { frameWidth: 160, frameHeight: 130 });
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
-      this.load.spritesheet("zombie-hit-firebomb-sheet", imageAsset("assets/images/zombie-hit-firebomb-sheet.png"), { frameWidth: 140, frameHeight: 140 });
       this.load.spritesheet("zombie-hit-shock-sheet", imageAsset("assets/images/zombie-hit-shock-sheet.png"), { frameWidth: 144, frameHeight: 144 });
       this.load.spritesheet("zombie-hit-nail-sheet", imageAsset("assets/images/zombie-hit-nail-sheet.png"), { frameWidth: 128, frameHeight: 128 });
       this.load.spritesheet("effect-fire-zone-sheet", imageAsset("assets/images/effect-fire-zone-sheet.png"), { frameWidth: 256, frameHeight: 160 });
@@ -5957,7 +5955,93 @@
       return event;
     }
 
+    createFirebombHitEffect(zombie, crit = false, impactPoint = null) {
+      const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.16 : 1);
+      const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, "projectile-firebomb", crit);
+      const depth = 229 + zombie.y / 5;
+      const addFollow = (object) => {
+        if (!object) {
+          return object;
+        }
+        object.followZombie = zombie;
+        object.followOffsetX = hitPoint.x - zombie.x;
+        object.followOffsetY = hitPoint.y - zombie.y;
+        if (!zombie.hitEffects) {
+          zombie.hitEffects = new Set();
+        }
+        zombie.hitEffects.add(object);
+        return this.trackTransient(object);
+      };
+
+      const flash = addFollow(this.add.circle(hitPoint.x, hitPoint.y, 15 * sizeScale, 0xfff1a1, 0.74)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(depth + 0.8));
+      const bloom = addFollow(this.add.ellipse(hitPoint.x, hitPoint.y, 56 * sizeScale, 34 * sizeScale, 0xff6b22, 0.42)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setRotation(rand(-0.45, 0.45))
+        .setDepth(depth + 0.45));
+      const ring = addFollow(this.add.circle(hitPoint.x, hitPoint.y, 20 * sizeScale, 0xff8a2a, 0)
+        .setStrokeStyle(4 * sizeScale, 0xffd66a, 0.78)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(depth + 0.6));
+
+      this.tweens.add({
+        targets: flash,
+        scale: 1.95,
+        alpha: 0,
+        duration: crit ? 320 : 260,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(flash, false)
+      });
+      this.tweens.add({
+        targets: bloom,
+        scaleX: bloom.scaleX * 1.45,
+        scaleY: bloom.scaleY * 1.22,
+        alpha: 0,
+        duration: 300,
+        ease: "Sine.easeOut",
+        onComplete: () => this.destroyTransientObject(bloom, false)
+      });
+      this.tweens.add({
+        targets: ring,
+        scale: crit ? 2.45 : 2.05,
+        alpha: 0,
+        duration: 290,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(ring, false)
+      });
+
+      const sparkCount = crit ? 8 : 5;
+      for (let i = 0; i < sparkCount; i += 1) {
+        const angle = rand(-Math.PI, Math.PI);
+        const distance = rand(18, crit ? 54 : 42) * sizeScale;
+        const spark = this.trackTransient(this.add.circle(
+          hitPoint.x + Math.cos(angle) * rand(2, 8),
+          hitPoint.y + Math.sin(angle) * rand(2, 8),
+          rand(2.4, crit ? 5.8 : 4.6) * sizeScale,
+          choose([0xfff4a8, 0xffb743, 0xff5a24]),
+          rand(0.62, 0.9)
+        )
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(depth + 0.9));
+        this.tweens.add({
+          targets: spark,
+          x: hitPoint.x + Math.cos(angle) * distance,
+          y: hitPoint.y + Math.sin(angle) * distance - rand(4, 18) * sizeScale,
+          scale: 0.25,
+          alpha: 0,
+          duration: rand(210, 340),
+          ease: "Cubic.easeOut",
+          onComplete: () => this.destroyTransientObject(spark, false)
+        });
+      }
+    }
+
     createZombieHitEffect(zombie, hitType = "default", crit = false, impactPoint = null) {
+      if (hitType === "projectile-firebomb") {
+        this.createFirebombHitEffect(zombie, crit, impactPoint);
+        return;
+      }
       const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
       const displayWidth = effect.width * sizeScale;
