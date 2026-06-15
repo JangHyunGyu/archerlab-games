@@ -56,6 +56,21 @@ const SCHOOL_ZOMBIE_GAME_ID = 'school-zombie-defense';
 const SCHOOL_ZOMBIE_MAX_CLEAR_STAGE = 1000;
 const SCHOOL_ZOMBIE_MIN_MS_PER_STAGE = 12000;
 const SCHOOL_ZOMBIE_KILLS_SQL = "CAST(COALESCE(CASE WHEN json_valid(extra_data) THEN json_extract(extra_data, '$.kills') END, 0) AS INTEGER)";
+const SCHOOL_ZOMBIE_PROFILE_PREFIX = 'szp_';
+const SCHOOL_ZOMBIE_PROFILE_SECRET_BYTES = 32;
+const SCHOOL_ZOMBIE_SHOP_MAX_LEVEL = 30;
+const SCHOOL_ZOMBIE_SHOP_COST_GROWTH = 1.16;
+const SCHOOL_ZOMBIE_SHOP_COST_ROUNDING = 10;
+const SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS = [
+    'c_power', 'c_speed', 'c_crit',
+    'a_power', 'a_mark', 'a_crit',
+    'b_power', 'b_control', 'b_grenade',
+    'd_charge', 'd_radius', 'd_slow',
+    'e_power', 'e_focus', 'e_pierce',
+    'f_burn', 'f_area', 'f_throw',
+    'g_voltage', 'g_chain', 'g_control',
+    'h_turret', 'h_wire', 'h_barricade',
+];
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
 const SHADOW_MAX_SCORE = 7200;
 const SHADOW_SCORE_GRACE_SECONDS = 15;
@@ -155,6 +170,70 @@ function makeSessionId() {
     const bytes = new Uint8Array(16);
     crypto.getRandomValues(bytes);
     return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function makeRandomHex(byteLength) {
+    const bytes = new Uint8Array(byteLength);
+    crypto.getRandomValues(bytes);
+    return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256Hex(value) {
+    const bytes = new TextEncoder().encode(String(value || ''));
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function getSchoolZombieShopUpgradeCost(level) {
+    if (level >= SCHOOL_ZOMBIE_SHOP_MAX_LEVEL) return 0;
+    return Math.round((200 * Math.pow(SCHOOL_ZOMBIE_SHOP_COST_GROWTH, level)) / SCHOOL_ZOMBIE_SHOP_COST_ROUNDING) * SCHOOL_ZOMBIE_SHOP_COST_ROUNDING;
+}
+
+function getSchoolZombieShopUpgradeRefund(level) {
+    const safeLevel = Math.max(0, Math.min(SCHOOL_ZOMBIE_SHOP_MAX_LEVEL, parseInteger(level)));
+    let refund = 0;
+    for (let i = 0; i < safeLevel; i += 1) {
+        refund += getSchoolZombieShopUpgradeCost(i);
+    }
+    return refund;
+}
+
+function createDefaultSchoolZombieProfileMeta() {
+    const upgrades = {};
+    SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS.forEach((id) => {
+        upgrades[id] = 0;
+    });
+    return { coins: 0, upgrades };
+}
+
+function normalizeSchoolZombieProfileMeta(meta) {
+    const defaults = createDefaultSchoolZombieProfileMeta();
+    const upgrades = { ...defaults.upgrades };
+    const rawUpgrades = isPlainObject(meta?.upgrades) ? meta.upgrades : {};
+    SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS.forEach((id) => {
+        const level = parseInteger(rawUpgrades[id]);
+        upgrades[id] = Number.isFinite(level)
+            ? Math.max(0, Math.min(SCHOOL_ZOMBIE_SHOP_MAX_LEVEL, level))
+            : 0;
+    });
+    const coins = parseInteger(meta?.coins);
+    return {
+        coins: Number.isFinite(coins) ? Math.max(0, coins) : 0,
+        upgrades,
+    };
+}
+
+function parseSchoolZombieProfileMeta(row) {
+    return normalizeSchoolZombieProfileMeta({
+        coins: row?.coins,
+        upgrades: parseExtraData(row?.upgrades || '{}'),
+    });
+}
+
+function getSchoolZombieStageCoinReward(clearedStage) {
+    const safeStage = Math.max(0, Math.min(SCHOOL_ZOMBIE_MAX_CLEAR_STAGE, parseInteger(clearedStage)));
+    if (!Number.isFinite(safeStage) || safeStage <= 0) return 0;
+    return getSchoolZombieMinKillsForClearedStage(safeStage);
 }
 
 function getProtectedGameKind(gameId) {
@@ -948,6 +1027,174 @@ async function verifyRankingSession(db, body, clientScore) {
     return null;
 }
 
+function schoolZombieProfileResponse(row, extra = {}) {
+    const meta = parseSchoolZombieProfileMeta(row);
+    return {
+        success: true,
+        profile_id: row.profile_id,
+        profile: meta,
+        coins: meta.coins,
+        upgrades: meta.upgrades,
+        ...extra,
+    };
+}
+
+async function createSchoolZombieProfile(db) {
+    const profileId = `${SCHOOL_ZOMBIE_PROFILE_PREFIX}${makeRandomHex(16)}`;
+    const profileSecret = makeRandomHex(SCHOOL_ZOMBIE_PROFILE_SECRET_BYTES);
+    const secretHash = await sha256Hex(profileSecret);
+    const meta = createDefaultSchoolZombieProfileMeta();
+    const now = Date.now();
+    await db.prepare(`
+        INSERT INTO school_zombie_profiles (profile_id, secret_hash, coins, upgrades, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(profileId, secretHash, meta.coins, JSON.stringify(meta.upgrades), now, now).run();
+    const row = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
+        .bind(profileId)
+        .first();
+    return jsonResponse(schoolZombieProfileResponse(row, {
+        profile_secret: profileSecret,
+        created: true,
+    }));
+}
+
+async function readSchoolZombieProfileAuth(db, body) {
+    const profileId = String(body?.profile_id || '').trim();
+    const profileSecret = String(body?.profile_secret || '').trim();
+    if (!profileId || !profileSecret) {
+        return { error: 'profile credentials are required', status: 400 };
+    }
+    const row = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
+        .bind(profileId)
+        .first();
+    if (!row) {
+        return { error: 'profile not found', status: 404 };
+    }
+    const secretHash = await sha256Hex(profileSecret);
+    if (secretHash !== row.secret_hash) {
+        return { error: 'profile authorization failed', status: 401 };
+    }
+    return { row };
+}
+
+async function getOrCreateSchoolZombieProfile(db, body) {
+    if (!body?.profile_id && !body?.profile_secret) {
+        return createSchoolZombieProfile(db);
+    }
+    const auth = await readSchoolZombieProfileAuth(db, body);
+    if (auth.error) {
+        return jsonResponse({ error: auth.error }, auth.status || 400);
+    }
+    return jsonResponse(schoolZombieProfileResponse(auth.row));
+}
+
+async function updateSchoolZombieProfile(db, row, meta) {
+    const next = normalizeSchoolZombieProfileMeta(meta);
+    const now = Date.now();
+    await db.prepare(`
+        UPDATE school_zombie_profiles
+        SET coins = ?, upgrades = ?, updated_at = ?
+        WHERE profile_id = ?
+    `).bind(next.coins, JSON.stringify(next.upgrades), now, row.profile_id).run();
+    const updated = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
+        .bind(row.profile_id)
+        .first();
+    return updated;
+}
+
+async function buySchoolZombieUpgrade(db, body) {
+    const auth = await readSchoolZombieProfileAuth(db, body);
+    if (auth.error) {
+        return jsonResponse({ error: auth.error }, auth.status || 400);
+    }
+    const upgradeId = String(body?.upgrade_id || '').trim();
+    if (!SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS.includes(upgradeId)) {
+        return jsonResponse({ error: 'invalid upgrade_id' }, 400);
+    }
+    const meta = parseSchoolZombieProfileMeta(auth.row);
+    const level = meta.upgrades[upgradeId] || 0;
+    if (level >= SCHOOL_ZOMBIE_SHOP_MAX_LEVEL) {
+        return jsonResponse({ error: 'upgrade already maxed' }, 400);
+    }
+    const cost = getSchoolZombieShopUpgradeCost(level);
+    if (meta.coins < cost) {
+        return jsonResponse({ error: 'not enough coins' }, 400);
+    }
+    meta.coins -= cost;
+    meta.upgrades[upgradeId] = level + 1;
+    const updated = await updateSchoolZombieProfile(db, auth.row, meta);
+    return jsonResponse(schoolZombieProfileResponse(updated, {
+        upgrade_id: upgradeId,
+        level: level + 1,
+        cost,
+    }));
+}
+
+async function resetSchoolZombieUpgrades(db, body) {
+    const auth = await readSchoolZombieProfileAuth(db, body);
+    if (auth.error) {
+        return jsonResponse({ error: auth.error }, auth.status || 400);
+    }
+    const meta = parseSchoolZombieProfileMeta(auth.row);
+    const refund = SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS
+        .reduce((sum, id) => sum + getSchoolZombieShopUpgradeRefund(meta.upgrades[id]), 0);
+    if (refund <= 0) {
+        return jsonResponse({ error: 'no upgrades to reset' }, 400);
+    }
+    SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS.forEach((id) => {
+        meta.upgrades[id] = 0;
+    });
+    meta.coins += refund;
+    const updated = await updateSchoolZombieProfile(db, auth.row, meta);
+    return jsonResponse(schoolZombieProfileResponse(updated, { refund }));
+}
+
+async function bankSchoolZombieRunCoins(db, body) {
+    const auth = await readSchoolZombieProfileAuth(db, body);
+    if (auth.error) {
+        return jsonResponse({ error: auth.error }, auth.status || 400);
+    }
+    const sessionId = String(body?.session_id || '').trim();
+    if (!sessionId) {
+        return jsonResponse({ error: 'session_id is required' }, 400);
+    }
+    const session = await db.prepare(
+        'SELECT session_id, game_id, score, event_count, started_at FROM ranking_sessions WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (!session || session.game_id !== SCHOOL_ZOMBIE_GAME_ID) {
+        return jsonResponse({ error: 'score session not found' }, 404);
+    }
+    const parsedStage = parseInteger(session.score);
+    const clearedStage = Number.isFinite(parsedStage) ? Math.max(0, parsedStage) : 0;
+    const earnedCoins = getSchoolZombieStageCoinReward(clearedStage);
+    const existingClaim = await db.prepare(
+        'SELECT profile_id, coins, cleared_stage FROM school_zombie_coin_claims WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (existingClaim) {
+        const latest = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
+            .bind(auth.row.profile_id)
+            .first();
+        return jsonResponse(schoolZombieProfileResponse(latest, {
+            earned_coins: 0,
+            cleared_stage: Number(existingClaim.cleared_stage || 0),
+            duplicate_claim: true,
+        }));
+    }
+    const now = Date.now();
+    await db.prepare(`
+        INSERT INTO school_zombie_coin_claims (session_id, profile_id, coins, cleared_stage, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    `).bind(sessionId, auth.row.profile_id, earnedCoins, clearedStage, now).run();
+
+    const meta = parseSchoolZombieProfileMeta(auth.row);
+    meta.coins += earnedCoins;
+    const updated = await updateSchoolZombieProfile(db, auth.row, meta);
+    return jsonResponse(schoolZombieProfileResponse(updated, {
+        earned_coins: earnedCoins,
+        cleared_stage: clearedStage,
+    }));
+}
+
 async function initDB(db) {
     await db.prepare(`
         CREATE TABLE IF NOT EXISTS rankings (
@@ -975,6 +1222,28 @@ async function initDB(db) {
     `).run();
     await db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_ranking_sessions_game_updated ON ranking_sessions(game_id, updated_at)
+    `).run();
+    await db.prepare(`
+        CREATE TABLE IF NOT EXISTS school_zombie_profiles (
+            profile_id TEXT PRIMARY KEY,
+            secret_hash TEXT NOT NULL,
+            coins INTEGER NOT NULL DEFAULT 0,
+            upgrades TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        )
+    `).run();
+    await db.prepare(`
+        CREATE TABLE IF NOT EXISTS school_zombie_coin_claims (
+            session_id TEXT PRIMARY KEY,
+            profile_id TEXT NOT NULL,
+            coins INTEGER NOT NULL DEFAULT 0,
+            cleared_stage INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL
+        )
+    `).run();
+    await db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_school_zombie_coin_claims_profile ON school_zombie_coin_claims(profile_id, created_at)
     `).run();
 }
 
@@ -1169,6 +1438,26 @@ export default {
             if (path === '/score-events' && request.method === 'POST') {
                 const body = await request.json();
                 return recordScoreEvents(env.DB, body);
+            }
+
+            if (path === '/school-zombie/profile' && request.method === 'POST') {
+                const body = await request.json().catch(() => ({}));
+                return getOrCreateSchoolZombieProfile(env.DB, body);
+            }
+
+            if (path === '/school-zombie/profile/buy-upgrade' && request.method === 'POST') {
+                const body = await request.json().catch(() => ({}));
+                return buySchoolZombieUpgrade(env.DB, body);
+            }
+
+            if (path === '/school-zombie/profile/reset-upgrades' && request.method === 'POST') {
+                const body = await request.json().catch(() => ({}));
+                return resetSchoolZombieUpgrades(env.DB, body);
+            }
+
+            if (path === '/school-zombie/profile/bank-run' && request.method === 'POST') {
+                const body = await request.json().catch(() => ({}));
+                return bankSchoolZombieRunCoins(env.DB, body);
             }
 
             if (path === '/rankings' && request.method === 'POST') {
