@@ -47,6 +47,8 @@
   const BOW_MARK_DURATION = 6.5;
   const BOW_MARK_DAMAGE_BONUS = 0.18;
   const ARROW_EMBED_DURATION = 2.8;
+  const SHOCK_STUN_TINT = 0xbdfaff;
+  const DEFAULT_SHOCK_STUN_DURATION = 3;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -733,6 +735,7 @@
       critMultiplier: 1.6,
       pierce: 1,
       slowDuration: 0.45,
+      stunDuration: DEFAULT_SHOCK_STUN_DURATION,
       chainJumps: 1,
       chainRadius: 118,
       chainDamageScale: 0.36,
@@ -2127,6 +2130,8 @@
           baseMarkDamageBonus: defender.markDamageBonus || 0,
           slowDuration: defender.slowDuration || 0,
           baseSlowDuration: defender.slowDuration || 0,
+          stunDuration: defender.stunDuration || 0,
+          baseStunDuration: defender.stunDuration || 0,
           timer: rand(scaleWeaponInterval(0.15), fireRate),
           damageScale: defender.damageScale,
           projectile: defender.projectile,
@@ -3044,13 +3049,90 @@
       if (!zombie || !zombie.active) {
         return;
       }
-      if (zombie.slowTimer > 0) {
+      if (zombie.stunTimer > 0) {
+        zombie.setTint(SHOCK_STUN_TINT);
+      } else if (zombie.slowTimer > 0) {
         zombie.setTint(0x99f4ff);
       } else if (zombie.baseTint) {
         zombie.setTint(zombie.baseTint);
       } else {
         zombie.clearTint();
       }
+    }
+
+    applyZombieStun(zombie, duration) {
+      if (!zombie || !zombie.active || duration <= 0) {
+        return;
+      }
+      zombie.stunTimer = Math.max(zombie.stunTimer || 0, duration);
+      zombie.stunAnchorX = Number.isFinite(zombie.stunAnchorX) ? zombie.stunAnchorX : zombie.x;
+      zombie.stunAnchorY = Number.isFinite(zombie.stunAnchorY) ? zombie.stunAnchorY : zombie.y;
+      zombie.stunSparkTimer = Math.min(zombie.stunSparkTimer || 0, 0.03);
+      zombie.setTint(SHOCK_STUN_TINT);
+    }
+
+    updateZombieStun(zombie, dt) {
+      if (!zombie || !zombie.active || zombie.stunTimer <= 0) {
+        return false;
+      }
+      zombie.stunTimer = Math.max(0, zombie.stunTimer - dt);
+      if (zombie.stunTimer <= 0) {
+        zombie.stunAnchorX = null;
+        zombie.stunAnchorY = null;
+        zombie.stunSparkTimer = 0;
+        zombie.setAngle(0);
+        this.restoreZombieTint(zombie);
+        return false;
+      }
+
+      zombie.stunAnchorX = Number.isFinite(zombie.stunAnchorX) ? zombie.stunAnchorX : zombie.x;
+      zombie.stunAnchorY = Number.isFinite(zombie.stunAnchorY) ? zombie.stunAnchorY : zombie.y;
+      zombie.attackTimer = Math.max(zombie.attackTimer || 0, 0.18);
+      zombie.setTint(SHOCK_STUN_TINT);
+      zombie.setAngle(Math.sin((this.elapsed || 0) * 46 + zombie.wobble) * 2.4);
+
+      zombie.stunSparkTimer = (zombie.stunSparkTimer || 0) - dt;
+      if (zombie.stunSparkTimer <= 0) {
+        zombie.stunSparkTimer = rand(0.08, 0.16);
+        this.createZombieStunSpark(zombie);
+      }
+      return true;
+    }
+
+    createZombieStunSpark(zombie) {
+      if (!zombie || !zombie.active) {
+        return;
+      }
+      const width = zombie.displayW || 80;
+      const height = zombie.displayH || 170;
+      const startX = zombie.x + rand(-width * 0.24, width * 0.24);
+      const startY = zombie.y - height * rand(0.18, 0.52);
+      const spark = this.trackTransient(this.add.graphics()
+        .setDepth(234 + zombie.y / 5)
+        .setBlendMode(Phaser.BlendModes.ADD));
+      spark.lineStyle(rand(1.5, 2.8), 0xffffff, 0.96);
+      spark.beginPath();
+      spark.moveTo(startX, startY);
+      let x = startX;
+      let y = startY;
+      for (let i = 0; i < 3; i += 1) {
+        x += rand(-10, 10);
+        y += rand(-7, 7);
+        spark.lineTo(x, y);
+      }
+      spark.strokePath();
+      spark.lineStyle(5, SKILL_ACCENTS.shock, 0.32);
+      spark.beginPath();
+      spark.moveTo(startX, startY);
+      spark.lineTo(x, y);
+      spark.strokePath();
+      this.tweens.add({
+        targets: spark,
+        alpha: 0,
+        duration: 130,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(spark, false)
+      });
     }
 
     applyZombieKnockback(zombie, hitType, crit = false) {
@@ -4191,6 +4273,7 @@
         defender.markDuration = defender.baseMarkDuration || 0;
         defender.markDamageBonus = defender.baseMarkDamageBonus || 0;
         defender.slowDuration = defender.baseSlowDuration || 0;
+        defender.stunDuration = defender.baseStunDuration || 0;
         defender.timer = rand(scaleWeaponInterval(0.1), defender.rate);
         defender.firePoseTimer = 0;
         defender.attackAnimation = null;
@@ -4360,6 +4443,10 @@
         zombie.attack = ((eliteRoll ? 40 : 18) + this.level * 2) * typeConfig.attackScale;
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
+        zombie.stunTimer = 0;
+        zombie.stunSparkTimer = 0;
+        zombie.stunAnchorX = null;
+        zombie.stunAnchorY = null;
         zombie.weakMarkTimer = 0;
         zombie.weakMarkBonus = 0;
         zombie.weakMarkFx = null;
@@ -4975,6 +5062,7 @@
         markDuration: defender.markDuration || 0,
         markDamageBonus: defender.markDamageBonus || 0,
         slowDuration: defender.slowDuration || 0,
+        stunDuration: defender.stunDuration || 0,
         fireZoneRadius: defender.fireZoneRadius || 0,
         fireZoneDuration: defender.fireZoneDuration || 0,
         fireZoneDamageScale: defender.fireZoneDamageScale || 0,
@@ -5192,6 +5280,9 @@
           this.damageZombie(zombie, bullet.damage, bullet.critChance, bullet.projectile, bullet.critMultiplier, impactPoint);
           if (bullet.slowDuration > 0 && zombie.active) {
             zombie.slowTimer = Math.max(zombie.slowTimer || 0, bullet.slowDuration);
+          }
+          if (bullet.stunDuration > 0 && zombie.active) {
+            this.applyZombieStun(zombie, bullet.stunDuration);
           }
           if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && zombie.active) {
             this.applyWeakMark(zombie, bullet.markDuration, bullet.markDamageBonus);
@@ -5420,6 +5511,9 @@
         );
         if (target.active && bullet.slowDuration > 0) {
           target.slowTimer = Math.max(target.slowTimer || 0, bullet.slowDuration * 0.85);
+        }
+        if (target.active && bullet.stunDuration > 0) {
+          this.applyZombieStun(target, bullet.stunDuration);
         }
         ignoredTargets.add(target);
         origin = hitPoint;
@@ -6135,16 +6229,21 @@
         if (!zombie.active) {
           continue;
         }
-        zombie.wobble += dt * 4.2;
-        zombie.animTimer += dt * (zombie.animRate || (zombie.elite ? 5.2 : 6.8));
+        const wasStunned = zombie.stunTimer > 0;
+        zombie.wobble += dt * (wasStunned ? 13.5 : 4.2);
+        zombie.animTimer += dt * (wasStunned
+          ? Math.max(15, (zombie.animRate || 6.8) * 2.35)
+          : (zombie.animRate || (zombie.elite ? 5.2 : 6.8)));
         const nextFrame = Math.floor(zombie.animTimer) % 4;
         if (nextFrame !== zombie.animFrame) {
           zombie.animFrame = nextFrame;
           zombie.setTexture(`${zombie.textureBase || "zombie-walk"}-${zombie.variant}-${nextFrame}`);
           zombie.setDisplaySize(zombie.displayW, zombie.displayH);
         }
-        const crowdShift = Math.sin(zombie.wobble) * 7 * dt;
-        zombie.x = clamp(zombie.x + crowdShift, this.bounds.left, this.bounds.right);
+        if (!wasStunned) {
+          const crowdShift = Math.sin(zombie.wobble) * 7 * dt;
+          zombie.x = clamp(zombie.x + crowdShift, this.bounds.left, this.bounds.right);
+        }
         zombie.setDepth(ZOMBIE_BODY_DEPTH_BASE + zombie.y / 5);
 
         if (zombie.slowTimer > 0) {
@@ -6154,7 +6253,22 @@
           this.restoreZombieTint(zombie);
         }
 
+        const stunned = this.updateZombieStun(zombie, dt);
+
         if (zombie.knockbackTweening) {
+          if (stunned) {
+            zombie.stunAnchorX = zombie.x;
+            zombie.stunAnchorY = zombie.y;
+          }
+          this.updateFollowingHitEffectsForZombie(zombie);
+          continue;
+        }
+
+        if (stunned) {
+          zombie.setPosition(
+            clamp(zombie.stunAnchorX, this.bounds.left, this.bounds.right),
+            zombie.stunAnchorY
+          );
           this.updateFollowingHitEffectsForZombie(zombie);
           continue;
         }
