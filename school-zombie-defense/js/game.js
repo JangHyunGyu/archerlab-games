@@ -367,6 +367,14 @@
     }
     return Math.round((200 * Math.pow(SHOP_COST_GROWTH, level)) / SHOP_COST_ROUNDING) * SHOP_COST_ROUNDING;
   };
+  const getShopUpgradeRefund = (level) => {
+    const safeLevel = clamp(Math.floor(Number(level) || 0), 0, SHOP_MAX_LEVEL);
+    let refund = 0;
+    for (let i = 0; i < safeLevel; i += 1) {
+      refund += getShopUpgradeCost(i);
+    }
+    return refund;
+  };
   const formatShopCost = (cost) => {
     if (cost < 100000) {
       return String(cost);
@@ -3293,14 +3301,16 @@
 
     addPremiumOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
       const isBlue = accent === COLORS.blue;
+      const buttonTint = isBlue ? COLORS.blue : accent;
       const shadow = this.add.ellipse(x, y + Math.max(8, height * 0.16), width * 0.86, height * 0.5, 0x000000, 0.46)
         .setDepth(depth);
       const glow = this.add.image(x, y, "ui-title-button")
         .setDisplaySize(width + 14, height + 12)
-        .setTint(isBlue ? COLORS.blue : COLORS.gold)
+        .setTint(buttonTint)
         .setAlpha(isBlue ? 0.16 : 0.13)
         .setDepth(depth + 0.05);
       const plate = this.add.image(x, y, "ui-title-button")
+        .setTint(buttonTint)
         .setDisplaySize(width, height)
         .setDepth(depth + 0.1);
       const shine = this.add.rectangle(x, y - height * 0.28, width * 0.76, Math.max(2, height * 0.05), 0xffffff, 0.2)
@@ -4000,7 +4010,9 @@
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(521));
       this.getCharacterShopUpgrades(selectedCharacter.id).forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, selectedCharacter, 270, 626 + index * 100));
-      this.addOverlayButton(270, 924, 172, 46, "뒤로", 560, () => this.showMenu(), COLORS.gold);
+      const resetRefund = this.getShopResetRefund();
+      this.addOverlayButton(156, 924, 216, 46, resetRefund > 0 ? `초기화 $${formatShopCost(resetRefund)}` : "강화 초기화", 560, () => this.resetShopUpgrades(), resetRefund > 0 ? COLORS.red : 0x5b646b);
+      this.addOverlayButton(396, 924, 132, 46, "뒤로", 560, () => this.showMenu(), COLORS.gold);
     }
 
     addShopCharacterButton(character, x, y, selected) {
@@ -4178,6 +4190,31 @@
       this.playSfx("skill");
       this.showShop(character.id);
       this.showToast(`${upgrade.title} Lv.${level + 1}`, character.accent);
+    }
+
+    getShopResetRefund() {
+      const meta = normalizeMetaSave(this.meta || loadMetaSave());
+      return getAllShopUpgradeIds()
+        .reduce((sum, id) => sum + getShopUpgradeRefund(meta.upgrades[id]), 0);
+    }
+
+    resetShopUpgrades() {
+      this.unlockAudio();
+      this.meta = loadMetaSave();
+      const refund = this.getShopResetRefund();
+      if (refund <= 0) {
+        this.playSfx("core", 0.65);
+        this.showToast("초기화할 강화가 없습니다", COLORS.red);
+        return;
+      }
+      getAllShopUpgradeIds().forEach((id) => {
+        this.meta.upgrades[id] = 0;
+      });
+      this.meta.coins += refund;
+      this.saveMeta();
+      this.playSfx("coin");
+      this.showShop(this.shopSelectedCharacter);
+      this.showToast(`강화 초기화 +$${formatShopCost(refund)}`, COLORS.gold);
     }
 
     saveMeta() {
@@ -4661,7 +4698,7 @@
 
       const position = {
         x: clamp(engineer?.x || 270, this.bounds.left + 58, this.bounds.right - 58),
-        y: clamp((engineer?.y || this.bounds.survivorLine) - 72, this.bounds.zombieFootLine + 24, this.bounds.survivorLine - 24)
+        y: clamp(this.bounds.barricade + 38, this.bounds.zombieFootLine + 24, this.bounds.survivorLine - 24)
       };
       const container = this.trackTransient(this.add.container(position.x, position.y).setDepth(228));
       const shadow = this.add.ellipse(0, 13, 44, 14, 0x000000, 0.34);
