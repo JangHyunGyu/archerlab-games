@@ -1847,6 +1847,7 @@
       this.load.spritesheet("effect-fire-zone-sheet", imageAsset("assets/images/effect-fire-zone-sheet.png"), { frameWidth: 256, frameHeight: 160 });
       this.load.image("engineer-turret", imageAsset("assets/images/engineer-turret.png"));
       this.load.image("engineer-turret-aim", imageAsset("assets/images/engineer-turret-aim.png"));
+      this.load.image("barbed-wire", imageAsset("assets/images/barbed-wire.png"));
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
       this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
       BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
@@ -4539,30 +4540,26 @@
         this.turrets = [];
       }
       this.turrets = this.turrets.filter((turret) => turret && !turret.container?.destroyed);
-      if (this.turrets.length >= 3) {
-        this.turrets.forEach((turret) => {
-          turret.damageScale *= 1.14;
-          turret.rate = Math.max(0.42, turret.rate * 0.9);
-          turret.life = Math.min(turret.duration, turret.life + 3.5);
-          if (turret.container && !turret.container.destroyed) {
-            this.tweens.add({
-              targets: turret.container,
-              scale: 1.12,
-              yoyo: true,
-              duration: 130,
-              ease: "Sine.easeOut"
-            });
-          }
-        });
+      const existingTurret = this.turrets[0];
+      if (existingTurret) {
+        existingTurret.damageScale *= 1.14;
+        existingTurret.rate = Math.max(0.34, existingTurret.rate * 0.9);
+        if (existingTurret.container && !existingTurret.container.destroyed) {
+          this.tweens.add({
+            targets: existingTurret.container,
+            scale: 1.12,
+            yoyo: true,
+            duration: 130,
+            ease: "Sine.easeOut"
+          });
+        }
         this.showToast("터렛 출력 강화", SKILL_ACCENTS.engineer);
         return;
       }
 
-      const offsets = [-72, 72, 0];
-      const index = this.turrets.length;
       const position = {
-        x: clamp((engineer?.x || 270) + (offsets[index] || 0), this.bounds.left + 58, this.bounds.right - 58),
-        y: clamp((engineer?.y || this.bounds.survivorLine) - 104 - index * 16, this.bounds.zombieFootLine + 24, this.bounds.survivorLine - 58)
+        x: clamp(engineer?.x || 270, this.bounds.left + 58, this.bounds.right - 58),
+        y: clamp((engineer?.y || this.bounds.survivorLine) - 104, this.bounds.zombieFootLine + 24, this.bounds.survivorLine - 58)
       };
       const container = this.trackTransient(this.add.container(position.x, position.y).setDepth(228));
       const shadow = this.add.ellipse(0, 26, 88, 28, 0x000000, 0.34);
@@ -4582,7 +4579,6 @@
         ease: "Back.easeOut"
       });
 
-      const duration = 12.5;
       const rifleDefender = this.getDefenderById("b");
 
       const turret = {
@@ -4595,8 +4591,6 @@
         rate: Math.max(0.46, 0.82 / (engineer?.turretRateBoost || 1)),
         timer: rand(0.18, 0.5),
         damageScale: 0.34 * (engineer?.turretDamageBoost || 1),
-        duration,
-        life: duration,
         pierce: 0,
         critChance: 0.05,
         critMultiplier: 1.35,
@@ -4614,19 +4608,6 @@
       for (let i = this.turrets.length - 1; i >= 0; i -= 1) {
         const turret = this.turrets[i];
         if (!turret || turret.container?.destroyed) {
-          this.turrets.splice(i, 1);
-          continue;
-        }
-        turret.life -= dt;
-        if (turret.life <= 0) {
-          this.tweens.add({
-            targets: turret.container,
-            alpha: 0,
-            scale: 0.78,
-            duration: 180,
-            ease: "Sine.easeIn",
-            onComplete: () => this.destroyTransientObject(turret.container, false)
-          });
           this.turrets.splice(i, 1);
           continue;
         }
@@ -4666,12 +4647,18 @@
     reinforceBarbedWire(engineer) {
       const y = this.bounds.zombieFootLine + 10;
       if (!this.barbedWire) {
-        const wire = this.trackTransient(this.add.graphics().setDepth(226));
-        const glow = this.trackTransient(this.add.rectangle(270, y, 492, 20, 0x3d4a4f, 0.16).setDepth(225));
+        const wire = this.textures.exists("barbed-wire")
+          ? this.trackTransient(this.add.image(270, y, "barbed-wire")
+            .setOrigin(0.5, 0.54)
+            .setDepth(226)
+            .setAlpha(0.97))
+          : this.trackTransient(this.add.graphics().setDepth(226));
+        const glow = this.trackTransient(this.add.rectangle(270, y + 8, 506, 70, 0x3d4a4f, 0.18).setDepth(225));
         this.barbedWire = {
           y,
           damageScale: 0.34 * (engineer?.wireDamageBoost || 1),
           slowDuration: 0.72 * (engineer?.wireSlowBoost || 1),
+          hitHalfHeight: 58,
           objects: [wire, glow]
         };
         this.drawBarbedWire();
@@ -4700,6 +4687,17 @@
         return;
       }
       const y = this.barbedWire.y;
+      if (this.textures.exists("barbed-wire") && typeof wire.setDisplaySize === "function") {
+        const width = 510;
+        const source = this.textures.get("barbed-wire").getSourceImage();
+        wire
+          .setPosition(270, y)
+          .setDisplaySize(width, width * source.height / source.width);
+        return;
+      }
+      if (typeof wire.clear !== "function") {
+        return;
+      }
       wire.clear();
       wire.lineStyle(4, 0x11181c, 0.86);
       wire.beginPath();
@@ -4722,11 +4720,13 @@
         return;
       }
       zombie.wireCooldown = Math.max(0, (zombie.wireCooldown || 0) - dt);
-      const footY = zombie.y + (zombie.displayH || 170) * 0.04;
-      if (Math.abs(footY - this.barbedWire.y) > 34 || zombie.wireCooldown > 0) {
+      const displayHeight = zombie.displayH || 170;
+      const type = zombie.elite ? "elite" : zombie.type || "normal";
+      const footY = zombie.y + displayHeight * (ZOMBIE_FOOT_OFFSET_RATIOS[type] || ZOMBIE_FOOT_OFFSET_RATIOS.normal);
+      if (Math.abs(footY - this.barbedWire.y) > (this.barbedWire.hitHalfHeight || 58) || zombie.wireCooldown > 0) {
         return;
       }
-      zombie.wireCooldown = 0.78;
+      zombie.wireCooldown = 0.58;
       this.damageZombie(
         zombie,
         this.damage * CHARACTER_DAMAGE_MULTIPLIER * this.barbedWire.damageScale,
@@ -6832,9 +6832,9 @@
         id: "h-turret",
         icon: "skill-barrage",
         tag: "공병",
-        title: (this.turrets?.length || 0) >= 3 ? "터렛 출력 강화" : "휴대 터렛",
+        title: (this.turrets?.length || 0) > 0 ? "터렛 출력 강화" : "휴대 터렛",
         desc: "방어선 앞에 자동 터렛을\n설치하거나 강화합니다.",
-        stat: `터렛 ${(this.turrets?.length || 0)}/3 → ${Math.min(3, (this.turrets?.length || 0) + 1)}/3\n출력 ${this.formatPercent(engineer.turretDamageBoost)} → ${this.formatPercent(engineer.turretDamageBoost * 1.08)}`,
+        stat: `${(this.turrets?.length || 0) > 0 ? "터렛 설치됨" : "터렛 0/1 → 1/1"}\n출력 ${this.formatPercent(engineer.turretDamageBoost)} → ${this.formatPercent(engineer.turretDamageBoost * 1.08)}`,
         accent: SKILL_ACCENTS.engineer,
         accentHex: SKILL_ACCENT_HEX.engineer,
         apply: () => {
