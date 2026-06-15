@@ -59,6 +59,7 @@ const SCHOOL_ZOMBIE_KILLS_SQL = "CAST(COALESCE(CASE WHEN json_valid(extra_data) 
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
 const SHADOW_MAX_SCORE = 7200;
 const SHADOW_SCORE_GRACE_SECONDS = 15;
+const CENTRAL_ERROR_LOG_ENDPOINT = 'https://chatbot-api.yama5993.workers.dev/error-logs';
 
 function jsonResponse(data, status = 200) {
     return new Response(JSON.stringify(data), {
@@ -95,6 +96,50 @@ function parseExtraData(extraStr) {
     } catch {
         return {};
     }
+}
+
+function limitText(value, maxLength) {
+    if (value === undefined || value === null) return '';
+    const text = String(value);
+    return text.length > maxLength ? text.slice(0, maxLength) : text;
+}
+
+async function forwardClientErrorToCentral(request, body) {
+    if (!isPlainObject(body)) {
+        return jsonResponse({ error: 'invalid client error payload' }, 400);
+    }
+
+    const gameId = limitText(body.game_id || body.gameId || body.appId || 'archerlab-games', 100)
+        .replace(/[^a-z0-9_.:-]/gi, '') || 'archerlab-games';
+    const errorType = limitText(body.error_type || body.type || 'error', 100) || 'error';
+    const message = limitText(body.message || body.stack || 'Unknown client error', 500);
+    if (!message) {
+        return jsonResponse({ ok: true });
+    }
+
+    await fetch(CENTRAL_ERROR_LOG_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            appId: gameId,
+            userId: '',
+            message: limitText('[' + errorType + '] ' + message, 500),
+            stack: limitText(body.stack || '', 4000),
+            url: limitText(body.url || request.headers.get('Referer') || '', 500),
+            source: limitText(body.source || body.filename || '', 500),
+            errorType: errorType,
+            errorClass: limitText(body.error_class || body.errorClass || '', 50),
+            context: body.context || null,
+            extra: {
+                lineno: body.lineno ?? body.line ?? 0,
+                colno: body.colno ?? body.column ?? 0,
+                appVersion: body.app_version || body.version || '',
+                userAgent: request.headers.get('User-Agent') || '',
+            },
+        }),
+    }).catch(() => null);
+
+    return jsonResponse({ ok: true });
 }
 
 function getSchoolZombieKillsFromExtra(extraStr) {
@@ -953,6 +998,11 @@ export default {
         try {
             // Auto-init DB table
             await initDB(env.DB);
+
+            if (path === '/client-errors' && request.method === 'POST') {
+                const body = await request.json().catch(() => null);
+                return forwardClientErrorToCentral(request, body);
+            }
 
             // GET /rankings?game_id=blockpang&limit=20
             if (path === '/rankings' && request.method === 'GET') {
