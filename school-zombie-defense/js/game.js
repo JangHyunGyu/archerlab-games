@@ -719,7 +719,7 @@
       critMultiplier: 1.45,
       fireZoneRadius: 72,
       fireZoneDuration: 3.2,
-      fireZoneDamageScale: 0.25,
+      fireZoneDamageScale: 0.2,
       aim: { pivot: [0, -121], reach: 39 },
       recruit: {
         icon: "avatar-fire",
