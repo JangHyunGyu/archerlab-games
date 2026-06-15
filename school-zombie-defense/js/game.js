@@ -86,6 +86,33 @@
     "projectile-shock": 0.48,
     "projectile-nail": 0.52
   };
+  const EMBEDDED_PROJECTILES = {
+    "projectile-arrow": {
+      texture: "projectile-arrow",
+      scale: PROJECTILE_SCALES["projectile-arrow"],
+      embedRatio: 0.28,
+      minEmbed: 8,
+      maxEmbed: 14,
+      alpha: 0.95,
+      depthOffset: -0.5,
+      life: ARROW_EMBED_DURATION
+    },
+    "projectile-nail": {
+      texture: "projectile-nail",
+      scale: PROJECTILE_SCALES["projectile-nail"],
+      embedRatio: 0.66,
+      minEmbed: 34,
+      maxEmbed: 64,
+      alpha: 0.92,
+      depthOffset: -0.55,
+      life: ARROW_EMBED_DURATION * 0.85
+    }
+  };
+  const ROCKET_ACCELERATION = {
+    startScale: 0.28,
+    endScale: 1.35,
+    rampDuration: 0.58
+  };
   const MUZZLE_EFFECTS = {
     "projectile-arrow": { texture: "muzzle-arrow", width: 42, duration: 150, alpha: 0.78, scalePeak: 1.12 },
     "projectile-pistol": { texture: "muzzle-pistol", width: 36, duration: 130, alpha: 0.92, scalePeak: 1.18 },
@@ -5168,20 +5195,32 @@
         .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
         .setRotation(angle + Math.PI / 2)
         .setDepth(190);
-      const visualEffects = defender.projectile === "projectile-sniper"
-        ? this.createSniperBulletGlow(sprite, angle)
-        : defender.projectile === "projectile-rocket"
-          ? this.createRocketProjectileGlow(sprite, angle)
-          : null;
+      const isRocket = defender.projectile === "projectile-rocket";
+      const launchSpeed = isRocket ? speed * ROCKET_ACCELERATION.startScale : speed;
+      const visualEffects = defender.projectile === "projectile-arrow"
+        ? this.createArrowProjectileTrail(sprite, angle)
+        : defender.projectile === "projectile-sniper"
+          ? this.createSniperBulletGlow(sprite, angle)
+          : isRocket
+            ? this.createRocketProjectileGlow(sprite, angle)
+            : defender.projectile === "projectile-shock"
+              ? this.createShockProjectileLink(x, y, sprite, angle)
+              : null;
       this.bullets.push({
         sprite,
         visualEffects,
         angle,
         hitOffset: sprite.displayHeight * 0.72,
         damage,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
+        vx: Math.cos(angle) * launchSpeed,
+        vy: Math.sin(angle) * launchSpeed,
         life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
+        age: 0,
+        speed,
+        currentSpeed: launchSpeed,
+        rocketSpeedStart: isRocket ? speed * ROCKET_ACCELERATION.startScale : null,
+        rocketSpeedEnd: isRocket ? speed * ROCKET_ACCELERATION.endScale : null,
+        rocketRampDuration: isRocket ? ROCKET_ACCELERATION.rampDuration : null,
         pierce,
         critChance,
         critMultiplier: defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
@@ -5206,6 +5245,20 @@
       });
       this.createMuzzle(x, y, angle, defender.projectile);
       this.playWeaponSfx(defender.projectile);
+    }
+
+    createArrowProjectileTrail(sprite, angle) {
+      const tailX = sprite.x - Math.cos(angle) * 14;
+      const tailY = sprite.y - Math.sin(angle) * 14;
+      const trail = this.add.ellipse(tailX, tailY, 74, 8, 0xffcf57, 0.24)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setRotation(angle)
+        .setDepth(188.7);
+      const core = this.add.ellipse(tailX + Math.cos(angle) * 9, tailY + Math.sin(angle) * 9, 42, 3, 0xffffff, 0.34)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setRotation(angle)
+        .setDepth(189.1);
+      return { type: "arrow", trail, core };
     }
 
     createSniperBulletGlow(sprite, angle) {
@@ -5234,8 +5287,42 @@
       return { type: "rocket", glow, flame };
     }
 
+    createShockProjectileLink(sourceX, sourceY, sprite, angle) {
+      const link = this.add.graphics().setDepth(189.2);
+      return {
+        type: "shock",
+        link,
+        sourceX,
+        sourceY,
+        phase: rand(0, Math.PI * 2),
+        angle
+      };
+    }
+
     updateBulletVisuals(bullet) {
       if (!bullet?.visualEffects || !bullet.sprite || bullet.sprite.destroyed) {
+        return;
+      }
+      if (bullet.visualEffects.type === "arrow") {
+        const { trail, core } = bullet.visualEffects;
+        const tailX = bullet.sprite.x - Math.cos(bullet.angle) * 14;
+        const tailY = bullet.sprite.y - Math.sin(bullet.angle) * 14;
+        const depth = (bullet.sprite.depth || 190) - 1.2;
+        const pulse = 0.9 + Math.sin((this.elapsed || 0) * 28) * 0.08;
+        if (trail && !trail.destroyed) {
+          trail
+            .setPosition(tailX - Math.cos(bullet.angle) * 18, tailY - Math.sin(bullet.angle) * 18)
+            .setRotation(bullet.angle)
+            .setScale(pulse, 0.92)
+            .setDepth(depth);
+        }
+        if (core && !core.destroyed) {
+          core
+            .setPosition(tailX + Math.cos(bullet.angle) * 4, tailY + Math.sin(bullet.angle) * 4)
+            .setRotation(bullet.angle)
+            .setScale(0.95 + pulse * 0.08, 1)
+            .setDepth(depth + 0.4);
+        }
         return;
       }
       if (bullet.visualEffects.type === "rocket") {
@@ -5243,10 +5330,12 @@
         const tailX = bullet.sprite.x - Math.cos(bullet.angle) * 7;
         const tailY = bullet.sprite.y - Math.sin(bullet.angle) * 7;
         const depth = (bullet.sprite.depth || 190) - 1.5;
+        const speedPulse = 0.72 + clamp(bullet.speedProgress || 0, 0, 1) * 0.38;
         if (glow && !glow.destroyed) {
           glow
             .setPosition(tailX - Math.cos(bullet.angle) * 8, tailY - Math.sin(bullet.angle) * 8)
             .setRotation(bullet.angle)
+            .setScale(speedPulse, 0.86 + speedPulse * 0.18)
             .setDepth(depth);
         }
         if (flame && !flame.destroyed) {
@@ -5254,9 +5343,13 @@
           flame
             .setPosition(tailX - Math.cos(bullet.angle) * 4, tailY - Math.sin(bullet.angle) * 4)
             .setRotation(bullet.angle)
-            .setScale(pulse, 0.88 + pulse * 0.1)
+            .setScale(pulse * speedPulse, 0.74 + pulse * 0.16)
             .setDepth(depth + 0.5);
         }
+        return;
+      }
+      if (bullet.visualEffects.type === "shock") {
+        this.drawShockProjectileLink(bullet);
         return;
       }
       const { glow, trail } = bullet.visualEffects;
@@ -5328,6 +5421,54 @@
       });
     }
 
+    drawShockProjectileLink(bullet) {
+      const effect = bullet.visualEffects;
+      const link = effect?.link;
+      if (!link || link.destroyed) {
+        return;
+      }
+      const start = { x: effect.sourceX, y: effect.sourceY };
+      const backX = Math.cos(bullet.angle);
+      const backY = Math.sin(bullet.angle);
+      const sideX = -Math.sin(bullet.angle);
+      const sideY = Math.cos(bullet.angle);
+      const end = {
+        x: bullet.sprite.x - backX * 20,
+        y: bullet.sprite.y - backY * 20
+      };
+      const segments = 6;
+      const points = [];
+      const pulse = (this.elapsed || 0) * 46 + (effect.phase || 0);
+      for (let i = 0; i <= segments; i += 1) {
+        const t = i / segments;
+        const jitter = i === 0 || i === segments
+          ? 0
+          : Math.sin(pulse + i * 1.7) * 8 + rand(-3, 3);
+        points.push({
+          x: start.x + (end.x - start.x) * t + sideX * jitter,
+          y: start.y + (end.y - start.y) * t + sideY * jitter
+        });
+      }
+      const drawPath = (width, color, alpha) => {
+        link.lineStyle(width, color, alpha);
+        link.beginPath();
+        link.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) {
+          link.lineTo(points[i].x, points[i].y);
+        }
+        link.strokePath();
+      };
+      link.clear();
+      drawPath(9, SKILL_ACCENTS.shock, 0.18);
+      drawPath(4, SKILL_ACCENTS.shock, 0.52);
+      drawPath(1.6, 0xffffff, 0.9);
+      link.fillStyle(0xffffff, 0.55);
+      link.fillCircle(start.x, start.y, 2.4);
+      link.fillStyle(SKILL_ACCENTS.shock, 0.48);
+      link.fillCircle(end.x, end.y, 4.2);
+      link.setDepth((bullet.sprite.depth || 190) - 0.8);
+    }
+
     destroyBullet(bullet) {
       if (!bullet) {
         return;
@@ -5391,6 +5532,8 @@
         const bullet = this.bullets[i];
         const previousTip = this.getBulletTip(bullet);
         bullet.life -= dt;
+        bullet.age = (bullet.age || 0) + dt;
+        this.updateBulletMotion(bullet);
         bullet.sprite.x += bullet.vx * dt;
         bullet.sprite.y += bullet.vy * dt;
         bullet.previousTip = previousTip;
@@ -5404,8 +5547,8 @@
           const impactPoint = hit.point;
           const isFirebombImpact = bullet.projectile === "projectile-firebomb";
           bullet.hitTargets.add(zombie);
-          if (bullet.projectile === "projectile-arrow") {
-            this.createEmbeddedArrow(zombie, bullet, impactPoint);
+          if (EMBEDDED_PROJECTILES[bullet.projectile]) {
+            this.createEmbeddedProjectile(zombie, bullet, impactPoint);
           }
           if (!isFirebombImpact) {
             this.damageZombie(zombie, bullet.damage, bullet.critChance, bullet.projectile, bullet.critMultiplier, impactPoint);
@@ -5447,6 +5590,21 @@
           this.bullets.splice(i, 1);
         }
       }
+    }
+
+    updateBulletMotion(bullet) {
+      if (!bullet || bullet.projectile !== "projectile-rocket") {
+        return;
+      }
+      const rampDuration = bullet.rocketRampDuration || ROCKET_ACCELERATION.rampDuration;
+      const progress = clamp((bullet.age || 0) / rampDuration, 0, 1);
+      const eased = progress * progress;
+      const startSpeed = bullet.rocketSpeedStart || bullet.speed * ROCKET_ACCELERATION.startScale;
+      const endSpeed = bullet.rocketSpeedEnd || bullet.speed * ROCKET_ACCELERATION.endScale;
+      bullet.speedProgress = progress;
+      bullet.currentSpeed = startSpeed + (endSpeed - startSpeed) * eased;
+      bullet.vx = Math.cos(bullet.angle) * bullet.currentSpeed;
+      bullet.vy = Math.sin(bullet.angle) * bullet.currentSpeed;
     }
 
     createFireZone(x, y, radius, damagePerTick, duration, slowDuration = 0) {
@@ -5753,29 +5911,33 @@
       return hitPoint;
     }
 
-    createEmbeddedArrow(zombie, bullet, impactPoint = null) {
-      if (!zombie || !zombie.active || !bullet?.sprite) {
+    createEmbeddedProjectile(zombie, bullet, impactPoint = null) {
+      const config = EMBEDDED_PROJECTILES[bullet?.projectile];
+      if (!config || !zombie || !zombie.active || !bullet?.sprite) {
         return;
       }
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint || this.getBulletTip(bullet), bullet.projectile);
       const hitX = hitPoint.x;
       const hitY = hitPoint.y;
-      const arrowLength = bullet.sprite.displayHeight || 42;
-      const embedDepth = clamp(arrowLength * 0.28, 8, 14);
-      const tailX = hitX - Math.cos(bullet.angle) * (arrowLength - embedDepth);
-      const tailY = hitY - Math.sin(bullet.angle) * (arrowLength - embedDepth);
-      const sprite = this.add.image(tailX, tailY, "projectile-arrow")
+      const projectileLength = bullet.sprite.displayHeight || 42;
+      const embedDepth = clamp(projectileLength * config.embedRatio, config.minEmbed, config.maxEmbed);
+      const visibleLength = Math.max(4, projectileLength - embedDepth);
+      const tailX = hitX - Math.cos(bullet.angle) * visibleLength;
+      const tailY = hitY - Math.sin(bullet.angle) * visibleLength;
+      const sprite = this.add.image(tailX, tailY, config.texture)
         .setOrigin(0.5, 1)
-        .setScale(PROJECTILE_SCALES["projectile-arrow"] || 0.19)
+        .setScale(config.scale || 0.19)
         .setRotation(bullet.angle + Math.PI / 2)
-        .setAlpha(0.95)
-        .setDepth((zombie.depth || 70) - 0.5);
+        .setAlpha(config.alpha)
+        .setDepth((zombie.depth || 70) + config.depthOffset);
       this.embeddedArrows.push({
         sprite,
         zombie,
         offsetX: tailX - zombie.x,
         offsetY: tailY - zombie.y,
-        life: ARROW_EMBED_DURATION
+        alpha: config.alpha,
+        depthOffset: config.depthOffset,
+        life: config.life
       });
     }
 
@@ -5791,8 +5953,8 @@
         }
         arrow.sprite
           .setPosition(zombie.x + arrow.offsetX, zombie.y + arrow.offsetY)
-          .setDepth((zombie.depth || 70) - 0.5)
-          .setAlpha(clamp(arrow.life / 0.45, 0, 0.95));
+          .setDepth((zombie.depth || 70) + (arrow.depthOffset === undefined ? -0.5 : arrow.depthOffset))
+          .setAlpha(clamp(arrow.life / 0.45, 0, arrow.alpha === undefined ? 0.95 : arrow.alpha));
       }
     }
 
