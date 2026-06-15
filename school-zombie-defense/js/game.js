@@ -51,6 +51,7 @@
   const DEFAULT_SHOCK_STUN_DURATION = 3;
   const FIRE_ZONE_VISUAL_DURATION_MULTIPLIER = 5;
   const FIRE_ZONE_VISUAL_SIZE_MULTIPLIER = 1.5;
+  const FIRE_ZONE_MIN_BURN_DURATION = 0.65;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -2663,6 +2664,16 @@
       this.barbedWire = null;
     }
 
+    getZombieFootPoint(zombie) {
+      const displayHeight = zombie?.displayH || 170;
+      const type = zombie?.elite ? "elite" : zombie?.type || "normal";
+      const footOffset = displayHeight * (ZOMBIE_FOOT_OFFSET_RATIOS[type] || ZOMBIE_FOOT_OFFSET_RATIOS.normal);
+      return {
+        x: zombie?.x || 0,
+        y: (zombie?.y || 0) + footOffset
+      };
+    }
+
     fetchWithAbort(url, options = {}, controllerSet = null) {
       const AbortControllerCtor = typeof window !== "undefined" ? window.AbortController : null;
       if (!AbortControllerCtor || !controllerSet || options.signal) {
@@ -4539,6 +4550,10 @@
         zombie.stunSparkTimer = 0;
         zombie.stunAnchorX = null;
         zombie.stunAnchorY = null;
+        zombie.fireBurnTimer = 0;
+        zombie.fireBurnTickTimer = 0;
+        zombie.fireBurnDamagePerTick = 0;
+        zombie.fireBurnTickInterval = 0;
         zombie.weakMarkTimer = 0;
         zombie.weakMarkBonus = 0;
         zombie.weakMarkFx = null;
@@ -4811,9 +4826,7 @@
         return;
       }
       zombie.wireCooldown = Math.max(0, (zombie.wireCooldown || 0) - dt);
-      const displayHeight = zombie.displayH || 170;
-      const type = zombie.elite ? "elite" : zombie.type || "normal";
-      const footY = zombie.y + displayHeight * (ZOMBIE_FOOT_OFFSET_RATIOS[type] || ZOMBIE_FOOT_OFFSET_RATIOS.normal);
+      const footY = this.getZombieFootPoint(zombie).y;
       if (Math.abs(footY - this.barbedWire.y) > (this.barbedWire.hitHalfHeight || 58) || zombie.wireCooldown > 0) {
         return;
       }
@@ -5064,6 +5077,9 @@
             const hitTarget = target.active && target.hp > 0
               ? target
               : this.findTarget(impactX, 92, null, this.bounds.autoEngageTop);
+            const fireZonePoint = hitTarget
+              ? this.getZombieFootPoint(hitTarget)
+              : { x: impactX, y: impactY };
             if (hitTarget && hitTarget.active) {
               this.damageZombie(
                 hitTarget,
@@ -5079,8 +5095,8 @@
             }
             if (defender.fireZoneRadius > 0 && defender.fireZoneDuration > 0 && defender.fireZoneDamageScale > 0) {
               this.createFireZone(
-                impactX,
-                impactY,
+                fireZonePoint.x,
+                fireZonePoint.y,
                 defender.fireZoneRadius,
                 damage * defender.fireZoneDamageScale,
                 defender.fireZoneDuration,
@@ -5379,9 +5395,10 @@
             this.applyWeakMark(zombie, bullet.markDuration, bullet.markDamageBonus);
           }
           if (bullet.fireZoneRadius > 0 && bullet.fireZoneDuration > 0 && bullet.fireZoneDamageScale > 0) {
+            const fireZonePoint = this.getZombieFootPoint(zombie);
             this.createFireZone(
-              impactPoint.x,
-              impactPoint.y,
+              fireZonePoint.x,
+              fireZonePoint.y,
               bullet.fireZoneRadius,
               bullet.damage * bullet.fireZoneDamageScale,
               bullet.fireZoneDuration,
@@ -5415,7 +5432,7 @@
       const visualDuration = damageDuration * FIRE_ZONE_VISUAL_DURATION_MULTIPLIER;
       const visualRadius = radius * FIRE_ZONE_VISUAL_SIZE_MULTIPLIER;
       const zoneX = clamp(x, this.bounds.left + 10, this.bounds.right - 10);
-      const zoneY = clamp(y + 10, this.bounds.top + 12, this.bounds.barricade - 24);
+      const zoneY = clamp(y, this.bounds.top + 12, this.bounds.barricade - 24);
       const glow = this.trackTransient(this.add.ellipse(zoneX, zoneY, visualRadius * 1.82, visualRadius * 0.78, 0xff5b22, 0.18)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(67 + zoneY / 15));
@@ -5447,7 +5464,8 @@
         duration: visualDuration,
         life: visualDuration,
         damageDuration,
-        damageLife: damageDuration,
+        damageLife: visualDuration,
+        burnDuration: Math.max(FIRE_ZONE_MIN_BURN_DURATION, damageDuration),
         tickTimer: 0.12,
         tickInterval: 0.34,
         slowDuration,
@@ -5460,6 +5478,45 @@
         embers
       });
       this.playSfx("explosion", 0.62);
+    }
+
+    applyFireZoneBurn(zombie, damagePerTick, burnDuration, tickInterval) {
+      if (!zombie?.active || damagePerTick <= 0 || burnDuration <= 0) {
+        return;
+      }
+      const wasBurning = (zombie.fireBurnTimer || 0) > 0;
+      zombie.fireBurnTimer = Math.max(zombie.fireBurnTimer || 0, burnDuration);
+      zombie.fireBurnDamagePerTick = Math.max(wasBurning ? zombie.fireBurnDamagePerTick || 0 : 0, damagePerTick);
+      zombie.fireBurnTickInterval = tickInterval || 0.34;
+      if (!wasBurning) {
+        zombie.fireBurnTickTimer = 0;
+      }
+    }
+
+    updateFireBurn(zombie, dt) {
+      if (!zombie?.active || (zombie.fireBurnTimer || 0) <= 0) {
+        return;
+      }
+      zombie.fireBurnTimer = Math.max(0, zombie.fireBurnTimer - dt);
+      zombie.fireBurnTickTimer = (zombie.fireBurnTickTimer || 0) - dt;
+      if (zombie.fireBurnTickTimer <= 0) {
+        zombie.fireBurnTickTimer += zombie.fireBurnTickInterval || 0.34;
+        this.damageZombie(
+          zombie,
+          zombie.fireBurnDamagePerTick || 1,
+          0,
+          "projectile-firebomb",
+          1,
+          { x: zombie.x, y: zombie.y - (zombie.displayH || 170) * 0.2 },
+          { applyKnockback: false }
+        );
+      }
+      if (!zombie.active || zombie.fireBurnTimer <= 0) {
+        zombie.fireBurnTimer = 0;
+        zombie.fireBurnTickTimer = 0;
+        zombie.fireBurnDamagePerTick = 0;
+        zombie.fireBurnTickInterval = 0;
+      }
     }
 
     updateFireZones(dt) {
@@ -5501,26 +5558,26 @@
         if (zone.damageLife > 0 && zone.tickTimer <= 0) {
           zone.tickTimer += zone.tickInterval;
           const hitRadius = zone.visualRadius || zone.radius;
-          const radiusSq = hitRadius * hitRadius;
+          const hitHalfWidth = hitRadius * 1.12;
+          const hitHalfHeight = Math.max(18, hitRadius * 0.62);
           this.zombies.slice().forEach((zombie) => {
             if (!zombie.active || zombie.hp <= 0 || this.mode !== "playing") {
               return;
             }
-            const dx = zombie.x - zone.x;
-            const dy = (zombie.y - (zombie.displayH || 170) * 0.08) - zone.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq > radiusSq) {
+            const foot = this.getZombieFootPoint(zombie);
+            const dx = foot.x - zone.x;
+            const dy = foot.y - zone.y;
+            const normalizedDistanceSq = (dx * dx) / (hitHalfWidth * hitHalfWidth)
+              + (dy * dy) / (hitHalfHeight * hitHalfHeight);
+            if (normalizedDistanceSq > 1) {
               return;
             }
-            const falloff = 1 - Math.sqrt(distSq) / hitRadius * 0.28;
-            this.damageZombie(
+            const falloff = 1 - Math.sqrt(normalizedDistanceSq) * 0.28;
+            this.applyFireZoneBurn(
               zombie,
               zone.damagePerTick * falloff,
-              0,
-              "projectile-firebomb",
-              1,
-              { x: zombie.x, y: zombie.y - (zombie.displayH || 170) * 0.2 },
-              { applyKnockback: false }
+              zone.burnDuration || zone.damageDuration || FIRE_ZONE_MIN_BURN_DURATION,
+              zone.tickInterval
             );
             if (zombie.active && zone.slowDuration > 0) {
               zombie.slowTimer = Math.max(zombie.slowTimer || 0, zone.slowDuration * 0.55);
@@ -6325,6 +6382,7 @@
         }
         this.updateWeakMark(zombie, dt);
         this.applyBarbedWireToZombie(zombie, dt);
+        this.updateFireBurn(zombie, dt);
         if (!zombie.active) {
           continue;
         }
