@@ -6171,20 +6171,14 @@
         { x: 13, y: 11, width: 11, height: 42, color: 0xff7030, alpha: 0.72, rotation: 0.28 },
         { x: 2, y: 12, width: 9, height: 41, color: 0xfff0a5, alpha: 0.9, rotation: 0.06 }
       ].forEach((shape) => {
-        const tongue = this.add.graphics()
-          .setBlendMode(Phaser.BlendModes.ADD)
-          .setRotation(shape.rotation);
         const x = shape.x * sizeScale;
         const y = shape.y * sizeScale;
         const width = shape.width * sizeScale;
         const height = shape.height * sizeScale;
-        tongue.fillStyle(shape.color, shape.alpha);
-        tongue.beginPath();
-        tongue.moveTo(x, y - height);
-        tongue.bezierCurveTo(x - width * 0.95, y - height * 0.54, x - width * 0.72, y + height * 0.1, x, y + height * 0.26);
-        tongue.bezierCurveTo(x + width * 0.78, y + height * 0.08, x + width * 0.82, y - height * 0.56, x, y - height);
-        tongue.closePath();
-        tongue.fillPath();
+        const tongue = this.add.ellipse(x, y - height * 0.34, width, height, shape.color, shape.alpha)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setRotation(shape.rotation)
+          .setScale(0.72, 1);
         flame.add(tongue);
       });
 
