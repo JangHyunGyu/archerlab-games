@@ -271,6 +271,8 @@
   const MAX_CORE_HP_SKILL_CAP = 6000;
   const MAX_CORE_HP_SKILL_RATE = 0.18;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
+  const META_CACHE_KEY = "schoolZombieDefenseMetaServerCacheV1";
+  const PROFILE_AUTH_KEY = "schoolZombieDefenseProfileV1";
   const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
   const RANK_GAME_ID = "school-zombie-defense";
   const RANK_LIMIT = 20;
@@ -519,7 +521,7 @@
 
   function loadMetaSave() {
     try {
-      return normalizeMetaSave(JSON.parse(window.localStorage.getItem(META_SAVE_KEY) || "{}"));
+      return normalizeMetaSave(JSON.parse(window.localStorage.getItem(META_CACHE_KEY) || "{}"));
     } catch (error) {
       return createDefaultMetaSave();
     }
@@ -527,10 +529,45 @@
 
   function saveMetaSave(save) {
     try {
-      window.localStorage.setItem(META_SAVE_KEY, JSON.stringify(normalizeMetaSave(save)));
+      const normalized = normalizeMetaSave(save);
+      window.localStorage.setItem(META_CACHE_KEY, JSON.stringify(normalized));
+      window.localStorage.removeItem(META_SAVE_KEY);
     } catch (error) {
       // Storage can be unavailable in private or embedded browser modes.
     }
+  }
+
+  function loadProfileAuth() {
+    try {
+      const auth = JSON.parse(window.localStorage.getItem(PROFILE_AUTH_KEY) || "{}");
+      const profileId = String(auth.profile_id || "").trim();
+      const profileSecret = String(auth.profile_secret || "").trim();
+      return profileId && profileSecret
+        ? { profile_id: profileId, profile_secret: profileSecret }
+        : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveProfileAuth(auth) {
+    try {
+      if (!auth?.profile_id || !auth?.profile_secret) {
+        window.localStorage.removeItem(PROFILE_AUTH_KEY);
+        return;
+      }
+      window.localStorage.setItem(PROFILE_AUTH_KEY, JSON.stringify({
+        profile_id: String(auth.profile_id),
+        profile_secret: String(auth.profile_secret)
+      }));
+    } catch (error) {
+      // Storage can be unavailable in private or embedded browser modes.
+    }
+  }
+
+  function isLocalDebugHost() {
+    const host = String(window.location.hostname || "");
+    return host === "localhost" || host === "127.0.0.1" || host === "";
   }
 
   function pickZombieType(level, eliteRoll) {
@@ -1931,7 +1968,9 @@
     }
 
     create() {
-      window.__schoolZombieGame = this;
+      if (isLocalDebugHost()) {
+        window.__schoolZombieGame = this;
+      }
       this.bounds = {
         left: 40,
         right: 500,
@@ -1972,7 +2011,7 @@
       this.coreHp = this.maxCoreHp;
       this.morale = 100;
       this.coins = 0;
-      this.meta = loadMetaSave();
+      this.meta = createDefaultMetaSave();
       this.runCoinsBanked = false;
       this.lastRankableRun = null;
       this.rankRequestId = 0;
@@ -1981,6 +2020,11 @@
       this.rankStageSyncPromises = [];
       this.rankSyncFailed = false;
       this.rankSyncToken = 0;
+      this.profileAuth = loadProfileAuth();
+      this.profilePromise = null;
+      this.profileReady = false;
+      this.profileSyncFailed = false;
+      this.profileFetchControllers = new Set();
       this.rankNameLayer = null;
       this.rankSubmitInFlight = false;
       this.shopSelectedCharacter = "c";
@@ -2021,10 +2065,22 @@
       this.createHud();
       this.bindInput();
       this.showMenu();
+      this.ensureServerProfile({ quiet: true }).then(() => {
+        if (!this.disposed && (this.mode === "menu" || this.mode === "shop")) {
+          if (this.mode === "shop") {
+            this.showShop(this.shopSelectedCharacter);
+          } else {
+            this.showMenu();
+          }
+        }
+      }).catch(() => {});
       this.applyDebugLaunchFlags();
     }
 
     applyDebugLaunchFlags() {
+      if (!isLocalDebugHost()) {
+        return;
+      }
       const params = new URLSearchParams(window.location.search);
       if (!params.has("autostart") && !params.has("debugSkill") && !params.has("debugHorde")) {
         return;
@@ -2730,6 +2786,95 @@
       controllerSet.clear();
     }
 
+    applyServerProfile(data) {
+      if (!data || data.success !== true) {
+        throw new Error("invalid profile response");
+      }
+      if (data.profile_id && data.profile_secret) {
+        this.profileAuth = {
+          profile_id: data.profile_id,
+          profile_secret: data.profile_secret
+        };
+        saveProfileAuth(this.profileAuth);
+      } else if (!this.profileAuth && data.profile_id) {
+        this.profileAuth = loadProfileAuth();
+      }
+      this.meta = normalizeMetaSave(data.profile || {
+        coins: data.coins,
+        upgrades: data.upgrades
+      });
+      saveMetaSave(this.meta);
+      this.profileReady = true;
+      this.profileSyncFailed = false;
+      return this.meta;
+    }
+
+    async ensureServerProfile(options = {}) {
+      const { quiet = false, force = false } = options;
+      if (this.profileReady && !force) {
+        return this.meta;
+      }
+      if (this.profilePromise && !force) {
+        return this.profilePromise;
+      }
+
+      const requestProfile = async (auth) => {
+        const response = await this.fetchWithAbort(`${RANK_API_BASE}/school-zombie/profile`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(auth || {})
+        }, this.profileFetchControllers);
+        return response;
+      };
+
+      const load = async () => {
+        let auth = this.profileAuth || loadProfileAuth();
+        let response = await requestProfile(auth);
+        if ((response.status === 401 || response.status === 404) && auth) {
+          this.profileAuth = null;
+          saveProfileAuth(null);
+          response = await requestProfile(null);
+        }
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(data?.error || `profile ${response.status}`);
+        }
+        return this.applyServerProfile(data);
+      };
+
+      this.profilePromise = load()
+        .catch((error) => {
+          this.profileSyncFailed = true;
+          if (!quiet) {
+            this.playSfx("core", 0.65);
+            this.showToast("프로필 동기화 실패", COLORS.red);
+          }
+          throw error;
+        })
+        .finally(() => {
+          this.profilePromise = null;
+        });
+      return this.profilePromise;
+    }
+
+    async postProfileAction(path, body = {}) {
+      await this.ensureServerProfile();
+      if (!this.profileAuth) {
+        throw new Error("profile credentials unavailable");
+      }
+      const response = await this.fetchWithAbort(`${RANK_API_BASE}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ ...this.profileAuth, ...body })
+      }, this.profileFetchControllers);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || `profile action ${response.status}`);
+      }
+      this.applyServerProfile(data);
+      return data;
+    }
+
     cleanupAudio() {
       this.sfxPreloadToken = (this.sfxPreloadToken || 0) + 1;
       this.abortFetchControllers(this.sfxFetchControllers);
@@ -2801,6 +2946,7 @@
       this.cancelSceneTimers();
       this.abortFetchControllers(this.rankFetchControllers);
       this.abortFetchControllers(this.rankListFetchControllers);
+      this.abortFetchControllers(this.profileFetchControllers);
       if (this.input && this.boundHandlePointerDown && typeof this.input.off === "function") {
         this.input.off("pointerdown", this.boundHandlePointerDown);
       }
@@ -3927,7 +4073,6 @@
       this.clearOverlay();
       this.mode = "menu";
       this.startBgm("menu");
-      this.meta = loadMetaSave();
       const items = this.overlayObjects;
       const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
       const source = titleArt.texture.getSourceImage();
@@ -3989,7 +4134,13 @@
       this.clearOverlay();
       this.mode = "shop";
       this.startBgm("menu");
-      this.meta = loadMetaSave();
+      if (!this.profileReady) {
+        this.ensureServerProfile({ quiet: true }).then(() => {
+          if (!this.disposed && this.mode === "shop") {
+            this.showShop(this.shopSelectedCharacter);
+          }
+        }).catch(() => {});
+      }
       const selectedCharacter = SHOP_CHARACTERS.find((character) => character.id === selectedId) || SHOP_CHARACTERS[0];
       this.shopSelectedCharacter = selectedCharacter.id;
       const items = this.overlayObjects;
@@ -4192,14 +4343,18 @@
       this.addOverlayButton(x + 154, y + 27, 112, 34, label, 524, () => this.buyShopUpgrade(upgrade.id), maxed ? 0x5b646b : canAfford ? COLORS.gold : 0x6f3333);
     }
 
-    buyShopUpgrade(id) {
+    async buyShopUpgrade(id) {
       const character = SHOP_CHARACTERS.find((item) => this.getCharacterShopUpgrades(item.id).some((upgrade) => upgrade.id === id));
       const upgrade = character ? this.getCharacterShopUpgrades(character.id).find((item) => item.id === id) : null;
       if (!upgrade) {
         return;
       }
       this.unlockAudio();
-      this.meta = loadMetaSave();
+      try {
+        await this.ensureServerProfile();
+      } catch (error) {
+        return;
+      }
       const level = this.getMetaUpgradeLevel(id);
       if (level >= SHOP_MAX_LEVEL) {
         this.showToast("이미 최대 강화입니다", COLORS.gold);
@@ -4211,16 +4366,24 @@
         this.showToast("코인이 부족합니다", COLORS.red);
         return;
       }
-      this.meta.coins -= cost;
-      this.meta.upgrades[id] = level + 1;
-      this.saveMeta();
-      this.playSfx("skill");
-      this.showShop(character.id);
-      this.showToast(`${upgrade.title} Lv.${level + 1}`, character.accent);
+      try {
+        const result = await this.postProfileAction("/school-zombie/profile/buy-upgrade", { upgrade_id: id });
+        this.playSfx("skill");
+        this.showShop(character.id);
+        this.showToast(`${upgrade.title} Lv.${result.level || level + 1}`, character.accent);
+      } catch (error) {
+        this.playSfx("core", 0.65);
+        this.showToast("구매 처리 실패", COLORS.red);
+        this.ensureServerProfile({ force: true, quiet: true }).then(() => {
+          if (!this.disposed && this.mode === "shop") {
+            this.showShop(character.id);
+          }
+        }).catch(() => {});
+      }
     }
 
     getShopResetRefund() {
-      const meta = normalizeMetaSave(this.meta || loadMetaSave());
+      const meta = normalizeMetaSave(this.meta || createDefaultMetaSave());
       return getAllShopUpgradeIds()
         .reduce((sum, id) => sum + getShopUpgradeRefund(meta.upgrades[id]), 0);
     }
@@ -4284,23 +4447,33 @@
       });
     }
 
-    resetShopUpgrades() {
+    async resetShopUpgrades() {
       this.unlockAudio();
-      this.meta = loadMetaSave();
+      try {
+        await this.ensureServerProfile();
+      } catch (error) {
+        return;
+      }
       const refund = this.getShopResetRefund();
       if (refund <= 0) {
         this.playSfx("core", 0.65);
         this.showShopResetNoticeLayer();
         return;
       }
-      getAllShopUpgradeIds().forEach((id) => {
-        this.meta.upgrades[id] = 0;
-      });
-      this.meta.coins += refund;
-      this.saveMeta();
-      this.playSfx("coin");
-      this.showShop(this.shopSelectedCharacter);
-      this.showToast(`강화 초기화 +$${formatShopCost(refund)}`, COLORS.gold);
+      try {
+        const result = await this.postProfileAction("/school-zombie/profile/reset-upgrades");
+        this.playSfx("coin");
+        this.showShop(this.shopSelectedCharacter);
+        this.showToast(`강화 초기화 +$${formatShopCost(result.refund || refund)}`, COLORS.gold);
+      } catch (error) {
+        this.playSfx("core", 0.65);
+        this.showToast("초기화 처리 실패", COLORS.red);
+        this.ensureServerProfile({ force: true, quiet: true }).then(() => {
+          if (!this.disposed && this.mode === "shop") {
+            this.showShop(this.shopSelectedCharacter);
+          }
+        }).catch(() => {});
+      }
     }
 
     saveMeta() {
@@ -4313,6 +4486,11 @@
         return;
       }
       this.unlockAudio();
+      try {
+        await this.ensureServerProfile();
+      } catch (error) {
+        return;
+      }
       this.playSfx("start");
       this.startBgm("game");
       this.clearOverlay();
@@ -4344,20 +4522,29 @@
       this.showMenu();
     }
 
-    bankRunCoins() {
-      if (this.runCoinsBanked || this.coins <= 0) {
+    async bankRunCoins() {
+      if (this.runCoinsBanked) {
         return 0;
       }
-      const earned = Math.floor(this.coins);
-      this.meta = loadMetaSave();
-      this.meta.coins += earned;
-      this.runCoinsBanked = true;
-      this.saveMeta();
-      return earned;
+      try {
+        await this.ensureServerProfile();
+        await this.ensureRankStagesRecorded();
+        if (!this.rankSessionId) {
+          return 0;
+        }
+        const result = await this.postProfileAction("/school-zombie/profile/bank-run", {
+          session_id: this.rankSessionId
+        });
+        this.runCoinsBanked = true;
+        return Math.max(0, Math.floor(Number(result.earned_coins) || 0));
+      } catch (error) {
+        this.playSfx("core", 0.65);
+        this.showToast("보상 동기화 실패", COLORS.red);
+        return 0;
+      }
     }
 
     applyMetaUpgrades() {
-      this.meta = loadMetaSave();
       this.defenders.forEach((defender) => {
         if (defender.id === "c") {
           const power = this.getMetaUpgradeLevel("c_power");
@@ -7749,7 +7936,7 @@
       this.updateHud();
     }
 
-    gameOver() {
+    async gameOver() {
       if (this.mode === "gameover") {
         return;
       }
@@ -7758,7 +7945,7 @@
       this.cancelSceneTimers();
       this.clearTransientObjects();
       this.startBgm("menu");
-      const earnedCoins = this.bankRunCoins();
+      const earnedCoins = await this.bankRunCoins();
       const rankSnapshot = this.getRankSnapshot(earnedCoins);
       this.lastRankableRun = rankSnapshot.score > 0 ? rankSnapshot : null;
       this.clearRunEntities();
