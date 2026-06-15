@@ -49,7 +49,7 @@
   const ARROW_EMBED_DURATION = 2.8;
   const SHOCK_STUN_TINT = 0xbdfaff;
   const DEFAULT_SHOCK_STUN_DURATION = 3;
-  const FIRE_ZONE_VISUAL_DURATION_MULTIPLIER = 5;
+  const FIRE_ZONE_VISUAL_DURATION_MULTIPLIER = 3.125;
   const FIRE_ZONE_VISUAL_SIZE_MULTIPLIER = 1.5;
   const FIRE_ZONE_MIN_BURN_DURATION = 0.65;
   const AIM_POSES = [
@@ -5078,19 +5078,6 @@
             const fireZonePoint = hitTarget
               ? this.getZombieFootPoint(hitTarget)
               : { x: impactX, y: impactY };
-            if (hitTarget && hitTarget.active) {
-              this.damageZombie(
-                hitTarget,
-                damage,
-                defender.critChance || BASE_CRIT_CHANCE,
-                "projectile-firebomb",
-                defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
-                { x: impactX, y: impactY, angle: launchAngle }
-              );
-              if (slowDuration > 0 && hitTarget.active) {
-                hitTarget.slowTimer = Math.max(hitTarget.slowTimer || 0, slowDuration);
-              }
-            }
             if (defender.fireZoneRadius > 0 && defender.fireZoneDuration > 0 && defender.fireZoneDamageScale > 0) {
               this.createFireZone(
                 fireZonePoint.x,
@@ -5378,19 +5365,22 @@
         if (hit) {
           const zombie = hit.zombie;
           const impactPoint = hit.point;
+          const isFirebombImpact = bullet.projectile === "projectile-firebomb";
           bullet.hitTargets.add(zombie);
           if (bullet.projectile === "projectile-arrow") {
             this.createEmbeddedArrow(zombie, bullet, impactPoint);
           }
-          this.damageZombie(zombie, bullet.damage, bullet.critChance, bullet.projectile, bullet.critMultiplier, impactPoint);
-          if (bullet.slowDuration > 0 && zombie.active) {
-            zombie.slowTimer = Math.max(zombie.slowTimer || 0, bullet.slowDuration);
-          }
-          if (bullet.stunDuration > 0 && zombie.active) {
-            this.applyZombieStun(zombie, bullet.stunDuration);
-          }
-          if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && zombie.active) {
-            this.applyWeakMark(zombie, bullet.markDuration, bullet.markDamageBonus);
+          if (!isFirebombImpact) {
+            this.damageZombie(zombie, bullet.damage, bullet.critChance, bullet.projectile, bullet.critMultiplier, impactPoint);
+            if (bullet.slowDuration > 0 && zombie.active) {
+              zombie.slowTimer = Math.max(zombie.slowTimer || 0, bullet.slowDuration);
+            }
+            if (bullet.stunDuration > 0 && zombie.active) {
+              this.applyZombieStun(zombie, bullet.stunDuration);
+            }
+            if (bullet.markDuration > 0 && bullet.markDamageBonus > 0 && zombie.active) {
+              this.applyWeakMark(zombie, bullet.markDuration, bullet.markDamageBonus);
+            }
           }
           if (bullet.fireZoneRadius > 0 && bullet.fireZoneDuration > 0 && bullet.fireZoneDamageScale > 0) {
             const fireZonePoint = this.getZombieFootPoint(zombie);
