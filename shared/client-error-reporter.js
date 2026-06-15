@@ -3,12 +3,11 @@
     window.__ARCHERLAB_CLIENT_ERROR_REPORTER__ = true;
 
     var script = document.currentScript;
-    var apiBase = (
-        (script && script.getAttribute('data-api-base')) ||
-        window.__ARCHERLAB_GAME_API_BASE__ ||
-        'https://game-api.yama5993.workers.dev'
-    ).replace(/\/+$/, '');
-    var endpoint = apiBase + '/client-errors';
+    var endpoint = (
+        (script && script.getAttribute('data-error-endpoint')) ||
+        window.__ARCHERLAB_ERROR_ENDPOINT__ ||
+        'https://chatbot-api.yama5993.workers.dev/error-logs'
+    );
     var gameId = getGameId();
     var appVersion = (
         (script && script.getAttribute('data-app-version')) ||
@@ -76,6 +75,11 @@
         }
     }
 
+    function truncate(value, maxLength) {
+        var text = safeString(value, '');
+        return text.length > maxLength ? text.slice(0, maxLength) : text;
+    }
+
     function report(payload) {
         if (!gameId || sentCount >= MAX_REPORTS_PER_PAGE) return;
         if (!payload || !payload.message) return;
@@ -101,10 +105,7 @@
         }
 
         sentCount += 1;
-        payload.game_id = gameId;
-        payload.url = window.location.href;
-        payload.app_version = appVersion || null;
-        payload.context = Object.assign({
+        var context = Object.assign({
             language: document.documentElement.lang || navigator.language || '',
             viewport: {
                 width: window.innerWidth,
@@ -112,8 +113,25 @@
                 devicePixelRatio: window.devicePixelRatio || 1
             }
         }, payload.context || {});
+        var errorType = payload.error_type || 'error';
+        var body = safeJson({
+            appId: gameId,
+            userId: '',
+            message: truncate('[' + errorType + '] ' + payload.message, 500),
+            stack: truncate(payload.stack || '', 4000),
+            url: truncate(window.location.href, 500),
+            source: truncate(payload.source || '', 500),
+            errorType: truncate(errorType, 100),
+            errorClass: truncate(payload.error_class || '', 50),
+            context: context,
+            extra: {
+                lineno: payload.lineno || 0,
+                colno: payload.colno || 0,
+                appVersion: appVersion || '',
+                pageTitle: document.title || ''
+            }
+        });
 
-        var body = safeJson(payload);
         try {
             if (navigator.sendBeacon) {
                 var blob = new Blob([body], { type: 'application/json' });
