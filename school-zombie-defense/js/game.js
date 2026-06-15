@@ -1962,6 +1962,10 @@
       this.sfxLoadPromises = new Map();
       this.sfxFallbackTracks = new Map();
       this.activeFallbackSfx = new Set();
+      this.activeSampleSfx = new Set();
+      this.sfxFetchControllers = new Set();
+      this.rankFetchControllers = new Set();
+      this.rankListFetchControllers = new Set();
       this.sfxPreloadStarted = false;
       this.sfxPreloadToken = 0;
       this.bgmTracks = null;
@@ -1969,6 +1973,8 @@
       this.ambientTracks = null;
       this.sfxLastPlayed = {};
       this.boundHandlePointerDown = null;
+      this.rankNameLayerCleanup = null;
+      this.rankNameFocusRaf = 0;
       this.hitStopTimer = 0;
       this.speedMultiplier = 1;
       this.pausedByButton = false;
@@ -2657,8 +2663,40 @@
       this.barbedWire = null;
     }
 
+    fetchWithAbort(url, options = {}, controllerSet = null) {
+      const AbortControllerCtor = typeof window !== "undefined" ? window.AbortController : null;
+      if (!AbortControllerCtor || !controllerSet || options.signal) {
+        return fetch(url, options);
+      }
+      const controller = new AbortControllerCtor();
+      controllerSet.add(controller);
+      return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => controllerSet.delete(controller));
+    }
+
+    abortFetchControllers(controllerSet) {
+      if (!controllerSet) {
+        return;
+      }
+      controllerSet.forEach((controller) => {
+        try {
+          controller.abort();
+        } catch (error) {
+          // Older browsers can throw if a controller is already settled.
+        }
+      });
+      controllerSet.clear();
+    }
+
     cleanupAudio() {
       this.sfxPreloadToken = (this.sfxPreloadToken || 0) + 1;
+      this.abortFetchControllers(this.sfxFetchControllers);
+      Array.from(this.activeSampleSfx || []).forEach((sample) => {
+        if (typeof sample.cleanup === "function") {
+          sample.cleanup();
+        }
+      });
+      this.activeSampleSfx.clear();
       if (this.bgmTracks) {
         Object.values(this.bgmTracks).forEach((track) => {
           track.pause();
@@ -2682,7 +2720,10 @@
       this.ambientTracks = null;
       this.sfxBuffers.clear();
       this.sfxLoadPromises.clear();
-      this.activeFallbackSfx.forEach((track) => {
+      Array.from(this.activeFallbackSfx || []).forEach((track) => {
+        if (typeof track.__schoolZombieSfxCleanup === "function") {
+          track.__schoolZombieSfxCleanup();
+        }
         track.pause();
         track.removeAttribute("src");
         if (typeof track.load === "function") {
@@ -2716,6 +2757,8 @@
       this.disposed = true;
       this.cancelRunTimers();
       this.cancelSceneTimers();
+      this.abortFetchControllers(this.rankFetchControllers);
+      this.abortFetchControllers(this.rankListFetchControllers);
       if (this.input && this.boundHandlePointerDown && typeof this.input.off === "function") {
         this.input.off("pointerdown", this.boundHandlePointerDown);
       }
@@ -2777,7 +2820,7 @@
       if (existing) {
         return existing;
       }
-      const loadPromise = fetch(url)
+      const loadPromise = this.fetchWithAbort(url, {}, this.sfxFetchControllers)
         .then((response) => response.ok ? response.arrayBuffer() : Promise.reject(new Error(`sfx ${response.status}`)))
         .then((data) => {
           if (this.disposed || this.audioCtx !== ctx || this.sfxPreloadToken !== preloadToken) {
@@ -2934,7 +2977,14 @@
       const gain = ctx.createGain();
       source.buffer = buffer;
       gain.gain.value = clamp(0.72 * intensity, 0.05, 1.45);
+      let cleaned = false;
+      const sample = { cleanup: null };
       const cleanup = () => {
+        if (cleaned) {
+          return;
+        }
+        cleaned = true;
+        this.activeSampleSfx.delete(sample);
         source.onended = null;
         try {
           source.disconnect();
@@ -2947,6 +2997,8 @@
           // Audio nodes may already be detached after playback.
         }
       };
+      sample.cleanup = cleanup;
+      this.activeSampleSfx.add(sample);
       source.onended = cleanup;
       source.connect(gain).connect(this.masterGain);
       try {
@@ -2966,11 +3018,18 @@
       }
       const track = template.cloneNode(true);
       track.volume = clamp(SFX_MASTER_VOLUME * 0.72 * intensity, 0.03, 1);
+      let cleaned = false;
       const cleanup = () => {
+        if (cleaned) {
+          return;
+        }
+        cleaned = true;
         this.activeFallbackSfx.delete(track);
         track.removeEventListener("ended", cleanup);
         track.removeEventListener("error", cleanup);
+        delete track.__schoolZombieSfxCleanup;
       };
+      track.__schoolZombieSfxCleanup = cleanup;
       track.addEventListener("ended", cleanup);
       track.addEventListener("error", cleanup);
       this.activeFallbackSfx.add(track);
@@ -3329,6 +3388,7 @@
     }
 
     resetRankSessionState() {
+      this.abortFetchControllers(this.rankFetchControllers);
       this.rankSyncToken = (this.rankSyncToken || 0) + 1;
       this.rankSessionId = null;
       this.rankSessionPromise = null;
@@ -3337,11 +3397,11 @@
     }
 
     async createRankSession(syncToken = this.rankSyncToken) {
-      const response = await fetch(`${RANK_API_BASE}/score-sessions`, {
+      const response = await this.fetchWithAbort(`${RANK_API_BASE}/score-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ game_id: RANK_GAME_ID })
-      });
+      }, this.rankFetchControllers);
       if (!response.ok) {
         throw new Error(`rank session ${response.status}`);
       }
@@ -3398,7 +3458,7 @@
         if (!sessionId) {
           throw new Error("rank session unavailable");
         }
-        const response = await fetch(`${RANK_API_BASE}/score-events`, {
+        const response = await this.fetchWithAbort(`${RANK_API_BASE}/score-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({
@@ -3413,7 +3473,7 @@
               survived_seconds: snapshot.survivedSeconds
             }
           })
-        });
+        }, this.rankFetchControllers);
         if (!response.ok) {
           throw new Error(`rank event ${response.status}`);
         }
@@ -3452,7 +3512,7 @@
 
     async fetchRankRows() {
       const url = `${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(RANK_GAME_ID)}&limit=${RANK_LIMIT}`;
-      const response = await fetch(url, { method: "GET" });
+      const response = await this.fetchWithAbort(url, { method: "GET" }, this.rankListFetchControllers);
       if (!response.ok) {
         throw new Error(`rankings ${response.status}`);
       }
@@ -3464,6 +3524,7 @@
     }
 
     showRankings() {
+      this.abortFetchControllers(this.rankListFetchControllers);
       const requestId = (this.rankRequestId || 0) + 1;
       this.rankRequestId = requestId;
       this.renderRankingsScreen([], "랭킹을 불러오는 중...");
@@ -3473,7 +3534,10 @@
             this.renderRankingsScreen(rows);
           }
         })
-        .catch(() => {
+        .catch((error) => {
+          if (error?.name === "AbortError") {
+            return;
+          }
           if (this.rankRequestId === requestId && this.mode === "ranking") {
             this.renderRankingsScreen([], "랭킹을 불러오지 못했습니다");
           }
@@ -3594,6 +3658,14 @@
     }
 
     removeRankNameLayer() {
+      if (this.rankNameFocusRaf) {
+        cancelAnimationFrame(this.rankNameFocusRaf);
+        this.rankNameFocusRaf = 0;
+      }
+      if (typeof this.rankNameLayerCleanup === "function") {
+        this.rankNameLayerCleanup();
+      }
+      this.rankNameLayerCleanup = null;
       if (this.rankNameLayer && this.rankNameLayer.parentNode) {
         this.rankNameLayer.parentNode.removeChild(this.rankNameLayer);
       }
@@ -3696,20 +3768,33 @@
         });
       };
 
-      form.addEventListener("submit", (event) => {
+      const handleSubmit = (event) => {
         event.preventDefault();
         submit();
-      });
-      skipButton.addEventListener("click", () => {
+      };
+      const handleSkipClick = () => {
         this.returnToGameStart();
-      });
-      layer.addEventListener("keydown", (event) => {
+      };
+      const handleKeyDown = (event) => {
         event.stopPropagation();
         if (event.key === "Escape") {
           event.preventDefault();
           this.returnToGameStart();
         }
-      });
+      };
+      form.addEventListener("submit", handleSubmit);
+      skipButton.addEventListener("click", handleSkipClick);
+      layer.addEventListener("keydown", handleKeyDown);
+
+      this.rankNameLayerCleanup = () => {
+        layer.removeEventListener("pointerdown", stopGameInput);
+        layer.removeEventListener("touchstart", stopGameInput);
+        layer.removeEventListener("mousedown", stopGameInput);
+        input.removeEventListener("input", updateSubmitState);
+        form.removeEventListener("submit", handleSubmit);
+        skipButton.removeEventListener("click", handleSkipClick);
+        layer.removeEventListener("keydown", handleKeyDown);
+      };
 
       shell.appendChild(layer);
       this.rankNameLayer = layer;
@@ -3717,7 +3802,11 @@
         window.__schoolZombieViewportRefresh();
       }
       if (autoFocus) {
-        requestAnimationFrame(() => {
+        this.rankNameFocusRaf = requestAnimationFrame(() => {
+          this.rankNameFocusRaf = 0;
+          if (this.disposed || this.rankNameLayer !== layer || !layer.isConnected) {
+            return;
+          }
           try {
             input.focus({ preventScroll: true });
           } catch {
@@ -3752,7 +3841,7 @@
 
       this.showToast("랭킹 등록 중...", COLORS.gold);
       try {
-        const response = await fetch(`${RANK_API_BASE}/rankings`, {
+        const response = await this.fetchWithAbort(`${RANK_API_BASE}/rankings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -3772,7 +3861,7 @@
               survived_seconds: run.survivedSeconds
             }
           })
-        });
+        }, this.rankFetchControllers);
         if (!response.ok) {
           throw new Error(`rank submit ${response.status}`);
         }
