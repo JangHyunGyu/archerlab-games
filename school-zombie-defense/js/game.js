@@ -50,6 +50,7 @@
   const SHOCK_STUN_TINT = 0xbdfaff;
   const DEFAULT_SHOCK_STUN_DURATION = 3;
   const FIRE_ZONE_VISUAL_DURATION_MULTIPLIER = 5;
+  const FIRE_ZONE_VISUAL_SIZE_MULTIPLIER = 1.5;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -5323,22 +5324,23 @@
       }
       const damageDuration = Math.max(0.01, duration);
       const visualDuration = damageDuration * FIRE_ZONE_VISUAL_DURATION_MULTIPLIER;
+      const visualRadius = radius * FIRE_ZONE_VISUAL_SIZE_MULTIPLIER;
       const zoneX = clamp(x, this.bounds.left + 10, this.bounds.right - 10);
       const zoneY = clamp(y + 10, this.bounds.top + 12, this.bounds.barricade - 24);
-      const glow = this.trackTransient(this.add.ellipse(zoneX, zoneY, radius * 1.82, radius * 0.78, 0xff5b22, 0.18)
+      const glow = this.trackTransient(this.add.ellipse(zoneX, zoneY, visualRadius * 1.82, visualRadius * 0.78, 0xff5b22, 0.18)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(67 + zoneY / 15));
       const firePatch = this.trackTransient(this.add.sprite(zoneX, zoneY, "effect-fire-zone-sheet", 0)
         .setOrigin(0.5, 0.62)
-        .setDisplaySize(radius * 2.25, radius * 1.22)
+        .setDisplaySize(visualRadius * 2.25, visualRadius * 1.22)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setAlpha(0.95)
         .setDepth(70 + zoneY / 15));
       const embers = [];
       for (let i = 0; i < 4; i += 1) {
         const ember = this.trackTransient(this.add.circle(
-          zoneX + rand(-radius * 0.62, radius * 0.62),
-          zoneY + rand(-radius * 0.2, radius * 0.18),
+          zoneX + rand(-visualRadius * 0.62, visualRadius * 0.62),
+          zoneY + rand(-visualRadius * 0.2, visualRadius * 0.18),
           rand(3, 6),
           choose([0xfff0a0, 0xff9a36, 0xff5330]),
           rand(0.48, 0.78)
@@ -5351,6 +5353,7 @@
         x: zoneX,
         y: zoneY,
         radius,
+        visualRadius,
         damagePerTick: Math.max(1, damagePerTick),
         duration: visualDuration,
         life: visualDuration,
@@ -5393,7 +5396,7 @@
             zone.sprite.setFrame(zone.frame);
           }
           zone.sprite
-            .setDisplaySize(zone.radius * 2.25 * (1 + progress * 0.08) * pulse, zone.radius * 1.22 * (1 + progress * 0.03))
+            .setDisplaySize(zone.visualRadius * 2.25 * (1 + progress * 0.08) * pulse, zone.visualRadius * 1.22 * (1 + progress * 0.03))
             .setAlpha(0.95 * fade);
         }
         (zone.embers || []).forEach((ember, index) => {
