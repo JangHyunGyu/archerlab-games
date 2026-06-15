@@ -4225,13 +4225,72 @@
         .reduce((sum, id) => sum + getShopUpgradeRefund(meta.upgrades[id]), 0);
     }
 
+    closeShopResetNoticeLayer() {
+      const objects = this.shopResetNoticeObjects || [];
+      objects.forEach((item) => this.destroyGameObject(item));
+      if (objects.length > 0) {
+        const removeSet = new Set(objects);
+        this.overlayObjects = this.overlayObjects.filter((item) => !removeSet.has(item));
+      }
+      this.shopResetNoticeObjects = null;
+    }
+
+    showShopResetNoticeLayer() {
+      this.closeShopResetNoticeLayer();
+      const objects = [];
+      const depth = 590;
+      const close = () => this.closeShopResetNoticeLayer();
+
+      const blocker = this.add.rectangle(270, 480, 540, 960, 0x010204, 0.58)
+        .setDepth(depth)
+        .setInteractive();
+      blocker.on("pointerdown", () => {});
+      const shadow = this.add.ellipse(270, 552, 330, 92, 0x000000, 0.44)
+        .setDepth(depth + 1);
+      const panel = this.add.rectangle(270, 474, 372, 236, 0x0b1116, 0.94)
+        .setStrokeStyle(2, COLORS.gold, 0.82)
+        .setDepth(depth + 2);
+      const topLine = this.add.rectangle(270, 374, 252, 4, 0xffd86b, 0.92)
+        .setDepth(depth + 3);
+      const title = this.add.text(270, 414, "초기화할 강화가 없습니다", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 24,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 5,
+        align: "center"
+      }).setOrigin(0.5).setDepth(depth + 4);
+      const body = this.add.text(270, 480, "상점에서 구매한 강화가 있을 때만\n강화 초기화를 사용할 수 있습니다.\n강화를 구매한 뒤 다시 시도하세요.", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 16,
+        fontStyle: "800",
+        color: "#d7edf1",
+        stroke: "#050607",
+        strokeThickness: 3,
+        align: "center",
+        lineSpacing: 6,
+        wordWrap: { width: 318, useAdvancedWrap: true }
+      }).setOrigin(0.5).setDepth(depth + 4);
+
+      objects.push(blocker, shadow, panel, topLine, title, body);
+      const button = this.addOverlayButton(270, 586, 160, 44, "확인", depth + 5, close, COLORS.gold);
+      objects.push(...Object.values(button));
+      this.shopResetNoticeObjects = objects;
+      objects.forEach((item) => {
+        if (!this.overlayObjects.includes(item)) {
+          this.overlayObjects.push(item);
+        }
+      });
+    }
+
     resetShopUpgrades() {
       this.unlockAudio();
       this.meta = loadMetaSave();
       const refund = this.getShopResetRefund();
       if (refund <= 0) {
         this.playSfx("core", 0.65);
-        this.showToast("초기화할 강화가 없습니다", COLORS.red);
+        this.showShopResetNoticeLayer();
         return;
       }
       getAllShopUpgradeIds().forEach((id) => {
@@ -7758,6 +7817,7 @@
         this.destroyGameObject(item);
       });
       this.overlayObjects = [];
+      this.shopResetNoticeObjects = null;
     }
 
     updateHud() {
