@@ -4832,7 +4832,9 @@
         this.damage * CHARACTER_DAMAGE_MULTIPLIER * this.barbedWire.damageScale,
         0,
         "projectile-nail",
-        1
+        1,
+        null,
+        { applyKnockback: false }
       );
       if (zombie.active) {
         zombie.slowTimer = Math.max(zombie.slowTimer || 0, this.barbedWire.slowDuration);
