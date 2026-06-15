@@ -431,6 +431,7 @@
   };
   const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4.6;
   const FIREBOMB_FLIGHT_TIME_SCALE = 2;
+  const FIREBOMB_THROW_INTERVAL_SECONDS = 5;
   const RIFLE_GRENADE_INTERVAL_SCALE = 1;
   const RIFLE_GRENADE_INITIAL_INTERVAL = 10 * RIFLE_GRENADE_INTERVAL_SCALE;
   const RIFLE_GRENADE_MIN_INTERVAL = 2 * RIFLE_GRENADE_INTERVAL_SCALE;
@@ -741,7 +742,7 @@
       role: "fire",
       projectile: "projectile-firebomb",
       speed: 980,
-      rate: 3 / CHARACTER_FIRE_COOLDOWN_MULTIPLIER,
+      rate: FIREBOMB_THROW_INTERVAL_SECONDS / CHARACTER_FIRE_COOLDOWN_MULTIPLIER,
       critChance: 0.05,
       critMultiplier: 1.45,
       fireZoneRadius: 72,
@@ -6373,7 +6374,11 @@
       this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       zombie.hp -= damage;
       this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
-      const knockback = options.applyKnockback === false || hitType === "projectile-shock"
+      const suppressKnockback =
+        options.applyKnockback === false ||
+        hitType === "projectile-shock" ||
+        hitType === "projectile-firebomb";
+      const knockback = suppressKnockback
         ? null
         : this.applyZombieKnockback(zombie, hitType, crit);
       if (crit) {
