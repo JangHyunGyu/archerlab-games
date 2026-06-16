@@ -5941,6 +5941,7 @@
       zombie.fireBurnTickTimer = (zombie.fireBurnTickTimer || 0) - dt;
       if (zombie.fireBurnTickTimer <= 0) {
         zombie.fireBurnTickTimer += zombie.fireBurnTickInterval || 0.34;
+        this.createFireBurnTickEffect(zombie);
         this.damageZombie(
           zombie,
           zombie.fireBurnDamagePerTick || 1,
@@ -6475,6 +6476,51 @@
           onComplete: () => this.destroyTransientObject(spark, false)
         });
       }
+    }
+
+    createFireBurnTickEffect(zombie) {
+      if (!zombie?.active) {
+        return;
+      }
+      const sizeScale = clamp(this.getZombieEffectScale(zombie) * 0.62, 0.42, 0.78);
+      const foot = this.getZombieFootPoint(zombie);
+      const x = foot.x + rand(-8, 8) * sizeScale;
+      const y = foot.y - rand(2, 7) * sizeScale;
+      const depth = (zombie.depth || (ZOMBIE_BODY_DEPTH_BASE + zombie.y / 5)) + 0.18;
+      const ember = this.trackTransient(this.add.container(x, y).setDepth(depth).setAlpha(0.72));
+      const glow = this.add.ellipse(0, 3 * sizeScale, 40 * sizeScale, 15 * sizeScale, 0xff6a22, 0.2)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      ember.add(glow);
+
+      [
+        { x: -7, y: 0, width: 8, height: 18, color: 0xff6f24, alpha: 0.32, rotation: -0.22 },
+        { x: 2, y: -1, width: 10, height: 23, color: 0xffb34a, alpha: 0.38, rotation: 0.06 },
+        { x: 9, y: 1, width: 7, height: 15, color: 0xff4b1e, alpha: 0.24, rotation: 0.24 }
+      ].forEach((shape) => {
+        const tongue = this.add.ellipse(
+          shape.x * sizeScale,
+          shape.y * sizeScale - shape.height * sizeScale * 0.28,
+          shape.width * sizeScale,
+          shape.height * sizeScale,
+          shape.color,
+          shape.alpha
+        )
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setRotation(shape.rotation)
+          .setScale(0.78, 1);
+        ember.add(tongue);
+      });
+
+      this.tweens.add({
+        targets: ember,
+        y: y - 4 * sizeScale,
+        scaleX: 1.14,
+        scaleY: 0.72,
+        alpha: 0,
+        duration: 260,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(ember, false)
+      });
     }
 
     createShockHitEffect(zombie, crit = false, impactPoint = null) {
