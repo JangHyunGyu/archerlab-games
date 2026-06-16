@@ -225,6 +225,11 @@
   const ZOMBIE_SEPARATION_RADIUS_SCALE = 0.9;
   const ZOMBIE_SEPARATION_PUSH = 0.34;
   const ZOMBIE_SEPARATION_MAX_STEP = 16;
+  const ZOMBIE_FRONT_BLOCK_X_SCALE = 0.86;
+  const ZOMBIE_FRONT_BLOCK_Y_GAP_SCALE = 0.48;
+  const ZOMBIE_FRONT_BLOCK_LOOKAHEAD = 46;
+  const ZOMBIE_FRONT_TIE_EPSILON = 2;
+  const ZOMBIE_SIDE_STEP_SPEED = 72;
   const DAMAGE_TEXT_POOL_LIMIT = 64;
   const ACTIVE_DAMAGE_TEXT_LIMIT = 46;
   const DAMAGE_TEXT_FRAME_BUDGET = 12;
@@ -2842,10 +2847,14 @@
       this.barbedWire = null;
     }
 
-    getZombieFootPoint(zombie) {
+    getZombieFootOffset(zombie) {
       const displayHeight = zombie?.displayH || 170;
       const type = zombie?.elite ? "elite" : zombie?.type || "normal";
-      const footOffset = displayHeight * (ZOMBIE_FOOT_OFFSET_RATIOS[type] || ZOMBIE_FOOT_OFFSET_RATIOS.normal);
+      return displayHeight * (ZOMBIE_FOOT_OFFSET_RATIOS[type] || ZOMBIE_FOOT_OFFSET_RATIOS.normal);
+    }
+
+    getZombieFootPoint(zombie) {
+      const footOffset = this.getZombieFootOffset(zombie);
       return {
         x: zombie?.x || 0,
         y: (zombie?.y || 0) + footOffset
@@ -5175,6 +5184,7 @@
         zombie.animRate = typeConfig.animRate;
         zombie.knockbackScale = typeConfig.knockbackScale;
         zombie.crowdSeed = rand(-1, 1) || 0.5;
+        zombie.crowdOrder = this.zombieSpawnSerial = (this.zombieSpawnSerial || 0) + 1;
         zombie.reward = typeConfig.reward;
         zombie.deathExplosion = Boolean(typeConfig.deathExplosion);
         this.zombies.push(zombie);
@@ -6620,12 +6630,16 @@
       return candidates;
     }
 
+    getZombieCrowdRadius(zombie) {
+      return Math.max(12, (zombie?.hitRadius || 32) * ZOMBIE_SEPARATION_RADIUS_SCALE);
+    }
+
     separateZombieFromCrowd(zombie, dt) {
       if (!zombie?.active || zombie.knockbackTweening || zombie.stunTimer > 0) {
         return;
       }
 
-      const radius = Math.max(12, (zombie.hitRadius || 32) * ZOMBIE_SEPARATION_RADIUS_SCALE);
+      const radius = this.getZombieCrowdRadius(zombie);
       const candidates = this.getNearbyZombies(zombie, radius * 2.4);
       let pushX = 0;
       let pushY = 0;
@@ -6637,7 +6651,7 @@
           continue;
         }
 
-        const otherRadius = Math.max(12, (other.hitRadius || 32) * ZOMBIE_SEPARATION_RADIUS_SCALE);
+        const otherRadius = this.getZombieCrowdRadius(other);
         const minX = radius + otherRadius;
         const minY = Math.max(14, minX * 0.54);
         let dx = zombie.x - other.x;
@@ -6671,6 +6685,103 @@
       if (zombie.y < attackLine - 4) {
         zombie.y = clamp(zombie.y + stepY, -70, attackLine - 4);
       }
+    }
+
+    getZombieFrontBlocker(zombie, x = zombie?.x || 0) {
+      if (!zombie?.active || zombie.hp <= 0) {
+        return null;
+      }
+
+      const radius = this.getZombieCrowdRadius(zombie);
+      const foot = this.getZombieFootPoint(zombie);
+      const candidates = this.getNearbyZombies(zombie, radius * 3.2 + ZOMBIE_FRONT_BLOCK_LOOKAHEAD);
+      let best = null;
+      let bestScore = Infinity;
+
+      for (let i = 0; i < candidates.length; i += 1) {
+        const other = candidates[i];
+        if (!other || other === zombie || !other.active || other.hp <= 0 || other.dying) {
+          continue;
+        }
+
+        const otherRadius = this.getZombieCrowdRadius(other);
+        const blockWidth = Math.max(24, (radius + otherRadius) * ZOMBIE_FRONT_BLOCK_X_SCALE);
+        if (Math.abs(x - other.x) >= blockWidth) {
+          continue;
+        }
+
+        const otherFoot = this.getZombieFootPoint(other);
+        const footGap = otherFoot.y - foot.y;
+        const tiedAhead = Math.abs(footGap) <= ZOMBIE_FRONT_TIE_EPSILON
+          && (other.crowdOrder || 0) < (zombie.crowdOrder || 0);
+        if (footGap <= ZOMBIE_FRONT_TIE_EPSILON && !tiedAhead) {
+          continue;
+        }
+
+        const requiredGap = Math.max(18, (radius + otherRadius) * ZOMBIE_FRONT_BLOCK_Y_GAP_SCALE);
+        if (!tiedAhead && footGap > requiredGap + ZOMBIE_FRONT_BLOCK_LOOKAHEAD) {
+          continue;
+        }
+
+        const score = tiedAhead ? 0 : footGap;
+        if (score < bestScore) {
+          bestScore = score;
+          best = other;
+        }
+      }
+
+      return best;
+    }
+
+    tryZombieSideStep(zombie, direction, dt, slowFactor) {
+      const minX = this.bounds.left + 8;
+      const maxX = this.bounds.right - 8;
+      const currentBlocker = this.getZombieFrontBlocker(zombie, zombie.x);
+      const step = ZOMBIE_SIDE_STEP_SPEED * Math.max(0.55, slowFactor) * dt;
+      const proposedX = clamp(zombie.x + direction * step, minX, maxX);
+      if (Math.abs(proposedX - zombie.x) < 0.001) {
+        return false;
+      }
+
+      const proposedBlocker = this.getZombieFrontBlocker(zombie, proposedX);
+      const currentDistance = currentBlocker ? Math.abs(zombie.x - currentBlocker.x) : Infinity;
+      const proposedDistance = proposedBlocker ? Math.abs(proposedX - proposedBlocker.x) : Infinity;
+      if (!proposedBlocker || proposedDistance > currentDistance + 0.2) {
+        zombie.x = proposedX;
+        zombie.crowdSide = direction;
+        return true;
+      }
+
+      return false;
+    }
+
+    stepZombieAroundBlocker(zombie, blocker, dt, slowFactor) {
+      const preferredDirection = Math.abs(zombie.x - blocker.x) > 1
+        ? (zombie.x >= blocker.x ? 1 : -1)
+        : ((zombie.crowdSide || zombie.crowdSeed || 1) >= 0 ? 1 : -1);
+      if (this.tryZombieSideStep(zombie, preferredDirection, dt, slowFactor)) {
+        return true;
+      }
+      return this.tryZombieSideStep(zombie, -preferredDirection, dt, slowFactor);
+    }
+
+    getZombieStopYBehindBlocker(zombie, blocker, attackLine) {
+      const radius = this.getZombieCrowdRadius(zombie);
+      const blockerRadius = this.getZombieCrowdRadius(blocker);
+      const footGap = Math.max(18, (radius + blockerRadius) * ZOMBIE_FRONT_BLOCK_Y_GAP_SCALE);
+      const blockerFoot = this.getZombieFootPoint(blocker);
+      return clamp(blockerFoot.y - footGap - this.getZombieFootOffset(zombie), -70, attackLine - 2);
+    }
+
+    holdZombieBehindBlocker(zombie, blocker, dt, slowFactor, attackLine) {
+      this.stepZombieAroundBlocker(zombie, blocker, dt, slowFactor);
+      const stopY = this.getZombieStopYBehindBlocker(zombie, blocker, attackLine);
+      if (zombie.y < stopY) {
+        zombie.y = Math.min(stopY, zombie.y + zombie.speed * slowFactor * dt);
+      } else if (zombie.y > stopY) {
+        zombie.y = Math.max(stopY, zombie.y - Math.max(18, zombie.speed * 0.5) * dt);
+      }
+      zombie.attackTimer = Math.max(zombie.attackTimer, 0.18);
     }
 
     findBulletHit(bullet) {
@@ -7667,6 +7778,12 @@
 
         const slowFactor = zombie.slowTimer > 0 ? 0.34 : 1;
         const attackLine = this.getZombieBarricadeContactY(zombie);
+        const frontBlocker = this.getZombieFrontBlocker(zombie);
+        if (frontBlocker) {
+          this.holdZombieBehindBlocker(zombie, frontBlocker, dt, slowFactor, attackLine);
+          continue;
+        }
+
         if (zombie.y < attackLine) {
           zombie.y = Math.min(attackLine, zombie.y + zombie.speed * slowFactor * dt);
         } else {
@@ -7686,10 +7803,7 @@
     }
 
     getZombieBarricadeContactY(zombie) {
-      const displayHeight = zombie?.displayH || 170;
-      const type = zombie?.elite ? "elite" : zombie?.type || "normal";
-      const footOffset = displayHeight * (ZOMBIE_FOOT_OFFSET_RATIOS[type] || ZOMBIE_FOOT_OFFSET_RATIOS.normal);
-      return (this.bounds.zombieFootLine || this.bounds.barricade) - footOffset;
+      return (this.bounds.zombieFootLine || this.bounds.barricade) - this.getZombieFootOffset(zombie);
     }
 
     takeDamage(rawAmount) {
