@@ -222,6 +222,14 @@
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
   const ZOMBIE_HIT_GRID_SIZE = 96;
   const ZOMBIE_HIT_GRID_PADDING = 88;
+  const DAMAGE_TEXT_POOL_LIMIT = 64;
+  const ACTIVE_DAMAGE_TEXT_LIMIT = 46;
+  const DAMAGE_TEXT_FRAME_BUDGET = 12;
+  const ACTIVE_HIT_EFFECT_LIMIT = 58;
+  const HIT_EFFECT_FRAME_BUDGET = 16;
+  const FIRE_TICK_EFFECT_FRAME_BUDGET = 8;
+  const ACTIVE_CORPSE_LIMIT = 34;
+  const CORPSE_TRIM_FADE_DURATION = 260;
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
@@ -2002,6 +2010,13 @@
       this.defenders = [];
       this.overlayObjects = [];
       this.transientObjects = new Set();
+      this.damageTextPool = [];
+      this.activeDamageTexts = new Set();
+      this.activeHitEffects = new Set();
+      this.activeCorpses = [];
+      this.damageTextsThisFrame = 0;
+      this.hitEffectsThisFrame = 0;
+      this.fireTickEffectsThisFrame = 0;
       this.runTimers = new Set();
       this.sceneTimers = new Set();
       this.recruitedDefenders = new Set(["c"]);
@@ -2695,6 +2710,54 @@
       return object;
     }
 
+    resetVisualEffectBudgets() {
+      this.damageTextsThisFrame = 0;
+      this.hitEffectsThisFrame = 0;
+      this.fireTickEffectsThisFrame = 0;
+    }
+
+    canSpawnDamageText(priority = false) {
+      const frameLimit = DAMAGE_TEXT_FRAME_BUDGET + (priority ? 4 : 0);
+      const activeLimit = ACTIVE_DAMAGE_TEXT_LIMIT + (priority ? 8 : 0);
+      if ((this.damageTextsThisFrame || 0) >= frameLimit) {
+        return false;
+      }
+      if ((this.activeDamageTexts?.size || 0) >= activeLimit) {
+        return false;
+      }
+      this.damageTextsThisFrame = (this.damageTextsThisFrame || 0) + 1;
+      return true;
+    }
+
+    canSpawnHitEffect(priority = false) {
+      const frameLimit = HIT_EFFECT_FRAME_BUDGET + (priority ? 4 : 0);
+      const activeLimit = ACTIVE_HIT_EFFECT_LIMIT + (priority ? 10 : 0);
+      if ((this.hitEffectsThisFrame || 0) >= frameLimit) {
+        return false;
+      }
+      if ((this.activeHitEffects?.size || 0) >= activeLimit) {
+        return false;
+      }
+      this.hitEffectsThisFrame = (this.hitEffectsThisFrame || 0) + 1;
+      return true;
+    }
+
+    canSpawnFireTickEffect() {
+      if ((this.fireTickEffectsThisFrame || 0) >= FIRE_TICK_EFFECT_FRAME_BUDGET) {
+        return false;
+      }
+      this.fireTickEffectsThisFrame = (this.fireTickEffectsThisFrame || 0) + 1;
+      return true;
+    }
+
+    trackHitEffectRoot(object) {
+      if (object) {
+        object.hitEffectRoot = true;
+        this.activeHitEffects.add(object);
+      }
+      return object;
+    }
+
     destroyGameObject(object, killTweens = true) {
       if (!object) {
         return;
@@ -2714,6 +2777,10 @@
       if (object?.followZombie?.hitEffects) {
         object.followZombie.hitEffects.delete(object);
       }
+      if (object?.hitEffectRoot) {
+        this.activeHitEffects.delete(object);
+        object.hitEffectRoot = false;
+      }
       this.transientObjects.delete(object);
       this.destroyGameObject(object, killTweens);
     }
@@ -2721,6 +2788,9 @@
     clearTransientObjects() {
       Array.from(this.transientObjects).forEach((object) => this.destroyTransientObject(object));
       this.transientObjects.clear();
+      this.clearActiveDamageTexts();
+      this.activeHitEffects.clear();
+      this.activeCorpses.length = 0;
     }
 
     clearEmbeddedArrows() {
@@ -4763,6 +4833,7 @@
         this.hitStopTimer -= rawDt;
         return;
       }
+      this.resetVisualEffectBudgets();
       const dt = rawDt * this.speedMultiplier;
       this.elapsed += dt;
       if (this.focusPoint) {
@@ -6470,6 +6541,9 @@
     }
 
     createFirebombHitEffect(zombie, crit = false, impactPoint = null) {
+      if (!this.canSpawnHitEffect(crit)) {
+        return;
+      }
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.16 : 1);
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, "projectile-firebomb", crit);
       const depth = 229 + zombie.y / 5;
@@ -6487,7 +6561,7 @@
         return this.trackTransient(object);
       };
 
-      const flame = addFollow(this.add.container(hitPoint.x, hitPoint.y).setDepth(depth + 0.95));
+      const flame = this.trackHitEffectRoot(addFollow(this.add.container(hitPoint.x, hitPoint.y).setDepth(depth + 0.95)));
       const baseGlow = this.add.ellipse(0, 8 * sizeScale, 58 * sizeScale, 27 * sizeScale, 0xff5f1d, 0.34)
         .setBlendMode(Phaser.BlendModes.ADD);
       flame.add(baseGlow);
@@ -6549,12 +6623,15 @@
       if (!zombie?.active) {
         return;
       }
+      if (!this.canSpawnFireTickEffect() || !this.canSpawnHitEffect(false)) {
+        return;
+      }
       const sizeScale = clamp(this.getZombieEffectScale(zombie) * 0.62, 0.42, 0.78);
       const foot = this.getZombieFootPoint(zombie);
       const x = foot.x + rand(-8, 8) * sizeScale;
       const y = foot.y - rand(2, 7) * sizeScale;
       const depth = (zombie.depth || (ZOMBIE_BODY_DEPTH_BASE + zombie.y / 5)) + 0.18;
-      const ember = this.trackTransient(this.add.container(x, y).setDepth(depth).setAlpha(0.72));
+      const ember = this.trackHitEffectRoot(this.trackTransient(this.add.container(x, y).setDepth(depth).setAlpha(0.72)));
       const glow = this.add.ellipse(0, 3 * sizeScale, 40 * sizeScale, 15 * sizeScale, 0xff6a22, 0.2)
         .setBlendMode(Phaser.BlendModes.ADD);
       ember.add(glow);
@@ -6591,6 +6668,9 @@
     }
 
     createShockHitEffect(zombie, crit = false, impactPoint = null) {
+      if (!this.canSpawnHitEffect(crit)) {
+        return;
+      }
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.14 : 1);
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, "projectile-shock", crit);
       const depth = 232 + zombie.y / 5;
@@ -6608,10 +6688,10 @@
         return this.trackTransient(object);
       };
 
-      const pulse = addFollow(this.add.circle(hitPoint.x, hitPoint.y, 18 * sizeScale, 0xffffff, 0.22)
+      const pulse = this.trackHitEffectRoot(addFollow(this.add.circle(hitPoint.x, hitPoint.y, 18 * sizeScale, 0xffffff, 0.22)
         .setStrokeStyle(3 * sizeScale, 0xffffff, 0.9)
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(depth + 0.2));
+        .setDepth(depth + 0.2)));
       this.tweens.add({
         targets: pulse,
         scale: crit ? 2.25 : 1.9,
@@ -6695,6 +6775,9 @@
         this.createShockHitEffect(zombie, crit, impactPoint);
         return;
       }
+      if (!this.canSpawnHitEffect(crit)) {
+        return;
+      }
       const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
       const displayWidth = effect.width * sizeScale;
@@ -6706,7 +6789,7 @@
       const rotation = effect.alignToImpact === false || impactAngle === null
         ? rand(-effect.rotation, effect.rotation)
         : impactAngle + rand(-effect.rotation * 0.36, effect.rotation * 0.36);
-      const impact = this.trackTransient(this.add.sprite(
+      const impact = this.trackHitEffectRoot(this.trackTransient(this.add.sprite(
         hitPoint.x,
         hitPoint.y,
         effect.texture,
@@ -6716,7 +6799,7 @@
         .setDisplaySize(displayWidth, displayHeight)
         .setRotation(rotation)
         .setAlpha(effect.alpha)
-        .setDepth(229 + zombie.y / 5));
+        .setDepth(229 + zombie.y / 5)));
       impact.followZombie = zombie;
       impact.followOffsetX = followOffsetX;
       impact.followOffsetY = followOffsetY;
@@ -6804,15 +6887,76 @@
       }
     }
 
-    showDamageText(x, y, damage, crit, marked = false) {
-      const text = this.trackTransient(this.add.text(x, y, String(damage), {
+    createDamageTextObject() {
+      return this.add.text(0, 0, "", {
         fontFamily: "Arial, sans-serif",
-        fontSize: crit ? 31 : marked ? 26 : 23,
+        fontSize: 23,
         fontStyle: "900",
-        color: crit ? "#fff0a5" : marked ? "#ffe29a" : "#ffffff",
-        stroke: crit ? "#811010" : marked ? "#5a310e" : "#40191b",
+        color: "#ffffff",
+        stroke: "#40191b",
         strokeThickness: 5
-      }).setOrigin(0.5).setRotation(rand(-0.18, 0.18)).setDepth(Math.max(250, 270 + y / 5)));
+      })
+        .setOrigin(0.5)
+        .setVisible(false)
+        .setActive(false)
+        .setAlpha(0);
+    }
+
+    acquireDamageText() {
+      let text = this.damageTextPool.pop();
+      if (!text || text.destroyed) {
+        text = this.createDamageTextObject();
+      }
+      this.activeDamageTexts.add(text);
+      return text.setVisible(true).setActive(true);
+    }
+
+    releaseDamageText(text) {
+      if (!text || text.destroyed) {
+        this.activeDamageTexts.delete(text);
+        return;
+      }
+      this.tweens.killTweensOf(text);
+      this.activeDamageTexts.delete(text);
+      text
+        .setVisible(false)
+        .setActive(false)
+        .setAlpha(0)
+        .setScale(1)
+        .setRotation(0)
+        .setText("");
+      if (this.damageTextPool.length < DAMAGE_TEXT_POOL_LIMIT) {
+        this.damageTextPool.push(text);
+      } else {
+        this.destroyGameObject(text, false);
+      }
+    }
+
+    clearActiveDamageTexts() {
+      Array.from(this.activeDamageTexts || []).forEach((text) => this.releaseDamageText(text));
+    }
+
+    showDamageText(x, y, damage, crit, marked = false) {
+      const priority = crit || marked;
+      if (!this.canSpawnDamageText(priority)) {
+        return;
+      }
+      const text = this.acquireDamageText();
+      text
+        .setText(String(damage))
+        .setStyle({
+          fontFamily: "Arial, sans-serif",
+          fontSize: crit ? 31 : marked ? 26 : 23,
+          fontStyle: "900",
+          color: crit ? "#fff0a5" : marked ? "#ffe29a" : "#ffffff",
+          stroke: crit ? "#811010" : marked ? "#5a310e" : "#40191b",
+          strokeThickness: 5
+        })
+        .setPosition(x, y)
+        .setRotation(rand(-0.18, 0.18))
+        .setScale(1)
+        .setAlpha(1)
+        .setDepth(Math.max(250, 270 + y / 5));
       this.tweens.add({
         targets: text,
         y: y - rand(26, 44),
@@ -6820,7 +6964,59 @@
         scale: crit ? 1.18 : 1,
         duration: 650,
         ease: "Cubic.easeOut",
-        onComplete: () => this.destroyTransientObject(text, false)
+        onComplete: () => this.releaseDamageText(text)
+      });
+    }
+
+    registerCorpseRecord(objects) {
+      const record = {
+        objects: objects.filter(Boolean),
+        fading: false
+      };
+      this.activeCorpses.push(record);
+      this.trimCorpseRecords();
+      return record;
+    }
+
+    removeCorpseRecord(record) {
+      if (!record || !this.activeCorpses) {
+        return;
+      }
+      const index = this.activeCorpses.indexOf(record);
+      if (index >= 0) {
+        this.activeCorpses.splice(index, 1);
+      }
+    }
+
+    trimCorpseRecords() {
+      while ((this.activeCorpses?.length || 0) > ACTIVE_CORPSE_LIMIT) {
+        const oldest = this.activeCorpses[0];
+        this.fadeCorpseRecord(oldest, CORPSE_TRIM_FADE_DURATION);
+        if (this.activeCorpses[0] === oldest) {
+          break;
+        }
+      }
+    }
+
+    fadeCorpseRecord(record, duration = CORPSE_TRIM_FADE_DURATION) {
+      if (!record || record.fading) {
+        return;
+      }
+      record.fading = true;
+      this.removeCorpseRecord(record);
+      const targets = record.objects.filter((object) => object && !object.destroyed);
+      if (!targets.length) {
+        return;
+      }
+      targets.forEach((target) => this.tweens.killTweensOf(target));
+      this.tweens.add({
+        targets,
+        alpha: 0,
+        duration,
+        ease: "Sine.easeInOut",
+        onComplete: () => {
+          targets.forEach((target) => this.destroyTransientObject(target, false));
+        }
       });
     }
 
