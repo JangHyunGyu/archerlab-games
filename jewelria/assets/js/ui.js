@@ -23,7 +23,10 @@ export class UI {
       resultBest: document.getElementById('result-best'),
       rankSubmit: document.getElementById('rank-submit'),
       nicknameInput: document.getElementById('nickname-input'),
+      submitRankButton: document.getElementById('submit-rank-btn'),
+      skipRankButton: document.getElementById('skip-rank-btn'),
       submitStatus: document.getElementById('submit-status'),
+      rankSubmitProgress: document.getElementById('rank-submit-progress'),
       resultActions: document.getElementById('result-actions'),
       rankModal: document.getElementById('rank-modal'),
       rankContent: document.getElementById('rank-content'),
@@ -112,6 +115,7 @@ export class UI {
     if (this.refs.resultActions) {
       this.refs.resultActions.classList.toggle('hidden', showRank);
     }
+    this.setRankSubmitLoading(false);
     this.refs.nicknameInput.value = nickname || '';
     this.refs.submitStatus.textContent = '';
     this.refs.submitStatus.className = 'submit-status';
@@ -168,6 +172,18 @@ export class UI {
   setSubmitStatus(message, type = '') {
     this.refs.submitStatus.textContent = message;
     this.refs.submitStatus.className = `submit-status ${type}`.trim();
+  }
+
+  setRankSubmitLoading(isLoading, message) {
+    if (this.refs.rankSubmit) this.refs.rankSubmit.classList.toggle('is-submitting', isLoading);
+    if (this.refs.rankSubmitProgress) {
+      this.refs.rankSubmitProgress.classList.toggle('hidden', !isLoading);
+      this.refs.rankSubmitProgress.setAttribute('aria-hidden', String(!isLoading));
+    }
+    if (this.refs.nicknameInput) this.refs.nicknameInput.disabled = isLoading;
+    if (this.refs.submitRankButton) this.refs.submitRankButton.disabled = isLoading;
+    if (this.refs.skipRankButton) this.refs.skipRankButton.disabled = isLoading;
+    if (message !== undefined) this.setSubmitStatus(message);
   }
 
   showPause() { this.showModal(this.refs.pauseModal); }

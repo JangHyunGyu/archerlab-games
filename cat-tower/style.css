@@ -942,6 +942,35 @@ h1 {
 }
 .submit-status.ok { color: var(--sage); }
 .submit-status.fail { color: var(--accent-dark); }
+.rank-submit-progress {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(114, 72, 37, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 250, 226, 0.78);
+  box-shadow: inset 0 0 14px rgba(89, 47, 25, 0.12);
+}
+.rank-submit-progress span {
+  position: absolute;
+  inset: -1px auto -1px 0;
+  width: 42%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--accent) 28%, var(--gold) 72%, transparent);
+  filter: drop-shadow(0 0 8px rgba(196, 117, 42, 0.5));
+  animation: rankSubmitBar 0.92s ease-in-out infinite;
+}
+.rank-submit-row.is-submitting input {
+  opacity: 0.68;
+}
+@keyframes rankSubmitBar {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
 
 .tier-preview {
   display: grid;

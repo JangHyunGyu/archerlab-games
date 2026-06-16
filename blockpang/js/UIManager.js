@@ -31,6 +31,7 @@ class UIManager {
         this._nameInputFocusHandler = null;
         this._nameInputBlurHandler = null;
         this._nameInputKeydownHandler = null;
+        this._nameInputLoadingTicker = null;
         this._hofOverlay = null;
         this._hofAbortController = null;
         this._hofRequestToken = 0;
@@ -297,6 +298,10 @@ class UIManager {
     }
 
     _destroyNameInputDom() {
+        if (this._nameInputLoadingTicker) {
+            this.game.app.ticker.remove(this._nameInputLoadingTicker);
+            this._nameInputLoadingTicker = null;
+        }
         if (this._nameInputFocusTimer) {
             clearTimeout(this._nameInputFocusTimer);
             this._nameInputFocusTimer = null;
@@ -2240,6 +2245,10 @@ class UIManager {
 
     showNameInput(score, onComplete) {
         this._destroyNameInputDom();
+        if (this._nameInputLoadingTicker) {
+            this.game.app.ticker.remove(this._nameInputLoadingTicker);
+            this._nameInputLoadingTicker = null;
+        }
         if (this._nameInputOverlay) {
             this._destroyDynamicTree(this._nameInputOverlay);
             this._nameInputOverlay = null;
@@ -2390,7 +2399,7 @@ class UIManager {
         const gap = 12;
         const btnY = panelY + panelH - btnH - 22;
 
-        this._makeNeonButton(overlay, {
+        const submitButton = this._makeNeonButton(overlay, {
             x: centerX - btnW - gap / 2,
             y: btnY,
             width: btnW,
@@ -2403,7 +2412,7 @@ class UIManager {
             onPress: () => doSubmit(),
         });
 
-        this._makeNeonButton(overlay, {
+        const skipButton = this._makeNeonButton(overlay, {
             x: centerX + gap / 2,
             y: btnY,
             width: btnW,
@@ -2416,7 +2425,65 @@ class UIManager {
             onPress: () => doSkip(),
         });
 
+        const loadingGroup = new PIXI.Container();
+        loadingGroup.visible = false;
+        overlay.addChild(loadingGroup);
+
+        const loadingLabel = new PIXI.Text({
+            text: getText('loading'),
+            style: {
+                fontFamily: FONT_BODY,
+                fontSize: 12,
+                fill: THEME.goldSoft,
+                fontWeight: '800',
+                letterSpacing: 0.4,
+                dropShadow: { color: THEME.secondary, blur: 4, distance: 0, alpha: 0.22 },
+            },
+        });
+        loadingLabel.anchor.set(0.5, 0.5);
+        loadingLabel.position.set(centerX, btnY - 30);
+        loadingGroup.addChild(loadingLabel);
+
+        const loadingDots = [];
+        for (let i = 0; i < 3; i++) {
+            const dot = new PIXI.Graphics();
+            dot.circle(0, 0, 3.5).fill({ color: THEME.secondary, alpha: 1 });
+            dot.position.set(centerX - 12 + i * 12, btnY - 14);
+            loadingGroup.addChild(dot);
+            loadingDots.push(dot);
+        }
+
+        let isSubmitting = false;
+        const setSubmitting = (submitting) => {
+            isSubmitting = submitting;
+            input.disabled = submitting;
+            loadingGroup.visible = submitting;
+            submitButton.btn.eventMode = submitting ? 'none' : 'static';
+            skipButton.btn.eventMode = submitting ? 'none' : 'static';
+            submitButton.btn.cursor = submitting ? 'default' : 'pointer';
+            skipButton.btn.cursor = submitting ? 'default' : 'pointer';
+            submitButton.btn.alpha = submitting ? 0.58 : 1;
+            skipButton.btn.alpha = submitting ? 0.45 : 1;
+        };
+
+        const updateLoading = () => {
+            if (!loadingGroup.visible) return;
+            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            loadingDots.forEach((dot, index) => {
+                const pulse = (Math.sin(now / 155 - index * 0.78) + 1) / 2;
+                dot.alpha = 0.32 + pulse * 0.68;
+                const scale = 0.78 + pulse * 0.34;
+                dot.scale.set(scale);
+            });
+        };
+        this.game.app.ticker.add(updateLoading);
+        this._nameInputLoadingTicker = updateLoading;
+
         const cleanup = () => {
+            if (this._nameInputLoadingTicker === updateLoading) {
+                this.game.app.ticker.remove(updateLoading);
+                this._nameInputLoadingTicker = null;
+            }
             this._destroyNameInputDom();
             if (this._nameInputOverlay) {
                 this._destroyDynamicTree(this._nameInputOverlay);
@@ -2425,13 +2492,14 @@ class UIManager {
         };
 
         const doSubmit = async () => {
+            if (isSubmitting) return;
             const name = input.value.trim().slice(0, 20);
             if (!name) { input.focus(); return; }
             localStorage.setItem('blockpang_player_name', name);
+            setSubmitting(true);
             try {
                 const synced = await this.game.flushRankEvents();
                 if (!this.game.rankSessionId || !synced || this.game.rankSyncFailed) throw new Error('rank score sync failed');
-                cleanup();
                 await fetch(`${GAME_API_URL}/rankings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2447,18 +2515,19 @@ class UIManager {
                         },
                     }),
                 });
-            } catch (e) {
-                cleanup();
-            }
+            } catch (e) {}
+            cleanup();
             if (onComplete) onComplete();
         };
 
         const doSkip = () => {
+            if (isSubmitting) return;
             cleanup();
             if (onComplete) onComplete();
         };
 
         const onKeydown = (e) => {
+            if (isSubmitting) return;
             if (e.key === 'Enter') doSubmit();
             if (e.key === 'Escape') doSkip();
         };

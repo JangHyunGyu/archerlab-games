@@ -60,7 +60,7 @@
 </script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20260616-rankloading">
 <!-- 카카오톡/라인/페이스북 인앱브라우저 차단 + 외부 브라우저 유도 -->
 <script src="../shared/client-error-reporter.js" data-game-id="cat-tower"></script>
 <script src="js/browser-check.js"></script>
@@ -151,6 +151,9 @@
           <button id="skip-rank-btn" class="btn btn-ghost" data-i18n="over.skipRank">Skip</button>
         </div>
         <div id="submit-status" class="submit-status"></div>
+        <div id="rank-submit-progress" class="rank-submit-progress hidden" role="progressbar" aria-label="ranking submit loading">
+          <span></span>
+        </div>
       </div>
       <button id="replay-btn" class="btn btn-primary" data-i18n="over.replay">다시 도전</button>
       <button id="menu-btn" class="btn btn-ghost" data-i18n="over.menu">메인 메뉴</button>
@@ -205,6 +208,6 @@
 <script src="js/i18n.js"></script>
 <script src="js/cats.js"></script>
 <script src="js/SoundManager.js"></script>
-<script src="js/game.js?v=20260529-rankfix"></script>
+<script src="js/game.js?v=20260616-rankloading"></script>
 </body>
 </html>

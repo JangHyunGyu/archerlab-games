@@ -1523,6 +1523,7 @@
     inp.disabled = true;
     status.className = 'submit-status';
     status.textContent = tt('over.submitting');
+    setRankSubmitLoading(true);
     try {
       const synced = await flushRankEvents();
       if (!rankSessionId || !synced || rankSyncFailed) throw new Error('rank score sync failed');
@@ -1530,19 +1531,32 @@
       try { localStorage.setItem(NICK_KEY, name); } catch {}
       status.className = 'submit-status ok';
       status.textContent = tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');
+      setRankSubmitLoading(false);
       log(`랭킹 등록 성공: ${name} = ${score} rank=${res && res.rank}`);
     } catch (e) {
       err('랭킹 등록 실패:', e.message);
       status.className = 'submit-status fail';
       status.textContent = tt('over.submitFail');
+      setRankSubmitLoading(false);
       btn.disabled = false;
       if (skipBtn) skipBtn.disabled = false;
       inp.disabled = false;
     }
   }
 
+  function setRankSubmitLoading(isLoading) {
+    const row = $('rank-submit-row');
+    const progress = $('rank-submit-progress');
+    if (row) row.classList.toggle('is-submitting', isLoading);
+    if (progress) {
+      progress.classList.toggle('hidden', !isLoading);
+      progress.setAttribute('aria-hidden', String(!isLoading));
+    }
+  }
+
   function handleSkipRank() {
     const row = $('rank-submit-row');
+    setRankSubmitLoading(false);
     if (row) row.style.display = 'none';
     log('UI: 랭킹 등록 Skip');
   }
@@ -1557,6 +1571,7 @@
     inp.disabled = false;
     btn.disabled = false;
     if (skipBtn) skipBtn.disabled = false;
+    setRankSubmitLoading(false);
     status.textContent = '';
     status.className = 'submit-status';
     try { inp.value = localStorage.getItem(NICK_KEY) || ''; } catch { inp.value = ''; }
@@ -1594,7 +1609,7 @@
       // 필수 DOM 엘리먼트 검증 — 하나라도 누락되면 게임 자체가 동작 안 함
       const required = ['play-btn', 'resume-btn-menu', 'how-btn', 'how-close', 'home-btn',
         'replay-btn', 'menu-btn', 'rank-btn', 'rank-close',
-        'rank-content', 'submit-rank-btn', 'skip-rank-btn', 'nickname-input', 'submit-status',
+        'rank-content', 'submit-rank-btn', 'skip-rank-btn', 'nickname-input', 'submit-status', 'rank-submit-progress',
         'lang-ko', 'lang-en', 'score', 'best-score',
         'final-score', 'new-record', 'combo-flash', 'tier-preview',
         'current-cat-name', 'next-cat-name', 'game-tier-strip'];
