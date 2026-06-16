@@ -2040,7 +2040,7 @@
       this.coreHp = this.maxCoreHp;
       this.morale = 100;
       this.coins = 0;
-      this.meta = createDefaultMetaSave();
+      this.meta = loadMetaSave();
       this.runCoinsBanked = false;
       this.lastRankableRun = null;
       this.rankRequestId = 0;
@@ -2096,17 +2096,16 @@
       this.createCharacters();
       this.createHud();
       this.bindInput();
-      this.showMenu();
-      this.ensureServerProfile({ quiet: true }).then(() => {
-        if (!this.disposed && (this.mode === "menu" || this.mode === "shop")) {
-          if (this.mode === "shop") {
-            this.showShop(this.shopSelectedCharacter);
-          } else {
-            this.showMenu();
-          }
+      this.showInitialProfileLoading();
+      this.ensureServerProfile({ quiet: true }).catch(() => null).finally(() => {
+        if (this.disposed) {
+          return;
         }
-      }).catch(() => {});
-      this.applyDebugLaunchFlags();
+        if (this.mode === "profile-loading") {
+          this.showMenu();
+        }
+        this.applyDebugLaunchFlags();
+      });
     }
 
     applyDebugLaunchFlags() {
@@ -4280,6 +4279,38 @@
       } catch (error) {
         this.showToast("랭킹 등록 실패", COLORS.red);
       }
+    }
+
+    showInitialProfileLoading() {
+      this.clearOverlay();
+      this.mode = "profile-loading";
+      const items = this.overlayObjects;
+      const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
+      const source = titleArt.texture.getSourceImage();
+      const ratio = source.width / source.height;
+      titleArt.setDisplaySize(Math.max(GAME_WIDTH, GAME_HEIGHT * ratio), Math.max(GAME_HEIGHT, GAME_WIDTH / ratio));
+      items.push(titleArt);
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.42).setDepth(501));
+      items.push(this.add.rectangle(270, 458, 342, 154, 0x071015, 0.9)
+        .setStrokeStyle(2, COLORS.gold, 0.76)
+        .setDepth(502));
+      items.push(this.add.rectangle(270, 392, 236, 4, 0xffd86b, 0.9).setDepth(503));
+      items.push(this.add.text(270, 438, "프로필 동기화 중", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 24,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 5
+      }).setOrigin(0.5).setDepth(504));
+      items.push(this.add.text(270, 486, "보유 코인 확인 중", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 16,
+        fontStyle: "900",
+        color: "#ffd86b",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(504));
     }
 
     showMenu() {
