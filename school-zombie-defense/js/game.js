@@ -3877,6 +3877,34 @@
       return !this.rankSyncFailed && results.every(Boolean);
     }
 
+    async recordRankRunProgress() {
+      const sessionId = await this.ensureRankSession();
+      if (!sessionId || this.disposed) {
+        return false;
+      }
+      const response = await this.fetchWithAbort(`${RANK_API_BASE}/score-events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          game_id: RANK_GAME_ID,
+          session_id: sessionId,
+          event: {
+            type: "run_progress",
+            run_coins: Math.max(0, Math.floor(Number(this.coins) || 0)),
+            kills: Math.max(0, Math.floor(Number(this.kills) || 0)),
+            reached_stage: Math.max(1, Math.floor(Number(this.stage) || 1)),
+            level: Math.max(1, Math.floor(Number(this.level) || 1)),
+            survived_seconds: Math.max(0, Math.floor(Number(this.elapsed) || 0))
+          }
+        })
+      }, this.rankFetchControllers);
+      if (!response.ok) {
+        throw new Error(`rank run progress ${response.status}`);
+      }
+      const data = await response.json().catch(() => null);
+      return !!(data && data.success === true);
+    }
+
     async fetchRankRows() {
       const url = `${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(RANK_GAME_ID)}&limit=${RANK_LIMIT}`;
       const response = await this.fetchWithAbort(url, { method: "GET" }, this.rankListFetchControllers);
@@ -4739,7 +4767,14 @@
       }
       try {
         await this.ensureServerProfile();
-        await this.ensureRankStagesRecorded();
+        const progressSynced = await this.recordRankRunProgress().catch((error) => {
+          console.warn("[SchoolZombie] run coin sync failed:", error.message);
+          return false;
+        });
+        if (!progressSynced) {
+          return 0;
+        }
+        await this.ensureRankStagesRecorded().catch(() => false);
         if (!this.rankSessionId) {
           return 0;
         }

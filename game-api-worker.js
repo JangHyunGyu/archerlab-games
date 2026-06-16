@@ -102,6 +102,12 @@ const PARKING_MAX_LEVEL_SCORE = 100000;
 const SCHOOL_ZOMBIE_GAME_ID = 'school-zombie-defense';
 const SCHOOL_ZOMBIE_MAX_CLEAR_STAGE = 1000;
 const SCHOOL_ZOMBIE_MIN_MS_PER_STAGE = 12000;
+const SCHOOL_ZOMBIE_RUN_COIN_LIMIT = 100000;
+const SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE = 30;
+const SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND = 8;
+const SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE = 60;
+const SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND = 32;
+const SCHOOL_ZOMBIE_MAX_COIN_PER_KILL = 4;
 const SCHOOL_ZOMBIE_KILLS_SQL = "CAST(COALESCE(CASE WHEN json_valid(extra_data) THEN json_extract(extra_data, '$.kills') END, 0) AS INTEGER)";
 const SCHOOL_ZOMBIE_PROFILE_PREFIX = 'szp_';
 const SCHOOL_ZOMBIE_PROFILE_SECRET_BYTES = 32;
@@ -559,6 +565,55 @@ function getSchoolZombieStageCoinReward(clearedStage) {
     const safeStage = Math.max(0, Math.min(SCHOOL_ZOMBIE_MAX_CLEAR_STAGE, parseInteger(clearedStage)));
     if (!Number.isFinite(safeStage) || safeStage <= 0) return 0;
     return getSchoolZombieMinKillsForClearedStage(safeStage);
+}
+
+function normalizeSchoolZombieRunProgress(event, session, previousState, now) {
+    if (!isPlainObject(event)) {
+        throw new Error('school zombie progress event must be an object');
+    }
+    const runCoins = parseInteger(event.run_coins ?? event.runCoins ?? event.coins);
+    const kills = parseInteger(event.kills);
+    const reachedStage = parseInteger(event.reached_stage ?? event.reachedStage ?? event.stage);
+    const level = parseInteger(event.level);
+    const survivedSeconds = parseInteger(event.survived_seconds ?? event.survivedSeconds ?? event.time);
+    if (!Number.isFinite(runCoins) || runCoins < 0 || runCoins > SCHOOL_ZOMBIE_RUN_COIN_LIMIT) {
+        throw new Error('invalid school zombie run coins');
+    }
+    if (!Number.isFinite(kills) || kills < 0) {
+        throw new Error('invalid school zombie kill count');
+    }
+    if (!Number.isFinite(reachedStage) || reachedStage < 1 || reachedStage > SCHOOL_ZOMBIE_MAX_CLEAR_STAGE + 1) {
+        throw new Error('invalid school zombie reached stage');
+    }
+    if (!Number.isFinite(level) || level < 1) {
+        throw new Error('invalid school zombie level');
+    }
+    const expectedStage = Math.floor((level - 1) / 4) + 1;
+    if (reachedStage !== expectedStage) {
+        throw new Error('invalid school zombie stage for level');
+    }
+    const elapsedSeconds = Math.max(0, Math.floor((now - Number(session.started_at)) / 1000));
+    if (Number.isFinite(survivedSeconds) && survivedSeconds > elapsedSeconds + 10) {
+        throw new Error('invalid school zombie survived time');
+    }
+    const maxKills = SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE + elapsedSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND;
+    const maxCoinsByTime = SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE + elapsedSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND;
+    if (kills > maxKills || runCoins > maxCoinsByTime || runCoins > kills * SCHOOL_ZOMBIE_MAX_COIN_PER_KILL) {
+        throw new Error('school zombie run progress exceeds allowed pace');
+    }
+    const previousCoins = Math.max(0, parseInteger(previousState.run_coins) || 0);
+    const previousKills = Math.max(0, parseInteger(previousState.kills) || 0);
+    if (runCoins < previousCoins || kills < previousKills) {
+        throw new Error('school zombie run progress cannot decrease');
+    }
+    return {
+        run_coins: runCoins,
+        kills,
+        reached_stage: reachedStage,
+        level,
+        survived_seconds: Number.isFinite(survivedSeconds) ? Math.max(0, survivedSeconds) : elapsedSeconds,
+        updated_at: now,
+    };
 }
 
 function getProtectedGameKind(gameId) {
@@ -1094,7 +1149,7 @@ async function recordSchoolZombieScoreEvents(db, body) {
     }
 
     const session = await db.prepare(
-        'SELECT session_id, game_id, score, event_count, started_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+        'SELECT session_id, game_id, score, event_count, started_at, submitted_at, state_json FROM ranking_sessions WHERE session_id = ?'
     ).bind(sessionId).first();
     if (!session || session.game_id !== gameId) {
         return jsonResponse({ error: 'score session not found' }, 404);
@@ -1104,10 +1159,25 @@ async function recordSchoolZombieScoreEvents(db, body) {
     }
 
     const currentScore = Number(session.score);
+    const now = Date.now();
+    let projectedScore = Number.isFinite(currentScore) ? currentScore : 0;
+    let nextState = {
+        ...parseExtraData(session.state_json),
+        version: 1,
+        game_id: gameId,
+    };
     try {
-        events.forEach((event, index) => {
-            if (!isPlainObject(event) || String(event.type || '') !== 'stage_clear') {
-                throw new Error('school zombie score event must be stage_clear');
+        events.forEach((event) => {
+            const type = String(event?.type || '');
+            if (type === 'run_progress') {
+                nextState = {
+                    ...nextState,
+                    ...normalizeSchoolZombieRunProgress(event, session, nextState, now),
+                };
+                return;
+            }
+            if (!isPlainObject(event) || type !== 'stage_clear') {
+                throw new Error('school zombie score event must be stage_clear or run_progress');
             }
             if (event.score !== undefined || event.delta !== undefined || event.highest_stage !== undefined) {
                 throw new Error('school zombie score event cannot set score');
@@ -1116,7 +1186,7 @@ async function recordSchoolZombieScoreEvents(db, body) {
             const reachedStage = parseInteger(event.reached_stage ?? event.reachedStage);
             const level = parseInteger(event.level);
             const kills = parseInteger(event.kills);
-            const expectedStage = currentScore + index + 1;
+            const expectedStage = projectedScore + 1;
             if (!Number.isFinite(clearedStage) || clearedStage !== expectedStage || clearedStage < 1 || clearedStage > SCHOOL_ZOMBIE_MAX_CLEAR_STAGE) {
                 throw new Error('invalid school zombie cleared stage sequence');
             }
@@ -1129,18 +1199,21 @@ async function recordSchoolZombieScoreEvents(db, body) {
             if (!Number.isFinite(kills) || kills < getSchoolZombieMinKillsForClearedStage(clearedStage)) {
                 throw new Error('invalid school zombie kill count for stage clear');
             }
+            projectedScore = clearedStage;
+            nextState.highest_cleared_stage = Math.max(parseInteger(nextState.highest_cleared_stage) || 0, clearedStage);
+            nextState.kills = Math.max(parseInteger(nextState.kills) || 0, kills);
+            nextState.reached_stage = Math.max(parseInteger(nextState.reached_stage) || 1, reachedStage);
+            nextState.level = Math.max(parseInteger(nextState.level) || 1, level);
         });
     } catch (err) {
         return jsonResponse({ error: err.message }, 400);
     }
 
-    const projectedScore = currentScore + events.length;
     const projectedEventCount = Number(session.event_count) + events.length;
     if (projectedScore > SCHOOL_ZOMBIE_MAX_CLEAR_STAGE) {
         return jsonResponse({ error: 'school zombie score exceeds allowed maximum' }, 400);
     }
 
-    const now = Date.now();
     const elapsedMs = now - Number(session.started_at);
     const minElapsedMs = projectedScore * SCHOOL_ZOMBIE_MIN_MS_PER_STAGE;
     if (elapsedMs < minElapsedMs) {
@@ -1148,8 +1221,8 @@ async function recordSchoolZombieScoreEvents(db, body) {
     }
 
     await db.prepare(
-        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ? WHERE session_id = ?'
-    ).bind(projectedScore, projectedEventCount, now, sessionId).run();
+        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ?, state_json = ? WHERE session_id = ?'
+    ).bind(projectedScore, projectedEventCount, now, safeJsonStringify(nextState), sessionId).run();
 
     return jsonResponse({
         success: true,
@@ -1157,6 +1230,7 @@ async function recordSchoolZombieScoreEvents(db, body) {
         session_id: sessionId,
         score: projectedScore,
         event_count: projectedEventCount,
+        run_coins: Math.max(0, parseInteger(nextState.run_coins) || 0),
     });
 }
 
@@ -1534,14 +1608,18 @@ async function bankSchoolZombieRunCoins(db, body) {
         return jsonResponse({ error: 'session_id is required' }, 400);
     }
     const session = await db.prepare(
-        'SELECT session_id, game_id, score, event_count, started_at FROM ranking_sessions WHERE session_id = ?'
+        'SELECT session_id, game_id, score, event_count, started_at, state_json FROM ranking_sessions WHERE session_id = ?'
     ).bind(sessionId).first();
     if (!session || session.game_id !== SCHOOL_ZOMBIE_GAME_ID) {
         return jsonResponse({ error: 'score session not found' }, 404);
     }
     const parsedStage = parseInteger(session.score);
     const clearedStage = Number.isFinite(parsedStage) ? Math.max(0, parsedStage) : 0;
-    const earnedCoins = getSchoolZombieStageCoinReward(clearedStage);
+    const sessionState = parseExtraData(session.state_json);
+    const storedRunCoins = parseInteger(sessionState.run_coins);
+    const earnedCoins = Number.isFinite(storedRunCoins)
+        ? Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, storedRunCoins))
+        : getSchoolZombieStageCoinReward(clearedStage);
     const existingClaim = await db.prepare(
         'SELECT profile_id, coins, cleared_stage FROM school_zombie_coin_claims WHERE session_id = ?'
     ).bind(sessionId).first();
@@ -1552,6 +1630,7 @@ async function bankSchoolZombieRunCoins(db, body) {
         return jsonResponse(schoolZombieProfileResponse(latest, {
             earned_coins: 0,
             cleared_stage: Number(existingClaim.cleared_stage || 0),
+            run_coins: Number(existingClaim.coins || 0),
             duplicate_claim: true,
         }));
     }
@@ -1567,6 +1646,7 @@ async function bankSchoolZombieRunCoins(db, body) {
     return jsonResponse(schoolZombieProfileResponse(updated, {
         earned_coins: earnedCoins,
         cleared_stage: clearedStage,
+        run_coins: earnedCoins,
     }));
 }
 
