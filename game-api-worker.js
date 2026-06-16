@@ -577,6 +577,51 @@ function getSchoolZombieStageCoinReward(clearedStage) {
     return getSchoolZombieMinKillsForClearedStage(safeStage);
 }
 
+function normalizeSchoolZombieRewardCounts(event, kills, level) {
+    const rawCounts = isPlainObject(event.reward_counts) ? event.reward_counts
+        : isPlainObject(event.rewardCounts) ? event.rewardCounts
+            : null;
+    if (!rawCounts) {
+        return {
+            counts: { '1': kills, '2': 0, '3': 0, '4': 0 },
+            coins: kills,
+        };
+    }
+    const counts = {};
+    [1, 2, 3, 4].forEach((reward) => {
+        const value = parseInteger(rawCounts[String(reward)] ?? rawCounts[reward]);
+        counts[String(reward)] = Number.isFinite(value) ? value : 0;
+    });
+    if (Object.values(counts).some((value) => value < 0)) {
+        throw new Error('invalid school zombie reward counts');
+    }
+    const countedKills = counts['1'] + counts['2'] + counts['3'] + counts['4'];
+    if (countedKills !== kills) {
+        throw new Error('school zombie reward counts must match kill count');
+    }
+    if (level < 4 && (counts['2'] > 0 || counts['3'] > 0 || counts['4'] > 0)) {
+        throw new Error('school zombie reward counts exceed level rewards');
+    }
+    if (level < 6 && counts['4'] > 0) {
+        throw new Error('school zombie elite rewards are not available yet');
+    }
+    if (level < 8 && counts['3'] > 0) {
+        throw new Error('school zombie guard rewards are not available yet');
+    }
+
+    const eliteCap = level >= 6 ? Math.ceil(kills * 0.22 + 4) : 0;
+    const guardCap = level >= 8 ? Math.ceil(kills * 0.35 + 4) : 0;
+    const premiumCap = level >= 4 ? Math.ceil(kills * 0.85 + 5) : 0;
+    if (counts['4'] > eliteCap || counts['3'] > guardCap || (counts['2'] + counts['3'] + counts['4']) > premiumCap) {
+        throw new Error('school zombie reward counts exceed allowed distribution');
+    }
+
+    return {
+        counts,
+        coins: counts['1'] + counts['2'] * 2 + counts['3'] * 3 + counts['4'] * 4,
+    };
+}
+
 function normalizeSchoolZombieRunProgress(event, session, previousState, now) {
     if (!isPlainObject(event)) {
         throw new Error('school zombie progress event must be an object');
@@ -607,10 +652,18 @@ function normalizeSchoolZombieRunProgress(event, session, previousState, now) {
         throw new Error('invalid school zombie survived time');
     }
     const maxKills = SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE + elapsedSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND;
-    const verifiedRunCoins = Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, kills));
+    let verifiedRunCoins = Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, kills));
     const maxCoinsByTime = SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE + elapsedSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND;
     if (kills > maxKills || verifiedRunCoins > maxCoinsByTime) {
         throw new Error('school zombie run progress exceeds allowed pace');
+    }
+    const rewards = normalizeSchoolZombieRewardCounts(event, kills, level);
+    if (Number.isFinite(clientRunCoins) && clientRunCoins !== rewards.coins) {
+        throw new Error('school zombie run coins must match reward counts');
+    }
+    verifiedRunCoins = Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, rewards.coins));
+    if (verifiedRunCoins > maxCoinsByTime) {
+        throw new Error('school zombie run rewards exceed allowed pace');
     }
     const previousCoins = Math.max(0, parseInteger(previousState.run_coins) || 0);
     const previousKills = Math.max(0, parseInteger(previousState.kills) || 0);
@@ -619,6 +672,7 @@ function normalizeSchoolZombieRunProgress(event, session, previousState, now) {
     }
     return {
         run_coins: verifiedRunCoins,
+        reward_counts: rewards.counts,
         kills,
         reached_stage: reachedStage,
         level,

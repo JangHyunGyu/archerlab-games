@@ -2040,6 +2040,7 @@
       this.coreHp = this.maxCoreHp;
       this.morale = 100;
       this.coins = 0;
+      this.rewardCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
       this.meta = loadMetaSave();
       this.runCoinsBanked = false;
       this.lastRankableRun = null;
@@ -3901,7 +3902,8 @@
           profile_secret: this.profileAuth?.profile_secret,
           event: {
             type: "run_progress",
-            run_coins: Math.max(0, Math.floor(Number(this.kills) || 0)),
+            run_coins: Math.max(0, Math.floor(Number(this.coins) || 0)),
+            reward_counts: { ...this.rewardCounts },
             kills: Math.max(0, Math.floor(Number(this.kills) || 0)),
             reached_stage: Math.max(1, Math.floor(Number(this.stage) || 1)),
             level: Math.max(1, Math.floor(Number(this.level) || 1)),
@@ -4939,6 +4941,7 @@
       this.coreHp = this.maxCoreHp;
       this.morale = 100;
       this.coins = 0;
+      this.rewardCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
       this.runCoinsBanked = false;
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
@@ -7164,7 +7167,9 @@
       this.createZombieCorpse(x, y, zombie, deathKnockback);
       this.kills += 1;
       this.killsInLevel += 1;
-      this.coins += 1;
+      const reward = clamp(Math.floor(Number(zombie.reward) || (zombie.elite ? 4 : 1)), 1, 4);
+      this.coins += reward;
+      this.rewardCounts[reward] = Math.max(0, Math.floor(Number(this.rewardCounts[reward]) || 0)) + 1;
       if (shouldExplode && this.mode === "playing") {
         this.createExplosion(x, y, 74, this.damage * 1.05, 0.35);
       }
