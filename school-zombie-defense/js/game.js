@@ -433,7 +433,8 @@
   };
   const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4.6;
   const FIREBOMB_FLIGHT_TIME_SCALE = 2;
-  const FIREBOMB_THROW_INTERVAL_SECONDS = 10;
+  const FIREBOMB_THROW_INTERVAL_SECONDS = 5;
+  const FIREBOMB_FIRE_ZONE_DURATION_SECONDS = 3;
   const RIFLE_GRENADE_INTERVAL_SCALE = 1;
   const RIFLE_GRENADE_INITIAL_INTERVAL = 10 * RIFLE_GRENADE_INTERVAL_SCALE;
   const RIFLE_GRENADE_MIN_INTERVAL = 2 * RIFLE_GRENADE_INTERVAL_SCALE;
@@ -783,7 +784,7 @@
       critChance: 0.05,
       critMultiplier: 1.45,
       fireZoneRadius: 72,
-      fireZoneDuration: 3.2,
+      fireZoneDuration: FIREBOMB_FIRE_ZONE_DURATION_SECONDS / FIRE_ZONE_VISUAL_DURATION_MULTIPLIER,
       fireZoneDamageScale: 0.2,
       aim: { pivot: [0, -121], reach: 39 },
       recruit: {
