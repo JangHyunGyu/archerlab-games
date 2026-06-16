@@ -5948,7 +5948,7 @@
           "projectile-firebomb",
           1,
           { x: zombie.x, y: zombie.y - (zombie.displayH || 170) * 0.2 },
-          { applyKnockback: false }
+          { applyKnockback: false, showHitEffect: false }
         );
       }
       if (!zombie.active || zombie.fireBurnTimer <= 0) {
@@ -6628,7 +6628,9 @@
       const marked = zombie.weakMarkTimer > 0 && zombie.weakMarkBonus > 0;
       const markMultiplier = marked ? 1 + zombie.weakMarkBonus : 1;
       const damage = Math.round(amount * markMultiplier * (crit ? critMultiplier : 1));
-      this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
+      if (options.showHitEffect !== false) {
+        this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
+      }
       zombie.hp -= damage;
       this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
       const suppressKnockback =
