@@ -13,6 +13,10 @@ class Game {
         this.rankEventQueue = [];
         this.rankFlushPromise = null;
         this.rankSyncFailed = false;
+        this.rankProtocol = 0;
+        this.rankSeed = 0;
+        this.rankMoveSeq = 0;
+        this.pieceRngState = 0;
 
         // ── Containers (render order) ──
         this.zoomContainer = new PIXI.Container();
@@ -433,6 +437,7 @@ class Game {
         this.isAnimating = false;
         this.scoreManager.reset();
         this.board.clearAll();
+        this._initRankSeed();
         this._startRankSession();
         this.ui.updateScore(0, this.scoreManager.bestScore);
         this.ui.updateLevel(1, 0);
@@ -453,15 +458,40 @@ class Game {
         this.rankSyncFailed = false;
     }
 
+    _initRankSeed(seed = makeBlockpangSeed()) {
+        this.rankProtocol = 2;
+        this.rankSeed = normalizeBlockpangSeed(seed);
+        this.pieceRngState = this.rankSeed;
+        this.rankMoveSeq = 0;
+    }
+
+    _nextPieceRandom() {
+        if (!this.pieceRngState) this._initRankSeed();
+        const result = nextBlockpangRandomState(this.pieceRngState);
+        this.pieceRngState = result.state;
+        return result.value;
+    }
+
+    _generateRankPiece(level) {
+        return generateRandomPiece(level, () => this._nextPieceRandom());
+    }
+
     async _createRankSession() {
+        if (!this.rankSeed) this._initRankSeed();
         const res = await fetch(`${GAME_API_URL}/score-sessions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ game_id: GAME_ID_BLOCKPANG }),
+            body: JSON.stringify({
+                game_id: GAME_ID_BLOCKPANG,
+                seed: this.rankSeed,
+            }),
         });
         if (!res.ok) throw new Error(`rank session ${res.status}`);
         const data = await res.json();
         if (!data || !data.session_id) throw new Error('rank session response invalid');
+        if (data.protocol !== 2 || normalizeBlockpangSeed(data.seed) !== this.rankSeed) {
+            throw new Error('rank session protocol mismatch');
+        }
         this.rankSessionId = data.session_id;
         this._autoSave();
         return this.rankSessionId;
@@ -476,14 +506,23 @@ class Game {
         });
     }
 
-    _restoreRankSession(sessionId, restoredScore = 0) {
+    _restoreRankSession(sessionId, restoredScore = 0, rankData = {}) {
         this._resetRankSessionState();
-        if (sessionId) {
+        const protocol = Number(rankData.protocol || 0);
+        const seed = normalizeBlockpangSeed(rankData.seed || 0);
+        const rngState = normalizeBlockpangSeed(rankData.rngState || 0);
+        const moveSeq = parseInt(rankData.moveSeq || 0, 10);
+        if (sessionId && protocol === 2 && seed && rngState && Number.isFinite(moveSeq)) {
             this.rankSessionId = String(sessionId);
             this.rankSessionPromise = Promise.resolve(this.rankSessionId);
-        } else if (restoredScore > 0) {
+            this.rankProtocol = protocol;
+            this.rankSeed = seed;
+            this.pieceRngState = rngState;
+            this.rankMoveSeq = Math.max(0, moveSeq);
+        } else if (sessionId || restoredScore > 0) {
             this.rankSyncFailed = true;
         } else {
+            this._initRankSeed();
             this._startRankSession();
         }
     }
@@ -499,7 +538,16 @@ class Game {
         return this.rankSessionPromise;
     }
 
-    _queueRankScoreEvent(event) {
+    _queueRankMove(slotIndex, gridX, gridY) {
+        if (this.rankSyncFailed) return;
+        const event = {
+            type: 'move',
+            seq: this.rankMoveSeq + 1,
+            slot_index: slotIndex,
+            grid_x: gridX,
+            grid_y: gridY,
+        };
+        this.rankMoveSeq = event.seq;
         if (this.rankSyncFailed || !event) return;
         this.rankEventQueue.push(event);
         this.flushRankEvents();
@@ -543,9 +591,9 @@ class Game {
     generatePieces() {
         const lv = this.scoreManager.level;
         const pieces = [
-            generateRandomPiece(lv),
-            generateRandomPiece(lv),
-            generateRandomPiece(lv),
+            this._generateRankPiece(lv),
+            this._generateRankPiece(lv),
+            this._generateRankPiece(lv),
         ];
         this.tray.setPieces(pieces);
         this._checkGameOver();
@@ -561,8 +609,8 @@ class Game {
         const result = this.board.place(piece.shape, gridX, gridY, piece.colorIndex);
         this.tray.removePiece(slotIndex);
 
-        const placementPts = this.scoreManager.addPlacementScore(piece.cellCount);
-        this._queueRankScoreEvent({ type: 'placement', cells: piece.cellCount, delta: placementPts });
+        this.scoreManager.addPlacementScore(piece.cellCount);
+        this._queueRankMove(slotIndex, gridX, gridY);
         this.sound.playPlace();
         this.effects.playPlaceEffect(result.sprites);
 
@@ -605,7 +653,6 @@ class Game {
         const result = this.scoreManager.addClearScore(clearResult.lines);
         const pts = result.points;
         const combo = this.scoreManager.combo;
-        this._queueRankScoreEvent({ type: 'clear', lines: clearResult.lines, combo, delta: pts });
 
         if (combo > 1 && clearResult.lines >= 2) {
             // 콤보 + 멀티라인 동시: 유리 깨지는 소리 먼저 → 콤보 사운드
@@ -719,7 +766,6 @@ class Game {
 
                 if (this.board.isEmpty()) {
                     const pcBonus = this.scoreManager.addPerfectClearBonus();
-                    this._queueRankScoreEvent({ type: 'perfect_clear', level: this.scoreManager.level, delta: pcBonus });
                     this.sound.playPerfectClear();
                     this.effects.showPerfectClear();
                     this._scheduleTimeout(() => {
@@ -771,6 +817,10 @@ class Game {
                 linesCleared: this.scoreManager.linesCleared,
                 totalLinesForLevel: this.scoreManager.totalLinesForLevel,
                 rankSessionId: this.rankSessionId,
+                rankProtocol: this.rankProtocol,
+                rankSeed: this.rankSeed,
+                rankMoveSeq: this.rankMoveSeq,
+                pieceRngState: this.pieceRngState,
                 ts: Date.now(),
             };
             localStorage.setItem('blockpang_save', JSON.stringify(data));
@@ -838,7 +888,12 @@ class Game {
             this.scoreManager.level = data.level;
             this.scoreManager.linesCleared = data.linesCleared;
             this.scoreManager.totalLinesForLevel = data.totalLinesForLevel;
-            this._restoreRankSession(data.rankSessionId, data.score || 0);
+            this._restoreRankSession(data.rankSessionId, data.score || 0, {
+                protocol: data.rankProtocol,
+                seed: data.rankSeed,
+                rngState: data.pieceRngState,
+                moveSeq: data.rankMoveSeq,
+            });
 
             this.ui.updateScore(data.score, this.scoreManager.bestScore);
             this.ui.updateLevel(data.level, this.scoreManager.levelProgress);

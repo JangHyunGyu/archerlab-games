@@ -1,19 +1,47 @@
 // ─── Piece Utilities ───
 
-function generateRandomPiece(level = 99) {
+function normalizeBlockpangSeed(value) {
+    const parsed = parseInt(value, 10);
+    if (Number.isFinite(parsed) && parsed !== 0) return parsed >>> 0;
+    return 1;
+}
+
+function makeBlockpangSeed() {
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        const bytes = new Uint8Array(4);
+        window.crypto.getRandomValues(bytes);
+        const seed = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]) >>> 0;
+        return (seed || 1) >>> 0;
+    }
+    return (Math.floor(Math.random() * 0xFFFFFFFF) || 1) >>> 0;
+}
+
+function nextBlockpangRandomState(state) {
+    const nextState = (normalizeBlockpangSeed(state) + 0x6D2B79F5) >>> 0;
+    let t = nextState;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return {
+        state: nextState,
+        value: ((t ^ (t >>> 14)) >>> 0) / 4294967296,
+    };
+}
+
+function generateRandomPiece(level = 99, randomSource = Math.random) {
     // 현재 레벨에 맞는 최대 tier 결정
     const maxTier = LEVEL_MAX_TIER[Math.min(level, LEVEL_MAX_TIER.length - 1)];
     const available = PIECE_SHAPES.filter(p => (p.tier || 1) <= maxTier);
+    const random = typeof randomSource === 'function' ? randomSource : Math.random;
 
     // Weighted random (레벨에 맞는 피스만)
     const totalWeight = available.reduce((s, p) => s + p.weight, 0);
-    let roll = Math.random() * totalWeight;
+    let roll = random() * totalWeight;
     let chosen = available[0];
     for (const def of available) {
         roll -= def.weight;
         if (roll <= 0) { chosen = def; break; }
     }
-    const colorIndex = Math.floor(Math.random() * BLOCK_COLORS.length);
+    const colorIndex = Math.floor(random() * BLOCK_COLORS.length);
     const shape = chosen.shape;
     let cellCount = 0;
     shape.forEach(row => row.forEach(v => { if (v) cellCount++; }));

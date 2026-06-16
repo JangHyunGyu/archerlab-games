@@ -42,6 +42,53 @@ const BLOCKPANG_PERFECT_CLEAR_BONUS = 500;
 const BLOCKPANG_MAX_SCORE = 500000;
 const BLOCKPANG_FREE_SCORE_BURST = 2000;
 const BLOCKPANG_MAX_SCORE_PER_SECOND = 3000;
+const BLOCKPANG_PROTOCOL_VERSION = 2;
+const BLOCKPANG_GRID_SIZE = 10;
+const BLOCKPANG_FREE_MOVE_BURST = 30;
+const BLOCKPANG_MIN_MS_PER_MOVE = 90;
+const BLOCKPANG_LEVEL_THRESHOLDS = [0, 5, 12, 22, 35, 52, 73, 100, 133, 172, 220, 275, 340, 415, 500, 600, 720, 860, 1020, 1200];
+const BLOCKPANG_LEVEL_MAX_TIER = [2, 2, 3, 4, 5];
+const BLOCKPANG_COLOR_COUNT = 8;
+const BLOCKPANG_PIECE_SHAPES = [
+    { shape: [[1]], weight: 4, tier: 1 },
+    { shape: [[1, 1]], weight: 7, tier: 1 },
+    { shape: [[1], [1]], weight: 7, tier: 1 },
+    { shape: [[1, 1, 1]], weight: 10, tier: 2 },
+    { shape: [[1], [1], [1]], weight: 10, tier: 2 },
+    { shape: [[1, 1], [1, 1]], weight: 8, tier: 2 },
+    { shape: [[1, 0], [1, 1]], weight: 7, tier: 2 },
+    { shape: [[0, 1], [1, 1]], weight: 7, tier: 2 },
+    { shape: [[1, 1], [1, 0]], weight: 7, tier: 2 },
+    { shape: [[1, 1], [0, 1]], weight: 7, tier: 2 },
+    { shape: [[1, 1, 1, 1]], weight: 5, tier: 3 },
+    { shape: [[1], [1], [1], [1]], weight: 5, tier: 3 },
+    { shape: [[1, 1, 1], [1, 0, 0]], weight: 4, tier: 3 },
+    { shape: [[1, 1, 1], [0, 0, 1]], weight: 4, tier: 3 },
+    { shape: [[1, 0, 0], [1, 1, 1]], weight: 4, tier: 3 },
+    { shape: [[0, 0, 1], [1, 1, 1]], weight: 4, tier: 3 },
+    { shape: [[1, 1], [1, 0], [1, 0]], weight: 4, tier: 3 },
+    { shape: [[1, 1], [0, 1], [0, 1]], weight: 4, tier: 3 },
+    { shape: [[1, 0], [1, 0], [1, 1]], weight: 4, tier: 3 },
+    { shape: [[0, 1], [0, 1], [1, 1]], weight: 4, tier: 3 },
+    { shape: [[1, 1, 1], [0, 1, 0]], weight: 4, tier: 3 },
+    { shape: [[0, 1, 0], [1, 1, 1]], weight: 4, tier: 3 },
+    { shape: [[1, 0], [1, 1], [1, 0]], weight: 4, tier: 3 },
+    { shape: [[0, 1], [1, 1], [0, 1]], weight: 4, tier: 3 },
+    { shape: [[1, 1, 0], [0, 1, 1]], weight: 4, tier: 3 },
+    { shape: [[0, 1, 1], [1, 1, 0]], weight: 4, tier: 3 },
+    { shape: [[1, 0], [1, 1], [0, 1]], weight: 4, tier: 3 },
+    { shape: [[0, 1], [1, 1], [1, 0]], weight: 4, tier: 3 },
+    { shape: [[1, 0, 0], [1, 0, 0], [1, 1, 1]], weight: 3, tier: 4 },
+    { shape: [[0, 0, 1], [0, 0, 1], [1, 1, 1]], weight: 3, tier: 4 },
+    { shape: [[1, 1, 1], [1, 0, 0], [1, 0, 0]], weight: 3, tier: 4 },
+    { shape: [[1, 1, 1], [0, 0, 1], [0, 0, 1]], weight: 3, tier: 4 },
+    { shape: [[1, 1, 1, 1, 1]], weight: 2, tier: 4 },
+    { shape: [[1], [1], [1], [1], [1]], weight: 2, tier: 4 },
+    { shape: [[1, 1, 1], [1, 1, 1]], weight: 3, tier: 4 },
+    { shape: [[1, 1], [1, 1], [1, 1]], weight: 3, tier: 4 },
+    { shape: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], weight: 1, tier: 5 },
+    { shape: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], weight: 2, tier: 5 },
+];
 const JEWELRIA_GAME_ID = 'jewelria';
 const JEWELRIA_MAX_SCORE = 600000;
 const JEWELRIA_MAX_STAGE = 8;
@@ -184,6 +231,284 @@ async function sha256Hex(value) {
     return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function safeJsonStringify(value) {
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return null;
+    }
+}
+
+function parseJsonObject(value) {
+    if (!value || typeof value !== 'string') return {};
+    try {
+        const parsed = JSON.parse(value);
+        return isPlainObject(parsed) ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+async function getRequestMeta(request) {
+    const ua = limitText(request?.headers?.get('User-Agent') || '', 300);
+    const ip = request?.headers?.get('CF-Connecting-IP') || '';
+    const ipHash = ip ? await sha256Hex(ip) : '';
+    return {
+        ip_hash: ipHash,
+        user_agent: ua,
+        origin: limitText(request?.headers?.get('Origin') || '', 300),
+        referer: limitText(request?.headers?.get('Referer') || '', 500),
+        country: limitText(request?.cf?.country || '', 16),
+        colo: limitText(request?.cf?.colo || '', 16),
+        asn: request?.cf?.asn || '',
+    };
+}
+
+function normalizeUint32(value) {
+    const parsed = parseInteger(value);
+    if (Number.isFinite(parsed)) return parsed >>> 0;
+    const text = String(value || '').trim();
+    if (/^[0-9a-f]{1,8}$/i.test(text)) return parseInt(text, 16) >>> 0;
+    return 0;
+}
+
+function makeBlockpangSeed(rawSeed) {
+    const normalized = normalizeUint32(rawSeed);
+    if (normalized) return normalized >>> 0;
+    const bytes = new Uint32Array(1);
+    crypto.getRandomValues(bytes);
+    return (bytes[0] || 1) >>> 0;
+}
+
+function blockpangNextRandom(state) {
+    const nextState = (normalizeUint32(state) + 0x6D2B79F5) >>> 0;
+    let t = nextState;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return {
+        state: nextState,
+        value: ((t ^ (t >>> 14)) >>> 0) / 4294967296,
+    };
+}
+
+function blockpangCellCount(shape) {
+    let count = 0;
+    for (const row of shape) {
+        for (const cell of row) {
+            if (cell) count += 1;
+        }
+    }
+    return count;
+}
+
+function cloneBlockpangShape(shape) {
+    return shape.map((row) => row.slice());
+}
+
+function blockpangGeneratePiece(state, level) {
+    const maxTier = BLOCKPANG_LEVEL_MAX_TIER[Math.min(Math.max(0, parseInteger(level) || 1), BLOCKPANG_LEVEL_MAX_TIER.length - 1)] || 2;
+    const available = BLOCKPANG_PIECE_SHAPES.filter((piece) => (piece.tier || 1) <= maxTier);
+    const totalWeight = available.reduce((sum, piece) => sum + piece.weight, 0);
+    let rollResult = blockpangNextRandom(state.rng_state);
+    state.rng_state = rollResult.state;
+    let roll = rollResult.value * totalWeight;
+    let chosen = available[0];
+    for (const piece of available) {
+        roll -= piece.weight;
+        if (roll <= 0) {
+            chosen = piece;
+            break;
+        }
+    }
+
+    rollResult = blockpangNextRandom(state.rng_state);
+    state.rng_state = rollResult.state;
+    const colorIndex = Math.floor(rollResult.value * BLOCKPANG_COLOR_COUNT);
+    const shape = cloneBlockpangShape(chosen.shape);
+    return {
+        shape,
+        colorIndex,
+        rows: shape.length,
+        cols: shape[0].length,
+        cellCount: blockpangCellCount(shape),
+    };
+}
+
+function blockpangGenerateTray(state) {
+    state.slots = [
+        blockpangGeneratePiece(state, state.level),
+        blockpangGeneratePiece(state, state.level),
+        blockpangGeneratePiece(state, state.level),
+    ];
+}
+
+function createEmptyBlockpangGrid() {
+    return Array.from({ length: BLOCKPANG_GRID_SIZE }, () => Array(BLOCKPANG_GRID_SIZE).fill(-1));
+}
+
+function createBlockpangSessionState(seed, requestMeta) {
+    const safeSeed = makeBlockpangSeed(seed);
+    const state = {
+        version: BLOCKPANG_PROTOCOL_VERSION,
+        game_id: BLOCKPANG_GAME_ID,
+        seed: safeSeed,
+        rng_state: safeSeed,
+        grid: createEmptyBlockpangGrid(),
+        slots: [null, null, null],
+        score: 0,
+        combo: 0,
+        level: 1,
+        linesCleared: 0,
+        totalLinesForLevel: 0,
+        move_seq: 0,
+        request_meta: requestMeta || {},
+    };
+    blockpangGenerateTray(state);
+    return state;
+}
+
+function normalizeBlockpangState(rawState) {
+    const state = isPlainObject(rawState) ? rawState : {};
+    if (state.version !== BLOCKPANG_PROTOCOL_VERSION || state.game_id !== BLOCKPANG_GAME_ID) return null;
+    if (!Array.isArray(state.grid) || state.grid.length !== BLOCKPANG_GRID_SIZE) return null;
+    if (!Array.isArray(state.slots) || state.slots.length !== 3) return null;
+    state.rng_state = normalizeUint32(state.rng_state || state.seed);
+    state.score = Math.max(0, parseInteger(state.score) || 0);
+    state.combo = Math.max(0, parseInteger(state.combo) || 0);
+    state.level = Math.max(1, parseInteger(state.level) || 1);
+    state.linesCleared = Math.max(0, parseInteger(state.linesCleared) || 0);
+    state.totalLinesForLevel = Math.max(0, parseInteger(state.totalLinesForLevel) || 0);
+    state.move_seq = Math.max(0, parseInteger(state.move_seq) || 0);
+    return state;
+}
+
+function blockpangCanPlace(grid, shape, gridX, gridY) {
+    for (let r = 0; r < shape.length; r += 1) {
+        for (let c = 0; c < shape[r].length; c += 1) {
+            if (!shape[r][c]) continue;
+            const gr = gridY + r;
+            const gc = gridX + c;
+            if (gr < 0 || gr >= BLOCKPANG_GRID_SIZE || gc < 0 || gc >= BLOCKPANG_GRID_SIZE) return false;
+            if (grid[gr][gc] !== -1) return false;
+        }
+    }
+    return true;
+}
+
+function blockpangCalcLevel(totalLines) {
+    for (let i = BLOCKPANG_LEVEL_THRESHOLDS.length - 1; i >= 0; i -= 1) {
+        if (totalLines >= BLOCKPANG_LEVEL_THRESHOLDS[i]) return i + 1;
+    }
+    return 1;
+}
+
+function blockpangClearFullLines(grid) {
+    const rows = [];
+    const cols = [];
+    for (let r = 0; r < BLOCKPANG_GRID_SIZE; r += 1) {
+        if (grid[r].every((value) => value !== -1)) rows.push(r);
+    }
+    for (let c = 0; c < BLOCKPANG_GRID_SIZE; c += 1) {
+        let full = true;
+        for (let r = 0; r < BLOCKPANG_GRID_SIZE; r += 1) {
+            if (grid[r][c] === -1) {
+                full = false;
+                break;
+            }
+        }
+        if (full) cols.push(c);
+    }
+    if (rows.length === 0 && cols.length === 0) return 0;
+
+    const keys = new Set();
+    for (const r of rows) {
+        for (let c = 0; c < BLOCKPANG_GRID_SIZE; c += 1) keys.add(`${r},${c}`);
+    }
+    for (const c of cols) {
+        for (let r = 0; r < BLOCKPANG_GRID_SIZE; r += 1) keys.add(`${r},${c}`);
+    }
+    for (const key of keys) {
+        const [r, c] = key.split(',').map(Number);
+        grid[r][c] = -1;
+    }
+    return rows.length + cols.length;
+}
+
+function blockpangIsGridEmpty(grid) {
+    for (let r = 0; r < BLOCKPANG_GRID_SIZE; r += 1) {
+        for (let c = 0; c < BLOCKPANG_GRID_SIZE; c += 1) {
+            if (grid[r][c] !== -1) return false;
+        }
+    }
+    return true;
+}
+
+function blockpangAddClearScore(state, lineCount) {
+    if (lineCount <= 0) {
+        state.combo = 0;
+        return;
+    }
+    state.combo += 1;
+    state.linesCleared += lineCount;
+    state.totalLinesForLevel += lineCount;
+    const multiBonus = lineCount >= 4 ? 100 : lineCount === 3 ? 50 : lineCount === 2 ? 20 : 0;
+    let points = lineCount * BLOCKPANG_SCORE_PER_LINE + multiBonus;
+    if (state.combo > 1) {
+        points = Math.floor(points * (1 + (state.combo - 1) * BLOCKPANG_COMBO_MULTIPLIER));
+    }
+    state.score += points;
+    state.level = blockpangCalcLevel(state.totalLinesForLevel);
+}
+
+function applyBlockpangMove(state, event) {
+    if (!isPlainObject(event) || String(event.type || '') !== 'move') {
+        throw new Error('blockpang score events must be authoritative moves');
+    }
+    const seq = parseInteger(event.seq);
+    if (!Number.isFinite(seq) || seq !== state.move_seq + 1) {
+        throw new Error('invalid blockpang move sequence');
+    }
+    const slotIndex = parseInteger(event.slot_index ?? event.slotIndex);
+    const gridX = parseInteger(event.grid_x ?? event.gridX ?? event.x);
+    const gridY = parseInteger(event.grid_y ?? event.gridY ?? event.y);
+    if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 2) {
+        throw new Error('invalid blockpang slot index');
+    }
+    if (!Number.isFinite(gridX) || !Number.isFinite(gridY)) {
+        throw new Error('invalid blockpang move position');
+    }
+
+    const piece = state.slots[slotIndex];
+    if (!piece || !Array.isArray(piece.shape)) {
+        throw new Error('blockpang slot is empty');
+    }
+    if (!blockpangCanPlace(state.grid, piece.shape, gridX, gridY)) {
+        throw new Error('invalid blockpang placement');
+    }
+
+    for (let r = 0; r < piece.shape.length; r += 1) {
+        for (let c = 0; c < piece.shape[r].length; c += 1) {
+            if (!piece.shape[r][c]) continue;
+            state.grid[gridY + r][gridX + c] = piece.colorIndex;
+        }
+    }
+    state.score += piece.cellCount * BLOCKPANG_SCORE_PER_CELL;
+    state.slots[slotIndex] = null;
+
+    const clearedLines = blockpangClearFullLines(state.grid);
+    blockpangAddClearScore(state, clearedLines);
+    let perfectClear = false;
+    if (clearedLines > 0 && blockpangIsGridEmpty(state.grid)) {
+        state.score += BLOCKPANG_PERFECT_CLEAR_BONUS * state.level;
+        perfectClear = true;
+    }
+    if (state.slots.every((slot) => slot === null)) {
+        blockpangGenerateTray(state);
+    }
+    state.move_seq = seq;
+    return { cleared_lines: clearedLines, perfect_clear: perfectClear };
+}
+
 function getSchoolZombieShopUpgradeCost(level) {
     if (level >= SCHOOL_ZOMBIE_SHOP_MAX_LEVEL) return 0;
     return Math.round((200 * Math.pow(SCHOOL_ZOMBIE_SHOP_COST_GROWTH, level)) / SCHOOL_ZOMBIE_SHOP_COST_ROUNDING) * SCHOOL_ZOMBIE_SHOP_COST_ROUNDING;
@@ -288,27 +613,44 @@ function validateCatTowerScoreEvent(event) {
     throw new Error('unsupported cat-tower score event');
 }
 
-async function createScoreSession(db, gameId) {
+async function createScoreSession(db, gameId, request, body = {}) {
     if (!getProtectedGameKind(gameId)) {
         return jsonResponse({ error: 'unsupported game_id for score sessions' }, 400);
     }
 
     const now = Date.now();
     const sessionId = makeSessionId();
-    const initialScore = gameId === PARKING_GAME_ID ? 1 : 0;
+    const requestMeta = await getRequestMeta(request);
+    let initialScore = gameId === PARKING_GAME_ID ? 1 : 0;
+    let state = {
+        version: 1,
+        game_id: gameId,
+        request_meta: requestMeta,
+    };
+    if (gameId === BLOCKPANG_GAME_ID) {
+        state = createBlockpangSessionState(body?.seed, requestMeta);
+        initialScore = state.score;
+    }
     await db.prepare(
-        'INSERT INTO ranking_sessions (session_id, game_id, score, event_count, started_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)'
-    ).bind(sessionId, gameId, initialScore, now, now).run();
+        'INSERT INTO ranking_sessions (session_id, game_id, score, event_count, started_at, updated_at, state_json) VALUES (?, ?, ?, 0, ?, ?, ?)'
+    ).bind(sessionId, gameId, initialScore, now, now, safeJsonStringify(state)).run();
 
     await db.prepare('DELETE FROM ranking_sessions WHERE updated_at < ?')
         .bind(now - CAT_TOWER_SESSION_TTL_MS)
         .run();
 
-    return jsonResponse({
+    const response = {
         success: true,
         game_id: gameId,
         session_id: sessionId,
-    });
+    };
+    if (gameId === BLOCKPANG_GAME_ID) {
+        response.protocol = BLOCKPANG_PROTOCOL_VERSION;
+        response.seed = state.seed;
+        response.rng_state = state.rng_state;
+        response.pieces = state.slots;
+    }
+    return jsonResponse(response);
 }
 
 async function recordCatTowerScoreEvents(db, body) {
@@ -344,10 +686,16 @@ async function recordCatTowerScoreEvents(db, body) {
     let deltaTotal = 0;
     let hasFinalMerge = false;
     try {
-        for (const event of events) {
+        events.forEach((event, index) => {
             if (String(event?.type || 'merge') === 'final_merge') hasFinalMerge = true;
+            const combo = parseInteger(event?.combo ?? 1);
+            if (String(event?.type || 'merge') === 'merge'
+                && Number.isFinite(combo)
+                && combo > Number(session.event_count) + index + 1) {
+                throw new Error('cat-tower combo exceeds session sequence');
+            }
             deltaTotal += validateCatTowerScoreEvent(event);
-        }
+        });
     } catch (err) {
         return jsonResponse({ error: err.message }, 400);
     }
@@ -456,7 +804,7 @@ async function recordBlockpangScoreEvents(db, body) {
     }
 
     const session = await db.prepare(
-        'SELECT session_id, game_id, score, event_count, started_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+        'SELECT session_id, game_id, score, event_count, started_at, submitted_at, state_json FROM ranking_sessions WHERE session_id = ?'
     ).bind(sessionId).first();
     if (!session || session.game_id !== gameId) {
         return jsonResponse({ error: 'score session not found' }, 404);
@@ -470,30 +818,36 @@ async function recordBlockpangScoreEvents(db, body) {
         return jsonResponse({ error: 'score session expired' }, 410);
     }
 
-    let deltaTotal = 0;
+    const state = normalizeBlockpangState(parseJsonObject(session.state_json));
+    if (!state) {
+        return jsonResponse({ error: 'blockpang session requires authoritative move protocol' }, 409);
+    }
+
+    const moveResults = [];
     try {
         for (const event of events) {
-            deltaTotal += validateBlockpangScoreEvent(event);
+            moveResults.push(applyBlockpangMove(state, event));
         }
     } catch (err) {
         return jsonResponse({ error: err.message }, 400);
     }
 
-    const projectedScore = Number(session.score) + deltaTotal;
+    const projectedScore = Number(state.score);
     const projectedEventCount = Number(session.event_count) + events.length;
     if (projectedScore > BLOCKPANG_MAX_SCORE) {
         return jsonResponse({ error: 'blockpang score exceeds allowed maximum' }, 400);
     }
 
     const elapsedMs = now - Number(session.started_at);
+    const minMoveElapsedMs = Math.max(0, Number(state.move_seq) - BLOCKPANG_FREE_MOVE_BURST) * BLOCKPANG_MIN_MS_PER_MOVE;
     const minScoreElapsedMs = (Math.max(0, projectedScore - BLOCKPANG_FREE_SCORE_BURST) / BLOCKPANG_MAX_SCORE_PER_SECOND) * 1000;
-    if (elapsedMs < minScoreElapsedMs) {
+    if (elapsedMs < Math.max(minMoveElapsedMs, minScoreElapsedMs)) {
         return jsonResponse({ error: 'blockpang score events are too fast' }, 429);
     }
 
     await db.prepare(
-        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ? WHERE session_id = ?'
-    ).bind(projectedScore, projectedEventCount, now, sessionId).run();
+        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ?, state_json = ? WHERE session_id = ?'
+    ).bind(projectedScore, projectedEventCount, now, safeJsonStringify(state), sessionId).run();
 
     return jsonResponse({
         success: true,
@@ -501,6 +855,11 @@ async function recordBlockpangScoreEvents(db, body) {
         session_id: sessionId,
         score: projectedScore,
         event_count: projectedEventCount,
+        move_seq: state.move_seq,
+        level: state.level,
+        lines: state.linesCleared,
+        slots: state.slots,
+        moves: moveResults,
     });
 }
 
@@ -596,9 +955,13 @@ async function recordJewelriaScoreEvents(db, body) {
 
     let deltaTotal = 0;
     try {
-        for (const event of events) {
+        events.forEach((event, index) => {
+            const combo = parseInteger(event?.combo);
+            if (Number.isFinite(combo) && combo > Number(session.event_count) + index + 1) {
+                throw new Error('jewelria combo exceeds session sequence');
+            }
             deltaTotal += validateJewelriaScoreEvent(event);
-        }
+        });
     } catch (err) {
         return jsonResponse({ error: err.message }, 400);
     }
@@ -969,7 +1332,7 @@ async function verifyStoredScoreRankingSession(db, body, clientScore, options) {
     }
 
     const session = await db.prepare(
-        'SELECT session_id, game_id, score, started_at, updated_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+        'SELECT session_id, game_id, score, started_at, updated_at, submitted_at, state_json FROM ranking_sessions WHERE session_id = ?'
     ).bind(sessionId).first();
     if (!session || session.game_id !== body.game_id) {
         return { error: 'score session not found', status: 404 };
@@ -983,7 +1346,18 @@ async function verifyStoredScoreRankingSession(db, body, clientScore, options) {
         return { error: 'score session expired', status: 410 };
     }
 
-    const verifiedScore = Number(session.score);
+    const state = parseJsonObject(session.state_json);
+    if (options.requiredStateVersion && state.version !== options.requiredStateVersion) {
+        return { error: `${options.label} ranking requires authoritative session state`, status: 409 };
+    }
+    const authoritativeState = options.requiredStateVersion === BLOCKPANG_PROTOCOL_VERSION
+        ? normalizeBlockpangState(state)
+        : null;
+    if (options.requiredStateVersion === BLOCKPANG_PROTOCOL_VERSION && !authoritativeState) {
+        return { error: `${options.label} ranking session state is invalid`, status: 409 };
+    }
+
+    const verifiedScore = authoritativeState ? Number(authoritativeState.score) : Number(session.score);
     if (!Number.isFinite(verifiedScore) || verifiedScore <= 0) {
         return { error: 'verified score must be positive', status: 400 };
     }
@@ -994,7 +1368,7 @@ async function verifyStoredScoreRankingSession(db, body, clientScore, options) {
         return { error: 'client score does not match verified score', status: 400 };
     }
 
-    return { sessionId, score: verifiedScore };
+    return { sessionId, score: verifiedScore, state: authoritativeState || state };
 }
 
 async function verifyShadowRankingSession(db, body, clientScore) {
@@ -1010,6 +1384,7 @@ async function verifyRankingSession(db, body, clientScore) {
     if (kind === 'blockpang') return verifyStoredScoreRankingSession(db, body, clientScore, {
         label: 'blockpang',
         maxScore: BLOCKPANG_MAX_SCORE,
+        requiredStateVersion: BLOCKPANG_PROTOCOL_VERSION,
     });
     if (kind === 'jewelria') return verifyStoredScoreRankingSession(db, body, clientScore, {
         label: 'jewelria',
@@ -1223,6 +1598,11 @@ async function initDB(db) {
     await db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_ranking_sessions_game_updated ON ranking_sessions(game_id, updated_at)
     `).run();
+    const rankingSessionColumns = await db.prepare('PRAGMA table_info(ranking_sessions)').all().catch(() => null);
+    const hasStateJson = rankingSessionColumns?.results?.some((column) => column.name === 'state_json');
+    if (!hasStateJson) {
+        await db.prepare('ALTER TABLE ranking_sessions ADD COLUMN state_json TEXT').run().catch(() => null);
+    }
     await db.prepare(`
         CREATE TABLE IF NOT EXISTS school_zombie_profiles (
             profile_id TEXT PRIMARY KEY,
@@ -1432,7 +1812,7 @@ export default {
             // POST /rankings  { game_id, player_name, score, extra_data? }
             if (path === '/score-sessions' && request.method === 'POST') {
                 const body = await request.json();
-                return createScoreSession(env.DB, body?.game_id);
+                return createScoreSession(env.DB, body?.game_id, request, body);
             }
 
             if (path === '/score-events' && request.method === 'POST') {
@@ -1501,6 +1881,16 @@ export default {
                     verification_kind: protectedKind,
                     verified_at: new Date().toISOString(),
                 };
+
+                if (game_id === BLOCKPANG_GAME_ID && verified.state) {
+                    extra_data = {
+                        ...extra_data,
+                        level: verified.state.level,
+                        lines: verified.state.linesCleared,
+                        move_seq: verified.state.move_seq,
+                        verification_protocol: verified.state.version,
+                    };
+                }
 
                 if (game_id === JEWELRIA_GAME_ID) {
                     extra_data = normalizeJewelriaExtraData(extra_data, scoreForInsert);
