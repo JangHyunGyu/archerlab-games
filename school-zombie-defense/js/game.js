@@ -376,7 +376,7 @@
     f: [
       { id: "f_burn", title: "고농도 연료", subtitle: "화염병 재료", part: "연소 온도와 직격 피해 강화", icon: "skill-rocket-impact" },
       { id: "f_area", title: "확산 심지", subtitle: "화염병 부품", part: "불길 확산 범위와 지속시간 증가", icon: "skill-rocket" },
-      { id: "f_throw", title: "투척 훈련", subtitle: "화염병 전술", part: "투척 동작과 장전 루틴 단축", icon: "skill-barrage" }
+      { id: "f_throw", title: "투척 훈련", subtitle: "화염병 전술", part: "투척 자세와 적중 피해 강화", icon: "skill-barrage" }
     ],
     g: [
       { id: "g_voltage", title: "고전압 배터리", subtitle: "전격 부품", part: "전격 피해와 둔화 지속 강화", icon: "skill-frost" },
@@ -433,7 +433,7 @@
   };
   const RIFLE_GRENADE_FLIGHT_TIME_SCALE = 4.6;
   const FIREBOMB_FLIGHT_TIME_SCALE = 2;
-  const FIREBOMB_THROW_INTERVAL_SECONDS = 5;
+  const FIREBOMB_THROW_INTERVAL_SECONDS = 10;
   const RIFLE_GRENADE_INTERVAL_SCALE = 1;
   const RIFLE_GRENADE_INITIAL_INTERVAL = 10 * RIFLE_GRENADE_INTERVAL_SCALE;
   const RIFLE_GRENADE_MIN_INTERVAL = 2 * RIFLE_GRENADE_INTERVAL_SCALE;
@@ -4260,7 +4260,7 @@
       }
       if (id === "f_burn") return `직격 +${percent(level * 2.6)} · 구역피해 +${percent(level * 0.6)}`;
       if (id === "f_area") return `반경 +${Math.round(level * 1.5)} · 지속 +${(level * 0.05).toFixed(2)}초`;
-      if (id === "f_throw") return `공격 간격 -${percent(level * 0.8)} · 피해 +${percent(level * 0.8)}`;
+      if (id === "f_throw") return `피해 +${percent(level * 1.2)}`;
       if (id === "g_voltage") return `피해 +${percent(level * 2.2)} · 둔화 +${(level * 0.03).toFixed(2)}초`;
       if (id === "g_chain") return `전도 반경 +${Math.round(level * 2)} · 연쇄 +${Math.floor(level / 10)}`;
       if (id === "g_control") return `공격 간격 -${percent(level * 0.6)} · 치명 +${percent(level * 0.35)}`;
@@ -4593,11 +4593,10 @@
           const burn = this.getMetaUpgradeLevel("f_burn");
           const area = this.getMetaUpgradeLevel("f_area");
           const throwTraining = this.getMetaUpgradeLevel("f_throw");
-          defender.damageBoost *= 1 + burn * 0.026 + throwTraining * 0.008;
+          defender.damageBoost *= 1 + burn * 0.026 + throwTraining * 0.012;
           defender.fireZoneDamageScale += burn * 0.006;
           defender.fireZoneRadius += area * 1.5;
           defender.fireZoneDuration += area * 0.05;
-          defender.rate *= Math.max(0.55, 1 - throwTraining * 0.008);
         } else if (defender.id === "g") {
           const voltage = this.getMetaUpgradeLevel("g_voltage");
           const chain = this.getMetaUpgradeLevel("g_chain");
@@ -4895,7 +4894,10 @@
         if (defender.timer <= 0) {
           const burstCount = defender.burstCount || 1;
           const shotDelay = burstCount > 1 ? this.getChainShotDelay(defender) : 0;
-          defender.timer = defender.rate * rand(0.75, 1.2) + (burstCount - 1) * shotDelay / 1000;
+          const nextFireInterval = defender.projectile === "projectile-firebomb"
+            ? FIREBOMB_THROW_INTERVAL_SECONDS
+            : defender.rate * rand(0.75, 1.2);
+          defender.timer = nextFireInterval + (burstCount - 1) * shotDelay / 1000;
           const target = this.findTarget(defender.x, 999, null, this.bounds.autoEngageTop);
           if (target) {
             let previousTarget = target;
@@ -7525,15 +7527,15 @@
         icon: "skill-rocket-impact",
         tag: "화염",
         title: "농축 화염병",
-        desc: "직격 피해를 높이고\n투척 간격을 줄입니다.",
-        stat: `피해 ${this.formatPercent(fire.damageBoost)} → ${this.formatPercent(fire.damageBoost * 1.14)}\n공격 간격 ${this.formatSeconds(fire.rate)} → ${this.formatSeconds(Math.max(fire.baseRate * 0.62, fire.rate * 0.86))}`,
-        available: fire.rate > fire.baseRate * 0.64 || fire.damageBoost < 2,
+        desc: "직격 피해를 높이고\n불길 지속 피해를 강화합니다.",
+        stat: `피해 ${this.formatPercent(fire.damageBoost)} → ${this.formatPercent(fire.damageBoost * 1.14)}\n구역 피해 ${this.formatPercent(fire.fireZoneDamageScale)} → ${this.formatPercent(fire.fireZoneDamageScale + 0.02)}`,
+        available: fire.damageBoost < 2,
         accent: SKILL_ACCENTS.fire,
         accentHex: SKILL_ACCENT_HEX.fire,
         apply: () => {
           const defender = this.getDefenderById("f");
           defender.damageBoost *= 1.14;
-          defender.rate = Math.max(defender.baseRate * 0.62, defender.rate * 0.86);
+          defender.fireZoneDamageScale += 0.02;
         }
       });
       add("f", {
