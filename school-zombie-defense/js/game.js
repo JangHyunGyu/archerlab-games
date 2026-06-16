@@ -2057,6 +2057,9 @@
       this.rankNameLayer = null;
       this.rankSubmitInFlight = false;
       this.shopSelectedCharacter = "c";
+      this.shopActionInFlight = false;
+      this.shopLoadingObjects = [];
+      this.shopLoadingTweens = [];
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
@@ -3637,6 +3640,92 @@
       });
     }
 
+    showShopActionLoading(message = "처리 중") {
+      if (this.disposed || this.mode !== "shop") {
+        return;
+      }
+      this.clearShopActionLoading();
+      this.shopActionInFlight = true;
+      const depth = 590;
+      const objects = [];
+      const blocker = this.add.rectangle(270, 480, 540, 960, 0x010204, 0.44)
+        .setDepth(depth)
+        .setInteractive();
+      blocker.on("pointerdown", () => {});
+      const shadow = this.add.ellipse(270, 536, 320, 78, 0x000000, 0.42)
+        .setDepth(depth + 1);
+      const panel = this.add.rectangle(270, 462, 330, 176, 0x071015, 0.94)
+        .setStrokeStyle(2, COLORS.blue, 0.82)
+        .setDepth(depth + 2);
+      const scan = this.add.rectangle(270, 384, 250, 4, COLORS.blue, 0.88)
+        .setDepth(depth + 3);
+      const label = this.add.text(270, 438, message, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 22,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 5
+      }).setOrigin(0.5).setDepth(depth + 4);
+      const dots = [0, 1, 2].map((index) => this.add.circle(246 + index * 24, 480, 7, index === 1 ? COLORS.gold : COLORS.blue, 0.92)
+        .setDepth(depth + 4));
+      const barBack = this.add.rectangle(270, 522, 226, 8, 0x05090d, 0.82)
+        .setStrokeStyle(1, COLORS.blue, 0.45)
+        .setDepth(depth + 4);
+      const bar = this.add.rectangle(176, 522, 62, 6, COLORS.gold, 0.94)
+        .setOrigin(0, 0.5)
+        .setDepth(depth + 5);
+      objects.push(blocker, shadow, panel, scan, label, ...dots, barBack, bar);
+      this.shopLoadingObjects = objects;
+      this.overlayObjects.push(...objects);
+      this.shopLoadingTweens = [
+        this.tweens.add({
+          targets: dots,
+          scale: { from: 0.72, to: 1.18 },
+          alpha: { from: 0.38, to: 1 },
+          duration: 460,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        }),
+        this.tweens.add({
+          targets: bar,
+          x: 302,
+          duration: 860,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        }),
+        this.tweens.add({
+          targets: scan,
+          alpha: { from: 0.35, to: 1 },
+          duration: 620,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        })
+      ];
+    }
+
+    clearShopActionLoading() {
+      if (this.shopLoadingTweens?.length) {
+        this.shopLoadingTweens.forEach((tween) => {
+          if (tween && typeof tween.stop === "function") {
+            tween.stop();
+          }
+        });
+      }
+      this.shopLoadingTweens = [];
+      const objects = this.shopLoadingObjects || [];
+      if (objects.length) {
+        const removeSet = new Set(objects);
+        this.overlayObjects = this.overlayObjects.filter((item) => !removeSet.has(item));
+        objects.forEach((item) => this.destroyGameObject(item));
+      }
+      this.shopLoadingObjects = [];
+      this.shopActionInFlight = false;
+    }
+
     getStoredRankName() {
       try {
         return String(window.localStorage.getItem(RANK_NAME_KEY) || "").trim().slice(0, 20);
@@ -4222,12 +4311,18 @@
       this.clearOverlay();
       this.mode = "shop";
       this.startBgm("menu");
-      if (!this.profileReady) {
+      const needsProfileSync = !this.profileReady;
+      if (needsProfileSync) {
         this.ensureServerProfile({ quiet: true }).then(() => {
           if (!this.disposed && this.mode === "shop") {
             this.showShop(this.shopSelectedCharacter);
           }
-        }).catch(() => {});
+        }).catch(() => {
+          if (!this.disposed && this.mode === "shop") {
+            this.clearShopActionLoading();
+            this.showToast("프로필 동기화 실패", COLORS.red);
+          }
+        });
       }
       const selectedCharacter = SHOP_CHARACTERS.find((character) => character.id === selectedId) || SHOP_CHARACTERS[0];
       this.shopSelectedCharacter = selectedCharacter.id;
@@ -4279,6 +4374,9 @@
       const resetRefund = this.getShopResetRefund();
       this.addOverlayButton(156, 924, 216, 46, resetRefund > 0 ? `초기화 $${formatShopCost(resetRefund)}` : "강화 초기화", 560, () => this.resetShopUpgrades(), resetRefund > 0 ? COLORS.red : 0x5b646b);
       this.addOverlayButton(396, 924, 132, 46, "뒤로", 560, () => this.showMenu(), COLORS.gold);
+      if (needsProfileSync) {
+        this.showShopActionLoading("프로필 동기화 중");
+      }
     }
 
     addShopCharacterButton(character, x, y, selected) {
@@ -4307,7 +4405,12 @@
       }).setOrigin(0.5).setDepth(524));
       const hit = this.add.rectangle(x, y, 94, 106, 0x000000, 0).setDepth(526);
       hit.setInteractive({ useHandCursor: true });
-      hit.on("pointerdown", () => this.showShop(character.id));
+      hit.on("pointerdown", () => {
+        if (this.shopActionInFlight) {
+          return;
+        }
+        this.showShop(character.id);
+      });
       [...objects, hit].forEach((item) => this.overlayObjects.push(item));
     }
 
@@ -4432,17 +4535,25 @@
     }
 
     async buyShopUpgrade(id) {
+      if (this.shopActionInFlight) {
+        return;
+      }
       const character = SHOP_CHARACTERS.find((item) => this.getCharacterShopUpgrades(item.id).some((upgrade) => upgrade.id === id));
       const upgrade = character ? this.getCharacterShopUpgrades(character.id).find((item) => item.id === id) : null;
       if (!upgrade) {
         return;
       }
       this.unlockAudio();
+      if (!this.profileReady) {
+        this.showShopActionLoading("프로필 동기화 중");
+      }
       try {
         await this.ensureServerProfile();
       } catch (error) {
+        this.clearShopActionLoading();
         return;
       }
+      this.clearShopActionLoading();
       const level = this.getMetaUpgradeLevel(id);
       if (level >= SHOP_MAX_LEVEL) {
         this.showToast("이미 최대 강화입니다", COLORS.gold);
@@ -4454,12 +4565,14 @@
         this.showToast("코인이 부족합니다", COLORS.red);
         return;
       }
+      this.showShopActionLoading("강화 구매 중");
       try {
         const result = await this.postProfileAction("/school-zombie/profile/buy-upgrade", { upgrade_id: id });
         this.playSfx("skill");
         this.showShop(character.id);
         this.showToast(`${upgrade.title} Lv.${result.level || level + 1}`, character.accent);
       } catch (error) {
+        this.clearShopActionLoading();
         this.playSfx("core", 0.65);
         this.showToast("구매 처리 실패", COLORS.red);
         this.ensureServerProfile({ force: true, quiet: true }).then(() => {
@@ -4536,24 +4649,34 @@
     }
 
     async resetShopUpgrades() {
+      if (this.shopActionInFlight) {
+        return;
+      }
       this.unlockAudio();
+      if (!this.profileReady) {
+        this.showShopActionLoading("프로필 동기화 중");
+      }
       try {
         await this.ensureServerProfile();
       } catch (error) {
+        this.clearShopActionLoading();
         return;
       }
+      this.clearShopActionLoading();
       const refund = this.getShopResetRefund();
       if (refund <= 0) {
         this.playSfx("core", 0.65);
         this.showShopResetNoticeLayer();
         return;
       }
+      this.showShopActionLoading("강화 초기화 중");
       try {
         const result = await this.postProfileAction("/school-zombie/profile/reset-upgrades");
         this.playSfx("coin");
         this.showShop(this.shopSelectedCharacter);
         this.showToast(`강화 초기화 +$${formatShopCost(result.refund || refund)}`, COLORS.gold);
       } catch (error) {
+        this.clearShopActionLoading();
         this.playSfx("core", 0.65);
         this.showToast("초기화 처리 실패", COLORS.red);
         this.ensureServerProfile({ force: true, quiet: true }).then(() => {
@@ -8406,6 +8529,7 @@
 
     clearOverlay() {
       this.removeRankNameLayer();
+      this.clearShopActionLoading();
       this.overlayObjects.forEach((item) => {
         this.destroyGameObject(item);
       });
