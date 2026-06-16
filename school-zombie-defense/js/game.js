@@ -435,6 +435,11 @@
   const FIREBOMB_FLIGHT_TIME_SCALE = 2;
   const FIREBOMB_THROW_INTERVAL_SECONDS = 5;
   const FIREBOMB_FIRE_ZONE_DURATION_SECONDS = 3;
+  const BARBED_WIRE_DAMAGE_PER_TICK = 3;
+  const BARBED_WIRE_SLOW_DURATION = 0.28;
+  const BARBED_WIRE_MAX_SLOW_DURATION = 0.48;
+  const BARBED_WIRE_REINFORCE_SLOW_GAIN = 0.08;
+  const BARBED_WIRE_HIT_HALF_HEIGHT = 38;
   const RIFLE_GRENADE_INTERVAL_SCALE = 1;
   const RIFLE_GRENADE_INITIAL_INTERVAL = 10 * RIFLE_GRENADE_INTERVAL_SCALE;
   const RIFLE_GRENADE_MIN_INTERVAL = 2 * RIFLE_GRENADE_INTERVAL_SCALE;
@@ -5071,15 +5076,18 @@
         const glow = this.trackTransient(this.add.rectangle(270, y + 8, 506, 70, 0x3d4a4f, 0.18).setDepth(225));
         this.barbedWire = {
           y,
-          damageScale: 0.34 * (engineer?.wireDamageBoost || 1),
-          slowDuration: 0.72 * (engineer?.wireSlowBoost || 1),
-          hitHalfHeight: 58,
+          damageScale: engineer?.wireDamageBoost || 1,
+          slowDuration: Math.min(BARBED_WIRE_MAX_SLOW_DURATION, BARBED_WIRE_SLOW_DURATION * (engineer?.wireSlowBoost || 1)),
+          hitHalfHeight: BARBED_WIRE_HIT_HALF_HEIGHT,
           objects: [wire, glow]
         };
         this.drawBarbedWire();
       } else {
-        this.barbedWire.damageScale *= 1.22;
-        this.barbedWire.slowDuration += 0.18;
+        this.barbedWire.damageScale *= 1.12;
+        this.barbedWire.slowDuration = Math.min(
+          BARBED_WIRE_MAX_SLOW_DURATION,
+          this.barbedWire.slowDuration + BARBED_WIRE_REINFORCE_SLOW_GAIN
+        );
         this.drawBarbedWire();
         this.barbedWire.objects.forEach((object) => {
           if (object && !object.destroyed) {
@@ -5136,13 +5144,13 @@
       }
       zombie.wireCooldown = Math.max(0, (zombie.wireCooldown || 0) - dt);
       const footY = this.getZombieFootPoint(zombie).y;
-      if (Math.abs(footY - this.barbedWire.y) > (this.barbedWire.hitHalfHeight || 58) || zombie.wireCooldown > 0) {
+      if (Math.abs(footY - this.barbedWire.y) > (this.barbedWire.hitHalfHeight || BARBED_WIRE_HIT_HALF_HEIGHT) || zombie.wireCooldown > 0) {
         return;
       }
       zombie.wireCooldown = 0.58;
       this.damageZombie(
         zombie,
-        this.damage * CHARACTER_DAMAGE_MULTIPLIER * this.barbedWire.damageScale,
+        BARBED_WIRE_DAMAGE_PER_TICK * this.barbedWire.damageScale,
         0,
         "projectile-nail",
         1,
