@@ -245,6 +245,10 @@ function safeJsonStringify(value) {
     }
 }
 
+function getMutationChangeCount(result) {
+    return Number(result?.meta?.changes ?? result?.changes ?? 0) || 0;
+}
+
 function parseJsonObject(value) {
     if (!value || typeof value !== 'string') return {};
     try {
@@ -529,6 +533,13 @@ function getSchoolZombieShopUpgradeRefund(level) {
     return refund;
 }
 
+function getSchoolZombieUpgradeJsonPath(upgradeId) {
+    if (!SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS.includes(upgradeId)) {
+        throw new Error('invalid upgrade_id');
+    }
+    return `$.${upgradeId}`;
+}
+
 function createDefaultSchoolZombieProfileMeta() {
     const upgrades = {};
     SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS.forEach((id) => {
@@ -682,6 +693,13 @@ async function createScoreSession(db, gameId, request, body = {}) {
         game_id: gameId,
         request_meta: requestMeta,
     };
+    if (gameId === SCHOOL_ZOMBIE_GAME_ID) {
+        const auth = await readSchoolZombieProfileAuth(db, body);
+        if (auth.error) {
+            return jsonResponse({ error: auth.error }, auth.status || 400);
+        }
+        state.profile_id = auth.row.profile_id;
+    }
     if (gameId === BLOCKPANG_GAME_ID) {
         state = createBlockpangSessionState(body?.seed, requestMeta);
         initialScore = state.score;
@@ -1569,9 +1587,31 @@ async function buySchoolZombieUpgrade(db, body) {
     if (meta.coins < cost) {
         return jsonResponse({ error: 'not enough coins' }, 400);
     }
-    meta.coins -= cost;
-    meta.upgrades[upgradeId] = level + 1;
-    const updated = await updateSchoolZombieProfile(db, auth.row, meta);
+    const now = Date.now();
+    const upgradePath = getSchoolZombieUpgradeJsonPath(upgradeId);
+    const mutation = await db.prepare(`
+        UPDATE school_zombie_profiles
+        SET coins = coins - ?,
+            upgrades = json_set(CASE WHEN json_valid(upgrades) THEN upgrades ELSE '{}' END, ?, ?),
+            updated_at = ?
+        WHERE profile_id = ?
+          AND coins >= ?
+          AND CAST(COALESCE(CASE WHEN json_valid(upgrades) THEN json_extract(upgrades, ?) END, 0) AS INTEGER) = ?
+    `).bind(cost, upgradePath, level + 1, now, auth.row.profile_id, cost, upgradePath, level).run();
+    const updated = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
+        .bind(auth.row.profile_id)
+        .first();
+    if (getMutationChangeCount(mutation) <= 0) {
+        const latestMeta = parseSchoolZombieProfileMeta(updated);
+        const latestLevel = latestMeta.upgrades[upgradeId] || 0;
+        if (latestLevel >= SCHOOL_ZOMBIE_SHOP_MAX_LEVEL) {
+            return jsonResponse({ error: 'upgrade already maxed' }, 400);
+        }
+        if (latestMeta.coins < getSchoolZombieShopUpgradeCost(latestLevel)) {
+            return jsonResponse({ error: 'not enough coins' }, 400);
+        }
+        return jsonResponse({ error: 'profile changed; retry upgrade' }, 409);
+    }
     return jsonResponse(schoolZombieProfileResponse(updated, {
         upgrade_id: upgradeId,
         level: level + 1,
@@ -1593,8 +1633,22 @@ async function resetSchoolZombieUpgrades(db, body) {
     SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS.forEach((id) => {
         meta.upgrades[id] = 0;
     });
-    meta.coins += refund;
-    const updated = await updateSchoolZombieProfile(db, auth.row, meta);
+    const now = Date.now();
+    const resetUpgrades = JSON.stringify(meta.upgrades);
+    const mutation = await db.prepare(`
+        UPDATE school_zombie_profiles
+        SET coins = coins + ?,
+            upgrades = ?,
+            updated_at = ?
+        WHERE profile_id = ?
+          AND upgrades = ?
+    `).bind(refund, resetUpgrades, now, auth.row.profile_id, auth.row.upgrades).run();
+    const updated = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
+        .bind(auth.row.profile_id)
+        .first();
+    if (getMutationChangeCount(mutation) <= 0) {
+        return jsonResponse({ error: 'profile changed; retry reset' }, 409);
+    }
     return jsonResponse(schoolZombieProfileResponse(updated, { refund }));
 }
 
@@ -1616,6 +1670,10 @@ async function bankSchoolZombieRunCoins(db, body) {
     const parsedStage = parseInteger(session.score);
     const clearedStage = Number.isFinite(parsedStage) ? Math.max(0, parsedStage) : 0;
     const sessionState = parseExtraData(session.state_json);
+    const sessionProfileId = String(sessionState.profile_id || '').trim();
+    if (sessionProfileId && sessionProfileId !== auth.row.profile_id) {
+        return jsonResponse({ error: 'score session belongs to another profile' }, 403);
+    }
     const storedRunCoins = parseInteger(sessionState.run_coins);
     const earnedCoins = Number.isFinite(storedRunCoins)
         ? Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, storedRunCoins))
@@ -1624,6 +1682,9 @@ async function bankSchoolZombieRunCoins(db, body) {
         'SELECT profile_id, coins, cleared_stage FROM school_zombie_coin_claims WHERE session_id = ?'
     ).bind(sessionId).first();
     if (existingClaim) {
+        if (existingClaim.profile_id !== auth.row.profile_id) {
+            return jsonResponse({ error: 'score session already claimed by another profile' }, 403);
+        }
         const latest = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
             .bind(auth.row.profile_id)
             .first();
@@ -1635,14 +1696,46 @@ async function bankSchoolZombieRunCoins(db, body) {
         }));
     }
     const now = Date.now();
-    await db.prepare(`
-        INSERT INTO school_zombie_coin_claims (session_id, profile_id, coins, cleared_stage, created_at)
+    const claim = await db.prepare(`
+        INSERT OR IGNORE INTO school_zombie_coin_claims (session_id, profile_id, coins, cleared_stage, created_at)
         VALUES (?, ?, ?, ?, ?)
     `).bind(sessionId, auth.row.profile_id, earnedCoins, clearedStage, now).run();
+    if (getMutationChangeCount(claim) <= 0) {
+        const latestClaim = await db.prepare(
+            'SELECT profile_id, coins, cleared_stage FROM school_zombie_coin_claims WHERE session_id = ?'
+        ).bind(sessionId).first();
+        if (latestClaim && latestClaim.profile_id !== auth.row.profile_id) {
+            return jsonResponse({ error: 'score session already claimed by another profile' }, 403);
+        }
+        const latest = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
+            .bind(auth.row.profile_id)
+            .first();
+        return jsonResponse(schoolZombieProfileResponse(latest, {
+            earned_coins: 0,
+            cleared_stage: Number(latestClaim?.cleared_stage || 0),
+            run_coins: Number(latestClaim?.coins || 0),
+            duplicate_claim: true,
+        }));
+    }
 
-    const meta = parseSchoolZombieProfileMeta(auth.row);
-    meta.coins += earnedCoins;
-    const updated = await updateSchoolZombieProfile(db, auth.row, meta);
+    if (!sessionProfileId) {
+        const nextSessionState = {
+            ...sessionState,
+            profile_id: auth.row.profile_id,
+        };
+        await db.prepare(
+            'UPDATE ranking_sessions SET state_json = ? WHERE session_id = ?'
+        ).bind(safeJsonStringify(nextSessionState), sessionId).run();
+    }
+    await db.prepare(`
+        UPDATE school_zombie_profiles
+        SET coins = coins + ?,
+            updated_at = ?
+        WHERE profile_id = ?
+    `).bind(earnedCoins, now, auth.row.profile_id).run();
+    const updated = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
+        .bind(auth.row.profile_id)
+        .first();
     return jsonResponse(schoolZombieProfileResponse(updated, {
         earned_coins: earnedCoins,
         cleared_stage: clearedStage,

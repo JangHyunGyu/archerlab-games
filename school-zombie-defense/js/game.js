@@ -3764,10 +3764,18 @@
     }
 
     async createRankSession(syncToken = this.rankSyncToken) {
+      const auth = this.profileAuth || loadProfileAuth();
+      if (!auth?.profile_id || !auth?.profile_secret) {
+        throw new Error("profile credentials unavailable");
+      }
       const response = await this.fetchWithAbort(`${RANK_API_BASE}/score-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ game_id: RANK_GAME_ID })
+        body: JSON.stringify({
+          game_id: RANK_GAME_ID,
+          profile_id: auth.profile_id,
+          profile_secret: auth.profile_secret
+        })
       }, this.rankFetchControllers);
       if (!response.ok) {
         throw new Error(`rank session ${response.status}`);
@@ -4743,7 +4751,7 @@
       this.mode = "playing";
     }
 
-    returnToMenuFromRun() {
+    async returnToMenuFromRun() {
       if (this.mode !== "playing" && this.mode !== "paused") {
         return;
       }
@@ -4756,9 +4764,15 @@
       if (this.ui.pauseText) {
         this.ui.pauseText.setText("II");
       }
+      this.mode = "gameover";
       this.clearOverlay();
+      const pendingCoins = Math.max(0, Math.floor(Number(this.coins) || 0));
+      const earnedCoins = pendingCoins > 0 ? await this.bankRunCoins() : 0;
       this.resetRun();
       this.showMenu();
+      if (earnedCoins > 0) {
+        this.showToast(`획득 $${earnedCoins}`, COLORS.gold);
+      }
     }
 
     async bankRunCoins() {
