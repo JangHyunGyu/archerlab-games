@@ -222,7 +222,7 @@
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
   const ZOMBIE_HIT_GRID_SIZE = 96;
   const ZOMBIE_HIT_GRID_PADDING = 88;
-  const ZOMBIE_SEPARATION_RADIUS_SCALE = 0.72;
+  const ZOMBIE_SEPARATION_RADIUS_SCALE = 0.9;
   const ZOMBIE_SEPARATION_PUSH = 0.34;
   const ZOMBIE_SEPARATION_MAX_STEP = 16;
   const DAMAGE_TEXT_POOL_LIMIT = 64;
@@ -4964,6 +4964,7 @@
         zombie.baseTint = 0;
         zombie.animRate = typeConfig.animRate;
         zombie.knockbackScale = typeConfig.knockbackScale;
+        zombie.crowdSeed = rand(-1, 1) || 0.5;
         zombie.reward = typeConfig.reward;
         zombie.deathExplosion = Boolean(typeConfig.deathExplosion);
         this.zombies.push(zombie);
@@ -6386,6 +6387,82 @@
       return candidates;
     }
 
+    getNearbyZombies(zombie, radius) {
+      const buckets = this.zombieHitBuckets;
+      const candidates = this.zombieSeparationCandidates || (this.zombieSeparationCandidates = []);
+      candidates.length = 0;
+      if (!zombie || !buckets?.size) {
+        return candidates;
+      }
+
+      const startBucketX = Math.floor((zombie.x - radius) / ZOMBIE_HIT_GRID_SIZE);
+      const endBucketX = Math.floor((zombie.x + radius) / ZOMBIE_HIT_GRID_SIZE);
+      const startBucketY = Math.floor((zombie.y - radius) / ZOMBIE_HIT_GRID_SIZE);
+      const endBucketY = Math.floor((zombie.y + radius) / ZOMBIE_HIT_GRID_SIZE);
+      for (let bucketX = startBucketX; bucketX <= endBucketX; bucketX += 1) {
+        for (let bucketY = startBucketY; bucketY <= endBucketY; bucketY += 1) {
+          const bucket = buckets.get(this.getZombieHitBucketKey(bucketX, bucketY));
+          if (bucket) {
+            candidates.push(...bucket);
+          }
+        }
+      }
+      return candidates;
+    }
+
+    separateZombieFromCrowd(zombie, dt) {
+      if (!zombie?.active || zombie.knockbackTweening || zombie.stunTimer > 0) {
+        return;
+      }
+
+      const radius = Math.max(12, (zombie.hitRadius || 32) * ZOMBIE_SEPARATION_RADIUS_SCALE);
+      const candidates = this.getNearbyZombies(zombie, radius * 2.4);
+      let pushX = 0;
+      let pushY = 0;
+      let overlaps = 0;
+
+      for (let i = 0; i < candidates.length; i += 1) {
+        const other = candidates[i];
+        if (!other || other === zombie || !other.active || other.hp <= 0 || other.dying) {
+          continue;
+        }
+
+        const otherRadius = Math.max(12, (other.hitRadius || 32) * ZOMBIE_SEPARATION_RADIUS_SCALE);
+        const minX = radius + otherRadius;
+        const minY = Math.max(14, minX * 0.54);
+        let dx = zombie.x - other.x;
+        let dy = zombie.y - other.y;
+        if (Math.abs(dx) + Math.abs(dy) < 0.001) {
+          dx = zombie.crowdSeed || 0.5;
+          dy = (zombie.wobble || 0.5) * 0.001;
+        }
+
+        const normalizedDistanceSq = (dx * dx) / (minX * minX) + (dy * dy) / (minY * minY);
+        if (normalizedDistanceSq >= 1) {
+          continue;
+        }
+
+        const distance = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
+        const strength = (1 - Math.sqrt(normalizedDistanceSq)) * ZOMBIE_SEPARATION_PUSH;
+        pushX += dx / distance * strength * minX;
+        pushY += dy / distance * strength * minY;
+        overlaps += 1;
+      }
+
+      if (overlaps <= 0) {
+        return;
+      }
+
+      const scale = Math.min(1, dt * 9);
+      const stepX = clamp(pushX / overlaps * scale, -ZOMBIE_SEPARATION_MAX_STEP, ZOMBIE_SEPARATION_MAX_STEP);
+      const stepY = clamp(pushY / overlaps * scale, -ZOMBIE_SEPARATION_MAX_STEP * 0.45, ZOMBIE_SEPARATION_MAX_STEP * 0.45);
+      const attackLine = this.getZombieBarricadeContactY(zombie);
+      zombie.x = clamp(zombie.x + stepX, this.bounds.left + 8, this.bounds.right - 8);
+      if (zombie.y < attackLine - 4) {
+        zombie.y = clamp(zombie.y + stepY, -70, attackLine - 4);
+      }
+    }
+
     findBulletHit(bullet) {
       const tip = this.getBulletTip(bullet);
       const segmentStart = bullet.previousTip || tip;
@@ -7373,6 +7450,8 @@
           this.updateFollowingHitEffectsForZombie(zombie);
           continue;
         }
+
+        this.separateZombieFromCrowd(zombie, dt);
 
         const slowFactor = zombie.slowTimer > 0 ? 0.34 : 1;
         const attackLine = this.getZombieBarricadeContactY(zombie);
