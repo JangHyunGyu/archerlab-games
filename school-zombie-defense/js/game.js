@@ -104,7 +104,7 @@
       minEmbed: 34,
       maxEmbed: 64,
       alpha: 0.92,
-      depthOffset: -0.55,
+      depthOffset: 0.65,
       life: ARROW_EMBED_DURATION * 0.85
     }
   };
@@ -808,7 +808,7 @@
       rate: 1.18,
       critChance: 0.1,
       critMultiplier: 1.6,
-      pierce: 1,
+      pierce: 0,
       slowDuration: 0.45,
       stunDuration: DEFAULT_SHOCK_STUN_DURATION,
       chainJumps: 1,
@@ -820,7 +820,7 @@
         portrait: "avatar-shock",
         tag: "전기",
         title: "전기 지원 합류",
-        desc: "전격 지원 사격\n관통/둔화 성장 해금",
+        desc: "전격 지원 사격\n연쇄/둔화 성장 해금",
         line: "전원 올렸어요. 복도는 제 쪽입니다."
       }
     },
@@ -3272,7 +3272,7 @@
         "projectile-firebomb": "rocket",
         "projectile-shock": "rifle",
         "projectile-frost": "sniper",
-        "projectile-nail": "rifle"
+        "projectile-nail": "arrow"
       };
       const sfx = map[projectile] || "pistol";
       this.playSfx(sfx, WEAPON_SFX_INTENSITY[sfx] || 1);
