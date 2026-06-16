@@ -4935,7 +4935,7 @@
         zombie.maxHp = hp;
         zombie.speed = (rand(19, 31) + (eliteRoll ? -6 : 0)) * typeConfig.speedScale;
         zombie.hitRadius = (eliteRoll ? 42 : 32) * typeConfig.hitRadiusScale;
-        zombie.attack = ((eliteRoll ? 40 : 18) + this.level * 2) * typeConfig.attackScale;
+        zombie.attack = (eliteRoll ? 40 : 18) * typeConfig.attackScale;
         zombie.attackTimer = rand(0.2, 0.7);
         zombie.slowTimer = 0;
         zombie.stunTimer = 0;
