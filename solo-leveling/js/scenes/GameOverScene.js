@@ -120,7 +120,36 @@ export class GameOverScene extends Phaser.Scene {
         });
         nameElements.push(submit.g, submit.hit, submit.txt, skip.g, skip.hit, skip.txt);
 
+        const loadingText = this.add.text(cx, submitBtnY + uv(36), t('loading'), {
+            fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
+            color: SYSTEM.TEXT_CYAN, letterSpacing: 0,
+        }).setOrigin(0.5).setDepth(depth).setAlpha(0.45).setVisible(false);
+        const loadingTween = this.tweens.add({
+            targets: loadingText,
+            alpha: { from: 0.45, to: 1 },
+            duration: 480,
+            yoyo: true,
+            repeat: -1,
+        });
+        nameElements.push(loadingText);
+
+        let isSubmitting = false;
+        const setSubmitting = (submitting) => {
+            isSubmitting = submitting;
+            input.disabled = submitting;
+            loadingText.setVisible(submitting);
+            if (submitting) {
+                submit.hit.disableInteractive();
+                skip.hit.disableInteractive();
+                submit.txt.setText(t('loading'));
+                fitText(submit.txt, btnW - uv(18), btnH - uv(8), 0.66);
+                submit.txt.setAlpha(0.72);
+                skip.txt.setAlpha(0.45);
+            }
+        };
+
         const cleanup = () => {
+            if (loadingTween) loadingTween.stop();
             this._cleanupNameInput();
             nameElements.forEach(el => { if (el && el.active) el.destroy(); });
         };
@@ -128,10 +157,11 @@ export class GameOverScene extends Phaser.Scene {
         const showStats = () => this._showStats(time, level, rank, kills, shadowCount);
 
         const doSubmit = async () => {
+            if (isSubmitting) return;
             const name = input.value.trim().slice(0, 20);
             if (!name) { input.focus(); return; }
             localStorage.setItem('shadow_player_name', name);
-            cleanup();
+            setSubmitting(true);
             try {
                 const characterId = this.finalData.characterId || DEFAULT_CHARACTER_ID;
                 const characterName = this.finalData.characterName || getCharacter(characterId).name;
@@ -155,15 +185,21 @@ export class GameOverScene extends Phaser.Scene {
                 });
                 if (!response.ok) throw new Error(`rank submit ${response.status}`);
             } catch (e) { /* silent */ }
+            cleanup();
             if (!this.sys?.isActive?.()) return;
             showStats();
         };
 
-        const doSkip = () => { cleanup(); showStats(); };
+        const doSkip = () => {
+            if (isSubmitting) return;
+            cleanup();
+            showStats();
+        };
 
         this.input.keyboard.enabled = false;
         this._nameInputKeydownHandler = (e) => {
             e.stopPropagation();
+            if (isSubmitting) return;
             if (e.key === 'Enter') doSubmit();
             if (e.key === 'Escape') doSkip();
         };

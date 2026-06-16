@@ -1243,6 +1243,40 @@ p {
   color: var(--rose);
 }
 
+.rank-submit-progress {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(159, 222, 220, 0.24);
+  border-radius: 999px;
+  background: rgba(4, 18, 24, 0.84);
+  box-shadow: inset 0 0 16px rgba(75, 214, 218, 0.16);
+}
+
+.rank-submit-progress span {
+  position: absolute;
+  inset: -1px auto -1px 0;
+  width: 42%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--cyan) 28%, var(--gold) 72%, transparent);
+  filter: drop-shadow(0 0 10px rgba(75, 214, 218, 0.64));
+  animation: rankSubmitBar 0.92s ease-in-out infinite;
+}
+
+.rank-submit.is-submitting input {
+  opacity: 0.68;
+}
+
+@keyframes rankSubmitBar {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(260%);
+  }
+}
+
 .rank-content {
   display: grid;
   gap: 7px;

@@ -30,6 +30,7 @@ let state = null;
 let selected = null;
 let locked = false;
 let timerId = null;
+let rankSubmitInFlight = false;
 
 queueMicrotask(boot);
 
@@ -99,6 +100,8 @@ function bindButtons() {
   on('result-home-btn', 'click', goTitle);
   on('submit-rank-btn', 'click', submitRank);
   on('skip-rank-btn', 'click', () => {
+    if (rankSubmitInFlight) return;
+    ui.setRankSubmitLoading(false);
     ui.refs.rankSubmit.classList.add('hidden');
     // 등록을 건너뛰었으니 재도전/타이틀 버튼을 노출한다.
     ui.revealResultActions();
@@ -392,6 +395,7 @@ function endGame() {
     mode: 'time_attack',
     score: state.score
   });
+  rankSubmitInFlight = false;
   ui.showResult({
     score: state.score,
     bestScore,
@@ -400,28 +404,34 @@ function endGame() {
 }
 
 async function submitRank() {
-  if (!state) return;
+  if (!state || rankSubmitInFlight) return;
   const name = ui.refs.nicknameInput.value.trim().slice(0, 20);
   if (!name) {
     ui.setSubmitStatus('닉네임을 입력해 주세요.', 'fail');
     ui.refs.nicknameInput.focus();
     return;
   }
+  rankSubmitInFlight = true;
   saveNickname(name);
-  ui.refs.nicknameInput.disabled = true;
-  document.getElementById('submit-rank-btn').disabled = true;
-  ui.setSubmitStatus('등록 중...', '');
+  ui.setRankSubmitLoading(true, '등록 중...');
+  let submitted = false;
   try {
     const result = await ranking.submit(name, state.score, {
       mode: 'time_attack',
       time_limit: TIME_LIMIT
     });
+    submitted = true;
     ui.setSubmitStatus(`등록 완료${result?.rank ? ` (#${result.rank})` : ''}`, 'ok');
   } catch {
     ui.setSubmitStatus('등록 실패. 다시 시도해 주세요.', 'fail');
   } finally {
-    ui.refs.nicknameInput.disabled = false;
-    document.getElementById('submit-rank-btn').disabled = false;
+    rankSubmitInFlight = false;
+    ui.setRankSubmitLoading(false);
+    if (submitted) {
+      ui.refs.nicknameInput.disabled = true;
+      ui.refs.submitRankButton.disabled = true;
+      ui.refs.skipRankButton.disabled = true;
+    }
     // 등록을 마쳤으니 재도전/타이틀 버튼을 노출한다.
     ui.revealResultActions();
   }
