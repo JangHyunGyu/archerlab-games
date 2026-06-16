@@ -40,7 +40,8 @@
     }
     return copy;
   };
-  const getTeamDamageForLevel = (level) => Math.round(28 + Math.max(0, level - 1) * 2.1);
+  const TEAM_BASE_DAMAGE = 28;
+  const getTeamDamageForLevel = () => TEAM_BASE_DAMAGE;
   const BASE_CRIT_CHANCE = 0.08;
   const DEFAULT_CRIT_MULTIPLIER = 1.85;
   const BOW_BASE_CRIT_CHANCE = 0.3;
@@ -2100,7 +2101,7 @@
           this.level = 12;
           this.stage = 3;
           this.levelNeed = 80;
-          this.damage = 72;
+          this.damage = getTeamDamageForLevel(this.level);
           this.maxCoreHp = 3600;
           this.coreHp = 3000;
           for (let i = 0; i < 42; i += 1) {
