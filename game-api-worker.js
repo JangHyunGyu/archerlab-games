@@ -107,7 +107,6 @@ const SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE = 30;
 const SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND = 8;
 const SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE = 60;
 const SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND = 32;
-const SCHOOL_ZOMBIE_MAX_COIN_PER_KILL = 4;
 const SCHOOL_ZOMBIE_KILLS_SQL = "CAST(COALESCE(CASE WHEN json_valid(extra_data) THEN json_extract(extra_data, '$.kills') END, 0) AS INTEGER)";
 const SCHOOL_ZOMBIE_PROFILE_PREFIX = 'szp_';
 const SCHOOL_ZOMBIE_PROFILE_SECRET_BYTES = 32;
@@ -582,12 +581,12 @@ function normalizeSchoolZombieRunProgress(event, session, previousState, now) {
     if (!isPlainObject(event)) {
         throw new Error('school zombie progress event must be an object');
     }
-    const runCoins = parseInteger(event.run_coins ?? event.runCoins ?? event.coins);
+    const clientRunCoins = parseInteger(event.run_coins ?? event.runCoins ?? event.coins);
     const kills = parseInteger(event.kills);
     const reachedStage = parseInteger(event.reached_stage ?? event.reachedStage ?? event.stage);
     const level = parseInteger(event.level);
     const survivedSeconds = parseInteger(event.survived_seconds ?? event.survivedSeconds ?? event.time);
-    if (!Number.isFinite(runCoins) || runCoins < 0 || runCoins > SCHOOL_ZOMBIE_RUN_COIN_LIMIT) {
+    if (Number.isFinite(clientRunCoins) && (clientRunCoins < 0 || clientRunCoins > SCHOOL_ZOMBIE_RUN_COIN_LIMIT)) {
         throw new Error('invalid school zombie run coins');
     }
     if (!Number.isFinite(kills) || kills < 0) {
@@ -608,17 +607,18 @@ function normalizeSchoolZombieRunProgress(event, session, previousState, now) {
         throw new Error('invalid school zombie survived time');
     }
     const maxKills = SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE + elapsedSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND;
+    const verifiedRunCoins = Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, kills));
     const maxCoinsByTime = SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE + elapsedSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND;
-    if (kills > maxKills || runCoins > maxCoinsByTime || runCoins > kills * SCHOOL_ZOMBIE_MAX_COIN_PER_KILL) {
+    if (kills > maxKills || verifiedRunCoins > maxCoinsByTime) {
         throw new Error('school zombie run progress exceeds allowed pace');
     }
     const previousCoins = Math.max(0, parseInteger(previousState.run_coins) || 0);
     const previousKills = Math.max(0, parseInteger(previousState.kills) || 0);
-    if (runCoins < previousCoins || kills < previousKills) {
+    if (verifiedRunCoins < previousCoins || kills < previousKills) {
         throw new Error('school zombie run progress cannot decrease');
     }
     return {
-        run_coins: runCoins,
+        run_coins: verifiedRunCoins,
         kills,
         reached_stage: reachedStage,
         level,
@@ -1175,12 +1175,24 @@ async function recordSchoolZombieScoreEvents(db, body) {
     if (session.submitted_at) {
         return jsonResponse({ error: 'score session already submitted' }, 409);
     }
+    const sessionState = parseExtraData(session.state_json);
+    const sessionProfileId = String(sessionState.profile_id || '').trim();
+    if (!sessionProfileId) {
+        return jsonResponse({ error: 'school zombie score session requires profile binding' }, 409);
+    }
+    const auth = await readSchoolZombieProfileAuth(db, body);
+    if (auth.error) {
+        return jsonResponse({ error: auth.error }, auth.status || 400);
+    }
+    if (auth.row.profile_id !== sessionProfileId) {
+        return jsonResponse({ error: 'score session belongs to another profile' }, 403);
+    }
 
     const currentScore = Number(session.score);
     const now = Date.now();
     let projectedScore = Number.isFinite(currentScore) ? currentScore : 0;
     let nextState = {
-        ...parseExtraData(session.state_json),
+        ...sessionState,
         version: 1,
         game_id: gameId,
     };

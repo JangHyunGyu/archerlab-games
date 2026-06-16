@@ -3838,6 +3838,8 @@
           body: JSON.stringify({
             game_id: RANK_GAME_ID,
             session_id: sessionId,
+            profile_id: this.profileAuth?.profile_id,
+            profile_secret: this.profileAuth?.profile_secret,
             event: {
               type: "stage_clear",
               cleared_stage: Math.floor(clearedStage),
@@ -3895,9 +3897,11 @@
         body: JSON.stringify({
           game_id: RANK_GAME_ID,
           session_id: sessionId,
+          profile_id: this.profileAuth?.profile_id,
+          profile_secret: this.profileAuth?.profile_secret,
           event: {
             type: "run_progress",
-            run_coins: Math.max(0, Math.floor(Number(this.coins) || 0)),
+            run_coins: Math.max(0, Math.floor(Number(this.kills) || 0)),
             kills: Math.max(0, Math.floor(Number(this.kills) || 0)),
             reached_stage: Math.max(1, Math.floor(Number(this.stage) || 1)),
             level: Math.max(1, Math.floor(Number(this.level) || 1)),
@@ -4765,7 +4769,7 @@
       }
       this.unlockAudio();
       try {
-        await this.ensureServerProfile();
+        await this.ensureServerProfile({ force: true });
       } catch (error) {
         return;
       }
@@ -7160,7 +7164,7 @@
       this.createZombieCorpse(x, y, zombie, deathKnockback);
       this.kills += 1;
       this.killsInLevel += 1;
-      this.coins += zombie.reward || (zombie.elite ? 4 : 1);
+      this.coins += 1;
       if (shouldExplode && this.mode === "playing") {
         this.createExplosion(x, y, 74, this.damage * 1.05, 0.35);
       }
