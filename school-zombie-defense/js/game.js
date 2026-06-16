@@ -220,6 +220,8 @@
   const ZOMBIE_BODY_DEPTH_BASE = 70;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
+  const ZOMBIE_HIT_GRID_SIZE = 96;
+  const ZOMBIE_HIT_GRID_PADDING = 88;
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
   const STARTING_LEVEL_NEED = getLevelNeedForLevel(1);
   const STARTING_SPAWN_TIMER = 1.15;
@@ -1991,6 +1993,8 @@
 
       this.zombies = [];
       this.bullets = [];
+      this.zombieHitBuckets = new Map();
+      this.zombieHitCandidates = [];
       this.embeddedArrows = [];
       this.fireZones = [];
       this.turrets = [];
@@ -2753,6 +2757,10 @@
       this.bullets.forEach((bullet) => this.destroyBullet(bullet));
       this.zombies = [];
       this.bullets = [];
+      this.zombieHitBuckets?.clear();
+      if (this.zombieHitCandidates) {
+        this.zombieHitCandidates.length = 0;
+      }
       this.fireZones = [];
       this.turrets = [];
       this.barbedWire = null;
@@ -4767,6 +4775,7 @@
       this.updateDefenderAnimations(dt);
       this.updateDefenders(dt);
       this.updateTurrets(dt);
+      this.rebuildZombieHitGrid();
       this.updateBullets(dt);
       this.updateFireZones(dt);
       this.updateZombies(dt);
@@ -6247,13 +6256,70 @@
       object.setDepth(229 + zombie.y / 5);
     }
 
+    getZombieHitBucketKey(bucketX, bucketY) {
+      return `${bucketX}:${bucketY}`;
+    }
+
+    rebuildZombieHitGrid() {
+      const buckets = this.zombieHitBuckets || (this.zombieHitBuckets = new Map());
+      buckets.clear();
+      for (let i = 0; i < this.zombies.length; i += 1) {
+        const zombie = this.zombies[i];
+        if (!zombie?.active || zombie.hp <= 0) {
+          continue;
+        }
+        const bucketX = Math.floor(zombie.x / ZOMBIE_HIT_GRID_SIZE);
+        const bucketY = Math.floor(zombie.y / ZOMBIE_HIT_GRID_SIZE);
+        const key = this.getZombieHitBucketKey(bucketX, bucketY);
+        let bucket = buckets.get(key);
+        if (!bucket) {
+          bucket = [];
+          buckets.set(key, bucket);
+        }
+        bucket.push(zombie);
+      }
+    }
+
+    getBulletHitCandidates(bullet, segmentStart, tip) {
+      const buckets = this.zombieHitBuckets;
+      const candidates = this.zombieHitCandidates || (this.zombieHitCandidates = []);
+      candidates.length = 0;
+      if (!buckets?.size) {
+        return candidates;
+      }
+
+      const minX = Math.min(segmentStart.x, tip.x) - ZOMBIE_HIT_GRID_PADDING;
+      const maxX = Math.max(segmentStart.x, tip.x) + ZOMBIE_HIT_GRID_PADDING;
+      const minY = Math.min(segmentStart.y, tip.y) - ZOMBIE_HIT_GRID_PADDING;
+      const maxY = Math.max(segmentStart.y, tip.y) + ZOMBIE_HIT_GRID_PADDING;
+      const startBucketX = Math.floor(minX / ZOMBIE_HIT_GRID_SIZE);
+      const endBucketX = Math.floor(maxX / ZOMBIE_HIT_GRID_SIZE);
+      const startBucketY = Math.floor(minY / ZOMBIE_HIT_GRID_SIZE);
+      const endBucketY = Math.floor(maxY / ZOMBIE_HIT_GRID_SIZE);
+      for (let bucketX = startBucketX; bucketX <= endBucketX; bucketX += 1) {
+        for (let bucketY = startBucketY; bucketY <= endBucketY; bucketY += 1) {
+          const bucket = buckets.get(this.getZombieHitBucketKey(bucketX, bucketY));
+          if (bucket) {
+            candidates.push(...bucket);
+          }
+        }
+      }
+
+      const aimTarget = bullet?.aimTarget;
+      if (aimTarget?.active && aimTarget.hp > 0 && !candidates.includes(aimTarget)) {
+        candidates.push(aimTarget);
+      }
+      return candidates;
+    }
+
     findBulletHit(bullet) {
       const tip = this.getBulletTip(bullet);
       const segmentStart = bullet.previousTip || tip;
+      const candidates = this.getBulletHitCandidates(bullet, segmentStart, tip);
       let bestHit = null;
       let bestT = Infinity;
-      for (let i = 0; i < this.zombies.length; i += 1) {
-        const zombie = this.zombies[i];
+      for (let i = 0; i < candidates.length; i += 1) {
+        const zombie = candidates[i];
         if (!zombie.active || zombie.hp <= 0) {
           continue;
         }
