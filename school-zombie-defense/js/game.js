@@ -7274,6 +7274,7 @@
           }
         });
       }
+      const corpseRecord = this.registerCorpseRecord([zombie, deathSprite, corpseImage, stain, shadow, poolShade]);
       const corpseFadeDelay = effect.corpseHold + (deathSprite ? effect.fall + 260 : 0);
       this.scheduleSceneDelay(corpseFadeDelay, () => {
         const corpseTarget = corpseImage && !corpseImage.destroyed
@@ -7306,6 +7307,7 @@
             this.destroyTransientObject(stain, false);
             this.destroyTransientObject(shadow, false);
             this.destroyTransientObject(poolShade, false);
+            this.removeCorpseRecord(corpseRecord);
           }
         });
       });
