@@ -5,7 +5,7 @@ import { PreloadScene } from './scenes/PreloadScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { LevelUpScene } from './scenes/LevelUpScene.js';
-import { GameOverScene } from './scenes/GameOverScene.js';
+import { GameOverScene } from './scenes/GameOverScene.js?v=20260616-rankloading';
 
 // Calculate game dimensions to match screen aspect ratio
 // This eliminates black bars on all devices
