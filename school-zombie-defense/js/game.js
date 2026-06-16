@@ -5988,7 +5988,7 @@
         zone.tickTimer -= dt;
         if (zone.damageLife > 0 && zone.tickTimer <= 0) {
           zone.tickTimer += zone.tickInterval;
-          const hitRadius = zone.visualRadius || zone.radius;
+          const hitRadius = zone.radius || zone.visualRadius;
           const hitHalfWidth = hitRadius * 1.12;
           const hitHalfHeight = Math.max(18, hitRadius * 0.62);
           this.zombies.slice().forEach((zombie) => {
