@@ -113,6 +113,7 @@
   const FIRE_ZONE_VISUAL_DURATION_MULTIPLIER = 3.125;
   const FIRE_ZONE_VISUAL_SIZE_MULTIPLIER = 1.5;
   const FIRE_ZONE_MIN_BURN_DURATION = 0.65;
+  const ZOMBIE_WALL_VISUAL_PADDING = 56;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -237,9 +238,9 @@
     brute: { corpseWidth: 1.06, deathSize: 1.22 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 },
-    teacher: { corpseWidth: 0.84, deathSize: 0.96 },
-    nurse: { corpseWidth: 1, deathSize: 1.18 },
-    athlete: { corpseWidth: 1.1, deathSize: 1.1 },
+    teacher: { corpseWidth: 0.98, deathSize: 1.12 },
+    nurse: { corpseWidth: 1.12, deathSize: 1.32 },
+    athlete: { corpseWidth: 1.1, deathSize: 1.24 },
     janitor: { corpseWidth: 1.34, deathSize: 1.32 },
     guard: { corpseWidth: 1.32, deathSize: 1.3 },
     crawler: { corpseWidth: 1.42, deathSize: 1.32 },
@@ -267,11 +268,11 @@
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
-  const ZOMBIE_LEVEL_HP_EXPONENT = 1.02;
-  const ZOMBIE_NORMAL_LEVEL_HP_GAIN = 11.4;
-  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 21;
-  const ZOMBIE_NORMAL_LATE_HP_GAIN = 2.2;
-  const ZOMBIE_ELITE_LATE_HP_GAIN = 4;
+  const ZOMBIE_LEVEL_HP_EXPONENT = 0.96;
+  const ZOMBIE_NORMAL_LEVEL_HP_GAIN = 10.2;
+  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 18.4;
+  const ZOMBIE_NORMAL_LATE_HP_GAIN = 1.5;
+  const ZOMBIE_ELITE_LATE_HP_GAIN = 2.8;
   const ZOMBIE_BODY_DEPTH_BASE = 70;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
@@ -2953,6 +2954,9 @@
         upgrades: data.upgrades
       });
       saveMetaSave(this.meta);
+      if (this.ui?.coins) {
+        this.updateHud();
+      }
       this.profileReady = true;
       this.profileSyncFailed = false;
       return this.meta;
@@ -3542,7 +3546,7 @@
             : 5;
       const amount = base * (zombie.knockbackScale || 1);
       const targetY = Math.max(-48, zombie.y - amount);
-      const targetX = clamp(zombie.x + rand(-amount * 0.34, amount * 0.34), this.bounds.left, this.bounds.right);
+      const targetX = this.clampZombieLaneX(zombie.x + rand(-amount * 0.34, amount * 0.34));
       const duration = clamp(95 + amount * 1.8, 110, 210);
       const knockback = {
         amount,
@@ -4180,7 +4184,7 @@
       this.removeRankNameLayer();
 
       const inlineGameOver = Boolean(options.inlineGameOver);
-      const autoFocus = options.autoFocus !== false;
+      const autoFocus = options.autoFocus === true;
       const shell = document.getElementById("game-shell") || document.body;
       const layer = document.createElement("div");
       layer.className = `school-zombie-rank-layer${inlineGameOver ? " school-zombie-rank-layer--gameover" : ""}`;
@@ -4846,6 +4850,12 @@
       saveMetaSave(this.meta);
     }
 
+    getDisplayedCoins() {
+      const storedCoins = Math.max(0, Math.floor(Number(this.meta?.coins) || 0));
+      const runCoins = Math.max(0, Math.floor(Number(this.coins) || 0));
+      return storedCoins + (this.runCoinsBanked ? 0 : runCoins);
+    }
+
     async startRun() {
       if (this.mode === "starting") {
         return;
@@ -5205,12 +5215,12 @@
         return;
       }
 
-      const levelPressure = Math.min(0.66, this.level * 0.033);
-      const lateFrequencyPressure = Math.min(0.45, Math.max(0, this.level - 7) * 0.045);
-      const earlyDelayBonus = Math.max(0, 0.4 - this.level * 0.045);
-      const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.34, 1.28) / (1 + lateFrequencyPressure);
-      const delayMin = this.level < 7 ? 0.68 : 0.58;
-      const delayMax = this.level < 7 ? 1.12 : 1.02;
+      const levelPressure = Math.min(0.5, Math.max(0, this.level - 1) * 0.026);
+      const lateFrequencyPressure = Math.min(0.28, Math.max(0, this.level - 8) * 0.025);
+      const earlyDelayBonus = Math.max(0, 0.34 - this.level * 0.038);
+      const baseDelay = clamp(1 - levelPressure + earlyDelayBonus, 0.46, 1.3) / (1 + lateFrequencyPressure);
+      const delayMin = this.level < 7 ? 0.72 : 0.64;
+      const delayMax = this.level < 7 ? 1.12 : 1.06;
       this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
       this.spawnZombie(0);
     }
@@ -5218,7 +5228,7 @@
     spawnZombie(delay) {
       this.scheduleRunDelay(delay * 1000 / this.speedMultiplier, () => {
         const eliteRoll = this.level >= 6 && Math.random() < Math.min(0.045 + this.level * 0.0055, 0.16);
-        const x = rand(this.bounds.left + 28, this.bounds.right - 28);
+        const x = rand(this.getZombieLaneMinX(), this.getZombieLaneMaxX());
         const y = rand(-65, 46);
         const variant = Math.floor(rand(0, 4));
         const frame = Math.floor(rand(0, 4));
@@ -5228,7 +5238,7 @@
         const displayWidth = displayHeight;
         const levelCurve = Math.pow(this.level, ZOMBIE_LEVEL_HP_EXPONENT);
         const lateLevelBonus = Math.max(0, this.level - 10);
-        const earlyHpScale = clamp(0.84 + Math.max(0, this.level - 1) * 0.04, 0.84, 1);
+        const earlyHpScale = clamp(0.84 + Math.max(0, this.level - 1) * 0.03, 0.84, 0.96);
         const baseHp =
           (eliteRoll ? 165 : 48)
           + levelCurve * (eliteRoll ? ZOMBIE_ELITE_LEVEL_HP_GAIN : ZOMBIE_NORMAL_LEVEL_HP_GAIN)
@@ -6722,6 +6732,18 @@
       return Math.max(12, (zombie?.hitRadius || 32) * ZOMBIE_SEPARATION_RADIUS_SCALE);
     }
 
+    getZombieLaneMinX(extra = 0) {
+      return this.bounds.left + ZOMBIE_WALL_VISUAL_PADDING + extra;
+    }
+
+    getZombieLaneMaxX(extra = 0) {
+      return this.bounds.right - ZOMBIE_WALL_VISUAL_PADDING - extra;
+    }
+
+    clampZombieLaneX(x, extra = 0) {
+      return clamp(x, this.getZombieLaneMinX(extra), this.getZombieLaneMaxX(extra));
+    }
+
     separateZombieFromCrowd(zombie, dt) {
       if (!zombie?.active || zombie.knockbackTweening || zombie.stunTimer > 0) {
         return;
@@ -6769,7 +6791,7 @@
       const stepX = clamp(pushX / overlaps * scale, -ZOMBIE_SEPARATION_MAX_STEP, ZOMBIE_SEPARATION_MAX_STEP);
       const stepY = clamp(pushY / overlaps * scale, -ZOMBIE_SEPARATION_MAX_STEP * 0.45, ZOMBIE_SEPARATION_MAX_STEP * 0.45);
       const attackLine = this.getZombieBarricadeContactY(zombie);
-      zombie.x = clamp(zombie.x + stepX, this.bounds.left + 8, this.bounds.right - 8);
+      zombie.x = this.clampZombieLaneX(zombie.x + stepX);
       if (zombie.y < attackLine - 4) {
         zombie.y = clamp(zombie.y + stepY, -70, attackLine - 4);
       }
@@ -6822,8 +6844,8 @@
     }
 
     tryZombieSideStep(zombie, direction, dt, slowFactor) {
-      const minX = this.bounds.left + 8;
-      const maxX = this.bounds.right - 8;
+      const minX = this.getZombieLaneMinX();
+      const maxX = this.getZombieLaneMaxX();
       const currentBlocker = this.getZombieFrontBlocker(zombie, zombie.x);
       const step = ZOMBIE_SIDE_STEP_SPEED * Math.max(0.55, slowFactor) * dt;
       const proposedX = clamp(zombie.x + direction * step, minX, maxX);
@@ -7529,15 +7551,15 @@
         { angle: (Math.random() < 0.5 ? -1 : 1) * rand(150, 168), x: rand(-0.08, 0.08), y: rand(-0.01, 0.05) }
       ];
       const fall = choose(fallProfiles);
-      const corpseX = clamp(x, this.bounds.left + 26, this.bounds.right - 26);
+      const corpseX = this.clampZombieLaneX(x);
       const knockbackDx = Number.isFinite(deathKnockback?.dx) ? deathKnockback.dx : 0;
       const knockbackDy = Number.isFinite(deathKnockback?.dy) ? deathKnockback.dy : 0;
-      const shoveX = clamp(corpseX + knockbackDx, this.bounds.left + 28, this.bounds.right - 28);
+      const shoveX = this.clampZombieLaneX(corpseX + knockbackDx);
       const shoveY = clamp(y + knockbackDy, -48, this.bounds.barricade - displayH * 0.14);
-      const landingX = clamp(shoveX + displayH * fall.x + rand(-6, 6), this.bounds.left + 28, this.bounds.right - 28);
+      const landingX = this.clampZombieLaneX(shoveX + displayH * fall.x + rand(-6, 6));
       const landingY = clamp(shoveY + displayH * fall.y + rand(-4, 5), -20, this.bounds.barricade - displayH * 0.1);
       const finalAngle = fall.angle + rand(-5, 5);
-      const stumbleX = clamp(corpseX + (shoveX - corpseX) * 0.62 + displayH * fall.x * 0.16, this.bounds.left + 24, this.bounds.right - 24);
+      const stumbleX = this.clampZombieLaneX(corpseX + (shoveX - corpseX) * 0.62 + displayH * fall.x * 0.16);
       const stumbleY = y + (shoveY - y) * 0.62 + displayH * (0.02 + fall.y * 0.14);
       const deathPushDuration = deathKnockback
         ? clamp((deathKnockback.duration || 110) * 0.62, 72, 140)
@@ -7831,7 +7853,7 @@
         }
         if (!wasStunned) {
           const crowdShift = Math.sin(zombie.wobble) * 7 * dt;
-          zombie.x = clamp(zombie.x + crowdShift, this.bounds.left, this.bounds.right);
+          zombie.x = this.clampZombieLaneX(zombie.x + crowdShift);
         }
         zombie.setDepth(ZOMBIE_BODY_DEPTH_BASE + zombie.y / 5);
 
@@ -7855,7 +7877,7 @@
 
         if (stunned) {
           zombie.setPosition(
-            clamp(zombie.stunAnchorX, this.bounds.left, this.bounds.right),
+            this.clampZombieLaneX(zombie.stunAnchorX),
             zombie.stunAnchorY
           );
           this.updateFollowingHitEffectsForZombie(zombie);
@@ -8764,6 +8786,12 @@
       this.updateHud();
     }
 
+    addGameOverBackdrop() {
+      const items = this.overlayObjects;
+      items.push(this.add.image(270, 480, "gameover-last-stand").setDisplaySize(540, 960).setDepth(540));
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.14).setDepth(541));
+    }
+
     async gameOver() {
       if (this.mode === "gameover") {
         return;
@@ -8773,6 +8801,9 @@
       this.cancelSceneTimers();
       this.clearTransientObjects();
       this.startBgm("menu");
+      this.clearRunEntities();
+      this.clearOverlay();
+      this.addGameOverBackdrop();
       let earnedCoins = 0;
       const rankPrepLayer = this.showRankPrepLayer();
       try {
@@ -8782,11 +8813,7 @@
       }
       const rankSnapshot = this.getRankSnapshot(earnedCoins);
       this.lastRankableRun = rankSnapshot.score > 0 ? rankSnapshot : null;
-      this.clearRunEntities();
-      this.clearOverlay();
       const items = this.overlayObjects;
-      items.push(this.add.image(270, 480, "gameover-last-stand").setDisplaySize(540, 960).setDepth(540));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.14).setDepth(541));
       items.push(this.add.rectangle(270, 166, 424, 236, 0x0d151b, 0.5).setStrokeStyle(2, 0xff6b68, 0.74).setDepth(542));
       items.push(this.add.rectangle(270, 62, 300, 4, 0xff6b68, 0.9).setDepth(543));
       items.push(this.add.text(270, 98, "방어선 붕괴", {
@@ -8823,7 +8850,6 @@
       }).setOrigin(0.5).setDepth(544));
       if (this.lastRankableRun) {
         this.showRankNameLayer(this.lastRankableRun, {
-          autoFocus: true,
           inlineGameOver: true,
           returnToMenuOnSuccess: true
         });
@@ -8853,7 +8879,7 @@
       this.ui.morale.setText(`M${this.morale}%`);
       this.ui.morale.setColor(this.morale < 35 ? "#ff524f" : this.morale < 70 ? "#ffd75c" : "#4dff67");
       this.ui.core.setText(`HP ${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
-      this.ui.coins.setText(`$${this.coins}`);
+      this.ui.coins.setText(`$${this.getDisplayedCoins()}`);
       this.ui.shield.setText(`S${Math.round(this.shield)}`);
       const progress = clamp(this.killsInLevel / this.levelNeed, 0, 1);
       this.progressBar.setSize(508 * progress, 6);
