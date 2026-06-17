@@ -7942,7 +7942,7 @@
       });
     }
 
-    createExplosion(x, y, radius, damage, slowDuration = 0) {
+    createExplosion(x, y, radius, damage, slowDuration = 0, options = {}) {
       this.playSfx("explosion", clamp(radius / 82, 0.75, 1.35));
       this.shakeCamera(130, clamp(radius / 22000, 0.004, 0.009));
       this.requestHitStop(0.045);
@@ -7961,7 +7961,15 @@
         const dx = zombie.x - x;
         const dy = zombie.y - y;
         if (dx * dx + dy * dy <= radius * radius) {
-          this.damageZombie(zombie, damage * (1 - Math.sqrt(dx * dx + dy * dy) / radius * 0.35), 0, "explosion");
+          this.damageZombie(
+            zombie,
+            damage * (1 - Math.sqrt(dx * dx + dy * dy) / radius * 0.35),
+            0,
+            "explosion",
+            DEFAULT_CRIT_MULTIPLIER,
+            null,
+            { showHitEffect: options.showSplashHitEffect === true }
+          );
           if (slowDuration > 0 && zombie.active) {
             zombie.slowTimer = Math.max(zombie.slowTimer || 0, slowDuration);
           }
