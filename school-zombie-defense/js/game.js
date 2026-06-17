@@ -2023,9 +2023,6 @@
       });
       this.load.image("ui-frame-sheet", imageAsset("assets/images/ui-frame-sheet.png"));
       this.load.image("skill-card-sheet", imageAsset("assets/images/skill-card-sheet.png"));
-      Object.entries(SFX_ASSETS).forEach(([name, url]) => this.load.audio(`sfx-preload-${name}`, url));
-      Object.entries(BGM_ASSETS).forEach(([name, url]) => this.load.audio(`bgm-preload-${name}`, url));
-      Object.entries(AMBIENT_ASSETS).forEach(([name, url]) => this.load.audio(`ambient-preload-${name}`, url));
     }
 
     create() {
@@ -2152,10 +2149,6 @@
       this.hitStopTimer = 0;
       this.speedMultiplier = 1;
       this.pausedByButton = false;
-      this.ensureSfxFallbackTracks();
-      this.ensureBgmTracks();
-      this.ensureAmbientTracks();
-
       this.events.once("shutdown", () => this.disposeScene());
       this.events.once("destroy", () => this.disposeScene());
       this.drawBackground();
@@ -3215,12 +3208,9 @@
       }
       Object.entries(SFX_ASSETS).forEach(([name, url]) => {
         const track = new Audio(url);
-        track.preload = "auto";
+        track.preload = "metadata";
         track.volume = 0;
         this.sfxFallbackTracks.set(name, track);
-        if (typeof track.load === "function") {
-          track.load();
-        }
       });
     }
 
@@ -3232,12 +3222,9 @@
       Object.entries(BGM_ASSETS).forEach(([name, url]) => {
         const track = new Audio(url);
         track.loop = true;
-        track.preload = "auto";
+        track.preload = name === "menu" ? "metadata" : "none";
         track.volume = BGM_VOLUME;
         this.bgmTracks[name] = track;
-        if (typeof track.load === "function") {
-          track.load();
-        }
       });
     }
 
@@ -3249,12 +3236,9 @@
       Object.entries(AMBIENT_ASSETS).forEach(([name, url]) => {
         const track = new Audio(url);
         track.loop = true;
-        track.preload = "auto";
+        track.preload = "none";
         track.volume = name === "zombie" ? ZOMBIE_AMBIENT_VOLUME : 0.08;
         this.ambientTracks[name] = track;
-        if (typeof track.load === "function") {
-          track.load();
-        }
       });
     }
 
