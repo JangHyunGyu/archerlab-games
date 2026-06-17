@@ -260,7 +260,7 @@ body {
   background:
     linear-gradient(180deg, rgba(2, 4, 6, 0.2), rgba(2, 4, 6, 0.74) 58%, rgba(2, 4, 6, 0.96)),
     linear-gradient(90deg, rgba(255, 69, 63, 0.24), rgba(2, 4, 6, 0.1) 44%, rgba(69, 215, 255, 0.2)),
-    url("../assets/images/run-loading-emblem.png");
+    url("../assets/images/run-loading-backdrop.png");
   background-position: center;
   background-size: cover;
   filter: saturate(1.08) contrast(1.02);
@@ -283,13 +283,13 @@ body {
 
 .run-loading__art {
   position: relative;
-  width: 138px;
-  aspect-ratio: 1;
+  width: 104px;
+  aspect-ratio: 9 / 16;
   border: 1px solid rgba(255, 216, 107, 0.46);
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.08)),
-    url("../assets/images/run-loading-emblem.png");
+    url("../assets/images/run-loading-backdrop.png");
   background-position: center;
   background-size: cover;
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.52), 0 0 30px rgba(255, 74, 65, 0.28);
