@@ -268,11 +268,11 @@
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
-  const ZOMBIE_LEVEL_HP_EXPONENT = 0.96;
-  const ZOMBIE_NORMAL_LEVEL_HP_GAIN = 10.2;
-  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 18.4;
-  const ZOMBIE_NORMAL_LATE_HP_GAIN = 1.5;
-  const ZOMBIE_ELITE_LATE_HP_GAIN = 2.8;
+  const ZOMBIE_LEVEL_HP_EXPONENT = 0.88;
+  const ZOMBIE_NORMAL_LEVEL_HP_GAIN = 8.2;
+  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 14.8;
+  const ZOMBIE_NORMAL_LATE_HP_GAIN = 0.6;
+  const ZOMBIE_ELITE_LATE_HP_GAIN = 1.2;
   const ZOMBIE_BODY_DEPTH_BASE = 70;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
@@ -5215,12 +5215,12 @@
         return;
       }
 
-      const levelPressure = Math.min(0.5, Math.max(0, this.level - 1) * 0.026);
-      const lateFrequencyPressure = Math.min(0.28, Math.max(0, this.level - 8) * 0.025);
-      const earlyDelayBonus = Math.max(0, 0.34 - this.level * 0.038);
-      const baseDelay = clamp(1 - levelPressure + earlyDelayBonus, 0.46, 1.3) / (1 + lateFrequencyPressure);
-      const delayMin = this.level < 7 ? 0.72 : 0.64;
-      const delayMax = this.level < 7 ? 1.12 : 1.06;
+      const levelPressure = Math.min(0.36, Math.max(0, this.level - 1) * 0.017);
+      const lateFrequencyPressure = Math.min(0.14, Math.max(0, this.level - 10) * 0.012);
+      const earlyDelayBonus = Math.max(0, 0.38 - this.level * 0.03);
+      const baseDelay = clamp(1.08 - levelPressure + earlyDelayBonus, 0.64, 1.42) / (1 + lateFrequencyPressure);
+      const delayMin = this.level < 7 ? 0.78 : 0.72;
+      const delayMax = this.level < 7 ? 1.18 : 1.14;
       this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
       this.spawnZombie(0);
     }
@@ -5238,7 +5238,7 @@
         const displayWidth = displayHeight;
         const levelCurve = Math.pow(this.level, ZOMBIE_LEVEL_HP_EXPONENT);
         const lateLevelBonus = Math.max(0, this.level - 10);
-        const earlyHpScale = clamp(0.84 + Math.max(0, this.level - 1) * 0.03, 0.84, 0.96);
+        const earlyHpScale = clamp(0.82 + Math.max(0, this.level - 1) * 0.018, 0.82, 0.9);
         const baseHp =
           (eliteRoll ? 165 : 48)
           + levelCurve * (eliteRoll ? ZOMBIE_ELITE_LEVEL_HP_GAIN : ZOMBIE_NORMAL_LEVEL_HP_GAIN)
