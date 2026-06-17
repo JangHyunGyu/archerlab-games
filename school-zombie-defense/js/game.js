@@ -267,6 +267,11 @@
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
+  const ZOMBIE_LEVEL_HP_EXPONENT = 1.02;
+  const ZOMBIE_NORMAL_LEVEL_HP_GAIN = 11.4;
+  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 21;
+  const ZOMBIE_NORMAL_LATE_HP_GAIN = 2.2;
+  const ZOMBIE_ELITE_LATE_HP_GAIN = 4;
   const ZOMBIE_BODY_DEPTH_BASE = 70;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
@@ -5202,8 +5207,8 @@
 
       const levelPressure = Math.min(0.66, this.level * 0.033);
       const lateFrequencyPressure = Math.min(0.45, Math.max(0, this.level - 7) * 0.045);
-      const earlyDelayBonus = Math.max(0, (5 - this.level) * 0.055);
-      const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.34, 1.12) / (1 + lateFrequencyPressure);
+      const earlyDelayBonus = Math.max(0, 0.4 - this.level * 0.045);
+      const baseDelay = clamp(0.96 - levelPressure + earlyDelayBonus, 0.34, 1.28) / (1 + lateFrequencyPressure);
       const delayMin = this.level < 7 ? 0.68 : 0.58;
       const delayMax = this.level < 7 ? 1.12 : 1.02;
       this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
@@ -5221,13 +5226,13 @@
         const baseDisplayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
         const displayHeight = baseDisplayHeight * typeConfig.sizeScale;
         const displayWidth = displayHeight;
-        const levelCurve = Math.pow(this.level, 1.06);
+        const levelCurve = Math.pow(this.level, ZOMBIE_LEVEL_HP_EXPONENT);
         const lateLevelBonus = Math.max(0, this.level - 10);
         const earlyHpScale = clamp(0.84 + Math.max(0, this.level - 1) * 0.04, 0.84, 1);
         const baseHp =
           (eliteRoll ? 165 : 48)
-          + levelCurve * (eliteRoll ? 24.5 : 13.8)
-          + lateLevelBonus * (eliteRoll ? 5.2 : 3)
+          + levelCurve * (eliteRoll ? ZOMBIE_ELITE_LEVEL_HP_GAIN : ZOMBIE_NORMAL_LEVEL_HP_GAIN)
+          + lateLevelBonus * (eliteRoll ? ZOMBIE_ELITE_LATE_HP_GAIN : ZOMBIE_NORMAL_LATE_HP_GAIN)
           + rand(-6, 12);
         const hp = Math.round(baseHp * ZOMBIE_HP_MULTIPLIER * typeConfig.hpScale * earlyHpScale);
         const textureBase = `zombie-walk-${typeConfig.id}`;
