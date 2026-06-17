@@ -31,6 +31,66 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
+  const RUN_LOADING_OVERLAY_ID = "run-loading-overlay";
+  const RUN_LOADING_TEXT_SELECTOR = "[data-run-loading-text]";
+  const showRunLoadingOverlay = (message = "출격 준비 중") => {
+    const root = document.getElementById("game-root");
+    if (!root) {
+      return null;
+    }
+    let overlay = document.getElementById(RUN_LOADING_OVERLAY_ID);
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = RUN_LOADING_OVERLAY_ID;
+      overlay.className = "run-loading";
+      overlay.setAttribute("role", "status");
+      overlay.setAttribute("aria-live", "polite");
+      overlay.innerHTML = `
+        <div class="run-loading__art" aria-hidden="true"></div>
+        <div class="run-loading__panel">
+          <div class="run-loading__signal" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="run-loading__kicker">SORTIE READY</div>
+          <div class="run-loading__title">출격 준비 중</div>
+          <div class="run-loading__text" data-run-loading-text></div>
+          <div class="run-loading__bar" aria-hidden="true"><span></span></div>
+        </div>`;
+      root.appendChild(overlay);
+    }
+    overlay.classList.remove("run-loading--hide");
+    overlay.querySelector(RUN_LOADING_TEXT_SELECTOR).textContent = message;
+    return overlay;
+  };
+  const updateRunLoadingOverlay = (message) => {
+    const overlay = document.getElementById(RUN_LOADING_OVERLAY_ID);
+    const text = overlay?.querySelector(RUN_LOADING_TEXT_SELECTOR);
+    if (text) {
+      text.textContent = message;
+    }
+  };
+  const hideRunLoadingOverlay = () => {
+    const overlay = document.getElementById(RUN_LOADING_OVERLAY_ID);
+    if (!overlay) {
+      return;
+    }
+    overlay.classList.add("run-loading--hide");
+    window.setTimeout(() => {
+      if (overlay.parentNode && overlay.classList.contains("run-loading--hide")) {
+        overlay.remove();
+      }
+    }, 220);
+  };
+  const waitForRenderFrames = (count = 2) => new Promise((resolve) => {
+    let remaining = Math.max(1, count);
+    const step = () => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+  });
   const choose = (items) => items[Math.floor(Math.random() * items.length)];
   const shuffleItems = (items) => {
     const copy = [...items];
@@ -4779,22 +4839,38 @@
         return;
       }
       this.unlockAudio();
+      const previousMode = this.mode;
+      showRunLoadingOverlay("프로필 동기화 중");
+      this.mode = "starting";
       try {
         await this.ensureServerProfile({ force: true });
       } catch (error) {
+        hideRunLoadingOverlay();
+        if (!this.disposed && this.mode === "starting") {
+          this.mode = previousMode;
+        }
         return;
       }
+      if (this.disposed || this.mode !== "starting") {
+        hideRunLoadingOverlay();
+        return;
+      }
+      updateRunLoadingOverlay("방어선 진입 중");
       this.playSfx("start");
       this.startBgm("game");
       this.clearOverlay();
-      this.mode = "starting";
       this.resetRun();
       this.startRankSession();
+      updateRunLoadingOverlay("장비 점검 중");
       await this.waitForGameplaySfxReady();
       if (this.disposed || this.mode !== "starting") {
+        hideRunLoadingOverlay();
         return;
       }
       this.mode = "playing";
+      updateRunLoadingOverlay("전장 표시 중");
+      await waitForRenderFrames(2);
+      hideRunLoadingOverlay();
     }
 
     async returnToMenuFromRun() {
