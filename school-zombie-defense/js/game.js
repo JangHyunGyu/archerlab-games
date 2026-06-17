@@ -157,16 +157,6 @@
       alpha: 0.95,
       depthOffset: -0.5,
       life: ARROW_EMBED_DURATION
-    },
-    "projectile-nail": {
-      texture: "projectile-nail",
-      scale: PROJECTILE_SCALES["projectile-nail"],
-      embedRatio: 0.66,
-      minEmbed: 34,
-      maxEmbed: 64,
-      alpha: 0.92,
-      depthOffset: 0.65,
-      life: ARROW_EMBED_DURATION * 0.85
     }
   };
   const ROCKET_ACCELERATION = {
@@ -514,7 +504,7 @@
   const FIREBOMB_FLIGHT_TIME_SCALE = 2;
   const FIREBOMB_THROW_INTERVAL_SECONDS = 5;
   const FIREBOMB_FIRE_ZONE_DURATION_SECONDS = 3;
-  const BARBED_WIRE_DAMAGE_PER_TICK = 3;
+  const BARBED_WIRE_DAMAGE_PER_TICK = 9;
   const BARBED_WIRE_SLOW_DURATION = 0.28;
   const BARBED_WIRE_MAX_SLOW_DURATION = 0.48;
   const BARBED_WIRE_REINFORCE_SLOW_GAIN = 0.08;
@@ -2117,6 +2107,7 @@
       this.profileReady = false;
       this.profileSyncFailed = false;
       this.profileFetchControllers = new Set();
+      this.rankPrepLayer = null;
       this.rankNameLayer = null;
       this.rankSubmitInFlight = false;
       this.shopSelectedCharacter = "c";
@@ -4115,6 +4106,38 @@
       this.addOverlayButton(canRegister ? 142 : 270, 888, 172, 50, "뒤로", 560, () => this.showMenu(), COLORS.gold);
       if (canRegister) {
         this.addOverlayButton(398, 888, 172, 50, "기록 등록", 560, () => this.submitRankScore(), COLORS.blue);
+      }
+    }
+
+    showRankPrepLayer(message = "랭킹 등록 준비 중") {
+      this.removeRankPrepLayer();
+      const shell = document.getElementById("game-shell") || document.body;
+      const layer = document.createElement("div");
+      layer.className = "school-zombie-rank-prep";
+      layer.setAttribute("role", "status");
+      layer.setAttribute("aria-live", "polite");
+      layer.innerHTML = `
+        <div class="school-zombie-rank-prep__panel">
+          <div class="school-zombie-rank-prep__signal" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="school-zombie-rank-prep__label">${message}</div>
+          <div class="school-zombie-rank-prep__bar" aria-hidden="true"><span></span></div>
+        </div>
+      `;
+      shell.appendChild(layer);
+      this.rankPrepLayer = layer;
+      return layer;
+    }
+
+    removeRankPrepLayer(layer = this.rankPrepLayer) {
+      if (layer && layer.parentNode) {
+        layer.parentNode.removeChild(layer);
+      }
+      if (!layer || this.rankPrepLayer === layer) {
+        this.rankPrepLayer = null;
       }
     }
 
@@ -8745,7 +8768,13 @@
       this.cancelSceneTimers();
       this.clearTransientObjects();
       this.startBgm("menu");
-      const earnedCoins = await this.bankRunCoins();
+      let earnedCoins = 0;
+      const rankPrepLayer = this.showRankPrepLayer();
+      try {
+        earnedCoins = await this.bankRunCoins();
+      } finally {
+        this.removeRankPrepLayer(rankPrepLayer);
+      }
       const rankSnapshot = this.getRankSnapshot(earnedCoins);
       this.lastRankableRun = rankSnapshot.score > 0 ? rankSnapshot : null;
       this.clearRunEntities();
@@ -8799,6 +8828,7 @@
     }
 
     clearOverlay() {
+      this.removeRankPrepLayer();
       this.removeRankNameLayer();
       this.clearShopActionLoading();
       this.overlayObjects.forEach((item) => {
