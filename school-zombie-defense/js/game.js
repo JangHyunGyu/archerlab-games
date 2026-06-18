@@ -239,7 +239,7 @@
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 },
     teacher: { corpseWidth: 0.98, deathSize: 1.12 },
-    nurse: { corpseWidth: 1.12, deathSize: 1.26 },
+    nurse: { corpseWidth: 1.12, deathSize: 1.16 },
     athlete: { corpseWidth: 1.1, deathSize: 1.24 },
     janitor: { corpseWidth: 1.34, deathSize: 1.32 },
     guard: { corpseWidth: 1.32, deathSize: 1.3 },
@@ -343,8 +343,6 @@
   };
   const BGM_VOLUME = 0.18;
   const ZOMBIE_AMBIENT_VOLUME = 0.1;
-  const MAX_CORE_HP_SKILL_CAP = 6000;
-  const MAX_CORE_HP_SKILL_RATE = 0.18;
   const META_SAVE_KEY = "schoolZombieDefenseMetaV1";
   const META_CACHE_KEY = "schoolZombieDefenseMetaServerCacheV1";
   const PROFILE_AUTH_KEY = "schoolZombieDefenseProfileV1";
