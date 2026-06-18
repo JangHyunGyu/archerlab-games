@@ -252,12 +252,12 @@
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 },
     teacher: { corpseWidth: 0.98, deathSize: 1.12 },
-    nurse: { corpseWidth: 1.12, deathSize: 1.16 },
+    nurse: { corpseWidth: 1.12, deathSize: 1.08 },
     athlete: { corpseWidth: 1.1, deathSize: 1.24 },
     janitor: { corpseWidth: 1.34, deathSize: 1.32 },
     guard: { corpseWidth: 1.32, deathSize: 1.3 },
     crawler: { corpseWidth: 1.42, deathSize: 1.32 },
-    screamer: { corpseWidth: 1.12, deathSize: 1.28 },
+    screamer: { corpseWidth: 1.12, deathSize: 1.18 },
     spider: { corpseWidth: 1.16, deathSize: 0.94 },
     bloom: { corpseWidth: 0.94, deathSize: 1.04 }
   };
@@ -289,6 +289,7 @@
   const ZOMBIE_BODY_DEPTH_BASE = 70;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
+  const ZOMBIE_CORPSE_RECENT_DEPTH_STEP = 0.012;
   const ZOMBIE_HIT_GRID_SIZE = 96;
   const ZOMBIE_HIT_GRID_PADDING = 88;
   const ZOMBIE_SEPARATION_RADIUS_SCALE = 0.9;
@@ -7498,12 +7499,15 @@
       });
     }
 
-    registerCorpseRecord(objects) {
+    registerCorpseRecord(objects, depthEntries = []) {
       const record = {
         objects: objects.filter(Boolean),
+        depthEntries: depthEntries.filter((entry) => entry?.object),
+        depthOffset: 0,
         fading: false
       };
       this.activeCorpses.push(record);
+      this.refreshCorpseDepthOrder();
       this.trimCorpseRecords();
       return record;
     }
@@ -7515,7 +7519,22 @@
       const index = this.activeCorpses.indexOf(record);
       if (index >= 0) {
         this.activeCorpses.splice(index, 1);
+        this.refreshCorpseDepthOrder();
       }
+    }
+
+    refreshCorpseDepthOrder() {
+      if (!this.activeCorpses) {
+        return;
+      }
+      this.activeCorpses.forEach((record, index) => {
+        record.depthOffset = index * ZOMBIE_CORPSE_RECENT_DEPTH_STEP;
+        (record.depthEntries || []).forEach(({ object, depth }) => {
+          if (object && !object.destroyed && typeof object.setDepth === "function") {
+            object.setDepth(depth + record.depthOffset);
+          }
+        });
+      });
     }
 
     trimCorpseRecords() {
@@ -7700,6 +7719,7 @@
           .setAlpha(1)
           .setDepth(bodyDepth + 0.9))
         : null;
+      let corpseRecord = null;
       const revealCorpseImage = () => {
         if (!corpseImage || corpseImage.destroyed) {
           return;
@@ -7787,7 +7807,7 @@
           duration: effect.fall,
           ease: "Quad.easeIn",
           onComplete: () => {
-            zombie.setDepth(corpseDepth + 0.4);
+            zombie.setDepth(corpseDepth + 0.4 + (corpseRecord?.depthOffset || 0));
             if (corpseImage) {
               revealCorpseImage();
               this.tweens.add({
@@ -7804,7 +7824,16 @@
           }
         });
       }
-      const corpseRecord = this.registerCorpseRecord([zombie, deathSprite, corpseImage, stain, shadow, poolShade]);
+      corpseRecord = this.registerCorpseRecord(
+        [zombie, deathSprite, corpseImage, stain, shadow, poolShade],
+        [
+          { object: stain, depth: corpseDepth },
+          { object: shadow, depth: corpseDepth - 0.4 },
+          { object: poolShade, depth: corpseDepth - 0.2 },
+          { object: corpseImage, depth: corpseDepth + 0.45 },
+          { object: deathSprite, depth: bodyDepth + 0.9 }
+        ]
+      );
       const corpseFadeDelay = effect.corpseHold + (deathSprite ? effect.fall + 260 : 0);
       this.scheduleSceneDelay(corpseFadeDelay, () => {
         const corpseTarget = corpseImage && !corpseImage.destroyed
