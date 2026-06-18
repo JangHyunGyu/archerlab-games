@@ -283,9 +283,9 @@
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
   const ZOMBIE_LEVEL_HP_EXPONENT = 0.88;
   const ZOMBIE_NORMAL_LEVEL_HP_GAIN = 8.2;
-  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 14.8;
+  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 17.2;
   const ZOMBIE_NORMAL_LATE_HP_GAIN = 0.6;
-  const ZOMBIE_ELITE_LATE_HP_GAIN = 1.2;
+  const ZOMBIE_ELITE_LATE_HP_GAIN = 1.8;
   const ZOMBIE_BODY_DEPTH_BASE = 70;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
@@ -5233,10 +5233,10 @@
         return;
       }
 
-      const levelPressure = Math.min(0.52, Math.max(0, this.level - 1) * 0.031);
-      const lateFrequencyPressure = Math.min(0.3, Math.max(0, this.level - 10) * 0.028);
+      const levelPressure = Math.min(0.6, Math.max(0, this.level - 1) * 0.038);
+      const lateFrequencyPressure = Math.min(0.38, Math.max(0, this.level - 10) * 0.037);
       const earlyDelayBonus = Math.max(0, 0.38 - this.level * 0.03);
-      const baseDelay = clamp(1.08 - levelPressure + earlyDelayBonus, 0.64, 1.42) / (1 + lateFrequencyPressure);
+      const baseDelay = clamp(1.08 - levelPressure + earlyDelayBonus, 0.58, 1.42) / (1 + lateFrequencyPressure);
       const delayMin = this.level < 7 ? 0.78 : 0.72;
       const delayMax = this.level < 7 ? 1.18 : 1.14;
       this.spawnTimer = rand(baseDelay * delayMin, baseDelay * delayMax) * ZOMBIE_SPAWN_INTERVAL_MULTIPLIER / ZOMBIE_SPAWN_COUNT_MULTIPLIER;
@@ -5258,7 +5258,7 @@
         const lateLevelBonus = Math.max(0, this.level - 10);
         const earlyHpScale = clamp(0.82 + Math.max(0, this.level - 1) * 0.018, 0.82, 0.9);
         const baseHp =
-          (eliteRoll ? 165 : 48)
+          (eliteRoll ? 190 : 48)
           + levelCurve * (eliteRoll ? ZOMBIE_ELITE_LEVEL_HP_GAIN : ZOMBIE_NORMAL_LEVEL_HP_GAIN)
           + lateLevelBonus * (eliteRoll ? ZOMBIE_ELITE_LATE_HP_GAIN : ZOMBIE_NORMAL_LATE_HP_GAIN)
           + rand(-6, 12);
