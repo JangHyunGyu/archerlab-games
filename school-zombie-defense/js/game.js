@@ -709,7 +709,6 @@
     shock: 0xff9ad6,
     engineer: 0xffd166,
     "core-full-repair": 0x7dffdf,
-    "core-max-hp": 0x91f7ff,
     "recruit-a": 0xff7fb7,
     "recruit-b": 0xff8d42,
     "recruit-d": 0x91f7ff,
@@ -730,7 +729,6 @@
     shock: "#ff9ad6",
     engineer: "#ffd166",
     "core-full-repair": "#7dffdf",
-    "core-max-hp": "#91f7ff",
     "recruit-a": "#ff7fb7",
     "recruit-b": "#ff8d42",
     "recruit-d": "#91f7ff",
@@ -8527,31 +8525,6 @@
         });
       }
 
-      return upgrades;
-
-      const hpBonus = Math.max(360, Math.round(this.maxCoreHp * MAX_CORE_HP_SKILL_RATE));
-      const nextMaxHp = Math.min(MAX_CORE_HP_SKILL_CAP, Math.round(this.maxCoreHp + hpBonus));
-      const appliedBonus = nextMaxHp - maxHp;
-      if (appliedBonus > 0) {
-        upgrades.push({
-          id: "core-max-hp",
-          common: true,
-          icon: "skill-max-hp",
-          tag: "방어",
-          title: "방벽 증축",
-          desc: "이번 방어 중\n최대 HP 확장",
-          stat: `최대 HP ${maxHp} → ${nextMaxHp}\n현재 HP +${appliedBonus}`,
-          accent: SKILL_ACCENTS["core-max-hp"],
-          accentHex: SKILL_ACCENT_HEX["core-max-hp"],
-          toast: "방어선 최대 HP 증가",
-          apply: () => {
-            const bonus = Math.max(0, nextMaxHp - Math.round(this.maxCoreHp));
-            this.maxCoreHp = Math.round(this.maxCoreHp + bonus);
-            this.coreHp = clamp(this.coreHp + bonus, 0, this.maxCoreHp);
-            this.morale = Math.round((this.coreHp / this.maxCoreHp) * 100);
-          }
-        });
-      }
       return upgrades;
     }
 
