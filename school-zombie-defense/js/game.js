@@ -255,7 +255,7 @@
     nurse: { corpseWidth: 1.12, deathSize: 1.08 },
     athlete: { corpseWidth: 1.1, deathSize: 1.24 },
     janitor: { corpseWidth: 1.34, deathSize: 1.32 },
-    guard: { corpseWidth: 1.32, deathSize: 1.3 },
+    guard: { corpseWidth: 1.32, deathSize: 1.26 },
     crawler: { corpseWidth: 1.42, deathSize: 1.32 },
     screamer: { corpseWidth: 1.12, deathSize: 1.18 },
     spider: { corpseWidth: 1.16, deathSize: 0.94 },
