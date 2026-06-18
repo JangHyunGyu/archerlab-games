@@ -1987,6 +1987,14 @@
       this.load.image("skill-rifle-suppress", imageAsset("assets/images/skill-rifle-suppress.png"));
       this.load.image("skill-rocket-reload", imageAsset("assets/images/skill-rocket-reload.png"));
       this.load.image("skill-sniper-reload", imageAsset("assets/images/skill-sniper-reload.png"));
+      this.load.image("skill-pistol-impact", imageAsset("assets/images/skill-pistol-impact.png"));
+      this.load.image("skill-arrow-force", imageAsset("assets/images/skill-arrow-force.png"));
+      this.load.image("skill-rifle-caliber", imageAsset("assets/images/skill-rifle-caliber.png"));
+      this.load.image("skill-rocket-warhead", imageAsset("assets/images/skill-rocket-warhead.png"));
+      this.load.image("skill-sniper-caliber", imageAsset("assets/images/skill-sniper-caliber.png"));
+      this.load.image("skill-fire-fuel", imageAsset("assets/images/skill-fire-fuel.png"));
+      this.load.image("skill-shock-amplifier", imageAsset("assets/images/skill-shock-amplifier.png"));
+      this.load.image("skill-engineer-nail", imageAsset("assets/images/skill-engineer-nail.png"));
       this.load.spritesheet("zombie-hit-arrow-sheet", imageAsset("assets/images/zombie-hit-arrow-sheet.png"), { frameWidth: 96, frameHeight: 96 });
       this.load.spritesheet("zombie-hit-pistol-sheet", imageAsset("assets/images/zombie-hit-pistol-sheet.png"), { frameWidth: 112, frameHeight: 96 });
       this.load.spritesheet("zombie-hit-rifle-sheet", imageAsset("assets/images/zombie-hit-rifle-sheet.png"), { frameWidth: 140, frameHeight: 100 });
@@ -8118,6 +8126,19 @@
       const rifleGrenadeRadiusBoost = rifle.rocketRadiusBoost || 1;
 
       add("c", {
+        id: "c-impact",
+        icon: "skill-pistol-impact",
+        tag: "권총",
+        title: "강화 탄환",
+        desc: "기본 탄환의 위력을\n안정적으로 끌어올립니다.",
+        stat: `피해 ${this.formatPercent(pistol.damageBoost)} → ${this.formatPercent(pistol.damageBoost * 1.12)}`,
+        available: pistol.damageBoost < 2.2,
+        apply: () => {
+          const defender = this.getDefenderById("c");
+          defender.damageBoost *= 1.12;
+        }
+      });
+      add("c", {
         id: "c-rapid",
         icon: "skill-pistol-rapid",
         tag: "권총",
@@ -8155,6 +8176,19 @@
           const defender = this.getDefenderById("c");
           defender.pierce += 1;
           defender.damageBoost *= 1.08;
+        }
+      });
+      add("a", {
+        id: "a-force",
+        icon: "skill-arrow-force",
+        tag: "활",
+        title: "고장력 활시위",
+        desc: "기본 화살의 장력을 높여\n정면 피해를 강화합니다.",
+        stat: `피해 ${this.formatPercent(bow.damageBoost)} → ${this.formatPercent(bow.damageBoost * 1.1)}`,
+        available: bow.damageBoost < 2.2,
+        apply: () => {
+          const defender = this.getDefenderById("a");
+          defender.damageBoost *= 1.1;
         }
       });
       add("a", {
@@ -8216,6 +8250,19 @@
         }
       });
       add("b", {
+        id: "b-caliber",
+        icon: "skill-rifle-caliber",
+        tag: "소총",
+        title: "대구경 탄창",
+        desc: "기본 소총탄의 저지력을\n한 단계 끌어올립니다.",
+        stat: `피해 ${this.formatPercent(rifle.damageBoost)} → ${this.formatPercent(rifle.damageBoost * 1.09)}`,
+        available: rifle.damageBoost < 2.2,
+        apply: () => {
+          const defender = this.getDefenderById("b");
+          defender.damageBoost *= 1.09;
+        }
+      });
+      add("b", {
         id: "b-barrage",
         icon: "skill-rifle-grenade",
         tag: "소총",
@@ -8258,6 +8305,19 @@
           const defender = this.getDefenderById("b");
           defender.slowDuration += 0.22;
           defender.damageBoost *= 1.08;
+        }
+      });
+      add("d", {
+        id: "d-warhead",
+        icon: "skill-rocket-warhead",
+        tag: "로켓",
+        title: "고밀도 탄두",
+        desc: "기본 로켓의 폭압을\n더 묵직하게 압축합니다.",
+        stat: `로켓 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.14)}`,
+        available: rocket.damageBoost < 2.2,
+        apply: () => {
+          const defender = this.getDefenderById("d");
+          defender.damageBoost *= 1.14;
         }
       });
       add("d", {
@@ -8312,6 +8372,19 @@
         }
       });
       add("e", {
+        id: "e-caliber",
+        icon: "skill-sniper-caliber",
+        tag: "저격",
+        title: "대구경 탄환",
+        desc: "기본 저격탄의 관통력을\n순수 피해로 끌어올립니다.",
+        stat: `저격 피해 ${this.formatPercent(sniper.damageBoost)} → ${this.formatPercent(sniper.damageBoost * 1.13)}`,
+        available: sniper.damageBoost < 2.2,
+        apply: () => {
+          const defender = this.getDefenderById("e");
+          defender.damageBoost *= 1.13;
+        }
+      });
+      add("e", {
         id: "e-weakpoint",
         icon: "skill-sniper-weakpoint",
         tag: "저격",
@@ -8351,6 +8424,21 @@
         }
       });
       add("f", {
+        id: "f-fuel",
+        icon: "skill-fire-fuel",
+        tag: "화염",
+        title: "고열 연료",
+        desc: "화염병이 남기는 불길의\n연소 피해를 강화합니다.",
+        stat: `불길 피해 ${this.formatPercent(fire.fireZoneDamageScale)} → ${this.formatPercent(fire.fireZoneDamageScale + 0.045)}`,
+        available: fire.fireZoneDamageScale < 0.75,
+        accent: SKILL_ACCENTS.fire,
+        accentHex: SKILL_ACCENT_HEX.fire,
+        apply: () => {
+          const defender = this.getDefenderById("f");
+          defender.fireZoneDamageScale += 0.045;
+        }
+      });
+      add("f", {
         id: "f-zone",
         icon: "skill-rocket",
         tag: "화염",
@@ -8371,8 +8459,8 @@
         icon: "skill-rocket-impact",
         tag: "화염",
         title: "농축 화염병",
-        desc: "직격 피해를 높이고\n불길 지속 피해를 강화합니다.",
-        stat: `피해 ${this.formatPercent(fire.damageBoost)} → ${this.formatPercent(fire.damageBoost * 1.14)}\n구역 피해 ${this.formatPercent(fire.fireZoneDamageScale)} → ${this.formatPercent(fire.fireZoneDamageScale + 0.02)}`,
+        desc: "연소 기준 피해를 높이고\n불길 지속 피해를 강화합니다.",
+        stat: `연소 기준 ${this.formatPercent(fire.damageBoost)} → ${this.formatPercent(fire.damageBoost * 1.14)}\n구역 피해 ${this.formatPercent(fire.fireZoneDamageScale)} → ${this.formatPercent(fire.fireZoneDamageScale + 0.02)}`,
         available: fire.damageBoost < 2,
         accent: SKILL_ACCENTS.fire,
         accentHex: SKILL_ACCENT_HEX.fire,
@@ -8397,6 +8485,21 @@
           defender.slowDuration += 0.35;
           defender.fireZoneDuration += 0.45;
           defender.fireZoneDamageScale += 0.02;
+        }
+      });
+      add("g", {
+        id: "g-amplifier",
+        icon: "skill-shock-amplifier",
+        tag: "전기",
+        title: "증폭 전극",
+        desc: "기본 전격탄의 출력을 높여\n첫 타 피해를 강화합니다.",
+        stat: `전격 피해 ${this.formatPercent(shock.damageBoost)} → ${this.formatPercent(shock.damageBoost * 1.1)}`,
+        available: shock.damageBoost < 2.2,
+        accent: SKILL_ACCENTS.shock,
+        accentHex: SKILL_ACCENT_HEX.shock,
+        apply: () => {
+          const defender = this.getDefenderById("g");
+          defender.damageBoost *= 1.1;
         }
       });
       add("g", {
@@ -8446,6 +8549,21 @@
           defender.critChance = Math.min(0.64, defender.critChance + 0.09);
           defender.critMultiplier += 0.3;
           defender.damageBoost *= 1.08;
+        }
+      });
+      add("h", {
+        id: "h-nail",
+        icon: "skill-engineer-nail",
+        tag: "공병",
+        title: "강화 못탄",
+        desc: "기본 못탄을 더 단단하게\n가공해 피해를 높입니다.",
+        stat: `못탄 피해 ${this.formatPercent(engineer.damageBoost)} → ${this.formatPercent(engineer.damageBoost * 1.12)}`,
+        available: engineer.damageBoost < 2.2,
+        accent: SKILL_ACCENTS.engineer,
+        accentHex: SKILL_ACCENT_HEX.engineer,
+        apply: () => {
+          const defender = this.getDefenderById("h");
+          defender.damageBoost *= 1.12;
         }
       });
       add("h", {
