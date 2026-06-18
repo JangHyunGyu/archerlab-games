@@ -8527,6 +8527,8 @@
         });
       }
 
+      return upgrades;
+
       const hpBonus = Math.max(360, Math.round(this.maxCoreHp * MAX_CORE_HP_SKILL_RATE));
       const nextMaxHp = Math.min(MAX_CORE_HP_SKILL_CAP, Math.round(this.maxCoreHp + hpBonus));
       const appliedBonus = nextMaxHp - maxHp;
