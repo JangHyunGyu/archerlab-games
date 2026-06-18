@@ -5233,8 +5233,8 @@
         return;
       }
 
-      const levelPressure = Math.min(0.43, Math.max(0, this.level - 1) * 0.024);
-      const lateFrequencyPressure = Math.min(0.2, Math.max(0, this.level - 10) * 0.018);
+      const levelPressure = Math.min(0.52, Math.max(0, this.level - 1) * 0.031);
+      const lateFrequencyPressure = Math.min(0.3, Math.max(0, this.level - 10) * 0.028);
       const earlyDelayBonus = Math.max(0, 0.38 - this.level * 0.03);
       const baseDelay = clamp(1.08 - levelPressure + earlyDelayBonus, 0.64, 1.42) / (1 + lateFrequencyPressure);
       const delayMin = this.level < 7 ? 0.78 : 0.72;
