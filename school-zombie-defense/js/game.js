@@ -283,9 +283,9 @@
   const ZOMBIE_SPAWN_COUNT_MULTIPLIER = 0.75;
   const ZOMBIE_LEVEL_HP_EXPONENT = 0.88;
   const ZOMBIE_NORMAL_LEVEL_HP_GAIN = 8.2;
-  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 17.2;
+  const ZOMBIE_ELITE_LEVEL_HP_GAIN = 20.5;
   const ZOMBIE_NORMAL_LATE_HP_GAIN = 0.6;
-  const ZOMBIE_ELITE_LATE_HP_GAIN = 1.8;
+  const ZOMBIE_ELITE_LATE_HP_GAIN = 2.6;
   const ZOMBIE_BODY_DEPTH_BASE = 70;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
@@ -544,18 +544,18 @@
     normal: { id: "normal", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 1, animRate: 6.8, reward: 1 },
     student: { id: "student", hpScale: 0.86, speedScale: 1.16, sizeScale: 0.9, attackScale: 0.9, hitRadiusScale: 0.9, knockbackScale: 1.08, animRate: 7.7, reward: 1 },
     runner: { id: "runner", hpScale: 0.72, speedScale: 1.72, sizeScale: 0.82, attackScale: 0.76, hitRadiusScale: 0.86, knockbackScale: 1.18, animRate: 9.4, reward: 1 },
-    brute: { id: "brute", hpScale: 3.7, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
+    brute: { id: "brute", hpScale: 4.1, speedScale: 0.72, sizeScale: 1.24, attackScale: 1.45, hitRadiusScale: 1.22, knockbackScale: 0.42, animRate: 4.9, reward: 2 },
     volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, deathExplosion: true },
     teacher: { id: "teacher", hpScale: 1.28, speedScale: 0.92, sizeScale: 1.03, attackScale: 1.18, hitRadiusScale: 1.04, knockbackScale: 0.82, animRate: 6.2, reward: 2 },
     nurse: { id: "nurse", hpScale: 0.82, speedScale: 1.32, sizeScale: 0.9, attackScale: 0.88, hitRadiusScale: 0.88, knockbackScale: 1.08, animRate: 8.2, reward: 1 },
     athlete: { id: "athlete", hpScale: 0.68, speedScale: 1.88, sizeScale: 0.86, attackScale: 0.82, hitRadiusScale: 0.9, knockbackScale: 1.2, animRate: 10.2, reward: 1 },
-    janitor: { id: "janitor", hpScale: 2.25, speedScale: 0.8, sizeScale: 1.14, attackScale: 1.26, hitRadiusScale: 1.14, knockbackScale: 0.55, animRate: 5.4, reward: 2 },
-    guard: { id: "guard", hpScale: 2.85, speedScale: 0.68, sizeScale: 1.12, attackScale: 1.18, hitRadiusScale: 1.12, knockbackScale: 0.48, animRate: 4.8, reward: 3 },
+    janitor: { id: "janitor", hpScale: 2.55, speedScale: 0.8, sizeScale: 1.14, attackScale: 1.26, hitRadiusScale: 1.14, knockbackScale: 0.55, animRate: 5.4, reward: 2 },
+    guard: { id: "guard", hpScale: 3.25, speedScale: 0.68, sizeScale: 1.12, attackScale: 1.18, hitRadiusScale: 1.12, knockbackScale: 0.48, animRate: 4.8, reward: 3 },
     crawler: { id: "crawler", hpScale: 0.9, speedScale: 1.38, sizeScale: 0.74, attackScale: 0.72, hitRadiusScale: 0.74, knockbackScale: 0.95, animRate: 8.8, reward: 1 },
     screamer: { id: "screamer", hpScale: 0.92, speedScale: 1.42, sizeScale: 0.95, attackScale: 0.98, hitRadiusScale: 0.92, knockbackScale: 1.04, animRate: 8.6, reward: 2 },
     spider: { id: "spider", hpScale: 0.78, speedScale: 1.64, sizeScale: 0.72, attackScale: 0.78, hitRadiusScale: 0.76, knockbackScale: 1.08, animRate: 9.8, reward: 1 },
     bloom: { id: "bloom", hpScale: 1.48, speedScale: 0.88, sizeScale: 1.02, attackScale: 1.12, hitRadiusScale: 1, knockbackScale: 0.7, animRate: 6.1, reward: 2, deathExplosion: true },
-    elite: { id: "elite", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
+    elite: { id: "elite", hpScale: 2, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
   const ZOMBIE_TEXTURE_TYPES = [
     "normal",
@@ -873,7 +873,7 @@
       rate: FIREBOMB_THROW_INTERVAL_SECONDS / CHARACTER_FIRE_COOLDOWN_MULTIPLIER,
       critChance: 0.05,
       critMultiplier: 1.45,
-      fireZoneRadius: 72,
+      fireZoneRadius: 64,
       fireZoneDuration: FIREBOMB_FIRE_ZONE_DURATION_SECONDS / FIRE_ZONE_VISUAL_DURATION_MULTIPLIER,
       fireZoneDamageScale: 0.2,
       aim: { pivot: [0, -121], reach: 39 },
@@ -5258,7 +5258,7 @@
         const lateLevelBonus = Math.max(0, this.level - 10);
         const earlyHpScale = clamp(0.82 + Math.max(0, this.level - 1) * 0.018, 0.82, 0.9);
         const baseHp =
-          (eliteRoll ? 190 : 48)
+          (eliteRoll ? 220 : 48)
           + levelCurve * (eliteRoll ? ZOMBIE_ELITE_LEVEL_HP_GAIN : ZOMBIE_NORMAL_LEVEL_HP_GAIN)
           + lateLevelBonus * (eliteRoll ? ZOMBIE_ELITE_LATE_HP_GAIN : ZOMBIE_NORMAL_LATE_HP_GAIN)
           + rand(-6, 12);
