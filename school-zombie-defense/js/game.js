@@ -3389,6 +3389,59 @@
       return true;
     }
 
+    playTimedSampleSfx(name, duration, intensity = 1) {
+      const ctx = this.audioCtx;
+      const buffer = this.sfxBuffers.get(name);
+      if (!ctx || ctx.state !== "running" || !this.masterGain || !buffer || duration <= 0) {
+        return false;
+      }
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      source.buffer = buffer;
+      const targetGain = clamp(0.72 * intensity, 0.05, 1.45);
+      gain.gain.value = targetGain;
+      let cleaned = false;
+      const sample = { cleanup: null };
+      const cleanup = () => {
+        if (cleaned) {
+          return;
+        }
+        cleaned = true;
+        this.activeSampleSfx.delete(sample);
+        source.onended = null;
+        try {
+          source.disconnect();
+        } catch (error) {
+          // Audio nodes may already be detached after playback.
+        }
+        try {
+          gain.disconnect();
+        } catch (error) {
+          // Audio nodes may already be detached after playback.
+        }
+      };
+      sample.cleanup = cleanup;
+      this.activeSampleSfx.add(sample);
+      source.onended = cleanup;
+      source.connect(gain).connect(this.masterGain);
+      try {
+        const now = ctx.currentTime;
+        const playDuration = Math.min(duration, buffer.duration);
+        const fadeOut = Math.min(0.035, playDuration * 0.35);
+        if (fadeOut > 0.004) {
+          gain.gain.setValueAtTime(targetGain, now);
+          gain.gain.setValueAtTime(targetGain, now + playDuration - fadeOut);
+          gain.gain.linearRampToValueAtTime(0.0001, now + playDuration);
+        }
+        source.start(now);
+        source.stop(now + playDuration);
+      } catch (error) {
+        cleanup();
+        return false;
+      }
+      return true;
+    }
+
     playFallbackSfx(name, intensity = 1) {
       this.ensureSfxFallbackTracks();
       const template = this.sfxFallbackTracks.get(name);
@@ -3412,6 +3465,45 @@
       track.addEventListener("ended", cleanup);
       track.addEventListener("error", cleanup);
       this.activeFallbackSfx.add(track);
+      const playPromise = track.play();
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(cleanup);
+      }
+      return true;
+    }
+
+    playTimedFallbackSfx(name, duration, intensity = 1) {
+      this.ensureSfxFallbackTracks();
+      const template = this.sfxFallbackTracks.get(name);
+      if (!template || duration <= 0) {
+        return false;
+      }
+      const track = template.cloneNode(true);
+      track.volume = clamp(SFX_MASTER_VOLUME * 0.72 * intensity, 0.03, 1);
+      let cleaned = false;
+      let stopTimer = 0;
+      const cleanup = () => {
+        if (cleaned) {
+          return;
+        }
+        cleaned = true;
+        if (stopTimer) {
+          window.clearTimeout(stopTimer);
+          stopTimer = 0;
+        }
+        this.activeFallbackSfx.delete(track);
+        track.removeEventListener("ended", cleanup);
+        track.removeEventListener("error", cleanup);
+        delete track.__schoolZombieSfxCleanup;
+      };
+      track.__schoolZombieSfxCleanup = cleanup;
+      track.addEventListener("ended", cleanup);
+      track.addEventListener("error", cleanup);
+      this.activeFallbackSfx.add(track);
+      stopTimer = window.setTimeout(() => {
+        track.pause();
+        cleanup();
+      }, Math.max(1, duration * 1000));
       const playPromise = track.play();
       if (playPromise && playPromise.catch) {
         playPromise.catch(cleanup);
@@ -3454,6 +3546,32 @@
         return;
       }
       if (this.playFallbackSfx(name, intensity)) {
+        this.sfxLastPlayed[name] = now;
+      }
+    }
+
+    playSfxForDuration(name, duration, intensity = 1) {
+      if (duration <= 0) {
+        return;
+      }
+      const ctx = this.unlockAudio();
+      const now = ctx?.currentTime || performance.now() / 1000;
+      const minGap = {
+        shock_hit: 0.075
+      }[name] || 0.04;
+      const last = this.sfxLastPlayed[name] || 0;
+      if (now - last < minGap) {
+        return;
+      }
+      if (ctx && this.sfxBuffers.has(name) && this.playTimedSampleSfx(name, duration, intensity)) {
+        this.sfxLastPlayed[name] = now;
+        return;
+      }
+      if (GAMEPLAY_TIMING_SFX_SET.has(name)) {
+        this.ensureSfxBuffer(name);
+        return;
+      }
+      if (this.playTimedFallbackSfx(name, duration, intensity)) {
         this.sfxLastPlayed[name] = now;
       }
     }
@@ -3511,7 +3629,12 @@
       if (!zombie || !zombie.active || duration <= 0) {
         return;
       }
-      zombie.stunTimer = Math.max(zombie.stunTimer || 0, duration);
+      const previousStun = zombie.stunTimer || 0;
+      const nextStun = Math.max(previousStun, duration);
+      if (nextStun > previousStun + 0.03) {
+        this.playSfxForDuration("shock_hit", nextStun - previousStun, 0.82);
+      }
+      zombie.stunTimer = nextStun;
       zombie.stunAnchorX = Number.isFinite(zombie.stunAnchorX) ? zombie.stunAnchorX : zombie.x;
       zombie.stunAnchorY = Number.isFinite(zombie.stunAnchorY) ? zombie.stunAnchorY : zombie.y;
       zombie.stunSparkTimer = Math.min(zombie.stunSparkTimer || 0, 0.03);
@@ -6373,7 +6496,7 @@
         objects: [glow, firePatch, ...embers],
         embers
       });
-      this.playSfx("firebomb_hit", 0.86);
+      this.playSfxForDuration("firebomb_hit", visualDuration, 0.86);
     }
 
     applyFireZoneBurn(zombie, damagePerTick, burnDuration, tickInterval) {
@@ -7392,20 +7515,21 @@
         this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       }
       zombie.hp -= damage;
+      const hitSfxMap = {
+        "projectile-shock": null,
+        "projectile-nail": "nailgun_hit"
+      };
       const hitSfx = crit
         ? "crit"
-        : {
-          "projectile-shock": "shock_hit",
-          "projectile-nail": "nailgun_hit"
-        }[hitType] || "hit";
-      if (!(hitType === "projectile-firebomb" && options.showHitEffect === false)) {
+        : Object.prototype.hasOwnProperty.call(hitSfxMap, hitType)
+          ? hitSfxMap[hitType]
+          : "hit";
+      if (hitSfx && !(hitType === "projectile-firebomb" && options.showHitEffect === false)) {
         const hitIntensity = crit
           ? 1.15
-          : hitSfx === "shock_hit"
-            ? 0.82
-            : hitSfx === "nailgun_hit"
-              ? 0.78
-              : 0.85;
+          : hitSfx === "nailgun_hit"
+            ? 0.78
+            : 0.85;
         this.playSfx(hitSfx, hitIntensity);
       }
       const suppressKnockback =
