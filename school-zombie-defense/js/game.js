@@ -333,6 +333,12 @@
     sniper: "assets/sounds/sfx/sniper.mp3",
     rocket: "assets/sounds/sfx/rocket.mp3",
     arrow: "assets/sounds/sfx/arrow.mp3",
+    firebomb_fire: "assets/sounds/sfx/firebomb_fire.mp3",
+    firebomb_hit: "assets/sounds/sfx/firebomb_hit.mp3",
+    shock_fire: "assets/sounds/sfx/shock_fire.mp3",
+    shock_hit: "assets/sounds/sfx/shock_hit.mp3",
+    nailgun_fire: "assets/sounds/sfx/nailgun_fire.mp3",
+    nailgun_hit: "assets/sounds/sfx/nailgun_hit.mp3",
     button: "assets/sounds/sfx/button.mp3",
     denied: "assets/sounds/sfx/denied.mp3",
     recruit: "assets/sounds/sfx/recruit.mp3",
@@ -341,7 +347,22 @@
     coin: "assets/sounds/sfx/coin.wav",
     pause: "assets/sounds/sfx/pause.wav"
   };
-  const GAMEPLAY_TIMING_SFX = ["hit", "crit", "explosion", "pistol", "rifle", "sniper", "rocket", "arrow"];
+  const GAMEPLAY_TIMING_SFX = [
+    "hit",
+    "crit",
+    "explosion",
+    "pistol",
+    "rifle",
+    "sniper",
+    "rocket",
+    "arrow",
+    "firebomb_fire",
+    "firebomb_hit",
+    "shock_fire",
+    "shock_hit",
+    "nailgun_fire",
+    "nailgun_hit"
+  ];
   const GAMEPLAY_TIMING_SFX_SET = new Set(GAMEPLAY_TIMING_SFX);
   const GAME_START_SFX_READY_TIMEOUT = 240;
   const WEAPON_SFX_INTENSITY = {
@@ -349,7 +370,10 @@
     rifle: 1,
     sniper: 1.18,
     rocket: 1,
-    arrow: 1.18
+    arrow: 1.18,
+    firebomb_fire: 0.74,
+    shock_fire: 0.82,
+    nailgun_fire: 0.78
   };
   const BGM_ASSETS = {
     menu: "assets/sounds/bgm/menu_loop.mp3",
@@ -3408,6 +3432,12 @@
         sniper: 0.08,
         rocket: 0.12,
         arrow: 0.06,
+        firebomb_fire: 0.16,
+        firebomb_hit: 0.18,
+        shock_fire: 0.055,
+        shock_hit: 0.075,
+        nailgun_fire: 0.035,
+        nailgun_hit: 0.06,
         skill: 0.18
       }[name] || 0.04;
       const now = ctx?.currentTime || performance.now() / 1000;
@@ -3435,10 +3465,10 @@
         "projectile-rifle": "rifle",
         "projectile-sniper": "sniper",
         "projectile-rocket": "rocket",
-        "projectile-firebomb": "rocket",
-        "projectile-shock": "rifle",
+        "projectile-firebomb": "firebomb_fire",
+        "projectile-shock": "shock_fire",
         "projectile-frost": "sniper",
-        "projectile-nail": "arrow"
+        "projectile-nail": "nailgun_fire"
       };
       const sfx = map[projectile] || "pistol";
       this.playSfx(sfx, WEAPON_SFX_INTENSITY[sfx] || 1);
@@ -5787,7 +5817,7 @@
       sprite.arcT = 0;
       const duration = clamp(distance / 1.55, 330, 620) * flightTimeScale;
       this.createMuzzle(startX, startY, launchAngle, defender.projectile);
-      this.playSfx("rocket", 0.58);
+      this.playSfx(isFirebomb ? "firebomb_fire" : "rocket", isFirebomb ? 0.74 : 0.58);
       this.tweens.add({
         targets: sprite,
         arcT: 1,
@@ -6343,7 +6373,7 @@
         objects: [glow, firePatch, ...embers],
         embers
       });
-      this.playSfx("explosion", 0.62);
+      this.playSfx("firebomb_hit", 0.86);
     }
 
     applyFireZoneBurn(zombie, damagePerTick, burnDuration, tickInterval) {
@@ -7362,7 +7392,22 @@
         this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       }
       zombie.hp -= damage;
-      this.playSfx(crit ? "crit" : "hit", crit ? 1.15 : 0.85);
+      const hitSfx = crit
+        ? "crit"
+        : {
+          "projectile-shock": "shock_hit",
+          "projectile-nail": "nailgun_hit"
+        }[hitType] || "hit";
+      if (!(hitType === "projectile-firebomb" && options.showHitEffect === false)) {
+        const hitIntensity = crit
+          ? 1.15
+          : hitSfx === "shock_hit"
+            ? 0.82
+            : hitSfx === "nailgun_hit"
+              ? 0.78
+              : 0.85;
+        this.playSfx(hitSfx, hitIntensity);
+      }
       const suppressKnockback =
         options.applyKnockback === false ||
         hitType === "projectile-shock" ||
