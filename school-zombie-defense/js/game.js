@@ -540,6 +540,8 @@
   const RECRUIT_UNLOCK_LEVELS = [3, 6, 9, 12];
   const RECRUIT_CUTIN_HOLD_MS = 3200;
   const getUnlockedRecruitSlots = (level) => RECRUIT_UNLOCK_LEVELS.filter((unlockLevel) => level >= unlockLevel).length;
+  const ZOMBIE_BASE_DISPLAY_HEIGHT = 170;
+  const ZOMBIE_ELITE_DISPLAY_HEIGHT = 220;
   const ZOMBIE_TYPE_CONFIGS = {
     normal: { id: "normal", hpScale: 1, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 1, animRate: 6.8, reward: 1 },
     student: { id: "student", hpScale: 0.86, speedScale: 1.16, sizeScale: 0.9, attackScale: 0.9, hitRadiusScale: 0.9, knockbackScale: 1.08, animRate: 7.7, reward: 1 },
@@ -5251,8 +5253,8 @@
         const variant = Math.floor(rand(0, 4));
         const frame = Math.floor(rand(0, 4));
         const typeConfig = pickZombieType(this.level, eliteRoll);
-        const baseDisplayHeight = eliteRoll ? rand(202, 238) : rand(152, 186);
-        const displayHeight = baseDisplayHeight * typeConfig.sizeScale;
+        const baseDisplayHeight = eliteRoll ? ZOMBIE_ELITE_DISPLAY_HEIGHT : ZOMBIE_BASE_DISPLAY_HEIGHT;
+        const displayHeight = Math.round(baseDisplayHeight * typeConfig.sizeScale);
         const displayWidth = displayHeight;
         const levelCurve = Math.pow(this.level, ZOMBIE_LEVEL_HP_EXPONENT);
         const lateLevelBonus = Math.max(0, this.level - 10);
