@@ -123,6 +123,9 @@
   const ARROW_EMBED_DURATION = 2.8;
   const SHOCK_STUN_TINT = 0xbdfaff;
   const DEFAULT_SHOCK_STUN_DURATION = 2;
+  const SHOCK_STUN_SKILL_GAIN = 0.25;
+  const SHOCK_STUN_SKILL_MAX = 4;
+  const SHOCK_STUN_SKILL_OFFER_LIMIT = SHOCK_STUN_SKILL_MAX - SHOCK_STUN_SKILL_GAIN;
   const FIRE_ZONE_VISUAL_DURATION_MULTIPLIER = 3.125;
   const FIRE_ZONE_VISUAL_SIZE_MULTIPLIER = 1.5;
   const FIRE_ZONE_MIN_BURN_DURATION = 0.65;
@@ -466,7 +469,7 @@
       { id: "f_throw", title: "투척 훈련", subtitle: "화염병 전술", part: "투척 자세와 적중 피해 강화", icon: "skill-barrage" }
     ],
     g: [
-      { id: "g_voltage", title: "고전압 배터리", subtitle: "전격 부품", part: "전격 피해와 둔화 지속 강화", icon: "skill-frost" },
+      { id: "g_voltage", title: "고전압 배터리", subtitle: "전격 부품", part: "전격 피해와 스턴 지속 강화", icon: "skill-shock-amplifier" },
       { id: "g_chain", title: "전도 코일", subtitle: "전격 부품", part: "연쇄 전도 반경과 횟수 보정", icon: "skill-pierce" },
       { id: "g_control", title: "절연 손잡이", subtitle: "전격 제어", part: "방전 간격과 급소 방전 안정화", icon: "skill-barrage" }
     ],
@@ -670,7 +673,7 @@
       return ZOMBIE_TYPE_CONFIGS.elite;
     }
     const entries = [
-      { type: ZOMBIE_TYPE_CONFIGS.normal, weight: Math.max(48, 100 - Math.max(0, level - 5) * 4) }
+      { type: ZOMBIE_TYPE_CONFIGS.normal, weight: Math.max(68, 100 - Math.max(0, level - 5) * 2.4) }
     ];
     if (level >= 2) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.student, weight: Math.min(34, 12 + level * 1.7) });
@@ -912,7 +915,7 @@
         portrait: "avatar-shock",
         tag: "전기",
         title: "전기 지원 합류",
-        desc: "전격 지원 사격\n연쇄/둔화 성장 해금",
+        desc: "전격 지원 사격\n연쇄/스턴 성장 해금",
         line: "전원 올렸어요. 복도는 제 쪽입니다."
       }
     },
@@ -4630,7 +4633,7 @@
       if (id === "f_burn") return `직격 +${percent(level * 2.6)} · 구역피해 +${percent(level * 0.6)}`;
       if (id === "f_area") return `반경 +${Math.round(level * 1.5)} · 지속 +${(level * 0.05).toFixed(2)}초`;
       if (id === "f_throw") return `피해 +${percent(level * 1.2)}`;
-      if (id === "g_voltage") return `피해 +${percent(level * 2.2)} · 둔화 +${(level * 0.03).toFixed(2)}초`;
+      if (id === "g_voltage") return `피해 +${percent(level * 2.2)} · 스턴 +${(level * 0.03).toFixed(2)}초`;
       if (id === "g_chain") return `전도 반경 +${Math.round(level * 2)} · 연쇄 +${Math.floor(level / 10)}`;
       if (id === "g_control") return `공격 간격 -${percent(level * 0.6)} · 치명 +${percent(level * 0.35)}`;
       if (id === "h_turret") return `터렛 출력 +${percent(level * 3.5)} · 속도 +${percent(level * 1.8)}`;
@@ -5026,7 +5029,7 @@
           const chain = this.getMetaUpgradeLevel("g_chain");
           const control = this.getMetaUpgradeLevel("g_control");
           defender.damageBoost *= 1 + voltage * 0.022;
-          defender.slowDuration += voltage * 0.03;
+          defender.stunDuration += voltage * 0.03;
           defender.chainDamageScale += voltage * 0.006;
           defender.chainRadius += chain * 2;
           defender.chainJumps += Math.floor(chain / 10);
@@ -8548,16 +8551,17 @@
       });
       add("g", {
         id: "g-voltage",
-        icon: "skill-frost",
+        icon: "skill-shock-amplifier",
         tag: "전기",
         title: "고전압 코일",
-        desc: "전격탄이 더 오래 물고 늘어져\n전진 속도를 늦춥니다.",
-        stat: `둔화 ${this.formatSeconds(shock.slowDuration)} → ${this.formatSeconds(shock.slowDuration + 0.35)}\n연쇄 피해 ${this.formatPercent(shock.chainDamageScale)} → ${this.formatPercent(shock.chainDamageScale + 0.05)}`,
+        desc: "전격탄이 더 오래 붙잡아\n스턴 시간을 늘립니다.",
+        stat: `스턴 ${this.formatSeconds(shock.stunDuration)} → ${this.formatSeconds(Math.min(SHOCK_STUN_SKILL_MAX, shock.stunDuration + SHOCK_STUN_SKILL_GAIN))}\n연쇄 피해 ${this.formatPercent(shock.chainDamageScale)} → ${this.formatPercent(shock.chainDamageScale + 0.05)}`,
+        available: shock.stunDuration < SHOCK_STUN_SKILL_OFFER_LIMIT,
         accent: SKILL_ACCENTS.shock,
         accentHex: SKILL_ACCENT_HEX.shock,
         apply: () => {
           const defender = this.getDefenderById("g");
-          defender.slowDuration += 0.35;
+          defender.stunDuration = Math.min(SHOCK_STUN_SKILL_MAX, defender.stunDuration + SHOCK_STUN_SKILL_GAIN);
           defender.chainDamageScale += 0.05;
           defender.damageBoost *= 1.06;
         }
