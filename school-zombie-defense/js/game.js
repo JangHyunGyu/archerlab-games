@@ -332,6 +332,7 @@
     rifle: "assets/sounds/sfx/rifle.mp3",
     sniper: "assets/sounds/sfx/sniper.mp3",
     rocket: "assets/sounds/sfx/rocket.mp3",
+    grenade_fire: "assets/sounds/sfx/grenade_fire.mp3",
     arrow: "assets/sounds/sfx/arrow.mp3",
     firebomb_fire: "assets/sounds/sfx/firebomb_fire.mp3",
     firebomb_hit: "assets/sounds/sfx/firebomb_hit.mp3",
@@ -355,6 +356,7 @@
     "rifle",
     "sniper",
     "rocket",
+    "grenade_fire",
     "arrow",
     "firebomb_fire",
     "firebomb_hit",
@@ -370,6 +372,7 @@
     rifle: 1,
     sniper: 1.18,
     rocket: 1,
+    grenade_fire: 0.72,
     arrow: 1.18,
     firebomb_fire: 0.74,
     shock_fire: 0.82,
@@ -3523,6 +3526,7 @@
         rifle: 0.032,
         sniper: 0.08,
         rocket: 0.12,
+        grenade_fire: 0.12,
         arrow: 0.06,
         firebomb_fire: 0.16,
         firebomb_hit: 0.18,
@@ -5940,7 +5944,7 @@
       sprite.arcT = 0;
       const duration = clamp(distance / 1.55, 330, 620) * flightTimeScale;
       this.createMuzzle(startX, startY, launchAngle, defender.projectile);
-      this.playSfx(isFirebomb ? "firebomb_fire" : "rocket", isFirebomb ? 0.74 : 0.58);
+      this.playSfx(isFirebomb ? "firebomb_fire" : "grenade_fire", isFirebomb ? 0.74 : 0.72);
       this.tweens.add({
         targets: sprite,
         arcT: 1,
