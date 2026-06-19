@@ -425,7 +425,7 @@
       name: "전기 지원",
       weapon: "전격 제어",
       portrait: "avatar-shock",
-      icon: "skill-frost",
+      icon: "skill-shock-amplifier",
       accent: 0xff9ad6
     },
     {
@@ -904,7 +904,7 @@
       critChance: 0.1,
       critMultiplier: 1.6,
       pierce: 0,
-      slowDuration: 0.45,
+      slowDuration: 0,
       stunDuration: DEFAULT_SHOCK_STUN_DURATION,
       chainJumps: 1,
       chainRadius: 118,
