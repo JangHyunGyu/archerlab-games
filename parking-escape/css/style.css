@@ -973,11 +973,35 @@ h2 {
   border-radius: 14px;
 }
 
+.rank-submit-row.is-submitting #submit-rank-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rank-submit-row.is-submitting #submit-rank-btn::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 2px solid rgba(229, 251, 255, 0.34);
+  border-top-color: #ffffff;
+  border-radius: 999px;
+  filter: drop-shadow(0 0 6px rgba(126, 239, 255, 0.52));
+  animation: rankSubmitSpin 0.72s linear infinite;
+}
+
 .submit-status {
   min-height: 18px;
   color: #fff3c9;
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.rank-submit-row.is-submitting .submit-status {
+  color: #bdf8ff;
+  text-shadow: 0 0 10px rgba(126, 239, 255, 0.36);
 }
 
 .rank-submit-progress {
@@ -1002,6 +1026,12 @@ h2 {
 
 .rank-submit-row.is-submitting input {
   opacity: 0.68;
+}
+
+@keyframes rankSubmitSpin {
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes rankSubmitBar {
