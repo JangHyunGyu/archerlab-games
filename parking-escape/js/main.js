@@ -998,6 +998,7 @@
 
     async handleSubmitRank() {
       if (!this.lastClear) return;
+      if (dom.submitRank.disabled) return;
       const name = (dom.nickname.value || "").trim().slice(0, 20);
       if (!name) {
         dom.submitStatus.textContent = "닉네임을 입력하세요";
@@ -1036,12 +1037,17 @@
         dom.submitRank.disabled = true;
         dom.skipRank.disabled = true;
         dom.nickname.disabled = true;
+        dom.submitRank.textContent = "완료";
         dom.submitStatus.textContent = result.rank ? `등록 완료 #${result.rank}` : "등록 완료";
         this.playTone("submit");
         this.returnToMenuAfterRank();
       } catch (error) {
         console.warn("[Parking] rank submit failed:", error.message);
-        this.setRankSubmitLoading(false, "등록 실패. 다시 시도하거나 Skip하세요");
+        const syncFailed = error.message.includes("rank score sync");
+        this.setRankSubmitLoading(
+          false,
+          syncFailed ? "기록 동기화가 끊겨 등록하지 못했습니다" : "등록 실패. 다시 시도하거나 Skip하세요"
+        );
       }
     }
 
@@ -1057,8 +1063,13 @@
 
     setRankSubmitLoading(isLoading, message) {
       dom.rankSubmitRow.classList.toggle("is-submitting", isLoading);
-      if (dom.submitProgress) dom.submitProgress.classList.toggle("hidden", !isLoading);
+      dom.rankSubmitRow.setAttribute("aria-busy", isLoading ? "true" : "false");
+      if (dom.submitProgress) {
+        dom.submitProgress.classList.toggle("hidden", !isLoading);
+        dom.submitProgress.setAttribute("aria-hidden", isLoading ? "false" : "true");
+      }
       dom.submitRank.disabled = isLoading;
+      dom.submitRank.textContent = isLoading ? "등록 중" : "등록";
       dom.skipRank.disabled = isLoading;
       dom.nickname.disabled = isLoading;
       if (message !== undefined) dom.submitStatus.textContent = message;
