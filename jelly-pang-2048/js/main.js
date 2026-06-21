@@ -43,10 +43,6 @@
     messageCopy: $("message-copy"),
     keepPlaying: $("keep-playing"),
     tryAgain: $("try-again"),
-    hammer: $("hammer-btn"),
-    hammerMeter: $("hammer-meter"),
-    shuffle: $("shuffle-btn"),
-    shuffleMeter: $("shuffle-meter"),
   };
 
   let app;
@@ -59,10 +55,7 @@
   let nextTileId = 1;
   let score = 0;
   let bestScore = Number(localStorage.getItem(STORAGE.best) || 0);
-  let hammerCharge = 34;
-  let shuffleCharge = 22;
   let locked = false;
-  let hammerMode = false;
   let won = false;
   let keepPlaying = false;
   let pointerStart = null;
@@ -169,23 +162,17 @@
       keepPlaying = true;
       hideModal();
     });
-    refs.hammer.addEventListener("click", toggleHammer);
-    refs.shuffle.addEventListener("click", shuffleBoard);
 
     window.addEventListener("blur", () => {
       pointerStart = null;
-      if (hammerMode) disarmHammer();
     });
   }
 
   function newGame() {
     locked = false;
-    hammerMode = false;
     won = false;
     keepPlaying = false;
     score = 0;
-    hammerCharge = 34;
-    shuffleCharge = 22;
     grid = emptyGrid();
     nextTileId = 1;
     visuals.forEach((visual) => visual.container.destroy({ children: true }));
@@ -205,7 +192,6 @@
       spawnRandomTile(true);
       hideGuide();
     }
-    updatePowers();
   }
 
   function emptyGrid() {
