@@ -6,7 +6,6 @@
   const STAGE = 900;
   const IS_TOUCH_DEVICE = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
   const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, IS_TOUCH_DEVICE ? 1.2 : 1.5);
-  const FX_DENSITY = IS_TOUCH_DEVICE ? 0.48 : 0.7;
   const MAX_FX_CHILDREN = IS_TOUCH_DEVICE ? 72 : 120;
   const BOARD = {
     x: 78,
@@ -424,10 +423,6 @@
   function destroyLayerChildren(layer) {
     if (!layer) return;
     layer.removeChildren().forEach((child) => destroyPixiObject(child));
-  }
-
-  function fxCount(base, intensity = 1, minimum = 1) {
-    return Math.max(minimum, Math.round(base * intensity * FX_DENSITY));
   }
 
   function addFxChild(child) {
@@ -994,31 +989,6 @@
     gsap.fromTo(button, { scale: 0.96 }, { scale: 1, duration: 0.34, ease: "elastic.out(1, 0.35)" });
   }
 
-  function createBurst(x, y, color, count = 14) {
-    for (let i = 0; i < count; i++) {
-      const dot = new PIXI.Graphics();
-      const radius = 5 + Math.random() * 8;
-      dot.beginFill(i % 5 === 0 ? 0xffffff : color, 0.96);
-      dot.drawCircle(0, 0, radius);
-      dot.endFill();
-      dot.x = x;
-      dot.y = y;
-      addFxChild(dot);
-
-      const angle = Math.random() * Math.PI * 2;
-      const distance = BOARD.cell * (0.22 + Math.random() * 0.56);
-      gsap.to(dot, {
-        x: x + Math.cos(angle) * distance,
-        y: y + Math.sin(angle) * distance,
-        alpha: 0,
-        duration: 0.45 + Math.random() * 0.24,
-        ease: "power2.out",
-        onComplete: () => destroyPixiObject(dot),
-      });
-      gsap.to(dot.scale, { x: 0.25, y: 0.25, duration: 0.6, ease: "sine.in" });
-    }
-  }
-
   function createMergeWow(x, y, rank, tileId) {
     const color = RANK_COLORS[rank % RANK_COLORS.length];
     const nextColor = RANK_COLORS[(rank + 2) % RANK_COLORS.length];
@@ -1180,111 +1150,6 @@
         onComplete: () => destroyPixiObject(wave),
       });
     });
-  }
-
-  function createLightRays(x, y, color, nextColor, intensity) {
-    const count = fxCount(7, intensity, 4);
-    for (let i = 0; i < count; i++) {
-      const ray = new PIXI.Graphics();
-      const length = BOARD.cell * (0.42 + Math.random() * 0.3);
-      ray.lineStyle(7 + Math.random() * 5, i % 2 ? nextColor : color, 0.58);
-      ray.moveTo(BOARD.cell * 0.16, 0);
-      ray.lineTo(length, 0);
-      ray.x = x;
-      ray.y = y;
-      ray.rotation = (Math.PI * 2 * i) / count + Math.random() * 0.16;
-      ray.alpha = 0;
-      ray.scale.set(0.55, 0.35);
-      addFxChild(ray);
-      gsap.to(ray, { alpha: 0.95, duration: 0.08, ease: "sine.out" });
-      gsap.to(ray.scale, { x: 1.25, y: 1, duration: 0.26, ease: "power2.out" });
-      gsap.to(ray, {
-        alpha: 0,
-        duration: 0.32,
-        delay: 0.12,
-        ease: "sine.in",
-        onComplete: () => destroyPixiObject(ray),
-      });
-    }
-  }
-
-  function createSparkles(x, y, color, intensity) {
-    const count = fxCount(9, intensity, 5);
-    for (let i = 0; i < count; i++) {
-      const sparkle = new PIXI.Graphics();
-      drawSparkle(sparkle, 9 + Math.random() * 8, i % 3 === 0 ? 0xffffff : color);
-      sparkle.x = x;
-      sparkle.y = y;
-      sparkle.alpha = 0;
-      sparkle.rotation = Math.random() * Math.PI;
-      sparkle.scale.set(0.25);
-      addFxChild(sparkle);
-
-      const angle = Math.random() * Math.PI * 2;
-      const distance = BOARD.cell * (0.38 + Math.random() * 0.62);
-      gsap.to(sparkle, {
-        x: x + Math.cos(angle) * distance,
-        y: y + Math.sin(angle) * distance,
-        rotation: sparkle.rotation + Math.PI * (0.7 + Math.random()),
-        alpha: 1,
-        duration: 0.2,
-        ease: "power2.out",
-      });
-      gsap.to(sparkle.scale, { x: 1, y: 1, duration: 0.22, ease: "back.out(2.4)" });
-      gsap.to(sparkle, {
-        alpha: 0,
-        duration: 0.38,
-        delay: 0.22,
-        ease: "sine.in",
-        onComplete: () => destroyPixiObject(sparkle),
-      });
-      gsap.to(sparkle.scale, { x: 0.2, y: 0.2, duration: 0.34, delay: 0.26, ease: "sine.in" });
-    }
-  }
-
-  function drawSparkle(graphics, radius, color) {
-    graphics.beginFill(color, 0.94);
-    graphics.moveTo(0, -radius);
-    graphics.lineTo(radius * 0.28, -radius * 0.28);
-    graphics.lineTo(radius, 0);
-    graphics.lineTo(radius * 0.28, radius * 0.28);
-    graphics.lineTo(0, radius);
-    graphics.lineTo(-radius * 0.28, radius * 0.28);
-    graphics.lineTo(-radius, 0);
-    graphics.lineTo(-radius * 0.28, -radius * 0.28);
-    graphics.lineTo(0, -radius);
-    graphics.endFill();
-  }
-
-  function createJellyDrops(x, y, color, nextColor, intensity) {
-    const count = fxCount(7, intensity, 4);
-    for (let i = 0; i < count; i++) {
-      const drop = new PIXI.Graphics();
-      const radius = 7 + Math.random() * 8;
-      drop.beginFill(i % 2 ? nextColor : color, 0.88);
-      drop.drawCircle(0, 0, radius);
-      drop.endFill();
-      drop.beginFill(0xffffff, 0.45);
-      drop.drawCircle(-radius * 0.32, -radius * 0.32, radius * 0.28);
-      drop.endFill();
-      drop.x = x;
-      drop.y = y;
-      drop.scale.set(0.5);
-      addFxChild(drop);
-
-      const angle = Math.random() * Math.PI * 2;
-      const distance = BOARD.cell * (0.25 + Math.random() * 0.58);
-      gsap.to(drop, {
-        x: x + Math.cos(angle) * distance,
-        y: y + Math.sin(angle) * distance + BOARD.cell * 0.12,
-        alpha: 0,
-        duration: 0.54 + Math.random() * 0.2,
-        ease: "power2.out",
-        onComplete: () => destroyPixiObject(drop),
-      });
-      gsap.to(drop.scale, { x: 1, y: 0.72, duration: 0.18, ease: "sine.out" });
-      gsap.to(drop.scale, { x: 0.22, y: 0.22, duration: 0.38, delay: 0.22, ease: "sine.in" });
-    }
   }
 
   function floatText(text, x, y) {
