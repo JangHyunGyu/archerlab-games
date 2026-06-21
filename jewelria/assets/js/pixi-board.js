@@ -756,10 +756,8 @@ export class PixiBoard {
 
   // ─── 애니메이션 엔진 ───
   _motionEnabled() {
-    return Boolean(
-      window.gsap &&
-      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    );
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return Boolean(window.gsap && !reduced);
   }
 
   _motionEase(ease) {

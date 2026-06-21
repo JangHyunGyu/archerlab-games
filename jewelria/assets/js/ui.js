@@ -48,10 +48,8 @@ export class UI {
   }
 
   _motionEnabled() {
-    return Boolean(
-      window.gsap &&
-      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    );
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return Boolean(window.gsap && !reduced);
   }
 
   _animateScreen(screenEl, screen) {
