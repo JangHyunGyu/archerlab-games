@@ -707,8 +707,8 @@ h1 {
 
 .swipe-pad {
   position: relative;
-  height: clamp(72px, 10dvh, 88px);
-  width: min(168px, 44vw);
+  height: clamp(78px, 10.5dvh, 92px);
+  width: min(174px, 45vw);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
@@ -721,7 +721,7 @@ h1 {
   position: absolute;
   inset: 17% 21%;
   border: 1px solid rgba(255, 255, 255, 0.64);
-  border-radius: 8px;
+  border-radius: 10px;
   background:
     radial-gradient(circle at 38% 30%, rgba(255, 255, 255, 0.86), transparent 25%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.44), rgba(72, 189, 245, 0.16));
@@ -757,7 +757,7 @@ h1 {
   display: grid;
   place-items: center;
   border: 1px solid rgba(255,255,255,0.8);
-  border-radius: 8px;
+  border-radius: 10px;
   color: #314052;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.56)),
@@ -874,14 +874,21 @@ h1 {
   }
 
   .swipe-pad {
-    width: 136px;
-    height: 70px;
+    width: 150px;
+    height: 78px;
     gap: 4px;
   }
 
   .swipe-pad::after {
     width: 18px;
     height: 18px;
+  }
+}
+
+@media (max-height: 640px) {
+  .swipe-pad {
+    width: 138px;
+    height: 72px;
   }
 }
 
