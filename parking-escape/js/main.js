@@ -105,6 +105,189 @@
     console.warn("[Parking] asset load failed; using vector fallback.", error);
   }
 
+  function motionEnabled() {
+    return Boolean(
+      window.gsap &&
+      !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  function animatePanelIn(modal) {
+    if (!motionEnabled() || !modal) return;
+    const gsap = window.gsap;
+    const panel = modal.querySelector(".modal-panel");
+    const targets = [modal, panel].filter(Boolean);
+    gsap.killTweensOf(targets);
+    gsap.set(modal, { clearProps: "opacity,visibility" });
+    gsap.fromTo(modal, { autoAlpha: 0 }, {
+      autoAlpha: 1,
+      duration: 0.18,
+      ease: "power2.out",
+      clearProps: "opacity,visibility",
+    });
+    if (panel) {
+      gsap.fromTo(panel, {
+        autoAlpha: 0,
+        y: 28,
+        scale: 0.94,
+        filter: "brightness(1.22)",
+      }, {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        filter: "brightness(1)",
+        duration: 0.36,
+        ease: "back.out(1.35)",
+        clearProps: "opacity,visibility,transform,filter",
+      });
+    }
+  }
+
+  function animatePanelOut(modal, onComplete) {
+    if (!motionEnabled() || !modal) {
+      onComplete?.();
+      return;
+    }
+    const gsap = window.gsap;
+    const panel = modal.querySelector(".modal-panel");
+    const targets = [modal, panel].filter(Boolean);
+    gsap.killTweensOf(targets);
+    if (panel) {
+      gsap.to(panel, {
+        autoAlpha: 0,
+        y: 12,
+        scale: 0.97,
+        duration: 0.14,
+        ease: "power2.in",
+      });
+    }
+    gsap.to(modal, {
+      autoAlpha: 0,
+      duration: 0.16,
+      ease: "power2.in",
+      onComplete: () => {
+        onComplete?.();
+        gsap.set(targets, { clearProps: "opacity,visibility,transform" });
+      },
+    });
+  }
+
+  function animateMenuIn() {
+    if (!motionEnabled() || !dom.menu) return;
+    const gsap = window.gsap;
+    const content = dom.menu.querySelector(".menu-content");
+    const laneLines = dom.menu.querySelectorAll(".menu-lane span");
+    const controls = dom.menu.querySelector(".menu-control-bar");
+    gsap.fromTo(content, {
+      autoAlpha: 0,
+      y: 22,
+      scale: 0.985,
+    }, {
+      autoAlpha: 1,
+      y: 0,
+      scale: 1,
+      duration: 0.46,
+      ease: "power3.out",
+      clearProps: "opacity,visibility,transform",
+    });
+    if (laneLines.length) {
+      gsap.fromTo(laneLines, { scaleX: 0, transformOrigin: "50% 50%" }, {
+        scaleX: 1,
+        duration: 0.34,
+        ease: "power3.out",
+        stagger: 0.07,
+        clearProps: "transform,transformOrigin",
+      });
+    }
+    if (controls) {
+      gsap.fromTo(controls.children, { autoAlpha: 0, y: 10 }, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.24,
+        ease: "power3.out",
+        stagger: 0.045,
+        clearProps: "opacity,visibility,transform",
+      });
+    }
+  }
+
+  function animateHudIn() {
+    if (!motionEnabled() || !dom.hud) return;
+    window.gsap.fromTo(dom.hud, {
+      autoAlpha: 0,
+      xPercent: -50,
+      y: -16,
+      scale: 0.98,
+    }, {
+      autoAlpha: 1,
+      xPercent: -50,
+      y: 0,
+      scale: 1,
+      duration: 0.34,
+      ease: "power3.out",
+      clearProps: "opacity,visibility,transform",
+    });
+  }
+
+  function animateLoadingIn() {
+    if (!motionEnabled() || !dom.loading) return;
+    const panel = dom.loading.querySelector(".loading-panel");
+    window.gsap.fromTo(panel || dom.loading, {
+      autoAlpha: 0,
+      y: 20,
+      scale: 0.94,
+    }, {
+      autoAlpha: 1,
+      y: 0,
+      scale: 1,
+      duration: 0.3,
+      ease: "back.out(1.4)",
+      clearProps: "opacity,visibility,transform",
+    });
+  }
+
+  function animateRankRows() {
+    if (!motionEnabled() || !dom.rankContent) return;
+    const rows = dom.rankContent.querySelectorAll(".rank-row");
+    if (!rows.length) return;
+    window.gsap.fromTo(rows, {
+      autoAlpha: 0,
+      x: -12,
+      scale: 0.985,
+    }, {
+      autoAlpha: 1,
+      x: 0,
+      scale: 1,
+      duration: 0.25,
+      ease: "power3.out",
+      stagger: 0.035,
+      clearProps: "opacity,visibility,transform",
+    });
+  }
+
+  function countText(el, value, render = v => String(v), duration = 0.52) {
+    if (!el) return;
+    const target = Number(value) || 0;
+    if (!motionEnabled()) {
+      el.textContent = render(target);
+      return;
+    }
+    const state = { value: 0 };
+    el._countTween?.kill();
+    el._countTween = window.gsap.to(state, {
+      value: target,
+      duration,
+      ease: "power3.out",
+      onUpdate: () => {
+        el.textContent = render(Math.round(state.value));
+      },
+      onComplete: () => {
+        el.textContent = render(target);
+        el._countTween = null;
+      },
+    });
+  }
+
   class Random {
     constructor(seed) {
       this.seed = seed >>> 0;
@@ -145,6 +328,7 @@
       this.vehicles = [];
       this.vehicleMap = new Map();
       this.tweens = [];
+      this.gsapTweens = new Set();
       this.mode = "menu";
       this.animating = false;
       this.drag = null;
@@ -672,7 +856,19 @@
 
     cancelTweens({ clearFx = false } = {}) {
       this.tweens = [];
+      for (const tween of this.gsapTweens) tween.kill();
+      this.gsapTweens.clear();
       if (clearFx && this.fxLayer) clearLayer(this.fxLayer);
+    }
+
+    trackGsapTween(tween) {
+      if (!tween) return tween;
+      this.gsapTweens.add(tween);
+      return tween;
+    }
+
+    releaseGsapTween(tween) {
+      this.gsapTweens.delete(tween);
     }
 
     moveDrag(event) {
