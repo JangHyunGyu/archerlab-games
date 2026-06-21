@@ -21,6 +21,12 @@
     { length: 12 },
     (_, rank) => `assets/images/jellies/jelly-${String(rank).padStart(2, "0")}.png`
   );
+  const EFFECT_ASSETS = {
+    mergePop: "assets/images/effects/merge-pop.png",
+    sparkleStar: "assets/images/effects/sparkle-star.png",
+    jellyDrop: "assets/images/effects/jelly-drop.png",
+    crownBurst: "assets/images/effects/crown-burst.png",
+  };
   const SOUND_ASSETS = {
     slide: "assets/sounds/jelly-slide.mp3",
     merge: "assets/sounds/jelly-merge.mp3",
@@ -105,6 +111,7 @@
   let tileLayer;
   let fxLayer;
   let textures = [];
+  let effectTextures = {};
   let grid = emptyGrid();
   let visuals = new Map();
   let nextTileId = 1;
@@ -231,7 +238,13 @@
   }
 
   async function loadTextures() {
-    textures = await Promise.all(JELLY_ASSETS.map((url) => PIXI.Assets.load(url)));
+    const effectEntries = Object.entries(EFFECT_ASSETS);
+    const [jellyTextures, loadedEffects] = await Promise.all([
+      Promise.all(JELLY_ASSETS.map((url) => PIXI.Assets.load(url))),
+      Promise.all(effectEntries.map(async ([key, url]) => [key, await PIXI.Assets.load(url)])),
+    ]);
+    textures = jellyTextures;
+    effectTextures = Object.fromEntries(loadedEffects);
   }
 
   function bindInput() {
@@ -429,6 +442,20 @@
     for (let i = 0; i < overflow; i++) {
       destroyPixiObject(fxLayer.children[0]);
     }
+  }
+
+  function createFxSprite(type, x, y, { scale = 1, alpha = 1, rotation = 0 } = {}) {
+    const texture = effectTextures[type];
+    if (!texture) return null;
+    const sprite = new PIXI.Sprite(texture);
+    sprite.anchor.set(0.5);
+    sprite.x = x;
+    sprite.y = y;
+    sprite.alpha = alpha;
+    sprite.rotation = rotation;
+    sprite.scale.set(scale);
+    addFxChild(sprite);
+    return sprite;
   }
 
   function move(dir) {
@@ -1001,10 +1028,96 @@
     pulseMergeTile(visual);
     pulseStageFrame(intensity);
     createShockwaves(x, y, color, nextColor, intensity);
-    createLightRays(x, y, color, nextColor, intensity);
-    createSparkles(x, y, color, intensity);
-    createJellyDrops(x, y, color, nextColor, intensity);
-    createBurst(x, y, color, fxCount(10, intensity, 5));
+    createSpriteMergeFx(x, y, rank, intensity);
+  }
+
+  function createSpriteMergeFx(x, y, rank, intensity) {
+    const base = BOARD.cell / 512;
+    const pop = createFxSprite("mergePop", x, y, {
+      scale: base * 0.42,
+      alpha: 0.95,
+      rotation: (Math.random() - 0.5) * 0.18,
+    });
+    if (pop) {
+      const targetScale = base * (1.32 + intensity * 0.18);
+      gsap.to(pop.scale, { x: targetScale, y: targetScale, duration: 0.42, ease: "power3.out" });
+      gsap.to(pop, {
+        alpha: 0,
+        rotation: pop.rotation + 0.12,
+        duration: 0.5,
+        delay: 0.1,
+        ease: "sine.in",
+        onComplete: () => destroyPixiObject(pop),
+      });
+    }
+
+    const star = createFxSprite("sparkleStar", x, y, {
+      scale: base * (0.58 + intensity * 0.12),
+      alpha: 0.9,
+      rotation: Math.random() * Math.PI,
+    });
+    if (star) {
+      gsap.fromTo(star.scale, { x: base * 0.25, y: base * 0.25 }, {
+        x: base * (0.78 + intensity * 0.12),
+        y: base * (0.78 + intensity * 0.12),
+        duration: 0.34,
+        ease: "back.out(2)",
+      });
+      gsap.to(star, {
+        alpha: 0,
+        rotation: star.rotation + 0.65,
+        duration: 0.62,
+        delay: 0.18,
+        ease: "sine.in",
+        onComplete: () => destroyPixiObject(star),
+      });
+    }
+
+    const drop = createFxSprite("jellyDrop", x + BOARD.cell * 0.1, y + BOARD.cell * 0.08, {
+      scale: base * (0.46 + intensity * 0.08),
+      alpha: 0.82,
+      rotation: (Math.random() - 0.5) * 0.55,
+    });
+    if (drop) {
+      gsap.to(drop.scale, {
+        x: base * (0.72 + intensity * 0.08),
+        y: base * (0.72 + intensity * 0.08),
+        duration: 0.3,
+        ease: "power2.out",
+      });
+      gsap.to(drop, {
+        x: drop.x + BOARD.cell * 0.08,
+        y: drop.y + BOARD.cell * 0.1,
+        alpha: 0,
+        duration: 0.52,
+        delay: 0.12,
+        ease: "sine.in",
+        onComplete: () => destroyPixiObject(drop),
+      });
+    }
+
+    if (rank >= TARGET_RANK) {
+      const crown = createFxSprite("crownBurst", x, y, {
+        scale: base * 0.52,
+        alpha: 0.95,
+        rotation: 0,
+      });
+      if (crown) {
+        gsap.to(crown.scale, {
+          x: base * 1.16,
+          y: base * 1.16,
+          duration: 0.58,
+          ease: "power3.out",
+        });
+        gsap.to(crown, {
+          alpha: 0,
+          duration: 0.72,
+          delay: 0.18,
+          ease: "sine.in",
+          onComplete: () => destroyPixiObject(crown),
+        });
+      }
+    }
   }
 
   function pulseMergeTile(visual) {
