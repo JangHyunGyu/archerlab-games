@@ -149,7 +149,7 @@
     prepareSounds();
     await loadTextures();
     bindInput();
-    refs.best.textContent = formatScore(bestScore);
+    if (refs.best) refs.best.textContent = formatScore(bestScore);
     showTitle();
   }
 
@@ -512,8 +512,10 @@
     if (score > bestScore) {
       bestScore = score;
       localStorage.setItem(STORAGE.best, String(bestScore));
-      refs.best.textContent = formatScore(bestScore);
-      gsap.fromTo(refs.best, { scale: 1.18 }, { scale: 1, duration: 0.58, ease: "elastic.out(1, 0.34)" });
+      if (refs.best) {
+        refs.best.textContent = formatScore(bestScore);
+        gsap.fromTo(refs.best, { scale: 1.18 }, { scale: 1, duration: 0.58, ease: "elastic.out(1, 0.34)" });
+      }
       if (score > 0) celebrate(16);
     }
 
