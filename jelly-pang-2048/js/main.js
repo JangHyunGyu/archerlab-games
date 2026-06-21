@@ -10,7 +10,10 @@
   BOARD.cell = (BOARD.size - BOARD.gap * (SIZE - 1)) / SIZE;
 
   const TARGET_RANK = 10; // 2 -> rank 0, 2048 -> rank 10
-  const SPRITE_URL = "assets/images/jelly-sprites.png";
+  const JELLY_ASSETS = Array.from(
+    { length: 12 },
+    (_, rank) => `assets/images/jellies/jelly-${String(rank).padStart(2, "0")}.png`
+  );
   const STORAGE = {
     best: "jelly-pang-2048-best",
     guide: "jelly-pang-2048-guide-seen",
@@ -103,15 +106,7 @@
   }
 
   async function loadTextures() {
-    const sheet = await PIXI.Assets.load(SPRITE_URL);
-    const base = sheet.baseTexture;
-    const cellW = 313;
-    const cellH = 418;
-    textures = Array.from({ length: 12 }, (_, rank) => {
-      const col = rank % 4;
-      const row = Math.floor(rank / 4);
-      return new PIXI.Texture(base, new PIXI.Rectangle(col * cellW, row * cellH, cellW, cellH));
-    });
+    textures = await Promise.all(JELLY_ASSETS.map((url) => PIXI.Assets.load(url)));
   }
 
   function bindInput() {
@@ -447,9 +442,9 @@
 
     const sprite = new PIXI.Sprite(textures[Math.min(tile.rank, textures.length - 1)]);
     sprite.anchor.set(0.5);
-    const fit = Math.min((BOARD.cell * 1.15) / sprite.texture.width, (BOARD.cell * 1.08) / sprite.texture.height);
+    const fit = Math.min((BOARD.cell * 0.98) / sprite.texture.width, (BOARD.cell * 0.98) / sprite.texture.height);
     sprite.scale.set(fit);
-    sprite.y = -BOARD.cell * 0.01;
+    sprite.y = BOARD.cell * 0.06;
 
     const shine = new PIXI.Graphics();
     shine.beginFill(0xffffff, 0.3);
@@ -481,33 +476,34 @@
 
   function createValueBadge(rank) {
     const value = String(tileValue(rank));
-    const fontSize = value.length >= 4 ? 25 : value.length === 3 ? 30 : 35;
+    const fontSize = value.length >= 4 ? 17 : value.length === 3 ? 19 : 22;
     const text = new PIXI.Text(value, {
       fontFamily: "Pretendard, Arial, sans-serif",
       fontSize,
       fontWeight: "950",
       fill: 0x1d2c3f,
       stroke: 0xffffff,
-      strokeThickness: 4,
+      strokeThickness: 3,
       align: "center",
     });
     text.anchor.set(0.5);
     text.y = -1;
 
-    const width = Math.max(54, text.width + 22);
-    const height = 39;
+    const width = Math.max(36, text.width + 15);
+    const height = 28;
     const badge = new PIXI.Container();
-    badge.y = BOARD.cell * 0.39;
+    badge.x = -BOARD.cell * 0.34;
+    badge.y = -BOARD.cell * 0.36;
 
     const shadow = new PIXI.Graphics();
-    shadow.beginFill(0x1d2c3f, 0.14);
-    shadow.drawRoundedRect(-width / 2 + 2, -height / 2 + 4, width, height, 19);
+    shadow.beginFill(0x1d2c3f, 0.12);
+    shadow.drawRoundedRect(-width / 2 + 1.5, -height / 2 + 2.5, width, height, 12);
     shadow.endFill();
 
     const bg = new PIXI.Graphics();
-    bg.beginFill(0xffffff, 0.9);
-    bg.lineStyle(3, RANK_COLORS[rank % RANK_COLORS.length], 0.7);
-    bg.drawRoundedRect(-width / 2, -height / 2, width, height, 19);
+    bg.beginFill(0xffffff, 0.92);
+    bg.lineStyle(2, RANK_COLORS[rank % RANK_COLORS.length], 0.68);
+    bg.drawRoundedRect(-width / 2, -height / 2, width, height, 12);
     bg.endFill();
 
     badge.addChild(shadow, bg, text);
