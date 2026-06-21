@@ -19,7 +19,7 @@
   <link rel="canonical" href="https://game.archerlab.dev/jelly-pang-2048/">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20260621-game-home">
+  <link rel="stylesheet" href="css/style.css?v=20260621-server-loader">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -56,6 +56,12 @@
         </div>
       </div>
     </section>
+    <div id="server-loader" class="server-loader hidden" aria-hidden="true">
+      <div class="server-loader-jelly"></div>
+      <div class="server-loader-track">
+        <div class="server-loader-fill"></div>
+      </div>
+    </div>
     <header class="topbar">
       <button id="home-game" class="icon-command home-command" type="button" aria-label="시작 화면으로 이동"></button>
       <div class="title-lockup">
@@ -130,6 +136,6 @@
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" crossorigin="anonymous"></script>
   <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
-  <script src="js/main.js?v=20260621-instant-rng" defer></script>
+  <script src="js/main.js?v=20260621-server-loader" defer></script>
 </body>
 </html>
