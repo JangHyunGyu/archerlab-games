@@ -324,6 +324,14 @@
     return placeTile(makeTile(rank, spot.row, spot.col), animate);
   }
 
+  function spawnNextTile(animate = true) {
+    const spawned = ranking.nextSpawn(emptyCells());
+    if (spawned && Number.isInteger(spawned.row) && Number.isInteger(spawned.col) && Number.isInteger(spawned.rank)) {
+      return placeTile(makeTile(spawned.rank, spawned.row, spawned.col), animate);
+    }
+    return spawnRandomTile(animate);
+  }
+
   function emptyCells() {
     const cells = [];
     for (let row = 0; row < SIZE; row++) {
@@ -447,7 +455,7 @@
     });
   }
 
-  async function finishMove(result) {
+  function finishMove(result) {
     result.merges.forEach((merge) => {
       merge.from.forEach((id) => {
         const visual = visuals.get(id);
@@ -470,21 +478,12 @@
       playSound("slide");
     }
 
-    const verifiedMove = await result.verificationPromise;
-    if (verifiedMove) {
-      result.verifiedMove = verifiedMove;
-      const verifiedScore = Number(verifiedMove.score);
-      if (Number.isFinite(verifiedScore) && verifiedScore !== score) {
-        updateScore(verifiedScore);
-      }
-    }
-
-    const spawned = verifiedMove?.spawned;
-    if (spawned && Number.isInteger(spawned.row) && Number.isInteger(spawned.col) && Number.isInteger(spawned.rank)) {
-      placeTile(makeTile(spawned.rank, spawned.row, spawned.col), true);
-    } else {
-      spawnRandomTile(true);
-    }
+    const spawned = spawnNextTile(true);
+    result.localSpawned = spawned ? { row: spawned.row, col: spawned.col, rank: spawned.rank } : null;
+    const localScore = score;
+    result.verificationPromise?.then((verifiedMove) => {
+      ranking.verifyLocalMove(verifiedMove, result.localSpawned, localScore);
+    });
 
     if (!won && !keepPlaying && hasRank(TARGET_RANK)) {
       won = true;
@@ -1241,6 +1240,8 @@
       this.moveSeq = 0;
       this.verifiedScore = 0;
       this.sessionData = null;
+      this.rngState = 0;
+      this.moveQueue = Promise.resolve();
       this.unsupported = false;
       this.syncFailed = false;
     }
@@ -1250,6 +1251,8 @@
       this.moveSeq = 0;
       this.verifiedScore = 0;
       this.sessionData = null;
+      this.rngState = 0;
+      this.moveQueue = Promise.resolve();
       this.unsupported = false;
       this.syncFailed = false;
       this.sessionPromise = fetch(`${RANK_API_BASE}/score-sessions`, {
@@ -1265,6 +1268,7 @@
         this.sessionId = data.session_id || null;
         this.moveSeq = Number(data.move_seq || 0);
         this.verifiedScore = Number(data.score || 0);
+        this.rngState = this.normalizeUint32(data.rng_state);
         this.sessionData = data;
         return data;
       }).catch(() => {
@@ -1282,20 +1286,44 @@
       return data?.session_id || null;
     }
 
-    async recordMove(dir) {
-      if (this.unsupported || this.syncFailed) return null;
-      const sessionId = await this.ensureSession();
-      if (!sessionId) return null;
+    normalizeUint32(value) {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return 0;
+      return parsed >>> 0;
+    }
+
+    nextRandom() {
+      const nextState = (this.normalizeUint32(this.rngState) + 0x6D2B79F5) >>> 0;
+      let t = nextState;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      this.rngState = nextState;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+
+    nextSpawn(cells) {
+      if (this.unsupported || this.syncFailed || !this.rngState || !Array.isArray(cells) || cells.length === 0) return null;
+      const spot = cells[Math.floor(this.nextRandom() * cells.length)] || cells[cells.length - 1];
+      const rank = this.nextRandom() < 0.9 ? 0 : 1;
+      return { row: spot.row, col: spot.col, rank };
+    }
+
+    recordMove(dir) {
+      if (this.unsupported || this.syncFailed) return Promise.resolve(null);
 
       const nextSeq = this.moveSeq + 1;
-      try {
+      this.moveSeq = nextSeq;
+      const event = { type: "move", dir, move_seq: nextSeq };
+      const request = this.moveQueue.then(async () => {
+        const sessionId = await this.ensureSession();
+        if (!sessionId) return null;
         const res = await fetch(`${RANK_API_BASE}/score-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({
             game_id: GAME_ID,
             session_id: sessionId,
-            event: { type: "move", dir, move_seq: nextSeq },
+            event,
           }),
         });
         if (!res.ok) {
@@ -1303,17 +1331,41 @@
           throw new Error(`rank move ${res.status}`);
         }
         const data = await res.json();
-        this.moveSeq = Number(data.move_seq || nextSeq);
+        this.moveSeq = Math.max(this.moveSeq, Number(data.move_seq || nextSeq));
         this.verifiedScore = Number(data.score || this.verifiedScore || 0);
         return data;
-      } catch {
+      }).catch(() => {
         if (!this.unsupported) this.syncFailed = true;
         return null;
+      });
+      this.moveQueue = request.catch(() => null).then(() => null);
+      return request;
+    }
+
+    async flushMoves() {
+      await this.moveQueue;
+      return !this.unsupported && !this.syncFailed;
+    }
+
+    verifyLocalMove(verifiedMove, localSpawned, localScore) {
+      if (!verifiedMove || this.unsupported || this.syncFailed) return;
+      const verifiedScore = Number(verifiedMove.score);
+      if (Number.isFinite(verifiedScore) && verifiedScore !== localScore) {
+        this.syncFailed = true;
+        return;
       }
+      const spawned = verifiedMove.spawned;
+      const spawnedMatches = !spawned && !localSpawned
+        || spawned && localSpawned
+          && spawned.row === localSpawned.row
+          && spawned.col === localSpawned.col
+          && spawned.rank === localSpawned.rank;
+      if (!spawnedMatches) this.syncFailed = true;
     }
 
     async submit(playerName, finalScore, extraData = {}) {
       await this.ensureSession();
+      await this.flushMoves();
       const canVerify = this.sessionId && !this.unsupported && !this.syncFailed;
       if (!canVerify) throw new Error("rank verification unavailable");
       const submittedScore = Math.max(0, Math.floor(finalScore || 0));
