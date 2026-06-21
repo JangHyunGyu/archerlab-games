@@ -66,15 +66,97 @@ button {
     max(14px, env(safe-area-inset-right))
     max(14px, env(safe-area-inset-bottom))
     max(14px, env(safe-area-inset-left));
+  position: relative;
   display: grid;
   grid-template-rows: auto auto 1fr auto;
   gap: 10px;
+  overflow: hidden;
+}
+
+.title-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at 20% 16%, rgba(255, 209, 102, 0.52), transparent 28%),
+    radial-gradient(circle at 84% 22%, rgba(72, 189, 245, 0.42), transparent 28%),
+    radial-gradient(circle at 52% 88%, rgba(88, 215, 183, 0.42), transparent 34%),
+    linear-gradient(155deg, #fff8e8 0%, #f8f0ff 43%, #e9fbff 100%);
+}
+
+.title-screen.hidden {
+  display: none;
+}
+
+.title-brand {
+  width: fit-content;
+}
+
+.title-hero {
+  width: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  padding-bottom: 10px;
+  text-align: center;
+}
+
+.title-hero h1 {
+  max-width: 100%;
+  font-size: clamp(42px, 10vw, 66px);
+}
+
+.title-jelly {
+  width: min(88%, 370px);
+  max-width: 100%;
+  max-height: min(48vh, 360px);
+  object-fit: contain;
+  filter: drop-shadow(0 24px 34px rgba(246, 79, 120, 0.22));
+  pointer-events: none;
+}
+
+.title-actions {
+  width: min(100%, 330px);
+  max-width: 100%;
+  display: grid;
+  gap: 10px;
+}
+
+.title-actions button {
+  min-height: 54px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.title-play {
+  background: linear-gradient(180deg, #ff8b4a, #f25b73);
+  box-shadow: 0 10px 0 #b94354, 0 20px 34px rgba(242, 91, 115, 0.22);
+}
+
+.title-rank {
+  background: linear-gradient(180deg, #4cc8f5, #6675f7);
+  box-shadow: 0 10px 0 #4350bb, 0 20px 34px rgba(76, 151, 245, 0.22);
 }
 
 .topbar {
   min-height: 76px;
   display: grid;
-  grid-template-columns: 82px minmax(0, 1fr) 96px;
+  grid-template-columns: 82px minmax(0, 1fr) 82px;
   align-items: center;
   gap: 10px;
 }
@@ -134,16 +216,6 @@ h1 {
 .icon-command span {
   font-size: 26px;
   line-height: 1;
-}
-
-.top-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.top-actions .icon-command {
-  flex: 0 0 44px;
 }
 
 .score-row {
@@ -466,7 +538,7 @@ h1 {
 .rank-modal {
   position: absolute;
   inset: 0;
-  z-index: 9;
+  z-index: 20;
   display: grid;
   place-items: center;
   padding: 18px;
@@ -676,6 +748,18 @@ h1 {
     min-height: 58px;
   }
 
+  .title-screen {
+    gap: 8px;
+  }
+
+  .title-hero h1 {
+    font-size: clamp(40px, 11vw, 58px);
+  }
+
+  .title-jelly {
+    max-height: min(40vh, 270px);
+  }
+
   .score-tile {
     min-height: 52px;
   }
@@ -700,8 +784,33 @@ h1 {
   }
 
   .topbar {
-    grid-template-columns: 72px minmax(0, 1fr) 88px;
+    grid-template-columns: 72px minmax(0, 1fr) 72px;
     gap: 7px;
+  }
+
+  .title-screen {
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  .title-hero {
+    padding-bottom: 4px;
+  }
+
+  .title-hero h1 {
+    font-size: clamp(42px, 12vw, 56px);
+  }
+
+  .title-jelly {
+    width: min(96%, 330px);
+  }
+
+  .title-actions button {
+    min-height: 50px;
+    font-size: 16px;
   }
 
   .brand-link {
@@ -709,12 +818,7 @@ h1 {
     font-size: 12px;
   }
 
-  .top-actions {
-    gap: 4px;
-  }
-
-  .icon-command,
-  .top-actions .icon-command {
+  .icon-command {
     width: 42px;
     height: 42px;
     flex-basis: 42px;

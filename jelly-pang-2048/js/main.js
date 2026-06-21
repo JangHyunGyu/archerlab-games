@@ -38,12 +38,14 @@
 
   const $ = (id) => document.getElementById(id);
   const refs = {
+    shell: document.querySelector(".game-shell"),
+    titleScreen: $("title-screen"),
+    playGame: $("play-game"),
     mount: $("pixi-stage"),
     frame: $("stage-frame"),
     score: $("score"),
     best: $("best-score"),
-    newGame: $("new-game"),
-    rankOpen: $("rank-open"),
+    rankOpen: $("rank-open-title"),
     guide: $("quick-guide"),
     modal: $("message-modal"),
     messageActions: document.querySelector(".message-actions"),
@@ -80,6 +82,7 @@
   let audioCtx = null;
   let ranking = null;
   let rankSubmitInFlight = false;
+  let startInFlight = false;
 
   async function init() {
     if (!window.PIXI || !window.gsap) {
@@ -101,6 +104,9 @@
     refs.mount.appendChild(app.view);
     app.view.style.width = "100%";
     app.view.style.height = "100%";
+    if (refs.rankModal && refs.rankModal.parentElement !== refs.shell) {
+      refs.shell.appendChild(refs.rankModal);
+    }
 
     boardLayer = new PIXI.Container();
     tileLayer = new PIXI.Container();
@@ -112,15 +118,33 @@
     await loadTextures();
     bindInput();
     refs.best.textContent = formatScore(bestScore);
-    newGame();
+    showTitle();
   }
 
   function showLoadError() {
+    refs.titleScreen.classList.add("hidden");
     refs.modal.classList.remove("hidden");
     refs.messageEyebrow.textContent = "Load error";
     refs.messageTitle.textContent = "Reload";
     refs.messageCopy.textContent = "라이브러리를 불러오지 못했습니다.";
     refs.keepPlaying.style.display = "none";
+  }
+
+  function showTitle() {
+    locked = true;
+    hideModal();
+    hideRanks();
+    refs.titleScreen.classList.remove("hidden");
+  }
+
+  function startGame() {
+    if (startInFlight) return;
+    startInFlight = true;
+    resumeAudio();
+    refs.titleScreen.classList.add("hidden");
+    newGame().finally(() => {
+      startInFlight = false;
+    });
   }
 
   async function loadTextures() {
@@ -169,10 +193,10 @@
       button.addEventListener("click", () => move(button.dataset.dir));
     });
 
-    refs.newGame.addEventListener("click", () => newGame());
+    refs.playGame.addEventListener("click", () => startGame());
     refs.rankOpen.addEventListener("click", () => openRanks());
     refs.rankClose.addEventListener("click", () => hideRanks());
-    refs.tryAgain.addEventListener("click", () => newGame());
+    refs.tryAgain.addEventListener("click", () => startGame());
     refs.keepPlaying.addEventListener("click", () => {
       keepPlaying = true;
       hideModal();
@@ -260,6 +284,7 @@
   }
 
   async function move(dir) {
+    if (!refs.titleScreen.classList.contains("hidden")) return;
     resumeAudio();
     if (locked || refs.modal.classList.contains("hidden") === false && !keepPlaying) return;
 
@@ -858,8 +883,14 @@
   }
 
   function resumeAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    try {
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) return;
+      if (!audioCtx) audioCtx = new AudioCtor();
+      if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+    } catch {
+      audioCtx = null;
+    }
   }
 
   function playSound(type) {
