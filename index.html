@@ -244,6 +244,8 @@
         }
         .jelly-pang-2048 .game-thumb {
             background: linear-gradient(135deg, #fff6d8 0%, #d8f7ff 48%, #f8e8ff 100%);
+            height: auto;
+            aspect-ratio: 1 / 1;
         }
         .jelly-pang-2048 .game-tag {
             background: #f64f7822;
@@ -269,7 +271,10 @@
     <div class="games-grid">
         <a href="jelly-pang-2048/" class="game-card jelly-pang-2048">
             <div class="game-thumb">
-                <img src="jelly-pang-2048/assets/images/jelly-pang-link.png" alt="Jelly Pang 2048 - casual jelly merge puzzle game" loading="lazy" decoding="async">
+                <picture>
+                    <source srcset="jelly-pang-2048/assets/images/jelly-pang-main-link.webp?v=1" type="image/webp">
+                    <img src="jelly-pang-2048/assets/images/jelly-pang-main-link.png?v=1" alt="Jelly Pang 2048 - casual jelly merge puzzle game" loading="lazy" decoding="async">
+                </picture>
             </div>
             <div class="game-info">
                 <h2>Jelly Pang! 2048</h2>
