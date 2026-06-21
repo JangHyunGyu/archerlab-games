@@ -556,7 +556,7 @@
     if (!won && !keepPlaying && hasRank(TARGET_RANK)) {
       won = true;
       locked = false;
-      showModal("2048 Jelly", "You win!", "왕관 젤리를 계속 키워보세요.", true, false);
+      showModal("Crown Jelly", "You win!", "왕관 젤리를 계속 키워보세요.", true, false);
       celebrate();
       playSound("win");
       playHaptic("win");
