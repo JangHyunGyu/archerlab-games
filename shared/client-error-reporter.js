@@ -17,6 +17,7 @@
     var sentCount = 0;
     var sentKeys = Object.create(null);
     var MAX_REPORTS_PER_PAGE = 20;
+    var endpointIsSameOrigin = isSameOriginEndpoint(endpoint);
 
     function getGameId() {
         var fromScript = script && script.getAttribute('data-game-id');
@@ -26,6 +27,14 @@
 
         var parts = window.location.pathname.split('/').filter(Boolean);
         return parts[0] || 'archerlab-games';
+    }
+
+    function isSameOriginEndpoint(value) {
+        try {
+            return new URL(value, window.location.href).origin === window.location.origin;
+        } catch {
+            return false;
+        }
     }
 
     function safeString(value, fallback) {
@@ -133,7 +142,7 @@
         });
 
         try {
-            if (navigator.sendBeacon) {
+            if (endpointIsSameOrigin && navigator.sendBeacon) {
                 var blob = new Blob([body], { type: 'application/json' });
                 if (navigator.sendBeacon(endpoint, blob)) return;
             }
