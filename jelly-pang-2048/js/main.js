@@ -223,17 +223,18 @@
     app.view.addEventListener("contextmenu", (event) => event.preventDefault());
 
     document.querySelectorAll("[data-dir]").forEach((button) => {
-      let handledPointer = false;
+      let skipNextClick = false;
       button.addEventListener("pointerdown", (event) => {
         event.preventDefault();
-        handledPointer = true;
+        skipNextClick = true;
         move(button.dataset.dir);
         window.setTimeout(() => {
-          handledPointer = false;
-        }, 350);
+          skipNextClick = false;
+        }, 900);
       });
       button.addEventListener("click", (event) => {
-        if (handledPointer) {
+        if (skipNextClick) {
+          skipNextClick = false;
           event.preventDefault();
           return;
         }
