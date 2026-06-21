@@ -7,6 +7,10 @@
   const IS_TOUCH_DEVICE = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
   const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, IS_TOUCH_DEVICE ? 1.2 : 1.5);
   const MAX_FX_CHILDREN = IS_TOUCH_DEVICE ? 72 : 120;
+  const SESSION_REQUEST_TIMEOUT_MS = 8000;
+  const MOVE_VERIFY_TIMEOUT_MS = 5000;
+  const RANK_REQUEST_TIMEOUT_MS = 10000;
+  const MOVE_FLUSH_TIMEOUT_MS = 6500;
   const BOARD = {
     x: 78,
     y: 78,
@@ -234,6 +238,26 @@
     } finally {
       endServerTrip();
     }
+  }
+
+  async function fetchWithTimeout(url, options = {}, timeoutMs = RANK_REQUEST_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }
+
+  function withTimeout(promise, timeoutMs, message) {
+    let timer = null;
+    const timeout = new Promise((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    });
+    return Promise.race([promise, timeout]).finally(() => {
+      if (timer) window.clearTimeout(timer);
+    });
   }
 
   async function loadTextures() {
@@ -884,7 +908,7 @@
     rankSubmitInFlight = true;
     setRankSubmitDisabled(true);
     saveNickname(name);
-    setSubmitStatus("등록 중...", "");
+    setSubmitStatus("서버 검증 중...", "");
 
     const extra = {
       max_tile: getMaxTileValue(),
@@ -892,11 +916,14 @@
     };
 
     try {
-      const result = await ranking.submit(name, score, extra);
+      const result = await withServerTrip(() => ranking.submit(name, score, extra));
       playSound("rankSubmit");
       setSubmitStatus(`등록 완료${result?.rank ? ` (#${result.rank})` : ""}`, "ok");
-    } catch {
-      setSubmitStatus("검증 실패로 등록되지 않았어요. 새 게임으로 다시 도전해주세요.", "fail");
+    } catch (err) {
+      const message = err?.message === "rank score verification mismatch"
+        ? "서버 검증 점수와 현재 점수가 달라 등록하지 않았어요."
+        : "서버 검증이 지연되거나 실패했어요. 잠시 후 다시 눌러주세요.";
+      setSubmitStatus(message, "fail");
       setRankSubmitDisabled(false);
     } finally {
       rankSubmitInFlight = false;
@@ -1328,11 +1355,11 @@
       this.moveQueue = Promise.resolve();
       this.unsupported = false;
       this.syncFailed = false;
-      this.sessionPromise = withServerTrip(() => fetch(`${RANK_API_BASE}/score-sessions`, {
+      this.sessionPromise = withServerTrip(() => fetchWithTimeout(`${RANK_API_BASE}/score-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ game_id: GAME_ID }),
-      })).then(async (res) => {
+      }, SESSION_REQUEST_TIMEOUT_MS)).then(async (res) => {
         if (!res.ok) {
           if (res.status === 400 || res.status === 404) this.unsupported = true;
           throw new Error(`rank session ${res.status}`);
@@ -1390,7 +1417,7 @@
       const request = this.moveQueue.then(async () => {
         const sessionId = await this.ensureSession();
         if (!sessionId) return null;
-        const res = await fetch(`${RANK_API_BASE}/score-events`, {
+        const res = await fetchWithTimeout(`${RANK_API_BASE}/score-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({
@@ -1398,7 +1425,7 @@
             session_id: sessionId,
             event,
           }),
-        });
+        }, MOVE_VERIFY_TIMEOUT_MS);
         if (!res.ok) {
           if (res.status === 400 || res.status === 404 || res.status === 409) this.unsupported = true;
           throw new Error(`rank move ${res.status}`);
@@ -1416,7 +1443,12 @@
     }
 
     async flushMoves() {
-      await this.moveQueue;
+      try {
+        await withTimeout(this.moveQueue, MOVE_FLUSH_TIMEOUT_MS, "rank move verification timeout");
+      } catch (err) {
+        this.syncFailed = true;
+        throw err;
+      }
       return !this.unsupported && !this.syncFailed;
     }
 
@@ -1437,7 +1469,7 @@
     }
 
     async submit(playerName, finalScore, extraData = {}) {
-      await this.ensureSession();
+      await withTimeout(this.ensureSession(), SESSION_REQUEST_TIMEOUT_MS, "rank session timeout");
       await this.flushMoves();
       const canVerify = this.sessionId && !this.unsupported && !this.syncFailed;
       if (!canVerify) throw new Error("rank verification unavailable");
@@ -1455,20 +1487,20 @@
         },
       };
 
-      const res = await withServerTrip(() => fetch(`${RANK_API_BASE}/rankings`, {
+      const res = await withServerTrip(() => fetchWithTimeout(`${RANK_API_BASE}/rankings`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify(body),
-      }));
+      }, RANK_REQUEST_TIMEOUT_MS));
       if (!res.ok) throw new Error(`rank submit ${res.status}`);
       const result = await res.json();
       return result;
     }
 
     async fetchTopRanks(limit = RANK_LIMIT) {
-      const res = await withServerTrip(() => fetch(`${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${limit}`, {
+      const res = await withServerTrip(() => fetchWithTimeout(`${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${limit}`, {
         headers: { "Accept": "application/json" },
-      }));
+      }, RANK_REQUEST_TIMEOUT_MS));
       if (!res.ok) throw new Error(`rank fetch ${res.status}`);
       const data = await res.json();
       return Array.isArray(data.rankings) ? data.rankings : [];
