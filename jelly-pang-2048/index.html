@@ -19,7 +19,7 @@
   <link rel="canonical" href="https://game.archerlab.dev/jelly-pang-2048/">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20260621-hall-of-fame">
+  <link rel="stylesheet" href="css/style.css?v=20260621-start-screen">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -31,19 +31,23 @@
 </head>
 <body>
   <main class="game-shell" aria-label="Jelly Pang 2048 game">
+    <section id="title-screen" class="title-screen" aria-label="Jelly Pang start screen">
+      <a class="brand-link title-brand" href="../" aria-label="Archerlab Games home">Archerlab</a>
+      <div class="title-hero">
+        <p class="kicker">Merge Puzzle</p>
+        <h1>Jelly Pang!</h1>
+        <img class="title-jelly" src="assets/images/jelly-pang-link.png" alt="" draggable="false">
+        <div class="title-actions">
+          <button id="play-game" class="title-play" type="button">게임 시작</button>
+          <button id="rank-open-title" class="title-rank" type="button">명예의 전당</button>
+        </div>
+      </div>
+    </section>
     <header class="topbar">
       <a class="brand-link" href="../" aria-label="Archerlab Games home">Archerlab</a>
       <div class="title-lockup">
         <p class="kicker">Merge Puzzle</p>
         <h1>Jelly Pang!</h1>
-      </div>
-      <div class="top-actions">
-        <button id="rank-open" class="icon-command" type="button" aria-label="명예의 전당 열기" title="명예의 전당">
-          <span aria-hidden="true">&#9733;</span>
-        </button>
-        <button id="new-game" class="icon-command" type="button" aria-label="새 게임" title="새 게임">
-          <span aria-hidden="true">&#8635;</span>
-        </button>
       </div>
     </header>
 
@@ -121,6 +125,6 @@
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" crossorigin="anonymous"></script>
   <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
-  <script src="js/main.js?v=20260621-hall-of-fame" defer></script>
+  <script src="js/main.js?v=20260621-start-screen" defer></script>
 </body>
 </html>
