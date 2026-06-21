@@ -1,4 +1,4 @@
-import { GEM_BY_ID, getGemName } from './gem.js';
+﻿import { GEM_BY_ID, getGemName } from './gem.js';
 import { formatTime } from './stage.js';
 import { PixiBoard } from './pixi-board.js';
 
@@ -47,9 +47,151 @@ export class UI {
     };
   }
 
+  _motionEnabled() {
+    return Boolean(
+      window.gsap &&
+      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    );
+  }
+
+  _animateScreen(screenEl, screen) {
+    if (!this._motionEnabled() || !screenEl) return;
+    const gsap = window.gsap;
+    gsap.killTweensOf(screenEl);
+    gsap.fromTo(screenEl, {
+      autoAlpha: 0,
+      scale: 0.985
+    }, {
+      autoAlpha: 1,
+      scale: 1,
+      duration: screen === 'game' ? 0.36 : 0.48,
+      ease: 'power3.out',
+      clearProps: 'opacity,visibility,transform'
+    });
+
+    if (screen === 'game' && this.refs.boardFrame) {
+      gsap.killTweensOf(this.refs.boardFrame);
+      gsap.fromTo(this.refs.boardFrame, {
+        y: 18,
+        scale: 0.975,
+        filter: 'brightness(1.25)'
+      }, {
+        y: 0,
+        scale: 1,
+        filter: 'brightness(1)',
+        duration: 0.5,
+        ease: 'power3.out',
+        clearProps: 'transform,filter'
+      });
+    }
+  }
+
+  _animateModalIn(modal) {
+    if (!this._motionEnabled() || !modal) return;
+    const gsap = window.gsap;
+    const card = modal.querySelector('.modal-card');
+    const targets = [modal, card].filter(Boolean);
+    gsap.killTweensOf(targets);
+    gsap.set(modal, { clearProps: 'opacity,visibility' });
+    gsap.fromTo(modal, { autoAlpha: 0 }, {
+      autoAlpha: 1,
+      duration: 0.18,
+      ease: 'power2.out',
+      clearProps: 'opacity,visibility'
+    });
+    if (card) {
+      gsap.fromTo(card, {
+        autoAlpha: 0,
+        y: 26,
+        scale: 0.94,
+        filter: 'brightness(1.2)'
+      }, {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        filter: 'brightness(1)',
+        duration: 0.36,
+        ease: 'back.out(1.35)',
+        clearProps: 'opacity,visibility,transform,filter'
+      });
+    }
+  }
+
+  _animateModalOut(modal, onComplete) {
+    if (!this._motionEnabled() || !modal) {
+      onComplete?.();
+      return;
+    }
+    const gsap = window.gsap;
+    const card = modal.querySelector('.modal-card');
+    const targets = [modal, card].filter(Boolean);
+    gsap.killTweensOf(targets);
+    if (card) {
+      gsap.to(card, {
+        y: 10,
+        scale: 0.97,
+        autoAlpha: 0,
+        duration: 0.14,
+        ease: 'power2.in'
+      });
+    }
+    gsap.to(modal, {
+      autoAlpha: 0,
+      duration: 0.16,
+      ease: 'power2.in',
+      onComplete: () => {
+        onComplete?.();
+        gsap.set(targets, { clearProps: 'opacity,visibility,transform' });
+      }
+    });
+  }
+
+  _countText(el, value, duration = 0.58) {
+    if (!el) return;
+    const target = Number(value) || 0;
+    if (!this._motionEnabled()) {
+      el.textContent = target.toLocaleString();
+      return;
+    }
+    const state = { value: 0 };
+    el._countTween?.kill();
+    el._countTween = window.gsap.to(state, {
+      value: target,
+      duration,
+      ease: 'power3.out',
+      onUpdate: () => {
+        el.textContent = Math.round(state.value).toLocaleString();
+      },
+      onComplete: () => {
+        el.textContent = target.toLocaleString();
+        el._countTween = null;
+      }
+    });
+  }
+
+  _animateRankRows() {
+    if (!this._motionEnabled()) return;
+    const rows = this.refs.rankContent.querySelectorAll('.rank-row');
+    if (!rows.length) return;
+    window.gsap.fromTo(rows, {
+      autoAlpha: 0,
+      y: 12,
+      scale: 0.985
+    }, {
+      autoAlpha: 1,
+      y: 0,
+      scale: 1,
+      duration: 0.26,
+      ease: 'power3.out',
+      stagger: 0.035,
+      clearProps: 'opacity,visibility,transform'
+    });
+  }
+
   setScreen(screen) {
     this.refs.title.classList.toggle('is-active', screen === 'title');
     this.refs.game.classList.toggle('is-active', screen === 'game');
+    this._animateScreen(screen === 'title' ? this.refs.title : this.refs.game, screen);
     if (screen === 'game' && this.pixi) {
       requestAnimationFrame(() => this.pixi.resize());
     }
@@ -72,7 +214,7 @@ export class UI {
     this.updateTime(state.timeLeft);
   }
 
-  // 남은 시간을 갱신하고 막바지(10초 이하)에는 경고 표시를 준다.
+  // ?⑥? ?쒓컙??媛깆떊?섍퀬 留됰컮吏(10珥??댄븯)?먮뒗 寃쎄퀬 ?쒖떆瑜?以??
   updateTime(timeLeft) {
     const left = Math.max(0, Number(timeLeft) || 0);
     if (this.refs.hudTime) this.refs.hudTime.textContent = formatTime(left);
@@ -105,13 +247,13 @@ export class UI {
 
   showResult({ score, bestScore, nickname }) {
     this.refs.resultKicker.textContent = 'TIME UP';
-    this.refs.resultTitle.textContent = '타임 어택 종료';
+    this.refs.resultTitle.textContent = '????댄깮 醫낅즺';
     this.refs.resultScore.textContent = Number(score).toLocaleString();
     this.refs.resultBest.textContent = Number(bestScore).toLocaleString();
-    // 점수가 0보다 크면 명예의 전당 등록 폼을 노출한다.
+    // ?먯닔媛 0蹂대떎 ?щ㈃ 紐낆삁???꾨떦 ?깅줉 ?쇱쓣 ?몄텧?쒕떎.
     const showRank = score > 0;
     this.refs.rankSubmit.classList.toggle('hidden', !showRank);
-    // 등록/건너뛰기를 결정하기 전엔 다시하기/타이틀 버튼을 숨긴다.
+    // ?깅줉/嫄대꼫?곌린瑜?寃곗젙?섍린 ?꾩뿏 ?ㅼ떆?섍린/??댄? 踰꾪듉???④릿??
     if (this.refs.resultActions) {
       this.refs.resultActions.classList.toggle('hidden', showRank);
     }
@@ -120,10 +262,26 @@ export class UI {
     this.refs.submitStatus.textContent = '';
     this.refs.submitStatus.className = 'submit-status';
     this.showModal(this.refs.resultModal);
+    this._countText(this.refs.resultScore, score);
+    this._countText(this.refs.resultBest, bestScore);
   }
 
   revealResultActions() {
-    if (this.refs.resultActions) this.refs.resultActions.classList.remove('hidden');
+    if (!this.refs.resultActions) return;
+    this.refs.resultActions.classList.remove('hidden');
+    if (this._motionEnabled()) {
+      window.gsap.fromTo(this.refs.resultActions.children, {
+        autoAlpha: 0,
+        y: 10
+      }, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.22,
+        ease: 'power3.out',
+        stagger: 0.045,
+        clearProps: 'opacity,visibility,transform'
+      });
+    }
   }
 
   renderRanks(rows, myName = '') {
@@ -131,7 +289,7 @@ export class UI {
     if (!rows || rows.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'rank-empty';
-      empty.textContent = '아직 기록이 없습니다. 첫 번째 도전자가 되어보세요.';
+      empty.textContent = '?꾩쭅 湲곕줉???놁뒿?덈떎. 泥?踰덉㎏ ?꾩쟾?먭? ?섏뼱蹂댁꽭??';
       this.refs.rankContent.appendChild(empty);
       return;
     }
@@ -153,20 +311,21 @@ export class UI {
       score.className = 'rank-score';
       const points = document.createElement('span');
       points.className = 'rank-points';
-      points.textContent = `${Number(row.score || 0).toLocaleString()}점`;
+      points.textContent = `${Number(row.score || 0).toLocaleString()}\uC810`;
       score.append(points);
       item.append(pos, name, score);
       this.refs.rankContent.appendChild(item);
     });
+    this._animateRankRows();
   }
 
   showRankLoading() {
-    this.refs.rankContent.innerHTML = '<div class="rank-loading">불러오는 중...</div>';
+    this.refs.rankContent.innerHTML = '<div class="rank-loading">遺덈윭?ㅻ뒗 以?..</div>';
     this.showModal(this.refs.rankModal);
   }
 
   showRankError() {
-    this.refs.rankContent.innerHTML = '<div class="rank-error">랭킹을 불러오지 못했어요. 로컬 기록을 표시합니다.</div>';
+    this.refs.rankContent.innerHTML = '<div class="rank-error">??궧??遺덈윭?ㅼ? 紐삵뻽?댁슂. 濡쒖뺄 湲곕줉???쒖떆?⑸땲??</div>';
   }
 
   setSubmitStatus(message, type = '') {
@@ -189,14 +348,53 @@ export class UI {
   showPause() { this.showModal(this.refs.pauseModal); }
   hidePause() { this.hideModal(this.refs.pauseModal); }
   hideResult() { this.hideModal(this.refs.resultModal); }
-  showModal(modal) { modal.classList.remove('hidden'); }
-  hideModal(modal) { modal.classList.add('hidden'); }
+  showModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    this._animateModalIn(modal);
+  }
+  hideModal(modal) {
+    if (!modal || modal.classList.contains('hidden')) return;
+    this._animateModalOut(modal, () => modal.classList.add('hidden'));
+  }
 
   showToast(message, duration = 1800) {
     const toast = this.refs.toast;
     toast.textContent = message;
     toast.classList.add('show');
     clearTimeout(this.toastTimer);
+    if (this._motionEnabled()) {
+      const gsap = window.gsap;
+      gsap.killTweensOf(toast);
+      gsap.fromTo(toast, {
+        autoAlpha: 0,
+        xPercent: -50,
+        y: 18,
+        scale: 0.96
+      }, {
+        autoAlpha: 1,
+        xPercent: -50,
+        y: 0,
+        scale: 1,
+        duration: 0.2,
+        ease: 'back.out(1.45)'
+      });
+      this.toastTimer = setTimeout(() => {
+        gsap.to(toast, {
+          autoAlpha: 0,
+          xPercent: -50,
+          y: 14,
+          scale: 0.98,
+          duration: 0.16,
+          ease: 'power2.in',
+          onComplete: () => {
+            toast.classList.remove('show');
+            gsap.set(toast, { clearProps: 'opacity,visibility,transform' });
+          }
+        });
+      }, duration);
+      return;
+    }
     this.toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
   }
 }

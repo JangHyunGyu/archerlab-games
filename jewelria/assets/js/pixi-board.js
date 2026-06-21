@@ -40,6 +40,7 @@ export class PixiBoard {
     this.fxReady = false;
     this.sprites = new Map(); // gem.id -> { sprite, row, col, base }
     this.tweens = new Set();
+    this.gsapTweens = new Set();
     this.particles = new Set();
     this.combos = new Set();
     this.callbacks = {};
@@ -754,7 +755,70 @@ export class PixiBoard {
   }
 
   // ─── 애니메이션 엔진 ───
+  _motionEnabled() {
+    return Boolean(
+      window.gsap &&
+      !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    );
+  }
+
+  _motionEase(ease) {
+    if (ease === easeOutBack) return 'back.out(1.8)';
+    if (ease === easeInQuad) return 'power2.in';
+    return 'power3.out';
+  }
+
+  _killGsapTweens() {
+    for (const tween of this.gsapTweens) tween.kill();
+    this.gsapTweens.clear();
+  }
+
   _tween(target, props, duration, ease = easeOutCubic, delay = 0) {
+    if (this._motionEnabled() && target && !target.destroyed) {
+      const gsap = window.gsap;
+      const seconds = Math.max(0.001, duration / 1000);
+      const direct = { duration: seconds, ease: this._motionEase(ease) };
+      let scaleState = null;
+      let timeline;
+
+      for (const key of Object.keys(props)) {
+        if (key === 'scale') {
+          scaleState = { value: target.scale?.x ?? 1, to: props.scale };
+        } else {
+          direct[key] = props[key];
+        }
+      }
+
+      const cleanup = () => {
+        this.gsapTweens.delete(timeline);
+      };
+      timeline = gsap.timeline({
+        delay: Math.max(0, delay / 1000),
+        onComplete: cleanup,
+        onInterrupt: cleanup
+      });
+
+      const directKeys = Object.keys(direct).filter((key) => key !== 'duration' && key !== 'ease');
+      if (directKeys.length) timeline.to(target, direct, 0);
+      if (scaleState) {
+        timeline.to(scaleState, {
+          value: scaleState.to,
+          duration: seconds,
+          ease: this._motionEase(ease),
+          onUpdate: () => {
+            if (target.destroyed) {
+              timeline.kill();
+              return;
+            }
+            target.scale?.set?.(scaleState.value);
+          }
+        }, 0);
+      }
+
+      this.gsapTweens.add(timeline);
+      return timeline;
+    }
+
     const tween = {
       target,
       duration,
@@ -990,6 +1054,7 @@ export class PixiBoard {
     for (const c of this.combos) { this.comboLayer.removeChild(c); c.destroy(); }
     this.combos.clear();
     this.tweens.clear();
+    this._killGsapTweens();
     this.selectGfx.visible = false;
   }
 }

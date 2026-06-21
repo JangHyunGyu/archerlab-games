@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Jelly Pang! 2048 - Archerlab Games</title>
+  <meta name="description" content="말랑한 젤리를 합쳐 2048 젤리를 만드는 캐주얼 머지 퍼즐 게임. PixiJS와 GSAP로 만든 부드러운 웹 게임입니다.">
+  <meta property="og:title" content="Jelly Pang! 2048">
+  <meta property="og:description" content="같은 젤리를 밀어 합치고, 망치와 셔플로 위기를 넘기는 말랑한 2048 머지 퍼즐.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://game.archerlab.dev/jelly-pang-2048/">
+  <meta property="og:image" content="https://game.archerlab.dev/jelly-pang-2048/assets/images/jelly-pang-link.png">
+  <meta property="og:locale" content="ko_KR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Jelly Pang! 2048">
+  <meta name="twitter:description" content="말랑한 젤리를 합쳐 2048 젤리를 만드는 캐주얼 머지 퍼즐 게임.">
+  <meta name="twitter:image" content="https://game.archerlab.dev/jelly-pang-2048/assets/images/jelly-pang-link.png">
+  <link rel="canonical" href="https://game.archerlab.dev/jelly-pang-2048/">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+  <link rel="stylesheet" href="css/style.css?v=20260621-gsap-pixi">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-66FS0YCEEM');
+  </script>
+  <script src="../shared/client-error-reporter.js" data-game-id="jelly-pang-2048"></script>
+</head>
+<body>
+  <main class="game-shell" aria-label="Jelly Pang 2048 game">
+    <header class="topbar">
+      <a class="brand-link" href="../" aria-label="Archerlab Games home">Archerlab</a>
+      <div class="title-lockup">
+        <p class="kicker">Merge Puzzle</p>
+        <h1>Jelly Pang!</h1>
+      </div>
+      <button id="new-game" class="icon-command" type="button" aria-label="새 게임">
+        <span aria-hidden="true">↻</span>
+      </button>
+    </header>
+
+    <section class="score-row" aria-label="score board">
+      <div class="score-tile">
+        <span>Score</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="score-tile best">
+        <span>Best</span>
+        <strong id="best-score">0</strong>
+      </div>
+      <div class="score-tile target">
+        <span>Target</span>
+        <strong>2048</strong>
+      </div>
+    </section>
+
+    <section class="play-area">
+      <div id="stage-frame" class="stage-frame">
+        <div id="pixi-stage" class="pixi-stage" aria-label="4 by 4 jelly merge board"></div>
+        <div id="quick-guide" class="quick-guide" aria-hidden="true">
+          <div class="guide-hand"></div>
+        </div>
+        <div id="message-modal" class="message-modal hidden" role="dialog" aria-live="polite">
+          <div class="message-card">
+            <p id="message-eyebrow" class="message-eyebrow">2048 Jelly</p>
+            <h2 id="message-title">You win!</h2>
+            <p id="message-copy">왕관 젤리를 계속 키워보세요.</p>
+            <div class="message-actions">
+              <button id="keep-playing" type="button">Keep playing</button>
+              <button id="try-again" type="button">Try again</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="control-dock">
+      <button id="hammer-btn" class="power-btn" type="button" aria-label="망치 아이템">
+        <span class="power-icon" aria-hidden="true">⌁</span>
+        <span class="power-label">Pop</span>
+        <span class="power-meter"><i id="hammer-meter"></i></span>
+      </button>
+      <div class="swipe-pad" aria-hidden="true">
+        <button type="button" data-dir="up">↑</button>
+        <button type="button" data-dir="left">←</button>
+        <button type="button" data-dir="down">↓</button>
+        <button type="button" data-dir="right">→</button>
+      </div>
+      <button id="shuffle-btn" class="power-btn shuffle" type="button" aria-label="셔플 아이템">
+        <span class="power-icon" aria-hidden="true">⟳</span>
+        <span class="power-label">Shuffle</span>
+        <span class="power-meter"><i id="shuffle-meter"></i></span>
+      </button>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" crossorigin="anonymous"></script>
+  <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
+  <script src="js/main.js?v=20260621-gsap-pixi" defer></script>
+</body>
+</html>
