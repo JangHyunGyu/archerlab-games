@@ -409,7 +409,7 @@
 
       createTileVisual(merge.tile, true, true);
       const pos = cellCenter(merge.tile.row, merge.tile.col);
-      createBurst(pos.x, pos.y, RANK_COLORS[merge.tile.rank % RANK_COLORS.length], 18);
+      createMergeWow(pos.x, pos.y, merge.tile.rank, merge.tile.id);
       floatText(`+${formatScore(merge.value)}`, pos.x, pos.y - BOARD.cell * 0.5);
     });
 
@@ -836,24 +836,206 @@
     }
   }
 
+  function createMergeWow(x, y, rank, tileId) {
+    const color = RANK_COLORS[rank % RANK_COLORS.length];
+    const nextColor = RANK_COLORS[(rank + 2) % RANK_COLORS.length];
+    const intensity = Math.min(1.7, 1 + rank * 0.08);
+    const visual = visuals.get(tileId);
+
+    pulseMergeTile(visual);
+    pulseStageFrame(intensity);
+    createShockwaves(x, y, color, nextColor, intensity);
+    createLightRays(x, y, color, nextColor, intensity);
+    createSparkles(x, y, color, intensity);
+    createJellyDrops(x, y, color, nextColor, intensity);
+    createBurst(x, y, color, Math.round(20 * intensity));
+  }
+
+  function pulseMergeTile(visual) {
+    if (!visual) return;
+    gsap.fromTo(
+      visual.container,
+      { rotation: -0.05 },
+      { rotation: 0, duration: 0.52, ease: "elastic.out(1.2, 0.32)" }
+    );
+    gsap.fromTo(
+      visual.sprite,
+      { alpha: 0.82 },
+      { alpha: 1, duration: 0.34, ease: "sine.out" }
+    );
+    gsap.fromTo(
+      visual.aura,
+      { alpha: 0.95 },
+      { alpha: 0, duration: 0.78, ease: "sine.out" }
+    );
+  }
+
+  function pulseStageFrame(intensity) {
+    gsap.killTweensOf(refs.frame);
+    gsap.fromTo(
+      refs.frame,
+      { filter: "brightness(1.16) saturate(1.16)" },
+      { filter: "brightness(1) saturate(1)", duration: 0.48 * intensity, ease: "power2.out" }
+    );
+  }
+
+  function createShockwaves(x, y, color, nextColor, intensity) {
+    [
+      { color, delay: 0, width: 10, scale: 1.28 },
+      { color: nextColor, delay: 0.06, width: 6, scale: 1.7 },
+      { color: 0xffffff, delay: 0.1, width: 4, scale: 2.05 },
+    ].forEach((ring) => {
+      const wave = new PIXI.Graphics();
+      wave.lineStyle(ring.width, ring.color, 0.82);
+      wave.drawCircle(0, 0, BOARD.cell * 0.28);
+      wave.x = x;
+      wave.y = y;
+      wave.alpha = 0;
+      wave.scale.set(0.45);
+      fxLayer.addChild(wave);
+      gsap.to(wave, { alpha: 0.85, duration: 0.08, delay: ring.delay, ease: "sine.out" });
+      gsap.to(wave.scale, {
+        x: ring.scale * intensity,
+        y: ring.scale * intensity,
+        duration: 0.62,
+        delay: ring.delay,
+        ease: "power3.out",
+      });
+      gsap.to(wave, {
+        alpha: 0,
+        duration: 0.46,
+        delay: ring.delay + 0.16,
+        ease: "sine.in",
+        onComplete: () => wave.destroy(),
+      });
+    });
+  }
+
+  function createLightRays(x, y, color, nextColor, intensity) {
+    const count = Math.round(8 * intensity);
+    for (let i = 0; i < count; i++) {
+      const ray = new PIXI.Graphics();
+      const length = BOARD.cell * (0.42 + Math.random() * 0.3);
+      ray.lineStyle(7 + Math.random() * 5, i % 2 ? nextColor : color, 0.58);
+      ray.moveTo(BOARD.cell * 0.16, 0);
+      ray.lineTo(length, 0);
+      ray.x = x;
+      ray.y = y;
+      ray.rotation = (Math.PI * 2 * i) / count + Math.random() * 0.16;
+      ray.alpha = 0;
+      ray.scale.set(0.55, 0.35);
+      fxLayer.addChild(ray);
+      gsap.to(ray, { alpha: 0.95, duration: 0.08, ease: "sine.out" });
+      gsap.to(ray.scale, { x: 1.25, y: 1, duration: 0.26, ease: "power2.out" });
+      gsap.to(ray, {
+        alpha: 0,
+        duration: 0.32,
+        delay: 0.12,
+        ease: "sine.in",
+        onComplete: () => ray.destroy(),
+      });
+    }
+  }
+
+  function createSparkles(x, y, color, intensity) {
+    const count = Math.round(13 * intensity);
+    for (let i = 0; i < count; i++) {
+      const sparkle = new PIXI.Graphics();
+      drawSparkle(sparkle, 9 + Math.random() * 8, i % 3 === 0 ? 0xffffff : color);
+      sparkle.x = x;
+      sparkle.y = y;
+      sparkle.alpha = 0;
+      sparkle.rotation = Math.random() * Math.PI;
+      sparkle.scale.set(0.25);
+      fxLayer.addChild(sparkle);
+
+      const angle = Math.random() * Math.PI * 2;
+      const distance = BOARD.cell * (0.38 + Math.random() * 0.62);
+      gsap.to(sparkle, {
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        rotation: sparkle.rotation + Math.PI * (0.7 + Math.random()),
+        alpha: 1,
+        duration: 0.2,
+        ease: "power2.out",
+      });
+      gsap.to(sparkle.scale, { x: 1, y: 1, duration: 0.22, ease: "back.out(2.4)" });
+      gsap.to(sparkle, {
+        alpha: 0,
+        duration: 0.38,
+        delay: 0.22,
+        ease: "sine.in",
+        onComplete: () => sparkle.destroy(),
+      });
+      gsap.to(sparkle.scale, { x: 0.2, y: 0.2, duration: 0.34, delay: 0.26, ease: "sine.in" });
+    }
+  }
+
+  function drawSparkle(graphics, radius, color) {
+    graphics.beginFill(color, 0.94);
+    graphics.moveTo(0, -radius);
+    graphics.lineTo(radius * 0.28, -radius * 0.28);
+    graphics.lineTo(radius, 0);
+    graphics.lineTo(radius * 0.28, radius * 0.28);
+    graphics.lineTo(0, radius);
+    graphics.lineTo(-radius * 0.28, radius * 0.28);
+    graphics.lineTo(-radius, 0);
+    graphics.lineTo(-radius * 0.28, -radius * 0.28);
+    graphics.lineTo(0, -radius);
+    graphics.endFill();
+  }
+
+  function createJellyDrops(x, y, color, nextColor, intensity) {
+    const count = Math.round(12 * intensity);
+    for (let i = 0; i < count; i++) {
+      const drop = new PIXI.Graphics();
+      const radius = 7 + Math.random() * 8;
+      drop.beginFill(i % 2 ? nextColor : color, 0.88);
+      drop.drawCircle(0, 0, radius);
+      drop.endFill();
+      drop.beginFill(0xffffff, 0.45);
+      drop.drawCircle(-radius * 0.32, -radius * 0.32, radius * 0.28);
+      drop.endFill();
+      drop.x = x;
+      drop.y = y;
+      drop.scale.set(0.5);
+      fxLayer.addChild(drop);
+
+      const angle = Math.random() * Math.PI * 2;
+      const distance = BOARD.cell * (0.25 + Math.random() * 0.58);
+      gsap.to(drop, {
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance + BOARD.cell * 0.12,
+        alpha: 0,
+        duration: 0.54 + Math.random() * 0.2,
+        ease: "power2.out",
+        onComplete: () => drop.destroy(),
+      });
+      gsap.to(drop.scale, { x: 1, y: 0.72, duration: 0.18, ease: "sine.out" });
+      gsap.to(drop.scale, { x: 0.22, y: 0.22, duration: 0.38, delay: 0.22, ease: "sine.in" });
+    }
+  }
+
   function floatText(text, x, y) {
     const label = new PIXI.Text(text, {
       fontFamily: "Pretendard, Arial, sans-serif",
-      fontSize: 34,
-      fontWeight: "900",
-      fill: 0xffffff,
+      fontSize: 40,
+      fontWeight: "950",
+      fill: [0xffffff, 0xfff2b8],
       stroke: 0x1d2c3f,
-      strokeThickness: 5,
+      strokeThickness: 6,
       align: "center",
     });
     label.anchor.set(0.5);
     label.x = x;
     label.y = y;
+    label.scale.set(0.72);
     fxLayer.addChild(label);
+    gsap.to(label.scale, { x: 1.12, y: 1.12, duration: 0.18, ease: "back.out(2.8)" });
     gsap.to(label, {
-      y: y - 42,
+      y: y - 58,
       alpha: 0,
-      duration: 0.72,
+      duration: 0.9,
       ease: "power2.out",
       onComplete: () => label.destroy(),
     });
