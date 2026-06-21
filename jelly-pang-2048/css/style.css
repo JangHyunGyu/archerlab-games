@@ -290,7 +290,7 @@ button {
   width: min(100%, 320px);
   max-width: 100%;
   display: grid;
-  gap: 10px;
+  gap: 16px;
   align-self: end;
   justify-self: center;
   margin-bottom: clamp(10px, 3dvh, 28px);
@@ -1125,6 +1125,7 @@ h1 {
 
   .title-actions {
     width: min(100%, 292px);
+    gap: 14px;
     margin-bottom: clamp(18px, 6dvh, 48px);
   }
 
