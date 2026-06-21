@@ -28,6 +28,13 @@
     0x4fd8ba, 0x42c5f5, 0x8e65f3, 0xf03f9b,
     0xf04437, 0xffca3a, 0xf39c12, 0xffd76a,
   ];
+  const HAPTIC_PATTERNS = {
+    bump: 24,
+    merge: [12, 28, 22],
+    mergeCombo: [14, 24, 24, 28, 34],
+    win: [28, 42, 54, 42, 82],
+    gameover: [52, 46, 30],
+  };
 
   const dirs = {
     left: { dr: 0, dc: -1 },
@@ -292,6 +299,7 @@
     if (!result.changed) {
       shakeBoard(0.34);
       playSound("bump");
+      playHaptic("bump");
       return;
     }
 
@@ -417,6 +425,7 @@
       const verifiedScore = Number(result.verifiedMove?.score);
       updateScore(Number.isFinite(verifiedScore) ? verifiedScore : score + result.scoreGain);
       playSound("merge");
+      playHaptic(result.merges.length > 1 ? "mergeCombo" : "merge");
     } else {
       playSound("slide");
     }
@@ -434,6 +443,7 @@
       showModal("2048 Jelly", "You win!", "왕관 젤리를 계속 키워보세요.", true, false);
       celebrate();
       playSound("win");
+      playHaptic("win");
       return;
     }
 
@@ -442,6 +452,7 @@
       showModal("Game over", "No space", "젤리들이 꽉 찼습니다.", false, true);
       shakeBoard(0.6);
       playSound("gameover");
+      playHaptic("gameover");
       return;
     }
 
@@ -1073,6 +1084,22 @@
     } catch {
       audioCtx = null;
     }
+  }
+
+  function canUseHaptics() {
+    const nav = window.navigator;
+    if (!nav || typeof nav.vibrate !== "function") return false;
+    if (nav.maxTouchPoints > 0) return true;
+    return window.matchMedia?.("(hover: none) and (pointer: coarse)")?.matches === true;
+  }
+
+  function playHaptic(type) {
+    if (!canUseHaptics()) return;
+    const pattern = HAPTIC_PATTERNS[type];
+    if (!pattern) return;
+    try {
+      window.navigator.vibrate(pattern);
+    } catch {}
   }
 
   function playSound(type) {
