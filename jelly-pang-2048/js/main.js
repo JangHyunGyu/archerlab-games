@@ -229,7 +229,6 @@
   function move(dir) {
     resumeAudio();
     if (locked || refs.modal.classList.contains("hidden") === false && !keepPlaying) return;
-    if (hammerMode) disarmHammer();
 
     const result = buildMove(dir);
     if (!result.changed) {
@@ -354,14 +353,12 @@
 
     if (result.scoreGain > 0) {
       updateScore(score + result.scoreGain);
-      chargePowers(result.scoreGain, result.merges.length);
       playSound("merge");
     } else {
       playSound("slide");
     }
 
     spawnRandomTile(true);
-    updatePowers();
 
     if (!won && !keepPlaying && hasRank(TARGET_RANK)) {
       won = true;
@@ -404,149 +401,6 @@
     return grid.some((row) => row.some((tile) => tile && tile.rank >= rank));
   }
 
-  function toggleHammer() {
-    resumeAudio();
-    if (locked) return;
-    if (hammerCharge < 100) {
-      pulseButton(refs.hammer);
-      playSound("bump");
-      return;
-    }
-    hammerMode ? disarmHammer() : armHammer();
-  }
-
-  function armHammer() {
-    hammerMode = true;
-    refs.hammer.classList.add("is-armed");
-    visuals.forEach(({ ring }) => {
-      ring.visible = true;
-      gsap.fromTo(ring, { alpha: 0.35 }, { alpha: 0.95, duration: 0.55, yoyo: true, repeat: -1, ease: "sine.inOut" });
-    });
-  }
-
-  function disarmHammer() {
-    hammerMode = false;
-    refs.hammer.classList.remove("is-armed");
-    visuals.forEach(({ ring }) => {
-      gsap.killTweensOf(ring);
-      ring.visible = false;
-    });
-  }
-
-  function handleTileTap(tileId) {
-    if (!hammerMode || locked) return;
-    const visual = visuals.get(tileId);
-    if (!visual) return;
-
-    locked = true;
-    disarmHammer();
-    const tile = visual.tile;
-    grid[tile.row][tile.col] = null;
-    hammerCharge = 0;
-    updatePowers();
-    playSound("pop");
-    createBurst(visual.container.x, visual.container.y, RANK_COLORS[tile.rank % RANK_COLORS.length], 24);
-
-    gsap.timeline({
-      onComplete: () => {
-        visual.container.destroy({ children: true });
-        visuals.delete(tileId);
-        locked = false;
-      },
-    })
-      .to(visual.container.scale, { x: 1.3, y: 0.72, duration: 0.1, ease: "power2.out" })
-      .to(visual.container, { alpha: 0, rotation: 0.12, duration: 0.16, ease: "power2.in" }, 0.08);
-  }
-
-  function shuffleBoard() {
-    resumeAudio();
-    if (locked) return;
-    if (hammerMode) disarmHammer();
-    if (shuffleCharge < 100) {
-      pulseButton(refs.shuffle);
-      playSound("bump");
-      return;
-    }
-
-    const tiles = [];
-    const positions = [];
-    for (let row = 0; row < SIZE; row++) {
-      for (let col = 0; col < SIZE; col++) {
-        if (!grid[row][col]) continue;
-        tiles.push(grid[row][col]);
-        positions.push({ row, col });
-      }
-    }
-    if (tiles.length < 2) return;
-
-    locked = true;
-    shuffleCharge = 0;
-    let shuffled = positions.slice();
-    for (let attempt = 0; attempt < 12; attempt++) {
-      shuffled = shuffleArray(positions.slice());
-      applyShuffleState(tiles, shuffled);
-      if (positionsChanged(tiles, positions) && canMove()) break;
-    }
-
-    const tl = gsap.timeline({
-      onComplete: () => {
-        locked = false;
-        updatePowers();
-        if (!canMove()) showModal("Game over", "No space", "젤리들이 꽉 찼습니다.", false);
-      },
-    });
-
-    tiles.forEach((tile, index) => {
-      const pos = cellCenter(shuffled[index].row, shuffled[index].col);
-      const visual = visuals.get(tile.id);
-      if (!visual) return;
-      tl.to(visual.container, {
-        x: pos.x,
-        y: pos.y,
-        rotation: (Math.random() - 0.5) * 0.22,
-        duration: 0.42,
-        ease: "back.out(1.6)",
-      }, 0);
-      tl.to(visual.container, { rotation: 0, duration: 0.22, ease: "sine.out" }, 0.42);
-    });
-    gsap.fromTo(boardLayer, { x: -7 }, { x: 0, duration: 0.46, ease: "elastic.out(1.1, 0.25)" });
-    playSound("shuffle");
-  }
-
-  function applyShuffleState(tiles, positions) {
-    grid = emptyGrid();
-    tiles.forEach((tile, index) => {
-      tile.row = positions[index].row;
-      tile.col = positions[index].col;
-      grid[tile.row][tile.col] = tile;
-    });
-  }
-
-  function positionsChanged(tiles, oldPositions) {
-    return tiles.some((tile, index) => tile.row !== oldPositions[index].row || tile.col !== oldPositions[index].col);
-  }
-
-  function shuffleArray(items) {
-    for (let i = items.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [items[i], items[j]] = [items[j], items[i]];
-    }
-    return items;
-  }
-
-  function chargePowers(gain, mergeCount) {
-    const add = Math.min(28, 8 + mergeCount * 5 + Math.log2(Math.max(2, gain)) * 1.5);
-    hammerCharge = Math.min(100, hammerCharge + add);
-    shuffleCharge = Math.min(100, shuffleCharge + add * 0.78);
-  }
-
-  function updatePowers() {
-    refs.hammerMeter.style.width = `${Math.round(hammerCharge)}%`;
-    refs.shuffleMeter.style.width = `${Math.round(shuffleCharge)}%`;
-    refs.hammer.classList.toggle("is-ready", hammerCharge >= 100);
-    refs.shuffle.classList.toggle("is-ready", shuffleCharge >= 100);
-  }
-
   function updateScore(nextScore, instant = false) {
     const previous = score;
     score = nextScore;
@@ -584,21 +438,12 @@
     container.x = pos.x;
     container.y = pos.y;
     container.sortableChildren = true;
-    container.interactive = true;
-    container.cursor = "pointer";
-    container.on("pointertap", () => handleTileTap(tile.id));
 
     const aura = new PIXI.Graphics();
     aura.beginFill(RANK_COLORS[tile.rank % RANK_COLORS.length], 0.16);
     aura.drawRoundedRect(-BOARD.cell * 0.46, -BOARD.cell * 0.44, BOARD.cell * 0.92, BOARD.cell * 0.88, 32);
     aura.endFill();
     aura.alpha = 0;
-
-    const ring = new PIXI.Graphics();
-    ring.name = "ring";
-    ring.lineStyle(7, 0xffd166, 0.96);
-    ring.drawRoundedRect(-BOARD.cell * 0.48, -BOARD.cell * 0.47, BOARD.cell * 0.96, BOARD.cell * 0.94, 34);
-    ring.visible = false;
 
     const sprite = new PIXI.Sprite(textures[Math.min(tile.rank, textures.length - 1)]);
     sprite.anchor.set(0.5);
@@ -613,9 +458,9 @@
     shine.rotation = -0.38;
     shine.alpha = 0.45;
 
-    container.addChild(aura, ring, sprite, shine);
+    container.addChild(aura, sprite, shine);
     tileLayer.addChild(container);
-    visuals.set(tile.id, { tile, container, sprite, ring, aura });
+    visuals.set(tile.id, { tile, container, sprite, aura });
 
     if (animate) {
       container.alpha = 0;
@@ -828,11 +673,6 @@
     if (type === "merge") {
       playTone(420, 0, 0.13, 0.06, "triangle");
       playTone(720, 0.06, 0.16, 0.045, "sine");
-    } else if (type === "pop") {
-      playTone(620, 0, 0.11, 0.065, "square");
-    } else if (type === "shuffle") {
-      playTone(260, 0, 0.16, 0.05, "sawtooth");
-      playTone(520, 0.09, 0.18, 0.04, "triangle");
     } else if (type === "win") {
       [523, 659, 784, 1046].forEach((freq, index) => playTone(freq, index * 0.07, 0.22, 0.05, "sine"));
     } else if (type === "gameover") {
