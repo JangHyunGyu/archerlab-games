@@ -193,6 +193,7 @@
         window.clearTimeout(serverLoaderHideTimer);
         serverLoaderHideTimer = null;
       }
+      refs.shell?.classList.add("is-server-loading");
       refs.serverLoader?.classList.remove("hidden");
       refs.serverLoader?.setAttribute("aria-hidden", "false");
     }
@@ -210,6 +211,7 @@
         if (serverTripCount > 0) return;
         refs.serverLoader?.classList.add("hidden");
         refs.serverLoader?.setAttribute("aria-hidden", "true");
+        refs.shell?.classList.remove("is-server-loading");
         serverLoaderHideTimer = null;
       }, delay);
     };
@@ -387,6 +389,7 @@
 
   function move(dir) {
     if (!refs.titleScreen.classList.contains("hidden")) return;
+    if (serverTripCount > 0) return;
     resumeAudio();
     if (locked || refs.modal.classList.contains("hidden") === false && !keepPlaying) return;
 
