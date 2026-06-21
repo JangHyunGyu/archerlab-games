@@ -106,10 +106,8 @@
   }
 
   function motionEnabled() {
-    return Boolean(
-      window.gsap &&
-      !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-    );
+    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return Boolean(window.gsap && !reduced);
   }
 
   function animatePanelIn(modal) {
@@ -178,18 +176,20 @@
     const content = dom.menu.querySelector(".menu-content");
     const laneLines = dom.menu.querySelectorAll(".menu-lane span");
     const controls = dom.menu.querySelector(".menu-control-bar");
-    gsap.fromTo(content, {
-      autoAlpha: 0,
-      y: 22,
-      scale: 0.985,
-    }, {
-      autoAlpha: 1,
-      y: 0,
-      scale: 1,
-      duration: 0.46,
-      ease: "power3.out",
-      clearProps: "opacity,visibility,transform",
-    });
+    if (content) {
+      gsap.fromTo(content, {
+        autoAlpha: 0,
+        y: 22,
+        scale: 0.985,
+      }, {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.46,
+        ease: "power3.out",
+        clearProps: "opacity,visibility,transform",
+      });
+    }
     if (laneLines.length) {
       gsap.fromTo(laneLines, { scaleX: 0, transformOrigin: "50% 50%" }, {
         scaleX: 1,
@@ -474,7 +474,7 @@
       dom.rank.addEventListener("click", () => this.openRankModal());
       dom.rankClose.addEventListener("click", () => {
         this.playTone("button");
-        dom.rankModal.classList.add("hidden");
+        animatePanelOut(dom.rankModal, () => dom.rankModal.classList.add("hidden"));
       });
       dom.submitRank.addEventListener("click", () => this.handleSubmitRank());
       dom.skipRank.addEventListener("click", () => this.handleSkipRank());
@@ -541,6 +541,7 @@
       this.hideLoading();
       this.mode = "playing";
       dom.hud.classList.remove("hidden");
+      animateHudIn();
       this.boardLayer.visible = true;
       this.resize();
       this.updateHud();
@@ -581,6 +582,7 @@
       dom.rankModal.classList.add("hidden");
       dom.loading.classList.add("hidden");
       dom.menu.classList.remove("hidden");
+      animateMenuIn();
       this.updateMenu();
       if (playSound) this.playTone("button");
       this.resize();
@@ -596,6 +598,7 @@
     showLoading(level) {
       if (dom.loadingLevel) dom.loadingLevel.textContent = String(level);
       if (dom.loading) dom.loading.classList.remove("hidden");
+      animateLoadingIn();
     }
 
     hideLoading() {
@@ -962,6 +965,30 @@
       const endX = -this.cell * 1.9;
       this.spawnExitGlow(vehicle);
       this.playTone("exit", 0.95);
+      if (motionEnabled()) {
+        const gsap = window.gsap;
+        let timeline;
+        timeline = gsap.timeline({
+          onComplete: () => {
+            this.releaseGsapTween(timeline);
+            if (vehicle.container.parent) this.vehicleLayer.removeChild(vehicle.container);
+            this.completeLevel();
+          },
+          onInterrupt: () => this.releaseGsapTween(timeline),
+        });
+        timeline.to(vehicle.container, {
+          x: endX,
+          duration: 0.68,
+          ease: "power3.inOut",
+        }, 0);
+        timeline.to(vehicle.container, {
+          alpha: 0,
+          duration: 0.22,
+          ease: "power2.in",
+        }, 0.46);
+        this.trackGsapTween(timeline);
+        return;
+      }
       this.tweens.push({
         duration: 680,
         elapsed: 0,
@@ -982,6 +1009,32 @@
       const y = (vehicle.y + 0.5) * this.cell;
       const g = new PIXI.Graphics();
       this.fxLayer.addChild(g);
+      if (motionEnabled()) {
+        const state = { t: 0 };
+        let tween;
+        const draw = () => {
+          const t = state.t;
+          g.clear();
+          const alpha = 1 - t;
+          g.roundRect(-this.cell * 1.1, y - this.cell * 0.42, this.cell * 1.45, this.cell * 0.84, this.cell * 0.16)
+            .fill({ color: 0xffd05a, alpha: 0.18 * alpha });
+          g.moveTo(this.cell * 0.18, y).lineTo(-this.cell * 0.95, y)
+            .stroke({ width: Math.max(4, this.cell * 0.08), color: 0xffd05a, alpha: 0.9 * alpha, cap: "round" });
+        };
+        tween = window.gsap.to(state, {
+          t: 1,
+          duration: 0.7,
+          ease: "none",
+          onUpdate: draw,
+          onComplete: () => {
+            this.releaseGsapTween(tween);
+            if (g.parent) this.fxLayer.removeChild(g);
+          },
+          onInterrupt: () => this.releaseGsapTween(tween),
+        });
+        this.trackGsapTween(tween);
+        return;
+      }
       this.tweens.push({
         duration: 700,
         elapsed: 0,
@@ -1003,6 +1056,27 @@
       this.showToast("이 방향으로는 움직일 수 없습니다");
       const originalX = vehicle.container.x;
       const originalY = vehicle.container.y;
+      if (motionEnabled()) {
+        const state = { t: 0 };
+        let tween;
+        tween = window.gsap.to(state, {
+          t: 1,
+          duration: 0.22,
+          ease: "none",
+          onUpdate: () => {
+            const wobble = Math.sin(state.t * Math.PI * 5) * (1 - state.t) * this.cell * 0.05;
+            if (vehicle.axis === "H") vehicle.container.x = originalX + wobble;
+            else vehicle.container.y = originalY + wobble;
+          },
+          onComplete: () => {
+            this.releaseGsapTween(tween);
+            vehicle.container.position.set(originalX, originalY);
+          },
+          onInterrupt: () => this.releaseGsapTween(tween),
+        });
+        this.trackGsapTween(tween);
+        return;
+      }
       this.tweens.push({
         duration: 220,
         elapsed: 0,
@@ -1083,6 +1157,10 @@
       dom.modal.classList.remove("is-timeout");
       dom.modal.classList.add("is-clear");
       dom.modal.classList.remove("hidden");
+      animatePanelIn(dom.modal);
+      countText(dom.clearMoves, this.moves);
+      countText(dom.nextLevel, this.level + 1);
+      countText(dom.clearLevel, clearedLevel, value => `Lv ${Number(value).toLocaleString()}`);
       this.mode = "complete";
     }
 
@@ -1125,6 +1203,10 @@
       dom.modal.classList.remove("is-clear");
       dom.modal.classList.add("is-timeout");
       dom.modal.classList.remove("hidden");
+      animatePanelIn(dom.modal);
+      countText(dom.clearMoves, this.moves);
+      countText(dom.nextLevel, this.level);
+      countText(dom.clearLevel, this.lastClear.rankLevel, value => `Lv ${Number(value).toLocaleString()}`);
       this.updateHud();
       this.playTone("blocked");
     }
@@ -1141,6 +1223,7 @@
       this.playTone("button");
       dom.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
       dom.rankModal.classList.remove("hidden");
+      animatePanelIn(dom.rankModal);
       try {
         const rows = await this.fetchRankings();
         this.renderRankRows(rows);
@@ -1190,6 +1273,7 @@
           </div>
         `;
       }).join("");
+      animateRankRows();
     }
 
     async handleSubmitRank() {
@@ -1283,6 +1367,38 @@
       dom.toast.textContent = text;
       dom.toast.classList.remove("hidden");
       clearTimeout(this.toastTimer);
+      if (motionEnabled()) {
+        const gsap = window.gsap;
+        gsap.killTweensOf(dom.toast);
+        gsap.fromTo(dom.toast, {
+          autoAlpha: 0,
+          xPercent: -50,
+          y: 18,
+          scale: 0.96,
+        }, {
+          autoAlpha: 1,
+          xPercent: -50,
+          y: 0,
+          scale: 1,
+          duration: 0.2,
+          ease: "back.out(1.45)",
+        });
+        this.toastTimer = setTimeout(() => {
+          gsap.to(dom.toast, {
+            autoAlpha: 0,
+            xPercent: -50,
+            y: 14,
+            scale: 0.98,
+            duration: 0.16,
+            ease: "power2.in",
+            onComplete: () => {
+              dom.toast.classList.add("hidden");
+              gsap.set(dom.toast, { clearProps: "opacity,visibility,transform" });
+            },
+          });
+        }, 1100);
+        return;
+      }
       this.toastTimer = setTimeout(() => dom.toast.classList.add("hidden"), 1100);
     }
 
