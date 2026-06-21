@@ -120,12 +120,29 @@ button {
   font-size: clamp(42px, 10vw, 66px);
 }
 
-.title-jelly {
-  width: min(88%, 370px);
+.title-jelly-grid {
+  width: min(88%, 360px);
   max-width: 100%;
-  max-height: min(48vh, 360px);
+  align-self: center;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(4px, 1dvh, 10px) clamp(6px, 2vw, 12px);
+  padding: clamp(6px, 1.4dvh, 12px);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(246, 79, 120, 0.16), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(255, 209, 102, 0.28), transparent 28%),
+    radial-gradient(circle at 82% 76%, rgba(88, 215, 183, 0.18), transparent 34%),
+    rgba(255, 255, 255, 0.46);
+  overflow: visible;
+}
+
+.title-jelly-grid img {
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1;
   object-fit: contain;
-  filter: drop-shadow(0 24px 34px rgba(246, 79, 120, 0.22));
+  filter: drop-shadow(0 10px 12px rgba(246, 79, 120, 0.18));
   pointer-events: none;
 }
 
@@ -761,8 +778,10 @@ h1 {
     font-size: clamp(40px, 11vw, 58px);
   }
 
-  .title-jelly {
-    max-height: min(40vh, 270px);
+  .title-jelly-grid {
+    width: min(78%, 280px);
+    gap: 4px 7px;
+    padding: 7px;
   }
 
   .score-tile {
@@ -809,8 +828,8 @@ h1 {
     font-size: clamp(42px, 12vw, 56px);
   }
 
-  .title-jelly {
-    width: min(96%, 330px);
+  .title-jelly-grid {
+    width: min(86%, 310px);
   }
 
   .title-actions button {
