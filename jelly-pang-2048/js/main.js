@@ -458,9 +458,11 @@
     shine.rotation = -0.38;
     shine.alpha = 0.45;
 
-    container.addChild(aura, sprite, shine);
+    const badge = createValueBadge(tile.rank);
+
+    container.addChild(aura, sprite, shine, badge);
     tileLayer.addChild(container);
-    visuals.set(tile.id, { tile, container, sprite, aura });
+    visuals.set(tile.id, { tile, container, sprite, badge, aura });
 
     if (animate) {
       container.alpha = 0;
@@ -475,6 +477,41 @@
       });
       gsap.fromTo(aura, { alpha: merged ? 0.9 : 0.45 }, { alpha: 0, duration: 0.56, ease: "sine.out" });
     }
+  }
+
+  function createValueBadge(rank) {
+    const value = String(tileValue(rank));
+    const fontSize = value.length >= 4 ? 25 : value.length === 3 ? 30 : 35;
+    const text = new PIXI.Text(value, {
+      fontFamily: "Pretendard, Arial, sans-serif",
+      fontSize,
+      fontWeight: "950",
+      fill: 0x1d2c3f,
+      stroke: 0xffffff,
+      strokeThickness: 4,
+      align: "center",
+    });
+    text.anchor.set(0.5);
+    text.y = -1;
+
+    const width = Math.max(54, text.width + 22);
+    const height = 39;
+    const badge = new PIXI.Container();
+    badge.y = BOARD.cell * 0.39;
+
+    const shadow = new PIXI.Graphics();
+    shadow.beginFill(0x1d2c3f, 0.14);
+    shadow.drawRoundedRect(-width / 2 + 2, -height / 2 + 4, width, height, 19);
+    shadow.endFill();
+
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0xffffff, 0.9);
+    bg.lineStyle(3, RANK_COLORS[rank % RANK_COLORS.length], 0.7);
+    bg.drawRoundedRect(-width / 2, -height / 2, width, height, 19);
+    bg.endFill();
+
+    badge.addChild(shadow, bg, text);
+    return badge;
   }
 
   function drawBoard() {
