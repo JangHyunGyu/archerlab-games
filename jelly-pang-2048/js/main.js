@@ -70,6 +70,7 @@
     shell: document.querySelector(".game-shell"),
     titleScreen: $("title-screen"),
     playGame: $("play-game"),
+    homeGame: $("home-game"),
     mount: $("pixi-stage"),
     frame: $("stage-frame"),
     score: $("score"),
@@ -243,6 +244,7 @@
     });
 
     refs.playGame.addEventListener("click", () => startGame());
+    refs.homeGame.addEventListener("click", () => showTitle());
     refs.rankOpen.addEventListener("click", () => openRanks());
     refs.rankClose.addEventListener("click", () => hideRanks());
     refs.tryAgain.addEventListener("click", () => startGame());
