@@ -8,9 +8,9 @@
   const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, IS_TOUCH_DEVICE ? 1.2 : 1.5);
   const MAX_FX_CHILDREN = IS_TOUCH_DEVICE ? 72 : 120;
   const SESSION_REQUEST_TIMEOUT_MS = 8000;
-  const MOVE_VERIFY_TIMEOUT_MS = 5000;
   const RANK_REQUEST_TIMEOUT_MS = 10000;
-  const MOVE_FLUSH_TIMEOUT_MS = 6500;
+  const MOVE_UPLOAD_TIMEOUT_MS = 10000;
+  const MOVE_UPLOAD_BATCH_SIZE = 50;
   const BOARD = {
     x: 78,
     y: 78,
@@ -493,7 +493,7 @@
 
     hideGuide(true);
     locked = true;
-    result.verificationPromise = ranking.recordMove(dir);
+    ranking.recordMove(dir);
     applyMoveState(result);
     animateMove(result);
   }
@@ -614,12 +614,7 @@
       playSound("slide");
     }
 
-    const spawned = spawnNextTile(true);
-    result.localSpawned = spawned ? { row: spawned.row, col: spawned.col, rank: spawned.rank } : null;
-    const localScore = score;
-    result.verificationPromise?.then((verifiedMove) => {
-      ranking.verifyLocalMove(verifiedMove, result.localSpawned, localScore);
-    });
+    spawnNextTile(true);
 
     if (!won && !keepPlaying && hasRank(TARGET_RANK)) {
       won = true;
@@ -631,7 +626,7 @@
       return;
     }
 
-    if (result.verifiedMove?.game_over || !canMove()) {
+    if (!canMove()) {
       locked = false;
       showModal("Game over", "No space", "젤리들이 꽉 찼습니다.", false, true);
       shakeBoard(0.6);
@@ -1341,7 +1336,7 @@
       this.verifiedScore = 0;
       this.sessionData = null;
       this.rngState = 0;
-      this.moveQueue = Promise.resolve();
+      this.pendingEvents = [];
       this.unsupported = false;
       this.syncFailed = false;
     }
@@ -1352,7 +1347,7 @@
       this.verifiedScore = 0;
       this.sessionData = null;
       this.rngState = 0;
-      this.moveQueue = Promise.resolve();
+      this.pendingEvents = [];
       this.unsupported = false;
       this.syncFailed = false;
       this.sessionPromise = withServerTrip(() => fetchWithTimeout(`${RANK_API_BASE}/score-sessions`, {
@@ -1409,69 +1404,49 @@
     }
 
     recordMove(dir) {
-      if (this.unsupported || this.syncFailed) return Promise.resolve(null);
+      if (this.unsupported || this.syncFailed) return null;
 
       const nextSeq = this.moveSeq + 1;
       this.moveSeq = nextSeq;
       const event = { type: "move", dir, move_seq: nextSeq };
-      const request = this.moveQueue.then(async () => {
-        const sessionId = await this.ensureSession();
-        if (!sessionId) return null;
+      this.pendingEvents.push(event);
+      return event;
+    }
+
+    async flushMoves() {
+      if (this.unsupported || this.syncFailed) return false;
+      const sessionId = await this.ensureSession();
+      if (!sessionId) return false;
+
+      while (this.pendingEvents.length > 0) {
+        const events = this.pendingEvents.slice(0, MOVE_UPLOAD_BATCH_SIZE);
         const res = await fetchWithTimeout(`${RANK_API_BASE}/score-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({
             game_id: GAME_ID,
             session_id: sessionId,
-            event,
+            events,
           }),
-        }, MOVE_VERIFY_TIMEOUT_MS);
+        }, MOVE_UPLOAD_TIMEOUT_MS);
         if (!res.ok) {
           if (res.status === 400 || res.status === 404 || res.status === 409) this.unsupported = true;
-          throw new Error(`rank move ${res.status}`);
+          throw new Error(`rank move upload ${res.status}`);
         }
         const data = await res.json();
-        this.moveSeq = Math.max(this.moveSeq, Number(data.move_seq || nextSeq));
-        this.verifiedScore = Number(data.score || this.verifiedScore || 0);
-        return data;
-      }).catch(() => {
-        if (!this.unsupported) this.syncFailed = true;
-        return null;
-      });
-      this.moveQueue = request.catch(() => null).then(() => null);
-      return request;
-    }
-
-    async flushMoves() {
-      try {
-        await withTimeout(this.moveQueue, MOVE_FLUSH_TIMEOUT_MS, "rank move verification timeout");
-      } catch (err) {
-        this.syncFailed = true;
-        throw err;
+        const verifiedScore = Number(data.score);
+        if (Number.isFinite(verifiedScore)) this.verifiedScore = verifiedScore;
+        this.moveSeq = Math.max(this.moveSeq, Number(data.move_seq || events[events.length - 1].move_seq));
+        this.pendingEvents.splice(0, events.length);
       }
+
       return !this.unsupported && !this.syncFailed;
-    }
-
-    verifyLocalMove(verifiedMove, localSpawned, localScore) {
-      if (!verifiedMove || this.unsupported || this.syncFailed) return;
-      const verifiedScore = Number(verifiedMove.score);
-      if (Number.isFinite(verifiedScore) && verifiedScore !== localScore) {
-        this.syncFailed = true;
-        return;
-      }
-      const spawned = verifiedMove.spawned;
-      const spawnedMatches = !spawned && !localSpawned
-        || spawned && localSpawned
-          && spawned.row === localSpawned.row
-          && spawned.col === localSpawned.col
-          && spawned.rank === localSpawned.rank;
-      if (!spawnedMatches) this.syncFailed = true;
     }
 
     async submit(playerName, finalScore, extraData = {}) {
       await withTimeout(this.ensureSession(), SESSION_REQUEST_TIMEOUT_MS, "rank session timeout");
       await this.flushMoves();
-      const canVerify = this.sessionId && !this.unsupported && !this.syncFailed;
+      const canVerify = this.sessionId && !this.unsupported && !this.syncFailed && this.pendingEvents.length === 0;
       if (!canVerify) throw new Error("rank verification unavailable");
       const submittedScore = Math.max(0, Math.floor(finalScore || 0));
       if (submittedScore !== this.verifiedScore) throw new Error("rank score verification mismatch");
@@ -1487,11 +1462,11 @@
         },
       };
 
-      const res = await withServerTrip(() => fetchWithTimeout(`${RANK_API_BASE}/rankings`, {
+      const res = await fetchWithTimeout(`${RANK_API_BASE}/rankings`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify(body),
-      }, RANK_REQUEST_TIMEOUT_MS));
+      }, RANK_REQUEST_TIMEOUT_MS);
       if (!res.ok) throw new Error(`rank submit ${res.status}`);
       const result = await res.json();
       return result;
