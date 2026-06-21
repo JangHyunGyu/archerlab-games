@@ -1360,7 +1360,7 @@
       const request = this.moveQueue.then(async () => {
         const sessionId = await this.ensureSession();
         if (!sessionId) return null;
-        const res = await withServerTrip(() => fetch(`${RANK_API_BASE}/score-events`, {
+        const res = await fetch(`${RANK_API_BASE}/score-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({
@@ -1368,7 +1368,7 @@
             session_id: sessionId,
             event,
           }),
-        }));
+        });
         if (!res.ok) {
           if (res.status === 400 || res.status === 404 || res.status === 409) this.unsupported = true;
           throw new Error(`rank move ${res.status}`);
