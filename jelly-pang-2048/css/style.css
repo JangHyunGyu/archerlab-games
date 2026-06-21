@@ -29,6 +29,8 @@ html {
 }
 
 body {
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
   min-height: 100dvh;
   color: var(--ink);
@@ -58,8 +60,9 @@ button {
 .game-shell {
   width: min(100%, 520px);
   max-width: 100vw;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   margin: 0 auto;
   padding:
     max(12px, env(safe-area-inset-top))
@@ -68,8 +71,8 @@ button {
     max(14px, env(safe-area-inset-left));
   position: relative;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
-  gap: 10px;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: clamp(6px, 1.2dvh, 10px);
   overflow: hidden;
 }
 
@@ -220,13 +223,14 @@ h1 {
 
 .score-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
 }
 
 .score-tile {
-  min-height: 62px;
-  padding: 9px 9px 8px;
+  width: min(100%, 172px);
+  min-height: 54px;
+  padding: 8px 14px 7px;
   border: 1px solid rgba(255,255,255,0.68);
   border-radius: 8px;
   background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.42));
@@ -249,19 +253,11 @@ h1 {
 .score-tile strong {
   margin-top: 2px;
   color: #1d2c3f;
-  font-size: clamp(20px, 5.5vw, 28px);
+  font-size: clamp(22px, 5.8vw, 30px);
   line-height: 1;
   font-weight: 950;
   letter-spacing: 0;
   white-space: nowrap;
-}
-
-.best strong {
-  color: #f24c70;
-}
-
-.target strong {
-  color: #00a789;
 }
 
 .play-area {
@@ -272,8 +268,9 @@ h1 {
 
 .stage-frame {
   position: relative;
-  width: min(100%, calc(100dvh - 244px));
+  width: min(100%, calc(100dvh - 240px));
   max-width: 492px;
+  max-height: 100%;
   aspect-ratio: 1;
   border: 1px solid rgba(255,255,255,0.78);
   border-radius: 8px;
@@ -687,11 +684,13 @@ h1 {
 .control-dock {
   display: grid;
   place-items: center;
+  min-height: 0;
+  padding-bottom: 2px;
 }
 
 .swipe-pad {
-  height: 84px;
-  width: min(148px, 42vw);
+  height: clamp(58px, 9dvh, 72px);
+  width: min(132px, 38vw);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
@@ -700,6 +699,12 @@ h1 {
 
 .swipe-pad button {
   min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  display: grid;
+  place-items: center;
   border: 1px solid rgba(255,255,255,0.72);
   border-radius: 8px;
   color: #314052;
@@ -745,7 +750,7 @@ h1 {
 
 @media (max-height: 720px) {
   .topbar {
-    min-height: 58px;
+    min-height: 54px;
   }
 
   .title-screen {
@@ -761,16 +766,16 @@ h1 {
   }
 
   .score-tile {
-    min-height: 52px;
+    min-height: 46px;
   }
 
   .stage-frame {
-    width: min(100%, calc(100dvh - 214px));
+    width: min(100%, calc(100dvh - 218px));
   }
 
   .swipe-pad {
-    width: 116px;
-    height: 66px;
+    width: 108px;
+    height: 58px;
   }
 }
 
@@ -829,10 +834,11 @@ h1 {
   }
 
   .score-row {
-    gap: 6px;
+    justify-items: center;
   }
 
   .score-tile {
+    width: min(100%, 154px);
     padding-inline: 6px;
   }
 
