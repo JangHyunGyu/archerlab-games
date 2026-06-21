@@ -17,6 +17,28 @@
     { length: 12 },
     (_, rank) => `assets/images/jellies/jelly-${String(rank).padStart(2, "0")}.png`
   );
+  const SOUND_ASSETS = {
+    slide: "assets/sounds/jelly-slide.mp3",
+    merge: "assets/sounds/jelly-merge.mp3",
+    mergeCombo: "assets/sounds/jelly-merge-combo.mp3",
+    bump: "assets/sounds/jelly-bump.mp3",
+    win: "assets/sounds/jelly-win.mp3",
+    gameover: "assets/sounds/jelly-gameover.mp3",
+    start: "assets/sounds/jelly-start.mp3",
+    rankOpen: "assets/sounds/jelly-rank-open.mp3",
+    rankSubmit: "assets/sounds/jelly-rank-submit.mp3",
+  };
+  const SOUND_VOLUME = {
+    slide: 0.44,
+    merge: 0.58,
+    mergeCombo: 0.6,
+    bump: 0.48,
+    win: 0.62,
+    gameover: 0.58,
+    start: 0.48,
+    rankOpen: 0.46,
+    rankSubmit: 0.5,
+  };
   const STORAGE = {
     best: "jelly-pang-2048-best",
     guide: "jelly-pang-2048-guide-seen",
@@ -87,6 +109,8 @@
   let keepPlaying = false;
   let pointerStart = null;
   let audioCtx = null;
+  let soundPools = {};
+  let soundCursor = {};
   let ranking = null;
   let rankSubmitInFlight = false;
   let startInFlight = false;
@@ -122,6 +146,7 @@
 
     ranking = new RankingClient();
     drawBoard();
+    prepareSounds();
     await loadTextures();
     bindInput();
     refs.best.textContent = formatScore(bestScore);
@@ -148,6 +173,7 @@
     if (startInFlight) return;
     startInFlight = true;
     resumeAudio();
+    playSound("start");
     refs.titleScreen.classList.add("hidden");
     newGame().finally(() => {
       startInFlight = false;
@@ -424,7 +450,7 @@
     if (result.scoreGain > 0) {
       const verifiedScore = Number(result.verifiedMove?.score);
       updateScore(Number.isFinite(verifiedScore) ? verifiedScore : score + result.scoreGain);
-      playSound("merge");
+      playSound(result.merges.length > 1 ? "mergeCombo" : "merge");
       playHaptic(result.merges.length > 1 ? "mergeCombo" : "merge");
     } else {
       playSound("slide");
@@ -692,6 +718,8 @@
   }
 
   async function openRanks() {
+    resumeAudio();
+    playSound("rankOpen");
     refs.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
     refs.rankModal.classList.remove("hidden");
     try {
@@ -727,6 +755,7 @@
 
     try {
       const result = await ranking.submit(name, score, extra);
+      playSound("rankSubmit");
       setSubmitStatus(`등록 완료${result?.rank ? ` (#${result.rank})` : ""}`, "ok");
     } catch {
       setSubmitStatus("검증 실패로 등록되지 않았어요. 새 게임으로 다시 도전해주세요.", "fail");
@@ -1075,6 +1104,22 @@
     }
   }
 
+  function prepareSounds() {
+    if (!window.Audio) return;
+    soundPools = {};
+    soundCursor = {};
+    Object.entries(SOUND_ASSETS).forEach(([type, src]) => {
+      const poolSize = type === "slide" || type === "merge" || type === "bump" ? 4 : 2;
+      soundPools[type] = Array.from({ length: poolSize }, () => {
+        const audio = new Audio(src);
+        audio.preload = "auto";
+        audio.volume = SOUND_VOLUME[type] ?? 0.55;
+        return audio;
+      });
+      soundCursor[type] = 0;
+    });
+  }
+
   function resumeAudio() {
     try {
       const AudioCtor = window.AudioContext || window.webkitAudioContext;
@@ -1103,6 +1148,31 @@
   }
 
   function playSound(type) {
+    if (playMp3Sound(type)) return;
+    playSynthSound(type);
+  }
+
+  function playMp3Sound(type) {
+    const pool = soundPools[type] || soundPools.merge;
+    if (!pool || pool.length === 0) return false;
+    const cursor = soundCursor[type] || 0;
+    const audio = pool[cursor % pool.length];
+    soundCursor[type] = cursor + 1;
+
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      const playing = audio.play();
+      if (playing && typeof playing.catch === "function") {
+        playing.catch(() => playSynthSound(type));
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function playSynthSound(type) {
     if (!audioCtx) return;
     const now = audioCtx.currentTime;
     const gain = audioCtx.createGain();
@@ -1121,15 +1191,19 @@
       gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
     };
 
-    if (type === "merge") {
+    if (type === "merge" || type === "mergeCombo") {
       playTone(420, 0, 0.13, 0.06, "triangle");
       playTone(720, 0.06, 0.16, 0.045, "sine");
-    } else if (type === "win") {
+      if (type === "mergeCombo") playTone(920, 0.12, 0.18, 0.038, "sine");
+    } else if (type === "win" || type === "rankSubmit") {
       [523, 659, 784, 1046].forEach((freq, index) => playTone(freq, index * 0.07, 0.22, 0.05, "sine"));
     } else if (type === "gameover") {
       playTone(180, 0, 0.28, 0.055, "triangle");
     } else if (type === "bump") {
       playTone(130, 0, 0.08, 0.035, "sine");
+    } else if (type === "start" || type === "rankOpen") {
+      playTone(520, 0, 0.08, 0.035, "triangle");
+      playTone(780, 0.05, 0.11, 0.03, "sine");
     } else {
       playTone(300, 0, 0.07, 0.025, "triangle");
     }
