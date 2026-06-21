@@ -702,7 +702,7 @@ h1 {
   display: grid;
   place-items: center;
   min-height: 0;
-  padding-bottom: 4px;
+  padding-bottom: clamp(18px, 3dvh, 28px);
 }
 
 .swipe-pad {
@@ -870,7 +870,11 @@ h1 {
   }
 
   .stage-frame {
-    width: min(100%, calc(100dvh - 218px));
+    width: min(100%, calc(100dvh - 234px));
+  }
+
+  .control-dock {
+    padding-bottom: 18px;
   }
 
   .swipe-pad {
@@ -886,6 +890,10 @@ h1 {
 }
 
 @media (max-height: 640px) {
+  .control-dock {
+    padding-bottom: 14px;
+  }
+
   .swipe-pad {
     width: 138px;
     height: 72px;
