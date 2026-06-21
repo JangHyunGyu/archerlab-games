@@ -118,11 +118,11 @@
     </section>
 
     <footer class="control-dock" aria-label="direction controls">
-      <div class="swipe-pad" aria-hidden="true">
-        <button type="button" data-dir="up">↑</button>
-        <button type="button" data-dir="left">←</button>
-        <button type="button" data-dir="down">↓</button>
-        <button type="button" data-dir="right">→</button>
+      <div class="swipe-pad" role="group" aria-label="방향 조작">
+        <button type="button" data-dir="up" aria-label="위로 이동"></button>
+        <button type="button" data-dir="left" aria-label="왼쪽으로 이동"></button>
+        <button type="button" data-dir="down" aria-label="아래로 이동"></button>
+        <button type="button" data-dir="right" aria-label="오른쪽으로 이동"></button>
       </div>
     </footer>
   </main>
@@ -130,6 +130,6 @@
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" crossorigin="anonymous"></script>
   <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
-  <script src="js/main.js?v=20260621-score-only" defer></script>
+  <script src="js/main.js?v=20260621-dpad-polish" defer></script>
 </body>
 </html>
