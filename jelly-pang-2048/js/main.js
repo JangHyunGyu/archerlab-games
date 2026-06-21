@@ -316,10 +316,10 @@
     score = 0;
     grid = emptyGrid();
     nextTileId = 1;
-    visuals.forEach((visual) => visual.container.destroy({ children: true }));
+    visuals.forEach((visual) => destroyPixiObject(visual.container));
     visuals.clear();
-    tileLayer.removeChildren();
-    fxLayer.removeChildren();
+    destroyLayerChildren(tileLayer);
+    destroyLayerChildren(fxLayer);
     hideModal();
     hideRanks();
     resetRankSubmit();
@@ -385,6 +385,28 @@
       }
     }
     return cells;
+  }
+
+  function killPixiTweens(target) {
+    if (!target || !window.gsap) return;
+    gsap.killTweensOf(target);
+    ["position", "scale", "skew", "pivot"].forEach((prop) => {
+      if (target[prop]) gsap.killTweensOf(target[prop]);
+    });
+    if (Array.isArray(target.children)) {
+      target.children.forEach((child) => killPixiTweens(child));
+    }
+  }
+
+  function destroyPixiObject(target) {
+    if (!target || target.destroyed) return;
+    killPixiTweens(target);
+    target.destroy({ children: true });
+  }
+
+  function destroyLayerChildren(layer) {
+    if (!layer) return;
+    layer.removeChildren().forEach((child) => destroyPixiObject(child));
   }
 
   function move(dir) {
@@ -506,7 +528,7 @@
       merge.from.forEach((id) => {
         const visual = visuals.get(id);
         if (!visual) return;
-        visual.container.destroy({ children: true });
+        destroyPixiObject(visual.container);
         visuals.delete(id);
       });
 
@@ -940,7 +962,7 @@
         alpha: 0,
         duration: 0.45 + Math.random() * 0.24,
         ease: "power2.out",
-        onComplete: () => dot.destroy(),
+        onComplete: () => destroyPixiObject(dot),
       });
       gsap.to(dot.scale, { x: 0.25, y: 0.25, duration: 0.6, ease: "sine.in" });
     }
@@ -1016,7 +1038,7 @@
         duration: 0.46,
         delay: ring.delay + 0.16,
         ease: "sine.in",
-        onComplete: () => wave.destroy(),
+        onComplete: () => destroyPixiObject(wave),
       });
     });
   }
@@ -1042,7 +1064,7 @@
         duration: 0.32,
         delay: 0.12,
         ease: "sine.in",
-        onComplete: () => ray.destroy(),
+        onComplete: () => destroyPixiObject(ray),
       });
     }
   }
@@ -1075,7 +1097,7 @@
         duration: 0.38,
         delay: 0.22,
         ease: "sine.in",
-        onComplete: () => sparkle.destroy(),
+        onComplete: () => destroyPixiObject(sparkle),
       });
       gsap.to(sparkle.scale, { x: 0.2, y: 0.2, duration: 0.34, delay: 0.26, ease: "sine.in" });
     }
@@ -1119,7 +1141,7 @@
         alpha: 0,
         duration: 0.54 + Math.random() * 0.2,
         ease: "power2.out",
-        onComplete: () => drop.destroy(),
+        onComplete: () => destroyPixiObject(drop),
       });
       gsap.to(drop.scale, { x: 1, y: 0.72, duration: 0.18, ease: "sine.out" });
       gsap.to(drop.scale, { x: 0.22, y: 0.22, duration: 0.38, delay: 0.22, ease: "sine.in" });
@@ -1147,7 +1169,7 @@
       alpha: 0,
       duration: 0.9,
       ease: "power2.out",
-      onComplete: () => label.destroy(),
+      onComplete: () => destroyPixiObject(label),
     });
   }
 
@@ -1169,7 +1191,7 @@
         rotation: dot.rotation + Math.PI * (1 + Math.random() * 2),
         duration: 1.5 + Math.random() * 1.2,
         ease: "power1.in",
-        onComplete: () => dot.destroy(),
+        onComplete: () => destroyPixiObject(dot),
       });
     }
   }
