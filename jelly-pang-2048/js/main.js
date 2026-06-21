@@ -223,7 +223,22 @@
     app.view.addEventListener("contextmenu", (event) => event.preventDefault());
 
     document.querySelectorAll("[data-dir]").forEach((button) => {
-      button.addEventListener("click", () => move(button.dataset.dir));
+      let handledPointer = false;
+      button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        handledPointer = true;
+        move(button.dataset.dir);
+        window.setTimeout(() => {
+          handledPointer = false;
+        }, 350);
+      });
+      button.addEventListener("click", (event) => {
+        if (handledPointer) {
+          event.preventDefault();
+          return;
+        }
+        move(button.dataset.dir);
+      });
     });
 
     refs.playGame.addEventListener("click", () => startGame());
@@ -316,7 +331,7 @@
     return cells;
   }
 
-  async function move(dir) {
+  function move(dir) {
     if (!refs.titleScreen.classList.contains("hidden")) return;
     resumeAudio();
     if (locked || refs.modal.classList.contains("hidden") === false && !keepPlaying) return;
@@ -331,10 +346,7 @@
 
     hideGuide(true);
     locked = true;
-    const verifiedMove = await ranking.recordMove(dir);
-    if (verifiedMove) {
-      result.verifiedMove = verifiedMove;
-    }
+    result.verificationPromise = ranking.recordMove(dir);
     applyMoveState(result);
     animateMove(result);
   }
@@ -432,7 +444,7 @@
     });
   }
 
-  function finishMove(result) {
+  async function finishMove(result) {
     result.merges.forEach((merge) => {
       merge.from.forEach((id) => {
         const visual = visuals.get(id);
@@ -448,15 +460,23 @@
     });
 
     if (result.scoreGain > 0) {
-      const verifiedScore = Number(result.verifiedMove?.score);
-      updateScore(Number.isFinite(verifiedScore) ? verifiedScore : score + result.scoreGain);
+      updateScore(score + result.scoreGain);
       playSound(result.merges.length > 1 ? "mergeCombo" : "merge");
       playHaptic(result.merges.length > 1 ? "mergeCombo" : "merge");
     } else {
       playSound("slide");
     }
 
-    const spawned = result.verifiedMove?.spawned;
+    const verifiedMove = await result.verificationPromise;
+    if (verifiedMove) {
+      result.verifiedMove = verifiedMove;
+      const verifiedScore = Number(verifiedMove.score);
+      if (Number.isFinite(verifiedScore) && verifiedScore !== score) {
+        updateScore(verifiedScore);
+      }
+    }
+
+    const spawned = verifiedMove?.spawned;
     if (spawned && Number.isInteger(spawned.row) && Number.isInteger(spawned.col) && Number.isInteger(spawned.rank)) {
       placeTile(makeTile(spawned.rank, spawned.row, spawned.col), true);
     } else {
