@@ -1,4 +1,7 @@
 (() => {
+  const GAME_ID = "jelly-pang-2048";
+  const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
+  const RANK_LIMIT = 20;
   const SIZE = 4;
   const STAGE = 900;
   const BOARD = {
@@ -17,6 +20,7 @@
   const STORAGE = {
     best: "jelly-pang-2048-best",
     guide: "jelly-pang-2048-guide-seen",
+    nick: "jelly-pang-2048-nick",
   };
 
   const RANK_COLORS = [
@@ -39,13 +43,24 @@
     score: $("score"),
     best: $("best-score"),
     newGame: $("new-game"),
+    rankOpen: $("rank-open"),
     guide: $("quick-guide"),
     modal: $("message-modal"),
+    messageActions: document.querySelector(".message-actions"),
     messageEyebrow: $("message-eyebrow"),
     messageTitle: $("message-title"),
     messageCopy: $("message-copy"),
     keepPlaying: $("keep-playing"),
     tryAgain: $("try-again"),
+    rankModal: $("rank-modal"),
+    rankClose: $("rank-close"),
+    rankContent: $("rank-content"),
+    rankSubmitPanel: $("rank-submit-panel"),
+    modalScore: $("modal-score"),
+    nicknameInput: $("nickname-input"),
+    submitRank: $("submit-rank"),
+    skipRank: $("skip-rank"),
+    submitStatus: $("submit-status"),
   };
 
   let app;
@@ -63,6 +78,8 @@
   let keepPlaying = false;
   let pointerStart = null;
   let audioCtx = null;
+  let ranking = null;
+  let rankSubmitInFlight = false;
 
   async function init() {
     if (!window.PIXI || !window.gsap) {
@@ -90,6 +107,7 @@
     fxLayer = new PIXI.Container();
     app.stage.addChild(boardLayer, tileLayer, fxLayer);
 
+    ranking = new RankingClient();
     drawBoard();
     await loadTextures();
     bindInput();
@@ -152,10 +170,18 @@
     });
 
     refs.newGame.addEventListener("click", () => newGame());
+    refs.rankOpen.addEventListener("click", () => openRanks());
+    refs.rankClose.addEventListener("click", () => hideRanks());
     refs.tryAgain.addEventListener("click", () => newGame());
     refs.keepPlaying.addEventListener("click", () => {
       keepPlaying = true;
       hideModal();
+    });
+    refs.submitRank.addEventListener("click", () => submitRank());
+    refs.skipRank.addEventListener("click", () => {
+      if (rankSubmitInFlight) return;
+      refs.rankSubmitPanel.classList.add("hidden");
+      setSubmitStatus("", "");
     });
 
     window.addEventListener("blur", () => {
@@ -163,8 +189,8 @@
     });
   }
 
-  function newGame() {
-    locked = false;
+  async function newGame() {
+    locked = true;
     won = false;
     keepPlaying = false;
     score = 0;
@@ -175,10 +201,21 @@
     tileLayer.removeChildren();
     fxLayer.removeChildren();
     hideModal();
+    hideRanks();
+    resetRankSubmit();
     updateScore(0, true);
 
     const firstRun = localStorage.getItem(STORAGE.guide) !== "1";
-    if (firstRun) {
+    const session = await ranking.startSession();
+    if (Array.isArray(session?.tiles) && session.tiles.length > 0) {
+      session.tiles.forEach((tile) => {
+        if (Number.isInteger(tile?.row) && Number.isInteger(tile?.col) && Number.isInteger(tile?.rank)) {
+          placeTile(makeTile(tile.rank, tile.row, tile.col), true);
+        }
+      });
+      if (firstRun) showGuide();
+      else hideGuide();
+    } else if (firstRun) {
       placeTile(makeTile(0, 2, 1), true);
       placeTile(makeTile(0, 2, 2), true);
       showGuide();
@@ -187,6 +224,7 @@
       spawnRandomTile(true);
       hideGuide();
     }
+    locked = false;
   }
 
   function emptyGrid() {
@@ -221,7 +259,7 @@
     return cells;
   }
 
-  function move(dir) {
+  async function move(dir) {
     resumeAudio();
     if (locked || refs.modal.classList.contains("hidden") === false && !keepPlaying) return;
 
@@ -234,6 +272,10 @@
 
     hideGuide(true);
     locked = true;
+    const verifiedMove = await ranking.recordMove(dir);
+    if (verifiedMove) {
+      result.verifiedMove = verifiedMove;
+    }
     applyMoveState(result);
     animateMove(result);
   }
@@ -347,26 +389,32 @@
     });
 
     if (result.scoreGain > 0) {
-      updateScore(score + result.scoreGain);
+      const verifiedScore = Number(result.verifiedMove?.score);
+      updateScore(Number.isFinite(verifiedScore) ? verifiedScore : score + result.scoreGain);
       playSound("merge");
     } else {
       playSound("slide");
     }
 
-    spawnRandomTile(true);
+    const spawned = result.verifiedMove?.spawned;
+    if (spawned && Number.isInteger(spawned.row) && Number.isInteger(spawned.col) && Number.isInteger(spawned.rank)) {
+      placeTile(makeTile(spawned.rank, spawned.row, spawned.col), true);
+    } else {
+      spawnRandomTile(true);
+    }
 
     if (!won && !keepPlaying && hasRank(TARGET_RANK)) {
       won = true;
       locked = false;
-      showModal("2048 Jelly", "You win!", "왕관 젤리를 계속 키워보세요.", true);
+      showModal("2048 Jelly", "You win!", "왕관 젤리를 계속 키워보세요.", true, false);
       celebrate();
       playSound("win");
       return;
     }
 
-    if (!canMove()) {
+    if (result.verifiedMove?.game_over || !canMove()) {
       locked = false;
-      showModal("Game over", "No space", "젤리들이 꽉 찼습니다.", false);
+      showModal("Game over", "No space", "젤리들이 꽉 찼습니다.", false, true);
       shakeBoard(0.6);
       playSound("gameover");
       return;
@@ -583,11 +631,19 @@
     if (commit) localStorage.setItem(STORAGE.guide, "1");
   }
 
-  function showModal(eyebrow, title, copy, canKeepPlaying) {
+  function showModal(eyebrow, title, copy, canKeepPlaying, canSubmitRank = false) {
     refs.messageEyebrow.textContent = eyebrow;
     refs.messageTitle.textContent = title;
     refs.messageCopy.textContent = copy;
     refs.keepPlaying.style.display = canKeepPlaying ? "" : "none";
+    refs.messageActions.classList.toggle("is-single", !canKeepPlaying);
+    if (canSubmitRank && score > 0) {
+      resetRankSubmit();
+      refs.modalScore.textContent = formatScore(score);
+      refs.rankSubmitPanel.classList.remove("hidden");
+    } else {
+      refs.rankSubmitPanel.classList.add("hidden");
+    }
     refs.modal.classList.remove("hidden");
     const card = refs.modal.querySelector(".message-card");
     gsap.fromTo(card, { scale: 0.78, y: 26, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 0.54, ease: "elastic.out(1, 0.42)" });
@@ -596,6 +652,128 @@
   function hideModal() {
     refs.modal.classList.add("hidden");
     refs.keepPlaying.style.display = "";
+    refs.messageActions.classList.remove("is-single");
+  }
+
+  async function openRanks() {
+    refs.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
+    refs.rankModal.classList.remove("hidden");
+    try {
+      const rows = await ranking.fetchTopRanks();
+      renderRanks(rows);
+    } catch {
+      refs.rankContent.innerHTML = `<div class="rank-error">랭킹 서버에 연결할 수 없습니다.</div>`;
+    }
+  }
+
+  function hideRanks() {
+    refs.rankModal.classList.add("hidden");
+  }
+
+  async function submitRank() {
+    if (rankSubmitInFlight || score <= 0) return;
+    const name = refs.nicknameInput.value.trim().slice(0, 20);
+    if (!name) {
+      setSubmitStatus("닉네임을 입력해주세요.", "fail");
+      refs.nicknameInput.focus();
+      return;
+    }
+
+    rankSubmitInFlight = true;
+    setRankSubmitDisabled(true);
+    saveNickname(name);
+    setSubmitStatus("등록 중...", "");
+
+    const extra = {
+      max_tile: getMaxTileValue(),
+      target_reached: hasRank(TARGET_RANK),
+    };
+
+    try {
+      const result = await ranking.submit(name, score, extra);
+      setSubmitStatus(`등록 완료${result?.rank ? ` (#${result.rank})` : ""}`, "ok");
+    } catch {
+      setSubmitStatus("검증 실패로 등록되지 않았어요. 새 게임으로 다시 도전해주세요.", "fail");
+      setRankSubmitDisabled(false);
+    } finally {
+      rankSubmitInFlight = false;
+    }
+  }
+
+  function resetRankSubmit() {
+    rankSubmitInFlight = false;
+    refs.rankSubmitPanel.classList.add("hidden");
+    refs.modalScore.textContent = formatScore(score);
+    refs.nicknameInput.disabled = false;
+    refs.submitRank.disabled = false;
+    refs.skipRank.disabled = false;
+    refs.nicknameInput.value = loadNickname();
+    setSubmitStatus("", "");
+  }
+
+  function setRankSubmitDisabled(disabled) {
+    refs.nicknameInput.disabled = disabled;
+    refs.submitRank.disabled = disabled;
+    refs.skipRank.disabled = disabled;
+  }
+
+  function setSubmitStatus(text, type) {
+    refs.submitStatus.textContent = text;
+    refs.submitStatus.className = `submit-status${type ? ` ${type}` : ""}`;
+  }
+
+  function renderRanks(rows) {
+    refs.rankContent.replaceChildren();
+    if (!rows || rows.length === 0) {
+      refs.rankContent.innerHTML = `<div class="rank-empty">아직 등록된 기록이 없습니다.</div>`;
+      return;
+    }
+
+    const myName = loadNickname();
+    rows.slice(0, RANK_LIMIT).forEach((row, index) => {
+      refs.rankContent.appendChild(createRankRow(row, index, myName));
+    });
+  }
+
+  function createRankRow(row, index, myName) {
+    const rank = Number(row.rank || index + 1);
+    const item = document.createElement("div");
+    item.className = "rank-row";
+    if (rank === 1) item.classList.add("top1");
+    else if (rank === 2) item.classList.add("top2");
+    else if (rank === 3) item.classList.add("top3");
+    if (myName && String(row.player_name || "").trim() === myName) item.classList.add("me");
+
+    const pos = document.createElement("div");
+    pos.className = "rank-pos";
+    pos.textContent = `#${rank}`;
+
+    const name = document.createElement("div");
+    name.className = "rank-name";
+    name.textContent = row.player_name || "Jelly Player";
+
+    const points = document.createElement("div");
+    points.className = "rank-score";
+    points.textContent = formatScore(Number(row.score || 0));
+
+    item.append(pos, name, points);
+    return item;
+  }
+
+  function getMaxTileValue() {
+    let maxRank = 0;
+    grid.forEach((row) => row.forEach((tile) => {
+      if (tile) maxRank = Math.max(maxRank, tile.rank);
+    }));
+    return tileValue(maxRank);
+  }
+
+  function loadNickname() {
+    try { return localStorage.getItem(STORAGE.nick) || ""; } catch { return ""; }
+  }
+
+  function saveNickname(name) {
+    try { localStorage.setItem(STORAGE.nick, name); } catch {}
   }
 
   function shakeBoard(duration = 0.42) {
@@ -714,6 +892,122 @@
       playTone(130, 0, 0.08, 0.035, "sine");
     } else {
       playTone(300, 0, 0.07, 0.025, "triangle");
+    }
+  }
+
+  class RankingClient {
+    constructor() {
+      this.sessionId = null;
+      this.sessionPromise = null;
+      this.moveSeq = 0;
+      this.verifiedScore = 0;
+      this.sessionData = null;
+      this.unsupported = false;
+      this.syncFailed = false;
+    }
+
+    startSession() {
+      this.sessionId = null;
+      this.moveSeq = 0;
+      this.verifiedScore = 0;
+      this.sessionData = null;
+      this.unsupported = false;
+      this.syncFailed = false;
+      this.sessionPromise = fetch(`${RANK_API_BASE}/score-sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ game_id: GAME_ID }),
+      }).then(async (res) => {
+        if (!res.ok) {
+          if (res.status === 400 || res.status === 404) this.unsupported = true;
+          throw new Error(`rank session ${res.status}`);
+        }
+        const data = await res.json();
+        this.sessionId = data.session_id || null;
+        this.moveSeq = Number(data.move_seq || 0);
+        this.verifiedScore = Number(data.score || 0);
+        this.sessionData = data;
+        return data;
+      }).catch(() => {
+        if (!this.unsupported) this.syncFailed = true;
+        return null;
+      });
+      return this.sessionPromise;
+    }
+
+    async ensureSession() {
+      if (this.unsupported || this.syncFailed) return null;
+      if (this.sessionId) return this.sessionId;
+      if (!this.sessionPromise) this.startSession();
+      const data = await this.sessionPromise;
+      return data?.session_id || null;
+    }
+
+    async recordMove(dir) {
+      if (this.unsupported || this.syncFailed) return null;
+      const sessionId = await this.ensureSession();
+      if (!sessionId) return null;
+
+      const nextSeq = this.moveSeq + 1;
+      try {
+        const res = await fetch(`${RANK_API_BASE}/score-events`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({
+            game_id: GAME_ID,
+            session_id: sessionId,
+            event: { type: "move", dir, move_seq: nextSeq },
+          }),
+        });
+        if (!res.ok) {
+          if (res.status === 400 || res.status === 404 || res.status === 409) this.unsupported = true;
+          throw new Error(`rank move ${res.status}`);
+        }
+        const data = await res.json();
+        this.moveSeq = Number(data.move_seq || nextSeq);
+        this.verifiedScore = Number(data.score || this.verifiedScore || 0);
+        return data;
+      } catch {
+        if (!this.unsupported) this.syncFailed = true;
+        return null;
+      }
+    }
+
+    async submit(playerName, finalScore, extraData = {}) {
+      await this.ensureSession();
+      const canVerify = this.sessionId && !this.unsupported && !this.syncFailed;
+      if (!canVerify) throw new Error("rank verification unavailable");
+      const submittedScore = Math.max(0, Math.floor(finalScore || 0));
+      if (submittedScore !== this.verifiedScore) throw new Error("rank score verification mismatch");
+      const body = {
+        game_id: GAME_ID,
+        player_name: playerName,
+        score: submittedScore,
+        session_id: this.sessionId,
+        extra_data: {
+          ...extraData,
+          session_id: this.sessionId,
+          verification_mode: "session",
+        },
+      };
+
+      const res = await fetch(`${RANK_API_BASE}/rankings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`rank submit ${res.status}`);
+      const result = await res.json();
+      return result;
+    }
+
+    async fetchTopRanks(limit = RANK_LIMIT) {
+      const res = await fetch(`${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${limit}`, {
+        headers: { "Accept": "application/json" },
+      });
+      if (!res.ok) throw new Error(`rank fetch ${res.status}`);
+      const data = await res.json();
+      return Array.isArray(data.rankings) ? data.rankings : [];
     }
   }
 

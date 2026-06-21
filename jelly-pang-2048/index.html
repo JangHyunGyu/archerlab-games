@@ -19,7 +19,7 @@
   <link rel="canonical" href="https://game.archerlab.dev/jelly-pang-2048/">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20260621-gsap-pixi">
+  <link rel="stylesheet" href="css/style.css?v=20260621-hall-of-fame">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -37,9 +37,14 @@
         <p class="kicker">Merge Puzzle</p>
         <h1>Jelly Pang!</h1>
       </div>
-      <button id="new-game" class="icon-command" type="button" aria-label="새 게임">
-        <span aria-hidden="true">↻</span>
-      </button>
+      <div class="top-actions">
+        <button id="rank-open" class="icon-command" type="button" aria-label="명예의 전당 열기" title="명예의 전당">
+          <span aria-hidden="true">&#9733;</span>
+        </button>
+        <button id="new-game" class="icon-command" type="button" aria-label="새 게임" title="새 게임">
+          <span aria-hidden="true">&#8635;</span>
+        </button>
+      </div>
     </header>
 
     <section class="score-row" aria-label="score board">
@@ -68,9 +73,35 @@
             <p id="message-eyebrow" class="message-eyebrow">2048 Jelly</p>
             <h2 id="message-title">You win!</h2>
             <p id="message-copy">왕관 젤리를 계속 키워보세요.</p>
+            <div id="rank-submit-panel" class="rank-submit-panel hidden">
+              <div class="final-score-line">
+                <span>Final Score</span>
+                <strong id="modal-score">0</strong>
+              </div>
+              <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="닉네임 입력">
+              <div class="rank-submit-buttons">
+                <button id="submit-rank" type="button">등록</button>
+                <button id="skip-rank" type="button">건너뛰기</button>
+              </div>
+              <p id="submit-status" class="submit-status" aria-live="polite"></p>
+            </div>
             <div class="message-actions">
               <button id="keep-playing" type="button">Keep playing</button>
               <button id="try-again" type="button">Try again</button>
+            </div>
+          </div>
+        </div>
+        <div id="rank-modal" class="rank-modal hidden" role="dialog" aria-live="polite" aria-label="명예의 전당">
+          <div class="rank-card">
+            <div class="rank-card-head">
+              <div>
+                <p>Hall of Fame</p>
+                <h2>명예의 전당</h2>
+              </div>
+              <button id="rank-close" class="rank-close" type="button" aria-label="닫기">&#215;</button>
+            </div>
+            <div id="rank-content" class="rank-content">
+              <div class="rank-loading">불러오는 중...</div>
             </div>
           </div>
         </div>
@@ -90,6 +121,6 @@
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" crossorigin="anonymous"></script>
   <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
-  <script src="js/main.js?v=20260621-gsap-pixi" defer></script>
+  <script src="js/main.js?v=20260621-hall-of-fame" defer></script>
 </body>
 </html>

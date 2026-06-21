@@ -95,6 +95,13 @@ const JEWELRIA_MAX_STAGE = 8;
 const JEWELRIA_FREE_SCORE_BURST = 2500;
 const JEWELRIA_MAX_SCORE_PER_SECOND = 4500;
 const JEWELRIA_COMBO_MULTIPLIER = 0.5;
+const JELLY_PANG_GAME_ID = 'jelly-pang-2048';
+const JELLY_PANG_PROTOCOL_VERSION = 1;
+const JELLY_PANG_GRID_SIZE = 4;
+const JELLY_PANG_MAX_SCORE = 5000000;
+const JELLY_PANG_MAX_RANK = 20;
+const JELLY_PANG_FREE_SCORE_BURST = 8192;
+const JELLY_PANG_MAX_SCORE_PER_SECOND = 20000;
 const PARKING_GAME_ID = 'parking_escape';
 const PARKING_FREE_LEVEL_BURST = 3;
 const PARKING_MIN_MS_PER_LEVEL = 1800;
@@ -391,6 +398,214 @@ function normalizeBlockpangState(rawState) {
     return state;
 }
 
+function createEmptyJellyPangGrid() {
+    return Array.from({ length: JELLY_PANG_GRID_SIZE }, () => Array(JELLY_PANG_GRID_SIZE).fill(null));
+}
+
+function jellyPangTileValue(rank) {
+    return 2 ** (rank + 1);
+}
+
+function jellyPangTilesFromGrid(grid) {
+    const tiles = [];
+    for (let row = 0; row < JELLY_PANG_GRID_SIZE; row += 1) {
+        for (let col = 0; col < JELLY_PANG_GRID_SIZE; col += 1) {
+            const rank = grid?.[row]?.[col];
+            if (Number.isInteger(rank) && rank >= 0) {
+                tiles.push({ row, col, rank });
+            }
+        }
+    }
+    return tiles;
+}
+
+function jellyPangEmptyCells(grid) {
+    const cells = [];
+    for (let row = 0; row < JELLY_PANG_GRID_SIZE; row += 1) {
+        for (let col = 0; col < JELLY_PANG_GRID_SIZE; col += 1) {
+            if (!Number.isInteger(grid[row][col])) cells.push({ row, col });
+        }
+    }
+    return cells;
+}
+
+function jellyPangSpawnTile(state) {
+    const cells = jellyPangEmptyCells(state.grid);
+    if (!cells.length) return null;
+
+    let roll = blockpangNextRandom(state.rng_state);
+    state.rng_state = roll.state;
+    const spot = cells[Math.floor(roll.value * cells.length)] || cells[cells.length - 1];
+
+    roll = blockpangNextRandom(state.rng_state);
+    state.rng_state = roll.state;
+    const rank = roll.value < 0.9 ? 0 : 1;
+    state.grid[spot.row][spot.col] = rank;
+    state.max_rank = Math.max(state.max_rank || 0, rank);
+    return { row: spot.row, col: spot.col, rank };
+}
+
+function createJellyPangSessionState(requestMeta) {
+    const seed = makeBlockpangSeed();
+    const state = {
+        version: JELLY_PANG_PROTOCOL_VERSION,
+        game_id: JELLY_PANG_GAME_ID,
+        rng_state: seed,
+        grid: createEmptyJellyPangGrid(),
+        score: 0,
+        max_rank: 0,
+        move_seq: 0,
+        game_over: false,
+        request_meta: requestMeta || {},
+    };
+    jellyPangSpawnTile(state);
+    jellyPangSpawnTile(state);
+    return state;
+}
+
+function normalizeJellyPangState(rawState) {
+    const state = isPlainObject(rawState) ? rawState : {};
+    if (state.version !== JELLY_PANG_PROTOCOL_VERSION || state.game_id !== JELLY_PANG_GAME_ID) return null;
+    if (!Array.isArray(state.grid) || state.grid.length !== JELLY_PANG_GRID_SIZE) return null;
+    const grid = createEmptyJellyPangGrid();
+    for (let row = 0; row < JELLY_PANG_GRID_SIZE; row += 1) {
+        if (!Array.isArray(state.grid[row]) || state.grid[row].length !== JELLY_PANG_GRID_SIZE) return null;
+        for (let col = 0; col < JELLY_PANG_GRID_SIZE; col += 1) {
+            const value = state.grid[row][col];
+            if (value === null || value === undefined) {
+                grid[row][col] = null;
+                continue;
+            }
+            const rank = parseInteger(value);
+            if (!Number.isFinite(rank) || rank < 0 || rank > JELLY_PANG_MAX_RANK) return null;
+            grid[row][col] = rank;
+        }
+    }
+    state.grid = grid;
+    state.rng_state = normalizeUint32(state.rng_state);
+    state.score = Math.max(0, parseInteger(state.score) || 0);
+    state.max_rank = Math.max(0, parseInteger(state.max_rank) || 0);
+    state.move_seq = Math.max(0, parseInteger(state.move_seq) || 0);
+    state.game_over = !!state.game_over;
+    return state;
+}
+
+function jellyPangLines(dir) {
+    const lines = [];
+    if (dir === 'left' || dir === 'right') {
+        for (let row = 0; row < JELLY_PANG_GRID_SIZE; row += 1) {
+            const line = [];
+            for (let i = 0; i < JELLY_PANG_GRID_SIZE; i += 1) {
+                const col = dir === 'left' ? i : JELLY_PANG_GRID_SIZE - 1 - i;
+                line.push({ row, col });
+            }
+            lines.push(line);
+        }
+    } else {
+        for (let col = 0; col < JELLY_PANG_GRID_SIZE; col += 1) {
+            const line = [];
+            for (let i = 0; i < JELLY_PANG_GRID_SIZE; i += 1) {
+                const row = dir === 'up' ? i : JELLY_PANG_GRID_SIZE - 1 - i;
+                line.push({ row, col });
+            }
+            lines.push(line);
+        }
+    }
+    return lines;
+}
+
+function jellyPangCanMove(grid) {
+    if (jellyPangEmptyCells(grid).length) return true;
+    const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    for (let row = 0; row < JELLY_PANG_GRID_SIZE; row += 1) {
+        for (let col = 0; col < JELLY_PANG_GRID_SIZE; col += 1) {
+            for (const [dr, dc] of dirs) {
+                const nr = row + dr;
+                const nc = col + dc;
+                if (nr < 0 || nr >= JELLY_PANG_GRID_SIZE || nc < 0 || nc >= JELLY_PANG_GRID_SIZE) continue;
+                if (grid[nr][nc] === grid[row][col]) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function applyJellyPangMove(state, event) {
+    if (!isPlainObject(event) || String(event.type || '') !== 'move') {
+        throw new Error('jelly-pang score event must be an authoritative move');
+    }
+    if (state.game_over) {
+        throw new Error('jelly-pang session already reached game over');
+    }
+
+    const dir = String(event.dir || event.direction || '');
+    if (!['left', 'right', 'up', 'down'].includes(dir)) {
+        throw new Error('invalid jelly-pang move direction');
+    }
+
+    const moveSeq = parseInteger(event.move_seq ?? event.moveSeq);
+    if (!Number.isFinite(moveSeq) || moveSeq !== state.move_seq + 1) {
+        throw new Error('invalid jelly-pang move sequence');
+    }
+
+    const newGrid = createEmptyJellyPangGrid();
+    let scoreGain = 0;
+    let changed = false;
+    let maxRank = state.max_rank || 0;
+
+    for (const line of jellyPangLines(dir)) {
+        const tiles = line
+            .map(({ row, col }) => ({ row, col, rank: state.grid[row][col] }))
+            .filter((tile) => Number.isInteger(tile.rank));
+        let targetIndex = 0;
+
+        for (let index = 0; index < tiles.length; index += 1) {
+            const tile = tiles[index];
+            const next = tiles[index + 1];
+            const target = line[targetIndex];
+            if (next && next.rank === tile.rank) {
+                const mergedRank = tile.rank + 1;
+                if (mergedRank > JELLY_PANG_MAX_RANK) {
+                    throw new Error('jelly-pang merge rank exceeds allowed maximum');
+                }
+                newGrid[target.row][target.col] = mergedRank;
+                scoreGain += jellyPangTileValue(mergedRank);
+                maxRank = Math.max(maxRank, mergedRank);
+                changed = true;
+                index += 1;
+                targetIndex += 1;
+                continue;
+            }
+
+            newGrid[target.row][target.col] = tile.rank;
+            if (tile.row !== target.row || tile.col !== target.col) changed = true;
+            targetIndex += 1;
+        }
+    }
+
+    if (!changed) {
+        throw new Error('jelly-pang move does not change board');
+    }
+
+    state.grid = newGrid;
+    state.score += scoreGain;
+    state.max_rank = maxRank;
+    state.move_seq = moveSeq;
+    const spawned = jellyPangSpawnTile(state);
+    state.game_over = !jellyPangCanMove(state.grid);
+
+    return {
+        dir,
+        move_seq: state.move_seq,
+        score: state.score,
+        score_gain: scoreGain,
+        max_rank: state.max_rank,
+        spawned,
+        game_over: state.game_over,
+        grid: state.grid,
+    };
+}
+
 function blockpangCanPlace(grid, shape, gridX, gridY) {
     for (let r = 0; r < shape.length; r += 1) {
         for (let c = 0; c < shape[r].length; c += 1) {
@@ -685,6 +900,7 @@ function getProtectedGameKind(gameId) {
     if (gameId === CAT_TOWER_GAME_ID) return 'cat-tower';
     if (gameId === BLOCKPANG_GAME_ID) return 'blockpang';
     if (gameId === JEWELRIA_GAME_ID) return 'jewelria';
+    if (gameId === JELLY_PANG_GAME_ID) return 'jelly-pang';
     if (gameId === PARKING_GAME_ID) return 'parking';
     if (gameId === SCHOOL_ZOMBIE_GAME_ID) return 'school-zombie';
     if (typeof gameId === 'string' && gameId.startsWith(SHADOW_GAME_PREFIX)) return 'shadow';
@@ -758,6 +974,10 @@ async function createScoreSession(db, gameId, request, body = {}) {
         state = createBlockpangSessionState(body?.seed, requestMeta);
         initialScore = state.score;
     }
+    if (gameId === JELLY_PANG_GAME_ID) {
+        state = createJellyPangSessionState(requestMeta);
+        initialScore = state.score;
+    }
     await db.prepare(
         'INSERT INTO ranking_sessions (session_id, game_id, score, event_count, started_at, updated_at, state_json) VALUES (?, ?, ?, 0, ?, ?, ?)'
     ).bind(sessionId, gameId, initialScore, now, now, safeJsonStringify(state)).run();
@@ -776,6 +996,13 @@ async function createScoreSession(db, gameId, request, body = {}) {
         response.seed = state.seed;
         response.rng_state = state.rng_state;
         response.pieces = state.slots;
+    }
+    if (gameId === JELLY_PANG_GAME_ID) {
+        response.protocol = JELLY_PANG_PROTOCOL_VERSION;
+        response.tiles = jellyPangTilesFromGrid(state.grid);
+        response.grid = state.grid;
+        response.score = state.score;
+        response.move_seq = state.move_seq;
     }
     return jsonResponse(response);
 }
@@ -1118,6 +1345,104 @@ async function recordJewelriaScoreEvents(db, body) {
     });
 }
 
+function normalizeJellyPangExtraData(extraData, score) {
+    const base = isPlainObject(extraData) ? extraData : {};
+    const rawMaxTile = parseInteger(base.max_tile ?? base.maxTile);
+    const maxTile = Number.isFinite(rawMaxTile) ? Math.max(2, Math.min(2 ** (JELLY_PANG_MAX_RANK + 1), rawMaxTile)) : undefined;
+    return {
+        ...base,
+        run_score: Math.max(0, Math.floor(score || 0)),
+        max_tile: maxTile,
+        target_reached: !!base.target_reached,
+    };
+}
+
+async function recordJellyPangScoreEvents(db, body) {
+    const gameId = body?.game_id;
+    const sessionId = String(body?.session_id || '').trim();
+    const events = Array.isArray(body?.events) ? body.events : (body?.event ? [body.event] : []);
+
+    if (gameId !== JELLY_PANG_GAME_ID) {
+        return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
+    }
+    if (!sessionId) {
+        return jsonResponse({ error: 'session_id is required' }, 400);
+    }
+    if (events.length === 0 || events.length > SCORE_EVENT_BATCH_LIMIT) {
+        return jsonResponse({ error: 'events must contain 1-50 items' }, 400);
+    }
+
+    const session = await db.prepare(
+        'SELECT session_id, game_id, score, event_count, started_at, submitted_at, state_json FROM ranking_sessions WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (!session || session.game_id !== gameId) {
+        return jsonResponse({ error: 'score session not found' }, 404);
+    }
+    if (session.submitted_at) {
+        return jsonResponse({ error: 'score session already submitted' }, 409);
+    }
+
+    const now = Date.now();
+    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
+        return jsonResponse({ error: 'score session expired' }, 410);
+    }
+
+    const state = normalizeJellyPangState(parseJsonObject(session.state_json));
+    if (!state) {
+        return jsonResponse({ error: 'jelly-pang session requires authoritative state' }, 409);
+    }
+
+    const moveResults = [];
+    try {
+        for (const event of events) {
+            moveResults.push(applyJellyPangMove(state, event));
+        }
+    } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+    }
+
+    const projectedScore = Number(state.score);
+    const projectedEventCount = Number(session.event_count) + events.length;
+    if (projectedScore > JELLY_PANG_MAX_SCORE) {
+        return jsonResponse({ error: 'jelly-pang score exceeds allowed maximum' }, 400);
+    }
+
+    const elapsedMs = now - Number(session.started_at);
+    const minScoreElapsedMs = (Math.max(0, projectedScore - JELLY_PANG_FREE_SCORE_BURST) / JELLY_PANG_MAX_SCORE_PER_SECOND) * 1000;
+    if (elapsedMs < minScoreElapsedMs) {
+        return jsonResponse({ error: 'jelly-pang score events are too fast' }, 429);
+    }
+
+    await db.prepare(
+        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ?, state_json = ? WHERE session_id = ?'
+    ).bind(projectedScore, projectedEventCount, now, safeJsonStringify(state), sessionId).run();
+
+    const latest = moveResults[moveResults.length - 1] || {
+        move_seq: state.move_seq,
+        score: state.score,
+        score_gain: 0,
+        max_rank: state.max_rank,
+        spawned: null,
+        game_over: state.game_over,
+        grid: state.grid,
+    };
+
+    return jsonResponse({
+        success: true,
+        game_id: gameId,
+        session_id: sessionId,
+        score: projectedScore,
+        event_count: projectedEventCount,
+        move_seq: latest.move_seq,
+        score_gain: latest.score_gain,
+        max_rank: latest.max_rank,
+        spawned: latest.spawned,
+        game_over: latest.game_over,
+        grid: latest.grid,
+        moves: moveResults,
+    });
+}
+
 async function recordParkingScoreEvents(db, body) {
     const gameId = body?.game_id;
     const sessionId = String(body?.session_id || '').trim();
@@ -1440,6 +1765,7 @@ async function recordScoreEvents(db, body) {
     if (kind === 'cat-tower') return recordCatTowerScoreEvents(db, body);
     if (kind === 'blockpang') return recordBlockpangScoreEvents(db, body);
     if (kind === 'jewelria') return recordJewelriaScoreEvents(db, body);
+    if (kind === 'jelly-pang') return recordJellyPangScoreEvents(db, body);
     if (kind === 'parking') return recordParkingScoreEvents(db, body);
     if (kind === 'school-zombie') return recordSchoolZombieScoreEvents(db, body);
     if (kind === 'shadow') return recordShadowScoreEvents(db, body);
@@ -1547,6 +1873,11 @@ async function verifyRankingSession(db, body, clientScore) {
     if (kind === 'jewelria') return verifyStoredScoreRankingSession(db, body, clientScore, {
         label: 'jewelria',
         maxScore: JEWELRIA_MAX_SCORE,
+    });
+    if (kind === 'jelly-pang') return verifyStoredScoreRankingSession(db, body, clientScore, {
+        label: 'jelly pang',
+        maxScore: JELLY_PANG_MAX_SCORE,
+        requiredStateVersion: JELLY_PANG_PROTOCOL_VERSION,
     });
     if (kind === 'parking') return verifyStoredScoreRankingSession(db, body, clientScore, {
         label: 'parking escape',
@@ -2133,6 +2464,9 @@ export default {
 
                 if (game_id === JEWELRIA_GAME_ID) {
                     extra_data = normalizeJewelriaExtraData(extra_data, scoreForInsert);
+                }
+                if (game_id === JELLY_PANG_GAME_ID) {
+                    extra_data = normalizeJellyPangExtraData(extra_data, scoreForInsert);
                 }
 
                 const extraStr = extra_data ? JSON.stringify(extra_data) : null;
