@@ -999,6 +999,7 @@ async function createScoreSession(db, gameId, request, body = {}) {
     }
     if (gameId === JELLY_PANG_GAME_ID) {
         response.protocol = JELLY_PANG_PROTOCOL_VERSION;
+        response.rng_state = state.rng_state;
         response.tiles = jellyPangTilesFromGrid(state.grid);
         response.grid = state.grid;
         response.score = state.score;
@@ -1438,6 +1439,7 @@ async function recordJellyPangScoreEvents(db, body) {
         max_rank: latest.max_rank,
         spawned: latest.spawned,
         game_over: latest.game_over,
+        rng_state: state.rng_state,
         grid: latest.grid,
         moves: moveResults,
     });
