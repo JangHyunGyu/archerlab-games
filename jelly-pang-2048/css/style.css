@@ -261,11 +261,13 @@ button {
 }
 
 .title-actions {
-  width: min(calc(100% - 28px), 330px);
+  width: min(100%, 320px);
   max-width: 100%;
   display: grid;
   gap: 10px;
   align-self: end;
+  justify-self: center;
+  margin-bottom: clamp(10px, 3dvh, 28px);
 }
 
 .title-actions button {
@@ -1079,7 +1081,7 @@ h1 {
   }
 
   .title-hero {
-    padding-bottom: clamp(18px, 4.8dvh, 32px);
+    padding-bottom: clamp(28px, 7dvh, 58px);
   }
 
   .title-hero h1 {
@@ -1096,7 +1098,8 @@ h1 {
   }
 
   .title-actions {
-    width: min(calc(100% - 28px), 312px);
+    width: min(100%, 292px);
+    margin-bottom: clamp(18px, 6dvh, 48px);
   }
 
   .message-modal {
@@ -1109,11 +1112,11 @@ h1 {
 
   .message-card {
     max-height: calc(100dvh - 30px);
-    padding: 18px 14px 14px;
+    padding: 16px 14px 12px;
   }
 
   .message-card h2 {
-    font-size: clamp(30px, 9vw, 42px);
+    font-size: clamp(28px, 8vw, 38px);
   }
 
   .rank-submit-panel {
@@ -1122,7 +1125,30 @@ h1 {
   }
 
   .message-actions {
-    margin-top: 12px;
+    margin-top: 10px;
+  }
+
+  .rank-submit-panel input {
+    min-height: 38px;
+    margin-top: 8px;
+  }
+
+  .rank-submit-buttons button,
+  .message-actions button {
+    min-height: 38px;
+    box-shadow: 0 6px 0 #4350bb, 0 12px 22px rgba(76, 151, 245, 0.2);
+  }
+
+  .rank-submit-buttons button + button {
+    box-shadow: inset 0 0 0 1px rgba(49, 64, 82, 0.12);
+  }
+
+  .message-actions button {
+    box-shadow: 0 6px 0 #b94354, 0 12px 22px rgba(242, 91, 115, 0.2);
+  }
+
+  .message-actions button + button {
+    box-shadow: 0 6px 0 #4350bb, 0 12px 22px rgba(76, 151, 245, 0.2);
   }
 
   .brand-link {
