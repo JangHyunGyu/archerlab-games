@@ -100,6 +100,120 @@ button {
   display: none;
 }
 
+.server-loader {
+  position: absolute;
+  left: 50%;
+  top: max(10px, env(safe-area-inset-top));
+  z-index: 40;
+  width: min(218px, calc(100% - 34px));
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(255, 255, 255, 0.86), transparent 30%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(196, 247, 255, 0.58));
+  box-shadow: 0 14px 28px rgba(49, 64, 82, 0.12);
+  pointer-events: none;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+}
+
+.server-loader.hidden {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateX(-50%) translateY(-12px);
+}
+
+.server-loader-jelly {
+  position: relative;
+  width: 26px;
+  height: 22px;
+  border-radius: 13px 13px 10px 10px;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.92) 0 12%, transparent 13%),
+    linear-gradient(180deg, #ff7aa8, #f64f78);
+  box-shadow:
+    inset 0 -4px 0 rgba(201, 35, 86, 0.18),
+    0 6px 12px rgba(246, 79, 120, 0.24);
+  animation: serverJellyBounce 0.72s ease-in-out infinite;
+}
+
+.server-loader-jelly::before,
+.server-loader-jelly::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #1d2c3f;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+.server-loader-jelly::before {
+  left: 8px;
+}
+
+.server-loader-jelly::after {
+  right: 8px;
+}
+
+.server-loader-track {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.26)),
+    rgba(72, 189, 245, 0.2);
+  box-shadow:
+    inset 0 2px 5px rgba(49, 64, 82, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.server-loader-fill {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  width: 46%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 24% 35%, rgba(255, 255, 255, 0.92), transparent 18%),
+    linear-gradient(90deg, #ff9f43, #f64f78 48%, #48bdf5);
+  box-shadow:
+    0 0 12px rgba(246, 79, 120, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  animation: serverJellySlide 0.98s ease-in-out infinite;
+}
+
+@keyframes serverJellyBounce {
+  0%, 100% {
+    transform: translateY(1px) scale(1.08, 0.92);
+  }
+  50% {
+    transform: translateY(-3px) scale(0.94, 1.08);
+  }
+}
+
+@keyframes serverJellySlide {
+  0% {
+    left: -46%;
+    transform: scaleX(0.82);
+  }
+  45% {
+    transform: scaleX(1.18);
+  }
+  100% {
+    left: 100%;
+    transform: scaleX(0.82);
+  }
+}
+
 .title-brand {
   width: fit-content;
 }

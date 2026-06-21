@@ -69,6 +69,7 @@
   const refs = {
     shell: document.querySelector(".game-shell"),
     titleScreen: $("title-screen"),
+    serverLoader: $("server-loader"),
     playGame: $("play-game"),
     homeGame: $("home-game"),
     mount: $("pixi-stage"),
@@ -115,6 +116,9 @@
   let ranking = null;
   let rankSubmitInFlight = false;
   let startInFlight = false;
+  let serverTripCount = 0;
+  let serverLoaderShownAt = 0;
+  let serverLoaderHideTimer = null;
 
   async function init() {
     if (!window.PIXI || !window.gsap) {
@@ -179,6 +183,45 @@
     newGame().finally(() => {
       startInFlight = false;
     });
+  }
+
+  function beginServerTrip() {
+    serverTripCount += 1;
+    if (serverTripCount === 1) {
+      serverLoaderShownAt = Date.now();
+      if (serverLoaderHideTimer) {
+        window.clearTimeout(serverLoaderHideTimer);
+        serverLoaderHideTimer = null;
+      }
+      refs.serverLoader?.classList.remove("hidden");
+      refs.serverLoader?.setAttribute("aria-hidden", "false");
+    }
+
+    let ended = false;
+    return () => {
+      if (ended) return;
+      ended = true;
+      serverTripCount = Math.max(0, serverTripCount - 1);
+      if (serverTripCount > 0) return;
+
+      const elapsed = Date.now() - serverLoaderShownAt;
+      const delay = Math.max(0, 420 - elapsed);
+      serverLoaderHideTimer = window.setTimeout(() => {
+        if (serverTripCount > 0) return;
+        refs.serverLoader?.classList.add("hidden");
+        refs.serverLoader?.setAttribute("aria-hidden", "true");
+        serverLoaderHideTimer = null;
+      }, delay);
+    };
+  }
+
+  async function withServerTrip(task) {
+    const endServerTrip = beginServerTrip();
+    try {
+      return await task();
+    } finally {
+      endServerTrip();
+    }
   }
 
   async function loadTextures() {
@@ -1255,11 +1298,11 @@
       this.moveQueue = Promise.resolve();
       this.unsupported = false;
       this.syncFailed = false;
-      this.sessionPromise = fetch(`${RANK_API_BASE}/score-sessions`, {
+      this.sessionPromise = withServerTrip(() => fetch(`${RANK_API_BASE}/score-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ game_id: GAME_ID }),
-      }).then(async (res) => {
+      })).then(async (res) => {
         if (!res.ok) {
           if (res.status === 400 || res.status === 404) this.unsupported = true;
           throw new Error(`rank session ${res.status}`);
@@ -1317,7 +1360,7 @@
       const request = this.moveQueue.then(async () => {
         const sessionId = await this.ensureSession();
         if (!sessionId) return null;
-        const res = await fetch(`${RANK_API_BASE}/score-events`, {
+        const res = await withServerTrip(() => fetch(`${RANK_API_BASE}/score-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({
@@ -1325,7 +1368,7 @@
             session_id: sessionId,
             event,
           }),
-        });
+        }));
         if (!res.ok) {
           if (res.status === 400 || res.status === 404 || res.status === 409) this.unsupported = true;
           throw new Error(`rank move ${res.status}`);
@@ -1382,20 +1425,20 @@
         },
       };
 
-      const res = await fetch(`${RANK_API_BASE}/rankings`, {
+      const res = await withServerTrip(() => fetch(`${RANK_API_BASE}/rankings`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify(body),
-      });
+      }));
       if (!res.ok) throw new Error(`rank submit ${res.status}`);
       const result = await res.json();
       return result;
     }
 
     async fetchTopRanks(limit = RANK_LIMIT) {
-      const res = await fetch(`${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${limit}`, {
+      const res = await withServerTrip(() => fetch(`${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${limit}`, {
         headers: { "Accept": "application/json" },
-      });
+      }));
       if (!res.ok) throw new Error(`rank fetch ${res.status}`);
       const data = await res.json();
       return Array.isArray(data.rankings) ? data.rankings : [];
