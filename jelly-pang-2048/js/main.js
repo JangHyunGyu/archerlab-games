@@ -4,6 +4,10 @@
   const RANK_LIMIT = 20;
   const SIZE = 4;
   const STAGE = 900;
+  const IS_TOUCH_DEVICE = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+  const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, IS_TOUCH_DEVICE ? 1.2 : 1.5);
+  const FX_DENSITY = IS_TOUCH_DEVICE ? 0.48 : 0.7;
+  const MAX_FX_CHILDREN = IS_TOUCH_DEVICE ? 72 : 120;
   const BOARD = {
     x: 78,
     y: 78,
@@ -126,7 +130,7 @@
       return;
     }
 
-    PIXI.settings.RESOLUTION = Math.min(window.devicePixelRatio || 1, 2);
+    PIXI.settings.RESOLUTION = RENDER_RESOLUTION;
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
 
     app = new PIXI.Application({
@@ -135,7 +139,7 @@
       antialias: true,
       autoDensity: true,
       backgroundAlpha: 0,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      resolution: RENDER_RESOLUTION,
     });
     refs.mount.appendChild(app.view);
     app.view.style.width = "100%";
@@ -407,6 +411,24 @@
   function destroyLayerChildren(layer) {
     if (!layer) return;
     layer.removeChildren().forEach((child) => destroyPixiObject(child));
+  }
+
+  function fxCount(base, intensity = 1, minimum = 1) {
+    return Math.max(minimum, Math.round(base * intensity * FX_DENSITY));
+  }
+
+  function addFxChild(child) {
+    fxLayer.addChild(child);
+    trimFxLayer();
+    return child;
+  }
+
+  function trimFxLayer() {
+    if (!fxLayer || fxLayer.children.length <= MAX_FX_CHILDREN) return;
+    const overflow = fxLayer.children.length - MAX_FX_CHILDREN;
+    for (let i = 0; i < overflow; i++) {
+      destroyPixiObject(fxLayer.children[0]);
+    }
   }
 
   function move(dir) {
@@ -713,6 +735,7 @@
   }
 
   function drawBoard() {
+    boardLayer.cacheAsBitmap = false;
     boardLayer.removeChildren();
 
     const shadow = new PIXI.Graphics();
@@ -751,6 +774,7 @@
         boardLayer.addChild(inner);
       }
     }
+    boardLayer.cacheAsBitmap = true;
   }
 
   function cellTopLeft(row, col) {
@@ -952,7 +976,7 @@
       dot.endFill();
       dot.x = x;
       dot.y = y;
-      fxLayer.addChild(dot);
+      addFxChild(dot);
 
       const angle = Math.random() * Math.PI * 2;
       const distance = BOARD.cell * (0.22 + Math.random() * 0.56);
@@ -971,7 +995,7 @@
   function createMergeWow(x, y, rank, tileId) {
     const color = RANK_COLORS[rank % RANK_COLORS.length];
     const nextColor = RANK_COLORS[(rank + 2) % RANK_COLORS.length];
-    const intensity = Math.min(1.7, 1 + rank * 0.08);
+    const intensity = Math.min(IS_TOUCH_DEVICE ? 1.28 : 1.5, 1 + rank * 0.07);
     const visual = visuals.get(tileId);
 
     pulseMergeTile(visual);
@@ -980,7 +1004,7 @@
     createLightRays(x, y, color, nextColor, intensity);
     createSparkles(x, y, color, intensity);
     createJellyDrops(x, y, color, nextColor, intensity);
-    createBurst(x, y, color, Math.round(20 * intensity));
+    createBurst(x, y, color, fxCount(10, intensity, 5));
   }
 
   function pulseMergeTile(visual) {
@@ -1003,6 +1027,7 @@
   }
 
   function pulseStageFrame(intensity) {
+    if (IS_TOUCH_DEVICE) return;
     gsap.killTweensOf(refs.frame);
     gsap.fromTo(
       refs.frame,
@@ -1012,11 +1037,12 @@
   }
 
   function createShockwaves(x, y, color, nextColor, intensity) {
-    [
+    const rings = [
       { color, delay: 0, width: 10, scale: 1.28 },
       { color: nextColor, delay: 0.06, width: 6, scale: 1.7 },
       { color: 0xffffff, delay: 0.1, width: 4, scale: 2.05 },
-    ].forEach((ring) => {
+    ];
+    rings.slice(0, IS_TOUCH_DEVICE ? 2 : rings.length).forEach((ring) => {
       const wave = new PIXI.Graphics();
       wave.lineStyle(ring.width, ring.color, 0.82);
       wave.drawCircle(0, 0, BOARD.cell * 0.28);
@@ -1024,7 +1050,7 @@
       wave.y = y;
       wave.alpha = 0;
       wave.scale.set(0.45);
-      fxLayer.addChild(wave);
+      addFxChild(wave);
       gsap.to(wave, { alpha: 0.85, duration: 0.08, delay: ring.delay, ease: "sine.out" });
       gsap.to(wave.scale, {
         x: ring.scale * intensity,
@@ -1044,7 +1070,7 @@
   }
 
   function createLightRays(x, y, color, nextColor, intensity) {
-    const count = Math.round(8 * intensity);
+    const count = fxCount(7, intensity, 4);
     for (let i = 0; i < count; i++) {
       const ray = new PIXI.Graphics();
       const length = BOARD.cell * (0.42 + Math.random() * 0.3);
@@ -1056,7 +1082,7 @@
       ray.rotation = (Math.PI * 2 * i) / count + Math.random() * 0.16;
       ray.alpha = 0;
       ray.scale.set(0.55, 0.35);
-      fxLayer.addChild(ray);
+      addFxChild(ray);
       gsap.to(ray, { alpha: 0.95, duration: 0.08, ease: "sine.out" });
       gsap.to(ray.scale, { x: 1.25, y: 1, duration: 0.26, ease: "power2.out" });
       gsap.to(ray, {
@@ -1070,7 +1096,7 @@
   }
 
   function createSparkles(x, y, color, intensity) {
-    const count = Math.round(13 * intensity);
+    const count = fxCount(9, intensity, 5);
     for (let i = 0; i < count; i++) {
       const sparkle = new PIXI.Graphics();
       drawSparkle(sparkle, 9 + Math.random() * 8, i % 3 === 0 ? 0xffffff : color);
@@ -1079,7 +1105,7 @@
       sparkle.alpha = 0;
       sparkle.rotation = Math.random() * Math.PI;
       sparkle.scale.set(0.25);
-      fxLayer.addChild(sparkle);
+      addFxChild(sparkle);
 
       const angle = Math.random() * Math.PI * 2;
       const distance = BOARD.cell * (0.38 + Math.random() * 0.62);
@@ -1118,7 +1144,7 @@
   }
 
   function createJellyDrops(x, y, color, nextColor, intensity) {
-    const count = Math.round(12 * intensity);
+    const count = fxCount(7, intensity, 4);
     for (let i = 0; i < count; i++) {
       const drop = new PIXI.Graphics();
       const radius = 7 + Math.random() * 8;
@@ -1131,7 +1157,7 @@
       drop.x = x;
       drop.y = y;
       drop.scale.set(0.5);
-      fxLayer.addChild(drop);
+      addFxChild(drop);
 
       const angle = Math.random() * Math.PI * 2;
       const distance = BOARD.cell * (0.25 + Math.random() * 0.58);
@@ -1162,7 +1188,7 @@
     label.x = x;
     label.y = y;
     label.scale.set(0.72);
-    fxLayer.addChild(label);
+    addFxChild(label);
     gsap.to(label.scale, { x: 1.12, y: 1.12, duration: 0.18, ease: "back.out(2.8)" });
     gsap.to(label, {
       y: y - 58,
@@ -1175,7 +1201,8 @@
 
   function celebrate(count = 34) {
     const width = STAGE;
-    for (let i = 0; i < count; i++) {
+    const total = Math.max(8, Math.round(count * (IS_TOUCH_DEVICE ? 0.55 : 0.78)));
+    for (let i = 0; i < total; i++) {
       const dot = new PIXI.Graphics();
       const color = RANK_COLORS[Math.floor(Math.random() * RANK_COLORS.length)];
       dot.beginFill(color, 0.98);
@@ -1184,7 +1211,7 @@
       dot.x = Math.random() * width;
       dot.y = -20 - Math.random() * 80;
       dot.rotation = Math.random() * Math.PI;
-      fxLayer.addChild(dot);
+      addFxChild(dot);
       gsap.to(dot, {
         y: STAGE + 40,
         x: dot.x + (Math.random() - 0.5) * 140,
