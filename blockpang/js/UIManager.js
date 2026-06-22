@@ -2453,6 +2453,34 @@ class UIManager {
             loadingDots.push(dot);
         }
 
+        const submitStatusText = new PIXI.Text({
+            text: '',
+            style: {
+                fontFamily: FONT_BODY,
+                fontSize: 12,
+                fill: THEME.rose,
+                fontWeight: '700',
+                align: 'center',
+                wordWrap: true,
+                wordWrapWidth: panelW - 48,
+            },
+        });
+        submitStatusText.anchor.set(0.5, 0);
+        submitStatusText.position.set(centerX, btnY + btnH + 8);
+        submitStatusText.visible = false;
+        overlay.addChild(submitStatusText);
+
+        const setSubmitStatus = (message) => {
+            submitStatusText.text = message || '';
+            submitStatusText.visible = !!message;
+            if (message) this._fitTextToWidth(submitStatusText, panelW - 48, 10);
+        };
+
+        const getRankSubmitFailedText = () => {
+            const message = getText('rankSubmitFailed');
+            return message === 'rankSubmitFailed' ? 'Submit failed. Try again.' : message;
+        };
+
         let isSubmitting = false;
         const setSubmitting = (submitting) => {
             isSubmitting = submitting;
@@ -2479,6 +2507,28 @@ class UIManager {
         this.game.app.ticker.add(updateLoading);
         this._nameInputLoadingTicker = updateLoading;
 
+        const reportRankSubmitFailure = (error, extra = {}) => {
+            const message = error?.message || String(error || 'rank submit failed');
+            const context = this.game && typeof this.game.getErrorMetadata === 'function'
+                ? this.game.getErrorMetadata('rank-submit', extra)
+                : { scope: 'rank-submit', ...extra };
+
+            console.warn('[Blockpang] rank submit failed:', error);
+            if (window.ArcherLabClientErrorReporter?.report) {
+                window.ArcherLabClientErrorReporter.report(error, context);
+                return;
+            }
+            if (window._sendGameError) {
+                window._sendGameError(
+                    'RankSubmitError',
+                    message,
+                    error?.stack || '',
+                    'UIManager.js:showNameInput',
+                    context
+                );
+            }
+        };
+
         const cleanup = () => {
             if (this._nameInputLoadingTicker === updateLoading) {
                 this.game.app.ticker.remove(updateLoading);
@@ -2495,12 +2545,16 @@ class UIManager {
             if (isSubmitting) return;
             const name = input.value.trim().slice(0, 20);
             if (!name) { input.focus(); return; }
-            localStorage.setItem('blockpang_player_name', name);
+            let synced = false;
+            let responseStatus = null;
+            let responseText = '';
+            setSubmitStatus('');
             setSubmitting(true);
             try {
-                const synced = await this.game.flushRankEvents();
+                localStorage.setItem('blockpang_player_name', name);
+                synced = await this.game.flushRankEvents();
                 if (!this.game.rankSessionId || !synced || this.game.rankSyncFailed) throw new Error('rank score sync failed');
-                await fetch(`${GAME_API_URL}/rankings`, {
+                const response = await fetch(`${GAME_API_URL}/rankings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2515,9 +2569,31 @@ class UIManager {
                         },
                     }),
                 });
-            } catch (e) {}
-            cleanup();
-            if (onComplete) onComplete();
+                if (!response.ok) {
+                    responseStatus = response.status;
+                    try {
+                        responseText = (await response.text()).slice(0, 500);
+                    } catch (_) {}
+                    const error = new Error(`rank submit ${response.status}`);
+                    error.responseStatus = responseStatus;
+                    error.responseText = responseText;
+                    throw error;
+                }
+                cleanup();
+                if (onComplete) onComplete();
+            } catch (e) {
+                reportRankSubmitFailure(e, {
+                    score,
+                    sessionId: this.game.rankSessionId || '',
+                    synced,
+                    rankSyncFailed: !!this.game.rankSyncFailed,
+                    responseStatus,
+                    responseText,
+                });
+                setSubmitting(false);
+                setSubmitStatus(getRankSubmitFailedText());
+                if (input.parentNode) input.focus();
+            }
         };
 
         const doSkip = () => {

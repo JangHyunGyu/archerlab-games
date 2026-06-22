@@ -133,6 +133,24 @@ export class GameOverScene extends Phaser.Scene {
         });
         nameElements.push(loadingText);
 
+        const statusText = this.add.text(cx, submitBtnY + uv(66), '', {
+            fontSize: fs(11), fontFamily: UI_FONT_KR, fontStyle: 'bold',
+            color: SYSTEM.TEXT_RED, align: 'center',
+            wordWrap: { width: GAME_WIDTH - uv(72), useAdvancedWrap: true },
+        }).setOrigin(0.5).setDepth(depth).setVisible(false);
+        nameElements.push(statusText);
+
+        const setStatus = (message) => {
+            statusText.setText(message || '');
+            statusText.setVisible(!!message);
+            if (message) fitText(statusText, GAME_WIDTH - uv(72), uv(42), 0.68);
+        };
+
+        const getRankSubmitFailedText = () => {
+            const message = t('rankSubmitFailed');
+            return message === 'rankSubmitFailed' ? 'Submit failed. Try again.' : message;
+        };
+
         let isSubmitting = false;
         const setSubmitting = (submitting) => {
             isSubmitting = submitting;
@@ -145,6 +163,13 @@ export class GameOverScene extends Phaser.Scene {
                 fitText(submit.txt, btnW - uv(18), btnH - uv(8), 0.66);
                 submit.txt.setAlpha(0.72);
                 skip.txt.setAlpha(0.45);
+            } else {
+                submit.hit.setInteractive({ useHandCursor: true });
+                skip.hit.setInteractive({ useHandCursor: true });
+                submit.txt.setText(t('submitScore'));
+                fitText(submit.txt, btnW - uv(18), btnH - uv(8), 0.66);
+                submit.txt.setAlpha(1);
+                skip.txt.setAlpha(1);
             }
         };
 
@@ -160,17 +185,21 @@ export class GameOverScene extends Phaser.Scene {
             if (isSubmitting) return;
             const name = input.value.trim().slice(0, 20);
             if (!name) { input.focus(); return; }
-            localStorage.setItem('shadow_player_name', name);
+            let characterId = this.finalData.characterId || DEFAULT_CHARACTER_ID;
+            let characterName = this.finalData.characterName || getCharacter(characterId).name;
+            let sessionId = this.finalData.rankSessionId || null;
+            let verifiedScore = Number(this.finalData.rankVerifiedScore);
+            let gameId = '';
+            let responseStatus = null;
+            let responseText = '';
+            setStatus('');
             setSubmitting(true);
             try {
-                const characterId = this.finalData.characterId || DEFAULT_CHARACTER_ID;
-                const characterName = this.finalData.characterName || getCharacter(characterId).name;
-                const sessionId = this.finalData.rankSessionId || null;
+                localStorage.setItem('shadow_player_name', name);
                 if (!sessionId || this.finalData.rankSyncFailed) throw new Error('rank score sync failed');
-                const verifiedScore = Number(this.finalData.rankVerifiedScore);
                 if (!Number.isFinite(verifiedScore) || verifiedScore !== time) throw new Error('rank score verification mismatch');
                 const extraData = { level, rank, kills, shadowCount, characterId, characterName, session_id: sessionId };
-                const gameId = getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
+                gameId = getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
 
                 const response = await fetch(`${GAME_API_URL}/rankings`, {
                     method: 'POST',
@@ -183,11 +212,40 @@ export class GameOverScene extends Phaser.Scene {
                         extra_data: extraData,
                     }),
                 });
-                if (!response.ok) throw new Error(`rank submit ${response.status}`);
-            } catch (e) { /* silent */ }
-            cleanup();
-            if (!this.sys?.isActive?.()) return;
-            showStats();
+                if (!response.ok) {
+                    responseStatus = response.status;
+                    try {
+                        responseText = (await response.text()).slice(0, 500);
+                    } catch (_) {}
+                    const error = new Error(`rank submit ${response.status}`);
+                    error.responseStatus = responseStatus;
+                    error.responseText = responseText;
+                    throw error;
+                }
+                cleanup();
+                if (!this.sys?.isActive?.()) return;
+                showStats();
+            } catch (e) {
+                if (!this.sys?.isActive?.()) return;
+                this._reportRankSubmitError(e, {
+                    score: time,
+                    level,
+                    rank,
+                    kills,
+                    shadowCount,
+                    characterId,
+                    characterName,
+                    sessionId,
+                    verifiedScore,
+                    rankSyncFailed: !!this.finalData.rankSyncFailed,
+                    gameId,
+                    responseStatus,
+                    responseText,
+                });
+                setSubmitting(false);
+                setStatus(getRankSubmitFailedText());
+                if (input.parentNode) input.focus();
+            }
         };
 
         const doSkip = () => {
@@ -204,6 +262,16 @@ export class GameOverScene extends Phaser.Scene {
             if (e.key === 'Escape') doSkip();
         };
         input.addEventListener('keydown', this._nameInputKeydownHandler);
+    }
+
+    _reportRankSubmitError(error, context = {}) {
+        console.warn('[SoloLeveling] rank submit failed:', error);
+        if (window.ArcherLabClientErrorReporter?.report) {
+            window.ArcherLabClientErrorReporter.report(error, {
+                scope: 'rank-submit',
+                ...context,
+            });
+        }
     }
 
     _cleanupNameInput() {
