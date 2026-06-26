@@ -211,7 +211,7 @@ for (const [file, content] of Object.entries(allJsContent)) {
     }
     for (const m of content.matchAll(/new\s+(\w+)\s*\(/g)) {
         // 내장 클래스 제외
-        const builtins = new Set(['Map', 'Set', 'Array', 'Object', 'Promise', 'Error',
+        const builtins = new Set(['Map', 'Set', 'Array', 'Object', 'Promise', 'Error', 'Date',
             'WebSocket', 'Audio', 'Peer', 'DataView', 'Uint8Array', 'Int32Array', 'Function']);
         if (!builtins.has(m[1]) && !m[1].startsWith('PIXI') && !m[1].startsWith('Tone')) {
             classInstantiations.add(m[1]);

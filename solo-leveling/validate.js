@@ -174,7 +174,8 @@ for (const { rel, full } of allJsFiles) {
         const importPath = m[1];
         if (importPath.startsWith('.')) {
             const resolvedDir = path.dirname(full);
-            let resolved = path.resolve(resolvedDir, importPath);
+            const cleanImportPath = importPath.split(/[?#]/)[0];
+            let resolved = path.resolve(resolvedDir, cleanImportPath);
             // .js 확장자 추가
             if (!resolved.endsWith('.js')) resolved += '.js';
             if (!fs.existsSync(resolved)) {
