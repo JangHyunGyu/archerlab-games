@@ -1,5 +1,5 @@
 /* Slime Volley - Stylesheet */
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+@import url('../../assets/vendor/pretendard/pretendard.css');
 
 :root {
     --bg-dark: #0b0d12;
