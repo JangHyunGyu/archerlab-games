@@ -1184,7 +1184,7 @@
       fontFamily: "Pretendard, Arial, sans-serif",
       fontSize: 40,
       fontWeight: "950",
-      fill: [0xffffff, 0xfff2b8],
+      fill: 0xffffff,
       stroke: 0x1d2c3f,
       strokeThickness: 6,
       align: "center",
