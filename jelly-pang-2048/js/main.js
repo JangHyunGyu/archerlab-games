@@ -110,6 +110,7 @@
   };
 
   let app;
+  let appCanvas;
   let boardLayer;
   let tileLayer;
   let fxLayer;
@@ -140,10 +141,13 @@
       return;
     }
 
-    PIXI.settings.RESOLUTION = RENDER_RESOLUTION;
-    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
+    if (PIXI.settings) {
+      PIXI.settings.RESOLUTION = RENDER_RESOLUTION;
+      PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
+    }
 
-    app = new PIXI.Application({
+    app = new PIXI.Application();
+    await app.init({
       width: STAGE,
       height: STAGE,
       antialias: true,
@@ -151,9 +155,10 @@
       backgroundAlpha: 0,
       resolution: RENDER_RESOLUTION,
     });
-    refs.mount.appendChild(app.view);
-    app.view.style.width = "100%";
-    app.view.style.height = "100%";
+    appCanvas = app.canvas || app.view;
+    refs.mount.appendChild(appCanvas);
+    appCanvas.style.width = "100%";
+    appCanvas.style.height = "100%";
     if (refs.rankModal && refs.rankModal.parentElement !== refs.shell) {
       refs.shell.appendChild(refs.rankModal);
     }
@@ -288,12 +293,12 @@
       move(dir);
     }, { passive: false });
 
-    app.view.addEventListener("pointerdown", (event) => {
+    appCanvas.addEventListener("pointerdown", (event) => {
       resumeAudio();
       pointerStart = { x: event.clientX, y: event.clientY };
     }, { passive: true });
 
-    app.view.addEventListener("pointerup", (event) => {
+    appCanvas.addEventListener("pointerup", (event) => {
       if (!pointerStart) return;
       const dx = event.clientX - pointerStart.x;
       const dy = event.clientY - pointerStart.y;
@@ -302,11 +307,11 @@
       move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
     }, { passive: true });
 
-    app.view.addEventListener("pointercancel", () => {
+    appCanvas.addEventListener("pointercancel", () => {
       pointerStart = null;
     });
 
-    app.view.addEventListener("contextmenu", (event) => event.preventDefault());
+    appCanvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
     document.querySelectorAll("[data-dir]").forEach((button) => {
       let skipNextClick = false;
