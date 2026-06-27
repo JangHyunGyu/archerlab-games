@@ -1,6 +1,28 @@
 (function (global) {
   "use strict";
 
+  const SAMPLE_ASSETS = {
+    start: "assets/sounds/parking-start.mp3",
+    targetMove: "assets/sounds/parking-target-move.mp3",
+    button: "assets/sounds/parking-button.mp3",
+    blocked: "assets/sounds/parking-blocked.mp3",
+    win: "assets/sounds/parking-clear.mp3",
+    timeout: "assets/sounds/parking-timeout.mp3",
+    rank: "assets/sounds/parking-rank-open.mp3",
+    submit: "assets/sounds/parking-rank-submit.mp3",
+  };
+
+  const SAMPLE_SETTINGS = {
+    start: { volume: 1, duration: 0.82 },
+    targetMove: { volume: 0, duration: 0.62 },
+    button: { volume: 1, duration: 0.14 },
+    blocked: { volume: 1, duration: 0.24 },
+    win: { volume: 0, duration: 0.74 },
+    timeout: { volume: 1, duration: 0.72 },
+    rank: { volume: -2, duration: 0.36 },
+    submit: { volume: -2, duration: 0.44 },
+  };
+
   class ParkingSoundManager {
     constructor() {
       this.storageKey = "archerlab-parking-sound-enabled";
@@ -8,6 +30,7 @@
       this.ready = false;
       this.lastAt = new Map();
       this.nodes = {};
+      this.players = {};
     }
 
     readEnabled() {
@@ -71,6 +94,19 @@
       this.nodes.dry = new Tone.Channel({ volume: 2 }).connect(this.nodes.comp);
       this.nodes.wet = new Tone.Channel({ volume: -1 }).connect(this.nodes.reverb);
       this.nodes.echo = new Tone.Channel({ volume: -3 }).connect(this.nodes.delay);
+      this.nodes.sample = new Tone.Channel({ volume: 3 }).connect(this.nodes.comp);
+
+      if (Tone.Player) {
+        Object.entries(SAMPLE_ASSETS).forEach(([key, url]) => {
+          const settings = SAMPLE_SETTINGS[key] || {};
+          this.players[key] = new Tone.Player({
+            url,
+            fadeIn: 0.004,
+            fadeOut: 0.08,
+          }).connect(this.nodes.sample);
+          this.players[key].volume.value = settings.volume ?? 0;
+        });
+      }
 
       this.nodes.click = new Tone.Synth({
         oscillator: { type: "square" },
@@ -241,7 +277,22 @@
       node.triggerAttackRelease(duration, time + this.jitter(), this.clamp(velocity));
     }
 
+    playSample(key, now, options = {}) {
+      const player = this.players[key];
+      if (!player || !player.loaded) return false;
+      const settings = SAMPLE_SETTINGS[key] || {};
+      player.stop(now);
+      player.playbackRate = options.playbackRate ?? 1;
+      player.start(now, options.offset ?? 0, options.duration ?? settings.duration);
+      return true;
+    }
+
     playStart(now, vel) {
+      if (this.playSample("start", now)) {
+        this.hit(this.nodes.gear, "E5", "128n", now + 0.018, 0.11);
+        this.noise(this.nodes.roll, "12n", now + 0.018, 0.08);
+        return;
+      }
       this.hit(this.nodes.body, "G1", "12n", now, 0.12 + vel * 0.08);
       this.hit(this.nodes.engine, "C2", "16n", now + 0.012, 0.22);
       this.hit(this.nodes.engine, "G2", "16n", now + 0.105, 0.16);
@@ -259,6 +310,13 @@
     }
 
     playMove(now, vel, target = false) {
+      if (target && this.playSample("targetMove", now, {
+        playbackRate: this.clamp(0.92 + vel * 0.16, 0.94, 1.08),
+      })) {
+        this.hit(this.nodes.body, "B1", "16n", now, 0.08 + vel * 0.08);
+        this.hit(this.nodes.gear, "A5", "128n", now + 0.02, 0.08);
+        return;
+      }
       const engineNote = target ? "F2" : vel > 0.72 ? "E2" : vel > 0.48 ? "D2" : "C2";
       const bodyNote = target ? "B1" : "A1";
       this.hit(this.nodes.body, bodyNote, "16n", now, 0.07 + vel * 0.09);
@@ -288,6 +346,11 @@
     }
 
     playBlocked(now, vel) {
+      if (this.playSample("blocked", now)) {
+        this.hit(this.nodes.body, "F1", "32n", now, 0.12 + vel * 0.05);
+        this.noise(this.nodes.skid, "48n", now + 0.008, 0.14);
+        return;
+      }
       this.hit(this.nodes.body, "F1", "32n", now, 0.17 + vel * 0.07);
       this.hit(this.nodes.impact, "C2", "64n", now + 0.004, 0.25);
       this.hit(this.nodes.impact, "F#1", "64n", now + 0.035, 0.13);
@@ -306,6 +369,11 @@
     }
 
     playTimeout(now, vel) {
+      if (this.playSample("timeout", now)) {
+        this.hit(this.nodes.body, "G1", "8n", now, 0.14);
+        this.noise(this.nodes.rumble, "8n", now, 0.1);
+        return;
+      }
       this.hit(this.nodes.body, "G1", "8n", now, 0.22);
       this.hit(this.nodes.impact, "G1", "16n", now + 0.02, 0.21);
       ["E4", "D4", "C#4"].forEach((note, index) => {
@@ -316,22 +384,30 @@
     }
 
     playButton(now) {
+      if (this.playSample("button", now)) return;
       this.hit(this.nodes.click, "B5", "128n", now, 0.11);
       this.hit(this.nodes.gear, "E6", "128n", now + 0.015, 0.05);
     }
 
     playRank(now) {
+      if (this.playSample("rank", now)) return;
       this.nodes.bell.triggerAttackRelease(["D5", "A5"], "16n", now, 0.17);
       this.hit(this.nodes.click, "E6", "128n", now + 0.055, 0.08);
       this.noise(this.nodes.air, "16n", now + 0.035, 0.05);
     }
 
     playSubmit(now) {
+      if (this.playSample("submit", now)) return;
       this.nodes.bell.triggerAttackRelease(["C5", "E5", "G5"], "8n", now, 0.2);
       this.hit(this.nodes.metal, "C6", "64n", now + 0.08, 0.08);
     }
 
     playWin(now) {
+      if (this.playSample("win", now)) {
+        this.noise(this.nodes.air, "8n", now + 0.06, 0.08);
+        this.hit(this.nodes.metal, "B5", "64n", now + 0.22, 0.07);
+        return;
+      }
       this.playExit(now, 0.55);
       ["E5", "G5", "B5", "E6"].forEach((note, index) => {
         this.nodes.bell.triggerAttackRelease(note, "16n", now + 0.18 + index * 0.052, 0.16);
