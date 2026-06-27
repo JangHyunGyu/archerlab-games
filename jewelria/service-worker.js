@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jewelria-v0.2.7';
+const CACHE_NAME = 'jewelria-v0.2.8';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -61,11 +61,14 @@ const CORE_ASSETS = [
   './assets/sounds/sfx/fail.mp3',
   './assets/sounds/sfx/button.mp3'
 ];
+const CACHE_ASSETS = CORE_ASSETS.flatMap((asset) => (
+  asset.endsWith('.png') ? [asset.replace(/\.png$/i, '.webp'), asset] : [asset]
+));
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => Promise.allSettled(CORE_ASSETS.map((asset) => cache.add(asset))))
+      .then((cache) => Promise.allSettled(CACHE_ASSETS.map((asset) => cache.add(asset))))
       .then(() => self.skipWaiting())
   );
 });

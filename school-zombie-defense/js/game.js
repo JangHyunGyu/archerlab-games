@@ -28,20 +28,7 @@
       return false;
     }
   })();
-  const PNG_ONLY_IMAGE_ASSETS = new Set([
-    "assets/images/skill-pistol-impact.png",
-    "assets/images/skill-arrow-force.png",
-    "assets/images/skill-rifle-caliber.png",
-    "assets/images/skill-rocket-warhead.png",
-    "assets/images/skill-sniper-caliber.png",
-    "assets/images/skill-fire-fuel.png",
-    "assets/images/skill-shock-amplifier.png",
-    "assets/images/skill-engineer-nail.png"
-  ]);
   const imageAsset = (path) => {
-    if (PNG_ONLY_IMAGE_ASSETS.has(path)) {
-      return path;
-    }
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const RUN_LOADING_OVERLAY_ID = "run-loading-overlay";

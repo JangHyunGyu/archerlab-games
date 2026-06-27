@@ -11,6 +11,21 @@
   const RANK_REQUEST_TIMEOUT_MS = 10000;
   const MOVE_UPLOAD_TIMEOUT_MS = 10000;
   const MOVE_UPLOAD_BATCH_SIZE = 50;
+  const SUPPORTS_WEBP = (() => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      return canvas.toDataURL("image/webp").startsWith("data:image/webp");
+    } catch {
+      return false;
+    }
+  })();
+  const imageAsset = (path) => (
+    SUPPORTS_WEBP && /\.png$/i.test(path)
+      ? path.replace(/\.png$/i, ".webp")
+      : path
+  );
   const BOARD = {
     x: 78,
     y: 78,
@@ -98,6 +113,7 @@
     messageCopy: $("message-copy"),
     keepPlaying: $("keep-playing"),
     tryAgain: $("try-again"),
+    backToTitle: $("back-to-title"),
     rankModal: $("rank-modal"),
     rankClose: $("rank-close"),
     rankContent: $("rank-content"),
@@ -267,9 +283,18 @@
 
   async function loadTextures() {
     const effectEntries = Object.entries(EFFECT_ASSETS);
+    const loadTexture = async (url) => {
+      const preferred = imageAsset(url);
+      try {
+        return await PIXI.Assets.load(preferred);
+      } catch (error) {
+        if (preferred === url) throw error;
+        return PIXI.Assets.load(url);
+      }
+    };
     const [jellyTextures, loadedEffects] = await Promise.all([
-      Promise.all(JELLY_ASSETS.map((url) => PIXI.Assets.load(url))),
-      Promise.all(effectEntries.map(async ([key, url]) => [key, await PIXI.Assets.load(url)])),
+      Promise.all(JELLY_ASSETS.map((url) => loadTexture(url))),
+      Promise.all(effectEntries.map(async ([key, url]) => [key, await loadTexture(url)])),
     ]);
     textures = jellyTextures;
     effectTextures = Object.fromEntries(loadedEffects);
@@ -338,6 +363,7 @@
     refs.rankOpen.addEventListener("click", () => openRanks());
     refs.rankClose.addEventListener("click", () => hideRanks());
     refs.tryAgain.addEventListener("click", () => startGame());
+    refs.backToTitle.addEventListener("click", () => showTitle());
     refs.keepPlaying.addEventListener("click", () => {
       keepPlaying = true;
       hideModal();
@@ -345,8 +371,7 @@
     refs.submitRank.addEventListener("click", () => submitRank());
     refs.skipRank.addEventListener("click", () => {
       if (rankSubmitInFlight) return;
-      refs.rankSubmitPanel.classList.add("hidden");
-      setSubmitStatus("", "");
+      completeRankSubmit("랭킹 등록을 건너뛰었습니다.", "");
     });
 
     window.addEventListener("blur", () => {
@@ -859,14 +884,14 @@
     refs.messageEyebrow.textContent = eyebrow;
     refs.messageTitle.textContent = title;
     refs.messageCopy.textContent = copy;
-    refs.keepPlaying.style.display = canKeepPlaying ? "" : "none";
-    refs.messageActions.classList.toggle("is-single", !canKeepPlaying);
     if (canSubmitRank && score > 0) {
       resetRankSubmit();
       refs.modalScore.textContent = formatScore(score);
       refs.rankSubmitPanel.classList.remove("hidden");
+      hideModalActions();
     } else {
       refs.rankSubmitPanel.classList.add("hidden");
+      showDefaultModalActions(canKeepPlaying);
     }
     refs.modal.classList.remove("hidden");
     const card = refs.modal.querySelector(".message-card");
@@ -875,7 +900,37 @@
 
   function hideModal() {
     refs.modal.classList.add("hidden");
+    resetModalActions();
+  }
+
+  function hideModalActions() {
+    refs.messageActions.style.display = "none";
+    refs.keepPlaying.style.display = "none";
+    refs.tryAgain.style.display = "none";
+    refs.backToTitle.hidden = true;
+  }
+
+  function showDefaultModalActions(canKeepPlaying) {
+    refs.messageActions.style.display = "";
+    refs.keepPlaying.style.display = canKeepPlaying ? "" : "none";
+    refs.tryAgain.style.display = "";
+    refs.backToTitle.hidden = true;
+    refs.messageActions.classList.toggle("is-single", !canKeepPlaying);
+  }
+
+  function showPostRankAction() {
+    refs.messageActions.style.display = "";
+    refs.keepPlaying.style.display = "none";
+    refs.tryAgain.style.display = "none";
+    refs.backToTitle.hidden = false;
+    refs.messageActions.classList.add("is-single");
+  }
+
+  function resetModalActions() {
+    refs.messageActions.style.display = "";
     refs.keepPlaying.style.display = "";
+    refs.tryAgain.style.display = "";
+    refs.backToTitle.hidden = true;
     refs.messageActions.classList.remove("is-single");
   }
 
@@ -918,7 +973,7 @@
     try {
       const result = await withServerTrip(() => ranking.submit(name, score, extra));
       playSound("rankSubmit");
-      setSubmitStatus(`등록 완료${result?.rank ? ` (#${result.rank})` : ""}`, "ok");
+      completeRankSubmit(`등록 완료${result?.rank ? ` (#${result.rank})` : ""}`, "ok");
     } catch (err) {
       const message = err?.message === "rank score verification mismatch"
         ? "서버 검증 점수와 현재 점수가 달라 등록하지 않았어요."
@@ -933,12 +988,23 @@
   function resetRankSubmit() {
     rankSubmitInFlight = false;
     refs.rankSubmitPanel.classList.add("hidden");
+    refs.rankSubmitPanel.classList.remove("is-complete");
     refs.modalScore.textContent = formatScore(score);
     refs.nicknameInput.disabled = false;
     refs.submitRank.disabled = false;
     refs.skipRank.disabled = false;
     refs.nicknameInput.value = loadNickname();
     setSubmitStatus("", "");
+  }
+
+  function completeRankSubmit(message, type) {
+    rankSubmitInFlight = false;
+    refs.rankSubmitPanel.classList.add("is-complete");
+    refs.nicknameInput.disabled = true;
+    refs.submitRank.disabled = true;
+    refs.skipRank.disabled = true;
+    setSubmitStatus(message, type);
+    showPostRankAction();
   }
 
   function setRankSubmitDisabled(disabled) {

@@ -23,6 +23,25 @@ class GameRenderer {
         this._msgStyle = null; // showMessage TextStyle 캐시
     }
 
+    supportsWebP() {
+        if (this._supportsWebP !== undefined) return this._supportsWebP;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            this._supportsWebP = canvas.toDataURL('image/webp').startsWith('data:image/webp');
+        } catch (error) {
+            this._supportsWebP = false;
+        }
+        return this._supportsWebP;
+    }
+
+    preferredImageSrc(src) {
+        return this.supportsWebP() && /\.png$/i.test(src)
+            ? src.replace(/\.png$/i, '.webp')
+            : src;
+    }
+
     async init() {
         this.app = new PIXI.Application();
         const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -100,12 +119,20 @@ class GameRenderer {
     }
 
     loadImageTexture(src) {
+        const preferredSrc = this.preferredImageSrc(src);
         return new Promise((resolve, reject) => {
             const img = document.createElement('img');
             img.decoding = 'async';
             img.onload = () => resolve(PIXI.Texture.from(img));
-            img.onerror = () => reject(new Error(`Failed to load image asset: ${src}`));
-            img.src = src;
+            img.onerror = () => {
+                if (preferredSrc !== src) {
+                    img.onerror = () => reject(new Error(`Failed to load image asset: ${src}`));
+                    img.src = src;
+                    return;
+                }
+                reject(new Error(`Failed to load image asset: ${src}`));
+            };
+            img.src = preferredSrc;
         });
     }
 
