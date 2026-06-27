@@ -14,6 +14,21 @@
     console.error('[CT✖]', _ts(), ...a);
     try { _remoteError('AppError', a.map(x => typeof x === 'string' ? x : (x && x.message) || String(x)).join(' '), (a.find(x => x && x.stack) || {}).stack || '', location.href); } catch (_) {}
   };
+  const SUPPORTS_WEBP = (() => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      return canvas.toDataURL('image/webp').startsWith('data:image/webp');
+    } catch (_) {
+      return false;
+    }
+  })();
+  const imageAsset = (path) => (
+    SUPPORTS_WEBP && /\.png$/i.test(path)
+      ? path.replace(/\.png$/i, '.webp')
+      : path
+  );
 
   // -------- 원격 오류 로그 (harem worker /error-logs) --------
   // solo-leveling 패턴을 그대로 차용 — appId만 cat-tower로 분리
@@ -404,13 +419,13 @@
     fieldBgImage = new Image();
     fieldBgImage.src = 'assets/ui/cushion-field.webp';
     mergeParticleImage = new Image();
-    mergeParticleImage.src = 'assets/ui/merge-particles.png';
+    mergeParticleImage.src = imageAsset('assets/ui/merge-particles.png');
     mergeBurstImage = new Image();
-    mergeBurstImage.src = 'assets/ui/merge-burst-sheet-16.png';
+    mergeBurstImage.src = imageAsset('assets/ui/merge-burst-sheet-16.png');
     mergeFinalBurstImage = new Image();
-    mergeFinalBurstImage.src = 'assets/ui/merge-burst-final-sheet-30.png';
+    mergeFinalBurstImage.src = imageAsset('assets/ui/merge-burst-final-sheet-30.png');
     landingDustImage = new Image();
-    landingDustImage.src = 'assets/ui/landing-dust-sheet.png';
+    landingDustImage.src = imageAsset('assets/ui/landing-dust-sheet.png');
     resizeCanvas();
     window.addEventListener('resize', () => {
       scheduleFitGameLayout();

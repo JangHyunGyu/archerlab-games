@@ -620,6 +620,11 @@ h1 {
   display: none;
 }
 
+.rank-submit-panel.is-complete input,
+.rank-submit-panel.is-complete .rank-submit-buttons {
+  display: none;
+}
+
 .final-score-line {
   display: flex;
   align-items: baseline;

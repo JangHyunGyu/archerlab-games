@@ -10,7 +10,7 @@ import {
   updateBestScore
 } from './storage.js';
 import { AudioManager } from './audio.js';
-import { UI, delay } from './ui.js?v=20260627-splashfix';
+import { UI, delay } from './ui.js?v=20260627-webp';
 import { trackEvent } from './ga.js';
 import { checkBrowserSupport } from './browser-check.js';
 

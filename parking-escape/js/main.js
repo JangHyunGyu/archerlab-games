@@ -5,6 +5,22 @@
     await new Promise(resolve => document.addEventListener("DOMContentLoaded", resolve, { once: true }));
   }
 
+  const SUPPORTS_WEBP = (() => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      return canvas.toDataURL("image/webp").startsWith("data:image/webp");
+    } catch {
+      return false;
+    }
+  })();
+  const imageAsset = (path) => (
+    SUPPORTS_WEBP && /\.png$/i.test(path)
+      ? path.replace(/\.png$/i, ".webp")
+      : path
+  );
+
   const ASSETS = {
     menu: "assets/ui/menu-bg.png",
     board: "assets/ui/board-surface.png",
@@ -99,10 +115,23 @@
   app.stage.eventMode = "static";
 
   let textures = {};
+  const texturePaths = [ASSETS.menu, ASSETS.board, ASSETS.cinematicBoard, ASSETS.asphaltTile, ...VEHICLE_ASSETS];
+  const textureAssets = (preferWebP) => texturePaths.map((path) => ({
+    alias: path,
+    src: preferWebP ? imageAsset(path) : path
+  }));
   try {
-    textures = await PIXI.Assets.load([ASSETS.menu, ASSETS.board, ASSETS.cinematicBoard, ASSETS.asphaltTile, ...VEHICLE_ASSETS]);
+    textures = await PIXI.Assets.load(textureAssets(true));
   } catch (error) {
-    console.warn("[Parking] asset load failed; using vector fallback.", error);
+    if (SUPPORTS_WEBP) {
+      try {
+        textures = await PIXI.Assets.load(textureAssets(false));
+      } catch (fallbackError) {
+        console.warn("[Parking] asset load failed; using vector fallback.", fallbackError);
+      }
+    } else {
+      console.warn("[Parking] asset load failed; using vector fallback.", error);
+    }
   }
 
   function motionEnabled() {

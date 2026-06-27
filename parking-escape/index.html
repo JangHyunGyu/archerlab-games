@@ -22,7 +22,7 @@
   <meta name="robots" content="index, follow">
   <meta name="author" content="ArcherLab">
   <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
-  <link rel="stylesheet" href="css/style.css?v=20260620-rank-loading">
+  <link rel="stylesheet" href="css/style.css?v=20260627-webp">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -122,7 +122,7 @@
 
     <section id="loading-screen" class="loading-screen hidden" aria-live="assertive" aria-label="레벨 생성 중">
       <div class="loading-panel">
-        <img class="loading-emblem" src="assets/ui/parking-loading-badge.png" alt="" aria-hidden="true" decoding="async">
+        <img class="loading-emblem"  src="assets/ui/parking-loading-badge.webp" data-png-fallback="assets/ui/parking-loading-badge.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true" decoding="async">
         <p class="brand-kicker">PARKING LOT</p>
         <strong>Lv <span id="loading-level-label">1</span></strong>
         <div class="loading-orbit" aria-hidden="true">
@@ -191,6 +191,6 @@
   <script src="../assets/vendor/pixi/pixi-8.19.0.min.js"></script>
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
   <script src="js/SoundManager.js"></script>
-  <script src="js/main.js?v=20260620-rank-loading"></script>
+  <script src="js/main.js?v=20260627-webp"></script>
 </body>
 </html>

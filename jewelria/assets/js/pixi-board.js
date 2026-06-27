@@ -15,6 +15,23 @@ const TYPE_COLORS = Object.fromEntries(
   GEM_TYPES.map((g) => [g.id, parseInt(g.color.replace('#', ''), 16)])
 );
 
+const SUPPORTS_WEBP = (() => {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas.toDataURL('image/webp').startsWith('data:image/webp');
+  } catch {
+    return false;
+  }
+})();
+
+function imageAsset(path) {
+  return SUPPORTS_WEBP && /\.png$/i.test(path)
+    ? path.replace(/\.png$/i, '.webp')
+    : path;
+}
+
 function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
 }
@@ -101,14 +118,28 @@ export class PixiBoard {
   async _loadTextures() {
     const assets = GEM_TYPES
       .filter((g) => g.image)
-      .map((g) => ({ alias: g.id, src: g.image }));
+      .map((g) => ({ alias: g.id, src: imageAsset(g.image) }));
     try {
       const loaded = await PIXI.Assets.load(assets);
       for (const g of GEM_TYPES) {
         if (loaded[g.id]) this.textures[g.id] = loaded[g.id];
       }
     } catch (err) {
-      console.warn('[Jewelria] 보석 텍스처 로드 실패, 벡터 폴백 사용', err);
+      if (!SUPPORTS_WEBP) {
+        console.warn('[Jewelria] 보석 텍스처 로드 실패, 벡터 폴백 사용', err);
+        return;
+      }
+      try {
+        const fallbackAssets = GEM_TYPES
+          .filter((g) => g.image)
+          .map((g) => ({ alias: g.id, src: g.image }));
+        const loaded = await PIXI.Assets.load(fallbackAssets);
+        for (const g of GEM_TYPES) {
+          if (loaded[g.id]) this.textures[g.id] = loaded[g.id];
+        }
+      } catch (fallbackErr) {
+        console.warn('[Jewelria] 보석 텍스처 로드 실패, 벡터 폴백 사용', fallbackErr);
+      }
     }
   }
 
@@ -116,10 +147,21 @@ export class PixiBoard {
   async _preloadEffects() {
     const fxAssets = [];
     for (const g of GEM_TYPES) {
-      fxAssets.push({ alias: `fx-shatter-${g.id}`, src: `assets/images/effects/gem-shatter-${g.id}.png` });
-      fxAssets.push({ alias: `fx-shards-${g.id}`, src: `assets/images/effects/gem-shards-${g.id}.png` });
+      fxAssets.push({ alias: `fx-shatter-${g.id}`, src: imageAsset(`assets/images/effects/gem-shatter-${g.id}.png`) });
+      fxAssets.push({ alias: `fx-shards-${g.id}`, src: imageAsset(`assets/images/effects/gem-shards-${g.id}.png`) });
     }
-    const fx = await PIXI.Assets.load(fxAssets);
+    let fx;
+    try {
+      fx = await PIXI.Assets.load(fxAssets);
+    } catch (err) {
+      if (!SUPPORTS_WEBP) throw err;
+      const fallbackAssets = [];
+      for (const g of GEM_TYPES) {
+        fallbackAssets.push({ alias: `fx-shatter-${g.id}`, src: `assets/images/effects/gem-shatter-${g.id}.png` });
+        fallbackAssets.push({ alias: `fx-shards-${g.id}`, src: `assets/images/effects/gem-shards-${g.id}.png` });
+      }
+      fx = await PIXI.Assets.load(fallbackAssets);
+    }
     for (const g of GEM_TYPES) {
       const shatterTex = fx[`fx-shatter-${g.id}`];
       if (shatterTex) this.fxFrames[`shatter-${g.id}`] = this._sliceStrip(shatterTex);
