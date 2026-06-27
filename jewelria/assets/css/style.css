@@ -111,7 +111,7 @@ button {
 }
 
 .title-bg {
-  background: url("../images/ui/jewelria-splash.png") center / cover no-repeat;
+  background: image-set(url("../images/ui/jewelria-splash.webp") type("image/webp"), url("../images/ui/jewelria-splash.png") type("image/png")) center / cover no-repeat;
   filter: saturate(1.05) contrast(1.03);
   transform: scale(1.015);
 }
@@ -238,7 +238,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(15, 52, 61, 0.84), rgba(5, 20, 28, 0.9)),
-    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
   backdrop-filter: blur(10px);
 }
 
@@ -290,7 +290,7 @@ p {
   position: absolute;
   inset: -8px -12px;
   z-index: -1;
-  background: var(--button-skin, url("../images/ui/ui-button-secondary.png")) center / 100% 100% no-repeat;
+  background: var(--button-skin, image-set(url("../images/ui/ui-button-secondary.webp") type("image/webp"), url("../images/ui/ui-button-secondary.png") type("image/png"))) center / 100% 100% no-repeat;
   pointer-events: none;
   transition: filter 140ms ease, opacity 140ms ease, transform 140ms ease;
 }
@@ -305,7 +305,7 @@ p {
 }
 
 .button-primary {
-  --button-skin: url("../images/ui/ui-button-primary.png");
+  --button-skin: image-set(url("../images/ui/ui-button-primary.webp") type("image/webp"), url("../images/ui/ui-button-primary.png") type("image/png"));
   color: #2d1805;
   text-shadow: 0 1px 0 rgba(255, 246, 198, 0.45);
 }
@@ -326,12 +326,12 @@ p {
 }
 
 .button-secondary {
-  --button-skin: url("../images/ui/ui-button-secondary.png");
+  --button-skin: image-set(url("../images/ui/ui-button-secondary.webp") type("image/webp"), url("../images/ui/ui-button-secondary.png") type("image/png"));
   color: #eafff9;
 }
 
 .button-ghost {
-  --button-skin: url("../images/ui/ui-button-ghost.png");
+  --button-skin: image-set(url("../images/ui/ui-button-ghost.webp") type("image/webp"), url("../images/ui/ui-button-ghost.png") type("image/png"));
   color: var(--ink-soft);
 }
 
@@ -363,7 +363,7 @@ p {
 }
 
 .icon-button {
-  --button-skin: url("../images/ui/ui-icon-button.png");
+  --button-skin: image-set(url("../images/ui/ui-icon-button.webp") type("image/webp"), url("../images/ui/ui-icon-button.png") type("image/png"));
   display: inline-grid;
   place-items: center;
   min-width: 42px;
@@ -382,7 +382,7 @@ p {
   padding: calc(44px + var(--safe-top)) clamp(10px, 2.4vw, 26px) calc(clamp(20px, 3.5vh, 40px) + var(--safe-bottom));
   background:
     linear-gradient(180deg, rgba(7, 26, 34, 0.88), rgba(5, 15, 21, 0.94)),
-    url("../images/ui/jewelria-splash.png") center / cover no-repeat;
+    image-set(url("../images/ui/jewelria-splash.webp") type("image/webp"), url("../images/ui/jewelria-splash.png") type("image/png")) center / cover no-repeat;
 }
 
 .app-shell.match-shake .game-screen.is-active {
@@ -406,7 +406,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(16, 56, 65, 0.84), rgba(4, 18, 25, 0.9)),
-    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
   text-align: center;
 }
 
@@ -464,7 +464,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(10, 39, 49, 0.84), rgba(3, 15, 22, 0.92)),
-    url("../images/ui/ui-modal-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-modal-panel.webp") type("image/webp"), url("../images/ui/ui-modal-panel.png") type("image/png")) center / 100% 100% no-repeat;
 }
 
 .stage-label {
@@ -499,7 +499,7 @@ p {
   border: 1px solid rgba(92, 204, 212, 0.24);
   background:
     linear-gradient(180deg, rgba(14, 49, 58, 0.86), rgba(4, 18, 25, 0.9)),
-    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 900;
@@ -573,7 +573,7 @@ p {
   max-width: 100%;
   aspect-ratio: 590 / 620;
   margin: clamp(8px, 2vw, 20px) auto;
-  background: url("../images/ui/ui-board-frame.png") center / 100% 100% no-repeat;
+  background: image-set(url("../images/ui/ui-board-frame.webp") type("image/webp"), url("../images/ui/ui-board-frame.png") type("image/png")) center / 100% 100% no-repeat;
   filter:
     drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34))
     drop-shadow(0 0 18px rgba(255, 221, 114, 0.15));
@@ -703,7 +703,7 @@ p {
   z-index: 4;
   width: 138%;
   height: 138%;
-  background-image: url("../images/effects/gem-land-sparkle-strip.png");
+  background-image: image-set(url("../images/effects/gem-land-sparkle-strip.webp") type("image/webp"), url("../images/effects/gem-land-sparkle-strip.png") type("image/png"));
   background-position: 0 50%;
   background-repeat: no-repeat;
   background-size: 1600% 100%;
@@ -940,7 +940,7 @@ p {
   width: var(--size);
   height: var(--size);
   opacity: 0.74;
-  background-image: url("../images/effects/gem-shatter-strip.png");
+  background-image: image-set(url("../images/effects/gem-shatter-strip.webp") type("image/webp"), url("../images/effects/gem-shatter-strip.png") type("image/png"));
   background-position: 0 50%;
   background-size: 1600% 100%;
   background-repeat: no-repeat;
@@ -1016,7 +1016,7 @@ p {
 .vfx-shard {
   width: var(--size);
   height: var(--size);
-  background-image: url("../images/effects/gem-shards-atlas.png");
+  background-image: image-set(url("../images/effects/gem-shards-atlas.webp") type("image/webp"), url("../images/effects/gem-shards-atlas.png") type("image/png"));
   background-size: 400% 400%;
   background-position: var(--atlas-x, 0%) var(--atlas-y, 0%);
   filter:
@@ -1086,7 +1086,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(12, 42, 52, 0.88), rgba(3, 15, 22, 0.94)),
-    url("../images/ui/ui-modal-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-modal-panel.webp") type("image/webp"), url("../images/ui/ui-modal-panel.png") type("image/png")) center / 100% 100% no-repeat;
 }
 
 .small-card {
@@ -1122,7 +1122,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(13, 46, 56, 0.86), rgba(4, 18, 25, 0.92)),
-    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
   color: var(--ink);
   text-align: left;
   cursor: pointer;
@@ -1182,7 +1182,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(15, 52, 61, 0.84), rgba(5, 20, 28, 0.9)),
-    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
 }
 
 .rank-submit {
@@ -1193,7 +1193,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(10, 39, 49, 0.78), rgba(3, 15, 22, 0.88)),
-    url("../images/ui/ui-modal-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-modal-panel.webp") type("image/webp"), url("../images/ui/ui-modal-panel.png") type("image/png")) center / 100% 100% no-repeat;
 }
 
 .rank-submit label {
@@ -1291,7 +1291,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(14, 49, 58, 0.86), rgba(4, 18, 25, 0.9)),
-    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
 }
 
 .rank-row.top1 {
@@ -1376,7 +1376,7 @@ p {
   border-radius: var(--radius);
   background:
     linear-gradient(180deg, rgba(10, 39, 49, 0.88), rgba(3, 15, 22, 0.94)),
-    url("../images/ui/ui-hud-panel.png") center / 100% 100% no-repeat;
+    image-set(url("../images/ui/ui-hud-panel.webp") type("image/webp"), url("../images/ui/ui-hud-panel.png") type("image/png")) center / 100% 100% no-repeat;
   color: var(--ink);
   font-size: 13px;
   font-weight: 850;

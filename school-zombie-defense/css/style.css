@@ -60,7 +60,6 @@ body {
   overflow: hidden;
   color: #f7fbff;
   background-color: #070b0e;
-  background-image: url("../assets/images/corridor-battlefield.png");
   background-image: image-set(
     url("../assets/images/corridor-battlefield.webp") type("image/webp"),
     url("../assets/images/corridor-battlefield.png") type("image/png")
@@ -260,7 +259,7 @@ body {
   background:
     linear-gradient(180deg, rgba(2, 4, 6, 0.2), rgba(2, 4, 6, 0.74) 58%, rgba(2, 4, 6, 0.96)),
     linear-gradient(90deg, rgba(255, 69, 63, 0.24), rgba(2, 4, 6, 0.1) 44%, rgba(69, 215, 255, 0.2)),
-    url("../assets/images/run-loading-backdrop.png");
+    image-set(url("../assets/images/run-loading-backdrop.webp") type("image/webp"), url("../assets/images/run-loading-backdrop.png") type("image/png"));
   background-position: center;
   background-size: cover;
   filter: saturate(1.08) contrast(1.02);
@@ -289,7 +288,7 @@ body {
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.08)),
-    url("../assets/images/run-loading-backdrop.png");
+    image-set(url("../assets/images/run-loading-backdrop.webp") type("image/webp"), url("../assets/images/run-loading-backdrop.png") type("image/png"));
   background-position: center;
   background-size: cover;
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.52), 0 0 30px rgba(255, 74, 65, 0.28);
