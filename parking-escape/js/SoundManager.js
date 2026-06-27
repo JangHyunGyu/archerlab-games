@@ -51,9 +51,9 @@
     init() {
       if (this.ready || typeof Tone === "undefined") return;
 
-      this.nodes.limiter = new Tone.Limiter(-2).toDestination();
+      this.nodes.limiter = new Tone.Limiter(-1).toDestination();
       this.nodes.comp = new Tone.Compressor({
-        threshold: -20,
+        threshold: -16,
         ratio: 5,
         attack: 0.004,
         release: 0.16,
@@ -68,22 +68,22 @@
         feedback: 0.18,
         wet: 0.12,
       }).connect(this.nodes.comp);
-      this.nodes.dry = new Tone.Channel({ volume: -5 }).connect(this.nodes.comp);
-      this.nodes.wet = new Tone.Channel({ volume: -8 }).connect(this.nodes.reverb);
-      this.nodes.echo = new Tone.Channel({ volume: -11 }).connect(this.nodes.delay);
+      this.nodes.dry = new Tone.Channel({ volume: 2 }).connect(this.nodes.comp);
+      this.nodes.wet = new Tone.Channel({ volume: -1 }).connect(this.nodes.reverb);
+      this.nodes.echo = new Tone.Channel({ volume: -3 }).connect(this.nodes.delay);
 
       this.nodes.click = new Tone.Synth({
         oscillator: { type: "square" },
         envelope: { attack: 0.001, decay: 0.018, sustain: 0.01, release: 0.035 },
       }).connect(this.nodes.dry);
-      this.nodes.click.volume.value = -18;
+      this.nodes.click.volume.value = -12;
 
       this.nodes.bell = new Tone.PolySynth(Tone.Synth, {
         maxPolyphony: 8,
         oscillator: { type: "sine" },
         envelope: { attack: 0.002, decay: 0.08, sustain: 0.2, release: 0.36 },
       }).connect(this.nodes.wet);
-      this.nodes.bell.volume.value = -10;
+      this.nodes.bell.volume.value = -5;
 
       this.nodes.engine = new Tone.MonoSynth({
         oscillator: { type: "sawtooth" },
@@ -98,7 +98,7 @@
           octaves: 2.1,
         },
       }).connect(this.nodes.dry);
-      this.nodes.engine.volume.value = -16;
+      this.nodes.engine.volume.value = -9;
 
       this.nodes.rev = new Tone.MonoSynth({
         oscillator: { type: "sawtooth" },
@@ -113,7 +113,7 @@
           octaves: 3.4,
         },
       }).connect(this.nodes.echo);
-      this.nodes.rev.volume.value = -17;
+      this.nodes.rev.volume.value = -10;
 
       this.nodes.body = new Tone.MonoSynth({
         oscillator: { type: "triangle" },
@@ -128,20 +128,20 @@
           octaves: 1.6,
         },
       }).connect(this.nodes.dry);
-      this.nodes.body.volume.value = -19;
+      this.nodes.body.volume.value = -11;
 
       this.nodes.gear = new Tone.Synth({
         oscillator: { type: "square" },
         envelope: { attack: 0.001, decay: 0.012, sustain: 0, release: 0.018 },
       }).connect(this.nodes.dry);
-      this.nodes.gear.volume.value = -22;
+      this.nodes.gear.volume.value = -15;
 
       this.nodes.pad = new Tone.PolySynth(Tone.Synth, {
         maxPolyphony: 8,
         oscillator: { type: "sine" },
         envelope: { attack: 0.02, decay: 0.22, sustain: 0.32, release: 0.8 },
       }).connect(this.nodes.wet);
-      this.nodes.pad.volume.value = -18;
+      this.nodes.pad.volume.value = -12;
 
       this.nodes.tireFilter = new Tone.Filter({
         type: "bandpass",
@@ -152,7 +152,7 @@
         noise: { type: "pink" },
         envelope: { attack: 0.004, decay: 0.12, sustain: 0, release: 0.055 },
       }).connect(this.nodes.tireFilter);
-      this.nodes.tire.volume.value = -24;
+      this.nodes.tire.volume.value = -16;
 
       this.nodes.rollFilter = new Tone.Filter({
         type: "lowpass",
@@ -163,7 +163,7 @@
         noise: { type: "brown" },
         envelope: { attack: 0.006, decay: 0.18, sustain: 0.02, release: 0.09 },
       }).connect(this.nodes.rollFilter);
-      this.nodes.roll.volume.value = -30;
+      this.nodes.roll.volume.value = -20;
 
       this.nodes.skidFilter = new Tone.Filter({
         type: "bandpass",
@@ -174,7 +174,7 @@
         noise: { type: "white" },
         envelope: { attack: 0.002, decay: 0.08, sustain: 0, release: 0.035 },
       }).connect(this.nodes.skidFilter);
-      this.nodes.skid.volume.value = -27;
+      this.nodes.skid.volume.value = -18;
 
       this.nodes.airFilter = new Tone.Filter({
         type: "highpass",
@@ -185,7 +185,7 @@
         noise: { type: "white" },
         envelope: { attack: 0.004, decay: 0.22, sustain: 0, release: 0.08 },
       }).connect(this.nodes.airFilter);
-      this.nodes.air.volume.value = -32;
+      this.nodes.air.volume.value = -22;
 
       this.nodes.rumbleFilter = new Tone.Filter({
         type: "lowpass",
@@ -196,31 +196,31 @@
         noise: { type: "brown" },
         envelope: { attack: 0.01, decay: 0.18, sustain: 0.02, release: 0.1 },
       }).connect(this.nodes.rumbleFilter);
-      this.nodes.rumble.volume.value = -28;
+      this.nodes.rumble.volume.value = -20;
 
       this.nodes.impact = new Tone.Synth({
         oscillator: { type: "square" },
         envelope: { attack: 0.001, decay: 0.07, sustain: 0, release: 0.04 },
       }).connect(this.nodes.dry);
-      this.nodes.impact.volume.value = -14;
+      this.nodes.impact.volume.value = -8;
 
       this.nodes.metal = new Tone.Synth({
         oscillator: { type: "triangle" },
         envelope: { attack: 0.001, decay: 0.035, sustain: 0, release: 0.03 },
       }).connect(this.nodes.wet);
-      this.nodes.metal.volume.value = -19;
+      this.nodes.metal.volume.value = -12;
 
       this.nodes.alarm = new Tone.Synth({
         oscillator: { type: "triangle" },
         envelope: { attack: 0.002, decay: 0.09, sustain: 0.02, release: 0.08 },
       }).connect(this.nodes.wet);
-      this.nodes.alarm.volume.value = -14;
+      this.nodes.alarm.volume.value = -7;
 
       this.nodes.sensor = new Tone.Synth({
         oscillator: { type: "sine" },
         envelope: { attack: 0.001, decay: 0.035, sustain: 0.06, release: 0.045 },
       }).connect(this.nodes.wet);
-      this.nodes.sensor.volume.value = -13;
+      this.nodes.sensor.volume.value = -6;
 
       this.ready = true;
     }
