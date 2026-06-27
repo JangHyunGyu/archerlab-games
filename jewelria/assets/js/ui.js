@@ -212,7 +212,7 @@ export class UI {
     this.updateTime(state.timeLeft);
   }
 
-  // ?⑥? ?쒓컙??媛깆떊?섍퀬 留됰컮吏(10珥??댄븯)?먮뒗 寃쎄퀬 ?쒖떆瑜?以??
+  // 남은 시간을 갱신하고 막바지에는 경고 표시를 준다.
   updateTime(timeLeft) {
     const left = Math.max(0, Number(timeLeft) || 0);
     if (this.refs.hudTime) this.refs.hudTime.textContent = formatTime(left);
@@ -245,13 +245,13 @@ export class UI {
 
   showResult({ score, bestScore, nickname }) {
     this.refs.resultKicker.textContent = 'TIME UP';
-    this.refs.resultTitle.textContent = '????댄깮 醫낅즺';
+    this.refs.resultTitle.textContent = '타임 어택 종료';
     this.refs.resultScore.textContent = Number(score).toLocaleString();
     this.refs.resultBest.textContent = Number(bestScore).toLocaleString();
-    // ?먯닔媛 0蹂대떎 ?щ㈃ 紐낆삁???꾨떦 ?깅줉 ?쇱쓣 ?몄텧?쒕떎.
+    // 점수가 0보다 높으면 명예의 전당 등록 UI를 노출한다.
     const showRank = score > 0;
     this.refs.rankSubmit.classList.toggle('hidden', !showRank);
-    // ?깅줉/嫄대꼫?곌린瑜?寃곗젙?섍린 ?꾩뿏 ?ㅼ떆?섍린/??댄? 踰꾪듉???④릿??
+    // 등록/건너뛰기를 결정하기 전에는 다시하기/타이틀 버튼을 숨긴다.
     if (this.refs.resultActions) {
       this.refs.resultActions.classList.toggle('hidden', showRank);
     }
@@ -285,10 +285,7 @@ export class UI {
   renderRanks(rows, myName = '') {
     this.refs.rankContent.replaceChildren();
     if (!rows || rows.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'rank-empty';
-      empty.textContent = '?꾩쭅 湲곕줉???놁뒿?덈떎. 泥?踰덉㎏ ?꾩쟾?먭? ?섏뼱蹂댁꽭??';
-      this.refs.rankContent.appendChild(empty);
+      this._setRankMessage('rank-empty', '아직 기록이 없습니다. 첫 번째 도전자가 되어보세요!');
       return;
     }
     rows.slice(0, 20).forEach((row, index) => {
@@ -318,12 +315,20 @@ export class UI {
   }
 
   showRankLoading() {
-    this.refs.rankContent.innerHTML = '<div class="rank-loading">遺덈윭?ㅻ뒗 以?..</div>';
+    this._setRankMessage('rank-loading', '불러오는 중...');
     this.showModal(this.refs.rankModal);
   }
 
   showRankError() {
-    this.refs.rankContent.innerHTML = '<div class="rank-error">??궧??遺덈윭?ㅼ? 紐삵뻽?댁슂. 濡쒖뺄 湲곕줉???쒖떆?⑸땲??</div>';
+    this._setRankMessage('rank-error', '랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+  }
+
+  _setRankMessage(className, message) {
+    this.refs.rankContent.replaceChildren();
+    const el = document.createElement('div');
+    el.className = className;
+    el.textContent = message;
+    this.refs.rankContent.appendChild(el);
   }
 
   setSubmitStatus(message, type = '') {
