@@ -550,6 +550,7 @@
       const token = ++this.startToken;
       const targetLevel = Math.max(1, level | 0);
       const continuesRun = this.mode === "complete" && targetLevel === this.nextLevelTarget && !!this.runRecord;
+      const shouldPlayStartSound = !continuesRun;
       if (targetLevel <= 1 || !this.rankSessionId || !continuesRun) this.startRankSession();
       this.level = targetLevel;
       this.moves = 0;
@@ -581,7 +582,7 @@
       this.boardLayer.visible = true;
       this.resize();
       this.updateHud();
-      this.playTone("start");
+      this.playTone(shouldPlayStartSound ? "start" : "button");
     }
 
     generateLevel(level, token) {
