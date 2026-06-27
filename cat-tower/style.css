@@ -44,7 +44,7 @@
   --rank-row-font-size: 14px;
   --field-max-width: 400px;
   --field-fit-width: var(--field-max-width);
-  --ui-icons: url("assets/ui/ui-icons.png");
+  --ui-icons: image-set(url("assets/ui/ui-icons.webp") type("image/webp"), url("assets/ui/ui-icons.png") type("image/png"));
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -700,7 +700,7 @@ h1 {
   width: min(176px, 58vw);
   aspect-ratio: 256 / 160;
   margin: -10px auto -4px;
-  background: url("assets/ui/gameover-cats.png") center / contain no-repeat;
+  background: image-set(url("assets/ui/gameover-cats.webp") type("image/webp"), url("assets/ui/gameover-cats.png") type("image/png")) center / contain no-repeat;
   filter: drop-shadow(0 5px 0 rgba(58, 41, 32, 0.16));
 }
 .final-block { padding: 8px 0; }
@@ -735,7 +735,7 @@ h1 {
   height: 34px;
   flex: 0 0 34px;
   margin: -8px 0 -7px -3px;
-  background: url("assets/ui/new-record-medal.png") center / contain no-repeat;
+  background: image-set(url("assets/ui/new-record-medal.webp") type("image/webp"), url("assets/ui/new-record-medal.png") type("image/png")) center / contain no-repeat;
 }
 
 .how-body { max-width: 420px; max-height: 90vh; overflow-y: auto; }
