@@ -98,6 +98,7 @@
     skipRank: $("skip-rank-btn"),
     submitStatus: $("submit-status"),
     submitProgress: $("rank-submit-progress"),
+    soundToggle: $("sound-toggle-btn"),
   };
 
   const app = new PIXI.Application();
@@ -375,9 +376,12 @@
       this.rankSyncFailed = false;
       this.rankClearSyncPromises = [];
       this.rankReturnTimer = null;
+      this.lastTimeAlertSecond = null;
       this.sound = new (window.ParkingSoundManager || class {
         ensure() {}
+        isEnabled() { return true; }
         play() {}
+        toggle() { return true; }
       })();
 
       this.stage = new PIXI.Container();
@@ -404,6 +408,7 @@
 
       this.createBackdrop();
       this.bindUI();
+      this.updateSoundButton();
       this.updateMenu();
       this.resize();
 
@@ -507,6 +512,7 @@
       });
       dom.submitRank.addEventListener("click", () => this.handleSubmitRank());
       dom.skipRank.addEventListener("click", () => this.handleSkipRank());
+      if (dom.soundToggle) dom.soundToggle.addEventListener("click", () => this.toggleSound());
       dom.nickname.addEventListener("keydown", event => {
         if (event.key === "Enter") this.handleSubmitRank();
       });
@@ -548,6 +554,7 @@
       this.level = targetLevel;
       this.moves = 0;
       this.timeLeft = LEVEL_TIME_LIMIT;
+      this.lastTimeAlertSecond = null;
       this.lastClear = null;
       if (!continuesRun) {
         this.runMoves = 0;
@@ -853,7 +860,7 @@
     beginDrag(event, vehicle) {
       if (this.mode !== "playing" || this.animating || this.drag) return;
       if (event.nativeEvent && event.nativeEvent.cancelable) event.nativeEvent.preventDefault();
-      this.playTone("button");
+      this.playTone("dragStart");
       const range = this.getMoveRange(vehicle);
       this.drag = {
         vehicle,
@@ -1141,6 +1148,7 @@
       if (this.mode === "playing" && !this.animating) {
         this.timeLeft = Math.max(0, this.timeLeft - deltaMS / 1000);
         this.updateHud();
+        this.maybePlayTimeAlert();
         if (this.timeLeft <= 0) {
           this.failLevel();
         }
@@ -1237,7 +1245,7 @@
       countText(dom.nextLevel, this.level);
       countText(dom.clearLevel, this.lastClear.rankLevel, value => `Lv ${Number(value).toLocaleString()}`);
       this.updateHud();
-      this.playTone("blocked");
+      this.playTone("timeout");
     }
 
     updateHud() {
@@ -1249,7 +1257,7 @@
     }
 
     async openRankModal() {
-      this.playTone("button");
+      this.playTone("rank");
       dom.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
       dom.rankModal.classList.remove("hidden");
       animatePanelIn(dom.rankModal);
@@ -1433,6 +1441,35 @@
 
     playTone(type, intensity = 1) {
       if (this.sound && this.sound.play) this.sound.play(type, intensity);
+    }
+
+    maybePlayTimeAlert() {
+      if (this.timeLeft <= 0 || this.timeLeft > 5) return;
+      const second = Math.ceil(this.timeLeft);
+      if (second === this.lastTimeAlertSecond) return;
+      this.lastTimeAlertSecond = second;
+      this.playTone("timer", 1 - second * 0.08);
+    }
+
+    toggleSound() {
+      if (!this.sound || !this.sound.toggle) return;
+      const enabled = this.sound.toggle();
+      this.updateSoundButton();
+      if (enabled) {
+        this.ensureAudio();
+        this.playTone("button");
+      }
+    }
+
+    updateSoundButton() {
+      if (!dom.soundToggle) return;
+      const enabled = !this.sound || !this.sound.isEnabled || this.sound.isEnabled();
+      dom.soundToggle.classList.toggle("is-muted", !enabled);
+      dom.soundToggle.setAttribute("aria-pressed", enabled ? "true" : "false");
+      dom.soundToggle.setAttribute("aria-label", enabled ? "Sound on" : "Sound off");
+      dom.soundToggle.title = enabled ? "Sound on" : "Sound off";
+      const tooltip = dom.soundToggle.querySelector(".icon-tooltip");
+      if (tooltip) tooltip.textContent = enabled ? "Sound on" : "Sound off";
     }
 
     ensureAudio() {
