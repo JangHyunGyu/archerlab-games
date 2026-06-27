@@ -13,14 +13,14 @@
   };
 
   const SAMPLE_SETTINGS = {
-    start: { volume: 1, duration: 0.82 },
-    targetMove: { volume: 0, duration: 0.62 },
-    button: { volume: 1, duration: 0.14 },
-    blocked: { volume: 1, duration: 0.24 },
-    win: { volume: 0, duration: 0.74 },
-    timeout: { volume: 1, duration: 0.72 },
-    rank: { volume: -2, duration: 0.36 },
-    submit: { volume: -2, duration: 0.44 },
+    start: { volume: 1 },
+    targetMove: { volume: 0 },
+    button: { volume: 1 },
+    blocked: { volume: 1 },
+    win: { volume: 0 },
+    timeout: { volume: 1 },
+    rank: { volume: -2 },
+    submit: { volume: -2 },
   };
 
   class ParkingSoundManager {
@@ -283,7 +283,13 @@
       const settings = SAMPLE_SETTINGS[key] || {};
       player.stop(now);
       player.playbackRate = options.playbackRate ?? 1;
-      player.start(now, options.offset ?? 0, options.duration ?? settings.duration);
+      const offset = options.offset ?? 0;
+      const duration = options.duration ?? settings.duration;
+      if (duration === undefined || duration === null) {
+        player.start(now, offset);
+      } else {
+        player.start(now, offset, duration);
+      }
       return true;
     }
 
