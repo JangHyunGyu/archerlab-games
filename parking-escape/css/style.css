@@ -245,6 +245,49 @@ button:disabled {
   transform: translate(-50%, 9px);
 }
 
+.sound-toggle {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 46;
+}
+
+.sound-toggle.is-muted {
+  border-color: rgba(255, 139, 126, 0.34);
+  background:
+    linear-gradient(180deg, rgba(58, 29, 36, 0.9), rgba(16, 13, 22, 0.88));
+}
+
+.icon-sound::before {
+  width: 19px;
+  height: 17px;
+  background: #dffaff;
+  clip-path: polygon(0 34%, 32% 34%, 72% 9%, 72% 91%, 32% 66%, 0 66%);
+  filter: drop-shadow(0 0 10px rgba(111, 238, 255, 0.5));
+}
+
+.icon-sound::after {
+  width: 13px;
+  height: 20px;
+  border: 2px solid #dffaff;
+  border-left: 0;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 0 999px 999px 0;
+  transform: translate(-12%, -50%);
+  filter: drop-shadow(0 0 10px rgba(111, 238, 255, 0.45));
+}
+
+.icon-sound.is-muted::after {
+  width: 22px;
+  height: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: #ff8b7e;
+  transform: translate(-50%, -50%) rotate(-42deg);
+  box-shadow: 0 0 12px rgba(255, 117, 101, 0.7);
+}
+
 .icon-retry::before {
   width: 17px;
   height: 17px;
