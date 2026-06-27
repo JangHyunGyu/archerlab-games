@@ -103,7 +103,6 @@ button {
 }
 
 .title-bg,
-.title-bg img,
 .title-shade {
   position: absolute;
   inset: 0;
@@ -111,9 +110,8 @@ button {
   height: 100%;
 }
 
-.title-bg img {
-  object-fit: cover;
-  object-position: center;
+.title-bg {
+  background: url("../images/ui/jewelria-splash.png") center / cover no-repeat;
   filter: saturate(1.05) contrast(1.03);
   transform: scale(1.015);
 }
