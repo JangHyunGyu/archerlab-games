@@ -26,6 +26,7 @@
       ? path.replace(/\.png$/i, ".webp")
       : path
   );
+  const retryAssetUrl = (path) => `${path}${path.includes("?") ? "&" : "?"}retry=${Date.now()}`;
   const BOARD = {
     x: 78,
     y: 78,
@@ -78,6 +79,51 @@
     0x4fd8ba, 0x42c5f5, 0x8e65f3, 0xf03f9b,
     0xf04437, 0xffca3a, 0xf39c12, 0xffd76a,
   ];
+
+  function hexColor(value) {
+    return `#${Number(value || 0).toString(16).padStart(6, "0")}`;
+  }
+
+  function createFallbackJellyTexture(rank) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    const color = hexColor(RANK_COLORS[rank % RANK_COLORS.length]);
+    const nextColor = hexColor(RANK_COLORS[(rank + 2) % RANK_COLORS.length]);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const gradient = ctx.createRadialGradient(92, 70, 18, 128, 132, 118);
+    gradient.addColorStop(0, "#ffffff");
+    gradient.addColorStop(0.22, color);
+    gradient.addColorStop(1, nextColor);
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(128, 136, 92, 82, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.beginPath();
+    ctx.ellipse(96, 92, 30, 18, -0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.82)";
+    ctx.beginPath();
+    ctx.arc(98, 122, 9, 0, Math.PI * 2);
+    ctx.arc(158, 122, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(40,30,50,0.75)";
+    ctx.beginPath();
+    ctx.arc(98, 124, 4, 0, Math.PI * 2);
+    ctx.arc(158, 124, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(40,30,50,0.45)";
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(128, 142, 22, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+
+    return PIXI.Texture.from(canvas);
+  }
   const HAPTIC_PATTERNS = {
     bump: 24,
     merge: [12, 28, 22],
@@ -283,17 +329,29 @@
 
   async function loadTextures() {
     const effectEntries = Object.entries(EFFECT_ASSETS);
-    const loadTexture = async (url) => {
+    const loadTexture = async (url, fallbackFactory = null) => {
       const preferred = imageAsset(url);
       try {
         return await PIXI.Assets.load(preferred);
       } catch (error) {
-        if (preferred === url) throw error;
-        return PIXI.Assets.load(url);
+        try {
+          if (preferred !== url) {
+            try {
+              return await PIXI.Assets.load(url);
+            } catch {
+              return await PIXI.Assets.load(retryAssetUrl(url));
+            }
+          }
+          return await PIXI.Assets.load(retryAssetUrl(url));
+        } catch (fallbackError) {
+          if (fallbackFactory) return fallbackFactory(fallbackError);
+          console.warn("[jelly-pang] texture load failed:", url, fallbackError);
+          return null;
+        }
       }
     };
     const [jellyTextures, loadedEffects] = await Promise.all([
-      Promise.all(JELLY_ASSETS.map((url) => loadTexture(url))),
+      Promise.all(JELLY_ASSETS.map((url, rank) => loadTexture(url, () => createFallbackJellyTexture(rank)))),
       Promise.all(effectEntries.map(async ([key, url]) => [key, await loadTexture(url)])),
     ]);
     textures = jellyTextures;
