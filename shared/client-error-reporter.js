@@ -89,6 +89,15 @@
         return text.length > maxLength ? text.slice(0, maxLength) : text;
     }
 
+    function isIgnorableResourceError(source, target) {
+        var src = safeString(source, '');
+        var tag = safeString(target && (target.tagName || target.nodeName), '').toUpperCase();
+        return tag === 'SCRIPT' && (
+            src.indexOf('https://www.googletagmanager.com/gtag/js') === 0 ||
+            src.indexOf('https://www.google-analytics.com/') === 0
+        );
+    }
+
     function report(payload) {
         if (!gameId || sentCount >= MAX_REPORTS_PER_PAGE) return;
         if (!payload || !payload.message) return;
@@ -168,6 +177,7 @@
         var target = event && event.target;
         if (target && target !== window && target !== document) {
             var source = target.currentSrc || target.src || target.href || '';
+            if (isIgnorableResourceError(source, target)) return;
             report({
                 error_type: 'resource_error',
                 message: 'Failed to load resource: ' + safeString(target.tagName || target.nodeName, 'unknown'),
