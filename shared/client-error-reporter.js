@@ -92,6 +92,23 @@
     function isIgnorableResourceError(source, target) {
         var src = safeString(source, '');
         var tag = safeString(target && (target.tagName || target.nodeName), '').toUpperCase();
+        if (tag === 'IMG') {
+            var fallback = target && (
+                target.getAttribute && target.getAttribute('data-png-fallback') ||
+                target.dataset && target.dataset.pngFallback
+            );
+            if (fallback) {
+                try {
+                    var sourceUrl = new URL(src, window.location.href).href;
+                    var fallbackUrl = new URL(fallback, window.location.href).href;
+                    if (sourceUrl !== fallbackUrl && /\.webp(?:[?#]|$)/i.test(sourceUrl)) {
+                        return true;
+                    }
+                } catch {
+                    if (/\.webp(?:[?#]|$)/i.test(src)) return true;
+                }
+            }
+        }
         return tag === 'SCRIPT' && (
             src.indexOf('https://www.googletagmanager.com/gtag/js') === 0 ||
             src.indexOf('https://www.google-analytics.com/') === 0
