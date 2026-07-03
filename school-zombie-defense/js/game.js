@@ -2162,6 +2162,8 @@
       this.playerFireTimer = 0;
       this.focusPoint = null;
       this.audioCtx = null;
+      this.audioUnavailable = false;
+      this.audioResumePromise = null;
       this.masterGain = null;
       this.sfxBuffers = new Map();
       this.sfxLoadPromises = new Map();
@@ -3124,6 +3126,8 @@
         this.audioCtx.close().catch(() => {});
       }
       this.audioCtx = null;
+      this.audioUnavailable = false;
+      this.audioResumePromise = null;
       this.sfxPreloadStarted = false;
     }
 
@@ -3153,26 +3157,75 @@
     }
 
     unlockAudio() {
+      if (this.audioUnavailable) {
+        return null;
+      }
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) {
         return null;
       }
-      if (!this.audioCtx) {
-        this.audioCtx = new AudioContext();
-        this.masterGain = this.audioCtx.createGain();
-        this.masterGain.gain.value = SFX_MASTER_VOLUME;
-        this.masterGain.connect(this.audioCtx.destination);
+      try {
+        if (!this.audioCtx || this.audioCtx.state === "closed") {
+          this.audioCtx = new AudioContext();
+          this.masterGain = this.audioCtx.createGain();
+          this.masterGain.gain.value = SFX_MASTER_VOLUME;
+          this.masterGain.connect(this.audioCtx.destination);
+        }
+      } catch (error) {
+        this.disableCustomAudio();
+        return null;
       }
-      this.preloadSfxAssets();
-      this.resumeAudioContext();
+      this.preloadSfxAssets().catch(() => {});
+      this.resumeAudioContext().catch(() => {});
       return this.audioCtx;
+    }
+
+    disableCustomAudio() {
+      this.audioUnavailable = true;
+      this.audioResumePromise = null;
+      this.sfxPreloadToken = (this.sfxPreloadToken || 0) + 1;
+      this.abortFetchControllers(this.sfxFetchControllers);
+      this.sfxBuffers.clear();
+      this.sfxLoadPromises.clear();
+      if (this.masterGain && typeof this.masterGain.disconnect === "function") {
+        try {
+          this.masterGain.disconnect();
+        } catch (error) {
+          // Audio graph may already be torn down by the browser.
+        }
+      }
+      this.masterGain = null;
+      const ctx = this.audioCtx;
+      this.audioCtx = null;
+      if (ctx && ctx.state !== "closed" && typeof ctx.close === "function") {
+        ctx.close().catch(() => {});
+      }
     }
 
     resumeAudioContext() {
       if (!this.audioCtx || this.audioCtx.state !== "suspended") {
         return Promise.resolve();
       }
-      return this.audioCtx.resume().catch(() => {});
+      if (this.audioResumePromise) {
+        return this.audioResumePromise;
+      }
+      try {
+        const resumePromise = this.audioCtx.resume();
+        if (!resumePromise || typeof resumePromise.then !== "function") {
+          return Promise.resolve();
+        }
+        this.audioResumePromise = resumePromise
+          .catch(() => {
+            this.disableCustomAudio();
+          })
+          .finally(() => {
+            this.audioResumePromise = null;
+          });
+        return this.audioResumePromise;
+      } catch (error) {
+        this.disableCustomAudio();
+        return Promise.resolve();
+      }
     }
 
     preloadSfxAssets() {
@@ -9338,6 +9391,9 @@
     render: {
       antialias: true,
       pixelArt: false
+    },
+    audio: {
+      noAudio: true
     },
     scene: [BootScene, GameScene]
   };
