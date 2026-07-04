@@ -84,6 +84,19 @@ function formatScore(value) {
   return Math.floor(value || 0).toLocaleString("en-US");
 }
 
+function colorToRgb(color) {
+  return {
+    r: (color >> 16) & 255,
+    g: (color >> 8) & 255,
+    b: color & 255,
+  };
+}
+
+function rgba(color, alpha) {
+  const { r, g, b } = colorToRgb(color);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function cloneMatrix(matrix) {
   return matrix.map((row) => row.slice());
 }
@@ -232,6 +245,10 @@ class AudioDirector {
     this.backingPulse = 0;
     this.backingDuck = 0;
     this.backingRetryTimer = 0;
+    this.phrasePulse = 0;
+    this.fillPulse = 0;
+    this.stageCuePulse = 0;
+    this.musicTension = 0;
     this.arpStep = 0;
     this.energyStep = 0;
     this.inputStep = 0;
@@ -255,9 +272,13 @@ class AudioDirector {
       sixteenth: 0,
       pulse: 0,
       downbeat: 0,
+      phrase: 0,
+      fill: 0,
+      stageCue: 0,
       event: 0,
       clear: 0,
       drop: 0,
+      tension: 0,
       bpm: STAGES[0].bpm,
     };
   }
@@ -294,6 +315,8 @@ class AudioDirector {
       const textureGain = new Tone.Gain(0).connect(reverb);
       const rhythmGain = new Tone.Gain(0.0).connect(master);
       const backingGain = new Tone.Gain(0.0).connect(master);
+      const leadGain = new Tone.Gain(0.0).connect(delay);
+      const stingerGain = new Tone.Gain(0.0).connect(reverb);
       let backingInput = backingGain;
       try {
         this.backingFilter = new Tone.Filter({ type: "lowpass", frequency: 6200, Q: 0.45 }).connect(backingGain);
@@ -356,6 +379,14 @@ class AudioDirector {
         oscillator: { type: "amsine", harmonicity: 1.5 },
         envelope: { attack: 0.006, decay: 0.08, sustain: 0.04, release: 0.26 },
       }).connect(textureGain);
+      const lead = new Tone.Synth({
+        oscillator: { type: "fatsawtooth", count: 2, spread: 10 },
+        envelope: { attack: 0.004, decay: 0.08, sustain: 0.08, release: 0.18 },
+      }).connect(leadGain);
+      const stinger = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "fatsine", count: 3, spread: 18 },
+        envelope: { attack: 0.018, decay: 0.18, sustain: 0.24, release: 1.1 },
+      }).connect(stingerGain);
       if (Tone.Player) {
         try {
           this.backingPlayer = new Tone.Player({
@@ -382,8 +413,10 @@ class AudioDirector {
         texture: textureGain,
         rhythm: rhythmGain,
         backing: backingGain,
+        lead: leadGain,
+        stinger: stingerGain,
       };
-      this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer, sparkle, kick, hat };
+      this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer, sparkle, kick, hat, lead, stinger };
       this.ready = true;
       if (this.backingPlayer && Tone.loaded) {
         let loaded = false;
@@ -439,6 +472,13 @@ class AudioDirector {
       ["A4", "B4", "E5", "G5"],
       ["F4", "G4", "C5", "E5"],
     ];
+    const stageLeads = [
+      ["C5", "D5", "G5", "A5", "C6", "D6"],
+      ["D5", "E5", "G5", "A5", "D6", "E6"],
+      ["A4", "C5", "E5", "G5", "A5", "C6"],
+      ["F5", "G5", "A5", "C6", "D6", "F6"],
+      ["C5", "E5", "G5", "B5", "D6", "G6"],
+    ];
     let step = 0;
     this.musicLoops = [];
     const baseLoop = new Tone.Loop((time) => {
@@ -491,6 +531,12 @@ class AudioDirector {
         this.beatPulse = 1;
         if (step16 === 0) this.downbeatPulse = 1;
       }
+      if (step16 === 0) {
+        this.phrasePulse = Math.max(this.phrasePulse, 1);
+      }
+      if ((step16 === 14 || step16 === 15) && arrangement > 0.5) {
+        this.fillPulse = Math.max(this.fillPulse, 0.72);
+      }
       if (arrangement > 0.18 && (step16 === 0 || step16 === 8 || this.gestureHeat > 0.7)) {
         this.synths.kick.triggerAttackRelease(step16 === 0 ? "C1" : "G1", "16n", time, 0.08 + arrangement * 0.11);
       }
@@ -499,6 +545,11 @@ class AudioDirector {
       }
       if (arrangement > 0.68 && (step16 === 6 || step16 === 14)) {
         this.synths.pulse.triggerAttackRelease("32n", time, 0.05 + arrangement * 0.08);
+      }
+      if (arrangement > 0.52 && (step16 === 3 || step16 === 7 || step16 === 11 || step16 === 15)) {
+        const leadBank = stageLeads[this.currentStage % stageLeads.length];
+        const note = leadBank[(this.timelineStep + this.currentStage * 2) % leadBank.length];
+        this.synths.lead.triggerAttackRelease(note, "32n", time, 0.035 + arrangement * 0.055 + this.gestureHeat * 0.025);
       }
       this.timelineStep = (this.timelineStep + 1) % 64;
     }, "16n");
@@ -546,11 +597,33 @@ class AudioDirector {
   setStage(index) {
     if (!window.Tone) return;
     this.currentStage = index;
+    this.stageCuePulse = 1;
+    this.musicTension = Math.max(this.musicTension, 0.62);
+    this.playStageStinger(index);
     try {
       window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
       window.Tone.Transport.bpm.rampTo(STAGES[index]?.bpm || 100, 0.8);
     } catch {
       window.Tone.Transport.bpm.value = STAGES[index]?.bpm || 100;
+    }
+  }
+
+  playStageStinger(index) {
+    if (!this.ready || !this.synths || !window.Tone) return;
+    const banks = [
+      ["C4", "G4", "D5", "G5"],
+      ["D4", "A4", "E5", "A5"],
+      ["A3", "E4", "C5", "G5"],
+      ["F4", "C5", "G5", "C6"],
+      ["C4", "G4", "E5", "B5", "D6"],
+    ];
+    const chord = banks[index % banks.length] || banks[0];
+    try {
+      const time = window.Tone.Transport?.nextSubdivision?.("4n");
+      this.synths.stinger.triggerAttackRelease(chord, "2n", time, 0.18);
+      this.synths.sparkle?.triggerAttackRelease(chord[chord.length - 1], "16n", time, 0.08);
+    } catch {
+      // Stage stingers are decorative.
     }
   }
 
@@ -567,6 +640,7 @@ class AudioDirector {
     this.gestureHeat = Math.max(0, this.gestureHeat - 0.045);
     this.backingPulse = Math.max(0, this.backingPulse - 0.05);
     this.backingDuck = Math.max(0, this.backingDuck - 0.045);
+    this.musicTension = Math.max(0, this.musicTension - 0.035);
     const layer = snapshot.arrangement?.layer || 0;
     if (layer > this.lastLayer && this.synths?.sparkle) {
       this.lastLayer = layer;
@@ -586,6 +660,8 @@ class AudioDirector {
     this.rampStem("texture", Math.pow(this.arrangement, 1.75) * 0.18 + zoneLift * 0.08);
     this.rampStem("motion", 0.21 + this.arrangement * 0.08 + this.gestureHeat * 0.05);
     this.rampStem("rhythm", Math.max(0, this.arrangement - 0.12) * 0.16 + comboLift * 0.045 + zoneLift * 0.08);
+    this.rampStem("lead", Math.max(0, this.arrangement - 0.44) * 0.16 + comboLift * 0.035 + zoneLift * 0.04);
+    this.rampStem("stinger", 0.1 + stageLift * 0.04 + zoneLift * 0.05);
     const beatLift = Math.max(this.lastBeatState?.pulse || 0, this.lastBeatState?.downbeat || 0) * 0.012;
     const backingDuck = 1 - Math.min(0.38, this.backingDuck * 0.22 + (this.clearPulse || 0) * 0.13 + (this.dropPulse || 0) * 0.09);
     this.rampStem("backing", this.backingPlayer ? (0.036 + this.arrangement * 0.12 + zoneLift * 0.04 + beatLift + this.backingPulse * 0.018) * backingDuck : 0);
@@ -649,6 +725,9 @@ class AudioDirector {
     const decay = dt / 16.67;
     this.beatPulse = Math.max(0, this.beatPulse - 0.12 * decay);
     this.downbeatPulse = Math.max(0, this.downbeatPulse - 0.075 * decay);
+    this.phrasePulse = Math.max(0, this.phrasePulse - 0.055 * decay);
+    this.fillPulse = Math.max(0, this.fillPulse - 0.12 * decay);
+    this.stageCuePulse = Math.max(0, this.stageCuePulse - 0.035 * decay);
     this.eventPulse = Math.max(0, this.eventPulse - 0.08 * decay);
     this.clearPulse = Math.max(0, this.clearPulse - 0.07 * decay);
     this.dropPulse = Math.max(0, this.dropPulse - 0.1 * decay);
@@ -661,9 +740,13 @@ class AudioDirector {
       sixteenth: Math.floor(beatFloat * 4) % 16,
       pulse: Math.max(this.beatPulse, Math.pow(1 - position, 8) * 0.52),
       downbeat: this.downbeatPulse,
+      phrase: this.phrasePulse,
+      fill: this.fillPulse,
+      stageCue: this.stageCuePulse,
       event: this.eventPulse,
       clear: this.clearPulse,
       drop: this.dropPulse,
+      tension: this.musicTension,
       bpm: ready ? Number(window.Tone.Transport?.bpm?.value || bpm) : bpm,
     };
     return this.lastBeatState;
@@ -1197,6 +1280,8 @@ class PixiView {
     this.particleAtlas = null;
     this.bgPlate = null;
     this.bgPlateTexture = null;
+    this.bgPlateFallbackTexture = null;
+    this.stageArtTextures = {};
     this.distortionSprite = null;
     this.distortionFilter = null;
     this.bgStars = [];
@@ -1215,6 +1300,8 @@ class PixiView {
     this.swarmTick = 0;
     this.flash = 0;
     this.shake = 0;
+    this.cameraPulse = 0;
+    this.cameraRoll = 0;
     this.lastLayoutKey = "";
   }
 
@@ -1264,6 +1351,7 @@ class PixiView {
     this.setAdditive(this.sparkLayer);
     this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.glow, this.fx, this.sparkLayer, this.flashLayer, this.distortionSprite);
     this.makeParticleTextures();
+    this.makeStageArtTextures();
     await this.loadStagePlate();
     this.applyBloomFilters();
     this.seedStars();
@@ -1313,12 +1401,15 @@ class PixiView {
   async loadStagePlate() {
     if (!this.bgPlate || !window.PIXI?.Assets) return;
     try {
-      this.bgPlateTexture = await window.PIXI.Assets.load("assets/images/stage-lumen-field-v2.webp?v=20260704-field-v1");
-      this.bgPlate.texture = this.bgPlateTexture;
-      this.bgPlate.anchor?.set?.(0.5);
-      this.bgPlate.visible = true;
+      this.bgPlateFallbackTexture = await window.PIXI.Assets.load("assets/images/stage-lumen-field-v2.webp?v=20260704-field-v1");
+      if (!this.bgPlateTexture) {
+        this.bgPlateTexture = this.bgPlateFallbackTexture;
+        this.bgPlate.texture = this.bgPlateTexture;
+        this.bgPlate.anchor?.set?.(0.5);
+        this.bgPlate.visible = true;
+      }
     } catch {
-      this.bgPlate.visible = false;
+      this.bgPlate.visible = !!this.bgPlateTexture;
     }
   }
 
@@ -1494,6 +1585,161 @@ class PixiView {
     kinds.forEach((kind, index) => {
       this.particleTextures[kind] = this.textureFromAtlas(atlas, index, cell, kind);
     });
+  }
+
+  makeStageArtTextures() {
+    const PIXI = window.PIXI;
+    if (!PIXI) return;
+    const w = this.quality.coarse ? 900 : 1280;
+    const h = this.quality.coarse ? 1200 : 1600;
+    this.stageArtTextures = {};
+    STAGES.forEach((stage, index) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      this.paintStageArt(ctx, w, h, stage, index);
+      this.stageArtTextures[stage.kind] = PIXI.Texture.from(canvas);
+    });
+    const first = this.stageArtTextures[STAGES[0]?.kind] || null;
+    if (first && this.bgPlate) {
+      this.bgPlateTexture = first;
+      this.bgPlate.texture = first;
+      this.bgPlate.anchor?.set?.(0.5);
+      this.bgPlate.visible = true;
+    }
+  }
+
+  paintStageArt(ctx, w, h, stage, index) {
+    const colors = stage.colors || [stage.accent, 0xffffff];
+    ctx.clearRect(0, 0, w, h);
+    const base = ctx.createLinearGradient(0, 0, w, h);
+    base.addColorStop(0, rgba(stage.bg?.[0] || 0x000006, 1));
+    base.addColorStop(0.48, rgba(stage.bg?.[1] || stage.accent, 0.68));
+    base.addColorStop(1, "rgba(0,0,6,1)");
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, w, h);
+
+    const cx = w * 0.5;
+    const cy = h * 0.46;
+    ctx.globalCompositeOperation = "lighter";
+    const halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.58);
+    halo.addColorStop(0, rgba(stage.accent, stage.kind === "core" ? 0.42 : 0.22));
+    halo.addColorStop(0.38, rgba(colors[1] || stage.accent, 0.1));
+    halo.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, w, h);
+
+    if (stage.kind === "ember") {
+      this.paintStageEmber(ctx, w, h, stage, colors);
+    } else if (stage.kind === "signal") {
+      this.paintStageSignal(ctx, w, h, stage, colors);
+    } else if (stage.kind === "aurora") {
+      this.paintStageAurora(ctx, w, h, stage, colors);
+    } else if (stage.kind === "core") {
+      this.paintStageCore(ctx, w, h, stage, colors);
+    } else {
+      this.paintStageTide(ctx, w, h, stage, colors);
+    }
+    this.paintStageDust(ctx, w, h, stage, colors, index);
+    ctx.globalCompositeOperation = "source-over";
+    const vignette = ctx.createRadialGradient(cx, cy, Math.max(w, h) * 0.18, cx, cy, Math.max(w, h) * 0.72);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(0.72, "rgba(0,0,0,0.12)");
+    vignette.addColorStop(1, "rgba(0,0,0,0.72)");
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  paintStageDust(ctx, w, h, stage, colors, seedOffset = 0) {
+    const count = this.quality.coarse ? 280 : 520;
+    for (let i = 0; i < count; i += 1) {
+      const seed = Math.sin((i + 1) * (12.9898 + seedOffset)) * 43758.5453;
+      const n = seed - Math.floor(seed);
+      const x = ((n * 997.3 + i * 37.7) % 1) * w;
+      const y = ((n * 613.1 + i * 19.1) % 1) * h;
+      const radius = 0.45 + ((n * 23.7) % 1) * (stage.kind === "core" ? 3.1 : 2.4);
+      const color = n > 0.72 ? 0xffffff : colors[i % colors.length] || stage.accent;
+      ctx.beginPath();
+      ctx.fillStyle = rgba(color, 0.08 + ((n * 17.1) % 1) * 0.24);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  paintStageTide(ctx, w, h, stage, colors) {
+    for (let i = 0; i < 18; i += 1) {
+      const y = h * (0.08 + i * 0.052);
+      ctx.beginPath();
+      for (let x = -80; x <= w + 80; x += 26) {
+        const yy = y + Math.sin(x * 0.012 + i * 0.9) * (24 + i * 1.6);
+        if (x === -80) ctx.moveTo(x, yy);
+        else ctx.lineTo(x, yy);
+      }
+      ctx.strokeStyle = rgba(colors[i % colors.length] || stage.accent, 0.045 + i * 0.002);
+      ctx.lineWidth = 1.4 + i * 0.16;
+      ctx.stroke();
+    }
+  }
+
+  paintStageEmber(ctx, w, h, stage, colors) {
+    for (let i = 0; i < 28; i += 1) {
+      const x = w * ((i * 0.173) % 1);
+      const y = h * (0.12 + ((i * 0.097) % 0.82));
+      const len = w * (0.08 + ((i * 0.037) % 0.18));
+      ctx.beginPath();
+      ctx.moveTo(x - len, y + i * 0.4);
+      ctx.lineTo(x + len * 0.35, y - 28 - (i % 5) * 12);
+      ctx.strokeStyle = rgba(colors[i % colors.length] || stage.accent, 0.08);
+      ctx.lineWidth = 3 + (i % 6);
+      ctx.stroke();
+    }
+  }
+
+  paintStageSignal(ctx, w, h, stage, colors) {
+    const cx = w * 0.5;
+    const cy = h * 0.42;
+    for (let i = 0; i < 16; i += 1) {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, w * (0.1 + i * 0.047), h * (0.055 + i * 0.026), i * 0.12, 0, Math.PI * 2);
+      ctx.strokeStyle = rgba(colors[i % colors.length] || stage.accent, 0.055);
+      ctx.lineWidth = 1.3 + (i % 4) * 0.8;
+      ctx.stroke();
+    }
+  }
+
+  paintStageAurora(ctx, w, h, stage, colors) {
+    for (let band = 0; band < 9; band += 1) {
+      ctx.beginPath();
+      const startX = w * (-0.16 + band * 0.16);
+      ctx.moveTo(startX, -80);
+      for (let y = -80; y <= h + 120; y += 36) {
+        const x = startX + y * 0.2 + Math.sin(y * 0.012 + band * 1.2) * (46 + band * 7);
+        ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = rgba(colors[band % colors.length] || stage.accent, 0.06);
+      ctx.lineWidth = 18 + band * 2.6;
+      ctx.stroke();
+    }
+  }
+
+  paintStageCore(ctx, w, h, stage, colors) {
+    const cx = w * 0.5;
+    ctx.fillStyle = "rgba(255,255,255,0.09)";
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(cx - w * 0.09, -40, w * 0.18, h + 80, w * 0.09);
+      ctx.fill();
+    } else {
+      ctx.fillRect(cx - w * 0.09, -40, w * 0.18, h + 80);
+    }
+    for (let i = 0; i < 14; i += 1) {
+      ctx.beginPath();
+      ctx.arc(cx, h * 0.48, w * (0.08 + i * 0.045), 0, Math.PI * 2);
+      ctx.strokeStyle = rgba(colors[i % colors.length] || 0xffffff, 0.055);
+      ctx.lineWidth = 1.4 + i * 0.32;
+      ctx.stroke();
+    }
   }
 
   textureFromAtlas(atlas, index, cell, kind) {
@@ -1818,10 +2064,36 @@ class PixiView {
     if (!this.app || !snapshot) return;
     const layout = this.layout();
     const stage = snapshot.stage || STAGES[0];
+    this.applyCamera(layout, beatState, dt);
     this.drawBackground(layout, stage, dt, snapshot, beatState);
     this.drawBoard(layout, snapshot);
     this.drawParticles(layout, dt);
-    this.drawFlash(layout, dt);
+    this.drawFlash(layout, dt, beatState, stage);
+  }
+
+  applyCamera(layout, beatState, dt) {
+    const root = this.app?.stage;
+    if (!root) return;
+    const cue = clamp(Math.max(
+      this.cameraPulse,
+      (beatState?.stageCue || 0) * 0.92,
+      (beatState?.clear || 0) * 0.52,
+      (beatState?.drop || 0) * 0.34,
+      (beatState?.phrase || 0) * 0.22,
+      (beatState?.fill || 0) * 0.18,
+    ), 0, 1);
+    const tension = clamp(beatState?.tension || 0, 0, 1);
+    const t = performance.now() * 0.001;
+    const micro = Math.max(0, this.shake * 0.12 + cue * 4.2);
+    const driftX = Math.sin(t * 9.7) * micro + Math.sin(t * 1.1) * tension * 2.4;
+    const driftY = Math.cos(t * 8.3) * micro * 0.72 + Math.cos(t * 1.4) * tension * 1.8;
+    const scale = 1 + cue * 0.012 + tension * 0.004 + this.zonePulse * 0.006;
+    this.cameraRoll *= Math.max(0, 1 - dt * 0.006);
+    this.cameraPulse = Math.max(0, this.cameraPulse - dt * 0.0027);
+    root.pivot?.set?.(layout.w / 2, layout.h / 2);
+    root.position?.set?.(layout.w / 2 + driftX, layout.h / 2 + driftY);
+    root.scale?.set?.(scale);
+    root.rotation = clamp(this.cameraRoll + Math.sin(t * 5.4) * cue * 0.0028, -0.024, 0.024);
   }
 
   drawBackground(layout, stage, dt, snapshot, beatState = null) {
@@ -1831,7 +2103,15 @@ class PixiView {
     if (beatState?.ready) {
       beatPosition = beatState.position || 0;
       this.beat = (beatState.bar || 0) * 4 + (beatState.beat || 0) + beatPosition;
-      this.beatHit = Math.max(this.beatHit, beatState.pulse || 0, (beatState.event || 0) * 0.72);
+      this.beatHit = Math.max(
+        this.beatHit,
+        beatState.pulse || 0,
+        (beatState.event || 0) * 0.72,
+        (beatState.phrase || 0) * 0.42,
+        (beatState.fill || 0) * 0.34,
+        (beatState.stageCue || 0) * 0.82,
+      );
+      this.phrasePulse = Math.max(this.phrasePulse, beatState.phrase || 0, (beatState.stageCue || 0) * 0.75);
     } else {
       const bpm = (snapshot.stage?.bpm || stage?.bpm || 100)
         + Math.min(8, (snapshot.combo || 0) * 0.45)
@@ -1876,6 +2156,10 @@ class PixiView {
       + beatPulse * 0.12
       + (beatState?.event || 0) * 0.09
       + (beatState?.clear || 0) * 0.14
+      + (beatState?.phrase || 0) * 0.11
+      + (beatState?.fill || 0) * 0.08
+      + (beatState?.stageCue || 0) * 0.2
+      + (beatState?.tension || 0) * 0.1
       + this.inputHeat * 0.11,
       0.04,
       1,
@@ -2104,11 +2388,18 @@ class PixiView {
 
   drawStagePlate(layout, stage, t, energy, beatPulse, cx, cy) {
     const sprite = this.bgPlate;
-    const texture = this.bgPlateTexture;
-    if (!sprite || !texture || !sprite.visible) return;
+    const texture = this.stageArtTextures?.[stage?.kind] || this.bgPlateTexture || this.bgPlateFallbackTexture;
+    if (!sprite || !texture) return;
+    if (sprite.texture !== texture) {
+      sprite.texture = texture;
+      this.bgPlateTexture = texture;
+      sprite.anchor?.set?.(0.5);
+      sprite.visible = true;
+    }
+    if (!sprite.visible) sprite.visible = true;
     const tw = texture.width || sprite.texture?.width || 1;
     const th = texture.height || sprite.texture?.height || 1;
-    const scale = Math.max(layout.w / tw, layout.h / th) * (1.018 + this.arrangement * 0.01 + energy * 0.025 + beatPulse * 0.012);
+    const scale = Math.max(layout.w / tw, layout.h / th) * (1.018 + this.arrangement * 0.012 + energy * 0.03 + beatPulse * 0.015 + this.stagePulse * 0.018);
     const driftX = Math.sin(t * 0.055 + this.stagePulse) * layout.w * 0.018;
     const driftY = Math.cos(t * 0.047 + this.worldSurge) * layout.h * 0.014;
     const tint = stage.kind === "ember"
@@ -2122,10 +2413,10 @@ class PixiView {
             : 0xffffff;
     const baseAlpha = stage.kind === "tide" ? 0.58 : stage.kind === "core" ? 0.4 : 0.34;
     sprite.tint = tint;
-    sprite.alpha = clamp(baseAlpha * (0.48 + this.arrangement * 0.62) + energy * 0.1 + this.worldSurge * 0.09 + beatPulse * 0.045, 0.18, 0.84);
+    sprite.alpha = clamp(baseAlpha * (0.48 + this.arrangement * 0.62) + energy * 0.1 + this.worldSurge * 0.09 + beatPulse * 0.045 + this.stagePulse * 0.12, 0.18, 0.9);
     sprite.scale.set(scale);
     sprite.position.set(layout.w / 2 + driftX, layout.h / 2 + driftY);
-    sprite.rotation = Math.sin(t * 0.026) * 0.012;
+    sprite.rotation = Math.sin(t * 0.026) * 0.012 + this.cameraRoll * 0.24;
   }
 
   drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy) {
@@ -2875,8 +3166,33 @@ class PixiView {
     });
   }
 
-  drawFlash(layout, dt) {
+  drawFlash(layout, dt, beatState = null, stage = STAGES[0]) {
     this.flashLayer.clear();
+    const stageCue = clamp(beatState?.stageCue || 0, 0, 1);
+    const phraseCue = clamp(beatState?.phrase || 0, 0, 1);
+    const fillCue = clamp(beatState?.fill || 0, 0, 1);
+    const tensionCue = clamp(beatState?.tension || 0, 0, 1);
+    const musicCue = Math.max(stageCue, phraseCue * 0.56, fillCue * 0.44);
+    if (musicCue > 0.02 || tensionCue > 0.05) {
+      const color = stage?.accent || 0x68e9ff;
+      const alpha = clamp(stageCue * 0.16 + phraseCue * 0.035 + fillCue * 0.05 + tensionCue * 0.026, 0, 0.2);
+      this.flashLayer.rect(0, 0, layout.w, layout.h)
+        .fill({ color, alpha });
+      const scanCount = this.quality.coarse ? 3 : 5;
+      for (let i = 0; i < scanCount; i += 1) {
+        const y = layout.h * ((performance.now() * 0.00012 * (1 + i * 0.12) + i / scanCount + musicCue * 0.04) % 1);
+        this.flashLayer.rect(0, y, layout.w, Math.max(1.2, layout.cell * (0.03 + musicCue * 0.035)))
+          .fill({ color: i % 2 ? 0xffffff : color, alpha: alpha * (0.28 + i * 0.06) });
+      }
+      if (stageCue > 0.02) {
+        const cx = layout.boardX + layout.boardW / 2;
+        const cy = layout.boardY + layout.boardH / 2;
+        this.flashLayer.circle(cx, cy, layout.boardW * (1.2 + (1 - stageCue) * 2.0))
+          .stroke({ color: 0xffffff, alpha: stageCue * 0.28, width: 1.8 + stageCue * 5.2 });
+        this.flashLayer.circle(cx, cy, layout.boardW * (0.78 + (1 - stageCue) * 1.1))
+          .fill({ color, alpha: stageCue * 0.045 });
+      }
+    }
     if (this.chromaticPulse > 0) {
       const pulse = this.chromaticPulse;
       const drift = Math.max(1, layout.cell * 0.1) * pulse;
@@ -2903,6 +3219,8 @@ class PixiView {
     this.phrasePulse = Math.max(this.phrasePulse, lines >= 4 ? 1 : 0.62);
     this.inputHeat = Math.max(this.inputHeat, 0.4 + lines * 0.12);
     this.chromaticPulse = Math.max(this.chromaticPulse, lines >= 4 ? 1 : 0.52);
+    this.cameraPulse = Math.max(this.cameraPulse, lines >= 4 ? 1 : 0.48 + lines * 0.12);
+    this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * (lines >= 4 ? 0.016 : 0.006 + lines * 0.0015);
     const clearColor = lines >= 4 ? 0xffffff : color;
     const centerY = rows.length
       ? rows.reduce((sum, row) => sum + layout.boardY + row * layout.cell + layout.cell / 2, 0) / rows.length
@@ -2938,6 +3256,16 @@ class PixiView {
       life: 34 + lines * 7,
       maxLife: 34 + lines * 7,
     });
+    this.lightFields.push({
+      x: centerX,
+      y: layout.boardY + layout.boardH * 0.48,
+      radius: Math.max(layout.w, layout.h) * (lines >= 4 ? 0.72 : 0.48),
+      color,
+      alpha: lines >= 4 ? 0.36 : 0.18,
+      growth: lines >= 4 ? 0.62 : 0.42,
+      life: 44 + lines * 8,
+      maxLife: 44 + lines * 8,
+    });
     this.screenBursts.push({
       x: centerX,
       y: centerY,
@@ -2958,6 +3286,16 @@ class PixiView {
         width: lines >= 4 ? 6.4 : 4.2,
         life: 46 + lines * 9,
         maxLife: 46 + lines * 9,
+      });
+      this.shockBands.push({
+        orientation: "vertical",
+        x: centerX,
+        width: Math.max(layout.cell * 0.62, 14 + lines * 4),
+        color: clearColor,
+        alpha: lines >= 4 ? 0.42 : 0.24,
+        sway: layout.cell * 0.16,
+        life: 34 + lines * 5,
+        maxLife: 34 + lines * 5,
       });
     }
     this.shockBands.push({
@@ -3015,6 +3353,23 @@ class PixiView {
         life: 32 + lines * 6,
         maxLife: 32 + lines * 6,
       });
+      if (lines >= 4 || (!this.quality.coarse && Math.random() > 0.4)) {
+        this.clearRays.push({
+          x: centerX,
+          y,
+          angle: (Math.random() > 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.12,
+          length: layout.w * (lines >= 4 ? 0.82 + Math.random() * 0.42 : 0.48 + Math.random() * 0.22),
+          width: Math.max(1.2, layout.cell * (0.08 + lines * 0.02)),
+          speed: layout.boardW * (0.26 + Math.random() * 0.42),
+          color: Math.random() > 0.28 ? clearColor : color,
+          alpha: lines >= 4 ? 0.82 : 0.48,
+          sway: layout.cell * 0.12,
+          spin: (Math.random() - 0.5) * 0.05,
+          phase: Math.random() * Math.PI * 2,
+          life: 32 + lines * 6,
+          maxLife: 32 + lines * 6,
+        });
+      }
       for (let i = 0; i < Math.min(this.quality.maxParticles * 0.62, 118 + lines * 44); i += 1) {
         const outward = Math.random() > 0.45 ? (Math.random() > 0.5 ? 1 : -1) : 0;
         const texture = lines >= 4
@@ -3088,6 +3443,8 @@ class PixiView {
     const cy = layout.boardY + layout.boardH * 0.56;
     this.worldSurge = 1;
     this.chromaticPulse = Math.max(this.chromaticPulse, 0.86);
+    this.cameraPulse = Math.max(this.cameraPulse, 0.82);
+    this.cameraRoll += 0.012;
     this.lightFields.push({
       x: cx,
       y: cy,
@@ -3127,10 +3484,20 @@ class PixiView {
     const color = stage?.accent || 0x68e9ff;
     this.stagePulse = 1;
     this.worldSurge = 1;
+    this.phrasePulse = 1;
+    this.cameraPulse = 1;
+    this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * 0.018;
     this.flash = Math.max(this.flash, 0.16);
     this.chromaticPulse = Math.max(this.chromaticPulse, 0.55);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH * 0.28;
+    const texture = this.stageArtTextures?.[stage?.kind];
+    if (texture && this.bgPlate && this.bgPlate.texture !== texture) {
+      this.bgPlate.texture = texture;
+      this.bgPlateTexture = texture;
+      this.bgPlate.anchor?.set?.(0.5);
+      this.bgPlate.visible = true;
+    }
     this.lightFields.push({
       x: cx,
       y: cy,
@@ -3141,6 +3508,56 @@ class PixiView {
       life: 54,
       maxLife: 54,
       swayY: layout.cell * 0.5,
+    });
+    this.lightFields.push({
+      x: layout.w / 2,
+      y: layout.h / 2,
+      radius: Math.max(layout.w, layout.h) * 0.72,
+      color,
+      alpha: 0.34,
+      growth: 0.48,
+      life: 74,
+      maxLife: 74,
+    });
+    this.screenBursts.push({
+      x: cx,
+      y: layout.boardY + layout.boardH / 2,
+      radius: layout.boardW * 2.1,
+      color,
+      alpha: 0.38,
+      width: 5.2,
+      life: 62,
+      maxLife: 62,
+    });
+    this.screenBursts.push({
+      x: layout.w / 2,
+      y: layout.h / 2,
+      radius: Math.max(layout.w, layout.h) * 0.42,
+      color: 0xffffff,
+      alpha: 0.2,
+      width: 3.4,
+      life: 58,
+      maxLife: 58,
+    });
+    this.shockBands.push({
+      orientation: "vertical",
+      x: cx,
+      width: Math.max(layout.cell * 1.2, layout.boardW * 0.16),
+      color,
+      alpha: 0.28,
+      sway: layout.cell * 0.2,
+      life: 54,
+      maxLife: 54,
+    });
+    this.shockBands.push({
+      orientation: "horizontal",
+      y: layout.boardY + layout.boardH * 0.5,
+      height: Math.max(layout.cell * 1.4, 32),
+      color: 0xffffff,
+      alpha: 0.18,
+      sway: layout.cell * 0.18,
+      life: 46,
+      maxLife: 46,
     });
     for (let i = 0; i < Math.min(this.quality.maxParticles * 0.72, 260); i += 1) {
       const a = Math.random() * Math.PI * 2;
@@ -3164,6 +3581,20 @@ class PixiView {
         phase: Math.random() * Math.PI * 2,
         life: 34 + Math.random() * 20,
         maxLife: 54,
+      });
+    }
+    for (let i = 0; i < (this.quality.coarse ? 4 : 9); i += 1) {
+      const y = layout.boardY + layout.boardH * (0.15 + i / Math.max(1, (this.quality.coarse ? 4 : 9) - 1) * 0.72);
+      this.clearWaves.push({
+        x: layout.w * (i % 2 ? 0.18 : 0.82),
+        y,
+        speed: (i % 2 ? 1 : -1) * (1.4 + i * 0.12),
+        width: layout.w * 1.45,
+        height: Math.max(22, layout.cell * (1.0 + i * 0.05)),
+        color: i % 2 ? color : 0xffffff,
+        power: 3,
+        life: 42 + i * 3,
+        maxLife: 42 + i * 3,
       });
     }
   }
@@ -3235,6 +3666,8 @@ class PixiView {
     if (kind === "drop") {
       this.worldSurge = Math.max(this.worldSurge, 0.28);
       this.chromaticPulse = Math.max(this.chromaticPulse, 0.28);
+      this.cameraPulse = Math.max(this.cameraPulse, 0.24 + Math.min(0.32, amount * 0.012));
+      this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * 0.0035;
     }
     const pipCount = kind === "move" ? 2 : kind === "rotate" ? 5 : 4;
     for (let i = 0; i < pipCount; i += 1) {
@@ -3398,6 +3831,16 @@ class PixiView {
         power: 2,
         life: 28,
         maxLife: 28,
+      });
+      this.lightFields.push({
+        x: cx,
+        y: layout.boardY + layout.boardH * 0.5,
+        radius: layout.boardW * (0.62 + Math.min(0.36, dropDistance * 0.018)),
+        color: 0xffffff,
+        alpha: 0.12,
+        growth: 0.34,
+        life: 18,
+        maxLife: 18,
       });
       this.shake = Math.max(this.shake, 5);
     }
