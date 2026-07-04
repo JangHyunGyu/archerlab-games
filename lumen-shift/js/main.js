@@ -6,12 +6,20 @@ const VISIBLE_NEXT = 5;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
 const STORAGE_PREFIX = "lumen-shift";
-const TEMP_BGM_URL = "assets/audio/lumen-temp-bgm.mp3?v=20260704-bgm-v1";
-const AUDIO_ASSET_VERSION = "20260705-audio-v1";
+const AUDIO_ASSET_VERSION = "20260705-audio-v2";
 
 function audioAsset(path) {
   return `${path}?v=${AUDIO_ASSET_VERSION}`;
 }
+
+const FALLBACK_BGM_URL = audioAsset("assets/audio/lumen-temp-bgm.mp3");
+const STAGE_FULL_BGM_URLS = [
+  audioAsset("assets/audio/music/stage-01-deep-tide/full.mp3"),
+  audioAsset("assets/audio/music/stage-02-ember-veil/full.mp3"),
+  audioAsset("assets/audio/music/stage-03-bloom-signal/full.mp3"),
+  audioAsset("assets/audio/music/stage-04-void-aurora/full.mp3"),
+  audioAsset("assets/audio/music/stage-05-white-core/full.mp3"),
+];
 
 const SFX_URLS = {
   moveA: audioAsset("assets/audio/sfx/piece-move-01.mp3"),
@@ -382,7 +390,8 @@ class AudioDirector {
     this.zoneLoopPlayer = null;
     this.nativeSfx = this.createNativePools(SFX_URLS);
     this.nativeStingers = this.createNativePools(STINGER_URLS, { defaultSize: 1 });
-    this.nativeBacking = this.createNativeAudio(TEMP_BGM_URL, { loop: true, volume: 0.22 });
+    this.nativeBackingUrl = this.stageBgmUrl(0);
+    this.nativeBacking = this.createNativeAudio(this.nativeBackingUrl, { loop: true, volume: 0.22 });
     this.nativeZoneLoop = this.nativeSfx.zoneLoop?.[0] || null;
     this.nativeUnlocked = false;
     this.nativeBackingStarted = false;
@@ -554,7 +563,7 @@ class AudioDirector {
       if (Tone.Player) {
         try {
           this.backingPlayer = new Tone.Player({
-            url: TEMP_BGM_URL,
+            url: this.stageBgmUrl(0),
             loop: true,
             fadeIn: 0.18,
             fadeOut: 0.18,
@@ -864,6 +873,36 @@ class AudioDirector {
     return Number(player.buffer?.duration || 0) > 0;
   }
 
+  stageBgmUrl(index) {
+    return STAGE_FULL_BGM_URLS[index] || FALLBACK_BGM_URL;
+  }
+
+  switchStageBacking(index) {
+    this.switchNativeBacking(this.stageBgmUrl(index));
+  }
+
+  switchNativeBacking(url, options = {}) {
+    if (!url) return;
+    if (!options.force && this.nativeBackingUrl === url) return;
+    const shouldResume = !!this.nativeBackingStarted && this.nativeBacking?.paused === false;
+    const volume = this.nativeBacking?.volume || 0.18;
+    try {
+      this.nativeBacking?.pause();
+    } catch {
+      // Native backing is best effort.
+    }
+    this.nativeBackingUrl = url;
+    this.nativeBacking = this.createNativeAudio(url, { loop: true, volume });
+    if (this.nativeBacking && url !== FALLBACK_BGM_URL) {
+      this.nativeBacking.addEventListener("error", () => {
+        this.switchNativeBacking(FALLBACK_BGM_URL, { force: true });
+      }, { once: true });
+    }
+    this.nativeBackingStarted = false;
+    this.nativePrimePromise = null;
+    if (shouldResume) this.startNativeBackingTrack();
+  }
+
   startNativeBackingTrack() {
     if (!this.nativeBacking || this.nativeBackingStarted) return;
     try {
@@ -872,10 +911,16 @@ class AudioDirector {
       const result = this.nativeBacking.play();
       result?.catch?.(() => {
         this.nativeBackingStarted = false;
+        if (this.nativeBackingUrl !== FALLBACK_BGM_URL) {
+          this.switchNativeBacking(FALLBACK_BGM_URL, { force: true });
+        }
       });
       this.nativeBackingStarted = true;
     } catch {
       this.nativeBackingStarted = false;
+      if (this.nativeBackingUrl !== FALLBACK_BGM_URL) {
+        this.switchNativeBacking(FALLBACK_BGM_URL, { force: true });
+      }
     }
   }
 
@@ -979,11 +1024,12 @@ class AudioDirector {
   }
 
   setStage(index) {
-    if (!window.Tone) return;
     this.currentStage = index;
+    this.switchStageBacking(index);
     this.stageCuePulse = 1;
     this.musicTension = Math.max(this.musicTension, 0.62);
     this.playStageStinger(index);
+    if (!window.Tone) return;
     try {
       window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
       window.Tone.Transport.bpm.rampTo(STAGES[index]?.bpm || 100, 0.8);
@@ -993,8 +1039,8 @@ class AudioDirector {
   }
 
   playStageStinger(index) {
-    if (!this.ready || !this.synths || !window.Tone) return;
     if (index > 0) this.playStinger(`stage${index + 1}`, -1);
+    if (!this.ready || !this.synths || !window.Tone) return;
     const banks = [
       ["C4", "G4", "D5", "G5"],
       ["D4", "A4", "E5", "A5"],
