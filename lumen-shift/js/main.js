@@ -228,6 +228,9 @@ class AudioDirector {
     this.backingPlayer = null;
     this.backingStarted = false;
     this.backingReady = false;
+    this.backingFilter = null;
+    this.backingPulse = 0;
+    this.backingDuck = 0;
     this.arpStep = 0;
     this.energyStep = 0;
     this.inputStep = 0;
@@ -288,6 +291,13 @@ class AudioDirector {
       const textureGain = new Tone.Gain(0).connect(reverb);
       const rhythmGain = new Tone.Gain(0.0).connect(master);
       const backingGain = new Tone.Gain(0.0).connect(master);
+      let backingInput = backingGain;
+      try {
+        this.backingFilter = new Tone.Filter({ type: "lowpass", frequency: 6200, Q: 0.45 }).connect(backingGain);
+        backingInput = this.backingFilter;
+      } catch {
+        this.backingFilter = null;
+      }
       const pad = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.08, decay: 0.2, sustain: 0.42, release: 1.4 },
@@ -350,7 +360,7 @@ class AudioDirector {
             loop: true,
             fadeIn: 0.18,
             fadeOut: 0.18,
-          }).connect(backingGain);
+          }).connect(backingInput);
         } catch {
           this.backingPlayer = null;
         }
@@ -511,6 +521,8 @@ class AudioDirector {
     const arrangement = smoothstep(arrangementTarget);
     this.arrangement += (arrangement - this.arrangement) * 0.22;
     this.gestureHeat = Math.max(0, this.gestureHeat - 0.045);
+    this.backingPulse = Math.max(0, this.backingPulse - 0.05);
+    this.backingDuck = Math.max(0, this.backingDuck - 0.045);
     const layer = snapshot.arrangement?.layer || 0;
     if (layer > this.lastLayer && this.synths?.sparkle) {
       this.lastLayer = layer;
@@ -530,9 +542,12 @@ class AudioDirector {
     this.rampStem("texture", Math.pow(this.arrangement, 1.75) * 0.18 + zoneLift * 0.08);
     this.rampStem("motion", 0.21 + this.arrangement * 0.08 + this.gestureHeat * 0.05);
     this.rampStem("rhythm", Math.max(0, this.arrangement - 0.12) * 0.16 + comboLift * 0.045 + zoneLift * 0.08);
-    this.rampStem("backing", this.backingPlayer ? 0.035 + this.arrangement * 0.105 + zoneLift * 0.035 : 0);
+    const beatLift = Math.max(this.lastBeatState?.pulse || 0, this.lastBeatState?.downbeat || 0) * 0.012;
+    const backingDuck = 1 - Math.min(0.38, this.backingDuck * 0.22 + (this.clearPulse || 0) * 0.13 + (this.dropPulse || 0) * 0.09);
+    this.rampStem("backing", this.backingPlayer ? (0.036 + this.arrangement * 0.12 + zoneLift * 0.04 + beatLift + this.backingPulse * 0.018) * backingDuck : 0);
     this.rampStem("zone", zoneLift * 0.42);
     this.rampStem("hit", 0.22 + energy * 0.09);
+    this.rampParam(this.backingFilter?.frequency, 4200 + this.arrangement * 6200 + zoneLift * 2800 + this.backingPulse * 1600, 0.18);
     const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
     try {
       window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
@@ -550,6 +565,17 @@ class AudioDirector {
       stem.gain.rampTo(value, 0.24);
     } catch {
       stem.gain.value = value;
+    }
+  }
+
+  rampParam(param, value, time = 0.18) {
+    if (!param || !window.Tone) return;
+    try {
+      param.cancelScheduledValues?.(window.Tone.now());
+      if (typeof param.rampTo === "function") param.rampTo(value, time);
+      else param.value = value;
+    } catch {
+      param.value = value;
     }
   }
 
@@ -614,9 +640,12 @@ class AudioDirector {
     this.gestureHeat = Math.max(this.gestureHeat, 0.78);
     this.eventPulse = Math.max(this.eventPulse, 0.72);
     this.dropPulse = Math.max(this.dropPulse, 1);
+    this.backingPulse = Math.max(this.backingPulse, 0.56);
+    this.backingDuck = Math.max(this.backingDuck, 0.68);
     try {
-      this.synths.impact.triggerAttackRelease("C2", "16n", undefined, 0.38);
-      this.inputNote(4, "16n", 0.09, 0.36);
+      const time = window.Tone.Transport?.nextSubdivision?.("16n");
+      this.synths.impact.triggerAttackRelease("C2", "16n", time, 0.34);
+      this.inputNote(4, "16n", 0.08, 0.36);
     } catch {
       // Audio can be interrupted on mobile when the page loses focus.
     }
@@ -634,15 +663,18 @@ class AudioDirector {
     this.eventPulse = Math.max(this.eventPulse, 0.72 + lines * 0.08);
     this.clearPulse = Math.max(this.clearPulse, lines >= 4 ? 1 : 0.68);
     this.beatPulse = Math.max(this.beatPulse, lines >= 4 ? 1 : 0.72);
+    this.backingPulse = Math.max(this.backingPulse, lines >= 4 ? 1 : 0.68);
+    this.backingDuck = Math.max(this.backingDuck, lines >= 4 ? 1 : 0.72);
     try {
+      const time = window.Tone.Transport?.nextSubdivision?.("16n");
       this.synths.clear.releaseAll?.();
-      this.synths.clear.triggerAttackRelease(chords[lines] || chords[1], "8n", undefined, lines >= 4 ? 0.32 : 0.18);
+      this.synths.clear.triggerAttackRelease(chords[lines] || chords[1], "8n", time, lines >= 4 ? 0.27 : 0.16);
       if (this.synths.sparkle) {
         const lift = lines >= 4 ? ["C6", "E6", "G6", "C7"] : ["C6", "G6"];
         lift.slice(0, Math.min(lift.length, lines + 1)).forEach((note, index) => {
           setTimeout(() => {
             try {
-              this.synths.sparkle.triggerAttackRelease(note, "32n", undefined, lines >= 4 ? 0.075 : 0.045);
+              this.synths.sparkle.triggerAttackRelease(note, "32n", undefined, lines >= 4 ? 0.062 : 0.04);
             } catch {
               // Ignore late sparkle failures.
             }
@@ -657,6 +689,8 @@ class AudioDirector {
   zoneStart() {
     this.eventPulse = Math.max(this.eventPulse, 1);
     this.downbeatPulse = Math.max(this.downbeatPulse, 1);
+    this.backingPulse = Math.max(this.backingPulse, 0.82);
+    this.backingDuck = Math.max(this.backingDuck, 0.44);
     this.rampStem("zone", 0.52);
     this.note("C5", "4n", 0.28);
     setTimeout(() => this.note("G5", "4n", 0.22), 80);
@@ -666,11 +700,14 @@ class AudioDirector {
     if (!this.ready || !this.synths) return;
     this.eventPulse = Math.max(this.eventPulse, lines > 0 ? 1 : 0.42);
     this.clearPulse = Math.max(this.clearPulse, lines > 0 ? 1 : 0.35);
+    this.backingPulse = Math.max(this.backingPulse, lines > 0 ? 1 : 0.42);
+    this.backingDuck = Math.max(this.backingDuck, lines > 0 ? 0.92 : 0.36);
     try {
+      const time = window.Tone.Transport?.nextSubdivision?.("8n");
       this.rampStem("zone", 0.04);
       this.synths.clear.releaseAll?.();
-      this.synths.clear.triggerAttackRelease(["C4", "G4", "C5", "E5", "G5"], "2n", undefined, lines > 0 ? 0.36 : 0.18);
-      this.synths.impact.triggerAttackRelease("C2", "4n", undefined, 0.34);
+      this.synths.clear.triggerAttackRelease(["C4", "G4", "C5", "E5", "G5"], "2n", time, lines > 0 ? 0.3 : 0.16);
+      this.synths.impact.triggerAttackRelease("C2", "4n", time, 0.28);
     } catch {
       // Ignore mobile audio scheduling errors.
     }
@@ -1142,11 +1179,12 @@ class PixiView {
     const small = Math.min(window.innerWidth, window.innerHeight) < 420;
     return {
       coarse,
-      dpr: Math.min(window.devicePixelRatio || 1, coarse ? 1.15 : 1.75),
-      bgStars: coarse ? (small ? 56 : 92) : 260,
-      swarmParticles: coarse ? (small ? 620 : 920) : 2800,
-      glowParticles: coarse ? (small ? 132 : 210) : 720,
-      maxParticles: coarse ? (small ? 260 : 340) : 1080,
+      small,
+      dpr: Math.min(window.devicePixelRatio || 1, coarse ? 1.25 : 1.85),
+      bgStars: coarse ? (small ? 86 : 130) : 320,
+      swarmParticles: coarse ? (small ? 860 : 1260) : 3600,
+      glowParticles: coarse ? (small ? 210 : 320) : 960,
+      maxParticles: coarse ? (small ? 430 : 620) : 1400,
     };
   }
 
@@ -1275,7 +1313,7 @@ class PixiView {
   applyBloomFilters() {
     const PIXI = window.PIXI;
     if (!PIXI?.BlurFilter) return;
-    const allowFilter = !this.quality.coarse && Math.min(window.innerWidth, window.innerHeight) > 700;
+    const allowFilter = Math.min(window.innerWidth, window.innerHeight) >= (this.quality.coarse ? 360 : 560);
     if (!allowFilter) {
       this.bloomLayer.filters = null;
       if (this.glow) this.glow.filters = null;
@@ -1295,10 +1333,11 @@ class PixiView {
       }
     };
     try {
-      this.bloomLayer.filters = [makeBlur(8.4, 6)];
-      if (this.glow) this.glow.filters = [makeBlur(12.5, 6)];
-      this.sparkLayer.filters = [makeBlur(1.15, 3)];
-      this.flashLayer.filters = [makeBlur(1.8, 2)];
+      const mobile = this.quality.coarse;
+      this.bloomLayer.filters = [makeBlur(mobile ? 4.2 : 9.8, mobile ? 2 : 6)];
+      if (this.glow) this.glow.filters = [makeBlur(mobile ? 6.4 : 15.5, mobile ? 2 : 6)];
+      this.sparkLayer.filters = [makeBlur(mobile ? 0.75 : 1.35, mobile ? 1 : 3)];
+      this.flashLayer.filters = [makeBlur(mobile ? 1.05 : 2.1, mobile ? 1 : 2)];
       if (PIXI.DisplacementFilter && this.distortionSprite && this.bgPlate) {
         try {
           this.distortionFilter = new PIXI.DisplacementFilter({ sprite: this.distortionSprite, scale: 0 });
@@ -1350,7 +1389,7 @@ class PixiView {
     }
     this.setAdditive(node);
     this.addParticleSprite(layer, node);
-    return { node, isParticle: useParticle, active: false };
+    return { node, isParticle: useParticle, active: false, texture };
   }
 
   showParticleNode(ref, x, y, color, alpha, scale, rotation = 0) {
@@ -1398,8 +1437,8 @@ class PixiView {
 
   makeParticleTextures() {
     const PIXI = window.PIXI;
-    const cell = 64;
-    const kinds = ["orb", "pin", "flare", "shard", "star", "ring", "streak", "diamond"];
+    const cell = this.quality.coarse ? 72 : 96;
+    const kinds = ["orb", "pin", "flare", "shard", "star", "ring", "streak", "diamond", "nova", "mote", "comet", "lens", "cross"];
     const canvas = document.createElement("canvas");
     canvas.width = cell * kinds.length;
     canvas.height = cell;
@@ -1448,6 +1487,86 @@ class PixiView {
       ctx.fillRect(x, 0, size, size);
       ctx.fillStyle = "rgba(255,255,255,0.78)";
       ctx.fillRect(x + size * 0.1, cy - 1.2, size * 0.8, 2.4);
+    } else if (kind === "nova") {
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.5);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.12, "rgba(255,255,255,0.86)");
+      gradient.addColorStop(0.42, "rgba(255,255,255,0.22)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+      ctx.lineWidth = size * 0.046;
+      ctx.lineCap = "round";
+      for (let i = 0; i < 6; i += 1) {
+        const a = i * Math.PI / 3;
+        const dx = Math.cos(a) * size * 0.43;
+        const dy = Math.sin(a) * size * 0.43;
+        ctx.beginPath();
+        ctx.moveTo(cx - dx * 0.24, cy - dy * 0.24);
+        ctx.lineTo(cx + dx, cy + dy);
+        ctx.stroke();
+      }
+    } else if (kind === "mote") {
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.38);
+      gradient.addColorStop(0, "rgba(255,255,255,0.95)");
+      gradient.addColorStop(0.22, "rgba(255,255,255,0.58)");
+      gradient.addColorStop(0.62, "rgba(255,255,255,0.16)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+      ctx.beginPath();
+      ctx.arc(cx, cy, size * 0.055, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
+      ctx.fill();
+    } else if (kind === "comet") {
+      const gradient = ctx.createLinearGradient(x + size * 0.06, cy, x + size * 0.94, cy);
+      gradient.addColorStop(0, "rgba(255,255,255,0)");
+      gradient.addColorStop(0.5, "rgba(255,255,255,0.26)");
+      gradient.addColorStop(0.76, "rgba(255,255,255,0.92)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = size * 0.18;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.1, cy + size * 0.11);
+      ctx.quadraticCurveTo(x + size * 0.48, cy - size * 0.08, x + size * 0.9, cy);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
+      ctx.beginPath();
+      ctx.arc(x + size * 0.77, cy - size * 0.02, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === "lens") {
+      const gradient = ctx.createRadialGradient(cx, cy, size * 0.04, cx, cy, size * 0.48);
+      gradient.addColorStop(0, "rgba(255,255,255,0.78)");
+      gradient.addColorStop(0.36, "rgba(255,255,255,0.24)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(1.75, 0.42);
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.26, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "rgba(255,255,255,0.62)";
+      ctx.fillRect(x + size * 0.18, cy - 0.7, size * 0.64, 1.4);
+    } else if (kind === "cross") {
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.48);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.2, "rgba(255,255,255,0.42)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+      ctx.lineWidth = size * 0.03;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx - size * 0.44, cy);
+      ctx.lineTo(cx + size * 0.44, cy);
+      ctx.moveTo(cx, cy - size * 0.44);
+      ctx.lineTo(cx, cy + size * 0.44);
+      ctx.stroke();
     } else if (kind === "streak") {
       const gradient = ctx.createLinearGradient(x + size * 0.08, cy, x + size * 0.92, cy);
       gradient.addColorStop(0, "rgba(255,255,255,0)");
@@ -1551,11 +1670,15 @@ class PixiView {
     const textures = this.particleTextures;
     const glowStep = Math.max(3, Math.floor(this.swarm.length / Math.max(1, this.quality.glowParticles)));
     this.swarmSprites = this.swarm.map((particle, index) => {
-      const texture = particle.band < 0.2 ? textures.flare : (particle.colorBias > 0.78 ? textures.pin : textures.orb);
+      const texture = particle.band < 0.12
+        ? textures.comet
+        : particle.band < 0.24
+          ? textures.lens
+          : (particle.colorBias > 0.82 ? textures.cross : (particle.colorBias > 0.58 ? textures.mote : textures.orb));
       const sprite = this.createParticleNode(this.swarmLayer, texture || textures.orb);
       let glow = null;
       if (index % glowStep === 0) {
-        glow = this.createParticleNode(this.bloomLayer, textures.orb);
+        glow = this.createParticleNode(this.bloomLayer, particle.band < 0.2 ? textures.flare : textures.mote);
       }
       return { particle, sprite, glow };
     });
@@ -1572,6 +1695,10 @@ class PixiView {
         this.particleTextures.star,
         this.particleTextures.streak,
         this.particleTextures.diamond,
+        this.particleTextures.nova,
+        this.particleTextures.mote,
+        this.particleTextures.comet,
+        this.particleTextures.cross,
       ];
       const texture = pool[index % pool.length] || this.particleTextures.orb;
       return this.createParticleNode(this.sparkLayer, texture);
@@ -1753,6 +1880,7 @@ class PixiView {
     this.drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy);
     this.drawDepthCurtains(layout, stage, t, energy, snapshot, cx, cy);
     this.drawResonanceField(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
+    this.drawVolumetricBloom(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
 
     const drift = dt * 0.001;
     for (const star of this.bgStars) {
@@ -1831,6 +1959,39 @@ class PixiView {
         .stroke({ color: 0xffffff, alpha: this.phrasePulse * 0.34, width: 1.4 + this.phrasePulse * 4.2 });
       g.circle(cx, cy, radius * 0.62)
         .fill({ color, alpha: this.phrasePulse * 0.035 });
+    }
+  }
+
+  drawVolumetricBloom(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
+    const g = this.bg;
+    const colors = stage.colors || [stage.accent, 0xffffff];
+    const zone = snapshot.zoneActive ? 1 : 0;
+    const clearLift = this.worldSurge * 0.32 + this.phrasePulse * 0.18;
+    const base = clamp(0.035 + this.arrangement * 0.1 + energy * 0.15 + beatPulse * 0.075 + zone * 0.13 + clearLift, 0, 0.44);
+    const radius = layout.boardW * (1.05 + this.arrangement * 0.65 + zone * 0.42 + beatPulse * 0.18);
+    g.circle(cx, cy, radius)
+      .fill({ color: stage.accent, alpha: base * 0.16 });
+    g.circle(cx, cy, radius * (0.56 + beatPulse * 0.08))
+      .fill({ color: 0xffffff, alpha: base * 0.055 });
+
+    const plumeCount = this.quality.coarse ? 3 : 5;
+    for (let i = 0; i < plumeCount; i += 1) {
+      const phase = t * (0.11 + i * 0.018) + i * 1.7;
+      const side = i % 2 ? -1 : 1;
+      const x = cx + Math.sin(phase) * layout.boardW * (0.8 + i * 0.16) * side;
+      const y = cy + Math.cos(phase * 0.72) * layout.boardH * (0.18 + i * 0.035);
+      const w = layout.boardW * (0.62 + energy * 0.7 + i * 0.12);
+      const h = layout.boardH * (0.2 + energy * 0.18);
+      g.roundRect(x - w / 2, y - h / 2, w, h, Math.max(12, h / 2))
+        .fill({ color: colors[i % colors.length] || stage.accent, alpha: base * (0.06 + i * 0.006) });
+    }
+
+    if (beatPulse > 0.04 || this.worldSurge > 0.08) {
+      const pulse = Math.max(beatPulse, this.worldSurge * 0.6);
+      g.roundRect(layout.boardX - layout.cell * 0.8, layout.boardY - layout.cell * 0.8, layout.boardW + layout.cell * 1.6, layout.boardH + layout.cell * 1.6, Math.max(6, layout.cell * 0.18))
+        .stroke({ color: 0xffffff, alpha: pulse * 0.11, width: Math.max(1.2, layout.cell * 0.12) });
+      g.roundRect(layout.boardX - layout.cell * 1.35, layout.boardY - layout.cell * 1.35, layout.boardW + layout.cell * 2.7, layout.boardH + layout.cell * 2.7, Math.max(8, layout.cell * 0.28))
+        .stroke({ color: stage.accent, alpha: pulse * 0.08, width: Math.max(1.4, layout.cell * 0.18) });
     }
   }
 
@@ -1995,7 +2156,7 @@ class PixiView {
     const colors = stage.colors || [stage.accent, 0xffffff];
     const stageWarm = stage.kind === "ember" || stage.kind === "core";
     const arrangement = this.arrangement;
-    const baseAlpha = (layout.portrait ? 0.18 : 0.22) + arrangement * (layout.portrait ? 0.16 : 0.22);
+    const baseAlpha = (layout.portrait ? 0.22 : 0.26) + arrangement * (layout.portrait ? 0.2 : 0.26);
     const zoneBoost = snapshot.zoneActive ? 0.5 : 0;
     const comboBoost = Math.min(0.32, snapshot.combo * 0.048);
     const flowBoost = 0.72 + arrangement * 0.52 + this.zonePulse * 0.9 + this.stagePulse * 0.8 + this.worldSurge * 0.65;
@@ -2068,17 +2229,18 @@ class PixiView {
         : (p.colorBias > 0.42 ? colors[0] : (stageWarm ? 0xffd36e : (colors[1] || stage.accent)));
       const stageAlpha = stage.kind === "core" ? 0.12 : 0;
       const alpha = clamp(baseAlpha * twinkle + energy * 0.32 + arrangement * 0.12 + zoneBoost + comboBoost + stageAlpha, 0.055, 0.98);
-      const size = p.size * (0.88 + arrangement * 0.44 + energy * 2.45 + this.worldSurge * 1.4 + (snapshot.zoneActive ? 1.75 : 0));
+      const size = p.size * (0.96 + arrangement * 0.5 + energy * 2.75 + this.worldSurge * 1.7 + (snapshot.zoneActive ? 2.1 : 0));
       const spriteScale = Math.max(0.048, size / 14);
-      this.showParticleNode(entry.sprite, x, y, color, alpha, spriteScale * (ribbon ? 1.78 : 1.12), rotation);
+      const lensScale = p.band < 0.24 ? 2.05 : 1;
+      this.showParticleNode(entry.sprite, x, y, color, alpha, spriteScale * (ribbon ? 1.86 : 1.18) * lensScale, rotation);
       if (entry.glow) {
         this.showParticleNode(
           entry.glow,
           x,
           y,
           color,
-          alpha * (snapshot.zoneActive ? 0.48 : 0.3),
-          spriteScale * (snapshot.zoneActive ? 7.0 : 5.0),
+          alpha * (snapshot.zoneActive ? 0.54 : 0.34),
+          spriteScale * (snapshot.zoneActive ? 7.8 : 5.6),
           rotation,
         );
       }
@@ -2660,7 +2822,8 @@ class PixiView {
       const alpha = clamp(p.life / p.maxLife, 0, 1);
       if (p.sprite) {
         p.rotation += p.spin * decay;
-        this.showParticleNode(p.sprite, p.x, p.y, p.color, alpha * p.alpha, Math.max(0.04, p.size * (0.5 + alpha) / 18), p.rotation);
+        const textureScale = p.textureKind === "comet" ? 1.55 : p.textureKind === "nova" ? 1.3 : p.textureKind === "lens" ? 1.8 : 1;
+        this.showParticleNode(p.sprite, p.x, p.y, p.color, alpha * p.alpha, Math.max(0.04, p.size * (0.5 + alpha) / 18) * textureScale, p.rotation);
       } else {
         g.circle(p.x, p.y, p.size * (0.5 + alpha)).fill({ color: p.color, alpha: alpha * p.alpha });
       }
@@ -2701,7 +2864,7 @@ class PixiView {
       ? rows.reduce((sum, row) => sum + layout.boardY + row * layout.cell + layout.cell / 2, 0) / rows.length
       : layout.boardY + layout.boardH / 2;
     const centerX = layout.boardX + layout.boardW / 2;
-    const rayCount = Math.min(this.quality.coarse ? 10 : 24, 8 + lines * 5);
+    const rayCount = Math.min(this.quality.coarse ? 18 : 38, 12 + lines * 7);
     for (let i = 0; i < rayCount; i += 1) {
       const side = i % 2 ? 1 : -1;
       const angle = (Math.random() - 0.5) * 0.38 + (side > 0 ? 0 : Math.PI);
@@ -2709,11 +2872,11 @@ class PixiView {
         x: centerX + (Math.random() - 0.5) * layout.boardW * 0.36,
         y: centerY + (Math.random() - 0.5) * layout.cell * Math.max(1, lines),
         angle,
-        length: layout.w * (lines >= 4 ? 0.5 + Math.random() * 0.46 : 0.32 + Math.random() * 0.28),
-        width: Math.max(1.4, layout.cell * (0.08 + Math.random() * 0.08 + lines * 0.018)),
+        length: layout.w * (lines >= 4 ? 0.58 + Math.random() * 0.54 : 0.36 + Math.random() * 0.34),
+        width: Math.max(1.4, layout.cell * (0.09 + Math.random() * 0.1 + lines * 0.022)),
         speed: layout.boardW * (0.25 + Math.random() * 0.42),
         color: Math.random() > 0.42 ? clearColor : color,
-        alpha: lines >= 4 ? 0.88 : 0.64,
+        alpha: lines >= 4 ? 0.96 : 0.7,
         sway: layout.cell * (0.12 + Math.random() * 0.26),
         spin: (Math.random() - 0.5) * 0.18,
         phase: Math.random() * Math.PI * 2,
@@ -2741,6 +2904,18 @@ class PixiView {
       life: 38 + lines * 8,
       maxLife: 38 + lines * 8,
     });
+    if (lines >= 3) {
+      this.screenBursts.push({
+        x: centerX,
+        y: centerY,
+        radius: layout.boardW * (lines >= 4 ? 2.32 : 1.72),
+        color,
+        alpha: lines >= 4 ? 0.34 : 0.22,
+        width: lines >= 4 ? 6.4 : 4.2,
+        life: 46 + lines * 9,
+        maxLife: 46 + lines * 9,
+      });
+    }
     this.shockBands.push({
       orientation: "horizontal",
       y: centerY,
@@ -2796,18 +2971,21 @@ class PixiView {
         life: 32 + lines * 6,
         maxLife: 32 + lines * 6,
       });
-      for (let i = 0; i < Math.min(this.quality.maxParticles / 2, 86 + lines * 28); i += 1) {
+      for (let i = 0; i < Math.min(this.quality.maxParticles * 0.62, 118 + lines * 44); i += 1) {
         const outward = Math.random() > 0.45 ? (Math.random() > 0.5 ? 1 : -1) : 0;
+        const texture = lines >= 4
+          ? (Math.random() > 0.7 ? "nova" : (Math.random() > 0.54 ? "comet" : "streak"))
+          : (Math.random() > 0.62 ? "cross" : (Math.random() > 0.48 ? "streak" : "shard"));
         this.spawnParticle(
           layout.boardX + Math.random() * layout.boardW,
           y + (Math.random() - 0.5) * layout.cell,
           Math.random() > 0.36 ? color : 0xffffff,
-          2.4 + Math.random() * (lines >= 4 ? 6.6 : 4.6),
-          outward * (3 + Math.random() * (5 + lines * 1.2)) + (Math.random() - 0.5) * 2.4,
-          (Math.random() - 0.5) * (2.5 + lines * 1.1),
-          36 + Math.random() * 34 + lines * 4,
-          0.9,
-          Math.random() > 0.54 ? "streak" : (Math.random() > 0.62 ? "star" : "shard"),
+          2.8 + Math.random() * (lines >= 4 ? 8.4 : 5.8),
+          outward * (3.8 + Math.random() * (6.4 + lines * 1.45)) + (Math.random() - 0.5) * 3.2,
+          (Math.random() - 0.5) * (3.2 + lines * 1.3),
+          42 + Math.random() * 42 + lines * 6,
+          lines >= 4 ? 1 : 0.92,
+          texture,
         );
       }
     });
@@ -2840,7 +3018,7 @@ class PixiView {
           (Math.random() - 0.5) * (2.4 + lines),
           34 + Math.random() * 24 + lines * 4,
           lines >= 4 ? 1 : 0.78,
-          Math.random() > 0.45 ? "diamond" : "streak",
+          lines >= 4 ? (Math.random() > 0.5 ? "nova" : "comet") : (Math.random() > 0.45 ? "diamond" : "streak"),
         );
       }
     }
@@ -2854,8 +3032,8 @@ class PixiView {
       maxLife: 44 + lines * 5,
     });
     this.comboPulse = Math.max(this.comboPulse, 0.75);
-    this.flash = Math.max(this.flash, lines >= 4 ? 0.48 : 0.2);
-    this.shake = Math.max(this.shake, lines >= 4 ? 20 : 9);
+    this.flash = Math.max(this.flash, lines >= 4 ? 0.56 : 0.24);
+    this.shake = Math.max(this.shake, lines >= 4 ? 18 : 8);
   }
 
   zoneBurst(lines, stage) {
@@ -3008,7 +3186,7 @@ class PixiView {
     const color = piece.color || snapshot.stage?.accent || 0xffffff;
     const cx = layout.boardX + (piece.x + piece.matrix[0].length / 2) * layout.cell;
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
-    const count = kind === "drop" ? 26 + Math.min(24, amount * 1.1) : kind === "rotate" ? 28 : 12;
+    const count = kind === "drop" ? 34 + Math.min(34, amount * 1.25) : kind === "rotate" ? 28 : 12;
     this.inputHeat = Math.max(this.inputHeat, kind === "drop" ? 0.7 : kind === "rotate" ? 0.46 : 0.32);
     if (kind === "drop") {
       this.worldSurge = Math.max(this.worldSurge, 0.28);
@@ -3035,17 +3213,17 @@ class PixiView {
       const a = kind === "drop"
         ? -Math.PI / 2 + (Math.random() - 0.5) * 0.72
         : Math.random() * Math.PI * 2;
-      const speed = kind === "drop" ? 1.6 + Math.random() * 4.4 : 0.9 + Math.random() * 3.2;
+      const speed = kind === "drop" ? 1.8 + Math.random() * 5.2 : 0.9 + Math.random() * 3.2;
       this.spawnParticle(
         cx + (Math.random() - 0.5) * layout.cell * (kind === "drop" ? 1.0 : 1.4),
         cy + (Math.random() - 0.5) * layout.cell * (kind === "drop" ? 0.8 : 1.4),
         Math.random() > 0.35 ? color : 0xffffff,
-        kind === "drop" ? 1.4 + Math.random() * 2.6 : 1.6 + Math.random() * 3.2,
+        kind === "drop" ? 1.6 + Math.random() * 3.4 : 1.6 + Math.random() * 3.2,
         Math.cos(a) * speed,
         Math.sin(a) * speed + (kind === "drop" ? 2.1 : 0),
-        kind === "drop" ? 20 + Math.random() * 18 : 20 + Math.random() * 20,
-        kind === "drop" ? 0.34 : (kind === "move" ? 0.48 : 0.74),
-        kind === "drop" ? "streak" : (kind === "rotate" ? "star" : "pin"),
+        kind === "drop" ? 22 + Math.random() * 22 : 20 + Math.random() * 20,
+        kind === "drop" ? 0.42 : (kind === "move" ? 0.48 : 0.74),
+        kind === "drop" ? (Math.random() > 0.46 ? "comet" : "streak") : (kind === "rotate" ? "star" : "pin"),
       );
     }
     if (kind === "drop") {
@@ -3065,9 +3243,9 @@ class PixiView {
             width: Math.max(3.5, layout.cell * 0.2),
             color,
             sway: (Math.random() - 0.5) * layout.cell * 0.16,
-            alpha: 0.11,
-            coreAlpha: 0.34,
-            lineAlpha: 0.44,
+            alpha: 0.15,
+            coreAlpha: 0.44,
+            lineAlpha: 0.56,
             life: 14 + Math.min(12, dropDistance * 0.72),
             maxLife: 14 + Math.min(12, dropDistance * 0.72),
           });
@@ -3101,17 +3279,17 @@ class PixiView {
         y: impactY,
         radius: Math.max(layout.boardW * 0.9, layout.cell * (4 + dropDistance * 0.18)),
         color: 0xffffff,
-        alpha: 0.36,
-        width: 3.6,
+        alpha: 0.26,
+        width: 3.2,
         life: 32 + Math.min(18, dropDistance * 1.1),
         maxLife: 32 + Math.min(18, dropDistance * 1.1),
       });
       this.shockBands.push({
         orientation: "vertical",
         x: cx,
-        width: Math.max(layout.cell * 0.46, 7 + dropDistance * 0.12),
+        width: Math.max(layout.cell * 0.28, 5 + dropDistance * 0.08),
         color: 0xffffff,
-        alpha: 0.22,
+        alpha: 0.12,
         sway: layout.cell * 0.08,
         life: 14 + Math.min(10, dropDistance * 0.55),
         maxLife: 14 + Math.min(10, dropDistance * 0.55),
@@ -3142,9 +3320,9 @@ class PixiView {
         x: cx,
         top: Math.max(layout.boardY - layout.cell * 0.4, impactY - dropDistance * layout.cell - layout.cell * 0.7),
         bottom: impactY + layout.cell * 0.8,
-        width: Math.max(layout.cell * 0.46, 8 + dropDistance * 0.11),
+        width: Math.max(layout.cell * 0.32, 6 + dropDistance * 0.08),
         color,
-        alpha: 0.58,
+        alpha: 0.36,
         life: 18 + Math.min(8, dropDistance * 0.38),
         maxLife: 18 + Math.min(8, dropDistance * 0.38),
       });
@@ -3206,6 +3384,7 @@ class PixiView {
       alpha,
       spin: (Math.random() - 0.5) * 0.08,
       rotation,
+      textureKind,
       sprite,
     });
   }
@@ -3498,7 +3677,7 @@ class LumenShiftApp {
     const beatState = this.audio.getBeatState(snapshot, dt);
     this.view.render(snapshot, dt, beatState);
     const now = performance.now();
-    if (now - this.lastAudioMixAt > 96) {
+    if (now - this.lastAudioMixAt > 48) {
       this.audio.updateMix(snapshot);
       this.lastAudioMixAt = now;
     }
@@ -3758,7 +3937,10 @@ class LumenShiftApp {
 }
 
 const app = new LumenShiftApp();
-if (new URLSearchParams(window.location.search).has("debug")) {
+const debugHandleAllowed = new URLSearchParams(window.location.search).has("debug")
+  || window.location.hostname === "127.0.0.1"
+  || window.location.hostname === "localhost";
+if (debugHandleAllowed) {
   window.__lumenApp = app;
 }
 app.init().catch((err) => {
