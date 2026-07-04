@@ -244,6 +244,11 @@ class AudioDirector {
         octaves: 5,
         envelope: { attack: 0.001, decay: 0.25, sustain: 0.02, release: 0.2 },
       }).connect(energyGain);
+      const impact = new Tone.MembraneSynth({
+        pitchDecay: 0.012,
+        octaves: 4.6,
+        envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.18 },
+      }).connect(hitGain);
       const clear = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "fatsawtooth", count: 2, spread: 18 },
         envelope: { attack: 0.01, decay: 0.18, sustain: 0.18, release: 0.42 },
@@ -265,7 +270,7 @@ class AudioDirector {
         envelope: { attack: 0.02, decay: 0.08, sustain: 0.24, release: 0.7 },
       }).connect(zoneGain);
       this.stemGains = { base: baseGain, pulse: pulseGain, energy: energyGain, zone: zoneGain, hit: hitGain };
-      this.synths = { pad, pluck, bass, clear, arp, pulse, shimmer };
+      this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer };
       this.ready = true;
       this.startMusic();
     } catch {
@@ -325,6 +330,7 @@ class AudioDirector {
     if (!window.Tone) return;
     this.currentStage = index;
     try {
+      window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
       window.Tone.Transport.bpm.rampTo(STAGES[index]?.bpm || 100, 0.8);
     } catch {
       window.Tone.Transport.bpm.value = STAGES[index]?.bpm || 100;
@@ -346,6 +352,7 @@ class AudioDirector {
     this.rampStem("hit", 0.34 + energy * 0.14);
     const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5;
     try {
+      window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
       window.Tone.Transport.bpm.rampTo(targetBpm, 0.4);
     } catch {
       window.Tone.Transport.bpm.value = targetBpm;
@@ -356,6 +363,7 @@ class AudioDirector {
     const stem = this.stemGains?.[key];
     if (!stem) return;
     try {
+      stem.gain.cancelScheduledValues?.(window.Tone.now());
       stem.gain.rampTo(value, 0.24);
     } catch {
       stem.gain.value = value;
@@ -373,7 +381,7 @@ class AudioDirector {
   drop() {
     if (!this.ready || !this.synths) return;
     try {
-      this.synths.bass.triggerAttackRelease("C2", "16n", undefined, 0.38);
+      this.synths.impact.triggerAttackRelease("C2", "16n", undefined, 0.38);
     } catch {
       // Audio can be interrupted on mobile when the page loses focus.
     }
@@ -405,7 +413,7 @@ class AudioDirector {
     try {
       this.rampStem("zone", 0.04);
       this.synths.clear.triggerAttackRelease(["C4", "G4", "C5", "E5", "G5"], "2n", undefined, lines > 0 ? 0.55 : 0.24);
-      this.synths.bass.triggerAttackRelease("C2", "4n", undefined, 0.48);
+      this.synths.impact.triggerAttackRelease("C2", "4n", undefined, 0.48);
     } catch {
       // Ignore mobile audio scheduling errors.
     }
