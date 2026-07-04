@@ -2896,6 +2896,7 @@ class PixiView {
     this.drawDepthCurtains(layout, stage, t, energy, snapshot, cx, cy);
     this.drawResonanceField(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
     this.drawVolumetricBloom(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
+    this.drawCinematicLightShell(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
 
     const drift = dt * 0.001;
     for (const star of this.bgStars) {
@@ -3008,6 +3009,71 @@ class PixiView {
       g.roundRect(layout.boardX - layout.cell * 1.35, layout.boardY - layout.cell * 1.35, layout.boardW + layout.cell * 2.7, layout.boardH + layout.cell * 2.7, Math.max(8, layout.cell * 0.28))
         .stroke({ color: stage.accent, alpha: pulse * 0.08, width: Math.max(1.4, layout.cell * 0.18) });
     }
+  }
+
+  drawCinematicLightShell(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
+    const g = this.bg;
+    const colors = stageFxColors(stage);
+    const lite = this.quality.coarse;
+    const active = clamp(
+      this.arrangement * 0.52
+      + energy * 0.72
+      + this.worldSurge * 0.7
+      + this.zonePulse * 0.65
+      + this.phrasePulse * 0.38
+      + beatPulse * 0.22
+      + Math.min(0.34, (snapshot.combo || 0) * 0.035),
+      0,
+      1,
+    );
+    if (active <= 0.035) return;
+
+    const maxDim = Math.max(layout.w, layout.h);
+    const shellCount = lite ? 4 : 8;
+    for (let i = 0; i < shellCount; i += 1) {
+      const phase = (t * (0.045 + i * 0.008) + i * 0.113 + this.stagePulse * 0.08) % 1;
+      const radius = layout.boardW * (0.9 + phase * (2.9 + active * 1.2) + i * 0.09);
+      const color = colors[i % colors.length] || stage.accent;
+      const alpha = active * (1 - phase) * (lite ? 0.028 : 0.046);
+      g.circle(cx, cy, radius)
+        .stroke({ color, alpha, width: Math.max(0.9, layout.cell * (0.035 + active * 0.065)) });
+    }
+
+    const spokeCount = lite ? 8 : 18;
+    for (let i = 0; i < spokeCount; i += 1) {
+      const p = i / spokeCount;
+      const angle = p * Math.PI * 2 + t * (0.04 + active * 0.025) + Math.sin(t * 0.13 + i) * 0.14;
+      const inner = layout.boardW * (0.56 + Math.sin(t * 0.2 + i) * 0.06);
+      const outer = maxDim * (0.42 + active * 0.18 + (i % 3) * 0.035);
+      const color = i % 4 === 0 ? 0xffffff : (colors[(i + 1) % colors.length] || stage.accent);
+      const x1 = cx + Math.cos(angle) * inner;
+      const y1 = cy + Math.sin(angle) * inner * 0.72;
+      const x2 = cx + Math.cos(angle) * outer;
+      const y2 = cy + Math.sin(angle) * outer * 0.72;
+      g.moveTo(x1, y1);
+      g.lineTo(x2, y2);
+      g.stroke({ color, alpha: active * (lite ? 0.018 : 0.032), width: Math.max(0.7, layout.cell * 0.025) });
+    }
+
+    const washAlpha = active * (snapshot.zoneActive ? 0.06 : 0.032);
+    g.roundRect(
+      layout.boardX - layout.boardW * 0.58,
+      layout.boardY - layout.boardH * 0.12,
+      layout.boardW * 2.16,
+      layout.boardH * 1.24,
+      Math.max(layout.cell, layout.boardW * 0.32),
+    ).fill({ color: stage.accent, alpha: washAlpha });
+    g.roundRect(
+      layout.boardX - layout.boardW * 0.28,
+      layout.boardY - layout.cell * 1.6,
+      layout.boardW * 1.56,
+      layout.boardH + layout.cell * 3.2,
+      Math.max(layout.cell * 0.6, layout.boardW * 0.16),
+    ).stroke({
+      color: 0xffffff,
+      alpha: active * (0.035 + beatPulse * 0.03 + this.worldSurge * 0.04),
+      width: Math.max(1.2, layout.cell * (0.08 + active * 0.11)),
+    });
   }
 
   drawDepthCurtains(layout, stage, t, energy, snapshot, cx, cy) {
@@ -3310,6 +3376,13 @@ class PixiView {
     g.clear();
 
     const boardEnergy = clamp(this.arrangement * 0.24 + this.inputHeat * 0.22 + this.zonePulse + this.comboPulse * 0.55 + (snapshot.combo >= 2 ? 0.18 : 0), 0, 1);
+    const framePulse = Math.max(boardEnergy, this.worldSurge * 0.62, this.beatHit * 0.2, this.phrasePulse * 0.28);
+    g.roundRect(bx - 44, by - 44, layout.boardW + 88, layout.boardH + 88, 12)
+      .fill({ color: stage.accent, alpha: 0.018 + framePulse * 0.042 });
+    g.roundRect(bx - 34, by - 34, layout.boardW + 68, layout.boardH + 68, 10)
+      .stroke({ color: stage.accent, alpha: 0.035 + framePulse * 0.18, width: Math.max(4, cell * (0.22 + framePulse * 0.32)) });
+    g.roundRect(bx - 24, by - 24, layout.boardW + 48, layout.boardH + 48, 8)
+      .stroke({ color: 0xffffff, alpha: 0.018 + framePulse * 0.11, width: Math.max(1.6, cell * (0.08 + framePulse * 0.1)) });
     g.roundRect(bx - 28, by - 28, layout.boardW + 56, layout.boardH + 56, 8)
       .fill({ color: 0x000000, alpha: 0.18 + boardEnergy * 0.18 });
     g.roundRect(bx - 18, by - 18, layout.boardW + 36, layout.boardH + 36, 6)
@@ -3996,6 +4069,68 @@ class PixiView {
       life: 28 + lines * 5,
       maxLife: 28 + lines * 5,
     });
+    this.shockBands.push({
+      orientation: "horizontal",
+      y: centerY - layout.cell * 0.42,
+      height: Math.max(layout.cell * (2.4 + lines * 0.35), 36 + lines * 11),
+      color: 0xffffff,
+      alpha: lines >= 4 ? 0.62 : 0.34,
+      sway: layout.cell * 0.26,
+      life: 20 + lines * 4,
+      maxLife: 20 + lines * 4,
+    });
+    this.clearWaves.push({
+      x: centerX,
+      y: centerY,
+      speed: 0,
+      width: layout.w * (lines >= 4 ? 2.75 : 2.1),
+      height: Math.max(layout.cell * (2.3 + lines * 0.46), 44 + lines * 12),
+      color: clearColor,
+      power: lines + 2,
+      life: 34 + lines * 7,
+      maxLife: 34 + lines * 7,
+    });
+    this.clearWaves.push({
+      x: centerX,
+      y: centerY,
+      speed: 0,
+      width: layout.w * (lines >= 4 ? 2.1 : 1.65),
+      height: Math.max(layout.cell * (0.72 + lines * 0.22), 18 + lines * 5),
+      color: 0xffffff,
+      power: lines + 3,
+      life: 18 + lines * 5,
+      maxLife: 18 + lines * 5,
+    });
+    if (lines >= 4) {
+      this.lightFields.push({
+        x: centerX,
+        y: centerY,
+        radius: Math.max(layout.w, layout.h) * 0.82,
+        color: 0xffffff,
+        alpha: 0.3,
+        growth: 0.28,
+        life: 42,
+        maxLife: 42,
+      });
+      for (let i = 0; i < (this.quality.coarse ? 6 : 16); i += 1) {
+        const angle = (i / (this.quality.coarse ? 6 : 16)) * Math.PI * 2 + Math.random() * 0.18;
+        this.clearRays.push({
+          x: centerX,
+          y: centerY,
+          angle,
+          length: layout.w * (0.38 + Math.random() * 0.32),
+          width: Math.max(1.2, layout.cell * (0.07 + Math.random() * 0.06)),
+          speed: layout.boardW * (0.22 + Math.random() * 0.28),
+          color: Math.random() > 0.32 ? 0xffffff : clearColor,
+          alpha: 0.76,
+          sway: layout.cell * 0.18,
+          spin: (Math.random() - 0.5) * 0.16,
+          phase: Math.random() * Math.PI * 2,
+          life: 36 + Math.random() * 18,
+          maxLife: 54,
+        });
+      }
+    }
     rows.forEach((row) => {
       const y = layout.boardY + row * layout.cell + layout.cell / 2;
       this.clearCores.push({
