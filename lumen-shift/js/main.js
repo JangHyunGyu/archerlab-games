@@ -1959,10 +1959,53 @@ class PixiView {
       );
     }
     if (kind === "drop") {
+      const dropDistance = Math.max(1, amount || 1);
+      const landedCells = [];
+      for (let y = 0; y < piece.matrix.length; y += 1) {
+        for (let x = 0; x < piece.matrix[y].length; x += 1) {
+          if (!piece.matrix[y][x]) continue;
+          const px = layout.boardX + (piece.x + x) * layout.cell + layout.cell / 2;
+          const py = layout.boardY + (piece.y + y) * layout.cell + layout.cell / 2;
+          landedCells.push({ x: px, y: py });
+          this.dropTrails.push({
+            x: px,
+            y1: Math.max(layout.boardY - layout.cell, py - dropDistance * layout.cell),
+            y2: py + layout.cell * 0.42,
+            width: Math.max(8, layout.cell * 0.52),
+            color,
+            sway: (Math.random() - 0.5) * layout.cell * 0.16,
+            life: 20 + Math.min(18, dropDistance * 1.2),
+            maxLife: 20 + Math.min(18, dropDistance * 1.2),
+          });
+          this.impactRings.push({
+            kind: "landing",
+            x: px,
+            y: py + layout.cell * 0.34,
+            width: layout.cell * (1.5 + Math.min(1.8, dropDistance * 0.08)),
+            height: layout.cell * 0.72,
+            color: Math.random() > 0.26 ? color : 0xffffff,
+            life: 24 + Math.min(14, dropDistance),
+            maxLife: 24 + Math.min(14, dropDistance),
+          });
+        }
+      }
+      const impactY = landedCells.length
+        ? landedCells.reduce((sum, block) => sum + block.y, 0) / landedCells.length
+        : cy;
+      this.impactRings.push({
+        kind: "landing",
+        x: cx,
+        y: impactY + layout.cell * 0.62,
+        width: Math.max(layout.boardW * 0.68, layout.cell * (3 + dropDistance * 0.28)),
+        height: Math.max(layout.cell * 1.25, layout.cell * (1.1 + dropDistance * 0.05)),
+        color: 0xffffff,
+        life: 32 + Math.min(18, dropDistance * 1.2),
+        maxLife: 32 + Math.min(18, dropDistance * 1.2),
+      });
       this.beams.push({
         kind: "vertical",
         x: cx,
-        width: Math.max(layout.cell * 1.75, 28 + amount * 0.5),
+        width: Math.max(layout.cell * 2.1, 32 + dropDistance * 0.65),
         life: 30,
         maxLife: 30,
       });
