@@ -726,7 +726,7 @@ button {
   left: 10px;
   z-index: 21;
   display: grid;
-  grid-template-columns: 0.95fr 1fr 1fr 1fr 0.95fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: 52px 58px;
   gap: 8px;
   pointer-events: auto;
@@ -745,22 +745,14 @@ button {
   touch-action: none;
 }
 
-.touch-controls [data-action="hold"] {
-  font-size: 18px;
-}
-
 .touch-controls [data-action="down"] {
-  grid-column: 2 / 4;
+  grid-column: 1 / 2;
 }
 
 .touch-controls .drop-key {
-  grid-column: 4 / 6;
+  grid-column: 2 / 4;
   background: linear-gradient(135deg, rgba(104, 233, 255, 0.74), rgba(255, 91, 212, 0.72));
   color: #050913;
-}
-
-.touch-controls .zone-key {
-  color: var(--gold);
 }
 
 .touch-controls button:active {
