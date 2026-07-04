@@ -380,6 +380,13 @@ class AudioDirector {
     this.sfxPlayers = {};
     this.stingerPlayers = {};
     this.zoneLoopPlayer = null;
+    this.nativeSfx = this.createNativePools(SFX_URLS);
+    this.nativeStingers = this.createNativePools(STINGER_URLS, { defaultSize: 1 });
+    this.nativeBacking = this.createNativeAudio(TEMP_BGM_URL, { loop: true, volume: 0.22 });
+    this.nativeZoneLoop = this.nativeSfx.zoneLoop?.[0] || null;
+    this.nativeUnlocked = false;
+    this.nativeBackingStarted = false;
+    this.nativePrimePromise = null;
     this.musicLoops = [];
     this.backingPlayer = null;
     this.backingStarted = false;
@@ -431,12 +438,16 @@ class AudioDirector {
 
   async unlock(options = {}) {
     const shouldStartMusic = options.startMusic !== false;
+    await this.unlockNativeAudio();
     if (this.ready) {
       if (shouldStartMusic) this.startMusic();
       return;
     }
     const toneGlobal = await this.waitForTone();
-    if (!toneGlobal) return;
+    if (!toneGlobal) {
+      if (shouldStartMusic) this.startNativeBackingTrack();
+      return;
+    }
     try {
       await toneGlobal.start();
       const Tone = toneGlobal;
@@ -590,6 +601,7 @@ class AudioDirector {
       if (shouldStartMusic) this.startMusic();
     } catch {
       this.ready = false;
+      if (shouldStartMusic) this.startNativeBackingTrack();
     }
   }
 
@@ -610,6 +622,108 @@ class AudioDirector {
       };
       tick();
     });
+  }
+
+  createNativePools(urls, options = {}) {
+    const defaultSize = options.defaultSize || 3;
+    return Object.fromEntries(Object.entries(urls).map(([key, url]) => {
+      const size = key === "zoneLoop" ? 1 : defaultSize;
+      const pool = Array.from({ length: size }, () => this.createNativeAudio(url, {
+        loop: key === "zoneLoop",
+        volume: key === "zoneLoop" ? 0 : 0.75,
+      })).filter(Boolean);
+      return [key, pool];
+    }).filter(([, pool]) => pool.length > 0));
+  }
+
+  createNativeAudio(url, options = {}) {
+    if (typeof Audio === "undefined") return null;
+    try {
+      const audio = new Audio(url);
+      audio.preload = "auto";
+      audio.loop = !!options.loop;
+      audio.volume = options.volume ?? 0.75;
+      audio.crossOrigin = "anonymous";
+      audio.setAttribute("playsinline", "");
+      return audio;
+    } catch {
+      return null;
+    }
+  }
+
+  async unlockNativeAudio() {
+    if (this.nativeUnlocked) return;
+    if (this.nativePrimePromise) return this.nativePrimePromise;
+    const candidates = [
+      this.nativeBacking,
+      this.nativeSfx.uiStart?.[0],
+      this.nativeSfx.uiClick?.[0],
+      this.nativeSfx.hardDrop?.[0],
+    ].filter(Boolean);
+    this.nativePrimePromise = Promise.all(candidates.map((audio) => this.primeNativeAudio(audio)))
+      .catch(() => null)
+      .then(() => {
+        this.nativeUnlocked = true;
+      });
+    return this.nativePrimePromise;
+  }
+
+  async primeNativeAudio(audio) {
+    if (!audio) return;
+    const previousMuted = audio.muted;
+    const previousVolume = audio.volume;
+    try {
+      audio.muted = true;
+      audio.volume = 0;
+      const result = audio.play();
+      if (result?.then) {
+        await Promise.race([result, new Promise((resolve) => setTimeout(resolve, 160))]);
+      }
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {
+      // Some mobile browsers only unlock on the first real play request.
+    } finally {
+      audio.muted = previousMuted;
+      audio.volume = previousVolume;
+    }
+  }
+
+  dbToVolume(db = 0) {
+    return clamp(Math.pow(10, db / 20), 0, 1);
+  }
+
+  playNative(poolMap, key, volumeDb = 0, delay = 0) {
+    const pool = poolMap?.[key];
+    if (!pool?.length) return false;
+    const indexKey = `nativeIndex_${key}`;
+    const index = this[indexKey] || 0;
+    this[indexKey] = (index + 1) % pool.length;
+    const audio = pool[index % pool.length];
+    const run = () => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+        audio.volume = this.dbToVolume(volumeDb);
+        const result = audio.play();
+        result?.catch?.(() => null);
+      } catch {
+        // Native audio fallback is best effort.
+      }
+    };
+    if (delay > 0) window.setTimeout(run, delay * 1000);
+    else run();
+    return true;
+  }
+
+  setNativeVolume(audio, volume) {
+    if (!audio) return;
+    try {
+      audio.volume = clamp(volume, 0, 1);
+    } catch {
+      // Native audio fallback is best effort.
+    }
   }
 
   startMusic() {
@@ -714,6 +828,7 @@ class AudioDirector {
     this.transportStart = Tone.now();
     this.timelineStep = 0;
     this.startBackingTrack();
+    this.startNativeBackingTrack();
     Tone.Transport.start();
     this.started = true;
   }
@@ -747,6 +862,21 @@ class AudioDirector {
     if (player.loaded === true) return true;
     if (player.buffer?.loaded === true) return true;
     return Number(player.buffer?.duration || 0) > 0;
+  }
+
+  startNativeBackingTrack() {
+    if (!this.nativeBacking || this.nativeBackingStarted) return;
+    try {
+      this.nativeBacking.loop = true;
+      this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.18);
+      const result = this.nativeBacking.play();
+      result?.catch?.(() => {
+        this.nativeBackingStarted = false;
+      });
+      this.nativeBackingStarted = true;
+    } catch {
+      this.nativeBackingStarted = false;
+    }
   }
 
   createPlayers(Tone, urls, defaultOutput, overrides = {}) {
@@ -798,14 +928,26 @@ class AudioDirector {
   }
 
   playSfx(key, volumeDb = 0, delay = 0) {
+    if (this.playNative(this.nativeSfx, key, volumeDb, delay)) return true;
     return this.playPlayer(this.sfxPlayers?.[key], volumeDb, delay);
   }
 
   playStinger(key, volumeDb = 0, delay = 0) {
+    if (this.playNative(this.nativeStingers, key, volumeDb, delay)) return true;
     return this.playPlayer(this.stingerPlayers?.[key], volumeDb, delay);
   }
 
   startZoneLoop() {
+    if (this.nativeZoneLoop) {
+      try {
+        this.nativeZoneLoop.loop = true;
+        this.nativeZoneLoop.currentTime = 0;
+        this.nativeZoneLoop.volume = 0.18;
+        this.nativeZoneLoop.play()?.catch?.(() => null);
+      } catch {
+        // Native zone loop is decorative.
+      }
+    }
     if (!this.ready || !window.Tone || !this.zoneLoopPlayer || !this.isPlayerLoaded(this.zoneLoopPlayer)) return;
     try {
       if (this.zoneLoopPlayer.state !== "started") this.zoneLoopPlayer.start(window.Tone.now() + 0.01);
@@ -816,6 +958,15 @@ class AudioDirector {
   }
 
   stopZoneLoop() {
+    if (this.nativeZoneLoop) {
+      try {
+        this.nativeZoneLoop.pause();
+        this.nativeZoneLoop.currentTime = 0;
+        this.nativeZoneLoop.volume = 0;
+      } catch {
+        // Native zone loop is decorative.
+      }
+    }
     this.rampStem("zoneSample", 0);
     if (!this.zoneLoopPlayer || !window.Tone) return;
     try {
@@ -898,7 +1049,9 @@ class AudioDirector {
     this.rampStem("stinger", 0.1 + stageLift * 0.04 + zoneLift * 0.05);
     const beatLift = Math.max(this.lastBeatState?.pulse || 0, this.lastBeatState?.downbeat || 0) * 0.012;
     const backingDuck = 1 - Math.min(0.38, this.backingDuck * 0.22 + (this.clearPulse || 0) * 0.13 + (this.dropPulse || 0) * 0.09);
-    this.rampStem("backing", this.backingPlayer ? (0.036 + this.arrangement * 0.12 + zoneLift * 0.04 + beatLift + this.backingPulse * 0.018) * backingDuck : 0);
+    const backingLevel = (0.06 + this.arrangement * 0.16 + zoneLift * 0.05 + beatLift + this.backingPulse * 0.02) * backingDuck;
+    this.rampStem("backing", this.backingPlayer ? backingLevel : 0);
+    this.setNativeVolume(this.nativeBacking, this.nativeBackingStarted ? clamp(0.12 + backingLevel * 0.82, 0, 0.32) : 0);
     this.rampStem("zone", zoneLift * 0.42);
     this.rampStem("hit", 0.22 + energy * 0.09);
     this.rampParam(this.backingFilter?.frequency, 4200 + this.arrangement * 6200 + zoneLift * 2800 + this.backingPulse * 1600, 0.18);
