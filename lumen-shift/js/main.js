@@ -1222,6 +1222,16 @@ class PixiView {
     if ("visible" in node) node.visible = false;
   }
 
+  setParticleTexture(ref, texture) {
+    if (!ref?.node || !texture || ref.texture === texture) return;
+    try {
+      ref.node.texture = texture;
+      ref.texture = texture;
+    } catch {
+      // Some Pixi particle builds keep texture immutable; the original pooled texture is fine.
+    }
+  }
+
   makeParticleTextures() {
     const PIXI = window.PIXI;
     const cell = 64;
@@ -1561,6 +1571,7 @@ class PixiView {
     }
 
     this.drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy);
+    this.drawDepthCurtains(layout, stage, t, energy, snapshot, cx, cy);
     this.drawResonanceField(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
 
     const drift = dt * 0.001;
@@ -1640,6 +1651,54 @@ class PixiView {
         .stroke({ color: 0xffffff, alpha: this.phrasePulse * 0.34, width: 1.4 + this.phrasePulse * 4.2 });
       g.circle(cx, cy, radius * 0.62)
         .fill({ color, alpha: this.phrasePulse * 0.035 });
+    }
+  }
+
+  drawDepthCurtains(layout, stage, t, energy, snapshot, cx, cy) {
+    const g = this.bg;
+    const lite = this.quality.coarse;
+    const colors = stage.colors || [stage.accent, 0xffffff];
+    const count = lite ? 3 : 7;
+    const arrangement = this.arrangement;
+    const zone = snapshot.zoneActive ? 1 : 0;
+    const widthBase = Math.max(layout.cell * 0.7, layout.boardW * 0.018);
+    for (let sideIndex = 0; sideIndex < 2; sideIndex += 1) {
+      const side = sideIndex === 0 ? -1 : 1;
+      const anchorX = side < 0 ? layout.boardX - layout.boardW * 0.44 : layout.boardX + layout.boardW * 1.44;
+      for (let i = 0; i < count; i += 1) {
+        const color = colors[(i + sideIndex) % colors.length] || stage.accent;
+        const phase = t * (0.14 + i * 0.017) + i * 1.77 + sideIndex * 0.9;
+        const spread = layout.boardW * (0.6 + i * 0.18 + arrangement * 0.22);
+        const x0 = anchorX + Math.sin(phase) * layout.boardW * 0.18;
+        const y0 = layout.h * (-0.08 + i / Math.max(1, count - 1) * 1.08);
+        const segments = lite ? 7 : 13;
+        g.moveTo(x0, y0);
+        for (let s = 1; s <= segments; s += 1) {
+          const p = s / segments;
+          const x = x0 + side * Math.sin(p * Math.PI * 1.15 + phase) * spread * (0.16 + p * 0.36);
+          const y = y0 + (p - 0.5) * layout.h * 0.46 + Math.cos(phase + p * 5.2) * layout.cell * (1.4 + arrangement);
+          g.lineTo(x, y);
+        }
+        g.stroke({
+          color,
+          alpha: (0.018 + arrangement * 0.05 + energy * 0.035 + zone * 0.04) * (1 - i * 0.055),
+          width: widthBase * (1.4 + i * 0.42 + energy * 1.8),
+        });
+      }
+    }
+
+    if (!lite) {
+      const haloCount = 8;
+      for (let i = 0; i < haloCount; i += 1) {
+        const phase = (t * 0.08 + i / haloCount + this.phrasePulse * 0.08) % 1;
+        const radius = layout.boardW * (1.2 + phase * (2.4 + arrangement));
+        g.circle(cx, cy, radius)
+          .stroke({
+            color: i % 2 ? colors[1] || stage.accent : colors[0] || 0xffffff,
+            alpha: (1 - phase) * (0.018 + arrangement * 0.035 + this.phrasePulse * 0.05),
+            width: 0.9 + energy * 2.4,
+          });
+      }
     }
   }
 
@@ -2017,6 +2076,10 @@ class PixiView {
     g.roundRect(x + innerGap, y + innerGap, inner, inner, radius)
       .fill({ color: 0x01040a, alpha: alpha * (hot ? 0.5 : 0.62) })
       .stroke({ color: 0xffffff, alpha: alpha * glow, width: Math.max(0.85, size * 0.045) });
+    g.roundRect(x + innerGap + inner * 0.08, y + innerGap + inner * 0.08, inner * 0.84, inner * 0.84, Math.max(1.2, radius * 0.7))
+      .fill({ color, alpha: alpha * (hot ? 0.16 : 0.1) });
+    g.circle(x + size * 0.5, y + size * 0.5, Math.max(1.8, size * 0.12))
+      .fill({ color: 0xffffff, alpha: alpha * (hot ? 0.18 : 0.1) });
     g.rect(x + innerGap, y + innerGap, inner, Math.max(2, size * 0.14))
       .fill({ color: 0xffffff, alpha: alpha * (hot ? 0.46 : 0.3) });
     g.rect(x + innerGap, y + innerGap, Math.max(2, size * 0.12), inner)
@@ -2030,6 +2093,12 @@ class PixiView {
       g.stroke({ color, alpha: alpha * 0.34, width: Math.max(0.8, size * 0.035) });
       g.circle(x + size * 0.73, y + size * 0.28, Math.max(1.1, size * 0.06))
         .fill({ color: 0xffffff, alpha: alpha * (hot ? 0.42 : 0.28) });
+      g.moveTo(x + innerGap * 1.18, y + innerGap * 1.28);
+      g.lineTo(x + size - innerGap * 1.2, y + innerGap * 1.28);
+      g.stroke({ color: 0xffffff, alpha: alpha * (hot ? 0.18 : 0.11), width: Math.max(0.65, size * 0.026) });
+      g.moveTo(x + innerGap * 1.18, y + size - innerGap * 1.28);
+      g.lineTo(x + size - innerGap * 1.2, y + size - innerGap * 1.28);
+      g.stroke({ color, alpha: alpha * 0.22, width: Math.max(0.65, size * 0.026) });
     }
   }
 
@@ -2158,6 +2227,34 @@ class PixiView {
         .stroke({ color: burst.color, alpha: alpha * burst.alpha, width: burst.width * (0.8 + growth * 2.4) });
       g.circle(cx, cy, radius * 0.62)
         .fill({ color: burst.color, alpha: alpha * burst.alpha * 0.08 });
+      return true;
+    });
+    this.clearRays = this.clearRays.filter((ray) => {
+      ray.life -= decay;
+      if (ray.life <= 0) return false;
+      const alpha = clamp(ray.life / ray.maxLife, 0, 1);
+      const p = 1 - alpha;
+      const sway = Math.sin(p * Math.PI * 2 + ray.phase) * ray.sway;
+      const angle = ray.angle + ray.spin * p;
+      const dx = Math.cos(angle);
+      const dy = Math.sin(angle);
+      const length = ray.length * (0.42 + p * 0.92);
+      const width = ray.width * (0.3 + alpha * 1.35);
+      const cx = ray.x + dx * ray.speed * p + Math.cos(angle + Math.PI / 2) * sway;
+      const cy = ray.y + dy * ray.speed * p + Math.sin(angle + Math.PI / 2) * sway;
+      const x1 = cx - dx * length * 0.5;
+      const y1 = cy - dy * length * 0.5;
+      const x2 = cx + dx * length * 0.5;
+      const y2 = cy + dy * length * 0.5;
+      glow?.moveTo(x1, y1);
+      glow?.lineTo(x2, y2);
+      glow?.stroke({ color: ray.color, alpha: alpha * ray.alpha * 0.12, width: width * 5.4 });
+      g.moveTo(x1, y1);
+      g.lineTo(x2, y2);
+      g.stroke({ color: ray.color, alpha: alpha * ray.alpha * 0.58, width });
+      g.moveTo(cx - dx * length * 0.16, cy - dy * length * 0.16);
+      g.lineTo(cx + dx * length * 0.16, cy + dy * length * 0.16);
+      g.stroke({ color: 0xffffff, alpha: alpha * ray.alpha * 0.72, width: Math.max(0.8, width * 0.22) });
       return true;
     });
     this.shockBands = this.shockBands.filter((band) => {
@@ -2393,6 +2490,18 @@ class PixiView {
 
   drawFlash(layout, dt) {
     this.flashLayer.clear();
+    if (this.chromaticPulse > 0) {
+      const pulse = this.chromaticPulse;
+      const drift = Math.max(1, layout.cell * 0.1) * pulse;
+      const alpha = pulse * 0.16;
+      this.flashLayer.roundRect(layout.boardX - 10 - drift, layout.boardY - 10, layout.boardW + 20, layout.boardH + 20, 6)
+        .stroke({ color: 0x68e9ff, alpha, width: 1.2 + pulse * 2.4 });
+      this.flashLayer.roundRect(layout.boardX - 10 + drift, layout.boardY - 10, layout.boardW + 20, layout.boardH + 20, 6)
+        .stroke({ color: 0xff5bd4, alpha: alpha * 0.9, width: 1.2 + pulse * 2.4 });
+      this.flashLayer.rect(0, layout.boardY + layout.boardH * 0.52 - drift * 0.5, layout.w, Math.max(1, layout.cell * 0.035))
+        .fill({ color: 0xffffff, alpha: alpha * 0.5 });
+      this.chromaticPulse = Math.max(0, this.chromaticPulse - dt * 0.0034);
+    }
     if (this.flash > 0) {
       this.flashLayer.rect(0, 0, layout.w, layout.h).fill({ color: 0xffffff, alpha: this.flash });
       this.flash = Math.max(0, this.flash - dt * 0.0018);
@@ -2406,12 +2515,34 @@ class PixiView {
     this.beatHit = Math.max(this.beatHit, lines >= 4 ? 1 : 0.62);
     this.phrasePulse = Math.max(this.phrasePulse, lines >= 4 ? 1 : 0.62);
     this.inputHeat = Math.max(this.inputHeat, 0.4 + lines * 0.12);
+    this.chromaticPulse = Math.max(this.chromaticPulse, lines >= 4 ? 1 : 0.52);
     const clearColor = lines >= 4 ? 0xffffff : color;
     const centerY = rows.length
       ? rows.reduce((sum, row) => sum + layout.boardY + row * layout.cell + layout.cell / 2, 0) / rows.length
       : layout.boardY + layout.boardH / 2;
+    const centerX = layout.boardX + layout.boardW / 2;
+    const rayCount = Math.min(this.quality.coarse ? 10 : 24, 8 + lines * 5);
+    for (let i = 0; i < rayCount; i += 1) {
+      const side = i % 2 ? 1 : -1;
+      const angle = (Math.random() - 0.5) * 0.38 + (side > 0 ? 0 : Math.PI);
+      this.clearRays.push({
+        x: centerX + (Math.random() - 0.5) * layout.boardW * 0.36,
+        y: centerY + (Math.random() - 0.5) * layout.cell * Math.max(1, lines),
+        angle,
+        length: layout.w * (lines >= 4 ? 0.5 + Math.random() * 0.46 : 0.32 + Math.random() * 0.28),
+        width: Math.max(1.4, layout.cell * (0.08 + Math.random() * 0.08 + lines * 0.018)),
+        speed: layout.boardW * (0.25 + Math.random() * 0.42),
+        color: Math.random() > 0.42 ? clearColor : color,
+        alpha: lines >= 4 ? 0.88 : 0.64,
+        sway: layout.cell * (0.12 + Math.random() * 0.26),
+        spin: (Math.random() - 0.5) * 0.18,
+        phase: Math.random() * Math.PI * 2,
+        life: 26 + lines * 6 + Math.random() * 16,
+        maxLife: 26 + lines * 6 + Math.random() * 16,
+      });
+    }
     this.lightFields.push({
-      x: layout.boardX + layout.boardW / 2,
+      x: centerX,
       y: centerY,
       radius: layout.boardW * (lines >= 4 ? 1.45 : 0.96),
       color: clearColor,
@@ -2421,7 +2552,7 @@ class PixiView {
       maxLife: 34 + lines * 7,
     });
     this.screenBursts.push({
-      x: layout.boardX + layout.boardW / 2,
+      x: centerX,
       y: centerY,
       radius: layout.boardW * (lines >= 4 ? 1.8 : 1.15),
       color: clearColor,
@@ -2496,6 +2627,7 @@ class PixiView {
           (Math.random() - 0.5) * (2.5 + lines * 1.1),
           36 + Math.random() * 34 + lines * 4,
           0.9,
+          Math.random() > 0.54 ? "streak" : (Math.random() > 0.62 ? "star" : "shard"),
         );
       }
     });
@@ -2518,10 +2650,23 @@ class PixiView {
         rotation: Math.random() * Math.PI * 2,
         spin: (Math.random() - 0.5) * 0.12,
       });
+      if (!this.quality.coarse || Math.random() > 0.35) {
+        this.spawnParticle(
+          px,
+          py,
+          Math.random() > 0.3 ? clearColor : (cellInfo.color || color),
+          layout.cell * (0.12 + Math.random() * 0.18),
+          side * (4.4 + Math.random() * 7.5),
+          (Math.random() - 0.5) * (2.4 + lines),
+          34 + Math.random() * 24 + lines * 4,
+          lines >= 4 ? 1 : 0.78,
+          Math.random() > 0.45 ? "diamond" : "streak",
+        );
+      }
     }
     this.impactRings.push({
       kind: "clear",
-      x: layout.boardX + layout.boardW / 2,
+      x: centerX,
       y: layout.boardY + layout.boardH / 2,
       radius: layout.boardW * (lines >= 4 ? 1.35 : 0.9),
       color: clearColor,
@@ -2540,6 +2685,7 @@ class PixiView {
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH * 0.56;
     this.worldSurge = 1;
+    this.chromaticPulse = Math.max(this.chromaticPulse, 0.86);
     this.lightFields.push({
       x: cx,
       y: cy,
@@ -2553,7 +2699,7 @@ class PixiView {
     for (let i = 0; i < count; i += 1) {
       const a = Math.random() * Math.PI * 2;
       const speed = 3.2 + Math.random() * (10 + lines * 0.36);
-      this.spawnParticle(cx, cy, Math.random() > 0.38 ? color : 0xffffff, 2.6 + Math.random() * 7, Math.cos(a) * speed, Math.sin(a) * speed, 52 + Math.random() * 44, 0.95);
+      this.spawnParticle(cx, cy, Math.random() > 0.38 ? color : 0xffffff, 2.6 + Math.random() * 7, Math.cos(a) * speed, Math.sin(a) * speed, 52 + Math.random() * 44, 0.95, Math.random() > 0.5 ? "star" : "diamond");
     }
     for (let i = 0; i < 5; i += 1) {
       this.clearWaves.push({
@@ -2580,6 +2726,7 @@ class PixiView {
     this.stagePulse = 1;
     this.worldSurge = 1;
     this.flash = Math.max(this.flash, 0.16);
+    this.chromaticPulse = Math.max(this.chromaticPulse, 0.55);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH * 0.28;
     this.lightFields.push({
@@ -2597,7 +2744,25 @@ class PixiView {
       const a = Math.random() * Math.PI * 2;
       const speed = 1.8 + Math.random() * 7.5;
       const c = Math.random() > 0.35 ? color : (stage?.colors?.[Math.floor(Math.random() * stage.colors.length)] || 0xffffff);
-      this.spawnParticle(cx, cy, c, 2.2 + Math.random() * 6.2, Math.cos(a) * speed, Math.sin(a) * speed, 48 + Math.random() * 42, 0.84);
+      this.spawnParticle(cx, cy, c, 2.2 + Math.random() * 6.2, Math.cos(a) * speed, Math.sin(a) * speed, 48 + Math.random() * 42, 0.84, Math.random() > 0.5 ? "star" : "flare");
+    }
+    for (let i = 0; i < (this.quality.coarse ? 6 : 14); i += 1) {
+      const angle = -Math.PI * 0.35 + Math.random() * Math.PI * 0.7 + (i % 2 ? 0 : Math.PI);
+      this.clearRays.push({
+        x: cx,
+        y: cy + (Math.random() - 0.5) * layout.boardH * 0.22,
+        angle,
+        length: layout.w * (0.22 + Math.random() * 0.26),
+        width: Math.max(1.1, layout.cell * (0.06 + Math.random() * 0.06)),
+        speed: layout.boardW * (0.18 + Math.random() * 0.28),
+        color: Math.random() > 0.4 ? color : 0xffffff,
+        alpha: 0.48,
+        sway: layout.cell * 0.16,
+        spin: (Math.random() - 0.5) * 0.12,
+        phase: Math.random() * Math.PI * 2,
+        life: 34 + Math.random() * 20,
+        maxLife: 54,
+      });
     }
   }
 
@@ -2610,6 +2775,7 @@ class PixiView {
     this.zonePulse = 1;
     this.worldSurge = 1;
     this.flash = Math.max(this.flash, 0.42);
+    this.chromaticPulse = Math.max(this.chromaticPulse, 1);
     this.shake = Math.max(this.shake, 12);
     this.lightFields.push({
       x: cx,
@@ -2651,7 +2817,7 @@ class PixiView {
     for (let i = 0; i < Math.min(this.quality.maxParticles * 0.7, 220); i += 1) {
       const x = layout.boardX + Math.random() * layout.boardW;
       const y = layout.boardY + layout.boardH + Math.random() * 20;
-      this.spawnParticle(x, y, Math.random() > 0.5 ? color : 0xffffff, 2.2 + Math.random() * 5.4, (Math.random() - 0.5) * 5, -3 - Math.random() * 8, 54 + Math.random() * 46, 0.9);
+      this.spawnParticle(x, y, Math.random() > 0.5 ? color : 0xffffff, 2.2 + Math.random() * 5.4, (Math.random() - 0.5) * 5, -3 - Math.random() * 8, 54 + Math.random() * 46, 0.9, Math.random() > 0.5 ? "streak" : "star");
     }
   }
 
@@ -2664,7 +2830,10 @@ class PixiView {
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
     const count = kind === "drop" ? 26 + Math.min(24, amount * 1.1) : kind === "rotate" ? 28 : 12;
     this.inputHeat = Math.max(this.inputHeat, kind === "drop" ? 0.7 : kind === "rotate" ? 0.46 : 0.32);
-    if (kind === "drop") this.worldSurge = Math.max(this.worldSurge, 0.28);
+    if (kind === "drop") {
+      this.worldSurge = Math.max(this.worldSurge, 0.28);
+      this.chromaticPulse = Math.max(this.chromaticPulse, 0.28);
+    }
     const pipCount = kind === "move" ? 2 : kind === "rotate" ? 5 : 4;
     for (let i = 0; i < pipCount; i += 1) {
       const a = kind === "move"
@@ -2696,6 +2865,7 @@ class PixiView {
         Math.sin(a) * speed + (kind === "drop" ? 2.1 : 0),
         kind === "drop" ? 20 + Math.random() * 18 : 20 + Math.random() * 20,
         kind === "drop" ? 0.34 : (kind === "move" ? 0.48 : 0.74),
+        kind === "drop" ? "streak" : (kind === "rotate" ? "star" : "pin"),
       );
     }
     if (kind === "drop") {
@@ -2798,6 +2968,24 @@ class PixiView {
         life: 18 + Math.min(8, dropDistance * 0.38),
         maxLife: 18 + Math.min(8, dropDistance * 0.38),
       });
+      for (let i = 0; i < (this.quality.coarse ? 4 : 9); i += 1) {
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.9;
+        this.clearRays.push({
+          x: cx + (Math.random() - 0.5) * layout.cell,
+          y: impactY,
+          angle,
+          length: layout.boardH * (0.18 + Math.random() * 0.22),
+          width: Math.max(1, layout.cell * (0.05 + Math.random() * 0.04)),
+          speed: layout.cell * (3 + Math.random() * 6),
+          color: Math.random() > 0.28 ? color : 0xffffff,
+          alpha: 0.38,
+          sway: layout.cell * 0.12,
+          spin: (Math.random() - 0.5) * 0.16,
+          phase: Math.random() * Math.PI * 2,
+          life: 18 + Math.random() * 12,
+          maxLife: 30,
+        });
+      }
       this.clearWaves.push({
         x: cx,
         y: layout.boardY + layout.boardH - layout.cell * 0.6,
@@ -2814,7 +3002,7 @@ class PixiView {
     if (kind === "rotate") this.comboPulse = Math.max(this.comboPulse, 0.22);
   }
 
-  spawnParticle(x, y, color, size, vx, vy, life, alpha) {
+  spawnParticle(x, y, color, size, vx, vy, life, alpha, textureKind = "") {
     while (this.particles.length >= this.quality.maxParticles) {
       const old = this.particles.shift();
       this.hideParticleNode(old?.sprite);
@@ -2822,6 +3010,7 @@ class PixiView {
     const sprite = this.acquireSparkSprite();
     const rotation = Math.random() * Math.PI * 2;
     if (sprite) {
+      this.setParticleTexture(sprite, this.particleTextures?.[textureKind] || sprite.texture);
       this.showParticleNode(sprite, x, y, color, alpha, Math.max(0.04, size / 18), rotation);
     }
     this.particles.push({
