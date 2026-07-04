@@ -1762,12 +1762,12 @@ class PixiView {
       const height = Math.abs(trail.y2 - trail.y1);
       const width = trail.width * (0.45 + alpha * 1.2);
       g.roundRect(x - width / 2, top, width, height, width / 2)
-        .fill({ color: trail.color, alpha: alpha * 0.2 });
-      g.roundRect(x - width * 0.16, top, width * 0.32, height, width * 0.16)
-        .fill({ color: 0xffffff, alpha: alpha * 0.58 });
+        .fill({ color: trail.color, alpha: alpha * (trail.alpha ?? 0.12) });
+      g.roundRect(x - width * 0.11, top, width * 0.22, height, width * 0.11)
+        .fill({ color: 0xffffff, alpha: alpha * (trail.coreAlpha ?? 0.34) });
       g.moveTo(x, top);
       g.lineTo(x, top + height);
-      g.stroke({ color: 0xffffff, alpha: alpha * 0.68, width: Math.max(1, width * 0.08) });
+      g.stroke({ color: 0xffffff, alpha: alpha * (trail.lineAlpha ?? 0.42), width: Math.max(0.8, width * 0.06) });
       return true;
     });
     this.impactRings = this.impactRings.filter((ring) => {
@@ -1845,11 +1845,28 @@ class PixiView {
       if (beam.life <= 0) return false;
       const alpha = clamp(beam.life / beam.maxLife, 0, 1);
       if (beam.kind === "vertical") {
-        const w = beam.width * (0.7 + alpha * 0.9);
-        g.roundRect(beam.x - w / 2, layout.boardY - layout.cell, w, layout.boardH + layout.cell * 2, w / 2)
-          .fill({ color: 0xffffff, alpha: 0.16 + alpha * 0.62 });
-        g.roundRect(beam.x - w * 0.18, layout.boardY - layout.cell, w * 0.36, layout.boardH + layout.cell * 2, w * 0.18)
-          .fill({ color: 0xffffff, alpha: 0.32 + alpha * 0.78 });
+        if (beam.style === "drop") {
+          const top = beam.top ?? layout.boardY;
+          const bottom = beam.bottom ?? (layout.boardY + layout.boardH);
+          const h = Math.max(1, bottom - top);
+          const w = beam.width * (0.45 + alpha * 0.7);
+          const color = beam.color || 0xffffff;
+          g.roundRect(beam.x - w * 1.2, top, w * 2.4, h, w)
+            .fill({ color, alpha: alpha * 0.08 });
+          g.roundRect(beam.x - w * 0.22, top, w * 0.44, h, w * 0.22)
+            .fill({ color: 0xffffff, alpha: alpha * 0.24 });
+          g.moveTo(beam.x - w * 0.58, top);
+          g.lineTo(beam.x - w * 0.18, bottom);
+          g.moveTo(beam.x + w * 0.42, top);
+          g.lineTo(beam.x + w * 0.12, bottom);
+          g.stroke({ color: 0xffffff, alpha: alpha * 0.24, width: Math.max(0.8, w * 0.08) });
+        } else {
+          const w = beam.width * (0.7 + alpha * 0.9);
+          g.roundRect(beam.x - w / 2, layout.boardY - layout.cell, w, layout.boardH + layout.cell * 2, w / 2)
+            .fill({ color: 0xffffff, alpha: 0.16 + alpha * 0.62 });
+          g.roundRect(beam.x - w * 0.18, layout.boardY - layout.cell, w * 0.36, layout.boardH + layout.cell * 2, w * 0.18)
+            .fill({ color: 0xffffff, alpha: 0.32 + alpha * 0.78 });
+        }
       } else {
         g.roundRect(layout.boardX - layout.cell, beam.y - beam.height / 2, layout.boardW + layout.cell * 2, beam.height, beam.height / 2)
           .fill({ color: beam.color, alpha: 0.14 + alpha * 0.48 });
@@ -2118,22 +2135,22 @@ class PixiView {
     const color = piece.color || snapshot.stage?.accent || 0xffffff;
     const cx = layout.boardX + (piece.x + piece.matrix[0].length / 2) * layout.cell;
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
-    const count = kind === "drop" ? 76 + Math.min(70, amount * 4) : kind === "rotate" ? 28 : 12;
+    const count = kind === "drop" ? 26 + Math.min(24, amount * 1.1) : kind === "rotate" ? 28 : 12;
     if (kind === "drop") this.worldSurge = Math.max(this.worldSurge, 0.28);
-    for (let i = 0; i < Math.min(count, this.quality.coarse ? 82 : 156); i += 1) {
+    for (let i = 0; i < Math.min(count, this.quality.coarse ? 36 : 62); i += 1) {
       const a = kind === "drop"
-        ? -Math.PI / 2 + (Math.random() - 0.5) * 0.9
+        ? -Math.PI / 2 + (Math.random() - 0.5) * 0.72
         : Math.random() * Math.PI * 2;
-      const speed = kind === "drop" ? 3.8 + Math.random() * 7 : 0.9 + Math.random() * 3.2;
+      const speed = kind === "drop" ? 1.6 + Math.random() * 4.4 : 0.9 + Math.random() * 3.2;
       this.spawnParticle(
-        cx + (Math.random() - 0.5) * layout.cell * 1.4,
-        cy + (Math.random() - 0.5) * layout.cell * 1.4,
+        cx + (Math.random() - 0.5) * layout.cell * (kind === "drop" ? 1.0 : 1.4),
+        cy + (Math.random() - 0.5) * layout.cell * (kind === "drop" ? 0.8 : 1.4),
         Math.random() > 0.35 ? color : 0xffffff,
-        kind === "drop" ? 2.6 + Math.random() * 5.6 : 1.6 + Math.random() * 3.2,
+        kind === "drop" ? 1.4 + Math.random() * 2.6 : 1.6 + Math.random() * 3.2,
         Math.cos(a) * speed,
-        Math.sin(a) * speed + (kind === "drop" ? 3.6 : 0),
-        kind === "drop" ? 38 + Math.random() * 32 : 20 + Math.random() * 20,
-        kind === "move" ? 0.48 : 0.74,
+        Math.sin(a) * speed + (kind === "drop" ? 2.1 : 0),
+        kind === "drop" ? 20 + Math.random() * 18 : 20 + Math.random() * 20,
+        kind === "drop" ? 0.34 : (kind === "move" ? 0.48 : 0.74),
       );
     }
     if (kind === "drop") {
@@ -2149,11 +2166,14 @@ class PixiView {
             x: px,
             y1: Math.max(layout.boardY - layout.cell, py - dropDistance * layout.cell),
             y2: py + layout.cell * 0.42,
-            width: Math.max(8, layout.cell * 0.52),
+            width: Math.max(3.5, layout.cell * 0.2),
             color,
             sway: (Math.random() - 0.5) * layout.cell * 0.16,
-            life: 20 + Math.min(18, dropDistance * 1.2),
-            maxLife: 20 + Math.min(18, dropDistance * 1.2),
+            alpha: 0.11,
+            coreAlpha: 0.34,
+            lineAlpha: 0.44,
+            life: 14 + Math.min(12, dropDistance * 0.72),
+            maxLife: 14 + Math.min(12, dropDistance * 0.72),
           });
           this.impactRings.push({
             kind: "landing",
@@ -2183,12 +2203,12 @@ class PixiView {
       this.shockBands.push({
         orientation: "vertical",
         x: cx,
-        width: Math.max(layout.cell * 1.4, 18 + dropDistance * 0.45),
+        width: Math.max(layout.cell * 0.7, 10 + dropDistance * 0.18),
         color: 0xffffff,
-        alpha: 0.8,
+        alpha: 0.34,
         sway: layout.cell * 0.08,
-        life: 24 + Math.min(18, dropDistance),
-        maxLife: 24 + Math.min(18, dropDistance),
+        life: 14 + Math.min(10, dropDistance * 0.55),
+        maxLife: 14 + Math.min(10, dropDistance * 0.55),
       });
       this.shockBands.push({
         orientation: "horizontal",
@@ -2212,10 +2232,14 @@ class PixiView {
       });
       this.beams.push({
         kind: "vertical",
+        style: "drop",
         x: cx,
-        width: Math.max(layout.cell * 2.4, 40 + dropDistance * 0.82),
-        life: 42,
-        maxLife: 42,
+        top: Math.max(layout.boardY - layout.cell * 0.4, impactY - dropDistance * layout.cell - layout.cell * 0.7),
+        bottom: impactY + layout.cell * 0.8,
+        width: Math.max(layout.cell * 0.72, 11 + dropDistance * 0.16),
+        color,
+        life: 18 + Math.min(8, dropDistance * 0.38),
+        maxLife: 18 + Math.min(8, dropDistance * 0.38),
       });
       this.clearWaves.push({
         x: cx,
