@@ -1,0 +1,431 @@
+# LUMEN SHIFT Sound Asset Plan
+
+이 문서는 LUMEN SHIFT에 필요한 사운드 파일, 현재 준비된 파일, 다른 ARCHERLAB 프로젝트에서 가져온 파일, 그리고 추가 제작해야 할 음악을 정리한다.
+
+기본 위치:
+
+```text
+lumen-shift/assets/audio/
+```
+
+현재 작업 기준:
+
+- 직접 생성한 SFX: `tools/generate-sfx.mjs`로 제작
+- 내부 프로젝트에서 재사용한 SFX: 주로 `blockpang`
+- 현재 임시 BGM: `lumen-temp-bgm.mp3`
+- 음악 후보로 복사한 파일: `jewelria` 게임 루프
+- 아직 진짜로 필요한 것: 스테이지별 stem 분리 음악
+
+## 왜 이렇게 나누는가
+
+LUMEN SHIFT는 단순히 배경음 하나를 트는 게임보다, 플레이 입력과 라인 클리어가 음악/이펙트에 붙는 느낌이 중요하다.
+
+그래서 사운드는 크게 4개로 나눈다.
+
+| 구분 | 역할 |
+| --- | --- |
+| `music/stage-*` | 스테이지별 메인 음악, 최종적으로 stem 분리 필요 |
+| `music/stingers` | 스테이지 전환, Zone 시작/종료, 게임오버 같은 짧은 음악 큐 |
+| `sfx` | 조작, 라인 클리어, 블럭 고정, UI 효과음 |
+| `music/candidates` | 다른 프로젝트에서 가져온 BGM 후보, 바로 연결 전 검토용 |
+
+## 공통 제작 규격
+
+| 항목 | 권장 |
+| --- | --- |
+| 포맷 | `mp3` |
+| 샘플레이트 | 44.1kHz 또는 48kHz |
+| BGM/stem 비트레이트 | 192~320kbps |
+| SFX 비트레이트 | 128~192kbps 이상 |
+| 피크 | -1dB 이하 |
+| 루프 | BGM/stem/Zone loop는 끊김 없는 loop |
+| 무음 | 짧은 SFX 앞쪽 무음 거의 없음 |
+| 권리 | 자체 제작, 구매, 무료 라이선스, 내부 사용 권리 확인된 파일만 사용 |
+
+## 현재 준비 완료된 파일
+
+### 직접 생성한 SFX
+
+아래 파일은 내가 직접 생성했다. 일단 게임에 바로 붙여 테스트할 수 있는 임시 고품질 SFX다. 최종 마스터링 사운드가 생기면 같은 파일명으로 교체하면 된다.
+
+| File | 길이 | 용도 | 상태 |
+| --- | ---: | --- | --- |
+| `assets/audio/sfx/piece-move-01.mp3` | 0.12s | 좌우 이동 variation A | 생성 완료 |
+| `assets/audio/sfx/piece-move-02.mp3` | 0.12s | 좌우 이동 variation B | 생성 완료 |
+| `assets/audio/sfx/piece-rotate-01.mp3` | 0.18s | 회전 variation A | 생성 완료 |
+| `assets/audio/sfx/piece-rotate-02.mp3` | 0.18s | 회전 variation B | 생성 완료 |
+| `assets/audio/sfx/piece-soft-drop-tick.mp3` | 0.08s | 아래키/소프트드롭 반복 tick | 생성 완료 |
+| `assets/audio/sfx/piece-hold.mp3` | 0.22s | hold 조작 | 생성 완료 |
+| `assets/audio/sfx/lumen-charge-small.mp3` | 0.28s | Lumen 게이지 소량 충전 | 생성 완료 |
+| `assets/audio/sfx/lumen-charge-full.mp3` | 1.05s | Lumen 게이지 만충전 | 생성 완료 |
+| `assets/audio/sfx/lumen-zone-start.mp3` | 1.35s | Lumen Zone 시작 SFX | 생성 완료 |
+| `assets/audio/sfx/lumen-zone-line-bank.mp3` | 0.36s | Zone 중 라인 누적 | 생성 완료 |
+| `assets/audio/sfx/lumen-zone-burst.mp3` | 1.65s | Zone 종료 폭발 | 생성 완료 |
+| `assets/audio/sfx/lumen-zone-loop.mp3` | 8.00s | Zone 중 반복 질감 | 생성 완료 |
+| `assets/audio/sfx/ui-click.mp3` | 0.10s | 일반 UI 클릭 | 생성 완료 |
+| `assets/audio/sfx/ui-start.mp3` | 0.52s | Start 버튼 | 생성 완료 |
+| `assets/audio/sfx/ui-back.mp3` | 0.18s | 홈/뒤로가기 | 생성 완료 |
+| `assets/audio/sfx/ui-pause.mp3` | 0.22s | Pause | 생성 완료 |
+| `assets/audio/sfx/ui-resume.mp3` | 0.22s | Resume | 생성 완료 |
+| `assets/audio/sfx/ui-submit.mp3` | 0.42s | 점수 제출 | 생성 완료 |
+| `assets/audio/sfx/ui-ranking-open.mp3` | 0.48s | Ranking 열기 | 생성 완료 |
+| `assets/audio/sfx/ui-error.mp3` | 0.34s | 오류/실패 | 생성 완료 |
+| `assets/audio/sfx/game-over.mp3` | 2.20s | 게임오버 SFX | 생성 완료 |
+
+### 내부 프로젝트에서 가져온 SFX
+
+아래 파일은 `blockpang`의 블럭/클리어 계열 소스를 LUMEN SHIFT 최종 파일명으로 MP3 변환한 것이다. 퍼즐/블럭 사운드 성격이 맞아서 1차 적용 후보로 적합하다.
+
+| LUMEN SHIFT File | Source | 길이 | 용도 | 상태 |
+| --- | --- | ---: | --- | --- |
+| `assets/audio/sfx/line-clear-1.mp3` | `blockpang/sounds/clear_single.wav` | 0.50s | 1줄 클리어 | 변환 완료 |
+| `assets/audio/sfx/line-clear-2.mp3` | `blockpang/sounds/clear_double.wav` | 0.65s | 2줄 클리어 | 변환 완료 |
+| `assets/audio/sfx/line-clear-3.mp3` | `blockpang/sounds/clear_triple.wav` | 0.80s | 3줄 클리어 | 변환 완료 |
+| `assets/audio/sfx/line-clear-4.mp3` | `blockpang/sounds/clear_quad.wav` | 1.00s | 4줄 클리어 | 변환 완료 |
+| `assets/audio/sfx/combo-02.mp3` | `blockpang/sounds/combo_hit.wav` | 0.40s | 낮은 combo | 변환 완료 |
+| `assets/audio/sfx/combo-04.mp3` | `blockpang/sounds/combo_escalate.wav` | 0.50s | 중간 combo | 변환 완료 |
+| `assets/audio/sfx/combo-08.mp3` | `blockpang/sounds/sparkle.wav` | 0.40s | 높은 combo sparkle | 변환 완료 |
+| `assets/audio/sfx/piece-hard-drop.mp3` | `blockpang/sounds/impact_heavy.wav` | 0.45s | 하드드롭 충격 | 변환 완료 |
+| `assets/audio/sfx/piece-lock.mp3` | `blockpang/sounds/place.wav` | 0.25s | 블럭 고정 | 변환 완료 |
+| `assets/audio/sfx/piece-lock-soft.mp3` | `blockpang/sounds/pickup.wav` | 0.22s | 약한 블럭 고정 | 변환 완료 |
+
+### 직접 생성한 음악 Stinger
+
+아래 파일은 스테이지 전환과 Zone 연출을 위해 직접 생성했다. 최종 음악 stem이 들어오기 전까지 바로 사용할 수 있다.
+
+| File | 길이 | 용도 | 상태 |
+| --- | ---: | --- | --- |
+| `assets/audio/music/stingers/stage-02-enter.mp3` | 1.70s | Stage 02 진입 | 생성 완료 |
+| `assets/audio/music/stingers/stage-03-enter.mp3` | 1.80s | Stage 03 진입 | 생성 완료 |
+| `assets/audio/music/stingers/stage-04-enter.mp3` | 1.90s | Stage 04 진입 | 생성 완료 |
+| `assets/audio/music/stingers/stage-05-enter.mp3` | 2.20s | Stage 05 진입 | 생성 완료 |
+| `assets/audio/music/stingers/zone-ready.mp3` | 1.10s | Zone 사용 가능 | 생성 완료 |
+| `assets/audio/music/stingers/zone-start.mp3` | 1.45s | Zone 시작 | 생성 완료 |
+| `assets/audio/music/stingers/zone-end-success.mp3` | 2.00s | Zone 종료 성공 | 생성 완료 |
+| `assets/audio/music/stingers/zone-end-empty.mp3` | 1.15s | Zone 종료, 성과 없음 | 생성 완료 |
+| `assets/audio/music/stingers/game-over.mp3` | 2.20s | 게임오버 음악 큐 | 생성 완료 |
+
+### 현재 BGM / 후보 BGM
+
+| File | Source | 길이 | 용도 | 상태 |
+| --- | --- | ---: | --- | --- |
+| `assets/audio/lumen-temp-bgm.mp3` | 기존 LUMEN SHIFT 임시 BGM | 30.77s | 현재 코드에서 쓰는 임시 BGM | 기존 |
+| `assets/audio/music/stage-01-deep-tide/full.mp3` | `lumen-temp-bgm.mp3` 복사 | 30.77s | Stage 01 fallback full mix | 복사 완료 |
+| `assets/audio/music/candidates/jewelria-bgm-game-loop.mp3` | `jewelria/assets/sounds/bgm_game_loop.mp3` | 30.77s | Stage/BGM 후보 | 후보 복사 |
+
+`music/candidates` 안의 파일은 바로 최종 적용하지 말고 들어보고 결정한다. 게임 템포와 분위기가 맞으면 Stage 02~05 fallback 후보로 쓸 수 있다.
+
+## 게임 이벤트별 연결 기준
+
+아래 기준대로 코드에 연결하면 된다.
+
+| Game Event | 1차 파일 | 보조/variation | 설명 |
+| --- | --- | --- | --- |
+| 좌우 이동 | `sfx/piece-move-01.mp3` | `sfx/piece-move-02.mp3` | 반복 입력이라 작고 짧게 |
+| 회전 | `sfx/piece-rotate-01.mp3` | `sfx/piece-rotate-02.mp3` | 이동음보다 살짝 밝게 |
+| 소프트드롭 | `sfx/piece-soft-drop-tick.mp3` | 없음 | 반복 재생되므로 매우 작게 |
+| 하드드롭 | `sfx/piece-hard-drop.mp3` | `sfx/lumen-charge-small.mp3` 아주 작게 섞어도 가능 | 스페이스바/아래 플릭 충격 |
+| Hold | `sfx/piece-hold.mp3` | 없음 | 회전과 구분되는 짧은 하강 sweep |
+| 블럭 고정 | `sfx/piece-lock.mp3` | `sfx/piece-lock-soft.mp3` | 높이가 낮거나 약한 착지는 soft |
+| 1줄 클리어 | `sfx/line-clear-1.mp3` | 없음 | 작지만 선명하게 |
+| 2줄 클리어 | `sfx/line-clear-2.mp3` | `sfx/combo-02.mp3` | combo가 있으면 같이 |
+| 3줄 클리어 | `sfx/line-clear-3.mp3` | `sfx/combo-04.mp3` | 더 넓은 공간감 |
+| 4줄 클리어 | `sfx/line-clear-4.mp3` | `sfx/combo-08.mp3` | 가장 큰 burst |
+| 낮은 combo | `sfx/combo-02.mp3` | 없음 | combo 2~3 |
+| 중간 combo | `sfx/combo-04.mp3` | 없음 | combo 4~7 |
+| 높은 combo | `sfx/combo-08.mp3` | 없음 | combo 8 이상 |
+| Lumen 충전 | `sfx/lumen-charge-small.mp3` | 없음 | 게이지가 조금 찰 때 |
+| Lumen 만충전 | `sfx/lumen-charge-full.mp3` | `music/stingers/zone-ready.mp3` | Zone 사용 가능 알림 |
+| Zone 시작 | `sfx/lumen-zone-start.mp3` | `music/stingers/zone-start.mp3`, `sfx/lumen-zone-loop.mp3` | 화면 veil/입자 증가와 동기화 |
+| Zone 중 라인 누적 | `sfx/lumen-zone-line-bank.mp3` | 없음 | Zone 내부 라인 bank |
+| Zone 종료 성공 | `sfx/lumen-zone-burst.mp3` | `music/stingers/zone-end-success.mp3` | 카메라/입자 폭발과 같이 |
+| Zone 종료 실패 | `music/stingers/zone-end-empty.mp3` | `sfx/ui-error.mp3` 아주 작게 | 성과 없이 종료 |
+| Stage 02 진입 | `music/stingers/stage-02-enter.mp3` | Stage 02 stem fade-in | 색감 전환과 동기화 |
+| Stage 03 진입 | `music/stingers/stage-03-enter.mp3` | Stage 03 stem fade-in | 색감 전환과 동기화 |
+| Stage 04 진입 | `music/stingers/stage-04-enter.mp3` | Stage 04 stem fade-in | 색감 전환과 동기화 |
+| Stage 05 진입 | `music/stingers/stage-05-enter.mp3` | Stage 05 stem fade-in | 색감 전환과 동기화 |
+| Start | `sfx/ui-start.mp3` | 없음 | 홈에서 게임 시작 |
+| UI click | `sfx/ui-click.mp3` | 없음 | 일반 버튼 |
+| 홈/뒤로 | `sfx/ui-back.mp3` | 없음 | 게임에서 홈으로 |
+| Pause | `sfx/ui-pause.mp3` | 없음 | 일시정지 |
+| Resume | `sfx/ui-resume.mp3` | 없음 | 재개 |
+| Ranking 열기 | `sfx/ui-ranking-open.mp3` | 없음 | 랭킹 패널 |
+| 점수 제출 | `sfx/ui-submit.mp3` | 없음 | 제출 성공 |
+| 오류 | `sfx/ui-error.mp3` | 없음 | 제출 실패/네트워크 오류 |
+| Game Over | `sfx/game-over.mp3` | `music/stingers/game-over.mp3` | 결과 화면 |
+
+## 추가로 진짜 제작해야 하는 음악
+
+현재 SFX와 Stinger는 1차로 채워졌다. 하지만 원작식 퀄리티를 목표로 하면 핵심은 스테이지별 stem 음악이다.
+
+각 스테이지마다 아래 8개 파일이 필요하다.
+
+| Stem | 역할 |
+| --- | --- |
+| `full.mp3` | 전체 믹스, stem이 없을 때 fallback |
+| `base.mp3` | pad, drone, 기본 공간감 |
+| `pulse.mp3` | 아르페지오, 8분/16분 pulse |
+| `rhythm.mp3` | kick, hat, percussion |
+| `energy.mp3` | bass, tension, impact layer |
+| `lead.mp3` | melody, top synth |
+| `texture.mp3` | shimmer, particle noise, sparkle |
+| `zone.mp3` | Lumen Zone 전용 고조 layer |
+
+중요 조건:
+
+- 같은 스테이지의 stem은 길이가 완전히 같아야 한다.
+- 같은 스테이지의 stem은 시작점이 완전히 같아야 한다.
+- stem끼리 동시에 틀었을 때 `full.mp3`와 비슷하게 들려야 한다.
+- stem은 모두 seamless loop여야 한다.
+- 최소 8 bars, 권장 16 bars.
+- `zone.mp3`는 평소에는 꺼져 있다가 Zone에서만 크게 올라온다.
+
+## Stage 01: Deep Tide
+
+현재 색감: 푸른 수중, 깊은 입자, 차갑고 투명한 glow.
+
+| 항목 | 값 |
+| --- | --- |
+| BPM | 88 |
+| 분위기 | deep, aquatic, luminous, meditative |
+| 키워드 | blue particles, underwater pad, soft pulse, distant choir |
+| 현재 파일 | `assets/audio/music/stage-01-deep-tide/full.mp3` 있음 |
+| 아직 필요한 파일 | `base`, `pulse`, `rhythm`, `energy`, `lead`, `texture`, `zone` |
+
+필요 파일:
+
+```text
+assets/audio/music/stage-01-deep-tide/full.mp3
+assets/audio/music/stage-01-deep-tide/base.mp3
+assets/audio/music/stage-01-deep-tide/pulse.mp3
+assets/audio/music/stage-01-deep-tide/rhythm.mp3
+assets/audio/music/stage-01-deep-tide/energy.mp3
+assets/audio/music/stage-01-deep-tide/lead.mp3
+assets/audio/music/stage-01-deep-tide/texture.mp3
+assets/audio/music/stage-01-deep-tide/zone.mp3
+```
+
+구체 요청:
+
+- `base`: 낮고 넓은 pad, 물속처럼 둥글게.
+- `pulse`: 너무 강한 드럼보다 얇은 8분/16분 신스 pulse.
+- `rhythm`: 초반에는 거의 없다가 후반에 살짝 올라오는 미니멀 percussion.
+- `energy`: 라인 클리어/콤보 때 올라갈 저역 tension.
+- `lead`: 멜로디는 절제, 높은 신스 한두 음 중심.
+- `texture`: 파티클과 맞는 sparkle/noise.
+- `zone`: 화면이 밝아지는 느낌의 넓은 shimmer layer.
+
+## Stage 02: Ember Veil
+
+현재 색감: 주황/황금빛, 열감, 불꽃 입자.
+
+| 항목 | 값 |
+| --- | --- |
+| BPM | 104 |
+| 분위기 | warm, ember, molten, energetic |
+| 키워드 | amber pulse, heat shimmer, golden sparks |
+| 현재 파일 | 없음 |
+| 후보 | `assets/audio/music/candidates/jewelria-bgm-game-loop.mp3` 들어보고 가능 |
+
+필요 파일:
+
+```text
+assets/audio/music/stage-02-ember-veil/full.mp3
+assets/audio/music/stage-02-ember-veil/base.mp3
+assets/audio/music/stage-02-ember-veil/pulse.mp3
+assets/audio/music/stage-02-ember-veil/rhythm.mp3
+assets/audio/music/stage-02-ember-veil/energy.mp3
+assets/audio/music/stage-02-ember-veil/lead.mp3
+assets/audio/music/stage-02-ember-veil/texture.mp3
+assets/audio/music/stage-02-ember-veil/zone.mp3
+```
+
+구체 요청:
+
+- `base`: 따뜻한 low pad, 어둡지만 밝은 가장자리.
+- `pulse`: 불꽃이 튀는 듯한 짧은 synth pulse.
+- `rhythm`: Stage 01보다 뚜렷한 kick/hat.
+- `energy`: 하드드롭과 라인 클리어에 맞는 impact bed.
+- `lead`: 짧은 상행 phrase.
+- `texture`: ember sparkle, crackle은 너무 현실적인 불소리보다 전자 질감.
+- `zone`: 금색/흰색으로 확 타오르는 고조 layer.
+
+## Stage 03: Bloom Signal
+
+현재 색감: 핑크/시안, 신호, 선명한 아르페지오.
+
+| 항목 | 값 |
+| --- | --- |
+| BPM | 112 |
+| 분위기 | neon, signal, crystalline, uplifting |
+| 키워드 | pink cyan arp, digital bloom, bright grid |
+| 현재 파일 | 없음 |
+
+필요 파일:
+
+```text
+assets/audio/music/stage-03-bloom-signal/full.mp3
+assets/audio/music/stage-03-bloom-signal/base.mp3
+assets/audio/music/stage-03-bloom-signal/pulse.mp3
+assets/audio/music/stage-03-bloom-signal/rhythm.mp3
+assets/audio/music/stage-03-bloom-signal/energy.mp3
+assets/audio/music/stage-03-bloom-signal/lead.mp3
+assets/audio/music/stage-03-bloom-signal/texture.mp3
+assets/audio/music/stage-03-bloom-signal/zone.mp3
+```
+
+구체 요청:
+
+- `base`: 너무 두껍지 않은 밝은 pad.
+- `pulse`: 이 스테이지의 핵심. 16분 arpeggio가 선명해야 함.
+- `rhythm`: 가볍고 전자적인 click/hat 중심.
+- `energy`: combo가 이어질 때 intensity가 올라가는 synth bass.
+- `lead`: stage theme를 기억하게 하는 짧은 hook.
+- `texture`: digital sparkle, tiny glitch는 약하게.
+- `zone`: 가장 화려한 pink/cyan shimmer.
+
+## Stage 04: Void Aurora
+
+현재 색감: 보라/시안/초록 오로라, 우주 공간감.
+
+| 항목 | 값 |
+| --- | --- |
+| BPM | 118 |
+| 분위기 | cosmic, aurora, wide, floating |
+| 키워드 | aurora pad, wide stereo, cold pulse |
+| 현재 파일 | 없음 |
+| 외부 후보 | `D:/workspace/nevergrad/assets/audio/bgm/wind_ambient.mp3`는 앰비언스 후보이나 길고 루프 검증 필요 |
+
+필요 파일:
+
+```text
+assets/audio/music/stage-04-void-aurora/full.mp3
+assets/audio/music/stage-04-void-aurora/base.mp3
+assets/audio/music/stage-04-void-aurora/pulse.mp3
+assets/audio/music/stage-04-void-aurora/rhythm.mp3
+assets/audio/music/stage-04-void-aurora/energy.mp3
+assets/audio/music/stage-04-void-aurora/lead.mp3
+assets/audio/music/stage-04-void-aurora/texture.mp3
+assets/audio/music/stage-04-void-aurora/zone.mp3
+```
+
+구체 요청:
+
+- `base`: 넓은 오로라 pad, 리버브 길게.
+- `pulse`: 너무 앞에 나오지 않는 cold pulse.
+- `rhythm`: 공간을 해치지 않는 낮은 percussion.
+- `energy`: 후반으로 갈수록 고조되는 bass/tension.
+- `lead`: 멀리서 들리는 고음 phrase.
+- `texture`: 별빛 shimmer, stereo movement.
+- `zone`: 화면 전체가 열리는 듯한 white/green/blue layer.
+
+## Stage 05: White Core
+
+현재 색감: 흰빛, 최종 고조, 클라이맥스.
+
+| 항목 | 값 |
+| --- | --- |
+| BPM | 126 |
+| 분위기 | climax, white light, transcendent, high energy |
+| 키워드 | bright core, full rhythm, final burst |
+| 현재 파일 | 없음 |
+
+필요 파일:
+
+```text
+assets/audio/music/stage-05-white-core/full.mp3
+assets/audio/music/stage-05-white-core/base.mp3
+assets/audio/music/stage-05-white-core/pulse.mp3
+assets/audio/music/stage-05-white-core/rhythm.mp3
+assets/audio/music/stage-05-white-core/energy.mp3
+assets/audio/music/stage-05-white-core/lead.mp3
+assets/audio/music/stage-05-white-core/texture.mp3
+assets/audio/music/stage-05-white-core/zone.mp3
+```
+
+구체 요청:
+
+- `base`: 밝고 넓은 pad, 과하게 날카롭지 않게.
+- `pulse`: 빠르고 선명한 pulse, 마지막 스테이지답게 밀도 높게.
+- `rhythm`: 5개 스테이지 중 가장 분명한 리듬.
+- `energy`: 하드드롭/4줄 클리어에 맞는 강한 저역 고조.
+- `lead`: 가장 기억에 남는 final hook.
+- `texture`: white sparkle, high shimmer.
+- `zone`: 거의 화면이 터지는 느낌의 최고조 layer.
+
+## 다른 프로젝트에서 가져다 쓸 만한 후보
+
+실제 파일을 확인한 뒤 1차 선별한 후보들이다.
+
+| Source | 추천 용도 | 판단 |
+| --- | --- | --- |
+| `blockpang/sounds/clear_single.wav` | 1줄 클리어 | 이미 사용 |
+| `blockpang/sounds/clear_double.wav` | 2줄 클리어 | 이미 사용 |
+| `blockpang/sounds/clear_triple.wav` | 3줄 클리어 | 이미 사용 |
+| `blockpang/sounds/clear_quad.wav` | 4줄 클리어 | 이미 사용 |
+| `blockpang/sounds/impact_heavy.wav` | 하드드롭 | 이미 사용 |
+| `blockpang/sounds/place.wav` | 블럭 고정 | 이미 사용 |
+| `blockpang/sounds/combo_hit.wav` | 낮은 combo | 이미 사용 |
+| `blockpang/sounds/combo_escalate.wav` | 중간 combo | 이미 사용 |
+| `blockpang/sounds/sparkle.wav` | 높은 combo | 이미 사용 |
+| `jewelria/assets/sounds/bgm_game_loop.mp3` | Stage fallback BGM 후보 | `music/candidates`에 복사 |
+| `jewelria/assets/sounds/sfx/button.mp3` | UI click 후보 | 직접 생성 파일이 더 맞아서 보류 |
+| `jelly-pang-2048/assets/sounds/jelly-start.mp3` | Start 후보 | 톤이 귀여워서 보류 |
+| `jelly-pang-2048/assets/sounds/jelly-gameover.mp3` | Game over 후보 | 톤이 귀여워서 보류 |
+| `nevergrad/assets/audio/bgm/sea_theme.mp3` | Deep Tide 분위기 후보 | 길고 장르가 달라 보류 |
+| `nevergrad/assets/audio/bgm/wind_ambient.mp3` | Void Aurora ambient 후보 | 길고 loop 검증 필요 |
+| `cupid/assets/audio/bgm/*.mp3` | 메뉴/감성 BGM 후보 | 현재 게임 톤과 달라 보류 |
+
+## 우선 제작 요청 목록
+
+사운드를 새로 구하거나 만들어올 때는 아래 순서가 가장 효율적이다.
+
+1. Stage 01~05의 `full.mp3`
+2. Stage 01의 stem 7개: `base`, `pulse`, `rhythm`, `energy`, `lead`, `texture`, `zone`
+3. Stage 02~05의 stem 전체
+4. 최종 마스터링된 `line-clear-1`~`line-clear-4`
+5. 최종 마스터링된 `piece-hard-drop`, `piece-lock`
+6. 최종 마스터링된 Zone SFX
+
+한 번에 다 만들기 어렵다면 최소 세트는 이것이다.
+
+```text
+assets/audio/music/stage-01-deep-tide/full.mp3
+assets/audio/music/stage-02-ember-veil/full.mp3
+assets/audio/music/stage-03-bloom-signal/full.mp3
+assets/audio/music/stage-04-void-aurora/full.mp3
+assets/audio/music/stage-05-white-core/full.mp3
+assets/audio/sfx/line-clear-1.mp3
+assets/audio/sfx/line-clear-2.mp3
+assets/audio/sfx/line-clear-3.mp3
+assets/audio/sfx/line-clear-4.mp3
+assets/audio/sfx/piece-hard-drop.mp3
+assets/audio/sfx/piece-lock.mp3
+```
+
+## 최종 납품 체크리스트
+
+- [ ] 파일명이 이 문서와 정확히 일치한다.
+- [ ] BGM/stem은 loop가 끊기지 않는다.
+- [ ] 같은 스테이지 stem은 길이와 시작점이 완전히 같다.
+- [ ] SFX 앞쪽에 불필요한 무음이 없다.
+- [ ] 라인 클리어 SFX는 1줄에서 4줄로 갈수록 확실히 커진다.
+- [ ] 하드드롭은 짧고 강하지만 음악을 찢지 않는다.
+- [ ] Zone 시작/종료는 화면 이펙트와 같이 커져야 한다.
+- [ ] 전체 파일에 클리핑이 없다.
+- [ ] 사용 권리가 명확하다.
+
+## 참고: 생성 명령
+
+직접 생성한 SFX와 stinger를 다시 만들려면 저장소 루트에서 실행한다.
+
+```bash
+node lumen-shift/tools/generate-sfx.mjs
+```
+
+이 명령은 아래 경로의 생성형 SFX와 stinger를 다시 만든다.
+
+```text
+lumen-shift/assets/audio/sfx/
+lumen-shift/assets/audio/music/stingers/
+```
