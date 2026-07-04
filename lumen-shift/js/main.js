@@ -5,6 +5,7 @@ const ROWS = 20;
 const VISIBLE_NEXT = 5;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STORAGE_PREFIX = "lumen-shift";
+const TEMP_BGM_URL = "assets/audio/lumen-temp-bgm.mp3?v=20260704-bgm-v1";
 
 const STAGES = [
   {
@@ -224,6 +225,9 @@ class AudioDirector {
     this.synths = null;
     this.stemGains = null;
     this.musicLoops = [];
+    this.backingPlayer = null;
+    this.backingStarted = false;
+    this.backingReady = false;
     this.arpStep = 0;
     this.energyStep = 0;
     this.inputStep = 0;
@@ -283,6 +287,7 @@ class AudioDirector {
       const motionGain = new Tone.Gain(0.24).connect(delay);
       const textureGain = new Tone.Gain(0).connect(reverb);
       const rhythmGain = new Tone.Gain(0.0).connect(master);
+      const backingGain = new Tone.Gain(0.0).connect(master);
       const pad = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.08, decay: 0.2, sustain: 0.42, release: 1.4 },
@@ -338,6 +343,18 @@ class AudioDirector {
         oscillator: { type: "amsine", harmonicity: 1.5 },
         envelope: { attack: 0.006, decay: 0.08, sustain: 0.04, release: 0.26 },
       }).connect(textureGain);
+      if (Tone.Player) {
+        try {
+          this.backingPlayer = new Tone.Player({
+            url: TEMP_BGM_URL,
+            loop: true,
+            fadeIn: 0.18,
+            fadeOut: 0.18,
+          }).connect(backingGain);
+        } catch {
+          this.backingPlayer = null;
+        }
+      }
       this.stemGains = {
         base: baseGain,
         pulse: pulseGain,
@@ -347,9 +364,21 @@ class AudioDirector {
         motion: motionGain,
         texture: textureGain,
         rhythm: rhythmGain,
+        backing: backingGain,
       };
       this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer, sparkle, kick, hat };
       this.ready = true;
+      if (this.backingPlayer && Tone.loaded) {
+        try {
+          await Promise.race([
+            Tone.loaded(),
+            new Promise((resolve) => setTimeout(resolve, 2400)),
+          ]);
+          this.backingReady = true;
+        } catch {
+          this.backingReady = false;
+        }
+      }
       this.startMusic();
     } catch {
       this.ready = false;
@@ -439,8 +468,25 @@ class AudioDirector {
     Tone.Transport.bpm.value = STAGES[0].bpm;
     this.transportStart = Tone.now();
     this.timelineStep = 0;
+    this.startBackingTrack();
     Tone.Transport.start();
     this.started = true;
+  }
+
+  startBackingTrack() {
+    if (!this.backingPlayer || this.backingStarted) return;
+    try {
+      this.backingPlayer.loop = true;
+      if (typeof this.backingPlayer.sync === "function") {
+        this.backingPlayer.sync().start(0);
+      } else {
+        this.backingPlayer.start();
+      }
+      this.backingStarted = true;
+      this.backingReady = true;
+    } catch {
+      this.backingReady = false;
+    }
   }
 
   setStage(index) {
@@ -484,6 +530,7 @@ class AudioDirector {
     this.rampStem("texture", Math.pow(this.arrangement, 1.75) * 0.18 + zoneLift * 0.08);
     this.rampStem("motion", 0.21 + this.arrangement * 0.08 + this.gestureHeat * 0.05);
     this.rampStem("rhythm", Math.max(0, this.arrangement - 0.12) * 0.16 + comboLift * 0.045 + zoneLift * 0.08);
+    this.rampStem("backing", this.backingPlayer ? 0.035 + this.arrangement * 0.105 + zoneLift * 0.035 : 0);
     this.rampStem("zone", zoneLift * 0.42);
     this.rampStem("hit", 0.22 + energy * 0.09);
     const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
