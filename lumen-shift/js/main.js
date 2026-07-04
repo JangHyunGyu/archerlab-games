@@ -7,6 +7,57 @@ const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
 const STORAGE_PREFIX = "lumen-shift";
 const TEMP_BGM_URL = "assets/audio/lumen-temp-bgm.mp3?v=20260704-bgm-v1";
+const AUDIO_ASSET_VERSION = "20260705-audio-v1";
+
+function audioAsset(path) {
+  return `${path}?v=${AUDIO_ASSET_VERSION}`;
+}
+
+const SFX_URLS = {
+  moveA: audioAsset("assets/audio/sfx/piece-move-01.mp3"),
+  moveB: audioAsset("assets/audio/sfx/piece-move-02.mp3"),
+  rotateA: audioAsset("assets/audio/sfx/piece-rotate-01.mp3"),
+  rotateB: audioAsset("assets/audio/sfx/piece-rotate-02.mp3"),
+  softDrop: audioAsset("assets/audio/sfx/piece-soft-drop-tick.mp3"),
+  hold: audioAsset("assets/audio/sfx/piece-hold.mp3"),
+  hardDrop: audioAsset("assets/audio/sfx/piece-hard-drop.mp3"),
+  lock: audioAsset("assets/audio/sfx/piece-lock.mp3"),
+  lockSoft: audioAsset("assets/audio/sfx/piece-lock-soft.mp3"),
+  clear1: audioAsset("assets/audio/sfx/line-clear-1.mp3"),
+  clear2: audioAsset("assets/audio/sfx/line-clear-2.mp3"),
+  clear3: audioAsset("assets/audio/sfx/line-clear-3.mp3"),
+  clear4: audioAsset("assets/audio/sfx/line-clear-4.mp3"),
+  combo2: audioAsset("assets/audio/sfx/combo-02.mp3"),
+  combo4: audioAsset("assets/audio/sfx/combo-04.mp3"),
+  combo8: audioAsset("assets/audio/sfx/combo-08.mp3"),
+  chargeSmall: audioAsset("assets/audio/sfx/lumen-charge-small.mp3"),
+  chargeFull: audioAsset("assets/audio/sfx/lumen-charge-full.mp3"),
+  zoneStart: audioAsset("assets/audio/sfx/lumen-zone-start.mp3"),
+  zoneBank: audioAsset("assets/audio/sfx/lumen-zone-line-bank.mp3"),
+  zoneBurst: audioAsset("assets/audio/sfx/lumen-zone-burst.mp3"),
+  zoneLoop: audioAsset("assets/audio/sfx/lumen-zone-loop.mp3"),
+  uiClick: audioAsset("assets/audio/sfx/ui-click.mp3"),
+  uiStart: audioAsset("assets/audio/sfx/ui-start.mp3"),
+  uiBack: audioAsset("assets/audio/sfx/ui-back.mp3"),
+  uiPause: audioAsset("assets/audio/sfx/ui-pause.mp3"),
+  uiResume: audioAsset("assets/audio/sfx/ui-resume.mp3"),
+  uiSubmit: audioAsset("assets/audio/sfx/ui-submit.mp3"),
+  uiRanking: audioAsset("assets/audio/sfx/ui-ranking-open.mp3"),
+  uiError: audioAsset("assets/audio/sfx/ui-error.mp3"),
+  gameOver: audioAsset("assets/audio/sfx/game-over.mp3"),
+};
+
+const STINGER_URLS = {
+  stage2: audioAsset("assets/audio/music/stingers/stage-02-enter.mp3"),
+  stage3: audioAsset("assets/audio/music/stingers/stage-03-enter.mp3"),
+  stage4: audioAsset("assets/audio/music/stingers/stage-04-enter.mp3"),
+  stage5: audioAsset("assets/audio/music/stingers/stage-05-enter.mp3"),
+  zoneReady: audioAsset("assets/audio/music/stingers/zone-ready.mp3"),
+  zoneStart: audioAsset("assets/audio/music/stingers/zone-start.mp3"),
+  zoneEndSuccess: audioAsset("assets/audio/music/stingers/zone-end-success.mp3"),
+  zoneEndEmpty: audioAsset("assets/audio/music/stingers/zone-end-empty.mp3"),
+  gameOver: audioAsset("assets/audio/music/stingers/game-over.mp3"),
+};
 
 const STAGES = [
   {
@@ -326,6 +377,9 @@ class AudioDirector {
     this.currentStage = 0;
     this.synths = null;
     this.stemGains = null;
+    this.sfxPlayers = {};
+    this.stingerPlayers = {};
+    this.zoneLoopPlayer = null;
     this.musicLoops = [];
     this.backingPlayer = null;
     this.backingStarted = false;
@@ -348,6 +402,9 @@ class AudioDirector {
     this.timelineStep = 0;
     this.lastBeatIndex = -1;
     this.lastBarIndex = -1;
+    this.moveVariant = 0;
+    this.rotateVariant = 0;
+    this.lastSoftDropAt = 0;
     this.beatPulse = 0;
     this.downbeatPulse = 0;
     this.eventPulse = 0;
@@ -372,8 +429,12 @@ class AudioDirector {
     };
   }
 
-  async unlock() {
-    if (this.ready) return;
+  async unlock(options = {}) {
+    const shouldStartMusic = options.startMusic !== false;
+    if (this.ready) {
+      if (shouldStartMusic) this.startMusic();
+      return;
+    }
     const toneGlobal = await this.waitForTone();
     if (!toneGlobal) return;
     try {
@@ -406,6 +467,9 @@ class AudioDirector {
       const backingGain = new Tone.Gain(0.0).connect(master);
       const leadGain = new Tone.Gain(0.0).connect(delay);
       const stingerGain = new Tone.Gain(0.0).connect(reverb);
+      const sfxGain = new Tone.Gain(0.86).connect(master);
+      const sampleStingerGain = new Tone.Gain(0.72).connect(reverb);
+      const zoneSampleGain = new Tone.Gain(0).connect(reverb);
       let backingInput = backingGain;
       try {
         this.backingFilter = new Tone.Filter({ type: "lowpass", frequency: 6200, Q: 0.45 }).connect(backingGain);
@@ -491,6 +555,11 @@ class AudioDirector {
         } catch {
           this.backingPlayer = null;
         }
+        this.sfxPlayers = this.createPlayers(Tone, SFX_URLS, sfxGain, {
+          zoneLoop: { output: zoneSampleGain, loop: true, fadeIn: 0.16, fadeOut: 0.42, volume: -4 },
+        });
+        this.zoneLoopPlayer = this.sfxPlayers.zoneLoop || null;
+        this.stingerPlayers = this.createPlayers(Tone, STINGER_URLS, sampleStingerGain, {});
       }
       this.stemGains = {
         base: baseGain,
@@ -504,24 +573,21 @@ class AudioDirector {
         backing: backingGain,
         lead: leadGain,
         stinger: stingerGain,
+        sfx: sfxGain,
+        sampleStinger: sampleStingerGain,
+        zoneSample: zoneSampleGain,
       };
       this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer, sparkle, kick, hat, lead, stinger };
       this.ready = true;
       if (this.backingPlayer && Tone.loaded) {
-        let loaded = false;
-        try {
-          await Promise.race([
-            Tone.loaded().then(() => {
-              loaded = true;
-            }),
-            new Promise((resolve) => setTimeout(resolve, 2400)),
-          ]);
-          this.backingReady = loaded || this.isBackingLoaded();
-        } catch {
+        Tone.loaded().then(() => {
           this.backingReady = this.isBackingLoaded();
-        }
+          if (this.started) this.startBackingTrack();
+        }).catch(() => {
+          this.backingReady = this.isBackingLoaded();
+        });
       }
-      this.startMusic();
+      if (shouldStartMusic) this.startMusic();
     } catch {
       this.ready = false;
     }
@@ -683,6 +749,84 @@ class AudioDirector {
     return Number(player.buffer?.duration || 0) > 0;
   }
 
+  createPlayers(Tone, urls, defaultOutput, overrides = {}) {
+    return Object.fromEntries(Object.entries(urls).map(([key, url]) => {
+      const config = overrides[key] || {};
+      return [key, this.createPlayer(Tone, url, config.output || defaultOutput, config)];
+    }).filter(([, player]) => !!player));
+  }
+
+  createPlayer(Tone, url, output, options = {}) {
+    if (!Tone.Player || !url || !output) return null;
+    try {
+      const player = new Tone.Player({
+        url,
+        loop: !!options.loop,
+        fadeIn: options.fadeIn ?? 0.005,
+        fadeOut: options.fadeOut ?? 0.035,
+      }).connect(output);
+      if (typeof options.volume === "number") player.volume.value = options.volume;
+      return player;
+    } catch {
+      return null;
+    }
+  }
+
+  isPlayerLoaded(player) {
+    if (!player) return false;
+    if (player.loaded === true) return true;
+    if (player.buffer?.loaded === true) return true;
+    return Number(player.buffer?.duration || 0) > 0;
+  }
+
+  playPlayer(player, volumeDb = 0, delay = 0) {
+    if (!this.ready || !window.Tone || !this.isPlayerLoaded(player)) return false;
+    try {
+      const time = window.Tone.now() + Math.max(0, delay);
+      if (player.state === "started") player.stop(time);
+      player.volume.value = volumeDb;
+      player.start(time + 0.001);
+      return true;
+    } catch {
+      try {
+        player.start();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  playSfx(key, volumeDb = 0, delay = 0) {
+    return this.playPlayer(this.sfxPlayers?.[key], volumeDb, delay);
+  }
+
+  playStinger(key, volumeDb = 0, delay = 0) {
+    return this.playPlayer(this.stingerPlayers?.[key], volumeDb, delay);
+  }
+
+  startZoneLoop() {
+    if (!this.ready || !window.Tone || !this.zoneLoopPlayer || !this.isPlayerLoaded(this.zoneLoopPlayer)) return;
+    try {
+      if (this.zoneLoopPlayer.state !== "started") this.zoneLoopPlayer.start(window.Tone.now() + 0.01);
+      this.rampStem("zoneSample", 0.34);
+    } catch {
+      // Zone loop is decorative.
+    }
+  }
+
+  stopZoneLoop() {
+    this.rampStem("zoneSample", 0);
+    if (!this.zoneLoopPlayer || !window.Tone) return;
+    try {
+      if (this.zoneLoopPlayer.state === "started") {
+        this.zoneLoopPlayer.stop(window.Tone.now() + 0.42);
+      }
+    } catch {
+      // Zone loop is decorative.
+    }
+  }
+
   setStage(index) {
     if (!window.Tone) return;
     this.currentStage = index;
@@ -699,6 +843,7 @@ class AudioDirector {
 
   playStageStinger(index) {
     if (!this.ready || !this.synths || !window.Tone) return;
+    if (index > 0) this.playStinger(`stage${index + 1}`, -1);
     const banks = [
       ["C4", "G4", "D5", "G5"],
       ["D4", "A4", "E5", "A5"],
@@ -843,12 +988,28 @@ class AudioDirector {
 
   move() {
     this.eventPulse = Math.max(this.eventPulse, 0.18);
+    const key = this.moveVariant % 2 === 0 ? "moveA" : "moveB";
+    this.moveVariant += 1;
+    this.playSfx(key, -13);
     this.inputNote(0, "32n", 0.048, 0.2);
   }
 
   rotate() {
     this.eventPulse = Math.max(this.eventPulse, 0.28);
+    const key = this.rotateVariant % 2 === 0 ? "rotateA" : "rotateB";
+    this.rotateVariant += 1;
+    this.playSfx(key, -10);
     this.inputNote(2, "32n", 0.07, 0.28);
+  }
+
+  softDrop() {
+    this.eventPulse = Math.max(this.eventPulse, 0.16);
+    const now = performance.now();
+    if (now - this.lastSoftDropAt > 52) {
+      this.lastSoftDropAt = now;
+      this.playSfx("softDrop", -17);
+    }
+    this.inputNote(1, "32n", 0.035, 0.14);
   }
 
   drop() {
@@ -858,6 +1019,7 @@ class AudioDirector {
     this.dropPulse = Math.max(this.dropPulse, 1);
     this.backingPulse = Math.max(this.backingPulse, 0.56);
     this.backingDuck = Math.max(this.backingDuck, 0.68);
+    this.playSfx("hardDrop", -2);
     try {
       const time = window.Tone.Transport?.nextSubdivision?.("16n");
       this.synths.impact.triggerAttackRelease("C2", "16n", time, 0.34);
@@ -867,7 +1029,12 @@ class AudioDirector {
     }
   }
 
-  clear(lines) {
+  lock(cellCount = 0) {
+    this.eventPulse = Math.max(this.eventPulse, 0.22);
+    this.playSfx(cellCount >= 4 ? "lock" : "lockSoft", -9);
+  }
+
+  clear(lines, combo = 0, zoneActive = false) {
     if (!this.ready || !this.synths) return;
     const chords = {
       1: ["C5", "G5"],
@@ -875,6 +1042,12 @@ class AudioDirector {
       3: ["D5", "F5", "A5", "C6"],
       4: ["C5", "E5", "G5", "B5", "D6"],
     };
+    const lineKey = `clear${clamp(lines, 1, 4)}`;
+    this.playSfx(lineKey, lines >= 4 ? -1 : -3);
+    if (combo >= 8) this.playSfx("combo8", -5, 0.05);
+    else if (combo >= 4) this.playSfx("combo4", -6, 0.04);
+    else if (combo >= 2) this.playSfx("combo2", -7, 0.03);
+    if (zoneActive) this.playSfx("zoneBank", -7, 0.02);
     this.gestureHeat = Math.max(this.gestureHeat, 0.48 + lines * 0.09);
     this.eventPulse = Math.max(this.eventPulse, 0.72 + lines * 0.08);
     this.clearPulse = Math.max(this.clearPulse, lines >= 4 ? 1 : 0.68);
@@ -907,6 +1080,9 @@ class AudioDirector {
     this.downbeatPulse = Math.max(this.downbeatPulse, 1);
     this.backingPulse = Math.max(this.backingPulse, 0.82);
     this.backingDuck = Math.max(this.backingDuck, 0.44);
+    this.playSfx("zoneStart", -1);
+    this.playStinger("zoneStart", -2);
+    this.startZoneLoop();
     this.rampStem("zone", 0.52);
     this.note("C5", "4n", 0.28);
     setTimeout(() => this.note("G5", "4n", 0.22), 80);
@@ -914,10 +1090,17 @@ class AudioDirector {
 
   zoneEnd(lines) {
     if (!this.ready || !this.synths) return;
+    this.stopZoneLoop();
     this.eventPulse = Math.max(this.eventPulse, lines > 0 ? 1 : 0.42);
     this.clearPulse = Math.max(this.clearPulse, lines > 0 ? 1 : 0.35);
     this.backingPulse = Math.max(this.backingPulse, lines > 0 ? 1 : 0.42);
     this.backingDuck = Math.max(this.backingDuck, lines > 0 ? 0.92 : 0.36);
+    if (lines > 0) {
+      this.playSfx("zoneBurst", -1);
+      this.playStinger("zoneEndSuccess", -2);
+    } else {
+      this.playStinger("zoneEndEmpty", -5);
+    }
     try {
       const time = window.Tone.Transport?.nextSubdivision?.("8n");
       this.rampStem("zone", 0.04);
@@ -953,6 +1136,22 @@ class AudioDirector {
     this.inputStep = (this.inputStep + 1) % 64;
     this.gestureHeat = Math.max(this.gestureHeat, heat);
     this.note(note, duration, velocity + this.arrangement * 0.035);
+  }
+
+  ui(kind = "click") {
+    const map = {
+      click: ["uiClick", -8],
+      start: ["uiStart", -3],
+      back: ["uiBack", -7],
+      pause: ["uiPause", -7],
+      resume: ["uiResume", -7],
+      ranking: ["uiRanking", -5],
+      submit: ["uiSubmit", -5],
+      error: ["uiError", -5],
+      gameOver: ["gameOver", -3],
+    };
+    const [key, volume] = map[kind] || map.click;
+    this.playSfx(key, volume);
   }
 }
 
@@ -1123,7 +1322,7 @@ class FallingBlockCore {
     if (!this.collides(this.active, 0, 1)) {
       this.active.y += 1;
       this.lockTimer = 0;
-      if (manual) this.callbacks.onMove?.();
+      if (manual) this.callbacks.onSoftDrop?.();
       return true;
     }
     if (manual) this.lockTimer = Math.min(this.lockDelay, this.lockTimer + 85);
@@ -1221,7 +1420,9 @@ class FallingBlockCore {
     const comboBonus = Math.max(0, this.combo - 1) * 50 * this.level;
     const delta = SCORE_TABLE[lineCount] * this.level + comboBonus;
     this.score += delta;
+    const previousLumen = this.lumen;
     this.lumen = clamp(this.lumen + lineCount * 0.11 + (lineCount >= 4 ? 0.09 : 0), 0, 1);
+    const lumenReady = previousLumen < 0.3 && this.lumen >= 0.3;
     if (this.zoneActive) {
       this.zoneLines += lineCount;
       this.totalZoneLines += lineCount;
@@ -1235,6 +1436,7 @@ class FallingBlockCore {
       level: this.level,
       score: this.score,
       zoneActive: this.zoneActive,
+      lumenReady,
     });
     return lineCount;
   }
@@ -4169,13 +4371,22 @@ class LumenShiftApp {
       });
     });
     this.elements.play.addEventListener("click", () => this.startGame("journey"));
-    this.elements.rank.addEventListener("click", () => this.openRankingOnly());
-    this.elements.home.addEventListener("click", () => this.openMenu());
+    this.elements.rank.addEventListener("click", () => {
+      this.playUiSound("ranking");
+      this.openRankingOnly();
+    });
+    this.elements.home.addEventListener("click", () => {
+      this.audio.ui("back");
+      this.openMenu();
+    });
     this.elements.pauseButton.addEventListener("click", () => this.togglePause());
     this.elements.resume.addEventListener("click", () => this.togglePause(false));
     this.elements.restart.addEventListener("click", () => this.startGame(this.modeKey));
     this.elements.again.addEventListener("click", () => this.startGame(this.modeKey));
-    this.elements.menuButton.addEventListener("click", () => this.openMenu());
+    this.elements.menuButton.addEventListener("click", () => {
+      this.audio.ui("back");
+      this.openMenu();
+    });
     this.elements.submit.addEventListener("click", () => this.submitScore());
     this.elements.nickname.addEventListener("change", () => writeStorage("nickname", this.elements.nickname.value.trim()));
     document.addEventListener("visibilitychange", () => {
@@ -4195,18 +4406,24 @@ class LumenShiftApp {
         this.view.actionPulse("rotate", this.core?.snapshot?.());
         this.haptic(7);
       },
+      onSoftDrop: () => {
+        this.audio.softDrop();
+        this.view.actionPulse("move", this.core?.snapshot?.());
+        this.haptic(3);
+      },
       onHardDrop: (distance) => {
         this.audio.drop();
         this.view.actionPulse("drop", this.core?.snapshot?.(), distance);
         this.haptic([12, 22, 16]);
       },
       onHold: () => {
-        this.audio.rotate();
+        this.audio.playSfx("hold", -8);
         this.view.actionPulse("rotate", this.core?.snapshot?.());
         this.haptic(8);
       },
       onLock: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
+        this.audio.lock(info.cells?.length || 0);
         this.view.pieceLock(info.cells, stage, false);
       },
       onStage: (index, stage) => {
@@ -4216,7 +4433,11 @@ class LumenShiftApp {
       },
       onClear: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
-        this.audio.clear(info.lines);
+        this.audio.clear(info.lines, info.combo, info.zoneActive);
+        if (info.lumenReady) {
+          this.audio.playSfx("chargeFull", -4, 0.06);
+          this.audio.playStinger("zoneReady", -5, 0.08);
+        }
         this.view.lineClear(info.rows, info.lines, stage, info.cells);
         this.showEvent(this.clearLabel(info.lines, info.combo, info.zoneActive));
         this.haptic(info.lines >= 4 ? [28, 36, 42] : [14, 20, 10]);
@@ -4279,12 +4500,18 @@ class LumenShiftApp {
     this.updateHud(snapshot);
   }
 
+  async playUiSound(kind) {
+    await this.audio.unlock({ startMusic: false });
+    this.audio.ui(kind);
+  }
+
   async startGame(modeKey) {
     this.modeKey = modeKey || this.modeKey || "journey";
     writeStorage("mode", this.modeKey);
     this.hideAllScreens();
     this.setZoneVeil(false, true);
-    await this.audio.unlock();
+    await this.audio.unlock({ startMusic: true });
+    this.audio.ui("start");
     this.rank = new RankClient();
     if (MODES[this.modeKey]?.ranked) this.rank.start().catch(() => null);
     this.core.callbacks = this.makeCallbacks();
@@ -4311,7 +4538,10 @@ class LumenShiftApp {
     else if (action === "hold") this.core.hold();
     else if (action === "zone") {
       const ok = this.core.activateZone();
-      if (!ok) this.showEvent("CHARGE");
+      if (!ok) {
+        this.audio.playSfx("chargeSmall", -10);
+        this.showEvent("CHARGE");
+      }
     }
   }
 
@@ -4319,6 +4549,7 @@ class LumenShiftApp {
     if (this.core.status === "menu" || this.core.status === "finished") return;
     if (forcePause === true && this.core.status !== "playing") return;
     const status = forcePause === true ? (this.core.status = "paused") : this.core.togglePause();
+    this.audio.ui(status === "paused" ? "pause" : "resume");
     if (status === "paused") {
       this.elements.pause.classList.remove("is-hidden");
     } else if (status === "playing") {
@@ -4352,6 +4583,8 @@ class LumenShiftApp {
     this.hideAllScreens();
     this.rankOnly = false;
     this.elements.result.classList.remove("is-hidden");
+    this.audio.ui("gameOver");
+    this.audio.playStinger("gameOver", -4);
     this.elements.nickname.parentElement.classList.toggle("is-hidden", !MODES[snapshot.modeKey]?.ranked || snapshot.score <= 0);
     this.elements.resultTitle.textContent = title;
     this.elements.resultMode.textContent = MODES[snapshot.modeKey]?.label || "Journey";
@@ -4390,9 +4623,11 @@ class LumenShiftApp {
         zone_lines: snapshot.totalZoneLines,
         elapsed_ms: Math.floor(snapshot.elapsed),
       });
+      this.audio.ui("submit");
       this.elements.submitStatus.textContent = `Rank ${data.rank || "-"} saved.`;
       await this.renderRanks();
     } catch (err) {
+      this.audio.ui("error");
       this.elements.submitStatus.textContent = err.message || "Submit failed.";
     } finally {
       this.elements.submit.disabled = false;

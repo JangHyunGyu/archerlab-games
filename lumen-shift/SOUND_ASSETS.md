@@ -14,6 +14,7 @@ lumen-shift/assets/audio/
 - 내부 프로젝트에서 재사용한 SFX: 주로 `blockpang`
 - 현재 임시 BGM: `lumen-temp-bgm.mp3`
 - 음악 후보로 복사한 파일: `jewelria` 게임 루프
+- 코드 연결 상태: 조작, 하드드롭, 블럭 고정, 라인 클리어, combo, Lumen Zone, UI, game over SFX가 `js/main.js`의 `AudioDirector`에 연결됨
 - 아직 진짜로 필요한 것: 스테이지별 stem 분리 음악
 
 ## 왜 이렇게 나누는가
