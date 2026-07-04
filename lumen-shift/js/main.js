@@ -8,37 +8,42 @@ const STORAGE_PREFIX = "lumen-shift";
 
 const STAGES = [
   {
-    name: "Deep Bloom",
+    name: "Deep Tide",
+    kind: "tide",
     colors: [0x68e9ff, 0x7cffb0, 0xc9f7ff],
-    bg: [0x070913, 0x09243a],
+    bg: [0x00030a, 0x021c2b],
     accent: 0x68e9ff,
     bpm: 88,
   },
   {
-    name: "Neon Pulse",
-    colors: [0xff5bd4, 0x68e9ff, 0x8d6cff],
-    bg: [0x090719, 0x221145],
-    accent: 0xff5bd4,
+    name: "Ember Veil",
+    kind: "ember",
+    colors: [0xffd36e, 0xff7a2f, 0xffffff],
+    bg: [0x080300, 0x2a0b00],
+    accent: 0xffd36e,
     bpm: 104,
   },
   {
-    name: "Solar Glass",
-    colors: [0xffd36e, 0xffffff, 0x68e9ff],
-    bg: [0x100c10, 0x3b2610],
-    accent: 0xffd36e,
+    name: "Bloom Signal",
+    kind: "signal",
+    colors: [0xff5bd4, 0x68e9ff, 0x8d6cff],
+    bg: [0x05020d, 0x1f0732],
+    accent: 0xff5bd4,
     bpm: 112,
   },
   {
-    name: "Abyss Signal",
-    colors: [0x8d6cff, 0x2dd9ff, 0xff5d73],
-    bg: [0x050813, 0x10123d],
+    name: "Void Aurora",
+    kind: "aurora",
+    colors: [0x8d6cff, 0x2dd9ff, 0x7cffb0],
+    bg: [0x02020b, 0x07143b],
     accent: 0x8d6cff,
     bpm: 118,
   },
   {
-    name: "Lumen Core",
-    colors: [0xffffff, 0xff5bd4, 0xffd36e, 0x68e9ff],
-    bg: [0x08070f, 0x251036],
+    name: "White Core",
+    kind: "core",
+    colors: [0xffffff, 0x68e9ff, 0xffd36e, 0xff5bd4],
+    bg: [0x030306, 0x1d1d2d],
     accent: 0xffffff,
     bpm: 126,
   },
@@ -807,6 +812,8 @@ class PixiView {
     this.zonePulse = 0;
     this.beat = 0;
     this.comboPulse = 0;
+    this.worldSurge = 0;
+    this.swarmTick = 0;
     this.flash = 0;
     this.shake = 0;
     this.lastLayoutKey = "";
@@ -817,11 +824,11 @@ class PixiView {
     const small = Math.min(window.innerWidth, window.innerHeight) < 420;
     return {
       coarse,
-      dpr: Math.min(window.devicePixelRatio || 1, coarse ? 1.35 : 1.75),
-      bgStars: coarse ? (small ? 70 : 110) : 190,
-      swarmParticles: coarse ? (small ? 760 : 1040) : 2300,
-      glowParticles: coarse ? (small ? 150 : 230) : 520,
-      maxParticles: coarse ? 300 : 860,
+      dpr: Math.min(window.devicePixelRatio || 1, coarse ? 1.15 : 1.75),
+      bgStars: coarse ? (small ? 48 : 82) : 190,
+      swarmParticles: coarse ? (small ? 540 : 780) : 1900,
+      glowParticles: coarse ? (small ? 112 : 170) : 440,
+      maxParticles: coarse ? 230 : 720,
     };
   }
 
@@ -907,6 +914,12 @@ class PixiView {
   applyBloomFilters() {
     const PIXI = window.PIXI;
     if (!PIXI?.BlurFilter) return;
+    const allowFilter = !this.quality.coarse && Math.min(window.innerWidth, window.innerHeight) > 1000;
+    if (!allowFilter) {
+      this.bloomLayer.filters = null;
+      this.sparkLayer.filters = null;
+      return;
+    }
     const makeBlur = (strength, quality) => {
       try {
         return new PIXI.BlurFilter({ strength, quality });
@@ -1121,9 +1134,11 @@ class PixiView {
         band,
         lane: Math.random(),
         phase: Math.random() * Math.PI * 2,
-        orbit: Math.random() * 0.8 + 0.2,
-        size: Math.random() * 2.2 + 0.45,
-        speed: Math.random() * 0.45 + 0.22,
+        orbit: Math.random() * 1.0 + 0.12,
+        size: Math.pow(Math.random(), 1.35) * 3.2 + 0.34,
+        speed: Math.random() * 0.64 + 0.18,
+        depth: Math.random(),
+        side: Math.random() > 0.5 ? 1 : -1,
         colorBias: Math.random(),
       };
     });
@@ -1182,41 +1197,51 @@ class PixiView {
     this.stagePulse = Math.max(0, this.stagePulse - dt * 0.0016);
     this.zonePulse = snapshot.zoneActive ? Math.min(1, this.zonePulse + dt * 0.0038) : Math.max(0, this.zonePulse - dt * 0.0024);
     this.comboPulse = Math.max(0, this.comboPulse - dt * 0.002);
+    this.worldSurge = Math.max(0, this.worldSurge - dt * 0.0015);
     g.clear();
     const maxDim = Math.max(layout.w, layout.h);
     const beatPulse = Math.pow((Math.sin(this.beat * Math.PI * 2) + 1) * 0.5, 5);
-    const energy = clamp(0.16 + snapshot.combo * 0.035 + this.zonePulse * 0.48 + this.stagePulse * 0.42 + beatPulse * 0.08, 0.12, 0.88);
+    const energy = clamp(0.12 + snapshot.combo * 0.04 + this.zonePulse * 0.54 + this.stagePulse * 0.52 + this.worldSurge * 0.46 + beatPulse * 0.12, 0.1, 1);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
 
-    g.rect(0, 0, layout.w, layout.h).fill({ color: stage.bg[0], alpha: 0.58 + this.zonePulse * 0.16 });
-    g.circle(cx, cy, maxDim * (0.38 + energy * 0.18))
-      .fill({ color: stage.bg[1], alpha: 0.08 + energy * 0.22 });
-    g.circle(layout.w * 0.24, layout.h * 0.84, maxDim * 0.34)
-      .fill({ color: stage.colors[1] || stage.accent, alpha: 0.07 + energy * 0.05 });
-    g.circle(layout.w * 0.86, layout.h * 0.16, maxDim * 0.28)
-      .fill({ color: stage.accent, alpha: 0.06 + energy * 0.06 });
+    g.rect(0, 0, layout.w, layout.h).fill({ color: 0x000006, alpha: 0.9 });
+    g.rect(0, 0, layout.w, layout.h).fill({ color: stage.bg[0], alpha: 0.42 + this.zonePulse * 0.12 });
+    g.circle(cx, cy, maxDim * (0.38 + energy * 0.15))
+      .fill({ color: stage.bg[1], alpha: 0.05 + energy * 0.16 });
+    g.circle(cx, cy, layout.boardW * (0.78 + energy * 0.16))
+      .fill({ color: 0x000000, alpha: 0.28 + energy * 0.18 });
+    g.circle(layout.w * 0.12, layout.h * 0.86, maxDim * 0.42)
+      .fill({ color: stage.colors[1] || stage.accent, alpha: 0.035 + energy * 0.07 });
+    g.circle(layout.w * 0.9, layout.h * 0.08, maxDim * 0.36)
+      .fill({ color: stage.accent, alpha: 0.035 + energy * 0.075 });
 
-    for (let i = 0; i < 7; i += 1) {
-      const phase = (this.beat * 0.22 + i / 7) % 1;
-      const radius = layout.boardW * (0.68 + phase * 2.35);
-      const alpha = (1 - phase) * (0.045 + energy * 0.07);
-      g.circle(cx, cy, radius)
-        .stroke({ color: i % 2 ? stage.accent : 0xffffff, alpha, width: 1 + energy * 2 });
-    }
-
-    const waveCount = layout.portrait ? 6 : 9;
-    for (let i = 0; i < waveCount; i += 1) {
-      const y = layout.h * (0.16 + i / (waveCount + 0.5) * 0.68);
-      const amp = 8 + energy * 24 + i * 0.8;
-      const step = Math.max(18, layout.w / 24);
-      g.moveTo(-20, y);
-      for (let x = -20; x <= layout.w + 24; x += step) {
-        const yy = y + Math.sin(x * 0.012 + t * (0.9 + i * 0.05) + i) * amp;
-        g.lineTo(x, yy);
+    const ribbonBands = this.quality.coarse ? 4 : 6;
+    const ribbonSegments = this.quality.coarse ? 36 : 64;
+    const ribbonPasses = this.quality.coarse ? 1 : 2;
+    for (let band = 0; band < ribbonBands; band += 1) {
+      const phase = (t * (0.045 + band * 0.008) + band * 0.137 + this.stagePulse * 0.08) % 1;
+      const side = band % 2 ? -1 : 1;
+      const width = 1.2 + energy * 7 + band * 0.6;
+      const alpha = (0.025 + energy * 0.075) * (1 - band * 0.08);
+      const color = stage.colors[band % stage.colors.length] || stage.accent;
+      for (let pass = 0; pass < ribbonPasses; pass += 1) {
+        const offset = (pass - 0.5) * layout.boardW * 0.16;
+        for (let i = 0; i <= ribbonSegments; i += 1) {
+          const p = i / ribbonSegments;
+          const angle = -Math.PI * (0.9 + phase * 0.38) + p * Math.PI * (1.18 + phase * 0.28);
+          const rx = layout.boardW * (1.05 + band * 0.19 + pass * 0.1);
+          const ry = layout.boardH * (0.28 + band * 0.045);
+          const x = cx + Math.cos(angle) * rx * side + offset + Math.sin(t * 0.5 + p * 8 + band) * 14;
+          const y = layout.boardY + layout.boardH * (0.1 + band * 0.045) + Math.sin(angle) * ry + Math.cos(t * 0.42 + p * 7) * 10;
+          if (i === 0) g.moveTo(x, y);
+          else g.lineTo(x, y);
+        }
+        g.stroke({ color, alpha: alpha * (pass ? 0.55 : 1), width: width * (pass ? 0.45 : 1) });
       }
-      g.stroke({ color: stage.colors[i % stage.colors.length] || stage.accent, alpha: 0.035 + energy * 0.07, width: 1 + energy * 1.2 });
     }
+
+    this.drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy);
 
     const drift = dt * 0.001;
     for (const star of this.bgStars) {
@@ -1244,63 +1269,161 @@ class PixiView {
     }
   }
 
+  drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy) {
+    const g = this.bg;
+    const colors = stage.colors || [stage.accent, 0xffffff];
+    const kind = stage.kind || "tide";
+    const pulse = this.stagePulse + this.worldSurge + this.zonePulse * 0.65;
+    const lite = this.quality.coarse;
+
+    if (kind === "ember") {
+      for (let i = 0; i < (lite ? 5 : 9); i += 1) {
+        const y = layout.h * (0.18 + i * 0.085);
+        const drift = (t * (18 + i * 2.5) + i * 31) % (layout.w + 220);
+        g.moveTo(drift - 190, y + Math.sin(t * 0.8 + i) * 24);
+        g.lineTo(drift - 40, y - 20 + Math.cos(t * 0.4 + i) * 12);
+        g.stroke({ color: colors[i % colors.length], alpha: 0.08 + energy * 0.11, width: 1 + energy * 3 });
+      }
+      g.circle(cx, layout.boardY + layout.boardH + layout.cell * 1.5, layout.boardW * (1.1 + energy * 0.7))
+        .fill({ color: stage.accent, alpha: 0.04 + energy * 0.08 });
+    } else if (kind === "signal") {
+      for (let i = 0; i < (lite ? 5 : 10); i += 1) {
+        const phase = (t * 0.12 + i * 0.1) % 1;
+        g.circle(cx, cy, layout.boardW * (0.72 + phase * (3.8 + i * 0.1)))
+          .stroke({ color: i % 2 ? colors[0] : colors[1], alpha: (1 - phase) * (0.035 + energy * 0.065), width: 1 + energy * 2.5 });
+      }
+      const dotCount = lite ? 22 : 42;
+      for (let i = 0; i < dotCount; i += 1) {
+        const a = i / dotCount * Math.PI * 2 + t * 0.08;
+        const r = layout.boardW * (1.5 + Math.sin(i * 2.7) * 0.36);
+        g.circle(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.72, 1.2 + energy * 2.8)
+          .fill({ color: colors[i % colors.length], alpha: 0.08 + energy * 0.16 });
+      }
+    } else if (kind === "aurora") {
+      for (let i = 0; i < (lite ? 4 : 8); i += 1) {
+        const baseX = layout.w * (-0.1 + i * 0.18 + Math.sin(t * 0.12 + i) * 0.03);
+        g.moveTo(baseX, -40);
+        for (let y = -40; y <= layout.h + 60; y += Math.max(lite ? 46 : 26, layout.h / (lite ? 14 : 24))) {
+          const x = baseX + y * 0.18 + Math.sin(y * 0.014 + t * (0.9 + i * 0.04)) * (28 + energy * 42);
+          g.lineTo(x, y);
+        }
+        g.stroke({ color: colors[i % colors.length], alpha: 0.035 + energy * 0.09, width: 6 + energy * 10 });
+      }
+    } else if (kind === "core") {
+      const beamW = layout.boardW * (0.18 + energy * 0.16 + pulse * 0.24);
+      g.roundRect(cx - beamW / 2, -layout.cell, beamW, layout.h + layout.cell * 2, beamW / 2)
+        .fill({ color: 0xffffff, alpha: 0.025 + energy * 0.085 + pulse * 0.08 });
+      const ringCount = lite ? 4 : 7;
+      for (let i = 0; i < ringCount; i += 1) {
+        const phase = (t * 0.18 + i / ringCount) % 1;
+        g.circle(cx, cy, layout.boardW * (0.64 + phase * 2.5))
+          .stroke({ color: i % 2 ? stage.accent : 0xffffff, alpha: (1 - phase) * (0.04 + energy * 0.11), width: 1.4 + energy * 3.5 });
+      }
+    } else {
+      const waveCount = lite ? (layout.portrait ? 4 : 6) : (layout.portrait ? 8 : 12);
+      for (let i = 0; i < waveCount; i += 1) {
+        const y = layout.h * (0.12 + i / (waveCount + 0.5) * 0.78);
+        const amp = 14 + energy * 42 + i * 1.4;
+        const step = Math.max(lite ? 34 : 16, layout.w / (lite ? 18 : 32));
+        g.moveTo(-30, y);
+        for (let x = -30; x <= layout.w + 36; x += step) {
+          const yy = y + Math.sin(x * 0.015 + t * (0.96 + i * 0.055) + i) * amp;
+          g.lineTo(x, yy);
+        }
+        g.stroke({ color: colors[i % colors.length] || stage.accent, alpha: 0.035 + energy * 0.085, width: 1.2 + energy * 2.6 });
+      }
+    }
+  }
+
   drawParticleSwarm(layout, stage, t, energy, snapshot) {
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
     const colors = stage.colors || [stage.accent, 0xffffff];
-    const stageWarm = stage.name && /Solar|Core/i.test(stage.name);
-    const baseAlpha = layout.portrait ? 0.34 : 0.42;
-    const zoneBoost = snapshot.zoneActive ? 0.46 : 0;
-    const comboBoost = Math.min(0.3, snapshot.combo * 0.045);
+    const stageWarm = stage.kind === "ember" || stage.kind === "core";
+    const baseAlpha = layout.portrait ? 0.32 : 0.4;
+    const zoneBoost = snapshot.zoneActive ? 0.5 : 0;
+    const comboBoost = Math.min(0.32, snapshot.combo * 0.048);
+    const flowBoost = 1 + this.zonePulse * 0.9 + this.stagePulse * 0.8 + this.worldSurge * 0.65;
+    this.swarmTick = (this.swarmTick + 1) % 120;
+    if (this.quality.coarse && this.swarmTick % 2 === 1) return;
 
     for (const entry of this.swarmSprites) {
       const p = entry.particle;
-      const travel = (p.lane + t * 0.018 * p.speed + this.stagePulse * 0.03) % 1;
-      const ribbon = p.band < 0.58;
+      const travel = (p.lane + t * 0.022 * p.speed * flowBoost + this.stagePulse * 0.04 + this.worldSurge * 0.05) % 1;
+      const ribbon = p.band < 0.64;
       let x;
       let y;
       let rotation = 0;
       if (ribbon) {
-        const angle = -Math.PI * 0.96 + travel * Math.PI * 1.62;
-        const rx = layout.boardW * (0.82 + p.orbit * 1.55);
-        const ry = layout.boardH * (0.28 + p.orbit * 0.55);
-        x = cx + Math.cos(angle) * rx + Math.sin(t * 0.7 + p.phase) * 18;
-        y = layout.boardY + layout.boardH * (0.1 + p.orbit * 0.18) + Math.sin(angle) * ry + Math.cos(t * 0.9 + p.phase) * 15;
-        rotation = angle + Math.PI * 0.5;
-      } else {
+        if (stage.kind === "ember") {
+          const angle = -Math.PI * 0.15 + travel * Math.PI * 1.22 + p.phase * 0.08;
+          const rx = layout.boardW * (1.0 + p.orbit * 2.25);
+          const ry = layout.boardH * (0.44 + p.orbit * 0.34);
+          x = cx + Math.cos(angle) * rx * p.side + Math.sin(t * 1.2 + p.phase) * 26;
+          y = layout.boardY + layout.boardH * (0.88 - p.orbit * 0.3) - Math.abs(Math.sin(angle)) * ry + Math.cos(t * 0.7 + p.phase) * 20;
+          rotation = -Math.PI * 0.5 + angle * 0.2;
+        } else if (stage.kind === "signal" || stage.kind === "core") {
+          const angle = travel * Math.PI * 2 + p.phase;
+          const rx = layout.boardW * (0.95 + p.orbit * 2.25);
+          const ry = layout.boardH * (0.3 + p.orbit * 0.48);
+          x = cx + Math.cos(angle) * rx + Math.sin(t * 0.8 + p.phase) * 18;
+          y = cy + Math.sin(angle * 0.78) * ry + Math.cos(t * 0.7 + p.phase) * 16;
+          rotation = angle + Math.PI * 0.5;
+        } else {
+          const angle = -Math.PI * 1.08 + travel * Math.PI * 1.78;
+          const rx = layout.boardW * (0.98 + p.orbit * 2.05);
+          const ry = layout.boardH * (0.22 + p.orbit * 0.58);
+          const crest = stage.kind === "aurora" ? Math.sin(travel * Math.PI * 2 + p.phase) * layout.boardH * 0.18 : 0;
+          x = cx + Math.cos(angle) * rx + Math.sin(t * 0.72 + p.phase) * 22;
+          y = layout.boardY + layout.boardH * (0.08 + p.orbit * 0.16) + Math.sin(angle) * ry + crest + Math.cos(t * 0.8 + p.phase) * 15;
+          rotation = angle + Math.PI * 0.5;
+        }
+      } else if (p.band < 0.86) {
         const angle = travel * Math.PI * 2 + p.phase;
-        const rx = layout.boardW * (0.82 + p.orbit * 1.95);
-        const ry = layout.boardH * (0.48 + p.orbit * 0.42);
-        x = cx + Math.cos(angle) * rx + Math.sin(t * 0.55 + p.phase) * 22;
-        y = cy + Math.sin(angle * 0.82) * ry + Math.cos(t * 0.65 + p.phase) * 18;
+        const sideBias = stage.kind === "aurora" ? Math.sin(t * 0.13 + p.phase) : p.side;
+        const rx = layout.boardW * (1.16 + p.orbit * 2.55);
+        const ry = layout.boardH * (0.5 + p.orbit * 0.45);
+        x = cx + sideBias * rx + Math.cos(angle) * layout.boardW * (0.22 + p.depth * 0.34);
+        y = cy + Math.sin(angle * 0.72) * ry + Math.cos(t * 0.5 + p.phase) * 24;
+        rotation = angle;
+      } else {
+        const drift = (travel + p.phase * 0.03) % 1;
+        const angle = p.phase + t * 0.06 * p.side;
+        x = ((p.seed * 37.1 + drift * layout.w * (1.15 + p.depth * 0.45)) % (layout.w + 180)) - 90;
+        y = layout.h * ((p.seed * 0.013) % 1) + Math.sin(angle) * (22 + p.depth * 34);
         rotation = angle;
       }
       const nearBoard = x > layout.boardX - layout.boardW * 0.2
         && x < layout.boardX + layout.boardW * 1.2
         && y > layout.boardY - layout.cell * 1.2
         && y < layout.boardY + layout.boardH + layout.cell * 1.2;
-      if ((nearBoard && p.band > 0.28) || x < -24 || x > layout.w + 24 || y < -24 || y > layout.h + 24) {
+      const insideBoard = x > layout.boardX - layout.cell * 0.25
+        && x < layout.boardX + layout.boardW + layout.cell * 0.25
+        && y > layout.boardY - layout.cell * 0.25
+        && y < layout.boardY + layout.boardH + layout.cell * 0.25;
+      if (insideBoard || (nearBoard && p.band > 0.7) || x < -64 || x > layout.w + 64 || y < -64 || y > layout.h + 64) {
         this.hideParticleNode(entry.sprite);
         if (entry.glow) this.hideParticleNode(entry.glow);
         continue;
       }
 
-      const twinkle = 0.45 + Math.sin(t * (3.4 + p.speed) + p.phase) * 0.35;
+      const twinkle = 0.48 + Math.sin(t * (3.6 + p.speed * 1.8) + p.phase) * 0.36;
       const color = p.colorBias > 0.72
         ? 0xffffff
         : (p.colorBias > 0.42 ? colors[0] : (stageWarm ? 0xffd36e : (colors[1] || stage.accent)));
-      const alpha = clamp(baseAlpha * twinkle + energy * 0.34 + zoneBoost + comboBoost, 0.08, 0.95);
-      const size = p.size * (1.18 + energy * 2.4 + (snapshot.zoneActive ? 1.55 : 0));
-      const spriteScale = Math.max(0.055, size / 14);
-      this.showParticleNode(entry.sprite, x, y, color, alpha, spriteScale * (ribbon ? 1.65 : 1.18), rotation);
+      const stageAlpha = stage.kind === "core" ? 0.12 : 0;
+      const alpha = clamp(baseAlpha * twinkle + energy * 0.36 + zoneBoost + comboBoost + stageAlpha, 0.08, 0.98);
+      const size = p.size * (1.12 + energy * 2.55 + this.worldSurge * 1.4 + (snapshot.zoneActive ? 1.75 : 0));
+      const spriteScale = Math.max(0.048, size / 14);
+      this.showParticleNode(entry.sprite, x, y, color, alpha, spriteScale * (ribbon ? 1.78 : 1.12), rotation);
       if (entry.glow) {
         this.showParticleNode(
           entry.glow,
           x,
           y,
           color,
-          alpha * (snapshot.zoneActive ? 0.42 : 0.26),
-          spriteScale * (snapshot.zoneActive ? 6.2 : 4.4),
+          alpha * (snapshot.zoneActive ? 0.48 : 0.3),
+          spriteScale * (snapshot.zoneActive ? 7.0 : 5.0),
           rotation,
         );
       }
@@ -1348,24 +1471,39 @@ class PixiView {
     g.clear();
 
     const boardEnergy = clamp(this.zonePulse + this.comboPulse * 0.55 + (snapshot.combo >= 2 ? 0.18 : 0), 0, 1);
-    g.roundRect(bx - 10, by - 10, layout.boardW + 20, layout.boardH + 20, 16)
-      .fill({ color: 0x02050d, alpha: 0.68 })
-      .stroke({ color: stage.accent, alpha: 0.25 + boardEnergy * 0.48, width: 1.5 + boardEnergy * 2.5 });
-    g.roundRect(bx - 20, by - 20, layout.boardW + 40, layout.boardH + 40, 22)
-      .stroke({ color: stage.accent, alpha: 0.04 + boardEnergy * 0.14, width: 6 + boardEnergy * 8 });
-    g.roundRect(bx - 4, by - 4, layout.boardW + 8, layout.boardH + 8, 10)
-      .stroke({ color: 0xffffff, alpha: 0.12, width: 1 });
+    g.roundRect(bx - 28, by - 28, layout.boardW + 56, layout.boardH + 56, 8)
+      .fill({ color: 0x000000, alpha: 0.18 + boardEnergy * 0.18 });
+    g.roundRect(bx - 18, by - 18, layout.boardW + 36, layout.boardH + 36, 6)
+      .stroke({ color: stage.accent, alpha: 0.05 + boardEnergy * 0.22, width: 7 + boardEnergy * 12 });
+    g.roundRect(bx - 7, by - 7, layout.boardW + 14, layout.boardH + 14, 4)
+      .fill({ color: 0x00030a, alpha: 0.42 })
+      .stroke({ color: stage.accent, alpha: 0.34 + boardEnergy * 0.52, width: 1.2 + boardEnergy * 2.4 });
+    g.rect(bx, by, layout.boardW, layout.boardH)
+      .fill({ color: 0x01040a, alpha: 0.82 });
+    g.rect(bx + 1, by + 1, layout.boardW - 2, layout.boardH - 2)
+      .stroke({ color: 0xffffff, alpha: 0.08 + boardEnergy * 0.12, width: 1 });
 
     const scanY = by + ((performance.now() * 0.035) % layout.boardH);
-    g.rect(bx + 2, scanY, layout.boardW - 4, 2 + boardEnergy * 3)
-      .fill({ color: stage.accent, alpha: 0.035 + boardEnergy * 0.08 });
+    g.rect(bx + 1, scanY, layout.boardW - 2, 1.4 + boardEnergy * 3)
+      .fill({ color: stage.accent, alpha: 0.035 + boardEnergy * 0.1 });
+
+    for (let x = 1; x < COLS; x += 1) {
+      const px = bx + x * cell;
+      g.moveTo(px, by);
+      g.lineTo(px, by + layout.boardH);
+      g.stroke({ color: 0xffffff, alpha: 0.035, width: 1 });
+    }
+    for (let y = 1; y < ROWS; y += 1) {
+      const py = by + y * cell;
+      g.moveTo(bx, py);
+      g.lineTo(bx + layout.boardW, py);
+      g.stroke({ color: 0xffffff, alpha: 0.03, width: 1 });
+    }
 
     for (let y = 0; y < ROWS; y += 1) {
       for (let x = 0; x < COLS; x += 1) {
         const px = bx + x * cell;
         const py = by + y * cell;
-        g.rect(px + 1, py + 1, cell - 2, cell - 2)
-          .fill({ color: 0xffffff, alpha: 0.026 });
         const cellData = snapshot.grid[y][x];
         if (cellData) this.drawBlock(g, px, py, cell, cellData.color, 0.95, false);
       }
@@ -1409,8 +1547,11 @@ class PixiView {
         const px = bx + (piece.x + x) * cell;
         const py = by + gy * cell;
         if (ghost) {
-          g.roundRect(px + cell * 0.18, py + cell * 0.18, cell * 0.64, cell * 0.64, Math.max(3, cell * 0.12))
-            .stroke({ color: piece.color, alpha, width: 2 });
+          const inset = cell * 0.2;
+          g.rect(px + inset, py + inset, cell - inset * 2, cell - inset * 2)
+            .stroke({ color: piece.color, alpha: alpha * 0.9, width: 1.5 });
+          g.circle(px + cell / 2, py + cell / 2, Math.max(1.2, cell * 0.055))
+            .fill({ color: piece.color, alpha: alpha * 0.7 });
         } else {
           this.drawBlock(g, px, py, cell, piece.color, alpha, true);
         }
@@ -1419,39 +1560,49 @@ class PixiView {
   }
 
   drawBlock(g, x, y, size, color, alpha, hot) {
-    const gap = Math.max(1.5, size * 0.08);
-    const radius = Math.max(3, size * 0.14);
-    const glow = hot ? 0.34 : 0.14;
+    const gap = Math.max(1.2, size * 0.075);
+    const radius = Math.max(1.5, size * 0.06);
+    const glow = hot ? 0.58 : 0.28;
     if (hot) {
-      g.roundRect(x + gap - 2, y + gap - 2, size - gap * 2 + 4, size - gap * 2 + 4, radius + 2)
-        .fill({ color, alpha: alpha * 0.28 });
-      g.roundRect(x + gap - 5, y + gap - 5, size - gap * 2 + 10, size - gap * 2 + 10, radius + 6)
-        .stroke({ color, alpha: alpha * 0.22, width: Math.max(2, size * 0.1) });
+      g.roundRect(x + gap - 4, y + gap - 4, size - gap * 2 + 8, size - gap * 2 + 8, radius + 2)
+        .fill({ color, alpha: alpha * 0.24 });
+      g.roundRect(x + gap - 8, y + gap - 8, size - gap * 2 + 16, size - gap * 2 + 16, radius + 3)
+        .stroke({ color, alpha: alpha * 0.22, width: Math.max(2.5, size * 0.12) });
     }
     g.roundRect(x + gap, y + gap, size - gap * 2, size - gap * 2, radius)
-      .fill({ color, alpha })
-      .stroke({ color: 0xffffff, alpha: 0.35, width: 1 });
-    g.roundRect(x + gap * 1.45, y + gap * 1.45, size - gap * 2.9, size - gap * 2.9, radius * 0.72)
+      .fill({ color, alpha: alpha * 0.92 })
+      .stroke({ color: 0xffffff, alpha: hot ? 0.62 : 0.4, width: 1.1 });
+    g.roundRect(x + gap * 1.55, y + gap * 1.55, size - gap * 3.1, size - gap * 3.1, radius)
+      .fill({ color, alpha: alpha * 0.32 })
       .stroke({ color: 0xffffff, alpha: alpha * glow, width: 1 });
-    g.rect(x + gap * 1.6, y + gap * 1.6, size - gap * 3.2, Math.max(2, size * 0.18))
-      .fill({ color: 0xffffff, alpha: alpha * 0.31 });
-    g.circle(x + size * 0.72, y + size * 0.72, Math.max(1.2, size * 0.08))
-      .fill({ color: 0xffffff, alpha: alpha * 0.26 });
+    g.rect(x + gap * 1.8, y + gap * 1.8, size - gap * 3.6, Math.max(2, size * 0.16))
+      .fill({ color: 0xffffff, alpha: alpha * 0.34 });
+    if (size >= 13) {
+      g.moveTo(x + gap * 1.7, y + size - gap * 1.9);
+      g.lineTo(x + size - gap * 1.8, y + gap * 1.7);
+      g.stroke({ color: 0xffffff, alpha: alpha * 0.13, width: 1 });
+      g.circle(x + size * 0.72, y + size * 0.72, Math.max(1.1, size * 0.065))
+        .fill({ color: 0xffffff, alpha: alpha * 0.28 });
+    }
   }
 
   drawMiniPanel(g, panel, label, types, stage) {
     if (!panel || panel.y < 0) return;
-    g.roundRect(panel.x, panel.y, panel.w, panel.h, 10)
-      .fill({ color: 0x02050d, alpha: 0.56 })
-      .stroke({ color: stage.accent, alpha: 0.2, width: 1 });
-    this.drawTinyText(g, label, panel.x + 8, panel.y + 7, 0xffffff, 0.48);
+    g.rect(panel.x, panel.y, panel.w, panel.h)
+      .fill({ color: 0x000000, alpha: 0.16 });
+    g.moveTo(panel.x + 6, panel.y + 8);
+    g.lineTo(panel.x + Math.min(panel.w - 6, 26), panel.y + 8);
+    g.stroke({ color: 0xffffff, alpha: 0.34, width: 1 });
+    g.moveTo(panel.x + 6, panel.y + 12);
+    g.lineTo(panel.x + Math.min(panel.w - 18, 18), panel.y + 12);
+    g.stroke({ color: stage.accent, alpha: 0.2, width: 1 });
     const max = panel.h > 80 ? Math.min(3, types.length) : Math.min(1, types.length);
     for (let i = 0; i < max; i += 1) {
       const type = types[i];
       if (!type) continue;
       const matrix = PIECES[type].matrix;
       const color = PIECES[type].color;
-      const scale = Math.min((panel.w - 24) / matrix[0].length, (panel.h / max - 22) / matrix.length, 17);
+      const scale = Math.min((panel.w - 20) / matrix[0].length, (panel.h / max - 22) / matrix.length, 18);
       const offsetY = panel.y + 24 + i * ((panel.h - 26) / Math.max(1, max));
       const offsetX = panel.x + (panel.w - matrix[0].length * scale) / 2;
       for (let y = 0; y < matrix.length; y += 1) {
@@ -1488,12 +1639,12 @@ class PixiView {
       if (beam.kind === "vertical") {
         const w = beam.width * (0.7 + alpha * 0.9);
         g.roundRect(beam.x - w / 2, layout.boardY - layout.cell, w, layout.boardH + layout.cell * 2, w / 2)
-          .fill({ color: 0xffffff, alpha: 0.08 + alpha * 0.38 });
+          .fill({ color: 0xffffff, alpha: 0.1 + alpha * 0.48 });
         g.roundRect(beam.x - w * 0.18, layout.boardY - layout.cell, w * 0.36, layout.boardH + layout.cell * 2, w * 0.18)
-          .fill({ color: 0xffffff, alpha: 0.16 + alpha * 0.58 });
+          .fill({ color: 0xffffff, alpha: 0.22 + alpha * 0.66 });
       } else {
         g.roundRect(layout.boardX - layout.cell, beam.y - beam.height / 2, layout.boardW + layout.cell * 2, beam.height, beam.height / 2)
-          .fill({ color: beam.color, alpha: 0.11 + alpha * 0.38 });
+          .fill({ color: beam.color, alpha: 0.14 + alpha * 0.48 });
       }
       return true;
     });
@@ -1504,12 +1655,12 @@ class PixiView {
       const alpha = clamp(wave.life / wave.maxLife, 0, 1);
       const width = wave.width * (1.1 - alpha * 0.25);
       g.roundRect(wave.x - width * 0.5, wave.y - wave.height * 0.5, width, wave.height, wave.height * 0.5)
-        .fill({ color: wave.color, alpha: 0.08 + alpha * 0.28 });
+        .fill({ color: wave.color, alpha: 0.1 + alpha * 0.38 });
       g.roundRect(wave.x - width * 0.44, wave.y - wave.height * 0.18, width * 0.88, wave.height * 0.36, wave.height * 0.18)
-        .fill({ color: 0xffffff, alpha: 0.08 + alpha * 0.24 });
+        .fill({ color: 0xffffff, alpha: 0.12 + alpha * 0.34 });
       g.moveTo(wave.x - width * 0.5, wave.y);
       g.lineTo(wave.x + width * 0.5, wave.y);
-      g.stroke({ color: 0xffffff, alpha: 0.16 + alpha * 0.52, width: 1.5 + wave.power });
+      g.stroke({ color: 0xffffff, alpha: 0.22 + alpha * 0.62, width: 1.8 + wave.power });
       return true;
     });
     this.particles = this.particles.filter((p) => {
@@ -1543,43 +1694,45 @@ class PixiView {
   lineClear(rows, lines, stage) {
     const layout = this.layout();
     const color = stage?.accent || 0x68e9ff;
+    this.worldSurge = Math.max(this.worldSurge, 0.44 + lines * 0.16);
     rows.forEach((row) => {
       const y = layout.boardY + row * layout.cell + layout.cell / 2;
       this.clearWaves.push({
         x: layout.boardX + layout.boardW / 2,
         y,
-        speed: (Math.random() > 0.5 ? 1 : -1) * (1.4 + lines * 0.6),
-        width: layout.w * (lines >= 4 ? 1.55 : 1.18),
-        height: Math.max(18, layout.cell * (1.2 + lines * 0.18)),
+        speed: (Math.random() > 0.5 ? 1 : -1) * (2.2 + lines * 0.8),
+        width: layout.w * (lines >= 4 ? 2.0 : 1.45),
+        height: Math.max(22, layout.cell * (1.35 + lines * 0.24)),
         color,
         power: lines,
-        life: 22 + lines * 5,
-        maxLife: 22 + lines * 5,
+        life: 30 + lines * 7,
+        maxLife: 30 + lines * 7,
       });
       this.beams.push({
         kind: "horizontal",
         y,
-        height: Math.max(20, layout.cell * (1.25 + lines * 0.2)),
+        height: Math.max(26, layout.cell * (1.55 + lines * 0.28)),
         color,
-        life: 18 + lines * 4,
-        maxLife: 18 + lines * 4,
+        life: 24 + lines * 5,
+        maxLife: 24 + lines * 5,
       });
-      for (let i = 0; i < Math.min(this.quality.maxParticles / 4, 54 + lines * 12); i += 1) {
+      for (let i = 0; i < Math.min(this.quality.maxParticles / 2, 86 + lines * 28); i += 1) {
+        const outward = Math.random() > 0.45 ? (Math.random() > 0.5 ? 1 : -1) : 0;
         this.spawnParticle(
           layout.boardX + Math.random() * layout.boardW,
           y + (Math.random() - 0.5) * layout.cell,
-          color,
-          2.2 + Math.random() * 3.5,
-          (Math.random() - 0.5) * (4 + lines),
-          (Math.random() - 0.5) * (2 + lines * 0.8),
-          28 + Math.random() * 24,
-          0.86,
+          Math.random() > 0.36 ? color : 0xffffff,
+          2.4 + Math.random() * (lines >= 4 ? 6.6 : 4.6),
+          outward * (3 + Math.random() * (5 + lines * 1.2)) + (Math.random() - 0.5) * 2.4,
+          (Math.random() - 0.5) * (2.5 + lines * 1.1),
+          36 + Math.random() * 34 + lines * 4,
+          0.9,
         );
       }
     });
     this.comboPulse = Math.max(this.comboPulse, 0.75);
-    this.flash = Math.max(this.flash, lines >= 4 ? 0.28 : 0.12);
-    this.shake = Math.max(this.shake, lines >= 4 ? 14 : 6);
+    this.flash = Math.max(this.flash, lines >= 4 ? 0.34 : 0.14);
+    this.shake = Math.max(this.shake, lines >= 4 ? 16 : 7);
   }
 
   zoneBurst(lines, stage) {
@@ -1588,22 +1741,23 @@ class PixiView {
     const count = Math.min(this.quality.maxParticles, 140 + lines * 28);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH * 0.56;
+    this.worldSurge = 1;
     for (let i = 0; i < count; i += 1) {
       const a = Math.random() * Math.PI * 2;
-      const speed = 2.5 + Math.random() * (8 + lines * 0.25);
-      this.spawnParticle(cx, cy, Math.random() > 0.45 ? color : 0xffffff, 2 + Math.random() * 5, Math.cos(a) * speed, Math.sin(a) * speed, 42 + Math.random() * 38, 0.9);
+      const speed = 3.2 + Math.random() * (10 + lines * 0.36);
+      this.spawnParticle(cx, cy, Math.random() > 0.38 ? color : 0xffffff, 2.6 + Math.random() * 7, Math.cos(a) * speed, Math.sin(a) * speed, 52 + Math.random() * 44, 0.95);
     }
     for (let i = 0; i < 5; i += 1) {
       this.clearWaves.push({
         x: cx,
         y: cy + (i - 2) * layout.cell * 0.7,
         speed: (i % 2 ? 1 : -1) * (2.4 + i * 0.25),
-        width: layout.w * 1.75,
-        height: Math.max(30, layout.cell * 2.1),
+        width: layout.w * 2.1,
+        height: Math.max(36, layout.cell * 2.4),
         color: i % 2 ? color : 0xffffff,
         power: 4,
-        life: 42 + i * 4,
-        maxLife: 42 + i * 4,
+        life: 50 + i * 5,
+        maxLife: 50 + i * 5,
       });
     }
     this.flash = Math.max(this.flash, 0.42);
@@ -1616,14 +1770,15 @@ class PixiView {
     const layout = this.layout();
     const color = stage?.accent || 0x68e9ff;
     this.stagePulse = 1;
+    this.worldSurge = 1;
     this.flash = Math.max(this.flash, 0.16);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH * 0.28;
-    for (let i = 0; i < Math.min(this.quality.maxParticles * 0.5, 130); i += 1) {
+    for (let i = 0; i < Math.min(this.quality.maxParticles * 0.72, 260); i += 1) {
       const a = Math.random() * Math.PI * 2;
-      const speed = 1.5 + Math.random() * 5;
+      const speed = 1.8 + Math.random() * 7.5;
       const c = Math.random() > 0.35 ? color : (stage?.colors?.[Math.floor(Math.random() * stage.colors.length)] || 0xffffff);
-      this.spawnParticle(cx, cy, c, 1.8 + Math.random() * 4.6, Math.cos(a) * speed, Math.sin(a) * speed, 38 + Math.random() * 34, 0.75);
+      this.spawnParticle(cx, cy, c, 2.2 + Math.random() * 6.2, Math.cos(a) * speed, Math.sin(a) * speed, 48 + Math.random() * 42, 0.84);
     }
   }
 
@@ -1632,12 +1787,20 @@ class PixiView {
     const layout = this.layout();
     const color = stage?.accent || 0xffffff;
     this.zonePulse = 1;
+    this.worldSurge = 1;
     this.flash = Math.max(this.flash, 0.24);
     this.shake = Math.max(this.shake, 8);
-    for (let i = 0; i < Math.min(this.quality.maxParticles * 0.5, 120); i += 1) {
+    this.beams.push({
+      kind: "vertical",
+      x: layout.boardX + layout.boardW / 2,
+      width: Math.max(layout.cell * 2.2, layout.boardW * 0.24),
+      life: 46,
+      maxLife: 46,
+    });
+    for (let i = 0; i < Math.min(this.quality.maxParticles * 0.7, 220); i += 1) {
       const x = layout.boardX + Math.random() * layout.boardW;
       const y = layout.boardY + layout.boardH + Math.random() * 20;
-      this.spawnParticle(x, y, Math.random() > 0.5 ? color : 0xffffff, 2 + Math.random() * 4, (Math.random() - 0.5) * 4, -2 - Math.random() * 6, 45 + Math.random() * 42, 0.82);
+      this.spawnParticle(x, y, Math.random() > 0.5 ? color : 0xffffff, 2.2 + Math.random() * 5.4, (Math.random() - 0.5) * 5, -3 - Math.random() * 8, 54 + Math.random() * 46, 0.9);
     }
   }
 
@@ -1648,43 +1811,44 @@ class PixiView {
     const color = piece.color || snapshot.stage?.accent || 0xffffff;
     const cx = layout.boardX + (piece.x + piece.matrix[0].length / 2) * layout.cell;
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
-    const count = kind === "drop" ? 42 : kind === "rotate" ? 18 : 10;
-    for (let i = 0; i < Math.min(count, this.quality.coarse ? 34 : 60); i += 1) {
+    const count = kind === "drop" ? 72 : kind === "rotate" ? 24 : 12;
+    if (kind === "drop") this.worldSurge = Math.max(this.worldSurge, 0.28);
+    for (let i = 0; i < Math.min(count, this.quality.coarse ? 54 : 96); i += 1) {
       const a = kind === "drop"
         ? -Math.PI / 2 + (Math.random() - 0.5) * 0.9
         : Math.random() * Math.PI * 2;
-      const speed = kind === "drop" ? 3 + Math.random() * 5 : 0.8 + Math.random() * 2.8;
+      const speed = kind === "drop" ? 3.8 + Math.random() * 7 : 0.9 + Math.random() * 3.2;
       this.spawnParticle(
         cx + (Math.random() - 0.5) * layout.cell * 1.4,
         cy + (Math.random() - 0.5) * layout.cell * 1.4,
         Math.random() > 0.35 ? color : 0xffffff,
-        kind === "drop" ? 2.2 + Math.random() * 4.5 : 1.5 + Math.random() * 3,
+        kind === "drop" ? 2.6 + Math.random() * 5.6 : 1.6 + Math.random() * 3.2,
         Math.cos(a) * speed,
-        Math.sin(a) * speed + (kind === "drop" ? 2.8 : 0),
-        kind === "drop" ? 30 + Math.random() * 26 : 18 + Math.random() * 18,
-        kind === "move" ? 0.45 : 0.68,
+        Math.sin(a) * speed + (kind === "drop" ? 3.6 : 0),
+        kind === "drop" ? 38 + Math.random() * 32 : 20 + Math.random() * 20,
+        kind === "move" ? 0.48 : 0.74,
       );
     }
     if (kind === "drop") {
       this.beams.push({
         kind: "vertical",
         x: cx,
-        width: Math.max(layout.cell * 1.2, 22 + amount * 0.35),
-        life: 22,
-        maxLife: 22,
+        width: Math.max(layout.cell * 1.75, 28 + amount * 0.5),
+        life: 30,
+        maxLife: 30,
       });
       this.clearWaves.push({
         x: cx,
         y: layout.boardY + layout.boardH - layout.cell * 0.6,
         speed: 0,
-        width: Math.max(layout.boardW * 0.5, layout.cell * (2 + amount * 0.15)),
-        height: Math.max(22, layout.cell * 1.35),
+        width: Math.max(layout.boardW * 0.78, layout.cell * (2.4 + amount * 0.2)),
+        height: Math.max(26, layout.cell * 1.55),
         color,
         power: 2,
-        life: 20,
-        maxLife: 20,
+        life: 28,
+        maxLife: 28,
       });
-      this.shake = Math.max(this.shake, 4);
+      this.shake = Math.max(this.shake, 5);
     }
     if (kind === "rotate") this.comboPulse = Math.max(this.comboPulse, 0.22);
   }
