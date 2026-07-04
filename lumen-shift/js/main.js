@@ -827,11 +827,14 @@ class PixiView {
     this.particleAtlas = null;
     this.bgPlate = null;
     this.bgPlateTexture = null;
+    this.distortionSprite = null;
+    this.distortionFilter = null;
     this.bgStars = [];
     this.stageIndex = 0;
     this.stagePulse = 0;
     this.zonePulse = 0;
     this.beat = 0;
+    this.beatHit = 0;
     this.comboPulse = 0;
     this.worldSurge = 0;
     this.swarmTick = 0;
@@ -869,6 +872,9 @@ class PixiView {
     this.bg = new window.PIXI.Graphics();
     this.bgPlate = new window.PIXI.Sprite(window.PIXI.Texture.EMPTY);
     this.bgPlate.eventMode = "none";
+    this.distortionSprite = new window.PIXI.Sprite(this.makeNoiseTexture());
+    this.distortionSprite.eventMode = "none";
+    this.distortionSprite.alpha = 0;
     this.bloomLayer = this.makeParticleLayer();
     this.swarmLayer = this.makeParticleLayer();
     this.board = new window.PIXI.Graphics();
@@ -880,7 +886,7 @@ class PixiView {
     this.setAdditive(this.swarmLayer);
     this.setAdditive(this.glow);
     this.setAdditive(this.sparkLayer);
-    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.glow, this.fx, this.sparkLayer, this.flashLayer);
+    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.glow, this.fx, this.sparkLayer, this.flashLayer, this.distortionSprite);
     this.makeParticleTextures();
     await this.loadStagePlate();
     this.applyBloomFilters();
@@ -940,6 +946,29 @@ class PixiView {
     }
   }
 
+  makeNoiseTexture() {
+    const PIXI = window.PIXI;
+    const size = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const image = ctx.createImageData(size, size);
+    for (let i = 0; i < image.data.length; i += 4) {
+      const x = (i / 4) % size;
+      const y = Math.floor(i / 4 / size);
+      const wave = Math.sin(x * 0.19) * 30 + Math.cos(y * 0.23) * 24;
+      const grain = Math.random() * 72;
+      const value = clamp(128 + wave + grain - 36, 0, 255);
+      image.data[i] = value;
+      image.data[i + 1] = 255 - value;
+      image.data[i + 2] = 128 + Math.sin((x + y) * 0.08) * 64;
+      image.data[i + 3] = 255;
+    }
+    ctx.putImageData(image, 0, 0);
+    return PIXI.Texture.from(canvas);
+  }
+
   setAdditive(layer) {
     if (!layer || !window.PIXI) return;
     try {
@@ -974,10 +1003,24 @@ class PixiView {
       this.bloomLayer.filters = [makeBlur(4.8, 5)];
       if (this.glow) this.glow.filters = [makeBlur(7.2, 5)];
       this.sparkLayer.filters = [makeBlur(this.quality.coarse ? 0.45 : 0.75, 2)];
+      if (PIXI.DisplacementFilter && this.distortionSprite && this.bgPlate) {
+        try {
+          this.distortionFilter = new PIXI.DisplacementFilter({ sprite: this.distortionSprite, scale: 0 });
+        } catch {
+          this.distortionFilter = new PIXI.DisplacementFilter(this.distortionSprite);
+        }
+        if (this.distortionFilter?.scale) {
+          this.distortionFilter.scale.x = 0;
+          this.distortionFilter.scale.y = 0;
+        }
+        this.bgPlate.filters = [this.distortionFilter];
+      }
     } catch {
       this.bloomLayer.filters = null;
       if (this.glow) this.glow.filters = null;
       this.sparkLayer.filters = null;
+      if (this.bgPlate) this.bgPlate.filters = null;
+      this.distortionFilter = null;
     }
   }
 
@@ -1234,18 +1277,26 @@ class PixiView {
   drawBackground(layout, stage, dt, snapshot) {
     const g = this.bg;
     const t = performance.now() * 0.001;
-    this.beat += dt * 0.001 * (snapshot.zoneActive ? 1.75 : 1);
+    const bpm = (snapshot.stage?.bpm || stage?.bpm || 100)
+      + Math.min(8, (snapshot.combo || 0) * 0.45)
+      + (snapshot.zoneActive ? 8 : 0);
+    const previousBeat = this.beat % 1;
+    this.beat += dt * 0.001 * (bpm / 60);
+    const beatPosition = this.beat % 1;
+    if (beatPosition < previousBeat) this.beatHit = 1;
+    this.beatHit = Math.max(0, this.beatHit - dt * 0.0052);
     this.stagePulse = Math.max(0, this.stagePulse - dt * 0.0016);
     this.zonePulse = snapshot.zoneActive ? Math.min(1, this.zonePulse + dt * 0.0038) : Math.max(0, this.zonePulse - dt * 0.0024);
     this.comboPulse = Math.max(0, this.comboPulse - dt * 0.002);
     this.worldSurge = Math.max(0, this.worldSurge - dt * 0.0015);
     g.clear();
     const maxDim = Math.max(layout.w, layout.h);
-    const beatPulse = Math.pow((Math.sin(this.beat * Math.PI * 2) + 1) * 0.5, 5);
+    const beatPulse = Math.max(this.beatHit, Math.pow(1 - beatPosition, 7) * 0.56);
     const energy = clamp(0.12 + snapshot.combo * 0.04 + this.zonePulse * 0.54 + this.stagePulse * 0.52 + this.worldSurge * 0.46 + beatPulse * 0.12, 0.1, 1);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
-    this.drawStagePlate(layout, stage, t, energy, cx, cy);
+    this.updateDistortion(layout, t, energy, beatPulse, snapshot);
+    this.drawStagePlate(layout, stage, t, energy, beatPulse, cx, cy);
 
     g.rect(0, 0, layout.w, layout.h).fill({ color: 0x000006, alpha: 0.9 });
     g.rect(0, 0, layout.w, layout.h).fill({ color: stage.bg[0], alpha: 0.42 + this.zonePulse * 0.12 });
@@ -1298,7 +1349,7 @@ class PixiView {
       g.circle(star.x * layout.w, star.y * layout.h, size).fill({ color: star.color, alpha: clamp(alpha, 0.05, 0.84) });
     }
 
-    this.drawParticleSwarm(layout, stage, t, energy, snapshot);
+    this.drawParticleSwarm(layout, stage, t, energy + beatPulse * 0.08, snapshot);
     this.updateMeteors(layout, stage, dt, energy);
 
     if (snapshot.zoneActive || this.zonePulse > 0) {
@@ -1311,13 +1362,28 @@ class PixiView {
     }
   }
 
-  drawStagePlate(layout, stage, t, energy, cx, cy) {
+  updateDistortion(layout, t, energy, beatPulse, snapshot) {
+    const sprite = this.distortionSprite;
+    if (!sprite) return;
+    const cover = Math.max(layout.w, layout.h) / 128;
+    sprite.position.set(layout.w / 2 + Math.sin(t * 0.19) * layout.w * 0.08, layout.h / 2 + Math.cos(t * 0.16) * layout.h * 0.06);
+    sprite.scale.set(cover * (1.65 + energy * 0.24));
+    sprite.rotation = t * 0.045;
+    if (!this.distortionFilter?.scale) return;
+    const strength = this.quality.coarse
+      ? 0
+      : clamp(1.2 + this.worldSurge * 8.5 + this.zonePulse * 7 + beatPulse * 3.8 + (snapshot.combo || 0) * 0.24, 0, 16);
+    this.distortionFilter.scale.x = Math.sin(t * 0.7) * strength;
+    this.distortionFilter.scale.y = Math.cos(t * 0.61) * strength * 0.72;
+  }
+
+  drawStagePlate(layout, stage, t, energy, beatPulse, cx, cy) {
     const sprite = this.bgPlate;
     const texture = this.bgPlateTexture;
     if (!sprite || !texture || !sprite.visible) return;
     const tw = texture.width || sprite.texture?.width || 1;
     const th = texture.height || sprite.texture?.height || 1;
-    const scale = Math.max(layout.w / tw, layout.h / th) * (1.02 + energy * 0.025);
+    const scale = Math.max(layout.w / tw, layout.h / th) * (1.02 + energy * 0.025 + beatPulse * 0.012);
     const driftX = Math.sin(t * 0.055 + this.stagePulse) * layout.w * 0.018;
     const driftY = Math.cos(t * 0.047 + this.worldSurge) * layout.h * 0.014;
     const tint = stage.kind === "ember"
@@ -1331,7 +1397,7 @@ class PixiView {
             : 0xffffff;
     const baseAlpha = stage.kind === "tide" ? 0.58 : stage.kind === "core" ? 0.4 : 0.34;
     sprite.tint = tint;
-    sprite.alpha = clamp(baseAlpha + energy * 0.12 + this.worldSurge * 0.1, 0.22, 0.78);
+    sprite.alpha = clamp(baseAlpha + energy * 0.12 + this.worldSurge * 0.1 + beatPulse * 0.045, 0.22, 0.82);
     sprite.scale.set(scale);
     sprite.position.set(layout.w / 2 + driftX, layout.h / 2 + driftY);
     sprite.rotation = Math.sin(t * 0.026) * 0.012;
@@ -2038,6 +2104,7 @@ class PixiView {
     const layout = this.layout();
     const color = stage?.accent || 0x68e9ff;
     this.worldSurge = Math.max(this.worldSurge, 0.62 + lines * 0.2);
+    this.beatHit = Math.max(this.beatHit, lines >= 4 ? 1 : 0.62);
     const clearColor = lines >= 4 ? 0xffffff : color;
     const centerY = rows.length
       ? rows.reduce((sum, row) => sum + layout.boardY + row * layout.cell + layout.cell / 2, 0) / rows.length
@@ -2314,6 +2381,7 @@ class PixiView {
     }
     if (kind === "drop") {
       const dropDistance = Math.max(1, amount || 1);
+      this.beatHit = Math.max(this.beatHit, 0.28);
       const landedCells = [];
       for (let y = 0; y < piece.matrix.length; y += 1) {
         for (let x = 0; x < piece.matrix[y].length; x += 1) {
