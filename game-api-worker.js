@@ -102,6 +102,11 @@ const JELLY_PANG_MAX_SCORE = 5000000;
 const JELLY_PANG_MAX_RANK = 20;
 const JELLY_PANG_FREE_SCORE_BURST = 8192;
 const JELLY_PANG_MAX_SCORE_PER_SECOND = 20000;
+const LUMEN_SHIFT_GAME_ID = 'lumen-shift';
+const LUMEN_SHIFT_MAX_SCORE = 3000000;
+const LUMEN_SHIFT_FREE_SCORE_BURST = 2500;
+const LUMEN_SHIFT_MAX_SCORE_PER_SECOND = 18000;
+const LUMEN_SHIFT_SCORE_TABLE = [0, 100, 300, 500, 800];
 const PARKING_GAME_ID = 'parking_escape';
 const PARKING_FREE_LEVEL_BURST = 3;
 const PARKING_MIN_MS_PER_LEVEL = 1800;
@@ -901,6 +906,7 @@ function getProtectedGameKind(gameId) {
     if (gameId === BLOCKPANG_GAME_ID) return 'blockpang';
     if (gameId === JEWELRIA_GAME_ID) return 'jewelria';
     if (gameId === JELLY_PANG_GAME_ID) return 'jelly-pang';
+    if (gameId === LUMEN_SHIFT_GAME_ID) return 'lumen-shift';
     if (gameId === PARKING_GAME_ID) return 'parking';
     if (gameId === SCHOOL_ZOMBIE_GAME_ID) return 'school-zombie';
     if (typeof gameId === 'string' && gameId.startsWith(SHADOW_GAME_PREFIX)) return 'shadow';
@@ -1768,6 +1774,7 @@ async function recordScoreEvents(db, body) {
     if (kind === 'blockpang') return recordBlockpangScoreEvents(db, body);
     if (kind === 'jewelria') return recordJewelriaScoreEvents(db, body);
     if (kind === 'jelly-pang') return recordJellyPangScoreEvents(db, body);
+    if (kind === 'lumen-shift') return recordLumenShiftScoreEvents(db, body);
     if (kind === 'parking') return recordParkingScoreEvents(db, body);
     if (kind === 'school-zombie') return recordSchoolZombieScoreEvents(db, body);
     if (kind === 'shadow') return recordShadowScoreEvents(db, body);
@@ -1808,6 +1815,116 @@ async function verifyCatTowerRankingSession(db, body, clientScore) {
     }
 
     return { sessionId, score: verifiedScore };
+}
+
+function validateLumenShiftScoreEvent(event) {
+    if (!isPlainObject(event)) {
+        throw new Error('score event must be an object');
+    }
+
+    const type = String(event.type || '');
+    const delta = parseInteger(event.delta);
+    const level = parseInteger(event.level);
+    if (!Number.isFinite(delta) || delta <= 0) {
+        throw new Error('score event delta must be positive');
+    }
+    if (!Number.isFinite(level) || level < 1 || level > 80) {
+        throw new Error('invalid lumen shift level');
+    }
+
+    if (type === 'clear') {
+        const lines = parseInteger(event.lines);
+        const combo = parseInteger(event.combo);
+        if (!Number.isFinite(lines) || lines < 1 || lines > 4) {
+            throw new Error('invalid lumen shift line count');
+        }
+        if (!Number.isFinite(combo) || combo < 1 || combo > 300) {
+            throw new Error('invalid lumen shift combo count');
+        }
+        const expected = (LUMEN_SHIFT_SCORE_TABLE[lines] * level) + (Math.max(0, combo - 1) * 50 * level);
+        if (delta !== expected) {
+            throw new Error('lumen shift clear delta mismatch');
+        }
+        return delta;
+    }
+
+    if (type === 'zone_bonus') {
+        const zoneLines = parseInteger(event.zone_lines);
+        if (!Number.isFinite(zoneLines) || zoneLines < 1 || zoneLines > 120) {
+            throw new Error('invalid lumen shift zone line count');
+        }
+        const expected = zoneLines * zoneLines * 42 * level + zoneLines * 120;
+        if (delta !== expected) {
+            throw new Error('lumen shift zone bonus delta mismatch');
+        }
+        return delta;
+    }
+
+    throw new Error('unsupported lumen shift score event');
+}
+
+async function recordLumenShiftScoreEvents(db, body) {
+    const gameId = body?.game_id;
+    const sessionId = String(body?.session_id || '').trim();
+    const events = Array.isArray(body?.events) ? body.events : (body?.event ? [body.event] : []);
+
+    if (gameId !== LUMEN_SHIFT_GAME_ID) {
+        return jsonResponse({ error: 'unsupported game_id for score events' }, 400);
+    }
+    if (!sessionId) {
+        return jsonResponse({ error: 'session_id is required' }, 400);
+    }
+    if (events.length === 0 || events.length > SCORE_EVENT_BATCH_LIMIT) {
+        return jsonResponse({ error: 'events must contain 1-50 items' }, 400);
+    }
+
+    const session = await db.prepare(
+        'SELECT session_id, game_id, score, event_count, started_at, submitted_at FROM ranking_sessions WHERE session_id = ?'
+    ).bind(sessionId).first();
+    if (!session || session.game_id !== gameId) {
+        return jsonResponse({ error: 'score session not found' }, 404);
+    }
+    if (session.submitted_at) {
+        return jsonResponse({ error: 'score session already submitted' }, 409);
+    }
+
+    const now = Date.now();
+    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
+        return jsonResponse({ error: 'score session expired' }, 410);
+    }
+
+    let deltaTotal = 0;
+    try {
+        for (const event of events) {
+            deltaTotal += validateLumenShiftScoreEvent(event);
+        }
+    } catch (err) {
+        return jsonResponse({ error: err.message }, 400);
+    }
+
+    const projectedScore = Number(session.score) + deltaTotal;
+    const projectedEventCount = Number(session.event_count) + events.length;
+    if (projectedScore > LUMEN_SHIFT_MAX_SCORE) {
+        return jsonResponse({ error: 'lumen shift score exceeds allowed maximum' }, 400);
+    }
+
+    const elapsedMs = now - Number(session.started_at);
+    const minScoreElapsedMs = (Math.max(0, projectedScore - LUMEN_SHIFT_FREE_SCORE_BURST) / LUMEN_SHIFT_MAX_SCORE_PER_SECOND) * 1000;
+    if (elapsedMs < minScoreElapsedMs) {
+        return jsonResponse({ error: 'lumen shift score events are too fast' }, 429);
+    }
+
+    await db.prepare(
+        'UPDATE ranking_sessions SET score = ?, event_count = ?, updated_at = ? WHERE session_id = ?'
+    ).bind(projectedScore, projectedEventCount, now, sessionId).run();
+
+    return jsonResponse({
+        success: true,
+        game_id: gameId,
+        session_id: sessionId,
+        score: projectedScore,
+        event_count: projectedEventCount,
+    });
 }
 
 async function verifyStoredScoreRankingSession(db, body, clientScore, options) {
@@ -1880,6 +1997,10 @@ async function verifyRankingSession(db, body, clientScore) {
         label: 'jelly pang',
         maxScore: JELLY_PANG_MAX_SCORE,
         requiredStateVersion: JELLY_PANG_PROTOCOL_VERSION,
+    });
+    if (kind === 'lumen-shift') return verifyStoredScoreRankingSession(db, body, clientScore, {
+        label: 'lumen shift',
+        maxScore: LUMEN_SHIFT_MAX_SCORE,
     });
     if (kind === 'parking') return verifyStoredScoreRankingSession(db, body, clientScore, {
         label: 'parking escape',

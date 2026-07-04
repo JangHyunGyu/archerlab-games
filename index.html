@@ -255,6 +255,17 @@
         .jelly-pang-2048:hover {
             border-color: #f64f78;
         }
+        .lumen-shift .game-thumb {
+            background: radial-gradient(circle at 50% 36%, #6ee7ff 0%, #161a3f 42%, #070913 100%);
+        }
+        .lumen-shift .game-tag {
+            background: #68e9ff22;
+            color: #9df3ff;
+            border: 1px solid #68e9ff55;
+        }
+        .lumen-shift:hover {
+            border-color: #68e9ff;
+        }
     </style>
     <script type="application/ld+json">
     {"@context":"https://schema.org","@type":"WebSite","name":"Archerlab Games","url":"https://game.archerlab.dev/","description":"브라우저에서 바로 플레이할 수 있는 무료 웹게임 포털","inLanguage":"ko","publisher":{"@type":"Organization","name":"Archerlab","url":"https://archerlab.dev/"}}
@@ -269,6 +280,20 @@
     </header>
 
     <div class="games-grid">
+        <a href="lumen-shift/" class="game-card lumen-shift">
+            <div class="game-thumb">
+                <picture>
+                    <source srcset="lumen-shift/assets/images/lumen-shift-link.webp" type="image/webp">
+                    <img src="lumen-shift/assets/images/lumen-shift-link.png" alt="LUMEN SHIFT - immersive reactive falling block puzzle game" loading="lazy" decoding="async">
+                </picture>
+            </div>
+            <div class="game-info">
+                <h2>LUMEN SHIFT</h2>
+                <p>Music-reactive falling block puzzle with luminous particles, Journey fields, Lumen Zone, touch controls, and D1 rankings.</p>
+                <span class="game-tag">Puzzle / Reactive</span>
+            </div>
+        </a>
+
         <a href="jelly-pang-2048/" class="game-card jelly-pang-2048">
             <div class="game-thumb">
                 <picture>
