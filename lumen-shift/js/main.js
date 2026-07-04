@@ -671,6 +671,12 @@ class FallingBlockCore {
     }
     if (rows.length === 0) return 0;
 
+    const cells = rows.flatMap((row) => this.grid[row].map((cell, col) => ({
+      row,
+      col,
+      color: cell?.color || STAGES[this.stageIndex]?.accent || 0xffffff,
+      type: cell?.type || "",
+    })));
     this.grid = this.grid.filter((_, index) => !rows.includes(index));
     while (this.grid.length < ROWS) this.grid.unshift(Array(COLS).fill(null));
 
@@ -689,6 +695,7 @@ class FallingBlockCore {
     }
     this.callbacks.onClear?.({
       rows,
+      cells,
       lines: lineCount,
       delta,
       combo: this.combo,
@@ -800,6 +807,10 @@ class PixiView {
     this.meteors = [];
     this.clearWaves = [];
     this.beams = [];
+    this.dropTrails = [];
+    this.impactRings = [];
+    this.rowSweeps = [];
+    this.clearTiles = [];
     this.swarm = [];
     this.swarmSprites = [];
     this.sparkSprites = [];
@@ -1632,6 +1643,78 @@ class PixiView {
     const g = this.fx;
     g.clear();
     const decay = dt / 16.67;
+    this.dropTrails = this.dropTrails.filter((trail) => {
+      trail.life -= decay;
+      if (trail.life <= 0) return false;
+      const alpha = clamp(trail.life / trail.maxLife, 0, 1);
+      const x = trail.x + Math.sin((1 - alpha) * Math.PI) * trail.sway;
+      const top = Math.min(trail.y1, trail.y2);
+      const height = Math.abs(trail.y2 - trail.y1);
+      const width = trail.width * (0.45 + alpha * 1.2);
+      g.roundRect(x - width / 2, top, width, height, width / 2)
+        .fill({ color: trail.color, alpha: alpha * 0.2 });
+      g.roundRect(x - width * 0.16, top, width * 0.32, height, width * 0.16)
+        .fill({ color: 0xffffff, alpha: alpha * 0.58 });
+      g.moveTo(x, top);
+      g.lineTo(x, top + height);
+      g.stroke({ color: 0xffffff, alpha: alpha * 0.68, width: Math.max(1, width * 0.08) });
+      return true;
+    });
+    this.impactRings = this.impactRings.filter((ring) => {
+      ring.life -= decay;
+      if (ring.life <= 0) return false;
+      const alpha = clamp(ring.life / ring.maxLife, 0, 1);
+      const growth = 1 - alpha;
+      if (ring.kind === "landing") {
+        const w = ring.width * (0.42 + growth * 1.05);
+        const h = ring.height * (0.38 + growth * 1.65);
+        g.roundRect(ring.x - w / 2, ring.y - h / 2, w, h, h / 2)
+          .stroke({ color: ring.color, alpha: alpha * 0.58, width: 2 + growth * 5 });
+        g.roundRect(layout.boardX - layout.cell * 0.5, ring.y - h * 0.16, layout.boardW + layout.cell, Math.max(3, h * 0.18), Math.max(2, h * 0.09))
+          .fill({ color: 0xffffff, alpha: alpha * 0.18 });
+      } else {
+        const radius = ring.radius * (0.3 + growth * 1.5);
+        g.circle(ring.x, ring.y, radius)
+          .stroke({ color: ring.color, alpha: alpha * 0.5, width: 1.5 + growth * 4 });
+      }
+      return true;
+    });
+    this.rowSweeps = this.rowSweeps.filter((sweep) => {
+      sweep.life -= decay;
+      if (sweep.life <= 0) return false;
+      const alpha = clamp(sweep.life / sweep.maxLife, 0, 1);
+      const p = 1 - alpha;
+      const headX = sweep.dir > 0
+        ? layout.boardX + layout.boardW * p
+        : layout.boardX + layout.boardW * (1 - p);
+      const tail = layout.boardW * (0.18 + p * 0.35);
+      const x = sweep.dir > 0 ? headX - tail : headX;
+      g.roundRect(x, sweep.y - sweep.height / 2, tail, sweep.height, sweep.height / 2)
+        .fill({ color: sweep.color, alpha: alpha * 0.28 });
+      g.roundRect(headX - sweep.height * 0.16, sweep.y - sweep.height * 0.62, sweep.height * 0.32, sweep.height * 1.24, sweep.height * 0.16)
+        .fill({ color: 0xffffff, alpha: alpha * 0.72 });
+      return true;
+    });
+    this.clearTiles = this.clearTiles.filter((tile) => {
+      tile.life -= decay;
+      tile.x += tile.vx * decay;
+      tile.y += tile.vy * decay;
+      tile.vy += 0.018 * decay;
+      tile.rotation += tile.spin * decay;
+      if (tile.life <= 0) return false;
+      const alpha = clamp(tile.life / tile.maxLife, 0, 1);
+      const size = tile.size * (0.44 + alpha * 0.76);
+      const half = size / 2;
+      g.roundRect(tile.x - half - 4, tile.y - half - 4, size + 8, size + 8, Math.max(2, size * 0.08))
+        .fill({ color: tile.color, alpha: alpha * 0.18 });
+      g.roundRect(tile.x - half, tile.y - half, size, size, Math.max(1.5, size * 0.06))
+        .fill({ color: tile.color, alpha: alpha * 0.86 })
+        .stroke({ color: 0xffffff, alpha: alpha * 0.56, width: 1 });
+      g.moveTo(tile.x - half * 0.62, tile.y + half * 0.62);
+      g.lineTo(tile.x + half * 0.62, tile.y - half * 0.62);
+      g.stroke({ color: 0xffffff, alpha: alpha * 0.2, width: 1 });
+      return true;
+    });
     this.beams = this.beams.filter((beam) => {
       beam.life -= decay;
       if (beam.life <= 0) return false;
@@ -1691,12 +1774,29 @@ class PixiView {
     }
   }
 
-  lineClear(rows, lines, stage) {
+  lineClear(rows, lines, stage, cells = []) {
     const layout = this.layout();
     const color = stage?.accent || 0x68e9ff;
-    this.worldSurge = Math.max(this.worldSurge, 0.44 + lines * 0.16);
+    this.worldSurge = Math.max(this.worldSurge, 0.62 + lines * 0.2);
+    const clearColor = lines >= 4 ? 0xffffff : color;
     rows.forEach((row) => {
       const y = layout.boardY + row * layout.cell + layout.cell / 2;
+      this.rowSweeps.push({
+        y,
+        dir: 1,
+        height: Math.max(18, layout.cell * (1.05 + lines * 0.16)),
+        color: clearColor,
+        life: 28 + lines * 4,
+        maxLife: 28 + lines * 4,
+      });
+      this.rowSweeps.push({
+        y,
+        dir: -1,
+        height: Math.max(16, layout.cell * (0.9 + lines * 0.12)),
+        color,
+        life: 34 + lines * 5,
+        maxLife: 34 + lines * 5,
+      });
       this.clearWaves.push({
         x: layout.boardX + layout.boardW / 2,
         y,
@@ -1730,9 +1830,38 @@ class PixiView {
         );
       }
     });
+    const sourceCells = cells.length
+      ? cells
+      : rows.flatMap((row) => Array.from({ length: COLS }, (_, col) => ({ row, col, color })));
+    for (const cellInfo of sourceCells) {
+      const px = layout.boardX + cellInfo.col * layout.cell + layout.cell / 2;
+      const py = layout.boardY + cellInfo.row * layout.cell + layout.cell / 2;
+      const side = cellInfo.col < COLS / 2 ? -1 : 1;
+      this.clearTiles.push({
+        x: px,
+        y: py,
+        vx: side * (1.8 + Math.random() * (3.2 + lines)) + (Math.random() - 0.5) * 1.4,
+        vy: (Math.random() - 0.5) * (2.4 + lines * 0.5),
+        color: Math.random() > 0.22 ? (cellInfo.color || color) : 0xffffff,
+        size: layout.cell * (0.88 + Math.random() * 0.16),
+        life: 28 + Math.random() * 18 + lines * 6,
+        maxLife: 28 + Math.random() * 18 + lines * 6,
+        rotation: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.12,
+      });
+    }
+    this.impactRings.push({
+      kind: "clear",
+      x: layout.boardX + layout.boardW / 2,
+      y: layout.boardY + layout.boardH / 2,
+      radius: layout.boardW * (lines >= 4 ? 1.35 : 0.9),
+      color: clearColor,
+      life: 44 + lines * 5,
+      maxLife: 44 + lines * 5,
+    });
     this.comboPulse = Math.max(this.comboPulse, 0.75);
-    this.flash = Math.max(this.flash, lines >= 4 ? 0.34 : 0.14);
-    this.shake = Math.max(this.shake, lines >= 4 ? 16 : 7);
+    this.flash = Math.max(this.flash, lines >= 4 ? 0.48 : 0.2);
+    this.shake = Math.max(this.shake, lines >= 4 ? 20 : 9);
   }
 
   zoneBurst(lines, stage) {
@@ -2105,7 +2234,7 @@ class LumenShiftApp {
       onClear: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
         this.audio.clear(info.lines);
-        this.view.lineClear(info.rows, info.lines, stage);
+        this.view.lineClear(info.rows, info.lines, stage, info.cells);
         this.showEvent(this.clearLabel(info.lines, info.combo, info.zoneActive));
         this.rank.record({
           type: "clear",
