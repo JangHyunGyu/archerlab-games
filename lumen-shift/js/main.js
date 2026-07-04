@@ -6,7 +6,7 @@ const VISIBLE_NEXT = 5;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
 const STORAGE_PREFIX = "lumen-shift";
-const AUDIO_ASSET_VERSION = "20260705-audio-v6";
+const AUDIO_ASSET_VERSION = "20260705-audio-v7";
 
 function audioAsset(path) {
   return `${path}?v=${AUDIO_ASSET_VERSION}`;
@@ -397,6 +397,8 @@ class AudioDirector {
     this.nativeBackingStarted = false;
     this.nativeBackingError = "";
     this.nativePrimePromise = null;
+    this.nativeBackingRetryTimer = 0;
+    this.lastStartSfxAt = 0;
     this.musicLoops = [];
     this.backingPlayer = null;
     this.backingStarted = false;
@@ -654,6 +656,7 @@ class AudioDirector {
       audio.loop = !!options.loop;
       audio.volume = options.volume ?? 0.75;
       audio.crossOrigin = "anonymous";
+      audio.playsInline = true;
       audio.setAttribute("playsinline", "");
       return audio;
     } catch {
@@ -884,13 +887,38 @@ class AudioDirector {
 
   beginUserGestureAudio(index = 0) {
     this.currentStage = index;
-    this.switchNativeBacking(this.stageBgmUrl(index), { force: true, volume: 0.22 });
+    const url = this.stageBgmUrl(index);
+    const isSameTrack = this.nativeBackingUrl === url;
+    const isAlreadyPlaying = isSameTrack && this.nativeBacking?.paused === false;
+    if (isAlreadyPlaying) {
+      this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.42);
+    } else {
+      this.switchNativeBacking(url, { force: true, volume: 0.48 });
+    }
     this.startNativeBackingTrack({ fromGesture: true });
-    this.playSfx("uiStart", -3);
+    const now = performance.now();
+    if (now - this.lastStartSfxAt > 420) {
+      this.lastStartSfxAt = now;
+      this.playSfx("uiStart", -3);
+    }
+  }
+
+  recoverBackingFromGesture() {
+    if (!this.nativeBacking) return;
+    if (this.nativeBacking.paused || !this.nativeBackingStarted) {
+      this.startNativeBackingTrack({ fromGesture: true });
+    } else {
+      this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.32);
+    }
+  }
+
+  scheduleNativeBackingRetry(delay = 180) {
+    window.clearTimeout(this.nativeBackingRetryTimer);
+    this.nativeBackingRetryTimer = window.setTimeout(() => this.startNativeBackingTrack(), delay);
   }
 
   switchStageBacking(index) {
-    this.switchNativeBacking(this.stageBgmUrl(index), { resume: true });
+    this.switchNativeBacking(this.stageBgmUrl(index), { resume: true, volume: 0.42 });
   }
 
   switchNativeBacking(url, options = {}) {
@@ -899,7 +927,7 @@ class AudioDirector {
     const audio = this.nativeBacking || this.createNativeAudio(url, { loop: true, volume: 0.22 });
     if (!audio) return;
     const shouldResume = !!options.resume || (!!this.nativeBackingStarted && audio.paused === false);
-    const volume = typeof options.volume === "number" ? options.volume : (audio.volume || 0.22);
+    const volume = typeof options.volume === "number" ? options.volume : Math.max(audio.volume || 0, shouldResume ? 0.42 : 0.22);
     const existingHandler = audio._lumenBackingErrorHandler;
     if (existingHandler) {
       try {
@@ -920,6 +948,8 @@ class AudioDirector {
     audio.loop = true;
     audio.volume = volume;
     audio.preload = "auto";
+    audio.autoplay = !!shouldResume;
+    audio.playsInline = true;
     audio.setAttribute("playsinline", "");
     try {
       audio.src = url;
@@ -935,6 +965,12 @@ class AudioDirector {
       audio._lumenBackingErrorHandler = onError;
       audio.addEventListener("error", onError, { once: true });
     }
+    if (shouldResume) {
+      const resume = () => this.startNativeBackingTrack();
+      audio.addEventListener("loadeddata", resume, { once: true });
+      audio.addEventListener("canplay", resume, { once: true });
+      this.scheduleNativeBackingRetry(220);
+    }
     this.nativeBackingStarted = false;
     this.nativePrimePromise = null;
     if (shouldResume) this.startNativeBackingTrack();
@@ -947,7 +983,11 @@ class AudioDirector {
       this.nativeBackingStarted = false;
       const errorName = err?.name || "play_failed";
       this.nativeBackingError = errorName;
-      const isGestureBlocked = errorName === "NotAllowedError" || errorName === "AbortError";
+      if (errorName === "AbortError") {
+        this.scheduleNativeBackingRetry(220);
+        return;
+      }
+      const isGestureBlocked = errorName === "NotAllowedError";
       if (!isGestureBlocked && this.nativeBackingUrl !== FALLBACK_BGM_URL) {
         this.switchNativeBacking(FALLBACK_BGM_URL, { force: true, resume: true });
       }
@@ -955,9 +995,10 @@ class AudioDirector {
     try {
       this.nativeBacking.loop = true;
       this.nativeBacking.muted = false;
-      this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.22);
+      this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.42);
       const result = this.nativeBacking.play();
       result?.then?.(() => {
+        window.clearTimeout(this.nativeBackingRetryTimer);
         this.nativeBackingStarted = true;
         this.nativeBackingError = "";
       });
@@ -1139,9 +1180,11 @@ class AudioDirector {
     this.rampStem("stinger", 0.1 + stageLift * 0.04 + zoneLift * 0.05);
     const beatLift = Math.max(this.lastBeatState?.pulse || 0, this.lastBeatState?.downbeat || 0) * 0.012;
     const backingDuck = 1 - Math.min(0.38, this.backingDuck * 0.22 + (this.clearPulse || 0) * 0.13 + (this.dropPulse || 0) * 0.09);
-    const backingLevel = (0.06 + this.arrangement * 0.16 + zoneLift * 0.05 + beatLift + this.backingPulse * 0.02) * backingDuck;
+    const backingLevel = (0.14 + this.arrangement * 0.2 + zoneLift * 0.07 + beatLift + this.backingPulse * 0.035) * backingDuck;
     this.rampStem("backing", this.backingPlayer ? backingLevel : 0);
-    this.setNativeVolume(this.nativeBacking, this.nativeBackingStarted ? clamp(0.12 + backingLevel * 0.82, 0, 0.32) : 0);
+    const nativeBackingAudible = this.nativeBackingStarted || this.nativeBacking?.paused === false;
+    if (nativeBackingAudible) this.nativeBackingStarted = true;
+    this.setNativeVolume(this.nativeBacking, nativeBackingAudible ? clamp(0.28 + backingLevel * 1.05, 0, 0.58) : 0);
     this.rampStem("zone", zoneLift * 0.42);
     this.rampStem("hit", 0.22 + energy * 0.09);
     this.rampParam(this.backingFilter?.frequency, 4200 + this.arrangement * 6200 + zoneLift * 2800 + this.backingPulse * 1600, 0.18);
@@ -4613,6 +4656,7 @@ class LumenShiftApp {
         this.applyModeSelection();
       });
     });
+    this.elements.play.addEventListener("pointerdown", () => this.audio.beginUserGestureAudio(0), { passive: true });
     this.elements.play.addEventListener("click", () => this.startGame("journey"));
     this.elements.rank.addEventListener("click", () => {
       this.playUiSound("ranking");
@@ -4767,6 +4811,7 @@ class LumenShiftApp {
       return;
     }
     if (this.core.status === "finished") return;
+    this.audio.recoverBackingFromGesture();
     if (action === "pause") {
       this.togglePause();
       return;
