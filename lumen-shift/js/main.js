@@ -74,6 +74,11 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function smoothstep(value) {
+  const t = clamp(value, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
 function formatScore(value) {
   return Math.floor(value || 0).toLocaleString("en-US");
 }
@@ -221,6 +226,10 @@ class AudioDirector {
     this.musicLoops = [];
     this.arpStep = 0;
     this.energyStep = 0;
+    this.inputStep = 0;
+    this.arrangement = 0;
+    this.gestureHeat = 0;
+    this.lastLayer = 0;
   }
 
   async unlock() {
@@ -231,11 +240,13 @@ class AudioDirector {
       const master = new Tone.Gain(0.74).toDestination();
       const delay = new Tone.FeedbackDelay("8n", 0.22).connect(master);
       const reverb = new Tone.Reverb({ decay: 3.2, wet: 0.28 }).connect(master);
-      const baseGain = new Tone.Gain(0.24).connect(reverb);
-      const pulseGain = new Tone.Gain(0.04).connect(delay);
-      const energyGain = new Tone.Gain(0.02).connect(master);
+      const baseGain = new Tone.Gain(0.1).connect(reverb);
+      const pulseGain = new Tone.Gain(0.01).connect(delay);
+      const energyGain = new Tone.Gain(0.0).connect(master);
       const zoneGain = new Tone.Gain(0).connect(reverb);
-      const hitGain = new Tone.Gain(0.4).connect(master);
+      const hitGain = new Tone.Gain(0.34).connect(master);
+      const motionGain = new Tone.Gain(0.24).connect(delay);
+      const textureGain = new Tone.Gain(0).connect(reverb);
       const pad = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.08, decay: 0.2, sustain: 0.42, release: 1.4 },
@@ -243,7 +254,7 @@ class AudioDirector {
       const pluck = new Tone.Synth({
         oscillator: { type: "triangle" },
         envelope: { attack: 0.005, decay: 0.08, sustain: 0.08, release: 0.16 },
-      }).connect(hitGain);
+      }).connect(motionGain);
       const bass = new Tone.MembraneSynth({
         pitchDecay: 0.015,
         octaves: 5,
@@ -274,8 +285,20 @@ class AudioDirector {
         oscillator: { type: "sine" },
         envelope: { attack: 0.02, decay: 0.08, sustain: 0.24, release: 0.7 },
       }).connect(zoneGain);
-      this.stemGains = { base: baseGain, pulse: pulseGain, energy: energyGain, zone: zoneGain, hit: hitGain };
-      this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer };
+      const sparkle = new Tone.Synth({
+        oscillator: { type: "amsine", harmonicity: 1.5 },
+        envelope: { attack: 0.006, decay: 0.08, sustain: 0.04, release: 0.26 },
+      }).connect(textureGain);
+      this.stemGains = {
+        base: baseGain,
+        pulse: pulseGain,
+        energy: energyGain,
+        zone: zoneGain,
+        hit: hitGain,
+        motion: motionGain,
+        texture: textureGain,
+      };
+      this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer, sparkle };
       this.ready = true;
       this.startMusic();
     } catch {
@@ -302,21 +325,33 @@ class AudioDirector {
     this.musicLoops = [];
     const baseLoop = new Tone.Loop((time) => {
       if (!this.synths) return;
+      const arrangement = this.arrangement;
       const chord = chords[step % chords.length];
-      this.synths.pad.triggerAttackRelease(chord, "2n", time, 0.18);
-      if (step % 2 === 0) this.synths.bass.triggerAttackRelease(chord[0], "8n", time, 0.34);
+      this.synths.pad.triggerAttackRelease(chord, "2n", time, 0.08 + arrangement * 0.13);
+      if (step % 2 === 0 && arrangement > 0.12) {
+        this.synths.bass.triggerAttackRelease(chord[0], "8n", time, 0.16 + arrangement * 0.22);
+      }
       step += 1;
     }, "1m");
     const pulseLoop = new Tone.Loop((time) => {
       if (!this.synths) return;
+      const arrangement = this.arrangement;
+      if (arrangement < 0.14 && this.gestureHeat < 0.18 && this.arpStep % 2 === 1) {
+        this.arpStep += 1;
+        return;
+      }
       const bank = arps[step % arps.length];
       const note = bank[this.arpStep % bank.length];
-      this.synths.arp.triggerAttackRelease(note, "32n", time, 0.12);
+      this.synths.arp.triggerAttackRelease(note, "32n", time, 0.045 + arrangement * 0.1 + this.gestureHeat * 0.035);
       this.arpStep += 1;
     }, "8n");
     const energyLoop = new Tone.Loop((time) => {
       if (!this.synths) return;
-      if (this.energyStep % 2 === 0) this.synths.pulse.triggerAttackRelease("32n", time, 0.14);
+      const arrangement = this.arrangement;
+      if (arrangement > 0.28 || this.gestureHeat > 0.42) {
+        const every = arrangement > 0.64 ? 1 : 2;
+        if (this.energyStep % every === 0) this.synths.pulse.triggerAttackRelease("32n", time, 0.06 + arrangement * 0.12);
+      }
       this.energyStep += 1;
     }, "4n");
     const zoneLoop = new Tone.Loop((time) => {
@@ -324,7 +359,13 @@ class AudioDirector {
       const chord = chords[(step + 1) % chords.length].map((note) => note.replace(/\d$/, (oct) => String(Number(oct) + 2)));
       this.synths.shimmer.triggerAttackRelease(chord, "16n", time, 0.1);
     }, "2n");
-    this.musicLoops.push(baseLoop, pulseLoop, energyLoop, zoneLoop);
+    const textureLoop = new Tone.Loop((time) => {
+      if (!this.synths || this.arrangement < 0.46) return;
+      const bank = arps[(step + 1) % arps.length];
+      const note = bank[(this.arpStep + 2) % bank.length].replace(/\d$/, (oct) => String(Math.min(7, Number(oct) + 1)));
+      this.synths.sparkle.triggerAttackRelease(note, "32n", time, 0.035 + this.arrangement * 0.08);
+    }, "16n");
+    this.musicLoops.push(baseLoop, pulseLoop, energyLoop, zoneLoop, textureLoop);
     this.musicLoops.forEach((loop) => loop.start(0));
     Tone.Transport.bpm.value = STAGES[0].bpm;
     Tone.Transport.start();
@@ -349,13 +390,31 @@ class AudioDirector {
     const comboLift = clamp((snapshot.combo || 0) / 8, 0, 1);
     const lumenLift = clamp(snapshot.lumen || 0, 0, 1);
     const zoneLift = snapshot.zoneActive ? clamp(0.62 + (snapshot.zoneProgress || 0) * 0.38, 0, 1) : 0;
-    const energy = clamp(stageLift * 0.34 + comboLift * 0.42 + lumenLift * 0.34 + zoneLift * 0.45, 0, 1);
-    this.rampStem("base", 0.2 + stageLift * 0.06 + zoneLift * 0.06);
-    this.rampStem("pulse", 0.02 + lumenLift * 0.16 + comboLift * 0.16 + zoneLift * 0.22);
-    this.rampStem("energy", 0.02 + energy * 0.3);
+    const arrangementTarget = clamp(snapshot.arrangement?.progress ?? 0, 0, 1);
+    const arrangement = smoothstep(arrangementTarget);
+    this.arrangement += (arrangement - this.arrangement) * 0.22;
+    this.gestureHeat = Math.max(0, this.gestureHeat - 0.045);
+    const layer = snapshot.arrangement?.layer || 0;
+    if (layer > this.lastLayer && this.synths?.sparkle) {
+      this.lastLayer = layer;
+      const liftNotes = ["C6", "E6", "G6", "B6"].slice(0, Math.max(1, Math.min(4, layer)));
+      try {
+        this.synths.sparkle.triggerAttackRelease(liftNotes[layer % liftNotes.length], "16n", undefined, 0.12);
+      } catch {
+        // Ignore decorative lift failures.
+      }
+    } else if (layer < this.lastLayer) {
+      this.lastLayer = layer;
+    }
+    const energy = clamp(this.arrangement * 0.46 + stageLift * 0.2 + comboLift * 0.34 + lumenLift * 0.24 + zoneLift * 0.48, 0, 1);
+    this.rampStem("base", 0.08 + this.arrangement * 0.2 + stageLift * 0.04 + zoneLift * 0.05);
+    this.rampStem("pulse", 0.006 + Math.pow(this.arrangement, 1.25) * 0.19 + lumenLift * 0.1 + comboLift * 0.12 + zoneLift * 0.16);
+    this.rampStem("energy", 0.004 + energy * 0.28);
+    this.rampStem("texture", Math.pow(this.arrangement, 1.75) * 0.18 + zoneLift * 0.08);
+    this.rampStem("motion", 0.21 + this.arrangement * 0.08 + this.gestureHeat * 0.05);
     this.rampStem("zone", zoneLift * 0.42);
-    this.rampStem("hit", 0.34 + energy * 0.14);
-    const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5;
+    this.rampStem("hit", 0.3 + energy * 0.13);
+    const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
     try {
       window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
       window.Tone.Transport.bpm.rampTo(targetBpm, 0.4);
@@ -376,17 +435,19 @@ class AudioDirector {
   }
 
   move() {
-    this.note("C6", "32n", 0.06);
+    this.inputNote(0, "32n", 0.048, 0.2);
   }
 
   rotate() {
-    this.note("G5", "32n", 0.08);
+    this.inputNote(2, "32n", 0.07, 0.28);
   }
 
   drop() {
     if (!this.ready || !this.synths) return;
+    this.gestureHeat = Math.max(this.gestureHeat, 0.78);
     try {
       this.synths.impact.triggerAttackRelease("C2", "16n", undefined, 0.38);
+      this.inputNote(4, "16n", 0.09, 0.36);
     } catch {
       // Audio can be interrupted on mobile when the page loses focus.
     }
@@ -400,8 +461,21 @@ class AudioDirector {
       3: ["D5", "F5", "A5", "C6"],
       4: ["C5", "E5", "G5", "B5", "D6"],
     };
+    this.gestureHeat = Math.max(this.gestureHeat, 0.48 + lines * 0.09);
     try {
       this.synths.clear.triggerAttackRelease(chords[lines] || chords[1], "8n", undefined, lines >= 4 ? 0.44 : 0.25);
+      if (this.synths.sparkle) {
+        const lift = lines >= 4 ? ["C6", "E6", "G6", "C7"] : ["C6", "G6"];
+        lift.slice(0, Math.min(lift.length, lines + 1)).forEach((note, index) => {
+          setTimeout(() => {
+            try {
+              this.synths.sparkle.triggerAttackRelease(note, "32n", undefined, lines >= 4 ? 0.12 : 0.07);
+            } catch {
+              // Ignore late sparkle failures.
+            }
+          }, index * 42);
+        });
+      }
     } catch {
       // Keep gameplay responsive even if WebAudio rejects a rapid trigger.
     }
@@ -431,6 +505,22 @@ class AudioDirector {
     } catch {
       // Ignore rapid input audio errors.
     }
+  }
+
+  inputNote(offset, duration, velocity, heat) {
+    if (!this.ready || !this.synths) return;
+    const banks = [
+      ["C5", "D5", "G5", "A5", "C6", "D6"],
+      ["D5", "E5", "A5", "B5", "D6", "E6"],
+      ["A4", "C5", "E5", "G5", "A5", "C6"],
+      ["F5", "G5", "C6", "D6", "F6", "G6"],
+      ["C5", "E5", "G5", "B5", "D6", "G6"],
+    ];
+    const bank = banks[this.currentStage % banks.length];
+    const note = bank[(this.inputStep + offset) % bank.length];
+    this.inputStep = (this.inputStep + 1) % 64;
+    this.gestureHeat = Math.max(this.gestureHeat, heat);
+    this.note(note, duration, velocity + this.arrangement * 0.035);
   }
 }
 
@@ -775,7 +865,24 @@ class FallingBlockCore {
     return ghost;
   }
 
+  arrangementState() {
+    const modeGoal = this.mode.lineGoal || (this.modeKey === "ultra" ? 80 : 90);
+    const lineProgress = clamp(this.lines / Math.max(1, modeGoal), 0, 1);
+    const stageProgress = clamp((this.stageIndex + clamp((this.lines % 14) / 14, 0, 1)) / Math.max(1, STAGES.length - 1), 0, 1);
+    const comboLift = clamp(this.combo / 10, 0, 1);
+    const lumenLift = clamp(this.lumen, 0, 1);
+    const zoneLift = this.zoneActive ? clamp(0.55 + this.zoneProgress * 0.45, 0, 1) : 0;
+    const progress = clamp(0.035 + lineProgress * 0.48 + stageProgress * 0.22 + comboLift * 0.12 + lumenLift * 0.12 + zoneLift * 0.22, 0, 1);
+    return {
+      progress,
+      layer: clamp(Math.floor(progress * 5.1), 0, 5),
+      lineProgress,
+      phrase: Math.floor(this.lines / 4) % 4,
+    };
+  }
+
   snapshot() {
+    const arrangement = this.arrangementState();
     return {
       modeKey: this.modeKey,
       mode: this.mode,
@@ -798,6 +905,7 @@ class FallingBlockCore {
       totalZoneLines: this.totalZoneLines,
       elapsed: this.elapsed,
       status: this.status,
+      arrangement,
     };
   }
 }
@@ -819,6 +927,7 @@ class PixiView {
     this.lockFlashes = [];
     this.shockBands = [];
     this.screenBursts = [];
+    this.resonancePips = [];
     this.swarm = [];
     this.swarmSprites = [];
     this.sparkSprites = [];
@@ -837,6 +946,10 @@ class PixiView {
     this.beatHit = 0;
     this.comboPulse = 0;
     this.worldSurge = 0;
+    this.arrangement = 0;
+    this.arrangementLayer = 0;
+    this.phrasePulse = 0;
+    this.inputHeat = 0;
     this.swarmTick = 0;
     this.flash = 0;
     this.shake = 0;
@@ -1284,30 +1397,51 @@ class PixiView {
     this.beat += dt * 0.001 * (bpm / 60);
     const beatPosition = this.beat % 1;
     if (beatPosition < previousBeat) this.beatHit = 1;
+    const arrangementTarget = clamp(snapshot.arrangement?.progress ?? 0, 0, 1);
+    const arrangementEase = smoothstep(arrangementTarget);
+    this.arrangement += (arrangementEase - this.arrangement) * clamp(dt * 0.003, 0.02, 0.18);
+    const nextLayer = snapshot.arrangement?.layer || 0;
+    if (nextLayer !== this.arrangementLayer) {
+      this.arrangementLayer = nextLayer;
+      this.phrasePulse = 1;
+    }
     this.beatHit = Math.max(0, this.beatHit - dt * 0.0052);
     this.stagePulse = Math.max(0, this.stagePulse - dt * 0.0016);
     this.zonePulse = snapshot.zoneActive ? Math.min(1, this.zonePulse + dt * 0.0038) : Math.max(0, this.zonePulse - dt * 0.0024);
     this.comboPulse = Math.max(0, this.comboPulse - dt * 0.002);
     this.worldSurge = Math.max(0, this.worldSurge - dt * 0.0015);
+    this.phrasePulse = Math.max(0, this.phrasePulse - dt * 0.0024);
+    this.inputHeat = Math.max(0, this.inputHeat - dt * 0.003);
     g.clear();
     const maxDim = Math.max(layout.w, layout.h);
     const beatPulse = Math.max(this.beatHit, Math.pow(1 - beatPosition, 7) * 0.56);
-    const energy = clamp(0.12 + snapshot.combo * 0.04 + this.zonePulse * 0.54 + this.stagePulse * 0.52 + this.worldSurge * 0.46 + beatPulse * 0.12, 0.1, 1);
+    const energy = clamp(
+      0.045
+      + this.arrangement * 0.34
+      + snapshot.combo * 0.036
+      + this.zonePulse * 0.54
+      + this.stagePulse * 0.46
+      + this.worldSurge * 0.4
+      + beatPulse * 0.12
+      + this.inputHeat * 0.11,
+      0.04,
+      1,
+    );
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
     this.updateDistortion(layout, t, energy, beatPulse, snapshot);
     this.drawStagePlate(layout, stage, t, energy, beatPulse, cx, cy);
 
     g.rect(0, 0, layout.w, layout.h).fill({ color: 0x000006, alpha: 0.9 });
-    g.rect(0, 0, layout.w, layout.h).fill({ color: stage.bg[0], alpha: 0.42 + this.zonePulse * 0.12 });
+    g.rect(0, 0, layout.w, layout.h).fill({ color: stage.bg[0], alpha: 0.3 + this.arrangement * 0.14 + this.zonePulse * 0.12 });
     g.circle(cx, cy, maxDim * (0.38 + energy * 0.15))
-      .fill({ color: stage.bg[1], alpha: 0.05 + energy * 0.16 });
+      .fill({ color: stage.bg[1], alpha: 0.028 + this.arrangement * 0.05 + energy * 0.13 });
     g.circle(cx, cy, layout.boardW * (0.78 + energy * 0.16))
       .fill({ color: 0x000000, alpha: 0.28 + energy * 0.18 });
     g.circle(layout.w * 0.12, layout.h * 0.86, maxDim * 0.42)
-      .fill({ color: stage.colors[1] || stage.accent, alpha: 0.035 + energy * 0.07 });
+      .fill({ color: stage.colors[1] || stage.accent, alpha: 0.014 + this.arrangement * 0.026 + energy * 0.062 });
     g.circle(layout.w * 0.9, layout.h * 0.08, maxDim * 0.36)
-      .fill({ color: stage.accent, alpha: 0.035 + energy * 0.075 });
+      .fill({ color: stage.accent, alpha: 0.014 + this.arrangement * 0.028 + energy * 0.066 });
 
     const ribbonBands = this.quality.coarse ? 4 : 6;
     const ribbonSegments = this.quality.coarse ? 36 : 64;
@@ -1316,7 +1450,7 @@ class PixiView {
       const phase = (t * (0.045 + band * 0.008) + band * 0.137 + this.stagePulse * 0.08) % 1;
       const side = band % 2 ? -1 : 1;
       const width = 1.2 + energy * 7 + band * 0.6;
-      const alpha = (0.025 + energy * 0.075) * (1 - band * 0.08);
+      const alpha = (0.01 + this.arrangement * 0.024 + energy * 0.068) * (1 - band * 0.08);
       const color = stage.colors[band % stage.colors.length] || stage.accent;
       for (let pass = 0; pass < ribbonPasses; pass += 1) {
         const offset = (pass - 0.5) * layout.boardW * 0.16;
@@ -1335,6 +1469,7 @@ class PixiView {
     }
 
     this.drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy);
+    this.drawResonanceField(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
 
     const drift = dt * 0.001;
     for (const star of this.bgStars) {
@@ -1344,7 +1479,7 @@ class PixiView {
         star.y = -0.02;
         star.x = Math.random();
       }
-      const alpha = 0.18 + Math.sin(t * 1.8 + star.phase) * 0.2 + energy * 0.28;
+      const alpha = 0.08 + this.arrangement * 0.12 + Math.sin(t * 1.8 + star.phase) * 0.16 + energy * 0.24;
       const size = star.r * (1 + beatPulse * 0.7 + this.zonePulse * 0.6);
       g.circle(star.x * layout.w, star.y * layout.h, size).fill({ color: star.color, alpha: clamp(alpha, 0.05, 0.84) });
     }
@@ -1362,6 +1497,60 @@ class PixiView {
     }
   }
 
+  drawResonanceField(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
+    const g = this.bg;
+    const arrangement = this.arrangement;
+    if (arrangement <= 0.04 && this.inputHeat <= 0.03 && this.phrasePulse <= 0.03) return;
+    const color = stage.accent || 0xffffff;
+    const secondary = stage.colors?.[1] || color;
+    const meterCount = layout.portrait ? 10 : 16;
+    const sideGap = Math.max(layout.cell * 0.42, 10);
+    const meterW = Math.max(2, layout.cell * 0.08);
+    const meterMax = layout.cell * (0.55 + arrangement * 1.8 + beatPulse * 0.65);
+    const top = layout.boardY + layout.cell * 0.5;
+    const span = layout.boardH - layout.cell;
+    for (let side = -1; side <= 1; side += 2) {
+      const x = side < 0
+        ? layout.boardX - sideGap - meterW
+        : layout.boardX + layout.boardW + sideGap;
+      for (let i = 0; i < meterCount; i += 1) {
+        const p = i / Math.max(1, meterCount - 1);
+        const y = top + span * p;
+        const wave = 0.5 + Math.sin(t * (2.8 + arrangement * 2.4) + i * 0.83 + side) * 0.5;
+        const phrase = snapshot.arrangement?.phrase || 0;
+        const phraseLift = ((i + phrase) % 4 === 0 ? 0.34 : 0);
+        const h = meterMax * (0.28 + wave * 0.56 + phraseLift + this.inputHeat * 0.42);
+        const alpha = clamp(0.06 + arrangement * 0.3 + beatPulse * 0.18 + this.inputHeat * 0.16, 0, 0.64);
+        g.roundRect(x, y - h / 2, meterW, h, meterW / 2)
+          .fill({ color: i % 2 ? secondary : color, alpha });
+      }
+    }
+
+    const ringAlpha = clamp((arrangement * 0.12 + this.phrasePulse * 0.24 + beatPulse * 0.08) * (layout.portrait ? 0.82 : 1), 0, 0.38);
+    for (let i = 0; i < 3; i += 1) {
+      const phase = (t * 0.12 + i * 0.18 + this.arrangementLayer * 0.07) % 1;
+      g.roundRect(
+        layout.boardX - layout.cell * (0.55 + phase * 1.1),
+        layout.boardY - layout.cell * (0.55 + phase * 1.1),
+        layout.boardW + layout.cell * (1.1 + phase * 2.2),
+        layout.boardH + layout.cell * (1.1 + phase * 2.2),
+        Math.max(4, layout.cell * 0.18),
+      ).stroke({
+        color: i % 2 ? secondary : color,
+        alpha: ringAlpha * (1 - phase * 0.68),
+        width: 0.8 + arrangement * 2.2 + this.phrasePulse * 2.8,
+      });
+    }
+
+    if (this.phrasePulse > 0.02) {
+      const radius = layout.boardW * (0.82 + (1 - this.phrasePulse) * 1.35);
+      g.circle(cx, cy, radius)
+        .stroke({ color: 0xffffff, alpha: this.phrasePulse * 0.34, width: 1.4 + this.phrasePulse * 4.2 });
+      g.circle(cx, cy, radius * 0.62)
+        .fill({ color, alpha: this.phrasePulse * 0.035 });
+    }
+  }
+
   updateDistortion(layout, t, energy, beatPulse, snapshot) {
     const sprite = this.distortionSprite;
     if (!sprite) return;
@@ -1372,7 +1561,7 @@ class PixiView {
     if (!this.distortionFilter?.scale) return;
     const strength = this.quality.coarse
       ? 0
-      : clamp(1.2 + this.worldSurge * 8.5 + this.zonePulse * 7 + beatPulse * 3.8 + (snapshot.combo || 0) * 0.24, 0, 16);
+      : clamp(0.35 + this.arrangement * 3.6 + this.worldSurge * 8.5 + this.zonePulse * 7 + beatPulse * 3.8 + (snapshot.combo || 0) * 0.24, 0, 16);
     this.distortionFilter.scale.x = Math.sin(t * 0.7) * strength;
     this.distortionFilter.scale.y = Math.cos(t * 0.61) * strength * 0.72;
   }
@@ -1383,7 +1572,7 @@ class PixiView {
     if (!sprite || !texture || !sprite.visible) return;
     const tw = texture.width || sprite.texture?.width || 1;
     const th = texture.height || sprite.texture?.height || 1;
-    const scale = Math.max(layout.w / tw, layout.h / th) * (1.02 + energy * 0.025 + beatPulse * 0.012);
+    const scale = Math.max(layout.w / tw, layout.h / th) * (1.018 + this.arrangement * 0.01 + energy * 0.025 + beatPulse * 0.012);
     const driftX = Math.sin(t * 0.055 + this.stagePulse) * layout.w * 0.018;
     const driftY = Math.cos(t * 0.047 + this.worldSurge) * layout.h * 0.014;
     const tint = stage.kind === "ember"
@@ -1397,7 +1586,7 @@ class PixiView {
             : 0xffffff;
     const baseAlpha = stage.kind === "tide" ? 0.58 : stage.kind === "core" ? 0.4 : 0.34;
     sprite.tint = tint;
-    sprite.alpha = clamp(baseAlpha + energy * 0.12 + this.worldSurge * 0.1 + beatPulse * 0.045, 0.22, 0.82);
+    sprite.alpha = clamp(baseAlpha * (0.48 + this.arrangement * 0.62) + energy * 0.1 + this.worldSurge * 0.09 + beatPulse * 0.045, 0.18, 0.84);
     sprite.scale.set(scale);
     sprite.position.set(layout.w / 2 + driftX, layout.h / 2 + driftY);
     sprite.rotation = Math.sin(t * 0.026) * 0.012;
@@ -1474,10 +1663,11 @@ class PixiView {
     const cy = layout.boardY + layout.boardH / 2;
     const colors = stage.colors || [stage.accent, 0xffffff];
     const stageWarm = stage.kind === "ember" || stage.kind === "core";
-    const baseAlpha = layout.portrait ? 0.32 : 0.4;
+    const arrangement = this.arrangement;
+    const baseAlpha = (layout.portrait ? 0.18 : 0.22) + arrangement * (layout.portrait ? 0.16 : 0.22);
     const zoneBoost = snapshot.zoneActive ? 0.5 : 0;
     const comboBoost = Math.min(0.32, snapshot.combo * 0.048);
-    const flowBoost = 1 + this.zonePulse * 0.9 + this.stagePulse * 0.8 + this.worldSurge * 0.65;
+    const flowBoost = 0.72 + arrangement * 0.52 + this.zonePulse * 0.9 + this.stagePulse * 0.8 + this.worldSurge * 0.65;
     this.swarmTick = (this.swarmTick + 1) % 120;
     if (this.quality.coarse && this.swarmTick % 2 === 1) return;
 
@@ -1546,8 +1736,8 @@ class PixiView {
         ? 0xffffff
         : (p.colorBias > 0.42 ? colors[0] : (stageWarm ? 0xffd36e : (colors[1] || stage.accent)));
       const stageAlpha = stage.kind === "core" ? 0.12 : 0;
-      const alpha = clamp(baseAlpha * twinkle + energy * 0.36 + zoneBoost + comboBoost + stageAlpha, 0.08, 0.98);
-      const size = p.size * (1.12 + energy * 2.55 + this.worldSurge * 1.4 + (snapshot.zoneActive ? 1.75 : 0));
+      const alpha = clamp(baseAlpha * twinkle + energy * 0.32 + arrangement * 0.12 + zoneBoost + comboBoost + stageAlpha, 0.055, 0.98);
+      const size = p.size * (0.88 + arrangement * 0.44 + energy * 2.45 + this.worldSurge * 1.4 + (snapshot.zoneActive ? 1.75 : 0));
       const spriteScale = Math.max(0.048, size / 14);
       this.showParticleNode(entry.sprite, x, y, color, alpha, spriteScale * (ribbon ? 1.78 : 1.12), rotation);
       if (entry.glow) {
@@ -1566,7 +1756,7 @@ class PixiView {
 
   updateMeteors(layout, stage, dt, energy) {
     const g = this.bg;
-    const spawnChance = (this.quality.coarse ? 0.018 : 0.035) + energy * 0.018;
+    const spawnChance = ((this.quality.coarse ? 0.012 : 0.024) + energy * 0.018) * (0.55 + this.arrangement * 0.75);
     if (Math.random() < spawnChance && this.meteors.length < (this.quality.coarse ? 8 : 18)) {
       const fromLeft = Math.random() > 0.5;
       this.meteors.push({
@@ -1604,7 +1794,7 @@ class PixiView {
     const cell = layout.cell;
     g.clear();
 
-    const boardEnergy = clamp(this.zonePulse + this.comboPulse * 0.55 + (snapshot.combo >= 2 ? 0.18 : 0), 0, 1);
+    const boardEnergy = clamp(this.arrangement * 0.24 + this.inputHeat * 0.22 + this.zonePulse + this.comboPulse * 0.55 + (snapshot.combo >= 2 ? 0.18 : 0), 0, 1);
     g.roundRect(bx - 28, by - 28, layout.boardW + 56, layout.boardH + 56, 8)
       .fill({ color: 0x000000, alpha: 0.18 + boardEnergy * 0.18 });
     g.roundRect(bx - 18, by - 18, layout.boardW + 36, layout.boardH + 36, 6)
@@ -1915,6 +2105,22 @@ class PixiView {
         .fill({ color: 0xffffff, alpha: alpha * 0.46 });
       return true;
     });
+    this.resonancePips = this.resonancePips.filter((pip) => {
+      pip.life -= decay;
+      if (pip.life <= 0) return false;
+      const alpha = clamp(pip.life / pip.maxLife, 0, 1);
+      const p = 1 - alpha;
+      const radius = pip.radius * (0.4 + p * 1.6);
+      const x = pip.x + pip.vx * p;
+      const y = pip.y + pip.vy * p;
+      glow?.circle(x, y, radius * 1.9)
+        .fill({ color: pip.color, alpha: alpha * pip.alpha * 0.05 });
+      g.circle(x, y, radius)
+        .stroke({ color: pip.color, alpha: alpha * pip.alpha, width: 1.1 + p * 2.4 });
+      g.circle(x, y, Math.max(1.4, radius * 0.1))
+        .fill({ color: 0xffffff, alpha: alpha * pip.alpha * 0.56 });
+      return true;
+    });
     this.dropTrails = this.dropTrails.filter((trail) => {
       trail.life -= decay;
       if (trail.life <= 0) return false;
@@ -2031,17 +2237,18 @@ class PixiView {
           const h = Math.max(1, bottom - top);
           const w = beam.width * (0.45 + alpha * 0.7);
           const color = beam.color || 0xffffff;
+          const beamAlpha = beam.alpha ?? 1;
           glow?.roundRect(beam.x - w * 2.2, top, w * 4.4, h, w * 2.2)
-            .fill({ color, alpha: alpha * 0.045 });
+            .fill({ color, alpha: alpha * 0.045 * beamAlpha });
           g.roundRect(beam.x - w * 1.2, top, w * 2.4, h, w)
-            .fill({ color, alpha: alpha * 0.08 });
+            .fill({ color, alpha: alpha * 0.08 * beamAlpha });
           g.roundRect(beam.x - w * 0.22, top, w * 0.44, h, w * 0.22)
-            .fill({ color: 0xffffff, alpha: alpha * 0.24 });
+            .fill({ color: 0xffffff, alpha: alpha * 0.24 * beamAlpha });
           g.moveTo(beam.x - w * 0.58, top);
           g.lineTo(beam.x - w * 0.18, bottom);
           g.moveTo(beam.x + w * 0.42, top);
           g.lineTo(beam.x + w * 0.12, bottom);
-          g.stroke({ color: 0xffffff, alpha: alpha * 0.24, width: Math.max(0.8, w * 0.08) });
+          g.stroke({ color: 0xffffff, alpha: alpha * 0.24 * beamAlpha, width: Math.max(0.8, w * 0.08) });
         } else {
           const w = beam.width * (0.7 + alpha * 0.9);
           glow?.roundRect(beam.x - w, layout.boardY - layout.cell, w * 2, layout.boardH + layout.cell * 2, w)
@@ -2105,6 +2312,8 @@ class PixiView {
     const color = stage?.accent || 0x68e9ff;
     this.worldSurge = Math.max(this.worldSurge, 0.62 + lines * 0.2);
     this.beatHit = Math.max(this.beatHit, lines >= 4 ? 1 : 0.62);
+    this.phrasePulse = Math.max(this.phrasePulse, lines >= 4 ? 1 : 0.62);
+    this.inputHeat = Math.max(this.inputHeat, 0.4 + lines * 0.12);
     const clearColor = lines >= 4 ? 0xffffff : color;
     const centerY = rows.length
       ? rows.reduce((sum, row) => sum + layout.boardY + row * layout.cell + layout.cell / 2, 0) / rows.length
@@ -2362,7 +2571,25 @@ class PixiView {
     const cx = layout.boardX + (piece.x + piece.matrix[0].length / 2) * layout.cell;
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
     const count = kind === "drop" ? 26 + Math.min(24, amount * 1.1) : kind === "rotate" ? 28 : 12;
+    this.inputHeat = Math.max(this.inputHeat, kind === "drop" ? 0.7 : kind === "rotate" ? 0.46 : 0.32);
     if (kind === "drop") this.worldSurge = Math.max(this.worldSurge, 0.28);
+    const pipCount = kind === "move" ? 2 : kind === "rotate" ? 5 : 4;
+    for (let i = 0; i < pipCount; i += 1) {
+      const a = kind === "move"
+        ? (piece.x < COLS / 2 ? Math.PI : 0) + (Math.random() - 0.5) * 0.7
+        : Math.random() * Math.PI * 2;
+      this.resonancePips.push({
+        x: cx + Math.cos(a) * layout.cell * 0.42,
+        y: cy + Math.sin(a) * layout.cell * 0.42,
+        vx: Math.cos(a) * layout.cell * (kind === "drop" ? 1.7 : 0.9),
+        vy: Math.sin(a) * layout.cell * (kind === "drop" ? 1.1 : 0.7),
+        radius: layout.cell * (kind === "drop" ? 0.38 : 0.26),
+        color: Math.random() > 0.28 ? color : 0xffffff,
+        alpha: kind === "drop" ? 0.62 : 0.5,
+        life: kind === "drop" ? 22 : 16,
+        maxLife: kind === "drop" ? 22 : 16,
+      });
+    }
     for (let i = 0; i < Math.min(count, this.quality.coarse ? 36 : 62); i += 1) {
       const a = kind === "drop"
         ? -Math.PI / 2 + (Math.random() - 0.5) * 0.72
@@ -2440,9 +2667,9 @@ class PixiView {
       this.shockBands.push({
         orientation: "vertical",
         x: cx,
-        width: Math.max(layout.cell * 0.7, 10 + dropDistance * 0.18),
+        width: Math.max(layout.cell * 0.46, 7 + dropDistance * 0.12),
         color: 0xffffff,
-        alpha: 0.34,
+        alpha: 0.22,
         sway: layout.cell * 0.08,
         life: 14 + Math.min(10, dropDistance * 0.55),
         maxLife: 14 + Math.min(10, dropDistance * 0.55),
@@ -2473,8 +2700,9 @@ class PixiView {
         x: cx,
         top: Math.max(layout.boardY - layout.cell * 0.4, impactY - dropDistance * layout.cell - layout.cell * 0.7),
         bottom: impactY + layout.cell * 0.8,
-        width: Math.max(layout.cell * 0.72, 11 + dropDistance * 0.16),
+        width: Math.max(layout.cell * 0.46, 8 + dropDistance * 0.11),
         color,
+        alpha: 0.58,
         life: 18 + Math.min(8, dropDistance * 0.38),
         maxLife: 18 + Math.min(8, dropDistance * 0.38),
       });
@@ -2725,18 +2953,22 @@ class LumenShiftApp {
       onMove: () => {
         this.audio.move();
         this.view.actionPulse("move", this.core?.snapshot?.());
+        this.haptic(4);
       },
       onRotate: () => {
         this.audio.rotate();
         this.view.actionPulse("rotate", this.core?.snapshot?.());
+        this.haptic(7);
       },
       onHardDrop: (distance) => {
         this.audio.drop();
         this.view.actionPulse("drop", this.core?.snapshot?.(), distance);
+        this.haptic([12, 22, 16]);
       },
       onHold: () => {
         this.audio.rotate();
         this.view.actionPulse("rotate", this.core?.snapshot?.());
+        this.haptic(8);
       },
       onLock: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
@@ -2752,6 +2984,7 @@ class LumenShiftApp {
         this.audio.clear(info.lines);
         this.view.lineClear(info.rows, info.lines, stage, info.cells);
         this.showEvent(this.clearLabel(info.lines, info.combo, info.zoneActive));
+        this.haptic(info.lines >= 4 ? [28, 36, 42] : [14, 20, 10]);
         this.rank.record({
           type: "clear",
           lines: info.lines,
@@ -2765,11 +2998,13 @@ class LumenShiftApp {
         this.view.zoneIgnite(STAGES[this.core.stageIndex] || STAGES[0]);
         this.showEvent("LUMEN ZONE");
         this.setZoneVeil(true);
+        this.haptic([18, 28, 18, 28, 32]);
       },
       onZoneEnd: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
         this.audio.zoneEnd(info.lines);
         this.view.zoneBurst(info.lines, stage);
+        this.haptic(info.lines > 0 ? [24, 28, 24, 36, 44] : 18);
         if (info.delta > 0) {
           this.showEvent(`${info.lines} LINE BURST`);
           this.rank.record({
@@ -2786,6 +3021,14 @@ class LumenShiftApp {
       onEvent: (label) => this.showEvent(label),
       onFinish: (title, snapshot) => this.openResult(title, snapshot),
     };
+  }
+
+  haptic(pattern) {
+    try {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    } catch {
+      // Haptics are optional and browser/device dependent.
+    }
   }
 
   frame(dt) {
