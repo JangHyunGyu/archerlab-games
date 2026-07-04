@@ -237,14 +237,27 @@ class AudioDirector {
     try {
       await window.Tone.start();
       const Tone = window.Tone;
-      const master = new Tone.Gain(0.74).toDestination();
+      let master = null;
+      try {
+        const limiter = new Tone.Limiter(-1.2).toDestination();
+        const compressor = new Tone.Compressor({
+          threshold: -14,
+          ratio: 3.5,
+          attack: 0.004,
+          release: 0.16,
+        }).connect(limiter);
+        master = new Tone.Gain(0.62).connect(compressor);
+      } catch {
+        master = new Tone.Gain(0.58).toDestination();
+      }
       const delay = new Tone.FeedbackDelay("8n", 0.22).connect(master);
       const reverb = new Tone.Reverb({ decay: 3.2, wet: 0.28 }).connect(master);
       const baseGain = new Tone.Gain(0.1).connect(reverb);
       const pulseGain = new Tone.Gain(0.01).connect(delay);
       const energyGain = new Tone.Gain(0.0).connect(master);
       const zoneGain = new Tone.Gain(0).connect(reverb);
-      const hitGain = new Tone.Gain(0.34).connect(master);
+      const hitGain = new Tone.Gain(0.26).connect(master);
+      const clearGain = new Tone.Gain(0.72).connect(hitGain);
       const motionGain = new Tone.Gain(0.24).connect(delay);
       const textureGain = new Tone.Gain(0).connect(reverb);
       const pad = new Tone.PolySynth(Tone.Synth, {
@@ -266,9 +279,9 @@ class AudioDirector {
         envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.18 },
       }).connect(hitGain);
       const clear = new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: "fatsawtooth", count: 2, spread: 18 },
-        envelope: { attack: 0.01, decay: 0.18, sustain: 0.18, release: 0.42 },
-      }).connect(hitGain);
+        oscillator: { type: "fatsine", count: 2, spread: 12 },
+        envelope: { attack: 0.012, decay: 0.14, sustain: 0.12, release: 0.34 },
+      }).connect(clearGain);
       const arp = new Tone.Synth({
         oscillator: { type: "fatsine", count: 2, spread: 14 },
         envelope: { attack: 0.004, decay: 0.06, sustain: 0.04, release: 0.18 },
@@ -413,7 +426,7 @@ class AudioDirector {
     this.rampStem("texture", Math.pow(this.arrangement, 1.75) * 0.18 + zoneLift * 0.08);
     this.rampStem("motion", 0.21 + this.arrangement * 0.08 + this.gestureHeat * 0.05);
     this.rampStem("zone", zoneLift * 0.42);
-    this.rampStem("hit", 0.3 + energy * 0.13);
+    this.rampStem("hit", 0.22 + energy * 0.09);
     const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
     try {
       window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
@@ -463,13 +476,14 @@ class AudioDirector {
     };
     this.gestureHeat = Math.max(this.gestureHeat, 0.48 + lines * 0.09);
     try {
-      this.synths.clear.triggerAttackRelease(chords[lines] || chords[1], "8n", undefined, lines >= 4 ? 0.44 : 0.25);
+      this.synths.clear.releaseAll?.();
+      this.synths.clear.triggerAttackRelease(chords[lines] || chords[1], "8n", undefined, lines >= 4 ? 0.32 : 0.18);
       if (this.synths.sparkle) {
         const lift = lines >= 4 ? ["C6", "E6", "G6", "C7"] : ["C6", "G6"];
         lift.slice(0, Math.min(lift.length, lines + 1)).forEach((note, index) => {
           setTimeout(() => {
             try {
-              this.synths.sparkle.triggerAttackRelease(note, "32n", undefined, lines >= 4 ? 0.12 : 0.07);
+              this.synths.sparkle.triggerAttackRelease(note, "32n", undefined, lines >= 4 ? 0.075 : 0.045);
             } catch {
               // Ignore late sparkle failures.
             }
@@ -491,8 +505,9 @@ class AudioDirector {
     if (!this.ready || !this.synths) return;
     try {
       this.rampStem("zone", 0.04);
-      this.synths.clear.triggerAttackRelease(["C4", "G4", "C5", "E5", "G5"], "2n", undefined, lines > 0 ? 0.55 : 0.24);
-      this.synths.impact.triggerAttackRelease("C2", "4n", undefined, 0.48);
+      this.synths.clear.releaseAll?.();
+      this.synths.clear.triggerAttackRelease(["C4", "G4", "C5", "E5", "G5"], "2n", undefined, lines > 0 ? 0.36 : 0.18);
+      this.synths.impact.triggerAttackRelease("C2", "4n", undefined, 0.34);
     } catch {
       // Ignore mobile audio scheduling errors.
     }
