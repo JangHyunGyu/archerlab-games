@@ -38,6 +38,169 @@
 - `base + pulse + rhythm + energy + lead + texture + zone`을 동시에 재생했을 때 `full.mp3`와 비슷하게 들리면 좋다.
 - stem 제작이 어렵다면 우선 `full.mp3` 5개만 가져와도 된다.
 
+## Loop Production Rules: BGM/stem 제작 규칙
+
+BGM 계열은 반드시 **loop asset**으로 제작한다. 게임 플레이 중 같은 스테이지 음악이 계속 반복되기 때문에, loop 지점에서 박자가 흔들리거나 reverb tail이 끊기면 바로 티가 난다.
+
+Loop로 만들어야 하는 파일:
+
+```text
+full.mp3
+base.mp3
+pulse.mp3
+rhythm.mp3
+energy.mp3
+lead.mp3
+texture.mp3
+zone.mp3
+```
+
+Loop가 아니어도 되는 파일:
+
+```text
+music/stingers/*.mp3
+sfx/*.mp3
+```
+
+`stingers`와 `sfx`는 one-shot이다. 한 번 재생하고 끝나는 파일로 만든다.
+
+### 권장 마디 수
+
+| Bars | 용도 | 판단 |
+| ---: | --- | --- |
+| 8 bars | 최소 loop | 제작은 쉽지만 반복감이 빨리 드러남 |
+| 16 bars | 기본 권장 | 게임 BGM으로 가장 무난함 |
+| 32 bars | 고퀄 권장 | 반복감이 줄고 원작 느낌에 더 가까움 |
+
+최소는 8 bars지만, 가능하면 16 bars 이상으로 제작한다. Stage 05처럼 마지막 고조 스테이지는 32 bars도 좋다.
+
+### 스테이지별 loop 길이 계산
+
+4/4 기준 계산식:
+
+```text
+loop seconds = bars * 4 beats * 60 / BPM
+```
+
+| Stage | BPM | 8 bars | 16 bars | 32 bars |
+| --- | ---: | ---: | ---: | ---: |
+| Stage 01 Deep Tide | 88 | 21.818s | 43.636s | 87.273s |
+| Stage 02 Ember Veil | 104 | 18.462s | 36.923s | 73.846s |
+| Stage 03 Bloom Signal | 112 | 17.143s | 34.286s | 68.571s |
+| Stage 04 Void Aurora | 118 | 16.271s | 32.542s | 65.085s |
+| Stage 05 White Core | 126 | 15.238s | 30.476s | 60.952s |
+
+예를 들어 Stage 03을 112 BPM, 16 bars로 만들면 `full/base/pulse/rhythm/energy/lead/texture/zone` 전부 길이가 **34.286초**로 맞아야 한다.
+
+### Stem 동기화 규칙
+
+같은 스테이지 안의 stem은 아래 조건을 모두 만족해야 한다.
+
+| 항목 | 규칙 |
+| --- | --- |
+| BPM | 모두 동일 |
+| 마디 수 | 모두 동일 |
+| 시작점 | 첫 박자 downbeat가 완전히 동일 |
+| 끝점 | 마지막 bar 끝에서 정확히 잘림 |
+| 길이 | sample 단위까지 최대한 동일 |
+| 루프 | 파일 끝에서 다시 처음으로 돌아와도 박자가 이어져야 함 |
+
+잘못된 예:
+
+```text
+base.mp3      43.636s
+pulse.mp3     43.700s
+rhythm.mp3    43.590s
+```
+
+이렇게 stem마다 길이가 조금씩 다르면 반복될수록 박자가 어긋난다.
+
+올바른 예:
+
+```text
+base.mp3      43.636s
+pulse.mp3     43.636s
+rhythm.mp3    43.636s
+energy.mp3    43.636s
+lead.mp3      43.636s
+texture.mp3   43.636s
+zone.mp3      43.636s
+```
+
+### Tail/Reverb 처리
+
+Loop BGM은 끝부분의 reverb/delay tail을 조심해야 한다.
+
+권장 방식:
+
+- 마지막 마디의 reverb tail이 다음 loop 첫 마디와 자연스럽게 이어지게 만든다.
+- 가능하면 DAW에서 loop region을 잡고 여러 번 반복 재생해 seam을 확인한다.
+- 끝에 긴 잔향이 남는 stem은 tail을 다음 loop 시작부에 반영하거나, loop 전용 bounce 기능을 사용한다.
+- 파일 끝에 빈 무음이 붙으면 안 된다.
+- 파일 시작점 앞에 프리롤 무음이 붙으면 안 된다.
+
+피해야 할 것:
+
+- 마지막에 crash/reverb가 갑자기 잘리는 파일
+- loop 첫 박자 앞에 50~200ms 무음이 붙은 파일
+- 마지막 박자가 덜 끝난 상태에서 잘린 파일
+- MP3 export 후 앞뒤 padding 때문에 박자가 밀리는 파일
+
+### MP3 loop 주의
+
+MP3는 인코딩 특성상 앞뒤 padding이 생길 수 있다. 가능하면 원본은 WAV로 보관하고, 게임 납품용만 MP3로 export한다.
+
+권장 납품:
+
+```text
+게임 적용용: mp3
+원본 보관용: wav 또는 flac
+```
+
+MP3로만 전달할 경우:
+
+- export 후 실제로 loop 테스트를 해야 한다.
+- 파일을 3~4번 반복 재생해서 클릭/공백/박자 밀림이 없는지 확인한다.
+- 문제가 있으면 WAV 원본도 같이 전달한다.
+
+### Zone stem 규칙
+
+`zone.mp3`도 one-shot이 아니라 loop다.
+
+Zone은 플레이 상황에 따라 길이가 달라질 수 있으므로, `zone.mp3`는 계속 반복되어도 어색하지 않아야 한다.
+
+`zone.mp3`는 이렇게 만든다.
+
+- 평소 BGM보다 더 밝고 넓게 만든다.
+- 시작점은 다른 stem과 같은 downbeat여야 한다.
+- 단독으로 들어도 loop가 자연스러워야 한다.
+- `base/pulse/rhythm/energy` 위에 얹었을 때 과하게 찢어지지 않아야 한다.
+- Zone 시작 순간의 강한 one-shot은 `music/stingers/zone-start.mp3` 또는 `sfx/lumen-zone-start.mp3`가 담당한다.
+
+### Stinger/one-shot 규칙
+
+아래 파일은 loop가 아니라 one-shot이다.
+
+```text
+music/stingers/stage-02-enter.mp3
+music/stingers/stage-03-enter.mp3
+music/stingers/stage-04-enter.mp3
+music/stingers/stage-05-enter.mp3
+music/stingers/zone-ready.mp3
+music/stingers/zone-start.mp3
+music/stingers/zone-end-success.mp3
+music/stingers/zone-end-empty.mp3
+music/stingers/game-over.mp3
+```
+
+one-shot은 다음 기준으로 만든다.
+
+- 앞쪽 무음 거의 없음
+- 시작 어택이 명확함
+- 끝부분 tail은 자연스럽게 fade out
+- BGM loop와 동시에 재생되어도 너무 크지 않게 마스터링
+- Stage enter stinger는 다음 stage의 BPM/키/분위기와 어울리게 제작
+
 ## Folder Checklist: 실제 넣을 파일 경로
 
 Stage 01:
