@@ -6,15 +6,17 @@
 
 최소 필수 파일은 아래 5개다.
 
-| Priority | File | BPM | 필수 이유 | 필요한 느낌 |
-| --- | --- | ---: | --- | --- |
-| 1 | `assets/audio/music/stage-01-deep-tide/full.mp3` | 88 | 첫 스테이지 전체 분위기 결정 | 깊은 푸른 수중, 부유감, 잔잔한 pulse, 차갑고 투명한 pad |
-| 2 | `assets/audio/music/stage-02-ember-veil/full.mp3` | 104 | 첫 전환에서 체감 퀄리티가 갈림 | 황금/주황빛, 열감, 불꽃 입자, 더 강한 rhythm |
-| 3 | `assets/audio/music/stage-03-bloom-signal/full.mp3` | 112 | 중반부 에너지 상승 담당 | 핑크/시안 네온, 선명한 arpeggio, digital signal |
-| 4 | `assets/audio/music/stage-04-void-aurora/full.mp3` | 118 | 후반부 공간감 담당 | 우주, 오로라, 넓은 reverb, 차가운 pulse |
-| 5 | `assets/audio/music/stage-05-white-core/full.mp3` | 126 | 최종 클라이맥스 담당 | 흰빛 폭발, 고밀도 rhythm, 밝은 lead, 최고조 에너지 |
+| Priority | File | Loop Type | BPM | 필수 이유 | 필요한 느낌 |
+| --- | --- | --- | ---: | --- | --- |
+| 1 | `assets/audio/music/stage-01-deep-tide/full.mp3` | seamless loop, 16 bars 권장 | 88 | 첫 스테이지 전체 분위기 결정 | 깊은 푸른 수중, 부유감, 잔잔한 pulse, 차갑고 투명한 pad |
+| 2 | `assets/audio/music/stage-02-ember-veil/full.mp3` | seamless loop, 16 bars 권장 | 104 | 첫 전환에서 체감 퀄리티가 갈림 | 황금/주황빛, 열감, 불꽃 입자, 더 강한 rhythm |
+| 3 | `assets/audio/music/stage-03-bloom-signal/full.mp3` | seamless loop, 16 bars 권장 | 112 | 중반부 에너지 상승 담당 | 핑크/시안 네온, 선명한 arpeggio, digital signal |
+| 4 | `assets/audio/music/stage-04-void-aurora/full.mp3` | seamless loop, 16 bars 권장 | 118 | 후반부 공간감 담당 | 우주, 오로라, 넓은 reverb, 차가운 pulse |
+| 5 | `assets/audio/music/stage-05-white-core/full.mp3` | seamless loop, 16~32 bars 권장 | 126 | 최종 클라이맥스 담당 | 흰빛 폭발, 고밀도 rhythm, 밝은 lead, 최고조 에너지 |
 
 이 5개만 먼저 넣어도 스테이지별 분위기 변화는 만들 수 있다. 단, 원작처럼 “음악이 플레이에 반응하는 느낌”까지 가려면 아래 stem 파일들이 필요하다.
+
+여기서 `full.mp3`는 일반 노래 한 곡이 아니라 **해당 스테이지의 전체 믹스 loop**다. 즉, 파일 끝에서 다시 처음으로 돌아와도 박자와 분위기가 자연스럽게 이어져야 한다.
 
 ## Best Quality: 스테이지별 Stem 설명
 
@@ -41,6 +43,32 @@
 ## Loop Production Rules: BGM/stem 제작 규칙
 
 BGM 계열은 반드시 **loop asset**으로 제작한다. 게임 플레이 중 같은 스테이지 음악이 계속 반복되기 때문에, loop 지점에서 박자가 흔들리거나 reverb tail이 끊기면 바로 티가 난다.
+
+## Vocal/Lyrics Rule: 가사/보컬 규칙
+
+BGM과 stem에는 **가사를 넣지 않는다.** 기본 방향은 instrumental이다.
+
+권장:
+
+- 무가사 instrumental
+- choir pad
+- vocal texture
+- ahh/ohh 계열의 단어 없는 보컬 질감
+- 숨소리처럼 느껴지는 아주 약한 texture
+
+피해야 할 것:
+
+- 한국어/영어/일본어 등 실제 단어가 들리는 가사
+- 반복 loop에서 문장이 반복되는 보컬 hook
+- 플레이 입력음과 경쟁하는 강한 lead vocal
+- line clear, hard drop, Zone 효과음을 덮는 보컬
+
+이유:
+
+- loop BGM에서 가사는 반복감이 너무 빨리 드러난다.
+- 블럭 조작과 라인 클리어 피드백을 방해한다.
+- 게임의 음악은 “노래”보다 “플레이에 반응하는 공간”에 가까워야 한다.
+- 보컬이 필요하면 단어 없는 choir/shimmer 계열로 분위기만 만든다.
 
 Loop로 만들어야 하는 파일:
 
