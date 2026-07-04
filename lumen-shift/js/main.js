@@ -6,7 +6,7 @@ const VISIBLE_NEXT = 5;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
 const STORAGE_PREFIX = "lumen-shift";
-const AUDIO_ASSET_VERSION = "20260705-audio-v5";
+const AUDIO_ASSET_VERSION = "20260705-audio-v6";
 
 function audioAsset(path) {
   return `${path}?v=${AUDIO_ASSET_VERSION}`;
@@ -395,6 +395,7 @@ class AudioDirector {
     this.nativeZoneLoop = this.nativeSfx.zoneLoop?.[0] || null;
     this.nativeUnlocked = false;
     this.nativeBackingStarted = false;
+    this.nativeBackingError = "";
     this.nativePrimePromise = null;
     this.musicLoops = [];
     this.backingPlayer = null;
@@ -663,8 +664,9 @@ class AudioDirector {
   async unlockNativeAudio() {
     if (this.nativeUnlocked) return;
     if (this.nativePrimePromise) return this.nativePrimePromise;
+    const shouldPrimeBacking = this.nativeBacking && this.nativeBacking.paused !== false;
     const candidates = [
-      this.nativeBacking,
+      shouldPrimeBacking ? this.nativeBacking : null,
       this.nativeSfx.uiStart?.[0],
       this.nativeSfx.uiClick?.[0],
       this.nativeSfx.hardDrop?.[0],
@@ -679,6 +681,7 @@ class AudioDirector {
 
   async primeNativeAudio(audio) {
     if (!audio) return;
+    if (audio.paused === false) return;
     const previousMuted = audio.muted;
     const previousVolume = audio.volume;
     try {
@@ -688,8 +691,10 @@ class AudioDirector {
       if (result?.then) {
         await Promise.race([result, new Promise((resolve) => setTimeout(resolve, 160))]);
       }
-      audio.pause();
-      audio.currentTime = 0;
+      if (audio.paused === false) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
     } catch {
       // Some mobile browsers only unlock on the first real play request.
     } finally {
@@ -877,26 +882,58 @@ class AudioDirector {
     return STAGE_FULL_BGM_URLS[index] || FALLBACK_BGM_URL;
   }
 
+  beginUserGestureAudio(index = 0) {
+    this.currentStage = index;
+    this.switchNativeBacking(this.stageBgmUrl(index), { force: true, volume: 0.22 });
+    this.startNativeBackingTrack({ fromGesture: true });
+    this.playSfx("uiStart", -3);
+  }
+
   switchStageBacking(index) {
-    this.switchNativeBacking(this.stageBgmUrl(index));
+    this.switchNativeBacking(this.stageBgmUrl(index), { resume: true });
   }
 
   switchNativeBacking(url, options = {}) {
     if (!url) return;
     if (!options.force && this.nativeBackingUrl === url) return;
-    const shouldResume = !!this.nativeBackingStarted && this.nativeBacking?.paused === false;
-    const volume = this.nativeBacking?.volume || 0.18;
+    const audio = this.nativeBacking || this.createNativeAudio(url, { loop: true, volume: 0.22 });
+    if (!audio) return;
+    const shouldResume = !!options.resume || (!!this.nativeBackingStarted && audio.paused === false);
+    const volume = typeof options.volume === "number" ? options.volume : (audio.volume || 0.22);
+    const existingHandler = audio._lumenBackingErrorHandler;
+    if (existingHandler) {
+      try {
+        audio.removeEventListener("error", existingHandler);
+      } catch {
+        // Native backing is best effort.
+      }
+      audio._lumenBackingErrorHandler = null;
+    }
     try {
-      this.nativeBacking?.pause();
+      audio.pause();
     } catch {
       // Native backing is best effort.
     }
     this.nativeBackingUrl = url;
-    this.nativeBacking = this.createNativeAudio(url, { loop: true, volume });
-    if (this.nativeBacking && url !== FALLBACK_BGM_URL) {
-      this.nativeBacking.addEventListener("error", () => {
-        this.switchNativeBacking(FALLBACK_BGM_URL, { force: true });
-      }, { once: true });
+    this.nativeBacking = audio;
+    this.nativeBackingError = "";
+    audio.loop = true;
+    audio.volume = volume;
+    audio.preload = "auto";
+    audio.setAttribute("playsinline", "");
+    try {
+      audio.src = url;
+      audio.load?.();
+    } catch {
+      // Native backing is best effort.
+    }
+    if (url !== FALLBACK_BGM_URL) {
+      const onError = () => {
+        this.nativeBackingError = "load_error";
+        this.switchNativeBacking(FALLBACK_BGM_URL, { force: true, resume: shouldResume });
+      };
+      audio._lumenBackingErrorHandler = onError;
+      audio.addEventListener("error", onError, { once: true });
     }
     this.nativeBackingStarted = false;
     this.nativePrimePromise = null;
@@ -904,23 +941,30 @@ class AudioDirector {
   }
 
   startNativeBackingTrack() {
-    if (!this.nativeBacking || this.nativeBackingStarted) return;
+    if (!this.nativeBacking) return;
+    if (this.nativeBackingStarted && this.nativeBacking.paused === false) return;
+    const handleFailure = (err) => {
+      this.nativeBackingStarted = false;
+      const errorName = err?.name || "play_failed";
+      this.nativeBackingError = errorName;
+      const isGestureBlocked = errorName === "NotAllowedError" || errorName === "AbortError";
+      if (!isGestureBlocked && this.nativeBackingUrl !== FALLBACK_BGM_URL) {
+        this.switchNativeBacking(FALLBACK_BGM_URL, { force: true, resume: true });
+      }
+    };
     try {
       this.nativeBacking.loop = true;
-      this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.18);
+      this.nativeBacking.muted = false;
+      this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.22);
       const result = this.nativeBacking.play();
-      result?.catch?.(() => {
-        this.nativeBackingStarted = false;
-        if (this.nativeBackingUrl !== FALLBACK_BGM_URL) {
-          this.switchNativeBacking(FALLBACK_BGM_URL, { force: true });
-        }
+      result?.then?.(() => {
+        this.nativeBackingStarted = true;
+        this.nativeBackingError = "";
       });
+      result?.catch?.(handleFailure);
       this.nativeBackingStarted = true;
-    } catch {
-      this.nativeBackingStarted = false;
-      if (this.nativeBackingUrl !== FALLBACK_BGM_URL) {
-        this.switchNativeBacking(FALLBACK_BGM_URL, { force: true });
-      }
+    } catch (err) {
+      handleFailure(err);
     }
   }
 
@@ -4707,10 +4751,10 @@ class LumenShiftApp {
   async startGame(modeKey) {
     this.modeKey = modeKey || this.modeKey || "journey";
     writeStorage("mode", this.modeKey);
+    this.audio.beginUserGestureAudio(0);
     this.hideAllScreens();
     this.setZoneVeil(false, true);
     await this.audio.unlock({ startMusic: true });
-    this.audio.ui("start");
     this.rank = new RankClient();
     if (MODES[this.modeKey]?.ranked) this.rank.start().catch(() => null);
     this.core.callbacks = this.makeCallbacks();
