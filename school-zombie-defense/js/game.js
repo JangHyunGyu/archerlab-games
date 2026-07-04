@@ -138,7 +138,10 @@
     up: "aim-12",
     right: "aim-1330"
   };
-  const CHARACTER_ATTACK_ACTIONS = {};
+  const CHARACTER_ATTACK_ACTIONS = {
+    a: "attack",
+    f: "throw"
+  };
   const PROJECTILE_SCALES = {
     "projectile-arrow": 0.228,
     "projectile-pistol": 0.032,
@@ -184,7 +187,7 @@
     "projectile-rifle": { texture: "zombie-hit-rifle-sheet", width: 70, duration: 260, alpha: 0.98, scalePeak: 1.08, rotation: 0.35, frameWidth: 140, frameHeight: 100, frames: 16 },
     "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 150, duration: 300, alpha: 0.98, scalePeak: 1.16, rotation: 0.42, frameWidth: 150, frameHeight: 104, frames: 16 },
     "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 106, duration: 320, alpha: 0.98, scalePeak: 1.1, rotation: 0.25, frameWidth: 160, frameHeight: 130, frames: 18 },
-    "projectile-nail": { texture: "zombie-hit-pistol-sheet", width: 58, duration: 250, alpha: 0.98, scalePeak: 1.08, rotation: 0.2, frameWidth: 112, frameHeight: 96, frames: 16 },
+    "projectile-nail": { texture: "zombie-hit-nail-sheet", width: 64, duration: 230, alpha: 0.98, scalePeak: 1.12, rotation: 0.18, frameWidth: 128, frameHeight: 128, frames: 4 },
     explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
     default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
   };
@@ -1977,6 +1980,10 @@
       this.load.image("character-f", imageAsset("assets/images/character-f.png"));
       this.load.image("character-g", imageAsset("assets/images/character-g.png"));
       this.load.image("character-h", imageAsset("assets/images/character-h.png"));
+      for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
+        this.load.image(`character-a-attack-${frame}`, imageAsset(`assets/images/character-a-attack-${frame}.png`));
+        this.load.image(`character-f-throw-${frame}`, imageAsset(`assets/images/character-f-throw-${frame}.png`));
+      }
       this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
       this.load.image("avatar-bow", imageAsset("assets/images/avatar-bow.png"));
       this.load.image("avatar-rifle", imageAsset("assets/images/avatar-rifle.png"));
@@ -2033,6 +2040,7 @@
       this.load.spritesheet("zombie-hit-rifle-sheet", imageAsset("assets/images/zombie-hit-rifle-sheet.png"), { frameWidth: 140, frameHeight: 100 });
       this.load.spritesheet("zombie-hit-rocket-sheet", imageAsset("assets/images/zombie-hit-rocket-sheet.png"), { frameWidth: 160, frameHeight: 130 });
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
+      this.load.spritesheet("zombie-hit-nail-sheet", imageAsset("assets/images/zombie-hit-nail-sheet.png"), { frameWidth: 128, frameHeight: 128 });
       this.load.spritesheet("effect-fire-zone-sheet", imageAsset("assets/images/effect-fire-zone-sheet.png"), { frameWidth: 256, frameHeight: 160 });
       this.load.image("engineer-turret", imageAsset("assets/images/engineer-turret.png"));
       this.load.image("engineer-turret-aim", imageAsset("assets/images/engineer-turret-aim.png"));
