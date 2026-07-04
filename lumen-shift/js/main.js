@@ -3577,6 +3577,7 @@ class LumenShiftApp {
     this.elements.nickname.value = readStorage("nickname", "");
     this.core = new FallingBlockCore(this.makeCallbacks());
     this.core.status = "menu";
+    this.setMenuShell(true);
     this.input = new InputController(this.root, this.elements.controls, (action) => this.handleAction(action));
   }
 
@@ -3756,6 +3757,7 @@ class LumenShiftApp {
 
   openMenu() {
     this.core.status = "menu";
+    this.setMenuShell(true);
     this.setZoneVeil(false, true);
     this.applyModeSelection();
     this.elements.menu.classList.remove("is-hidden");
@@ -3788,9 +3790,14 @@ class LumenShiftApp {
   }
 
   hideAllScreens() {
+    this.setMenuShell(false);
     this.elements.menu.classList.add("is-hidden");
     this.elements.pause.classList.add("is-hidden");
     this.elements.result.classList.add("is-hidden");
+  }
+
+  setMenuShell(active) {
+    this.root.classList.toggle("is-menu-mode", !!active);
   }
 
   async submitScore() {
