@@ -825,6 +825,8 @@ class PixiView {
     this.sparkCursor = 0;
     this.particleTextures = null;
     this.particleAtlas = null;
+    this.bgPlate = null;
+    this.bgPlateTexture = null;
     this.bgStars = [];
     this.stageIndex = 0;
     this.stagePulse = 0;
@@ -865,6 +867,8 @@ class PixiView {
     this.root.appendChild(this.app.canvas || this.app.view);
 
     this.bg = new window.PIXI.Graphics();
+    this.bgPlate = new window.PIXI.Sprite(window.PIXI.Texture.EMPTY);
+    this.bgPlate.eventMode = "none";
     this.bloomLayer = this.makeParticleLayer();
     this.swarmLayer = this.makeParticleLayer();
     this.board = new window.PIXI.Graphics();
@@ -876,8 +880,9 @@ class PixiView {
     this.setAdditive(this.swarmLayer);
     this.setAdditive(this.glow);
     this.setAdditive(this.sparkLayer);
-    this.app.stage.addChild(this.bg, this.bloomLayer, this.swarmLayer, this.board, this.glow, this.fx, this.sparkLayer, this.flashLayer);
+    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.glow, this.fx, this.sparkLayer, this.flashLayer);
     this.makeParticleTextures();
+    await this.loadStagePlate();
     this.applyBloomFilters();
     this.seedStars();
     this.seedSwarm();
@@ -921,6 +926,18 @@ class PixiView {
     if (!layer) layer = new PIXI.Container();
     layer.eventMode = "none";
     return layer;
+  }
+
+  async loadStagePlate() {
+    if (!this.bgPlate || !window.PIXI?.Assets) return;
+    try {
+      this.bgPlateTexture = await window.PIXI.Assets.load("assets/images/stage-lumen-field-v2.webp?v=20260704-field-v1");
+      this.bgPlate.texture = this.bgPlateTexture;
+      this.bgPlate.anchor?.set?.(0.5);
+      this.bgPlate.visible = true;
+    } catch {
+      this.bgPlate.visible = false;
+    }
   }
 
   setAdditive(layer) {
@@ -1228,6 +1245,7 @@ class PixiView {
     const energy = clamp(0.12 + snapshot.combo * 0.04 + this.zonePulse * 0.54 + this.stagePulse * 0.52 + this.worldSurge * 0.46 + beatPulse * 0.12, 0.1, 1);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
+    this.drawStagePlate(layout, stage, t, energy, cx, cy);
 
     g.rect(0, 0, layout.w, layout.h).fill({ color: 0x000006, alpha: 0.9 });
     g.rect(0, 0, layout.w, layout.h).fill({ color: stage.bg[0], alpha: 0.42 + this.zonePulse * 0.12 });
@@ -1291,6 +1309,32 @@ class PixiView {
       }
       g.rect(0, 0, layout.w, layout.h).fill({ color: stage.accent, alpha: this.zonePulse * 0.035 });
     }
+  }
+
+  drawStagePlate(layout, stage, t, energy, cx, cy) {
+    const sprite = this.bgPlate;
+    const texture = this.bgPlateTexture;
+    if (!sprite || !texture || !sprite.visible) return;
+    const tw = texture.width || sprite.texture?.width || 1;
+    const th = texture.height || sprite.texture?.height || 1;
+    const scale = Math.max(layout.w / tw, layout.h / th) * (1.02 + energy * 0.025);
+    const driftX = Math.sin(t * 0.055 + this.stagePulse) * layout.w * 0.018;
+    const driftY = Math.cos(t * 0.047 + this.worldSurge) * layout.h * 0.014;
+    const tint = stage.kind === "ember"
+      ? 0xffb06a
+      : stage.kind === "signal"
+        ? 0xff9bed
+        : stage.kind === "aurora"
+          ? 0xa8c6ff
+          : stage.kind === "core"
+            ? 0xeaf7ff
+            : 0xffffff;
+    const baseAlpha = stage.kind === "tide" ? 0.58 : stage.kind === "core" ? 0.4 : 0.34;
+    sprite.tint = tint;
+    sprite.alpha = clamp(baseAlpha + energy * 0.12 + this.worldSurge * 0.1, 0.22, 0.78);
+    sprite.scale.set(scale);
+    sprite.position.set(layout.w / 2 + driftX, layout.h / 2 + driftY);
+    sprite.rotation = Math.sin(t * 0.026) * 0.012;
   }
 
   drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy) {
