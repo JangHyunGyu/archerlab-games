@@ -263,10 +263,12 @@ class AudioDirector {
   }
 
   async unlock() {
-    if (this.ready || !window.Tone) return;
+    if (this.ready) return;
+    const toneGlobal = await this.waitForTone();
+    if (!toneGlobal) return;
     try {
-      await window.Tone.start();
-      const Tone = window.Tone;
+      await toneGlobal.start();
+      const Tone = toneGlobal;
       let master = null;
       try {
         const limiter = new Tone.Limiter(-1.2).toDestination();
@@ -401,6 +403,25 @@ class AudioDirector {
     } catch {
       this.ready = false;
     }
+  }
+
+  waitForTone(timeoutMs = 3600) {
+    if (window.Tone) return Promise.resolve(window.Tone);
+    const startedAt = performance.now();
+    return new Promise((resolve) => {
+      const tick = () => {
+        if (window.Tone) {
+          resolve(window.Tone);
+          return;
+        }
+        if (performance.now() - startedAt >= timeoutMs) {
+          resolve(null);
+          return;
+        }
+        window.setTimeout(tick, 80);
+      };
+      tick();
+    });
   }
 
   startMusic() {
