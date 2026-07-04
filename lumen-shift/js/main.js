@@ -4,6 +4,7 @@ const COLS = 10;
 const ROWS = 20;
 const VISIBLE_NEXT = 5;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
+const STAGE_LINE_GOAL = 14;
 const STORAGE_PREFIX = "lumen-shift";
 const TEMP_BGM_URL = "assets/audio/lumen-temp-bgm.mp3?v=20260704-bgm-v1";
 
@@ -120,6 +121,25 @@ const PIECES = {
 
 const PIECE_KEYS = Object.keys(PIECES);
 const KICKS = [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, -1], [1, -1], [-1, -1]];
+
+function stageLineGoalForMode(modeKey, mode) {
+  if (mode?.lineGoal) return Math.max(4, Math.ceil(mode.lineGoal / STAGES.length));
+  if (modeKey === "ultra") return 12;
+  return STAGE_LINE_GOAL;
+}
+
+function stageWindowForLines(lines, modeKey, mode) {
+  const goal = stageLineGoalForMode(modeKey, mode);
+  const stageIndex = clamp(Math.floor((lines || 0) / goal), 0, STAGES.length - 1);
+  const stageStart = stageIndex * goal;
+  const stageLines = clamp((lines || 0) - stageStart, 0, goal);
+  return {
+    stageIndex,
+    stageLines,
+    stageLineGoal: goal,
+    stageProgress: clamp(stageLines / goal, 0, 1),
+  };
+}
 
 function stageFxColors(stage) {
   return stage?.fxColors || stage?.colors || [stage?.accent || 0xffffff];
@@ -1045,7 +1065,13 @@ class FallingBlockCore {
   dropInterval() {
     const scale = this.mode.gravityScale || 1;
     if (this.zoneActive) return Infinity;
-    return Math.max(110, (900 - (this.level - 1) * 58) * scale);
+    const stageBoost = this.stageIndex * 74;
+    const comboBoost = Math.min(48, this.combo * 5);
+    return Math.max(88, (900 - (this.level - 1) * 52 - stageBoost - comboBoost) * scale);
+  }
+
+  speedLevel() {
+    return Math.max(1, this.level + this.stageIndex);
   }
 
   collides(piece, dx, dy, matrix = piece.matrix) {
@@ -1214,9 +1240,7 @@ class FallingBlockCore {
   }
 
   updateStage() {
-    const nextStage = this.modeKey === "journey"
-      ? clamp(Math.floor(this.lines / 14), 0, STAGES.length - 1)
-      : clamp(Math.floor((this.level - 1) / 3), 0, STAGES.length - 1);
+    const nextStage = stageWindowForLines(this.lines, this.modeKey, this.mode).stageIndex;
     if (nextStage !== this.stageIndex) {
       this.stageIndex = nextStage;
       if (this.active?.type) {
@@ -1285,7 +1309,8 @@ class FallingBlockCore {
   arrangementState() {
     const modeGoal = this.mode.lineGoal || (this.modeKey === "ultra" ? 80 : 90);
     const lineProgress = clamp(this.lines / Math.max(1, modeGoal), 0, 1);
-    const stageProgress = clamp((this.stageIndex + clamp((this.lines % 14) / 14, 0, 1)) / Math.max(1, STAGES.length - 1), 0, 1);
+    const stageWindow = stageWindowForLines(this.lines, this.modeKey, this.mode);
+    const stageProgress = clamp((stageWindow.stageIndex + stageWindow.stageProgress) / Math.max(1, STAGES.length - 1), 0, 1);
     const comboLift = clamp(this.combo / 10, 0, 1);
     const lumenLift = clamp(this.lumen, 0, 1);
     const zoneLift = this.zoneActive ? clamp(0.55 + this.zoneProgress * 0.45, 0, 1) : 0;
@@ -1300,6 +1325,7 @@ class FallingBlockCore {
 
   snapshot() {
     const arrangement = this.arrangementState();
+    const stageWindow = stageWindowForLines(this.lines, this.modeKey, this.mode);
     return {
       modeKey: this.modeKey,
       mode: this.mode,
@@ -1315,6 +1341,10 @@ class FallingBlockCore {
       maxCombo: this.maxCombo,
       stageIndex: this.stageIndex,
       stage: STAGES[this.stageIndex],
+      stageLines: stageWindow.stageLines,
+      stageLineGoal: stageWindow.stageLineGoal,
+      stageProgress: stageWindow.stageProgress,
+      speedLevel: this.speedLevel(),
       lumen: this.lumen,
       zoneActive: this.zoneActive,
       zoneProgress: this.zoneActive ? 1 - this.zoneTimer / Math.max(1, this.zoneDuration) : 0,
@@ -4403,15 +4433,14 @@ class LumenShiftApp {
     this.elements.lines.textContent = snapshot.lines;
     this.elements.level.textContent = snapshot.level;
     this.elements.combo.textContent = snapshot.combo;
-    this.elements.speedLv.textContent = snapshot.level;
-    this.elements.areaLines.textContent = snapshot.lines;
-    this.elements.areaLinesGoal.textContent = snapshot.mode?.lineGoal || (snapshot.modeKey === "ultra" ? "∞" : 150);
+    this.elements.speedLv.textContent = snapshot.speedLevel || snapshot.level;
+    this.elements.areaLines.textContent = snapshot.stageLines ?? snapshot.lines;
+    this.elements.areaLinesGoal.textContent = snapshot.stageLineGoal || snapshot.mode?.lineGoal || (snapshot.modeKey === "ultra" ? "∞" : 150);
     this.elements.time.textContent = this.formatTime(snapshot.elapsed);
     this.elements.areaScore.textContent = formatScore(snapshot.score);
     this.elements.maxRing.classList.toggle("is-ready", snapshot.lumen >= 0.3 || snapshot.zoneActive);
     this.elements.stage.textContent = snapshot.stage?.name || "Deep Bloom";
-    const lumenValue = snapshot.zoneActive ? snapshot.zoneProgress : snapshot.lumen;
-    this.elements.lumenFill.style.width = `${clamp(lumenValue, 0, 1) * 100}%`;
+    this.elements.lumenFill.style.width = `${clamp(snapshot.stageProgress ?? 0, 0, 1) * 100}%`;
   }
 
   formatTime(ms) {
