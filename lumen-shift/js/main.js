@@ -358,6 +358,8 @@ class FallingBlockCore {
     this.maxCombo = 0;
     this.stageIndex = 0;
     this.dropTimer = 0;
+    this.lockTimer = 0;
+    this.lockDelay = 520;
     this.elapsed = 0;
     this.status = "playing";
     this.lumen = 0;
@@ -422,11 +424,21 @@ class FallingBlockCore {
       this.zoneTimer -= dt;
       if (this.zoneTimer <= 0) this.endZone();
     }
+    if (this.collides(this.active, 0, 1)) {
+      this.lockTimer += dt;
+      if (this.lockTimer >= this.lockDelay) {
+        this.lockTimer = 0;
+        this.lock();
+        return;
+      }
+    } else {
+      this.lockTimer = 0;
+    }
     this.dropTimer += dt;
     const interval = this.dropInterval();
     if (Number.isFinite(interval) && this.dropTimer >= interval) {
       this.dropTimer = 0;
-      this.stepDown();
+      this.gravityDown();
     }
   }
 
@@ -453,6 +465,7 @@ class FallingBlockCore {
     if (this.status !== "playing") return false;
     if (!this.collides(this.active, dx, 0)) {
       this.active.x += dx;
+      this.lockTimer = Math.max(0, this.lockTimer - 120);
       this.callbacks.onMove?.();
       return true;
     }
@@ -471,6 +484,7 @@ class FallingBlockCore {
         this.active.matrix = rotated;
         this.active.x += kx;
         this.active.y += ky;
+        this.lockTimer = Math.max(0, this.lockTimer - 160);
         this.callbacks.onRotate?.();
         return true;
       }
@@ -482,10 +496,21 @@ class FallingBlockCore {
     if (this.status !== "playing") return false;
     if (!this.collides(this.active, 0, 1)) {
       this.active.y += 1;
+      this.lockTimer = 0;
       if (manual) this.callbacks.onMove?.();
       return true;
     }
-    this.lock();
+    if (manual) this.lockTimer = Math.min(this.lockDelay, this.lockTimer + 85);
+    return false;
+  }
+
+  gravityDown() {
+    if (this.status !== "playing") return false;
+    if (!this.collides(this.active, 0, 1)) {
+      this.active.y += 1;
+      this.lockTimer = 0;
+      return true;
+    }
     return false;
   }
 
@@ -497,6 +522,7 @@ class FallingBlockCore {
       distance += 1;
     }
     this.callbacks.onHardDrop?.(distance);
+    this.lockTimer = 0;
     this.lock();
   }
 
@@ -676,6 +702,8 @@ class PixiView {
     this.particles = [];
     this.meteors = [];
     this.clearWaves = [];
+    this.beams = [];
+    this.swarm = [];
     this.bgStars = [];
     this.stageIndex = 0;
     this.stagePulse = 0;
@@ -694,6 +722,7 @@ class PixiView {
       coarse,
       dpr: Math.min(window.devicePixelRatio || 1, coarse ? 1.35 : 1.75),
       bgStars: coarse ? (small ? 70 : 110) : 190,
+      swarmParticles: coarse ? (small ? 420 : 620) : 1400,
       maxParticles: coarse ? 190 : 560,
     };
   }
@@ -717,6 +746,7 @@ class PixiView {
     this.flashLayer = new window.PIXI.Graphics();
     this.app.stage.addChild(this.bg, this.board, this.fx, this.flashLayer);
     this.seedStars();
+    this.seedSwarm();
 
     this.app.ticker.add((ticker) => {
       const dt = ticker.deltaMS || 16.67;
@@ -733,6 +763,22 @@ class PixiView {
       phase: Math.random() * Math.PI * 2,
       color: Math.random() > 0.64 ? 0xffd36e : (Math.random() > 0.5 ? 0x68e9ff : 0xffffff),
     }));
+  }
+
+  seedSwarm() {
+    this.swarm = Array.from({ length: this.quality.swarmParticles }, (_, i) => {
+      const band = Math.random();
+      return {
+        seed: i * 17.13 + Math.random() * 999,
+        band,
+        lane: Math.random(),
+        phase: Math.random() * Math.PI * 2,
+        orbit: Math.random() * 0.8 + 0.2,
+        size: Math.random() * 2.2 + 0.45,
+        speed: Math.random() * 0.45 + 0.22,
+        colorBias: Math.random(),
+      };
+    });
   }
 
   layout() {
@@ -837,6 +883,7 @@ class PixiView {
       g.circle(star.x * layout.w, star.y * layout.h, size).fill({ color: star.color, alpha: clamp(alpha, 0.05, 0.84) });
     }
 
+    this.drawParticleSwarm(layout, stage, t, energy, snapshot);
     this.updateMeteors(layout, stage, dt, energy);
 
     if (snapshot.zoneActive || this.zonePulse > 0) {
@@ -846,6 +893,54 @@ class PixiView {
           .stroke({ color: i % 2 ? stage.accent : 0xffffff, alpha: this.zonePulse * (0.1 + ring * 0.12), width: 2 + i });
       }
       g.rect(0, 0, layout.w, layout.h).fill({ color: stage.accent, alpha: this.zonePulse * 0.035 });
+    }
+  }
+
+  drawParticleSwarm(layout, stage, t, energy, snapshot) {
+    const g = this.bg;
+    const cx = layout.boardX + layout.boardW / 2;
+    const cy = layout.boardY + layout.boardH / 2;
+    const colors = stage.colors || [stage.accent, 0xffffff];
+    const stageWarm = stage.name && /Solar|Core/i.test(stage.name);
+    const baseAlpha = layout.portrait ? 0.22 : 0.3;
+    const zoneBoost = snapshot.zoneActive ? 0.32 : 0;
+    const comboBoost = Math.min(0.22, snapshot.combo * 0.035);
+
+    for (const p of this.swarm) {
+      const travel = (p.lane + t * 0.018 * p.speed + this.stagePulse * 0.03) % 1;
+      const ribbon = p.band < 0.58;
+      let x;
+      let y;
+      if (ribbon) {
+        const angle = -Math.PI * 0.96 + travel * Math.PI * 1.62;
+        const rx = layout.boardW * (0.82 + p.orbit * 1.55);
+        const ry = layout.boardH * (0.28 + p.orbit * 0.55);
+        x = cx + Math.cos(angle) * rx + Math.sin(t * 0.7 + p.phase) * 18;
+        y = layout.boardY + layout.boardH * (0.1 + p.orbit * 0.18) + Math.sin(angle) * ry + Math.cos(t * 0.9 + p.phase) * 15;
+      } else {
+        const angle = travel * Math.PI * 2 + p.phase;
+        const rx = layout.boardW * (0.82 + p.orbit * 1.95);
+        const ry = layout.boardH * (0.48 + p.orbit * 0.42);
+        x = cx + Math.cos(angle) * rx + Math.sin(t * 0.55 + p.phase) * 22;
+        y = cy + Math.sin(angle * 0.82) * ry + Math.cos(t * 0.65 + p.phase) * 18;
+      }
+      const nearBoard = x > layout.boardX - layout.boardW * 0.2
+        && x < layout.boardX + layout.boardW * 1.2
+        && y > layout.boardY - layout.cell * 1.2
+        && y < layout.boardY + layout.boardH + layout.cell * 1.2;
+      if (nearBoard && p.band > 0.18) continue;
+      if (x < -20 || x > layout.w + 20 || y < -20 || y > layout.h + 20) continue;
+
+      const twinkle = 0.45 + Math.sin(t * (3.4 + p.speed) + p.phase) * 0.35;
+      const color = p.colorBias > 0.72
+        ? 0xffffff
+        : (p.colorBias > 0.42 ? colors[0] : (stageWarm ? 0xffd36e : (colors[1] || stage.accent)));
+      const alpha = clamp(baseAlpha * twinkle + energy * 0.22 + zoneBoost + comboBoost, 0.05, 0.9);
+      const size = p.size * (1 + energy * 1.8 + (snapshot.zoneActive ? 1.2 : 0));
+      if (p.colorBias > 0.86 || snapshot.zoneActive) {
+        g.circle(x, y, size * 1.9).fill({ color, alpha: alpha * 0.13 });
+      }
+      g.circle(x, y, size).fill({ color, alpha });
     }
   }
 
@@ -1023,6 +1118,22 @@ class PixiView {
     const g = this.fx;
     g.clear();
     const decay = dt / 16.67;
+    this.beams = this.beams.filter((beam) => {
+      beam.life -= decay;
+      if (beam.life <= 0) return false;
+      const alpha = clamp(beam.life / beam.maxLife, 0, 1);
+      if (beam.kind === "vertical") {
+        const w = beam.width * (0.7 + alpha * 0.9);
+        g.roundRect(beam.x - w / 2, layout.boardY - layout.cell, w, layout.boardH + layout.cell * 2, w / 2)
+          .fill({ color: 0xffffff, alpha: 0.08 + alpha * 0.38 });
+        g.roundRect(beam.x - w * 0.18, layout.boardY - layout.cell, w * 0.36, layout.boardH + layout.cell * 2, w * 0.18)
+          .fill({ color: 0xffffff, alpha: 0.16 + alpha * 0.58 });
+      } else {
+        g.roundRect(layout.boardX - layout.cell, beam.y - beam.height / 2, layout.boardW + layout.cell * 2, beam.height, beam.height / 2)
+          .fill({ color: beam.color, alpha: 0.11 + alpha * 0.38 });
+      }
+      return true;
+    });
     this.clearWaves = this.clearWaves.filter((wave) => {
       wave.life -= decay;
       wave.x += wave.speed * decay;
@@ -1073,6 +1184,14 @@ class PixiView {
         power: lines,
         life: 22 + lines * 5,
         maxLife: 22 + lines * 5,
+      });
+      this.beams.push({
+        kind: "horizontal",
+        y,
+        height: Math.max(20, layout.cell * (1.25 + lines * 0.2)),
+        color,
+        life: 18 + lines * 4,
+        maxLife: 18 + lines * 4,
       });
       for (let i = 0; i < Math.min(this.quality.maxParticles / 4, 54 + lines * 12); i += 1) {
         this.spawnParticle(
@@ -1176,6 +1295,13 @@ class PixiView {
       );
     }
     if (kind === "drop") {
+      this.beams.push({
+        kind: "vertical",
+        x: cx,
+        width: Math.max(layout.cell * 1.2, 22 + amount * 0.35),
+        life: 22,
+        maxLife: 22,
+      });
       this.clearWaves.push({
         x: cx,
         y: layout.boardY + layout.boardH - layout.cell * 0.6,
@@ -1328,6 +1454,12 @@ class LumenShiftApp {
       lines: document.getElementById("lines-value"),
       level: document.getElementById("level-value"),
       combo: document.getElementById("combo-value"),
+      speedLv: document.getElementById("speed-lv-value"),
+      areaLines: document.getElementById("area-lines-value"),
+      areaLinesGoal: document.getElementById("area-lines-goal"),
+      time: document.getElementById("time-value"),
+      areaScore: document.getElementById("area-score-value"),
+      maxRing: document.getElementById("max-ring"),
       stage: document.getElementById("stage-name"),
       lumenFill: document.getElementById("lumen-fill"),
       eventLabel: document.getElementById("event-label"),
@@ -1577,13 +1709,39 @@ class LumenShiftApp {
   }
 
   updateHud(snapshot) {
+    const layout = this.view.app ? this.view.layout() : null;
+    if (layout) {
+      const hudY = Math.round(layout.boardY + layout.boardH * (layout.portrait ? 0.58 : 0.56));
+      const leftX = Math.max(7, Math.round(layout.boardX - (layout.portrait ? 86 : 126)));
+      const rightX = Math.min(window.innerWidth - 84, Math.round(layout.boardX + layout.boardW + (layout.portrait ? 16 : 34)));
+      this.root.style.setProperty("--board-x", `${Math.round(layout.boardX)}px`);
+      this.root.style.setProperty("--board-y", `${Math.round(layout.boardY)}px`);
+      this.root.style.setProperty("--board-w", `${Math.round(layout.boardW)}px`);
+      this.root.style.setProperty("--board-h", `${Math.round(layout.boardH)}px`);
+      this.root.style.setProperty("--effect-hud-y", `${hudY}px`);
+      this.root.style.setProperty("--effect-hud-left-x", `${leftX}px`);
+      this.root.style.setProperty("--effect-hud-right-x", `${rightX}px`);
+    }
     this.elements.score.textContent = formatScore(snapshot.score);
     this.elements.lines.textContent = snapshot.lines;
     this.elements.level.textContent = snapshot.level;
     this.elements.combo.textContent = snapshot.combo;
+    this.elements.speedLv.textContent = snapshot.level;
+    this.elements.areaLines.textContent = snapshot.lines;
+    this.elements.areaLinesGoal.textContent = snapshot.mode?.lineGoal || (snapshot.modeKey === "ultra" ? "∞" : 150);
+    this.elements.time.textContent = this.formatTime(snapshot.elapsed);
+    this.elements.areaScore.textContent = formatScore(snapshot.score);
+    this.elements.maxRing.classList.toggle("is-ready", snapshot.lumen >= 0.3 || snapshot.zoneActive);
     this.elements.stage.textContent = snapshot.stage?.name || "Deep Bloom";
     const lumenValue = snapshot.zoneActive ? snapshot.zoneProgress : snapshot.lumen;
     this.elements.lumenFill.style.width = `${clamp(lumenValue, 0, 1) * 100}%`;
+  }
+
+  formatTime(ms) {
+    const total = Math.max(0, Math.floor((ms || 0) / 1000));
+    const min = Math.floor(total / 60);
+    const sec = total % 60;
+    return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   }
 
   clearLabel(lines, combo, zoneActive) {

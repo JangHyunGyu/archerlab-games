@@ -53,6 +53,27 @@
     <div class="lumen-meter" aria-label="Lumen gauge">
       <div id="lumen-fill"></div>
     </div>
+    <section class="effect-hud effect-hud-left" aria-label="area status">
+      <div class="effect-stat">
+        <span>SPEED LV</span>
+        <strong id="speed-lv-value">1</strong>
+      </div>
+      <div class="effect-stat">
+        <span>LINES</span>
+        <strong><b id="area-lines-value">0</b>/<b id="area-lines-goal">70</b></strong>
+      </div>
+      <div class="max-ring" id="max-ring">MAX</div>
+    </section>
+    <section class="effect-hud effect-hud-right" aria-label="score status">
+      <div class="effect-stat">
+        <span>TIME</span>
+        <strong id="time-value">00:00</strong>
+      </div>
+      <div class="effect-stat">
+        <span>AREA SCORE</span>
+        <strong id="area-score-value">0</strong>
+      </div>
+    </section>
 
     <div id="event-label" class="event-label" aria-live="polite"></div>
     <div id="stage-splash" class="stage-splash" aria-live="polite"></div>
