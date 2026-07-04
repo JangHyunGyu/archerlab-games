@@ -212,6 +212,10 @@ class AudioDirector {
     this.started = false;
     this.currentStage = 0;
     this.synths = null;
+    this.stemGains = null;
+    this.musicLoops = [];
+    this.arpStep = 0;
+    this.energyStep = 0;
   }
 
   async unlock() {
@@ -222,24 +226,46 @@ class AudioDirector {
       const master = new Tone.Gain(0.74).toDestination();
       const delay = new Tone.FeedbackDelay("8n", 0.22).connect(master);
       const reverb = new Tone.Reverb({ decay: 3.2, wet: 0.28 }).connect(master);
+      const baseGain = new Tone.Gain(0.24).connect(reverb);
+      const pulseGain = new Tone.Gain(0.04).connect(delay);
+      const energyGain = new Tone.Gain(0.02).connect(master);
+      const zoneGain = new Tone.Gain(0).connect(reverb);
+      const hitGain = new Tone.Gain(0.4).connect(master);
       const pad = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.08, decay: 0.2, sustain: 0.42, release: 1.4 },
-      }).connect(reverb);
+      }).connect(baseGain);
       const pluck = new Tone.Synth({
         oscillator: { type: "triangle" },
         envelope: { attack: 0.005, decay: 0.08, sustain: 0.08, release: 0.16 },
-      }).connect(delay);
+      }).connect(hitGain);
       const bass = new Tone.MembraneSynth({
         pitchDecay: 0.015,
         octaves: 5,
         envelope: { attack: 0.001, decay: 0.25, sustain: 0.02, release: 0.2 },
-      }).connect(master);
+      }).connect(energyGain);
       const clear = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "fatsawtooth", count: 2, spread: 18 },
         envelope: { attack: 0.01, decay: 0.18, sustain: 0.18, release: 0.42 },
-      }).connect(reverb);
-      this.synths = { pad, pluck, bass, clear };
+      }).connect(hitGain);
+      const arp = new Tone.Synth({
+        oscillator: { type: "fatsine", count: 2, spread: 14 },
+        envelope: { attack: 0.004, decay: 0.06, sustain: 0.04, release: 0.18 },
+      }).connect(pulseGain);
+      const pulse = new Tone.MetalSynth({
+        frequency: 190,
+        envelope: { attack: 0.001, decay: 0.08, release: 0.04 },
+        harmonicity: 3.1,
+        modulationIndex: 8,
+        resonance: 900,
+        octaves: 0.9,
+      }).connect(energyGain);
+      const shimmer = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.02, decay: 0.08, sustain: 0.24, release: 0.7 },
+      }).connect(zoneGain);
+      this.stemGains = { base: baseGain, pulse: pulseGain, energy: energyGain, zone: zoneGain, hit: hitGain };
+      this.synths = { pad, pluck, bass, clear, arp, pulse, shimmer };
       this.ready = true;
       this.startMusic();
     } catch {
@@ -256,15 +282,40 @@ class AudioDirector {
       ["A2", "E3", "B3"],
       ["F2", "C3", "G3"],
     ];
+    const arps = [
+      ["C5", "D5", "G5", "A5"],
+      ["D5", "E5", "A5", "C6"],
+      ["A4", "B4", "E5", "G5"],
+      ["F4", "G4", "C5", "E5"],
+    ];
     let step = 0;
-    this.loop = new Tone.Loop((time) => {
+    this.musicLoops = [];
+    const baseLoop = new Tone.Loop((time) => {
       if (!this.synths) return;
       const chord = chords[step % chords.length];
-      this.synths.pad.triggerAttackRelease(chord, "2n", time, 0.16);
-      if (step % 2 === 0) this.synths.bass.triggerAttackRelease(chord[0], "8n", time, 0.22);
+      this.synths.pad.triggerAttackRelease(chord, "2n", time, 0.18);
+      if (step % 2 === 0) this.synths.bass.triggerAttackRelease(chord[0], "8n", time, 0.34);
       step += 1;
     }, "1m");
-    this.loop.start(0);
+    const pulseLoop = new Tone.Loop((time) => {
+      if (!this.synths) return;
+      const bank = arps[step % arps.length];
+      const note = bank[this.arpStep % bank.length];
+      this.synths.arp.triggerAttackRelease(note, "32n", time, 0.12);
+      this.arpStep += 1;
+    }, "8n");
+    const energyLoop = new Tone.Loop((time) => {
+      if (!this.synths) return;
+      if (this.energyStep % 2 === 0) this.synths.pulse.triggerAttackRelease("32n", time, 0.14);
+      this.energyStep += 1;
+    }, "4n");
+    const zoneLoop = new Tone.Loop((time) => {
+      if (!this.synths) return;
+      const chord = chords[(step + 1) % chords.length].map((note) => note.replace(/\d$/, (oct) => String(Number(oct) + 2)));
+      this.synths.shimmer.triggerAttackRelease(chord, "16n", time, 0.1);
+    }, "2n");
+    this.musicLoops.push(baseLoop, pulseLoop, energyLoop, zoneLoop);
+    this.musicLoops.forEach((loop) => loop.start(0));
     Tone.Transport.bpm.value = STAGES[0].bpm;
     Tone.Transport.start();
     this.started = true;
@@ -277,6 +328,37 @@ class AudioDirector {
       window.Tone.Transport.bpm.rampTo(STAGES[index]?.bpm || 100, 0.8);
     } catch {
       window.Tone.Transport.bpm.value = STAGES[index]?.bpm || 100;
+    }
+  }
+
+  updateMix(snapshot) {
+    if (!this.ready || !this.stemGains || !window.Tone || !snapshot) return;
+    const stageCount = Math.max(1, STAGES.length - 1);
+    const stageLift = clamp((snapshot.stageIndex || 0) / stageCount, 0, 1);
+    const comboLift = clamp((snapshot.combo || 0) / 8, 0, 1);
+    const lumenLift = clamp(snapshot.lumen || 0, 0, 1);
+    const zoneLift = snapshot.zoneActive ? clamp(0.62 + (snapshot.zoneProgress || 0) * 0.38, 0, 1) : 0;
+    const energy = clamp(stageLift * 0.34 + comboLift * 0.42 + lumenLift * 0.34 + zoneLift * 0.45, 0, 1);
+    this.rampStem("base", 0.2 + stageLift * 0.06 + zoneLift * 0.06);
+    this.rampStem("pulse", 0.02 + lumenLift * 0.16 + comboLift * 0.16 + zoneLift * 0.22);
+    this.rampStem("energy", 0.02 + energy * 0.3);
+    this.rampStem("zone", zoneLift * 0.42);
+    this.rampStem("hit", 0.34 + energy * 0.14);
+    const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5;
+    try {
+      window.Tone.Transport.bpm.rampTo(targetBpm, 0.4);
+    } catch {
+      window.Tone.Transport.bpm.value = targetBpm;
+    }
+  }
+
+  rampStem(key, value) {
+    const stem = this.stemGains?.[key];
+    if (!stem) return;
+    try {
+      stem.gain.rampTo(value, 0.24);
+    } catch {
+      stem.gain.value = value;
     }
   }
 
@@ -313,6 +395,7 @@ class AudioDirector {
   }
 
   zoneStart() {
+    this.rampStem("zone", 0.52);
     this.note("C5", "4n", 0.28);
     setTimeout(() => this.note("G5", "4n", 0.22), 80);
   }
@@ -320,6 +403,7 @@ class AudioDirector {
   zoneEnd(lines) {
     if (!this.ready || !this.synths) return;
     try {
+      this.rampStem("zone", 0.04);
       this.synths.clear.triggerAttackRelease(["C4", "G4", "C5", "E5", "G5"], "2n", undefined, lines > 0 ? 0.55 : 0.24);
       this.synths.bass.triggerAttackRelease("C2", "4n", undefined, 0.48);
     } catch {
@@ -704,6 +788,11 @@ class PixiView {
     this.clearWaves = [];
     this.beams = [];
     this.swarm = [];
+    this.swarmSprites = [];
+    this.sparkSprites = [];
+    this.sparkCursor = 0;
+    this.particleTextures = null;
+    this.particleAtlas = null;
     this.bgStars = [];
     this.stageIndex = 0;
     this.stagePulse = 0;
@@ -722,8 +811,9 @@ class PixiView {
       coarse,
       dpr: Math.min(window.devicePixelRatio || 1, coarse ? 1.35 : 1.75),
       bgStars: coarse ? (small ? 70 : 110) : 190,
-      swarmParticles: coarse ? (small ? 420 : 620) : 1400,
-      maxParticles: coarse ? 190 : 560,
+      swarmParticles: coarse ? (small ? 760 : 1040) : 2300,
+      glowParticles: coarse ? (small ? 150 : 230) : 520,
+      maxParticles: coarse ? 300 : 860,
     };
   }
 
@@ -741,16 +831,266 @@ class PixiView {
     this.root.appendChild(this.app.canvas || this.app.view);
 
     this.bg = new window.PIXI.Graphics();
+    this.bloomLayer = this.makeParticleLayer();
+    this.swarmLayer = this.makeParticleLayer();
     this.board = new window.PIXI.Graphics();
     this.fx = new window.PIXI.Graphics();
+    this.sparkLayer = this.makeParticleLayer();
     this.flashLayer = new window.PIXI.Graphics();
-    this.app.stage.addChild(this.bg, this.board, this.fx, this.flashLayer);
+    this.setAdditive(this.bloomLayer);
+    this.setAdditive(this.swarmLayer);
+    this.setAdditive(this.sparkLayer);
+    this.app.stage.addChild(this.bg, this.bloomLayer, this.swarmLayer, this.board, this.fx, this.sparkLayer, this.flashLayer);
+    this.makeParticleTextures();
+    this.applyBloomFilters();
     this.seedStars();
     this.seedSwarm();
+    this.buildSwarmSprites();
+    this.buildSparkSprites();
 
     this.app.ticker.add((ticker) => {
       const dt = ticker.deltaMS || 16.67;
       onFrame(dt);
+    });
+  }
+
+  makeParticleLayer() {
+    const PIXI = window.PIXI;
+    let layer = null;
+    if (PIXI?.ParticleContainer) {
+      try {
+        layer = new PIXI.ParticleContainer({
+          dynamicProperties: {
+            position: true,
+            scale: true,
+            rotation: true,
+            color: true,
+            alpha: true,
+          },
+        });
+      } catch {
+        try {
+          layer = new PIXI.ParticleContainer(4096, {
+            position: true,
+            scale: true,
+            rotation: true,
+            tint: true,
+            alpha: true,
+          });
+        } catch {
+          layer = null;
+        }
+      }
+    }
+    if (!layer) layer = new PIXI.Container();
+    layer.eventMode = "none";
+    return layer;
+  }
+
+  setAdditive(layer) {
+    if (!layer || !window.PIXI) return;
+    try {
+      layer.blendMode = window.PIXI.BLEND_MODES?.ADD || "add";
+    } catch {
+      layer.blendMode = "add";
+    }
+  }
+
+  applyBloomFilters() {
+    const PIXI = window.PIXI;
+    if (!PIXI?.BlurFilter) return;
+    const makeBlur = (strength, quality) => {
+      try {
+        return new PIXI.BlurFilter({ strength, quality });
+      } catch {
+        const filter = new PIXI.BlurFilter();
+        if ("strength" in filter) filter.strength = strength;
+        if ("quality" in filter) filter.quality = quality;
+        if ("blur" in filter) filter.blur = strength;
+        return filter;
+      }
+    };
+    try {
+      this.bloomLayer.filters = [makeBlur(this.quality.coarse ? 2.4 : 3.8, this.quality.coarse ? 3 : 5)];
+      this.sparkLayer.filters = [makeBlur(this.quality.coarse ? 0.45 : 0.75, 2)];
+    } catch {
+      this.bloomLayer.filters = null;
+      this.sparkLayer.filters = null;
+    }
+  }
+
+  addParticleSprite(layer, sprite) {
+    if (!layer || !sprite) return;
+    if (typeof layer.addParticle === "function") {
+      layer.addParticle(sprite);
+    } else {
+      layer.addChild(sprite);
+    }
+  }
+
+  createParticleNode(layer, texture) {
+    const PIXI = window.PIXI;
+    const useParticle = typeof layer?.addParticle === "function" && PIXI?.Particle;
+    let node;
+    if (useParticle) {
+      node = new PIXI.Particle({
+        texture,
+        anchorX: 0.5,
+        anchorY: 0.5,
+        alpha: 0,
+      });
+      node.x = -9999;
+      node.y = -9999;
+    } else {
+      node = new PIXI.Sprite(texture);
+      node.anchor?.set?.(0.5);
+      node.visible = false;
+    }
+    this.setAdditive(node);
+    this.addParticleSprite(layer, node);
+    return { node, isParticle: useParticle, active: false };
+  }
+
+  showParticleNode(ref, x, y, color, alpha, scale, rotation = 0) {
+    if (!ref?.node) return;
+    const node = ref.node;
+    ref.active = true;
+    if (node.position?.set) node.position.set(x, y);
+    else {
+      node.x = x;
+      node.y = y;
+    }
+    if (node.scale?.set) node.scale.set(scale);
+    else {
+      node.scaleX = scale;
+      node.scaleY = scale;
+    }
+    node.tint = color;
+    node.alpha = alpha;
+    node.rotation = rotation;
+    if ("visible" in node) node.visible = true;
+  }
+
+  hideParticleNode(ref) {
+    if (!ref?.node) return;
+    const node = ref.node;
+    ref.active = false;
+    node.alpha = 0;
+    if (node.position?.set) node.position.set(-9999, -9999);
+    else {
+      node.x = -9999;
+      node.y = -9999;
+    }
+    if ("visible" in node) node.visible = false;
+  }
+
+  makeParticleTextures() {
+    const PIXI = window.PIXI;
+    const cell = 64;
+    const kinds = ["orb", "pin", "flare", "shard"];
+    const canvas = document.createElement("canvas");
+    canvas.width = cell * kinds.length;
+    canvas.height = cell;
+    const ctx = canvas.getContext("2d");
+    kinds.forEach((kind, index) => this.paintParticleCell(ctx, index * cell, cell, kind));
+    const atlas = PIXI.Texture.from(canvas);
+    this.particleAtlas = atlas;
+    this.particleTextures = {};
+    kinds.forEach((kind, index) => {
+      this.particleTextures[kind] = this.textureFromAtlas(atlas, index, cell, kind);
+    });
+  }
+
+  textureFromAtlas(atlas, index, cell, kind) {
+    const PIXI = window.PIXI;
+    const frame = PIXI.Rectangle ? new PIXI.Rectangle(index * cell, 0, cell, cell) : null;
+    if (frame) {
+      try {
+        return new PIXI.Texture({ source: atlas.source, frame });
+      } catch {
+        try {
+          return new PIXI.Texture(atlas.baseTexture, frame);
+        } catch {
+          // Fall through to a standalone canvas texture for older/newer Pixi builds.
+        }
+      }
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = cell;
+    canvas.height = cell;
+    this.paintParticleCell(canvas.getContext("2d"), 0, cell, kind);
+    return PIXI.Texture.from(canvas);
+  }
+
+  paintParticleCell(ctx, x, size, kind) {
+    const cx = x + size / 2;
+    const cy = size / 2;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    if (kind === "flare") {
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.5);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.18, "rgba(255,255,255,0.55)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+      ctx.fillStyle = "rgba(255,255,255,0.78)";
+      ctx.fillRect(x + size * 0.1, cy - 1.2, size * 0.8, 2.4);
+    } else if (kind === "shard") {
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.48);
+      gradient.addColorStop(0, "rgba(255,255,255,0.72)");
+      gradient.addColorStop(0.34, "rgba(255,255,255,0.22)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+      ctx.fillStyle = "rgba(255,255,255,0.94)";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - size * 0.34);
+      ctx.lineTo(cx + size * 0.16, cy);
+      ctx.lineTo(cx, cy + size * 0.34);
+      ctx.lineTo(cx - size * 0.16, cy);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      const radius = kind === "pin" ? size * 0.32 : size * 0.5;
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(kind === "pin" ? 0.18 : 0.26, "rgba(255,255,255,0.76)");
+      gradient.addColorStop(0.58, "rgba(255,255,255,0.18)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+      if (kind === "pin") {
+        ctx.fillStyle = "rgba(255,255,255,0.76)";
+        ctx.fillRect(cx - 0.8, cy - size * 0.32, 1.6, size * 0.64);
+        ctx.fillRect(cx - size * 0.32, cy - 0.8, size * 0.64, 1.6);
+      }
+    }
+    ctx.restore();
+  }
+
+  buildSwarmSprites() {
+    const PIXI = window.PIXI;
+    if (!PIXI || !this.particleTextures) return;
+    const textures = this.particleTextures;
+    const glowStep = Math.max(3, Math.floor(this.swarm.length / Math.max(1, this.quality.glowParticles)));
+    this.swarmSprites = this.swarm.map((particle, index) => {
+      const texture = particle.band < 0.2 ? textures.flare : (particle.colorBias > 0.78 ? textures.pin : textures.orb);
+      const sprite = this.createParticleNode(this.swarmLayer, texture || textures.orb);
+      let glow = null;
+      if (index % glowStep === 0) {
+        glow = this.createParticleNode(this.bloomLayer, textures.orb);
+      }
+      return { particle, sprite, glow };
+    });
+  }
+
+  buildSparkSprites() {
+    const PIXI = window.PIXI;
+    if (!PIXI || !this.particleTextures) return;
+    this.sparkSprites = Array.from({ length: this.quality.maxParticles }, (_, index) => {
+      const texture = index % 5 === 0 ? this.particleTextures.shard : (index % 3 === 0 ? this.particleTextures.pin : this.particleTextures.orb);
+      return this.createParticleNode(this.sparkLayer, texture);
     });
   }
 
@@ -897,50 +1237,65 @@ class PixiView {
   }
 
   drawParticleSwarm(layout, stage, t, energy, snapshot) {
-    const g = this.bg;
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
     const colors = stage.colors || [stage.accent, 0xffffff];
     const stageWarm = stage.name && /Solar|Core/i.test(stage.name);
-    const baseAlpha = layout.portrait ? 0.22 : 0.3;
-    const zoneBoost = snapshot.zoneActive ? 0.32 : 0;
-    const comboBoost = Math.min(0.22, snapshot.combo * 0.035);
+    const baseAlpha = layout.portrait ? 0.34 : 0.42;
+    const zoneBoost = snapshot.zoneActive ? 0.46 : 0;
+    const comboBoost = Math.min(0.3, snapshot.combo * 0.045);
 
-    for (const p of this.swarm) {
+    for (const entry of this.swarmSprites) {
+      const p = entry.particle;
       const travel = (p.lane + t * 0.018 * p.speed + this.stagePulse * 0.03) % 1;
       const ribbon = p.band < 0.58;
       let x;
       let y;
+      let rotation = 0;
       if (ribbon) {
         const angle = -Math.PI * 0.96 + travel * Math.PI * 1.62;
         const rx = layout.boardW * (0.82 + p.orbit * 1.55);
         const ry = layout.boardH * (0.28 + p.orbit * 0.55);
         x = cx + Math.cos(angle) * rx + Math.sin(t * 0.7 + p.phase) * 18;
         y = layout.boardY + layout.boardH * (0.1 + p.orbit * 0.18) + Math.sin(angle) * ry + Math.cos(t * 0.9 + p.phase) * 15;
+        rotation = angle + Math.PI * 0.5;
       } else {
         const angle = travel * Math.PI * 2 + p.phase;
         const rx = layout.boardW * (0.82 + p.orbit * 1.95);
         const ry = layout.boardH * (0.48 + p.orbit * 0.42);
         x = cx + Math.cos(angle) * rx + Math.sin(t * 0.55 + p.phase) * 22;
         y = cy + Math.sin(angle * 0.82) * ry + Math.cos(t * 0.65 + p.phase) * 18;
+        rotation = angle;
       }
       const nearBoard = x > layout.boardX - layout.boardW * 0.2
         && x < layout.boardX + layout.boardW * 1.2
         && y > layout.boardY - layout.cell * 1.2
         && y < layout.boardY + layout.boardH + layout.cell * 1.2;
-      if (nearBoard && p.band > 0.18) continue;
-      if (x < -20 || x > layout.w + 20 || y < -20 || y > layout.h + 20) continue;
+      if ((nearBoard && p.band > 0.28) || x < -24 || x > layout.w + 24 || y < -24 || y > layout.h + 24) {
+        this.hideParticleNode(entry.sprite);
+        if (entry.glow) this.hideParticleNode(entry.glow);
+        continue;
+      }
 
       const twinkle = 0.45 + Math.sin(t * (3.4 + p.speed) + p.phase) * 0.35;
       const color = p.colorBias > 0.72
         ? 0xffffff
         : (p.colorBias > 0.42 ? colors[0] : (stageWarm ? 0xffd36e : (colors[1] || stage.accent)));
-      const alpha = clamp(baseAlpha * twinkle + energy * 0.22 + zoneBoost + comboBoost, 0.05, 0.9);
-      const size = p.size * (1 + energy * 1.8 + (snapshot.zoneActive ? 1.2 : 0));
-      if (p.colorBias > 0.86 || snapshot.zoneActive) {
-        g.circle(x, y, size * 1.9).fill({ color, alpha: alpha * 0.13 });
+      const alpha = clamp(baseAlpha * twinkle + energy * 0.34 + zoneBoost + comboBoost, 0.08, 0.95);
+      const size = p.size * (1.18 + energy * 2.4 + (snapshot.zoneActive ? 1.55 : 0));
+      const spriteScale = Math.max(0.055, size / 14);
+      this.showParticleNode(entry.sprite, x, y, color, alpha, spriteScale * (ribbon ? 1.65 : 1.18), rotation);
+      if (entry.glow) {
+        this.showParticleNode(
+          entry.glow,
+          x,
+          y,
+          color,
+          alpha * (snapshot.zoneActive ? 0.42 : 0.26),
+          spriteScale * (snapshot.zoneActive ? 6.2 : 4.4),
+          rotation,
+        );
       }
-      g.circle(x, y, size).fill({ color, alpha });
     }
   }
 
@@ -1154,9 +1509,17 @@ class PixiView {
       p.x += p.vx * decay;
       p.y += p.vy * decay;
       p.vy += p.gravity * decay;
-      if (p.life <= 0) return false;
+      if (p.life <= 0) {
+        this.hideParticleNode(p.sprite);
+        return false;
+      }
       const alpha = clamp(p.life / p.maxLife, 0, 1);
-      g.circle(p.x, p.y, p.size * (0.5 + alpha)).fill({ color: p.color, alpha: alpha * p.alpha });
+      if (p.sprite) {
+        p.rotation += p.spin * decay;
+        this.showParticleNode(p.sprite, p.x, p.y, p.color, alpha * p.alpha, Math.max(0.04, p.size * (0.5 + alpha) / 18), p.rotation);
+      } else {
+        g.circle(p.x, p.y, p.size * (0.5 + alpha)).fill({ color: p.color, alpha: alpha * p.alpha });
+      }
       return true;
     });
   }
@@ -1319,7 +1682,15 @@ class PixiView {
   }
 
   spawnParticle(x, y, color, size, vx, vy, life, alpha) {
-    if (this.particles.length > this.quality.maxParticles) this.particles.splice(0, this.particles.length - this.quality.maxParticles);
+    while (this.particles.length >= this.quality.maxParticles) {
+      const old = this.particles.shift();
+      this.hideParticleNode(old?.sprite);
+    }
+    const sprite = this.acquireSparkSprite();
+    const rotation = Math.random() * Math.PI * 2;
+    if (sprite) {
+      this.showParticleNode(sprite, x, y, color, alpha, Math.max(0.04, size / 18), rotation);
+    }
     this.particles.push({
       x,
       y,
@@ -1331,7 +1702,27 @@ class PixiView {
       maxLife: life,
       gravity: 0.025,
       alpha,
+      spin: (Math.random() - 0.5) * 0.08,
+      rotation,
+      sprite,
     });
+  }
+
+  acquireSparkSprite() {
+    if (!this.sparkSprites.length) return null;
+    for (let i = 0; i < this.sparkSprites.length; i += 1) {
+      const index = (this.sparkCursor + i) % this.sparkSprites.length;
+      const sprite = this.sparkSprites[index];
+      if (!sprite.active) {
+        this.sparkCursor = (index + 1) % this.sparkSprites.length;
+        return sprite;
+      }
+    }
+    const old = this.particles.shift();
+    this.hideParticleNode(old?.sprite);
+    const sprite = this.sparkSprites[this.sparkCursor % this.sparkSprites.length];
+    this.sparkCursor = (this.sparkCursor + 1) % this.sparkSprites.length;
+    return sprite;
   }
 }
 
@@ -1351,8 +1742,16 @@ class InputController {
       const action = this.keyToAction(event);
       if (!action) return;
       event.preventDefault();
+      if ((action === "left" || action === "right" || action === "down") && event.repeat) return;
       this.dispatch(action);
+      if (action === "left" || action === "right" || action === "down") this.startRepeat(action);
     }, { passive: false });
+
+    window.addEventListener("keyup", (event) => {
+      const action = this.keyToAction(event);
+      if (!action) return;
+      if (action === this.repeatAction) this.stopRepeat();
+    }, { passive: true });
 
     this.buttons.querySelectorAll("button[data-action]").forEach((button) => {
       const action = button.dataset.action;
@@ -1434,6 +1833,7 @@ class LumenShiftApp {
     this.rank = new RankClient();
     this.modeKey = readStorage("mode", "journey");
     this.rankOnly = false;
+    this.lastAudioMixAt = 0;
     this.elements = {
       menu: document.getElementById("menu-screen"),
       pause: document.getElementById("pause-screen"),
@@ -1575,6 +1975,11 @@ class LumenShiftApp {
     if (this.core.status === "playing") this.core.tick(dt);
     const snapshot = this.core.snapshot();
     this.view.render(snapshot, dt);
+    const now = performance.now();
+    if (now - this.lastAudioMixAt > 96) {
+      this.audio.updateMix(snapshot);
+      this.lastAudioMixAt = now;
+    }
     this.updateHud(snapshot);
   }
 
