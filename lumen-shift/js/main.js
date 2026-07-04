@@ -6,20 +6,34 @@ const VISIBLE_NEXT = 5;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
 const STORAGE_PREFIX = "lumen-shift";
-const AUDIO_ASSET_VERSION = "20260705-audio-v7";
+const AUDIO_ASSET_VERSION = "20260705-audio-v8";
 
 function audioAsset(path) {
   return `${path}?v=${AUDIO_ASSET_VERSION}`;
 }
 
 const FALLBACK_BGM_URL = audioAsset("assets/audio/lumen-temp-bgm.mp3");
-const STAGE_FULL_BGM_URLS = [
-  audioAsset("assets/audio/music/stage-01-deep-tide/full.mp3"),
-  audioAsset("assets/audio/music/stage-02-ember-veil/full.mp3"),
-  audioAsset("assets/audio/music/stage-03-bloom-signal/full.mp3"),
-  audioAsset("assets/audio/music/stage-04-void-aurora/full.mp3"),
-  audioAsset("assets/audio/music/stage-05-white-core/full.mp3"),
+const STAGE_MUSIC_DIRS = [
+  "stage-01-deep-tide",
+  "stage-02-ember-veil",
+  "stage-03-bloom-signal",
+  "stage-04-void-aurora",
+  "stage-05-white-core",
 ];
+const MUSIC_STEM_KEYS = ["base", "pulse", "rhythm", "energy", "lead", "texture", "zone"];
+const STAGE_FULL_BGM_URLS = STAGE_MUSIC_DIRS.map((dir) => audioAsset(`assets/audio/music/${dir}/full.mp3`));
+const STAGE_STEM_URLS = STAGE_MUSIC_DIRS.map((dir) => Object.fromEntries(
+  MUSIC_STEM_KEYS.map((key) => [key, audioAsset(`assets/audio/music/${dir}/${key}.mp3`)]),
+));
+const MUSIC_STEM_PLAYER_VOLUMES = {
+  base: -14,
+  pulse: -16,
+  rhythm: -15,
+  energy: -17,
+  lead: -20,
+  texture: -18,
+  zone: -15,
+};
 
 const SFX_URLS = {
   moveA: audioAsset("assets/audio/sfx/piece-move-01.mp3"),
@@ -387,6 +401,11 @@ class AudioDirector {
     this.stemGains = null;
     this.sfxPlayers = {};
     this.stingerPlayers = {};
+    this.musicStemPlayers = {};
+    this.musicStemOutputs = null;
+    this.musicStemStage = 0;
+    this.musicStemStarted = false;
+    this.musicStemRetryTimer = 0;
     this.zoneLoopPlayer = null;
     this.nativeSfx = this.createNativePools(SFX_URLS);
     this.nativeStingers = this.createNativePools(STINGER_URLS, { defaultSize: 1 });
@@ -564,20 +583,17 @@ class AudioDirector {
         envelope: { attack: 0.018, decay: 0.18, sustain: 0.24, release: 1.1 },
       }).connect(stingerGain);
       if (Tone.Player) {
-        try {
-          this.backingPlayer = new Tone.Player({
-            url: this.stageBgmUrl(0),
-            loop: true,
-            fadeIn: 0.18,
-            fadeOut: 0.18,
-            onload: () => {
-              this.backingReady = true;
-              if (this.started) this.startBackingTrack();
-            },
-          }).connect(backingInput);
-        } catch {
-          this.backingPlayer = null;
-        }
+        this.backingPlayer = null;
+        this.musicStemOutputs = {
+          base: baseGain,
+          pulse: pulseGain,
+          rhythm: rhythmGain,
+          energy: energyGain,
+          lead: leadGain,
+          texture: textureGain,
+          zone: zoneGain,
+        };
+        this.createStageStemPlayers(Tone, 0);
         this.sfxPlayers = this.createPlayers(Tone, SFX_URLS, sfxGain, {
           zoneLoop: { output: zoneSampleGain, loop: true, fadeIn: 0.16, fadeOut: 0.42, volume: -4 },
         });
@@ -609,6 +625,11 @@ class AudioDirector {
         }).catch(() => {
           this.backingReady = this.isBackingLoaded();
         });
+      }
+      if (Object.keys(this.musicStemPlayers || {}).length > 0 && Tone.loaded) {
+        Tone.loaded().then(() => {
+          if (this.started) this.startMusicStems();
+        }).catch(() => null);
       }
       if (shouldStartMusic) this.startMusic();
     } catch {
@@ -743,6 +764,77 @@ class AudioDirector {
     }
   }
 
+  stageStemUrls(index) {
+    return STAGE_STEM_URLS[index] || STAGE_STEM_URLS[0] || {};
+  }
+
+  createStageStemPlayers(Tone, index = 0) {
+    if (!Tone?.Player || !this.musicStemOutputs) return;
+    this.disposeStageStemPlayers();
+    const urls = this.stageStemUrls(index);
+    this.musicStemStage = index;
+    this.musicStemPlayers = Object.fromEntries(MUSIC_STEM_KEYS.map((key) => {
+      const output = this.musicStemOutputs[key];
+      const url = urls[key];
+      if (!output || !url) return [key, null];
+      try {
+        const player = new Tone.Player({
+          url,
+          loop: true,
+          fadeIn: 0.08,
+          fadeOut: 0.18,
+        }).connect(output);
+        player.volume.value = MUSIC_STEM_PLAYER_VOLUMES[key] ?? -16;
+        return [key, player];
+      } catch {
+        return [key, null];
+      }
+    }).filter(([, player]) => !!player));
+    this.musicStemStarted = false;
+  }
+
+  disposeStageStemPlayers() {
+    Object.values(this.musicStemPlayers || {}).forEach((player) => {
+      try {
+        if (player.state === "started") player.stop();
+        player.dispose?.();
+      } catch {
+        // Sample stems are decorative.
+      }
+    });
+    this.musicStemPlayers = {};
+    this.musicStemStarted = false;
+    window.clearTimeout(this.musicStemRetryTimer);
+  }
+
+  switchStageStems(index) {
+    if (!this.ready || !window.Tone || !this.musicStemOutputs) return;
+    this.createStageStemPlayers(window.Tone, index);
+    if (this.started) this.startMusicStems();
+  }
+
+  startMusicStems() {
+    const players = Object.values(this.musicStemPlayers || {});
+    if (!players.length || this.musicStemStarted || !window.Tone) return;
+    const pending = players.some((player) => !this.isPlayerLoaded(player));
+    if (pending) {
+      window.clearTimeout(this.musicStemRetryTimer);
+      this.musicStemRetryTimer = window.setTimeout(() => this.startMusicStems(), 260);
+      return;
+    }
+    try {
+      const at = window.Tone.now() + 0.012;
+      players.forEach((player) => {
+        player.loop = true;
+        if (typeof player.sync === "function") player.sync().start(0);
+        else player.start(at);
+      });
+      this.musicStemStarted = true;
+    } catch {
+      this.musicStemStarted = false;
+    }
+  }
+
   startMusic() {
     if (!this.ready || this.started || !window.Tone) return;
     const Tone = window.Tone;
@@ -845,6 +937,7 @@ class AudioDirector {
     this.transportStart = Tone.now();
     this.timelineStep = 0;
     this.startBackingTrack();
+    this.startMusicStems();
     this.startNativeBackingTrack();
     Tone.Transport.start();
     this.started = true;
@@ -1111,6 +1204,7 @@ class AudioDirector {
   setStage(index) {
     this.currentStage = index;
     this.switchStageBacking(index);
+    this.switchStageStems(index);
     this.stageCuePulse = 1;
     this.musicTension = Math.max(this.musicTension, 0.62);
     this.playStageStinger(index);
