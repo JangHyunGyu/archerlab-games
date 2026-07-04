@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#070913">
+  <title>LUMEN SHIFT - Archerlab Games</title>
+  <meta name="description" content="음악에 반응하는 빛과 파티클 속에서 즐기는 고퀄리티 낙하 블록 퍼즐 게임. 모바일 세로모드에 최적화된 Archerlab Games 오리지널 브라우저 게임.">
+  <meta property="og:title" content="LUMEN SHIFT">
+  <meta property="og:description" content="빛, 음악, 파티클이 플레이에 반응하는 몰입형 낙하 블록 퍼즐.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://game.archerlab.dev/lumen-shift/">
+  <meta property="og:image" content="https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:site_name" content="Archerlab Games">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="LUMEN SHIFT">
+  <meta name="twitter:description" content="음악 반응형 빛 연출과 Lumen Zone이 있는 몰입형 블록 퍼즐.">
+  <meta name="twitter:image" content="https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png">
+  <link rel="canonical" href="https://game.archerlab.dev/lumen-shift/">
+  <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
+  <link rel="stylesheet" href="css/style.css?v=20260704-mobile-first">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-66FS0YCEEM');
+  </script>
+  <script src="../shared/client-error-reporter.js?v=20260702-resource-fallback-filter" data-game-id="lumen-shift"></script>
+</head>
+<body>
+  <main id="game-root" class="game-shell" aria-label="LUMEN SHIFT game">
+    <div id="pixi-root" class="pixi-root" aria-hidden="true"></div>
+
+    <a class="brand-link" href="https://archerlab.dev/" target="_blank" rel="noopener noreferrer" aria-label="Archerlab">Archerlab</a>
+
+    <header class="hud" aria-label="game status">
+      <button id="home-button" class="icon-button" type="button" aria-label="menu">⌂</button>
+      <div class="hud-main">
+        <span id="stage-name" class="stage-name">Deep Bloom</span>
+        <strong id="score-value">0</strong>
+      </div>
+      <button id="pause-button" class="icon-button" type="button" aria-label="pause">Ⅱ</button>
+    </header>
+
+    <section class="stat-strip" aria-label="run statistics">
+      <div><span>Lines</span><strong id="lines-value">0</strong></div>
+      <div><span>Level</span><strong id="level-value">1</strong></div>
+      <div><span>Combo</span><strong id="combo-value">0</strong></div>
+    </section>
+
+    <div class="lumen-meter" aria-label="Lumen gauge">
+      <div id="lumen-fill"></div>
+    </div>
+
+    <div id="event-label" class="event-label" aria-live="polite"></div>
+    <div id="stage-splash" class="stage-splash" aria-live="polite"></div>
+    <div id="zone-veiler" class="zone-veiler" aria-hidden="true"></div>
+
+    <section id="menu-screen" class="screen-layer menu-screen">
+      <div class="menu-lockup">
+        <p class="kicker">Archerlab Games</p>
+        <h1>LUMEN SHIFT</h1>
+      </div>
+      <div class="mode-grid" aria-label="game modes">
+        <button class="mode-card is-selected" type="button" data-mode="journey">
+          <span>Journey</span>
+          <strong>5 Fields</strong>
+        </button>
+        <button class="mode-card" type="button" data-mode="marathon">
+          <span>Marathon</span>
+          <strong>Score</strong>
+        </button>
+        <button class="mode-card" type="button" data-mode="sprint">
+          <span>Sprint</span>
+          <strong>40 Lines</strong>
+        </button>
+        <button class="mode-card" type="button" data-mode="ultra">
+          <span>Ultra</span>
+          <strong>3 Min</strong>
+        </button>
+        <button class="mode-card" type="button" data-mode="relax">
+          <span>Relax</span>
+          <strong>Flow</strong>
+        </button>
+      </div>
+      <div class="menu-actions">
+        <button id="play-button" class="primary-button" type="button">Play</button>
+        <button id="rank-button" class="secondary-button" type="button">Ranking</button>
+      </div>
+    </section>
+
+    <section id="pause-screen" class="screen-layer compact-screen is-hidden" aria-live="polite">
+      <h2>Paused</h2>
+      <div class="menu-actions">
+        <button id="resume-button" class="primary-button" type="button">Resume</button>
+        <button id="restart-button" class="secondary-button" type="button">Restart</button>
+      </div>
+    </section>
+
+    <section id="result-screen" class="screen-layer result-screen is-hidden" aria-live="polite">
+      <div class="result-head">
+        <span id="result-mode">Journey</span>
+        <h2 id="result-title">Run Complete</h2>
+        <strong id="final-score">0</strong>
+      </div>
+      <div class="submit-row">
+        <input id="nickname-input" type="text" maxlength="20" autocomplete="nickname" placeholder="Nickname">
+        <button id="submit-score" type="button">Submit</button>
+      </div>
+      <p id="submit-status" class="submit-status"></p>
+      <div id="ranking-list" class="ranking-list" aria-label="ranking list"></div>
+      <div class="menu-actions">
+        <button id="again-button" class="primary-button" type="button">Again</button>
+        <button id="menu-button" class="secondary-button" type="button">Menu</button>
+      </div>
+    </section>
+
+    <nav id="touch-controls" class="touch-controls" aria-label="touch controls">
+      <button type="button" data-action="hold" aria-label="hold">H</button>
+      <button type="button" data-action="left" aria-label="left">‹</button>
+      <button type="button" data-action="rotate" aria-label="rotate">↻</button>
+      <button type="button" data-action="right" aria-label="right">›</button>
+      <button type="button" data-action="zone" class="zone-key" aria-label="Lumen Zone">◆</button>
+      <button type="button" data-action="down" aria-label="soft drop">↓</button>
+      <button type="button" data-action="drop" class="drop-key" aria-label="hard drop">⇣</button>
+    </nav>
+  </main>
+
+  <script src="../assets/vendor/pixi/pixi-8.19.0.min.js"></script>
+  <script src="../assets/vendor/tone/tone-15.5.25.js"></script>
+  <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
+  <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
+  <script type="module" src="js/main.js?v=20260704-mobile-first"></script>
+</body>
+</html>
