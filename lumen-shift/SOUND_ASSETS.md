@@ -6,13 +6,13 @@
 
 최소 필수 파일은 아래 5개다.
 
-| Priority | File | Loop Type | BPM | 필수 이유 | 필요한 느낌 |
-| --- | --- | --- | ---: | --- | --- |
-| 1 | `assets/audio/music/stage-01-deep-tide/full.mp3` | seamless loop, 16 bars 권장 | 88 | 첫 스테이지 전체 분위기 결정 | 깊은 푸른 수중, 부유감, 잔잔한 pulse, 차갑고 투명한 pad |
-| 2 | `assets/audio/music/stage-02-ember-veil/full.mp3` | seamless loop, 16 bars 권장 | 104 | 첫 전환에서 체감 퀄리티가 갈림 | 황금/주황빛, 열감, 불꽃 입자, 더 강한 rhythm |
-| 3 | `assets/audio/music/stage-03-bloom-signal/full.mp3` | seamless loop, 16 bars 권장 | 112 | 중반부 에너지 상승 담당 | 핑크/시안 네온, 선명한 arpeggio, digital signal |
-| 4 | `assets/audio/music/stage-04-void-aurora/full.mp3` | seamless loop, 16 bars 권장 | 118 | 후반부 공간감 담당 | 우주, 오로라, 넓은 reverb, 차가운 pulse |
-| 5 | `assets/audio/music/stage-05-white-core/full.mp3` | seamless loop, 16~32 bars 권장 | 126 | 최종 클라이맥스 담당 | 흰빛 폭발, 고밀도 rhythm, 밝은 lead, 최고조 에너지 |
+| Priority | File | Loop Type | Lyrics/Vocal Rule | BPM | 필수 이유 | 필요한 느낌 |
+| --- | --- | --- | --- | ---: | --- | --- |
+| 1 | `assets/audio/music/stage-01-deep-tide/full.mp3` | seamless loop, 16 bars 권장 | 가사 없음, 단어 없는 choir/vocal texture만 허용 | 88 | 첫 스테이지 전체 분위기 결정 | 깊은 푸른 수중, 부유감, 잔잔한 pulse, 차갑고 투명한 pad |
+| 2 | `assets/audio/music/stage-02-ember-veil/full.mp3` | seamless loop, 16 bars 권장 | 가사 없음, chant/문장형 vocal 금지 | 104 | 첫 전환에서 체감 퀄리티가 갈림 | 황금/주황빛, 열감, 불꽃 입자, 더 강한 rhythm |
+| 3 | `assets/audio/music/stage-03-bloom-signal/full.mp3` | seamless loop, 16 bars 권장 | 가사 없음, abstract vocal chop은 단어가 안 들릴 때만 허용 | 112 | 중반부 에너지 상승 담당 | 핑크/시안 네온, 선명한 arpeggio, digital signal |
+| 4 | `assets/audio/music/stage-04-void-aurora/full.mp3` | seamless loop, 16 bars 권장 | 가사 없음, 넓은 choir pad/숨결 texture만 허용 | 118 | 후반부 공간감 담당 | 우주, 오로라, 넓은 reverb, 차가운 pulse |
+| 5 | `assets/audio/music/stage-05-white-core/full.mp3` | seamless loop, 16~32 bars 권장 | 가사 없음, climax choir는 단어 없는 swell만 허용 | 126 | 최종 클라이맥스 담당 | 흰빛 폭발, 고밀도 rhythm, 밝은 lead, 최고조 에너지 |
 
 이 5개만 먼저 넣어도 스테이지별 분위기 변화는 만들 수 있다. 단, 원작처럼 “음악이 플레이에 반응하는 느낌”까지 가려면 아래 stem 파일들이 필요하다.
 
@@ -69,6 +69,82 @@ BGM과 stem에는 **가사를 넣지 않는다.** 기본 방향은 instrumental�
 - 블럭 조작과 라인 클리어 피드백을 방해한다.
 - 게임의 음악은 “노래”보다 “플레이에 반응하는 공간”에 가까워야 한다.
 - 보컬이 필요하면 단어 없는 choir/shimmer 계열로 분위기만 만든다.
+
+## Per-Asset Lyrics Matrix: 음원별 가사/보컬 기준
+
+아래 기준을 모든 스테이지 음악 제작에 적용한다. 핵심은 **가사는 넣지 않고, 보컬을 쓰더라도 단어가 들리지 않는 질감으로만 쓰는 것**이다.
+
+### Stage full mix
+
+| File Pattern | Lyrics | Vocal Allowed | 제작 기준 |
+| --- | --- | --- | --- |
+| `assets/audio/music/stage-01-deep-tide/full.mp3` | 없음 | 단어 없는 choir pad, underwater vocal texture | 물속 공간감처럼 멀고 흐리게, 보컬이 멜로디 주역이 되면 안 됨 |
+| `assets/audio/music/stage-02-ember-veil/full.mp3` | 없음 | 아주 약한 breath/heat shimmer texture | chant, shout, 문장형 vocal 금지 |
+| `assets/audio/music/stage-03-bloom-signal/full.mp3` | 없음 | 단어로 인식되지 않는 짧은 vocal chop 가능 | arpeggio와 pulse가 중심, vocal chop은 질감 수준 |
+| `assets/audio/music/stage-04-void-aurora/full.mp3` | 없음 | 넓은 choir pad, ahh/ohh 계열 | 우주/오로라 공간감용, 가사처럼 들리면 제거 |
+| `assets/audio/music/stage-05-white-core/full.mp3` | 없음 | 단어 없는 choir swell 가능 | 클라이맥스 고조용, lead vocal 금지 |
+
+### Stem files
+
+| Stem | Lyrics | Vocal Allowed | 제작 기준 |
+| --- | --- | --- | --- |
+| `base.mp3` | 없음 | choir pad, breath pad, vowel pad 가능 | 배경 공간감 담당. 단어/문장/가사 금지 |
+| `pulse.mp3` | 없음 | 권장하지 않음 | 박자/아르페지오 담당. 보컬이 들어가면 반복감이 커져서 피함 |
+| `rhythm.mp3` | 없음 | 금지 | 드럼/퍼커션 담당. vocal shout, chant, hey 계열 금지 |
+| `energy.mp3` | 없음 | 아주 약한 noise texture만 가능 | bass/tension 담당. 보컬 hook 금지 |
+| `lead.mp3` | 없음 | 단어 없는 synth-vocal texture만 제한 허용 | 멜로디 담당이지만 노래처럼 들리면 안 됨. synth lead 우선 |
+| `texture.mp3` | 없음 | 가장 허용 폭이 넓음. 단어 없는 whisper/choir/shimmer 가능 | 입자감 담당. 언어로 들리는 순간 제거 |
+| `zone.mp3` | 없음 | 단어 없는 choir swell, bright vocal pad 가능 | Zone 고조 담당. 성가/가사처럼 들리지 않게 vowel texture만 사용 |
+
+### Stinger files
+
+| File Pattern | Lyrics | Vocal Allowed | 제작 기준 |
+| --- | --- | --- | --- |
+| `music/stingers/stage-02-enter.mp3` | 없음 | 짧은 wordless rise 가능 | Stage 02 진입 cue. 보컬보다 impact/swell 중심 |
+| `music/stingers/stage-03-enter.mp3` | 없음 | 짧은 wordless sparkle 가능 | Stage 03 진입 cue. 단어형 vocal chop 금지 |
+| `music/stingers/stage-04-enter.mp3` | 없음 | 넓은 choir swell 가능 | Stage 04 진입 cue. 공간감 중심 |
+| `music/stingers/stage-05-enter.mp3` | 없음 | 단어 없는 climax choir 가능 | Stage 05 진입 cue. 웅장하지만 가사 금지 |
+| `music/stingers/zone-ready.mp3` | 없음 | 거의 불필요 | 짧고 명확한 ready cue |
+| `music/stingers/zone-start.mp3` | 없음 | 단어 없는 swell 가능 | Zone 시작. one-shot이므로 tail은 자연스럽게 |
+| `music/stingers/zone-end-success.mp3` | 없음 | 단어 없는 choir hit 가능 | Zone 성공 폭발. 가사보다 밝은 impact 중심 |
+| `music/stingers/zone-end-empty.mp3` | 없음 | 불필요 | 짧고 어두운 fade cue |
+| `music/stingers/game-over.mp3` | 없음 | 낮은 choir pad 가능 | 결과 화면 cue. 노래처럼 들리면 안 됨 |
+
+### SFX files
+
+`assets/audio/sfx/*.mp3`는 전부 가사와 보컬이 필요 없다. 조작, 충돌, 클리어, UI 피드백만 담당한다.
+
+| SFX Group | Lyrics | Vocal Allowed | 제작 기준 |
+| --- | --- | --- | --- |
+| `piece-*` | 없음 | 금지 | 짧고 타이트한 조작음 |
+| `line-clear-*` | 없음 | 금지 | 라인 수에 따라 점점 강해지는 clear burst |
+| `combo-*` | 없음 | 금지 | 짧은 상승감, sparkle, hit |
+| `lumen-*` | 없음 | 금지 | charge, zone, burst 효과 |
+| `ui-*` | 없음 | 금지 | 메뉴/버튼 피드백 |
+| `game-over.mp3` | 없음 | 보컬 금지 | 짧은 결과 cue |
+
+보컬을 써도 되는 가장 안전한 표현:
+
+```text
+wordless choir pad
+vocal texture
+ahh/ohh vowel pad
+breathy shimmer
+non-lyrical vocal swell
+```
+
+피해야 하는 표현:
+
+```text
+lyrics
+lead vocal
+rap
+spoken word
+chant with words
+hey/yeah vocal hook
+recognizable language
+repeating sung phrase
+```
 
 Loop로 만들어야 하는 파일:
 
