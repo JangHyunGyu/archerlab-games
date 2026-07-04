@@ -231,6 +231,7 @@ class AudioDirector {
     this.backingFilter = null;
     this.backingPulse = 0;
     this.backingDuck = 0;
+    this.backingRetryTimer = 0;
     this.arpStep = 0;
     this.energyStep = 0;
     this.inputStep = 0;
@@ -360,6 +361,10 @@ class AudioDirector {
             loop: true,
             fadeIn: 0.18,
             fadeOut: 0.18,
+            onload: () => {
+              this.backingReady = true;
+              if (this.started) this.startBackingTrack();
+            },
           }).connect(backingInput);
         } catch {
           this.backingPlayer = null;
@@ -379,14 +384,17 @@ class AudioDirector {
       this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer, sparkle, kick, hat };
       this.ready = true;
       if (this.backingPlayer && Tone.loaded) {
+        let loaded = false;
         try {
           await Promise.race([
-            Tone.loaded(),
+            Tone.loaded().then(() => {
+              loaded = true;
+            }),
             new Promise((resolve) => setTimeout(resolve, 2400)),
           ]);
-          this.backingReady = true;
+          this.backingReady = loaded || this.isBackingLoaded();
         } catch {
-          this.backingReady = false;
+          this.backingReady = this.isBackingLoaded();
         }
       }
       this.startMusic();
@@ -485,7 +493,14 @@ class AudioDirector {
 
   startBackingTrack() {
     if (!this.backingPlayer || this.backingStarted) return;
+    if (!this.isBackingLoaded()) {
+      this.backingReady = false;
+      window.clearTimeout(this.backingRetryTimer);
+      this.backingRetryTimer = window.setTimeout(() => this.startBackingTrack(), 320);
+      return;
+    }
     try {
+      window.clearTimeout(this.backingRetryTimer);
       this.backingPlayer.loop = true;
       if (typeof this.backingPlayer.sync === "function") {
         this.backingPlayer.sync().start(0);
@@ -497,6 +512,14 @@ class AudioDirector {
     } catch {
       this.backingReady = false;
     }
+  }
+
+  isBackingLoaded() {
+    const player = this.backingPlayer;
+    if (!player) return false;
+    if (player.loaded === true) return true;
+    if (player.buffer?.loaded === true) return true;
+    return Number(player.buffer?.duration || 0) > 0;
   }
 
   setStage(index) {
