@@ -942,6 +942,7 @@ class PixiView {
     this.lockFlashes = [];
     this.shockBands = [];
     this.screenBursts = [];
+    this.clearRays = [];
     this.resonancePips = [];
     this.swarm = [];
     this.swarmSprites = [];
@@ -965,6 +966,7 @@ class PixiView {
     this.arrangementLayer = 0;
     this.phrasePulse = 0;
     this.inputHeat = 0;
+    this.chromaticPulse = 0;
     this.swarmTick = 0;
     this.flash = 0;
     this.shake = 0;
@@ -977,10 +979,10 @@ class PixiView {
     return {
       coarse,
       dpr: Math.min(window.devicePixelRatio || 1, coarse ? 1.15 : 1.75),
-      bgStars: coarse ? (small ? 48 : 82) : 190,
-      swarmParticles: coarse ? (small ? 540 : 780) : 1900,
-      glowParticles: coarse ? (small ? 112 : 170) : 440,
-      maxParticles: coarse ? 230 : 720,
+      bgStars: coarse ? (small ? 56 : 92) : 260,
+      swarmParticles: coarse ? (small ? 620 : 920) : 2800,
+      glowParticles: coarse ? (small ? 132 : 210) : 720,
+      maxParticles: coarse ? (small ? 260 : 340) : 1080,
     };
   }
 
@@ -1114,6 +1116,7 @@ class PixiView {
       this.bloomLayer.filters = null;
       if (this.glow) this.glow.filters = null;
       this.sparkLayer.filters = null;
+      this.flashLayer.filters = null;
       return;
     }
     const makeBlur = (strength, quality) => {
@@ -1128,9 +1131,10 @@ class PixiView {
       }
     };
     try {
-      this.bloomLayer.filters = [makeBlur(4.8, 5)];
-      if (this.glow) this.glow.filters = [makeBlur(7.2, 5)];
-      this.sparkLayer.filters = [makeBlur(this.quality.coarse ? 0.45 : 0.75, 2)];
+      this.bloomLayer.filters = [makeBlur(8.4, 6)];
+      if (this.glow) this.glow.filters = [makeBlur(12.5, 6)];
+      this.sparkLayer.filters = [makeBlur(1.15, 3)];
+      this.flashLayer.filters = [makeBlur(1.8, 2)];
       if (PIXI.DisplacementFilter && this.distortionSprite && this.bgPlate) {
         try {
           this.distortionFilter = new PIXI.DisplacementFilter({ sprite: this.distortionSprite, scale: 0 });
@@ -1147,6 +1151,7 @@ class PixiView {
       this.bloomLayer.filters = null;
       if (this.glow) this.glow.filters = null;
       this.sparkLayer.filters = null;
+      this.flashLayer.filters = null;
       if (this.bgPlate) this.bgPlate.filters = null;
       this.distortionFilter = null;
     }
