@@ -1225,7 +1225,7 @@ class PixiView {
   makeParticleTextures() {
     const PIXI = window.PIXI;
     const cell = 64;
-    const kinds = ["orb", "pin", "flare", "shard"];
+    const kinds = ["orb", "pin", "flare", "shard", "star", "ring", "streak", "diamond"];
     const canvas = document.createElement("canvas");
     canvas.width = cell * kinds.length;
     canvas.height = cell;
@@ -1274,6 +1274,25 @@ class PixiView {
       ctx.fillRect(x, 0, size, size);
       ctx.fillStyle = "rgba(255,255,255,0.78)";
       ctx.fillRect(x + size * 0.1, cy - 1.2, size * 0.8, 2.4);
+    } else if (kind === "streak") {
+      const gradient = ctx.createLinearGradient(x + size * 0.08, cy, x + size * 0.92, cy);
+      gradient.addColorStop(0, "rgba(255,255,255,0)");
+      gradient.addColorStop(0.42, "rgba(255,255,255,0.92)");
+      gradient.addColorStop(0.58, "rgba(255,255,255,0.92)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = size * 0.1;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.08, cy);
+      ctx.lineTo(x + size * 0.92, cy);
+      ctx.stroke();
+      ctx.lineWidth = size * 0.028;
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.18, cy);
+      ctx.lineTo(x + size * 0.82, cy);
+      ctx.stroke();
     } else if (kind === "shard") {
       const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.48);
       gradient.addColorStop(0, "rgba(255,255,255,0.72)");
@@ -1289,6 +1308,51 @@ class PixiView {
       ctx.lineTo(cx - size * 0.16, cy);
       ctx.closePath();
       ctx.fill();
+    } else if (kind === "diamond") {
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.46);
+      gradient.addColorStop(0, "rgba(255,255,255,0.92)");
+      gradient.addColorStop(0.36, "rgba(255,255,255,0.34)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = size * 0.035;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - size * 0.34);
+      ctx.lineTo(cx + size * 0.34, cy);
+      ctx.lineTo(cx, cy + size * 0.34);
+      ctx.lineTo(cx - size * 0.34, cy);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.34)";
+      ctx.fill();
+    } else if (kind === "ring") {
+      const gradient = ctx.createRadialGradient(cx, cy, size * 0.18, cx, cy, size * 0.48);
+      gradient.addColorStop(0, "rgba(255,255,255,0)");
+      gradient.addColorStop(0.52, "rgba(255,255,255,0.72)");
+      gradient.addColorStop(0.72, "rgba(255,255,255,0.24)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+    } else if (kind === "star") {
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.48);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.18, "rgba(255,255,255,0.52)");
+      gradient.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, size, size);
+      ctx.strokeStyle = "rgba(255,255,255,0.86)";
+      ctx.lineWidth = size * 0.035;
+      ctx.lineCap = "round";
+      for (let i = 0; i < 4; i += 1) {
+        const a = i * Math.PI / 4;
+        const dx = Math.cos(a) * size * 0.38;
+        const dy = Math.sin(a) * size * 0.38;
+        ctx.beginPath();
+        ctx.moveTo(cx - dx, cy - dy);
+        ctx.lineTo(cx + dx, cy + dy);
+        ctx.stroke();
+      }
     } else {
       const radius = kind === "pin" ? size * 0.32 : size * 0.5;
       const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
@@ -1327,7 +1391,15 @@ class PixiView {
     const PIXI = window.PIXI;
     if (!PIXI || !this.particleTextures) return;
     this.sparkSprites = Array.from({ length: this.quality.maxParticles }, (_, index) => {
-      const texture = index % 5 === 0 ? this.particleTextures.shard : (index % 3 === 0 ? this.particleTextures.pin : this.particleTextures.orb);
+      const pool = [
+        this.particleTextures.orb,
+        this.particleTextures.pin,
+        this.particleTextures.shard,
+        this.particleTextures.star,
+        this.particleTextures.streak,
+        this.particleTextures.diamond,
+      ];
+      const texture = pool[index % pool.length] || this.particleTextures.orb;
       return this.createParticleNode(this.sparkLayer, texture);
     });
   }
