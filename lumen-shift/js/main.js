@@ -1229,7 +1229,7 @@ class AudioDirector {
     ];
     const chord = banks[index % banks.length] || banks[0];
     try {
-      const time = window.Tone.Transport?.nextSubdivision?.("4n");
+      const time = this.nextToneTime("4n");
       this.synths.stinger.triggerAttackRelease(chord, "2n", time, 0.18);
       this.synths.sparkle?.triggerAttackRelease(chord[chord.length - 1], "16n", time, 0.08);
     } catch {
@@ -1311,6 +1311,23 @@ class AudioDirector {
     } catch {
       param.value = value;
     }
+  }
+
+  nextToneTime(subdivision = "16n", offset = 0.012) {
+    if (!window.Tone) return undefined;
+    try {
+      const scheduled = window.Tone.Transport?.nextSubdivision?.(subdivision);
+      if (Number.isFinite(scheduled)) return scheduled;
+    } catch {
+      // Fall back to a near-future absolute time when Transport is not ready.
+    }
+    try {
+      const now = window.Tone.now?.();
+      if (Number.isFinite(now)) return now + offset;
+    } catch {
+      // Tone may exist before its clock is fully available on mobile.
+    }
+    return undefined;
   }
 
   getBeatState(snapshot, dt = 16.67) {
@@ -1401,7 +1418,7 @@ class AudioDirector {
     this.backingDuck = Math.max(this.backingDuck, 0.68);
     this.playSfx("hardDrop", -2);
     try {
-      const time = window.Tone.Transport?.nextSubdivision?.("16n");
+      const time = this.nextToneTime("16n");
       this.synths.impact.triggerAttackRelease("C2", "16n", time, 0.34);
       this.inputNote(4, "16n", 0.08, 0.36);
     } catch {
@@ -1435,7 +1452,7 @@ class AudioDirector {
     this.backingPulse = Math.max(this.backingPulse, lines >= 4 ? 1 : 0.68);
     this.backingDuck = Math.max(this.backingDuck, lines >= 4 ? 1 : 0.72);
     try {
-      const time = window.Tone.Transport?.nextSubdivision?.("16n");
+      const time = this.nextToneTime("16n");
       this.synths.clear.releaseAll?.();
       this.synths.clear.triggerAttackRelease(chords[lines] || chords[1], "8n", time, lines >= 4 ? 0.27 : 0.16);
       if (this.synths.sparkle) {
@@ -1482,7 +1499,7 @@ class AudioDirector {
       this.playStinger("zoneEndEmpty", -5);
     }
     try {
-      const time = window.Tone.Transport?.nextSubdivision?.("8n");
+      const time = this.nextToneTime("8n");
       this.rampStem("zone", 0.04);
       this.synths.clear.releaseAll?.();
       this.synths.clear.triggerAttackRelease(["C4", "G4", "C5", "E5", "G5"], "2n", time, lines > 0 ? 0.3 : 0.16);
@@ -5233,18 +5250,23 @@ class LumenShiftApp {
       this.root.style.setProperty("--effect-hud-left-x", `${leftX}px`);
       this.root.style.setProperty("--effect-hud-right-x", `${rightX}px`);
     }
-    this.elements.score.textContent = formatScore(snapshot.score);
-    this.elements.lines.textContent = snapshot.lines;
-    this.elements.level.textContent = snapshot.level;
-    this.elements.combo.textContent = snapshot.combo;
-    this.elements.speedLv.textContent = snapshot.speedLevel || snapshot.level;
-    this.elements.areaLines.textContent = snapshot.stageLines ?? snapshot.lines;
-    this.elements.areaLinesGoal.textContent = snapshot.stageLineGoal || snapshot.mode?.lineGoal || (snapshot.modeKey === "ultra" ? "∞" : 150);
+    const setText = (element, value) => {
+      if (element) element.textContent = value;
+    };
+    const mode = snapshot.mode || MODES[snapshot.modeKey] || MODES.journey;
+    const areaGoal = snapshot.stageLineGoal ?? stageLineGoalForMode(snapshot.modeKey, mode);
+    setText(this.elements.score, formatScore(snapshot.score));
+    setText(this.elements.lines, snapshot.lines);
+    setText(this.elements.level, snapshot.level);
+    setText(this.elements.combo, snapshot.combo);
+    setText(this.elements.speedLv, snapshot.speedLevel || snapshot.level);
+    setText(this.elements.areaLines, snapshot.stageLines ?? snapshot.lines);
+    setText(this.elements.areaLinesGoal, Number.isFinite(areaGoal) ? areaGoal : STAGE_LINE_GOAL);
     if (this.elements.time) this.elements.time.textContent = this.formatTime(snapshot.elapsed);
     if (this.elements.areaScore) this.elements.areaScore.textContent = formatScore(snapshot.score);
     if (this.elements.maxRing) this.elements.maxRing.classList.toggle("is-ready", snapshot.lumen >= 0.3 || snapshot.zoneActive);
     if (this.elements.stage) this.elements.stage.textContent = "Score";
-    this.elements.lumenFill.style.width = `${clamp(snapshot.stageProgress ?? 0, 0, 1) * 100}%`;
+    if (this.elements.lumenFill) this.elements.lumenFill.style.width = `${clamp(snapshot.stageProgress ?? 0, 0, 1) * 100}%`;
   }
 
   formatTime(ms) {
