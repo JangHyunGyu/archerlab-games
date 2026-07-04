@@ -2155,10 +2155,10 @@ class PixiView {
     };
     try {
       const mobile = this.quality.coarse;
-      this.bloomLayer.filters = [makeBlur(mobile ? 4.2 : 9.8, mobile ? 2 : 6)];
-      if (this.glow) this.glow.filters = [makeBlur(mobile ? 6.4 : 15.5, mobile ? 2 : 6)];
-      this.sparkLayer.filters = [makeBlur(mobile ? 0.75 : 1.35, mobile ? 1 : 3)];
-      this.flashLayer.filters = [makeBlur(mobile ? 1.05 : 2.1, mobile ? 1 : 2)];
+      this.bloomLayer.filters = [makeBlur(mobile ? 5.1 : 12.4, mobile ? 2 : 6)];
+      if (this.glow) this.glow.filters = [makeBlur(mobile ? 7.2 : 19.2, mobile ? 2 : 6)];
+      this.sparkLayer.filters = [makeBlur(mobile ? 0.9 : 1.55, mobile ? 1 : 3)];
+      this.flashLayer.filters = [makeBlur(mobile ? 1.25 : 2.65, mobile ? 1 : 2)];
       if (PIXI.DisplacementFilter && this.distortionSprite && this.bgPlate) {
         try {
           this.distortionFilter = new PIXI.DisplacementFilter({ sprite: this.distortionSprite, scale: 0 });
@@ -3878,16 +3878,24 @@ class PixiView {
           g.stroke({ color: 0xffffff, alpha: alpha * 0.24 * beamAlpha, width: Math.max(0.8, w * 0.08) });
         } else {
           const w = beam.width * (0.7 + alpha * 0.9);
-          glow?.roundRect(beam.x - w, layout.boardY - layout.cell, w * 2, layout.boardH + layout.cell * 2, w)
-            .fill({ color: 0xffffff, alpha: alpha * 0.1 });
+          const color = beam.color || 0xffffff;
+          const beamAlpha = beam.alpha ?? 1;
+          glow?.roundRect(beam.x - w * 1.35, layout.boardY - layout.cell, w * 2.7, layout.boardH + layout.cell * 2, w)
+            .fill({ color, alpha: alpha * 0.12 * beamAlpha });
           g.roundRect(beam.x - w / 2, layout.boardY - layout.cell, w, layout.boardH + layout.cell * 2, w / 2)
-            .fill({ color: 0xffffff, alpha: 0.16 + alpha * 0.62 });
+            .fill({ color, alpha: (0.14 + alpha * 0.58) * beamAlpha });
           g.roundRect(beam.x - w * 0.18, layout.boardY - layout.cell, w * 0.36, layout.boardH + layout.cell * 2, w * 0.18)
-            .fill({ color: 0xffffff, alpha: 0.32 + alpha * 0.78 });
+            .fill({ color: 0xffffff, alpha: (0.3 + alpha * 0.82) * beamAlpha });
         }
       } else {
+        const beamAlpha = beam.alpha ?? 1;
+        const beamColor = beam.color || 0xffffff;
+        glow?.roundRect(layout.boardX - layout.cell * 2.2, beam.y - beam.height * 1.05, layout.boardW + layout.cell * 4.4, beam.height * 2.1, beam.height)
+          .fill({ color: beamColor, alpha: alpha * 0.12 * beamAlpha });
         g.roundRect(layout.boardX - layout.cell, beam.y - beam.height / 2, layout.boardW + layout.cell * 2, beam.height, beam.height / 2)
-          .fill({ color: beam.color, alpha: 0.14 + alpha * 0.48 });
+          .fill({ color: beamColor, alpha: (0.14 + alpha * 0.5) * beamAlpha });
+        g.roundRect(layout.boardX - layout.cell * 0.55, beam.y - beam.height * 0.16, layout.boardW + layout.cell * 1.1, beam.height * 0.32, beam.height * 0.16)
+          .fill({ color: 0xffffff, alpha: (0.18 + alpha * 0.56) * beamAlpha });
       }
       return true;
     });
@@ -4173,6 +4181,16 @@ class PixiView {
         y,
         height: Math.max(32, layout.cell * (1.8 + lines * 0.32)),
         color,
+        alpha: lines >= 4 ? 0.92 : 0.68,
+        life: 32 + lines * 6,
+        maxLife: 32 + lines * 6,
+      });
+      this.beams.push({
+        kind: "horizontal",
+        y,
+        height: Math.max(18, layout.cell * (0.82 + lines * 0.18)),
+        color: 0xffffff,
+        alpha: lines >= 4 ? 0.76 : 0.36,
         life: 32 + lines * 6,
         maxLife: 32 + lines * 6,
       });
@@ -4488,10 +4506,11 @@ class PixiView {
     const count = kind === "drop" ? 34 + Math.min(34, amount * 1.25) : kind === "rotate" ? 28 : 12;
     this.inputHeat = Math.max(this.inputHeat, kind === "drop" ? 0.7 : kind === "rotate" ? 0.46 : 0.32);
     if (kind === "drop") {
-      this.worldSurge = Math.max(this.worldSurge, 0.28);
-      this.chromaticPulse = Math.max(this.chromaticPulse, 0.28);
-      this.cameraPulse = Math.max(this.cameraPulse, 0.24 + Math.min(0.32, amount * 0.012));
-      this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * 0.0035;
+      const dropPower = clamp((amount || 1) / 24, 0, 1);
+      this.worldSurge = Math.max(this.worldSurge, 0.38 + dropPower * 0.36);
+      this.chromaticPulse = Math.max(this.chromaticPulse, 0.34 + dropPower * 0.24);
+      this.cameraPulse = Math.max(this.cameraPulse, 0.32 + Math.min(0.42, amount * 0.014));
+      this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * (0.0045 + dropPower * 0.005);
     }
     const pipCount = kind === "move" ? 2 : kind === "rotate" ? 5 : 4;
     for (let i = 0; i < pipCount; i += 1) {
@@ -4565,6 +4584,7 @@ class PixiView {
       const impactY = landedCells.length
         ? landedCells.reduce((sum, block) => sum + block.y, 0) / landedCells.length
         : cy;
+      const dropPower = clamp(dropDistance / 24, 0, 1);
       this.lightFields.push({
         x: cx,
         y: impactY,
@@ -4574,6 +4594,16 @@ class PixiView {
         growth: 0.62,
         life: 22 + Math.min(10, dropDistance * 0.36),
         maxLife: 22 + Math.min(10, dropDistance * 0.36),
+      });
+      this.lightFields.push({
+        x: cx,
+        y: impactY,
+        radius: Math.max(layout.boardW * (0.82 + dropPower * 0.38), layout.cell * (4.2 + dropDistance * 0.12)),
+        color: 0xffffff,
+        alpha: 0.18 + dropPower * 0.18,
+        growth: 0.46,
+        life: 24 + Math.min(12, dropDistance * 0.45),
+        maxLife: 24 + Math.min(12, dropDistance * 0.45),
       });
       this.screenBursts.push({
         x: cx,
@@ -4605,6 +4635,16 @@ class PixiView {
         life: 22 + Math.min(14, dropDistance),
         maxLife: 22 + Math.min(14, dropDistance),
       });
+      this.shockBands.push({
+        orientation: "vertical",
+        x: cx,
+        width: Math.max(layout.cell * (0.86 + dropPower * 0.34), 14 + dropDistance * 0.16),
+        color: 0xffffff,
+        alpha: 0.28 + dropPower * 0.2,
+        sway: layout.cell * 0.12,
+        life: 20 + Math.min(12, dropDistance * 0.58),
+        maxLife: 20 + Math.min(12, dropDistance * 0.58),
+      });
       this.impactRings.push({
         kind: "landing",
         x: cx,
@@ -4619,13 +4659,25 @@ class PixiView {
         kind: "vertical",
         style: "drop",
         x: cx,
+        top: layout.boardY - layout.cell,
+        bottom: impactY + layout.cell * 1.2,
+        width: Math.max(layout.cell * (1.0 + dropPower * 0.45), 14 + dropDistance * 0.16),
+        color: 0xffffff,
+        alpha: 0.25 + dropPower * 0.18,
+        life: 24 + Math.min(10, dropDistance * 0.5),
+        maxLife: 24 + Math.min(10, dropDistance * 0.5),
+      });
+      this.beams.push({
+        kind: "vertical",
+        style: "drop",
+        x: cx,
         top: Math.max(layout.boardY - layout.cell * 0.4, impactY - dropDistance * layout.cell - layout.cell * 0.7),
         bottom: impactY + layout.cell * 0.8,
-        width: Math.max(layout.cell * 0.32, 6 + dropDistance * 0.08),
+        width: Math.max(layout.cell * 0.56, 8 + dropDistance * 0.12),
         color,
-        alpha: 0.36,
-        life: 18 + Math.min(8, dropDistance * 0.38),
-        maxLife: 18 + Math.min(8, dropDistance * 0.38),
+        alpha: 0.58 + dropPower * 0.18,
+        life: 22 + Math.min(10, dropDistance * 0.45),
+        maxLife: 22 + Math.min(10, dropDistance * 0.45),
       });
       for (let i = 0; i < (this.quality.coarse ? 4 : 9); i += 1) {
         const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.9;
