@@ -230,6 +230,28 @@ class AudioDirector {
     this.arrangement = 0;
     this.gestureHeat = 0;
     this.lastLayer = 0;
+    this.transportStart = 0;
+    this.timelineStep = 0;
+    this.lastBeatIndex = -1;
+    this.lastBarIndex = -1;
+    this.beatPulse = 0;
+    this.downbeatPulse = 0;
+    this.eventPulse = 0;
+    this.clearPulse = 0;
+    this.dropPulse = 0;
+    this.lastBeatState = {
+      ready: false,
+      position: 0,
+      beat: 0,
+      bar: 0,
+      sixteenth: 0,
+      pulse: 0,
+      downbeat: 0,
+      event: 0,
+      clear: 0,
+      drop: 0,
+      bpm: STAGES[0].bpm,
+    };
   }
 
   async unlock() {
@@ -260,6 +282,7 @@ class AudioDirector {
       const clearGain = new Tone.Gain(0.72).connect(hitGain);
       const motionGain = new Tone.Gain(0.24).connect(delay);
       const textureGain = new Tone.Gain(0).connect(reverb);
+      const rhythmGain = new Tone.Gain(0.0).connect(master);
       const pad = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.08, decay: 0.2, sustain: 0.42, release: 1.4 },
@@ -294,6 +317,19 @@ class AudioDirector {
         resonance: 900,
         octaves: 0.9,
       }).connect(energyGain);
+      const kick = new Tone.MembraneSynth({
+        pitchDecay: 0.018,
+        octaves: 3.2,
+        envelope: { attack: 0.001, decay: 0.18, sustain: 0.01, release: 0.12 },
+      }).connect(rhythmGain);
+      const hat = new Tone.MetalSynth({
+        frequency: 320,
+        envelope: { attack: 0.001, decay: 0.045, release: 0.02 },
+        harmonicity: 4.2,
+        modulationIndex: 10,
+        resonance: 2100,
+        octaves: 0.42,
+      }).connect(rhythmGain);
       const shimmer = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: "sine" },
         envelope: { attack: 0.02, decay: 0.08, sustain: 0.24, release: 0.7 },
@@ -310,8 +346,9 @@ class AudioDirector {
         hit: hitGain,
         motion: motionGain,
         texture: textureGain,
+        rhythm: rhythmGain,
       };
-      this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer, sparkle };
+      this.synths = { pad, pluck, bass, impact, clear, arp, pulse, shimmer, sparkle, kick, hat };
       this.ready = true;
       this.startMusic();
     } catch {
@@ -378,9 +415,30 @@ class AudioDirector {
       const note = bank[(this.arpStep + 2) % bank.length].replace(/\d$/, (oct) => String(Math.min(7, Number(oct) + 1)));
       this.synths.sparkle.triggerAttackRelease(note, "32n", time, 0.035 + this.arrangement * 0.08);
     }, "16n");
-    this.musicLoops.push(baseLoop, pulseLoop, energyLoop, zoneLoop, textureLoop);
+    const timelineLoop = new Tone.Loop((time) => {
+      if (!this.synths) return;
+      const step16 = this.timelineStep % 16;
+      const arrangement = this.arrangement;
+      if (step16 % 4 === 0) {
+        this.beatPulse = 1;
+        if (step16 === 0) this.downbeatPulse = 1;
+      }
+      if (arrangement > 0.18 && (step16 === 0 || step16 === 8 || this.gestureHeat > 0.7)) {
+        this.synths.kick.triggerAttackRelease(step16 === 0 ? "C1" : "G1", "16n", time, 0.08 + arrangement * 0.11);
+      }
+      if (arrangement > 0.38 && step16 % 2 === 1) {
+        this.synths.hat.triggerAttackRelease("64n", time, 0.025 + arrangement * 0.035);
+      }
+      if (arrangement > 0.68 && (step16 === 6 || step16 === 14)) {
+        this.synths.pulse.triggerAttackRelease("32n", time, 0.05 + arrangement * 0.08);
+      }
+      this.timelineStep = (this.timelineStep + 1) % 64;
+    }, "16n");
+    this.musicLoops.push(baseLoop, pulseLoop, energyLoop, zoneLoop, textureLoop, timelineLoop);
     this.musicLoops.forEach((loop) => loop.start(0));
     Tone.Transport.bpm.value = STAGES[0].bpm;
+    this.transportStart = Tone.now();
+    this.timelineStep = 0;
     Tone.Transport.start();
     this.started = true;
   }
@@ -425,6 +483,7 @@ class AudioDirector {
     this.rampStem("energy", 0.004 + energy * 0.28);
     this.rampStem("texture", Math.pow(this.arrangement, 1.75) * 0.18 + zoneLift * 0.08);
     this.rampStem("motion", 0.21 + this.arrangement * 0.08 + this.gestureHeat * 0.05);
+    this.rampStem("rhythm", Math.max(0, this.arrangement - 0.12) * 0.16 + comboLift * 0.045 + zoneLift * 0.08);
     this.rampStem("zone", zoneLift * 0.42);
     this.rampStem("hit", 0.22 + energy * 0.09);
     const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
@@ -447,17 +506,67 @@ class AudioDirector {
     }
   }
 
+  getBeatState(snapshot, dt = 16.67) {
+    const bpm = snapshot?.stage?.bpm || STAGES[this.currentStage]?.bpm || STAGES[0].bpm;
+    let beatFloat = 0;
+    let ready = false;
+    if (this.ready && this.started && window.Tone) {
+      const Tone = window.Tone;
+      const transportBpm = Number(Tone.Transport?.bpm?.value || bpm);
+      const seconds = Number(Tone.Transport?.seconds || 0);
+      beatFloat = seconds * transportBpm / 60;
+      ready = true;
+    } else {
+      beatFloat = performance.now() * 0.001 * bpm / 60;
+    }
+    const beatIndex = Math.floor(beatFloat);
+    const barIndex = Math.floor(beatIndex / 4);
+    if (beatIndex !== this.lastBeatIndex) {
+      this.lastBeatIndex = beatIndex;
+      this.beatPulse = Math.max(this.beatPulse, 1);
+    }
+    if (barIndex !== this.lastBarIndex) {
+      this.lastBarIndex = barIndex;
+      this.downbeatPulse = Math.max(this.downbeatPulse, 1);
+    }
+    const decay = dt / 16.67;
+    this.beatPulse = Math.max(0, this.beatPulse - 0.12 * decay);
+    this.downbeatPulse = Math.max(0, this.downbeatPulse - 0.075 * decay);
+    this.eventPulse = Math.max(0, this.eventPulse - 0.08 * decay);
+    this.clearPulse = Math.max(0, this.clearPulse - 0.07 * decay);
+    this.dropPulse = Math.max(0, this.dropPulse - 0.1 * decay);
+    const position = beatFloat - Math.floor(beatFloat);
+    this.lastBeatState = {
+      ready,
+      position,
+      beat: beatIndex % 4,
+      bar: barIndex,
+      sixteenth: Math.floor(beatFloat * 4) % 16,
+      pulse: Math.max(this.beatPulse, Math.pow(1 - position, 8) * 0.52),
+      downbeat: this.downbeatPulse,
+      event: this.eventPulse,
+      clear: this.clearPulse,
+      drop: this.dropPulse,
+      bpm: ready ? Number(window.Tone.Transport?.bpm?.value || bpm) : bpm,
+    };
+    return this.lastBeatState;
+  }
+
   move() {
+    this.eventPulse = Math.max(this.eventPulse, 0.18);
     this.inputNote(0, "32n", 0.048, 0.2);
   }
 
   rotate() {
+    this.eventPulse = Math.max(this.eventPulse, 0.28);
     this.inputNote(2, "32n", 0.07, 0.28);
   }
 
   drop() {
     if (!this.ready || !this.synths) return;
     this.gestureHeat = Math.max(this.gestureHeat, 0.78);
+    this.eventPulse = Math.max(this.eventPulse, 0.72);
+    this.dropPulse = Math.max(this.dropPulse, 1);
     try {
       this.synths.impact.triggerAttackRelease("C2", "16n", undefined, 0.38);
       this.inputNote(4, "16n", 0.09, 0.36);
@@ -475,6 +584,9 @@ class AudioDirector {
       4: ["C5", "E5", "G5", "B5", "D6"],
     };
     this.gestureHeat = Math.max(this.gestureHeat, 0.48 + lines * 0.09);
+    this.eventPulse = Math.max(this.eventPulse, 0.72 + lines * 0.08);
+    this.clearPulse = Math.max(this.clearPulse, lines >= 4 ? 1 : 0.68);
+    this.beatPulse = Math.max(this.beatPulse, lines >= 4 ? 1 : 0.72);
     try {
       this.synths.clear.releaseAll?.();
       this.synths.clear.triggerAttackRelease(chords[lines] || chords[1], "8n", undefined, lines >= 4 ? 0.32 : 0.18);
@@ -496,6 +608,8 @@ class AudioDirector {
   }
 
   zoneStart() {
+    this.eventPulse = Math.max(this.eventPulse, 1);
+    this.downbeatPulse = Math.max(this.downbeatPulse, 1);
     this.rampStem("zone", 0.52);
     this.note("C5", "4n", 0.28);
     setTimeout(() => this.note("G5", "4n", 0.22), 80);
@@ -503,6 +617,8 @@ class AudioDirector {
 
   zoneEnd(lines) {
     if (!this.ready || !this.synths) return;
+    this.eventPulse = Math.max(this.eventPulse, lines > 0 ? 1 : 0.42);
+    this.clearPulse = Math.max(this.clearPulse, lines > 0 ? 1 : 0.35);
     try {
       this.rampStem("zone", 0.04);
       this.synths.clear.releaseAll?.();
@@ -532,7 +648,8 @@ class AudioDirector {
       ["C5", "E5", "G5", "B5", "D6", "G6"],
     ];
     const bank = banks[this.currentStage % banks.length];
-    const note = bank[(this.inputStep + offset) % bank.length];
+    const gridStep = this.lastBeatState?.sixteenth ?? this.timelineStep;
+    const note = bank[(gridStep + this.inputStep + offset) % bank.length];
     this.inputStep = (this.inputStep + 1) % 64;
     this.gestureHeat = Math.max(this.gestureHeat, heat);
     this.note(note, duration, velocity + this.arrangement * 0.035);
@@ -1479,26 +1596,33 @@ class PixiView {
     return { w, h, portrait, boardX, boardY, boardW: actualW, boardH: actualH, cell, hold, next };
   }
 
-  render(snapshot, dt) {
+  render(snapshot, dt, beatState = null) {
     if (!this.app || !snapshot) return;
     const layout = this.layout();
     const stage = snapshot.stage || STAGES[0];
-    this.drawBackground(layout, stage, dt, snapshot);
+    this.drawBackground(layout, stage, dt, snapshot, beatState);
     this.drawBoard(layout, snapshot);
     this.drawParticles(layout, dt);
     this.drawFlash(layout, dt);
   }
 
-  drawBackground(layout, stage, dt, snapshot) {
+  drawBackground(layout, stage, dt, snapshot, beatState = null) {
     const g = this.bg;
     const t = performance.now() * 0.001;
-    const bpm = (snapshot.stage?.bpm || stage?.bpm || 100)
-      + Math.min(8, (snapshot.combo || 0) * 0.45)
-      + (snapshot.zoneActive ? 8 : 0);
-    const previousBeat = this.beat % 1;
-    this.beat += dt * 0.001 * (bpm / 60);
-    const beatPosition = this.beat % 1;
-    if (beatPosition < previousBeat) this.beatHit = 1;
+    let beatPosition;
+    if (beatState?.ready) {
+      beatPosition = beatState.position || 0;
+      this.beat = (beatState.bar || 0) * 4 + (beatState.beat || 0) + beatPosition;
+      this.beatHit = Math.max(this.beatHit, beatState.pulse || 0, (beatState.event || 0) * 0.72);
+    } else {
+      const bpm = (snapshot.stage?.bpm || stage?.bpm || 100)
+        + Math.min(8, (snapshot.combo || 0) * 0.45)
+        + (snapshot.zoneActive ? 8 : 0);
+      const previousBeat = this.beat % 1;
+      this.beat += dt * 0.001 * (bpm / 60);
+      beatPosition = this.beat % 1;
+      if (beatPosition < previousBeat) this.beatHit = 1;
+    }
     const arrangementTarget = clamp(snapshot.arrangement?.progress ?? 0, 0, 1);
     const arrangementEase = smoothstep(arrangementTarget);
     this.arrangement += (arrangementEase - this.arrangement) * clamp(dt * 0.003, 0.02, 0.18);
@@ -1516,7 +1640,14 @@ class PixiView {
     this.inputHeat = Math.max(0, this.inputHeat - dt * 0.003);
     g.clear();
     const maxDim = Math.max(layout.w, layout.h);
-    const beatPulse = Math.max(this.beatHit, Math.pow(1 - beatPosition, 7) * 0.56);
+    const beatPulse = Math.max(
+      this.beatHit,
+      beatState?.pulse || 0,
+      (beatState?.downbeat || 0) * 0.72,
+      (beatState?.clear || 0) * 0.68,
+      (beatState?.drop || 0) * 0.42,
+      Math.pow(1 - beatPosition, 7) * 0.56,
+    );
     const energy = clamp(
       0.045
       + this.arrangement * 0.34
@@ -1525,6 +1656,8 @@ class PixiView {
       + this.stagePulse * 0.46
       + this.worldSurge * 0.4
       + beatPulse * 0.12
+      + (beatState?.event || 0) * 0.09
+      + (beatState?.clear || 0) * 0.14
       + this.inputHeat * 0.11,
       0.04,
       1,
@@ -3315,7 +3448,8 @@ class LumenShiftApp {
   frame(dt) {
     if (this.core.status === "playing") this.core.tick(dt);
     const snapshot = this.core.snapshot();
-    this.view.render(snapshot, dt);
+    const beatState = this.audio.getBeatState(snapshot, dt);
+    this.view.render(snapshot, dt, beatState);
     const now = performance.now();
     if (now - this.lastAudioMixAt > 96) {
       this.audio.updateMix(snapshot);
