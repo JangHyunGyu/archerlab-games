@@ -4106,7 +4106,7 @@ class LumenShiftApp {
     this.view = new PixiView(this.pixiRoot);
     this.audio = new AudioDirector();
     this.rank = new RankClient();
-    this.modeKey = readStorage("mode", "journey");
+    this.modeKey = "journey";
     this.rankOnly = false;
     this.lastAudioMixAt = 0;
     this.elements = {
@@ -4168,7 +4168,7 @@ class LumenShiftApp {
         this.applyModeSelection();
       });
     });
-    this.elements.play.addEventListener("click", () => this.startGame(this.modeKey));
+    this.elements.play.addEventListener("click", () => this.startGame("journey"));
     this.elements.rank.addEventListener("click", () => this.openRankingOnly());
     this.elements.home.addEventListener("click", () => this.openMenu());
     this.elements.pauseButton.addEventListener("click", () => this.togglePause());
@@ -4293,7 +4293,7 @@ class LumenShiftApp {
 
   handleAction(action) {
     if (this.elements.menu.classList.contains("is-hidden") === false) {
-      if (action === "drop" || action === "rotate" || action === "pause") this.startGame(this.modeKey);
+      if (action === "drop" || action === "rotate" || action === "pause") this.startGame("journey");
       return;
     }
     if (this.core.status === "finished") return;
