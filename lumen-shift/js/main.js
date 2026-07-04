@@ -4212,7 +4212,7 @@ class LumenShiftApp {
       onStage: (index, stage) => {
         this.audio.setStage(index);
         this.view.stageShift(stage);
-        this.showStageSplash(stage.name);
+        this.showStageSplash(index > 0 ? `STAGE ${index + 1}` : "");
       },
       onClear: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
@@ -4436,10 +4436,10 @@ class LumenShiftApp {
     this.elements.speedLv.textContent = snapshot.speedLevel || snapshot.level;
     this.elements.areaLines.textContent = snapshot.stageLines ?? snapshot.lines;
     this.elements.areaLinesGoal.textContent = snapshot.stageLineGoal || snapshot.mode?.lineGoal || (snapshot.modeKey === "ultra" ? "∞" : 150);
-    this.elements.time.textContent = this.formatTime(snapshot.elapsed);
-    this.elements.areaScore.textContent = formatScore(snapshot.score);
-    this.elements.maxRing.classList.toggle("is-ready", snapshot.lumen >= 0.3 || snapshot.zoneActive);
-    this.elements.stage.textContent = snapshot.stage?.name || "Deep Bloom";
+    if (this.elements.time) this.elements.time.textContent = this.formatTime(snapshot.elapsed);
+    if (this.elements.areaScore) this.elements.areaScore.textContent = formatScore(snapshot.score);
+    if (this.elements.maxRing) this.elements.maxRing.classList.toggle("is-ready", snapshot.lumen >= 0.3 || snapshot.zoneActive);
+    if (this.elements.stage) this.elements.stage.textContent = "Score";
     this.elements.lumenFill.style.width = `${clamp(snapshot.stageProgress ?? 0, 0, 1) * 100}%`;
   }
 
