@@ -6,7 +6,7 @@ const VISIBLE_NEXT = 5;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
 const STORAGE_PREFIX = "lumen-shift";
-const AUDIO_ASSET_VERSION = "20260705-audio-v2";
+const AUDIO_ASSET_VERSION = "20260705-audio-v3";
 
 function audioAsset(path) {
   return `${path}?v=${AUDIO_ASSET_VERSION}`;
