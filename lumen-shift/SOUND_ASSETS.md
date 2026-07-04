@@ -1,5 +1,117 @@
 # LUMEN SHIFT Sound Asset Plan
 
+## Must Provide: 필수로 직접 넣어야 하는 사운드
+
+현재 SFX, UI 클릭음, 라인 클리어음, Zone 효과음은 임시 버전으로 이미 들어가 있다. 네가 필수로 구하거나 제작해서 교체해야 하는 것은 **스테이지별 메인 음악**이다.
+
+최소 필수 파일은 아래 5개다.
+
+| Priority | File | BPM | 필수 이유 | 필요한 느낌 |
+| --- | --- | ---: | --- | --- |
+| 1 | `assets/audio/music/stage-01-deep-tide/full.mp3` | 88 | 첫 스테이지 전체 분위기 결정 | 깊은 푸른 수중, 부유감, 잔잔한 pulse, 차갑고 투명한 pad |
+| 2 | `assets/audio/music/stage-02-ember-veil/full.mp3` | 104 | 첫 전환에서 체감 퀄리티가 갈림 | 황금/주황빛, 열감, 불꽃 입자, 더 강한 rhythm |
+| 3 | `assets/audio/music/stage-03-bloom-signal/full.mp3` | 112 | 중반부 에너지 상승 담당 | 핑크/시안 네온, 선명한 arpeggio, digital signal |
+| 4 | `assets/audio/music/stage-04-void-aurora/full.mp3` | 118 | 후반부 공간감 담당 | 우주, 오로라, 넓은 reverb, 차가운 pulse |
+| 5 | `assets/audio/music/stage-05-white-core/full.mp3` | 126 | 최종 클라이맥스 담당 | 흰빛 폭발, 고밀도 rhythm, 밝은 lead, 최고조 에너지 |
+
+이 5개만 먼저 넣어도 스테이지별 분위기 변화는 만들 수 있다. 단, 원작처럼 “음악이 플레이에 반응하는 느낌”까지 가려면 아래 stem 파일들이 필요하다.
+
+## Best Quality: 스테이지별 Stem 설명
+
+각 스테이지마다 아래 8개 파일이 이상적인 구성이다.
+
+| Stem File | 필수도 | 설명 | 게임에서 쓰는 방식 |
+| --- | --- | --- | --- |
+| `full.mp3` | 필수 | 전체 믹스. stem이 없을 때 fallback으로 재생 | 기본 BGM |
+| `base.mp3` | 고퀄 필수 | pad, drone, 저음 공간감 | 항상 낮게 깔림 |
+| `pulse.mp3` | 고퀄 필수 | arpeggio, 8분/16분 pulse, 박자감 | 진행도/입력감에 따라 커짐 |
+| `rhythm.mp3` | 고퀄 필수 | kick, hat, percussion | 중후반/콤보에서 올라옴 |
+| `energy.mp3` | 고퀄 필수 | bass, tension, impact bed | 하드드롭/라인클리어/콤보에서 올라옴 |
+| `lead.mp3` | 선택이지만 추천 | 멜로디, top synth hook | 후반부 고조에서 등장 |
+| `texture.mp3` | 선택이지만 추천 | sparkle, shimmer, particle noise | 입자/블룸/배경 이펙트와 같이 움직임 |
+| `zone.mp3` | 고퀄 필수 | Lumen Zone 전용 고조 layer | Zone 발동 때만 크게 올라옴 |
+
+중요 조건:
+
+- 같은 스테이지의 stem은 **BPM, 길이, 시작점이 완전히 같아야 한다.**
+- 모든 stem은 **seamless loop**가 되어야 한다.
+- `base + pulse + rhythm + energy + lead + texture + zone`을 동시에 재생했을 때 `full.mp3`와 비슷하게 들리면 좋다.
+- stem 제작이 어렵다면 우선 `full.mp3` 5개만 가져와도 된다.
+
+## Folder Checklist: 실제 넣을 파일 경로
+
+Stage 01:
+
+```text
+assets/audio/music/stage-01-deep-tide/full.mp3
+assets/audio/music/stage-01-deep-tide/base.mp3
+assets/audio/music/stage-01-deep-tide/pulse.mp3
+assets/audio/music/stage-01-deep-tide/rhythm.mp3
+assets/audio/music/stage-01-deep-tide/energy.mp3
+assets/audio/music/stage-01-deep-tide/lead.mp3
+assets/audio/music/stage-01-deep-tide/texture.mp3
+assets/audio/music/stage-01-deep-tide/zone.mp3
+```
+
+Stage 02:
+
+```text
+assets/audio/music/stage-02-ember-veil/full.mp3
+assets/audio/music/stage-02-ember-veil/base.mp3
+assets/audio/music/stage-02-ember-veil/pulse.mp3
+assets/audio/music/stage-02-ember-veil/rhythm.mp3
+assets/audio/music/stage-02-ember-veil/energy.mp3
+assets/audio/music/stage-02-ember-veil/lead.mp3
+assets/audio/music/stage-02-ember-veil/texture.mp3
+assets/audio/music/stage-02-ember-veil/zone.mp3
+```
+
+Stage 03:
+
+```text
+assets/audio/music/stage-03-bloom-signal/full.mp3
+assets/audio/music/stage-03-bloom-signal/base.mp3
+assets/audio/music/stage-03-bloom-signal/pulse.mp3
+assets/audio/music/stage-03-bloom-signal/rhythm.mp3
+assets/audio/music/stage-03-bloom-signal/energy.mp3
+assets/audio/music/stage-03-bloom-signal/lead.mp3
+assets/audio/music/stage-03-bloom-signal/texture.mp3
+assets/audio/music/stage-03-bloom-signal/zone.mp3
+```
+
+Stage 04:
+
+```text
+assets/audio/music/stage-04-void-aurora/full.mp3
+assets/audio/music/stage-04-void-aurora/base.mp3
+assets/audio/music/stage-04-void-aurora/pulse.mp3
+assets/audio/music/stage-04-void-aurora/rhythm.mp3
+assets/audio/music/stage-04-void-aurora/energy.mp3
+assets/audio/music/stage-04-void-aurora/lead.mp3
+assets/audio/music/stage-04-void-aurora/texture.mp3
+assets/audio/music/stage-04-void-aurora/zone.mp3
+```
+
+Stage 05:
+
+```text
+assets/audio/music/stage-05-white-core/full.mp3
+assets/audio/music/stage-05-white-core/base.mp3
+assets/audio/music/stage-05-white-core/pulse.mp3
+assets/audio/music/stage-05-white-core/rhythm.mp3
+assets/audio/music/stage-05-white-core/energy.mp3
+assets/audio/music/stage-05-white-core/lead.mp3
+assets/audio/music/stage-05-white-core/texture.mp3
+assets/audio/music/stage-05-white-core/zone.mp3
+```
+
+## Replacement Priority: 교체 우선순위
+
+1. `full.mp3` 5개를 먼저 준비한다.
+2. 그 다음 `base`, `pulse`, `rhythm`, `energy`, `zone` stem을 준비한다.
+3. 마지막으로 `lead`, `texture` stem을 추가한다.
+4. SFX는 이미 임시 버전이 있으므로 나중에 최종 마스터링 파일로 교체하면 된다.
+
 이 문서는 LUMEN SHIFT에 필요한 사운드 파일, 현재 준비된 파일, 다른 ARCHERLAB 프로젝트에서 가져온 파일, 그리고 추가 제작해야 할 음악을 정리한다.
 
 기본 위치:
