@@ -12,6 +12,16 @@ const STAGES = [
     name: "Deep Tide",
     kind: "tide",
     colors: [0x68e9ff, 0x7cffb0, 0xc9f7ff],
+    fxColors: [0x68e9ff, 0x2dd9ff, 0x7cffb0, 0xc9f7ff],
+    pieceColors: {
+      I: 0x68e9ff,
+      O: 0xc9f7ff,
+      T: 0x4fb7ff,
+      S: 0x7cffb0,
+      Z: 0x1fd6c8,
+      J: 0x3b84ff,
+      L: 0xb8fff5,
+    },
     bg: [0x00030a, 0x021c2b],
     accent: 0x68e9ff,
     bpm: 88,
@@ -20,6 +30,16 @@ const STAGES = [
     name: "Ember Veil",
     kind: "ember",
     colors: [0xffd36e, 0xff7a2f, 0xffffff],
+    fxColors: [0xffd36e, 0xffa34f, 0xff7a2f, 0xfff0a8],
+    pieceColors: {
+      I: 0xfff0a8,
+      O: 0xffd36e,
+      T: 0xffa34f,
+      S: 0xff8a3d,
+      Z: 0xff5d38,
+      J: 0xffba6a,
+      L: 0xff6f24,
+    },
     bg: [0x080300, 0x2a0b00],
     accent: 0xffd36e,
     bpm: 104,
@@ -28,6 +48,16 @@ const STAGES = [
     name: "Bloom Signal",
     kind: "signal",
     colors: [0xff5bd4, 0x68e9ff, 0x8d6cff],
+    fxColors: [0xff5bd4, 0x68e9ff, 0xbf7bff, 0xffb6ef],
+    pieceColors: {
+      I: 0x68e9ff,
+      O: 0xffb6ef,
+      T: 0xff5bd4,
+      S: 0x8d6cff,
+      Z: 0xdf5fff,
+      J: 0x4f7dff,
+      L: 0xff7ddf,
+    },
     bg: [0x05020d, 0x1f0732],
     accent: 0xff5bd4,
     bpm: 112,
@@ -36,6 +66,16 @@ const STAGES = [
     name: "Void Aurora",
     kind: "aurora",
     colors: [0x8d6cff, 0x2dd9ff, 0x7cffb0],
+    fxColors: [0x8d6cff, 0x2dd9ff, 0x7cffb0, 0xe2fbff],
+    pieceColors: {
+      I: 0x2dd9ff,
+      O: 0xe2fbff,
+      T: 0xb39cff,
+      S: 0x7cffb0,
+      Z: 0x5ce8d5,
+      J: 0x8d6cff,
+      L: 0xbfffe0,
+    },
     bg: [0x02020b, 0x07143b],
     accent: 0x8d6cff,
     bpm: 118,
@@ -44,6 +84,16 @@ const STAGES = [
     name: "White Core",
     kind: "core",
     colors: [0xffffff, 0x68e9ff, 0xffd36e, 0xff5bd4],
+    fxColors: [0xffffff, 0xeaf7ff, 0x68e9ff, 0xffe9a8],
+    pieceColors: {
+      I: 0xeaf7ff,
+      O: 0xffffff,
+      T: 0xffe9a8,
+      S: 0x8bf4ff,
+      Z: 0xffbedf,
+      J: 0xb4c7ff,
+      L: 0xffd36e,
+    },
     bg: [0x030306, 0x1d1d2d],
     accent: 0xffffff,
     bpm: 126,
@@ -70,6 +120,25 @@ const PIECES = {
 
 const PIECE_KEYS = Object.keys(PIECES);
 const KICKS = [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, -1], [1, -1], [-1, -1]];
+
+function stageFxColors(stage) {
+  return stage?.fxColors || stage?.colors || [stage?.accent || 0xffffff];
+}
+
+function stageFxColor(stage, index = 0) {
+  const colors = stageFxColors(stage);
+  return colors[((index % colors.length) + colors.length) % colors.length] || stage?.accent || 0xffffff;
+}
+
+function stagePieceColor(stage, type, fallback = 0xffffff) {
+  if (type && stage?.pieceColors?.[type]) return stage.pieceColors[type];
+  if (type && PIECES[type]?.color) return PIECES[type].color;
+  return stage?.accent || fallback;
+}
+
+function stageCellColor(stage, cell, fallback = 0xffffff) {
+  return stagePieceColor(stage, cell?.type, cell?.color || fallback);
+}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -918,10 +987,11 @@ class FallingBlockCore {
   makePiece(type) {
     const def = PIECES[type];
     const matrix = cloneMatrix(def.matrix);
+    const stage = STAGES[this.stageIndex] || STAGES[0];
     return {
       type,
       matrix,
-      color: def.color,
+      color: stagePieceColor(stage, type, def.color),
       x: Math.floor((COLS - matrix[0].length) / 2),
       y: -1,
     };
@@ -1085,8 +1155,9 @@ class FallingBlockCore {
           this.finish("Game Over");
           return;
         }
-        this.grid[by][bx] = { type: this.active.type, color: this.active.color };
-        lockedCells.push({ row: by, col: bx, color: this.active.color, type: this.active.type });
+        const cellColor = stagePieceColor(STAGES[this.stageIndex], this.active.type, this.active.color);
+        this.grid[by][bx] = { type: this.active.type, color: cellColor };
+        lockedCells.push({ row: by, col: bx, color: cellColor, type: this.active.type });
       }
     }
     this.callbacks.onLock?.({ cells: lockedCells, type: this.active.type });
@@ -1110,7 +1181,7 @@ class FallingBlockCore {
     const cells = rows.flatMap((row) => this.grid[row].map((cell, col) => ({
       row,
       col,
-      color: cell?.color || STAGES[this.stageIndex]?.accent || 0xffffff,
+      color: stageCellColor(STAGES[this.stageIndex], cell, STAGES[this.stageIndex]?.accent || 0xffffff),
       type: cell?.type || "",
     })));
     this.grid = this.grid.filter((_, index) => !rows.includes(index));
@@ -1148,6 +1219,9 @@ class FallingBlockCore {
       : clamp(Math.floor((this.level - 1) / 3), 0, STAGES.length - 1);
     if (nextStage !== this.stageIndex) {
       this.stageIndex = nextStage;
+      if (this.active?.type) {
+        this.active.color = stagePieceColor(STAGES[nextStage], this.active.type, this.active.color);
+      }
       this.callbacks.onStage?.(nextStage, STAGES[nextStage]);
     }
   }
@@ -1611,7 +1685,7 @@ class PixiView {
   }
 
   paintStageArt(ctx, w, h, stage, index) {
-    const colors = stage.colors || [stage.accent, 0xffffff];
+    const colors = stageFxColors(stage);
     ctx.clearRect(0, 0, w, h);
     const base = ctx.createLinearGradient(0, 0, w, h);
     base.addColorStop(0, rgba(stage.bg?.[0] || 0x000006, 1));
@@ -2099,6 +2173,7 @@ class PixiView {
   drawBackground(layout, stage, dt, snapshot, beatState = null) {
     const g = this.bg;
     const t = performance.now() * 0.001;
+    const fxColors = stageFxColors(stage);
     let beatPosition;
     if (beatState?.ready) {
       beatPosition = beatState.position || 0;
@@ -2176,7 +2251,7 @@ class PixiView {
     g.circle(cx, cy, layout.boardW * (0.78 + energy * 0.16))
       .fill({ color: 0x000000, alpha: 0.28 + energy * 0.18 });
     g.circle(layout.w * 0.12, layout.h * 0.86, maxDim * 0.42)
-      .fill({ color: stage.colors[1] || stage.accent, alpha: 0.014 + this.arrangement * 0.026 + energy * 0.062 });
+      .fill({ color: fxColors[1] || stage.accent, alpha: 0.014 + this.arrangement * 0.026 + energy * 0.062 });
     g.circle(layout.w * 0.9, layout.h * 0.08, maxDim * 0.36)
       .fill({ color: stage.accent, alpha: 0.014 + this.arrangement * 0.028 + energy * 0.066 });
 
@@ -2188,7 +2263,7 @@ class PixiView {
       const side = band % 2 ? -1 : 1;
       const width = 1.2 + energy * 7 + band * 0.6;
       const alpha = (0.01 + this.arrangement * 0.024 + energy * 0.068) * (1 - band * 0.08);
-      const color = stage.colors[band % stage.colors.length] || stage.accent;
+      const color = fxColors[band % fxColors.length] || stage.accent;
       for (let pass = 0; pass < ribbonPasses; pass += 1) {
         const offset = (pass - 0.5) * layout.boardW * 0.16;
         for (let i = 0; i <= ribbonSegments; i += 1) {
@@ -2241,7 +2316,7 @@ class PixiView {
     const arrangement = this.arrangement;
     if (arrangement <= 0.04 && this.inputHeat <= 0.03 && this.phrasePulse <= 0.03) return;
     const color = stage.accent || 0xffffff;
-    const secondary = stage.colors?.[1] || color;
+    const secondary = stageFxColor(stage, 1) || color;
     const meterCount = layout.portrait ? 10 : 16;
     const sideGap = Math.max(layout.cell * 0.42, 10);
     const meterW = Math.max(2, layout.cell * 0.08);
@@ -2292,7 +2367,7 @@ class PixiView {
 
   drawVolumetricBloom(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
     const g = this.bg;
-    const colors = stage.colors || [stage.accent, 0xffffff];
+    const colors = stageFxColors(stage);
     const zone = snapshot.zoneActive ? 1 : 0;
     const clearLift = this.worldSurge * 0.32 + this.phrasePulse * 0.18;
     const base = clamp(0.035 + this.arrangement * 0.1 + energy * 0.15 + beatPulse * 0.075 + zone * 0.13 + clearLift, 0, 0.44);
@@ -2326,7 +2401,7 @@ class PixiView {
   drawDepthCurtains(layout, stage, t, energy, snapshot, cx, cy) {
     const g = this.bg;
     const lite = this.quality.coarse;
-    const colors = stage.colors || [stage.accent, 0xffffff];
+    const colors = stageFxColors(stage);
     const count = lite ? 3 : 7;
     const arrangement = this.arrangement;
     const zone = snapshot.zoneActive ? 1 : 0;
@@ -2421,7 +2496,7 @@ class PixiView {
 
   drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy) {
     const g = this.bg;
-    const colors = stage.colors || [stage.accent, 0xffffff];
+    const colors = stageFxColors(stage);
     const kind = stage.kind || "tide";
     const pulse = this.stagePulse + this.worldSurge + this.zonePulse * 0.65;
     const lite = this.quality.coarse;
@@ -2488,7 +2563,7 @@ class PixiView {
   drawParticleSwarm(layout, stage, t, energy, snapshot) {
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
-    const colors = stage.colors || [stage.accent, 0xffffff];
+    const colors = stageFxColors(stage);
     const stageWarm = stage.kind === "ember" || stage.kind === "core";
     const arrangement = this.arrangement;
     const baseAlpha = (layout.portrait ? 0.22 : 0.26) + arrangement * (layout.portrait ? 0.2 : 0.26);
@@ -2594,7 +2669,7 @@ class PixiView {
         vy: 2.2 + Math.random() * 3.6,
         life: 70 + Math.random() * 60,
         maxLife: 110,
-        color: Math.random() > 0.5 ? stage.accent : (stage.colors[Math.floor(Math.random() * stage.colors.length)] || 0xffffff),
+        color: Math.random() > 0.5 ? stage.accent : stageFxColor(stage, Math.floor(Math.random() * stageFxColors(stage).length)),
       });
     }
     const decay = dt / 16.67;
@@ -2657,7 +2732,7 @@ class PixiView {
         const px = bx + x * cell;
         const py = by + y * cell;
         const cellData = snapshot.grid[y][x];
-        if (cellData) this.drawBlock(g, px, py, cell, cellData.color, 0.95, false);
+        if (cellData) this.drawBlock(g, px, py, cell, stageCellColor(stage, cellData, cellData.color), 0.95, false);
       }
     }
 
@@ -2670,9 +2745,9 @@ class PixiView {
       }
     }
 
-    this.drawPiece(g, snapshot.ghost, bx, by, cell, 0.18, true);
+    this.drawPiece(g, snapshot.ghost, bx, by, cell, 0.18, true, stage);
     this.drawPieceAura(g, snapshot.active, bx, by, cell, stage, snapshot.zoneActive);
-    this.drawPiece(g, snapshot.active, bx, by, cell, snapshot.zoneActive ? 1 : 0.98, false);
+    this.drawPiece(g, snapshot.active, bx, by, cell, snapshot.zoneActive ? 1 : 0.98, false, stage);
 
     if (snapshot.zoneActive) {
       const progressH = layout.boardH * snapshot.zoneProgress;
@@ -2690,8 +2765,9 @@ class PixiView {
     this.shake = Math.max(0, this.shake - 0.8);
   }
 
-  drawPiece(g, piece, bx, by, cell, alpha, ghost) {
+  drawPiece(g, piece, bx, by, cell, alpha, ghost, stage = STAGES[0]) {
     if (!piece) return;
+    const color = stagePieceColor(stage, piece.type, piece.color);
     for (let y = 0; y < piece.matrix.length; y += 1) {
       for (let x = 0; x < piece.matrix[y].length; x += 1) {
         if (!piece.matrix[y][x]) continue;
@@ -2702,11 +2778,11 @@ class PixiView {
         if (ghost) {
           const inset = cell * 0.2;
           g.rect(px + inset, py + inset, cell - inset * 2, cell - inset * 2)
-            .stroke({ color: piece.color, alpha: alpha * 0.9, width: 1.5 });
+            .stroke({ color, alpha: alpha * 0.9, width: 1.5 });
           g.circle(px + cell / 2, py + cell / 2, Math.max(1.2, cell * 0.055))
-            .fill({ color: piece.color, alpha: alpha * 0.7 });
+            .fill({ color, alpha: alpha * 0.7 });
         } else {
-          this.drawBlock(g, px, py, cell, piece.color, alpha, true);
+          this.drawBlock(g, px, py, cell, color, alpha, true);
         }
       }
     }
@@ -2716,7 +2792,7 @@ class PixiView {
     if (!piece) return;
     const t = performance.now() * 0.006;
     const pulse = 0.5 + Math.sin(t) * 0.5;
-    const color = piece.color || stage?.accent || 0xffffff;
+    const color = stagePieceColor(stage, piece.type, piece.color || stage?.accent || 0xffffff);
     for (let y = 0; y < piece.matrix.length; y += 1) {
       for (let x = 0; x < piece.matrix[y].length; x += 1) {
         if (!piece.matrix[y][x]) continue;
@@ -2794,7 +2870,7 @@ class PixiView {
       const type = types[i];
       if (!type) continue;
       const matrix = PIECES[type].matrix;
-      const color = PIECES[type].color;
+      const color = stagePieceColor(stage, type, PIECES[type].color);
       const scale = Math.min((panel.w - 20) / matrix[0].length, (panel.h / max - 22) / matrix.length, 18);
       const offsetY = panel.y + 24 + i * ((panel.h - 26) / Math.max(1, max));
       const offsetX = panel.x + (panel.w - matrix[0].length * scale) / 2;
@@ -2824,13 +2900,13 @@ class PixiView {
   pieceLock(cells, stage, intense = false) {
     if (!this.app || !Array.isArray(cells) || cells.length === 0) return;
     const layout = this.layout();
-    const color = stage?.accent || cells[0]?.color || 0xffffff;
+    const color = stageCellColor(stage, cells[0], stage?.accent || 0xffffff);
     const cx = cells.reduce((sum, cell) => sum + (layout.boardX + cell.col * layout.cell + layout.cell / 2), 0) / cells.length;
     const cy = cells.reduce((sum, cell) => sum + (layout.boardY + cell.row * layout.cell + layout.cell / 2), 0) / cells.length;
     cells.forEach((cell) => {
       const x = layout.boardX + cell.col * layout.cell + layout.cell / 2;
       const y = layout.boardY + cell.row * layout.cell + layout.cell / 2;
-      const cellColor = cell.color || color;
+      const cellColor = stageCellColor(stage, cell, color);
       this.lockFlashes.push({
         x,
         y,
@@ -3213,7 +3289,7 @@ class PixiView {
 
   lineClear(rows, lines, stage, cells = []) {
     const layout = this.layout();
-    const color = stage?.accent || 0x68e9ff;
+    const color = stageFxColor(stage, lines);
     this.worldSurge = Math.max(this.worldSurge, 0.62 + lines * 0.2);
     this.beatHit = Math.max(this.beatHit, lines >= 4 ? 1 : 0.62);
     this.phrasePulse = Math.max(this.phrasePulse, lines >= 4 ? 1 : 0.62);
@@ -3221,7 +3297,7 @@ class PixiView {
     this.chromaticPulse = Math.max(this.chromaticPulse, lines >= 4 ? 1 : 0.52);
     this.cameraPulse = Math.max(this.cameraPulse, lines >= 4 ? 1 : 0.48 + lines * 0.12);
     this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * (lines >= 4 ? 0.016 : 0.006 + lines * 0.0015);
-    const clearColor = lines >= 4 ? 0xffffff : color;
+    const clearColor = lines >= 4 ? 0xffffff : stageFxColor(stage, lines + 1);
     const centerY = rows.length
       ? rows.reduce((sum, row) => sum + layout.boardY + row * layout.cell + layout.cell / 2, 0) / rows.length
       : layout.boardY + layout.boardH / 2;
@@ -3400,7 +3476,7 @@ class PixiView {
         y: py,
         vx: side * (1.8 + Math.random() * (3.2 + lines)) + (Math.random() - 0.5) * 1.4,
         vy: (Math.random() - 0.5) * (2.4 + lines * 0.5),
-        color: Math.random() > 0.22 ? (cellInfo.color || color) : 0xffffff,
+        color: Math.random() > 0.22 ? stageCellColor(stage, cellInfo, color) : 0xffffff,
         size: layout.cell * (0.88 + Math.random() * 0.16),
         life: 28 + Math.random() * 18 + lines * 6,
         maxLife: 28 + Math.random() * 18 + lines * 6,
@@ -3411,7 +3487,7 @@ class PixiView {
         this.spawnParticle(
           px,
           py,
-          Math.random() > 0.3 ? clearColor : (cellInfo.color || color),
+          Math.random() > 0.3 ? clearColor : stageCellColor(stage, cellInfo, color),
           layout.cell * (0.12 + Math.random() * 0.18),
           side * (4.4 + Math.random() * 7.5),
           (Math.random() - 0.5) * (2.4 + lines),
@@ -3437,7 +3513,7 @@ class PixiView {
 
   zoneBurst(lines, stage) {
     const layout = this.layout();
-    const color = stage?.accent || 0xffffff;
+    const color = stageFxColor(stage, lines);
     const count = Math.min(this.quality.maxParticles, 140 + lines * 28);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH * 0.56;
@@ -3481,7 +3557,7 @@ class PixiView {
   stageShift(stage) {
     if (!this.app) return;
     const layout = this.layout();
-    const color = stage?.accent || 0x68e9ff;
+    const color = stageFxColor(stage, 0);
     this.stagePulse = 1;
     this.worldSurge = 1;
     this.phrasePulse = 1;
@@ -3562,7 +3638,8 @@ class PixiView {
     for (let i = 0; i < Math.min(this.quality.maxParticles * 0.72, 260); i += 1) {
       const a = Math.random() * Math.PI * 2;
       const speed = 1.8 + Math.random() * 7.5;
-      const c = Math.random() > 0.35 ? color : (stage?.colors?.[Math.floor(Math.random() * stage.colors.length)] || 0xffffff);
+      const fxColors = stageFxColors(stage);
+      const c = Math.random() > 0.35 ? color : (fxColors[Math.floor(Math.random() * fxColors.length)] || 0xffffff);
       this.spawnParticle(cx, cy, c, 2.2 + Math.random() * 6.2, Math.cos(a) * speed, Math.sin(a) * speed, 48 + Math.random() * 42, 0.84, Math.random() > 0.5 ? "star" : "flare");
     }
     for (let i = 0; i < (this.quality.coarse ? 6 : 14); i += 1) {
@@ -3602,7 +3679,7 @@ class PixiView {
   zoneIgnite(stage) {
     if (!this.app) return;
     const layout = this.layout();
-    const color = stage?.accent || 0xffffff;
+    const color = stageFxColor(stage, 0);
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
     this.zonePulse = 1;
@@ -3658,7 +3735,7 @@ class PixiView {
     if (!this.app || !snapshot?.active) return;
     const layout = this.layout();
     const piece = snapshot.active;
-    const color = piece.color || snapshot.stage?.accent || 0xffffff;
+    const color = stagePieceColor(snapshot.stage, piece.type, piece.color || snapshot.stage?.accent || 0xffffff);
     const cx = layout.boardX + (piece.x + piece.matrix[0].length / 2) * layout.cell;
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
     const count = kind === "drop" ? 34 + Math.min(34, amount * 1.25) : kind === "rotate" ? 28 : 12;
