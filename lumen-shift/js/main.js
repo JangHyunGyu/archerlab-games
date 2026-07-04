@@ -642,6 +642,7 @@ class FallingBlockCore {
 
   lock() {
     if (this.status !== "playing") return;
+    const lockedCells = [];
     for (let y = 0; y < this.active.matrix.length; y += 1) {
       for (let x = 0; x < this.active.matrix[y].length; x += 1) {
         if (!this.active.matrix[y][x]) continue;
@@ -652,8 +653,10 @@ class FallingBlockCore {
           return;
         }
         this.grid[by][bx] = { type: this.active.type, color: this.active.color };
+        lockedCells.push({ row: by, col: bx, color: this.active.color, type: this.active.type });
       }
     }
+    this.callbacks.onLock?.({ cells: lockedCells, type: this.active.type });
     const cleared = this.clearLines();
     if (cleared === 0) this.combo = 0;
     this.updateStage();
@@ -810,7 +813,11 @@ class PixiView {
     this.dropTrails = [];
     this.impactRings = [];
     this.rowSweeps = [];
+    this.clearCores = [];
     this.clearTiles = [];
+    this.lockFlashes = [];
+    this.shockBands = [];
+    this.screenBursts = [];
     this.swarm = [];
     this.swarmSprites = [];
     this.sparkSprites = [];
@@ -1573,27 +1580,35 @@ class PixiView {
   drawBlock(g, x, y, size, color, alpha, hot) {
     const gap = Math.max(1.2, size * 0.075);
     const radius = Math.max(1.5, size * 0.06);
-    const glow = hot ? 0.58 : 0.28;
+    const outer = size - gap * 2;
+    const innerGap = gap * 1.62;
+    const inner = size - innerGap * 2;
+    const glow = hot ? 0.72 : 0.38;
     if (hot) {
-      g.roundRect(x + gap - 4, y + gap - 4, size - gap * 2 + 8, size - gap * 2 + 8, radius + 2)
-        .fill({ color, alpha: alpha * 0.24 });
-      g.roundRect(x + gap - 8, y + gap - 8, size - gap * 2 + 16, size - gap * 2 + 16, radius + 3)
-        .stroke({ color, alpha: alpha * 0.22, width: Math.max(2.5, size * 0.12) });
+      g.roundRect(x + gap - size * 0.18, y + gap - size * 0.18, outer + size * 0.36, outer + size * 0.36, radius + 4)
+        .fill({ color, alpha: alpha * 0.18 });
+      g.roundRect(x + gap - size * 0.28, y + gap - size * 0.28, outer + size * 0.56, outer + size * 0.56, radius + 5)
+        .stroke({ color, alpha: alpha * 0.22, width: Math.max(2.4, size * 0.12) });
     }
-    g.roundRect(x + gap, y + gap, size - gap * 2, size - gap * 2, radius)
-      .fill({ color, alpha: alpha * 0.92 })
-      .stroke({ color: 0xffffff, alpha: hot ? 0.62 : 0.4, width: 1.1 });
-    g.roundRect(x + gap * 1.55, y + gap * 1.55, size - gap * 3.1, size - gap * 3.1, radius)
-      .fill({ color, alpha: alpha * 0.32 })
-      .stroke({ color: 0xffffff, alpha: alpha * glow, width: 1 });
-    g.rect(x + gap * 1.8, y + gap * 1.8, size - gap * 3.6, Math.max(2, size * 0.16))
-      .fill({ color: 0xffffff, alpha: alpha * 0.34 });
+    g.roundRect(x + gap, y + gap, outer, outer, radius)
+      .fill({ color, alpha: alpha * (hot ? 0.32 : 0.26) })
+      .stroke({ color, alpha: alpha * (hot ? 0.98 : 0.82), width: Math.max(1.15, size * 0.07) });
+    g.roundRect(x + innerGap, y + innerGap, inner, inner, radius)
+      .fill({ color: 0x01040a, alpha: alpha * (hot ? 0.5 : 0.62) })
+      .stroke({ color: 0xffffff, alpha: alpha * glow, width: Math.max(0.85, size * 0.045) });
+    g.rect(x + innerGap, y + innerGap, inner, Math.max(2, size * 0.14))
+      .fill({ color: 0xffffff, alpha: alpha * (hot ? 0.46 : 0.3) });
+    g.rect(x + innerGap, y + innerGap, Math.max(2, size * 0.12), inner)
+      .fill({ color: 0xffffff, alpha: alpha * 0.18 });
     if (size >= 13) {
-      g.moveTo(x + gap * 1.7, y + size - gap * 1.9);
-      g.lineTo(x + size - gap * 1.8, y + gap * 1.7);
-      g.stroke({ color: 0xffffff, alpha: alpha * 0.13, width: 1 });
-      g.circle(x + size * 0.72, y + size * 0.72, Math.max(1.1, size * 0.065))
-        .fill({ color: 0xffffff, alpha: alpha * 0.28 });
+      g.moveTo(x + innerGap * 1.06, y + size - innerGap * 1.08);
+      g.lineTo(x + size - innerGap * 1.08, y + innerGap * 1.06);
+      g.stroke({ color: 0xffffff, alpha: alpha * 0.18, width: Math.max(0.8, size * 0.035) });
+      g.moveTo(x + size - innerGap * 0.94, y + size - innerGap * 1.08);
+      g.lineTo(x + size * 0.54, y + size * 0.54);
+      g.stroke({ color, alpha: alpha * 0.34, width: Math.max(0.8, size * 0.035) });
+      g.circle(x + size * 0.73, y + size * 0.28, Math.max(1.1, size * 0.06))
+        .fill({ color: 0xffffff, alpha: alpha * (hot ? 0.42 : 0.28) });
     }
   }
 
@@ -1639,10 +1654,105 @@ class PixiView {
     }
   }
 
+  pieceLock(cells, stage, intense = false) {
+    if (!this.app || !Array.isArray(cells) || cells.length === 0) return;
+    const layout = this.layout();
+    const color = stage?.accent || cells[0]?.color || 0xffffff;
+    const cx = cells.reduce((sum, cell) => sum + (layout.boardX + cell.col * layout.cell + layout.cell / 2), 0) / cells.length;
+    const cy = cells.reduce((sum, cell) => sum + (layout.boardY + cell.row * layout.cell + layout.cell / 2), 0) / cells.length;
+    cells.forEach((cell) => {
+      const x = layout.boardX + cell.col * layout.cell + layout.cell / 2;
+      const y = layout.boardY + cell.row * layout.cell + layout.cell / 2;
+      const cellColor = cell.color || color;
+      this.lockFlashes.push({
+        x,
+        y,
+        color: cellColor,
+        size: layout.cell * (intense ? 1.08 : 0.86),
+        life: intense ? 24 : 14,
+        maxLife: intense ? 24 : 14,
+      });
+      const sparkleCount = intense ? 4 : 1;
+      for (let i = 0; i < sparkleCount; i += 1) {
+        const a = Math.random() * Math.PI * 2;
+        const speed = intense ? 1.6 + Math.random() * 3.8 : 0.55 + Math.random() * 1.45;
+        this.spawnParticle(
+          x + (Math.random() - 0.5) * layout.cell * 0.36,
+          y + (Math.random() - 0.5) * layout.cell * 0.36,
+          Math.random() > 0.35 ? cellColor : 0xffffff,
+          intense ? 1.9 + Math.random() * 4.2 : 1.0 + Math.random() * 2.1,
+          Math.cos(a) * speed,
+          Math.sin(a) * speed,
+          intense ? 24 + Math.random() * 20 : 14 + Math.random() * 11,
+          intense ? 0.74 : 0.42,
+        );
+      }
+    });
+    if (intense) {
+      this.screenBursts.push({
+        x: cx,
+        y: cy,
+        radius: layout.boardW * 0.7,
+        color: 0xffffff,
+        alpha: 0.24,
+        width: 2.4,
+        life: 24,
+        maxLife: 24,
+      });
+    }
+  }
+
   drawParticles(layout, dt) {
     const g = this.fx;
     g.clear();
     const decay = dt / 16.67;
+    this.screenBursts = this.screenBursts.filter((burst) => {
+      burst.life -= decay;
+      if (burst.life <= 0) return false;
+      const alpha = clamp(burst.life / burst.maxLife, 0, 1);
+      const growth = 1 - alpha;
+      const cx = burst.x ?? (layout.boardX + layout.boardW / 2);
+      const cy = burst.y ?? (layout.boardY + layout.boardH / 2);
+      const radius = burst.radius * (0.38 + growth * 1.85);
+      g.circle(cx, cy, radius)
+        .stroke({ color: burst.color, alpha: alpha * burst.alpha, width: burst.width * (0.8 + growth * 2.4) });
+      g.circle(cx, cy, radius * 0.62)
+        .fill({ color: burst.color, alpha: alpha * burst.alpha * 0.08 });
+      return true;
+    });
+    this.shockBands = this.shockBands.filter((band) => {
+      band.life -= decay;
+      if (band.life <= 0) return false;
+      const alpha = clamp(band.life / band.maxLife, 0, 1);
+      const p = 1 - alpha;
+      if (band.orientation === "vertical") {
+        const x = band.x + Math.sin(p * Math.PI) * band.sway;
+        const w = band.width * (0.4 + p * 2.2);
+        g.roundRect(x - w / 2, -layout.cell, w, layout.h + layout.cell * 2, w / 2)
+          .fill({ color: band.color, alpha: alpha * band.alpha * 0.22 });
+      } else {
+        const y = band.y + Math.sin(p * Math.PI) * band.sway;
+        const h = band.height * (0.4 + p * 2.4);
+        g.roundRect(-layout.cell, y - h / 2, layout.w + layout.cell * 2, h, h / 2)
+          .fill({ color: band.color, alpha: alpha * band.alpha * 0.26 });
+      }
+      return true;
+    });
+    this.lockFlashes = this.lockFlashes.filter((flash) => {
+      flash.life -= decay;
+      if (flash.life <= 0) return false;
+      const alpha = clamp(flash.life / flash.maxLife, 0, 1);
+      const p = 1 - alpha;
+      const size = flash.size * (1 + p * 0.9);
+      const half = size / 2;
+      g.roundRect(flash.x - half - 4, flash.y - half - 4, size + 8, size + 8, Math.max(2, size * 0.08))
+        .fill({ color: flash.color, alpha: alpha * 0.16 });
+      g.roundRect(flash.x - half, flash.y - half, size, size, Math.max(2, size * 0.06))
+        .stroke({ color: flash.color, alpha: alpha * 0.7, width: 1.4 + p * 2.2 });
+      g.circle(flash.x, flash.y, Math.max(1.8, size * 0.08))
+        .fill({ color: 0xffffff, alpha: alpha * 0.46 });
+      return true;
+    });
     this.dropTrails = this.dropTrails.filter((trail) => {
       trail.life -= decay;
       if (trail.life <= 0) return false;
@@ -1695,6 +1805,21 @@ class PixiView {
         .fill({ color: 0xffffff, alpha: alpha * 0.72 });
       return true;
     });
+    this.clearCores = this.clearCores.filter((core) => {
+      core.life -= decay;
+      if (core.life <= 0) return false;
+      const alpha = clamp(core.life / core.maxLife, 0, 1);
+      const p = 1 - alpha;
+      const height = core.height * (0.72 + p * 1.38);
+      const glowH = height * (1.9 + p * 1.2);
+      g.roundRect(layout.boardX - layout.cell * 0.58, core.y - glowH / 2, layout.boardW + layout.cell * 1.16, glowH, glowH / 2)
+        .fill({ color: core.color, alpha: alpha * core.alpha * 0.18 });
+      g.roundRect(layout.boardX - layout.cell * 0.22, core.y - height / 2, layout.boardW + layout.cell * 0.44, height, height / 2)
+        .fill({ color: 0xffffff, alpha: alpha * core.alpha * 0.72 });
+      g.roundRect(layout.boardX + layout.cell * 0.16, core.y - height * 0.18, layout.boardW - layout.cell * 0.32, Math.max(2, height * 0.36), Math.max(1, height * 0.18))
+        .fill({ color: core.color, alpha: alpha * core.alpha * 0.52 });
+      return true;
+    });
     this.clearTiles = this.clearTiles.filter((tile) => {
       tile.life -= decay;
       tile.x += tile.vx * decay;
@@ -1722,9 +1847,9 @@ class PixiView {
       if (beam.kind === "vertical") {
         const w = beam.width * (0.7 + alpha * 0.9);
         g.roundRect(beam.x - w / 2, layout.boardY - layout.cell, w, layout.boardH + layout.cell * 2, w / 2)
-          .fill({ color: 0xffffff, alpha: 0.1 + alpha * 0.48 });
+          .fill({ color: 0xffffff, alpha: 0.16 + alpha * 0.62 });
         g.roundRect(beam.x - w * 0.18, layout.boardY - layout.cell, w * 0.36, layout.boardH + layout.cell * 2, w * 0.18)
-          .fill({ color: 0xffffff, alpha: 0.22 + alpha * 0.66 });
+          .fill({ color: 0xffffff, alpha: 0.32 + alpha * 0.78 });
       } else {
         g.roundRect(layout.boardX - layout.cell, beam.y - beam.height / 2, layout.boardW + layout.cell * 2, beam.height, beam.height / 2)
           .fill({ color: beam.color, alpha: 0.14 + alpha * 0.48 });
@@ -1779,8 +1904,39 @@ class PixiView {
     const color = stage?.accent || 0x68e9ff;
     this.worldSurge = Math.max(this.worldSurge, 0.62 + lines * 0.2);
     const clearColor = lines >= 4 ? 0xffffff : color;
+    const centerY = rows.length
+      ? rows.reduce((sum, row) => sum + layout.boardY + row * layout.cell + layout.cell / 2, 0) / rows.length
+      : layout.boardY + layout.boardH / 2;
+    this.screenBursts.push({
+      x: layout.boardX + layout.boardW / 2,
+      y: centerY,
+      radius: layout.boardW * (lines >= 4 ? 1.8 : 1.15),
+      color: clearColor,
+      alpha: lines >= 4 ? 0.5 : 0.28,
+      width: lines >= 4 ? 4.2 : 2.6,
+      life: 38 + lines * 8,
+      maxLife: 38 + lines * 8,
+    });
+    this.shockBands.push({
+      orientation: "horizontal",
+      y: centerY,
+      height: Math.max(layout.cell * 1.5, 24 + lines * 9),
+      color: clearColor,
+      alpha: lines >= 4 ? 0.9 : 0.58,
+      sway: layout.cell * 0.18,
+      life: 28 + lines * 5,
+      maxLife: 28 + lines * 5,
+    });
     rows.forEach((row) => {
       const y = layout.boardY + row * layout.cell + layout.cell / 2;
+      this.clearCores.push({
+        y,
+        height: Math.max(18, layout.cell * (1.15 + lines * 0.2)),
+        color: clearColor,
+        alpha: lines >= 4 ? 1 : 0.72,
+        life: 22 + lines * 6,
+        maxLife: 22 + lines * 6,
+      });
       this.rowSweeps.push({
         y,
         dir: 1,
@@ -1915,13 +2071,35 @@ class PixiView {
     if (!this.app) return;
     const layout = this.layout();
     const color = stage?.accent || 0xffffff;
+    const cx = layout.boardX + layout.boardW / 2;
+    const cy = layout.boardY + layout.boardH / 2;
     this.zonePulse = 1;
     this.worldSurge = 1;
-    this.flash = Math.max(this.flash, 0.24);
-    this.shake = Math.max(this.shake, 8);
+    this.flash = Math.max(this.flash, 0.42);
+    this.shake = Math.max(this.shake, 12);
+    this.screenBursts.push({
+      x: cx,
+      y: cy,
+      radius: layout.boardW * 1.9,
+      color: 0xffffff,
+      alpha: 0.5,
+      width: 4,
+      life: 54,
+      maxLife: 54,
+    });
+    this.shockBands.push({
+      orientation: "vertical",
+      x: cx,
+      width: Math.max(layout.cell * 2.8, layout.boardW * 0.32),
+      color: 0xffffff,
+      alpha: 0.84,
+      sway: layout.cell * 0.1,
+      life: 58,
+      maxLife: 58,
+    });
     this.beams.push({
       kind: "vertical",
-      x: layout.boardX + layout.boardW / 2,
+      x: cx,
       width: Math.max(layout.cell * 2.2, layout.boardW * 0.24),
       life: 46,
       maxLife: 46,
@@ -1940,9 +2118,9 @@ class PixiView {
     const color = piece.color || snapshot.stage?.accent || 0xffffff;
     const cx = layout.boardX + (piece.x + piece.matrix[0].length / 2) * layout.cell;
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
-    const count = kind === "drop" ? 72 : kind === "rotate" ? 24 : 12;
+    const count = kind === "drop" ? 76 + Math.min(70, amount * 4) : kind === "rotate" ? 28 : 12;
     if (kind === "drop") this.worldSurge = Math.max(this.worldSurge, 0.28);
-    for (let i = 0; i < Math.min(count, this.quality.coarse ? 54 : 96); i += 1) {
+    for (let i = 0; i < Math.min(count, this.quality.coarse ? 82 : 156); i += 1) {
       const a = kind === "drop"
         ? -Math.PI / 2 + (Math.random() - 0.5) * 0.9
         : Math.random() * Math.PI * 2;
@@ -1992,6 +2170,36 @@ class PixiView {
       const impactY = landedCells.length
         ? landedCells.reduce((sum, block) => sum + block.y, 0) / landedCells.length
         : cy;
+      this.screenBursts.push({
+        x: cx,
+        y: impactY,
+        radius: Math.max(layout.boardW * 0.9, layout.cell * (4 + dropDistance * 0.18)),
+        color: 0xffffff,
+        alpha: 0.36,
+        width: 3.6,
+        life: 32 + Math.min(18, dropDistance * 1.1),
+        maxLife: 32 + Math.min(18, dropDistance * 1.1),
+      });
+      this.shockBands.push({
+        orientation: "vertical",
+        x: cx,
+        width: Math.max(layout.cell * 1.4, 18 + dropDistance * 0.45),
+        color: 0xffffff,
+        alpha: 0.8,
+        sway: layout.cell * 0.08,
+        life: 24 + Math.min(18, dropDistance),
+        maxLife: 24 + Math.min(18, dropDistance),
+      });
+      this.shockBands.push({
+        orientation: "horizontal",
+        y: impactY + layout.cell * 0.62,
+        height: Math.max(layout.cell * 0.9, 18 + dropDistance * 0.35),
+        color,
+        alpha: 0.55,
+        sway: layout.cell * 0.12,
+        life: 22 + Math.min(14, dropDistance),
+        maxLife: 22 + Math.min(14, dropDistance),
+      });
       this.impactRings.push({
         kind: "landing",
         x: cx,
@@ -2005,9 +2213,9 @@ class PixiView {
       this.beams.push({
         kind: "vertical",
         x: cx,
-        width: Math.max(layout.cell * 2.1, 32 + dropDistance * 0.65),
-        life: 30,
-        maxLife: 30,
+        width: Math.max(layout.cell * 2.4, 40 + dropDistance * 0.82),
+        life: 42,
+        maxLife: 42,
       });
       this.clearWaves.push({
         x: cx,
@@ -2154,8 +2362,8 @@ class InputController {
     this.stopRepeat();
     this.repeatAction = action;
     this.repeatTimer = window.setTimeout(() => {
-      this.repeatTimer = window.setInterval(() => this.dispatch(this.repeatAction), action === "down" ? 42 : 62);
-    }, 145);
+      this.repeatTimer = window.setInterval(() => this.dispatch(this.repeatAction), action === "down" ? 32 : 46);
+    }, 112);
   }
 
   stopRepeat() {
@@ -2268,6 +2476,10 @@ class LumenShiftApp {
       onHold: () => {
         this.audio.rotate();
         this.view.actionPulse("rotate", this.core?.snapshot?.());
+      },
+      onLock: (info) => {
+        const stage = STAGES[this.core.stageIndex] || STAGES[0];
+        this.view.pieceLock(info.cells, stage, false);
       },
       onStage: (index, stage) => {
         this.audio.setStage(index);
@@ -2580,6 +2792,9 @@ class LumenShiftApp {
 }
 
 const app = new LumenShiftApp();
+if (new URLSearchParams(window.location.search).has("debug")) {
+  window.__lumenApp = app;
+}
 app.init().catch((err) => {
   console.error(err);
   const label = document.getElementById("event-label");
