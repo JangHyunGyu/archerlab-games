@@ -19,7 +19,7 @@
   <meta name="twitter:image" content="https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png">
   <link rel="canonical" href="https://game.archerlab.dev/lumen-shift/">
   <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
-  <link rel="stylesheet" href="css/style.css?v=20260705-menu-v12">
+  <link rel="stylesheet" href="css/style.css?v=20260705-hud-v13">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -33,12 +33,10 @@
   <main id="game-root" class="game-shell" aria-label="LUMEN SHIFT game">
     <div id="pixi-root" class="pixi-root" aria-hidden="true"></div>
 
-    <a class="brand-link" href="https://archerlab.dev/" target="_blank" rel="noopener noreferrer" aria-label="Archerlab">Archerlab</a>
-
     <header class="hud" aria-label="game status">
       <button id="home-button" class="icon-button" type="button" aria-label="menu">⌂</button>
       <div class="hud-main">
-        <span id="stage-name" class="stage-name">Deep Bloom</span>
+        <span id="stage-name" class="stage-name">Score</span>
         <strong id="score-value">0</strong>
       </div>
       <button id="pause-button" class="icon-button" type="button" aria-label="pause">Ⅱ</button>
@@ -62,17 +60,6 @@
         <span>LINES</span>
         <strong><b id="area-lines-value">0</b>/<b id="area-lines-goal">70</b></strong>
       </div>
-      <div class="max-ring" id="max-ring">MAX</div>
-    </section>
-    <section class="effect-hud effect-hud-right" aria-label="score status">
-      <div class="effect-stat">
-        <span>TIME</span>
-        <strong id="time-value">00:00</strong>
-      </div>
-      <div class="effect-stat">
-        <span>AREA SCORE</span>
-        <strong id="area-score-value">0</strong>
-      </div>
     </section>
 
     <div id="event-label" class="event-label" aria-live="polite"></div>
@@ -80,14 +67,13 @@
     <div id="zone-veiler" class="zone-veiler" aria-hidden="true"></div>
 
     <section id="menu-screen" class="screen-layer menu-screen">
+      <a class="menu-archerlab-link" href="https://archerlab.dev/" target="_blank" rel="noopener noreferrer">ARCHERLAB</a>
       <div class="menu-lockup">
-        <p class="kicker">Archerlab Games</p>
         <h1>LUMEN SHIFT</h1>
       </div>
       <div class="menu-actions">
         <button id="play-button" class="primary-button" type="button">Start</button>
         <button id="rank-button" class="secondary-button" type="button">Ranking</button>
-        <a class="secondary-button menu-link" href="https://archerlab.dev/" target="_blank" rel="noopener noreferrer">ARCHERLAB</a>
       </div>
     </section>
 
@@ -132,6 +118,6 @@
   <script src="../assets/vendor/tone/tone-15.5.25.js"></script>
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
   <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
-  <script type="module" src="js/main.js?v=20260705-menu-v23"></script>
+  <script type="module" src="js/main.js?v=20260705-hud-v24"></script>
 </body>
 </html>
