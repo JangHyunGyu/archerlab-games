@@ -6288,7 +6288,7 @@ class LumenShiftApp {
       "padding:10px 24px 14px",
       "background:linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.42) 18%, rgba(0, 0, 0, 0.56) 50%, rgba(0, 0, 0, 0.42) 82%, transparent)",
       "color:rgba(255, 255, 255, 0.98)",
-      "font-size:clamp(38px, 11.5vw, 98px)",
+      "font-size:48px",
       "font-weight:950",
       "line-height:0.86",
       "text-align:center",
