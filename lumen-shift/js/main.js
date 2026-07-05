@@ -1030,6 +1030,15 @@ class AudioDirector {
       }
       audio._lumenBackingErrorHandler = null;
     }
+    if (audio._lumenBackingResumeHandlers) {
+      try {
+        audio.removeEventListener("loadeddata", audio._lumenBackingResumeHandlers.loadeddata);
+        audio.removeEventListener("canplay", audio._lumenBackingResumeHandlers.canplay);
+      } catch {
+        // Native backing is best effort.
+      }
+      audio._lumenBackingResumeHandlers = null;
+    }
     try {
       audio.pause();
     } catch {
@@ -1059,7 +1068,19 @@ class AudioDirector {
       audio.addEventListener("error", onError, { once: true });
     }
     if (shouldResume) {
-      const resume = () => this.startNativeBackingTrack();
+      const resume = () => {
+        if (audio._lumenBackingResumeHandlers) {
+          try {
+            audio.removeEventListener("loadeddata", audio._lumenBackingResumeHandlers.loadeddata);
+            audio.removeEventListener("canplay", audio._lumenBackingResumeHandlers.canplay);
+          } catch {
+            // Native backing is best effort.
+          }
+          audio._lumenBackingResumeHandlers = null;
+        }
+        this.startNativeBackingTrack();
+      };
+      audio._lumenBackingResumeHandlers = { loadeddata: resume, canplay: resume };
       audio.addEventListener("loadeddata", resume, { once: true });
       audio.addEventListener("canplay", resume, { once: true });
       this.scheduleNativeBackingRetry(220);
@@ -5237,20 +5258,24 @@ class InputController {
     this.repeatTimer = 0;
     this.repeatAction = "";
     this.pointerStart = null;
+    this.listeners = [];
+    this.controlDrag = null;
+    this.controlDragHandle = this.buttons?.querySelector("[data-control-drag]") || null;
     this.bind();
+    this.restoreControlPosition();
   }
 
   bind() {
-    window.addEventListener("keydown", (event) => {
+    this.on(window, "keydown", (event) => {
       const action = this.keyToAction(event);
       if (!action) return;
       event.preventDefault();
-      if ((action === "left" || action === "right" || action === "down") && event.repeat) return;
+      if (this.isRepeatAction(action) && event.repeat) return;
       this.dispatch(action);
-      if (action === "left" || action === "right" || action === "down") this.startRepeat(action);
+      if (this.isRepeatAction(action)) this.startRepeat(action);
     }, { passive: false });
 
-    window.addEventListener("keyup", (event) => {
+    this.on(window, "keyup", (event) => {
       const action = this.keyToAction(event);
       if (!action) return;
       if (action === this.repeatAction) this.stopRepeat();
@@ -5258,27 +5283,38 @@ class InputController {
 
     this.buttons.querySelectorAll("button[data-action]").forEach((button) => {
       const action = button.dataset.action;
-      button.addEventListener("pointerdown", (event) => {
+      this.on(button, "pointerdown", (event) => {
         event.preventDefault();
         button.setPointerCapture?.(event.pointerId);
         this.dispatch(action);
-        if (action === "left" || action === "right" || action === "down") {
+        if (this.isRepeatAction(action)) {
           this.startRepeat(action);
         }
       });
       const stop = () => this.stopRepeat();
-      button.addEventListener("pointerup", stop);
-      button.addEventListener("pointercancel", stop);
-      button.addEventListener("pointerleave", stop);
+      this.on(button, "pointerup", stop);
+      this.on(button, "pointercancel", stop);
+      this.on(button, "pointerleave", stop);
     });
 
-    this.root.addEventListener("pointerdown", (event) => {
-      if (event.target.closest("button, input, a, .screen-layer")) return;
+    if (this.controlDragHandle) {
+      this.on(this.controlDragHandle, "pointerdown", (event) => this.startControlDrag(event));
+      this.on(this.controlDragHandle, "pointermove", (event) => this.moveControlDrag(event));
+      this.on(this.controlDragHandle, "pointerup", (event) => this.endControlDrag(event));
+      this.on(this.controlDragHandle, "pointercancel", (event) => this.endControlDrag(event));
+    }
+
+    const keepControlsOnScreen = () => this.reclampControlPosition();
+    this.on(window, "resize", keepControlsOnScreen, { passive: true });
+    this.on(window, "orientationchange", keepControlsOnScreen, { passive: true });
+
+    this.on(this.root, "pointerdown", (event) => {
+      if (event.target.closest("button, input, a, .screen-layer, .touch-controls")) return;
       this.pointerStart = { x: event.clientX, y: event.clientY, t: performance.now() };
     }, { passive: true });
 
-    this.root.addEventListener("pointerup", (event) => {
-      if (!this.pointerStart || event.target.closest("button, input, a, .screen-layer")) return;
+    this.on(this.root, "pointerup", (event) => {
+      if (!this.pointerStart || event.target.closest("button, input, a, .screen-layer, .touch-controls")) return;
       const dx = event.clientX - this.pointerStart.x;
       const dy = event.clientY - this.pointerStart.y;
       const adx = Math.abs(dx);
@@ -5295,6 +5331,16 @@ class InputController {
     }, { passive: true });
   }
 
+  on(target, type, handler, options) {
+    if (!target?.addEventListener) return;
+    target.addEventListener(type, handler, options);
+    this.listeners.push(() => target.removeEventListener(type, handler, options));
+  }
+
+  isRepeatAction(action) {
+    return action === "left" || action === "right" || action === "down";
+  }
+
   keyToAction(event) {
     const key = event.key.toLowerCase();
     if (key === "arrowleft" || key === "a") return "left";
@@ -5307,6 +5353,98 @@ class InputController {
     if (key === "l") return "zone";
     if (key === "enter" || key === "escape" || key === "p") return "pause";
     return "";
+  }
+
+  restoreControlPosition() {
+    const saved = readStorage("touchControlsPosition", "");
+    if (!saved) return;
+    try {
+      const point = JSON.parse(saved);
+      if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return;
+      this.applyControlPosition(point.x, point.y, false);
+    } catch {
+      // Ignore stale control layout data.
+    }
+  }
+
+  startControlDrag(event) {
+    if (!this.buttons) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = this.buttons.getBoundingClientRect();
+    this.controlDrag = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      moved: false,
+    };
+    this.buttons.classList.add("is-dragging");
+    this.controlDragHandle?.setPointerCapture?.(event.pointerId);
+  }
+
+  moveControlDrag(event) {
+    if (!this.controlDrag || event.pointerId !== this.controlDrag.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.controlDrag.moved = true;
+    this.applyControlPosition(
+      event.clientX - this.controlDrag.offsetX,
+      event.clientY - this.controlDrag.offsetY,
+      false,
+    );
+  }
+
+  endControlDrag(event) {
+    if (!this.controlDrag || event.pointerId !== this.controlDrag.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.buttons?.classList.remove("is-dragging");
+    this.controlDragHandle?.releasePointerCapture?.(event.pointerId);
+    this.controlDrag = null;
+    this.saveControlPosition();
+  }
+
+  clampControlPosition(x, y) {
+    const rect = this.buttons?.getBoundingClientRect?.();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return { x, y };
+    const padding = 8;
+    const vw = window.visualViewport?.width || window.innerWidth || rect.width;
+    const vh = window.visualViewport?.height || window.innerHeight || rect.height;
+    const minX = padding;
+    const maxX = Math.max(minX, vw - rect.width - padding);
+    const minY = padding;
+    const maxY = Math.max(minY, vh - rect.height - padding);
+    return {
+      x: clamp(x, minX, maxX),
+      y: clamp(y, minY, maxY),
+    };
+  }
+
+  applyControlPosition(x, y, persist = true) {
+    if (!this.buttons) return;
+    const point = this.clampControlPosition(x, y);
+    this.buttons.classList.add("is-custom-position");
+    this.buttons.style.left = `${Math.round(point.x)}px`;
+    this.buttons.style.top = `${Math.round(point.y)}px`;
+    this.buttons.style.right = "auto";
+    this.buttons.style.bottom = "auto";
+    this.buttons.style.transform = "none";
+    if (persist) this.saveControlPosition();
+  }
+
+  saveControlPosition() {
+    if (!this.buttons?.classList.contains("is-custom-position")) return;
+    const rect = this.buttons.getBoundingClientRect();
+    writeStorage("touchControlsPosition", JSON.stringify({
+      x: Math.round(rect.left),
+      y: Math.round(rect.top),
+    }));
+  }
+
+  reclampControlPosition() {
+    if (!this.buttons?.classList.contains("is-custom-position")) return;
+    const rect = this.buttons.getBoundingClientRect();
+    this.applyControlPosition(rect.left, rect.top, true);
   }
 
   startRepeat(action) {
@@ -5324,6 +5462,18 @@ class InputController {
       this.repeatTimer = 0;
     }
     this.repeatAction = "";
+  }
+
+  dispose() {
+    this.stopRepeat();
+    this.controlDrag = null;
+    this.listeners.splice(0).reverse().forEach((dispose) => {
+      try {
+        dispose();
+      } catch {
+        // Listener cleanup is best effort.
+      }
+    });
   }
 }
 
