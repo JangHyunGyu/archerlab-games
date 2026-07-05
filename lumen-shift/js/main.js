@@ -7,6 +7,7 @@ const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
 const STORAGE_PREFIX = "lumen-shift";
 const AUDIO_ASSET_VERSION = "20260705-audio-v9";
+const ENABLE_GENERATED_TONE_LOOPS = false;
 
 function audioAsset(path) {
   return `${path}?v=${AUDIO_ASSET_VERSION}`;
@@ -396,6 +397,7 @@ class AudioDirector {
   constructor() {
     this.ready = false;
     this.started = false;
+    this.transportClockActive = false;
     this.currentStage = 0;
     this.synths = null;
     this.stemGains = null;
@@ -808,6 +810,7 @@ class AudioDirector {
   }
 
   switchStageStems(index) {
+    if (!ENABLE_GENERATED_TONE_LOOPS) return;
     if (!this.ready || !window.Tone || !this.musicStemOutputs) return;
     this.createStageStemPlayers(window.Tone, index);
     if (this.started) this.startMusicStems();
@@ -838,6 +841,14 @@ class AudioDirector {
   startMusic() {
     if (!this.ready || this.started || !window.Tone) return;
     const Tone = window.Tone;
+    this.resetTransportSchedule(Tone);
+    if (!ENABLE_GENERATED_TONE_LOOPS) {
+      this.startNativeBackingTrack();
+      this.started = true;
+      this.transportClockActive = false;
+      return;
+    }
+    this.transportClockActive = true;
     const chords = [
       ["C3", "G3", "D4"],
       ["D3", "A3", "E4"],
@@ -941,6 +952,33 @@ class AudioDirector {
     this.startNativeBackingTrack();
     Tone.Transport.start();
     this.started = true;
+  }
+
+  resetTransportSchedule(Tone) {
+    try {
+      this.musicLoops.forEach((loop) => {
+        try {
+          loop.stop?.(0);
+          loop.dispose?.();
+        } catch {
+          // Decorative music loops can be rebuilt.
+        }
+      });
+    } catch {
+      // Transport cleanup is best effort.
+    }
+    this.musicLoops = [];
+    try {
+      Tone.Transport.stop();
+      Tone.Transport.cancel(0);
+      Tone.Transport.position = 0;
+    } catch {
+      // Some mobile browsers lock Transport state until audio is resumed.
+    }
+    this.transportClockActive = false;
+    this.timelineStep = 0;
+    this.lastBeatIndex = -1;
+    this.lastBarIndex = -1;
   }
 
   startBackingTrack() {
@@ -1229,7 +1267,7 @@ class AudioDirector {
     this.stageCuePulse = 1;
     this.musicTension = Math.max(this.musicTension, 0.62);
     this.playStageStinger(index);
-    if (!window.Tone) return;
+    if (!this.transportClockActive || !window.Tone) return;
     try {
       window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
       window.Tone.Transport.bpm.rampTo(STAGES[index]?.bpm || 100, 0.8);
@@ -1303,12 +1341,14 @@ class AudioDirector {
     this.rampStem("zone", zoneLift * 0.42);
     this.rampStem("hit", 0.22 + energy * 0.09);
     this.rampParam(this.backingFilter?.frequency, 4200 + this.arrangement * 6200 + zoneLift * 2800 + this.backingPulse * 1600, 0.18);
-    const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
-    try {
-      window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
-      window.Tone.Transport.bpm.rampTo(targetBpm, 0.4);
-    } catch {
-      window.Tone.Transport.bpm.value = targetBpm;
+    if (this.transportClockActive) {
+      const targetBpm = (snapshot.stage?.bpm || STAGES[this.currentStage]?.bpm || 100) + comboLift * 3 + zoneLift * 5 + this.arrangement * 1.6;
+      try {
+        window.Tone.Transport.bpm.cancelScheduledValues?.(window.Tone.now());
+        window.Tone.Transport.bpm.rampTo(targetBpm, 0.4);
+      } catch {
+        window.Tone.Transport.bpm.value = targetBpm;
+      }
     }
   }
 
@@ -1355,7 +1395,7 @@ class AudioDirector {
     const bpm = snapshot?.stage?.bpm || STAGES[this.currentStage]?.bpm || STAGES[0].bpm;
     let beatFloat = 0;
     let ready = false;
-    if (this.ready && this.started && window.Tone) {
+    if (this.ready && this.started && this.transportClockActive && window.Tone) {
       const Tone = window.Tone;
       const transportBpm = Number(Tone.Transport?.bpm?.value || bpm);
       const seconds = Number(Tone.Transport?.seconds || 0);
