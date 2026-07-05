@@ -5976,8 +5976,6 @@ class LumenShiftApp {
     this.modeKey = "journey";
     this.rankOnly = false;
     this.lastAudioMixAt = 0;
-    this.stageSplashTween = null;
-    this.stageSplashTimer = 0;
     this.elements = {
       menu: document.getElementById("menu-screen"),
       pause: document.getElementById("pause-screen"),
@@ -6007,7 +6005,6 @@ class LumenShiftApp {
       stage: document.getElementById("stage-name"),
       lumenFill: document.getElementById("lumen-fill"),
       eventLabel: document.getElementById("event-label"),
-      stageSplash: document.getElementById("stage-splash"),
       zoneVeil: document.getElementById("zone-veiler"),
       finalScore: document.getElementById("final-score"),
       resultTitle: document.getElementById("result-title"),

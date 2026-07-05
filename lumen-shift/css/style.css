@@ -305,58 +305,6 @@ button {
   pointer-events: none;
 }
 
-.stage-splash {
-  position: fixed;
-  top: 37vh;
-  right: 0;
-  left: 0;
-  z-index: 100000;
-  display: block;
-  padding: 10px 24px 14px;
-  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.34) 18%, rgba(0, 0, 0, 0.48) 50%, rgba(0, 0, 0, 0.34) 82%, transparent);
-  color: rgba(255, 255, 255, 0.98);
-  font-size: clamp(36px, 11vw, 98px);
-  font-weight: 950;
-  line-height: 0.82;
-  text-align: center;
-  text-transform: uppercase;
-  white-space: pre-line;
-  text-shadow:
-    0 0 4px rgba(255, 255, 255, 0.92),
-    0 0 26px rgba(104, 233, 255, 0.72),
-    0 0 68px rgba(45, 217, 255, 0.5),
-    0 0 118px rgba(255, 91, 212, 0.42);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.stage-splash::before,
-.stage-splash::after {
-  content: "";
-  position: absolute;
-  left: -18vw;
-  right: -18vw;
-  top: 50%;
-  height: clamp(90px, 19vh, 190px);
-  transform: translateY(-50%) skewY(-7deg);
-  background:
-    linear-gradient(90deg, transparent 0%, rgba(104, 233, 255, 0.2) 22%, rgba(255, 255, 255, 0.42) 50%, rgba(255, 91, 212, 0.2) 78%, transparent 100%),
-    repeating-linear-gradient(0deg, transparent 0 11px, rgba(255, 255, 255, 0.18) 11px 13px, transparent 13px 24px);
-  filter: blur(1px);
-  mix-blend-mode: screen;
-  opacity: 0.42;
-}
-
-.stage-splash::after {
-  height: 2px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow:
-    0 0 20px rgba(255, 255, 255, 0.88),
-    0 0 54px rgba(104, 233, 255, 0.68),
-    0 0 88px rgba(255, 91, 212, 0.48);
-  opacity: 0.78;
-}
-
 .zone-veiler {
   position: fixed;
   inset: 0;
