@@ -721,15 +721,17 @@ button {
 
 .touch-controls {
   position: fixed;
-  right: 10px;
+  right: auto;
   bottom: max(10px, env(safe-area-inset-bottom));
-  left: 10px;
+  left: 50%;
   z-index: 21;
+  width: min(440px, calc(100vw - 20px));
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: 52px 58px;
-  gap: 8px;
+  grid-template-columns: 1fr 0.92fr 1fr 1.04fr 1.28fr;
+  grid-template-rows: 52px;
+  gap: 6px;
   pointer-events: auto;
+  transform: translateX(-50%);
 }
 
 .touch-controls button {
@@ -746,13 +748,13 @@ button {
 }
 
 .touch-controls [data-action="down"] {
-  grid-column: 1 / 2;
+  background: rgba(0, 0, 0, 0.7);
 }
 
 .touch-controls .drop-key {
-  grid-column: 2 / 4;
   background: linear-gradient(135deg, rgba(104, 233, 255, 0.74), rgba(255, 91, 212, 0.72));
   color: #050913;
+  font-size: 22px;
 }
 
 .touch-controls button:active {
@@ -815,7 +817,9 @@ button {
   }
 
   .touch-controls {
-    grid-template-rows: 44px 50px;
-    gap: 6px;
+    width: min(420px, calc(100vw - 16px));
+    grid-template-rows: 46px;
+    gap: 5px;
+    bottom: max(8px, env(safe-area-inset-bottom));
   }
 }
