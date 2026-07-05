@@ -1978,9 +1978,13 @@ class PixiView {
     this.swarm = [];
     this.swarmSprites = [];
     this.sparkSprites = [];
+    this.blockSprites = [];
     this.sparkCursor = 0;
+    this.blockCursor = 0;
     this.particleTextures = null;
     this.particleAtlas = null;
+    this.blockTextures = null;
+    this.blockTextureAtlas = null;
     this.bgPlate = null;
     this.bgPlateTexture = null;
     this.bgPlateFallbackTexture = null;
@@ -2000,6 +2004,7 @@ class PixiView {
     this.phrasePulse = 0;
     this.inputHeat = 0;
     this.chromaticPulse = 0;
+    this.stageTransition = null;
     this.swarmTick = 0;
     this.flash = 0;
     this.shake = 0;
@@ -2044,16 +2049,21 @@ class PixiView {
     this.bloomLayer = this.makeParticleLayer();
     this.swarmLayer = this.makeParticleLayer();
     this.board = new window.PIXI.Graphics();
+    this.blockLayer = new window.PIXI.Container();
+    this.blockLayer.eventMode = "none";
     this.glow = new window.PIXI.Graphics();
     this.fx = new window.PIXI.Graphics();
     this.sparkLayer = this.makeParticleLayer();
+    this.glareLayer = new window.PIXI.Graphics();
     this.flashLayer = new window.PIXI.Graphics();
     this.setAdditive(this.bloomLayer);
     this.setAdditive(this.swarmLayer);
     this.setAdditive(this.glow);
     this.setAdditive(this.sparkLayer);
-    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.glow, this.fx, this.sparkLayer, this.flashLayer, this.distortionSprite);
+    this.setAdditive(this.glareLayer);
+    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.blockLayer, this.glow, this.fx, this.sparkLayer, this.glareLayer, this.flashLayer, this.distortionSprite);
     this.makeParticleTextures();
+    this.makeBlockTextures();
     this.makeStageArtTextures();
     await this.loadStagePlate();
     this.applyBloomFilters();
@@ -2061,6 +2071,7 @@ class PixiView {
     this.seedSwarm();
     this.buildSwarmSprites();
     this.buildSparkSprites();
+    this.buildBlockSprites();
 
     this.app.ticker.add((ticker) => {
       const dt = ticker.deltaMS || 16.67;
@@ -2156,6 +2167,7 @@ class PixiView {
       this.bloomLayer.filters = null;
       if (this.glow) this.glow.filters = null;
       this.sparkLayer.filters = null;
+      if (this.glareLayer) this.glareLayer.filters = null;
       this.flashLayer.filters = null;
       return;
     }
@@ -2175,6 +2187,7 @@ class PixiView {
       this.bloomLayer.filters = [makeBlur(mobile ? 5.1 : 12.4, mobile ? 2 : 6)];
       if (this.glow) this.glow.filters = [makeBlur(mobile ? 7.2 : 19.2, mobile ? 2 : 6)];
       this.sparkLayer.filters = [makeBlur(mobile ? 0.9 : 1.55, mobile ? 1 : 3)];
+      if (this.glareLayer) this.glareLayer.filters = [makeBlur(mobile ? 1.8 : 4.8, mobile ? 1 : 3)];
       this.flashLayer.filters = [makeBlur(mobile ? 1.25 : 2.65, mobile ? 1 : 2)];
       if (PIXI.DisplacementFilter && this.distortionSprite && this.bgPlate) {
         try {
@@ -2192,6 +2205,7 @@ class PixiView {
       this.bloomLayer.filters = null;
       if (this.glow) this.glow.filters = null;
       this.sparkLayer.filters = null;
+      if (this.glareLayer) this.glareLayer.filters = null;
       this.flashLayer.filters = null;
       if (this.bgPlate) this.bgPlate.filters = null;
       this.distortionFilter = null;
@@ -2287,6 +2301,24 @@ class PixiView {
     this.particleTextures = {};
     kinds.forEach((kind, index) => {
       this.particleTextures[kind] = this.textureFromAtlas(atlas, index, cell, kind);
+    });
+  }
+
+  makeBlockTextures() {
+    const PIXI = window.PIXI;
+    if (!PIXI) return;
+    const cell = 128;
+    const kinds = ["glass", "core"];
+    const canvas = document.createElement("canvas");
+    canvas.width = cell * kinds.length;
+    canvas.height = cell;
+    const ctx = canvas.getContext("2d");
+    kinds.forEach((kind, index) => this.paintBlockCell(ctx, index * cell, cell, kind));
+    const atlas = PIXI.Texture.from(canvas);
+    this.blockTextureAtlas = atlas;
+    this.blockTextures = {};
+    kinds.forEach((kind, index) => {
+      this.blockTextures[kind] = this.textureFromAtlas(atlas, index, cell, `block-${kind}`);
     });
   }
 
@@ -2462,7 +2494,8 @@ class PixiView {
     const canvas = document.createElement("canvas");
     canvas.width = cell;
     canvas.height = cell;
-    this.paintParticleCell(canvas.getContext("2d"), 0, cell, kind);
+    if (String(kind).startsWith("block-")) this.paintBlockCell(canvas.getContext("2d"), 0, cell, String(kind).replace("block-", ""));
+    else this.paintParticleCell(canvas.getContext("2d"), 0, cell, kind);
     return PIXI.Texture.from(canvas);
   }
 
@@ -2657,6 +2690,68 @@ class PixiView {
     ctx.restore();
   }
 
+  paintBlockCell(ctx, x, size, kind) {
+    const inset = size * 0.09;
+    const inner = size - inset * 2;
+    const r = size * 0.12;
+    ctx.save();
+    ctx.clearRect(x, 0, size, size);
+    ctx.globalCompositeOperation = "lighter";
+
+    const bloom = ctx.createRadialGradient(x + size * 0.52, size * 0.46, 0, x + size * 0.52, size * 0.46, size * 0.68);
+    bloom.addColorStop(0, kind === "core" ? "rgba(255,255,255,0.96)" : "rgba(255,255,255,0.58)");
+    bloom.addColorStop(0.34, "rgba(255,255,255,0.24)");
+    bloom.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = bloom;
+    ctx.fillRect(x, 0, size, size);
+
+    const edge = ctx.createLinearGradient(x + inset, inset, x + inset + inner, inset + inner);
+    edge.addColorStop(0, "rgba(255,255,255,0.92)");
+    edge.addColorStop(0.36, "rgba(255,255,255,0.2)");
+    edge.addColorStop(0.68, "rgba(255,255,255,0.44)");
+    edge.addColorStop(1, "rgba(255,255,255,0.12)");
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = size * 0.075;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x + inset, inset, inner, inner, r);
+    else ctx.rect(x + inset, inset, inner, inner);
+    ctx.stroke();
+
+    const face = ctx.createLinearGradient(x + inset, inset, x + inset, inset + inner);
+    face.addColorStop(0, "rgba(255,255,255,0.34)");
+    face.addColorStop(0.42, "rgba(255,255,255,0.08)");
+    face.addColorStop(1, "rgba(255,255,255,0.18)");
+    ctx.fillStyle = face;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x + inset * 1.42, inset * 1.42, size - inset * 2.84, size - inset * 2.84, r * 0.58);
+    else ctx.rect(x + inset * 1.42, inset * 1.42, size - inset * 2.84, size - inset * 2.84);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.42)";
+    ctx.lineWidth = size * 0.024;
+    ctx.beginPath();
+    ctx.moveTo(x + inset * 1.65, size - inset * 1.82);
+    ctx.lineTo(x + size - inset * 1.72, inset * 1.65);
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.beginPath();
+    ctx.ellipse(x + size * 0.72, size * 0.28, size * 0.08, size * 0.045, -0.55, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (kind === "core") {
+      ctx.strokeStyle = "rgba(255,255,255,0.82)";
+      ctx.lineWidth = size * 0.032;
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.24, size * 0.76);
+      ctx.lineTo(x + size * 0.76, size * 0.24);
+      ctx.moveTo(x + size * 0.32, size * 0.28);
+      ctx.lineTo(x + size * 0.68, size * 0.28);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   buildSwarmSprites() {
     const PIXI = window.PIXI;
     if (!PIXI || !this.particleTextures) return;
@@ -2696,6 +2791,48 @@ class PixiView {
       const texture = pool[index % pool.length] || this.particleTextures.orb;
       return this.createParticleNode(this.sparkLayer, texture);
     });
+  }
+
+  buildBlockSprites() {
+    const PIXI = window.PIXI;
+    if (!PIXI || !this.blockLayer || !this.blockTextures?.glass) return;
+    const count = this.quality.coarse ? 280 : 360;
+    this.blockSprites = Array.from({ length: count }, (_, index) => {
+      const sprite = new PIXI.Sprite(index % 5 === 0 ? this.blockTextures.core : this.blockTextures.glass);
+      sprite.anchor?.set?.(0.5);
+      sprite.visible = false;
+      sprite.alpha = 0;
+      this.setAdditive(sprite);
+      this.blockLayer.addChild(sprite);
+      return sprite;
+    });
+  }
+
+  beginBlockSprites() {
+    this.blockCursor = 0;
+  }
+
+  showBlockSprite(x, y, size, color, alpha, hot) {
+    if (!this.blockSprites.length || !this.blockTextures?.glass) return;
+    const sprite = this.blockSprites[this.blockCursor];
+    if (!sprite) return;
+    this.blockCursor += 1;
+    sprite.texture = hot ? (this.blockTextures.core || this.blockTextures.glass) : this.blockTextures.glass;
+    sprite.position.set(x + size / 2, y + size / 2);
+    sprite.scale.set(size / 128 * (hot ? 1.08 : 1.0));
+    sprite.rotation = hot ? Math.sin(performance.now() * 0.0018 + this.blockCursor) * 0.025 : 0;
+    sprite.tint = color;
+    sprite.alpha = alpha * (hot ? 0.72 : 0.48);
+    sprite.visible = true;
+  }
+
+  endBlockSprites() {
+    for (let i = this.blockCursor; i < this.blockSprites.length; i += 1) {
+      const sprite = this.blockSprites[i];
+      if (!sprite?.visible) continue;
+      sprite.visible = false;
+      sprite.alpha = 0;
+    }
   }
 
   seedStars() {
@@ -2910,6 +3047,7 @@ class PixiView {
     }
 
     this.drawStageMotifs(layout, stage, t, energy, snapshot, cx, cy);
+    this.drawStageDepthArchitecture(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
     this.drawDepthCurtains(layout, stage, t, energy, snapshot, cx, cy);
     this.drawResonanceField(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
     this.drawVolumetricBloom(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
@@ -3091,6 +3229,105 @@ class PixiView {
       alpha: active * (0.035 + beatPulse * 0.03 + this.worldSurge * 0.04),
       width: Math.max(1.2, layout.cell * (0.08 + active * 0.11)),
     });
+  }
+
+  drawStageDepthArchitecture(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
+    const g = this.bg;
+    const colors = stageFxColors(stage);
+    const lite = this.quality.coarse;
+    const active = clamp(
+      this.arrangement * 0.48
+      + energy * 0.52
+      + this.worldSurge * 0.34
+      + this.stagePulse * 0.42
+      + this.zonePulse * 0.32
+      + beatPulse * 0.16,
+      0,
+      1,
+    );
+    if (active <= 0.025) return;
+
+    const count = lite ? 4 : 9;
+    const maxDim = Math.max(layout.w, layout.h);
+    const kind = stage.kind || "tide";
+    if (kind === "ember") {
+      for (let i = 0; i < count + 3; i += 1) {
+        const p = (t * (0.02 + i * 0.004) + i * 0.137) % 1;
+        const y = layout.h * (0.2 + p * 0.72);
+        const w = layout.w * (0.24 + active * 0.32 + (i % 3) * 0.04);
+        const x = layout.w * ((i * 0.219 + Math.sin(t * 0.09 + i) * 0.05) % 1);
+        g.moveTo(x - w, y + layout.cell * 0.8);
+        g.lineTo(x + w, y - layout.cell * (2.2 + active * 2.4));
+        g.stroke({
+          color: colors[i % colors.length] || stage.accent,
+          alpha: active * (0.035 + (1 - p) * 0.035),
+          width: Math.max(1.2, layout.cell * (0.06 + active * 0.08)),
+        });
+      }
+    } else if (kind === "signal") {
+      for (let i = 0; i < count + 4; i += 1) {
+        const phase = (t * 0.045 + i / (count + 4)) % 1;
+        const rx = layout.boardW * (1.15 + phase * (2.4 + active) + i * 0.025);
+        const ry = layout.boardH * (0.28 + phase * 0.8);
+        g.ellipse?.(cx, cy, rx, ry)
+          ?.stroke?.({ color: colors[i % colors.length] || stage.accent, alpha: active * (1 - phase) * 0.045, width: 1 + active * 2 });
+        if (!g.ellipse) {
+          g.circle(cx, cy, Math.max(rx, ry)).stroke({ color: colors[i % colors.length] || stage.accent, alpha: active * (1 - phase) * 0.025, width: 1 + active * 2 });
+        }
+      }
+      const nodeCount = lite ? 12 : 26;
+      for (let i = 0; i < nodeCount; i += 1) {
+        const a = i / nodeCount * Math.PI * 2 + t * 0.055;
+        const r = layout.boardW * (1.15 + (i % 4) * 0.18);
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a * 0.88) * r * 0.72;
+        g.circle(x, y, Math.max(1.2, layout.cell * (0.025 + active * 0.04)))
+          .fill({ color: i % 3 === 0 ? 0xffffff : colors[i % colors.length], alpha: active * 0.18 });
+      }
+    } else if (kind === "aurora") {
+      for (let i = 0; i < count; i += 1) {
+        const x = layout.w * (-0.18 + i / Math.max(1, count - 1) * 1.36);
+        const top = -layout.cell * 2;
+        const bottom = layout.h + layout.cell * 2;
+        g.moveTo(x, top);
+        for (let s = 0; s <= 12; s += 1) {
+          const p = s / 12;
+          g.lineTo(x + Math.sin(p * Math.PI * 2 + t * (0.38 + i * 0.02) + i) * layout.cell * (1.4 + active * 2.8), top + (bottom - top) * p);
+        }
+        g.stroke({
+          color: colors[i % colors.length] || stage.accent,
+          alpha: active * 0.052,
+          width: layout.cell * (0.24 + active * 0.35),
+        });
+      }
+    } else if (kind === "core") {
+      const beamW = layout.boardW * (0.26 + active * 0.38);
+      g.roundRect(cx - beamW / 2, -layout.cell, beamW, layout.h + layout.cell * 2, beamW / 2)
+        .fill({ color: 0xffffff, alpha: active * 0.042 });
+      for (let i = 0; i < count + 5; i += 1) {
+        const phase = (t * 0.08 + i * 0.077) % 1;
+        const radius = layout.boardW * (0.72 + phase * 3.6);
+        g.circle(cx, cy, radius)
+          .stroke({ color: i % 2 ? stage.accent : 0xffffff, alpha: active * (1 - phase) * 0.068, width: 1.2 + active * 3.8 });
+      }
+    } else {
+      for (let i = 0; i < count + 2; i += 1) {
+        const phase = t * (0.06 + i * 0.006) + i * 0.63;
+        const radius = maxDim * (0.14 + i * 0.035 + active * 0.04);
+        const x = cx + Math.cos(phase) * layout.boardW * (0.9 + i * 0.08);
+        const y = cy + Math.sin(phase * 0.72) * layout.boardH * (0.22 + i * 0.025);
+        g.circle(x, y, radius)
+          .stroke({ color: colors[i % colors.length] || stage.accent, alpha: active * 0.018, width: Math.max(1, layout.cell * 0.055) });
+      }
+    }
+
+    if (snapshot.combo > 0 || this.worldSurge > 0.08) {
+      const burst = clamp(this.worldSurge * 0.48 + Math.min(0.28, snapshot.combo * 0.025), 0, 0.66);
+      g.roundRect(layout.boardX - layout.boardW * 0.82, layout.boardY + layout.boardH * 0.64, layout.boardW * 2.64, layout.cell * (1.4 + active * 2.2), layout.cell)
+        .fill({ color: 0xffffff, alpha: burst * 0.06 });
+      g.roundRect(layout.boardX - layout.boardW * 0.9, layout.boardY + layout.boardH * 0.64 + layout.cell * 0.22, layout.boardW * 2.8, Math.max(2, layout.cell * 0.09), layout.cell * 0.04)
+        .fill({ color: stage.accent, alpha: burst * 0.18 });
+    }
   }
 
   drawDepthCurtains(layout, stage, t, energy, snapshot, cx, cy) {
@@ -3391,6 +3628,7 @@ class PixiView {
     const by = layout.boardY + shakeY;
     const cell = layout.cell;
     g.clear();
+    this.beginBlockSprites();
 
     const boardEnergy = clamp(this.arrangement * 0.24 + this.inputHeat * 0.22 + this.zonePulse + this.comboPulse * 0.55 + (snapshot.combo >= 2 ? 0.18 : 0), 0, 1);
     const framePulse = Math.max(boardEnergy, this.worldSurge * 0.62, this.beatHit * 0.2, this.phrasePulse * 0.28);
@@ -3463,6 +3701,7 @@ class PixiView {
 
     this.drawMiniPanel(g, layout.hold, "HOLD", snapshot.holdType ? [snapshot.holdType] : [], stage);
     this.drawMiniPanel(g, layout.next, "NEXT", snapshot.queue, stage);
+    this.endBlockSprites();
 
     this.shake = Math.max(0, this.shake - 0.8);
   }
@@ -3555,6 +3794,7 @@ class PixiView {
       g.lineTo(x + size - innerGap * 1.2, y + size - innerGap * 1.28);
       g.stroke({ color, alpha: alpha * 0.22, width: Math.max(0.65, size * 0.026) });
     }
+    this.showBlockSprite(x, y, size, color, alpha, hot);
   }
 
   drawMiniPanel(g, panel, label, types, stage) {
@@ -3954,10 +4194,13 @@ class PixiView {
 
   drawFlash(layout, dt, beatState = null, stage = STAGES[0]) {
     this.flashLayer.clear();
+    this.glareLayer?.clear();
     const stageCue = clamp(beatState?.stageCue || 0, 0, 1);
     const phraseCue = clamp(beatState?.phrase || 0, 0, 1);
     const fillCue = clamp(beatState?.fill || 0, 0, 1);
     const tensionCue = clamp(beatState?.tension || 0, 0, 1);
+    this.drawScreenGlare(layout, stage, beatState, dt);
+    this.drawStageTransitionCinematic(layout, stage, dt);
     const musicCue = Math.max(stageCue, phraseCue * 0.56, fillCue * 0.44);
     if (musicCue > 0.02 || tensionCue > 0.05) {
       const color = stage?.accent || 0x68e9ff;
@@ -3995,6 +4238,102 @@ class PixiView {
       this.flashLayer.rect(0, 0, layout.w, layout.h).fill({ color: 0xffffff, alpha: this.flash });
       this.flash = Math.max(0, this.flash - dt * 0.0018);
     }
+  }
+
+  drawScreenGlare(layout, stage, beatState = null) {
+    const g = this.glareLayer;
+    if (!g) return;
+    const t = performance.now() * 0.001;
+    const clearCue = clamp(beatState?.clear || 0, 0, 1);
+    const dropCue = clamp(beatState?.drop || 0, 0, 1);
+    const stageCue = clamp(beatState?.stageCue || 0, 0, 1);
+    const phraseCue = clamp(beatState?.phrase || 0, 0, 1);
+    const pulse = clamp(
+      clearCue * 0.78
+      + dropCue * 0.38
+      + stageCue * 0.9
+      + phraseCue * 0.36
+      + this.worldSurge * 0.52
+      + this.stagePulse * 0.54
+      + this.zonePulse * 0.24
+      + this.flash * 0.36,
+      0,
+      1,
+    );
+    if (pulse <= 0.015) return;
+    const cx = layout.boardX + layout.boardW / 2;
+    const cy = layout.boardY + layout.boardH / 2;
+    const color = stage?.accent || 0x68e9ff;
+    const white = pulse > 0.48 ? 0xffffff : color;
+    const h = Math.max(layout.cell * 0.8, layout.h * (0.035 + pulse * 0.035));
+    const y = cy + Math.sin(t * 1.7) * layout.cell * 0.8;
+
+    g.roundRect(-layout.w * 0.18, y - h * 0.5, layout.w * 1.36, h, h * 0.5)
+      .fill({ color, alpha: pulse * 0.1 });
+    g.roundRect(-layout.w * 0.12, y - Math.max(1, h * 0.08), layout.w * 1.24, Math.max(2, h * 0.16), Math.max(1, h * 0.08))
+      .fill({ color: white, alpha: pulse * 0.28 });
+    g.roundRect(cx - layout.boardW * (0.32 + pulse * 0.3), -layout.cell, layout.boardW * (0.64 + pulse * 0.6), layout.h + layout.cell * 2, layout.boardW * 0.28)
+      .fill({ color: white, alpha: pulse * 0.035 });
+
+    const rayCount = this.quality.coarse ? 5 : 11;
+    for (let i = 0; i < rayCount; i += 1) {
+      const a = -0.55 + i / Math.max(1, rayCount - 1) * 1.1 + Math.sin(t * 0.3 + i) * 0.08;
+      const len = layout.w * (0.45 + pulse * 0.38 + (i % 3) * 0.05);
+      const x1 = cx + Math.cos(a + Math.PI) * len * 0.28;
+      const y1 = cy + Math.sin(a + Math.PI) * len * 0.16;
+      const x2 = cx + Math.cos(a) * len;
+      const y2 = cy + Math.sin(a) * len * 0.58;
+      g.moveTo(x1, y1);
+      g.lineTo(x2, y2);
+      g.stroke({
+        color: i % 3 === 0 ? 0xffffff : color,
+        alpha: pulse * (0.034 + (i % 2) * 0.018),
+        width: Math.max(1.2, layout.cell * (0.04 + pulse * 0.05)),
+      });
+    }
+  }
+
+  drawStageTransitionCinematic(layout, stage, dt) {
+    const transition = this.stageTransition;
+    if (!transition) return;
+    transition.life -= dt / 16.67;
+    if (transition.life <= 0) {
+      this.stageTransition = null;
+      return;
+    }
+    const g = this.flashLayer;
+    const p = 1 - clamp(transition.life / transition.maxLife, 0, 1);
+    const easeIn = smoothstep(clamp(p * 1.7, 0, 1));
+    const easeOut = 1 - smoothstep(clamp((p - 0.26) / 0.74, 0, 1));
+    const alpha = clamp(easeIn * easeOut, 0, 1);
+    const color = transition.color || stage?.accent || 0xffffff;
+    const cx = layout.boardX + layout.boardW / 2;
+    const cy = layout.boardY + layout.boardH / 2;
+
+    g.rect(0, 0, layout.w, layout.h)
+      .fill({ color: 0x000006, alpha: alpha * 0.34 });
+    g.rect(0, 0, layout.w, layout.h)
+      .fill({ color, alpha: alpha * 0.18 });
+
+    const curtainW = layout.w * (0.18 + p * 1.15);
+    g.roundRect(-curtainW * 0.42, -layout.cell, curtainW, layout.h + layout.cell * 2, curtainW * 0.18)
+      .fill({ color, alpha: alpha * 0.22 });
+    g.roundRect(layout.w - curtainW * 0.58, -layout.cell, curtainW, layout.h + layout.cell * 2, curtainW * 0.18)
+      .fill({ color: 0xffffff, alpha: alpha * 0.14 });
+
+    const ringCount = this.quality.coarse ? 4 : 7;
+    for (let i = 0; i < ringCount; i += 1) {
+      const phase = clamp(p * 1.2 - i * 0.055, 0, 1);
+      const radius = layout.boardW * (0.6 + phase * (2.2 + i * 0.18));
+      g.circle(cx, cy, radius)
+        .stroke({ color: i % 2 ? color : 0xffffff, alpha: alpha * (1 - phase * 0.55) * 0.28, width: 1.4 + alpha * 5.2 });
+    }
+
+    const sweepY = layout.boardY + layout.boardH * (0.18 + p * 0.64);
+    g.roundRect(-layout.cell, sweepY - layout.cell * 0.72, layout.w + layout.cell * 2, layout.cell * (1.3 + alpha * 1.6), layout.cell)
+      .fill({ color: 0xffffff, alpha: alpha * 0.22 });
+    g.roundRect(-layout.cell, sweepY - layout.cell * 0.18, layout.w + layout.cell * 2, Math.max(2, layout.cell * 0.18), layout.cell * 0.08)
+      .fill({ color, alpha: alpha * 0.36 });
   }
 
   lineClear(rows, lines, stage, cells = []) {
@@ -4347,6 +4686,11 @@ class PixiView {
     this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * 0.018;
     this.flash = Math.max(this.flash, 0.16);
     this.chromaticPulse = Math.max(this.chromaticPulse, 0.55);
+    this.stageTransition = {
+      color,
+      life: this.quality.coarse ? 68 : 86,
+      maxLife: this.quality.coarse ? 68 : 86,
+    };
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH * 0.28;
     const texture = this.stageArtTextures?.[stage?.kind];
