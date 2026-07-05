@@ -725,13 +725,44 @@ button {
   bottom: max(10px, env(safe-area-inset-bottom));
   left: 50%;
   z-index: 21;
-  width: min(440px, calc(100vw - 20px));
+  width: min(390px, calc(100vw - 20px));
   display: grid;
-  grid-template-columns: 1fr 0.92fr 1fr 1.04fr 1.28fr;
-  grid-template-rows: 52px;
+  grid-template-columns: 1fr 1fr 1.08fr 1.25fr;
+  grid-template-rows: 14px 52px;
   gap: 6px;
   pointer-events: auto;
   transform: translateX(-50%);
+  user-select: none;
+  touch-action: none;
+}
+
+.touch-controls.is-custom-position {
+  right: auto;
+  bottom: auto;
+  transform: none;
+}
+
+.control-drag-handle {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: 58px;
+  height: 12px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 18px 50%, rgba(255, 255, 255, 0.86) 0 2px, transparent 2.6px),
+    radial-gradient(circle at 29px 50%, rgba(255, 255, 255, 0.86) 0 2px, transparent 2.6px),
+    radial-gradient(circle at 40px 50%, rgba(255, 255, 255, 0.86) 0 2px, transparent 2.6px),
+    rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 18px rgba(104, 233, 255, 0.22);
+  cursor: grab;
+  opacity: 0.88;
+  touch-action: none;
+}
+
+.touch-controls.is-dragging .control-drag-handle {
+  cursor: grabbing;
+  opacity: 1;
+  filter: brightness(1.25);
 }
 
 .touch-controls button {
@@ -747,10 +778,7 @@ button {
   touch-action: none;
 }
 
-.touch-controls [data-action="down"] {
-  background: rgba(0, 0, 0, 0.7);
-}
-
+.touch-controls [data-action="drop"],
 .touch-controls .drop-key {
   background: linear-gradient(135deg, rgba(104, 233, 255, 0.74), rgba(255, 91, 212, 0.72));
   color: #050913;
@@ -817,8 +845,8 @@ button {
   }
 
   .touch-controls {
-    width: min(420px, calc(100vw - 16px));
-    grid-template-rows: 46px;
+    width: min(374px, calc(100vw - 16px));
+    grid-template-rows: 12px 46px;
     gap: 5px;
     bottom: max(8px, env(safe-area-inset-bottom));
   }
