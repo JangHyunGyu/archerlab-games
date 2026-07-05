@@ -5,6 +5,7 @@ const ROWS = 20;
 const VISIBLE_NEXT = 5;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
+const JOURNEY_STAGE_COUNT = 100;
 const STORAGE_PREFIX = "lumen-shift";
 const AUDIO_ASSET_VERSION = "20260705-audio-v9";
 const ENABLE_GENERATED_TONE_LOOPS = false;
@@ -176,7 +177,13 @@ const STAGES = [
 ];
 
 const MODES = {
-  journey: { label: "Journey", lineGoal: 70, ranked: true },
+  journey: {
+    label: "Journey",
+    lineGoal: STAGE_LINE_GOAL * JOURNEY_STAGE_COUNT,
+    stageCount: JOURNEY_STAGE_COUNT,
+    stageLineGoal: STAGE_LINE_GOAL,
+    ranked: true,
+  },
   marathon: { label: "Marathon", ranked: true },
   sprint: { label: "Sprint", lineGoal: 40, ranked: true },
   ultra: { label: "Ultra", timeLimitMs: 180000, ranked: true },
@@ -196,18 +203,24 @@ const PIECES = {
 const PIECE_KEYS = Object.keys(PIECES);
 const KICKS = [[0, 0], [1, 0], [-1, 0], [2, 0], [-2, 0], [0, -1], [1, -1], [-1, -1]];
 
+function stageCountForMode(mode) {
+  return Math.max(1, Math.floor(Number(mode?.stageCount || STAGES.length)));
+}
+
 function stageLineGoalForMode(modeKey, mode) {
-  if (mode?.lineGoal) return Math.max(4, Math.ceil(mode.lineGoal / STAGES.length));
+  if (mode?.stageLineGoal) return Math.max(4, Math.floor(mode.stageLineGoal));
+  if (mode?.lineGoal) return Math.max(4, Math.ceil(mode.lineGoal / stageCountForMode(mode)));
   if (modeKey === "ultra") return 12;
   return STAGE_LINE_GOAL;
 }
 
 function stageWindowForLines(lines, modeKey, mode) {
   const goal = stageLineGoalForMode(modeKey, mode);
+  const stageCount = stageCountForMode(mode);
   const lineCount = Math.max(0, lines || 0);
   const rawStageOrdinal = Math.floor(lineCount / goal);
   const terminalStageOrdinal = mode?.lineGoal && lineCount >= mode.lineGoal
-    ? STAGES.length - 1
+    ? stageCount - 1
     : rawStageOrdinal;
   const stageOrdinal = Math.max(0, terminalStageOrdinal);
   const stageIndex = stageOrdinal % STAGES.length;
@@ -1731,9 +1744,12 @@ class FallingBlockCore {
   dropInterval() {
     const scale = this.mode.gravityScale || 1;
     if (this.zoneActive) return Infinity;
-    const stageBoost = this.stageOrdinal * 74;
-    const comboBoost = Math.min(48, this.combo * 5);
-    return Math.max(88, (900 - (this.level - 1) * 52 - stageBoost - comboBoost) * scale);
+    const stageOrdinal = Math.max(0, this.stageOrdinal || 0);
+    const stageCurve = 900 * (0.982 ** stageOrdinal);
+    const stageFloor = Math.max(34, 92 - stageOrdinal * 0.45);
+    const levelBoost = Math.min(180, (this.level - 1) * 1.2);
+    const comboBoost = Math.min(42, this.combo * 4);
+    return Math.max(stageFloor, (stageCurve - levelBoost - comboBoost) * scale);
   }
 
   speedLevel() {
