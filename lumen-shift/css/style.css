@@ -789,7 +789,7 @@ button {
 .touch-controls {
   position: fixed;
   right: auto;
-  bottom: max(10px, env(safe-area-inset-bottom));
+  bottom: max(22px, calc(env(safe-area-inset-bottom) + 14px));
   left: 50%;
   z-index: 21;
   width: min(390px, calc(100vw - 20px));
@@ -924,6 +924,6 @@ button {
     width: min(374px, calc(100vw - 16px));
     grid-template-rows: 12px 46px;
     gap: 5px;
-    bottom: max(8px, env(safe-area-inset-bottom));
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
   }
 }
