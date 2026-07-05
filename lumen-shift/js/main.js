@@ -6277,12 +6277,15 @@ class LumenShiftApp {
   showStageSplash(label) {
     if (!this.elements.stageSplash || !label) return;
     const splash = this.elements.stageSplash;
+    if (splash.parentElement !== document.body || splash !== document.body.lastElementChild) {
+      document.body.appendChild(splash);
+    }
     splash.textContent = label;
     splash.style.cssText = [
       "position:fixed",
       "left:0",
       "right:0",
-      "top:38vh",
+      "top:330px",
       "z-index:100000",
       "display:block",
       "padding:10px 24px 14px",
