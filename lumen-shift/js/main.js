@@ -2091,6 +2091,9 @@ class PixiView {
     this.bgStars = [];
     this.stageIndex = 0;
     this.stagePulse = 0;
+    this.stageTitleState = null;
+    this.stageTitleBand = null;
+    this.stageTitleText = null;
     this.zonePulse = 0;
     this.beat = 0;
     this.beatHit = 0;
@@ -2153,12 +2156,18 @@ class PixiView {
     this.sparkLayer = this.makeParticleLayer();
     this.glareLayer = new window.PIXI.Graphics();
     this.flashLayer = new window.PIXI.Graphics();
+    this.stageTitleLayer = new window.PIXI.Container();
+    this.stageTitleLayer.eventMode = "none";
+    this.stageTitleBand = new window.PIXI.Graphics();
+    this.stageTitleText = this.makeStageTitleText();
+    this.stageTitleLayer.addChild(this.stageTitleBand, this.stageTitleText);
+    this.stageTitleLayer.visible = false;
     this.setAdditive(this.bloomLayer);
     this.setAdditive(this.swarmLayer);
     this.setAdditive(this.glow);
     this.setAdditive(this.sparkLayer);
     this.setAdditive(this.glareLayer);
-    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.blockLayer, this.glow, this.fx, this.sparkLayer, this.glareLayer, this.flashLayer, this.distortionSprite);
+    this.app.stage.addChild(this.bg, this.bgPlate, this.bloomLayer, this.swarmLayer, this.board, this.blockLayer, this.glow, this.fx, this.sparkLayer, this.glareLayer, this.flashLayer, this.distortionSprite, this.stageTitleLayer);
     this.makeParticleTextures();
     this.makeBlockTextures();
     this.makeStageArtTextures();
@@ -2207,6 +2216,34 @@ class PixiView {
     if (!layer) layer = new PIXI.Container();
     layer.eventMode = "none";
     return layer;
+  }
+
+  makeStageTitleText() {
+    const PIXI = window.PIXI;
+    const style = {
+      fontFamily: "Pretendard, Arial, sans-serif",
+      fontSize: 54,
+      fontWeight: "950",
+      fill: 0xffffff,
+      align: "center",
+      lineHeight: 48,
+      dropShadow: {
+        color: 0x68e9ff,
+        blur: 12,
+        distance: 0,
+        alpha: 0.86,
+      },
+    };
+    let text;
+    try {
+      text = new PIXI.Text({ text: "", style });
+    } catch {
+      text = new PIXI.Text("", style);
+    }
+    text.anchor?.set?.(0.5);
+    text.eventMode = "none";
+    text.visible = false;
+    return text;
   }
 
   async loadStagePlate() {
@@ -3006,6 +3043,85 @@ class PixiView {
     this.drawBoard(layout, snapshot);
     this.drawParticles(layout, dt);
     this.drawFlash(layout, dt, beatState, stage);
+    this.drawStageTitle(layout, dt);
+  }
+
+  showStageTitle(label, stage = STAGES[0]) {
+    if (!label || !this.stageTitleText) return;
+    this.stageTitleState = {
+      label,
+      color: stageFxColor(stage, 0),
+      accent: stageFxColor(stage, 2),
+      life: 96,
+      maxLife: 96,
+    };
+    this.stageTitleText.text = label;
+    this.stageTitleText.visible = true;
+    if (this.stageTitleLayer) this.stageTitleLayer.visible = true;
+  }
+
+  drawStageTitle(layout, dt) {
+    const state = this.stageTitleState;
+    if (!state || !this.stageTitleText || !this.stageTitleBand) {
+      if (this.stageTitleLayer) this.stageTitleLayer.visible = false;
+      return;
+    }
+    state.life -= dt / 16.67;
+    if (state.life <= 0) {
+      this.stageTitleState = null;
+      this.stageTitleText.visible = false;
+      this.stageTitleBand.clear();
+      if (this.stageTitleLayer) this.stageTitleLayer.visible = false;
+      return;
+    }
+
+    const p = 1 - clamp(state.life / state.maxLife, 0, 1);
+    const fadeIn = smoothstep(clamp(p / 0.16, 0, 1));
+    const fadeOut = 1 - smoothstep(clamp((p - 0.72) / 0.28, 0, 1));
+    const alpha = clamp(fadeIn * fadeOut, 0, 1);
+    const fontSize = Math.max(38, Math.min(92, layout.w * 0.122));
+    const y = layout.h * (layout.portrait ? 0.405 : 0.46);
+    const bandH = Math.max(fontSize * 2.05, layout.cell * 3.1);
+    const x = layout.w / 2;
+
+    this.stageTitleText.text = state.label;
+    this.stageTitleText.style.fontSize = fontSize;
+    this.stageTitleText.style.lineHeight = fontSize * 0.86;
+    this.stageTitleText.position.set(x, y);
+    this.stageTitleText.alpha = alpha;
+    this.stageTitleText.scale.set(0.96 + smoothstep(clamp(p / 0.28, 0, 1)) * 0.04);
+    this.stageTitleText.visible = alpha > 0.01;
+
+    const band = this.stageTitleBand;
+    band.clear();
+    if (alpha <= 0.01) return;
+    const skew = Math.sin(p * Math.PI) * layout.cell * 0.65;
+    band.poly([
+      -layout.cell,
+      y - bandH * 0.58 + skew,
+      layout.w + layout.cell,
+      y - bandH * 0.78 - skew,
+      layout.w + layout.cell,
+      y + bandH * 0.62 - skew,
+      -layout.cell,
+      y + bandH * 0.82 + skew,
+    ]).fill({ color: 0x000000, alpha: alpha * 0.46 });
+    band.poly([
+      -layout.cell,
+      y - bandH * 0.2 + skew * 0.45,
+      layout.w + layout.cell,
+      y - bandH * 0.36 - skew * 0.45,
+      layout.w + layout.cell,
+      y + bandH * 0.28 - skew * 0.45,
+      -layout.cell,
+      y + bandH * 0.44 + skew * 0.45,
+    ]).fill({ color: state.color, alpha: alpha * 0.18 });
+    band.moveTo(-layout.cell, y + bandH * 0.04);
+    band.lineTo(layout.w + layout.cell, y - bandH * 0.18);
+    band.stroke({ color: 0xffffff, alpha: alpha * 0.5, width: Math.max(1.4, layout.cell * 0.07) });
+    band.moveTo(-layout.cell, y + bandH * 0.26);
+    band.lineTo(layout.w + layout.cell, y + bandH * 0.12);
+    band.stroke({ color: state.accent, alpha: alpha * 0.34, width: Math.max(1, layout.cell * 0.05) });
   }
 
   applyCamera(layout, beatState, dt) {
@@ -6275,45 +6391,9 @@ class LumenShiftApp {
   }
 
   showStageSplash(label) {
-    if (!this.elements.stageSplash || !label) return;
-    const splash = this.elements.stageSplash;
-    if (splash.parentElement !== document.body || splash !== document.body.lastElementChild) {
-      document.body.appendChild(splash);
-    }
-    splash.textContent = label;
-    splash.style.cssText = [
-      "position:fixed",
-      "left:0",
-      "right:0",
-      "top:330px",
-      "z-index:100000",
-      "display:block",
-      "padding:10px 24px 14px",
-      "background:linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.42) 18%, rgba(0, 0, 0, 0.56) 50%, rgba(0, 0, 0, 0.42) 82%, transparent)",
-      "color:rgba(255, 255, 255, 0.98)",
-      "font-size:48px",
-      "font-weight:950",
-      "line-height:0.86",
-      "text-align:center",
-      "text-shadow:0 0 4px rgba(255, 255, 255, 0.95), 0 0 28px rgba(104, 233, 255, 0.78), 0 0 72px rgba(255, 91, 212, 0.5)",
-      "text-transform:uppercase",
-      "white-space:pre-line",
-      "pointer-events:none",
-      "opacity:1",
-      "transform:none",
-      "filter:none",
-      "transition:none",
-    ].join(";");
-    if (this.stageSplashTween) this.stageSplashTween.kill();
-    if (this.stageSplashTimer) {
-      window.clearTimeout(this.stageSplashTimer);
-      this.stageSplashTimer = 0;
-    }
-    this.stageSplashTimer = window.setTimeout(() => {
-      splash.style.transition = "none";
-      splash.style.opacity = "0";
-      this.stageSplashTimer = 0;
-    }, 1120);
+    if (!label) return;
+    const stage = this.core?.snapshot?.().stage || STAGES[0];
+    this.view.showStageTitle(label, stage);
   }
 
   setZoneVeil(active, immediate = false) {
