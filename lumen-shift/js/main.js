@@ -2020,10 +2020,10 @@ class PixiView {
       coarse,
       small,
       dpr: Math.min(window.devicePixelRatio || 1, coarse ? 1.25 : 1.85),
-      bgStars: coarse ? (small ? 86 : 130) : 320,
-      swarmParticles: coarse ? (small ? 860 : 1260) : 3600,
-      glowParticles: coarse ? (small ? 210 : 320) : 960,
-      maxParticles: coarse ? (small ? 430 : 620) : 1400,
+      bgStars: coarse ? (small ? 128 : 180) : 360,
+      swarmParticles: coarse ? (small ? 1240 : 1780) : 4200,
+      glowParticles: coarse ? (small ? 300 : 460) : 1120,
+      maxParticles: coarse ? (small ? 560 : 780) : 1560,
     };
   }
 
@@ -3067,6 +3067,7 @@ class PixiView {
     }
 
     this.drawParticleSwarm(layout, stage, t, energy + beatPulse * 0.08, snapshot);
+    this.drawParticleVeil(layout, stage, t, energy, beatPulse, snapshot, cx, cy);
     this.updateMeteors(layout, stage, dt, energy);
 
     if (snapshot.zoneActive || this.zonePulse > 0) {
@@ -3229,6 +3230,91 @@ class PixiView {
       alpha: active * (0.035 + beatPulse * 0.03 + this.worldSurge * 0.04),
       width: Math.max(1.2, layout.cell * (0.08 + active * 0.11)),
     });
+  }
+
+  drawParticleVeil(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
+    const g = this.bg;
+    const colors = stageFxColors(stage);
+    const lite = this.quality.coarse;
+    const stageSeed = Math.max(0, STAGES.indexOf(stage));
+    const count = lite ? (layout.portrait ? 64 : 82) : 150;
+    const active = clamp(
+      0.22
+      + this.arrangement * 0.56
+      + energy * 0.68
+      + beatPulse * 0.28
+      + this.worldSurge * 0.7
+      + this.zonePulse * 0.62
+      + this.stagePulse * 0.38,
+      0,
+      1,
+    );
+    const orbitScale = layout.portrait ? 0.68 : 1;
+    const verticalScale = layout.portrait ? 0.86 : 1;
+    const kind = stage.kind || "tide";
+    for (let i = 0; i < count; i += 1) {
+      const raw = Math.sin((i + 1) * 12.9898 + stageSeed * 78.233) * 43758.5453;
+      const seed = raw - Math.floor(raw);
+      const raw2 = Math.sin((i + 3) * 43.271 + stageSeed * 19.17) * 24634.6345;
+      const depth = raw2 - Math.floor(raw2);
+      const side = seed > 0.5 ? 1 : -1;
+      const speed = 0.035 + depth * 0.08 + this.zonePulse * 0.045 + this.worldSurge * 0.055;
+      let angle = seed * Math.PI * 2 + t * speed * side + this.stagePulse * 0.12;
+      let x;
+      let y;
+
+      if (kind === "ember") {
+        angle = -Math.PI * 0.12 + ((seed + t * speed * 0.8) % 1) * Math.PI * 1.26;
+        const rx = layout.boardW * (0.78 + depth * 1.24) * orbitScale;
+        const ry = layout.boardH * (0.32 + depth * 0.36) * verticalScale;
+        x = cx + Math.cos(angle) * rx * side + Math.sin(t * 0.7 + i) * layout.cell * 0.65;
+        y = layout.boardY + layout.boardH * (0.86 - depth * 0.18) - Math.abs(Math.sin(angle)) * ry;
+      } else if (kind === "signal" || kind === "core") {
+        const rx = layout.boardW * (0.72 + depth * 1.58) * orbitScale;
+        const ry = layout.boardH * (0.18 + seed * 0.44) * verticalScale;
+        x = cx + Math.cos(angle) * rx;
+        y = cy + Math.sin(angle * 0.82) * ry;
+      } else if (kind === "aurora") {
+        const column = (seed + Math.sin(t * 0.04 + i) * 0.025) % 1;
+        x = layout.w * column;
+        y = layout.boardY - layout.cell * 1.6 + ((depth + t * speed * 1.7) % 1) * (layout.boardH + layout.cell * 3.2);
+        x += Math.sin(y * 0.018 + t * 0.42 + i) * layout.cell * (1.1 + active * 1.7);
+      } else {
+        const travel = (seed + t * speed) % 1;
+        angle = -Math.PI * 1.06 + travel * Math.PI * 1.82;
+        const rx = layout.boardW * (0.82 + depth * 1.52) * orbitScale;
+        const ry = layout.boardH * (0.18 + seed * 0.44) * verticalScale;
+        x = cx + Math.cos(angle) * rx + Math.sin(t * 0.56 + i) * layout.cell * 0.75;
+        y = layout.boardY + layout.boardH * (0.12 + depth * 0.16) + Math.sin(angle) * ry;
+      }
+
+      const insideBoard = x > layout.boardX - layout.cell * 0.2
+        && x < layout.boardX + layout.boardW + layout.cell * 0.2
+        && y > layout.boardY - layout.cell * 0.2
+        && y < layout.boardY + layout.boardH + layout.cell * 0.2;
+      if (insideBoard || x < -layout.cell * 2 || x > layout.w + layout.cell * 2 || y < -layout.cell * 3 || y > layout.h + layout.cell * 3) {
+        continue;
+      }
+
+      const twinkle = 0.52 + Math.sin(t * (2.2 + seed * 4.4) + depth * 24) * 0.48;
+      const color = seed > 0.78 ? 0xffffff : (colors[(i + stageSeed) % colors.length] || stage.accent);
+      const alpha = clamp((0.042 + active * 0.22 + this.worldSurge * 0.12 + this.zonePulse * 0.08) * twinkle, 0.018, 0.42);
+      const size = Math.max(0.9, layout.cell * (0.026 + depth * 0.048) * (1 + active * 0.72));
+      g.circle(x, y, size)
+        .fill({ color, alpha });
+      if (i % 5 === 0) {
+        g.circle(x, y, size * (2.8 + active * 1.6))
+          .fill({ color, alpha: alpha * 0.075 });
+      }
+      if (i % 11 === 0) {
+        const len = layout.cell * (1.2 + depth * 2.4 + active * 1.8);
+        const dx = Math.cos(angle) * len;
+        const dy = Math.sin(angle) * len * 0.42;
+        g.moveTo(x - dx, y - dy);
+        g.lineTo(x + dx * 0.32, y + dy * 0.32);
+        g.stroke({ color, alpha: alpha * 0.54, width: Math.max(0.7, layout.cell * 0.026) });
+      }
+    }
   }
 
   drawStageDepthArchitecture(layout, stage, t, energy, beatPulse, snapshot, cx, cy) {
@@ -3498,10 +3584,12 @@ class PixiView {
     const colors = stageFxColors(stage);
     const stageWarm = stage.kind === "ember" || stage.kind === "core";
     const arrangement = this.arrangement;
-    const baseAlpha = (layout.portrait ? 0.22 : 0.26) + arrangement * (layout.portrait ? 0.2 : 0.26);
+    const baseAlpha = (layout.portrait ? 0.28 : 0.3) + arrangement * (layout.portrait ? 0.24 : 0.3);
     const zoneBoost = snapshot.zoneActive ? 0.5 : 0;
     const comboBoost = Math.min(0.32, snapshot.combo * 0.048);
     const flowBoost = 0.72 + arrangement * 0.52 + this.zonePulse * 0.9 + this.stagePulse * 0.8 + this.worldSurge * 0.65;
+    const orbitScale = layout.portrait ? 0.62 : 1;
+    const verticalScale = layout.portrait ? 0.84 : 1;
     this.swarmTick = (this.swarmTick + 1) % 120;
     if (this.quality.coarse && this.swarmTick % 2 === 1) return;
 
@@ -3515,23 +3603,23 @@ class PixiView {
       if (ribbon) {
         if (stage.kind === "ember") {
           const angle = -Math.PI * 0.15 + travel * Math.PI * 1.22 + p.phase * 0.08;
-          const rx = layout.boardW * (1.0 + p.orbit * 2.25);
-          const ry = layout.boardH * (0.44 + p.orbit * 0.34);
+          const rx = layout.boardW * (1.0 + p.orbit * 2.25) * orbitScale;
+          const ry = layout.boardH * (0.44 + p.orbit * 0.34) * verticalScale;
           x = cx + Math.cos(angle) * rx * p.side + Math.sin(t * 1.2 + p.phase) * 26;
           y = layout.boardY + layout.boardH * (0.88 - p.orbit * 0.3) - Math.abs(Math.sin(angle)) * ry + Math.cos(t * 0.7 + p.phase) * 20;
           rotation = -Math.PI * 0.5 + angle * 0.2;
         } else if (stage.kind === "signal" || stage.kind === "core") {
           const angle = travel * Math.PI * 2 + p.phase;
-          const rx = layout.boardW * (0.95 + p.orbit * 2.25);
-          const ry = layout.boardH * (0.3 + p.orbit * 0.48);
+          const rx = layout.boardW * (0.95 + p.orbit * 2.25) * orbitScale;
+          const ry = layout.boardH * (0.3 + p.orbit * 0.48) * verticalScale;
           x = cx + Math.cos(angle) * rx + Math.sin(t * 0.8 + p.phase) * 18;
           y = cy + Math.sin(angle * 0.78) * ry + Math.cos(t * 0.7 + p.phase) * 16;
           rotation = angle + Math.PI * 0.5;
         } else {
           const angle = -Math.PI * 1.08 + travel * Math.PI * 1.78;
-          const rx = layout.boardW * (0.98 + p.orbit * 2.05);
-          const ry = layout.boardH * (0.22 + p.orbit * 0.58);
-          const crest = stage.kind === "aurora" ? Math.sin(travel * Math.PI * 2 + p.phase) * layout.boardH * 0.18 : 0;
+          const rx = layout.boardW * (0.98 + p.orbit * 2.05) * orbitScale;
+          const ry = layout.boardH * (0.22 + p.orbit * 0.58) * verticalScale;
+          const crest = stage.kind === "aurora" ? Math.sin(travel * Math.PI * 2 + p.phase) * layout.boardH * 0.18 * verticalScale : 0;
           x = cx + Math.cos(angle) * rx + Math.sin(t * 0.72 + p.phase) * 22;
           y = layout.boardY + layout.boardH * (0.08 + p.orbit * 0.16) + Math.sin(angle) * ry + crest + Math.cos(t * 0.8 + p.phase) * 15;
           rotation = angle + Math.PI * 0.5;
@@ -3539,9 +3627,9 @@ class PixiView {
       } else if (p.band < 0.86) {
         const angle = travel * Math.PI * 2 + p.phase;
         const sideBias = stage.kind === "aurora" ? Math.sin(t * 0.13 + p.phase) : p.side;
-        const rx = layout.boardW * (1.16 + p.orbit * 2.55);
-        const ry = layout.boardH * (0.5 + p.orbit * 0.45);
-        x = cx + sideBias * rx + Math.cos(angle) * layout.boardW * (0.22 + p.depth * 0.34);
+        const rx = layout.boardW * (1.16 + p.orbit * 2.55) * orbitScale;
+        const ry = layout.boardH * (0.5 + p.orbit * 0.45) * verticalScale;
+        x = cx + sideBias * rx + Math.cos(angle) * layout.boardW * (0.22 + p.depth * 0.34) * orbitScale;
         y = cy + Math.sin(angle * 0.72) * ry + Math.cos(t * 0.5 + p.phase) * 24;
         rotation = angle;
       } else {
@@ -4248,7 +4336,7 @@ class PixiView {
     const dropCue = clamp(beatState?.drop || 0, 0, 1);
     const stageCue = clamp(beatState?.stageCue || 0, 0, 1);
     const phraseCue = clamp(beatState?.phrase || 0, 0, 1);
-    const pulse = clamp(
+    const cuePulse = clamp(
       clearCue * 0.78
       + dropCue * 0.38
       + stageCue * 0.9
@@ -4260,6 +4348,16 @@ class PixiView {
       0,
       1,
     );
+    const ambient = clamp(
+      0.022
+      + this.arrangement * 0.05
+      + this.inputHeat * 0.035
+      + this.zonePulse * 0.04
+      + (beatState?.pulse || 0) * 0.035,
+      0,
+      0.14,
+    );
+    const pulse = Math.max(cuePulse, ambient);
     if (pulse <= 0.015) return;
     const cx = layout.boardX + layout.boardW / 2;
     const cy = layout.boardY + layout.boardH / 2;
