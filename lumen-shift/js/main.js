@@ -204,11 +204,19 @@ function stageLineGoalForMode(modeKey, mode) {
 
 function stageWindowForLines(lines, modeKey, mode) {
   const goal = stageLineGoalForMode(modeKey, mode);
-  const stageIndex = clamp(Math.floor((lines || 0) / goal), 0, STAGES.length - 1);
-  const stageStart = stageIndex * goal;
+  const lineCount = Math.max(0, lines || 0);
+  const rawStageOrdinal = Math.floor(lineCount / goal);
+  const terminalStageOrdinal = mode?.lineGoal && lineCount >= mode.lineGoal
+    ? STAGES.length - 1
+    : rawStageOrdinal;
+  const stageOrdinal = Math.max(0, terminalStageOrdinal);
+  const stageIndex = stageOrdinal % STAGES.length;
+  const stageStart = stageOrdinal * goal;
   const stageLines = clamp((lines || 0) - stageStart, 0, goal);
   return {
     stageIndex,
+    stageOrdinal,
+    stageNumber: stageOrdinal + 1,
     stageLines,
     stageLineGoal: goal,
     stageProgress: clamp(stageLines / goal, 0, 1),
@@ -1633,6 +1641,7 @@ class FallingBlockCore {
     this.combo = 0;
     this.maxCombo = 0;
     this.stageIndex = 0;
+    this.stageOrdinal = 0;
     this.dropTimer = 0;
     this.lockTimer = 0;
     this.lockDelay = 520;
@@ -1722,13 +1731,13 @@ class FallingBlockCore {
   dropInterval() {
     const scale = this.mode.gravityScale || 1;
     if (this.zoneActive) return Infinity;
-    const stageBoost = this.stageIndex * 74;
+    const stageBoost = this.stageOrdinal * 74;
     const comboBoost = Math.min(48, this.combo * 5);
     return Math.max(88, (900 - (this.level - 1) * 52 - stageBoost - comboBoost) * scale);
   }
 
   speedLevel() {
-    return Math.max(1, this.level + this.stageIndex);
+    return Math.max(1, this.level + this.stageOrdinal);
   }
 
   collides(piece, dx, dy, matrix = piece.matrix) {
@@ -1900,13 +1909,16 @@ class FallingBlockCore {
   }
 
   updateStage() {
-    const nextStage = stageWindowForLines(this.lines, this.modeKey, this.mode).stageIndex;
-    if (nextStage !== this.stageIndex) {
+    const stageWindow = stageWindowForLines(this.lines, this.modeKey, this.mode);
+    const nextStage = stageWindow.stageIndex;
+    const nextStageOrdinal = stageWindow.stageOrdinal;
+    if (nextStage !== this.stageIndex || nextStageOrdinal !== this.stageOrdinal) {
       this.stageIndex = nextStage;
+      this.stageOrdinal = nextStageOrdinal;
       if (this.active?.type) {
         this.active.color = stagePieceColor(STAGES[nextStage], this.active.type, this.active.color);
       }
-      this.callbacks.onStage?.(nextStage, STAGES[nextStage]);
+      this.callbacks.onStage?.(nextStage, STAGES[nextStage], stageWindow);
     }
   }
 
@@ -1970,7 +1982,8 @@ class FallingBlockCore {
     const modeGoal = this.mode.lineGoal || (this.modeKey === "ultra" ? 80 : 90);
     const lineProgress = clamp(this.lines / Math.max(1, modeGoal), 0, 1);
     const stageWindow = stageWindowForLines(this.lines, this.modeKey, this.mode);
-    const stageProgress = clamp((stageWindow.stageIndex + stageWindow.stageProgress) / Math.max(1, STAGES.length - 1), 0, 1);
+    const visualLiftStage = Math.min(stageWindow.stageOrdinal, STAGES.length - 1);
+    const stageProgress = clamp((visualLiftStage + stageWindow.stageProgress) / Math.max(1, STAGES.length - 1), 0, 1);
     const comboLift = clamp(this.combo / 10, 0, 1);
     const lumenLift = clamp(this.lumen, 0, 1);
     const zoneLift = this.zoneActive ? clamp(0.55 + this.zoneProgress * 0.45, 0, 1) : 0;
@@ -2000,6 +2013,8 @@ class FallingBlockCore {
       combo: this.combo,
       maxCombo: this.maxCombo,
       stageIndex: this.stageIndex,
+      stageOrdinal: this.stageOrdinal,
+      stageNumber: stageWindow.stageNumber,
       stage: STAGES[this.stageIndex],
       stageLines: stageWindow.stageLines,
       stageLineGoal: stageWindow.stageLineGoal,
@@ -5643,10 +5658,11 @@ class LumenShiftApp {
         this.audio.lock(info.cells?.length || 0);
         this.view.pieceLock(info.cells, stage, false);
       },
-      onStage: (index, stage) => {
+      onStage: (index, stage, stageWindow = null) => {
         this.audio.setStage(index);
         this.view.stageShift(stage);
-        this.showStageSplash(index > 0 ? `STAGE ${index + 1}` : "");
+        const stageNumber = stageWindow?.stageNumber ?? index + 1;
+        this.showStageSplash(stageNumber > 1 ? `STAGE ${stageNumber}` : "");
       },
       onClear: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
