@@ -794,7 +794,7 @@ button {
   z-index: 21;
   width: min(390px, calc(100vw - 20px));
   display: grid;
-  grid-template-columns: 1fr 1fr 1.08fr 1.25fr;
+  grid-template-columns: 1.64fr 1.42fr 0.82fr 0.82fr;
   grid-template-rows: 14px 52px;
   gap: 6px;
   pointer-events: auto;
@@ -850,6 +850,15 @@ button {
   background: linear-gradient(135deg, rgba(104, 233, 255, 0.74), rgba(255, 91, 212, 0.72));
   color: #050913;
   font-size: 22px;
+}
+
+.touch-controls [data-action="rotate"] {
+  font-size: 27px;
+}
+
+.touch-controls [data-action="left"],
+.touch-controls [data-action="right"] {
+  font-size: 26px;
 }
 
 .touch-controls button:active {
