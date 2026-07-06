@@ -838,6 +838,7 @@ button {
   justify-content: center;
   gap: 5px;
   width: 88px;
+  min-width: 88px;
   height: 24px;
   border: 1px solid rgba(104, 233, 255, 0.28);
   border-radius: 8px;
@@ -874,7 +875,8 @@ button {
 }
 
 .touch-controls.is-layout-editing .control-drag-handle {
-  width: 96px;
+  width: 116px;
+  min-width: 116px;
   border-color: rgba(255, 211, 110, 0.5);
   color: rgba(255, 232, 174, 0.98);
   box-shadow: 0 0 0 1px rgba(255, 211, 110, 0.42), 0 0 24px rgba(255, 211, 110, 0.28);
