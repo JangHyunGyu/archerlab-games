@@ -89,25 +89,67 @@
         return text.length > maxLength ? text.slice(0, maxLength) : text;
     }
 
+    function resolveUrl(value) {
+        try {
+            return new URL(value, window.location.href).href;
+        } catch {
+            return safeString(value, '');
+        }
+    }
+
+    function isWebpUrl(value) {
+        return /\.webp(?:[?#]|$)/i.test(safeString(value, ''));
+    }
+
+    function getImageFallbackUrl(source, target) {
+        if (!target || !target.getAttribute) return '';
+        var explicitFallback = (
+            target.getAttribute('data-png-fallback') ||
+            target.getAttribute('data-fallback-src') ||
+            target.dataset && (target.dataset.pngFallback || target.dataset.fallbackSrc) ||
+            ''
+        );
+        var fallback = explicitFallback || target.getAttribute('src') || '';
+        if (!fallback) return '';
+
+        var sourceUrl = resolveUrl(source);
+        var fallbackUrl = resolveUrl(fallback);
+        if (!sourceUrl || !fallbackUrl || sourceUrl === fallbackUrl) return '';
+        if (!isWebpUrl(sourceUrl)) return '';
+        return fallbackUrl;
+    }
+
+    function applyImageFallback(source, target) {
+        var fallbackUrl = getImageFallbackUrl(source, target);
+        if (!fallbackUrl || target.__archerlabImageFallbackApplied) return false;
+
+        target.__archerlabImageFallbackApplied = true;
+        target.__archerlabImageFallbackFrom = resolveUrl(source);
+        try {
+            var parent = target.parentElement;
+            if (parent && parent.tagName && parent.tagName.toUpperCase() === 'PICTURE') {
+                Array.prototype.forEach.call(parent.querySelectorAll('source'), function (sourceEl) {
+                    var srcset = sourceEl.getAttribute('srcset') || '';
+                    var type = sourceEl.getAttribute('type') || '';
+                    if (/image\/webp/i.test(type) || isWebpUrl(srcset)) {
+                        sourceEl.setAttribute('data-archerlab-disabled-srcset', srcset);
+                        sourceEl.removeAttribute('srcset');
+                    }
+                });
+            }
+            target.src = fallbackUrl;
+        } catch {
+            return false;
+        }
+        return true;
+    }
+
     function isIgnorableResourceError(source, target) {
         var src = safeString(source, '');
         var tag = safeString(target && (target.tagName || target.nodeName), '').toUpperCase();
         if (tag === 'IMG') {
-            var fallback = target && (
-                target.getAttribute && target.getAttribute('data-png-fallback') ||
-                target.dataset && target.dataset.pngFallback
-            );
-            if (fallback) {
-                try {
-                    var sourceUrl = new URL(src, window.location.href).href;
-                    var fallbackUrl = new URL(fallback, window.location.href).href;
-                    if (sourceUrl !== fallbackUrl && /\.webp(?:[?#]|$)/i.test(sourceUrl)) {
-                        return true;
-                    }
-                } catch {
-                    if (/\.webp(?:[?#]|$)/i.test(src)) return true;
-                }
-            }
+            if (applyImageFallback(src, target)) return true;
+            if (target && target.__archerlabImageFallbackApplied && target.naturalWidth > 0) return true;
         }
         return tag === 'SCRIPT' && (
             src.indexOf('https://www.googletagmanager.com/gtag/js') === 0 ||
