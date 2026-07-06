@@ -3028,17 +3028,12 @@ class PixiView {
       ? (portraitSidePanels ? Math.min(58, sideSpace - 10) : Math.min(88, Math.floor((actualW - 14) / 2)))
       : 96;
     const miniH = portrait ? (portraitSidePanels ? 66 : 52) : 96;
-    const hold = portrait
-      ? (portraitSidePanels
-        ? { x: Math.max(8, boardX - miniW - 7), y: boardY + 22, w: miniW, h: miniH }
-        : { x: boardX, y: boardY - miniH - 10, w: miniW, h: miniH })
-      : { x: boardX - miniW - 22, y: boardY + 16, w: miniW, h: miniH };
     const next = portrait
       ? (portraitSidePanels
         ? { x: Math.min(w - miniW - 8, boardX + actualW + 7), y: boardY + 22, w: miniW, h: miniH + 72 }
         : { x: boardX + actualW - miniW, y: boardY - miniH - 10, w: miniW, h: miniH })
       : { x: boardX + actualW + 22, y: boardY + 16, w: miniW, h: miniH + 132 };
-    return { w, h, portrait, boardX, boardY, boardW: actualW, boardH: actualH, cell, hold, next };
+    return { w, h, portrait, boardX, boardY, boardW: actualW, boardH: actualH, cell, next };
   }
 
   render(snapshot, dt, beatState = null) {
@@ -4033,7 +4028,6 @@ class PixiView {
       }
     }
 
-    this.drawMiniPanel(g, layout.hold, "HOLD", snapshot.holdType ? [snapshot.holdType] : [], stage);
     this.drawMiniPanel(g, layout.next, "NEXT", snapshot.queue, stage);
     this.endBlockSprites();
 
@@ -5898,8 +5892,6 @@ class InputController {
     if (key === "arrowup" || key === "w" || key === "x") return "rotate";
     if (key === "z") return "rotate-ccw";
     if (key === " " || key === "spacebar") return "drop";
-    if (key === "c" || key === "shift") return "hold";
-    if (key === "l") return "zone";
     if (key === "enter" || key === "escape" || key === "p") return "pause";
     return "";
   }
@@ -6495,14 +6487,6 @@ class LumenShiftApp {
     else if (action === "rotate") this.core.rotate(1);
     else if (action === "rotate-ccw") this.core.rotate(-1);
     else if (action === "drop") this.core.hardDrop();
-    else if (action === "hold") this.core.hold();
-    else if (action === "zone") {
-      const ok = this.core.activateZone();
-      if (!ok) {
-        this.audio.playSfx("chargeSmall", -10);
-        this.showEvent("CHARGE");
-      }
-    }
   }
 
   togglePause(forcePause) {

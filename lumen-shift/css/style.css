@@ -792,9 +792,9 @@ button {
   bottom: max(22px, calc(env(safe-area-inset-bottom) + 14px));
   left: 50%;
   z-index: 21;
-  width: min(430px, calc(100vw - 18px));
+  width: min(360px, calc(100vw - 18px));
   display: grid;
-  grid-template-columns: 0.76fr 0.92fr 0.92fr 0.92fr 0.76fr 1fr 1.22fr;
+  grid-template-columns: 0.96fr 0.96fr 0.96fr 1fr 1.2fr;
   grid-template-rows: 26px 52px;
   gap: 6px;
   pointer-events: auto;
@@ -912,14 +912,6 @@ button {
   touch-action: none;
 }
 
-.touch-controls [data-action="hold"],
-.touch-controls [data-action="zone"] {
-  border-color: rgba(255, 211, 110, 0.24);
-  color: rgba(255, 211, 110, 0.96);
-  font-size: 14px;
-  letter-spacing: 0;
-}
-
 .touch-controls [data-action="drop"],
 .touch-controls .drop-key {
   background: linear-gradient(135deg, rgba(104, 233, 255, 0.74), rgba(255, 91, 212, 0.72));
@@ -980,39 +972,31 @@ button {
 
 @media (pointer: coarse) and (min-width: 760px) {
   .touch-controls {
-    width: min(900px, calc(100vw - 72px));
+    width: min(720px, calc(100vw - 72px));
     bottom: max(26px, calc(env(safe-area-inset-bottom) + 18px));
-    grid-template-columns: 58px 72px 72px 72px minmax(64px, 1fr) 64px 86px 106px;
+    grid-template-columns: 82px 82px 82px minmax(120px, 1fr) 96px 116px;
     grid-template-rows: 28px 62px;
     gap: 8px;
   }
 
-  .touch-controls [data-action="hold"] {
+  .touch-controls [data-action="left"] {
     grid-column: 1;
   }
 
-  .touch-controls [data-action="left"] {
+  .touch-controls [data-action="down"] {
     grid-column: 2;
   }
 
-  .touch-controls [data-action="down"] {
+  .touch-controls [data-action="right"] {
     grid-column: 3;
   }
 
-  .touch-controls [data-action="right"] {
-    grid-column: 4;
-  }
-
-  .touch-controls [data-action="zone"] {
-    grid-column: 6;
-  }
-
   .touch-controls [data-action="rotate"] {
-    grid-column: 7;
+    grid-column: 5;
   }
 
   .touch-controls [data-action="drop"] {
-    grid-column: 8;
+    grid-column: 6;
   }
 
   .touch-controls button {
@@ -1037,9 +1021,9 @@ button {
 
 @media (pointer: coarse) and (min-width: 1000px) {
   .touch-controls {
-    width: min(1040px, calc(100vw - 104px));
-    grid-template-columns: 64px 82px 82px 82px minmax(120px, 1fr) 72px 96px 116px;
-    grid-template-rows: 16px 68px;
+    width: min(820px, calc(100vw - 104px));
+    grid-template-columns: 92px 92px 92px minmax(180px, 1fr) 106px 128px;
+    grid-template-rows: 28px 68px;
   }
 }
 
@@ -1062,7 +1046,7 @@ button {
   }
 
   .touch-controls {
-    width: min(414px, calc(100vw - 14px));
+    width: min(350px, calc(100vw - 14px));
     grid-template-rows: 24px 46px;
     gap: 5px;
     bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
