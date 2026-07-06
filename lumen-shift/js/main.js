@@ -7,6 +7,7 @@ const SCORE_TABLE = [0, 100, 300, 500, 800];
 const STAGE_LINE_GOAL = 14;
 const JOURNEY_STAGE_COUNT = 100;
 const STORAGE_PREFIX = "lumen-shift";
+const TOUCH_CONTROL_POSITION_KEY = "touchControlsPosition:v2";
 const AUDIO_ASSET_VERSION = "20260705-audio-v9";
 const ENABLE_GENERATED_TONE_LOOPS = false;
 
@@ -5845,7 +5846,7 @@ class InputController {
   }
 
   restoreControlPosition() {
-    const saved = readStorage("touchControlsPosition", "");
+    const saved = readStorage(TOUCH_CONTROL_POSITION_KEY, "");
     if (!saved) return;
     try {
       const point = JSON.parse(saved);
@@ -5924,7 +5925,7 @@ class InputController {
   saveControlPosition() {
     if (!this.buttons?.classList.contains("is-custom-position")) return;
     const rect = this.buttons.getBoundingClientRect();
-    writeStorage("touchControlsPosition", JSON.stringify({
+    writeStorage(TOUCH_CONTROL_POSITION_KEY, JSON.stringify({
       x: Math.round(rect.left),
       y: Math.round(rect.top),
     }));

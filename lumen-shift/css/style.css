@@ -792,9 +792,9 @@ button {
   bottom: max(22px, calc(env(safe-area-inset-bottom) + 14px));
   left: 50%;
   z-index: 21;
-  width: min(390px, calc(100vw - 20px));
+  width: min(430px, calc(100vw - 18px));
   display: grid;
-  grid-template-columns: 1.64fr 1.42fr 0.82fr 0.82fr;
+  grid-template-columns: 0.76fr 0.92fr 0.92fr 0.92fr 0.76fr 1fr 1.22fr;
   grid-template-rows: 14px 52px;
   gap: 6px;
   pointer-events: auto;
@@ -834,6 +834,8 @@ button {
 
 .touch-controls button {
   min-width: 0;
+  height: 100%;
+  padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.62);
@@ -841,8 +843,17 @@ button {
   color: rgba(255, 255, 255, 0.94);
   font-size: 24px;
   font-weight: 950;
+  line-height: 1;
   backdrop-filter: blur(14px);
   touch-action: none;
+}
+
+.touch-controls [data-action="hold"],
+.touch-controls [data-action="zone"] {
+  border-color: rgba(255, 211, 110, 0.24);
+  color: rgba(255, 211, 110, 0.96);
+  font-size: 16px;
+  letter-spacing: 0;
 }
 
 .touch-controls [data-action="drop"],
@@ -857,6 +868,7 @@ button {
 }
 
 .touch-controls [data-action="left"],
+.touch-controls [data-action="down"],
 .touch-controls [data-action="right"] {
   font-size: 26px;
 }
@@ -902,6 +914,71 @@ button {
   }
 }
 
+@media (pointer: coarse) and (min-width: 760px) {
+  .touch-controls {
+    width: min(900px, calc(100vw - 72px));
+    bottom: max(26px, calc(env(safe-area-inset-bottom) + 18px));
+    grid-template-columns: 58px 72px 72px 72px minmax(64px, 1fr) 64px 86px 106px;
+    grid-template-rows: 16px 62px;
+    gap: 8px;
+  }
+
+  .touch-controls [data-action="hold"] {
+    grid-column: 1;
+  }
+
+  .touch-controls [data-action="left"] {
+    grid-column: 2;
+  }
+
+  .touch-controls [data-action="down"] {
+    grid-column: 3;
+  }
+
+  .touch-controls [data-action="right"] {
+    grid-column: 4;
+  }
+
+  .touch-controls [data-action="zone"] {
+    grid-column: 6;
+  }
+
+  .touch-controls [data-action="rotate"] {
+    grid-column: 7;
+  }
+
+  .touch-controls [data-action="drop"] {
+    grid-column: 8;
+  }
+
+  .touch-controls button {
+    grid-row: 2;
+    border-radius: 10px;
+  }
+
+  .touch-controls [data-action="left"],
+  .touch-controls [data-action="down"],
+  .touch-controls [data-action="right"] {
+    font-size: 30px;
+  }
+
+  .touch-controls [data-action="rotate"] {
+    font-size: 31px;
+  }
+
+  .touch-controls [data-action="drop"] {
+    font-size: 27px;
+  }
+}
+
+@media (pointer: coarse) and (min-width: 1000px) {
+  .touch-controls {
+    width: min(1040px, calc(100vw - 104px));
+    grid-template-columns: 64px 82px 82px 82px minmax(120px, 1fr) 72px 96px 116px;
+    grid-template-rows: 16px 68px;
+  }
+}
+
 @media (max-height: 720px) and (orientation: portrait) {
   .hud {
     top: calc(max(8px, env(safe-area-inset-top)) + 22px);
@@ -921,7 +998,7 @@ button {
   }
 
   .touch-controls {
-    width: min(374px, calc(100vw - 16px));
+    width: min(414px, calc(100vw - 14px));
     grid-template-rows: 12px 46px;
     gap: 5px;
     bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
