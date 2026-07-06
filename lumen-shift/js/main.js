@@ -9,6 +9,8 @@ const JOURNEY_STAGE_COUNT = 100;
 const STORAGE_PREFIX = "lumen-shift";
 const TOUCH_CONTROL_POSITION_KEY = "touchControlsPosition:v2";
 const TOUCH_CONTROL_KEY_LAYOUT_KEY = "touchControlKeyLayout:v2";
+const TOUCH_EDIT_LABEL = "키편집";
+const TOUCH_EDIT_DONE_LABEL = "키편집 종료";
 const MAX_RANK_EVENT_QUEUE = 96;
 const AUDIO_ASSET_VERSION = "20260705-audio-v9";
 const ENABLE_GENERATED_TONE_LOOPS = false;
@@ -5777,6 +5779,7 @@ class InputController {
     this.listeners = [];
     this.controlDrag = null;
     this.controlDragHandle = this.buttons?.querySelector("[data-control-drag]") || null;
+    this.controlDragLabel = this.controlDragHandle?.querySelector("span") || null;
     this.keyButtons = Array.from(this.buttons?.querySelectorAll("button[data-action]") || []);
     this.keyDrag = null;
     this.layoutEditMode = false;
@@ -5785,6 +5788,7 @@ class InputController {
     this.preFreeContainerStyle = null;
     this.bind();
     this.restoreControlPosition();
+    this.updateControlEditLabel();
   }
 
   bind() {
@@ -6019,6 +6023,7 @@ class InputController {
     if (this.layoutEditMode) {
       this.layoutEditMode = false;
       this.buttons.classList.remove("is-layout-editing");
+      this.updateControlEditLabel();
       if (this.layoutChangedInEdit || this.hasSavedKeyLayout) {
         this.saveKeyLayout();
       } else {
@@ -6031,6 +6036,16 @@ class InputController {
     this.layoutEditMode = true;
     this.layoutChangedInEdit = false;
     this.buttons.classList.add("is-layout-editing");
+    this.updateControlEditLabel();
+  }
+
+  updateControlEditLabel() {
+    if (!this.controlDragHandle) return;
+    const label = this.layoutEditMode ? TOUCH_EDIT_DONE_LABEL : TOUCH_EDIT_LABEL;
+    if (this.controlDragLabel) this.controlDragLabel.textContent = label;
+    this.controlDragHandle.setAttribute("aria-label", label);
+    this.controlDragHandle.setAttribute("title", label);
+    this.controlDragHandle.setAttribute("aria-pressed", this.layoutEditMode ? "true" : "false");
   }
 
   ensureFreeLayout(savedItems = null) {
