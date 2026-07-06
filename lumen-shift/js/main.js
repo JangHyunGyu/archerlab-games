@@ -8,6 +8,7 @@ const STAGE_LINE_GOAL = 14;
 const JOURNEY_STAGE_COUNT = 100;
 const STORAGE_PREFIX = "lumen-shift";
 const TOUCH_CONTROL_POSITION_KEY = "touchControlsPosition:v2";
+const MAX_RANK_EVENT_QUEUE = 96;
 const AUDIO_ASSET_VERSION = "20260705-audio-v9";
 const ENABLE_GENERATED_TONE_LOOPS = false;
 
@@ -353,6 +354,9 @@ class RankClient {
       combo: Math.floor(Number(event.combo || 0)),
       at: Date.now(),
     });
+    if (this.queue.length > MAX_RANK_EVENT_QUEUE) {
+      this.queue.splice(0, this.queue.length - MAX_RANK_EVENT_QUEUE);
+    }
     if (this.queue.length >= 8) {
       this.flush().catch(() => null);
     }
@@ -379,6 +383,7 @@ class RankClient {
       return true;
     } catch {
       this.disabled = true;
+      this.queue = [];
       return false;
     } finally {
       this.syncing = false;
@@ -3039,12 +3044,38 @@ class PixiView {
     if (!this.app || !snapshot) return;
     const layout = this.layout();
     const stage = snapshot.stage || STAGES[0];
+    this.trimFxQueues();
     this.applyCamera(layout, beatState, dt);
     this.drawBackground(layout, stage, dt, snapshot, beatState);
     this.drawBoard(layout, snapshot);
     this.drawParticles(layout, dt);
     this.drawFlash(layout, dt, beatState, stage);
     this.drawStageTitle(layout, dt);
+  }
+
+  trimFxQueues() {
+    const scale = this.quality.coarse ? 1 : 1.8;
+    const limits = {
+      clearWaves: 18,
+      beams: 32,
+      dropTrails: 36,
+      impactRings: 32,
+      rowSweeps: 28,
+      clearCores: 18,
+      clearTiles: 120,
+      lightFields: 18,
+      lockFlashes: 64,
+      shockBands: 28,
+      screenBursts: 18,
+      clearRays: 96,
+      resonancePips: 80,
+    };
+    Object.entries(limits).forEach(([key, baseLimit]) => {
+      const queue = this[key];
+      if (!Array.isArray(queue)) return;
+      const limit = Math.max(1, Math.round(baseLimit * scale));
+      if (queue.length > limit) queue.splice(0, queue.length - limit);
+    });
   }
 
   showStageTitle(label, stage = STAGES[0]) {
