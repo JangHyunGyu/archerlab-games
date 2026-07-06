@@ -6381,10 +6381,6 @@ class LumenShiftApp {
       onClear: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
         this.audio.clear(info.lines, info.combo, info.zoneActive);
-        if (info.lumenReady) {
-          this.audio.playSfx("chargeFull", -4, 0.06);
-          this.audio.playStinger("zoneReady", -5, 0.08);
-        }
         this.view.lineClear(info.rows, info.lines, stage, info.cells);
         if (info.stageCleared) {
           const nextStage = STAGES[info.stageWindowAfter?.stageIndex] || STAGES[0];
