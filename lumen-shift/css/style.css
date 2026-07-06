@@ -809,6 +809,27 @@ button {
   transform: none;
 }
 
+.touch-controls.is-free-layout {
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  display: block;
+  right: auto;
+  bottom: auto;
+  left: 0;
+  top: 0;
+  transform: none;
+  pointer-events: none;
+}
+
+.touch-controls.is-free-layout .control-drag-handle,
+.touch-controls.is-free-layout button {
+  position: absolute;
+  grid-column: auto;
+  grid-row: auto;
+  pointer-events: auto;
+}
+
 .control-drag-handle {
   grid-column: 1 / -1;
   justify-self: center;
@@ -830,6 +851,27 @@ button {
   cursor: grabbing;
   opacity: 1;
   filter: brightness(1.25);
+}
+
+.touch-controls.is-layout-editing .control-drag-handle {
+  width: 68px;
+  box-shadow: 0 0 0 1px rgba(255, 211, 110, 0.42), 0 0 24px rgba(255, 211, 110, 0.28);
+  opacity: 1;
+}
+
+.touch-controls.is-layout-editing button {
+  border-color: rgba(255, 211, 110, 0.46);
+  box-shadow:
+    inset 0 0 24px rgba(255, 211, 110, 0.08),
+    0 0 0 1px rgba(255, 211, 110, 0.12),
+    0 10px 26px rgba(0, 0, 0, 0.34);
+  cursor: grab;
+}
+
+.touch-controls.is-layout-editing button.is-key-dragging {
+  cursor: grabbing;
+  filter: brightness(1.22);
+  transform: scale(1.04);
 }
 
 .touch-controls button {
