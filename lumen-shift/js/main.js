@@ -8,6 +8,7 @@ const STAGE_LINE_GOAL = 14;
 const JOURNEY_STAGE_COUNT = 100;
 const STORAGE_PREFIX = "lumen-shift";
 const TOUCH_CONTROL_POSITION_KEY = "touchControlsPosition:v2";
+const TOUCH_CONTROL_KEY_LAYOUT_KEY = "touchControlKeyLayout:v1";
 const MAX_RANK_EVENT_QUEUE = 96;
 const AUDIO_ASSET_VERSION = "20260705-audio-v9";
 const ENABLE_GENERATED_TONE_LOOPS = false;
@@ -5782,6 +5783,12 @@ class InputController {
     this.listeners = [];
     this.controlDrag = null;
     this.controlDragHandle = this.buttons?.querySelector("[data-control-drag]") || null;
+    this.keyButtons = Array.from(this.buttons?.querySelectorAll("button[data-action]") || []);
+    this.keyDrag = null;
+    this.layoutEditMode = false;
+    this.layoutChangedInEdit = false;
+    this.hasSavedKeyLayout = false;
+    this.preFreeContainerStyle = null;
     this.bind();
     this.restoreControlPosition();
   }
@@ -5802,9 +5809,13 @@ class InputController {
       if (action === this.repeatAction) this.stopRepeat();
     }, { passive: true });
 
-    this.buttons.querySelectorAll("button[data-action]").forEach((button) => {
+    this.keyButtons.forEach((button) => {
       const action = button.dataset.action;
       this.on(button, "pointerdown", (event) => {
+        if (this.layoutEditMode) {
+          this.startKeyDrag(event, button);
+          return;
+        }
         event.preventDefault();
         try {
           button.setPointerCapture?.(event.pointerId);
@@ -5816,7 +5827,14 @@ class InputController {
           this.startRepeat(action);
         }
       });
-      const stop = () => this.stopRepeat();
+      const stop = (event) => {
+        if (this.keyDrag?.button === button) {
+          this.endKeyDrag(event);
+          return;
+        }
+        this.stopRepeat();
+      };
+      this.on(button, "pointermove", (event) => this.moveKeyDrag(event));
       this.on(button, "pointerup", stop);
       this.on(button, "pointercancel", stop);
       this.on(button, "pointerleave", stop);
@@ -5881,6 +5899,7 @@ class InputController {
   }
 
   restoreControlPosition() {
+    if (this.restoreKeyLayout()) return;
     const saved = readStorage(TOUCH_CONTROL_POSITION_KEY, "");
     if (!saved) return;
     try {
@@ -5897,11 +5916,15 @@ class InputController {
     event.preventDefault();
     event.stopPropagation();
     const rect = this.buttons.getBoundingClientRect();
+    const freeLayout = this.buttons.classList.contains("is-free-layout");
     this.controlDrag = {
       pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
       moved: false,
+      freeLayout,
     };
     this.buttons.classList.add("is-dragging");
     try {
@@ -5915,7 +5938,9 @@ class InputController {
     if (!this.controlDrag || event.pointerId !== this.controlDrag.pointerId) return;
     event.preventDefault();
     event.stopPropagation();
-    this.controlDrag.moved = true;
+    const distance = Math.hypot(event.clientX - this.controlDrag.startX, event.clientY - this.controlDrag.startY);
+    if (distance > 6) this.controlDrag.moved = true;
+    if (this.controlDrag.freeLayout) return;
     this.applyControlPosition(
       event.clientX - this.controlDrag.offsetX,
       event.clientY - this.controlDrag.offsetY,
@@ -5927,6 +5952,8 @@ class InputController {
     if (!this.controlDrag || event.pointerId !== this.controlDrag.pointerId) return;
     event.preventDefault();
     event.stopPropagation();
+    const wasTap = !this.controlDrag.moved;
+    const freeLayout = this.controlDrag.freeLayout;
     this.buttons?.classList.remove("is-dragging");
     try {
       this.controlDragHandle?.releasePointerCapture?.(event.pointerId);
@@ -5934,7 +5961,11 @@ class InputController {
       // Pointer capture may already be gone after cancellation.
     }
     this.controlDrag = null;
-    this.saveControlPosition();
+    if (wasTap) {
+      this.toggleLayoutEditMode();
+    } else if (!freeLayout) {
+      this.saveControlPosition();
+    }
   }
 
   clampControlPosition(x, y) {
@@ -5975,9 +6006,217 @@ class InputController {
   }
 
   reclampControlPosition() {
+    if (this.buttons?.classList.contains("is-free-layout")) {
+      this.reclampKeyPositions();
+      return;
+    }
     if (!this.buttons?.classList.contains("is-custom-position")) return;
     const rect = this.buttons.getBoundingClientRect();
     this.applyControlPosition(rect.left, rect.top, true);
+  }
+
+  toggleLayoutEditMode() {
+    if (!this.buttons) return;
+    this.stopRepeat();
+    if (this.layoutEditMode) {
+      this.layoutEditMode = false;
+      this.buttons.classList.remove("is-layout-editing");
+      if (this.layoutChangedInEdit || this.hasSavedKeyLayout) {
+        this.saveKeyLayout();
+      } else {
+        this.clearFreeLayout();
+      }
+      this.layoutChangedInEdit = false;
+      return;
+    }
+    this.ensureFreeLayout();
+    this.layoutEditMode = true;
+    this.layoutChangedInEdit = false;
+    this.buttons.classList.add("is-layout-editing");
+  }
+
+  ensureFreeLayout(savedItems = null) {
+    if (!this.buttons || this.buttons.classList.contains("is-free-layout")) return;
+    this.preFreeContainerStyle = {
+      classIsCustom: this.buttons.classList.contains("is-custom-position"),
+      left: this.buttons.style.left,
+      top: this.buttons.style.top,
+      right: this.buttons.style.right,
+      bottom: this.buttons.style.bottom,
+      transform: this.buttons.style.transform,
+    };
+    const buttonRects = new Map(this.keyButtons.map((button) => [button.dataset.action, button.getBoundingClientRect()]));
+    const handleRect = this.controlDragHandle?.getBoundingClientRect?.();
+    this.buttons.classList.add("is-free-layout");
+    this.buttons.classList.remove("is-custom-position");
+    this.buttons.style.left = "0px";
+    this.buttons.style.top = "0px";
+    this.buttons.style.right = "auto";
+    this.buttons.style.bottom = "auto";
+    this.buttons.style.transform = "none";
+    if (this.controlDragHandle && handleRect) {
+      this.applyFreeElementBox(this.controlDragHandle, handleRect.left, handleRect.top, handleRect.width, handleRect.height);
+    }
+    this.keyButtons.forEach((button) => {
+      const action = button.dataset.action;
+      const fallback = buttonRects.get(action);
+      const saved = savedItems?.[action];
+      const width = Number(saved?.w) > 0 ? Number(saved.w) : fallback?.width;
+      const height = Number(saved?.h) > 0 ? Number(saved.h) : fallback?.height;
+      const x = Number.isFinite(Number(saved?.x)) ? Number(saved.x) : fallback?.left;
+      const y = Number.isFinite(Number(saved?.y)) ? Number(saved.y) : fallback?.top;
+      this.applyKeyPosition(button, x || 0, y || 0, width || 54, height || 52, false);
+    });
+  }
+
+  clearFreeLayout() {
+    if (!this.buttons) return;
+    this.buttons.classList.remove("is-free-layout", "is-layout-editing");
+    this.keyButtons.forEach((button) => {
+      button.classList.remove("is-key-dragging");
+      ["left", "top", "width", "height"].forEach((prop) => {
+        button.style[prop] = "";
+      });
+    });
+    if (this.controlDragHandle) {
+      ["left", "top", "width", "height"].forEach((prop) => {
+        this.controlDragHandle.style[prop] = "";
+      });
+    }
+    const previous = this.preFreeContainerStyle;
+    if (previous?.classIsCustom) this.buttons.classList.add("is-custom-position");
+    else this.buttons.classList.remove("is-custom-position");
+    this.buttons.style.left = previous?.left || "";
+    this.buttons.style.top = previous?.top || "";
+    this.buttons.style.right = previous?.right || "";
+    this.buttons.style.bottom = previous?.bottom || "";
+    this.buttons.style.transform = previous?.transform || "";
+  }
+
+  restoreKeyLayout() {
+    const saved = readStorage(TOUCH_CONTROL_KEY_LAYOUT_KEY, "");
+    if (!saved) return false;
+    try {
+      const layout = JSON.parse(saved);
+      if (!layout?.items || typeof layout.items !== "object") return false;
+      this.ensureFreeLayout(layout.items);
+      this.hasSavedKeyLayout = true;
+      this.reclampKeyPositions(false);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  clampKeyPosition(x, y, width, height) {
+    const padding = 8;
+    const vw = window.visualViewport?.width || window.innerWidth || width;
+    const vh = window.visualViewport?.height || window.innerHeight || height;
+    const maxX = Math.max(padding, vw - width - padding);
+    const maxY = Math.max(padding, vh - height - padding);
+    return {
+      x: clamp(x, padding, maxX),
+      y: clamp(y, padding, maxY),
+    };
+  }
+
+  applyFreeElementBox(element, x, y, width, height) {
+    if (!element) return;
+    const point = this.clampKeyPosition(x, y, width, height);
+    element.style.left = `${Math.round(point.x)}px`;
+    element.style.top = `${Math.round(point.y)}px`;
+    element.style.width = `${Math.round(width)}px`;
+    element.style.height = `${Math.round(height)}px`;
+  }
+
+  applyKeyPosition(button, x, y, width, height, persist = true) {
+    if (!button) return;
+    this.applyFreeElementBox(button, x, y, width, height);
+    if (persist) this.saveKeyLayout();
+  }
+
+  saveKeyLayout() {
+    if (!this.buttons?.classList.contains("is-free-layout")) return;
+    const items = {};
+    this.keyButtons.forEach((button) => {
+      const action = button.dataset.action;
+      const rect = button.getBoundingClientRect();
+      items[action] = {
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        w: Math.round(rect.width),
+        h: Math.round(rect.height),
+      };
+    });
+    this.hasSavedKeyLayout = true;
+    writeStorage(TOUCH_CONTROL_KEY_LAYOUT_KEY, JSON.stringify({ items }));
+  }
+
+  reclampKeyPositions(persist = true) {
+    if (!this.buttons?.classList.contains("is-free-layout")) return;
+    this.keyButtons.forEach((button) => {
+      const rect = button.getBoundingClientRect();
+      this.applyKeyPosition(button, rect.left, rect.top, rect.width, rect.height, false);
+    });
+    if (this.controlDragHandle) {
+      const rect = this.controlDragHandle.getBoundingClientRect();
+      this.applyFreeElementBox(this.controlDragHandle, rect.left, rect.top, rect.width, rect.height);
+    }
+    if (persist) this.saveKeyLayout();
+  }
+
+  startKeyDrag(event, button) {
+    if (!button || !this.layoutEditMode) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.stopRepeat();
+    this.ensureFreeLayout();
+    const rect = button.getBoundingClientRect();
+    this.keyDrag = {
+      button,
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+    button.classList.add("is-key-dragging");
+    try {
+      button.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Individual key dragging still works without pointer capture.
+    }
+  }
+
+  moveKeyDrag(event) {
+    if (!this.keyDrag || event.pointerId !== this.keyDrag.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.layoutChangedInEdit = true;
+    this.applyKeyPosition(
+      this.keyDrag.button,
+      event.clientX - this.keyDrag.offsetX,
+      event.clientY - this.keyDrag.offsetY,
+      this.keyDrag.width,
+      this.keyDrag.height,
+      false,
+    );
+  }
+
+  endKeyDrag(event) {
+    if (!this.keyDrag || event.pointerId !== this.keyDrag.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const button = this.keyDrag.button;
+    button.classList.remove("is-key-dragging");
+    try {
+      button.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // Pointer capture may already be gone after cancellation.
+    }
+    this.keyDrag = null;
+    this.layoutChangedInEdit = true;
+    this.saveKeyLayout();
   }
 
   startRepeat(action) {
