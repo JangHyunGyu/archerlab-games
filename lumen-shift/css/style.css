@@ -109,7 +109,7 @@ button {
 
 .hud {
   position: fixed;
-  top: calc(max(10px, env(safe-area-inset-top)) + 28px);
+  top: var(--hud-y, calc(max(10px, env(safe-area-inset-top)) + 28px));
   left: 12px;
   right: 12px;
   z-index: 20;
@@ -226,7 +226,7 @@ button {
   z-index: 20;
   display: grid;
   gap: 8px;
-  width: 78px;
+  width: var(--effect-hud-w, 78px);
   color: #fff;
   font-weight: 950;
   line-height: 0.92;
@@ -295,11 +295,11 @@ button {
 
 .event-label {
   position: fixed;
-  top: calc(max(10px, env(safe-area-inset-top)) + 146px);
-  left: 50%;
+  top: var(--event-label-y, calc(var(--board-y, 164px) - 42px));
+  left: var(--event-label-x, 50%);
   z-index: 22;
-  width: min(360px, calc(100vw - 36px));
-  transform: translateX(-50%);
+  width: var(--event-label-w, min(360px, calc(100vw - 36px)));
+  transform: var(--event-label-transform, translateX(-50%));
   color: rgba(255, 255, 255, 0.95);
   font-size: 16px;
   font-weight: 900;
@@ -1146,7 +1146,7 @@ button {
 
 @media (max-height: 720px) and (orientation: portrait) {
   .hud {
-    top: calc(max(8px, env(safe-area-inset-top)) + 22px);
+    top: var(--hud-y, calc(max(8px, env(safe-area-inset-top)) + 22px));
   }
 
   .stat-strip {
@@ -1158,7 +1158,7 @@ button {
   }
 
   .event-label {
-    top: calc(max(8px, env(safe-area-inset-top)) + 128px);
+    top: var(--event-label-y, calc(var(--board-y, 134px) - 40px));
     font-size: 14px;
   }
 

@@ -6853,14 +6853,41 @@ class LumenShiftApp {
   updateHud(snapshot) {
     const layout = this.view.app ? this.view.layout() : null;
     if (layout) {
-      const hudY = Math.round(layout.boardY + layout.boardH * (layout.portrait ? 0.58 : 0.56));
-      const leftX = Math.max(7, Math.round(layout.boardX - (layout.portrait ? 86 : 126)));
-      const rightX = Math.min(window.innerWidth - 84, Math.round(layout.boardX + layout.boardW + (layout.portrait ? 16 : 34)));
+      const safeArea = safeAreaInsets();
+      const hudDefaultY = safeArea.top + (layout.portrait && window.innerHeight <= 720 ? 22 : 28);
+      const hudY = layout.portrait
+        ? hudDefaultY
+        : Math.max(safeArea.top + 8, Math.round(layout.boardY - 64));
+      const eventRightRoom = Math.max(0, window.innerWidth - safeArea.right - layout.boardX - layout.boardW - 12);
+      const eventLeftRoom = Math.max(0, layout.boardX - safeArea.left - 12);
+      const eventUseRight = eventRightRoom >= eventLeftRoom;
+      const eventSideRoom = eventUseRight ? eventRightRoom : eventLeftRoom;
+      const eventHasSideRoom = !layout.portrait && eventSideRoom >= 150;
+      const eventY = layout.portrait
+        ? Math.max(safeArea.top + 70, Math.round(layout.boardY - (window.innerHeight <= 720 ? 40 : 42)))
+        : (eventHasSideRoom ? Math.round(layout.boardY + 6) : Math.max(safeArea.top + 8, Math.round(layout.boardY - 34)));
+      const eventWidth = Math.min(300, Math.floor(eventSideRoom));
+      const eventX = eventUseRight
+        ? Math.round(layout.boardX + layout.boardW + 12)
+        : Math.round(safeArea.left + 12);
+      const effectHudY = Math.round(layout.boardY + layout.boardH * (layout.portrait ? 0.58 : 0.56));
+      const panelGap = 6;
+      const panelWidth = layout.portrait
+        ? clamp(Math.floor(layout.boardX - panelGap - 7), 50, 78)
+        : 78;
+      const leftX = Math.max(7, Math.round(layout.boardX - panelWidth - panelGap));
+      const rightX = Math.min(window.innerWidth - 84, Math.max(Math.round(layout.boardX + layout.boardW + panelGap), Math.round(layout.boardX + layout.boardW + (layout.portrait ? 16 : 34))));
       this.root.style.setProperty("--board-x", `${Math.round(layout.boardX)}px`);
       this.root.style.setProperty("--board-y", `${Math.round(layout.boardY)}px`);
       this.root.style.setProperty("--board-w", `${Math.round(layout.boardW)}px`);
       this.root.style.setProperty("--board-h", `${Math.round(layout.boardH)}px`);
-      this.root.style.setProperty("--effect-hud-y", `${hudY}px`);
+      this.root.style.setProperty("--hud-y", `${hudY}px`);
+      this.root.style.setProperty("--event-label-y", `${eventY}px`);
+      this.root.style.setProperty("--event-label-x", eventHasSideRoom ? `${eventX}px` : "50%");
+      this.root.style.setProperty("--event-label-w", eventHasSideRoom ? `${eventWidth}px` : "min(360px, calc(100vw - 36px))");
+      this.root.style.setProperty("--event-label-transform", eventHasSideRoom ? "none" : "translateX(-50%)");
+      this.root.style.setProperty("--effect-hud-y", `${effectHudY}px`);
+      this.root.style.setProperty("--effect-hud-w", `${panelWidth}px`);
       this.root.style.setProperty("--effect-hud-left-x", `${leftX}px`);
       this.root.style.setProperty("--effect-hud-right-x", `${rightX}px`);
     }
@@ -6918,8 +6945,7 @@ class LumenShiftApp {
 
   showStageSplash(label) {
     if (!label) return;
-    const stage = this.core?.snapshot?.().stage || STAGES[0];
-    this.view.showStageTitle(label, stage);
+    this.showEvent(label.replace(/\s*\n\s*/g, " / "));
   }
 
   setZoneVeil(active, immediate = false) {
