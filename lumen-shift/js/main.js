@@ -5902,17 +5902,105 @@ class InputController {
     return "";
   }
 
-  restoreControlPosition() {
-    if (this.restoreKeyLayout()) return;
-    const saved = readStorage(TOUCH_CONTROL_POSITION_KEY, "");
-    if (!saved) return;
+  getLayoutViewport() {
+    const width = Math.round(
+      window.visualViewport?.width
+      || window.innerWidth
+      || document.documentElement?.clientWidth
+      || 1,
+    );
+    const height = Math.round(
+      window.visualViewport?.height
+      || window.innerHeight
+      || document.documentElement?.clientHeight
+      || 1,
+    );
+    return {
+      w: Math.max(1, width),
+      h: Math.max(1, height),
+      orientation: width >= height ? "landscape" : "portrait",
+    };
+  }
+
+  readJsonStorage(key) {
+    const saved = readStorage(key, "");
+    if (!saved) return null;
     try {
-      const point = JSON.parse(saved);
-      if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return;
-      this.applyControlPosition(point.x, point.y, false);
+      return JSON.parse(saved);
     } catch {
-      // Ignore stale control layout data.
+      return null;
     }
+  }
+
+  normalizeViewport(viewport) {
+    const w = Number(viewport?.w);
+    const h = Number(viewport?.h);
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+    return { w, h };
+  }
+
+  viewportRatio(value, size) {
+    if (!Number.isFinite(value) || !Number.isFinite(size) || size <= 0) return 0;
+    return clamp(value / size, 0, 1);
+  }
+
+  scaleFromSavedViewport(value, savedSize, currentSize) {
+    if (!Number.isFinite(value)) return value;
+    if (!Number.isFinite(savedSize) || !Number.isFinite(currentSize) || savedSize <= 0 || currentSize <= 0) {
+      return value;
+    }
+    return value * (currentSize / savedSize);
+  }
+
+  readControlPositionStore() {
+    const stored = this.readJsonStorage(TOUCH_CONTROL_POSITION_KEY);
+    if (stored?.layouts && typeof stored.layouts === "object") {
+      return { layouts: stored.layouts };
+    }
+    return { layouts: {} };
+  }
+
+  readLegacyControlPosition() {
+    const point = this.readJsonStorage(TOUCH_CONTROL_POSITION_LEGACY_KEY);
+    if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return null;
+    return {
+      x: Number(point.x),
+      y: Number(point.y),
+      viewport: this.normalizeViewport(point.viewport),
+    };
+  }
+
+  readKeyLayoutStore() {
+    const stored = this.readJsonStorage(TOUCH_CONTROL_KEY_LAYOUT_KEY);
+    if (stored?.layouts && typeof stored.layouts === "object") {
+      return { layouts: stored.layouts };
+    }
+    return { layouts: {} };
+  }
+
+  readLegacyKeyLayout() {
+    const layout = this.readJsonStorage(TOUCH_CONTROL_KEY_LAYOUT_LEGACY_KEY);
+    if (!layout?.items || typeof layout.items !== "object") return null;
+    return {
+      items: layout.items,
+      viewport: this.normalizeViewport(layout.viewport),
+    };
+  }
+
+  restoreControlPosition(allowLegacy = true) {
+    if (this.restoreKeyLayout(allowLegacy)) return;
+    const viewport = this.getLayoutViewport();
+    const store = this.readControlPositionStore();
+    const saved = store.layouts?.[viewport.orientation] || (allowLegacy ? this.readLegacyControlPosition() : null);
+    if (!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y)) return;
+    const savedViewport = this.normalizeViewport(saved.viewport);
+    const x = Number.isFinite(saved.xRatio)
+      ? saved.xRatio * viewport.w
+      : this.scaleFromSavedViewport(Number(saved.x), savedViewport?.w, viewport.w);
+    const y = Number.isFinite(saved.yRatio)
+      ? saved.yRatio * viewport.h
+      : this.scaleFromSavedViewport(Number(saved.y), savedViewport?.h, viewport.h);
+    this.applyControlPosition(x, y, false);
   }
 
   startControlDrag(event) {
@@ -6003,20 +6091,36 @@ class InputController {
   saveControlPosition() {
     if (!this.buttons?.classList.contains("is-custom-position")) return;
     const rect = this.buttons.getBoundingClientRect();
-    writeStorage(TOUCH_CONTROL_POSITION_KEY, JSON.stringify({
+    const viewport = this.getLayoutViewport();
+    const store = this.readControlPositionStore();
+    store.layouts[viewport.orientation] = {
       x: Math.round(rect.left),
       y: Math.round(rect.top),
+      xRatio: this.viewportRatio(rect.left, viewport.w),
+      yRatio: this.viewportRatio(rect.top, viewport.h),
+      viewport: { w: viewport.w, h: viewport.h },
+    };
+    writeStorage(TOUCH_CONTROL_POSITION_KEY, JSON.stringify({
+      version: 3,
+      layouts: store.layouts,
     }));
   }
 
   reclampControlPosition() {
     if (this.buttons?.classList.contains("is-free-layout")) {
-      this.reclampKeyPositions();
+      if (!this.restoreKeyLayout(false)) {
+        const wasEditing = this.layoutEditMode;
+        this.clearFreeLayout();
+        if (wasEditing) {
+          this.ensureFreeLayout();
+          this.buttons?.classList.add("is-layout-editing");
+        }
+      }
       return;
     }
     if (!this.buttons?.classList.contains("is-custom-position")) return;
     const rect = this.buttons.getBoundingClientRect();
-    this.applyControlPosition(rect.left, rect.top, true);
+    this.applyControlPosition(rect.left, rect.top, false);
   }
 
   toggleLayoutEditMode() {
@@ -6050,7 +6154,7 @@ class InputController {
     this.controlDragHandle.setAttribute("aria-pressed", this.layoutEditMode ? "true" : "false");
   }
 
-  ensureFreeLayout(savedItems = null) {
+  ensureFreeLayout(savedItems = null, savedViewport = null) {
     if (!this.buttons || this.buttons.classList.contains("is-free-layout")) return;
     this.preFreeContainerStyle = {
       classIsCustom: this.buttons.classList.contains("is-custom-position"),
@@ -6076,11 +6180,8 @@ class InputController {
       const action = button.dataset.action;
       const fallback = buttonRects.get(action);
       const saved = savedItems?.[action];
-      const width = Number(saved?.w) > 0 ? Number(saved.w) : fallback?.width;
-      const height = Number(saved?.h) > 0 ? Number(saved.h) : fallback?.height;
-      const x = Number.isFinite(Number(saved?.x)) ? Number(saved.x) : fallback?.left;
-      const y = Number.isFinite(Number(saved?.y)) ? Number(saved.y) : fallback?.top;
-      this.applyKeyPosition(button, x || 0, y || 0, width || 54, height || 52, false);
+      const box = this.resolveKeyBox(saved, fallback, savedViewport);
+      this.applyKeyPosition(button, box.x, box.y, box.w, box.h, false);
     });
   }
 
@@ -6108,19 +6209,43 @@ class InputController {
     this.buttons.style.transform = previous?.transform || "";
   }
 
-  restoreKeyLayout() {
-    const saved = readStorage(TOUCH_CONTROL_KEY_LAYOUT_KEY, "");
-    if (!saved) return false;
-    try {
-      const layout = JSON.parse(saved);
-      if (!layout?.items || typeof layout.items !== "object") return false;
-      this.ensureFreeLayout(layout.items);
-      this.hasSavedKeyLayout = true;
-      this.reclampKeyPositions(false);
-      return true;
-    } catch {
-      return false;
-    }
+  resolveKeyBox(saved, fallback, savedViewport = null) {
+    const viewport = this.getLayoutViewport();
+    const sourceViewport = this.normalizeViewport(savedViewport || saved?.viewport);
+    const savedX = Number(saved?.x);
+    const savedY = Number(saved?.y);
+    const savedW = Number(saved?.w);
+    const savedH = Number(saved?.h);
+    const x = Number.isFinite(Number(saved?.xRatio))
+      ? Number(saved.xRatio) * viewport.w
+      : Number.isFinite(savedX)
+        ? this.scaleFromSavedViewport(savedX, sourceViewport?.w, viewport.w)
+        : fallback?.left;
+    const y = Number.isFinite(Number(saved?.yRatio))
+      ? Number(saved.yRatio) * viewport.h
+      : Number.isFinite(savedY)
+        ? this.scaleFromSavedViewport(savedY, sourceViewport?.h, viewport.h)
+        : fallback?.top;
+    return {
+      x: Number.isFinite(x) ? x : 0,
+      y: Number.isFinite(y) ? y : 0,
+      w: savedW > 0 ? savedW : fallback?.width || 54,
+      h: savedH > 0 ? savedH : fallback?.height || 52,
+    };
+  }
+
+  restoreKeyLayout(allowLegacy = true) {
+    const viewport = this.getLayoutViewport();
+    const store = this.readKeyLayoutStore();
+    const layout = store.layouts?.[viewport.orientation] || (allowLegacy ? this.readLegacyKeyLayout() : null);
+    if (!layout?.items || typeof layout.items !== "object") return false;
+    const wasEditing = this.layoutEditMode;
+    if (this.buttons?.classList.contains("is-free-layout")) this.clearFreeLayout();
+    this.ensureFreeLayout(layout.items, this.normalizeViewport(layout.viewport));
+    if (wasEditing) this.buttons?.classList.add("is-layout-editing");
+    this.hasSavedKeyLayout = true;
+    this.reclampKeyPositions(false);
+    return true;
   }
 
   clampKeyPosition(x, y, width, height) {
@@ -6152,6 +6277,8 @@ class InputController {
 
   saveKeyLayout() {
     if (!this.buttons?.classList.contains("is-free-layout")) return;
+    const viewport = this.getLayoutViewport();
+    const store = this.readKeyLayoutStore();
     const items = {};
     this.keyButtons.forEach((button) => {
       const action = button.dataset.action;
@@ -6161,10 +6288,19 @@ class InputController {
         y: Math.round(rect.top),
         w: Math.round(rect.width),
         h: Math.round(rect.height),
+        xRatio: this.viewportRatio(rect.left, viewport.w),
+        yRatio: this.viewportRatio(rect.top, viewport.h),
       };
     });
     this.hasSavedKeyLayout = true;
-    writeStorage(TOUCH_CONTROL_KEY_LAYOUT_KEY, JSON.stringify({ items }));
+    store.layouts[viewport.orientation] = {
+      viewport: { w: viewport.w, h: viewport.h },
+      items,
+    };
+    writeStorage(TOUCH_CONTROL_KEY_LAYOUT_KEY, JSON.stringify({
+      version: 3,
+      layouts: store.layouts,
+    }));
   }
 
   reclampKeyPositions(persist = true) {
