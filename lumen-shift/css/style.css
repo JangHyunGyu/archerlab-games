@@ -793,7 +793,7 @@ button {
   left: 50%;
   z-index: 21;
   width: min(360px, calc(100vw - 18px));
-  display: grid;
+  display: none;
   grid-template-columns: 1.18fr 1fr 0.9fr 0.9fr 0.9fr;
   grid-template-rows: 26px 52px;
   column-gap: 6px;
@@ -814,13 +814,22 @@ button {
   inset: 0;
   width: 100vw;
   height: 100dvh;
-  display: block;
   right: auto;
   bottom: auto;
   left: 0;
   top: 0;
   transform: none;
   pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .touch-controls {
+    display: grid;
+  }
+
+  .touch-controls.is-free-layout {
+    display: block;
+  }
 }
 
 .touch-controls.is-free-layout .control-drag-handle,
