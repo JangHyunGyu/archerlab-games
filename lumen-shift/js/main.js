@@ -5775,7 +5775,11 @@ class InputController {
       const action = button.dataset.action;
       this.on(button, "pointerdown", (event) => {
         event.preventDefault();
-        button.setPointerCapture?.(event.pointerId);
+        try {
+          button.setPointerCapture?.(event.pointerId);
+        } catch {
+          // Some synthetic or interrupted pointer streams cannot be captured.
+        }
         this.dispatch(action);
         if (this.isRepeatAction(action)) {
           this.startRepeat(action);
@@ -5869,7 +5873,11 @@ class InputController {
       moved: false,
     };
     this.buttons.classList.add("is-dragging");
-    this.controlDragHandle?.setPointerCapture?.(event.pointerId);
+    try {
+      this.controlDragHandle?.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Drag still works without capture when the browser rejects it.
+    }
   }
 
   moveControlDrag(event) {
@@ -5889,7 +5897,11 @@ class InputController {
     event.preventDefault();
     event.stopPropagation();
     this.buttons?.classList.remove("is-dragging");
-    this.controlDragHandle?.releasePointerCapture?.(event.pointerId);
+    try {
+      this.controlDragHandle?.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // Pointer capture may already be gone after cancellation.
+    }
     this.controlDrag = null;
     this.saveControlPosition();
   }
