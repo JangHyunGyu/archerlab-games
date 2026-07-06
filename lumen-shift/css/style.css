@@ -794,7 +794,7 @@ button {
   z-index: 21;
   width: min(360px, calc(100vw - 18px));
   display: grid;
-  grid-template-columns: 0.96fr 0.96fr 0.96fr 1fr 1.2fr;
+  grid-template-columns: 1.18fr 1fr 0.9fr 0.9fr 0.9fr;
   grid-template-rows: 26px 52px;
   gap: 6px;
   pointer-events: auto;
@@ -914,13 +914,27 @@ button {
 
 .touch-controls [data-action="drop"],
 .touch-controls .drop-key {
+  grid-column: 1;
   background: linear-gradient(135deg, rgba(104, 233, 255, 0.74), rgba(255, 91, 212, 0.72));
   color: #050913;
   font-size: 22px;
 }
 
 .touch-controls [data-action="rotate"] {
+  grid-column: 2;
   font-size: 27px;
+}
+
+.touch-controls [data-action="left"] {
+  grid-column: 3;
+}
+
+.touch-controls [data-action="down"] {
+  grid-column: 4;
+}
+
+.touch-controls [data-action="right"] {
+  grid-column: 5;
 }
 
 .touch-controls [data-action="left"],
@@ -974,29 +988,29 @@ button {
   .touch-controls {
     width: min(720px, calc(100vw - 72px));
     bottom: max(26px, calc(env(safe-area-inset-bottom) + 18px));
-    grid-template-columns: 82px 82px 82px minmax(120px, 1fr) 96px 116px;
+    grid-template-columns: 116px minmax(70px, 1fr) 96px minmax(70px, 1fr) 82px 82px 82px;
     grid-template-rows: 28px 62px;
     gap: 8px;
   }
 
-  .touch-controls [data-action="left"] {
+  .touch-controls [data-action="drop"] {
     grid-column: 1;
   }
 
-  .touch-controls [data-action="down"] {
-    grid-column: 2;
-  }
-
-  .touch-controls [data-action="right"] {
+  .touch-controls [data-action="rotate"] {
     grid-column: 3;
   }
 
-  .touch-controls [data-action="rotate"] {
+  .touch-controls [data-action="left"] {
     grid-column: 5;
   }
 
-  .touch-controls [data-action="drop"] {
+  .touch-controls [data-action="down"] {
     grid-column: 6;
+  }
+
+  .touch-controls [data-action="right"] {
+    grid-column: 7;
   }
 
   .touch-controls button {
@@ -1022,7 +1036,7 @@ button {
 @media (pointer: coarse) and (min-width: 1000px) {
   .touch-controls {
     width: min(820px, calc(100vw - 104px));
-    grid-template-columns: 92px 92px 92px minmax(180px, 1fr) 106px 128px;
+    grid-template-columns: 128px minmax(90px, 1fr) 106px minmax(90px, 1fr) 92px 92px 92px;
     grid-template-rows: 28px 68px;
   }
 }
