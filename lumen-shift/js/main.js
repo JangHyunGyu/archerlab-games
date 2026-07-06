@@ -321,6 +321,30 @@ function writeStorage(key, value) {
   }
 }
 
+function removeStorage(key) {
+  try {
+    localStorage.removeItem(`${STORAGE_PREFIX}:${key}`);
+  } catch {
+    // Ignore private-mode storage failures.
+  }
+}
+
+function cssPx(value) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function safeAreaInsets() {
+  if (typeof document === "undefined" || !document.documentElement) return { top: 0, left: 0, right: 0, bottom: 0 };
+  const style = getComputedStyle(document.documentElement);
+  return {
+    top: cssPx(style.getPropertyValue("--safe-top")),
+    left: cssPx(style.getPropertyValue("--safe-left")),
+    right: cssPx(style.getPropertyValue("--safe-right")),
+    bottom: cssPx(style.getPropertyValue("--safe-bottom")),
+  };
+}
+
 class RankClient {
   constructor() {
     this.sessionId = "";
@@ -3013,8 +3037,11 @@ class PixiView {
     const w = this.app.screen.width;
     const h = this.app.screen.height;
     const portrait = h >= w;
+    const safeArea = safeAreaInsets();
     const topInset = portrait ? (h < 720 ? 134 : 164) : 92;
-    const bottomInset = portrait ? (h < 720 ? 118 : 146) : 34;
+    const bottomInset = portrait
+      ? Math.max(h < 720 ? 146 : 156, safeArea.bottom + 126)
+      : 34;
     const availableH = Math.max(300, h - topInset - bottomInset);
     const boardW = portrait
       ? Math.min(w * 0.76, availableH * 0.5, 332)
@@ -5782,6 +5809,7 @@ class InputController {
     this.controlDrag = null;
     this.controlDragHandle = this.buttons?.querySelector("[data-control-drag]") || null;
     this.controlDragLabel = this.controlDragHandle?.querySelector("span") || null;
+    this.controlResetButton = this.buttons?.querySelector("[data-control-reset]") || null;
     this.keyButtons = Array.from(this.buttons?.querySelectorAll("button[data-action]") || []);
     this.keyDrag = null;
     this.layoutEditMode = false;
@@ -5850,6 +5878,14 @@ class InputController {
         event.preventDefault();
         event.stopPropagation();
         if (!event.repeat) this.toggleLayoutEditMode();
+      }, { passive: false });
+    }
+
+    if (this.controlResetButton) {
+      this.on(this.controlResetButton, "pointerdown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.resetCurrentControlLayout();
       }, { passive: false });
     }
 
@@ -6000,6 +6036,18 @@ class InputController {
     };
   }
 
+  writeOrientationStore(key, store) {
+    const layouts = store?.layouts || {};
+    if (Object.keys(layouts).length === 0) {
+      removeStorage(key);
+      return;
+    }
+    writeStorage(key, JSON.stringify({
+      version: 3,
+      layouts,
+    }));
+  }
+
   restoreControlPosition(allowLegacy = true) {
     if (this.restoreKeyLayout(allowLegacy)) return;
     const viewport = this.getLayoutViewport();
@@ -6017,6 +6065,33 @@ class InputController {
       : this.scaleFromSavedViewport(Number(saved.y), savedViewport?.h, viewport.h);
     this.applyControlPosition(x, y, false);
     if (legacy) this.saveControlPosition();
+  }
+
+  resetCurrentControlLayout() {
+    if (!this.buttons) return;
+    const { orientation } = this.getLayoutViewport();
+    const positionStore = this.readControlPositionStore();
+    const keyLayoutStore = this.readKeyLayoutStore();
+    delete positionStore.layouts[orientation];
+    delete keyLayoutStore.layouts[orientation];
+    this.writeOrientationStore(TOUCH_CONTROL_POSITION_KEY, positionStore);
+    this.writeOrientationStore(TOUCH_CONTROL_KEY_LAYOUT_KEY, keyLayoutStore);
+    removeStorage(TOUCH_CONTROL_POSITION_LEGACY_KEY);
+    removeStorage(TOUCH_CONTROL_KEY_LAYOUT_LEGACY_KEY);
+    this.stopRepeat();
+    this.controlDrag = null;
+    this.keyDrag = null;
+    this.layoutEditMode = false;
+    this.layoutChangedInEdit = false;
+    this.hasSavedKeyLayout = Object.keys(keyLayoutStore.layouts).length > 0;
+    this.clearFreeLayout();
+    this.buttons.classList.remove("is-custom-position", "is-layout-editing", "is-dragging");
+    this.buttons.style.left = "";
+    this.buttons.style.top = "";
+    this.buttons.style.right = "";
+    this.buttons.style.bottom = "";
+    this.buttons.style.transform = "";
+    this.updateControlEditLabel();
   }
 
   startControlDrag(event) {
@@ -6089,12 +6164,13 @@ class InputController {
     const rect = this.buttons?.getBoundingClientRect?.();
     if (!rect || rect.width <= 0 || rect.height <= 0) return { x, y };
     const padding = 8;
+    const safeArea = safeAreaInsets();
     const vw = window.visualViewport?.width || window.innerWidth || rect.width;
     const vh = window.visualViewport?.height || window.innerHeight || rect.height;
-    const minX = padding;
-    const maxX = Math.max(minX, vw - rect.width - padding);
-    const minY = padding;
-    const maxY = Math.max(minY, vh - rect.height - padding);
+    const minX = padding + safeArea.left;
+    const maxX = Math.max(minX, vw - rect.width - padding - safeArea.right);
+    const minY = padding + safeArea.top;
+    const maxY = Math.max(minY, vh - rect.height - padding - safeArea.bottom);
     return {
       x: clamp(x, minX, maxX),
       y: clamp(y, minY, maxY),
@@ -6278,13 +6354,16 @@ class InputController {
 
   clampKeyPosition(x, y, width, height) {
     const padding = 8;
+    const safeArea = safeAreaInsets();
     const vw = window.visualViewport?.width || window.innerWidth || width;
     const vh = window.visualViewport?.height || window.innerHeight || height;
-    const maxX = Math.max(padding, vw - width - padding);
-    const maxY = Math.max(padding, vh - height - padding);
+    const minX = padding + safeArea.left;
+    const minY = padding + safeArea.top;
+    const maxX = Math.max(minX, vw - width - padding - safeArea.right);
+    const maxY = Math.max(minY, vh - height - padding - safeArea.bottom);
     return {
-      x: clamp(x, padding, maxX),
-      y: clamp(y, padding, maxY),
+      x: clamp(x, minX, maxX),
+      y: clamp(y, minY, maxY),
     };
   }
 
