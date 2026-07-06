@@ -10,6 +10,10 @@
   --gold: #ffd36e;
   --green: #7cffb0;
   --danger: #ff5d73;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 * {
@@ -789,7 +793,7 @@ button {
 .touch-controls {
   position: fixed;
   right: auto;
-  bottom: max(22px, calc(env(safe-area-inset-bottom) + 14px));
+  bottom: max(24px, calc(var(--safe-bottom) + 16px));
   left: 50%;
   z-index: 21;
   width: min(360px, calc(100vw - 18px));
@@ -925,6 +929,33 @@ button {
   touch-action: none;
 }
 
+.control-reset-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 211, 110, 0.34);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.64);
+  color: rgba(255, 232, 174, 0.96);
+  box-shadow: inset 0 0 16px rgba(255, 211, 110, 0.06), 0 0 18px rgba(255, 211, 110, 0.18);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.touch-controls.is-layout-editing .control-reset-button {
+  display: inline-flex;
+}
+
+.touch-controls.is-free-layout .control-reset-button {
+    left: max(8px, calc(var(--safe-left) + 8px));
+    top: max(8px, calc(var(--safe-top) + 8px));
+  pointer-events: auto;
+}
+
 .touch-controls [data-action="drop"],
 .touch-controls .drop-key {
   grid-column: 1;
@@ -1000,7 +1031,7 @@ button {
 @media (pointer: coarse) and (min-width: 760px) {
   .touch-controls {
     width: min(720px, calc(100vw - 72px));
-    bottom: max(26px, calc(env(safe-area-inset-bottom) + 18px));
+    bottom: max(26px, calc(var(--safe-bottom) + 18px));
     grid-template-columns: 116px minmax(70px, 1fr) 96px minmax(70px, 1fr) 82px 82px 82px;
     grid-template-rows: 28px 62px;
     column-gap: 8px;
@@ -1057,15 +1088,15 @@ button {
 
 @media (pointer: coarse) and (orientation: landscape) {
   .touch-controls:not(.is-custom-position):not(.is-free-layout) {
-    left: 50%;
-    right: auto;
-    bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
-    width: min(860px, calc(100vw - 24px));
-    grid-template-columns: 92px 64px 64px minmax(150px, 1fr) 64px 64px 64px;
-    grid-template-rows: 24px 56px;
-    column-gap: 8px;
+    left: max(12px, calc(var(--safe-left) + 12px));
+    right: max(12px, calc(var(--safe-right) + 12px));
+    bottom: max(12px, calc(var(--safe-bottom) + 8px));
+    width: auto;
+    grid-template-columns: 84px 56px 56px minmax(120px, 1fr) 56px 56px 56px;
+    grid-template-rows: 24px 54px;
+    column-gap: 6px;
     row-gap: 10px;
-    transform: translateX(-50%);
+    transform: none;
     pointer-events: none;
   }
 
@@ -1078,8 +1109,8 @@ button {
     grid-column: 1;
     grid-row: 1;
     justify-self: stretch;
-    width: 92px;
-    min-width: 92px;
+    width: 84px;
+    min-width: 84px;
     height: 24px;
     font-size: 11px;
   }
@@ -1087,17 +1118,17 @@ button {
   .touch-controls:not(.is-custom-position):not(.is-free-layout) button {
     grid-row: 2;
     border-radius: 9px;
-    font-size: 24px;
+    font-size: 23px;
   }
 
   .touch-controls:not(.is-custom-position):not(.is-free-layout) [data-action="drop"] {
     grid-column: 2;
-    font-size: 24px;
+    font-size: 23px;
   }
 
   .touch-controls:not(.is-custom-position):not(.is-free-layout) [data-action="rotate"] {
     grid-column: 3;
-    font-size: 26px;
+    font-size: 25px;
   }
 
   .touch-controls:not(.is-custom-position):not(.is-free-layout) [data-action="left"] {
@@ -1136,7 +1167,7 @@ button {
     grid-template-rows: 24px 46px;
     column-gap: 5px;
     row-gap: 12px;
-    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
+    bottom: max(18px, calc(var(--safe-bottom) + 12px));
   }
 
   .control-drag-handle {
