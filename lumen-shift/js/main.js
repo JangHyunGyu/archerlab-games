@@ -5853,6 +5853,19 @@ class InputController {
       }, { passive: false });
     }
 
+    this.on(window, "pointermove", (event) => {
+      if (this.controlDrag) this.moveControlDrag(event);
+      if (this.keyDrag) this.moveKeyDrag(event);
+    }, { passive: false });
+    this.on(window, "pointerup", (event) => {
+      if (this.controlDrag) this.endControlDrag(event);
+      if (this.keyDrag) this.endKeyDrag(event);
+    }, { passive: false });
+    this.on(window, "pointercancel", (event) => {
+      if (this.controlDrag) this.endControlDrag(event);
+      if (this.keyDrag) this.endKeyDrag(event);
+    }, { passive: false });
+
     const keepControlsOnScreen = () => this.reclampControlPosition();
     this.on(window, "resize", keepControlsOnScreen, { passive: true });
     this.on(window, "orientationchange", keepControlsOnScreen, { passive: true });
@@ -5991,7 +6004,9 @@ class InputController {
     if (this.restoreKeyLayout(allowLegacy)) return;
     const viewport = this.getLayoutViewport();
     const store = this.readControlPositionStore();
-    const saved = store.layouts?.[viewport.orientation] || (allowLegacy ? this.readLegacyControlPosition() : null);
+    const stored = store.layouts?.[viewport.orientation];
+    const legacy = allowLegacy && !stored ? this.readLegacyControlPosition() : null;
+    const saved = stored || legacy;
     if (!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y)) return;
     const savedViewport = this.normalizeViewport(saved.viewport);
     const x = Number.isFinite(saved.xRatio)
@@ -6001,6 +6016,7 @@ class InputController {
       ? saved.yRatio * viewport.h
       : this.scaleFromSavedViewport(Number(saved.y), savedViewport?.h, viewport.h);
     this.applyControlPosition(x, y, false);
+    if (legacy) this.saveControlPosition();
   }
 
   startControlDrag(event) {
@@ -6044,6 +6060,15 @@ class InputController {
     if (!this.controlDrag || event.pointerId !== this.controlDrag.pointerId) return;
     event.preventDefault();
     event.stopPropagation();
+    const distance = Math.hypot(event.clientX - this.controlDrag.startX, event.clientY - this.controlDrag.startY);
+    if (distance > 6) this.controlDrag.moved = true;
+    if (this.controlDrag.moved && !this.controlDrag.freeLayout) {
+      this.applyControlPosition(
+        event.clientX - this.controlDrag.offsetX,
+        event.clientY - this.controlDrag.offsetY,
+        false,
+      );
+    }
     const wasTap = !this.controlDrag.moved;
     const freeLayout = this.controlDrag.freeLayout;
     this.buttons?.classList.remove("is-dragging");
@@ -6237,7 +6262,9 @@ class InputController {
   restoreKeyLayout(allowLegacy = true) {
     const viewport = this.getLayoutViewport();
     const store = this.readKeyLayoutStore();
-    const layout = store.layouts?.[viewport.orientation] || (allowLegacy ? this.readLegacyKeyLayout() : null);
+    const stored = store.layouts?.[viewport.orientation];
+    const legacy = allowLegacy && !stored ? this.readLegacyKeyLayout() : null;
+    const layout = stored || legacy;
     if (!layout?.items || typeof layout.items !== "object") return false;
     const wasEditing = this.layoutEditMode;
     if (this.buttons?.classList.contains("is-free-layout")) this.clearFreeLayout();
@@ -6245,6 +6272,7 @@ class InputController {
     if (wasEditing) this.buttons?.classList.add("is-layout-editing");
     this.hasSavedKeyLayout = true;
     this.reclampKeyPositions(false);
+    if (legacy) this.saveKeyLayout();
     return true;
   }
 
