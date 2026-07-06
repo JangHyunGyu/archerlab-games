@@ -5845,6 +5845,12 @@ class InputController {
       this.on(this.controlDragHandle, "pointermove", (event) => this.moveControlDrag(event));
       this.on(this.controlDragHandle, "pointerup", (event) => this.endControlDrag(event));
       this.on(this.controlDragHandle, "pointercancel", (event) => this.endControlDrag(event));
+      this.on(this.controlDragHandle, "keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (!event.repeat) this.toggleLayoutEditMode();
+      }, { passive: false });
     }
 
     const keepControlsOnScreen = () => this.reclampControlPosition();
