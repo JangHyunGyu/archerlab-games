@@ -1205,12 +1205,14 @@ class AudioDirector {
       this.nativeBacking.muted = false;
       this.nativeBacking.volume = Math.max(this.nativeBacking.volume || 0, 0.42);
       const result = this.nativeBacking.play();
-      result?.then?.(() => {
+      const handleSuccess = () => {
         window.clearTimeout(this.nativeBackingRetryTimer);
         this.nativeBackingStarted = true;
         this.nativeBackingError = "";
-      });
-      result?.catch?.(handleFailure);
+      };
+      if (result?.then) {
+        result.then(handleSuccess, handleFailure);
+      }
       this.nativeBackingStarted = true;
     } catch (err) {
       handleFailure(err);
