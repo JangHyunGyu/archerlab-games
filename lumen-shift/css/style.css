@@ -1055,6 +1055,64 @@ button {
   }
 }
 
+@media (pointer: coarse) and (orientation: landscape) {
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) {
+    left: 50%;
+    right: auto;
+    bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+    width: min(860px, calc(100vw - 24px));
+    grid-template-columns: 92px 64px 64px minmax(150px, 1fr) 64px 64px 64px;
+    grid-template-rows: 24px 56px;
+    column-gap: 8px;
+    row-gap: 10px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) .control-drag-handle,
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) button {
+    pointer-events: auto;
+  }
+
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) .control-drag-handle {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: stretch;
+    width: 92px;
+    min-width: 92px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) button {
+    grid-row: 2;
+    border-radius: 9px;
+    font-size: 24px;
+  }
+
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) [data-action="drop"] {
+    grid-column: 2;
+    font-size: 24px;
+  }
+
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) [data-action="rotate"] {
+    grid-column: 3;
+    font-size: 26px;
+  }
+
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) [data-action="left"] {
+    grid-column: 5;
+  }
+
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) [data-action="down"] {
+    grid-column: 6;
+  }
+
+  .touch-controls:not(.is-custom-position):not(.is-free-layout) [data-action="right"] {
+    grid-column: 7;
+  }
+}
+
 @media (max-height: 720px) and (orientation: portrait) {
   .hud {
     top: calc(max(8px, env(safe-area-inset-top)) + 22px);
