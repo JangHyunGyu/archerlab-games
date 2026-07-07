@@ -17,6 +17,7 @@
   };
   const GAME_SPEED_STEPS = [1, 1.5, 2];
   const DEFAULT_GAME_SPEED = GAME_SPEED_STEPS[0];
+  const SKILL_REROLL_BASE_COST = 5;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rand = (min, max) => Math.random() * (max - min) + min;
@@ -2195,6 +2196,11 @@
       this.rankNameFocusRaf = 0;
       this.hitStopTimer = 0;
       this.speedMultiplier = 1;
+      this.skillRerollsThisRun = 0;
+      this.skillRerollUsed = false;
+      this.skillChoiceCardObjects = [];
+      this.skillRerollButtonObjects = null;
+      this.currentSkillChoiceSignature = "";
       this.pausedByButton = false;
       this.events.once("shutdown", () => this.disposeScene());
       this.events.once("destroy", () => this.disposeScene());
@@ -5321,6 +5327,9 @@
       this.focusPoint = null;
       this.hitStopTimer = 0;
       this.setGameSpeed(DEFAULT_GAME_SPEED);
+      this.skillRerollsThisRun = 0;
+      this.skillRerollUsed = false;
+      this.currentSkillChoiceSignature = "";
       this.recruitedDefenders = new Set(["c"]);
       this.recruitOrder = ["c"];
       this.defenders.forEach((defender) => {
@@ -8358,6 +8367,9 @@
       this.killsInLevel = 0;
       this.levelNeed = getLevelNeedForLevel(this.level);
       this.damage = getTeamDamageForLevel(this.level);
+      this.skillRerollUsed = false;
+      this.skillChoiceCardObjects = [];
+      this.currentSkillChoiceSignature = "";
       this.clearOverlay();
 
       const items = this.overlayObjects;
@@ -8384,9 +8396,8 @@
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(525));
 
-      const upgrades = this.pickUpgrades();
-      const xs = upgrades.length === 1 ? [270] : upgrades.length === 2 ? [174, 366] : [92, 270, 448];
-      upgrades.forEach((upgrade, index) => this.addSkillCard(xs[index], 548, upgrade, index));
+      this.renderSkillChoiceCards();
+      this.addSkillRerollButton();
       items.push(this.add.text(270, 810, "카드를 눌러 즉시 적용", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 18,
@@ -8395,6 +8406,130 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(535));
+    }
+
+    getSkillRerollCost() {
+      const rerollNumber = Math.max(1, Math.floor(Number(this.skillRerollsThisRun) || 0) + 1);
+      const stageMultiplier = Math.max(1, Math.floor(Number(this.stage) || 1));
+      return SKILL_REROLL_BASE_COST * (rerollNumber + stageMultiplier - 1);
+    }
+
+    getUpgradeChoiceSignature(upgrades) {
+      return (upgrades || [])
+        .map((upgrade) => upgrade?.id || "")
+        .sort()
+        .join("|");
+    }
+
+    pickSkillChoiceUpgrades(avoidSignature = "") {
+      let upgrades = this.pickUpgrades();
+      for (let attempt = 0; attempt < 6 && avoidSignature && this.getUpgradeChoiceSignature(upgrades) === avoidSignature; attempt += 1) {
+        upgrades = this.pickUpgrades();
+      }
+      return upgrades;
+    }
+
+    destroySkillChoiceCards() {
+      const cardObjects = this.skillChoiceCardObjects || [];
+      if (cardObjects.length <= 0) {
+        this.skillChoiceCardObjects = [];
+        return;
+      }
+      const cardSet = new Set(cardObjects);
+      cardObjects.forEach((item) => this.destroyGameObject(item));
+      this.overlayObjects = this.overlayObjects.filter((item) => !cardSet.has(item));
+      this.skillChoiceCardObjects = [];
+    }
+
+    renderSkillChoiceCards(avoidSignature = "") {
+      this.destroySkillChoiceCards();
+      const upgrades = this.pickSkillChoiceUpgrades(avoidSignature);
+      this.currentSkillChoiceSignature = this.getUpgradeChoiceSignature(upgrades);
+      const xs = upgrades.length === 1 ? [270] : upgrades.length === 2 ? [174, 366] : [92, 270, 448];
+      upgrades.forEach((upgrade, index) => this.addSkillCard(xs[index], 548, upgrade, index));
+    }
+
+    addSkillRerollButton() {
+      const x = 270;
+      const y = 858;
+      const width = 176;
+      const height = 42;
+      const cost = this.getSkillRerollCost();
+      const canAfford = this.coins >= cost;
+      const accent = this.skillRerollUsed ? 0x5b646b : canAfford ? COLORS.blue : 0x6f3333;
+      const shadow = this.add.rectangle(x, y + 6, width, height, 0x000000, 0.36).setDepth(535);
+      const outer = this.add.rectangle(x, y, width, height, accent, this.skillRerollUsed ? 0.55 : 0.92)
+        .setStrokeStyle(2, this.skillRerollUsed ? 0xaab2b8 : 0xffffff, this.skillRerollUsed ? 0.32 : 0.62)
+        .setDepth(536);
+      const inner = this.add.rectangle(x, y, width - 12, height - 12, 0x101820, this.skillRerollUsed ? 0.6 : 0.88)
+        .setStrokeStyle(1, accent, this.skillRerollUsed ? 0.32 : 0.72)
+        .setDepth(537);
+      const text = this.add.text(x, y, this.skillRerollUsed ? "리롤 완료" : `리롤 $${cost}`, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 18,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 4
+      }).setOrigin(0.5).setDepth(538);
+      const hit = this.add.rectangle(x, y, width, height, 0xffffff, 0)
+        .setDepth(539)
+        .setInteractive({ useHandCursor: !this.skillRerollUsed });
+      const objects = [shadow, outer, inner, text, hit];
+      const setHover = (hovered) => {
+        if (this.skillRerollUsed) {
+          return;
+        }
+        outer.setAlpha(hovered ? 1 : 0.92);
+        inner.setFillStyle(hovered ? 0x162633 : 0x101820, hovered ? 0.96 : 0.88);
+        text.setScale(hovered ? 1.04 : 1);
+      };
+      hit.on("pointerdown", () => this.rerollSkillChoices());
+      hit.on("pointerover", () => setHover(true));
+      hit.on("pointerout", () => setHover(false));
+      objects.forEach((item) => this.overlayObjects.push(item));
+      this.skillRerollButtonObjects = { shadow, outer, inner, text, hit };
+    }
+
+    updateSkillRerollButton() {
+      const button = this.skillRerollButtonObjects;
+      if (!button?.text || !button.text.active) {
+        return;
+      }
+      const cost = this.getSkillRerollCost();
+      const canAfford = this.coins >= cost;
+      const accent = this.skillRerollUsed ? 0x5b646b : canAfford ? COLORS.blue : 0x6f3333;
+      button.text.setText(this.skillRerollUsed ? "리롤 완료" : `리롤 $${cost}`);
+      button.outer.setFillStyle(accent, this.skillRerollUsed ? 0.55 : 0.92);
+      button.outer.setStrokeStyle(2, this.skillRerollUsed ? 0xaab2b8 : 0xffffff, this.skillRerollUsed ? 0.32 : 0.62);
+      button.inner.setFillStyle(0x101820, this.skillRerollUsed ? 0.6 : 0.88);
+      button.inner.setStrokeStyle(1, accent, this.skillRerollUsed ? 0.32 : 0.72);
+      if (this.skillRerollUsed) {
+        button.hit.disableInteractive();
+      } else {
+        button.hit.setInteractive({ useHandCursor: true });
+      }
+    }
+
+    rerollSkillChoices() {
+      if (this.mode !== "skill" || this.skillRerollUsed) {
+        return;
+      }
+      const cost = this.getSkillRerollCost();
+      if (this.coins < cost) {
+        this.playSfx("core", 0.65);
+        this.showToast("코인이 부족합니다", COLORS.red);
+        return;
+      }
+      const previousSignature = this.currentSkillChoiceSignature;
+      this.coins = Math.max(0, Math.floor(Number(this.coins) || 0) - cost);
+      this.skillRerollsThisRun = Math.max(0, Math.floor(Number(this.skillRerollsThisRun) || 0)) + 1;
+      this.skillRerollUsed = true;
+      this.playSfx("button", 0.85);
+      this.renderSkillChoiceCards(previousSignature);
+      this.updateSkillRerollButton();
+      this.updateHud();
+      this.showToast(`리롤 -$${cost}`, COLORS.gold);
     }
 
     formatPercent(value) {
@@ -9159,7 +9294,12 @@
         item.on("pointerover", () => setHover(true));
         item.on("pointerout", () => setHover(false));
       });
-      [...animated, hit].forEach((item) => this.overlayObjects.push(item));
+      const objects = [...animated, hit];
+      objects.forEach((item) => this.overlayObjects.push(item));
+      if (this.skillChoiceCardObjects) {
+        this.skillChoiceCardObjects.push(...objects);
+      }
+      return objects;
     }
 
     getUpgradeCharacterKey(id) {
@@ -9276,6 +9416,8 @@
         this.destroyGameObject(item);
       });
       this.overlayObjects = [];
+      this.skillChoiceCardObjects = [];
+      this.skillRerollButtonObjects = null;
       this.shopResetNoticeObjects = null;
     }
 
