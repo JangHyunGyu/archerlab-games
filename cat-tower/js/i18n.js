@@ -73,7 +73,7 @@
       'cat.9': '사바나',
 
       // 메타
-      'title': '고양이 타워',
+      'title': '고양이 타워 - 무료 고양이 합성 물리 퍼즐 | ArcherLab Games',
     },
     en: {
       'menu.tagline': 'Merge cats all the way to Savannah',
@@ -137,7 +137,7 @@
       'cat.8': 'Maine Coon',
       'cat.9': 'Savannah',
 
-      'title': 'Cat Tower',
+      'title': 'Cat Tower - Free Cat Merge Puzzle Game | ArcherLab Games',
     },
   };
 
