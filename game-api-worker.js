@@ -1044,25 +1044,38 @@ async function recordCatTowerScoreEvents(db, body) {
         return jsonResponse({ error: 'score session expired' }, 410);
     }
 
+    const currentEventCount = Math.max(0, parseInteger(session.event_count) || 0);
     let deltaTotal = 0;
+    let appliedEventCount = 0;
     let hasFinalMerge = false;
     try {
-        events.forEach((event, index) => {
-            if (String(event?.type || 'merge') === 'final_merge') hasFinalMerge = true;
+        events.forEach((event) => {
+            const seq = parseInteger(event?.seq ?? event?.event_seq ?? event?.eventSeq);
+            if (Number.isFinite(seq)) {
+                if (seq <= currentEventCount) return;
+                if (seq !== currentEventCount + appliedEventCount + 1) {
+                    throw new Error('cat-tower score event sequence mismatch');
+                }
+            }
+
+            const eventNumber = currentEventCount + appliedEventCount + 1;
+            const type = String(event?.type || 'merge');
+            if (type === 'final_merge') hasFinalMerge = true;
             const combo = parseInteger(event?.combo ?? 1);
-            if (String(event?.type || 'merge') === 'merge'
+            if (type === 'merge'
                 && Number.isFinite(combo)
-                && combo > Number(session.event_count) + index + 1) {
+                && combo > eventNumber) {
                 throw new Error('cat-tower combo exceeds session sequence');
             }
             deltaTotal += validateCatTowerScoreEvent(event);
+            appliedEventCount += 1;
         });
     } catch (err) {
         return jsonResponse({ error: err.message }, 400);
     }
 
     const projectedScore = Number(session.score) + deltaTotal;
-    const projectedEventCount = Number(session.event_count) + events.length;
+    const projectedEventCount = currentEventCount + appliedEventCount;
     if (projectedScore > CAT_TOWER_MAX_SCORE) {
         return jsonResponse({ error: 'cat-tower score exceeds allowed maximum' }, 400);
     }

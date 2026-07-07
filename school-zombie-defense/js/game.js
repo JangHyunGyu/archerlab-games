@@ -15,9 +15,12 @@
     blue: 0x45d7ff,
     white: 0xf7fbff
   };
+  const GAME_SPEED_STEPS = [1, 1.5, 2];
+  const DEFAULT_GAME_SPEED = GAME_SPEED_STEPS[0];
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rand = (min, max) => Math.random() * (max - min) + min;
+  const formatGameSpeedLabel = (speed) => Number.isInteger(speed) ? `x${speed}.0` : `x${speed}`;
   const SUPPORTS_WEBP = (() => {
     try {
       const canvas = document.createElement("canvas");
@@ -2645,6 +2648,7 @@
       this.progressBack = this.add.rectangle(270, 75, 508, 6, 0x030404, 0.82).setOrigin(0.5).setDepth(302);
       this.progressBar = this.add.rectangle(16, 75, 1, 6, COLORS.gold, 1).setOrigin(0, 0.5).setDepth(303);
       this.createHomeButton();
+      this.createSpeedButton();
 
       this.ui.timer = this.add.text(82, 42, "00:00", {
         fontFamily: "Arial, sans-serif",
@@ -2712,6 +2716,42 @@
       hit.on("pointerover", () => drawIcon(true));
       hit.on("pointerout", () => drawIcon(false));
       this.ui.homeButton = { base, glow, icon, hit };
+    }
+
+    createSpeedButton() {
+      const x = 493;
+      const y = 42;
+      const circle = this.textures.exists("ui-speed-circle")
+        ? this.add.image(x, y, "ui-speed-circle").setDisplaySize(60, 60)
+        : this.add.circle(x, y, 27, 0x1b232a, 0.78);
+      circle.setDepth(315);
+      const text = this.add.text(x, y, formatGameSpeedLabel(this.speedMultiplier || DEFAULT_GAME_SPEED), {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 18,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#111",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(316);
+      const hit = this.add.zone(x, y, 62, 62)
+        .setDepth(320)
+        .setInteractive({ useHandCursor: true });
+      const setHover = (hovered) => {
+        circle.setAlpha(hovered ? 1 : 0.92);
+        text.setScale(hovered ? 1.05 : 1);
+      };
+      hit.on("pointerdown", (pointer, localX, localY, event) => {
+        if (event && typeof event.stopPropagation === "function") {
+          event.stopPropagation();
+        }
+        this.unlockAudio();
+        this.toggleSpeed();
+      });
+      hit.on("pointerover", () => setHover(true));
+      hit.on("pointerout", () => setHover(false));
+      this.speedCircle = circle;
+      this.ui.speed = text;
+      this.ui.speedButton = { circle, text, hit };
     }
 
     createStatusPanel() {
@@ -5129,10 +5169,7 @@
       }
       this.unlockAudio();
       this.playSfx("button", 0.85);
-      this.speedMultiplier = 1;
-      if (this.ui.speed) {
-        this.ui.speed.setText("x1.0");
-      }
+      this.setGameSpeed(DEFAULT_GAME_SPEED);
       if (this.ui.pauseText) {
         this.ui.pauseText.setText("II");
       }
@@ -5283,6 +5320,7 @@
       this.playerFireTimer = 0;
       this.focusPoint = null;
       this.hitStopTimer = 0;
+      this.setGameSpeed(DEFAULT_GAME_SPEED);
       this.recruitedDefenders = new Set(["c"]);
       this.recruitOrder = ["c"];
       this.defenders.forEach((defender) => {
@@ -5364,11 +5402,22 @@
       this.addOverlayButton(270, 498, 184, 52, "계속", 523, () => this.togglePause(), COLORS.gold);
     }
 
-    toggleSpeed() {
-      this.speedMultiplier = this.speedMultiplier === 1 ? 1.5 : 1;
+    setGameSpeed(speed = DEFAULT_GAME_SPEED) {
+      const normalized = GAME_SPEED_STEPS.find((step) => Math.abs(step - speed) < 0.001) || DEFAULT_GAME_SPEED;
+      this.speedMultiplier = normalized;
       if (this.ui.speed) {
-        this.ui.speed.setText(this.speedMultiplier === 1 ? "x1.0" : "x1.5");
+        this.ui.speed.setText(formatGameSpeedLabel(normalized));
       }
+    }
+
+    toggleSpeed() {
+      if (this.mode !== "playing" && this.mode !== "paused") {
+        return;
+      }
+      this.playSfx("button", 0.85);
+      const currentIndex = GAME_SPEED_STEPS.findIndex((step) => Math.abs(step - this.speedMultiplier) < 0.001);
+      const nextSpeed = GAME_SPEED_STEPS[(currentIndex + 1) % GAME_SPEED_STEPS.length] || DEFAULT_GAME_SPEED;
+      this.setGameSpeed(nextSpeed);
     }
 
     update(time, delta) {
@@ -9157,6 +9206,7 @@
         return;
       }
       this.mode = "gameover";
+      this.setGameSpeed(DEFAULT_GAME_SPEED);
       this.cancelRunTimers();
       this.cancelSceneTimers();
       this.clearTransientObjects();
