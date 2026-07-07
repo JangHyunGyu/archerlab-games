@@ -285,7 +285,7 @@ export class MenuScene extends Phaser.Scene {
 
     _createCleanMenu() {
         const alLink = document.getElementById('archerlab-link');
-        if (alLink) alLink.style.display = 'none';
+        if (alLink) alLink.style.display = '';
 
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
             || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
