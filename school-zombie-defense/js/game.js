@@ -8406,6 +8406,7 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(535));
+      this.updateHud();
     }
 
     getSkillRerollCost() {
