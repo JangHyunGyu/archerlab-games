@@ -36,6 +36,17 @@ const PAGES = [
     ctaHref: '/blockpang/'
   },
   {
+    slug: 'block-puzzle-game',
+    lang: 'en',
+    h1: 'Free Block Puzzle Game - Play Blockpang Online',
+    title: 'Free Block Puzzle Game | Play Blockpang Online',
+    meta: 'Play Blockpang, a free 10x10 block puzzle game in your browser. Place blocks, clear lines, and chase a high score on mobile or desktop.',
+    keywords: 'free block puzzle game, block puzzle online, 10x10 block game, blockpang, browser puzzle game',
+    intro: 'Blockpang is a clean 10x10 block puzzle you can open instantly in a browser. It is built for short mobile and desktop puzzle sessions.',
+    ctaHref: '/blockpang/',
+    primaryGame: 'Blockpang'
+  },
+  {
     slug: 'cat-tower-game',
     lang: 'en',
     h1: 'Cat Tower Game - Free Cat Merge Puzzle Online',
@@ -45,6 +56,83 @@ const PAGES = [
     intro: 'Cat Tower is a quick browser merge puzzle where matching cats evolve into the next tier. It is built for short sessions on mobile or desktop.',
     ctaHref: '/cat-tower/',
     primaryGame: 'Cat Tower'
+  },
+  {
+    slug: 'jelly-pang-2048-game',
+    lang: 'en',
+    h1: 'Jelly Pang 2048 - Free Jelly Merge Puzzle',
+    title: 'Jelly Pang 2048 | Free Jelly Merge Puzzle Game',
+    meta: 'Play Jelly Pang 2048, a free browser jelly merge puzzle with soft animations, 4x4 board strategy, high scores, and instant mobile play.',
+    keywords: 'jelly pang 2048, jelly merge puzzle, 2048 puzzle game, free merge game, browser puzzle game',
+    intro: 'Jelly Pang 2048 turns the familiar merge puzzle loop into a soft jelly board. Slide, merge, and build toward the crown jelly.',
+    ctaHref: '/jelly-pang-2048/',
+    primaryGame: 'Jelly Pang 2048'
+  },
+  {
+    slug: 'lumen-shift-block-puzzle',
+    lang: 'en',
+    h1: 'Lumen Shift - Free Falling Block Puzzle Game',
+    title: 'Lumen Shift | Free Falling Block Puzzle Browser Game',
+    meta: 'Play Lumen Shift, a free falling block puzzle with music-reactive light, particles, touch controls, stages, and browser ranking.',
+    keywords: 'lumen shift, falling block puzzle, free block puzzle game, tetris style browser game, music reactive puzzle',
+    intro: 'Lumen Shift is a falling block puzzle built around light, rhythm, stage changes, and fast browser play on mobile or desktop.',
+    ctaHref: '/lumen-shift/',
+    primaryGame: 'Lumen Shift'
+  },
+  {
+    slug: 'parking-escape-puzzle',
+    lang: 'en',
+    h1: 'Parking Escape Puzzle - Free Car Parking Game',
+    title: 'Parking Escape Puzzle | Free Car Parking Browser Game',
+    meta: 'Play Parking Escape, a free car parking puzzle where you slide vehicles, clear the path, and escape the lot in your browser.',
+    keywords: 'parking escape puzzle, car parking game, unblock car game, free parking puzzle, browser puzzle game',
+    intro: 'Parking Escape is a browser car puzzle about sliding blocked vehicles out of the way until the target car reaches the exit.',
+    ctaHref: '/parking-escape/',
+    primaryGame: 'Parking Escape'
+  },
+  {
+    slug: 'jewelria-match-3',
+    lang: 'en',
+    h1: 'Jewelria - Free Match 3 Jewel Puzzle',
+    title: 'Jewelria | Free Match 3 Jewel Puzzle Game',
+    meta: 'Play Jewelria, a free match 3 jewel puzzle in your browser. Swap gems, trigger combos, clear goals, and play on mobile or desktop.',
+    keywords: 'jewelria, match 3 jewel game, free match 3 puzzle, jewel puzzle game, browser puzzle game',
+    intro: 'Jewelria is a compact match 3 jewel puzzle with swaps, combo chains, special gems, and quick browser sessions.',
+    ctaHref: '/jewelria/',
+    primaryGame: 'Jewelria'
+  },
+  {
+    slug: 'school-zombie-defense-game',
+    lang: 'en',
+    h1: 'School Zombie Defense - Free Browser Defense Game',
+    title: 'School Zombie Defense | Free Zombie Defense Browser Game',
+    meta: 'Play School Zombie Defense, a free vertical zombie defense game in your browser. Hold the barricade, choose skills, and survive waves.',
+    keywords: 'school zombie defense, zombie defense game, free zombie browser game, vertical defense game, survival defense',
+    intro: 'School Zombie Defense is a portrait-friendly defense game about holding a school corridor barricade against incoming undead waves.',
+    ctaHref: '/school-zombie-defense/',
+    primaryGame: 'School Zombie Defense'
+  },
+  {
+    slug: 'slime-volleyball-online',
+    lang: 'en',
+    h1: 'Slime Volleyball Online - Free Browser Volley Game',
+    title: 'Slime Volleyball Online | Free Slime Volley Browser Game',
+    meta: 'Play Slime Volley online for free. Practice against bots or play browser volleyball matches from 1v1 to 4v4.',
+    keywords: 'slime volleyball online, slime volley, free volleyball game, browser volleyball game, multiplayer sports game',
+    intro: 'Slime Volley is a fast browser volleyball game for solo practice and online matches with simple slime controls.',
+    ctaHref: '/slimevolley/',
+    primaryGame: 'Slime Volley'
+  },
+  {
+    slug: 'shadow-survival-roguelike',
+    lang: 'en',
+    h1: 'Shadow Survival - Free Dungeon Roguelike Web Game',
+    title: 'Shadow Survival | Free 2D Dungeon Roguelike Browser Game',
+    meta: 'Play Shadow Survival, a free 2D dungeon survival roguelike web game. Defeat monsters, level up, and lead a shadow army in your browser.',
+    keywords: 'shadow survival, dungeon survival game, free roguelike browser game, 2d action survival, web game',
+    intro: 'Shadow Survival is a browser action roguelike built for short dungeon runs, level-ups, and shadow army progression.',
+    ctaHref: '/solo-leveling/',
+    primaryGame: 'Shadow Survival'
   },
   {
     slug: 'cat-tower-defense',
@@ -117,9 +205,9 @@ const COPY = {
     how: ['Press the play button below.', 'Open the game in your browser.', 'Play instantly with no install.'],
     faqTitle: 'FAQ',
     faqs: [
-      ['Is Cat Tower free?', 'Yes. Cat Tower and the other Archerlab Games browser titles are free to play.'],
-      ['Does it work on mobile?', 'Yes. Cat Tower is tuned for portrait mobile play and also works on desktop browsers.'],
-      ['Is this a defense game?', 'Cat Tower is a cat merge puzzle, not a tower defense clone. The page is provided for players searching nearby cat tower terms.']
+      ['Are the games free?', 'Yes. Archerlab Games titles are free to play in the browser.'],
+      ['Do they work on mobile?', 'Yes. The main games are designed for mobile browsers as well as desktop play.'],
+      ['Do I need to install anything?', 'No. Open a game page in a modern browser and play instantly.']
     ],
     footer: 'game.archerlab.dev - free browser games by ArcherLab'
   }
@@ -165,7 +253,7 @@ function render(p) {
     mainEntity: p.primaryGame ? {
       '@type': 'VideoGame',
       name: p.primaryGame,
-      url: `${SITE}/cat-tower/`,
+      url: `${SITE}${p.ctaHref}`,
       applicationCategory: 'Game',
       operatingSystem: 'Any',
       gamePlatform: ['Web Browser', 'Mobile Browser'],

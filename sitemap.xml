@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://game.archerlab.dev/</loc>
-    <lastmod>2026-03-01</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -14,68 +14,94 @@
   </url>
   <url>
     <loc>https://game.archerlab.dev/lumen-shift/</loc>
-    <lastmod>2026-07-04</lastmod>
+    <lastmod>2026-07-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/jelly-pang-2048/</loc>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/parking-escape/</loc>
-    <lastmod>2026-05-25</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/jewelria/</loc>
-    <lastmod>2026-05-30</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://game.archerlab.dev/jewelria/index-en</loc>
+    <lastmod>2026-07-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/jewelria/index-ja</loc>
+    <lastmod>2026-07-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://game.archerlab.dev/school-zombie-defense/</loc>
-    <lastmod>2026-06-04</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/solo-leveling/</loc>
-    <lastmod>2026-03-01</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/blockpang/</loc>
-    <lastmod>2026-03-02</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/blockpang/index-en</loc>
-    <lastmod>2026-03-02</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/slimevolley/</loc>
-    <lastmod>2026-04-01</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/solo-leveling/index-en</loc>
-    <lastmod>2026-03-01</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/solo-leveling/index-ja</loc>
-    <lastmod>2026-03-01</lastmod>
+    <lastmod>2026-07-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url><loc>https://game.archerlab.dev/seo/museolchi-webgame</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://game.archerlab.dev/seo/muryo-browser-game</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://game.archerlab.dev/seo/block-pang-muryo</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://game.archerlab.dev/seo/block-puzzle-game</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://game.archerlab.dev/seo/cat-tower-game</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://game.archerlab.dev/seo/jelly-pang-2048-game</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://game.archerlab.dev/seo/lumen-shift-block-puzzle</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://game.archerlab.dev/seo/parking-escape-puzzle</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://game.archerlab.dev/seo/jewelria-match-3</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://game.archerlab.dev/seo/school-zombie-defense-game</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://game.archerlab.dev/seo/slime-volleyball-online</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://game.archerlab.dev/seo/shadow-survival-roguelike</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://game.archerlab.dev/seo/cat-tower-defense</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://game.archerlab.dev/seo/cat-laser-tower</loc><lastmod>2026-07-07</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>
