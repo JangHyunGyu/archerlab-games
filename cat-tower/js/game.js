@@ -189,10 +189,12 @@
   let rankSessionId = null;
   let rankSessionPromise = null;
   let rankEventQueue = [];
+  let rankNextEventSeq = 1;
   let rankFlushPromise = null;
   let rankSyncFailed = false;
 
   function tt(key, vars) { return (window.I18N && window.I18N.t(key, vars)) || key; }
+  function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
   function setDangerActive(active) {
     if (dangerActive === active) return;
@@ -276,6 +278,8 @@
         nextTier,
         score,
         rankSessionId,
+        rankEventQueue: getRankEventQueueSnapshot(),
+        rankNextEventSeq,
         reachedFinal,
         ts: Date.now(),
       };
@@ -310,8 +314,42 @@
     rankSessionId = null;
     rankSessionPromise = null;
     rankEventQueue = [];
+    rankNextEventSeq = 1;
     rankFlushPromise = null;
     rankSyncFailed = false;
+  }
+
+  function toRankEventInteger(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.floor(number) : null;
+  }
+
+  function normalizeRankScoreEvent(event) {
+    if (!event || typeof event !== 'object') return null;
+    const normalized = { type: String(event.type || 'merge') };
+    ['created_tier', 'tier_created', 'tier', 'combo', 'delta', 'seq'].forEach((key) => {
+      const value = toRankEventInteger(event[key]);
+      if (value !== null) normalized[key] = value;
+    });
+    if (!Number.isFinite(normalized.delta) || normalized.delta <= 0) return null;
+    if (Number.isFinite(normalized.seq) && normalized.seq < 1) delete normalized.seq;
+    return normalized;
+  }
+
+  function getRankEventQueueSnapshot() {
+    return rankEventQueue.map(normalizeRankScoreEvent).filter(Boolean);
+  }
+
+  function restoreRankEventQueue(events) {
+    rankEventQueue = Array.isArray(events)
+      ? events.map(normalizeRankScoreEvent).filter(Boolean)
+      : [];
+  }
+
+  function canRestartRankSessionFromQueue() {
+    if (!rankEventQueue.length) return false;
+    const firstSeq = toRankEventInteger(rankEventQueue[0].seq);
+    return firstSeq === 1;
   }
 
   async function createRankSession() {
@@ -332,9 +370,10 @@
     if (rankSessionId) return Promise.resolve(rankSessionId);
     if (!rankSessionPromise) {
       rankSessionPromise = createRankSession().catch((e) => {
-        rankSyncFailed = true;
         warn('rank session create failed:', e.message);
-        throw e;
+        return null;
+      }).finally(() => {
+        if (!rankSessionId) rankSessionPromise = null;
       });
     }
     return rankSessionPromise;
@@ -342,28 +381,37 @@
 
   function startRankSession() {
     resetRankSessionState();
-    rankSessionPromise = createRankSession().catch((e) => {
-      rankSyncFailed = true;
-      warn('rank session start failed:', e.message);
-      return null;
-    });
+    ensureRankSession();
   }
 
-  function restoreRankSession(sessionId, restoredScore = 0) {
+  function restoreRankSession(sessionId, restoredScore = 0, pendingEvents = [], nextEventSeq = 1) {
     resetRankSessionState();
+    restoreRankEventQueue(pendingEvents);
+    const restoredNextSeq = toRankEventInteger(nextEventSeq);
+    const highestQueuedSeq = rankEventQueue.reduce((max, event) => {
+      const seq = toRankEventInteger(event.seq);
+      return seq !== null ? Math.max(max, seq) : max;
+    }, 0);
+    rankNextEventSeq = Math.max(1, restoredNextSeq || 1, highestQueuedSeq + 1);
     if (sessionId) {
       rankSessionId = String(sessionId);
       rankSessionPromise = Promise.resolve(rankSessionId);
-    } else if (restoredScore > 0) {
+    } else if (restoredScore > 0 && rankEventQueue.length === 0) {
       rankSyncFailed = true;
     } else {
-      startRankSession();
+      ensureRankSession();
     }
+    if (rankEventQueue.length > 0 && !rankSyncFailed) flushRankEvents();
   }
 
   function queueRankScoreEvent(event) {
     if (rankSyncFailed || !event) return;
-    rankEventQueue.push(event);
+    const normalized = normalizeRankScoreEvent(event);
+    if (!normalized) return;
+    if (!Number.isFinite(normalized.seq)) normalized.seq = rankNextEventSeq++;
+    else rankNextEventSeq = Math.max(rankNextEventSeq, normalized.seq + 1);
+    rankEventQueue.push(normalized);
+    markSaveDirty();
     flushRankEvents();
   }
 
@@ -372,11 +420,12 @@
     rankFlushPromise = (async () => {
       if (rankSyncFailed) return false;
       const sessionId = await ensureRankSession();
-      if (!sessionId) return false;
+      if (!sessionId) throw new Error('rank session unavailable');
       while (rankEventQueue.length > 0) {
-        const batch = rankEventQueue.splice(0, RANK_EVENT_BATCH_LIMIT);
+        const batch = rankEventQueue.slice(0, RANK_EVENT_BATCH_LIMIT);
         const res = await fetch(`${RANK_API_BASE}/score-events`, {
           method: 'POST',
+          keepalive: true,
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({
             game_id: GAME_ID,
@@ -385,15 +434,24 @@
           }),
         });
         if (!res.ok) {
-          rankEventQueue = batch.concat(rankEventQueue);
-          throw new Error('rank event HTTP ' + res.status);
+          const text = await res.text().catch(() => '');
+          const error = new Error('rank event HTTP ' + res.status + (text ? ' ' + text : ''));
+          error.status = res.status;
+          throw error;
         }
         const data = await res.json().catch(() => null);
         if (!data || data.success !== true) throw new Error('rank event response invalid');
+        rankEventQueue.splice(0, batch.length);
+        markSaveDirty();
       }
       return true;
     })().catch((e) => {
-      rankSyncFailed = true;
+      if ((e.status === 404 || e.status === 410) && canRestartRankSessionFromQueue()) {
+        rankSessionId = null;
+        rankSessionPromise = null;
+      } else if (e.status && e.status >= 400 && e.status < 500 && e.status !== 429) {
+        rankSyncFailed = true;
+      }
       warn('rank event sync failed:', e.message);
       return false;
     }).finally(() => {
@@ -1304,7 +1362,7 @@
       _frameCount = 0;
       _lastFpsAt = 0;
       _framesSinceFps = 0;
-      restoreRankSession(data.rankSessionId, score);
+      restoreRankSession(data.rankSessionId, score, data.rankEventQueue, data.rankNextEventSeq);
 
       if (world) {
         const existing = Composite.allBodies(world).filter(b => b.label === 'cat');
@@ -1540,7 +1598,11 @@
     status.textContent = tt('over.submitting');
     setRankSubmitLoading(true);
     try {
-      const synced = await flushRankEvents();
+      let synced = await flushRankEvents();
+      if (!synced && !rankSyncFailed) {
+        await delay(1200);
+        synced = await flushRankEvents();
+      }
       if (!rankSessionId || !synced || rankSyncFailed) throw new Error('rank score sync failed');
       const res = await submitScore(name, score);
       try { localStorage.setItem(NICK_KEY, name); } catch {}
