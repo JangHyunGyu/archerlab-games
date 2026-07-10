@@ -339,6 +339,8 @@
     death_elite: "assets/sounds/sfx/death_elite.mp3",
     explosion_large: "assets/sounds/sfx/explosion_large.mp3",
     core_full_repair: "assets/sounds/sfx/core_full_repair.mp3",
+    shop_open: "assets/sounds/sfx/shop_open.mp3",
+    upgrade_maxed: "assets/sounds/sfx/upgrade_maxed.mp3",
     button: "assets/sounds/sfx/button.mp3",
     denied: "assets/sounds/sfx/denied.mp3",
     recruit: "assets/sounds/sfx/recruit.mp3",
@@ -3628,6 +3630,8 @@
         shield_block: 0.08,
         purchase: 0.18,
         core_full_repair: 0.2,
+        shop_open: 0.2,
+        upgrade_maxed: 0.2,
         core: 0.16,
         pistol: 0.065,
         rifle: 0.032,
@@ -4892,9 +4896,13 @@
     }
 
     showShop(selectedId = this.shopSelectedCharacter || "c") {
+      const enteringShop = this.mode !== "shop";
       this.clearOverlay();
       this.mode = "shop";
       this.startBgm("menu");
+      if (enteringShop) {
+        this.playSfx("shop_open", 0.82);
+      }
       const needsProfileSync = !this.profileReady;
       if (needsProfileSync) {
         this.ensureServerProfile({ quiet: true }).then(() => {
@@ -5140,6 +5148,7 @@
       this.clearShopActionLoading();
       const level = this.getMetaUpgradeLevel(id);
       if (level >= SHOP_MAX_LEVEL) {
+        this.playSfx("upgrade_maxed", 0.78);
         this.showToast("이미 최대 강화입니다", COLORS.gold);
         return;
       }
