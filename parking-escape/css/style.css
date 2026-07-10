@@ -24,6 +24,32 @@ body {
   -webkit-touch-callout: none;
 }
 
+html.menu-open,
+html.menu-open body.menu-open {
+  width: 100%;
+  max-width: 100vw;
+  min-width: 0;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+html.menu-open #game-shell {
+  width: 100vw;
+  height: 100dvh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html.menu-open #game-container {
+  width: 100vw !important;
+  height: 100dvh !important;
+  overflow: hidden;
+}
+
 body::before {
   content: "";
   position: fixed;
@@ -333,13 +359,12 @@ button:disabled {
 
 .menu-screen {
   position: fixed;
-  left: 0;
-  top: 0;
+  inset: 0;
   z-index: 15;
-  width: var(--game-width, 100vw);
-  min-width: 100vw;
-  height: var(--game-height, 100dvh);
-  min-height: 100dvh;
+  width: 100vw;
+  min-width: 0;
+  height: 100dvh;
+  min-height: 0;
   display: grid;
   align-items: stretch;
   padding: max(80px, calc(env(safe-area-inset-top) + 76px)) 28px max(26px, env(safe-area-inset-bottom));
@@ -951,6 +976,14 @@ h2 {
   transform: translateY(1px) scale(0.99);
 }
 
+.primary-btn:focus-visible,
+.secondary-btn:focus-visible,
+.icon-btn:focus-visible,
+.archerlab-link:focus-visible {
+  outline: 3px solid #fff0a8;
+  outline-offset: 3px;
+}
+
 .modal {
   position: fixed;
   inset: 0;
@@ -1307,6 +1340,10 @@ h2 {
     grid-column: 1 / -1;
   }
 
+  .menu-control-bar .menu-actions--menu .secondary-btn {
+    grid-column: 1 / -1;
+  }
+
   .menu-actions {
     grid-template-columns: 1fr;
   }
@@ -1506,5 +1543,84 @@ h2 {
 
   .menu-actions {
     gap: 8px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .menu-screen {
+    padding-top: max(50px, calc(env(safe-area-inset-top) + 46px));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    background:
+      linear-gradient(90deg, rgba(2, 6, 14, 0.82) 0%, rgba(2, 6, 14, 0.46) 52%, rgba(2, 6, 14, 0.2) 100%),
+      linear-gradient(180deg, rgba(2, 5, 12, 0.12), rgba(2, 5, 12, 0.72));
+  }
+
+  .menu-content {
+    width: min(1120px, 100%);
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+    align-items: center;
+    gap: clamp(16px, 4vw, 44px);
+  }
+
+  .menu-title-block {
+    align-self: center;
+    padding-bottom: 0;
+  }
+
+  .menu-title-block .brand-kicker {
+    min-height: 24px;
+    padding: 4px 10px;
+    font-size: 0.62rem;
+  }
+
+  .menu-title-block h1 {
+    margin-top: 10px;
+    font-size: clamp(3rem, 10vw, 5.8rem);
+    line-height: 0.8;
+  }
+
+  .menu-lane {
+    width: min(320px, 84%);
+    height: 6px;
+    margin-top: 14px;
+  }
+
+  .menu-control-bar {
+    align-self: end;
+    width: min(380px, 100%);
+    gap: 8px;
+  }
+
+  .menu-control-bar .record-row {
+    gap: 10px;
+  }
+
+  .menu-control-bar .record-row strong {
+    font-size: 1.22rem;
+  }
+
+  .menu-control-bar .menu-actions--menu {
+    grid-template-columns: 1.2fr 1fr;
+    gap: 8px;
+  }
+
+  .menu-control-bar .menu-actions--menu .primary-btn,
+  .menu-control-bar .menu-actions--menu .secondary-btn {
+    grid-column: auto;
+    min-height: 50px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
   }
 }

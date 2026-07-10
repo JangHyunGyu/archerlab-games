@@ -3940,6 +3940,89 @@
       return { shadow, glow, plate, shine, text, hit };
     }
 
+    addTacticalMenuButton(x, y, width, height, label, depth, onClick, accent = COLORS.blue, options = {}) {
+      const visualHeight = Math.max(34, Number(options.visualHeight) || height);
+      const hitHeight = Math.max(height, Number(options.hitHeight) || height);
+      const compact = options.compact === true;
+      const primary = options.primary === true;
+      const cut = Math.max(7, Math.min(16, Math.round(visualHeight * 0.18)));
+      const left = x - width / 2;
+      const top = y - visualHeight / 2;
+      const right = left + width;
+      const bottom = top + visualHeight;
+      const shadow = this.add.rectangle(x, y + Math.max(6, visualHeight * 0.1), width * 0.94, visualHeight * 0.86, 0x000000, 0.58)
+        .setDepth(depth);
+      const glow = this.add.rectangle(x, y, width + 8, visualHeight + 8, accent, primary ? 0.12 : 0.07)
+        .setDepth(depth + 0.04);
+      const frame = this.add.graphics().setDepth(depth + 0.1);
+      const scan = this.add.rectangle(x, y - visualHeight * 0.22, width - cut * 3, 2, 0xffffff, primary ? 0.13 : 0.08)
+        .setDepth(depth + 0.18);
+      const kicker = options.kicker
+        ? this.add.text(x, y - visualHeight * 0.2, String(options.kicker), {
+          fontFamily: "Arial, sans-serif",
+          fontSize: compact ? 9 : primary ? 10 : 9,
+          fontStyle: "900",
+          color: primary ? "#ffd9d2" : "#a9cbd2"
+        }).setOrigin(0.5).setDepth(depth + 0.24)
+        : null;
+      const text = this.add.text(x, y + (kicker ? visualHeight * 0.12 : 0), label, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: Number(options.fontSize) || (compact ? 16 : primary ? 28 : 21),
+        fontStyle: "900",
+        color: primary ? "#fff5ef" : "#f2fbff",
+        stroke: "#020507",
+        strokeThickness: compact ? 3 : 5
+      }).setOrigin(0.5).setDepth(depth + 0.3);
+      text.setShadow(0, compact ? 2 : 3, "#000000", compact ? 4 : 8, true, true);
+      const hit = this.add.rectangle(x, y, width, hitHeight, 0xffffff, 0)
+        .setDepth(depth + 0.5)
+        .setInteractive({ useHandCursor: true });
+
+      const drawFrame = (hovered = false) => {
+        frame.clear();
+        frame.fillStyle(hovered ? 0x17252c : 0x0a1116, hovered ? 0.98 : 0.94);
+        frame.lineStyle(primary ? 3 : 2, accent, hovered ? 1 : 0.78);
+        frame.beginPath();
+        frame.moveTo(left + cut, top);
+        frame.lineTo(right - cut, top);
+        frame.lineTo(right, top + cut);
+        frame.lineTo(right, bottom - cut);
+        frame.lineTo(right - cut, bottom);
+        frame.lineTo(left + cut, bottom);
+        frame.lineTo(left, bottom - cut);
+        frame.lineTo(left, top + cut);
+        frame.closePath();
+        frame.fillPath();
+        frame.strokePath();
+        frame.fillStyle(accent, hovered ? 1 : 0.86);
+        frame.fillRect(left + 3, top + cut + 2, primary ? 5 : 3, Math.max(8, visualHeight - cut * 2 - 4));
+        frame.fillRect(right - (primary ? 8 : 6), top + cut + 2, primary ? 5 : 3, Math.max(8, visualHeight - cut * 2 - 4));
+        frame.lineStyle(1, 0xffffff, hovered ? 0.24 : 0.12);
+        frame.lineBetween(left + cut + 8, bottom - 8, right - cut - 8, bottom - 8);
+      };
+      const setHover = (hovered) => {
+        drawFrame(hovered);
+        glow.setAlpha(hovered ? (primary ? 0.2 : 0.13) : (primary ? 0.12 : 0.07));
+        text.setScale(hovered ? 1.025 : 1);
+        if (kicker) {
+          kicker.setAlpha(hovered ? 1 : 0.82);
+        }
+      };
+      drawFrame(false);
+      hit.on("pointerover", () => setHover(true));
+      hit.on("pointerout", () => setHover(false));
+      hit.on("pointerdown", () => {
+        this.unlockAudio();
+        onClick();
+      });
+
+      this.overlayObjects.push(shadow, glow, frame, scan, text, hit);
+      if (kicker) {
+        this.overlayObjects.push(kicker);
+      }
+      return { shadow, glow, frame, scan, kicker, text, hit };
+    }
+
     showToast(message, color = COLORS.gold) {
       const panel = this.trackTransient(this.add.rectangle(270, 158, 330, 48, 0x0b1014, 0.88)
         .setStrokeStyle(2, color, 0.9)
@@ -4688,26 +4771,60 @@
       const ratio = source.width / source.height;
       titleArt.setDisplaySize(Math.max(GAME_WIDTH, GAME_HEIGHT * ratio), Math.max(GAME_HEIGHT, GAME_WIDTH / ratio));
       items.push(titleArt);
-      items.push(this.add.rectangle(270, 118, 540, 236, 0x020304, 0.56).setDepth(501));
-      items.push(this.add.rectangle(270, 842, 540, 244, 0x020304, 0.7).setDepth(501));
-      items.push(this.add.rectangle(270, 208, 430, 2, 0xffd86b, 0.75).setDepth(502));
-      items.push(this.add.rectangle(270, 666, 540, 4, 0x57e5ff, 0.18).setDepth(502));
-      this.addOverlayButton(270, 34, 244, 40, "ArcherLab 이동", 530, () => {
+
+      const scrim = this.add.graphics().setDepth(501);
+      const bandCount = 12;
+      for (let index = 0; index < bandCount; index += 1) {
+        const progress = index / Math.max(1, bandCount - 1);
+        scrim.fillStyle(0x020406, 0.78 * Math.pow(1 - progress, 1.45));
+        scrim.fillRect(0, index * 23, GAME_WIDTH, 24);
+      }
+      for (let index = 0; index < bandCount; index += 1) {
+        const progress = index / Math.max(1, bandCount - 1);
+        scrim.fillStyle(0x020406, 0.82 * Math.pow(progress, 1.25));
+        scrim.fillRect(0, 628 + index * 28, GAME_WIDTH, 30);
+      }
+      items.push(scrim);
+
+      const hudLines = this.add.graphics().setDepth(502);
+      hudLines.lineStyle(2, 0x65ddf3, 0.48);
+      hudLines.lineBetween(38, 218, 164, 218);
+      hudLines.lineBetween(376, 218, 502, 218);
+      hudLines.lineStyle(1, 0xffffff, 0.14);
+      hudLines.lineBetween(48, 224, 492, 224);
+      hudLines.lineStyle(2, 0xf15a47, 0.72);
+      hudLines.lineBetween(42, 654, 498, 654);
+      hudLines.fillStyle(0xf15a47, 0.92);
+      hudLines.fillRect(42, 648, 42, 4);
+      hudLines.fillStyle(0x65ddf3, 0.82);
+      hudLines.fillRect(456, 648, 42, 4);
+      items.push(hudLines);
+
+      this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
         window.location.href = "https://archerlab.dev/";
-      }, COLORS.gold);
-      const eyebrow = this.add.text(270, 72, "SCHOOL UNDEAD", {
+      }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76 });
+      const protocol = this.add.text(492, 38, "07 / RED", {
         fontFamily: "Arial, sans-serif",
-        fontSize: 15,
+        fontSize: 12,
         fontStyle: "900",
-        color: "#ffdf7a",
+        color: "#ff8a78",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(1, 0.5).setDepth(504);
+      items.push(protocol);
+      const eyebrow = this.add.text(270, 79, "SCHOOL UNDEAD · DEFENSE PROTOCOL", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 13,
+        fontStyle: "900",
+        color: "#8deeff",
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(504);
       eyebrow.setShadow(0, 2, "#000000", 8, true, true);
       items.push(eyebrow);
-      const title = this.add.text(270, 126, "스쿨 언데드 디펜스", {
+      const title = this.add.text(270, 132, "스쿨 언데드 디펜스", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 39,
+        fontSize: 38,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#030607",
@@ -4715,7 +4832,7 @@
       }).setOrigin(0.5).setDepth(504);
       title.setShadow(0, 5, "#000000", 10, true, true);
       items.push(title);
-      const subtitle = this.add.text(270, 174, "무너진 복도, 마지막 방어선", {
+      const subtitle = this.add.text(270, 179, "무너진 복도 · 마지막 방어선", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 16,
         fontStyle: "900",
@@ -4725,18 +4842,40 @@
       }).setOrigin(0.5).setDepth(504);
       subtitle.setShadow(0, 3, "#000000", 7, true, true);
       items.push(subtitle);
-      items.push(this.add.rectangle(270, 708, 262, 36, 0x05080a, 0.78).setStrokeStyle(1, 0xe7bb54, 0.58).setDepth(526));
-      items.push(this.add.text(270, 708, `보유 코인 $${this.meta.coins}`, {
+
+      items.push(this.add.rectangle(270, 700, 306, 42, 0x071015, 0.9)
+        .setStrokeStyle(1, 0x65ddf3, 0.5)
+        .setDepth(526));
+      items.push(this.add.text(152, 700, "SUPPLY CREDIT", {
         fontFamily: "Arial, sans-serif",
-        fontSize: 16,
+        fontSize: 11,
         fontStyle: "900",
-        color: "#ffd86b",
+        color: "#8aaab2",
+        stroke: "#050607",
+        strokeThickness: 2
+      }).setOrigin(0, 0.5).setDepth(527));
+      items.push(this.add.text(388, 700, `$${this.meta.coins}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 19,
+        fontStyle: "900",
+        color: "#ffd36b",
         stroke: "#050607",
         strokeThickness: 3
-      }).setOrigin(0.5).setDepth(527));
-      this.addOverlayButton(270, 784, 390, 68, "출격", 530, () => this.startRun(), COLORS.gold);
-      this.addOverlayButton(164, 874, 172, 56, "랭킹", 530, () => this.showRankings(), COLORS.gold);
-      this.addOverlayButton(376, 874, 172, 56, "상점", 530, () => this.showShop(), COLORS.blue);
+      }).setOrigin(1, 0.5).setDepth(527));
+
+      this.addTacticalMenuButton(270, 790, 410, 86, "출격", 530, () => this.startRun(), 0xf15a47, {
+        primary: true,
+        kicker: "BEGIN SORTIE",
+        hitHeight: 86
+      });
+      this.addTacticalMenuButton(164, 892, 188, 76, "랭킹", 530, () => this.showRankings(), COLORS.gold, {
+        kicker: "RECORDS",
+        hitHeight: 76
+      });
+      this.addTacticalMenuButton(376, 892, 188, 76, "상점", 530, () => this.showShop(), COLORS.blue, {
+        kicker: "ARMORY",
+        hitHeight: 76
+      });
     }
 
     showShop(selectedId = this.shopSelectedCharacter || "c") {

@@ -101,6 +101,12 @@
     soundToggle: $("sound-toggle-btn"),
   };
 
+  function setMenuViewportLocked(locked) {
+    document.documentElement.classList.toggle("menu-open", locked);
+    document.body.classList.toggle("menu-open", locked);
+    if (locked) requestAnimationFrame(() => window.scrollTo(0, 0));
+  }
+
   const app = new PIXI.Application();
   await app.init({
     width: window.innerWidth,
@@ -410,6 +416,7 @@
       this.bindUI();
       this.updateSoundButton();
       this.updateMenu();
+      setMenuViewportLocked(true);
       this.resize();
 
       app.ticker.add(ticker => this.update(ticker.deltaMS));
@@ -565,6 +572,7 @@
       this.cancelTweens({ clearFx: true });
       this.mode = "loading";
       this.animating = false;
+      setMenuViewportLocked(false);
       dom.menu.classList.add("hidden");
       dom.modal.classList.add("hidden");
       dom.rankModal.classList.add("hidden");
@@ -614,6 +622,7 @@
       this.cancelDrag();
       this.cancelTweens({ clearFx: true });
       this.boardLayer.visible = false;
+      setMenuViewportLocked(true);
       dom.hud.classList.add("hidden");
       dom.modal.classList.add("hidden");
       dom.rankModal.classList.add("hidden");

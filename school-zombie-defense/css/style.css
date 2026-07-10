@@ -5,6 +5,10 @@
 :root {
   --game-viewport-width: 100vw;
   --game-viewport-height: 100dvh;
+  --game-safe-top: env(safe-area-inset-top, 0px);
+  --game-safe-right: env(safe-area-inset-right, 0px);
+  --game-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --game-safe-left: env(safe-area-inset-left, 0px);
 }
 
 html,
@@ -21,19 +25,60 @@ body {
 
 body {
   height: var(--game-viewport-height);
+  padding:
+    var(--game-safe-top)
+    var(--game-safe-right)
+    var(--game-safe-bottom)
+    var(--game-safe-left);
   display: grid;
   place-items: center;
+  position: relative;
+  isolation: isolate;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body::before {
+  z-index: -2;
+  background:
+    radial-gradient(circle at 18% 48%, rgba(29, 145, 174, 0.15), transparent 24%),
+    radial-gradient(circle at 82% 52%, rgba(184, 71, 45, 0.12), transparent 24%),
+    linear-gradient(90deg, #06090b, #0a1115 34%, #0a1115 66%, #07090b);
+}
+
+body::after {
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(4, 7, 9, 0.78), rgba(4, 7, 9, 0.2) 38%, rgba(4, 7, 9, 0.2) 62%, rgba(4, 7, 9, 0.78)),
+    repeating-linear-gradient(180deg, rgba(102, 225, 255, 0.035) 0 1px, transparent 1px 7px),
+    radial-gradient(circle at 50% 50%, rgba(44, 181, 214, 0.14), transparent 48%);
 }
 
 #game-shell {
   position: relative;
-  width: min(var(--game-viewport-width), calc(var(--game-viewport-height) * 0.5625));
-  height: min(var(--game-viewport-height), calc(var(--game-viewport-width) * 1.7777778));
+  width: min(
+    calc(var(--game-viewport-width) - var(--game-safe-left) - var(--game-safe-right)),
+    calc((var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom)) * 0.5625)
+  );
+  height: min(
+    calc(var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom)),
+    calc((var(--game-viewport-width) - var(--game-safe-left) - var(--game-safe-right)) * 1.7777778)
+  );
   max-width: 540px;
   max-height: 960px;
   background: #101418;
   overflow: hidden;
-  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.7);
+  border-inline: 1px solid rgba(112, 225, 255, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.88),
+    0 18px 70px rgba(0, 0, 0, 0.72),
+    0 0 52px rgba(69, 215, 255, 0.08);
 }
 
 #game-root,
@@ -48,6 +93,80 @@ body {
 
 #game-root canvas {
   display: block;
+}
+
+.rotate-lock {
+  display: none;
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  .rotate-lock {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding:
+      max(24px, env(safe-area-inset-top, 0px))
+      max(24px, env(safe-area-inset-right, 0px))
+      max(24px, env(safe-area-inset-bottom, 0px))
+      max(24px, env(safe-area-inset-left, 0px));
+    background:
+      repeating-linear-gradient(180deg, rgba(92, 224, 255, 0.04) 0 1px, transparent 1px 7px),
+      radial-gradient(circle at 50% 45%, rgba(28, 158, 190, 0.18), transparent 38%),
+      #05080b;
+    color: #f5fbff;
+    text-align: center;
+  }
+
+  .rotate-lock__phone {
+    position: relative;
+    width: 42px;
+    height: 68px;
+    border: 3px solid #65e7ff;
+    border-radius: 9px;
+    box-shadow: 0 0 22px rgba(101, 231, 255, 0.32);
+    animation: rotateLockPhone 1.8s ease-in-out infinite;
+  }
+
+  .rotate-lock__phone::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    width: 10px;
+    height: 2px;
+    border-radius: 999px;
+    background: #ff6752;
+    transform: translateX(-50%);
+  }
+
+  .rotate-lock strong {
+    font-size: clamp(20px, 5vw, 28px);
+    letter-spacing: -0.025em;
+  }
+
+  .rotate-lock > span:last-child {
+    color: #73e7fa;
+    font-size: 11px;
+    font-weight: 850;
+    letter-spacing: 0.12em;
+  }
+}
+
+@keyframes rotateLockPhone {
+  0%, 18%, 100% { transform: rotate(90deg); }
+  45%, 72% { transform: rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-lock__phone {
+    animation: none;
+    transform: rotate(0deg);
+  }
 }
 
 .loading {
@@ -799,7 +918,29 @@ noscript {
 }
 
 @media (max-width: 720px) {
+  body::before,
+  body::after {
+    opacity: 0;
+  }
+
   #game-shell {
+    border: 0;
     box-shadow: none;
+  }
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid #8deeff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

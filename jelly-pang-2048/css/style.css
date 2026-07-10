@@ -1211,3 +1211,496 @@ h1 {
     font-size: clamp(18px, 5vw, 23px);
   }
 }
+
+/* ---------- 2026 title hero: a real Jelly Pang scene ---------- */
+.title-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(4px, 1dvh, 10px);
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 202, 91, 0.56), transparent 30%),
+    radial-gradient(circle at 89% 18%, rgba(84, 202, 255, 0.48), transparent 32%),
+    radial-gradient(circle at 52% 96%, rgba(78, 231, 192, 0.42), transparent 38%),
+    linear-gradient(145deg, #fff2c9 0%, #fff9f5 38%, #e9f7ff 70%, #dffbf2 100%);
+}
+
+.title-screen::before,
+.title-screen::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.title-screen::before {
+  width: min(70vw, 680px);
+  aspect-ratio: 1;
+  left: -18vw;
+  bottom: -38vw;
+  border-radius: 44% 56% 62% 38%;
+  background: linear-gradient(135deg, rgba(255, 108, 147, 0.2), rgba(255, 185, 72, 0.08));
+  filter: blur(2px);
+}
+
+.title-screen::after {
+  width: min(62vw, 620px);
+  aspect-ratio: 1;
+  right: -24vw;
+  top: -32vw;
+  border-radius: 58% 42% 38% 62%;
+  background: linear-gradient(145deg, rgba(72, 189, 245, 0.24), rgba(140, 108, 247, 0.08));
+  filter: blur(3px);
+}
+
+.title-screen.hidden {
+  display: none;
+}
+
+.title-bubbles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.title-bubbles span {
+  position: absolute;
+  display: block;
+  width: clamp(24px, 6vw, 64px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255,255,255,0.88);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.96) 0 8%, transparent 9%),
+    linear-gradient(145deg, rgba(255,255,255,0.48), rgba(72,189,245,0.12) 48%, rgba(246,79,120,0.12));
+  box-shadow: inset 0 -8px 18px rgba(140,108,247,0.08), 0 12px 24px rgba(49,64,82,0.08);
+  opacity: 0.62;
+  animation: titleBubbleFloat 6s ease-in-out infinite;
+}
+
+.title-bubbles span:nth-child(1) { left: 6%; top: 18%; animation-delay: -1.2s; }
+.title-bubbles span:nth-child(2) { right: 8%; top: 12%; width: clamp(18px, 4vw, 44px); animation-delay: -3.8s; }
+.title-bubbles span:nth-child(3) { left: 12%; bottom: 14%; width: clamp(16px, 3.5vw, 38px); animation-delay: -2.4s; }
+.title-bubbles span:nth-child(4) { right: 5%; bottom: 20%; animation-delay: -4.6s; }
+.title-bubbles span:nth-child(5) { left: 48%; top: 7%; width: clamp(12px, 2.4vw, 28px); animation-delay: -0.5s; }
+
+.title-brand {
+  position: relative;
+  z-index: 3;
+  width: fit-content;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 13px;
+  border: 1px solid rgba(255,255,255,0.92);
+  border-radius: 999px;
+  color: #26364c;
+  background: rgba(255,255,255,0.66);
+  box-shadow: 0 10px 26px rgba(49,64,82,0.1), inset 0 1px 0 rgba(255,255,255,0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.title-hero {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 1120px);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0 0 clamp(2px, 1dvh, 8px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "copy"
+    "art"
+    "actions";
+  align-items: center;
+  justify-items: center;
+  gap: clamp(6px, 1.4dvh, 14px);
+  text-align: center;
+}
+
+.title-copy {
+  grid-area: copy;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: clamp(3px, 0.7dvh, 7px);
+}
+
+.title-copy .kicker {
+  margin: 0;
+  color: #b83d62;
+  font-size: clamp(9px, 2.6vw, 12px);
+  font-weight: 950;
+  letter-spacing: 0.16em;
+}
+
+.title-hero h1 {
+  max-width: 100%;
+  margin: 0;
+  color: #17283f;
+  font-size: clamp(38px, 12vw, 58px);
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.94), 0 13px 28px rgba(246,79,120,0.2);
+}
+
+.title-tagline {
+  margin: 0;
+  color: #4b5d70;
+  font-size: clamp(12px, 3.4vw, 15px);
+  line-height: 1.38;
+  font-weight: 800;
+}
+
+.title-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.title-badges span,
+.title-art-chip {
+  padding: 5px 9px;
+  border: 1px solid rgba(255,255,255,0.9);
+  border-radius: 999px;
+  color: #6f587f;
+  background: rgba(255,255,255,0.62);
+  box-shadow: 0 5px 14px rgba(49,64,82,0.08);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.title-art-shell {
+  grid-area: art;
+  position: relative;
+  width: min(82vw, 42dvh, 380px);
+  aspect-ratio: 1;
+  align-self: center;
+  justify-self: center;
+  filter: drop-shadow(0 24px 30px rgba(86,65,104,0.2));
+  animation: titleArtFloat 4.8s ease-in-out infinite;
+}
+
+.title-art-shell::before,
+.title-art-shell::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+.title-art-shell::before {
+  width: 42%;
+  height: 42%;
+  left: -7%;
+  top: 4%;
+  background: rgba(255, 116, 153, 0.28);
+}
+
+.title-art-shell::after {
+  width: 48%;
+  height: 48%;
+  right: -8%;
+  bottom: 2%;
+  background: rgba(72, 189, 245, 0.25);
+}
+
+.title-art {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: hidden;
+  border: clamp(3px, 0.8vw, 7px) solid rgba(255,255,255,0.94);
+  border-radius: clamp(24px, 7vw, 46px);
+  background: rgba(255,255,255,0.5);
+  box-shadow:
+    0 0 0 2px rgba(246,79,120,0.12),
+    0 26px 50px rgba(61,74,105,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.title-art img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.title-art-chip {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  z-index: 2;
+  translate: -50% 0;
+  width: max-content;
+  padding: 7px 12px;
+  color: #fff;
+  border-color: rgba(255,255,255,0.92);
+  background: linear-gradient(135deg, #f64f78, #ff9f43);
+  box-shadow: 0 8px 16px rgba(246,79,120,0.22);
+}
+
+.title-actions {
+  grid-area: actions;
+  width: min(100%, 330px);
+  max-width: 100%;
+  margin: 0;
+  display: grid;
+  gap: clamp(9px, 1.4dvh, 13px);
+  align-self: center;
+  justify-self: center;
+}
+
+.title-actions button {
+  position: relative;
+  min-height: 52px;
+  padding: 11px 18px;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.9);
+  border-radius: 17px;
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 950;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.title-actions button::after {
+  content: "";
+  position: absolute;
+  inset: 2px 8px auto;
+  height: 42%;
+  border-radius: 13px 13px 50% 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.24), transparent);
+  pointer-events: none;
+}
+
+.title-play {
+  background: linear-gradient(135deg, #ff9448, #f64f78 62%, #e84175);
+  box-shadow: 0 8px 0 #b63b58, 0 18px 30px rgba(242,91,115,0.24);
+}
+
+.title-rank {
+  background: linear-gradient(135deg, #45d2e9, #4c97f5 54%, #7669ef);
+  box-shadow: 0 8px 0 #4350bb, 0 18px 30px rgba(76,151,245,0.22);
+}
+
+.title-actions button:hover {
+  transform: translateY(-2px);
+  filter: saturate(1.08) brightness(1.03);
+}
+
+.title-actions button:active {
+  transform: translateY(5px) scale(0.99);
+  box-shadow: 0 3px 0 #9f3a55, 0 9px 18px rgba(49,64,82,0.18);
+}
+
+.title-actions button:focus-visible,
+.title-brand:focus-visible {
+  outline: 4px solid #17283f;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.96), 0 16px 30px rgba(49,64,82,0.2);
+}
+
+.rank-modal {
+  position: fixed;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+}
+
+@keyframes titleArtFloat {
+  0%, 100% { transform: translateY(0) rotate(-0.45deg); }
+  50% { transform: translateY(-7px) rotate(0.45deg); }
+}
+
+@keyframes titleBubbleFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-12px) scale(1.04); }
+}
+
+@media (min-width: 760px) {
+  .title-screen {
+    gap: 8px;
+    padding:
+      max(18px, env(safe-area-inset-top))
+      max(24px, env(safe-area-inset-right))
+      max(20px, env(safe-area-inset-bottom))
+      max(24px, env(safe-area-inset-left));
+  }
+
+  .title-hero {
+    height: min(100%, 780px);
+    grid-template-columns: minmax(300px, 0.82fr) minmax(390px, 1.08fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "copy art"
+      "actions art";
+    column-gap: clamp(30px, 5vw, 72px);
+    row-gap: 22px;
+    padding: 4px 0 14px;
+  }
+
+  .title-copy {
+    align-self: end;
+    justify-self: end;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .title-copy .kicker { font-size: 12px; }
+  .title-hero h1 { font-size: clamp(58px, 6.2vw, 82px); }
+  .title-tagline { font-size: clamp(15px, 1.55vw, 18px); }
+  .title-badges { justify-content: flex-start; }
+  .title-badges span { padding: 7px 11px; font-size: 9px; }
+
+  .title-art-shell {
+    width: min(46vw, 67dvh, 560px);
+    grid-row: 1 / -1;
+  }
+
+  .title-actions {
+    width: min(100%, 372px);
+    align-self: start;
+    justify-self: end;
+    gap: 14px;
+  }
+
+  .title-actions button {
+    min-height: 60px;
+    border-radius: 20px;
+    font-size: 18px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .title-screen {
+    grid-template-rows: minmax(0, 1fr);
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  .title-brand {
+    position: absolute;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    min-height: 32px;
+    padding: 6px 11px;
+    font-size: 11px;
+  }
+
+  .title-hero {
+    width: min(100%, 980px);
+    height: 100%;
+    grid-template-columns: minmax(0, 0.86fr) minmax(170px, 0.94fr) minmax(0, 0.8fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "copy art actions";
+    gap: clamp(10px, 2.2vw, 24px);
+    padding: max(30px, calc(env(safe-area-inset-top) + 24px)) 0 0;
+  }
+
+  .title-copy {
+    align-self: center;
+    justify-self: end;
+    justify-items: start;
+    text-align: left;
+    gap: 4px;
+  }
+
+  .title-copy .kicker { font-size: clamp(8px, 1.3vw, 10px); }
+  .title-hero h1 { font-size: clamp(34px, 5.6vw, 52px); }
+  .title-tagline { font-size: clamp(10px, 1.7vw, 13px); }
+  .title-badges { justify-content: flex-start; gap: 4px; }
+  .title-badges span { padding: 4px 7px; font-size: 7px; }
+
+  .title-art-shell {
+    grid-row: auto;
+    width: min(30vw, 70dvh, 270px);
+  }
+
+  .title-art { border-radius: clamp(20px, 4vw, 34px); }
+  .title-art-chip { padding: 5px 9px; font-size: 7px; }
+
+  .title-actions {
+    width: min(100%, 228px);
+    align-self: center;
+    justify-self: start;
+    gap: 10px;
+  }
+
+  .title-actions button {
+    min-height: 50px;
+    padding: 9px 12px;
+    border-radius: 15px;
+    font-size: clamp(13px, 2vw, 16px);
+    box-shadow: 0 6px 0 #4350bb, 0 12px 20px rgba(49,64,82,0.16);
+  }
+
+  .title-play { box-shadow: 0 6px 0 #b63b58, 0 12px 20px rgba(242,91,115,0.2) !important; }
+}
+
+@media (max-width: 430px) and (max-height: 650px) {
+  .title-screen { gap: 2px; }
+  .title-brand { min-height: 32px; padding: 6px 10px; font-size: 11px; }
+  .title-hero { gap: 4px; padding-bottom: 2px; }
+  .title-copy { gap: 2px; }
+  .title-copy .kicker { font-size: 8px; }
+  .title-hero h1 { font-size: clamp(36px, 11vw, 44px); }
+  .title-tagline { font-size: 11px; line-height: 1.25; }
+  .title-badges span { padding: 4px 7px; font-size: 7px; }
+  .title-art-shell { width: min(74vw, 39dvh, 244px); }
+  .title-art-chip { padding: 5px 9px; font-size: 7px; }
+  .title-actions { width: min(100%, 292px); gap: 8px; }
+  .title-actions button { min-height: 45px; padding: 8px 12px; border-radius: 14px; font-size: 14px; }
+}
+
+@media (pointer: coarse) {
+  .title-actions button,
+  .title-brand {
+    touch-action: manipulation;
+  }
+
+  .title-actions button {
+    min-height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-art-shell,
+  .title-bubbles span {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .title-actions button,
+  .title-brand {
+    transition: none !important;
+  }
+}

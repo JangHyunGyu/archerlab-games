@@ -95,7 +95,7 @@
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <link rel="stylesheet" href="css/style.css?v=48">
+    <link rel="stylesheet" href="css/style.css?v=20260710-start-menu">
     <script>
         // 모바일 주소창 높이를 반영한 실제 뷰포트 높이
         function setVH() {
@@ -107,7 +107,7 @@
     </script>
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
 </head>
-<body>
+<body data-screen="main-menu">
     <!-- 세로모드 경고 오버레이 -->
     <div id="rotate-overlay">
         <div class="rotate-icon">📱</div>
@@ -134,12 +134,24 @@
                     <button type="button" class="language-btn" data-lang-choice="en" data-i18n="language.en">English</button>
                 </div>
                 <div class="game-logo game-logo-assets">
-                    <img class="logo-slime-img logo-slime-blue"  src="assets/images/slime-blue.webp" data-png-fallback="assets/images/slime-blue.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true">
-                    <img class="logo-ball-img"  src="assets/images/ball.webp" data-png-fallback="assets/images/ball.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true">
-                    <img class="logo-slime-img logo-slime-red"  src="assets/images/slime-red.webp" data-png-fallback="assets/images/slime-red.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true">
+                    <div class="logo-mascot logo-mascot-blue">
+                        <span class="logo-team-tag" aria-hidden="true">BLUE</span>
+                        <img class="logo-slime-img logo-slime-blue" src="assets/images/slime-blue.webp" data-png-fallback="assets/images/slime-blue.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true">
+                    </div>
+                    <div class="logo-ball-wrap" aria-hidden="true">
+                        <img class="logo-ball-img" src="assets/images/ball.webp" data-png-fallback="assets/images/ball.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="">
+                        <span class="logo-versus">VS</span>
+                    </div>
+                    <div class="logo-mascot logo-mascot-red">
+                        <span class="logo-team-tag" aria-hidden="true">RED</span>
+                        <img class="logo-slime-img logo-slime-red" src="assets/images/slime-red.webp" data-png-fallback="assets/images/slime-red.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true">
+                    </div>
                 </div>
-                <h2 class="menu-title" data-i18n="app.name">슬라임 배구</h2>
-                <p class="menu-subtitle" data-i18n="menu.subtitle">클래식 슬라임 배구 대전</p>
+                <div class="menu-copy">
+                    <p class="menu-kicker" aria-hidden="true">ARCADE VOLLEY · MATCH READY</p>
+                    <h2 class="menu-title" data-i18n="app.name">슬라임 배구</h2>
+                    <p class="menu-subtitle" data-i18n="menu.subtitle">클래식 슬라임 배구 대전</p>
+                </div>
 
                 <div class="menu-buttons">
                     <button id="btn-practice" class="btn btn-primary btn-large">
@@ -148,7 +160,7 @@
                         <span class="btn-desc" data-i18n="menu.practiceDesc">봇 상대 연습 모드</span>
                     </button>
                     <button id="btn-multiplayer" class="btn btn-secondary btn-large">
-                        <span class="btn-icon">&#9775;</span>
+                        <span class="btn-icon" aria-hidden="true"><img src="assets/images/ball.webp" data-png-fallback="assets/images/ball.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt=""></span>
                         <span data-i18n="menu.multiplayer">다같이 시합</span>
                         <span class="btn-desc" data-i18n="menu.multiplayerDesc">온라인 멀티플레이어</span>
                     </button>
@@ -399,7 +411,7 @@
     <script src="js/webrtc.js?v=48"></script>
     <script src="js/network.js?v=48"></script>
     <script src="js/i18n.js?v=48"></script>
-    <script src="js/lobby.js?v=48"></script>
+    <script src="js/lobby.js?v=20260710-start-menu"></script>
     <script src="js/main.js?v=48"></script>
 </body>
 </html>

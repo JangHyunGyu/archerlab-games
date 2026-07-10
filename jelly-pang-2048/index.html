@@ -43,7 +43,7 @@
   }
   </script>
   <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
-  <link rel="stylesheet" href="css/style.css?v=20260627-rank-flow">
+  <link rel="stylesheet" href="css/style.css?v=20260710-start-screen-v2">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -56,23 +56,26 @@
 <body>
   <main class="game-shell" aria-label="Jelly Pang game">
     <section id="title-screen" class="title-screen" aria-label="Jelly Pang start screen">
+      <div class="title-bubbles" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
       <a class="brand-link title-brand" href="https://archerlab.dev/" aria-label="Archerlab home">Archerlab</a>
       <div class="title-hero">
-        <p class="kicker">Merge Puzzle</p>
-        <h1>Jelly Pang!</h1>
-        <div class="title-jelly-grid" aria-hidden="true">
-          <img  src="assets/images/jellies/jelly-00.webp" data-png-fallback="assets/images/jellies/jelly-00.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-01.webp" data-png-fallback="assets/images/jellies/jelly-01.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-02.webp" data-png-fallback="assets/images/jellies/jelly-02.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-03.webp" data-png-fallback="assets/images/jellies/jelly-03.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-04.webp" data-png-fallback="assets/images/jellies/jelly-04.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-05.webp" data-png-fallback="assets/images/jellies/jelly-05.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-06.webp" data-png-fallback="assets/images/jellies/jelly-06.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-07.webp" data-png-fallback="assets/images/jellies/jelly-07.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-08.webp" data-png-fallback="assets/images/jellies/jelly-08.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-09.webp" data-png-fallback="assets/images/jellies/jelly-09.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-10.webp" data-png-fallback="assets/images/jellies/jelly-10.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
-          <img  src="assets/images/jellies/jelly-11.webp" data-png-fallback="assets/images/jellies/jelly-11.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" draggable="false">
+        <div class="title-copy">
+          <p class="kicker">Soft Merge Puzzle</p>
+          <h1>Jelly Pang!</h1>
+          <p class="title-tagline">말랑한 젤리를 밀고 합쳐<br>왕관 젤리까지 키워보세요</p>
+          <div class="title-badges" aria-label="game features">
+            <span>4 × 4 MERGE</span>
+            <span>12 JELLIES</span>
+          </div>
+        </div>
+        <div class="title-art-shell" aria-hidden="true">
+          <picture class="title-art">
+            <source srcset="assets/images/jelly-pang-main-link.webp" type="image/webp">
+            <img src="assets/images/jelly-pang-main-link.png" alt="" draggable="false">
+          </picture>
+          <span class="title-art-chip">MERGE &amp; GROW</span>
         </div>
         <div class="title-actions">
           <button id="play-game" class="title-play" type="button">게임 시작</button>

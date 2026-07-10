@@ -3,6 +3,7 @@ class LobbyManager {
     constructor(game) {
         this.game = game;
         this.currentScreen = 'main-menu';
+        document.body.dataset.screen = this.currentScreen;
         this.playerName = localStorage.getItem('sv_playerName') || '';
         this.roomPlayers = [];
         this.roomListRefreshTimer = null;
@@ -204,8 +205,14 @@ class LobbyManager {
     }
 
     showScreen(screenId) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(screenId).classList.add('active');
+        const nextScreen = document.getElementById(screenId);
+        if (!nextScreen) return;
+        document.querySelectorAll('.screen').forEach(s => {
+            const active = s === nextScreen;
+            s.classList.toggle('active', active);
+            s.setAttribute('aria-hidden', active ? 'false' : 'true');
+        });
+        document.body.dataset.screen = screenId;
         this.currentScreen = screenId;
     }
 

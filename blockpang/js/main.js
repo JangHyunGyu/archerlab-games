@@ -48,6 +48,8 @@
     });
 
     container.appendChild(app.canvas);
+    app.canvas.tabIndex = 0;
+    app.canvas.setAttribute('aria-label', 'Blockpang game');
 
     // Prevent context menu on long press (mobile)
     app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -78,6 +80,17 @@
     // Create game
     const game = new Game(app);
     window.__blockpangGame = game;
+
+    // Keyboard users get a visible canvas focus ring and the same primary
+    // title action as pointer users. Modal/dropdown states keep priority.
+    app.canvas.addEventListener('keydown', (event) => {
+        if (event.repeat || (event.key !== 'Enter' && event.key !== ' ')) return;
+        if (game.state !== 'title') return;
+        if (game.ui.shouldBlockDomFallback && game.ui.shouldBlockDomFallback()) return;
+        event.preventDefault();
+        game.sound.ensureContext();
+        game.startGame(Game.hasSavedGame());
+    });
 
     // Handle resize
     let resizeTimer;

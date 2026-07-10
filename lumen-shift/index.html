@@ -40,11 +40,12 @@
     "isAccessibleForFree": true,
     "playMode": "SinglePlayer",
     "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
-    "dateModified": "2026-07-07"
+    "dateModified": "2026-07-10"
   }
   </script>
+  <link rel="preload" as="image" href="assets/images/lumen-shift-link.webp" type="image/webp">
   <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
-  <link rel="stylesheet" href="css/style.css?v=20260707-reset-button-fit">
+  <link rel="stylesheet" href="css/style.css?v=20260710-menu-hero-v1">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -92,18 +93,32 @@
 
     <section id="menu-screen" class="screen-layer menu-screen">
       <a class="menu-archerlab-link" href="https://archerlab.dev/" target="_blank" rel="noopener noreferrer">ARCHERLAB</a>
-      <div class="menu-lockup">
-        <h1>LUMEN SHIFT</h1>
-      </div>
-      <div class="menu-actions">
-        <button id="play-button" class="primary-button" type="button">
-          <span class="button-index">01</span>
-          <span class="button-copy">Start</span>
-        </button>
-        <button id="rank-button" class="secondary-button" type="button">
-          <span class="button-index">02</span>
-          <span class="button-copy">Ranking</span>
-        </button>
+      <div class="menu-layout">
+        <div class="menu-lockup">
+          <p class="kicker">FALLING LIGHT PUZZLE</p>
+          <h1><span>LUMEN</span><span>SHIFT</span></h1>
+          <p class="menu-subtitle">Stack light. Break lines. Shift the void.</p>
+        </div>
+
+        <div class="menu-hero" aria-hidden="true">
+          <img src="assets/images/lumen-shift-link.webp" data-png-fallback="assets/images/lumen-shift-link.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" width="1280" height="1280" fetchpriority="high" decoding="async">
+        </div>
+
+        <div class="menu-command">
+          <div class="menu-signal" aria-hidden="true">
+            <span>STACK</span><i></i><span>CHARGE</span><i></i><span>SHIFT</span>
+          </div>
+          <div class="menu-actions">
+            <button id="play-button" class="primary-button" type="button">
+              <span class="button-index">01</span>
+              <span class="button-copy">Start</span>
+            </button>
+            <button id="rank-button" class="secondary-button" type="button">
+              <span class="button-index">02</span>
+              <span class="button-copy">Ranking</span>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
