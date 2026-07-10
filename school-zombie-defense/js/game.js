@@ -2270,11 +2270,43 @@
         .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
         .setDepth(1);
 
+      const coolSpill = this.add.ellipse(42, 286, 270, 620, COLORS.blue, 0.065)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(2);
+      const alarmSpill = this.add.ellipse(508, 352, 230, 560, 0xff4c3d, 0.055)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(2);
       const atmosphere = this.add.graphics().setDepth(2);
       atmosphere.fillStyle(0x061015, 0.2);
       atmosphere.fillRect(0, 0, GAME_WIDTH, 96);
       atmosphere.fillStyle(0x061015, 0.34);
       atmosphere.fillRect(0, 870, GAME_WIDTH, 90);
+
+      const vignette = this.add.graphics().setDepth(3);
+      for (let index = 0; index < 8; index += 1) {
+        vignette.lineStyle(18, 0x020304, 0.075 + index * 0.012);
+        vignette.strokeRect(index * 9, index * 9, GAME_WIDTH - index * 18, GAME_HEIGHT - index * 18);
+      }
+
+      this.tweens.add({
+        targets: coolSpill,
+        alpha: 0.78,
+        scaleX: 1.06,
+        duration: 3600,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
+      this.tweens.add({
+        targets: alarmSpill,
+        alpha: 0.86,
+        scaleY: 1.05,
+        duration: 2500,
+        delay: 420,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
     }
 
     drawCrack(graphics, x, y, scale) {
@@ -2697,21 +2729,26 @@
     createHomeButton() {
       const x = 34;
       const y = 42;
-      const base = this.add.rectangle(x, y, 44, 34, 0x091319, 0.92)
-        .setStrokeStyle(2, COLORS.gold, 0.76)
-        .setDepth(318);
-      const glow = this.add.rectangle(x, y, 52, 42, COLORS.gold, 0.08)
+      const glow = this.add.circle(x, y, 28, COLORS.gold, 0.08)
+        .setStrokeStyle(1, COLORS.gold, 0.2)
+        .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(317);
+      const base = this.add.image(x, y, "ui-skill-button")
+        .setDisplaySize(52, 52)
+        .setDepth(318);
+      const baseScaleX = base.scaleX;
+      const baseScaleY = base.scaleY;
       const icon = this.add.graphics().setDepth(319);
       const hit = this.add.zone(x, y, 52, 42)
         .setDepth(320)
         .setInteractive({ useHandCursor: true });
       const drawIcon = (hovered = false) => {
-        base.setFillStyle(hovered ? 0x142632 : 0x091319, hovered ? 0.98 : 0.92);
-        base.setStrokeStyle(2, hovered ? 0xffffff : COLORS.gold, hovered ? 0.9 : 0.76);
-        glow.setAlpha(hovered ? 0.16 : 0.08);
+        base
+          .setTint(hovered ? 0xe9fbff : 0xffffff)
+          .setScale(baseScaleX * (hovered ? 1.045 : 1), baseScaleY * (hovered ? 1.045 : 1));
+        glow.setAlpha(hovered ? 0.2 : 0.08).setScale(hovered ? 1.08 : 1);
         icon.clear();
-        icon.fillStyle(COLORS.gold, 0.96);
+        icon.fillStyle(hovered ? 0xffffff : COLORS.gold, 0.96);
         icon.beginPath();
         icon.moveTo(x - 14, y - 2);
         icon.lineTo(x, y - 15);
@@ -3866,6 +3903,25 @@
       return knockback;
     }
 
+    animateOverlayEntrance(objects, delay = 0, offsetY = 16, duration = 360) {
+      (objects || []).filter(Boolean).forEach((item, index) => {
+        if (!item || !item.active) {
+          return;
+        }
+        const targetY = item.y;
+        const targetAlpha = item.alpha;
+        item.setY(targetY + offsetY).setAlpha(0);
+        this.tweens.add({
+          targets: item,
+          y: targetY,
+          alpha: targetAlpha,
+          duration,
+          delay: delay + index * 16,
+          ease: "Cubic.easeOut"
+        });
+      });
+    }
+
     addOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
       if (width >= 150 && this.textures.exists("ui-title-button")) {
         return this.addPremiumOverlayButton(x, y, width, height, label, depth, onClick, accent);
@@ -3891,6 +3947,7 @@
         item.setInteractive({ useHandCursor: true });
         item.on("pointerdown", () => {
           this.unlockAudio();
+          this.playSfx("button", 0.78);
           onClick();
         });
         item.on("pointerover", () => {
@@ -3947,6 +4004,7 @@
         item.setInteractive({ useHandCursor: true });
         item.on("pointerdown", () => {
           this.unlockAudio();
+          this.playSfx("button", 0.78);
           onClick();
         });
         item.on("pointerover", () => setHover(true));
@@ -4030,6 +4088,7 @@
       hit.on("pointerout", () => setHover(false));
       hit.on("pointerdown", () => {
         this.unlockAudio();
+        this.playSfx("button", primary ? 0.94 : 0.76);
         onClick();
       });
 
@@ -4389,6 +4448,18 @@
       const ratio = source.width / source.height;
       titleArt.setDisplaySize(Math.max(GAME_WIDTH, GAME_HEIGHT * ratio), Math.max(GAME_HEIGHT, GAME_WIDTH / ratio));
       items.push(titleArt);
+      const titleScaleX = titleArt.scaleX;
+      const titleScaleY = titleArt.scaleY;
+      this.tweens.add({
+        targets: titleArt,
+        y: 474,
+        scaleX: titleScaleX * 1.018,
+        scaleY: titleScaleY * 1.018,
+        duration: 7200,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
       items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.72).setDepth(501));
       items.push(this.add.rectangle(270, 118, 430, 108, 0x070c10, 0.84).setStrokeStyle(2, 0xe7bb54, 0.78).setDepth(502));
       items.push(this.add.rectangle(270, 70, 320, 4, 0xffd86b, 0.92).setDepth(503));
@@ -4788,6 +4859,18 @@
       const ratio = source.width / source.height;
       titleArt.setDisplaySize(Math.max(GAME_WIDTH, GAME_HEIGHT * ratio), Math.max(GAME_HEIGHT, GAME_WIDTH / ratio));
       items.push(titleArt);
+      const titleScaleX = titleArt.scaleX;
+      const titleScaleY = titleArt.scaleY;
+      this.tweens.add({
+        targets: titleArt,
+        y: 474,
+        scaleX: titleScaleX * 1.018,
+        scaleY: titleScaleY * 1.018,
+        duration: 7200,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut"
+      });
 
       const scrim = this.add.graphics().setDepth(501);
       const bandCount = 12;
@@ -4817,7 +4900,7 @@
       hudLines.fillRect(456, 648, 42, 4);
       items.push(hudLines);
 
-      this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
+      const archerButton = this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
         window.location.href = "https://archerlab.dev/";
       }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76 });
       const protocol = this.add.text(492, 38, "07 / RED", {
@@ -4860,39 +4943,49 @@
       subtitle.setShadow(0, 3, "#000000", 7, true, true);
       items.push(subtitle);
 
-      items.push(this.add.rectangle(270, 700, 306, 42, 0x071015, 0.9)
+      const creditPanel = this.add.rectangle(270, 700, 306, 42, 0x071015, 0.9)
         .setStrokeStyle(1, 0x65ddf3, 0.5)
-        .setDepth(526));
-      items.push(this.add.text(152, 700, "SUPPLY CREDIT", {
+        .setDepth(526);
+      const creditLabel = this.add.text(152, 700, "SUPPLY CREDIT", {
         fontFamily: "Arial, sans-serif",
         fontSize: 11,
         fontStyle: "900",
         color: "#8aaab2",
         stroke: "#050607",
         strokeThickness: 2
-      }).setOrigin(0, 0.5).setDepth(527));
-      items.push(this.add.text(388, 700, `$${this.meta.coins}`, {
+      }).setOrigin(0, 0.5).setDepth(527);
+      const creditValue = this.add.text(388, 700, `$${this.meta.coins}`, {
         fontFamily: "Arial, sans-serif",
         fontSize: 19,
         fontStyle: "900",
         color: "#ffd36b",
         stroke: "#050607",
         strokeThickness: 3
-      }).setOrigin(1, 0.5).setDepth(527));
+      }).setOrigin(1, 0.5).setDepth(527);
+      items.push(creditPanel, creditLabel, creditValue);
 
-      this.addTacticalMenuButton(270, 790, 410, 86, "출격", 530, () => this.startRun(), 0xf15a47, {
+      const startButton = this.addTacticalMenuButton(270, 790, 410, 86, "출격", 530, () => this.startRun(), 0xf15a47, {
         primary: true,
         kicker: "BEGIN SORTIE",
         hitHeight: 86
       });
-      this.addTacticalMenuButton(164, 892, 188, 76, "랭킹", 530, () => this.showRankings(), COLORS.gold, {
+      const rankingButton = this.addTacticalMenuButton(164, 892, 188, 76, "랭킹", 530, () => this.showRankings(), COLORS.gold, {
         kicker: "RECORDS",
         hitHeight: 76
       });
-      this.addTacticalMenuButton(376, 892, 188, 76, "상점", 530, () => this.showShop(), COLORS.blue, {
+      const shopButton = this.addTacticalMenuButton(376, 892, 188, 76, "상점", 530, () => this.showShop(), COLORS.blue, {
         kicker: "ARMORY",
         hitHeight: 76
       });
+
+      this.animateOverlayEntrance(Object.values(archerButton), 40, -10, 300);
+      this.animateOverlayEntrance([protocol, eyebrow], 90, 10, 320);
+      this.animateOverlayEntrance([title], 150, 18, 420);
+      this.animateOverlayEntrance([subtitle], 230, 14, 380);
+      this.animateOverlayEntrance([creditPanel, creditLabel, creditValue], 300, 18, 360);
+      this.animateOverlayEntrance(Object.values(startButton), 350, 22, 420);
+      this.animateOverlayEntrance(Object.values(rankingButton), 430, 18, 380);
+      this.animateOverlayEntrance(Object.values(shopButton), 470, 18, 380);
     }
 
     showShop(selectedId = this.shopSelectedCharacter || "c") {
@@ -6395,7 +6488,9 @@
     }
 
     createShockProjectileLink(sourceX, sourceY, sprite, angle) {
-      const link = this.add.graphics().setDepth(189.2);
+      const link = this.add.graphics()
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(189.2);
       return {
         type: "shock",
         link,
@@ -6610,6 +6705,7 @@
         .setOrigin(0.08, 0.5)
         .setDisplaySize(effect.width, displayHeight)
         .setRotation(angle)
+        .setBlendMode(Phaser.BlendModes.ADD)
         .setAlpha(effect.alpha)
         .setDepth(238));
       this.tweens.add({
@@ -6902,7 +6998,9 @@
     }
 
     createShockArc(start, end, alpha = 0.88) {
-      const arc = this.trackTransient(this.add.graphics().setDepth(233));
+      const arc = this.trackTransient(this.add.graphics()
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(233));
       const segments = 5;
       const points = [];
       for (let i = 0; i <= segments; i += 1) {
@@ -8520,6 +8618,7 @@
         return;
       }
       this.mode = "skill";
+      this.playSfx("wave_clear", 0.92);
       this.cancelRunTimers();
       const previousStage = this.stage;
       this.level += 1;
@@ -8537,28 +8636,40 @@
       this.clearOverlay();
 
       const items = this.overlayObjects;
-      items.push(this.add.image(270, 480, "skill-choice-backdrop").setDisplaySize(540, 960).setDepth(520));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.26).setDepth(521));
+      const backdrop = this.add.image(270, 480, "skill-choice-backdrop")
+        .setDisplaySize(540, 960)
+        .setAlpha(0)
+        .setDepth(520);
+      const backdropShade = this.add.rectangle(270, 480, 540, 960, 0x010204, 0.26)
+        .setAlpha(0)
+        .setDepth(521);
+      items.push(backdrop, backdropShade);
+      this.tweens.add({ targets: backdrop, alpha: 1, duration: 320, ease: "Cubic.easeOut" });
+      this.tweens.add({ targets: backdropShade, alpha: 1, duration: 420, ease: "Cubic.easeOut" });
       items.push(this.add.rectangle(270, 538, 492, 520, 0x010204, 0.18).setDepth(522));
       items.push(this.add.ellipse(270, 552, 450, 570, COLORS.gold, 0.05).setDepth(522.2));
-      items.push(this.add.rectangle(270, 180, 432, 92, 0x0a1116, 0.82).setStrokeStyle(2, 0xeac15b, 0.76).setDepth(523));
-      items.push(this.add.rectangle(270, 130, 320, 4, 0xffd86b, 0.95).setDepth(524));
-      items.push(this.add.text(270, 160, "스킬 선택", {
+      const headerPanel = this.add.rectangle(270, 180, 432, 92, 0x0a1116, 0.82)
+        .setStrokeStyle(2, 0xeac15b, 0.76)
+        .setDepth(523);
+      const headerLine = this.add.rectangle(270, 130, 320, 4, 0xffd86b, 0.95).setDepth(524);
+      const headerTitle = this.add.text(270, 160, "스킬 선택", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 38,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
         strokeThickness: 6
-      }).setOrigin(0.5).setDepth(525));
-      items.push(this.add.text(270, 202, `웨이브 ${this.level} 보급 승인 - 전술 하나를 선택하세요`, {
+      }).setOrigin(0.5).setDepth(525);
+      const headerSubtitle = this.add.text(270, 202, `웨이브 ${this.level} 보급 승인 - 전술 하나를 선택하세요`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 16,
         fontStyle: "900",
         color: "#f6d985",
         stroke: "#050607",
         strokeThickness: 3
-      }).setOrigin(0.5).setDepth(525));
+      }).setOrigin(0.5).setDepth(525);
+      items.push(headerPanel, headerLine, headerTitle, headerSubtitle);
+      this.animateOverlayEntrance([headerPanel, headerLine, headerTitle, headerSubtitle], 70, 18, 390);
 
       this.renderSkillChoiceCards();
       this.addSkillRerollButton();
@@ -9424,15 +9535,18 @@
         chooseText
       ].filter(Boolean);
 
-      animated.forEach((item) => {
-        item.y += 24;
-      });
-      this.tweens.add({
-        targets: animated,
-        y: "-=24",
-        duration: 360,
-        delay: index * 90,
-        ease: "Cubic.easeOut"
+      animated.forEach((item, itemIndex) => {
+        const targetY = item.y;
+        const targetAlpha = item.alpha;
+        item.setY(targetY + 24).setAlpha(0);
+        this.tweens.add({
+          targets: item,
+          y: targetY,
+          alpha: targetAlpha,
+          duration: 390,
+          delay: 120 + index * 95 + itemIndex * 5,
+          ease: "Cubic.easeOut"
+        });
       });
 
       const selectUpgrade = () => this.applyUpgrade(upgrade);
@@ -9503,8 +9617,31 @@
 
     addGameOverBackdrop() {
       const items = this.overlayObjects;
-      items.push(this.add.image(270, 480, "gameover-last-stand").setDisplaySize(540, 960).setDepth(540));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x030405, 0.14).setDepth(541));
+      const backdrop = this.add.image(270, 480, "gameover-last-stand")
+        .setDisplaySize(540, 960)
+        .setAlpha(0)
+        .setDepth(540);
+      const backdropScaleX = backdrop.scaleX;
+      const backdropScaleY = backdrop.scaleY;
+      backdrop.setScale(backdropScaleX * 1.045, backdropScaleY * 1.045);
+      const veil = this.add.rectangle(270, 480, 540, 960, 0x030405, 0.14)
+        .setAlpha(0)
+        .setDepth(541);
+      items.push(backdrop, veil);
+      this.tweens.add({
+        targets: backdrop,
+        scaleX: backdropScaleX,
+        scaleY: backdropScaleY,
+        alpha: 1,
+        duration: 820,
+        ease: "Cubic.easeOut"
+      });
+      this.tweens.add({
+        targets: veil,
+        alpha: 1,
+        duration: 520,
+        ease: "Cubic.easeOut"
+      });
     }
 
     async gameOver() {
@@ -9516,6 +9653,7 @@
       this.cancelRunTimers();
       this.cancelSceneTimers();
       this.clearTransientObjects();
+      this.playSfx("game_over", 1);
       this.startBgm("menu");
       this.clearRunEntities();
       this.clearOverlay();
@@ -9530,40 +9668,45 @@
       const rankSnapshot = this.getRankSnapshot(earnedCoins);
       this.lastRankableRun = rankSnapshot.score > 0 ? rankSnapshot : null;
       const items = this.overlayObjects;
-      items.push(this.add.rectangle(270, 166, 424, 236, 0x0d151b, 0.5).setStrokeStyle(2, 0xff6b68, 0.74).setDepth(542));
-      items.push(this.add.rectangle(270, 62, 300, 4, 0xff6b68, 0.9).setDepth(543));
-      items.push(this.add.text(270, 98, "방어선 붕괴", {
+      const summaryPanel = this.add.rectangle(270, 166, 424, 236, 0x0d151b, 0.5)
+        .setStrokeStyle(2, 0xff6b68, 0.74)
+        .setDepth(542);
+      const summaryLine = this.add.rectangle(270, 62, 300, 4, 0xff6b68, 0.9).setDepth(543);
+      const summaryTitle = this.add.text(270, 98, "방어선 붕괴", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 42,
         fontStyle: "900",
         color: "#ff6b68",
         stroke: "#050607",
         strokeThickness: 6
-      }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 146, `웨이브 ${this.level} · 처치 ${this.kills}`, {
+      }).setOrigin(0.5).setDepth(544);
+      const summaryWave = this.add.text(270, 146, `웨이브 ${this.level} · 처치 ${this.kills}`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 22,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
         strokeThickness: 4
-      }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 182, `클리어 St.${rankSnapshot.score} · 도달 St.${rankSnapshot.reachedStage}`, {
+      }).setOrigin(0.5).setDepth(544);
+      const summaryStage = this.add.text(270, 182, `클리어 St.${rankSnapshot.score} · 도달 St.${rankSnapshot.reachedStage}`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 19,
         fontStyle: "900",
         color: "#8deeff",
         stroke: "#050607",
         strokeThickness: 4
-      }).setOrigin(0.5).setDepth(544));
-      items.push(this.add.text(270, 216, `획득 $${earnedCoins} · 보유 $${this.meta.coins}`, {
+      }).setOrigin(0.5).setDepth(544);
+      const summaryCoins = this.add.text(270, 216, `획득 $${earnedCoins} · 보유 $${this.meta.coins}`, {
         fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
         color: "#ffd86b",
         stroke: "#050607",
         strokeThickness: 4
-      }).setOrigin(0.5).setDepth(544));
+      }).setOrigin(0.5).setDepth(544);
+      const summaryObjects = [summaryPanel, summaryLine, summaryTitle, summaryWave, summaryStage, summaryCoins];
+      items.push(...summaryObjects);
+      this.animateOverlayEntrance(summaryObjects, 60, 20, 420);
       if (this.lastRankableRun) {
         this.showRankNameLayer(this.lastRankableRun, {
           inlineGameOver: true,
