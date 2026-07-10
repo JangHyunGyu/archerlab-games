@@ -223,16 +223,20 @@ async function storeClientError(db, request, body) {
 
     const gameId = limitText(body.game_id || body.gameId || body.appId || 'archerlab-games', 100)
         .replace(/[^a-z0-9_.:-]/gi, '') || 'archerlab-games';
-    const errorType = limitText(body.error_type || body.type || 'error', 100) || 'error';
+    const errorType = limitText(body.error_type || body.errorType || body.type || 'error', 100) || 'error';
     const message = limitText(body.message || body.stack || 'Unknown client error', 500);
     if (!message) {
         return jsonResponse({ ok: true });
     }
 
+    const normalizedMessage = message.startsWith('[' + errorType + ']')
+        ? message
+        : '[' + errorType + '] ' + message;
+
     await insertErrorLog(db, request, {
         appId: gameId,
         userId: '',
-        message: limitText('[' + errorType + '] ' + message, 500),
+        message: limitText(normalizedMessage, 500),
         stack: limitText(body.stack || '', 4000),
         url: limitText(body.url || request.headers.get('Referer') || '', 500),
         source: limitText(body.source || body.filename || '', 500),
