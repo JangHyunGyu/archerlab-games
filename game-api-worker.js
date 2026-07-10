@@ -141,8 +141,6 @@ const SHADOW_SCORE_GRACE_SECONDS = 15;
 const SHADOW_FIRST_EVENT_MAX_SCORE = 30;
 const SHADOW_PROGRESS_SYNC_GRACE_SECONDS = 8;
 const SHADOW_PROGRESS_EVENT_INTERVAL_SECONDS = 5;
-const CENTRAL_ERROR_LOG_ENDPOINT = 'https://chatbot-api.yama5993.workers.dev/error-logs';
-
 function jsonResponse(data, status = 200) {
     return new Response(JSON.stringify(data), {
         status,
@@ -186,7 +184,39 @@ function limitText(value, maxLength) {
     return text.length > maxLength ? text.slice(0, maxLength) : text;
 }
 
-async function forwardClientErrorToCentral(request, body) {
+function safeJsonText(value) {
+    if (value === undefined || value === null) return null;
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return JSON.stringify({ serialization_failed: true });
+    }
+}
+
+async function insertErrorLog(db, request, payload) {
+    if (!db) throw new Error('D1 DB binding is unavailable');
+    await db.prepare(`
+        INSERT INTO error_logs (
+            app_id, user_id, message, stack, url, user_agent,
+            source, error_type, error_class, session_id, context_json, extra_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        limitText(payload.appId || 'game-api', 100),
+        limitText(payload.userId || '', 100),
+        limitText(payload.message || 'Unknown error', 500),
+        limitText(payload.stack || '', 4000),
+        limitText(payload.url || request?.url || '', 500),
+        limitText(request?.headers?.get('User-Agent') || '', 500),
+        limitText(payload.source || '', 500),
+        limitText(payload.errorType || 'error', 100),
+        limitText(payload.errorClass || '', 50),
+        limitText(payload.sessionId || '', 100),
+        safeJsonText(payload.context),
+        safeJsonText(payload.extra)
+    ).run();
+}
+
+async function storeClientError(db, request, body) {
     if (!isPlainObject(body)) {
         return jsonResponse({ error: 'invalid client error payload' }, 400);
     }
@@ -199,27 +229,23 @@ async function forwardClientErrorToCentral(request, body) {
         return jsonResponse({ ok: true });
     }
 
-    await fetch(CENTRAL_ERROR_LOG_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            appId: gameId,
-            userId: '',
-            message: limitText('[' + errorType + '] ' + message, 500),
-            stack: limitText(body.stack || '', 4000),
-            url: limitText(body.url || request.headers.get('Referer') || '', 500),
-            source: limitText(body.source || body.filename || '', 500),
-            errorType: errorType,
-            errorClass: limitText(body.error_class || body.errorClass || '', 50),
-            context: body.context || null,
-            extra: {
-                lineno: body.lineno ?? body.line ?? 0,
-                colno: body.colno ?? body.column ?? 0,
-                appVersion: body.app_version || body.version || '',
-                userAgent: request.headers.get('User-Agent') || '',
-            },
-        }),
-    }).catch(() => null);
+    await insertErrorLog(db, request, {
+        appId: gameId,
+        userId: '',
+        message: limitText('[' + errorType + '] ' + message, 500),
+        stack: limitText(body.stack || '', 4000),
+        url: limitText(body.url || request.headers.get('Referer') || '', 500),
+        source: limitText(body.source || body.filename || '', 500),
+        errorType: errorType,
+        errorClass: limitText(body.error_class || body.errorClass || '', 50),
+        context: body.context || null,
+        extra: {
+            lineno: body.lineno ?? body.line ?? 0,
+            colno: body.colno ?? body.column ?? 0,
+            appVersion: body.app_version || body.version || '',
+            userAgent: request.headers.get('User-Agent') || '',
+        },
+    });
 
     return jsonResponse({ ok: true });
 }
@@ -2446,13 +2472,13 @@ export default {
         }
 
         try {
-            // Auto-init DB table
-            await initDB(env.DB);
-
             if (path === '/client-errors' && request.method === 'POST') {
                 const body = await request.json().catch(() => null);
-                return forwardClientErrorToCentral(request, body);
+                return storeClientError(env.DB, request, body);
             }
+
+            // Auto-init DB table
+            await initDB(env.DB);
 
             // GET /rankings?game_id=blockpang&limit=20
             if (path === '/rankings' && request.method === 'GET') {
@@ -2761,6 +2787,26 @@ export default {
             return jsonResponse({ error: 'Not Found' }, 404);
 
         } catch (err) {
+            try {
+                await insertErrorLog(env.DB, request, {
+                    appId: 'game-api',
+                    message: err?.message || String(err),
+                    stack: err?.stack || '',
+                    url: request.url,
+                    source: 'game-api.fetch',
+                    errorType: 'WORKER_ERROR',
+                    errorClass: 'server',
+                    context: {
+                        method: request.method,
+                        path,
+                    },
+                    extra: {
+                        colo: request.cf?.colo || '',
+                    },
+                });
+            } catch (logErr) {
+                console.error('[D1] Failed to persist game-api error:', logErr?.message || logErr);
+            }
             return jsonResponse({ error: err.message || 'Internal Server Error' }, 500);
         }
     },

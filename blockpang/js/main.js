@@ -294,12 +294,25 @@
             extra: extraData,
         };
 
+        if (window.ArcherLabClientErrorReporter) {
+            window.ArcherLabClientErrorReporter.reportPayload({
+                error_type: type || 'Error',
+                message: msg,
+                stack: stack || '',
+                source: src || '',
+                error_class: errClass,
+                context: context,
+                extra: extraData,
+            });
+            return;
+        }
         _sendPayload(payload);
     }
 
     // 게임 코드에서 호출 가능하도록 전역 노출
     window._sendGameError = _sendError;
 
+    if (!window.ArcherLabClientErrorReporter) {
     window.addEventListener('error', function(e) {
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
         _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src, {
@@ -318,4 +331,5 @@
             reasonType: reason?.name || typeof reason,
         });
     });
+    }
 })();

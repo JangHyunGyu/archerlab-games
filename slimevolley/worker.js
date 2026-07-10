@@ -111,7 +111,7 @@ export default {
 
         return new Response('Not Found', { status: 404 });
         } catch (e) {
-            const logPromise = logErrorToCentral('slimevolley-server', e.message || String(e), e.stack || '', url?.pathname || '');
+            const logPromise = logErrorToD1(env, 'slimevolley-server', e.message || String(e), e.stack || '', url?.pathname || '', 'slimevolley.worker.fetch');
             if (ctx?.waitUntil) ctx.waitUntil(logPromise);
             else await logPromise;
             return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
@@ -119,14 +119,48 @@ export default {
     },
 };
 
-async function logErrorToCentral(appId, message, stack, url) {
+async function logErrorToD1(env, appId, message, stack, url, source) {
+    const payload = {
+        appId,
+        message: (message || '').substring(0, 500),
+        stack: (stack || '').substring(0, 4000),
+        url: (url || '').substring(0, 500),
+        source: (source || 'slimevolley.worker').substring(0, 500),
+        errorType: 'WORKER_ERROR',
+        errorClass: 'server',
+    };
+
     try {
-        await fetch('https://chatbot-api.yama5993.workers.dev/error-logs', {
+        if (env?.DB) {
+            await env.DB.prepare(`
+                INSERT INTO error_logs (
+                    app_id, user_id, message, stack, url, source, error_type, error_class
+                ) VALUES (?, '', ?, ?, ?, ?, ?, ?)
+            `).bind(
+                payload.appId,
+                payload.message,
+                payload.stack,
+                payload.url,
+                payload.source,
+                payload.errorType,
+                payload.errorClass
+            ).run();
+            return true;
+        }
+    } catch (_) {
+        // Fall back to the central ingestion endpoint.
+    }
+
+    try {
+        const response = await fetch('https://chatbot-api.yama5993.workers.dev/error-logs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ appId, message: (message || '').substring(0, 500), stack: (stack || '').substring(0, 2000), url: (url || '').substring(0, 500) }),
+            body: JSON.stringify(payload),
         });
-    } catch (_) {}
+        return response.ok;
+    } catch (_) {
+        return false;
+    }
 }
 
 // --- Durable Object: GameLobby (방 목록 관리) ---
@@ -330,15 +364,24 @@ export class GameRoom {
                 this.handleMessage(server, playerData, msg);
             } catch (e) {
                 console.error('Message parse error:', e);
+                this.queueError('slimevolley.room.message', e);
             }
         });
 
         server.addEventListener('close', () => {
-            this.handleDisconnect(server, playerData);
+            try {
+                this.handleDisconnect(server, playerData);
+            } catch (e) {
+                this.queueError('slimevolley.room.close', e);
+            }
         });
 
         server.addEventListener('error', () => {
-            this.handleDisconnect(server, playerData);
+            try {
+                this.handleDisconnect(server, playerData);
+            } catch (e) {
+                this.queueError('slimevolley.room.socket-error', e);
+            }
         });
 
         return new Response(null, { status: 101, webSocket: client });
@@ -354,7 +397,21 @@ export class GameRoom {
             }));
         } catch (e) {
             console.error('Lobby notify error:', e);
+            this.queueError('slimevolley.room.notify-lobby', e);
         }
+    }
+
+    queueError(source, error) {
+        const promise = logErrorToD1(
+            this.env,
+            'slimevolley-server',
+            error?.message || String(error),
+            error?.stack || '',
+            this.roomId || '',
+            source
+        );
+        if (this.state?.waitUntil) this.state.waitUntil(promise);
+        else promise.catch(() => {});
     }
 
     handleMessage(ws, player, msg) {
