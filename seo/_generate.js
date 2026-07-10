@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SITE = 'https://game.archerlab.dev';
-const LASTMOD = '2026-07-07';
+const LASTMOD = '2026-07-10';
 
 const PAGES = [
   {
@@ -270,6 +270,8 @@ function render(p) {
 <link rel="canonical" href="${url}">
 <meta property="og:title" content="${esc(p.title)}"><meta property="og:description" content="${esc(p.meta)}"><meta property="og:url" content="${url}"><meta property="og:type" content="website">
 <meta name="twitter:card" content="summary"><meta name="twitter:title" content="${esc(p.title)}"><meta name="twitter:description" content="${esc(p.meta)}">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-66FS0YCEEM');</script>
 <style>${CSS}</style>
 <script type="application/ld+json">${JSON.stringify([webPageLd, faqLd])}</script>
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
@@ -299,5 +301,14 @@ const frag = PAGES
   .join('\n');
 fs.writeFileSync(path.join(__dirname, '_sitemap_fragment.xml'), frag, 'utf8');
 
+const sitemapPath = path.join(__dirname, '..', 'sitemap.xml');
+if (fs.existsSync(sitemapPath)) {
+  let sitemap = fs.readFileSync(sitemapPath, 'utf8');
+  sitemap = sitemap.replace(/\s*<url>\s*<loc>https:\/\/game\.archerlab\.dev\/seo\/[\s\S]*?<\/url>/g, '');
+  sitemap = sitemap.replace(/\s*<\/urlset>\s*$/m, `\n${frag}\n</urlset>\n`);
+  fs.writeFileSync(sitemapPath, sitemap, 'utf8');
+}
+
 console.log(`${n} pages generated`);
 console.log('sitemap fragment written');
+console.log('root sitemap updated');
