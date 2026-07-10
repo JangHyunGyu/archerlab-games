@@ -1,4 +1,7 @@
 // Service Worker - JS 파일 캐시 완전 방지
+self.__ARCHERLAB_GAME_ID__ = 'solo-leveling-service-worker';
+importScripts('../shared/service-worker-error-reporter.js?v=20260710-d1-v2');
+
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {
     e.waitUntil(

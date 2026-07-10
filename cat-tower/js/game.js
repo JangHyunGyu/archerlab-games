@@ -12,7 +12,9 @@
   const warn = (...a) => console.warn('[CT!]', _ts(), ...a);
   const err  = (...a) => {
     console.error('[CT✖]', _ts(), ...a);
-    try { _remoteError('AppError', a.map(x => typeof x === 'string' ? x : (x && x.message) || String(x)).join(' '), (a.find(x => x && x.stack) || {}).stack || '', location.href); } catch (_) {}
+    if (!window.ArcherLabClientErrorReporter) {
+      try { _remoteError('AppError', a.map(x => typeof x === 'string' ? x : (x && x.message) || String(x)).join(' '), (a.find(x => x && x.stack) || {}).stack || '', location.href); } catch (_) {}
+    }
   };
   const SUPPORTS_WEBP = (() => {
     try {
@@ -74,6 +76,7 @@
   }
 
   // 전역 에러 핸들러 — 게임 내 어떤 예외든 바로 캐치 + 원격 전송
+  if (!window.ArcherLabClientErrorReporter) {
   window.addEventListener('error', (e) => {
     const src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
     console.error('[CT✖]', _ts(), 'uncaught:', e.message, 'at', src, e.error?.stack || '');
@@ -85,6 +88,7 @@
     console.error('[CT✖]', _ts(), 'unhandled promise:', msg, reason?.stack || '');
     _remoteError('UnhandledRejection', msg, reason?.stack || '', location.href);
   });
+  }
 
   // NaN 바디 감지 — 물리가 터지면 즉시 알림
   let _lastNanWarnAt = 0;

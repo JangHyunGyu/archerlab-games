@@ -167,6 +167,18 @@ game.events.on('destroy', () => {
         if (key === _lastError) { _errorCount++; if (_errorCount > 5) return; }
         else { _lastError = key; _errorCount = 1; }
 
+        if (window.ArcherLabClientErrorReporter) {
+            window.ArcherLabClientErrorReporter.reportPayload({
+                error_type: type || 'Error',
+                message: msg,
+                stack: stack || '',
+                source: src || '',
+                error_class: errClass,
+                context: { sessionId: _session },
+            });
+            return;
+        }
+
         var ctx = 'sess:' + _session + ' | path:' + location.pathname + ' | online:' + navigator.onLine + ' | vw:' + innerWidth + 'x' + innerHeight;
         var payload = {
             appId: APP_ID, userId: '',
@@ -185,6 +197,7 @@ game.events.on('destroy', () => {
         try { navigator.sendBeacon(ERROR_ENDPOINT, JSON.stringify(payload)); } catch (_) {}
     }
 
+    if (!window.ArcherLabClientErrorReporter) {
     window.addEventListener('error', function(e) {
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
         _sendError(e.error?.name || 'Error', e.message, e.error?.stack || '', src);
@@ -195,4 +208,5 @@ game.events.on('destroy', () => {
         var msg = reason?.message || String(reason || 'Unhandled rejection');
         _sendError('UnhandledRejection', msg, reason?.stack || '', location.href);
     });
+    }
 })();

@@ -6,7 +6,7 @@
     var endpoint = (
         (script && script.getAttribute('data-error-endpoint')) ||
         window.__ARCHERLAB_ERROR_ENDPOINT__ ||
-        'https://chatbot-api.yama5993.workers.dev/error-logs'
+        'https://game-api.yama5993.workers.dev/client-errors'
     );
     var gameId = getGameId();
     var appVersion = (
@@ -17,7 +17,12 @@
     var sentCount = 0;
     var sentKeys = Object.create(null);
     var MAX_REPORTS_PER_PAGE = 20;
-    var endpointIsSameOrigin = isSameOriginEndpoint(endpoint);
+    var MAX_QUEUED_REPORTS = 50;
+    var QUEUE_KEY = 'archerlab-client-error-queue:v2';
+    var queue = loadQueue();
+    var flushPromise = null;
+    var flushTimer = null;
+    var suppressConsoleCapture = false;
 
     function getGameId() {
         var fromScript = script && script.getAttribute('data-game-id');
@@ -27,14 +32,6 @@
 
         var parts = window.location.pathname.split('/').filter(Boolean);
         return parts[0] || 'archerlab-games';
-    }
-
-    function isSameOriginEndpoint(value) {
-        try {
-            return new URL(value, window.location.href).origin === window.location.origin;
-        } catch {
-            return false;
-        }
     }
 
     function safeString(value, fallback) {
@@ -79,9 +76,23 @@
         try {
             return JSON.stringify(value);
         } catch {
-            value.context = { serialization_failed: true };
-            return JSON.stringify(value);
+            return JSON.stringify({ serialization_failed: true });
         }
+    }
+
+    function safePreview(value) {
+        if (value instanceof Error) return value.message || value.name || 'Error';
+        if (typeof value === 'string') return value;
+        if (value === undefined) return 'undefined';
+        if (value === null) return 'null';
+        if (typeof value === 'object') {
+            try {
+                return JSON.stringify(value);
+            } catch {
+                return Object.prototype.toString.call(value);
+            }
+        }
+        return safeString(value, '');
     }
 
     function truncate(value, maxLength) {
@@ -157,6 +168,91 @@
         );
     }
 
+    function loadQueue() {
+        try {
+            var parsed = JSON.parse(window.localStorage.getItem(QUEUE_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed.slice(-MAX_QUEUED_REPORTS) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function persistQueue() {
+        try {
+            window.localStorage.setItem(QUEUE_KEY, JSON.stringify(queue.slice(-MAX_QUEUED_REPORTS)));
+        } catch {
+            // Keep the in-memory queue when storage is blocked.
+        }
+    }
+
+    function createReportId() {
+        var random = '';
+        try {
+            var bytes = new Uint32Array(2);
+            window.crypto.getRandomValues(bytes);
+            random = bytes[0].toString(36) + bytes[1].toString(36);
+        } catch {
+            random = Math.random().toString(36).slice(2);
+        }
+        return Date.now().toString(36) + '-' + random;
+    }
+
+    function enqueue(body) {
+        var id = createReportId();
+        body.context = Object.assign({}, body.context || {}, { clientReportId: id });
+        queue.push({ id: id, body: body, queuedAt: Date.now() });
+        if (queue.length > MAX_QUEUED_REPORTS) {
+            queue = queue.slice(-MAX_QUEUED_REPORTS);
+        }
+        persistQueue();
+        scheduleFlush(0);
+    }
+
+    function scheduleFlush(delay) {
+        if (flushTimer !== null) return;
+        flushTimer = window.setTimeout(function () {
+            flushTimer = null;
+            flushQueue();
+        }, delay || 0);
+    }
+
+    function flushQueue() {
+        if (flushPromise || !queue.length || typeof window.fetch !== 'function') {
+            return flushPromise || Promise.resolve();
+        }
+
+        flushPromise = (async function () {
+            while (queue.length) {
+                var item = queue[0];
+                try {
+                    var response = await window.fetch(endpoint, {
+                        method: 'POST',
+                        mode: 'cors',
+                        credentials: 'omit',
+                        keepalive: true,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: safeJson(item.body)
+                    });
+                    if (!response.ok) throw new Error('error reporter HTTP ' + response.status);
+                    queue.shift();
+                    persistQueue();
+                } catch {
+                    break;
+                }
+            }
+        })().finally(function () {
+            flushPromise = null;
+        });
+        return flushPromise;
+    }
+
+    function suppressConsoleForCurrentTask() {
+        suppressConsoleCapture = true;
+        window.setTimeout(function () {
+            suppressConsoleCapture = false;
+        }, 0);
+    }
+
     function report(payload) {
         if (!gameId || sentCount >= MAX_REPORTS_PER_PAGE) return;
         if (!payload || !payload.message) return;
@@ -191,7 +287,7 @@
             }
         }, payload.context || {});
         var errorType = payload.error_type || 'error';
-        var body = safeJson({
+        var body = {
             appId: gameId,
             userId: '',
             message: truncate('[' + errorType + '] ' + payload.message, 500),
@@ -201,38 +297,18 @@
             errorType: truncate(errorType, 100),
             errorClass: truncate(payload.error_class || '', 50),
             context: context,
-            extra: {
+            extra: Object.assign({
                 lineno: payload.lineno || 0,
                 colno: payload.colno || 0,
                 appVersion: appVersion || '',
                 pageTitle: document.title || ''
-            }
-        });
-
-        try {
-            if (endpointIsSameOrigin && navigator.sendBeacon) {
-                var blob = new Blob([body], { type: 'application/json' });
-                if (navigator.sendBeacon(endpoint, blob)) return;
-            }
-        } catch {
-            // Fall through to fetch.
-        }
-
-        try {
-            fetch(endpoint, {
-                method: 'POST',
-                mode: 'cors',
-                credentials: 'omit',
-                keepalive: true,
-                headers: { 'Content-Type': 'application/json' },
-                body: body
-            }).catch(function () {});
-        } catch {
-            // Reporting must never break the game.
-        }
+            }, payload.extra || {})
+        };
+        enqueue(body);
     }
 
     window.addEventListener('error', function (event) {
+        suppressConsoleForCurrentTask();
         var target = event && event.target;
         if (target && target !== window && target !== document) {
             var source = target.currentSrc || target.src || target.href || '';
@@ -265,6 +341,7 @@
     }, true);
 
     window.addEventListener('unhandledrejection', function (event) {
+        suppressConsoleForCurrentTask();
         var details = reasonPayload(event.reason);
         report({
             error_type: 'unhandledrejection',
@@ -276,6 +353,47 @@
             context: details.context || {}
         });
     }, true);
+
+    document.addEventListener('securitypolicyviolation', function (event) {
+        report({
+            error_type: 'securitypolicyviolation',
+            message: 'Blocked by Content Security Policy: ' + safeString(event.violatedDirective, 'unknown directive'),
+            source: event.blockedURI || event.sourceFile || '',
+            lineno: event.lineNumber || 0,
+            colno: event.columnNumber || 0,
+            stack: '',
+            context: {
+                effectiveDirective: event.effectiveDirective || '',
+                disposition: event.disposition || '',
+                statusCode: event.statusCode || 0
+            }
+        });
+    }, true);
+
+    if (window.console && typeof window.console.error === 'function') {
+        var originalConsoleError = window.console.error;
+        window.console.error = function () {
+            originalConsoleError.apply(window.console, arguments);
+            if (suppressConsoleCapture) return;
+            var args = Array.prototype.slice.call(arguments);
+            var errorArg = args.find(function (value) { return value instanceof Error; });
+            report({
+                error_type: 'console_error',
+                message: args.map(safePreview).join(' ').slice(0, 500) || 'console.error',
+                source: '',
+                lineno: 0,
+                colno: 0,
+                stack: errorArg && errorArg.stack ? errorArg.stack : '',
+                context: { argumentCount: args.length }
+            });
+        };
+    }
+
+    window.addEventListener('online', function () { scheduleFlush(0); });
+    window.addEventListener('pagehide', function () { flushQueue(); });
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') flushQueue();
+    });
 
     window.ArcherLabClientErrorReporter = {
         report: function (error, context) {
@@ -289,6 +407,12 @@
                 stack: details.stack || '',
                 context: Object.assign({}, details.context || {}, context || {})
             });
-        }
+        },
+        reportPayload: function (payload) {
+            report(payload || {});
+        },
+        flush: flushQueue
     };
+
+    scheduleFlush(0);
 })();

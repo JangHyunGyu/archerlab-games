@@ -1016,6 +1016,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         try { navigator.sendBeacon(ERROR_ENDPOINT, JSON.stringify(payload)); } catch (_) {}
     }
 
+    if (!window.ArcherLabClientErrorReporter) {
     window.addEventListener('error', function(e) {
         var src = (e.filename || '') + ':' + e.lineno + ':' + e.colno;
         if (window.__slimeVolleyIgnoreError && window.__slimeVolleyIgnoreError(e.message, e.filename, e.lineno, e.colno, e.error)) return;
@@ -1027,4 +1028,5 @@ window.addEventListener('DOMContentLoaded', async () => {
         var msg = reason?.message || String(reason || 'Unhandled rejection');
         _sendError('UnhandledRejection', msg, reason?.stack || '', location.href);
     });
+    }
 })();
