@@ -3,7 +3,9 @@
 
   const SAMPLE_ASSETS = {
     start: "assets/sounds/parking-start.mp3",
+    move: "assets/sounds/parking-car-move.mp3",
     targetMove: "assets/sounds/parking-target-move.mp3",
+    exit: "assets/sounds/parking-exit.mp3",
     button: "assets/sounds/parking-button.mp3",
     blocked: "assets/sounds/parking-blocked.mp3",
     win: "assets/sounds/parking-clear.mp3",
@@ -14,7 +16,9 @@
 
   const SAMPLE_SETTINGS = {
     start: { volume: 1 },
+    move: { volume: -7 },
     targetMove: { volume: 0 },
+    exit: { volume: -7 },
     button: { volume: 1 },
     blocked: { volume: 1 },
     win: { volume: 0 },
@@ -316,7 +320,8 @@
     }
 
     playMove(now, vel, target = false) {
-      if (target && this.playSample("targetMove", now, {
+      const sampleKey = target ? "targetMove" : "move";
+      if (this.playSample(sampleKey, now, {
         playbackRate: this.clamp(0.92 + vel * 0.16, 0.94, 1.08),
       })) {
         this.hit(this.nodes.body, "B1", "16n", now, 0.08 + vel * 0.08);
@@ -339,6 +344,13 @@
     }
 
     playExit(now, vel) {
+      if (this.playSample("exit", now, {
+        playbackRate: this.clamp(0.96 + vel * 0.08, 0.96, 1.04),
+      })) {
+        this.noise(this.nodes.air, "8n", now + 0.08, 0.1 + vel * 0.08);
+        this.hit(this.nodes.gear, "A5", "128n", now + 0.03, 0.07);
+        return;
+      }
       this.hit(this.nodes.body, "C2", "8n", now, 0.15 + vel * 0.08);
       [["C2", 0], ["F2", 0.08], ["A2", 0.17], ["C3", 0.28]].forEach(([note, offset], index) => {
         this.hit(this.nodes.rev, note, index < 2 ? "16n" : "12n", now + offset, 0.15 + vel * 0.13);
