@@ -6,6 +6,8 @@
     ko: {
       // 메뉴
       'menu.title': '고양이 타워',
+      'menu.kicker': 'CAT MERGE PUZZLE',
+      'menu.evolution': '진화 타워',
       'menu.tagline': '같은 고양이를 합쳐 사바나까지',
       'menu.best': '최고 기록',
       'menu.play': '플레이',
@@ -78,6 +80,8 @@
     },
     en: {
       'menu.title': 'Cat Tower',
+      'menu.kicker': 'CAT MERGE PUZZLE',
+      'menu.evolution': 'EVOLUTION TOWER',
       'menu.tagline': 'Merge cats all the way to Savannah',
       'menu.best': 'Best',
       'menu.play': 'Play',

@@ -291,14 +291,19 @@ export class MenuScene extends Phaser.Scene {
             || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         const viewportW = window.innerWidth || GAME_WIDTH;
         const viewportH = window.innerHeight || GAME_HEIGHT;
+        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
+        const minTouchHeight = Math.ceil(46 / cssPerUnit);
         const isPortrait = viewportH > viewportW || GAME_HEIGHT > GAME_WIDTH;
         const isShortLandscape = !isPortrait && ((viewportH <= 620 && viewportW > viewportH) || GAME_HEIGHT <= 620);
         const isCompact = isPortrait || GAME_WIDTH < 980 || isShortLandscape;
+        const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+        const fadeDuration = reduceMotion ? 0 : 380;
 
         this._modalElements = [];
         this._dropdownElements = [];
         this._startingGame = false;
         this._characterSelectOpen = false;
+        this._reduceMenuMotion = reduceMotion;
         this.selectedCharacterId = getStoredCharacterId();
 
         this._createMenuBackdrop({ isPortrait, isShortLandscape });
@@ -311,6 +316,30 @@ export class MenuScene extends Phaser.Scene {
         const topY = isPortrait ? uv(72) : (isShortLandscape ? uv(44) : GAME_HEIGHT * 0.16);
         const headerX = isPortrait ? GAME_WIDTH / 2 : contentX;
         const headerOriginX = isPortrait ? 0.5 : 0;
+        const selectedCharacter = getCharacter(this.selectedCharacterId);
+        const selectedText = getCharacterText(selectedCharacter);
+
+        if (!isCompact) {
+            const panelX = contentX - uv(26);
+            const panelY = Math.max(uv(24), topY - uv(38));
+            const panelBottom = Math.min(GAME_HEIGHT - uv(48), topY + uv(500));
+            const panel = this.add.graphics().setDepth(0);
+            drawSystemPanel(panel, panelX, panelY, contentW + uv(52), panelBottom - panelY, {
+                cut: uv(14),
+                fill: SYSTEM.BG_PANEL,
+                fillAlpha: 0.54,
+                border: SYSTEM.BORDER_DIM,
+                borderAlpha: 0.42,
+                borderWidth: 1,
+            });
+            panel.fillStyle(SYSTEM.BORDER, 0.82);
+            panel.fillRect(panelX + uv(2), panelY + uv(26), uv(3), uv(86));
+            this._createHeroFocus(GAME_WIDTH / 2, pct => GAME_HEIGHT * pct, { isPortrait, isShortLandscape });
+        } else if (isPortrait) {
+            this._createMobileHeroPortrait(GAME_WIDTH / 2, GAME_HEIGHT * 0.305);
+        } else if (isShortLandscape) {
+            this._createMobileHeroPortrait(GAME_WIDTH * 0.72, GAME_HEIGHT * 0.54, { isShortLandscape: true });
+        }
 
         const startGame = async (resume = false, characterIdOverride = null) => {
             if (this._startingGame) return;
@@ -331,8 +360,12 @@ export class MenuScene extends Phaser.Scene {
                 this._startingGame = false;
                 return;
             }
-            this.cameras.main.fadeOut(380, 0, 0, 0);
-            this.time.delayedCall(380, () => this.scene.start('GameScene', { resume, characterId }));
+            if (fadeDuration <= 0) {
+                this.scene.start('GameScene', { resume, characterId });
+                return;
+            }
+            this.cameras.main.fadeOut(fadeDuration, 0, 0, 0);
+            this.time.delayedCall(fadeDuration, () => this.scene.start('GameScene', { resume, characterId }));
         };
 
         if (!isPortrait) {
@@ -372,46 +405,56 @@ export class MenuScene extends Phaser.Scene {
             const notice = this.add.text(headerX, topY + uv(isPortrait ? 126 : 144), t('menuMsg3'), {
                 fontSize: fs(isPortrait ? 12 : 13),
                 fontFamily: UI_FONT_KR,
-                color: SYSTEM.TEXT_CYAN_DIM,
+                color: SYSTEM.TEXT_CYAN,
                 stroke: '#02040a',
                 strokeThickness: 2,
                 lineSpacing: 4,
                 align: isPortrait ? 'center' : 'left',
-            }).setOrigin(headerOriginX, 0).setDepth(4);
+            }).setOrigin(headerOriginX, 0).setDepth(4).setAlpha(0.82);
             this._fitText(notice, contentW, uv(30));
         }
+
+        const hunterY = topY + uv(isShortLandscape ? 112 : (isPortrait ? 176 : 190));
+        const hunterLabel = this.add.text(headerX, hunterY, `[ SHADOW LINK · ${selectedText.name} · ${selectedText.archetype} ]`, {
+            fontSize: fs(isShortLandscape ? 9 : 10),
+            fontFamily: UI_FONT_KR,
+            fontStyle: 'bold',
+            color: selectedCharacter.accentText || SYSTEM.TEXT_CYAN,
+            stroke: '#02040a',
+            strokeThickness: 2,
+            align: isPortrait ? 'center' : 'left',
+        }).setOrigin(headerOriginX, 0).setDepth(4);
+        this._fitText(hunterLabel, contentW, uv(22));
 
         const hasSave = GameScene.hasSavedGame();
         const btnW = Math.min(contentW, uv(isPortrait ? 430 : (isCompact ? 420 : 340)));
         const btnX = isPortrait ? (GAME_WIDTH - btnW) / 2 : contentX;
         const secondaryW = Math.min(btnW * (isPortrait ? 0.88 : 0.84), uv(isPortrait ? 390 : 300));
         const secondaryX = isPortrait ? (GAME_WIDTH - secondaryW) / 2 : contentX + (btnW - secondaryW) / 2;
-        const primaryH = Math.round(Math.min(
+        const primaryH = Math.max(minTouchHeight, Math.round(Math.min(
             uv(isShortLandscape ? 74 : (isPortrait ? 116 : 94)),
             Math.max(uv(isShortLandscape ? 52 : 76), btnW / 3.79)
-        ));
-        const secondaryH = Math.round(Math.min(
+        )));
+        const secondaryH = Math.max(minTouchHeight, Math.round(Math.min(
             uv(isShortLandscape ? 52 : (isPortrait ? 86 : 72)),
             Math.max(uv(isShortLandscape ? 38 : 54), secondaryW / 3.32)
-        ));
-        const resumeH = Math.round(Math.min(
+        )));
+        const resumeH = Math.max(minTouchHeight, Math.round(Math.min(
             uv(isShortLandscape ? 78 : (isPortrait ? 108 : 96)),
             Math.max(uv(isShortLandscape ? 56 : 72), btnW / 3.79)
-        ));
+        )));
         const gap = uv(isShortLandscape ? 10 : 16);
+        const actionStackH = (hasSave ? resumeH + gap : 0) + primaryH + gap + secondaryH;
         let actionY;
         if (isPortrait) {
-            const actionStackH = (hasSave ? resumeH + gap : 0) + primaryH + gap + secondaryH;
-            const targetY = GAME_HEIGHT * (hasSave ? 0.39 : 0.47);
-            const minY = topY + uv(isShortLandscape ? 156 : 296);
-            actionY = Math.min(GAME_HEIGHT - uv(260) - actionStackH, Math.max(targetY, minY));
+            const targetY = GAME_HEIGHT * (hasSave ? 0.39 : 0.49);
+            const minY = topY + uv(hasSave ? 260 : 302);
+            actionY = Math.min(GAME_HEIGHT - uv(176) - actionStackH, Math.max(targetY, minY));
         } else if (isShortLandscape) {
-            const actionStackH = primaryH + gap + secondaryH;
-            actionY = Math.min(GAME_HEIGHT - uv(24) - actionStackH, topY + uv(128));
+            actionY = Math.min(GAME_HEIGHT - uv(28) - actionStackH, topY + uv(144));
         } else {
-            actionY = GAME_HEIGHT - uv(232);
+            actionY = Math.min(GAME_HEIGHT - uv(52) - actionStackH, topY + uv(282));
         }
-        if (hasSave) actionY -= resumeH + gap;
 
         if (hasSave) {
             const summary = GameScene.getSavedSummary();
@@ -446,13 +489,17 @@ export class MenuScene extends Phaser.Scene {
         });
 
         this._createLanguageDropdown(isMobile);
-        this.cameras.main.fadeIn(380, 0, 0, 0);
+        if (fadeDuration > 0) this.cameras.main.fadeIn(fadeDuration, 0, 0, 0);
 
         this.events.once('shutdown', () => {
             this._dropdownElements.forEach(el => { if (el && el.active) el.destroy(); });
             this._dropdownElements = [];
             this._modalElements.forEach(el => { if (el && el.active) el.destroy(); });
             this._modalElements = [];
+            (this._heroPreviewMasks || []).forEach(mask => mask?.destroy?.());
+            (this._heroPreviewMaskSources || []).forEach(source => source?.destroy?.());
+            this._heroPreviewMasks = [];
+            this._heroPreviewMaskSources = [];
         });
 
         this.input.once('pointerdown', async () => {
@@ -981,8 +1028,22 @@ export class MenuScene extends Phaser.Scene {
 
         this._heroPreviewSprite = this.add.image(x, y, heroKey)
             .setDepth(3)
-            .setAlpha(isShortLandscape ? 0.78 : 0.42);
+            .setAlpha(isShortLandscape ? 0.72 : 0.64);
         this._fitImageDisplay(this._heroPreviewSprite, heroKey, size, size * 1.12);
+        this._applyHeroPreviewMask(this._heroPreviewSprite, x, y, Math.min(this._heroPreviewSprite.displayWidth, this._heroPreviewSprite.displayHeight));
+    }
+
+    _applyHeroPreviewMask(image, x, y, diameter) {
+        if (!image || diameter <= 0) return;
+        const maskSource = this.make.graphics({ x: 0, y: 0, add: false });
+        maskSource.fillStyle(0xffffff, 1);
+        maskSource.fillCircle(x, y, diameter * 0.49);
+        const mask = maskSource.createGeometryMask();
+        image.setMask(mask);
+        this._heroPreviewMaskSources = this._heroPreviewMaskSources || [];
+        this._heroPreviewMasks = this._heroPreviewMasks || [];
+        this._heroPreviewMaskSources.push(maskSource);
+        this._heroPreviewMasks.push(mask);
     }
 
     _createMenuBackdrop({ isPortrait = false, isShortLandscape = false } = {}) {
@@ -1002,7 +1063,7 @@ export class MenuScene extends Phaser.Scene {
         this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.08, GAME_WIDTH, GAME_HEIGHT * 0.2, 0x010309, isShortLandscape ? 0.28 : 0.14)
             .setDepth(-33);
 
-        if (this.textures.exists('particle_glow')) {
+        if (!this._reduceMenuMotion && this.textures.exists('particle_glow')) {
             try {
                 this.add.particles(GAME_WIDTH * (isPortrait ? 0.52 : 0.63), GAME_HEIGHT * 0.55, 'particle_glow', {
                     x: { min: -GAME_WIDTH * 0.42, max: GAME_WIDTH * 0.38 },
@@ -1042,7 +1103,7 @@ export class MenuScene extends Phaser.Scene {
 
         const heroX = centerX + Math.min(GAME_WIDTH * 0.28, uv(390));
         const heroY = cy(0.52);
-        const ringSize = Math.min(uv(440), GAME_HEIGHT * 0.56);
+        const ringSize = Math.min(uv(380), GAME_HEIGHT * 0.5);
 
         if (this.textures.exists('env_shadow_portal')) {
             this._heroPreviewAura = this.add.image(heroX, heroY, 'env_shadow_portal')
@@ -1063,19 +1124,22 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(-14)
             .setAlpha(0.9)
             .setDisplaySize(ringSize * 0.72, ringSize * 0.72);
+        this._applyHeroPreviewMask(this._heroPreviewSprite, heroX, heroY, ringSize * 0.72);
         this._heroPreviewMaxW = ringSize * 0.72;
         this._heroPreviewMaxH = ringSize * 0.86;
         this._refreshHeroPreview();
 
-        this.tweens.add({
-            targets: [this._heroPreviewAura, this._heroPreviewRing].filter(Boolean),
-            alpha: { from: 0.18, to: 0.32 },
-            scale: '+=0.035',
-            duration: 2400,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-        });
+        if (!this._reduceMenuMotion) {
+            this.tweens.add({
+                targets: [this._heroPreviewAura, this._heroPreviewRing].filter(Boolean),
+                alpha: { from: 0.18, to: 0.32 },
+                scale: '+=0.035',
+                duration: 2400,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+        }
     }
 
     _refreshHeroPreview(character = getCharacter(this.selectedCharacterId)) {
@@ -1370,10 +1434,14 @@ export class MenuScene extends Phaser.Scene {
 
     _createLanguageDropdown(isMobile) {
         const current = (LANGUAGES.find(l => l.code === LANG)?.code || 'ko').toUpperCase();
-        const btnW = uv(isMobile ? 92 : 82);
-        const btnH = uv(30);
+        const viewportW = window.innerWidth || GAME_WIDTH;
+        const viewportH = window.innerHeight || GAME_HEIGHT;
+        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
+        const minTouchHeight = Math.ceil(44 / cssPerUnit);
+        const btnW = Math.max(uv(isMobile ? 92 : 82), minTouchHeight * 1.8);
+        const btnH = Math.max(uv(30), minTouchHeight);
         const btnX = GAME_WIDTH - btnW - uv(18);
-        const btnY = uv(44);
+        const btnY = Math.max(uv(24), uv(44) - (btnH - uv(30)) * 0.5);
         const depth = 50;
 
         const triggerG = this.add.graphics().setDepth(depth);

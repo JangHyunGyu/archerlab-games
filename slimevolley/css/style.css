@@ -2085,3 +2085,645 @@ kbd {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); border: 2px solid transparent; background-clip: padding-box; }
+
+/* 2026 start menu: arcade court presentation */
+:root {
+    --arcade-cyan: #4ce6ff;
+    --arcade-blue: #3b8dff;
+    --arcade-red: #ff5a62;
+    --arcade-yellow: #ffd34e;
+    --arcade-ink: #07101f;
+}
+
+#game-header {
+    min-height: 56px;
+    padding:
+        calc(8px + env(safe-area-inset-top, 0px))
+        calc(18px + env(safe-area-inset-right, 0px))
+        8px
+        calc(18px + env(safe-area-inset-left, 0px));
+    background: rgba(5, 9, 20, 0.9);
+    border-bottom-color: rgba(76, 230, 255, 0.2);
+}
+
+.header-archerlab-link {
+    padding: 6px 15px;
+    border: 1px solid rgba(76, 230, 255, 0.55);
+    background: rgba(10, 23, 43, 0.92);
+    color: #dffaff;
+    animation: none;
+    box-shadow: 0 0 18px rgba(76, 230, 255, 0.14);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+}
+
+.header-archerlab-link:hover {
+    transform: translate(-50%, -50%) scale(1.03);
+    box-shadow: 0 0 24px rgba(76, 230, 255, 0.28);
+}
+
+.screen {
+    padding:
+        24px
+        max(24px, env(safe-area-inset-right, 0px))
+        max(24px, env(safe-area-inset-bottom, 0px))
+        max(24px, env(safe-area-inset-left, 0px));
+}
+
+#main-menu.screen::before {
+    background:
+        linear-gradient(180deg, rgba(3, 7, 19, 0.2), rgba(3, 7, 19, 0.64)),
+        radial-gradient(circle at 28% 44%, rgba(59, 141, 255, 0.16), transparent 28%),
+        radial-gradient(circle at 76% 44%, rgba(255, 90, 98, 0.14), transparent 28%),
+        url('../assets/images/court-bg.webp') center / cover no-repeat;
+    opacity: 1;
+    transform: scale(1.025);
+}
+
+#main-menu .menu-container {
+    grid-template-columns: minmax(300px, 0.92fr) minmax(380px, 1fr);
+    grid-template-rows: auto 1fr auto;
+    column-gap: 48px;
+    row-gap: 14px;
+    max-width: 1040px;
+    padding: 34px 38px 36px;
+    overflow: hidden;
+    border: 1px solid rgba(76, 230, 255, 0.26);
+    border-radius: 8px;
+    background:
+        linear-gradient(105deg, rgba(4, 13, 31, 0.94), rgba(7, 13, 34, 0.78) 54%, rgba(20, 8, 31, 0.82)),
+        repeating-linear-gradient(180deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 7px);
+    box-shadow:
+        0 30px 90px rgba(0,0,0,0.42),
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        0 0 42px rgba(59, 141, 255, 0.08);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
+}
+
+#main-menu .menu-container::before,
+#main-menu .menu-container::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+}
+
+#main-menu .menu-container::before {
+    inset: 10px;
+    border: 1px solid rgba(255,255,255,0.045);
+    clip-path: inherit;
+}
+
+#main-menu .menu-container::after {
+    left: 38px;
+    right: 38px;
+    bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--arcade-blue), var(--arcade-cyan) 42%, var(--arcade-yellow) 50%, var(--arcade-red) 58%, #ff4a8b);
+    box-shadow: 0 0 18px rgba(76, 230, 255, 0.5);
+}
+
+#main-menu .language-switch {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 4px;
+    background: rgba(3, 8, 20, 0.9);
+    border-color: rgba(76, 230, 255, 0.28);
+    border-radius: 6px;
+}
+
+#main-menu .language-btn {
+    min-height: 34px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+}
+
+#main-menu .language-btn.active {
+    color: #06101d;
+    background: var(--arcade-yellow);
+    box-shadow: 0 0 14px rgba(255, 211, 78, 0.28);
+}
+
+#main-menu .game-logo,
+#main-menu .game-logo-assets {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+    height: 184px;
+    gap: 12px;
+    margin: 0;
+    padding-top: 12px;
+}
+
+.logo-mascot,
+.logo-ball-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+#main-menu .logo-slime-img {
+    width: 132px;
+    height: 112px;
+    filter: drop-shadow(0 12px 18px rgba(0,0,0,0.42));
+}
+
+#main-menu .logo-mascot-blue .logo-slime-img {
+    filter: drop-shadow(0 0 18px rgba(59, 141, 255, 0.38)) drop-shadow(0 12px 18px rgba(0,0,0,0.42));
+}
+
+#main-menu .logo-mascot-red .logo-slime-img {
+    filter: drop-shadow(0 0 18px rgba(255, 90, 98, 0.32)) drop-shadow(0 12px 18px rgba(0,0,0,0.42));
+}
+
+.logo-team-tag {
+    min-width: 64px;
+    margin-bottom: 5px;
+    padding: 3px 9px;
+    border: 1px solid currentColor;
+    color: var(--arcade-cyan);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-align: center;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+.logo-mascot-red .logo-team-tag {
+    color: #ff838a;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 100%, 6px 100%);
+}
+
+#main-menu .logo-ball-wrap {
+    align-self: flex-start;
+    justify-content: flex-start;
+    min-width: 68px;
+    padding-top: 6px;
+}
+
+#main-menu .logo-ball-img {
+    width: 58px;
+    height: 58px;
+    margin: 0 0 25px;
+    animation: logoBounce 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 14px rgba(255, 211, 78, 0.42));
+}
+
+.logo-versus {
+    padding: 4px 10px;
+    border-block: 1px solid rgba(255, 211, 78, 0.56);
+    color: var(--arcade-yellow);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+}
+
+#main-menu .menu-copy {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    padding-bottom: 10px;
+}
+
+#main-menu .menu-kicker {
+    margin-bottom: 8px;
+    color: var(--arcade-cyan);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+#main-menu .menu-title {
+    margin: 0;
+    color: #f7fbff;
+    font-size: clamp(3rem, 4.2vw, 4rem);
+    font-weight: 900;
+    letter-spacing: -0.045em;
+    line-height: 0.98;
+    text-shadow: 0 4px 22px rgba(0,0,0,0.52), 0 0 24px rgba(76,230,255,0.08);
+}
+
+#main-menu .menu-subtitle {
+    margin: 12px 0 0;
+    color: #9fb5c9;
+    font-size: 0.98rem;
+    font-weight: 600;
+}
+
+#main-menu .menu-buttons {
+    grid-column: 2;
+    grid-row: 3;
+    gap: 12px;
+}
+
+#main-menu .btn-large {
+    min-height: 68px;
+    padding: 15px 20px;
+    overflow: hidden;
+    border-radius: 4px;
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+    font-size: 1rem;
+    font-weight: 850;
+    letter-spacing: -0.015em;
+}
+
+#main-menu .btn-large .btn-icon {
+    display: grid;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+}
+
+#main-menu .btn-large .btn-icon img {
+    display: block;
+    width: 21px;
+    height: 21px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28));
+}
+
+#main-menu .btn-desc {
+    position: static;
+    max-width: 48%;
+    margin-left: auto;
+    color: currentColor;
+    font-size: 0.7rem;
+    font-weight: 650;
+    opacity: 0.64;
+    text-align: right;
+}
+
+#main-menu .btn-primary {
+    color: #171300;
+    background: linear-gradient(100deg, #ffd34e, #ffb52e);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.52), 0 8px 22px rgba(255, 187, 46, 0.18);
+}
+
+#main-menu .btn-primary:hover {
+    color: #0b1220;
+    background: linear-gradient(100deg, #ffe16f, #ffc54c);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 10px 28px rgba(255, 187, 46, 0.28);
+}
+
+#main-menu .btn-secondary {
+    border: 1px solid rgba(76, 230, 255, 0.5);
+    color: #e8faff;
+    background: linear-gradient(100deg, rgba(12, 39, 73, 0.94), rgba(22, 21, 58, 0.94));
+    box-shadow: inset 4px 0 0 var(--arcade-blue), inset -4px 0 0 var(--arcade-red);
+}
+
+#main-menu .btn-secondary:hover {
+    border-color: var(--arcade-cyan);
+    background: linear-gradient(100deg, rgba(17, 54, 96, 0.98), rgba(41, 25, 78, 0.98));
+}
+
+#main-menu .controls-guide {
+    grid-column: 1;
+    grid-row: 3;
+    align-self: end;
+    min-height: 148px;
+    border: 1px solid rgba(76, 230, 255, 0.18);
+    border-radius: 4px;
+    background: rgba(3, 10, 25, 0.7);
+    color: #8ea7ba;
+    font-family: var(--font-mono);
+}
+
+#main-menu .controls-guide strong {
+    color: var(--arcade-yellow);
+    letter-spacing: 0.08em;
+}
+
+#main-menu kbd {
+    border-color: rgba(76, 230, 255, 0.32);
+    color: #eafaff;
+    background: rgba(17, 39, 65, 0.9);
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+    outline: 3px solid var(--arcade-yellow);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px rgba(255, 211, 78, 0.18);
+}
+
+#main-menu .btn-large:focus-visible {
+    outline: 0;
+    box-shadow:
+        inset 0 0 0 3px #ffffff,
+        inset 0 0 0 6px var(--arcade-yellow),
+        0 8px 24px rgba(255, 211, 78, 0.24);
+}
+
+@media (max-height: 450px) and (orientation: landscape) {
+    #game-header {
+        min-height: 44px;
+        padding:
+            max(2px, env(safe-area-inset-top, 0px))
+            calc(10px + env(safe-area-inset-right, 0px))
+            2px
+            calc(10px + env(safe-area-inset-left, 0px));
+    }
+
+    #main-menu.screen {
+        padding: 7px max(12px, env(safe-area-inset-right, 0px)) max(7px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    #main-menu .menu-container {
+        grid-template-columns: minmax(190px, 0.72fr) minmax(300px, 1fr);
+        grid-template-rows: auto 1fr auto;
+        max-width: min(850px, calc(100vw - 24px));
+        padding: 12px 16px 14px;
+        column-gap: 20px;
+        row-gap: 5px;
+    }
+
+    #main-menu .game-logo,
+    #main-menu .game-logo-assets {
+        height: 116px;
+        gap: 7px;
+        padding-top: 0;
+    }
+
+    #main-menu .logo-slime-img {
+        width: 78px;
+        height: 68px;
+    }
+
+    #main-menu .logo-ball-wrap {
+        min-width: 42px;
+        padding-top: 2px;
+    }
+
+    #main-menu .logo-ball-img {
+        width: 34px;
+        height: 34px;
+        margin-bottom: 12px;
+    }
+
+    #main-menu .logo-team-tag {
+        min-width: 48px;
+        padding: 2px 6px;
+        font-size: 0.5rem;
+    }
+
+    #main-menu .logo-versus {
+        padding: 2px 6px;
+        font-size: 0.54rem;
+    }
+
+    #main-menu .menu-kicker {
+        margin-bottom: 3px;
+        font-size: 0.54rem;
+    }
+
+    #main-menu .menu-title {
+        font-size: clamp(1.65rem, 5vw, 2.2rem);
+    }
+
+    #main-menu .menu-subtitle {
+        margin-top: 4px;
+        font-size: 0.7rem;
+    }
+
+    #main-menu .menu-buttons {
+        gap: 7px;
+    }
+
+    #main-menu .btn-large {
+        min-height: 44px;
+        padding: 7px 12px;
+        font-size: 0.86rem;
+    }
+
+    #main-menu .btn-large .btn-icon {
+        flex-basis: 26px;
+        width: 26px;
+        height: 26px;
+        font-size: 0.68rem;
+    }
+
+    #main-menu .btn-desc {
+        font-size: 0.58rem;
+    }
+
+    #main-menu .controls-guide {
+        display: none;
+    }
+}
+
+@media (max-height: 450px) and (orientation: landscape) and (max-width: 640px) {
+    #main-menu .menu-container {
+        grid-template-columns: minmax(142px, 0.62fr) minmax(235px, 1fr);
+        column-gap: 10px;
+        padding-inline: 12px;
+    }
+
+    #main-menu .game-logo,
+    #main-menu .game-logo-assets {
+        height: 102px;
+    }
+
+    #main-menu .logo-slime-img {
+        width: 63px;
+        height: 56px;
+    }
+
+    #main-menu .logo-ball-img {
+        width: 28px;
+        height: 28px;
+    }
+
+    #main-menu .btn-desc {
+        display: none;
+    }
+}
+
+@media (orientation: portrait) {
+    #main-menu.screen {
+        align-items: flex-start;
+        overflow-y: auto;
+        padding:
+            max(14px, env(safe-area-inset-top, 0px))
+            max(12px, env(safe-area-inset-right, 0px))
+            max(18px, env(safe-area-inset-bottom, 0px))
+            max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    #main-menu .menu-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        width: min(100%, 500px);
+        min-height: auto;
+        margin: auto;
+        padding: 22px 18px 26px;
+        text-align: center;
+    }
+
+    #main-menu .language-switch {
+        order: 1;
+        align-self: flex-end;
+    }
+
+    #main-menu .game-logo,
+    #main-menu .game-logo-assets {
+        order: 2;
+        width: 100%;
+        height: 154px;
+        padding-top: 0;
+    }
+
+    #main-menu .logo-slime-img {
+        width: 108px;
+        height: 92px;
+    }
+
+    #main-menu .logo-ball-wrap {
+        min-width: 54px;
+    }
+
+    #main-menu .logo-ball-img {
+        width: 45px;
+        height: 45px;
+        margin-bottom: 18px;
+    }
+
+    #main-menu .menu-copy {
+        order: 3;
+        width: 100%;
+        padding: 0;
+    }
+
+    #main-menu .menu-title {
+        font-size: clamp(2.45rem, 13vw, 3.5rem);
+    }
+
+    #main-menu .menu-subtitle {
+        margin-top: 9px;
+    }
+
+    #main-menu .menu-buttons {
+        order: 4;
+        width: min(100%, 430px);
+    }
+
+    #main-menu .controls-guide {
+        order: 5;
+        width: min(100%, 430px);
+        min-height: 0;
+        text-align: left;
+    }
+}
+
+@media (orientation: portrait) and (max-width: 360px) {
+    .header-archerlab-link {
+        padding-inline: 8px;
+        font-size: 0.65rem;
+        letter-spacing: 0.02em;
+    }
+
+    #main-menu .menu-container {
+        gap: 10px;
+        padding: 16px 12px 20px;
+    }
+
+    #main-menu .game-logo,
+    #main-menu .game-logo-assets {
+        height: 124px;
+        gap: 6px;
+    }
+
+    #main-menu .logo-slime-img {
+        width: 82px;
+        height: 74px;
+    }
+
+    #main-menu .logo-ball-wrap {
+        min-width: 42px;
+    }
+
+    #main-menu .logo-ball-img {
+        width: 34px;
+        height: 34px;
+        margin-bottom: 14px;
+    }
+
+    #main-menu .logo-team-tag {
+        min-width: 46px;
+        padding: 2px 5px;
+        font-size: 0.5rem;
+    }
+
+    #main-menu .menu-title {
+        font-size: 2.25rem;
+    }
+
+    #main-menu .btn-large {
+        min-height: 56px;
+        padding-inline: 12px;
+    }
+
+    #main-menu .btn-desc {
+        font-size: 0.58rem;
+    }
+}
+
+@media (any-pointer: coarse) {
+    #main-menu .language-btn,
+    #main-menu .btn-large,
+    .back-link,
+    .icon-btn,
+    .header-archerlab-link {
+        min-height: 44px;
+    }
+
+    .back-link,
+    .icon-btn {
+        min-width: 44px;
+    }
+}
+
+@media (max-width: 768px) and (orientation: portrait),
+       (hover: none) and (pointer: coarse) and (orientation: portrait) {
+    #rotate-overlay {
+        display: none;
+        padding:
+            env(safe-area-inset-top, 0px)
+            env(safe-area-inset-right, 0px)
+            env(safe-area-inset-bottom, 0px)
+            env(safe-area-inset-left, 0px);
+    }
+
+    body[data-screen="game-screen"] #rotate-overlay {
+        display: flex;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+
+    .screen.active {
+        animation: none;
+    }
+}

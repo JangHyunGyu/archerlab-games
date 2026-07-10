@@ -822,13 +822,21 @@ class UIManager {
         minFontSize = 10,
         onPress,
         registerActive = false,
-        hitPad = 8,
+        hitPad = null,
     }) {
+        const resolvedHitPad = hitPad == null
+            ? ((typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches) ? 12 : 8)
+            : hitPad;
         const btn = new PIXI.Container();
         btn.position.set(x, y);
         btn.eventMode = 'static';
         btn.cursor = 'pointer';
-        btn.hitArea = new PIXI.Rectangle(-hitPad, -hitPad, width + hitPad * 2, height + hitPad * 2);
+        btn.hitArea = new PIXI.Rectangle(
+            -resolvedHitPad,
+            -resolvedHitPad,
+            width + resolvedHitPad * 2,
+            height + resolvedHitPad * 2
+        );
 
         const bg = new PIXI.Graphics();
         btn.addChild(bg);
@@ -917,10 +925,10 @@ class UIManager {
 
         if (registerActive) {
             this._activeButtons.push({
-                x: x - hitPad,
-                y: y - hitPad,
-                w: width + hitPad * 2,
-                h: height + hitPad * 2,
+                x: x - resolvedHitPad,
+                y: y - resolvedHitPad,
+                w: width + resolvedHitPad * 2,
+                h: height + resolvedHitPad * 2,
                 action: fire,
             });
         }
@@ -1100,6 +1108,86 @@ class UIManager {
             : Math.max(h * (isShort ? 0.48 : 0.54), h - safeBottom - actionStackH);
         const startBtnY = hasSave ? actionTop + btnH + actionGap : actionTop + 18;
         const btnX = centerX - btnW / 2;
+
+        // ── Playable concept preview: the real board frame and block tiles ──
+        // It occupies only the measured gap between the title and first action,
+        // so saved-game layouts and short screens cannot overlap it.
+        let heroArt = null;
+        const firstActionY = hasSave ? startBtnY - btnH - actionGap : startBtnY;
+        const titleContentBottom = bestText
+            ? bestText.y + bestText.height + 12
+            : subtitle.y + subtitle.height + 10;
+        const heroAvailableH = firstActionY - titleContentBottom - 24;
+        const isShortLandscape = isLandscape && h < 500;
+        if (!isShortLandscape && heroAvailableH >= 92) {
+            const heroMaxByViewport = isLandscape
+                ? Math.min(w * 0.2, h * 0.3, 286 * uiScale)
+                : Math.min(w * 0.55, h * 0.3, 308 * uiScale);
+            const heroSize = Math.max(92, Math.min(heroMaxByViewport, heroAvailableH));
+            heroArt = new PIXI.Container();
+            heroArt._blockpangTitleHero = true;
+            heroArt._blockpangTitleHeroSize = heroSize;
+            heroArt.position.set(centerX, titleContentBottom + 12 + heroSize / 2);
+            heroArt.eventMode = 'none';
+
+            const heroGlow = new PIXI.Graphics();
+            heroGlow.circle(0, 0, heroSize * 0.46)
+                .fill({ color: THEME.secondary, alpha: 0.09 });
+            heroGlow.circle(0, 0, heroSize * 0.38)
+                .fill({ color: THEME.accent, alpha: 0.045 });
+            heroArt.addChild(heroGlow);
+
+            const boardTexture = getBlockpangTexture('boardPanel');
+            if (boardTexture) {
+                const board = new PIXI.Sprite(boardTexture);
+                board.anchor.set(0.5);
+                board.width = heroSize;
+                board.height = heroSize;
+                board.alpha = 0.92;
+                heroArt.addChild(board);
+            } else {
+                const board = new PIXI.Graphics();
+                board.roundRect(-heroSize / 2, -heroSize / 2, heroSize, heroSize, heroSize * 0.08)
+                    .fill({ color: THEME.surface, alpha: 0.86 });
+                board.roundRect(-heroSize / 2, -heroSize / 2, heroSize, heroSize, heroSize * 0.08)
+                    .stroke({ width: 3, color: THEME.secondary, alpha: 0.72 });
+                heroArt.addChild(board);
+            }
+
+            const tileSize = Math.max(14, heroSize * 0.115);
+            const tileStep = tileSize * 0.82;
+            const tileSpecs = [
+                ['blockTile0', -2.0, -1.7], ['blockTile0', -1.2, -1.7], ['blockTile0', -2.0, -0.9],
+                ['blockTile7', -0.35, -0.2], ['blockTile7', 0.45, -0.2], ['blockTile7', 1.25, -0.2], ['blockTile7', 0.45, 0.6],
+                ['blockTile3', 1.15, 1.45], ['blockTile3', 1.95, 1.45], ['blockTile3', 1.95, 0.65],
+            ];
+            tileSpecs.forEach(([textureKey, gridX, gridY], index) => {
+                const texture = getBlockpangTexture(textureKey);
+                if (!texture) return;
+                const tile = new PIXI.Sprite(texture);
+                tile.anchor.set(0.5);
+                tile.width = tileSize;
+                tile.height = tileSize;
+                tile.position.set(gridX * tileStep, gridY * tileStep);
+                tile.alpha = 0.94;
+                tile.rotation = index % 3 === 0 ? -0.012 : (index % 3 === 1 ? 0.01 : 0);
+                heroArt.addChild(tile);
+            });
+
+            const sparkleTexture = getBlockpangTexture('effectStar') || getBlockpangTexture('effectSparkle');
+            if (sparkleTexture) {
+                [[-0.34, 0.28, 0.075], [0.32, -0.31, 0.055], [0.1, 0.36, 0.045]].forEach(([x, y, size]) => {
+                    const sparkle = new PIXI.Sprite(sparkleTexture);
+                    sparkle.anchor.set(0.5);
+                    sparkle.position.set(heroSize * x, heroSize * y);
+                    sparkle.width = heroSize * size;
+                    sparkle.height = heroSize * size;
+                    sparkle.alpha = 0.8;
+                    heroArt.addChild(sparkle);
+                });
+            }
+            container.addChild(heroArt);
+        }
 
         this._activeButtons = [];
 
@@ -1371,37 +1459,44 @@ class UIManager {
 
         // ── Entrance Animation ── (fade + gentle lift, no pop-scaling)
         container.alpha = 0;
-        const liftTargets = [logo, subtitle, actionPanel, startBtn, hofBtn.btn, contactBtn.btn, langTrigger, titleSoundBtn];
+        const liftTargets = [logo, subtitle, heroArt, actionPanel, startBtn, hofBtn.btn, contactBtn.btn, langTrigger, titleSoundBtn]
+            .filter(Boolean);
         if (resumeBtn) liftTargets.push(resumeBtn);
-        liftTargets.forEach(el => { el.y += 16; el.alpha = 0; });
+        const reduceMotion = typeof window !== 'undefined'
+            && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        if (reduceMotion) {
+            container.alpha = 1;
+        } else {
+            liftTargets.forEach(el => { el.y += 16; el.alpha = 0; });
 
-        this.game.effects.tweens.push({
-            elapsed: 0,
-            duration: 700,
-            _isTitleTween: true,
-            _titleRoot: container,
-            _lastLift: 0,
-            update(dt) {
-                if (!container || container.destroyed) return true;
-                this.elapsed += dt;
-                const t = Math.min(this.elapsed / this.duration, 1);
-                container.alpha = easeOutCubic(Math.min(t / 0.4, 1));
+            this.game.effects.tweens.push({
+                elapsed: 0,
+                duration: 700,
+                _isTitleTween: true,
+                _titleRoot: container,
+                _lastLift: 0,
+                update(dt) {
+                    if (!container || container.destroyed) return true;
+                    this.elapsed += dt;
+                    const t = Math.min(this.elapsed / this.duration, 1);
+                    container.alpha = easeOutCubic(Math.min(t / 0.4, 1));
 
-                const lift = easeOutCubic(t) * 16;
-                const delta = lift - this._lastLift;
-                this._lastLift = lift;
-                liftTargets.forEach((el, i) => {
-                    if (!el || el.destroyed) return;
-                    // Stagger
-                    const stagger = i * 0.04;
-                    if (t < stagger) { el.alpha = 0; return; }
-                    const lt = Math.min((t - stagger) / (1 - stagger), 1);
-                    el.alpha = easeOutCubic(lt);
-                    el.y -= delta;
-                });
-                return t >= 1;
-            }
-        });
+                    const lift = easeOutCubic(t) * 16;
+                    const delta = lift - this._lastLift;
+                    this._lastLift = lift;
+                    liftTargets.forEach((el, i) => {
+                        if (!el || el.destroyed) return;
+                        // Stagger
+                        const stagger = i * 0.04;
+                        if (t < stagger) { el.alpha = 0; return; }
+                        const lt = Math.min((t - stagger) / (1 - stagger), 1);
+                        el.alpha = easeOutCubic(lt);
+                        el.y -= delta;
+                    });
+                    return t >= 1;
+                }
+            });
+        }
 
         this.titleContainer = container;
         this.game.app.stage.addChild(container);
@@ -1431,6 +1526,13 @@ class UIManager {
             }
             if (onComplete) onComplete();
         };
+
+        if (typeof window !== 'undefined'
+            && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+            this._destroyDynamicTree(container);
+            finish();
+            return;
+        }
 
         this.game.effects.tweens.push({
             elapsed: 0,

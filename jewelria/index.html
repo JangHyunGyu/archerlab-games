@@ -26,7 +26,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="assets/images/ui/apple-touch-icon.png">
   <link rel="preload" as="image" href="assets/images/ui/jewelria-splash.webp" type="image/webp">
-  <link rel="stylesheet" href="assets/css/style.css?v=20260627-webp">
+  <link rel="stylesheet" href="assets/css/style.css?v=20260710-title-v1">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -76,8 +76,11 @@
       <div class="title-content">
         <div class="title-headline">
           <p class="eyebrow">ARCHERLAB GAMES</p>
-          <h1>쥬얼리아</h1>
+          <div class="title-plaque">
+            <h1>쥬얼리아</h1>
+          </div>
           <p class="subtitle">3분 안에 보석을 맞추고 콤보를 터뜨려 최고 점수에 도전하세요.</p>
+          <p class="title-mantra" aria-label="매치, 콤보, 최고 점수">MATCH <span>◆</span> COMBO <span>◆</span> HIGH SCORE</p>
         </div>
         <div class="title-bottom">
           <div class="record-strip" aria-live="polite">
@@ -91,7 +94,10 @@
             </div>
           </div>
           <div class="title-actions">
-            <button id="play-btn" class="button button-primary" type="button">게임 시작</button>
+            <button id="play-btn" class="button button-primary" type="button">
+              <span class="btn-label">게임 시작</span>
+              <span class="btn-sub">3분 타임 어택</span>
+            </button>
           </div>
         </div>
       </div>
@@ -192,6 +198,56 @@
 
   <script src="../assets/vendor/pixi/pixi-8.19.0.min.js"></script>
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
+  <script>
+    (() => {
+      const requested = new URLSearchParams(location.search).get('lang');
+      const lang = requested === 'en' || requested === 'ja' ? requested : 'ko';
+      const copy = {
+        ko: {
+          documentTitle: '쥬얼리아 Jewelria - Free Match 3 Jewel Puzzle Game',
+          archerlab: 'ArcherLab로 이동', titleLabel: '쥬얼리아 타이틀', sound: '사운드 켜기/끄기', rank: '명예의 전당 열기',
+          title: '쥬얼리아', subtitle: '3분 안에 보석을 맞추고 콤보를 터뜨려 최고 점수에 도전하세요.',
+          mantra: '매치, 콤보, 최고 점수', time: '제한시간', best: '최고 점수', play: '게임 시작', sub: '3분 타임 어택'
+        },
+        en: {
+          documentTitle: 'Jewelria - Free Match-3 Jewel Puzzle | ArcherLab Games',
+          archerlab: 'Open ArcherLab', titleLabel: 'Jewelria title screen', sound: 'Toggle sound', rank: 'Open Hall of Fame',
+          title: 'JEWELRIA', subtitle: 'Match jewels, build combos, and chase the high score in three minutes.',
+          mantra: 'Match, combo, high score', time: 'TIME LIMIT', best: 'BEST SCORE', play: 'PLAY', sub: '3-MINUTE TIME ATTACK'
+        },
+        ja: {
+          documentTitle: 'ジュエルリア - 無料マッチ3ジュエルパズル | ArcherLab Games',
+          archerlab: 'ArcherLabを開く', titleLabel: 'ジュエルリア タイトル', sound: 'サウンド切り替え', rank: '栄光の殿堂を開く',
+          title: 'ジュエルリア', subtitle: '3分以内にジュエルをそろえ、コンボでハイスコアを目指そう。',
+          mantra: 'マッチ、コンボ、ハイスコア', time: '制限時間', best: 'ハイスコア', play: 'ゲームスタート', sub: '3分タイムアタック'
+        }
+      }[lang];
+      const text = (selector, value) => {
+        const node = document.querySelector(selector);
+        if (node) node.textContent = value;
+      };
+      const label = (selector, value) => {
+        const node = document.querySelector(selector);
+        if (node) node.setAttribute('aria-label', value);
+      };
+      document.documentElement.lang = lang;
+      document.title = copy.documentTitle;
+      document.getElementById('app')?.setAttribute('data-lang', lang);
+      label('.archerlab-link', copy.archerlab);
+      label('#title-screen', copy.titleLabel);
+      label('#sound-toggle-title', copy.sound);
+      label('#rank-open-title', copy.rank);
+      document.getElementById('sound-toggle-title')?.setAttribute('title', copy.sound);
+      document.getElementById('rank-open-title')?.setAttribute('title', copy.rank);
+      text('.title-plaque h1', copy.title);
+      text('.title-headline .subtitle', copy.subtitle);
+      label('.title-mantra', copy.mantra);
+      text('.record-strip > div:first-child span', copy.time);
+      text('.record-strip > div:last-child span', copy.best);
+      text('#play-btn .btn-label', copy.play);
+      text('#play-btn .btn-sub', copy.sub);
+    })();
+  </script>
   <script type="module" src="assets/js/main.js?v=20260627-webp"></script>
 </body>
 </html>

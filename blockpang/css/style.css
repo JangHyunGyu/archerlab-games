@@ -34,7 +34,14 @@ html, body {
     display: block;
 }
 
+#game-container canvas:focus-visible {
+    outline: 3px solid #FFE9A6;
+    outline-offset: -6px;
+    box-shadow: inset 0 0 0 6px rgba(33, 231, 255, 0.5);
+}
+
 .archerlab-link {
+    top: max(14px, calc(env(safe-area-inset-top) + 8px)) !important;
     background: rgba(16, 26, 58, 0.82) !important;
     border-color: rgba(45, 232, 255, 0.76) !important;
     box-shadow:
@@ -52,4 +59,18 @@ html, body {
 .archerlab-link:hover {
     background: rgba(23, 41, 87, 0.96) !important;
     color: #FFFFFF !important;
+}
+
+@media (pointer: coarse) {
+    .archerlab-link {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .archerlab-link {
+        transition: none !important;
+    }
 }
