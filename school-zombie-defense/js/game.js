@@ -334,6 +334,11 @@
     shock_hit: "assets/sounds/sfx/shock_hit.mp3",
     nailgun_fire: "assets/sounds/sfx/nailgun_fire.mp3",
     nailgun_hit: "assets/sounds/sfx/nailgun_hit.mp3",
+    purchase: "assets/sounds/sfx/purchase.mp3",
+    shield_block: "assets/sounds/sfx/shield_block.mp3",
+    death_elite: "assets/sounds/sfx/death_elite.mp3",
+    explosion_large: "assets/sounds/sfx/explosion_large.mp3",
+    core_full_repair: "assets/sounds/sfx/core_full_repair.mp3",
     button: "assets/sounds/sfx/button.mp3",
     denied: "assets/sounds/sfx/denied.mp3",
     recruit: "assets/sounds/sfx/recruit.mp3",
@@ -357,7 +362,10 @@
     "shock_fire",
     "shock_hit",
     "nailgun_fire",
-    "nailgun_hit"
+    "nailgun_hit",
+    "shield_block",
+    "death_elite",
+    "explosion_large"
   ];
   const GAMEPLAY_TIMING_SFX_SET = new Set(GAMEPLAY_TIMING_SFX);
   const GAME_START_SFX_READY_TIMEOUT = 240;
@@ -3615,6 +3623,11 @@
         crit: 0.05,
         death: 0.075,
         explosion: 0.12,
+        explosion_large: 0.18,
+        death_elite: 0.12,
+        shield_block: 0.08,
+        purchase: 0.18,
+        core_full_repair: 0.2,
         core: 0.16,
         pistol: 0.065,
         rifle: 0.032,
@@ -5139,7 +5152,7 @@
       this.showShopActionLoading("강화 구매 중");
       try {
         const result = await this.postProfileAction("/school-zombie/profile/buy-upgrade", { upgrade_id: id });
-        this.playSfx("skill");
+        this.playSfx("purchase");
         this.showShop(character.id);
         this.showToast(`${upgrade.title} Lv.${result.level || level + 1}`, character.accent);
       } catch (error) {
@@ -7820,7 +7833,7 @@
       zombie.hp = 0;
       this.clearWeakMark(zombie);
       this.clearEmbeddedArrowsForZombie(zombie);
-      this.playSfx("death", zombie.elite ? 1.35 : 1);
+      this.playSfx(zombie.elite ? "death_elite" : "death", 1);
       if (zombie.elite || zombie.type === "brute") {
         this.shakeCamera(90, 0.0045);
       }
@@ -8387,15 +8400,17 @@
 
     takeDamage(rawAmount) {
       let amount = rawAmount;
+      let blocked = 0;
       if (this.shield > 0) {
-        const blocked = Math.min(this.shield, amount);
+        blocked = Math.min(this.shield, amount);
         this.shield -= blocked;
         amount -= blocked;
       }
       this.coreHp = clamp(this.coreHp - amount, 0, this.maxCoreHp);
       this.morale = Math.round((this.coreHp / this.maxCoreHp) * 100);
       if (rawAmount > 0) {
-        this.playSfx("core");
+        if (blocked > 0) this.playSfx("shield_block", clamp(blocked / Math.max(rawAmount, 1), 0.55, 1));
+        if (amount > 0) this.playSfx("core", clamp(amount / Math.max(rawAmount, 1), 0.45, 1));
         const severity = clamp(rawAmount / 46, 1, 1.9);
         this.shakeCamera(260, 0.014 * severity);
         this.requestHitStop(0.055);
@@ -8446,7 +8461,8 @@
     }
 
     createExplosion(x, y, radius, damage, slowDuration = 0, options = {}) {
-      this.playSfx("explosion", clamp(radius / 82, 0.75, 1.35));
+      const explosionSfx = radius >= 100 ? "explosion_large" : "explosion";
+      this.playSfx(explosionSfx, clamp(radius / 100, 0.75, 1.2));
       this.shakeCamera(130, clamp(radius / 22000, 0.004, 0.009));
       this.requestHitStop(0.045);
       const ring = this.trackTransient(this.add.circle(x, y, 18, 0xffd35a, 0.46).setStrokeStyle(4, 0xffffff, 0.55).setDepth(221));
@@ -9228,6 +9244,7 @@
           stat: `HP ${currentHp}/${maxHp} → ${maxHp}/${maxHp}`,
           accent: SKILL_ACCENTS["core-full-repair"],
           accentHex: SKILL_ACCENT_HEX["core-full-repair"],
+          sfx: "core_full_repair",
           toast: "방어선 완전 복구",
           apply: () => {
             this.coreHp = this.maxCoreHp;

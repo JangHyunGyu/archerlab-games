@@ -1,0 +1,3 @@
+id,role,type,description,size/ratio,style line ref,source
+parking_car_move,normal vehicle movement,SFX,"One isolated short car movement cue: tire roll on asphalt, compact engine pull and subtle body rattle; no long pass-by or horn",1 second,"Indoor parking audio identity: concrete, asphalt, compact vehicle mechanics and restrained sensor electronics; realistic but clean",generate
+parking_exit,target vehicle passes through exit,SFX,"One isolated parking exit cue: short acceleration, tire roll and clean air pass through a concrete garage opening; satisfying but realistic",1.5 seconds,"Indoor parking audio identity: concrete, asphalt, compact vehicle mechanics and restrained sensor electronics; realistic but clean",generate
