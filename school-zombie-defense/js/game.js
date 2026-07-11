@@ -40,7 +40,7 @@
     guard: "20260711-higgsfield-v1",
     nurse: "20260711-higgsfield-v1"
   };
-  const CHARACTER_ASSET_VERSION = "20260711-character-actions-v2";
+  const CHARACTER_ASSET_VERSION = "20260711-character-actions-v3";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
