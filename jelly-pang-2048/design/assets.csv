@@ -20,6 +20,7 @@ merge-impact-core,instant merge impact flash,procedural PIXI effect,white-gold c
 merge-speed-lines,instant merge motion accent,procedural PIXI effect,radial white-gold speed rays,board-cell relative,STYLE_FORMULA_V1,generate
 merge-particles,merge debris burst,procedural PIXI effect,glossy jelly droplets and star sparks,board-cell relative,STYLE_FORMULA_V1,generate
 merge-combo-callout,multi-merge reward label,procedural PIXI text effect,bright candy combo badge,board-cell relative,STYLE_FORMULA_V1,generate
+merge-impact-word,single merge reward label,procedural PIXI text effect,bold candy PANG impact badge,board-cell relative,STYLE_FORMULA_V1,generate
 jelly-slide,movement feedback,audio SFX,short soft jelly slide,MP3 under 0.12s,audio-v1,reference_media[0]
 jelly-merge,basic merge feedback,audio SFX,bouncy rising jelly pop,MP3 under 0.25s,audio-v1,reference_media[0]
 jelly-merge-combo,multiple merge feedback,audio SFX,layered sparkling combo pop,MP3 under 0.35s,audio-v1,reference_media[0]
