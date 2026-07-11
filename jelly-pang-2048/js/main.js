@@ -8,6 +8,7 @@
   const PREFERS_REDUCED_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
   const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, IS_TOUCH_DEVICE ? 1.2 : 1.5);
   const MAX_FX_CHILDREN = IS_TOUCH_DEVICE ? 72 : 120;
+  const MAX_ACTIVE_MERGE_PARTICLES = IS_TOUCH_DEVICE ? 60 : 104;
   // STYLE_FORMULA_V1: Glossy high-end mobile puzzle illustration with candy-like 3D gel rendering, luminous soft gradients and crisp specular highlights. Rounded blobby silhouettes with clean edges and no hard outlines. Board in cool aqua and navy shadows, jellies in saturated pink, orange, cyan and violet, impact effects in white-gold with rainbow accents. Bright playful arcade mood with radiant bloom. High contrast between effects, tiles and board, clean readable silhouettes, consistent flat frontal perspective across all assets.
   const MERGE_FX_BUDGET = {
     particlesPerMove: PREFERS_REDUCED_MOTION ? 0 : IS_TOUCH_DEVICE ? 30 : 52,
@@ -67,8 +68,8 @@
   };
   const SOUND_VOLUME = {
     slide: 0.44,
-    merge: 0.58,
-    mergeCombo: 0.6,
+    merge: 0.72,
+    mergeCombo: 0.78,
     bump: 0.48,
     win: 0.62,
     gameover: 0.58,
@@ -739,7 +740,7 @@
       floatText(
         `+${formatScore(merge.value)}`,
         pos.x,
-        pos.y - BOARD.cell * 0.5,
+        pos.y - BOARD.cell * 0.68,
         RANK_COLORS[merge.tile.rank % RANK_COLORS.length],
         delay + 0.1
       );
@@ -1224,18 +1225,19 @@
     createSpeedLines(x, y, color, nextColor, intensity, delay);
     createMergeParticles(x, y, color, nextColor, intensity, mergeCount, isHeroMerge, delay);
     createSpriteMergeFx(x, y, rank, intensity, delay, isHeroMerge);
+    if (isHeroMerge && mergeCount === 1) createImpactWord(x, y, color, delay);
   }
 
   function createImpactFlash(x, y, color, nextColor, intensity, delay) {
     const flash = new PIXI.Graphics();
     flash.beginFill(nextColor, 0.2);
-    flash.drawCircle(0, 0, BOARD.cell * 0.44);
+    flash.drawCircle(0, 0, BOARD.cell * 0.58);
     flash.endFill();
     flash.beginFill(color, 0.42);
-    flash.drawCircle(0, 0, BOARD.cell * 0.27);
+    flash.drawCircle(0, 0, BOARD.cell * 0.36);
     flash.endFill();
     flash.beginFill(0xffffff, 0.98);
-    flash.drawCircle(0, 0, BOARD.cell * 0.105);
+    flash.drawCircle(0, 0, BOARD.cell * 0.15);
     flash.endFill();
     flash.x = x;
     flash.y = y;
@@ -1244,18 +1246,18 @@
     flash.blendMode = "add";
     addFxChild(flash);
 
-    gsap.to(flash, { alpha: 1, duration: 0.045, delay, ease: "power4.out" });
+    gsap.to(flash, { alpha: 1, duration: 0.075, delay, ease: "power4.out" });
     gsap.to(flash.scale, {
       x: intensity,
       y: intensity,
-      duration: 0.17,
+      duration: 0.24,
       delay,
       ease: "power4.out",
     });
     gsap.to(flash, {
       alpha: 0,
-      duration: 0.24,
-      delay: delay + 0.075,
+      duration: 0.34,
+      delay: delay + 0.12,
       ease: "power2.in",
       onComplete: () => destroyPixiObject(flash),
     });
@@ -1263,13 +1265,13 @@
 
   function createSpeedLines(x, y, color, nextColor, intensity, delay) {
     const rays = new PIXI.Graphics();
-    const rayCount = IS_TOUCH_DEVICE ? 11 : 16;
+    const rayCount = IS_TOUCH_DEVICE ? 14 : 20;
     for (let i = 0; i < rayCount; i++) {
       const angle = (Math.PI * 2 * i) / rayCount + (Math.random() - 0.5) * 0.12;
-      const inner = BOARD.cell * (0.27 + Math.random() * 0.07);
-      const outer = BOARD.cell * (0.48 + Math.random() * 0.18);
+      const inner = BOARD.cell * (0.24 + Math.random() * 0.08);
+      const outer = BOARD.cell * (0.72 + Math.random() * 0.34);
       const rayColor = i % 4 === 0 ? 0xffffff : i % 2 === 0 ? nextColor : color;
-      rays.lineStyle(i % 4 === 0 ? 6 : 3.5, rayColor, i % 4 === 0 ? 0.92 : 0.7);
+      rays.lineStyle(i % 4 === 0 ? 9 : 5, rayColor, i % 4 === 0 ? 1 : 0.82);
       rays.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
       rays.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
     }
@@ -1279,21 +1281,21 @@
     rays.rotation = (Math.random() - 0.5) * 0.12;
     rays.scale.set(0.42);
     rays.blendMode = "add";
-    addFxChild(rays, true);
+    addFxChild(rays);
 
-    gsap.to(rays, { alpha: 0.92, duration: 0.055, delay: delay + 0.02, ease: "sine.out" });
+    gsap.to(rays, { alpha: 1, duration: 0.075, delay: delay + 0.025, ease: "sine.out" });
     gsap.to(rays.scale, {
       x: intensity,
       y: intensity,
-      duration: 0.32,
+      duration: 0.46,
       delay: delay + 0.02,
       ease: "power3.out",
     });
     gsap.to(rays, {
       alpha: 0,
       rotation: rays.rotation + 0.08,
-      duration: 0.28,
-      delay: delay + 0.14,
+      duration: 0.42,
+      delay: delay + 0.2,
       ease: "sine.in",
       onComplete: () => destroyPixiObject(rays),
     });
@@ -1307,7 +1309,9 @@
     );
     if (particleCount <= 0) return;
 
+    reserveMergeParticleCapacity(particleCount);
     const burst = new PIXI.Container();
+    burst.__mergeParticleCount = particleCount;
     burst.x = x;
     burst.y = y;
     addFxChild(burst);
@@ -1317,7 +1321,7 @@
     for (let i = 0; i < particleCount; i++) {
       const particle = new PIXI.Graphics();
       const particleColor = colors[i % colors.length];
-      const size = BOARD.cell * (0.035 + Math.random() * 0.025);
+      const size = BOARD.cell * (0.05 + Math.random() * 0.04);
       const shape = i % 3;
 
       particle.beginFill(particleColor, 0.98);
@@ -1342,8 +1346,8 @@
       }
 
       const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.28;
-      const travel = BOARD.cell * (0.48 + Math.random() * 0.42) * intensity;
-      const duration = 0.42 + Math.random() * 0.2;
+      const travel = BOARD.cell * (0.68 + Math.random() * 0.5) * intensity;
+      const duration = 0.56 + Math.random() * 0.28;
       const particleDelay = delay + 0.045 + Math.random() * 0.055;
       const endX = Math.cos(angle) * travel;
       const endY = Math.sin(angle) * travel + BOARD.cell * (0.08 + Math.random() * 0.18);
@@ -1364,15 +1368,15 @@
       gsap.to(particle.scale, {
         x: 1,
         y: shape === 0 ? 1.28 : 1,
-        duration: 0.14,
+        duration: 0.18,
         delay: particleDelay,
         ease: "back.out(2.4)",
       });
       gsap.to(particle.scale, {
         x: 0.12,
         y: 0.12,
-        duration: Math.max(0.2, duration - 0.16),
-        delay: particleDelay + 0.16,
+        duration: Math.max(0.24, duration - 0.22),
+        delay: particleDelay + 0.22,
         ease: "sine.in",
       });
       maxLifetime = Math.max(maxLifetime, particleDelay + duration);
@@ -1386,29 +1390,46 @@
     });
   }
 
+  function reserveMergeParticleCapacity(incomingCount) {
+    const activeBursts = fxLayer.children.filter((child) => child.__mergeParticleCount > 0);
+    let activeCount = activeBursts.reduce((total, child) => total + child.__mergeParticleCount, 0);
+    while (activeBursts.length && activeCount + incomingCount > MAX_ACTIVE_MERGE_PARTICLES) {
+      const oldest = activeBursts.shift();
+      activeCount -= oldest.__mergeParticleCount;
+      destroyPixiObject(oldest);
+    }
+  }
+
   function createSpriteMergeFx(x, y, rank, intensity, delay, isHeroMerge) {
     const base = BOARD.cell / 512;
     const pop = createFxSprite("mergePop", x, y, {
-      scale: base * 0.3,
+      scale: base * (isHeroMerge ? 0.46 : 0.34),
       alpha: 0,
       rotation: (Math.random() - 0.5) * 0.18,
-      behindTiles: true,
+      behindTiles: !isHeroMerge,
     });
     if (pop) {
-      const targetScale = base * (0.94 + intensity * 0.16);
-      gsap.to(pop, { alpha: 0.86, duration: 0.06, delay: delay + 0.025, ease: "sine.out" });
+      const targetScale = isHeroMerge
+        ? base * (1.62 + intensity * 0.28)
+        : base * (1.05 + intensity * 0.2);
+      gsap.to(pop, {
+        alpha: isHeroMerge ? 0.96 : 0.8,
+        duration: 0.085,
+        delay: delay + 0.025,
+        ease: "sine.out",
+      });
       gsap.to(pop.scale, {
         x: targetScale,
         y: targetScale,
-        duration: 0.34,
+        duration: isHeroMerge ? 0.48 : 0.38,
         delay: delay + 0.025,
-        ease: "power3.out",
+        ease: "back.out(1.7)",
       });
       gsap.to(pop, {
         alpha: 0,
-        rotation: pop.rotation + 0.12,
-        duration: 0.28,
-        delay: delay + 0.14,
+        rotation: pop.rotation + 0.2,
+        duration: isHeroMerge ? 0.46 : 0.34,
+        delay: delay + (isHeroMerge ? 0.24 : 0.18),
         ease: "sine.in",
         onComplete: () => destroyPixiObject(pop),
       });
@@ -1416,49 +1437,49 @@
 
     if (isHeroMerge) {
       const star = createFxSprite("sparkleStar", x, y, {
-        scale: base * 0.18,
+        scale: base * 0.25,
         alpha: 0,
         rotation: Math.random() * Math.PI,
       });
       if (star) {
-        gsap.to(star, { alpha: 0.82, duration: 0.08, delay: delay + 0.1, ease: "sine.out" });
+        gsap.to(star, { alpha: 1, duration: 0.1, delay: delay + 0.13, ease: "sine.out" });
         gsap.to(star.scale, {
-          x: base * (0.58 + intensity * 0.1),
-          y: base * (0.58 + intensity * 0.1),
-          duration: 0.3,
-          delay: delay + 0.1,
-          ease: "back.out(2.5)",
+          x: base * (1.12 + intensity * 0.22),
+          y: base * (1.12 + intensity * 0.22),
+          duration: 0.42,
+          delay: delay + 0.13,
+          ease: "back.out(2.2)",
         });
         gsap.to(star, {
           alpha: 0,
-          rotation: star.rotation + 0.6,
-          duration: 0.36,
-          delay: delay + 0.25,
+          rotation: star.rotation + 0.85,
+          duration: 0.48,
+          delay: delay + 0.4,
           ease: "sine.in",
           onComplete: () => destroyPixiObject(star),
         });
       }
 
       const drop = createFxSprite("jellyDrop", x + BOARD.cell * 0.06, y + BOARD.cell * 0.08, {
-        scale: base * 0.2,
+        scale: base * 0.28,
         alpha: 0,
         rotation: (Math.random() - 0.5) * 0.55,
       });
       if (drop) {
-        gsap.to(drop, { alpha: 0.58, duration: 0.08, delay: delay + 0.08, ease: "sine.out" });
+        gsap.to(drop, { alpha: 0.86, duration: 0.1, delay: delay + 0.1, ease: "sine.out" });
         gsap.to(drop.scale, {
-          x: base * (0.48 + intensity * 0.08),
-          y: base * (0.48 + intensity * 0.08),
-          duration: 0.3,
-          delay: delay + 0.08,
-          ease: "power2.out",
+          x: base * (1.08 + intensity * 0.18),
+          y: base * (1.08 + intensity * 0.18),
+          duration: 0.5,
+          delay: delay + 0.1,
+          ease: "back.out(1.7)",
         });
         gsap.to(drop, {
-          x: drop.x + BOARD.cell * 0.08,
-          y: drop.y + BOARD.cell * 0.12,
+          x: drop.x + BOARD.cell * 0.16,
+          y: drop.y + BOARD.cell * 0.2,
           alpha: 0,
-          duration: 0.34,
-          delay: delay + 0.24,
+          duration: 0.52,
+          delay: delay + 0.3,
           ease: "sine.in",
           onComplete: () => destroyPixiObject(drop),
         });
@@ -1507,17 +1528,17 @@
       });
       return;
     }
-    const squash = Math.min(1.48, 1.34 + (intensity - 1) * 0.18);
-    const overshoot = Math.min(1.2, 1.14 + (intensity - 1) * 0.08);
+    const squash = Math.min(1.64, 1.48 + (intensity - 1) * 0.22);
+    const overshoot = Math.min(1.32, 1.24 + (intensity - 1) * 0.1);
     visual.container.alpha = 0;
     visual.container.rotation = -0.055;
-    visual.container.scale.set(0.48, squash);
+    visual.container.scale.set(0.34, squash);
 
-    gsap.to(visual.container, { alpha: 1, rotation: 0, duration: 0.1, delay, ease: "power3.out" });
+    gsap.to(visual.container, { alpha: 1, rotation: 0, duration: 0.12, delay, ease: "power4.out" });
     gsap.timeline({ delay })
-      .to(visual.container.scale, { x: overshoot, y: 0.86, duration: 0.13, ease: "power4.out" })
-      .to(visual.container.scale, { x: 0.96, y: 1.07, duration: 0.14, ease: "sine.inOut" })
-      .to(visual.container.scale, { x: 1, y: 1, duration: 0.28, ease: "elastic.out(1.2, 0.42)" });
+      .to(visual.container.scale, { x: overshoot, y: 0.76, duration: 0.16, ease: "power4.out" })
+      .to(visual.container.scale, { x: 0.9, y: 1.16, duration: 0.17, ease: "sine.inOut" })
+      .to(visual.container.scale, { x: 1, y: 1, duration: 0.32, ease: "elastic.out(1.25, 0.38)" });
     gsap.fromTo(visual.sprite, { alpha: 0.74 }, {
       alpha: 1,
       duration: 0.2,
@@ -1540,19 +1561,64 @@
     }
   }
 
+  function createImpactWord(x, y, accent, delay) {
+    const callout = new PIXI.Container();
+    const label = new PIXI.Text("PANG!", {
+      fontFamily: "Pretendard, Arial, sans-serif",
+      fontSize: IS_TOUCH_DEVICE ? 54 : 64,
+      fontWeight: "950",
+      fill: 0xffffff,
+      stroke: 0x5b1749,
+      strokeThickness: 10,
+      align: "center",
+    });
+    label.anchor.set(0.5);
+    const plate = new PIXI.Graphics();
+    plate.lineStyle(6, 0xffffff, 0.94);
+    plate.beginFill(accent, 0.94);
+    plate.drawRoundedRect(-label.width * 0.68, -44, label.width * 1.36, 88, 40);
+    plate.endFill();
+    callout.addChild(plate, label);
+    callout.x = x;
+    callout.y = y;
+    callout.alpha = 0;
+    callout.rotation = -0.1;
+    callout.scale.set(0.16);
+    addFxChild(callout);
+
+    gsap.to(callout, { alpha: 1, rotation: 0.05, duration: 0.1, delay: delay + 0.12, ease: "power4.out" });
+    gsap.timeline({ delay: delay + 0.12 })
+      .to(callout.scale, { x: 1.18, y: 1.18, duration: 0.2, ease: "back.out(3.5)" })
+      .to(callout.scale, { x: 0.98, y: 0.98, duration: 0.16, ease: "sine.inOut" });
+    gsap.to(callout, {
+      y: y - BOARD.cell * 0.42,
+      alpha: 0,
+      duration: 0.48,
+      delay: delay + 0.46,
+      ease: "power2.in",
+      onComplete: () => destroyPixiObject(callout),
+    });
+  }
+
   function pulseStageFrame(intensity) {
     if (IS_TOUCH_DEVICE || PREFERS_REDUCED_MOTION) return;
     gsap.killTweensOf(refs.frame);
     gsap.fromTo(
       refs.frame,
-      { filter: "brightness(1.16) saturate(1.16)" },
-      { filter: "brightness(1) saturate(1)", duration: 0.48 * intensity, ease: "power2.out" }
+      { filter: "brightness(1.36) saturate(1.42)", scale: 1.028, rotation: -0.28 },
+      {
+        filter: "brightness(1) saturate(1)",
+        scale: 1,
+        rotation: 0,
+        duration: 0.5 * intensity,
+        ease: "elastic.out(1.1, 0.42)",
+      }
     );
   }
 
   function kickMergeScene(intensity, mergeCount) {
     if (PREFERS_REDUCED_MOTION || !app?.stage) return;
-    const strength = Math.min(IS_TOUCH_DEVICE ? 4.5 : 7.5, 1.8 + intensity * 2 + (mergeCount - 1) * 0.55);
+    const strength = Math.min(IS_TOUCH_DEVICE ? 9 : 15, 4 + intensity * 5 + (mergeCount - 1) * 1.1);
     const angle = Math.random() * Math.PI * 2;
     gsap.killTweensOf(app.stage.position);
     gsap.fromTo(app.stage.position, {
@@ -1561,8 +1627,8 @@
     }, {
       x: 0,
       y: 0,
-      duration: 0.34,
-      ease: "elastic.out(1.4, 0.3)",
+      duration: 0.46,
+      ease: "elastic.out(1.55, 0.26)",
     });
   }
 
@@ -1581,12 +1647,12 @@
     flash.alpha = 0;
     flash.blendMode = "add";
     addFxChild(flash);
-    const peakAlpha = Math.min(IS_TOUCH_DEVICE ? 0.11 : 0.17, 0.07 + intensity * 0.045 + mergeCount * 0.012);
-    gsap.to(flash, { alpha: peakAlpha, duration: 0.035, ease: "power4.out" });
+    const peakAlpha = Math.min(IS_TOUCH_DEVICE ? 0.19 : 0.27, 0.12 + intensity * 0.065 + mergeCount * 0.016);
+    gsap.to(flash, { alpha: peakAlpha, duration: 0.07, ease: "power4.out" });
     gsap.to(flash, {
       alpha: 0,
-      duration: 0.16,
-      delay: 0.045,
+      duration: 0.26,
+      delay: 0.08,
       ease: "power2.in",
       onComplete: () => destroyPixiObject(flash),
     });
@@ -1594,15 +1660,15 @@
 
   function createShockwaves(x, y, color, nextColor, intensity, delay) {
     const rings = [
-      { color, delay: 0, width: 10, scale: 1.28 },
-      { color: nextColor, delay: 0.06, width: 6, scale: 1.7 },
-      { color: 0xffffff, delay: 0.1, width: 4, scale: 2.05 },
+      { color, delay: 0, width: 16, scale: 1.62 },
+      { color: nextColor, delay: 0.07, width: 10, scale: 2.22 },
+      { color: 0xffffff, delay: 0.13, width: 6, scale: 2.78 },
     ];
     const ringCount = PREFERS_REDUCED_MOTION ? 1 : IS_TOUCH_DEVICE ? 2 : rings.length;
     rings.slice(0, ringCount).forEach((ring) => {
       const wave = new PIXI.Graphics();
-      wave.lineStyle(ring.width, ring.color, 0.82);
-      wave.drawCircle(0, 0, BOARD.cell * 0.28);
+      wave.lineStyle(ring.width, ring.color, 0.94);
+      wave.drawCircle(0, 0, BOARD.cell * 0.3);
       wave.x = x;
       wave.y = y;
       wave.alpha = 0;
@@ -1621,18 +1687,18 @@
         });
         return;
       }
-      gsap.to(wave, { alpha: 0.85, duration: 0.08, delay: delay + ring.delay, ease: "sine.out" });
+      gsap.to(wave, { alpha: 1, duration: 0.1, delay: delay + ring.delay, ease: "sine.out" });
       gsap.to(wave.scale, {
         x: ring.scale * intensity,
         y: ring.scale * intensity,
-        duration: 0.62,
+        duration: 0.78,
         delay: delay + ring.delay,
         ease: "power3.out",
       });
       gsap.to(wave, {
         alpha: 0,
-        duration: 0.46,
-        delay: delay + ring.delay + 0.16,
+        duration: 0.58,
+        delay: delay + ring.delay + 0.22,
         ease: "sine.in",
         onComplete: () => destroyPixiObject(wave),
       });
@@ -1653,18 +1719,18 @@
     const callout = new PIXI.Container();
     const label = new PIXI.Text(labelText, {
       fontFamily: "Pretendard, Arial, sans-serif",
-      fontSize: mergeCount >= 4 ? 30 : 34,
+      fontSize: mergeCount >= 4 ? 40 : 46,
       fontWeight: "950",
       fill: 0xffffff,
       stroke: 0x6c174f,
-      strokeThickness: 7,
+      strokeThickness: 10,
       align: "center",
     });
     label.anchor.set(0.5);
     const plate = new PIXI.Graphics();
-    plate.lineStyle(5, 0xffffff, 0.9);
+    plate.lineStyle(7, 0xffffff, 0.95);
     plate.beginFill(accent, 0.9);
-    plate.drawRoundedRect(-label.width * 0.62, -34, label.width * 1.24, 68, 28);
+    plate.drawRoundedRect(-label.width * 0.62, -48, label.width * 1.24, 96, 40);
     plate.endFill();
     plate.rotation = -0.025;
     callout.addChild(plate, label);
@@ -1672,7 +1738,7 @@
     callout.y = Math.max(BOARD.y + 42, center.y - BOARD.cell * 0.68);
     callout.alpha = 0;
     callout.rotation = -0.07;
-    callout.scale.set(0.28);
+    callout.scale.set(0.18);
     addFxChild(callout);
 
     if (PREFERS_REDUCED_MOTION) {
@@ -1689,15 +1755,15 @@
       return;
     }
 
-    gsap.to(callout, { alpha: 1, rotation: 0.035, duration: 0.12, delay: 0.12, ease: "power3.out" });
-    gsap.timeline({ delay: 0.12 })
-      .to(callout.scale, { x: 1.12, y: 1.12, duration: 0.17, ease: "back.out(3.2)" })
-      .to(callout.scale, { x: 1, y: 1, duration: 0.15, ease: "sine.inOut" });
+    gsap.to(callout, { alpha: 1, rotation: 0.035, duration: 0.12, delay: 0.14, ease: "power4.out" });
+    gsap.timeline({ delay: 0.14 })
+      .to(callout.scale, { x: 1.18, y: 1.18, duration: 0.22, ease: "back.out(3.5)" })
+      .to(callout.scale, { x: 1, y: 1, duration: 0.2, ease: "sine.inOut" });
     gsap.to(callout, {
-      y: callout.y - 36,
+      y: callout.y - 48,
       alpha: 0,
-      duration: 0.48,
-      delay: 0.62,
+      duration: 0.56,
+      delay: 0.78,
       ease: "power2.in",
       onComplete: () => destroyPixiObject(callout),
     });
