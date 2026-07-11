@@ -36,11 +36,20 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_WALK_ASSET_VERSIONS = {
+    athlete: "20260712-higgsfield-v2",
+    bloom: "20260712-higgsfield-v2",
     brute: "20260711-higgsfield-v1",
     guard: "20260711-higgsfield-v1",
-    nurse: "20260711-higgsfield-v1"
+    janitor: "20260712-higgsfield-v2",
+    normal: "20260712-scale-normalized-v2",
+    nurse: "20260711-higgsfield-v1",
+    runner: "20260712-higgsfield-v2",
+    screamer: "20260712-higgsfield-v2",
+    spider: "20260712-higgsfield-v2",
+    teacher: "20260712-higgsfield-v2"
   };
-  const CHARACTER_ASSET_VERSION = "20260711-character-actions-v4";
+  const CHARACTER_ASSET_VERSION = "20260712-character-audit-v5";
+  const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
@@ -163,12 +172,12 @@
     h: "attack"
   };
   const CHARACTER_ACTION_HEIGHT_SCALE = {
-    a: 800 / 715,
+    a: 1,
     b: 1,
     c: 1,
     d: 1,
     e: 1,
-    f: 640 / 512,
+    f: 1,
     g: 1,
     h: 1
   };
@@ -269,20 +278,20 @@
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
     normal: { corpseWidth: 0.82, deathSize: 0.92 },
-    student: { corpseWidth: 0.78, deathSize: 0.84 },
-    runner: { corpseWidth: 0.84, deathSize: 0.96 },
+    student: { corpseWidth: 0.78, deathSize: 1 },
+    runner: { corpseWidth: 0.84, deathSize: 1.12 },
     brute: { corpseWidth: 1.06, deathSize: 1.22 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 },
     teacher: { corpseWidth: 0.96, deathSize: 1.12 },
-    nurse: { corpseWidth: 1.12, deathSize: 1.1 },
-    athlete: { corpseWidth: 1.1, deathSize: 1.24 },
+    nurse: { corpseWidth: 1.48, deathSize: 1.1 },
+    athlete: { corpseWidth: 1.5, deathSize: 1.24 },
     janitor: { corpseWidth: 1.22, deathSize: 1.14 },
-    guard: { corpseWidth: 1.32, deathSize: 1.38 },
+    guard: { corpseWidth: 1.55, deathSize: 1.1 },
     crawler: { corpseWidth: 1.42, deathSize: 1.32 },
     screamer: { corpseWidth: 1.12, deathSize: 1.18 },
     spider: { corpseWidth: 1.16, deathSize: 0.94 },
-    bloom: { corpseWidth: 0.94, deathSize: 1.04 }
+    bloom: { corpseWidth: 1.4, deathSize: 1.04 }
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,
@@ -1319,27 +1328,6 @@
     });
   }
 
-  function createTurretAimTextures(scene) {
-    const sourceKey = "engineer-turret-aim";
-    if (!scene.textures.exists(sourceKey)) {
-      return;
-    }
-    const source = scene.textures.get(sourceKey).getSourceImage();
-    const cellWidth = Math.floor(source.width / AIM_POSE_KEYS.length);
-    const cellHeight = source.height;
-    AIM_POSE_KEYS.forEach((pose, index) => {
-      makeImageSliceTexture(
-        scene,
-        sourceKey,
-        `engineer-turret-${pose}`,
-        index * cellWidth,
-        0,
-        cellWidth,
-        cellHeight
-      );
-    });
-  }
-
   function createCharacterBadgeTextures(scene) {
     DEFENDER_ROSTER.map((defender) => defender.id).forEach((id) => {
       const sourceKey = `character-${id}-idle`;
@@ -2000,8 +1988,8 @@
         ["projectile-firebomb", "assets/images/projectile-firebomb.png"],
         ["projectile-shock", "assets/images/projectile-shock.png"],
         ["projectile-nail", "assets/images/projectile-nail.png"],
-        ["engineer-turret", "assets/images/engineer-turret.png"],
-        ["engineer-turret-aim", "assets/images/engineer-turret-aim.png"]
+        ["engineer-turret-base", "assets/images/engineer-turret-base.png", TURRET_ASSET_VERSION],
+        ["engineer-turret-head", "assets/images/engineer-turret-head.png", TURRET_ASSET_VERSION]
       ];
       return Promise.all(assets.map(([key, path, version]) => this.loadManualTexture(key, path, version)));
     }
@@ -2088,8 +2076,6 @@
       this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
       this.load.spritesheet("zombie-hit-nail-sheet", imageAsset("assets/images/zombie-hit-nail-sheet.png"), { frameWidth: 128, frameHeight: 128 });
       this.load.spritesheet("effect-fire-zone-sheet", imageAsset("assets/images/effect-fire-zone-sheet.png"), { frameWidth: 256, frameHeight: 160 });
-      this.load.image("engineer-turret", imageAsset("assets/images/engineer-turret.png"));
-      this.load.image("engineer-turret-aim", imageAsset("assets/images/engineer-turret-aim.png"));
       this.load.image("barbed-wire", imageAsset("assets/images/barbed-wire.png"));
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
       this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
@@ -2128,7 +2114,6 @@
         createGeneratedDefenderTextures(this);
         createCharacterSpriteTextures(this);
         createCharacterAttackTextures(this);
-        createTurretAimTextures(this);
         createCharacterBadgeTextures(this);
         createUiTextures(this);
         createTextures(this);
@@ -5969,13 +5954,13 @@
       };
       const container = this.trackTransient(this.add.container(position.x, position.y).setDepth(228));
       const shadow = this.add.ellipse(0, 13, 44, 14, 0x000000, 0.34);
-      const initialTurretTexture = this.textures.exists("engineer-turret-aim-12")
-        ? "engineer-turret-aim-12"
-        : "engineer-turret";
-      const turretSprite = this.add.image(0, 0, initialTurretTexture)
+      const turretBase = this.add.image(0, 0, "engineer-turret-base")
         .setOrigin(0.5, 0.58);
-      turretSprite.setDisplaySize(75, 75);
-      container.add([shadow, turretSprite]);
+      const turretHead = this.add.image(0, 0, "engineer-turret-head")
+        .setOrigin(0.5, 0.5);
+      turretBase.setDisplaySize(75, 75);
+      turretHead.setDisplaySize(75, 75);
+      container.add([shadow, turretBase, turretHead]);
       container.setAlpha(0).setScale(0.72);
       this.tweens.add({
         targets: container,
@@ -5991,7 +5976,8 @@
         x: position.x,
         y: position.y,
         container,
-        turretSprite,
+        turretBase,
+        turretSprite: turretHead,
         projectile: "projectile-rifle",
         speed: rifleDefender?.speed || 1800,
         rate: Math.max(0.46, 0.82 / (engineer?.turretRateBoost || 1)),
@@ -6021,19 +6007,9 @@
         const target = this.findTarget(turret.x, 999, null, this.bounds.autoEngageTop);
         if (target && turret.turretSprite && !turret.turretSprite.destroyed) {
           const targetAngle = Math.atan2(target.y - (turret.y - 12), target.x - turret.x);
-          const aimTexture = `engineer-turret-${getShotAimPoseKey(targetAngle)}`;
-          if (this.textures.exists(aimTexture)) {
-            if (turret.turretSprite.texture?.key !== aimTexture) {
-              turret.turretSprite.setTexture(aimTexture);
-            }
-            turret.turretSprite
-              .setDisplaySize(75, 75)
-              .setRotation(0);
-          } else {
-            turret.turretSprite
-              .setDisplaySize(75, 75)
-              .setRotation(targetAngle + Math.PI / 2);
-          }
+          turret.turretSprite
+            .setDisplaySize(75, 75)
+            .setRotation(targetAngle + Math.PI / 2);
         }
         if (turret.timer > 0 || !target) {
           continue;
