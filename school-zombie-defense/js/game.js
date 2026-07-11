@@ -40,7 +40,7 @@
     guard: "20260711-higgsfield-v1",
     nurse: "20260711-higgsfield-v1"
   };
-  const CHARACTER_ASSET_VERSION = "20260711-character-actions-v3";
+  const CHARACTER_ASSET_VERSION = "20260711-character-actions-v4";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
@@ -154,11 +154,23 @@
   };
   const CHARACTER_ATTACK_ACTIONS = {
     a: "attack",
-    f: "throw"
+    b: "attack",
+    c: "attack",
+    d: "attack",
+    e: "attack",
+    f: "throw",
+    g: "attack",
+    h: "attack"
   };
   const CHARACTER_ACTION_HEIGHT_SCALE = {
     a: 800 / 715,
-    f: 640 / 512
+    b: 1,
+    c: 1,
+    d: 1,
+    e: 1,
+    f: 640 / 512,
+    g: 1,
+    h: 1
   };
   const PROJECTILE_SCALES = {
     "projectile-arrow": 0.228,
@@ -1302,6 +1314,7 @@
             cellHeight
           );
         });
+        scene.textures.remove(sourceKey);
       }
     });
   }
@@ -2009,16 +2022,14 @@
       this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-g", versionedImageAsset("assets/images/character-g.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
-      for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
-        this.load.image(
-          `character-a-attack-${frame}`,
-          versionedImageAsset(`assets/images/character-a-attack-${frame}.png`, CHARACTER_ASSET_VERSION)
-        );
-        this.load.image(
-          `character-f-throw-${frame}`,
-          versionedImageAsset(`assets/images/character-f-throw-${frame}.png`, CHARACTER_ASSET_VERSION)
-        );
-      }
+      Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
+        for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
+          this.load.image(
+            `character-${id}-${action}-${frame}`,
+            versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`, CHARACTER_ASSET_VERSION)
+          );
+        }
+      });
       this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
       this.load.image("avatar-bow", imageAsset("assets/images/avatar-bow.png"));
       this.load.image("avatar-rifle", imageAsset("assets/images/avatar-rifle.png"));
