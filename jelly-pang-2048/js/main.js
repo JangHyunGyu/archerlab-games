@@ -5,8 +5,16 @@
   const SIZE = 4;
   const STAGE = 900;
   const IS_TOUCH_DEVICE = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+  const PREFERS_REDUCED_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
   const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, IS_TOUCH_DEVICE ? 1.2 : 1.5);
   const MAX_FX_CHILDREN = IS_TOUCH_DEVICE ? 72 : 120;
+  // STYLE_FORMULA_V1: Glossy high-end mobile puzzle illustration with candy-like 3D gel rendering, luminous soft gradients and crisp specular highlights. Rounded blobby silhouettes with clean edges and no hard outlines. Board in cool aqua and navy shadows, jellies in saturated pink, orange, cyan and violet, impact effects in white-gold with rainbow accents. Bright playful arcade mood with radiant bloom. High contrast between effects, tiles and board, clean readable silhouettes, consistent flat frontal perspective across all assets.
+  const MERGE_FX_BUDGET = {
+    particlesPerMove: PREFERS_REDUCED_MOTION ? 0 : IS_TOUCH_DEVICE ? 30 : 52,
+    minParticlesPerMerge: IS_TOUCH_DEVICE ? 3 : 6,
+    maxParticlesPerMerge: IS_TOUCH_DEVICE ? 9 : 14,
+    maxIntensity: IS_TOUCH_DEVICE ? 1.42 : 1.75,
+  };
   const SESSION_REQUEST_TIMEOUT_MS = 8000;
   const RANK_REQUEST_TIMEOUT_MS = 10000;
   const MOVE_UPLOAD_TIMEOUT_MS = 10000;
@@ -174,6 +182,7 @@
   let app;
   let appCanvas;
   let boardLayer;
+  let fxBackLayer;
   let tileLayer;
   let fxLayer;
   let textures = [];
@@ -226,9 +235,10 @@
     }
 
     boardLayer = new PIXI.Container();
+    fxBackLayer = new PIXI.Container();
     tileLayer = new PIXI.Container();
     fxLayer = new PIXI.Container();
-    app.stage.addChild(boardLayer, tileLayer, fxLayer);
+    app.stage.addChild(boardLayer, fxBackLayer, tileLayer, fxLayer);
 
     ranking = new RankingClient();
     drawBoard();
@@ -447,7 +457,10 @@
     visuals.forEach((visual) => destroyPixiObject(visual.container));
     visuals.clear();
     destroyLayerChildren(tileLayer);
+    destroyLayerChildren(fxBackLayer);
     destroyLayerChildren(fxLayer);
+    gsap.killTweensOf(app.stage.position);
+    app.stage.position.set(0, 0);
     hideModal();
     hideRanks();
     resetRankSubmit();
@@ -537,21 +550,36 @@
     layer.removeChildren().forEach((child) => destroyPixiObject(child));
   }
 
-  function addFxChild(child) {
-    fxLayer.addChild(child);
-    trimFxLayer();
+  function addFxChild(child, behindTiles = false) {
+    child.__fxCreatedAt = performance.now();
+    (behindTiles ? fxBackLayer : fxLayer).addChild(child);
+    trimFxLayers();
     return child;
   }
 
-  function trimFxLayer() {
-    if (!fxLayer || fxLayer.children.length <= MAX_FX_CHILDREN) return;
-    const overflow = fxLayer.children.length - MAX_FX_CHILDREN;
+  function trimFxLayers() {
+    if (!fxLayer || !fxBackLayer) return;
+    const total = fxLayer.children.length + fxBackLayer.children.length;
+    if (total <= MAX_FX_CHILDREN) return;
+    const overflow = total - MAX_FX_CHILDREN;
     for (let i = 0; i < overflow; i++) {
-      destroyPixiObject(fxLayer.children[0]);
+      const front = fxLayer.children[0];
+      const back = fxBackLayer.children[0];
+      const oldest = !front
+        ? back
+        : !back
+          ? front
+          : front.__fxCreatedAt <= back.__fxCreatedAt ? front : back;
+      destroyPixiObject(oldest);
     }
   }
 
-  function createFxSprite(type, x, y, { scale = 1, alpha = 1, rotation = 0 } = {}) {
+  function createFxSprite(type, x, y, {
+    scale = 1,
+    alpha = 1,
+    rotation = 0,
+    behindTiles = false,
+  } = {}) {
     const texture = effectTextures[type];
     if (!texture) return null;
     const sprite = new PIXI.Sprite(texture);
@@ -561,7 +589,7 @@
     sprite.alpha = alpha;
     sprite.rotation = rotation;
     sprite.scale.set(scale);
-    addFxChild(sprite);
+    addFxChild(sprite, behindTiles);
     return sprite;
   }
 
@@ -671,6 +699,11 @@
     result.moves.forEach((moveItem) => {
       const visual = visuals.get(moveItem.id);
       if (!visual) return;
+      gsap.killTweensOf(visual.container);
+      gsap.killTweensOf(visual.container.scale);
+      visual.container.alpha = 1;
+      visual.container.rotation = 0;
+      visual.container.scale.set(1);
       const pos = cellCenter(moveItem.to.row, moveItem.to.col);
       tl.to(visual.container, { x: pos.x, y: pos.y }, 0);
       if (moveItem.remove) {
@@ -680,7 +713,12 @@
   }
 
   function finishMove(result) {
-    result.merges.forEach((merge) => {
+    const mergeCount = result.merges.length;
+    const orderedMerges = [...result.merges].sort((a, b) => a.tile.rank - b.tile.rank);
+    const highestRank = orderedMerges.reduce((max, merge) => Math.max(max, merge.tile.rank), 0);
+    const impactPositions = [];
+
+    orderedMerges.forEach((merge, mergeIndex) => {
       merge.from.forEach((id) => {
         const visual = visuals.get(id);
         if (!visual) return;
@@ -688,11 +726,32 @@
         visuals.delete(id);
       });
 
-      createTileVisual(merge.tile, true, true);
+      createTileVisual(merge.tile, false, true);
       const pos = cellCenter(merge.tile.row, merge.tile.col);
-      createMergeWow(pos.x, pos.y, merge.tile.rank, merge.tile.id);
-      floatText(`+${formatScore(merge.value)}`, pos.x, pos.y - BOARD.cell * 0.5);
+      const delay = Math.min(0.09, mergeIndex * 0.03);
+      const isHeroMerge = mergeIndex === orderedMerges.length - 1;
+      impactPositions.push(pos);
+      createMergeWow(pos.x, pos.y, merge.tile.rank, merge.tile.id, {
+        delay,
+        mergeCount,
+        isHeroMerge,
+      });
+      floatText(
+        `+${formatScore(merge.value)}`,
+        pos.x,
+        pos.y - BOARD.cell * 0.5,
+        RANK_COLORS[merge.tile.rank % RANK_COLORS.length],
+        delay + 0.1
+      );
     });
+
+    if (mergeCount > 0) {
+      const sceneIntensity = getMergeIntensity(highestRank, mergeCount);
+      pulseStageFrame(sceneIntensity);
+      kickMergeScene(sceneIntensity, mergeCount);
+      createSceneFlash(sceneIntensity, mergeCount);
+      if (mergeCount > 1) createComboCallout(impactPositions, mergeCount, highestRank);
+    }
 
     if (result.scoreGain > 0) {
       updateScore(score + result.scoreGain);
@@ -810,7 +869,7 @@
 
     container.addChild(aura, sprite, shine, badge);
     tileLayer.addChild(container);
-    visuals.set(tile.id, { tile, container, sprite, badge, aura });
+    visuals.set(tile.id, { tile, container, sprite, shine, badge, aura });
 
     if (animate) {
       container.alpha = 0;
@@ -1140,100 +1199,291 @@
     gsap.fromTo(button, { scale: 0.96 }, { scale: 1, duration: 0.34, ease: "elastic.out(1, 0.35)" });
   }
 
-  function createMergeWow(x, y, rank, tileId) {
-    const color = RANK_COLORS[rank % RANK_COLORS.length];
-    const nextColor = RANK_COLORS[(rank + 2) % RANK_COLORS.length];
-    const intensity = Math.min(IS_TOUCH_DEVICE ? 1.28 : 1.5, 1 + rank * 0.07);
-    const visual = visuals.get(tileId);
-
-    pulseMergeTile(visual);
-    pulseStageFrame(intensity);
-    createShockwaves(x, y, color, nextColor, intensity);
-    createSpriteMergeFx(x, y, rank, intensity);
+  function getMergeIntensity(rank, mergeCount) {
+    const intensity = 1
+      + Math.min(rank, TARGET_RANK) * 0.035
+      + Math.min(Math.max(0, mergeCount - 1), 3) * 0.16;
+    return Math.min(MERGE_FX_BUDGET.maxIntensity, intensity);
   }
 
-  function createSpriteMergeFx(x, y, rank, intensity) {
+  function createMergeWow(x, y, rank, tileId, {
+    delay = 0,
+    mergeCount = 1,
+    isHeroMerge = true,
+  } = {}) {
+    const color = RANK_COLORS[rank % RANK_COLORS.length];
+    const nextColor = RANK_COLORS[(rank + 2) % RANK_COLORS.length];
+    const intensity = getMergeIntensity(rank, mergeCount);
+    const visual = visuals.get(tileId);
+
+    pulseMergeTile(visual, delay, intensity);
+    createShockwaves(x, y, color, nextColor, intensity, delay);
+    if (PREFERS_REDUCED_MOTION) return;
+
+    createImpactFlash(x, y, color, nextColor, intensity, delay);
+    createSpeedLines(x, y, color, nextColor, intensity, delay);
+    createMergeParticles(x, y, color, nextColor, intensity, mergeCount, isHeroMerge, delay);
+    createSpriteMergeFx(x, y, rank, intensity, delay, isHeroMerge);
+  }
+
+  function createImpactFlash(x, y, color, nextColor, intensity, delay) {
+    const flash = new PIXI.Graphics();
+    flash.beginFill(nextColor, 0.2);
+    flash.drawCircle(0, 0, BOARD.cell * 0.44);
+    flash.endFill();
+    flash.beginFill(color, 0.42);
+    flash.drawCircle(0, 0, BOARD.cell * 0.27);
+    flash.endFill();
+    flash.beginFill(0xffffff, 0.98);
+    flash.drawCircle(0, 0, BOARD.cell * 0.105);
+    flash.endFill();
+    flash.x = x;
+    flash.y = y;
+    flash.alpha = 0;
+    flash.scale.set(0.08);
+    flash.blendMode = "add";
+    addFxChild(flash);
+
+    gsap.to(flash, { alpha: 1, duration: 0.045, delay, ease: "power4.out" });
+    gsap.to(flash.scale, {
+      x: intensity,
+      y: intensity,
+      duration: 0.17,
+      delay,
+      ease: "power4.out",
+    });
+    gsap.to(flash, {
+      alpha: 0,
+      duration: 0.24,
+      delay: delay + 0.075,
+      ease: "power2.in",
+      onComplete: () => destroyPixiObject(flash),
+    });
+  }
+
+  function createSpeedLines(x, y, color, nextColor, intensity, delay) {
+    const rays = new PIXI.Graphics();
+    const rayCount = IS_TOUCH_DEVICE ? 11 : 16;
+    for (let i = 0; i < rayCount; i++) {
+      const angle = (Math.PI * 2 * i) / rayCount + (Math.random() - 0.5) * 0.12;
+      const inner = BOARD.cell * (0.27 + Math.random() * 0.07);
+      const outer = BOARD.cell * (0.48 + Math.random() * 0.18);
+      const rayColor = i % 4 === 0 ? 0xffffff : i % 2 === 0 ? nextColor : color;
+      rays.lineStyle(i % 4 === 0 ? 6 : 3.5, rayColor, i % 4 === 0 ? 0.92 : 0.7);
+      rays.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+      rays.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+    }
+    rays.x = x;
+    rays.y = y;
+    rays.alpha = 0;
+    rays.rotation = (Math.random() - 0.5) * 0.12;
+    rays.scale.set(0.42);
+    rays.blendMode = "add";
+    addFxChild(rays, true);
+
+    gsap.to(rays, { alpha: 0.92, duration: 0.055, delay: delay + 0.02, ease: "sine.out" });
+    gsap.to(rays.scale, {
+      x: intensity,
+      y: intensity,
+      duration: 0.32,
+      delay: delay + 0.02,
+      ease: "power3.out",
+    });
+    gsap.to(rays, {
+      alpha: 0,
+      rotation: rays.rotation + 0.08,
+      duration: 0.28,
+      delay: delay + 0.14,
+      ease: "sine.in",
+      onComplete: () => destroyPixiObject(rays),
+    });
+  }
+
+  function createMergeParticles(x, y, color, nextColor, intensity, mergeCount, isHeroMerge, delay) {
+    const sharedBudget = Math.floor(MERGE_FX_BUDGET.particlesPerMove / Math.max(1, mergeCount));
+    const particleCount = Math.max(
+      MERGE_FX_BUDGET.minParticlesPerMerge,
+      Math.min(MERGE_FX_BUDGET.maxParticlesPerMerge, sharedBudget + (isHeroMerge ? 2 : 0))
+    );
+    if (particleCount <= 0) return;
+
+    const burst = new PIXI.Container();
+    burst.x = x;
+    burst.y = y;
+    addFxChild(burst);
+    const colors = [color, nextColor, 0xfff1a8, 0xffffff];
+    let maxLifetime = 0;
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = new PIXI.Graphics();
+      const particleColor = colors[i % colors.length];
+      const size = BOARD.cell * (0.035 + Math.random() * 0.025);
+      const shape = i % 3;
+
+      particle.beginFill(particleColor, 0.98);
+      if (shape === 0) {
+        particle.drawEllipse(-size * 0.42, -size * 0.72, size * 0.84, size * 1.44);
+      } else if (shape === 1) {
+        particle.drawCircle(0, 0, size * 0.55);
+      } else {
+        particle.moveTo(0, -size * 0.8);
+        particle.lineTo(size * 0.48, 0);
+        particle.lineTo(0, size * 0.8);
+        particle.lineTo(-size * 0.48, 0);
+        particle.lineTo(0, -size * 0.8);
+      }
+      particle.endFill();
+      if (shape !== 2) {
+        particle.beginFill(0xffffff, 0.7);
+        particle.drawCircle(-size * 0.16, -size * 0.24, size * 0.13);
+        particle.endFill();
+      } else {
+        particle.blendMode = "add";
+      }
+
+      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.28;
+      const travel = BOARD.cell * (0.48 + Math.random() * 0.42) * intensity;
+      const duration = 0.42 + Math.random() * 0.2;
+      const particleDelay = delay + 0.045 + Math.random() * 0.055;
+      const endX = Math.cos(angle) * travel;
+      const endY = Math.sin(angle) * travel + BOARD.cell * (0.08 + Math.random() * 0.18);
+
+      particle.alpha = 0.98;
+      particle.rotation = angle + Math.PI * 0.5;
+      particle.scale.set(0.18);
+      burst.addChild(particle);
+      gsap.to(particle, {
+        x: endX,
+        y: endY,
+        alpha: 0,
+        rotation: particle.rotation + (Math.random() - 0.5) * 3.2,
+        duration,
+        delay: particleDelay,
+        ease: "power2.out",
+      });
+      gsap.to(particle.scale, {
+        x: 1,
+        y: shape === 0 ? 1.28 : 1,
+        duration: 0.14,
+        delay: particleDelay,
+        ease: "back.out(2.4)",
+      });
+      gsap.to(particle.scale, {
+        x: 0.12,
+        y: 0.12,
+        duration: Math.max(0.2, duration - 0.16),
+        delay: particleDelay + 0.16,
+        ease: "sine.in",
+      });
+      maxLifetime = Math.max(maxLifetime, particleDelay + duration);
+    }
+
+    gsap.to(burst, {
+      alpha: 0.999,
+      duration: Math.max(0.1, maxLifetime - delay),
+      delay,
+      onComplete: () => destroyPixiObject(burst),
+    });
+  }
+
+  function createSpriteMergeFx(x, y, rank, intensity, delay, isHeroMerge) {
     const base = BOARD.cell / 512;
     const pop = createFxSprite("mergePop", x, y, {
-      scale: base * 0.42,
-      alpha: 0.95,
+      scale: base * 0.3,
+      alpha: 0,
       rotation: (Math.random() - 0.5) * 0.18,
+      behindTiles: true,
     });
     if (pop) {
-      const targetScale = base * (1.32 + intensity * 0.18);
-      gsap.to(pop.scale, { x: targetScale, y: targetScale, duration: 0.42, ease: "power3.out" });
+      const targetScale = base * (0.94 + intensity * 0.16);
+      gsap.to(pop, { alpha: 0.86, duration: 0.06, delay: delay + 0.025, ease: "sine.out" });
+      gsap.to(pop.scale, {
+        x: targetScale,
+        y: targetScale,
+        duration: 0.34,
+        delay: delay + 0.025,
+        ease: "power3.out",
+      });
       gsap.to(pop, {
         alpha: 0,
         rotation: pop.rotation + 0.12,
-        duration: 0.5,
-        delay: 0.1,
+        duration: 0.28,
+        delay: delay + 0.14,
         ease: "sine.in",
         onComplete: () => destroyPixiObject(pop),
       });
     }
 
-    const star = createFxSprite("sparkleStar", x, y, {
-      scale: base * (0.58 + intensity * 0.12),
-      alpha: 0.9,
-      rotation: Math.random() * Math.PI,
-    });
-    if (star) {
-      gsap.fromTo(star.scale, { x: base * 0.25, y: base * 0.25 }, {
-        x: base * (0.78 + intensity * 0.12),
-        y: base * (0.78 + intensity * 0.12),
-        duration: 0.34,
-        ease: "back.out(2)",
-      });
-      gsap.to(star, {
+    if (isHeroMerge) {
+      const star = createFxSprite("sparkleStar", x, y, {
+        scale: base * 0.18,
         alpha: 0,
-        rotation: star.rotation + 0.65,
-        duration: 0.62,
-        delay: 0.18,
-        ease: "sine.in",
-        onComplete: () => destroyPixiObject(star),
+        rotation: Math.random() * Math.PI,
       });
-    }
+      if (star) {
+        gsap.to(star, { alpha: 0.82, duration: 0.08, delay: delay + 0.1, ease: "sine.out" });
+        gsap.to(star.scale, {
+          x: base * (0.58 + intensity * 0.1),
+          y: base * (0.58 + intensity * 0.1),
+          duration: 0.3,
+          delay: delay + 0.1,
+          ease: "back.out(2.5)",
+        });
+        gsap.to(star, {
+          alpha: 0,
+          rotation: star.rotation + 0.6,
+          duration: 0.36,
+          delay: delay + 0.25,
+          ease: "sine.in",
+          onComplete: () => destroyPixiObject(star),
+        });
+      }
 
-    const drop = createFxSprite("jellyDrop", x + BOARD.cell * 0.1, y + BOARD.cell * 0.08, {
-      scale: base * (0.46 + intensity * 0.08),
-      alpha: 0.82,
-      rotation: (Math.random() - 0.5) * 0.55,
-    });
-    if (drop) {
-      gsap.to(drop.scale, {
-        x: base * (0.72 + intensity * 0.08),
-        y: base * (0.72 + intensity * 0.08),
-        duration: 0.3,
-        ease: "power2.out",
-      });
-      gsap.to(drop, {
-        x: drop.x + BOARD.cell * 0.08,
-        y: drop.y + BOARD.cell * 0.1,
+      const drop = createFxSprite("jellyDrop", x + BOARD.cell * 0.06, y + BOARD.cell * 0.08, {
+        scale: base * 0.2,
         alpha: 0,
-        duration: 0.52,
-        delay: 0.12,
-        ease: "sine.in",
-        onComplete: () => destroyPixiObject(drop),
+        rotation: (Math.random() - 0.5) * 0.55,
       });
+      if (drop) {
+        gsap.to(drop, { alpha: 0.58, duration: 0.08, delay: delay + 0.08, ease: "sine.out" });
+        gsap.to(drop.scale, {
+          x: base * (0.48 + intensity * 0.08),
+          y: base * (0.48 + intensity * 0.08),
+          duration: 0.3,
+          delay: delay + 0.08,
+          ease: "power2.out",
+        });
+        gsap.to(drop, {
+          x: drop.x + BOARD.cell * 0.08,
+          y: drop.y + BOARD.cell * 0.12,
+          alpha: 0,
+          duration: 0.34,
+          delay: delay + 0.24,
+          ease: "sine.in",
+          onComplete: () => destroyPixiObject(drop),
+        });
+      }
     }
 
     if (rank >= TARGET_RANK) {
       const crown = createFxSprite("crownBurst", x, y, {
         scale: base * 0.52,
-        alpha: 0.95,
+        alpha: 0,
         rotation: 0,
       });
       if (crown) {
+        gsap.to(crown, { alpha: 0.95, duration: 0.08, delay: delay + 0.06, ease: "sine.out" });
         gsap.to(crown.scale, {
           x: base * 1.16,
           y: base * 1.16,
           duration: 0.58,
+          delay: delay + 0.06,
           ease: "power3.out",
         });
         gsap.to(crown, {
           alpha: 0,
           duration: 0.72,
-          delay: 0.18,
+          delay: delay + 0.2,
           ease: "sine.in",
           onComplete: () => destroyPixiObject(crown),
         });
@@ -1241,27 +1491,57 @@
     }
   }
 
-  function pulseMergeTile(visual) {
+  function pulseMergeTile(visual, delay, intensity) {
     if (!visual) return;
-    gsap.fromTo(
-      visual.container,
-      { rotation: -0.05 },
-      { rotation: 0, duration: 0.52, ease: "elastic.out(1.2, 0.32)" }
-    );
-    gsap.fromTo(
-      visual.sprite,
-      { alpha: 0.82 },
-      { alpha: 1, duration: 0.34, ease: "sine.out" }
-    );
-    gsap.fromTo(
-      visual.aura,
-      { alpha: 0.95 },
-      { alpha: 0, duration: 0.78, ease: "sine.out" }
-    );
+    if (PREFERS_REDUCED_MOTION) {
+      visual.container.alpha = 0.8;
+      visual.container.rotation = 0;
+      visual.container.scale.set(0.94);
+      gsap.to(visual.container, { alpha: 1, duration: 0.16, delay, ease: "sine.out" });
+      gsap.to(visual.container.scale, { x: 1, y: 1, duration: 0.2, delay, ease: "sine.out" });
+      gsap.fromTo(visual.aura, { alpha: 0.48 }, {
+        alpha: 0,
+        duration: 0.3,
+        delay,
+        ease: "sine.out",
+      });
+      return;
+    }
+    const squash = Math.min(1.48, 1.34 + (intensity - 1) * 0.18);
+    const overshoot = Math.min(1.2, 1.14 + (intensity - 1) * 0.08);
+    visual.container.alpha = 0;
+    visual.container.rotation = -0.055;
+    visual.container.scale.set(0.48, squash);
+
+    gsap.to(visual.container, { alpha: 1, rotation: 0, duration: 0.1, delay, ease: "power3.out" });
+    gsap.timeline({ delay })
+      .to(visual.container.scale, { x: overshoot, y: 0.86, duration: 0.13, ease: "power4.out" })
+      .to(visual.container.scale, { x: 0.96, y: 1.07, duration: 0.14, ease: "sine.inOut" })
+      .to(visual.container.scale, { x: 1, y: 1, duration: 0.28, ease: "elastic.out(1.2, 0.42)" });
+    gsap.fromTo(visual.sprite, { alpha: 0.74 }, {
+      alpha: 1,
+      duration: 0.2,
+      delay,
+      ease: "sine.out",
+    });
+    gsap.fromTo(visual.aura, { alpha: 0.98 }, {
+      alpha: 0,
+      duration: 0.62,
+      delay,
+      ease: "power2.out",
+    });
+    if (visual.shine) {
+      gsap.fromTo(visual.shine, { alpha: 1 }, {
+        alpha: 0.45,
+        duration: 0.48,
+        delay: delay + 0.06,
+        ease: "sine.out",
+      });
+    }
   }
 
   function pulseStageFrame(intensity) {
-    if (IS_TOUCH_DEVICE) return;
+    if (IS_TOUCH_DEVICE || PREFERS_REDUCED_MOTION) return;
     gsap.killTweensOf(refs.frame);
     gsap.fromTo(
       refs.frame,
@@ -1270,13 +1550,56 @@
     );
   }
 
-  function createShockwaves(x, y, color, nextColor, intensity) {
+  function kickMergeScene(intensity, mergeCount) {
+    if (PREFERS_REDUCED_MOTION || !app?.stage) return;
+    const strength = Math.min(IS_TOUCH_DEVICE ? 4.5 : 7.5, 1.8 + intensity * 2 + (mergeCount - 1) * 0.55);
+    const angle = Math.random() * Math.PI * 2;
+    gsap.killTweensOf(app.stage.position);
+    gsap.fromTo(app.stage.position, {
+      x: Math.cos(angle) * strength,
+      y: Math.sin(angle) * strength,
+    }, {
+      x: 0,
+      y: 0,
+      duration: 0.34,
+      ease: "elastic.out(1.4, 0.3)",
+    });
+  }
+
+  function createSceneFlash(intensity, mergeCount) {
+    if (PREFERS_REDUCED_MOTION) return;
+    const flash = new PIXI.Graphics();
+    flash.beginFill(0xffffff, 1);
+    flash.drawRoundedRect(
+      BOARD.x - BOARD.gap,
+      BOARD.y - BOARD.gap,
+      BOARD.size + BOARD.gap * 2,
+      BOARD.size + BOARD.gap * 2,
+      48
+    );
+    flash.endFill();
+    flash.alpha = 0;
+    flash.blendMode = "add";
+    addFxChild(flash);
+    const peakAlpha = Math.min(IS_TOUCH_DEVICE ? 0.11 : 0.17, 0.07 + intensity * 0.045 + mergeCount * 0.012);
+    gsap.to(flash, { alpha: peakAlpha, duration: 0.035, ease: "power4.out" });
+    gsap.to(flash, {
+      alpha: 0,
+      duration: 0.16,
+      delay: 0.045,
+      ease: "power2.in",
+      onComplete: () => destroyPixiObject(flash),
+    });
+  }
+
+  function createShockwaves(x, y, color, nextColor, intensity, delay) {
     const rings = [
       { color, delay: 0, width: 10, scale: 1.28 },
       { color: nextColor, delay: 0.06, width: 6, scale: 1.7 },
       { color: 0xffffff, delay: 0.1, width: 4, scale: 2.05 },
     ];
-    rings.slice(0, IS_TOUCH_DEVICE ? 2 : rings.length).forEach((ring) => {
+    const ringCount = PREFERS_REDUCED_MOTION ? 1 : IS_TOUCH_DEVICE ? 2 : rings.length;
+    rings.slice(0, ringCount).forEach((ring) => {
       const wave = new PIXI.Graphics();
       wave.lineStyle(ring.width, ring.color, 0.82);
       wave.drawCircle(0, 0, BOARD.cell * 0.28);
@@ -1284,31 +1607,108 @@
       wave.y = y;
       wave.alpha = 0;
       wave.scale.set(0.45);
-      addFxChild(wave);
-      gsap.to(wave, { alpha: 0.85, duration: 0.08, delay: ring.delay, ease: "sine.out" });
+      wave.blendMode = "add";
+      addFxChild(wave, true);
+      if (PREFERS_REDUCED_MOTION) {
+        wave.scale.set(0.9);
+        gsap.to(wave, { alpha: 0.48, duration: 0.1, delay, ease: "sine.out" });
+        gsap.to(wave, {
+          alpha: 0,
+          duration: 0.22,
+          delay: delay + 0.2,
+          ease: "sine.in",
+          onComplete: () => destroyPixiObject(wave),
+        });
+        return;
+      }
+      gsap.to(wave, { alpha: 0.85, duration: 0.08, delay: delay + ring.delay, ease: "sine.out" });
       gsap.to(wave.scale, {
         x: ring.scale * intensity,
         y: ring.scale * intensity,
         duration: 0.62,
-        delay: ring.delay,
+        delay: delay + ring.delay,
         ease: "power3.out",
       });
       gsap.to(wave, {
         alpha: 0,
         duration: 0.46,
-        delay: ring.delay + 0.16,
+        delay: delay + ring.delay + 0.16,
         ease: "sine.in",
         onComplete: () => destroyPixiObject(wave),
       });
     });
   }
 
-  function floatText(text, x, y) {
+  function createComboCallout(positions, mergeCount, highestRank) {
+    if (!positions.length) return;
+    const center = positions.reduce((acc, pos) => ({ x: acc.x + pos.x, y: acc.y + pos.y }), { x: 0, y: 0 });
+    center.x /= positions.length;
+    center.y /= positions.length;
+    const labelText = mergeCount >= 4
+      ? `x${mergeCount} JELLY JACKPOT!`
+      : mergeCount === 3
+        ? "x3 TRIPLE POP!"
+        : "x2 DOUBLE POP!";
+    const accent = RANK_COLORS[highestRank % RANK_COLORS.length];
+    const callout = new PIXI.Container();
+    const label = new PIXI.Text(labelText, {
+      fontFamily: "Pretendard, Arial, sans-serif",
+      fontSize: mergeCount >= 4 ? 30 : 34,
+      fontWeight: "950",
+      fill: 0xffffff,
+      stroke: 0x6c174f,
+      strokeThickness: 7,
+      align: "center",
+    });
+    label.anchor.set(0.5);
+    const plate = new PIXI.Graphics();
+    plate.lineStyle(5, 0xffffff, 0.9);
+    plate.beginFill(accent, 0.9);
+    plate.drawRoundedRect(-label.width * 0.62, -34, label.width * 1.24, 68, 28);
+    plate.endFill();
+    plate.rotation = -0.025;
+    callout.addChild(plate, label);
+    callout.x = center.x;
+    callout.y = Math.max(BOARD.y + 42, center.y - BOARD.cell * 0.68);
+    callout.alpha = 0;
+    callout.rotation = -0.07;
+    callout.scale.set(0.28);
+    addFxChild(callout);
+
+    if (PREFERS_REDUCED_MOTION) {
+      callout.rotation = 0;
+      callout.scale.set(1);
+      gsap.to(callout, { alpha: 1, duration: 0.12, delay: 0.08, ease: "sine.out" });
+      gsap.to(callout, {
+        alpha: 0,
+        duration: 0.24,
+        delay: 0.58,
+        ease: "sine.in",
+        onComplete: () => destroyPixiObject(callout),
+      });
+      return;
+    }
+
+    gsap.to(callout, { alpha: 1, rotation: 0.035, duration: 0.12, delay: 0.12, ease: "power3.out" });
+    gsap.timeline({ delay: 0.12 })
+      .to(callout.scale, { x: 1.12, y: 1.12, duration: 0.17, ease: "back.out(3.2)" })
+      .to(callout.scale, { x: 1, y: 1, duration: 0.15, ease: "sine.inOut" });
+    gsap.to(callout, {
+      y: callout.y - 36,
+      alpha: 0,
+      duration: 0.48,
+      delay: 0.62,
+      ease: "power2.in",
+      onComplete: () => destroyPixiObject(callout),
+    });
+  }
+
+  function floatText(text, x, y, accent = 0xffffff, delay = 0) {
     const label = new PIXI.Text(text, {
       fontFamily: "Pretendard, Arial, sans-serif",
       fontSize: 40,
       fontWeight: "950",
-      fill: 0xffffff,
+      fill: accent,
       stroke: 0x1d2c3f,
       strokeThickness: 6,
       align: "center",
@@ -1316,13 +1716,28 @@
     label.anchor.set(0.5);
     label.x = x;
     label.y = y;
-    label.scale.set(0.72);
+    label.alpha = 0;
+    label.scale.set(0.58);
     addFxChild(label);
-    gsap.to(label.scale, { x: 1.12, y: 1.12, duration: 0.18, ease: "back.out(2.8)" });
+    if (PREFERS_REDUCED_MOTION) {
+      label.scale.set(1);
+      gsap.to(label, { alpha: 1, duration: 0.1, delay, ease: "sine.out" });
+      gsap.to(label, {
+        alpha: 0,
+        duration: 0.22,
+        delay: delay + 0.48,
+        ease: "sine.in",
+        onComplete: () => destroyPixiObject(label),
+      });
+      return;
+    }
+    gsap.to(label, { alpha: 1, duration: 0.06, delay, ease: "sine.out" });
+    gsap.to(label.scale, { x: 1.12, y: 1.12, duration: 0.18, delay, ease: "back.out(2.8)" });
     gsap.to(label, {
       y: y - 58,
       alpha: 0,
-      duration: 0.9,
+      duration: 0.72,
+      delay: delay + 0.16,
       ease: "power2.out",
       onComplete: () => destroyPixiObject(label),
     });

@@ -1,0 +1,31 @@
+id,role,type,description,size/ratio,style line ref,source
+jelly-00,rank 2 tile sprite,static 2D sprite,small pink starter jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-01,rank 4 tile sprite,static 2D sprite,small orange jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-02,rank 8 tile sprite,static 2D sprite,small yellow jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-03,rank 16 tile sprite,static 2D sprite,small lime jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-04,rank 32 tile sprite,static 2D sprite,small cyan jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-05,rank 64 tile sprite,static 2D sprite,small blue jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-06,rank 128 tile sprite,static 2D sprite,small violet jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-07,rank 256 tile sprite,static 2D sprite,large pink jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-08,rank 512 tile sprite,static 2D sprite,large orange jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-09,rank 1024 tile sprite,static 2D sprite,large rainbow jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-10,rank 2048 tile sprite,static 2D sprite,crown jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+jelly-11,post-win tile sprite,static 2D sprite,royal crown jelly,1:1 / 128px in game,STYLE_FORMULA_V1,reference_media[0]
+title-hero,start screen illustration,static 2D background,jelly merge hero artwork,1:1 responsive,STYLE_FORMULA_V1,reference_media[0]
+merge-pop,primary merge splash,static 2D effect sprite,pink orange candy gel splash,1:1 / 512px source,STYLE_FORMULA_V1,reference_media[0]
+sparkle-star,merge sparkle overlay,static 2D effect sprite,rainbow glossy star cluster,1:1 / 512px source,STYLE_FORMULA_V1,reference_media[0]
+jelly-drop,merge fragment overlay,static 2D effect sprite,multicolor jelly droplets,1:1 / 512px source,STYLE_FORMULA_V1,reference_media[0]
+crown-burst,win rank celebration overlay,static 2D effect sprite,royal crown radial burst,1:1 / 512px source,STYLE_FORMULA_V1,reference_media[0]
+merge-impact-core,instant merge impact flash,procedural PIXI effect,white-gold core flash with rainbow edge,board-cell relative,STYLE_FORMULA_V1,generate
+merge-speed-lines,instant merge motion accent,procedural PIXI effect,radial white-gold speed rays,board-cell relative,STYLE_FORMULA_V1,generate
+merge-particles,merge debris burst,procedural PIXI effect,glossy jelly droplets and star sparks,board-cell relative,STYLE_FORMULA_V1,generate
+merge-combo-callout,multi-merge reward label,procedural PIXI text effect,bright candy combo badge,board-cell relative,STYLE_FORMULA_V1,generate
+jelly-slide,movement feedback,audio SFX,short soft jelly slide,MP3 under 0.12s,audio-v1,reference_media[0]
+jelly-merge,basic merge feedback,audio SFX,bouncy rising jelly pop,MP3 under 0.25s,audio-v1,reference_media[0]
+jelly-merge-combo,multiple merge feedback,audio SFX,layered sparkling combo pop,MP3 under 0.35s,audio-v1,reference_media[0]
+jelly-bump,invalid move feedback,audio SFX,rounded low jelly bump,MP3 under 0.14s,audio-v1,reference_media[0]
+jelly-win,crown rank feedback,audio SFX,short bright success fanfare,MP3 under 0.9s,audio-v1,reference_media[0]
+jelly-gameover,end state feedback,audio SFX,cute descending game over cue,MP3 under 0.8s,audio-v1,reference_media[0]
+jelly-start,start button feedback,audio SFX,bright short launch cue,MP3 under 0.35s,audio-v1,reference_media[0]
+jelly-rank-open,leaderboard open feedback,audio SFX,sparkling reveal cue,MP3 under 0.28s,audio-v1,reference_media[0]
+jelly-rank-submit,leaderboard submit feedback,audio SFX,small celebratory success cue,MP3 under 0.55s,audio-v1,reference_media[0]
