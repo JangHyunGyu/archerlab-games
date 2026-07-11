@@ -1562,39 +1562,70 @@
   }
 
   function createImpactWord(x, y, accent, delay) {
-    const callout = new PIXI.Container();
-    const label = new PIXI.Text("PANG!", {
-      fontFamily: "Pretendard, Arial, sans-serif",
+    const startY = Math.max(BOARD.y + BOARD.cell * 0.16, y - BOARD.cell * 0.36);
+    createOutlinedMergeCallout("PANG!", x, startY, accent, {
       fontSize: IS_TOUCH_DEVICE ? 50 : 60,
+      delay: delay + 0.25,
+      holdDuration: 0.37,
+      fadeDuration: 0.42,
+      travel: BOARD.cell * 0.18,
+    });
+  }
+
+  function createOutlinedMergeCallout(text, x, y, accent, {
+    fontSize,
+    delay,
+    holdDuration,
+    fadeDuration,
+    travel,
+  }) {
+    const callout = new PIXI.Container();
+    const label = new PIXI.Text(text, {
+      fontFamily: "Pretendard, Arial, sans-serif",
+      fontSize,
       fontWeight: "950",
       fill: 0xffffff,
       stroke: 0x5b1749,
-      strokeThickness: 8,
+      strokeThickness: Math.max(7, Math.round(fontSize * 0.135)),
       align: "center",
     });
     label.anchor.set(0.5);
     const accentLine = new PIXI.Graphics();
     accentLine.lineStyle(7, accent, 0.92);
-    accentLine.moveTo(-label.width * 0.38, 36);
-    accentLine.lineTo(label.width * 0.38, 36);
+    accentLine.moveTo(-label.width * 0.38, fontSize * 0.6);
+    accentLine.lineTo(label.width * 0.38, fontSize * 0.6);
     callout.addChild(accentLine, label);
-    callout.x = x;
-    const startY = Math.max(BOARD.y + BOARD.cell * 0.16, y - BOARD.cell * 0.36);
-    callout.y = startY;
+    const halfWidth = label.width * 0.56;
+    callout.x = Math.max(BOARD.x + halfWidth, Math.min(BOARD.x + BOARD.size - halfWidth, x));
+    callout.y = y;
     callout.alpha = 0;
     callout.rotation = -0.07;
     callout.scale.set(0.32);
     addFxChild(callout);
 
-    gsap.to(callout, { alpha: 0.96, rotation: 0.03, duration: 0.12, delay: delay + 0.25, ease: "power3.out" });
-    gsap.timeline({ delay: delay + 0.25 })
+    if (PREFERS_REDUCED_MOTION) {
+      callout.rotation = 0;
+      callout.scale.set(1);
+      gsap.to(callout, { alpha: 0.96, duration: 0.1, delay, ease: "sine.out" });
+      gsap.to(callout, {
+        alpha: 0,
+        duration: 0.22,
+        delay: delay + holdDuration,
+        ease: "sine.in",
+        onComplete: () => destroyPixiObject(callout),
+      });
+      return;
+    }
+
+    gsap.to(callout, { alpha: 0.96, rotation: 0.03, duration: 0.12, delay, ease: "power3.out" });
+    gsap.timeline({ delay })
       .to(callout.scale, { x: 1.06, y: 1.06, duration: 0.18, ease: "back.out(2.8)" })
       .to(callout.scale, { x: 0.98, y: 0.98, duration: 0.16, ease: "sine.inOut" });
     gsap.to(callout, {
-      y: startY - BOARD.cell * 0.18,
+      y: y - travel,
       alpha: 0,
-      duration: 0.42,
-      delay: delay + 0.62,
+      duration: fadeDuration,
+      delay: delay + holdDuration,
       ease: "power2.in",
       onComplete: () => destroyPixiObject(callout),
     });
@@ -1716,56 +1747,13 @@
         ? "x3 TRIPLE POP!"
         : "x2 DOUBLE POP!";
     const accent = RANK_COLORS[highestRank % RANK_COLORS.length];
-    const callout = new PIXI.Container();
-    const label = new PIXI.Text(labelText, {
-      fontFamily: "Pretendard, Arial, sans-serif",
-      fontSize: mergeCount >= 4 ? 40 : 46,
-      fontWeight: "950",
-      fill: 0xffffff,
-      stroke: 0x6c174f,
-      strokeThickness: 10,
-      align: "center",
-    });
-    label.anchor.set(0.5);
-    const plate = new PIXI.Graphics();
-    plate.lineStyle(7, 0xffffff, 0.95);
-    plate.beginFill(accent, 0.9);
-    plate.drawRoundedRect(-label.width * 0.62, -48, label.width * 1.24, 96, 40);
-    plate.endFill();
-    plate.rotation = -0.025;
-    callout.addChild(plate, label);
-    callout.x = center.x;
-    callout.y = Math.max(BOARD.y + 42, center.y - BOARD.cell * 0.68);
-    callout.alpha = 0;
-    callout.rotation = -0.07;
-    callout.scale.set(0.18);
-    addFxChild(callout);
-
-    if (PREFERS_REDUCED_MOTION) {
-      callout.rotation = 0;
-      callout.scale.set(1);
-      gsap.to(callout, { alpha: 1, duration: 0.12, delay: 0.08, ease: "sine.out" });
-      gsap.to(callout, {
-        alpha: 0,
-        duration: 0.24,
-        delay: 0.58,
-        ease: "sine.in",
-        onComplete: () => destroyPixiObject(callout),
-      });
-      return;
-    }
-
-    gsap.to(callout, { alpha: 1, rotation: 0.035, duration: 0.12, delay: 0.14, ease: "power4.out" });
-    gsap.timeline({ delay: 0.14 })
-      .to(callout.scale, { x: 1.18, y: 1.18, duration: 0.22, ease: "back.out(3.5)" })
-      .to(callout.scale, { x: 1, y: 1, duration: 0.2, ease: "sine.inOut" });
-    gsap.to(callout, {
-      y: callout.y - 48,
-      alpha: 0,
-      duration: 0.56,
-      delay: 0.78,
-      ease: "power2.in",
-      onComplete: () => destroyPixiObject(callout),
+    const startY = Math.max(BOARD.y + BOARD.cell * 0.16, center.y - BOARD.cell * 0.54);
+    createOutlinedMergeCallout(labelText, center.x, startY, accent, {
+      fontSize: mergeCount >= 4 ? 38 : 44,
+      delay: 0.3,
+      holdDuration: 0.48,
+      fadeDuration: 0.5,
+      travel: BOARD.cell * 0.24,
     });
   }
 
