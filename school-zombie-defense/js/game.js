@@ -40,6 +40,7 @@
     guard: "20260711-higgsfield-v1",
     nurse: "20260711-higgsfield-v1"
   };
+  const CHARACTER_ASSET_VERSION = "20260711-character-normalize-v1";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
@@ -1932,9 +1933,10 @@
       super("BootScene");
     }
 
-    loadManualImage(path) {
+    loadManualImage(path, version = "") {
       return new Promise((resolve) => {
-        const candidates = [imageAsset(path), path]
+        const encodedVersion = version ? `?v=${encodeURIComponent(version)}` : "";
+        const candidates = [versionedImageAsset(path, version), `${path}${encodedVersion}`]
           .map((candidate) => new URL(candidate, window.location.href).href)
           .filter((candidate, index, items) => items.indexOf(candidate) === index);
         const tryLoad = (index) => {
@@ -1952,11 +1954,11 @@
       });
     }
 
-    loadManualTexture(key, path) {
+    loadManualTexture(key, path, version = "") {
       if (this.textures.exists(key)) {
         return Promise.resolve();
       }
-      return this.loadManualImage(path).then((image) => {
+      return this.loadManualImage(path, version).then((image) => {
         if (!image || this.textures.exists(key)) {
           return;
         }
@@ -1972,9 +1974,9 @@
 
     loadManualCharacterAssets() {
       const assets = [
-        ["character-f", "assets/images/character-f.png"],
-        ["character-g", "assets/images/character-g.png"],
-        ["character-h", "assets/images/character-h.png"],
+        ["character-f", "assets/images/character-f.png", CHARACTER_ASSET_VERSION],
+        ["character-g", "assets/images/character-g.png", CHARACTER_ASSET_VERSION],
+        ["character-h", "assets/images/character-h.png", CHARACTER_ASSET_VERSION],
         ["avatar-fire", "assets/images/avatar-fire.png"],
         ["avatar-shock", "assets/images/avatar-shock.png"],
         ["avatar-engineer", "assets/images/avatar-engineer.png"],
@@ -1984,7 +1986,7 @@
         ["engineer-turret", "assets/images/engineer-turret.png"],
         ["engineer-turret-aim", "assets/images/engineer-turret-aim.png"]
       ];
-      return Promise.all(assets.map(([key, path]) => this.loadManualTexture(key, path)));
+      return Promise.all(assets.map(([key, path, version]) => this.loadManualTexture(key, path, version)));
     }
 
     preload() {
@@ -1995,17 +1997,23 @@
       this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
       this.load.image("shop-blackmarket", imageAsset("assets/images/shop-blackmarket.png"));
       this.load.image("premium-skill-card", imageAsset("assets/images/premium-skill-card.png"));
-      this.load.image("character-a", imageAsset("assets/images/character-a.png"));
-      this.load.image("character-b", imageAsset("assets/images/character-b.png"));
-      this.load.image("character-c", imageAsset("assets/images/character-c.png"));
-      this.load.image("character-d", imageAsset("assets/images/character-d.png"));
-      this.load.image("character-e", imageAsset("assets/images/character-e.png"));
-      this.load.image("character-f", imageAsset("assets/images/character-f.png"));
-      this.load.image("character-g", imageAsset("assets/images/character-g.png"));
-      this.load.image("character-h", imageAsset("assets/images/character-h.png"));
+      this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-e", versionedImageAsset("assets/images/character-e.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-g", versionedImageAsset("assets/images/character-g.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
       for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
-        this.load.image(`character-a-attack-${frame}`, imageAsset(`assets/images/character-a-attack-${frame}.png`));
-        this.load.image(`character-f-throw-${frame}`, imageAsset(`assets/images/character-f-throw-${frame}.png`));
+        this.load.image(
+          `character-a-attack-${frame}`,
+          versionedImageAsset(`assets/images/character-a-attack-${frame}.png`, CHARACTER_ASSET_VERSION)
+        );
+        this.load.image(
+          `character-f-throw-${frame}`,
+          versionedImageAsset(`assets/images/character-f-throw-${frame}.png`, CHARACTER_ASSET_VERSION)
+        );
       }
       this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
       this.load.image("avatar-bow", imageAsset("assets/images/avatar-bow.png"));
