@@ -40,7 +40,7 @@
     guard: "20260711-higgsfield-v1",
     nurse: "20260711-higgsfield-v1"
   };
-  const CHARACTER_ASSET_VERSION = "20260711-character-normalize-v1";
+  const CHARACTER_ASSET_VERSION = "20260711-character-actions-v2";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
@@ -155,6 +155,10 @@
   const CHARACTER_ATTACK_ACTIONS = {
     a: "attack",
     f: "throw"
+  };
+  const CHARACTER_ACTION_HEIGHT_SCALE = {
+    a: 800 / 715,
+    f: 640 / 512
   };
   const PROJECTILE_SCALES = {
     "projectile-arrow": 0.228,
@@ -2661,6 +2665,11 @@
       sprite.setDisplaySize(height * ratio, height);
     }
 
+    fitDefenderActionHeight(defender) {
+      const sourceHeightScale = CHARACTER_ACTION_HEIGHT_SCALE[defender.id] || 1;
+      this.fitSpriteHeight(defender.sprite, defender.height * sourceHeightScale);
+    }
+
     setDefenderPose(defender, pose) {
       if (!defender.sprite) {
         return;
@@ -2689,7 +2698,7 @@
           frameDuration: THROW_ANIMATION_FRAME_DURATION
         };
         defender.sprite.setTexture(firstAttackFrame);
-        this.fitSpriteHeight(defender.sprite, defender.height);
+        this.fitDefenderActionHeight(defender);
         defender.firePoseTimer = THROW_ANIMATION_FRAMES * THROW_ANIMATION_FRAME_DURATION;
         return;
       }
@@ -5758,7 +5767,7 @@
             const textureKey = `character-${defender.id}-${animation.action}-${animation.pose}-${animation.frame}`;
             if (defender.sprite && this.textures.exists(textureKey)) {
               defender.sprite.setTexture(textureKey);
-              this.fitSpriteHeight(defender.sprite, defender.height);
+              this.fitDefenderActionHeight(defender);
             }
           }
           return;
