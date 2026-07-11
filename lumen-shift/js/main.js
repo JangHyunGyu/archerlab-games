@@ -5539,14 +5539,15 @@ class PixiView {
     const color = stagePieceColor(snapshot.stage, piece.type, piece.color || snapshot.stage?.accent || 0xffffff);
     const cx = layout.boardX + (piece.x + piece.matrix[0].length / 2) * layout.cell;
     const cy = layout.boardY + (piece.y + piece.matrix.length / 2) * layout.cell;
-    const count = kind === "drop" ? 34 + Math.min(34, amount * 1.25) : kind === "rotate" ? 28 : 12;
+    const count = kind === "drop" ? 46 + Math.min(42, amount * 1.7) : kind === "rotate" ? 28 : 12;
     this.inputHeat = Math.max(this.inputHeat, kind === "drop" ? 0.7 : kind === "rotate" ? 0.46 : 0.32);
     if (kind === "drop") {
       const dropPower = clamp((amount || 1) / 24, 0, 1);
-      this.worldSurge = Math.max(this.worldSurge, 0.38 + dropPower * 0.36);
-      this.chromaticPulse = Math.max(this.chromaticPulse, 0.34 + dropPower * 0.24);
-      this.cameraPulse = Math.max(this.cameraPulse, 0.32 + Math.min(0.42, amount * 0.014));
-      this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * (0.0045 + dropPower * 0.005);
+      this.worldSurge = Math.max(this.worldSurge, 0.48 + dropPower * 0.4);
+      this.chromaticPulse = Math.max(this.chromaticPulse, 0.48 + dropPower * 0.3);
+      this.cameraPulse = Math.max(this.cameraPulse, 0.42 + Math.min(0.46, amount * 0.016));
+      this.cameraRoll += (Math.random() > 0.5 ? 1 : -1) * (0.006 + dropPower * 0.007);
+      this.flash = Math.max(this.flash, 0.045 + dropPower * 0.045);
     }
     const pipCount = kind === "move" ? 2 : kind === "rotate" ? 5 : 4;
     for (let i = 0; i < pipCount; i += 1) {
@@ -5565,21 +5566,23 @@ class PixiView {
         maxLife: kind === "drop" ? 22 : 16,
       });
     }
-    for (let i = 0; i < Math.min(count, this.quality.coarse ? 36 : 62); i += 1) {
+    for (let i = 0; i < Math.min(count, this.quality.coarse ? 44 : 88); i += 1) {
       const a = kind === "drop"
-        ? -Math.PI / 2 + (Math.random() - 0.5) * 0.72
+        ? -Math.PI + Math.random() * Math.PI
         : Math.random() * Math.PI * 2;
-      const speed = kind === "drop" ? 1.8 + Math.random() * 5.2 : 0.9 + Math.random() * 3.2;
+      const speed = kind === "drop" ? 2.2 + Math.random() * 6.6 : 0.9 + Math.random() * 3.2;
       this.spawnParticle(
         cx + (Math.random() - 0.5) * layout.cell * (kind === "drop" ? 1.0 : 1.4),
         cy + (Math.random() - 0.5) * layout.cell * (kind === "drop" ? 0.8 : 1.4),
         Math.random() > 0.35 ? color : 0xffffff,
-        kind === "drop" ? 1.6 + Math.random() * 3.4 : 1.6 + Math.random() * 3.2,
+        kind === "drop" ? 1.8 + Math.random() * 4.2 : 1.6 + Math.random() * 3.2,
         Math.cos(a) * speed,
         Math.sin(a) * speed + (kind === "drop" ? 2.1 : 0),
-        kind === "drop" ? 22 + Math.random() * 22 : 20 + Math.random() * 20,
-        kind === "drop" ? 0.42 : (kind === "move" ? 0.48 : 0.74),
-        kind === "drop" ? (Math.random() > 0.46 ? "comet" : "streak") : (kind === "rotate" ? "star" : "pin"),
+        kind === "drop" ? 26 + Math.random() * 26 : 20 + Math.random() * 20,
+        kind === "drop" ? 0.54 : (kind === "move" ? 0.48 : 0.74),
+        kind === "drop"
+          ? (Math.random() > 0.72 ? "star" : (Math.random() > 0.42 ? "comet" : "streak"))
+          : (kind === "rotate" ? "star" : "pin"),
       );
     }
     if (kind === "drop") {
@@ -5605,6 +5608,23 @@ class PixiView {
             life: 14 + Math.min(12, dropDistance * 0.72),
             maxLife: 14 + Math.min(12, dropDistance * 0.72),
           });
+          if (!this.quality.coarse) {
+            [-1, 1].forEach((direction) => {
+              this.dropTrails.push({
+                x: px + direction * layout.cell * 0.16,
+                y1: Math.max(layout.boardY - layout.cell, py - dropDistance * layout.cell * 0.88),
+                y2: py + layout.cell * 0.3,
+                width: Math.max(2.2, layout.cell * 0.1),
+                color: direction < 0 ? 0x68e9ff : 0xff5bd4,
+                sway: direction * layout.cell * 0.12,
+                alpha: 0.12,
+                coreAlpha: 0.28,
+                lineAlpha: 0.38,
+                life: 12 + Math.min(10, dropDistance * 0.58),
+                maxLife: 12 + Math.min(10, dropDistance * 0.58),
+              });
+            });
+          }
           this.impactRings.push({
             kind: "landing",
             x: px,
@@ -5650,6 +5670,16 @@ class PixiView {
         width: 3.2,
         life: 32 + Math.min(18, dropDistance * 1.1),
         maxLife: 32 + Math.min(18, dropDistance * 1.1),
+      });
+      this.screenBursts.push({
+        x: cx,
+        y: impactY,
+        radius: Math.max(layout.boardW * 0.66, layout.cell * (3.2 + dropDistance * 0.14)),
+        color,
+        alpha: 0.34 + dropPower * 0.12,
+        width: 2.2,
+        life: 20 + Math.min(12, dropDistance * 0.68),
+        maxLife: 20 + Math.min(12, dropDistance * 0.68),
       });
       this.shockBands.push({
         orientation: "vertical",
@@ -5715,17 +5745,17 @@ class PixiView {
         life: 22 + Math.min(10, dropDistance * 0.45),
         maxLife: 22 + Math.min(10, dropDistance * 0.45),
       });
-      for (let i = 0; i < (this.quality.coarse ? 4 : 9); i += 1) {
-        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.9;
+      for (let i = 0; i < (this.quality.coarse ? 7 : 15); i += 1) {
+        const angle = -Math.PI + Math.random() * Math.PI;
         this.clearRays.push({
-          x: cx + (Math.random() - 0.5) * layout.cell,
-          y: impactY,
+          x: cx + (Math.random() - 0.5) * layout.cell * 1.4,
+          y: impactY + layout.cell * 0.3,
           angle,
-          length: layout.boardH * (0.18 + Math.random() * 0.22),
+          length: layout.boardW * (0.16 + Math.random() * 0.32),
           width: Math.max(1, layout.cell * (0.05 + Math.random() * 0.04)),
-          speed: layout.cell * (3 + Math.random() * 6),
+          speed: layout.cell * (4 + Math.random() * 7),
           color: Math.random() > 0.28 ? color : 0xffffff,
-          alpha: 0.38,
+          alpha: 0.52,
           sway: layout.cell * 0.12,
           spin: (Math.random() - 0.5) * 0.16,
           phase: Math.random() * Math.PI * 2,
@@ -5735,10 +5765,10 @@ class PixiView {
       }
       this.clearWaves.push({
         x: cx,
-        y: layout.boardY + layout.boardH - layout.cell * 0.6,
+        y: impactY + layout.cell * 0.55,
         speed: 0,
-        width: Math.max(layout.boardW * 0.78, layout.cell * (2.4 + amount * 0.2)),
-        height: Math.max(26, layout.cell * 1.55),
+        width: Math.max(layout.boardW * 0.9, layout.cell * (3 + amount * 0.22)),
+        height: Math.max(30, layout.cell * 1.8),
         color,
         power: 2,
         life: 28,
@@ -5754,7 +5784,7 @@ class PixiView {
         life: 18,
         maxLife: 18,
       });
-      this.shake = Math.max(this.shake, 5);
+      this.shake = Math.max(this.shake, 6.5 + dropPower * 2.5);
     }
     if (kind === "rotate") this.comboPulse = Math.max(this.comboPulse, 0.22);
   }
@@ -6526,6 +6556,7 @@ class LumenShiftApp {
     this.modeKey = "journey";
     this.rankOnly = false;
     this.lastAudioMixAt = 0;
+    this.hardDropLockPending = false;
     this.elements = {
       menu: document.getElementById("menu-screen"),
       pause: document.getElementById("pause-screen"),
@@ -6627,9 +6658,10 @@ class LumenShiftApp {
         this.haptic(3);
       },
       onHardDrop: (distance) => {
+        this.hardDropLockPending = true;
         this.audio.drop();
         this.view.actionPulse("drop", this.core?.snapshot?.(), distance);
-        this.haptic([12, 22, 16]);
+        this.haptic([16, 26, 20]);
       },
       onHold: () => {
         this.audio.playSfx("hold", -8);
@@ -6638,8 +6670,10 @@ class LumenShiftApp {
       },
       onLock: (info) => {
         const stage = STAGES[this.core.stageIndex] || STAGES[0];
+        const intense = this.hardDropLockPending;
+        this.hardDropLockPending = false;
         this.audio.lock(info.cells?.length || 0);
-        this.view.pieceLock(info.cells, stage, false);
+        this.view.pieceLock(info.cells, stage, intense);
       },
       onStage: (index, stage, stageWindow = null) => {
         this.audio.setStage(index);
@@ -6729,6 +6763,7 @@ class LumenShiftApp {
     this.setZoneVeil(false, true);
     await this.audio.unlock({ startMusic: true });
     this.rank = new RankClient();
+    this.hardDropLockPending = false;
     if (MODES[this.modeKey]?.ranked) this.rank.start().catch(() => null);
     this.core.callbacks = this.makeCallbacks();
     this.core.reset(this.modeKey);
