@@ -1565,36 +1565,36 @@
     const callout = new PIXI.Container();
     const label = new PIXI.Text("PANG!", {
       fontFamily: "Pretendard, Arial, sans-serif",
-      fontSize: IS_TOUCH_DEVICE ? 54 : 64,
+      fontSize: IS_TOUCH_DEVICE ? 50 : 60,
       fontWeight: "950",
       fill: 0xffffff,
       stroke: 0x5b1749,
-      strokeThickness: 10,
+      strokeThickness: 8,
       align: "center",
     });
     label.anchor.set(0.5);
-    const plate = new PIXI.Graphics();
-    plate.lineStyle(6, 0xffffff, 0.94);
-    plate.beginFill(accent, 0.94);
-    plate.drawRoundedRect(-label.width * 0.68, -44, label.width * 1.36, 88, 40);
-    plate.endFill();
-    callout.addChild(plate, label);
+    const accentLine = new PIXI.Graphics();
+    accentLine.lineStyle(7, accent, 0.92);
+    accentLine.moveTo(-label.width * 0.38, 36);
+    accentLine.lineTo(label.width * 0.38, 36);
+    callout.addChild(accentLine, label);
     callout.x = x;
-    callout.y = y;
+    const startY = Math.max(BOARD.y + BOARD.cell * 0.16, y - BOARD.cell * 0.36);
+    callout.y = startY;
     callout.alpha = 0;
-    callout.rotation = -0.1;
-    callout.scale.set(0.16);
+    callout.rotation = -0.07;
+    callout.scale.set(0.32);
     addFxChild(callout);
 
-    gsap.to(callout, { alpha: 1, rotation: 0.05, duration: 0.1, delay: delay + 0.12, ease: "power4.out" });
-    gsap.timeline({ delay: delay + 0.12 })
-      .to(callout.scale, { x: 1.18, y: 1.18, duration: 0.2, ease: "back.out(3.5)" })
+    gsap.to(callout, { alpha: 0.96, rotation: 0.03, duration: 0.12, delay: delay + 0.25, ease: "power3.out" });
+    gsap.timeline({ delay: delay + 0.25 })
+      .to(callout.scale, { x: 1.06, y: 1.06, duration: 0.18, ease: "back.out(2.8)" })
       .to(callout.scale, { x: 0.98, y: 0.98, duration: 0.16, ease: "sine.inOut" });
     gsap.to(callout, {
-      y: y - BOARD.cell * 0.42,
+      y: startY - BOARD.cell * 0.18,
       alpha: 0,
-      duration: 0.48,
-      delay: delay + 0.46,
+      duration: 0.42,
+      delay: delay + 0.62,
       ease: "power2.in",
       onComplete: () => destroyPixiObject(callout),
     });
