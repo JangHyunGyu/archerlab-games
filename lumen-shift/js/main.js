@@ -4047,7 +4047,7 @@ class PixiView {
       }
     }
 
-    this.drawPiece(g, snapshot.ghost, bx, by, cell, 0.18, true, stage);
+    this.drawPiece(g, snapshot.ghost, bx, by, cell, 0.12, true, stage);
     this.drawPieceAura(g, snapshot.active, bx, by, cell, stage, snapshot.zoneActive);
     this.drawPiece(g, snapshot.active, bx, by, cell, snapshot.zoneActive ? 1 : 0.98, false, stage);
 
@@ -4078,13 +4078,20 @@ class PixiView {
         const px = bx + (piece.x + x) * cell;
         const py = by + gy * cell;
         if (ghost) {
-          const inset = cell * 0.2;
-          g.rect(px + inset, py + inset, cell - inset * 2, cell - inset * 2)
-            .stroke({ color, alpha: alpha * 0.9, width: 1.5 });
-          g.circle(px + cell / 2, py + cell / 2, Math.max(1.2, cell * 0.055))
-            .fill({ color, alpha: alpha * 0.7 });
+          const inset = cell * 0.16;
+          const ghostSize = cell - inset * 2;
+          g.roundRect(px + inset, py + inset, ghostSize, ghostSize, Math.max(1.5, cell * 0.06))
+            .fill({ color: 0x02060b, alpha: 0.78 })
+            .stroke({ color: 0x6b8190, alpha: 0.14 + alpha * 0.52, width: Math.max(1, cell * 0.045) });
+          g.roundRect(px + inset * 1.34, py + inset * 1.34, cell - inset * 2.68, cell - inset * 2.68, Math.max(1, cell * 0.04))
+            .stroke({ color, alpha: alpha * 0.32, width: Math.max(0.8, cell * 0.025) });
         } else {
           this.drawBlock(g, px, py, cell, color, alpha, true);
+          const edgeInset = Math.max(1, cell * 0.045);
+          g.roundRect(px + edgeInset, py + edgeInset, cell - edgeInset * 2, cell - edgeInset * 2, Math.max(2, cell * 0.075))
+            .stroke({ color: 0xffffff, alpha: alpha * 0.94, width: Math.max(1.6, cell * 0.08) });
+          g.roundRect(px + edgeInset * 1.8, py + edgeInset * 1.8, cell - edgeInset * 3.6, cell - edgeInset * 3.6, Math.max(1.5, cell * 0.055))
+            .stroke({ color, alpha: alpha, width: Math.max(1.2, cell * 0.052) });
         }
       }
     }
