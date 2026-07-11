@@ -35,6 +35,15 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
+  const ZOMBIE_WALK_ASSET_VERSIONS = {
+    brute: "20260711-higgsfield-v1",
+    guard: "20260711-higgsfield-v1",
+    nurse: "20260711-higgsfield-v1"
+  };
+  const versionedImageAsset = (path, version) => {
+    const resolvedPath = imageAsset(path);
+    return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
+  };
   const RUN_LOADING_OVERLAY_ID = "run-loading-overlay";
   const RUN_LOADING_TEXT_SELECTOR = "[data-run-loading-text]";
   const showRunLoadingOverlay = (message = "출격 준비 중") => {
@@ -2074,7 +2083,13 @@
         ));
       this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       ZOMBIE_TEXTURE_TYPES.forEach((type) => {
-        this.load.image(`zombie-walk-${type}`, imageAsset(`assets/images/zombie-walk-${type}.png`));
+        this.load.image(
+          `zombie-walk-${type}`,
+          versionedImageAsset(
+            `assets/images/zombie-walk-${type}.png`,
+            ZOMBIE_WALK_ASSET_VERSIONS[type]
+          )
+        );
       });
       this.load.image("ui-frame-sheet", imageAsset("assets/images/ui-frame-sheet.png"));
       this.load.image("skill-card-sheet", imageAsset("assets/images/skill-card-sheet.png"));
