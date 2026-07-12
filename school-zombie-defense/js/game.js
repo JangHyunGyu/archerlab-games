@@ -15,13 +15,36 @@
     blue: 0x45d7ff,
     white: 0xf7fbff
   };
+  const UI_COLORS = {
+    void: 0x020507,
+    panel: 0x071015,
+    panelRaised: 0x0d1a21,
+    panelHover: 0x142832,
+    steel: 0x7e9299,
+    cyan: 0x8deeff,
+    cyanDeep: 0x2a8193,
+    amber: 0xffd86b,
+    danger: 0xff6862,
+    success: 0x6ff58a,
+    muted: 0x9bb4bb
+  };
   const GAME_SPEED_STEPS = [1, 1.5, 2];
   const DEFAULT_GAME_SPEED = GAME_SPEED_STEPS[0];
   const SKILL_REROLL_BASE_COST = 5;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const rand = (min, max) => Math.random() * (max - min) + min;
-  const formatGameSpeedLabel = (speed) => Number.isInteger(speed) ? `x${speed}.0` : `x${speed}`;
+  const formatGameSpeedLabel = (speed) => Number.isInteger(speed) ? `×${speed}.0` : `×${speed}`;
+  const formatRunClock = (elapsed = 0) => {
+    const total = Math.max(0, Math.floor(Number(elapsed) || 0));
+    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  };
+  const announceGameStatus = (message) => {
+    const status = document.getElementById("game-a11y-status");
+    if (status) {
+      status.textContent = String(message || "");
+    }
+  };
   const SUPPORTS_WEBP = (() => {
     try {
       const canvas = document.createElement("canvas");
@@ -1039,11 +1062,11 @@
     }
   ];
   const DEFENDER_FORMATION_SLOTS = [
-    { x: 270, y: 925 },
-    { x: 158, y: 924 },
-    { x: 382, y: 925 },
-    { x: 52, y: 926 },
-    { x: 488, y: 924 }
+    { x: 270, y: 879 },
+    { x: 158, y: 878 },
+    { x: 382, y: 879 },
+    { x: 52, y: 880 },
+    { x: 488, y: 878 }
   ];
   const OWNER_SKILL_PORTRAITS = {
     c: "avatar-pistol",
@@ -1443,8 +1466,6 @@
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-skill-button", 72, 610, 284, 276);
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-pause-circle", 490, 610, 275, 276);
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-speed-circle", 810, 610, 275, 276);
-    makeImageSliceTexture(scene, "ui-frame-sheet", "ui-resource-panel", 1185, 382, 565, 472);
-    makeImageSliceTexture(scene, "skill-card-sheet", "ui-skill-card", 45, 64, 440, 890);
   }
 
   function roundedRect(ctx, x, y, width, height, radius) {
@@ -2022,13 +2043,35 @@
     }
 
     preload() {
+      const loadingRoot = document.querySelector(".loading");
+      const loadingTitle = loadingRoot?.querySelector(".loading__title");
+      const loadingText = loadingRoot?.querySelector(".loading__text");
+      const loadingBar = loadingRoot?.querySelector(".loading__bar span");
+      this.load.on("progress", (progress) => {
+        const percent = clamp(Math.round(progress * 100), 0, 100);
+        if (loadingTitle) {
+          loadingTitle.textContent = percent < 100 ? "방어선 구축 중" : "전투 시스템 준비 완료";
+        }
+        if (loadingText) {
+          loadingText.textContent = `작전 자산 동기화 · ${percent}%`;
+        }
+        if (loadingBar) {
+          loadingBar.style.animation = "none";
+          loadingBar.style.transform = "none";
+          loadingBar.style.width = `${Math.max(3, percent)}%`;
+        }
+      });
+      this.load.on("loaderror", () => {
+        if (loadingText) {
+          loadingText.textContent = "일부 자산을 다시 확인하고 있습니다";
+        }
+      });
       this.load.image("bg-corridor", imageAsset("assets/images/corridor-battlefield.png"));
       this.load.image("title-keyart", imageAsset("assets/images/title-keyart.png"));
       this.load.image("ui-title-button", imageAsset("assets/images/ui-title-button.png"));
       this.load.image("skill-choice-backdrop", imageAsset("assets/images/skill-choice-backdrop.png"));
       this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
       this.load.image("shop-blackmarket", imageAsset("assets/images/shop-blackmarket.png"));
-      this.load.image("premium-skill-card", imageAsset("assets/images/premium-skill-card.png"));
       this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", CHARACTER_ASSET_VERSION));
@@ -2127,16 +2170,16 @@
         );
       });
       this.load.image("ui-frame-sheet", imageAsset("assets/images/ui-frame-sheet.png"));
-      this.load.image("skill-card-sheet", imageAsset("assets/images/skill-card-sheet.png"));
     }
 
     create() {
-      const loading = document.querySelector(".loading");
-      if (loading) {
-        loading.remove();
-      }
       createZombieSpriteTextures(this);
-      this.loadManualCharacterAssets().then(() => {
+      const fontsReady = document.fonts?.ready || Promise.resolve();
+      const loadingText = document.querySelector(".loading__text");
+      if (loadingText) {
+        loadingText.textContent = "캐릭터 데이터와 전술 UI 조립 중";
+      }
+      Promise.all([this.loadManualCharacterAssets(), fontsReady]).then(() => {
         createGeneratedDefenderTextures(this);
         createCharacterSpriteTextures(this);
         createCharacterAttackTextures(this);
@@ -2144,7 +2187,20 @@
         releaseCharacterSourceTextures(this);
         createUiTextures(this);
         createTextures(this);
+        const loading = document.querySelector(".loading");
+        if (loading) {
+          loading.remove();
+        }
         this.scene.start("GameScene");
+      }).catch(() => {
+        const loadingTitle = document.querySelector(".loading__title");
+        const failedText = document.querySelector(".loading__text");
+        if (loadingTitle) {
+          loadingTitle.textContent = "연결을 다시 확인해 주세요";
+        }
+        if (failedText) {
+          failedText.textContent = "새로고침하면 중단된 자산 동기화를 다시 시도합니다";
+        }
       });
     }
   }
@@ -2157,6 +2213,13 @@
     create() {
       if (isLocalDebugHost()) {
         window.__schoolZombieGame = this;
+      }
+      const canvas = this.game?.canvas;
+      if (canvas) {
+        canvas.tabIndex = 0;
+        canvas.setAttribute("role", "application");
+        canvas.setAttribute("aria-label", "스쿨 언데드 디펜스 게임");
+        canvas.setAttribute("aria-describedby", "game-input-help");
       }
       this.bounds = {
         left: 40,
@@ -2193,6 +2256,7 @@
       this.recruitOrder = ["c"];
       this.runId = 0;
       this.disposed = false;
+      this.reducedMotion = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
       this.mode = "menu";
       this.elapsed = 0;
       this.stage = 1;
@@ -2252,6 +2316,10 @@
       this.ambientTracks = null;
       this.sfxLastPlayed = {};
       this.boundHandlePointerDown = null;
+      this.boundHandleKeyDown = null;
+      this.boundHandleVisibilityChange = null;
+      this.gamepadButtons = new Set();
+      this.lastGamepadPoll = 0;
       this.rankNameLayerCleanup = null;
       this.rankNameFocusRaf = 0;
       this.hitStopTimer = 0;
@@ -2259,9 +2327,13 @@
       this.skillRerollsThisRun = 0;
       this.skillRerollUsed = false;
       this.skillChoiceCardObjects = [];
+      this.currentSkillChoices = [];
+      this.skillChoiceFocusHandlers = [];
+      this.skillChoiceFocusIndex = 0;
       this.skillRerollButtonObjects = null;
       this.currentSkillChoiceSignature = "";
       this.pausedByButton = false;
+      this.pauseConfirmOpen = false;
       this.events.once("shutdown", () => this.disposeScene());
       this.events.once("destroy", () => this.disposeScene());
       this.drawBackground();
@@ -2338,25 +2410,27 @@
         vignette.strokeRect(index * 9, index * 9, GAME_WIDTH - index * 18, GAME_HEIGHT - index * 18);
       }
 
-      this.tweens.add({
-        targets: coolSpill,
-        alpha: 0.78,
-        scaleX: 1.06,
-        duration: 3600,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut"
-      });
-      this.tweens.add({
-        targets: alarmSpill,
-        alpha: 0.86,
-        scaleY: 1.05,
-        duration: 2500,
-        delay: 420,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut"
-      });
+      if (!this.reducedMotion) {
+        this.tweens.add({
+          targets: coolSpill,
+          alpha: 0.78,
+          scaleX: 1.06,
+          duration: 3600,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+        this.tweens.add({
+          targets: alarmSpill,
+          alpha: 0.86,
+          scaleY: 1.05,
+          duration: 2500,
+          delay: 420,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
     }
 
     drawCrack(graphics, x, y, scale) {
@@ -2747,101 +2821,150 @@
 
     createHud() {
       this.ui = {};
-      this.add.image(270, 41, "ui-top-hud").setDisplaySize(530, 72).setDepth(300);
-      this.progressBack = this.add.rectangle(270, 75, 508, 6, 0x030404, 0.82).setOrigin(0.5).setDepth(302);
-      this.progressBar = this.add.rectangle(16, 75, 1, 6, COLORS.gold, 1).setOrigin(0, 0.5).setDepth(303);
+      this.add.rectangle(270, 58, 538, 118, 0x020507, 0.74).setDepth(299);
+      this.add.image(270, 42, "ui-top-hud").setDisplaySize(532, 82).setDepth(300);
+      this.add.rectangle(270, 116, 516, 12, 0x030708, 0.84)
+        .setStrokeStyle(1, 0x8deeff, 0.18)
+        .setDepth(301);
+      this.progressBack = this.add.rectangle(270, 115, 506, 8, 0x020303, 0.9)
+        .setStrokeStyle(1, 0xffffff, 0.12)
+        .setOrigin(0.5)
+        .setDepth(302);
+      this.progressBar = this.add.rectangle(17, 115, 1, 6, COLORS.gold, 1).setOrigin(0, 0.5).setDepth(303);
       this.createHomeButton();
+      this.createPauseButton();
       this.createSpeedButton();
 
-      this.ui.timer = this.add.text(82, 42, "00:00", {
+      this.add.text(100, 20, "SURVIVE", {
         fontFamily: "Arial, sans-serif",
-        fontSize: 21,
+        fontSize: 9,
+        fontStyle: "900",
+        color: "#8deeff"
+      }).setOrigin(0.5).setDepth(316);
+      this.ui.timer = this.add.text(100, 42, "00:00", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 19,
         fontStyle: "900",
         color: "#f4fbff",
         stroke: "#0c1115",
         strokeThickness: 4
-      }).setOrigin(0, 0.5).setDepth(316);
-      this.ui.stage = this.add.text(270, 37, "St. 1 - 교문", {
+      }).setOrigin(0.5).setDepth(316);
+      this.ui.stage = this.add.text(270, 30, "STAGE 01 · 교문", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 28,
+        fontSize: 22,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#1a2228",
         strokeThickness: 5
       }).setOrigin(0.5).setDepth(316);
-      this.ui.level = this.add.text(270, 65, "웨이브 1", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 17,
+      this.ui.level = this.add.text(270, 57, "WAVE 01 · 0 / 4", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 13,
         fontStyle: "900",
-        color: "#ffffff",
+        color: "#d7edf1",
         stroke: "#1a2228",
-        strokeThickness: 4
+        strokeThickness: 3
       }).setOrigin(0.5).setDepth(316);
 
       this.createStatusPanel();
     }
 
     createHomeButton() {
-      const x = 34;
+      const x = 38;
       const y = 42;
-      const glow = this.add.circle(x, y, 28, COLORS.gold, 0.08)
-        .setStrokeStyle(1, COLORS.gold, 0.2)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(317);
+      const glow = this.add.circle(x, y, 27, COLORS.gold, 0.1).setDepth(317);
       const base = this.add.image(x, y, "ui-skill-button")
-        .setDisplaySize(52, 52)
+        .setDisplaySize(50, 50)
         .setDepth(318);
-      const baseScaleX = base.scaleX;
-      const baseScaleY = base.scaleY;
       const icon = this.add.graphics().setDepth(319);
-      const hit = this.add.zone(x, y, 52, 42)
+      const hit = this.add.zone(x, y, 76, 76)
         .setDepth(320)
         .setInteractive({ useHandCursor: true });
       const drawIcon = (hovered = false) => {
-        base
-          .setTint(hovered ? 0xe9fbff : 0xffffff)
-          .setScale(baseScaleX * (hovered ? 1.045 : 1), baseScaleY * (hovered ? 1.045 : 1));
-        glow.setAlpha(hovered ? 0.2 : 0.08).setScale(hovered ? 1.08 : 1);
+        base.setTint(hovered ? 0xfff2c2 : 0xffffff);
+        glow.setAlpha(hovered ? 0.24 : 0.1).setScale(hovered ? 1.1 : 1);
         icon.clear();
         icon.fillStyle(hovered ? 0xffffff : COLORS.gold, 0.96);
         icon.beginPath();
-        icon.moveTo(x - 14, y - 2);
-        icon.lineTo(x, y - 15);
-        icon.lineTo(x + 14, y - 2);
+        icon.moveTo(x - 12, y - 2);
+        icon.lineTo(x, y - 13);
+        icon.lineTo(x + 12, y - 2);
         icon.closePath();
         icon.fillPath();
-        icon.fillRect(x - 10, y - 2, 20, 15);
+        icon.fillRect(x - 9, y - 2, 18, 13);
         icon.fillStyle(0x091319, 1);
-        icon.fillRect(x - 3, y + 5, 6, 8);
+        icon.fillRect(x - 3, y + 4, 6, 7);
       };
       drawIcon(false);
       hit.on("pointerdown", (pointer, localX, localY, event) => {
         if (event && typeof event.stopPropagation === "function") {
           event.stopPropagation();
         }
-        this.returnToMenuFromRun();
+        this.unlockAudio();
+        this.playSfx("button", 0.72);
+        if (this.mode === "playing") {
+          this.mode = "paused";
+          this.ui.pauseText?.setText("▶");
+          this.showQuitConfirmation();
+        } else if (this.mode === "paused") {
+          this.showQuitConfirmation();
+        }
       });
       hit.on("pointerover", () => drawIcon(true));
       hit.on("pointerout", () => drawIcon(false));
       this.ui.homeButton = { base, glow, icon, hit };
     }
 
+    createPauseButton() {
+      const x = 426;
+      const y = 42;
+      const glow = this.add.circle(x, y, 27, COLORS.gold, 0.08).setDepth(314);
+      const circle = this.textures.exists("ui-pause-circle")
+        ? this.add.image(x, y, "ui-pause-circle").setDisplaySize(50, 50)
+        : this.add.circle(x, y, 24, 0x17232a, 0.94);
+      circle.setDepth(315);
+      const text = this.add.text(x, y - 1, "Ⅱ", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 19,
+        fontStyle: "900",
+        color: "#fff6d6",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(316);
+      const hit = this.add.zone(x, y, 76, 76).setDepth(320).setInteractive({ useHandCursor: true });
+      const setHover = (hovered) => {
+        circle.setTint(hovered ? 0xfff0bd : 0xffffff);
+        glow.setAlpha(hovered ? 0.22 : 0.08).setScale(hovered ? 1.1 : 1);
+        text.setScale(hovered ? 1.06 : 1);
+      };
+      hit.on("pointerdown", (pointer, localX, localY, event) => {
+        event?.stopPropagation?.();
+        this.unlockAudio();
+        this.playSfx("pause", 0.74);
+        this.togglePause();
+      });
+      hit.on("pointerover", () => setHover(true));
+      hit.on("pointerout", () => setHover(false));
+      this.ui.pauseText = text;
+      this.ui.pauseButton = { glow, circle, text, hit };
+    }
+
     createSpeedButton() {
-      const x = 493;
+      const x = 502;
       const y = 42;
       const circle = this.textures.exists("ui-speed-circle")
-        ? this.add.image(x, y, "ui-speed-circle").setDisplaySize(60, 60)
-        : this.add.circle(x, y, 27, 0x1b232a, 0.78);
+        ? this.add.image(x, y, "ui-speed-circle").setDisplaySize(50, 50)
+        : this.add.circle(x, y, 24, 0x1b232a, 0.86);
       circle.setDepth(315);
       const text = this.add.text(x, y, formatGameSpeedLabel(this.speedMultiplier || DEFAULT_GAME_SPEED), {
         fontFamily: "Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 16,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#111",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(316);
-      const hit = this.add.zone(x, y, 62, 62)
+      const hit = this.add.zone(x, y, 76, 76)
         .setDepth(320)
         .setInteractive({ useHandCursor: true });
       const setHover = (hovered) => {
@@ -2863,33 +2986,46 @@
     }
 
     createStatusPanel() {
-      const statStyle = {
+      const morale = this.addHudChip(90, 91, 138, "사기", "100%", COLORS.green);
+      const coins = this.addHudChip(270, 91, 138, "보급", "$0", COLORS.gold);
+      const shield = this.addHudChip(450, 91, 138, "보호막", "0", COLORS.blue);
+      this.ui.morale = morale.value;
+      this.ui.coins = coins.value;
+      this.ui.shield = shield.value;
+      this.ui.statusChips = { morale, coins, shield };
+
+      const corePanel = this.addCommandPanel(270, 925, 438, 58, 315, COLORS.green, {
+        cut: 11,
+        alpha: 0.88,
+        glowAlpha: 0.08,
+        strokeAlpha: 0.62,
+        track: false
+      });
+      this.ui.corePanel = corePanel;
+      this.add.text(72, 913, "BARRICADE", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 12,
+        fontStyle: "900",
+        color: "#9bb4bb"
+      }).setOrigin(0, 0.5).setDepth(317);
+      this.ui.core = this.add.text(468, 913, "3000 / 3000", {
         fontFamily: "Arial, sans-serif",
         fontSize: 14,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#111",
+        stroke: "#050607",
         strokeThickness: 3
-      };
-      this.ui.morale = this.add.text(378, 65, "M100%", {
-        ...statStyle,
-        color: "#4dff67"
-      }).setOrigin(0, 0.5).setDepth(316);
-      this.ui.coins = this.add.text(445, 65, "$0", {
-        ...statStyle,
-        color: "#ffd75c"
-      }).setOrigin(0, 0.5).setDepth(316);
-      this.ui.shield = this.add.text(445, 84, "S0", {
-        ...statStyle,
-        color: "#62c7ff"
-      }).setOrigin(0, 0.5).setDepth(316);
-      this.add.rectangle(270, 918, 220, 24, 0x050709, 0.68).setStrokeStyle(1, 0xffffff, 0.14).setDepth(316);
-      this.ui.core = this.add.text(270, 918, "HP 3000 / 3000", {
-        ...statStyle,
-        fontSize: 15
+      }).setOrigin(1, 0.5).setDepth(317);
+      this.coreBack = this.add.rectangle(270, 932, 380, 11, 0x000000, 0.78)
+        .setStrokeStyle(1, 0xffffff, 0.18)
+        .setDepth(316);
+      this.coreBar = this.add.rectangle(80, 932, 380, 7, COLORS.green, 1).setOrigin(0, 0.5).setDepth(317);
+      this.ui.threat = this.add.text(270, 947, "방어 안정", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 12,
+        fontStyle: "900",
+        color: "#9ff5ad"
       }).setOrigin(0.5).setDepth(317);
-      this.coreBack = this.add.rectangle(270, 940, 330, 8, 0x000000, 0.78).setStrokeStyle(1, 0xffffff, 0.18).setDepth(316);
-      this.coreBar = this.add.rectangle(105, 940, 330, 6, COLORS.green, 1).setOrigin(0, 0.5).setDepth(317);
     }
 
     bindInput() {
@@ -2904,6 +3040,134 @@
         }
       };
       this.input.on("pointerdown", this.boundHandlePointerDown);
+
+      this.boundHandleKeyDown = (event) => {
+        const target = event.target;
+        if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+          return;
+        }
+        const code = event.code;
+        const consume = () => {
+          event.preventDefault();
+          event.stopPropagation();
+        };
+        if ((code === "Escape" || code === "KeyP") && !event.repeat) {
+          if (this.mode === "playing" || this.mode === "paused") {
+            consume();
+            this.playSfx("pause", 0.72);
+            this.togglePause();
+            return;
+          }
+          if (this.mode === "shop" || this.mode === "ranking") {
+            consume();
+            this.showMenu();
+            return;
+          }
+        }
+        if (code === "KeyF" && !event.repeat && (this.mode === "playing" || this.mode === "paused")) {
+          consume();
+          this.toggleSpeed();
+          return;
+        }
+        if (this.mode === "menu" && !event.repeat) {
+          if (code === "Enter" || code === "Space") {
+            consume();
+            this.startRun();
+          } else if (code === "KeyL") {
+            consume();
+            this.showRankings();
+          } else if (code === "KeyA") {
+            consume();
+            this.showShop();
+          }
+          return;
+        }
+        if (this.mode === "skill" && !event.repeat) {
+          if (code === "KeyR") {
+            consume();
+            this.rerollSkillChoices();
+            return;
+          }
+          const choiceIndex = { Digit1: 0, Digit2: 1, Digit3: 2 }[code];
+          const choice = Number.isInteger(choiceIndex) ? this.currentSkillChoices?.[choiceIndex] : null;
+          if (choice) {
+            consume();
+            this.applyUpgrade(choice);
+            return;
+          }
+          if (code === "ArrowUp" || code === "ArrowLeft" || code === "ArrowDown" || code === "ArrowRight") {
+            consume();
+            const direction = code === "ArrowUp" || code === "ArrowLeft" ? -1 : 1;
+            this.setSkillChoiceFocus((this.skillChoiceFocusIndex || 0) + direction);
+            return;
+          }
+          if (code === "Enter" || code === "Space") {
+            consume();
+            const focusedChoice = this.currentSkillChoices?.[this.skillChoiceFocusIndex || 0];
+            if (focusedChoice) {
+              this.applyUpgrade(focusedChoice);
+            }
+          }
+        }
+      };
+      window.addEventListener("keydown", this.boundHandleKeyDown, { passive: false });
+
+      this.boundHandleVisibilityChange = () => {
+        if (document.hidden && this.mode === "playing") {
+          this.togglePause();
+        }
+      };
+      document.addEventListener("visibilitychange", this.boundHandleVisibilityChange);
+    }
+
+    pollGamepadInput(time = 0) {
+      if (time - (this.lastGamepadPoll || 0) < 70) {
+        return;
+      }
+      this.lastGamepadPoll = time;
+      const gamepads = typeof navigator.getGamepads === "function" ? navigator.getGamepads() : [];
+      const gamepad = Array.from(gamepads || []).find(Boolean);
+      if (!gamepad) {
+        this.gamepadButtons.clear();
+        return;
+      }
+      const pressed = new Set();
+      gamepad.buttons.forEach((button, index) => {
+        if (button?.pressed) {
+          pressed.add(index);
+        }
+      });
+      const justPressed = (index) => pressed.has(index) && !this.gamepadButtons.has(index);
+      if (justPressed(9) && (this.mode === "playing" || this.mode === "paused")) {
+        this.playSfx("pause", 0.72);
+        this.togglePause();
+      } else if (justPressed(5) && (this.mode === "playing" || this.mode === "paused")) {
+        this.toggleSpeed();
+      } else if (this.mode === "skill" && (justPressed(12) || justPressed(14))) {
+        this.setSkillChoiceFocus((this.skillChoiceFocusIndex || 0) - 1);
+      } else if (this.mode === "skill" && (justPressed(13) || justPressed(15))) {
+        this.setSkillChoiceFocus((this.skillChoiceFocusIndex || 0) + 1);
+      } else if (this.mode === "skill" && justPressed(2)) {
+        this.rerollSkillChoices();
+      } else if (justPressed(0)) {
+        if (this.mode === "menu") {
+          this.startRun();
+        } else if (this.mode === "skill") {
+          const focusedChoice = this.currentSkillChoices?.[this.skillChoiceFocusIndex || 0];
+          if (focusedChoice) {
+            this.applyUpgrade(focusedChoice);
+          }
+        } else if (this.mode === "paused") {
+          this.togglePause();
+        }
+      } else if (justPressed(1)) {
+        if (this.mode === "shop" || this.mode === "ranking") {
+          this.showMenu();
+        } else if (this.mode === "paused") {
+          this.showPauseOverlay();
+        }
+      }
+      this.gamepadButtons = pressed;
     }
 
     scheduleSceneDelay(delayMs, callback) {
@@ -3108,13 +3372,19 @@
 
     fetchWithAbort(url, options = {}, controllerSet = null) {
       const AbortControllerCtor = typeof window !== "undefined" ? window.AbortController : null;
-      if (!AbortControllerCtor || !controllerSet || options.signal) {
-        return fetch(url, options);
+      const timeoutMs = clamp(Number(options.timeoutMs) || 8000, 1500, 20000);
+      const { timeoutMs: omittedTimeout, ...fetchOptions } = options;
+      if (!AbortControllerCtor || options.signal) {
+        return fetch(url, fetchOptions);
       }
       const controller = new AbortControllerCtor();
-      controllerSet.add(controller);
-      return fetch(url, { ...options, signal: controller.signal })
-        .finally(() => controllerSet.delete(controller));
+      controllerSet?.add(controller);
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(url, { ...fetchOptions, signal: controller.signal })
+        .finally(() => {
+          window.clearTimeout(timeout);
+          controllerSet?.delete(controller);
+        });
     }
 
     abortFetchControllers(controllerSet) {
@@ -3158,7 +3428,7 @@
     }
 
     async ensureServerProfile(options = {}) {
-      const { quiet = false, force = false } = options;
+      const { quiet = false, force = false, allowOffline = true } = options;
       if (this.profileReady && !force) {
         return this.meta;
       }
@@ -3193,6 +3463,14 @@
       this.profilePromise = load()
         .catch((error) => {
           this.profileSyncFailed = true;
+          if (allowOffline) {
+            this.profileReady = true;
+            if (!quiet) {
+              this.playSfx("core", 0.5);
+              this.showToast("오프라인 모드 · 보상 동기화 보류", COLORS.gold);
+            }
+            return this.meta;
+          }
           if (!quiet) {
             this.playSfx("core", 0.65);
             this.showToast("프로필 동기화 실패", COLORS.red);
@@ -3301,6 +3579,15 @@
         this.input.off("pointerdown", this.boundHandlePointerDown);
       }
       this.boundHandlePointerDown = null;
+      if (this.boundHandleKeyDown) {
+        window.removeEventListener("keydown", this.boundHandleKeyDown);
+      }
+      if (this.boundHandleVisibilityChange) {
+        document.removeEventListener("visibilitychange", this.boundHandleVisibilityChange);
+      }
+      this.boundHandleKeyDown = null;
+      this.boundHandleVisibilityChange = null;
+      this.gamepadButtons.clear();
       this.clearOverlay();
       this.clearTransientObjects();
       this.clearRunEntities();
@@ -3800,6 +4087,9 @@
     }
 
     shakeCamera(duration = 70, intensity = 0.004) {
+      if (this.reducedMotion) {
+        return;
+      }
       const camera = this.cameras?.main;
       if (camera && camera.shake) {
         camera.shake(duration, intensity);
@@ -3807,6 +4097,9 @@
     }
 
     vibrateImpact(pattern = [60, 28, 80]) {
+      if (this.reducedMotion) {
+        return;
+      }
       const vibrate = window.navigator?.vibrate;
       if (typeof vibrate === "function") {
         vibrate.call(window.navigator, pattern);
@@ -3968,7 +4261,117 @@
       return knockback;
     }
 
+    addCommandPanel(x, y, width, height, depth = 500, accent = COLORS.blue, options = {}) {
+      const cut = clamp(Number(options.cut) || 12, 6, Math.min(22, height * 0.28));
+      const fill = options.fill ?? UI_COLORS.panel;
+      const alpha = options.alpha ?? 0.94;
+      const strokeAlpha = options.strokeAlpha ?? 0.72;
+      const shadow = this.add.graphics().setDepth(depth);
+      const glow = this.add.graphics().setDepth(depth + 0.04);
+      const panel = this.add.graphics().setDepth(depth + 0.1);
+      const drawPolygon = (graphics, offsetY, color, opacity, strokeColor = null, strokeOpacity = 0) => {
+        const left = x - width / 2;
+        const right = x + width / 2;
+        const top = y - height / 2 + offsetY;
+        const bottom = y + height / 2 + offsetY;
+        graphics.fillStyle(color, opacity);
+        if (strokeColor !== null) {
+          graphics.lineStyle(2, strokeColor, strokeOpacity);
+        }
+        graphics.beginPath();
+        graphics.moveTo(left + cut, top);
+        graphics.lineTo(right - cut, top);
+        graphics.lineTo(right, top + cut);
+        graphics.lineTo(right, bottom - cut);
+        graphics.lineTo(right - cut, bottom);
+        graphics.lineTo(left + cut, bottom);
+        graphics.lineTo(left, bottom - cut);
+        graphics.lineTo(left, top + cut);
+        graphics.closePath();
+        graphics.fillPath();
+        if (strokeColor !== null) {
+          graphics.strokePath();
+        }
+      };
+      drawPolygon(shadow, 8, 0x000000, options.shadowAlpha ?? 0.52);
+      drawPolygon(glow, 0, accent, options.glowAlpha ?? 0.07);
+      drawPolygon(panel, 0, fill, alpha, accent, strokeAlpha);
+      panel.lineStyle(1, 0xffffff, options.highlightAlpha ?? 0.12);
+      panel.lineBetween(x - width / 2 + cut + 6, y - height / 2 + 5, x + width / 2 - cut - 6, y - height / 2 + 5);
+      panel.fillStyle(accent, options.railAlpha ?? 0.92);
+      panel.fillRect(x - width / 2 + 4, y - height / 2 + cut + 1, options.railWidth ?? 3, Math.max(6, height - cut * 2 - 2));
+      const objects = [shadow, glow, panel];
+      if (options.track !== false) {
+        this.overlayObjects.push(...objects);
+      }
+      return { shadow, glow, panel, objects };
+    }
+
+    addHudChip(x, y, width, label, value, accent, depth = 322) {
+      const panel = this.addCommandPanel(x, y, width, 34, depth, accent, {
+        cut: 7,
+        alpha: 0.82,
+        glowAlpha: 0.055,
+        strokeAlpha: 0.46,
+        shadowAlpha: 0.3,
+        railWidth: 2,
+        track: false
+      });
+      const labelText = this.add.text(x - width / 2 + 15, y, label, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 12,
+        fontStyle: "900",
+        color: "#9bb4bb"
+      }).setOrigin(0, 0.5).setDepth(depth + 0.3);
+      const valueText = this.add.text(x + width / 2 - 10, y, value, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 18,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#030607",
+        strokeThickness: 3
+      }).setOrigin(1, 0.5).setDepth(depth + 0.3);
+      return { ...panel, label: labelText, value: valueText, objects: [...panel.objects, labelText, valueText] };
+    }
+
+    addOverlayHeader({ y = 120, title, kicker = "DEFENSE COMMAND", subtitle = "", accent = COLORS.gold, depth = 502 }) {
+      const panel = this.addCommandPanel(270, y, 440, 116, depth, accent, {
+        cut: 14,
+        alpha: 0.88,
+        glowAlpha: 0.08,
+        strokeAlpha: 0.72
+      });
+      const signal = this.add.rectangle(270, y - 53, 286, 4, accent, 0.94).setDepth(depth + 0.22);
+      const kickerText = this.add.text(270, y - 34, kicker, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 11,
+        fontStyle: "900",
+        color: accent === COLORS.gold ? "#ffd86b" : "#8deeff"
+      }).setOrigin(0.5).setDepth(depth + 0.3);
+      const titleText = this.add.text(270, y - 4, title, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 32,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#030607",
+        strokeThickness: 6
+      }).setOrigin(0.5).setDepth(depth + 0.3);
+      const subtitleText = this.add.text(270, y + 35, subtitle, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 14,
+        fontStyle: "900",
+        color: "#cfe4e8",
+        stroke: "#030607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(depth + 0.3);
+      this.overlayObjects.push(signal, kickerText, titleText, subtitleText);
+      return { ...panel, signal, kicker: kickerText, title: titleText, subtitle: subtitleText, objects: [...panel.objects, signal, kickerText, titleText, subtitleText] };
+    }
+
     animateOverlayEntrance(objects, delay = 0, offsetY = 16, duration = 360) {
+      if (this.reducedMotion) {
+        return;
+      }
       (objects || []).filter(Boolean).forEach((item, index) => {
         if (!item || !item.active) {
           return;
@@ -4032,26 +4435,29 @@
     addPremiumOverlayButton(x, y, width, height, label, depth, onClick, accent = COLORS.gold) {
       const isBlue = accent === COLORS.blue;
       const buttonTint = isBlue ? COLORS.blue : accent;
-      const shadow = this.add.ellipse(x, y + Math.max(8, height * 0.16), width * 0.86, height * 0.5, 0x000000, 0.46)
+      const buttonSource = this.textures.get("ui-title-button")?.getSourceImage?.();
+      const sourceRatio = buttonSource?.width && buttonSource?.height ? buttonSource.width / buttonSource.height : width / height;
+      const visualHeight = Math.min(height, width / Math.max(1, sourceRatio));
+      const shadow = this.add.ellipse(x, y + Math.max(8, visualHeight * 0.16), width * 0.86, visualHeight * 0.5, 0x000000, 0.46)
         .setDepth(depth);
       const glow = this.add.image(x, y, "ui-title-button")
-        .setDisplaySize(width + 14, height + 12)
+        .setDisplaySize(width + 14, visualHeight + 12)
         .setTint(buttonTint)
         .setAlpha(isBlue ? 0.16 : 0.13)
         .setDepth(depth + 0.05);
       const plate = this.add.image(x, y, "ui-title-button")
         .setTint(buttonTint)
-        .setDisplaySize(width, height)
+        .setDisplaySize(width, visualHeight)
         .setDepth(depth + 0.1);
-      const shine = this.add.rectangle(x, y - height * 0.28, width * 0.76, Math.max(2, height * 0.05), 0xffffff, 0.2)
+      const shine = this.add.rectangle(x, y - visualHeight * 0.28, width * 0.76, Math.max(2, visualHeight * 0.05), 0xffffff, 0.2)
         .setDepth(depth + 0.2);
       const text = this.add.text(x, y - 1, label, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: Math.max(20, Math.round(height * 0.45)),
+        fontSize: Math.max(20, Math.round(visualHeight * 0.45)),
         fontStyle: "900",
         color: isBlue ? "#e8fbff" : "#fff8dc",
         stroke: "#050607",
-        strokeThickness: Math.max(4, Math.round(height * 0.09))
+        strokeThickness: Math.max(4, Math.round(visualHeight * 0.09))
       }).setOrigin(0.5).setDepth(depth + 0.3);
       text.setShadow(0, 3, "#000000", 8, true, true);
 
@@ -4059,8 +4465,8 @@
         .setDepth(depth + 0.4)
         .setInteractive({ useHandCursor: true });
       const setHover = (hovered) => {
-        plate.setDisplaySize(width * (hovered ? 1.018 : 1), height * (hovered ? 1.018 : 1));
-        glow.setDisplaySize(width * (hovered ? 1.06 : 1) + 14, height * (hovered ? 1.06 : 1) + 12);
+        plate.setDisplaySize(width * (hovered ? 1.018 : 1), visualHeight * (hovered ? 1.018 : 1));
+        glow.setDisplaySize(width * (hovered ? 1.06 : 1) + 14, visualHeight * (hovered ? 1.06 : 1) + 12);
         text.setScale(hovered ? 1.025 : 1);
         glow.setAlpha(hovered ? 0.25 : isBlue ? 0.14 : 0.12);
         shine.setAlpha(hovered ? 0.32 : 0.2);
@@ -4165,6 +4571,7 @@
     }
 
     showToast(message, color = COLORS.gold) {
+      announceGameStatus(message);
       const panel = this.trackTransient(this.add.rectangle(270, 158, 330, 48, 0x0b1014, 0.88)
         .setStrokeStyle(2, color, 0.9)
         .setDepth(430));
@@ -4229,7 +4636,7 @@
       objects.push(blocker, shadow, panel, scan, label, ...dots, barBack, bar);
       this.shopLoadingObjects = objects;
       this.overlayObjects.push(...objects);
-      this.shopLoadingTweens = [
+      this.shopLoadingTweens = this.reducedMotion ? [] : [
         this.tweens.add({
           targets: dots,
           scale: { from: 0.72, to: 1.18 },
@@ -4506,6 +4913,7 @@
     renderRankingsScreen(rows = [], status = "") {
       this.clearOverlay();
       this.mode = "ranking";
+      announceGameStatus(status || `랭킹 화면. ${rows.length ? `${Math.min(rows.length, 11)}개의 기록을 표시합니다.` : "등록된 기록이 없습니다."} Escape 또는 B로 뒤로 갑니다.`);
       this.startBgm("menu");
       const items = this.overlayObjects;
       const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
@@ -4515,117 +4923,144 @@
       items.push(titleArt);
       const titleScaleX = titleArt.scaleX;
       const titleScaleY = titleArt.scaleY;
-      this.tweens.add({
-        targets: titleArt,
-        y: 474,
-        scaleX: titleScaleX * 1.018,
-        scaleY: titleScaleY * 1.018,
-        duration: 7200,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut"
+      if (!this.reducedMotion) {
+        this.tweens.add({
+          targets: titleArt,
+          y: 474,
+          scaleX: titleScaleX * 1.018,
+          scaleY: titleScaleY * 1.018,
+          duration: 7200,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.78).setDepth(501));
+      const header = this.addOverlayHeader({
+        y: 112,
+        title: "스테이지 랭킹",
+        kicker: "DEFENDER RECORDS",
+        subtitle: "클리어 스테이지 우선 · 동률 시 처치 수",
+        accent: COLORS.gold,
+        depth: 502
       });
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.72).setDepth(501));
-      items.push(this.add.rectangle(270, 118, 430, 108, 0x070c10, 0.84).setStrokeStyle(2, 0xe7bb54, 0.78).setDepth(502));
-      items.push(this.add.rectangle(270, 70, 320, 4, 0xffd86b, 0.92).setDepth(503));
-      items.push(this.add.text(270, 106, "스테이지 랭킹", {
-        fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 34,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#050607",
-        strokeThickness: 6
-      }).setOrigin(0.5).setDepth(504));
-      items.push(this.add.text(270, 148, "클리어 스테이지 · 처치 수 기준", {
-        fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 17,
-        fontStyle: "900",
-        color: "#ffd86b",
-        stroke: "#050607",
-        strokeThickness: 3
-      }).setOrigin(0.5).setDepth(504));
-      items.push(this.add.rectangle(270, 486, 448, 552, 0x071015, 0.88).setStrokeStyle(2, 0x45d7ff, 0.52).setDepth(502));
+      const board = this.addCommandPanel(270, 500, 464, 620, 502, COLORS.blue, {
+        cut: 16,
+        alpha: 0.91,
+        glowAlpha: 0.075,
+        strokeAlpha: 0.62
+      });
+      const boardTop = this.add.rectangle(270, 214, 416, 38, 0x10232b, 0.82)
+        .setStrokeStyle(1, 0x8deeff, 0.26)
+        .setDepth(504);
+      const headers = [
+        this.add.text(74, 214, "RANK", { fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "900", color: "#8deeff" }).setOrigin(0, 0.5).setDepth(505),
+        this.add.text(146, 214, "DEFENDER", { fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "900", color: "#8deeff" }).setOrigin(0, 0.5).setDepth(505),
+        this.add.text(410, 214, "CLEAR", { fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "900", color: "#8deeff" }).setOrigin(1, 0.5).setDepth(505)
+      ];
+      items.push(boardTop, ...headers);
 
       const visibleRows = rows.slice(0, 11);
       if (!visibleRows.length) {
-        items.push(this.add.text(270, 480, status || "아직 등록된 기록이 없습니다", {
+        const emptySignal = this.add.text(270, 434, status ? "···" : "—", {
+          fontFamily: "Arial, sans-serif",
+          fontSize: 34,
+          fontStyle: "900",
+          color: status ? "#8deeff" : "#ffd86b"
+        }).setOrigin(0.5).setDepth(505);
+        const emptyTitle = this.add.text(270, 482, status || "첫 방어 기록을 남겨보세요", {
           fontFamily: "Pretendard Variable, Arial, sans-serif",
-          fontSize: 20,
+          fontSize: 19,
           fontStyle: "900",
           color: "#dceff3",
           stroke: "#050607",
           strokeThickness: 4,
           align: "center"
-        }).setOrigin(0.5).setDepth(505));
+        }).setOrigin(0.5).setDepth(505);
+        const emptySub = this.add.text(270, 520, status ? "네트워크 상태를 확인한 뒤 다시 시도합니다" : "스테이지를 클리어하면 자동으로 등록할 수 있습니다", {
+          fontFamily: "Pretendard Variable, Arial, sans-serif",
+          fontSize: 12,
+          fontStyle: "800",
+          color: "#89a8b0",
+          align: "center"
+        }).setOrigin(0.5).setDepth(505);
+        items.push(emptySignal, emptyTitle, emptySub);
+        if (status.includes("못했습니다")) {
+          this.addTacticalMenuButton(270, 596, 228, 58, "다시 불러오기", 506, () => this.showRankings(), COLORS.blue, {
+            hitHeight: 76,
+            fontSize: 17
+          });
+        }
       } else {
-        items.push(this.add.text(92, 248, "순위", {
-          fontFamily: "Arial, sans-serif",
-          fontSize: 14,
-          fontStyle: "900",
-          color: "#8deeff"
-        }).setDepth(505));
-        items.push(this.add.text(168, 248, "이름", {
-          fontFamily: "Pretendard Variable, Arial, sans-serif",
-          fontSize: 14,
-          fontStyle: "900",
-          color: "#8deeff"
-        }).setDepth(505));
-        items.push(this.add.text(398, 248, "클리어", {
-          fontFamily: "Pretendard Variable, Arial, sans-serif",
-          fontSize: 14,
-          fontStyle: "900",
-          color: "#8deeff"
-        }).setOrigin(1, 0).setDepth(505));
+        const storedName = this.getStoredRankName().toLocaleUpperCase();
+        const medalColors = [0xffd86b, 0xcbd6dc, 0xd89868];
         visibleRows.forEach((row, index) => {
-          const y = 292 + index * 42;
+          const y = 262 + index * 48;
           const rank = Math.max(1, Math.floor(Number(row.rank) || index + 1));
           const score = Math.max(0, Math.floor(Number(row.score) || 0));
           const name = String(row.player_name || "DEFENDER").trim().slice(0, 14) || "DEFENDER";
           const extra = row.extra_data && typeof row.extra_data === "object" ? row.extra_data : {};
           const kills = Math.max(0, Math.floor(Number(extra.kills) || 0));
-          items.push(this.add.rectangle(270, y, 408, 34, index % 2 ? 0x0c1920 : 0x101f28, 0.82)
-            .setStrokeStyle(1, 0x254653, 0.48)
-            .setDepth(503));
-          items.push(this.add.text(92, y, `${rank}`, {
+          const isPlayer = Boolean(storedName && name.toLocaleUpperCase() === storedName);
+          const rowAccent = rank <= 3 ? medalColors[rank - 1] : isPlayer ? COLORS.blue : 0x315462;
+          const rowPanel = this.addCommandPanel(270, y, 414, 40, 503, rowAccent, {
+            cut: 7,
+            alpha: isPlayer ? 0.94 : index % 2 ? 0.72 : 0.82,
+            glowAlpha: isPlayer ? 0.12 : rank <= 3 ? 0.07 : 0.025,
+            strokeAlpha: isPlayer ? 0.82 : rank <= 3 ? 0.58 : 0.28,
+            shadowAlpha: 0.2
+          });
+          const rankBadge = this.add.circle(95, y, 14, rank <= 3 ? rowAccent : 0x0a1318, rank <= 3 ? 0.94 : 0.82)
+            .setStrokeStyle(1, rowAccent, 0.72)
+            .setDepth(505);
+          const rankText = this.add.text(95, y, `${rank}`, {
             fontFamily: "Arial, sans-serif",
-            fontSize: 20,
+            fontSize: 14,
             fontStyle: "900",
-            color: rank <= 3 ? "#ffd86b" : "#ffffff",
+            color: rank <= 3 ? "#101418" : "#ffffff",
+            stroke: "#050607",
+            strokeThickness: rank <= 3 ? 0 : 2
+          }).setOrigin(0.5).setDepth(506);
+          const nameText = this.add.text(132, y - 5, name.length > 12 ? `${name.slice(0, 12)}…` : name, {
+            fontFamily: "Pretendard Variable, Arial, sans-serif",
+            fontSize: 15,
+            fontStyle: "900",
+            color: isPlayer ? "#8deeff" : "#ffffff",
             stroke: "#050607",
             strokeThickness: 3
-          }).setOrigin(0, 0.5).setDepth(505));
-          items.push(this.add.text(168, y - 5, name.length > 10 ? `${name.slice(0, 10)}...` : name, {
+          }).setOrigin(0, 0.5).setDepth(505);
+          const detailText = this.add.text(132, y + 11, `${isPlayer ? "YOU · " : ""}KILLS ${kills}`, {
             fontFamily: "Pretendard Variable, Arial, sans-serif",
-            fontSize: 17,
-            fontStyle: "900",
-            color: "#ffffff",
-            stroke: "#050607",
-            strokeThickness: 3
-          }).setOrigin(0, 0.5).setDepth(505));
-          items.push(this.add.text(168, y + 10, `처치 ${kills}`, {
-            fontFamily: "Pretendard Variable, Arial, sans-serif",
-            fontSize: 12,
+            fontSize: 9,
             fontStyle: "800",
             color: "#a9c7cf",
-            stroke: "#050607",
-            strokeThickness: 2
-          }).setOrigin(0, 0.5).setDepth(505));
-          items.push(this.add.text(404, y, `St.${score}`, {
+          }).setOrigin(0, 0.5).setDepth(505);
+          const scoreText = this.add.text(444, y, `ST.${String(score).padStart(2, "0")}`, {
             fontFamily: "Arial, sans-serif",
-            fontSize: 22,
+            fontSize: 17,
             fontStyle: "900",
-            color: "#ffd86b",
+            color: rank <= 3 ? `#${rowAccent.toString(16).padStart(6, "0")}` : "#ffd86b",
             stroke: "#050607",
-            strokeThickness: 4
-          }).setOrigin(1, 0.5).setDepth(505));
+            strokeThickness: 3
+          }).setOrigin(1, 0.5).setDepth(505);
+          items.push(rankBadge, rankText, nameText, detailText, scoreText);
         });
       }
 
       const canRegister = this.lastRankableRun && this.lastRankableRun.score > 0;
-      this.addOverlayButton(canRegister ? 142 : 270, 888, 172, 50, "뒤로", 560, () => this.showMenu(), COLORS.gold);
+      const back = this.addTacticalMenuButton(canRegister ? 154 : 270, 884, canRegister ? 196 : 328, 64, "메인으로", 560, () => this.showMenu(), COLORS.gold, {
+        kicker: "BACK · ESC / B",
+        hitHeight: 76,
+        fontSize: 19
+      });
       if (canRegister) {
-        this.addOverlayButton(398, 888, 172, 50, "기록 등록", 560, () => this.submitRankScore(), COLORS.blue);
+        this.addTacticalMenuButton(386, 884, 196, 64, "기록 등록", 560, () => this.submitRankScore(), COLORS.blue, {
+          kicker: "SUBMIT RUN",
+          hitHeight: 76,
+          fontSize: 19
+        });
       }
+      this.animateOverlayEntrance([...header.objects, ...board.objects, boardTop, ...headers, ...Object.values(back)], 40, 16, 340);
     }
 
     showRankPrepLayer(message = "랭킹 등록 준비 중") {
@@ -4699,13 +5134,16 @@
       const layer = document.createElement("div");
       layer.className = `school-zombie-rank-layer${inlineGameOver ? " school-zombie-rank-layer--gameover" : ""}`;
       layer.innerHTML = `
-        <form class="school-zombie-rank-dialog${inlineGameOver ? " school-zombie-rank-dialog--gameover" : ""}" autocomplete="off">
+        <form class="school-zombie-rank-dialog${inlineGameOver ? " school-zombie-rank-dialog--gameover" : ""}" autocomplete="off" role="dialog" aria-modal="true" aria-labelledby="school-zombie-rank-dialog-title">
           ${inlineGameOver ? "" : `
             <div class="school-zombie-rank-kicker">RANKING</div>
-            <div class="school-zombie-rank-title">랭킹 등록</div>
+            <div class="school-zombie-rank-title" id="school-zombie-rank-dialog-title">랭킹 등록</div>
             <div class="school-zombie-rank-score">클리어 St.${run.score} · 처치 ${run.kills}</div>
           `}
-          <input class="school-zombie-rank-input" name="playerName" maxlength="20" aria-label="랭킹 이름" placeholder="닉네임 입력" />
+          ${inlineGameOver ? '<div class="sr-only" id="school-zombie-rank-dialog-title">게임 오버 랭킹 등록</div>' : ""}
+          <label class="sr-only" for="school-zombie-rank-input">랭킹에 표시할 닉네임</label>
+          <input class="school-zombie-rank-input" id="school-zombie-rank-input" name="playerName" maxlength="20" inputmode="text" aria-describedby="school-zombie-rank-help" placeholder="닉네임 입력" />
+          <div class="sr-only" id="school-zombie-rank-help">최대 20자. 등록하거나 나중에 버튼으로 건너뛸 수 있습니다.</div>
           <div class="school-zombie-rank-loader" role="status" aria-live="polite" aria-hidden="true">
             <div class="school-zombie-rank-loader__signal" aria-hidden="true">
               <span></span>
@@ -4717,7 +5155,7 @@
           </div>
           <div class="school-zombie-rank-actions">
             <button class="school-zombie-rank-submit" type="submit">등록</button>
-            <button class="school-zombie-rank-skip" type="button">SKIP</button>
+            <button class="school-zombie-rank-skip" type="button">나중에</button>
           </div>
         </form>
       `;
@@ -4783,6 +5221,19 @@
         if (event.key === "Escape") {
           event.preventDefault();
           this.returnToGameStart();
+          return;
+        }
+        if (event.key === "Tab") {
+          const focusable = [input, submitButton, skipButton].filter((item) => item && !item.disabled);
+          if (!focusable.length) {
+            return;
+          }
+          const currentIndex = focusable.indexOf(document.activeElement);
+          const nextIndex = event.shiftKey
+            ? (currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1)
+            : (currentIndex + 1) % focusable.length;
+          event.preventDefault();
+          focusable[nextIndex].focus();
         }
       };
       form.addEventListener("submit", handleSubmit);
@@ -4917,6 +5368,7 @@
     showMenu() {
       this.clearOverlay();
       this.mode = "menu";
+      announceGameStatus(`메인 메뉴. 보유 보급 ${this.meta.coins}.${this.profileSyncFailed ? " 현재 오프라인 모드입니다." : ""} Enter 또는 게임패드 A로 출격하고, L은 랭킹, A 키는 상점입니다.`);
       this.startBgm("menu");
       const items = this.overlayObjects;
       const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
@@ -4926,16 +5378,18 @@
       items.push(titleArt);
       const titleScaleX = titleArt.scaleX;
       const titleScaleY = titleArt.scaleY;
-      this.tweens.add({
-        targets: titleArt,
-        y: 474,
-        scaleX: titleScaleX * 1.018,
-        scaleY: titleScaleY * 1.018,
-        duration: 7200,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut"
-      });
+      if (!this.reducedMotion) {
+        this.tweens.add({
+          targets: titleArt,
+          y: 474,
+          scaleX: titleScaleX * 1.018,
+          scaleY: titleScaleY * 1.018,
+          duration: 7200,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
 
       const scrim = this.add.graphics().setDepth(501);
       const bandCount = 12;
@@ -4968,9 +5422,9 @@
       const archerButton = this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
         window.location.href = "https://archerlab.dev/";
       }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76 });
-      const protocol = this.add.text(492, 38, "07 / RED", {
+      const protocol = this.add.text(492, 38, this.profileSyncFailed ? "SYNC · OFFLINE" : "THREAT · RED", {
         fontFamily: "Arial, sans-serif",
-        fontSize: 12,
+        fontSize: 13,
         fontStyle: "900",
         color: "#ff8a78",
         stroke: "#050607",
@@ -4979,7 +5433,7 @@
       items.push(protocol);
       const eyebrow = this.add.text(270, 79, "SCHOOL UNDEAD · DEFENSE PROTOCOL", {
         fontFamily: "Arial, sans-serif",
-        fontSize: 13,
+        fontSize: 14,
         fontStyle: "900",
         color: "#8deeff",
         stroke: "#050607",
@@ -4989,7 +5443,7 @@
       items.push(eyebrow);
       const title = this.add.text(270, 132, "스쿨 언데드 디펜스", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 38,
+        fontSize: 40,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#030607",
@@ -4999,7 +5453,7 @@
       items.push(title);
       const subtitle = this.add.text(270, 179, "무너진 복도 · 마지막 방어선", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 16,
+        fontSize: 18,
         fontStyle: "900",
         color: "#d9eef0",
         stroke: "#050607",
@@ -5008,10 +5462,43 @@
       subtitle.setShadow(0, 3, "#000000", 7, true, true);
       items.push(subtitle);
 
-      const creditPanel = this.add.rectangle(270, 700, 306, 42, 0x071015, 0.9)
-        .setStrokeStyle(1, 0x65ddf3, 0.5)
-        .setDepth(526);
-      const creditLabel = this.add.text(152, 700, "SUPPLY CREDIT", {
+      const missionPanel = this.addCommandPanel(270, 602, 432, 74, 522, COLORS.blue, {
+        cut: 12,
+        alpha: 0.72,
+        glowAlpha: 0.07,
+        strokeAlpha: 0.48
+      });
+      const missionKicker = this.add.text(72, 584, "CURRENT OBJECTIVE", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 10,
+        fontStyle: "900",
+        color: "#8deeff"
+      }).setOrigin(0, 0.5).setDepth(524);
+      const missionTitle = this.add.text(72, 610, "바리케이드를 지키고 생존자를 규합하세요", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 15,
+        fontStyle: "900",
+        color: "#f5fbff",
+        stroke: "#030607",
+        strokeThickness: 3
+      }).setOrigin(0, 0.5).setDepth(524);
+      const missionTag = this.add.text(468, 602, "ENDLESS", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 11,
+        fontStyle: "900",
+        color: "#ffd86b",
+        stroke: "#030607",
+        strokeThickness: 3
+      }).setOrigin(1, 0.5).setDepth(524);
+      items.push(missionKicker, missionTitle, missionTag);
+
+      const creditPanel = this.addCommandPanel(270, 700, 318, 46, 526, COLORS.gold, {
+        cut: 8,
+        alpha: 0.88,
+        glowAlpha: 0.05,
+        strokeAlpha: 0.46
+      });
+      const creditLabel = this.add.text(132, 700, this.profileSyncFailed ? "OFFLINE SUPPLY" : "SUPPLY CREDIT", {
         fontFamily: "Arial, sans-serif",
         fontSize: 11,
         fontStyle: "900",
@@ -5019,7 +5506,7 @@
         stroke: "#050607",
         strokeThickness: 2
       }).setOrigin(0, 0.5).setDepth(527);
-      const creditValue = this.add.text(388, 700, `$${this.meta.coins}`, {
+      const creditValue = this.add.text(408, 700, `$${this.meta.coins}`, {
         fontFamily: "Arial, sans-serif",
         fontSize: 19,
         fontStyle: "900",
@@ -5027,19 +5514,19 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(1, 0.5).setDepth(527);
-      items.push(creditPanel, creditLabel, creditValue);
+      items.push(creditLabel, creditValue);
 
       const startButton = this.addTacticalMenuButton(270, 790, 410, 86, "출격", 530, () => this.startRun(), 0xf15a47, {
         primary: true,
-        kicker: "BEGIN SORTIE",
+        kicker: "BEGIN SORTIE · ENTER / A",
         hitHeight: 86
       });
       const rankingButton = this.addTacticalMenuButton(164, 892, 188, 76, "랭킹", 530, () => this.showRankings(), COLORS.gold, {
-        kicker: "RECORDS",
+        kicker: "RECORDS · L",
         hitHeight: 76
       });
       const shopButton = this.addTacticalMenuButton(376, 892, 188, 76, "상점", 530, () => this.showShop(), COLORS.blue, {
-        kicker: "ARMORY",
+        kicker: "ARMORY · A",
         hitHeight: 76
       });
 
@@ -5047,7 +5534,8 @@
       this.animateOverlayEntrance([protocol, eyebrow], 90, 10, 320);
       this.animateOverlayEntrance([title], 150, 18, 420);
       this.animateOverlayEntrance([subtitle], 230, 14, 380);
-      this.animateOverlayEntrance([creditPanel, creditLabel, creditValue], 300, 18, 360);
+      this.animateOverlayEntrance([...missionPanel.objects, missionKicker, missionTitle, missionTag], 270, 18, 360);
+      this.animateOverlayEntrance([...creditPanel.objects, creditLabel, creditValue], 300, 18, 360);
       this.animateOverlayEntrance(Object.values(startButton), 350, 22, 420);
       this.animateOverlayEntrance(Object.values(rankingButton), 430, 18, 380);
       this.animateOverlayEntrance(Object.values(shopButton), 470, 18, 380);
@@ -5057,6 +5545,7 @@
       const enteringShop = this.mode !== "shop";
       this.clearOverlay();
       this.mode = "shop";
+      announceGameStatus("암시장 정비소. 캐릭터와 강화를 선택할 수 있습니다. Escape 또는 게임패드 B로 돌아갑니다.");
       this.startBgm("menu");
       if (enteringShop) {
         this.playSfx("shop_open", 0.82);
@@ -5078,29 +5567,19 @@
       this.shopSelectedCharacter = selectedCharacter.id;
       const items = this.overlayObjects;
       items.push(this.add.image(270, 480, "shop-blackmarket").setDisplaySize(540, 960).setDepth(500));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.26).setDepth(501));
-      items.push(this.add.rectangle(270, 94, 430, 86, 0x070c10, 0.78).setStrokeStyle(2, 0xe7bb54, 0.72).setDepth(502));
-      items.push(this.add.rectangle(270, 48, 320, 4, 0xffd86b, 0.9).setDepth(503));
-      items.push(this.add.text(270, 78, "암시장 상점", {
-        fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 34,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#050607",
-        strokeThickness: 6
-      }).setOrigin(0.5).setDepth(504));
-      items.push(this.add.text(270, 118, `보유 코인 $${this.meta.coins}`, {
-        fontFamily: "Arial, sans-serif",
-        fontSize: 18,
-        fontStyle: "900",
-        color: "#ffd86b",
-        stroke: "#050607",
-        strokeThickness: 4
-      }).setOrigin(0.5).setDepth(504));
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.42).setDepth(501));
+      const shopHeader = this.addOverlayHeader({
+        y: 96,
+        title: "암시장 정비소",
+        kicker: "FIELD ARMORY · PERMANENT UPGRADES",
+        subtitle: `보유 보급 $${this.meta.coins} · 캐릭터별 최대 Lv.${SHOP_MAX_LEVEL}`,
+        accent: COLORS.gold,
+        depth: 502
+      });
 
-      items.push(this.add.text(270, 304, "정비할 캐릭터 선택", {
+      items.push(this.add.text(270, 304, "정비할 캐릭터 선택 · 탭하여 전환", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 17,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
@@ -5122,8 +5601,19 @@
       }).setOrigin(0.5).setDepth(521));
       this.getCharacterShopUpgrades(selectedCharacter.id).forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, selectedCharacter, 270, 626 + index * 100));
       const resetRefund = this.getShopResetRefund();
-      this.addOverlayButton(156, 924, 216, 46, resetRefund > 0 ? `초기화 $${formatShopCost(resetRefund)}` : "강화 초기화", 560, () => this.resetShopUpgrades(), resetRefund > 0 ? COLORS.red : 0x5b646b);
-      this.addOverlayButton(396, 924, 132, 46, "뒤로", 560, () => this.showMenu(), COLORS.gold);
+      this.addTacticalMenuButton(166, 924, 236, 48, resetRefund > 0 ? `초기화 +$${formatShopCost(resetRefund)}` : "강화 초기화", 560, () => this.resetShopUpgrades(), resetRefund > 0 ? COLORS.red : 0x5b646b, {
+        compact: true,
+        fontSize: 15,
+        visualHeight: 44,
+        hitHeight: 76
+      });
+      this.addTacticalMenuButton(402, 924, 164, 48, "뒤로", 560, () => this.showMenu(), COLORS.gold, {
+        compact: true,
+        fontSize: 16,
+        visualHeight: 44,
+        hitHeight: 76
+      });
+      this.animateOverlayEntrance(shopHeader.objects, 40, 16, 340);
       if (needsProfileSync) {
         this.showShopActionLoading("프로필 동기화 중");
       }
@@ -5139,7 +5629,7 @@
       objects.push(this.add.image(x, y - 19, character.portrait).setDisplaySize(58, 58).setDepth(524));
       objects.push(this.add.text(x, y + 29, character.weapon, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 12,
+        fontSize: 16,
         fontStyle: "900",
         color: selected ? "#ffffff" : "#d5e4e7",
         stroke: "#050607",
@@ -5147,7 +5637,7 @@
       }).setOrigin(0.5).setDepth(524));
       objects.push(this.add.text(x, y + 47, this.getCharacterTotalUpgradeLevel(character.id), {
         fontFamily: "Arial, sans-serif",
-        fontSize: 11,
+        fontSize: 14,
         fontStyle: "900",
         color: "#ffd86b",
         stroke: "#050607",
@@ -5225,13 +5715,13 @@
       const canAfford = this.meta.coins >= cost;
       const accent = character.accent || COLORS.gold;
       const objects = [];
-      objects.push(this.add.rectangle(x, y, 468, 100, 0x071015, 0.78).setStrokeStyle(2, accent, 0.55).setDepth(520));
-      objects.push(this.add.rectangle(x, y + 43, 444, 1, accent, 0.22).setDepth(521));
+      objects.push(this.add.rectangle(x, y, 468, 104, 0x071015, 0.84).setStrokeStyle(2, accent, 0.62).setDepth(520));
+      objects.push(this.add.rectangle(x, y + 45, 444, 1, accent, 0.22).setDepth(521));
       objects.push(this.add.circle(x - 198, y - 16, 40, 0x020406, 0.78).setStrokeStyle(2, accent, 0.75).setDepth(522));
       objects.push(this.add.image(x - 198, y - 16, upgrade.icon).setDisplaySize(64, 64).setDepth(523));
       objects.push(this.add.text(x - 144, y - 34, upgrade.title, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 20,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
@@ -5239,25 +5729,25 @@
       }).setOrigin(0, 0.5).setDepth(523));
       objects.push(this.add.text(x - 144, y - 14, upgrade.subtitle, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 11,
+        fontSize: 16,
         fontStyle: "900",
         color: "#d6e9ed",
         stroke: "#050607",
-        strokeThickness: 3,
+        strokeThickness: 2,
         wordWrap: { width: 228, useAdvancedWrap: true }
       }).setOrigin(0, 0.5).setDepth(523));
       objects.push(this.add.text(x - 144, y + 4, upgrade.part || "정비 부품", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 11,
+        fontSize: 15,
         fontStyle: "800",
         color: "#b8c8cc",
         stroke: "#050607",
-        strokeThickness: 3,
+        strokeThickness: 2,
         wordWrap: { width: 228, useAdvancedWrap: true }
       }).setOrigin(0, 0.5).setDepth(523));
       objects.push(this.add.text(x - 144, y + 29, this.getShopUpgradeStatText(upgrade, level), {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 11,
+        fontSize: 14,
         fontStyle: "900",
         color: "#ffd86b",
         align: "left",
@@ -5272,16 +5762,21 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0.5).setDepth(523));
-      for (let i = 0; i < SHOP_MAX_LEVEL; i += 1) {
-        const row = Math.floor(i / SHOP_LEVEL_PIPS_PER_ROW);
-        const col = i % SHOP_LEVEL_PIPS_PER_ROW;
-        objects.push(this.add.rectangle(x + 86 + col * 7, y - 17 + row * 10, 5, 7, i < level ? accent : 0x15222b, i < level ? 0.95 : 0.72)
+      const progressSegments = 10;
+      const filledSegments = Math.ceil(level / (SHOP_MAX_LEVEL / progressSegments));
+      for (let i = 0; i < progressSegments; i += 1) {
+        objects.push(this.add.rectangle(x + 95 + i * 14, y - 12, 11, 8, i < filledSegments ? accent : 0x15222b, i < filledSegments ? 0.95 : 0.72)
           .setStrokeStyle(1, 0x000000, 0.35)
           .setDepth(523));
       }
       this.overlayObjects.push(...objects);
       const label = maxed ? "MAX" : `$${formatShopCost(cost)}`;
-      this.addOverlayButton(x + 154, y + 27, 112, 34, label, 524, () => this.buyShopUpgrade(upgrade.id), maxed ? 0x5b646b : canAfford ? COLORS.gold : 0x6f3333);
+      this.addTacticalMenuButton(x + 154, y + 28, 118, 46, label, 524, () => this.buyShopUpgrade(upgrade.id), maxed ? 0x5b646b : canAfford ? COLORS.gold : 0x6f3333, {
+        compact: true,
+        fontSize: 17,
+        visualHeight: 42,
+        hitHeight: 76
+      });
     }
 
     async buyShopUpgrade(id) {
@@ -5399,7 +5894,70 @@
       });
     }
 
-    async resetShopUpgrades() {
+    showShopResetConfirmLayer(refund) {
+      this.closeShopResetNoticeLayer();
+      const objects = [];
+      const depth = 590;
+      const close = () => this.closeShopResetNoticeLayer();
+      const confirm = () => {
+        close();
+        this.resetShopUpgrades(true);
+      };
+      const blocker = this.add.rectangle(270, 480, 540, 960, 0x010204, 0.72)
+        .setDepth(depth)
+        .setInteractive();
+      blocker.on("pointerdown", () => {});
+      const panel = this.addCommandPanel(270, 480, 414, 356, depth + 1, COLORS.red, {
+        cut: 18,
+        alpha: 0.96,
+        glowAlpha: 0.11,
+        strokeAlpha: 0.82,
+        track: false
+      });
+      const kicker = this.add.text(270, 365, "RESET ALL UPGRADES", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 11,
+        fontStyle: "900",
+        color: "#ff9b94"
+      }).setOrigin(0.5).setDepth(depth + 3);
+      const title = this.add.text(270, 406, "모든 강화를 초기화할까요?", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 25,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#050607",
+        strokeThickness: 5
+      }).setOrigin(0.5).setDepth(depth + 3);
+      const body = this.add.text(270, 468, `구매한 영구 강화가 모두 사라지고\n보급 $${formatShopCost(refund)}이 반환됩니다.`, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 16,
+        fontStyle: "800",
+        color: "#d7edf1",
+        stroke: "#050607",
+        strokeThickness: 2,
+        align: "center",
+        lineSpacing: 7
+      }).setOrigin(0.5).setDepth(depth + 3);
+      objects.push(blocker, ...panel.objects, kicker, title, body);
+      const cancelButton = this.addTacticalMenuButton(164, 570, 180, 62, "취소", depth + 4, close, COLORS.blue, {
+        hitHeight: 76,
+        fontSize: 18
+      });
+      const confirmButton = this.addTacticalMenuButton(376, 570, 180, 62, "초기화", depth + 4, confirm, COLORS.red, {
+        hitHeight: 76,
+        fontSize: 18
+      });
+      objects.push(...Object.values(cancelButton), ...Object.values(confirmButton));
+      this.shopResetNoticeObjects = objects;
+      objects.forEach((item) => {
+        if (item && !this.overlayObjects.includes(item)) {
+          this.overlayObjects.push(item);
+        }
+      });
+      this.animateOverlayEntrance([...panel.objects, kicker, title, body, ...Object.values(cancelButton), ...Object.values(confirmButton)], 30, 16, 320);
+    }
+
+    async resetShopUpgrades(confirmed = false) {
       if (this.shopActionInFlight) {
         return;
       }
@@ -5418,6 +5976,10 @@
       if (refund <= 0) {
         this.playSfx("core", 0.65);
         this.showShopResetNoticeLayer();
+        return;
+      }
+      if (!confirmed) {
+        this.showShopResetConfirmLayer(refund);
         return;
       }
       this.showShopActionLoading("강화 초기화 중");
@@ -5483,6 +6045,7 @@
         return;
       }
       this.mode = "playing";
+      announceGameStatus("작전 시작. Escape 또는 Start로 일시정지하고 F 또는 오른쪽 범퍼로 속도를 바꿉니다.");
       updateRunLoadingOverlay("전장 표시 중");
       await waitForRenderFrames(2);
       hideRunLoadingOverlay();
@@ -5496,7 +6059,7 @@
       this.playSfx("button", 0.85);
       this.setGameSpeed(DEFAULT_GAME_SPEED);
       if (this.ui.pauseText) {
-        this.ui.pauseText.setText("II");
+        this.ui.pauseText.setText("Ⅱ");
       }
       this.mode = "gameover";
       this.clearOverlay();
@@ -5696,38 +6259,217 @@
     togglePause() {
       if (this.mode === "playing") {
         this.mode = "paused";
+        announceGameStatus(`일시정지. 스테이지 ${this.stage}, 웨이브 ${this.level}, 바리케이드 ${Math.round(this.coreHp)}. Escape 또는 Start로 계속합니다.`);
         if (this.ui.pauseText) {
           this.ui.pauseText.setText("▶");
         }
         this.showPauseOverlay();
       } else if (this.mode === "paused") {
+        if (this.pauseConfirmOpen) {
+          this.showPauseOverlay();
+          return;
+        }
         this.clearOverlay();
         this.mode = "playing";
+        announceGameStatus("작전을 계속합니다.");
         if (this.ui.pauseText) {
-          this.ui.pauseText.setText("II");
+          this.ui.pauseText.setText("Ⅱ");
         }
       }
     }
 
     showPauseOverlay() {
       this.clearOverlay();
-      this.overlayObjects.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.58).setDepth(520));
-      this.overlayObjects.push(this.add.rectangle(270, 426, 300, 122, 0x0d151b, 0.88).setStrokeStyle(2, 0xe7bb54, 0.75).setDepth(521));
-      this.overlayObjects.push(this.add.text(270, 394, "일시정지", {
+      this.mode = "paused";
+      this.pauseConfirmOpen = false;
+      const items = this.overlayObjects;
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.72).setDepth(520));
+      const scan = this.add.graphics().setDepth(520.2);
+      scan.lineStyle(1, 0x8deeff, 0.045);
+      for (let y = 18; y < GAME_HEIGHT; y += 18) {
+        scan.lineBetween(0, y, GAME_WIDTH, y);
+      }
+      items.push(scan);
+      this.addCommandPanel(270, 486, 454, 646, 521, COLORS.gold, {
+        cut: 18,
+        alpha: 0.94,
+        glowAlpha: 0.08,
+        strokeAlpha: 0.78
+      });
+      const header = this.addOverlayHeader({
+        y: 230,
+        title: "작전 일시정지",
+        kicker: "TACTICAL HOLD",
+        subtitle: `STAGE ${String(this.stage).padStart(2, "0")} · WAVE ${String(this.level).padStart(2, "0")}`,
+        accent: COLORS.gold,
+        depth: 523
+      });
+
+      const addSnapshot = (x, label, value, accent) => {
+        const panel = this.addCommandPanel(x, 352, 126, 82, 525, accent, {
+          cut: 9,
+          alpha: 0.78,
+          glowAlpha: 0.05,
+          strokeAlpha: 0.48
+        });
+        const labelText = this.add.text(x, 331, label, {
+          fontFamily: "Arial, sans-serif",
+          fontSize: 10,
+          fontStyle: "900",
+          color: "#9bb4bb"
+        }).setOrigin(0.5).setDepth(525.4);
+        const valueText = this.add.text(x, 360, value, {
+          fontFamily: "Pretendard Variable, Arial, sans-serif",
+          fontSize: 19,
+          fontStyle: "900",
+          color: "#ffffff",
+          stroke: "#030607",
+          strokeThickness: 3
+        }).setOrigin(0.5).setDepth(525.4);
+        items.push(labelText, valueText);
+        return [...panel.objects, labelText, valueText];
+      };
+      const snapshotObjects = [
+        ...addSnapshot(132, "생존 시간", formatRunClock(this.elapsed), COLORS.blue),
+        ...addSnapshot(270, "처치", `${this.kills}`, COLORS.red),
+        ...addSnapshot(408, "보급", `$${this.getDisplayedCoins()}`, COLORS.gold)
+      ];
+
+      const corePanel = this.addCommandPanel(270, 456, 400, 88, 525, this.coreHp < this.maxCoreHp * 0.35 ? COLORS.red : COLORS.green, {
+        cut: 10,
+        alpha: 0.78,
+        glowAlpha: 0.05,
+        strokeAlpha: 0.56
+      });
+      const coreTitle = this.add.text(92, 431, "바리케이드 무결성", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 36,
+        fontSize: 12,
+        fontStyle: "900",
+        color: "#b9cdd2"
+      }).setOrigin(0, 0.5).setDepth(526);
+      const coreValue = this.add.text(448, 431, `${Math.round(this.coreHp)} / ${this.maxCoreHp}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 14,
         fontStyle: "900",
         color: "#ffffff",
-        stroke: "#050607",
-        strokeThickness: 5
-      }).setOrigin(0.5).setDepth(521));
-      this.overlayObjects.push(this.add.text(270, 432, "전열을 정비합니다", {
+        stroke: "#030607",
+        strokeThickness: 3
+      }).setOrigin(1, 0.5).setDepth(526);
+      const coreTrack = this.add.rectangle(270, 466, 352, 12, 0x010203, 0.9)
+        .setStrokeStyle(1, 0xffffff, 0.18)
+        .setDepth(526);
+      const coreRatio = clamp(this.coreHp / this.maxCoreHp, 0, 1);
+      const coreFill = this.add.rectangle(94, 466, 352 * coreRatio, 8, coreRatio < 0.35 ? COLORS.red : coreRatio < 0.68 ? COLORS.gold : COLORS.green, 1)
+        .setOrigin(0, 0.5)
+        .setDepth(527);
+      items.push(coreTitle, coreValue, coreTrack, coreFill);
+
+      const speedPanel = this.addCommandPanel(270, 540, 400, 54, 525, COLORS.blue, {
+        cut: 9,
+        alpha: 0.72,
+        glowAlpha: 0.04,
+        strokeAlpha: 0.42
+      });
+      const speedLabel = this.add.text(92, 540, "전투 속도", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 15,
+        fontSize: 13,
+        fontStyle: "900",
+        color: "#b9cdd2"
+      }).setOrigin(0, 0.5).setDepth(526);
+      this.ui.pauseSpeedValue = this.add.text(448, 540, formatGameSpeedLabel(this.speedMultiplier), {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 18,
+        fontStyle: "900",
+        color: "#8deeff",
+        stroke: "#030607",
+        strokeThickness: 3
+      }).setOrigin(1, 0.5).setDepth(526);
+      const speedHit = this.add.rectangle(270, 540, 400, 58, 0xffffff, 0)
+        .setDepth(527)
+        .setInteractive({ useHandCursor: true });
+      speedHit.on("pointerdown", () => {
+        this.toggleSpeed();
+        this.ui.pauseSpeedValue?.setText(formatGameSpeedLabel(this.speedMultiplier));
+      });
+      items.push(speedLabel, this.ui.pauseSpeedValue, speedHit);
+
+      const resume = this.addTacticalMenuButton(270, 636, 382, 78, "계속 방어", 530, () => this.togglePause(), COLORS.gold, {
+        primary: true,
+        kicker: "RESUME · ESC / START",
+        hitHeight: 82
+      });
+      const exit = this.addTacticalMenuButton(270, 734, 382, 62, "작전 종료", 530, () => this.showQuitConfirmation(), COLORS.red, {
+        kicker: "BANK SUPPLIES & RETURN",
+        hitHeight: 76,
+        fontSize: 20
+      });
+      const hint = this.add.text(270, 800, "홈 버튼은 먼저 이 화면을 열어 진행 손실을 방지합니다", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 11,
         fontStyle: "800",
-        color: "#cfe8ea"
-      }).setOrigin(0.5).setDepth(522));
-      this.addOverlayButton(270, 498, 184, 52, "계속", 523, () => this.togglePause(), COLORS.gold);
+        color: "#8fa8ae",
+        align: "center"
+      }).setOrigin(0.5).setDepth(532);
+      items.push(hint);
+      this.animateOverlayEntrance([
+        ...header.objects,
+        ...snapshotObjects,
+        ...corePanel.objects,
+        ...speedPanel.objects,
+        speedLabel,
+        this.ui.pauseSpeedValue,
+        ...Object.values(resume),
+        ...Object.values(exit),
+        hint
+      ], 40, 18, 360);
+    }
+
+    showQuitConfirmation() {
+      this.clearOverlay();
+      this.mode = "paused";
+      this.pauseConfirmOpen = true;
+      const items = this.overlayObjects;
+      items.push(this.add.rectangle(270, 480, 540, 960, 0x010204, 0.82).setDepth(570));
+      const panel = this.addCommandPanel(270, 480, 414, 370, 571, COLORS.red, {
+        cut: 18,
+        alpha: 0.96,
+        glowAlpha: 0.12,
+        strokeAlpha: 0.84
+      });
+      const kicker = this.add.text(270, 356, "CONFIRM WITHDRAWAL", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 11,
+        fontStyle: "900",
+        color: "#ff9b94"
+      }).setOrigin(0.5).setDepth(573);
+      const title = this.add.text(270, 399, "작전을 종료할까요?", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 30,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#030607",
+        strokeThickness: 5
+      }).setOrigin(0.5).setDepth(573);
+      const body = this.add.text(270, 463, `현재 보급 $${this.getDisplayedCoins()}을 정산하고\n메인 화면으로 복귀합니다.`, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 16,
+        fontStyle: "800",
+        color: "#cfe3e7",
+        stroke: "#030607",
+        strokeThickness: 3,
+        align: "center",
+        lineSpacing: 7
+      }).setOrigin(0.5).setDepth(573);
+      items.push(kicker, title, body);
+      const cancel = this.addTacticalMenuButton(164, 570, 180, 60, "계속 방어", 575, () => this.showPauseOverlay(), COLORS.blue, {
+        hitHeight: 76,
+        fontSize: 18
+      });
+      const confirm = this.addTacticalMenuButton(376, 570, 180, 60, "종료", 575, () => this.returnToMenuFromRun(), COLORS.red, {
+        hitHeight: 76,
+        fontSize: 18
+      });
+      this.animateOverlayEntrance([...panel.objects, kicker, title, body, ...Object.values(cancel), ...Object.values(confirm)], 30, 16, 320);
     }
 
     setGameSpeed(speed = DEFAULT_GAME_SPEED) {
@@ -5735,6 +6477,9 @@
       this.speedMultiplier = normalized;
       if (this.ui.speed) {
         this.ui.speed.setText(formatGameSpeedLabel(normalized));
+      }
+      if (this.ui.pauseSpeedValue?.active) {
+        this.ui.pauseSpeedValue.setText(formatGameSpeedLabel(normalized));
       }
     }
 
@@ -5749,6 +6494,7 @@
     }
 
     update(time, delta) {
+      this.pollGamepadInput(time);
       if (this.mode !== "playing") {
         return;
       }
@@ -7584,14 +8330,16 @@
       marker.add([halo, vertical, horizontal, center]);
       marker.setScale(0.82);
       zombie.weakMarkFx = marker;
-      this.tweens.add({
-        targets: marker,
-        scale: 1.08,
-        yoyo: true,
-        repeat: -1,
-        duration: 420,
-        ease: "Sine.easeInOut"
-      });
+      if (!this.reducedMotion) {
+        this.tweens.add({
+          targets: marker,
+          scale: 1.08,
+          yoyo: true,
+          repeat: -1,
+          duration: 420,
+          ease: "Sine.easeInOut"
+        });
+      }
     }
 
     clearWeakMark(zombie) {
@@ -8855,6 +9603,7 @@
         return;
       }
       this.mode = "skill";
+      announceGameStatus(`웨이브 ${this.level + 1} 보급 선택. 숫자 1부터 3으로 전술을 고르고 R로 한 번 리롤할 수 있습니다.`);
       this.playSfx("wave_clear", 0.92);
       this.cancelRunTimers();
       const previousStage = this.stage;
@@ -8881,38 +9630,30 @@
         .setAlpha(0)
         .setDepth(521);
       items.push(backdrop, backdropShade);
-      this.tweens.add({ targets: backdrop, alpha: 1, duration: 320, ease: "Cubic.easeOut" });
-      this.tweens.add({ targets: backdropShade, alpha: 1, duration: 420, ease: "Cubic.easeOut" });
-      items.push(this.add.rectangle(270, 538, 492, 520, 0x010204, 0.18).setDepth(522));
-      items.push(this.add.ellipse(270, 552, 450, 570, COLORS.gold, 0.05).setDepth(522.2));
-      const headerPanel = this.add.rectangle(270, 180, 432, 92, 0x0a1116, 0.82)
-        .setStrokeStyle(2, 0xeac15b, 0.76)
-        .setDepth(523);
-      const headerLine = this.add.rectangle(270, 130, 320, 4, 0xffd86b, 0.95).setDepth(524);
-      const headerTitle = this.add.text(270, 160, "스킬 선택", {
-        fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 38,
-        fontStyle: "900",
-        color: "#ffffff",
-        stroke: "#050607",
-        strokeThickness: 6
-      }).setOrigin(0.5).setDepth(525);
-      const headerSubtitle = this.add.text(270, 202, `웨이브 ${this.level} 보급 승인 - 전술 하나를 선택하세요`, {
-        fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 16,
-        fontStyle: "900",
-        color: "#f6d985",
-        stroke: "#050607",
-        strokeThickness: 3
-      }).setOrigin(0.5).setDepth(525);
-      items.push(headerPanel, headerLine, headerTitle, headerSubtitle);
-      this.animateOverlayEntrance([headerPanel, headerLine, headerTitle, headerSubtitle], 70, 18, 390);
+      if (this.reducedMotion) {
+        backdrop.setAlpha(1);
+        backdropShade.setAlpha(1);
+      } else {
+        this.tweens.add({ targets: backdrop, alpha: 1, duration: 320, ease: "Cubic.easeOut" });
+        this.tweens.add({ targets: backdropShade, alpha: 1, duration: 420, ease: "Cubic.easeOut" });
+      }
+      items.push(this.add.rectangle(270, 514, 500, 694, 0x010204, 0.24).setDepth(522));
+      items.push(this.add.ellipse(270, 514, 474, 720, COLORS.gold, 0.045).setDepth(522.2));
+      const header = this.addOverlayHeader({
+        y: 118,
+        title: "전술 보급 선택",
+        kicker: "WAVE CLEAR · SUPPLY AUTHORIZED",
+        subtitle: `WAVE ${String(this.level).padStart(2, "0")} · 세 가지 중 하나를 선택하세요`,
+        accent: COLORS.gold,
+        depth: 523
+      });
+      this.animateOverlayEntrance(header.objects, 70, 18, 390);
 
       this.renderSkillChoiceCards();
       this.addSkillRerollButton();
-      items.push(this.add.text(270, 810, "카드를 눌러 즉시 적용", {
+      items.push(this.add.text(270, 912, "카드를 탭하거나 숫자 1–3으로 즉시 적용", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 18,
+        fontSize: 14,
         fontStyle: "900",
         color: "#ffffff",
         stroke: "#050607",
@@ -8954,19 +9695,45 @@
       this.skillChoiceCardObjects = [];
     }
 
+    setSkillChoiceFocus(index = 0) {
+      const count = this.currentSkillChoices?.length || 0;
+      if (count <= 0) {
+        return;
+      }
+      const normalized = (Math.floor(index) % count + count) % count;
+      this.skillChoiceFocusIndex = normalized;
+      this.skillChoiceFocusHandlers.forEach((handler, handlerIndex) => handler?.(handlerIndex === normalized));
+      const choice = this.currentSkillChoices[normalized];
+      if (choice) {
+        announceGameStatus(`전술 ${normalized + 1}. ${choice.title}. ${String(choice.desc || "").replace(/\n/g, " ")}`);
+      }
+    }
+
     renderSkillChoiceCards(avoidSignature = "") {
       this.destroySkillChoiceCards();
       const upgrades = this.pickSkillChoiceUpgrades(avoidSignature);
+      this.currentSkillChoices = upgrades;
+      this.skillChoiceFocusHandlers = [];
+      this.skillChoiceFocusIndex = 0;
       this.currentSkillChoiceSignature = this.getUpgradeChoiceSignature(upgrades);
-      const xs = upgrades.length === 1 ? [270] : upgrades.length === 2 ? [174, 366] : [92, 270, 448];
-      upgrades.forEach((upgrade, index) => this.addSkillCard(xs[index], 548, upgrade, index));
+      const spacing = upgrades.length === 1 ? 0 : 166;
+      const startY = upgrades.length === 1 ? 508 : upgrades.length === 2 ? 425 : 344;
+      upgrades.forEach((upgrade, index) => this.addWideSkillCard(270, startY + index * spacing, upgrade, index));
+      this.setSkillChoiceFocus(0);
+      if (!this.reducedMotion) {
+        this.scheduleSceneDelay(620, () => {
+          if (this.mode === "skill") {
+            this.setSkillChoiceFocus(this.skillChoiceFocusIndex || 0);
+          }
+        });
+      }
     }
 
     addSkillRerollButton() {
       const x = 270;
       const y = 858;
-      const width = 176;
-      const height = 42;
+      const width = 212;
+      const height = 50;
       const cost = this.getSkillRerollCost();
       const canAfford = this.coins >= cost;
       const accent = this.skillRerollUsed ? 0x5b646b : canAfford ? COLORS.blue : 0x6f3333;
@@ -8977,7 +9744,7 @@
       const inner = this.add.rectangle(x, y, width - 12, height - 12, 0x101820, this.skillRerollUsed ? 0.6 : 0.88)
         .setStrokeStyle(1, accent, this.skillRerollUsed ? 0.32 : 0.72)
         .setDepth(537);
-      const text = this.add.text(x, y, this.skillRerollUsed ? "리롤 완료" : `리롤 $${cost}`, {
+      const text = this.add.text(x, y, this.skillRerollUsed ? "리롤 완료" : `R · 리롤 $${cost}`, {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -8985,7 +9752,7 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(538);
-      const hit = this.add.rectangle(x, y, width, height, 0xffffff, 0)
+      const hit = this.add.rectangle(x, y, width + 8, 76, 0xffffff, 0)
         .setDepth(539)
         .setInteractive({ useHandCursor: !this.skillRerollUsed });
       const objects = [shadow, outer, inner, text, hit];
@@ -9012,7 +9779,7 @@
       const cost = this.getSkillRerollCost();
       const canAfford = this.coins >= cost;
       const accent = this.skillRerollUsed ? 0x5b646b : canAfford ? COLORS.blue : 0x6f3333;
-      button.text.setText(this.skillRerollUsed ? "리롤 완료" : `리롤 $${cost}`);
+      button.text.setText(this.skillRerollUsed ? "리롤 완료" : `R · 리롤 $${cost}`);
       button.outer.setFillStyle(accent, this.skillRerollUsed ? 0.55 : 0.92);
       button.outer.setStrokeStyle(2, this.skillRerollUsed ? 0xaab2b8 : 0xffffff, this.skillRerollUsed ? 0.32 : 0.62);
       button.inner.setFillStyle(0x101820, this.skillRerollUsed ? 0.6 : 0.88);
@@ -9644,6 +10411,168 @@
       return chosen;
     }
 
+    addWideSkillCard(x, y, upgrade, index = 0) {
+      const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
+      const accentHex = upgrade.accentHex || SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
+      const isRecruit = Boolean(upgrade.characterTexture);
+      const recruitPortraitTexture = isRecruit ? (upgrade.portraitTexture || upgrade.icon || upgrade.characterTexture) : null;
+      const ownerTexture = upgrade.ownerCharacterTexture;
+      const hasOwnerCharacter = Boolean(ownerTexture && !isRecruit && this.textures.exists(ownerTexture));
+      const panel = this.addCommandPanel(x, y, 452, 150, 523, accent, {
+        cut: 14,
+        alpha: 0.92,
+        glowAlpha: 0.075,
+        strokeAlpha: 0.64,
+        shadowAlpha: 0.42,
+        railWidth: 5,
+        track: false
+      });
+      const accentRail = this.add.rectangle(x - 215, y, 5, 104, accent, 0.92).setDepth(525);
+      const portraitHalo = this.add.circle(x - 166, y, 48, 0x020507, 0.78)
+        .setStrokeStyle(2, accent, 0.76)
+        .setDepth(525);
+      const icon = this.add.image(x - 166, y, isRecruit ? recruitPortraitTexture : upgrade.icon).setDepth(526);
+      icon.setDisplaySize(isRecruit ? 92 : 78, isRecruit ? 92 : 78);
+      const ownerHalo = hasOwnerCharacter
+        ? this.add.circle(x - 132, y + 34, 21, 0x020507, 0.92).setStrokeStyle(2, accent, 0.72).setDepth(526)
+        : null;
+      const ownerCharacter = hasOwnerCharacter
+        ? this.add.image(x - 132, y + 34, ownerTexture).setDisplaySize(38, 38).setDepth(527)
+        : null;
+      const tagBg = this.add.rectangle(x - 87, y - 51, 86, 24, accent, 0.2)
+        .setStrokeStyle(1, accent, 0.72)
+        .setDepth(525);
+      const tagText = this.add.text(x - 87, y - 51, upgrade.tag || (isRecruit ? "영입" : "전술"), {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 13,
+        fontStyle: "900",
+        color: accentHex,
+        stroke: "#030607",
+        strokeThickness: 2
+      }).setOrigin(0.5).setDepth(526);
+      const title = this.add.text(x - 124, y - 24, upgrade.title, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 22,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#030607",
+        strokeThickness: 4
+      }).setOrigin(0, 0.5).setDepth(526);
+      const desc = this.add.text(x - 124, y + 22, upgrade.desc, {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 16,
+        fontStyle: "800",
+        color: "#d7e6e9",
+        stroke: "#030607",
+        strokeThickness: 2,
+        lineSpacing: 3,
+        wordWrap: { width: 190, useAdvancedWrap: true }
+      }).setOrigin(0, 0.5).setDepth(526);
+      const statLines = upgrade.stat ? String(upgrade.stat).split("\n").length : 0;
+      const statPanel = this.addCommandPanel(x + 132, y - 10, 128, statLines > 1 ? 70 : 58, 525, accent, {
+        cut: 8,
+        alpha: 0.7,
+        glowAlpha: 0.04,
+        strokeAlpha: 0.38,
+        shadowAlpha: 0.18,
+        railWidth: 2,
+        track: false
+      });
+      const statText = upgrade.stat
+        ? this.add.text(x + 132, y - 10, upgrade.stat, {
+          fontFamily: "Pretendard Variable, Arial, sans-serif",
+          fontSize: statLines > 1 ? 12 : 14,
+          fontStyle: "900",
+          color: accentHex,
+          align: "center",
+          lineSpacing: 3,
+          wordWrap: { width: 112, useAdvancedWrap: true }
+        }).setOrigin(0.5).setDepth(527)
+        : this.add.text(x + 132, y - 10, "즉시 적용", {
+          fontFamily: "Pretendard Variable, Arial, sans-serif",
+          fontSize: 14,
+          fontStyle: "900",
+          color: accentHex
+        }).setOrigin(0.5).setDepth(527);
+      const chooseBg = this.add.rectangle(x + 132, y + 49, 122, 38, 0x101820, 0.92)
+        .setStrokeStyle(2, accent, 0.82)
+        .setDepth(526);
+      const chooseText = this.add.text(x + 132, y + 49, "선택", {
+        fontFamily: "Pretendard Variable, Arial, sans-serif",
+        fontSize: 17,
+        fontStyle: "900",
+        color: "#ffffff",
+        stroke: "#030607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(527);
+      const keyBadge = this.add.circle(x + 205, y - 58, 16, 0x020507, 0.92)
+        .setStrokeStyle(2, accent, 0.88)
+        .setDepth(527);
+      const keyText = this.add.text(x + 205, y - 58, `${index + 1}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 14,
+        fontStyle: "900",
+        color: accentHex
+      }).setOrigin(0.5).setDepth(528);
+      const hit = this.add.rectangle(x, y, 456, 156, 0xffffff, 0)
+        .setDepth(529)
+        .setInteractive({ useHandCursor: true });
+      const animated = [
+        ...panel.objects,
+        accentRail,
+        portraitHalo,
+        icon,
+        ownerHalo,
+        ownerCharacter,
+        tagBg,
+        tagText,
+        title,
+        desc,
+        ...statPanel.objects,
+        statText,
+        chooseBg,
+        chooseText,
+        keyBadge,
+        keyText
+      ].filter(Boolean);
+      if (!this.reducedMotion) {
+        animated.forEach((item, itemIndex) => {
+          const targetY = item.y;
+          const targetAlpha = item.alpha;
+          item.setY(targetY + 18).setAlpha(0);
+          this.tweens.add({
+            targets: item,
+            y: targetY,
+            alpha: targetAlpha,
+            duration: 340,
+            delay: 90 + index * 90 + itemIndex * 3,
+            ease: "Cubic.easeOut"
+          });
+        });
+      }
+      const setHover = (active) => {
+        panel.glow.setAlpha(active ? 0.18 : 0.075);
+        portraitHalo.setScale(active ? 1.05 : 1);
+        icon.setScale(active ? 1.035 : 1);
+        chooseBg.setFillStyle(active ? accent : 0x101820, active ? 0.35 : 0.92);
+        chooseText.setScale(active ? 1.04 : 1);
+      };
+      this.skillChoiceFocusHandlers[index] = setHover;
+      hit.on("pointerdown", () => this.applyUpgrade(upgrade));
+      hit.on("pointerover", () => this.setSkillChoiceFocus(index));
+      hit.on("pointerout", () => setHover(this.skillChoiceFocusIndex === index));
+      [chooseBg, chooseText].forEach((item) => {
+        item.setInteractive({ useHandCursor: true });
+        item.on("pointerdown", () => this.applyUpgrade(upgrade));
+        item.on("pointerover", () => this.setSkillChoiceFocus(index));
+        item.on("pointerout", () => setHover(this.skillChoiceFocusIndex === index));
+      });
+      const objects = [...animated, hit];
+      this.overlayObjects.push(...objects);
+      this.skillChoiceCardObjects?.push(...objects);
+      return objects;
+    }
+
     addSkillCard(x, y, upgrade, index = 0) {
       const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
       const accentHex = upgrade.accentHex || SKILL_ACCENT_HEX[upgrade.id] || "#f6d985";
@@ -9865,20 +10794,25 @@
         .setAlpha(0)
         .setDepth(541);
       items.push(backdrop, veil);
-      this.tweens.add({
-        targets: backdrop,
-        scaleX: backdropScaleX,
-        scaleY: backdropScaleY,
-        alpha: 1,
-        duration: 820,
-        ease: "Cubic.easeOut"
-      });
-      this.tweens.add({
-        targets: veil,
-        alpha: 1,
-        duration: 520,
-        ease: "Cubic.easeOut"
-      });
+      if (this.reducedMotion) {
+        backdrop.setScale(backdropScaleX, backdropScaleY).setAlpha(1);
+        veil.setAlpha(1);
+      } else {
+        this.tweens.add({
+          targets: backdrop,
+          scaleX: backdropScaleX,
+          scaleY: backdropScaleY,
+          alpha: 1,
+          duration: 820,
+          ease: "Cubic.easeOut"
+        });
+        this.tweens.add({
+          targets: veil,
+          alpha: 1,
+          duration: 520,
+          ease: "Cubic.easeOut"
+        });
+      }
     }
 
     async gameOver() {
@@ -9886,6 +10820,7 @@
         return;
       }
       this.mode = "gameover";
+      announceGameStatus(`방어선 붕괴. 웨이브 ${this.level}, 처치 ${this.kills}. 기록을 등록하거나 메뉴로 돌아갈 수 있습니다.`);
       this.setGameSpeed(DEFAULT_GAME_SPEED);
       this.cancelRunTimers();
       this.cancelSceneTimers();
@@ -9963,28 +10898,36 @@
       });
       this.overlayObjects = [];
       this.skillChoiceCardObjects = [];
+      this.currentSkillChoices = [];
+      this.skillChoiceFocusHandlers = [];
+      this.skillChoiceFocusIndex = 0;
       this.skillRerollButtonObjects = null;
       this.shopResetNoticeObjects = null;
     }
 
     updateHud() {
-      const minutes = Math.floor(this.elapsed / 60);
-      const seconds = Math.floor(this.elapsed % 60);
-      this.ui.timer.setText(`${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`);
+      this.ui.timer.setText(formatRunClock(this.elapsed));
       const stageName = ["교문", "복도", "교실", "옥상"][Math.min(3, this.stage - 1)];
-      this.ui.stage.setText(`St.${this.stage} - ${stageName}`);
-      this.ui.level.setText(`웨이브 ${this.level}`);
-      this.ui.morale.setText(`M${this.morale}%`);
+      this.ui.stage.setText(`STAGE ${String(this.stage).padStart(2, "0")} · ${stageName}`);
+      this.ui.level.setText(`WAVE ${String(this.level).padStart(2, "0")} · ${this.killsInLevel} / ${this.levelNeed}`);
+      this.ui.morale.setText(`${this.morale}%`);
       this.ui.morale.setColor(this.morale < 35 ? "#ff524f" : this.morale < 70 ? "#ffd75c" : "#4dff67");
-      this.ui.core.setText(`HP ${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
+      this.ui.core.setText(`${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
       this.ui.coins.setText(`$${this.getDisplayedCoins()}`);
-      this.ui.shield.setText(`S${Math.round(this.shield)}`);
+      this.ui.shield.setText(`${Math.round(this.shield)}`);
       const progress = clamp(this.killsInLevel / this.levelNeed, 0, 1);
-      this.progressBar.setSize(508 * progress, 6);
+      this.progressBar.setSize(506 * progress, 6);
       this.progressBar.setFillStyle(this.mode === "skill" ? COLORS.gold : 0xe0ab26, 1);
       const hpRate = clamp(this.coreHp / this.maxCoreHp, 0, 1);
-      this.coreBar.setSize(330 * hpRate, 6);
+      this.coreBar.setSize(380 * hpRate, 7);
       this.coreBar.setFillStyle(hpRate < 0.35 ? COLORS.red : hpRate < 0.68 ? COLORS.gold : COLORS.green, 1);
+      const threatLabel = hpRate < 0.35 || this.morale < 35
+        ? "붕괴 위험 · 즉시 복구 필요"
+        : hpRate < 0.68 || this.morale < 70
+          ? "방어선 압박 · 보강 권장"
+          : "방어 안정";
+      this.ui.threat.setText(threatLabel);
+      this.ui.threat.setColor(hpRate < 0.35 || this.morale < 35 ? "#ff7771" : hpRate < 0.68 || this.morale < 70 ? "#ffd86b" : "#9ff5ad");
     }
   }
 

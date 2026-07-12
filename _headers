@@ -9,3 +9,24 @@
 
 /solo-leveling/asset-preview-light-swordswoman*
   X-Robots-Tag: noindex, nofollow, noimageindex
+
+/school-zombie-defense
+  Cache-Control: public, max-age=0, must-revalidate
+
+/school-zombie-defense/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/school-zombie-defense/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/school-zombie-defense/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/school-zombie-defense/css/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/school-zombie-defense/assets/images/*
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+
+/school-zombie-defense/assets/sounds/*
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
