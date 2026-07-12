@@ -31,6 +31,7 @@ class ActionSpec:
     output_width: int
     output_height: int
     hair: str
+    alias_frame_zero: bool = False
 
 
 SPECS = (
@@ -38,25 +39,27 @@ SPECS = (
         character="a",
         action="attack",
         base_name="character-a.png",
-        # Keep the approved base pose as the anticipation frame and discard
-        # the old frame where the bow vanished completely.
+        # The approved base pose is the anticipation frame. Runtime aliases it
+        # as attack frame zero, so only the three distinct follow-up strips
+        # remain as source files.
         source_names=(
             "character-a.png",
-            "character-a-attack-0.png",
             "character-a-attack-1.png",
+            "character-a-attack-2.png",
             "character-a-attack-3.png",
         ),
-        expected_source_widths=(2592, 2592, 2592, 2592),
+        expected_source_widths=(4608, 4608, 4608, 4608),
         output_width=512,
         output_height=800,
         hair="pink",
+        alias_frame_zero=True,
     ),
     ActionSpec(
         character="f",
         action="throw",
         base_name="character-f.png",
         source_names=tuple(f"character-f-throw-{frame}.png" for frame in range(4)),
-        expected_source_widths=(2565, 2565, 2565, 2565),
+        expected_source_widths=(4608, 4608, 4608, 4608),
         output_width=512,
         output_height=640,
         hair="red",
@@ -228,6 +231,8 @@ def rebuild(spec: ActionSpec) -> None:
             )
 
     for frame, cells in enumerate(output_frames):
+        if frame == 0 and spec.alias_frame_zero:
+            continue
         save_strip(cells, IMAGE_DIR / f"character-{spec.character}-{spec.action}-{frame}.png")
 
 
@@ -241,7 +246,11 @@ def verify(spec: ActionSpec) -> None:
             base_bbox[3] - largest_hair_component_top(base_cell, spec.hair)
         )
     for frame in range(4):
-        path = IMAGE_DIR / f"character-{spec.character}-{spec.action}-{frame}.png"
+        path = (
+            IMAGE_DIR / spec.base_name
+            if frame == 0 and spec.alias_frame_zero
+            else IMAGE_DIR / f"character-{spec.character}-{spec.action}-{frame}.png"
+        )
         image = Image.open(path).convert("RGBA")
         if image.size != expected_size:
             raise ValueError(f"Unexpected size for {path.name}: {image.size}")
