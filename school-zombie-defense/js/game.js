@@ -50,6 +50,7 @@
   };
   const CHARACTER_ASSET_VERSION = "20260712-character-audit-v5";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
+  const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
@@ -221,15 +222,17 @@
     "projectile-nail": { texture: "muzzle-rifle", width: 34, duration: 95, alpha: 0.9, scalePeak: 1.12 }
   };
   const ZOMBIE_HIT_EFFECTS = {
-    "projectile-arrow": { texture: "zombie-hit-arrow-sheet", width: 44, duration: 240, alpha: 0.96, scalePeak: 1.08, rotation: 0.15, frameWidth: 96, frameHeight: 96, frames: 16 },
-    "projectile-pistol": { texture: "zombie-hit-pistol-sheet", width: 58, duration: 250, alpha: 0.98, scalePeak: 1.08, rotation: 0.2, frameWidth: 112, frameHeight: 96, frames: 16 },
-    "projectile-rifle": { texture: "zombie-hit-rifle-sheet", width: 70, duration: 260, alpha: 0.98, scalePeak: 1.08, rotation: 0.35, frameWidth: 140, frameHeight: 100, frames: 16 },
-    "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 150, duration: 300, alpha: 0.98, scalePeak: 1.16, rotation: 0.42, frameWidth: 150, frameHeight: 104, frames: 16 },
-    "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 106, duration: 320, alpha: 0.98, scalePeak: 1.1, rotation: 0.25, frameWidth: 160, frameHeight: 130, frames: 18 },
-    "projectile-nail": { texture: "zombie-hit-nail-sheet", width: 64, duration: 230, alpha: 0.98, scalePeak: 1.12, rotation: 0.18, frameWidth: 128, frameHeight: 128, frames: 4 },
-    explosion: { texture: "zombie-hit-rocket-sheet", width: 120, duration: 340, alpha: 0.94, scalePeak: 1.14, rotation: 0.45, frameWidth: 160, frameHeight: 130, frames: 18 },
-    default: { texture: "zombie-hit-pistol-sheet", width: 56, duration: 245, alpha: 0.94, scalePeak: 1.08, rotation: 0.28, frameWidth: 112, frameHeight: 96, frames: 16 }
+    "projectile-arrow": { texture: "zombie-hit-arrow-sheet", width: 42, duration: 210, alpha: 0.94, scalePeak: 1.03, rotation: 0.08, frameWidth: 96, frameHeight: 96, frames: 12 },
+    "projectile-pistol": { texture: "zombie-hit-pistol-sheet", width: 54, duration: 220, alpha: 0.96, scalePeak: 1.05, rotation: 0.1, frameWidth: 112, frameHeight: 96, frames: 12 },
+    "projectile-rifle": { texture: "zombie-hit-rifle-sheet", width: 72, duration: 235, alpha: 0.96, scalePeak: 1.06, rotation: 0.12, frameWidth: 140, frameHeight: 100, frames: 14 },
+    "projectile-sniper": { texture: "zombie-hit-sniper-sheet", width: 132, duration: 285, alpha: 0.9, scalePeak: 1.1, rotation: 0.16, originX: 0.24, frameWidth: 150, frameHeight: 104, frames: 16 },
+    "projectile-rocket": { texture: "zombie-hit-rocket-sheet", width: 116, duration: 300, alpha: 0.96, scalePeak: 1.08, rotation: 0.12, frameWidth: 160, frameHeight: 130, frames: 16 },
+    "projectile-nail": { texture: "zombie-hit-nail-sheet", width: 52, duration: 195, alpha: 0.95, scalePeak: 1.04, rotation: 0.08, frameWidth: 128, frameHeight: 128, frames: 12 },
+    explosion: { texture: "zombie-hit-rocket-sheet", width: 128, duration: 330, alpha: 0.94, scalePeak: 1.12, rotation: 0.18, frameWidth: 160, frameHeight: 130, frames: 16 },
+    default: { texture: "zombie-hit-pistol-sheet", width: 52, duration: 215, alpha: 0.92, scalePeak: 1.04, rotation: 0.1, frameWidth: 112, frameHeight: 96, frames: 12 }
   };
+  const FIRE_ZONE_ANIMATION_FRAMES = 8;
+  const SHOCK_EFFECT_OUTER_COLOR = 0x8f9dff;
   const ZOMBIE_CORPSE_EFFECTS = {
     small: { stainWidth: 54, stainHeight: 34, fall: 250, corpseHold: 24000, corpseFade: 650 },
     normal: { stainWidth: 70, stainHeight: 42, fall: 285, corpseHold: 24000, corpseFade: 700 },
@@ -243,6 +246,17 @@
     "blood-stain-direction-1",
     "blood-stain-heavy-1"
   ];
+  const BLOOD_STAIN_TEXTURES_BY_HIT = {
+    "projectile-arrow": ["blood-stain-direction-1", "blood-stain-smear-1", "blood-stain-splatter-1"],
+    "projectile-pistol": ["blood-stain-splatter-1", "blood-stain-pool-1", "blood-stain-direction-1"],
+    "projectile-rifle": ["blood-stain-direction-1", "blood-stain-splatter-1", "blood-stain-smear-1"],
+    "projectile-sniper": ["blood-stain-direction-1", "blood-stain-splatter-1", "blood-stain-heavy-1"],
+    "projectile-rocket": ["blood-stain-heavy-1", "blood-stain-pool-2", "blood-stain-splatter-1"],
+    "projectile-firebomb": ["blood-stain-heavy-1", "blood-stain-pool-2", "blood-stain-smear-1"],
+    "projectile-shock": ["blood-stain-pool-1", "blood-stain-smear-1", "blood-stain-splatter-1"],
+    "projectile-nail": ["blood-stain-direction-1", "blood-stain-splatter-1", "blood-stain-pool-1"],
+    explosion: ["blood-stain-heavy-1", "blood-stain-pool-2", "blood-stain-splatter-1"]
+  };
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
   const ZOMBIE_CORPSE_TYPES = [
@@ -2069,17 +2083,17 @@
       this.load.image("skill-fire-fuel", imageAsset("assets/images/skill-fire-fuel.png"));
       this.load.image("skill-shock-amplifier", imageAsset("assets/images/skill-shock-amplifier.png"));
       this.load.image("skill-engineer-nail", imageAsset("assets/images/skill-engineer-nail.png"));
-      this.load.spritesheet("zombie-hit-arrow-sheet", imageAsset("assets/images/zombie-hit-arrow-sheet.png"), { frameWidth: 96, frameHeight: 96 });
-      this.load.spritesheet("zombie-hit-pistol-sheet", imageAsset("assets/images/zombie-hit-pistol-sheet.png"), { frameWidth: 112, frameHeight: 96 });
-      this.load.spritesheet("zombie-hit-rifle-sheet", imageAsset("assets/images/zombie-hit-rifle-sheet.png"), { frameWidth: 140, frameHeight: 100 });
-      this.load.spritesheet("zombie-hit-rocket-sheet", imageAsset("assets/images/zombie-hit-rocket-sheet.png"), { frameWidth: 160, frameHeight: 130 });
-      this.load.spritesheet("zombie-hit-sniper-sheet", imageAsset("assets/images/zombie-hit-sniper-sheet.png"), { frameWidth: 150, frameHeight: 104 });
-      this.load.spritesheet("zombie-hit-nail-sheet", imageAsset("assets/images/zombie-hit-nail-sheet.png"), { frameWidth: 128, frameHeight: 128 });
-      this.load.spritesheet("effect-fire-zone-sheet", imageAsset("assets/images/effect-fire-zone-sheet.png"), { frameWidth: 256, frameHeight: 160 });
+      this.load.spritesheet("zombie-hit-arrow-sheet", versionedImageAsset("assets/images/zombie-hit-arrow-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 96, frameHeight: 96 });
+      this.load.spritesheet("zombie-hit-pistol-sheet", versionedImageAsset("assets/images/zombie-hit-pistol-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 112, frameHeight: 96 });
+      this.load.spritesheet("zombie-hit-rifle-sheet", versionedImageAsset("assets/images/zombie-hit-rifle-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 140, frameHeight: 100 });
+      this.load.spritesheet("zombie-hit-rocket-sheet", versionedImageAsset("assets/images/zombie-hit-rocket-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 160, frameHeight: 130 });
+      this.load.spritesheet("zombie-hit-sniper-sheet", versionedImageAsset("assets/images/zombie-hit-sniper-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 150, frameHeight: 104 });
+      this.load.spritesheet("zombie-hit-nail-sheet", versionedImageAsset("assets/images/zombie-hit-nail-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 128, frameHeight: 128 });
+      this.load.spritesheet("effect-fire-zone-sheet", versionedImageAsset("assets/images/effect-fire-zone-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 256, frameHeight: 160 });
       this.load.image("barbed-wire", imageAsset("assets/images/barbed-wire.png"));
       this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
-      this.load.image("blood-burst-core", imageAsset("assets/images/blood-burst-core.png"));
-      BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
+      this.load.image("blood-burst-core", versionedImageAsset("assets/images/blood-burst-core.png", COMBAT_EFFECT_ASSET_VERSION));
+      BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, versionedImageAsset(`assets/images/${key}.png`, COMBAT_EFFECT_ASSET_VERSION)));
       Object.values(ZOMBIE_CORPSE_TEXTURES)
         .flat()
         .forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
@@ -3871,7 +3885,7 @@
         spark.lineTo(x, y);
       }
       spark.strokePath();
-      spark.lineStyle(5, SKILL_ACCENTS.shock, 0.32);
+      spark.lineStyle(5, SHOCK_EFFECT_OUTER_COLOR, 0.32);
       spark.beginPath();
       spark.moveTo(startX, startY);
       spark.lineTo(x, y);
@@ -6110,14 +6124,26 @@
         return;
       }
       zombie.wireCooldown = 0.58;
+      const wireImpactPoint = {
+        x: zombie.x + rand(-8, 8),
+        y: footY - Math.max(8, (zombie.displayH || 170) * 0.08),
+        angle: zombie.x < GAME_WIDTH * 0.5 ? Math.PI * 0.08 : Math.PI * 0.92
+      };
+      this.createWorldHitEffect(
+        wireImpactPoint.x,
+        wireImpactPoint.y,
+        "projectile-nail",
+        wireImpactPoint.angle,
+        this.getZombieEffectScale(zombie) * 0.78
+      );
       this.damageZombie(
         zombie,
         BARBED_WIRE_DAMAGE_PER_TICK * this.barbedWire.damageScale,
         0,
         "projectile-nail",
         1,
-        null,
-        { applyKnockback: false }
+        wireImpactPoint,
+        { applyKnockback: false, showHitEffect: false }
       );
       if (zombie.active) {
         zombie.slowTimer = Math.max(zombie.slowTimer || 0, this.barbedWire.slowDuration);
@@ -6358,6 +6384,13 @@
             const hitTarget = target.active && target.hp > 0
               ? target
               : this.findTarget(impactX, 92, null, this.bounds.autoEngageTop);
+            if (hitTarget) {
+              this.createFirebombHitEffect(hitTarget, false, {
+                x: impactX,
+                y: impactY,
+                angle: Math.atan2(impactY - startY, impactX - startX)
+              });
+            }
             const fireZonePoint = hitTarget
               ? this.getZombieFootPoint(hitTarget)
               : { x: impactX, y: impactY };
@@ -6680,12 +6713,12 @@
         link.strokePath();
       };
       link.clear();
-      drawPath(9, SKILL_ACCENTS.shock, 0.18);
-      drawPath(4, SKILL_ACCENTS.shock, 0.52);
+      drawPath(9, SHOCK_EFFECT_OUTER_COLOR, 0.18);
+      drawPath(4, SHOCK_EFFECT_OUTER_COLOR, 0.52);
       drawPath(1.6, 0xffffff, 0.9);
       link.fillStyle(0xffffff, 0.55);
       link.fillCircle(start.x, start.y, 2.4);
-      link.fillStyle(SKILL_ACCENTS.shock, 0.48);
+      link.fillStyle(SHOCK_EFFECT_OUTER_COLOR, 0.48);
       link.fillCircle(end.x, end.y, 4.2);
       link.setDepth((bullet.sprite.depth || 190) - 0.8);
     }
@@ -6799,7 +6832,14 @@
             this.createShockChain(zombie, impactPoint, bullet);
           }
           if (bullet.splashRadius > 0) {
-            this.createExplosion(impactPoint.x, impactPoint.y, bullet.splashRadius, bullet.damage * (bullet.splashDamageScale || 0.75), bullet.slowDuration);
+            this.createExplosion(
+              impactPoint.x,
+              impactPoint.y,
+              bullet.splashRadius,
+              bullet.damage * (bullet.splashDamageScale || 0.75),
+              bullet.slowDuration,
+              { showCenterEffect: false }
+            );
           }
           if (bullet.pierce > 0 && !shouldRemove) {
             bullet.pierce -= 1;
@@ -6844,8 +6884,7 @@
       const firePatch = this.trackTransient(this.add.sprite(zoneX, zoneY, "effect-fire-zone-sheet", 0)
         .setOrigin(0.5, 0.62)
         .setDisplaySize(visualRadius * 2.25, visualRadius * 1.22)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setAlpha(0.95)
+        .setAlpha(0.92)
         .setDepth(70 + zoneY / 15));
       const embers = [];
       for (let i = 0; i < 4; i += 1) {
@@ -6944,12 +6983,12 @@
           zone.frameTimer -= dt;
           if (zone.frameTimer <= 0) {
             zone.frameTimer += zone.frameDuration;
-            zone.frame = (zone.frame + 1) % 4;
+            zone.frame = (zone.frame + 1) % FIRE_ZONE_ANIMATION_FRAMES;
             zone.sprite.setFrame(zone.frame);
           }
           zone.sprite
             .setDisplaySize(zone.visualRadius * 2.25 * (1 + progress * 0.08) * pulse, zone.visualRadius * 1.22 * (1 + progress * 0.03))
-            .setAlpha(0.95 * fade);
+            .setAlpha(0.92 * fade);
         }
         (zone.embers || []).forEach((ember, index) => {
           if (!ember || ember.destroyed) {
@@ -7039,7 +7078,7 @@
         }
         arc.strokePath();
       };
-      drawLine(7, SKILL_ACCENTS.shock, alpha * 0.5);
+      drawLine(7, SHOCK_EFFECT_OUTER_COLOR, alpha * 0.5);
       drawLine(3, 0xffffff, alpha);
       this.tweens.add({
         targets: arc,
@@ -7841,6 +7880,51 @@
       }
     }
 
+    createImpactSprite(effect, hitPoint, sizeScale, rotation, depth) {
+      const displayWidth = effect.width * sizeScale;
+      const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
+      const impact = this.trackHitEffectRoot(this.trackTransient(this.add.sprite(
+        hitPoint.x,
+        hitPoint.y,
+        effect.texture,
+        0
+      )
+        .setOrigin(effect.originX === undefined ? 0.5 : effect.originX, effect.originY === undefined ? 0.5 : effect.originY)
+        .setDisplaySize(displayWidth, displayHeight)
+        .setRotation(rotation)
+        .setAlpha(effect.alpha)
+        .setDepth(depth)));
+      this.playTransientSpriteFrames(impact, effect.frames, effect.duration);
+
+      this.tweens.add({
+        targets: impact,
+        scaleX: impact.scaleX * effect.scalePeak,
+        scaleY: impact.scaleY * effect.scalePeak,
+        duration: effect.duration,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(impact, false)
+      });
+      this.tweens.add({
+        targets: impact,
+        alpha: 0,
+        delay: effect.duration * 0.68,
+        duration: effect.duration * 0.32,
+        ease: "Sine.easeIn"
+      });
+      return impact;
+    }
+
+    createWorldHitEffect(x, y, hitType = "explosion", angle = null, sizeScale = 1) {
+      if (!this.canSpawnHitEffect(false)) {
+        return null;
+      }
+      const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
+      const rotation = effect.alignToImpact === false || !Number.isFinite(angle)
+        ? rand(-effect.rotation, effect.rotation)
+        : angle + rand(-effect.rotation * 0.36, effect.rotation * 0.36);
+      return this.createImpactSprite(effect, { x, y }, sizeScale, rotation, 229 + y / 5);
+    }
+
     createZombieHitEffect(zombie, hitType = "default", crit = false, impactPoint = null) {
       if (hitType === "projectile-firebomb") {
         this.createFirebombHitEffect(zombie, crit, impactPoint);
@@ -7855,43 +7939,12 @@
       }
       const effect = ZOMBIE_HIT_EFFECTS[hitType] || ZOMBIE_HIT_EFFECTS.default;
       const sizeScale = this.getZombieEffectScale(zombie) * (crit ? 1.12 : 1);
-      const displayWidth = effect.width * sizeScale;
-      const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint, hitType, crit);
-      const followOffsetX = hitPoint.x - zombie.x;
-      const followOffsetY = hitPoint.y - zombie.y;
       const impactAngle = Number.isFinite(impactPoint?.angle) ? impactPoint.angle : null;
       const rotation = effect.alignToImpact === false || impactAngle === null
         ? rand(-effect.rotation, effect.rotation)
         : impactAngle + rand(-effect.rotation * 0.36, effect.rotation * 0.36);
-      const impact = this.trackHitEffectRoot(this.trackTransient(this.add.sprite(
-        hitPoint.x,
-        hitPoint.y,
-        effect.texture,
-        0
-      )
-        .setOrigin(0.5)
-        .setDisplaySize(displayWidth, displayHeight)
-        .setRotation(rotation)
-        .setAlpha(effect.alpha)
-        .setDepth(229 + zombie.y / 5)));
-      impact.followZombie = zombie;
-      impact.followOffsetX = followOffsetX;
-      impact.followOffsetY = followOffsetY;
-      if (!zombie.hitEffects) {
-        zombie.hitEffects = new Set();
-      }
-      zombie.hitEffects.add(impact);
-      this.playTransientSpriteFrames(impact, effect.frames, effect.duration);
-
-      this.tweens.add({
-        targets: impact,
-        scaleX: impact.scaleX * effect.scalePeak,
-        scaleY: impact.scaleY * effect.scalePeak,
-        duration: effect.duration,
-        ease: "Cubic.easeOut",
-        onComplete: () => this.destroyTransientObject(impact, false)
-      });
+      this.createImpactSprite(effect, hitPoint, sizeScale, rotation, 229 + zombie.y / 5);
     }
 
     damageZombie(zombie, amount, critChance = BASE_CRIT_CHANCE, hitType = "default", critMultiplier = DEFAULT_CRIT_MULTIPLIER, impactPoint = null, options = {}) {
@@ -7902,6 +7955,11 @@
       if (options.showHitEffect !== false) {
         this.createZombieHitEffect(zombie, hitType, crit, impactPoint);
       }
+      zombie.lastHitContext = {
+        type: hitType,
+        angle: Number.isFinite(impactPoint?.angle) ? impactPoint.angle : null,
+        crit
+      };
       zombie.hp -= damage;
       const hitSfxMap = {
         "projectile-shock": null,
@@ -8194,12 +8252,21 @@
       const bloodMaxSide = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.46) * rand(0.84, 1);
       const bloodX = landingX;
       const bloodY = landingY + corpseDisplayHeight * 0.06;
+      const lastHitContext = zombie.lastHitContext || {};
       const availableBloodTextures = this.textures && typeof this.textures.exists === "function"
         ? BLOOD_STAIN_TEXTURES.filter((key) => this.textures.exists(key))
         : [];
-      const bloodTexture = availableBloodTextures.length > 0
-        ? choose(availableBloodTextures)
+      const preferredBloodTextures = (BLOOD_STAIN_TEXTURES_BY_HIT[lastHitContext.type] || BLOOD_STAIN_TEXTURES)
+        .filter((key) => availableBloodTextures.includes(key));
+      const bloodTexturePool = preferredBloodTextures.length > 0
+        ? preferredBloodTextures
+        : availableBloodTextures;
+      const bloodTexture = bloodTexturePool.length > 0
+        ? choose(bloodTexturePool)
         : null;
+      const bloodRotation = bloodTexture === "blood-stain-direction-1" && Number.isFinite(lastHitContext.angle)
+        ? lastHitContext.angle + rand(-0.12, 0.12)
+        : corpseRotation + rand(-0.16, 0.16);
       const hasBloodFallback = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists("blood-burst-core");
@@ -8208,7 +8275,7 @@
       const createBloodStainImage = (textureKey, tint = null) => {
         const image = this.add.image(bloodX, bloodY, textureKey)
           .setOrigin(0.5)
-          .setRotation(corpseRotation + rand(-0.16, 0.16));
+          .setRotation(bloodRotation);
         const frameWidth = image.frame?.realWidth || image.frame?.width || bloodMaxSide;
         const frameHeight = image.frame?.realHeight || image.frame?.height || bloodMaxSide;
         const aspect = frameWidth / Math.max(1, frameHeight);
@@ -8281,6 +8348,9 @@
           .setAlpha(1)
           .setDepth(bodyDepth + 0.9))
         : null;
+      const bloodRevealDelay = deathSprite
+        ? deathPushDuration + effect.fall + 55
+        : Math.max(120, effect.fall - 45);
       let corpseRecord = null;
       const revealCorpseImage = () => {
         if (!corpseImage || corpseImage.destroyed) {
@@ -8299,12 +8369,14 @@
         scaleX: stainBaseScaleX,
         scaleY: stainBaseScaleY,
         alpha: 0.72,
+        delay: bloodRevealDelay,
         duration: 180,
         ease: "Cubic.easeOut"
       });
       this.tweens.add({
         targets: poolShade,
-        alpha: 0.28,
+        alpha: 0.22,
+        delay: bloodRevealDelay + 30,
         duration: 220,
         ease: "Cubic.easeOut"
       });
@@ -8591,7 +8663,10 @@
       this.playSfx(explosionSfx, clamp(radius / 100, 0.75, 1.2));
       this.shakeCamera(130, clamp(radius / 22000, 0.004, 0.009));
       this.requestHitStop(0.045);
-      const ring = this.trackTransient(this.add.circle(x, y, 18, 0xffd35a, 0.46).setStrokeStyle(4, 0xffffff, 0.55).setDepth(221));
+      if (options.showCenterEffect !== false) {
+        this.createWorldHitEffect(x, y, "explosion", null, clamp(radius / 92, 0.8, 1.35));
+      }
+      const ring = this.trackTransient(this.add.circle(x, y, 18, 0xff8a35, 0.28).setStrokeStyle(3, 0xffdba1, 0.44).setDepth(221));
       this.tweens.add({
         targets: ring,
         scale: radius / 18,
