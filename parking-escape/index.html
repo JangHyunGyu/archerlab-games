@@ -2,7 +2,7 @@
 <html lang="ko" class="menu-open">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#080d1a">
   <title>주차장 탈출 | Parking Escape - Free Car Parking Puzzle Game</title>
   <meta name="description" content="막힌 주차장에서 목표 차량을 출구까지 빼내는 무료 브라우저 퍼즐. Play Parking Escape, a free car parking puzzle and unblock car game.">
@@ -22,7 +22,7 @@
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="author" content="ArcherLab">
   <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
-  <link rel="stylesheet" href="css/style.css?v=20260710-menu-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260712-commercial-v3">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -52,7 +52,7 @@
     "isAccessibleForFree": true,
     "playMode": "SinglePlayer",
     "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
-    "dateModified": "2026-07-07"
+    "dateModified": "2026-07-12"
   }
   </script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
@@ -66,31 +66,30 @@
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
 </head>
 <body class="menu-open">
-  <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" class="archerlab-link" aria-label="ArcherLab 홈">ArcherLab</a>
-
   <main id="game-shell">
+    <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" class="archerlab-link" aria-label="ArcherLab 홈, 새 창에서 열기">ArcherLab</a>
     <div id="game-container" aria-label="주차 퍼즐 게임 화면"></div>
-    <button id="sound-toggle-btn" class="icon-btn sound-toggle icon-sound" type="button" aria-label="Sound on" aria-pressed="true" title="Sound on">
-      <span class="icon-tooltip" aria-hidden="true">Sound on</span>
+    <button id="sound-toggle-btn" class="icon-btn sound-toggle icon-sound" type="button" aria-label="사운드 켬" aria-pressed="true" title="사운드 켬">
+      <span class="icon-tooltip" aria-hidden="true">사운드 켬</span>
     </button>
 
-    <header id="hud" class="hud hidden" aria-live="polite">
+    <header id="hud" class="hud hidden" aria-label="게임 상태">
       <button id="home-btn" class="icon-btn icon-home" type="button" aria-label="메뉴" title="메뉴"><span class="icon-tooltip" aria-hidden="true">메뉴</span></button>
       <div class="stat">
         <span>레벨</span>
         <strong id="level-label">1</strong>
       </div>
       <div id="time-stat" class="stat stat-time">
-        <span>TIME</span>
+        <span>시간</span>
         <strong id="time-label">30</strong>
       </div>
       <div class="stat">
         <span>이동</span>
         <strong id="moves-label">0</strong>
       </div>
-      <div class="stat stat-wide">
-        <span>차량</span>
-        <strong id="left-label">0</strong>
+      <div class="stat stat-par">
+        <span>최소</span>
+        <strong id="par-label">-</strong>
       </div>
     </header>
 
@@ -109,23 +108,23 @@
         <div class="menu-control-bar">
           <div class="record-row">
             <div>
-              <span>BEST LV</span>
+              <span>최고 레벨</span>
               <strong id="best-level-label">1</strong>
             </div>
             <div>
-              <span>TIME LIMIT</span>
-              <strong id="best-moves-label">30s</strong>
+              <span>제한 시간</span>
+              <strong id="best-moves-label">30s+</strong>
             </div>
           </div>
           <div class="menu-actions menu-actions--menu">
-            <button id="play-btn" class="primary-btn" type="button">START</button>
-            <button id="rank-btn" class="secondary-btn" type="button">RANKING</button>
+            <button id="play-btn" class="primary-btn" type="button">시작</button>
+            <button id="rank-btn" class="secondary-btn" type="button">랭킹</button>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="loading-screen" class="loading-screen hidden" aria-live="assertive" aria-label="레벨 생성 중">
+    <section id="loading-screen" class="loading-screen hidden" role="status" aria-live="polite" aria-label="레벨 생성 중">
       <div class="loading-panel">
         <img class="loading-emblem"  src="assets/ui/parking-loading-badge.webp" data-png-fallback="assets/ui/parking-loading-badge.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true" decoding="async">
         <p class="brand-kicker">PARKING LOT</p>
@@ -138,34 +137,29 @@
       </div>
     </section>
 
-    <section id="complete-modal" class="modal modal-clear hidden" aria-live="polite">
+    <section id="complete-modal" class="modal modal-clear hidden" role="dialog" aria-modal="true" aria-labelledby="clear-title" tabindex="-1">
       <div class="modal-panel clear-panel">
-        <div class="clear-gate" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
         <p id="clear-kicker" class="brand-kicker">PARKING EXIT</p>
         <h2 id="clear-title">LEVEL CLEAR</h2>
         <div class="clear-stats">
           <div>
-            <span id="clear-moves-label">MOVE</span>
+            <span id="clear-moves-label">이동</span>
             <strong id="clear-moves">0</strong>
           </div>
           <div>
-            <span id="next-level-caption">NEXT</span>
+            <span id="next-level-caption">다음</span>
             <strong id="next-level-label">2</strong>
           </div>
           <div>
-            <span id="clear-level-caption">REACHED</span>
+            <span id="clear-level-caption">도달</span>
             <strong id="clear-level">0</strong>
           </div>
         </div>
         <div id="rank-submit-row" class="rank-submit-row">
-          <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="닉네임 (20자)">
+          <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="닉네임 (20자)" aria-label="랭킹 닉네임">
           <div class="rank-submit-buttons">
             <button id="submit-rank-btn" class="secondary-btn" type="button">등록</button>
-            <button id="skip-rank-btn" class="secondary-btn secondary-btn--ghost" type="button">Skip</button>
+            <button id="skip-rank-btn" class="secondary-btn secondary-btn--ghost" type="button">건너뛰기</button>
           </div>
           <div id="submit-status" class="submit-status" role="status" aria-live="polite"></div>
           <div id="rank-submit-progress" class="rank-submit-progress hidden" role="progressbar" aria-label="랭킹 등록 중">
@@ -178,10 +172,10 @@
       </div>
     </section>
 
-    <section id="rank-modal" class="modal hidden" aria-live="polite">
+    <section id="rank-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rank-title" tabindex="-1">
       <div class="modal-panel rank-panel">
         <p class="brand-kicker">TOP 20</p>
-        <h2>랭킹</h2>
+        <h2 id="rank-title">랭킹</h2>
         <div id="rank-content" class="rank-content">
           <div class="rank-loading">불러오는 중...</div>
         </div>
@@ -189,13 +183,14 @@
       </div>
     </section>
 
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
   </main>
 
   <script src="../assets/vendor/tone/tone-15.5.25.js" crossorigin="anonymous"></script>
   <script src="../assets/vendor/pixi/pixi-8.19.0.min.js"></script>
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
   <script src="js/SoundManager.js?v=20260627-start-once"></script>
-  <script src="js/main.js?v=20260710-menu-v1"></script>
+  <script src="js/PuzzleCatalog.js?v=20260712-progression-v1"></script>
+  <script src="js/main.js?v=20260712-commercial-v8"></script>
 </body>
 </html>
