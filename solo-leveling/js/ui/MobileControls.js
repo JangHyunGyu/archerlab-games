@@ -22,9 +22,14 @@ export class MobileControls {
         this.padX = 0;
         this.padY = 0;
         this.elements = [];
+        this.buttonElements = [];
+        this.buttonHitAreas = [];
+        this.actionButtonBounds = null;
+        this._modalOpen = false;
         this._onPointerDown = null;
         this._onPointerMove = null;
         this._onPointerUp = null;
+        this._onPostUpdate = null;
 
         this.baseRadius = uv(70);
         this.thumbRadius = uv(28);
@@ -34,6 +39,9 @@ export class MobileControls {
         if (this.isMobile) {
             this._setupFloatingJoystick();
             this._createButtons();
+            this._onPostUpdate = () => this._syncModalState();
+            this.scene.events.on('postupdate', this._onPostUpdate);
+            this._syncModalState(true);
         }
     }
 
@@ -45,21 +53,21 @@ export class MobileControls {
 
     _setupFloatingJoystick() {
         // Dark translucent base
-        this.joystickBase = this.scene.add.circle(0, 0, this.baseRadius, SYSTEM.BG_DEEP, 0.55)
+        this.joystickBase = this.scene.add.circle(0, 0, this.baseRadius, SYSTEM.BG_DEEP, 0.74)
             .setDepth(600).setScrollFactor(0)
-            .setStrokeStyle(1, SYSTEM.BORDER, 0.55)
+            .setStrokeStyle(2, SYSTEM.BORDER_DIM, 0.8)
             .setVisible(false);
 
         // Thin cyan ring
         this.joystickRing = this.scene.add.circle(0, 0, this.baseRadius + 4, 0x000000, 0)
             .setDepth(600).setScrollFactor(0)
-            .setStrokeStyle(1, SYSTEM.BORDER, 0.35)
+            .setStrokeStyle(2, SYSTEM.BORDER, 0.5)
             .setVisible(false);
 
         // Thumb — small angular look via circle + inner dot
-        this.joystickThumb = this.scene.add.circle(0, 0, this.thumbRadius, SYSTEM.BG_PANEL_HI, 0.85)
+        this.joystickThumb = this.scene.add.circle(0, 0, this.thumbRadius, SYSTEM.BG_PANEL_HI, 0.94)
             .setDepth(601).setScrollFactor(0)
-            .setStrokeStyle(1, SYSTEM.BORDER, 0.9)
+            .setStrokeStyle(2, SYSTEM.BORDER, 0.95)
             .setVisible(false);
         this.joystickThumbDot = this.scene.add.circle(0, 0, 3, SYSTEM.BORDER, 1)
             .setDepth(602).setScrollFactor(0)
@@ -67,8 +75,10 @@ export class MobileControls {
         this.elements.push(this.joystickBase, this.joystickRing, this.joystickThumb, this.joystickThumbDot);
 
         this._onPointerDown = (pointer) => {
+            this._syncModalState();
+            if (this._isStatusModalOpen()) return;
             if (this.pointerId !== null) return;
-            if (pointer.x > GAME_WIDTH - uv(80)) return;
+            if (this._isInActionButtonColumn(pointer.x)) return;
 
             this.pointerId = pointer.id;
             this.joystick.active = true;
@@ -82,6 +92,10 @@ export class MobileControls {
         };
 
         this._onPointerMove = (pointer) => {
+            if (this._isStatusModalOpen()) {
+                this._resetJoystick();
+                return;
+            }
             if (!this.joystick.active || pointer.id !== this.pointerId) return;
             this._updateThumb(pointer.x, pointer.y);
         };
@@ -135,19 +149,52 @@ export class MobileControls {
         this.joystick.y = 0;
         this.pointerId = null;
 
-        this.joystickRing.setVisible(false);
-        this.joystickBase.setVisible(false);
-        this.joystickThumb.setVisible(false);
-        this.joystickThumbDot.setVisible(false);
+        this.joystickRing?.setVisible(false);
+        this.joystickBase?.setVisible(false);
+        this.joystickThumb?.setVisible(false);
+        this.joystickThumbDot?.setVisible(false);
+    }
+
+    _isStatusModalOpen() {
+        return !!this.scene?.statusWindow?.isOpen;
+    }
+
+    _isInActionButtonColumn(pointerX) {
+        const bounds = this.actionButtonBounds;
+        if (!bounds) return false;
+        return pointerX >= bounds.x && pointerX <= bounds.x + bounds.width;
+    }
+
+    _syncModalState(force = false) {
+        if (!this.isMobile) return;
+        const modalOpen = this._isStatusModalOpen();
+        if (modalOpen) this._resetJoystick();
+        if (!force && modalOpen === this._modalOpen) return;
+
+        this._modalOpen = modalOpen;
+        this.buttonElements.forEach(el => {
+            if (el?.active) el.setVisible(!modalOpen);
+        });
+        this.buttonHitAreas.forEach(hit => {
+            if (!hit?.active) return;
+            if (modalOpen) hit.disableInteractive();
+            else hit.setInteractive({ useHandCursor: true });
+        });
     }
 
     _createButtons() {
         const isPortrait = GAME_HEIGHT > GAME_WIDTH;
-        const btnW = uv(isPortrait ? 52 : 58);
-        const btnH = uv(36);
+        const viewport = window.visualViewport;
+        const viewportW = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
+        const viewportH = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
+        const minTouch = Math.ceil(46 / cssPerUnit);
+        const btnH = Math.max(uv(42), minTouch);
+        const btnW = Math.max(uv(isPortrait ? 68 : 72), Math.ceil(minTouch * 1.25));
         const btnX = GAME_WIDTH - uv(12) - btnW;
         const statusY = isPortrait ? uv(70) : uv(118);
         const soundY = statusY + btnH + uv(10);
+        this.actionButtonBounds = { x: btnX, width: btnW };
 
         // Status button
         const statusPanel = UIAssets.createPanel(this.scene, btnX, statusY, btnW, btnH, {
@@ -160,9 +207,12 @@ export class MobileControls {
             borderAlpha: 0.8,
             borderWidth: 1,
             accent: SYSTEM.BORDER,
+            glow: 3,
+            variant: 'button',
+            surfaceLines: false,
             depth: 600,
             scrollFactor: 0,
-            hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.95, borderWidth: 2, glow: 4 },
+            hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.97, borderWidth: 2, glow: 6 },
         });
         const statusHit = UIAssets.createHitArea(this.scene, btnX, statusY, btnW, btnH, 601).setScrollFactor(0);
         const statusText = padText(this.scene.add.text(btnX + btnW / 2, statusY + btnH / 2, t('hudStatus'), {
@@ -171,11 +221,19 @@ export class MobileControls {
         }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
         fitText(statusText, btnW - uv(8), btnH - uv(4), 0.62);
         this.elements.push(statusPanel, statusHit, statusText);
+        this.buttonElements.push(statusPanel, statusHit, statusText);
+        this.buttonHitAreas.push(statusHit);
 
         statusHit.on('pointerover', () => statusPanel.setUIState('hover'));
         statusHit.on('pointerout', () => statusPanel.setUIState('normal'));
         statusHit.on('pointerdown', () => {
-            if (this.scene.statusWindow) this.scene.statusWindow.toggle();
+            if (this._isStatusModalOpen()) return;
+            statusPanel.setUIState('hover');
+            this.scene.time.delayedCall(110, () => statusPanel?.active && statusPanel.setUIState('normal'));
+            if (this.scene.statusWindow) {
+                this.scene.statusWindow.toggle();
+                this._syncModalState(true);
+            }
         });
 
         // Sound button
@@ -189,21 +247,30 @@ export class MobileControls {
             borderAlpha: 0.8,
             borderWidth: 1,
             accent: SYSTEM.BORDER,
+            glow: 3,
+            variant: 'button',
+            surfaceLines: false,
             depth: 600,
             scrollFactor: 0,
-            hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.95, borderWidth: 2, glow: 4 },
+            hover: { fill: SYSTEM.BG_PANEL_HI, fillAlpha: 0.97, borderWidth: 2, glow: 6 },
         });
         const soundHit = UIAssets.createHitArea(this.scene, btnX, soundY, btnW, btnH, 601).setScrollFactor(0);
-        this.soundBtnText = padText(this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, 'SND', {
+        const soundEnabled = this.scene.soundManager?.enabled !== false;
+        this.soundBtnText = padText(this.scene.add.text(btnX + btnW / 2, soundY + btnH / 2, soundEnabled ? 'SND' : 'MUTE', {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
-            color: SYSTEM.TEXT_CYAN,
+            color: soundEnabled ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED,
         }).setOrigin(0.5).setDepth(602).setScrollFactor(0), 2, 2);
         fitText(this.soundBtnText, btnW - uv(8), btnH - uv(4), 0.62);
         this.elements.push(soundPanel, soundHit, this.soundBtnText);
+        this.buttonElements.push(soundPanel, soundHit, this.soundBtnText);
+        this.buttonHitAreas.push(soundHit);
 
         soundHit.on('pointerover', () => soundPanel.setUIState('hover'));
         soundHit.on('pointerout', () => soundPanel.setUIState('normal'));
         soundHit.on('pointerdown', () => {
+            if (this._isStatusModalOpen()) return;
+            soundPanel.setUIState('hover');
+            this.scene.time.delayedCall(110, () => soundPanel?.active && soundPanel.setUIState('normal'));
             if (this.scene.soundManager) {
                 const enabled = this.scene.soundManager.toggleSound();
                 this.soundBtnText.setText(enabled ? 'SND' : 'MUTE');
@@ -214,7 +281,8 @@ export class MobileControls {
     }
 
     getJoystickState() {
-        if (!this.isMobile || !this.joystick.active) return null;
+        this._syncModalState();
+        if (!this.isMobile || this._isStatusModalOpen() || !this.joystick.active) return null;
 
         const mag = Math.sqrt(this.joystick.x * this.joystick.x + this.joystick.y * this.joystick.y);
         if (mag < this.deadZone) return { x: 0, y: 0 };
@@ -228,7 +296,14 @@ export class MobileControls {
     }
 
     updateLayout() {
-        // Joystick floats; buttons use GAME_WIDTH live binding.
+        // GameScene rebuilds controls after a resize. Refresh visibility and keep the
+        // exclusion strip tied to the live hit-area bounds in case this is called directly.
+        const activeHit = this.buttonHitAreas.find(hit => hit?.active);
+        if (activeHit?.getBounds) {
+            const bounds = activeHit.getBounds();
+            this.actionButtonBounds = { x: bounds.x, width: bounds.width };
+        }
+        this._syncModalState(true);
     }
 
     destroy() {
@@ -237,11 +312,18 @@ export class MobileControls {
             if (this._onPointerMove) this.scene.input.off('pointermove', this._onPointerMove);
             if (this._onPointerUp) this.scene.input.off('pointerup', this._onPointerUp);
         }
+        if (this._onPostUpdate && this.scene?.events) {
+            this.scene.events.off('postupdate', this._onPostUpdate);
+        }
         this.elements.forEach(el => { if (el && el.active) el.destroy(); });
         this.elements = [];
+        this.buttonElements = [];
+        this.buttonHitAreas = [];
+        this.actionButtonBounds = null;
         this._onPointerDown = null;
         this._onPointerMove = null;
         this._onPointerUp = null;
+        this._onPostUpdate = null;
         this.scene = null;
     }
 }

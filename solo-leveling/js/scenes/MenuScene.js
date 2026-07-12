@@ -318,25 +318,34 @@ export class MenuScene extends Phaser.Scene {
         const headerOriginX = isPortrait ? 0.5 : 0;
         const selectedCharacter = getCharacter(this.selectedCharacterId);
         const selectedText = getCharacterText(selectedCharacter);
+        const hasSave = GameScene.hasSavedGame();
 
+        let portraitHeroLayout = null;
         if (!isCompact) {
             const panelX = contentX - uv(26);
             const panelY = Math.max(uv(24), topY - uv(38));
-            const panelBottom = Math.min(GAME_HEIGHT - uv(48), topY + uv(500));
+            const panelBottom = GAME_HEIGHT - uv(44);
             const panel = this.add.graphics().setDepth(0);
             drawSystemPanel(panel, panelX, panelY, contentW + uv(52), panelBottom - panelY, {
                 cut: uv(14),
                 fill: SYSTEM.BG_PANEL,
-                fillAlpha: 0.54,
+                fillAlpha: 0.68,
                 border: SYSTEM.BORDER_DIM,
-                borderAlpha: 0.42,
+                borderAlpha: 0.56,
                 borderWidth: 1,
             });
-            panel.fillStyle(SYSTEM.BORDER, 0.82);
-            panel.fillRect(panelX + uv(2), panelY + uv(26), uv(3), uv(86));
+            panel.fillStyle(SYSTEM.BORDER, 0.88);
+            panel.fillRect(panelX + uv(2), panelY + uv(24), uv(3), uv(92));
+            panel.fillStyle(SYSTEM.BORDER_GOLD, 0.72);
+            panel.fillRect(panelX + uv(18), panelY + uv(2), uv(72), 2);
+            panel.lineStyle(1, SYSTEM.BORDER_DIM, 0.28);
+            panel.lineBetween(panelX + uv(20), panelBottom - uv(24), panelX + contentW + uv(32), panelBottom - uv(24));
             this._createHeroFocus(GAME_WIDTH / 2, pct => GAME_HEIGHT * pct, { isPortrait, isShortLandscape });
         } else if (isPortrait) {
-            this._createMobileHeroPortrait(GAME_WIDTH / 2, GAME_HEIGHT * 0.305);
+            portraitHeroLayout = this._createMobileHeroPortrait(
+                GAME_WIDTH / 2,
+                GAME_HEIGHT * (hasSave ? 0.258 : 0.32)
+            );
         } else if (isShortLandscape) {
             this._createMobileHeroPortrait(GAME_WIDTH * 0.72, GAME_HEIGHT * 0.54, { isShortLandscape: true });
         }
@@ -390,7 +399,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(headerOriginX, 0.5).setDepth(4);
         this._fitText(title, contentW, uv(isCompact ? 58 : 72));
 
-        const subtitle = this.add.text(headerX + (isPortrait ? 0 : uv(2)), topY + uv(isCompact ? 86 : 104), t('subtitle').replace(/\s+/g, ''), {
+        const subtitle = this.add.text(headerX + (isPortrait ? 0 : uv(2)), topY + uv(isCompact ? 86 : 104), t('subtitle'), {
             fontSize: fs(isShortLandscape ? 11 : 13),
             fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_CYAN,
@@ -400,6 +409,27 @@ export class MenuScene extends Phaser.Scene {
             align: isPortrait ? 'center' : 'left',
         }).setOrigin(headerOriginX, 0).setDepth(4);
         this._fitText(subtitle, contentW, uv(24));
+
+        if (!isShortLandscape) {
+            const titleRule = this.add.graphics().setDepth(4);
+            const ruleY = topY + uv(isCompact ? 116 : 132);
+            const ruleW = Math.min(contentW * (isPortrait ? 0.72 : 0.82), uv(isPortrait ? 360 : 320));
+            const ruleLeft = isPortrait ? headerX - ruleW / 2 : headerX;
+            titleRule.lineStyle(1, SYSTEM.BORDER, 0.54);
+            titleRule.lineBetween(ruleLeft, ruleY, ruleLeft + ruleW, ruleY);
+            titleRule.lineStyle(2, SYSTEM.BORDER_GOLD, 0.74);
+            titleRule.lineBetween(ruleLeft, ruleY, ruleLeft + Math.min(ruleW * 0.2, uv(62)), ruleY);
+            titleRule.fillStyle(SYSTEM.BORDER, 0.9);
+            const ruleTip = ruleLeft + ruleW;
+            const ruleNode = uv(4);
+            titleRule.beginPath();
+            titleRule.moveTo(ruleTip, ruleY - ruleNode);
+            titleRule.lineTo(ruleTip + ruleNode, ruleY);
+            titleRule.lineTo(ruleTip, ruleY + ruleNode);
+            titleRule.lineTo(ruleTip - ruleNode, ruleY);
+            titleRule.closePath();
+            titleRule.fillPath();
+        }
 
         if (!isShortLandscape) {
             const notice = this.add.text(headerX, topY + uv(isPortrait ? 126 : 144), t('menuMsg3'), {
@@ -415,18 +445,19 @@ export class MenuScene extends Phaser.Scene {
         }
 
         const hunterY = topY + uv(isShortLandscape ? 112 : (isPortrait ? 176 : 190));
-        const hunterLabel = this.add.text(headerX, hunterY, `[ SHADOW LINK · ${selectedText.name} · ${selectedText.archetype} ]`, {
-            fontSize: fs(isShortLandscape ? 9 : 10),
-            fontFamily: UI_FONT_KR,
-            fontStyle: 'bold',
-            color: selectedCharacter.accentText || SYSTEM.TEXT_CYAN,
-            stroke: '#02040a',
-            strokeThickness: 2,
-            align: isPortrait ? 'center' : 'left',
-        }).setOrigin(headerOriginX, 0).setDepth(4);
-        this._fitText(hunterLabel, contentW, uv(22));
+        if (!isPortrait) {
+            const hunterLabel = this.add.text(headerX, hunterY, `[ SHADOW LINK · ${selectedText.name} · ${selectedText.archetype} ]`, {
+                fontSize: fs(isShortLandscape ? 9 : 10),
+                fontFamily: UI_FONT_KR,
+                fontStyle: 'bold',
+                color: selectedCharacter.accentText || SYSTEM.TEXT_CYAN,
+                stroke: '#02040a',
+                strokeThickness: 2,
+                align: 'left',
+            }).setOrigin(headerOriginX, 0).setDepth(4);
+            this._fitText(hunterLabel, contentW, uv(22));
+        }
 
-        const hasSave = GameScene.hasSavedGame();
         const btnW = Math.min(contentW, uv(isPortrait ? 430 : (isCompact ? 420 : 340)));
         const btnX = isPortrait ? (GAME_WIDTH - btnW) / 2 : contentX;
         const secondaryW = Math.min(btnW * (isPortrait ? 0.88 : 0.84), uv(isPortrait ? 390 : 300));
@@ -448,8 +479,23 @@ export class MenuScene extends Phaser.Scene {
         let actionY;
         if (isPortrait) {
             const targetY = GAME_HEIGHT * (hasSave ? 0.39 : 0.49);
-            const minY = topY + uv(hasSave ? 260 : 302);
-            actionY = Math.min(GAME_HEIGHT - uv(176) - actionStackH, Math.max(targetY, minY));
+            const captionGap = uv(hasSave ? 18 : 24);
+            const preferredMaxY = GAME_HEIGHT - uv(176) - actionStackH;
+            const hardMaxY = GAME_HEIGHT - uv(52) - actionStackH;
+            let heroSafeY = portraitHeroLayout
+                ? portraitHeroLayout.captionBottom + captionGap
+                : 0;
+            if (portraitHeroLayout && heroSafeY > hardMaxY) {
+                portraitHeroLayout.hideCaption();
+                heroSafeY = portraitHeroLayout.heroBottom + captionGap;
+            }
+            if (portraitHeroLayout && heroSafeY > hardMaxY) {
+                portraitHeroLayout.hideHero();
+                heroSafeY = 0;
+            }
+            const minY = Math.max(topY + uv(hasSave ? 260 : 302), heroSafeY);
+            const maxY = minY > preferredMaxY ? hardMaxY : preferredMaxY;
+            actionY = Math.min(maxY, Math.max(targetY, minY));
         } else if (isShortLandscape) {
             actionY = Math.min(GAME_HEIGHT - uv(28) - actionStackH, topY + uv(144));
         } else {
@@ -725,9 +771,17 @@ export class MenuScene extends Phaser.Scene {
         if (this.textures.exists(key)) {
             const panel = this.add.image(x, y, key)
                 .setOrigin(0, 0)
-                .setDisplaySize(w, h)
                 .setAlpha(alpha)
                 .setDepth(depth);
+            if (key === 'ui_modal_master') {
+                // The generated master has a generous transparent bleed. Expand it so the
+                // actual gothic frame, rather than the source canvas, hugs the modal bounds.
+                panel
+                    .setPosition(x - w * 0.209, y - h * 0.232)
+                    .setDisplaySize(w * 1.414, h * 1.49);
+            } else {
+                panel.setDisplaySize(w, h);
+            }
             if (tint !== null) panel.setTint(tint);
             return panel;
         }
@@ -784,14 +838,31 @@ export class MenuScene extends Phaser.Scene {
 
         if (queued.length === 0) {
             SpriteFactory.createAll(this);
-            return Promise.resolve();
+            return Promise.resolve(true);
         }
 
         return new Promise((resolve) => {
-            const dim = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x02040a, 0.58)
+            const cx = GAME_WIDTH / 2;
+            const cy = GAME_HEIGHT / 2;
+            const panelW = Math.min(uv(500), GAME_WIDTH - uv(44));
+            const panelH = Math.min(uv(220), GAME_HEIGHT - uv(54));
+            const panelX = cx - panelW / 2;
+            const panelY = cy - panelH / 2;
+            const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x02040a, 0.84)
                 .setDepth(218)
                 .setInteractive();
-            const loadingIcon = this._addMenuIcon('icon_loading_core', GAME_WIDTH / 2, GAME_HEIGHT / 2 - uv(58), uv(46), 220, 0.95);
+            const panel = this.add.graphics().setDepth(219);
+            drawSystemPanel(panel, panelX, panelY, panelW, panelH, {
+                cut: uv(12), fill: SYSTEM.BG_PANEL, fillAlpha: 0.97,
+                border: SYSTEM.BORDER, borderAlpha: 0.86, borderWidth: 1,
+            });
+            drawSystemPanel(panel, panelX + uv(7), panelY + uv(7), panelW - uv(14), panelH - uv(14), {
+                cut: uv(8), fill: SYSTEM.BG_PANEL, fillAlpha: 0,
+                border: SYSTEM.BORDER_DIM, borderAlpha: 0.34, borderWidth: 1,
+            });
+            const innerShade = this.add.rectangle(cx, cy + uv(4), panelW - uv(118), panelH - uv(82), 0x02040a, 0.48)
+                .setDepth(219.2);
+            const loadingIcon = this._addMenuIcon('icon_loading_core', cx, cy - uv(58), uv(46), 220, 0.98);
             if (loadingIcon) {
                 loadingIcon.setBlendMode(Phaser.BlendModes.ADD);
                 this.tweens.add({
@@ -802,21 +873,47 @@ export class MenuScene extends Phaser.Scene {
                     ease: 'Linear',
                 });
             }
-            const loading = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - uv(12), 'LOADING DUNGEON...', {
-                fontSize: fs(13),
-                fontFamily: UI_FONT_MONO,
-                color: SYSTEM.TEXT_CYAN,
+            const loading = this.add.text(cx, cy - uv(20), t('loading'), {
+                fontSize: fs(17),
+                fontFamily: UI_FONT_KR,
+                fontStyle: 'bold',
+                color: SYSTEM.TEXT_BRIGHT,
                 stroke: '#02040a',
-                strokeThickness: 3,
+                strokeThickness: 4,
             }).setOrigin(0.5).setDepth(220);
-            const progress = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + uv(18), '000 %', {
-                fontSize: fs(10),
+            const status = this.add.text(cx, cy + uv(8), '[ GATE LINK · ASSET SYNC ]', {
+                fontSize: fs(9),
                 fontFamily: UI_FONT_MONO,
                 color: SYSTEM.TEXT_CYAN_DIM,
             }).setOrigin(0.5).setDepth(220);
+            const barW = Math.max(uv(160), panelW - uv(176));
+            const barY = cy + uv(39);
+            const barBg = this.add.rectangle(cx - barW / 2, barY, barW, uv(7), 0x061522, 0.98)
+                .setOrigin(0, 0.5)
+                .setStrokeStyle(1, SYSTEM.BORDER_DIM, 0.72)
+                .setDepth(220);
+            const barFill = this.add.rectangle(cx - barW / 2, barY, 2, uv(5), SYSTEM.BORDER, 1)
+                .setOrigin(0, 0.5)
+                .setDepth(221);
+            const progress = this.add.text(cx, cy + uv(62), '000 %  ·  00 / 00', {
+                fontSize: fs(10),
+                fontFamily: UI_FONT_MONO,
+                color: SYSTEM.TEXT_CYAN,
+                stroke: '#02040a',
+                strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(220);
+
+            this._fitText(loading, panelW - uv(120), uv(30));
+            this._fitText(status, panelW - uv(138), uv(18));
 
             const onProgress = (value) => {
-                progress.setText(String(Math.floor(value * 100)).padStart(3, '0') + ' %');
+                const ratio = Phaser.Math.Clamp(value, 0, 1);
+                const percent = Math.floor(ratio * 100);
+                const loaded = Math.min(queued.length, Math.round(ratio * queued.length));
+                barFill.setDisplaySize(Math.max(2, barW * ratio), uv(5));
+                progress.setText(
+                    `${String(percent).padStart(3, '0')} %  ·  ${String(loaded).padStart(2, '0')} / ${String(queued.length).padStart(2, '0')}`
+                );
             };
             const onError = (file) => {
                 const fallback = fallbackMap.get(file.key);
@@ -839,8 +936,13 @@ export class MenuScene extends Phaser.Scene {
                 if (onShutdown) this.events.off('shutdown', onShutdown);
                 if (loadingIcon?.active) this.tweens.killTweensOf(loadingIcon);
                 if (dim.active) dim.destroy();
+                if (panel?.active) panel.destroy();
+                if (innerShade.active) innerShade.destroy();
                 if (loadingIcon?.active) loadingIcon.destroy();
                 if (loading.active) loading.destroy();
+                if (status.active) status.destroy();
+                if (barBg.active) barBg.destroy();
+                if (barFill.active) barFill.destroy();
                 if (progress.active) progress.destroy();
             };
             const finish = (assetsReady) => {
@@ -933,6 +1035,14 @@ export class MenuScene extends Phaser.Scene {
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
             .setDepth(8)
             .setInteractive({ useHandCursor: true });
+        const icon = this._addMenuIcon(
+            'icon_resume',
+            x + Math.min(uv(48), w * 0.16),
+            y + h / 2,
+            Math.min(uv(30), h * 0.34),
+            7,
+            0.88
+        );
         const titleText = this.add.text(x + w / 2, y + h * 0.43, title, {
             fontSize: fs(isNarrow ? 17 : 19),
             fontFamily: UI_FONT_KR,
@@ -954,12 +1064,14 @@ export class MenuScene extends Phaser.Scene {
         hit.on('pointerover', () => {
             if (this.textures.exists(hoverKey)) bg.setTexture(hoverKey).setDisplaySize(w, h);
             bg.setAlpha(1);
+            if (icon?.active) icon.setAlpha(1);
             titleText.setScale(titleScale * 1.02);
             metaText.setScale(metaScale * 1.02);
         });
         hit.on('pointerout', () => {
             bg.setTexture(normalKey).setDisplaySize(w, h);
             bg.setAlpha(0.98);
+            if (icon?.active) icon.setAlpha(0.88);
             titleText.setScale(titleScale);
             metaText.setScale(metaScale);
         });
@@ -988,6 +1100,14 @@ export class MenuScene extends Phaser.Scene {
         const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
             .setDepth(8)
             .setInteractive({ useHandCursor: true });
+        const icon = this._addMenuIcon(
+            primary ? 'icon_play' : 'icon_ranking',
+            x + Math.min(uv(48), w * 0.16),
+            y + h / 2,
+            Math.min(uv(primary ? 31 : 27), h * (primary ? 0.34 : 0.32)),
+            7,
+            primary ? 0.96 : 0.82
+        );
         const txt = this.add.text(x + w / 2, y + h / 2, label, {
             fontSize: fs(labelSize),
             fontFamily: labelFont,
@@ -1001,11 +1121,13 @@ export class MenuScene extends Phaser.Scene {
         hit.on('pointerover', () => {
             if (this.textures.exists(hoverKey)) bg.setTexture(hoverKey).setDisplaySize(w, h);
             bg.setAlpha(1);
+            if (icon?.active) icon.setAlpha(1);
             txt.setScale(baseScale * 1.02);
         });
         hit.on('pointerout', () => {
             bg.setTexture(normalKey).setDisplaySize(w, h);
             bg.setAlpha(primary ? 0.99 : 0.94);
+            if (icon?.active) icon.setAlpha(primary ? 0.96 : 0.82);
             txt.setScale(baseScale);
         });
         hit.on('pointerdown', () => onClick && onClick());
@@ -1013,24 +1135,85 @@ export class MenuScene extends Phaser.Scene {
 
     _createMobileHeroPortrait(x, y, { isShortLandscape = false } = {}) {
         const character = getCharacter(this.selectedCharacterId);
+        const characterText = getCharacterText(character);
         const heroKey = this._getCharacterHeroTexture(character);
         if (!this.textures.exists(heroKey)) return;
 
-        const size = uv(isShortLandscape ? 86 : 150);
+        const size = uv(isShortLandscape ? 118 : 188);
+        const backplate = this.add.graphics().setDepth(2);
+        backplate.fillStyle(0x02040a, 0.54);
+        backplate.fillCircle(x, y, size * 0.53);
+        backplate.lineStyle(2, character.accent, 0.54);
+        backplate.strokeCircle(x, y, size * 0.51);
+        backplate.lineStyle(1, SYSTEM.BORDER_GOLD, 0.28);
+        backplate.strokeCircle(x, y, size * 0.56);
+        this._heroPreviewBackplate = backplate;
+
+        let glow = null;
         if (this.textures.exists('env_shadow_portal')) {
-            const glow = this.add.image(x, y, 'env_shadow_portal')
+            glow = this.add.image(x, y, 'env_shadow_portal')
                 .setDepth(1)
-                .setAlpha(0.14)
-                .setScale(isShortLandscape ? 0.68 : 1.0)
+                .setAlpha(isShortLandscape ? 0.22 : 0.28)
+                .setDisplaySize(size * 1.55, size * 1.55)
                 .setBlendMode(Phaser.BlendModes.ADD);
             this._heroPreviewAura = glow;
         }
 
         this._heroPreviewSprite = this.add.image(x, y, heroKey)
             .setDepth(3)
-            .setAlpha(isShortLandscape ? 0.72 : 0.64);
-        this._fitImageDisplay(this._heroPreviewSprite, heroKey, size, size * 1.12);
+            .setAlpha(isShortLandscape ? 0.94 : 0.98);
+        this._fitImageDisplay(this._heroPreviewSprite, heroKey, size, size);
         this._applyHeroPreviewMask(this._heroPreviewSprite, x, y, Math.min(this._heroPreviewSprite.displayWidth, this._heroPreviewSprite.displayHeight));
+        this._heroPreviewMaxW = size;
+        this._heroPreviewMaxH = size;
+
+        const captionW = Math.min(uv(isShortLandscape ? 238 : 286), GAME_WIDTH - uv(36));
+        const captionH = uv(isShortLandscape ? 42 : 52);
+        const captionX = x - captionW / 2;
+        const captionY = y + size * 0.58;
+        const captionPanel = this.add.graphics().setDepth(3.4);
+        drawSystemPanel(captionPanel, captionX, captionY, captionW, captionH, {
+            cut: uv(7),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0.9,
+            border: character.accent,
+            borderAlpha: 0.64,
+            borderWidth: 1,
+        });
+        const caption = this.add.text(x, captionY + captionH * 0.38, characterText.name, {
+            fontSize: fs(isShortLandscape ? 12 : 15),
+            fontFamily: UI_FONT_KR,
+            fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT,
+            stroke: '#02040a',
+            strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(4);
+        const captionMeta = this.add.text(x, captionY + captionH * 0.72, characterText.archetype, {
+            fontSize: fs(isShortLandscape ? 8 : 9),
+            fontFamily: UI_FONT_KR,
+            color: character.accentText || SYSTEM.TEXT_CYAN,
+            stroke: '#02040a',
+            strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(4);
+        this._fitText(caption, captionW - uv(30), captionH * 0.42);
+        this._fitText(captionMeta, captionW - uv(34), captionH * 0.26);
+        this._heroPreviewCaption = caption;
+        this._heroPreviewCaptionMeta = captionMeta;
+        return {
+            top: y - size * 0.56,
+            heroBottom: y + size * 0.56,
+            captionBottom: captionY + captionH,
+            hideCaption: () => {
+                captionPanel.setVisible(false);
+                caption.setVisible(false);
+                captionMeta.setVisible(false);
+            },
+            hideHero: () => {
+                [backplate, glow, this._heroPreviewSprite, captionPanel, caption, captionMeta]
+                    .filter(Boolean)
+                    .forEach(el => el.setVisible(false));
+            },
+        };
     }
 
     _applyHeroPreviewMask(image, x, y, diameter) {
@@ -1052,16 +1235,26 @@ export class MenuScene extends Phaser.Scene {
 
         const bgKey = this.textures.exists('shadow_gate_backdrop') ? 'shadow_gate_backdrop' : 'ai_dungeon_atmosphere';
         if (this.textures.exists(bgKey)) {
-            this._coverImage(bgKey, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT)
+            const usesGateArt = bgKey === 'shadow_gate_backdrop';
+            this._coverImage(bgKey, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, usesGateArt ? {
+                focusX: 0.72,
+                focusY: 0.52,
+                targetX: isPortrait ? 0.54 : 0.72,
+                targetY: isShortLandscape ? 0.47 : 0.52,
+            } : undefined)
                 .setDepth(-39)
                 .setAlpha(1);
         }
 
         const leftShadeW = isPortrait ? GAME_WIDTH : GAME_WIDTH * 0.58;
-        this.add.rectangle(leftShadeW / 2, GAME_HEIGHT / 2, leftShadeW, GAME_HEIGHT, 0x020611, isPortrait ? 0.3 : 0.38)
+        this.add.rectangle(leftShadeW / 2, GAME_HEIGHT / 2, leftShadeW, GAME_HEIGHT, 0x020611, isPortrait ? 0.36 : 0.38)
             .setDepth(-34);
-        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.08, GAME_WIDTH, GAME_HEIGHT * 0.2, 0x010309, isShortLandscape ? 0.28 : 0.14)
+        this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.08, GAME_WIDTH, GAME_HEIGHT * 0.2, 0x010309, isPortrait ? 0.32 : (isShortLandscape ? 0.28 : 0.14))
             .setDepth(-33);
+        if (isPortrait) {
+            this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, GAME_WIDTH, GAME_HEIGHT * 0.42, 0x010309, 0.3)
+                .setDepth(-33);
+        }
 
         if (!this._reduceMenuMotion && this.textures.exists('particle_glow')) {
             try {
@@ -1089,27 +1282,57 @@ export class MenuScene extends Phaser.Scene {
         }
     }
 
-    _coverImage(key, x, y, w, h) {
+    _coverImage(key, x, y, w, h, { focusX = 0.5, focusY = 0.5, targetX = 0.5, targetY = 0.5 } = {}) {
         const img = this.add.image(x, y, key).setOrigin(0.5);
         const source = this.textures.get(key)?.getSourceImage?.();
         const iw = Math.max(source?.width || w, 1);
         const ih = Math.max(source?.height || h, 1);
-        img.setScale(Math.max(w / iw, h / ih));
+        const scale = Math.max(w / iw, h / ih);
+        const renderW = iw * scale;
+        const renderH = ih * scale;
+        const left = x - w / 2;
+        const top = y - h / 2;
+        const desiredFocusX = left + w * Phaser.Math.Clamp(targetX, 0, 1);
+        const desiredFocusY = top + h * Phaser.Math.Clamp(targetY, 0, 1);
+        const rawX = desiredFocusX - (Phaser.Math.Clamp(focusX, 0, 1) - 0.5) * renderW;
+        const rawY = desiredFocusY - (Phaser.Math.Clamp(focusY, 0, 1) - 0.5) * renderH;
+        const minX = left + w - renderW / 2;
+        const maxX = left + renderW / 2;
+        const minY = top + h - renderH / 2;
+        const maxY = top + renderH / 2;
+        img.setPosition(
+            Phaser.Math.Clamp(rawX, Math.min(minX, maxX), Math.max(minX, maxX)),
+            Phaser.Math.Clamp(rawY, Math.min(minY, maxY), Math.max(minY, maxY))
+        );
+        img.setScale(scale);
         return img;
     }
 
     _createHeroFocus(centerX, cy, { isPortrait = false, isShortLandscape = false } = {}) {
         if (isPortrait || isShortLandscape) return;
 
+        const character = getCharacter(this.selectedCharacterId);
+        const characterText = getCharacterText(character);
+        const heroKey = this._getCharacterHeroTexture(character);
+        if (!this.textures.exists(heroKey)) return;
         const heroX = centerX + Math.min(GAME_WIDTH * 0.28, uv(390));
         const heroY = cy(0.52);
-        const ringSize = Math.min(uv(380), GAME_HEIGHT * 0.5);
+        const ringSize = Math.min(uv(430), GAME_HEIGHT * 0.56);
+
+        const backplate = this.add.graphics().setDepth(-17);
+        backplate.fillStyle(0x02040a, 0.42);
+        backplate.fillCircle(heroX, heroY, ringSize * 0.42);
+        backplate.lineStyle(2, character.accent, 0.38);
+        backplate.strokeCircle(heroX, heroY, ringSize * 0.4);
+        backplate.lineStyle(1, SYSTEM.BORDER_GOLD, 0.22);
+        backplate.strokeCircle(heroX, heroY, ringSize * 0.45);
+        this._heroPreviewBackplate = backplate;
 
         if (this.textures.exists('env_shadow_portal')) {
             this._heroPreviewAura = this.add.image(heroX, heroY, 'env_shadow_portal')
-                .setDepth(-16)
-                .setAlpha(0.24)
-                .setScale(ringSize / uv(260))
+                .setDepth(-16.5)
+                .setAlpha(0.3)
+                .setDisplaySize(ringSize * 1.22, ringSize * 1.22)
                 .setBlendMode(Phaser.BlendModes.ADD);
         }
 
@@ -1120,13 +1343,51 @@ export class MenuScene extends Phaser.Scene {
             .setTint(0x73dfff)
             .setBlendMode(Phaser.BlendModes.ADD);
 
-        this._heroPreviewSprite = this.add.image(heroX, heroY, 'char_original_shadow_monarch_portrait')
+        this._heroPreviewSprite = this.add.image(heroX, heroY, heroKey)
             .setDepth(-14)
-            .setAlpha(0.9)
-            .setDisplaySize(ringSize * 0.72, ringSize * 0.72);
-        this._applyHeroPreviewMask(this._heroPreviewSprite, heroX, heroY, ringSize * 0.72);
-        this._heroPreviewMaxW = ringSize * 0.72;
-        this._heroPreviewMaxH = ringSize * 0.86;
+            .setAlpha(0.98)
+            .setDisplaySize(ringSize * 0.8, ringSize * 0.8);
+        this._applyHeroPreviewMask(this._heroPreviewSprite, heroX, heroY, ringSize * 0.8);
+        this._heroPreviewMaxW = ringSize * 0.8;
+        this._heroPreviewMaxH = ringSize * 0.8;
+
+        const captionW = Math.min(uv(292), ringSize * 0.88);
+        const captionH = uv(58);
+        const captionX = heroX - captionW / 2;
+        const captionY = heroY + ringSize * 0.43;
+        const captionPanel = this.add.graphics().setDepth(-13.5);
+        drawSystemPanel(captionPanel, captionX, captionY, captionW, captionH, {
+            cut: uv(8),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0.9,
+            border: character.accent,
+            borderAlpha: 0.62,
+            borderWidth: 1,
+        });
+        captionPanel.fillStyle(SYSTEM.BORDER_GOLD, 0.64);
+        captionPanel.fillRect(captionX + uv(16), captionY + 1, uv(54), 2);
+        this._heroPreviewCaption = this.add.text(heroX, captionY + captionH * 0.38, characterText.name, {
+            fontSize: fs(15),
+            fontFamily: UI_FONT_KR,
+            fontStyle: 'bold',
+            color: SYSTEM.TEXT_BRIGHT,
+            stroke: '#02040a',
+            strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(-13);
+        this._heroPreviewCaptionMeta = this.add.text(
+            heroX,
+            captionY + captionH * 0.72,
+            `${characterText.archetype}  ·  HP ${character.stats.hp}  ·  ATK ${character.stats.attack}`,
+            {
+                fontSize: fs(9),
+                fontFamily: UI_FONT_KR,
+                color: character.accentText || SYSTEM.TEXT_CYAN,
+                stroke: '#02040a',
+                strokeThickness: 2,
+            }
+        ).setOrigin(0.5).setDepth(-13);
+        this._fitText(this._heroPreviewCaption, captionW - uv(28), captionH * 0.42);
+        this._fitText(this._heroPreviewCaptionMeta, captionW - uv(30), captionH * 0.26);
         this._refreshHeroPreview();
 
         if (!this._reduceMenuMotion) {
@@ -1144,15 +1405,27 @@ export class MenuScene extends Phaser.Scene {
 
     _refreshHeroPreview(character = getCharacter(this.selectedCharacterId)) {
         const texture = this._getCharacterHeroTexture(character);
+        const characterText = getCharacterText(character);
         if (this._heroPreviewSprite?.active && this.textures.exists(texture)) {
             this._heroPreviewSprite.setTexture(texture);
-            this._heroPreviewSprite.setAlpha(0.9);
+            this._heroPreviewSprite.setAlpha(0.98);
             this._fitImageDisplay(
                 this._heroPreviewSprite,
                 texture,
                 this._heroPreviewMaxW || uv(280),
                 this._heroPreviewMaxH || uv(320)
             );
+        }
+        if (this._heroPreviewCaption?.active) {
+            this._heroPreviewCaption.setText(characterText.name);
+        }
+        if (this._heroPreviewCaptionMeta?.active) {
+            const hasStats = this._heroPreviewCaptionMeta.text.includes('HP ');
+            this._heroPreviewCaptionMeta.setText(hasStats
+                ? `${characterText.archetype}  ·  HP ${character.stats.hp}  ·  ATK ${character.stats.attack}`
+                : characterText.archetype
+            );
+            this._heroPreviewCaptionMeta.setColor(character.accentText || SYSTEM.TEXT_CYAN);
         }
         if (this._heroPreviewAura?.active && this._heroPreviewAura.setFillStyle) {
             this._heroPreviewAura.setFillStyle(character.accent, 0.04);
@@ -1557,9 +1830,11 @@ export class MenuScene extends Phaser.Scene {
         const by = cy - boxH / 2;
 
         let boxFrame;
-        if (this.textures.exists('modal_frame_cyan')) {
+        const useMasterFrame = this.textures.exists('ui_modal_master')
+            && Math.abs(boxW / Math.max(1, boxH) - 4 / 3) <= 0.22;
+        if (useMasterFrame) {
             boxFrame = this._addBitmapPanel(bx, by, boxW, boxH, {
-                key: 'modal_frame_cyan',
+                key: 'ui_modal_master',
                 alpha: 0.98,
                 depth: depth + 2,
             });
@@ -1668,7 +1943,7 @@ export class MenuScene extends Phaser.Scene {
             const hit = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, 0x000000, 0)
                 .setDepth(depth + 8)
                 .setInteractive({ useHandCursor: true });
-            const portraitSize = Math.min(uv(isShortLandscape ? 54 : 62), cardH * 0.42);
+            const portraitSize = Math.min(uv(isShortLandscape ? 68 : 78), cardH * 0.46);
             const portraitKey = this._getCharacterPortraitTexture(character);
             const portrait = this.add.image(x + cardW / 2, y + cardH * 0.28, portraitKey)
                 .setDepth(depth + 6)
@@ -1754,9 +2029,11 @@ export class MenuScene extends Phaser.Scene {
         const bx = cx - boxW / 2;
         const by = cy - boxH / 2;
         let boxFrame;
-        if (this.textures.exists('modal_frame_cyan')) {
+        const useMasterFrame = this.textures.exists('ui_modal_master')
+            && Math.abs(boxW / Math.max(1, boxH) - 4 / 3) <= 0.22;
+        if (useMasterFrame) {
             boxFrame = this._addBitmapPanel(bx, by, boxW, boxH, {
-                key: 'modal_frame_cyan',
+                key: 'ui_modal_master',
                 alpha: 0.98,
                 depth: 101,
             });
@@ -1845,6 +2122,10 @@ export class MenuScene extends Phaser.Scene {
         const cy = GAME_HEIGHT / 2;
         const isPortrait = GAME_HEIGHT > GAME_WIDTH;
         const depth = 200;
+        const viewportW = window.innerWidth || GAME_WIDTH;
+        const viewportH = window.innerHeight || GAME_HEIGHT;
+        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
+        const minModalTouchH = Math.ceil(44 / cssPerUnit);
 
         const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.84)
             .setDepth(depth).setInteractive();
@@ -1869,20 +2150,38 @@ export class MenuScene extends Phaser.Scene {
             : (isCrampedLandscape
                 ? GAME_HEIGHT - uv(42)
                 : Math.min(uv(isShortLandscape ? 660 : 720), GAME_HEIGHT - uv(82)));
+        const isCrampedPortrait = isPortrait && (
+            GAME_HEIGHT / Math.max(1, GAME_WIDTH) < 1.52
+            || boxH < uv(760)
+            || (window.innerHeight || GAME_HEIGHT) <= 720
+        );
         const bx = cx - boxW / 2;
         const by = cy - boxH / 2;
         const safePadX = uv(isPortrait ? 72 : (isCrampedLandscape ? 82 : 116));
         const safeLeft = bx + safePadX;
         const safeRight = bx + boxW - safePadX;
         const safeW = safeRight - safeLeft;
-        const safeTop = by + uv(isPortrait ? 100 : 78);
-        const closeBtnH = uv(isCrampedLandscape ? 26 : (isPortrait ? 38 : 40));
-        const closeBtnY = by + boxH - uv(isCrampedLandscape ? 28 : (isPortrait ? 86 : 78));
-        const contentBottom = closeBtnY - uv(isCrampedLandscape ? 8 : (isPortrait ? 30 : 26));
+        const safeTop = by + (isCrampedPortrait
+            ? Math.min(uv(48), boxH * 0.065)
+            : uv(isPortrait ? 100 : 78));
+        const closeBtnH = isCrampedPortrait
+            ? Math.max(minModalTouchH, Math.min(uv(38), boxH * 0.06))
+            : (isCrampedLandscape
+                ? Math.max(uv(26), minModalTouchH)
+                : uv(isPortrait ? 38 : 40));
+        const closeBottomPad = isCrampedPortrait
+            ? Math.min(uv(36), boxH * 0.04)
+            : uv(isCrampedLandscape ? 2 : (isPortrait ? 48 : 38));
+        const closeBtnY = by + boxH - closeBottomPad - closeBtnH;
+        const contentBottom = closeBtnY - (isCrampedPortrait
+            ? Math.min(uv(18), boxH * 0.025)
+            : uv(isCrampedLandscape ? 8 : (isPortrait ? 30 : 26)));
         let boxFrame;
-        if (this.textures.exists('modal_frame_gold')) {
+        const useMasterFrame = this.textures.exists('ui_modal_master')
+            && Math.abs(boxW / Math.max(1, boxH) - 4 / 3) <= 0.22;
+        if (useMasterFrame) {
             boxFrame = this._addBitmapPanel(bx, by, boxW, boxH, {
-                key: 'modal_frame_gold',
+                key: 'ui_modal_master',
                 alpha: 0.98,
                 depth: depth + 1,
             });
@@ -1906,8 +2205,14 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(depth + 1.4);
         elements.push(innerShade);
 
-        const headerTag = this.add.text(cx, by + uv(isCrampedLandscape ? 40 : (isPortrait ? 104 : 82)), '[ SYSTEM - RANKING ]', {
-            fontSize: fs(isCrampedLandscape ? 10 : (isPortrait ? 11 : 12)),
+        const headerY = isCrampedPortrait
+            ? by + Math.min(uv(48), boxH * 0.065)
+            : by + uv(isCrampedLandscape ? 40 : (isPortrait ? 104 : 82));
+        const titleY = isCrampedPortrait
+            ? headerY + Math.min(uv(42), boxH * 0.075)
+            : by + uv(isCrampedLandscape ? 72 : (isPortrait ? 144 : 128));
+        const headerTag = this.add.text(cx, headerY, '[ SYSTEM - RANKING ]', {
+            fontSize: fs(isCrampedLandscape || isCrampedPortrait ? 10 : (isPortrait ? 11 : 12)),
             fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_CYAN,
             stroke: '#02040a',
@@ -1917,8 +2222,8 @@ export class MenuScene extends Phaser.Scene {
         this._fitText(headerTag, safeW * 0.82, uv(24));
         elements.push(headerTag);
 
-        const title = this.add.text(cx, by + uv(isCrampedLandscape ? 72 : (isPortrait ? 144 : 128)), t('hallOfFame'), {
-            fontSize: fs(isCrampedLandscape ? 22 : (isPortrait ? 28 : 34)),
+        const title = this.add.text(cx, titleY, t('hallOfFame'), {
+            fontSize: fs(isCrampedLandscape || isCrampedPortrait ? 22 : (isPortrait ? 28 : 34)),
             fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_GOLD,
             fontStyle: 'bold',
             stroke: '#02040a',
@@ -1928,17 +2233,42 @@ export class MenuScene extends Phaser.Scene {
         elements.push(title);
 
         const characters = Object.values(CHARACTER_DEFS);
-        const tabGap = uv(isPortrait ? 10 : (isCrampedLandscape ? 6 : 10));
-        const tabTop = by + uv(isPortrait ? 198 : (isCrampedLandscape ? 122 : 178));
-        const tabH = uv(isPortrait ? 40 : (isCrampedLandscape ? 28 : 38));
         const tabColumns = isPortrait ? 2 : characters.length;
         const tabRows = Math.ceil(characters.length / tabColumns);
+        const tabGap = isCrampedPortrait
+            ? Math.min(uv(10), boxH * 0.012)
+            : uv(isPortrait ? 10 : (isCrampedLandscape ? 6 : 10));
+        const tabTop = isCrampedPortrait
+            ? titleY + Math.min(uv(50), boxH * 0.085)
+            : by + uv(isPortrait ? 198 : (isCrampedLandscape ? 122 : 178));
+        const divGap = isCrampedPortrait
+            ? Math.min(uv(14), boxH * 0.02)
+            : uv(isPortrait ? 16 : (isCrampedLandscape ? 8 : 12));
+        const nominalTabH = isCrampedPortrait
+            ? Math.max(minModalTouchH, Math.min(uv(36), boxH * 0.055))
+            : (isCrampedLandscape
+                ? Math.max(uv(28), minModalTouchH)
+                : uv(isPortrait ? 40 : 38));
+        const maxTabsAndRankingH = contentBottom - divGap - tabTop - tabGap * (tabRows - 1);
+        const rankingReserveH = isCrampedPortrait
+            ? Math.min(
+                Math.min(uv(260), boxH * 0.38),
+                Math.max(0, maxTabsAndRankingH - Math.min(uv(22), nominalTabH) * tabRows)
+            )
+            : 0;
+        const availableTabRowsH = isCrampedPortrait
+            ? contentBottom - rankingReserveH - divGap - tabTop - tabGap * (tabRows - 1)
+            : nominalTabH * tabRows;
+        const tabH = isCrampedPortrait
+            ? Math.max(minModalTouchH, Math.min(nominalTabH, availableTabRowsH / Math.max(1, tabRows)))
+            : nominalTabH;
         const tabAreaW = safeW;
         const tabW = Math.floor((tabAreaW - tabGap * (tabColumns - 1)) / tabColumns);
         const tabRefs = [];
         let activeCharacterId = CHARACTER_DEFS[this.selectedCharacterId] ? this.selectedCharacterId : characters[0].id;
         let requestSeq = 0;
         let contentElements = [];
+        let contentTweens = [];
         const rankingDisplayLimit = 10;
 
         const trackContent = (el) => {
@@ -1946,7 +2276,23 @@ export class MenuScene extends Phaser.Scene {
             elements.push(el);
             return el;
         };
+        const trackContentTween = (tween) => {
+            if (tween) contentTweens.push(tween);
+            return tween;
+        };
+        const stopContentTweens = () => {
+            contentTweens.forEach((tween) => {
+                if (!tween) return;
+                tween.stop();
+                if (typeof tween.remove === 'function') tween.remove();
+            });
+            contentTweens = [];
+            contentElements.forEach((el) => {
+                if (el) this.tweens.killTweensOf(el);
+            });
+        };
         const clearContent = () => {
+            stopContentTweens();
             const removeSet = new Set(contentElements);
             contentElements.forEach(el => { if (el && el.destroy) el.destroy(); });
             for (let i = elements.length - 1; i >= 0; i--) {
@@ -1954,6 +2300,7 @@ export class MenuScene extends Phaser.Scene {
             }
             contentElements = [];
         };
+        this.events.once('shutdown', stopContentTweens);
         const drawTab = (ref, hover = false) => {
             const selected = ref.character.id === activeCharacterId;
             ref.g.clear();
@@ -2007,7 +2354,7 @@ export class MenuScene extends Phaser.Scene {
         redrawTabs();
 
         const divG = this.add.graphics().setDepth(depth + 2);
-        const divY = tabTop + tabRows * tabH + (tabRows - 1) * tabGap + uv(isPortrait ? 16 : (isCrampedLandscape ? 8 : 12));
+        const divY = tabTop + tabRows * tabH + (tabRows - 1) * tabGap + divGap;
         divG.lineStyle(1, SYSTEM.BORDER_GOLD, 0.35);
         divG.lineBetween(safeLeft, divY, safeRight, divY);
         divG.lineStyle(1, SYSTEM.BORDER_DIM, 0.26);
@@ -2058,6 +2405,8 @@ export class MenuScene extends Phaser.Scene {
             if (closed) return;
             closed = true;
             this.events.off('shutdown', markClosed);
+            this.events.off('shutdown', stopContentTweens);
+            stopContentTweens();
             elements.forEach(el => el.destroy());
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
@@ -2075,20 +2424,21 @@ export class MenuScene extends Phaser.Scene {
         const renderRanking = (characterId) => {
             const seq = ++requestSeq;
             clearContent();
-            const loadingIcon = this._addMenuIcon('icon_loading_core', cx, cy - uv(30), uv(46), depth + 4, 0.9);
+            const contentCenterY = divY + Math.max(0, contentBottom - divY) * 0.5;
+            const loadingIcon = this._addMenuIcon('icon_loading_core', cx, contentCenterY - uv(30), uv(46), depth + 4, 0.9);
             let loadingTween = null;
             if (loadingIcon) {
                 loadingIcon.setBlendMode(Phaser.BlendModes.ADD);
                 trackContent(loadingIcon);
-                loadingTween = this.tweens.add({
+                loadingTween = trackContentTween(this.tweens.add({
                     targets: loadingIcon,
                     angle: 360,
                     duration: 2600,
                     repeat: -1,
                     ease: 'Linear',
-                });
+                }));
             }
-            const loadingText = trackContent(this.add.text(cx, cy + uv(28), t('loading'), {
+            const loadingText = trackContent(this.add.text(cx, contentCenterY + uv(28), t('loading'), {
                 fontSize: fs(13), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
                 stroke: '#02040a', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(depth + 4));
@@ -2102,9 +2452,9 @@ export class MenuScene extends Phaser.Scene {
                     clearContent();
                     const rankings = (data.rankings || []).slice(0, rankingDisplayLimit);
                     if (rankings.length === 0) {
-                        const emptyIcon = this._addMenuIcon('icon_empty_record', cx, cy - uv(34), uv(54), depth + 4, 0.86);
+                        const emptyIcon = this._addMenuIcon('icon_empty_record', cx, contentCenterY - uv(34), uv(54), depth + 4, 0.86);
                         if (emptyIcon) trackContent(emptyIcon);
-                        const emptyText = trackContent(this.add.text(cx, cy + uv(28), t('noRecords'), {
+                        const emptyText = trackContent(this.add.text(cx, contentCenterY + uv(28), t('noRecords'), {
                             fontSize: fs(15), fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_BRIGHT,
                             stroke: '#02040a', strokeThickness: 4,
                         }).setOrigin(0.5).setDepth(depth + 4));
@@ -2114,7 +2464,9 @@ export class MenuScene extends Phaser.Scene {
 
                     const topStartY = divY + uv(isPortrait ? 28 : 24);
                     const gap = uv(isPortrait ? 14 : 22);
-                    const preferredTopCount = isPortrait ? Math.min(1, rankings.length) : Math.min(3, rankings.length);
+                    const preferredTopCount = isCrampedPortrait
+                        ? 0
+                        : (isPortrait ? Math.min(1, rankings.length) : Math.min(3, rankings.length));
                     const topCardW = Math.min(
                         uv(isPortrait ? 252 : 208),
                         (safeW - gap * Math.max(0, preferredTopCount - 1)) / Math.max(1, preferredTopCount)
@@ -2201,15 +2553,17 @@ export class MenuScene extends Phaser.Scene {
                     const startY = topCount > 0
                         ? topStartTableY
                         : divY + uv(isPortrait ? 22 : (isCrampedLandscape ? 8 : 18));
-                    const maxH = Math.max(uv(120), contentBottom - startY);
+                    const maxH = isCrampedPortrait
+                        ? Math.max(1, contentBottom - startY)
+                        : Math.max(uv(120), contentBottom - startY);
                     const visibleRowBudget = Math.max(1, tableRankings.length);
-                    const rowH = Math.max(
-                        uv(isPortrait ? 22 : 20),
-                        Math.min(
-                            uv(isPortrait ? 36 : 32),
-                            (maxH - uv(4)) / Math.max(1, visibleRowBudget + 1)
-                        )
-                    );
+                    const fittedRowH = (maxH - uv(4)) / Math.max(1, visibleRowBudget + 1);
+                    const rowH = isCrampedPortrait
+                        ? Math.max(1, Math.min(uv(32), fittedRowH))
+                        : Math.max(
+                            uv(isPortrait ? 22 : 20),
+                            Math.min(uv(isPortrait ? 36 : 32), fittedRowH)
+                        );
                     const hStyle = { fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN, stroke: '#02040a', strokeThickness: 2 };
                     let y = startY;
                     const tableLeft = safeLeft + uv(isPortrait ? 12 : 18);
@@ -2221,7 +2575,9 @@ export class MenuScene extends Phaser.Scene {
                     const rankColW = uv(isPortrait ? 56 : 60);
                     const scoreColW = uv(isPortrait ? 90 : 94);
                     const nameColW = Math.max(uv(90), scoreX - scoreColW - nameX - uv(10));
-                    const tableBgH = Math.max(rowH * 2, contentBottom - startY);
+                    const tableBgH = isCrampedPortrait
+                        ? maxH
+                        : Math.max(rowH * 2, contentBottom - startY);
                     trackContent(this.add.rectangle(tableLeft + tableW / 2, startY + tableBgH / 2, tableW, tableBgH, 0x02040a, isPortrait ? 0.44 : 0.36)
                         .setDepth(depth + 1.8));
                     const rankHead = trackContent(this.add.text(rankX, y, 'RANK', hStyle).setDepth(depth + 2));

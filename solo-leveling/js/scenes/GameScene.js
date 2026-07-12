@@ -1,4 +1,8 @@
-import { GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE, COLORS, PLAYER_BASE_STATS, RANKS, BOSS_SCHEDULE, BOSS_TYPES } from '../utils/Constants.js';
+import {
+    GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE,
+    COLORS, PLAYER_BASE_STATS, RANKS, BOSS_SCHEDULE, BOSS_TYPES,
+    SYSTEM, UI_FONT_MONO, UI_FONT_KR, fs, uv, drawSystemPanel,
+} from '../utils/Constants.js';
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { Player } from '../entities/Player.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
@@ -310,54 +314,121 @@ export class GameScene extends Phaser.Scene {
 
     _createStartupOverlay() {
         const cam = this.cameras.main;
-        const w = Math.min(320, cam.width - 48);
-        const h = 82;
         const cx = cam.width / 2;
         const cy = cam.height / 2;
+        const w = Math.min(uv(500), cam.width - uv(44));
+        const h = Math.min(uv(220), cam.height - uv(54));
+        const x = cx - w / 2;
+        const y = cy - h / 2;
 
-        const bg = this.add.rectangle(cx, cy, cam.width, cam.height, 0x020308, 0.88)
+        const bg = this.add.rectangle(cx, cy, cam.width, cam.height, 0x020308, 0.86)
             .setScrollFactor(0).setDepth(300);
-        const panel = this.add.rectangle(cx, cy, w, h, 0x07101a, 0.94)
-            .setScrollFactor(0).setDepth(301)
-            .setStrokeStyle(1, 0x55dfff, 0.65);
-        const title = this.add.text(cx, cy - 18, 'LOADING', {
-            fontSize: '16px',
-            fontFamily: 'Arial',
+        const panel = this.add.graphics().setScrollFactor(0).setDepth(301);
+        drawSystemPanel(panel, x, y, w, h, {
+            cut: uv(12),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0.96,
+            border: SYSTEM.BORDER,
+            borderAlpha: 0.82,
+            borderWidth: 1,
+        });
+        drawSystemPanel(panel, x + uv(7), y + uv(7), w - uv(14), h - uv(14), {
+            cut: uv(8),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0,
+            border: SYSTEM.BORDER_DIM,
+            borderAlpha: 0.34,
+            borderWidth: 1,
+        });
+        const innerShade = this.add.rectangle(cx, cy + uv(4), w - uv(118), h - uv(82), 0x02040a, 0.5)
+            .setScrollFactor(0).setDepth(301.2);
+        const core = this.textures.exists('icon_loading_core')
+            ? this.add.image(cx, cy - uv(58), 'icon_loading_core')
+                .setDisplaySize(uv(46), uv(46))
+                .setAlpha(0.98)
+                .setBlendMode(Phaser.BlendModes.ADD)
+                .setScrollFactor(0)
+                .setDepth(302)
+            : null;
+        if (core) {
+            this._startupCoreTween = this.tweens.add({
+                targets: core,
+                angle: 360,
+                duration: 2800,
+                repeat: -1,
+                ease: 'Linear',
+            });
+        }
+        const title = this.add.text(cx, cy - uv(20), t('loading'), {
+            fontSize: fs(17),
+            fontFamily: UI_FONT_KR,
             fontStyle: 'bold',
-            color: '#e8fbff',
+            color: SYSTEM.TEXT_BRIGHT,
+            stroke: '#02040a',
+            strokeThickness: 4,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
-        const label = this.add.text(cx, cy + 4, 'STARTUP', {
-            fontSize: '10px',
-            fontFamily: 'Arial',
-            color: '#7cdfff',
+        const label = this.add.text(cx, cy + uv(8), '[ GATE LINK · WORLD SYNC ]', {
+            fontSize: fs(9),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN_DIM,
+            stroke: '#02040a',
+            strokeThickness: 2,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
-        const barW = w - 46;
-        const barBg = this.add.rectangle(cx - barW / 2, cy + 24, barW, 4, 0x0b2433, 0.95)
-            .setOrigin(0, 0.5).setScrollFactor(0).setDepth(302);
-        const barFill = this.add.rectangle(cx - barW / 2, cy + 24, 1, 4, 0x55dfff, 1)
+        const barW = Math.max(uv(160), w - uv(176));
+        const barY = cy + uv(39);
+        const barBg = this.add.rectangle(cx - barW / 2, barY, barW, uv(7), 0x061522, 0.98)
+            .setOrigin(0, 0.5)
+            .setStrokeStyle(1, SYSTEM.BORDER_DIM, 0.72)
+            .setScrollFactor(0).setDepth(302);
+        const barFill = this.add.rectangle(cx - barW / 2, barY, 2, uv(5), SYSTEM.BORDER, 1)
             .setOrigin(0, 0.5).setScrollFactor(0).setDepth(303);
+        const percent = this.add.text(cx, cy + uv(62), '000 %  ·  00 / 00', {
+            fontSize: fs(10),
+            fontFamily: UI_FONT_MONO,
+            color: SYSTEM.TEXT_CYAN,
+            stroke: '#02040a',
+            strokeThickness: 2,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(302);
 
-        this._startupOverlay = [bg, panel, title, label, barBg, barFill];
+        this._startupOverlay = [bg, panel, innerShade, core, title, label, barBg, barFill, percent].filter(Boolean);
         this._startupLabel = label;
+        this._startupPercent = percent;
         this._startupProgressFill = barFill;
         this._startupProgressWidth = barW;
+        this._startupProgressHeight = uv(5);
     }
 
     _setStartupProgress(done, total, label) {
         if (!this._startupProgressFill) return;
         const progress = Phaser.Math.Clamp(total > 0 ? done / total : 1, 0.02, 1);
-        this._startupProgressFill.width = Math.max(1, this._startupProgressWidth * progress);
-        if (this._startupLabel && label) this._startupLabel.setText(label);
+        this._startupProgressFill.setDisplaySize(
+            Math.max(2, this._startupProgressWidth * progress),
+            this._startupProgressHeight || uv(5)
+        );
+        const completed = Math.min(total, Math.max(0, done));
+        if (this._startupLabel && label) {
+            this._startupLabel.setText(`[ ${String(completed).padStart(2, '0')} / ${String(total).padStart(2, '0')} · ${label} ]`);
+        }
+        if (this._startupPercent) {
+            this._startupPercent.setText(
+                `${String(Math.floor(progress * 100)).padStart(3, '0')} %  ·  ${String(completed).padStart(2, '0')} / ${String(total).padStart(2, '0')}`
+            );
+        }
     }
 
     _destroyStartupOverlay() {
         const elements = this._startupOverlay || [];
         if (elements.length === 0) return;
 
+        if (this._startupCoreTween) {
+            this._startupCoreTween.stop();
+            this._startupCoreTween = null;
+        }
+
         this.tweens.add({
             targets: elements,
             alpha: 0,
-            duration: 180,
+            duration: window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 0 : 180,
             onComplete: () => {
                 elements.forEach(el => {
                     if (el?.active) el.destroy();
@@ -367,6 +438,7 @@ export class GameScene extends Phaser.Scene {
 
         this._startupOverlay = null;
         this._startupLabel = null;
+        this._startupPercent = null;
         this._startupProgressFill = null;
     }
 
@@ -1245,7 +1317,12 @@ export class GameScene extends Phaser.Scene {
                 this._startupOverlay.forEach(el => { if (el?.active) el.destroy(); });
                 this._startupOverlay = null;
                 this._startupLabel = null;
+                this._startupPercent = null;
                 this._startupProgressFill = null;
+            }
+            if (this._startupCoreTween) {
+                this._startupCoreTween.stop();
+                this._startupCoreTween = null;
             }
 
             if (this._saveOnPageHide) {

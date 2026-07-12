@@ -31,6 +31,13 @@ export class HUD {
             || (navigator.maxTouchPoints > 0);
     }
 
+    _minTouchUnits(cssPixels = 44) {
+        const viewportW = Math.max(1, window.innerWidth || GAME_WIDTH);
+        const viewportH = Math.max(1, window.innerHeight || GAME_HEIGHT);
+        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
+        return Math.ceil(cssPixels / cssPerUnit);
+    }
+
     _text(x, y, value, style) {
         const text = padText(this.scene.add.text(x, y, value, style), 4, 5, 2, 2);
         if (typeof text.setLineSpacing === 'function') text.setLineSpacing(3);
@@ -49,42 +56,68 @@ export class HUD {
         if (obj && obj.visible !== visible) obj.setVisible(visible);
     }
 
+    _weaponIconTexture(key) {
+        const authoredKey = 'asset_icon_' + key;
+        return this.scene.textures.exists(authoredKey) ? authoredKey : 'icon_' + key;
+    }
+
     _createLeftPanel() {
         const m = this._margin;
-        let y = m;
+        const inset = uv(11);
+        const barW = Math.min(uv(this._isPortrait ? 184 : 206), GAME_WIDTH * 0.42);
+        const panelW = barW + inset * 2;
+        const panelH = uv(this._isPortrait ? 88 : 82);
+        const panel = UIAssets.createPanel(this.scene, m, m, panelW, panelH, {
+            cut: uv(8),
+            fill: SYSTEM.BG_PANEL,
+            fillAlpha: 0.9,
+            border: SYSTEM.BORDER,
+            borderAlpha: 0.72,
+            borderWidth: 1,
+            accent: 0x7b2fff,
+            glow: 3,
+            depth: 98,
+            scrollFactor: 0,
+            variant: 'hud',
+        });
+        this.elements.push(panel);
 
-        const hpLabel = this._text(m, y, '[ HP ]', {
+        const x = m + inset;
+        let y = m + uv(9);
+
+        const hpLabel = this._text(x, y, 'VITAL  //  HP', {
             fontSize: fs(10), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: '#ff6666',
         }).setDepth(100).setScrollFactor(0);
         this.elements.push(hpLabel);
         y += hpLabel.displayHeight + uv(2);
 
-        const barW = Math.min(uv(180), GAME_WIDTH * 0.4);
         const hpH = uv(14);
         this._hpW = barW;
         this._hpH = hpH;
 
-        this.hpBg = this.scene.add.rectangle(m, y, barW, hpH, 0x1a0608)
+        this.hpBg = this.scene.add.rectangle(x, y, barW, hpH, 0x18070b, 0.98)
             .setOrigin(0, 0).setDepth(100).setScrollFactor(0);
-        this.hpFill = this.scene.add.rectangle(m + 1, y + 1, barW - 2, hpH - 2, COLORS.HP_RED)
+        this.hpFill = this.scene.add.rectangle(x + 2, y + 2, barW - 4, hpH - 4, COLORS.HP_RED)
             .setOrigin(0, 0).setDepth(101).setScrollFactor(0);
 
         const hpFrame = this.scene.add.graphics().setDepth(102).setScrollFactor(0);
-        hpFrame.lineStyle(1, 0xff6666, 0.85);
-        hpFrame.strokeRect(m, y, barW, hpH);
-        drawCornerBrackets(hpFrame, m - 2, y - 2, barW + 4, hpH + 4, {
+        hpFrame.lineStyle(1, 0xff6677, 0.82);
+        hpFrame.strokeRect(x, y, barW, hpH);
+        hpFrame.lineStyle(1, 0xffffff, 0.14);
+        hpFrame.lineBetween(x + 2, y + 2, x + barW - 2, y + 2);
+        drawCornerBrackets(hpFrame, x - 2, y - 2, barW + 4, hpH + 4, {
             len: uv(5), color: 0xff6666, alpha: 1, lineWidth: 1,
         });
 
-        this.hpText = this._text(m + barW / 2, y + hpH / 2, '', {
+        this.hpText = this._text(x + barW / 2, y + hpH / 2, '', {
             fontSize: fs(9), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: '#ffffff', stroke: '#000000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(103).setScrollFactor(0);
         this.elements.push(this.hpBg, this.hpFill, hpFrame, this.hpText);
         y += hpH + 8;
 
-        const xpLabel = this._text(m, y, '[ EXP ]', {
+        const xpLabel = this._text(x, y, 'ASCENSION  //  EXP', {
             fontSize: fs(9), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN,
         }).setDepth(100).setScrollFactor(0);
@@ -95,27 +128,38 @@ export class HUD {
         this._xpW = barW;
         this._xpH = xpH;
 
-        this.xpBg = this.scene.add.rectangle(m, y, barW, xpH, 0x0a1520)
+        this.xpBg = this.scene.add.rectangle(x, y, barW, xpH, 0x06111d, 0.98)
             .setOrigin(0, 0).setDepth(100).setScrollFactor(0);
-        this.xpFill = this.scene.add.rectangle(m + 1, y + 1, barW - 2, xpH - 2, SYSTEM.BORDER)
+        this.xpFill = this.scene.add.rectangle(x + 1, y + 1, barW - 2, xpH - 2, SYSTEM.BORDER)
             .setOrigin(0, 0).setDepth(101).setScrollFactor(0);
 
         const xpFrame = this.scene.add.graphics().setDepth(102).setScrollFactor(0);
         xpFrame.lineStyle(1, SYSTEM.BORDER, 0.8);
-        xpFrame.strokeRect(m, y, barW, xpH);
+        xpFrame.strokeRect(x, y, barW, xpH);
 
         this.elements.push(this.xpBg, this.xpFill, xpFrame);
-        this._leftPanelBottom = y + xpH;
+        this._leftPanelBottom = m + panelH;
+        this._leftPanelRight = m + panelW;
     }
 
     _createRightPanel() {
         const m = this._margin;
-        const panelX = this._isPortrait ? m : GAME_WIDTH - m;
+        const panelW = Math.min(uv(this._isPortrait ? 300 : 226), this._isPortrait ? GAME_WIDTH - m * 2 : GAME_WIDTH * 0.3);
+        const panelH = uv(this._isPortrait ? 154 : 162);
+        const panelLeft = this._isPortrait ? m : GAME_WIDTH - m - panelW;
+        const panelTop = this._isPortrait ? this._leftPanelBottom + uv(8) : m;
         const originX = this._isPortrait ? 0 : 1;
-        const panelW = Math.min(uv(210), this._isPortrait ? GAME_WIDTH - m * 2 : GAME_WIDTH * 0.28);
-        let y = this._isPortrait ? this._leftPanelBottom + uv(10) : m;
+        const textX = this._isPortrait ? panelLeft + uv(12) : panelLeft + panelW - uv(12);
+        let y = panelTop + uv(10);
 
-        this.killText = this._text(panelX, y, '▸ KILL  0000', {
+        const panel = UIAssets.createPanel(this.scene, panelLeft, panelTop, panelW, panelH, {
+            cut: uv(8), fill: SYSTEM.BG_PANEL, fillAlpha: 0.88,
+            border: SYSTEM.BORDER_DIM, borderAlpha: 0.7, borderWidth: 1,
+            accent: 0xff6633, depth: 98, scrollFactor: 0, variant: 'hud',
+        });
+        this.elements.push(panel);
+
+        this.killText = this._text(textX, y, 'KILL  //  0000', {
             fontSize: fs(13), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: '#ff9966', stroke: '#000000', strokeThickness: 2,
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
@@ -123,7 +167,7 @@ export class HUD {
         this.elements.push(this.killText);
         y += this.killText.displayHeight + uv(5);
 
-        this.levelText = this._text(panelX, y, '▸ LV    01', {
+        this.levelText = this._text(textX, y, 'LEVEL //  01', {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT, stroke: '#000000', strokeThickness: 1,
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
@@ -131,7 +175,7 @@ export class HUD {
         this.elements.push(this.levelText);
         y += this.levelText.displayHeight + uv(5);
 
-        this.rankText = this._text(panelX, y, '▸ RANK  E', {
+        this.rankText = this._text(textX, y, 'RANK  //  E', {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: '#888888',
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
@@ -139,29 +183,39 @@ export class HUD {
         this.elements.push(this.rankText);
         y += this.rankText.displayHeight + uv(12);
 
-        this.questText = this._text(panelX, y, '', {
+        this.questText = this._text(textX, y, '', {
             fontSize: fs(10), fontFamily: UI_FONT_KR,
             color: SYSTEM.TEXT_CYAN,
             align: this._isPortrait ? 'left' : 'right',
-            wordWrap: { width: panelW, useAdvancedWrap: true },
+            wordWrap: { width: panelW - uv(24), useAdvancedWrap: true },
             lineSpacing: 5,
         }).setOrigin(originX, 0).setDepth(100).setScrollFactor(0);
         this.elements.push(this.questText);
     }
 
     _createTimer() {
-        this.timerText = this._text(GAME_WIDTH / 2, this._margin, '[ 00:00 ]', {
+        const w = Math.min(uv(this._isPortrait ? 136 : 174), GAME_WIDTH * 0.26);
+        const h = uv(42);
+        const x = GAME_WIDTH / 2 - w / 2;
+        const y = this._margin;
+        const panel = UIAssets.createPanel(this.scene, x, y, w, h, {
+            cut: uv(9), fill: SYSTEM.BG_PANEL, fillAlpha: 0.92,
+            border: SYSTEM.BORDER, borderAlpha: 0.82, borderWidth: 1,
+            accent: 0x7b2fff, glow: 4, depth: 98, scrollFactor: 0,
+            variant: 'hud', surfaceLines: false,
+        });
+        this.timerText = this._text(GAME_WIDTH / 2, y + h / 2, '00:00', {
             fontSize: fs(18), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_BRIGHT, stroke: '#000000', strokeThickness: 2,
-        }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(100).setScrollFactor(0);
         fitText(this.timerText, Math.min(uv(190), GAME_WIDTH * 0.28), 0, 0.72);
-        this.elements.push(this.timerText);
+        this.elements.push(panel, this.timerText);
+        this._timerBottom = y + h;
     }
 
     _createDungeonBreakDisplay() {
-        const homeBottom = this.homeBtn
-            ? this.homeBtn.y + this.homeBtn.displayHeight
-            : this._margin + (this.timerText ? this.timerText.displayHeight : uv(20));
+        const homeBottom = this._homeBottom
+            || (this._timerBottom || this._margin + uv(42));
         const y = homeBottom + uv(5);
         this.breakText = this._text(GAME_WIDTH / 2, y, '', {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
@@ -175,8 +229,8 @@ export class HUD {
         this.weaponIcons = [];
         this.weaponTexts = [];
 
-        const slotSize = uv(32);
-        const gap = uv(4);
+        const slotSize = uv(this._isTouch ? (this._isPortrait ? 62 : 50) : 40);
+        const gap = uv(this._isTouch ? 7 : 5);
         const cols = this._isPortrait ? 3 : 6;
         const rows = Math.ceil(6 / cols);
         const totalW = cols * slotSize + (cols - 1) * gap;
@@ -199,6 +253,9 @@ export class HUD {
                 fill: SYSTEM.BG_PANEL, fillAlpha: 0.75,
                 border: SYSTEM.BORDER_DIM, borderAlpha: 0.85, borderWidth: 1,
                 accent: SYSTEM.BORDER,
+                glow: 2,
+                variant: 'slot',
+                surfaceLines: false,
                 depth: 100,
                 scrollFactor: 0,
             });
@@ -206,6 +263,7 @@ export class HUD {
 
             const icon = this.scene.add.sprite(x + slotSize / 2, y + slotSize / 2, 'particle')
                 .setDepth(101).setScrollFactor(0).setVisible(false);
+            icon._hudDisplaySize = Math.max(8, slotSize - uv(7));
 
             const lvText = this._text(x + slotSize - 3, y + slotSize - 3, '', {
                 fontSize: fs(9), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
@@ -231,7 +289,7 @@ export class HUD {
     }
 
     _createMinimap() {
-        const size = this._isPortrait ? uv(66) : (this._isCompact ? uv(78) : uv(90));
+        const size = this._isPortrait ? uv(86) : (this._isCompact ? uv(84) : uv(96));
         const m = this._margin;
         this._mmSize = size;
         this._mmX = GAME_WIDTH - m - size;
@@ -248,6 +306,8 @@ export class HUD {
             borderWidth: 1,
             accent: SYSTEM.BORDER,
             glow: 3,
+            variant: 'minimap',
+            surfaceLines: false,
             depth: 100,
             scrollFactor: 0,
         });
@@ -343,23 +403,35 @@ export class HUD {
 
     _createHomeButton() {
         const m = this._margin;
-        const timerBottom = m + (this.timerText ? this.timerText.displayHeight : uv(20));
-        this.homeBtn = this._text(GAME_WIDTH / 2, timerBottom + uv(6), '[ ◁  EXIT ]', {
+        const timerBottom = this._timerBottom || m + uv(42);
+        const w = Math.min(uv(116), GAME_WIDTH * 0.18);
+        const h = Math.max(uv(32), this._isTouch ? this._minTouchUnits(44) : 0);
+        const x = GAME_WIDTH / 2 - w / 2;
+        const y = timerBottom + uv(5);
+        const panel = UIAssets.createPanel(this.scene, x, y, w, h, {
+            cut: uv(6), fill: SYSTEM.BG_PANEL, fillAlpha: 0.84,
+            border: SYSTEM.BORDER_DIM, borderAlpha: 0.62, borderWidth: 1,
+            accent: SYSTEM.BORDER, depth: 98, scrollFactor: 0,
+            variant: 'button', surfaceLines: false,
+            hover: { border: SYSTEM.BORDER_WARN, accent: SYSTEM.BORDER_WARN, glow: 4 },
+        });
+        const hit = UIAssets.createHitArea(this.scene, x, y, w, h, 101).setScrollFactor(0);
+        this.homeBtn = this._text(GAME_WIDTH / 2, y + h / 2, '◁  EXIT', {
             fontSize: fs(11), fontFamily: UI_FONT_MONO, fontStyle: 'bold',
             color: SYSTEM.TEXT_CYAN_DIM,
-        }).setOrigin(0.5, 0).setDepth(100).setScrollFactor(0)
-          .setInteractive({ useHandCursor: true });
+        }).setOrigin(0.5).setDepth(100).setScrollFactor(0);
         fitText(this.homeBtn, Math.min(uv(150), GAME_WIDTH * 0.24), 0, 0.72);
+        this._homeBottom = y + h;
 
-        this.homeBtn.on('pointerover', () => this.homeBtn.setColor(SYSTEM.TEXT_BRIGHT));
-        this.homeBtn.on('pointerout', () => this.homeBtn.setColor(SYSTEM.TEXT_CYAN_DIM));
-        this.homeBtn.on('pointerdown', () => {
+        hit.on('pointerover', () => { panel.setUIState('hover'); this.homeBtn.setColor(SYSTEM.TEXT_BRIGHT); });
+        hit.on('pointerout', () => { panel.setUIState('normal'); this.homeBtn.setColor(SYSTEM.TEXT_CYAN_DIM); });
+        hit.on('pointerdown', () => {
             this.scene.cameras.main.fadeOut(300, 0, 0, 0);
             this.scene.time.delayedCall(300, () => {
                 this.scene.scene.start('MenuScene');
             });
         });
-        this.elements.push(this.homeBtn);
+        this.elements.push(panel, hit, this.homeBtn);
     }
 
     update(player, weaponManager, enemyManager, shadowArmyManager) {
@@ -371,7 +443,7 @@ export class HUD {
         const now = this.scene?.time?.now ?? 0;
 
         const hpRatio = player.stats.hp / player.stats.maxHp;
-        const hpWidth = (this._hpW - 2) * hpRatio;
+        const hpWidth = (this._hpW - 4) * hpRatio;
         if (this.hpFill._hudWidth !== hpWidth) {
             this.hpFill._hudWidth = hpWidth;
             this.hpFill.width = hpWidth;
@@ -400,7 +472,7 @@ export class HUD {
                 this._hudSeconds = totalSeconds;
                 const min = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
                 const sec = (totalSeconds % 60).toString().padStart(2, '0');
-                this._setTextIfChanged(this.timerText, `[ ${min}:${sec} ]`);
+                this._setTextIfChanged(this.timerText, `${min}:${sec}`);
             }
             activeEnemies = enemyManager.getActiveEnemies();
         }
@@ -432,8 +504,9 @@ export class HUD {
                     if (i < weapons.length) {
                         const w = weapons[i];
                         const icon = this.weaponIcons[i];
-                        const texture = 'icon_' + w.key;
+                        const texture = this._weaponIconTexture(w.key);
                         if (icon.texture?.key !== texture) icon.setTexture(texture);
+                        icon.setDisplaySize(icon._hudDisplaySize, icon._hudDisplaySize);
                         this._setVisibleIfChanged(icon, true);
                         this._setTextIfChanged(this.weaponTexts[i], String(w.level));
                     } else {
@@ -533,7 +606,7 @@ export class HUD {
             for (let i = 0; i < 6; i++) {
                 if (i < weapons.length) {
                     const w = weapons[i];
-                    this.weaponIcons[i].setTexture('icon_' + w.key).setVisible(true);
+                    this.weaponIcons[i].setTexture(this._weaponIconTexture(w.key)).setVisible(true);
                     this.weaponTexts[i].setText(String(w.level));
                 } else {
                     this.weaponIcons[i].setVisible(false);
@@ -576,6 +649,21 @@ export class HUD {
     rebuild() {
         this.destroy();
         this.elements = [];
+
+        // Every display object below is new. Invalidate the value caches too,
+        // otherwise the first update after an orientation change can mistake
+        // the fresh HUD for the already-painted one and leave weapon icons,
+        // rank color, or elapsed time in their placeholder state.
+        this._hudSeconds = null;
+        this._hudWeaponSignature = null;
+        this._hudRankColor = null;
+        this._hudPrefixesReady = false;
+        this._hudKillPrefix = null;
+        this._hudLevelPrefix = null;
+        this._hudRankPrefix = null;
+        this._questNextUpdateAt = 0;
+        this._mmFrameCounter = 0;
+
         this._margin = uv(12);
         this._isPortrait = GAME_WIDTH < GAME_HEIGHT;
         this._isTouch = this._detectTouch();

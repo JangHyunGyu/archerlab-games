@@ -52,6 +52,9 @@ const UI_ASSET_KEYS = [
     'menu/preload_bar_fill',
 ];
 
+// Keep authored high-resolution chrome for the large menu surfaces. The
+// compact base frames are useful fallbacks, but visibly soften when scaled to
+// character-select and ranking modal sizes.
 const UI_ASSET_OVERRIDES = {
     'menu/hunter_card_normal': 'assets/ui/menu/hunter_card_normal_imagegen.png',
     'menu/hunter_card_selected': 'assets/ui/menu/hunter_card_selected_imagegen.png',
@@ -159,6 +162,7 @@ export function getCharacterMotionAssets(characterId = getStoredCharacterId()) {
 export function getMenuAssetList() {
     return [
         ...UI_ASSET_KEYS.map(uiAsset),
+        { key: 'ui_modal_master', path: 'assets/ui/ui_modal_master.png' },
         { key: 'env_shadow_portal', path: 'assets/environment/shadow_portal.png' },
         { key: 'ai_dungeon_atmosphere', path: 'assets/background/bg_dungeon_atmosphere.png' },
         ...getCharacterPortraitAssets(),
