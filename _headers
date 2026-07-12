@@ -1,0 +1,11 @@
+/tmp/*
+  X-Robots-Tag: noindex, nofollow, noimageindex
+
+/blockpang/tmp-screenshots/*
+  X-Robots-Tag: noindex, nofollow, noimageindex
+
+/seo/_*
+  X-Robots-Tag: noindex, nofollow, noimageindex
+
+/solo-leveling/asset-preview-light-swordswoman*
+  X-Robots-Tag: noindex, nofollow, noimageindex

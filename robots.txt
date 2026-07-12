@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://game.archerlab.dev/sitemap.xml
+Sitemap: https://game.archerlab.dev/sitemap-images.xml

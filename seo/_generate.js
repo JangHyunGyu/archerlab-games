@@ -296,19 +296,19 @@ for (const p of PAGES) {
   n++;
 }
 
-const frag = PAGES
-  .map(p => `  <url><loc>${pageUrl(p.slug)}</loc><lastmod>${LASTMOD}</lastmod><changefreq>monthly</changefreq><priority>${p.slug.startsWith('cat-') ? '0.8' : '0.7'}</priority></url>`)
-  .join('\n');
+// These legacy landing URLs are permanent redirects to canonical game pages.
+// Keep them out of sitemaps so crawlers consolidate signals on the game URLs.
+const frag = '<!-- Legacy SEO landing URLs redirect to canonical game pages. -->\n';
 fs.writeFileSync(path.join(__dirname, '_sitemap_fragment.xml'), frag, 'utf8');
 
 const sitemapPath = path.join(__dirname, '..', 'sitemap.xml');
 if (fs.existsSync(sitemapPath)) {
   let sitemap = fs.readFileSync(sitemapPath, 'utf8');
   sitemap = sitemap.replace(/\s*<url>\s*<loc>https:\/\/game\.archerlab\.dev\/seo\/[\s\S]*?<\/url>/g, '');
-  sitemap = sitemap.replace(/\s*<\/urlset>\s*$/m, `\n${frag}\n</urlset>\n`);
+  sitemap = sitemap.replace(/\s*<\/urlset>\s*$/m, '\n</urlset>\n');
   fs.writeFileSync(sitemapPath, sitemap, 'utf8');
 }
 
 console.log(`${n} pages generated`);
-console.log('sitemap fragment written');
-console.log('root sitemap updated');
+console.log('redirect-only sitemap fragment written');
+console.log('redirected landing URLs removed from root sitemap');
