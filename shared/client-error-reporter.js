@@ -158,6 +158,13 @@
     function isIgnorableResourceError(source, target) {
         var src = safeString(source, '');
         var tag = safeString(target && (target.tagName || target.nodeName), '').toUpperCase();
+        var userAgent = safeString(window.navigator && window.navigator.userAgent, '');
+        // Search/rendering agents do not execute a complete browser lifecycle and
+        // commonly cancel otherwise healthy image requests. Their resource errors
+        // are not actionable player failures.
+        if (/Google-Read-Aloud|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(userAgent)) {
+            return true;
+        }
         if (tag === 'IMG') {
             if (applyImageFallback(src, target)) return true;
             if (target && target.__archerlabImageFallbackApplied && target.naturalWidth > 0) return true;
