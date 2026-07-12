@@ -35,22 +35,11 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_WALK_ASSET_VERSIONS = {
-    athlete: "20260712-higgsfield-v2",
-    bloom: "20260712-higgsfield-v2",
-    brute: "20260711-higgsfield-v1",
-    guard: "20260711-higgsfield-v1",
-    janitor: "20260712-higgsfield-v2",
-    normal: "20260712-scale-normalized-v2",
-    nurse: "20260711-higgsfield-v1",
-    runner: "20260712-higgsfield-v2",
-    screamer: "20260712-higgsfield-v2",
-    spider: "20260712-higgsfield-v2",
-    teacher: "20260712-higgsfield-v2"
-  };
+  const ZOMBIE_ASSET_VERSION = "20260712-zombie-roster-v3";
   const CHARACTER_ASSET_VERSION = "20260712-character-audit-v5";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
+  const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
@@ -172,6 +161,7 @@
     g: "attack",
     h: "attack"
   };
+  const CHARACTER_ATTACK_FRAME_ZERO_ALIASES = new Set(["a", "b", "d", "e"]);
   const CHARACTER_ACTION_HEIGHT_SCALE = {
     a: 1,
     b: 1,
@@ -192,7 +182,7 @@
     "projectile-frost": 0.78,
     "projectile-firebomb": 0.32,
     "projectile-shock": 0.48,
-    "projectile-nail": 0.52
+    "projectile-nail": 0.22
   };
   const EMBEDDED_PROJECTILES = {
     "projectile-arrow": {
@@ -233,6 +223,8 @@
   };
   const FIRE_ZONE_ANIMATION_FRAMES = 8;
   const SHOCK_EFFECT_OUTER_COLOR = 0x8f9dff;
+  const CHARGER_CHARGE_TINT = 0xffcf9e;
+  const CHARGER_SURGE_TINT = 0xffa45c;
   const ZOMBIE_CORPSE_EFFECTS = {
     small: { stainWidth: 54, stainHeight: 34, fall: 250, corpseHold: 24000, corpseFade: 650 },
     normal: { stainWidth: 70, stainHeight: 42, fall: 285, corpseHold: 24000, corpseFade: 700 },
@@ -274,7 +266,8 @@
     "crawler",
     "screamer",
     "spider",
-    "bloom"
+    "bloom",
+    "charger"
   ];
   const ZOMBIE_CORPSE_TEXTURES = Object.fromEntries(
     ZOMBIE_CORPSE_TYPES.map((type) => [
@@ -305,7 +298,8 @@
     crawler: { corpseWidth: 1.42, deathSize: 1.32 },
     screamer: { corpseWidth: 1.12, deathSize: 1.18 },
     spider: { corpseWidth: 1.16, deathSize: 0.94 },
-    bloom: { corpseWidth: 1.4, deathSize: 1.04 }
+    bloom: { corpseWidth: 1.4, deathSize: 1.04 },
+    charger: { corpseWidth: 1.48, deathSize: 1.16 }
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,
@@ -322,7 +316,8 @@
     crawler: 0.235,
     screamer: 0.392,
     spider: 0.225,
-    bloom: 0.392
+    bloom: 0.392,
+    charger: 0.408
   };
   const ZOMBIE_HP_MULTIPLIER = 3;
   const ZOMBIE_SPAWN_INTERVAL_MULTIPLIER = 2.4;
@@ -640,6 +635,23 @@
     screamer: { id: "screamer", hpScale: 0.92, speedScale: 1.42, sizeScale: 0.95, attackScale: 0.98, hitRadiusScale: 0.92, knockbackScale: 1.04, animRate: 8.6, reward: 2 },
     spider: { id: "spider", hpScale: 0.78, speedScale: 1.64, sizeScale: 0.72, attackScale: 0.78, hitRadiusScale: 0.76, knockbackScale: 1.08, animRate: 9.8, reward: 1 },
     bloom: { id: "bloom", hpScale: 1.48, speedScale: 0.88, sizeScale: 1.02, attackScale: 1.12, hitRadiusScale: 1, knockbackScale: 0.7, animRate: 6.1, reward: 2, deathExplosion: true },
+    charger: {
+      id: "charger",
+      hpScale: 1.32,
+      speedScale: 0.96,
+      sizeScale: 1.04,
+      attackScale: 1.16,
+      hitRadiusScale: 1.06,
+      knockbackScale: 0.66,
+      animRate: 6.8,
+      reward: 2,
+      surgeSpeedScale: 3.05,
+      surgeDuration: 0.38,
+      surgeChargeDuration: 0.22,
+      surgeCooldownMin: 3.8,
+      surgeCooldownMax: 5.2,
+      surgeMinBarricadeDistance: 120
+    },
     elite: { id: "elite", hpScale: 1.5, speedScale: 1, sizeScale: 1, attackScale: 1, hitRadiusScale: 1, knockbackScale: 0.5, animRate: 5.2, reward: 4 }
   };
   const ZOMBIE_TEXTURE_TYPES = [
@@ -657,7 +669,8 @@
     "crawler",
     "screamer",
     "spider",
-    "bloom"
+    "bloom",
+    "charger"
   ];
 
   function createDefaultMetaSave() {
@@ -785,6 +798,9 @@
     }
     if (level >= 9) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.bloom, weight: Math.min(18, 4 + (level - 9) * 1) });
+    }
+    if (level >= 10) {
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.charger, weight: Math.min(16, 6 + (level - 10) * 0.8) });
     }
     const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
     let roll = Math.random() * total;
@@ -1142,9 +1158,9 @@
           );
         }
       }
+      scene.textures.remove(sourceKey);
     };
 
-    sliceSheet("zombie-walk", "zombie-walk");
     ZOMBIE_TEXTURE_TYPES.forEach((type) => {
       sliceSheet(`zombie-walk-${type}`, `zombie-walk-${type}`);
     });
@@ -1319,7 +1335,8 @@
   function createCharacterAttackTextures(scene) {
     Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
       for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
-        const sourceKey = `character-${id}-${action}-${frame}`;
+        const usesBasePose = frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id);
+        const sourceKey = usesBasePose ? `character-${id}` : `character-${id}-${action}-${frame}`;
         if (!scene.textures.exists(sourceKey)) {
           continue;
         }
@@ -1337,6 +1354,17 @@
             cellHeight
           );
         });
+        if (!usesBasePose) {
+          scene.textures.remove(sourceKey);
+        }
+      }
+    });
+  }
+
+  function releaseCharacterSourceTextures(scene) {
+    DEFENDER_ROSTER.forEach(({ id }) => {
+      const sourceKey = `character-${id}`;
+      if (scene.textures.exists(sourceKey)) {
         scene.textures.remove(sourceKey);
       }
     });
@@ -1417,21 +1445,6 @@
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-speed-circle", 810, 610, 275, 276);
     makeImageSliceTexture(scene, "ui-frame-sheet", "ui-resource-panel", 1185, 382, 565, 472);
     makeImageSliceTexture(scene, "skill-card-sheet", "ui-skill-card", 45, 64, 440, 890);
-  }
-
-  function createLegacyZombieSpriteTextures(scene) {
-    const cellSize = 512;
-    for (let index = 0; index < 6; index += 1) {
-      makeImageSliceTexture(
-        scene,
-        "zombie-sheet",
-        `zombie-sprite-${index}`,
-        (index % 3) * cellSize,
-        Math.floor(index / 3) * cellSize,
-        cellSize,
-        cellSize
-      );
-    }
   }
 
   function roundedRect(ctx, x, y, width, height, radius) {
@@ -1999,9 +2012,9 @@
         ["avatar-fire", "assets/images/avatar-fire.png"],
         ["avatar-shock", "assets/images/avatar-shock.png"],
         ["avatar-engineer", "assets/images/avatar-engineer.png"],
-        ["projectile-firebomb", "assets/images/projectile-firebomb.png"],
+        ["projectile-firebomb", "assets/images/projectile-firebomb.png", COMBAT_PROP_ASSET_VERSION],
         ["projectile-shock", "assets/images/projectile-shock.png"],
-        ["projectile-nail", "assets/images/projectile-nail.png"],
+        ["projectile-nail", "assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION],
         ["engineer-turret-base", "assets/images/engineer-turret-base.png", TURRET_ASSET_VERSION],
         ["engineer-turret-head", "assets/images/engineer-turret-head.png", TURRET_ASSET_VERSION]
       ];
@@ -2026,6 +2039,9 @@
       this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
       Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
         for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
+          if (frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id)) {
+            continue;
+          }
           this.load.image(
             `character-${id}-${action}-${frame}`,
             versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`, CHARACTER_ASSET_VERSION)
@@ -2046,9 +2062,9 @@
       this.load.image("projectile-grenade", imageAsset("assets/images/projectile-grenade.png"));
       this.load.image("projectile-rocket", imageAsset("assets/images/projectile-rocket.png"));
       this.load.image("projectile-sniper", imageAsset("assets/images/projectile-sniper.png"));
-      this.load.image("projectile-firebomb", imageAsset("assets/images/projectile-firebomb.png"));
+      this.load.image("projectile-firebomb", versionedImageAsset("assets/images/projectile-firebomb.png", COMBAT_PROP_ASSET_VERSION));
       this.load.image("projectile-shock", imageAsset("assets/images/projectile-shock.png"));
-      this.load.image("projectile-nail", imageAsset("assets/images/projectile-nail.png"));
+      this.load.image("projectile-nail", versionedImageAsset("assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION));
       this.load.image("muzzle-arrow", imageAsset("assets/images/muzzle-arrow.png"));
       this.load.image("muzzle-pistol", imageAsset("assets/images/muzzle-pistol.png"));
       this.load.image("muzzle-rifle", imageAsset("assets/images/muzzle-rifle.png"));
@@ -2091,27 +2107,23 @@
       this.load.spritesheet("zombie-hit-nail-sheet", versionedImageAsset("assets/images/zombie-hit-nail-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 128, frameHeight: 128 });
       this.load.spritesheet("effect-fire-zone-sheet", versionedImageAsset("assets/images/effect-fire-zone-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 256, frameHeight: 160 });
       this.load.image("barbed-wire", imageAsset("assets/images/barbed-wire.png"));
-      this.load.image("barricade-impact", imageAsset("assets/images/barricade-impact.png"));
+      this.load.image("barricade-impact", versionedImageAsset("assets/images/barricade-impact.png", COMBAT_PROP_ASSET_VERSION));
       this.load.image("blood-burst-core", versionedImageAsset("assets/images/blood-burst-core.png", COMBAT_EFFECT_ASSET_VERSION));
       BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, versionedImageAsset(`assets/images/${key}.png`, COMBAT_EFFECT_ASSET_VERSION)));
       Object.values(ZOMBIE_CORPSE_TEXTURES)
         .flat()
-        .forEach((key) => this.load.image(key, imageAsset(`assets/images/${key}.png`)));
+        .forEach((key) => this.load.image(key, versionedImageAsset(`assets/images/${key}.png`, ZOMBIE_ASSET_VERSION)));
       Object.values(ZOMBIE_DEATH_TEXTURES)
         .flat()
         .forEach((key) => this.load.spritesheet(
           key,
-          imageAsset(`assets/images/${key}.png`),
+          versionedImageAsset(`assets/images/${key}.png`, ZOMBIE_ASSET_VERSION),
           { frameWidth: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE, frameHeight: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE }
         ));
-      this.load.image("zombie-walk", imageAsset("assets/images/zombie-walk.png"));
       ZOMBIE_TEXTURE_TYPES.forEach((type) => {
         this.load.image(
           `zombie-walk-${type}`,
-          versionedImageAsset(
-            `assets/images/zombie-walk-${type}.png`,
-            ZOMBIE_WALK_ASSET_VERSIONS[type]
-          )
+          versionedImageAsset(`assets/images/zombie-walk-${type}.png`, ZOMBIE_ASSET_VERSION)
         );
       });
       this.load.image("ui-frame-sheet", imageAsset("assets/images/ui-frame-sheet.png"));
@@ -2129,6 +2141,7 @@
         createCharacterSpriteTextures(this);
         createCharacterAttackTextures(this);
         createCharacterBadgeTextures(this);
+        releaseCharacterSourceTextures(this);
         createUiTextures(this);
         createTextures(this);
         this.scene.start("GameScene");
@@ -3812,6 +3825,10 @@
         zombie.setTint(SHOCK_STUN_TINT);
       } else if (zombie.slowTimer > 0) {
         zombie.setTint(0x99f4ff);
+      } else if (zombie.surgeState === "charge") {
+        zombie.setTint(CHARGER_CHARGE_TINT);
+      } else if (zombie.surgeState === "surge") {
+        zombie.setTint(CHARGER_SURGE_TINT);
       } else if (zombie.baseTint) {
         zombie.setTint(zombie.baseTint);
       } else {
@@ -3822,6 +3839,9 @@
     applyZombieStun(zombie, duration) {
       if (!zombie || !zombie.active || duration <= 0) {
         return;
+      }
+      if (zombie.surgeState === "charge" || zombie.surgeState === "surge") {
+        this.resetZombieSurge(zombie, 0.9);
       }
       const previousStun = zombie.stunTimer || 0;
       const nextStun = Math.max(previousStun, duration);
@@ -3902,6 +3922,9 @@
     applyZombieKnockback(zombie, hitType, crit = false) {
       if (!zombie || !zombie.active) {
         return;
+      }
+      if (zombie.surgeState === "charge" || zombie.surgeState === "surge") {
+        this.resetZombieSurge(zombie, 0.9);
       }
       const base = hitType === "explosion" || hitType === "projectile-rocket"
         ? 36
@@ -5867,6 +5890,16 @@
         zombie.crowdOrder = this.zombieSpawnSerial = (this.zombieSpawnSerial || 0) + 1;
         zombie.reward = typeConfig.reward;
         zombie.deathExplosion = Boolean(typeConfig.deathExplosion);
+        zombie.surgeSpeedScale = typeConfig.surgeSpeedScale || 1;
+        zombie.surgeDuration = typeConfig.surgeDuration || 0;
+        zombie.surgeChargeDuration = typeConfig.surgeChargeDuration || 0;
+        zombie.surgeCooldownMin = typeConfig.surgeCooldownMin || 0;
+        zombie.surgeCooldownMax = typeConfig.surgeCooldownMax || 0;
+        zombie.surgeMinBarricadeDistance = typeConfig.surgeMinBarricadeDistance || 0;
+        zombie.surgeState = typeConfig.surgeSpeedScale ? "cooldown" : null;
+        zombie.surgeTimer = typeConfig.surgeSpeedScale
+          ? rand(typeConfig.surgeCooldownMin, typeConfig.surgeCooldownMax)
+          : 0;
         this.zombies.push(zombie);
       });
     }
@@ -6339,10 +6372,11 @@
       const distance = Phaser.Math.Distance.Between(startX, startY, aimPoint.x, aimPoint.y);
       const arcHeight = this.getGrenadeArcHeight(distance);
       const launchAngle = this.getGrenadeArcAngle(startX, startY, aimPoint.x, aimPoint.y, arcHeight, 0);
+      const projectileRotationOffset = isFirebomb ? Math.PI : Math.PI / 2;
       const sprite = this.trackTransient(this.add.image(startX, startY, projectileKey)
         .setOrigin(0.5)
         .setScale(PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"])
-        .setRotation(launchAngle + Math.PI / 2)
+        .setRotation(launchAngle + projectileRotationOffset)
         .setDepth(192));
       const shadow = this.trackTransient(this.add.ellipse(startX, startY + 10, 18, 7, 0x000000, 0.32)
         .setDepth(78));
@@ -6366,10 +6400,11 @@
           }
           const arcPoint = this.getGrenadeArcPoint(startX, startY, impactX, impactY, arcHeight, t);
           const arcAngle = this.getGrenadeArcAngle(startX, startY, impactX, impactY, arcHeight, t);
+          const firebombTumble = isFirebomb ? Math.sin(t * Math.PI * 2) * 0.18 : 0;
           const flightDepth = 188 + arcPoint.groundY / 6;
           sprite
             .setPosition(arcPoint.x, arcPoint.y)
-            .setRotation(arcAngle + Math.PI / 2)
+            .setRotation(arcAngle + projectileRotationOffset + firebombTumble)
             .setScale((PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"]) * (1 + Math.sin(Math.PI * t) * 0.16))
             .setDepth(flightDepth);
           if (shadow && !shadow.destroyed) {
@@ -6442,10 +6477,11 @@
       const x = muzzle.x + shotOffset;
       const y = muzzle.y;
       const angle = Math.atan2(ty - y, tx - x) + angleOffset;
+      const usesHorizontalProjectile = defender.projectile === "projectile-nail";
       const sprite = this.add.image(x, y, defender.projectile)
-        .setOrigin(0.5, 1)
+        .setOrigin(0.5, usesHorizontalProjectile ? 0.5 : 1)
         .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
-        .setRotation(angle + Math.PI / 2)
+        .setRotation(angle + (usesHorizontalProjectile ? 0 : Math.PI / 2))
         .setDepth(190);
       const isRocket = defender.projectile === "projectile-rocket";
       const launchSpeed = isRocket ? speed * ROCKET_ACCELERATION.startScale : speed;
@@ -6462,7 +6498,7 @@
         sprite,
         visualEffects,
         angle,
-        hitOffset: sprite.displayHeight * 0.72,
+        hitOffset: usesHorizontalProjectile ? sprite.displayWidth * 0.48 : sprite.displayHeight * 0.72,
         damage,
         vx: Math.cos(angle) * launchSpeed,
         vy: Math.sin(angle) * launchSpeed,
@@ -8018,7 +8054,7 @@
       this.clearWeakMark(zombie);
       this.clearEmbeddedArrowsForZombie(zombie);
       this.playSfx(zombie.elite ? "death_elite" : "death", 1);
-      if (zombie.elite || zombie.type === "brute") {
+      if (zombie.elite || zombie.type === "brute" || zombie.type === "charger") {
         this.shakeCamera(90, 0.0045);
       }
       const shouldExplode = zombie.deathExplosion;
@@ -8191,7 +8227,7 @@
 
     createZombieCorpse(x, y, zombie, deathKnockback = null) {
       const sizeScale = this.getZombieEffectScale(zombie);
-      const tier = zombie.elite ? "elite" : sizeScale < 0.95 ? "small" : "normal";
+      const tier = zombie.elite || zombie.type === "charger" ? "elite" : sizeScale < 0.95 ? "small" : "normal";
       const effect = ZOMBIE_CORPSE_EFFECTS[tier];
       const displayH = zombie.displayH || 170;
       const displayW = zombie.displayW || displayH;
@@ -8506,6 +8542,108 @@
       });
     }
 
+    getZombieSurgeCooldown(zombie) {
+      const min = Math.max(0.4, Number(zombie?.surgeCooldownMin) || 3.8);
+      const max = Math.max(min, Number(zombie?.surgeCooldownMax) || 5.2);
+      return rand(min, max);
+    }
+
+    setZombieSurgeState(zombie, state, timer) {
+      if (!zombie?.surgeState) {
+        return;
+      }
+      zombie.surgeState = state;
+      zombie.surgeTimer = Math.max(0, timer || 0);
+      if (state === "charge") {
+        this.createChargerSurgeCue(zombie);
+      } else if ((zombie.stunTimer || 0) <= 0) {
+        zombie.setAngle(0);
+      }
+      this.restoreZombieTint(zombie);
+    }
+
+    resetZombieSurge(zombie, minimumDelay = 0) {
+      if (!zombie?.surgeState) {
+        return;
+      }
+      this.setZombieSurgeState(zombie, "cooldown", Math.max(minimumDelay, this.getZombieSurgeCooldown(zombie)));
+    }
+
+    createChargerSurgeCue(zombie) {
+      if (!zombie?.active) {
+        return;
+      }
+      const foot = this.getZombieFootPoint(zombie);
+      const cue = this.trackTransient(this.add.ellipse(
+        foot.x,
+        foot.y + 2,
+        Math.max(44, (zombie.displayW || 170) * 0.42),
+        18,
+        0xff9d4d,
+        0.12
+      )
+        .setStrokeStyle(3, 0xffd5a0, 0.78)
+        .setDepth((zombie.depth || ZOMBIE_BODY_DEPTH_BASE) - 0.4));
+      this.tweens.add({
+        targets: cue,
+        scaleX: 1.55,
+        scaleY: 1.18,
+        alpha: 0,
+        duration: Math.max(180, (zombie.surgeChargeDuration || 0.22) * 1000 + 70),
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(cue, false)
+      });
+    }
+
+    updateZombieSurge(zombie, dt, attackLine, frontBlocker) {
+      if (!zombie?.surgeState) {
+        return 1;
+      }
+      const remainingDistance = attackLine - zombie.y;
+      const tooClose = remainingDistance <= (zombie.surgeMinBarricadeDistance || 120);
+      if (frontBlocker || tooClose) {
+        if (zombie.surgeState !== "cooldown") {
+          this.resetZombieSurge(zombie, 0.7);
+        } else {
+          zombie.surgeTimer = Math.max(zombie.surgeTimer || 0, 0.55);
+        }
+        return 1;
+      }
+
+      zombie.surgeTimer = Math.max(0, (zombie.surgeTimer || 0) - dt);
+      if (zombie.surgeState === "cooldown") {
+        if (zombie.surgeTimer <= 0) {
+          this.setZombieSurgeState(zombie, "charge", zombie.surgeChargeDuration || 0.22);
+          return 0.2;
+        }
+        return 1;
+      }
+      if (zombie.surgeState === "charge") {
+        if (zombie.surgeTimer <= 0) {
+          this.setZombieSurgeState(zombie, "surge", zombie.surgeDuration || 0.38);
+          return zombie.surgeSpeedScale || 3.05;
+        }
+        if (zombie.slowTimer <= 0) {
+          zombie.setTint(CHARGER_CHARGE_TINT);
+        }
+        zombie.setAngle(Math.sin((this.elapsed || 0) * 44) * 1.8);
+        return 0.2;
+      }
+      if (zombie.surgeState === "surge") {
+        if (zombie.surgeTimer <= 0) {
+          this.resetZombieSurge(zombie);
+          zombie.setAngle(0);
+          return 1;
+        }
+        if (zombie.slowTimer <= 0) {
+          zombie.setTint(CHARGER_SURGE_TINT);
+        }
+        return zombie.surgeSpeedScale || 3.05;
+      }
+      this.resetZombieSurge(zombie);
+      return 1;
+    }
+
     updateZombies(dt) {
       for (let i = this.zombies.length - 1; i >= 0; i -= 1) {
         const zombie = this.zombies[i];
@@ -8522,13 +8660,16 @@
         }
         const wasStunned = zombie.stunTimer > 0;
         zombie.wobble += dt * (wasStunned ? 13.5 : 4.2);
+        const surgeAnimationScale = zombie.surgeState === "surge"
+          ? 1.55
+          : zombie.surgeState === "charge" ? 0.55 : 1;
         zombie.animTimer += dt * (wasStunned
           ? Math.max(15, (zombie.animRate || 6.8) * 2.35)
-          : (zombie.animRate || (zombie.elite ? 5.2 : 6.8)));
+          : (zombie.animRate || (zombie.elite ? 5.2 : 6.8)) * surgeAnimationScale);
         const nextFrame = Math.floor(zombie.animTimer) % 4;
         if (nextFrame !== zombie.animFrame) {
           zombie.animFrame = nextFrame;
-          zombie.setTexture(`${zombie.textureBase || "zombie-walk"}-${zombie.variant}-${nextFrame}`);
+          zombie.setTexture(`${zombie.textureBase || "zombie-walk-normal"}-${zombie.variant}-${nextFrame}`);
           zombie.setDisplaySize(zombie.displayW, zombie.displayH);
         }
         if (!wasStunned) {
@@ -8569,13 +8710,14 @@
         const slowFactor = zombie.slowTimer > 0 ? 0.34 : 1;
         const attackLine = this.getZombieBarricadeContactY(zombie);
         const frontBlocker = this.getZombieFrontBlocker(zombie);
+        const surgeMovementScale = this.updateZombieSurge(zombie, dt, attackLine, frontBlocker);
         if (frontBlocker) {
           this.holdZombieBehindBlocker(zombie, frontBlocker, dt, slowFactor, attackLine);
           continue;
         }
 
         if (zombie.y < attackLine) {
-          zombie.y = Math.min(attackLine, zombie.y + zombie.speed * slowFactor * dt);
+          zombie.y = Math.min(attackLine, zombie.y + zombie.speed * slowFactor * surgeMovementScale * dt);
         } else {
           zombie.attackTimer -= dt;
           zombie.y = clamp(zombie.y + Math.sin(zombie.wobble) * 6 * dt, attackLine - 8, attackLine);
@@ -8620,40 +8762,41 @@
     }
 
     createHitAtBarricade(x) {
-      const effectWidth = 520;
+      const effectWidth = 178;
       const texture = this.textures.get("barricade-impact").getSourceImage();
       const effectHeight = effectWidth * texture.height / texture.width;
       const effectX = clamp(x, effectWidth / 2 + 8, GAME_WIDTH - effectWidth / 2 - 8);
-      const effectY = this.bounds.barricade + 8;
+      const effectY = this.bounds.barricade + 4;
       const impact = this.trackTransient(this.add.image(effectX, effectY, "barricade-impact")
-        .setOrigin(0.5, 0.55)
+        .setOrigin(0.5)
         .setDisplaySize(effectWidth, effectHeight)
-        .setRotation(rand(-0.035, 0.035))
-        .setAlpha(0.98)
+        .setRotation(rand(-0.09, 0.09))
+        .setAlpha(0.92)
         .setDepth(225));
-      const flash = this.trackTransient(this.add.rectangle(270, this.bounds.barricade + 14, 540, 78, 0xff3b22, 0.18).setDepth(224));
-      const sparks = this.trackTransient(this.add.circle(x, this.bounds.barricade + rand(-8, 14), 11, 0xffd86b, 0.86).setDepth(226));
+      const flash = this.trackTransient(this.add.ellipse(effectX, effectY + 4, 96, 34, 0xff9a55, 0.14).setDepth(224));
+      const sparks = this.trackTransient(this.add.circle(effectX, effectY + rand(-4, 8), 6, 0xffd49a, 0.76).setDepth(226));
       this.tweens.add({
         targets: impact,
-        scaleX: impact.scaleX * 1.08,
-        scaleY: impact.scaleY * 1.08,
+        scaleX: impact.scaleX * 1.18,
+        scaleY: impact.scaleY * 1.12,
         alpha: 0,
-        duration: 330,
+        duration: 270,
         ease: "Cubic.easeOut",
         onComplete: () => this.destroyTransientObject(impact, false)
       });
       this.tweens.add({
         targets: flash,
+        scaleX: 1.35,
         alpha: 0,
-        duration: 150,
+        duration: 125,
         ease: "Cubic.easeOut",
         onComplete: () => this.destroyTransientObject(flash, false)
       });
       this.tweens.add({
         targets: sparks,
-        scale: 2.8,
+        scale: 2.15,
         alpha: 0,
-        duration: 240,
+        duration: 190,
         onComplete: () => this.destroyTransientObject(sparks, false)
       });
     }
