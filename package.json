@@ -1,5 +1,8 @@
 {
   "private": true,
+  "scripts": {
+    "test": "node parking-escape/tests/difficulty.test.cjs && node parking-escape/tests/static.test.cjs"
+  },
   "devDependencies": {
     "@playwright/test": "^1.61.0"
   }

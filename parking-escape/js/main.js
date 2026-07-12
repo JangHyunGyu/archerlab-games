@@ -47,8 +47,13 @@
   const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
   const GAME_ID = "parking_escape";
   const RANK_LIMIT = 20;
+  const RANK_FETCH_LIMIT = 100;
+  const RANK_RULESET = "strict_par_2026_07";
   const NICK_KEY = "archerlab-parking-nick";
   const LEVEL_TIME_LIMIT = 30;
+  const puzzleCatalog = window.ParkingPuzzleCatalog;
+  if (!puzzleCatalog) throw new Error("Parking puzzle catalog is unavailable");
+  const MAX_LEVEL = puzzleCatalog.MAX_LEVEL;
 
   const CAR_PALETTE = [
     { body: 0xff334a, dark: 0x8c1422, light: 0xffd5d9, glass: 0x10243d, glow: 0xff5064 },
@@ -73,7 +78,7 @@
     time: $("time-label"),
     timeStat: $("time-stat"),
     moves: $("moves-label"),
-    left: $("left-label"),
+    par: $("par-label"),
     bestLevel: $("best-level-label"),
     bestMoves: $("best-moves-label"),
     clearMoves: $("clear-moves"),
@@ -99,6 +104,7 @@
     submitStatus: $("submit-status"),
     submitProgress: $("rank-submit-progress"),
     soundToggle: $("sound-toggle-btn"),
+    archerlab: document.querySelector(".archerlab-link"),
   };
 
   function setMenuViewportLocked(locked) {
@@ -324,31 +330,10 @@
     });
   }
 
-  class Random {
-    constructor(seed) {
-      this.seed = seed >>> 0;
-    }
-    next() {
-      let t = this.seed += 0x6d2b79f5;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    }
-    int(min, max) {
-      return Math.floor(this.next() * (max - min + 1)) + min;
-    }
-    pick(list) {
-      return list[Math.floor(this.next() * list.length)];
-    }
-    chance(value) {
-      return this.next() < value;
-    }
-  }
-
   class ParkingGame {
     constructor() {
       this.level = 1;
-      this.bestLevel = readInt(STORAGE.bestLevel, 1);
+      this.bestLevel = clamp(readInt(STORAGE.bestLevel, 1), 1, MAX_LEVEL);
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
       this.moves = 0;
       this.timeLeft = LEVEL_TIME_LIMIT;
@@ -383,6 +368,7 @@
       this.rankClearSyncPromises = [];
       this.rankReturnTimer = null;
       this.lastTimeAlertSecond = null;
+      this.dialogReturnFocus = null;
       this.sound = new (window.ParkingSoundManager || class {
         ensure() {}
         isEnabled() { return true; }
@@ -427,6 +413,7 @@
       }, { passive: true });
       window.addEventListener("blur", () => this.cancelDrag(), { passive: true });
       document.addEventListener("pointerdown", () => this.ensureAudio(), { once: true, passive: true });
+      document.addEventListener("keydown", event => this.handleDialogKeydown(event));
     }
 
     resetRankSessionState() {
@@ -513,15 +500,80 @@
       dom.next.addEventListener("click", () => this.start(this.nextLevelTarget || this.level + 1));
       dom.home.addEventListener("click", () => this.showMenu());
       dom.rank.addEventListener("click", () => this.openRankModal());
-      dom.rankClose.addEventListener("click", () => {
-        this.playTone("button");
-        animatePanelOut(dom.rankModal, () => dom.rankModal.classList.add("hidden"));
-      });
+      dom.rankClose.addEventListener("click", () => this.closeRankModal());
       dom.submitRank.addEventListener("click", () => this.handleSubmitRank());
       dom.skipRank.addEventListener("click", () => this.handleSkipRank());
       if (dom.soundToggle) dom.soundToggle.addEventListener("click", () => this.toggleSound());
       dom.nickname.addEventListener("keydown", event => {
         if (event.key === "Enter") this.handleSubmitRank();
+      });
+    }
+
+    activateDialog(dialog) {
+      if (!dialog) return;
+      const active = document.activeElement;
+      this.dialogReturnFocus = active instanceof HTMLElement ? active : null;
+      for (const element of [dom.container, dom.menu, dom.hud, dom.soundToggle, dom.archerlab]) {
+        if (element) element.inert = true;
+      }
+      document.body.classList.add("dialog-open");
+      requestAnimationFrame(() => {
+        if (!dialog.classList.contains("hidden")) dialog.focus({ preventScroll: true });
+      });
+    }
+
+    deactivateDialog({ restoreFocus = true } = {}) {
+      for (const element of [dom.container, dom.menu, dom.hud, dom.soundToggle, dom.archerlab]) {
+        if (element) element.inert = false;
+      }
+      document.body.classList.remove("dialog-open");
+      const returnFocus = this.dialogReturnFocus;
+      this.dialogReturnFocus = null;
+      if (restoreFocus && returnFocus?.isConnected && !returnFocus.closest(".hidden")) {
+        requestAnimationFrame(() => returnFocus.focus({ preventScroll: true }));
+      }
+    }
+
+    handleDialogKeydown(event) {
+      const dialog = !dom.rankModal.classList.contains("hidden")
+        ? dom.rankModal
+        : !dom.modal.classList.contains("hidden") ? dom.modal : null;
+      if (!dialog) return;
+      if (event.key === "Escape" && dialog === dom.rankModal) {
+        event.preventDefault();
+        this.closeRankModal();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialog.querySelectorAll(
+        'button:not(:disabled), input:not(:disabled), [href], [tabindex]:not([tabindex="-1"])'
+      )).filter(element => !element.closest(".hidden"));
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus({ preventScroll: true });
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (
+        document.activeElement === first
+        || document.activeElement === dialog
+        || !dialog.contains(document.activeElement)
+      )) {
+        event.preventDefault();
+        last.focus({ preventScroll: true });
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus({ preventScroll: true });
+      }
+    }
+
+    closeRankModal() {
+      if (dom.rankModal.classList.contains("hidden")) return;
+      this.playTone("button");
+      animatePanelOut(dom.rankModal, () => {
+        dom.rankModal.classList.add("hidden");
+        this.deactivateDialog();
       });
     }
 
@@ -555,13 +607,13 @@
       clearTimeout(this.rankReturnTimer);
       this.rankReturnTimer = null;
       const token = ++this.startToken;
-      const targetLevel = Math.max(1, level | 0);
+      const targetLevel = clamp(level | 0, 1, MAX_LEVEL);
       const continuesRun = this.mode === "complete" && targetLevel === this.nextLevelTarget && !!this.runRecord;
       const shouldPlayStartSound = !continuesRun;
-      if (targetLevel <= 1 || !this.rankSessionId || !continuesRun) this.startRankSession();
+      if (!continuesRun) this.startRankSession();
       this.level = targetLevel;
       this.moves = 0;
-      this.timeLeft = LEVEL_TIME_LIMIT;
+      this.timeLeft = getLevelTimeLimit(targetLevel);
       this.lastTimeAlertSecond = null;
       this.lastClear = null;
       if (!continuesRun) {
@@ -570,6 +622,7 @@
       }
       this.cancelDrag();
       this.cancelTweens({ clearFx: true });
+      this.deactivateDialog({ restoreFocus: false });
       this.mode = "loading";
       this.animating = false;
       setMenuViewportLocked(false);
@@ -595,13 +648,12 @@
 
     generateLevel(level, token) {
       if (token !== this.startToken) return false;
-      this.levelSeed = createLevelSeed(level);
-      const config = getParkingConfig(level);
-      const puzzle = createParkingPuzzle(config, this.levelSeed);
-      this.gridW = config.size;
-      this.gridH = config.size;
-      this.exitRow = config.exitRow;
-      this.exitSide = config.exitSide;
+      const puzzle = puzzleCatalog.getLevel(level);
+      this.levelSeed = level;
+      this.gridW = puzzle.size;
+      this.gridH = puzzle.size;
+      this.exitRow = puzzle.exitRow;
+      this.exitSide = puzzle.exitSide;
       this.levelMetrics = puzzle.metrics || null;
       this.vehicles = puzzle.vehicles.map((vehicle, index) => ({
         ...cloneVehicle(vehicle),
@@ -621,6 +673,7 @@
       this.animating = false;
       this.cancelDrag();
       this.cancelTweens({ clearFx: true });
+      this.deactivateDialog({ restoreFocus: false });
       this.boardLayer.visible = false;
       setMenuViewportLocked(true);
       dom.hud.classList.add("hidden");
@@ -635,10 +688,10 @@
     }
 
     updateMenu() {
-      this.bestLevel = Math.max(this.bestLevel, readInt(STORAGE.bestLevel, 1));
+      this.bestLevel = clamp(Math.max(this.bestLevel, readInt(STORAGE.bestLevel, 1)), 1, MAX_LEVEL);
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
       dom.bestLevel.textContent = String(this.bestLevel);
-      dom.bestMoves.textContent = `${LEVEL_TIME_LIMIT}s`;
+      dom.bestMoves.textContent = `${LEVEL_TIME_LIMIT}s+`;
     }
 
     showLoading(level) {
@@ -664,22 +717,25 @@
     resize() {
       const viewportW = window.innerWidth;
       const viewportH = window.innerHeight;
-      const topSafe = viewportW < 620 ? 104 : 126;
-      const bottomSafe = viewportW < 620 ? 24 : 42;
-      const side = viewportW < 620 ? 14 : 46;
+      const compact = viewportW < 620;
+      const topSafe = compact ? 96 : 118;
+      const bottomSafe = compact ? 12 : 30;
+      const side = compact ? 10 : 32;
+      const frameCells = textures[ASSETS.cinematicBoard] ? 1.16 : 0.42;
       const maxBoardW = viewportW - side * 2;
       const maxBoardH = viewportH - topSafe - bottomSafe;
-      const exitExtra = this.exitSide === "left" ? 0.9 : 0;
-      const rawCell = Math.floor(Math.min(maxBoardW / (this.gridW + exitExtra), maxBoardH / this.gridH));
-      const minCell = viewportW < 390 ? 44 : viewportW < 620 ? 48 : 58;
+      const rawCell = Math.floor(Math.min(
+        maxBoardW / (this.gridW + frameCells * 2),
+        maxBoardH / (this.gridH + frameCells * 2)
+      ));
       const maxCell = viewportW < 620 ? 66 : 86;
-      this.cell = clamp(rawCell, minCell, maxCell);
-      const visualPad = Math.round((textures[ASSETS.cinematicBoard] ? 1.16 : 0.9) * this.cell);
+      this.cell = clamp(rawCell, 24, maxCell);
+      const visualPad = Math.round(frameCells * this.cell);
       this.boardW = this.cell * this.gridW;
       this.boardH = this.cell * this.gridH;
 
-      const contentW = Math.max(viewportW, this.boardW + side * 2 + visualPad * 2);
-      const contentH = Math.max(viewportH, this.boardH + topSafe + bottomSafe + visualPad);
+      const contentW = viewportW;
+      const contentH = viewportH;
       if (app.screen.width !== contentW || app.screen.height !== contentH) {
         app.renderer.resize(contentW, contentH);
         app.canvas.style.width = `${contentW}px`;
@@ -702,8 +758,10 @@
         spark.y = spark.baseY * height;
       }
 
-      this.boardX = Math.round(Math.max(side + visualPad, (width - this.boardW) / 2));
-      this.boardY = Math.round(topSafe + Math.max(0, (height - topSafe - bottomSafe - this.boardH) / 2));
+      this.boardX = Math.round((width - this.boardW) / 2);
+      const usableHeight = height - topSafe - bottomSafe;
+      const decoratedHeight = this.boardH + visualPad * 2;
+      this.boardY = Math.round(topSafe + visualPad + Math.max(0, (usableHeight - decoratedHeight) / 2));
       this.boardLayer.position.set(this.boardX, this.boardY);
 
       if (this.mode === "playing" && !this.animating) {
@@ -860,7 +918,14 @@
       container.zIndex = vehicle.target ? 10 : 1;
       vehicle.container = container;
       container.position.set(vehicle.x * this.cell, vehicle.y * this.cell);
-      container.hitArea = new PIXI.Rectangle(0, 0, vehicle.w * this.cell, vehicle.h * this.cell);
+      const hitPadX = vehicle.axis === "V" ? Math.max(0, (44 - this.cell) / 2) : 0;
+      const hitPadY = vehicle.axis === "H" ? Math.max(0, (44 - this.cell) / 2) : 0;
+      container.hitArea = new PIXI.Rectangle(
+        -hitPadX,
+        -hitPadY,
+        vehicle.w * this.cell + hitPadX * 2,
+        vehicle.h * this.cell + hitPadY * 2
+      );
 
       drawCar(container, vehicle, this.cell);
       container.on("pointerdown", event => this.beginDrag(event, vehicle));
@@ -896,6 +961,7 @@
       app.stage.off("pointerupoutside", this.boundEnd);
       const vehicle = this.drag.vehicle;
       if (vehicle && vehicle.container && !vehicle.container.destroyed) {
+        vehicle.container.position.set(vehicle.x * this.cell, vehicle.y * this.cell);
         vehicle.container.cursor = "grab";
         vehicle.container.alpha = 1;
         vehicle.container.zIndex = vehicle.target ? 10 : 1;
@@ -963,7 +1029,7 @@
       this.drag = null;
 
       if (!moved) {
-        this.blockPulse(vehicle);
+        if (range.max === range.min) this.blockPulse(vehicle);
         return;
       }
 
@@ -1168,12 +1234,15 @@
     completeLevel() {
       this.playTone("win");
       this.animating = false;
-      this.nextLevelTarget = this.level + 1;
+      const isFinalLevel = this.level >= MAX_LEVEL;
+      this.nextLevelTarget = isFinalLevel ? 1 : this.level + 1;
       const clearedLevel = calculateClearedLevel(this.level);
       this.runMoves += this.moves;
       this.runRecord = {
         level: this.level,
-        rankLevel: clearedLevel,
+        rankLevel: isFinalLevel ? MAX_LEVEL + 1 : clearedLevel,
+        displayLevel: clearedLevel,
+        allClear: isFinalLevel,
         moves: this.runMoves,
         levelMoves: this.moves,
         vehicles: this.initialVehicleCount,
@@ -1181,33 +1250,48 @@
       };
       this.lastClear = this.runRecord;
       this.rankClearSyncPromises.push(this.recordRankClear(this.runRecord));
-      this.bestLevel = Math.max(this.bestLevel, this.level + 1);
+      this.bestLevel = Math.max(this.bestLevel, Math.min(MAX_LEVEL, this.level + 1));
       localStorage.setItem(STORAGE.bestLevel, String(this.bestLevel));
       if (this.bestMoves === 0 || this.moves < this.bestMoves) {
         this.bestMoves = this.moves;
         localStorage.setItem(STORAGE.bestMoves, String(this.bestMoves));
       }
-      dom.clearTitle.textContent = `LEVEL ${this.level} CLEAR`;
-      dom.clearKicker.textContent = "PARKING EXIT";
-      dom.clearMovesLabel.textContent = "MOVE";
-      dom.clearMoves.textContent = String(this.moves);
-      dom.nextLevelCaption.textContent = "NEXT";
-      dom.nextLevel.textContent = String(this.level + 1);
-      dom.clearLevelCaption.textContent = "CLEARED";
-      dom.clearLevel.textContent = `Lv ${clearedLevel.toLocaleString()}`;
-      dom.next.textContent = "NEXT";
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       this.setRankSubmitLoading(false);
-      dom.rankSubmitRow.classList.add("hidden");
-      if (dom.next.parentElement) dom.next.parentElement.classList.remove("hidden");
+      dom.clearMovesLabel.textContent = isFinalLevel ? "마지막" : "이동";
+      dom.clearMoves.textContent = String(this.moves);
+      dom.clearLevelCaption.textContent = "완료";
+      if (isFinalLevel) {
+        dom.clearTitle.textContent = "ALL LEVELS CLEAR";
+        dom.clearKicker.textContent = "PARKING MASTER";
+        dom.nextLevelCaption.textContent = "총 이동";
+        dom.nextLevel.textContent = String(this.runMoves);
+        dom.clearLevel.textContent = `${MAX_LEVEL} / ${MAX_LEVEL}`;
+        dom.rankSubmitRow.classList.remove("hidden");
+        if (dom.next.parentElement) dom.next.parentElement.classList.add("hidden");
+      } else {
+        dom.clearTitle.textContent = `LEVEL ${this.level} CLEAR`;
+        dom.clearKicker.textContent = "PARKING EXIT";
+        dom.nextLevelCaption.textContent = "다음";
+        dom.nextLevel.textContent = String(this.level + 1);
+        dom.clearLevel.textContent = `Lv ${clearedLevel.toLocaleString()}`;
+        dom.next.textContent = "다음";
+        dom.rankSubmitRow.classList.add("hidden");
+        if (dom.next.parentElement) dom.next.parentElement.classList.remove("hidden");
+      }
       dom.modal.classList.remove("is-timeout");
       dom.modal.classList.add("is-clear");
       dom.modal.classList.remove("hidden");
+      this.activateDialog(dom.modal);
       animatePanelIn(dom.modal);
       countText(dom.clearMoves, this.moves);
-      countText(dom.nextLevel, this.level + 1);
-      countText(dom.clearLevel, clearedLevel, value => `Lv ${Number(value).toLocaleString()}`);
+      countText(dom.nextLevel, isFinalLevel ? this.runMoves : this.level + 1);
+      countText(
+        dom.clearLevel,
+        clearedLevel,
+        value => isFinalLevel ? `${Number(value).toLocaleString()} / ${MAX_LEVEL}` : `Lv ${Number(value).toLocaleString()}`
+      );
       this.mode = "complete";
     }
 
@@ -1223,6 +1307,8 @@
         ...(this.runRecord || {}),
         level: this.level,
         rankLevel: this.level,
+        displayLevel: this.level,
+        allClear: false,
         moves: this.runMoves + this.moves,
         levelMoves: this.moves,
         vehicles: this.initialVehicleCount,
@@ -1233,13 +1319,13 @@
       };
       dom.clearTitle.textContent = "TIME UP";
       dom.clearKicker.textContent = "TIME LIMIT";
-      dom.clearMovesLabel.textContent = "MOVE";
+      dom.clearMovesLabel.textContent = "이동";
       dom.clearMoves.textContent = String(this.moves);
-      dom.nextLevelCaption.textContent = "FAILED";
+      dom.nextLevelCaption.textContent = "실패";
       dom.nextLevel.textContent = String(this.level);
-      dom.clearLevelCaption.textContent = "REACHED";
+      dom.clearLevelCaption.textContent = "도달";
       dom.clearLevel.textContent = `Lv ${this.lastClear.rankLevel.toLocaleString()}`;
-      dom.next.textContent = "MAIN";
+      dom.next.textContent = "메인";
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       this.setRankSubmitLoading(false);
@@ -1250,6 +1336,7 @@
       dom.modal.classList.remove("is-clear");
       dom.modal.classList.add("is-timeout");
       dom.modal.classList.remove("hidden");
+      this.activateDialog(dom.modal);
       animatePanelIn(dom.modal);
       countText(dom.clearMoves, this.moves);
       countText(dom.nextLevel, this.level);
@@ -1263,13 +1350,14 @@
       if (dom.time) dom.time.textContent = formatTime(this.timeLeft);
       if (dom.timeStat) dom.timeStat.classList.toggle("is-low", this.mode === "playing" && this.timeLeft <= 5);
       dom.moves.textContent = String(this.moves);
-      dom.left.textContent = String(this.vehicles.length);
+      if (dom.par) dom.par.textContent = String(this.levelMetrics?.depth || "-");
     }
 
     async openRankModal() {
       this.playTone("rank");
       dom.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
       dom.rankModal.classList.remove("hidden");
+      this.activateDialog(dom.rankModal);
       animatePanelIn(dom.rankModal);
       try {
         const rows = await this.fetchRankings();
@@ -1279,13 +1367,20 @@
       }
     }
 
-    async fetchRankings() {
-      const url = `${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${RANK_LIMIT}`;
+    async fetchRankingRows() {
+      const url = `${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${RANK_FETCH_LIMIT}`;
       const response = await fetch(url, { method: "GET" });
       if (!response.ok) throw new Error(`rankings ${response.status}`);
       const data = await response.json();
       if (!Array.isArray(data.rankings)) throw new Error("invalid rankings response");
       return data.rankings;
+    }
+
+    async fetchRankings() {
+      const rows = await this.fetchRankingRows();
+      return rows
+        .filter(row => getRankExtra(row).ruleset === RANK_RULESET)
+        .slice(0, RANK_LIMIT);
     }
 
     renderRankRows(rows) {
@@ -1296,14 +1391,12 @@
       const sortedRows = rows.slice().sort((a, b) => {
         const levelDiff = getRankLevel(b) - getRankLevel(a);
         if (levelDiff !== 0) return levelDiff;
-        const movesA = getRankMoves(a);
-        const movesB = getRankMoves(b);
-        if (movesA !== movesB) return movesA - movesB;
         return getRankTime(a) - getRankTime(b);
       });
       dom.rankContent.innerHTML = sortedRows.map((row, index) => {
         const rank = index + 1;
         const level = getRankLevel(row);
+        const levelLabel = getRankLevelLabel(row, level);
         let meta = "";
         if (row.created_at) {
           const date = new Date(row.created_at);
@@ -1316,7 +1409,7 @@
           <div class="${cls.join(" ")}">
             <div class="rank-pos">${rank}</div>
             <div class="rank-name">${escapeHtml(row.player_name || "PLAYER")}${metaHtml}</div>
-            <div class="rank-level">Lv ${Number(level || 0).toLocaleString()}</div>
+            <div class="rank-level">${escapeHtml(levelLabel)}</div>
           </div>
         `;
       }).join("");
@@ -1333,6 +1426,17 @@
       }
       this.setRankSubmitLoading(true, "등록 중...");
       try {
+        const rankingRows = await this.fetchRankingRows();
+        const normalizedName = normalizeRankName(name);
+        const legacyConflict = rankingRows.find(row => (
+          normalizeRankName(row.player_name || "") === normalizedName
+          && getRankExtra(row).ruleset !== RANK_RULESET
+          && getRankLevel(row) >= this.lastClear.rankLevel
+        ));
+        if (legacyConflict) {
+          this.setRankSubmitLoading(false, "기존 랭킹과 겹치는 닉네임입니다. 다른 이름을 사용하세요");
+          return;
+        }
         const synced = await this.ensureRankClearRecorded(this.lastClear);
         if (!this.rankSessionId || !synced || this.rankSyncFailed) throw new Error("rank score sync failed");
         const response = await fetch(`${RANK_API_BASE}/rankings`, {
@@ -1344,9 +1448,13 @@
             score: this.lastClear.rankLevel,
             session_id: this.rankSessionId,
             extra_data: {
+              ruleset: RANK_RULESET,
+              max_level: MAX_LEVEL,
               session_id: this.rankSessionId,
               level: this.lastClear.rankLevel,
               cleared_level: this.lastClear.rankLevel,
+              display_level: this.lastClear.displayLevel || this.lastClear.rankLevel,
+              all_clear: !!this.lastClear.allClear,
               moves: this.lastClear.moves,
               level_moves: this.lastClear.levelMoves,
               vehicles: this.lastClear.vehicles,
@@ -1365,7 +1473,7 @@
         dom.skipRank.disabled = true;
         dom.nickname.disabled = true;
         dom.submitRank.textContent = "완료";
-        dom.submitStatus.textContent = result.rank ? `등록 완료 #${result.rank}` : "등록 완료";
+        dom.submitStatus.textContent = "등록 완료";
         this.playTone("submit");
         this.returnToMenuAfterRank();
       } catch (error) {
@@ -1474,12 +1582,13 @@
     updateSoundButton() {
       if (!dom.soundToggle) return;
       const enabled = !this.sound || !this.sound.isEnabled || this.sound.isEnabled();
+      const label = enabled ? "사운드 켬" : "사운드 끔";
       dom.soundToggle.classList.toggle("is-muted", !enabled);
       dom.soundToggle.setAttribute("aria-pressed", enabled ? "true" : "false");
-      dom.soundToggle.setAttribute("aria-label", enabled ? "Sound on" : "Sound off");
-      dom.soundToggle.title = enabled ? "Sound on" : "Sound off";
+      dom.soundToggle.setAttribute("aria-label", label);
+      dom.soundToggle.title = label;
       const tooltip = dom.soundToggle.querySelector(".icon-tooltip");
-      if (tooltip) tooltip.textContent = enabled ? "Sound on" : "Sound off";
+      if (tooltip) tooltip.textContent = label;
     }
 
     ensureAudio() {
@@ -1487,222 +1596,6 @@
     }
   }
 
-  function getParkingConfig(level) {
-    const rawLevel = Math.max(1, level | 0);
-    const size = 6;
-    const exitRow = 3;
-    const exitSide = "left";
-    const vehicleCount = rawLevel < 8 ? 9 : rawLevel < 16 ? 10 : rawLevel < 28 ? 11 : rawLevel < 40 ? 12 : 13;
-    const targetDepth = getTargetSolutionDepth(rawLevel);
-    const minBlockers = clamp(1 + Math.floor(rawLevel / 16), 1, 4);
-    const longVehicleRate = clamp(0.16 + rawLevel / 180, 0.18, 0.44);
-    const scrambleMoves = Math.min(120, 24 + rawLevel * 2);
-    const attempts = rawLevel < 16 ? 120 : rawLevel < 40 ? 170 : rawLevel < 80 ? 220 : 280;
-    const solverStateLimit = rawLevel < 40 ? 18000 : 26000;
-    return {
-      size,
-      exitRow,
-      exitSide,
-      vehicleCount,
-      targetDepth,
-      minBlockers,
-      longVehicleRate,
-      scrambleMoves,
-      attempts,
-      solverStateLimit,
-      level: rawLevel,
-    };
-  }
-
-  function createParkingPuzzle(config, seed) {
-    let best = null;
-    for (let attempt = 0; attempt < config.attempts; attempt++) {
-      const rng = new Random((seed ^ 0x51f15eed ^ Math.imul(attempt + 1, 0x9e3779b1)) >>> 0);
-      const vehicles = createSolvedVehicleSet(config, rng, attempt);
-      scrambleVehicles(vehicles, config, rng, config.scrambleMoves + attempt);
-      const metrics = measureParkingPuzzle(vehicles, config);
-      if (!metrics.valid) continue;
-      const score = scoreParkingCandidate(metrics, config);
-      if (!best || score < best.score) best = { vehicles: cloneVehicles(vehicles), metrics, score };
-      if (metrics.depth >= config.targetDepth && metrics.depth <= config.targetDepth + 1 && metrics.blockers >= config.minBlockers) {
-        return { vehicles: cloneVehicles(vehicles), metrics };
-      }
-    }
-    if (best) return { vehicles: best.vehicles, metrics: best.metrics };
-    const fallback = createFallbackPuzzle(config);
-    return { vehicles: fallback, metrics: measureParkingPuzzle(fallback, config) };
-  }
-
-  function getTargetSolutionDepth(level) {
-    if (level < 6) return 2;
-    if (level < 12) return 3;
-    if (level < 20) return 5;
-    if (level < 30) return 6;
-    if (level < 45) return 7;
-    if (level < 60) return 8;
-    return 9;
-  }
-
-  function createSolvedVehicleSet(config, rng, attempt) {
-    const vehicles = [{
-      id: "goal",
-      target: true,
-      axis: "H",
-      x: 0,
-      y: config.exitRow,
-      w: 2,
-      h: 1,
-      colorIndex: 0,
-    }];
-    const occupied = makeVehicleOccupancy(vehicles);
-    const tries = config.vehicleCount * 80 + attempt * 5;
-    let colorCursor = 1;
-    for (let i = 0; i < tries && vehicles.length < config.vehicleCount; i++) {
-      const axis = rng.chance(0.58) ? "V" : "H";
-      const length = rng.chance(config.longVehicleRate) ? 3 : 2;
-      const w = axis === "H" ? length : 1;
-      const h = axis === "V" ? length : 1;
-      const x = rng.int(0, config.size - w);
-      const y = rng.int(0, config.size - h);
-      const draft = {
-        id: `c${vehicles.length}`,
-        target: false,
-        axis,
-        x,
-        y,
-        w,
-        h,
-        colorIndex: colorCursor++ % (CAR_PALETTE.length - 1) + 1,
-      };
-      if (vehicleTouchesExitLane(draft, config.exitRow)) continue;
-      if (!vehicleFits(draft, config.size, occupied)) continue;
-      vehicles.push(draft);
-      for (const cell of vehicleCells(draft)) occupied.add(key(cell.x, cell.y));
-    }
-    return vehicles;
-  }
-
-  function scrambleVehicles(vehicles, config, rng, moves) {
-    for (let step = 0; step < moves; step++) {
-      const candidates = vehicles
-        .map(vehicle => ({ vehicle, range: getVehicleRange(vehicle, vehicles, config.size) }))
-        .filter(item => item.range.max > item.range.min);
-      if (!candidates.length) return;
-      let item = rng.pick(candidates);
-      const targetItem = candidates.find(candidate => candidate.vehicle.target);
-      if (targetItem && (step < 5 || rng.chance(0.18))) item = targetItem;
-      const { vehicle, range } = item;
-      let next = rng.int(range.min, range.max);
-      if (vehicle.target) {
-        const minTarget = Math.min(range.max, 1);
-        next = rng.int(minTarget, range.max);
-      }
-      if (vehicle.axis === "H") vehicle.x = next;
-      else vehicle.y = next;
-    }
-  }
-
-  function measureParkingPuzzle(vehicles, config) {
-    const target = vehicles.find(vehicle => vehicle.target);
-    if (!target) return { valid: false, depth: 0, blockers: 0, movable: 0, states: 0 };
-    const occupied = makeVehicleOccupancy(vehicles, target.id);
-    let blockers = 0;
-    for (let x = 0; x < target.x; x++) {
-      if (occupied.has(key(x, target.y))) blockers += 1;
-    }
-    const distance = target.x;
-    const movable = vehicles.filter(vehicle => {
-      const range = getVehicleRange(vehicle, vehicles, config.size);
-      return range.max > range.min;
-    }).length;
-    if (distance <= 0 || blockers <= 0) {
-      return { valid: false, depth: 0, blockers, movable, states: 0 };
-    }
-    const solution = solveParkingPuzzle(vehicles, config);
-    const valid = Number.isFinite(solution.depth) && solution.depth > 0;
-    return {
-      valid,
-      depth: valid ? solution.depth : 0,
-      blockers,
-      movable,
-      states: solution.states,
-      vehicles: vehicles.length,
-      distance,
-    };
-  }
-
-  function scoreParkingCandidate(metrics, config) {
-    const depthMiss = Math.max(0, config.targetDepth - metrics.depth);
-    const depthOver = Math.max(0, metrics.depth - config.targetDepth - 1);
-    const blockerMiss = Math.max(0, config.minBlockers - metrics.blockers);
-    const densityMiss = Math.max(0, config.vehicleCount - metrics.vehicles);
-    return depthMiss * 900
-      + depthOver * 60
-      + blockerMiss * 220
-      + densityMiss * 90
-      - metrics.depth * 18
-      - metrics.blockers * 6
-      - Math.min(metrics.states, 12000) / 1800;
-  }
-
-  function solveParkingPuzzle(vehicles, config) {
-    const start = cloneVehicles(vehicles);
-    const targetIndex = start.findIndex(vehicle => vehicle.target);
-    if (targetIndex < 0) return { depth: Infinity, states: 0 };
-
-    const queue = [{ vehicles: start, depth: 0 }];
-    const seen = new Set([encodeVehiclePositions(start)]);
-    for (let head = 0; head < queue.length && head < config.solverStateLimit; head++) {
-      const item = queue[head];
-      if (item.vehicles[targetIndex].x === 0) return { depth: item.depth, states: seen.size };
-
-      for (let i = 0; i < item.vehicles.length; i++) {
-        const vehicle = item.vehicles[i];
-        const range = getVehicleRange(vehicle, item.vehicles, config.size);
-        for (let pos = range.min; pos <= range.max; pos++) {
-          if ((vehicle.axis === "H" && pos === vehicle.x) || (vehicle.axis === "V" && pos === vehicle.y)) continue;
-          const next = cloneVehicles(item.vehicles);
-          if (vehicle.axis === "H") next[i].x = pos;
-          else next[i].y = pos;
-          const encoded = encodeVehiclePositions(next);
-          if (seen.has(encoded)) continue;
-          seen.add(encoded);
-          queue.push({ vehicles: next, depth: item.depth + 1 });
-        }
-      }
-    }
-    return { depth: Infinity, states: seen.size };
-  }
-
-  function encodeVehiclePositions(vehicles) {
-    return vehicles.map(vehicle => `${vehicle.x},${vehicle.y}`).join("|");
-  }
-
-  function createFallbackPuzzle(config) {
-    const size = config.size;
-    const row = config.exitRow;
-    const vehicles = [
-      { id: "goal", target: true, axis: "H", x: 1, y: row, w: 2, h: 1, colorIndex: 0 },
-      { id: "c1", axis: "V", x: 3, y: Math.max(0, row - 1), w: 1, h: 3, colorIndex: 2 },
-      { id: "c2", axis: "V", x: 4, y: 0, w: 1, h: 2, colorIndex: 3 },
-      { id: "c3", axis: "H", x: 0, y: 0, w: 2, h: 1, colorIndex: 4 },
-      { id: "c4", axis: "H", x: 2, y: 0, w: 2, h: 1, colorIndex: 5 },
-      { id: "c5", axis: "V", x: 0, y: 3, w: 1, h: 2, colorIndex: 6 },
-      { id: "c6", axis: "H", x: 1, y: size - 1, w: 2, h: 1, colorIndex: 7 },
-      { id: "c7", axis: "V", x: 5, y: 0, w: 1, h: 3, colorIndex: 1 },
-      { id: "c8", axis: "H", x: 2, y: 4, w: 2, h: 1, colorIndex: 2 },
-      { id: "c9", axis: "V", x: 4, y: 4, w: 1, h: 2, colorIndex: 3 },
-      { id: "c10", axis: "H", x: 4, y: 3, w: 2, h: 1, colorIndex: 4 },
-    ];
-    return vehicles.filter(vehicle => vehicle.x + vehicle.w <= size && vehicle.y + vehicle.h <= size);
-  }
-
-  function vehicleTouchesExitLane(vehicle, exitRow) {
-    for (const cell of vehicleCells(vehicle)) {
-      if (cell.y === exitRow) return true;
-    }
-    return false;
-  }
 
   function getVehicleRange(vehicle, vehicles, size) {
     const occupied = makeVehicleOccupancy(vehicles, vehicle.id);
@@ -1718,14 +1611,6 @@
     let max = vehicle.y;
     while (max + vehicle.h < size && !occupied.has(key(vehicle.x, max + vehicle.h))) max += 1;
     return { min, max };
-  }
-
-  function vehicleFits(vehicle, size, occupied) {
-    if (vehicle.x < 0 || vehicle.y < 0 || vehicle.x + vehicle.w > size || vehicle.y + vehicle.h > size) return false;
-    for (const cell of vehicleCells(vehicle)) {
-      if (occupied.has(key(cell.x, cell.y))) return false;
-    }
-    return true;
   }
 
   function makeVehicleOccupancy(vehicles, exceptId = null) {
@@ -1864,14 +1749,6 @@
     return vehicles.map(cloneVehicle);
   }
 
-  function createLevelSeed(level) {
-    let n = Math.max(1, level | 0);
-    n ^= 0x9e3779b9;
-    n = Math.imul(n ^ (n >>> 16), 0x85ebca6b);
-    n = Math.imul(n ^ (n >>> 13), 0xc2b2ae35);
-    return (n ^ (n >>> 16)) >>> 0;
-  }
-
   function key(x, y) {
     return `${x},${y}`;
   }
@@ -1886,6 +1763,11 @@
 
   function calculateClearedLevel(level) {
     return Math.max(1, level | 0);
+  }
+
+  function getLevelTimeLimit(level) {
+    const parMoves = puzzleCatalog.getLevel(clamp(level | 0, 1, MAX_LEVEL))?.parMoves || 2;
+    return Math.max(LEVEL_TIME_LIMIT, Math.ceil(18 + parMoves * 1.5));
   }
 
   function formatTime(seconds) {
@@ -1909,15 +1791,20 @@
     return Number(extra.cleared_level || extra.level || row.score || 0);
   }
 
-  function getRankMoves(row) {
+  function getRankLevelLabel(row, level = getRankLevel(row)) {
     const extra = getRankExtra(row);
-    const moves = Number(extra.moves || 0);
-    return moves > 0 ? moves : Number.POSITIVE_INFINITY;
+    if (extra.all_clear === true) return "ALL CLEAR";
+    const displayLevel = Number(extra.display_level || level || 0);
+    return `Lv ${displayLevel.toLocaleString()}`;
   }
 
   function getRankTime(row) {
     const time = row.created_at ? new Date(row.created_at).getTime() : Number.POSITIVE_INFINITY;
     return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+  }
+
+  function normalizeRankName(value) {
+    return String(value).trim().normalize("NFKC").toLocaleLowerCase("ko-KR");
   }
 
   function escapeHtml(value) {
