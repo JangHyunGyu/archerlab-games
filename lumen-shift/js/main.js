@@ -1,3 +1,5 @@
+import { gravityIntervalMs } from "./gravity.mjs?v=20260712-stage-speed-v1";
+
 const GAME_ID = "lumen-shift";
 const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
 const COLS = 10;
@@ -1779,14 +1781,13 @@ class FallingBlockCore {
   }
 
   dropInterval() {
-    const scale = this.mode.gravityScale || 1;
-    if (this.zoneActive) return Infinity;
-    const stageOrdinal = Math.max(0, this.stageOrdinal || 0);
-    const stageCurve = 900 * (0.982 ** stageOrdinal);
-    const stageFloor = Math.max(34, 92 - stageOrdinal * 0.45);
-    const levelBoost = Math.min(180, (this.level - 1) * 1.2);
-    const comboBoost = Math.min(42, this.combo * 4);
-    return Math.max(stageFloor, (stageCurve - levelBoost - comboBoost) * scale);
+    return gravityIntervalMs({
+      stageOrdinal: this.stageOrdinal,
+      level: this.level,
+      combo: this.combo,
+      gravityScale: this.mode.gravityScale,
+      zoneActive: this.zoneActive,
+    });
   }
 
   speedLevel() {
