@@ -58,7 +58,7 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20260712-zombie-roster-v3";
+  const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
   const CHARACTER_ASSET_VERSION = "20260712-character-audit-v5";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
@@ -273,6 +273,7 @@
     explosion: ["blood-stain-heavy-1", "blood-stain-pool-2", "blood-stain-splatter-1"]
   };
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
+  const NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES = 12;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
   const ZOMBIE_CORPSE_TYPES = [
     "normal",
@@ -295,15 +296,19 @@
   const ZOMBIE_CORPSE_TEXTURES = Object.fromEntries(
     ZOMBIE_CORPSE_TYPES.map((type) => [
       type,
-      [1, 2, 3].map((index) => `zombie-corpse-${type}-${index}`)
+      type === "normal"
+        ? [1, 2, 3, 4].map((index) => `zombie-corpse-normal-variant-${index}`)
+        : [1, 2, 3].map((index) => `zombie-corpse-${type}-${index}`)
     ])
   );
   const ZOMBIE_DEATH_TEXTURES = Object.fromEntries(
     ZOMBIE_CORPSE_TYPES.map((type) => [
       type,
-      type === "student"
-        ? [1, 2, 3].map((index) => `zombie-death-student-${index}-sheet`)
-        : [`zombie-death-${type}-sheet`]
+      type === "normal"
+        ? [1, 2, 3, 4].map((index) => `zombie-death-normal-variant-${index}-sheet`)
+        : type === "student"
+          ? [1, 2, 3].map((index) => `zombie-death-student-${index}-sheet`)
+          : [`zombie-death-${type}-sheet`]
     ])
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
@@ -9022,7 +9027,9 @@
 
       const corpseType = zombie.elite ? "elite" : zombie.type || "normal";
       const corpseTexturePool = ZOMBIE_CORPSE_TEXTURES[corpseType] || ZOMBIE_CORPSE_TEXTURES.normal;
-      const corpseVariantIndex = Math.floor(rand(0, corpseTexturePool.length));
+      const corpseVariantIndex = corpseType === "normal"
+        ? clamp(Math.floor(Number(zombie.variant) || 0), 0, corpseTexturePool.length - 1)
+        : Math.floor(rand(0, corpseTexturePool.length));
       const corpseTexture = corpseTexturePool[corpseVariantIndex] || choose(corpseTexturePool);
       const deathTexturePool = ZOMBIE_DEATH_TEXTURES[corpseType] || ZOMBIE_DEATH_TEXTURES.normal;
       const deathTexture = deathTexturePool[corpseVariantIndex % deathTexturePool.length] || deathTexturePool[0];
@@ -9172,7 +9179,10 @@
       });
       if (deathSprite) {
         this.destroyTransientObject(zombie, false);
-        this.playTransientSpriteFrames(deathSprite, ZOMBIE_DEATH_ANIMATION_FRAMES, effect.fall + 260);
+        const deathFrameCount = corpseType === "normal"
+          ? NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES
+          : ZOMBIE_DEATH_ANIMATION_FRAMES;
+        this.playTransientSpriteFrames(deathSprite, deathFrameCount, effect.fall + 260);
         const finishDeathFall = () => {
           this.tweens.add({
             targets: deathSprite,
