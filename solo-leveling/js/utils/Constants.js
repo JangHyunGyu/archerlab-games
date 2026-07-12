@@ -70,15 +70,15 @@ export const SYSTEM = {
     BORDER_GOLD: 0xe8b64a,
     TEXT_BRIGHT: '#d9f4ff',
     TEXT_CYAN: '#4dd2ff',
-    TEXT_CYAN_DIM: '#3a8bb8',
-    TEXT_MUTED: '#5a6c7a',
+    TEXT_CYAN_DIM: '#69bce0',
+    TEXT_MUTED: '#8ca3b5',
     TEXT_RED: '#ff5a5a',
     TEXT_GOLD: '#e8b64a',
     SCAN_LINE: 0x0e2033,
 };
 
 export const UI_FONT_MONO = '"Courier New", Consolas, Menlo, monospace';
-export const UI_FONT_KR = '"Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+export const UI_FONT_KR = '"Pretendard Variable", Pretendard, "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
 
 // Draw an angular-cut panel (System aesthetic). Corners are chamfered instead of rounded.
 export function drawSystemPanel(g, x, y, w, h, opts = {}) {

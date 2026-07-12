@@ -38,6 +38,7 @@ export class SystemMessage {
         if (this._destroyed || !this.scene) return;
         if (this.queue.length === 0) {
             this.isShowing = false;
+            this.currentMessage = null;
             return;
         }
 
@@ -47,21 +48,33 @@ export class SystemMessage {
 
         const colors = this._getColors(msg.type);
         const cx = GAME_WIDTH / 2;
-        const lineCount = msg.lines.length;
-        const lineH = uv(27);
-        const boxH = uv(66) + lineCount * lineH;
-        const boxW = Math.min(uv(360), GAME_WIDTH - uv(40));
-        const startY = uv(118);
+        const lineCount = Math.max(1, msg.lines.length);
+        const portrait = GAME_HEIGHT > GAME_WIDTH;
+        const safeX = Math.max(14, Math.min(uv(20), GAME_WIDTH * 0.045));
+        const safeTop = Math.max(14, Math.min(uv(24), GAME_HEIGHT * 0.04));
+        const safeBottom = Math.max(14, Math.min(uv(20), GAME_HEIGHT * 0.04));
+        const boxW = Math.max(1, Math.min(uv(430), GAME_WIDTH - safeX * 2));
+        const maxBoxH = Math.max(1, GAME_HEIGHT - safeTop - safeBottom);
+        let lineH = uv(28);
+        const fixedH = uv(58);
+        if (fixedH + lineCount * lineH > maxBoxH) {
+            lineH = Math.max(18, Math.floor((maxBoxH - fixedH) / lineCount));
+        }
+        const boxH = Math.min(maxBoxH, fixedH + lineCount * lineH);
+        const preferredTop = portrait
+            ? Math.min(uv(156), GAME_HEIGHT * 0.2)
+            : Math.min(uv(72), GAME_HEIGHT * 0.13);
+        const boxTop = Math.max(safeTop, Math.min(preferredTop, GAME_HEIGHT - safeBottom - boxH));
+        const boxLeft = cx - boxW / 2;
+        const startY = boxTop + boxH / 2;
 
-        // Container for scroll factor
         const elements = [];
         this.currentElements = elements;
 
-        // Generated panel texture: one reusable UI asset instead of several primitives.
         const bg = UIAssets.createPanel(
             this.scene,
-            cx - boxW / 2,
-            startY - boxH / 2,
+            boxLeft,
+            boxTop,
             boxW,
             boxH,
             {
@@ -74,71 +87,101 @@ export class SystemMessage {
                 borderWidth: 1,
                 accent: colors.border,
                 glow: 6,
+                variant: 'panel',
                 depth: 201,
                 scrollFactor: 0,
             }
         ).setAlpha(0);
         elements.push(bg);
 
-        // Side decorations (small diamonds)
-        const diamondL = this.scene.add.rectangle(cx - boxW / 2 + 8, startY - boxH / 2, 6, 6, colors.border, 0.8)
+        // Severity rail and corner markers make the message type readable at a glance.
+        const rail = this.scene.add.rectangle(boxLeft + uv(5), startY, Math.max(2, uv(3)), boxH - uv(18), colors.border, 0.88)
+            .setDepth(202).setScrollFactor(0).setAlpha(0);
+        const diamondL = this.scene.add.rectangle(boxLeft + uv(12), boxTop + uv(4), 6, 6, colors.border, 0.9)
             .setDepth(202).setScrollFactor(0).setRotation(Math.PI / 4).setAlpha(0);
-        const diamondR = this.scene.add.rectangle(cx + boxW / 2 - 8, startY - boxH / 2, 6, 6, colors.border, 0.8)
+        const diamondR = this.scene.add.rectangle(boxLeft + boxW - uv(12), boxTop + uv(4), 6, 6, colors.border, 0.9)
             .setDepth(202).setScrollFactor(0).setRotation(Math.PI / 4).setAlpha(0);
-        elements.push(diamondL, diamondR);
+        elements.push(rail, diamondL, diamondR);
+
+        const markerSize = Math.max(24, uv(26));
+        const markerPlate = this.scene.add.rectangle(
+            boxLeft + uv(22), boxTop + uv(22), markerSize, markerSize, colors.border, 0.13
+        ).setStrokeStyle(1, colors.border, 0.72).setDepth(202).setScrollFactor(0).setAlpha(0);
+        const marker = padText(this.scene.add.text(boxLeft + uv(22), boxTop + uv(22), colors.marker, {
+            fontSize: fs(12), fontFamily: UI_FONT_MONO, fontStyle: 'bold', color: colors.titleColor,
+            stroke: '#02040a', strokeThickness: 1,
+        }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 2, 2);
+        elements.push(markerPlate, marker);
 
         // Title text
-        const titleText = padText(this.scene.add.text(cx, startY - boxH / 2 + uv(18), msg.title, {
+        const titleText = padText(this.scene.add.text(boxLeft + uv(43), boxTop + uv(12), msg.title, {
             fontSize: fs(13),
             fontFamily: UI_FONT_MONO,
             fontStyle: 'bold',
             color: colors.titleColor,
             stroke: '#02040a',
             strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 4, 5, 2, 2);
-        fitText(titleText, boxW - uv(30), 0, 0.72);
+        }).setOrigin(0, 0).setDepth(203).setScrollFactor(0).setAlpha(0), 4, 5, 2, 2);
+        fitText(titleText, boxW - uv(62), uv(28), 0.68);
         elements.push(titleText);
 
         // Horizontal line under title
-        const titleLine = this.scene.add.rectangle(cx, startY - boxH / 2 + uv(32), boxW - uv(40), 1, colors.border, 0.4)
+        const titleLine = this.scene.add.rectangle(cx, boxTop + uv(43), boxW - uv(30), 1, colors.border, 0.5)
             .setDepth(202).setScrollFactor(0).setAlpha(0);
         elements.push(titleLine);
 
-        // Body lines
-        const bodyTexts = [];
+        // The first line carries the message; subsequent lines read as supporting detail.
+        const bodyX = boxLeft + uv(20);
         msg.lines.forEach((line, i) => {
-            const t = padText(this.scene.add.text(cx, startY - boxH / 2 + uv(48) + i * lineH, line, {
-                fontSize: fs(14),
+            const bodyY = boxTop + uv(50) + i * lineH;
+            const body = padText(this.scene.add.text(bodyX, bodyY, line, {
+                fontSize: fs(i === 0 ? 15 : 13),
                 fontFamily: UI_FONT_KR,
-                color: colors.textColor,
+                fontStyle: i === 0 ? 'bold' : 'normal',
+                color: i === 0 ? colors.primaryTextColor : colors.textColor,
                 stroke: '#02040a',
                 strokeThickness: 2,
                 lineSpacing: 4,
-            }).setOrigin(0.5).setDepth(203).setScrollFactor(0).setAlpha(0), 4, 5, 2, 2);
-            fitText(t, boxW - uv(34), lineH, 0.68);
-            elements.push(t);
-            bodyTexts.push(t);
+            }).setOrigin(0, 0).setDepth(203).setScrollFactor(0).setAlpha(0), 4, 5, 2, 2);
+            fitText(body, boxW - uv(40), lineH, 0.64);
+            elements.push(body);
         });
 
-        // Animate in: slide down + fade in
+        // A quiet lifetime bar communicates timing without adding copy.
+        const progress = this.scene.add.rectangle(
+            boxLeft + uv(10), boxTop + boxH - uv(5), boxW - uv(20), Math.max(1, uv(2)), colors.border, 0.72
+        ).setOrigin(0, 0.5).setDepth(203).setScrollFactor(0).setAlpha(0);
+        elements.push(progress);
+
+        // Cohesive slide-in replaces the old flicker, keeping the alert legible in motion.
+        const enterOffset = uv(10);
         elements.forEach((el, idx) => {
+            const finalY = el.y;
+            el.setAlpha(0).setY(finalY - enterOffset);
             this.scene.tweens.add({
                 targets: el,
                 alpha: 1,
-                y: el.y, // keep position
-                duration: 300,
-                delay: idx * 20,
-                ease: 'Power2',
+                y: finalY,
+                duration: 250,
+                delay: Math.min(idx * 12, 84),
+                ease: 'Cubic.Out',
             });
-            el.setAlpha(0);
         });
-
-        // Glitch/flicker effect for cyberpunk feel
-        this._delay(100, () => {
-            bg.setAlpha(0.4);
-            this._delay(50, () => {
-                bg.setAlpha(0.85);
-            });
+        titleLine.setScale(0.18, 1);
+        this.scene.tweens.add({
+            targets: titleLine,
+            scaleX: 1,
+            duration: 340,
+            delay: 70,
+            ease: 'Cubic.Out',
+        });
+        progress.setScale(1, 1);
+        this.scene.tweens.add({
+            targets: progress,
+            scaleX: 0,
+            duration: Math.max(300, msg.duration - 240),
+            delay: 240,
+            ease: 'Linear',
         });
 
         // Play sound
@@ -155,12 +198,14 @@ export class SystemMessage {
                 this.scene.tweens.add({
                     targets: el,
                     alpha: 0,
-                    duration: 200,
-                    delay: idx * 10,
+                    y: el.y - uv(7),
+                    duration: 180,
+                    delay: Math.min(idx * 5, 40),
+                    ease: 'Cubic.In',
                     onComplete: () => el.destroy(),
                 });
             });
-            this._delay(400, () => {
+            this._delay(260, () => {
                 if (this.currentElements === elements) this.currentElements = [];
                 this._showNext();
             });
@@ -205,31 +250,31 @@ export class SystemMessage {
                 return {
                     asset: 'ui_panel_red',
                     bg: 0x2a0a0a, border: 0xff3333, glow: 0xff0000,
-                    titleColor: '#ff4444', textColor: '#ffaaaa',
+                    titleColor: '#ff6666', primaryTextColor: '#fff0f0', textColor: '#ffb8b8', marker: '!',
                 };
             case 'quest':
                 return {
                     asset: 'ui_panel_cyan',
                     bg: 0x0a1a2a, border: 0x44aaff, glow: 0x2288ff,
-                    titleColor: '#66ccff', textColor: '#ccddff',
+                    titleColor: '#78d6ff', primaryTextColor: '#f1f8ff', textColor: '#c8ddf5', marker: 'Q',
                 };
             case 'levelup':
                 return {
                     asset: 'ui_panel_purple',
                     bg: 0x0a0a2a, border: 0x7b2fff, glow: 0x6622ff,
-                    titleColor: '#b366ff', textColor: '#ddccff',
+                    titleColor: '#c590ff', primaryTextColor: '#ffffff', textColor: '#e0d0ff', marker: '↑',
                 };
             case 'arise':
                 return {
                     asset: 'ui_panel_purple',
                     bg: 0x0f0020, border: 0x9b44ff, glow: 0x7b2fff,
-                    titleColor: '#cc88ff', textColor: '#eeddff',
+                    titleColor: '#d6a4ff', primaryTextColor: '#ffffff', textColor: '#eadbff', marker: '◆',
                 };
             default: // info
                 return {
                     asset: 'ui_panel_cyan',
                     bg: 0x0a1a2a, border: 0x3388cc, glow: 0x2266aa,
-                    titleColor: '#55aadd', textColor: '#aaccdd',
+                    titleColor: '#69c8f5', primaryTextColor: '#edfaff', textColor: '#b8d3e2', marker: 'i',
                 };
         }
     }
