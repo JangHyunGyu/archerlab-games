@@ -1,6 +1,8 @@
 import { WeaponBase } from './WeaponBase.js';
 import { WEAPONS } from '../utils/Constants.js';
 
+const BASIC_ATTACK_MOTION_DURATION = 300;
+
 export class BasicDagger extends WeaponBase {
     constructor(scene, player, config = WEAPONS.basicDagger) {
         super(scene, player, config);
@@ -204,11 +206,16 @@ export class BasicDagger extends WeaponBase {
         this._stabSide *= -1;
         const side = this._stabSide;
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, 240, side);
+            this.player.playAttackMotion(baseAngle, BASIC_ATTACK_MOTION_DURATION, side);
         }
         const effectTexture = this._getConfiguredEffectTexture() || this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
-        const useEffectStab = !useCharacterEffect && this.scene.textures.exists('effect_basic_stab_0');
+        // The rebuilt Shadow Monarch motion already carries its separately
+        // rendered dagger at the hand socket. Use the procedural energy trail
+        // for that loadout so the old stab sheet cannot draw a second weapon.
+        const useEmbeddedDagger = this.key === 'basicDagger';
+        const useEffectStab = !useCharacterEffect && !useEmbeddedDagger &&
+            this.scene.textures.exists('effect_basic_stab_0');
         const bladeScale = useCharacterEffect ? (this.config.effectScale || 0.46) : (useEffectStab ? 0.56 : 0.72);
         const bladeTipFromOrigin = 82 * 0.94;
         const bladeVisualLength = bladeTipFromOrigin * bladeScale;
@@ -221,8 +228,9 @@ export class BasicDagger extends WeaponBase {
 
         const mainBlade = this._getBlade(effectTexture || (useEffectStab ? 'effect_basic_stab_0' : 'proj_dagger_stab'))
             .setDepth(14)
-            .setScale(bladeScale);
-        const trails = useEffectStab || useCharacterEffect
+            .setScale(bladeScale)
+            .setAlpha(useEmbeddedDagger ? 0 : 1);
+        const trails = useEffectStab || useCharacterEffect || useEmbeddedDagger
             ? []
             : [this._getBlade(), this._getBlade(), this._getBlade()];
 
@@ -333,14 +341,16 @@ export class BasicDagger extends WeaponBase {
             const forwardAlpha = Math.max(0, phase.force);
             const armAlpha = Math.max(0.35, phase.alpha * 0.85);
 
-            fx.lineStyle(9, 0x09040f, 0.72 * armAlpha);
-            fx.lineBetween(pose.shoulderX, pose.shoulderY, pose.pommelX, pose.pommelY);
-            fx.lineStyle(4, 0x332052, 0.75 * armAlpha);
-            fx.lineBetween(pose.shoulderX, pose.shoulderY, pose.pommelX, pose.pommelY);
-            fx.fillStyle(0x171028, 0.95 * armAlpha);
-            fx.fillCircle(pose.pommelX, pose.pommelY, 5.5);
-            fx.fillStyle(0xbda9ff, 0.55 * armAlpha);
-            fx.fillCircle(pose.pommelX - pose.perpX * 1.4, pose.pommelY - pose.perpY * 1.4, 2.1);
+            if (!useEmbeddedDagger) {
+                fx.lineStyle(9, 0x09040f, 0.72 * armAlpha);
+                fx.lineBetween(pose.shoulderX, pose.shoulderY, pose.pommelX, pose.pommelY);
+                fx.lineStyle(4, 0x332052, 0.75 * armAlpha);
+                fx.lineBetween(pose.shoulderX, pose.shoulderY, pose.pommelX, pose.pommelY);
+                fx.fillStyle(0x171028, 0.95 * armAlpha);
+                fx.fillCircle(pose.pommelX, pose.pommelY, 5.5);
+                fx.fillStyle(0xbda9ff, 0.55 * armAlpha);
+                fx.fillCircle(pose.pommelX - pose.perpX * 1.4, pose.pommelY - pose.perpY * 1.4, 2.1);
+            }
 
             if (useEffectStab || useCharacterEffect) return;
             if (forwardAlpha <= 0.03) return;
@@ -401,6 +411,8 @@ export class BasicDagger extends WeaponBase {
                     mainBlade.setRotation(pose.angle);
                     mainBlade.setAlpha(phase.alpha);
                     mainBlade.setScale(bladeScale * (1 + phase.force * (useCharacterEffect ? 0.16 : 0.05)));
+                } else if (useEmbeddedDagger) {
+                    mainBlade.setAlpha(0);
                 } else {
                     mainBlade.setPosition(pose.pommelX, pose.pommelY);
                     mainBlade.setRotation(pose.angle + Math.PI / 2);
@@ -492,7 +504,10 @@ export class BasicDagger extends WeaponBase {
     }
 
     _swordSlash() {
-        const { baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 65, duration: 260 });
+        const { baseAngle, side } = this._getAttackSetup({
+            rangeBonus: this.config.targetRangeBonus ?? 65,
+            duration: BASIC_ATTACK_MOTION_DURATION,
+        });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const originX = this.player.x;
@@ -548,7 +563,10 @@ export class BasicDagger extends WeaponBase {
     }
 
     _clawSwipe() {
-        const { baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 35, duration: 245 });
+        const { baseAngle, side } = this._getAttackSetup({
+            rangeBonus: this.config.targetRangeBonus ?? 35,
+            duration: BASIC_ATTACK_MOTION_DURATION,
+        });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
@@ -641,7 +659,10 @@ export class BasicDagger extends WeaponBase {
     }
 
     _maceSlam() {
-        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 25, duration: 285 });
+        const { target, baseAngle, side } = this._getAttackSetup({
+            rangeBonus: this.config.targetRangeBonus ?? 25,
+            duration: BASIC_ATTACK_MOTION_DURATION,
+        });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
@@ -729,7 +750,10 @@ export class BasicDagger extends WeaponBase {
     }
 
     _fireball() {
-        const { target, baseAngle, side } = this._getAttackSetup({ rangeBonus: this.config.targetRangeBonus ?? 130, duration: 300 });
+        const { target, baseAngle, side } = this._getAttackSetup({
+            rangeBonus: this.config.targetRangeBonus ?? 130,
+            duration: BASIC_ATTACK_MOTION_DURATION,
+        });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
         const perpX = -sinA;
