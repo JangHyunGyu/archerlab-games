@@ -43,6 +43,7 @@ class MotionSet:
     motion_dir: Path
     prefix: str = ""
     separate_weapon: bool = False
+    embedded_weapon: bool = False
 
 
 MOTION_SETS = (
@@ -51,7 +52,7 @@ MOTION_SETS = (
         "light_swordswoman",
         "light_swordswoman",
         ROOT / "assets" / "player" / "characters" / "light_swordswoman" / "motion",
-        separate_weapon=True,
+        embedded_weapon=True,
     ),
     MotionSet(
         "white_tiger_brawler",
@@ -73,7 +74,6 @@ MOTION_SETS = (
 
 WEAPON_SOURCES = {
     "shadow_monarch": SOURCE_ROOT / "weapons" / "shadow_dagger_chroma.png",
-    "light_swordswoman": SOURCE_ROOT / "weapons" / "light_sword_chroma.png",
     "sanctuary_healer": SOURCE_ROOT / "weapons" / "sanctuary_staff_chroma.png",
 }
 
@@ -695,7 +695,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"mean chroma {metrics['mean_removed']:.1%} / max residue {metrics['max_residual']:.1%}"
             )
         weapon_metrics = verify_weapon_sources()
-        print(f"weapon sources verified: 3 masters / min elongation {weapon_metrics['min_elongation']:.2f}")
+        print(
+            f"weapon sources verified: {len(WEAPON_SOURCES)} masters / "
+            f"min elongation {weapon_metrics['min_elongation']:.2f}"
+        )
 
     if not args.sources_only:
         for motion_set in MOTION_SETS:

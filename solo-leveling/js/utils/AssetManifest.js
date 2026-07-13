@@ -126,9 +126,10 @@ const PLAYER_MOTION_NAMES = [
     ...Array.from({ length: 2 }, (_, i) => `player_hit_${i}`),
 ];
 
-// Runtime image URLs are otherwise stable across releases and can remain in a
-// browser/CDN cache after the motion PNG/WebP files are rebuilt in place.
-export const CHARACTER_MOTION_ASSET_VERSION = '20260714-weapon-readability-v1';
+// Character image URLs are otherwise stable across releases and can remain in
+// a browser/CDN cache after portraits or motion frames are rebuilt in place.
+export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-light-swordswoman-identity-v1';
+export const CHARACTER_MOTION_ASSET_VERSION = CHARACTER_VISUAL_ASSET_VERSION;
 
 const uiAsset = (key) => ({
     key: key.includes('/') ? key.split('/').pop() : key,
@@ -146,10 +147,12 @@ export function getCharacterPortraitAssets() {
         {
             key: `char_${character.assetKey}_portrait`,
             path: `assets/player/characters/${character.assetKey}/portrait.png`,
+            cacheVersion: CHARACTER_VISUAL_ASSET_VERSION,
         },
         {
             key: `char_${character.assetKey}_menu_portrait`,
             path: `assets/player/characters/${character.assetKey}/menu_portrait.png`,
+            cacheVersion: CHARACTER_VISUAL_ASSET_VERSION,
         },
     ]));
 }

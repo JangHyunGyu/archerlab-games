@@ -13,9 +13,10 @@ Source layout::
         attack_up_chroma.png
 
 Each body source is a horizontal strip of four poses; generated cell widths
-need not be equal.  Weaponed characters use one independently rendered weapon
-master plus explicit direction/pose sockets, then bake the two reviewed layers
-into the existing 112x144 runtime-frame contract.
+need not be equal.  Most weaponed characters use one independently rendered
+weapon master plus explicit direction/pose sockets.  Characters marked with an
+embedded weapon instead keep the generated hand, grip, and blade together as a
+single reviewed silhouette throughout the 112x144 runtime-frame contract.
 """
 
 import argparse
@@ -87,6 +88,7 @@ class CharacterProfile:
     filename_prefix: str = ""
     socket_profile: str | None = None
     weapon_profile: WeaponProfile | None = None
+    embedded_weapon: bool = False
     socket_overrides: Mapping[str, WeaponSocket] = field(default_factory=dict)
     body_track_adjustments: Mapping[str, tuple[float, int, int]] = field(default_factory=dict)
 
@@ -139,18 +141,7 @@ CHARACTER_PROFILES: dict[str, CharacterProfile] = {
     "light_swordswoman": CharacterProfile(
         character_id="light_swordswoman",
         output_relative=Path("assets/player/characters/light_swordswoman/motion"),
-        socket_profile="light_swordswoman",
-        weapon_profile=WeaponProfile(
-            "light_sword_chroma.png",
-            (0.140, 0.50),
-            brightness=1.08,
-            length_scale=1.42,
-            thickness_scale=1.34,
-            glow_color=(255, 214, 92),
-            glow_alpha=92,
-            minimum_visible_pixels=64,
-            minimum_visible_extent=34,
-        ),
+        embedded_weapon=True,
     ),
     "white_tiger_brawler": CharacterProfile(
         character_id="white_tiger_brawler",
@@ -215,32 +206,6 @@ SOCKET_PROFILES: dict[str, dict[str, tuple[WeaponSocket, ...]]] = {
         "attack_up": weapon_sockets(
             (74, 49, 90, 26, "front"), (91, 72, 110, 25, "front"),
             (94, 33, 150, 25, "front"), (90, 79, 110, 25, "front"),
-        ),
-    },
-    "light_swordswoman": {
-        "walk_down": weapon_sockets(
-            (39, 93, -100, 43, "front"), (40, 92, -99, 43, "front"),
-            (39, 96, -103, 41, "front"), (40, 94, -101, 42, "front"),
-        ),
-        "walk_right": weapon_sockets(
-            (70, 89, -66, 42, "front"), (72, 88, -64, 42, "front"),
-            (72, 94, -70, 40, "front"), (71, 91, -68, 41, "front"),
-        ),
-        "walk_up": weapon_sockets(
-            (73, 93, -104, 40, "behind"), (74, 91, -103, 40, "behind"),
-            (73, 95, -108, 39, "behind"), (74, 93, -106, 39, "behind"),
-        ),
-        "attack_down": weapon_sockets(
-            (42, 84, -78, 41, "front"), (46, 78, -60, 40, "front"),
-            (79, 62, -22, 35, "front"), (71, 89, -70, 39, "front"),
-        ),
-        "attack_right": weapon_sockets(
-            (67, 88, -64, 39, "front"), (72, 78, -34, 38, "front"),
-            (80, 72, 24, 34, "front"), (80, 72, 24, 34, "front"),
-        ),
-        "attack_up": weapon_sockets(
-            (64, 84, 48, 37, "behind"), (69, 71, 56, 36, "behind"),
-            (76, 51, 64, 34, "behind"), (73, 90, -104, 39, "behind"),
         ),
     },
     "sanctuary_healer": {
@@ -1239,7 +1204,12 @@ def write_preview(preview_dir: Path, profile: CharacterProfile, frames: Mapping[
         (14, 16, 23, 255),
     )
     draw = ImageDraw.Draw(sheet)
-    render_label = "separate-weapon composite" if profile.weapon_profile else "body motion"
+    if profile.weapon_profile:
+        render_label = "separate-weapon composite"
+    elif profile.embedded_weapon:
+        render_label = "embedded-weapon motion"
+    else:
+        render_label = "body motion"
     draw.text((8, 6), f"{profile.character_id} / {render_label} v2", fill=(238, 241, 250, 255))
     for row_index, (row_label, names) in enumerate(rows):
         y = header_height + row_index * row_height

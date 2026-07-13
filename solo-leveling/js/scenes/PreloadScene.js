@@ -284,14 +284,19 @@ export class PreloadScene extends Phaser.Scene {
     _loadImage(key, pngPath, options = {}) {
         if (this.textures.exists(key) || this._queuedAssetKeys.has(key)) return;
         this._queuedAssetKeys.add(key);
+        const withVersion = (path) => {
+            if (!options.cacheVersion) return path;
+            const separator = path.includes('?') ? '&' : '?';
+            return `${path}${separator}v=${encodeURIComponent(options.cacheVersion)}`;
+        };
         if (options.preferPng || !this._preferWebP || !pngPath.endsWith('.png')) {
-            this.load.image(key, pngPath);
+            this.load.image(key, withVersion(pngPath));
             return;
         }
 
         const webpPath = pngPath.replace(/\.png$/i, '.webp');
-        this._pngFallbacks.set(key, pngPath);
-        this.load.image(key, webpPath);
+        this._pngFallbacks.set(key, withVersion(pngPath));
+        this.load.image(key, withVersion(webpPath));
     }
 
     _loadPreloadSkinAssets() {
