@@ -1,9 +1,11 @@
-"""Rebuild defender action strips from the existing approved character art.
+"""Normalise the A/F defender sheets without redrawing their approved art.
 
-The source attack renders were generated independently and changed body scale
-between frames.  This script keeps every pose bottom-centred, normalises the
-hair-to-feet body height against the matching base pose, and gives weapons
-enough transparent room so no frame can be cropped in the game.
+The game fits every sliced texture to the same display height.  A therefore
+needs one common hair-to-feet height across its 800 px base/action canvases,
+while F's 640 px throw canvases need 1.25 times the pixel body height and foot
+gap of its untouched 512 px base canvas.  This tool applies those rules,
+preserves each original pose, and validates the complete output set before it
+writes any production asset.
 """
 
 from __future__ import annotations
@@ -19,6 +21,9 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE_DIR = ROOT / "assets" / "images"
 POSE_COUNT = 9
+SAFE_MARGIN = 8
+A_COMMON_BODY_HEIGHT = 542
+MAX_SCALE_RATIO = 1.03
 
 
 @dataclass(frozen=True)
@@ -27,11 +32,10 @@ class ActionSpec:
     action: str
     base_name: str
     source_names: tuple[str, str, str, str]
-    expected_source_widths: tuple[int, int, int, int]
     output_width: int
     output_height: int
     hair: str
-    alias_frame_zero: bool = False
+    normalise_base: bool = False
 
 
 SPECS = (
@@ -39,27 +43,22 @@ SPECS = (
         character="a",
         action="attack",
         base_name="character-a.png",
-        # The approved base pose is the anticipation frame. Runtime aliases it
-        # as attack frame zero, so only the three distinct follow-up strips
-        # remain as source files.
         source_names=(
             "character-a.png",
             "character-a-attack-1.png",
             "character-a-attack-2.png",
             "character-a-attack-3.png",
         ),
-        expected_source_widths=(4608, 4608, 4608, 4608),
         output_width=512,
         output_height=800,
         hair="pink",
-        alias_frame_zero=True,
+        normalise_base=True,
     ),
     ActionSpec(
         character="f",
         action="throw",
         base_name="character-f.png",
         source_names=tuple(f"character-f-throw-{frame}.png" for frame in range(4)),
-        expected_source_widths=(4608, 4608, 4608, 4608),
         output_width=512,
         output_height=640,
         hair="red",
@@ -122,151 +121,303 @@ def alpha_geometry(image: Image.Image) -> tuple[tuple[int, int, int, int], float
     bbox = alpha.getbbox()
     if bbox is None:
         raise ValueError("Empty sprite cell")
-    left, top, right, bottom_exclusive = bbox
-    bottom = bottom_exclusive - 1
-    sample_top = max(top, bottom - max(18, round((bottom - top + 1) * 0.14)))
+    left, top, right, bottom = bbox
+    foot_top = max(top, bottom - max(18, round((bottom - top) * 0.14)))
     alpha_pixels = alpha.load()
     feet_x = [
         x
-        for y in range(sample_top, bottom + 1)
+        for y in range(foot_top, bottom)
         for x in range(left, right)
         if alpha_pixels[x, y] > 32
     ]
     if not feet_x:
         raise ValueError("Could not locate sprite footing")
-    return (left, top, right, bottom_exclusive), sum(feet_x) / len(feet_x)
+    return bbox, sum(feet_x) / len(feet_x)
+
+
+def body_height(image: Image.Image, hair: str) -> int:
+    bbox = image.getchannel("A").getbbox()
+    if bbox is None:
+        raise ValueError("Empty sprite cell")
+    return bbox[3] - largest_hair_component_top(image, hair)
 
 
 def split_strip(image: Image.Image) -> list[Image.Image]:
-    cell_width = image.width // POSE_COUNT
-    if cell_width * POSE_COUNT != image.width:
+    if image.width % POSE_COUNT:
         raise ValueError(f"Sprite strip width {image.width} is not divisible by {POSE_COUNT}")
+    cell_width = image.width // POSE_COUNT
     return [
         image.crop((pose * cell_width, 0, (pose + 1) * cell_width, image.height))
         for pose in range(POSE_COUNT)
     ]
 
 
+def resized_for_body_height(source: Image.Image, target_body_height: int, hair: str) -> Image.Image:
+    source_body_height = body_height(source, hair)
+    scale = target_body_height / source_body_height
+    resized = source
+    for _ in range(4):
+        resized = source.resize(
+            (max(1, round(source.width * scale)), max(1, round(source.height * scale))),
+            Image.Resampling.LANCZOS,
+        )
+        actual_body_height = body_height(resized, hair)
+        if abs(actual_body_height - target_body_height) <= 1:
+            break
+        scale *= target_body_height / actual_body_height
+    return resized
+
+
 def normalise_cell(
     source: Image.Image,
+    *,
     target_body_height: int,
     target_bottom: int,
     output_size: tuple[int, int],
     hair: str,
 ) -> Image.Image:
+    """Scale around the body, plant the feet, and retain the complete pose."""
     output_width, output_height = output_size
-    hair_top = largest_hair_component_top(source, hair)
-    bbox, feet_center = alpha_geometry(source)
-    left, top, right, bottom_exclusive = bbox
-    bottom = bottom_exclusive - 1
-    body_height = bottom - hair_top + 1
-    scale = target_body_height / body_height
+    resized = resized_for_body_height(source, target_body_height, hair)
+    bbox, feet_center = alpha_geometry(resized)
+    left, top, right, bottom = bbox
 
-    margin = 14
-    bbox_width = right - left
-    bbox_height = bottom_exclusive - top
-    scale = min(
-        scale,
-        (output_width - margin * 2) / bbox_width,
-        (target_bottom - margin) / max(1, bottom - top),
+    if right - left > output_width - SAFE_MARGIN * 2:
+        raise ValueError(
+            f"Pose cannot retain target body height {target_body_height} within width: {bbox}"
+        )
+
+    x = round(output_width / 2 - feet_center)
+    y = target_bottom - bottom
+    placed_left = x + left
+    placed_right = x + right
+    if placed_left < SAFE_MARGIN:
+        x += SAFE_MARGIN - placed_left
+    if x + right > output_width - SAFE_MARGIN:
+        x -= x + right - (output_width - SAFE_MARGIN)
+
+    placed_bbox = (x + left, y + top, x + right, y + bottom)
+    margins = (
+        placed_bbox[0],
+        placed_bbox[1],
+        output_width - placed_bbox[2],
+        output_height - placed_bbox[3],
     )
+    if min(margins) < SAFE_MARGIN:
+        raise ValueError(f"Normalised cell violates {SAFE_MARGIN}px safe margins: {placed_bbox}")
 
-    resized = source.resize(
-        (max(1, round(source.width * scale)), max(1, round(source.height * scale))),
-        Image.Resampling.LANCZOS,
-    )
-    x = round(output_width / 2 - feet_center * scale)
-    y = round(target_bottom - bottom * scale)
-
-    scaled_left = x + round(left * scale)
-    scaled_right = x + round(right * scale)
-    if scaled_left < margin:
-        x += margin - scaled_left
-    elif scaled_right > output_width - margin:
-        x -= scaled_right - (output_width - margin)
-
-    result = Image.new("RGBA", (output_width, output_height), (0, 0, 0, 0))
+    result = Image.new("RGBA", output_size, (0, 0, 0, 0))
     result.alpha_composite(resized, (x, y))
+    result_bbox = result.getchannel("A").getbbox()
+    if result_bbox is None or result_bbox[3] != target_bottom:
+        raise ValueError(f"Normalised footing is unstable: {result_bbox}, expected bottom {target_bottom}")
     return result
 
 
-def save_strip(cells: list[Image.Image], png_path: Path) -> None:
+def alpha_component_sizes(image: Image.Image, threshold: int = 32) -> list[int]:
+    alpha = image.getchannel("A")
+    width, height = image.size
+    pixels = alpha.load()
+    active = bytearray(width * height)
+    for y in range(height):
+        offset = y * width
+        for x in range(width):
+            if pixels[x, y] > threshold:
+                active[offset + x] = 1
+
+    sizes: list[int] = []
+    for start, value in enumerate(active):
+        if not value:
+            continue
+        active[start] = 0
+        queue = deque([start])
+        size = 0
+        while queue:
+            current = queue.popleft()
+            size += 1
+            y, x = divmod(current, width)
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    if not dx and not dy:
+                        continue
+                    nx = x + dx
+                    ny = y + dy
+                    if not (0 <= nx < width and 0 <= ny < height):
+                        continue
+                    neighbour = ny * width + nx
+                    if active[neighbour]:
+                        active[neighbour] = 0
+                        queue.append(neighbour)
+        sizes.append(size)
+    return sorted(sizes, reverse=True)
+
+
+def join_strip(cells: list[Image.Image]) -> Image.Image:
     cell_width, cell_height = cells[0].size
+    if len(cells) != POSE_COUNT or any(cell.size != (cell_width, cell_height) for cell in cells):
+        raise ValueError("Invalid sprite cells")
     strip = Image.new("RGBA", (cell_width * POSE_COUNT, cell_height), (0, 0, 0, 0))
     for pose, cell in enumerate(cells):
         strip.alpha_composite(cell, (pose * cell_width, 0))
-    strip.save(png_path, optimize=True)
-    strip.save(png_path.with_suffix(".webp"), format="WEBP", quality=92, method=6)
+    return strip
 
 
-def rebuild(spec: ActionSpec) -> None:
-    base = Image.open(IMAGE_DIR / spec.base_name).convert("RGBA")
-    base_cells = split_strip(base)
-    sources = [Image.open(IMAGE_DIR / name).convert("RGBA") for name in spec.source_names]
-    actual_widths = tuple(image.width for image in sources)
-    if actual_widths != spec.expected_source_widths:
-        raise ValueError(
-            f"Refusing to rebuild character {spec.character}: expected source widths "
-            f"{spec.expected_source_widths}, got {actual_widths}. The tool is intentionally one-shot."
-        )
-    source_frames = [split_strip(image) for image in sources]
-    base_offset = (spec.output_height - base.height) / 2
+def output_paths(spec: ActionSpec) -> tuple[Path, Path, Path, Path]:
+    return tuple(IMAGE_DIR / name for name in spec.source_names)
 
-    output_frames: list[list[Image.Image]] = [[] for _ in range(4)]
-    for pose, base_cell in enumerate(base_cells):
-        base_hair_top = largest_hair_component_top(base_cell, spec.hair)
-        base_bbox, _ = alpha_geometry(base_cell)
-        base_bottom = base_bbox[3] - 1
-        target_body_height = base_bottom - base_hair_top + 1
-        target_bottom = round(base_bottom + base_offset)
-        for frame in range(4):
-            output_frames[frame].append(
-                normalise_cell(
-                    source_frames[frame][pose],
-                    target_body_height,
-                    target_bottom,
-                    (spec.output_width, spec.output_height),
-                    spec.hair,
-                )
+
+def build_a(spec: ActionSpec) -> dict[Path, Image.Image]:
+    outputs: dict[Path, Image.Image] = {}
+    for path in output_paths(spec):
+        source = Image.open(path).convert("RGBA")
+        if source.size != (spec.output_width * POSE_COUNT, spec.output_height):
+            raise ValueError(f"Unexpected source size for {path.name}: {source.size}")
+        cells = [
+            normalise_cell(
+                cell,
+                target_body_height=A_COMMON_BODY_HEIGHT,
+                target_bottom=770,
+                output_size=(spec.output_width, spec.output_height),
+                hair=spec.hair,
             )
+            for cell in split_strip(source)
+        ]
+        outputs[path] = join_strip(cells)
+    return outputs
 
-    for frame, cells in enumerate(output_frames):
-        if frame == 0 and spec.alias_frame_zero:
-            continue
-        save_strip(cells, IMAGE_DIR / f"character-{spec.character}-{spec.action}-{frame}.png")
+
+def build_f(spec: ActionSpec) -> dict[Path, Image.Image]:
+    base = Image.open(IMAGE_DIR / spec.base_name).convert("RGBA")
+    if base.size != (spec.output_width * POSE_COUNT, 512):
+        raise ValueError(f"Unexpected F base size: {base.size}")
+    base_cells = split_strip(base)
+    canvas_ratio = spec.output_height / base.height
+    target_body_heights = [round(body_height(cell, spec.hair) * canvas_ratio) for cell in base_cells]
+    target_bottoms = []
+    for cell in base_cells:
+        bbox = cell.getchannel("A").getbbox()
+        if bbox is None:
+            raise ValueError("Empty F base cell")
+        base_gap = base.height - bbox[3]
+        target_gap = round(base_gap * canvas_ratio)
+        target_bottoms.append(spec.output_height - target_gap)
+
+    outputs: dict[Path, Image.Image] = {}
+    for path in output_paths(spec):
+        source = Image.open(path).convert("RGBA")
+        if source.size != (spec.output_width * POSE_COUNT, spec.output_height):
+            raise ValueError(f"Unexpected source size for {path.name}: {source.size}")
+        cells = [
+            normalise_cell(
+                cell,
+                target_body_height=target_body_heights[pose],
+                target_bottom=target_bottoms[pose],
+                output_size=(spec.output_width, spec.output_height),
+                hair=spec.hair,
+            )
+            for pose, cell in enumerate(split_strip(source))
+        ]
+        outputs[path] = join_strip(cells)
+    return outputs
 
 
-def verify(spec: ActionSpec) -> None:
-    expected_size = (spec.output_width * POSE_COUNT, spec.output_height)
-    base_cells = split_strip(Image.open(IMAGE_DIR / spec.base_name).convert("RGBA"))
-    target_body_heights = []
-    for base_cell in base_cells:
-        base_bbox, _ = alpha_geometry(base_cell)
-        target_body_heights.append(
-            base_bbox[3] - largest_hair_component_top(base_cell, spec.hair)
-        )
-    for frame in range(4):
-        path = (
-            IMAGE_DIR / spec.base_name
-            if frame == 0 and spec.alias_frame_zero
-            else IMAGE_DIR / f"character-{spec.character}-{spec.action}-{frame}.png"
-        )
-        image = Image.open(path).convert("RGBA")
-        if image.size != expected_size:
-            raise ValueError(f"Unexpected size for {path.name}: {image.size}")
+def verify_safe_cell(cell: Image.Image, name: str, pose: int) -> tuple[int, int]:
+    bbox = cell.getchannel("A").getbbox()
+    if bbox is None:
+        raise ValueError(f"Empty {name} pose {pose}")
+    margins = (bbox[0], bbox[1], cell.width - bbox[2], cell.height - bbox[3])
+    if min(margins) < SAFE_MARGIN:
+        raise ValueError(f"Unsafe crop margin in {name} pose {pose}: {bbox}")
+    return bbox[3], min(margins)
+
+
+def verify_a_assets(assets: dict[Path, Image.Image]) -> None:
+    heights: list[int] = []
+    bottoms: list[int] = []
+    for path, image in assets.items():
+        if image.size != (512 * POSE_COUNT, 800):
+            raise ValueError(f"Unexpected A size for {path.name}: {image.size}")
         for pose, cell in enumerate(split_strip(image)):
-            bbox = cell.getchannel("A").getbbox()
-            if bbox is None:
-                raise ValueError(f"Empty {path.name} pose {pose}")
-            left, top, right, bottom = bbox
-            if min(left, top, spec.output_width - right, spec.output_height - bottom) < 8:
-                raise ValueError(f"Unsafe crop margin in {path.name} pose {pose}: {bbox}")
-            body_height = bottom - 1 - largest_hair_component_top(cell, spec.hair) + 1
-            ratio = body_height / target_body_heights[pose]
+            bottom, _ = verify_safe_cell(cell, path.name, pose)
+            heights.append(body_height(cell, "pink"))
+            bottoms.append(bottom)
+    if max(heights) / min(heights) > MAX_SCALE_RATIO:
+        raise ValueError(f"A body scale spread exceeds 3%: {min(heights)}..{max(heights)}")
+    if max(bottoms) - min(bottoms) > 1:
+        raise ValueError(f"A footing drift exceeds 1px: {min(bottoms)}..{max(bottoms)}")
+
+
+def verify_f_assets(assets: dict[Path, Image.Image]) -> None:
+    base = Image.open(IMAGE_DIR / "character-f.png").convert("RGBA")
+    base_cells = split_strip(base)
+    screen_heights: list[float] = []
+    for path, image in assets.items():
+        if image.size != (512 * POSE_COUNT, 640):
+            raise ValueError(f"Unexpected F size for {path.name}: {image.size}")
+        for pose, cell in enumerate(split_strip(image)):
+            bottom, _ = verify_safe_cell(cell, path.name, pose)
+            action_screen_height = body_height(cell, "red") / image.height
+            base_bbox = base_cells[pose].getchannel("A").getbbox()
+            if base_bbox is None:
+                raise ValueError(f"Empty F base pose {pose}")
+            base_screen_height = body_height(base_cells[pose], "red") / base.height
+            ratio = action_screen_height / base_screen_height
             if not 0.97 <= ratio <= 1.03:
-                raise ValueError(
-                    f"Body scale drift in {path.name} pose {pose}: {ratio:.3f}"
-                )
+                raise ValueError(f"F screen scale drift in {path.name} pose {pose}: {ratio:.3f}")
+            action_foot_gap = (image.height - bottom) / image.height
+            base_foot_gap = (base.height - base_bbox[3]) / base.height
+            if abs(action_foot_gap - base_foot_gap) > 1 / base.height:
+                raise ValueError(f"F screen foot-gap drift in {path.name} pose {pose}")
+            component_sizes = alpha_component_sizes(cell)
+            if not component_sizes or component_sizes[0] < 8_000:
+                raise ValueError(f"F defender missing in {path.name} pose {pose}")
+            if any(size >= 128 for size in component_sizes[1:]):
+                raise ValueError(f"Detached F projectile in {path.name} pose {pose}: {component_sizes[:4]}")
+            screen_heights.append(action_screen_height)
+    if max(screen_heights) / min(screen_heights) > MAX_SCALE_RATIO:
+        raise ValueError(
+            f"F direction/frame screen scale spread exceeds 3%: "
+            f"{min(screen_heights):.4f}..{max(screen_heights):.4f}"
+        )
+
+
+def load_current_assets(spec: ActionSpec) -> dict[Path, Image.Image]:
+    return {path: Image.open(path).convert("RGBA") for path in output_paths(spec)}
+
+
+def save_assets(assets: dict[Path, Image.Image]) -> None:
+    for path, image in assets.items():
+        image.save(path, optimize=True)
+        image.save(path.with_suffix(".webp"), format="WEBP", quality=92, method=6)
+
+
+def verify_png_webp_pairs(paths: list[Path]) -> None:
+    for path in paths:
+        png = Image.open(path).convert("RGBA")
+        webp = Image.open(path.with_suffix(".webp")).convert("RGBA")
+        if png.size != webp.size or png.getchannel("A").tobytes() != webp.getchannel("A").tobytes():
+            raise ValueError(f"PNG/WebP dimensions or alpha differ for {path.name}")
+
+
+def report(assets: dict[Path, Image.Image], hair: str) -> None:
+    values: list[int] = []
+    bottoms: list[int] = []
+    margins: list[int] = []
+    for path, image in assets.items():
+        frame_values = []
+        for pose, cell in enumerate(split_strip(image)):
+            bottom, margin = verify_safe_cell(cell, path.name, pose)
+            height = body_height(cell, hair)
+            frame_values.append(height)
+            values.append(height)
+            bottoms.append(bottom)
+            margins.append(margin)
+        print(f"{path.name}: body heights {' '.join(map(str, frame_values))}")
+    print(
+        f"body range {min(values)}..{max(values)} "
+        f"({max(values) / min(values):.4f}x), "
+        f"bottom {min(bottoms)}..{max(bottoms)}, safe margin min {min(margins)}px"
+    )
 
 
 def main() -> None:
@@ -274,18 +425,29 @@ def main() -> None:
     parser.add_argument(
         "--verify-only",
         action="store_true",
-        help="validate the rebuilt strips without rewriting them",
+        help="validate current production strips without rewriting them",
     )
     args = parser.parse_args()
-    for spec in SPECS:
-        if not args.verify_only:
-            rebuild(spec)
-        verify(spec)
-        print(
-            f"{'verified' if args.verify_only else 'rebuilt'} "
-            f"character-{spec.character}-{spec.action}: "
-            f"4 x {spec.output_width * POSE_COUNT}x{spec.output_height} PNG/WebP strips"
-        )
+
+    if args.verify_only:
+        a_assets = load_current_assets(SPECS[0])
+        f_assets = load_current_assets(SPECS[1])
+    else:
+        a_assets = build_a(SPECS[0])
+        f_assets = build_f(SPECS[1])
+        # Validate the complete in-memory set before the first production write.
+        verify_a_assets(a_assets)
+        verify_f_assets(f_assets)
+        save_assets({**a_assets, **f_assets})
+        verify_png_webp_pairs(list(a_assets) + list(f_assets))
+
+    verify_a_assets(a_assets)
+    verify_f_assets(f_assets)
+    print("character A")
+    report(a_assets, "pink")
+    print("character F")
+    report(f_assets, "red")
+    print(f"{'verified' if args.verify_only else 'rebuilt and verified'} A/F commercial-scale sheets")
 
 
 if __name__ == "__main__":

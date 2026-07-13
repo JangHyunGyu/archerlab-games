@@ -2,6 +2,7 @@
 
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
+const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const zlib = require("node:zlib");
@@ -229,7 +230,7 @@ function decodePngAlpha(filePath) {
   for (let pixel = 0, source = 3; pixel < alpha.length; pixel += 1, source += bytesPerPixel) {
     alpha[pixel] = pixels[source];
   }
-  return { alpha, width: header.width, height: header.height };
+  return { alpha, rgba: pixels, width: header.width, height: header.height };
 }
 
 function alphaComponentSizes(image, cellIndex, threshold = 8) {
@@ -278,6 +279,284 @@ function alphaComponentSizes(image, cellIndex, threshold = 8) {
   return sizes.sort((left, right) => right - left);
 }
 
+const directionKeys = ["10", "1030", "11", "1130", "12", "1230", "13", "1330", "14"];
+
+function cellVisibleBounds(image, cellIndex, threshold = 8) {
+  const cellWidth = image.width / directionKeys.length;
+  assert.ok(Number.isInteger(cellWidth), "semantic sprite checks require nine equal-width cells");
+  let left = cellWidth;
+  let top = image.height;
+  let right = -1;
+  let bottom = -1;
+  for (let y = 0; y < image.height; y += 1) {
+    const rowOffset = y * image.width + cellIndex * cellWidth;
+    for (let x = 0; x < cellWidth; x += 1) {
+      if (image.alpha[rowOffset + x] <= threshold) continue;
+      left = Math.min(left, x);
+      top = Math.min(top, y);
+      right = Math.max(right, x);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  assert.ok(right >= left && bottom >= top, `direction ${directionKeys[cellIndex]} must not be empty`);
+  return { left, top, right: right + 1, bottom: bottom + 1, cellWidth };
+}
+
+function isHairPixel(red, green, blue, alpha, hair) {
+  if (alpha <= 32) return false;
+  if (hair === "pink") {
+    return red >= 125 && red > green * 1.22 && red > blue * 0.98 && blue >= 58;
+  }
+  return red >= 62 && red > green * 1.35 && red > blue * 1.18 && green < 115;
+}
+
+function largestHairComponentTop(image, cellIndex, hair) {
+  const cellWidth = image.width / directionKeys.length;
+  const active = new Uint8Array(cellWidth * image.height);
+  for (let y = 0; y < image.height; y += 1) {
+    for (let x = 0; x < cellWidth; x += 1) {
+      const sourcePixel = (y * image.width + cellIndex * cellWidth + x) * 4;
+      if (isHairPixel(
+        image.rgba[sourcePixel],
+        image.rgba[sourcePixel + 1],
+        image.rgba[sourcePixel + 2],
+        image.rgba[sourcePixel + 3],
+        hair
+      )) {
+        active[y * cellWidth + x] = 1;
+      }
+    }
+  }
+
+  const queue = new Int32Array(active.length);
+  let bestSize = 0;
+  let bestTop = null;
+  for (let start = 0; start < active.length; start += 1) {
+    if (!active[start]) continue;
+    active[start] = 0;
+    let head = 0;
+    let tail = 1;
+    let size = 0;
+    let top = image.height;
+    queue[0] = start;
+    while (head < tail) {
+      const current = queue[head];
+      head += 1;
+      size += 1;
+      const x = current % cellWidth;
+      const y = Math.floor(current / cellWidth);
+      top = Math.min(top, y);
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nextX = x + dx;
+        const nextY = y + dy;
+        if (nextX < 0 || nextX >= cellWidth || nextY < 0 || nextY >= image.height) continue;
+        const next = nextY * cellWidth + nextX;
+        if (!active[next]) continue;
+        active[next] = 0;
+        queue[tail] = next;
+        tail += 1;
+      }
+    }
+    if (size > bestSize) {
+      bestSize = size;
+      bestTop = top;
+    }
+  }
+  assert.ok(
+    bestTop !== null && bestSize >= 80,
+    `direction ${directionKeys[cellIndex]} must retain a stable ${hair} hair scale reference`
+  );
+  return bestTop;
+}
+
+function getActionHeightScale(defenderId) {
+  const block = gameSource.match(/const\s+CHARACTER_ACTION_HEIGHT_SCALE\s*=\s*\{([\s\S]*?)\};/)?.[1];
+  assert.ok(block, "CHARACTER_ACTION_HEIGHT_SCALE must remain discoverable for screen-space checks");
+  const match = block.match(new RegExp(`\\b${defenderId}\\s*:\\s*([0-9.]+)\\b`));
+  assert.ok(match, `action height scale for defender ${defenderId.toUpperCase()} must be declared`);
+  return Number(match[1]);
+}
+
+function assertCharacterBodyGeometry({ defenderId, hair, baseName, actionNames }) {
+  const actionHeightScale = getActionHeightScale(defenderId);
+  const entries = [baseName, ...actionNames].map((name, sheetIndex) => {
+    const image = decodePngAlpha(path.join(imageRoot, `${name}.png`));
+    const displayScale = sheetIndex === 0 ? 1 : actionHeightScale;
+    const cells = directionKeys.map((direction, cellIndex) => {
+      const bounds = cellVisibleBounds(image, cellIndex);
+      const safeMargin = Math.min(
+        bounds.left,
+        bounds.top,
+        bounds.cellWidth - bounds.right,
+        image.height - bounds.bottom
+      );
+      assert.ok(
+        safeMargin >= 8,
+        `${name} direction ${direction} must keep at least 8 transparent pixels on every canvas edge; got ${safeMargin}`
+      );
+      const hairTop = largestHairComponentTop(image, cellIndex, hair);
+      return {
+        direction,
+        bodyScale: ((bounds.bottom - hairTop) / image.height) * displayScale,
+        footOffset: ((bounds.bottom / image.height) - 0.5) * displayScale
+      };
+    });
+    return { name, cells };
+  });
+
+  const baseCells = entries[0].cells;
+  for (const entry of entries.slice(1)) {
+    entry.cells.forEach((cell, cellIndex) => {
+      const base = baseCells[cellIndex];
+      const ratio = cell.bodyScale / base.bodyScale;
+      assert.ok(
+        ratio >= 0.97 && ratio <= 1.03,
+        `${entry.name} direction ${cell.direction} screen body scale must stay within +/-3% of ${baseName}; got ${ratio.toFixed(3)}`
+      );
+      const footDrift = Math.abs(cell.footOffset - base.footOffset);
+      assert.ok(
+        footDrift <= 0.01,
+        `${entry.name} direction ${cell.direction} screen foot baseline drifted by ${(footDrift * 100).toFixed(2)}% of defender height`
+      );
+    });
+  }
+
+  const allCells = entries.flatMap(entry => entry.cells);
+  const bodyScales = allCells.map(cell => cell.bodyScale);
+  const bodyRangeRatio = Math.max(...bodyScales) / Math.min(...bodyScales);
+  assert.ok(
+    bodyRangeRatio <= 1.03,
+    `character ${defenderId.toUpperCase()} screen body scales across every direction/frame must have max/min <= 1.03; got ${bodyRangeRatio.toFixed(3)}`
+  );
+  const footOffsets = allCells.map(cell => cell.footOffset);
+  const footRange = Math.max(...footOffsets) - Math.min(...footOffsets);
+  assert.ok(
+    footRange <= 0.01,
+    `character ${defenderId.toUpperCase()} screen foot baselines across every direction/frame drifted by ${(footRange * 100).toFixed(2)}% of defender height`
+  );
+}
+
+function cannonAxisAngle(image, cellIndex) {
+  const bounds = cellVisibleBounds(image, cellIndex);
+  const scanBottom = bounds.top + Math.round((bounds.bottom - bounds.top) * 0.52);
+  const points = [];
+  for (let y = bounds.top; y < scanBottom; y += 1) {
+    for (let x = 0; x < bounds.cellWidth; x += 1) {
+      const sourcePixel = (y * image.width + cellIndex * bounds.cellWidth + x) * 4;
+      const red = image.rgba[sourcePixel];
+      const green = image.rgba[sourcePixel + 1];
+      const blue = image.rgba[sourcePixel + 2];
+      const alpha = image.rgba[sourcePixel + 3];
+      const cannonAccent = alpha > 40
+        && blue > 70
+        && blue > green * 1.08
+        && blue > red * 0.8
+        && (blue - Math.max(red, green) > 12 || blue > red * 1.15);
+      if (cannonAccent) points.push([x, y]);
+    }
+  }
+  assert.ok(
+    points.length >= Math.max(120, (bounds.right - bounds.left) * (bounds.bottom - bounds.top) * 0.005),
+    `G direction ${directionKeys[cellIndex]} must retain enough blue/purple cannon pixels for axis validation; got ${points.length}`
+  );
+  const meanX = points.reduce((sum, [x]) => sum + x, 0) / points.length;
+  const meanY = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
+  let covarianceXX = 0;
+  let covarianceYY = 0;
+  let covarianceXY = 0;
+  for (const [x, y] of points) {
+    covarianceXX += (x - meanX) ** 2;
+    covarianceYY += (y - meanY) ** 2;
+    covarianceXY += (x - meanX) * (y - meanY);
+  }
+  const angle = 0.5 * Math.atan2(2 * covarianceXY, covarianceXX - covarianceYY) * 180 / Math.PI;
+  return angle < 0 ? angle + 180 : angle;
+}
+
+function assertShockCannonDirections() {
+  const names = ["character-g", ...[0, 1, 2, 3].map(frame => `character-g-attack-${frame}`)];
+  for (const name of names) {
+    const image = decodePngAlpha(path.join(imageRoot, `${name}.png`));
+    directionKeys.forEach((direction, cellIndex) => {
+      const bounds = cellVisibleBounds(image, cellIndex);
+      const safeMargin = Math.min(
+        bounds.left,
+        bounds.top,
+        bounds.cellWidth - bounds.right,
+        image.height - bounds.bottom
+      );
+      assert.ok(
+        safeMargin >= 8,
+        `${name} direction ${direction} must keep at least 8 transparent pixels on every canvas edge; got ${safeMargin}`
+      );
+    });
+    const angles = directionKeys.map((_, cellIndex) => cannonAxisAngle(image, cellIndex));
+    for (let index = 1; index < angles.length; index += 1) {
+      assert.ok(
+        angles[index] > angles[index - 1],
+        `${name} cannon axes must progress monotonically from 10 to 14; got ${angles.map(value => value.toFixed(1)).join(", ")}`
+      );
+    }
+    assert.ok(
+      angles.slice(0, 4).every(angle => angle < 86)
+        && angles[4] >= 84 && angles[4] <= 96
+        && angles.slice(5).every(angle => angle > 94),
+      `${name} cannon axes crossed the wrong aiming hemisphere; got ${angles.map(value => value.toFixed(1)).join(", ")}`
+    );
+    assert.ok(
+      angles[8] - angles[0] >= 50,
+      `${name} cannon directions must cover a visible aiming arc; got ${(angles[8] - angles[0]).toFixed(1)} degrees`
+    );
+  }
+}
+
+function assertPngWebpAlphaParity() {
+  const pairs = sheets.map(sheet => [
+    path.join(imageRoot, `${sheet.name}.png`),
+    path.join(imageRoot, `${sheet.name}.webp`)
+  ]);
+  const pythonSource = [
+    "import json, sys",
+    "from PIL import Image",
+    "for png_path, webp_path in json.load(sys.stdin):",
+    "    with Image.open(png_path) as png_source, Image.open(webp_path) as webp_source:",
+    "        png = png_source.convert('RGBA')",
+    "        webp = webp_source.convert('RGBA')",
+    "        if png.size != webp.size:",
+    "            raise SystemExit(f'{webp_path} dimensions differ from its PNG')",
+    "        if png.getchannel('A').tobytes() != webp.getchannel('A').tobytes():",
+    "            raise SystemExit(f'{webp_path} alpha channel differs from its PNG')"
+  ].join("\n");
+  const input = JSON.stringify(pairs);
+  let result = childProcess.spawnSync("python", ["-c", pythonSource], { input, encoding: "utf8" });
+  if (result.error?.code === "ENOENT") {
+    result = childProcess.spawnSync("py", ["-3", "-c", pythonSource], { input, encoding: "utf8" });
+  }
+  assert.ifError(result.error);
+  assert.equal(
+    result.status,
+    0,
+    `PNG/WebP alpha parity check requires Pillow and exact matching alpha channels: ${(result.stderr || result.stdout).trim()}`
+  );
+}
+
+assertCharacterBodyGeometry({
+  defenderId: "a",
+  hair: "pink",
+  baseName: "character-a",
+  actionNames: [1, 2, 3].map(frame => `character-a-attack-${frame}`)
+});
+
+assertCharacterBodyGeometry({
+  defenderId: "f",
+  hair: "red",
+  baseName: "character-f",
+  actionNames: [0, 1, 2, 3].map(frame => `character-f-throw-${frame}`)
+});
+
+assertShockCannonDirections();
+assertPngWebpAlphaParity();
+
 const firebombRelease = decodePngAlpha(path.join(imageRoot, "character-f-throw-2.png"));
 for (let cellIndex = 0; cellIndex < 9; cellIndex += 1) {
   const components = alphaComponentSizes(firebombRelease, cellIndex);
@@ -323,5 +602,6 @@ if (updateHashes) {
 
 console.log(
   `defender actions verified: ${sheets.length} nine-direction PNG/WebP pairs, ` +
+    `A/F screen-space scale and footing, G cannon directions, alpha parity, ` +
     `F release separation, G recovery continuity, asset version ${assetVersion}`
 );
