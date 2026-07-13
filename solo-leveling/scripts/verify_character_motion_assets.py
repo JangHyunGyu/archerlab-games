@@ -454,10 +454,16 @@ def color_distance(pixel: tuple[int, int, int, int], key: tuple[int, int, int]) 
 
 
 def quick_chroma_key(image: Image.Image, label: str) -> tuple[Image.Image, float, float]:
-    """Fast low-resolution, border-connected source diagnostic."""
+    """Fast border-connected source diagnostic at animation-safe detail.
+
+    Integrated swords can be only a few pixels wide at the previous 192px
+    thumbnail size, which can detach a hand from its weapon or merge adjacent
+    silhouettes.  Match the builder's 384px per-pose working height so the
+    independent verifier measures the same visible geometry.
+    """
 
     rgba = image.convert("RGBA")
-    rgba.thumbnail((192, 192), Image.Resampling.LANCZOS)
+    rgba.thumbnail((1536, 384), Image.Resampling.LANCZOS)
     border = [pixel for pixel in border_pixels(rgba) if green_pixel(pixel)]
     all_border = border_pixels(rgba)
     border_ratio = len(border) / max(1, len(all_border))
