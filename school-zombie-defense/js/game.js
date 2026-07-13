@@ -59,7 +59,7 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
-  const CHARACTER_ASSET_VERSION = "20260713-defender-actions-v6";
+  const CHARACTER_ASSET_VERSION = "20260713-defender-directions-v7";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
