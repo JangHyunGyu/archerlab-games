@@ -72,6 +72,12 @@ class WeaponProfile:
     source_filename: str
     grip_fraction: tuple[float, float]
     brightness: float = 1.0
+    length_scale: float = 1.0
+    thickness_scale: float = 1.0
+    glow_color: tuple[int, int, int] | None = None
+    glow_alpha: int = 0
+    minimum_visible_pixels: int = 32
+    minimum_visible_extent: int = 18
 
 
 @dataclass(frozen=True)
@@ -104,6 +110,8 @@ class MotionFrame:
     source_pose: int | None
     root_anchor: tuple[int, int] = (FRAME_W // 2, FOOT_Y)
     weapon_socket: WeaponSocket | None = None
+    weapon_visible_pixels: int = 0
+    weapon_visible_extent: int = 0
 
 
 CHARACTER_PROFILES: dict[str, CharacterProfile] = {
@@ -112,17 +120,37 @@ CHARACTER_PROFILES: dict[str, CharacterProfile] = {
         output_relative=Path("assets/player/motion"),
         filename_prefix="player_",
         socket_profile="shadow_monarch",
-        weapon_profile=WeaponProfile("shadow_dagger_chroma.png", (0.225, 0.50), brightness=1.35),
+        weapon_profile=WeaponProfile(
+            "shadow_dagger_chroma.png",
+            (0.225, 0.50),
+            brightness=1.55,
+            length_scale=1.55,
+            thickness_scale=1.30,
+            glow_color=(142, 84, 255),
+            glow_alpha=105,
+            minimum_visible_pixels=52,
+            minimum_visible_extent=25,
+        ),
         # The right thrust reaches the 112px frame edge before its separately
         # rendered blade can emerge.  A subtle uniform pull-back preserves the
-        # pose while reserving a reviewed 14-16px blade corridor.
+        # pose while reserving a reviewed full-dagger corridor.
         body_track_adjustments={"attack_right": (0.92, -3, 0)},
     ),
     "light_swordswoman": CharacterProfile(
         character_id="light_swordswoman",
         output_relative=Path("assets/player/characters/light_swordswoman/motion"),
         socket_profile="light_swordswoman",
-        weapon_profile=WeaponProfile("light_sword_chroma.png", (0.140, 0.50)),
+        weapon_profile=WeaponProfile(
+            "light_sword_chroma.png",
+            (0.140, 0.50),
+            brightness=1.08,
+            length_scale=1.42,
+            thickness_scale=1.34,
+            glow_color=(255, 214, 92),
+            glow_alpha=92,
+            minimum_visible_pixels=64,
+            minimum_visible_extent=34,
+        ),
     ),
     "white_tiger_brawler": CharacterProfile(
         character_id="white_tiger_brawler",
@@ -138,7 +166,17 @@ CHARACTER_PROFILES: dict[str, CharacterProfile] = {
         character_id="sanctuary_healer",
         output_relative=Path("assets/player/characters/sanctuary_healer/motion"),
         socket_profile="sanctuary_healer",
-        weapon_profile=WeaponProfile("sanctuary_staff_chroma.png", (0.615, 0.50)),
+        weapon_profile=WeaponProfile(
+            "sanctuary_staff_chroma.png",
+            (0.615, 0.50),
+            brightness=1.08,
+            length_scale=1.28,
+            thickness_scale=1.24,
+            glow_color=(79, 255, 187),
+            glow_alpha=86,
+            minimum_visible_pixels=78,
+            minimum_visible_extent=46,
+        ),
     ),
 }
 
@@ -694,8 +732,11 @@ def render_weapon_layer(
     weapon_profile: WeaponProfile,
     socket: WeaponSocket,
 ) -> Image.Image:
-    target_width = max(8, round(socket.length))
-    target_height = max(2, round(weapon.height * target_width / weapon.width))
+    target_width = max(8, round(socket.length * weapon_profile.length_scale))
+    target_height = max(
+        3,
+        round(weapon.height * target_width / weapon.width * weapon_profile.thickness_scale),
+    )
     resized = clear_low_alpha(weapon.resize((target_width, target_height), Image.Resampling.LANCZOS))
     grip_x = weapon_profile.grip_fraction[0] * (target_width - 1)
     grip_y = weapon_profile.grip_fraction[1] * (target_height - 1)
@@ -715,14 +756,44 @@ def render_weapon_layer(
     left = round(socket.x - pivot_in_crop[0])
     top = round(socket.y - pivot_in_crop[1])
     right, bottom = left + crop.width, top + crop.height
+    # Keep the complete identity prop inside the existing 112x144 frame.  The
+    # authored socket remains the target; only the smallest translation needed
+    # to protect the tip/head from clipping is applied.
+    shift_x = max(0, MIN_PADDING - left) + min(0, FRAME_W - MIN_PADDING - right)
+    shift_y = max(0, MIN_PADDING - top) + min(0, FOOT_Y - bottom)
+    left += shift_x
+    right += shift_x
+    top += shift_y
+    bottom += shift_y
     if left < MIN_PADDING or right > FRAME_W - MIN_PADDING or top < MIN_PADDING or bottom > FOOT_Y:
         raise ValueError(
             f"weapon socket ({socket.x}, {socket.y}, {socket.angle_degrees}, {socket.length}) "
             f"places bbox {(left, top, right, bottom)} outside frame padding"
         )
     layer = Image.new("RGBA", (FRAME_W, FRAME_H), (0, 0, 0, 0))
+    if weapon_profile.glow_color and weapon_profile.glow_alpha > 0:
+        glow_alpha = crop.getchannel("A").filter(ImageFilter.MaxFilter(3))
+        glow_alpha = glow_alpha.point(lambda value: round(value * weapon_profile.glow_alpha / 255))
+        glow = Image.new("RGBA", crop.size, (*weapon_profile.glow_color, 0))
+        glow.putalpha(glow_alpha)
+        layer.alpha_composite(glow, (left, top))
     layer.alpha_composite(crop, (left, top))
     return layer
+
+
+def visible_weapon_metrics(body: Image.Image, composite: Image.Image) -> tuple[int, int]:
+    difference = ImageChops.difference(composite.convert("RGBA"), body.convert("RGBA"))
+    channels = difference.split()
+    mask = channels[0]
+    for channel in channels[1:]:
+        mask = ImageChops.lighter(mask, channel)
+    mask = mask.point(lambda value: 255 if value > 6 else 0)
+    bbox = mask.getbbox()
+    if not bbox:
+        return 0, 0
+    visible_pixels = sum(1 for value in image_pixels(mask) if value)
+    left, top, right, bottom = bbox
+    return visible_pixels, max(right - left, bottom - top)
 
 
 def socket_for_source(profile: CharacterProfile, track: str, pose_index: int | None) -> WeaponSocket:
@@ -772,9 +843,24 @@ def composite_profile_weapon(
             composite.alpha_composite(weapon_layer)
         else:
             raise ValueError(f"{profile.character_id}/{name}: invalid weapon layer {socket.layer}")
-        if ImageChops.difference(composite.convert("RGB"), frame.image.convert("RGB")).getbbox() is None:
-            raise ValueError(f"{profile.character_id}/{name}: weapon is completely occluded")
-        frames[name] = replace(frame, image=composite, weapon_socket=socket)
+        visible_pixels, visible_extent = visible_weapon_metrics(frame.image, composite)
+        if visible_pixels < profile.weapon_profile.minimum_visible_pixels:
+            raise ValueError(
+                f"{profile.character_id}/{name}: weapon has only {visible_pixels} visible pixels; "
+                f"expected at least {profile.weapon_profile.minimum_visible_pixels}"
+            )
+        if visible_extent < profile.weapon_profile.minimum_visible_extent:
+            raise ValueError(
+                f"{profile.character_id}/{name}: weapon visible extent is only {visible_extent}px; "
+                f"expected at least {profile.weapon_profile.minimum_visible_extent}px"
+            )
+        frames[name] = replace(
+            frame,
+            image=composite,
+            weapon_socket=socket,
+            weapon_visible_pixels=visible_pixels,
+            weapon_visible_extent=visible_extent,
+        )
 
     for index in range(8):
         right = frames[f"walk_right_{index}"]
@@ -788,6 +874,8 @@ def composite_profile_weapon(
                 x=FRAME_W - 1 - socket.x,
                 angle_degrees=180 - socket.angle_degrees,
             ),
+            weapon_visible_pixels=right.weapon_visible_pixels,
+            weapon_visible_extent=right.weapon_visible_extent,
         )
     for index in range(6):
         right = frames[f"attack_right_{index}"]
@@ -801,12 +889,16 @@ def composite_profile_weapon(
                 x=FRAME_W - 1 - socket.x,
                 angle_degrees=180 - socket.angle_degrees,
             ),
+            weapon_visible_pixels=right.weapon_visible_pixels,
+            weapon_visible_extent=right.weapon_visible_extent,
         )
         down = frames[f"attack_down_{index}"]
         frames[f"attack_{index}"] = replace(
             frames[f"attack_{index}"],
             image=down.image.copy(),
             weapon_socket=down.weapon_socket,
+            weapon_visible_pixels=down.weapon_visible_pixels,
+            weapon_visible_extent=down.weapon_visible_extent,
         )
     return removed_ratio, residual_ratio
 
@@ -1003,6 +1095,23 @@ def validate_motion_frames(profile: CharacterProfile, frames: Mapping[str, Motio
         raise ValueError(f"{profile.character_id}: expected exactly 68 logical frames")
     for name in EXPECTED_FRAME_NAMES:
         validate_frame_image(f"{profile.character_id}/{name}", frames[name].image)
+
+    # Freshly built frames retain identity-layer metrics.  Loaded installed
+    # files do not, so their PNG/WebP and structural checks continue below.
+    if profile.weapon_profile and all(frame.source_track != "existing" for frame in frames.values()):
+        for name, frame in frames.items():
+            if frame.weapon_socket is None:
+                raise ValueError(f"{profile.character_id}/{name}: missing weapon socket metadata")
+            if frame.weapon_visible_pixels < profile.weapon_profile.minimum_visible_pixels:
+                raise ValueError(
+                    f"{profile.character_id}/{name}: weapon prominence regressed to "
+                    f"{frame.weapon_visible_pixels} visible pixels"
+                )
+            if frame.weapon_visible_extent < profile.weapon_profile.minimum_visible_extent:
+                raise ValueError(
+                    f"{profile.character_id}/{name}: weapon prominence regressed to "
+                    f"{frame.weapon_visible_extent}px extent"
+                )
 
     for direction in DIRECTIONS:
         walk_unique = {frame_digest(frames[f"walk_{direction}_{index}"].image) for index in range(8)}

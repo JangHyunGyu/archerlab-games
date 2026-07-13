@@ -820,8 +820,17 @@ export class MenuScene extends Phaser.Scene {
     _queueRuntimeImage(key, pngPath, fallbackMap = null, options = {}) {
         if (this.textures.exists(key)) return false;
         const useWebP = !options.preferPng && this._supportsWebP() && pngPath.endsWith('.png');
-        const path = useWebP ? pngPath.replace(/\.png$/i, '.webp') : pngPath;
-        if (useWebP && fallbackMap) fallbackMap.set(key, pngPath);
+        const rawPath = useWebP ? pngPath.replace(/\.png$/i, '.webp') : pngPath;
+        const versionSuffix = options.cacheVersion
+            ? `${rawPath.includes('?') ? '&' : '?'}v=${encodeURIComponent(options.cacheVersion)}`
+            : '';
+        const path = `${rawPath}${versionSuffix}`;
+        if (useWebP && fallbackMap) {
+            const fallbackSuffix = options.cacheVersion
+                ? `${pngPath.includes('?') ? '&' : '?'}v=${encodeURIComponent(options.cacheVersion)}`
+                : '';
+            fallbackMap.set(key, `${pngPath}${fallbackSuffix}`);
+        }
         this.load.image(key, path);
         return true;
     }
