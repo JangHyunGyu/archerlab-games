@@ -59,7 +59,7 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
-  const CHARACTER_ASSET_VERSION = "20260712-character-audit-v5";
+  const CHARACTER_ASSET_VERSION = "20260713-defender-actions-v6";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -185,6 +185,12 @@
     h: "attack"
   };
   const CHARACTER_ATTACK_FRAME_ZERO_ALIASES = new Set(["a", "b", "d", "e"]);
+  const CHARACTER_ATTACK_RELEASE_FRAMES = {
+    a: 2,
+    d: 1,
+    f: 2,
+    g: 1
+  };
   const CHARACTER_ACTION_HEIGHT_SCALE = {
     a: 1,
     b: 1,
@@ -2786,9 +2792,11 @@
       this.fitSpriteHeight(defender.sprite, defender.height);
     }
 
-    startDefenderAttackAnimation(defender, pose) {
+    startDefenderAttackAnimation(defender, pose, onRelease = null) {
       const action = CHARACTER_ATTACK_ACTIONS[defender.id];
       const firstAttackFrame = action ? `character-${defender.id}-${action}-${pose}-0` : null;
+      const releaseFrame = CHARACTER_ATTACK_RELEASE_FRAMES[defender.id];
+      const delaysRelease = Number.isInteger(releaseFrame) && typeof onRelease === "function";
       if (action && defender.sprite && this.textures.exists(firstAttackFrame)) {
         defender.pose = pose;
         defender.attackAnimation = {
@@ -2797,15 +2805,23 @@
           frame: 0,
           frames: THROW_ANIMATION_FRAMES,
           timer: THROW_ANIMATION_FRAME_DURATION,
-          frameDuration: THROW_ANIMATION_FRAME_DURATION
+          frameDuration: THROW_ANIMATION_FRAME_DURATION,
+          releaseFrame: delaysRelease ? releaseFrame : null,
+          onRelease: delaysRelease ? onRelease : null
         };
         defender.sprite.setTexture(firstAttackFrame);
         this.fitDefenderActionHeight(defender);
         defender.firePoseTimer = THROW_ANIMATION_FRAMES * THROW_ANIMATION_FRAME_DURATION;
+        if (!delaysRelease && typeof onRelease === "function") {
+          onRelease();
+        }
         return;
       }
       this.setDefenderPose(defender, pose);
       defender.firePoseTimer = 0.18;
+      if (typeof onRelease === "function") {
+        onRelease();
+      }
     }
 
     getAttackPose(defender, target) {
@@ -6543,9 +6559,10 @@
             animation.frame += 1;
             animation.timer += animation.frameDuration;
             if (animation.frame >= animation.frames) {
+              const restingPose = animation.pose || defender.pose || "aim-12";
               defender.attackAnimation = null;
               defender.firePoseTimer = 0;
-              this.setDefenderPose(defender, "aim-12");
+              this.setDefenderPose(defender, restingPose);
               return;
             }
             const textureKey = `character-${defender.id}-${animation.action}-${animation.pose}-${animation.frame}`;
@@ -6553,13 +6570,18 @@
               defender.sprite.setTexture(textureKey);
               this.fitDefenderActionHeight(defender);
             }
+            if (animation.frame === animation.releaseFrame && animation.onRelease) {
+              const releaseAttack = animation.onRelease;
+              animation.onRelease = null;
+              releaseAttack();
+            }
           }
           return;
         }
         if (defender.firePoseTimer > 0) {
           defender.firePoseTimer -= dt;
           if (defender.firePoseTimer <= 0) {
-            this.setDefenderPose(defender, "aim-12");
+            this.setDefenderPose(defender, defender.pose || "aim-12");
           }
         }
       });
@@ -7105,97 +7127,109 @@
       }
       const isFirebomb = defender.projectile === "projectile-firebomb";
       const projectileKey = isFirebomb ? "projectile-firebomb" : "projectile-grenade";
-      const aimPoint = this.getZombieHitPoint(target, isFirebomb ? "projectile-firebomb" : "projectile-rocket");
-      const aimOffsetX = aimPoint.x - target.x;
-      const aimOffsetY = aimPoint.y - target.y;
-      let impactX = aimPoint.x;
-      let impactY = aimPoint.y;
+      const initialAimPoint = this.getZombieHitPoint(target, isFirebomb ? "projectile-firebomb" : "projectile-rocket");
       const initialPose = this.getAttackPose(defender, target);
       const initialMuzzle = this.getDefenderMuzzle(defender, initialPose);
-      const initialDistance = Phaser.Math.Distance.Between(initialMuzzle.x, initialMuzzle.y, aimPoint.x, aimPoint.y);
+      const initialDistance = Phaser.Math.Distance.Between(initialMuzzle.x, initialMuzzle.y, initialAimPoint.x, initialAimPoint.y);
       const initialArcHeight = this.getGrenadeArcHeight(initialDistance);
-      const initialAngle = this.getGrenadeArcAngle(initialMuzzle.x, initialMuzzle.y, aimPoint.x, aimPoint.y, initialArcHeight, 0);
+      const initialAngle = this.getGrenadeArcAngle(
+        initialMuzzle.x,
+        initialMuzzle.y,
+        initialAimPoint.x,
+        initialAimPoint.y,
+        initialArcHeight,
+        0
+      );
       const pose = getShotAimPoseKey(initialAngle);
-      this.startDefenderAttackAnimation(defender, pose);
-      const muzzle = this.getDefenderMuzzle(defender, pose);
-      const startX = muzzle.x;
-      const startY = muzzle.y;
-      const distance = Phaser.Math.Distance.Between(startX, startY, aimPoint.x, aimPoint.y);
-      const arcHeight = this.getGrenadeArcHeight(distance);
-      const launchAngle = this.getGrenadeArcAngle(startX, startY, aimPoint.x, aimPoint.y, arcHeight, 0);
-      const projectileRotationOffset = isFirebomb ? Math.PI : Math.PI / 2;
-      const sprite = this.trackTransient(this.add.image(startX, startY, projectileKey)
-        .setOrigin(0.5)
-        .setScale(PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"])
-        .setRotation(launchAngle + projectileRotationOffset)
-        .setDepth(192));
-      const shadow = this.trackTransient(this.add.ellipse(startX, startY + 10, 18, 7, 0x000000, 0.32)
-        .setDepth(78));
-      sprite.arcT = 0;
-      const duration = clamp(distance / 1.55, 330, 620) * flightTimeScale;
-      this.createMuzzle(startX, startY, launchAngle, defender.projectile);
-      this.playSfx(isFirebomb ? "firebomb_fire" : "grenade_fire", isFirebomb ? 0.74 : 0.72);
-      this.tweens.add({
-        targets: sprite,
-        arcT: 1,
-        duration,
-        ease: "Sine.easeInOut",
-        onUpdate: () => {
-          if (this.disposed || sprite.destroyed) {
-            return;
-          }
-          const t = sprite.arcT;
-          if (target.active && target.hp > 0) {
-            impactX = target.x + aimOffsetX;
-            impactY = target.y + aimOffsetY;
-          }
-          const arcPoint = this.getGrenadeArcPoint(startX, startY, impactX, impactY, arcHeight, t);
-          const arcAngle = this.getGrenadeArcAngle(startX, startY, impactX, impactY, arcHeight, t);
-          const firebombTumble = isFirebomb ? Math.sin(t * Math.PI * 2) * 0.18 : 0;
-          const flightDepth = 188 + arcPoint.groundY / 6;
-          sprite
-            .setPosition(arcPoint.x, arcPoint.y)
-            .setRotation(arcAngle + projectileRotationOffset + firebombTumble)
-            .setScale((PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"]) * (1 + Math.sin(Math.PI * t) * 0.16))
-            .setDepth(flightDepth);
-          if (shadow && !shadow.destroyed) {
-            shadow
-              .setPosition(arcPoint.groundX, arcPoint.groundY + 7)
-              .setScale(0.72 + t * 0.42, 0.72 + t * 0.2)
-              .setAlpha(0.1 + t * 0.24);
-          }
-        },
-        onComplete: () => {
-          if (!this.disposed && this.mode === "playing" && isFirebomb) {
-            const hitTarget = target.active && target.hp > 0
-              ? target
-              : this.findTarget(impactX, 92, null, this.bounds.autoEngageTop);
-            if (hitTarget) {
-              this.createFirebombHitEffect(hitTarget, false, {
-                x: impactX,
-                y: impactY,
-                angle: Math.atan2(impactY - startY, impactX - startX)
-              });
-            }
-            const fireZonePoint = hitTarget
-              ? this.getZombieFootPoint(hitTarget)
-              : { x: impactX, y: impactY };
-            if (defender.fireZoneRadius > 0 && defender.fireZoneDuration > 0 && defender.fireZoneDamageScale > 0) {
-              this.createFireZone(
-                fireZonePoint.x,
-                fireZonePoint.y,
-                defender.fireZoneRadius,
-                damage * defender.fireZoneDamageScale,
-                defender.fireZoneDuration,
-                slowDuration
-              );
-            }
-          } else if (!this.disposed && this.mode === "playing") {
-            this.createExplosion(impactX, impactY, radius, damage, slowDuration);
-          }
-          this.destroyTransientObject(sprite, false);
-          this.destroyTransientObject(shadow, false);
+      this.startDefenderAttackAnimation(defender, pose, () => {
+        if (this.disposed || this.mode !== "playing" || !defender.recruited || !target.active || target.hp <= 0) {
+          return;
         }
+        const aimPoint = this.getZombieHitPoint(target, isFirebomb ? "projectile-firebomb" : "projectile-rocket");
+        const aimOffsetX = aimPoint.x - target.x;
+        const aimOffsetY = aimPoint.y - target.y;
+        let impactX = aimPoint.x;
+        let impactY = aimPoint.y;
+        const muzzle = this.getDefenderMuzzle(defender, pose);
+        const startX = muzzle.x;
+        const startY = muzzle.y;
+        const distance = Phaser.Math.Distance.Between(startX, startY, aimPoint.x, aimPoint.y);
+        const arcHeight = this.getGrenadeArcHeight(distance);
+        const launchAngle = this.getGrenadeArcAngle(startX, startY, aimPoint.x, aimPoint.y, arcHeight, 0);
+        const projectileRotationOffset = isFirebomb ? Math.PI : Math.PI / 2;
+        const sprite = this.trackTransient(this.add.image(startX, startY, projectileKey)
+          .setOrigin(0.5)
+          .setScale(PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"])
+          .setRotation(launchAngle + projectileRotationOffset)
+          .setDepth(192));
+        const shadow = this.trackTransient(this.add.ellipse(startX, startY + 10, 18, 7, 0x000000, 0.32)
+          .setDepth(78));
+        sprite.arcT = 0;
+        const duration = clamp(distance / 1.55, 330, 620) * flightTimeScale;
+        this.createMuzzle(startX, startY, launchAngle, defender.projectile);
+        this.playSfx(isFirebomb ? "firebomb_fire" : "grenade_fire", isFirebomb ? 0.74 : 0.72);
+        this.tweens.add({
+          targets: sprite,
+          arcT: 1,
+          duration,
+          ease: "Sine.easeInOut",
+          onUpdate: () => {
+            if (this.disposed || sprite.destroyed) {
+              return;
+            }
+            const t = sprite.arcT;
+            if (target.active && target.hp > 0) {
+              impactX = target.x + aimOffsetX;
+              impactY = target.y + aimOffsetY;
+            }
+            const arcPoint = this.getGrenadeArcPoint(startX, startY, impactX, impactY, arcHeight, t);
+            const arcAngle = this.getGrenadeArcAngle(startX, startY, impactX, impactY, arcHeight, t);
+            const firebombTumble = isFirebomb ? Math.sin(t * Math.PI * 2) * 0.18 : 0;
+            const flightDepth = 188 + arcPoint.groundY / 6;
+            sprite
+              .setPosition(arcPoint.x, arcPoint.y)
+              .setRotation(arcAngle + projectileRotationOffset + firebombTumble)
+              .setScale((PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"]) * (1 + Math.sin(Math.PI * t) * 0.16))
+              .setDepth(flightDepth);
+            if (shadow && !shadow.destroyed) {
+              shadow
+                .setPosition(arcPoint.groundX, arcPoint.groundY + 7)
+                .setScale(0.72 + t * 0.42, 0.72 + t * 0.2)
+                .setAlpha(0.1 + t * 0.24);
+            }
+          },
+          onComplete: () => {
+            if (!this.disposed && this.mode === "playing" && isFirebomb) {
+              const hitTarget = target.active && target.hp > 0
+                ? target
+                : this.findTarget(impactX, 92, null, this.bounds.autoEngageTop);
+              if (hitTarget) {
+                this.createFirebombHitEffect(hitTarget, false, {
+                  x: impactX,
+                  y: impactY,
+                  angle: Math.atan2(impactY - startY, impactX - startX)
+                });
+              }
+              const fireZonePoint = hitTarget
+                ? this.getZombieFootPoint(hitTarget)
+                : { x: impactX, y: impactY };
+              if (defender.fireZoneRadius > 0 && defender.fireZoneDuration > 0 && defender.fireZoneDamageScale > 0) {
+                this.createFireZone(
+                  fireZonePoint.x,
+                  fireZonePoint.y,
+                  defender.fireZoneRadius,
+                  damage * defender.fireZoneDamageScale,
+                  defender.fireZoneDuration,
+                  slowDuration
+                );
+              }
+            } else if (!this.disposed && this.mode === "playing") {
+              this.createExplosion(impactX, impactY, radius, damage, slowDuration);
+            }
+            this.destroyTransientObject(sprite, false);
+            this.destroyTransientObject(shadow, false);
+          }
+        });
       });
     }
 
@@ -7213,77 +7247,84 @@
       const initialX = initialMuzzle.x + shotOffset;
       const initialAngle = Math.atan2(ty - initialMuzzle.y, tx - initialX) + angleOffset;
       const pose = getShotAimPoseKey(initialAngle);
-      this.startDefenderAttackAnimation(defender, pose);
-      if (defender.sprite) {
-        this.tweens.killTweensOf(defender.sprite);
-        this.tweens.add({
-          targets: defender.sprite,
-          y: defender.y + 3,
-          yoyo: true,
-          duration: 65,
-          ease: "Sine.easeOut"
+      this.startDefenderAttackAnimation(defender, pose, () => {
+        if (this.disposed || this.mode !== "playing" || !defender.recruited || !target.active || target.hp <= 0) {
+          return;
+        }
+        const releaseAimPoint = this.getZombieHitPoint(target, defender.projectile);
+        const releaseTx = releaseAimPoint.x;
+        const releaseTy = releaseAimPoint.y;
+        if (defender.sprite) {
+          this.tweens.killTweensOf(defender.sprite);
+          this.tweens.add({
+            targets: defender.sprite,
+            y: defender.y + 3,
+            yoyo: true,
+            duration: 65,
+            ease: "Sine.easeOut"
+          });
+        }
+        const muzzle = this.getDefenderMuzzle(defender, pose);
+        const x = muzzle.x + shotOffset;
+        const y = muzzle.y;
+        const angle = Math.atan2(releaseTy - y, releaseTx - x) + angleOffset;
+        const usesHorizontalProjectile = defender.projectile === "projectile-nail";
+        const sprite = this.add.image(x, y, defender.projectile)
+          .setOrigin(0.5, usesHorizontalProjectile ? 0.5 : 1)
+          .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
+          .setRotation(angle + (usesHorizontalProjectile ? 0 : Math.PI / 2))
+          .setDepth(190);
+        const isRocket = defender.projectile === "projectile-rocket";
+        const launchSpeed = isRocket ? speed * ROCKET_ACCELERATION.startScale : speed;
+        const visualEffects = defender.projectile === "projectile-arrow"
+          ? this.createArrowProjectileTrail(sprite, angle)
+          : defender.projectile === "projectile-sniper"
+            ? this.createSniperBulletGlow(sprite, angle)
+            : isRocket
+              ? this.createRocketProjectileGlow(sprite, angle)
+              : defender.projectile === "projectile-shock"
+                ? this.createShockProjectileLink(x, y, sprite, angle)
+                : null;
+        this.bullets.push({
+          sprite,
+          visualEffects,
+          angle,
+          hitOffset: usesHorizontalProjectile ? sprite.displayWidth * 0.48 : sprite.displayHeight * 0.72,
+          damage,
+          vx: Math.cos(angle) * launchSpeed,
+          vy: Math.sin(angle) * launchSpeed,
+          life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
+          age: 0,
+          speed,
+          currentSpeed: launchSpeed,
+          rocketSpeedStart: isRocket ? speed * ROCKET_ACCELERATION.startScale : null,
+          rocketSpeedEnd: isRocket ? speed * ROCKET_ACCELERATION.endScale : null,
+          rocketRampDuration: isRocket ? ROCKET_ACCELERATION.rampDuration : null,
+          pierce,
+          critChance,
+          critMultiplier: defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
+          projectile: defender.projectile,
+          splashRadius: (defender.splashRadius || 0) * (defender.splashRadiusBoost || 1),
+          splashDamageScale: (defender.splashDamageScale || 0) * (defender.splashDamageBoost || 1),
+          markDuration: defender.markDuration || 0,
+          markDamageBonus: defender.markDamageBonus || 0,
+          slowDuration: defender.slowDuration || 0,
+          stunDuration: defender.stunDuration || 0,
+          fireZoneRadius: defender.fireZoneRadius || 0,
+          fireZoneDuration: defender.fireZoneDuration || 0,
+          fireZoneDamageScale: defender.fireZoneDamageScale || 0,
+          chainJumps: defender.chainJumps || 0,
+          chainRadius: defender.chainRadius || 0,
+          chainDamageScale: defender.chainDamageScale || 0,
+          aimTarget: target,
+          aimOffsetX: releaseAimPoint.x - target.x,
+          aimOffsetY: releaseAimPoint.y - target.y,
+          hitTargets: new Set(),
+          trailTimer: 0
         });
-      }
-      const muzzle = this.getDefenderMuzzle(defender, pose);
-      const x = muzzle.x + shotOffset;
-      const y = muzzle.y;
-      const angle = Math.atan2(ty - y, tx - x) + angleOffset;
-      const usesHorizontalProjectile = defender.projectile === "projectile-nail";
-      const sprite = this.add.image(x, y, defender.projectile)
-        .setOrigin(0.5, usesHorizontalProjectile ? 0.5 : 1)
-        .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
-        .setRotation(angle + (usesHorizontalProjectile ? 0 : Math.PI / 2))
-        .setDepth(190);
-      const isRocket = defender.projectile === "projectile-rocket";
-      const launchSpeed = isRocket ? speed * ROCKET_ACCELERATION.startScale : speed;
-      const visualEffects = defender.projectile === "projectile-arrow"
-        ? this.createArrowProjectileTrail(sprite, angle)
-        : defender.projectile === "projectile-sniper"
-          ? this.createSniperBulletGlow(sprite, angle)
-          : isRocket
-            ? this.createRocketProjectileGlow(sprite, angle)
-            : defender.projectile === "projectile-shock"
-              ? this.createShockProjectileLink(x, y, sprite, angle)
-              : null;
-      this.bullets.push({
-        sprite,
-        visualEffects,
-        angle,
-        hitOffset: usesHorizontalProjectile ? sprite.displayWidth * 0.48 : sprite.displayHeight * 0.72,
-        damage,
-        vx: Math.cos(angle) * launchSpeed,
-        vy: Math.sin(angle) * launchSpeed,
-        life: defender.projectile === "projectile-rocket" ? 1.25 : defender.projectile === "projectile-sniper" ? 1.05 : 1.55,
-        age: 0,
-        speed,
-        currentSpeed: launchSpeed,
-        rocketSpeedStart: isRocket ? speed * ROCKET_ACCELERATION.startScale : null,
-        rocketSpeedEnd: isRocket ? speed * ROCKET_ACCELERATION.endScale : null,
-        rocketRampDuration: isRocket ? ROCKET_ACCELERATION.rampDuration : null,
-        pierce,
-        critChance,
-        critMultiplier: defender.critMultiplier || DEFAULT_CRIT_MULTIPLIER,
-        projectile: defender.projectile,
-        splashRadius: (defender.splashRadius || 0) * (defender.splashRadiusBoost || 1),
-        splashDamageScale: (defender.splashDamageScale || 0) * (defender.splashDamageBoost || 1),
-        markDuration: defender.markDuration || 0,
-        markDamageBonus: defender.markDamageBonus || 0,
-        slowDuration: defender.slowDuration || 0,
-        stunDuration: defender.stunDuration || 0,
-        fireZoneRadius: defender.fireZoneRadius || 0,
-        fireZoneDuration: defender.fireZoneDuration || 0,
-        fireZoneDamageScale: defender.fireZoneDamageScale || 0,
-        chainJumps: defender.chainJumps || 0,
-        chainRadius: defender.chainRadius || 0,
-        chainDamageScale: defender.chainDamageScale || 0,
-        aimTarget: target,
-        aimOffsetX: aimPoint.x - target.x,
-        aimOffsetY: aimPoint.y - target.y,
-        hitTargets: new Set(),
-        trailTimer: 0
+        this.createMuzzle(x, y, angle, defender.projectile);
+        this.playWeaponSfx(defender.projectile);
       });
-      this.createMuzzle(x, y, angle, defender.projectile);
-      this.playWeaponSfx(defender.projectile);
     }
 
     createArrowProjectileTrail(sprite, angle) {
