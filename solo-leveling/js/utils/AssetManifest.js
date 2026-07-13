@@ -126,6 +126,10 @@ const PLAYER_MOTION_NAMES = [
     ...Array.from({ length: 2 }, (_, i) => `player_hit_${i}`),
 ];
 
+// Runtime image URLs are otherwise stable across releases and can remain in a
+// browser/CDN cache after the motion PNG/WebP files are rebuilt in place.
+export const CHARACTER_MOTION_ASSET_VERSION = '20260714-weapon-readability-v1';
+
 const uiAsset = (key) => ({
     key: key.includes('/') ? key.split('/').pop() : key,
     path: UI_ASSET_OVERRIDES[key] || `assets/ui/${key}.png`,
@@ -134,6 +138,7 @@ const uiAsset = (key) => ({
 const frameAssets = (prefix, dir, names) => names.map(name => ({
     key: `${prefix}_${name}`,
     path: `${dir}/${name}.png`,
+    cacheVersion: CHARACTER_MOTION_ASSET_VERSION,
 }));
 
 export function getCharacterPortraitAssets() {
@@ -187,7 +192,11 @@ export function getGameplayAssetList(characterId = getStoredCharacterId()) {
         { key: 'ai_player_idle', path: 'assets/player/player_idle.png' },
         { key: 'ai_dungeon_floor', path: 'assets/background/bg_dungeon_floor.png' },
         { key: 'ai_dungeon_atmosphere', path: 'assets/background/bg_dungeon_atmosphere.png' },
-        ...PLAYER_MOTION_NAMES.map(name => ({ key: `motion_${name}`, path: `assets/player/motion/${name}.png` })),
+        ...PLAYER_MOTION_NAMES.map(name => ({
+            key: `motion_${name}`,
+            path: `assets/player/motion/${name}.png`,
+            cacheVersion: CHARACTER_MOTION_ASSET_VERSION,
+        })),
         ...ENEMY_KEYS.map(key => ({ key: `ai_enemy_${key}`, path: `assets/enemies/source/${key}.png` })),
         ...BOSS_KEYS.map(key => ({ key: `ai_boss_${key}`, path: `assets/bosses/source/${key}.png` })),
         ...BASE_EFFECT_KEYS.map(key => ({ key: `effect_${key}`, path: `assets/effects/${key}.png` })),
