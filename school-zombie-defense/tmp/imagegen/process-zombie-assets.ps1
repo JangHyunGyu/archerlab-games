@@ -58,9 +58,13 @@ function Remove-ChromaKey {
       $r = $p.R
       $g = $p.G
       $b = $p.B
-      if ($g -gt $r -and $g -gt $b) {
+      if ($alpha -lt 252 -and $key.G -gt ($key.R + 64) -and $key.G -gt ($key.B + 64)) {
         $limit = [int]([Math]::Max([int]$r, [int]$b) + 28)
         $g = [int][Math]::Min([int]$g, [Math]::Min(255, $limit))
+      } elseif ($alpha -lt 252 -and $key.R -gt ($key.G + 64) -and $key.B -gt ($key.G + 64)) {
+        $limit = [int]([Math]::Min(255, [int]$g + 28))
+        $r = [int][Math]::Min([int]$r, $limit)
+        $b = [int][Math]::Min([int]$b, $limit)
       }
       $out.SetPixel($x, $y, [System.Drawing.Color]::FromArgb($alpha, $r, $g, $b))
     }
