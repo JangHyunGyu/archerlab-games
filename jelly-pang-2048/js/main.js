@@ -231,8 +231,8 @@
     refs.mount.appendChild(appCanvas);
     appCanvas.style.width = "100%";
     appCanvas.style.height = "100%";
-    if (refs.rankModal && refs.rankModal.parentElement !== refs.shell) {
-      refs.shell.appendChild(refs.rankModal);
+    if (refs.rankModal && refs.rankModal.parentElement !== document.body) {
+      document.body.appendChild(refs.rankModal);
     }
 
     boardLayer = new PIXI.Container();

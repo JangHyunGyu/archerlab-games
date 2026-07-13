@@ -742,8 +742,9 @@ h1 {
   position: absolute;
   inset: 0;
   z-index: 20;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 18px;
   background: rgba(24, 33, 48, 0.32);
   backdrop-filter: blur(8px);
