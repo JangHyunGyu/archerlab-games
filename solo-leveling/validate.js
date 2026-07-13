@@ -1381,6 +1381,12 @@ if (fileExists('js/managers/SoundManager.js')) {
     if (!smContent.includes('sfx') && !smContent.includes('SFX') && !smContent.includes('play')) {
         warnings.push(`[SOUND] SoundManager may not support SFX`);
     }
+    if (/\bTone\.context\b/.test(smContent)) {
+        errors.push(`[SOUND] SoundManager must use Tone.getContext(); Tone.context can retain a stale context reference`);
+    }
+    if (/\bTone\.setContext\s*\(/.test(smContent)) {
+        errors.push(`[SOUND] SoundManager must not replace Tone's default AudioContext`);
+    }
 }
 
 // ═══════════════════════════════════════════
