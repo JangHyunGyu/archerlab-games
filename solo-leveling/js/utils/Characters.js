@@ -109,7 +109,6 @@ export const CHARACTER_DEFS = {
         accent: 0xbfeaff,
         accentText: '#d6f4ff',
         visualScale: 0.98,
-        useDirectionalAttackAnimations: false,
         stats: {
             hp: 190,
             maxHp: 190,
@@ -150,7 +149,6 @@ export const CHARACTER_DEFS = {
         archetype: '회복 / 보호막',
         accent: 0x66f2b0,
         accentText: '#9dffd0',
-        swapHorizontalWalkAnimations: true,
         stats: {
             hp: 160,
             maxHp: 160,

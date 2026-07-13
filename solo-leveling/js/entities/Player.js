@@ -116,7 +116,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             });
         };
 
-        create('idle', frames('idle_', 8), 5);
+        create('idle', frames('idle_', 4), 5);
         create('walk', frames('walk_', 8), 10);
         create('walk_down', frames('walk_down_', 8), 12);
         create('walk_right', frames('walk_right_', 8), 12);
