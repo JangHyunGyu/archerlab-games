@@ -261,7 +261,7 @@ export class SoundManager {
                 if (typeof Tone !== 'undefined' && this._toneReady) {
                     const rawContext = Tone.getContext()?.rawContext;
                     if (rawContext && rawContext.state !== 'running') await rawContext.resume();
-                    if (Tone.context?.state !== 'running') await Tone.start();
+                    if (Tone.getContext().state !== 'running') await Tone.start();
                 }
                 if (this._sfxGain) this._sfxGain.gain.value = this.enabled ? this._sfxMaster : 0;
                 this._restoreActiveMusicGains();
@@ -416,23 +416,27 @@ export class SoundManager {
             if (!this.enabled || !this._initialized || !this._userActivated) return false;
             if (this._pageHidden) return false;
 
+            // Keep every Tone node on the library's single default context. Replacing
+            // it leaves deprecated static context exports pointing at the old graph and
+            // can make native AudioNode connections fail with InvalidAccessError.
             if (!this._toneReady && typeof Tone !== 'undefined') {
-                try {
-                    Tone.setContext(new Tone.Context({ latencyHint: 'playback', lookAhead: 0.1 }));
-                } catch (e) { /* silent */ }
-                if (Tone.context.state !== 'running') {
+                const toneContext = Tone.getContext();
+                if (toneContext.state !== 'running') {
                     await Tone.start();
                 }
                 await new Promise(resolve => setTimeout(resolve, 0));
                 this._ensureToneGraph();
-            } else if (typeof Tone !== 'undefined' && this._toneReady && Tone.context.state !== 'running') {
-                await Tone.start();
+            } else if (typeof Tone !== 'undefined' && this._toneReady) {
+                const toneContext = Tone.getContext();
+                if (toneContext.state !== 'running') await Tone.start();
             }
             if (typeof Tone !== 'undefined' && this._toneReady) {
                 this._ensureSfxBus();
                 this._scheduleSfxBufferLoad();
             }
-            return typeof Tone !== 'undefined' && this._toneReady && Tone.context.state === 'running';
+            return typeof Tone !== 'undefined'
+                && this._toneReady
+                && Tone.getContext().state === 'running';
         } catch (e) { /* silent */ }
         return false;
     }
