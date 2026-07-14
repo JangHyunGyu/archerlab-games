@@ -28,7 +28,7 @@ const CHARACTER_SFX_CONFIG = {
     flameMeteor: { file: 'effects/characters/flame_mage/flame_mage_flame_meteor.wav', pool: 3, throttle: 680, release: 1570, volume: 0.5, priority: 3 },
     flameInferno: { file: 'effects/characters/flame_mage/flame_mage_flame_inferno.wav', pool: 2, throttle: 820, release: 1720, volume: 0.42, priority: 3 },
 
-    sanctuaryMace: { file: 'effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_strike.wav', pool: 5, throttle: 280, release: 960, volume: 0.42, priority: 2 },
+    sanctuaryStaffCast: { file: 'effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_strike.wav', pool: 5, throttle: 280, release: 960, volume: 0.42, priority: 2 },
     sanctuaryOrb: { file: 'effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_orb.wav', pool: 5, throttle: 280, release: 1500, volume: 0.78, priority: 2 },
     sanctuaryArc: { file: 'effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_arc.wav', pool: 4, throttle: 380, release: 1530, volume: 0.5, priority: 2 },
     sanctuarySeal: { file: 'effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_seal.wav', pool: 3, throttle: 660, release: 1880, volume: 0.42, priority: 3 },

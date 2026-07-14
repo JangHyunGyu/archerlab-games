@@ -60,7 +60,7 @@
 이펙트 프롬프트:
 
 ```text
-탑다운 2D 액션 RPG 단검 찌르기 이펙트. 검보라색 그림자 칼날, 짧은 초승달 형태의 베기 궤적, 끝부분의 작은 폭발, 희미한 보라색 잔상, 투명 배경, 글자 없음, 캐릭터 없음, 64px 크기에서도 잘 읽히는 스타일화된 게임 이펙트.
+탑다운 2D 액션 RPG 쌍단검 교차 베기 이펙트. 검보라색 그림자 칼날 두 개가 짧은 시간차로 X자 궤적을 만들고, 교차점에는 작은 백보라색 마력 섬광이 남는다. 두 궤적은 각각 짧고 날카로운 초승달이며 장검 검기나 직선 빔처럼 보이지 않는다. 희미한 보라색 잔상, 투명 배경, 글자 없음, 캐릭터 없음, 64px 크기에서도 잘 읽히는 스타일화된 게임 이펙트.
 ```
 
 사운드 프롬프트 (`sounds/effects/characters/shadow_monarch`):
@@ -72,7 +72,7 @@
 추천 파일:
 
 ```text
-assets/effects/character_skills/basic_shadow_stab.png
+assets/effects/basic_attacks/shadow_dagger_slash.png
 sounds/effects/characters/shadow_monarch/shadow_monarch_basic_dagger.wav
 ```
 
@@ -512,24 +512,24 @@ sounds/effects/combat/combat_burn_hit.wav
 
 컨셉: 초록빛과 흰빛의 성역 마법, 회복 파동, 보호막, 부드럽지만 확실한 타격.
 
-### 성역 타격
+### 성역 지팡이 타격
 
 이펙트 프롬프트:
 
 ```text
-탑다운 2D 성역 철퇴 타격 이펙트. 초록색과 흰색의 성스러운 충격, 회복 입자가 섞인 원형 폭발, 작고 선명한 지면 섬광, 투명 배경, 글자 없음, 캐릭터 없음, 스타일화된 게임 이펙트.
+탑다운 2D 성역 지팡이 시전 이펙트. 지팡이 수정 끝에서 짧은 민트색과 흰색 연결광이 뻗어 나가고, 끝 지점에서 회복 입자가 섞인 선명한 성역 문장과 별빛 폭발이 열린다. 철퇴나 물리적인 낙하 충격처럼 보이지 않으며, 부드럽지만 확실한 마법 타격감, 투명 배경, 글자 없음, 캐릭터 없음, 스타일화된 게임 이펙트.
 ```
 
 사운드 프롬프트 (`sounds/effects/characters/sanctuary_healer`):
 
 ```text
-성역 철퇴 타격 사운드. 둔탁하지만 깨끗한 충돌음, 부드러운 성스러운 종소리, 초록빛 회복 스파크 반짝임. 잔혹한 소리 없음, 음성 없음, 음악 없음. 길이 약 0.35초, 게임용 WAV.
+성역 지팡이 시전 사운드. 짧고 맑은 마력 연결음, 부드러운 성스러운 종소리, 민트빛 회복 스파크 반짝임, 끝 지점의 깨끗한 마법 타격음. 둔탁한 철퇴 충돌음과 잔혹한 소리 없음, 음성 없음, 음악 없음. 길이 약 0.35초, 게임용 WAV.
 ```
 
 추천 파일:
 
 ```text
-assets/effects/character_skills/sanctuary_strike.png
+assets/effects/basic_attacks/sanctuary_mace_slam.png (현재 호환 파일명)
 sounds/effects/characters/sanctuary_healer/sanctuary_healer_sanctuary_strike.wav
 ```
 

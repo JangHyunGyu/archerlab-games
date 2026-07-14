@@ -337,6 +337,40 @@ for (const [id, weapon] of Object.entries(WEAPONS)) {
 }
 
 // unlockLevel 단조증가 확인
+// Character starter attacks use BasicDagger's style dispatcher and a dedicated
+// authored VFX texture. Keep config, preload manifest, runtime switch, and the
+// PNG/WebP pair synchronized so a removed key cannot silently fall back to a
+// crude procedural placeholder.
+const characterContent = readFile('js/utils/Characters.js') || '';
+const basicDaggerRuntime = readFile('js/weapons/BasicDagger.js') || '';
+const basicAttackEffectKeys = new Set(
+    Object.values(WEAPONS)
+        .map(weapon => weapon.basicAttackEffectKey)
+        .filter(Boolean)
+);
+for (const effectKey of basicAttackEffectKeys) {
+    if (!characterContent.includes(`'${effectKey}'`)) {
+        errors.push(`[BASIC_VFX] "${effectKey}" is missing from CHARACTER_BASIC_ATTACK_EFFECT_KEYS`);
+    }
+    for (const extension of ['png', 'webp']) {
+        const relPath = `assets/effects/basic_attacks/${effectKey}.${extension}`;
+        if (!fileExists(relPath)) {
+            errors.push(`[BASIC_VFX] "${relPath}" not found`);
+        }
+    }
+}
+
+const basicAttackStyles = new Set(
+    Object.values(WEAPONS)
+        .map(weapon => weapon.attackStyle)
+        .filter(Boolean)
+);
+for (const style of basicAttackStyles) {
+    if (!basicDaggerRuntime.includes(`case '${style}'`)) {
+        errors.push(`[BASIC_VFX] attackStyle "${style}" is not handled by BasicDagger`);
+    }
+}
+
 weaponUnlockLevels.sort((a, b) => a.level - b.level);
 for (let i = 1; i < weaponUnlockLevels.length; i++) {
     if (weaponUnlockLevels[i].level < weaponUnlockLevels[i - 1].level) {
