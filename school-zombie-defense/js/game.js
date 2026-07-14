@@ -301,6 +301,16 @@
     "projectile-nail": ["blood-stain-direction-1", "blood-stain-splatter-1", "blood-stain-pool-1"],
     explosion: ["blood-stain-heavy-1", "blood-stain-pool-2", "blood-stain-splatter-1"]
   };
+  // Alpha-weighted centers keep each irregular blood texture centered on the corpse anchor.
+  const BLOOD_STAIN_ALPHA_ORIGINS = {
+    "blood-stain-direction-1": { x: 0.3823, y: 0.5136 },
+    "blood-stain-heavy-1": { x: 0.4626, y: 0.4855 },
+    "blood-stain-pool-1": { x: 0.5114, y: 0.4252 },
+    "blood-stain-pool-2": { x: 0.5104, y: 0.4867 },
+    "blood-stain-smear-1": { x: 0.3613, y: 0.5537 },
+    "blood-stain-splatter-1": { x: 0.5033, y: 0.4964 },
+    "blood-burst-core": { x: 0.4996, y: 0.4497 }
+  };
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES = 12;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
@@ -336,6 +346,30 @@
           : [`zombie-death-${type}-sheet`]
     ])
   );
+  // Alpha-weighted final-frame centers and opaque bounds, normalized to each 512px death frame.
+  const ZOMBIE_DEATH_FINAL_FRAME_BOUNDS = {
+    "zombie-death-normal-variant-1-sheet": { x: 0.0575, y: 0.2986, width: 0.918, height: 0.3008 },
+    "zombie-death-normal-variant-2-sheet": { x: 0.0317, y: 0.2924, width: 0.8574, height: 0.334 },
+    "zombie-death-normal-variant-3-sheet": { x: 0.0459, y: 0.3254, width: 0.9219, height: 0.2266 },
+    "zombie-death-normal-variant-4-sheet": { x: 0.0303, y: 0.266, width: 0.918, height: 0.3086 },
+    "zombie-death-student-1-sheet": { x: -0.0486, y: 0.0409, width: 0.8496, height: 0.3535 },
+    "zombie-death-student-2-sheet": { x: 0.0645, y: 0.0463, width: 0.8652, height: 0.3594 },
+    "zombie-death-student-3-sheet": { x: -0.093, y: 0.0404, width: 0.8906, height: 0.3418 },
+    "zombie-death-runner-sheet": { x: -0.0105, y: -0.0173, width: 0.5879, height: 0.3496 },
+    "zombie-death-brute-sheet": { x: -0.0122, y: -0.0015, width: 0.5469, height: 0.3145 },
+    "zombie-death-volatile-sheet": { x: -0.0098, y: -0.0037, width: 0.5977, height: 0.3418 },
+    "zombie-death-elite-sheet": { x: -0.0221, y: 0.0018, width: 0.6172, height: 0.3438 },
+    "zombie-death-teacher-sheet": { x: -0.0294, y: 0.0365, width: 0.6367, height: 0.2871 },
+    "zombie-death-nurse-sheet": { x: -0.0275, y: 0.0929, width: 0.8613, height: 0.1836 },
+    "zombie-death-athlete-sheet": { x: 0.0203, y: 0.1069, width: 0.8594, height: 0.166 },
+    "zombie-death-janitor-sheet": { x: -0.0549, y: 0.0596, width: 0.8594, height: 0.2441 },
+    "zombie-death-guard-sheet": { x: -0.023, y: 0.0777, width: 0.8613, height: 0.2207 },
+    "zombie-death-crawler-sheet": { x: -0.0278, y: 0.0228, width: 0.8594, height: 0.3379 },
+    "zombie-death-screamer-sheet": { x: -0.0622, y: 0.0616, width: 0.8594, height: 0.2148 },
+    "zombie-death-spider-sheet": { x: -0.0256, y: 0.045, width: 0.8594, height: 0.2832 },
+    "zombie-death-bloom-sheet": { x: -0.0135, y: 0.0588, width: 0.8594, height: 0.2656 },
+    "zombie-death-charger-sheet": { x: -0.0703, y: 0.1005, width: 0.9375, height: 0.4727 }
+  };
   const ZOMBIE_DEATH_RENDER_SCALES = {
     normal: { deathSize: 0.92 },
     student: { deathSize: 1 },
@@ -381,6 +415,8 @@
   const ZOMBIE_NORMAL_LATE_HP_GAIN = 0.6;
   const ZOMBIE_ELITE_LATE_HP_GAIN = 2.6;
   const ZOMBIE_BODY_DEPTH_BASE = 70;
+  const ZOMBIE_CORPSE_GROUND_DEPTH_BASE = 25;
+  const ZOMBIE_CORPSE_GROUND_DEPTH_RANGE = 8;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
   const ZOMBIE_CORPSE_RECENT_DEPTH_STEP = 0.012;
@@ -9059,7 +9095,6 @@
       const displayH = zombie.displayH || 170;
       const displayW = zombie.displayW || displayH;
       const bodyDepth = ZOMBIE_BODY_DEPTH_BASE + y / 5;
-      const corpseDepth = ZOMBIE_CORPSE_DEPTH_BASE + clamp(y / GAME_HEIGHT, 0, 1) * ZOMBIE_CORPSE_DEPTH_RANGE;
       const fallProfiles = [
         { angle: -rand(76, 104), x: -rand(0.14, 0.27), y: rand(0.02, 0.08) },
         { angle: rand(76, 104), x: rand(0.14, 0.27), y: rand(0.02, 0.08) },
@@ -9128,10 +9163,29 @@
         ? NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES
         : ZOMBIE_DEATH_ANIMATION_FRAMES;
       const settledDeathAngle = finalAngle * 0.08;
+      const corpseFlipX = finalAngle < 0;
       const corpseRotation = settledDeathAngle * Math.PI / 180;
-      const bloodMaxSide = Math.max(effect.stainWidth * sizeScale, deathDisplaySize * 0.46) * rand(0.84, 1);
-      const bloodX = landingX;
-      const bloodY = landingY + deathDisplaySize * 0.06;
+      const finalFrameBounds = hasDeathTexture
+        ? ZOMBIE_DEATH_FINAL_FRAME_BOUNDS[deathTexture] || { x: 0, y: 0, width: 0.8, height: 0.32 }
+        : { x: 0, y: 0, width: 0.8, height: 0.32 };
+      const bloodAnchorLocalX = deathDisplaySize * finalFrameBounds.x * (corpseFlipX ? -1 : 1);
+      const bloodAnchorLocalY = deathDisplaySize * finalFrameBounds.y;
+      const corpseRotationCos = Math.cos(corpseRotation);
+      const corpseRotationSin = Math.sin(corpseRotation);
+      const bloodX = landingX
+        + bloodAnchorLocalX * corpseRotationCos
+        - bloodAnchorLocalY * corpseRotationSin;
+      const bloodY = landingY
+        + bloodAnchorLocalX * corpseRotationSin
+        + bloodAnchorLocalY * corpseRotationCos;
+      const corpseVisualDepthRatio = clamp(bloodY / GAME_HEIGHT, 0, 1);
+      const groundDepth = ZOMBIE_CORPSE_GROUND_DEPTH_BASE
+        + corpseVisualDepthRatio * ZOMBIE_CORPSE_GROUND_DEPTH_RANGE;
+      const corpseDepth = ZOMBIE_CORPSE_DEPTH_BASE
+        + corpseVisualDepthRatio * ZOMBIE_CORPSE_DEPTH_RANGE;
+      const corpseVisibleWidth = deathDisplaySize * finalFrameBounds.width;
+      const corpseVisibleHeight = deathDisplaySize * finalFrameBounds.height;
+      const bloodMaxSide = Math.max(effect.stainWidth * sizeScale, corpseVisibleWidth * 0.52) * rand(0.84, 1);
       const lastHitContext = zombie.lastHitContext || {};
       const availableBloodTextures = this.textures && typeof this.textures.exists === "function"
         ? BLOOD_STAIN_TEXTURES.filter((key) => this.textures.exists(key))
@@ -9153,8 +9207,9 @@
       let bloodWidth = bloodMaxSide;
       let bloodHeight = bloodMaxSide;
       const createBloodStainImage = (textureKey, tint = null) => {
+        const alphaOrigin = BLOOD_STAIN_ALPHA_ORIGINS[textureKey] || { x: 0.5, y: 0.5 };
         const image = this.add.image(bloodX, bloodY, textureKey)
-          .setOrigin(0.5)
+          .setOrigin(alphaOrigin.x, alphaOrigin.y)
           .setRotation(bloodRotation);
         const frameWidth = image.frame?.realWidth || image.frame?.width || bloodMaxSide;
         const frameHeight = image.frame?.realHeight || image.frame?.height || bloodMaxSide;
@@ -9178,22 +9233,22 @@
           ? createBloodStainImage("blood-burst-core", 0x9b1216)
         : this.add.ellipse(bloodX, bloodY, bloodMaxSide, Math.max(effect.stainHeight * sizeScale, bloodMaxSide * 0.58), COLORS.blood, 0.72)
           .setRotation(corpseRotation + rand(-0.14, 0.14)));
-      stain.setAlpha(0).setDepth(corpseDepth);
+      stain.setAlpha(0).setDepth(groundDepth);
       const stainBaseScaleX = stain.scaleX;
       const stainBaseScaleY = stain.scaleY;
       stain.setScale(stainBaseScaleX * 0.18, stainBaseScaleY * 0.18);
 
       const shadow = this.trackTransient(this.add.ellipse(
         bloodX,
-        bloodY + deathDisplaySize * 0.04,
-        bloodWidth * 0.78,
-        Math.max(bloodHeight * 0.42, deathDisplaySize * 0.18),
+        bloodY,
+        Math.max(bloodWidth * 0.78, corpseVisibleWidth * 0.58),
+        Math.max(bloodHeight * 0.42, corpseVisibleHeight * 0.42),
         0x050101,
         0.38
       )
         .setRotation(corpseRotation)
         .setAlpha(0)
-        .setDepth(corpseDepth - 0.4));
+        .setDepth(groundDepth - 0.4));
 
       const poolShade = this.trackTransient(this.add.ellipse(
         bloodX,
@@ -9205,13 +9260,13 @@
       )
         .setRotation(corpseRotation + rand(-0.08, 0.08))
         .setAlpha(0)
-        .setDepth(corpseDepth - 0.2));
+        .setDepth(groundDepth - 0.2));
 
       const deathSprite = hasDeathTexture
         ? this.trackTransient(this.add.sprite(corpseX, y + displayH * 0.04, deathTexture, 0)
           .setOrigin(0.5)
           .setDisplaySize(deathDisplaySize, deathDisplaySize)
-          .setFlipX(finalAngle < 0)
+          .setFlipX(corpseFlipX)
           .setAlpha(1)
           .setDepth(bodyDepth + 0.9))
         : null;
@@ -9317,9 +9372,9 @@
       corpseRecord = this.registerCorpseRecord(
         [zombie, deathSprite, stain, shadow, poolShade],
         [
-          { object: stain, depth: corpseDepth },
-          { object: shadow, depth: corpseDepth - 0.4 },
-          { object: poolShade, depth: corpseDepth - 0.2 },
+          { object: stain, depth: groundDepth },
+          { object: shadow, depth: groundDepth - 0.4 },
+          { object: poolShade, depth: groundDepth - 0.2 },
           { object: zombie, depth: bodyDepth + 0.8 },
           { object: deathSprite, depth: bodyDepth + 0.9 }
         ]
