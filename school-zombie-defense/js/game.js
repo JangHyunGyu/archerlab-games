@@ -2333,7 +2333,6 @@
       this.spawnBurst = 1;
       this.maxCoreHp = 3000;
       this.coreHp = this.maxCoreHp;
-      this.morale = 100;
       this.coins = 0;
       this.rewardCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
       this.meta = loadMetaSave();
@@ -3075,13 +3074,9 @@
     }
 
     createStatusPanel() {
-      const morale = this.addHudChip(90, 91, 138, "사기", "100%", COLORS.green);
-      const coins = this.addHudChip(270, 91, 138, "보급", "$0", COLORS.gold);
-      const shield = this.addHudChip(450, 91, 138, "보호막", "0", COLORS.blue);
-      this.ui.morale = morale.value;
+      const coins = this.addHudChip(270, 91, 176, "보급", "$0", COLORS.gold);
       this.ui.coins = coins.value;
-      this.ui.shield = shield.value;
-      this.ui.statusChips = { morale, coins, shield };
+      this.ui.statusChips = { coins };
 
       const corePanel = this.addCommandPanel(270, 925, 438, 58, 315, COLORS.green, {
         cut: 11,
@@ -3105,10 +3100,22 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(1, 0.5).setDepth(317);
+      this.ui.shield = this.add.text(270, 913, "SHIELD +0", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: 11,
+        fontStyle: "900",
+        color: "#79d9ff",
+        stroke: "#050607",
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(318).setVisible(false);
       this.coreBack = this.add.rectangle(270, 932, 380, 11, 0x000000, 0.78)
         .setStrokeStyle(1, 0xffffff, 0.18)
         .setDepth(316);
       this.coreBar = this.add.rectangle(80, 932, 380, 7, COLORS.green, 1).setOrigin(0, 0.5).setDepth(317);
+      this.shieldBar = this.add.rectangle(80, 927, 380, 3, COLORS.blue, 1)
+        .setOrigin(0, 0.5)
+        .setDepth(318)
+        .setVisible(false);
       this.ui.threat = this.add.text(270, 947, "방어 안정", {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 12,
@@ -6288,7 +6295,6 @@
       this.spawnBurst = 1;
       this.maxCoreHp = 3000;
       this.coreHp = this.maxCoreHp;
-      this.morale = 100;
       this.coins = 0;
       this.rewardCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
       this.runCoinsBanked = false;
@@ -9627,7 +9633,6 @@
         amount -= blocked;
       }
       this.coreHp = clamp(this.coreHp - amount, 0, this.maxCoreHp);
-      this.morale = Math.round((this.coreHp / this.maxCoreHp) * 100);
       if (rawAmount > 0) {
         if (blocked > 0) this.playSfx("shield_block", clamp(blocked / Math.max(rawAmount, 1), 0.55, 1));
         if (amount > 0) this.playSfx("core", clamp(amount / Math.max(rawAmount, 1), 0.45, 1));
@@ -10478,7 +10483,6 @@
           const defender = this.getDefenderById("h");
           this.coreHp = clamp(this.coreHp + barricadeRepair, 0, this.maxCoreHp);
           this.shield += barricadeShield;
-          this.morale = Math.round((this.coreHp / this.maxCoreHp) * 100);
           defender.damageBoost *= 1.06;
         }
       });
@@ -10504,7 +10508,6 @@
           toast: "방어선 완전 복구",
           apply: () => {
             this.coreHp = this.maxCoreHp;
-            this.morale = 100;
           }
         });
       }
@@ -11042,24 +11045,26 @@
       const stageName = ["교문", "복도", "교실", "옥상"][Math.min(3, this.stage - 1)];
       this.ui.stage.setText(`STAGE ${String(this.stage).padStart(2, "0")} · ${stageName}`);
       this.ui.level.setText(`WAVE ${String(this.level).padStart(2, "0")} · ${this.killsInLevel} / ${this.levelNeed}`);
-      this.ui.morale.setText(`${this.morale}%`);
-      this.ui.morale.setColor(this.morale < 35 ? "#ff524f" : this.morale < 70 ? "#ffd75c" : "#4dff67");
       this.ui.core.setText(`${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
       this.ui.coins.setText(`$${this.getDisplayedCoins()}`);
-      this.ui.shield.setText(`${Math.round(this.shield)}`);
       const progress = clamp(this.killsInLevel / this.levelNeed, 0, 1);
       this.progressBar.setSize(506 * progress, 6);
       this.progressBar.setFillStyle(this.mode === "skill" ? COLORS.gold : 0xe0ab26, 1);
       const hpRate = clamp(this.coreHp / this.maxCoreHp, 0, 1);
       this.coreBar.setSize(380 * hpRate, 7);
       this.coreBar.setFillStyle(hpRate < 0.35 ? COLORS.red : hpRate < 0.68 ? COLORS.gold : COLORS.green, 1);
-      const threatLabel = hpRate < 0.35 || this.morale < 35
+      const shieldValue = Math.max(0, Math.round(this.shield));
+      const shieldRate = clamp(this.shield / this.maxCoreHp, 0, 1);
+      const hasShield = shieldValue > 0;
+      this.ui.shield.setText(`SHIELD +${shieldValue}`).setVisible(hasShield);
+      this.shieldBar.setSize(380 * shieldRate, 3).setVisible(hasShield);
+      const threatLabel = hpRate < 0.35
         ? "붕괴 위험 · 즉시 복구 필요"
-        : hpRate < 0.68 || this.morale < 70
+        : hpRate < 0.68
           ? "방어선 압박 · 보강 권장"
           : "방어 안정";
       this.ui.threat.setText(threatLabel);
-      this.ui.threat.setColor(hpRate < 0.35 || this.morale < 35 ? "#ff7771" : hpRate < 0.68 || this.morale < 70 ? "#ffd86b" : "#9ff5ad");
+      this.ui.threat.setColor(hpRate < 0.35 ? "#ff7771" : hpRate < 0.68 ? "#ffd86b" : "#9ff5ad");
     }
   }
 
