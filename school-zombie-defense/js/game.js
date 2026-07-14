@@ -308,7 +308,7 @@
   const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE = 0.24;
   const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO = 0.07;
   const ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO = 0.02;
-  const ZOMBIE_CORPSE_TYPES = [
+  const ZOMBIE_DEATH_TYPES = [
     "normal",
     "student",
     "runner",
@@ -326,16 +326,8 @@
     "bloom",
     "charger"
   ];
-  const ZOMBIE_CORPSE_TEXTURES = Object.fromEntries(
-    ZOMBIE_CORPSE_TYPES.map((type) => [
-      type,
-      type === "normal"
-        ? [1, 2, 3, 4].map((index) => `zombie-corpse-normal-variant-${index}`)
-        : [1, 2, 3].map((index) => `zombie-corpse-${type}-${index}`)
-    ])
-  );
   const ZOMBIE_DEATH_TEXTURES = Object.fromEntries(
-    ZOMBIE_CORPSE_TYPES.map((type) => [
+    ZOMBIE_DEATH_TYPES.map((type) => [
       type,
       type === "normal"
         ? [1, 2, 3, 4].map((index) => `zombie-death-normal-variant-${index}-sheet`)
@@ -345,23 +337,22 @@
     ])
   );
   const ZOMBIE_DEATH_RENDER_SCALES = {
-    normal: { corpseWidth: 0.82, deathSize: 0.92 },
-    student: { corpseWidth: 0.78, deathSize: 1 },
-    runner: { corpseWidth: 0.84, deathSize: 1.12 },
-    brute: { corpseWidth: 1.06, deathSize: 1.22 },
-    volatile: { corpseWidth: 0.94, deathSize: 0.89 },
-    elite: { corpseWidth: 0.96, deathSize: 1.05 },
-    // Custom corpse PNGs sit higher inside their canvases than the final death-sheet frames.
-    teacher: { corpseWidth: 0.96, deathSize: 1.12, corpseYOffset: 0.047 },
-    nurse: { corpseWidth: 1.48, deathSize: 1.1, corpseYOffset: 0.103 },
-    athlete: { corpseWidth: 1.5, deathSize: 1.24, corpseYOffset: 0.124 },
-    janitor: { corpseWidth: 1.22, deathSize: 1.14, corpseYOffset: 0.07 },
-    guard: { corpseWidth: 1.55, deathSize: 1.1, corpseYOffset: 0.084 },
-    crawler: { corpseWidth: 1.42, deathSize: 1.32, corpseYOffset: 0.018 },
-    screamer: { corpseWidth: 1.12, deathSize: 1.18, corpseYOffset: 0.092 },
-    spider: { corpseWidth: 1.16, deathSize: 0.94, corpseYOffset: 0.039 },
-    bloom: { corpseWidth: 1.4, deathSize: 1.04, corpseYOffset: 0.053 },
-    charger: { corpseWidth: 1.48, deathSize: 1.16, corpseYOffset: 0.142 }
+    normal: { deathSize: 0.92 },
+    student: { deathSize: 1 },
+    runner: { deathSize: 1.12 },
+    brute: { deathSize: 1.22 },
+    volatile: { deathSize: 0.89 },
+    elite: { deathSize: 1.05 },
+    teacher: { deathSize: 1.12 },
+    nurse: { deathSize: 1.1 },
+    athlete: { deathSize: 1.24 },
+    janitor: { deathSize: 1.14 },
+    guard: { deathSize: 1.1 },
+    crawler: { deathSize: 1.32 },
+    screamer: { deathSize: 1.18 },
+    spider: { deathSize: 0.94 },
+    bloom: { deathSize: 1.04 },
+    charger: { deathSize: 1.16 }
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,
@@ -2192,9 +2183,6 @@
       this.load.image("barricade-impact", versionedImageAsset("assets/images/barricade-impact.png", COMBAT_PROP_ASSET_VERSION));
       this.load.image("blood-burst-core", versionedImageAsset("assets/images/blood-burst-core.png", COMBAT_EFFECT_ASSET_VERSION));
       BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, versionedImageAsset(`assets/images/${key}.png`, COMBAT_EFFECT_ASSET_VERSION)));
-      Object.values(ZOMBIE_CORPSE_TEXTURES)
-        .flat()
-        .forEach((key) => this.load.image(key, versionedImageAsset(`assets/images/${key}.png`, ZOMBIE_ASSET_VERSION)));
       Object.values(ZOMBIE_DEATH_TEXTURES)
         .flat()
         .forEach((key) => this.load.spritesheet(
@@ -9123,29 +9111,27 @@
       }
       zombie.setTint(0x9b8f88);
 
-      const corpseType = zombie.elite ? "elite" : zombie.type || "normal";
-      const corpseTexturePool = ZOMBIE_CORPSE_TEXTURES[corpseType] || ZOMBIE_CORPSE_TEXTURES.normal;
-      const corpseVariantIndex = corpseType === "normal"
-        ? clamp(Math.floor(Number(zombie.variant) || 0), 0, corpseTexturePool.length - 1)
-        : Math.floor(rand(0, corpseTexturePool.length));
-      const corpseTexture = corpseTexturePool[corpseVariantIndex] || choose(corpseTexturePool);
-      const deathTexturePool = ZOMBIE_DEATH_TEXTURES[corpseType] || ZOMBIE_DEATH_TEXTURES.normal;
-      const deathTexture = deathTexturePool[corpseVariantIndex % deathTexturePool.length] || deathTexturePool[0];
-      const renderScale = ZOMBIE_DEATH_RENDER_SCALES[corpseType] || ZOMBIE_DEATH_RENDER_SCALES.normal;
-      const corpseLandingY = clamp(
-        landingY + displayH * (renderScale.corpseYOffset || 0),
-        -20,
-        this.bounds.barricade - displayH * 0.02
-      );
-      const hasCorpseTexture = this.textures
+      const deathType = zombie.elite ? "elite" : zombie.type || "normal";
+      const deathTexturePool = ZOMBIE_DEATH_TEXTURES[deathType] || ZOMBIE_DEATH_TEXTURES.normal;
+      const deathVariantIndex = deathType === "normal"
+        ? clamp(Math.floor(Number(zombie.variant) || 0), 0, deathTexturePool.length - 1)
+        : deathType === "student"
+          ? Math.floor(rand(0, deathTexturePool.length))
+          : 0;
+      const deathTexture = deathTexturePool[deathVariantIndex] || deathTexturePool[0];
+      const renderScale = ZOMBIE_DEATH_RENDER_SCALES[deathType] || ZOMBIE_DEATH_RENDER_SCALES.normal;
+      const hasDeathTexture = this.textures
         && typeof this.textures.exists === "function"
-        && this.textures.exists(corpseTexture);
-      const corpseDisplayWidth = displayH * renderScale.corpseWidth;
-      const corpseDisplayHeight = corpseDisplayWidth * 360 / 512;
-      const corpseRotation = finalAngle * Math.PI / 180;
-      const bloodMaxSide = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.46) * rand(0.84, 1);
+        && this.textures.exists(deathTexture);
+      const deathDisplaySize = displayH * (renderScale.deathSize || 0.9);
+      const deathFrameCount = deathType === "normal"
+        ? NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES
+        : ZOMBIE_DEATH_ANIMATION_FRAMES;
+      const settledDeathAngle = finalAngle * 0.08;
+      const corpseRotation = settledDeathAngle * Math.PI / 180;
+      const bloodMaxSide = Math.max(effect.stainWidth * sizeScale, deathDisplaySize * 0.46) * rand(0.84, 1);
       const bloodX = landingX;
-      const bloodY = corpseLandingY + corpseDisplayHeight * 0.06;
+      const bloodY = landingY + deathDisplaySize * 0.06;
       const lastHitContext = zombie.lastHitContext || {};
       const availableBloodTextures = this.textures && typeof this.textures.exists === "function"
         ? BLOOD_STAIN_TEXTURES.filter((key) => this.textures.exists(key))
@@ -9199,9 +9185,9 @@
 
       const shadow = this.trackTransient(this.add.ellipse(
         bloodX,
-        bloodY + corpseDisplayHeight * 0.04,
+        bloodY + deathDisplaySize * 0.04,
         bloodWidth * 0.78,
-        Math.max(bloodHeight * 0.42, corpseDisplayHeight * 0.18),
+        Math.max(bloodHeight * 0.42, deathDisplaySize * 0.18),
         0x050101,
         0.38
       )
@@ -9221,19 +9207,6 @@
         .setAlpha(0)
         .setDepth(corpseDepth - 0.2));
 
-      const corpseImage = hasCorpseTexture
-        ? this.trackTransient(this.add.image(landingX, corpseLandingY, corpseTexture)
-          .setOrigin(0.5)
-          .setDisplaySize(corpseDisplayWidth, corpseDisplayHeight)
-          .setFlipX(Math.random() < 0.5)
-          .setAngle(finalAngle * rand(0.1, 0.18) + rand(-7, 7))
-          .setAlpha(0)
-          .setDepth(corpseDepth + 0.45))
-        : null;
-      const hasDeathTexture = this.textures
-        && typeof this.textures.exists === "function"
-        && this.textures.exists(deathTexture);
-      const deathDisplaySize = displayH * (renderScale.deathSize || 0.9);
       const deathSprite = hasDeathTexture
         ? this.trackTransient(this.add.sprite(corpseX, y + displayH * 0.04, deathTexture, 0)
           .setOrigin(0.5)
@@ -9246,16 +9219,12 @@
         ? deathPushDuration + effect.fall + 55
         : Math.max(120, effect.fall - 45);
       let corpseRecord = null;
-      const revealCorpseImage = () => {
-        if (!corpseImage || corpseImage.destroyed) {
-          return;
+      const settleCorpseObjectDepth = (object, depth) => {
+        const depthEntry = corpseRecord?.depthEntries.find((entry) => entry.object === object);
+        if (depthEntry) {
+          depthEntry.depth = depth;
         }
-        this.tweens.add({
-          targets: corpseImage,
-          alpha: 0.96,
-          duration: 130,
-          ease: "Cubic.easeOut"
-        });
+        object.setDepth(depth + (corpseRecord?.depthOffset || 0));
       };
 
       this.tweens.add({
@@ -9282,27 +9251,27 @@
       });
       if (deathSprite) {
         this.destroyTransientObject(zombie, false);
-        const deathFrameCount = corpseType === "normal"
-          ? NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES
-          : ZOMBIE_DEATH_ANIMATION_FRAMES;
-        this.playTransientSpriteFrames(deathSprite, deathFrameCount, effect.fall + 260);
+        const deathFrameEvent = this.playTransientSpriteFrames(deathSprite, deathFrameCount, effect.fall + 260);
         const finishDeathFall = () => {
           this.tweens.add({
             targets: deathSprite,
             x: landingX,
             y: landingY,
-            angle: finalAngle * 0.08,
+            angle: settledDeathAngle,
             duration: effect.fall + 210,
             ease: "Quad.easeInOut",
             onComplete: () => {
-              revealCorpseImage();
-              this.tweens.add({
-                targets: deathSprite,
-                alpha: 0,
-                duration: 120,
-                ease: "Cubic.easeOut",
-                onComplete: () => this.destroyTransientObject(deathSprite, false)
-              });
+              if (deathFrameEvent) {
+                this.sceneTimers.delete(deathFrameEvent);
+                this.cancelTimerEvent(deathFrameEvent);
+              }
+              // Keep the final death-sheet frame in place so the corpse cannot jump during an asset swap.
+              deathSprite
+                .setFrame(deathFrameCount - 1)
+                .setPosition(landingX, landingY)
+                .setAngle(settledDeathAngle)
+                .setAlpha(1);
+              settleCorpseObjectDepth(deathSprite, corpseDepth + 0.45);
               if (zombie.elite || zombie.type === "brute") {
                 this.shakeCamera(70, 0.0035);
               }
@@ -9338,17 +9307,7 @@
           duration: effect.fall,
           ease: "Quad.easeIn",
           onComplete: () => {
-            zombie.setDepth(corpseDepth + 0.4 + (corpseRecord?.depthOffset || 0));
-            if (corpseImage) {
-              revealCorpseImage();
-              this.tweens.add({
-                targets: zombie,
-                alpha: 0,
-                duration: 110,
-                ease: "Cubic.easeOut",
-                onComplete: () => this.destroyTransientObject(zombie, false)
-              });
-            }
+            settleCorpseObjectDepth(zombie, corpseDepth + 0.4);
             if (zombie.elite || zombie.type === "brute") {
               this.shakeCamera(70, 0.0035);
             }
@@ -9356,22 +9315,23 @@
         });
       }
       corpseRecord = this.registerCorpseRecord(
-        [zombie, deathSprite, corpseImage, stain, shadow, poolShade],
+        [zombie, deathSprite, stain, shadow, poolShade],
         [
           { object: stain, depth: corpseDepth },
           { object: shadow, depth: corpseDepth - 0.4 },
           { object: poolShade, depth: corpseDepth - 0.2 },
-          { object: corpseImage, depth: corpseDepth + 0.45 },
+          { object: zombie, depth: bodyDepth + 0.8 },
           { object: deathSprite, depth: bodyDepth + 0.9 }
         ]
       );
-      const corpseFadeDelay = effect.corpseHold + (deathSprite ? effect.fall + 260 : 0);
+      const corpseSettleDelay = deathSprite
+        ? deathPushDuration + effect.fall + 210
+        : effect.fall + 70;
+      const corpseFadeDelay = corpseSettleDelay + effect.corpseHold;
       this.scheduleSceneDelay(corpseFadeDelay, () => {
-        const corpseTarget = corpseImage && !corpseImage.destroyed
-          ? corpseImage
-          : deathSprite && !deathSprite.destroyed
-            ? deathSprite
-            : zombie && !zombie.destroyed ? zombie : null;
+        const corpseTarget = deathSprite && !deathSprite.destroyed
+          ? deathSprite
+          : zombie && !zombie.destroyed ? zombie : null;
         if (!corpseTarget) {
           return;
         }
