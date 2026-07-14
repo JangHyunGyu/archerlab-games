@@ -295,6 +295,9 @@ export const WEAPONS = {
         attackRange: 205,
         targetAcquireMultiplier: 2,
         hitAngle: 0.42,
+        attackStyle: 'dualDaggerSlash',
+        basicAttackEffectKey: 'shadow_dagger_slash',
+        effectScale: 0.36,
         levelBonuses: {
             2: { damage: 8 },
             3: { damage: 10 },
@@ -707,9 +710,9 @@ Object.assign(WEAPONS, {
     sanctuaryStrike: cloneWeapon('basicDagger', 'sanctuaryStrike', {
         name: '성역 타격',
         description: '정화의 힘을 담은 짧은 타격으로 가까운 적을 밀어냅니다.',
-        attackStyle: 'maceSlam',
+        attackStyle: 'sanctuaryBurst',
         basicAttackEffectKey: 'sanctuary_mace_slam',
-        soundKey: 'sanctuaryMace',
+        soundKey: 'sanctuaryStaffCast',
         hitEffect: 'sanctuary',
         baseDamage: 45,
         attackRange: 246,

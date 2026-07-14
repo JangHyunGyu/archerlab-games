@@ -57,14 +57,18 @@ export class BasicDagger extends WeaponBase {
 
     _attackByStyle(style) {
         switch (style) {
+            case 'dualDaggerSlash':
+                this._dualDaggerSlash();
+                break;
             case 'swordSlash':
                 this._swordSlash();
                 break;
             case 'clawSwipe':
                 this._clawSwipe();
                 break;
+            case 'sanctuaryBurst':
             case 'maceSlam':
-                this._maceSlam();
+                this._sanctuaryBurst();
                 break;
             case 'fireball':
                 this._fireball();
@@ -503,6 +507,117 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('dagger');
     }
 
+    _dualDaggerSlash() {
+        const effectTexture = this._getConfiguredEffectTexture();
+        if (!effectTexture) {
+            this._thrust();
+            return;
+        }
+
+        const { baseAngle, side } = this._getAttackSetup({
+            rangeBonus: this.config.targetRangeBonus ?? 50,
+            duration: BASIC_ATTACK_MOTION_DURATION,
+        });
+        const cosA = Math.cos(baseAngle);
+        const sinA = Math.sin(baseAngle);
+        const perpX = -sinA;
+        const perpY = cosA;
+        const getOrigin = () => ({
+            x: this.player.x,
+            y: this.player.y - 16,
+        });
+        const initialOrigin = getOrigin();
+        const baseScale = this.config.effectScale || 0.36;
+
+        const createArc = (depth, flipY = false) => this.scene.add.sprite(
+            initialOrigin.x,
+            initialOrigin.y,
+            effectTexture
+        )
+            .setDepth(depth)
+            .setAlpha(0)
+            .setScale(baseScale * 0.72)
+            .setFlipY(flipY)
+            .setBlendMode(Phaser.BlendModes.ADD);
+
+        const primaryArc = createArc(15);
+        const echoArc = createArc(14, true);
+        const coreFx = this.scene.add.graphics()
+            .setDepth(16)
+            .setBlendMode(Phaser.BlendModes.ADD);
+        const progress = { t: 0 };
+        const entry = this._trackAttackObjects([primaryArc, echoArc, coreFx]);
+
+        const pulse = (t, start, end) => {
+            const phase = Phaser.Math.Clamp((t - start) / (end - start), 0, 1);
+            return {
+                phase,
+                eased: Phaser.Math.Easing.Cubic.Out(phase),
+                alpha: Math.sin(Math.PI * phase),
+            };
+        };
+
+        const drawArc = (arc, phase, lateral, angleOffset, maxAlpha, origin) => {
+            const forward = 46 + phase.eased * 22;
+            arc
+                .setPosition(
+                    origin.x + cosA * forward + perpX * lateral,
+                    origin.y + sinA * forward + perpY * lateral
+                )
+                .setRotation(baseAngle + angleOffset * (1 - phase.eased * 0.12))
+                .setAlpha(phase.alpha * maxAlpha)
+                .setScale(baseScale * (0.72 + phase.eased * 0.38));
+        };
+
+        const draw = (t) => {
+            const origin = getOrigin();
+            const primary = pulse(t, 0.02, 0.68);
+            const echo = pulse(t, 0.16, 0.84);
+            drawArc(primaryArc, primary, side * 6, side * 0.58, 0.92, origin);
+            drawArc(echoArc, echo, side * -7, side * -0.52, 0.76, origin);
+
+            const flash = Math.max(primary.alpha, echo.alpha * 0.9);
+            const flashX = origin.x + cosA * 64;
+            const flashY = origin.y + sinA * 64;
+            coreFx.clear();
+            if (flash > 0.03) {
+                coreFx.fillStyle(0xf7f3ff, 0.22 * flash);
+                coreFx.fillCircle(flashX, flashY, 5 + flash * 6);
+                coreFx.lineStyle(2, 0xb996ff, 0.52 * flash);
+                coreFx.strokeCircle(flashX, flashY, 9 + flash * 8);
+            }
+        };
+
+        entry.tween = this.scene.tweens.add({
+            targets: progress,
+            t: 1,
+            duration: 265,
+            ease: 'Linear',
+            onUpdate: () => draw(progress.t),
+            onComplete: () => this._destroyAttackObjects(entry),
+        });
+
+        this._delay(132, () => {
+            if (!this.scene?.scene?.isActive() || !this.player?.active) return;
+
+            const origin = getOrigin();
+            // Preserve the old embedded-dagger thrust tip as the knockback
+            // source so this visual upgrade does not change combat feel.
+            const knockbackSourceDistance = 159.5;
+            const hitX = origin.x + cosA * knockbackSourceDistance;
+            const hitY = origin.y + sinA * knockbackSourceDistance;
+            this._damageEnemiesInCone(
+                baseAngle,
+                this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0),
+                this.config.hitAngle ?? 0.42,
+                hitX,
+                hitY
+            );
+        });
+
+        this.playConfiguredSound('dagger');
+    }
+
     _swordSlash() {
         const { baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 65,
@@ -658,7 +773,7 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('slash');
     }
 
-    _maceSlam() {
+    _sanctuaryBurst() {
         const { target, baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 25,
             duration: BASIC_ATTACK_MOTION_DURATION,
@@ -672,65 +787,110 @@ export class BasicDagger extends WeaponBase {
         const maxDist = this.attackRange + this.extraRange + (this.config.impactRangeBonus ?? -18);
         const targetDist = target
             ? Math.min(maxDist, Phaser.Math.Distance.Between(originX, originY, target.x, target.y))
-            : Math.min(maxDist, 118);
+            : Math.min(maxDist, this.config.fallbackImpactDistance ?? 118);
         const impactX = originX + cosA * targetDist;
         const impactY = originY + sinA * targetDist;
+        const getCastPoint = () => ({
+            x: this.player.x + cosA * 30 + perpX * side * 6,
+            y: this.player.y - 18 + sinA * 30 + perpY * side * 6,
+        });
         const effectColor = this.getEffectColor(0x66f2b0);
         const glowColor = this.getEffectGlowColor(0xe8fff5);
         const effectTexture = this._getConfiguredEffectTexture();
-        const impactFx = effectTexture ? null : this.scene.add.graphics().setDepth(14);
+        const linkFx = this.scene.add.graphics()
+            .setDepth(14)
+            .setBlendMode(Phaser.BlendModes.ADD);
+        const burstFx = this.scene.add.graphics()
+            .setDepth(17)
+            .setBlendMode(Phaser.BlendModes.ADD);
         const slamSprite = effectTexture
             ? this.scene.add.sprite(impactX, impactY, effectTexture)
-                .setOrigin(0.5, 0.72)
+                .setOrigin(0.5, 0.68)
                 .setDepth(16)
                 .setAlpha(0)
-                .setScale(0.14)
-                .setRotation(side * 0.05)
+                .setScale(0.16)
+                .setRotation(side * 0.025)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
-        const entryObjects = [];
+        const entryObjects = [linkFx, burstFx];
         if (slamSprite) entryObjects.push(slamSprite);
-        if (impactFx) entryObjects.push(impactFx);
         const entry = this._trackAttackObjects(entryObjects);
         const baseScale = this.config.effectScale || 0.46;
 
         const draw = (t) => {
             const k = Phaser.Math.Clamp(t, 0, 1);
-            const wind = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(k / 0.18, 0, 1));
-            const strikeRaw = k < 0.18 ? 0 : Phaser.Math.Clamp((k - 0.18) / 0.5, 0, 1);
-            const land = Phaser.Math.Easing.Cubic.In(strikeRaw);
-            const pulseRaw = k < 0.68 ? 0 : Phaser.Math.Clamp((k - 0.68) / 0.32, 0, 1);
-            const pulse = Phaser.Math.Easing.Cubic.Out(pulseRaw);
+            const charge = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(k / 0.28, 0, 1));
+            const burstRaw = Phaser.Math.Clamp((k - 0.2) / 0.46, 0, 1);
+            const burst = Phaser.Math.Easing.Cubic.Out(burstRaw);
+            const fadeRaw = Phaser.Math.Clamp((k - 0.7) / 0.3, 0, 1);
+            const fade = Phaser.Math.Easing.Quadratic.In(fadeRaw);
+            const remaining = 1 - fade;
+
+            const linkAlpha = charge * (1 - burst * 0.65) * remaining;
+            linkFx.clear();
+            if (linkAlpha > 0.02) {
+                const castPoint = getCastPoint();
+                linkFx.lineStyle(11, effectColor, 0.1 * linkAlpha);
+                linkFx.lineBetween(castPoint.x, castPoint.y, impactX, impactY);
+                linkFx.lineStyle(5, effectColor, 0.34 * linkAlpha);
+                linkFx.lineBetween(castPoint.x, castPoint.y, impactX, impactY);
+                linkFx.lineStyle(2, glowColor, 0.78 * linkAlpha);
+                linkFx.lineBetween(castPoint.x, castPoint.y, impactX, impactY);
+                for (let i = 1; i <= 3; i++) {
+                    const laneT = i / 4;
+                    const motePulse = 0.65 + 0.35 * Math.sin((k * 12 + i) * Math.PI);
+                    linkFx.fillStyle(glowColor, 0.58 * linkAlpha);
+                    linkFx.fillCircle(
+                        Phaser.Math.Linear(castPoint.x, impactX, laneT),
+                        Phaser.Math.Linear(castPoint.y, impactY, laneT),
+                        1.5 + motePulse * 1.7
+                    );
+                }
+            }
 
             if (slamSprite) {
-                const drop = 30 * (1 - land);
-                const lateral = side * 10 * (1 - land);
-                const alpha = pulseRaw > 0
-                    ? 0.94 * (1 - pulse * 0.86)
-                    : wind * (0.22 + 0.72 * land);
-                const scaleX = baseScale * (0.64 + land * 0.34 + pulse * 0.34);
-                const scaleY = baseScale * (0.48 + land * 0.58 + pulse * 0.18);
+                const lateral = side * 6 * (1 - burst);
+                const alpha = charge * (0.3 + burst * 0.68) * remaining;
+                const scaleX = baseScale * (0.42 + burst * 0.66 + fade * 0.12);
+                const scaleY = baseScale * (0.34 + burst * 0.8 + fade * 0.1);
 
                 slamSprite
-                    .setPosition(impactX - perpX * lateral, impactY - perpY * lateral - drop)
+                    .setPosition(impactX - perpX * lateral, impactY - perpY * lateral)
                     .setAlpha(alpha)
                     .setScale(scaleX, scaleY)
-                    .setRotation(side * (0.05 - land * 0.03));
-            } else if (impactFx) {
-                const pulse = Phaser.Math.Easing.Cubic.Out(k);
-                impactFx.clear();
-                impactFx.lineStyle(5, effectColor, 0.78 * (1 - pulse));
-                impactFx.strokeCircle(impactX, impactY, 20 + pulse * 42);
-                impactFx.lineStyle(2, glowColor, 0.84 * (1 - pulse));
-                impactFx.strokeCircle(impactX, impactY, 8 + pulse * 24);
+                    .setRotation(side * (0.025 - burst * 0.02));
+            }
+
+            burstFx.clear();
+            const burstAlpha = charge * remaining;
+            if (burstAlpha > 0.02) {
+                const coreRadius = 4 + burst * 11;
+                burstFx.fillStyle(glowColor, (0.22 + burst * 0.24) * burstAlpha);
+                burstFx.fillCircle(impactX, impactY, coreRadius);
+                burstFx.lineStyle(4, effectColor, 0.5 * burstAlpha);
+                burstFx.strokeCircle(impactX, impactY, 11 + burst * 30);
+                burstFx.lineStyle(2, glowColor, 0.76 * burstAlpha);
+                burstFx.strokeCircle(impactX, impactY, 5 + burst * 19);
+                for (let i = 0; i < 6; i++) {
+                    const rayAngle = (Math.PI * 2 * i) / 6 + side * 0.12;
+                    const inner = 8 + burst * 8;
+                    const outer = 14 + burst * 25;
+                    burstFx.lineStyle(2, glowColor, 0.52 * burstAlpha);
+                    burstFx.lineBetween(
+                        impactX + Math.cos(rayAngle) * inner,
+                        impactY + Math.sin(rayAngle) * inner,
+                        impactX + Math.cos(rayAngle) * outer,
+                        impactY + Math.sin(rayAngle) * outer
+                    );
+                }
             }
         };
 
         entry.tween = this.scene.tweens.add({
             targets: progress,
             t: 1,
-            duration: 285,
+            duration: 300,
             ease: 'Linear',
             onUpdate: () => draw(progress.t),
             onComplete: () => this._destroyAttackObjects(entry),
@@ -743,7 +903,7 @@ export class BasicDagger extends WeaponBase {
                 this.config.impactRadius ?? 56,
                 baseAngle
             );
-            if (this.scene.cameras?.main) this.scene.cameras.main.shake(70, 0.0022);
+            if (this.scene.cameras?.main) this.scene.cameras.main.shake(55, 0.0008);
         });
 
         this.playConfiguredSound('groundSlam');
