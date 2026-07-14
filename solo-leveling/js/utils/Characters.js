@@ -22,6 +22,10 @@ export const CHARACTER_WEAPON_LOADOUTS = {
 };
 
 export const CHARACTER_WEAPON_EFFECT_KEYS = [
+    'shadow_dagger',
+    'shadow_slash',
+    'rulers_authority',
+    'dragon_fear',
     'light_pierce',
     'light_lance',
     'light_lance_pierce',

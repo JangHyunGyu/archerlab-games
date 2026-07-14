@@ -360,6 +360,23 @@ for (const effectKey of basicAttackEffectKeys) {
     }
 }
 
+const characterSkillEffectKeys = new Set(
+    Object.values(WEAPONS)
+        .map(weapon => weapon.effectKey)
+        .filter(Boolean)
+);
+for (const effectKey of characterSkillEffectKeys) {
+    if (!characterContent.includes(`'${effectKey}'`)) {
+        errors.push(`[SKILL_VFX] "${effectKey}" is missing from CHARACTER_WEAPON_EFFECT_KEYS`);
+    }
+    for (const extension of ['png', 'webp']) {
+        const relPath = `assets/effects/character_skills/${effectKey}.${extension}`;
+        if (!fileExists(relPath)) {
+            errors.push(`[SKILL_VFX] "${relPath}" not found`);
+        }
+    }
+}
+
 const basicAttackStyles = new Set(
     Object.values(WEAPONS)
         .map(weapon => weapon.attackStyle)

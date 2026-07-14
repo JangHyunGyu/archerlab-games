@@ -94,7 +94,8 @@ export class ShadowSlash extends WeaponBase {
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && !imageOnlyVfx && this.scene.textures.exists('effect_shadow_slash');
-        const suppressAuxiliaryFx = imageOnlyVfx || useCharacterEffect || useEffectAsset;
+        const suppressAuxiliaryFx = imageOnlyVfx ||
+            (useCharacterEffect && !this.config.combineProceduralVfx) || useEffectAsset;
 
         if (!suppressAuxiliaryFx) {
             const gfx = this._getGfx();
@@ -190,7 +191,9 @@ export class ShadowSlash extends WeaponBase {
         const slash = this.scene.add.sprite(slashX, slashY, effectTexture || (useEffectAsset ? 'effect_shadow_slash' : 'proj_slash'))
             .setDepth(8)
             .setRotation(slashRotation)
-            .setAlpha((useCharacterEffect || useEffectAsset) ? 0.82 : 0.5)
+            .setAlpha(useCharacterEffect
+                ? (this.config.effectPeakAlpha ?? 0.82)
+                : (useEffectAsset ? 0.82 : 0.5))
             .setScale(useCharacterEffect ? (this.config.effectScale || 0.58) + this.extraRange / 520 : (useEffectAsset ? 0.48 + this.extraRange / 460 : 1.5 + this.extraRange / 60))
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
         if (!useCharacterEffect && !useEffectAsset) slash.setTint(color);
@@ -200,7 +203,10 @@ export class ShadowSlash extends WeaponBase {
             alpha: 0,
             scaleX: slash.scaleX * ((useCharacterEffect || useEffectAsset) ? 1.28 : 1.8),
             scaleY: slash.scaleY * ((useCharacterEffect || useEffectAsset) ? 1.28 : 1.8),
-            duration: (useCharacterEffect || useEffectAsset) ? 320 : 400,
+            hold: useCharacterEffect ? (this.config.effectHold ?? 0) : 0,
+            duration: useCharacterEffect
+                ? (this.config.effectFadeDuration ?? 320)
+                : (useEffectAsset ? 320 : 400),
             onComplete: () => slash.destroy(),
         });
 
@@ -290,7 +296,8 @@ export class ShadowSlash extends WeaponBase {
         const lineWidth = this.config.lineWidth || 34;
         const imageOnlyVfx = !!this.config.imageOnlyVfx;
         const effectTexture = this.getEffectTexture();
-        const suppressAuxiliaryFx = imageOnlyVfx || !!effectTexture;
+        const suppressAuxiliaryFx = imageOnlyVfx ||
+            (!!effectTexture && !this.config.combineProceduralVfx);
 
         if (!suppressAuxiliaryFx) {
             const color = this.getEffectColor(0xffd86a);
@@ -308,6 +315,15 @@ export class ShadowSlash extends WeaponBase {
                     const currentX = startX + (endX - startX) * reach;
                     const currentY = startY + (endY - startY) * reach;
                     gfx.clear();
+                    if (this.config.proceduralCoreOnly) {
+                        gfx.lineStyle(10, color, 0.12 * (1 - progress.t * 0.35));
+                        gfx.lineBetween(startX, startY, currentX, currentY);
+                        gfx.lineStyle(4, color, 0.58 * (1 - progress.t * 0.25));
+                        gfx.lineBetween(startX, startY, currentX, currentY);
+                        gfx.lineStyle(1.5, 0xffffff, 0.88 * (1 - progress.t * 0.2));
+                        gfx.lineBetween(startX, startY, currentX, currentY);
+                        return;
+                    }
                     gfx.lineStyle(lineWidth, color, 0.18 * (1 - progress.t * 0.35));
                     gfx.lineBetween(startX, startY, currentX, currentY);
                     gfx.lineStyle(Math.max(7, lineWidth * 0.38), glowColor, 0.72 * (1 - progress.t * 0.25));
@@ -329,7 +345,7 @@ export class ShadowSlash extends WeaponBase {
             const lance = this.scene.add.sprite(midX, midY, effectTexture)
                 .setDepth(9)
                 .setRotation(angle)
-                .setAlpha(0.88)
+                .setAlpha(this.config.effectPeakAlpha ?? 0.88)
                 .setScale(this.config.effectScale || 0.58)
                 .setBlendMode(Phaser.BlendModes.ADD);
             this.scene.tweens.add({
@@ -337,7 +353,8 @@ export class ShadowSlash extends WeaponBase {
                 alpha: 0,
                 scaleX: lance.scaleX * 1.18,
                 scaleY: lance.scaleY * 0.74,
-                duration: 260,
+                hold: this.config.effectHold ?? 0,
+                duration: this.config.effectFadeDuration ?? 260,
                 ease: 'Quad.easeOut',
                 onComplete: () => lance.destroy(),
             });
