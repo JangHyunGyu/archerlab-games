@@ -130,7 +130,7 @@ const PLAYER_MOTION_NAMES = [
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
 export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
 export const CHARACTER_MOTION_ASSET_VERSION = CHARACTER_VISUAL_ASSET_VERSION;
-export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20260714-character-basic-attacks-v2';
+export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20260714-character-combat-vfx-v3';
 
 const uiAsset = (key) => ({
     key: key.includes('/') ? key.split('/').pop() : key,
@@ -189,7 +189,11 @@ export function getGameplayAssetList(characterId = getStoredCharacterId()) {
         ...ENV_KEYS.map(key => ({ key: `env_${key}`, path: `assets/environment/${key}.png` })),
         ...SHADOW_KEYS.map(key => ({ key: `asset_shadow_${key}`, path: `assets/shadows/shadow_${key}.png` })),
         ...getCharacterMotionAssets(characterId),
-        ...CHARACTER_SKILL_EFFECT_KEYS.map(key => ({ key: `char_skill_${key}`, path: `assets/effects/character_skills/${key}.png` })),
+        ...CHARACTER_SKILL_EFFECT_KEYS.map(key => ({
+            key: `char_skill_${key}`,
+            path: `assets/effects/character_skills/${key}.png`,
+            cacheVersion: CHARACTER_COMBAT_VFX_ASSET_VERSION,
+        })),
         ...CHARACTER_BASIC_ATTACK_EFFECT_KEYS.map(key => ({
             key: `basic_attack_${key}`,
             path: `assets/effects/basic_attacks/${key}.png`,
