@@ -153,6 +153,7 @@
   const FIRE_ZONE_VISUAL_SIZE_MULTIPLIER = 1.5;
   const FIRE_ZONE_MIN_BURN_DURATION = 0.65;
   const ZOMBIE_WALL_VISUAL_PADDING = 56;
+  const AIM_FORWARD_SNAP_ANGLE = Math.PI / 18;
   const AIM_POSES = [
     { key: "aim-10", angle: -Math.PI * 5 / 6 },
     { key: "aim-1030", angle: -Math.PI * 3 / 4 },
@@ -1139,7 +1140,7 @@
   }
 
   function getShotAimPoseKey(angle) {
-    if (angleDistance(angle, AIM_POSE_BY_KEY["aim-12"].angle) <= Math.atan(0.36)) {
+    if (angleDistance(angle, AIM_POSE_BY_KEY["aim-12"].angle) <= AIM_FORWARD_SNAP_ANGLE) {
       return "aim-12";
     }
     return getNearestAimPose(angle).key;
