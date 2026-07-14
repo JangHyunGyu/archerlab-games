@@ -210,9 +210,9 @@ export class BasicDagger extends WeaponBase {
         }
         const effectTexture = this._getConfiguredEffectTexture() || this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
-        // The rebuilt Shadow Monarch motion already carries its separately
-        // rendered dagger at the hand socket. Use the procedural energy trail
-        // for that loadout so the old stab sheet cannot draw a second weapon.
+        // The rebuilt Shadow Monarch motion already carries its generated
+        // dagger in the character's hand. Use the procedural energy trail for
+        // that loadout so the old stab sheet cannot draw a second weapon.
         const useEmbeddedDagger = this.key === 'basicDagger';
         const useEffectStab = !useCharacterEffect && !useEmbeddedDagger &&
             this.scene.textures.exists('effect_basic_stab_0');

@@ -128,7 +128,7 @@ const PLAYER_MOTION_NAMES = [
 
 // Character image URLs are otherwise stable across releases and can remain in
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
-export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-light-swordswoman-identity-v1';
+export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
 export const CHARACTER_MOTION_ASSET_VERSION = CHARACTER_VISUAL_ASSET_VERSION;
 
 const uiAsset = (key) => ({

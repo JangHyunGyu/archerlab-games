@@ -13,10 +13,10 @@ Source layout::
         attack_up_chroma.png
 
 Each body source is a horizontal strip of four poses; generated cell widths
-need not be equal.  Most weaponed characters use one independently rendered
-weapon master plus explicit direction/pose sockets.  Characters marked with an
-embedded weapon instead keep the generated hand, grip, and blade together as a
-single reviewed silhouette throughout the 112x144 runtime-frame contract.
+need not be equal.  Current characters keep the generated weapon or combat
+focus together with the body as a single reviewed silhouette.  The independent
+weapon-master and direction/pose socket path remains available as a fallback
+inside the existing 112x144 runtime-frame contract.
 """
 
 import argparse
@@ -121,22 +121,7 @@ CHARACTER_PROFILES: dict[str, CharacterProfile] = {
         character_id="shadow_monarch",
         output_relative=Path("assets/player/motion"),
         filename_prefix="player_",
-        socket_profile="shadow_monarch",
-        weapon_profile=WeaponProfile(
-            "shadow_dagger_chroma.png",
-            (0.225, 0.50),
-            brightness=1.55,
-            length_scale=1.55,
-            thickness_scale=1.30,
-            glow_color=(142, 84, 255),
-            glow_alpha=105,
-            minimum_visible_pixels=52,
-            minimum_visible_extent=25,
-        ),
-        # The right thrust reaches the 112px frame edge before its separately
-        # rendered blade can emerge.  A subtle uniform pull-back preserves the
-        # pose while reserving a reviewed full-dagger corridor.
-        body_track_adjustments={"attack_right": (0.92, -3, 0)},
+        embedded_weapon=True,
     ),
     "light_swordswoman": CharacterProfile(
         character_id="light_swordswoman",
@@ -146,28 +131,17 @@ CHARACTER_PROFILES: dict[str, CharacterProfile] = {
     "white_tiger_brawler": CharacterProfile(
         character_id="white_tiger_brawler",
         output_relative=Path("assets/player/characters/white_tiger_brawler/motion"),
-        socket_profile="white_tiger_brawler",
+        embedded_weapon=True,
     ),
     "flame_mage": CharacterProfile(
         character_id="flame_mage",
         output_relative=Path("assets/player/characters/flame_mage/motion"),
-        socket_profile="flame_mage",
+        embedded_weapon=True,
     ),
     "sanctuary_healer": CharacterProfile(
         character_id="sanctuary_healer",
         output_relative=Path("assets/player/characters/sanctuary_healer/motion"),
-        socket_profile="sanctuary_healer",
-        weapon_profile=WeaponProfile(
-            "sanctuary_staff_chroma.png",
-            (0.615, 0.50),
-            brightness=1.08,
-            length_scale=1.28,
-            thickness_scale=1.24,
-            glow_color=(79, 255, 187),
-            glow_alpha=86,
-            minimum_visible_pixels=78,
-            minimum_visible_extent=46,
-        ),
+        embedded_weapon=True,
     ),
 }
 

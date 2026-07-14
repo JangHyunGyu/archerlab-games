@@ -47,7 +47,13 @@ class MotionSet:
 
 
 MOTION_SETS = (
-    MotionSet("player", "shadow_monarch", ROOT / "assets" / "player" / "motion", "player_", True),
+    MotionSet(
+        "player",
+        "shadow_monarch",
+        ROOT / "assets" / "player" / "motion",
+        prefix="player_",
+        embedded_weapon=True,
+    ),
     MotionSet(
         "light_swordswoman",
         "light_swordswoman",
@@ -58,24 +64,23 @@ MOTION_SETS = (
         "white_tiger_brawler",
         "white_tiger_brawler",
         ROOT / "assets" / "player" / "characters" / "white_tiger_brawler" / "motion",
+        embedded_weapon=True,
     ),
     MotionSet(
         "flame_mage",
         "flame_mage",
         ROOT / "assets" / "player" / "characters" / "flame_mage" / "motion",
+        embedded_weapon=True,
     ),
     MotionSet(
         "sanctuary_healer",
         "sanctuary_healer",
         ROOT / "assets" / "player" / "characters" / "sanctuary_healer" / "motion",
-        separate_weapon=True,
+        embedded_weapon=True,
     ),
 )
 
-WEAPON_SOURCES = {
-    "shadow_monarch": SOURCE_ROOT / "weapons" / "shadow_dagger_chroma.png",
-    "sanctuary_healer": SOURCE_ROOT / "weapons" / "sanctuary_staff_chroma.png",
-}
+WEAPON_SOURCES: dict[str, Path] = {}
 
 
 def image_pixels(image: Image.Image):
@@ -318,6 +323,7 @@ def verify_sequence_variance(
     minimum_unique: int,
     minimum_peak: float,
     minimum_active_steps: int,
+    cyclic: bool = False,
 ) -> tuple[float, float]:
     unique = len({digest(frame) for frame in frames})
     if unique < minimum_unique:
@@ -327,6 +333,10 @@ def verify_sequence_variance(
     if peak < minimum_peak:
         raise AssertionError(f"{label} motion is too subtle/static (peak difference {peak:.3f})")
     steps = [difference_score(frames[index], frames[index + 1]) for index in range(len(frames) - 1)]
+    if cyclic:
+        # Walk animations loop from the last runtime frame back to the first;
+        # that closing stride is a real visible step and belongs in variance QC.
+        steps.append(difference_score(frames[-1], frames[0]))
     active_steps = sum(score >= 0.008 for score in steps)
     if active_steps < minimum_active_steps:
         raise AssertionError(
@@ -372,6 +382,7 @@ def verify_motion_set(motion_set: MotionSet) -> dict[str, float]:
             minimum_unique=4,
             minimum_peak=0.012,
             minimum_active_steps=3,
+            cyclic=True,
         )
         attack = [logical(frames, motion_set, f"attack_{direction}_{index}") for index in range(ATTACK_FRAMES)]
         peak, step_mean = verify_sequence_variance(
@@ -664,7 +675,9 @@ def elongation(image: Image.Image) -> float:
     return math.sqrt(major / minor)
 
 
-def verify_weapon_sources() -> dict[str, float]:
+def verify_weapon_sources() -> dict[str, float] | None:
+    if not WEAPON_SOURCES:
+        return None
     elongations: list[float] = []
     for source_id, path in WEAPON_SOURCES.items():
         if not path.is_file():
@@ -701,10 +714,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"mean chroma {metrics['mean_removed']:.1%} / max residue {metrics['max_residual']:.1%}"
             )
         weapon_metrics = verify_weapon_sources()
-        print(
-            f"weapon sources verified: {len(WEAPON_SOURCES)} masters / "
-            f"min elongation {weapon_metrics['min_elongation']:.2f}"
-        )
+        if weapon_metrics is not None:
+            print(
+                f"weapon sources verified: {len(WEAPON_SOURCES)} masters / "
+                f"min elongation {weapon_metrics['min_elongation']:.2f}"
+            )
+        else:
+            print("weapon sources verified: 0 registered separate masters")
 
     if not args.sources_only:
         for motion_set in MOTION_SETS:
