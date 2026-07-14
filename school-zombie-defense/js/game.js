@@ -282,6 +282,7 @@
     normal: { stainWidth: 70, stainHeight: 42, fall: 285, corpseHold: 24000, corpseFade: 700 },
     elite: { stainWidth: 90, stainHeight: 54, fall: 340, corpseHold: 24000, corpseFade: 800 }
   };
+  const BLOOD_STAIN_SIZE_MULTIPLIER = 2;
   const BLOOD_STAIN_TEXTURES = [
     "blood-stain-pool-1",
     "blood-stain-pool-2",
@@ -9185,7 +9186,8 @@
         + corpseVisualDepthRatio * ZOMBIE_CORPSE_DEPTH_RANGE;
       const corpseVisibleWidth = deathDisplaySize * finalFrameBounds.width;
       const corpseVisibleHeight = deathDisplaySize * finalFrameBounds.height;
-      const bloodMaxSide = Math.max(effect.stainWidth * sizeScale, corpseVisibleWidth * 0.52) * rand(0.84, 1);
+      const bloodBaseMaxSide = Math.max(effect.stainWidth * sizeScale, corpseVisibleWidth * 0.52) * rand(0.84, 1);
+      const bloodMaxSide = bloodBaseMaxSide * BLOOD_STAIN_SIZE_MULTIPLIER;
       const lastHitContext = zombie.lastHitContext || {};
       const availableBloodTextures = this.textures && typeof this.textures.exists === "function"
         ? BLOOD_STAIN_TEXTURES.filter((key) => this.textures.exists(key))
@@ -9237,12 +9239,14 @@
       const stainBaseScaleX = stain.scaleX;
       const stainBaseScaleY = stain.scaleY;
       stain.setScale(stainBaseScaleX * 0.18, stainBaseScaleY * 0.18);
+      const shadowBloodWidth = bloodWidth / BLOOD_STAIN_SIZE_MULTIPLIER;
+      const shadowBloodHeight = bloodHeight / BLOOD_STAIN_SIZE_MULTIPLIER;
 
       const shadow = this.trackTransient(this.add.ellipse(
         bloodX,
         bloodY,
-        Math.max(bloodWidth * 0.78, corpseVisibleWidth * 0.58),
-        Math.max(bloodHeight * 0.42, corpseVisibleHeight * 0.42),
+        Math.max(shadowBloodWidth * 0.78, corpseVisibleWidth * 0.58),
+        Math.max(shadowBloodHeight * 0.42, corpseVisibleHeight * 0.42),
         0x050101,
         0.38
       )
