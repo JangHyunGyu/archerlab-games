@@ -282,6 +282,10 @@
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES = 12;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
+  // Keep the hit reaction visible without letting a corpse settle far above the position where the fall began.
+  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE = 0.24;
+  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO = 0.07;
+  const ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO = 0.02;
   const ZOMBIE_CORPSE_TYPES = [
     "normal",
     "student",
@@ -325,16 +329,17 @@
     brute: { corpseWidth: 1.06, deathSize: 1.22 },
     volatile: { corpseWidth: 0.94, deathSize: 0.89 },
     elite: { corpseWidth: 0.96, deathSize: 1.05 },
-    teacher: { corpseWidth: 0.96, deathSize: 1.12 },
-    nurse: { corpseWidth: 1.48, deathSize: 1.1 },
-    athlete: { corpseWidth: 1.5, deathSize: 1.24 },
-    janitor: { corpseWidth: 1.22, deathSize: 1.14 },
-    guard: { corpseWidth: 1.55, deathSize: 1.1 },
-    crawler: { corpseWidth: 1.42, deathSize: 1.32 },
-    screamer: { corpseWidth: 1.12, deathSize: 1.18 },
-    spider: { corpseWidth: 1.16, deathSize: 0.94 },
-    bloom: { corpseWidth: 1.4, deathSize: 1.04 },
-    charger: { corpseWidth: 1.48, deathSize: 1.16 }
+    // Custom corpse PNGs sit higher inside their canvases than the final death-sheet frames.
+    teacher: { corpseWidth: 0.96, deathSize: 1.12, corpseYOffset: 0.047 },
+    nurse: { corpseWidth: 1.48, deathSize: 1.1, corpseYOffset: 0.103 },
+    athlete: { corpseWidth: 1.5, deathSize: 1.24, corpseYOffset: 0.124 },
+    janitor: { corpseWidth: 1.22, deathSize: 1.14, corpseYOffset: 0.07 },
+    guard: { corpseWidth: 1.55, deathSize: 1.1, corpseYOffset: 0.084 },
+    crawler: { corpseWidth: 1.42, deathSize: 1.32, corpseYOffset: 0.018 },
+    screamer: { corpseWidth: 1.12, deathSize: 1.18, corpseYOffset: 0.092 },
+    spider: { corpseWidth: 1.16, deathSize: 0.94, corpseYOffset: 0.039 },
+    bloom: { corpseWidth: 1.4, deathSize: 1.04, corpseYOffset: 0.053 },
+    charger: { corpseWidth: 1.48, deathSize: 1.16, corpseYOffset: 0.142 }
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,
@@ -9041,10 +9046,22 @@
       const corpseX = this.clampZombieLaneX(x);
       const knockbackDx = Number.isFinite(deathKnockback?.dx) ? deathKnockback.dx : 0;
       const knockbackDy = Number.isFinite(deathKnockback?.dy) ? deathKnockback.dy : 0;
+      const deathKnockbackDy = clamp(
+        knockbackDy * ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE,
+        -displayH * ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO,
+        0
+      );
       const shoveX = this.clampZombieLaneX(corpseX + knockbackDx);
-      const shoveY = clamp(y + knockbackDy, -48, this.bounds.barricade - displayH * 0.14);
+      const shoveY = clamp(y + deathKnockbackDy, -48, this.bounds.barricade - displayH * 0.14);
       const landingX = this.clampZombieLaneX(shoveX + displayH * fall.x + rand(-6, 6));
-      const landingY = clamp(shoveY + displayH * fall.y + rand(-4, 5), -20, this.bounds.barricade - displayH * 0.1);
+      const landingY = clamp(
+        Math.max(
+          y - displayH * ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO,
+          shoveY + displayH * fall.y + rand(-4, 5)
+        ),
+        -20,
+        this.bounds.barricade - displayH * 0.1
+      );
       const finalAngle = fall.angle + rand(-5, 5);
       const stumbleX = this.clampZombieLaneX(corpseX + (shoveX - corpseX) * 0.62 + displayH * fall.x * 0.16);
       const stumbleY = y + (shoveY - y) * 0.62 + displayH * (0.02 + fall.y * 0.14);
@@ -9076,6 +9093,11 @@
       const deathTexturePool = ZOMBIE_DEATH_TEXTURES[corpseType] || ZOMBIE_DEATH_TEXTURES.normal;
       const deathTexture = deathTexturePool[corpseVariantIndex % deathTexturePool.length] || deathTexturePool[0];
       const renderScale = ZOMBIE_DEATH_RENDER_SCALES[corpseType] || ZOMBIE_DEATH_RENDER_SCALES.normal;
+      const corpseLandingY = clamp(
+        landingY + displayH * (renderScale.corpseYOffset || 0),
+        -20,
+        this.bounds.barricade - displayH * 0.02
+      );
       const hasCorpseTexture = this.textures
         && typeof this.textures.exists === "function"
         && this.textures.exists(corpseTexture);
@@ -9084,7 +9106,7 @@
       const corpseRotation = finalAngle * Math.PI / 180;
       const bloodMaxSide = Math.max(effect.stainWidth * sizeScale, corpseDisplayWidth * 0.46) * rand(0.84, 1);
       const bloodX = landingX;
-      const bloodY = landingY + corpseDisplayHeight * 0.06;
+      const bloodY = corpseLandingY + corpseDisplayHeight * 0.06;
       const lastHitContext = zombie.lastHitContext || {};
       const availableBloodTextures = this.textures && typeof this.textures.exists === "function"
         ? BLOOD_STAIN_TEXTURES.filter((key) => this.textures.exists(key))
@@ -9161,7 +9183,7 @@
         .setDepth(corpseDepth - 0.2));
 
       const corpseImage = hasCorpseTexture
-        ? this.trackTransient(this.add.image(landingX, landingY, corpseTexture)
+        ? this.trackTransient(this.add.image(landingX, corpseLandingY, corpseTexture)
           .setOrigin(0.5)
           .setDisplaySize(corpseDisplayWidth, corpseDisplayHeight)
           .setFlipX(Math.random() < 0.5)
