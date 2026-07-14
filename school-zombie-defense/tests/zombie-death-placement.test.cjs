@@ -167,6 +167,7 @@ function assertPngWebpAlphaParity(assetNames) {
 const verticalKnockbackScale = readNumberConstant("ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE");
 const verticalKnockbackLimitRatio = readNumberConstant("ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO");
 const landingRiseLimitRatio = readNumberConstant("ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO");
+const bloodStainSizeMultiplier = readNumberConstant("BLOOD_STAIN_SIZE_MULTIPLIER");
 const groundDepthBase = readNumberConstant("ZOMBIE_CORPSE_GROUND_DEPTH_BASE");
 const groundDepthRange = readNumberConstant("ZOMBIE_CORPSE_GROUND_DEPTH_RANGE");
 const corpseDepthBase = readNumberConstant("ZOMBIE_CORPSE_DEPTH_BASE");
@@ -176,6 +177,7 @@ const activeCorpseLimit = readNumberConstant("ACTIVE_CORPSE_LIMIT");
 assert.equal(verticalKnockbackScale, 0.24, "death recoil must retain only a restrained part of hit knockback");
 assert.equal(verticalKnockbackLimitRatio, 0.07, "death recoil must stay capped relative to zombie height");
 assert.equal(landingRiseLimitRatio, 0.02, "a corpse must not settle far above its death position");
+assert.equal(bloodStainSizeMultiplier, 2, "corpse blood stains must be twice their previous visual size");
 assert.equal(groundDepthBase, 25, "ground decals must stay above the arena floor art");
 assert.equal(groundDepthRange, 8, "ground decals must use their isolated narrow depth band");
 assert.equal(corpseDepthBase, 34, "corpse bodies must retain their established depth band");
@@ -315,6 +317,21 @@ assert.match(
 );
 assert.match(
   corpseFunction,
+  /const bloodBaseMaxSide = Math\.max\(effect\.stainWidth \* sizeScale, corpseVisibleWidth \* 0\.52\) \* rand\(0\.84, 1\)/,
+  "blood sizing must retain the corpse-relative pre-scale baseline"
+);
+assert.match(
+  corpseFunction,
+  /const bloodMaxSide = bloodBaseMaxSide \* BLOOD_STAIN_SIZE_MULTIPLIER/,
+  "blood stains must apply the shared two-times visual multiplier"
+);
+assert.match(
+  corpseFunction,
+  /const shadowBloodWidth = bloodWidth \/ BLOOD_STAIN_SIZE_MULTIPLIER[\s\S]*?const shadowBloodHeight = bloodHeight \/ BLOOD_STAIN_SIZE_MULTIPLIER[\s\S]*?Math\.max\(shadowBloodWidth \* 0\.78, corpseVisibleWidth \* 0\.58\)/,
+  "doubling blood stains must not also double the corpse shadow"
+);
+assert.match(
+  corpseFunction,
   /stain\.setAlpha\s*\(0\)\.setDepth\s*\(groundDepth\)/,
   "blood stains must stay in the ground depth band"
 );
@@ -391,5 +408,6 @@ for (const displayHeight of [116, 146, 170, 177, 220]) {
 
 console.log(
   `zombie death placement verified: ${finalFrameBounds.size} alpha-aligned final frames, isolated ground depth, ` +
-    `${Math.round(verticalKnockbackLimitRatio * 100)}% recoil cap, ${Math.round(landingRiseLimitRatio * 100)}% landing rise limit`
+    `${bloodStainSizeMultiplier}x blood stains, ${Math.round(verticalKnockbackLimitRatio * 100)}% recoil cap, ` +
+    `${Math.round(landingRiseLimitRatio * 100)}% landing rise limit`
 );
