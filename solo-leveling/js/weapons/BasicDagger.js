@@ -537,6 +537,7 @@ export class BasicDagger extends WeaponBase {
             .setDepth(depth)
             .setAlpha(0)
             .setScale(baseScale * 0.72)
+            .setFlipX(true)
             .setFlipY(flipY)
             .setBlendMode(Phaser.BlendModes.ADD);
 
@@ -790,16 +791,9 @@ export class BasicDagger extends WeaponBase {
             : Math.min(maxDist, this.config.fallbackImpactDistance ?? 118);
         const impactX = originX + cosA * targetDist;
         const impactY = originY + sinA * targetDist;
-        const getCastPoint = () => ({
-            x: this.player.x + cosA * 30 + perpX * side * 6,
-            y: this.player.y - 18 + sinA * 30 + perpY * side * 6,
-        });
         const effectColor = this.getEffectColor(0x66f2b0);
         const glowColor = this.getEffectGlowColor(0xe8fff5);
         const effectTexture = this._getConfiguredEffectTexture();
-        const linkFx = this.scene.add.graphics()
-            .setDepth(14)
-            .setBlendMode(Phaser.BlendModes.ADD);
         const burstFx = this.scene.add.graphics()
             .setDepth(17)
             .setBlendMode(Phaser.BlendModes.ADD);
@@ -813,7 +807,7 @@ export class BasicDagger extends WeaponBase {
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
-        const entryObjects = [linkFx, burstFx];
+        const entryObjects = [burstFx];
         if (slamSprite) entryObjects.push(slamSprite);
         const entry = this._trackAttackObjects(entryObjects);
         const baseScale = this.config.effectScale || 0.46;
@@ -826,28 +820,6 @@ export class BasicDagger extends WeaponBase {
             const fadeRaw = Phaser.Math.Clamp((k - 0.7) / 0.3, 0, 1);
             const fade = Phaser.Math.Easing.Quadratic.In(fadeRaw);
             const remaining = 1 - fade;
-
-            const linkAlpha = charge * (1 - burst * 0.65) * remaining;
-            linkFx.clear();
-            if (linkAlpha > 0.02) {
-                const castPoint = getCastPoint();
-                linkFx.lineStyle(11, effectColor, 0.1 * linkAlpha);
-                linkFx.lineBetween(castPoint.x, castPoint.y, impactX, impactY);
-                linkFx.lineStyle(5, effectColor, 0.34 * linkAlpha);
-                linkFx.lineBetween(castPoint.x, castPoint.y, impactX, impactY);
-                linkFx.lineStyle(2, glowColor, 0.78 * linkAlpha);
-                linkFx.lineBetween(castPoint.x, castPoint.y, impactX, impactY);
-                for (let i = 1; i <= 3; i++) {
-                    const laneT = i / 4;
-                    const motePulse = 0.65 + 0.35 * Math.sin((k * 12 + i) * Math.PI);
-                    linkFx.fillStyle(glowColor, 0.58 * linkAlpha);
-                    linkFx.fillCircle(
-                        Phaser.Math.Linear(castPoint.x, impactX, laneT),
-                        Phaser.Math.Linear(castPoint.y, impactY, laneT),
-                        1.5 + motePulse * 1.7
-                    );
-                }
-            }
 
             if (slamSprite) {
                 const lateral = side * 6 * (1 - burst);
