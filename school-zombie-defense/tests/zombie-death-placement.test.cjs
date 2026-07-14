@@ -21,31 +21,11 @@ assert.equal(verticalKnockbackScale, 0.24, "death recoil must retain only a rest
 assert.equal(verticalKnockbackLimitRatio, 0.07, "death recoil must stay capped relative to zombie height");
 assert.equal(landingRiseLimitRatio, 0.02, "a corpse must not settle far above its death position");
 
-const renderScalesBlock = gameSource.match(
-  /const\s+ZOMBIE_DEATH_RENDER_SCALES\s*=\s*\{([\s\S]*?)\n\s*\};/
-)?.[1];
-assert.ok(renderScalesBlock, "ZOMBIE_DEATH_RENDER_SCALES must remain discoverable");
-
-const expectedCorpseOffsets = {
-  teacher: 0.047,
-  nurse: 0.103,
-  athlete: 0.124,
-  janitor: 0.07,
-  guard: 0.084,
-  crawler: 0.018,
-  screamer: 0.092,
-  spider: 0.039,
-  bloom: 0.053,
-  charger: 0.142
-};
-
-for (const [type, expectedOffset] of Object.entries(expectedCorpseOffsets)) {
-  const match = renderScalesBlock.match(
-    new RegExp(`\\b${type}\\s*:\\s*\\{[^}]*corpseYOffset\\s*:\\s*([0-9.]+)`)
-  );
-  assert.ok(match, `${type} must retain its measured death-to-corpse Y correction`);
-  assert.equal(Number(match[1]), expectedOffset, `${type} corpse Y correction drifted`);
-}
+assert.doesNotMatch(
+  gameSource,
+  /ZOMBIE_CORPSE_TEXTURES|zombie-corpse-/,
+  "standalone corpse assets must not be registered or preloaded"
+);
 
 const corpseFunction = gameSource.match(
   /createZombieCorpse\s*\(x, y, zombie, deathKnockback\s*=\s*null\)\s*\{([\s\S]*?)\n\s*getZombieSurgeCooldown\s*\(/
@@ -68,18 +48,48 @@ assert.match(
 );
 assert.match(
   corpseFunction,
-  /landingY\s*\+\s*displayH\s*\*\s*\(renderScale\.corpseYOffset\s*\|\|\s*0\)/,
-  "corpse placement must apply the per-type alpha-center correction"
+  /const deathFrameEvent = this\.playTransientSpriteFrames\s*\(deathSprite, deathFrameCount, effect\.fall \+ 260\)/,
+  "the death sheet must play through its configured frames"
 );
 assert.match(
   corpseFunction,
-  /add\.image\s*\(landingX, corpseLandingY, corpseTexture\)/,
-  "the corpse image must use its corrected landing position"
+  /cancelTimerEvent\s*\(deathFrameEvent\)[\s\S]*?\.setFrame\s*\(deathFrameCount - 1\)/,
+  "settling must stop the animation timer before locking the final frame"
 );
 assert.match(
   corpseFunction,
-  /targets:\s*deathSprite,[\s\S]*?y:\s*landingY/,
-  "the death animation must finish on its own visual-center landing position"
+  /\.setFrame\s*\(deathFrameCount - 1\)/,
+  "the settled corpse must explicitly hold the final death frame"
+);
+assert.match(
+  corpseFunction,
+  /\.setPosition\s*\(landingX, landingY\)/,
+  "the final death frame must retain the animation landing position"
+);
+assert.match(
+  corpseFunction,
+  /settleCorpseObjectDepth\s*\(deathSprite, corpseDepth \+ 0\.45\)/,
+  "the final death frame must move into the persistent corpse depth band"
+);
+assert.match(
+  corpseFunction,
+  /depthEntry\.depth\s*=\s*depth/,
+  "settling must update the stored depth used by later corpse ordering"
+);
+assert.match(
+  corpseFunction,
+  /\{ object: deathSprite, depth: bodyDepth \+ 0\.9 \}/,
+  "the death animation must retain live-body depth until it settles"
+);
+assert.match(
+  corpseFunction,
+  /const corpseTarget = deathSprite && !deathSprite\.destroyed[\s\S]*?\? deathSprite/,
+  "the final death frame must remain the corpse fade target"
+);
+assert.doesNotMatch(
+  corpseFunction,
+  /corpseImage|corpseTexture|revealCorpseImage/,
+  "death completion must not swap to a separately positioned corpse image"
 );
 
 for (const displayHeight of [116, 146, 170, 177, 220]) {
@@ -103,6 +113,6 @@ for (const displayHeight of [116, 146, 170, 177, 220]) {
 }
 
 console.log(
-  `zombie death placement verified: ${Object.keys(expectedCorpseOffsets).length} corrected corpse types, ` +
+  `zombie death placement verified: final-frame corpse reuse, ` +
     `${Math.round(verticalKnockbackLimitRatio * 100)}% recoil cap, ${Math.round(landingRiseLimitRatio * 100)}% landing rise limit`
 );
