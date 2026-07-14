@@ -281,6 +281,76 @@ function alphaComponentSizes(image, cellIndex, threshold = 8) {
 
 const directionKeys = ["10", "1030", "11", "1130", "12", "1230", "13", "1330", "14"];
 
+const muzzleOffsetsSource = gameSource.match(
+  /const\s+CHARACTER_MUZZLE_OFFSETS\s*=\s*(\{[\s\S]*?\n\s*\});/
+)?.[1];
+assert.ok(muzzleOffsetsSource, "CHARACTER_MUZZLE_OFFSETS must remain discoverable");
+const muzzleOffsets = Function(`"use strict"; return (${muzzleOffsetsSource});`)();
+assert.deepEqual(
+  Object.keys(muzzleOffsets).sort(),
+  ["a", "b", "c", "d", "e", "f", "g", "h"],
+  "every defender must declare measured muzzle offsets"
+);
+for (const [defenderId, offsets] of Object.entries(muzzleOffsets)) {
+  assert.equal(offsets.length, directionKeys.length, `defender ${defenderId.toUpperCase()} must cover all nine muzzle directions`);
+  offsets.forEach((offset, index) => {
+    assert.ok(
+      Array.isArray(offset)
+        && offset.length === 2
+        && offset.every(Number.isFinite),
+      `defender ${defenderId.toUpperCase()} direction ${directionKeys[index]} must use a finite [x, y] muzzle offset`
+    );
+  });
+}
+
+function nearestAlphaDistanceFromMuzzle(image, cellIndex, displayHeight, offset, threshold = 16) {
+  const cellWidth = image.width / directionKeys.length;
+  assert.ok(Number.isInteger(cellWidth), "muzzle checks require nine equal-width cells");
+  const displayScale = displayHeight / image.height;
+  const muzzleX = cellWidth / 2 + offset[0] / displayScale;
+  const muzzleY = image.height + offset[1] / displayScale;
+  const searchRadius = Math.ceil(8 / displayScale);
+  let nearestSquared = Number.POSITIVE_INFINITY;
+  const minX = Math.max(0, Math.floor(muzzleX - searchRadius));
+  const maxX = Math.min(cellWidth - 1, Math.ceil(muzzleX + searchRadius));
+  const minY = Math.max(0, Math.floor(muzzleY - searchRadius));
+  const maxY = Math.min(image.height - 1, Math.ceil(muzzleY + searchRadius));
+  for (let y = minY; y <= maxY; y += 1) {
+    const rowOffset = y * image.width + cellIndex * cellWidth;
+    for (let x = minX; x <= maxX; x += 1) {
+      if (image.alpha[rowOffset + x] <= threshold) continue;
+      nearestSquared = Math.min(
+        nearestSquared,
+        (x - muzzleX) ** 2 + (y - muzzleY) ** 2
+      );
+    }
+  }
+  return Math.sqrt(nearestSquared) * displayScale;
+}
+
+function assertMeasuredMuzzlesTouchReleaseArt() {
+  const releaseSheets = {
+    a: { name: "character-a-attack-2", height: 222 },
+    b: { name: "character-b", height: 230 },
+    c: { name: "character-c-attack-0", height: 248 },
+    d: { name: "character-d-attack-1", height: 226 },
+    e: { name: "character-e", height: 205 },
+    f: { name: "character-f-throw-2", height: 196 },
+    g: { name: "character-g-attack-1", height: 222 },
+    h: { name: "character-h-attack-0", height: 226 }
+  };
+  for (const [defenderId, spec] of Object.entries(releaseSheets)) {
+    const image = decodePngAlpha(path.join(imageRoot, `${spec.name}.png`));
+    muzzleOffsets[defenderId].forEach((offset, cellIndex) => {
+      const distance = nearestAlphaDistanceFromMuzzle(image, cellIndex, spec.height, offset);
+      assert.ok(
+        distance <= 2,
+        `${defenderId.toUpperCase()} direction ${directionKeys[cellIndex]} muzzle detached from ${spec.name} by ${distance.toFixed(2)} world pixels`
+      );
+    });
+  }
+}
+
 function cellVisibleBounds(image, cellIndex, threshold = 8) {
   const cellWidth = image.width / directionKeys.length;
   assert.ok(Number.isInteger(cellWidth), "semantic sprite checks require nine equal-width cells");
@@ -556,6 +626,28 @@ assertCharacterBodyGeometry({
 
 assertShockCannonDirections();
 assertPngWebpAlphaParity();
+assertMeasuredMuzzlesTouchReleaseArt();
+assert.ok(
+  muzzleOffsets.f.slice(0, 4).every(([x]) => x < 0)
+    && muzzleOffsets.f.slice(5).every(([x]) => x > 0),
+  "F throw origins must stay in the same horizontal hemisphere as their aim direction"
+);
+assert.match(
+  gameSource,
+  /\.setOrigin\(isFirebomb\s*\?\s*0\.8\s*:\s*0\.5\s*,\s*0\.5\)/,
+  "firebomb flight art must anchor its neck to the measured throw origin"
+);
+assert.match(
+  gameSource,
+  /createMuzzle\(x,\s*y,\s*muzzle\.effectAngle\s*\?\?\s*angle,\s*defender\.projectile\)/,
+  "directional weapon muzzle effects must use their measured barrel angle"
+);
+const rebuildSource = fs.readFileSync(path.join(root, "tools", "rebuild-character-actions.py"), "utf8");
+assert.match(
+  rebuildSource,
+  /source_cells\[pose\]\s*=\s*source_cells\[opposite\]\.transpose\(Image\.Transpose\.FLIP_LEFT_RIGHT\)/,
+  "F left-side throw frames must be rebuilt from their approved opposite-direction art"
+);
 
 const firebombRelease = decodePngAlpha(path.join(imageRoot, "character-f-throw-2.png"));
 for (let cellIndex = 0; cellIndex < 9; cellIndex += 1) {
@@ -602,6 +694,7 @@ if (updateHashes) {
 
 console.log(
   `defender actions verified: ${sheets.length} nine-direction PNG/WebP pairs, ` +
-    `A/F screen-space scale and footing, G cannon directions, alpha parity, ` +
-    `F release separation, G recovery continuity, asset version ${assetVersion}`
+    `72 measured release origins, A/F screen-space scale and footing, ` +
+    `G cannon directions, alpha parity, F release separation, ` +
+    `G recovery continuity, asset version ${assetVersion}`
 );
