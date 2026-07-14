@@ -59,7 +59,7 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
-  const CHARACTER_ASSET_VERSION = "20260713-defender-commercial-v8";
+  const CHARACTER_ASSET_VERSION = "20260714-defender-muzzles-v9";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -167,6 +167,28 @@
   ];
   const AIM_POSE_KEYS = AIM_POSES.map((pose) => pose.key);
   const AIM_POSE_BY_KEY = Object.fromEntries(AIM_POSES.map((pose) => [pose.key, pose]));
+  // World-space offsets measured from each defender's planted sprite origin
+  // to the visible weapon/throw release point in all nine direction cells.
+  // The commercial character sheets do not share one circular muzzle arc, so
+  // a single pivot/reach pair cannot keep effects attached in every pose.
+  const CHARACTER_MUZZLE_OFFSETS = {
+    a: [[-66, -150], [-58, -161], [-21, -149], [-50, -150], [-50, -143], [35, -143], [51, -159], [40, -147], [36, -156]],
+    b: [[-31, -176], [-37, -192], [-32, -198], [-23, -194], [2, -210], [24, -195], [34, -198], [39, -189], [32, -179]],
+    c: [[-28, -182], [-38, -209], [-24, -210], [-15, -215], [0, -215], [15, -215], [28, -212], [34, -210], [28, -183]],
+    d: [[-36, -172], [-30, -183], [-25, -193], [-15, -198], [2, -198], [18, -196], [30, -193], [31, -180], [41, -171]],
+    e: [[-33, -154], [-30, -160], [-34, -162], [-26, -165], [2, -180], [23, -175], [30, -167], [30, -158], [33, -151]],
+    f: [[-52, -150], [-58, -142], [-65, -158], [-31, -141], [32, -147], [32, -140], [64, -157], [58, -142], [52, -150]],
+    g: [[-36, -159], [-40, -198], [-21, -199], [-15, -204], [0, -205], [17, -203], [27, -200], [33, -192], [36, -161]],
+    h: [[-32, -174], [-39, -187], [-23, -203], [-14, -208], [0, -211], [21, -211], [32, -206], [39, -190], [36, -176]]
+  };
+  const DIRECTIONAL_MUZZLE_EFFECT_DEFENDERS = new Set(["b", "c", "d", "e", "g", "h"]);
+  const CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES = {
+    // G's commercial cannon art intentionally has a tighter visible arc than
+    // its target-selection arc. These measured barrel axes keep the discharge
+    // flash attached to the cannon while projectile physics still aim true.
+    g: [-117.3, -116.2, -105.8, -100.8, -86.3, -81.9, -75.5, -66.8, -56.7]
+      .map((degrees) => degrees * Math.PI / 180)
+  };
   const THROW_ANIMATION_FRAMES = 4;
   const THROW_ANIMATION_FRAME_DURATION = 0.075;
   const AIM_ALIASES = {
@@ -2840,6 +2862,21 @@
     getDefenderMuzzle(defender, pose) {
       const aim = defender.aim || { pivot: [0, -160], reach: 84 };
       const poseInfo = getAimPose(pose);
+      const poseIndex = AIM_POSE_KEYS.indexOf(poseInfo.key);
+      const measuredOffset = CHARACTER_MUZZLE_OFFSETS[defender.id]?.[poseIndex];
+      if (measuredOffset) {
+        const effectAngleOverride = CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES[defender.id]?.[poseIndex];
+        const effectAngle = Number.isFinite(effectAngleOverride)
+          ? effectAngleOverride
+          : DIRECTIONAL_MUZZLE_EFFECT_DEFENDERS.has(defender.id)
+            ? Math.atan2(measuredOffset[1] - aim.pivot[1], measuredOffset[0] - aim.pivot[0])
+            : null;
+        return {
+          x: defender.x + measuredOffset[0],
+          y: defender.y + measuredOffset[1],
+          effectAngle
+        };
+      }
       return {
         x: defender.x + aim.pivot[0] + Math.cos(poseInfo.angle) * aim.reach,
         y: defender.y + aim.pivot[1] + Math.sin(poseInfo.angle) * aim.reach
@@ -7164,7 +7201,9 @@
         const launchAngle = this.getGrenadeArcAngle(startX, startY, aimPoint.x, aimPoint.y, arcHeight, 0);
         const projectileRotationOffset = isFirebomb ? Math.PI : Math.PI / 2;
         const sprite = this.trackTransient(this.add.image(startX, startY, projectileKey)
-          .setOrigin(0.5)
+          // Anchor a Molotov at its neck instead of its image centre so the
+          // bottle leaves the thrower's hand rather than hovering above it.
+          .setOrigin(isFirebomb ? 0.8 : 0.5, 0.5)
           .setScale(PROJECTILE_SCALES[projectileKey] || PROJECTILE_SCALES["projectile-grenade"])
           .setRotation(launchAngle + projectileRotationOffset)
           .setDepth(192));
@@ -7328,7 +7367,7 @@
           hitTargets: new Set(),
           trailTimer: 0
         });
-        this.createMuzzle(x, y, angle, defender.projectile);
+        this.createMuzzle(x, y, muzzle.effectAngle ?? angle, defender.projectile);
         this.playWeaponSfx(defender.projectile);
       });
     }

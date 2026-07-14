@@ -24,6 +24,7 @@ POSE_COUNT = 9
 SAFE_MARGIN = 8
 A_COMMON_BODY_HEIGHT = 542
 MAX_SCALE_RATIO = 1.03
+MIRRORED_LEFT_THROW_POSES = range(4)
 
 
 @dataclass(frozen=True)
@@ -307,6 +308,14 @@ def build_f(spec: ActionSpec) -> dict[Path, Image.Image]:
         source = Image.open(path).convert("RGBA")
         if source.size != (spec.output_width * POSE_COUNT, spec.output_height):
             raise ValueError(f"Unexpected source size for {path.name}: {source.size}")
+        source_cells = split_strip(source)
+        # The approved right-side throws carry the correct release arm, while
+        # the generated left-side cells still throw across the body.  Build
+        # the four left directions from their exact opposite counterparts so
+        # the animation, hand, and projectile all stay in one hemisphere.
+        for pose in MIRRORED_LEFT_THROW_POSES:
+            opposite = POSE_COUNT - 1 - pose
+            source_cells[pose] = source_cells[opposite].transpose(Image.Transpose.FLIP_LEFT_RIGHT)
         cells = [
             normalise_cell(
                 cell,
@@ -315,7 +324,7 @@ def build_f(spec: ActionSpec) -> dict[Path, Image.Image]:
                 output_size=(spec.output_width, spec.output_height),
                 hair=spec.hair,
             )
-            for pose, cell in enumerate(split_strip(source))
+            for pose, cell in enumerate(source_cells)
         ]
         outputs[path] = join_strip(cells)
     return outputs
@@ -427,27 +436,54 @@ def main() -> None:
         action="store_true",
         help="validate current production strips without rewriting them",
     )
+    parser.add_argument(
+        "--character",
+        choices=("all", "a", "f"),
+        default="all",
+        help="limit rebuild/verification to one defender",
+    )
     args = parser.parse_args()
 
-    if args.verify_only:
-        a_assets = load_current_assets(SPECS[0])
-        f_assets = load_current_assets(SPECS[1])
-    else:
-        a_assets = build_a(SPECS[0])
-        f_assets = build_f(SPECS[1])
-        # Validate the complete in-memory set before the first production write.
-        verify_a_assets(a_assets)
-        verify_f_assets(f_assets)
-        save_assets({**a_assets, **f_assets})
-        verify_png_webp_pairs(list(a_assets) + list(f_assets))
+    selected_specs = [
+        spec for spec in SPECS
+        if args.character == "all" or spec.character == args.character
+    ]
+    assets_by_character: dict[str, dict[Path, Image.Image]] = {}
+    for spec in selected_specs:
+        assets = (
+            load_current_assets(spec)
+            if args.verify_only
+            else build_a(spec) if spec.character == "a" else build_f(spec)
+        )
+        if spec.character == "a":
+            verify_a_assets(assets)
+        else:
+            verify_f_assets(assets)
+        assets_by_character[spec.character] = assets
 
-    verify_a_assets(a_assets)
-    verify_f_assets(f_assets)
-    print("character A")
-    report(a_assets, "pink")
-    print("character F")
-    report(f_assets, "red")
-    print(f"{'verified' if args.verify_only else 'rebuilt and verified'} A/F commercial-scale sheets")
+    if not args.verify_only:
+        combined_assets = {
+            path: image
+            for assets in assets_by_character.values()
+            for path, image in assets.items()
+        }
+        # Validate every selected sheet in memory before the first write.
+        save_assets(combined_assets)
+        verify_png_webp_pairs(list(combined_assets))
+
+    for spec in selected_specs:
+        assets = assets_by_character[spec.character]
+        if spec.character == "a":
+            verify_a_assets(assets)
+        else:
+            verify_f_assets(assets)
+        print(f"character {spec.character.upper()}")
+        report(assets, spec.hair)
+    selected_label = "A/F" if args.character == "all" else args.character.upper()
+    print(
+        f"{'verified' if args.verify_only else 'rebuilt and verified'} "
+        f"{selected_label} commercial-scale sheets"
+    )
 
 
 if __name__ == "__main__":
