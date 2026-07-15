@@ -188,7 +188,12 @@ export class ShadowSlash extends WeaponBase {
 
         // Visual-only slash sprite (energy wave projection)
         const slashRotation = useCharacterEffect ? angle : (useEffectAsset ? angle + Math.PI : angle);
-        const slash = this.scene.add.sprite(slashX, slashY, effectTexture || (useEffectAsset ? 'effect_shadow_slash' : 'proj_slash'))
+        const slash = this.createEffectSprite(
+            slashX,
+            slashY,
+            effectTexture || (useEffectAsset ? 'effect_shadow_slash' : 'proj_slash'),
+            { frameMs: 44 },
+        )
             .setDepth(8)
             .setRotation(slashRotation)
             .setAlpha(useCharacterEffect
@@ -342,7 +347,7 @@ export class ShadowSlash extends WeaponBase {
         }
 
         if (effectTexture) {
-            const lance = this.scene.add.sprite(midX, midY, effectTexture)
+            const lance = this.createEffectSprite(midX, midY, effectTexture, { frameMs: 44 })
                 .setDepth(9)
                 .setRotation(angle)
                 .setAlpha(this.config.effectPeakAlpha ?? 0.88)
@@ -385,7 +390,7 @@ export class ShadowSlash extends WeaponBase {
 
         if (effectTexture) {
             const source = this.scene.textures.get(effectTexture).getSourceImage();
-            const pulse = this.scene.add.sprite(px, py, effectTexture)
+            const pulse = this.createEffectSprite(px, py, effectTexture, { frameMs: 70 })
                 .setDepth(8)
                 .setAlpha(0.84)
                 .setScale((range * 2) / (source?.width || 320))

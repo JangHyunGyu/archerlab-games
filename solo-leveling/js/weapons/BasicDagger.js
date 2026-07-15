@@ -26,17 +26,22 @@ export class BasicDagger extends WeaponBase {
             blade.clearTint();
             blade.setOrigin(0.5, isImageEffect ? 0.5 : 0.94);
             blade.setBlendMode(isImageEffect ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
-            return blade;
+        } else {
+            blade = this.scene.add.sprite(0, 0, textureKey)
+                .setOrigin(0.5, isImageEffect ? 0.5 : 0.94)
+                .setBlendMode(isImageEffect ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
+                .setDepth(13);
         }
 
-        return this.scene.add.sprite(0, 0, textureKey)
-            .setOrigin(0.5, isImageEffect ? 0.5 : 0.94)
-            .setBlendMode(isImageEffect ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL)
-            .setDepth(13);
+        if (textureKey.startsWith('char_skill_') || textureKey.startsWith('basic_attack_')) {
+            this.animateEffectSprite(blade, textureKey, { frameMs: 42 });
+        }
+        return blade;
     }
 
     _releaseBlade(blade) {
         if (!blade || !blade.scene) return;
+        this.stopEffectAnimation(blade);
         blade.setVisible(false);
         blade.setAlpha(0);
         blade.clearTint();
@@ -633,7 +638,7 @@ export class BasicDagger extends WeaponBase {
         const effectTexture = this._getConfiguredEffectTexture();
 
         const slash = effectTexture
-            ? this.scene.add.sprite(centerX, centerY, effectTexture)
+            ? this.createEffectSprite(centerX, centerY, effectTexture, { frameMs: 42 })
                 .setDepth(14)
                 .setAlpha(0)
                 .setScale(this.config.effectScale || 0.44)
@@ -694,7 +699,7 @@ export class BasicDagger extends WeaponBase {
         const effectTexture = this._getConfiguredEffectTexture();
         const fx = effectTexture ? null : this.scene.add.graphics().setDepth(15);
         const swipeSprite = effectTexture
-            ? this.scene.add.sprite(originX + cosA * 74, originY + sinA * 74, effectTexture)
+            ? this.createEffectSprite(originX + cosA * 74, originY + sinA * 74, effectTexture, { frameMs: 40 })
                 .setDepth(16)
                 .setAlpha(0)
                 .setScale(this.config.effectScale || 0.42)
@@ -798,7 +803,7 @@ export class BasicDagger extends WeaponBase {
             .setDepth(17)
             .setBlendMode(Phaser.BlendModes.ADD);
         const slamSprite = effectTexture
-            ? this.scene.add.sprite(impactX, impactY, effectTexture)
+            ? this.createEffectSprite(impactX, impactY, effectTexture, { frameMs: 52 })
                 .setOrigin(0.5, 0.68)
                 .setDepth(16)
                 .setAlpha(0)
@@ -905,7 +910,12 @@ export class BasicDagger extends WeaponBase {
         const effectColor = this.getEffectColor(0xff7a34);
         const glowColor = this.getEffectGlowColor(0xffd86a);
         const projectile = effectTexture
-            ? this.scene.add.sprite(startX, startY, effectTexture)
+            ? this.createEffectSprite(startX, startY, effectTexture, {
+                frameMs: 54,
+                loop: true,
+                loopStart: 2,
+                loopEnd: 4,
+            })
                 .setDepth(14)
                 .setScale(this.config.effectScale || 0.32)
                 .setRotation(baseAngle)
@@ -938,7 +948,7 @@ export class BasicDagger extends WeaponBase {
 
         const spawnImpactBurst = (x, y) => {
             if (effectTexture) {
-                const burst = this.scene.add.sprite(x, y, effectTexture)
+                const burst = this.createEffectSprite(x, y, effectTexture, { frameMs: 24 })
                     .setDepth(15)
                     .setAlpha(0.84)
                     .setScale((this.config.effectScale || 0.32) * 0.72)
