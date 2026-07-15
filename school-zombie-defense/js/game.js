@@ -2392,6 +2392,7 @@
       this.boundHandleKeyDown = null;
       this.boundHandleVisibilityChange = null;
       this.gamepadButtons = new Set();
+      this.gamepadAccessDenied = false;
       this.lastGamepadPoll = 0;
       this.rankNameLayerCleanup = null;
       this.rankNameFocusRaf = 0;
@@ -3227,11 +3228,24 @@
     }
 
     pollGamepadInput(time = 0) {
+      if (this.gamepadAccessDenied) {
+        return;
+      }
       if (time - (this.lastGamepadPoll || 0) < 70) {
         return;
       }
       this.lastGamepadPoll = time;
-      const gamepads = typeof navigator.getGamepads === "function" ? navigator.getGamepads() : [];
+      let gamepads = [];
+      try {
+        gamepads = typeof navigator.getGamepads === "function" ? navigator.getGamepads() : [];
+      } catch (error) {
+        if (error?.name === "SecurityError") {
+          this.gamepadAccessDenied = true;
+          this.gamepadButtons.clear();
+          return;
+        }
+        throw error;
+      }
       const gamepad = Array.from(gamepads || []).find(Boolean);
       if (!gamepad) {
         this.gamepadButtons.clear();
