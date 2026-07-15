@@ -15,6 +15,7 @@ export class WeaponBase {
         this.extraRange = 0;
         this.extraSlow = 0;
         this._timers = new Set();
+        this._effectFrameTimers = new Set();
         this._destroyed = false;
     }
 
@@ -84,6 +85,92 @@ export class WeaponBase {
         return key && this.scene?.textures?.exists(key) ? key : null;
     }
 
+    createEffectSprite(x, y, textureKey = this.getEffectTexture(), animationOptions = {}) {
+        if (!textureKey || !this.scene?.add) return null;
+        const initialTexture = this.scene.textures.exists(`${textureKey}_0`)
+            ? `${textureKey}_0`
+            : textureKey;
+        const sprite = this.scene.add.sprite(x, y, initialTexture);
+        this.animateEffectSprite(sprite, textureKey, animationOptions);
+        return sprite;
+    }
+
+    animateEffectSprite(sprite, textureKey, options = {}) {
+        if (!sprite?.scene || !textureKey || !this.scene?.time) return sprite;
+        this.stopEffectAnimation(sprite);
+
+        const frames = [];
+        for (let index = 0; index < 12; index++) {
+            const frameKey = `${textureKey}_${index}`;
+            if (!this.scene.textures.exists(frameKey)) break;
+            frames.push(frameKey);
+        }
+        if (frames.length < 2) {
+            if (this.scene.textures.exists(textureKey)) sprite.setTexture(textureKey);
+            return sprite;
+        }
+
+        const loopStart = Phaser.Math.Clamp(options.loopStart ?? 0, 0, frames.length - 1);
+        const loopEnd = Phaser.Math.Clamp(options.loopEnd ?? frames.length - 1, loopStart, frames.length - 1);
+        const shouldLoop = !!options.loop;
+        const frameMs = Math.max(16, options.frameMs ?? this.config.effectFrameMs ?? 48);
+        let frameIndex = loopStart;
+        sprite.setTexture(frames[frameIndex]);
+
+        const cleanup = () => {
+            const timer = sprite._skillVfxFrameTimer;
+            if (timer) {
+                timer.destroy();
+                this._effectFrameTimers.delete(timer);
+            }
+            sprite._skillVfxFrameTimer = null;
+            if (sprite._skillVfxDestroyHandler) {
+                sprite.off('destroy', sprite._skillVfxDestroyHandler);
+                sprite._skillVfxDestroyHandler = null;
+            }
+        };
+
+        const timer = this.scene.time.addEvent({
+            delay: frameMs,
+            loop: true,
+            callback: () => {
+                if (!sprite.scene || !this.scene?.scene?.isActive()) {
+                    cleanup();
+                    return;
+                }
+                if (frameIndex >= loopEnd) {
+                    if (!shouldLoop) {
+                        cleanup();
+                        return;
+                    }
+                    frameIndex = loopStart;
+                } else {
+                    frameIndex += 1;
+                }
+                sprite.setTexture(frames[frameIndex]);
+            },
+        });
+        sprite._skillVfxFrameTimer = timer;
+        sprite._skillVfxDestroyHandler = cleanup;
+        sprite.once('destroy', cleanup);
+        this._effectFrameTimers.add(timer);
+        return sprite;
+    }
+
+    stopEffectAnimation(sprite) {
+        if (!sprite) return;
+        const timer = sprite._skillVfxFrameTimer;
+        if (timer) {
+            timer.destroy();
+            this._effectFrameTimers.delete(timer);
+            sprite._skillVfxFrameTimer = null;
+        }
+        if (sprite._skillVfxDestroyHandler) {
+            sprite.off('destroy', sprite._skillVfxDestroyHandler);
+            sprite._skillVfxDestroyHandler = null;
+        }
+    }
+
     getEffectColor(fallback) {
         return this.config.effectColor ?? fallback;
     }
@@ -119,6 +206,10 @@ export class WeaponBase {
             try { timer.remove(false); } catch (e) { /* already removed */ }
         }
         this._timers.clear();
+        for (const timer of this._effectFrameTimers) {
+            try { timer.destroy(); } catch (e) { /* already removed */ }
+        }
+        this._effectFrameTimers.clear();
         this.player = null;
         this.scene = null;
     }

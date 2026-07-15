@@ -81,7 +81,12 @@ export class ShadowDagger extends WeaponBase {
         const slowMultiplier = this.config.slowMultiplier;
         const slowDuration = this.config.slowDuration || 1400;
 
-        const dagger = this.scene.add.sprite(px, py, textureKey)
+        const dagger = this.createEffectSprite(px, py, textureKey, {
+            frameMs: 56,
+            loop: useCharacterEffect,
+            loopStart: 2,
+            loopEnd: 4,
+        })
             .setDepth(8)
             .setScale(useCharacterEffect ? (this.config.projectileScale || this.config.effectScale || 0.5) : (useEffectAsset ? 0.22 : 0.85))
             .setRotation((useCharacterEffect || useEffectAsset) ? angle : angle + Math.PI / 2)
@@ -111,7 +116,7 @@ export class ShadowDagger extends WeaponBase {
             if (!explosionRadius) return;
 
             if (usesImageEffect) {
-                const burst = this.scene.add.sprite(x, y, textureKey)
+                const burst = this.createEffectSprite(x, y, textureKey, { frameMs: 28 })
                     .setDepth(8)
                     .setAlpha(0.62)
                     .setScale((this.config.projectileScale || this.config.effectScale || 0.5) * 0.72)

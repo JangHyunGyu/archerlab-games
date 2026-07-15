@@ -5,6 +5,7 @@ import {
     CHARACTER_FRAME_NAMES,
     CHARACTER_SKILL_EFFECT_KEYS,
     getCharacter,
+    getCharacterWeaponKeys,
     getStoredCharacterId,
 } from './Characters.js';
 
@@ -130,7 +131,8 @@ const PLAYER_MOTION_NAMES = [
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
 export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
 export const CHARACTER_MOTION_ASSET_VERSION = CHARACTER_VISUAL_ASSET_VERSION;
-export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20260714-character-combat-vfx-v3';
+export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20260715-character-combat-vfx-v4';
+export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({
     key: key.includes('/') ? key.split('/').pop() : key,
@@ -168,6 +170,36 @@ export function getCharacterMotionAssets(characterId = getStoredCharacterId()) {
     );
 }
 
+export function getCharacterCombatVfxFrameAssets(characterId = getStoredCharacterId()) {
+    const seen = new Set();
+    const effects = [];
+
+    for (const weaponKey of getCharacterWeaponKeys(characterId)) {
+        const weapon = WEAPONS[weaponKey];
+        if (!weapon) continue;
+
+        const isBasicAttack = !!weapon.basicAttackEffectKey;
+        const effectKey = isBasicAttack ? weapon.basicAttackEffectKey : weapon.effectKey;
+        if (!effectKey) continue;
+
+        const texturePrefix = isBasicAttack ? 'basic_attack' : 'char_skill';
+        const directory = isBasicAttack ? 'basic_attacks' : 'character_skills';
+        const identity = `${texturePrefix}_${effectKey}`;
+        if (seen.has(identity)) continue;
+        seen.add(identity);
+
+        for (let frame = 0; frame < CHARACTER_COMBAT_VFX_FRAME_COUNT; frame++) {
+            effects.push({
+                key: `${identity}_${frame}`,
+                path: `assets/effects/${directory}/frames/${effectKey}_${frame}.png`,
+                cacheVersion: CHARACTER_COMBAT_VFX_ASSET_VERSION,
+            });
+        }
+    }
+
+    return effects;
+}
+
 export function getMenuAssetList() {
     return [
         ...UI_ASSET_KEYS.map(uiAsset),
@@ -189,6 +221,7 @@ export function getGameplayAssetList(characterId = getStoredCharacterId()) {
         ...ENV_KEYS.map(key => ({ key: `env_${key}`, path: `assets/environment/${key}.png` })),
         ...SHADOW_KEYS.map(key => ({ key: `asset_shadow_${key}`, path: `assets/shadows/shadow_${key}.png` })),
         ...getCharacterMotionAssets(characterId),
+        ...getCharacterCombatVfxFrameAssets(characterId),
         ...CHARACTER_SKILL_EFFECT_KEYS.map(key => ({
             key: `char_skill_${key}`,
             path: `assets/effects/character_skills/${key}.png`,

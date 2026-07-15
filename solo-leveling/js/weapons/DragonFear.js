@@ -27,7 +27,12 @@ export class DragonFear extends WeaponBase {
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_dragon_fear');
         const targetScale = (useCharacterEffect || useEffectAsset) ? (range * 2) / this.auraSpriteWidth(effectTexture, useEffectAsset) : range / 60;
-        this.auraSprite = this.scene.add.sprite(this.player.x, this.player.y, effectTexture || (useEffectAsset ? 'effect_dragon_fear' : 'proj_fear'))
+        this.auraSprite = this.createEffectSprite(
+            this.player.x,
+            this.player.y,
+            effectTexture || (useEffectAsset ? 'effect_dragon_fear' : 'proj_fear'),
+            { frameMs: Math.max(48, Math.round(auraDuration / 6)) },
+        )
             .setDepth(3)
             .setAlpha(0)
             .setScale(this.config.smoothVisual ? targetScale * (this.config.visualStartScaleRatio ?? 0.55) : targetScale)

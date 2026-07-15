@@ -84,7 +84,17 @@ export class RulersAuthority extends WeaponBase {
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && !this.config.imageOnlyVfx && this.scene.textures.exists('effect_ruler_authority');
         const targetScale = (useCharacterEffect || useEffectAsset) ? (range * 2) / this._effectSpriteWidth(effectTexture, useEffectAsset) : range / 50;
-        const circle = this.scene.add.sprite(targetX, targetY, effectTexture || (useEffectAsset ? 'effect_ruler_authority' : 'proj_ruler'))
+        const visualDuration = this.config.smoothVisual
+            ? (this.config.visualFadeInDuration ?? 260) +
+                (this.config.visualHoldDuration ?? 80) +
+                (this.config.visualFadeOutDuration ?? 420)
+            : 700;
+        const circle = this.createEffectSprite(
+            targetX,
+            targetY,
+            effectTexture || (useEffectAsset ? 'effect_ruler_authority' : 'proj_ruler'),
+            { frameMs: Math.max(42, Math.round(visualDuration / 6)) },
+        )
             .setDepth(7)
             .setAlpha(0)
             .setScale(this.config.smoothVisual ? targetScale * (this.config.visualStartScaleRatio ?? 0.35) : ((useCharacterEffect || useEffectAsset) ? 0.08 : 0.2))
