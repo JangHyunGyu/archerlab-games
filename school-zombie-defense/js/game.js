@@ -372,22 +372,24 @@
     "zombie-death-charger-sheet": { x: -0.0703, y: 0.1005, width: 0.9375, height: 0.4727 }
   };
   const ZOMBIE_DEATH_RENDER_SCALES = {
-    normal: { deathSize: 0.92 },
-    student: { deathSize: 1 },
-    runner: { deathSize: 1.12 },
-    brute: { deathSize: 1.22 },
-    volatile: { deathSize: 0.89 },
+    // Match the first visible death pose to the alpha-bounded size of the walk cycle.
+    // Normal variants start in mixed upright/falling poses, so their shared scale uses visible alpha area.
+    normal: { deathSize: 1.04 },
+    student: { deathSize: 1.01 },
+    runner: { deathSize: 1.17 },
+    brute: { deathSize: 1.16 },
+    volatile: { deathSize: 0.99 },
     elite: { deathSize: 1.05 },
-    teacher: { deathSize: 1.12 },
-    nurse: { deathSize: 1.1 },
-    athlete: { deathSize: 1.24 },
-    janitor: { deathSize: 1.14 },
+    teacher: { deathSize: 1.11 },
+    nurse: { deathSize: 1.09 },
+    athlete: { deathSize: 1.21 },
+    janitor: { deathSize: 1.27 },
     guard: { deathSize: 1.1 },
-    crawler: { deathSize: 1.32 },
-    screamer: { deathSize: 1.18 },
-    spider: { deathSize: 0.94 },
-    bloom: { deathSize: 1.04 },
-    charger: { deathSize: 1.16 }
+    crawler: { deathSize: 1.18 },
+    screamer: { deathSize: 1.23 },
+    spider: { deathSize: 1.18 },
+    bloom: { deathSize: 1.13 },
+    charger: { deathSize: 1.37 }
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,

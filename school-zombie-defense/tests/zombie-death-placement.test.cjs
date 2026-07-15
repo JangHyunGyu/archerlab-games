@@ -126,8 +126,17 @@ function measureAlphaRegion(image, startX, startY, width, height, threshold = 8)
     centerX: weightedX / weight,
     centerY: weightedY / weight,
     width: maxX - minX + 1,
-    height: maxY - minY + 1
+    height: maxY - minY + 1,
+    alphaCoverage: weight / (255 * width * height)
   };
+}
+
+function median(values) {
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
 }
 
 function assertNear(actual, expected, label, tolerance = 0.0001) {
@@ -203,6 +212,80 @@ const expectedDeathTextures = [
     "janitor", "guard", "crawler", "screamer", "spider", "bloom", "charger"
   ].map((type) => `zombie-death-${type}-sheet`)
 ];
+const deathRenderScalesBlock = gameSource.match(
+  /const\s+ZOMBIE_DEATH_RENDER_SCALES\s*=\s*\{([\s\S]*?)\n\s*\};/
+)?.[1];
+assert.ok(deathRenderScalesBlock, "death render scales must remain discoverable");
+const deathRenderScales = new Map(
+  [...deathRenderScalesBlock.matchAll(
+    /([a-z]+)\s*:\s*\{\s*deathSize:\s*([0-9.]+)\s*\}/g
+  )].map((match) => [match[1], Number(match[2])])
+);
+assert.deepEqual(
+  [...deathRenderScales.keys()].sort(),
+  [...new Set(expectedDeathTextures.map((texture) => (
+    texture.includes("normal-variant")
+      ? "normal"
+      : texture.includes("student-")
+        ? "student"
+        : texture.replace(/^zombie-death-|-sheet$/g, "")
+  )))].sort(),
+  "every zombie type must have an explicit death render scale"
+);
+
+const deathTexturesByType = new Map([
+  ["normal", [1, 2, 3, 4].map((index) => `zombie-death-normal-variant-${index}-sheet`)],
+  ["student", [1, 2, 3].map((index) => `zombie-death-student-${index}-sheet`)],
+  ...[
+    "runner", "brute", "volatile", "elite", "teacher", "nurse", "athlete",
+    "janitor", "guard", "crawler", "screamer", "spider", "bloom", "charger"
+  ].map((type) => [type, [`zombie-death-${type}-sheet`]])
+]);
+for (const [type, deathTextures] of deathTexturesByType) {
+  const walkImage = decodePngAlpha(path.join(imageRoot, `zombie-walk-${type}.png`));
+  const walkCellWidth = Math.floor(walkImage.width / 4);
+  const walkCellHeight = Math.floor(walkImage.height / 4);
+  const walkMeasurementsByVariant = Array.from({ length: 4 }, (_, variant) => (
+    Array.from({ length: 4 }, (_, frame) => measureAlphaRegion(
+      walkImage,
+      frame * walkCellWidth,
+      variant * walkCellHeight,
+      walkCellWidth,
+      walkCellHeight
+    ))
+  ));
+  const deathSize = deathRenderScales.get(type);
+
+  if (type === "normal") {
+    deathTextures.forEach((texture, variant) => {
+      const walkAlphaCoverage = median(
+        walkMeasurementsByVariant[variant].map((measurement) => measurement.alphaCoverage)
+      );
+      const deathImage = decodePngAlpha(path.join(imageRoot, `${texture}.png`));
+      const deathMeasurement = measureAlphaRegion(deathImage, 0, 0, 512, 512);
+      const renderedAreaRatio = deathMeasurement.alphaCoverage * deathSize ** 2 / walkAlphaCoverage;
+      assert.ok(
+        renderedAreaRatio >= 0.95 && renderedAreaRatio <= 1.05,
+        `${texture} visible body area differs from walk variant ${variant + 1}: ${renderedAreaRatio}`
+      );
+    });
+    continue;
+  }
+
+  const walkVisibleHeightRatio = median(
+    walkMeasurementsByVariant.flat().map((measurement) => measurement.height / walkCellHeight)
+  );
+  for (const texture of deathTextures) {
+    const deathImage = decodePngAlpha(path.join(imageRoot, `${texture}.png`));
+    const deathMeasurement = measureAlphaRegion(deathImage, 0, 0, 512, 512);
+    const renderedHeightRatio = deathMeasurement.height / 512 * deathSize / walkVisibleHeightRatio;
+    assert.ok(
+      renderedHeightRatio >= 0.985 && renderedHeightRatio <= 1.015,
+      `${texture} first-frame height differs from the walk cycle: ${renderedHeightRatio}`
+    );
+  }
+}
+
 const finalFrameBoundsBlock = gameSource.match(
   /const\s+ZOMBIE_DEATH_FINAL_FRAME_BOUNDS\s*=\s*\{([\s\S]*?)\n\s*\};/
 )?.[1];
@@ -407,7 +490,8 @@ for (const displayHeight of [116, 146, 170, 177, 220]) {
 }
 
 console.log(
-  `zombie death placement verified: ${finalFrameBounds.size} alpha-aligned final frames, isolated ground depth, ` +
+  `zombie death placement verified: ${deathTexturesByType.size} motion-matched types, ` +
+    `${finalFrameBounds.size} alpha-aligned final frames, isolated ground depth, ` +
     `${bloodStainSizeMultiplier}x blood stains, ${Math.round(verticalKnockbackLimitRatio * 100)}% recoil cap, ` +
     `${Math.round(landingRiseLimitRatio * 100)}% landing rise limit`
 );
