@@ -467,14 +467,15 @@ def color_distance(pixel: tuple[int, int, int, int], key: tuple[int, int, int]) 
 def quick_chroma_key(image: Image.Image, label: str) -> tuple[Image.Image, float, float]:
     """Fast border-connected source diagnostic at animation-safe detail.
 
-    Integrated swords can be only a few pixels wide at the previous 192px
+    Integrated swords can be only a few pixels wide at the previous 192px-wide
     thumbnail size, which can detach a hand from its weapon or merge adjacent
-    silhouettes.  Match the builder's 384px per-pose working height so the
-    independent verifier measures the same visible geometry.
+    silhouettes.  Keep a 192px working height (roughly half the builder's
+    detail) so the verifier preserves that geometry without paying full build
+    cost across every character.
     """
 
     rgba = image.convert("RGBA")
-    rgba.thumbnail((1536, 384), Image.Resampling.LANCZOS)
+    rgba.thumbnail((768, 192), Image.Resampling.LANCZOS)
     border = [pixel for pixel in border_pixels(rgba) if green_pixel(pixel)]
     all_border = border_pixels(rgba)
     border_ratio = len(border) / max(1, len(all_border))
@@ -579,7 +580,10 @@ def split_source_strip(path: Path, track: str) -> tuple[list[Image.Image], list[
     if width < 256 or height < 128 or width / height < 2.0:
         raise AssertionError(f"{path} is not a plausible four-pose horizontal strip: {strip.size}")
     keyed, removed_ratio, residual_ratio = quick_chroma_key(strip, str(path))
-    components = component_images(keyed)
+    # Long integrated blades can approach the neighbouring pose at source
+    # scale.  Do not dilate components here: a one-pixel bridge can merge two
+    # valid columns and turn a four-pose strip into a false three-pose failure.
+    components = component_images(keyed, bridge_radius=0)
     if not components:
         raise AssertionError(f"{path} contains no keyed pose silhouettes")
     largest_area = components[0][0]

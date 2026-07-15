@@ -50,6 +50,15 @@ node validate.js
 - 런타임 스케일 0.2818
 - 68 PNG + 68 lossless WebP 설치 성공
 
+현재 체크포인트의 검증 결과:
+
+- `python scripts\verify_character_motion_assets.py`: 통과
+- `light_swordswoman` 6개 시트, 24개 고유 포즈 확인
+- `light_swordswoman` 68 PNG + 68 pixel-identical WebP 확인
+- `node validate.js`: 0 errors, 0 warnings로 통과
+- 접촉 시트 육안 검토: 정면·측면·후면 걷기와 3방향 공격에서 일체형 장검 확인
+- 실제 브라우저 메뉴 및 `GameScene` 검증은 다음 세션의 첫 작업으로 남겨 두었다.
+
 ## 다음 세션에서 할 일
 
 1. `python scripts\verify_character_motion_assets.py`와 `node validate.js`를 다시 실행한다.
