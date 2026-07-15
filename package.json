@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "test": "node parking-escape/tests/difficulty.test.cjs && node parking-escape/tests/static.test.cjs && node school-zombie-defense/tests/defender-actions.test.cjs && node school-zombie-defense/tests/zombie-death-placement.test.cjs && node school-zombie-defense/tests/barricade-impact.test.cjs && node school-zombie-defense/tests/hud-status.test.cjs"
+    "test": "node parking-escape/tests/difficulty.test.cjs && node parking-escape/tests/static.test.cjs && node school-zombie-defense/tests/defender-actions.test.cjs && node school-zombie-defense/tests/zombie-death-placement.test.cjs && node school-zombie-defense/tests/barricade-impact.test.cjs && node school-zombie-defense/tests/hud-status.test.cjs && node solo-leveling/tests/memory-lifecycle.test.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0"

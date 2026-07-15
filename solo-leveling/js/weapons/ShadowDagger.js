@@ -1,6 +1,8 @@
 import { WeaponBase } from './WeaponBase.js';
 import { WEAPONS } from '../utils/Constants.js';
 
+const TRAIL_INTERVAL_MS = 50;
+
 export class ShadowDagger extends WeaponBase {
     constructor(scene, player, config = WEAPONS.shadowDagger) {
         super(scene, player, config);
@@ -211,7 +213,7 @@ export class ShadowDagger extends WeaponBase {
 
         const cleanup = () => {
             if (trailInterval) {
-                trailInterval.destroy();
+                trailInterval.remove(false);
                 trailInterval = null;
             }
             entry.trailInterval = null;
@@ -241,9 +243,13 @@ export class ShadowDagger extends WeaponBase {
         });
 
         if (!suppressTrailFx) {
+            // Phaser repeat counts must be integers. A fractional repeat count
+            // (for example 1437.5 / 50 = 28.75) eventually becomes -0.25 and
+            // never reaches the completion condition, retaining the timer.
+            const trailRepeatCount = Math.max(0, Math.floor(duration / TRAIL_INTERVAL_MS) - 1);
             trailInterval = this.scene.time.addEvent({
-                delay: 50,
-                repeat: duration / 50,
+                delay: TRAIL_INTERVAL_MS,
+                repeat: trailRepeatCount,
                 callback: () => {
                     if (!dagger.active || !this.scene?.scene?.isActive()) return;
                     const trail = this._getTrailCircle(dagger.x, dagger.y);
@@ -263,7 +269,7 @@ export class ShadowDagger extends WeaponBase {
     destroy() {
         const tweens = this.scene?.tweens;
         for (const entry of this._activeDaggers) {
-            if (entry.trailInterval) entry.trailInterval.destroy();
+            if (entry.trailInterval) entry.trailInterval.remove(false);
             if (tweens) tweens.killTweensOf(entry.dagger);
             if (entry.dagger?.scene) entry.dagger.destroy();
         }
