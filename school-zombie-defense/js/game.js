@@ -439,6 +439,13 @@
   const ACTIVE_HIT_EFFECT_LIMIT = 58;
   const HIT_EFFECT_FRAME_BUDGET = 16;
   const FIRE_TICK_EFFECT_FRAME_BUDGET = 8;
+  const BARRICADE_IMPACT_DISPLAY_WIDTH = 240;
+  const BARRICADE_IMPACT_DURATION = 320;
+  const BARRICADE_FRAGMENT_LIMIT = 30;
+  const BARRICADE_WOOD_FRAGMENT_MIN = 3;
+  const BARRICADE_WOOD_FRAGMENT_MAX = 5;
+  const BARRICADE_METAL_FRAGMENT_MIN = 1;
+  const BARRICADE_METAL_FRAGMENT_MAX = 2;
   const ACTIVE_CORPSE_LIMIT = 34;
   const CORPSE_TRIM_FADE_DURATION = 260;
   const getLevelNeedForLevel = (level) => Math.max(4, Math.round((level === 1 ? 12 : 15 + level * 4.4) / ZOMBIE_SPAWN_INTERVAL_MULTIPLIER));
@@ -2312,6 +2319,7 @@
       this.damageTextPool = [];
       this.activeDamageTexts = new Set();
       this.activeHitEffects = new Set();
+      this.activeBarricadeFragments = new Set();
       this.activeCorpses = [];
       this.damageTextsThisFrame = 0;
       this.hitEffectsThisFrame = 0;
@@ -3399,6 +3407,10 @@
         this.activeHitEffects.delete(object);
         object.hitEffectRoot = false;
       }
+      if (object?.barricadeFragment) {
+        this.activeBarricadeFragments.delete(object);
+        object.barricadeFragment = false;
+      }
       this.transientObjects.delete(object);
       this.destroyGameObject(object, killTweens);
     }
@@ -3408,6 +3420,7 @@
       this.transientObjects.clear();
       this.clearActiveDamageTexts();
       this.activeHitEffects.clear();
+      this.activeBarricadeFragments.clear();
       this.activeCorpses.length = 0;
     }
 
@@ -9648,26 +9661,111 @@
       }
     }
 
+    createBarricadeFragment(x, y, kind) {
+      const isMetal = kind === "metal";
+      const width = isMetal ? rand(5, 9) : rand(8, 15);
+      const height = isMetal ? rand(2, 3.5) : rand(3, 5.5);
+      const colors = isMetal
+        ? [0xffdda1, 0xfff0c7, 0xd8b17b]
+        : [0x5d3828, 0x875033, 0xb56d3e, 0xd08a50];
+      const startAngle = rand(-42, 42);
+      const fragment = this.trackTransient(this.add.rectangle(
+        x + rand(-12, 12),
+        y + rand(-8, 9),
+        width,
+        height,
+        choose(colors),
+        isMetal ? 0.96 : 0.92
+      )
+        .setAngle(startAngle)
+        .setDepth(isMetal ? 228 : 227));
+      if (isMetal) {
+        fragment.setBlendMode(Phaser.BlendModes.ADD);
+      } else {
+        fragment.setStrokeStyle(1, 0x2a1711, 0.62);
+      }
+      fragment.barricadeFragment = true;
+      this.activeBarricadeFragments.add(fragment);
+
+      const direction = Math.random() < 0.5 ? -1 : 1;
+      const travelX = rand(isMetal ? 48 : 34, isMetal ? 112 : 92);
+      const rise = rand(isMetal ? 44 : 30, isMetal ? 88 : 72);
+      const peakX = x + direction * travelX * rand(0.46, 0.62);
+      const landingX = clamp(x + direction * travelX, 8, GAME_WIDTH - 8);
+      const landingY = y + rand(16, 42);
+      const spin = direction * rand(isMetal ? 140 : 100, isMetal ? 260 : 220);
+
+      this.tweens.add({
+        targets: fragment,
+        x: peakX,
+        y: y - rise,
+        angle: startAngle + spin * 0.54,
+        scaleX: isMetal ? 1.28 : 1.06,
+        duration: rand(110, 170),
+        ease: "Cubic.easeOut",
+        onComplete: () => {
+          if (!fragment.active || fragment.destroyed) {
+            return;
+          }
+          this.tweens.add({
+            targets: fragment,
+            x: landingX,
+            y: landingY,
+            angle: startAngle + spin,
+            scaleX: isMetal ? 0.54 : 0.72,
+            scaleY: isMetal ? 0.54 : 0.78,
+            alpha: 0,
+            duration: rand(170, 255),
+            ease: "Quad.easeIn",
+            onComplete: () => this.destroyTransientObject(fragment, false)
+          });
+        }
+      });
+    }
+
+    createBarricadeDebris(x, y) {
+      if (this.reducedMotion) {
+        return;
+      }
+      const available = Math.max(0, BARRICADE_FRAGMENT_LIMIT - this.activeBarricadeFragments.size);
+      if (available <= 0) {
+        return;
+      }
+      const woodCount = Math.floor(rand(BARRICADE_WOOD_FRAGMENT_MIN, BARRICADE_WOOD_FRAGMENT_MAX + 1));
+      const metalCount = Math.floor(rand(BARRICADE_METAL_FRAGMENT_MIN, BARRICADE_METAL_FRAGMENT_MAX + 1));
+      const kinds = [
+        ...Array.from({ length: woodCount }, () => "wood"),
+        ...Array.from({ length: metalCount }, () => "metal")
+      ].slice(0, available);
+      kinds.forEach((kind) => this.createBarricadeFragment(x, y, kind));
+    }
+
     createHitAtBarricade(x) {
-      const effectWidth = 178;
+      const effectWidth = BARRICADE_IMPACT_DISPLAY_WIDTH;
       const texture = this.textures.get("barricade-impact").getSourceImage();
       const effectHeight = effectWidth * texture.height / texture.width;
-      const effectX = clamp(x, effectWidth / 2 + 8, GAME_WIDTH - effectWidth / 2 - 8);
+      const effectVisibleHalfWidth = effectWidth * 0.26;
+      const effectX = clamp(x, effectVisibleHalfWidth + 8, GAME_WIDTH - effectVisibleHalfWidth - 8);
       const effectY = this.bounds.barricade + 4;
       const impact = this.trackTransient(this.add.image(effectX, effectY, "barricade-impact")
         .setOrigin(0.5)
         .setDisplaySize(effectWidth, effectHeight)
         .setRotation(rand(-0.09, 0.09))
-        .setAlpha(0.92)
+        .setAlpha(0.96)
         .setDepth(225));
-      const flash = this.trackTransient(this.add.ellipse(effectX, effectY + 4, 96, 34, 0xff9a55, 0.14).setDepth(224));
-      const sparks = this.trackTransient(this.add.circle(effectX, effectY + rand(-4, 8), 6, 0xffd49a, 0.76).setDepth(226));
+      const flash = this.trackTransient(this.add.ellipse(effectX, effectY + 4, 128, 46, 0xffa45f, 0.28)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(224));
+      const sparks = this.trackTransient(this.add.circle(effectX, effectY + rand(-4, 8), 8, 0xffe0ab, 0.88)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(226));
+      this.createBarricadeDebris(effectX, effectY);
       this.tweens.add({
         targets: impact,
-        scaleX: impact.scaleX * 1.18,
-        scaleY: impact.scaleY * 1.12,
+        scaleX: impact.scaleX * 1.16,
+        scaleY: impact.scaleY * 1.1,
         alpha: 0,
-        duration: 270,
+        duration: BARRICADE_IMPACT_DURATION,
         ease: "Cubic.easeOut",
         onComplete: () => this.destroyTransientObject(impact, false)
       });
