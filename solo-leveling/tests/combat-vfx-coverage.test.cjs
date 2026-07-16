@@ -93,8 +93,14 @@ function readRgbaPngAlphaBounds(filePath, threshold = 12) {
         bottom: bottom + 1,
         width: right - left + 1,
         height: bottom - top + 1,
+        meanX,
+        meanY,
         axisAngle: 0.5 * Math.atan2(2 * xy, xx - yy),
     };
+}
+
+function halfTurnAngleError(angle) {
+    return Math.abs(0.5 * Math.atan2(Math.sin(2 * angle), Math.cos(2 * angle)));
 }
 
 function projectedBounds(bounds, rotation = 0) {
@@ -132,14 +138,17 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     const skillIdentity = key => `char_skill_${WEAPONS[key].effectKey}`;
 
     // Character-centered directional basics fit their visible outer edge to 90% of the hit range.
-    for (const [key, centerForward, rotation] of [
-        ['basicDagger', 86, 0],
-        ['lightPierce', 70, Math.PI / 4],
-        ['tigerPalm', 82, 0.08],
+    for (const [key, centerForward] of [
+        ['basicDagger', 86],
+        ['lightPierce', 70],
+        ['tigerPalm', 82],
     ]) {
         const config = WEAPONS[key];
         const hitRange = config.attackRange + (config.hitRangeBonus || 0);
-        const projection = projectedBounds(getCombatVfxVisibleBounds(basicIdentity(key)), rotation);
+        const projection = projectedBounds(
+            getCombatVfxVisibleBounds(basicIdentity(key)),
+            config.effectRotationOffset || 0
+        );
         const scale = (hitRange * config.visualRangeRatio - centerForward) / projection.maxX;
         const coverage = (centerForward + projection.maxX * scale) / hitRange;
         assertCoverage(rows, key, coverage);
@@ -221,7 +230,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     assert.ok(WEAPONS.lightPierce.effectPeakAlpha >= 0.9);
     assert.strictEqual(WEAPONS.lightLance.imageOnlyVfx, true);
     assert.strictEqual(WEAPONS.lightLance.combineProceduralVfx, false);
-    assert.strictEqual(WEAPONS.lightLance.effectRotationOffset, Math.PI / 4);
+    assert.strictEqual(WEAPONS.lightLance.effectRotationOffset, -3 * Math.PI / 4);
     assert.strictEqual(WEAPONS.lightLance.effectStartFrame ?? 0, 0);
     assert.strictEqual(WEAPONS.lightLance.effectLoop ?? false, false);
     assert.ok(
@@ -229,27 +238,112 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         'lightLance must show all six authored frames before fading'
     );
     assert.strictEqual(WEAPONS.flameSpark.effectRotationOffset, -Math.PI / 7);
+    assert.strictEqual(WEAPONS.tigerPalm.effectRotationOffset, -Math.PI / 4);
+    assert.strictEqual(WEAPONS.tigerFang.effectRotationOffset, -Math.PI / 4);
+    assert.strictEqual(WEAPONS.flameArc.effectRotationOffset, 3 * Math.PI / 4);
     assert.strictEqual(WEAPONS.lightSanctum.visualStartScaleRatio, 1);
 
-    // Compare every projectile frame's measured alpha-axis against its runtime
-    // correction. This catches visually tilted art even when the orientation
-    // contract and the rotation resolver are wired correctly.
-    for (const [key, directory, effectKey] of [
-        ['flameSpark', 'basic_attacks', 'flame_fireball'],
-        ['flameBolt', 'character_skills', 'flame_bolt'],
-        ['lightLance', 'character_skills', 'light_lance_pierce'],
-        ['shadowDagger', 'character_skills', 'shadow_dagger'],
-    ]) {
-        const axes = Array.from({ length: 6 }, (_, frameIndex) => readRgbaPngAlphaBounds(path.join(
+    // Audit all 25 authored sequences and all six frames. Every image must stay
+    // centered on the 512px authoring canvas so runtime rotation does not orbit
+    // around a displaced pivot.
+    const basicAttackKeys = new Set([
+        'basicDagger', 'lightPierce', 'tigerPalm', 'flameSpark', 'sanctuaryStrike',
+    ]);
+    const frameAudit = new Map();
+    const frameFiles = new Map();
+    for (const [key, config] of Object.entries(WEAPONS)) {
+        const isBasicAttack = basicAttackKeys.has(key);
+        const directory = isBasicAttack ? 'basic_attacks' : 'character_skills';
+        const effectKey = isBasicAttack ? config.basicAttackEffectKey : config.effectKey;
+        const files = Array.from({ length: 6 }, (_, frameIndex) => path.join(
             root,
             'assets', 'effects', directory, 'frames', `${effectKey}_${frameIndex}.png`
-        )).axisAngle);
-        const meanAxis = axes.reduce((sum, angle) => sum + angle, 0) / axes.length;
-        const correctedAxis = meanAxis + (WEAPONS[key].effectRotationOffset || 0);
+        ));
+        const frames = files.map(filePath => readRgbaPngAlphaBounds(filePath, 1));
+        for (const [frameIndex, metrics] of frames.entries()) {
+            const pivotDistance = Math.hypot(metrics.meanX - 256, metrics.meanY - 256);
+            const maxPivotDistance = ['bodyArc', 'bodyThrust', 'forwardArc', 'projectile']
+                .includes(config.effectOrientation) ? 160 : 96;
+            assert.ok(
+                pivotDistance <= maxPivotDistance,
+                `${key} frame ${frameIndex}: alpha centroid is ${pivotDistance.toFixed(1)}px from the rotation pivot`
+            );
+        }
+        frameAudit.set(key, frames);
+        frameFiles.set(key, files);
+    }
+    assert.strictEqual(frameAudit.size * 6, 150, 'pixel audit must cover all 25 six-frame sequences');
+
+    // For narrow projectile/thrust art, PCA measures the undirected image axis
+    // on every frame. A separate visual head/tail audit chooses the signed
+    // runtime correction; this catches tilted partial reveal frames as well.
+    for (const key of [
+        'basicDagger', 'shadowDagger', 'lightPierce', 'lightLance',
+        'flameSpark', 'flameBolt',
+    ]) {
+        const offset = WEAPONS[key].effectRotationOffset || 0;
+        for (const [frameIndex, filePath] of frameFiles.get(key).entries()) {
+            const metrics = readRgbaPngAlphaBounds(filePath);
+            const correctedAxisError = halfTurnAngleError(metrics.axisAngle + offset);
+            assert.ok(
+                correctedAxisError <= Math.PI / 9,
+                `${key} frame ${frameIndex}: corrected image axis is ${(correctedAxisError * 180 / Math.PI).toFixed(2)} degrees from aim`
+            );
+        }
+    }
+
+    // Signed source-forward angles are the result of the visual tip/tail audit.
+    // Unlike PCA, this contract distinguishes a visually correct image from the
+    // same image rotated by 180 degrees.
+    const authoredForwardAngles = {
+        basicDagger: 0,
+        shadowDagger: 0,
+        lightPierce: -Math.PI / 4,
+        lightLance: 3 * Math.PI / 4,
+        lightCrescent: Math.PI / 2,
+        tigerPalm: Math.PI / 4,
+        tigerFang: Math.PI / 4,
+        flameSpark: Math.PI / 7,
+        flameBolt: Math.PI / 4,
+        flameArc: -3 * Math.PI / 4,
+        sanctuaryArc: Math.PI,
+    };
+    for (const [key, sourceForwardAngle] of Object.entries(authoredForwardAngles)) {
+        const correctedForwardAngle = sourceForwardAngle + (WEAPONS[key].effectRotationOffset || 0);
         assert.ok(
-            Math.abs(correctedAxis) <= Math.PI / 30,
-            `${key}: corrected image axis is ${(correctedAxis * 180 / Math.PI).toFixed(2)} degrees from travel`
+            Math.cos(correctedForwardAngle) > 0.999999,
+            `${key}: visually audited head/convex edge must point toward +X`
         );
+    }
+
+    // Crescent art has a 180-degree ambiguity that PCA cannot solve. Its alpha
+    // mass must land on +X after correction: open side toward the player, convex
+    // edge toward the target. This catches accidentally reversed arc assets.
+    for (const key of ['lightCrescent', 'flameArc', 'sanctuaryArc']) {
+        const offset = WEAPONS[key].effectRotationOffset || 0;
+        const cos = Math.cos(offset);
+        const sin = Math.sin(offset);
+        const meanForwardCentroid = frameAudit.get(key).reduce((sum, metrics) => {
+            const dx = metrics.meanX - 256;
+            const dy = metrics.meanY - 256;
+            return sum + dx * cos - dy * sin;
+        }, 0) / 6;
+        assert.ok(
+            meanForwardCentroid >= 8,
+            `${key}: corrected convex edge is reversed (${meanForwardCentroid.toFixed(1)}px forward centroid)`
+        );
+    }
+
+    // Symmetric cross-slashes have no meaningful head/tail; placement supplies
+    // their direction and their authored image must remain unrotated.
+    for (const key of ['shadowSlash', 'tigerRend']) {
+        assert.strictEqual(WEAPONS[key].effectRotationOffset ?? 0, 0, `${key}: symmetric slash offset`);
+    }
+
+    // World-space impacts and radial auras must ignore aim completely.
+    for (const [key, config] of Object.entries(WEAPONS)) {
+        if (!['targetImpact', 'selfRadial'].includes(config.effectOrientation)) continue;
+        assert.strictEqual(config.effectRotationOffset ?? 0, 0, `${key}: non-directional effect rotation`);
     }
 
     const installerSource = fs.readFileSync(
@@ -283,7 +377,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         );
     }
 
-    console.log(`combat VFX hit-range and full image-only layering verified: ${coveredKeys.size}/25`);
+    console.log(`combat VFX hit-range, direction, and pixel audit verified: ${coveredKeys.size}/25, 150/150 frames`);
 })().catch(error => {
     console.error(error);
     process.exit(1);

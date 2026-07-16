@@ -45,9 +45,9 @@ async function loadDirectionModule() {
     }
 
     assert.strictEqual(
-        resolveCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.PROJECTILE, Math.PI / 4),
-        Math.PI / 4,
-        'light lance source points up-right and needs a clockwise quarter-diagonal correction'
+        resolveCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.PROJECTILE, -3 * Math.PI / 4),
+        -3 * Math.PI / 4,
+        'light lance spear tip points down-left and needs a counter-clockwise three-quarter correction'
     );
     assert.strictEqual(
         resolveCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.PROJECTILE, -Math.PI / 4),
@@ -68,6 +68,16 @@ async function loadDirectionModule() {
         resolveCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.FORWARD_ARC, Math.PI),
         Math.PI,
         'sanctuary arc must open back toward the player and bow outward toward the target'
+    );
+    assert.strictEqual(
+        resolveCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.FORWARD_ARC, -Math.PI / 4),
+        -Math.PI / 4,
+        'tiger fang tips point down-right and need a counter-clockwise diagonal correction'
+    );
+    assert.strictEqual(
+        resolveCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.FORWARD_ARC, 3 * Math.PI / 4),
+        3 * Math.PI / 4,
+        'flame arc must place its open side toward the player and convex edge toward the target'
     );
     assert.strictEqual(
         resolveMirroredCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.BODY_ARC, Math.PI / 4, false),
@@ -102,6 +112,27 @@ async function loadDirectionModule() {
         }
     }
 
+    // Tiger claw tips point down-right (+45 degrees) in the source. Alternating
+    // vertical mirroring must preserve the corrected outward (+X) direction.
+    const tigerClawSourceAngle = Math.PI / 4;
+    for (const aimAngle of Array.from({ length: 16 }, (_, index) => -Math.PI + index * Math.PI / 8)) {
+        for (const flipY of [false, true]) {
+            const localForwardAngle = flipY ? -tigerClawSourceAngle : tigerClawSourceAngle;
+            const rotation = resolveMirroredCombatVfxRotation(
+                aimAngle,
+                COMBAT_VFX_ORIENTATIONS.BODY_ARC,
+                -Math.PI / 4,
+                flipY,
+            );
+            const worldForwardAngle = localForwardAngle + rotation;
+            const alignment = Math.cos(worldForwardAngle - aimAngle);
+            assert.ok(
+                alignment > 0.999999,
+                `tiger claw must point outward at aim=${aimAngle}, flipY=${flipY}`
+            );
+        }
+    }
+
     const basicRuntime = fs.readFileSync(
         path.join(__dirname, '..', 'js', 'weapons', 'BasicDagger.js'),
         'utf8'
@@ -128,6 +159,10 @@ async function loadDirectionModule() {
         'utf8'
     );
     assert.match(constantsSource, /flameSpark:[\s\S]*?effectRotationOffset: -Math\.PI \/ 7,/);
+    assert.match(constantsSource, /lightLance:[\s\S]*?effectRotationOffset: -3 \* Math\.PI \/ 4,/);
+    assert.match(constantsSource, /tigerPalm:[\s\S]*?effectRotationOffset: -Math\.PI \/ 4,/);
+    assert.match(constantsSource, /tigerFang:[\s\S]*?effectRotationOffset: -Math\.PI \/ 4,/);
+    assert.match(constantsSource, /flameArc:[\s\S]*?effectRotationOffset: 3 \* Math\.PI \/ 4,/);
 
     console.log('combat VFX direction tests passed');
 })().catch((error) => {
