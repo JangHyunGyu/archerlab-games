@@ -479,6 +479,7 @@ const expectedCombatVfxRotationOffsets = {
     lightPierce: Math.PI / 4,
     lightLance: Math.PI / 4,
     lightCrescent: -Math.PI / 2,
+    flameSpark: -Math.PI / 4,
     flameBolt: -Math.PI / 4,
     sanctuaryArc: Math.PI,
 };
@@ -525,7 +526,8 @@ for (const [label, runtime] of [
         errors.push(`[VFX_DIRECTION] ${label} is not wired to the shared direction contract`);
     }
 }
-if (!basicDaggerRuntime.includes('slash.setFlipY(side < 0)')) {
+if (!basicDaggerRuntime.includes('getMirroredEffectRotation(baseAngle, flipY)') ||
+    !basicDaggerRuntime.includes('slash.setFlipY(flipY)')) {
     errors.push('[VFX_DIRECTION] sword basic attack must mirror sweep parity without changing its outward axis');
 }
 if (basicDaggerRuntime.includes('slash.setRotation(baseAngle + side * 0.55)')) {
@@ -555,26 +557,30 @@ const combatEnemyRuntime = readFile('js/entities/Enemy.js') || '';
 if ((combatEnemyRuntime.match(/if \(usedAsset\) return;/g) || []).length !== 3) {
     errors.push('[VFX_LAYERING] authored normal, flame, and sanctuary hit images must suppress procedural follow-up layers');
 }
-if ((WEAPONS.lightLance?.effectFadeDelay ?? 0) < (WEAPONS.lightLance?.effectFrameMs ?? 44) * 4 ||
-    WEAPONS.lightLance?.effectStartFrame !== 3 ||
-    WEAPONS.lightLance?.effectLoop !== true ||
-    WEAPONS.lightLance?.effectLoopEnd !== 3 ||
+if ((WEAPONS.lightLance?.effectFadeDelay ?? 0) < (WEAPONS.lightLance?.effectFrameMs ?? 44) * 5 ||
+    (WEAPONS.lightLance?.effectStartFrame ?? 0) !== 0 ||
+    (WEAPONS.lightLance?.effectLoop ?? false) !== false ||
     !shadowSlashRuntime.includes('.setDepth(18)') ||
     !shadowSlashRuntime.includes('delay: this.config.effectFadeDelay')) {
-    errors.push('[VFX_CLARITY] lightLance must stay fully opaque and unobscured through its sharp peak frames');
+    errors.push('[VFX_CLARITY] lightLance must play all six authored frames before fading');
 }
 if (WEAPONS.lightPierce?.effectStartFrame !== 1 ||
     (WEAPONS.lightPierce?.effectPeakAlpha ?? 0) < 0.9 ||
-    !basicDaggerRuntime.includes('.setRotation(this.getEffectRotation(baseAngle))') ||
-    !basicDaggerRuntime.includes('.setFlipY(side < 0)')) {
+    !basicDaggerRuntime.includes('getMirroredEffectRotation(baseAngle, flipY)') ||
+    !basicDaggerRuntime.includes('.setFlipY(flipY)')) {
     errors.push('[VFX_DIRECTION] lightPierce must spawn visibly on its authored horizontal slash axis');
 }
-if (!basicDaggerRuntime.includes('getEffectProjectedBounds') ||
-    !shadowSlashRuntime.includes('getEffectProjectedBounds')) {
+if (!basicDaggerRuntime.includes('getEffectForwardFit') ||
+    !shadowSlashRuntime.includes('getEffectForwardFit')) {
     errors.push('[VFX_COVERAGE] directional attacks are not fitted to their hit range');
 }
 const rulersAuthorityRuntime = readFile('js/weapons/RulersAuthority.js') || '';
 const dragonFearRuntime = readFile('js/weapons/DragonFear.js') || '';
+const higgsfieldVfxInstaller = readFile('scripts/install_higgsfield_character_vfx_20260716.py') || '';
+if (!higgsfieldVfxInstaller.includes('EffectTarget("sanctuary_pulse", "sanctuary", "aura"') ||
+    !rulersAuthorityRuntime.includes('Math.round(visualPeakDuration / 3)')) {
+    errors.push('[VFX_ANIMATION] radial and target-impact effects must reach a complete peak frame at impact');
+}
 for (const [label, runtime] of [
     ['RulersAuthority', rulersAuthorityRuntime],
     ['DragonFear', dragonFearRuntime],
@@ -583,7 +589,8 @@ for (const [label, runtime] of [
         errors.push(`[VFX_COVERAGE] ${label} does not fit visible bounds to its hit radius`);
     }
 }
-if (!rulersAuthorityRuntime.includes('duration: Math.max(80, impactDelay)')) {
+if (!rulersAuthorityRuntime.includes('const impactTweenDuration = Math.max(80, impactDelay)') ||
+    !rulersAuthorityRuntime.includes('duration: impactTweenDuration')) {
     errors.push('[VFX_COVERAGE] target impacts must reach their fitted radius at the damage frame');
 }
 if (WEAPONS.lightSanctum?.visualStartScaleRatio !== 1) {

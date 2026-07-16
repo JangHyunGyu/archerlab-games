@@ -533,9 +533,13 @@ export class BasicDagger extends WeaponBase {
         });
         const initialOrigin = getOrigin();
         const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
-        const effectProjection = this.getEffectProjectedBounds(effectTexture, this.config.effectRotationOffset ?? 0);
         const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
-        const baseScale = Math.max(0.1, (desiredOuterReach - 86) / Math.max(1, effectProjection.maxX));
+        const effectFit = this.getEffectForwardFit(effectTexture, {
+            innerReach: 18,
+            outerReach: desiredOuterReach,
+            rotationOffset: this.config.effectRotationOffset ?? 0,
+        });
+        const baseScale = effectFit.scale;
         const frameCount = 6;
 
         // The authored sprite is one slim, right-facing (+X) dagger trail.
@@ -567,7 +571,7 @@ export class BasicDagger extends WeaponBase {
         };
 
         const drawTrail = (trail, phase, laneSign, maxAlpha, origin) => {
-            const forward = 52 + phase.eased * 34;
+            const forward = effectFit.centerForward - 34 + phase.eased * 34;
             const lateral = Phaser.Math.Linear(laneSign * 11, laneSign * -3, phase.eased);
             const angleOffset = Phaser.Math.Linear(laneSign * -0.18, laneSign * -0.08, phase.eased);
             const frameIndex = Math.min(frameCount - 1, Math.floor(phase.phase * frameCount));
@@ -632,16 +636,24 @@ export class BasicDagger extends WeaponBase {
         const sinA = Math.sin(baseAngle);
         const originX = this.player.x;
         const originY = this.player.y - 18;
-        const centerX = originX + cosA * 62;
-        const centerY = originY + sinA * 62;
         const effectTexture = this._getConfiguredEffectTexture();
         const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 35);
-        const effectProjection = effectTexture
-            ? this.getEffectProjectedBounds(effectTexture, this.config.effectRotationOffset ?? 0)
+        const flipY = side < 0;
+        const authoredOffset = this.config.effectRotationOffset ?? 0;
+        const mirroredOffset = flipY ? -authoredOffset : authoredOffset;
+        const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
+        const effectFit = effectTexture
+            ? this.getEffectForwardFit(effectTexture, {
+                innerReach: 20,
+                outerReach: desiredOuterReach - 8,
+                rotationOffset: mirroredOffset,
+                flipY,
+            })
             : null;
-        const targetScale = effectProjection
-            ? Math.max(0.1, (hitRange * (this.config.visualRangeRatio ?? 0.9) - 70) / Math.max(1, effectProjection.maxX))
-            : (this.config.effectScale || 0.44);
+        const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.44);
+        const centerForward = effectFit?.centerForward ?? 62;
+        const centerX = originX + cosA * centerForward;
+        const centerY = originY + sinA * centerForward;
 
         const peakAlpha = this.config.effectPeakAlpha ?? 0.82;
         const slash = effectTexture
@@ -652,8 +664,8 @@ export class BasicDagger extends WeaponBase {
                 .setDepth(14)
                 .setAlpha(peakAlpha)
                 .setScale(targetScale * 0.78)
-                .setRotation(this.getEffectRotation(baseAngle))
-                .setFlipY(side < 0)
+                .setRotation(this.getMirroredEffectRotation(baseAngle, flipY))
+                .setFlipY(flipY)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
@@ -665,8 +677,8 @@ export class BasicDagger extends WeaponBase {
             const eased = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(t, 0, 1));
             if (slash) {
                 slash.setPosition(centerX + cosA * 8 * eased, centerY + sinA * 8 * eased);
-                slash.setRotation(this.getEffectRotation(baseAngle));
-                slash.setFlipY(side < 0);
+                slash.setRotation(this.getMirroredEffectRotation(baseAngle, flipY));
+                slash.setFlipY(flipY);
                 slash.setAlpha((1 - eased) * peakAlpha);
                 slash.setScale(targetScale * (0.78 + eased * 0.22));
             }
@@ -711,15 +723,20 @@ export class BasicDagger extends WeaponBase {
         const glowColor = this.getEffectGlowColor(0xffffff);
         const effectTexture = this._getConfiguredEffectTexture();
         const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
-        const effectProjection = effectTexture
-            ? this.getEffectProjectedBounds(effectTexture, side * 0.08 + (this.config.effectRotationOffset ?? 0))
+        const swipeRotationOffset = side * 0.08 + (this.config.effectRotationOffset ?? 0);
+        const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
+        const effectFit = effectTexture
+            ? this.getEffectForwardFit(effectTexture, {
+                innerReach: 18,
+                outerReach: desiredOuterReach - 12,
+                rotationOffset: swipeRotationOffset,
+            })
             : null;
-        const targetScale = effectProjection
-            ? Math.max(0.1, (hitRange * (this.config.visualRangeRatio ?? 0.9) - 82) / Math.max(1, effectProjection.maxX))
-            : (this.config.effectScale || 0.42);
+        const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.42);
+        const centerForward = effectFit?.centerForward ?? 74;
         const fx = effectTexture ? null : this.scene.add.graphics().setDepth(15);
         const swipeSprite = effectTexture
-            ? this.createEffectSprite(originX + cosA * 74, originY + sinA * 74, effectTexture, { frameMs: 40 })
+            ? this.createEffectSprite(originX + cosA * centerForward, originY + sinA * centerForward, effectTexture, { frameMs: 40 })
                 .setDepth(16)
                 .setAlpha(0)
                 .setScale(targetScale * 0.76)
@@ -768,7 +785,10 @@ export class BasicDagger extends WeaponBase {
             }
 
             if (swipeSprite) {
-                swipeSprite.setPosition(originX + cosA * (70 + eased * 12), originY + sinA * (70 + eased * 12));
+                swipeSprite.setPosition(
+                    originX + cosA * (centerForward + eased * 12),
+                    originY + sinA * (centerForward + eased * 12)
+                );
                 swipeSprite.setRotation(this.getEffectRotation(baseAngle) + side * 0.08);
                 swipeSprite.setAlpha(alpha * 0.86);
                 swipeSprite.setScale(targetScale * (0.76 + eased * 0.24));

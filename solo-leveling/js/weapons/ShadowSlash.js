@@ -190,16 +190,22 @@ export class ShadowSlash extends WeaponBase {
         const slashRotation = useCharacterEffect
             ? this.getEffectRotation(angle)
             : (useEffectAsset ? angle + Math.PI : angle);
-        const effectProjection = useCharacterEffect
-            ? this.getEffectProjectedBounds(effectTexture, this.config.effectRotationOffset ?? 0)
-            : null;
         const desiredOuterReach = range * (this.config.visualRangeRatio ?? 0.9);
-        const fittedCharacterScale = effectProjection
-            ? Math.max(0.1, (desiredOuterReach - slashDist) / Math.max(1, effectProjection.maxX))
-            : (this.config.effectScale || 0.58) + this.extraRange / 520;
+        const effectFit = useCharacterEffect
+            ? this.getEffectForwardFit(effectTexture, {
+                innerReach: 24,
+                outerReach: desiredOuterReach,
+                rotationOffset: this.config.effectRotationOffset ?? 0,
+            })
+            : null;
+        const fittedCharacterScale = effectFit?.scale ??
+            (this.config.effectScale || 0.58) + this.extraRange / 520;
+        const visualSlashDist = effectFit?.centerForward ?? slashDist;
+        const visualSlashX = this.player.x + Math.cos(angle) * visualSlashDist;
+        const visualSlashY = this.player.y + Math.sin(angle) * visualSlashDist;
         const slash = this.createEffectSprite(
-            slashX,
-            slashY,
+            visualSlashX,
+            visualSlashY,
             effectTexture || (useEffectAsset ? 'effect_shadow_slash' : 'proj_slash'),
             { frameMs: 44 },
         )
@@ -305,8 +311,6 @@ export class ShadowSlash extends WeaponBase {
         const startY = py + Math.sin(angle) * 24;
         const endX = px + Math.cos(angle) * range;
         const endY = py + Math.sin(angle) * range;
-        const midX = (startX + endX) * 0.5;
-        const midY = (startY + endY) * 0.5;
         const lineWidth = this.config.lineWidth || 34;
         const imageOnlyVfx = !!this.config.imageOnlyVfx;
         const effectTexture = this.getEffectTexture();
@@ -356,13 +360,15 @@ export class ShadowSlash extends WeaponBase {
         }
 
         if (effectTexture) {
-            const projection = this.getEffectProjectedBounds(
-                effectTexture,
-                this.config.effectRotationOffset ?? 0
-            );
-            const visibleLength = Math.max(1, projection.maxX - projection.minX);
-            const fittedScale = ((range - 24) * (this.config.visualRangeRatio ?? 0.96)) / visibleLength;
-            const lance = this.createEffectSprite(midX, midY, effectTexture, {
+            const visualOuterReach = 24 + (range - 24) * (this.config.visualRangeRatio ?? 0.96);
+            const effectFit = this.getEffectForwardFit(effectTexture, {
+                innerReach: 24,
+                outerReach: visualOuterReach,
+                rotationOffset: this.config.effectRotationOffset ?? 0,
+            });
+            const visualMidX = px + Math.cos(angle) * effectFit.centerForward;
+            const visualMidY = py + Math.sin(angle) * effectFit.centerForward;
+            const lance = this.createEffectSprite(visualMidX, visualMidY, effectTexture, {
                 frameMs: this.config.effectFrameMs ?? 44,
                 loop: this.config.effectLoop ?? false,
                 loopStart: this.config.effectStartFrame ?? 0,
@@ -371,7 +377,7 @@ export class ShadowSlash extends WeaponBase {
                 .setDepth(18)
                 .setRotation(this.getEffectRotation(angle))
                 .setAlpha(this.config.effectPeakAlpha ?? 0.88)
-                .setScale(fittedScale)
+                .setScale(effectFit.scale)
                 .setBlendMode(Phaser.BlendModes.ADD);
             this.scene.tweens.add({
                 targets: lance,
