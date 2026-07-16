@@ -643,11 +643,17 @@ export class BasicDagger extends WeaponBase {
             ? Math.max(0.1, (hitRange * (this.config.visualRangeRatio ?? 0.9) - 70) / Math.max(1, effectProjection.maxX))
             : (this.config.effectScale || 0.44);
 
+        const peakAlpha = this.config.effectPeakAlpha ?? 0.82;
         const slash = effectTexture
-            ? this.createEffectSprite(centerX, centerY, effectTexture, { frameMs: 42 })
+            ? this.createEffectSprite(centerX, centerY, effectTexture, {
+                frameMs: this.config.effectFrameMs ?? 42,
+                loopStart: this.config.effectStartFrame ?? 0,
+            })
                 .setDepth(14)
-                .setAlpha(0)
-                .setScale(targetScale * 0.72)
+                .setAlpha(peakAlpha)
+                .setScale(targetScale * 0.78)
+                .setRotation(this.getEffectRotation(baseAngle))
+                .setFlipY(side < 0)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
@@ -661,8 +667,8 @@ export class BasicDagger extends WeaponBase {
                 slash.setPosition(centerX + cosA * 8 * eased, centerY + sinA * 8 * eased);
                 slash.setRotation(this.getEffectRotation(baseAngle));
                 slash.setFlipY(side < 0);
-                slash.setAlpha(Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.82);
-                slash.setScale(targetScale * (0.72 + eased * 0.28));
+                slash.setAlpha((1 - eased) * peakAlpha);
+                slash.setScale(targetScale * (0.78 + eased * 0.22));
             }
         };
 

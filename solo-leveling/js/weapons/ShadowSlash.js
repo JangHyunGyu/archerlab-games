@@ -362,8 +362,13 @@ export class ShadowSlash extends WeaponBase {
             );
             const visibleLength = Math.max(1, projection.maxX - projection.minX);
             const fittedScale = ((range - 24) * (this.config.visualRangeRatio ?? 0.96)) / visibleLength;
-            const lance = this.createEffectSprite(midX, midY, effectTexture, { frameMs: 44 })
-                .setDepth(9)
+            const lance = this.createEffectSprite(midX, midY, effectTexture, {
+                frameMs: this.config.effectFrameMs ?? 44,
+                loop: this.config.effectLoop ?? false,
+                loopStart: this.config.effectStartFrame ?? 0,
+                loopEnd: this.config.effectLoopEnd,
+            })
+                .setDepth(18)
                 .setRotation(this.getEffectRotation(angle))
                 .setAlpha(this.config.effectPeakAlpha ?? 0.88)
                 .setScale(fittedScale)
@@ -371,9 +376,9 @@ export class ShadowSlash extends WeaponBase {
             this.scene.tweens.add({
                 targets: lance,
                 alpha: 0,
-                scaleX: lance.scaleX * 1.04,
-                scaleY: lance.scaleY * 0.92,
-                hold: this.config.effectHold ?? 0,
+                scaleX: lance.scaleX * 1.015,
+                scaleY: lance.scaleY * 1.015,
+                delay: this.config.effectFadeDelay ?? 0,
                 duration: this.config.effectFadeDuration ?? 260,
                 ease: 'Quad.easeOut',
                 onComplete: () => lance.destroy(),

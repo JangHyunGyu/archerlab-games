@@ -42,7 +42,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     // Character-centered directional basics fit their visible outer edge to 90% of the hit range.
     for (const [key, centerForward, rotation] of [
         ['basicDagger', 86, 0],
-        ['lightPierce', 70, 0],
+        ['lightPierce', 70, Math.PI / 4],
         ['tigerPalm', 82, 0.08],
     ]) {
         const config = WEAPONS[key];
@@ -124,8 +124,19 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     );
     assert.strictEqual(WEAPONS.lightPierce.name, '빛가름 검격');
     assert.strictEqual(WEAPONS.lightPierce.attackStyle, 'swordSlash');
+    assert.strictEqual(WEAPONS.lightPierce.effectRotationOffset, Math.PI / 4);
+    assert.strictEqual(WEAPONS.lightPierce.effectStartFrame, 1);
+    assert.ok(WEAPONS.lightPierce.effectPeakAlpha >= 0.9);
     assert.strictEqual(WEAPONS.lightLance.imageOnlyVfx, true);
     assert.strictEqual(WEAPONS.lightLance.combineProceduralVfx, false);
+    assert.strictEqual(WEAPONS.lightLance.effectRotationOffset, Math.PI / 4);
+    assert.strictEqual(WEAPONS.lightLance.effectStartFrame, 3);
+    assert.strictEqual(WEAPONS.lightLance.effectLoop, true);
+    assert.strictEqual(WEAPONS.lightLance.effectLoopEnd, 3);
+    assert.ok(
+        WEAPONS.lightLance.effectFadeDelay >= WEAPONS.lightLance.effectFrameMs * 4,
+        'lightLance must hold full opacity through its sharp peak frames'
+    );
     assert.strictEqual(WEAPONS.lightSanctum.visualStartScaleRatio, 1);
 
     console.log(`combat VFX hit-range and full image-only layering verified: ${coveredKeys.size}/25`);
