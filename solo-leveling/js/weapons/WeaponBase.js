@@ -156,6 +156,21 @@ export class WeaponBase {
         };
     }
 
+    getEffectCenteredFit(textureKey, {
+        outerReach,
+        rotationOffset = 0,
+        flipY = false,
+    } = {}) {
+        const projection = this.getEffectProjectedBounds(textureKey, rotationOffset, flipY);
+        const safeOuterReach = Number.isFinite(outerReach) ? Math.max(1, outerReach) : 1;
+        const forwardExtent = Math.max(1, projection.maxX);
+        return {
+            scale: Math.max(0.1, safeOuterReach / forwardExtent),
+            centerForward: 0,
+            projection,
+        };
+    }
+
     getEffectScaleForVisibleSize(textureKey, width, height = width) {
         const bounds = this.getEffectVisibleBounds(textureKey);
         return {

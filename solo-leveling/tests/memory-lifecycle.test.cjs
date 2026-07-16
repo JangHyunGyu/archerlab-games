@@ -37,7 +37,7 @@ assert.equal(
 );
 assert.match(
   indexSource,
-  /js\/main\.js\?v=20260717-all-vfx-axis-v16/,
+  /js\/main\.js\?v=20260717-centered-slash-audio-v17/,
   "the deployed entry point must invalidate cached game modules"
 );
 
