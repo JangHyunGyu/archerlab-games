@@ -1,6 +1,6 @@
 import {
     GAME_WIDTH, GAME_HEIGHT, WORLD_SIZE,
-    COLORS, PLAYER_BASE_STATS, RANKS, BOSS_SCHEDULE, BOSS_TYPES,
+    COLORS, PLAYER_BASE_STATS, RANKS, BOSS_SCHEDULE, BOSS_TYPES, getXpToNext,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR, fs, uv, drawSystemPanel,
 } from '../utils/Constants.js';
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
@@ -1147,9 +1147,10 @@ export class GameScene extends Phaser.Scene {
         player.setAlpha(1);
         player.clearTint();
 
-        player.level = Phaser.Math.Clamp(Number(saved.level) || 1, 1, 30);
+        const restoredLevel = Number(saved.level);
+        player.level = Number.isSafeInteger(restoredLevel) ? Math.max(1, restoredLevel) : 1;
         player.xp = Math.max(0, Number(saved.xp) || 0);
-        player.xpToNext = Math.max(1, Number(saved.xpToNext) || player.xpToNext);
+        player.xpToNext = getXpToNext(player.level);
         player.currentRank = RANKS[saved.currentRank] ? saved.currentRank : 'E';
         player.rankUpCount = Math.max(0, Number(saved.rankUpCount) || 0);
         player.kills = Math.max(0, Number(saved.kills) || 0);
