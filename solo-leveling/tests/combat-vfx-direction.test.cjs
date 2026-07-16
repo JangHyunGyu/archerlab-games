@@ -107,6 +107,21 @@ async function loadDirectionModule() {
     assert.match(basicRuntime, /case 'dualDaggerCrossThrust'/);
     assert.match(basicRuntime, /laneSign \* -0\.18/);
     assert.doesNotMatch(basicRuntime, /\.setFlipX\(true\)/);
+    assert.match(
+        basicRuntime,
+        /const wobbleAngle = baseAngle \+ Math\.sin\(progress\.t \* 0\.28\) \* 0\.08;/,
+        'flame basic projectile may wobble only by changing its aim angle'
+    );
+    assert.match(
+        basicRuntime,
+        /projectile\.setRotation\(this\.getEffectRotation\(wobbleAngle\)\)/,
+        'flame basic projectile must preserve its authored-axis correction on every update'
+    );
+    assert.doesNotMatch(
+        basicRuntime,
+        /projectile\.setRotation\(baseAngle/,
+        'runtime updates must not overwrite an authored projectile rotation offset'
+    );
 
     const constantsSource = fs.readFileSync(
         path.join(__dirname, '..', 'js', 'utils', 'Constants.js'),
