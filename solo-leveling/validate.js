@@ -476,6 +476,7 @@ const expectedCombatVfxOrientations = {
     sanctuaryField: 'selfRadial',
 };
 const expectedCombatVfxRotationOffsets = {
+    lightPierce: Math.PI / 4,
     lightLance: Math.PI / 4,
     lightCrescent: -Math.PI / 2,
     flameBolt: -Math.PI / 4,
@@ -553,6 +554,20 @@ if (basicDaggerRuntime.includes('const burstFx = this.scene.add.graphics()')) {
 const combatEnemyRuntime = readFile('js/entities/Enemy.js') || '';
 if ((combatEnemyRuntime.match(/if \(usedAsset\) return;/g) || []).length !== 3) {
     errors.push('[VFX_LAYERING] authored normal, flame, and sanctuary hit images must suppress procedural follow-up layers');
+}
+if ((WEAPONS.lightLance?.effectFadeDelay ?? 0) < (WEAPONS.lightLance?.effectFrameMs ?? 44) * 4 ||
+    WEAPONS.lightLance?.effectStartFrame !== 3 ||
+    WEAPONS.lightLance?.effectLoop !== true ||
+    WEAPONS.lightLance?.effectLoopEnd !== 3 ||
+    !shadowSlashRuntime.includes('.setDepth(18)') ||
+    !shadowSlashRuntime.includes('delay: this.config.effectFadeDelay')) {
+    errors.push('[VFX_CLARITY] lightLance must stay fully opaque and unobscured through its sharp peak frames');
+}
+if (WEAPONS.lightPierce?.effectStartFrame !== 1 ||
+    (WEAPONS.lightPierce?.effectPeakAlpha ?? 0) < 0.9 ||
+    !basicDaggerRuntime.includes('.setRotation(this.getEffectRotation(baseAngle))') ||
+    !basicDaggerRuntime.includes('.setFlipY(side < 0)')) {
+    errors.push('[VFX_DIRECTION] lightPierce must spawn visibly on its authored horizontal slash axis');
 }
 if (!basicDaggerRuntime.includes('getEffectProjectedBounds') ||
     !shadowSlashRuntime.includes('getEffectProjectedBounds')) {
