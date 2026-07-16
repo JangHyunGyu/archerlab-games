@@ -776,7 +776,7 @@
 
     if (!canMove()) {
       locked = false;
-      showModal("Game over", "No space", "젤리들이 꽉 찼습니다.", false, true);
+      showModal("Game over", "No moves", "더 이상 움직일 수 없어요.", false, true);
       shakeBoard(0.6);
       playSound("gameover");
       playHaptic("gameover");

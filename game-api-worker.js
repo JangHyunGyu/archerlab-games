@@ -1647,7 +1647,10 @@ async function recordSchoolZombieScoreEvents(db, body) {
             const level = parseInteger(event.level);
             const kills = parseInteger(event.kills);
             const expectedStage = projectedScore + 1;
-            if (!Number.isFinite(clearedStage) || clearedStage !== expectedStage || clearedStage < 1 || clearedStage > SCHOOL_ZOMBIE_MAX_CLEAR_STAGE) {
+            if (!Number.isFinite(clearedStage) || clearedStage < 1 || clearedStage > SCHOOL_ZOMBIE_MAX_CLEAR_STAGE) {
+                throw new Error('invalid school zombie cleared stage sequence');
+            }
+            if (clearedStage > expectedStage) {
                 throw new Error('invalid school zombie cleared stage sequence');
             }
             if (!Number.isFinite(reachedStage) || reachedStage !== clearedStage + 1) {
@@ -1659,7 +1662,9 @@ async function recordSchoolZombieScoreEvents(db, body) {
             if (!Number.isFinite(kills) || kills < getSchoolZombieMinKillsForClearedStage(clearedStage)) {
                 throw new Error('invalid school zombie kill count for stage clear');
             }
-            projectedScore = clearedStage;
+            // Stage events are idempotent so the client can safely retry when the
+            // original response is lost after D1 has already committed the event.
+            projectedScore = Math.max(projectedScore, clearedStage);
             nextState.highest_cleared_stage = Math.max(parseInteger(nextState.highest_cleared_stage) || 0, clearedStage);
             nextState.kills = Math.max(parseInteger(nextState.kills) || 0, kills);
             nextState.reached_stage = Math.max(parseInteger(nextState.reached_stage) || 1, reachedStage);
