@@ -353,6 +353,7 @@ for (const [id, weapon] of Object.entries(WEAPONS)) {
 // crude procedural placeholder.
 const characterContent = readFile('js/utils/Characters.js') || '';
 const basicDaggerRuntime = readFile('js/weapons/BasicDagger.js') || '';
+const combatVfxMetrics = readFile('js/utils/CombatVfxMetrics.js') || '';
 const basicAttackEffectKeys = new Set(
     Object.values(WEAPONS)
         .map(weapon => weapon.basicAttackEffectKey)
@@ -371,6 +372,20 @@ for (const effectKey of basicAttackEffectKeys) {
     const dimensions = readPngDimensions(`assets/effects/basic_attacks/${effectKey}.png`);
     if (dimensions && (dimensions.width !== 512 || dimensions.height !== 512)) {
         errors.push(`[BASIC_VFX] "${effectKey}.png" must be 512x512, got ${dimensions.width}x${dimensions.height}`);
+    }
+}
+
+for (const effectKey of basicAttackEffectKeys) {
+    if (!combatVfxMetrics.includes(`'basic_attack_${effectKey}'`)) {
+        errors.push(`[VFX_COVERAGE] basic attack "${effectKey}" is missing visible bounds`);
+    }
+}
+for (const effectKey of new Set(Object.values(WEAPONS)
+    .filter(weapon => !weapon.basicAttackEffectKey)
+    .map(weapon => weapon.effectKey)
+    .filter(Boolean))) {
+    if (!combatVfxMetrics.includes(`'char_skill_${effectKey}'`)) {
+        errors.push(`[VFX_COVERAGE] skill "${effectKey}" is missing visible bounds`);
     }
 }
 
@@ -523,6 +538,32 @@ if (!basicDaggerRuntime.includes('laneSign * -0.18')) {
 }
 if (basicDaggerRuntime.includes('.setFlipX(true)')) {
     errors.push('[VFX_DIRECTION] a forward dagger trail must not be flipped back toward the player');
+}
+if (WEAPONS.lightPierce?.name !== '빛가름 검격' || WEAPONS.lightPierce?.attackStyle !== 'swordSlash') {
+    errors.push('[VFX_NAMING] light swordswoman basic attack must be named as a slash');
+}
+if (!WEAPONS.lightLance?.imageOnlyVfx || WEAPONS.lightLance?.combineProceduralVfx !== false) {
+    errors.push('[VFX_LAYERING] lightLance must render only its authored image sequence');
+}
+if (!basicDaggerRuntime.includes('getEffectProjectedBounds') ||
+    !shadowSlashRuntime.includes('getEffectProjectedBounds')) {
+    errors.push('[VFX_COVERAGE] directional attacks are not fitted to their hit range');
+}
+const rulersAuthorityRuntime = readFile('js/weapons/RulersAuthority.js') || '';
+const dragonFearRuntime = readFile('js/weapons/DragonFear.js') || '';
+for (const [label, runtime] of [
+    ['RulersAuthority', rulersAuthorityRuntime],
+    ['DragonFear', dragonFearRuntime],
+]) {
+    if (!runtime.includes('getEffectScaleForVisibleSize')) {
+        errors.push(`[VFX_COVERAGE] ${label} does not fit visible bounds to its hit radius`);
+    }
+}
+if (!rulersAuthorityRuntime.includes('duration: Math.max(80, impactDelay)')) {
+    errors.push('[VFX_COVERAGE] target impacts must reach their fitted radius at the damage frame');
+}
+if (WEAPONS.lightSanctum?.visualStartScaleRatio !== 1) {
+    errors.push('[VFX_COVERAGE] the immediate lightSanctum aura must begin at its full hit radius');
 }
 
 for (const iconKey of new Set(Object.values(WEAPONS).map(weapon => weapon.icon).filter(Boolean))) {
@@ -710,6 +751,7 @@ const requiredFiles = [
     'js/ui/MobileControls.js',
     // Utils
     'js/utils/Constants.js', 'js/utils/i18n.js', 'js/utils/SpriteFactory.js',
+    'js/utils/CombatVfxDirection.js', 'js/utils/CombatVfxMetrics.js',
     // Core
     'js/main.js', 'js/browser-check.js',
 ];

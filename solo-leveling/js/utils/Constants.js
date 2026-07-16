@@ -298,7 +298,8 @@ export const WEAPONS = {
         attackStyle: 'dualDaggerCrossThrust',
         basicAttackEffectKey: 'shadow_dagger_slash',
         effectOrientation: 'bodyThrust',
-        effectScale: 0.44,
+        effectScale: 0.58,
+        visualRangeRatio: 0.9,
         levelBonuses: {
             2: { damage: 8 },
             3: { damage: 10 },
@@ -350,7 +351,8 @@ export const WEAPONS = {
         slashArc: 0.8,
         effectKey: 'shadow_slash',
         effectOrientation: 'forwardArc',
-        effectScale: 0.5,
+        effectScale: 0.67,
+        visualRangeRatio: 0.9,
         levelBonuses: {
             2: { damage: 12 },
             3: { range: 15 },
@@ -431,8 +433,8 @@ function cloneWeapon(baseKey, key, opts) {
 
 Object.assign(WEAPONS, {
     lightPierce: cloneWeapon('basicDagger', 'lightPierce', {
-        name: '빛가름 찌르기',
-        description: '가까운 적을 광휘의 검끝으로 빠르게 찌릅니다.',
+        name: '빛가름 검격',
+        description: '가까운 적을 광휘의 검날로 빠르게 베어냅니다.',
         attackStyle: 'swordSlash',
         basicAttackEffectKey: 'light_sword_slash',
         effectOrientation: 'bodyArc',
@@ -446,7 +448,8 @@ Object.assign(WEAPONS, {
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
         effectDarkColor: 0x7a5d16,
-        effectScale: 0.5,
+        effectScale: 1.1,
+        visualRangeRatio: 0.9,
     }),
     lightLance: cloneWeapon('shadowDagger', 'lightLance', {
         name: '섬광 찌르기',
@@ -454,7 +457,7 @@ Object.assign(WEAPONS, {
         type: 'melee',
         classKey: 'shadowSlash',
         slashMode: 'linePierce',
-        imageOnlyVfx: false,
+        imageOnlyVfx: true,
         soundKey: 'lightLance',
         baseCooldown: 1500,
         acquireRange: 360,
@@ -466,15 +469,15 @@ Object.assign(WEAPONS, {
         effectKey: 'light_lance_pierce',
         effectOrientation: 'projectile',
         effectRotationOffset: Math.PI / 4,
-        combineProceduralVfx: true,
-        proceduralCoreOnly: true,
+        combineProceduralVfx: false,
         effectPeakAlpha: 1,
         effectHold: 55,
         effectFadeDuration: 300,
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
         effectDarkColor: 0x7a5d16,
-        effectScale: 0.44,
+        effectScale: 0.52,
+        visualRangeRatio: 0.96,
     }),
     lightCrescent: cloneWeapon('shadowSlash', 'lightCrescent', {
         name: '광휘 참격',
@@ -493,7 +496,8 @@ Object.assign(WEAPONS, {
         effectColor: 0xffd86a,
         effectGlowColor: 0xffffff,
         effectDarkColor: 0x7a5d16,
-        effectScale: 0.56,
+        effectScale: 0.87,
+        visualRangeRatio: 0.9,
     }),
     lightJudgment: cloneWeapon('rulersAuthority', 'lightJudgment', {
         name: '심판의 낙광',
@@ -532,7 +536,7 @@ Object.assign(WEAPONS, {
         auraDuration: 850,
         damageMult: 0.42,
         smoothVisual: true,
-        visualStartScaleRatio: 0.52,
+        visualStartScaleRatio: 1,
         visualEndScaleRatio: 1.2,
         visualFadeInDuration: 320,
         visualHoldDuration: 100,
@@ -559,7 +563,8 @@ Object.assign(WEAPONS, {
         effectColor: 0xbfeaff,
         effectGlowColor: 0xffffff,
         effectDarkColor: 0x17425a,
-        effectScale: 0.48,
+        effectScale: 0.69,
+        visualRangeRatio: 0.9,
     }),
     tigerFang: cloneWeapon('shadowDagger', 'tigerFang', {
         name: '백호 송곳니',
@@ -591,6 +596,7 @@ Object.assign(WEAPONS, {
         effectGlowColor: 0xffffff,
         effectDarkColor: 0x17425a,
         effectScale: 0.5,
+        visualRangeRatio: 0.9,
     }),
     tigerRend: cloneWeapon('shadowSlash', 'tigerRend', {
         name: '맹호 찢기',
@@ -608,6 +614,7 @@ Object.assign(WEAPONS, {
         effectGlowColor: 0xffffff,
         effectDarkColor: 0x17425a,
         effectScale: 0.58,
+        visualRangeRatio: 0.9,
     }),
     tigerQuake: cloneWeapon('rulersAuthority', 'tigerQuake', {
         name: '백호 진각',
@@ -658,7 +665,7 @@ Object.assign(WEAPONS, {
         effectColor: 0xff7a34,
         effectGlowColor: 0xffd86a,
         effectDarkColor: 0x7a2108,
-        effectScale: 0.3,
+        effectScale: 1.49,
     }),
     flameBolt: cloneWeapon('shadowDagger', 'flameBolt', {
         name: '화염구',
@@ -701,6 +708,7 @@ Object.assign(WEAPONS, {
         effectGlowColor: 0xffd86a,
         effectDarkColor: 0x7a2108,
         effectScale: 0.58,
+        visualRangeRatio: 0.9,
     }),
     flameMeteor: cloneWeapon('rulersAuthority', 'flameMeteor', {
         name: '유성 낙인',
@@ -758,7 +766,7 @@ Object.assign(WEAPONS, {
         effectColor: 0x66f2b0,
         effectGlowColor: 0xe8fff5,
         effectDarkColor: 0x0d6543,
-        effectScale: 0.62,
+        effectScale: 0.54,
     }),
     sanctuaryOrb: cloneWeapon('shadowDagger', 'sanctuaryOrb', {
         name: '성역 파동',
@@ -818,7 +826,8 @@ Object.assign(WEAPONS, {
         effectColor: 0x66f2b0,
         effectGlowColor: 0xe8fff5,
         effectDarkColor: 0x0d6543,
-        effectScale: 0.56,
+        effectScale: 0.73,
+        visualRangeRatio: 0.9,
     }),
     sanctuarySeal: cloneWeapon('rulersAuthority', 'sanctuarySeal', {
         name: '성역 문장',

@@ -26,7 +26,12 @@ export class DragonFear extends WeaponBase {
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && this.scene.textures.exists('effect_dragon_fear');
-        const targetScale = (useCharacterEffect || useEffectAsset) ? (range * 2) / this.auraSpriteWidth(effectTexture, useEffectAsset) : range / 60;
+        const visualTexture = effectTexture || (useEffectAsset ? 'effect_dragon_fear' : null);
+        const fittedScale = (useCharacterEffect || useEffectAsset)
+            ? this.getEffectScaleForVisibleSize(visualTexture, range * 2)
+            : { x: range / 60, y: range / 60 };
+        const targetScaleX = fittedScale.x;
+        const targetScaleY = fittedScale.y;
         this.auraSprite = this.createEffectSprite(
             this.player.x,
             this.player.y,
@@ -35,8 +40,9 @@ export class DragonFear extends WeaponBase {
         )
             .setDepth(3)
             .setAlpha(0)
-            .setScale(this.config.smoothVisual ? targetScale * (this.config.visualStartScaleRatio ?? 0.55) : targetScale)
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+        const startRatio = this.config.smoothVisual ? (this.config.visualStartScaleRatio ?? 0.55) : 1;
+        this.auraSprite.setScale(targetScaleX * startRatio, targetScaleY * startRatio);
         const auraSprite = this.auraSprite;
 
         if (this.config.smoothVisual) {
@@ -46,14 +52,16 @@ export class DragonFear extends WeaponBase {
             this.scene.tweens.add({
                 targets: auraSprite,
                 alpha: this.config.visualPeakAlpha ?? ((useCharacterEffect || useEffectAsset) ? 0.76 : 0.58),
-                scale: targetScale * (this.config.visualPeakScaleRatio ?? 1),
+                scaleX: targetScaleX * (this.config.visualPeakScaleRatio ?? 1),
+                scaleY: targetScaleY * (this.config.visualPeakScaleRatio ?? 1),
                 duration: fadeInDuration,
                 ease: 'Sine.easeOut',
                 onComplete: () => {
                     this.scene.tweens.add({
                         targets: auraSprite,
                         alpha: 0,
-                        scale: targetScale * (this.config.visualEndScaleRatio ?? 1.22),
+                        scaleX: targetScaleX * (this.config.visualEndScaleRatio ?? 1.22),
+                        scaleY: targetScaleY * (this.config.visualEndScaleRatio ?? 1.22),
                         duration: fadeOutDuration,
                         delay: this.config.visualHoldDuration ?? holdDuration,
                         ease: 'Sine.easeInOut',
@@ -76,7 +84,8 @@ export class DragonFear extends WeaponBase {
             this.scene.tweens.add({
                 targets: auraSprite,
                 alpha: 0,
-                scale: targetScale * 1.3,
+                scaleX: targetScaleX * 1.3,
+                scaleY: targetScaleY * 1.3,
                 duration: Math.max(500, auraDuration - 500),
                 delay: 500,
                 onComplete: () => {
@@ -140,13 +149,6 @@ export class DragonFear extends WeaponBase {
                 }
             }
         }
-    }
-
-    auraSpriteWidth(effectTexture, useEffectAsset) {
-        if (effectTexture && this.scene.textures.exists(effectTexture)) {
-            return this.scene.textures.get(effectTexture).getSourceImage().width || 320;
-        }
-        return useEffectAsset ? 614 : 320;
     }
 
     destroy() {

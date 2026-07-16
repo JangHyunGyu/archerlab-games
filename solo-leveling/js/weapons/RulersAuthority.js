@@ -20,6 +20,7 @@ export class RulersAuthority extends WeaponBase {
 
     _blast(strikeIndex = 0) {
         const range = (this.config.blastRange || 160) + this.extraRange;
+        const impactDelay = this.config.impactDelay ?? 200;
 
         this.playConfiguredSound('authority');
         if (strikeIndex === 0) this.healPlayerFromConfig();
@@ -83,7 +84,12 @@ export class RulersAuthority extends WeaponBase {
         const effectTexture = this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
         const useEffectAsset = !useCharacterEffect && !this.config.imageOnlyVfx && this.scene.textures.exists('effect_ruler_authority');
-        const targetScale = (useCharacterEffect || useEffectAsset) ? (range * 2) / this._effectSpriteWidth(effectTexture, useEffectAsset) : range / 50;
+        const visualTexture = effectTexture || (useEffectAsset ? 'effect_ruler_authority' : null);
+        const fittedScale = (useCharacterEffect || useEffectAsset)
+            ? this.getEffectScaleForVisibleSize(visualTexture, range * 2)
+            : { x: range / 50, y: range / 50 };
+        const targetScaleX = fittedScale.x;
+        const targetScaleY = fittedScale.y;
         const visualDuration = this.config.smoothVisual
             ? (this.config.visualFadeInDuration ?? 260) +
                 (this.config.visualHoldDuration ?? 80) +
@@ -97,26 +103,29 @@ export class RulersAuthority extends WeaponBase {
         )
             .setDepth(7)
             .setAlpha(0)
-            .setScale(this.config.smoothVisual ? targetScale * (this.config.visualStartScaleRatio ?? 0.35) : ((useCharacterEffect || useEffectAsset) ? 0.08 : 0.2))
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
+        const startRatio = this.config.smoothVisual
+            ? (this.config.visualStartScaleRatio ?? 0.35)
+            : ((useCharacterEffect || useEffectAsset) ? 0.08 : 0.2);
+        circle.setScale(targetScaleX * startRatio, targetScaleY * startRatio);
 
         if (this.config.smoothVisual) {
             const peakAlpha = this.config.visualPeakAlpha ?? ((useCharacterEffect || useEffectAsset) ? 0.82 : 0.72);
-            const peakScale = targetScale * (this.config.visualPeakScaleRatio ?? 1);
-            const endScale = targetScale * (this.config.visualEndScaleRatio ?? 1.16);
+            const peakRatio = this.config.visualPeakScaleRatio ?? 1;
+            const endRatio = this.config.visualEndScaleRatio ?? 1.16;
             this.scene.tweens.add({
                 targets: circle,
                 alpha: peakAlpha,
-                scaleX: peakScale,
-                scaleY: peakScale,
+                scaleX: targetScaleX * peakRatio,
+                scaleY: targetScaleY * peakRatio,
                 duration: this.config.visualFadeInDuration ?? 260,
                 ease: 'Sine.easeOut',
                 onComplete: () => {
                     this.scene.tweens.add({
                         targets: circle,
                         alpha: 0,
-                        scaleX: endScale,
-                        scaleY: endScale,
+                        scaleX: targetScaleX * endRatio,
+                        scaleY: targetScaleY * endRatio,
                         duration: this.config.visualFadeOutDuration ?? 420,
                         delay: this.config.visualHoldDuration ?? 80,
                         ease: 'Sine.easeInOut',
@@ -128,9 +137,9 @@ export class RulersAuthority extends WeaponBase {
             this.scene.tweens.add({
                 targets: circle,
                 alpha: (useCharacterEffect || useEffectAsset) ? 0.92 : 0.8,
-                scaleX: targetScale,
-                scaleY: targetScale,
-                duration: 300,
+                scaleX: targetScaleX,
+                scaleY: targetScaleY,
+                duration: Math.max(80, impactDelay),
                 yoyo: true,
                 hold: 100,
                 onComplete: () => circle.destroy(),
@@ -151,7 +160,7 @@ export class RulersAuthority extends WeaponBase {
         }
 
         // Deal damage to enemies in range
-        this._delay(this.config.impactDelay ?? 200, () => {
+        this._delay(impactDelay, () => {
             if (!this.scene?.scene?.isActive()) return;
             const damage = Math.floor(this.getDamage() * (this.config.damageMult ?? 1));
             const enemies = this.player.getAllEnemies();
@@ -172,11 +181,4 @@ export class RulersAuthority extends WeaponBase {
         super.destroy();
     }
 
-    _effectSpriteWidth(effectTexture, useEffectAsset) {
-        const textureKey = effectTexture || (useEffectAsset ? 'effect_ruler_authority' : null);
-        if (textureKey && this.scene.textures.exists(textureKey)) {
-            return this.scene.textures.get(textureKey).getSourceImage().width || 320;
-        }
-        return 320;
-    }
 }
