@@ -193,13 +193,24 @@ function safeJsonText(value) {
     }
 }
 
+function isLocalDevelopmentUrl(value) {
+    if (!value) return false;
+    try {
+        const hostname = new URL(String(value)).hostname.toLowerCase();
+        return /^(?:localhost|127(?:\.\d+){3}|0\.0\.0\.0|\[?::1\]?)$/.test(hostname)
+            || hostname.endsWith('.localhost');
+    } catch {
+        return false;
+    }
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
-        INSERT INTO error_logs (
+        INSERT OR IGNORE INTO error_logs (
             app_id, user_id, message, stack, url, user_agent,
-            source, error_type, error_class, session_id, context_json, extra_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            source, error_type, error_class, session_id, context_json, extra_json, report_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
         limitText(payload.appId || 'game-api', 100),
         limitText(payload.userId || '', 100),
@@ -212,13 +223,18 @@ async function insertErrorLog(db, request, payload) {
         limitText(payload.errorClass || '', 50),
         limitText(payload.sessionId || '', 100),
         safeJsonText(payload.context),
-        safeJsonText(payload.extra)
+        safeJsonText(payload.extra),
+        limitText(payload.reportId || payload.context?.clientReportId || payload.extra?.eventId || '', 128) || null
     ).run();
 }
 
 async function storeClientError(db, request, body) {
     if (!isPlainObject(body)) {
         return jsonResponse({ error: 'invalid client error payload' }, 400);
+    }
+
+    if ([body.url, body.source, request.headers.get('Referer')].some(isLocalDevelopmentUrl)) {
+        return jsonResponse({ ok: true, ignored: true, reason: 'local_development_session' });
     }
 
     const gameId = limitText(body.game_id || body.gameId || body.appId || 'archerlab-games', 100)
@@ -243,6 +259,7 @@ async function storeClientError(db, request, body) {
         errorType: errorType,
         errorClass: limitText(body.error_class || body.errorClass || '', 50),
         context: body.context || null,
+        reportId: body.report_id || body.reportId || body.context?.clientReportId || body.extra?.eventId || '',
         extra: {
             lineno: body.lineno ?? body.line ?? 0,
             colno: body.colno ?? body.column ?? 0,

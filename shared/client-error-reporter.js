@@ -19,10 +19,17 @@
     var MAX_REPORTS_PER_PAGE = 20;
     var MAX_QUEUED_REPORTS = 50;
     var QUEUE_KEY = 'archerlab-client-error-queue:v2';
-    var queue = loadQueue();
+    var remoteReportingEnabled = !isLocalDevelopmentHost(window.location.hostname);
+    var queue = remoteReportingEnabled ? loadQueue() : [];
     var flushPromise = null;
     var flushTimer = null;
     var suppressConsoleCapture = false;
+
+    function isLocalDevelopmentHost(hostname) {
+        var host = safeString(hostname, '').toLowerCase();
+        return /^(?:localhost|127(?:\.\d+){3}|0\.0\.0\.0|\[?::1\]?)$/.test(host)
+            || host.endsWith('.localhost');
+    }
 
     function getGameId() {
         var fromScript = script && script.getAttribute('data-game-id');
@@ -205,6 +212,7 @@
     }
 
     function enqueue(body) {
+        if (!remoteReportingEnabled) return;
         var id = createReportId();
         body.context = Object.assign({}, body.context || {}, { clientReportId: id });
         queue.push({ id: id, body: body, queuedAt: Date.now() });
@@ -224,7 +232,7 @@
     }
 
     function flushQueue() {
-        if (flushPromise || !queue.length || typeof window.fetch !== 'function') {
+        if (!remoteReportingEnabled || flushPromise || !queue.length || typeof window.fetch !== 'function') {
             return flushPromise || Promise.resolve();
         }
 
@@ -261,6 +269,7 @@
     }
 
     function report(payload) {
+        if (!remoteReportingEnabled) return;
         if (!gameId || sentCount >= MAX_REPORTS_PER_PAGE) return;
         if (!payload || !payload.message) return;
 
@@ -421,5 +430,5 @@
         flush: flushQueue
     };
 
-    scheduleFlush(0);
+    if (remoteReportingEnabled) scheduleFlush(0);
 })();

@@ -928,6 +928,7 @@ export class MenuScene extends Phaser.Scene {
                 const fallback = fallbackMap.get(file.key);
                 if (fallback) {
                     fallbackMap.delete(file.key);
+                    if (this.textures.exists(file.key)) return;
                     console.warn('WebP asset not loaded; falling back to PNG:', file.key);
                     this.load.image(file.key, fallback);
                     return;
