@@ -17,8 +17,8 @@
     maxIntensity: IS_TOUCH_DEVICE ? 1.42 : 1.75,
   };
   const MOVE_TIMING = {
-    slide: PREFERS_REDUCED_MOTION ? 0.16 : 0.19,
-    mergeBlend: PREFERS_REDUCED_MOTION ? 0.12 : 0.22,
+    slide: PREFERS_REDUCED_MOTION ? 0.15 : 0.16,
+    mergeBlend: PREFERS_REDUCED_MOTION ? 0.11 : 0.18,
   };
   const SESSION_REQUEST_TIMEOUT_MS = 8000;
   const RANK_REQUEST_TIMEOUT_MS = 10000;
@@ -792,21 +792,21 @@
         y: Math.sin(angle) * travel,
         alpha: 0,
         rotation: angle + Math.PI * 0.5,
-        duration: 0.38,
-        delay: 0.065 + index * 0.012,
+        duration: 0.32,
+        delay: 0.055 + index * 0.01,
         ease: "power2.out",
       });
     }
 
     addFxChild(effect);
     gsap.to(effect, { alpha: 1, duration: 0.065, ease: "power3.out" });
-    gsap.to(effect.scale, { x: 1, y: 1, duration: 0.22, ease: "back.out(2.6)" });
-    gsap.to(heart.scale, { x: 1.08, y: 1.08, duration: 0.18, ease: "back.out(3)" });
-    gsap.to(heartCore.scale, { x: 1, y: 1, duration: 0.2, delay: 0.025, ease: "back.out(2.4)" });
+    gsap.to(effect.scale, { x: 1, y: 1, duration: 0.18, ease: "back.out(2.6)" });
+    gsap.to(heart.scale, { x: 1.08, y: 1.08, duration: 0.15, ease: "back.out(3)" });
+    gsap.to(heartCore.scale, { x: 1, y: 1, duration: 0.17, delay: 0.02, ease: "back.out(2.4)" });
     gsap.to(effect, {
       alpha: 0,
-      duration: 0.26,
-      delay: 0.2,
+      duration: 0.22,
+      delay: 0.15,
       ease: "sine.in",
       onComplete: () => destroyPixiObject(effect),
     });
@@ -949,8 +949,8 @@
 
     const slideDuration = MOVE_TIMING.slide;
     const blendDuration = MOVE_TIMING.mergeBlend;
-    const mergeStart = slideDuration + (PREFERS_REDUCED_MOTION ? 0 : 0.04);
-    const formationStart = mergeStart + (PREFERS_REDUCED_MOTION ? 0 : blendDuration * 0.1);
+    const mergeStart = slideDuration + (PREFERS_REDUCED_MOTION ? 0 : 0.025);
+    const formationStart = mergeStart + (PREFERS_REDUCED_MOTION ? 0 : blendDuration * 0.08);
     const tl = gsap.timeline({
       defaults: { duration: slideDuration, ease: "power3.out" },
       onComplete: () => {
@@ -978,13 +978,13 @@
           tl.to(visual.container.scale, {
             x: horizontal ? 0.86 : 1.08,
             y: horizontal ? 1.08 : 0.86,
-            duration: 0.1,
+            duration: 0.085,
             ease: "sine.out",
           }, Math.max(0.06, slideDuration - 0.08));
           tl.to(visual.container.scale, {
             x: horizontal ? 0.7 : 1.14,
             y: horizontal ? 1.14 : 0.7,
-            duration: 0.1,
+            duration: 0.085,
             ease: "sine.inOut",
           }, mergeStart);
           tl.to(visual.container, {
@@ -1006,7 +1006,7 @@
             ease: "sine.in",
           }, mergeStart + blendDuration * 0.2);
           if (visual.badge) {
-            tl.to(visual.badge, { alpha: 0, duration: 0.1, ease: "sine.in" }, mergeStart);
+            tl.to(visual.badge, { alpha: 0, duration: 0.085, ease: "sine.in" }, mergeStart);
           }
         }
       }
@@ -1883,28 +1883,28 @@
       visual.container.scale.set(0.34, squash);
     }
 
-    gsap.to(visual.container, { alpha: 1, rotation: 0, duration: 0.12, delay, ease: "power4.out" });
+    gsap.to(visual.container, { alpha: 1, rotation: 0, duration: 0.1, delay, ease: "power4.out" });
     gsap.timeline({ delay })
-      .to(visual.container.scale, { x: overshoot, y: 0.76, duration: 0.16, ease: "power4.out" })
-      .to(visual.container.scale, { x: 0.9, y: 1.16, duration: 0.17, ease: "sine.inOut" })
-      .to(visual.container.scale, { x: 1, y: 1, duration: 0.32, ease: "elastic.out(1.25, 0.38)" });
+      .to(visual.container.scale, { x: overshoot, y: 0.76, duration: 0.13, ease: "power4.out" })
+      .to(visual.container.scale, { x: 0.9, y: 1.16, duration: 0.14, ease: "sine.inOut" })
+      .to(visual.container.scale, { x: 1, y: 1, duration: 0.26, ease: "elastic.out(1.25, 0.38)" });
     gsap.fromTo(visual.sprite, { alpha: 0.74 }, {
       alpha: 1,
-      duration: 0.2,
+      duration: 0.16,
       delay,
       ease: "sine.out",
     });
     gsap.fromTo(visual.aura, { alpha: 0.98 }, {
       alpha: 0,
-      duration: 0.62,
+      duration: 0.52,
       delay,
       ease: "power2.out",
     });
     if (visual.shine) {
       gsap.fromTo(visual.shine, { alpha: 1 }, {
         alpha: 0.45,
-        duration: 0.48,
-        delay: delay + 0.06,
+        duration: 0.4,
+        delay: delay + 0.05,
         ease: "sine.out",
       });
     }
