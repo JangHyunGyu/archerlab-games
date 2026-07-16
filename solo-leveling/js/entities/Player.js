@@ -1,4 +1,4 @@
-import { PLAYER_BASE_STATS, RANKS, RANK_ORDER, XP_TABLE, COLORS, WORLD_SIZE, PASSIVES, MAX_COOLDOWN_REDUCTION } from '../utils/Constants.js';
+import { PLAYER_BASE_STATS, RANKS, RANK_ORDER, getXpToNext, COLORS, WORLD_SIZE, PASSIVES, MAX_COOLDOWN_REDUCTION } from '../utils/Constants.js';
 import { getCharacter } from '../utils/Characters.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
@@ -25,7 +25,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.stats = { ...this.baseStats };
         this.level = 1;
         this.xp = 0;
-        this.xpToNext = XP_TABLE[1] || 10;
+        this.xpToNext = getXpToNext(this.level);
         this.currentRank = 'E';
         this.kills = 0;
 
@@ -545,10 +545,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const actualAmount = Math.floor(amount * this.stats.xpMultiplier);
         this.xp += actualAmount;
 
-        if (this.xp >= this.xpToNext && this.level < 30) {
+        if (this.xp >= this.xpToNext) {
             this.xp -= this.xpToNext;
             this.level++;
-            this.xpToNext = XP_TABLE[this.level] || this.xpToNext * 1.2;
+            this.xpToNext = getXpToNext(this.level);
             // Level-up heal (30% of max HP)
             this.heal(Math.floor(this.stats.maxHp * 0.3));
             return true; // Level up occurred (one at a time, remaining XP carries over)

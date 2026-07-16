@@ -188,6 +188,20 @@ export const XP_TABLE = [
     2420, 2780, 3200, 3680, 4200, 4800, 5500, 6300, 7200, 8200,
 ];
 
+// XP_TABLE preserves the authored Lv.1-30 curve. Beyond S-rank, continue with
+// a gentle power curve so survival progression never reaches a hard cap.
+export function getXpToNext(level) {
+    const safeLevel = Math.max(1, Math.floor(Number(level) || 1));
+    if (safeLevel < XP_TABLE.length) return XP_TABLE[safeLevel];
+
+    const lastAuthoredLevel = XP_TABLE.length - 1;
+    const levelsBeyond = safeLevel - lastAuthoredLevel;
+    const lastRequirement = XP_TABLE[lastAuthoredLevel];
+    const growth = 1 + levelsBeyond * 0.12 + Math.pow(levelsBeyond, 1.5) * 0.01;
+    const requirement = Math.round(lastRequirement * growth / 50) * 50;
+    return Math.min(Number.MAX_SAFE_INTEGER, Math.max(lastRequirement + 50, requirement));
+}
+
 export const ENEMY_TYPES = {
     // --- 초반 적 (0~3분) ---
     goblin: {

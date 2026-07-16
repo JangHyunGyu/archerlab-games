@@ -458,7 +458,9 @@ export class HUD {
             this.hpFill.setFillStyle(hpColor);
         }
 
-        const xpRatio = player.xpToNext > 0 ? player.xp / player.xpToNext : 0;
+        const xpRatio = player.xpToNext > 0
+            ? Phaser.Math.Clamp(player.xp / player.xpToNext, 0, 1)
+            : 0;
         const xpWidth = (this._xpW - 2) * xpRatio;
         if (this.xpFill._hudWidth !== xpWidth) {
             this.xpFill._hudWidth = xpWidth;
@@ -575,7 +577,9 @@ export class HUD {
             this.hpFill.setFillStyle(hpColor);
         }
 
-        const xpRatio = player.xpToNext > 0 ? player.xp / player.xpToNext : 0;
+        const xpRatio = player.xpToNext > 0
+            ? Phaser.Math.Clamp(player.xp / player.xpToNext, 0, 1)
+            : 0;
         const xpWidth = (this._xpW - 2) * xpRatio;
         if (this.xpFill._hudWidth !== xpWidth) {
             this.xpFill._hudWidth = xpWidth;
