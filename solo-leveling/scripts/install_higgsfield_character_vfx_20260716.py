@@ -44,7 +44,7 @@ GREEN = (0, 255, 0)
 MAGENTA = (255, 0, 255)
 
 TARGETS = (
-    EffectTarget("shadow_dagger_slash", "shadow", "slash", "basicDagger", True, GREEN),
+    EffectTarget("shadow_dagger_slash", "shadow", "thrust", "basicDagger", True, GREEN),
     EffectTarget("shadow_dagger", "shadow", "projectile", "shadowDagger", False, GREEN),
     EffectTarget("shadow_slash", "shadow", "slash", "shadowSlash", False, GREEN),
     EffectTarget("rulers_authority", "shadow", "burst", "rulersAuthority", False, GREEN),
@@ -92,6 +92,14 @@ PEAK_CONTENT_SIZES = {
 }
 
 STAGE_PROFILES = {
+    "thrust": (
+        (0.72, 0.30, 0.24, -14, 0),
+        (0.84, 0.62, 0.52, -8, 0),
+        (0.94, 0.88, 0.82, -3, 0),
+        (1.00, 1.00, 1.00, 0, 0),
+        (1.06, 0.66, 1.00, 4, 0),
+        (1.12, 0.30, 1.00, 8, 0),
+    ),
     "slash": (
         (0.72, 0.30, 0.22, -14, 4),
         (0.84, 0.62, 0.50, -8, 2),
@@ -248,9 +256,21 @@ def build_icon(peak: Image.Image, target: EffectTarget) -> Image.Image:
     if not bbox:
         raise ValueError(f"cannot create icon for empty effect: {target.name}")
     content = peak.crop(bbox)
-    scale = min(96 / content.width, 96 / content.height)
-    size = (max(1, round(content.width * scale)), max(1, round(content.height * scale)))
-    content = content.resize(size, Image.Resampling.LANCZOS)
+    if target.kind == "thrust":
+        scale = min(88 / content.width, 24 / content.height)
+        size = (max(1, round(content.width * scale)), max(1, round(content.height * scale)))
+        blade = content.resize(size, Image.Resampling.LANCZOS)
+        upper = blade.rotate(10, resample=Image.Resampling.BICUBIC, expand=True)
+        lower = blade.rotate(-10, resample=Image.Resampling.BICUBIC, expand=True)
+        crossed = Image.new("RGBA", (100, 58), (0, 0, 0, 0))
+        crossed.alpha_composite(upper, ((crossed.width - upper.width) // 2, 4))
+        crossed.alpha_composite(lower, ((crossed.width - lower.width) // 2, crossed.height - lower.height - 4))
+        content = crossed
+        size = content.size
+    else:
+        scale = min(96 / content.width, 96 / content.height)
+        size = (max(1, round(content.width * scale)), max(1, round(content.height * scale)))
+        content = content.resize(size, Image.Resampling.LANCZOS)
     offset = ((ICON_SIZE - size[0]) // 2, (ICON_SIZE - size[1]) // 2)
 
     glow_alpha = content.getchannel("A").filter(ImageFilter.GaussianBlur(6))
@@ -293,7 +313,7 @@ def stage_reveal_mask(frame: Image.Image, kind: str, amount: float) -> Image.Ima
     elif kind == "projectile":
         reveal_left = right - round((right - left) * amount)
         draw.rectangle((reveal_left, top - feather, right + feather, bottom + feather), fill=255)
-    elif kind == "slash":
+    elif kind in {"slash", "thrust"}:
         reveal_right = left + round((right - left) * amount)
         draw.polygon(
             (
@@ -340,7 +360,7 @@ def render_staged_frame(peak: Image.Image, target: EffectTarget, frame_index: in
     frame.putalpha(alpha)
 
     output = Image.new("RGBA", frame.size, (0, 0, 0, 0))
-    if target.kind in {"slash", "projectile"} and frame_index in {1, 2, 3, 4}:
+    if target.kind in {"slash", "thrust", "projectile"} and frame_index in {1, 2, 3, 4}:
         trail = translated_copy(frame, -max(4, 14 - frame_index * 2), 2, 0.18 if frame_index < 4 else 0.10)
         trail.putalpha(trail.getchannel("A").filter(ImageFilter.GaussianBlur(4)))
         output.alpha_composite(trail)
@@ -453,7 +473,7 @@ def main() -> int:
         return 1
 
     print(
-        f"installed {len(TARGETS)} Higgsfield peaks, {len(TARGETS)} unified icons, "
+        f"installed {len(TARGETS)} source peaks, {len(TARGETS)} unified icons, "
         f"and {len(TARGETS) * FRAME_COUNT} effect-specific staged frames"
     )
     return 0

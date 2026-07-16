@@ -295,10 +295,10 @@ export const WEAPONS = {
         attackRange: 205,
         targetAcquireMultiplier: 2,
         hitAngle: 0.42,
-        attackStyle: 'dualDaggerSlash',
+        attackStyle: 'dualDaggerCrossThrust',
         basicAttackEffectKey: 'shadow_dagger_slash',
-        effectOrientation: 'bodyArc',
-        effectScale: 0.36,
+        effectOrientation: 'bodyThrust',
+        effectScale: 0.44,
         levelBonuses: {
             2: { damage: 8 },
             3: { damage: 10 },

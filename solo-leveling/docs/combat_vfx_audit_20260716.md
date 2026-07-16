@@ -61,3 +61,25 @@ python solo-leveling\scripts\install_higgsfield_character_vfx_20260716.py
 - 무기·스킬 아이콘 25종이 모두 128x128인지
 
 검증 결과는 오류 0건, 경고 0건이다.
+
+## 그림자 군주 기본 공격 재설계
+
+기존 기본 공격은 한 이미지 안에 두 개의 넓은 궤적이 들어 있었고, 런타임이 그 이미지를 다시 두 장 겹쳐 그려 실제 화면에서는 네 줄처럼 뭉쳤다. 한 장은 수평 반전되어 단검 끝이 캐릭터 쪽을 향하는 순간도 있었다.
+
+새 원본은 로컬 진행축을 오른쪽(+X)으로 고정한 단일 단검 찌르기 궤적이다. 런타임에서만 두 장으로 복제해 양손 위치에서 좁게 교차시키며, 수평 반전은 금지한다. 넓은 횡베기 대신 캐릭터 모션과 좁은 전방 판정에 맞는 `dualDaggerCrossThrust`로 분류했다. 아이콘은 같은 단일 원본을 두 줄로 교차 합성해 실제 공격 형태를 보여준다.
+
+생성 모드: Codex 내장 이미지 생성(`gpt-image`) 후 크로마 키 제거. 선택 원본 프롬프트는 다음과 같다.
+
+```text
+Use case: stylized-concept
+Asset type: production source sprite for one hand of a top-down dual-dagger cross-lunge basic attack
+Input images: Image 1 is a first draft and palette reference. Keep its exact left-to-right +X direction and purple energy identity, but redesign the subject to be substantially slimmer, faster, and more dagger-like.
+Primary request: create exactly ONE narrow high-speed dagger thrust trail. It should read as a precise stab with a subtle cutting diagonal, not as a feather or a broad magic projectile.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for background removal. One uniform color, no gradient, texture, shadows, reflections, or floor.
+Subject: one thin violet streak from left to right, with a compact fractured tail, a clean white-violet central blade line, and one razor point facing exactly right. The upper and lower silhouettes must be slightly asymmetric so vertical mirroring produces a visibly different off-hand trail. Reduce the draft's thickness and branching by about 45 percent.
+Style/medium: premium dark-fantasy anime combat VFX, crisp and controlled, readable at 80-120 gameplay pixels.
+Composition/framing: square canvas; subject centered; 62-68% canvas width; no more than 14% canvas height; generous padding; exact local forward axis +X/right.
+Color palette: white-hot core, electric violet, deep purple, minimal magenta sparks. Never use #00ff00 inside the subject.
+Constraints: exactly one trail and one right-facing point; crisp isolated sprite; no shadow; no text; no watermark.
+Avoid: feather shape, leaf shape, broad projectile, two trails, paired blades, X, crescent, semicircle, ring, portal, shield, explosion, aura, character, hand, physical dagger, scenery, green glow, green particles.
+```

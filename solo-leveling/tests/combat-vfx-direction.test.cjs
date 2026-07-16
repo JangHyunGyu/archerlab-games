@@ -18,6 +18,7 @@ async function loadDirectionModule() {
 
     const aimed = [
         COMBAT_VFX_ORIENTATIONS.BODY_ARC,
+        COMBAT_VFX_ORIENTATIONS.BODY_THRUST,
         COMBAT_VFX_ORIENTATIONS.FORWARD_ARC,
         COMBAT_VFX_ORIENTATIONS.PROJECTILE,
     ];
@@ -69,6 +70,9 @@ async function loadDirectionModule() {
     );
     assert.match(basicRuntime, /slash\.setFlipY\(side < 0\)/);
     assert.doesNotMatch(basicRuntime, /slash\.setRotation\(baseAngle \+ side \* 0\.55\)/);
+    assert.match(basicRuntime, /case 'dualDaggerCrossThrust'/);
+    assert.match(basicRuntime, /laneSign \* -0\.18/);
+    assert.doesNotMatch(basicRuntime, /\.setFlipX\(true\)/);
 
     console.log('combat VFX direction tests passed');
 })().catch((error) => {
