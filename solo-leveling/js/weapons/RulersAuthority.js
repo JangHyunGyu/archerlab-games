@@ -90,16 +90,22 @@ export class RulersAuthority extends WeaponBase {
             : { x: range / 50, y: range / 50 };
         const targetScaleX = fittedScale.x;
         const targetScaleY = fittedScale.y;
-        const visualDuration = this.config.smoothVisual
-            ? (this.config.visualFadeInDuration ?? 260) +
-                (this.config.visualHoldDuration ?? 80) +
-                (this.config.visualFadeOutDuration ?? 420)
-            : 700;
+        const impactTweenDuration = Math.max(80, impactDelay);
+        const visualPeakDuration = this.config.smoothVisual
+            ? (this.config.visualFadeInDuration ?? 260)
+            : impactTweenDuration;
+        const effectFrameMs = this.config.effectFrameMs
+            ?? Math.max(24, Math.round(visualPeakDuration / 3));
         const circle = this.createEffectSprite(
             targetX,
             targetY,
             effectTexture || (useEffectAsset ? 'effect_ruler_authority' : 'proj_ruler'),
-            { frameMs: Math.max(42, Math.round(visualDuration / 6)) },
+            {
+                frameMs: effectFrameMs,
+                loop: this.config.effectLoop ?? false,
+                loopStart: this.config.effectStartFrame ?? 0,
+                loopEnd: this.config.effectLoopEnd,
+            },
         )
             .setDepth(7)
             .setAlpha(0)
@@ -139,7 +145,7 @@ export class RulersAuthority extends WeaponBase {
                 alpha: (useCharacterEffect || useEffectAsset) ? 0.92 : 0.8,
                 scaleX: targetScaleX,
                 scaleY: targetScaleY,
-                duration: Math.max(80, impactDelay),
+                duration: impactTweenDuration,
                 yoyo: true,
                 hold: 100,
                 onComplete: () => circle.destroy(),

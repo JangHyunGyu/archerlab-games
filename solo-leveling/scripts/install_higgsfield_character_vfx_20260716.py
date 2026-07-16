@@ -66,7 +66,7 @@ TARGETS = (
     EffectTarget("flame_meteor", "flame", "burst", "flameMeteor", False, MAGENTA),
     EffectTarget("flame_inferno", "flame", "aura", "flameInferno", False, MAGENTA),
     EffectTarget("sanctuary_mace_slam", "sanctuary", "burst", "sanctuaryStrike", True, MAGENTA),
-    EffectTarget("sanctuary_pulse", "sanctuary", "projectile", "sanctuaryOrb", False, MAGENTA),
+    EffectTarget("sanctuary_pulse", "sanctuary", "aura", "sanctuaryOrb", False, MAGENTA),
     EffectTarget("sanctuary_arc", "sanctuary", "slash", "sanctuaryArc", False, MAGENTA),
     EffectTarget("sanctuary_seal", "sanctuary", "burst", "sanctuarySeal", False, MAGENTA),
     EffectTarget("sanctuary_field", "sanctuary", "aura", "sanctuaryField", False, MAGENTA),
