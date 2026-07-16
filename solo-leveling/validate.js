@@ -542,6 +542,10 @@ if (!basicDaggerRuntime.includes('laneSign * -0.18')) {
 if (basicDaggerRuntime.includes('.setFlipX(true)')) {
     errors.push('[VFX_DIRECTION] a forward dagger trail must not be flipped back toward the player');
 }
+if (!basicDaggerRuntime.includes('projectile.setRotation(this.getEffectRotation(wobbleAngle))') ||
+    basicDaggerRuntime.includes('projectile.setRotation(baseAngle')) {
+    errors.push('[VFX_DIRECTION] flame basic projectile updates must preserve the authored-axis rotation offset');
+}
 if (WEAPONS.lightPierce?.name !== '빛가름 검격' || WEAPONS.lightPierce?.attackStyle !== 'swordSlash') {
     errors.push('[VFX_NAMING] light swordswoman basic attack must be named as a slash');
 }

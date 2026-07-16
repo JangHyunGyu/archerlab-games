@@ -37,7 +37,7 @@ assert.equal(
 );
 assert.match(
   indexSource,
-    /js\/main\.js\?v=20260716-direction-audit-v13/,
+  /js\/main\.js\?v=20260717-direction-runtime-v14/,
   "the deployed entry point must invalidate cached game modules"
 );
 
