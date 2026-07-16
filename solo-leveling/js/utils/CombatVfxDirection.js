@@ -1,5 +1,6 @@
 export const COMBAT_VFX_ORIENTATIONS = Object.freeze({
     BODY_ARC: 'bodyArc',
+    BODY_THRUST: 'bodyThrust',
     FORWARD_ARC: 'forwardArc',
     PROJECTILE: 'projectile',
     TARGET_IMPACT: 'targetImpact',
@@ -8,6 +9,7 @@ export const COMBAT_VFX_ORIENTATIONS = Object.freeze({
 
 const AIMED_ORIENTATIONS = new Set([
     COMBAT_VFX_ORIENTATIONS.BODY_ARC,
+    COMBAT_VFX_ORIENTATIONS.BODY_THRUST,
     COMBAT_VFX_ORIENTATIONS.FORWARD_ARC,
     COMBAT_VFX_ORIENTATIONS.PROJECTILE,
 ]);

@@ -62,8 +62,8 @@ export class BasicDagger extends WeaponBase {
 
     _attackByStyle(style) {
         switch (style) {
-            case 'dualDaggerSlash':
-                this._dualDaggerSlash();
+            case 'dualDaggerCrossThrust':
+                this._dualDaggerCrossThrust();
                 break;
             case 'swordSlash':
                 this._swordSlash();
@@ -512,7 +512,7 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('dagger');
     }
 
-    _dualDaggerSlash() {
+    _dualDaggerCrossThrust() {
         const effectTexture = this._getConfiguredEffectTexture();
         if (!effectTexture) {
             this._thrust();
@@ -532,27 +532,27 @@ export class BasicDagger extends WeaponBase {
             y: this.player.y - 16,
         });
         const initialOrigin = getOrigin();
-        const baseScale = this.config.effectScale || 0.36;
+        const baseScale = this.config.effectScale || 0.44;
+        const frameCount = 6;
 
-        const createArc = (depth, flipY = false) => this.scene.add.sprite(
+        // The authored sprite is one slim, right-facing (+X) dagger trail.
+        // Two copies cross from the character's hands; never flip X, because
+        // that would turn one dagger back toward the player.
+        const createTrail = (depth, flipY = false) => this.scene.add.sprite(
             initialOrigin.x,
             initialOrigin.y,
-            effectTexture
+            this.scene.textures.exists(`${effectTexture}_0`) ? `${effectTexture}_0` : effectTexture
         )
             .setDepth(depth)
             .setAlpha(0)
-            .setScale(baseScale * 0.72)
-            .setFlipX(true)
+            .setScale(baseScale * 0.82)
             .setFlipY(flipY)
             .setBlendMode(Phaser.BlendModes.ADD);
 
-        const primaryArc = createArc(15);
-        const echoArc = createArc(14, true);
-        const coreFx = this.scene.add.graphics()
-            .setDepth(16)
-            .setBlendMode(Phaser.BlendModes.ADD);
+        const primaryTrail = createTrail(15);
+        const offhandTrail = createTrail(14, true);
         const progress = { t: 0 };
-        const entry = this._trackAttackObjects([primaryArc, echoArc, coreFx]);
+        const entry = this._trackAttackObjects([primaryTrail, offhandTrail]);
 
         const pulse = (t, start, end) => {
             const phase = Phaser.Math.Clamp((t - start) / (end - start), 0, 1);
@@ -563,41 +563,37 @@ export class BasicDagger extends WeaponBase {
             };
         };
 
-        const drawArc = (arc, phase, lateral, angleOffset, maxAlpha, origin) => {
-            const forward = 46 + phase.eased * 22;
-            arc
+        const drawTrail = (trail, phase, laneSign, maxAlpha, origin) => {
+            const forward = 52 + phase.eased * 34;
+            const lateral = Phaser.Math.Linear(laneSign * 11, laneSign * -3, phase.eased);
+            const angleOffset = Phaser.Math.Linear(laneSign * -0.18, laneSign * -0.08, phase.eased);
+            const frameIndex = Math.min(frameCount - 1, Math.floor(phase.phase * frameCount));
+            const frameTexture = `${effectTexture}_${frameIndex}`;
+            if (this.scene.textures.exists(frameTexture) && trail.texture.key !== frameTexture) {
+                trail.setTexture(frameTexture);
+            }
+            trail
                 .setPosition(
                     origin.x + cosA * forward + perpX * lateral,
                     origin.y + sinA * forward + perpY * lateral
                 )
-                .setRotation(this.getEffectRotation(baseAngle) + angleOffset * (1 - phase.eased * 0.12))
+                .setRotation(this.getEffectRotation(baseAngle) + angleOffset)
                 .setAlpha(phase.alpha * maxAlpha)
-                .setScale(baseScale * (0.72 + phase.eased * 0.38));
+                .setScale(baseScale * (0.82 + phase.eased * 0.18));
         };
 
         const draw = (t) => {
             const origin = getOrigin();
-            const primary = pulse(t, 0.02, 0.68);
-            const echo = pulse(t, 0.16, 0.84);
-            drawArc(primaryArc, primary, side * 6, side * 0.58, 0.92, origin);
-            drawArc(echoArc, echo, side * -7, side * -0.52, 0.76, origin);
-
-            const flash = Math.max(primary.alpha, echo.alpha * 0.9);
-            const flashX = origin.x + cosA * 64;
-            const flashY = origin.y + sinA * 64;
-            coreFx.clear();
-            if (flash > 0.03) {
-                coreFx.fillStyle(0xf7f3ff, 0.22 * flash);
-                coreFx.fillCircle(flashX, flashY, 5 + flash * 6);
-                coreFx.lineStyle(2, 0xb996ff, 0.52 * flash);
-                coreFx.strokeCircle(flashX, flashY, 9 + flash * 8);
-            }
+            const primary = pulse(t, 0.00, 0.78);
+            const offhand = pulse(t, 0.10, 0.88);
+            drawTrail(primaryTrail, primary, side, 0.96, origin);
+            drawTrail(offhandTrail, offhand, -side, 0.82, origin);
         };
 
         entry.tween = this.scene.tweens.add({
             targets: progress,
             t: 1,
-            duration: 265,
+            duration: 280,
             ease: 'Linear',
             onUpdate: () => draw(progress.t),
             onComplete: () => this._destroyAttackObjects(entry),

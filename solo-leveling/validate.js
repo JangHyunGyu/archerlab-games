@@ -427,13 +427,14 @@ for (const [directory, effectKeys] of [
 
 const allowedCombatVfxOrientations = new Set([
     'bodyArc',
+    'bodyThrust',
     'forwardArc',
     'projectile',
     'targetImpact',
     'selfRadial',
 ]);
 const expectedCombatVfxOrientations = {
-    basicDagger: 'bodyArc',
+    basicDagger: 'bodyThrust',
     shadowDagger: 'projectile',
     shadowSlash: 'forwardArc',
     rulersAuthority: 'targetImpact',
@@ -513,6 +514,15 @@ if (!basicDaggerRuntime.includes('slash.setFlipY(side < 0)')) {
 }
 if (basicDaggerRuntime.includes('slash.setRotation(baseAngle + side * 0.55)')) {
     errors.push('[VFX_DIRECTION] legacy sword side-angle rotation is still active');
+}
+if (!basicDaggerRuntime.includes("case 'dualDaggerCrossThrust'")) {
+    errors.push('[VFX_DIRECTION] Shadow Monarch basic attack must use the cross-thrust runtime');
+}
+if (!basicDaggerRuntime.includes('laneSign * -0.18')) {
+    errors.push('[VFX_DIRECTION] Shadow Monarch dagger trails must converge in a narrow forward cross');
+}
+if (basicDaggerRuntime.includes('.setFlipX(true)')) {
+    errors.push('[VFX_DIRECTION] a forward dagger trail must not be flipped back toward the player');
 }
 
 for (const iconKey of new Set(Object.values(WEAPONS).map(weapon => weapon.icon).filter(Boolean))) {
