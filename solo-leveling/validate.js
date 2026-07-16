@@ -477,10 +477,13 @@ const expectedCombatVfxOrientations = {
 };
 const expectedCombatVfxRotationOffsets = {
     lightPierce: Math.PI / 4,
-    lightLance: Math.PI / 4,
+    lightLance: -3 * Math.PI / 4,
     lightCrescent: -Math.PI / 2,
+    tigerPalm: -Math.PI / 4,
+    tigerFang: -Math.PI / 4,
     flameSpark: -Math.PI / 7,
     flameBolt: -Math.PI / 4,
+    flameArc: 3 * Math.PI / 4,
     sanctuaryArc: Math.PI,
 };
 
