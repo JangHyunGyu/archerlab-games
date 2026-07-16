@@ -53,6 +53,16 @@ function fileExists(relPath) {
     return fs.existsSync(path.join(ROOT, relPath));
 }
 
+function readPngDimensions(relPath) {
+    const full = path.join(ROOT, relPath);
+    if (!fs.existsSync(full)) return null;
+    const bytes = fs.readFileSync(full);
+    if (bytes.length < 24 || bytes.readUInt32BE(0) !== 0x89504e47 || bytes.toString('ascii', 12, 16) !== 'IHDR') {
+        return null;
+    }
+    return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+}
+
 function walkAssetPngs(dir, relPrefix = '') {
     if (!fs.existsSync(dir)) return [];
     const out = [];
@@ -358,10 +368,15 @@ for (const effectKey of basicAttackEffectKeys) {
             errors.push(`[BASIC_VFX] "${relPath}" not found`);
         }
     }
+    const dimensions = readPngDimensions(`assets/effects/basic_attacks/${effectKey}.png`);
+    if (dimensions && (dimensions.width !== 512 || dimensions.height !== 512)) {
+        errors.push(`[BASIC_VFX] "${effectKey}.png" must be 512x512, got ${dimensions.width}x${dimensions.height}`);
+    }
 }
 
 const characterSkillEffectKeys = new Set(
     Object.values(WEAPONS)
+        .filter(weapon => !weapon.basicAttackEffectKey)
         .map(weapon => weapon.effectKey)
         .filter(Boolean)
 );
@@ -374,6 +389,49 @@ for (const effectKey of characterSkillEffectKeys) {
         if (!fileExists(relPath)) {
             errors.push(`[SKILL_VFX] "${relPath}" not found`);
         }
+    }
+    const dimensions = readPngDimensions(`assets/effects/character_skills/${effectKey}.png`);
+    if (dimensions && (dimensions.width !== 512 || dimensions.height !== 512)) {
+        errors.push(`[SKILL_VFX] "${effectKey}.png" must be 512x512, got ${dimensions.width}x${dimensions.height}`);
+    }
+}
+
+const characterCombatVfxFrameCount = 6;
+for (const [directory, effectKeys] of [
+    ['basic_attacks', basicAttackEffectKeys],
+    ['character_skills', characterSkillEffectKeys],
+]) {
+    const label = directory === 'basic_attacks' ? 'BASIC_VFX_FRAME' : 'SKILL_VFX_FRAME';
+    for (const effectKey of effectKeys) {
+        const frameSignatures = new Set();
+        for (let frame = 0; frame < characterCombatVfxFrameCount; frame++) {
+            const prefix = `assets/effects/${directory}/frames/${effectKey}_${frame}`;
+            for (const extension of ['png', 'webp']) {
+                if (!fileExists(`${prefix}.${extension}`)) {
+                    errors.push(`[${label}] "${prefix}.${extension}" not found`);
+                }
+            }
+            const dimensions = readPngDimensions(`${prefix}.png`);
+            if (dimensions && (dimensions.width !== 512 || dimensions.height !== 512)) {
+                errors.push(`[${label}] "${effectKey}_${frame}.png" must be 512x512, got ${dimensions.width}x${dimensions.height}`);
+            }
+            if (dimensions) {
+                frameSignatures.add(fs.readFileSync(path.join(ROOT, `${prefix}.png`)).toString('base64'));
+            }
+        }
+        if (frameSignatures.size > 0 && frameSignatures.size < 4) {
+            errors.push(`[${label}] "${effectKey}" must contain at least four distinct animation stages`);
+        }
+    }
+}
+
+for (const iconKey of new Set(Object.values(WEAPONS).map(weapon => weapon.icon).filter(Boolean))) {
+    const relPath = `assets/ui/icons/${iconKey}.png`;
+    const dimensions = readPngDimensions(relPath);
+    if (!dimensions) {
+        errors.push(`[WEAPON_ICON] "${relPath}" not found or invalid`);
+    } else if (dimensions.width !== 128 || dimensions.height !== 128) {
+        errors.push(`[WEAPON_ICON] "${relPath}" must be 128x128, got ${dimensions.width}x${dimensions.height}`);
     }
 }
 
