@@ -111,13 +111,17 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
 
     const coveredKeys = new Set(rows.map(row => row.key.replace(/:height$/, '')));
     assert.deepStrictEqual(coveredKeys, new Set(Object.keys(WEAPONS)), 'coverage contract must include all 25 attacks and skills');
+    for (const [key, config] of Object.entries(WEAPONS)) {
+        assert.strictEqual(config.imageOnlyVfx, true, `${key}: authored VFX must be image-only`);
+        assert.strictEqual(config.combineProceduralVfx, false, `${key}: procedural VFX layers must stay disabled`);
+    }
     assert.strictEqual(WEAPONS.lightPierce.name, '빛가름 검격');
     assert.strictEqual(WEAPONS.lightPierce.attackStyle, 'swordSlash');
     assert.strictEqual(WEAPONS.lightLance.imageOnlyVfx, true);
     assert.strictEqual(WEAPONS.lightLance.combineProceduralVfx, false);
     assert.strictEqual(WEAPONS.lightSanctum.visualStartScaleRatio, 1);
 
-    console.log(`combat VFX hit-range coverage verified: ${coveredKeys.size}/25`);
+    console.log(`combat VFX hit-range and image-only layering verified: ${coveredKeys.size}/25`);
 })().catch(error => {
     console.error(error);
     process.exit(1);

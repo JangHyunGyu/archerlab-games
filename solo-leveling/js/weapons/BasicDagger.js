@@ -810,16 +810,11 @@ export class BasicDagger extends WeaponBase {
             : Math.min(maxDist, this.config.fallbackImpactDistance ?? 118);
         const impactX = originX + cosA * targetDist;
         const impactY = originY + sinA * targetDist;
-        const effectColor = this.getEffectColor(0x66f2b0);
-        const glowColor = this.getEffectGlowColor(0xe8fff5);
         const effectTexture = this._getConfiguredEffectTexture();
         const impactRadius = this.config.impactRadius ?? 56;
         const fittedScale = effectTexture
             ? this.getEffectScaleForVisibleSize(effectTexture, impactRadius * 2)
             : null;
-        const burstFx = this.scene.add.graphics()
-            .setDepth(17)
-            .setBlendMode(Phaser.BlendModes.ADD);
         const slamSprite = effectTexture
             ? this.createEffectSprite(impactX, impactY, effectTexture, { frameMs: 52 })
                 .setOrigin(0.5, 0.68)
@@ -830,9 +825,7 @@ export class BasicDagger extends WeaponBase {
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
-        const entryObjects = [burstFx];
-        if (slamSprite) entryObjects.push(slamSprite);
-        const entry = this._trackAttackObjects(entryObjects);
+        const entry = this._trackAttackObjects([slamSprite].filter(Boolean));
 
         const draw = (t) => {
             const k = Phaser.Math.Clamp(t, 0, 1);
@@ -857,29 +850,6 @@ export class BasicDagger extends WeaponBase {
                     .setRotation(side * (0.025 - burst * 0.02));
             }
 
-            burstFx.clear();
-            const burstAlpha = charge * remaining;
-            if (burstAlpha > 0.02) {
-                const coreRadius = 4 + burst * 11;
-                burstFx.fillStyle(glowColor, (0.22 + burst * 0.24) * burstAlpha);
-                burstFx.fillCircle(impactX, impactY, coreRadius);
-                burstFx.lineStyle(4, effectColor, 0.5 * burstAlpha);
-                burstFx.strokeCircle(impactX, impactY, 11 + burst * 30);
-                burstFx.lineStyle(2, glowColor, 0.76 * burstAlpha);
-                burstFx.strokeCircle(impactX, impactY, 5 + burst * 19);
-                for (let i = 0; i < 6; i++) {
-                    const rayAngle = (Math.PI * 2 * i) / 6 + side * 0.12;
-                    const inner = 8 + burst * 8;
-                    const outer = 14 + burst * 25;
-                    burstFx.lineStyle(2, glowColor, 0.52 * burstAlpha);
-                    burstFx.lineBetween(
-                        impactX + Math.cos(rayAngle) * inner,
-                        impactY + Math.sin(rayAngle) * inner,
-                        impactX + Math.cos(rayAngle) * outer,
-                        impactY + Math.sin(rayAngle) * outer
-                    );
-                }
-            }
         };
 
         entry.tween = this.scene.tweens.add({
