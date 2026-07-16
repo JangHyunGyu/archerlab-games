@@ -131,7 +131,7 @@ const PLAYER_MOTION_NAMES = [
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
 export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
 export const CHARACTER_MOTION_ASSET_VERSION = CHARACTER_VISUAL_ASSET_VERSION;
-export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20260716-higgsfield-character-combat-vfx-v5';
+export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20260716-character-vfx-direction-v6';
 export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({

@@ -91,7 +91,9 @@ export class ShadowDagger extends WeaponBase {
         })
             .setDepth(8)
             .setScale(useCharacterEffect ? (this.config.projectileScale || this.config.effectScale || 0.5) : (useEffectAsset ? 0.22 : 0.85))
-            .setRotation((useCharacterEffect || useEffectAsset) ? angle : angle + Math.PI / 2)
+            .setRotation(useCharacterEffect
+                ? this.getEffectRotation(angle)
+                : (useEffectAsset ? angle : angle + Math.PI / 2))
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
 
         let trailInterval = null;
@@ -122,7 +124,7 @@ export class ShadowDagger extends WeaponBase {
                     .setDepth(8)
                     .setAlpha(0.62)
                     .setScale((this.config.projectileScale || this.config.effectScale || 0.5) * 0.72)
-                    .setRotation(angle)
+                    .setRotation(useCharacterEffect ? this.getEffectRotation(angle) : angle)
                     .setBlendMode(Phaser.BlendModes.ADD);
                 this.scene.tweens.add({
                     targets: burst,

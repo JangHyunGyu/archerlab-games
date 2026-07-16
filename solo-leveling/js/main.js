@@ -93,6 +93,10 @@ const config = {
 const game = new Phaser.Game(config);
 requestAnimationFrame(() => syncCanvasDisplaySize(viewport));
 
+// Export the existing instance so browser smoke tests can inspect live scene
+// transforms without creating a second Phaser game.
+export { game };
+
 // Handle orientation/resize: keep internal game size and CSS canvas size in sync.
 let resizeRefreshTimer = null;
 function handleResize() {
