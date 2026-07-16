@@ -16,6 +16,10 @@
     maxParticlesPerMerge: IS_TOUCH_DEVICE ? 9 : 14,
     maxIntensity: IS_TOUCH_DEVICE ? 1.42 : 1.75,
   };
+  const MOVE_TIMING = {
+    slide: PREFERS_REDUCED_MOTION ? 0.16 : 0.19,
+    mergeBlend: PREFERS_REDUCED_MOTION ? 0.12 : 0.22,
+  };
   const SESSION_REQUEST_TIMEOUT_MS = 8000;
   const RANK_REQUEST_TIMEOUT_MS = 10000;
   const MOVE_UPLOAD_TIMEOUT_MS = 10000;
@@ -542,6 +546,9 @@
 
   function destroyPixiObject(target) {
     if (!target || target.destroyed) return;
+    const beforeDestroy = target.__beforeDestroy;
+    target.__beforeDestroy = null;
+    if (typeof beforeDestroy === "function") beforeDestroy();
     killPixiTweens(target);
     target.destroy({ children: true });
   }
@@ -592,6 +599,217 @@
     sprite.scale.set(scale);
     addFxChild(sprite, behindTiles);
     return sprite;
+  }
+
+  function drawJellyBridgeShape(graphics, halfDistance, endRadius, neckRadius, color, alpha) {
+    graphics.beginFill(color, alpha);
+    if (halfDistance < endRadius * 0.55) {
+      graphics.drawEllipse(0, 0, endRadius, neckRadius);
+    } else {
+      graphics.moveTo(-halfDistance, -endRadius);
+      graphics.bezierCurveTo(-halfDistance * 0.58, -endRadius, -halfDistance * 0.4, -neckRadius, 0, -neckRadius);
+      graphics.bezierCurveTo(halfDistance * 0.4, -neckRadius, halfDistance * 0.58, -endRadius, halfDistance, -endRadius);
+      graphics.lineTo(halfDistance, endRadius);
+      graphics.bezierCurveTo(halfDistance * 0.58, endRadius, halfDistance * 0.4, neckRadius, 0, neckRadius);
+      graphics.bezierCurveTo(-halfDistance * 0.4, neckRadius, -halfDistance * 0.58, endRadius, -halfDistance, endRadius);
+      graphics.closePath();
+    }
+    graphics.endFill();
+  }
+
+  function createJellyBridge(sourceVisuals, nextVisual, horizontal) {
+    if (PREFERS_REDUCED_MOTION || sourceVisuals.length !== 2 || !nextVisual || !app?.ticker) return null;
+
+    const bridge = new PIXI.Container();
+    const body = new PIXI.Graphics();
+    const colorCore = new PIXI.Graphics();
+    const highlight = new PIXI.Graphics();
+    bridge.addChild(body, colorCore, highlight);
+    bridge.alpha = 0;
+    bridge.visible = false;
+    bridge.blendMode = "normal";
+    bridge.__jellyBridge = true;
+    addFxChild(bridge, true);
+
+    const sourceColor = RANK_COLORS[sourceVisuals[0].tile.rank % RANK_COLORS.length];
+    const nextColor = RANK_COLORS[nextVisual.tile.rank % RANK_COLORS.length];
+    const maxDistance = BOARD.cell * 1.65;
+    const fullDistance = BOARD.cell * 0.18;
+    let lastAngle = horizontal ? 0 : Math.PI * 0.5;
+    let stopped = false;
+
+    const stopTicker = () => {
+      if (stopped) return;
+      stopped = true;
+      app?.ticker?.remove(update);
+    };
+
+    const destroy = () => {
+      stopTicker();
+      if (!bridge.destroyed) {
+        bridge.__beforeDestroy = null;
+        destroyPixiObject(bridge);
+      }
+    };
+
+    function update() {
+      const [first, second] = sourceVisuals;
+      if (
+        bridge.destroyed
+        || first.container.destroyed
+        || second.container.destroyed
+        || nextVisual.container.destroyed
+      ) {
+        destroy();
+        return;
+      }
+
+      const dx = second.container.x - first.container.x;
+      const dy = second.container.y - first.container.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 1) lastAngle = Math.atan2(dy, dx);
+
+      const proximity = Math.max(0, Math.min(1, (maxDistance - distance) / (maxDistance - fullDistance)));
+      if (proximity <= 0) {
+        bridge.visible = false;
+        return;
+      }
+
+      const sourceAlpha = (first.container.alpha + second.container.alpha) * 0.5;
+      const nextAlpha = nextVisual.container.alpha;
+      const halfDistance = Math.max(BOARD.cell * 0.025, distance * 0.5);
+      const endRadius = BOARD.cell * (0.17 + proximity * 0.1);
+      const neckRadius = BOARD.cell * (0.028 + Math.pow(proximity, 0.72) * 0.16);
+
+      bridge.visible = true;
+      bridge.x = (first.container.x + second.container.x) * 0.5;
+      bridge.y = (first.container.y + second.container.y) * 0.5 + BOARD.cell * 0.055;
+      bridge.rotation = lastAngle;
+      bridge.alpha = proximity * Math.min(1, 0.18 + sourceAlpha * 0.72 + nextAlpha * 0.28);
+
+      body.clear();
+      drawJellyBridgeShape(body, halfDistance, endRadius, neckRadius, sourceColor, 0.76);
+
+      colorCore.clear();
+      drawJellyBridgeShape(
+        colorCore,
+        Math.max(BOARD.cell * 0.02, halfDistance * 0.93),
+        endRadius * 0.74,
+        neckRadius * 0.68,
+        nextColor,
+        0.16 + nextAlpha * 0.68
+      );
+
+      highlight.clear();
+      highlight.lineStyle(Math.max(2, BOARD.cell * 0.018), 0xffffff, 0.42 + proximity * 0.2);
+      const highlightHalf = Math.max(endRadius * 0.28, halfDistance * 0.66);
+      highlight.moveTo(-highlightHalf, -neckRadius * 0.42);
+      highlight.bezierCurveTo(
+        -highlightHalf * 0.45,
+        -endRadius * 0.58,
+        highlightHalf * 0.45,
+        -endRadius * 0.46,
+        highlightHalf,
+        -neckRadius * 0.34
+      );
+    }
+
+    bridge.__beforeDestroy = stopTicker;
+    app.ticker.add(update);
+    update();
+    return { bridge, destroy };
+  }
+
+  function drawMergeHeart(graphics, size, color, alpha = 1) {
+    graphics.beginFill(color, alpha);
+    graphics.moveTo(0, size * 0.52);
+    graphics.bezierCurveTo(-size * 0.14, size * 0.35, -size * 0.52, size * 0.12, -size * 0.52, -size * 0.18);
+    graphics.bezierCurveTo(-size * 0.52, -size * 0.5, -size * 0.14, -size * 0.62, 0, -size * 0.31);
+    graphics.bezierCurveTo(size * 0.14, -size * 0.62, size * 0.52, -size * 0.5, size * 0.52, -size * 0.18);
+    graphics.bezierCurveTo(size * 0.52, size * 0.12, size * 0.14, size * 0.35, 0, size * 0.52);
+    graphics.closePath();
+    graphics.endFill();
+  }
+
+  function createJellyContactMoment(x, y, color, horizontal) {
+    if (PREFERS_REDUCED_MOTION) return;
+
+    const effect = new PIXI.Container();
+    effect.x = x;
+    effect.y = y + BOARD.cell * 0.055;
+    effect.alpha = 0;
+    effect.scale.set(0.34);
+    effect.__jellyContact = true;
+
+    const glow = new PIXI.Graphics();
+    glow.beginFill(color, 0.18);
+    glow.drawCircle(0, 0, BOARD.cell * 0.36);
+    glow.endFill();
+    glow.beginFill(0xfff1a8, 0.42);
+    glow.drawCircle(0, 0, BOARD.cell * 0.21);
+    glow.endFill();
+    glow.beginFill(0xffffff, 0.92);
+    glow.drawCircle(0, 0, BOARD.cell * 0.1);
+    glow.endFill();
+    glow.blendMode = "add";
+
+    const heart = new PIXI.Graphics();
+    drawMergeHeart(heart, BOARD.cell * 0.2, 0xffffff, 0.96);
+    heart.rotation = horizontal ? -0.03 : 0.03;
+    heart.scale.set(0.54);
+
+    const heartCore = new PIXI.Graphics();
+    drawMergeHeart(heartCore, BOARD.cell * 0.13, 0xfff0a6, 0.88);
+    heartCore.y = BOARD.cell * 0.005;
+    heartCore.scale.set(0.48);
+
+    effect.addChild(glow, heart, heartCore);
+
+    const dropletCount = IS_TOUCH_DEVICE ? 3 : 5;
+    for (let index = 0; index < dropletCount; index++) {
+      const droplet = new PIXI.Graphics();
+      const size = BOARD.cell * (0.026 + (index % 2) * 0.012);
+      droplet.beginFill(index % 2 === 0 ? color : 0xfff1a8, 0.9);
+      droplet.drawEllipse(0, 0, size * 0.68, size);
+      droplet.endFill();
+      droplet.beginFill(0xffffff, 0.66);
+      droplet.drawCircle(-size * 0.16, -size * 0.25, size * 0.14);
+      droplet.endFill();
+      droplet.alpha = 0;
+      droplet.scale.set(0.3);
+      effect.addChild(droplet);
+
+      const side = index % 2 === 0 ? -1 : 1;
+      const spread = (index - (dropletCount - 1) * 0.5) * 0.15;
+      const angle = horizontal
+        ? (side < 0 ? -Math.PI * 0.5 : Math.PI * 0.5) + spread
+        : (side < 0 ? Math.PI : 0) + spread;
+      const travel = BOARD.cell * (0.35 + (index % 3) * 0.1);
+      gsap.to(droplet, { alpha: 0.92, duration: 0.07, delay: 0.035 + index * 0.012, ease: "sine.out" });
+      gsap.to(droplet.scale, { x: 1, y: 1.24, duration: 0.14, delay: 0.035 + index * 0.012, ease: "back.out(2)" });
+      gsap.to(droplet, {
+        x: Math.cos(angle) * travel,
+        y: Math.sin(angle) * travel,
+        alpha: 0,
+        rotation: angle + Math.PI * 0.5,
+        duration: 0.38,
+        delay: 0.065 + index * 0.012,
+        ease: "power2.out",
+      });
+    }
+
+    addFxChild(effect);
+    gsap.to(effect, { alpha: 1, duration: 0.065, ease: "power3.out" });
+    gsap.to(effect.scale, { x: 1, y: 1, duration: 0.22, ease: "back.out(2.6)" });
+    gsap.to(heart.scale, { x: 1.08, y: 1.08, duration: 0.18, ease: "back.out(3)" });
+    gsap.to(heartCore.scale, { x: 1, y: 1, duration: 0.2, delay: 0.025, ease: "back.out(2.4)" });
+    gsap.to(effect, {
+      alpha: 0,
+      duration: 0.26,
+      delay: 0.2,
+      ease: "sine.in",
+      onComplete: () => destroyPixiObject(effect),
+    });
   }
 
   function move(dir) {
@@ -690,8 +908,51 @@
   }
 
   function animateMove(result) {
+    const moveById = new Map(result.moves.map((moveItem) => [moveItem.id, moveItem]));
+    const mergeAxisById = new Map();
+    const mergeContactById = new Map();
+    const preparedMerges = new Map();
+
+    result.merges.forEach((merge) => {
+      const sourceMoves = merge.from.map((id) => moveById.get(id)).filter(Boolean);
+      const horizontal = sourceMoves.some((moveItem) => moveItem.from.col !== moveItem.to.col);
+      merge.from.forEach((id) => mergeAxisById.set(id, horizontal));
+      const contactPoint = cellCenter(merge.tile.row, merge.tile.col);
+      const contactOffset = PREFERS_REDUCED_MOTION ? 0 : BOARD.cell * 0.34;
+      const orderedSources = [...sourceMoves].sort((first, second) => (
+        horizontal
+          ? first.from.col - second.from.col
+          : first.from.row - second.from.row
+      ));
+      orderedSources.forEach((moveItem, index) => {
+        const side = index === 0 ? -1 : 1;
+        mergeContactById.set(moveItem.id, {
+          x: contactPoint.x + (horizontal ? side * contactOffset : 0),
+          y: contactPoint.y + (horizontal ? 0 : side * contactOffset),
+        });
+      });
+
+      const visual = createTileVisual(merge.tile, false, true);
+      if (!visual) return;
+      visual.mergeMorphPrepared = true;
+      visual.container.alpha = 0;
+      visual.container.rotation = horizontal ? -0.04 : 0.04;
+      visual.container.scale.set(horizontal ? 0.16 : 0.88, horizontal ? 0.88 : 0.16);
+      visual.sprite.alpha = 0.18;
+      visual.badge.alpha = 0;
+      visual.shine.alpha = 0;
+      visual.aura.alpha = 0.7;
+      const sourceVisuals = merge.from.map((id) => visuals.get(id)).filter(Boolean);
+      visual.mergeBridge = createJellyBridge(sourceVisuals, visual, horizontal);
+      preparedMerges.set(merge.tile.id, { visual, horizontal, contactPoint });
+    });
+
+    const slideDuration = MOVE_TIMING.slide;
+    const blendDuration = MOVE_TIMING.mergeBlend;
+    const mergeStart = slideDuration + (PREFERS_REDUCED_MOTION ? 0 : 0.04);
+    const formationStart = mergeStart + (PREFERS_REDUCED_MOTION ? 0 : blendDuration * 0.1);
     const tl = gsap.timeline({
-      defaults: { duration: 0.18, ease: "power3.out" },
+      defaults: { duration: slideDuration, ease: "power3.out" },
       onComplete: () => {
         finishMove(result);
       },
@@ -706,10 +967,77 @@
       visual.container.rotation = 0;
       visual.container.scale.set(1);
       const pos = cellCenter(moveItem.to.row, moveItem.to.col);
-      tl.to(visual.container, { x: pos.x, y: pos.y }, 0);
+      const contactPos = mergeContactById.get(moveItem.id) || pos;
+      tl.to(visual.container, { x: contactPos.x, y: contactPos.y, duration: slideDuration }, 0);
       if (moveItem.remove) {
-        tl.to(visual.container.scale, { x: 0.82, y: 1.12, duration: 0.12, ease: "sine.out" }, 0.08);
+        const horizontal = mergeAxisById.get(moveItem.id) ?? true;
+        if (PREFERS_REDUCED_MOTION) {
+          tl.to(visual.container, { alpha: 0.18, duration: blendDuration, ease: "sine.inOut" }, mergeStart);
+          tl.to(visual.container.scale, { x: 0.88, y: 0.88, duration: blendDuration, ease: "sine.inOut" }, mergeStart);
+        } else {
+          tl.to(visual.container.scale, {
+            x: horizontal ? 0.86 : 1.08,
+            y: horizontal ? 1.08 : 0.86,
+            duration: 0.1,
+            ease: "sine.out",
+          }, Math.max(0.06, slideDuration - 0.08));
+          tl.to(visual.container.scale, {
+            x: horizontal ? 0.7 : 1.14,
+            y: horizontal ? 1.14 : 0.7,
+            duration: 0.1,
+            ease: "sine.inOut",
+          }, mergeStart);
+          tl.to(visual.container, {
+            x: pos.x,
+            y: pos.y,
+            duration: blendDuration * 0.72,
+            ease: "power2.in",
+          }, mergeStart);
+          tl.to(visual.container.scale, {
+            x: horizontal ? 0.08 : 0.72,
+            y: horizontal ? 0.72 : 0.08,
+            duration: blendDuration * 0.7,
+            ease: "power2.in",
+          }, mergeStart + blendDuration * 0.24);
+          tl.to(visual.container, {
+            alpha: 0,
+            rotation: horizontal ? 0.045 : -0.045,
+            duration: blendDuration * 0.76,
+            ease: "sine.in",
+          }, mergeStart + blendDuration * 0.2);
+          if (visual.badge) {
+            tl.to(visual.badge, { alpha: 0, duration: 0.1, ease: "sine.in" }, mergeStart);
+          }
+        }
       }
+    });
+
+    preparedMerges.forEach(({ visual, horizontal, contactPoint }) => {
+      const formedX = PREFERS_REDUCED_MOTION ? 0.94 : horizontal ? 0.62 : 1.1;
+      const formedY = PREFERS_REDUCED_MOTION ? 0.94 : horizontal ? 1.1 : 0.62;
+      if (!PREFERS_REDUCED_MOTION) {
+        tl.call(
+          () => createJellyContactMoment(contactPoint.x, contactPoint.y, RANK_COLORS[visual.tile.rank % RANK_COLORS.length], horizontal),
+          null,
+          Math.max(0, slideDuration - 0.01)
+        );
+      }
+      tl.to(visual.container, {
+        alpha: PREFERS_REDUCED_MOTION ? 1 : 0.94,
+        rotation: 0,
+        duration: blendDuration,
+        ease: "sine.inOut",
+      }, formationStart);
+      tl.to(visual.container.scale, {
+        x: formedX,
+        y: formedY,
+        duration: blendDuration,
+        ease: PREFERS_REDUCED_MOTION ? "sine.inOut" : "back.out(1.35)",
+      }, formationStart);
+      tl.to(visual.sprite, { alpha: 1, duration: blendDuration * 0.82, ease: "sine.inOut" }, formationStart);
+      tl.to(visual.shine, { alpha: 0.45, duration: blendDuration * 0.6, ease: "sine.out" }, formationStart + blendDuration * 0.32);
+      tl.to(visual.badge, { alpha: 1, duration: blendDuration * 0.48, ease: "sine.out" }, formationStart + blendDuration * 0.52);
+      tl.to(visual.aura, { alpha: 0.22, duration: blendDuration, ease: "sine.out" }, formationStart);
     });
   }
 
@@ -720,6 +1048,10 @@
     const impactPositions = [];
 
     orderedMerges.forEach((merge, mergeIndex) => {
+      const preparedVisual = visuals.get(merge.tile.id);
+      preparedVisual?.mergeBridge?.destroy();
+      if (preparedVisual) preparedVisual.mergeBridge = null;
+
       merge.from.forEach((id) => {
         const visual = visuals.get(id);
         if (!visual) return;
@@ -727,7 +1059,8 @@
         visuals.delete(id);
       });
 
-      createTileVisual(merge.tile, false, true);
+      const continuedFromMorph = Boolean(preparedVisual?.mergeMorphPrepared);
+      if (!preparedVisual) createTileVisual(merge.tile, false, true);
       const pos = cellCenter(merge.tile.row, merge.tile.col);
       const delay = Math.min(0.09, mergeIndex * 0.03);
       const isHeroMerge = mergeIndex === orderedMerges.length - 1;
@@ -736,6 +1069,7 @@
         delay,
         mergeCount,
         isHeroMerge,
+        continuedFromMorph,
       });
       floatText(
         `+${formatScore(merge.value)}`,
@@ -870,7 +1204,17 @@
 
     container.addChild(aura, sprite, shine, badge);
     tileLayer.addChild(container);
-    visuals.set(tile.id, { tile, container, sprite, shine, badge, aura });
+    const visual = {
+      tile,
+      container,
+      sprite,
+      shine,
+      badge,
+      aura,
+      mergeMorphPrepared: false,
+      mergeBridge: null,
+    };
+    visuals.set(tile.id, visual);
 
     if (animate) {
       container.alpha = 0;
@@ -885,6 +1229,7 @@
       });
       gsap.fromTo(aura, { alpha: merged ? 0.9 : 0.45 }, { alpha: 0, duration: 0.56, ease: "sine.out" });
     }
+    return visual;
   }
 
   function createValueBadge(rank) {
@@ -1211,13 +1556,14 @@
     delay = 0,
     mergeCount = 1,
     isHeroMerge = true,
+    continuedFromMorph = false,
   } = {}) {
     const color = RANK_COLORS[rank % RANK_COLORS.length];
     const nextColor = RANK_COLORS[(rank + 2) % RANK_COLORS.length];
     const intensity = getMergeIntensity(rank, mergeCount);
     const visual = visuals.get(tileId);
 
-    pulseMergeTile(visual, delay, intensity);
+    pulseMergeTile(visual, delay, intensity, continuedFromMorph);
     createShockwaves(x, y, color, nextColor, intensity, delay);
     if (PREFERS_REDUCED_MOTION) return;
 
@@ -1512,12 +1858,13 @@
     }
   }
 
-  function pulseMergeTile(visual, delay, intensity) {
+  function pulseMergeTile(visual, delay, intensity, continuedFromMorph = false) {
     if (!visual) return;
+    visual.mergeMorphPrepared = false;
     if (PREFERS_REDUCED_MOTION) {
-      visual.container.alpha = 0.8;
+      if (!continuedFromMorph) visual.container.alpha = 0.8;
       visual.container.rotation = 0;
-      visual.container.scale.set(0.94);
+      if (!continuedFromMorph) visual.container.scale.set(0.94);
       gsap.to(visual.container, { alpha: 1, duration: 0.16, delay, ease: "sine.out" });
       gsap.to(visual.container.scale, { x: 1, y: 1, duration: 0.2, delay, ease: "sine.out" });
       gsap.fromTo(visual.aura, { alpha: 0.48 }, {
@@ -1530,9 +1877,11 @@
     }
     const squash = Math.min(1.64, 1.48 + (intensity - 1) * 0.22);
     const overshoot = Math.min(1.32, 1.24 + (intensity - 1) * 0.1);
-    visual.container.alpha = 0;
-    visual.container.rotation = -0.055;
-    visual.container.scale.set(0.34, squash);
+    if (!continuedFromMorph) {
+      visual.container.alpha = 0;
+      visual.container.rotation = -0.055;
+      visual.container.scale.set(0.34, squash);
+    }
 
     gsap.to(visual.container, { alpha: 1, rotation: 0, duration: 0.12, delay, ease: "power4.out" });
     gsap.timeline({ delay })
