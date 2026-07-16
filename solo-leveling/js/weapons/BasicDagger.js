@@ -632,8 +632,6 @@ export class BasicDagger extends WeaponBase {
             rangeBonus: this.config.targetRangeBonus ?? 65,
             duration: BASIC_ATTACK_MOTION_DURATION,
         });
-        const cosA = Math.cos(baseAngle);
-        const sinA = Math.sin(baseAngle);
         const originX = this.player.x;
         const originY = this.player.y - 18;
         const effectTexture = this._getConfiguredEffectTexture();
@@ -643,21 +641,17 @@ export class BasicDagger extends WeaponBase {
         const mirroredOffset = flipY ? -authoredOffset : authoredOffset;
         const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
         const effectFit = effectTexture
-            ? this.getEffectForwardFit(effectTexture, {
-                innerReach: 20,
-                outerReach: desiredOuterReach - 8,
+            ? this.getEffectCenteredFit(effectTexture, {
+                outerReach: desiredOuterReach,
                 rotationOffset: mirroredOffset,
                 flipY,
             })
             : null;
         const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.44);
-        const centerForward = effectFit?.centerForward ?? 62;
-        const centerX = originX + cosA * centerForward;
-        const centerY = originY + sinA * centerForward;
 
         const peakAlpha = this.config.effectPeakAlpha ?? 0.82;
         const slash = effectTexture
-            ? this.createEffectSprite(centerX, centerY, effectTexture, {
+            ? this.createEffectSprite(originX, originY, effectTexture, {
                 frameMs: this.config.effectFrameMs ?? 42,
                 loopStart: this.config.effectStartFrame ?? 0,
             })
@@ -676,7 +670,9 @@ export class BasicDagger extends WeaponBase {
         const draw = (t) => {
             const eased = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(t, 0, 1));
             if (slash) {
-                slash.setPosition(centerX + cosA * 8 * eased, centerY + sinA * 8 * eased);
+                // This authored arc is a body-centered horizontal sweep, not a
+                // projectile. It must stay pinned to the character while it opens.
+                slash.setPosition(originX, originY);
                 slash.setRotation(this.getMirroredEffectRotation(baseAngle, flipY));
                 slash.setFlipY(flipY);
                 slash.setAlpha((1 - eased) * peakAlpha);
@@ -694,14 +690,12 @@ export class BasicDagger extends WeaponBase {
         });
 
         this._delay(118, () => {
-            const hitX = originX + cosA * 96;
-            const hitY = originY + sinA * 96;
             this._damageEnemiesInCone(
                 baseAngle,
                 hitRange,
                 this.config.hitAngle ?? 0.92,
-                hitX,
-                hitY
+                originX,
+                originY
             );
         });
 
@@ -726,17 +720,15 @@ export class BasicDagger extends WeaponBase {
         const swipeRotationOffset = side * 0.08 + (this.config.effectRotationOffset ?? 0);
         const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
         const effectFit = effectTexture
-            ? this.getEffectForwardFit(effectTexture, {
-                innerReach: 18,
-                outerReach: desiredOuterReach - 12,
+            ? this.getEffectCenteredFit(effectTexture, {
+                outerReach: desiredOuterReach,
                 rotationOffset: swipeRotationOffset,
             })
             : null;
         const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.42);
-        const centerForward = effectFit?.centerForward ?? 74;
         const fx = effectTexture ? null : this.scene.add.graphics().setDepth(15);
         const swipeSprite = effectTexture
-            ? this.createEffectSprite(originX + cosA * centerForward, originY + sinA * centerForward, effectTexture, { frameMs: 40 })
+            ? this.createEffectSprite(originX, originY, effectTexture, { frameMs: 40 })
                 .setDepth(16)
                 .setAlpha(0)
                 .setScale(targetScale * 0.76)
@@ -785,10 +777,9 @@ export class BasicDagger extends WeaponBase {
             }
 
             if (swipeSprite) {
-                swipeSprite.setPosition(
-                    originX + cosA * (centerForward + eased * 12),
-                    originY + sinA * (centerForward + eased * 12)
-                );
+                // Keep the claw fan centered on the brawler so the image reads
+                // as a lateral body swing instead of a narrow forward thrust.
+                swipeSprite.setPosition(originX, originY);
                 swipeSprite.setRotation(this.getEffectRotation(baseAngle) + side * 0.08);
                 swipeSprite.setAlpha(alpha * 0.86);
                 swipeSprite.setScale(targetScale * (0.76 + eased * 0.24));
@@ -805,14 +796,12 @@ export class BasicDagger extends WeaponBase {
         });
 
         this._delay(112, () => {
-            const hitX = originX + cosA * 110;
-            const hitY = originY + sinA * 110;
             this._damageEnemiesInCone(
                 baseAngle,
                 hitRange,
                 this.config.hitAngle ?? 0.78,
-                hitX,
-                hitY
+                originX,
+                originY
             );
         });
 

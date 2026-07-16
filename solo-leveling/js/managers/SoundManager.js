@@ -565,26 +565,8 @@ export class SoundManager {
             }, 600);
             this._introIntervals.push(arpInterval);
 
-            // 5. Subtle percussion
-            const percNoise = new Tone.NoiseSynth({
-                noise: { type: 'white' },
-                envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.03 },
-            });
-            const percFilter = new Tone.Filter({ frequency: 700, type: 'bandpass', Q: 3 });
-            percNoise.connect(percFilter);
-            percFilter.connect(introGain);
-            this._introNodes.push(percNoise, percFilter);
-
-            const percInterval = setInterval(() => {
-                if (!this._initialized || introToken !== this._introToken || this._pageHidden) return;
-                try {
-                    percFilter.frequency.value = 600 + Math.random() * 400;
-                    percNoise.triggerAttackRelease('64n', Tone.now() + this._toneLeadTime, 0.08);
-                } catch (e) { /* silent */ }
-            }, 2400);
-            this._introIntervals.push(percInterval);
-
-            // 6. Tension riser
+            // 5. Tension riser. Keep the soundtrack tonal: short white-noise
+            // bursts read as recurring static on phone and laptop speakers.
             const riserInterval = setInterval(() => {
                 if (!this._initialized || introToken !== this._introToken || this._pageHidden) return;
                 try {
@@ -720,7 +702,7 @@ export class SoundManager {
             subOsc.start(bgmStart);
             this._bgmNodes.push(subOsc, subVol, subLfo);
 
-            // === Phase 2: Kick + Hi-hat (500ms) ===
+            // === Phase 2: Kick (500ms) ===
             this._bgmTimeouts.push(setTimeout(() => {
                 if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain) return;
                 try {
@@ -745,28 +727,6 @@ export class SoundManager {
                     }, beatMs / 2);
                     this._bgmIntervals.push(kickInterval);
 
-                    const hatNoise = new Tone.NoiseSynth({
-                        noise: { type: 'white' },
-                        envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
-                    });
-                    const hatFilter = new Tone.Filter({ frequency: 8000, type: 'highpass' });
-                    const hatVol = new Tone.Volume(-34);
-                    hatNoise.connect(hatFilter);
-                    hatFilter.connect(hatVol);
-                    hatVol.connect(bgmGain);
-                    this._bgmNodes.push(hatNoise, hatFilter, hatVol);
-
-                    let hatIdx = 0;
-                    const hatPattern = [0.12, 0.04, 0.08, 0.04];
-                    const hatInterval = setInterval(() => {
-                        if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain || this._pageHidden) return;
-                        try {
-                            const vel = hatPattern[hatIdx % hatPattern.length];
-                            hatNoise.triggerAttackRelease('64n', Tone.now() + this._toneLeadTime, vel);
-                            hatIdx++;
-                        } catch (e) { /* silent */ }
-                    }, beatMs / 2);
-                    this._bgmIntervals.push(hatInterval);
                 } catch (e) { /* silent */ }
             }, 500));
 

@@ -137,12 +137,10 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     const basicIdentity = key => `basic_attack_${WEAPONS[key].basicAttackEffectKey}`;
     const skillIdentity = key => `char_skill_${WEAPONS[key].effectKey}`;
 
-    // Character-centered directional basics fit their visible outer edge to 90% of the hit range.
-    for (const [key, centerForward] of [
-        ['basicDagger', 86],
-        ['lightPierce', 70],
-        ['tigerPalm', 82],
-    ]) {
+    // The dagger remains a forward-fitted thrust.
+    {
+        const key = 'basicDagger';
+        const centerForward = 86;
         const config = WEAPONS[key];
         const hitRange = config.attackRange + (config.hitRangeBonus || 0);
         const projection = projectedBounds(
@@ -151,6 +149,20 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         );
         const scale = (hitRange * config.visualRangeRatio - centerForward) / projection.maxX;
         const coverage = (centerForward + projection.maxX * scale) / hitRange;
+        assertCoverage(rows, key, coverage);
+    }
+
+    // Sword and claw basics are body-centered horizontal sweeps. Their sprite
+    // pivot stays on the character and scaling alone places the outward edge.
+    for (const key of ['lightPierce', 'tigerPalm']) {
+        const config = WEAPONS[key];
+        const hitRange = config.attackRange + (config.hitRangeBonus || 0);
+        const projection = projectedBounds(
+            getCombatVfxVisibleBounds(basicIdentity(key)),
+            config.effectRotationOffset || 0
+        );
+        const scale = hitRange * config.visualRangeRatio / projection.maxX;
+        const coverage = projection.maxX * scale / hitRange;
         assertCoverage(rows, key, coverage);
     }
 
@@ -242,6 +254,22 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     assert.strictEqual(WEAPONS.tigerFang.effectRotationOffset, -Math.PI / 4);
     assert.strictEqual(WEAPONS.flameArc.effectRotationOffset, 3 * Math.PI / 4);
     assert.strictEqual(WEAPONS.lightSanctum.visualStartScaleRatio, 1);
+
+    const basicRuntime = fs.readFileSync(path.join(root, 'js', 'weapons', 'BasicDagger.js'), 'utf8');
+    const centeredMethodBounds = [
+        ['_swordSlash', '_clawSwipe'],
+        ['_clawSwipe', '_sanctuaryBurst'],
+    ];
+    for (const [method, nextMethod] of centeredMethodBounds) {
+        const start = basicRuntime.indexOf(`    ${method}() {`);
+        const end = basicRuntime.indexOf(`    ${nextMethod}() {`, start);
+        const body = basicRuntime.slice(start, end);
+        assert.ok(start >= 0 && end > start, `${method}: runtime body not found`);
+        assert.match(body, /getEffectCenteredFit\(effectTexture,/);
+        assert.match(body, /createEffectSprite\(originX, originY, effectTexture,/);
+        assert.match(body, /setPosition\(originX, originY\)/);
+        assert.doesNotMatch(body, /centerForward/);
+    }
 
     // Audit all 25 authored sequences and all six frames. Every image must stay
     // centered on the 512px authoring canvas so runtime rotation does not orbit
