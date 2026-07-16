@@ -542,8 +542,13 @@ if (basicDaggerRuntime.includes('.setFlipX(true)')) {
 if (WEAPONS.lightPierce?.name !== '빛가름 검격' || WEAPONS.lightPierce?.attackStyle !== 'swordSlash') {
     errors.push('[VFX_NAMING] light swordswoman basic attack must be named as a slash');
 }
-if (!WEAPONS.lightLance?.imageOnlyVfx || WEAPONS.lightLance?.combineProceduralVfx !== false) {
-    errors.push('[VFX_LAYERING] lightLance must render only its authored image sequence');
+for (const [weaponKey, weapon] of Object.entries(WEAPONS)) {
+    if (!weapon.imageOnlyVfx || weapon.combineProceduralVfx !== false) {
+        errors.push(`[VFX_LAYERING] ${weaponKey} must render only its authored image sequence`);
+    }
+}
+if (basicDaggerRuntime.includes('const burstFx = this.scene.add.graphics()')) {
+    errors.push('[VFX_LAYERING] sanctuary basic attack still creates a procedural burst layer');
 }
 if (!basicDaggerRuntime.includes('getEffectProjectedBounds') ||
     !shadowSlashRuntime.includes('getEffectProjectedBounds')) {

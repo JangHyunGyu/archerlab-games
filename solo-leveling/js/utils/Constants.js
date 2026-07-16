@@ -875,6 +875,10 @@ Object.entries(WEAPONS).forEach(([key, config]) => {
     config.key = key;
     config.baseWeaponKey = config.baseWeaponKey || key;
     config.classKey = config.classKey || key;
+    // Every character combat VFX has a dedicated authored image sequence.
+    // Runtime-drawn lines, rings, and particles must never be composited on it.
+    config.imageOnlyVfx = true;
+    config.combineProceduralVfx = false;
 });
 
 export const PASSIVES = {
