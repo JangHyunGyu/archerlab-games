@@ -532,7 +532,10 @@ export class BasicDagger extends WeaponBase {
             y: this.player.y - 16,
         });
         const initialOrigin = getOrigin();
-        const baseScale = this.config.effectScale || 0.44;
+        const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
+        const effectProjection = this.getEffectProjectedBounds(effectTexture, this.config.effectRotationOffset ?? 0);
+        const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
+        const baseScale = Math.max(0.1, (desiredOuterReach - 86) / Math.max(1, effectProjection.maxX));
         const frameCount = 6;
 
         // The authored sprite is one slim, right-facing (+X) dagger trail.
@@ -610,7 +613,7 @@ export class BasicDagger extends WeaponBase {
             const hitY = origin.y + sinA * knockbackSourceDistance;
             this._damageEnemiesInCone(
                 baseAngle,
-                this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0),
+                hitRange,
                 this.config.hitAngle ?? 0.42,
                 hitX,
                 hitY
@@ -632,12 +635,19 @@ export class BasicDagger extends WeaponBase {
         const centerX = originX + cosA * 62;
         const centerY = originY + sinA * 62;
         const effectTexture = this._getConfiguredEffectTexture();
+        const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 35);
+        const effectProjection = effectTexture
+            ? this.getEffectProjectedBounds(effectTexture, this.config.effectRotationOffset ?? 0)
+            : null;
+        const targetScale = effectProjection
+            ? Math.max(0.1, (hitRange * (this.config.visualRangeRatio ?? 0.9) - 70) / Math.max(1, effectProjection.maxX))
+            : (this.config.effectScale || 0.44);
 
         const slash = effectTexture
             ? this.createEffectSprite(centerX, centerY, effectTexture, { frameMs: 42 })
                 .setDepth(14)
                 .setAlpha(0)
-                .setScale(this.config.effectScale || 0.44)
+                .setScale(targetScale * 0.72)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
         const progress = { t: 0 };
@@ -652,7 +662,7 @@ export class BasicDagger extends WeaponBase {
                 slash.setRotation(this.getEffectRotation(baseAngle));
                 slash.setFlipY(side < 0);
                 slash.setAlpha(Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.82);
-                slash.setScale((this.config.effectScale || 0.44) * (0.74 + eased * 0.38));
+                slash.setScale(targetScale * (0.72 + eased * 0.28));
             }
         };
 
@@ -670,7 +680,7 @@ export class BasicDagger extends WeaponBase {
             const hitY = originY + sinA * 96;
             this._damageEnemiesInCone(
                 baseAngle,
-                this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 35),
+                hitRange,
                 this.config.hitAngle ?? 0.92,
                 hitX,
                 hitY
@@ -694,12 +704,19 @@ export class BasicDagger extends WeaponBase {
         const effectColor = this.getEffectColor(0xbfeaff);
         const glowColor = this.getEffectGlowColor(0xffffff);
         const effectTexture = this._getConfiguredEffectTexture();
+        const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
+        const effectProjection = effectTexture
+            ? this.getEffectProjectedBounds(effectTexture, side * 0.08 + (this.config.effectRotationOffset ?? 0))
+            : null;
+        const targetScale = effectProjection
+            ? Math.max(0.1, (hitRange * (this.config.visualRangeRatio ?? 0.9) - 82) / Math.max(1, effectProjection.maxX))
+            : (this.config.effectScale || 0.42);
         const fx = effectTexture ? null : this.scene.add.graphics().setDepth(15);
         const swipeSprite = effectTexture
             ? this.createEffectSprite(originX + cosA * 74, originY + sinA * 74, effectTexture, { frameMs: 40 })
                 .setDepth(16)
                 .setAlpha(0)
-                .setScale(this.config.effectScale || 0.42)
+                .setScale(targetScale * 0.76)
                 .setRotation(baseAngle)
                 .setBlendMode(Phaser.BlendModes.ADD)
             : null;
@@ -748,7 +765,7 @@ export class BasicDagger extends WeaponBase {
                 swipeSprite.setPosition(originX + cosA * (70 + eased * 12), originY + sinA * (70 + eased * 12));
                 swipeSprite.setRotation(this.getEffectRotation(baseAngle) + side * 0.08);
                 swipeSprite.setAlpha(alpha * 0.86);
-                swipeSprite.setScale((this.config.effectScale || 0.42) * (0.92 + eased * 0.18));
+                swipeSprite.setScale(targetScale * (0.76 + eased * 0.24));
             }
         };
 
@@ -766,7 +783,7 @@ export class BasicDagger extends WeaponBase {
             const hitY = originY + sinA * 110;
             this._damageEnemiesInCone(
                 baseAngle,
-                this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0),
+                hitRange,
                 this.config.hitAngle ?? 0.78,
                 hitX,
                 hitY
@@ -796,6 +813,10 @@ export class BasicDagger extends WeaponBase {
         const effectColor = this.getEffectColor(0x66f2b0);
         const glowColor = this.getEffectGlowColor(0xe8fff5);
         const effectTexture = this._getConfiguredEffectTexture();
+        const impactRadius = this.config.impactRadius ?? 56;
+        const fittedScale = effectTexture
+            ? this.getEffectScaleForVisibleSize(effectTexture, impactRadius * 2)
+            : null;
         const burstFx = this.scene.add.graphics()
             .setDepth(17)
             .setBlendMode(Phaser.BlendModes.ADD);
@@ -812,7 +833,6 @@ export class BasicDagger extends WeaponBase {
         const entryObjects = [burstFx];
         if (slamSprite) entryObjects.push(slamSprite);
         const entry = this._trackAttackObjects(entryObjects);
-        const baseScale = this.config.effectScale || 0.46;
 
         const draw = (t) => {
             const k = Phaser.Math.Clamp(t, 0, 1);
@@ -826,8 +846,9 @@ export class BasicDagger extends WeaponBase {
             if (slamSprite) {
                 const lateral = side * 6 * (1 - burst);
                 const alpha = charge * (0.3 + burst * 0.68) * remaining;
-                const scaleX = baseScale * (0.42 + burst * 0.66 + fade * 0.12);
-                const scaleY = baseScale * (0.34 + burst * 0.8 + fade * 0.1);
+                const scaleRatio = 0.38 + burst * 0.62 + fade * 0.1;
+                const scaleX = (fittedScale?.x ?? (this.config.effectScale || 0.46)) * scaleRatio;
+                const scaleY = (fittedScale?.y ?? (this.config.effectScale || 0.46)) * scaleRatio;
 
                 slamSprite
                     .setPosition(impactX - perpX * lateral, impactY - perpY * lateral)
@@ -874,7 +895,7 @@ export class BasicDagger extends WeaponBase {
             this._damageEnemiesInRadius(
                 impactX,
                 impactY,
-                this.config.impactRadius ?? 56,
+                impactRadius,
                 baseAngle
             );
             if (this.scene.cameras?.main) this.scene.cameras.main.shake(55, 0.0008);
@@ -904,6 +925,10 @@ export class BasicDagger extends WeaponBase {
         const endY = originY + sinA * targetDist;
         const effectTexture = this._getConfiguredEffectTexture();
         const usesImageEffect = !!effectTexture;
+        const impactRadius = this.config.impactRadius ?? 38;
+        const projectileScale = effectTexture
+            ? this.getEffectScaleForVisibleSize(effectTexture, impactRadius * 2).x
+            : (this.config.effectScale || 0.32);
         const effectColor = this.getEffectColor(0xff7a34);
         const glowColor = this.getEffectGlowColor(0xffd86a);
         const projectile = effectTexture
@@ -914,13 +939,12 @@ export class BasicDagger extends WeaponBase {
                 loopEnd: 4,
             })
                 .setDepth(14)
-                .setScale(this.config.effectScale || 0.32)
+                .setScale(projectileScale)
                 .setRotation(this.getEffectRotation(baseAngle))
                 .setBlendMode(Phaser.BlendModes.ADD)
             : this.scene.add.circle(startX, startY, 13, effectColor, 0.95).setDepth(14);
         const trailFx = usesImageEffect ? null : this.scene.add.graphics().setDepth(13);
         const hitEnemies = new Set();
-        const impactRadius = this.config.impactRadius ?? 38;
         const progress = { t: 0 };
         const entry = this._trackAttackObjects([projectile, trailFx].filter(Boolean));
 
@@ -948,7 +972,7 @@ export class BasicDagger extends WeaponBase {
                 const burst = this.createEffectSprite(x, y, effectTexture, { frameMs: 24 })
                     .setDepth(15)
                     .setAlpha(0.84)
-                    .setScale((this.config.effectScale || 0.32) * 0.72)
+                    .setScale(projectileScale * 0.72)
                     .setRotation(this.getEffectRotation(baseAngle))
                     .setBlendMode(Phaser.BlendModes.ADD);
                 entry.objects.push(burst);

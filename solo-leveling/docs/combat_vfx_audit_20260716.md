@@ -83,3 +83,7 @@ Color palette: white-hot core, electric violet, deep purple, minimal magenta spa
 Constraints: exactly one trail and one right-facing point; crisp isolated sprite; no shadow; no text; no watermark.
 Avoid: feather shape, leaf shape, broad projectile, two trails, paired blades, X, crescent, semicircle, ring, portal, shield, explosion, aura, character, hand, physical dagger, scenery, green glow, green particles.
 ```
+
+## 판정 범위와 표시 크기
+
+25개 기본공격·스킬의 판정 반경/선분과 실제 불투명 픽셀 크기를 다시 대조했다. 방향형 공격은 바깥 끝 90%, 직선 관통은 선분 96%, 지점 충돌·오라는 가시 영역 지름 100%로 맞췄다. 세부 수치는 `combat_vfx_range_audit_20260716.md`에 기록했다.

@@ -1,5 +1,6 @@
 import { MAX_COOLDOWN_REDUCTION } from '../utils/Constants.js';
 import { resolveCombatVfxRotation } from '../utils/CombatVfxDirection.js';
+import { COMBAT_VFX_CANVAS_SIZE, getCombatVfxVisibleBounds } from '../utils/CombatVfxMetrics.js';
 
 export class WeaponBase {
     constructor(scene, player, config) {
@@ -92,6 +93,40 @@ export class WeaponBase {
             this.config.effectOrientation,
             this.config.effectRotationOffset ?? 0
         );
+    }
+
+    getEffectVisibleBounds(textureKey = this.getEffectTexture()) {
+        return getCombatVfxVisibleBounds(textureKey);
+    }
+
+    getEffectProjectedBounds(textureKey = this.getEffectTexture(), rotationOffset = 0) {
+        const bounds = this.getEffectVisibleBounds(textureKey);
+        const center = COMBAT_VFX_CANVAS_SIZE / 2;
+        const cos = Math.cos(rotationOffset);
+        const sin = Math.sin(rotationOffset);
+        const corners = [
+            [bounds.left - center, bounds.top - center],
+            [bounds.right - center, bounds.top - center],
+            [bounds.right - center, bounds.bottom - center],
+            [bounds.left - center, bounds.bottom - center],
+        ].map(([x, y]) => ({
+            x: x * cos - y * sin,
+            y: x * sin + y * cos,
+        }));
+        return {
+            minX: Math.min(...corners.map(point => point.x)),
+            maxX: Math.max(...corners.map(point => point.x)),
+            minY: Math.min(...corners.map(point => point.y)),
+            maxY: Math.max(...corners.map(point => point.y)),
+        };
+    }
+
+    getEffectScaleForVisibleSize(textureKey, width, height = width) {
+        const bounds = this.getEffectVisibleBounds(textureKey);
+        return {
+            x: width / Math.max(1, bounds.width),
+            y: height / Math.max(1, bounds.height),
+        };
     }
 
     createEffectSprite(x, y, textureKey = this.getEffectTexture(), animationOptions = {}) {

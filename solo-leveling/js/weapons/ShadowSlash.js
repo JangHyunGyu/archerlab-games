@@ -190,6 +190,13 @@ export class ShadowSlash extends WeaponBase {
         const slashRotation = useCharacterEffect
             ? this.getEffectRotation(angle)
             : (useEffectAsset ? angle + Math.PI : angle);
+        const effectProjection = useCharacterEffect
+            ? this.getEffectProjectedBounds(effectTexture, this.config.effectRotationOffset ?? 0)
+            : null;
+        const desiredOuterReach = range * (this.config.visualRangeRatio ?? 0.9);
+        const fittedCharacterScale = effectProjection
+            ? Math.max(0.1, (desiredOuterReach - slashDist) / Math.max(1, effectProjection.maxX))
+            : (this.config.effectScale || 0.58) + this.extraRange / 520;
         const slash = this.createEffectSprite(
             slashX,
             slashY,
@@ -201,15 +208,15 @@ export class ShadowSlash extends WeaponBase {
             .setAlpha(useCharacterEffect
                 ? (this.config.effectPeakAlpha ?? 0.82)
                 : (useEffectAsset ? 0.82 : 0.5))
-            .setScale(useCharacterEffect ? (this.config.effectScale || 0.58) + this.extraRange / 520 : (useEffectAsset ? 0.48 + this.extraRange / 460 : 1.5 + this.extraRange / 60))
+            .setScale(useCharacterEffect ? fittedCharacterScale : (useEffectAsset ? 0.48 + this.extraRange / 460 : 1.5 + this.extraRange / 60))
             .setBlendMode((useCharacterEffect || useEffectAsset) ? Phaser.BlendModes.ADD : Phaser.BlendModes.NORMAL);
         if (!useCharacterEffect && !useEffectAsset) slash.setTint(color);
 
         this.scene.tweens.add({
             targets: slash,
             alpha: 0,
-            scaleX: slash.scaleX * ((useCharacterEffect || useEffectAsset) ? 1.28 : 1.8),
-            scaleY: slash.scaleY * ((useCharacterEffect || useEffectAsset) ? 1.28 : 1.8),
+            scaleX: slash.scaleX * ((useCharacterEffect || useEffectAsset) ? 1.08 : 1.8),
+            scaleY: slash.scaleY * ((useCharacterEffect || useEffectAsset) ? 1.08 : 1.8),
             hold: useCharacterEffect ? (this.config.effectHold ?? 0) : 0,
             duration: useCharacterEffect
                 ? (this.config.effectFadeDuration ?? 320)
@@ -349,17 +356,23 @@ export class ShadowSlash extends WeaponBase {
         }
 
         if (effectTexture) {
+            const projection = this.getEffectProjectedBounds(
+                effectTexture,
+                this.config.effectRotationOffset ?? 0
+            );
+            const visibleLength = Math.max(1, projection.maxX - projection.minX);
+            const fittedScale = ((range - 24) * (this.config.visualRangeRatio ?? 0.96)) / visibleLength;
             const lance = this.createEffectSprite(midX, midY, effectTexture, { frameMs: 44 })
                 .setDepth(9)
                 .setRotation(this.getEffectRotation(angle))
                 .setAlpha(this.config.effectPeakAlpha ?? 0.88)
-                .setScale(this.config.effectScale || 0.58)
+                .setScale(fittedScale)
                 .setBlendMode(Phaser.BlendModes.ADD);
             this.scene.tweens.add({
                 targets: lance,
                 alpha: 0,
-                scaleX: lance.scaleX * 1.18,
-                scaleY: lance.scaleY * 0.74,
+                scaleX: lance.scaleX * 1.04,
+                scaleY: lance.scaleY * 0.92,
                 hold: this.config.effectHold ?? 0,
                 duration: this.config.effectFadeDuration ?? 260,
                 ease: 'Quad.easeOut',
@@ -391,16 +404,17 @@ export class ShadowSlash extends WeaponBase {
         const effectTexture = this.getEffectTexture();
 
         if (effectTexture) {
-            const source = this.scene.textures.get(effectTexture).getSourceImage();
+            const fittedScale = this.getEffectScaleForVisibleSize(effectTexture, range * 2);
             const pulse = this.createEffectSprite(px, py, effectTexture, { frameMs: 70 })
                 .setDepth(8)
                 .setAlpha(0.84)
-                .setScale((range * 2) / (source?.width || 320))
+                .setScale(fittedScale.x, fittedScale.y)
                 .setBlendMode(Phaser.BlendModes.ADD);
             this.scene.tweens.add({
                 targets: pulse,
                 alpha: 0,
-                scale: pulse.scaleX * 1.24,
+                scaleX: pulse.scaleX * 1.12,
+                scaleY: pulse.scaleY * 1.12,
                 duration: 420,
                 ease: 'Quad.easeOut',
                 onComplete: () => pulse.destroy(),
