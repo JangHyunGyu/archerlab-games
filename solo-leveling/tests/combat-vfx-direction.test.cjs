@@ -55,6 +55,11 @@ async function loadDirectionModule() {
         'flame bolt source points down-right and needs a counter-clockwise quarter-diagonal correction'
     );
     assert.strictEqual(
+        resolveCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.PROJECTILE, -Math.PI / 7),
+        -Math.PI / 7,
+        'flame basic source points about 26 degrees down-right and needs its measured correction'
+    );
+    assert.strictEqual(
         resolveCombatVfxRotation(0, COMBAT_VFX_ORIENTATIONS.FORWARD_ARC, -Math.PI / 2),
         -Math.PI / 2,
         'light crescent must open back toward the player and bow outward toward the target'
@@ -109,25 +114,20 @@ async function loadDirectionModule() {
     assert.doesNotMatch(basicRuntime, /\.setFlipX\(true\)/);
     assert.match(
         basicRuntime,
-        /const wobbleAngle = baseAngle \+ Math\.sin\(progress\.t \* 0\.28\) \* 0\.08;/,
-        'flame basic projectile may wobble only by changing its aim angle'
-    );
-    assert.match(
-        basicRuntime,
-        /projectile\.setRotation\(this\.getEffectRotation\(wobbleAngle\)\)/,
-        'flame basic projectile must preserve its authored-axis correction on every update'
+        /projectile\.setRotation\(this\.getEffectRotation\(baseAngle\)\);/,
+        'flame basic projectile must stay locked to its travel direction on every update'
     );
     assert.doesNotMatch(
         basicRuntime,
-        /projectile\.setRotation\(baseAngle/,
-        'runtime updates must not overwrite an authored projectile rotation offset'
+        /wobbleAngle|projectile\.setRotation\(baseAngle/,
+        'runtime updates must neither wobble nor overwrite an authored projectile rotation offset'
     );
 
     const constantsSource = fs.readFileSync(
         path.join(__dirname, '..', 'js', 'utils', 'Constants.js'),
         'utf8'
     );
-    assert.match(constantsSource, /flameSpark:[\s\S]*?effectRotationOffset: -Math\.PI \/ 4,/);
+    assert.match(constantsSource, /flameSpark:[\s\S]*?effectRotationOffset: -Math\.PI \/ 7,/);
 
     console.log('combat VFX direction tests passed');
 })().catch((error) => {
