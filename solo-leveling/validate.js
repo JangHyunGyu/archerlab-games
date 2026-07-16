@@ -425,6 +425,96 @@ for (const [directory, effectKeys] of [
     }
 }
 
+const allowedCombatVfxOrientations = new Set([
+    'bodyArc',
+    'forwardArc',
+    'projectile',
+    'targetImpact',
+    'selfRadial',
+]);
+const expectedCombatVfxOrientations = {
+    basicDagger: 'bodyArc',
+    shadowDagger: 'projectile',
+    shadowSlash: 'forwardArc',
+    rulersAuthority: 'targetImpact',
+    dragonFear: 'selfRadial',
+    lightPierce: 'bodyArc',
+    lightLance: 'projectile',
+    lightCrescent: 'forwardArc',
+    lightJudgment: 'targetImpact',
+    lightSanctum: 'selfRadial',
+    tigerPalm: 'bodyArc',
+    tigerFang: 'forwardArc',
+    tigerRend: 'forwardArc',
+    tigerQuake: 'selfRadial',
+    tigerGuard: 'selfRadial',
+    flameSpark: 'projectile',
+    flameBolt: 'projectile',
+    flameArc: 'forwardArc',
+    flameMeteor: 'targetImpact',
+    flameInferno: 'selfRadial',
+    sanctuaryStrike: 'targetImpact',
+    sanctuaryOrb: 'selfRadial',
+    sanctuaryArc: 'forwardArc',
+    sanctuarySeal: 'targetImpact',
+    sanctuaryField: 'selfRadial',
+};
+const expectedCombatVfxRotationOffsets = {
+    lightLance: Math.PI / 4,
+    lightCrescent: -Math.PI / 2,
+    flameBolt: -Math.PI / 4,
+    sanctuaryArc: Math.PI,
+};
+
+for (const [weaponKey, expectedOrientation] of Object.entries(expectedCombatVfxOrientations)) {
+    const weapon = WEAPONS[weaponKey];
+    if (!weapon) {
+        errors.push(`[VFX_DIRECTION] WEAPONS.${weaponKey} not found`);
+        continue;
+    }
+    if (!allowedCombatVfxOrientations.has(weapon.effectOrientation)) {
+        errors.push(`[VFX_DIRECTION] WEAPONS.${weaponKey}.effectOrientation "${weapon.effectOrientation}" is invalid`);
+    } else if (weapon.effectOrientation !== expectedOrientation) {
+        errors.push(`[VFX_DIRECTION] WEAPONS.${weaponKey} must use "${expectedOrientation}", got "${weapon.effectOrientation}"`);
+    }
+
+    const expectedOffset = expectedCombatVfxRotationOffsets[weaponKey] ?? 0;
+    const actualOffset = weapon.effectRotationOffset ?? 0;
+    if (!Number.isFinite(actualOffset) || Math.abs(actualOffset - expectedOffset) > 0.000001) {
+        errors.push(`[VFX_DIRECTION] WEAPONS.${weaponKey}.effectRotationOffset must be ${expectedOffset}, got ${actualOffset}`);
+    }
+}
+
+const configuredCharacterWeaponKeys = Object.keys(WEAPONS);
+if (Object.keys(expectedCombatVfxOrientations).length !== configuredCharacterWeaponKeys.length) {
+    errors.push(`[VFX_DIRECTION] direction contract covers ${Object.keys(expectedCombatVfxOrientations).length}/${configuredCharacterWeaponKeys.length} character attacks and skills`);
+}
+for (const weaponKey of configuredCharacterWeaponKeys) {
+    if (!Object.prototype.hasOwnProperty.call(expectedCombatVfxOrientations, weaponKey)) {
+        errors.push(`[VFX_DIRECTION] WEAPONS.${weaponKey} is missing from the direction contract`);
+    }
+}
+
+const weaponBaseRuntime = readFile('js/weapons/WeaponBase.js') || '';
+const shadowDaggerRuntime = readFile('js/weapons/ShadowDagger.js') || '';
+const shadowSlashRuntime = readFile('js/weapons/ShadowSlash.js') || '';
+for (const [label, runtime] of [
+    ['WeaponBase', weaponBaseRuntime],
+    ['BasicDagger', basicDaggerRuntime],
+    ['ShadowDagger', shadowDaggerRuntime],
+    ['ShadowSlash', shadowSlashRuntime],
+]) {
+    if (!runtime.includes('getEffectRotation')) {
+        errors.push(`[VFX_DIRECTION] ${label} is not wired to the shared direction contract`);
+    }
+}
+if (!basicDaggerRuntime.includes('slash.setFlipY(side < 0)')) {
+    errors.push('[VFX_DIRECTION] sword basic attack must mirror sweep parity without changing its outward axis');
+}
+if (basicDaggerRuntime.includes('slash.setRotation(baseAngle + side * 0.55)')) {
+    errors.push('[VFX_DIRECTION] legacy sword side-angle rotation is still active');
+}
+
 for (const iconKey of new Set(Object.values(WEAPONS).map(weapon => weapon.icon).filter(Boolean))) {
     const relPath = `assets/ui/icons/${iconKey}.png`;
     const dimensions = readPngDimensions(relPath);

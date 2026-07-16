@@ -1,4 +1,5 @@
 import { MAX_COOLDOWN_REDUCTION } from '../utils/Constants.js';
+import { resolveCombatVfxRotation } from '../utils/CombatVfxDirection.js';
 
 export class WeaponBase {
     constructor(scene, player, config) {
@@ -83,6 +84,14 @@ export class WeaponBase {
     getEffectTexture() {
         const key = this.config.effectKey ? `char_skill_${this.config.effectKey}` : null;
         return key && this.scene?.textures?.exists(key) ? key : null;
+    }
+
+    getEffectRotation(aimAngle = 0) {
+        return resolveCombatVfxRotation(
+            aimAngle,
+            this.config.effectOrientation,
+            this.config.effectRotationOffset ?? 0
+        );
     }
 
     createEffectSprite(x, y, textureKey = this.getEffectTexture(), animationOptions = {}) {

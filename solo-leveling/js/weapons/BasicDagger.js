@@ -570,7 +570,7 @@ export class BasicDagger extends WeaponBase {
                     origin.x + cosA * forward + perpX * lateral,
                     origin.y + sinA * forward + perpY * lateral
                 )
-                .setRotation(baseAngle + angleOffset * (1 - phase.eased * 0.12))
+                .setRotation(this.getEffectRotation(baseAngle) + angleOffset * (1 - phase.eased * 0.12))
                 .setAlpha(phase.alpha * maxAlpha)
                 .setScale(baseScale * (0.72 + phase.eased * 0.38));
         };
@@ -653,7 +653,8 @@ export class BasicDagger extends WeaponBase {
             const eased = Phaser.Math.Easing.Cubic.Out(Phaser.Math.Clamp(t, 0, 1));
             if (slash) {
                 slash.setPosition(centerX + cosA * 8 * eased, centerY + sinA * 8 * eased);
-                slash.setRotation(baseAngle + side * 0.55);
+                slash.setRotation(this.getEffectRotation(baseAngle));
+                slash.setFlipY(side < 0);
                 slash.setAlpha(Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.82);
                 slash.setScale((this.config.effectScale || 0.44) * (0.74 + eased * 0.38));
             }
@@ -749,7 +750,7 @@ export class BasicDagger extends WeaponBase {
 
             if (swipeSprite) {
                 swipeSprite.setPosition(originX + cosA * (70 + eased * 12), originY + sinA * (70 + eased * 12));
-                swipeSprite.setRotation(baseAngle + side * 0.08);
+                swipeSprite.setRotation(this.getEffectRotation(baseAngle) + side * 0.08);
                 swipeSprite.setAlpha(alpha * 0.86);
                 swipeSprite.setScale((this.config.effectScale || 0.42) * (0.92 + eased * 0.18));
             }
@@ -918,7 +919,7 @@ export class BasicDagger extends WeaponBase {
             })
                 .setDepth(14)
                 .setScale(this.config.effectScale || 0.32)
-                .setRotation(baseAngle)
+                .setRotation(this.getEffectRotation(baseAngle))
                 .setBlendMode(Phaser.BlendModes.ADD)
             : this.scene.add.circle(startX, startY, 13, effectColor, 0.95).setDepth(14);
         const trailFx = usesImageEffect ? null : this.scene.add.graphics().setDepth(13);
@@ -952,7 +953,7 @@ export class BasicDagger extends WeaponBase {
                     .setDepth(15)
                     .setAlpha(0.84)
                     .setScale((this.config.effectScale || 0.32) * 0.72)
-                    .setRotation(baseAngle)
+                    .setRotation(this.getEffectRotation(baseAngle))
                     .setBlendMode(Phaser.BlendModes.ADD);
                 entry.objects.push(burst);
                 this.scene.tweens.add({
