@@ -550,6 +550,10 @@ for (const [weaponKey, weapon] of Object.entries(WEAPONS)) {
 if (basicDaggerRuntime.includes('const burstFx = this.scene.add.graphics()')) {
     errors.push('[VFX_LAYERING] sanctuary basic attack still creates a procedural burst layer');
 }
+const combatEnemyRuntime = readFile('js/entities/Enemy.js') || '';
+if ((combatEnemyRuntime.match(/if \(usedAsset\) return;/g) || []).length !== 3) {
+    errors.push('[VFX_LAYERING] authored normal, flame, and sanctuary hit images must suppress procedural follow-up layers');
+}
 if (!basicDaggerRuntime.includes('getEffectProjectedBounds') ||
     !shadowSlashRuntime.includes('getEffectProjectedBounds')) {
     errors.push('[VFX_COVERAGE] directional attacks are not fitted to their hit range');

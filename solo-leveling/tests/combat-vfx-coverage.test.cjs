@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
@@ -115,13 +116,19 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         assert.strictEqual(config.imageOnlyVfx, true, `${key}: authored VFX must be image-only`);
         assert.strictEqual(config.combineProceduralVfx, false, `${key}: procedural VFX layers must stay disabled`);
     }
+    const enemyRuntime = fs.readFileSync(path.join(root, 'js', 'entities', 'Enemy.js'), 'utf8');
+    assert.strictEqual(
+        (enemyRuntime.match(/if \(usedAsset\) return;/g) || []).length,
+        3,
+        'normal, flame, and sanctuary hit images must suppress procedural follow-up layers'
+    );
     assert.strictEqual(WEAPONS.lightPierce.name, '빛가름 검격');
     assert.strictEqual(WEAPONS.lightPierce.attackStyle, 'swordSlash');
     assert.strictEqual(WEAPONS.lightLance.imageOnlyVfx, true);
     assert.strictEqual(WEAPONS.lightLance.combineProceduralVfx, false);
     assert.strictEqual(WEAPONS.lightSanctum.visualStartScaleRatio, 1);
 
-    console.log(`combat VFX hit-range and image-only layering verified: ${coveredKeys.size}/25`);
+    console.log(`combat VFX hit-range and full image-only layering verified: ${coveredKeys.size}/25`);
 })().catch(error => {
     console.error(error);
     process.exit(1);

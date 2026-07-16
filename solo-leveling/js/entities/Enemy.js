@@ -871,6 +871,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 blendMode: Phaser.BlendModes.ADD,
             }
         );
+        // Authored combat-hit sequences are complete VFX. Do not composite
+        // runtime rings, embers, or ground ellipses over the generated image.
+        if (usedAsset) return;
         this._spawnHitRing(profile, isCrit ? 0xffc45a : 0xff7a22, -this.displayHeight * 0.04);
 
         const particleScale = constrained ? (isCrit ? 0.55 : 0.32) : 1;
@@ -939,6 +942,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 blendMode: Phaser.BlendModes.ADD,
             }
         );
+        // Keep the authored sanctuary impact visually isolated as well.
+        if (usedAsset) return;
 
         this._spawnHitRing(profile, mainColor, -this.displayHeight * 0.04);
 
@@ -1021,6 +1026,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 frameCount: isCrit ? 16 : 12,
             }
         );
+        // Blood and critical impact sheets already contain their full burst.
+        if (usedAsset) return;
         this._spawnHitRing(profile, isCrit ? 0xff3344 : 0xcc1020, -this.displayHeight * 0.04);
 
         const particleScale = constrained ? (isCrit ? 0.52 : 0.28) : 1;
