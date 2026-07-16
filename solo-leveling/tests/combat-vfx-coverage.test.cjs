@@ -53,17 +53,48 @@ function readRgbaPngAlphaBounds(filePath, threshold = 12) {
     let top = height;
     let right = -1;
     let bottom = -1;
+    let totalAlpha = 0;
+    let weightedX = 0;
+    let weightedY = 0;
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-            if (rows[y * stride + x * 4 + 3] < threshold) continue;
+            const alpha = rows[y * stride + x * 4 + 3];
+            if (alpha < threshold) continue;
             left = Math.min(left, x);
             top = Math.min(top, y);
             right = Math.max(right, x);
             bottom = Math.max(bottom, y);
+            totalAlpha += alpha;
+            weightedX += x * alpha;
+            weightedY += y * alpha;
         }
     }
     assert.ok(right >= left && bottom >= top, `${filePath}: no visible alpha`);
-    return { left, top, right: right + 1, bottom: bottom + 1, width: right - left + 1, height: bottom - top + 1 };
+    const meanX = weightedX / totalAlpha;
+    const meanY = weightedY / totalAlpha;
+    let xx = 0;
+    let yy = 0;
+    let xy = 0;
+    for (let y = top; y <= bottom; y++) {
+        for (let x = left; x <= right; x++) {
+            const alpha = rows[y * stride + x * 4 + 3];
+            if (alpha < threshold) continue;
+            const dx = x - meanX;
+            const dy = y - meanY;
+            xx += alpha * dx * dx;
+            yy += alpha * dy * dy;
+            xy += alpha * dx * dy;
+        }
+    }
+    return {
+        left,
+        top,
+        right: right + 1,
+        bottom: bottom + 1,
+        width: right - left + 1,
+        height: bottom - top + 1,
+        axisAngle: 0.5 * Math.atan2(2 * xy, xx - yy),
+    };
 }
 
 function projectedBounds(bounds, rotation = 0) {
@@ -197,8 +228,29 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         WEAPONS.lightLance.effectFadeDelay >= WEAPONS.lightLance.effectFrameMs * 5,
         'lightLance must show all six authored frames before fading'
     );
-    assert.strictEqual(WEAPONS.flameSpark.effectRotationOffset, -Math.PI / 4);
+    assert.strictEqual(WEAPONS.flameSpark.effectRotationOffset, -Math.PI / 7);
     assert.strictEqual(WEAPONS.lightSanctum.visualStartScaleRatio, 1);
+
+    // Compare every projectile frame's measured alpha-axis against its runtime
+    // correction. This catches visually tilted art even when the orientation
+    // contract and the rotation resolver are wired correctly.
+    for (const [key, directory, effectKey] of [
+        ['flameSpark', 'basic_attacks', 'flame_fireball'],
+        ['flameBolt', 'character_skills', 'flame_bolt'],
+        ['lightLance', 'character_skills', 'light_lance_pierce'],
+        ['shadowDagger', 'character_skills', 'shadow_dagger'],
+    ]) {
+        const axes = Array.from({ length: 6 }, (_, frameIndex) => readRgbaPngAlphaBounds(path.join(
+            root,
+            'assets', 'effects', directory, 'frames', `${effectKey}_${frameIndex}.png`
+        )).axisAngle);
+        const meanAxis = axes.reduce((sum, angle) => sum + angle, 0) / axes.length;
+        const correctedAxis = meanAxis + (WEAPONS[key].effectRotationOffset || 0);
+        assert.ok(
+            Math.abs(correctedAxis) <= Math.PI / 30,
+            `${key}: corrected image axis is ${(correctedAxis * 180 / Math.PI).toFixed(2)} degrees from travel`
+        );
+    }
 
     const installerSource = fs.readFileSync(
         path.join(root, 'scripts', 'install_higgsfield_character_vfx_20260716.py'),

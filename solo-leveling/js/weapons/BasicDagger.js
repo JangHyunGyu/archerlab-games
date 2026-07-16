@@ -1032,9 +1032,8 @@ export class BasicDagger extends WeaponBase {
             onUpdate: () => {
                 progress.t += 1;
                 if (progress.t % 2 === 0) spawnTrail();
-                const wobbleAngle = baseAngle + Math.sin(progress.t * 0.28) * 0.08;
                 if (projectile.setRotation) {
-                    projectile.setRotation(this.getEffectRotation(wobbleAngle));
+                    projectile.setRotation(this.getEffectRotation(baseAngle));
                 }
                 checkHits();
             },

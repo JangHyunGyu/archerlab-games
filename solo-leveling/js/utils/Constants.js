@@ -660,7 +660,7 @@ Object.assign(WEAPONS, {
         attackStyle: 'fireball',
         basicAttackEffectKey: 'flame_fireball',
         effectOrientation: 'projectile',
-        effectRotationOffset: -Math.PI / 4,
+        effectRotationOffset: -Math.PI / 7,
         soundKey: 'flameSpark',
         baseDamage: 48,
         attackRange: 342,
