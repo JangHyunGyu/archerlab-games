@@ -9,6 +9,8 @@ const { chromium } = require('@playwright/test');
 const baseUrl = process.env.BLOCKPANG_URL || 'http://127.0.0.1:4173/blockpang/';
 const outputDir = process.env.BLOCKPANG_SCREENSHOT_DIR
     || path.join(os.tmpdir(), 'blockpang-visual-smoke');
+const effectMode = process.env.BLOCKPANG_EFFECT_SHOWCASE || '';
+const effectShowcase = Boolean(effectMode);
 
 const allScenarios = [
     { name: 'mobile-390x844', width: 390, height: 844, minCell: 28 },
@@ -31,7 +33,7 @@ async function run() {
             const context = await browser.newContext({
                 viewport: { width: scenario.width, height: scenario.height },
                 deviceScaleFactor: 1,
-                reducedMotion: 'reduce',
+                reducedMotion: effectShowcase ? 'no-preference' : 'reduce',
             });
             await context.route('**/*', (route) => {
                 const url = route.request().url();
@@ -92,7 +94,32 @@ async function run() {
                 const orange = board.place([[1, 0], [1, 0], [1, 1]], 6, 3, 5);
                 window.__blockpangVisualPlacedCells = cyan.cells.length + orange.cells.length;
             });
-            await page.waitForTimeout(150);
+            if (effectShowcase) {
+                await page.evaluate((mode) => {
+                    const game = window.__blockpangGame;
+                    const boardPos = game.board.getGlobalPosition();
+                    const centerX = boardPos.x + game.cellSize * GRID_SIZE * 0.5;
+                    const centerY = boardPos.y + game.cellSize * GRID_SIZE * 0.5;
+                    game.effects.clearTransient();
+                    if (mode === 'placement') {
+                        game.effects.playPlacementImpact(centerX, centerY, 0x00E5FF, 5);
+                        return;
+                    }
+                    const cells = [];
+                    for (let row = 3; row <= 6; row++) {
+                        for (let col = 0; col < GRID_SIZE; col++) {
+                            cells.push({ row, col, colorIndex: (row + col) % BLOCK_COLORS.length });
+                        }
+                    }
+                    game.effects.playLineSweep([3, 4, 5, 6], [], boardPos);
+                    game.effects.playClearEffect(cells, boardPos);
+                    game.effects.playBoardResonance(boardPos, 4, cells);
+                    game.effects.playSingleClearEffect(4, centerX, centerY, cells);
+                    game.effects.showMultiLinePopup(centerX, boardPos.y + game.cellSize * 2.2, 4);
+                    game.effects.playComboEffect(7, centerX, centerY, 4);
+                }, effectMode);
+            }
+            await page.waitForTimeout(effectMode === 'placement' ? 150 : effectShowcase ? 260 : 150);
 
             const metrics = await page.evaluate(() => {
                 const game = window.__blockpangGame;
@@ -112,6 +139,7 @@ async function run() {
                     trayY: game.tray.container.y,
                     trayCellSizes: game.tray.trayCellSizes.slice(),
                     placedCellCount: window.__blockpangVisualPlacedCells || 0,
+                    effectDiagnostics: game.effects.getDiagnostics(),
                     state: game.state,
                 };
             });
@@ -119,6 +147,20 @@ async function run() {
 
             assert.equal(metrics.state, 'playing', scenario.name + ' must enter gameplay');
             assert.equal(metrics.placedCellCount, 8, scenario.name + ' must render placed crystal blocks');
+            assert.ok(
+                metrics.effectDiagnostics.peakParticles <= metrics.effectDiagnostics.particleBudget,
+                scenario.name + ' exceeded the active particle budget'
+            );
+            if (effectShowcase) {
+                assert.ok(
+                    metrics.effectDiagnostics.peakParticles >= (effectMode === 'placement' ? 8 : 80),
+                    scenario.name + ' effect showcase did not produce a substantial particle burst'
+                );
+                assert.ok(
+                    metrics.effectDiagnostics.peakTweens >= (effectMode === 'placement' ? 6 : 20),
+                    scenario.name + ' effect showcase did not produce layered motion'
+                );
+            }
             assert.ok(
                 metrics.cellSize >= scenario.minCell,
                 scenario.name + ' board cells are unexpectedly small: ' + metrics.cellSize
@@ -141,7 +183,10 @@ async function run() {
                 scenario.name + ' contains an unreadably small tray piece'
             );
 
-            const screenshotPath = path.join(outputDir, scenario.name + '.png');
+            const screenshotPath = path.join(
+                outputDir,
+                scenario.name + (effectShowcase ? '-' + effectMode + '-effects' : '') + '.png'
+            );
             await page.screenshot({ path: screenshotPath, fullPage: false });
             console.log(JSON.stringify({ scenario: scenario.name, screenshotPath }));
             await context.close();
