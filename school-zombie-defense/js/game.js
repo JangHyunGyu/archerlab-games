@@ -59,7 +59,7 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
-  const CHARACTER_ASSET_VERSION = "20260718-bow-motion-v11";
+  const CHARACTER_ASSET_VERSION = "20260718-bow-directions-v12";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -172,7 +172,7 @@
   // The commercial character sheets do not share one circular muzzle arc, so
   // a single pivot/reach pair cannot keep effects attached in every pose.
   const CHARACTER_MUZZLE_OFFSETS = {
-    a: [[-66, -150], [-58, -161], [-21, -149], [-50, -150], [-50, -143], [35, -143], [51, -159], [40, -147], [36, -156]],
+    a: [[-66, -150], [-58, -161], [-21, -149], [-50, -150], [-56, -115], [-39, -135], [51, -159], [40, -147], [36, -156]],
     b: [[-31, -176], [-37, -192], [-32, -198], [-23, -194], [2, -210], [24, -195], [34, -198], [39, -189], [32, -179]],
     c: [[-28, -182], [-38, -209], [-24, -210], [-15, -215], [0, -215], [15, -215], [28, -212], [34, -210], [28, -183]],
     d: [[-36, -172], [-30, -183], [-25, -193], [-15, -198], [2, -198], [18, -196], [30, -193], [31, -180], [41, -171]],
