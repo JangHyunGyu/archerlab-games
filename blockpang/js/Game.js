@@ -627,7 +627,12 @@ class Game {
         const boardPos = this.board.getGlobalPosition();
         const cx = boardPos.x + (gridX + piece.cols / 2) * this.cellSize;
         const cy = boardPos.y + (gridY + piece.rows / 2) * this.cellSize;
-        this.effects.playRingBurst(cx, cy, BLOCK_COLORS[piece.colorIndex].glow);
+        this.effects.playPlacementImpact(
+            cx,
+            cy,
+            BLOCK_COLORS[piece.colorIndex].glow,
+            piece.cellCount
+        );
 
         this._scheduleTimeout(() => {
             if (!this._isCurrentPlacementAnimation(animationToken)) return;
@@ -716,6 +721,11 @@ class Game {
 
                 const boardPos = this.board.getGlobalPosition();
                 this.effects.playClearEffect(clearResult.cells, boardPos);
+                this.effects.playBoardResonance(
+                    boardPos,
+                    clearResult.lines,
+                    clearResult.cells
+                );
 
                 // Calculate center of cleared cells
                 let avgX = 0, avgY = 0;
