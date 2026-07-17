@@ -218,7 +218,7 @@
     <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" class="archerlab-link" id="archerlab-link" title="ArcherLab">[ ArcherLab ]</a>
     <style>
         .archerlab-link {
-            position: fixed; left: 50%; right: auto; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+            position: fixed; left: 50%; right: auto; top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto;
             transform: translateX(-50%); z-index: 9999;
             background: linear-gradient(180deg, rgba(12, 22, 35, 0.82), rgba(5, 9, 16, 0.9));
             color: #79dcfa; border: 1px solid rgba(77, 210, 255, 0.38);
@@ -240,7 +240,7 @@
         }
         @media (max-width: 768px), (max-height: 500px) {
             .archerlab-link {
-                left: 50%; right: auto; top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+                left: 50%; right: auto; top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto;
                 transform: translateX(-50%); font-size: 0.62rem; padding: 2px 8px;
                 opacity: 0.68;
             }
