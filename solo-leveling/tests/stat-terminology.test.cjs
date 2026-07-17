@@ -16,4 +16,16 @@ assert.match(i18nSource, /strength: \{ name: '공격력 강화', desc: '공격�
 assert.match(i18nSource, /strength: \{ name: 'Attack Boost', desc: 'Attack \+8%' \}/);
 assert.match(i18nSource, /strength: \{ name: '攻撃力強化', desc: '攻撃力 \+8%' \}/);
 
-console.log('attack terminology verified: character-neutral labels in ko/en/ja');
+assert.match(
+    constantsSource,
+    /critMaster: \{ name: '치명타 확률 강화', description: '치명타 확률 \+8%', stat: 'critRate', bonus: 0\.08/,
+    'the critical passive must clearly describe a chance increase',
+);
+assert.doesNotMatch(constantsSource, /치명타 달인|치명타율/, 'critical chance must not use a class-like title or abbreviation');
+assert.match(i18nSource, /statCrit: '치명타 확률'/);
+assert.match(i18nSource, /critMaster: \{ name: '치명타 확률 강화', desc: '치명타 확률 \+8%' \}/);
+assert.match(i18nSource, /statCrit: 'Critical Chance'/);
+assert.match(i18nSource, /critMaster: \{ name: 'Critical Chance Boost', desc: 'Critical chance \+8%' \}/);
+assert.match(i18nSource, /critMaster: \{ name: 'クリティカル率強化', desc: 'クリティカル率 \+8%' \}/);
+
+console.log('stat terminology verified: attack and critical chance labels in ko/en/ja');

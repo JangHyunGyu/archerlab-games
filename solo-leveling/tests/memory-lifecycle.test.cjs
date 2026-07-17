@@ -37,7 +37,7 @@ assert.equal(
 );
 assert.match(
   indexSource,
-  /js\/main\.js\?v=20260717-attack-terminology-v21/,
+  /js\/main\.js\?v=20260717-critical-terminology-v22/,
   "the deployed entry point must invalidate cached game modules"
 );
 
