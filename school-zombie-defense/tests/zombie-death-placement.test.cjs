@@ -187,7 +187,7 @@ const activeCorpseLimit = readNumberConstant("ACTIVE_CORPSE_LIMIT");
 assert.equal(verticalKnockbackScale, 1, "lethal hits must carry their full knockback into the death fall");
 assert.equal(verticalKnockbackLimitRatio, 0.35, "death recoil must only cap extreme lane displacement");
 assert.equal(landingRiseLimitRatio, 0.28, "a corpse must be allowed to land behind its death position");
-assert.equal(hitEffectSizeMultiplier, 1.35, "zombie hit effects must remain visibly enlarged");
+assert.equal(hitEffectSizeMultiplier, 1.15, "zombie hit effects must stay subtly enlarged without obscuring the target");
 assert.equal(bloodStainSizeMultiplier, 2, "corpse blood stains must be twice their previous visual size");
 assert.equal(groundDepthBase, 25, "ground decals must stay above the arena floor art");
 assert.equal(groundDepthRange, 8, "ground decals must use their isolated narrow depth band");

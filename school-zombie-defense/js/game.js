@@ -216,6 +216,7 @@
     h: "attack"
   };
   const CHARACTER_ATTACK_FRAME_ZERO_ALIASES = new Set(["a", "b", "d", "e"]);
+  const CHARACTER_ATTACK_DIRECTION_LOCKS = new Set(["a"]);
   const CHARACTER_ATTACK_RELEASE_FRAMES = {
     a: 2,
     d: 1,
@@ -281,7 +282,7 @@
     explosion: { texture: "zombie-hit-rocket-sheet", width: 128, duration: 330, alpha: 0.94, scalePeak: 1.12, rotation: 0.18, frameWidth: 160, frameHeight: 130, frames: 16 },
     default: { texture: "zombie-hit-pistol-sheet", width: 52, duration: 215, alpha: 0.92, scalePeak: 1.04, rotation: 0.1, frameWidth: 112, frameHeight: 96, frames: 12 }
   };
-  const ZOMBIE_HIT_EFFECT_SIZE_MULTIPLIER = 1.35;
+  const ZOMBIE_HIT_EFFECT_SIZE_MULTIPLIER = 1.15;
   const FIRE_ZONE_ANIMATION_FRAMES = 8;
   const SHOCK_EFFECT_OUTER_COLOR = 0x8f9dff;
   const CHARGER_CHARGE_TINT = 0xffcf9e;
@@ -7473,7 +7474,9 @@
       const initialMuzzle = this.getDefenderMuzzle(defender, initialPose);
       const initialX = initialMuzzle.x + shotOffset;
       const initialAngle = Math.atan2(ty - initialMuzzle.y, tx - initialX) + angleOffset;
-      const pose = getShotAimPoseKey(initialAngle);
+      const pose = CHARACTER_ATTACK_DIRECTION_LOCKS.has(defender.id)
+        ? initialPose
+        : getShotAimPoseKey(initialAngle);
       this.startDefenderAttackAnimation(defender, pose, () => {
         if (this.disposed || this.mode !== "playing" || !defender.recruited || !target.active || target.hp <= 0) {
           return;
