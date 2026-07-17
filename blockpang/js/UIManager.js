@@ -981,6 +981,28 @@ class UIManager {
         artGrade.rect(0, h * 0.74, w, h * 0.26).fill({ color: THEME.shadow, alpha: 0.5 });
         container.addChild(artGrade);
 
+        const cinematicFrame = new PIXI.Graphics();
+        const framePad = Math.max(10, Math.min(18, w * 0.018));
+        const frameCorner = Math.max(18, Math.min(34, w * 0.035));
+        cinematicFrame.rect(framePad, framePad, w - framePad * 2, h - framePad * 2)
+            .stroke({ width: 1, color: THEME.secondary, alpha: 0.14 });
+        [
+            [framePad, framePad, 1, 1],
+            [w - framePad, framePad, -1, 1],
+            [framePad, h - framePad, 1, -1],
+            [w - framePad, h - framePad, -1, -1],
+        ].forEach(([x, y, sx, sy]) => {
+            cinematicFrame.moveTo(x, y + sy * frameCorner)
+                .lineTo(x, y)
+                .lineTo(x + sx * frameCorner, y)
+                .stroke({ width: 2, color: THEME.secondary, alpha: 0.64 });
+        });
+        cinematicFrame.rect(centerX - Math.min(140, w * 0.18), h * 0.385, Math.min(280, w * 0.36), 1)
+            .fill({ color: THEME.accent, alpha: 0.18 });
+        cinematicFrame.rect(centerX - Math.min(44, w * 0.06), h * 0.383, Math.min(88, w * 0.12), 2)
+            .fill({ color: THEME.gold, alpha: 0.52 });
+        container.addChild(cinematicFrame);
+
         // ── Small decorative block pictogram (a few stacked pieces above logo) ──
         const deco = new PIXI.Graphics();
         const dcs = Math.max(10, Math.min(14, w * 0.03));   // deco-cell size
@@ -1496,6 +1518,23 @@ class UIManager {
                     return t >= 1;
                 }
             });
+
+            if (heroArt) {
+                this.game.effects.tweens.push({
+                    elapsed: 0,
+                    _isTitleTween: true,
+                    _titleRoot: container,
+                    update(dt) {
+                        if (!heroArt || heroArt.destroyed || !container || container.destroyed) return true;
+                        this.elapsed += dt;
+                        const phase = this.elapsed / 2600;
+                        const breathe = 1 + Math.sin(phase) * 0.006;
+                        heroArt.scale.set(breathe);
+                        heroArt.rotation = Math.sin(phase * 0.72) * 0.0025;
+                        return false;
+                    }
+                });
+            }
         }
 
         this.titleContainer = container;

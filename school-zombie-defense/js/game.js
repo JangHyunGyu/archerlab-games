@@ -5609,6 +5609,29 @@
       hudLines.fillRect(456, 648, 42, 4);
       items.push(hudLines);
 
+      const atmosphere = this.add.graphics().setDepth(502).setBlendMode(Phaser.BlendModes.ADD);
+      atmosphere.fillStyle(0x65ddf3, 0.035);
+      atmosphere.fillEllipse(118, 328, 250, 380);
+      atmosphere.fillStyle(0xf15a47, 0.045);
+      atmosphere.fillEllipse(424, 548, 300, 420);
+      atmosphere.lineStyle(1, 0x8deeff, 0.08);
+      for (let y = 244; y <= 620; y += 47) {
+        atmosphere.lineBetween(34, y, 506, y);
+      }
+      atmosphere.lineStyle(2, 0xf15a47, 0.18);
+      atmosphere.strokeEllipse(270, 786, 430, 154);
+      items.push(atmosphere);
+      if (!this.reducedMotion) {
+        this.tweens.add({
+          targets: atmosphere,
+          alpha: { from: 0.62, to: 1 },
+          duration: 3200,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
+
       const archerButton = this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
         window.location.href = "https://archerlab.dev/";
       }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76 });

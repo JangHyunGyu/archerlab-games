@@ -2,7 +2,7 @@
 import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { PreloadScene } from './scenes/PreloadScene.js';
-import { MenuScene } from './scenes/MenuScene.js';
+import { MenuScene } from './scenes/MenuScene.js?v=20260718-menu-premium-v1';
 import { GameScene } from './scenes/GameScene.js';
 import { LevelUpScene } from './scenes/LevelUpScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js?v=20260622-rankerror';
