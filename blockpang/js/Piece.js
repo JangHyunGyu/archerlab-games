@@ -153,6 +153,11 @@ class PieceTray {
         this.slotContainers = [null, null, null]; // PIXI containers
         this.slotPositions = []; // {x, y} for each slot center
         this.trayCellSize = 0;
+        this.trayCellSizes = [0, 0, 0];
+        this._slotWidth = 0;
+        this._trayAreaHeight = 0;
+        this._boardCellSize = 0;
+        this._compactTray = false;
         this._idleTime = 0;
         this._slotBaseY = [0, 0, 0]; // saved base Y for idle float
 
@@ -207,14 +212,18 @@ class PieceTray {
     resize(cellSize, areaWidth, areaHeight, x, y) {
         this.container.position.set(x, y);
 
-        // Calculate tray cell size so pieces fit nicely
+        // Keep each shape legible instead of sizing every piece as though it
+        // occupied the maximum 5x5 footprint.
         const slotWidth = areaWidth / 3;
-        const maxDim = 5;
         const compact = areaWidth < 520;
+        this._slotWidth = slotWidth;
+        this._trayAreaHeight = areaHeight;
+        this._boardCellSize = cellSize;
+        this._compactTray = compact;
         this.trayCellSize = Math.min(
-            (slotWidth * (compact ? 0.84 : 0.72)) / maxDim,
-            (areaHeight * 0.78) / maxDim,
-            cellSize * (compact ? 0.86 : 0.82)
+            slotWidth * (compact ? 0.84 : 0.74),
+            areaHeight * (compact ? 0.58 : 0.62),
+            cellSize * (compact ? 1.04 : 1.12)
         );
 
         // Slot center positions
@@ -266,14 +275,29 @@ class PieceTray {
         root.addChild(matte);
 
         const slotW = w / 3;
+        const wells = new PIXI.Graphics();
         for (let i = 0; i < 3; i++) {
-            const slotX = slotW * i + slotW * 0.15;
-            const slotY = Math.max(22, panelH * 0.33);
-            const slotGlowW = slotW * 0.7;
-            const slotGlowH = Math.max(28, panelH * 0.14);
-            matte.roundRect(slotX, slotY, slotGlowW, slotGlowH, slotGlowH / 2)
-                 .fill({ color: THEME.secondary, alpha: 0.032 });
+            const wellW = slotW * 0.76;
+            const wellH = Math.max(54, panelH * 0.56);
+            const wellX = slotW * i + (slotW - wellW) * 0.5;
+            const wellY = Math.max(18, panelH * 0.16);
+            const wellR = Math.min(18, wellH * 0.22);
+
+            wells.roundRect(wellX, wellY, wellW, wellH, wellR)
+                 .fill({ color: 0x020B1E, alpha: 0.24 });
+            wells.roundRect(wellX, wellY, wellW, wellH, wellR)
+                 .stroke({ width: 1, color: THEME.divider, alpha: 0.12 });
+            wells.roundRect(
+                wellX + wellW * 0.13,
+                wellY + wellH * 0.76,
+                wellW * 0.74,
+                Math.max(7, wellH * 0.10),
+                Math.max(4, wellH * 0.05)
+            ).fill({ color: THEME.secondary, alpha: 0.055 });
+            wells.roundRect(wellX + 6, wellY + 5, wellW - 12, 2, 1)
+                 .fill({ color: 0xFFFFFF, alpha: 0.035 });
         }
+        root.addChild(wells);
 
         const border = new PIXI.Graphics();
         border.roundRect(10, 2, panelW, panelH, 14)
@@ -316,16 +340,32 @@ class PieceTray {
         return this.slots.every(s => s === null);
     }
 
+    _getTrayCellSize(piece) {
+        const cols = Math.max(1, piece.cols || 1);
+        const rows = Math.max(1, piece.rows || 1);
+        const widthRatio = this._compactTray ? 0.84 : 0.74;
+        const heightRatio = this._compactTray ? 0.58 : 0.62;
+        const boardScale = this._compactTray ? 1.04 : 1.12;
+
+        return Math.max(10, Math.min(
+            (this._slotWidth * widthRatio) / cols,
+            (this._trayAreaHeight * heightRatio) / rows,
+            this._boardCellSize * boardScale
+        ));
+    }
+
     _rebuildSlotVisuals(animate = false) {
         // Remove old
         this._clearTrayTweens();
         this.slotContainers.forEach(c => { if (c) c.destroy({ children: true }); });
         this.slotContainers = [null, null, null];
+        this.trayCellSizes = [0, 0, 0];
 
         for (let i = 0; i < 3; i++) {
             if (!this.slots[i] || this.slotPositions.length === 0) continue;
             const piece = this.slots[i];
-            const cs = this.trayCellSize;
+            const cs = this._getTrayCellSize(piece);
+            this.trayCellSizes[i] = cs;
             const cont = createPieceContainer(piece, cs);
             const trayRef = this;
 
