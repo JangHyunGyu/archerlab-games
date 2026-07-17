@@ -234,7 +234,7 @@ def apply_generated_repairs(generated_dir: Path) -> None:
         source = Image.open(generated_dir / source_name).convert("RGBA")
         cells[index] = normalise_generated_cell(
             source,
-            bow_identity[6],
+            bow_identity[index],
             key_colour="blue",
         )
         save_strip(cells, sheet_path)
