@@ -59,7 +59,7 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
-  const CHARACTER_ASSET_VERSION = "20260718-pistol-forward-v10";
+  const CHARACTER_ASSET_VERSION = "20260718-bow-motion-v11";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -191,6 +191,14 @@
   };
   const THROW_ANIMATION_FRAMES = 4;
   const THROW_ANIMATION_FRAME_DURATION = 0.075;
+  const CHARACTER_ATTACK_FRAME_DURATIONS = {
+    // Give the bow a readable draw, a crisp release, and a softer recovery
+    // while keeping the projectile release at roughly the original 150 ms beat.
+    a: [0.045, 0.11, 0.045, 0.09]
+  };
+  const CHARACTER_RECOVERY_BLEND_DURATIONS = {
+    a: 70
+  };
   const AIM_ALIASES = {
     idle: "aim-12",
     left: "aim-1030",
@@ -2863,6 +2871,8 @@
       const action = CHARACTER_ATTACK_ACTIONS[defender.id];
       const firstAttackFrame = action ? `character-${defender.id}-${action}-${pose}-0` : null;
       const releaseFrame = CHARACTER_ATTACK_RELEASE_FRAMES[defender.id];
+      const frameDurations = CHARACTER_ATTACK_FRAME_DURATIONS[defender.id]
+        || Array(THROW_ANIMATION_FRAMES).fill(THROW_ANIMATION_FRAME_DURATION);
       const delaysRelease = Number.isInteger(releaseFrame) && typeof onRelease === "function";
       if (action && defender.sprite && this.textures.exists(firstAttackFrame)) {
         defender.pose = pose;
@@ -2871,14 +2881,15 @@
           pose,
           frame: 0,
           frames: THROW_ANIMATION_FRAMES,
-          timer: THROW_ANIMATION_FRAME_DURATION,
+          timer: frameDurations[0],
           frameDuration: THROW_ANIMATION_FRAME_DURATION,
+          frameDurations,
           releaseFrame: delaysRelease ? releaseFrame : null,
           onRelease: delaysRelease ? onRelease : null
         };
         defender.sprite.setTexture(firstAttackFrame);
         this.fitDefenderActionHeight(defender);
-        defender.firePoseTimer = THROW_ANIMATION_FRAMES * THROW_ANIMATION_FRAME_DURATION;
+        defender.firePoseTimer = frameDurations.reduce((total, duration) => total + duration, 0);
         if (!delaysRelease && typeof onRelease === "function") {
           onRelease();
         }
@@ -6748,14 +6759,37 @@
           animation.timer -= dt;
           if (animation.timer <= 0) {
             animation.frame += 1;
-            animation.timer += animation.frameDuration;
             if (animation.frame >= animation.frames) {
               const restingPose = animation.pose || defender.pose || "aim-12";
+              const recoveryBlendDuration = CHARACTER_RECOVERY_BLEND_DURATIONS[defender.id] || 0;
+              const recoveryGhost = recoveryBlendDuration > 0 && defender.sprite
+                ? this.trackTransient(this.add.image(
+                  defender.sprite.x,
+                  defender.sprite.y,
+                  defender.sprite.texture.key
+                )
+                  .setOrigin(defender.sprite.originX, defender.sprite.originY)
+                  .setDisplaySize(defender.sprite.displayWidth, defender.sprite.displayHeight)
+                  .setRotation(defender.sprite.rotation)
+                  .setFlip(defender.sprite.flipX, defender.sprite.flipY)
+                  .setAlpha(defender.sprite.alpha)
+                  .setDepth(defender.sprite.depth + 0.01))
+                : null;
               defender.attackAnimation = null;
               defender.firePoseTimer = 0;
               this.setDefenderPose(defender, restingPose);
+              if (recoveryGhost) {
+                this.tweens.add({
+                  targets: recoveryGhost,
+                  alpha: 0,
+                  duration: recoveryBlendDuration,
+                  ease: "Sine.easeOut",
+                  onComplete: () => this.destroyTransientObject(recoveryGhost, false)
+                });
+              }
               return;
             }
+            animation.timer += animation.frameDurations?.[animation.frame] || animation.frameDuration;
             const textureKey = `character-${defender.id}-${animation.action}-${animation.pose}-${animation.frame}`;
             if (defender.sprite && this.textures.exists(textureKey)) {
               defender.sprite.setTexture(textureKey);

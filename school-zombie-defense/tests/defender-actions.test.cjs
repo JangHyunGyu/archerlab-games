@@ -24,6 +24,19 @@ for (const [defenderId, expectedFrame] of Object.entries({ a: 2, d: 1, f: 2, g: 
   assert.equal(Number(frameMatch[1]), expectedFrame, `defender ${defenderId.toUpperCase()} release frame drifted`);
 }
 
+const frameDurationsBlock = gameSource.match(
+  /const\s+CHARACTER_ATTACK_FRAME_DURATIONS\s*=\s*\{([\s\S]*?)\};/
+)?.[1];
+assert.ok(frameDurationsBlock, "CHARACTER_ATTACK_FRAME_DURATIONS must be declared");
+const bowDurations = frameDurationsBlock.match(/\ba\s*:\s*\[([^\]]+)\]/)?.[1]
+  .split(",")
+  .map(value => Number(value.trim()));
+assert.deepEqual(
+  bowDurations,
+  [0.045, 0.11, 0.045, 0.09],
+  "bow timing must preserve the readable draw and crisp release rhythm"
+);
+
 assert.match(
   gameSource,
   /startDefenderAttackAnimation\s*\(\s*defender\s*,\s*pose\s*,\s*onRelease(?:\s*=\s*null)?\s*\)/,
@@ -38,6 +51,16 @@ assert.doesNotMatch(
   animationUpdate,
   /setDefenderPose\s*\(\s*defender\s*,\s*["']aim-12["']\s*\)/,
   "attack completion must preserve the defender's last aim instead of forcing aim-12"
+);
+assert.match(
+  animationUpdate,
+  /animation\.frameDurations\?\.\[animation\.frame\]\s*\|\|\s*animation\.frameDuration/,
+  "attack animation updates must honor per-frame timing"
+);
+assert.match(
+  animationUpdate,
+  /CHARACTER_RECOVERY_BLEND_DURATIONS\[defender\.id\]/,
+  "bow recovery must blend back to its ready pose instead of popping"
 );
 
 const assetVersion = gameSource.match(
