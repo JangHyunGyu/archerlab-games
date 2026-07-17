@@ -120,6 +120,15 @@ async function run() {
                 }, effectMode);
             }
             await page.waitForTimeout(effectMode === 'placement' ? 150 : effectShowcase ? 260 : 150);
+            if (effectShowcase) {
+                await page.evaluate(() => window.__blockpangGame.app.ticker.stop());
+            }
+
+            const screenshotPath = path.join(
+                outputDir,
+                scenario.name + (effectShowcase ? '-' + effectMode + '-effects' : '') + '.png'
+            );
+            await page.screenshot({ path: screenshotPath, fullPage: false });
 
             const metrics = await page.evaluate(() => {
                 const game = window.__blockpangGame;
@@ -183,11 +192,6 @@ async function run() {
                 scenario.name + ' contains an unreadably small tray piece'
             );
 
-            const screenshotPath = path.join(
-                outputDir,
-                scenario.name + (effectShowcase ? '-' + effectMode + '-effects' : '') + '.png'
-            );
-            await page.screenshot({ path: screenshotPath, fullPage: false });
             console.log(JSON.stringify({ scenario: scenario.name, screenshotPath }));
             await context.close();
         }

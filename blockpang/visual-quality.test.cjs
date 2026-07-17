@@ -31,10 +31,10 @@ assert.ok(!game.includes('bgSprite.width = w;'), 'square background must preserv
 assert.match(game, /const landscapeTrayH = Math\.max\(144, Math\.min\(210, h \* 0\.25\)\);/);
 assert.ok(!game.includes('0.62) / PANEL_RATIO'), 'desktop board must not use the undersized fixed ratio');
 
-const cacheVersion = '20260717-visual-polish-v3';
+const cacheVersion = '20260718-wow-fx-v4';
 for (const file of ['index.html', 'index-en.html']) {
     const html = read(file);
-    for (const script of ['Board', 'Piece', 'Game', 'main']) {
+    for (const script of ['EffectManager', 'Board', 'Piece', 'Game', 'main']) {
         assert.ok(
             html.includes('src="js/' + script + '.js?v=' + cacheVersion + '"'),
             file + ' must cache-bust ' + script + '.js'

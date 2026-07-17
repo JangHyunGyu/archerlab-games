@@ -1192,6 +1192,11 @@ class EffectManager {
         txt.position.set(x, y);
         txt.alpha = 0;
         this.container.addChild(txt);
+        const popOvershoot = (1 + tier * 0.15) * 1.16;
+        const textFitScale = Math.min(
+            1,
+            (sw * 0.86) / Math.max(1, txt.width * popOvershoot)
+        );
 
         // ── Glow ring behind text ──
         const glowRadius = size * 2;
@@ -1249,7 +1254,7 @@ class EffectManager {
                 if (t < 0.15) {
                     const p = t / 0.15;
                     txt.alpha = easeOutCubic(p);
-                    const scale = easeOutElastic(p) * (1 + tier * 0.15);
+                    const scale = easeOutElastic(p) * (1 + tier * 0.15) * textFitScale;
                     txt.scale.set(scale);
                     glow.alpha = easeOutCubic(p) * (0.6 + tier * 0.15);
                     glow.scale.set(easeOutElastic(p) * 1.2);
@@ -1260,7 +1265,7 @@ class EffectManager {
                     const pulseAmp = (0.08 + tier * 0.04) * (1 - pp);
                     const pulseFreq = (5 + tier * 3);
                     const pulse = 1 + Math.sin(pp * Math.PI * pulseFreq) * pulseAmp;
-                    txt.scale.set(pulse * (1 + tier * 0.05));
+                    txt.scale.set(pulse * (1 + tier * 0.05) * textFitScale);
 
                     // Neon flicker: tier가 높을수록 더 격렬
                     const neonSpeed = 20 + tier * 12;
@@ -1277,7 +1282,7 @@ class EffectManager {
                     const pp = (t - 0.55) / 0.45;
                     const fadeFlicker = pp < 0.4 ? (0.9 + Math.sin(pp * Math.PI * 16) * 0.1) : 1;
                     txt.alpha = (1 - easeInOutQuad(pp)) * fadeFlicker;
-                    txt.scale.set((1 + tier * 0.05) * (1 - pp * 0.2));
+                    txt.scale.set((1 + tier * 0.05) * (1 - pp * 0.2) * textFitScale);
                     glow.alpha = (0.2 + tier * 0.05) * (1 - easeInOutQuad(pp));
                     glow.scale.set(1.5 + pp * 0.5);
                 }
@@ -1954,6 +1959,43 @@ class EffectManager {
         this.playPrismaticFlare(x, y, color, weight);
         this.playRingBurst(x, y, color, cellSize * (1.15 + weight * 0.48));
 
+        const bloom = this._createParticleDisplay('effectSoftBurst', (g) => {
+            g.circle(0, 0, cellSize * 1.65).fill({ color, alpha: 0.28 });
+            g.circle(0, 0, cellSize * 0.72).fill({ color: 0xFFFFFF, alpha: 0.86 });
+        });
+        const bloomIsSprite = !!bloom._blockpangEffectSprite;
+        if (bloomIsSprite) bloom.tint = color;
+        bloom.position.set(x, y);
+        bloom.alpha = 0;
+        bloom.blendMode = 'add';
+        this.container.addChild(bloom);
+
+        const bloomTextureSize = bloomIsSprite
+            ? Math.max(bloom.texture.width || 128, bloom.texture.height || 128)
+            : cellSize * 3.3;
+        const bloomBaseScale = (cellSize * (3.2 + weight * 0.85)) / bloomTextureSize;
+        const self = this;
+        this.tweens.push({
+            elapsed: 0,
+            duration: reduced ? 240 : 680,
+            update(dt) {
+                if (!bloom || bloom.destroyed) return true;
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                const pop = Math.min(1, t / 0.14);
+                const scale = bloomBaseScale * (0.32 + easeOutBack(pop) * 0.78 + t * 0.18);
+                bloom.scale.set(scale);
+                bloom.alpha = easeOutCubic(pop)
+                    * (1 - easeInOutQuad(Math.max(0, (t - 0.34) / 0.66)))
+                    * (reduced ? 0.38 : 0.98);
+                if (t >= 1) {
+                    self._releaseParticleDisplay(bloom);
+                    return true;
+                }
+                return false;
+            }
+        });
+
         this.spawnSparkles(x, y, color, reduced ? 4 : Math.min(20, 7 + cellCount * 2));
         this.playRadialRays(
             x,
@@ -1968,6 +2010,7 @@ class EffectManager {
         }
         if (!reduced && cellCount >= 5) {
             this.screenShake(2.5, 130);
+            this.playScreenFlash(color, 0.045, 145);
         }
     }
 
