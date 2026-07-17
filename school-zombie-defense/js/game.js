@@ -59,7 +59,7 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
-  const CHARACTER_ASSET_VERSION = "20260714-defender-muzzles-v9";
+  const CHARACTER_ASSET_VERSION = "20260718-pistol-forward-v10";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -273,6 +273,7 @@
     explosion: { texture: "zombie-hit-rocket-sheet", width: 128, duration: 330, alpha: 0.94, scalePeak: 1.12, rotation: 0.18, frameWidth: 160, frameHeight: 130, frames: 16 },
     default: { texture: "zombie-hit-pistol-sheet", width: 52, duration: 215, alpha: 0.92, scalePeak: 1.04, rotation: 0.1, frameWidth: 112, frameHeight: 96, frames: 12 }
   };
+  const ZOMBIE_HIT_EFFECT_SIZE_MULTIPLIER = 1.35;
   const FIRE_ZONE_ANIMATION_FRAMES = 8;
   const SHOCK_EFFECT_OUTER_COLOR = 0x8f9dff;
   const CHARGER_CHARGE_TINT = 0xffcf9e;
@@ -315,10 +316,10 @@
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES = 12;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
-  // Keep the hit reaction visible without letting a corpse settle far above the position where the fall began.
-  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE = 0.24;
-  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO = 0.07;
-  const ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO = 0.02;
+  // Carry the lethal hit into the fall while keeping extreme knockback inside the combat lane.
+  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE = 1;
+  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO = 0.35;
+  const ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO = 0.28;
   const ZOMBIE_DEATH_TYPES = [
     "normal",
     "student",
@@ -8880,7 +8881,7 @@
     }
 
     createImpactSprite(effect, hitPoint, sizeScale, rotation, depth) {
-      const displayWidth = effect.width * sizeScale;
+      const displayWidth = effect.width * sizeScale * ZOMBIE_HIT_EFFECT_SIZE_MULTIPLIER;
       const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
       const impact = this.trackHitEffectRoot(this.trackTransient(this.add.sprite(
         hitPoint.x,
@@ -9215,18 +9216,19 @@
       );
       const shoveX = this.clampZombieLaneX(corpseX + knockbackDx);
       const shoveY = clamp(y + deathKnockbackDy, -48, this.bounds.barricade - displayH * 0.14);
+      const deathFallTravelY = displayH * fall.y * 0.35;
       const landingX = this.clampZombieLaneX(shoveX + displayH * fall.x + rand(-6, 6));
       const landingY = clamp(
         Math.max(
           y - displayH * ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO,
-          shoveY + displayH * fall.y + rand(-4, 5)
+          shoveY + deathFallTravelY + rand(-4, 5)
         ),
         -20,
         this.bounds.barricade - displayH * 0.1
       );
       const finalAngle = fall.angle + rand(-5, 5);
       const stumbleX = this.clampZombieLaneX(corpseX + (shoveX - corpseX) * 0.62 + displayH * fall.x * 0.16);
-      const stumbleY = y + (shoveY - y) * 0.62 + displayH * (0.02 + fall.y * 0.14);
+      const stumbleY = y + (shoveY - y) * 0.9 + displayH * (0.006 + fall.y * 0.05);
       const deathPushDuration = deathKnockback
         ? clamp((deathKnockback.duration || 110) * 0.62, 72, 140)
         : rand(70, 112);
@@ -10746,6 +10748,8 @@
         .setDepth(525);
       const icon = this.add.image(x - 166, y, isRecruit ? recruitPortraitTexture : upgrade.icon).setDepth(526);
       icon.setDisplaySize(isRecruit ? 92 : 78, isRecruit ? 92 : 78);
+      const iconBaseScaleX = icon.scaleX;
+      const iconBaseScaleY = icon.scaleY;
       const ownerHalo = hasOwnerCharacter
         ? this.add.circle(x - 132, y + 34, 21, 0x020507, 0.92).setStrokeStyle(2, accent, 0.72).setDepth(526)
         : null;
@@ -10866,7 +10870,10 @@
       const setHover = (active) => {
         panel.glow.setAlpha(active ? 0.18 : 0.075);
         portraitHalo.setScale(active ? 1.05 : 1);
-        icon.setScale(active ? 1.035 : 1);
+        icon.setScale(
+          iconBaseScaleX * (active ? 1.035 : 1),
+          iconBaseScaleY * (active ? 1.035 : 1)
+        );
         chooseBg.setFillStyle(active ? accent : 0x101820, active ? 0.35 : 0.92);
         chooseText.setScale(active ? 1.04 : 1);
       };

@@ -51,6 +51,8 @@ assert.notEqual(
 );
 
 const sheets = [
+  { name: "character-c", width: 2565, height: 724 },
+  ...[0, 1, 2, 3].map(frame => ({ name: `character-c-attack-${frame}`, width: 1440, height: 362 })),
   { name: "character-a", width: 4608, height: 800 },
   ...[1, 2, 3].map(frame => ({ name: `character-a-attack-${frame}`, width: 4608, height: 800 })),
   { name: "character-d", width: 2016, height: 362 },
