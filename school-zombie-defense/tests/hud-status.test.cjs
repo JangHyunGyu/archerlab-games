@@ -38,6 +38,26 @@ assert.match(
 );
 assert.match(gameSource, /this\.shield \+= barricadeShield/, "the engineer barricade skill must still grant shield");
 
+const wideSkillCard = gameSource.match(
+  /addWideSkillCard\s*\(x, y, upgrade, index\s*=\s*0\)\s*\{([\s\S]*?)\n\s*addSkillCard\s*\(/
+)?.[1];
+assert.ok(wideSkillCard, "addWideSkillCard must remain discoverable");
+assert.match(
+  wideSkillCard,
+  /const iconBaseScaleX = icon\.scaleX;[\s\S]*?const iconBaseScaleY = icon\.scaleY;/,
+  "skill card hover must preserve the fitted portrait scale"
+);
+assert.match(
+  wideSkillCard,
+  /icon\.setScale\(\s*iconBaseScaleX \* \(active \? 1\.035 : 1\),\s*iconBaseScaleY \* \(active \? 1\.035 : 1\)\s*\)/,
+  "skill card hover must scale relative to the 92px portrait size"
+);
+assert.doesNotMatch(
+  wideSkillCard,
+  /icon\.setScale\(active \? 1\.035 : 1\)/,
+  "skill card hover must not restore a portrait to its 512px source size"
+);
+
 const updateHud = gameSource.match(
   /updateHud\s*\(\)\s*\{([\s\S]*?)\r?\n\s{4}\}\r?\n\s{2}\}\r?\n\r?\n\s{2}if \(!window\.Phaser\)/
 )?.[1];
