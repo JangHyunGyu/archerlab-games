@@ -137,6 +137,63 @@ def alpha_geometry(image: Image.Image) -> tuple[tuple[int, int, int, int], float
     return bbox, sum(foot_x) / len(foot_x)
 
 
+def is_hair_pixel(pixel: tuple[int, int, int, int], kind: str) -> bool:
+    red, green, blue, alpha = pixel
+    if alpha <= 32:
+        return False
+    if kind == "pink":
+        return red >= 125 and red > green * 1.22 and red > blue * 0.98 and blue >= 58
+    return red >= 62 and red > green * 1.35 and red > blue * 1.18 and green < 115
+
+
+def largest_hair_component_top(image: Image.Image, kind: str) -> int:
+    width, height = image.size
+    pixels = image.load()
+    active = bytearray(width * height)
+    for y in range(height):
+        offset = y * width
+        for x in range(width):
+            if is_hair_pixel(pixels[x, y], kind):
+                active[offset + x] = 1
+
+    best_size = 0
+    best_top = None
+    for start, value in enumerate(active):
+        if not value:
+            continue
+        active[start] = 0
+        queue = deque([start])
+        size = 0
+        top = height
+        while queue:
+            current = queue.popleft()
+            y, x = divmod(current, width)
+            size += 1
+            top = min(top, y)
+            for neighbour in (current - 1, current + 1, current - width, current + width):
+                if neighbour < 0 or neighbour >= len(active) or not active[neighbour]:
+                    continue
+                neighbour_y, neighbour_x = divmod(neighbour, width)
+                if abs(neighbour_x - x) + abs(neighbour_y - y) != 1:
+                    continue
+                active[neighbour] = 0
+                queue.append(neighbour)
+        if size > best_size:
+            best_size = size
+            best_top = top
+
+    if best_top is None or best_size < 80:
+        raise ValueError(f"could not locate the {kind} hair reference")
+    return best_top
+
+
+def body_height(image: Image.Image, hair: str) -> int:
+    bbox = image.getchannel("A").getbbox()
+    if bbox is None:
+        raise ValueError("empty sprite cell")
+    return bbox[3] - largest_hair_component_top(image, hair)
+
+
 def despill_key_colour(image: Image.Image, key_colour: str) -> Image.Image:
     """Remove high-saturation key remnants without recolouring the subject."""
     result = image.convert("RGBA").copy()
@@ -173,6 +230,7 @@ def normalise_generated_cell(
     target: Image.Image,
     *,
     key_colour: str,
+    hair: str | None = None,
 ) -> Image.Image:
     """Fit one approved repair cell to an existing cell's scale and footing."""
     source = despill_key_colour(source, key_colour)
@@ -185,22 +243,73 @@ def normalise_generated_cell(
 
     source_height = source_bottom - source_top
     target_subject_height = target_bottom - target_top
-    scale = target_subject_height / max(1, source_height)
+    scale = (
+        body_height(target, hair) / max(1, body_height(source, hair))
+        if hair is not None
+        else target_subject_height / max(1, source_height)
+    )
     margin = 10
+    if hair is not None:
+        probe = source.resize(
+            (max(1, round(source.width * scale)), max(1, round(source.height * scale))),
+            Image.Resampling.LANCZOS,
+        )
+        desired_body_height = body_height(target, hair)
+        probe_body_height = body_height(probe, hair)
+        if abs(probe_body_height - desired_body_height) > 2:
+            scale *= desired_body_height / max(1, probe_body_height)
     scale = min(
         scale,
         (target_width - 2 * margin) / max(1, source_right - source_left),
-        (target_height - 2 * margin) / max(1, source_height),
+        (target_bottom - margin - 2) / max(1, source_height),
     )
     resized = source.resize(
         (max(1, round(source.width * scale)), max(1, round(source.height * scale))),
         Image.Resampling.LANCZOS,
     )
-    x = round(target_foot_x - source_foot_x * scale)
-    y = round(target_bottom - source_bottom * scale)
+    resized_bbox = resized.getchannel("A").getbbox()
+    if resized_bbox is None:
+        raise ValueError("normalised source became empty")
+    resized_left, resized_top, resized_right, resized_bottom = resized_bbox
+    _, resized_foot_x = alpha_geometry(resized)
+    x = round(target_foot_x - resized_foot_x)
+    y = target_bottom - resized_bottom
+    if x + resized_left < margin:
+        x += margin - (x + resized_left)
+    if x + resized_right > target_width - margin:
+        x -= x + resized_right - (target_width - margin)
     result = Image.new("RGBA", target.size, (0, 0, 0, 0))
     result.alpha_composite(resized, (x, y))
     result = despill_key_colour(result, key_colour)
+    if hair is not None:
+        desired_body_height = body_height(target, hair)
+        for _ in range(2):
+            actual_body_height = body_height(result, hair)
+            if actual_body_height <= desired_body_height + 2:
+                break
+            bbox = result.getchannel("A").getbbox()
+            if bbox is None:
+                raise ValueError("normalised result became empty")
+            sprite = result.crop(bbox)
+            correction = desired_body_height / actual_body_height
+            sprite = sprite.resize(
+                (
+                    max(1, round(sprite.width * correction)),
+                    max(1, round(sprite.height * correction)),
+                ),
+                Image.Resampling.LANCZOS,
+            )
+            sprite_bbox, sprite_foot_x = alpha_geometry(sprite)
+            sprite_left, sprite_top, sprite_right, sprite_bottom = sprite_bbox
+            x = round(target_foot_x - sprite_foot_x)
+            y = target_bottom - sprite_bottom
+            if x + sprite_left < margin:
+                x += margin - (x + sprite_left)
+            if x + sprite_right > target_width - margin:
+                x -= x + sprite_right - (target_width - margin)
+            result = Image.new("RGBA", target.size, (0, 0, 0, 0))
+            result.alpha_composite(sprite, (x, y))
+            result = despill_key_colour(result, key_colour)
     bbox = result.getchannel("A").getbbox()
     if bbox is None or min(bbox[0], bbox[1], target_width - bbox[2], target_height - bbox[3]) < 6:
         raise ValueError(f"normalised cell violates safe margins: {bbox}")
@@ -223,10 +332,14 @@ def apply_deterministic_repairs() -> None:
     save_strip(split_strip(shock_settled), IMAGE_DIR / "character-g-attack-3.png")
 
 
-def apply_generated_repairs(generated_dir: Path) -> None:
+def apply_generated_bow_repairs(generated_dir: Path) -> None:
     bow_targets = {
+        "a-f1-c4.png": (IMAGE_DIR / "character-a-attack-1.png", 4),
+        "a-f2-c4.png": (IMAGE_DIR / "character-a-attack-2.png", 4),
+        "a-f3-c4.png": (IMAGE_DIR / "character-a-attack-3.png", 4),
         "a-f1-c5.png": (IMAGE_DIR / "character-a-attack-1.png", 5),
         "a-f2-c5.png": (IMAGE_DIR / "character-a-attack-2.png", 5),
+        "a-f3-c5.png": (IMAGE_DIR / "character-a-attack-3.png", 5),
     }
     bow_identity = split_strip(Image.open(IMAGE_DIR / "character-a.png").convert("RGBA"))
     for source_name, (sheet_path, index) in bow_targets.items():
@@ -236,8 +349,13 @@ def apply_generated_repairs(generated_dir: Path) -> None:
             source,
             bow_identity[index],
             key_colour="blue",
+            hair="pink",
         )
         save_strip(cells, sheet_path)
+
+
+def apply_generated_repairs(generated_dir: Path) -> None:
+    apply_generated_bow_repairs(generated_dir)
 
     firebomb_path = IMAGE_DIR / "character-f-throw-3.png"
     firebomb_cells = split_strip(Image.open(firebomb_path).convert("RGBA"))
@@ -299,6 +417,7 @@ def verify_direction_safe_outputs() -> None:
     modified_stems = (
         "character-a-attack-1",
         "character-a-attack-2",
+        "character-a-attack-3",
         "character-d-attack-2",
         "character-f-throw-2",
         "character-f-throw-3",
@@ -353,6 +472,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--generated-dir", type=Path)
     parser.add_argument("--deterministic-only", action="store_true")
+    parser.add_argument("--bow-only", action="store_true")
     parser.add_argument("--inspect-firebomb", action="store_true")
     parser.add_argument("--verify-only", action="store_true")
     args = parser.parse_args()
@@ -363,6 +483,13 @@ def main() -> None:
     if args.verify_only:
         verify_direction_safe_outputs()
         print("verified defender direction-safe action sheets")
+        return
+    if args.bow_only:
+        if args.generated_dir is None:
+            parser.error("--generated-dir is required with --bow-only")
+        apply_generated_bow_repairs(args.generated_dir.resolve())
+        verify_direction_safe_outputs()
+        print("finalized defender A direction-safe attack sheets")
         return
     apply_deterministic_repairs()
     if not args.deterministic_only:
