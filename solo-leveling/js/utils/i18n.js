@@ -122,7 +122,7 @@ const TEXTS = {
         passives: {
             swiftness: { name: '신속', desc: '이동속도 +8%' },
             vitality: { name: '체력 강화', desc: '최대 HP +12%' },
-            strength: { name: '힘 강화', desc: '공격력 +8%' },
+            strength: { name: '공격력 강화', desc: '공격력 +8%' },
             critMaster: { name: '치명타 달인', desc: '치명타율 +8%' },
             scholar: { name: '학습 능력', desc: '경험치 +12%' },
             hastening: { name: '쿨타임 감소', desc: '스킬 쿨타임 -6%' },
@@ -243,7 +243,7 @@ const TEXTS = {
         passives: {
             swiftness: { name: 'Swiftness', desc: 'Move speed +10%' },
             vitality: { name: 'Vitality', desc: 'Max HP +15%' },
-            strength: { name: 'Strength', desc: 'Attack +12%' },
+            strength: { name: 'Attack Boost', desc: 'Attack +8%' },
             critMaster: { name: 'Crit Master', desc: 'Crit rate +5%' },
             scholar: { name: 'Scholar', desc: 'XP gain +15%' },
             hastening: { name: 'Haste', desc: 'Skill cooldown -6%' },
@@ -361,7 +361,7 @@ const TEXTS = {
         passives: {
             swiftness: { name: '迅速', desc: '移動速度 +10%' },
             vitality: { name: '体力強化', desc: '最大HP +15%' },
-            strength: { name: '力強化', desc: '攻撃力 +12%' },
+            strength: { name: '攻撃力強化', desc: '攻撃力 +8%' },
             critMaster: { name: 'クリティカルの達人', desc: 'クリティカル率 +5%' },
             scholar: { name: '学習能力', desc: '経験値 +15%' },
             hastening: { name: 'クールダウン減少', desc: 'スキルクールダウン -6%' },
