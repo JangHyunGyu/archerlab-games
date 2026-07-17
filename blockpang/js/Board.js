@@ -1,3 +1,6 @@
+const BOARD_TILE_VISUAL_SCALE = 0.94;
+const BOARD_GHOST_VISUAL_SCALE = 0.90;
+
 class Board {
     constructor(game) {
         this.game = game;
@@ -215,15 +218,26 @@ class Board {
         ).fill({ color: 0x06142F, alpha: panelTexture ? 0.93 : 0.78 });
         container.addChild(surface);
 
-        const sheen = getBlockpangTexture('crystalSheen');
-        if (sheen) {
-            const sheenSprite = new PIXI.Sprite(sheen);
-            sheenSprite.position.set(-surfacePad, -surfacePad);
-            sheenSprite.width = total + surfacePad * 2;
-            sheenSprite.height = total + surfacePad * 2;
-            sheenSprite.alpha = 0.13;
-            container.addChild(sheenSprite);
-        }
+        // The crystal-sheen asset is a material source sheet rather than a
+        // seamless board texture. Drawing the full sheet caused a bright
+        // rainbow seam across the middle of the board, so use restrained,
+        // procedural reflections that remain clean at every board size.
+        const ambience = new PIXI.Graphics();
+        ambience.poly([
+            0, 0,
+            total * 0.72, 0,
+            total * 0.48, total * 0.30,
+            0, total * 0.50,
+        ], true).fill({ color: 0xFFFFFF, alpha: 0.025 });
+        ambience.poly([
+            total * 0.62, total,
+            total, total,
+            total, total * 0.72,
+            total * 0.78, total * 0.84,
+        ], true).fill({ color: THEME.secondary, alpha: 0.026 });
+        ambience.roundRect(cs * 0.34, cs * 0.28, total - cs * 0.68, 2, 1)
+                .fill({ color: 0xFFFFFF, alpha: 0.045 });
+        container.addChild(ambience);
 
         // Thin hairline border (kept tight to the cell area, not the asset edge)
         const border = new PIXI.Graphics();
@@ -283,12 +297,14 @@ class Board {
         const r = Math.max(3, s * 0.14);
 
         // Glassy empty recess, kept subtle so placed crystal blocks own the board.
-        g.roundRect(0, 0, s, s, r).fill({ color: 0x07142F, alpha: 0.68 });
+        g.roundRect(0, 0, s, s, r).fill({ color: 0x07142F, alpha: 0.62 });
 
         g.roundRect(1, 1, s - 2, s - 2, r - 1)
-         .stroke({ width: 1, color: THEME.divider, alpha: 0.16 });
+         .stroke({ width: 1, color: THEME.divider, alpha: 0.23 });
         g.roundRect(2, 2, s - 4, s * 0.28, r - 1)
-         .fill({ color: 0xFFFFFF, alpha: 0.035 });
+         .fill({ color: 0xFFFFFF, alpha: 0.055 });
+        g.roundRect(2, s * 0.68, s - 4, s * 0.26, r - 1)
+         .fill({ color: 0x000000, alpha: 0.08 });
 
         const tex = this.app.renderer.generateTexture({
             target: g,
@@ -303,9 +319,11 @@ class Board {
     fitCellSprite(sprite, row, col) {
         if (!sprite) return;
         const cs = this.cellSize;
-        sprite.position.set(col * cs, row * cs);
-        sprite.width = cs;
-        sprite.height = cs;
+        const visualSize = cs * BOARD_TILE_VISUAL_SCALE;
+        sprite.anchor.set(0.5);
+        sprite.position.set((col + 0.5) * cs, (row + 0.5) * cs);
+        sprite.width = visualSize;
+        sprite.height = visualSize;
         sprite._blockpangBaseScaleX = sprite.scale.x;
         sprite._blockpangBaseScaleY = sprite.scale.y;
     }
@@ -630,6 +648,7 @@ class Board {
             return this._ghostSpritePool[index];
         }
         const sprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
+        sprite.anchor.set(0.5);
         sprite.eventMode = 'none';
         this._ghostSpritePool.push(sprite);
         return sprite;
@@ -653,9 +672,9 @@ class Board {
                 if (ghostTexture) {
                     const sprite = this._getGhostSprite(idx);
                     sprite.texture = ghostTexture;
-                    sprite.position.set(x, y);
-                    sprite.width = cs;
-                    sprite.height = cs;
+                    sprite.position.set(x + cs * 0.5, y + cs * 0.5);
+                    sprite.width = cs * BOARD_GHOST_VISUAL_SCALE;
+                    sprite.height = cs * BOARD_GHOST_VISUAL_SCALE;
                     sprite.alpha = isValid ? 0.62 : 0.78;
                     sprite.visible = true;
                     if (!sprite.parent) {
