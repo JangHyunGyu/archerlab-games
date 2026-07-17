@@ -9,6 +9,10 @@ const zlib = require("node:zlib");
 
 const root = path.resolve(__dirname, "..");
 const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+const finalizeDirectionsSource = fs.readFileSync(
+  path.join(root, "tools", "finalize-defender-action-directions.py"),
+  "utf8"
+);
 const imageRoot = path.join(root, "assets", "images");
 const hashFixturePath = path.join(__dirname, "defender-action-assets.sha256.json");
 const updateHashes = process.argv.includes("--update-hashes");
@@ -35,6 +39,22 @@ assert.deepEqual(
   bowDurations,
   [0.045, 0.11, 0.045, 0.09],
   "bow timing must preserve the readable draw and crisp release rhythm"
+);
+
+assert.match(
+  gameSource,
+  /const\s+CHARACTER_ATTACK_DIRECTION_LOCKS\s*=\s*new Set\(\["a"\]\)/,
+  "bow attacks must lock their animation to the target direction"
+);
+assert.match(
+  gameSource,
+  /const pose = CHARACTER_ATTACK_DIRECTION_LOCKS\.has\(defender\.id\)\s*\? initialPose\s*:\s*getShotAimPoseKey\(initialAngle\)/,
+  "muzzle offsets must not remap the bow animation away from its target direction"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /normalise_generated_cell\(\s*source,\s*bow_identity\[index\],/,
+  "bow direction repairs must use the matching ready-pose direction as their alignment target"
 );
 
 assert.match(
