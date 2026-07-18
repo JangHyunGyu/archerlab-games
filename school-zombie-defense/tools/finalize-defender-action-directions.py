@@ -333,24 +333,26 @@ def apply_deterministic_repairs() -> None:
 
 
 def apply_generated_bow_repairs(generated_dir: Path) -> None:
-    bow_targets = {
-        "a-f1-c4.png": (IMAGE_DIR / "character-a-attack-1.png", 4),
-        "a-f2-c4.png": (IMAGE_DIR / "character-a-attack-2.png", 4),
-        "a-f3-c4.png": (IMAGE_DIR / "character-a-attack-3.png", 4),
-        "a-f1-c5.png": (IMAGE_DIR / "character-a-attack-1.png", 5),
-        "a-f2-c5.png": (IMAGE_DIR / "character-a-attack-2.png", 5),
-        "a-f3-c5.png": (IMAGE_DIR / "character-a-attack-3.png", 5),
-    }
     bow_identity = split_strip(Image.open(IMAGE_DIR / "character-a.png").convert("RGBA"))
-    for source_name, (sheet_path, index) in bow_targets.items():
-        cells = split_strip(Image.open(sheet_path).convert("RGBA"))
-        source = Image.open(generated_dir / source_name).convert("RGBA")
-        cells[index] = normalise_generated_cell(
-            source,
-            bow_identity[index],
-            key_colour="blue",
-            hair="pink",
+    bow_sheets = {
+        frame: (
+            IMAGE_DIR / f"character-a-attack-{frame}.png",
+            split_strip(
+                Image.open(IMAGE_DIR / f"character-a-attack-{frame}.png").convert("RGBA")
+            ),
         )
+        for frame in range(1, 4)
+    }
+    for frame, (_, cells) in bow_sheets.items():
+        for index in range(POSE_COUNT):
+            source = Image.open(generated_dir / f"a-f{frame}-c{index}.png").convert("RGBA")
+            cells[index] = normalise_generated_cell(
+                source,
+                bow_identity[index],
+                key_colour="blue",
+                hair="pink",
+            )
+    for sheet_path, cells in bow_sheets.values():
         save_strip(cells, sheet_path)
 
 
