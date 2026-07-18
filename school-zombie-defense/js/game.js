@@ -241,7 +241,7 @@
     "projectile-rocket": 0.19,
     "projectile-sniper": 0.16,
     "projectile-frost": 0.78,
-    "projectile-firebomb": 0.32,
+    "projectile-firebomb": 0.26,
     "projectile-shock": 0.48,
     "projectile-nail": 0.22
   };

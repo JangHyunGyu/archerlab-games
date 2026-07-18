@@ -900,6 +900,11 @@ assert.match(
 );
 assert.match(
   gameSource,
+  /"projectile-firebomb"\s*:\s*0\.26/,
+  "firebomb flight art must stay compact enough to read as a handheld bottle"
+);
+assert.match(
+  gameSource,
   /createMuzzle\(x,\s*y,\s*muzzle\.effectAngle\s*\?\?\s*angle,\s*defender\.projectile\)/,
   "directional weapon muzzle effects must use their measured barrel angle"
 );
