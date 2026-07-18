@@ -156,8 +156,8 @@ assert.match(
 );
 assert.match(
   finalizeDirectionsSource,
-  /if args\.bow_only:[\s\S]*?apply_generated_bow_repairs\(args\.generated_dir\.resolve\(\)\)/,
-  "the bow repair workflow must run without rewriting unrelated defender assets"
+  /if args\.bow_only:[\s\S]*?else BOW_SOURCE_DIR[\s\S]*?apply_generated_bow_repairs\(generated_dir\)/,
+  "the bow repair workflow must default to reviewed sources without rewriting unrelated defender assets"
 );
 
 assert.match(
@@ -281,6 +281,39 @@ function readWebpDimensions(filePath) {
 
 function sha256(filePath) {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function assertArcherSourceChecksums() {
+  const sourceRoot = path.join(root, "design", "source-assets", "archer-v14");
+  const sumsPath = path.join(sourceRoot, "SHA256SUMS");
+  assert.ok(fs.existsSync(sumsPath), "reviewed archer source checksum manifest must exist");
+
+  const entries = fs.readFileSync(sumsPath, "utf8").trim().split(/\r?\n/).map(line => {
+    const match = line.match(/^([0-9a-f]{64})  (a-f[0-3]-c[0-4]\.png)$/);
+    assert.ok(match, `invalid reviewed archer source checksum line: ${line}`);
+    return { hash: match[1], fileName: match[2] };
+  });
+  const expectedNames = [];
+  for (let frame = 0; frame <= 3; frame += 1) {
+    for (let direction = 0; direction <= 4; direction += 1) {
+      expectedNames.push(`a-f${frame}-c${direction}.png`);
+    }
+  }
+  assert.deepEqual(
+    entries.map(({ fileName }) => fileName),
+    expectedNames,
+    "reviewed archer source set must contain exactly frames 0..3 and directions 0..4"
+  );
+  for (const { hash, fileName } of entries) {
+    const sourcePath = path.join(sourceRoot, fileName);
+    assert.ok(fs.existsSync(sourcePath), `${fileName} reviewed archer source must exist`);
+    assert.equal(sha256(sourcePath), hash, `${fileName} reviewed archer source changed unexpectedly`);
+  }
+  assert.match(
+    finalizeDirectionsSource,
+    /BOW_SOURCE_DIR\s*=\s*ROOT\s*\/\s*"design"\s*\/\s*"source-assets"\s*\/\s*"archer-v14"/,
+    "bow finalization must default to the tracked reviewed source directory"
+  );
 }
 
 const assetPaths = [];
@@ -854,6 +887,7 @@ assertShockCannonDirections();
 assertPngWebpAlphaParity();
 assertMeasuredMuzzlesTouchReleaseArt();
 assertArcherDirectionalSymmetry();
+assertArcherSourceChecksums();
 assert.ok(
   muzzleOffsets.f.slice(0, 4).every(([x]) => x < 0)
     && muzzleOffsets.f.slice(5).every(([x]) => x > 0),

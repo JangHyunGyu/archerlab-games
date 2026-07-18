@@ -3,3 +3,9 @@ test-results/
 playwright-report/
 __pycache__/
 *.pyc
+
+# Local generation and visual-QA artifacts.
+/tmp/
+/school-zombie-defense/tmp/archer-v3/
+/-background
+/jpeg
