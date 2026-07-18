@@ -56,19 +56,11 @@ assert.match(
   /normalise_generated_cell\(\s*source,\s*bow_identity\[index\],\s*key_colour="blue",\s*hair="pink",/,
   "bow direction repairs must use the matching ready-pose direction as their alignment target"
 );
-for (const sourceName of [
-  "a-f1-c4.png",
-  "a-f2-c4.png",
-  "a-f3-c4.png",
-  "a-f1-c5.png",
-  "a-f2-c5.png",
-  "a-f3-c5.png"
-]) {
-  assert.ok(
-    finalizeDirectionsSource.includes(`"${sourceName}"`),
-    `${sourceName} must remain in the generated bow repair set`
-  );
-}
+assert.match(
+  finalizeDirectionsSource,
+  /for frame, \(_, cells\) in bow_sheets\.items\(\):[\s\S]*?for index in range\(POSE_COUNT\):[\s\S]*?generated_dir \/ f"a-f\{frame\}-c\{index\}\.png"/,
+  "the generated bow repair set must cover all three attack frames and all nine directions"
+);
 assert.match(
   finalizeDirectionsSource,
   /if args\.bow_only:[\s\S]*?apply_generated_bow_repairs\(args\.generated_dir\.resolve\(\)\)/,
@@ -107,7 +99,7 @@ const assetVersion = gameSource.match(
 assert.ok(assetVersion, "CHARACTER_ASSET_VERSION must be declared");
 assert.equal(
   assetVersion,
-  "20260718-bow-directions-v12",
+  "20260718-bow-video-directions-v13",
   "character asset cache version must track the corrected bow direction sheets"
 );
 

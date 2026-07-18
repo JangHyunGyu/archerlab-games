@@ -1,12 +1,12 @@
 {
   "algorithm": "sha256",
   "assets": {
-    "character-a-attack-1.png": "0ad2c599b18db8420bc7c6acf93f0cbd54c2d136e871465a41e5d4fc55521ecc",
-    "character-a-attack-1.webp": "aeaac0dbf9ae3d47ff7908c8244bb01885a6858b822ae9e9add5423f8a2a711f",
-    "character-a-attack-2.png": "e6ba61c846f0d5bd6f0aba851201c62d3cd870cd97a32351958a86cc58d1f726",
-    "character-a-attack-2.webp": "6abe61d5c797169d2a2fb4817a54d31c56ab9bbb1ef359f8b6e6a01949c33577",
-    "character-a-attack-3.png": "394f97a207bcd4ebd837b8290ce09745c52c317c54f307a30a44e8cf8662fe97",
-    "character-a-attack-3.webp": "21c740579d52c675ebe4c92a966a6bef67e0c018b91c3ad7858ab114bf89715d",
+    "character-a-attack-1.png": "b5f8004ffb56d99d145e02099a1f9935dca8d355bc48c6557e8b09aff7f9abcd",
+    "character-a-attack-1.webp": "24d220a26484523edc4c6c64b438a71de3efddea9b5b2de91924c1b034c43bf0",
+    "character-a-attack-2.png": "c95104b7d6e72e65f50c3f65b6a0835932cba78e428211af297906704a927a87",
+    "character-a-attack-2.webp": "f26b528ad4e1336d4d7c5ee09e6aa5c91ce12d88557e23bde1f594e564a23754",
+    "character-a-attack-3.png": "8cdb278e7c06c71a38901a4ae1aa0beada40f6007f20f2928ced1f3ba587a570",
+    "character-a-attack-3.webp": "37c95fde6328812092aaba82084e82ebc0c34c5ef60062a958d981059692d1b3",
     "character-a.png": "16509fd37e0f9abdc65515ec2f270cf132f3925348fd5e31ab31da276b4275b5",
     "character-a.webp": "3a647e22d5f2c743664addbbdc5dc07c1c8fa8382f3ba75b3a686734b8041188",
     "character-c-attack-0.png": "5d14b8144138b8a6c6b276aab9f9a900b163b6f4f77178dd75255d832b0fa3d0",
