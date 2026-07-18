@@ -59,7 +59,7 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
-  const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v13";
+  const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -172,7 +172,7 @@
   // The commercial character sheets do not share one circular muzzle arc, so
   // a single pivot/reach pair cannot keep effects attached in every pose.
   const CHARACTER_MUZZLE_OFFSETS = {
-    a: [[-44, -159], [-46, -168], [-39, -156], [-41, -157], [-6, -191], [56, -134], [68, -135], [51, -168], [42, -161]],
+    a: [[-44, -159], [-46, -168], [-39, -156], [-8, -182], [6, -191], [8, -182], [39, -156], [46, -168], [44, -159]],
     b: [[-31, -176], [-37, -192], [-32, -198], [-23, -194], [2, -210], [24, -195], [34, -198], [39, -189], [32, -179]],
     c: [[-28, -182], [-38, -209], [-24, -210], [-15, -215], [0, -215], [15, -215], [28, -212], [34, -210], [28, -183]],
     d: [[-36, -172], [-30, -183], [-25, -193], [-15, -198], [2, -198], [18, -196], [30, -193], [31, -180], [41, -171]],
@@ -224,7 +224,7 @@
     g: 1
   };
   const CHARACTER_ACTION_HEIGHT_SCALE = {
-    a: 1,
+    a: 1.2,
     b: 1,
     c: 1,
     d: 1,
@@ -2562,7 +2562,10 @@
         const sprite = this.add.image(defender.x, defender.y, `character-${defender.id}-aim-12`)
           .setOrigin(0.5, 1)
           .setDepth(142 + defender.y / 10);
-        this.fitSpriteHeight(sprite, defender.height);
+        this.fitSpriteHeight(
+          sprite,
+          defender.height * (CHARACTER_ACTION_HEIGHT_SCALE[defender.id] || 1)
+        );
         sprite.setVisible(recruited).setAlpha(recruited ? 1 : 0);
         this.defenders.push({
           x: defender.x,
@@ -2865,7 +2868,10 @@
       defender.attackAnimation = null;
       defender.pose = pose;
       defender.sprite.setTexture(textureKey);
-      this.fitSpriteHeight(defender.sprite, defender.height);
+      this.fitSpriteHeight(
+        defender.sprite,
+        defender.height * (CHARACTER_ACTION_HEIGHT_SCALE[defender.id] || 1)
+      );
     }
 
     startDefenderAttackAnimation(defender, pose, onRelease = null) {

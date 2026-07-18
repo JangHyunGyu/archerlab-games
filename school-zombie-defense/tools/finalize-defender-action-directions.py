@@ -20,6 +20,11 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE_DIR = ROOT / "assets" / "images"
 POSE_COUNT = 9
+BOW_WEBP_QUALITY = 96
+BOW_LEGACY_CELL_SIZE = (512, 800)
+BOW_CELL_SIZE = (736, 960)
+BOW_CELL_PADDING = (112, 160)
+BOW_MIRROR_DIRECTION_PAIRS = ((3, 5), (2, 6), (1, 7), (0, 8))
 
 
 def split_strip(image: Image.Image) -> list[Image.Image]:
@@ -32,7 +37,30 @@ def split_strip(image: Image.Image) -> list[Image.Image]:
     ]
 
 
-def save_strip(cells: list[Image.Image], png_path: Path) -> None:
+def prepare_bow_identity_cells(cells: list[Image.Image]) -> list[Image.Image]:
+    """Pad bow cells without changing their character-pixel scale or footing."""
+    prepared: list[Image.Image] = []
+    for index, cell in enumerate(cells):
+        if cell.size == BOW_CELL_SIZE:
+            prepared.append(cell.copy())
+            continue
+        if cell.size != BOW_LEGACY_CELL_SIZE:
+            raise ValueError(
+                f"bow identity cell {index} has unsupported size {cell.size}; "
+                f"expected {BOW_LEGACY_CELL_SIZE} or {BOW_CELL_SIZE}"
+            )
+        expanded = Image.new("RGBA", BOW_CELL_SIZE, (0, 0, 0, 0))
+        expanded.alpha_composite(cell, BOW_CELL_PADDING)
+        prepared.append(expanded)
+    return prepared
+
+
+def save_strip(
+    cells: list[Image.Image],
+    png_path: Path,
+    *,
+    webp_quality: int = 92,
+) -> None:
     cell_width, cell_height = cells[0].size
     if len(cells) != POSE_COUNT or any(cell.size != (cell_width, cell_height) for cell in cells):
         raise ValueError(f"invalid cells for {png_path.name}")
@@ -40,7 +68,12 @@ def save_strip(cells: list[Image.Image], png_path: Path) -> None:
     for index, cell in enumerate(cells):
         strip.alpha_composite(cell, (index * cell_width, 0))
     strip.save(png_path, optimize=True)
-    strip.save(png_path.with_suffix(".webp"), format="WEBP", quality=92, method=6)
+    strip.save(
+        png_path.with_suffix(".webp"),
+        format="WEBP",
+        quality=webp_quality,
+        method=6,
+    )
 
 
 def alpha_components(image: Image.Image, threshold: int = 8) -> list[tuple[list[int], tuple[int, int, int, int]]]:
@@ -156,20 +189,25 @@ def largest_hair_component_top(image: Image.Image, kind: str) -> int:
             if is_hair_pixel(pixels[x, y], kind):
                 active[offset + x] = 1
 
-    best_size = 0
-    best_top = None
+    components: list[tuple[int, int, int, int, int]] = []
     for start, value in enumerate(active):
         if not value:
             continue
         active[start] = 0
         queue = deque([start])
         size = 0
+        left = width
         top = height
+        right = 0
+        bottom = 0
         while queue:
             current = queue.popleft()
             y, x = divmod(current, width)
             size += 1
+            left = min(left, x)
             top = min(top, y)
+            right = max(right, x + 1)
+            bottom = max(bottom, y + 1)
             for neighbour in (current - 1, current + 1, current - width, current + width):
                 if neighbour < 0 or neighbour >= len(active) or not active[neighbour]:
                     continue
@@ -178,13 +216,35 @@ def largest_hair_component_top(image: Image.Image, kind: str) -> int:
                     continue
                 active[neighbour] = 0
                 queue.append(neighbour)
-        if size > best_size:
-            best_size = size
-            best_top = top
+        if size >= 80:
+            components.append((size, top, left, right, bottom))
 
-    if best_top is None or best_size < 80:
+    if not components:
         raise ValueError(f"could not locate the {kind} hair reference")
-    return best_top
+
+    if kind == "pink":
+        # The archer's bow shares the same pink hue as her hair, while the
+        # twin tails can contain more thresholded pixels than the crown after
+        # resampling. Select the uppermost compact head-sized component.
+        minimum_head_height = max(12, round(height * 0.045))
+        substantial_size = max(80, round(max(item[0] for item in components) * 0.25))
+        head_candidates = []
+        for component in components:
+            size, top, left, right, bottom = component
+            component_width = right - left
+            component_height = bottom - top
+            density = size / max(1, component_width * component_height)
+            if (
+                size >= substantial_size
+                and component_height >= minimum_head_height
+                and component_width >= component_height * 0.36
+                and density >= 0.16
+            ):
+                head_candidates.append(component)
+        if head_candidates:
+            return min(head_candidates, key=lambda item: (item[1], -item[0]))[1]
+
+    return max(components, key=lambda item: item[0])[1]
 
 
 def body_height(image: Image.Image, hair: str) -> int:
@@ -231,10 +291,13 @@ def normalise_generated_cell(
     *,
     key_colour: str,
     hair: str | None = None,
+    body_height_target: int | None = None,
+    keep_largest_component: bool = True,
 ) -> Image.Image:
     """Fit one approved repair cell to an existing cell's scale and footing."""
     source = despill_key_colour(source, key_colour)
-    source = keep_character_component(source)
+    if keep_largest_component:
+        source = keep_character_component(source)
     source_bbox, source_foot_x = alpha_geometry(source)
     target_bbox, target_foot_x = alpha_geometry(target)
     target_width, target_height = target.size
@@ -243,8 +306,11 @@ def normalise_generated_cell(
 
     source_height = source_bottom - source_top
     target_subject_height = target_bottom - target_top
+    desired_body_height = (
+        body_height_target if body_height_target is not None else body_height(target, hair)
+    ) if hair is not None else None
     scale = (
-        body_height(target, hair) / max(1, body_height(source, hair))
+        desired_body_height / max(1, body_height(source, hair))
         if hair is not None
         else target_subject_height / max(1, source_height)
     )
@@ -254,7 +320,6 @@ def normalise_generated_cell(
             (max(1, round(source.width * scale)), max(1, round(source.height * scale))),
             Image.Resampling.LANCZOS,
         )
-        desired_body_height = body_height(target, hair)
         probe_body_height = body_height(probe, hair)
         if abs(probe_body_height - desired_body_height) > 2:
             scale *= desired_body_height / max(1, probe_body_height)
@@ -282,7 +347,6 @@ def normalise_generated_cell(
     result.alpha_composite(resized, (x, y))
     result = despill_key_colour(result, key_colour)
     if hair is not None:
-        desired_body_height = body_height(target, hair)
         for _ in range(2):
             actual_body_height = body_height(result, hair)
             if actual_body_height <= desired_body_height + 2:
@@ -332,9 +396,102 @@ def apply_deterministic_repairs() -> None:
     save_strip(split_strip(shock_settled), IMAGE_DIR / "character-g-attack-3.png")
 
 
+def verify_generated_bow_sheets(
+    bow_identity: list[Image.Image],
+    bow_sheets: dict[int, tuple[Path, list[Image.Image]]],
+) -> None:
+    """Validate every generated bow cell before the first production write."""
+    expected_frames = set(range(4))
+    if set(bow_sheets) != expected_frames:
+        raise ValueError(
+            f"generated bow sheets must cover frames 0..3: {sorted(bow_sheets)}"
+        )
+    if len(bow_identity) != POSE_COUNT:
+        raise ValueError(f"bow identity must contain {POSE_COUNT} direction cells")
+    reference_body_height = sorted(
+        body_height(cell, "pink") for cell in bow_identity
+    )[POSE_COUNT // 2]
+
+    body_heights: list[int] = []
+    bottoms: list[int] = []
+    for frame, (sheet_path, cells) in bow_sheets.items():
+        if len(cells) != POSE_COUNT:
+            raise ValueError(
+                f"{sheet_path.name} frame {frame} must contain {POSE_COUNT} direction cells"
+            )
+        for index, (cell, target) in enumerate(zip(cells, bow_identity)):
+            if cell.size != target.size:
+                raise ValueError(
+                    f"bow frame {frame} direction {index} has size {cell.size}; "
+                    f"expected {target.size}"
+                )
+
+            bbox, feet_center = alpha_geometry(cell)
+            target_bbox, target_feet_center = alpha_geometry(target)
+            margins = (
+                bbox[0],
+                bbox[1],
+                cell.width - bbox[2],
+                cell.height - bbox[3],
+            )
+            if min(margins) < 8:
+                raise ValueError(
+                    f"bow frame {frame} direction {index} violates 8px safe margins: {bbox}"
+                )
+
+            target_body_height = reference_body_height
+            actual_body_height = body_height(cell, "pink")
+            body_ratio = actual_body_height / target_body_height
+            if not 0.97 <= body_ratio <= 1.03:
+                raise ValueError(
+                    f"bow frame {frame} direction {index} body scale drifted to "
+                    f"{body_ratio:.3f} ({actual_body_height}px vs {target_body_height}px)"
+                )
+            if abs(bbox[3] - target_bbox[3]) > 1:
+                raise ValueError(
+                    f"bow frame {frame} direction {index} footing drifted from "
+                    f"{target_bbox[3]}px to {bbox[3]}px"
+                )
+            if abs(feet_center - target_feet_center) > 2:
+                raise ValueError(
+                    f"bow frame {frame} direction {index} horizontal footing drifted by "
+                    f"{abs(feet_center - target_feet_center):.2f}px"
+                )
+
+            components = alpha_components(cell)
+            if not components or len(components[0][0]) < 8_000:
+                raise ValueError(
+                    f"bow frame {frame} direction {index} is missing its defender silhouette"
+                )
+            body_heights.append(actual_body_height)
+            bottoms.append(bbox[3])
+
+    if max(body_heights) / min(body_heights) > 1.03:
+        raise ValueError(
+            f"generated bow body scale spread exceeds 3%: "
+            f"{min(body_heights)}..{max(body_heights)}"
+        )
+    if max(bottoms) - min(bottoms) > 1:
+        raise ValueError(
+            f"generated bow footing spread exceeds 1px: {min(bottoms)}..{max(bottoms)}"
+        )
+
+
 def apply_generated_bow_repairs(generated_dir: Path) -> None:
-    bow_identity = split_strip(Image.open(IMAGE_DIR / "character-a.png").convert("RGBA"))
+    bow_identity = prepare_bow_identity_cells(
+        split_strip(Image.open(IMAGE_DIR / "character-a.png").convert("RGBA"))
+    )
+    for source_index, mirrored_index in BOW_MIRROR_DIRECTION_PAIRS:
+        bow_identity[mirrored_index] = bow_identity[source_index].transpose(
+            Image.Transpose.FLIP_LEFT_RIGHT
+        )
     bow_sheets = {
+        0: (
+            IMAGE_DIR / "character-a.png",
+            [cell.copy() for cell in bow_identity],
+        ),
+    }
+    bow_sheets.update({
         frame: (
             IMAGE_DIR / f"character-a-attack-{frame}.png",
             split_strip(
@@ -342,18 +499,28 @@ def apply_generated_bow_repairs(generated_dir: Path) -> None:
             ),
         )
         for frame in range(1, 4)
-    }
+    })
+    reference_body_height = sorted(
+        body_height(cell, "pink") for cell in bow_identity
+    )[POSE_COUNT // 2]
     for frame, (_, cells) in bow_sheets.items():
-        for index in range(POSE_COUNT):
+        for index in range(5):
             source = Image.open(generated_dir / f"a-f{frame}-c{index}.png").convert("RGBA")
             cells[index] = normalise_generated_cell(
                 source,
                 bow_identity[index],
                 key_colour="blue",
                 hair="pink",
+                body_height_target=reference_body_height,
+                keep_largest_component=False,
             )
+        for source_index, mirrored_index in BOW_MIRROR_DIRECTION_PAIRS:
+            cells[mirrored_index] = cells[source_index].transpose(
+                Image.Transpose.FLIP_LEFT_RIGHT
+            )
+    verify_generated_bow_sheets(bow_identity, bow_sheets)
     for sheet_path, cells in bow_sheets.values():
-        save_strip(cells, sheet_path)
+        save_strip(cells, sheet_path, webp_quality=BOW_WEBP_QUALITY)
 
 
 def apply_generated_repairs(generated_dir: Path) -> None:
@@ -417,6 +584,7 @@ def rocket_launcher_angle(cell: Image.Image) -> float:
 
 def verify_direction_safe_outputs() -> None:
     modified_stems = (
+        "character-a",
         "character-a-attack-1",
         "character-a-attack-2",
         "character-a-attack-3",

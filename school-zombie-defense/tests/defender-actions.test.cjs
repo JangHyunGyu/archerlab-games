@@ -17,6 +17,74 @@ const imageRoot = path.join(root, "assets", "images");
 const hashFixturePath = path.join(__dirname, "defender-action-assets.sha256.json");
 const updateHashes = process.argv.includes("--update-hashes");
 
+const expectedAimPoses = [
+  { key: "aim-10", degrees: -150 },
+  { key: "aim-1030", degrees: -135 },
+  { key: "aim-11", degrees: -120 },
+  { key: "aim-1130", degrees: -105 },
+  { key: "aim-12", degrees: -90 },
+  { key: "aim-1230", degrees: -75 },
+  { key: "aim-13", degrees: -60 },
+  { key: "aim-1330", degrees: -45 },
+  { key: "aim-14", degrees: -30 }
+];
+
+const aimPosesSource = gameSource.match(
+  /const\s+AIM_POSES\s*=\s*\[([\s\S]*?)\];/
+)?.[1];
+assert.ok(aimPosesSource, "AIM_POSES must remain discoverable");
+const parsedAimPoses = [...aimPosesSource.matchAll(
+  /\{\s*key:\s*["']([^"']+)["']\s*,\s*angle:\s*([^}]+?)\s*\}/g
+)].map(([, key, angleSource]) => ({
+  key,
+  degrees: Function("Math", '"use strict"; return (' + angleSource + ');')(Math) * 180 / Math.PI
+}));
+assert.deepEqual(
+  parsedAimPoses.map(({ key }) => key),
+  expectedAimPoses.map(({ key }) => key),
+  "AIM_POSES order must remain identical to the nine sprite-sheet columns"
+);
+parsedAimPoses.forEach((pose, index) => {
+  assert.ok(
+    Math.abs(pose.degrees - expectedAimPoses[index].degrees) <= 1e-9,
+    pose.key + " runtime angle must remain " + expectedAimPoses[index].degrees
+      + " degrees; got " + pose.degrees
+  );
+});
+assert.match(
+  gameSource,
+  /const\s+AIM_POSE_KEYS\s*=\s*AIM_POSES\.map\(\(pose\)\s*=>\s*pose\.key\)/,
+  "runtime pose keys must preserve AIM_POSES column order"
+);
+
+function assertUsesOrderedAimColumns(source, label) {
+  assert.ok(source, label + " texture factory must remain discoverable");
+  assert.match(
+    source,
+    /const\s+cellWidth\s*=\s*Math\.floor\(source\.width\s*\/\s*AIM_POSE_KEYS\.length\)/,
+    label + " textures must divide their source into the AIM_POSE_KEYS column count"
+  );
+  assert.match(
+    source,
+    /AIM_POSE_KEYS\.forEach\(\(pose,\s*index\)\s*=>\s*\{/,
+    label + " textures must enumerate poses in AIM_POSE_KEYS order"
+  );
+  assert.match(
+    source,
+    /index\s*\*\s*cellWidth,\s*0,\s*cellWidth,\s*cellHeight/,
+    label + " textures must extract each pose from its matching source column"
+  );
+}
+
+const characterSpriteTexturesSource = gameSource.match(
+  /function\s+createCharacterSpriteTextures\s*\(scene\)\s*\{([\s\S]*?)\n\s*function\s+createCharacterAttackTextures/
+)?.[1];
+const characterAttackTexturesSource = gameSource.match(
+  /function\s+createCharacterAttackTextures\s*\(scene\)\s*\{([\s\S]*?)\n\s*function\s+releaseCharacterSourceTextures/
+)?.[1];
+assertUsesOrderedAimColumns(characterSpriteTexturesSource, "ready-pose");
+assertUsesOrderedAimColumns(characterAttackTexturesSource, "attack-frame");
+
 const releaseFramesBlock = gameSource.match(
   /const\s+CHARACTER_ATTACK_RELEASE_FRAMES\s*=\s*\{([\s\S]*?)\};/
 )?.[1];
@@ -58,8 +126,33 @@ assert.match(
 );
 assert.match(
   finalizeDirectionsSource,
-  /for frame, \(_, cells\) in bow_sheets\.items\(\):[\s\S]*?for index in range\(POSE_COUNT\):[\s\S]*?generated_dir \/ f"a-f\{frame\}-c\{index\}\.png"/,
-  "the generated bow repair set must cover all three attack frames and all nine directions"
+  /for frame, \(_, cells\) in bow_sheets\.items\(\):[\s\S]*?for index in range\(5\):[\s\S]*?generated_dir \/ f"a-f\{frame\}-c\{index\}\.png"/,
+  "the generated bow repair set must source the center and four approved left-side directions"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /BOW_MIRROR_DIRECTION_PAIRS\s*=\s*\(\(3, 5\), \(2, 6\), \(1, 7\), \(0, 8\)\)/,
+  "bow right-side directions must remain paired with their approved mirrored sources"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /for source_index, mirrored_index in BOW_MIRROR_DIRECTION_PAIRS:[\s\S]*?cells\[mirrored_index\]\s*=\s*cells\[source_index\]\.transpose\(\s*Image\.Transpose\.FLIP_LEFT_RIGHT/,
+  "bow right-side attack cells must be deterministic mirrors instead of independent generations"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /bow_sheets\s*=\s*\{\s*0:\s*\(\s*IMAGE_DIR \/ "character-a\.png",[\s\S]*?bow_sheets\.update\(\{[\s\S]*?for frame in range\(1, 4\)/,
+  "bow frame zero must update the nine-direction ready sheet alongside attack frames one through three"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /verify_generated_bow_sheets\(bow_identity, bow_sheets\)[\s\S]*?save_strip\(cells, sheet_path, webp_quality=BOW_WEBP_QUALITY\)/,
+  "all four bow sheets must pass in-memory geometry checks before high-quality production writes"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /BOW_WEBP_QUALITY\s*=\s*96/,
+  "bow WebP sheets must retain high-quality thin weapon and bowstring detail"
 );
 assert.match(
   finalizeDirectionsSource,
@@ -99,15 +192,15 @@ const assetVersion = gameSource.match(
 assert.ok(assetVersion, "CHARACTER_ASSET_VERSION must be declared");
 assert.equal(
   assetVersion,
-  "20260718-bow-video-directions-v13",
+  "20260718-bow-video-directions-v14",
   "character asset cache version must track the corrected bow direction sheets"
 );
 
 const sheets = [
   { name: "character-c", width: 2565, height: 724 },
   ...[0, 1, 2, 3].map(frame => ({ name: `character-c-attack-${frame}`, width: 1440, height: 362 })),
-  { name: "character-a", width: 4608, height: 800 },
-  ...[1, 2, 3].map(frame => ({ name: `character-a-attack-${frame}`, width: 4608, height: 800 })),
+  { name: "character-a", width: 6624, height: 960 },
+  ...[1, 2, 3].map(frame => ({ name: `character-a-attack-${frame}`, width: 6624, height: 960 })),
   { name: "character-d", width: 2016, height: 362 },
   ...[1, 2, 3].map(frame => ({ name: `character-d-attack-${frame}`, width: 2016, height: 362 })),
   { name: "character-f", width: 4608, height: 512 },
@@ -335,6 +428,49 @@ function alphaComponentSizes(image, cellIndex, threshold = 8) {
 }
 
 const directionKeys = ["10", "1030", "11", "1130", "12", "1230", "13", "1330", "14"];
+const archerMirrorPairs = [[3, 5], [2, 6], [1, 7], [0, 8]];
+
+function assertArcherDirectionalSymmetry() {
+  const sheetNames = [
+    "character-a",
+    "character-a-attack-1",
+    "character-a-attack-2",
+    "character-a-attack-3"
+  ];
+  for (const sheetName of sheetNames) {
+    const image = decodePngAlpha(path.join(imageRoot, `${sheetName}.png`));
+    const cellWidth = image.width / directionKeys.length;
+    assert.ok(Number.isInteger(cellWidth), `${sheetName} must have nine equal-width cells`);
+    for (const [sourceIndex, mirroredIndex] of archerMirrorPairs) {
+      let mismatch = null;
+      pixelScan:
+      for (let y = 0; y < image.height; y += 1) {
+        for (let x = 0; x < cellWidth; x += 1) {
+          const sourcePixel = (y * image.width + sourceIndex * cellWidth + x) * 4;
+          const mirroredPixel = (
+            y * image.width + mirroredIndex * cellWidth + (cellWidth - 1 - x)
+          ) * 4;
+          for (let channel = 0; channel < 4; channel += 1) {
+            if (image.rgba[sourcePixel + channel] === image.rgba[mirroredPixel + channel]) continue;
+            mismatch = { x, y, channel };
+            break pixelScan;
+          }
+        }
+      }
+      assert.equal(
+        mismatch,
+        null,
+        `${sheetName} directions ${directionKeys[sourceIndex]}/${directionKeys[mirroredIndex]} `
+          + "must remain exact RGBA mirrors"
+      );
+    }
+  }
+}
+assert.deepEqual(
+  directionKeys,
+  expectedAimPoses.map(({ key }) => key.replace("aim-", "")),
+  "semantic direction keys must preserve the runtime sprite-sheet column order"
+);
 
 const muzzleOffsetsSource = gameSource.match(
   /const\s+CHARACTER_MUZZLE_OFFSETS\s*=\s*(\{[\s\S]*?\n\s*\});/
@@ -356,6 +492,17 @@ for (const [defenderId, offsets] of Object.entries(muzzleOffsets)) {
       `defender ${defenderId.toUpperCase()} direction ${directionKeys[index]} must use a finite [x, y] muzzle offset`
     );
   });
+}
+
+for (let leftIndex = 0; leftIndex < 4; leftIndex += 1) {
+  const rightIndex = directionKeys.length - 1 - leftIndex;
+  const [leftX, leftY] = muzzleOffsets.a[leftIndex];
+  const [rightX, rightY] = muzzleOffsets.a[rightIndex];
+  assert.ok(
+    Math.abs(leftX + rightX) <= 2 && Math.abs(leftY - rightY) <= 2,
+    `archer mirrored directions ${directionKeys[leftIndex]}/${directionKeys[rightIndex]} `
+      + "must use mirrored release points"
+  );
 }
 
 function nearestAlphaDistanceFromMuzzle(image, cellIndex, displayHeight, offset, threshold = 16) {
@@ -385,7 +532,7 @@ function nearestAlphaDistanceFromMuzzle(image, cellIndex, displayHeight, offset,
 
 function assertMeasuredMuzzlesTouchReleaseArt() {
   const releaseSheets = {
-    a: { name: "character-a-attack-2", height: 222 },
+    a: { name: "character-a-attack-2", height: 266.4 },
     b: { name: "character-b", height: 230 },
     c: { name: "character-c-attack-0", height: 248 },
     d: { name: "character-d-attack-1", height: 226 },
@@ -454,15 +601,17 @@ function largestHairComponentTop(image, cellIndex, hair) {
   }
 
   const queue = new Int32Array(active.length);
-  let bestSize = 0;
-  let bestTop = null;
+  const components = [];
   for (let start = 0; start < active.length; start += 1) {
     if (!active[start]) continue;
     active[start] = 0;
     let head = 0;
     let tail = 1;
     let size = 0;
+    let left = cellWidth;
     let top = image.height;
+    let right = 0;
+    let bottom = 0;
     queue[0] = start;
     while (head < tail) {
       const current = queue[head];
@@ -470,7 +619,10 @@ function largestHairComponentTop(image, cellIndex, hair) {
       size += 1;
       const x = current % cellWidth;
       const y = Math.floor(current / cellWidth);
+      left = Math.min(left, x);
       top = Math.min(top, y);
+      right = Math.max(right, x + 1);
+      bottom = Math.max(bottom, y + 1);
       for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
         const nextX = x + dx;
         const nextY = y + dy;
@@ -482,16 +634,35 @@ function largestHairComponentTop(image, cellIndex, hair) {
         tail += 1;
       }
     }
-    if (size > bestSize) {
-      bestSize = size;
-      bestTop = top;
-    }
+    if (size >= 80) components.push({ size, top, left, right, bottom });
   }
   assert.ok(
-    bestTop !== null && bestSize >= 80,
+    components.length > 0,
     `direction ${directionKeys[cellIndex]} must retain a stable ${hair} hair scale reference`
   );
-  return bestTop;
+  if (hair === "pink") {
+    const minimumHeadHeight = Math.max(12, Math.round(image.height * 0.045));
+    const substantialSize = Math.max(
+      80,
+      Math.round(Math.max(...components.map(component => component.size)) * 0.25)
+    );
+    const headCandidates = components.filter(component => {
+      const width = component.right - component.left;
+      const height = component.bottom - component.top;
+      const density = component.size / Math.max(1, width * height);
+      return component.size >= substantialSize
+        && height >= minimumHeadHeight
+        && width >= height * 0.36
+        && density >= 0.16;
+    });
+    if (headCandidates.length > 0) {
+      headCandidates.sort((left, right) => left.top - right.top || right.size - left.size);
+      return headCandidates[0].top;
+    }
+  }
+  return components.reduce((best, component) => (
+    component.size > best.size ? component : best
+  )).top;
 }
 
 function getActionHeightScale(defenderId) {
@@ -506,7 +677,7 @@ function assertCharacterBodyGeometry({ defenderId, hair, baseName, actionNames }
   const actionHeightScale = getActionHeightScale(defenderId);
   const entries = [baseName, ...actionNames].map((name, sheetIndex) => {
     const image = decodePngAlpha(path.join(imageRoot, `${name}.png`));
-    const displayScale = sheetIndex === 0 ? 1 : actionHeightScale;
+    const displayScale = actionHeightScale;
     const cells = directionKeys.map((direction, cellIndex) => {
       const bounds = cellVisibleBounds(image, cellIndex);
       const safeMargin = Math.min(
@@ -682,6 +853,7 @@ assertCharacterBodyGeometry({
 assertShockCannonDirections();
 assertPngWebpAlphaParity();
 assertMeasuredMuzzlesTouchReleaseArt();
+assertArcherDirectionalSymmetry();
 assert.ok(
   muzzleOffsets.f.slice(0, 4).every(([x]) => x < 0)
     && muzzleOffsets.f.slice(5).every(([x]) => x > 0),
