@@ -204,6 +204,11 @@ function isLocalDevelopmentUrl(value) {
     }
 }
 
+function isAutomatedResourceProbe(errorType, userAgent) {
+    return String(errorType || '').toLowerCase() === 'resource_error'
+        && /Google-Read-Aloud|Googlebot|bingbot|DuckDuckBot|YandexBot|Baiduspider|HeadlessChrome|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)/i.test(String(userAgent || ''));
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
@@ -240,6 +245,10 @@ async function storeClientError(db, request, body) {
     const gameId = limitText(body.game_id || body.gameId || body.appId || 'archerlab-games', 100)
         .replace(/[^a-z0-9_.:-]/gi, '') || 'archerlab-games';
     const errorType = limitText(body.error_type || body.errorType || body.type || 'error', 100) || 'error';
+    const userAgent = request.headers.get('User-Agent') || body.user_agent || body.userAgent || '';
+    if (isAutomatedResourceProbe(errorType, userAgent)) {
+        return jsonResponse({ ok: true, ignored: true, reason: 'automated_resource_probe' });
+    }
     const message = limitText(body.message || body.stack || 'Unknown client error', 500);
     if (!message) {
         return jsonResponse({ ok: true });

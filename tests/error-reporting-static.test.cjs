@@ -12,9 +12,20 @@ assert.match(reporter, /if \(!remoteReportingEnabled\) return;/);
 
 const worker = read('game-api-worker.js');
 assert.match(worker, /reason: 'local_development_session'/);
+assert.match(worker, /reason: 'automated_resource_probe'/);
 assert.match(worker, /INSERT OR IGNORE INTO error_logs/);
 assert.match(worker, /report_id/);
 assert.match(worker, /context\?\.clientReportId/);
+
+const policySource = worker.match(/function isAutomatedResourceProbe\(errorType, userAgent\) \{[\s\S]*?\n\}/);
+assert.ok(policySource, 'automated resource probe policy must be defined');
+const isAutomatedResourceProbe = Function(
+    `${policySource[0]}; return isAutomatedResourceProbe;`,
+)();
+assert.equal(isAutomatedResourceProbe('resource_error', 'HeadlessChrome/146.0.0.0'), true);
+assert.equal(isAutomatedResourceProbe('RESOURCE_ERROR', 'Googlebot/2.1'), true);
+assert.equal(isAutomatedResourceProbe('error', 'HeadlessChrome/146.0.0.0'), false);
+assert.equal(isAutomatedResourceProbe('resource_error', 'Chrome/146.0.0.0'), false);
 
 for (const relativePath of [
     'solo-leveling/js/scenes/PreloadScene.js',
