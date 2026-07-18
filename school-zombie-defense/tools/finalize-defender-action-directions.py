@@ -19,6 +19,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE_DIR = ROOT / "assets" / "images"
+BOW_SOURCE_DIR = ROOT / "design" / "source-assets" / "archer-v14"
 POSE_COUNT = 9
 BOW_WEBP_QUALITY = 96
 BOW_LEGACY_CELL_SIZE = (512, 800)
@@ -640,7 +641,14 @@ def verify_direction_safe_outputs() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--generated-dir", type=Path)
+    parser.add_argument(
+        "--generated-dir",
+        type=Path,
+        help=(
+            "directory containing reviewed generated cells; bow-only defaults "
+            "to the tracked archer-v14 source set"
+        ),
+    )
     parser.add_argument("--deterministic-only", action="store_true")
     parser.add_argument("--bow-only", action="store_true")
     parser.add_argument("--inspect-firebomb", action="store_true")
@@ -655,9 +663,12 @@ def main() -> None:
         print("verified defender direction-safe action sheets")
         return
     if args.bow_only:
-        if args.generated_dir is None:
-            parser.error("--generated-dir is required with --bow-only")
-        apply_generated_bow_repairs(args.generated_dir.resolve())
+        generated_dir = (
+            args.generated_dir.resolve()
+            if args.generated_dir is not None
+            else BOW_SOURCE_DIR
+        )
+        apply_generated_bow_repairs(generated_dir)
         verify_direction_safe_outputs()
         print("finalized defender A direction-safe attack sheets")
         return
