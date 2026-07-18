@@ -1,7 +1,7 @@
 """Normalise the A/F defender sheets without redrawing their approved art.
 
 The game fits every sliced texture to the same display height.  A therefore
-needs one common hair-to-feet height across its 800 px base/action canvases,
+needs one common hair-to-feet height across its padded 960 px base/action canvases,
 while F's 640 px throw canvases need 1.25 times the pixel body height and foot
 gap of its untouched 512 px base canvas.  This tool applies those rules,
 preserves each original pose, and validates the complete output set before it
@@ -50,8 +50,8 @@ SPECS = (
             "character-a-attack-2.png",
             "character-a-attack-3.png",
         ),
-        output_width=512,
-        output_height=800,
+        output_width=736,
+        output_height=960,
         hair="pink",
         normalise_base=True,
     ),
@@ -86,20 +86,25 @@ def largest_hair_component_top(image: Image.Image, kind: str) -> int:
             if is_hair_pixel(pixels[x, y], kind):
                 mask[row + x] = 1
 
-    best_size = 0
-    best_top = None
+    components: list[tuple[int, int, int, int, int]] = []
     for index, active in enumerate(mask):
         if not active:
             continue
         mask[index] = 0
         queue = deque([index])
         size = 0
+        left = width
         top = height
+        right = 0
+        bottom = 0
         while queue:
             current = queue.popleft()
             y, x = divmod(current, width)
             size += 1
+            left = min(left, x)
             top = min(top, y)
+            right = max(right, x + 1)
+            bottom = max(bottom, y + 1)
             for neighbour in (current - 1, current + 1, current - width, current + width):
                 if neighbour < 0 or neighbour >= len(mask) or not mask[neighbour]:
                     continue
@@ -108,13 +113,32 @@ def largest_hair_component_top(image: Image.Image, kind: str) -> int:
                     continue
                 mask[neighbour] = 0
                 queue.append(neighbour)
-        if size > best_size:
-            best_size = size
-            best_top = top
+        if size >= 80:
+            components.append((size, top, left, right, bottom))
 
-    if best_top is None or best_size < 80:
+    if not components:
         raise ValueError(f"Could not locate the {kind} hair reference")
-    return best_top
+
+    if kind == "pink":
+        minimum_head_height = max(12, round(height * 0.045))
+        substantial_size = max(80, round(max(item[0] for item in components) * 0.25))
+        head_candidates = []
+        for component in components:
+            size, top, left, right, bottom = component
+            component_width = right - left
+            component_height = bottom - top
+            density = size / max(1, component_width * component_height)
+            if (
+                size >= substantial_size
+                and component_height >= minimum_head_height
+                and component_width >= component_height * 0.36
+                and density >= 0.16
+            ):
+                head_candidates.append(component)
+        if head_candidates:
+            return min(head_candidates, key=lambda item: (item[1], -item[0]))[1]
+
+    return max(components, key=lambda item: item[0])[1]
 
 
 def alpha_geometry(image: Image.Image) -> tuple[tuple[int, int, int, int], float]:
@@ -344,7 +368,7 @@ def verify_a_assets(assets: dict[Path, Image.Image]) -> None:
     heights: list[int] = []
     bottoms: list[int] = []
     for path, image in assets.items():
-        if image.size != (512 * POSE_COUNT, 800):
+        if image.size != (736 * POSE_COUNT, 960):
             raise ValueError(f"Unexpected A size for {path.name}: {image.size}")
         for pose, cell in enumerate(split_strip(image)):
             bottom, _ = verify_safe_cell(cell, path.name, pose)
