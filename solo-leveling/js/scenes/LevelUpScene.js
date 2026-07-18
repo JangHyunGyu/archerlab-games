@@ -237,7 +237,6 @@ export class LevelUpScene extends Phaser.Scene {
 
         for (const [key, config] of Object.entries(PASSIVES)) {
             const currentLevel = this.player.passiveLevels[config.stat] || 0;
-            if (currentLevel >= 10) continue;
             passiveOptions.push({
                 type: 'passive', key,
                 name: config.name,

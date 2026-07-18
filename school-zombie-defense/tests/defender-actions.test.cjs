@@ -9,6 +9,10 @@ const zlib = require("node:zlib");
 
 const root = path.resolve(__dirname, "..");
 const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+const finalizeDirectionsSource = fs.readFileSync(
+  path.join(root, "tools", "finalize-defender-action-directions.py"),
+  "utf8"
+);
 const imageRoot = path.join(root, "assets", "images");
 const hashFixturePath = path.join(__dirname, "defender-action-assets.sha256.json");
 const updateHashes = process.argv.includes("--update-hashes");
@@ -23,6 +27,45 @@ for (const [defenderId, expectedFrame] of Object.entries({ a: 2, d: 1, f: 2, g: 
   assert.ok(frameMatch, `release frame for defender ${defenderId.toUpperCase()} must be declared`);
   assert.equal(Number(frameMatch[1]), expectedFrame, `defender ${defenderId.toUpperCase()} release frame drifted`);
 }
+
+const frameDurationsBlock = gameSource.match(
+  /const\s+CHARACTER_ATTACK_FRAME_DURATIONS\s*=\s*\{([\s\S]*?)\};/
+)?.[1];
+assert.ok(frameDurationsBlock, "CHARACTER_ATTACK_FRAME_DURATIONS must be declared");
+const bowDurations = frameDurationsBlock.match(/\ba\s*:\s*\[([^\]]+)\]/)?.[1]
+  .split(",")
+  .map(value => Number(value.trim()));
+assert.deepEqual(
+  bowDurations,
+  [0.045, 0.11, 0.045, 0.09],
+  "bow timing must preserve the readable draw and crisp release rhythm"
+);
+
+assert.match(
+  gameSource,
+  /const\s+CHARACTER_ATTACK_DIRECTION_LOCKS\s*=\s*new Set\(\["a"\]\)/,
+  "bow attacks must lock their animation to the target direction"
+);
+assert.match(
+  gameSource,
+  /const pose = CHARACTER_ATTACK_DIRECTION_LOCKS\.has\(defender\.id\)\s*\? initialPose\s*:\s*getShotAimPoseKey\(initialAngle\)/,
+  "muzzle offsets must not remap the bow animation away from its target direction"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /normalise_generated_cell\(\s*source,\s*bow_identity\[index\],\s*key_colour="blue",\s*hair="pink",/,
+  "bow direction repairs must use the matching ready-pose direction as their alignment target"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /for frame, \(_, cells\) in bow_sheets\.items\(\):[\s\S]*?for index in range\(POSE_COUNT\):[\s\S]*?generated_dir \/ f"a-f\{frame\}-c\{index\}\.png"/,
+  "the generated bow repair set must cover all three attack frames and all nine directions"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /if args\.bow_only:[\s\S]*?apply_generated_bow_repairs\(args\.generated_dir\.resolve\(\)\)/,
+  "the bow repair workflow must run without rewriting unrelated defender assets"
+);
 
 assert.match(
   gameSource,
@@ -39,18 +82,30 @@ assert.doesNotMatch(
   /setDefenderPose\s*\(\s*defender\s*,\s*["']aim-12["']\s*\)/,
   "attack completion must preserve the defender's last aim instead of forcing aim-12"
 );
+assert.match(
+  animationUpdate,
+  /animation\.frameDurations\?\.\[animation\.frame\]\s*\|\|\s*animation\.frameDuration/,
+  "attack animation updates must honor per-frame timing"
+);
+assert.match(
+  animationUpdate,
+  /CHARACTER_RECOVERY_BLEND_DURATIONS\[defender\.id\]/,
+  "bow recovery must blend back to its ready pose instead of popping"
+);
 
 const assetVersion = gameSource.match(
   /const\s+CHARACTER_ASSET_VERSION\s*=\s*["']([^"']+)["']/
 )?.[1];
 assert.ok(assetVersion, "CHARACTER_ASSET_VERSION must be declared");
-assert.notEqual(
+assert.equal(
   assetVersion,
-  "20260713-defender-actions-v6",
-  "character asset cache version must be bumped for the direction-safe sheets"
+  "20260718-bow-video-directions-v13",
+  "character asset cache version must track the corrected bow direction sheets"
 );
 
 const sheets = [
+  { name: "character-c", width: 2565, height: 724 },
+  ...[0, 1, 2, 3].map(frame => ({ name: `character-c-attack-${frame}`, width: 1440, height: 362 })),
   { name: "character-a", width: 4608, height: 800 },
   ...[1, 2, 3].map(frame => ({ name: `character-a-attack-${frame}`, width: 4608, height: 800 })),
   { name: "character-d", width: 2016, height: 362 },

@@ -59,7 +59,7 @@
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
-  const CHARACTER_ASSET_VERSION = "20260714-defender-muzzles-v9";
+  const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v13";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -172,7 +172,7 @@
   // The commercial character sheets do not share one circular muzzle arc, so
   // a single pivot/reach pair cannot keep effects attached in every pose.
   const CHARACTER_MUZZLE_OFFSETS = {
-    a: [[-66, -150], [-58, -161], [-21, -149], [-50, -150], [-50, -143], [35, -143], [51, -159], [40, -147], [36, -156]],
+    a: [[-44, -159], [-46, -168], [-39, -156], [-41, -157], [-6, -191], [56, -134], [68, -135], [51, -168], [42, -161]],
     b: [[-31, -176], [-37, -192], [-32, -198], [-23, -194], [2, -210], [24, -195], [34, -198], [39, -189], [32, -179]],
     c: [[-28, -182], [-38, -209], [-24, -210], [-15, -215], [0, -215], [15, -215], [28, -212], [34, -210], [28, -183]],
     d: [[-36, -172], [-30, -183], [-25, -193], [-15, -198], [2, -198], [18, -196], [30, -193], [31, -180], [41, -171]],
@@ -191,6 +191,14 @@
   };
   const THROW_ANIMATION_FRAMES = 4;
   const THROW_ANIMATION_FRAME_DURATION = 0.075;
+  const CHARACTER_ATTACK_FRAME_DURATIONS = {
+    // Give the bow a readable draw, a crisp release, and a softer recovery
+    // while keeping the projectile release at roughly the original 150 ms beat.
+    a: [0.045, 0.11, 0.045, 0.09]
+  };
+  const CHARACTER_RECOVERY_BLEND_DURATIONS = {
+    a: 70
+  };
   const AIM_ALIASES = {
     idle: "aim-12",
     left: "aim-1030",
@@ -208,6 +216,7 @@
     h: "attack"
   };
   const CHARACTER_ATTACK_FRAME_ZERO_ALIASES = new Set(["a", "b", "d", "e"]);
+  const CHARACTER_ATTACK_DIRECTION_LOCKS = new Set(["a"]);
   const CHARACTER_ATTACK_RELEASE_FRAMES = {
     a: 2,
     d: 1,
@@ -273,6 +282,7 @@
     explosion: { texture: "zombie-hit-rocket-sheet", width: 128, duration: 330, alpha: 0.94, scalePeak: 1.12, rotation: 0.18, frameWidth: 160, frameHeight: 130, frames: 16 },
     default: { texture: "zombie-hit-pistol-sheet", width: 52, duration: 215, alpha: 0.92, scalePeak: 1.04, rotation: 0.1, frameWidth: 112, frameHeight: 96, frames: 12 }
   };
+  const ZOMBIE_HIT_EFFECT_SIZE_MULTIPLIER = 1.15;
   const FIRE_ZONE_ANIMATION_FRAMES = 8;
   const SHOCK_EFFECT_OUTER_COLOR = 0x8f9dff;
   const CHARGER_CHARGE_TINT = 0xffcf9e;
@@ -315,10 +325,10 @@
   const ZOMBIE_DEATH_ANIMATION_FRAMES = 4;
   const NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES = 12;
   const ZOMBIE_DEATH_ANIMATION_FRAME_SIZE = 512;
-  // Keep the hit reaction visible without letting a corpse settle far above the position where the fall began.
-  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE = 0.24;
-  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO = 0.07;
-  const ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO = 0.02;
+  // Carry the lethal hit into the fall while keeping extreme knockback inside the combat lane.
+  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE = 1;
+  const ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO = 0.35;
+  const ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO = 0.28;
   const ZOMBIE_DEATH_TYPES = [
     "normal",
     "student",
@@ -2862,6 +2872,8 @@
       const action = CHARACTER_ATTACK_ACTIONS[defender.id];
       const firstAttackFrame = action ? `character-${defender.id}-${action}-${pose}-0` : null;
       const releaseFrame = CHARACTER_ATTACK_RELEASE_FRAMES[defender.id];
+      const frameDurations = CHARACTER_ATTACK_FRAME_DURATIONS[defender.id]
+        || Array(THROW_ANIMATION_FRAMES).fill(THROW_ANIMATION_FRAME_DURATION);
       const delaysRelease = Number.isInteger(releaseFrame) && typeof onRelease === "function";
       if (action && defender.sprite && this.textures.exists(firstAttackFrame)) {
         defender.pose = pose;
@@ -2870,14 +2882,15 @@
           pose,
           frame: 0,
           frames: THROW_ANIMATION_FRAMES,
-          timer: THROW_ANIMATION_FRAME_DURATION,
+          timer: frameDurations[0],
           frameDuration: THROW_ANIMATION_FRAME_DURATION,
+          frameDurations,
           releaseFrame: delaysRelease ? releaseFrame : null,
           onRelease: delaysRelease ? onRelease : null
         };
         defender.sprite.setTexture(firstAttackFrame);
         this.fitDefenderActionHeight(defender);
-        defender.firePoseTimer = THROW_ANIMATION_FRAMES * THROW_ANIMATION_FRAME_DURATION;
+        defender.firePoseTimer = frameDurations.reduce((total, duration) => total + duration, 0);
         if (!delaysRelease && typeof onRelease === "function") {
           onRelease();
         }
@@ -5608,6 +5621,29 @@
       hudLines.fillRect(456, 648, 42, 4);
       items.push(hudLines);
 
+      const atmosphere = this.add.graphics().setDepth(502).setBlendMode(Phaser.BlendModes.ADD);
+      atmosphere.fillStyle(0x65ddf3, 0.035);
+      atmosphere.fillEllipse(118, 328, 250, 380);
+      atmosphere.fillStyle(0xf15a47, 0.045);
+      atmosphere.fillEllipse(424, 548, 300, 420);
+      atmosphere.lineStyle(1, 0x8deeff, 0.08);
+      for (let y = 244; y <= 620; y += 47) {
+        atmosphere.lineBetween(34, y, 506, y);
+      }
+      atmosphere.lineStyle(2, 0xf15a47, 0.18);
+      atmosphere.strokeEllipse(270, 786, 430, 154);
+      items.push(atmosphere);
+      if (!this.reducedMotion) {
+        this.tweens.add({
+          targets: atmosphere,
+          alpha: { from: 0.62, to: 1 },
+          duration: 3200,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut"
+        });
+      }
+
       const archerButton = this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
         window.location.href = "https://archerlab.dev/";
       }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76 });
@@ -6724,14 +6760,37 @@
           animation.timer -= dt;
           if (animation.timer <= 0) {
             animation.frame += 1;
-            animation.timer += animation.frameDuration;
             if (animation.frame >= animation.frames) {
               const restingPose = animation.pose || defender.pose || "aim-12";
+              const recoveryBlendDuration = CHARACTER_RECOVERY_BLEND_DURATIONS[defender.id] || 0;
+              const recoveryGhost = recoveryBlendDuration > 0 && defender.sprite
+                ? this.trackTransient(this.add.image(
+                  defender.sprite.x,
+                  defender.sprite.y,
+                  defender.sprite.texture.key
+                )
+                  .setOrigin(defender.sprite.originX, defender.sprite.originY)
+                  .setDisplaySize(defender.sprite.displayWidth, defender.sprite.displayHeight)
+                  .setRotation(defender.sprite.rotation)
+                  .setFlip(defender.sprite.flipX, defender.sprite.flipY)
+                  .setAlpha(defender.sprite.alpha)
+                  .setDepth(defender.sprite.depth + 0.01))
+                : null;
               defender.attackAnimation = null;
               defender.firePoseTimer = 0;
               this.setDefenderPose(defender, restingPose);
+              if (recoveryGhost) {
+                this.tweens.add({
+                  targets: recoveryGhost,
+                  alpha: 0,
+                  duration: recoveryBlendDuration,
+                  ease: "Sine.easeOut",
+                  onComplete: () => this.destroyTransientObject(recoveryGhost, false)
+                });
+              }
               return;
             }
+            animation.timer += animation.frameDurations?.[animation.frame] || animation.frameDuration;
             const textureKey = `character-${defender.id}-${animation.action}-${animation.pose}-${animation.frame}`;
             if (defender.sprite && this.textures.exists(textureKey)) {
               defender.sprite.setTexture(textureKey);
@@ -7415,7 +7474,9 @@
       const initialMuzzle = this.getDefenderMuzzle(defender, initialPose);
       const initialX = initialMuzzle.x + shotOffset;
       const initialAngle = Math.atan2(ty - initialMuzzle.y, tx - initialX) + angleOffset;
-      const pose = getShotAimPoseKey(initialAngle);
+      const pose = CHARACTER_ATTACK_DIRECTION_LOCKS.has(defender.id)
+        ? initialPose
+        : getShotAimPoseKey(initialAngle);
       this.startDefenderAttackAnimation(defender, pose, () => {
         if (this.disposed || this.mode !== "playing" || !defender.recruited || !target.active || target.hp <= 0) {
           return;
@@ -8880,7 +8941,7 @@
     }
 
     createImpactSprite(effect, hitPoint, sizeScale, rotation, depth) {
-      const displayWidth = effect.width * sizeScale;
+      const displayWidth = effect.width * sizeScale * ZOMBIE_HIT_EFFECT_SIZE_MULTIPLIER;
       const displayHeight = displayWidth * effect.frameHeight / effect.frameWidth;
       const impact = this.trackHitEffectRoot(this.trackTransient(this.add.sprite(
         hitPoint.x,
@@ -9215,18 +9276,19 @@
       );
       const shoveX = this.clampZombieLaneX(corpseX + knockbackDx);
       const shoveY = clamp(y + deathKnockbackDy, -48, this.bounds.barricade - displayH * 0.14);
+      const deathFallTravelY = displayH * fall.y * 0.35;
       const landingX = this.clampZombieLaneX(shoveX + displayH * fall.x + rand(-6, 6));
       const landingY = clamp(
         Math.max(
           y - displayH * ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO,
-          shoveY + displayH * fall.y + rand(-4, 5)
+          shoveY + deathFallTravelY + rand(-4, 5)
         ),
         -20,
         this.bounds.barricade - displayH * 0.1
       );
       const finalAngle = fall.angle + rand(-5, 5);
       const stumbleX = this.clampZombieLaneX(corpseX + (shoveX - corpseX) * 0.62 + displayH * fall.x * 0.16);
-      const stumbleY = y + (shoveY - y) * 0.62 + displayH * (0.02 + fall.y * 0.14);
+      const stumbleY = y + (shoveY - y) * 0.9 + displayH * (0.006 + fall.y * 0.05);
       const deathPushDuration = deathKnockback
         ? clamp((deathKnockback.duration || 110) * 0.62, 72, 140)
         : rand(70, 112);
@@ -10746,6 +10808,8 @@
         .setDepth(525);
       const icon = this.add.image(x - 166, y, isRecruit ? recruitPortraitTexture : upgrade.icon).setDepth(526);
       icon.setDisplaySize(isRecruit ? 92 : 78, isRecruit ? 92 : 78);
+      const iconBaseScaleX = icon.scaleX;
+      const iconBaseScaleY = icon.scaleY;
       const ownerHalo = hasOwnerCharacter
         ? this.add.circle(x - 132, y + 34, 21, 0x020507, 0.92).setStrokeStyle(2, accent, 0.72).setDepth(526)
         : null;
@@ -10866,7 +10930,10 @@
       const setHover = (active) => {
         panel.glow.setAlpha(active ? 0.18 : 0.075);
         portraitHalo.setScale(active ? 1.05 : 1);
-        icon.setScale(active ? 1.035 : 1);
+        icon.setScale(
+          iconBaseScaleX * (active ? 1.035 : 1),
+          iconBaseScaleY * (active ? 1.035 : 1)
+        );
         chooseBg.setFillStyle(active ? accent : 0x101820, active ? 0.35 : 0.92);
         chooseText.setScale(active ? 1.04 : 1);
       };

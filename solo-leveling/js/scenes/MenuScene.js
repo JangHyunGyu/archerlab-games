@@ -340,6 +340,7 @@ export class MenuScene extends Phaser.Scene {
             panel.fillRect(panelX + uv(18), panelY + uv(2), uv(72), 2);
             panel.lineStyle(1, SYSTEM.BORDER_DIM, 0.28);
             panel.lineBetween(panelX + uv(20), panelBottom - uv(24), panelX + contentW + uv(32), panelBottom - uv(24));
+            this._createMenuFrameDetails(panelX, panelY, contentW + uv(52), panelBottom - panelY);
             this._createHeroFocus(GAME_WIDTH / 2, pct => GAME_HEIGHT * pct, { isPortrait, isShortLandscape });
         } else if (isPortrait) {
             portraitHeroLayout = this._createMobileHeroPortrait(
@@ -397,6 +398,7 @@ export class MenuScene extends Phaser.Scene {
             strokeThickness: 5,
             align: isPortrait ? 'center' : 'left',
         }).setOrigin(headerOriginX, 0.5).setDepth(4);
+        title.setShadow(0, uv(7), '#000711', uv(16), true, true);
         this._fitText(title, contentW, uv(isCompact ? 58 : 72));
 
         const subtitle = this.add.text(headerX + (isPortrait ? 0 : uv(2)), topY + uv(isCompact ? 86 : 104), t('subtitle'), {
@@ -1036,6 +1038,13 @@ export class MenuScene extends Phaser.Scene {
         const hoverKey = this.textures.exists('start_button_primary_hover')
             ? 'start_button_primary_hover'
             : (this.textures.exists('start_button_primary_wide_hover') ? 'start_button_primary_wide_hover' : normalKey);
+        const glow = this._addBitmapPanel(x - uv(4), y - uv(4), w + uv(8), h + uv(8), {
+            key: normalKey,
+            alpha: 0.12,
+            depth: 4.5,
+            tint: 0x7be5ff,
+        });
+        glow.setBlendMode?.(Phaser.BlendModes.ADD);
         const bg = this._addBitmapPanel(x, y, w, h, {
             key: normalKey,
             alpha: 0.98,
@@ -1077,6 +1086,7 @@ export class MenuScene extends Phaser.Scene {
             if (icon?.active) icon.setAlpha(1);
             titleText.setScale(titleScale * 1.02);
             metaText.setScale(metaScale * 1.02);
+            glow.setAlpha?.(0.22);
         });
         hit.on('pointerout', () => {
             bg.setTexture(normalKey).setDisplaySize(w, h);
@@ -1084,6 +1094,7 @@ export class MenuScene extends Phaser.Scene {
             if (icon?.active) icon.setAlpha(0.88);
             titleText.setScale(titleScale);
             metaText.setScale(metaScale);
+            glow.setAlpha?.(0.12);
         });
         hit.on('pointerdown', () => onClick && onClick());
     }
@@ -1101,6 +1112,15 @@ export class MenuScene extends Phaser.Scene {
             : (this.textures.exists(primary ? 'start_button_primary_wide_hover' : 'start_button_secondary_wide_hover')
                 ? (primary ? 'start_button_primary_wide_hover' : 'start_button_secondary_wide_hover')
                 : (this.textures.exists('ui_button_hover') ? 'ui_button_hover' : normalKey));
+        const glow = primary
+            ? this._addBitmapPanel(x - uv(5), y - uv(5), w + uv(10), h + uv(10), {
+                key: normalKey,
+                alpha: 0.16,
+                depth: 4.5,
+                tint: 0x8cecff,
+            })
+            : null;
+        glow?.setBlendMode?.(Phaser.BlendModes.ADD);
         const bg = this._addBitmapPanel(x, y, w, h, {
             key: normalKey,
             alpha: primary ? 0.99 : 0.94,
@@ -1133,12 +1153,14 @@ export class MenuScene extends Phaser.Scene {
             bg.setAlpha(1);
             if (icon?.active) icon.setAlpha(1);
             txt.setScale(baseScale * 1.02);
+            glow?.setAlpha?.(0.28);
         });
         hit.on('pointerout', () => {
             bg.setTexture(normalKey).setDisplaySize(w, h);
             bg.setAlpha(primary ? 0.99 : 0.94);
             if (icon?.active) icon.setAlpha(primary ? 0.96 : 0.82);
             txt.setScale(baseScale);
+            glow?.setAlpha?.(0.16);
         });
         hit.on('pointerdown', () => onClick && onClick());
     }
@@ -1244,9 +1266,10 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(-40);
 
         const bgKey = this.textures.exists('shadow_gate_backdrop') ? 'shadow_gate_backdrop' : 'ai_dungeon_atmosphere';
+        let backdropArt = null;
         if (this.textures.exists(bgKey)) {
             const usesGateArt = bgKey === 'shadow_gate_backdrop';
-            this._coverImage(bgKey, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, usesGateArt ? {
+            backdropArt = this._coverImage(bgKey, GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, usesGateArt ? {
                 focusX: 0.72,
                 focusY: 0.52,
                 targetX: isPortrait ? 0.54 : 0.72,
@@ -1254,6 +1277,21 @@ export class MenuScene extends Phaser.Scene {
             } : undefined)
                 .setDepth(-39)
                 .setAlpha(1);
+        }
+
+        if (backdropArt && !this._reduceMenuMotion) {
+            const baseScaleX = backdropArt.scaleX;
+            const baseScaleY = backdropArt.scaleY;
+            this.tweens.add({
+                targets: backdropArt,
+                scaleX: baseScaleX * 1.018,
+                scaleY: baseScaleY * 1.018,
+                x: backdropArt.x - uv(isPortrait ? 2 : 7),
+                duration: 9200,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
         }
 
         const leftShadeW = isPortrait ? GAME_WIDTH : GAME_WIDTH * 0.58;
@@ -1264,6 +1302,37 @@ export class MenuScene extends Phaser.Scene {
         if (isPortrait) {
             this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT * 0.82, GAME_WIDTH, GAME_HEIGHT * 0.42, 0x010309, 0.3)
                 .setDepth(-33);
+        }
+
+        const portalX = GAME_WIDTH * (isPortrait ? 0.54 : 0.72);
+        const portalY = GAME_HEIGHT * (isShortLandscape ? 0.47 : 0.52);
+        const portalGlow = this.add.graphics().setDepth(-32).setBlendMode(Phaser.BlendModes.ADD);
+        portalGlow.fillStyle(0x6f62ff, isPortrait ? 0.025 : 0.04);
+        portalGlow.fillEllipse(portalX, portalY, GAME_WIDTH * (isPortrait ? 0.54 : 0.34), GAME_HEIGHT * 0.62);
+        portalGlow.lineStyle(2, 0x8cecff, isPortrait ? 0.05 : 0.09);
+        portalGlow.strokeEllipse(portalX, portalY, GAME_WIDTH * (isPortrait ? 0.34 : 0.21), GAME_HEIGHT * 0.48);
+
+        if (this.textures.exists('env_shadow_portal')) {
+            const auraSize = Math.min(GAME_HEIGHT * (isPortrait ? 0.62 : 0.78), GAME_WIDTH * (isPortrait ? 0.82 : 0.42));
+            const portalAura = this.add.image(portalX, portalY, 'env_shadow_portal')
+                .setDepth(-31)
+                .setDisplaySize(auraSize, auraSize)
+                .setTint(0x8176ff)
+                .setAlpha(isPortrait ? 0.07 : 0.11)
+                .setBlendMode(Phaser.BlendModes.ADD);
+            if (!this._reduceMenuMotion) {
+                this.tweens.add({
+                    targets: portalAura,
+                    alpha: { from: isPortrait ? 0.045 : 0.075, to: isPortrait ? 0.09 : 0.15 },
+                    scaleX: portalAura.scaleX * 1.035,
+                    scaleY: portalAura.scaleY * 1.035,
+                    angle: 2.5,
+                    duration: 3600,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+            }
         }
 
         if (!this._reduceMenuMotion && this.textures.exists('particle_glow')) {
@@ -1289,6 +1358,44 @@ export class MenuScene extends Phaser.Scene {
                 .setDepth(-10)
                 .setDisplaySize(GAME_WIDTH * 1.24, GAME_HEIGHT * 1.24)
                 .setAlpha(isPortrait ? 0.78 : 0.62);
+        }
+    }
+
+    _createMenuFrameDetails(x, y, w, h) {
+        const frame = this.add.graphics().setDepth(1);
+        const inset = uv(8);
+        const corner = uv(18);
+
+        frame.lineStyle(1, SYSTEM.BORDER, 0.2);
+        frame.strokeRect(x + inset, y + inset, w - inset * 2, h - inset * 2);
+        frame.lineStyle(2, SYSTEM.BORDER, 0.72);
+        [
+            [x + inset, y + inset, 1, 1],
+            [x + w - inset, y + inset, -1, 1],
+            [x + inset, y + h - inset, 1, -1],
+            [x + w - inset, y + h - inset, -1, -1],
+        ].forEach(([cx, cy, sx, sy]) => {
+            frame.lineBetween(cx, cy, cx + sx * corner, cy);
+            frame.lineBetween(cx, cy, cx, cy + sy * corner);
+        });
+
+        frame.fillStyle(SYSTEM.BORDER_GOLD, 0.82);
+        frame.fillRect(x + uv(18), y + uv(2), uv(54), 2);
+        frame.fillStyle(SYSTEM.BORDER, 0.72);
+        frame.fillRect(x + w - uv(62), y + h - uv(4), uv(42), 2);
+
+        const signal = this.add.rectangle(x + w - uv(28), y + uv(20), uv(5), uv(5), SYSTEM.BORDER, 0.84)
+            .setDepth(1.2)
+            .setBlendMode(Phaser.BlendModes.ADD);
+        if (!this._reduceMenuMotion) {
+            this.tweens.add({
+                targets: signal,
+                alpha: { from: 0.35, to: 1 },
+                duration: 1050,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
         }
     }
 

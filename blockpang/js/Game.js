@@ -285,8 +285,15 @@ class Game {
         const bgTexture = getBlockpangTexture('arcadeBg');
         if (bgTexture) {
             const bgSprite = new PIXI.Sprite(bgTexture);
-            bgSprite.width = w;
-            bgSprite.height = h;
+            const textureW = Math.max(1, bgTexture.width || (bgTexture.orig && bgTexture.orig.width) || w);
+            const textureH = Math.max(1, bgTexture.height || (bgTexture.orig && bgTexture.orig.height) || h);
+            const coverScale = Math.max(w / textureW, h / textureH);
+            bgSprite.width = textureW * coverScale;
+            bgSprite.height = textureH * coverScale;
+            bgSprite.position.set(
+                Math.floor((w - bgSprite.width) * 0.5),
+                Math.floor((h - bgSprite.height) * 0.5)
+            );
             this.bgContainer.addChild(bgSprite);
         }
 
@@ -353,8 +360,6 @@ class Game {
         const padding = Math.max(8, Math.min(w, h) * 0.025);
 
         const scoreAreaH = Math.max(82, h * 0.135);
-        const availW = w - padding * 2;
-        const availH = h - scoreAreaH - padding * 2;
         const isPortrait = h > w * 1.12;
 
         const panelExtForCell = (cell) => getBlockpangBoardPanelExt(cell, w, h);
@@ -380,8 +385,7 @@ class Game {
             : Math.max(14, Math.min(w, h) * 0.025);
         // Asset frame on board-panel.webp is ~11% of total panel side, so
         // ext ≈ cs * 1.1 is needed to keep cells inside the inner edge of the frame.
-        // The panel-to-cell-area ratio is therefore (10 + 2*1.1) / 10 = 1.22.
-        const PANEL_RATIO = 1.22;
+        // The sizing helpers above account for that extension directly.
         if (isPortrait) {
             const minTrayH = Math.max(154, Math.min(220, h * 0.24));
             const maxBoardStack = h - scoreAreaH - padding * 3 - minTrayH;
@@ -390,10 +394,15 @@ class Game {
                 maxCellForBoardStack(maxBoardStack)
             );
         } else {
-            const gridMaxH = ((availH - frameMargin * 2) * 0.62) / PANEL_RATIO;
-            const gridMaxW = (availW - frameMargin * 2) / PANEL_RATIO;
-            const gridSize = Math.min(gridMaxW, gridMaxH);
-            this.cellSize = Math.floor(gridSize / GRID_SIZE);
+            // The old fixed height ratio made the board tiny on desktop.
+            // Reserve a usable tray, then let the board consume the remaining
+            // height while accounting for its decorative frame.
+            const landscapeTrayH = Math.max(144, Math.min(210, h * 0.25));
+            const maxBoardStack = h - scoreAreaH - padding * 3 - landscapeTrayH;
+            this.cellSize = Math.min(
+                maxCellForVisualWidth(w - frameMargin * 2),
+                maxCellForBoardStack(maxBoardStack)
+            );
         }
         const actualGrid = this.cellSize * GRID_SIZE;
         const boardPanelExt = panelExtForCell(this.cellSize);
@@ -618,7 +627,12 @@ class Game {
         const boardPos = this.board.getGlobalPosition();
         const cx = boardPos.x + (gridX + piece.cols / 2) * this.cellSize;
         const cy = boardPos.y + (gridY + piece.rows / 2) * this.cellSize;
-        this.effects.playRingBurst(cx, cy, BLOCK_COLORS[piece.colorIndex].glow);
+        this.effects.playPlacementImpact(
+            cx,
+            cy,
+            BLOCK_COLORS[piece.colorIndex].glow,
+            piece.cellCount
+        );
 
         this._scheduleTimeout(() => {
             if (!this._isCurrentPlacementAnimation(animationToken)) return;
@@ -707,6 +721,11 @@ class Game {
 
                 const boardPos = this.board.getGlobalPosition();
                 this.effects.playClearEffect(clearResult.cells, boardPos);
+                this.effects.playBoardResonance(
+                    boardPos,
+                    clearResult.lines,
+                    clearResult.cells
+                );
 
                 // Calculate center of cleared cells
                 let avgX = 0, avgY = 0;

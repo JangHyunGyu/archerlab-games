@@ -176,6 +176,7 @@ function assertPngWebpAlphaParity(assetNames) {
 const verticalKnockbackScale = readNumberConstant("ZOMBIE_DEATH_VERTICAL_KNOCKBACK_SCALE");
 const verticalKnockbackLimitRatio = readNumberConstant("ZOMBIE_DEATH_VERTICAL_KNOCKBACK_LIMIT_RATIO");
 const landingRiseLimitRatio = readNumberConstant("ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO");
+const hitEffectSizeMultiplier = readNumberConstant("ZOMBIE_HIT_EFFECT_SIZE_MULTIPLIER");
 const bloodStainSizeMultiplier = readNumberConstant("BLOOD_STAIN_SIZE_MULTIPLIER");
 const groundDepthBase = readNumberConstant("ZOMBIE_CORPSE_GROUND_DEPTH_BASE");
 const groundDepthRange = readNumberConstant("ZOMBIE_CORPSE_GROUND_DEPTH_RANGE");
@@ -183,9 +184,10 @@ const corpseDepthBase = readNumberConstant("ZOMBIE_CORPSE_DEPTH_BASE");
 const recentDepthStep = readNumberConstant("ZOMBIE_CORPSE_RECENT_DEPTH_STEP");
 const activeCorpseLimit = readNumberConstant("ACTIVE_CORPSE_LIMIT");
 
-assert.equal(verticalKnockbackScale, 0.24, "death recoil must retain only a restrained part of hit knockback");
-assert.equal(verticalKnockbackLimitRatio, 0.07, "death recoil must stay capped relative to zombie height");
-assert.equal(landingRiseLimitRatio, 0.02, "a corpse must not settle far above its death position");
+assert.equal(verticalKnockbackScale, 1, "lethal hits must carry their full knockback into the death fall");
+assert.equal(verticalKnockbackLimitRatio, 0.35, "death recoil must only cap extreme lane displacement");
+assert.equal(landingRiseLimitRatio, 0.28, "a corpse must be allowed to land behind its death position");
+assert.equal(hitEffectSizeMultiplier, 1.15, "zombie hit effects must stay subtly enlarged without obscuring the target");
 assert.equal(bloodStainSizeMultiplier, 2, "corpse blood stains must be twice their previous visual size");
 assert.equal(groundDepthBase, 25, "ground decals must stay above the arena floor art");
 assert.equal(groundDepthRange, 8, "ground decals must use their isolated narrow depth band");
@@ -366,7 +368,17 @@ assert.match(
 assert.match(
   corpseFunction,
   /Math\.max\s*\(\s*y\s*-\s*displayH\s*\*\s*ZOMBIE_DEATH_LANDING_RISE_LIMIT_RATIO/,
-  "the settled death pose must stay near the position where the fall began"
+  "the settled death pose must keep a bounded lane position"
+);
+assert.match(
+  corpseFunction,
+  /const deathFallTravelY = displayH \* fall\.y \* 0\.35/,
+  "death fall travel must not erase the incoming hit knockback"
+);
+assert.match(
+  corpseFunction,
+  /const stumbleY = y \+ \(shoveY - y\) \* 0\.9 \+ displayH \* \(0\.006 \+ fall\.y \* 0\.05\)/,
+  "the first death beat must visibly preserve the lethal shove"
 );
 assert.match(
   corpseFunction,
@@ -481,11 +493,21 @@ for (const displayHeight of [116, 146, 170, 177, 220]) {
   );
   const earliestLanding = Math.max(
     500 - displayHeight * landingRiseLimitRatio,
-    500 + scaledKnockback - displayHeight * 0.01 - 4
+    500 + scaledKnockback + displayHeight * 0.02 * 0.35 - 4
   );
   assert.ok(
     earliestLanding >= 500 - displayHeight * landingRiseLimitRatio,
-    `the ${displayHeight}px zombie corpse can still settle too far above its death position`
+    `the ${displayHeight}px zombie corpse exceeded its bounded landing displacement`
+  );
+
+  const pistolKnockback = Math.max(
+    -displayHeight * verticalKnockbackLimitRatio,
+    -10 * verticalKnockbackScale
+  );
+  const pistolStumbleY = 500 + pistolKnockback * 0.9 + displayHeight * (0.006 + 0.06 * 0.05);
+  assert.ok(
+    pistolStumbleY <= 495,
+    `a lethal pistol hit only moved the ${displayHeight}px zombie to ${pistolStumbleY.toFixed(2)}`
   );
 }
 
@@ -493,5 +515,5 @@ console.log(
   `zombie death placement verified: ${deathTexturesByType.size} motion-matched types, ` +
     `${finalFrameBounds.size} alpha-aligned final frames, isolated ground depth, ` +
     `${bloodStainSizeMultiplier}x blood stains, ${Math.round(verticalKnockbackLimitRatio * 100)}% recoil cap, ` +
-    `${Math.round(landingRiseLimitRatio * 100)}% landing rise limit`
+    `${Math.round(landingRiseLimitRatio * 100)}% landing rise limit, ${hitEffectSizeMultiplier}x hit effects`
 );

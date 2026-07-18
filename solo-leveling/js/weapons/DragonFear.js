@@ -9,7 +9,7 @@ export class DragonFear extends WeaponBase {
 
     fire() {
         const range = (this.config.auraRange || 230) + this.extraRange;
-        const slowAmount = this.config.slowMultiplier ?? Math.max(0.1, 0.4 - this.extraSlow);
+        const slowAmount = Math.max(0.1, (this.config.slowMultiplier ?? 0.4) - this.extraSlow);
         const auraDuration = this.config.auraDuration || 2000;
         if (this.player.playAttackMotion) {
             const angle = this.player.moveIntensity > 0.12

@@ -17,12 +17,57 @@ class EffectManager {
         this._spritePool = [];
         this._POOL_MAX = 400;
         this._sheetFrameCache = new Map();
+        this._peakParticleCount = 0;
+        this._peakTweenCount = 0;
 
         // ── Text object pool for score/combo/bonus popups ──
         this._textPool = [];
         this._TEXT_POOL_MAX = 20;
 
         game.app.ticker.add(this.update, this);
+    }
+
+    _prefersReducedMotion() {
+        return typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    _getParticleBudget() {
+        if (this._prefersReducedMotion()) return 120;
+        const screen = this.game && this.game.app ? this.game.app.screen : null;
+        const minSide = screen ? Math.min(screen.width, screen.height) : 720;
+        if (minSide < 520) return 420;
+        if (minSide < 900) return 620;
+        return 780;
+    }
+
+    _clampParticleCount(requested) {
+        const available = Math.max(0, this._getParticleBudget() - this.particles.length);
+        return Math.max(0, Math.min(Math.floor(requested), available));
+    }
+
+    _pushParticle(particle) {
+        if (!particle || !particle.gfx) return false;
+        const budget = this._getParticleBudget();
+        if (this.particles.length >= budget) {
+            this._releaseParticleDisplay(particle.gfx);
+            return false;
+        }
+        this.particles.push(particle);
+        this._peakParticleCount = Math.max(this._peakParticleCount, this.particles.length);
+        return true;
+    }
+
+    getDiagnostics() {
+        return {
+            particles: this.particles.length,
+            tweens: this.tweens.length,
+            children: this.container.children.length,
+            particleBudget: this._getParticleBudget(),
+            peakParticles: this._peakParticleCount,
+            peakTweens: this._peakTweenCount,
+        };
     }
 
     // Get a Graphics object from pool or create new
@@ -270,6 +315,7 @@ class EffectManager {
         const delta = ticker.deltaTime;
         const dt = delta * (1000 / 60);
         this._time += dt;
+        this._peakTweenCount = Math.max(this._peakTweenCount, this.tweens.length);
 
         // ── Particles ──
         for (let i = this.particles.length - 1; i >= 0; i--) {
@@ -349,6 +395,7 @@ class EffectManager {
         const cellSize = this.game.cellSize;
         const cx = worldX + cellSize / 2;
         const cy = worldY + cellSize / 2;
+        count = this._clampParticleCount(count);
 
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 1.2;
@@ -367,7 +414,7 @@ class EffectManager {
             gfx.position.set(cx, cy);
             this.container.addChild(gfx);
 
-            this.particles.push({
+            this._pushParticle({
                 gfx,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed - 3.5,
@@ -381,7 +428,7 @@ class EffectManager {
         }
 
         // Extra ember particles (tiny, fast, many)
-        const emberCount = Math.ceil(count * 0.6);
+        const emberCount = this._clampParticleCount(Math.ceil(count * 0.6));
         for (let i = 0; i < emberCount; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 5 + Math.random() * 8;
@@ -399,7 +446,7 @@ class EffectManager {
                              cy + (Math.random() - 0.5) * cellSize * 0.3);
             this.container.addChild(gfx);
 
-            this.particles.push({
+            this._pushParticle({
                 gfx,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed - 2,
@@ -415,6 +462,7 @@ class EffectManager {
 
     // ── Sparkle particles (floating upward, no gravity) ──
     spawnSparkles(worldX, worldY, color, count = 5) {
+        count = this._clampParticleCount(count);
         for (let i = 0; i < count; i++) {
             const size = 1.5 + Math.random() * 3.5;
             const textureKey = this._pickTextureKey(['effectSparkle', 'effectSparkleAlt'], 'effectSparkle');
@@ -432,7 +480,7 @@ class EffectManager {
             );
             this.container.addChild(gfx);
 
-            this.particles.push({
+            this._pushParticle({
                 gfx,
                 vx: (Math.random() - 0.5) * 1.0,
                 vy: -1.5 - Math.random() * 2.5,
@@ -449,6 +497,7 @@ class EffectManager {
 
     // ── Star-shaped burst particles (for high combos) ──
     spawnStarParticles(worldX, worldY, color, count = 10) {
+        count = this._clampParticleCount(count);
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.6;
             const speed = 4 + Math.random() * 7;
@@ -464,7 +513,7 @@ class EffectManager {
             gfx.position.set(worldX, worldY);
             this.container.addChild(gfx);
 
-            this.particles.push({
+            this._pushParticle({
                 gfx,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
@@ -519,7 +568,7 @@ class EffectManager {
                 if (flashIsSprite) flash.tint = color;
                 flash.position.set(cellCx, cellCy);
                 this.container.addChild(flash);
-                this.particles.push({
+                this._pushParticle({
                     gfx: flash,
                     vx: 0, vy: 0, rotSpeed: 0, gravity: 0,
                     baseScale: flashIsSprite ? (flashSize * 2) / 64 : 0.5,
@@ -541,7 +590,7 @@ class EffectManager {
                 });
 
                 // ── 3. EXPLOSION DEBRIS: block shatters into many fragments ──
-                const debrisCount = 4 + intensity * 3; // Much more debris!
+                const debrisCount = this._clampParticleCount(4 + intensity * 3);
                 const dirX = cellCx - cx;
                 const dirY = cellCy - cy;
 
@@ -573,7 +622,7 @@ class EffectManager {
                     const angle = Math.atan2(dirY, dirX) + (Math.random() - 0.5) * 2.2;
                     const speed = (4 + Math.random() * 6) * speedMul;
 
-                    this.particles.push({
+                    this._pushParticle({
                         gfx: frag,
                         vx: Math.cos(angle) * speed * (0.7 + Math.random() * 0.6),
                         vy: Math.sin(angle) * speed * (0.7 + Math.random() * 0.6) - 4 - Math.random() * 3,
@@ -589,7 +638,7 @@ class EffectManager {
                 }
 
                 // ── 4. Micro-debris dust cloud (tiny particles, lots) ──
-                const dustCount = 3 + intensity * 2;
+                const dustCount = this._clampParticleCount(3 + intensity * 2);
                 for (let d = 0; d < dustCount; d++) {
                     const dustSize = 1 + Math.random() * 2;
                     const dust = this._createParticleDisplay(this._pickTextureKey(['effectSoftCircle', 'effectSoftBurst'], 'effectSoftCircle'), (g) => {
@@ -605,7 +654,7 @@ class EffectManager {
 
                     const dAngle = Math.random() * Math.PI * 2;
                     const dSpeed = 1 + Math.random() * 3;
-                    this.particles.push({
+                    this._pushParticle({
                         gfx: dust,
                         vx: Math.cos(dAngle) * dSpeed,
                         vy: Math.sin(dAngle) * dSpeed - 1,
@@ -620,21 +669,6 @@ class EffectManager {
                 }
             }, idx * 10); // Slightly faster wave
         });
-
-        if (intensity >= 2) {
-            this._scheduleTimeout(() => {
-                this.playSpriteSheetEffect('vfxLineClearSheet', cx, cy, {
-                    duration: 620 + intensity * 70,
-                    targetWidth: Math.min(this.game.app.screen.width * 0.96, cellSize * GRID_SIZE * 1.18),
-                    targetHeight: cellSize * (2.0 + intensity * 0.35),
-                    alpha: 0.92,
-                    fadeIn: 0.05,
-                    fadeOut: 0.28,
-                    startScale: 0.92,
-                    endScale: 1.08,
-                });
-            }, Math.min(140, sorted.length * 5));
-        }
 
         // ── 5. Per-clear-size bonus effects ──
         if (intensity >= 2) {
@@ -765,6 +799,53 @@ class EffectManager {
     playLineSweep(rows, cols, boardGlobalPos) {
         const cs = this.game.cellSize;
         const total = cs * GRID_SIZE;
+        const lineCount = Math.max(1, rows.length + cols.length);
+        const intensity = Math.min(4, lineCount);
+        const reduced = this._prefersReducedMotion();
+
+        // The source sheet is a horizontal energy band. Rotate it for columns
+        // and play one burst per cleared line so the visual direction always
+        // matches the board event.
+        rows.forEach((row, index) => {
+            this._scheduleTimeout(() => {
+                this.playSpriteSheetEffect(
+                    'vfxLineClearSheet',
+                    boardGlobalPos.x + total * 0.5,
+                    boardGlobalPos.y + (row + 0.5) * cs,
+                    {
+                        duration: reduced ? 360 : 560 + intensity * 55,
+                        targetWidth: total * 1.18,
+                        targetHeight: cs * (1.8 + intensity * 0.22),
+                        alpha: reduced ? 0.44 : 0.88 + intensity * 0.025,
+                        fadeIn: 0.025,
+                        fadeOut: 0.32,
+                        startScale: 0.82,
+                        endScale: 1.08,
+                        rotation: 0,
+                    }
+                );
+            }, index * 45);
+        });
+        cols.forEach((col, index) => {
+            this._scheduleTimeout(() => {
+                this.playSpriteSheetEffect(
+                    'vfxLineClearSheet',
+                    boardGlobalPos.x + (col + 0.5) * cs,
+                    boardGlobalPos.y + total * 0.5,
+                    {
+                        duration: reduced ? 360 : 560 + intensity * 55,
+                        targetWidth: total * 1.18,
+                        targetHeight: cs * (1.8 + intensity * 0.22),
+                        alpha: reduced ? 0.44 : 0.88 + intensity * 0.025,
+                        fadeIn: 0.025,
+                        fadeOut: 0.32,
+                        startScale: 0.82,
+                        endScale: 1.08,
+                        rotation: Math.PI * 0.5,
+                    }
+                );
+            }, (rows.length + index) * 45);
+        });
 
         // Row sweeps (horizontal)
         const self = this;
@@ -820,8 +901,136 @@ class EffectManager {
         });
     }
 
+    // ── Board-wide resonance frame and energy scan for line clears ──
+    playBoardResonance(boardGlobalPos, lineCount = 1, clearedCells = []) {
+        const cs = this.game.cellSize;
+        const total = cs * GRID_SIZE;
+        const intensity = Math.min(4, Math.max(1, lineCount));
+        const reduced = this._prefersReducedMotion();
+        const centerX = boardGlobalPos.x + total * 0.5;
+        const centerY = boardGlobalPos.y + total * 0.5;
+        const colors = [];
+        const seen = new Set();
+
+        clearedCells.forEach((cell) => {
+            if (!cell || cell.colorIndex < 0 || seen.has(cell.colorIndex)) return;
+            seen.add(cell.colorIndex);
+            const blockColor = BLOCK_COLORS[cell.colorIndex] || BLOCK_COLORS[0];
+            colors.push(blockColor.glow || blockColor.particle || 0x44FF88);
+        });
+        if (colors.length === 0) colors.push(0x00E5FF, 0xD500F9);
+
+        const primary = colors[0];
+        const secondary = colors[Math.min(1, colors.length - 1)];
+        const pad = cs * (0.18 + intensity * 0.04);
+        const half = total * 0.5;
+        const frame = new PIXI.Graphics();
+        frame.roundRect(
+            -half - pad,
+            -half - pad,
+            total + pad * 2,
+            total + pad * 2,
+            Math.max(12, cs * 0.5)
+        ).stroke({ width: 2.2 + intensity * 0.8, color: primary, alpha: 0.72 });
+        frame.roundRect(
+            -half + cs * 0.08,
+            -half + cs * 0.08,
+            total - cs * 0.16,
+            total - cs * 0.16,
+            Math.max(10, cs * 0.38)
+        ).stroke({ width: 1.2 + intensity * 0.35, color: 0xFFFFFF, alpha: 0.38 });
+
+        const bracket = cs * (0.85 + intensity * 0.08);
+        frame.moveTo(-half - pad, -half + bracket)
+             .lineTo(-half - pad, -half - pad)
+             .lineTo(-half + bracket, -half - pad);
+        frame.moveTo(half - bracket, -half - pad)
+             .lineTo(half + pad, -half - pad)
+             .lineTo(half + pad, -half + bracket);
+        frame.moveTo(half + pad, half - bracket)
+             .lineTo(half + pad, half + pad)
+             .lineTo(half - bracket, half + pad);
+        frame.moveTo(-half + bracket, half + pad)
+             .lineTo(-half - pad, half + pad)
+             .lineTo(-half - pad, half - bracket)
+             .stroke({ width: 4 + intensity, color: secondary, alpha: 0.88 });
+        frame.position.set(centerX, centerY);
+        frame.alpha = 0;
+        frame.scale.set(0.965);
+        frame.blendMode = 'add';
+        this.container.addChild(frame);
+
+        const beamWidth = cs * (0.72 + intensity * 0.13);
+        const beam = new PIXI.Graphics();
+        beam.rect(-beamWidth * 0.5, -half, beamWidth, total)
+            .fill({ color: primary, alpha: reduced ? 0.10 : 0.15 + intensity * 0.025 });
+        beam.rect(-beamWidth * 0.16, -half, beamWidth * 0.32, total)
+            .fill({ color: 0xFFFFFF, alpha: reduced ? 0.18 : 0.44 });
+        beam.rect(-beamWidth, -half, beamWidth * 2, total)
+            .stroke({ width: 1.2, color: secondary, alpha: 0.22 });
+        beam.position.set(boardGlobalPos.x - beamWidth, centerY);
+        beam.alpha = 0;
+        beam.blendMode = 'add';
+        this.container.addChild(beam);
+
+        this.tweens.push({
+            elapsed: 0,
+            duration: reduced ? 320 : 680 + intensity * 65,
+            update(dt) {
+                if (!frame || frame.destroyed) return true;
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                const pop = Math.min(1, t / 0.14);
+                frame.alpha = easeOutCubic(pop) * (1 - easeInOutQuad(t)) * (reduced ? 0.45 : 1);
+                const pulse = 1 + Math.sin(t * Math.PI * (4 + intensity)) * 0.018 * (1 - t);
+                frame.scale.set((0.965 + easeOutBack(pop) * 0.035) * pulse);
+                if (t >= 1) {
+                    frame.destroy();
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        this.tweens.push({
+            elapsed: 0,
+            duration: reduced ? 300 : 520,
+            delay: reduced ? 0 : 55,
+            update(dt) {
+                if (!beam || beam.destroyed) return true;
+                if (this.delay > 0) {
+                    this.delay -= dt;
+                    return false;
+                }
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                beam.x = boardGlobalPos.x - beamWidth + easeOutQuart(t) * (total + beamWidth * 2);
+                beam.alpha = Math.sin(t * Math.PI) * (reduced ? 0.35 : 0.95);
+                if (t >= 1) {
+                    beam.destroy();
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        this.playPrismaticFlare(centerX, centerY, primary, 1.05 + intensity * 0.26);
+        if (!reduced) {
+            const cornerCount = 2 + intensity;
+            this.spawnSparkles(boardGlobalPos.x, boardGlobalPos.y, primary, cornerCount);
+            this.spawnSparkles(boardGlobalPos.x + total, boardGlobalPos.y, secondary, cornerCount);
+            this.spawnSparkles(boardGlobalPos.x, boardGlobalPos.y + total, secondary, cornerCount);
+            this.spawnSparkles(boardGlobalPos.x + total, boardGlobalPos.y + total, primary, cornerCount);
+        }
+    }
+
     // ── Screen shake ──
     screenShake(intensity = 6, duration = 300) {
+        if (this._prefersReducedMotion()) {
+            intensity *= 0.16;
+            duration = Math.min(duration, 150);
+        }
+        if (intensity < 0.75) return;
         this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
         this.shakeDuration = duration;
         this.shakeTime = duration;
@@ -890,36 +1099,62 @@ class EffectManager {
 
     playComboEffect(combo, x, y, lineCount) {
         const tier = combo <= 3 ? 1 : combo <= 5 ? 2 : 3;
+        const reduced = this._prefersReducedMotion();
+        const cellSize = Math.max(16, this.game.cellSize || 32);
+        const tierColor = tier === 3 ? 0xFFD600 : tier === 2 ? 0x00E5FF : 0x44FF88;
 
-        // ── Tier 1 (combo 2-3): "Nice" ──
-        if (tier >= 1) {
-            this.screenShake(5 + combo, 200 + lineCount * 30);
-            this.playShockwave(x, y, lineCount);
-            this.spawnSparkles(x, y, 0x44FF88, 15 + combo * 5);
-            this.showComboPopup(x, y, combo, tier);
-        }
+        // Shared impact language keeps every combo readable without stacking
+        // the complete lower tiers again on legendary combos.
+        this.screenShake(
+            (tier === 1 ? 4 : tier === 2 ? 8 : 13) + Math.min(combo, 8),
+            220 + tier * 90 + lineCount * 35
+        );
+        this.playShockwave(x, y, Math.max(lineCount, tier));
+        this.playPrismaticFlare(x, y, tierColor, 1.05 + tier * 0.42);
+        this.spawnSparkles(x, y, tierColor, reduced ? 6 : 12 + combo * 4);
+        this.showComboPopup(x, y, combo, tier);
 
         // ── Tier 2 (combo 4-5): "Amazing" ──
-        if (tier >= 2) {
-            this.screenShake(8 + combo, 300 + lineCount * 40);
-            this.playScreenFlash(0xFFFFFF, 0.15, 200);
-            this.playMultiRingWave(x, y, 2, [0x44FF88, 0x00E5FF], 120 + lineCount * 30);
-            this.playRadialRays(x, y, 6, 0x44FF88, 100);
-            this.spawnSparkles(x, y, 0x00E5FF, 20 + combo * 5);
+        if (tier === 2) {
+            this.playScreenFlash(0xFFFFFF, 0.14, 210);
+            this.playMultiRingWave(x, y, 3, [0x44FF88, 0x00E5FF, 0xFFFFFF], 135 + lineCount * 34);
+            this.playRadialRays(x, y, 9, 0x00E5FF, 120 + lineCount * 12);
+            this.spawnStarParticles(x, y, 0xFFFFFF, reduced ? 3 : 8);
+            this._scheduleTimeout(() => {
+                this.playPrismaticFlare(x, y, 0x76FF03, 1.35);
+            }, reduced ? 0 : 100);
         }
 
         // ── Tier 3 (combo 6+): "LEGENDARY" ──
-        if (tier >= 3) {
-            this.screenShake(12 + Math.min(combo, 10), 400 + lineCount * 50);
-            this.playRainbowFlash(300);
-            this.playScreenZoomPulse(0.03, 350);
-            this.playMultiRingWave(x, y, 4,
+        else if (tier === 3) {
+            this.playRainbowFlash(380);
+            this.playScreenFlash(0xFFD600, 0.12, 260);
+            this.playScreenZoomPulse(0.036, 420);
+            this.playMultiRingWave(x, y, 5,
                 [0xFF1744, 0xFFD600, 0x76FF03, 0x00E5FF, 0xD500F9],
-                160 + lineCount * 40);
-            this.playRadialRays(x, y, 12, 0xFFD600, 150);
-            this.spawnStarParticles(x, y, 0xFFD600, 15 + combo * 3);
-            this.playParticleShower(40 + combo * 8);
-            this.spawnSparkles(x, y, 0xD500F9, 25);
+                185 + lineCount * 46);
+            this.playRadialRays(x, y, 16, 0xFFD600, 175 + lineCount * 14);
+            this.spawnStarParticles(x, y, 0xFFD600, reduced ? 5 : 16 + combo * 2);
+            this.playParticleShower(reduced ? 8 : 48 + combo * 6);
+            this.spawnSparkles(x, y, 0xD500F9, reduced ? 5 : 28);
+
+            const nova = this.playSpriteSheetEffect('vfxRewardNovaSheet', x, y, {
+                duration: reduced ? 520 : 980,
+                targetWidth: Math.min(this.game.app.screen.width * 0.92, cellSize * 10.5),
+                alpha: reduced ? 0.45 : 0.96,
+                fadeIn: 0.025,
+                fadeOut: 0.36,
+                startScale: 0.64,
+                endScale: 1.16,
+            });
+            if (nova) {
+                this.container.setChildIndex(nova, Math.max(0, this.container.children.length - 3));
+            }
+
+            this._scheduleTimeout(() => {
+                this.playPrismaticFlare(x, y, 0xD500F9, 1.8);
+                this.playPrismaticFlare(x, y, 0x00E5FF, 1.55);
+            }, reduced ? 0 : 135);
         }
     }
 
@@ -957,6 +1192,11 @@ class EffectManager {
         txt.position.set(x, y);
         txt.alpha = 0;
         this.container.addChild(txt);
+        const popOvershoot = (1 + tier * 0.15) * 1.16;
+        const textFitScale = Math.min(
+            1,
+            (sw * 0.86) / Math.max(1, txt.width * popOvershoot)
+        );
 
         // ── Glow ring behind text ──
         const glowRadius = size * 2;
@@ -1014,7 +1254,7 @@ class EffectManager {
                 if (t < 0.15) {
                     const p = t / 0.15;
                     txt.alpha = easeOutCubic(p);
-                    const scale = easeOutElastic(p) * (1 + tier * 0.15);
+                    const scale = easeOutElastic(p) * (1 + tier * 0.15) * textFitScale;
                     txt.scale.set(scale);
                     glow.alpha = easeOutCubic(p) * (0.6 + tier * 0.15);
                     glow.scale.set(easeOutElastic(p) * 1.2);
@@ -1025,7 +1265,7 @@ class EffectManager {
                     const pulseAmp = (0.08 + tier * 0.04) * (1 - pp);
                     const pulseFreq = (5 + tier * 3);
                     const pulse = 1 + Math.sin(pp * Math.PI * pulseFreq) * pulseAmp;
-                    txt.scale.set(pulse * (1 + tier * 0.05));
+                    txt.scale.set(pulse * (1 + tier * 0.05) * textFitScale);
 
                     // Neon flicker: tier가 높을수록 더 격렬
                     const neonSpeed = 20 + tier * 12;
@@ -1042,7 +1282,7 @@ class EffectManager {
                     const pp = (t - 0.55) / 0.45;
                     const fadeFlicker = pp < 0.4 ? (0.9 + Math.sin(pp * Math.PI * 16) * 0.1) : 1;
                     txt.alpha = (1 - easeInOutQuad(pp)) * fadeFlicker;
-                    txt.scale.set((1 + tier * 0.05) * (1 - pp * 0.2));
+                    txt.scale.set((1 + tier * 0.05) * (1 - pp * 0.2) * textFitScale);
                     glow.alpha = (0.2 + tier * 0.05) * (1 - easeInOutQuad(pp));
                     glow.scale.set(1.5 + pp * 0.5);
                 }
@@ -1205,6 +1445,10 @@ class EffectManager {
 
     // ── Screen Flash ──
     playScreenFlash(color, intensity, duration) {
+        if (this._prefersReducedMotion()) {
+            intensity = Math.min(intensity, 0.045);
+            duration = Math.min(duration, 150);
+        }
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
         const flash = new PIXI.Graphics();
@@ -1230,6 +1474,10 @@ class EffectManager {
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
         const rainbowColors = BLOCK_COLORS.map(c => c.glow);
+        if (this._prefersReducedMotion()) {
+            this.playScreenFlash(rainbowColors[1] || 0x00E5FF, 0.04, Math.min(duration, 150));
+            return;
+        }
 
         const flash = new PIXI.Graphics();
         flash.rect(0, 0, w, h).fill({ color: rainbowColors[0], alpha: 0.2 });
@@ -1263,6 +1511,10 @@ class EffectManager {
     playScreenZoomPulse(intensity, duration) {
         const zc = this.game.zoomContainer;
         if (!zc) return;
+        if (this._prefersReducedMotion()) {
+            intensity *= 0.18;
+            duration = Math.min(duration, 180);
+        }
         const w = this.game.app.screen.width;
         const h = this.game.app.screen.height;
 
@@ -1374,6 +1626,7 @@ class EffectManager {
     playParticleShower(count) {
         const w = this.game.app.screen.width;
         const colors = BLOCK_COLORS.map(c => c.particle);
+        count = this._clampParticleCount(count);
 
         for (let i = 0; i < count; i++) {
             const color = colors[Math.floor(Math.random() * colors.length)];
@@ -1388,7 +1641,7 @@ class EffectManager {
             gfx.position.set(Math.random() * w, -10 - Math.random() * 50);
             this.container.addChild(gfx);
 
-            this.particles.push({
+            this._pushParticle({
                 gfx,
                 vx: (Math.random() - 0.5) * 1.5,
                 vy: 1 + Math.random() * 3,
@@ -1512,6 +1765,11 @@ class EffectManager {
         this.playScreenFlash(0xFFFFFF, 0.25, 300);
         this.playScreenZoomPulse(0.04, 400);
         this.screenShake(10, 400);
+        this.playPrismaticFlare(x, y, 0xFFD600, 2.35);
+        this._scheduleTimeout(() => {
+            this.playPrismaticFlare(x, y, 0xFF4081, 2.05);
+            this.playPrismaticFlare(x, y, 0x00E5FF, 1.8);
+        }, this._prefersReducedMotion() ? 0 : 130);
 
         // Massive particle burst
         const colors = BLOCK_COLORS.map(c => c.particle);
@@ -1541,6 +1799,7 @@ class EffectManager {
         const boardPos = this.game.board.getGlobalPosition();
         const cs = this.game.cellSize;
         const boardTotal = cs * GRID_SIZE;
+        this.playBoardResonance(boardPos, 4, []);
         const shimmer = new PIXI.Graphics();
         shimmer.rect(0, 0, 30, boardTotal).fill({ color: 0xFFFFFF, alpha: 0.2 });
         shimmer.rect(8, 0, 14, boardTotal).fill({ color: 0xFFD600, alpha: 0.15 });
@@ -1621,6 +1880,138 @@ class EffectManager {
                 return false;
             }
         });
+    }
+
+    // ── Prismatic lens flare used by premium impact moments ──
+    playPrismaticFlare(x, y, color = 0x44FF88, intensity = 1) {
+        const reduced = this._prefersReducedMotion();
+        const cellSize = Math.max(16, this.game.cellSize || 32);
+        const screen = this.game.app.screen;
+        const span = Math.min(
+            Math.max(screen.width, screen.height) * 0.42,
+            cellSize * (3.2 + intensity * 1.4)
+        );
+        const thickness = Math.max(2, cellSize * (0.07 + intensity * 0.025));
+        const flare = new PIXI.Graphics();
+
+        flare.poly([
+            -span, 0,
+            -span * 0.14, -thickness,
+            0, 0,
+            -span * 0.14, thickness,
+        ], true).fill({ color, alpha: 0.34 });
+        flare.poly([
+            span, 0,
+            span * 0.14, -thickness,
+            0, 0,
+            span * 0.14, thickness,
+        ], true).fill({ color, alpha: 0.34 });
+        flare.poly([
+            0, -span * 0.52,
+            -thickness * 0.7, -span * 0.08,
+            0, 0,
+            thickness * 0.7, -span * 0.08,
+        ], true).fill({ color: 0xFFFFFF, alpha: 0.46 });
+        flare.poly([
+            0, span * 0.52,
+            -thickness * 0.7, span * 0.08,
+            0, 0,
+            thickness * 0.7, span * 0.08,
+        ], true).fill({ color: 0xFFFFFF, alpha: 0.46 });
+        flare.circle(0, 0, thickness * 2.8)
+             .fill({ color, alpha: 0.72 });
+        flare.circle(0, 0, thickness * 1.15)
+             .fill({ color: 0xFFFFFF, alpha: 0.96 });
+        flare.position.set(x, y);
+        flare.alpha = 0;
+        flare.scale.set(0.28);
+        flare.blendMode = 'add';
+        this.container.addChild(flare);
+
+        this.tweens.push({
+            elapsed: 0,
+            duration: reduced ? 240 : 480 + intensity * 45,
+            update(dt) {
+                if (!flare || flare.destroyed) return true;
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                const pop = Math.min(1, t / 0.16);
+                const fade = 1 - easeInOutQuad(Math.max(0, (t - 0.18) / 0.82));
+                const scale = 0.28 + easeOutQuart(pop) * (0.92 + intensity * 0.10);
+                flare.alpha = Math.min(1, pop * 1.15) * fade * (reduced ? 0.42 : 1);
+                flare.scale.set(scale, scale * (0.88 + Math.sin(t * Math.PI) * 0.12));
+                flare.rotation = Math.sin(t * Math.PI * 2) * 0.018 * intensity;
+                if (t >= 1) {
+                    flare.destroy();
+                    return true;
+                }
+                return false;
+            }
+        });
+    }
+
+    // ── Premium impact for every piece placement ──
+    playPlacementImpact(x, y, color = 0x44FF88, cellCount = 1) {
+        const weight = Math.min(1.65, 0.82 + Math.max(1, cellCount) * 0.13);
+        const cellSize = Math.max(16, this.game.cellSize || 32);
+        const reduced = this._prefersReducedMotion();
+
+        this.playPrismaticFlare(x, y, color, weight);
+        this.playRingBurst(x, y, color, cellSize * (1.15 + weight * 0.48));
+
+        const bloom = this._createParticleDisplay('effectSoftBurst', (g) => {
+            g.circle(0, 0, cellSize * 1.65).fill({ color, alpha: 0.28 });
+            g.circle(0, 0, cellSize * 0.72).fill({ color: 0xFFFFFF, alpha: 0.86 });
+        });
+        const bloomIsSprite = !!bloom._blockpangEffectSprite;
+        if (bloomIsSprite) bloom.tint = color;
+        bloom.position.set(x, y);
+        bloom.alpha = 0;
+        bloom.blendMode = 'add';
+        this.container.addChild(bloom);
+
+        const bloomTextureSize = bloomIsSprite
+            ? Math.max(bloom.texture.width || 128, bloom.texture.height || 128)
+            : cellSize * 3.3;
+        const bloomBaseScale = (cellSize * (3.2 + weight * 0.85)) / bloomTextureSize;
+        const self = this;
+        this.tweens.push({
+            elapsed: 0,
+            duration: reduced ? 240 : 680,
+            update(dt) {
+                if (!bloom || bloom.destroyed) return true;
+                this.elapsed += dt;
+                const t = Math.min(this.elapsed / this.duration, 1);
+                const pop = Math.min(1, t / 0.14);
+                const scale = bloomBaseScale * (0.32 + easeOutBack(pop) * 0.78 + t * 0.18);
+                bloom.scale.set(scale);
+                bloom.alpha = easeOutCubic(pop)
+                    * (1 - easeInOutQuad(Math.max(0, (t - 0.34) / 0.66)))
+                    * (reduced ? 0.38 : 0.98);
+                if (t >= 1) {
+                    self._releaseParticleDisplay(bloom);
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        this.spawnSparkles(x, y, color, reduced ? 4 : Math.min(20, 7 + cellCount * 2));
+        this.playRadialRays(
+            x,
+            y,
+            reduced ? 3 : Math.min(9, 4 + cellCount),
+            color,
+            cellSize * (1.15 + weight * 0.58)
+        );
+
+        if (!reduced && cellCount >= 4) {
+            this.spawnStarParticles(x, y, 0xFFFFFF, 3 + Math.min(4, cellCount - 3));
+        }
+        if (!reduced && cellCount >= 5) {
+            this.screenShake(2.5, 130);
+            this.playScreenFlash(color, 0.045, 145);
+        }
     }
 
     // ── Ring Burst: expanding ring on piece placement ──
@@ -1854,7 +2245,7 @@ class EffectManager {
         }
 
         // Radial particle burst (more particles, faster)
-        const burstCount = 12 + intensity * 6;
+        const burstCount = this._clampParticleCount(12 + intensity * 6);
         for (let i = 0; i < burstCount; i++) {
             const angle = (Math.PI * 2 * i / burstCount) + (Math.random() - 0.5) * 0.4;
             const speed = 4 + Math.random() * 4 + intensity * 1.5;
@@ -1870,7 +2261,7 @@ class EffectManager {
             gfx.position.set(x, y);
             this.container.addChild(gfx);
 
-            this.particles.push({
+            this._pushParticle({
                 gfx,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
@@ -1951,6 +2342,8 @@ class EffectManager {
             }
         });
         this.particles = [];
+        this._peakParticleCount = 0;
+        this._peakTweenCount = 0;
 
         const leftovers = this.container.removeChildren();
         leftovers.forEach((child) => {
