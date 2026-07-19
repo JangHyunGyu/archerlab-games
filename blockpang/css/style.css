@@ -23,6 +23,83 @@ html, body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+body {
+    padding:
+        env(safe-area-inset-top)
+        env(safe-area-inset-right)
+        env(safe-area-inset-bottom)
+        env(safe-area-inset-left);
+}
+
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.game-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+        radial-gradient(circle at 50% 42%, rgba(33, 231, 255, 0.18), transparent 34%),
+        rgba(5, 4, 24, 0.94);
+    transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.game-loading.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.game-loading-card {
+    width: min(84vw, 320px);
+    display: grid;
+    gap: 12px;
+    color: #F7FCFF;
+    text-align: center;
+}
+
+.game-loading-card strong {
+    color: #FFE9A6;
+    font-size: clamp(26px, 8vw, 38px);
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(255, 62, 165, 0.58);
+}
+
+.game-loading-card span {
+    color: #CBEFFF;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.game-loading-track {
+    height: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(45, 232, 255, 0.56);
+    border-radius: 999px;
+    background: rgba(2, 11, 30, 0.82);
+}
+
+.game-loading-track i {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #21E7FF, #FF3EA5, #FFD66D);
+    transition: width 120ms linear;
+}
+
 #game-container {
     width: 100%;
     height: 100%;

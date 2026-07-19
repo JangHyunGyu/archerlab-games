@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -87,12 +87,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Zen+Maru+Gothic:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="../assets/vendor/pretendard/pretendard.css">
-    <link rel="stylesheet" href="css/style.css?v=20260710-start-screen-v2">
+    <link rel="stylesheet" href="css/style.css?v=20260719-quality-v1">
     <script src="../shared/client-error-reporter.js?v=20260712-d1-v3" data-game-id="blockpang"></script>
     <script src="../assets/vendor/pixi/pixi-8.19.0.min.js"></script>
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
 </head>
 <body>
+    <noscript>블럭팡을 플레이하려면 JavaScript를 활성화해 주세요.</noscript>
+    <p id="game-instructions" class="sr-only">마우스나 터치로 블록을 끌어 놓으세요. 키보드는 숫자 1, 2, 3으로 블록을 고르고, 방향키로 이동한 뒤 Enter로 배치하고 Escape로 취소합니다.</p>
+    <div id="game-status" class="sr-only" role="status" aria-live="polite"></div>
+    <div id="game-loading" class="game-loading" role="status" aria-live="polite">
+        <div class="game-loading-card">
+            <strong>BLOCKPANG</strong>
+            <span id="game-loading-text">그래픽 준비 중… 0%</span>
+            <div class="game-loading-track" aria-hidden="true"><i id="game-loading-fill"></i></div>
+        </div>
+    </div>
     <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" class="archerlab-link" id="archerlab-link" title="ArcherLab">ArcherLab</a>
     <style>
         .archerlab-link {
@@ -115,15 +125,15 @@
     </style>
     <div id="game-container"></div>
     <script src="../assets/vendor/tone/tone-15.5.25.js" crossorigin="anonymous"></script>
-    <script src="js/constants.js?v=20260622-rankerror"></script>
-    <script src="js/SoundManager.js"></script>
-    <script src="js/ScoreManager.js"></script>
-    <script src="js/EffectManager.js?v=20260718-wow-fx-v4"></script>
-    <script src="js/Board.js?v=20260718-wow-fx-v4"></script>
-    <script src="js/Piece.js?v=20260718-wow-fx-v4"></script>
-    <script src="js/InputManager.js"></script>
-    <script src="js/UIManager.js?v=20260718-title-premium-v3"></script>
-    <script src="js/Game.js?v=20260718-wow-fx-v4"></script>
-    <script src="js/main.js?v=20260718-wow-fx-v4"></script>
+    <script src="js/constants.js?v=20260719-quality-v1"></script>
+    <script src="js/SoundManager.js?v=20260719-quality-v1"></script>
+    <script src="js/ScoreManager.js?v=20260719-quality-v1"></script>
+    <script src="js/EffectManager.js?v=20260719-quality-v1"></script>
+    <script src="js/Board.js?v=20260719-quality-v1"></script>
+    <script src="js/Piece.js?v=20260719-quality-v1"></script>
+    <script src="js/InputManager.js?v=20260719-quality-v1"></script>
+    <script src="js/UIManager.js?v=20260719-quality-v1"></script>
+    <script src="js/Game.js?v=20260719-quality-v1"></script>
+    <script src="js/main.js?v=20260719-quality-v1"></script>
 </body>
 </html>

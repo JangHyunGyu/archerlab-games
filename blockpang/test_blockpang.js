@@ -444,18 +444,23 @@ test('리셋 후 점수/콤보/레벨 초기화', () => {
 // ══════════════════════════════════════
 console.log('\n🕹️  [5] 게임 시뮬레이션');
 
-test('시뮬레이션: 50턴 이상 정상 진행 가능', () => {
+test('시뮬레이션: 고정 시드로 20턴 이상 정상 진행 가능', () => {
     const board = new TestBoard();
     const sm = new ScoreManager();
     let turns = 0;
     let gameOver = false;
+    let randomState = 0xB10C2026;
+    const seededRandom = () => {
+        randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
+        return randomState / 4294967296;
+    };
 
     for (let round = 0; round < 30 && !gameOver; round++) {
         // 3개 피스 생성
         const pieces = [
-            generateRandomPiece(sm.level),
-            generateRandomPiece(sm.level),
-            generateRandomPiece(sm.level),
+            generateRandomPiece(sm.level, seededRandom),
+            generateRandomPiece(sm.level, seededRandom),
+            generateRandomPiece(sm.level, seededRandom),
         ];
 
         for (const piece of pieces) {
@@ -487,7 +492,7 @@ test('시뮬레이션: 50턴 이상 정상 진행 가능', () => {
         }
     }
 
-    assert(turns >= 10, `${turns}턴만에 게임 오버 (너무 빠름)`);
+    assert(turns >= 20, `${turns}턴만에 게임 오버 (너무 빠름)`);
     console.log(`     → ${turns}턴 진행, 점수 ${sm.score}, 레벨 ${sm.level}, 줄 ${sm.linesCleared}`);
 });
 

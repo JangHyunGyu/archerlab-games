@@ -949,12 +949,13 @@ class Game {
 
         this.state = 'gameover';
         this.isGameOver = true;
+        const previousBestScore = this.scoreManager.bestScore;
         this.scoreManager.finalize();
         this._clearSave();
         this.sound.stopAmbient();
         this.sound.playGameOver();
 
-        const isNewBest = this.scoreManager.score >= this.scoreManager.bestScore;
+        const isNewBest = this.scoreManager.score > previousBestScore;
         const finalScore = this.scoreManager.score;
         const bestScore = this.scoreManager.bestScore;
         this.flushRankEvents();

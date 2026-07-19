@@ -35,6 +35,14 @@
     }
 
     const container = document.getElementById('game-container');
+    const loading = document.getElementById('game-loading');
+    const loadingText = document.getElementById('game-loading-text');
+    const loadingFill = document.getElementById('game-loading-fill');
+    const updateLoading = (progress, message) => {
+        const percent = Math.max(0, Math.min(100, Math.round(progress * 100)));
+        if (loadingFill) loadingFill.style.width = `${percent}%`;
+        if (loadingText) loadingText.textContent = `${message} ${percent}%`;
+    };
 
     // Create PixiJS Application (v8 async init)
     const app = new PIXI.Application();
@@ -50,6 +58,7 @@
     container.appendChild(app.canvas);
     app.canvas.tabIndex = 0;
     app.canvas.setAttribute('aria-label', 'Blockpang game');
+    app.canvas.setAttribute('aria-describedby', 'game-instructions');
 
     // Prevent context menu on long press (mobile)
     app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -61,7 +70,10 @@
                 ? window.getBlockpangAssetManifest(false)
                 : window.BLOCKPANG_ASSET_MANIFEST;
             PIXI.Assets.addBundle('blockpang-ui', manifest);
-            window.BLOCKPANG_ASSETS = await PIXI.Assets.loadBundle('blockpang-ui');
+            window.BLOCKPANG_ASSETS = await PIXI.Assets.loadBundle(
+                'blockpang-ui',
+                progress => updateLoading(progress, currentLang === 'ko' ? '그래픽 준비 중…' : 'Preparing graphics…')
+            );
         } catch (e) {
             console.warn('[Blockpang] WebP UI asset load failed; trying PNG fallback.', e);
             try {
@@ -69,7 +81,10 @@
                     ? window.getBlockpangAssetManifest(true)
                     : window.BLOCKPANG_ASSET_MANIFEST;
                 PIXI.Assets.addBundle('blockpang-ui-png-fallback', fallbackManifest);
-                window.BLOCKPANG_ASSETS = await PIXI.Assets.loadBundle('blockpang-ui-png-fallback');
+                window.BLOCKPANG_ASSETS = await PIXI.Assets.loadBundle(
+                    'blockpang-ui-png-fallback',
+                    progress => updateLoading(progress, currentLang === 'ko' ? '호환 그래픽 준비 중…' : 'Preparing compatible graphics…')
+                );
             } catch (fallbackError) {
                 console.warn('[Blockpang] UI asset load failed; using vector fallback.', fallbackError);
                 window.BLOCKPANG_ASSETS = {};
@@ -80,16 +95,45 @@
     // Create game
     const game = new Game(app);
     window.__blockpangGame = game;
+    updateLoading(1, currentLang === 'ko' ? '준비 완료' : 'Ready');
+    requestAnimationFrame(() => loading?.classList.add('is-hidden'));
 
     // Keyboard users get a visible canvas focus ring and the same primary
     // title action as pointer users. Modal/dropdown states keep priority.
     app.canvas.addEventListener('keydown', (event) => {
-        if (event.repeat || (event.key !== 'Enter' && event.key !== ' ')) return;
-        if (game.state !== 'title') return;
+        if (event.repeat) return;
         if (game.ui.shouldBlockDomFallback && game.ui.shouldBlockDomFallback()) return;
-        event.preventDefault();
-        game.sound.ensureContext();
-        game.startGame(Game.hasSavedGame());
+
+        if (game.state === 'title' && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            game.sound.ensureContext();
+            game.startGame(Game.hasSavedGame());
+            return;
+        }
+
+        if (game.state !== 'playing') return;
+        if (/^[123]$/.test(event.key)) {
+            event.preventDefault();
+            game.input.selectKeyboardPiece(Number(event.key) - 1);
+            return;
+        }
+
+        const movement = {
+            ArrowLeft: [-1, 0],
+            ArrowRight: [1, 0],
+            ArrowUp: [0, -1],
+            ArrowDown: [0, 1],
+        }[event.key];
+        if (movement) {
+            event.preventDefault();
+            game.input.moveKeyboardPlacement(movement[0], movement[1]);
+        } else if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            game.input.confirmKeyboardPlacement();
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            game.input.cancelKeyboardPlacement();
+        }
     });
 
     // Handle resize
@@ -142,7 +186,15 @@
     }, { passive: true });
 
     console.log('%c블럭팡', 'color: #E57A54; font-size: 14px; font-weight: bold;');
-})();
+})().catch((error) => {
+    console.error('[Blockpang] initialization failed', error);
+    const loading = document.getElementById('game-loading');
+    const loadingText = document.getElementById('game-loading-text');
+    if (loadingText) loadingText.textContent = currentLang === 'ko'
+        ? '게임을 불러오지 못했습니다. 새로고침해 주세요.'
+        : 'Could not load the game. Please refresh.';
+    if (loading) loading.classList.remove('is-hidden');
+});
 
 // 【글로벌 에러 핸들러】
 (function() {

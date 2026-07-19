@@ -2,7 +2,9 @@ class ScoreManager {
     constructor() {
         this.score = 0;
         this.combo = 0;
-        this.bestScore = parseInt(localStorage.getItem('blockpang_best') || '0', 10);
+        let storedBest = 0;
+        try { storedBest = parseInt(localStorage.getItem('blockpang_best') || '0', 10); } catch (_) {}
+        this.bestScore = Number.isFinite(storedBest) && storedBest >= 0 ? storedBest : 0;
         this.linesCleared = 0;
         this.level = 1;
         this.totalLinesForLevel = 0;

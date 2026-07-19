@@ -42,7 +42,6 @@ const BLOCKPANG_ASSET_MANIFEST = {
     boardPanel: 'assets/ui/board-panel.webp',
     glassPanel: 'assets/ui/glass-panel.webp',
     glassPanelFill: 'assets/ui/glass-panel-fill.webp',
-    crystalSheen: 'assets/ui/crystal-sheen.webp',
     rankPopupFrame: 'assets/ui/rank-popup-frame.webp',
     effectSoftCircle: 'assets/ui/effect-soft-circle.webp',
     effectShard: 'assets/ui/effect-shard.webp',
@@ -69,8 +68,6 @@ const BLOCKPANG_ASSET_MANIFEST = {
     iconClose: 'assets/ui/icon-close.webp',
     iconCheck: 'assets/ui/icon-check.webp',
     iconSkip: 'assets/ui/icon-skip.webp',
-    ghostValidCell: 'assets/ui/ghost-valid-cell.webp',
-    ghostInvalidCell: 'assets/ui/ghost-invalid-cell.webp',
     blockTile0: 'assets/ui/block-tile-0-cyan.webp',
     blockTile1: 'assets/ui/block-tile-1-red.webp',
     blockTile2: 'assets/ui/block-tile-2-green.webp',
@@ -88,7 +85,6 @@ const BLOCKPANG_PNG_FALLBACKS = {
     boardPanel: 'assets/ui/board-panel.png',
     glassPanel: 'assets/ui/glass-panel.png',
     glassPanelFill: 'assets/ui/glass-panel-fill.png',
-    crystalSheen: 'assets/ui/crystal-sheen.png',
     rankPopupFrame: 'assets/ui/rank-popup-frame.png',
     effectSoftCircle: 'assets/ui/effect-soft-circle.png',
     effectShard: 'assets/ui/effect-shard.png',
@@ -115,8 +111,6 @@ const BLOCKPANG_PNG_FALLBACKS = {
     iconClose: 'assets/ui/icon-close.png',
     iconCheck: 'assets/ui/icon-check.png',
     iconSkip: 'assets/ui/icon-skip.png',
-    ghostValidCell: 'assets/ui/ghost-valid-cell.png',
-    ghostInvalidCell: 'assets/ui/ghost-invalid-cell.png',
     blockTile0: 'assets/ui/block-tile-0-cyan.png',
     blockTile1: 'assets/ui/block-tile-1-red.png',
     blockTile2: 'assets/ui/block-tile-2-green.png',
@@ -287,8 +281,15 @@ function easeOutBack(t) {
 // ─── Internationalization ───
 const LANGUAGES = ['ko', 'en', 'ja'];
 const _browserLang = (navigator.language || '').slice(0, 2);
-let currentLang = localStorage.getItem('blockpang_lang')
-    || (LANGUAGES.includes(_browserLang) ? _browserLang : 'ko');
+const _documentLang = typeof document !== 'undefined'
+    ? (document.documentElement?.lang || '').slice(0, 2)
+    : '';
+let _storedLang = null;
+try { _storedLang = localStorage.getItem('blockpang_lang'); } catch (_) {}
+let currentLang = LANGUAGES.includes(_storedLang) ? _storedLang
+    : LANGUAGES.includes(_documentLang) ? _documentLang
+    : LANGUAGES.includes(_browserLang) ? _browserLang
+    : 'ko';
 
 // ─── Game API Config ───
 const GAME_API_URL = 'https://game-api.yama5993.workers.dev';
@@ -391,13 +392,16 @@ function getText(key) {
 const LANG_LABELS = { ko: '한국어', en: 'English', ja: '日本語' };
 
 function setLanguage(code) {
+    if (!LANGUAGES.includes(code)) return currentLang;
     currentLang = code;
-    localStorage.setItem('blockpang_lang', code);
+    if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.lang = code;
+    }
+    try { localStorage.setItem('blockpang_lang', code); } catch (_) {}
+    return currentLang;
 }
 
 function cycleLanguage() {
     const idx = LANGUAGES.indexOf(currentLang);
-    currentLang = LANGUAGES[(idx + 1) % LANGUAGES.length];
-    localStorage.setItem('blockpang_lang', currentLang);
-    return currentLang;
+    return setLanguage(LANGUAGES[(idx + 1) % LANGUAGES.length]);
 }
