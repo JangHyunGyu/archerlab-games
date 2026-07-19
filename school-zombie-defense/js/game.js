@@ -61,6 +61,7 @@
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
   const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
+  const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -482,7 +483,7 @@
     sniper: "assets/sounds/sfx/sniper.mp3",
     rocket: "assets/sounds/sfx/rocket.mp3",
     grenade_fire: "assets/sounds/sfx/grenade_fire.mp3",
-    arrow: `assets/sounds/sfx/arrow.mp3?v=${encodeURIComponent(CROSSBOW_ASSET_VERSION)}`,
+    arrow: `assets/sounds/sfx/arrow.mp3?v=${encodeURIComponent(CROSSBOW_AUDIO_VERSION)}`,
     firebomb_fire: "assets/sounds/sfx/firebomb_fire.mp3",
     firebomb_hit: "assets/sounds/sfx/firebomb_hit.mp3",
     shock_fire: "assets/sounds/sfx/shock_fire.mp3",
