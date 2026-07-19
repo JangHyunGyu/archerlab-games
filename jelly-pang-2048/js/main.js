@@ -20,7 +20,7 @@
     slide: PREFERS_REDUCED_MOTION ? 0.15 : 0.16,
     mergeBlend: PREFERS_REDUCED_MOTION ? 0.11 : 0.18,
   };
-  const SESSION_REQUEST_TIMEOUT_MS = 8000;
+  const SESSION_REQUEST_TIMEOUT_MS = 3000;
   const RANK_REQUEST_TIMEOUT_MS = 10000;
   const MOVE_UPLOAD_TIMEOUT_MS = 10000;
   const MOVE_UPLOAD_BATCH_SIZE = 50;
@@ -85,7 +85,21 @@
     best: "jelly-pang-2048-best",
     guide: "jelly-pang-2048-guide-seen",
     nick: "jelly-pang-2048-nick",
+    sound: "jelly-pang-2048-sound-enabled",
   };
+
+  function readStorage(key, fallback = null) {
+    try {
+      const value = localStorage.getItem(key);
+      return value === null ? fallback : value;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try { localStorage.setItem(key, String(value)); } catch {}
+  }
 
   const RANK_COLORS = [
     0xf76f9d, 0xff9c38, 0xffdf46, 0x83d928,
@@ -159,6 +173,7 @@
     serverLoader: $("server-loader"),
     playGame: $("play-game"),
     homeGame: $("home-game"),
+    soundToggle: $("sound-toggle"),
     mount: $("pixi-stage"),
     frame: $("stage-frame"),
     score: $("score"),
@@ -196,7 +211,9 @@
   let visuals = new Map();
   let nextTileId = 1;
   let score = 0;
-  let bestScore = Number(localStorage.getItem(STORAGE.best) || 0);
+  const storedBestScore = Number(readStorage(STORAGE.best, "0"));
+  let bestScore = Number.isFinite(storedBestScore) && storedBestScore >= 0 ? storedBestScore : 0;
+  let soundEnabled = readStorage(STORAGE.sound, "1") !== "0";
   let locked = false;
   let won = false;
   let keepPlaying = false;
@@ -235,6 +252,8 @@
     refs.mount.appendChild(appCanvas);
     appCanvas.style.width = "100%";
     appCanvas.style.height = "100%";
+    appCanvas.tabIndex = 0;
+    appCanvas.setAttribute("aria-label", "4 by 4 jelly merge board");
     if (refs.rankModal && refs.rankModal.parentElement !== document.body) {
       document.body.appendChild(refs.rankModal);
     }
@@ -248,15 +267,25 @@
     ranking = new RankingClient();
     drawBoard();
     prepareSounds();
-    await loadTextures();
+    syncSoundToggle();
+    const endInitialLoad = beginServerTrip();
+    try {
+      await loadTextures();
+    } finally {
+      endInitialLoad();
+    }
     bindInput();
     if (refs.best) refs.best.textContent = formatScore(bestScore);
     showTitle();
   }
 
   function showLoadError() {
+    serverTripCount = 0;
+    refs.shell?.classList.remove("is-server-loading");
+    refs.serverLoader?.classList.add("hidden");
     refs.titleScreen.classList.add("hidden");
     refs.modal.classList.remove("hidden");
+    refs.modal.setAttribute("aria-hidden", "false");
     refs.messageEyebrow.textContent = "Load error";
     refs.messageTitle.textContent = "Reload";
     refs.messageCopy.textContent = "라이브러리를 불러오지 못했습니다.";
@@ -375,6 +404,13 @@
 
   function bindInput() {
     window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        if (!refs.rankModal.classList.contains("hidden")) {
+          event.preventDefault();
+          hideRanks();
+          return;
+        }
+      }
       const map = {
         ArrowLeft: "left",
         ArrowRight: "right",
@@ -433,6 +469,7 @@
 
     refs.playGame.addEventListener("click", () => startGame());
     refs.homeGame.addEventListener("click", () => showTitle());
+    refs.soundToggle.addEventListener("click", () => toggleSound());
     refs.rankOpen.addEventListener("click", () => openRanks());
     refs.rankClose.addEventListener("click", () => hideRanks());
     refs.tryAgain.addEventListener("click", () => startGame());
@@ -471,7 +508,7 @@
     resetRankSubmit();
     updateScore(0, true);
 
-    const firstRun = localStorage.getItem(STORAGE.guide) !== "1";
+    const firstRun = readStorage(STORAGE.guide) !== "1";
     const session = await ranking.startSession();
     if (Array.isArray(session?.tiles) && session.tiles.length > 0) {
       session.tiles.forEach((tile) => {
@@ -1146,7 +1183,7 @@
     score = nextScore;
     if (score > bestScore) {
       bestScore = score;
-      localStorage.setItem(STORAGE.best, String(bestScore));
+      writeStorage(STORAGE.best, bestScore);
       if (refs.best) {
         refs.best.textContent = formatScore(bestScore);
         gsap.fromTo(refs.best, { scale: 1.18 }, { scale: 1, duration: 0.58, ease: "elastic.out(1, 0.34)" });
@@ -1340,7 +1377,7 @@
 
   function hideGuide(commit = false) {
     refs.guide.classList.remove("is-visible");
-    if (commit) localStorage.setItem(STORAGE.guide, "1");
+    if (commit) writeStorage(STORAGE.guide, "1");
   }
 
   function showModal(eyebrow, title, copy, canKeepPlaying, canSubmitRank = false) {
@@ -1357,12 +1394,21 @@
       showDefaultModalActions(canKeepPlaying);
     }
     refs.modal.classList.remove("hidden");
+    refs.modal.setAttribute("aria-hidden", "false");
     const card = refs.modal.querySelector(".message-card");
     gsap.fromTo(card, { scale: 0.78, y: 26, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 0.54, ease: "elastic.out(1, 0.42)" });
+    window.setTimeout(() => {
+      const prefersTextFocus = window.matchMedia?.("(pointer: fine)")?.matches === true;
+      const target = canSubmitRank && score > 0
+        ? prefersTextFocus ? refs.nicknameInput : refs.skipRank
+        : canKeepPlaying ? refs.keepPlaying : refs.tryAgain;
+      target?.focus({ preventScroll: true });
+    }, 80);
   }
 
   function hideModal() {
     refs.modal.classList.add("hidden");
+    refs.modal.setAttribute("aria-hidden", "true");
     resetModalActions();
   }
 
@@ -1402,6 +1448,8 @@
     playSound("rankOpen");
     refs.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
     refs.rankModal.classList.remove("hidden");
+    refs.rankModal.setAttribute("aria-hidden", "false");
+    refs.rankClose.focus({ preventScroll: true });
     try {
       const rows = await ranking.fetchTopRanks();
       renderRanks(rows);
@@ -1412,6 +1460,9 @@
 
   function hideRanks() {
     refs.rankModal.classList.add("hidden");
+    refs.rankModal.setAttribute("aria-hidden", "true");
+    const target = refs.titleScreen.classList.contains("hidden") ? refs.homeGame : refs.rankOpen;
+    target?.focus({ preventScroll: true });
   }
 
   async function submitRank() {
@@ -2180,6 +2231,7 @@
         const audio = new Audio(src);
         audio.preload = "auto";
         audio.volume = SOUND_VOLUME[type] ?? 0.55;
+        audio.muted = !soundEnabled;
         return audio;
       });
       soundCursor[type] = 0;
@@ -2187,6 +2239,7 @@
   }
 
   function resumeAudio() {
+    if (!soundEnabled) return;
     try {
       const AudioCtor = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtor) return;
@@ -2214,8 +2267,32 @@
   }
 
   function playSound(type) {
+    if (!soundEnabled) return;
     if (playMp3Sound(type)) return;
     playSynthSound(type);
+  }
+
+  function syncSoundToggle() {
+    if (!refs.soundToggle) return;
+    refs.soundToggle.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
+    refs.soundToggle.setAttribute("aria-label", soundEnabled ? "소리 끄기" : "소리 켜기");
+    refs.soundToggle.title = soundEnabled ? "소리 끄기" : "소리 켜기";
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    writeStorage(STORAGE.sound, soundEnabled ? "1" : "0");
+    Object.values(soundPools).flat().forEach((audio) => {
+      audio.muted = !soundEnabled;
+      if (!soundEnabled) {
+        try { audio.pause(); } catch {}
+      }
+    });
+    syncSoundToggle();
+    if (soundEnabled) {
+      resumeAudio();
+      playSound("start");
+    }
   }
 
   function playMp3Sound(type) {
@@ -2429,5 +2506,8 @@
     }
   }
 
-  init();
+  init().catch((error) => {
+    console.error("[jelly-pang] initialization failed", error);
+    showLoadError();
+  });
 })();

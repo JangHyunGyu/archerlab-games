@@ -6,6 +6,7 @@ const path = require('node:path');
 const read = (file) => fs.readFileSync(path.join(__dirname, file), 'utf8');
 const effects = read('js/EffectManager.js');
 const game = read('js/Game.js');
+const input = read('js/InputManager.js');
 const smoke = read('visual-smoke.cjs');
 
 function section(start, end) {
@@ -25,6 +26,8 @@ assert.equal(
     1,
     'particles must pass through the capped helper'
 );
+assert.equal((input.match(/effects\.particles\.push\(/g) || []).length, 0, 'input particles must use the capped helper');
+assert.equal((input.match(/effects\._pushParticle\(/g) || []).length, 2, 'both drag trail variants must use the capped helper');
 
 const placement = section('playPlacementImpact(', '// ── Ring Burst');
 assert.ok(!placement.includes('vfxComboBurstSheet'), 'placement must preserve combo VFX rarity');
@@ -50,8 +53,8 @@ assert.match(smoke, /peakParticles <= metrics\.effectDiagnostics\.particleBudget
 
 for (const file of ['index.html', 'index-en.html']) {
     const html = read(file);
-    assert.ok(html.includes('EffectManager.js?v=20260718-wow-fx-v4'));
-    assert.ok(html.includes('Game.js?v=20260718-wow-fx-v4'));
+    assert.ok(html.includes('EffectManager.js?v=20260719-quality-v1'));
+    assert.ok(html.includes('Game.js?v=20260719-quality-v1'));
 }
 
 console.log('blockpang effect quality tests passed');

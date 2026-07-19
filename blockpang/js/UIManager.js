@@ -243,6 +243,7 @@ class UIManager {
 
     _toggleHudSound() {
         const enabled = this.game.sound.toggle();
+        if (enabled && this.game.state === 'playing') this.game.sound.startAmbient();
         this._syncHudSoundButton(enabled);
     }
 
@@ -544,6 +545,8 @@ class UIManager {
             this._scoreAnimating = true;
         }
         this.bestText.text = `BEST ${bestScore.toLocaleString()}`;
+        const status = document.getElementById('game-status');
+        if (status) status.textContent = `${getText('score')} ${score.toLocaleString()}, ${getText('best')} ${bestScore.toLocaleString()}`;
 
         // Score pulse effect on increase
         if (hadIncrease && this.scoreText && !this.scoreText.destroyed) {
@@ -1450,6 +1453,7 @@ class UIManager {
 
         titleSoundBtn.on('pointerdown', () => {
             const enabled = this.game.sound.toggle();
+            if (enabled && this.game.state === 'playing') this.game.sound.startAmbient();
             const nextTexture = getBlockpangTexture(enabled ? 'iconSoundOn' : 'iconSoundOff');
             if (nextTexture && titleSoundIcon instanceof PIXI.Sprite) {
                 titleSoundIcon.texture = nextTexture;
@@ -1630,7 +1634,9 @@ class UIManager {
         const panelH = Math.min(h * 0.62, 420);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
-        const resultFrameTexture = getBlockpangTexture('rankPopupFrame');
+        // The ornate ranking frame is portrait artwork; stretching it into this
+        // landscape result panel distorts the border and typography area.
+        const resultFrameTexture = null;
 
         let panel;
         if (resultFrameTexture) {
@@ -2412,7 +2418,8 @@ class UIManager {
         const panelH = Math.min(240, h * 0.42);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
-        const nameFrameTexture = getBlockpangTexture('rankPopupFrame');
+        // Keep the portrait ranking frame for the Hall of Fame only.
+        const nameFrameTexture = null;
 
         let panel;
         if (nameFrameTexture) {
@@ -2529,10 +2536,13 @@ class UIManager {
         this._nameInputElement = input;
         this._nameInputFocusHandler = onFocus;
         this._nameInputBlurHandler = onBlur;
-        this._nameInputFocusTimer = setTimeout(() => {
-            this._nameInputFocusTimer = null;
-            if (input.parentNode) input.focus();
-        }, 100);
+        const hasFinePointer = window.matchMedia?.('(pointer: fine)')?.matches === true;
+        if (hasFinePointer) {
+            this._nameInputFocusTimer = setTimeout(() => {
+                this._nameInputFocusTimer = null;
+                if (input.parentNode) input.focus();
+            }, 100);
+        }
 
         // Buttons
         const btnW = panelW * 0.38;

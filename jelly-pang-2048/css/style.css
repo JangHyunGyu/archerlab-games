@@ -414,14 +414,56 @@ h1 {
   transform: translateX(-50%);
 }
 
+.sound-command {
+  position: relative;
+  justify-self: end;
+}
+
+.sound-command::before {
+  content: "";
+  width: 20px;
+  height: 18px;
+  background: currentColor;
+  clip-path: polygon(0 34%, 30% 34%, 68% 4%, 68% 96%, 30% 66%, 0 66%);
+}
+
+.sound-command::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  width: 12px;
+  height: 18px;
+  border: 3px solid currentColor;
+  border-left: 0;
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 0 999px 999px 0;
+}
+
+.sound-command[aria-pressed="false"] {
+  color: #9b4c65;
+}
+
+.sound-command[aria-pressed="false"]::after {
+  right: 11px;
+  width: 20px;
+  height: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+
 .score-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, 360px);
+  justify-self: center;
 }
 
 .score-tile {
-  width: min(100%, 172px);
+  width: 100%;
   min-height: 54px;
   padding: 8px 14px 7px;
   border: 1px solid rgba(255,255,255,0.68);
@@ -1200,11 +1242,10 @@ h1 {
   }
 
   .score-row {
-    justify-items: center;
+    gap: 7px;
   }
 
   .score-tile {
-    width: min(100%, 154px);
     padding-inline: 6px;
   }
 

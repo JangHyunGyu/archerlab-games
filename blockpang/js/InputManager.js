@@ -16,6 +16,9 @@ class InputManager {
         this._lastGridCol = -1;
         this._lastGridRow = -1;
         this._dragLastSeenAt = 0;
+        this.keyboardPieceIndex = -1;
+        this.keyboardGridCol = 0;
+        this.keyboardGridRow = 0;
         this._onPointerMove = this.onPointerMove.bind(this);
         this._onPointerUp = this.onPointerUp.bind(this);
         this._onPointerCancel = this.onPointerCancel.bind(this);
@@ -48,6 +51,8 @@ class InputManager {
 
     startDrag(slotIndex, event) {
         if (this.dragging || this.dragReturning || this.game.isGameOver || this.game.isAnimating || this.game.state !== 'playing') return;
+
+        this.cancelKeyboardPlacement();
 
         const piece = this.game.tray.slots[slotIndex];
         if (!piece) return;
@@ -169,7 +174,7 @@ class InputManager {
         );
         effects.container.addChild(gfx);
 
-        effects.particles.push({
+        effects._pushParticle({
             gfx,
             vx: (Math.random() - 0.5) * 0.8,
             vy: -0.8 - Math.random() * 1.5,
@@ -193,7 +198,7 @@ class InputManager {
                 y + (Math.random() - 0.5) * 30
             );
             effects.container.addChild(sparkGfx);
-            effects.particles.push({
+            effects._pushParticle({
                 gfx: sparkGfx,
                 vx: (Math.random() - 0.5) * 1.2,
                 vy: -1 - Math.random() * 2,
@@ -206,6 +211,96 @@ class InputManager {
                 maxLife: 500,
             });
         }
+    }
+
+    selectKeyboardPiece(slotIndex) {
+        if (this.dragging || this.dragReturning || this.game.isGameOver ||
+            this.game.isAnimating || this.game.state !== 'playing') return false;
+
+        const piece = this.game.tray.slots[slotIndex];
+        if (!piece) {
+            this.game.sound.playInvalid();
+            return false;
+        }
+
+        let firstValid = null;
+        for (let row = 0; row <= GRID_SIZE - piece.rows && !firstValid; row++) {
+            for (let col = 0; col <= GRID_SIZE - piece.cols; col++) {
+                if (this.game.board.canPlace(piece.shape, col, row)) {
+                    firstValid = { col, row };
+                    break;
+                }
+            }
+        }
+
+        if (!firstValid) {
+            this.game.sound.playInvalid();
+            return false;
+        }
+
+        this.game.sound.ensureContext();
+        this.keyboardPieceIndex = slotIndex;
+        this.keyboardGridCol = firstValid.col;
+        this.keyboardGridRow = firstValid.row;
+        this.game.board.showGhost(piece.shape, firstValid.col, firstValid.row, true);
+        this.game.sound.playPickup();
+        return true;
+    }
+
+    moveKeyboardPlacement(deltaCol, deltaRow) {
+        const piece = this.game.tray.slots[this.keyboardPieceIndex];
+        if (!piece || this.game.state !== 'playing' || this.game.isAnimating) return false;
+
+        this.keyboardGridCol = Math.max(
+            0,
+            Math.min(GRID_SIZE - piece.cols, this.keyboardGridCol + deltaCol)
+        );
+        this.keyboardGridRow = Math.max(
+            0,
+            Math.min(GRID_SIZE - piece.rows, this.keyboardGridRow + deltaRow)
+        );
+        const canPlace = this.game.board.canPlace(
+            piece.shape,
+            this.keyboardGridCol,
+            this.keyboardGridRow
+        );
+        this.game.board.showGhost(
+            piece.shape,
+            this.keyboardGridCol,
+            this.keyboardGridRow,
+            canPlace
+        );
+        this.game.sound.playDragSnap();
+        return true;
+    }
+
+    confirmKeyboardPlacement() {
+        const slotIndex = this.keyboardPieceIndex;
+        const piece = this.game.tray.slots[slotIndex];
+        if (!piece || this.game.isAnimating || this.game.state !== 'playing') return false;
+
+        const canPlace = this.game.board.canPlace(
+            piece.shape,
+            this.keyboardGridCol,
+            this.keyboardGridRow
+        );
+        if (!canPlace) {
+            this.game.sound.playInvalid();
+            return false;
+        }
+
+        const col = this.keyboardGridCol;
+        const row = this.keyboardGridRow;
+        this.cancelKeyboardPlacement();
+        this.game.placePiece(slotIndex, col, row);
+        return true;
+    }
+
+    cancelKeyboardPlacement() {
+        if (this.keyboardPieceIndex < 0) return false;
+        this.keyboardPieceIndex = -1;
+        this.game.board.clearGhost();
+        return true;
     }
 
     onPointerCancel(event) {
@@ -393,6 +488,10 @@ class InputManager {
 
     _updateDragWatchdog() {
         if (!this.game) return;
+
+        if (this.game.state !== 'playing' && this.keyboardPieceIndex >= 0) {
+            this.cancelKeyboardPlacement();
+        }
 
         if (this.game.state !== 'playing' && (this.dragging || this.dragReturning || this._hasDragLayerChildren())) {
             this.cancelDrag({ animate: false, restorePiece: true });
@@ -582,6 +681,7 @@ class InputManager {
         window.removeEventListener('blur', this._onWindowBlur);
         document.removeEventListener('visibilitychange', this._onVisibilityChange);
 
+        this.cancelKeyboardPlacement();
         this._cleanupDrag();
         if (this.dragLayer && !this.dragLayer.destroyed) {
             this.dragLayer.destroy({ children: true });

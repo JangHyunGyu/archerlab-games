@@ -1,6 +1,8 @@
 class SoundManager {
     constructor() {
-        this.enabled = true;
+        let storedSound = null;
+        try { storedSound = localStorage.getItem('blockpang_sound_enabled'); } catch (_) {}
+        this.enabled = storedSound !== '0';
         this.volume = 1.4;
         this._initialized = false;
 
@@ -34,6 +36,9 @@ class SoundManager {
             }
         };
         document.addEventListener('visibilitychange', this._visibilityHandler);
+        if (typeof Tone !== 'undefined' && Tone.Destination) {
+            Tone.Destination.mute = !this.enabled;
+        }
     }
 
     // ── WAV Audio Pool System ─────────────────────────────────────
@@ -1076,6 +1081,9 @@ class SoundManager {
 
     toggle() {
         this.enabled = !this.enabled;
+        try {
+            localStorage.setItem('blockpang_sound_enabled', this.enabled ? '1' : '0');
+        } catch (_) {}
         if (typeof Tone !== 'undefined') {
             Tone.Destination.mute = !this.enabled;
         }
