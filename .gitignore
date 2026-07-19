@@ -7,5 +7,7 @@ __pycache__/
 # Local generation and visual-QA artifacts.
 /tmp/
 /school-zombie-defense/tmp/archer-v3/
+/school-zombie-defense/tmp/review/
+/school-zombie-defense/design/source-assets/crossbow-v1/generated/
 /-background
 /jpeg

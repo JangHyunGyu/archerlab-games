@@ -49,7 +49,7 @@ assert.match(
   /createHitAtBarricade\(x\)\s*\{[\s\S]*?BARRICADE_IMPACT_DISPLAY_WIDTH[\s\S]*?0xffa45f, 0\.28[\s\S]*?createBarricadeDebris\(effectX, effectY\)[\s\S]*?BARRICADE_IMPACT_DURATION/,
   "barricade hits must combine the enlarged burst, stronger flash, and procedural debris"
 );
-assert.match(indexSource, /js\/game\.js\?v=20260719-firebomb-scale-v1/);
+assert.match(indexSource, /js\/game\.js\?v=20260719-crossbow-assets-v1/);
 
 console.log(
   `barricade impact verified: ${displayWidth}px burst, ${duration}ms hold, ` +

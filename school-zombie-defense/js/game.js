@@ -60,6 +60,7 @@
   };
   const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
+  const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
@@ -172,7 +173,7 @@
   // The commercial character sheets do not share one circular muzzle arc, so
   // a single pivot/reach pair cannot keep effects attached in every pose.
   const CHARACTER_MUZZLE_OFFSETS = {
-    a: [[-44, -159], [-46, -168], [-39, -156], [-8, -182], [6, -191], [8, -182], [39, -156], [46, -168], [44, -159]],
+    a: [[-57, -143], [-38, -176], [-33, -171], [-19, -165], [8, -175], [19, -165], [33, -171], [38, -176], [57, -143]],
     b: [[-31, -176], [-37, -192], [-32, -198], [-23, -194], [2, -210], [24, -195], [34, -198], [39, -189], [32, -179]],
     c: [[-28, -182], [-38, -209], [-24, -210], [-15, -215], [0, -215], [15, -215], [28, -212], [34, -210], [28, -183]],
     d: [[-36, -172], [-30, -183], [-25, -193], [-15, -198], [2, -198], [18, -196], [30, -193], [31, -180], [41, -171]],
@@ -192,7 +193,7 @@
   const THROW_ANIMATION_FRAMES = 4;
   const THROW_ANIMATION_FRAME_DURATION = 0.075;
   const CHARACTER_ATTACK_FRAME_DURATIONS = {
-    // Give the bow a readable draw, a crisp release, and a softer recovery
+    // Give the crossbow a readable aim, a crisp release, and a softer recovery
     // while keeping the projectile release at roughly the original 150 ms beat.
     a: [0.045, 0.11, 0.045, 0.09]
   };
@@ -254,6 +255,7 @@
       maxEmbed: 14,
       alpha: 0.95,
       depthOffset: -0.5,
+      horizontal: true,
       life: ARROW_EMBED_DURATION
     }
   };
@@ -480,7 +482,7 @@
     sniper: "assets/sounds/sfx/sniper.mp3",
     rocket: "assets/sounds/sfx/rocket.mp3",
     grenade_fire: "assets/sounds/sfx/grenade_fire.mp3",
-    arrow: "assets/sounds/sfx/arrow.mp3",
+    arrow: `assets/sounds/sfx/arrow.mp3?v=${encodeURIComponent(CROSSBOW_ASSET_VERSION)}`,
     firebomb_fire: "assets/sounds/sfx/firebomb_fire.mp3",
     firebomb_hit: "assets/sounds/sfx/firebomb_hit.mp3",
     shock_fire: "assets/sounds/sfx/shock_fire.mp3",
@@ -566,8 +568,8 @@
     },
     {
       id: "a",
-      name: "활 지원",
-      weapon: "활",
+      name: "석궁 지원",
+      weapon: "석궁",
       portrait: "avatar-bow",
       icon: "skill-arrow-pin",
       accent: 0xff80b6
@@ -628,9 +630,9 @@
       { id: "c_crit", title: "정밀 조준기", subtitle: "권총 부품", part: "급소 조준 보정 모듈", icon: "skill-pierce" }
     ],
     a: [
-      { id: "a_power", title: "복합 활대", subtitle: "활 부품", part: "장력과 화살 속도 강화", icon: "skill-arrow-pin" },
-      { id: "a_mark", title: "표식 화살촉", subtitle: "화살 부품", part: "약점 표식 각인 강화", icon: "skill-mark" },
-      { id: "a_crit", title: "균형 깃털", subtitle: "화살 부품", part: "비행 안정성과 치명 보정", icon: "skill-rally" }
+      { id: "a_power", title: "강화 석궁 몸체", subtitle: "석궁 부품", part: "장력과 볼트 속도 강화", icon: "skill-arrow-pin" },
+      { id: "a_mark", title: "표식 볼트촉", subtitle: "볼트 부품", part: "약점 표식 각인 강화", icon: "skill-mark" },
+      { id: "a_crit", title: "균형 깃털", subtitle: "볼트 부품", part: "비행 안정성과 치명 보정", icon: "skill-rally" }
     ],
     b: [
       { id: "b_power", title: "강선 총열", subtitle: "소총 부품", part: "탄속과 관통 안정성 강화", icon: "skill-barrage" },
@@ -980,9 +982,9 @@
       recruit: {
         icon: "avatar-bow",
         portrait: "avatar-bow",
-        tag: "활",
-        title: "활 지원 합류",
-        desc: "화살 지원 사격\n치명/표식 성장 해금",
+        tag: "석궁",
+        title: "석궁 지원 합류",
+        desc: "볼트 지원 사격\n치명/표식 성장 해금",
         line: "표식은 내가 잡을게."
       }
     },
@@ -2158,7 +2160,7 @@
       this.load.image("skill-choice-backdrop", imageAsset("assets/images/skill-choice-backdrop.png"));
       this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
       this.load.image("shop-blackmarket", imageAsset("assets/images/shop-blackmarket.png"));
-      this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CROSSBOW_ASSET_VERSION));
       this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", CHARACTER_ASSET_VERSION));
@@ -2167,25 +2169,26 @@
       this.load.image("character-g", versionedImageAsset("assets/images/character-g.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
       Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
+        const assetVersion = id === "a" ? CROSSBOW_ASSET_VERSION : CHARACTER_ASSET_VERSION;
         for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
           if (frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id)) {
             continue;
           }
           this.load.image(
             `character-${id}-${action}-${frame}`,
-            versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`, CHARACTER_ASSET_VERSION)
+            versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`, assetVersion)
           );
         }
       });
       this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
-      this.load.image("avatar-bow", imageAsset("assets/images/avatar-bow.png"));
+      this.load.image("avatar-bow", versionedImageAsset("assets/images/avatar-bow.png", CROSSBOW_ASSET_VERSION));
       this.load.image("avatar-rifle", imageAsset("assets/images/avatar-rifle.png"));
       this.load.image("avatar-rocket", imageAsset("assets/images/avatar-rocket.png"));
       this.load.image("avatar-sniper", imageAsset("assets/images/avatar-sniper.png"));
       this.load.image("avatar-fire", imageAsset("assets/images/avatar-fire.png"));
       this.load.image("avatar-shock", imageAsset("assets/images/avatar-shock.png"));
       this.load.image("avatar-engineer", imageAsset("assets/images/avatar-engineer.png"));
-      this.load.image("projectile-arrow", imageAsset("assets/images/projectile-arrow.png"));
+      this.load.image("projectile-arrow", versionedImageAsset("assets/images/projectile-arrow.png", CROSSBOW_ASSET_VERSION));
       this.load.image("projectile-pistol", imageAsset("assets/images/projectile-pistol.png"));
       this.load.image("projectile-rifle", imageAsset("assets/images/projectile-rifle.png"));
       this.load.image("projectile-grenade", imageAsset("assets/images/projectile-grenade.png"));
@@ -2194,7 +2197,7 @@
       this.load.image("projectile-firebomb", versionedImageAsset("assets/images/projectile-firebomb.png", COMBAT_PROP_ASSET_VERSION));
       this.load.image("projectile-shock", imageAsset("assets/images/projectile-shock.png"));
       this.load.image("projectile-nail", versionedImageAsset("assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION));
-      this.load.image("muzzle-arrow", imageAsset("assets/images/muzzle-arrow.png"));
+      this.load.image("muzzle-arrow", versionedImageAsset("assets/images/muzzle-arrow.png", CROSSBOW_ASSET_VERSION));
       this.load.image("muzzle-pistol", imageAsset("assets/images/muzzle-pistol.png"));
       this.load.image("muzzle-rifle", imageAsset("assets/images/muzzle-rifle.png"));
       this.load.image("muzzle-rocket", imageAsset("assets/images/muzzle-rocket.png"));
@@ -2211,17 +2214,17 @@
       this.load.image("skill-max-hp", imageAsset("assets/images/skill-max-hp.png"));
       this.load.image("skill-sniper", imageAsset("assets/images/skill-sniper.png"));
       this.load.image("skill-pistol-rapid", imageAsset("assets/images/skill-pistol-rapid.png"));
-      this.load.image("skill-arrow-pin", imageAsset("assets/images/skill-arrow-pin.png"));
+      this.load.image("skill-arrow-pin", versionedImageAsset("assets/images/skill-arrow-pin.png", CROSSBOW_ASSET_VERSION));
       this.load.image("skill-rifle-grenade", imageAsset("assets/images/skill-rifle-grenade.png"));
       this.load.image("skill-rocket-impact", imageAsset("assets/images/skill-rocket-impact.png"));
       this.load.image("skill-sniper-weakpoint", imageAsset("assets/images/skill-sniper-weakpoint.png"));
       this.load.image("skill-pistol-pierce", imageAsset("assets/images/skill-pistol-pierce.png"));
-      this.load.image("skill-arrow-pierce", imageAsset("assets/images/skill-arrow-pierce.png"));
+      this.load.image("skill-arrow-pierce", versionedImageAsset("assets/images/skill-arrow-pierce.png", CROSSBOW_ASSET_VERSION));
       this.load.image("skill-rifle-suppress", imageAsset("assets/images/skill-rifle-suppress.png"));
       this.load.image("skill-rocket-reload", imageAsset("assets/images/skill-rocket-reload.png"));
       this.load.image("skill-sniper-reload", imageAsset("assets/images/skill-sniper-reload.png"));
       this.load.image("skill-pistol-impact", imageAsset("assets/images/skill-pistol-impact.png"));
-      this.load.image("skill-arrow-force", imageAsset("assets/images/skill-arrow-force.png"));
+      this.load.image("skill-arrow-force", versionedImageAsset("assets/images/skill-arrow-force.png", CROSSBOW_ASSET_VERSION));
       this.load.image("skill-rifle-caliber", imageAsset("assets/images/skill-rifle-caliber.png"));
       this.load.image("skill-rocket-warhead", imageAsset("assets/images/skill-rocket-warhead.png"));
       this.load.image("skill-sniper-caliber", imageAsset("assets/images/skill-sniper-caliber.png"));
@@ -7504,7 +7507,8 @@
         const x = muzzle.x + shotOffset;
         const y = muzzle.y;
         const angle = Math.atan2(releaseTy - y, releaseTx - x) + angleOffset;
-        const usesHorizontalProjectile = defender.projectile === "projectile-nail";
+        const usesHorizontalProjectile = defender.projectile === "projectile-nail"
+          || defender.projectile === "projectile-arrow";
         const sprite = this.add.image(x, y, defender.projectile)
           .setOrigin(0.5, usesHorizontalProjectile ? 0.5 : 1)
           .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
@@ -8247,15 +8251,15 @@
       const hitPoint = this.getZombieBodyHitPoint(zombie, impactPoint || this.getBulletTip(bullet), bullet.projectile);
       const hitX = hitPoint.x;
       const hitY = hitPoint.y;
-      const projectileLength = bullet.sprite.displayHeight || 42;
+      const projectileLength = (config.horizontal ? bullet.sprite.displayWidth : bullet.sprite.displayHeight) || 42;
       const embedDepth = clamp(projectileLength * config.embedRatio, config.minEmbed, config.maxEmbed);
       const visibleLength = Math.max(4, projectileLength - embedDepth);
       const tailX = hitX - Math.cos(bullet.angle) * visibleLength;
       const tailY = hitY - Math.sin(bullet.angle) * visibleLength;
       const sprite = this.add.image(tailX, tailY, config.texture)
-        .setOrigin(0.5, 1)
+        .setOrigin(config.horizontal ? 0 : 0.5, config.horizontal ? 0.5 : 1)
         .setScale(config.scale || 0.19)
-        .setRotation(bullet.angle + Math.PI / 2)
+        .setRotation(config.horizontal ? bullet.angle : bullet.angle + Math.PI / 2)
         .setAlpha(config.alpha)
         .setDepth((zombie.depth || 70) + config.depthOffset);
       this.embeddedArrows.push({
@@ -10296,9 +10300,9 @@
       add("a", {
         id: "a-force",
         icon: "skill-arrow-force",
-        tag: "활",
-        title: "고장력 활시위",
-        desc: "기본 화살의 장력을 높여\n정면 피해를 강화합니다.",
+        tag: "석궁",
+        title: "고장력 석궁 현",
+        desc: "석궁 현의 장력을 높여\n정면 피해를 강화합니다.",
         stat: `피해 ${this.formatPercent(bow.damageBoost)} → ${this.formatPercent(bow.damageBoost * 1.1)}`,
         available: bow.damageBoost < 2.2,
         apply: () => {
@@ -10309,9 +10313,9 @@
       add("a", {
         id: "a-rally",
         icon: "skill-rally",
-        tag: "활",
+        tag: "석궁",
         title: "집중 호흡",
-        desc: "활시위를 당길수록\n치명타가 날카로워집니다.",
+        desc: "조준에 집중할수록\n치명타가 날카로워집니다.",
         stat: `치명률 ${this.formatPercent(bow.critChance)} → ${this.formatPercent(Math.min(0.72, bow.critChance + 0.14))}\n치명 피해 ${this.formatPercent(bow.critMultiplier)} → ${this.formatPercent(bow.critMultiplier + 0.35)}`,
         apply: () => {
           const defender = this.getDefenderById("a");
@@ -10322,7 +10326,7 @@
       add("a", {
         id: "a-mark",
         icon: "skill-mark",
-        tag: "활",
+        tag: "석궁",
         title: "약점 표식",
         desc: "표식이 붙은 적이\n더 큰 피해를 받습니다.",
         stat: `표식 피해 ${this.formatBonus(bow.markDamageBonus)} → ${this.formatBonus(bow.markDamageBonus + 0.12)}\n표식 지속 ${this.formatSeconds(bow.markDuration)} → ${this.formatSeconds(bow.markDuration + 1.8)}`,
@@ -10337,8 +10341,8 @@
       add("a", {
         id: "a-pin",
         icon: "skill-arrow-pin",
-        tag: "활",
-        title: "속박 화살",
+        tag: "석궁",
+        title: "속박 볼트",
         desc: "맞은 좀비의 발을\n잠시 묶어둡니다.",
         stat: `둔화 ${this.formatSeconds(bow.slowDuration)} → ${this.formatSeconds(bow.slowDuration + 0.75)}\n표식 피해 ${this.formatBonus(bow.markDamageBonus)} → ${this.formatBonus(bow.markDamageBonus + 0.04)}`,
         apply: () => {
@@ -10352,9 +10356,9 @@
       add("a", {
         id: "a-pierce",
         icon: "skill-arrow-pierce",
-        tag: "활",
-        title: "관통 화살",
-        desc: "화살이 깊게 박혀\n일렬의 적을 꿰뚫습니다.",
+        tag: "석궁",
+        title: "관통 볼트",
+        desc: "볼트가 깊게 박혀\n일렬의 적을 꿰뚫습니다.",
         stat: `관통 ${bow.pierce} → ${bow.pierce + 1}\n피해 ${this.formatPercent(bow.damageBoost)} → ${this.formatPercent(bow.damageBoost * 1.1)}`,
         available: bow.pierce < 3,
         apply: () => {
