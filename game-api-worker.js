@@ -193,13 +193,29 @@ function safeJsonText(value) {
     }
 }
 
+function isLocalDevelopmentUrl(value) {
+    if (!value) return false;
+    try {
+        const hostname = new URL(String(value)).hostname.toLowerCase();
+        return /^(?:localhost|127(?:\.\d+){3}|0\.0\.0\.0|\[?::1\]?)$/.test(hostname)
+            || hostname.endsWith('.localhost');
+    } catch {
+        return false;
+    }
+}
+
+function isAutomatedResourceProbe(errorType, userAgent) {
+    return String(errorType || '').toLowerCase() === 'resource_error'
+        && /Google-Read-Aloud|Googlebot|bingbot|DuckDuckBot|YandexBot|Baiduspider|HeadlessChrome|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)/i.test(String(userAgent || ''));
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
-        INSERT INTO error_logs (
+        INSERT OR IGNORE INTO error_logs (
             app_id, user_id, message, stack, url, user_agent,
-            source, error_type, error_class, session_id, context_json, extra_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            source, error_type, error_class, session_id, context_json, extra_json, report_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
         limitText(payload.appId || 'game-api', 100),
         limitText(payload.userId || '', 100),
@@ -212,7 +228,8 @@ async function insertErrorLog(db, request, payload) {
         limitText(payload.errorClass || '', 50),
         limitText(payload.sessionId || '', 100),
         safeJsonText(payload.context),
-        safeJsonText(payload.extra)
+        safeJsonText(payload.extra),
+        limitText(payload.reportId || payload.context?.clientReportId || payload.extra?.eventId || '', 128) || null
     ).run();
 }
 
@@ -221,9 +238,17 @@ async function storeClientError(db, request, body) {
         return jsonResponse({ error: 'invalid client error payload' }, 400);
     }
 
+    if ([body.url, body.source, request.headers.get('Referer')].some(isLocalDevelopmentUrl)) {
+        return jsonResponse({ ok: true, ignored: true, reason: 'local_development_session' });
+    }
+
     const gameId = limitText(body.game_id || body.gameId || body.appId || 'archerlab-games', 100)
         .replace(/[^a-z0-9_.:-]/gi, '') || 'archerlab-games';
     const errorType = limitText(body.error_type || body.errorType || body.type || 'error', 100) || 'error';
+    const userAgent = request.headers.get('User-Agent') || body.user_agent || body.userAgent || '';
+    if (isAutomatedResourceProbe(errorType, userAgent)) {
+        return jsonResponse({ ok: true, ignored: true, reason: 'automated_resource_probe' });
+    }
     const message = limitText(body.message || body.stack || 'Unknown client error', 500);
     if (!message) {
         return jsonResponse({ ok: true });
@@ -243,6 +268,7 @@ async function storeClientError(db, request, body) {
         errorType: errorType,
         errorClass: limitText(body.error_class || body.errorClass || '', 50),
         context: body.context || null,
+        reportId: body.report_id || body.reportId || body.context?.clientReportId || body.extra?.eventId || '',
         extra: {
             lineno: body.lineno ?? body.line ?? 0,
             colno: body.colno ?? body.column ?? 0,

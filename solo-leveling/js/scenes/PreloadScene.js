@@ -312,6 +312,7 @@ export class PreloadScene extends Phaser.Scene {
             const fallback = this._pngFallbacks.get(file.key);
             if (fallback) {
                 this._pngFallbacks.delete(file.key);
+                if (this.textures.exists(file.key)) return;
                 console.warn('WebP asset not loaded; falling back to PNG:', file.key);
                 this.load.image(file.key, fallback);
                 return;
