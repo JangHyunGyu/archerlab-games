@@ -19,13 +19,13 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE_DIR = ROOT / "assets" / "images"
-BOW_SOURCE_DIR = ROOT / "design" / "source-assets" / "archer-v14"
+CROSSBOW_SOURCE_DIR = ROOT / "design" / "source-assets" / "crossbow-v1"
 POSE_COUNT = 9
-BOW_WEBP_QUALITY = 96
-BOW_LEGACY_CELL_SIZE = (512, 800)
-BOW_CELL_SIZE = (736, 960)
-BOW_CELL_PADDING = (112, 160)
-BOW_MIRROR_DIRECTION_PAIRS = ((3, 5), (2, 6), (1, 7), (0, 8))
+CROSSBOW_WEBP_QUALITY = 96
+CROSSBOW_LEGACY_CELL_SIZE = (512, 800)
+CROSSBOW_CELL_SIZE = (736, 960)
+CROSSBOW_CELL_PADDING = (112, 160)
+CROSSBOW_MIRROR_DIRECTION_PAIRS = ((3, 5), (2, 6), (1, 7), (0, 8))
 
 
 def split_strip(image: Image.Image) -> list[Image.Image]:
@@ -38,20 +38,20 @@ def split_strip(image: Image.Image) -> list[Image.Image]:
     ]
 
 
-def prepare_bow_identity_cells(cells: list[Image.Image]) -> list[Image.Image]:
-    """Pad bow cells without changing their character-pixel scale or footing."""
+def prepare_crossbow_identity_cells(cells: list[Image.Image]) -> list[Image.Image]:
+    """Pad crossbow cells without changing their character-pixel scale or footing."""
     prepared: list[Image.Image] = []
     for index, cell in enumerate(cells):
-        if cell.size == BOW_CELL_SIZE:
+        if cell.size == CROSSBOW_CELL_SIZE:
             prepared.append(cell.copy())
             continue
-        if cell.size != BOW_LEGACY_CELL_SIZE:
+        if cell.size != CROSSBOW_LEGACY_CELL_SIZE:
             raise ValueError(
-                f"bow identity cell {index} has unsupported size {cell.size}; "
-                f"expected {BOW_LEGACY_CELL_SIZE} or {BOW_CELL_SIZE}"
+                f"crossbow identity cell {index} has unsupported size {cell.size}; "
+                f"expected {CROSSBOW_LEGACY_CELL_SIZE} or {CROSSBOW_CELL_SIZE}"
             )
-        expanded = Image.new("RGBA", BOW_CELL_SIZE, (0, 0, 0, 0))
-        expanded.alpha_composite(cell, BOW_CELL_PADDING)
+        expanded = Image.new("RGBA", CROSSBOW_CELL_SIZE, (0, 0, 0, 0))
+        expanded.alpha_composite(cell, CROSSBOW_CELL_PADDING)
         prepared.append(expanded)
     return prepared
 
@@ -224,7 +224,7 @@ def largest_hair_component_top(image: Image.Image, kind: str) -> int:
         raise ValueError(f"could not locate the {kind} hair reference")
 
     if kind == "pink":
-        # The archer's bow shares the same pink hue as her hair, while the
+        # The defender's weapon shares the same pink hue as her hair, while the
         # twin tails can contain more thresholded pixels than the crown after
         # resampling. Select the uppermost compact head-sized component.
         minimum_head_height = max(12, round(height * 0.045))
@@ -290,13 +290,14 @@ def normalise_generated_cell(
     source: Image.Image,
     target: Image.Image,
     *,
-    key_colour: str,
+    key_colour: str | None,
     hair: str | None = None,
     body_height_target: int | None = None,
     keep_largest_component: bool = True,
 ) -> Image.Image:
     """Fit one approved repair cell to an existing cell's scale and footing."""
-    source = despill_key_colour(source, key_colour)
+    if key_colour is not None:
+        source = despill_key_colour(source, key_colour)
     if keep_largest_component:
         source = keep_character_component(source)
     source_bbox, source_foot_x = alpha_geometry(source)
@@ -346,7 +347,8 @@ def normalise_generated_cell(
         x -= x + resized_right - (target_width - margin)
     result = Image.new("RGBA", target.size, (0, 0, 0, 0))
     result.alpha_composite(resized, (x, y))
-    result = despill_key_colour(result, key_colour)
+    if key_colour is not None:
+        result = despill_key_colour(result, key_colour)
     if hair is not None:
         for _ in range(2):
             actual_body_height = body_height(result, hair)
@@ -374,7 +376,8 @@ def normalise_generated_cell(
                 x -= x + sprite_right - (target_width - margin)
             result = Image.new("RGBA", target.size, (0, 0, 0, 0))
             result.alpha_composite(sprite, (x, y))
-            result = despill_key_colour(result, key_colour)
+            if key_colour is not None:
+                result = despill_key_colour(result, key_colour)
     bbox = result.getchannel("A").getbbox()
     if bbox is None or min(bbox[0], bbox[1], target_width - bbox[2], target_height - bbox[3]) < 6:
         raise ValueError(f"normalised cell violates safe margins: {bbox}")
@@ -397,33 +400,33 @@ def apply_deterministic_repairs() -> None:
     save_strip(split_strip(shock_settled), IMAGE_DIR / "character-g-attack-3.png")
 
 
-def verify_generated_bow_sheets(
-    bow_identity: list[Image.Image],
-    bow_sheets: dict[int, tuple[Path, list[Image.Image]]],
+def verify_generated_crossbow_sheets(
+    crossbow_identity: list[Image.Image],
+    crossbow_sheets: dict[int, tuple[Path, list[Image.Image]]],
 ) -> None:
-    """Validate every generated bow cell before the first production write."""
+    """Validate every generated crossbow cell before the first production write."""
     expected_frames = set(range(4))
-    if set(bow_sheets) != expected_frames:
+    if set(crossbow_sheets) != expected_frames:
         raise ValueError(
-            f"generated bow sheets must cover frames 0..3: {sorted(bow_sheets)}"
+            f"generated crossbow sheets must cover frames 0..3: {sorted(crossbow_sheets)}"
         )
-    if len(bow_identity) != POSE_COUNT:
-        raise ValueError(f"bow identity must contain {POSE_COUNT} direction cells")
+    if len(crossbow_identity) != POSE_COUNT:
+        raise ValueError(f"crossbow identity must contain {POSE_COUNT} direction cells")
     reference_body_height = sorted(
-        body_height(cell, "pink") for cell in bow_identity
+        body_height(cell, "pink") for cell in crossbow_identity
     )[POSE_COUNT // 2]
 
     body_heights: list[int] = []
     bottoms: list[int] = []
-    for frame, (sheet_path, cells) in bow_sheets.items():
+    for frame, (sheet_path, cells) in crossbow_sheets.items():
         if len(cells) != POSE_COUNT:
             raise ValueError(
                 f"{sheet_path.name} frame {frame} must contain {POSE_COUNT} direction cells"
             )
-        for index, (cell, target) in enumerate(zip(cells, bow_identity)):
+        for index, (cell, target) in enumerate(zip(cells, crossbow_identity)):
             if cell.size != target.size:
                 raise ValueError(
-                    f"bow frame {frame} direction {index} has size {cell.size}; "
+                    f"crossbow frame {frame} direction {index} has size {cell.size}; "
                     f"expected {target.size}"
                 )
 
@@ -437,7 +440,7 @@ def verify_generated_bow_sheets(
             )
             if min(margins) < 8:
                 raise ValueError(
-                    f"bow frame {frame} direction {index} violates 8px safe margins: {bbox}"
+                    f"crossbow frame {frame} direction {index} violates 8px safe margins: {bbox}"
                 )
 
             target_body_height = reference_body_height
@@ -445,54 +448,54 @@ def verify_generated_bow_sheets(
             body_ratio = actual_body_height / target_body_height
             if not 0.97 <= body_ratio <= 1.03:
                 raise ValueError(
-                    f"bow frame {frame} direction {index} body scale drifted to "
+                    f"crossbow frame {frame} direction {index} body scale drifted to "
                     f"{body_ratio:.3f} ({actual_body_height}px vs {target_body_height}px)"
                 )
             if abs(bbox[3] - target_bbox[3]) > 1:
                 raise ValueError(
-                    f"bow frame {frame} direction {index} footing drifted from "
+                    f"crossbow frame {frame} direction {index} footing drifted from "
                     f"{target_bbox[3]}px to {bbox[3]}px"
                 )
             if abs(feet_center - target_feet_center) > 2:
                 raise ValueError(
-                    f"bow frame {frame} direction {index} horizontal footing drifted by "
+                    f"crossbow frame {frame} direction {index} horizontal footing drifted by "
                     f"{abs(feet_center - target_feet_center):.2f}px"
                 )
 
             components = alpha_components(cell)
             if not components or len(components[0][0]) < 8_000:
                 raise ValueError(
-                    f"bow frame {frame} direction {index} is missing its defender silhouette"
+                    f"crossbow frame {frame} direction {index} is missing its defender silhouette"
                 )
             body_heights.append(actual_body_height)
             bottoms.append(bbox[3])
 
     if max(body_heights) / min(body_heights) > 1.03:
         raise ValueError(
-            f"generated bow body scale spread exceeds 3%: "
+            f"generated crossbow body scale spread exceeds 3%: "
             f"{min(body_heights)}..{max(body_heights)}"
         )
     if max(bottoms) - min(bottoms) > 1:
         raise ValueError(
-            f"generated bow footing spread exceeds 1px: {min(bottoms)}..{max(bottoms)}"
+            f"generated crossbow footing spread exceeds 1px: {min(bottoms)}..{max(bottoms)}"
         )
 
 
-def apply_generated_bow_repairs(generated_dir: Path) -> None:
-    bow_identity = prepare_bow_identity_cells(
+def apply_generated_crossbow_repairs(generated_dir: Path) -> None:
+    crossbow_identity = prepare_crossbow_identity_cells(
         split_strip(Image.open(IMAGE_DIR / "character-a.png").convert("RGBA"))
     )
-    for source_index, mirrored_index in BOW_MIRROR_DIRECTION_PAIRS:
-        bow_identity[mirrored_index] = bow_identity[source_index].transpose(
+    for source_index, mirrored_index in CROSSBOW_MIRROR_DIRECTION_PAIRS:
+        crossbow_identity[mirrored_index] = crossbow_identity[source_index].transpose(
             Image.Transpose.FLIP_LEFT_RIGHT
         )
-    bow_sheets = {
+    crossbow_sheets = {
         0: (
             IMAGE_DIR / "character-a.png",
-            [cell.copy() for cell in bow_identity],
+            [cell.copy() for cell in crossbow_identity],
         ),
     }
-    bow_sheets.update({
+    crossbow_sheets.update({
         frame: (
             IMAGE_DIR / f"character-a-attack-{frame}.png",
             split_strip(
@@ -502,30 +505,30 @@ def apply_generated_bow_repairs(generated_dir: Path) -> None:
         for frame in range(1, 4)
     })
     reference_body_height = sorted(
-        body_height(cell, "pink") for cell in bow_identity
+        body_height(cell, "pink") for cell in crossbow_identity
     )[POSE_COUNT // 2]
-    for frame, (_, cells) in bow_sheets.items():
+    for frame, (_, cells) in crossbow_sheets.items():
         for index in range(5):
             source = Image.open(generated_dir / f"a-f{frame}-c{index}.png").convert("RGBA")
             cells[index] = normalise_generated_cell(
                 source,
-                bow_identity[index],
-                key_colour="blue",
+                crossbow_identity[index],
+                key_colour=None,
                 hair="pink",
                 body_height_target=reference_body_height,
-                keep_largest_component=False,
+                keep_largest_component=True,
             )
-        for source_index, mirrored_index in BOW_MIRROR_DIRECTION_PAIRS:
+        for source_index, mirrored_index in CROSSBOW_MIRROR_DIRECTION_PAIRS:
             cells[mirrored_index] = cells[source_index].transpose(
                 Image.Transpose.FLIP_LEFT_RIGHT
             )
-    verify_generated_bow_sheets(bow_identity, bow_sheets)
-    for sheet_path, cells in bow_sheets.values():
-        save_strip(cells, sheet_path, webp_quality=BOW_WEBP_QUALITY)
+    verify_generated_crossbow_sheets(crossbow_identity, crossbow_sheets)
+    for sheet_path, cells in crossbow_sheets.values():
+        save_strip(cells, sheet_path, webp_quality=CROSSBOW_WEBP_QUALITY)
 
 
 def apply_generated_repairs(generated_dir: Path) -> None:
-    apply_generated_bow_repairs(generated_dir)
+    apply_generated_crossbow_repairs(generated_dir)
 
     firebomb_path = IMAGE_DIR / "character-f-throw-3.png"
     firebomb_cells = split_strip(Image.open(firebomb_path).convert("RGBA"))
@@ -645,12 +648,12 @@ def main() -> None:
         "--generated-dir",
         type=Path,
         help=(
-            "directory containing reviewed generated cells; bow-only defaults "
-            "to the tracked archer-v14 source set"
+            "directory containing reviewed generated cells; crossbow-only defaults "
+            "to the tracked crossbow-v1 source set"
         ),
     )
     parser.add_argument("--deterministic-only", action="store_true")
-    parser.add_argument("--bow-only", action="store_true")
+    parser.add_argument("--crossbow-only", action="store_true")
     parser.add_argument("--inspect-firebomb", action="store_true")
     parser.add_argument("--verify-only", action="store_true")
     args = parser.parse_args()
@@ -662,15 +665,15 @@ def main() -> None:
         verify_direction_safe_outputs()
         print("verified defender direction-safe action sheets")
         return
-    if args.bow_only:
+    if args.crossbow_only:
         generated_dir = (
             args.generated_dir.resolve()
             if args.generated_dir is not None
-            else BOW_SOURCE_DIR
+            else CROSSBOW_SOURCE_DIR
         )
-        apply_generated_bow_repairs(generated_dir)
+        apply_generated_crossbow_repairs(generated_dir)
         verify_direction_safe_outputs()
-        print("finalized defender A direction-safe attack sheets")
+        print("finalized defender A crossbow direction-safe attack sheets")
         return
     apply_deterministic_repairs()
     if not args.deterministic_only:

@@ -9,10 +9,23 @@ const zlib = require("node:zlib");
 
 const root = path.resolve(__dirname, "..");
 const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+assert.doesNotMatch(
+  gameSource,
+  /활|화살/,
+  "game-facing Korean copy must not regress from crossbow/bolt terminology to bow/arrow"
+);
+assert.match(gameSource, /석궁/, "game-facing Korean copy must identify the crossbow");
+assert.match(gameSource, /볼트/, "game-facing Korean copy must identify crossbow bolts");
 const finalizeDirectionsSource = fs.readFileSync(
   path.join(root, "tools", "finalize-defender-action-directions.py"),
   "utf8"
 );
+const prepareCrossbowSourcePath = path.join(
+  root,
+  "tools",
+  "prepare-crossbow-source-cells.py"
+);
+const prepareCrossbowSource = fs.readFileSync(prepareCrossbowSourcePath, "utf8");
 const imageRoot = path.join(root, "assets", "images");
 const hashFixturePath = path.join(__dirname, "defender-action-assets.sha256.json");
 const updateHashes = process.argv.includes("--update-hashes");
@@ -100,64 +113,129 @@ const frameDurationsBlock = gameSource.match(
   /const\s+CHARACTER_ATTACK_FRAME_DURATIONS\s*=\s*\{([\s\S]*?)\};/
 )?.[1];
 assert.ok(frameDurationsBlock, "CHARACTER_ATTACK_FRAME_DURATIONS must be declared");
-const bowDurations = frameDurationsBlock.match(/\ba\s*:\s*\[([^\]]+)\]/)?.[1]
+const crossbowDurations = frameDurationsBlock.match(/\ba\s*:\s*\[([^\]]+)\]/)?.[1]
   .split(",")
   .map(value => Number(value.trim()));
 assert.deepEqual(
-  bowDurations,
+  crossbowDurations,
   [0.045, 0.11, 0.045, 0.09],
-  "bow timing must preserve the readable draw and crisp release rhythm"
+  "crossbow timing must preserve a readable aim and crisp release rhythm"
 );
 
 assert.match(
   gameSource,
   /const\s+CHARACTER_ATTACK_DIRECTION_LOCKS\s*=\s*new Set\(\["a"\]\)/,
-  "bow attacks must lock their animation to the target direction"
+  "crossbow attacks must lock their animation to the target direction"
 );
 assert.match(
   gameSource,
   /const pose = CHARACTER_ATTACK_DIRECTION_LOCKS\.has\(defender\.id\)\s*\? initialPose\s*:\s*getShotAimPoseKey\(initialAngle\)/,
-  "muzzle offsets must not remap the bow animation away from its target direction"
+  "muzzle offsets must not remap the crossbow animation away from its target direction"
 );
 assert.match(
   finalizeDirectionsSource,
-  /normalise_generated_cell\(\s*source,\s*bow_identity\[index\],\s*key_colour="blue",\s*hair="pink",/,
-  "bow direction repairs must use the matching ready-pose direction as their alignment target"
+  /normalise_generated_cell\(\s*source,\s*crossbow_identity\[index\],\s*key_colour=None,\s*hair="pink",[\s\S]*?keep_largest_component=True,/,
+  "alpha-ready crossbow sources must skip a second blue despill and discard detached ghosts"
 );
 assert.match(
   finalizeDirectionsSource,
-  /for frame, \(_, cells\) in bow_sheets\.items\(\):[\s\S]*?for index in range\(5\):[\s\S]*?generated_dir \/ f"a-f\{frame\}-c\{index\}\.png"/,
-  "the generated bow repair set must source the center and four approved left-side directions"
+  /key_colour:\s*str\s*\|\s*None[\s\S]*?if key_colour is not None:\s*source = despill_key_colour\(source, key_colour\)/,
+  "normalization must explicitly allow reviewed alpha sources to skip key-colour cleanup"
 );
 assert.match(
   finalizeDirectionsSource,
-  /BOW_MIRROR_DIRECTION_PAIRS\s*=\s*\(\(3, 5\), \(2, 6\), \(1, 7\), \(0, 8\)\)/,
-  "bow right-side directions must remain paired with their approved mirrored sources"
+  /firebomb_source[\s\S]*?key_colour="blue"[\s\S]*?rocket_targets[\s\S]*?key_colour="magenta"/,
+  "legacy firebomb and rocket workflows must retain their existing key-colour despill"
+);
+assert.match(
+  prepareCrossbowSource,
+  /DEFAULT_OPAQUE_THRESHOLD\s*=\s*96/,
+  "crossbow blue-key extraction must make all pixels beyond the narrow edge range opaque"
+);
+assert.match(
+  prepareCrossbowSource,
+  /distance\s*>=\s*opaque_threshold[\s\S]*?output\.append\(\(red, green, blue, alpha\)\)[\s\S]*?blue_dominance[\s\S]*?key_like/,
+  "crossbow chroma extraction must preserve distant navy/cyan before applying its blue-dominance guard"
+);
+assert.match(
+  prepareCrossbowSource,
+  /result\s*=\s*keep_largest_alpha_component\(result\)\s*validate_alpha_cell\(result, label\)/,
+  "crossbow source cells must drop detached alpha noise before validation and saving"
+);
+
+const chromaSmokeSource = [
+  "import runpy, sys",
+  "from PIL import Image",
+  "tool = runpy.run_path(sys.argv[1])",
+  "source = Image.new('RGBA', (4, 1))",
+  "samples = [(0, 0, 255, 255), (25, 30, 220, 255), (20, 30, 70, 255), (0, 220, 255, 255)]",
+  "source.putdata(samples)",
+  "result = tool['remove_blue_chroma'](source, transparent_threshold=12, opaque_threshold=96)",
+  "pixels = list(result.get_flattened_data())",
+  "assert pixels[0][3] == 0, pixels",
+  "assert 0 < pixels[1][3] < 255, pixels",
+  "assert pixels[2] == samples[2], pixels",
+  "assert pixels[3] == samples[3], pixels",
+  "component_source = Image.new('RGBA', (6, 4), (0, 0, 0, 0))",
+  "main_pixels = {(0, 0): (20, 30, 70, 255), (1, 1): (0, 220, 255, 127), (2, 2): (255, 100, 50, 9)}",
+  "noise_pixels = {(5, 0): (25, 30, 220, 40), (5, 1): (25, 30, 220, 40)}",
+  "for point, rgba in {**main_pixels, **noise_pixels}.items(): component_source.putpixel(point, rgba)",
+  "cleaned = tool['keep_largest_alpha_component'](component_source)",
+  "for point, rgba in main_pixels.items(): assert cleaned.getpixel(point) == rgba, (point, cleaned.getpixel(point), rgba)",
+  "for point in noise_pixels: assert cleaned.getpixel(point) == (0, 0, 0, 0), (point, cleaned.getpixel(point))"
+].join("\n");
+let chromaSmoke = childProcess.spawnSync(
+  "python",
+  ["-c", chromaSmokeSource, prepareCrossbowSourcePath],
+  { encoding: "utf8" }
+);
+if (chromaSmoke.error?.code === "ENOENT") {
+  chromaSmoke = childProcess.spawnSync(
+    "py",
+    ["-3", "-c", chromaSmokeSource, prepareCrossbowSourcePath],
+    { encoding: "utf8" }
+  );
+}
+assert.ifError(chromaSmoke.error);
+assert.equal(
+  chromaSmoke.status,
+  0,
+  "crossbow navy/cyan/blue-background chroma smoke failed:\n" + chromaSmoke.stderr
 );
 assert.match(
   finalizeDirectionsSource,
-  /for source_index, mirrored_index in BOW_MIRROR_DIRECTION_PAIRS:[\s\S]*?cells\[mirrored_index\]\s*=\s*cells\[source_index\]\.transpose\(\s*Image\.Transpose\.FLIP_LEFT_RIGHT/,
-  "bow right-side attack cells must be deterministic mirrors instead of independent generations"
+  /for frame, \(_, cells\) in crossbow_sheets\.items\(\):[\s\S]*?for index in range\(5\):[\s\S]*?generated_dir \/ f"a-f\{frame\}-c\{index\}\.png"/,
+  "the generated crossbow set must source the center and four approved left-side directions"
 );
 assert.match(
   finalizeDirectionsSource,
-  /bow_sheets\s*=\s*\{\s*0:\s*\(\s*IMAGE_DIR \/ "character-a\.png",[\s\S]*?bow_sheets\.update\(\{[\s\S]*?for frame in range\(1, 4\)/,
-  "bow frame zero must update the nine-direction ready sheet alongside attack frames one through three"
+  /CROSSBOW_MIRROR_DIRECTION_PAIRS\s*=\s*\(\(3, 5\), \(2, 6\), \(1, 7\), \(0, 8\)\)/,
+  "crossbow right-side directions must remain paired with their approved mirrored sources"
 );
 assert.match(
   finalizeDirectionsSource,
-  /verify_generated_bow_sheets\(bow_identity, bow_sheets\)[\s\S]*?save_strip\(cells, sheet_path, webp_quality=BOW_WEBP_QUALITY\)/,
-  "all four bow sheets must pass in-memory geometry checks before high-quality production writes"
+  /for source_index, mirrored_index in CROSSBOW_MIRROR_DIRECTION_PAIRS:[\s\S]*?cells\[mirrored_index\]\s*=\s*cells\[source_index\]\.transpose\(\s*Image\.Transpose\.FLIP_LEFT_RIGHT/,
+  "crossbow right-side attack cells must be deterministic mirrors instead of independent generations"
 );
 assert.match(
   finalizeDirectionsSource,
-  /BOW_WEBP_QUALITY\s*=\s*96/,
-  "bow WebP sheets must retain high-quality thin weapon and bowstring detail"
+  /crossbow_sheets\s*=\s*\{\s*0:\s*\(\s*IMAGE_DIR \/ "character-a\.png",[\s\S]*?crossbow_sheets\.update\(\{[\s\S]*?for frame in range\(1, 4\)/,
+  "crossbow frame zero must update the nine-direction ready sheet alongside attack frames one through three"
 );
 assert.match(
   finalizeDirectionsSource,
-  /if args\.bow_only:[\s\S]*?else BOW_SOURCE_DIR[\s\S]*?apply_generated_bow_repairs\(generated_dir\)/,
-  "the bow repair workflow must default to reviewed sources without rewriting unrelated defender assets"
+  /verify_generated_crossbow_sheets\(crossbow_identity, crossbow_sheets\)[\s\S]*?save_strip\(cells, sheet_path, webp_quality=CROSSBOW_WEBP_QUALITY\)/,
+  "all four crossbow sheets must pass in-memory geometry checks before high-quality production writes"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /CROSSBOW_WEBP_QUALITY\s*=\s*96/,
+  "crossbow WebP sheets must retain high-quality thin weapon detail"
+);
+assert.match(
+  finalizeDirectionsSource,
+  /if args\.crossbow_only:[\s\S]*?else CROSSBOW_SOURCE_DIR[\s\S]*?apply_generated_crossbow_repairs\(generated_dir\)/,
+  "the crossbow workflow must default to reviewed sources without rewriting unrelated defender assets"
 );
 
 assert.match(
@@ -183,17 +261,47 @@ assert.match(
 assert.match(
   animationUpdate,
   /CHARACTER_RECOVERY_BLEND_DURATIONS\[defender\.id\]/,
-  "bow recovery must blend back to its ready pose instead of popping"
+  "crossbow recovery must blend back to its ready pose instead of popping"
 );
 
-const assetVersion = gameSource.match(
+const characterAssetVersion = gameSource.match(
   /const\s+CHARACTER_ASSET_VERSION\s*=\s*["']([^"']+)["']/
 )?.[1];
-assert.ok(assetVersion, "CHARACTER_ASSET_VERSION must be declared");
+assert.ok(characterAssetVersion, "CHARACTER_ASSET_VERSION must be declared");
 assert.equal(
-  assetVersion,
+  characterAssetVersion,
   "20260718-bow-video-directions-v14",
-  "character asset cache version must track the corrected bow direction sheets"
+  "the shared character cache contract must remain independent from crossbow-only changes"
+);
+const crossbowAssetVersion = gameSource.match(
+  /const\s+CROSSBOW_ASSET_VERSION\s*=\s*["']([^"']+)["']/
+)?.[1];
+assert.ok(crossbowAssetVersion, "CROSSBOW_ASSET_VERSION must be declared");
+assert.equal(
+  crossbowAssetVersion,
+  "20260719-crossbow-directions-v1",
+  "crossbow asset cache version must track the reviewed direction sheets"
+);
+const directlyVersionedCrossbowAssets = [...gameSource.matchAll(
+  /this\.load\.image\("([^"]+)",\s*versionedImageAsset\("assets\/images\/[^"]+",\s*CROSSBOW_ASSET_VERSION\)\)/g
+)].map(([, key]) => key).sort();
+assert.deepEqual(
+  directlyVersionedCrossbowAssets,
+  [
+    "avatar-bow",
+    "character-a",
+    "muzzle-arrow",
+    "projectile-arrow",
+    "skill-arrow-force",
+    "skill-arrow-pierce",
+    "skill-arrow-pin"
+  ].sort(),
+  "only regenerated crossbow image assets must use the crossbow cache contract directly"
+);
+assert.match(
+  gameSource,
+  /const assetVersion = id === "a" \? CROSSBOW_ASSET_VERSION : CHARACTER_ASSET_VERSION;/,
+  "only defender A attack sheets must select the crossbow cache contract"
 );
 
 const sheets = [
@@ -283,14 +391,20 @@ function sha256(filePath) {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
-function assertArcherSourceChecksums() {
-  const sourceRoot = path.join(root, "design", "source-assets", "archer-v14");
+function assertCrossbowSourceChecksums() {
+  const archivedArcherRoot = path.join(root, "design", "source-assets", "archer-v14");
+  assert.ok(
+    fs.existsSync(path.join(archivedArcherRoot, "SHA256SUMS")),
+    "the reviewed archer-v14 source record must remain preserved"
+  );
+
+  const sourceRoot = path.join(root, "design", "source-assets", "crossbow-v1");
   const sumsPath = path.join(sourceRoot, "SHA256SUMS");
-  assert.ok(fs.existsSync(sumsPath), "reviewed archer source checksum manifest must exist");
+  assert.ok(fs.existsSync(sumsPath), "reviewed crossbow source checksum manifest must exist");
 
   const entries = fs.readFileSync(sumsPath, "utf8").trim().split(/\r?\n/).map(line => {
     const match = line.match(/^([0-9a-f]{64})  (a-f[0-3]-c[0-4]\.png)$/);
-    assert.ok(match, `invalid reviewed archer source checksum line: ${line}`);
+    assert.ok(match, `invalid reviewed crossbow source checksum line: ${line}`);
     return { hash: match[1], fileName: match[2] };
   });
   const expectedNames = [];
@@ -302,17 +416,17 @@ function assertArcherSourceChecksums() {
   assert.deepEqual(
     entries.map(({ fileName }) => fileName),
     expectedNames,
-    "reviewed archer source set must contain exactly frames 0..3 and directions 0..4"
+    "reviewed crossbow source set must contain exactly frames 0..3 and directions 0..4"
   );
   for (const { hash, fileName } of entries) {
     const sourcePath = path.join(sourceRoot, fileName);
-    assert.ok(fs.existsSync(sourcePath), `${fileName} reviewed archer source must exist`);
-    assert.equal(sha256(sourcePath), hash, `${fileName} reviewed archer source changed unexpectedly`);
+    assert.ok(fs.existsSync(sourcePath), `${fileName} reviewed crossbow source must exist`);
+    assert.equal(sha256(sourcePath), hash, `${fileName} reviewed crossbow source changed unexpectedly`);
   }
   assert.match(
     finalizeDirectionsSource,
-    /BOW_SOURCE_DIR\s*=\s*ROOT\s*\/\s*"design"\s*\/\s*"source-assets"\s*\/\s*"archer-v14"/,
-    "bow finalization must default to the tracked reviewed source directory"
+    /CROSSBOW_SOURCE_DIR\s*=\s*ROOT\s*\/\s*"design"\s*\/\s*"source-assets"\s*\/\s*"crossbow-v1"/,
+    "crossbow finalization must default to the tracked reviewed source directory"
   );
 }
 
@@ -461,9 +575,9 @@ function alphaComponentSizes(image, cellIndex, threshold = 8) {
 }
 
 const directionKeys = ["10", "1030", "11", "1130", "12", "1230", "13", "1330", "14"];
-const archerMirrorPairs = [[3, 5], [2, 6], [1, 7], [0, 8]];
+const crossbowMirrorPairs = [[3, 5], [2, 6], [1, 7], [0, 8]];
 
-function assertArcherDirectionalSymmetry() {
+function assertCrossbowDirectionalSymmetry() {
   const sheetNames = [
     "character-a",
     "character-a-attack-1",
@@ -474,7 +588,7 @@ function assertArcherDirectionalSymmetry() {
     const image = decodePngAlpha(path.join(imageRoot, `${sheetName}.png`));
     const cellWidth = image.width / directionKeys.length;
     assert.ok(Number.isInteger(cellWidth), `${sheetName} must have nine equal-width cells`);
-    for (const [sourceIndex, mirroredIndex] of archerMirrorPairs) {
+    for (const [sourceIndex, mirroredIndex] of crossbowMirrorPairs) {
       let mismatch = null;
       pixelScan:
       for (let y = 0; y < image.height; y += 1) {
@@ -533,7 +647,7 @@ for (let leftIndex = 0; leftIndex < 4; leftIndex += 1) {
   const [rightX, rightY] = muzzleOffsets.a[rightIndex];
   assert.ok(
     Math.abs(leftX + rightX) <= 2 && Math.abs(leftY - rightY) <= 2,
-    `archer mirrored directions ${directionKeys[leftIndex]}/${directionKeys[rightIndex]} `
+    `crossbow mirrored directions ${directionKeys[leftIndex]}/${directionKeys[rightIndex]} `
       + "must use mirrored release points"
   );
 }
@@ -886,8 +1000,8 @@ assertCharacterBodyGeometry({
 assertShockCannonDirections();
 assertPngWebpAlphaParity();
 assertMeasuredMuzzlesTouchReleaseArt();
-assertArcherDirectionalSymmetry();
-assertArcherSourceChecksums();
+assertCrossbowDirectionalSymmetry();
+assertCrossbowSourceChecksums();
 assert.ok(
   muzzleOffsets.f.slice(0, 4).every(([x]) => x < 0)
     && muzzleOffsets.f.slice(5).every(([x]) => x > 0),
@@ -902,6 +1016,31 @@ assert.match(
   gameSource,
   /"projectile-firebomb"\s*:\s*0\.26/,
   "firebomb flight art must stay compact enough to read as a handheld bottle"
+);
+assert.match(
+  gameSource,
+  /"projectile-arrow"\s*:\s*\{[\s\S]*?horizontal:\s*true,[\s\S]*?life:\s*ARROW_EMBED_DURATION/,
+  "the crossbow bolt embed config must declare its source art as horizontal"
+);
+assert.match(
+  gameSource,
+  /const usesHorizontalProjectile = defender\.projectile === "projectile-nail"\s*\|\|\s*defender\.projectile === "projectile-arrow";/,
+  "crossbow bolts and nails must fly in the direction of their horizontal source art"
+);
+assert.match(
+  gameSource,
+  /const projectileLength = \(config\.horizontal \? bullet\.sprite\.displayWidth : bullet\.sprite\.displayHeight\) \|\| 42;/,
+  "embedded horizontal projectiles must measure their visible length from displayWidth"
+);
+assert.match(
+  gameSource,
+  /\.setOrigin\(config\.horizontal \? 0 : 0\.5, config\.horizontal \? 0\.5 : 1\)/,
+  "embedded crossbow bolts must attach from the left-center origin"
+);
+assert.match(
+  gameSource,
+  /\.setRotation\(config\.horizontal \? bullet\.angle : bullet\.angle \+ Math\.PI \/ 2\)/,
+  "embedded crossbow bolts must preserve the fired angle without a vertical-art offset"
 );
 assert.match(
   gameSource,
@@ -962,5 +1101,5 @@ console.log(
   `defender actions verified: ${sheets.length} nine-direction PNG/WebP pairs, ` +
     `72 measured release origins, A/F screen-space scale and footing, ` +
     `G cannon directions, alpha parity, F release separation, ` +
-    `G recovery continuity, asset version ${assetVersion}`
+    `G recovery continuity, asset version ${crossbowAssetVersion}`
 );
