@@ -22,7 +22,7 @@
   );
 
   const ASSETS = {
-    menu: "assets/ui/menu-bg.png",
+    menu: "assets/ui/menu-bg-v2.png",
     board: "assets/ui/board-surface.png",
     cinematicBoard: "assets/ui/game-board-cinematic.png",
     asphaltTile: "assets/ui/asphalt-tile.png",
@@ -91,6 +91,7 @@
     clearKicker: $("clear-kicker"),
     clearTitle: $("clear-title"),
     play: $("play-btn"),
+    playLabel: $("play-label"),
     rank: $("rank-btn"),
     next: $("next-btn"),
     home: $("home-btn"),
@@ -128,23 +129,32 @@
   app.stage.eventMode = "static";
 
   let textures = {};
+  let textureLoadPromise = null;
   const texturePaths = [ASSETS.menu, ASSETS.board, ASSETS.cinematicBoard, ASSETS.asphaltTile, ...VEHICLE_ASSETS];
   const textureAssets = (preferWebP) => texturePaths.map((path) => ({
     alias: path,
     src: preferWebP ? imageAsset(path) : path
   }));
-  try {
-    textures = await PIXI.Assets.load(textureAssets(true));
-  } catch (error) {
-    if (SUPPORTS_WEBP) {
-      try {
-        textures = await PIXI.Assets.load(textureAssets(false));
-      } catch (fallbackError) {
-        console.warn("[Parking] asset load failed; using vector fallback.", fallbackError);
+  async function loadGameTextures() {
+    try {
+      textures = await PIXI.Assets.load(textureAssets(true));
+    } catch (error) {
+      if (SUPPORTS_WEBP) {
+        try {
+          textures = await PIXI.Assets.load(textureAssets(false));
+        } catch (fallbackError) {
+          console.warn("[Parking] asset load failed; using vector fallback.", fallbackError);
+        }
+      } else {
+        console.warn("[Parking] asset load failed; using vector fallback.", error);
       }
-    } else {
-      console.warn("[Parking] asset load failed; using vector fallback.", error);
     }
+    return textures;
+  }
+
+  function ensureGameTextures() {
+    if (!textureLoadPromise) textureLoadPromise = loadGameTextures();
+    return textureLoadPromise;
   }
 
   function motionEnabled() {
@@ -496,7 +506,7 @@
     }
 
     bindUI() {
-      dom.play.addEventListener("click", () => this.start(1));
+      dom.play.addEventListener("click", () => this.start(this.bestLevel > 1 ? this.bestLevel : 1));
       dom.next.addEventListener("click", () => this.start(this.nextLevelTarget || this.level + 1));
       dom.home.addEventListener("click", () => this.showMenu());
       dom.rank.addEventListener("click", () => this.openRankModal());
@@ -579,11 +589,6 @@
 
     createBackdrop() {
       this.bgSprite = null;
-      if (textures[ASSETS.menu]) {
-        this.bgSprite = new PIXI.Sprite(textures[ASSETS.menu]);
-        this.bgSprite.alpha = 0.44;
-        this.backdrop.addChild(this.bgSprite);
-      }
       this.bgWash = new PIXI.Graphics();
       this.backdrop.addChild(this.bgWash);
       this.bgSparks = [];
@@ -600,6 +605,13 @@
         this.backdrop.addChild(spark);
         this.bgSparks.push(spark);
       }
+    }
+
+    applyBackdropTexture() {
+      if (this.bgSprite || !textures[ASSETS.menu]) return;
+      this.bgSprite = new PIXI.Sprite(textures[ASSETS.menu]);
+      this.bgSprite.alpha = 0.44;
+      this.backdrop.addChildAt(this.bgSprite, 0);
     }
 
     async start(level) {
@@ -633,7 +645,9 @@
       this.boardLayer.visible = false;
       this.showLoading(this.level);
       await nextFrame();
-      await waitMs(80);
+      await Promise.all([ensureGameTextures(), waitMs(120)]);
+      if (token !== this.startToken) return;
+      this.applyBackdropTexture();
       const ready = this.generateLevel(this.level, token);
       if (!ready || token !== this.startToken) return;
       this.hideLoading();
@@ -691,7 +705,10 @@
       this.bestLevel = clamp(Math.max(this.bestLevel, readInt(STORAGE.bestLevel, 1)), 1, MAX_LEVEL);
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
       dom.bestLevel.textContent = String(this.bestLevel);
-      dom.bestMoves.textContent = `${LEVEL_TIME_LIMIT}s+`;
+      dom.bestMoves.textContent = `${LEVEL_TIME_LIMIT}초+`;
+      if (dom.playLabel) {
+        dom.playLabel.textContent = this.bestLevel > 1 ? `Lv ${this.bestLevel} 계속하기` : "게임 시작";
+      }
     }
 
     showLoading(level) {
