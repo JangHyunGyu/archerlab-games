@@ -421,5 +421,16 @@
         flush: flushQueue
     };
 
+    if (!window.ArcherGames && script && script.src) {
+        var runtimeScript = document.createElement('script');
+        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260802-runtime-v1');
+        runtimeScript.async = false;
+        runtimeScript.setAttribute('data-game-id', gameId);
+        if (!/^(?:jewelria|solo-leveling|archerlab-games)$/.test(gameId)) {
+            runtimeScript.setAttribute('data-service-worker', 'sw.js');
+        }
+        document.head.appendChild(runtimeScript);
+    }
+
     scheduleFlush(0);
 })();

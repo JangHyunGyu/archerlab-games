@@ -1,7 +1,6 @@
 import { gravityIntervalMs } from "./gravity.mjs?v=20260712-stage-speed-v1";
+import { RankClient } from "./ranking.mjs?v=20260802-modules-v1";
 
-const GAME_ID = "lumen-shift";
-const RANK_API_BASE = "https://game-api.yama5993.workers.dev";
 const COLS = 10;
 const ROWS = 20;
 const VISIBLE_NEXT = 5;
@@ -15,7 +14,6 @@ const TOUCH_CONTROL_KEY_LAYOUT_KEY = "touchControlKeyLayout:v3";
 const TOUCH_CONTROL_KEY_LAYOUT_LEGACY_KEY = "touchControlKeyLayout:v2";
 const TOUCH_EDIT_LABEL = "키편집";
 const TOUCH_EDIT_DONE_LABEL = "키편집 종료";
-const MAX_RANK_EVENT_QUEUE = 96;
 const AUDIO_ASSET_VERSION = "20260705-audio-v9";
 const ENABLE_GENERATED_TONE_LOOPS = false;
 
@@ -345,110 +343,6 @@ function safeAreaInsets() {
     right: cssPx(style.getPropertyValue("--safe-right")),
     bottom: cssPx(style.getPropertyValue("--safe-bottom")),
   };
-}
-
-class RankClient {
-  constructor() {
-    this.sessionId = "";
-    this.queue = [];
-    this.disabled = false;
-    this.syncing = false;
-  }
-
-  async start() {
-    this.sessionId = "";
-    this.queue = [];
-    this.disabled = false;
-    try {
-      const res = await fetch(`${RANK_API_BASE}/score-sessions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ game_id: GAME_ID }),
-      });
-      if (!res.ok) throw new Error(`session ${res.status}`);
-      const data = await res.json();
-      this.sessionId = data.session_id || "";
-      if (!this.sessionId) throw new Error("empty session");
-    } catch {
-      this.disabled = true;
-    }
-  }
-
-  record(event) {
-    if (this.disabled || !this.sessionId || !event) return;
-    const delta = Math.floor(Number(event.delta || 0));
-    if (!Number.isFinite(delta) || delta <= 0) return;
-    this.queue.push({
-      ...event,
-      delta,
-      level: Math.floor(Number(event.level || 1)),
-      combo: Math.floor(Number(event.combo || 0)),
-      at: Date.now(),
-    });
-    if (this.queue.length > MAX_RANK_EVENT_QUEUE) {
-      this.queue.splice(0, this.queue.length - MAX_RANK_EVENT_QUEUE);
-    }
-    if (this.queue.length >= 8) {
-      this.flush().catch(() => null);
-    }
-  }
-
-  async flush() {
-    if (this.disabled || !this.sessionId || this.syncing || this.queue.length === 0) return false;
-    this.syncing = true;
-    try {
-      while (this.queue.length > 0) {
-        const events = this.queue.slice(0, 20);
-        const res = await fetch(`${RANK_API_BASE}/score-events`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            game_id: GAME_ID,
-            session_id: this.sessionId,
-            events,
-          }),
-        });
-        if (!res.ok) throw new Error(`events ${res.status}`);
-        this.queue.splice(0, events.length);
-      }
-      return true;
-    } catch {
-      this.disabled = true;
-      this.queue = [];
-      return false;
-    } finally {
-      this.syncing = false;
-    }
-  }
-
-  async submit(playerName, score, extraData) {
-    if (this.disabled || !this.sessionId) throw new Error("ranking offline");
-    const synced = await this.flush();
-    if (!synced) throw new Error("score sync failed");
-    const res = await fetch(`${RANK_API_BASE}/rankings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
-        game_id: GAME_ID,
-        player_name: playerName,
-        score: Math.floor(score),
-        session_id: this.sessionId,
-        extra_data: extraData,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `submit ${res.status}`);
-    return data;
-  }
-
-  async fetchTop(limit = 20) {
-    const res = await fetch(`${RANK_API_BASE}/rankings?game_id=${encodeURIComponent(GAME_ID)}&limit=${limit}`, {
-      headers: { Accept: "application/json" },
-    });
-    if (!res.ok) throw new Error(`ranking ${res.status}`);
-    const data = await res.json();
-    return Array.isArray(data.rankings) ? data.rankings : [];
-  }
 }
 
 class AudioDirector {
