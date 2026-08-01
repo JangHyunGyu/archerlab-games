@@ -32,6 +32,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/setup-python@v5
+        if: matrix.game == 'school-zombie-defense'
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pillow
+        if: matrix.game == 'school-zombie-defense'
       - run: npm run test:game -- --game=${{ matrix.game }}
 
   shared-and-assets:

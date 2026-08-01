@@ -20,14 +20,24 @@ function walk(directory, files = []) {
 }
 
 const assets = walk(root).sort((a, b) => a.localeCompare(b)).map((absolute) => {
-  const data = fs.readFileSync(absolute);
+  const raw = fs.readFileSync(absolute);
+  // SVG is text and may be checked out with CRLF on Windows. Hash a canonical
+  // LF representation so the manifest is identical on every build host.
+  const data = path.extname(absolute).toLowerCase() === '.svg'
+    ? Buffer.from(raw.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8')
+    : raw;
   return {
     path: path.relative(root, absolute).replaceAll('\\', '/'),
     bytes: data.length,
     sha256: crypto.createHash('sha256').update(data).digest('hex')
   };
 });
-const manifest = `${JSON.stringify({ version: 1, algorithm: 'sha256', assets }, null, 2)}\n`;
+const manifest = `${JSON.stringify({
+  version: 2,
+  algorithm: 'sha256',
+  textNormalization: 'svg-lf',
+  assets
+}, null, 2)}\n`;
 
 if (process.argv.includes('--check')) {
   const current = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : '';
