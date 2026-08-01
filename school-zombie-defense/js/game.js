@@ -32,13 +32,14 @@
   const DEFAULT_GAME_SPEED = GAME_SPEED_STEPS[0];
   const SKILL_REROLL_BASE_COST = 5;
 
-  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  const rand = (min, max) => Math.random() * (max - min) + min;
-  const formatGameSpeedLabel = (speed) => Number.isInteger(speed) ? `×${speed}.0` : `×${speed}`;
-  const formatRunClock = (elapsed = 0) => {
-    const total = Math.max(0, Math.floor(Number(elapsed) || 0));
-    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-  };
+  const {
+    clamp,
+    rand,
+    formatGameSpeedLabel,
+    formatRunClock,
+    choose,
+    shuffleItems
+  } = window.SchoolZombieCore;
   const announceGameStatus = (message) => {
     const status = document.getElementById("game-a11y-status");
     if (status) {
@@ -129,15 +130,6 @@
     };
     window.requestAnimationFrame(step);
   });
-  const choose = (items) => items[Math.floor(Math.random() * items.length)];
-  const shuffleItems = (items) => {
-    const copy = [...items];
-    for (let i = copy.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy;
-  };
   const TEAM_BASE_DAMAGE = 28;
   const getTeamDamageForLevel = () => TEAM_BASE_DAMAGE;
   const BASE_CRIT_CHANCE = 0.08;
@@ -785,88 +777,21 @@
     "charger"
   ];
 
-  function createDefaultMetaSave() {
-    const save = {
-      coins: 0,
-      upgrades: {}
-    };
-    getAllShopUpgradeIds().forEach((id) => {
-      save.upgrades[id] = 0;
-    });
-    return save;
-  }
-
-  function normalizeMetaSave(save) {
-    const defaults = createDefaultMetaSave();
-    const next = {
-      coins: Math.max(0, Math.floor(Number(save?.coins) || 0)),
-      upgrades: { ...defaults.upgrades }
-    };
-    Object.keys(defaults.upgrades).forEach((id) => {
-      next.upgrades[id] = clamp(Math.floor(Number(save?.upgrades?.[id]) || 0), 0, SHOP_MAX_LEVEL);
-    });
-    const oldGunLevel = clamp(Math.floor(Number(save?.upgrades?.gun) || 0), 0, SHOP_MAX_LEVEL);
-    const oldBowLevel = clamp(Math.floor(Number(save?.upgrades?.bow) || 0), 0, SHOP_MAX_LEVEL);
-    const oldLauncherLevel = clamp(Math.floor(Number(save?.upgrades?.launcher) || 0), 0, SHOP_MAX_LEVEL);
-    if (oldGunLevel > 0) {
-      ["c_power", "b_power", "e_power"].forEach((id) => {
-        next.upgrades[id] = Math.max(next.upgrades[id], oldGunLevel);
-      });
-    }
-    if (oldBowLevel > 0) {
-      next.upgrades.a_power = Math.max(next.upgrades.a_power, oldBowLevel);
-    }
-    if (oldLauncherLevel > 0) {
-      next.upgrades.d_charge = Math.max(next.upgrades.d_charge, oldLauncherLevel);
-    }
-    return next;
-  }
-
-  function loadMetaSave() {
-    try {
-      return normalizeMetaSave(JSON.parse(window.localStorage.getItem(META_CACHE_KEY) || "{}"));
-    } catch (error) {
-      return createDefaultMetaSave();
-    }
-  }
-
-  function saveMetaSave(save) {
-    try {
-      const normalized = normalizeMetaSave(save);
-      window.localStorage.setItem(META_CACHE_KEY, JSON.stringify(normalized));
-      window.localStorage.removeItem(META_SAVE_KEY);
-    } catch (error) {
-      // Storage can be unavailable in private or embedded browser modes.
-    }
-  }
-
-  function loadProfileAuth() {
-    try {
-      const auth = JSON.parse(window.localStorage.getItem(PROFILE_AUTH_KEY) || "{}");
-      const profileId = String(auth.profile_id || "").trim();
-      const profileSecret = String(auth.profile_secret || "").trim();
-      return profileId && profileSecret
-        ? { profile_id: profileId, profile_secret: profileSecret }
-        : null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  function saveProfileAuth(auth) {
-    try {
-      if (!auth?.profile_id || !auth?.profile_secret) {
-        window.localStorage.removeItem(PROFILE_AUTH_KEY);
-        return;
-      }
-      window.localStorage.setItem(PROFILE_AUTH_KEY, JSON.stringify({
-        profile_id: String(auth.profile_id),
-        profile_secret: String(auth.profile_secret)
-      }));
-    } catch (error) {
-      // Storage can be unavailable in private or embedded browser modes.
-    }
-  }
+  const {
+    createDefaultMetaSave,
+    normalizeMetaSave,
+    loadMetaSave,
+    saveMetaSave,
+    loadProfileAuth,
+    saveProfileAuth
+  } = window.SchoolZombiePersistence.create({
+    getUpgradeIds: getAllShopUpgradeIds,
+    maxLevel: SHOP_MAX_LEVEL,
+    clamp,
+    cacheKey: META_CACHE_KEY,
+    legacySaveKey: META_SAVE_KEY,
+    profileAuthKey: PROFILE_AUTH_KEY
+  });
 
   function isLocalDebugHost() {
     const host = String(window.location.hostname || "");
