@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -7,19 +8,19 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputPath = path.join(root, 'asset-manifest.json');
 const extensions = new Set(['.png', '.webp', '.jpg', '.jpeg', '.gif', '.svg', '.mp3', '.wav', '.ogg', '.m4a', '.wasm']);
-const ignored = new Set(['.git', 'node_modules', 'tmp', 'test-results', 'playwright-report', '.wrangler']);
+const trackedAssets = childProcess.execFileSync('git', ['ls-files', '-z'], {
+  cwd: root,
+  encoding: 'utf8'
+})
+  .split('\0')
+  .filter(Boolean)
+  .map((relative) => relative.replaceAll('\\', '/'))
+  .filter((relative) => extensions.has(path.extname(relative).toLowerCase()))
+  .filter((relative) => fs.existsSync(path.join(root, ...relative.split('/'))))
+  .sort();
 
-function walk(directory, files = []) {
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (ignored.has(entry.name)) continue;
-    const absolute = path.join(directory, entry.name);
-    if (entry.isDirectory()) walk(absolute, files);
-    else if (extensions.has(path.extname(entry.name).toLowerCase())) files.push(absolute);
-  }
-  return files;
-}
-
-const assets = walk(root).sort((a, b) => a.localeCompare(b)).map((absolute) => {
+const assets = trackedAssets.map((relative) => {
+  const absolute = path.join(root, ...relative.split('/'));
   const raw = fs.readFileSync(absolute);
   // SVG is text and may be checked out with CRLF on Windows. Hash a canonical
   // LF representation so the manifest is identical on every build host.
@@ -27,7 +28,7 @@ const assets = walk(root).sort((a, b) => a.localeCompare(b)).map((absolute) => {
     ? Buffer.from(raw.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8')
     : raw;
   return {
-    path: path.relative(root, absolute).replaceAll('\\', '/'),
+    path: relative,
     bytes: data.length,
     sha256: crypto.createHash('sha256').update(data).digest('hex')
   };

@@ -4419,14 +4419,14 @@
       "sha256": "dca177b8b0be91c70e8c30b8555f977efaa30532334a8830c3ad0c8e2f83a07e"
     },
     {
-      "path": "school-zombie-defense/assets/sounds/sfx/core_full_repair.mp3",
-      "bytes": 44556,
-      "sha256": "5b945345cddb447a0e3ebde1af2db5a87b905c6e79c8b3c49d412eced6f4e159"
-    },
-    {
       "path": "school-zombie-defense/assets/sounds/sfx/core.wav",
       "bytes": 26504,
       "sha256": "ca7d680daae9bf40adb8e14a8659d3fb6e1ba41715896961cba4d0fd9485c0c3"
+    },
+    {
+      "path": "school-zombie-defense/assets/sounds/sfx/core_full_repair.mp3",
+      "bytes": 44556,
+      "sha256": "5b945345cddb447a0e3ebde1af2db5a87b905c6e79c8b3c49d412eced6f4e159"
     },
     {
       "path": "school-zombie-defense/assets/sounds/sfx/crit.wav",
@@ -4434,14 +4434,14 @@
       "sha256": "6e91a7391e2c3172f747b80bc1c3d20767228da1745d216c6f1fef5eca493ece"
     },
     {
-      "path": "school-zombie-defense/assets/sounds/sfx/death_elite.mp3",
-      "bytes": 44556,
-      "sha256": "f0da6bc7bddf197b1d33826e2937c020263ed64e9cf634b7bbeb46da431cbe73"
-    },
-    {
       "path": "school-zombie-defense/assets/sounds/sfx/death.mp3",
       "bytes": 18477,
       "sha256": "aa71fd89ce89d232bb0660db05a4ac3255059d26db571c4a13c534eb49ae2dd1"
+    },
+    {
+      "path": "school-zombie-defense/assets/sounds/sfx/death_elite.mp3",
+      "bytes": 44556,
+      "sha256": "f0da6bc7bddf197b1d33826e2937c020263ed64e9cf634b7bbeb46da431cbe73"
     },
     {
       "path": "school-zombie-defense/assets/sounds/sfx/denied.mp3",
@@ -4449,14 +4449,14 @@
       "sha256": "3601cf2f00d3fb4ba7de23cd835be332b826f1d5f3de0f98596a103edd034465"
     },
     {
-      "path": "school-zombie-defense/assets/sounds/sfx/explosion_large.mp3",
-      "bytes": 44556,
-      "sha256": "e61ea2894a28f335ec4348e61af07335237747f9f310509a989cdfe635a7f694"
-    },
-    {
       "path": "school-zombie-defense/assets/sounds/sfx/explosion.wav",
       "bytes": 63548,
       "sha256": "8c97833338900cbeb040afcebb72b72ab4b91a935bbaff20d3535a5209b4a982"
+    },
+    {
+      "path": "school-zombie-defense/assets/sounds/sfx/explosion_large.mp3",
+      "bytes": 44556,
+      "sha256": "e61ea2894a28f335ec4348e61af07335237747f9f310509a989cdfe635a7f694"
     },
     {
       "path": "school-zombie-defense/assets/sounds/sfx/firebomb_fire.mp3",
@@ -4772,171 +4772,6 @@
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f3-c4.png",
       "bytes": 255161,
       "sha256": "4021c80ee1f8a8dae141852557b29a8e8aa58c0cd5185738f132cf8f05ff73b5"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/avatar-candidate-1-b7f2f924-04f1-4795-84b0-9efdffebaa2f.png",
-      "bytes": 4368398,
-      "sha256": "6a43a08256f3f4f2ce4b9b3632e5040c90ad00364b051689e94ef7d7146a2076"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/avatar-candidate-2-df9528a9-07cd-4a68-b9fb-ff494ad96a40.png",
-      "bytes": 4394929,
-      "sha256": "9a76e6483c6ba24d8efbdbe545b822398a6daed97ae36771d760029117aa4ed4"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/avatar-selected-alpha.png",
-      "bytes": 3511416,
-      "sha256": "3e372c2480365d6115e8529c6f1f20c0c9c2786ac9a26a678cf17fdbaaff51fa"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c0-keypose-candidate-1-c22648e4-3ce6-466d-94c5-ecbe262d4124.png",
-      "bytes": 2901569,
-      "sha256": "7d0be13666d78d8979ab19df49da4752a15c317a6d952893f2841e294df9a149"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c0-keypose-candidate-2-2a61855f-91c3-46b4-ad98-f30cec41e129.png",
-      "bytes": 2868257,
-      "sha256": "525732ce14126d29658a9c2e335e6a8cf2c09bd6de9f1ee0ecd638d9877b3588"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c1-keypose-candidate-1-012ea072-5f05-4c2c-86f8-73a5f011f77b.png",
-      "bytes": 2926286,
-      "sha256": "4eb839e41372cde199a2cad89fbf844e50be5e52c2fec2898140bce45fceae74"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c1-keypose-candidate-2-1c0abd59-62a5-4530-b40f-b63c7075ad0b.png",
-      "bytes": 2905152,
-      "sha256": "78cd7c0aa2c8e6610893d25c2a68a052bdb71f9321aa613d8be49fba28f7c0e7"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c2-keypose-candidate-1-f1c683b1-a52a-4a96-9abd-e65cb2c4cfef.png",
-      "bytes": 2977392,
-      "sha256": "c8a3c81bdcc8248cec2ba48367861e6f650d9a35eb7efed585adb0f794ec61ec"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c2-keypose-candidate-2-7b299a3a-f895-4d68-ae23-cf1f1c4e821e.png",
-      "bytes": 2929373,
-      "sha256": "d8b1ed3746c24a7ad7f85b18c9ac040f00a04dc5c9d564f716aad3b15e7d0c39"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c3-keypose-attempt2-candidate-1-8ea9dfec-ebda-4852-9ffc-e66425e1ebc8.png",
-      "bytes": 2916485,
-      "sha256": "1997d10441815c531b0088d1b6b85482a5e018c4002566180db73ef792e600df"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c3-keypose-attempt2-candidate-2-f345d30b-4bd7-472f-947a-aab1c43100ed.png",
-      "bytes": 2887812,
-      "sha256": "ecdc5d4ea6d176ab9da3967107a6bdd6e0da388769961a5e0c2cb29f97f0d77f"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c3-keypose-candidate-1-ceaae52f-344b-4e99-aab9-69e34ff87bb6.png",
-      "bytes": 2899886,
-      "sha256": "9ab20481580e6e25d79abd0de61091f30693de699a0c2531ca50d22c83c4bb92"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c3-keypose-candidate-2-59a73ebe-4dfe-4ea4-806c-44309547d23e.png",
-      "bytes": 2831680,
-      "sha256": "4c41a5f98b41a67129b3c922c0b58df4bfc7a4ec27fa65aacc777e563e52c34e"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c4-keypose-attempt2-candidate-1-08fd200f-7997-4e77-a047-5429039c3c7f.png",
-      "bytes": 2905430,
-      "sha256": "72c91544ae41f604af4aaad343c47ba98eb61d26e57ec09156309127d856ed62"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c4-keypose-attempt2-candidate-2-9232749a-61f7-41c9-8454-87d1d722ee1d.png",
-      "bytes": 3000939,
-      "sha256": "3c548160772f63d3f14f3cd8f994cffe8b73825d04596c7bdc64b2e4c129cf9c"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c4-keypose-candidate-1-3ab2e4c1-ab77-4c13-add5-40ffebf98169.png",
-      "bytes": 3011404,
-      "sha256": "80a7187f214c37f9d6c5d7600531d04ba8ea764e9329687a6d4ec0780330b6a2"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/c4-keypose-candidate-2-8ba266bb-696d-46c4-a7b1-19e0162f2dea.png",
-      "bytes": 2909755,
-      "sha256": "fe179cb87eb80ea1cafd738c873d933a89625b2d04ef83710ee35dd55b94cfea"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/crossbow-sfx-candidate-1-510188f8.mp3",
-      "bytes": 8795,
-      "sha256": "fcd4cdbb8c291b333ce4aba47f84dcde65d5b68f29949f902f6ccf2815e01da6"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/crossbow-sfx-candidate-2-0b55124d.mp3",
-      "bytes": 8795,
-      "sha256": "099f550323bb3498d6a45abb4e088299bc1dc7cb544ba4aa389e17b9df786a82"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/force-candidate-1-63707eda-4191-4157-8506-84f15eeac206.png",
-      "bytes": 6027995,
-      "sha256": "9f2291355a8f61b104be5ece86f674a5152b42aa0ce879681f6d0ae67545ed02"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/force-selected-alpha.png",
-      "bytes": 5768636,
-      "sha256": "c9a21ec36e142a5ec9d2ac75d89b07c6af87460c588ba2ab3ff8ab5cbb21ebe8"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/muzzle-candidate-1-198d384e-36ce-4ce0-a54d-959746ae9d5d.png",
-      "bytes": 1789846,
-      "sha256": "8d40fae69d5914659cadf2dcab52e5029158531988342a62645aff45585ca66e"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/muzzle-candidate-2-e2579f65-3e53-46fa-b11d-178d047ecf76.png",
-      "bytes": 1834491,
-      "sha256": "ae2d14a251257c2636069e6b14f13dd031506cdb5c4b42c857944c723b6b2cc8"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/muzzle-selected-alpha.png",
-      "bytes": 60164,
-      "sha256": "a22267fb15220b5be2e0b90ce52d5323aa29d2efbb2e3a126fe4bbfd0d44b9fd"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/pierce-candidate-1-7ca09143-032c-4c0d-a965-cda0eecd06e5.png",
-      "bytes": 5789397,
-      "sha256": "118604e82cadee8aba052821cee91aa6e3f8e26f53bcd33f07dc305c678746c3"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/pierce-candidate-2-46a80eec-e48a-4ff5-afde-8899e9191d78.png",
-      "bytes": 5520962,
-      "sha256": "1374b7e5cc4bdea9a7dc44cdbee1783c50473465bdf93042842f830755875e26"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/pierce-selected-alpha.png",
-      "bytes": 5040382,
-      "sha256": "2d0741fbe6dfab5a31f55bce253893b2566a003f536a3c3fd34441f365dcd708"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/pin-candidate-1-5596911f-c5a6-4b8e-ab31-0bdd75020e83.png",
-      "bytes": 5481374,
-      "sha256": "fc301bdb7eea7e0a0bbe373bd0fc26ff9a63cbb4f9dd6ef8ef45045f7b4e7fc9"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/pin-candidate-2a-130787e5-c049-4284-88d7-0cbbd5ef7c33.png",
-      "bytes": 5137459,
-      "sha256": "b48f220075d4496666313cd02e2df0b68c2dea2cbf43677345ad7039df883767"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/pin-candidate-2b-2b94de89-a087-4aa5-aaff-3da41860a14b.png",
-      "bytes": 5835228,
-      "sha256": "9b2834127d1c372ee35ae4a015f12f655e45e44357df3cfdb8ec77de6745e32f"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/pin-selected-alpha.png",
-      "bytes": 5029920,
-      "sha256": "066c7c973528411db94f4c1915b9ea81655c72d61296a1573e1fd991cab06b62"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/projectile-bolt-alpha.png",
-      "bytes": 378114,
-      "sha256": "7798ee18c805fbd280ed50d6b1a717c01d3fc27c71973fd7553144df5595d5f3"
-    },
-    {
-      "path": "school-zombie-defense/design/source-assets/crossbow-v1/generated/projectile-bolt-source.png",
-      "bytes": 3185311,
-      "sha256": "867406934310f3e99a1697ad51e12b0fd57b88c962dee7d1bbb75cafcffb81ae"
     },
     {
       "path": "slimevolley/assets/images/ball.png",
@@ -6924,16 +6759,6 @@
       "sha256": "783ec82356843b44b8d9ef9c2f4c80ae3d9fd78154a10f3ce7d72df5c55442ae"
     },
     {
-      "path": "solo-leveling/assets/effects/character_skills/light_lance_pierce.png",
-      "bytes": 146736,
-      "sha256": "6659a03d6912c32f379fd9286e4be341287b4148b60acdcd3c32f007195a5f9a"
-    },
-    {
-      "path": "solo-leveling/assets/effects/character_skills/light_lance_pierce.webp",
-      "bytes": 116564,
-      "sha256": "22720a7107a2414ecfd7619495755cc15e0a04daef0b2cf644d67dec694b1084"
-    },
-    {
       "path": "solo-leveling/assets/effects/character_skills/light_lance.png",
       "bytes": 81020,
       "sha256": "ccb0cfd9438b40938334b18b5d63933ff7e84ef341d97d672aef8aa7d51352a7"
@@ -6942,6 +6767,16 @@
       "path": "solo-leveling/assets/effects/character_skills/light_lance.webp",
       "bytes": 49510,
       "sha256": "237cf5130e8c90a956b36c0c7813d7c7d79370b5fa7307c3e956168f563a5d96"
+    },
+    {
+      "path": "solo-leveling/assets/effects/character_skills/light_lance_pierce.png",
+      "bytes": 146736,
+      "sha256": "6659a03d6912c32f379fd9286e4be341287b4148b60acdcd3c32f007195a5f9a"
+    },
+    {
+      "path": "solo-leveling/assets/effects/character_skills/light_lance_pierce.webp",
+      "bytes": 116564,
+      "sha256": "22720a7107a2414ecfd7619495755cc15e0a04daef0b2cf644d67dec694b1084"
     },
     {
       "path": "solo-leveling/assets/effects/character_skills/light_pierce.png",
@@ -7054,16 +6889,6 @@
       "sha256": "8b87601f3b5e783d2a26d125a01ecc3cf5a4d506dffb02aa4f853b2f7ff6c427"
     },
     {
-      "path": "solo-leveling/assets/effects/character_skills/tiger_fang_combo.png",
-      "bytes": 355313,
-      "sha256": "8729a20b1b2cf4e72fbf7ea422594d65d10ef1ecc02ab35a781aa84d10fe795b"
-    },
-    {
-      "path": "solo-leveling/assets/effects/character_skills/tiger_fang_combo.webp",
-      "bytes": 274104,
-      "sha256": "b2b98a54e8829371527881832931325ad942efb10f4283838b5186a8bd6ee9e7"
-    },
-    {
       "path": "solo-leveling/assets/effects/character_skills/tiger_fang.png",
       "bytes": 79588,
       "sha256": "04d6ff0a99d7db7bcae0cc65a9b735aa861544cc6d32cff7e9b7579d87e211cf"
@@ -7072,6 +6897,16 @@
       "path": "solo-leveling/assets/effects/character_skills/tiger_fang.webp",
       "bytes": 57092,
       "sha256": "81367ccd277c8c43224490b38e620d874788729718107df34c658bc3dc5c1e6c"
+    },
+    {
+      "path": "solo-leveling/assets/effects/character_skills/tiger_fang_combo.png",
+      "bytes": 355313,
+      "sha256": "8729a20b1b2cf4e72fbf7ea422594d65d10ef1ecc02ab35a781aa84d10fe795b"
+    },
+    {
+      "path": "solo-leveling/assets/effects/character_skills/tiger_fang_combo.webp",
+      "bytes": 274104,
+      "sha256": "b2b98a54e8829371527881832931325ad942efb10f4283838b5186a8bd6ee9e7"
     },
     {
       "path": "solo-leveling/assets/effects/character_skills/tiger_guard.png",
@@ -12239,171 +12074,6 @@
       "sha256": "d229b2bd3894c5c9cf8002074db6d97a791442862aa9db60de7bae4addc5951c"
     },
     {
-      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/attack_down_chroma.png",
-      "bytes": 5132989,
-      "sha256": "1466952d5a34ae863d532d662095af32375ed108f880471f259eb140c84263d9"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/attack_right_chroma.png",
-      "bytes": 4687383,
-      "sha256": "c2eb27be51d45a9c2e86572ef11c4ed36053465c52c5139ce6c2a81218d57ec9"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/attack_up_chroma.png",
-      "bytes": 4406654,
-      "sha256": "610552aa1d587deb75f32dc82a64faf97bc268bc9f2054b51c3d80eb782c861f"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/walk_down_chroma.png",
-      "bytes": 4667337,
-      "sha256": "9d87e5dbfe8178f72b6a3376d4090e99782ce1daaac048fc69ebcf7033147ee5"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/walk_right_chroma.png",
-      "bytes": 4598262,
-      "sha256": "388a8b2a91e679f5a8c78ad615032863b2ae6ad579fcb8e1d502b17f47b92017"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/walk_up_chroma.png",
-      "bytes": 4505725,
-      "sha256": "f325ef206e03e551e461eab74656cc72ed7ae7d7c7fddb06e54e32b4f6c99272"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/attack_down_chroma.png",
-      "bytes": 4908629,
-      "sha256": "9253fc946785d21ba84545b34870bfb7033820a41295b8d3b576c994b605bb80"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/attack_right_chroma.png",
-      "bytes": 4775507,
-      "sha256": "0f56550e1e9686a0b0ad01eb5444e5484c947e0f9afb5d31f69d10ba9da1d813"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/attack_up_chroma.png",
-      "bytes": 4653697,
-      "sha256": "126ce72438f9cabe9e27189cb5dbb2ed76d2d872d3191d52d8bbedaf04db0297"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/walk_down_chroma.png",
-      "bytes": 5704271,
-      "sha256": "f23de6429dbb4f791e258ea085c75d6b9e89a88897f6190b7c297b03eb27f3ce"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/walk_right_chroma.png",
-      "bytes": 4601756,
-      "sha256": "3364e8c784036448721a774e22a7fb8e9ca3effcb98fdc4f57eb6c439ec1d43b"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/walk_up_chroma.png",
-      "bytes": 1692815,
-      "sha256": "1bade30bbac74338641015c9d88156cb6a983cd32ff996a2eebf2a444db5c125"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/attack_down_chroma.png",
-      "bytes": 4821318,
-      "sha256": "6b4184ffef25f2443b14b5a2508ff9bfd33566d35e8663c86e9cce2523acc2e2"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/attack_right_chroma.png",
-      "bytes": 4596161,
-      "sha256": "72e62f4a48a3bf292f5fb7e4af9a82207ae2579eeb05e4f1a8d66b8aa095af76"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/attack_up_chroma.png",
-      "bytes": 4610113,
-      "sha256": "68b63eef17f39813e45ebe6802e5429b83f8867630a94694bf2429a18b665da7"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/walk_down_chroma.png",
-      "bytes": 4516834,
-      "sha256": "7e69c1c2024584d33b7b3620d0d364e20e164b3a989a82ae168e8b71d8852b36"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/walk_right_chroma.png",
-      "bytes": 4483970,
-      "sha256": "03c8fb61950abbd64e91332ca75ca6c36bcf5c3864aafae81ccf20bab35744df"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/walk_up_chroma.png",
-      "bytes": 4686438,
-      "sha256": "6a55d89258847e21ac5d4c082ed388d76d6f3b56a710050034e1122c9d30ea0b"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/attack_down_chroma.png",
-      "bytes": 4795940,
-      "sha256": "01654dd869cab8def58809c4c4a2477f2d7dd779e25ad413374bbb72b4bb4bd8"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/attack_right_chroma.png",
-      "bytes": 4458827,
-      "sha256": "db851bb035fc1e22683c26b0198aba78f81d0d293c2093c1b210c66d41dbb36b"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/attack_up_chroma.png",
-      "bytes": 4796080,
-      "sha256": "1c95744d73473198d6407f6a3b4dfe85e53a4f0647f4ec17d63d053447649ae9"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/walk_down_chroma.png",
-      "bytes": 4852597,
-      "sha256": "957084f5cf716e3e41d6293b75e9129d3dbe3740007de5f08ccf81eed5a76806"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/walk_right_chroma.png",
-      "bytes": 5036060,
-      "sha256": "1279abbf4cd36d8891c58ee7d4a626fcec3a27aaa2fcec100c29c8be1271d96e"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/walk_up_chroma.png",
-      "bytes": 4555502,
-      "sha256": "0fa63008b699e51ce6fb350f2495bcd33cefc5d26044cda1a4fe99329c449133"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/weapons/light_sword_chroma.png",
-      "bytes": 1051261,
-      "sha256": "9c3aef4fab685e505a8bf38ea138667547356042c9c4498286214aa5dc184810"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/weapons/sanctuary_staff_chroma.png",
-      "bytes": 1046707,
-      "sha256": "b0c17855cff3d0037069be2542bdeacfa6721458d4d0e915f8ea477290698401"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/weapons/shadow_dagger_chroma.png",
-      "bytes": 1127625,
-      "sha256": "408be6a512cb05e1f31cfc3c8fa831b29bd013d0ffaa1e9398eb11cccb788124"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/attack_down_chroma.png",
-      "bytes": 5722608,
-      "sha256": "287a4045f05d00510bc7833174bcc040757ee4eeed73511ab27163592e4510bb"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/attack_right_chroma.png",
-      "bytes": 5471693,
-      "sha256": "dbbcad9ac44433d0c03b20df22b4d171d462a54ef8f8ad214360ac62488afe46"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/attack_up_chroma.png",
-      "bytes": 5687210,
-      "sha256": "f5dffe228db71b20f0abe73dfd7785d4f936bcc93477af82a5e0d10c856ae79a"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/walk_down_chroma.png",
-      "bytes": 5826667,
-      "sha256": "e32a9b04b04db2ec5666e15a70c445d5f3a14865a0f7020ffa36add2f4019b79"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/walk_right_chroma.png",
-      "bytes": 5820270,
-      "sha256": "84b70b357a0ae5f53e512f02a51a6698c8e403be51966d35192f0dfbe2611a79"
-    },
-    {
-      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/walk_up_chroma.png",
-      "bytes": 5342858,
-      "sha256": "354810a11f366755cdb52bdcdc48c47b1a49caf167aca39175763f50deaf4a74"
-    },
-    {
       "path": "solo-leveling/assets/player/motion/player_attack_0.png",
       "bytes": 14705,
       "sha256": "55adff3ad5d5bb4ddbf382a2be098a5e22a628feb9d87c1ccfb6a97e25b46faa"
@@ -13084,6 +12754,171 @@
       "sha256": "c34e843f6c7dc8c5a7a7e2534283be9fcc9fd53985f2be8b00942a4d8c0aaa2a"
     },
     {
+      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/attack_down_chroma.png",
+      "bytes": 5132989,
+      "sha256": "1466952d5a34ae863d532d662095af32375ed108f880471f259eb140c84263d9"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/attack_right_chroma.png",
+      "bytes": 4687383,
+      "sha256": "c2eb27be51d45a9c2e86572ef11c4ed36053465c52c5139ce6c2a81218d57ec9"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/attack_up_chroma.png",
+      "bytes": 4406654,
+      "sha256": "610552aa1d587deb75f32dc82a64faf97bc268bc9f2054b51c3d80eb782c861f"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/walk_down_chroma.png",
+      "bytes": 4667337,
+      "sha256": "9d87e5dbfe8178f72b6a3376d4090e99782ce1daaac048fc69ebcf7033147ee5"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/walk_right_chroma.png",
+      "bytes": 4598262,
+      "sha256": "388a8b2a91e679f5a8c78ad615032863b2ae6ad579fcb8e1d502b17f47b92017"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/walk_up_chroma.png",
+      "bytes": 4505725,
+      "sha256": "f325ef206e03e551e461eab74656cc72ed7ae7d7c7fddb06e54e32b4f6c99272"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/attack_down_chroma.png",
+      "bytes": 4908629,
+      "sha256": "9253fc946785d21ba84545b34870bfb7033820a41295b8d3b576c994b605bb80"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/attack_right_chroma.png",
+      "bytes": 4775507,
+      "sha256": "0f56550e1e9686a0b0ad01eb5444e5484c947e0f9afb5d31f69d10ba9da1d813"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/attack_up_chroma.png",
+      "bytes": 4653697,
+      "sha256": "126ce72438f9cabe9e27189cb5dbb2ed76d2d872d3191d52d8bbedaf04db0297"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/walk_down_chroma.png",
+      "bytes": 5704271,
+      "sha256": "f23de6429dbb4f791e258ea085c75d6b9e89a88897f6190b7c297b03eb27f3ce"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/walk_right_chroma.png",
+      "bytes": 4601756,
+      "sha256": "3364e8c784036448721a774e22a7fb8e9ca3effcb98fdc4f57eb6c439ec1d43b"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/light_swordswoman/walk_up_chroma.png",
+      "bytes": 1692815,
+      "sha256": "1bade30bbac74338641015c9d88156cb6a983cd32ff996a2eebf2a444db5c125"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/attack_down_chroma.png",
+      "bytes": 4821318,
+      "sha256": "6b4184ffef25f2443b14b5a2508ff9bfd33566d35e8663c86e9cce2523acc2e2"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/attack_right_chroma.png",
+      "bytes": 4596161,
+      "sha256": "72e62f4a48a3bf292f5fb7e4af9a82207ae2579eeb05e4f1a8d66b8aa095af76"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/attack_up_chroma.png",
+      "bytes": 4610113,
+      "sha256": "68b63eef17f39813e45ebe6802e5429b83f8867630a94694bf2429a18b665da7"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/walk_down_chroma.png",
+      "bytes": 4516834,
+      "sha256": "7e69c1c2024584d33b7b3620d0d364e20e164b3a989a82ae168e8b71d8852b36"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/walk_right_chroma.png",
+      "bytes": 4483970,
+      "sha256": "03c8fb61950abbd64e91332ca75ca6c36bcf5c3864aafae81ccf20bab35744df"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/sanctuary_healer/walk_up_chroma.png",
+      "bytes": 4686438,
+      "sha256": "6a55d89258847e21ac5d4c082ed388d76d6f3b56a710050034e1122c9d30ea0b"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/attack_down_chroma.png",
+      "bytes": 4795940,
+      "sha256": "01654dd869cab8def58809c4c4a2477f2d7dd779e25ad413374bbb72b4bb4bd8"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/attack_right_chroma.png",
+      "bytes": 4458827,
+      "sha256": "db851bb035fc1e22683c26b0198aba78f81d0d293c2093c1b210c66d41dbb36b"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/attack_up_chroma.png",
+      "bytes": 4796080,
+      "sha256": "1c95744d73473198d6407f6a3b4dfe85e53a4f0647f4ec17d63d053447649ae9"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/walk_down_chroma.png",
+      "bytes": 4852597,
+      "sha256": "957084f5cf716e3e41d6293b75e9129d3dbe3740007de5f08ccf81eed5a76806"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/walk_right_chroma.png",
+      "bytes": 5036060,
+      "sha256": "1279abbf4cd36d8891c58ee7d4a626fcec3a27aaa2fcec100c29c8be1271d96e"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/shadow_monarch/walk_up_chroma.png",
+      "bytes": 4555502,
+      "sha256": "0fa63008b699e51ce6fb350f2495bcd33cefc5d26044cda1a4fe99329c449133"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/weapons/light_sword_chroma.png",
+      "bytes": 1051261,
+      "sha256": "9c3aef4fab685e505a8bf38ea138667547356042c9c4498286214aa5dc184810"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/weapons/sanctuary_staff_chroma.png",
+      "bytes": 1046707,
+      "sha256": "b0c17855cff3d0037069be2542bdeacfa6721458d4d0e915f8ea477290698401"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/weapons/shadow_dagger_chroma.png",
+      "bytes": 1127625,
+      "sha256": "408be6a512cb05e1f31cfc3c8fa831b29bd013d0ffaa1e9398eb11cccb788124"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/attack_down_chroma.png",
+      "bytes": 5722608,
+      "sha256": "287a4045f05d00510bc7833174bcc040757ee4eeed73511ab27163592e4510bb"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/attack_right_chroma.png",
+      "bytes": 5471693,
+      "sha256": "dbbcad9ac44433d0c03b20df22b4d171d462a54ef8f8ad214360ac62488afe46"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/attack_up_chroma.png",
+      "bytes": 5687210,
+      "sha256": "f5dffe228db71b20f0abe73dfd7785d4f936bcc93477af82a5e0d10c856ae79a"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/walk_down_chroma.png",
+      "bytes": 5826667,
+      "sha256": "e32a9b04b04db2ec5666e15a70c445d5f3a14865a0f7020ffa36add2f4019b79"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/walk_right_chroma.png",
+      "bytes": 5820270,
+      "sha256": "84b70b357a0ae5f53e512f02a51a6698c8e403be51966d35192f0dfbe2611a79"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/white_tiger_brawler/walk_up_chroma.png",
+      "bytes": 5342858,
+      "sha256": "354810a11f366755cdb52bdcdc48c47b1a49caf167aca39175763f50deaf4a74"
+    },
+    {
       "path": "solo-leveling/assets/player/player_idle.png",
       "bytes": 18410,
       "sha256": "dd4e22c8984c37b02f2b520733189738b909980a065e1b10b5c17dddfcf6d699"
@@ -13544,16 +13379,6 @@
       "sha256": "3211b69be7fbe8062e4dc45bfe8324977e4f3c544f5909c58265f8ddc964db48"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/hunter_card_normal_imagegen.png",
-      "bytes": 1869245,
-      "sha256": "596287b2d912516fa23698f2adad251b227a6ccca6bdad552e94d35d525cf090"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/hunter_card_normal_imagegen.webp",
-      "bytes": 95202,
-      "sha256": "7b75dc3071d69d859817943a4a43828ee38a59a4906cc48e9f83015921c4c490"
-    },
-    {
       "path": "solo-leveling/assets/ui/menu/hunter_card_normal.png",
       "bytes": 10043,
       "sha256": "1597e7b3d2d469a0dd41d71736e45f05dca07f9956f4838c326680ce4301df88"
@@ -13564,14 +13389,14 @@
       "sha256": "c8c09b1944304c3468f5e867cfe3fb7532fe9528468c6ffa54bf3b21649658a1"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/hunter_card_selected_imagegen.png",
-      "bytes": 1489431,
-      "sha256": "49dd4291558f330351a1eb3c9b7fa4da6c451b52ffef3da3b9c99e5a613f9ece"
+      "path": "solo-leveling/assets/ui/menu/hunter_card_normal_imagegen.png",
+      "bytes": 1869245,
+      "sha256": "596287b2d912516fa23698f2adad251b227a6ccca6bdad552e94d35d525cf090"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/hunter_card_selected_imagegen.webp",
-      "bytes": 103982,
-      "sha256": "7b6f55ce7e4036b8416d619c57bff760ae88dd34d57a0d1ed08b90701aaa819f"
+      "path": "solo-leveling/assets/ui/menu/hunter_card_normal_imagegen.webp",
+      "bytes": 95202,
+      "sha256": "7b75dc3071d69d859817943a4a43828ee38a59a4906cc48e9f83015921c4c490"
     },
     {
       "path": "solo-leveling/assets/ui/menu/hunter_card_selected.png",
@@ -13582,6 +13407,16 @@
       "path": "solo-leveling/assets/ui/menu/hunter_card_selected.webp",
       "bytes": 7244,
       "sha256": "98cf987970280f73672fff3b2fc72cb3d890a64cc642539eddc07a38926174b0"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/hunter_card_selected_imagegen.png",
+      "bytes": 1489431,
+      "sha256": "49dd4291558f330351a1eb3c9b7fa4da6c451b52ffef3da3b9c99e5a613f9ece"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/hunter_card_selected_imagegen.webp",
+      "bytes": 103982,
+      "sha256": "7b6f55ce7e4036b8416d619c57bff760ae88dd34d57a0d1ed08b90701aaa819f"
     },
     {
       "path": "solo-leveling/assets/ui/menu/icon_empty_record.png",
@@ -13664,16 +13499,6 @@
       "sha256": "bd4f1b9efed55ea0f42e259800ec9e11ba24dc81169b75c666c48321e5e42b5d"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/modal_frame_cyan_imagegen.png",
-      "bytes": 1179037,
-      "sha256": "c6c6e8a748a64c6a8834c1c9a0b24dc1189eeae78b9ffca8ca165606da3c1dff"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/modal_frame_cyan_imagegen.webp",
-      "bytes": 72078,
-      "sha256": "536b1f0cc3afe35633c44e85b784011253cec426a701ff9c09f753889fcab914"
-    },
-    {
       "path": "solo-leveling/assets/ui/menu/modal_frame_cyan.png",
       "bytes": 24726,
       "sha256": "e9ec9479048a01ba4b17407e7c7d48e90a508df29062f3016ab4aeb30c4e9bdc"
@@ -13684,14 +13509,14 @@
       "sha256": "46dae3f947c9908bf8f689b0e8f9df3abf535778e975c6d98ec93ea82c15c48c"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/modal_frame_gold_imagegen.png",
-      "bytes": 1285702,
-      "sha256": "4dc8b006977f831491ae3d87dfa48184b9dab51952c50bb403132efb872db901"
+      "path": "solo-leveling/assets/ui/menu/modal_frame_cyan_imagegen.png",
+      "bytes": 1179037,
+      "sha256": "c6c6e8a748a64c6a8834c1c9a0b24dc1189eeae78b9ffca8ca165606da3c1dff"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/modal_frame_gold_imagegen.webp",
-      "bytes": 88884,
-      "sha256": "8455678b25d762e3cf754da9b9c4efe0dbbd0d77d17f8e4e2151a1d0c25a2b1a"
+      "path": "solo-leveling/assets/ui/menu/modal_frame_cyan_imagegen.webp",
+      "bytes": 72078,
+      "sha256": "536b1f0cc3afe35633c44e85b784011253cec426a701ff9c09f753889fcab914"
     },
     {
       "path": "solo-leveling/assets/ui/menu/modal_frame_gold.png",
@@ -13702,6 +13527,16 @@
       "path": "solo-leveling/assets/ui/menu/modal_frame_gold.webp",
       "bytes": 9186,
       "sha256": "c57e6044909473707757f09bd25612b28082945537a3754a13d60291d389daf3"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/modal_frame_gold_imagegen.png",
+      "bytes": 1285702,
+      "sha256": "4dc8b006977f831491ae3d87dfa48184b9dab51952c50bb403132efb872db901"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/modal_frame_gold_imagegen.webp",
+      "bytes": 88884,
+      "sha256": "8455678b25d762e3cf754da9b9c4efe0dbbd0d77d17f8e4e2151a1d0c25a2b1a"
     },
     {
       "path": "solo-leveling/assets/ui/menu/preload_bar_fill.png",
@@ -13734,16 +13569,6 @@
       "sha256": "c4de20b9747e19cf804a3411b6668546f68a6aa4e1bf3bcf6206e141f24028d5"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/rank_card_1_imagegen.png",
-      "bytes": 1423775,
-      "sha256": "1b783f6da36701d9c96e6464284d58e30df42821be9744c34086799af506af29"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/rank_card_1_imagegen.webp",
-      "bytes": 109314,
-      "sha256": "d273d158113092069c5456c3c2552c83f10d25b53b56e7a03c87f3c8557ea1dc"
-    },
-    {
       "path": "solo-leveling/assets/ui/menu/rank_card_1.png",
       "bytes": 13003,
       "sha256": "08eaa3217fc66ae97ee72dadba1b0277dca7e3cca7a2b3ea85e7f4aa6f65c266"
@@ -13754,14 +13579,14 @@
       "sha256": "4a5bc502a5ffd77a02851eb391c90016a0041925226730feb5c35aae278d6f34"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/rank_card_2_imagegen.png",
-      "bytes": 1440594,
-      "sha256": "56ff978107030846792fa8dc639b43b862c72cf55799ded027e38bc602531c8f"
+      "path": "solo-leveling/assets/ui/menu/rank_card_1_imagegen.png",
+      "bytes": 1423775,
+      "sha256": "1b783f6da36701d9c96e6464284d58e30df42821be9744c34086799af506af29"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/rank_card_2_imagegen.webp",
-      "bytes": 91168,
-      "sha256": "0a2148439565ecdc2d0716b6d9236b6cc57f5398d542365eee95fa88efc7cf2e"
+      "path": "solo-leveling/assets/ui/menu/rank_card_1_imagegen.webp",
+      "bytes": 109314,
+      "sha256": "d273d158113092069c5456c3c2552c83f10d25b53b56e7a03c87f3c8557ea1dc"
     },
     {
       "path": "solo-leveling/assets/ui/menu/rank_card_2.png",
@@ -13774,14 +13599,14 @@
       "sha256": "3b6d57dbd261e2e24a5ac6dc0d7addd3e4ff0a3a20f8b6ad0c49e215f0238919"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/rank_card_3_imagegen.png",
-      "bytes": 1216273,
-      "sha256": "ca423dfdba14da81a5c0b117ee1fb1743a735367da3350a7e2bee82026dc88cd"
+      "path": "solo-leveling/assets/ui/menu/rank_card_2_imagegen.png",
+      "bytes": 1440594,
+      "sha256": "56ff978107030846792fa8dc639b43b862c72cf55799ded027e38bc602531c8f"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/rank_card_3_imagegen.webp",
-      "bytes": 98784,
-      "sha256": "ed448d4c6b743be3ab1f4178adf7c5a3edede249feb772c9aeb239c24fed89f4"
+      "path": "solo-leveling/assets/ui/menu/rank_card_2_imagegen.webp",
+      "bytes": 91168,
+      "sha256": "0a2148439565ecdc2d0716b6d9236b6cc57f5398d542365eee95fa88efc7cf2e"
     },
     {
       "path": "solo-leveling/assets/ui/menu/rank_card_3.png",
@@ -13794,6 +13619,16 @@
       "sha256": "c39a6f2e5479eec6750c1affce042b7fc895b88e91bb275dbd6939a8adaaf198"
     },
     {
+      "path": "solo-leveling/assets/ui/menu/rank_card_3_imagegen.png",
+      "bytes": 1216273,
+      "sha256": "ca423dfdba14da81a5c0b117ee1fb1743a735367da3350a7e2bee82026dc88cd"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/rank_card_3_imagegen.webp",
+      "bytes": 98784,
+      "sha256": "ed448d4c6b743be3ab1f4178adf7c5a3edede249feb772c9aeb239c24fed89f4"
+    },
+    {
       "path": "solo-leveling/assets/ui/menu/shadow_gate_backdrop.png",
       "bytes": 2039028,
       "sha256": "f0f362f7c87f407c2bf6a2821177c543c611c87b9e25a88f760a6280204f661c"
@@ -13802,36 +13637,6 @@
       "path": "solo-leveling/assets/ui/menu/shadow_gate_backdrop.webp",
       "bytes": 133566,
       "sha256": "7ad33f7c3e4d8ff4da804315e4c81da20891ccda42106581c19fa1f2f3617793"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/start_button_primary_hover.png",
-      "bytes": 377581,
-      "sha256": "9252bfab79d428e3ef99cd9e4fe06a260d91c60708b80db589524a739ede2a18"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/start_button_primary_hover.webp",
-      "bytes": 47140,
-      "sha256": "3edf3911d04792529ba5909183372b5f2b46775a5d664cdfc975401b4b0664d8"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/start_button_primary_wide_hover.png",
-      "bytes": 18013,
-      "sha256": "66a1defe9c467d5b12c329c2041819c9eb8c7e29a1dc7d036418f4bdda00613b"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/start_button_primary_wide_hover.webp",
-      "bytes": 9376,
-      "sha256": "33768cc711a8898b9dab5e610598ef330c8244b13ea65d6d61b20f91a19c7086"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/start_button_primary_wide.png",
-      "bytes": 13933,
-      "sha256": "31a2a1135822e18e57cc8450f7e18a6378b40566a3e4f5fa190e0551ea64aa2b"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/start_button_primary_wide.webp",
-      "bytes": 7002,
-      "sha256": "7c9d9ece4ccbae9606a07425e5a654d9fcc3dc1b26dc9cd1b318ad28fa729f58"
     },
     {
       "path": "solo-leveling/assets/ui/menu/start_button_primary.png",
@@ -13844,6 +13649,46 @@
       "sha256": "3af4f602cc2b7c6ffbb4239588d08ac03791c75047898aa967e04b2ec2a6989e"
     },
     {
+      "path": "solo-leveling/assets/ui/menu/start_button_primary_hover.png",
+      "bytes": 377581,
+      "sha256": "9252bfab79d428e3ef99cd9e4fe06a260d91c60708b80db589524a739ede2a18"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/start_button_primary_hover.webp",
+      "bytes": 47140,
+      "sha256": "3edf3911d04792529ba5909183372b5f2b46775a5d664cdfc975401b4b0664d8"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/start_button_primary_wide.png",
+      "bytes": 13933,
+      "sha256": "31a2a1135822e18e57cc8450f7e18a6378b40566a3e4f5fa190e0551ea64aa2b"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/start_button_primary_wide.webp",
+      "bytes": 7002,
+      "sha256": "7c9d9ece4ccbae9606a07425e5a654d9fcc3dc1b26dc9cd1b318ad28fa729f58"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/start_button_primary_wide_hover.png",
+      "bytes": 18013,
+      "sha256": "66a1defe9c467d5b12c329c2041819c9eb8c7e29a1dc7d036418f4bdda00613b"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/start_button_primary_wide_hover.webp",
+      "bytes": 9376,
+      "sha256": "33768cc711a8898b9dab5e610598ef330c8244b13ea65d6d61b20f91a19c7086"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/start_button_secondary.png",
+      "bytes": 488491,
+      "sha256": "c936959ea7bb921e33e8183b9a04826e8f52e4214935e5460656e9806238c5ef"
+    },
+    {
+      "path": "solo-leveling/assets/ui/menu/start_button_secondary.webp",
+      "bytes": 58352,
+      "sha256": "162180817809998638f5fd573774f484801fd0961ff4ccdebb67bf519f9fa785"
+    },
+    {
       "path": "solo-leveling/assets/ui/menu/start_button_secondary_hover.png",
       "bytes": 508065,
       "sha256": "5f0ad71cf6a7262d2f75e7d19d0855c21833a2d20848f0daaa5650f1eb28a4ad"
@@ -13852,16 +13697,6 @@
       "path": "solo-leveling/assets/ui/menu/start_button_secondary_hover.webp",
       "bytes": 64082,
       "sha256": "db6e59e7ff43afe7a023226ece69b9fafca625edc5e0f87f36faffae24c8b591"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/start_button_secondary_wide_hover.png",
-      "bytes": 17052,
-      "sha256": "01572e18c6d34d2ce1e8e587cbe138ba75c5cf2297ea6c0be905c3c713242477"
-    },
-    {
-      "path": "solo-leveling/assets/ui/menu/start_button_secondary_wide_hover.webp",
-      "bytes": 8848,
-      "sha256": "3b78264842e9cc1e6ba8a70c62e73739d1ff8574e69b0e6e2a40c10d4f23214d"
     },
     {
       "path": "solo-leveling/assets/ui/menu/start_button_secondary_wide.png",
@@ -13874,14 +13709,14 @@
       "sha256": "fcb0526cbbb75cba40fd9e57a5acf88c5cab0be4a23a04b3af978e764a29caef"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/start_button_secondary.png",
-      "bytes": 488491,
-      "sha256": "c936959ea7bb921e33e8183b9a04826e8f52e4214935e5460656e9806238c5ef"
+      "path": "solo-leveling/assets/ui/menu/start_button_secondary_wide_hover.png",
+      "bytes": 17052,
+      "sha256": "01572e18c6d34d2ce1e8e587cbe138ba75c5cf2297ea6c0be905c3c713242477"
     },
     {
-      "path": "solo-leveling/assets/ui/menu/start_button_secondary.webp",
-      "bytes": 58352,
-      "sha256": "162180817809998638f5fd573774f484801fd0961ff4ccdebb67bf519f9fa785"
+      "path": "solo-leveling/assets/ui/menu/start_button_secondary_wide_hover.webp",
+      "bytes": 8848,
+      "sha256": "3b78264842e9cc1e6ba8a70c62e73739d1ff8574e69b0e6e2a40c10d4f23214d"
     },
     {
       "path": "solo-leveling/assets/ui/ui_button_cyan.png",
@@ -14054,6 +13889,16 @@
       "sha256": "1773f7edcba3ef165b94475bd9ecd29a28e444a93815a615cc53de648e3f5cb6"
     },
     {
+      "path": "solo-leveling/sounds/bossAppear.wav",
+      "bytes": 70604,
+      "sha256": "9cea89a13e6bde9faaaf7113d9f81a85e1b57d5a543e5a33351d755dc8364a63"
+    },
+    {
+      "path": "solo-leveling/sounds/bossKill.wav",
+      "bytes": 88244,
+      "sha256": "062ec1a45edfefeda914bf19031468d457abf72ca3b8d878f038cec2f78734a4"
+    },
+    {
       "path": "solo-leveling/sounds/boss_charge.wav",
       "bytes": 54728,
       "sha256": "87b75d4fc7c66e1e1d1c859a4bf25d4f32730d10bf41d3ff6e150edbfadfd63b"
@@ -14069,16 +13914,6 @@
       "sha256": "f1677cd382d086fd740031756645ce4bbafa693ba250ebd14e721f0e41063eb1"
     },
     {
-      "path": "solo-leveling/sounds/bossAppear.wav",
-      "bytes": 70604,
-      "sha256": "9cea89a13e6bde9faaaf7113d9f81a85e1b57d5a543e5a33351d755dc8364a63"
-    },
-    {
-      "path": "solo-leveling/sounds/bossKill.wav",
-      "bytes": 88244,
-      "sha256": "062ec1a45edfefeda914bf19031468d457abf72ca3b8d878f038cec2f78734a4"
-    },
-    {
       "path": "solo-leveling/sounds/burn_hit.wav",
       "bytes": 33560,
       "sha256": "de77726a24317d8c05de3038292027a4a91e05da05e10b81b818b0ec004ec614"
@@ -14089,14 +13924,14 @@
       "sha256": "16c584e9ee7874516f40f94e59679cf11c7f6d2402cc4b84c054a208b5ab4039"
     },
     {
-      "path": "solo-leveling/sounds/dagger_throw.wav",
-      "bytes": 88364,
-      "sha256": "721c1f6ad6d176242661cc99918dcf5a571961a86dfa8a4036e2ba11e7f529bc"
-    },
-    {
       "path": "solo-leveling/sounds/dagger.wav",
       "bytes": 69164,
       "sha256": "f8789c267ae95d88aa527a4fb8c52d5db47d64180e38edad0c96c20fdc5849f6"
+    },
+    {
+      "path": "solo-leveling/sounds/dagger_throw.wav",
+      "bytes": 88364,
+      "sha256": "721c1f6ad6d176242661cc99918dcf5a571961a86dfa8a4036e2ba11e7f529bc"
     },
     {
       "path": "solo-leveling/sounds/dungeonBreak.wav",
