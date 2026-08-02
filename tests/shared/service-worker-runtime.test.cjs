@@ -87,6 +87,15 @@ const event = {
     assert.match(worker, /service-worker-runtime\.js\?v=20260802-runtime-v2/);
   }
 
+  const jewelriaWorker = fs.readFileSync(path.join(root, 'jewelria/service-worker.js'), 'utf8');
+  assert.match(jewelriaWorker, /const copy = response\.clone\(\);\s*cacheWrite = caches\.open/);
+  assert.match(jewelriaWorker, /event\.waitUntil\(\s*result/);
+  assert.doesNotMatch(
+    jewelriaWorker,
+    /caches\.open\([^)]*\)\.then\([\s\S]{0,200}?response\.clone\(\)/,
+    'Jewelria must not defer cloning until after asynchronous cache access'
+  );
+
   console.log('shared service worker response cloning and cache lifetime verified');
 })().catch((error) => {
   console.error(error);

@@ -88,21 +88,30 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
+
+  const result = caches.match(event.request).then((cached) => {
+    if (cached) return { response: cached, cacheWrite: Promise.resolve() };
+    return fetch(event.request).then((response) => {
+      let cacheWrite = Promise.resolve();
+      if (response && response.ok) {
+        const copy = response.clone();
+        cacheWrite = caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      }
+      return { response, cacheWrite };
+    });
+  }).catch(() => ({
+    response: event.request.mode === 'navigate' || event.request.destination === 'document'
+      ? caches.match('./index.html')
+      : new Response('', { status: 504, statusText: 'Offline asset unavailable' }),
+    cacheWrite: Promise.resolve()
+  }));
+
+  event.waitUntil(
+    result
+      .then((entry) => entry.cacheWrite)
+      .catch(() => {})
+  );
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (response && response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        }
-        return response;
-      }).catch(() => {
-        if (event.request.mode === 'navigate' || event.request.destination === 'document') {
-          return caches.match('./index.html');
-        }
-        return new Response('', { status: 504, statusText: 'Offline asset unavailable' });
-      });
-    })
+    result.then((entry) => entry.response)
   );
 });
