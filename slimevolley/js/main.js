@@ -785,7 +785,7 @@ class SlimeVolleyGame {
 
         this.network.on('kicked', () => {
             this.network.disconnect();
-            this.lobby.showError('방장에 의해 퇴장되었습니다');
+            this.lobby.showError('방장이 내보냈습니다');
             this.lobby.showScreen('main-menu');
         });
 
