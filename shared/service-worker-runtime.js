@@ -23,24 +23,48 @@
                 }).then(function () { return scope.clients.claim(); }));
             });
 
+            function fetchAndCache(request, cacheKey) {
+                return fetch(request).then(function (response) {
+                    var cacheWrite = Promise.resolve();
+                    if (response.ok) {
+                        // Clone while the network response is still fresh. Delaying this
+                        // until caches.open() resolves can leave a stale-while-revalidate
+                        // response with an already-consumed body.
+                        var copy = response.clone();
+                        cacheWrite = caches.open(cacheName).then(function (cache) {
+                            return cache.put(cacheKey, copy);
+                        });
+                    }
+                    return { response: response, cacheWrite: cacheWrite };
+                });
+            }
+
+            function keepAlive(event, result) {
+                event.waitUntil(result.then(function (entry) {
+                    return entry.cacheWrite;
+                }).catch(function () {
+                    // A failed refresh must not break an already cached response.
+                }));
+            }
+
             scope.addEventListener('fetch', function (event) {
                 if (event.request.method !== 'GET') return;
                 var url = new URL(event.request.url);
                 if (url.origin !== scope.location.origin) return;
                 if (event.request.mode === 'navigate') {
-                    event.respondWith(fetch(event.request).then(function (response) {
-                        var copy = response.clone();
-                        caches.open(cacheName).then(function (cache) { cache.put('./index.html', copy); });
-                        return response;
+                    var navigation = fetchAndCache(event.request, './index.html');
+                    keepAlive(event, navigation);
+                    event.respondWith(navigation.then(function (entry) {
+                        return entry.response;
                     }).catch(function () { return caches.match('./index.html'); }));
                     return;
                 }
+                var update = fetchAndCache(event.request, event.request);
+                keepAlive(event, update);
                 event.respondWith(caches.match(event.request).then(function (cached) {
-                    var update = fetch(event.request).then(function (response) {
-                        if (response.ok) caches.open(cacheName).then(function (cache) { cache.put(event.request, response.clone()); });
-                        return response;
+                    return cached || update.then(function (entry) {
+                        return entry.response;
                     });
-                    return cached || update;
                 }));
             });
         }
