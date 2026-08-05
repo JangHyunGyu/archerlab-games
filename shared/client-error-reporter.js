@@ -43,6 +43,11 @@
         }
     }
 
+    function isAutomatedAgent() {
+        var userAgent = safeString(window.navigator && window.navigator.userAgent, '');
+        return /Google-Read-Aloud|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(userAgent);
+    }
+
     function stackFrom(value) {
         if (!value) return '';
         if (value.stack) return safeString(value.stack);
@@ -261,6 +266,7 @@
     }
 
     function report(payload) {
+        if (isAutomatedAgent()) return;
         if (!gameId || sentCount >= MAX_REPORTS_PER_PAGE) return;
         if (!payload || !payload.message) return;
 
@@ -423,7 +429,7 @@
 
     if (!window.ArcherGames && script && script.src) {
         var runtimeScript = document.createElement('script');
-        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260802-runtime-v1');
+        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260805-runtime-v2');
         runtimeScript.async = false;
         runtimeScript.setAttribute('data-game-id', gameId);
         if (!/^(?:jewelria|solo-leveling|archerlab-games)$/.test(gameId)) {

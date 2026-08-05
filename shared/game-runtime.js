@@ -9,6 +9,11 @@
         return String(value || 'archerlab-games').trim().replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
     }
 
+    function isAutomatedAgent() {
+        var userAgent = String(global.navigator && global.navigator.userAgent || '');
+        return /Google-Read-Aloud|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(userAgent);
+    }
+
     function Storage(namespace, storage) {
         this.namespace = normalizeGameId(namespace);
         this.storage = storage || global.localStorage;
@@ -172,7 +177,7 @@
     };
 
     function registerServiceWorker(url) {
-        if (!url || !global.navigator || !global.navigator.serviceWorker) return Promise.resolve(null);
+        if (!url || isAutomatedAgent() || !global.navigator || !global.navigator.serviceWorker) return Promise.resolve(null);
         return global.navigator.serviceWorker.register(url).catch(function (error) {
             if (global.ArcherLabClientErrorReporter) {
                 global.ArcherLabClientErrorReporter.report(error, { source: 'shared-service-worker', url: url });

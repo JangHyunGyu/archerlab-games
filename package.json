@@ -1,10 +1,11 @@
 {
   "private": true,
   "scripts": {
-    "test": "npm run test:matrix && npm run test:shared && npm run assets:check",
+    "test": "npm run test:matrix && npm run test:shared && npm run test:api && npm run assets:check",
     "test:matrix": "node scripts/run-test-matrix.mjs",
     "test:game": "node scripts/run-test-matrix.mjs",
-    "test:shared": "node tests/shared/game-runtime.test.cjs && node tests/shared/service-worker-runtime.test.cjs",
+    "test:shared": "node tests/shared/game-runtime.test.cjs && node tests/shared/client-error-reporter.test.cjs && node tests/shared/service-worker-runtime.test.cjs",
+    "test:api": "node tests/api/client-error-ingest.test.cjs",
     "assets:build": "node scripts/asset-manifest.mjs",
     "assets:check": "node scripts/asset-manifest.mjs --check"
   },

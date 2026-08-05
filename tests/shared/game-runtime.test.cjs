@@ -52,6 +52,34 @@ const ranking = window.ArcherGames.createRankingClient({
   assert.match(requests.at(-1).url, /limit=100$/);
   await listeners.load();
   assert.deepEqual(registrations, ['sw.js']);
+
+  const crawlerListeners = {};
+  const crawlerRegistrations = [];
+  const crawlerReports = [];
+  const crawlerWindow = {
+    localStorage: storage,
+    location: { pathname: '/blockpang/' },
+    navigator: {
+      userAgent: 'Mozilla/5.0 (compatible; Google-Read-Aloud)',
+      serviceWorker: {
+        register: async (url) => {
+          crawlerRegistrations.push(url);
+          throw new Error('Rejected');
+        }
+      }
+    },
+    document: { currentScript: { getAttribute: (key) => ({ 'data-game-id': 'blockpang', 'data-service-worker': 'sw.js' })[key] || null } },
+    addEventListener: (name, listener) => { crawlerListeners[name] = listener; },
+    ArcherLabClientErrorReporter: { report: (error) => crawlerReports.push(error) },
+    fetch: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+    Promise,
+    Date
+  };
+  crawlerWindow.window = crawlerWindow;
+  vm.runInNewContext(source, crawlerWindow, { filename: 'game-runtime.js' });
+  await crawlerListeners.load();
+  assert.deepEqual(crawlerRegistrations, []);
+  assert.deepEqual(crawlerReports, []);
   console.log('✓ shared game runtime storage/audio/ranking/service worker verified');
 })().catch((error) => {
   console.error(error);

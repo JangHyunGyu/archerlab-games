@@ -193,6 +193,10 @@ function safeJsonText(value) {
     }
 }
 
+function isAutomatedUserAgent(value) {
+    return /Google-Read-Aloud|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(String(value || ''));
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
@@ -219,6 +223,10 @@ async function insertErrorLog(db, request, payload) {
 async function storeClientError(db, request, body) {
     if (!isPlainObject(body)) {
         return jsonResponse({ error: 'invalid client error payload' }, 400);
+    }
+
+    if (isAutomatedUserAgent(request.headers.get('User-Agent'))) {
+        return jsonResponse({ ok: true, ignored: true });
     }
 
     const gameId = limitText(body.game_id || body.gameId || body.appId || 'archerlab-games', 100)
