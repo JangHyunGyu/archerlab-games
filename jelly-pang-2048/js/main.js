@@ -1459,8 +1459,10 @@
   }
 
   function hideRanks() {
+    const wasOpen = !refs.rankModal.classList.contains("hidden");
     refs.rankModal.classList.add("hidden");
     refs.rankModal.setAttribute("aria-hidden", "true");
+    if (!wasOpen) return;
     const target = refs.titleScreen.classList.contains("hidden") ? refs.homeGame : refs.rankOpen;
     target?.focus({ preventScroll: true });
   }
