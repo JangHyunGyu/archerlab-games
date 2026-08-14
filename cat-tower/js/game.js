@@ -191,6 +191,7 @@
   const NICK_KEY = 'cat-tower.nick';
   const RANK_EVENT_BATCH_LIMIT = 20;
   let rankSessionId = null;
+  let rankVerifiedScore = null;
   let rankSessionPromise = null;
   let rankEventQueue = [];
   let rankNextEventSeq = 1;
@@ -316,6 +317,7 @@
   // -------- 캔버스 & 리사이즈 --------
   function resetRankSessionState() {
     rankSessionId = null;
+    rankVerifiedScore = null;
     rankSessionPromise = null;
     rankEventQueue = [];
     rankNextEventSeq = 1;
@@ -366,6 +368,7 @@
     const data = await res.json();
     if (!data || !data.session_id) throw new Error('rank session response invalid');
     rankSessionId = data.session_id;
+    rankVerifiedScore = Number.isFinite(Number(data.score)) ? Number(data.score) : 0;
     markSaveDirty();
     return rankSessionId;
   }
@@ -445,6 +448,7 @@
         }
         const data = await res.json().catch(() => null);
         if (!data || data.success !== true) throw new Error('rank event response invalid');
+        if (Number.isFinite(Number(data.score))) rankVerifiedScore = Number(data.score);
         rankEventQueue.splice(0, batch.length);
         markSaveDirty();
       }
@@ -1608,7 +1612,10 @@
         synced = await flushRankEvents();
       }
       if (!rankSessionId || !synced || rankSyncFailed) throw new Error('rank score sync failed');
-      const res = await submitScore(name, score);
+      const rankingScore = Number.isFinite(rankVerifiedScore) && rankVerifiedScore > 0
+        ? rankVerifiedScore
+        : score;
+      const res = await submitScore(name, rankingScore);
       try { localStorage.setItem(NICK_KEY, name); } catch {}
       status.className = 'submit-status ok';
       status.textContent = tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');

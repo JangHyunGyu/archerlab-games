@@ -1866,10 +1866,8 @@ async function verifyCatTowerRankingSession(db, body, clientScore) {
     if (verifiedScore > CAT_TOWER_MAX_SCORE) {
         return { error: 'verified score exceeds allowed maximum', status: 400 };
     }
-    if (verifiedScore !== clientScore) {
-        return { error: 'client score does not match verified score', status: 400 };
-    }
-
+    // Display score can drift after a resume/flush race. Rank the
+    // authoritative session score and keep the client value only as extra_data.
     return { sessionId, score: verifiedScore };
 }
 
