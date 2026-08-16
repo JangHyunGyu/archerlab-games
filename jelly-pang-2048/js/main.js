@@ -170,8 +170,16 @@
   const refs = {
     shell: document.querySelector(".game-shell"),
     titleScreen: $("title-screen"),
+    gameSurface: [
+      document.querySelector(".topbar"),
+      document.querySelector(".score-row"),
+      document.querySelector(".play-area"),
+      document.querySelector(".control-dock"),
+    ].filter(Boolean),
     serverLoader: $("server-loader"),
     playGame: $("play-game"),
+    newGame: $("new-game"),
+    titleActions: document.querySelector(".title-actions"),
     homeGame: $("home-game"),
     soundToggle: $("sound-toggle"),
     mount: $("pixi-stage"),
@@ -197,6 +205,7 @@
     submitRank: $("submit-rank"),
     skipRank: $("skip-rank"),
     submitStatus: $("submit-status"),
+    gameStatus: $("game-status"),
   };
 
   let app;
@@ -224,6 +233,7 @@
   let ranking = null;
   let rankSubmitInFlight = false;
   let startInFlight = false;
+  let hasActiveGame = false;
   let serverTripCount = 0;
   let serverLoaderShownAt = 0;
   let serverLoaderHideTimer = null;
@@ -254,6 +264,8 @@
     appCanvas.style.height = "100%";
     appCanvas.tabIndex = 0;
     appCanvas.setAttribute("aria-label", "4 by 4 jelly merge board");
+    appCanvas.setAttribute("aria-describedby", "game-instructions");
+    appCanvas.setAttribute("aria-keyshortcuts", "ArrowUp ArrowDown ArrowLeft ArrowRight W A S D");
     if (refs.rankModal && refs.rankModal.parentElement !== document.body) {
       document.body.appendChild(refs.rankModal);
     }
@@ -284,6 +296,7 @@
     refs.shell?.classList.remove("is-server-loading");
     refs.serverLoader?.classList.add("hidden");
     refs.titleScreen.classList.add("hidden");
+    setGameSurfaceActive(true);
     refs.modal.classList.remove("hidden");
     refs.modal.setAttribute("aria-hidden", "false");
     refs.messageEyebrow.textContent = "Load error";
@@ -296,15 +309,57 @@
     locked = true;
     hideModal();
     hideRanks();
+    syncTitleActions();
     refs.titleScreen.classList.remove("hidden");
+    setGameSurfaceActive(false);
+    refs.titleScreen.scrollTop = 0;
+    window.setTimeout(() => {
+      refs.playGame.focus({ preventScroll: true });
+      refs.titleScreen.scrollTop = 0;
+    }, 0);
+  }
+
+  function setGameSurfaceActive(active) {
+    refs.gameSurface.forEach((surface) => {
+      surface.inert = !active;
+      if (active) surface.removeAttribute("aria-hidden");
+      else surface.setAttribute("aria-hidden", "true");
+    });
+  }
+
+  function syncTitleActions() {
+    const canResume = hasActiveGame && canMove();
+    refs.playGame.textContent = canResume ? "이어하기" : "게임 시작";
+    refs.newGame.hidden = !canResume;
+    refs.titleActions.classList.toggle("has-resume", canResume);
+  }
+
+  function focusGameBoard() {
+    window.setTimeout(() => appCanvas?.focus({ preventScroll: true }), 0);
+  }
+
+  function resumeGame() {
+    if (!hasActiveGame || !canMove()) {
+      startGame();
+      return;
+    }
+    resumeAudio();
+    playSound("start");
+    refs.titleScreen.classList.add("hidden");
+    setGameSurfaceActive(true);
+    locked = false;
+    announceGameState("게임을 이어합니다.");
+    focusGameBoard();
   }
 
   function startGame() {
     if (startInFlight) return;
     startInFlight = true;
+    hasActiveGame = false;
     resumeAudio();
     playSound("start");
     refs.titleScreen.classList.add("hidden");
+    setGameSurfaceActive(true);
     newGame().finally(() => {
       startInFlight = false;
     });
@@ -421,7 +476,8 @@
         w: "up",
         s: "down",
       };
-      const dir = map[event.key];
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      const dir = map[key];
       if (!dir) return;
       event.preventDefault();
       move(dir);
@@ -467,7 +523,14 @@
       });
     });
 
-    refs.playGame.addEventListener("click", () => startGame());
+    refs.playGame.addEventListener("click", () => {
+      if (hasActiveGame) resumeGame();
+      else startGame();
+    });
+    refs.newGame.addEventListener("click", () => {
+      if (!window.confirm("진행 중인 게임을 끝내고 새 게임을 시작할까요?")) return;
+      startGame();
+    });
     refs.homeGame.addEventListener("click", () => showTitle());
     refs.soundToggle.addEventListener("click", () => toggleSound());
     refs.rankOpen.addEventListener("click", () => openRanks());
@@ -527,7 +590,10 @@
       spawnRandomTile(true);
       hideGuide();
     }
+    hasActiveGame = true;
     locked = false;
+    announceGameState("새 게임을 시작합니다.");
+    focusGameBoard();
   }
 
   function emptyGrid() {
@@ -860,6 +926,7 @@
       shakeBoard(0.34);
       playSound("bump");
       playHaptic("bump");
+      announceGameState("움직일 수 없는 방향입니다.");
       return;
     }
 
@@ -1138,6 +1205,7 @@
     if (!won && !keepPlaying && hasRank(TARGET_RANK)) {
       won = true;
       locked = false;
+      announceGameState("왕관 젤리를 완성했습니다!");
       showModal("Crown Jelly", "You win!", "왕관 젤리를 계속 키워보세요.", true, false);
       celebrate();
       playSound("win");
@@ -1147,6 +1215,8 @@
 
     if (!canMove()) {
       locked = false;
+      hasActiveGame = false;
+      announceGameState("더 움직일 수 없습니다. 게임 오버입니다.");
       showModal("Game over", "No moves", "더 이상 움직일 수 없어요.", false, true);
       shakeBoard(0.6);
       playSound("gameover");
@@ -1155,6 +1225,21 @@
     }
 
     locked = false;
+    announceGameState(result.scoreGain > 0 ? `${formatScore(result.scoreGain)}점을 얻었습니다.` : "젤리를 움직였습니다.");
+  }
+
+  function announceGameState(message = "") {
+    let maxValue = 0;
+    const rows = grid.map((row) => row.map((tile) => {
+      if (!tile) return "빈칸";
+      const value = tileValue(tile.rank);
+      maxValue = Math.max(maxValue, value);
+      return String(value);
+    }).join(", "));
+    const emptyCount = emptyCells().length;
+    const summary = `점수 ${formatScore(score)}점. 최고 젤리 ${formatScore(maxValue)}. 빈 칸 ${emptyCount}개.`;
+    if (refs.gameStatus) refs.gameStatus.textContent = `${message} ${summary}`.trim();
+    if (appCanvas) appCanvas.setAttribute("aria-label", `4 곱하기 4 젤리 보드. ${rows.join(" / ")}. ${summary}`);
   }
 
   function canMove() {

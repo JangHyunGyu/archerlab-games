@@ -39,11 +39,11 @@
     "isAccessibleForFree": true,
     "playMode": "SinglePlayer",
     "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
-    "dateModified": "2026-07-19"
+    "dateModified": "2026-08-16"
   }
   </script>
   <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
-  <link rel="stylesheet" href="css/style.css?v=20260719-quality-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260816-resume-a11y-v3">
   <link rel="stylesheet" href="../shared/start-screen-premium.css?v=20260718-premium-v1">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
@@ -57,6 +57,8 @@
 <body data-game="jelly-pang">
   <noscript>젤리팡 2048을 플레이하려면 JavaScript를 활성화해 주세요.</noscript>
   <main class="game-shell" aria-label="Jelly Pang game">
+    <p id="game-instructions" class="sr-only">화면을 밀거나 방향 버튼, 키보드 방향키 또는 W A S D 키로 같은 숫자의 젤리를 합치세요.</p>
+    <p id="game-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
     <section id="title-screen" class="title-screen" aria-label="Jelly Pang start screen">
       <div class="title-bubbles" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span>
@@ -81,6 +83,7 @@
         </div>
         <div class="title-actions">
           <button id="play-game" class="title-play" type="button">게임 시작</button>
+          <button id="new-game" class="title-new" type="button" hidden>새 게임</button>
           <button id="rank-open-title" class="title-rank" type="button">명예의 전당</button>
         </div>
       </div>
@@ -93,7 +96,7 @@
         </div>
       </div>
     </div>
-    <header class="topbar">
+    <header class="topbar" aria-hidden="true" inert>
       <button id="home-game" class="icon-command home-command" type="button" aria-label="시작 화면으로 이동"></button>
       <div class="title-lockup">
         <p class="kicker">Merge Puzzle</p>
@@ -102,7 +105,7 @@
       <button id="sound-toggle" class="icon-command sound-command" type="button" aria-label="소리 끄기" aria-pressed="true"></button>
     </header>
 
-    <section class="score-row" aria-label="score board">
+    <section class="score-row" aria-label="score board" aria-hidden="true" inert>
       <div class="score-tile">
         <span>Score</span>
         <strong id="score" aria-live="polite">0</strong>
@@ -113,7 +116,7 @@
       </div>
     </section>
 
-    <section class="play-area">
+    <section class="play-area" aria-hidden="true" inert>
       <div id="stage-frame" class="stage-frame">
         <div id="pixi-stage" class="pixi-stage" aria-label="4 by 4 jelly merge board"></div>
         <div id="quick-guide" class="quick-guide" aria-hidden="true">
@@ -160,7 +163,7 @@
       </div>
     </section>
 
-    <footer class="control-dock" aria-label="direction controls">
+    <footer class="control-dock" aria-label="direction controls" aria-hidden="true" inert>
       <div class="swipe-pad" role="group" aria-label="방향 조작">
         <button type="button" data-dir="up" aria-label="위로 이동"></button>
         <button type="button" data-dir="left" aria-label="왼쪽으로 이동"></button>
@@ -173,6 +176,6 @@
   <script src="../assets/vendor/pixi/pixi-8.19.0.min.js"></script>
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
   <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
-  <script src="js/main.js?v=20260809-focus-v1" defer></script>
+  <script src="js/main.js?v=20260816-resume-a11y-v3" defer></script>
 </body>
 </html>
