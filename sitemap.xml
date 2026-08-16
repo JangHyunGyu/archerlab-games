@@ -44,4 +44,18 @@
     <loc>https://game.archerlab.dev/slimevolley/</loc>
     <lastmod>2026-07-07</lastmod>
   </url>
+<!-- traffic-pages:start -->
+  <url>
+    <loc>https://game.archerlab.dev/seo/quick-browser-games.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/mobile-and-keyboard-web-games.html</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<!-- traffic-pages:end -->
 </urlset>
