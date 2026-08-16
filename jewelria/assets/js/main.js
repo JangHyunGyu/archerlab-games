@@ -29,6 +29,7 @@ let input = null;
 let state = null;
 let selected = null;
 let locked = false;
+let resolving = false;
 let timerId = null;
 let rankSubmitInFlight = false;
 
@@ -52,9 +53,10 @@ async function boot() {
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('./service-worker.js').catch(() => {});
   }
-  window.addEventListener('pagehide', () => {
-    if (state?.status === 'playing') pauseTimer();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pauseGame({ playSound: false });
   });
+  window.addEventListener('pagehide', () => pauseGame({ playSound: false }));
 }
 
 function bindButtons() {
@@ -64,19 +66,10 @@ function bindButtons() {
   });
   on('home-btn', 'click', goTitle);
   on('pause-btn', 'click', () => {
-    if (!state || state.status !== 'playing') return;
-    audio.play('button');
-    locked = true;
-    input.setEnabled(false);
-    pauseTimer();
-    ui.showPause();
+    pauseGame();
   });
   on('resume-btn', 'click', () => {
-    audio.play('button');
-    ui.hidePause();
-    locked = false;
-    input.setEnabled(true);
-    resumeTimer();
+    resumeGame();
   });
   on('pause-restart-btn', 'click', () => {
     audio.play('button');
@@ -118,6 +111,7 @@ function startGame() {
   board.generateInitial();
   selected = null;
   locked = false;
+  resolving = false;
   state = {
     status: 'playing',
     stage: TIME_ATTACK,
@@ -161,6 +155,32 @@ function pauseTimer() {
   clearTimer();
 }
 
+function pauseGame({ playSound = true } = {}) {
+  if (!state || state.status !== 'playing') return false;
+  if (playSound) audio.play('button');
+  locked = true;
+  input.setEnabled(false);
+  pauseTimer();
+  if (state.timeUp || state.timeLeft <= 0) {
+    endGame();
+    return false;
+  }
+  state.status = 'paused';
+  ui.showPause();
+  return true;
+}
+
+function resumeGame() {
+  if (!state || state.status !== 'paused') return false;
+  audio.play('button');
+  state.status = 'playing';
+  ui.hidePause();
+  locked = resolving;
+  input.setEnabled(!resolving);
+  resumeTimer();
+  return true;
+}
+
 function resumeTimer() {
   if (!state || state.status !== 'playing') return;
   startTimer();
@@ -177,6 +197,7 @@ function goTitle() {
   audio.play('button');
   clearTimer();
   locked = false;
+  resolving = false;
   selected = null;
   state = null;
   input.setEnabled(false);
@@ -228,6 +249,7 @@ function handleKeyboardMove(dir) {
 
 async function attemptSwap(from, to) {
   if (!canPlay() || !state.board.areAdjacent(from, to)) return;
+  resolving = true;
   locked = true;
   input.setEnabled(false);
   state.board.swap(from, to);
@@ -358,6 +380,12 @@ function finishTurn() {
 }
 
 function unlockBoard() {
+  resolving = false;
+  if (state?.status === 'paused') {
+    locked = true;
+    input.setEnabled(false);
+    return;
+  }
   // 보드 처리 중 제한시간이 끝났다면 잠금 해제 대신 게임을 종료한다.
   if (state && (state.timeUp || state.timeLeft <= 0)) {
     endGame();
@@ -385,9 +413,11 @@ function endGame() {
   if (!state || state.status === 'result') return;
   clearTimer();
   locked = true;
+  resolving = false;
   input.setEnabled(false);
   state.status = 'result';
   state.timeLeft = 0;
+  ui.hidePause();
   const bestScore = updateBestScore(state.score);
   audio.play('clear');
   audio.startAmbient('main');
