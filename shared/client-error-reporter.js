@@ -180,6 +180,42 @@
         );
     }
 
+    function probeImageResource(source) {
+        if (!source || typeof window.Image !== 'function') return Promise.resolve(false);
+        return new Promise(function (resolve) {
+            var settled = false;
+            var probe = new window.Image();
+            var timer = window.setTimeout(function () { finish(false); }, 4000);
+            function finish(reachable) {
+                if (settled) return;
+                settled = true;
+                if (typeof window.clearTimeout === 'function') window.clearTimeout(timer);
+                probe.onload = null;
+                probe.onerror = null;
+                resolve(reachable);
+            }
+            probe.onload = function () { finish(true); };
+            probe.onerror = function () { finish(false); };
+            try {
+                var probeUrl = new URL(source, window.location.href);
+                probeUrl.searchParams.set('__resource_probe', Date.now().toString(36));
+                probe.src = probeUrl.href;
+            } catch {
+                finish(false);
+            }
+        });
+    }
+
+    function reportImageResourceErrorAfterProbe(source, payload) {
+        if (document.visibilityState === 'hidden') return;
+        probeImageResource(source).then(function (reachable) {
+            if (reachable || document.visibilityState === 'hidden') return;
+            report(payload);
+        }).catch(function () {
+            if (document.visibilityState !== 'hidden') report(payload);
+        });
+    }
+
     function loadQueue() {
         try {
             var parsed = JSON.parse(window.localStorage.getItem(QUEUE_KEY) || '[]');
@@ -326,7 +362,7 @@
         if (target && target !== window && target !== document) {
             var source = target.currentSrc || target.src || target.href || '';
             if (isIgnorableResourceError(source, target)) return;
-            report({
+            var resourcePayload = {
                 error_type: 'resource_error',
                 message: 'Failed to load resource: ' + safeString(target.tagName || target.nodeName, 'unknown'),
                 source: source,
@@ -338,7 +374,12 @@
                     id: target.id || '',
                     className: target.className || ''
                 }
-            });
+            };
+            if (safeString(target.tagName || target.nodeName, '').toUpperCase() === 'IMG') {
+                reportImageResourceErrorAfterProbe(source, resourcePayload);
+                return;
+            }
+            report(resourcePayload);
             return;
         }
 
