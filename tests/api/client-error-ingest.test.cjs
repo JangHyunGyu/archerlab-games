@@ -55,6 +55,19 @@ function createDb() {
   assert.deepEqual(await crawlerResponse.json(), { ok: true, ignored: true });
   assert.equal(crawlerDb.writes.length, 0);
 
+  const yetiDb = createDb();
+  const yetiRequest = new Request('https://game-api.yama5993.workers.dev/client-errors', {
+    method: 'POST',
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd) Chrome/149.0.0.0 Safari/537.36' }
+  });
+  const yetiResponse = await context.__gameApiTest.storeClientError(yetiDb, yetiRequest, {
+    appId: 'parking_escape',
+    errorType: 'manual',
+    message: '[manual] Service Worker registration failed'
+  });
+  assert.deepEqual(await yetiResponse.json(), { ok: true, ignored: true });
+  assert.equal(yetiDb.writes.length, 0);
+
   const browserDb = createDb();
   const browserRequest = new Request('https://game-api.yama5993.workers.dev/client-errors', {
     method: 'POST',

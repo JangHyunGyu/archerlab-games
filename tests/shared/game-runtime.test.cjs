@@ -53,33 +53,38 @@ const ranking = window.ArcherGames.createRankingClient({
   await listeners.load();
   assert.deepEqual(registrations, ['sw.js']);
 
-  const crawlerListeners = {};
-  const crawlerRegistrations = [];
-  const crawlerReports = [];
-  const crawlerWindow = {
-    localStorage: storage,
-    location: { pathname: '/blockpang/' },
-    navigator: {
-      userAgent: 'Mozilla/5.0 (compatible; Google-Read-Aloud)',
-      serviceWorker: {
-        register: async (url) => {
-          crawlerRegistrations.push(url);
-          throw new Error('Rejected');
+  for (const userAgent of [
+    'Mozilla/5.0 (compatible; Google-Read-Aloud)',
+    'Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd) Chrome/149.0.0.0 Safari/537.36'
+  ]) {
+    const crawlerListeners = {};
+    const crawlerRegistrations = [];
+    const crawlerReports = [];
+    const crawlerWindow = {
+      localStorage: storage,
+      location: { pathname: '/blockpang/' },
+      navigator: {
+        userAgent,
+        serviceWorker: {
+          register: async (url) => {
+            crawlerRegistrations.push(url);
+            throw new Error('Rejected');
+          }
         }
-      }
-    },
-    document: { currentScript: { getAttribute: (key) => ({ 'data-game-id': 'blockpang', 'data-service-worker': 'sw.js' })[key] || null } },
-    addEventListener: (name, listener) => { crawlerListeners[name] = listener; },
-    ArcherLabClientErrorReporter: { report: (error) => crawlerReports.push(error) },
-    fetch: async () => ({ ok: true, status: 200, json: async () => ({}) }),
-    Promise,
-    Date
-  };
-  crawlerWindow.window = crawlerWindow;
-  vm.runInNewContext(source, crawlerWindow, { filename: 'game-runtime.js' });
-  await crawlerListeners.load();
-  assert.deepEqual(crawlerRegistrations, []);
-  assert.deepEqual(crawlerReports, []);
+      },
+      document: { currentScript: { getAttribute: (key) => ({ 'data-game-id': 'blockpang', 'data-service-worker': 'sw.js' })[key] || null } },
+      addEventListener: (name, listener) => { crawlerListeners[name] = listener; },
+      ArcherLabClientErrorReporter: { report: (error) => crawlerReports.push(error) },
+      fetch: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+      Promise,
+      Date
+    };
+    crawlerWindow.window = crawlerWindow;
+    vm.runInNewContext(source, crawlerWindow, { filename: 'game-runtime.js' });
+    await crawlerListeners.load();
+    assert.deepEqual(crawlerRegistrations, []);
+    assert.deepEqual(crawlerReports, []);
+  }
   console.log('✓ shared game runtime storage/audio/ranking/service worker verified');
 })().catch((error) => {
   console.error(error);

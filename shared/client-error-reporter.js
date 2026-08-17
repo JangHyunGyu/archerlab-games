@@ -45,7 +45,7 @@
 
     function isAutomatedAgent() {
         var userAgent = safeString(window.navigator && window.navigator.userAgent, '');
-        return /Google-Read-Aloud|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(userAgent);
+        return /Google-Read-Aloud|Yeti\/|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(userAgent);
     }
 
     function stackFrom(value) {
@@ -167,7 +167,7 @@
         // Search/rendering agents do not execute a complete browser lifecycle and
         // commonly cancel otherwise healthy image requests. Their resource errors
         // are not actionable player failures.
-        if (/Google-Read-Aloud|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(userAgent)) {
+        if (/Google-Read-Aloud|Yeti\/|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(userAgent)) {
             return true;
         }
         if (tag === 'IMG') {
@@ -470,7 +470,7 @@
 
     if (!window.ArcherGames && script && script.src) {
         var runtimeScript = document.createElement('script');
-        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260805-runtime-v2');
+        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260817-yeti-v1');
         runtimeScript.async = false;
         runtimeScript.setAttribute('data-game-id', gameId);
         if (!/^(?:jewelria|solo-leveling|archerlab-games)$/.test(gameId)) {

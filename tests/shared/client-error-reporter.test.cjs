@@ -65,6 +65,13 @@ crawler.window.ArcherLabClientErrorReporter.report(new Error('Rejected'), {
 });
 assert.equal(crawler.values.has('archerlab-client-error-queue:v2'), false);
 
+const yeti = loadReporter('Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd) Chrome/149.0.0.0 Safari/537.36');
+yeti.window.ArcherLabClientErrorReporter.report(new Error('Rejected'), {
+  source: 'shared-service-worker',
+  url: 'sw.js'
+});
+assert.equal(yeti.values.has('archerlab-client-error-queue:v2'), false);
+
 const browser = loadReporter('Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36');
 browser.window.ArcherLabClientErrorReporter.report(new Error('Real player failure'), {
   source: 'gameplay'
