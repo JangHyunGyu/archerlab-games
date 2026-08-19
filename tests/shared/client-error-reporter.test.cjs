@@ -21,15 +21,19 @@ function loadReporter(userAgent, options = {}) {
     head: { appendChild() {} },
     createElement: () => ({ setAttribute() {} })
   };
+  const timers = [];
   const window = {
     location: { href: 'https://game.archerlab.dev/blockpang/', pathname: '/blockpang/' },
-    navigator: { userAgent, language: 'ko' },
+    navigator: { userAgent, language: 'ko', onLine: options.onLine !== false },
     localStorage: {
       getItem: (key) => values.has(key) ? values.get(key) : null,
       setItem: (key, value) => values.set(key, value)
     },
     addEventListener(name, listener) { listeners[name] = listener; },
-    setTimeout: () => 1,
+    setTimeout: (callback) => {
+      timers.push(callback);
+      return timers.length;
+    },
     clearTimeout() {},
     fetch: async () => ({ ok: true }),
     console: { error() {} },
@@ -55,7 +59,14 @@ function loadReporter(userAgent, options = {}) {
   window.window = window;
   window.document = document;
   vm.runInNewContext(source, window, { filename: 'client-error-reporter.js' });
-  return { window, values, listeners };
+  return {
+    window,
+    values,
+    listeners,
+    flushTimers() {
+      while (timers.length) timers.shift()();
+    }
+  };
 }
 
 const crawler = loadReporter('Mozilla/5.0 (compatible; Google-Read-Aloud)');
@@ -101,9 +112,31 @@ console.log('✓ client error reporter automation filtering verified');
   });
   await Promise.resolve();
   await Promise.resolve();
+  missing.flushTimers();
   const missingQueue = JSON.parse(missing.values.get('archerlab-client-error-queue:v2'));
   assert.equal(missingQueue.length, 1);
   assert.equal(missingQueue[0].body.errorType, 'resource_error');
+
+  const broadOutage = loadReporter('Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36', { imageReachable: false });
+  for (let index = 0; index < 9; index += 1) {
+    broadOutage.listeners.error({
+      target: { tagName: 'IMG', currentSrc: `https://game.archerlab.dev/assets/image-${index}.png`, id: '', className: '' }
+    });
+  }
+  await Promise.resolve();
+  await Promise.resolve();
+  broadOutage.flushTimers();
+  const broadQueue = JSON.parse(broadOutage.values.get('archerlab-client-error-queue:v2'));
+  assert.equal(broadQueue.length, 1, 'a broad image outage should create one diagnostic report');
+  assert.match(broadQueue[0].body.message, /Multiple image resources failed to load/);
+  assert.equal(broadQueue[0].body.context.failedImageCount, 9);
+
+  const offline = loadReporter('Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36', { imageReachable: false, onLine: false });
+  offline.listeners.error({
+    target: { tagName: 'IMG', currentSrc: 'https://game.archerlab.dev/assets/offline.png', id: '', className: '' }
+  });
+  await Promise.resolve();
+  assert.equal(offline.values.has('archerlab-client-error-queue:v2'), false, 'offline image failures are not server defects');
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

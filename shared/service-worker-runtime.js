@@ -47,6 +47,14 @@
                 }));
             }
 
+            function unavailableResponse() {
+                return new Response('', {
+                    status: 503,
+                    statusText: 'Service Unavailable',
+                    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+                });
+            }
+
             scope.addEventListener('fetch', function (event) {
                 if (event.request.method !== 'GET') return;
                 var url = new URL(event.request.url);
@@ -56,7 +64,11 @@
                     keepAlive(event, navigation);
                     event.respondWith(navigation.then(function (entry) {
                         return entry.response;
-                    }).catch(function () { return caches.match('./index.html'); }));
+                    }).catch(function () {
+                        return caches.match('./index.html').then(function (cached) {
+                            return cached || unavailableResponse();
+                        });
+                    }));
                     return;
                 }
                 var update = fetchAndCache(event.request, event.request);
@@ -65,7 +77,7 @@
                     return cached || update.then(function (entry) {
                         return entry.response;
                     });
-                }));
+                }).catch(function () { return unavailableResponse(); }));
             });
         }
     });

@@ -206,13 +206,39 @@
         });
     }
 
+    var pendingImageFailures = [];
+    var imageFailureFlushTimer = null;
+
+    function flushImageResourceErrors() {
+        imageFailureFlushTimer = null;
+        var failures = pendingImageFailures.splice(0);
+        if (!failures.length || document.visibilityState === 'hidden' || (window.navigator && window.navigator.onLine === false)) return;
+        if (failures.length < 3) {
+            failures.forEach(function (failure) { report(failure.payload); });
+            return;
+        }
+        var first = failures[0].payload;
+        first.message = 'Multiple image resources failed to load';
+        first.context = Object.assign({}, first.context || {}, {
+            failedImageCount: failures.length,
+            failedImageSources: failures.map(function (failure) { return failure.source; }).slice(0, 20)
+        });
+        report(first);
+    }
+
+    function queueImageResourceError(source, payload) {
+        pendingImageFailures.push({ source: source, payload: payload });
+        if (imageFailureFlushTimer !== null) return;
+        imageFailureFlushTimer = window.setTimeout(flushImageResourceErrors, 750);
+    }
+
     function reportImageResourceErrorAfterProbe(source, payload) {
-        if (document.visibilityState === 'hidden') return;
+        if (document.visibilityState === 'hidden' || (window.navigator && window.navigator.onLine === false)) return;
         probeImageResource(source).then(function (reachable) {
             if (reachable || document.visibilityState === 'hidden') return;
-            report(payload);
+            queueImageResourceError(source, payload);
         }).catch(function () {
-            if (document.visibilityState !== 'hidden') report(payload);
+            if (document.visibilityState !== 'hidden') queueImageResourceError(source, payload);
         });
     }
 

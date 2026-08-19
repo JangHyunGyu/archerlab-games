@@ -32,6 +32,7 @@ const scope = {
 scope.self = scope;
 scope.URL = URL;
 scope.Promise = Promise;
+scope.Response = Response;
 scope.fetch = async () => networkResponse;
 scope.caches = {
   keys: async () => [],
@@ -84,8 +85,39 @@ const event = {
   ];
   for (const game of consumers) {
     const worker = fs.readFileSync(path.join(root, game, 'sw.js'), 'utf8');
-    assert.match(worker, /service-worker-runtime\.js\?v=20260802-runtime-v2/);
+    assert.match(worker, /service-worker-runtime\.js\?v=20260819-runtime-v3/);
   }
+
+  const failedScope = {
+    location: { origin: 'https://game.archerlab.dev' },
+    clients: { claim: async () => {} },
+    skipWaiting: async () => {},
+    URL,
+    Promise,
+    Response,
+    fetch: async () => { throw new Error('Failed to fetch'); },
+    caches: {
+      keys: async () => [],
+      delete: async () => true,
+      match: async () => null,
+      open: async () => ({ put: async () => {}, addAll: async () => {} })
+    },
+    addEventListener(name, listener) { this.listeners[name] = listener; },
+    listeners: {}
+  };
+  failedScope.self = failedScope;
+  vm.runInNewContext(source, failedScope, { filename: 'service-worker-runtime.js' });
+  failedScope.ArcherGameServiceWorker.install({ gameId: 'jelly-pang-2048', version: 'test' });
+  const failedWaiters = [];
+  const failedEvent = {
+    request: { method: 'GET', mode: 'cors', url: 'https://game.archerlab.dev/jelly-pang-2048/app.js' },
+    respondWith(promise) { this.response = promise; },
+    waitUntil(promise) { failedWaiters.push(promise); }
+  };
+  failedScope.listeners.fetch(failedEvent);
+  const unavailable = await failedEvent.response;
+  await Promise.all(failedWaiters);
+  assert.equal(unavailable.status, 503, 'an uncached network failure must resolve to a response');
 
   const jewelriaWorker = fs.readFileSync(path.join(root, 'jewelria/service-worker.js'), 'utf8');
   assert.match(jewelriaWorker, /const copy = response\.clone\(\);\s*cacheWrite = caches\.open/);
