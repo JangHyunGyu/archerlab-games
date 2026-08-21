@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SITE = 'https://game.archerlab.dev';
+const ORIGIN_TRIAL_META = '<meta http-equiv="origin-trial" content="Agn9opFYdjvT/UqEIvt4RnCkmN8Kt+8/lzvg731pKSz7MpNoJkLvra/pLOIFgR9GZb39JbBGeJ+CDO++Tus3FggAAABmeyJvcmlnaW4iOiJodHRwczovL2FyY2hlcmxhYi5kZXY6NDQzIiwiZmVhdHVyZSI6IkhUTUxJbkNhbnZhcyIsImV4cGlyeSI6MTc5MjQ1NDQwMCwiaXNTdWJkb21haW4iOnRydWV9">';
 const LASTMOD = '2026-07-10';
 
 const PAGES = [
@@ -264,7 +265,7 @@ function render(p) {
 
   return `<!DOCTYPE html>
 <html lang="${copy.htmlLang}"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">${ORIGIN_TRIAL_META}<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(p.title)}</title><meta name="description" content="${esc(p.meta)}">
 <meta name="keywords" content="${esc(p.keywords)}">
 <link rel="canonical" href="${url}">
