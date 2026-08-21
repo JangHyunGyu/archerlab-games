@@ -296,9 +296,9 @@ export class GameOverScene extends Phaser.Scene {
 
         const lastName = localStorage.getItem('shadow_player_name') || '';
         input.value = this._pendingPlayerName ?? lastName;
-        document.body.appendChild(inputShell);
         this._nameInput = input;
         this._nameInputShell = inputShell;
+        this._mountNameInputShell(inputShell);
 
         const inputGameW = Math.min(
             layout.panelW - uv(76),
@@ -509,6 +509,94 @@ export class GameOverScene extends Phaser.Scene {
         input.addEventListener('keydown', this._nameInputKeydownHandler);
     }
 
+    _mountNameInputShell(inputShell) {
+        const renderCanvas = document.createElement('canvas');
+        renderCanvas.className = 'shadow-html-canvas';
+        renderCanvas.setAttribute('layoutsubtree', 'true');
+        const context = renderCanvas.getContext('2d');
+        const supportsHtmlInCanvas = (
+            typeof context?.drawElementImage === 'function'
+            && typeof renderCanvas.requestPaint === 'function'
+        );
+
+        if (!supportsHtmlInCanvas) {
+            document.body.appendChild(inputShell);
+            return;
+        }
+
+        renderCanvas.appendChild(inputShell);
+        renderCanvas.onpaint = () => this._paintNameInputCanvas();
+        document.body.appendChild(renderCanvas);
+
+        this._nameInputCanvas = renderCanvas;
+        this._nameInputCanvasContext = context;
+        this._requestNameInputCanvasPaint();
+    }
+
+    _requestNameInputCanvasPaint() {
+        if (!this._nameInputCanvas || this._nameInputCanvasPaintFrame) return;
+        this._nameInputCanvasPaintFrame = requestAnimationFrame(() => {
+            this._nameInputCanvasPaintFrame = null;
+            this._nameInputCanvas?.requestPaint();
+        });
+    }
+
+    _paintNameInputCanvas() {
+        const canvas = this._nameInputCanvas;
+        const context = this._nameInputCanvasContext;
+        const shell = this._nameInputShell;
+        const draw = this._nameInputCanvasDraw;
+        if (!canvas || !context || !shell || !draw) return;
+
+        try {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            const transform = context.drawElementImage(
+                shell,
+                draw.x,
+                draw.y,
+                draw.width,
+                draw.height,
+            );
+            shell.style.transform = transform.toString();
+            this._nameInputCanvasPaintRetries = 0;
+        } catch (error) {
+            if (error?.name === 'InvalidStateError' && (this._nameInputCanvasPaintRetries || 0) < 2) {
+                this._nameInputCanvasPaintRetries = (this._nameInputCanvasPaintRetries || 0) + 1;
+                this._requestNameInputCanvasPaint();
+                return;
+            }
+            console.warn('[SoloLeveling] HTML-in-Canvas input disabled:', error);
+            this._disableNameInputCanvas();
+        }
+    }
+
+    _disableNameInputCanvas() {
+        const canvas = this._nameInputCanvas;
+        const shell = this._nameInputShell;
+        if (!canvas) return;
+
+        canvas.onpaint = null;
+        if (shell?.parentNode === canvas) document.body.appendChild(shell);
+        canvas.remove();
+
+        this._nameInputCanvas = null;
+        this._nameInputCanvasContext = null;
+        this._nameInputCanvasDraw = null;
+        if (this._nameInputCanvasPaintFrame) cancelAnimationFrame(this._nameInputCanvasPaintFrame);
+        this._nameInputCanvasPaintFrame = null;
+        this._nameInputCanvasPaintRetries = 0;
+
+        if (shell) {
+            shell.style.transform = '';
+            const position = this._nameInputPositionSnapshot;
+            if (position) {
+                shell.style.width = `${Math.round(position.width)}px`;
+                shell.style.left = `${Math.round(position.left)}px`;
+                shell.style.top = `${Math.round(position.top)}px`;
+            }
+        }
+    }
+
     _installNameInputPositioning(gameX, gameY, gameWidth) {
         const syncPosition = () => {
             const shell = this._nameInputShell;
@@ -542,7 +630,36 @@ export class GameOverScene extends Phaser.Scene {
             let top = rect.top + gameY * scaleY;
             top = Math.max(viewTop + topMargin, Math.min(top, viewTop + viewHeight - bottomMargin));
 
+            this._nameInputPositionSnapshot = { width: targetW, left, top };
             shell.style.width = `${Math.round(targetW)}px`;
+
+            const htmlCanvas = this._nameInputCanvas;
+            if (htmlCanvas) {
+                const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+                const bufferW = Math.max(1, Math.round(rect.width * pixelRatio));
+                const bufferH = Math.max(1, Math.round(rect.height * pixelRatio));
+                const gridScaleX = bufferW / rect.width;
+                const gridScaleY = bufferH / rect.height;
+                const inputHeight = parseFloat(getComputedStyle(this._nameInput).height) || 52;
+                const shellHeight = inputHeight + 2;
+
+                htmlCanvas.style.left = `${Math.round(rect.left)}px`;
+                htmlCanvas.style.top = `${Math.round(rect.top)}px`;
+                htmlCanvas.style.width = `${Math.round(rect.width)}px`;
+                htmlCanvas.style.height = `${Math.round(rect.height)}px`;
+                if (htmlCanvas.width !== bufferW) htmlCanvas.width = bufferW;
+                if (htmlCanvas.height !== bufferH) htmlCanvas.height = bufferH;
+
+                this._nameInputCanvasDraw = {
+                    x: Math.round((left - rect.left - targetW / 2) * gridScaleX),
+                    y: Math.round((top - rect.top - shellHeight / 2) * gridScaleY),
+                    width: Math.round(targetW * gridScaleX),
+                    height: Math.round(shellHeight * gridScaleY),
+                };
+                this._requestNameInputCanvasPaint();
+                return;
+            }
+
             shell.style.left = `${Math.round(left)}px`;
             shell.style.top = `${Math.round(top)}px`;
         };
@@ -594,6 +711,13 @@ export class GameOverScene extends Phaser.Scene {
         if (this._nameInput && this._nameInputKeydownHandler) {
             this._nameInput.removeEventListener('keydown', this._nameInputKeydownHandler);
         }
+        if (this._nameInputCanvas) {
+            this._nameInputCanvas.onpaint = null;
+            this._nameInputCanvas.remove();
+        }
+        if (this._nameInputCanvasPaintFrame) {
+            cancelAnimationFrame(this._nameInputCanvasPaintFrame);
+        }
         if (this._nameInputShell?.parentNode) {
             this._nameInputShell.parentNode.removeChild(this._nameInputShell);
         } else if (this._nameInput?.parentNode) {
@@ -604,6 +728,12 @@ export class GameOverScene extends Phaser.Scene {
         this._nameInputShell = null;
         this._nameInputKeydownHandler = null;
         this._nameInputPositionHandler = null;
+        this._nameInputCanvas = null;
+        this._nameInputCanvasContext = null;
+        this._nameInputCanvasDraw = null;
+        this._nameInputCanvasPaintFrame = null;
+        this._nameInputCanvasPaintRetries = 0;
+        this._nameInputPositionSnapshot = null;
         this._nameInputSubmitting = false;
     }
 

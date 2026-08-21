@@ -139,6 +139,27 @@
             outline: none;
         }
 
+        .shadow-html-canvas {
+            position: fixed;
+            z-index: 9999;
+            display: block;
+            max-width: none;
+            max-height: none;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            pointer-events: none;
+        }
+
+        .shadow-html-canvas > .shadow-name-entry {
+            position: relative;
+            top: 0;
+            left: 0;
+            transform: none;
+            pointer-events: auto;
+        }
+
         .shadow-name-entry {
             --entry-accent: #4dd2ff;
             position: fixed;
@@ -272,7 +293,7 @@
             navigator.serviceWorker.register('sw.js').catch(() => {});
         }
     </script>
-    <script type="module" src="js/main.js?v=20260718-menu-premium-v23"></script>
+    <script type="module" src="js/main.js?v=20260821-html-in-canvas-v1"></script>
     <script>
         document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
         document.addEventListener('gesturestart', function(e) { e.preventDefault(); });

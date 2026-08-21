@@ -7,6 +7,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "js", "weapons", "ShadowDagger.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const gameOverSource = fs.readFileSync(path.join(root, "js", "scenes", "GameOverScene.js"), "utf8");
 
 assert.match(
   source,
@@ -37,8 +38,38 @@ assert.equal(
 );
 assert.match(
   indexSource,
-  /js\/main\.js\?v=20260718-menu-premium-v23/,
+  /js\/main\.js\?v=20260821-html-in-canvas-v1/,
   "the deployed entry point must invalidate cached game modules"
 );
+assert.match(
+  gameOverSource,
+  /typeof context\?\.drawElementImage === 'function'[\s\S]*typeof renderCanvas\.requestPaint === 'function'/,
+  "HTML-in-Canvas must be enabled only after runtime feature detection"
+);
+assert.match(
+  gameOverSource,
+  /renderCanvas\.setAttribute\('layoutsubtree', 'true'\);\s*const context = renderCanvas\.getContext\('2d'\);/,
+  "layoutsubtree must be enabled before creating the experimental 2D context"
+);
+assert.match(
+  gameOverSource,
+  /if \(!supportsHtmlInCanvas\) \{\s*document\.body\.appendChild\(inputShell\);\s*return;/,
+  "unsupported browsers must retain the existing DOM input fallback"
+);
+assert.match(
+  gameOverSource,
+  /_requestNameInputCanvasPaint\(\)[\s\S]*requestAnimationFrame\(\(\) => \{[\s\S]*requestPaint\(\)/,
+  "the first experimental paint must wait for a browser layout frame"
+);
+assert.match(
+  gameOverSource,
+  /_disableNameInputCanvas\(\)[\s\S]*document\.body\.appendChild\(shell\)[\s\S]*canvas\.remove\(\)/,
+  "runtime drawing failures must restore the DOM input before removing the canvas"
+);
+assert.match(
+  gameOverSource,
+  /if \(this\._nameInputCanvas\) \{[\s\S]*this\._nameInputCanvas\.onpaint = null;[\s\S]*this\._nameInputCanvas\.remove\(\);/,
+  "scene cleanup must detach the experimental canvas paint handler"
+);
 
-console.log("shadow dagger timer lifecycle verified: integer repeats and explicit removal");
+console.log("solo-leveling lifecycle verified: timers, cache busting, and HTML-in-Canvas fallback");
