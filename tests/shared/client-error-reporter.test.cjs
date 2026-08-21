@@ -22,6 +22,8 @@ function loadReporter(userAgent, options = {}) {
     createElement: () => ({ setAttribute() {} })
   };
   const timers = [];
+  let timerSequence = 0;
+  let imageProbeCount = 0;
   const window = {
     location: { href: 'https://game.archerlab.dev/blockpang/', pathname: '/blockpang/' },
     navigator: { userAgent, language: 'ko', onLine: options.onLine !== false },
@@ -30,11 +32,15 @@ function loadReporter(userAgent, options = {}) {
       setItem: (key, value) => values.set(key, value)
     },
     addEventListener(name, listener) { listeners[name] = listener; },
-    setTimeout: (callback) => {
-      timers.push(callback);
-      return timers.length;
+    setTimeout: (callback, delay = 0) => {
+      timerSequence += 1;
+      timers.push({ id: timerSequence, callback, delay, cancelled: false });
+      return timerSequence;
     },
-    clearTimeout() {},
+    clearTimeout(id) {
+      const timer = timers.find((item) => item.id === id);
+      if (timer) timer.cancelled = true;
+    },
     fetch: async () => ({ ok: true }),
     console: { error() {} },
     crypto: global.crypto,
@@ -50,8 +56,13 @@ function loadReporter(userAgent, options = {}) {
   window.Image = class {
     set src(value) {
       this.currentSrc = value;
+      const probeIndex = imageProbeCount;
+      imageProbeCount += 1;
       Promise.resolve().then(() => {
-        if (options.imageReachable === false) this.onerror?.();
+        const reachable = typeof options.imageReachable === 'function'
+          ? options.imageReachable(probeIndex, value)
+          : options.imageReachable !== false;
+        if (!reachable) this.onerror?.();
         else this.onload?.();
       });
     }
@@ -63,8 +74,15 @@ function loadReporter(userAgent, options = {}) {
     window,
     values,
     listeners,
-    flushTimers() {
-      while (timers.length) timers.shift()();
+    flushTimers(delay) {
+      const selected = timers.filter((timer) => (
+        !timer.cancelled && (delay === undefined || timer.delay === delay)
+      ));
+      for (const timer of selected) {
+        const index = timers.indexOf(timer);
+        if (index >= 0) timers.splice(index, 1);
+        timer.callback();
+      }
     }
   };
 }
@@ -112,10 +130,34 @@ console.log('✓ client error reporter automation filtering verified');
   });
   await Promise.resolve();
   await Promise.resolve();
-  missing.flushTimers();
+  missing.flushTimers(3000);
+  await Promise.resolve();
+  await Promise.resolve();
+  missing.flushTimers(750);
   const missingQueue = JSON.parse(missing.values.get('archerlab-client-error-queue:v2'));
   assert.equal(missingQueue.length, 1);
   assert.equal(missingQueue[0].body.errorType, 'resource_error');
+
+  const recoveredOutage = loadReporter(
+    'Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36',
+    { imageReachable: (probeIndex) => probeIndex >= 9 }
+  );
+  for (let index = 0; index < 9; index += 1) {
+    recoveredOutage.listeners.error({
+      target: { tagName: 'IMG', currentSrc: `https://game.archerlab.dev/assets/recovered-${index}.png`, id: '', className: '' }
+    });
+  }
+  await Promise.resolve();
+  await Promise.resolve();
+  recoveredOutage.flushTimers(3000);
+  await Promise.resolve();
+  await Promise.resolve();
+  recoveredOutage.flushTimers(750);
+  assert.equal(
+    recoveredOutage.values.has('archerlab-client-error-queue:v2'),
+    false,
+    'a broad transient outage that recovers on delayed probes must not be reported'
+  );
 
   const broadOutage = loadReporter('Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36', { imageReachable: false });
   for (let index = 0; index < 9; index += 1) {
@@ -125,7 +167,10 @@ console.log('✓ client error reporter automation filtering verified');
   }
   await Promise.resolve();
   await Promise.resolve();
-  broadOutage.flushTimers();
+  broadOutage.flushTimers(3000);
+  await Promise.resolve();
+  await Promise.resolve();
+  broadOutage.flushTimers(750);
   const broadQueue = JSON.parse(broadOutage.values.get('archerlab-client-error-queue:v2'));
   assert.equal(broadQueue.length, 1, 'a broad image outage should create one diagnostic report');
   assert.match(broadQueue[0].body.message, /Multiple image resources failed to load/);

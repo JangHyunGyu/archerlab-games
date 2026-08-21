@@ -208,6 +208,7 @@
 
     var pendingImageFailures = [];
     var imageFailureFlushTimer = null;
+    var IMAGE_RESOURCE_REPROBE_DELAY_MS = 3000;
 
     function flushImageResourceErrors() {
         imageFailureFlushTimer = null;
@@ -232,13 +233,27 @@
         imageFailureFlushTimer = window.setTimeout(flushImageResourceErrors, 750);
     }
 
+    function queueImageResourceErrorAfterReprobe(source, payload) {
+        window.setTimeout(function () {
+            if (document.visibilityState === 'hidden' || (window.navigator && window.navigator.onLine === false)) return;
+            probeImageResource(source).then(function (reachableAfterDelay) {
+                if (!reachableAfterDelay && document.visibilityState !== 'hidden') {
+                    queueImageResourceError(source, payload);
+                }
+            }).catch(function () {
+                if (document.visibilityState !== 'hidden') queueImageResourceError(source, payload);
+            });
+        }, IMAGE_RESOURCE_REPROBE_DELAY_MS);
+    }
+
     function reportImageResourceErrorAfterProbe(source, payload) {
         if (document.visibilityState === 'hidden' || (window.navigator && window.navigator.onLine === false)) return;
         probeImageResource(source).then(function (reachable) {
             if (reachable || document.visibilityState === 'hidden') return;
-            queueImageResourceError(source, payload);
+            queueImageResourceErrorAfterReprobe(source, payload);
         }).catch(function () {
-            if (document.visibilityState !== 'hidden') queueImageResourceError(source, payload);
+            if (document.visibilityState === 'hidden') return;
+            queueImageResourceErrorAfterReprobe(source, payload);
         });
     }
 
