@@ -1,3 +1,49 @@
+async function createBlockpangApplication(options) {
+    const createApplication = async initOptions => {
+        const application = new PIXI.Application();
+        await application.init({ ...initOptions, autoStart: false });
+        return application;
+    };
+
+    const primary = await createApplication(options);
+    const probe = new PIXI.Graphics();
+    probe.rect(0, 0, 1, 1).fill({ color: 0xFFFFFF, alpha: 0 });
+    primary.stage.addChild(probe);
+
+    const originalConsoleError = console.error;
+    let shaderInitializationFailed = false;
+    let renderError = null;
+    console.error = (...args) => {
+        const message = args.map(value => String(value || '')).join(' ');
+        if (message.includes('PixiJS Error: Could not initialize shader')) {
+            shaderInitializationFailed = true;
+            return;
+        }
+        originalConsoleError.apply(console, args);
+    };
+
+    try {
+        primary.renderer.render({ container: primary.stage });
+    } catch (error) {
+        renderError = error;
+    } finally {
+        console.error = originalConsoleError;
+        primary.stage.removeChild(probe);
+        probe.destroy();
+    }
+
+    if (!shaderInitializationFailed && !renderError) return primary;
+
+    primary.destroy({ removeView: true }, { children: true });
+    console.warn('[Blockpang] WebGL renderer probe failed; using the Canvas renderer.');
+    return createApplication({
+        ...options,
+        preference: ['canvas'],
+        antialias: false,
+        resolution: 1,
+    });
+}
+
 // ─── Entry Point ───
 (async function () {
     'use strict';
@@ -45,8 +91,7 @@
     };
 
     // Create PixiJS Application (v8 async init)
-    const app = new PIXI.Application();
-    await app.init({
+    const app = await createBlockpangApplication({
         resizeTo: container,
         backgroundColor: 0xF5ECDA,
         antialias: true,
@@ -95,6 +140,7 @@
     // Create game
     const game = new Game(app);
     window.__blockpangGame = game;
+    app.start();
     updateLoading(1, currentLang === 'ko' ? '준비 완료' : 'Ready');
     requestAnimationFrame(() => loading?.classList.add('is-hidden'));
 

@@ -31,7 +31,7 @@ assert.ok(!game.includes('bgSprite.width = w;'), 'square background must preserv
 assert.match(game, /const landscapeTrayH = Math\.max\(144, Math\.min\(210, h \* 0\.25\)\);/);
 assert.ok(!game.includes('0.62) / PANEL_RATIO'), 'desktop board must not use the undersized fixed ratio');
 
-const cacheVersion = '20260719-quality-v1';
+const cacheVersion = '20260825-renderer-fallback-v1';
 for (const file of ['index.html', 'index-en.html']) {
     const html = read(file);
     for (const script of ['constants', 'SoundManager', 'ScoreManager', 'EffectManager', 'Board', 'Piece', 'InputManager', 'UIManager', 'Game', 'main']) {
