@@ -177,13 +177,30 @@
     };
 
     function registerServiceWorker(url) {
-        if (!url || isAutomatedAgent() || !global.navigator || !global.navigator.serviceWorker) return Promise.resolve(null);
-        return global.navigator.serviceWorker.register(url).catch(function (error) {
-            if (global.ArcherLabClientErrorReporter) {
-                global.ArcherLabClientErrorReporter.report(error, { source: 'shared-service-worker', url: url });
-            }
-            return null;
-        });
+        if (!url || isAutomatedAgent() || !global.navigator || global.navigator.onLine === false
+            || !global.navigator.serviceWorker) return Promise.resolve(null);
+        var attemptCount = 0;
+        var lastError = null;
+        function attemptRegistration() {
+            attemptCount += 1;
+            return global.navigator.serviceWorker.register(url).catch(function (error) {
+                lastError = error;
+                if (global.navigator.onLine !== false && attemptCount < 3) {
+                    return new Promise(function (resolve) {
+                        global.setTimeout(resolve, 500 * attemptCount);
+                    }).then(attemptRegistration);
+                }
+                if (global.navigator.onLine !== false && global.ArcherLabClientErrorReporter) {
+                    global.ArcherLabClientErrorReporter.report(lastError, {
+                        source: 'shared-service-worker',
+                        url: url,
+                        attempts: attemptCount
+                    });
+                }
+                return null;
+            });
+        }
+        return attemptRegistration();
     }
 
     var currentScript = global.document && global.document.currentScript;

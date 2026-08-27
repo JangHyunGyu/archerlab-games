@@ -53,6 +53,57 @@ const ranking = window.ArcherGames.createRankingClient({
   await listeners.load();
   assert.deepEqual(registrations, ['sw.js']);
 
+  const retryDelays = [];
+  const retryReports = [];
+  let retryAttempts = 0;
+  const retryWindow = {
+    localStorage: storage,
+    location: { pathname: '/lumen-shift/' },
+    navigator: {
+      onLine: true,
+      serviceWorker: {
+        register: async () => {
+          retryAttempts += 1;
+          if (retryAttempts < 3) throw new TypeError('transient service worker fetch failure');
+          return { scope: '/lumen-shift/' };
+        }
+      }
+    },
+    document: { currentScript: { getAttribute: () => null } },
+    addEventListener() {},
+    ArcherLabClientErrorReporter: { report: (...args) => retryReports.push(args) },
+    setTimeout(callback, delay) { retryDelays.push(delay); callback(); return retryDelays.length; },
+    fetch: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+    Promise,
+    Date
+  };
+  retryWindow.window = retryWindow;
+  vm.runInNewContext(source, retryWindow, { filename: 'game-runtime.js' });
+  assert.deepEqual(await retryWindow.ArcherGames.registerServiceWorker('sw.js'), { scope: '/lumen-shift/' });
+  assert.equal(retryAttempts, 3);
+  assert.deepEqual(retryDelays, [500, 1000]);
+  assert.deepEqual(retryReports, []);
+
+  const persistentReports = [];
+  let persistentAttempts = 0;
+  retryWindow.ArcherGames = undefined;
+  retryWindow.navigator.serviceWorker.register = async () => {
+    persistentAttempts += 1;
+    throw new TypeError('persistent service worker fetch failure');
+  };
+  retryWindow.ArcherLabClientErrorReporter = {
+    report: (...args) => persistentReports.push(args)
+  };
+  vm.runInNewContext(source, retryWindow, { filename: 'game-runtime.js' });
+  assert.equal(await retryWindow.ArcherGames.registerServiceWorker('sw.js'), null);
+  assert.equal(persistentAttempts, 3);
+  assert.equal(persistentReports.length, 1);
+  assert.equal(persistentReports[0][1].attempts, 3);
+
+  const lumenHtml = fs.readFileSync(path.join(__dirname, '../../lumen-shift/index.html'), 'utf8');
+  assert.doesNotMatch(lumenHtml, /rel="preload"[^>]+title-screen-(?:desktop|mobile)-v2\.webp/);
+  assert.match(lumenHtml, /game-runtime\.js\?v=20260827-sw-retry-v1/);
+
   for (const userAgent of [
     'Mozilla/5.0 (compatible; Google-Read-Aloud)',
     'Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd) Chrome/149.0.0.0 Safari/537.36'
