@@ -30,3 +30,28 @@
 
 /school-zombie-defense/assets/sounds/*
   Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+
+# Keep the Cloudflare Pages production subdomain and repository inputs out of search.
+https://archerlab-games.pages.dev/*
+  X-Robots-Tag: noindex, follow
+
+/package*.json
+  X-Robots-Tag: noindex, nofollow
+
+/wrangler*.toml
+  X-Robots-Tag: noindex, nofollow
+
+/AGENTS.md
+  X-Robots-Tag: noindex, nofollow
+
+/CLAUDE.md
+  X-Robots-Tag: noindex, nofollow
+
+/README*
+  X-Robots-Tag: noindex, nofollow
+
+/scripts/*
+  X-Robots-Tag: noindex, nofollow
+
+/tests/*
+  X-Robots-Tag: noindex, nofollow
