@@ -81,6 +81,43 @@ function createDb() {
   assert.deepEqual(await browserResponse.json(), { ok: true });
   assert.equal(browserDb.writes.length, 1);
 
+  const recoveredDb = createDb();
+  const recoveredResponse = await context.__gameApiTest.storeClientError(recoveredDb, browserRequest, {
+    appId: 'lumen-shift',
+    errorType: 'RendererError',
+    message: 'WebGL renderer failed',
+    context: { fallbackSucceeded: true }
+  });
+  assert.deepEqual(await recoveredResponse.json(), {
+    ok: true,
+    ignored: true,
+    reason: 'recovered_by_fallback'
+  });
+  assert.equal(recoveredDb.writes.length, 0);
+
+  const exhaustedDb = createDb();
+  const exhaustedResponse = await context.__gameApiTest.storeClientError(exhaustedDb, browserRequest, {
+    appId: 'lumen-shift',
+    errorType: 'RendererError',
+    message: 'Canvas fallback also failed',
+    extra: { fallbackSucceeded: true, recoveryExhausted: true }
+  });
+  assert.deepEqual(await exhaustedResponse.json(), { ok: true });
+  assert.equal(exhaustedDb.writes.length, 1);
+
+  const base64Db = createDb();
+  const base64Response = await context.__gameApiTest.storeClientError(base64Db, browserRequest, {
+    appId: 'custom-game',
+    errorType: 'console_error',
+    message: '[R2] Avatar upload failed, base64 폴백: Failed to fetch'
+  });
+  assert.deepEqual(await base64Response.json(), {
+    ok: true,
+    ignored: true,
+    reason: 'successful_base64_fallback'
+  });
+  assert.equal(base64Db.writes.length, 0);
+
   console.log('✓ game API client-error automation filtering verified');
 })().catch((error) => {
   console.error(error);

@@ -190,7 +190,44 @@ function safeJsonText(value) {
         return JSON.stringify(value);
     } catch {
         return JSON.stringify({ serialization_failed: true });
+  }
+}
+
+function parseClientErrorRecord(value) {
+    if (isPlainObject(value)) return value;
+    if (typeof value !== 'string' || !value.trim()) return {};
+    try {
+        const parsed = JSON.parse(value);
+        return isPlainObject(parsed) ? parsed : {};
+    } catch {
+        return {};
     }
+}
+
+function hasTruthyClientErrorFlag(record, keys) {
+    if (!record || typeof record !== 'object') return false;
+    return keys.some((key) => {
+        const value = record[key];
+        return value === true || value === 1 || String(value || '').trim().toLowerCase() === 'true';
+    });
+}
+
+function getRecoveredClientErrorReason(body) {
+    const records = [body, parseClientErrorRecord(body.context), parseClientErrorRecord(body.extra)];
+    const recoveryFailed = records.some((record) => hasTruthyClientErrorFlag(record, [
+        'fallbackFailed', 'recoveryFailed', 'recoveryExhausted'
+    ]));
+    if (recoveryFailed) return '';
+    const recoverySucceeded = records.some((record) => hasTruthyClientErrorFlag(record, [
+        'recovered', 'fallbackSucceeded', 'recoverySucceeded'
+    ]));
+    if (recoverySucceeded) return 'recovered_by_fallback';
+    const errorType = String(body.error_type || body.errorType || body.type || '');
+    const message = String(body.message || '');
+    if (/base64\s*폴백/i.test(message) && /^(?:console_error|ConsoleError)$/i.test(errorType)) {
+        return 'successful_base64_fallback';
+    }
+    return '';
 }
 
 function isAutomatedUserAgent(value) {
@@ -227,6 +264,11 @@ async function storeClientError(db, request, body) {
 
     if (isAutomatedUserAgent(request.headers.get('User-Agent'))) {
         return jsonResponse({ ok: true, ignored: true });
+    }
+
+    const recoveredReason = getRecoveredClientErrorReason(body);
+    if (recoveredReason) {
+        return jsonResponse({ ok: true, ignored: true, reason: recoveredReason });
     }
 
     const gameId = limitText(body.game_id || body.gameId || body.appId || 'archerlab-games', 100)
