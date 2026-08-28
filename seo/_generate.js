@@ -305,7 +305,11 @@ fs.writeFileSync(path.join(__dirname, '_sitemap_fragment.xml'), frag, 'utf8');
 const sitemapPath = path.join(__dirname, '..', 'sitemap.xml');
 if (fs.existsSync(sitemapPath)) {
   let sitemap = fs.readFileSync(sitemapPath, 'utf8');
-  sitemap = sitemap.replace(/\s*<url>\s*<loc>https:\/\/game\.archerlab\.dev\/seo\/[\s\S]*?<\/url>/g, '');
+  for (const { slug } of PAGES) {
+    const escapedSlug = slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const legacyUrl = new RegExp(`\\s*<url>\\s*<loc>https:\\/\\/game\\.archerlab\\.dev\\/seo\\/${escapedSlug}(?:\\.html)?<\\/loc>[\\s\\S]*?<\\/url>`, 'g');
+    sitemap = sitemap.replace(legacyUrl, '');
+  }
   sitemap = sitemap.replace(/\s*<\/urlset>\s*$/m, '\n</urlset>\n');
   fs.writeFileSync(sitemapPath, sitemap, 'utf8');
 }
