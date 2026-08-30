@@ -44,6 +44,23 @@
             flex-direction: column;
             align-items: center;
         }
+        .skip-link {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #fff;
+            color: #17102e;
+            font-weight: 700;
+            text-decoration: none;
+            transform: translateY(-160%);
+            transition: transform 0.2s ease;
+        }
+        .skip-link:focus {
+            transform: translateY(0);
+        }
         header {
             text-align: center;
             padding: 60px 20px 40px;
@@ -75,9 +92,14 @@
             transition: transform 0.2s, box-shadow 0.2s;
             white-space: nowrap;
         }
-        .archerlab-link:hover {
+        .archerlab-link:hover,
+        .archerlab-link:focus-visible {
             transform: translateX(-50%) scale(1.08);
             box-shadow: 0 0 20px rgba(139,92,246,0.6),0 4px 12px rgba(0,0,0,0.3);
+        }
+        .archerlab-link:focus-visible {
+            outline: 3px solid #fff;
+            outline-offset: 3px;
         }
         @media (max-width: 768px) {
             .archerlab-link {
@@ -97,7 +119,7 @@
         }
         .games-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
             gap: 24px;
             padding: 20px;
             max-width: 1000px;
@@ -112,11 +134,18 @@
             cursor: pointer;
             text-decoration: none;
             color: inherit;
-            display: block;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
         }
-        .game-card:hover {
+        .game-card:hover,
+        .game-card:focus-visible {
             transform: translateY(-4px);
             border-color: #7b2fff;
+        }
+        .game-card:focus-visible {
+            outline: 3px solid #b889ff;
+            outline-offset: 4px;
         }
         .game-thumb {
             height: 180px;
@@ -144,6 +173,9 @@
         }
         .game-info {
             padding: 20px;
+            display: flex;
+            flex: 1;
+            flex-direction: column;
         }
         .game-info h2 {
             font-size: 1.3rem;
@@ -154,10 +186,12 @@
             font-size: 0.9rem;
             color: #999;
             line-height: 1.5;
+            margin-bottom: 12px;
         }
         .game-tag {
             display: inline-block;
-            margin-top: 12px;
+            align-self: flex-start;
+            margin-top: auto;
             padding: 4px 10px;
             border-radius: 20px;
             font-size: 0.75rem;
@@ -167,7 +201,7 @@
             margin-top: auto;
             padding: 40px 20px;
             text-align: center;
-            color: #555;
+            color: #8d8da3;
             font-size: 0.85rem;
         }
 
@@ -249,8 +283,6 @@
         }
         .jelly-pang-2048 .game-thumb {
             background: linear-gradient(135deg, #fff6d8 0%, #d8f7ff 48%, #f8e8ff 100%);
-            height: auto;
-            aspect-ratio: 1 / 1;
         }
         .jelly-pang-2048 .game-tag {
             background: #f64f7822;
@@ -271,6 +303,28 @@
         .lumen-shift:hover {
             border-color: #68e9ff;
         }
+        @media (max-width: 480px) {
+            header {
+                padding: 56px 16px 24px;
+            }
+            header h1 {
+                font-size: clamp(2rem, 11vw, 2.5rem);
+            }
+            .games-grid {
+                gap: 16px;
+                padding: 16px;
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .archerlab-link {
+                animation: none;
+            }
+            .archerlab-link,
+            .game-card,
+            .skip-link {
+                transition: none;
+            }
+        }
     </style>
     <script type="application/ld+json">
     {"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://archerlab.dev/#organization","name":"Archerlab","url":"https://archerlab.dev/"},{"@type":"WebSite","@id":"https://game.archerlab.dev/#website","name":"Archerlab Games","alternateName":"ArcherLab Games","url":"https://game.archerlab.dev/","description":"설치 없이 PC와 모바일에서 즐기는 Archerlab의 무료 브라우저 게임 모음.","inLanguage":"ko","publisher":{"@id":"https://archerlab.dev/#organization"}},{"@type":"WebPage","@id":"https://game.archerlab.dev/#webpage","url":"https://game.archerlab.dev/","name":"무료 브라우저 게임 | Archerlab Games","description":"고양이 타워, 블럭팡, 루멘 쉬프트 등 다양한 퍼즐·액션 웹게임을 PC와 모바일에서 설치 없이 무료로 즐겨보세요.","inLanguage":"ko","isPartOf":{"@id":"https://game.archerlab.dev/#website"},"primaryImageOfPage":{"@type":"ImageObject","url":"https://game.archerlab.dev/cat-tower/cat-tower_link.png"}},{"@type":"ItemList","name":"Archerlab 무료 브라우저 게임","itemListElement":[{"@type":"ListItem","position":1,"url":"https://game.archerlab.dev/lumen-shift/","name":"Lumen Shift","description":"음악에 반응하는 빛과 함께 즐기는 낙하 블록 퍼즐."},{"@type":"ListItem","position":2,"url":"https://game.archerlab.dev/jelly-pang-2048/","name":"Jelly Pang 2048","description":"말랑한 젤리를 합치는 무료 2048 퍼즐."},{"@type":"ListItem","position":3,"url":"https://game.archerlab.dev/parking-escape/","name":"Parking Escape","description":"차량을 밀어 출구를 여는 주차 퍼즐."},{"@type":"ListItem","position":4,"url":"https://game.archerlab.dev/jewelria/","name":"Jewelria","description":"연쇄 콤보를 만드는 매치3 보석 퍼즐."},{"@type":"ListItem","position":5,"url":"https://game.archerlab.dev/school-zombie-defense/","name":"School Zombie Defense","description":"학교 복도의 바리케이드를 지키는 좀비 디펜스."},{"@type":"ListItem","position":6,"url":"https://game.archerlab.dev/blockpang/","name":"Blockpang","description":"10×10 보드에서 즐기는 무료 블록 퍼즐."},{"@type":"ListItem","position":7,"url":"https://game.archerlab.dev/solo-leveling/","name":"Shadow Survival","description":"그림자 군단과 함께하는 2D 던전 서바이벌."},{"@type":"ListItem","position":8,"url":"https://game.archerlab.dev/cat-tower/","name":"Cat Tower","description":"같은 고양이를 합쳐 10단계로 성장시키는 물리 퍼즐."},{"@type":"ListItem","position":9,"url":"https://game.archerlab.dev/slimevolley/","name":"Slime Volley","description":"브라우저에서 즐기는 슬라임 배구 게임."}]}]}
@@ -278,13 +332,14 @@
 <script src="assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
 </head>
 <body>
+    <a class="skip-link" href="#games">게임 목록으로 바로가기</a>
     <header>
         <a href="https://archerlab.dev" class="archerlab-link" target="_blank" rel="noopener noreferrer" title="ArcherLab" aria-label="ArcherLab 홈">🏹 ArcherLab</a>
-        <h1>Archerlab Games</h1>
-        <p>Browser-based games by Archerlab</p>
+        <h1>ArcherLab Games</h1>
+        <p>설치 없이 바로 즐기는 브라우저 게임</p>
     </header>
 
-    <div class="games-grid">
+    <main id="games" class="games-grid" aria-label="게임 목록">
         <a href="lumen-shift/" class="game-card lumen-shift">
             <div class="game-thumb">
                 <picture>
@@ -294,8 +349,8 @@
             </div>
             <div class="game-info">
                 <h2>루멘 쉬프트</h2>
-                <p>빛나는 파티클 무대와 Lumen Zone, 터치 컨트롤, D1 랭킹을 갖춘 음악 반응형 낙하 블록 퍼즐.</p>
-                <span class="game-tag">Puzzle / Reactive</span>
+                <p>음악에 반응하는 빛의 무대에서 루멘 존을 활용해 블록을 쌓고 기록에 도전하는 낙하 퍼즐.</p>
+                <span class="game-tag">퍼즐 · 리듬</span>
             </div>
         </a>
 
@@ -303,13 +358,13 @@
             <div class="game-thumb">
                 <picture>
                     <source srcset="jelly-pang-2048/assets/images/jelly-pang-main-link.webp?v=1" type="image/webp">
-                    <img src="jelly-pang-2048/assets/images/jelly-pang-main-link.png?v=1" alt="Jelly Pang - casual jelly merge puzzle game" loading="lazy" decoding="async">
+                    <img src="jelly-pang-2048/assets/images/jelly-pang-main-link.png?v=1" alt="젤리팡 - 말랑한 젤리 합치기 퍼즐" loading="lazy" decoding="async">
                 </picture>
             </div>
             <div class="game-info">
                 <h2>Jelly Pang!</h2>
-                <p>Squishy 4x4 jelly merge puzzle with PixiJS rendering, GSAP bounce, score, best record, and same-rank merge rules.</p>
-                <span class="game-tag">Puzzle / Merge</span>
+                <p>말랑한 젤리를 밀고 합쳐 더 높은 등급을 만드는 4×4 합치기 퍼즐.</p>
+                <span class="game-tag">퍼즐 · 합치기</span>
             </div>
         </a>
 
@@ -322,8 +377,8 @@
             </div>
             <div class="game-info">
                 <h2>주차장 탈출</h2>
-                <p>막힌 주차장에서 차량을 가로세로로 밀어 빨간 차를 출구까지 빼내는 고퀄리티 차 빼기 퍼즐.</p>
-                <span class="game-tag">Puzzle / Parking</span>
+                <p>막힌 주차장에서 차량을 가로세로로 밀어 빨간 차의 출구를 여는 차 빼기 퍼즐.</p>
+                <span class="game-tag">퍼즐 · 주차</span>
             </div>
         </a>
 
@@ -331,13 +386,13 @@
             <div class="game-thumb">
                 <picture>
                     <source srcset="jewelria/assets/images/ui/jewelria-link.webp" type="image/webp">
-                    <img src="jewelria/assets/images/ui/jewelria-link.png" alt="Jewelria match-3 jewel puzzle game" loading="lazy" decoding="async">
+                    <img src="jewelria/assets/images/ui/jewelria-link.png" alt="쥬얼리아 - 연쇄 콤보 보석 매치3 퍼즐" loading="lazy" decoding="async">
                 </picture>
             </div>
             <div class="game-info">
                 <h2>쥬얼리아</h2>
-                <p>보석을 스왑해 3개 이상 맞추고 연쇄 콤보와 광선 보석으로 목표를 달성하는 캐주얼 매치3 퍼즐.</p>
-                <span class="game-tag">Puzzle / Match-3</span>
+                <p>보석을 맞춰 연쇄 콤보를 만들고 특별한 광선 보석으로 목표를 깨는 매치3 퍼즐.</p>
+                <span class="game-tag">퍼즐 · 매치3</span>
             </div>
         </a>
 
@@ -350,22 +405,22 @@
             </div>
             <div class="game-info">
                 <h2>스쿨 언데드 디펜스</h2>
-                <p>무너진 학교 복도에서 바리케이드를 지키며 몰려오는 감염 학생들을 막는 Phaser 4 기반 세로형 디펜스.</p>
-                <span class="game-tag">Defense / Zombie</span>
+                <p>무너진 학교 복도에서 바리케이드를 지키며 몰려오는 감염 학생들을 막는 세로형 디펜스.</p>
+                <span class="game-tag">디펜스 · 좀비</span>
             </div>
         </a>
 
         <a href="blockpang/" class="game-card blockpang">
             <div class="game-thumb">
                 <picture>
-                    <source srcset="https://archerlab.dev/assets/images/blox_pang_link.webp?v=1" type="image/webp">
-                    <img src="https://archerlab.dev/assets/images/blox_pang_link.png?v=1" alt="블럭팡 - 블록 퍼즐 게임" loading="lazy" decoding="async">
+                    <source srcset="blockpang/blox_pang_link.webp" type="image/webp">
+                    <img src="blockpang/blox_pang_link.png" alt="블럭팡 - 블록 퍼즐 게임" loading="lazy" decoding="async">
                 </picture>
             </div>
             <div class="game-info">
                 <h2>블럭팡</h2>
-                <p>블록을 배치하고 줄을 완성하여 최고 점수에 도전하세요! 설치 없이 브라우저에서 즐기는 무료 블록 퍼즐 게임.</p>
-                <span class="game-tag">Puzzle / Block</span>
+                <p>10×10 보드에 블록을 배치하고 가로세로 줄을 완성해 최고 점수에 도전하는 퍼즐.</p>
+                <span class="game-tag">퍼즐 · 블록</span>
             </div>
         </a>
 
@@ -378,21 +433,21 @@
             </div>
             <div class="game-info">
                 <h2>그림자 서바이벌</h2>
-                <p>2D 던전 서바이벌 로그라이크 게임. 던전 몬스터를 처치하고 그림자 군단을 이끌어라!</p>
-                <span class="game-tag">Action / Survival</span>
+                <p>몰려오는 던전 몬스터를 쓰러뜨리고 그림자 군단을 키워 나가는 2D 서바이벌 액션.</p>
+                <span class="game-tag">액션 · 서바이벌</span>
             </div>
         </a>
         <a href="cat-tower/" class="game-card cat-tower">
             <div class="game-thumb">
                 <picture>
-                    <source srcset="https://archerlab.dev/assets/images/cat-tower_link.webp?v=3" type="image/webp">
-                    <img src="https://archerlab.dev/assets/images/cat-tower_link.png?v=3" alt="고양이 타워 - 합성 퍼즐 게임" loading="lazy" decoding="async">
+                    <source srcset="cat-tower/cat-tower_link.webp" type="image/webp">
+                    <img src="cat-tower/cat-tower_link.png" alt="고양이 타워 - 합성 퍼즐 게임" loading="lazy" decoding="async">
                 </picture>
             </div>
             <div class="game-info">
                 <h2>고양이 타워</h2>
-                <p>같은 고양이 둘이 닿으면 진화! 새끼 고양이부터 전설의 사바나까지 10단계 합성 물리 퍼즐.</p>
-                <span class="game-tag">Puzzle / Merge</span>
+                <p>같은 고양이 둘을 합쳐 새끼 고양이부터 전설의 사바나까지 키우는 10단계 물리 퍼즐.</p>
+                <span class="game-tag">퍼즐 · 합치기</span>
             </div>
         </a>
         <a href="slimevolley/" class="game-card slimevolley">
@@ -404,14 +459,14 @@
             </div>
             <div class="game-info">
                 <h2>Slime Volley</h2>
-                <p>슬라임 배구! 1:1부터 4:4까지 온라인 멀티플레이. 봇 상대 연습 모드도 지원.</p>
-                <span class="game-tag">Sports / Multiplayer</span>
+                <p>1:1부터 4:4까지 함께 즐기고 봇을 상대로도 연습할 수 있는 온라인 슬라임 배구.</p>
+                <span class="game-tag">스포츠 · 멀티플레이</span>
             </div>
         </a>
-    </div>
+    </main>
 
     <footer>
-        &copy; 2026 Archerlab. All rights reserved.
+        &copy; 2026 ArcherLab. 모든 권리 보유.
     </footer>
 </body>
 </html>
