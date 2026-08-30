@@ -17,6 +17,11 @@ class NetworkClient {
         this.playerPings = {};
         this.lastSentInput = null;
         this.mySlotIndex = 0;
+        this._stateSeq = 0;
+        this._lastReceivedStateSeq = -1;
+        this._inputSeq = 0;
+        this._lastInputSentAt = 0;
+        this._inputBurstRemaining = 0;
 
         // PeerJS P2P
         this.peerjs = new PeerJSManager();
@@ -126,7 +131,7 @@ class NetworkClient {
     // === 게임 데이터: PeerJS P2P 전용 (WS 안 씀) ===
 
     sendGameState(state) {
-        this.peerjs.broadcast({ type: 'gameState', state });
+        this.peerjs.broadcastRealtime({ type: 'gameState', state, seq: ++this._stateSeq });
     }
 
     sendGameEvent(eventData) {
@@ -135,11 +140,31 @@ class NetworkClient {
 
     sendInput(input) {
         const last = this.lastSentInput;
-        if (last && last.left === input.left && last.right === input.right && last.jump === input.jump) {
+        const changed = !last || last.left !== input.left || last.right !== input.right || last.jump !== input.jump;
+        const now = performance.now();
+
+        if (changed) {
+            this.lastSentInput = { ...input };
+            // Repeat an input edge on the next render frame so unordered low-latency
+            // delivery can recover quickly from a single lost packet.
+            this._inputBurstRemaining = 1;
+        }
+
+        const heartbeatDue = now - this._lastInputSentAt >= 50;
+        if (!changed && !heartbeatDue && this._inputBurstRemaining <= 0) {
             return;
         }
-        this.lastSentInput = { ...input };
-        this.peerjs.broadcast({ type: 'input', input, slotIndex: this.mySlotIndex });
+
+        if (!changed && this._inputBurstRemaining > 0) {
+            this._inputBurstRemaining--;
+        }
+        this._lastInputSentAt = now;
+        this.peerjs.broadcast({
+            type: 'input',
+            input,
+            slotIndex: this.mySlotIndex,
+            seq: ++this._inputSeq,
+        });
     }
 
     // === PeerJS P2P 연결 ===
@@ -177,6 +202,7 @@ class NetworkClient {
         this.p2pReady = false;
         this.p2pPings = {};
         this.myPing = 0;
+        this.resetRealtimeState();
 
         // 정리 시간 확보 (PeerJS 브로커 상태 갱신 대기)
         await new Promise(r => setTimeout(r, 300));
@@ -192,7 +218,7 @@ class NetworkClient {
     // PeerJS 이벤트 핸들러 바인딩 (생성자에서도 같은 핸들러 사용)
     _rebindPeerJSHandlers() {
         this.peerjs.onMessage = (peerId, data) => {
-            this.emit(data.type, data);
+            this.handleMessage(data);
         };
         this.peerjs.onPeerConnected = (peerId) => {
             console.log(`%c[P2P] Peer connected: ${peerId}`, 'color: #66BB6A; font-weight: bold');
@@ -253,6 +279,19 @@ class NetworkClient {
                     this.playerPings = msg.pings;
                     this.emit('pingUpdate', msg.pings);
                 }
+                break;
+
+            case 'gameStart':
+                this.resetRealtimeState();
+                this.emit('gameStart', msg);
+                break;
+
+            case 'gameState':
+                if (Number.isSafeInteger(msg.seq)) {
+                    if (msg.seq <= this._lastReceivedStateSeq) return;
+                    this._lastReceivedStateSeq = msg.seq;
+                }
+                this.emit('gameState', msg);
                 break;
 
             // rtcSignal은 더 이상 사용하지 않음 (PeerJS가 자체 시그널링)
@@ -323,11 +362,21 @@ class NetworkClient {
         this.isHost = false;
         this.myPing = 0;
         this.playerPings = {};
+        this.resetRealtimeState();
         if (this.ws) {
             this.ws.close();
             this.ws = null;
         }
         this.connected = false;
+    }
+
+    resetRealtimeState() {
+        this._stateSeq = 0;
+        this._lastReceivedStateSeq = -1;
+        this._inputSeq = 0;
+        this._lastInputSentAt = 0;
+        this._inputBurstRemaining = 0;
+        this.lastSentInput = null;
     }
 
     clearAllHandlers() {

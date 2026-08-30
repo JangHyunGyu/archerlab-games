@@ -16,6 +16,9 @@ class SlimeVolleyGame {
         this.countdown = 0;
         this.countdownTimer = null;
         this.relayUrl = 'wss://relay.archerlab.dev';
+        this._lastStateArrival = 0;
+        this._stateIntervalMs = 1000 / 60;
+        this._stateJitterMs = 0;
 
         this.setupInput();
         this.setupNetworkHandlers();
@@ -50,9 +53,11 @@ class SlimeVolleyGame {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
                 if (this.running) e.preventDefault();
             }
+            this._sendInputNow();
         };
         this._onKeyUp = (e) => {
             this.keys[e.code] = false;
+            this._sendInputNow();
         };
         window.addEventListener('keydown', this._onKeyDown);
         window.addEventListener('keyup', this._onKeyUp);
@@ -91,6 +96,7 @@ class SlimeVolleyGame {
             const dx = e.touches[0].clientX - moveStartX;
             this.keys['ArrowLeft'] = dx < -DEAD_ZONE;
             this.keys['ArrowRight'] = dx > DEAD_ZONE;
+            this._sendInputNow();
             // 조이스틱 노브 이동
             if (joystickKnob) {
                 const clampedDx = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, dx));
@@ -102,6 +108,7 @@ class SlimeVolleyGame {
             moveStartX = null;
             this.keys['ArrowLeft'] = false;
             this.keys['ArrowRight'] = false;
+            this._sendInputNow();
             moveZone.classList.remove('active');
             if (joystickKnob) joystickKnob.style.transform = '';
         };
@@ -114,11 +121,13 @@ class SlimeVolleyGame {
         this._onJumpStart = (e) => {
             e.preventDefault();
             this.keys['ArrowUp'] = true;
+            this._sendInputNow();
             jumpZone.classList.add('active');
         };
         this._onJumpEnd = (e) => {
             e.preventDefault();
             this.keys['ArrowUp'] = false;
+            this._sendInputNow();
             jumpZone.classList.remove('active');
         };
         jumpZone.addEventListener('touchstart', this._onJumpStart, { passive: false });
@@ -132,6 +141,12 @@ class SlimeVolleyGame {
         this._myInput.right = this.keys['ArrowRight'] || this.keys['KeyD'] || false;
         this._myInput.jump = this.keys['ArrowUp'] || this.keys['KeyW'] || this.keys['Space'] || false;
         return this._myInput;
+    }
+
+    _sendInputNow() {
+        if (this.running && this.mode === 'multiplayer' && !this.network.isHost) {
+            this.network.sendInput(this.getMyInput());
+        }
     }
 
     // === Practice Mode ===
@@ -226,7 +241,19 @@ class SlimeVolleyGame {
             entry = { time: 0, ball: { x: 0, y: 0 }, slimes: [] };
         }
 
-        entry.time = performance.now();
+        const arrivalTime = performance.now();
+        if (this._lastStateArrival > 0) {
+            const interval = Math.min(100, arrivalTime - this._lastStateArrival);
+            if (this._stateIntervalMs > 0) {
+                const deviation = Math.abs(interval - this._stateIntervalMs);
+                this._stateJitterMs += (deviation - this._stateJitterMs) * 0.15;
+                this._stateIntervalMs += (interval - this._stateIntervalMs) * 0.15;
+            } else {
+                this._stateIntervalMs = interval;
+            }
+        }
+        this._lastStateArrival = arrivalTime;
+        entry.time = arrivalTime;
         entry.ball.x = state.ball.x;
         entry.ball.y = state.ball.y;
 
@@ -248,14 +275,15 @@ class SlimeVolleyGame {
         const baseState = this.physics.getState();
         if (!buf || buf.length < 2) return baseState;
 
-        // 안 2: 동적 보간 지연 — 핑에 맞춰 자동 조정.
-        // 낮은 핑: 40~50ms (원래 80ms 대비 응답성 개선)
-        // 높은 핑: 최대 120ms까지 (jitter buffer ↑로 워프 방지)
-        // 30fps state 송신 간격(33ms) + jitter 여유 = 하한 40ms.
-        const ping = this.network.myPing || 0;
-        const adaptiveDelay = ping > 0
-            ? Math.max(40, Math.min(120, ping + 15))
-            : CONFIG.INTERPOLATION_DELAY;
+        // Buffer only enough received snapshots to absorb measured arrival jitter.
+        // Base RTT is already present in the authoritative snapshot and must not be
+        // added a second time as render delay.
+        const stateInterval = this._stateIntervalMs || (1000 / 60);
+        const stateJitter = this._stateJitterMs || 0;
+        const adaptiveDelay = Math.max(
+            CONFIG.INTERPOLATION_DELAY,
+            Math.min(80, stateInterval + stateJitter * 2 + 2)
+        );
         const renderTime = performance.now() - adaptiveDelay;
 
         // renderTime을 둘러싼 두 스냅샷 찾기
@@ -297,6 +325,9 @@ class SlimeVolleyGame {
         this.physics.freezeTimer = 60;
         this.physicsAccumulator = 0;
         this._stateBuffer = [];
+        this._lastStateArrival = 0;
+        this._stateIntervalMs = 1000 / 60;
+        this._stateJitterMs = 0;
 
         // 렌더 보간용 이전 물리 상태
         this._interpPrev = null;
@@ -307,7 +338,7 @@ class SlimeVolleyGame {
 
         const FIXED_DT = 1000 / 120; // 120fps 고정 물리 스텝
         this._remotePlayerInputs = new Map();
-        this._hostInputBuffer = []; // 안 1: 공정성 지연용 호스트 입력 버퍼
+        this._remoteInputSeqs = new Map();
 
         this.gameLoop = (ticker) => {
             if (!this.running) return;
@@ -378,46 +409,9 @@ class SlimeVolleyGame {
         }
     }
 
-    // 안 1: 공정성 지연 — 호스트 자기 입력을 ping/2 만큼 지연시켜
-    // 비호스트가 겪는 round-trip 지연과 균형을 맞춤. "방장만 안 렉" 해소.
+    // 호스트 로컬 입력은 인위적인 네트워크 지연 없이 즉시 적용한다.
     _getDelayedHostInput() {
-        const currentInput = this.getMyInput();
-
-        // 연습모드 또는 비호스트는 즉시 적용 (지연 불필요)
-        if (this.mode !== 'multiplayer' || !this.network.isHost) {
-            return currentInput;
-        }
-
-        const ping = this.network.myPing || 0;
-        if (ping <= 0) {
-            // 핑 측정 전 — 지연 없이 통과 (버퍼도 비움)
-            this._hostInputBuffer.length = 0;
-            return currentInput;
-        }
-
-        const FIXED_DT = 1000 / 120;
-        const fairnessDelayFrames = Math.min(
-            Math.max(0, Math.round((ping / 2) / FIXED_DT)),
-            15 // 최대 15프레임(~125ms) 캡 — 너무 답답해지지 않게
-        );
-
-        this._hostInputBuffer.push({
-            left: currentInput.left,
-            right: currentInput.right,
-            jump: currentInput.jump,
-        });
-
-        // 핑 감소로 버퍼가 너무 길면 앞쪽 잘라냄
-        while (this._hostInputBuffer.length > fairnessDelayFrames + 2) {
-            this._hostInputBuffer.shift();
-        }
-
-        if (this._hostInputBuffer.length > fairnessDelayFrames) {
-            return this._hostInputBuffer.shift();
-        }
-
-        // 버퍼가 아직 충분히 안 찼으면 정지 입력
-        return { left: false, right: false, jump: false };
+        return this.getMyInput();
     }
 
     update() {
@@ -453,11 +447,11 @@ class SlimeVolleyGame {
         const result = this.physics.update();
         this.handlePhysicsResult(result);
 
-        // 호스트: 게임 상태를 클라이언트에 전송 (30fps — 120fps 물리 중 매 4틱)
+        // 호스트: 게임 상태를 클라이언트에 전송 (60fps — 120fps 물리 중 매 2틱)
         if (this.mode === 'multiplayer' && this.network.isHost) {
             if (!this._netSendCounter) this._netSendCounter = 0;
             this._netSendCounter++;
-            if (this._netSendCounter >= 4) {
+            if (this._netSendCounter >= 2) {
                 this._netSendCounter = 0;
                 this.network.sendGameState(this.physics.getState());
             }
@@ -642,10 +636,10 @@ class SlimeVolleyGame {
         // (비호스트 시절 받아둔 마지막 gameState가 이미 physics에 적용되어 있음)
         this.physicsAccumulator = 0;
         this._netSendCounter = 0;
-        this._hostInputBuffer = [];
         this._interpPrev = null;
         this._stateBuffer = []; // 비호스트용 보간 버퍼는 더 이상 불필요
         this._remotePlayerInputs = new Map();
+        this._remoteInputSeqs = new Map();
 
         // 봇이 된 옛 호스트의 입력은 비우고 봇 AI가 채우도록
         for (const slime of this.physics.slimes) {
@@ -882,7 +876,12 @@ class SlimeVolleyGame {
             // 호스트: 원격 플레이어 입력 수신
             if (this.network.isHost && msg.input && msg.slotIndex !== undefined) {
                 if (this._remotePlayerInputs) {
-                    this._remotePlayerInputs.set(msg.slotIndex, msg.input);
+                    const hasSequence = Number.isSafeInteger(msg.seq);
+                    const lastSequence = this._remoteInputSeqs?.get(msg.slotIndex);
+                    if (!hasSequence || lastSequence === undefined || msg.seq > lastSequence) {
+                        this._remotePlayerInputs.set(msg.slotIndex, msg.input);
+                        if (hasSequence) this._remoteInputSeqs.set(msg.slotIndex, msg.seq);
+                    }
                 }
             }
         });

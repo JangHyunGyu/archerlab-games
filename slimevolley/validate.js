@@ -273,7 +273,7 @@ for (const content of [networkContent, mainContent]) {
 
 // P2P로 보내는 broadcast 타입
 const p2pTypes = new Set();
-for (const m of networkContent.matchAll(/broadcast\(\s*\{[^}]*type:\s*['"](\w+)['"]/g)) {
+for (const m of networkContent.matchAll(/broadcast(?:Realtime)?\(\s*\{[^}]*type:\s*['"](\w+)['"]/g)) {
     p2pTypes.add(m[1]);
 }
 
@@ -430,6 +430,31 @@ if (webrtcContent.includes('class PeerJSManager')) {
     if (!webrtcContent.includes('connections.clear()')) {
         warnings.push(`[P2P] PeerJSManager.destroy() should clear connections Map`);
     }
+    if (!webrtcContent.match(/reliable:\s*false/)) {
+        errors.push(`[P2P_LATENCY] Gameplay DataConnection must use unordered low-latency delivery`);
+    }
+    if (!webrtcContent.includes('broadcastRealtime') || !webrtcContent.includes('bufferedAmount')) {
+        errors.push(`[P2P_LATENCY] Realtime snapshots must avoid growing a congested send queue`);
+    }
+}
+
+if (!networkContent.includes('_lastReceivedStateSeq') || !networkContent.includes('_inputSeq')) {
+    errors.push(`[P2P_LATENCY] Unordered state/input traffic requires monotonic sequence guards`);
+}
+if (!networkContent.includes('this.handleMessage(data)')) {
+    errors.push(`[P2P_LATENCY] P2P packets must pass through sequence-aware message handling`);
+}
+if (!networkContent.includes('_inputBurstRemaining') || !networkContent.includes('>= 50')) {
+    errors.push(`[P2P_LATENCY] Input changes need redundant delivery and a short heartbeat`);
+}
+if (!mainContent.includes('this._netSendCounter >= 2')) {
+    errors.push(`[P2P_LATENCY] Host snapshots must be sent at 60fps from the 120fps simulation`);
+}
+if (!mainContent.includes('_stateJitterMs') || !mainContent.includes('CONFIG.INTERPOLATION_DELAY')) {
+    errors.push(`[P2P_LATENCY] Client interpolation must adapt to measured snapshot jitter`);
+}
+if (!mainContent.includes('_sendInputNow()') || !mainContent.includes('_remoteInputSeqs')) {
+    errors.push(`[P2P_LATENCY] Input edges must send immediately and reject stale packets`);
 }
 
 // NetworkClient disconnect에서 peerjs.destroy 호출 확인
@@ -1129,7 +1154,7 @@ if (CONFIG.COURT_WIDTH) {
     }
 
     // P2P broadcast types
-    for (const m of networkContent.matchAll(/broadcast\(\s*\{[^}]*type:\s*['"](\w+)['"]/g)) {
+    for (const m of networkContent.matchAll(/broadcast(?:Realtime)?\(\s*\{[^}]*type:\s*['"](\w+)['"]/g)) {
         allSentTypes.add(m[1]);
     }
 

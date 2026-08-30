@@ -75,7 +75,7 @@ const CONFIG = {
 
     // Network
     TICK_RATE: 60,
-    INTERPOLATION_DELAY: 80,
+    INTERPOLATION_DELAY: 20,
 
     // TURN (metered.ca)
     METERED_TURN_ENABLED: false,

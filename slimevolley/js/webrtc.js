@@ -12,6 +12,10 @@ class PeerJSManager {
         this._pingTimers = {};
     }
 
+    static get MAX_REALTIME_BUFFERED_BYTES() {
+        return 64 * 1024;
+    }
+
     // TURN 크레덴셜 가져오기 (metered.ca)
     async _fetchIceServers() {
         const fallback = [
@@ -154,7 +158,9 @@ class PeerJSManager {
                 console.log(`[PeerJS] Connecting to host: ${hostId}`);
 
                 const conn = this.peer.connect(hostId, {
-                    reliable: true,
+                    // Game traffic favors the newest packet. An unordered channel avoids
+                    // head-of-line blocking when an older state packet is delayed.
+                    reliable: false,
                     serialization: 'json',
                 });
 
@@ -244,6 +250,26 @@ class PeerJSManager {
                     ok = false;
                 }
             } else {
+                ok = false;
+            }
+        }
+        return ok;
+    }
+
+    broadcastRealtime(data) {
+        if (this.connections.size === 0) return false;
+        let ok = true;
+        for (const [peerId, conn] of this.connections) {
+            const bufferedAmount = conn.dataChannel ? conn.dataChannel.bufferedAmount : 0;
+            if (!conn.open || bufferedAmount > PeerJSManager.MAX_REALTIME_BUFFERED_BYTES) {
+                // Do not add obsolete snapshots behind an already congested send queue.
+                ok = false;
+                continue;
+            }
+            try {
+                conn.send(data);
+            } catch (e) {
+                console.error(`[PeerJS] Realtime broadcast failed to ${peerId}:`, e);
                 ok = false;
             }
         }
