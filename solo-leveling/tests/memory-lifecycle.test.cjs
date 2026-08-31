@@ -38,7 +38,7 @@ assert.equal(
 );
 assert.match(
   indexSource,
-  /js\/main\.js\?v=20260821-html-in-canvas-v1/,
+  /js\/main\.js\?v=20260831-rank-sync-retry-v1/,
   "the deployed entry point must invalidate cached game modules"
 );
 assert.match(

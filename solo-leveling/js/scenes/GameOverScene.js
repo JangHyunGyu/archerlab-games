@@ -467,21 +467,23 @@ export class GameOverScene extends Phaser.Scene {
                 showStats();
             } catch (e) {
                 if (!this.sys?.isActive?.()) return;
-                this._reportRankSubmitError(e, {
-                    score: time,
-                    level,
-                    rank,
-                    kills,
-                    shadowCount,
-                    characterId,
-                    characterName,
-                    sessionId,
-                    verifiedScore,
-                    rankSyncFailed: !!this.finalData.rankSyncFailed,
-                    gameId,
-                    responseStatus,
-                    responseText,
-                });
+                if (!this.finalData.rankSyncDisabled) {
+                    this._reportRankSubmitError(e, {
+                        score: time,
+                        level,
+                        rank,
+                        kills,
+                        shadowCount,
+                        characterId,
+                        characterName,
+                        sessionId,
+                        verifiedScore,
+                        rankSyncFailed: !!this.finalData.rankSyncFailed,
+                        gameId,
+                        responseStatus,
+                        responseText,
+                    });
+                }
                 setStatus(getRankSubmitFailedText());
                 setSubmitting(false);
                 if (this._resizePending) {

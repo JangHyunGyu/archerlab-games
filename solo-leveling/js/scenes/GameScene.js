@@ -26,6 +26,8 @@ const AUTO_SAVE_INTERVAL_MS = 10000;
 const AUTO_SAVE_ENEMY_LIMIT = 140;
 const FORCE_SAVE_ENEMY_LIMIT = 260;
 const RANK_PROGRESS_SYNC_INTERVAL_MS = 5000;
+const RANK_SYNC_MAX_ATTEMPTS = 3;
+const RANK_SYNC_RETRY_DELAY_MS = 400;
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -41,6 +43,7 @@ export class GameScene extends Phaser.Scene {
         this._rankSessionId = null;
         this._rankSessionPromise = null;
         this._rankSyncFailed = false;
+        this._rankSyncDisabled = false;
         this._rankSyncedScore = 0;
         this._rankLastSyncGameTime = 0;
         this._rankSyncInFlight = null;
@@ -201,6 +204,7 @@ export class GameScene extends Phaser.Scene {
 
     _initRankSession() {
         if (this._resumeRequested) {
+            this._rankSyncDisabled = true;
             this._rankSyncFailed = true;
             return;
         }
@@ -219,18 +223,20 @@ export class GameScene extends Phaser.Scene {
                 const data = await res.json();
                 if (!data || !data.session_id) throw new Error('rank session response invalid');
                 this._rankSessionId = data.session_id;
+                this._rankSyncFailed = false;
                 this._autoSave(true);
                 return this._rankSessionId;
             })
             .catch((e) => {
                 this._rankSyncFailed = true;
+                this._rankSessionPromise = null;
                 console.warn('[ShadowSurvival] rank session failed:', e.message);
                 return null;
             });
     }
 
     async _ensureRankSession() {
-        if (this._rankSyncFailed) return null;
+        if (this._rankSyncDisabled) return null;
         if (this._rankSessionId) return this._rankSessionId;
         if (!this._rankSessionPromise) this._initRankSession();
         return this._rankSessionPromise;
@@ -253,7 +259,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     _updateRankProgressSync() {
-        if (this._rankSyncFailed || !this.enemyManager || this.isGameOver || this._isBooting) return;
+        if (this._rankSyncDisabled || !this.enemyManager || this.isGameOver || this._isBooting) return;
         const gameTime = this.enemyManager.getGameTime?.() || 0;
         if (gameTime - this._rankLastSyncGameTime < RANK_PROGRESS_SYNC_INTERVAL_MS) return;
         this._rankLastSyncGameTime = gameTime;
@@ -265,7 +271,7 @@ export class GameScene extends Phaser.Scene {
             if (!force) return this._rankSyncInFlight;
             await this._rankSyncInFlight;
         }
-        if (this._rankSyncFailed) return null;
+        if (this._rankSyncDisabled) return null;
 
         const score = Math.max(0, Math.floor((this.enemyManager?.getGameTime?.() || 0) / 1000));
         if (score <= 0 || (!force && score <= this._rankSyncedScore)) {
@@ -292,6 +298,7 @@ export class GameScene extends Phaser.Scene {
 
             const verifiedScore = Number(data.score);
             this._rankSyncedScore = Number.isFinite(verifiedScore) ? verifiedScore : score;
+            this._rankSyncFailed = false;
             return this._rankSyncedScore;
         })();
 
@@ -308,8 +315,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     async _flushRankProgress() {
+        if (this._rankSyncDisabled) return null;
         if (this._rankSyncInFlight) await this._rankSyncInFlight;
-        return this._syncRankProgress(true);
+        for (let attempt = 0; attempt < RANK_SYNC_MAX_ATTEMPTS; attempt += 1) {
+            const verifiedScore = await this._syncRankProgress(true);
+            if (Number.isFinite(verifiedScore)) return verifiedScore;
+            if (attempt < RANK_SYNC_MAX_ATTEMPTS - 1) {
+                await new Promise(resolve => setTimeout(resolve, RANK_SYNC_RETRY_DELAY_MS * (attempt + 1)));
+            }
+        }
+        return null;
     }
 
     _createStartupOverlay() {
@@ -869,9 +884,9 @@ export class GameScene extends Phaser.Scene {
 
         this.time.delayedCall(1500, async () => {
             const finalScore = Math.floor(this.enemyManager.getGameTime() / 1000);
-            let rankSyncFailed = this._rankSyncFailed;
+            let rankSyncFailed = this._rankSyncDisabled;
             let rankVerifiedScore = this._rankSyncedScore;
-            if (!rankSyncFailed) {
+            if (!this._rankSyncDisabled) {
                 rankVerifiedScore = await this._flushRankProgress();
                 if (rankVerifiedScore !== finalScore) rankSyncFailed = true;
             }
@@ -886,6 +901,7 @@ export class GameScene extends Phaser.Scene {
                 characterName: this.player.character?.name,
                 rankSessionId: this._rankSessionId,
                 rankSyncFailed,
+                rankSyncDisabled: this._rankSyncDisabled,
                 rankVerifiedScore,
             });
         });

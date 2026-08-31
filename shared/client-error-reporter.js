@@ -180,6 +180,30 @@
         );
     }
 
+    function retryStylesheetResource(source, target) {
+        var tag = safeString(target && (target.tagName || target.nodeName), '').toUpperCase();
+        if (tag !== 'LINK' || !target || typeof target.getAttribute !== 'function'
+            || typeof target.setAttribute !== 'function'
+            || document.visibilityState === 'hidden' || window.navigator.onLine === false) return false;
+        var rel = safeString(target.getAttribute('rel'), '').toLowerCase();
+        if (rel !== 'stylesheet') return false;
+
+        try {
+            var parsed = new URL(source, window.location.href);
+            if (parsed.origin !== window.location.origin) return false;
+            var attempt = Number(target.getAttribute('data-archerlab-stylesheet-retry') || 0);
+            if (!Number.isFinite(attempt) || attempt < 0) attempt = 0;
+            if (attempt >= 2) return false;
+            attempt += 1;
+            target.setAttribute('data-archerlab-stylesheet-retry', String(attempt));
+            parsed.searchParams.set('__resource_retry', Date.now().toString(36) + '-' + attempt);
+            window.setTimeout(function () { target.href = parsed.href; }, 500 * attempt);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     function probeImageResource(source) {
         if (!source || typeof window.Image !== 'function') return Promise.resolve(false);
         return new Promise(function (resolve) {
@@ -403,6 +427,7 @@
         if (target && target !== window && target !== document) {
             var source = target.currentSrc || target.src || target.href || '';
             if (isIgnorableResourceError(source, target)) return;
+            if (retryStylesheetResource(source, target)) return;
             var resourcePayload = {
                 error_type: 'resource_error',
                 message: 'Failed to load resource: ' + safeString(target.tagName || target.nodeName, 'unknown'),

@@ -25,7 +25,7 @@ function loadReporter(userAgent, options = {}) {
   let timerSequence = 0;
   let imageProbeCount = 0;
   const window = {
-    location: { href: 'https://game.archerlab.dev/blockpang/', pathname: '/blockpang/' },
+    location: { href: 'https://game.archerlab.dev/blockpang/', pathname: '/blockpang/', origin: 'https://game.archerlab.dev' },
     navigator: { userAgent, language: 'ko', onLine: options.onLine !== false },
     localStorage: {
       getItem: (key) => values.has(key) ? values.get(key) : null,
@@ -108,6 +108,29 @@ browser.window.ArcherLabClientErrorReporter.report(new Error('Real player failur
 const queued = JSON.parse(browser.values.get('archerlab-client-error-queue:v2'));
 assert.equal(queued.length, 1);
 assert.match(queued[0].body.message, /Real player failure/);
+
+const stylesheetRetry = loadReporter('Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36');
+const stylesheetAttributes = new Map([['rel', 'stylesheet']]);
+const stylesheetTarget = {
+  tagName: 'LINK',
+  href: 'https://game.archerlab.dev/slimevolley/css/style.css?v=test',
+  id: '',
+  className: '',
+  getAttribute: (name) => stylesheetAttributes.get(name) || null,
+  setAttribute: (name, value) => stylesheetAttributes.set(name, value)
+};
+stylesheetRetry.listeners.error({ target: stylesheetTarget });
+assert.equal(stylesheetAttributes.get('data-archerlab-stylesheet-retry'), '1');
+assert.equal(stylesheetRetry.values.has('archerlab-client-error-queue:v2'), false);
+stylesheetRetry.flushTimers(500);
+assert.match(stylesheetTarget.href, /__resource_retry=/);
+stylesheetRetry.listeners.error({ target: stylesheetTarget });
+assert.equal(stylesheetAttributes.get('data-archerlab-stylesheet-retry'), '2');
+stylesheetRetry.flushTimers(1000);
+stylesheetRetry.listeners.error({ target: stylesheetTarget });
+const stylesheetQueue = JSON.parse(stylesheetRetry.values.get('archerlab-client-error-queue:v2'));
+assert.equal(stylesheetQueue.length, 1, 'a stylesheet must report only after both retries fail');
+assert.equal(stylesheetQueue[0].body.errorType, 'resource_error');
 
 console.log('✓ client error reporter automation filtering verified');
 
