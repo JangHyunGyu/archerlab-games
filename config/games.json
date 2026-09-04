@@ -11,7 +11,7 @@
         "node blockpang/quality-fixes.test.cjs"
       ]
     },
-    { "id": "cat-tower", "entry": "cat-tower/index.html", "tests": [] },
+    { "id": "cat-tower", "entry": "cat-tower/index.html", "tests": ["node cat-tower/static-quality.test.cjs"] },
     { "id": "jelly-pang-2048", "entry": "jelly-pang-2048/index.html", "tests": ["node jelly-pang-2048/static-quality.test.cjs"] },
     { "id": "jewelria", "entry": "jewelria/index.html", "tests": ["node jewelria/static-quality.test.cjs"] },
     {
@@ -19,7 +19,8 @@
       "entry": "lumen-shift/index.html",
       "tests": [
         "node lumen-shift/tools/gravity.test.mjs",
-        "node lumen-shift/tools/ranking.test.mjs"
+        "node lumen-shift/tools/ranking.test.mjs",
+        "node lumen-shift/tools/audio-loading.test.mjs"
       ]
     },
     {

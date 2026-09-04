@@ -38,7 +38,7 @@ assert.equal(
 );
 assert.match(
   indexSource,
-  /js\/main\.js\?v=20260831-rank-sync-retry-v1/,
+  /js\/main\.js\?v=20260904-continuation-rank-v1/,
   "the deployed entry point must invalidate cached game modules"
 );
 assert.match(
@@ -72,4 +72,4 @@ assert.match(
   "scene cleanup must detach the experimental canvas paint handler"
 );
 
-console.log("solo-leveling lifecycle verified: timers, cache busting, and HTML-in-Canvas fallback");
+console.log("solo-leveling lifecycle verified: timers, module versioning, and HTML-in-Canvas fallback");

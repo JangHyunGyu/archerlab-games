@@ -547,7 +547,7 @@ class AudioDirector {
           texture: textureGain,
           zone: zoneGain,
         };
-        this.createStageStemPlayers(Tone, 0);
+        if (ENABLE_GENERATED_TONE_LOOPS) this.createStageStemPlayers(Tone, 0);
         this.sfxPlayers = this.createPlayers(Tone, SFX_URLS, sfxGain, {
           zoneLoop: { output: zoneSampleGain, loop: true, fadeIn: 0.16, fadeOut: 0.42, volume: -4 },
         });

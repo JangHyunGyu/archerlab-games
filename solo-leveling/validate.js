@@ -1422,12 +1422,14 @@ for (const timeSec of [60, 180, 300, 480, 600]) {
 // ═══════════════════════════════════════════
 if (fileExists('sw.js')) {
     const swContent = readFile('sw.js');
+    const usesSharedRuntime = swContent.includes('service-worker-runtime.js')
+        && swContent.includes('ArcherGameServiceWorker.install');
     // 캐시 버스팅 전략 확인
     if (!swContent.includes('no-cache') && !swContent.includes('no-store') && !swContent.includes('cache')) {
         warnings.push(`[SW] sw.js has no cache strategy — assets may be stale`);
     }
     // fetch 이벤트 핸들러 존재
-    if (!swContent.includes("'fetch'") && !swContent.includes('"fetch"')) {
+    if (!usesSharedRuntime && !swContent.includes("'fetch'") && !swContent.includes('"fetch"')) {
         warnings.push(`[SW] sw.js has no fetch event handler`);
     }
 }

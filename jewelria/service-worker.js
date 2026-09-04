@@ -1,7 +1,7 @@
 self.__ARCHERLAB_GAME_ID__ = 'jewelria-service-worker';
 importScripts('../shared/service-worker-error-reporter.js?v=20260710-d1-v2');
 
-const CACHE_NAME = 'jewelria-v0.3.2-pause-guard';
+const CACHE_NAME = 'jewelria-v0.3.2-cache-policy-v1';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -64,9 +64,9 @@ const CORE_ASSETS = [
   './assets/sounds/sfx/fail.mp3',
   './assets/sounds/sfx/button.mp3'
 ];
-const CACHE_ASSETS = CORE_ASSETS.flatMap((asset) => (
-  asset.endsWith('.png') ? [asset.replace(/\.png$/i, '.webp'), asset] : [asset]
-));
+const CACHE_ASSETS = [...new Set(CORE_ASSETS.map((asset) => (
+  asset.endsWith('.png') ? asset.replace(/\.png$/i, '.webp') : asset
+)))];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

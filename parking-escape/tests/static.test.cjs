@@ -22,6 +22,7 @@ const shellMarkup = html.match(/<main id="game-shell">([\s\S]*?)<\/main>/)?.[1] 
 assert.ok(shellMarkup.includes('class="archerlab-link"'), "global link must share the modal stacking context");
 assert.match(html, /id="complete-modal"[^>]*tabindex="-1"/);
 assert.match(html, /id="rank-modal"[^>]*tabindex="-1"/);
+assert.match(html, /id="rank-challenge-btn"[^>]*>Lv\.1부터 랭킹 도전<\/button>/);
 assert.match(main, /element\.inert = true/);
 assert.match(main, /handleDialogKeydown/);
 assert.match(html, /id="best-moves-label">30초\+<\/b>/);
@@ -31,7 +32,15 @@ assert.match(main, /Lv \$\{this\.bestLevel\} 계속하기/);
 assert.match(main, /Math\.ceil\(18 \+ parMoves \* 1\.5\)/);
 assert.match(main, /rankLevel:\s*isFinalLevel \? MAX_LEVEL \+ 1 : clearedLevel/);
 assert.match(main, /displayLevel:\s*this\.level,[\s\S]*?allClear:\s*false/);
-assert.match(main, /if \(!continuesRun\) this\.startRankSession\(\)/);
+assert.match(main, /this\.rankEligible = options\.ranked === true && targetLevel === 1/);
+assert.match(main, /if \(this\.rankEligible\) this\.startRankSession\(\)/);
+assert.match(main, /this\.start\(startLevel, \{ ranked: startLevel === 1 \}\)/);
+assert.match(main, /if \(!this\.rankEligible \|\| !this\.lastClear\) return/);
+assert.match(main, /this\.mode = "background-paused"/);
+assert.match(main, /this\.mode = "playing"/);
+assert.doesNotMatch(main, /if \(!continuesRun\) this\.startRankSession\(\)/);
+assert.match(html, /js\/main\.js\?v=20260904-ranked-run-v1/);
+assert.match(html, /css\/style\.css\?v=20260904-ranked-run-v1/);
 
 const scripts = Array.from(html.matchAll(/<script[^>]+src="([^"]+)"/g), match => match[1]);
 const catalogIndex = scripts.findIndex(src => src.includes("PuzzleCatalog.js"));

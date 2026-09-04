@@ -17,7 +17,7 @@ export class GameOverScene extends Phaser.Scene {
     init(data) {
         this.finalData = data;
         this._transitioning = false;
-        this._viewState = data?.__viewState === 'stats' ? 'stats' : 'name';
+        this._viewState = data?.rankSyncDisabled || data?.__viewState === 'stats' ? 'stats' : 'name';
         this._pendingPlayerName = Object.prototype.hasOwnProperty.call(data || {}, '__pendingPlayerName')
             ? String(data.__pendingPlayerName || '')
             : null;
@@ -838,7 +838,9 @@ export class GameOverScene extends Phaser.Scene {
         const subtitle = padText(this.add.text(
             cx,
             layout.subtitleY,
-            isVictory ? t('victorySub') : t('huntOver'),
+            this.finalData.rankSyncDisabled
+                ? t('continuedRunUnranked')
+                : isVictory ? t('victorySub') : t('huntOver'),
             {
                 fontSize: fs(12), fontFamily: UI_FONT_DISPLAY, fontStyle: 'bold',
                 color: isVictory ? SYSTEM.TEXT_CYAN : SYSTEM.TEXT_MUTED,

@@ -1226,7 +1226,7 @@ h1 {
   --shadow: 0 3px 0 0 #2D1A0E;
   --shadow-deep: 0 6px 0 0 #2D1A0E;
   --ui-wood: url("assets/ui/wood-texture.webp");
-  --ui-paper: url("assets/ui/paper-texture.webp");
+  --ui-paper: url("../cat-tower/assets/ui/paper-texture.webp");
   --ui-cushion: url("assets/ui/cushion-field.webp");
 }
 

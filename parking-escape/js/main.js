@@ -97,6 +97,7 @@
     home: $("home-btn"),
     rankModal: $("rank-modal"),
     rankContent: $("rank-content"),
+    rankChallenge: $("rank-challenge-btn"),
     rankClose: $("rank-close-btn"),
     rankSubmitRow: $("rank-submit-row"),
     nickname: $("nickname-input"),
@@ -377,6 +378,9 @@
       this.rankSyncFailed = false;
       this.rankClearSyncPromises = [];
       this.rankReturnTimer = null;
+      this.rankEligible = false;
+      this.nextReturnsToMenu = false;
+      this.pausedForVisibility = false;
       this.lastTimeAlertSecond = null;
       this.dialogReturnFocus = null;
       this.sound = new (window.ParkingSoundManager || class {
@@ -422,6 +426,7 @@
         this.orientationTimer = setTimeout(() => this.queueResize(), 250);
       }, { passive: true });
       window.addEventListener("blur", () => this.cancelDrag(), { passive: true });
+      document.addEventListener("visibilitychange", () => this.handleVisibilityChange());
       document.addEventListener("pointerdown", () => this.ensureAudio(), { once: true, passive: true });
       document.addEventListener("keydown", event => this.handleDialogKeydown(event));
     }
@@ -506,10 +511,17 @@
     }
 
     bindUI() {
-      dom.play.addEventListener("click", () => this.start(this.bestLevel > 1 ? this.bestLevel : 1));
-      dom.next.addEventListener("click", () => this.start(this.nextLevelTarget || this.level + 1));
+      dom.play.addEventListener("click", () => {
+        const startLevel = this.bestLevel > 1 ? this.bestLevel : 1;
+        this.start(startLevel, { ranked: startLevel === 1 });
+      });
+      dom.next.addEventListener("click", () => {
+        if (this.nextReturnsToMenu) this.showMenu();
+        else this.start(this.nextLevelTarget || this.level + 1);
+      });
       dom.home.addEventListener("click", () => this.showMenu());
       dom.rank.addEventListener("click", () => this.openRankModal());
+      dom.rankChallenge.addEventListener("click", () => this.startRankedChallenge());
       dom.rankClose.addEventListener("click", () => this.closeRankModal());
       dom.submitRank.addEventListener("click", () => this.handleSubmitRank());
       dom.skipRank.addEventListener("click", () => this.handleSkipRank());
@@ -587,6 +599,30 @@
       });
     }
 
+    startRankedChallenge() {
+      dom.rankModal.classList.add("hidden");
+      this.deactivateDialog({ restoreFocus: false });
+      this.start(1, { ranked: true });
+    }
+
+    handleVisibilityChange() {
+      if (document.hidden) {
+        if (this.mode === "playing") {
+          this.pausedForVisibility = true;
+          this.mode = "background-paused";
+          this.cancelDrag();
+        }
+        return;
+      }
+      if (this.pausedForVisibility && this.mode === "background-paused") {
+        this.pausedForVisibility = false;
+        this.mode = "playing";
+        this.lastTimeAlertSecond = null;
+      } else {
+        this.pausedForVisibility = false;
+      }
+    }
+
     createBackdrop() {
       this.bgSprite = null;
       this.bgWash = new PIXI.Graphics();
@@ -614,7 +650,7 @@
       this.backdrop.addChildAt(this.bgSprite, 0);
     }
 
-    async start(level) {
+    async start(level, options = {}) {
       if (this.mode === "loading") return;
       clearTimeout(this.rankReturnTimer);
       this.rankReturnTimer = null;
@@ -622,12 +658,18 @@
       const targetLevel = clamp(level | 0, 1, MAX_LEVEL);
       const continuesRun = this.mode === "complete" && targetLevel === this.nextLevelTarget && !!this.runRecord;
       const shouldPlayStartSound = !continuesRun;
-      if (!continuesRun) this.startRankSession();
+      if (!continuesRun) {
+        this.rankEligible = options.ranked === true && targetLevel === 1;
+        if (this.rankEligible) this.startRankSession();
+        else this.resetRankSessionState();
+      }
       this.level = targetLevel;
       this.moves = 0;
       this.timeLeft = getLevelTimeLimit(targetLevel);
       this.lastTimeAlertSecond = null;
       this.lastClear = null;
+      this.nextReturnsToMenu = false;
+      this.pausedForVisibility = false;
       if (!continuesRun) {
         this.runMoves = 0;
         this.runRecord = null;
@@ -684,6 +726,10 @@
       this.rankReturnTimer = null;
       this.startToken += 1;
       this.mode = "menu";
+      this.rankEligible = false;
+      this.nextReturnsToMenu = false;
+      this.pausedForVisibility = false;
+      this.resetRankSessionState();
       this.animating = false;
       this.cancelDrag();
       this.cancelTweens({ clearFx: true });
@@ -1266,7 +1312,7 @@
         seed: this.levelSeed,
       };
       this.lastClear = this.runRecord;
-      this.rankClearSyncPromises.push(this.recordRankClear(this.runRecord));
+      if (this.rankEligible) this.rankClearSyncPromises.push(this.recordRankClear(this.runRecord));
       this.bestLevel = Math.max(this.bestLevel, Math.min(MAX_LEVEL, this.level + 1));
       localStorage.setItem(STORAGE.bestLevel, String(this.bestLevel));
       if (this.bestMoves === 0 || this.moves < this.bestMoves) {
@@ -1285,17 +1331,21 @@
         dom.nextLevelCaption.textContent = "총 이동";
         dom.nextLevel.textContent = String(this.runMoves);
         dom.clearLevel.textContent = `${MAX_LEVEL} / ${MAX_LEVEL}`;
-        dom.rankSubmitRow.classList.remove("hidden");
-        if (dom.next.parentElement) dom.next.parentElement.classList.add("hidden");
+        dom.rankSubmitRow.classList.toggle("hidden", !this.rankEligible);
+        if (dom.next.parentElement) dom.next.parentElement.classList.toggle("hidden", this.rankEligible);
+        if (!this.rankEligible) {
+          this.nextReturnsToMenu = true;
+          dom.next.textContent = "메뉴로";
+        }
       } else {
         dom.clearTitle.textContent = `LEVEL ${this.level} CLEAR`;
         dom.clearKicker.textContent = "PARKING EXIT";
         dom.nextLevelCaption.textContent = "다음";
         dom.nextLevel.textContent = String(this.level + 1);
         dom.clearLevel.textContent = `Lv ${clearedLevel.toLocaleString()}`;
-        dom.next.textContent = "다음";
         dom.rankSubmitRow.classList.add("hidden");
         if (dom.next.parentElement) dom.next.parentElement.classList.remove("hidden");
+        dom.next.textContent = "다음";
       }
       dom.modal.classList.remove("is-timeout");
       dom.modal.classList.add("is-clear");
@@ -1346,10 +1396,15 @@
       dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       this.setRankSubmitLoading(false);
-      dom.rankSubmitRow.classList.remove("hidden");
+      dom.rankSubmitRow.classList.toggle("hidden", !this.rankEligible);
       dom.submitRank.disabled = false;
       dom.skipRank.disabled = false;
-      if (dom.next.parentElement) dom.next.parentElement.classList.add("hidden");
+      if (dom.next.parentElement) dom.next.parentElement.classList.toggle("hidden", this.rankEligible);
+      if (!this.rankEligible) {
+        this.nextLevelTarget = this.level;
+        this.nextReturnsToMenu = false;
+        dom.next.textContent = "다시하기";
+      }
       dom.modal.classList.remove("is-clear");
       dom.modal.classList.add("is-timeout");
       dom.modal.classList.remove("hidden");
@@ -1434,7 +1489,7 @@
     }
 
     async handleSubmitRank() {
-      if (!this.lastClear) return;
+      if (!this.rankEligible || !this.lastClear) return;
       if (dom.submitRank.disabled) return;
       const name = (dom.nickname.value || "").trim().slice(0, 20);
       if (!name) {

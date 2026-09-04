@@ -986,7 +986,14 @@ h2 {
   overflow: hidden;
 }
 
-.rank-panel > .primary-btn {
+.rank-modal-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.72fr);
+  gap: 9px;
+}
+
+.rank-modal-actions .primary-btn,
+.rank-modal-actions .secondary-btn {
   width: 100%;
 }
 

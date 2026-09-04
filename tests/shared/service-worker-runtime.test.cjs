@@ -81,7 +81,8 @@ const event = {
     'lumen-shift',
     'parking-escape',
     'school-zombie-defense',
-    'slimevolley'
+    'slimevolley',
+    'solo-leveling'
   ];
   for (const game of consumers) {
     const worker = fs.readFileSync(path.join(root, game, 'sw.js'), 'utf8');

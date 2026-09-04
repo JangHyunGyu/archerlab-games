@@ -3,9 +3,9 @@ import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js
 import { BootScene } from './scenes/BootScene.js';
 import { PreloadScene } from './scenes/PreloadScene.js';
 import { MenuScene } from './scenes/MenuScene.js?v=20260718-menu-premium-v1';
-import { GameScene } from './scenes/GameScene.js?v=20260831-rank-sync-retry-v1';
+import { GameScene } from './scenes/GameScene.js?v=20260904-continuation-rank-v1';
 import { LevelUpScene } from './scenes/LevelUpScene.js';
-import { GameOverScene } from './scenes/GameOverScene.js?v=20260831-rank-sync-retry-v1';
+import { GameOverScene } from './scenes/GameOverScene.js?v=20260904-continuation-rank-v1';
 
 // Calculate game dimensions to match screen aspect ratio
 // This eliminates black bars on all devices
