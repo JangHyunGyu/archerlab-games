@@ -102,11 +102,13 @@ const ranking = window.ArcherGames.createRankingClient({
 
   const lumenHtml = fs.readFileSync(path.join(__dirname, '../../lumen-shift/index.html'), 'utf8');
   assert.doesNotMatch(lumenHtml, /rel="preload"[^>]+title-screen-(?:desktop|mobile)-v2\.webp/);
-  assert.match(lumenHtml, /game-runtime\.js\?v=20260827-sw-retry-v1/);
+  assert.match(lumenHtml, /game-runtime\.js\?v=20260905-bot-filter-v2/);
 
   for (const userAgent of [
     'Mozilla/5.0 (compatible; Google-Read-Aloud)',
-    'Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd) Chrome/149.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd) Chrome/149.0.0.0 Safari/537.36',
+    'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/136.0.0.0 Safari/537.36 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36',
+    'Mozilla/5.0 (compatible; YandexRenderResourcesBot/1.0; +http://yandex.com/bots) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0'
   ]) {
     const crawlerListeners = {};
     const crawlerRegistrations = [];

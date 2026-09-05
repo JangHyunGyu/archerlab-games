@@ -68,6 +68,24 @@ function createDb() {
   assert.deepEqual(await yetiResponse.json(), { ok: true, ignored: true });
   assert.equal(yetiDb.writes.length, 0);
 
+  for (const userAgent of [
+    'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/136.0.0.0 Safari/537.36 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/116.0.1938.76 Safari/537.36',
+    'Mozilla/5.0 (compatible; YandexRenderResourcesBot/1.0; +http://yandex.com/bots) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0'
+  ]) {
+    const automatedDb = createDb();
+    const automatedRequest = new Request('https://game-api.yama5993.workers.dev/client-errors', {
+      method: 'POST',
+      headers: { 'User-Agent': userAgent }
+    });
+    const automatedResponse = await context.__gameApiTest.storeClientError(automatedDb, automatedRequest, {
+      appId: 'slimevolley',
+      errorType: 'resource_error',
+      message: '[resource_error] Failed to load resource: SCRIPT'
+    });
+    assert.deepEqual(await automatedResponse.json(), { ok: true, ignored: true });
+    assert.equal(automatedDb.writes.length, 0);
+  }
+
   const browserDb = createDb();
   const browserRequest = new Request('https://game-api.yama5993.workers.dev/client-errors', {
     method: 'POST',

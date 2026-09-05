@@ -11,7 +11,7 @@
 
     function isAutomatedAgent() {
         var userAgent = String(global.navigator && global.navigator.userAgent || '');
-        return /Google-Read-Aloud|Yeti\/|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(userAgent);
+        return /Google-Read-Aloud|Yeti\/|(?:bot|crawler|spider)(?:[\/\s;,)]|$)|HeadlessChrome/i.test(userAgent);
     }
 
     function Storage(namespace, storage) {

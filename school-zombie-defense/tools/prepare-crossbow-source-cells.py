@@ -38,6 +38,13 @@ MIN_VISIBLE_PIXELS = 1_000
 MAX_VISIBLE_FRACTION = 0.85
 
 
+def image_pixels(image: Image.Image):
+    """Return pixels on both pre-13 and current Pillow releases."""
+
+    flattened = getattr(image, "get_flattened_data", None)
+    return flattened() if flattened is not None else image.getdata()
+
+
 @dataclass(frozen=True)
 class FrameSelection:
     kind: str
@@ -214,7 +221,7 @@ def remove_blue_chroma(
     """
     rgba = source.convert("RGBA")
     output: list[tuple[int, int, int, int]] = []
-    for red, green, blue, alpha in rgba.get_flattened_data():
+    for red, green, blue, alpha in image_pixels(rgba):
         distance = max(
             abs(red - BLUE_KEY[0]),
             abs(green - BLUE_KEY[1]),
@@ -282,7 +289,7 @@ def keep_largest_alpha_component(
     rgba = image.convert("RGBA")
     width, height = rgba.size
     active = bytearray(
-        alpha > threshold for alpha in rgba.getchannel("A").get_flattened_data()
+        alpha > threshold for alpha in image_pixels(rgba.getchannel("A"))
     )
     largest: list[int] = []
 
@@ -311,7 +318,7 @@ def keep_largest_alpha_component(
         if len(component) > len(largest):
             largest = component
 
-    source_pixels = list(rgba.get_flattened_data())
+    source_pixels = list(image_pixels(rgba))
     output_pixels = [(0, 0, 0, 0)] * (width * height)
     for index in largest:
         output_pixels[index] = source_pixels[index]
@@ -325,7 +332,7 @@ def validate_alpha_cell(image: Image.Image, label: str) -> None:
     bbox = alpha.getbbox()
     if bbox is None:
         raise ValueError(f"{label} is empty after blue-key removal")
-    visible = sum(value > 8 for value in alpha.get_flattened_data())
+    visible = sum(value > 8 for value in image_pixels(alpha))
     total = image.width * image.height
     if visible < MIN_VISIBLE_PIXELS:
         raise ValueError(f"{label} retains only {visible} visible pixels")

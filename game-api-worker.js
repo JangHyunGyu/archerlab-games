@@ -231,7 +231,7 @@ function getRecoveredClientErrorReason(body) {
 }
 
 function isAutomatedUserAgent(value) {
-    return /Google-Read-Aloud|Yeti\/|(?:^|[^a-z])(?:bot|crawler|spider)(?:[^a-z]|$)|HeadlessChrome/i.test(String(value || ''));
+    return /Google-Read-Aloud|Yeti\/|(?:bot|crawler|spider)(?:[\/\s;,)]|$)|HeadlessChrome/i.test(String(value || ''));
 }
 
 async function insertErrorLog(db, request, payload) {

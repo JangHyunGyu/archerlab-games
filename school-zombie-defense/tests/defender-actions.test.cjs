@@ -171,7 +171,7 @@ const chromaSmokeSource = [
   "samples = [(0, 0, 255, 255), (25, 30, 220, 255), (20, 30, 70, 255), (0, 220, 255, 255)]",
   "source.putdata(samples)",
   "result = tool['remove_blue_chroma'](source, transparent_threshold=12, opaque_threshold=96)",
-  "pixels = list(result.get_flattened_data())",
+  "pixels = list(tool['image_pixels'](result))",
   "assert pixels[0][3] == 0, pixels",
   "assert 0 < pixels[1][3] < 255, pixels",
   "assert pixels[2] == samples[2], pixels",
