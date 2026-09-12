@@ -234,6 +234,18 @@ function isAutomatedUserAgent(value) {
     return /Google-Read-Aloud|Yeti\/|(?:bot|crawler|spider)(?:[\/\s;,)]|$)|HeadlessChrome/i.test(String(value || ''));
 }
 
+function isLocalDevelopmentUrl(value) {
+    const source = String(value || '').trim();
+    if (!source) return false;
+    try {
+        const hostname = new URL(source).hostname.toLowerCase();
+        return /^(?:localhost|127(?:\.\d+){3}|0\.0\.0\.0|\[?::1\]?)$/i.test(hostname)
+            || hostname.endsWith('.localhost');
+    } catch {
+        return false;
+    }
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
@@ -260,6 +272,11 @@ async function insertErrorLog(db, request, payload) {
 async function storeClientError(db, request, body) {
     if (!isPlainObject(body)) {
         return jsonResponse({ error: 'invalid client error payload' }, 400);
+    }
+
+    if ([body.url, request.headers.get('Referer'), request.headers.get('Origin')]
+        .some((value) => isLocalDevelopmentUrl(value))) {
+        return jsonResponse({ ok: true, ignored: true, reason: 'local_development_session' });
     }
 
     if (isAutomatedUserAgent(request.headers.get('User-Agent'))) {

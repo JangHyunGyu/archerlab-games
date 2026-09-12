@@ -55,6 +55,24 @@ function createDb() {
   assert.deepEqual(await crawlerResponse.json(), { ok: true, ignored: true });
   assert.equal(crawlerDb.writes.length, 0);
 
+  const localDb = createDb();
+  const localRequest = new Request('https://game-api.yama5993.workers.dev/client-errors', {
+    method: 'POST',
+    headers: { 'User-Agent': 'Mozilla/5.0 Chrome/154.0.0.0 Safari/537.36' }
+  });
+  const localResponse = await context.__gameApiTest.storeClientError(localDb, localRequest, {
+    appId: 'school-zombie-defense',
+    errorType: 'console_error',
+    message: '[console_error] Failed to process file: image zombie-walk-charger',
+    url: 'http://127.0.0.1:8765/school-zombie-defense/?autostart=1'
+  });
+  assert.deepEqual(await localResponse.json(), {
+    ok: true,
+    ignored: true,
+    reason: 'local_development_session'
+  });
+  assert.equal(localDb.writes.length, 0);
+
   const yetiDb = createDb();
   const yetiRequest = new Request('https://game-api.yama5993.workers.dev/client-errors', {
     method: 'POST',
