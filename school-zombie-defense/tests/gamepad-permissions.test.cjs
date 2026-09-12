@@ -29,6 +29,6 @@ assert.match(
   /error\?\.name === "SecurityError"[\s\S]*?this\.gamepadAccessDenied = true[\s\S]*?this\.gamepadButtons\.clear\(\)[\s\S]*?return/,
   "SecurityError must disable later polls without affecting keyboard or touch input"
 );
-assert.match(indexSource, /js\/game\.js\?v=20260913-corpse-order-v1/);
+assert.match(indexSource, /js\/game\.js\?v=20260913-diva-elite-v1/);
 
 console.log("gamepad permissions policy handling verified");

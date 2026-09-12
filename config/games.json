@@ -41,6 +41,7 @@
         "node school-zombie-defense/tests/allied-polish.test.cjs",
         "node school-zombie-defense/tests/zombie-death-placement.test.cjs",
         "node school-zombie-defense/tests/zombie-motion.test.cjs",
+        "node school-zombie-defense/tests/diva-elite.test.cjs",
         "node school-zombie-defense/tests/corpse-order.test.cjs",
         "node school-zombie-defense/tests/barricade-impact.test.cjs",
         "node school-zombie-defense/tests/hud-status.test.cjs",

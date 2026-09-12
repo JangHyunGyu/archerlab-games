@@ -4034,6 +4034,16 @@
       "sha256": "36f3c250011770258748634a8cace8bca298980452f1bba2807347c3cca60a51"
     },
     {
+      "path": "school-zombie-defense/assets/images/zombie-death-diva-sheet.png",
+      "bytes": 518558,
+      "sha256": "8a779e9f23bc9398c584b95b8de7c12aaa7cb99b71306403b7bb2bde74d226ab"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/zombie-death-diva-sheet.webp",
+      "bytes": 112188,
+      "sha256": "88bb8cfe99424f3f34379c6cbca7367899bb7cfa683d56b2c6e27e1a6889363c"
+    },
+    {
       "path": "school-zombie-defense/assets/images/zombie-death-elite-sheet.png",
       "bytes": 436535,
       "sha256": "44f8f0274d989104cf6e9190028dbc8742e9fa46f71c361e418c8489bf2f37f7"
@@ -4314,14 +4324,24 @@
       "sha256": "e96e30fba99029d0dc4f909950b8234a133a1802eca2683babc4f41d621a6a10"
     },
     {
+      "path": "school-zombie-defense/assets/images/zombie-walk-diva.png",
+      "bytes": 1813122,
+      "sha256": "79388674bf5047bd5c5dec37eaf2ac902e75b071194b0ba6649d0d281da91c6d"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/zombie-walk-diva.webp",
+      "bytes": 381192,
+      "sha256": "7bb36a8c59d79f96324365dcc2f66cfbe55e6a974d619266270bec75ecdab735"
+    },
+    {
       "path": "school-zombie-defense/assets/images/zombie-walk-elite.png",
-      "bytes": 1015714,
-      "sha256": "dfce0e22be3757d8664a8d5ec959086bc309c12bdfa76c6110d88eddd38452f7"
+      "bytes": 2162769,
+      "sha256": "488a27d77044b293a1958de9e732edf79719f88804b3c00b1ff7f3db389905cc"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-elite.webp",
-      "bytes": 789226,
-      "sha256": "09322eba0273660d34bf15498c397d3ca819b924255a9491fd17a152aed7b234"
+      "bytes": 453858,
+      "sha256": "1dc5dc665f4d9e600dd48e45da34e42e06accd450d0f51e05edbe6b6593077e0"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-guard.png",
@@ -4827,6 +4847,21 @@
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f3-c4.png",
       "bytes": 255161,
       "sha256": "4021c80ee1f8a8dae141852557b29a8e8aa58c0cd5185738f132cf8f05ff73b5"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/diva-elite-v1/diva-death.png",
+      "bytes": 1590950,
+      "sha256": "cd1b3c25acdc1c84cbfb7ddbc20c8482d22f474c74dd9d552408efacc6915d1d"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/diva-elite-v1/diva-walk.png",
+      "bytes": 1732502,
+      "sha256": "48e6988696dc796c4946b705a8625079dd7aeded1b31e1bca41de3b74b035f2e"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/diva-elite-v1/elite-walk.png",
+      "bytes": 1535166,
+      "sha256": "efd8a6835311230d95fe66a4d1119ab810cf27b8923a802311b7c18c4e4c2cc6"
     },
     {
       "path": "slimevolley/assets/images/ball.png",

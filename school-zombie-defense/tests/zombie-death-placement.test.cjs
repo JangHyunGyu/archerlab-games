@@ -210,7 +210,7 @@ const expectedDeathTextures = [
   ...[1, 2, 3, 4].map((index) => `zombie-death-normal-variant-${index}-sheet`),
   ...[1, 2, 3].map((index) => `zombie-death-student-${index}-sheet`),
   ...[
-    "runner", "brute", "volatile", "elite", "teacher", "nurse", "athlete",
+    "runner", "brute", "volatile", "elite", "teacher", "nurse", "diva", "athlete",
     "janitor", "guard", "crawler", "screamer", "spider", "bloom", "charger"
   ].map((type) => `zombie-death-${type}-sheet`)
 ];
@@ -239,7 +239,7 @@ const deathTexturesByType = new Map([
   ["normal", [1, 2, 3, 4].map((index) => `zombie-death-normal-variant-${index}-sheet`)],
   ["student", [1, 2, 3].map((index) => `zombie-death-student-${index}-sheet`)],
   ...[
-    "runner", "brute", "volatile", "elite", "teacher", "nurse", "athlete",
+    "runner", "brute", "volatile", "elite", "teacher", "nurse", "diva", "athlete",
     "janitor", "guard", "crawler", "screamer", "spider", "bloom", "charger"
   ].map((type) => [type, [`zombie-death-${type}-sheet`]])
 ]);
@@ -298,7 +298,7 @@ const finalFrameBounds = new Map(
 assert.deepEqual(
   [...finalFrameBounds.keys()].sort(),
   [...expectedDeathTextures].sort(),
-  "all 21 shipped final death frames must have measured alpha bounds"
+  "all 22 shipped final death frames must have measured alpha bounds"
 );
 assert.equal(finalFrameBounds.get("zombie-death-normal-variant-1-sheet").y, 0.2937);
 assert.equal(finalFrameBounds.get("zombie-death-normal-variant-3-sheet").y, 0.3308);

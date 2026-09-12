@@ -70,7 +70,7 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20260912-male-continuity-v2";
+  const ZOMBIE_ASSET_VERSION = "20260913-diva-elite-v1";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
   const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
@@ -348,6 +348,7 @@
     "elite",
     "teacher",
     "nurse",
+    "diva",
     "athlete",
     "janitor",
     "guard",
@@ -374,6 +375,7 @@
     "zombie-death-brute-sheet": { x: -0.0122, y: -0.0015, width: 0.5469, height: 0.3145 },
     "zombie-death-charger-sheet": { x: -0.0512, y: 0.36, width: 0.748, height: 0.2324 },
     "zombie-death-crawler-sheet": { x: -0.0189, y: 0.0664, width: 0.8359, height: 0.4688 },
+    "zombie-death-diva-sheet": { x: -0.0364, y: 0.3556, width: 0.5508, height: 0.1719 },
     "zombie-death-elite-sheet": { x: -0.0221, y: 0.0018, width: 0.6172, height: 0.3438 },
     "zombie-death-guard-sheet": { x: -0.0188, y: 0.0792, width: 0.7695, height: 0.1992 },
     "zombie-death-janitor-sheet": { x: -0.0532, y: 0.0615, width: 0.8223, height: 0.2363 },
@@ -403,6 +405,7 @@
     elite: { deathSize: 1.05 },
     teacher: { deathSize: 1.35 },
     nurse: { deathSize: 1 },
+    diva: { deathSize: 1.25 },
     athlete: { deathSize: 1.35 },
     janitor: { deathSize: 1.5 },
     guard: { deathSize: 1.35 },
@@ -421,6 +424,7 @@
     elite: 0.402,
     teacher: 0.394,
     nurse: 0.39,
+    diva: 0.39,
     athlete: 0.384,
     janitor: 0.41,
     guard: 0.408,
@@ -747,6 +751,7 @@
     volatile: { id: "volatile", hpScale: 1.05, speedScale: 1.08, sizeScale: 1.02, attackScale: 1.06, hitRadiusScale: 1, knockbackScale: 0.72, animRate: 7.4, reward: 2, deathExplosion: true },
     teacher: { id: "teacher", hpScale: 1.28, speedScale: 0.92, sizeScale: 1.03, attackScale: 1.18, hitRadiusScale: 1.04, knockbackScale: 0.82, animRate: 6.2, reward: 2 },
     nurse: { id: "nurse", hpScale: 0.82, speedScale: 1.32, sizeScale: 0.9, attackScale: 0.88, hitRadiusScale: 0.88, knockbackScale: 1.08, animRate: 8.2, reward: 1 },
+    diva: { id: "diva", hpScale: 1.12, speedScale: 1.08, sizeScale: 1.07, attackScale: 1.04, hitRadiusScale: 0.94, knockbackScale: 0.9, animRate: 6.4, reward: 1 },
     athlete: { id: "athlete", hpScale: 0.68, speedScale: 1.88, sizeScale: 0.86, attackScale: 0.82, hitRadiusScale: 0.9, knockbackScale: 1.2, animRate: 10.2, reward: 1 },
     janitor: { id: "janitor", hpScale: 2.55, speedScale: 0.8, sizeScale: 1.14, attackScale: 1.26, hitRadiusScale: 1.14, knockbackScale: 0.55, animRate: 5.4, reward: 2 },
     guard: { id: "guard", hpScale: 3.25, speedScale: 0.68, sizeScale: 1.12, attackScale: 1.18, hitRadiusScale: 1.12, knockbackScale: 0.48, animRate: 4.8, reward: 2 },
@@ -782,6 +787,7 @@
     "elite",
     "teacher",
     "nurse",
+    "diva",
     "athlete",
     "janitor",
     "guard",
@@ -832,6 +838,7 @@
     }
     if (level >= 3) {
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.nurse, weight: Math.min(28, 8 + level * 1.3) });
+      entries.push({ type: ZOMBIE_TYPE_CONFIGS.diva, weight: Math.min(24, 8 + level * 1.1) });
       entries.push({ type: ZOMBIE_TYPE_CONFIGS.athlete, weight: Math.min(32, 9 + level * 1.4) });
     }
     if (level >= 5) {
