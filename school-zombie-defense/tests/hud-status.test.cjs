@@ -26,7 +26,7 @@ assert.match(
 );
 assert.match(
   statusPanel,
-  /this\.shieldBar\s*=\s*this\.add\.rectangle\(80, 927, 380, 3, COLORS\.blue, 1\)[\s\S]*?\.setVisible\(false\)/,
+  /this\.shieldBar\s*=\s*this\.add\.rectangle\(80, 927, 380, 3, UI_COLORS\.olive, 1\)[\s\S]*?\.setVisible\(false\)/,
   "the shield bar must start hidden above the barricade health bar"
 );
 

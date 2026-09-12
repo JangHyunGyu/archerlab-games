@@ -3414,6 +3414,46 @@
       "sha256": "e765decf7515b6f415f3b65c7aff55bbbc6c55f757cb41d2ca677a3c041b2644"
     },
     {
+      "path": "school-zombie-defense/assets/images/ui-survival-button.png",
+      "bytes": 2184479,
+      "sha256": "592dd25649f7c480507fe3b4a79dd0f478fdc0d258c4653bda4f2b763535c000"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-button.webp",
+      "bytes": 134358,
+      "sha256": "d87c3e95b94d764a3c38788a521dc4d16d8c553835b7836292a15af2a5d8bf72"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-equipment.png",
+      "bytes": 1796274,
+      "sha256": "a248d6918985606e728328217abd9960bf85a317666619840d44c128a5ce3c1a"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-equipment.webp",
+      "bytes": 435796,
+      "sha256": "37350055602004609c25bf5d58705722d44abc51954ddf1af13498e4e924a47e"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-panel.png",
+      "bytes": 2650665,
+      "sha256": "eb04d0c7d15489f8bb6f2934723e65a3f539066a6a057c48e2fa5c7c34d10c71"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-panel.webp",
+      "bytes": 256318,
+      "sha256": "6afd7be669afcc08a1966905ffca94019cbad9572eb0638f4e1c437cda7c36e0"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-primary.png",
+      "bytes": 2350251,
+      "sha256": "0e704112e9f0b1058df3978420971ae2efc03dee8bb4e5d79dcb5f0d9b7aa054"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/ui-survival-primary.webp",
+      "bytes": 161912,
+      "sha256": "6ebeb52815330bb4d4b6744497db153f879b102202c44a61430d0d6d9f39e743"
+    },
+    {
       "path": "school-zombie-defense/assets/images/ui-title-button.png",
       "bytes": 1211144,
       "sha256": "bb905567b5c3ef9a02a87f3b038e2746123f51ec9c47c6490b910d7a6bffc8b2"

@@ -291,13 +291,14 @@ assert.deepEqual(
     "avatar-bow",
     "character-a",
     "muzzle-arrow",
-    "projectile-arrow",
-    "skill-arrow-force",
-    "skill-arrow-pierce",
-    "skill-arrow-pin"
+    "projectile-arrow"
   ].sort(),
-  "only regenerated crossbow image assets must use the crossbow cache contract directly"
+  "crossbow characters and combat effects must retain their independent cache contract"
 );
+const uiSource = fs.readFileSync(path.join(__dirname, "..", "js", "ui-surfaces.js"), "utf8");
+for (const key of ["skill-arrow-force", "skill-arrow-pierce", "skill-arrow-pin"]) {
+  assert.ok(uiSource.includes(`"${key}": 2`), `${key} must use the reviewed bolt icon from the UI atlas`);
+}
 assert.match(
   gameSource,
   /const assetVersion = id === "a" \? CROSSBOW_ASSET_VERSION : CHARACTER_ASSET_VERSION;/,
