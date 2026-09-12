@@ -1400,13 +1400,13 @@
     shadow.endFill();
 
     const panel = new PIXI.Graphics();
-    panel.beginFill(0xffffff, 0.38);
-    panel.lineStyle(3, 0xffffff, 0.5);
+    panel.beginFill(0x77b8a9, 0.38);
+    panel.lineStyle(3, 0xf5fff8, 0.7);
     panel.drawRoundedRect(BOARD.x, BOARD.y, BOARD.size, BOARD.size, 44);
     panel.endFill();
 
     const glass = new PIXI.Graphics();
-    glass.beginFill(0xf9fbff, 0.32);
+    glass.beginFill(0xf9fff5, 0.15);
     glass.drawRoundedRect(BOARD.x + 14, BOARD.y + 12, BOARD.size - 28, BOARD.size * 0.5, 34);
     glass.endFill();
 
@@ -1416,7 +1416,7 @@
       for (let col = 0; col < SIZE; col++) {
         const pos = cellTopLeft(row, col);
         const cell = new PIXI.Graphics();
-        cell.beginFill(0xffffff, 0.42);
+        cell.beginFill(0xf5fff8, 0.60);
         cell.drawRoundedRect(pos.x, pos.y, BOARD.cell, BOARD.cell, 28);
         cell.endFill();
         cell.lineStyle(2, 0xffffff, 0.55);
@@ -1424,7 +1424,7 @@
         boardLayer.addChild(cell);
 
         const inner = new PIXI.Graphics();
-        inner.beginFill(0x2b3a55, 0.045);
+        inner.beginFill(0x468c7a, 0.065);
         inner.drawRoundedRect(pos.x + 11, pos.y + 12, BOARD.cell - 22, BOARD.cell - 24, 22);
         inner.endFill();
         boardLayer.addChild(inner);

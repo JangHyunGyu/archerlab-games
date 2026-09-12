@@ -148,6 +148,7 @@ function createPieceContainer(piece, cellSize, alpha = 1, options = {}) {
 class PieceTray {
     constructor(game) {
         this.game = game;
+        this._reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         this.container = new PIXI.Container();
         this.slots = [null, null, null]; // piece data
         this.slotContainers = [null, null, null]; // PIXI containers
@@ -183,6 +184,7 @@ class PieceTray {
     }
 
     _updateIdle(ticker) {
+        if (this._reducedMotion) return;
         const delta = ticker.deltaTime;
         this._idleTime += delta * (1000 / 60) * 0.002;
         for (let i = 0; i < 3; i++) {
@@ -209,20 +211,22 @@ class PieceTray {
         });
     }
 
-    resize(cellSize, areaWidth, areaHeight, x, y) {
+    resize(cellSize, areaWidth, areaHeight, x, y, vertical = false) {
         this.container.position.set(x, y);
+        this._vertical = vertical;
 
         // Keep each shape legible instead of sizing every piece as though it
         // occupied the maximum 5x5 footprint.
-        const slotWidth = areaWidth / 3;
+        const slotWidth = vertical ? areaWidth : areaWidth / 3;
+        const slotHeight = vertical ? areaHeight / 3 : areaHeight;
         const compact = areaWidth < 520;
         this._slotWidth = slotWidth;
-        this._trayAreaHeight = areaHeight;
+        this._trayAreaHeight = slotHeight;
         this._boardCellSize = cellSize;
         this._compactTray = compact;
         this.trayCellSize = Math.min(
             slotWidth * (compact ? 0.84 : 0.74),
-            areaHeight * (compact ? 0.58 : 0.62),
+            slotHeight * (compact ? 0.58 : 0.62),
             cellSize * (compact ? 1.04 : 1.12)
         );
 
@@ -230,8 +234,8 @@ class PieceTray {
         this.slotPositions = [];
         for (let i = 0; i < 3; i++) {
             this.slotPositions.push({
-                x: slotWidth * (i + 0.5),
-                y: areaHeight * (compact ? 0.43 : 0.45),
+                x: vertical ? areaWidth / 2 : slotWidth * (i + 0.5),
+                y: vertical ? slotHeight * (i + 0.5) : areaHeight * (compact ? 0.43 : 0.45),
             });
         }
 
@@ -246,7 +250,6 @@ class PieceTray {
             this.trayBg.destroy({ children: true });
         }
         const root = new PIXI.Container();
-        const panelTexture = getBlockpangTexture('glassPanelFill') || getBlockpangTexture('glassPanel');
         const panelW = Math.max(1, w - 20);
         const panelH = Math.max(1, h - 8);
 
@@ -255,32 +258,23 @@ class PieceTray {
          .fill({ color: THEME.shadow, alpha: 0.34 });
         root.addChild(shadow);
 
-        if (panelTexture) {
-            const panel = new PIXI.Sprite(panelTexture);
-            panel.position.set(10, 2);
-            panel.width = panelW;
-            panel.height = panelH;
-            panel.alpha = 0.68;
-            root.addChild(panel);
-        } else {
-            const fallback = new PIXI.Graphics();
-            fallback.roundRect(10, 2, panelW, panelH, 14)
-             .fill({ color: THEME.surface });
-            root.addChild(fallback);
-        }
+        const panel = new PIXI.Graphics();
+        panel.roundRect(10, 2, panelW, panelH, 20)
+            .fill({ color: 0x0d1c33, alpha: 0.96 });
+        root.addChild(panel);
 
         const matte = new PIXI.Graphics();
         matte.roundRect(18, 16, Math.max(1, panelW - 16), Math.max(1, panelH - 28), 12)
              .fill({ color: 0x06142F, alpha: 0.34 });
         root.addChild(matte);
 
-        const slotW = w / 3;
+        const slotW = this._vertical ? w : w / 3;
         const wells = new PIXI.Graphics();
         for (let i = 0; i < 3; i++) {
             const wellW = slotW * 0.76;
-            const wellH = Math.max(54, panelH * 0.56);
-            const wellX = slotW * i + (slotW - wellW) * 0.5;
-            const wellY = Math.max(18, panelH * 0.16);
+            const wellH = this._vertical ? h / 3 - 16 : Math.max(54, panelH * 0.56);
+            const wellX = (this._vertical ? 0 : slotW * i) + (slotW - wellW) * 0.5;
+            const wellY = this._vertical ? h / 3 * i + 8 : Math.max(18, panelH * 0.16);
             const wellR = Math.min(18, wellH * 0.22);
 
             wells.roundRect(wellX, wellY, wellW, wellH, wellR)
@@ -301,7 +295,7 @@ class PieceTray {
 
         const border = new PIXI.Graphics();
         border.roundRect(10, 2, panelW, panelH, 14)
-         .stroke({ width: 1.2, color: THEME.divider, alpha: 0.42 });
+         .stroke({ width: 1, color: 0x547f9b, alpha: 0.5 });
         border.roundRect(16, 7, Math.max(1, panelW - 12), 3, 2)
          .fill({ color: THEME.secondary, alpha: 0.14 });
         root.addChild(border);

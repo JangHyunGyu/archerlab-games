@@ -24,6 +24,7 @@ html, body {
 }
 
 body {
+    height: 100dvh;
     padding:
         env(safe-area-inset-top)
         env(safe-area-inset-right)
@@ -110,6 +111,28 @@ body {
 #game-container canvas {
     display: block;
 }
+
+/* Quiet outer canvas lets the jewel pieces carry the color. */
+body .archerlab-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding-inline: 12px;
+    border-color: rgba(139, 199, 230, .25) !important;
+    background: rgba(11, 21, 45, .86) !important;
+    box-shadow: none !important;
+    letter-spacing: .03em;
+}
+.game-loading-card {
+    padding: 30px 24px;
+    border: 1px solid #31526c;
+    border-radius: 24px;
+    background: #0c172d;
+    box-shadow: 0 24px 80px #0006;
+}
+.game-loading-card strong { color: #c8f8ee; text-shadow: none; font-size: 26px; letter-spacing: -.04em; }
+.game-loading-track { height: 6px; border: 0; background: #1a2b42; }
+.game-loading-track i { background: linear-gradient(90deg, #5bdec8, #b4f3d3); }
 
 #game-container canvas:focus-visible {
     outline: 3px solid #FFE9A6;

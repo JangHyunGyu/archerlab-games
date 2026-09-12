@@ -28,10 +28,27 @@ assert.match(piece, /fill\(\{ color: 0x020B1E, alpha: 0\.24 \}\)/);
 
 assert.match(game, /const coverScale = Math\.max\(w \/ textureW, h \/ textureH\);/);
 assert.ok(!game.includes('bgSprite.width = w;'), 'square background must preserve its aspect ratio');
-assert.match(game, /const landscapeTrayH = Math\.max\(144, Math\.min\(210, h \* 0\.25\)\);/);
+// Check actual geometry: the framed board, HUD and tray must fit and stay apart.
+const vm = require('node:vm');
+const context = vm.createContext({ navigator: { language: 'ko' }, localStorage: { getItem: () => null } });
+vm.runInContext(read('js/constants.js') + '\n' + game, context);
+for (const [width, height] of [[320,568], [360,640], [390,844], [430,932], [768,1024], [1024,768], [1440,900], [1920,1080], [568,320], [844,390], [932,430]]) {
+    const layout = vm.runInContext(`getBlockpangLayout(${width}, ${height})`, context);
+    const grid = layout.cellSize * 10;
+    const right = layout.boardX + grid + layout.boardExt;
+    const bottom = layout.boardY + grid + layout.boardExt;
+    assert.ok(layout.boardX - layout.boardExt >= 0, `${width}x${height}: board left`);
+    assert.ok(right <= width, `${width}x${height}: board right`);
+    assert.ok(layout.boardY - layout.boardExt >= layout.scoreAreaH, `${width}x${height}: HUD separation`);
+    assert.ok(bottom <= height, `${width}x${height}: board bottom`);
+    assert.ok(layout.trayX >= 0 && layout.trayX + layout.trayWidth <= width, `${width}x${height}: tray width`);
+    assert.ok(layout.trayY + layout.trayHeight <= height + 1, `${width}x${height}: tray bottom`);
+    assert.ok(layout.sideTray ? right <= layout.trayX : bottom <= layout.trayY, `${width}x${height}: board and tray separation`);
+    assert.ok(grid >= (height <= 430 ? 140 : 260), `${width}x${height}: legible board`);
+}
 assert.ok(!game.includes('0.62) / PANEL_RATIO'), 'desktop board must not use the undersized fixed ratio');
 
-const cacheVersion = '20260825-renderer-fallback-v1';
+const cacheVersion = '20260912-puzzle-ui-v5';
 for (const file of ['index.html', 'index-en.html']) {
     const html = read(file);
     for (const script of ['constants', 'SoundManager', 'ScoreManager', 'EffectManager', 'Board', 'Piece', 'InputManager', 'UIManager', 'Game', 'main']) {

@@ -1,6 +1,43 @@
+// CSS-pixel geometry shared by the canvas and its input hit areas.
+function getBlockpangLayout(width, height) {
+    const w = Math.max(240, width);
+    const h = Math.max(240, height);
+    const padding = Math.max(8, Math.min(w, h) * 0.025);
+    const sideTray = w > h * 1.15 && h <= 600;
+    const hudWidth = Math.min(w, 740);
+    const scoreAreaH = Math.max(94, Math.min(124, h * 0.135));
+    const trayWidth = sideTray ? Math.min(280, w * 0.34) : Math.min(w, 740);
+    const trayHeight = Math.max(132, Math.min(186, h * 0.23));
+    const maxBoardWidth = sideTray ? w - trayWidth - padding * 4 : w - padding * 2;
+    const maxBoardHeight = h - scoreAreaH - padding * 3 - (sideTray ? 0 : trayHeight);
+    let cellSize = 8;
+    for (let cell = 64; cell >= 8; cell--) {
+        const ext = getBlockpangBoardPanelExt(cell, w, h);
+        if (cell * GRID_SIZE + ext * 2 <= Math.min(maxBoardWidth, maxBoardHeight)) {
+            cellSize = cell;
+            break;
+        }
+    }
+    const boardExt = getBlockpangBoardPanelExt(cellSize, w, h);
+    const grid = cellSize * GRID_SIZE;
+    const boardVisual = grid + boardExt * 2;
+    const boardAreaWidth = sideTray ? w - trayWidth - padding * 2 : w;
+    const boardX = Math.floor((boardAreaWidth - grid) / 2);
+    const boardY = Math.floor(scoreAreaH + padding + boardExt + Math.max(0, maxBoardHeight - boardVisual) / 2);
+    return {
+        cellSize, padding, scoreAreaH, boardX, boardY, boardExt, sideTray,
+        hudWidth, hudX: (w - hudWidth) / 2,
+        trayWidth,
+        trayX: sideTray ? w - trayWidth - padding : (w - trayWidth) / 2,
+        trayY: sideTray ? scoreAreaH + padding : boardY + grid + boardExt + padding,
+        trayHeight: sideTray ? h - scoreAreaH - padding * 2 : trayHeight,
+    };
+}
+
 class Game {
     constructor(app) {
         this.app = app;
+        this._reducedMotion = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         this.cellSize = 0;
         this.isGameOver = false;
         this.isAnimating = false;
@@ -299,7 +336,7 @@ class Game {
 
         // Dark neon base (fallback plus a tint layer over the bitmap)
         const baseBg = new PIXI.Graphics();
-        baseBg.rect(0, 0, w, h).fill({ color: THEME.bg, alpha: bgTexture ? 0.18 : 1 });
+        baseBg.rect(0, 0, w, h).fill({ color: THEME.bg, alpha: bgTexture ? 0.62 : 1 });
         baseBg.rect(0, h * 0.42, w, h * 0.58).fill({ color: THEME.bgDeep, alpha: bgTexture ? 0.18 : 0.75 });
         baseBg.rect(0, h * 0.78, w, h * 0.22).fill({ color: THEME.accentSoft, alpha: 0.20 });
         this.bgContainer.addChild(baseBg);
@@ -312,7 +349,7 @@ class Game {
             const r = Math.min(w, h) * (0.36 + i * 0.12);
             for (let j = 6; j >= 0; j--) {
                 g.circle(0, 0, r + j * 18)
-                 .fill({ color: blobColors[i], alpha: 0.018 });
+                 .fill({ color: blobColors[i], alpha: 0.008 });
             }
             const bx = i === 0 ? w * 0.16 : i === 1 ? w * 0.84 : w * 0.5;
             const by = i === 0 ? h * 0.25 : i === 1 ? h * 0.72 : h * 0.92;
@@ -336,6 +373,7 @@ class Game {
 
 
     _updateBackground(ticker) {
+        if (this._reducedMotion) return;
         const delta = ticker.deltaTime;
         const dt = delta * (1000 / 60);
         this._bgTime += dt;
@@ -357,65 +395,11 @@ class Game {
         if (this.board && typeof this.board.clearTransientOverlays === 'function') this.board.clearTransientOverlays();
         const w = this.app.screen.width;
         const h = this.app.screen.height;
-        const padding = Math.max(8, Math.min(w, h) * 0.025);
-
-        const scoreAreaH = Math.max(82, h * 0.135);
-        const isPortrait = h > w * 1.12;
-
-        const panelExtForCell = (cell) => getBlockpangBoardPanelExt(cell, w, h);
-        const maxCellForVisualWidth = (maxWidth) => {
-            for (let cell = 72; cell >= 8; cell--) {
-                const ext = panelExtForCell(cell);
-                if (cell * GRID_SIZE + ext * 2 <= maxWidth) return cell;
-            }
-            return 8;
-        };
-        const maxCellForBoardStack = (maxStackHeight) => {
-            for (let cell = 72; cell >= 8; cell--) {
-                const ext = panelExtForCell(cell);
-                if (cell * GRID_SIZE + ext <= maxStackHeight) return cell;
-            }
-            return 8;
-        };
-
-        // Reserve room on the sides so the board panel asset's outer frame
-        // doesn't push the cells against the screen edges.
-        const frameMargin = isPortrait
-            ? 4
-            : Math.max(14, Math.min(w, h) * 0.025);
-        // Asset frame on board-panel.webp is ~11% of total panel side, so
-        // ext ≈ cs * 1.1 is needed to keep cells inside the inner edge of the frame.
-        // The sizing helpers above account for that extension directly.
-        if (isPortrait) {
-            const minTrayH = Math.max(154, Math.min(220, h * 0.24));
-            const maxBoardStack = h - scoreAreaH - padding * 3 - minTrayH;
-            this.cellSize = Math.min(
-                maxCellForVisualWidth(w - frameMargin * 2),
-                maxCellForBoardStack(maxBoardStack)
-            );
-        } else {
-            // The old fixed height ratio made the board tiny on desktop.
-            // Reserve a usable tray, then let the board consume the remaining
-            // height while accounting for its decorative frame.
-            const landscapeTrayH = Math.max(144, Math.min(210, h * 0.25));
-            const maxBoardStack = h - scoreAreaH - padding * 3 - landscapeTrayH;
-            this.cellSize = Math.min(
-                maxCellForVisualWidth(w - frameMargin * 2),
-                maxCellForBoardStack(maxBoardStack)
-            );
-        }
-        const actualGrid = this.cellSize * GRID_SIZE;
-        const boardPanelExt = panelExtForCell(this.cellSize);
-
-        const boardX = Math.floor((w - actualGrid) / 2);
-        // Push the board down so the panel asset's top frame clears the header.
-        const boardY = Math.floor(scoreAreaH + padding + boardPanelExt * 0.6);
-        const trayY = boardY + actualGrid + padding + boardPanelExt * 0.4;
-        const trayH = h - trayY - padding;
-
-        this.board.resize(this.cellSize, boardX, boardY);
-        this.tray.resize(this.cellSize, w, trayH, 0, trayY);
-        this.ui.resize(w, scoreAreaH, padding);
+        const layout = getBlockpangLayout(w, h);
+        this.cellSize = layout.cellSize;
+        this.board.resize(this.cellSize, layout.boardX, layout.boardY);
+        this.tray.resize(this.cellSize, layout.trayWidth, layout.trayHeight, layout.trayX, layout.trayY, layout.sideTray);
+        this.ui.resize(layout.hudWidth, layout.scoreAreaH, layout.padding, layout.hudX);
         this.input.updateHitArea();
 
         // Only recreate background if dimensions changed significantly (>5px)

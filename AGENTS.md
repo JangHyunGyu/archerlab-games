@@ -1,5 +1,10 @@
 # Repository Agent Rules
 
+## Responsive UI Quality (Permanent)
+- Every game UI change includes responsive optimization by default. Verify small and large phones, tablets, desktop, portrait and landscape, safe-area insets, and dynamic viewport heights.
+- Keep the board legible and primary controls reachable with touch, mouse, and keyboard. Avoid clipped content, unintended scrolling, and touch targets smaller than 44 CSS pixels; honor reduced-motion settings and mobile rendering budgets.
+- Validate title, saved-game, gameplay, and dialog layouts before publishing UI changes.
+
 ## Main-Only Git and Deployment (Permanent)
 - 이 저장소에서는 브랜치를 새로 만들지 않는다.
 - 모든 `git commit`, `git push`, 운영 배포는 반드시 `main` 브랜치에서만 수행한다.
