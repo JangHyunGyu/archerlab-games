@@ -183,8 +183,6 @@ const bloodStainSizeMultiplier = readNumberConstant("BLOOD_STAIN_SIZE_MULTIPLIER
 const groundDepthBase = readNumberConstant("ZOMBIE_CORPSE_GROUND_DEPTH_BASE");
 const groundDepthRange = readNumberConstant("ZOMBIE_CORPSE_GROUND_DEPTH_RANGE");
 const corpseDepthBase = readNumberConstant("ZOMBIE_CORPSE_DEPTH_BASE");
-const recentDepthStep = readNumberConstant("ZOMBIE_CORPSE_RECENT_DEPTH_STEP");
-const activeCorpseLimit = readNumberConstant("ACTIVE_CORPSE_LIMIT");
 
 assert.equal(verticalKnockbackScale, 1, "lethal hits must carry their full knockback into the death fall");
 assert.equal(verticalKnockbackLimitRatio, 0.35, "death recoil must only cap extreme lane displacement");
@@ -194,8 +192,8 @@ assert.equal(bloodStainSizeMultiplier, 2, "corpse blood stains must be twice the
 assert.equal(groundDepthBase, 25, "ground decals must stay above the arena floor art");
 assert.equal(groundDepthRange, 8, "ground decals must use their isolated narrow depth band");
 assert.equal(corpseDepthBase, 34, "corpse bodies must retain their established depth band");
-const highestGroundDepth = groundDepthBase + groundDepthRange + (activeCorpseLimit - 1) * recentDepthStep;
-const lowestCorpseDepth = corpseDepthBase + 0.4;
+const highestGroundDepth = groundDepthBase + groundDepthRange;
+const lowestCorpseDepth = corpseDepthBase;
 assert.ok(
   highestGroundDepth < lowestCorpseDepth,
   `ground decals can cover a corpse: ${highestGroundDepth} >= ${lowestCorpseDepth}`
@@ -379,7 +377,7 @@ assert.match(
 assert.match(
   corpseFunction,
   /const corpseVisualDepthRatio = clamp\s*\(bloodY \/ GAME_HEIGHT, 0, 1\)/,
-  "corpse and ground depths must follow the visible final-frame anchor"
+  "ground decal depth must follow the visible final-frame anchor"
 );
 assert.match(
   corpseFunction,
@@ -453,23 +451,18 @@ assert.match(
 );
 assert.match(
   corpseFunction,
-  /settleCorpseObjectDepth\s*\(deathSprite, corpseDepth \+ 0\.45\)/,
-  "the final death frame must move into the persistent corpse depth band"
+  /\{ object: zombie, bodyLayer: 0 \}[\s\S]*?\{ object: deathSprite, bodyLayer: 0\.5 \}/,
+  "both crossfade sprites must enter the same ordered death slot"
+);
+assert.doesNotMatch(
+  corpseFunction,
+  /settleCorpseObjectDepth|const corpseDepth =|bodyDepth \+/,
+  "settling must not replace death order with screen position or live-body depth"
 );
 assert.match(
   corpseFunction,
-  /depthEntry\.depth\s*=\s*depth/,
-  "settling must update the stored depth used by later corpse ordering"
-);
-assert.match(
-  corpseFunction,
-  /\{ object: deathSprite, depth: bodyDepth \+ 0\.9 \}/,
-  "the death animation must retain live-body depth until it settles"
-);
-assert.match(
-  corpseFunction,
-  /const corpseTarget = deathSprite && !deathSprite\.destroyed[\s\S]*?\? deathSprite/,
-  "the final death frame must remain the corpse fade target"
+  /this\.fadeCorpseRecord\(corpseRecord, effect\.corpseFade\)/,
+  "body and ground objects must finish fading before their record is removed"
 );
 assert.doesNotMatch(
   corpseFunction,

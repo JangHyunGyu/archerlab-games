@@ -443,7 +443,6 @@
   const ZOMBIE_CORPSE_GROUND_DEPTH_RANGE = 8;
   const ZOMBIE_CORPSE_DEPTH_BASE = 34;
   const ZOMBIE_CORPSE_DEPTH_RANGE = 18;
-  const ZOMBIE_CORPSE_RECENT_DEPTH_STEP = 0.012;
   const ZOMBIE_HIT_GRID_SIZE = 96;
   const ZOMBIE_HIT_GRID_PADDING = 88;
   const ZOMBIE_SEPARATION_RADIUS_SCALE = 0.9;
@@ -8887,7 +8886,6 @@
       const record = {
         objects: objects.filter(Boolean),
         depthEntries: depthEntries.filter((entry) => entry?.object),
-        depthOffset: 0,
         fading: false
       };
       this.activeCorpses.push(record);
@@ -8911,24 +8909,24 @@
       if (!this.activeCorpses) {
         return;
       }
+      // Reserve a complete slot for each death, including its crossfade/fall.
+      // Neither screen Y nor animation completion may override death order.
+      const step = ZOMBIE_CORPSE_DEPTH_RANGE / Math.max(1, this.activeCorpses.length);
       this.activeCorpses.forEach((record, index) => {
-        record.depthOffset = index * ZOMBIE_CORPSE_RECENT_DEPTH_STEP;
-        (record.depthEntries || []).forEach(({ object, depth }) => {
+        (record.depthEntries || []).forEach(({ object, depth, bodyLayer }) => {
           if (object && !object.destroyed && typeof object.setDepth === "function") {
-            object.setDepth(depth + record.depthOffset);
+            object.setDepth(bodyLayer === undefined
+              ? depth
+              : ZOMBIE_CORPSE_DEPTH_BASE + (index + bodyLayer) * step);
           }
         });
       });
     }
 
     trimCorpseRecords() {
-      while ((this.activeCorpses?.length || 0) > ACTIVE_CORPSE_LIMIT) {
-        const oldest = this.activeCorpses[0];
-        this.fadeCorpseRecord(oldest, CORPSE_TRIM_FADE_DURATION);
-        if (this.activeCorpses[0] === oldest) {
-          break;
-        }
-      }
+      const retained = (this.activeCorpses || []).filter((record) => !record.fading);
+      retained.slice(0, Math.max(0, retained.length - ACTIVE_CORPSE_LIMIT))
+        .forEach((record) => this.fadeCorpseRecord(record, CORPSE_TRIM_FADE_DURATION));
     }
 
     fadeCorpseRecord(record, duration = CORPSE_TRIM_FADE_DURATION) {
@@ -8936,9 +8934,10 @@
         return;
       }
       record.fading = true;
-      this.removeCorpseRecord(record);
+      // Fading bodies are still visible: keep their ordered slot until removal.
       const targets = record.objects.filter((object) => object && !object.destroyed);
       if (!targets.length) {
+        this.removeCorpseRecord(record);
         return;
       }
       targets.forEach((target) => this.tweens.killTweensOf(target));
@@ -8949,6 +8948,7 @@
         ease: "Sine.easeInOut",
         onComplete: () => {
           targets.forEach((target) => this.destroyTransientObject(target, false));
+          this.removeCorpseRecord(record);
         }
       });
     }
@@ -8959,7 +8959,6 @@
       const effect = ZOMBIE_CORPSE_EFFECTS[tier];
       const displayH = zombie.displayH || 170;
       const displayW = zombie.displayW || displayH;
-      const bodyDepth = ZOMBIE_BODY_DEPTH_BASE + y / 5;
       const fallProfiles = [
         { angle: -rand(76, 104), x: -rand(0.14, 0.27), y: rand(0.02, 0.08) },
         { angle: rand(76, 104), x: rand(0.14, 0.27), y: rand(0.02, 0.08) },
@@ -9005,7 +9004,7 @@
         .setPosition(corpseX, y)
         .setOrigin(0.5, 0.56)
         .setDisplaySize(displayW, displayH)
-        .setDepth(bodyDepth + 0.8)
+        .setDepth(ZOMBIE_CORPSE_DEPTH_BASE)
         .setAlpha(1);
       if (typeof zombie.clearTint === "function") {
         zombie.clearTint();
@@ -9054,8 +9053,6 @@
       const corpseVisualDepthRatio = clamp(bloodY / GAME_HEIGHT, 0, 1);
       const groundDepth = ZOMBIE_CORPSE_GROUND_DEPTH_BASE
         + corpseVisualDepthRatio * ZOMBIE_CORPSE_GROUND_DEPTH_RANGE;
-      const corpseDepth = ZOMBIE_CORPSE_DEPTH_BASE
-        + corpseVisualDepthRatio * ZOMBIE_CORPSE_DEPTH_RANGE;
       const corpseVisibleWidth = deathDisplaySize * finalFrameBounds.width * finalFrameScale;
       const corpseVisibleHeight = deathDisplaySize * finalFrameBounds.height * finalFrameScale;
       const bloodBaseMaxSide = Math.max(effect.stainWidth * sizeScale, corpseVisibleWidth * 0.52) * rand(0.84, 1);
@@ -9144,19 +9141,11 @@
           .setDisplaySize(deathDisplaySize, deathDisplaySize)
           .setFlipX(corpseFlipX)
           .setAlpha(0)
-          .setDepth(bodyDepth + 0.9))
+          .setDepth(ZOMBIE_CORPSE_DEPTH_BASE))
         : null;
       const bloodRevealDelay = deathSprite
         ? deathPushDuration + effect.fall + 55
         : Math.max(120, effect.fall - 45);
-      let corpseRecord = null;
-      const settleCorpseObjectDepth = (object, depth) => {
-        const depthEntry = corpseRecord?.depthEntries.find((entry) => entry.object === object);
-        if (depthEntry) {
-          depthEntry.depth = depth;
-        }
-        object.setDepth(depth + (corpseRecord?.depthOffset || 0));
-      };
 
       this.tweens.add({
         targets: stain,
@@ -9215,7 +9204,6 @@
                 .setAngle(settledDeathAngle)
                 .setAlpha(1);
               applyDeathFrameSize(deathFrameCount - 1);
-              settleCorpseObjectDepth(deathSprite, corpseDepth + 0.45);
               if (zombie.elite || zombie.type === "brute") {
                 this.shakeCamera(70, 0.0035);
               }
@@ -9251,21 +9239,20 @@
           duration: effect.fall,
           ease: "Quad.easeIn",
           onComplete: () => {
-            settleCorpseObjectDepth(zombie, corpseDepth + 0.4);
             if (zombie.elite || zombie.type === "brute") {
               this.shakeCamera(70, 0.0035);
             }
           }
         });
       }
-      corpseRecord = this.registerCorpseRecord(
+      const corpseRecord = this.registerCorpseRecord(
         [zombie, deathSprite, stain, shadow, poolShade],
         [
           { object: stain, depth: groundDepth },
           { object: shadow, depth: groundDepth - 0.4 },
           { object: poolShade, depth: groundDepth - 0.2 },
-          { object: zombie, depth: bodyDepth + 0.8 },
-          { object: deathSprite, depth: bodyDepth + 0.9 }
+          { object: zombie, bodyLayer: 0 },
+          { object: deathSprite, bodyLayer: 0.5 }
         ]
       );
       const corpseSettleDelay = deathSprite
@@ -9273,37 +9260,7 @@
         : effect.fall + 70;
       const corpseFadeDelay = corpseSettleDelay + effect.corpseHold;
       this.scheduleSceneDelay(corpseFadeDelay, () => {
-        const corpseTarget = deathSprite && !deathSprite.destroyed
-          ? deathSprite
-          : zombie && !zombie.destroyed ? zombie : null;
-        if (!corpseTarget) {
-          return;
-        }
-        this.tweens.add({
-          targets: corpseTarget,
-          alpha: 0,
-          duration: effect.corpseFade,
-          ease: "Sine.easeInOut",
-          onComplete: () => this.destroyTransientObject(corpseTarget, false)
-        });
-      });
-      this.scheduleSceneDelay(corpseFadeDelay, () => {
-        const stainTargets = [stain, shadow, poolShade].filter((target) => target && !target.destroyed);
-        if (!stainTargets.length) {
-          return;
-        }
-        this.tweens.add({
-          targets: stainTargets,
-          alpha: 0,
-          duration: effect.corpseFade,
-          ease: "Sine.easeInOut",
-          onComplete: () => {
-            this.destroyTransientObject(stain, false);
-            this.destroyTransientObject(shadow, false);
-            this.destroyTransientObject(poolShade, false);
-            this.removeCorpseRecord(corpseRecord);
-          }
-        });
+        this.fadeCorpseRecord(corpseRecord, effect.corpseFade);
       });
     }
 
