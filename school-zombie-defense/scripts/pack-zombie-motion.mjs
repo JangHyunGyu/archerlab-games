@@ -1,5 +1,5 @@
 // Mechanical sprite import: chroma extraction, uniform resize, cell packing.
-// Artwork uses the built-in image tool; see design/zombie-motion-v1.json and nurse-design-v1.json.
+// Artwork uses the built-in image tool; see the generation records in design/.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -8,8 +8,17 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const [type, source, mode] = process.argv.slice(2);
 const walkOnly = mode === '--walk-only';
+const walkRow = mode === '--walk-row';
 const sourceColumns = walkOnly ? 2 : 4;
+const normalVariant = /^normal-([1-4])$/.exec(type)?.[1];
 const profiles = {
+  'normal-1': { height: 0.892578125, bottom: 0.939453125 },
+  'normal-2': { height: 0.880859375, bottom: 0.935546875 },
+  'normal-3': { height: 0.90625, bottom: 0.94921875 },
+  'normal-4': { height: 0.8984375, bottom: 0.951171875 },
+  teacher: { height: 0.931640625, bottom: 0.96875 },
+  guard: { height: 0.890625, bottom: 0.96484375 },
+  janitor: { height: 0.931640625, bottom: 0.96484375 },
   runner: { height: 0.923828125, bottom: 0.952 },
   athlete: { height: 0.923828125, bottom: 0.952 },
   nurse: { height: 0.88671875, bottom: 0.953125 },
@@ -48,7 +57,7 @@ for (let y = 0; y < height; y++) {
   let last = y;
   while (++y < height) {
     if (occupied[y]) last = y;
-    else if (y - last > 6) break;
+    else if (y - last > 2) break;
   }
   bands.push([top, last + 1]);
 }
@@ -70,7 +79,9 @@ const scale = profiles[type].height * 512 / ((heights[1] + heights[2]) / 2);
 const bottom = Math.round(profiles[type].bottom * 512);
 const packFrame = (box, name) => {
   const w = Math.round(box.width * scale), h = Math.round(box.height * scale);
-  const x = Math.round((512 - w) / 2), y = bottom - h;
+  // A recoil may stand taller than a hunched walk. Move it within the cell;
+  // measured runtime centroids handle placement without shrinking the body.
+  const x = Math.round((512 - w) / 2), y = Math.max(2, bottom - h);
   if (x < 2 || y < 2 || x + w > 510 || y + h > 510) throw new Error(`${type} ${name} clips its cell: ${x},${y},${w},${h}`);
   const crop = path.join(work, `${name}-crop.png`), cell = path.join(work, `${name}.png`);
   magick(keyed, '-crop', `${box.width}x${box.height}+${box.x}+${box.y}`, '+repage', '-resize', `${w}x${h}!`, `PNG32:${crop}`);
@@ -78,11 +89,18 @@ const packFrame = (box, name) => {
   return cell;
 };
 const cells = walks.map((box, i) => packFrame(box, `walk-${i}`));
-const deathCells = walkOnly ? [] : [2, 3].flatMap(row => [0, 1, 2, 3].map(col => packFrame(bounds(row, col), `death-${(row - 2) * 4 + col}`)));
+const deathCells = (walkOnly || walkRow) ? [] : [2, 3].flatMap(row => [0, 1, 2, 3].map(col => packFrame(bounds(row, col), `death-${(row - 2) * 4 + col}`)));
 const imageRoot = path.join(root, 'assets', 'images');
+// Normal zombies retain four distinct identities, one walk row per variant.
+// Assemble only when all four imported rows exist; never duplicate one identity.
+const normalCells = [1, 2, 3, 4].flatMap(variant => [0, 1, 2, 3].map(frame =>
+  path.join(root, '..', 'tmp', 'zombie-motion-import', `normal-${variant}`, `walk-${frame}.png`)));
+const walkFrames = normalVariant
+  ? (normalCells.every(file => fs.existsSync(file)) ? normalCells : [])
+  : Array.from({ length: 4 }, () => cells).flat();
 for (const [name, frames, rows] of [
-  [`zombie-walk-${type}`, Array.from({ length: 4 }, () => cells).flat(), 4],
-  [`zombie-death-${type}-sheet`, deathCells, 2]
+  [`zombie-walk-${normalVariant ? 'normal' : type}`, walkFrames, 4],
+  [`zombie-death-${normalVariant ? `normal-variant-${normalVariant}` : type}-sheet`, deathCells, 2]
 ]) {
   if (!frames.length) continue;
   const png = path.join(imageRoot, `${name}.png`);

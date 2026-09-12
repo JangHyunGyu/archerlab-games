@@ -70,7 +70,7 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20260912-nurse-design-v2";
+  const ZOMBIE_ASSET_VERSION = "20260912-male-continuity-v2";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
   const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
@@ -369,18 +369,18 @@
   );
   // Alpha-weighted final-frame centers and opaque bounds, normalized to each 512px death frame.
   const ZOMBIE_DEATH_FINAL_FRAME_BOUNDS = {
-    "zombie-death-athlete-sheet": { x: -0.0264, y: 0.3344, width: 0.791, height: 0.2559 },
+    "zombie-death-athlete-sheet": { x: -0.0252, y: 0.3342, width: 0.7285, height: 0.2383 },
     "zombie-death-bloom-sheet": { x: -0.0135, y: 0.0588, width: 0.8594, height: 0.2656 },
     "zombie-death-brute-sheet": { x: -0.0122, y: -0.0015, width: 0.5469, height: 0.3145 },
     "zombie-death-charger-sheet": { x: -0.0512, y: 0.36, width: 0.748, height: 0.2324 },
     "zombie-death-crawler-sheet": { x: -0.0189, y: 0.0664, width: 0.8359, height: 0.4688 },
     "zombie-death-elite-sheet": { x: -0.0221, y: 0.0018, width: 0.6172, height: 0.3438 },
-    "zombie-death-guard-sheet": { x: -0.023, y: 0.0777, width: 0.8613, height: 0.2207 },
-    "zombie-death-janitor-sheet": { x: -0.0549, y: 0.0596, width: 0.8594, height: 0.2441 },
-    "zombie-death-normal-variant-1-sheet": { x: 0.0575, y: 0.2986, width: 0.918, height: 0.3008 },
-    "zombie-death-normal-variant-2-sheet": { x: 0.0317, y: 0.2924, width: 0.8574, height: 0.334 },
-    "zombie-death-normal-variant-3-sheet": { x: 0.0459, y: 0.3254, width: 0.9219, height: 0.2266 },
-    "zombie-death-normal-variant-4-sheet": { x: 0.0303, y: 0.266, width: 0.918, height: 0.3086 },
+    "zombie-death-guard-sheet": { x: -0.0188, y: 0.0792, width: 0.7695, height: 0.1992 },
+    "zombie-death-janitor-sheet": { x: -0.0532, y: 0.0615, width: 0.8223, height: 0.2363 },
+    "zombie-death-normal-variant-1-sheet": { x: 0.0444, y: 0.2937, width: 0.7617, height: 0.2539 },
+    "zombie-death-normal-variant-2-sheet": { x: 0.019, y: 0.2912, width: 0.7188, height: 0.2812 },
+    "zombie-death-normal-variant-3-sheet": { x: 0.0435, y: 0.3308, width: 0.7129, height: 0.1914 },
+    "zombie-death-normal-variant-4-sheet": { x: 0.0248, y: 0.2632, width: 0.7246, height: 0.2402 },
     "zombie-death-nurse-sheet": { x: -0.0429, y: 0.333, width: 0.8301, height: 0.2559 },
     "zombie-death-runner-sheet": { x: -0.0516, y: 0.3208, width: 0.8047, height: 0.2734 },
     "zombie-death-screamer-sheet": { x: -0.0622, y: 0.0616, width: 0.8594, height: 0.2148 },
@@ -388,23 +388,24 @@
     "zombie-death-student-1-sheet": { x: -0.0486, y: 0.0409, width: 0.8496, height: 0.3535 },
     "zombie-death-student-2-sheet": { x: 0.0645, y: 0.0463, width: 0.8652, height: 0.3594 },
     "zombie-death-student-3-sheet": { x: -0.093, y: 0.0404, width: 0.8906, height: 0.3418 },
-    "zombie-death-teacher-sheet": { x: -0.0294, y: 0.0365, width: 0.6367, height: 0.2871 },
+    "zombie-death-teacher-sheet": { x: -0.0383, y: 0.036, width: 0.7246, height: 0.3027 },
     "zombie-death-volatile-sheet": { x: -0.0098, y: -0.0037, width: 0.5977, height: 0.3418 }
   };
   const ZOMBIE_DEATH_RENDER_SCALES = {
     // Match the first visible death pose to the alpha-bounded size of the walk cycle.
-    // Normal variants start in mixed upright/falling poses, so their shared scale uses visible alpha area.
-    normal: { deathSize: 1.04 },
+    // Repaint imports bake original pose corrections into the pixels; these
+    // factors restore their anatomical size from the padded atlas cells.
+    normal: { deathSize: 1.35 },
     student: { deathSize: 1.01 },
     runner: { deathSize: 1 },
     brute: { deathSize: 1.16 },
     volatile: { deathSize: 0.99 },
     elite: { deathSize: 1.05 },
-    teacher: { deathSize: 1.11 },
+    teacher: { deathSize: 1.35 },
     nurse: { deathSize: 1 },
-    athlete: { deathSize: 1 },
-    janitor: { deathSize: 1.27 },
-    guard: { deathSize: 1.1 },
+    athlete: { deathSize: 1.35 },
+    janitor: { deathSize: 1.5 },
+    guard: { deathSize: 1.35 },
     crawler: { deathSize: 1 },
     screamer: { deathSize: 1.23 },
     spider: { deathSize: 1 },

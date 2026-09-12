@@ -3985,13 +3985,13 @@
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-athlete-sheet.png",
-      "bytes": 945882,
-      "sha256": "c8903669b36acbb9054b0b81c524ceaa877338e68eacebc4fd6e73388987fb32"
+      "bytes": 785251,
+      "sha256": "d20c47b23bae08246a6dba196b22b0cc28b458d9b99558ac0eccccc06dc5e6b6"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-athlete-sheet.webp",
-      "bytes": 155808,
-      "sha256": "e284ed3eb473ca579e70b8f65f209f73772cfdf553bdfde9d0ef0e27ec7eadb1"
+      "bytes": 133924,
+      "sha256": "3ff281a5690232752b17077a353ef7d954bd06ee2c5a7423dc2f8dbf6c896169"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-bloom-sheet.png",
@@ -4045,23 +4045,23 @@
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-guard-sheet.png",
-      "bytes": 660668,
-      "sha256": "5e8208902083fc3b187ff88dbde84014658d2bdd3e7451f89ca02a4a3ce2b6b2"
+      "bytes": 331165,
+      "sha256": "9654b03bc866c916d16fb6d8abf554e93ef79c31aa96644d2da4d232923099f6"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-guard-sheet.webp",
-      "bytes": 99210,
-      "sha256": "1e5141736df8f13f450cac217661ea16cfa12fe1a952bdeb2877f5c019a2ad94"
+      "bytes": 60548,
+      "sha256": "4ba12735877a5825b2e9b6d040a5f3c7d2074272b38771073a8f83b14ea22961"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-janitor-sheet.png",
-      "bytes": 796936,
-      "sha256": "230a34111a2c62974aa6335fbbec9b03c5d2b02e577b5b463163433eba8a1197"
+      "bytes": 406485,
+      "sha256": "1365ffb1155b4f32dadc423d66301819e6b97ac15a9751597bf285c4598015b1"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-janitor-sheet.webp",
-      "bytes": 112192,
-      "sha256": "5500b84fa37389d6956643ed9aa32784857b5b04635aa1afd95c94e4ffeb9fcd"
+      "bytes": 73626,
+      "sha256": "4fdaea21865fd37f846addbd1822b4b1a8c509543426fbeba9d7305b71f7b0f4"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-sheet.png",
@@ -4075,43 +4075,43 @@
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-variant-1-sheet.png",
-      "bytes": 1258568,
-      "sha256": "5b92ef81fbacc11a4b9389bd59564192d627cb750811216b530367a211a4dcb0"
+      "bytes": 885838,
+      "sha256": "08d732395645ef3a2dcea531c73debcc9097e2667d08e73ff07592a744203821"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-variant-1-sheet.webp",
-      "bytes": 861296,
-      "sha256": "029acbc71b6295938ff50fe0b84c4bb575f3acf4f5eb2938a3ed7b8859128a59"
+      "bytes": 149850,
+      "sha256": "012a6b85564e9ae9ca9c4b08ee246853eeba78a2f42c4274b2f7c72245829372"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-variant-2-sheet.png",
-      "bytes": 1396042,
-      "sha256": "0fbf4134f0814b09faf05896c01d01cab04c04900b4ef022f4441057440e8ca2"
+      "bytes": 995063,
+      "sha256": "a8dd66564c1af1da1c487108343ce74c770e4cd5d1e96071768cffc8c5af8a0c"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-variant-2-sheet.webp",
-      "bytes": 940464,
-      "sha256": "78204f696c265fa2728a7eaea40357ddd8f640f821149eb52dbb222cebd1577b"
+      "bytes": 173988,
+      "sha256": "fbfd9fe165878fb6240eb161705e27fb291f5cda17c5ff5de0095d6f8c2d3fc1"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-variant-3-sheet.png",
-      "bytes": 1152261,
-      "sha256": "231162c318b495257cd410c4fbdd6b16aee9fde1e9369036fcd7fc816c5d3140"
+      "bytes": 808375,
+      "sha256": "b858ccb5f47247441902d44540f53078d43f273a8d206887299729275370ec04"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-variant-3-sheet.webp",
-      "bytes": 777204,
-      "sha256": "532f1b5a0aa537cc108375fe58f64ea8f615650f77fe442692b60f7e327df7da"
+      "bytes": 153456,
+      "sha256": "bf60fe50572f4dbaf8b365e153f1fb10ea32959484278052015b281a51c3a87d"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-variant-4-sheet.png",
-      "bytes": 1506606,
-      "sha256": "927839c27923926a09f042fab72d22a9c13e8a2c835ea500368212c33042c42b"
+      "bytes": 1005016,
+      "sha256": "cba4e16fb06f061a84dbbf82a707b216e51786f1e6d8afc6e1b95f08046a1114"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-normal-variant-4-sheet.webp",
-      "bytes": 1036574,
-      "sha256": "68fe62297025b467a97299b2ce74e3ff787852f5df0f79e76b47aa2f057f2fff"
+      "bytes": 181506,
+      "sha256": "fa52295c11919f2703342953857b8d24c6fc8b0d156747fea2700d0d30c82189"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-nurse-sheet.png",
@@ -4185,13 +4185,13 @@
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-teacher-sheet.png",
-      "bytes": 636235,
-      "sha256": "2392f2a01c231d8563c111c1be77f33285516872a43106270dbda83845fb30bf"
+      "bytes": 431237,
+      "sha256": "5b511e9c7ff0dd00017eb3468e3298fc1486d84a5d6531de467d73eb7baa7df9"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-teacher-sheet.webp",
-      "bytes": 105862,
-      "sha256": "651945d8be931c05c4e8b69a1099e84399de6fd286e851797f182be9b3cf226f"
+      "bytes": 77618,
+      "sha256": "a720c575893be880ccabe372eab2753ed7f6244239639f943ad65787ce6ae75c"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-death-volatile-sheet.png",
@@ -4265,13 +4265,13 @@
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-athlete.png",
-      "bytes": 2276392,
-      "sha256": "25299e68be84ed73676e6d64ef7af60a20c874340341c7120821080200153864"
+      "bytes": 2847389,
+      "sha256": "8eebfde749b339ce35f6a14fad8913959353ece0c2a6f3e69a8d246e241c401f"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-athlete.webp",
-      "bytes": 396964,
-      "sha256": "ab4095a4d920112094209884284f144e94db7105cb051c5350e81f1ab2367941"
+      "bytes": 455292,
+      "sha256": "9dc62f2c918b889672dbbd5c027e53793b35796cc1c56653db440ff60ed288a5"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-bloom.png",
@@ -4325,33 +4325,33 @@
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-guard.png",
-      "bytes": 918290,
-      "sha256": "9a8dff6c063200069ce59a290822398707f141ac075bf62f1cac8e77c838a35f"
+      "bytes": 2384104,
+      "sha256": "e3641ad18bbd8fcca65e2f600e7abc75d62f3a4b3939aab03d5fb6a40abd27f8"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-guard.webp",
-      "bytes": 163526,
-      "sha256": "3d3479b18a4c16522ae1376d1f5be6709076bf72fa0c896321fba09cf7b44af1"
+      "bytes": 386874,
+      "sha256": "9458dc2aa6e17fe4cc37f2d53f9f90c53bd2c66edc9f2378709dbfdfb021c674"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-janitor.png",
-      "bytes": 1098568,
-      "sha256": "8003b62f770f92a906c49b8b1207b3db521d053fa1c32fc793e7ea08e08ab25a"
+      "bytes": 3354678,
+      "sha256": "e2fe98b57441f305f85d5c03c0473e7521e765f770168ba311896ff8bcdce505"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-janitor.webp",
-      "bytes": 259492,
-      "sha256": "a13aebbf730e29e97c6c0c17f2daec104fbda7aa396ad6b66b653e41d8d1f360"
+      "bytes": 517770,
+      "sha256": "73817bd03fc898fed458c711e8fdfd84647b4f4fd727fff5b18cc724d7984ab2"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-normal.png",
-      "bytes": 575856,
-      "sha256": "d3945ced531d24511e8cca70704bae475940e29fe86aaa9db72b3f34c3e0e41a"
+      "bytes": 2146692,
+      "sha256": "a7e317d25ba3b66015c3a1f44e34435ab30813c20b271fff1ff8a08586297989"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-normal.webp",
-      "bytes": 426580,
-      "sha256": "a073c64c90f3b068bcb1fa4180255578145c3761cb463fb90cb7b3658bef0093"
+      "bytes": 360770,
+      "sha256": "a98031176afb466f5e5e78a0bc81361a1c6bbda3e1e6961e0f13d8229b826972"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-nurse.png",
@@ -4405,13 +4405,13 @@
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-teacher.png",
-      "bytes": 789931,
-      "sha256": "a12530b336fe6f2bf356de04496f84c7064ea53b21b914e24e3e19b1252e3e67"
+      "bytes": 2705237,
+      "sha256": "73fb00826658034b362ea9d4b387dfd22b9a97e9d9d3b48a0650cec1e03d937c"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-teacher.webp",
-      "bytes": 183786,
-      "sha256": "7863a01eba9af0660d726cda10d322b3c10a37b4f399b0920a62261c63a6c81c"
+      "bytes": 396754,
+      "sha256": "576453c97a7e38dce05f43d89b3f4655a0a217767588130c368b21078affb2e6"
     },
     {
       "path": "school-zombie-defense/assets/images/zombie-walk-volatile.png",

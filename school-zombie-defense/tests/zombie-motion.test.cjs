@@ -53,6 +53,12 @@ for (const count of [4, 8, 12]) {
 for (const type of ["crawler", "spider", "runner", "athlete", "charger", "nurse"]) {
   assert.equal(data.death[`zombie-death-${type}-sheet`].length, 8);
 }
+for (const type of ["teacher", "guard", "janitor"]) {
+  assert.equal(data.death[`zombie-death-${type}-sheet`].length, 4);
+}
+for (let variant = 1; variant <= 4; variant++) {
+  assert.equal(data.death[`zombie-death-normal-variant-${variant}-sheet`].length, 12);
+}
 assert.match(source, /const corpseFlipX = Boolean\(zombie.flipX\)/);
 assert.match(source, /applyDeathFrameSize\(deathFrameCount - 1\)/);
 console.log("zombie motion verified: transition centers, mirrored scaling, every timer frame, disposal and final-frame hold");
