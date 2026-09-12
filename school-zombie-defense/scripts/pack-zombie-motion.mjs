@@ -1,5 +1,5 @@
 // Mechanical sprite import: chroma extraction, uniform resize, cell packing.
-// Artwork is generated with the built-in image tool; see design/zombie-motion-v1.json.
+// Artwork uses the built-in image tool; see design/zombie-motion-v1.json and nurse-design-v1.json.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -12,6 +12,7 @@ const sourceColumns = walkOnly ? 2 : 4;
 const profiles = {
   runner: { height: 0.923828125, bottom: 0.952 },
   athlete: { height: 0.923828125, bottom: 0.952 },
+  nurse: { height: 0.88671875, bottom: 0.953125 },
   charger: { height: 0.8984375, bottom: 0.968 },
   crawler: { height: 0.65655, bottom: 0.795 },
   spider: { height: 0.730469, bottom: 0.785 }

@@ -50,7 +50,7 @@ for (const count of [4, 8, 12]) {
   timer.callback();
   assert.ok(timer.cancelled);
 }
-for (const type of ["crawler", "spider", "runner", "athlete", "charger"]) {
+for (const type of ["crawler", "spider", "runner", "athlete", "charger", "nurse"]) {
   assert.equal(data.death[`zombie-death-${type}-sheet`].length, 8);
 }
 assert.match(source, /const corpseFlipX = Boolean\(zombie.flipX\)/);

@@ -70,7 +70,7 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20260912-zombie-motion-v2";
+  const ZOMBIE_ASSET_VERSION = "20260912-nurse-design-v2";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
   const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
@@ -377,7 +377,7 @@
     "zombie-death-normal-variant-2-sheet": { x: 0.0317, y: 0.2924, width: 0.8574, height: 0.334 },
     "zombie-death-normal-variant-3-sheet": { x: 0.0459, y: 0.3254, width: 0.9219, height: 0.2266 },
     "zombie-death-normal-variant-4-sheet": { x: 0.0303, y: 0.266, width: 0.918, height: 0.3086 },
-    "zombie-death-nurse-sheet": { x: -0.0275, y: 0.0929, width: 0.8613, height: 0.1836 },
+    "zombie-death-nurse-sheet": { x: -0.0429, y: 0.333, width: 0.8301, height: 0.2559 },
     "zombie-death-runner-sheet": { x: -0.0516, y: 0.3208, width: 0.8047, height: 0.2734 },
     "zombie-death-screamer-sheet": { x: -0.0622, y: 0.0616, width: 0.8594, height: 0.2148 },
     "zombie-death-spider-sheet": { x: 0.0123, y: 0.0539, width: 0.8906, height: 0.459 },
@@ -397,7 +397,7 @@
     volatile: { deathSize: 0.99 },
     elite: { deathSize: 1.05 },
     teacher: { deathSize: 1.11 },
-    nurse: { deathSize: 1.09 },
+    nurse: { deathSize: 1 },
     athlete: { deathSize: 1 },
     janitor: { deathSize: 1.27 },
     guard: { deathSize: 1.1 },
