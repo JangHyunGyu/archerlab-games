@@ -4319,7 +4319,7 @@
 
     addCommandPanel(x, y, width, height, depth = 500, accent = COLORS.blue, options = {}) {
       const shadow = this.add.rectangle(x, y + 5, width - 4, height - 3, 0x000000, options.shadowAlpha ?? 0.38).setDepth(depth);
-      const panel = this.addSurfaceImage(x, y, width, height).setAlpha(Math.max(0.84, options.alpha ?? 0.96)).setDepth(depth + 0.1);
+      const panel = this.addSurfaceImage(x, y, width, height).setAlpha(options.surfaceAlpha ?? Math.max(0.84, options.alpha ?? 0.96)).setDepth(depth + 0.1);
       const wash = this.add.rectangle(x, y, width - 8, height - 8, UI_COLORS.chalk, options.fill ? 0.045 : 0).setDepth(depth + 0.15);
       const objects = [shadow, panel, wash];
       if (options.track !== false) this.overlayObjects.push(...objects);
@@ -4412,20 +4412,23 @@
       const visualHeight = Math.max(34, Number(options.visualHeight) || height);
       const hitHeight = Math.max(height, Number(options.hitHeight) || height);
       const primary = options.primary === true;
+      const lightText = !primary || options.lightText === true;
       const compact = options.compact === true;
       const disabled = options.disabled === true;
-      const shadow = this.add.rectangle(x, y + 4, width - 6, visualHeight - 4, 0x000000, 0.45).setDepth(depth);
-      const frame = this.addSurfaceImage(x, y, width, visualHeight, primary ? "primary" : "button").setDepth(depth + 0.1);
+      const shadow = this.add.rectangle(x, y + 4, width - 6, visualHeight - 4, 0x000000, options.shadowAlpha ?? 0.45).setDepth(depth);
+      const frame = this.addSurfaceImage(x, y, width, visualHeight, primary ? "primary" : "button")
+        .setAlpha(options.surfaceAlpha ?? 1).setDepth(depth + 0.1);
       const wash = this.add.rectangle(x, y, width - 12, visualHeight - 12, 0xffeed0, 0).setDepth(depth + 0.2);
       const kicker = options.kicker ? this.add.text(x, y - visualHeight * 0.22, String(options.kicker), {
         resolution: 2, fontFamily: "Arial, sans-serif", fontSize: compact ? 9 : 10,
-        fontStyle: "700", color: primary ? "#30291d" : "#bdb8a6"
+        fontStyle: "700", color: lightText ? "#bdb8a6" : "#30291d",
+        stroke: "#131712", strokeThickness: options.lightText ? 2 : 0
       }).setOrigin(0.5).setDepth(depth + 0.24) : null;
       const text = this.add.text(x, y + (kicker ? visualHeight * 0.13 : 0), label, {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: Number(options.fontSize) || (compact ? 16 : primary ? 30 : 21),
-        fontStyle: "800", color: primary ? "#1d211b" : accent === COLORS.red ? "#e0aa91" : "#f0e8d5",
-        stroke: primary ? "#1d211b" : "#131712", strokeThickness: primary ? 0 : 1
+        fontStyle: "800", color: lightText ? accent === COLORS.red ? "#e0aa91" : "#f0e8d5" : "#1d211b",
+        stroke: lightText ? "#131712" : "#1d211b", strokeThickness: options.lightText ? 2 : lightText ? 1 : 0
       }).setOrigin(0.5).setDepth(depth + 0.3);
       const hit = this.add.rectangle(x, y, width, hitHeight, 0xffffff, 0)
         .setDepth(depth + 0.5).setInteractive({ useHandCursor: !disabled });
@@ -5323,19 +5326,19 @@
       const bandCount = 12;
       for (let index = 0; index < bandCount; index += 1) {
         const progress = index / Math.max(1, bandCount - 1);
-        scrim.fillStyle(0x020406, 0.78 * Math.pow(1 - progress, 1.45));
+        scrim.fillStyle(0x020406, 0.52 * Math.pow(1 - progress, 1.45));
         scrim.fillRect(0, index * 23, GAME_WIDTH, 24);
       }
       for (let index = 0; index < bandCount; index += 1) {
         const progress = index / Math.max(1, bandCount - 1);
-        scrim.fillStyle(0x020406, 0.82 * Math.pow(progress, 1.25));
+        scrim.fillStyle(0x020406, 0.44 * Math.pow(progress, 1.25));
         scrim.fillRect(0, 628 + index * 28, GAME_WIDTH, 30);
       }
       items.push(scrim);
 
       const archerButton = this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
         window.location.href = "https://archerlab.dev/";
-      }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76 });
+      }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76, surfaceAlpha: 0.32, shadowAlpha: 0.1 });
       const protocol = this.add.text(492, 38, this.profileSyncFailed ? "SYNC · OFFLINE" : "THREAT · RED", {
         resolution: 2, fontFamily: "Arial, sans-serif",
         fontSize: 13,
@@ -5377,7 +5380,8 @@
       items.push(subtitle);
 
       const missionPanel = this.addCommandPanel(270, 602, 432, 74, 522, COLORS.blue, {
-        alpha: 0.72,
+        surfaceAlpha: 0.28,
+        shadowAlpha: 0.08,
       });
       const missionKicker = this.add.text(72, 584, "CURRENT OBJECTIVE", {
         resolution: 2, fontFamily: "Arial, sans-serif",
@@ -5404,7 +5408,8 @@
       items.push(missionKicker, missionTitle, missionTag);
 
       const creditPanel = this.addCommandPanel(270, 700, 318, 46, 526, COLORS.gold, {
-        alpha: 0.88,
+        surfaceAlpha: 0.3,
+        shadowAlpha: 0.08,
       });
       const creditLabel = this.add.text(132, 700, this.profileSyncFailed ? "OFFLINE SUPPLY" : "SUPPLY CREDIT", {
         resolution: 2, fontFamily: "Arial, sans-serif",
@@ -5426,14 +5431,21 @@
 
       const startButton = this.addTacticalMenuButton(270, 790, 410, 86, "출격", 530, () => this.startRun(), 0xf15a47, {
         primary: true,
+        surfaceAlpha: 0.55,
+        shadowAlpha: 0.14,
+        lightText: true,
         kicker: "BEGIN SORTIE · ENTER / A",
         hitHeight: 86
       });
       const rankingButton = this.addTacticalMenuButton(164, 892, 188, 76, "랭킹", 530, () => this.showRankings(), COLORS.gold, {
+        surfaceAlpha: 0.32,
+        shadowAlpha: 0.1,
         kicker: "RECORDS · L",
         hitHeight: 76
       });
       const shopButton = this.addTacticalMenuButton(376, 892, 188, 76, "상점", 530, () => this.showShop(), COLORS.blue, {
+        surfaceAlpha: 0.32,
+        shadowAlpha: 0.1,
         kicker: "ARMORY · A",
         hitHeight: 76
       });
