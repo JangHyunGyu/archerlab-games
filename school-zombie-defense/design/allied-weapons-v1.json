@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-12",
+  "mode": "built-in image_gen",
+  "scope": "Allied projectile replacements; no zombie changes",
+  "sources": [
+    {
+      "file": "source-assets/allied-projectiles-v1/pistol.png",
+      "prompt": "A single isolated copper-jacketed pistol bullet projectile already fired, rounded ogive nose upward at exactly twelve o'clock, flat plain copper base downward. Show ONLY the small solid copper projectile itself. Absolutely no cartridge case, brass shell, primer, crimped casing, gun, text, diagram, extra objects or multiple views. 2D game sprite, finely drawn anime game inventory rendering, crisp warm copper edges and a small bright glint, slender upright silhouette, front/side orthographic view without foreshortening. Center on a genuinely transparent RGBA background, generous transparent padding. A solid compact copper slug for a top-down zombie-defense game, no shadow cast outside the projectile. 1024 by 1024 square.",
+      "generated_file": "C:\\Users\\2606\\.codex\\generated_images\\01a09552-c81f-7a20-b11e-745c319b0526\\exec-c753f7ea-1167-45f6-a81e-5e5c76406450.png"
+    },
+    {
+      "file": "source-assets/allied-projectiles-v1/rifle.png",
+      "prompt": "A single isolated copper-jacketed pointed rifle bullet projectile already fired, sharp elongated ogive nose upward at exactly twelve o'clock, short solid cylindrical copper shank and small flat copper base downward. The whole projectile is COPPER colored. Show ONLY the solid bullet PROJECTILE, with absolutely NO brass cartridge case, NO shell, NO primer, NO casing, NO firearm, NO markings, NO text, NO multiple views. Narrow 1:4 width-to-height silhouette. 2D anime game sprite, crisp hand-rendered metallic glints, detailed but readable at small gameplay sizes, orthographic view without foreshortening. Center on a genuinely transparent RGBA background, generous transparent padding. No cast shadow. 1024 by 1024 square.",
+      "generated_file": "C:\\Users\\2606\\.codex\\generated_images\\01a09552-c81f-7a20-b11e-745c319b0526\\exec-6729a2dc-cf28-401a-86d4-0a9659d352e2.png"
+    },
+    {
+      "file": "source-assets/allied-projectiles-v1/shock.png",
+      "prompt": "A single compact blue-violet electrical energy bolt sprite for a top-down anime zombie-defense game. Upward traveling projectile: small bright white-blue teardrop energy core pointed directly toward twelve o'clock, with a short violet lightning tail downward and a few restrained branching arcs around it. Free-floating energy only, absolutely NO metal parts, NO gun barrel, NO coil, NO machinery, NO ammunition shell, NO text, NO extra views. Electric blue and violet to match a futuristic shock cannon. Crisp high-quality hand-painted game VFX, softly fading outer glow but clear bright small core, centered on a genuinely transparent RGBA background with generous transparent margins, 1024 by 1024 square.",
+      "generated_file": "C:\\Users\\2606\\.codex\\generated_images\\01a09552-c81f-7a20-b11e-745c319b0526\\exec-6ffd17dc-a238-477f-83cd-0530b61a1f21.png"
+    }
+  ],
+  "notes": [
+    "Rifle and sniper use the same copper projectile source at their existing texture dimensions.",
+    "Packing only trims transparent padding, resizes proportionally, and preserves alpha.",
+    "Ready poses for C/F/G/H reuse their own attack drawings at runtime; no character bitmap is redrawn."
+  ]
+}

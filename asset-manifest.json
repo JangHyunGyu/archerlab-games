@@ -3015,23 +3015,23 @@
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-pistol.png",
-      "bytes": 16156,
-      "sha256": "0a8ed01b1e770898f37ea19df201ff47e62da172bd5481a987a1e16d6b81dcf9"
+      "bytes": 16173,
+      "sha256": "0c09e2460480e9b1b981336b46452c596b1e85ee0bce573ad75cdd0524786383"
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-pistol.webp",
-      "bytes": 12690,
-      "sha256": "358b619203165ed2ba715cd74e45e13008ce7d5800bf027ac79308b6375e2f1e"
+      "bytes": 5452,
+      "sha256": "8a522af2c14684b5178dbffd3f5c71f3bec2d60700a31d52fb2391fa0ebdcfd7"
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-rifle.png",
-      "bytes": 15948,
-      "sha256": "2ec55a9323eaf4fbd7dbfca4a968bd364a9e0dc4b86cfda087a7f3a76535b374"
+      "bytes": 17635,
+      "sha256": "2641f52f199e612de33d3f52cf8dd97c78cdf69e2086dbfb2e0a9eb527ebf380"
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-rifle.webp",
-      "bytes": 5944,
-      "sha256": "7e3d40571cd3cc8786ac8b44b4438425bcbe6d9d48968c1387188ab840395c3d"
+      "bytes": 6846,
+      "sha256": "fe7b70167b5940406b1080732f6651c0b69f81885dc5990593b490f31aa55172"
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-rocket.png",
@@ -3045,23 +3045,23 @@
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-shock.png",
-      "bytes": 15624,
-      "sha256": "1647c6b005955991be7479b53b91480ff2fed17a1d05f23d2800bd785a8c145e"
+      "bytes": 19314,
+      "sha256": "724e8ca83771016c546807f92a73ac2db6aa74bce0561a28f5a39190bf508b44"
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-shock.webp",
-      "bytes": 8650,
-      "sha256": "c50ca3d5672270cba7006a9976776e326d4fa1a3a19f591af9dea9f262f97d5a"
+      "bytes": 9830,
+      "sha256": "d2966f737c7ff9d9b9337585e9d02bbbd9df5c22078841c288c7c78f696710cf"
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-sniper.png",
-      "bytes": 12802,
-      "sha256": "767ad706789d731765dbb84bbe4bf4cab2d171eca877dad2bd6b5074f03403ff"
+      "bytes": 9725,
+      "sha256": "cef50af8b8a78e13f4ac01897c5274515953e705ab5e2b30ef453a94c1d6f468"
     },
     {
       "path": "school-zombie-defense/assets/images/projectile-sniper.webp",
-      "bytes": 5400,
-      "sha256": "b1b05cdf81c226c485da30dce75a5e617b601b67ea998061ae56203d9e1cbbef"
+      "bytes": 4418,
+      "sha256": "8f6227a2324e9ef1195f1e62a0e26ba6d14a3509f4b005e67580decd9188feac"
     },
     {
       "path": "school-zombie-defense/assets/images/run-loading-backdrop.png",

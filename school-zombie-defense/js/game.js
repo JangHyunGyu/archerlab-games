@@ -77,6 +77,7 @@
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
   const COMBAT_PROP_ASSET_VERSION = "20260712-combat-props-v2";
+  const ALLIED_WEAPON_ASSET_VERSION = "20260912-allied-weapons-v1";
   const versionedImageAsset = (path, version) => {
     const resolvedPath = imageAsset(path);
     return version ? `${resolvedPath}?v=${encodeURIComponent(version)}` : resolvedPath;
@@ -202,8 +203,13 @@
     a: [0.045, 0.11, 0.045, 0.09]
   };
   const CHARACTER_RECOVERY_BLEND_DURATIONS = {
-    a: 70
+    a: 70,
+    f: 90,
+    g: 50
   };
+  // Use the same drawing for ready/attack transitions. In particular, F's
+  // old ready sheet holds the bottle in the opposite hand for leftward throws.
+  const CHARACTER_READY_SOURCE_FRAMES = { c: 0, f: 0, g: 1, h: 0 };
   const AIM_ALIASES = {
     idle: "aim-12",
     left: "aim-1030",
@@ -269,14 +275,12 @@
     rampDuration: 0.58
   };
   const MUZZLE_EFFECTS = {
-    "projectile-arrow": { texture: "muzzle-arrow", width: 42, duration: 150, alpha: 0.78, scalePeak: 1.12 },
-    "projectile-pistol": { texture: "muzzle-pistol", width: 36, duration: 130, alpha: 0.92, scalePeak: 1.18 },
-    "projectile-rifle": { texture: "muzzle-rifle", width: 48, duration: 120, alpha: 0.95, scalePeak: 1.16 },
-    "projectile-sniper": { texture: "muzzle-sniper", width: 58, duration: 135, alpha: 0.9, scalePeak: 1.12 },
-    "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08 },
-    "projectile-firebomb": { texture: "muzzle-rocket", width: 58, duration: 170, alpha: 0.86, scalePeak: 1.1 },
-    "projectile-shock": { texture: "muzzle-rifle", width: 52, duration: 115, alpha: 0.9, scalePeak: 1.18 },
-    "projectile-nail": { texture: "muzzle-rifle", width: 34, duration: 95, alpha: 0.9, scalePeak: 1.12 }
+    // Anchor the bright ignition point to the barrel, leaving smoke behind it.
+    "projectile-arrow": { texture: "muzzle-arrow", width: 42, duration: 150, alpha: 0.78, scalePeak: 1.12, originX: 0.18 },
+    "projectile-pistol": { texture: "muzzle-pistol", width: 36, duration: 130, alpha: 0.92, scalePeak: 1.18, originX: 0.34 },
+    "projectile-rifle": { texture: "muzzle-rifle", width: 48, duration: 120, alpha: 0.95, scalePeak: 1.16, originX: 0.25 },
+    "projectile-sniper": { texture: "muzzle-sniper", width: 58, duration: 135, alpha: 0.9, scalePeak: 1.12, originX: 0.2 },
+    "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08, originX: 0.35 }
   };
   const ZOMBIE_HIT_EFFECTS = {
     "projectile-arrow": { texture: "zombie-hit-arrow-sheet", width: 42, duration: 210, alpha: 0.94, scalePeak: 1.03, rotation: 0.08, frameWidth: 96, frameHeight: 96, frames: 12 },
@@ -533,7 +537,7 @@
   const WEAPON_SFX_INTENSITY = {
     pistol: 0.38,
     rifle: 1,
-    sniper: 1.18,
+    sniper: 1.3,
     rocket: 1,
     grenade_fire: 0.72,
     arrow: 1.18,
@@ -1347,7 +1351,11 @@
 
   function createCharacterSpriteTextures(scene) {
     DEFENDER_ROSTER.map((defender) => defender.id).forEach((id) => {
-      const sourceKey = `character-${id}`;
+      const readyFrame = CHARACTER_READY_SOURCE_FRAMES[id];
+      const actionSourceKey = `character-${id}-${CHARACTER_ATTACK_ACTIONS[id]}-${readyFrame}`;
+      const sourceKey = Number.isInteger(readyFrame) && scene.textures.exists(actionSourceKey)
+        ? actionSourceKey
+        : `character-${id}`;
       if (!scene.textures.exists(sourceKey)) {
         return;
       }
@@ -2122,13 +2130,13 @@
       this.load.image("avatar-shock", imageAsset("assets/images/avatar-shock.png"));
       this.load.image("avatar-engineer", imageAsset("assets/images/avatar-engineer.png"));
       this.load.image("projectile-arrow", versionedImageAsset("assets/images/projectile-arrow.png", CROSSBOW_ASSET_VERSION));
-      this.load.image("projectile-pistol", imageAsset("assets/images/projectile-pistol.png"));
-      this.load.image("projectile-rifle", imageAsset("assets/images/projectile-rifle.png"));
+      this.load.image("projectile-pistol", versionedImageAsset("assets/images/projectile-pistol.png", ALLIED_WEAPON_ASSET_VERSION));
+      this.load.image("projectile-rifle", versionedImageAsset("assets/images/projectile-rifle.png", ALLIED_WEAPON_ASSET_VERSION));
       this.load.image("projectile-grenade", imageAsset("assets/images/projectile-grenade.png"));
       this.load.image("projectile-rocket", imageAsset("assets/images/projectile-rocket.png"));
-      this.load.image("projectile-sniper", imageAsset("assets/images/projectile-sniper.png"));
+      this.load.image("projectile-sniper", versionedImageAsset("assets/images/projectile-sniper.png", ALLIED_WEAPON_ASSET_VERSION));
       this.load.image("projectile-firebomb", versionedImageAsset("assets/images/projectile-firebomb.png", COMBAT_PROP_ASSET_VERSION));
-      this.load.image("projectile-shock", imageAsset("assets/images/projectile-shock.png"));
+      this.load.image("projectile-shock", versionedImageAsset("assets/images/projectile-shock.png", ALLIED_WEAPON_ASSET_VERSION));
       this.load.image("projectile-nail", versionedImageAsset("assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION));
       this.load.image("muzzle-arrow", versionedImageAsset("assets/images/muzzle-arrow.png", CROSSBOW_ASSET_VERSION));
       this.load.image("muzzle-pistol", imageAsset("assets/images/muzzle-pistol.png"));
@@ -6401,7 +6409,9 @@
         if (defender.attackAnimation) {
           const animation = defender.attackAnimation;
           animation.timer -= dt;
-          if (animation.timer <= 0) {
+          // Consume elapsed frames at low frame rates and accelerated speed;
+          // otherwise the release/recovery beat stretches with every frame.
+          while (animation.timer <= 0 && defender.attackAnimation === animation) {
             animation.frame += 1;
             if (animation.frame >= animation.frames) {
               const restingPose = animation.pose || defender.pose || "aim-12";
@@ -7127,16 +7137,8 @@
         const releaseAimPoint = this.getZombieHitPoint(target, defender.projectile);
         const releaseTx = releaseAimPoint.x;
         const releaseTy = releaseAimPoint.y;
-        if (defender.sprite) {
-          this.tweens.killTweensOf(defender.sprite);
-          this.tweens.add({
-            targets: defender.sprite,
-            y: defender.y + 3,
-            yoyo: true,
-            duration: 65,
-            ease: "Sine.easeOut"
-          });
-        }
+        // Recoil is already drawn into the attack frames. Moving the entire
+        // sprite here makes planted feet slide, especially during rifle bursts.
         const muzzle = this.getDefenderMuzzle(defender, pose);
         const x = muzzle.x + shotOffset;
         const y = muzzle.y;
@@ -7440,6 +7442,10 @@
     }
 
     createMuzzle(x, y, angle, projectile) {
+      if (["projectile-shock", "projectile-firebomb", "projectile-nail"].includes(projectile)) {
+        this.createWeaponDischarge(x, y, angle, projectile);
+        return;
+      }
       const effect = MUZZLE_EFFECTS[projectile];
       if (!effect) {
         const flash = this.trackTransient(this.add.circle(x, y, 5, 0xfff3a4, 0.8).setDepth(191));
@@ -7456,7 +7462,7 @@
       const texture = this.textures.get(effect.texture).getSourceImage();
       const displayHeight = effect.width * texture.height / texture.width;
       const flash = this.trackTransient(this.add.image(x, y, effect.texture)
-        .setOrigin(0.08, 0.5)
+        .setOrigin(effect.originX, 0.5)
         .setDisplaySize(effect.width, displayHeight)
         .setRotation(angle)
         .setBlendMode(Phaser.BlendModes.ADD)
@@ -7468,6 +7474,45 @@
         scaleY: flash.scaleY * effect.scalePeak,
         alpha: 0,
         duration: effect.duration,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(flash, false)
+      });
+    }
+
+    createWeaponDischarge(x, y, angle, projectile) {
+      const electric = projectile === "projectile-shock";
+      const ember = projectile === "projectile-firebomb";
+      const length = electric ? 28 : ember ? 9 : 13;
+      const flash = this.trackTransient(this.add.graphics()
+        .setPosition(x, y)
+        .setRotation(angle)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(238));
+      if (electric) {
+        const points = [[0, 0], [7, -4], [11, 2], [19, -3], [length, 0]];
+        for (const [width, color, alpha] of [[5, SHOCK_EFFECT_OUTER_COLOR, 0.65], [1.7, 0xeeffff, 1]]) {
+          flash.lineStyle(width, color, alpha);
+          flash.beginPath();
+          flash.moveTo(points[0][0], points[0][1]);
+          points.slice(1).forEach(([px, py]) => flash.lineTo(px, py));
+          flash.strokePath();
+        }
+        flash.fillStyle(0xe8ffff, 0.95).fillCircle(0, 0, 3);
+      } else {
+        flash.lineStyle(ember ? 2 : 1.3, ember ? 0xffa349 : 0xffdda1, 0.9);
+        for (const side of [-1, 1]) {
+          flash.beginPath();
+          flash.moveTo(2, side);
+          flash.lineTo(length, side * (ember ? 3 : 4));
+          flash.strokePath();
+        }
+        flash.fillStyle(0xffedb9, 0.9).fillCircle(0, 0, ember ? 2.3 : 1.5);
+      }
+      this.tweens.add({
+        targets: flash,
+        scale: electric ? 1.15 : 1.35,
+        alpha: 0,
+        duration: electric ? 105 : ember ? 90 : 65,
         ease: "Cubic.easeOut",
         onComplete: () => this.destroyTransientObject(flash, false)
       });
