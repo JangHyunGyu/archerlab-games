@@ -4614,6 +4614,21 @@
       "sha256": "09af8db5e6eceec0d7e6ee0d9e41918380e982a533cdea2e0d812bccb14bb82b"
     },
     {
+      "path": "school-zombie-defense/design/source-assets/allied-projectiles-v1/pistol.png",
+      "bytes": 339824,
+      "sha256": "af31c765f8c7eeae0a61fe6398e9af3b7c5ad94dfd51a984c128d57d29be9769"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/allied-projectiles-v1/rifle.png",
+      "bytes": 384744,
+      "sha256": "b0632af7e3a1f9a7f2343017e39355e5b415c7fe8d35affee0d01c838053c8d7"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/allied-projectiles-v1/shock.png",
+      "bytes": 378281,
+      "sha256": "8019f24a744ea0f687544c40c290d0735e17f983ba12be5d22c5622affb3023a"
+    },
+    {
       "path": "school-zombie-defense/design/source-assets/archer-v14/a-f0-c0.png",
       "bytes": 509490,
       "sha256": "dd29c48060de23a24bc9051b0395e38e1c9305caf9d4b61ae53979f040790414"
