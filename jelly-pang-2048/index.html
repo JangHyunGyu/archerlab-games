@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="origin-trial" content="Agn9opFYdjvT/UqEIvt4RnCkmN8Kt+8/lzvg731pKSz7MpNoJkLvra/pLOIFgR9GZb39JbBGeJ+CDO++Tus3FggAAABmeyJvcmlnaW4iOiJodHRwczovL2FyY2hlcmxhYi5kZXY6NDQzIiwiZmVhdHVyZSI6IkhUTUxJbkNhbnZhcyIsImV4cGlyeSI6MTc5MjQ1NDQwMCwiaXNTdWJkb21haW4iOnRydWV9">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#fff7ed">
   <title>Jelly Pang 2048 - Free Jelly Merge Puzzle Game | ArcherLab Games</title>
   <meta name="description" content="말랑한 젤리를 밀어 합치고 명예의 전당 점수에 도전하는 무료 머지 퍼즐. Play Jelly Pang 2048, a soft browser merge puzzle for mobile and desktop.">
   <meta name="keywords" content="Jelly Pang 2048, jelly merge puzzle, 2048 puzzle game, free merge game, browser puzzle game, 젤리 퍼즐, 무료 머지 게임">
@@ -40,12 +40,12 @@
     "isAccessibleForFree": true,
     "playMode": "SinglePlayer",
     "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
-    "dateModified": "2026-08-16"
+    "dateModified": "2026-09-12"
   }
   </script>
   <link rel="stylesheet" href="../assets/vendor/pretendard/pretendard.css">
-  <link rel="stylesheet" href="css/style.css?v=20260816-resume-a11y-v3">
-  <link rel="stylesheet" href="../shared/start-screen-premium.css?v=20260718-premium-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260912-puzzle-ui-v5">
+  <link rel="stylesheet" href="css/premium.css?v=20260912-puzzle-ui-v5">
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -67,12 +67,12 @@
       <a class="brand-link title-brand" href="https://archerlab.dev/" aria-label="Archerlab home">Archerlab</a>
       <div class="title-hero">
         <div class="title-copy">
-          <p class="kicker">Soft Merge Puzzle</p>
-          <h1>Jelly Pang!</h1>
-          <p class="title-tagline">말랑한 젤리를 밀고 합쳐<br>왕관 젤리까지 키워보세요</p>
+          <p class="kicker"><span aria-hidden="true">✦</span> THE SOFTEST LITTLE PUZZLE</p>
+          <h1><span>Jelly</span> <span>Pang!</span></h1>
+          <p class="title-tagline">톡, 밀면 말랑하게 팡!<br>같은 젤리를 합쳐 왕관 젤리까지.</p>
           <div class="title-badges" aria-label="game features">
-            <span>4 × 4 MERGE</span>
-            <span>12 JELLIES</span>
+            <span>4 × 4 머지 퍼즐</span>
+            <span>12가지 젤리 친구</span>
           </div>
         </div>
         <div class="title-art-shell" aria-hidden="true">
@@ -80,7 +80,14 @@
             <source srcset="assets/images/jelly-pang-main-link.webp" type="image/webp">
             <img src="assets/images/jelly-pang-main-link.png" alt="" draggable="false">
           </picture>
-          <span class="title-art-chip">MERGE &amp; GROW</span>
+          <span class="title-art-chip"><span aria-hidden="true">✦</span> 작은 젤리의 커다란 변신</span>
+          <div class="jelly-recipe" aria-hidden="true">
+            <img src="assets/images/jellies/jelly-00.webp" alt="" width="56" height="56">
+            <span>+</span>
+            <img src="assets/images/jellies/jelly-00.webp" alt="" width="56" height="56">
+            <span>=</span>
+            <img src="assets/images/jellies/jelly-01.webp" alt="" width="56" height="56">
+          </div>
         </div>
         <div class="title-actions">
           <button id="play-game" class="title-play" type="button">게임 시작</button>
@@ -108,11 +115,11 @@
 
     <section class="score-row" aria-label="score board" aria-hidden="true" inert>
       <div class="score-tile">
-        <span>Score</span>
+        <span>지금 점수</span>
         <strong id="score" aria-live="polite">0</strong>
       </div>
       <div class="score-tile">
-        <span>Best</span>
+        <span>최고 기록</span>
         <strong id="best-score" aria-live="polite">0</strong>
       </div>
     </section>
@@ -165,18 +172,20 @@
     </section>
 
     <footer class="control-dock" aria-label="direction controls" aria-hidden="true" inert>
+      <div class="merge-goal"><img src="assets/images/jellies/jelly-10.webp" alt="" width="48" height="48"><p><strong>다음 목표, 왕관 젤리!</strong><span>같은 숫자를 합쳐 2048에 도전하세요.</span></p></div>
       <div class="swipe-pad" role="group" aria-label="방향 조작">
         <button type="button" data-dir="up" aria-label="위로 이동"></button>
         <button type="button" data-dir="left" aria-label="왼쪽으로 이동"></button>
         <button type="button" data-dir="down" aria-label="아래로 이동"></button>
         <button type="button" data-dir="right" aria-label="오른쪽으로 이동"></button>
       </div>
+      <p class="control-hint">화면을 밀거나 방향키로 움직여요</p>
     </footer>
   </main>
 
   <script src="../assets/vendor/pixi/pixi-8.19.0.min.js"></script>
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
   <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
-  <script src="js/main.js?v=20260816-resume-a11y-v3" defer></script>
+  <script src="js/main.js?v=20260912-puzzle-ui-v5" defer></script>
 </body>
 </html>

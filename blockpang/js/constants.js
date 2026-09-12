@@ -298,6 +298,7 @@ const GAME_ID_BLOCKPANG = 'blockpang';
 const I18N = {
     ko: {
         gameTitle: '블럭팡',
+        titleTagline: '빈칸에 쏙, 한 줄이면 팡!\n나만의 리듬으로 최고 기록에 도전하세요.',
         gameStart: '게임 시작',
         language: '다국어',
         contact: '연락하기',
@@ -327,6 +328,7 @@ const I18N = {
     },
     en: {
         gameTitle: 'Blockpang',
+        titleTagline: 'Find the fit. Feel the pop.\nMake room for your next high score.',
         gameStart: 'GAME START',
         language: 'Language',
         contact: 'Contact',
@@ -356,6 +358,7 @@ const I18N = {
     },
     ja: {
         gameTitle: 'ブロックパン',
+        titleTagline: 'ぴったり置いて、一列そろえてパン！\n自分のペースでハイスコアに挑戦。',
         gameStart: 'ゲームスタート',
         language: '多言語',
         contact: 'お問い合わせ',

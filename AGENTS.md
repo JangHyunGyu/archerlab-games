@@ -8,6 +8,10 @@
 - Walking, every collapse frame and the persistent corpse must retain consistent anatomical size: head, torso, hands and limbs. Crouching or lying down changes the silhouette, not the body's scale. Never normalize every pose to standing height or shrink the body to fit a cell.
 - Review transitions and final bodies at actual gameplay size, including mirrored instances. Keep the final death frame as the persistent corpse with the same scale and orientation. Automated bounds/coverage checks supplement visual review and do not replace it.
 
+## Responsive UI Quality (Permanent)
+- Every game UI change includes responsive optimization by default. Verify small and large phones, tablets, desktop, portrait and landscape, safe-area insets, and dynamic viewport heights.
+- Keep the board legible and primary controls reachable with touch, mouse, and keyboard. Avoid clipped content, unintended scrolling, and touch targets smaller than 44 CSS pixels; honor reduced-motion settings and mobile rendering budgets.
+- Validate title, saved-game, gameplay, and dialog layouts before publishing UI changes.
 
 ## Main-Only Git and Deployment (Permanent)
 - 이 저장소에서는 브랜치를 새로 만들지 않는다.

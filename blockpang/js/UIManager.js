@@ -410,7 +410,8 @@ class UIManager {
         this._activeButtons = [];
     }
 
-    resize(screenWidth, scoreAreaHeight, padding) {
+    resize(screenWidth, scoreAreaHeight, padding, offsetX = 0) {
+        this.container.x = offsetX;
         const centerX = screenWidth / 2;
 
         // ── Panel geometry ──
@@ -432,30 +433,19 @@ class UIManager {
         if (this.hudBg) {
             const oldHud = this.hudBg.removeChildren();
             oldHud.forEach(c => c.destroy({ children: true }));
-            const panelTexture = getBlockpangTexture('glassPanelFill') || getBlockpangTexture('glassPanel');
-
             const shadow = new PIXI.Graphics();
             shadow.roundRect(hudX, hudY + 4, hudW, hudH, 18)
                   .fill({ color: THEME.shadow, alpha: 0.32 });
             this.hudBg.addChild(shadow);
 
-            if (panelTexture) {
-                const panel = new PIXI.Sprite(panelTexture);
-                panel.position.set(hudX, hudY);
-                panel.width = hudW;
-                panel.height = hudH;
-                panel.alpha = compact ? 0.68 : 0.76;
-                this.hudBg.addChild(panel);
-            } else {
-                const panel = new PIXI.Graphics();
-                panel.roundRect(hudX, hudY, hudW, hudH, 18)
-                     .fill({ color: THEME.surface, alpha: 0.9 });
-                this.hudBg.addChild(panel);
-            }
+            const panel = new PIXI.Graphics();
+            panel.roundRect(hudX, hudY, hudW, hudH, 20)
+                .fill({ color: 0x0d1c33, alpha: 0.96 });
+            this.hudBg.addChild(panel);
 
             const line = new PIXI.Graphics();
             line.roundRect(hudX, hudY, hudW, hudH, 18)
-                .stroke({ width: 1.2, color: THEME.divider, alpha: compact ? 0.44 : 0.52 });
+                .stroke({ width: 1, color: 0x547f9b, alpha: 0.5 });
             line.roundRect(hudX + 10, hudY + 6, Math.max(1, hudW - 20), 3, 2)
                 .fill({ color: THEME.secondary, alpha: compact ? 0.16 : 0.22 });
             this.hudBg.addChild(line);
@@ -487,10 +477,8 @@ class UIManager {
         const barW = Math.min(compact ? 132 : 110, hudW * 0.36);
         const barX = innerRight - barW;
         const barY = innerBottom - barH - 4;
-        const levelY = compact
-            ? barY - this.levelText.height * 0.5 - 5
-            : barY + barH + this.levelText.height * 0.5 + 3;
-        this.levelText.position.set(innerRight, levelY);
+        const levelY = barY + barH / 2;
+        this.levelText.position.set(barX - 8, levelY);
 
         this.levelBarBg.clear();
         this.levelBarBg.roundRect(barX, barY, barW, barH, barH / 2).fill({ color: THEME.secondaryDp, alpha: 0.56 });
@@ -535,6 +523,8 @@ class UIManager {
             w: hudHitSize,
             h: hudHitSize,
         };
+        this._hudHomeBounds.x += offsetX;
+        this._hudSoundBounds.x += offsetX;
         this._registerGameHudFallbackButtons();
     }
 
@@ -668,53 +658,25 @@ class UIManager {
     _drawNeonButtonFrame(g, width, height, variant = 'ghost', hovered = false) {
         g.clear();
 
-        const radius = Math.min(14, Math.max(8, height * 0.24));
+        const radius = Math.min(17, height * 0.32);
         const isPrimary = variant === 'primary';
         const isSecondary = variant === 'secondary';
         const isGold = variant === 'gold';
-        const border = isGold ? THEME.gold : THEME.secondary;
-        const borderAlpha = hovered ? (isPrimary ? 0.95 : 0.84) : (isPrimary ? 0.76 : 0.58);
-        const base = isPrimary ? THEME.accentDeep : THEME.surface;
-        const mid = isPrimary ? THEME.accent : (isSecondary ? THEME.surfaceAlt : THEME.bgDim);
-        const top = isPrimary ? THEME.rose : (isGold ? THEME.gold : THEME.secondaryDp);
+        const border = isGold ? THEME.gold : (isPrimary ? 0xa3f9e2 : 0x4b7295);
+        const borderAlpha = hovered ? 0.9 : 0.6;
+        const base = isPrimary ? 0x299c95 : 0x0f2038;
+        const mid = isPrimary ? 0x73e8cb : (isSecondary ? 0x203c56 : 0x142840);
 
         g.roundRect(0, 7, width, height, radius + 3)
             .fill({ color: THEME.shadow, alpha: hovered ? 0.42 : 0.32 });
-        g.roundRect(-2, -2, width + 4, height + 4, radius + 2)
-            .stroke({ width: 2, color: border, alpha: hovered ? 0.25 : 0.14 });
         g.roundRect(0, 0, width, height, radius)
             .fill({ color: base, alpha: isPrimary ? 1 : (hovered ? 0.96 : 0.9) });
-        g.roundRect(3, 3, width - 6, height - 7, Math.max(6, radius - 2))
+        g.roundRect(1, 1, width - 2, height - 5, radius - 1)
             .fill({ color: mid, alpha: isPrimary ? (hovered ? 1 : 0.92) : (hovered ? 0.54 : 0.36) });
         g.roundRect(7, 5, width - 14, Math.max(7, height * 0.22), Math.max(5, radius - 5))
             .fill({ color: THEME.white, alpha: isPrimary ? (hovered ? 0.22 : 0.15) : (hovered ? 0.12 : 0.08) });
-        g.roundRect(5, height - 9, width - 10, 4, 3)
-            .fill({ color: isPrimary ? THEME.accentDeep : top, alpha: isPrimary ? 0.46 : 0.22 });
         g.roundRect(0, 0, width, height, radius)
-            .stroke({ width: isPrimary ? 2.2 : 1.5, color: border, alpha: borderAlpha });
-
-        const railAlpha = hovered ? 0.72 : 0.46;
-        g.roundRect(6, height * 0.24, 3, height * 0.52, 2)
-            .fill({ color: border, alpha: railAlpha });
-        g.roundRect(width - 9, height * 0.24, 3, height * 0.52, 2)
-            .fill({ color: border, alpha: railAlpha });
-
-        const bracket = Math.min(23, width * 0.16);
-        const inset = 7;
-        const accentAlpha = isPrimary ? (hovered ? 0.9 : 0.7) : (hovered ? 0.68 : 0.48);
-        g.moveTo(inset, inset + 11)
-            .lineTo(inset, inset)
-            .lineTo(inset + bracket, inset)
-            .moveTo(width - inset - bracket, inset)
-            .lineTo(width - inset, inset)
-            .lineTo(width - inset, inset + 11)
-            .moveTo(inset, height - inset - 11)
-            .lineTo(inset, height - inset)
-            .lineTo(inset + bracket, height - inset)
-            .moveTo(width - inset - bracket, height - inset)
-            .lineTo(width - inset, height - inset)
-            .lineTo(width - inset, height - inset - 11)
-            .stroke({ width: 2, color: isPrimary ? THEME.gold : border, alpha: accentAlpha });
+            .stroke({ width: 1, color: border, alpha: borderAlpha });
     }
 
     _drawButtonIcon(g, icon, x, y, size, color, alpha = 1) {
@@ -845,7 +807,7 @@ class UIManager {
         btn.addChild(bg);
 
         const iconTextureKey = this._getButtonIconTextureKey(icon);
-        const iconTexture = iconTextureKey ? getBlockpangTexture(iconTextureKey) : null;
+        const iconTexture = iconTextureKey && icon !== 'play' ? getBlockpangTexture(iconTextureKey) : null;
         const iconG = icon
             ? (iconTexture ? new PIXI.Sprite(iconTexture) : new PIXI.Graphics())
             : null;
@@ -856,7 +818,7 @@ class UIManager {
             btn.addChild(iconG);
         }
 
-        const textColor = variant === 'primary' ? THEME.white : THEME.inkStrong;
+        const textColor = variant === 'primary' ? 0x103b42 : THEME.inkStrong;
         const txt = new PIXI.Text({
             text: label,
             style: {
@@ -869,7 +831,7 @@ class UIManager {
                     color: variant === 'primary' ? THEME.shadow : THEME.secondary,
                     blur: variant === 'primary' ? 4 : 3,
                     distance: variant === 'primary' ? 1 : 0,
-                    alpha: variant === 'primary' ? 0.38 : 0.18,
+                    alpha: 0,
                 },
             },
         });
@@ -888,7 +850,7 @@ class UIManager {
         const draw = (hovered = false) => {
             this._drawNeonButtonFrame(bg, width, height, variant, hovered);
             if (iconG) {
-                const iconColor = variant === 'primary' ? THEME.white : (variant === 'gold' ? THEME.gold : THEME.secondary);
+                const iconColor = variant === 'primary' ? 0x103b42 : (variant === 'gold' ? THEME.gold : THEME.secondary);
                 const iconAlpha = hovered ? 1 : 0.88;
                 if (iconIsSprite) {
                     iconG.width = iconSize * 1.28;
@@ -955,7 +917,14 @@ class UIManager {
         const h = this.game.app.screen.height;
         container.hitArea = new PIXI.Rectangle(0, 0, w, h);
 
-        const centerX = w / 2;
+        const titleBase = new PIXI.Graphics();
+        titleBase.rect(0, 0, w, h).fill({ color: 0x080e25 });
+        container.addChild(titleBase);
+
+        const splitTitle = w >= 480 && w > h * 1.12;
+        const compositionW = Math.min(w - 64, 1120);
+        const compositionLeft = (w - compositionW) / 2;
+        const centerX = splitTitle ? compositionLeft + compositionW * 0.23 : w / 2;
         const isSmall = w < 380;
         const isLandscape = w > h * 1.08;
         const isShort = h < 640;
@@ -972,16 +941,20 @@ class UIManager {
             const scale = Math.max(w / tw, h / th);
             splash.anchor.set(0.5);
             splash.scale.set(scale);
-            splash.position.set(centerX, h * (isLandscape ? 0.5 : 0.5));
-            splash.alpha = 0.98;
+            splash.position.set(w / 2, h * 0.5);
+            splash.alpha = 0.42;
             container.addChild(splash);
         }
 
         const artGrade = new PIXI.Graphics();
         artGrade.rect(0, 0, w, h).fill({ color: THEME.bgDeep, alpha: splashTexture ? 0.1 : 0.24 });
-        artGrade.rect(0, 0, w, h * 0.18).fill({ color: THEME.shadow, alpha: 0.2 });
-        artGrade.rect(0, h * 0.38, w, h * 0.34).fill({ color: THEME.bg, alpha: 0.18 });
-        artGrade.rect(0, h * 0.74, w, h * 0.26).fill({ color: THEME.shadow, alpha: 0.5 });
+        // A continuous tint avoids visible horizontal bands behind the artwork.
+        artGrade.rect(0, 0, w, h).fill({ color: 0x080e25, alpha: 0.36 });
+        for (let x = 36; x < w; x += 42) {
+            for (let y = 36; y < h; y += 42) {
+                artGrade.circle(x, y, 0.7).fill({ color: THEME.inkMuted, alpha: 0.13 });
+            }
+        }
         container.addChild(artGrade);
 
         const cinematicFrame = new PIXI.Graphics();
@@ -1000,10 +973,6 @@ class UIManager {
                 .lineTo(x + sx * frameCorner, y)
                 .stroke({ width: 2, color: THEME.secondary, alpha: 0.64 });
         });
-        cinematicFrame.rect(centerX - Math.min(140, w * 0.18), h * 0.385, Math.min(280, w * 0.36), 1)
-            .fill({ color: THEME.accent, alpha: 0.18 });
-        cinematicFrame.rect(centerX - Math.min(44, w * 0.06), h * 0.383, Math.min(88, w * 0.12), 2)
-            .fill({ color: THEME.gold, alpha: 0.52 });
         container.addChild(cinematicFrame);
 
         // ── Small decorative block pictogram (a few stacked pieces above logo) ──
@@ -1038,7 +1007,9 @@ class UIManager {
         container.addChild(deco);
 
         // ── Logo: "블럭팡" / 한글/영문 반응 ──
-        const logoFontSize = Math.min((isLandscape ? 54 : 64) * uiScale, w * (isLandscape ? 0.12 : 0.155)) * sc;
+        const logoFontSize = splitTitle
+            ? Math.min(104, compositionW * 0.11, h * (h < 560 ? 0.14 : 0.19))
+            : Math.min(78, w * 0.18, h * 0.105);
         const logo = new PIXI.Text({
             text: getText('gameTitle'),
             style: {
@@ -1046,13 +1017,14 @@ class UIManager {
                 fontSize: logoFontSize,
                 fill: THEME.inkStrong,
                 fontWeight: '900',
-                letterSpacing: 0.8,
-                stroke: { color: THEME.secondaryDp, width: Math.max(3, logoFontSize * 0.07), alpha: 0.74 },
-                dropShadow: { color: THEME.accent, blur: 18, distance: 0, alpha: 0.5 },
+                letterSpacing: -1,
+                stroke: { color: 0x18345b, width: Math.max(2, logoFontSize * 0.025) },
+                dropShadow: { color: THEME.secondaryDp, blur: 0, distance: 4, angle: Math.PI / 2, alpha: 0.65 },
             },
         });
         logo.anchor.set(0.5, 0.5);
-        logo.position.set(centerX, h * (isLandscape ? 0.22 : isShort ? 0.185 : 0.205));
+        logo.position.set(centerX, splitTitle ? Math.max(78, h * (h < 560 ? 0.25 : 0.32)) : Math.max(106, h * 0.17));
+        this._fitTextToWidth(logo, splitTitle ? compositionW * 0.45 : w * 0.88, 28);
 
         const logoPlateW = Math.min(w * 0.86, Math.max(250, logo.width + 76));
         const logoPlateH = Math.max(70, logo.height + 26);
@@ -1085,10 +1057,31 @@ class UIManager {
         subtitle.position.set(centerX, logo.y + logo.height * 0.5 + 8);
         container.addChild(subtitle);
 
+        const edition = new PIXI.Text({
+            text: 'THE BLOCK ARCADE',
+            style: { fontFamily: FONT_BODY, fontSize: splitTitle ? 11 : 9, fill: THEME.secondary, fontWeight: '700', letterSpacing: 3 },
+        });
+        edition.anchor.set(0.5, 1);
+        edition.position.set(centerX, logo.y - logo.height * 0.5 - 14);
+        edition.visible = h >= 640;
+        container.addChild(edition);
+
+        const titleTagline = new PIXI.Text({
+            text: getText('titleTagline'),
+            style: { fontFamily: FONT_BODY, fontSize: splitTitle ? Math.min(16, h * 0.035) : 13,
+                fill: THEME.inkMuted, fontWeight: '500', align: 'center', lineHeight: splitTitle ? 25 : 21 },
+        });
+        titleTagline.anchor.set(0.5, 0);
+        titleTagline.position.set(centerX, subtitle.y + subtitle.height + 16);
+        this._fitTextToWidth(titleTagline, splitTitle ? compositionW * 0.42 : w * 0.86, 10);
+        container.addChild(titleTagline);
+        if (splitTitle && h < 560) titleTagline.visible = false;
+        if (splitTitle && h < 350) subtitle.visible = false;
+
         // ── Best Score pill ──
         const bestScore = this.game.scoreManager.bestScore;
         let bestText = null;
-        if (bestScore > 0) {
+        if (bestScore > 0 && !(splitTitle && h < 560)) {
             const bestLabel = `${getText('best')}  ${bestScore.toLocaleString()}`;
             bestText = new PIXI.Text({
                 text: bestLabel,
@@ -1106,7 +1099,7 @@ class UIManager {
             const padX = 14, padY = 6;
             const pillW = bestText.width + padX * 2;
             const pillH = bestText.height + padY * 2;
-            const pillY = subtitle.y + subtitle.height + 18;
+            const pillY = titleTagline.y + titleTagline.height + 12;
             const pill = new PIXI.Graphics();
             pill.roundRect(centerX - pillW / 2, pillY, pillW, pillH, pillH / 2)
                 .fill({ color: THEME.surface });
@@ -1120,17 +1113,17 @@ class UIManager {
 
         // ── Buttons ──
         const hasSave = Game.hasSavedGame();
-        const btnW = Math.min(w * (isLandscape ? 0.38 : 0.78), (isLandscape ? 320 : 344) * uiScale);
-        const btnH = Math.min(58 * uiScale, Math.max(50, h * 0.064));
-        const actionGap = Math.max(18, Math.min(24 * uiScale, h * 0.024));
-        const smallBtnH = Math.min(42 * uiScale, Math.max(38, h * 0.05));
+        const btnW = splitTitle ? Math.min(360, compositionW * 0.42) : Math.min(w * 0.82, 360);
+        const btnH = Math.min(60, Math.max(46, h * 0.067));
+        const actionGap = Math.max(12, Math.min(18, h * 0.022));
+        const smallBtnH = 44;
         const safeBottom = Math.max(18, Math.min(32, h * 0.03));
         const actionStackH = hasSave
-            ? btnH * 2 + actionGap + smallBtnH + 52
+            ? btnH * 2 + actionGap + smallBtnH + 32
             : btnH + smallBtnH + 52;
-        const actionTop = isLandscape
-            ? Math.min(h - safeBottom - actionStackH, h * (h > 520 ? 0.56 : 0.52))
-            : Math.max(h * (isShort ? 0.48 : 0.54), h - safeBottom - actionStackH);
+        const actionTop = splitTitle
+            ? Math.min(h - safeBottom - actionStackH, h * 0.58)
+            : h - safeBottom - actionStackH;
         const startBtnY = hasSave ? actionTop + btnH + actionGap : actionTop + 18;
         const btnX = centerX - btnW / 2;
 
@@ -1141,18 +1134,21 @@ class UIManager {
         const firstActionY = hasSave ? startBtnY - btnH - actionGap : startBtnY;
         const titleContentBottom = bestText
             ? bestText.y + bestText.height + 12
-            : subtitle.y + subtitle.height + 10;
+            : titleTagline.y + titleTagline.height + 10;
         const heroAvailableH = firstActionY - titleContentBottom - 24;
         const isShortLandscape = isLandscape && h < 500;
-        if (!isShortLandscape && heroAvailableH >= 92) {
+        if (splitTitle || (!isShortLandscape && heroAvailableH >= 92)) {
             const heroMaxByViewport = isLandscape
                 ? Math.min(w * 0.2, h * 0.3, 286 * uiScale)
                 : Math.min(w * 0.55, h * 0.3, 308 * uiScale);
-            const heroSize = Math.max(92, Math.min(heroMaxByViewport, heroAvailableH));
+            const heroSize = splitTitle
+                ? Math.min(compositionW * 0.49, h * 0.70, 520)
+                : Math.max(92, Math.min(w * 0.65, heroAvailableH, 350));
             heroArt = new PIXI.Container();
             heroArt._blockpangTitleHero = true;
             heroArt._blockpangTitleHeroSize = heroSize;
-            heroArt.position.set(centerX, titleContentBottom + 12 + heroSize / 2);
+            heroArt.position.set(splitTitle ? compositionLeft + compositionW * 0.75 : centerX,
+                splitTitle ? h * 0.52 : titleContentBottom + 12 + heroAvailableH / 2);
             heroArt.eventMode = 'none';
 
             const heroGlow = new PIXI.Graphics();
@@ -1170,6 +1166,12 @@ class UIManager {
                 board.height = heroSize;
                 board.alpha = 0.92;
                 heroArt.addChild(board);
+                const boardMask = new PIXI.Graphics();
+                const edge = heroSize * 0.025;
+                boardMask.roundRect(-heroSize / 2 + edge, -heroSize / 2 + edge,
+                    heroSize - edge * 2, heroSize - edge * 2, heroSize * 0.06).fill(0xffffff);
+                heroArt.addChild(boardMask);
+                board.mask = boardMask;
             } else {
                 const board = new PIXI.Graphics();
                 board.roundRect(-heroSize / 2, -heroSize / 2, heroSize, heroSize, heroSize * 0.08)
@@ -1179,8 +1181,8 @@ class UIManager {
                 heroArt.addChild(board);
             }
 
-            const tileSize = Math.max(14, heroSize * 0.115);
-            const tileStep = tileSize * 0.82;
+            const tileSize = Math.max(14, heroSize * 0.125);
+            const tileStep = tileSize * 0.99;
             const tileSpecs = [
                 ['blockTile0', -2.0, -1.7], ['blockTile0', -1.2, -1.7], ['blockTile0', -2.0, -0.9],
                 ['blockTile7', -0.35, -0.2], ['blockTile7', 0.45, -0.2], ['blockTile7', 1.25, -0.2], ['blockTile7', 0.45, 0.6],
@@ -1261,7 +1263,7 @@ class UIManager {
         // ── Bottom Row: Hall of Fame + Contact (ghost buttons) ──
         const gap = 12;
         const bottomY = startBtnY + btnH + Math.max(18, h * 0.024);
-        const smallBtnW = Math.min((btnW - gap) / 2, 140 * uiScale);
+        const smallBtnW = (btnW - gap) / 2;
 
         const hofBtn = makeTitleButton(btnX, bottomY, smallBtnW, smallBtnH, getText('hallOfFame'), 'ghost',
             () => this.showHallOfFame(), 'rank');
@@ -1282,7 +1284,7 @@ class UIManager {
         actionPanel.roundRect(panelX + 8, panelY + 7, panelW - 16, Math.max(16, panelH * 0.24), 18)
             .fill({ color: THEME.white, alpha: 0.055 });
         actionPanel.roundRect(panelX, panelY, panelW, panelH, 24)
-            .stroke({ width: 1.2, color: THEME.secondary, alpha: 0.46 });
+            .stroke({ width: 1, color: THEME.inkMuted, alpha: 0.22 });
         container.addChild(actionPanel);
         container.setChildIndex(actionPanel, Math.max(0, container.children.indexOf(resumeBtn || startBtn)));
 
@@ -1293,11 +1295,12 @@ class UIManager {
         const langLabel = LANG_LABELS[currentLang] || '한국어';
         const archLinkEl = document.getElementById('archerlab-link');
         const archRect = archLinkEl ? archLinkEl.getBoundingClientRect() : null;
-        const langBtnH = archRect ? archRect.height : Math.round(Math.min(28, Math.max(24, h * 0.04)));
+        const langBtnH = Math.max(44, archRect ? archRect.height : 44);
         const langFontSize = Math.max(11, Math.min(12, w * 0.03)) * sc;
         const langBtnW = Math.min(110, w * 0.28);
         const langX = 14;
-        const langY = archRect ? archRect.top : 14;
+        const canvasTop = this.game.app.canvas?.getBoundingClientRect().top || 0;
+        const langY = archRect ? Math.max(8, archRect.top - canvasTop) : 14;
 
         const langTrigger = new PIXI.Graphics();
         langTrigger.roundRect(0, 3, langBtnW, langBtnH, langBtnH / 2)
@@ -1331,11 +1334,11 @@ class UIManager {
             const langIcon = new PIXI.Sprite(langIconTexture);
             langIcon.anchor.set(0.5);
             langIcon.eventMode = 'none';
-            langIcon.width = langBtnH * 0.62;
-            langIcon.height = langBtnH * 0.62;
-            langIcon.position.set(langBtnH * 0.58, langBtnH / 2);
+            langIcon.width = 19;
+            langIcon.height = 19;
+            langIcon.position.set(20, langBtnH / 2);
             langTrigger.addChild(langIcon);
-            langTriggerText.position.set(langBtnW / 2 + langBtnH * 0.12, langBtnH / 2);
+            langTriggerText.position.set(langBtnW / 2 + 10, langBtnH / 2);
         }
 
         // Dropdown items
@@ -1468,7 +1471,7 @@ class UIManager {
 
         // ── Version text (footer) ──
         const versionText = new PIXI.Text({
-            text: 'v1.0  -  ArcherLab',
+            text: '10 × 10  /  ENDLESS POSSIBILITIES',
             style: {
                 fontFamily: FONT_BODY,
                 fontSize: Math.min(10, w * 0.025),
@@ -1478,7 +1481,7 @@ class UIManager {
             },
         });
         versionText.anchor.set(0.5, 1);
-        versionText.position.set(centerX, h - 14);
+        versionText.position.set(w / 2, h - 12);
         container.addChild(versionText);
 
         this._titleRefs = { logo, subtitle, startBtnText, langBtn, contactBtn, hofBtn, bestText, resumeBtnText };
@@ -1630,8 +1633,9 @@ class UIManager {
         overlay.addChild(bg);
 
         // Panel
-        const panelW = Math.min(w * 0.86, 380);
-        const panelH = Math.min(h * 0.62, 420);
+        const splitResult = w > h * 1.15 && h < 500;
+        const panelW = Math.min(w * 0.9, splitResult ? 660 : 390);
+        const panelH = Math.min(h - 32, splitResult ? 340 : 500);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
         // The ornate ranking frame is portrait artwork; stretching it into this
@@ -1667,8 +1671,8 @@ class UIManager {
             overlay.addChild(readable);
         }
 
-        const centerX = w / 2;
-        let yOff = panelY + 36;
+        const centerX = splitResult ? panelX + panelW * 0.26 : w / 2;
+        let yOff = panelY + (splitResult ? 18 : 28);
 
         // Game Over title
         const title = new PIXI.Text({
@@ -1677,7 +1681,7 @@ class UIManager {
                 fontFamily: FONT_DISPLAY,
                 fontSize: Math.min(30, panelW * 0.085),
                 fill: THEME.rose,
-                fontWeight: '400',
+                fontWeight: '800',
                 letterSpacing: 1,
             },
         });
@@ -1688,7 +1692,7 @@ class UIManager {
 
         // Divider
         const divider = new PIXI.Graphics();
-        divider.moveTo(panelX + 36, yOff).lineTo(panelX + panelW - 36, yOff)
+        divider.moveTo(panelX + 36, yOff).lineTo(splitResult ? panelX + panelW * 0.48 : panelX + panelW - 36, yOff)
                .stroke({ width: 1, color: THEME.divider, alpha: 1 });
         overlay.addChild(divider);
         yOff += 20;
@@ -1812,10 +1816,11 @@ class UIManager {
         yOff += levelLabel.height + 24;
 
         // ── Play Again button ──
-        const btnW = panelW * 0.7;
+        const btnW = panelW * (splitResult ? 0.38 : 0.7);
         const btnH = 48;
-        const btnX = centerX - btnW / 2;
-        const btnY = Math.min(yOff, panelY + panelH - btnH * 2 - 40);
+        const buttonCenterX = splitResult ? panelX + panelW * 0.75 : centerX;
+        const btnX = buttonCenterX - btnW / 2;
+        const btnY = splitResult ? h / 2 - 54 : Math.max(yOff, panelY + panelH - 130);
 
         const btn = new PIXI.Graphics();
         btn.roundRect(btnX, btnY + 3, btnW, btnH, btnH / 2)
@@ -1856,12 +1861,12 @@ class UIManager {
             },
         });
         btnText.anchor.set(0.5, 0.5);
-        btnText.position.set(centerX, btnY + btnH / 2);
+        btnText.position.set(buttonCenterX, btnY + btnH / 2);
         btnText.eventMode = 'none';
         btn.addChild(btnText);
 
         // ── Back to Title button (ghost) ──
-        const titleBtnH = 40;
+        const titleBtnH = 44;
         const titleBtnY = btnY + btnH + 14;
         const titleBtn = new PIXI.Graphics();
         titleBtn.roundRect(btnX, titleBtnY, btnW, titleBtnH, titleBtnH / 2)
@@ -1901,7 +1906,7 @@ class UIManager {
             },
         });
         titleBtnText.anchor.set(0.5, 0.5);
-        titleBtnText.position.set(centerX, titleBtnY + titleBtnH / 2);
+        titleBtnText.position.set(buttonCenterX, titleBtnY + titleBtnH / 2);
         titleBtnText.eventMode = 'none';
         titleBtn.addChild(titleBtnText);
 
@@ -2109,7 +2114,7 @@ class UIManager {
         // Close button
         const closeBtnY = panelY + panelH - 56;
         const closeBtnW = Math.min(panelW * 0.48, 176);
-        const closeBtnH = 42;
+        const closeBtnH = 44;
         const closeBtnX = centerX - closeBtnW / 2;
 
         this._makeNeonButton(overlay, {
@@ -2415,7 +2420,7 @@ class UIManager {
 
         // Panel
         const panelW = Math.min(w * 0.86, 360);
-        const panelH = Math.min(240, h * 0.42);
+        const panelH = Math.min(260, h - 24);
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2;
         // Keep the portrait ranking frame for the Hall of Fame only.
@@ -2546,7 +2551,7 @@ class UIManager {
 
         // Buttons
         const btnW = panelW * 0.38;
-        const btnH = 42;
+        const btnH = 44;
         const gap = 12;
         const btnY = panelY + panelH - btnH - 22;
 

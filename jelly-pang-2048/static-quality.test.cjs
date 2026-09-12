@@ -20,9 +20,9 @@ assert.match(html, /id="best-score"/);
 assert.match(html, /id="sound-toggle"/);
 assert.match(html, /aria-modal="true"/);
 assert.match(html, /<noscript>/);
-assert.match(html, /main\.js\?v=20260816-resume-a11y-v3/);
-assert.match(html, /style\.css\?v=20260816-resume-a11y-v3/);
-assert.match(html, /"dateModified": "2026-08-16"/);
+assert.match(html, /main\.js\?v=20260912-puzzle-ui-v5/);
+assert.match(html, /style\.css\?v=20260912-puzzle-ui-v5/);
+assert.match(html, /"dateModified": "2026-09-12"/);
 assert.match(html, /id="new-game"/);
 assert.match(html, /id="game-status"/);
 assert.match(html, /class="topbar" aria-hidden="true" inert/);
@@ -44,7 +44,7 @@ assert.match(main, /event\.key\.toLowerCase\(\)/);
 assert.match(main, /refs\.titleScreen\.scrollTop = 0;/);
 assert.match(main, /const wasOpen = !refs\.rankModal\.classList\.contains\("hidden"\);/);
 assert.match(main, /if \(!wasOpen\) return;/);
-assert.match(sw, /version: '20260816-resume-a11y-v3'/);
+assert.match(sw, /version: '20260912-puzzle-ui-v5'/);
 
 for (let rank = 0; rank < 12; rank++) {
   const stem = `jelly-${String(rank).padStart(2, '0')}`;
