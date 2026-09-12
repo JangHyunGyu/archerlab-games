@@ -40,6 +40,8 @@
     choose,
     shuffleItems
   } = window.SchoolZombieCore;
+  const zombieMotion = window.SchoolZombieMotion;
+  const zombieMotionData = window.SchoolZombieMotionData;
   const announceGameStatus = (message) => {
     const status = document.getElementById("game-a11y-status");
     if (status) {
@@ -59,7 +61,7 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20260712-zombie-death-sync-v4";
+  const ZOMBIE_ASSET_VERSION = "20260912-zombie-motion-v2";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
   const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
@@ -354,47 +356,47 @@
   );
   // Alpha-weighted final-frame centers and opaque bounds, normalized to each 512px death frame.
   const ZOMBIE_DEATH_FINAL_FRAME_BOUNDS = {
+    "zombie-death-athlete-sheet": { x: -0.0264, y: 0.3344, width: 0.791, height: 0.2559 },
+    "zombie-death-bloom-sheet": { x: -0.0135, y: 0.0588, width: 0.8594, height: 0.2656 },
+    "zombie-death-brute-sheet": { x: -0.0122, y: -0.0015, width: 0.5469, height: 0.3145 },
+    "zombie-death-charger-sheet": { x: -0.0512, y: 0.36, width: 0.748, height: 0.2324 },
+    "zombie-death-crawler-sheet": { x: -0.0189, y: 0.0664, width: 0.8359, height: 0.4688 },
+    "zombie-death-elite-sheet": { x: -0.0221, y: 0.0018, width: 0.6172, height: 0.3438 },
+    "zombie-death-guard-sheet": { x: -0.023, y: 0.0777, width: 0.8613, height: 0.2207 },
+    "zombie-death-janitor-sheet": { x: -0.0549, y: 0.0596, width: 0.8594, height: 0.2441 },
     "zombie-death-normal-variant-1-sheet": { x: 0.0575, y: 0.2986, width: 0.918, height: 0.3008 },
     "zombie-death-normal-variant-2-sheet": { x: 0.0317, y: 0.2924, width: 0.8574, height: 0.334 },
     "zombie-death-normal-variant-3-sheet": { x: 0.0459, y: 0.3254, width: 0.9219, height: 0.2266 },
     "zombie-death-normal-variant-4-sheet": { x: 0.0303, y: 0.266, width: 0.918, height: 0.3086 },
+    "zombie-death-nurse-sheet": { x: -0.0275, y: 0.0929, width: 0.8613, height: 0.1836 },
+    "zombie-death-runner-sheet": { x: -0.0516, y: 0.3208, width: 0.8047, height: 0.2734 },
+    "zombie-death-screamer-sheet": { x: -0.0622, y: 0.0616, width: 0.8594, height: 0.2148 },
+    "zombie-death-spider-sheet": { x: 0.0123, y: 0.0539, width: 0.8906, height: 0.459 },
     "zombie-death-student-1-sheet": { x: -0.0486, y: 0.0409, width: 0.8496, height: 0.3535 },
     "zombie-death-student-2-sheet": { x: 0.0645, y: 0.0463, width: 0.8652, height: 0.3594 },
     "zombie-death-student-3-sheet": { x: -0.093, y: 0.0404, width: 0.8906, height: 0.3418 },
-    "zombie-death-runner-sheet": { x: -0.0105, y: -0.0173, width: 0.5879, height: 0.3496 },
-    "zombie-death-brute-sheet": { x: -0.0122, y: -0.0015, width: 0.5469, height: 0.3145 },
-    "zombie-death-volatile-sheet": { x: -0.0098, y: -0.0037, width: 0.5977, height: 0.3418 },
-    "zombie-death-elite-sheet": { x: -0.0221, y: 0.0018, width: 0.6172, height: 0.3438 },
     "zombie-death-teacher-sheet": { x: -0.0294, y: 0.0365, width: 0.6367, height: 0.2871 },
-    "zombie-death-nurse-sheet": { x: -0.0275, y: 0.0929, width: 0.8613, height: 0.1836 },
-    "zombie-death-athlete-sheet": { x: 0.0203, y: 0.1069, width: 0.8594, height: 0.166 },
-    "zombie-death-janitor-sheet": { x: -0.0549, y: 0.0596, width: 0.8594, height: 0.2441 },
-    "zombie-death-guard-sheet": { x: -0.023, y: 0.0777, width: 0.8613, height: 0.2207 },
-    "zombie-death-crawler-sheet": { x: -0.0278, y: 0.0228, width: 0.8594, height: 0.3379 },
-    "zombie-death-screamer-sheet": { x: -0.0622, y: 0.0616, width: 0.8594, height: 0.2148 },
-    "zombie-death-spider-sheet": { x: -0.0256, y: 0.045, width: 0.8594, height: 0.2832 },
-    "zombie-death-bloom-sheet": { x: -0.0135, y: 0.0588, width: 0.8594, height: 0.2656 },
-    "zombie-death-charger-sheet": { x: -0.0703, y: 0.1005, width: 0.9375, height: 0.4727 }
+    "zombie-death-volatile-sheet": { x: -0.0098, y: -0.0037, width: 0.5977, height: 0.3418 }
   };
   const ZOMBIE_DEATH_RENDER_SCALES = {
     // Match the first visible death pose to the alpha-bounded size of the walk cycle.
     // Normal variants start in mixed upright/falling poses, so their shared scale uses visible alpha area.
     normal: { deathSize: 1.04 },
     student: { deathSize: 1.01 },
-    runner: { deathSize: 1.17 },
+    runner: { deathSize: 1 },
     brute: { deathSize: 1.16 },
     volatile: { deathSize: 0.99 },
     elite: { deathSize: 1.05 },
     teacher: { deathSize: 1.11 },
     nurse: { deathSize: 1.09 },
-    athlete: { deathSize: 1.21 },
+    athlete: { deathSize: 1 },
     janitor: { deathSize: 1.27 },
     guard: { deathSize: 1.1 },
-    crawler: { deathSize: 1.18 },
+    crawler: { deathSize: 1 },
     screamer: { deathSize: 1.23 },
-    spider: { deathSize: 1.18 },
+    spider: { deathSize: 1 },
     bloom: { deathSize: 1.13 },
-    charger: { deathSize: 1.37 }
+    charger: { deathSize: 1 }
   };
   const ZOMBIE_FOOT_OFFSET_RATIOS = {
     normal: 0.386,
@@ -8623,12 +8625,13 @@
       };
     }
 
-    playTransientSpriteFrames(sprite, frameCount, duration) {
+    playTransientSpriteFrames(sprite, frameCount, duration, onFrame = null) {
       if (!sprite || frameCount <= 1 || typeof sprite.setFrame !== "function") {
         return null;
       }
       let frame = 0;
       let event = null;
+      if (onFrame) onFrame(0);
       const frameDelay = Math.max(16, Math.round(duration / frameCount));
       event = this.time.addEvent({
         delay: frameDelay,
@@ -8641,6 +8644,7 @@
           }
           frame += 1;
           sprite.setFrame(Math.min(frame, frameCount - 1));
+          if (onFrame) onFrame(Math.min(frame, frameCount - 1));
           if (frame >= frameCount - 1) {
             this.sceneTimers.delete(event);
           }
@@ -9235,7 +9239,7 @@
       this.trackTransient(zombie);
       zombie.setActive(false)
         .setPosition(corpseX, y)
-        .setOrigin(0.5, 0.58)
+        .setOrigin(0.5, 0.56)
         .setDisplaySize(displayW, displayH)
         .setDepth(bodyDepth + 0.8)
         .setAlpha(1);
@@ -9257,11 +9261,18 @@
         && typeof this.textures.exists === "function"
         && this.textures.exists(deathTexture);
       const deathDisplaySize = displayH * (renderScale.deathSize || 0.9);
-      const deathFrameCount = deathType === "normal"
+      const deathCenters = zombieMotionData.death[deathTexture];
+      const deathFrameCount = deathCenters?.length || (deathType === "normal"
         ? NORMAL_ZOMBIE_DEATH_ANIMATION_FRAMES
-        : ZOMBIE_DEATH_ANIMATION_FRAMES;
+        : ZOMBIE_DEATH_ANIMATION_FRAMES);
       const settledDeathAngle = finalAngle * 0.08;
-      const corpseFlipX = finalAngle < 0;
+      const corpseFlipX = Boolean(zombie.flipX);
+      const walkCenters = zombieMotionData.walk[deathType] || zombieMotionData.walk.normal;
+      const walkFrameIndex = (zombie.variant || 0) * 4 + (zombie.animFrame || 0);
+      const deathStart = zombieMotion.deathStart(
+        zombie, walkCenters[walkFrameIndex] || walkCenters[0], deathCenters?.[0] || [0, 0], deathDisplaySize
+      );
+      const finalFrameScale = zombieMotion.frameScale(deathType, deathFrameCount - 1);
       const corpseRotation = settledDeathAngle * Math.PI / 180;
       const finalFrameBounds = hasDeathTexture
         ? ZOMBIE_DEATH_FINAL_FRAME_BOUNDS[deathTexture] || { x: 0, y: 0, width: 0.8, height: 0.32 }
@@ -9281,8 +9292,8 @@
         + corpseVisualDepthRatio * ZOMBIE_CORPSE_GROUND_DEPTH_RANGE;
       const corpseDepth = ZOMBIE_CORPSE_DEPTH_BASE
         + corpseVisualDepthRatio * ZOMBIE_CORPSE_DEPTH_RANGE;
-      const corpseVisibleWidth = deathDisplaySize * finalFrameBounds.width;
-      const corpseVisibleHeight = deathDisplaySize * finalFrameBounds.height;
+      const corpseVisibleWidth = deathDisplaySize * finalFrameBounds.width * finalFrameScale;
+      const corpseVisibleHeight = deathDisplaySize * finalFrameBounds.height * finalFrameScale;
       const bloodBaseMaxSide = Math.max(effect.stainWidth * sizeScale, corpseVisibleWidth * 0.52) * rand(0.84, 1);
       const bloodMaxSide = bloodBaseMaxSide * BLOOD_STAIN_SIZE_MULTIPLIER;
       const lastHitContext = zombie.lastHitContext || {};
@@ -9364,11 +9375,11 @@
         .setDepth(groundDepth - 0.2));
 
       const deathSprite = hasDeathTexture
-        ? this.trackTransient(this.add.sprite(corpseX, y + displayH * 0.04, deathTexture, 0)
+        ? this.trackTransient(this.add.sprite(deathStart.x, deathStart.y, deathTexture, 0)
           .setOrigin(0.5)
           .setDisplaySize(deathDisplaySize, deathDisplaySize)
           .setFlipX(corpseFlipX)
-          .setAlpha(1)
+          .setAlpha(0)
           .setDepth(bodyDepth + 0.9))
         : null;
       const bloodRevealDelay = deathSprite
@@ -9406,8 +9417,20 @@
         ease: "Cubic.easeOut"
       });
       if (deathSprite) {
-        this.destroyTransientObject(zombie, false);
-        const deathFrameEvent = this.playTransientSpriteFrames(deathSprite, deathFrameCount, effect.fall + 260);
+        const applyDeathFrameSize = (frame) => {
+          const transform = zombieMotion.frameTransform(
+            deathDisplaySize, zombieMotion.frameScale(deathType, frame), deathCenters?.[frame] || [0, 0], corpseFlipX
+          );
+          deathSprite.setOrigin(transform.originX, transform.originY)
+            .setDisplaySize(transform.size, transform.size);
+        };
+        // Bridge the different poses without teleporting or mirroring the body.
+        this.tweens.add({ targets: zombie, alpha: 0, duration: 80,
+          onComplete: () => this.destroyTransientObject(zombie, false) });
+        this.tweens.add({ targets: deathSprite, alpha: 1, duration: 80 });
+        const deathFrameEvent = this.playTransientSpriteFrames(
+          deathSprite, deathFrameCount, effect.fall + 260, applyDeathFrameSize
+        );
         const finishDeathFall = () => {
           this.tweens.add({
             targets: deathSprite,
@@ -9427,6 +9450,7 @@
                 .setPosition(landingX, landingY)
                 .setAngle(settledDeathAngle)
                 .setAlpha(1);
+              applyDeathFrameSize(deathFrameCount - 1);
               settleCorpseObjectDepth(deathSprite, corpseDepth + 0.45);
               if (zombie.elite || zombie.type === "brute") {
                 this.shakeCamera(70, 0.0035);
@@ -9436,8 +9460,8 @@
         };
         this.tweens.add({
           targets: deathSprite,
-          x: stumbleX,
-          y: stumbleY + displayH * 0.04,
+          x: stumbleX + (deathStart.x - corpseX) * 0.6,
+          y: stumbleY + (deathStart.y - y) * 0.6,
           angle: finalAngle * 0.025,
           duration: deathPushDuration,
           ease: "Cubic.easeOut",

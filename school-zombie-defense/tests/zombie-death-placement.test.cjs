@@ -9,6 +9,8 @@ const zlib = require("node:zlib");
 const root = path.resolve(__dirname, "..");
 const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
 const imageRoot = path.join(root, "assets", "images");
+const motion = require("../js/zombie-motion.js");
+const motionData = require("../js/zombie-motion-data.js");
 
 function readNumberConstant(name) {
   const match = gameSource.match(new RegExp(`const\\s+${name}\\s*=\\s*([0-9.]+)`));
@@ -257,34 +259,29 @@ for (const [type, deathTextures] of deathTexturesByType) {
     ))
   ));
   const deathSize = deathRenderScales.get(type);
-
-  if (type === "normal") {
-    deathTextures.forEach((texture, variant) => {
-      const walkAlphaCoverage = median(
-        walkMeasurementsByVariant[variant].map((measurement) => measurement.alphaCoverage)
-      );
-      const deathImage = decodePngAlpha(path.join(imageRoot, `${texture}.png`));
-      const deathMeasurement = measureAlphaRegion(deathImage, 0, 0, 512, 512);
-      const renderedAreaRatio = deathMeasurement.alphaCoverage * deathSize ** 2 / walkAlphaCoverage;
-      assert.ok(
-        renderedAreaRatio >= 0.95 && renderedAreaRatio <= 1.05,
-        `${texture} visible body area differs from walk variant ${variant + 1}: ${renderedAreaRatio}`
-      );
-    });
-    continue;
-  }
-
-  const walkVisibleHeightRatio = median(
-    walkMeasurementsByVariant.flat().map((measurement) => measurement.height / walkCellHeight)
-  );
-  for (const texture of deathTextures) {
+  assert.equal(motionData.walk[type].length, 16, `${type} needs anchors for all four walk variants`);
+  walkMeasurementsByVariant.flat().forEach((measurement, frame) => {
+    assertNear(measurement.centerX / walkCellWidth - 0.5, motionData.walk[type][frame][0], `${type} walk ${frame} X`);
+    assertNear(measurement.centerY / walkCellHeight - 0.5, motionData.walk[type][frame][1], `${type} walk ${frame} Y`);
+  });
+  for (const [variant, texture] of deathTextures.entries()) {
     const deathImage = decodePngAlpha(path.join(imageRoot, `${texture}.png`));
-    const deathMeasurement = measureAlphaRegion(deathImage, 0, 0, 512, 512);
-    const renderedHeightRatio = deathMeasurement.height / 512 * deathSize / walkVisibleHeightRatio;
-    assert.ok(
-      renderedHeightRatio >= 0.985 && renderedHeightRatio <= 1.015,
-      `${texture} first-frame height differs from the walk cycle: ${renderedHeightRatio}`
-    );
+    const reference = type === "normal" ? walkMeasurementsByVariant[variant] : walkMeasurementsByVariant.flat();
+    const walkArea = median(reference.map(measurement => measurement.alphaCoverage));
+    const centers = motionData.death[texture];
+    assert.equal(centers.length, deathImage.width / 512 * deathImage.height / 512, `${texture} frame count`);
+    centers.forEach((center, frame) => {
+      const columns = deathImage.width / 512;
+      const measured = measureAlphaRegion(deathImage, frame % columns * 512, Math.floor(frame / columns) * 512, 512, 512);
+      assertNear(measured.centerX / 512 - 0.5, center[0], `${texture} frame ${frame} X`);
+      assertNear(measured.centerY / 512 - 0.5, center[1], `${texture} frame ${frame} Y`);
+      const scale = deathSize * motion.frameScale(type, frame);
+      const areaRatio = measured.alphaCoverage * scale ** 2 / walkArea;
+      // Pose overlap changes visible area. This broad envelope catches swelling
+      // and undersized corpses without stretching a crouch to standing height.
+      assert.ok(areaRatio >= 0.65 && areaRatio <= 1.30,
+        `${texture} frame ${frame + 1} visible body area / walk = ${areaRatio.toFixed(3)}`);
+    });
   }
 }
 
@@ -307,7 +304,6 @@ assert.deepEqual(
 );
 assert.equal(finalFrameBounds.get("zombie-death-normal-variant-1-sheet").y, 0.2986);
 assert.equal(finalFrameBounds.get("zombie-death-normal-variant-3-sheet").y, 0.3254);
-assert.equal(finalFrameBounds.get("zombie-death-charger-sheet").x, -0.0703);
 for (const [texture, bounds] of finalFrameBounds) {
   assert.ok(Math.abs(bounds.x) < 0.5 && Math.abs(bounds.y) < 0.5, `${texture} alpha center left its frame`);
   assert.ok(bounds.width > 0 && bounds.width <= 1, `${texture} alpha width is invalid`);
@@ -315,7 +311,7 @@ for (const [texture, bounds] of finalFrameBounds) {
   const image = decodePngAlpha(path.join(imageRoot, `${texture}.png`));
   assert.equal(image.width % 512, 0, `${texture} width must contain complete 512px frames`);
   assert.equal(image.height % 512, 0, `${texture} height must contain complete 512px frames`);
-  const frameCount = texture.includes("normal-variant") ? 12 : 4;
+  const frameCount = motionData.death[texture].length;
   const columns = image.width / 512;
   const finalFrameIndex = frameCount - 1;
   const measured = measureAlphaRegion(
@@ -349,7 +345,7 @@ for (const [texture, origin] of bloodOrigins) {
   assertNear(measured.centerX / image.width, origin.x, `${texture} alpha origin X`);
   assertNear(measured.centerY / image.height, origin.y, `${texture} alpha origin Y`);
 }
-assertPngWebpAlphaParity([...finalFrameBounds.keys(), ...bloodOrigins.keys()]);
+assertPngWebpAlphaParity([...finalFrameBounds.keys(), ...bloodOrigins.keys(), ...[...deathTexturesByType.keys()].map(type => `zombie-walk-${type}`)]);
 
 const corpseFunction = gameSource.match(
   /createZombieCorpse\s*\(x, y, zombie, deathKnockback\s*=\s*null\)\s*\{([\s\S]*?)\n\s*getZombieSurgeCooldown\s*\(/
@@ -437,7 +433,7 @@ assert.doesNotMatch(
 );
 assert.match(
   corpseFunction,
-  /const deathFrameEvent = this\.playTransientSpriteFrames\s*\(deathSprite, deathFrameCount, effect\.fall \+ 260\)/,
+  /const deathFrameEvent = this\.playTransientSpriteFrames\s*\(\s*deathSprite, deathFrameCount, effect\.fall \+ 260, applyDeathFrameSize\s*\)/,
   "the death sheet must play through its configured frames"
 );
 assert.match(

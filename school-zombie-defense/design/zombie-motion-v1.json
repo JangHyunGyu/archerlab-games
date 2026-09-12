@@ -1,0 +1,67 @@
+{
+  "date": "2026-09-12",
+  "mode": "built-in image_gen",
+  "preparation": "ImageMagick chroma extraction and uniform frame packing; no anatomy or motion synthesized by the packing script.",
+  "outputs": {
+    "crawler": {
+      "source": "exec-4bdcef57-d006-4c49-87de-b182c624a2f5.png",
+      "prompt": "Edit this crawler zombie game sprite atlas. Preserve the same character identity, outfit, head size, rendering, camera and body proportions. Produce exactly FOUR columns and FOUR equal rows with generous clear gutters. One whole character per cell. The bottom TWO rows: preserve the existing eight chronological death poses and consistent head/body scale. Top TWO rows: replace with a FOUR-pose seamless locomotion cycle, exactly repeated in row two.\nCycle: column 1 the hand on IMAGE LEFT is reaching far forward and planted near the bottom, hand on IMAGE RIGHT is bent near the shoulder. Column 2 left hand pulls body forward, right hand lifts and passes forward. Column 3 the hand on IMAGE RIGHT is reaching far forward and planted near the bottom, hand on IMAGE LEFT is bent near the shoulder. Column 4 right hand pulls, left hand lifts/passes. Opposite knee crawls with each reaching hand. Keep torso low, consistent head size, believable weight transfer.\nCRITICAL BACKGROUND CHANGE: remove ALL checkerboard squares and replace every background pixel with a completely flat uniform saturated MAGENTA #FF00FF, including holes between limbs. No checkerboard, grid lines, labels, text, shadows, gradients or colored edge glow. The magenta is a chroma key backing for game asset extraction. Characters themselves contain NO magenta. Full body stays inside its own cell, including every hand/foot.",
+      "walkSource": "exec-4bdcef57-d006-4c49-87de-b182c624a2f5.png",
+      "walkPrompt": null,
+      "assets": [
+        "assets/images/zombie-walk-crawler.png",
+        "assets/images/zombie-walk-crawler.webp",
+        "assets/images/zombie-death-crawler-sheet.png",
+        "assets/images/zombie-death-crawler-sheet.webp"
+      ]
+    },
+    "spider": {
+      "source": "exec-b83a383c-3f25-41c6-bcaf-d26d9a6750fb.png",
+      "prompt": "Edit this spider zombie game sprite atlas. Preserve the same character identity, outfit, head size, rendering, camera and body proportions. Produce exactly FOUR columns and FOUR equal rows with generous clear gutters. One whole character per cell. The bottom TWO rows: preserve the existing eight chronological death poses and consistent head/body scale. Top TWO rows: replace with a FOUR-pose seamless locomotion cycle, exactly repeated in row two.\nCycle: column 1 the hand on IMAGE LEFT is reaching far forward and planted near the bottom, hand on IMAGE RIGHT is bent near the shoulder. Column 2 left hand pulls body forward, right hand lifts and passes forward. Column 3 the hand on IMAGE RIGHT is reaching far forward and planted near the bottom, hand on IMAGE LEFT is bent near the shoulder. Column 4 right hand pulls, left hand lifts/passes. Opposite knee crawls with each reaching hand. Keep torso low, consistent head size, believable weight transfer.\nCRITICAL BACKGROUND CHANGE: remove ALL checkerboard squares and replace every background pixel with a completely flat uniform saturated MAGENTA #FF00FF, including holes between limbs. No checkerboard, grid lines, labels, text, shadows, gradients or colored edge glow. The magenta is a chroma key backing for game asset extraction. Characters themselves contain NO magenta. Full body stays inside its own cell, including every hand/foot.",
+      "walkSource": "exec-b83a383c-3f25-41c6-bcaf-d26d9a6750fb.png",
+      "walkPrompt": null,
+      "assets": [
+        "assets/images/zombie-walk-spider.png",
+        "assets/images/zombie-walk-spider.webp",
+        "assets/images/zombie-death-spider-sheet.png",
+        "assets/images/zombie-death-spider-sheet.webp"
+      ]
+    },
+    "charger": {
+      "source": "exec-2766fd17-57c6-4219-bbfa-16bad4c060d9.png",
+      "prompt": "Edit this charger zombie game sprite atlas. Preserve the same character identity, outfit, head size, rendering, camera and body proportions. Produce exactly FOUR columns and FOUR equal rows with generous clear gutters. One whole character per cell. The bottom TWO rows: preserve the existing eight chronological death poses and consistent head/body scale. Top TWO rows: replace with a FOUR-pose seamless locomotion cycle, exactly repeated in row two.\nCycle: column 1 FOOT ON IMAGE LEFT extended forward at bottom of cell, opposite arm forward. Column 2 feet pass beneath hips, lowered supporting leg and opposite knee lifting. Column 3 FOOT ON IMAGE RIGHT extended forward at bottom of cell, opposite arm forward (clear reversal of column 1). Column 4 opposite passing pose. Clearly alternate the leading leg, keep stable head/body scale and consistent ground contact. Do not repeat same leading foot in all four columns.\nCRITICAL BACKGROUND CHANGE: remove ALL checkerboard squares and replace every background pixel with a completely flat uniform saturated MAGENTA #FF00FF, including holes between limbs. No checkerboard, grid lines, labels, text, shadows, gradients or colored edge glow. The magenta is a chroma key backing for game asset extraction. Characters themselves contain NO magenta. Full body stays inside its own cell, including every hand/foot.",
+      "walkSource": "exec-2766fd17-57c6-4219-bbfa-16bad4c060d9.png",
+      "walkPrompt": null,
+      "assets": [
+        "assets/images/zombie-walk-charger.png",
+        "assets/images/zombie-walk-charger.webp",
+        "assets/images/zombie-death-charger-sheet.png",
+        "assets/images/zombie-death-charger-sheet.webp"
+      ]
+    },
+    "runner": {
+      "source": "exec-79e60b7b-3350-429d-88e9-4865f6de0c15.png",
+      "prompt": "Edit this runner zombie game sprite atlas. Preserve the same character identity, outfit, head size, rendering, camera and body proportions. Produce exactly FOUR columns and FOUR equal rows with generous clear gutters. One whole character per cell. The bottom TWO rows: preserve the existing eight chronological death poses and consistent head/body scale. Top TWO rows: replace with a FOUR-pose seamless locomotion cycle, exactly repeated in row two.\nCycle: column 1 FOOT ON IMAGE LEFT extended forward at bottom of cell, opposite arm forward. Column 2 feet pass beneath hips, lowered supporting leg and opposite knee lifting. Column 3 FOOT ON IMAGE RIGHT extended forward at bottom of cell, opposite arm forward (clear reversal of column 1). Column 4 opposite passing pose. Clearly alternate the leading leg, keep stable head/body scale and consistent ground contact. Do not repeat same leading foot in all four columns.\nCRITICAL BACKGROUND CHANGE: remove ALL checkerboard squares and replace every background pixel with a completely flat uniform saturated MAGENTA #FF00FF, including holes between limbs. No checkerboard, grid lines, labels, text, shadows, gradients or colored edge glow. The magenta is a chroma key backing for game asset extraction. Characters themselves contain NO magenta. Full body stays inside its own cell, including every hand/foot.",
+      "walkSource": "exec-7923fc12-e072-4653-b7ca-14533e6cad48.png",
+      "walkPrompt": "Create a new four-frame running sprite sheet for exactly the SAME runner zombie character in the reference. Same outfit, face, painterly comic shading and head size. Front view approaching camera. Four equal cells in a 2 by 2 square grid. Exactly one full-body pose per cell. Each pose at identical scale and centered; shoes at same ground line in each cell. Plain solid #FF00FF magenta background, no checkerboard, no shadows, no labels.\nFour sequential poses for ONE entire running cycle:\nTOP LEFT: CONTACT A. Character's right foot (on image left) extended forward toward viewer and low. Left leg trails behind. Left arm forward, right arm back.\nTOP RIGHT: PASSING A. Body over RIGHT supporting leg (on image left). LEFT knee (on image right) lifts high forward. Left arm moving back, right arm moving forward.\nBOTTOM LEFT: CONTACT B. LEFT foot (on image right) now extended forward toward viewer and low. Right leg trails. RIGHT arm forward, left arm back. Clear opposite of top-left.\nBOTTOM RIGHT: PASSING B. Body over LEFT supporting leg (on image right). RIGHT knee (on image left) lifts high forward. Right arm moving back, left arm moving forward. Clear opposite of top-right.\nDo not repeat contact poses in passing cells. Frame 4 must connect to frame 1 without a pause. Entire head, hands, shoes inside own cell with a wide clear margin. No death poses in this image.",
+      "assets": [
+        "assets/images/zombie-walk-runner.png",
+        "assets/images/zombie-walk-runner.webp",
+        "assets/images/zombie-death-runner-sheet.png",
+        "assets/images/zombie-death-runner-sheet.webp"
+      ]
+    },
+    "athlete": {
+      "source": "exec-0ff9d08b-fac4-43ce-bf66-bdd2a2055623.png",
+      "prompt": "Edit this athlete zombie game sprite atlas. Preserve the same character identity, outfit, head size, rendering, camera and body proportions. Produce exactly FOUR columns and FOUR equal rows with generous clear gutters. One whole character per cell. The bottom TWO rows: preserve the existing eight chronological death poses and consistent head/body scale. Top TWO rows: replace with a FOUR-pose seamless locomotion cycle, exactly repeated in row two.\nCycle: column 1 FOOT ON IMAGE LEFT extended forward at bottom of cell, opposite arm forward. Column 2 feet pass beneath hips, lowered supporting leg and opposite knee lifting. Column 3 FOOT ON IMAGE RIGHT extended forward at bottom of cell, opposite arm forward (clear reversal of column 1). Column 4 opposite passing pose. Clearly alternate the leading leg, keep stable head/body scale and consistent ground contact. Do not repeat same leading foot in all four columns.\nCRITICAL BACKGROUND CHANGE: remove ALL checkerboard squares and replace every background pixel with a completely flat uniform saturated MAGENTA #FF00FF, including holes between limbs. No checkerboard, grid lines, labels, text, shadows, gradients or colored edge glow. The magenta is a chroma key backing for game asset extraction. Characters themselves contain NO magenta. Full body stays inside its own cell, including every hand/foot.",
+      "walkSource": "exec-63aa39ea-871d-43a6-a970-5be771a20256.png",
+      "walkPrompt": "Create a new four-frame running sprite sheet for exactly the SAME athlete zombie character in the reference. Same outfit, face, painterly comic shading and head size. Front view approaching camera. Four equal cells in a 2 by 2 square grid. Exactly one full-body pose per cell. Each pose at identical scale and centered; shoes at same ground line in each cell. Plain solid #FF00FF magenta background, no checkerboard, no shadows, no labels.\nFour sequential poses for ONE entire running cycle:\nTOP LEFT: CONTACT A. Character's right foot (on image left) extended forward toward viewer and low. Left leg trails behind. Left arm forward, right arm back.\nTOP RIGHT: PASSING A. Body over RIGHT supporting leg (on image left). LEFT knee (on image right) lifts high forward. Left arm moving back, right arm moving forward.\nBOTTOM LEFT: CONTACT B. LEFT foot (on image right) now extended forward toward viewer and low. Right leg trails. RIGHT arm forward, left arm back. Clear opposite of top-left.\nBOTTOM RIGHT: PASSING B. Body over LEFT supporting leg (on image right). RIGHT knee (on image left) lifts high forward. Right arm moving back, left arm moving forward. Clear opposite of top-right.\nDo not repeat contact poses in passing cells. Frame 4 must connect to frame 1 without a pause. Entire head, hands, shoes inside own cell with a wide clear margin. No death poses in this image.",
+      "assets": [
+        "assets/images/zombie-walk-athlete.png",
+        "assets/images/zombie-walk-athlete.webp",
+        "assets/images/zombie-death-athlete-sheet.png",
+        "assets/images/zombie-death-athlete-sheet.webp"
+      ]
+    }
+  }
+}

@@ -38,6 +38,7 @@
         "node school-zombie-defense/tests/core-modules.test.cjs",
         "node school-zombie-defense/tests/defender-actions.test.cjs",
         "node school-zombie-defense/tests/zombie-death-placement.test.cjs",
+        "node school-zombie-defense/tests/zombie-motion.test.cjs",
         "node school-zombie-defense/tests/barricade-impact.test.cjs",
         "node school-zombie-defense/tests/hud-status.test.cjs",
         "node school-zombie-defense/tests/ranking-sync.test.cjs",
