@@ -86,3 +86,8 @@ body[data-game="parking-escape"] .rank-submit-row input { font-size: 16px; borde
 @media (prefers-reduced-motion: reduce) {
   body[data-game="parking-escape"] *, body[data-game="parking-escape"] *::before, body[data-game="parking-escape"] *::after { animation: none !important; transition: none !important; }
 }
+
+@media (orientation: portrait) and (max-width: 380px) {
+  body[data-game="parking-escape"] .menu-actions--menu { grid-template-columns: minmax(0, 1fr) 80px; }
+  body[data-game="parking-escape"] .menu-control-bar button { padding-inline: 8px; gap: 6px; white-space: nowrap; }
+}
