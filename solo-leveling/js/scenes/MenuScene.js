@@ -1,4 +1,4 @@
-import { getShadowMenuLayout } from '../ui/MenuLayout.js?v=20260913-concept-ui-v4';
+import { getShadowMenuLayout } from '../ui/MenuLayout.js?v=20260913-concept-ui-v5';
 import {
     GAME_WIDTH, GAME_HEIGHT,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
@@ -7,7 +7,7 @@ import {
 import { SpriteFactory } from '../utils/SpriteFactory.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
-import { GameScene } from './GameScene.js?v=20260913-concept-ui-v4';
+import { GameScene } from './GameScene.js?v=20260913-concept-ui-v5';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
 import { getGameplayAssetList } from '../utils/AssetManifest.js';
 import { getCharacterMenuLabels, getCharacterText } from '../utils/CharacterLocalization.js';
@@ -287,9 +287,9 @@ export class MenuScene extends Phaser.Scene {
     _createCleanMenu() {
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = '';
-        const viewport = this.game.canvas.getBoundingClientRect();
-        const cssW = viewport.width || window.innerWidth;
-        const cssH = viewport.height || window.innerHeight;
+        const container = document.getElementById('game-container');
+        const cssW = container?.clientWidth || window.innerWidth;
+        const cssH = container?.clientHeight || window.innerHeight;
         const px = GAME_WIDTH / cssW;
         const hasSave = GameScene.hasSavedGame();
         const layout = getShadowMenuLayout(cssW, cssH, hasSave);
@@ -299,6 +299,7 @@ export class MenuScene extends Phaser.Scene {
         this._startingGame = false;
         this._characterSelectOpen = false;
         this._reduceMenuMotion = reduceMotion;
+        this._menuKeyboardActions = [];
         this.selectedCharacterId = getStoredCharacterId();
         this._createMenuBackdrop({ isPortrait: layout.portrait, isShortLandscape: layout.short });
 
@@ -370,13 +371,21 @@ export class MenuScene extends Phaser.Scene {
             label: t('hallOfFame'), onClick: () => this._showHallOfFame(layout.portrait),
         });
         this._createLanguageDropdown(layout.portrait);
-        const onEnter = () => {
-            if (!this._startingGame && !this._characterSelectOpen && !this._modalElements.some(el => el.active)) openCharacters();
+        let focusIndex = hasSave ? 1 : 0;
+        const onMenuKey = (event) => {
+            if (this._startingGame || this._characterSelectOpen || this._modalElements.some(el => el.active)) return;
+            if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) return;
+            event.preventDefault();
+            if (event.key === 'Enter') { this._menuKeyboardActions[focusIndex]?.emit('pointerdown'); return; }
+            this._menuKeyboardActions[focusIndex]?.emit('pointerout');
+            focusIndex = (focusIndex + (event.key === 'ArrowDown' ? 1 : -1) + this._menuKeyboardActions.length) % this._menuKeyboardActions.length;
+            this._menuKeyboardActions[focusIndex]?.emit('pointerover');
         };
-        this.input.keyboard?.on('keydown-ENTER', onEnter);
+        this.input.keyboard?.on('keydown', onMenuKey);
         if (!reduceMotion) this.cameras.main.fadeIn(300, 0, 0, 0);
         this.events.once('shutdown', () => {
-            this.input.keyboard?.off('keydown-ENTER', onEnter);
+            this.input.keyboard?.off('keydown', onMenuKey);
+            this._menuKeyboardActions = [];
             [...this._dropdownElements, ...this._modalElements].forEach(el => { if (el?.active) el.destroy(); });
             this._dropdownElements = [];
             this._modalElements = [];
@@ -405,6 +414,11 @@ export class MenuScene extends Phaser.Scene {
             });
             g.lineStyle(px, primary ? 0xf2d4fb : 0x9984b0, .24);
             g.lineBetween((x + 12) * px, (y + 3) * px, (x + w - 12) * px, (y + 3) * px);
+            g.fillStyle(primary ? 0xf0d49d : 0xa597ba, hover ? .9 : .65);
+            g.fillRect((x + 1) * px, (y + 12) * px, 2 * px, (h - 24) * px);
+            g.lineStyle(px, primary ? 0xe9d3b0 : 0xb5a9c9, .7);
+            g.lineBetween((x + w - 25) * px, (y + h / 2 - 4) * px, (x + w - 21) * px, (y + h / 2) * px);
+            g.lineBetween((x + w - 21) * px, (y + h / 2) * px, (x + w - 25) * px, (y + h / 2 + 4) * px);
         };
         draw();
         const title = this.add.text((x + w / 2) * px, (y + h * (meta ? .35 : .5)) * px, label, {
@@ -423,6 +437,7 @@ export class MenuScene extends Phaser.Scene {
         hit.on('pointerover', () => draw(true));
         hit.on('pointerout', () => draw(false));
         hit.on('pointerdown', () => { if (!this._startingGame) onClick?.(); });
+        this._menuKeyboardActions.push(hit);
     }
 
     _createPremiumHero(layout, px) {
@@ -1815,7 +1830,10 @@ export class MenuScene extends Phaser.Scene {
         const cx = GAME_WIDTH / 2;
         const cy = GAME_HEIGHT / 2;
         const isPortrait = GAME_HEIGHT > GAME_WIDTH;
-        const isShortLandscape = !isPortrait && GAME_HEIGHT <= 820 && GAME_WIDTH > 1180;
+        const cssW = document.getElementById('game-container')?.clientWidth || window.innerWidth;
+        const cssH = document.getElementById('game-container')?.clientHeight || window.innerHeight;
+        const px = GAME_WIDTH / cssW;
+        const isShortLandscape = !isPortrait && cssH <= 500;
         const depth = 140;
 
         const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.82)
@@ -1832,10 +1850,10 @@ export class MenuScene extends Phaser.Scene {
             elements.push(portal);
         }
 
-        const boxW = isPortrait
+        const boxW = isShortLandscape ? (cssW - 32) * px : isPortrait
             ? Math.min(GAME_WIDTH - uv(36), uv(560))
             : Math.min(GAME_WIDTH - uv(70), uv(isShortLandscape ? 1060 : 1080));
-        const boxH = isPortrait
+        const boxH = isShortLandscape ? (cssH - 32) * px : isPortrait
             ? Math.min(GAME_HEIGHT - uv(84), uv(800))
             : Math.min(GAME_HEIGHT - uv(70), uv(isShortLandscape ? 560 : 590));
         const bx = cx - boxW / 2;
@@ -1868,7 +1886,7 @@ export class MenuScene extends Phaser.Scene {
             .setInteractive();
         elements.push(bodyShield);
 
-        const title = this.add.text(cx, by + uv(isShortLandscape ? 38 : 42), '[ HUNTER SELECT ]', {
+        const title = this.add.text(cx, by + (isShortLandscape ? 24 * px : uv(42)), '[ HUNTER SELECT ]', {
             fontSize: fs(isShortLandscape ? 18 : (isPortrait ? 18 : 22)),
             fontFamily: UI_FONT_MONO,
             fontStyle: 'bold',
@@ -1878,8 +1896,8 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(depth + 5);
         elements.push(title);
 
-        const hint = this.add.text(cx, by + uv(isShortLandscape ? 68 : 76), 'SELECT HUNTER TO ENTER', {
-            fontSize: fs(isShortLandscape ? 10 : 11),
+        const hint = this.add.text(cx, by + (isShortLandscape ? 45 * px : uv(76)), 'SELECT HUNTER · ← → / ENTER', {
+            fontSize: isShortLandscape ? `${11 * px}px` : fs(11),
             fontFamily: UI_FONT_MONO,
             color: SYSTEM.TEXT_BRIGHT,
             stroke: '#02040a',
@@ -1888,19 +1906,19 @@ export class MenuScene extends Phaser.Scene {
         elements.push(hint);
 
         const characters = Object.values(CHARACTER_DEFS);
-        const columns = isPortrait ? 2 : 3;
+        const columns = isShortLandscape ? 5 : (isPortrait ? 2 : 3);
         const rows = Math.ceil(characters.length / columns);
-        const gap = uv(isShortLandscape ? 14 : 16);
-        const areaPadX = uv(isPortrait ? 34 : 68);
-        const cardAreaTop = by + uv(isShortLandscape ? 104 : (isPortrait ? 114 : 122));
+        const gap = isShortLandscape ? 8 * px : uv(16);
+        const areaPadX = isShortLandscape ? 12 * px : uv(isPortrait ? 34 : 68);
+        const cardAreaTop = by + (isShortLandscape ? 70 * px : uv(isPortrait ? 114 : 122));
         const cardAreaW = boxW - areaPadX * 2;
-        const cardAreaH = by + boxH - cardAreaTop - uv(isShortLandscape ? 76 : 84);
+        const cardAreaH = by + boxH - cardAreaTop - (isShortLandscape ? 60 * px : uv(84));
         const cardW = Math.floor(Math.min(
-            uv(isPortrait ? 220 : (isShortLandscape ? 276 : 292)),
+            (isShortLandscape ? 200 * px : uv(isPortrait ? 220 : 292)),
             (cardAreaW - gap * (columns - 1)) / columns
         ));
         const cardH = Math.floor(Math.min(
-            uv(isPortrait ? 192 : (isShortLandscape ? 164 : 190)),
+            (isShortLandscape ? 174 * px : uv(isPortrait ? 192 : 190)),
             (cardAreaH - gap * (rows - 1)) / rows
         ));
 
@@ -1934,6 +1952,7 @@ export class MenuScene extends Phaser.Scene {
         const closeAll = () => {
             if (!this._characterSelectOpen) return;
             this._characterSelectOpen = false;
+            this.input.keyboard?.off('keydown', onSelectKey);
             elements.forEach(el => { if (el && el.destroy) el.destroy(); });
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
@@ -1952,14 +1971,14 @@ export class MenuScene extends Phaser.Scene {
             const hit = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, 0x000000, 0)
                 .setDepth(depth + 8)
                 .setInteractive({ useHandCursor: true });
-            const portraitSize = Math.min(uv(isShortLandscape ? 68 : 78), cardH * 0.46);
+            const portraitSize = Math.min(isShortLandscape ? 44 * px : uv(78), cardH * 0.46);
             const portraitKey = this._getCharacterPortraitTexture(character);
             const portrait = this.add.image(x + cardW / 2, y + cardH * 0.28, portraitKey)
                 .setDepth(depth + 6)
                 .setOrigin(0.5);
             this._fitImageDisplay(portrait, portraitKey, portraitSize, portraitSize);
             const name = this.add.text(x + cardW / 2, y + cardH * 0.53, characterText.name, {
-                fontSize: fs(isShortLandscape ? 14 : 15),
+                fontSize: isShortLandscape ? `${14 * px}px` : fs(15),
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
                 color: SYSTEM.TEXT_BRIGHT,
@@ -1968,21 +1987,25 @@ export class MenuScene extends Phaser.Scene {
             }).setOrigin(0.5).setDepth(depth + 6);
             this._fitText(name, cardW - uv(14), cardH * 0.18);
             const role = this.add.text(x + cardW / 2, y + cardH * 0.66, characterText.archetype, {
-                fontSize: fs(isShortLandscape ? 10 : 11),
+                fontSize: isShortLandscape ? `${11 * px}px` : fs(11),
                 fontFamily: UI_FONT_KR,
                 color: character.accentText,
                 stroke: '#02040a',
                 strokeThickness: 3,
             }).setOrigin(0.5).setDepth(depth + 6);
             this._fitText(role, cardW - uv(14), cardH * 0.14);
-            const stat = this.add.text(x + cardW / 2, y + cardH * 0.78, `HP ${character.stats.hp}  ATK ${character.stats.attack}`, {
-                fontSize: fs(isShortLandscape ? 10 : 11),
+            const statLabel = isShortLandscape
+                ? `HP ${character.stats.hp}\nATK ${character.stats.attack}`
+                : `HP ${character.stats.hp}  ATK ${character.stats.attack}`;
+            const stat = this.add.text(x + cardW / 2, y + cardH * 0.8, statLabel, {
+                align: 'center',
+                fontSize: isShortLandscape ? `${11 * px}px` : fs(11),
                 fontFamily: UI_FONT_MONO,
                 color: SYSTEM.TEXT_CYAN,
                 stroke: '#02040a',
                 strokeThickness: 3,
             }).setOrigin(0.5).setDepth(depth + 6);
-            this._fitText(stat, cardW - uv(20), cardH * 0.14);
+            this._fitText(stat, cardW - uv(20), cardH * (isShortLandscape ? 0.24 : 0.14));
 
             const ref = { g, bg, accentG, hit, portrait, character, x, y, w: cardW, h: cardH };
             cardRefs.push(ref);
@@ -2007,7 +2030,22 @@ export class MenuScene extends Phaser.Scene {
         });
         redrawCards();
 
-        const closeBtn = this.add.text(cx, by + boxH - uv(isShortLandscape ? 42 : 46), `[ ${t('close')} ]`, {
+        let focusedCard = Math.max(0, characters.findIndex(character => character.id === this.selectedCharacterId));
+        const onSelectKey = (event) => {
+            if (!this._characterSelectOpen || this._startingGame) return;
+            if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(event.key)) return;
+            event.preventDefault();
+            if (event.key === 'Escape') { closeAll(); return; }
+            if (event.key === 'Enter') { cardRefs[focusedCard]?.hit.emit('pointerdown'); return; }
+            const step = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowUp' ? -columns : event.key === 'ArrowDown' ? columns : 1;
+            focusedCard = (focusedCard + step + cardRefs.length) % cardRefs.length;
+            redrawCards();
+            redrawCard(cardRefs[focusedCard], true);
+        };
+        this.input.keyboard?.on('keydown', onSelectKey);
+        this.events.once('shutdown', () => this.input.keyboard?.off('keydown', onSelectKey));
+
+        const closeBtn = this.add.text(cx, by + boxH - (isShortLandscape ? 30 * px : uv(46)), `[ ${t('close')} ]`, {
             fontSize: fs(isShortLandscape ? 13 : 14),
             fontFamily: UI_FONT_MONO,
             fontStyle: 'bold',

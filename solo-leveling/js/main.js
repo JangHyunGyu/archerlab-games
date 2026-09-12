@@ -2,8 +2,8 @@
 import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { PreloadScene } from './scenes/PreloadScene.js';
-import { MenuScene } from './scenes/MenuScene.js?v=20260913-concept-ui-v4';
-import { GameScene } from './scenes/GameScene.js?v=20260913-concept-ui-v4';
+import { MenuScene } from './scenes/MenuScene.js?v=20260913-concept-ui-v5';
+import { GameScene } from './scenes/GameScene.js?v=20260913-concept-ui-v5';
 import { LevelUpScene } from './scenes/LevelUpScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js?v=20260904-continuation-rank-v1';
 
@@ -51,6 +51,9 @@ function syncCanvasDisplaySize(viewport = getViewportSize()) {
     canvas.style.height = `${displayH}px`;
     canvas.style.maxWidth = '100%';
     canvas.style.maxHeight = '100%';
+    // The container's flex layout centers the canvas without stale resize offsets.
+    canvas.style.marginLeft = '0';
+    canvas.style.marginTop = '0';
 }
 
 const size = calcGameSize();
@@ -75,7 +78,7 @@ const config = {
         // Phaser FIT can leave stale CSS dimensions after dynamic game-size changes.
         // We resize the internal game buffer and the canvas display size together.
         mode: Phaser.Scale.NONE,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        autoCenter: Phaser.Scale.NO_CENTER,
         expandParent: false,
     },
     input: {

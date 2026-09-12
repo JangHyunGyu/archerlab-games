@@ -19,6 +19,7 @@
       "entry": "lumen-shift/index.html",
       "tests": [
         "node lumen-shift/tools/gravity.test.mjs",
+        "node lumen-shift/tools/layout.test.mjs",
         "node lumen-shift/tools/ranking.test.mjs",
         "node lumen-shift/tools/audio-loading.test.mjs"
       ]

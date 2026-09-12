@@ -1,0 +1,119 @@
+/* A quiet instrument panel around the luminous playfield. */
+body[data-game="lumen-shift"] .menu-screen { padding: max(90px, calc(var(--safe-top) + 72px)) max(40px, var(--safe-right)) max(48px, var(--safe-bottom)) max(40px, var(--safe-left)); }
+body[data-game="lumen-shift"] .menu-screen::before { inset: 0; background: linear-gradient(90deg, #030911d9, #03091188 38%, transparent 68%); transform: none; opacity: 1; }
+body[data-game="lumen-shift"] .menu-layout { position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; width: min(1200px, 100%); height: 100%; padding: 0; margin: auto; }
+body[data-game="lumen-shift"] .menu-screen .menu-lockup { position: static; align-self: flex-start; width: min(530px, 49%); margin: 0; padding: 0; text-align: left; }
+body[data-game="lumen-shift"] .menu-screen .kicker { margin-bottom: 24px; color: #a5c9d4; font-size: 10px; letter-spacing: .23em; }
+body[data-game="lumen-shift"] .menu-screen .menu-lockup h1 { font-size: clamp(72px, 8.1vw, 124px); line-height: .88; letter-spacing: -.065em; color: #f0f8ff; text-shadow: 0 4px 20px #02071180; }
+body[data-game="lumen-shift"] .menu-screen .menu-lockup h1 span:last-child { color: #97f0ef; text-shadow: 0 0 36px #6ff5fc1a; }
+body[data-game="lumen-shift"] .menu-subtitle { max-width: 285px; margin-top: 26px; font-size: 15px; line-height: 1.65; letter-spacing: 0; color: #abc0cf; font-weight: 400; }
+body[data-game="lumen-shift"] .menu-command { width: min(420px, 46%); margin-top: 42px; gap: 16px; }
+body[data-game="lumen-shift"] .menu-signal { color: #9cb4c5; font-size: 9px; gap: 12px; letter-spacing: .18em; }
+body[data-game="lumen-shift"] .menu-signal i { background: #6acdcc66; max-width: 42px; }
+body[data-game="lumen-shift"] .menu-screen .menu-actions { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 10px; }
+body[data-game="lumen-shift"] .menu-screen .primary-button, body[data-game="lumen-shift"] .menu-screen .secondary-button { min-height: 62px; padding: 0 16px; gap: 10px; clip-path: none; border-radius: 4px; }
+body[data-game="lumen-shift"] .menu-screen .primary-button { background: linear-gradient(120deg, #d5fff5, #8ae8e8); border-color: #d4fff1; box-shadow: 0 4px 0 #1d6474, 0 12px 36px #63ece214, inset 0 1px #fff; }
+body[data-game="lumen-shift"] .menu-screen .secondary-button { background: #141a2de8; border-color: #8290b14d; color: #d5d9f0; box-shadow: inset 0 1px #ffffff10; backdrop-filter: none; }
+body[data-game="lumen-shift"] .button-copy { font-size: 15px; letter-spacing: .04em; }
+body[data-game="lumen-shift"] .button-index { width: 25px; font-size: 10px; opacity: .65; }
+body[data-game="lumen-shift"] .menu-screen .primary-button::after, body[data-game="lumen-shift"] .menu-screen .secondary-button::after { right: 15px; width: 7px; height: 7px; }
+body[data-game="lumen-shift"] .menu-archerlab-link { top: max(16px, var(--safe-top)); left: max(30px, var(--safe-left)); display: inline-flex; min-height: 44px; align-items: center; padding: 0 10px; color: #b3c5ce; font-size: 10px; transform: none; }
+.menu-guide { display: flex; gap: 16px; margin: 8px 0 0; color: #a1afc0; font-size: 11px; line-height: 1.5; }
+.menu-guide kbd { font: inherit; color: #dce9ef; }
+.guide-touch { display: none; }
+body[data-game="lumen-shift"] .hud { grid-template-columns: 44px 1fr 44px; gap: 12px; }
+body[data-game="lumen-shift"] .icon-button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 6px; border-color: #9ebedf4a; background: #0b1724eb; color: #d7eef4; backdrop-filter: none; cursor: pointer; font-size: 21px; }
+body[data-game="lumen-shift"] .stage-name { color: #a1bbc9; font-size: 10px; letter-spacing: .2em; }
+body[data-game="lumen-shift"] .hud-main { justify-self: center; min-width: 112px; padding: 6px 20px; border: 1px solid #97d2e333; border-radius: 5px; background: #071320e8; }
+body[data-game="lumen-shift"] #score-value { color: #eefcff; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px #0009; }
+body[data-game="lumen-shift"] .effect-hud { text-shadow: 0 2px 6px #000; }
+body[data-game="lumen-shift"] .effect-stat span { color: #a0bbc9; font-size: clamp(9px, 1.4vw, 12px); letter-spacing: .06em; }
+body[data-game="lumen-shift"] .effect-stat { min-width: 48px; padding: 7px 4px; border-top: 1px solid #86c9d644; border-radius: 3px; background: #071320e8; }
+body[data-game="lumen-shift"] .effect-stat strong { color: #ecffff; font-weight: 750; font-variant-numeric: tabular-nums; }
+body[data-game="lumen-shift"] .touch-controls button { border-color: #a5c4da42; background: #101d2be8; box-shadow: inset 0 1px #dbf8ff26, 0 3px 0 #02070dc9; color: #d1e5ec; }
+body[data-game="lumen-shift"] .touch-controls [data-action="drop"] { background: #214751ed; border-color: #8de9e95c; color: #bdfff6; }
+body[data-game="lumen-shift"] .touch-controls [data-action="rotate"] { background: #2b2946eb; border-color: #a299db70; color: #e3d7ff; }
+body[data-game="lumen-shift"] .control-drag-handle, body[data-game="lumen-shift"] .control-reset-button { min-height: 44px !important; min-width: 44px; cursor: pointer; }
+body[data-game="lumen-shift"] .touch-controls:not(.is-free-layout) { grid-template-rows: 44px 52px; row-gap: 8px; }
+body[data-game="lumen-shift"] .touch-controls:not(.is-free-layout) .control-drag-handle { height: 44px; }
+body[data-game="lumen-shift"] .compact-screen, body[data-game="lumen-shift"] .result-screen { background: linear-gradient(145deg, #0c182beb, #050a15f5); backdrop-filter: blur(8px); overflow-y: auto; overscroll-behavior: contain; padding-left: max(20px, var(--safe-left)); padding-right: max(20px, var(--safe-right)); }
+body[data-game="lumen-shift"] .compact-screen h2, body[data-game="lumen-shift"] .result-head h2 { letter-spacing: -.045em; font-weight: 800; }
+body[data-game="lumen-shift"] .result-head > span { color: #9ecccc; letter-spacing: .2em; }
+body[data-game="lumen-shift"] .result-head strong { color: #baffef; font-variant-numeric: tabular-nums; text-shadow: none; }
+body[data-game="lumen-shift"] .submit-row input { font-size: 16px; min-height: 48px; border-color: #9dafc34d; background: #06101f; border-radius: 4px; }
+body[data-game="lumen-shift"] .primary-button, body[data-game="lumen-shift"] .submit-row button { background: linear-gradient(120deg, #d5fff5, #8ae8e8); color: #082227; box-shadow: 0 3px 0 #235963; border-radius: 4px; cursor: pointer; }
+body[data-game="lumen-shift"] .secondary-button { border-color: #8290b14d; background: #141e31; border-radius: 4px; cursor: pointer; }
+body[data-game="lumen-shift"] .screen-layer:not(.menu-screen) > .menu-actions,
+body[data-game="lumen-shift"] .result-head,
+body[data-game="lumen-shift"] .submit-row,
+body[data-game="lumen-shift"] .ranking-list { width: min(430px, 100%); }
+body[data-game="lumen-shift"] .game-shell:has(.screen-layer:not(.is-hidden)) > :is(.hud, .effect-hud, .lumen-meter, .touch-controls) { visibility: hidden; pointer-events: none; }
+body[data-game="lumen-shift"] button:focus-visible, body[data-game="lumen-shift"] a:focus-visible, body[data-game="lumen-shift"] input:focus-visible, body[data-game="lumen-shift"] [tabindex]:focus-visible { outline: 2px solid #d7fff1; outline-offset: 4px; }
+@media (pointer: coarse) { .guide-keyboard { display: none; } .guide-touch { display: block; } }
+@media (max-width: 900px), (max-height: 600px) {
+  body[data-game="lumen-shift"] .touch-controls { display: grid; }
+  body[data-game="lumen-shift"] .touch-controls.is-free-layout { display: block; }
+  .guide-keyboard { display: none; } .guide-touch { display: block; }
+}
+@media (orientation: portrait) {
+  body[data-game="lumen-shift"] .menu-screen { padding: max(86px, calc(var(--safe-top) + 72px)) max(24px, var(--safe-right)) max(30px, calc(var(--safe-bottom) + 20px)) max(24px, var(--safe-left)); }
+  body[data-game="lumen-shift"] .menu-screen::before { background: linear-gradient(180deg, #030b14e6, #030b1455 35%, transparent 50%, #030b14cc 80%); }
+  body[data-game="lumen-shift"] .menu-layout { align-items: flex-start; justify-content: space-between; width: min(460px, 100%); }
+  body[data-game="lumen-shift"] .menu-screen .menu-lockup { width: 100%; text-align: left; }
+  body[data-game="lumen-shift"] .menu-screen .kicker { justify-content: flex-start; font-size: 9px; margin-bottom: 18px; }
+  body[data-game="lumen-shift"] .menu-screen .menu-lockup h1 { font-size: clamp(64px, 18vw, 92px); line-height: .87; }
+  body[data-game="lumen-shift"] .menu-subtitle { display: block; margin-top: 18px; max-width: 240px; font-size: 13px; }
+  body[data-game="lumen-shift"] .menu-command { width: 100%; margin-top: 30px; gap: 12px; }
+  body[data-game="lumen-shift"] .menu-signal { display: flex; justify-content: flex-start; }
+  body[data-game="lumen-shift"] .menu-screen .primary-button, body[data-game="lumen-shift"] .menu-screen .secondary-button { min-height: 58px; padding-inline: 12px; gap: 8px; }
+  body[data-game="lumen-shift"] .button-copy { font-size: 14px; }
+  body[data-game="lumen-shift"] .button-index { width: 20px; }
+  body[data-game="lumen-shift"] .menu-archerlab-link { left: max(18px, var(--safe-left)); transform: none; }
+}
+@media (orientation: portrait) and (max-height: 650px) {
+  body[data-game="lumen-shift"] .menu-screen { padding-top: max(72px, calc(var(--safe-top) + 62px)); padding-bottom: max(22px, var(--safe-bottom)); }
+  body[data-game="lumen-shift"] .menu-screen .menu-lockup h1 { font-size: clamp(58px, 17vw, 76px); }
+  body[data-game="lumen-shift"] .menu-subtitle { margin-top: 12px; font-size: 12px; }
+  body[data-game="lumen-shift"] .menu-command { gap: 8px; }
+  .menu-guide { margin-top: 4px; font-size: 10px; }
+}
+@media (orientation: landscape) and (max-height: 650px) {
+  body[data-game="lumen-shift"] .menu-screen { padding: max(64px, calc(var(--safe-top) + 54px)) max(30px, var(--safe-right)) max(24px, var(--safe-bottom)) max(30px, var(--safe-left)); }
+  body[data-game="lumen-shift"] .menu-screen .menu-lockup { width: 52%; }
+  body[data-game="lumen-shift"] .menu-screen .menu-lockup h1 { font-size: clamp(46px, 14dvh, 76px); }
+  body[data-game="lumen-shift"] .menu-screen .kicker { margin-bottom: 12px; font-size: 9px; }
+  body[data-game="lumen-shift"] .menu-subtitle { margin-top: 14px; font-size: 12px; max-width: 310px; }
+  body[data-game="lumen-shift"] .menu-command { margin-top: 22px; width: min(390px, 58%); gap: 8px; }
+  body[data-game="lumen-shift"] .menu-signal { display: none; }
+  body[data-game="lumen-shift"] .menu-screen .primary-button, body[data-game="lumen-shift"] .menu-screen .secondary-button { min-height: 48px; }
+}
+@media (orientation: landscape) and (max-height: 380px) {
+  body[data-game="lumen-shift"] .menu-screen { padding-top: max(58px, var(--safe-top)); padding-bottom: max(14px, var(--safe-bottom)); }
+  body[data-game="lumen-shift"] .menu-subtitle, body[data-game="lumen-shift"] .menu-guide { display: none; }
+  body[data-game="lumen-shift"] .menu-command { margin-top: 18px; }
+}
+@media (max-height: 500px) {
+  body[data-game="lumen-shift"] .result-screen { justify-content: flex-start; gap: 12px; }
+  body[data-game="lumen-shift"] .result-head h2 { font-size: 25px; margin: 8px 0; }
+  body[data-game="lumen-shift"] .ranking-list { flex: 1 0 90px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-game="lumen-shift"] *, body[data-game="lumen-shift"] *::before, body[data-game="lumen-shift"] *::after { animation: none !important; transition: none !important; }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  body[data-game="lumen-shift"] .hud { top: max(12px, var(--safe-top)); }
+  body[data-game="lumen-shift"] .effect-hud-left { top: calc(max(12px, var(--safe-top)) + 80px); left: max(12px, var(--safe-left)); width: 140px; display: flex; gap: 8px; }
+  body[data-game="lumen-shift"] .effect-stat { flex: 1; min-width: 62px; }
+  body[data-game="lumen-shift"] .effect-stat strong { font-size: 24px; line-height: 1.1; }
+  body[data-game="lumen-shift"] .touch-controls:not(.is-custom-position):not(.is-free-layout) { left: max(12px, var(--safe-left)); right: max(12px, var(--safe-right)); bottom: max(12px, calc(var(--safe-bottom) + 8px)); width: auto; transform: none; grid-template-columns: 44px 44px 44px minmax(80px, 1fr) 44px 52px; grid-template-rows: 44px 52px; column-gap: 8px; pointer-events: none; }
+  body[data-game="lumen-shift"] .touch-controls:not(.is-custom-position):not(.is-free-layout) > * { pointer-events: auto; }
+  body[data-game="lumen-shift"] .touch-controls:not(.is-custom-position):not(.is-free-layout) .control-drag-handle { grid-column: 1 / 3; grid-row: 1; justify-self: start; width: 96px; }
+  body[data-game="lumen-shift"] .touch-controls:not(.is-custom-position):not(.is-free-layout) button { grid-row: 2; width: 100%; height: 52px; }
+  body[data-game="lumen-shift"] .touch-controls:not(.is-custom-position):not(.is-free-layout) .control-reset-button { grid-column: 6; grid-row: 1; height: 44px; }
+  body[data-game="lumen-shift"] .touch-controls [data-action="left"] { grid-column: 1; }
+  body[data-game="lumen-shift"] .touch-controls [data-action="down"] { grid-column: 2; }
+  body[data-game="lumen-shift"] .touch-controls [data-action="right"] { grid-column: 3; }
+  body[data-game="lumen-shift"] .touch-controls [data-action="rotate"] { grid-column: 5; }
+  body[data-game="lumen-shift"] .touch-controls [data-action="drop"] { grid-column: 6; }
+}

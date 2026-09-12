@@ -39,7 +39,7 @@ assert.equal(
 );
 assert.match(
   indexSource,
-  /js\/main\.js\?v=20260913-concept-ui-v4/,
+  /js\/main\.js\?v=20260913-concept-ui-v5/,
   "the deployed entry point must invalidate cached game modules"
 );
 assert.match(

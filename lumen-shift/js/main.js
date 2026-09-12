@@ -1989,6 +1989,7 @@ class PixiView {
   constructor(root) {
     this.root = root;
     this.quality = this.detectQuality();
+    this.motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.particles = [];
     this.meteors = [];
     this.clearWaves = [];
@@ -2935,32 +2936,32 @@ class PixiView {
     const h = this.app.screen.height;
     const portrait = h >= w;
     const safeArea = safeAreaInsets();
-    const topInset = portrait ? (h < 720 ? 134 : 164) : 92;
+    const topInset = safeArea.top + (portrait ? (h < 720 ? 134 : 164) : 92);
     const bottomInset = portrait
       ? Math.max(h < 720 ? 146 : 156, safeArea.bottom + 126)
-      : 34;
-    const availableH = Math.max(300, h - topInset - bottomInset);
+      : Math.max(34, safeArea.bottom + 12);
+    const availableH = Math.max(160, h - topInset - bottomInset);
     const boardW = portrait
       ? Math.min(w * 0.76, availableH * 0.5, 332)
-      : Math.min(w * 0.28, (h - 124) * 0.5, 380);
+      : Math.min(w * 0.28, availableH * 0.5, 380);
     const cell = Math.floor(boardW / COLS);
     const actualW = cell * COLS;
     const actualH = cell * ROWS;
     const boardX = portrait ? Math.round((w - actualW) / 2) : Math.round(w * 0.5 - actualW / 2);
     const boardY = portrait
       ? Math.round(topInset + Math.max(0, availableH - actualH) * 0.42)
-      : Math.round((h - actualH) / 2 + 18);
+      : Math.round(topInset + Math.max(0, availableH - actualH) * 0.5);
     const sideSpace = Math.max(0, (w - actualW) / 2);
     const portraitSidePanels = portrait && sideSpace >= 50;
     const miniW = portrait
       ? (portraitSidePanels ? Math.min(58, sideSpace - 10) : Math.min(88, Math.floor((actualW - 14) / 2)))
-      : 96;
+      : (h <= 600 ? 72 : 96);
     const miniH = portrait ? (portraitSidePanels ? 66 : 52) : 96;
     const next = portrait
       ? (portraitSidePanels
         ? { x: Math.min(w - miniW - 8, boardX + actualW + 7), y: boardY + 22, w: miniW, h: miniH + 72 }
         : { x: boardX + actualW - miniW, y: boardY - miniH - 10, w: miniW, h: miniH })
-      : { x: boardX + actualW + 22, y: boardY + 16, w: miniW, h: miniH + 132 };
+      : { x: boardX + actualW + (h <= 600 ? 16 : 22), y: boardY + 16, w: miniW, h: Math.min(miniH + 132, actualH - 16) };
     return { w, h, portrait, boardX, boardY, boardW: actualW, boardH: actualH, cell, next };
   }
 
@@ -2969,6 +2970,22 @@ class PixiView {
     const layout = this.layout();
     const stage = snapshot.stage || STAGES[0];
     this.trimFxQueues();
+    const reducedMotion = this.motionPreference.matches;
+    for (const layer of [this.bgPlate, this.bloomLayer, this.swarmLayer, this.glow, this.fx, this.sparkLayer, this.glareLayer, this.flashLayer, this.distortionSprite]) {
+      if (layer) layer.visible = !reducedMotion;
+    }
+    if (reducedMotion) {
+      this.shake = this.cameraPulse = this.cameraRoll = this.zonePulse = this.beatHit = 0;
+      const root = this.app.stage;
+      root.pivot.set(0, 0);
+      root.position.set(0, 0);
+      root.scale.set(1);
+      root.rotation = 0;
+      this.bg.clear().rect(0, 0, layout.w, layout.h).fill({color: 0x050b16});
+      this.drawBoard(layout, snapshot);
+      if (this.stageTitleLayer) this.stageTitleLayer.visible = false;
+      return;
+    }
     this.applyCamera(layout, beatState, dt);
     this.drawBackground(layout, stage, dt, snapshot, beatState);
     this.drawBoard(layout, snapshot);
@@ -3943,7 +3960,7 @@ class PixiView {
     }
 
     this.drawPiece(g, snapshot.ghost, bx, by, cell, 0.12, true, stage);
-    this.drawPieceAura(g, snapshot.active, bx, by, cell, stage, snapshot.zoneActive);
+    if (!this.motionPreference.matches) this.drawPieceAura(g, snapshot.active, bx, by, cell, stage, snapshot.zoneActive);
     this.drawPiece(g, snapshot.active, bx, by, cell, snapshot.zoneActive ? 1 : 0.98, false, stage);
 
     if (snapshot.zoneActive) {
@@ -6636,7 +6653,8 @@ class LumenShiftApp {
     if (this.core.status === "playing") this.core.tick(dt);
     const snapshot = this.core.snapshot();
     const beatState = this.audio.getBeatState(snapshot, dt);
-    this.view.render(snapshot, dt, beatState);
+    // Opaque menus and pause screens do not need a particle scene behind them.
+    if (this.core.status === 'playing') this.view.render(snapshot, dt, beatState);
     const now = performance.now();
     if (now - this.lastAudioMixAt > 48) {
       this.audio.updateMix(snapshot);

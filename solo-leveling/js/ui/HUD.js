@@ -4,7 +4,7 @@ import {
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
     fs, uv, drawCornerBrackets, fitText, padText,
 } from '../utils/Constants.js';
-import { UIAssets } from './UIAssets.js?v=20260913-concept-ui-v4';
+import { UIAssets } from './UIAssets.js?v=20260913-concept-ui-v5';
 
 export class HUD {
     constructor(scene) {

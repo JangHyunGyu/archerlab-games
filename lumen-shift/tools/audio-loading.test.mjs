@@ -14,6 +14,6 @@ assert.match(
   'disabled stem mixing must not instantiate seven unused stage players'
 );
 assert.doesNotMatch(main, /\n\s*this\.createStageStemPlayers\(Tone, 0\);/);
-assert.match(html, /js\/main\.js\?v=20260904-audio-loading-v1/);
+assert.match(html, /js\/main\.js\?v=20260913-concept-ui-v2/);
 
 console.log('lumen-shift audio loading policy verified');
