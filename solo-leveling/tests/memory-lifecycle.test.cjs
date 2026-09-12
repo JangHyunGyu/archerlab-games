@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+require('./menu-layout.test.cjs');
 
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "js", "weapons", "ShadowDagger.js"), "utf8");
@@ -38,7 +39,7 @@ assert.equal(
 );
 assert.match(
   indexSource,
-  /js\/main\.js\?v=20260904-continuation-rank-v1/,
+  /js\/main\.js\?v=20260913-concept-ui-v4/,
   "the deployed entry point must invalidate cached game modules"
 );
 assert.match(

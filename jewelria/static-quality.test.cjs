@@ -18,7 +18,7 @@ assert.match(main, /if \(document\.hidden\) pauseGame\(\{ playSound: false \}\)/
 assert.match(main, /window\.addEventListener\('pagehide', \(\) => pauseGame/);
 assert.match(main, /if \(state\?\.status === 'paused'\)/);
 assert.match(main, /input\.setEnabled\(!resolving\)/);
-assert.match(serviceWorker, /jewelria-v0\.3\.2-cache-policy-v1/);
+assert.match(serviceWorker, /jewelria-v0\.3\.3-concept-ui-v4/);
 assert.match(serviceWorker, /CORE_ASSETS\.map/);
 assert.doesNotMatch(serviceWorker, /CORE_ASSETS\.flatMap/);
 const coreBlock = serviceWorker.match(/const CORE_ASSETS = \[([\s\S]*?)\];/)?.[1] || '';
@@ -33,7 +33,7 @@ for (const asset of preferredAssets) {
   precacheBytes += fs.statSync(target).size;
 }
 assert.ok(precacheBytes < 15 * 1024 * 1024, 'Jewelria install precache must stay below 15 MiB');
-assert.equal(version.version, '0.3.2');
-assert.equal(version.build, '2026-08-16');
+assert.equal(version.version, '0.3.3');
+assert.equal(version.build, '2026-09-13');
 
 console.log('jewelria pause lifecycle quality tests passed');

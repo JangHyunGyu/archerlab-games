@@ -14,7 +14,7 @@ import { XPOrbPool } from '../entities/XPOrb.js';
 import { ItemDropManager } from '../entities/ItemDrop.js';
 import { Boss } from '../entities/Boss.js';
 import { Enemy } from '../entities/Enemy.js';
-import { HUD } from '../ui/HUD.js';
+import { HUD } from '../ui/HUD.js?v=20260913-concept-ui-v4';
 import { SystemMessage } from '../ui/SystemMessage.js';
 import { StatusWindow } from '../ui/StatusWindow.js';
 import { MobileControls } from '../ui/MobileControls.js';

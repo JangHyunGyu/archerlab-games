@@ -1,3 +1,4 @@
+import { getShadowMenuLayout } from '../ui/MenuLayout.js?v=20260913-concept-ui-v4';
 import {
     GAME_WIDTH, GAME_HEIGHT,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
@@ -6,7 +7,7 @@ import {
 import { SpriteFactory } from '../utils/SpriteFactory.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
-import { GameScene } from './GameScene.js?v=20260904-continuation-rank-v1';
+import { GameScene } from './GameScene.js?v=20260913-concept-ui-v4';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
 import { getGameplayAssetList } from '../utils/AssetManifest.js';
 import { getCharacterMenuLabels, getCharacterText } from '../utils/CharacterLocalization.js';
@@ -286,70 +287,46 @@ export class MenuScene extends Phaser.Scene {
     _createCleanMenu() {
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = '';
-
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-            || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        const viewportW = window.innerWidth || GAME_WIDTH;
-        const viewportH = window.innerHeight || GAME_HEIGHT;
-        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
-        const minTouchHeight = Math.ceil(46 / cssPerUnit);
-        const isPortrait = viewportH > viewportW || GAME_HEIGHT > GAME_WIDTH;
-        const isShortLandscape = !isPortrait && ((viewportH <= 620 && viewportW > viewportH) || GAME_HEIGHT <= 620);
-        const isCompact = isPortrait || GAME_WIDTH < 980 || isShortLandscape;
+        const viewport = this.game.canvas.getBoundingClientRect();
+        const cssW = viewport.width || window.innerWidth;
+        const cssH = viewport.height || window.innerHeight;
+        const px = GAME_WIDTH / cssW;
+        const hasSave = GameScene.hasSavedGame();
+        const layout = getShadowMenuLayout(cssW, cssH, hasSave);
         const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
-        const fadeDuration = reduceMotion ? 0 : 380;
-
         this._modalElements = [];
         this._dropdownElements = [];
         this._startingGame = false;
         this._characterSelectOpen = false;
         this._reduceMenuMotion = reduceMotion;
         this.selectedCharacterId = getStoredCharacterId();
+        this._createMenuBackdrop({ isPortrait: layout.portrait, isShortLandscape: layout.short });
 
-        this._createMenuBackdrop({ isPortrait, isShortLandscape });
-
-        const safe = uv(isCompact ? 24 : 48);
-        const contentX = isCompact ? safe : Math.max(safe, GAME_WIDTH * 0.08);
-        const contentW = isCompact
-            ? GAME_WIDTH - safe * 2
-            : Math.min(uv(470), GAME_WIDTH * 0.38);
-        const topY = isPortrait ? uv(72) : (isShortLandscape ? uv(44) : GAME_HEIGHT * 0.16);
-        const headerX = isPortrait ? GAME_WIDTH / 2 : contentX;
-        const headerOriginX = isPortrait ? 0.5 : 0;
-        const selectedCharacter = getCharacter(this.selectedCharacterId);
-        const selectedText = getCharacterText(selectedCharacter);
-        const hasSave = GameScene.hasSavedGame();
-
-        let portraitHeroLayout = null;
-        if (!isCompact) {
-            const panelX = contentX - uv(26);
-            const panelY = Math.max(uv(24), topY - uv(38));
-            const panelBottom = GAME_HEIGHT - uv(44);
-            const panel = this.add.graphics().setDepth(0);
-            drawSystemPanel(panel, panelX, panelY, contentW + uv(52), panelBottom - panelY, {
-                cut: uv(14),
-                fill: SYSTEM.BG_PANEL,
-                fillAlpha: 0.68,
-                border: SYSTEM.BORDER_DIM,
-                borderAlpha: 0.56,
-                borderWidth: 1,
-            });
-            panel.fillStyle(SYSTEM.BORDER, 0.88);
-            panel.fillRect(panelX + uv(2), panelY + uv(24), uv(3), uv(92));
-            panel.fillStyle(SYSTEM.BORDER_GOLD, 0.72);
-            panel.fillRect(panelX + uv(18), panelY + uv(2), uv(72), 2);
-            panel.lineStyle(1, SYSTEM.BORDER_DIM, 0.28);
-            panel.lineBetween(panelX + uv(20), panelBottom - uv(24), panelX + contentW + uv(32), panelBottom - uv(24));
-            this._createMenuFrameDetails(panelX, panelY, contentW + uv(52), panelBottom - panelY);
-            this._createHeroFocus(GAME_WIDTH / 2, pct => GAME_HEIGHT * pct, { isPortrait, isShortLandscape });
-        } else if (isPortrait) {
-            portraitHeroLayout = this._createMobileHeroPortrait(
-                GAME_WIDTH / 2,
-                GAME_HEIGHT * (hasSave ? 0.258 : 0.32)
-            );
-        } else if (isShortLandscape) {
-            this._createMobileHeroPortrait(GAME_WIDTH * 0.72, GAME_HEIGHT * 0.54, { isShortLandscape: true });
+        const addText = (x, y, text, size, color, origin = 0, bold = false) => {
+            const el = this.add.text(x * px, y * px, text, {
+                fontFamily: UI_FONT_KR, fontSize: `${size * px}px`,
+                fontStyle: bold ? 'bold' : 'normal', color, lineSpacing: 0,
+                align: origin === .5 ? 'center' : 'left',
+            }).setOrigin(origin, 0).setDepth(4).setResolution(2);
+            return el;
+        };
+        const cx = layout.portrait ? cssW / 2 : layout.x;
+        const origin = layout.portrait ? .5 : 0;
+        const titleText = LANG === 'ko' ? '그림자\n서바이벌' : LANG === 'ja' ? 'シャドウ\nサバイバル' : 'SHADOW\nSURVIVAL';
+        const title = addText(cx, layout.top, titleText, layout.titleSize, '#f0e9f6', origin, true);
+        title.setShadow(0, 4 * px, '#281b41', 0, false, true);
+        this._fitText(title, layout.contentW * px, layout.titleSize * 2.3 * px);
+        if (!layout.short && !layout.portrait) {
+            addText(cx, layout.top - 30, 'A DARK FANTASY SURVIVOR', 10, '#c4a975');
+            const rule = this.add.graphics().setDepth(4);
+            rule.lineStyle(px, 0xbda379, .5);
+            rule.lineBetween(cx * px, (layout.top + layout.titleSize * 2.35) * px,
+                (cx + 52) * px, (layout.top + layout.titleSize * 2.35) * px);
+            const notice = addText(cx, layout.top + layout.titleSize * 2.35 + 22,
+                t('menuMsg3'), 14, '#aa9fbc');
+            this._fitText(notice, layout.contentW * px, 34 * px);
         }
+        this._createPremiumHero(layout, px);
 
         const startGame = async (resume = false, characterIdOverride = null) => {
             if (this._startingGame) return;
@@ -366,201 +343,112 @@ export class MenuScene extends Phaser.Scene {
             sm.stopIntroMusic();
             await sm.resume(true);
             const assetsReady = await this._ensureGameplayAssetsLoaded(characterId);
-            if (!assetsReady || !this.sys?.isActive?.()) {
-                this._startingGame = false;
-                return;
-            }
-            if (fadeDuration <= 0) {
-                this.scene.start('GameScene', { resume, characterId });
-                return;
-            }
-            this.cameras.main.fadeOut(fadeDuration, 0, 0, 0);
-            this.time.delayedCall(fadeDuration, () => this.scene.start('GameScene', { resume, characterId }));
+            if (!assetsReady || !this.sys?.isActive?.()) { this._startingGame = false; return; }
+            const duration = reduceMotion ? 0 : 300;
+            if (duration) this.cameras.main.fadeOut(duration, 0, 0, 0);
+            this.time.delayedCall(duration, () => this.scene.start('GameScene', { resume, characterId }));
         };
-
-        if (!isPortrait) {
-            const tag = this.add.text(headerX, topY, '[ SYSTEM ONLINE ]', {
-                fontSize: fs(isCompact ? 10 : 11),
-                fontFamily: UI_FONT_MONO,
-                color: SYSTEM.TEXT_CYAN_DIM,
-                letterSpacing: 0,
-                align: 'left',
-            }).setOrigin(headerOriginX, 0).setDepth(4);
-            this._fitText(tag, contentW, uv(24));
-        }
-
-        const title = this.add.text(headerX, topY + uv(isCompact ? 42 : 52), t('title'), {
-            fontSize: fs(isShortLandscape ? 30 : (isPortrait ? 44 : 58)),
-            fontFamily: UI_FONT_KR,
-            fontStyle: 'bold',
-            color: SYSTEM.TEXT_BRIGHT,
-            stroke: '#02040a',
-            strokeThickness: 5,
-            align: isPortrait ? 'center' : 'left',
-        }).setOrigin(headerOriginX, 0.5).setDepth(4);
-        title.setShadow(0, uv(7), '#000711', uv(16), true, true);
-        this._fitText(title, contentW, uv(isCompact ? 58 : 72));
-
-        const subtitle = this.add.text(headerX + (isPortrait ? 0 : uv(2)), topY + uv(isCompact ? 86 : 104), t('subtitle'), {
-            fontSize: fs(isShortLandscape ? 11 : 13),
-            fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_CYAN,
-            stroke: '#02040a',
-            strokeThickness: 2,
-            letterSpacing: 0,
-            align: isPortrait ? 'center' : 'left',
-        }).setOrigin(headerOriginX, 0).setDepth(4);
-        this._fitText(subtitle, contentW, uv(24));
-
-        if (!isShortLandscape) {
-            const titleRule = this.add.graphics().setDepth(4);
-            const ruleY = topY + uv(isCompact ? 116 : 132);
-            const ruleW = Math.min(contentW * (isPortrait ? 0.72 : 0.82), uv(isPortrait ? 360 : 320));
-            const ruleLeft = isPortrait ? headerX - ruleW / 2 : headerX;
-            titleRule.lineStyle(1, SYSTEM.BORDER, 0.54);
-            titleRule.lineBetween(ruleLeft, ruleY, ruleLeft + ruleW, ruleY);
-            titleRule.lineStyle(2, SYSTEM.BORDER_GOLD, 0.74);
-            titleRule.lineBetween(ruleLeft, ruleY, ruleLeft + Math.min(ruleW * 0.2, uv(62)), ruleY);
-            titleRule.fillStyle(SYSTEM.BORDER, 0.9);
-            const ruleTip = ruleLeft + ruleW;
-            const ruleNode = uv(4);
-            titleRule.beginPath();
-            titleRule.moveTo(ruleTip, ruleY - ruleNode);
-            titleRule.lineTo(ruleTip + ruleNode, ruleY);
-            titleRule.lineTo(ruleTip, ruleY + ruleNode);
-            titleRule.lineTo(ruleTip - ruleNode, ruleY);
-            titleRule.closePath();
-            titleRule.fillPath();
-        }
-
-        if (!isShortLandscape) {
-            const notice = this.add.text(headerX, topY + uv(isPortrait ? 126 : 144), t('menuMsg3'), {
-                fontSize: fs(isPortrait ? 12 : 13),
-                fontFamily: UI_FONT_KR,
-                color: SYSTEM.TEXT_CYAN,
-                stroke: '#02040a',
-                strokeThickness: 2,
-                lineSpacing: 4,
-                align: isPortrait ? 'center' : 'left',
-            }).setOrigin(headerOriginX, 0).setDepth(4).setAlpha(0.82);
-            this._fitText(notice, contentW, uv(30));
-        }
-
-        const hunterY = topY + uv(isShortLandscape ? 112 : (isPortrait ? 176 : 190));
-        if (!isPortrait) {
-            const hunterLabel = this.add.text(headerX, hunterY, `[ SHADOW LINK · ${selectedText.name} · ${selectedText.archetype} ]`, {
-                fontSize: fs(isShortLandscape ? 9 : 10),
-                fontFamily: UI_FONT_KR,
-                fontStyle: 'bold',
-                color: selectedCharacter.accentText || SYSTEM.TEXT_CYAN,
-                stroke: '#02040a',
-                strokeThickness: 2,
-                align: 'left',
-            }).setOrigin(headerOriginX, 0).setDepth(4);
-            this._fitText(hunterLabel, contentW, uv(22));
-        }
-
-        const btnW = Math.min(contentW, uv(isPortrait ? 430 : (isCompact ? 420 : 340)));
-        const btnX = isPortrait ? (GAME_WIDTH - btnW) / 2 : contentX;
-        const secondaryW = Math.min(btnW * (isPortrait ? 0.88 : 0.84), uv(isPortrait ? 390 : 300));
-        const secondaryX = isPortrait ? (GAME_WIDTH - secondaryW) / 2 : contentX + (btnW - secondaryW) / 2;
-        const primaryH = Math.max(minTouchHeight, Math.round(Math.min(
-            uv(isShortLandscape ? 74 : (isPortrait ? 116 : 94)),
-            Math.max(uv(isShortLandscape ? 52 : 76), btnW / 3.79)
-        )));
-        const secondaryH = Math.max(minTouchHeight, Math.round(Math.min(
-            uv(isShortLandscape ? 52 : (isPortrait ? 86 : 72)),
-            Math.max(uv(isShortLandscape ? 38 : 54), secondaryW / 3.32)
-        )));
-        const resumeH = Math.max(minTouchHeight, Math.round(Math.min(
-            uv(isShortLandscape ? 78 : (isPortrait ? 108 : 96)),
-            Math.max(uv(isShortLandscape ? 56 : 72), btnW / 3.79)
-        )));
-        const gap = uv(isShortLandscape ? 10 : 16);
-        const actionStackH = (hasSave ? resumeH + gap : 0) + primaryH + gap + secondaryH;
-        let actionY;
-        if (isPortrait) {
-            const targetY = GAME_HEIGHT * (hasSave ? 0.39 : 0.49);
-            const captionGap = uv(hasSave ? 18 : 24);
-            const preferredMaxY = GAME_HEIGHT - uv(176) - actionStackH;
-            const hardMaxY = GAME_HEIGHT - uv(52) - actionStackH;
-            let heroSafeY = portraitHeroLayout
-                ? portraitHeroLayout.captionBottom + captionGap
-                : 0;
-            if (portraitHeroLayout && heroSafeY > hardMaxY) {
-                portraitHeroLayout.hideCaption();
-                heroSafeY = portraitHeroLayout.heroBottom + captionGap;
-            }
-            if (portraitHeroLayout && heroSafeY > hardMaxY) {
-                portraitHeroLayout.hideHero();
-                heroSafeY = 0;
-            }
-            const minY = Math.max(topY + uv(hasSave ? 260 : 302), heroSafeY);
-            const maxY = minY > preferredMaxY ? hardMaxY : preferredMaxY;
-            actionY = Math.min(maxY, Math.max(targetY, minY));
-        } else if (isShortLandscape) {
-            actionY = Math.min(GAME_HEIGHT - uv(28) - actionStackH, topY + uv(144));
-        } else {
-            actionY = Math.min(GAME_HEIGHT - uv(52) - actionStackH, topY + uv(282));
-        }
-
+        const btnW = Math.min(layout.contentW, 360);
+        const btnX = layout.portrait ? (cssW - btnW) / 2 : layout.x;
+        let actionY = layout.actionsY;
         if (hasSave) {
             const summary = GameScene.getSavedSummary();
-            const savedCharacter = getCharacter(summary?.characterId);
-            const savedText = getCharacterText(savedCharacter);
-            const min = Math.floor((summary?.timeSec || 0) / 60).toString().padStart(2, '0');
-            const sec = ((summary?.timeSec || 0) % 60).toString().padStart(2, '0');
-            this._makeMenuResumeButton(btnX, actionY, btnW, resumeH, {
-                title: t('continueGame'),
-                meta: `${savedText.name}  LV.${String(summary?.level || 1).padStart(2, '0')}  |  ${min}:${sec}`.trim(),
-                isNarrow: isCompact,
+            const characterText = getCharacterText(getCharacter(summary?.characterId));
+            const minutes = Math.floor((summary?.timeSec || 0) / 60);
+            const seconds = String((summary?.timeSec || 0) % 60).padStart(2, '0');
+            this._makePremiumAction(btnX, actionY, btnW, layout.buttonH, px, {
+                label: t('continueGame'), meta: `${characterText.name} · LV.${summary?.level || 1} · ${minutes}:${seconds}`,
                 onClick: () => startGame(true),
             });
-            actionY += resumeH + gap;
+            actionY += layout.buttonH + layout.gap;
         }
-
-        this._makeMenuButton(btnX, actionY, btnW, primaryH, {
-            label: t('startGame'),
-            labelColor: SYSTEM.TEXT_BRIGHT,
-            labelSize: isShortLandscape ? 16 : (isPortrait ? 21 : 19),
-            labelFont: UI_FONT_KR,
-            primary: true,
-            onClick: () => this._showCharacterSelectModal((characterId) => startGame(false, characterId)),
+        const openCharacters = () => this._showCharacterSelectModal(id => startGame(false, id));
+        this._makePremiumAction(btnX, actionY, btnW, layout.buttonH, px, {
+            label: t('startGame'), primary: true, onClick: openCharacters,
         });
-
-        this._makeMenuButton(secondaryX, actionY + primaryH + gap, secondaryW, secondaryH, {
-            label: t('hallOfFame'),
-            labelColor: SYSTEM.TEXT_GOLD,
-            labelSize: isShortLandscape ? 11 : (isPortrait ? 14 : 13),
-            labelFont: UI_FONT_KR,
-            onClick: () => this._showHallOfFame(isMobile),
+        this._makePremiumAction(btnX, actionY + layout.buttonH + layout.gap, btnW, layout.buttonH, px, {
+            label: t('hallOfFame'), onClick: () => this._showHallOfFame(layout.portrait),
         });
-
-        this._createLanguageDropdown(isMobile);
-        if (fadeDuration > 0) this.cameras.main.fadeIn(fadeDuration, 0, 0, 0);
-
+        this._createLanguageDropdown(layout.portrait);
+        const onEnter = () => {
+            if (!this._startingGame && !this._characterSelectOpen && !this._modalElements.some(el => el.active)) openCharacters();
+        };
+        this.input.keyboard?.on('keydown-ENTER', onEnter);
+        if (!reduceMotion) this.cameras.main.fadeIn(300, 0, 0, 0);
         this.events.once('shutdown', () => {
-            this._dropdownElements.forEach(el => { if (el && el.active) el.destroy(); });
+            this.input.keyboard?.off('keydown-ENTER', onEnter);
+            [...this._dropdownElements, ...this._modalElements].forEach(el => { if (el?.active) el.destroy(); });
             this._dropdownElements = [];
-            this._modalElements.forEach(el => { if (el && el.active) el.destroy(); });
             this._modalElements = [];
-            (this._heroPreviewMasks || []).forEach(mask => mask?.destroy?.());
-            (this._heroPreviewMaskSources || []).forEach(source => source?.destroy?.());
-            this._heroPreviewMasks = [];
-            this._heroPreviewMaskSources = [];
         });
-
         this.input.once('pointerdown', async () => {
             if (this._startingGame) return;
-            if (!this.game._soundManager) {
-                this.game._soundManager = new SoundManager();
-                this.game._soundManager.init();
-            }
+            if (!this.game._soundManager) { this.game._soundManager = new SoundManager(); this.game._soundManager.init(); }
             const sm = this.game._soundManager;
             await sm.resume(true);
             sm.warmup();
             sm.playIntroMusic();
         });
+    }
+
+    _makePremiumAction(x, y, w, h, px, { label, meta = '', primary = false, onClick }) {
+        const g = this.add.graphics().setDepth(5);
+        const draw = (hover = false) => {
+            g.clear();
+            drawSystemPanel(g, x * px, (y + 4) * px, w * px, h * px, {
+                cut: 8 * px, fill: 0x02040a, fillAlpha: .5, borderAlpha: 0,
+            });
+            drawSystemPanel(g, x * px, y * px, w * px, h * px, {
+                cut: 8 * px, fill: primary ? (hover ? 0x635184 : 0x493a64) : (hover ? 0x252136 : 0x141320),
+                fillAlpha: .98, border: primary ? 0xc8addd : 0x655b73,
+                borderAlpha: hover ? 1 : .75, borderWidth: px,
+            });
+            g.lineStyle(px, primary ? 0xf2d4fb : 0x9984b0, .24);
+            g.lineBetween((x + 12) * px, (y + 3) * px, (x + w - 12) * px, (y + 3) * px);
+        };
+        draw();
+        const title = this.add.text((x + w / 2) * px, (y + h * (meta ? .35 : .5)) * px, label, {
+            fontFamily: UI_FONT_KR, fontSize: `${(meta ? 15 : 17) * px}px`, fontStyle: 'bold',
+            color: primary ? '#fff3e0' : '#d2c8df',
+        }).setOrigin(.5).setDepth(6).setResolution(2);
+        this._fitText(title, (w - 40) * px, h * (meta ? .52 : .8) * px);
+        if (meta) {
+            const sub = this.add.text((x + w / 2) * px, (y + h * .73) * px, meta, {
+                fontFamily: UI_FONT_KR, fontSize: `${10 * px}px`, color: '#a89bb9',
+            }).setOrigin(.5).setDepth(6).setResolution(2);
+            this._fitText(sub, (w - 24) * px, h * .24 * px);
+        }
+        const hit = this.add.rectangle((x + w / 2) * px, (y + h / 2) * px, w * px, h * px, 0, 0)
+            .setDepth(8).setInteractive({ useHandCursor: true });
+        hit.on('pointerover', () => draw(true));
+        hit.on('pointerout', () => draw(false));
+        hit.on('pointerdown', () => { if (!this._startingGame) onClick?.(); });
+    }
+
+    _createPremiumHero(layout, px) {
+        const character = getCharacter(this.selectedCharacterId);
+        const characterText = getCharacterText(character);
+        const key = this._getCharacterHeroTexture(character);
+        if (!this.textures.exists(key)) return;
+        const x = layout.heroX * px, y = layout.heroY * px, size = layout.heroSize * px;
+        const rings = this.add.graphics().setDepth(2);
+        rings.lineStyle(px, 0xc3a577, .5);
+        rings.strokeCircle(x, y, size * .53);
+        rings.lineStyle(px, 0x9980c0, .25);
+        rings.strokeCircle(x, y, size * .57);
+        this._heroPreviewSprite = this.add.image(x, y, key).setDepth(3).setDisplaySize(size, size);
+        this._applyHeroPreviewMask(this._heroPreviewSprite, x, y, size);
+        this._heroPreviewMaxW = size;
+        this._heroPreviewMaxH = size;
+        const captionY = y + size * .57 + 14 * px;
+        this._heroPreviewCaption = this.add.text(x, captionY, characterText.name, {
+            fontFamily: UI_FONT_KR, fontSize: `${layout.short ? 13 * px : 16 * px}px`,
+            fontStyle: 'bold', color: '#e4d7ef',
+        }).setOrigin(.5, 0).setDepth(4).setResolution(2);
+        this._heroPreviewCaptionMeta = this.add.text(x, captionY + 25 * px, characterText.archetype, {
+            fontFamily: UI_FONT_KR, fontSize: `${11 * px}px`, color: '#ae97bf',
+        }).setOrigin(.5, 0).setDepth(4).setResolution(2);
+        if (layout.short) this._heroPreviewCaptionMeta.setVisible(false);
     }
 
     _createCommercialMenu() {
@@ -1249,15 +1137,22 @@ export class MenuScene extends Phaser.Scene {
 
     _applyHeroPreviewMask(image, x, y, diameter) {
         if (!image || diameter <= 0) return;
-        const maskSource = this.make.graphics({ x: 0, y: 0, add: false });
-        maskSource.fillStyle(0xffffff, 1);
-        maskSource.fillCircle(x, y, diameter * 0.49);
-        const mask = maskSource.createGeometryMask();
-        image.setMask(mask);
-        this._heroPreviewMaskSources = this._heroPreviewMaskSources || [];
-        this._heroPreviewMasks = this._heroPreviewMasks || [];
-        this._heroPreviewMaskSources.push(maskSource);
-        this._heroPreviewMasks.push(mask);
+        const sourceKey = image.texture.key;
+        const key = `menu_circle_${sourceKey}`;
+        if (!this.textures.exists(key)) {
+            const source = image.texture.getSourceImage();
+            const side = Math.min(768, source.width, source.height);
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = side;
+            const ctx = canvas.getContext('2d');
+            ctx.beginPath();
+            ctx.arc(side / 2, side / 2, side * .485, 0, Math.PI * 2);
+            ctx.clip();
+            const crop = Math.min(source.width, source.height);
+            ctx.drawImage(source, (source.width - crop) / 2, (source.height - crop) / 2, crop, crop, 0, 0, side, side);
+            this.textures.addCanvas(key, canvas);
+        }
+        image.setTexture(key).setDisplaySize(diameter, diameter);
     }
 
     _createMenuBackdrop({ isPortrait = false, isShortLandscape = false } = {}) {
@@ -1531,6 +1426,7 @@ export class MenuScene extends Phaser.Scene {
                 this._heroPreviewMaxW || uv(280),
                 this._heroPreviewMaxH || uv(320)
             );
+            this._applyHeroPreviewMask(this._heroPreviewSprite, this._heroPreviewSprite.x, this._heroPreviewSprite.y, this._heroPreviewMaxW || uv(280));
         }
         if (this._heroPreviewCaption?.active) {
             this._heroPreviewCaption.setText(characterText.name);
@@ -1830,7 +1726,7 @@ export class MenuScene extends Phaser.Scene {
         const btnW = Math.max(uv(isMobile ? 92 : 82), minTouchHeight * 1.8);
         const btnH = Math.max(uv(30), minTouchHeight);
         const btnX = GAME_WIDTH - btnW - uv(18);
-        const btnY = Math.max(uv(24), uv(44) - (btnH - uv(30)) * 0.5);
+        const btnY = Math.ceil(12 / cssPerUnit);
         const depth = 50;
 
         const triggerG = this.add.graphics().setDepth(depth);
@@ -2004,7 +1900,7 @@ export class MenuScene extends Phaser.Scene {
             (cardAreaW - gap * (columns - 1)) / columns
         ));
         const cardH = Math.floor(Math.min(
-            uv(isPortrait ? 150 : (isShortLandscape ? 142 : 156)),
+            uv(isPortrait ? 192 : (isShortLandscape ? 164 : 190)),
             (cardAreaH - gap * (rows - 1)) / rows
         ));
 
@@ -2050,11 +1946,8 @@ export class MenuScene extends Phaser.Scene {
             const rowStartX = cx - (cardW * rowCount + gap * (rowCount - 1)) / 2;
             const x = rowStartX + col * (cardW + gap);
             const y = cardAreaTop + row * (cardH + gap);
-            const hasCardSkin = this.textures.exists('hunter_card_normal') && this.textures.exists('hunter_card_selected');
-            const bg = hasCardSkin
-                ? this._addBitmapPanel(x, y, cardW, cardH, { key: 'hunter_card_normal', alpha: 0.82, depth: depth + 4 })
-                : null;
-            const g = hasCardSkin ? null : this.add.graphics().setDepth(depth + 4);
+            const bg = null;
+            const g = this.add.graphics().setDepth(depth + 4);
             const accentG = this.add.graphics().setDepth(depth + 5);
             const hit = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, 0x000000, 0)
                 .setDepth(depth + 8)
@@ -2126,6 +2019,13 @@ export class MenuScene extends Phaser.Scene {
         closeBtn.on('pointerover', () => closeBtn.setColor(SYSTEM.TEXT_CYAN));
         closeBtn.on('pointerout', () => closeBtn.setColor(SYSTEM.TEXT_MUTED));
         closeBtn.on('pointerdown', closeAll);
+        const closeHeight = Math.ceil(44 * GAME_WIDTH / Math.max(1, this.game.canvas.getBoundingClientRect().width));
+        const closeHit = this.add.rectangle(cx, closeBtn.y, Math.max(closeHeight * 2.8, closeBtn.width), closeHeight, 0, 0)
+            .setDepth(depth + 9).setInteractive({ useHandCursor: true });
+        closeHit.on('pointerover', () => closeBtn.setColor(SYSTEM.TEXT_CYAN));
+        closeHit.on('pointerout', () => closeBtn.setColor(SYSTEM.TEXT_BRIGHT));
+        closeHit.on('pointerdown', closeAll);
+        elements.push(closeHit);
         dim.on('pointerdown', closeAll);
 
         this._modalElements.push(...elements);
@@ -2280,11 +2180,11 @@ export class MenuScene extends Phaser.Scene {
         const safeTop = by + (isCrampedPortrait
             ? Math.min(uv(48), boxH * 0.065)
             : uv(isPortrait ? 100 : 78));
-        const closeBtnH = isCrampedPortrait
+        const closeBtnH = Math.max(minModalTouchH, isCrampedPortrait
             ? Math.max(minModalTouchH, Math.min(uv(38), boxH * 0.06))
             : (isCrampedLandscape
                 ? Math.max(uv(26), minModalTouchH)
-                : uv(isPortrait ? 38 : 40));
+                : uv(isPortrait ? 38 : 40)));
         const closeBottomPad = isCrampedPortrait
             ? Math.min(uv(36), boxH * 0.04)
             : uv(isCrampedLandscape ? 2 : (isPortrait ? 48 : 38));
@@ -2360,11 +2260,11 @@ export class MenuScene extends Phaser.Scene {
         const divGap = isCrampedPortrait
             ? Math.min(uv(14), boxH * 0.02)
             : uv(isPortrait ? 16 : (isCrampedLandscape ? 8 : 12));
-        const nominalTabH = isCrampedPortrait
+        const nominalTabH = Math.max(minModalTouchH, isCrampedPortrait
             ? Math.max(minModalTouchH, Math.min(uv(36), boxH * 0.055))
             : (isCrampedLandscape
                 ? Math.max(uv(28), minModalTouchH)
-                : uv(isPortrait ? 40 : 38));
+                : uv(isPortrait ? 40 : 38)));
         const maxTabsAndRankingH = contentBottom - divGap - tabTop - tabGap * (tabRows - 1);
         const rankingReserveH = isCrampedPortrait
             ? Math.min(

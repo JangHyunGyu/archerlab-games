@@ -25,6 +25,7 @@
       'hud.hint': '좌우로 움직여 탭하면 드롭!',
       'hud.soundAria': '사운드 켜기/끄기',
       'hud.homeAria': '메인 메뉴로',
+      'hud.fieldAria': '고양이 게임판. 좌우 방향키로 움직이고 스페이스로 떨어뜨리세요.',
 
       // 게임오버
       'over.title': '게임 오버',
@@ -41,7 +42,7 @@
 
       // 조작법
       'how.title': '조작법',
-      'how.1': '드래그로 위치 조정, 탭하면 드롭',
+      'how.1': '드래그로 옮기고 탭해서 떨어뜨리세요. 키보드는 좌우 방향키와 스페이스를 사용해요.',
       'how.2': '같은 종류 둘이 닿으면 합쳐져요 (2마리 → 1마리, 공간 확보!)',
       'how.3': '점수는 기하급수: 새끼 10점 → 사바나 10,000점',
       'how.4': '10단계 <b>사바나</b> 둘이 만나면 <b>소멸 + 20,000점 보너스</b> (필드 청소 기술!)',
@@ -98,6 +99,7 @@
       'hud.hint': 'Drag to move, tap to drop!',
       'hud.soundAria': 'Toggle sound',
       'hud.homeAria': 'Main menu',
+      'hud.fieldAria': 'Cat game field. Move with the left and right arrows, and drop with Space.',
 
       'over.title': 'Game Over',
       'over.final': 'Final Score',
@@ -112,7 +114,7 @@
       'over.submitFail': 'Submit failed — try later',
 
       'how.title': 'How to Play',
-      'how.1': 'Drag to move, tap to drop',
+      'how.1': 'Drag to move and tap to drop. On a keyboard, use the left and right arrows and Space.',
       'how.2': 'Two of the same kind merge (2 → 1, frees space!)',
       'how.3': 'Scores grow exponentially: Kitten 10pts → Savannah 10,000pts',
       'how.4': 'Two <b>Savannahs</b> touch → <b>vanish + 20,000pt bonus</b> (field clear!)',

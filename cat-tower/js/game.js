@@ -496,6 +496,7 @@
     window.addEventListener('resize', () => {
       scheduleFitGameLayout();
       resizeCanvas();
+      drawNextPreview();
     });
     window.addEventListener('orientationchange', scheduleFitGameLayout);
     if (window.visualViewport) {
@@ -513,8 +514,8 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     fieldBgGradient = ctx.createLinearGradient(0, 0, 0, FIELD_H);
-    fieldBgGradient.addColorStop(0, '#EAF6F2');
-    fieldBgGradient.addColorStop(1, '#C5DDD7');
+    fieldBgGradient.addColorStop(0, '#FBF4E8');
+    fieldBgGradient.addColorStop(1, '#E3E8CE');
 
     const ndpr = window.devicePixelRatio || 1;
     nextCanvas.width = 72 * ndpr;
@@ -1141,6 +1142,8 @@
   function render(bodiesSnapshot = null) {
     // 배경 — 은은한 베이지 + 경계선
     ctx.clearRect(0, 0, FIELD_W, FIELD_H);
+    ctx.fillStyle = fieldBgGradient || '#F5F0DF';
+    ctx.fillRect(0, 0, FIELD_W, FIELD_H);
     // 필드 내부 부드러운 그라데이션 (AI 같지 않게 톤온톤 1.5단계)
     if (fieldBgImage && fieldBgImage.complete && fieldBgImage.naturalWidth > 0) {
       const iw = fieldBgImage.naturalWidth;
@@ -1148,19 +1151,10 @@
       const scale = Math.max(FIELD_W / iw, FIELD_H / ih);
       const sw = FIELD_W / scale;
       const sh = FIELD_H / scale;
+      ctx.save();
+      ctx.globalAlpha = 0.16;
       ctx.drawImage(fieldBgImage, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 0, 0, FIELD_W, FIELD_H);
-      // 가장자리만 살짝 어두워지는 비네트 (전체 틴트 대신 — 고양이 가독성 유지)
-      const vignette = ctx.createRadialGradient(
-        FIELD_W / 2, FIELD_H / 2, Math.min(FIELD_W, FIELD_H) * 0.45,
-        FIELD_W / 2, FIELD_H / 2, Math.max(FIELD_W, FIELD_H) * 0.78
-      );
-      vignette.addColorStop(0, 'rgba(60, 40, 25, 0)');
-      vignette.addColorStop(1, 'rgba(60, 40, 25, 0.22)');
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
-    } else {
-      ctx.fillStyle = fieldBgGradient || '#DCECE7';
-      ctx.fillRect(0, 0, FIELD_W, FIELD_H);
+      ctx.restore();
     }
 
     // 위험선
@@ -1826,6 +1820,15 @@
 
       // 키보드 접근성
       window.addEventListener('keydown', (e) => {
+        if (running && !gameOver && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')
+            && document.activeElement?.tagName !== 'INPUT') {
+          e.preventDefault();
+          pointerX = Math.max(0, Math.min(FIELD_W, pointerX + (e.key === 'ArrowLeft' ? -18 : 18)));
+          if (currentCat?.isStatic) {
+            const r = TIERS[currentCat.cat.tier].radius;
+            Body.setPosition(currentCat, { x: Math.max(r, Math.min(FIELD_W - r, pointerX)), y: SPAWN_Y });
+          }
+        }
         if (e.key === 'Escape') {
           if (!modals.how.classList.contains('hidden')) hide(modals.how);
           else if (!modals.rank.classList.contains('hidden')) hide(modals.rank);

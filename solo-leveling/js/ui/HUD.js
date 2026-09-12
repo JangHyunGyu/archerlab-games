@@ -4,7 +4,7 @@ import {
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
     fs, uv, drawCornerBrackets, fitText, padText,
 } from '../utils/Constants.js';
-import { UIAssets } from './UIAssets.js';
+import { UIAssets } from './UIAssets.js?v=20260913-concept-ui-v4';
 
 export class HUD {
     constructor(scene) {
@@ -144,8 +144,8 @@ export class HUD {
 
     _createRightPanel() {
         const m = this._margin;
-        const panelW = Math.min(uv(this._isPortrait ? 300 : 226), this._isPortrait ? GAME_WIDTH - m * 2 : GAME_WIDTH * 0.3);
-        const panelH = uv(this._isPortrait ? 154 : 162);
+        const panelW = this._isPortrait ? this._leftPanelRight - m : Math.min(uv(226), GAME_WIDTH * 0.3);
+        const panelH = uv(this._isPortrait ? 220 : 162);
         const panelLeft = this._isPortrait ? m : GAME_WIDTH - m - panelW;
         const panelTop = this._isPortrait ? this._leftPanelBottom + uv(8) : m;
         const originX = this._isPortrait ? 0 : 1;
@@ -405,7 +405,7 @@ export class HUD {
         const m = this._margin;
         const timerBottom = this._timerBottom || m + uv(42);
         const w = Math.min(uv(116), GAME_WIDTH * 0.18);
-        const h = Math.max(uv(32), this._isTouch ? this._minTouchUnits(44) : 0);
+        const h = Math.max(uv(32), this._minTouchUnits(44));
         const x = GAME_WIDTH / 2 - w / 2;
         const y = timerBottom + uv(5);
         const panel = UIAssets.createPanel(this.scene, x, y, w, h, {

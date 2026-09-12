@@ -209,6 +209,10 @@ export class UIAssets {
     }
 
     static createPanel(scene, x, y, w, h, opts = {}) {
+        if (opts.variant === 'hud') {
+            opts = { ...opts, surfaceLines: false, ornament: false, innerBorder: false,
+                fill: 0x11101e, fillAlpha: 0.95, border: 0x77658e, borderAlpha: 0.55, glow: 0 };
+        }
         // Most bundled panels were authored at one ratio and looked soft or distorted when
         // stretched. Runtime chrome is the default; fixed-ratio artwork opts in explicitly.
         const normalAsset = opts.preferAsset ? this.resolveAsset(scene, opts.asset) : null;
