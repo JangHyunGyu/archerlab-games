@@ -389,15 +389,8 @@
         <div class="mig-subtitle" id="mig-subtitle">잠시만 기다려 주세요</div>
     </div>
 
-    <!-- Kakao in-app browser redirect -->
-    <script>
-        (function() {
-            var ua = navigator.userAgent || '';
-            if (ua.match(/KAKAOTALK/i)) {
-                location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
-            }
-        })();
-    </script>
+    <!-- In-app browser handoff (KAKAOTALK, Instagram, NAVER, BAND, Facebook, LINE, X, TikTok) -->
+    <script src="js/browser-check.js?v=1.1.0"></script>
 
     <!-- Libraries -->
     <script src="../assets/vendor/pixi/pixi-8.19.0.min.js"></script>
