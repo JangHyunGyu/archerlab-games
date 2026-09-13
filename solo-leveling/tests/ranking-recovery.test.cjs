@@ -25,9 +25,9 @@ assert.match(gameOverScene, /if \(!this\.finalData\.rankSyncDisabled\) \{\s+this
 assert.match(gameOverScene, /data\?\.rankSyncDisabled \|\| data\?\.__viewState === 'stats'/);
 assert.match(gameOverScene, /this\.finalData\.rankSyncDisabled\s+\? t\('continuedRunUnranked'\)/);
 assert.equal((i18n.match(/continuedRunUnranked:/g) || []).length, 3);
-assert.match(main, /GameScene\.js\?v=20260913-image-ui-v3/);
+assert.match(main, /GameScene\.js\?v=20260913-crafted-ui-v1/);
 assert.match(main, /GameOverScene\.js\?v=20260904-continuation-rank-v1/);
-assert.match(menuScene, /GameScene\.js\?v=20260913-image-ui-v3/);
-assert.match(html, /js\/main\.js\?v=20260913-image-ui-v3/);
+assert.match(menuScene, /GameScene\.js\?v=20260913-crafted-ui-v1/);
+assert.match(html, /js\/main\.js\?v=20260913-crafted-ui-v1/);
 
 console.log('solo-leveling ranking transient recovery verified');

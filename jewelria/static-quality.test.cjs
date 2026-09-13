@@ -9,7 +9,7 @@ const main = read('assets/js/main.js');
 const serviceWorker = read('service-worker.js');
 const version = JSON.parse(read('version.json'));
 
-assert.match(html, /main\.js\?v=20260816-pause-guard-v1/);
+assert.match(html, /main\.js\?v=20260913-crafted-ui-v1/);
 assert.match(main, /let resolving = false;/);
 assert.match(main, /function pauseGame\(\{ playSound = true \} = \{\}\)/);
 assert.match(main, /function resumeGame\(\)/);
@@ -18,7 +18,7 @@ assert.match(main, /if \(document\.hidden\) pauseGame\(\{ playSound: false \}\)/
 assert.match(main, /window\.addEventListener\('pagehide', \(\) => pauseGame/);
 assert.match(main, /if \(state\?\.status === 'paused'\)/);
 assert.match(main, /input\.setEnabled\(!resolving\)/);
-assert.match(serviceWorker, /jewelria-v0\.3\.3-concept-ui-v4/);
+assert.match(serviceWorker, /jewelria-v0\.3\.3-crafted-ui-v1/);
 assert.match(serviceWorker, /CORE_ASSETS\.map/);
 assert.doesNotMatch(serviceWorker, /CORE_ASSETS\.flatMap/);
 const coreBlock = serviceWorker.match(/const CORE_ASSETS = \[([\s\S]*?)\];/)?.[1] || '';

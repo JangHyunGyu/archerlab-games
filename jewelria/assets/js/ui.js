@@ -202,7 +202,7 @@ export class UI {
 
   updateSoundButtons(enabled) {
     document.querySelectorAll('[id^="sound-toggle"]').forEach((button) => {
-      button.textContent = enabled ? 'Sound' : 'Mute';
+      button.classList.toggle('is-muted', !enabled);
       button.setAttribute('aria-pressed', String(enabled));
     });
   }

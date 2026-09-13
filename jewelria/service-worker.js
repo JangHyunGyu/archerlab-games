@@ -1,7 +1,7 @@
 self.__ARCHERLAB_GAME_ID__ = 'jewelria-service-worker';
 importScripts('../shared/service-worker-error-reporter.js?v=20260710-d1-v2');
 
-const CACHE_NAME = 'jewelria-v0.3.3-concept-ui-v4';
+const CACHE_NAME = 'jewelria-v0.3.3-crafted-ui-v1';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -53,6 +53,8 @@ const CORE_ASSETS = [
   './assets/images/ui/ui-button-secondary.png',
   './assets/images/ui/ui-button-ghost.png',
   './assets/images/ui/ui-icon-button.png',
+  './assets/images/ui/crafted-button-v1.webp',
+  './assets/images/ui/crafted-frame-v1.webp',
   './assets/sounds/bgm_main_loop.mp3',
   './assets/sounds/bgm_game_loop.mp3',
   './assets/sounds/sfx/swap.mp3',

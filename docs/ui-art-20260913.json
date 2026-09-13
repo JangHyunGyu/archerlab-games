@@ -1,0 +1,36 @@
+{
+  "generator": "Built-in image_gen",
+  "purpose": "Text-free button and frame textures for Jewelria, Cat Tower and Shadow Survival. Original alpha preserved; WebP encoding only.",
+  "assets": [
+    {
+      "key": "jewel-button",
+      "path": "jewelria/assets/images/ui/crafted-button-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one production-ready blank button skin for a premium jewel match puzzle game. Generate a single horizontal button, front-on orthographic, centered on a genuinely transparent alpha background, tightly framed with only a small transparent margin. Wide canvas, 3:1 aspect ratio. The button itself is a long rounded rectangular jewel case, approximately 5:1 width-to-height. Exquisite 3D game-art rendering: polished champagne-gold sculpted bevels, layered gold rim, dark emerald enamel inset, tiny faceted emerald mounts integrated at the two ends, refined symmetrical filigree only on the end caps. The center 70% is calm deep teal lacquer, blank and dark enough for a large white label added by code. Physical depth with crisp reflected highlights, fine gold engravings, a small contact shadow immediately below, jewel-like tactile finish. Mobile game art readable when displayed 320 pixels wide. Clean coherent silhouette, beautiful material definition, no excessive scrollwork. NO text, letters, numbers, logos, watermark, symbols in the center, extra buttons, checkerboard, mockup, backdrop, scenery or surrounding objects. A usable standalone UI asset, not a picture of a UI."
+    },
+    {
+      "key": "cat-button",
+      "path": "cat-tower/assets/ui/crafted-button-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one production-ready blank button skin for a cozy cat merge game set in a warm sunlit wooden cat room. Generate a single horizontal button, front-on orthographic, centered on a genuinely transparent alpha background, tightly framed with only a small transparent margin. Wide canvas, 3:1 aspect ratio. Button itself approximately 5:1 width-to-height: a softly rounded chunky caramel wooden frame holding a plump coral-peach upholstered cushion. Premium charming 3D mobile game art, tactile soft cushion, beautiful soft edge highlights, restrained fine stitching around the rim, warm honey wood end caps with subtle carved paw impressions, very small cream fabric detail at each end. Center 70% completely clear and visually quiet peach-coral velvet for a large dark brown label added by code. Rounded silhouette and rich material depth, subtle small cast shadow below. Looks delightful and touchable at 320 pixels wide, polished like a shipped high-end casual game. NO text, letters, numbers, logos, watermark, characters, animal faces, center icons, extra buttons, checkerboard, scenery, mockup, backdrop or surrounding objects. A usable standalone UI asset, not a picture of a UI."
+    },
+    {
+      "key": "shadow-button",
+      "path": "solo-leveling/assets/ui/crafted-button-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset type: one production-ready blank button skin for a premium dark fantasy survival action RPG. Generate a single horizontal button, front-on orthographic, centered on a genuinely transparent alpha background, tightly framed with only a small transparent margin. Wide canvas, 3:1 aspect ratio. Button itself approximately 5:1 width-to-height: an elongated obsidian and antiqued silver metal plaque with sculpted angular beveled end caps, layered gunmetal frame, exquisite sharp silver edge highlights and restrained amethyst glow in the narrow seams. Deep royal violet enameled center, center 70% calm blank dark purple for a large ivory label added by code. Two small faceted amethysts integrated into the end caps. Gothic fantasy craftsmanship with rich engraved details restricted to the frame; believable thickness, directional lighting and small contact shadow, high quality hand-polished 3D game art. Elegant, powerful, readable when displayed 320 pixels wide. No huge protrusions or spikes. NO text, letters, numbers, runes, logos, watermark, center symbols, extra buttons, checkerboard, mockup, scenery or surrounding objects. A usable standalone UI asset, not a picture of a UI."
+    },
+    {
+      "key": "jewel-tile",
+      "path": "jewelria/assets/images/ui/crafted-frame-v1.webp",
+      "prompt": "Use case: stylized-concept. Production game UI asset, one square icon-button skin on a genuinely transparent alpha background, no text or icon. Front-on orthographic, nearly fills square canvas with small transparent margin. A rounded square emerald-teal lacquered inset surrounded by layered polished champagne gold bevels, fine delicate jewel-case craftsmanship, tiny emerald accents limited to outer corners. Center 65% is a clean dark teal blank area for a white UI icon added later. Premium 3D mobile puzzle game art, sculpted thickness, crisp reflected edge highlights, restrained immediate contact shadow below. Strong beautiful silhouette readable at 48 pixels. No letters, logos, symbols, checkerboard, backdrop, scene, extra objects, extra buttons, or perspective tilt."
+    },
+    {
+      "key": "cat-tile",
+      "path": "cat-tower/assets/ui/crafted-frame-v1.webp",
+      "prompt": "Use case: stylized-concept. Production game UI asset, one square icon-button skin on a genuinely transparent alpha background, no text or icon. Front-on orthographic, nearly fills square canvas with small transparent margin. Rounded square plump warm ivory fabric cushion inside a honey-caramel wooden frame. Fine cream stitching around cushion edge, lovely tactile rounded bevels and warm polished wood grain. Center 65% is a clean cream blank area for a dark brown UI icon added later. Cozy cat-room casual game, premium polished 3D game art, soft edge highlights, restrained immediate contact shadow below. Beautiful silhouette readable at 48 pixels. No animal faces, paw in center, letters, logos, symbols, checkerboard, backdrop, scene, extra objects, extra buttons, or perspective tilt."
+    },
+    {
+      "key": "shadow-tile",
+      "path": "solo-leveling/assets/ui/crafted-frame-v1.webp",
+      "prompt": "Use case: stylized-concept. Production game UI asset, one square icon-button skin on a genuinely transparent alpha background, no text or icon. Front-on orthographic, nearly fills square canvas with small transparent margin. A square obsidian button with subtly clipped corners, sculpted antique-silver gunmetal frame, layered metal bevels and a deep dark amethyst enameled inset. Small restrained purple seam glow, engraved gothic craftsmanship only along the narrow outer border. Center 65% is a clean blank dark purple area for a white UI icon added later. Premium dark fantasy RPG 3D game art, crisp silver highlights, restrained contact shadow below. Strong beautiful silhouette readable at 48 pixels. No skulls, runes, lettering, logos, central symbols, checkerboard, backdrop, scene, extra objects, extra buttons, or perspective tilt."
+    }
+  ]
+}

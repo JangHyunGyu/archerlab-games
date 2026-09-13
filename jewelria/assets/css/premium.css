@@ -57,7 +57,7 @@
 @media (max-width: 900px) and (max-height: 900px) {
   .archerlab-link { left: 50%; transform: translateX(-50%); top: max(12px,env(safe-area-inset-top)); }
 }
-@media (max-width: 759px) and (orientation: portrait) {
+@media (orientation: portrait) {
   .title-content { grid-template-columns: 1fr; grid-template-rows: auto minmax(0,1fr) auto; grid-template-areas: 'headline' 'gems' 'actions'; gap: 18px; justify-items: center; text-align: center; }
   .title-headline { justify-items: center; }
   .title-headline .eyebrow { margin-bottom: 14px; font-size: 8px; }
@@ -102,5 +102,49 @@
   .game-controls { grid-column: 1; grid-row: 3; align-self: start; display: grid; grid-template-columns: 1fr 1fr; }
   .game-controls .button { padding: 8px 4px; font-size: 11px; }
   body:has(.game-screen.is-active) .archerlab-link { top: 12px; left: max(24px,env(safe-area-inset-left)); transform: none; }
+}
+/* Authored artwork: wide jewel buttons and a separate frame for compact controls. */
+:root { --crafted-frame: url('../images/ui/crafted-frame-v1.webp'); }
+.title-bg { opacity: .72; filter: saturate(.9); }
+.title-plaque { margin-bottom: 0; }
+.title-content h1 { background: linear-gradient(#fff9da 20%,#f5dfa4 48%,#bb8b46 90%); background-clip: text; -webkit-background-clip: text; color: transparent; filter: drop-shadow(0 3px #513713); text-shadow: none; }
+.button,.button:hover,.button:active,.icon-button,.icon-button:hover,.archerlab-link { position: relative; isolation: isolate; background: none; border: 0; box-shadow: none; color: #fff2c9; text-shadow: 0 2px 2px #001c18; }
+.button { min-height: 52px; padding: 12px 24px; font-weight: 800; }
+.button::before,.icon-button::before { content: ''; display: block; position: absolute; inset: -2px; z-index: -1; border: 14px solid transparent; border-image: var(--crafted-frame) 290 fill / 14px / 0 stretch; background: none; opacity: 1; transform: none; filter: drop-shadow(0 3px 2px #0005); transition: filter .15s; }
+.button:hover::before,.icon-button:hover::before { filter: brightness(1.18) drop-shadow(0 4px 3px #0005); }
+.button:active,.icon-button:active { transform: translateY(2px); }
+.title-actions #play-btn { min-height: 78px; background: none; padding: 14px 42px; border: 0; }
+.title-actions #play-btn::before { display: block; border: 0; inset: -2px -8px; background: url('../images/ui/crafted-button-v1.webp') center / 100% 158% no-repeat; }
+#play-btn .btn-label { font-size: 24px; letter-spacing: .02em; }
+.icon-button { display: grid; place-items: center; }
+.icon-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.is-muted .sound-waves { opacity: .2; }
+.archerlab-link { position: fixed; border: 12px solid transparent; border-image: var(--crafted-frame) 290 fill / 12px / 0 stretch; padding: 4px 12px; }
+.record-strip > div { border: 14px solid transparent; border-image: var(--crafted-frame) 290 fill / 14px / 0 stretch; padding: 2px 8px; text-align: center; }
+.hud-stat { border: 12px solid transparent; border-image: var(--crafted-frame) 290 fill / 12px / 0 stretch; background: none; box-shadow: none; padding: 0 4px; }
+.modal-card { border: 18px solid transparent; border-image: var(--crafted-frame) 290 fill / 18px / 0 stretch; background: none; border-radius: 0; padding: 18px; }
+.board-frame { border: 0; background: none; box-shadow: none; }
+.board-frame::before { content: ''; position: absolute; inset: -3px; border: 18px solid transparent; border-image: var(--crafted-frame) 290 fill / 18px / 0 stretch; pointer-events: none; }
+.board { inset: 16px; }
+.modal-actions { gap: 12px; }
+.modal-actions .button { flex: 1 1 110px; }
+@media (orientation: portrait) {
+  .title-content { grid-template-rows: auto minmax(0,1fr) auto; gap: 20px; }
+  .jewel-showcase { width: min(80vw,420px); height: auto; max-height: 44dvh; }
+  .title-content h1 { font-size: clamp(52px,15vw,76px); }
+}
+@media (orientation: portrait) and (max-height: 650px) {
+  .title-content { gap: 8px; }
+  .jewel-showcase { width: min(62vw,29dvh); }
+  .title-actions #play-btn { min-height: 66px; }
+  #play-btn .btn-label { font-size: 21px; }
+  .record-strip strong { font-size: 21px; }
+}
+@media (orientation: landscape) and (max-height: 620px) {
+  .title-actions #play-btn { min-height: 64px; }
+  #play-btn .btn-label { font-size: 19px; }
+  .record-strip > div { padding: 0 3px; }
+  .hud-stat strong { font-size: 22px; }
+  .hud-stat { padding-inline: 0; }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; } }

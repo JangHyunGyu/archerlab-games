@@ -8,3 +8,6 @@ body { height: 100dvh; }
 .shadow-name-input { background: #12101e; color: #eee6f5; }
 .archerlab-link:focus-visible { outline: 2px solid #e0c997; outline-offset: 3px; }
 @media (max-width: 768px),(max-height:500px) { .archerlab-link { left: max(14px,env(safe-area-inset-left)); top: max(10px,env(safe-area-inset-top)); transform: none; padding: 10px 14px; min-height: 44px; font-size: 11px; opacity: 1; } .shadow-name-input { font-size: 16px; } }
+
+.archerlab-link,.archerlab-link:hover { background: none; border: 12px solid transparent; border-image: url('assets/ui/crafted-frame-v1.webp') 290 fill / 12px / 0 stretch; border-radius: 0; padding: 3px 10px; color: #efe3ff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media (max-width: 768px),(max-height:500px) { .archerlab-link { padding: 3px 10px; } }

@@ -784,6 +784,16 @@
       "sha256": "af1c1a06f399dfb49d2dd5d0c61f4da2d7138ef684ecde0203caf83ef3e29360"
     },
     {
+      "path": "cat-tower/assets/ui/crafted-button-v1.webp",
+      "bytes": 272146,
+      "sha256": "dc0057545c930f05b57383adab69bb4068c603c61821a0739bd39d43c690404f"
+    },
+    {
+      "path": "cat-tower/assets/ui/crafted-frame-v1.webp",
+      "bytes": 250616,
+      "sha256": "cc031ec17b233a1b3e014f78d7110ad9ee44741439d9d6381b5fdb517d48c4a5"
+    },
+    {
       "path": "cat-tower/assets/ui/cushion-field.webp",
       "bytes": 65234,
       "sha256": "5056d86b2a8494db51a90828ee774b133a1425d65e2fac1997abdcfbb6066b4a"
@@ -1392,6 +1402,16 @@
       "path": "jewelria/assets/images/ui/apple-touch-icon.webp",
       "bytes": 54910,
       "sha256": "afe0da951a28d66a0d42bda2a6c12f22be7804430cbcce2277d92b46ee8c52a0"
+    },
+    {
+      "path": "jewelria/assets/images/ui/crafted-button-v1.webp",
+      "bytes": 150112,
+      "sha256": "72e6c84fe40fa717b0537a200484cc46ca443a47db1db2001e189978885c68f2"
+    },
+    {
+      "path": "jewelria/assets/images/ui/crafted-frame-v1.webp",
+      "bytes": 155406,
+      "sha256": "070a5407b72e241bb5c63755d41392e1368477dc3e0fd21a98a6d665bdfa9ebe"
     },
     {
       "path": "jewelria/assets/images/ui/icon-192.png",
@@ -13187,6 +13207,16 @@
       "path": "solo-leveling/assets/shadows/source/shadow_tank_imagegen_chromakey.webp",
       "bytes": 1883056,
       "sha256": "7459925f3ec38b115c3492f209a8ff65fd535af0fb2ccb4641693b6934d60366"
+    },
+    {
+      "path": "solo-leveling/assets/ui/crafted-button-v1.webp",
+      "bytes": 176200,
+      "sha256": "71b18d4fa3cae4f83a7146e2925d4d8acddd01f30dbcb626b7c1d57c358e3097"
+    },
+    {
+      "path": "solo-leveling/assets/ui/crafted-frame-v1.webp",
+      "bytes": 250188,
+      "sha256": "b3a21a40b629718af13eb623ed2b4b991f835e809f5fb85a6fb2e6e45e2efc7c"
     },
     {
       "path": "solo-leveling/assets/ui/icons/basicDagger.png",

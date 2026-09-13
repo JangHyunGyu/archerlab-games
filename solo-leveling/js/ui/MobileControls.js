@@ -4,7 +4,7 @@ import {
     fs, uv, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
-import { UIAssets } from './UIAssets.js?v=20260913-image-ui-v3';
+import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
 
 /**
  * Mobile touch controls — System aesthetic.

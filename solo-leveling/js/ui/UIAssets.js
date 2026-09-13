@@ -65,9 +65,11 @@ export class UIAssets {
         const unitsPerPixel = scene.scale.width / Math.max(1, scene.game.canvas.clientWidth);
         const edge = Math.max(1, Math.min(width / 3, height / 3,
             (variant === 'hud' ? 10 : variant === 'button' ? 8 : 18) * unitsPerPixel));
-        const key = `ui_painted_v1_${width}_${height}_${Math.round(edge * 10)}`;
+        const sourceKey = variant === 'button' && scene.textures.exists('ui_crafted_frame')
+            ? 'ui_crafted_frame' : 'ui_skin_panel';
+        const key = `ui_painted_v1_${sourceKey}_${width}_${height}_${Math.round(edge * 10)}`;
         if (scene.textures.exists(key)) return key;
-        const source = scene.textures.get('ui_skin_panel').getSourceImage();
+        const source = scene.textures.get(sourceKey).getSourceImage();
         const sx = [0, Math.round(source.width * .22), Math.round(source.width * .78), source.width];
         const sy = [0, Math.round(source.height * .22), Math.round(source.height * .78), source.height];
         const dx = [0, edge, width - edge, width];

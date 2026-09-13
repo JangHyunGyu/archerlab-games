@@ -204,6 +204,8 @@ export function getMenuAssetList() {
     return [
         { key: 'ui_skin_button', path: 'assets/ui/skin-button-v1.png' },
         { key: 'ui_skin_panel', path: 'assets/ui/skin-panel-v1.png' },
+        { key: 'ui_crafted_button', path: 'assets/ui/crafted-button-v1.webp' },
+        { key: 'ui_crafted_frame', path: 'assets/ui/crafted-frame-v1.webp' },
         ...UI_ASSET_KEYS.map(uiAsset),
         { key: 'ui_modal_master', path: 'assets/ui/ui_modal_master.png' },
         { key: 'env_shadow_portal', path: 'assets/environment/shadow_portal.png' },
