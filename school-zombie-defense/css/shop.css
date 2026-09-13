@@ -1,11 +1,11 @@
 .school-shop {
+  --shop-padding: clamp(12px, 3.5vw, 24px);
   position: absolute;
   inset: 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: clamp(12px, 3.5vw, 24px);
+  padding: var(--shop-padding);
   color: #eee6d2;
   text-shadow: 0 2px 4px #000, 0 0 8px #000;
   background: linear-gradient(#05070655, transparent 13%, transparent 75%, #05070645);
@@ -17,15 +17,16 @@
 .school-shop h1 { font-size: clamp(18px, 5cqw, 27px); margin: 3px 0 0; letter-spacing: -.04em; }
 .school-shop__credit { margin: 0; padding: 7px 10px; text-align: right; font-size: 11px; background: #11150e38; border: 1px solid #c5b99524; }
 .school-shop__credit strong { display: block; color: #eed09b; font-size: 21px; line-height: 1.35; }
-.school-shop__actions { display: grid; gap: 10px; width: 100%; max-width: 380px; align-self: center; }
-.school-shop__status { margin: 0; color: #edcd98; font-size: 12px; text-align: center; }
+.school-shop__actions { display: contents; }
+.school-shop__status { position: absolute; top: calc(47% - 28px); left: var(--shop-padding); right: var(--shop-padding); margin: 0; color: #edcd98; font-size: 12px; text-align: center; }
+.school-shop__status:empty { display: none; }
 .school-shop.is-maintaining > .school-shop__header,
 .school-shop.is-maintaining > .school-shop__actions { visibility: hidden; }
 .school-shop button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
-.school-shop__actions button { min-height: 48px; border: 1px solid #d5b67570; color: #fff2da; text-shadow: 0 2px 3px #000; background: #15191142; }
-.school-shop__actions .school-shop__open { padding: 12px; font-size: 22px; font-weight: 800; background: #a17a324a; border-color: #dec590a6; }
+.school-shop__actions button { position: absolute; left: 50%; transform: translateX(-50%); min-height: 48px; border: 1px solid #d5b67570; color: #fff2da; text-shadow: 0 2px 3px #000; background: #15191142; }
+.school-shop__actions .school-shop__open { top: 47%; width: calc(100% - var(--shop-padding) * 2); max-width: 380px; padding: 12px; font-size: 22px; font-weight: 800; background: #a17a324a; border-color: #dec590a6; }
 .school-shop__open span { display: block; margin-top: 4px; color: #e4d7bd; font-size: 12px; font-weight: 500; }
-.school-shop__actions .school-shop__exit { width: 150px; justify-self: center; font-size: 14px; background: #0b100d30; border-color: #c5b99540; }
+.school-shop__actions .school-shop__exit { bottom: var(--shop-padding); width: 150px; font-size: 14px; background: #0b100d30; border-color: #c5b99540; }
 .school-shop button:focus-visible { outline: 2px solid #ffe0a1; outline-offset: 3px; }
 .school-shop button:disabled { cursor: default; opacity: .5; }
 
