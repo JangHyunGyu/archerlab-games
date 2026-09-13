@@ -92,7 +92,7 @@
   .school-shop-dialog__footer { padding: 8px; }
 }
 @media (max-height: 520px) and (orientation: landscape) {
-  .school-shop-dialog { width: min(670px, calc(100vw - 24px)); }
+  .school-shop-dialog { width: min(670px, calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px)); }
   .school-shop-dialog__header { padding: 7px 16px; }
   .school-shop-dialog__header .school-shop__eyebrow { display: none; }
   .school-shop-dialog__characters { grid-template-columns: repeat(8, minmax(0, 1fr)); }
