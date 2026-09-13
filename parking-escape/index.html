@@ -67,6 +67,7 @@
   </script>
   <script src="../shared/client-error-reporter.js?v=20260905-bot-filter-v2" data-game-id="parking_escape"></script>
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
+  <link rel="stylesheet" href="css/image-ui.css?v=20260913-image-ui-v3">
 </head>
 <body class="menu-open" data-game="parking-escape">
   <main id="game-shell">
@@ -100,45 +101,11 @@
       <div class="menu-art" aria-hidden="true"></div>
       <div class="menu-content">
         <div class="menu-title-block">
-          <p class="brand-kicker"><span class="status-light" aria-hidden="true"></span>출차 준비 완료</p>
           <div class="menu-lockup">
-            <h1 aria-label="주차장 탈출">
-              <span>주차장</span>
-              <span>탈출</span>
-              <small>PARKING ESCAPE</small>
-            </h1>
-            <picture class="menu-hero-car" aria-hidden="true">
-              <source srcset="assets/vehicles/red.webp" type="image/webp">
-              <img src="assets/vehicles/red.png" alt="" decoding="async">
-            </picture>
-          </div>
-          <p class="menu-tagline">얽힌 차를 밀어 <strong>빨간 차량</strong>을 출구로 빼내세요.</p>
-          <div class="menu-lane" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
+            <h1 aria-label="주차장 탈출"><span>주차장</span><span>탈출</span></h1>
           </div>
         </div>
         <div class="menu-control-bar">
-          <div class="mission-head">
-            <span class="mission-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false"><path d="M4 12h13m-5-5 5 5-5 5M4 5v14"/></svg>
-            </span>
-            <div>
-              <span>MISSION</span>
-              <strong>빨간 차를 출구로</strong>
-            </div>
-          </div>
-          <div class="record-row">
-            <div class="progress-record">
-              <span>내 진행도</span>
-              <strong>Lv <b id="best-level-label">1</b></strong>
-            </div>
-            <div class="rule-badges" aria-label="게임 정보">
-              <span class="rule-chip"><b id="best-moves-label">30초+</b><small>TIME</small></span>
-              <span class="rule-chip"><b>50</b><small>LEVELS</small></span>
-            </div>
-          </div>
           <div class="menu-actions menu-actions--menu">
             <button id="play-btn" class="primary-btn" type="button">
               <span class="button-icon button-icon--play" aria-hidden="true"></span>
@@ -156,7 +123,6 @@
     <section id="loading-screen" class="loading-screen hidden" role="status" aria-live="polite" aria-label="레벨 생성 중">
       <div class="loading-panel">
         <img class="loading-emblem" src="assets/ui/parking-loading-badge-v2.webp" data-png-fallback="assets/ui/parking-loading-badge-v2.png" onerror="this.onerror=null;this.src=this.dataset.pngFallback;" alt="" aria-hidden="true" decoding="async">
-        <p class="brand-kicker">PARKING LOT</p>
         <strong>Lv <span id="loading-level-label">1</span></strong>
         <div class="loading-orbit" aria-hidden="true">
           <span></span>
@@ -168,7 +134,6 @@
 
     <section id="complete-modal" class="modal modal-clear hidden" role="dialog" aria-modal="true" aria-labelledby="clear-title" tabindex="-1">
       <div class="modal-panel clear-panel">
-        <p id="clear-kicker" class="brand-kicker">PARKING EXIT</p>
         <h2 id="clear-title">LEVEL CLEAR</h2>
         <div class="clear-stats">
           <div>
@@ -203,7 +168,6 @@
 
     <section id="rank-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rank-title" tabindex="-1">
       <div class="modal-panel rank-panel">
-        <p class="brand-kicker">TOP 20</p>
         <h2 id="rank-title">랭킹</h2>
         <div id="rank-content" class="rank-content">
           <div class="rank-loading">불러오는 중...</div>
@@ -223,6 +187,6 @@
   <script src="../assets/vendor/gsap/gsap-3.15.0.min.js"></script>
   <script src="js/SoundManager.js?v=20260627-start-once"></script>
   <script src="js/PuzzleCatalog.js?v=20260712-progression-v1"></script>
-  <script src="js/main.js?v=20260904-ranked-run-v1"></script>
+  <script src="js/main.js?v=20260913-image-ui-v3"></script>
 </body>
 </html>

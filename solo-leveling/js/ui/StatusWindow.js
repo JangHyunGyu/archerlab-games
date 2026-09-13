@@ -4,7 +4,7 @@ import {
     UI_SCALE, fs, uv, fitText, padText,
 } from '../utils/Constants.js';
 import { t } from '../utils/i18n.js';
-import { UIAssets } from './UIAssets.js';
+import { UIAssets } from './UIAssets.js?v=20260913-image-ui-v3';
 
 /**
  * TAB-key status window, System aesthetic.

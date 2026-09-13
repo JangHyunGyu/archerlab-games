@@ -14,10 +14,10 @@ import { XPOrbPool } from '../entities/XPOrb.js';
 import { ItemDropManager } from '../entities/ItemDrop.js';
 import { Boss } from '../entities/Boss.js';
 import { Enemy } from '../entities/Enemy.js';
-import { HUD } from '../ui/HUD.js?v=20260913-concept-ui-v5';
-import { SystemMessage } from '../ui/SystemMessage.js';
-import { StatusWindow } from '../ui/StatusWindow.js';
-import { MobileControls } from '../ui/MobileControls.js';
+import { HUD } from '../ui/HUD.js?v=20260913-image-ui-v3';
+import { SystemMessage } from '../ui/SystemMessage.js?v=20260913-image-ui-v3';
+import { StatusWindow } from '../ui/StatusWindow.js?v=20260913-image-ui-v3';
+import { MobileControls } from '../ui/MobileControls.js?v=20260913-image-ui-v3';
 import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
 const SAVE_KEY = 'shadow_survival_save_v1';

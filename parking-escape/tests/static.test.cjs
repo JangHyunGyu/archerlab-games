@@ -25,7 +25,6 @@ assert.match(html, /id="rank-modal"[^>]*tabindex="-1"/);
 assert.match(html, /id="rank-challenge-btn"[^>]*>Lv\.1부터 랭킹 도전<\/button>/);
 assert.match(main, /element\.inert = true/);
 assert.match(main, /handleDialogKeydown/);
-assert.match(html, /id="best-moves-label">30초\+<\/b>/);
 assert.match(css, /menu-bg-mobile-v2\.webp/);
 assert.match(main, /ensureGameTextures\(\)/);
 assert.match(main, /Lv \$\{this\.bestLevel\} 계속하기/);
@@ -39,7 +38,7 @@ assert.match(main, /if \(!this\.rankEligible \|\| !this\.lastClear\) return/);
 assert.match(main, /this\.mode = "background-paused"/);
 assert.match(main, /this\.mode = "playing"/);
 assert.doesNotMatch(main, /if \(!continuesRun\) this\.startRankSession\(\)/);
-assert.match(html, /js\/main\.js\?v=20260904-ranked-run-v1/);
+assert.match(html, /js\/main\.js\?v=20260913-image-ui-v3/);
 assert.match(html, /css\/style\.css\?v=20260904-ranked-run-v1/);
 
 const scripts = Array.from(html.matchAll(/<script[^>]+src="([^"]+)"/g), match => match[1]);

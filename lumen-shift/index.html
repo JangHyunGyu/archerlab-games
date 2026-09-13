@@ -57,6 +57,7 @@
   </script>
   <script src="../shared/client-error-reporter.js?v=20260905-bot-filter-v2" data-game-id="lumen-shift"></script>
   <script src="../shared/game-runtime.js?v=20260905-bot-filter-v2" data-game-id="lumen-shift" data-service-worker="sw.js"></script>
+  <link rel="stylesheet" href="css/image-ui.css?v=20260913-image-ui-v3">
 </head>
 <body data-game="lumen-shift">
   <main id="game-root" class="game-shell" aria-label="LUMEN SHIFT game">
@@ -98,53 +99,49 @@
       <a class="menu-archerlab-link" href="https://archerlab.dev/" target="_blank" rel="noopener noreferrer">ARCHERLAB</a>
       <div class="menu-layout">
         <div class="menu-lockup">
-          <p class="kicker">FALLING LIGHT PUZZLE</p>
           <h1><span>LUMEN</span><span>SHIFT</span></h1>
-          <p class="menu-subtitle">Stack light. Break lines. Shift the void.</p>
         </div>
 
         <div class="menu-command">
-          <div class="menu-signal" aria-hidden="true">
-            <span>STACK</span><i></i><span>CHARGE</span><i></i><span>SHIFT</span>
-          </div>
           <div class="menu-actions">
             <button id="play-button" class="primary-button" type="button">
-              <span class="button-index">01</span>
               <span class="button-copy">Start</span>
             </button>
             <button id="rank-button" class="secondary-button" type="button">
-              <span class="button-index">02</span>
               <span class="button-copy">Ranking</span>
             </button>
           </div>
-          <p class="menu-guide"><span class="guide-keyboard"><kbd>← ↓ →</kbd> Move · <kbd>↑</kbd> Rotate · <kbd>Space</kbd> Drop</span><span class="guide-touch">Move, rotate and drop with the touch controls.</span></p>
         </div>
       </div>
     </section>
 
     <section id="pause-screen" class="screen-layer compact-screen is-hidden" aria-live="polite">
-      <h2>Paused</h2>
-      <div class="menu-actions">
-        <button id="resume-button" class="primary-button" type="button">Resume</button>
-        <button id="restart-button" class="secondary-button" type="button">Restart</button>
+      <div class="dialog-card">
+        <h2>Paused</h2>
+        <div class="menu-actions">
+          <button id="resume-button" class="primary-button" type="button">Resume</button>
+          <button id="restart-button" class="secondary-button" type="button">Restart</button>
+        </div>
       </div>
     </section>
 
     <section id="result-screen" class="screen-layer result-screen is-hidden" aria-live="polite">
-      <div class="result-head">
-        <span id="result-mode">Journey</span>
-        <h2 id="result-title">Run Complete</h2>
-        <strong id="final-score">0</strong>
-      </div>
-      <div class="submit-row">
-        <input id="nickname-input" type="text" maxlength="20" autocomplete="nickname" placeholder="Nickname">
-        <button id="submit-score" type="button">Submit</button>
-      </div>
-      <p id="submit-status" class="submit-status"></p>
-      <div id="ranking-list" class="ranking-list" aria-label="ranking list"></div>
-      <div class="menu-actions">
-        <button id="again-button" class="primary-button" type="button">Again</button>
-        <button id="menu-button" class="secondary-button" type="button">Menu</button>
+      <div class="dialog-card">
+        <div class="result-head">
+          <span id="result-mode">Journey</span>
+          <h2 id="result-title">Run Complete</h2>
+          <strong id="final-score">0</strong>
+        </div>
+        <div class="submit-row">
+          <input id="nickname-input" type="text" maxlength="20" autocomplete="nickname" placeholder="Nickname">
+          <button id="submit-score" type="button">Submit</button>
+        </div>
+        <p id="submit-status" class="submit-status"></p>
+        <div id="ranking-list" class="ranking-list" aria-label="ranking list"></div>
+        <div class="menu-actions">
+          <button id="again-button" class="primary-button" type="button">Again</button>
+          <button id="menu-button" class="secondary-button" type="button">Menu</button>
+        </div>
       </div>
     </section>
 

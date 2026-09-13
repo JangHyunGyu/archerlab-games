@@ -2084,6 +2084,26 @@
       "sha256": "9f9c25af13069d362ea15084e7b9901448d61fdbedaa9bf7a5a5e0c6d0b2a9a8"
     },
     {
+      "path": "lumen-shift/assets/ui/skin-button-v1.png",
+      "bytes": 1551459,
+      "sha256": "00dbc43102921a89e3b648bbe3884b60110207e948d78403edb7822aff0216bf"
+    },
+    {
+      "path": "lumen-shift/assets/ui/skin-button-v1.webp",
+      "bytes": 158460,
+      "sha256": "83eb2f5e251fc6427f306f0da17b1fa1af9077dc769a55b828bb07fb3116ef83"
+    },
+    {
+      "path": "lumen-shift/assets/ui/skin-panel-v1.png",
+      "bytes": 1465845,
+      "sha256": "3d93e6136ec4d00d754df2a3c437fab24b7f52df36775f0b2447347b5612283a"
+    },
+    {
+      "path": "lumen-shift/assets/ui/skin-panel-v1.webp",
+      "bytes": 84284,
+      "sha256": "c2c1cca069e7a45c7137d2ea2a98691738da0ceebc72356728eb5251bb1798ff"
+    },
+    {
       "path": "parking-escape/assets/sounds/dragon-studio-car-engine-372477.mp3",
       "bytes": 98638,
       "sha256": "e88301a9aa74ed997d3de130b8f2f5193d1fafbdac11f3f85c0f474626002830"
@@ -2232,6 +2252,26 @@
       "path": "parking-escape/assets/ui/parking-loading-badge.webp",
       "bytes": 1630860,
       "sha256": "aceac67aa88ed427da2cf77b8f358b47416567e3903ac9679bd2e2f428a4c78b"
+    },
+    {
+      "path": "parking-escape/assets/ui/skin-button-v1.png",
+      "bytes": 1977685,
+      "sha256": "6111772b67d5e248493f800dfe588a38bcb0ebf6086a8123cec0d98154cf7718"
+    },
+    {
+      "path": "parking-escape/assets/ui/skin-button-v1.webp",
+      "bytes": 159556,
+      "sha256": "715949935d6dd7b6bfa3f9a68c5975b58ae1062a65dd8fb8cc3eb97499cd4bbb"
+    },
+    {
+      "path": "parking-escape/assets/ui/skin-panel-v1.png",
+      "bytes": 1713816,
+      "sha256": "559264c3cb46af5045dfd677723fb734d4e42d4b6b5f1cf556688935508b5391"
+    },
+    {
+      "path": "parking-escape/assets/ui/skin-panel-v1.webp",
+      "bytes": 64126,
+      "sha256": "1c81d1bea5f3cdeadaa719542e949884c3e76e7782c8b80c6f1aaf6955790858"
     },
     {
       "path": "parking-escape/assets/ui/vehicle-atlas-source.png",
@@ -13807,6 +13847,26 @@
       "path": "solo-leveling/assets/ui/menu/start_button_secondary_wide_hover.webp",
       "bytes": 8848,
       "sha256": "3b78264842e9cc1e6ba8a70c62e73739d1ff8574e69b0e6e2a40c10d4f23214d"
+    },
+    {
+      "path": "solo-leveling/assets/ui/skin-button-v1.png",
+      "bytes": 1904779,
+      "sha256": "d620467c423b2d88b42f26882b59817187799f29bce21ab9923ff50752c1c259"
+    },
+    {
+      "path": "solo-leveling/assets/ui/skin-button-v1.webp",
+      "bytes": 181710,
+      "sha256": "f553427dbc88cdda0fc82e53d3a6fb0dc2499a43e51110229a1e25e27f761d41"
+    },
+    {
+      "path": "solo-leveling/assets/ui/skin-panel-v1.png",
+      "bytes": 1757890,
+      "sha256": "675c381c3de6e196a6c28f78281426ca06911650eb6966b089f32d75f666cb96"
+    },
+    {
+      "path": "solo-leveling/assets/ui/skin-panel-v1.webp",
+      "bytes": 97276,
+      "sha256": "f036737d93d5e88f50401d1bdd12be70e27673caa7c61f7821258f31961c11b9"
     },
     {
       "path": "solo-leveling/assets/ui/ui_button_cyan.png",

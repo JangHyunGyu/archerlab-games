@@ -202,6 +202,8 @@ export function getCharacterCombatVfxFrameAssets(characterId = getStoredCharacte
 
 export function getMenuAssetList() {
     return [
+        { key: 'ui_skin_button', path: 'assets/ui/skin-button-v1.png' },
+        { key: 'ui_skin_panel', path: 'assets/ui/skin-panel-v1.png' },
         ...UI_ASSET_KEYS.map(uiAsset),
         { key: 'ui_modal_master', path: 'assets/ui/ui_modal_master.png' },
         { key: 'env_shadow_portal', path: 'assets/environment/shadow_portal.png' },

@@ -59,6 +59,34 @@ function textureKey(prefix, w, h, opts) {
 }
 
 export class UIAssets {
+    static ensureSkinPanel(scene, w, h, variant = 'panel') {
+        const width = Math.max(2, Math.ceil(w));
+        const height = Math.max(2, Math.ceil(h));
+        const unitsPerPixel = scene.scale.width / Math.max(1, scene.game.canvas.clientWidth);
+        const edge = Math.max(1, Math.min(width / 3, height / 3,
+            (variant === 'hud' ? 10 : variant === 'button' ? 8 : 18) * unitsPerPixel));
+        const key = `ui_painted_v1_${width}_${height}_${Math.round(edge * 10)}`;
+        if (scene.textures.exists(key)) return key;
+        const source = scene.textures.get('ui_skin_panel').getSourceImage();
+        const sx = [0, Math.round(source.width * .22), Math.round(source.width * .78), source.width];
+        const sy = [0, Math.round(source.height * .22), Math.round(source.height * .78), source.height];
+        const dx = [0, edge, width - edge, width];
+        const dy = [0, edge, height - edge, height];
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+                ctx.drawImage(source, sx[col], sy[row], sx[col + 1] - sx[col], sy[row + 1] - sy[row],
+                    dx[col], dy[row], dx[col + 1] - dx[col], dy[row + 1] - dy[row]);
+            }
+        }
+        scene.textures.addCanvas(key, canvas);
+        return key;
+    }
+
     static resolveAsset(scene, asset) {
         if (!asset) return null;
         const key = asset.startsWith('ui_') ? asset : `ui_${asset}`;
@@ -209,6 +237,17 @@ export class UIAssets {
     }
 
     static createPanel(scene, x, y, w, h, opts = {}) {
+        if (scene.textures.exists('ui_skin_panel') && !opts.preferAsset) {
+            const image = scene.add.image(x, y, this.ensureSkinPanel(scene, w, h, opts.variant))
+                .setOrigin(0, 0).setDisplaySize(w, h);
+            if (opts.depth !== undefined) image.setDepth(opts.depth);
+            if (opts.scrollFactor !== undefined) image.setScrollFactor(opts.scrollFactor);
+            image.setUIState = state => {
+                image.setTint(state === 'hover' ? 0xffffff : 0xe4dfef);
+                return image;
+            };
+            return image.setUIState('normal');
+        }
         if (opts.variant === 'hud') {
             opts = { ...opts, surfaceLines: false, ornament: false, innerBorder: false,
                 fill: 0x11101e, fillAlpha: 0.95, border: 0x77658e, borderAlpha: 0.55, glow: 0 };

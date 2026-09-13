@@ -1,5 +1,5 @@
 import { GAME_WIDTH, GAME_HEIGHT, UI_FONT_MONO, UI_FONT_KR, fs, uv, fitText, padText } from '../utils/Constants.js';
-import { UIAssets } from './UIAssets.js';
+import { UIAssets } from './UIAssets.js?v=20260913-image-ui-v3';
 
 /**
  * 그림자 서바이벌의 시스템 창 UI입니다.

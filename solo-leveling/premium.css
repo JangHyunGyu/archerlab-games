@@ -2,6 +2,7 @@
 .archerlab-link { left: max(18px,env(safe-area-inset-left)); top: max(12px,env(safe-area-inset-top)); transform: none; min-height: 44px; display: inline-flex; align-items: center; padding: 10px 16px; border-color: #9c8fb340; color: #d1c6e4; background: #131020c9; font-size: 11px; letter-spacing: .06em; opacity: 1; border-radius: 6px; box-shadow: none; }
 .shadow-name-input { font-size: 16px; }
 body { height: 100dvh; }
+.shadow-name-entry { border: 8px solid transparent; border-image: url('assets/ui/skin-panel-v1.webp') 230 fill / 8px stretch; background: none !important; clip-path: none; filter: none !important; }
 #game-container canvas { margin: 0 !important; }
 .shadow-name-entry { --entry-accent: #b39bcf; background: linear-gradient(110deg, #71617e, #cbb590, #71617e); filter: drop-shadow(0 12px 28px #0007); }
 .shadow-name-input { background: #12101e; color: #eee6f5; }

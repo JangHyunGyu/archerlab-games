@@ -1,0 +1,41 @@
+/* Painted automotive controls. Labels remain live text. */
+body[data-game="parking-escape"] .menu-control-bar { padding: 0; width: min(380px,100%); background: none; border: 0; box-shadow: none; backdrop-filter: none; }
+body[data-game="parking-escape"] .menu-control-bar::before { display: none; }
+body[data-game="parking-escape"] .menu-content { gap: 44px; }
+body[data-game="parking-escape"] .menu-actions--menu { display: grid; grid-template-columns: minmax(0,1fr); gap: 14px; }
+body[data-game="parking-escape"] :is(.primary-btn,.secondary-btn) { position: relative; isolation: isolate; min-height: 60px; padding: 12px 30px; gap: 10px; background: none; border: 0; border-radius: 0; box-shadow: none; color: #fff2d4; font-weight: 800; font-size: 15px; text-shadow: 0 2px 3px #000; white-space: nowrap; overflow: visible; }
+body[data-game="parking-escape"] :is(.primary-btn,.secondary-btn)::before { content: ""; position: absolute; inset: -8px -3px; z-index: -1; background: url('../assets/ui/skin-button-v1.webp') center / 100% 100% no-repeat; pointer-events: none; transition: filter .15s; }
+body[data-game="parking-escape"] .secondary-btn { color: #e4e7e7; }
+body[data-game="parking-escape"] .secondary-btn::before { filter: saturate(.18) brightness(.78); }
+body[data-game="parking-escape"] :is(.primary-btn,.secondary-btn)::after { display: none; }
+body[data-game="parking-escape"] .menu-control-bar button { min-height: 72px; font-size: 18px; padding-inline: 30px; letter-spacing: -.025em; }
+body[data-game="parking-escape"] .menu-control-bar .primary-btn { background: none; color: #fff2d4; box-shadow: none; }
+body[data-game="parking-escape"] .menu-control-bar .secondary-btn { background: none; color: #e4e7e7; }
+body[data-game="parking-escape"] :is(.hud,.modal-panel,.loading-panel) { position: relative; isolation: isolate; background: none; border-color: transparent; box-shadow: none; border-radius: 0; backdrop-filter: none; }
+body[data-game="parking-escape"] .hud { position: absolute; }
+body[data-game="parking-escape"] :is(.hud,.modal-panel,.loading-panel)::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 18px solid transparent; border-image: url('../assets/ui/skin-panel-v1.webp') 230 fill / 18px stretch; pointer-events: none; }
+body[data-game="parking-escape"] .hud::before { border-image-width: 10px; }
+body[data-game="parking-escape"] .modal-panel { padding: 30px 24px 24px; }
+body[data-game="parking-escape"] .icon-btn { border: 7px solid transparent; border-image: url('../assets/ui/skin-panel-v1.webp') 230 fill / 7px stretch; background: none; border-radius: 0; box-shadow: none; }
+body[data-game="parking-escape"] .button-svg { color: currentColor; }
+body[data-game="parking-escape"] button:focus-visible { outline: 2px solid #fff0b6; outline-offset: 5px; }
+@media (hover:hover) {
+  body[data-game="parking-escape"] .primary-btn:hover::before { filter: brightness(1.2); }
+  body[data-game="parking-escape"] .secondary-btn:hover::before { filter: saturate(.5) brightness(1.12); }
+}
+body[data-game="parking-escape"] :is(.primary-btn,.secondary-btn):active { transform: translateY(2px); }
+@media (orientation:portrait) {
+  body[data-game="parking-escape"] .menu-content { width: min(420px,100%); gap: 24px; margin-inline: auto; }
+  body[data-game="parking-escape"] .menu-control-bar { width: 100%; }
+  body[data-game="parking-escape"] .menu-title-block h1 { width: 100%; text-align: center; }
+}
+@media (orientation:landscape) and (max-height:650px) {
+  body[data-game="parking-escape"] .menu-content { grid-template-columns: minmax(0,1fr) minmax(230px,340px); gap: 28px; }
+  body[data-game="parking-escape"] .menu-control-bar { padding: 0; }
+  body[data-game="parking-escape"] .menu-control-bar button { min-height: 64px; font-size: 16px; }
+}
+@media (max-width:380px) {
+  body[data-game="parking-escape"] .menu-control-bar button { font-size: 16px; min-height: 68px; }
+  body[data-game="parking-escape"] .modal-panel { padding: 24px 18px 18px; }
+}
+@media (prefers-reduced-motion:reduce) { body[data-game="parking-escape"] button::before { transition: none; } }

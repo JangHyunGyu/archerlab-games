@@ -1,6 +1,6 @@
 import { SpriteFactory } from '../utils/SpriteFactory.js';
 import { SYSTEM, UI_FONT_MONO, fs, uv, drawSystemPanel, fitText, padText } from '../utils/Constants.js';
-import { getMenuAssetList } from '../utils/AssetManifest.js';
+import { getMenuAssetList } from '../utils/AssetManifest.js?v=20260913-image-ui-v3';
 
 export class PreloadScene extends Phaser.Scene {
     constructor() {

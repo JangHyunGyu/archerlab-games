@@ -79,8 +79,6 @@
     timeStat: $("time-stat"),
     moves: $("moves-label"),
     par: $("par-label"),
-    bestLevel: $("best-level-label"),
-    bestMoves: $("best-moves-label"),
     clearMoves: $("clear-moves"),
     clearMovesLabel: $("clear-moves-label"),
     nextLevel: $("next-level-label"),
@@ -88,7 +86,6 @@
     loadingLevel: $("loading-level-label"),
     clearLevel: $("clear-level"),
     clearLevelCaption: $("clear-level-caption"),
-    clearKicker: $("clear-kicker"),
     clearTitle: $("clear-title"),
     play: $("play-btn"),
     playLabel: $("play-label"),
@@ -750,8 +747,6 @@
     updateMenu() {
       this.bestLevel = clamp(Math.max(this.bestLevel, readInt(STORAGE.bestLevel, 1)), 1, MAX_LEVEL);
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
-      dom.bestLevel.textContent = String(this.bestLevel);
-      dom.bestMoves.textContent = `${LEVEL_TIME_LIMIT}초+`;
       if (dom.playLabel) {
         dom.playLabel.textContent = this.bestLevel > 1 ? `Lv ${this.bestLevel} 계속하기` : "게임 시작";
       }
@@ -1327,7 +1322,6 @@
       dom.clearLevelCaption.textContent = "완료";
       if (isFinalLevel) {
         dom.clearTitle.textContent = "ALL LEVELS CLEAR";
-        dom.clearKicker.textContent = "PARKING MASTER";
         dom.nextLevelCaption.textContent = "총 이동";
         dom.nextLevel.textContent = String(this.runMoves);
         dom.clearLevel.textContent = `${MAX_LEVEL} / ${MAX_LEVEL}`;
@@ -1339,7 +1333,6 @@
         }
       } else {
         dom.clearTitle.textContent = `LEVEL ${this.level} CLEAR`;
-        dom.clearKicker.textContent = "PARKING EXIT";
         dom.nextLevelCaption.textContent = "다음";
         dom.nextLevel.textContent = String(this.level + 1);
         dom.clearLevel.textContent = `Lv ${clearedLevel.toLocaleString()}`;
@@ -1385,7 +1378,6 @@
         timedOut: true,
       };
       dom.clearTitle.textContent = "TIME UP";
-      dom.clearKicker.textContent = "TIME LIMIT";
       dom.clearMovesLabel.textContent = "이동";
       dom.clearMoves.textContent = String(this.moves);
       dom.nextLevelCaption.textContent = "실패";

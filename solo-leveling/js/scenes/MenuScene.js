@@ -1,4 +1,5 @@
-import { getShadowMenuLayout } from '../ui/MenuLayout.js?v=20260913-concept-ui-v5';
+import { UIAssets } from '../ui/UIAssets.js?v=20260913-image-ui-v3';
+import { getShadowMenuLayout } from '../ui/MenuLayout.js?v=20260913-image-ui-v3';
 import {
     GAME_WIDTH, GAME_HEIGHT,
     SYSTEM, UI_FONT_MONO, UI_FONT_KR,
@@ -7,9 +8,9 @@ import {
 import { SpriteFactory } from '../utils/SpriteFactory.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
-import { GameScene } from './GameScene.js?v=20260913-concept-ui-v5';
+import { GameScene } from './GameScene.js?v=20260913-image-ui-v3';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
-import { getGameplayAssetList } from '../utils/AssetManifest.js';
+import { getGameplayAssetList } from '../utils/AssetManifest.js?v=20260913-image-ui-v3';
 import { getCharacterMenuLabels, getCharacterText } from '../utils/CharacterLocalization.js';
 
 export class MenuScene extends Phaser.Scene {
@@ -317,16 +318,6 @@ export class MenuScene extends Phaser.Scene {
         const title = addText(cx, layout.top, titleText, layout.titleSize, '#f0e9f6', origin, true);
         title.setShadow(0, 4 * px, '#281b41', 0, false, true);
         this._fitText(title, layout.contentW * px, layout.titleSize * 2.3 * px);
-        if (!layout.short && !layout.portrait) {
-            addText(cx, layout.top - 30, 'A DARK FANTASY SURVIVOR', 10, '#c4a975');
-            const rule = this.add.graphics().setDepth(4);
-            rule.lineStyle(px, 0xbda379, .5);
-            rule.lineBetween(cx * px, (layout.top + layout.titleSize * 2.35) * px,
-                (cx + 52) * px, (layout.top + layout.titleSize * 2.35) * px);
-            const notice = addText(cx, layout.top + layout.titleSize * 2.35 + 22,
-                t('menuMsg3'), 14, '#aa9fbc');
-            this._fitText(notice, layout.contentW * px, 34 * px);
-        }
         this._createPremiumHero(layout, px);
 
         const startGame = async (resume = false, characterIdOverride = null) => {
@@ -401,28 +392,15 @@ export class MenuScene extends Phaser.Scene {
     }
 
     _makePremiumAction(x, y, w, h, px, { label, meta = '', primary = false, onClick }) {
-        const g = this.add.graphics().setDepth(5);
+        const skin = this.add.image((x + w / 2) * px, (y + h / 2) * px, 'ui_skin_button')
+            .setDisplaySize((w + 10) * px, (h + 14) * px).setDepth(5);
         const draw = (hover = false) => {
-            g.clear();
-            drawSystemPanel(g, x * px, (y + 4) * px, w * px, h * px, {
-                cut: 8 * px, fill: 0x02040a, fillAlpha: .5, borderAlpha: 0,
-            });
-            drawSystemPanel(g, x * px, y * px, w * px, h * px, {
-                cut: 8 * px, fill: primary ? (hover ? 0x635184 : 0x493a64) : (hover ? 0x252136 : 0x141320),
-                fillAlpha: .98, border: primary ? 0xc8addd : 0x655b73,
-                borderAlpha: hover ? 1 : .75, borderWidth: px,
-            });
-            g.lineStyle(px, primary ? 0xf2d4fb : 0x9984b0, .24);
-            g.lineBetween((x + 12) * px, (y + 3) * px, (x + w - 12) * px, (y + 3) * px);
-            g.fillStyle(primary ? 0xf0d49d : 0xa597ba, hover ? .9 : .65);
-            g.fillRect((x + 1) * px, (y + 12) * px, 2 * px, (h - 24) * px);
-            g.lineStyle(px, primary ? 0xe9d3b0 : 0xb5a9c9, .7);
-            g.lineBetween((x + w - 25) * px, (y + h / 2 - 4) * px, (x + w - 21) * px, (y + h / 2) * px);
-            g.lineBetween((x + w - 21) * px, (y + h / 2) * px, (x + w - 25) * px, (y + h / 2 + 4) * px);
+            skin.setTint(primary || hover ? 0xffffff : 0xb1aabc);
+            skin.setAlpha(primary || hover ? 1 : .88);
         };
         draw();
         const title = this.add.text((x + w / 2) * px, (y + h * (meta ? .35 : .5)) * px, label, {
-            fontFamily: UI_FONT_KR, fontSize: `${(meta ? 15 : 17) * px}px`, fontStyle: 'bold',
+            fontFamily: UI_FONT_KR, fontSize: `${(meta ? 16 : 19) * px}px`, fontStyle: 'bold',
             color: primary ? '#fff3e0' : '#d2c8df',
         }).setOrigin(.5).setDepth(6).setResolution(2);
         this._fitText(title, (w - 40) * px, h * (meta ? .52 : .8) * px);
@@ -765,15 +743,7 @@ export class MenuScene extends Phaser.Scene {
             const dim = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x02040a, 0.84)
                 .setDepth(218)
                 .setInteractive();
-            const panel = this.add.graphics().setDepth(219);
-            drawSystemPanel(panel, panelX, panelY, panelW, panelH, {
-                cut: uv(12), fill: SYSTEM.BG_PANEL, fillAlpha: 0.97,
-                border: SYSTEM.BORDER, borderAlpha: 0.86, borderWidth: 1,
-            });
-            drawSystemPanel(panel, panelX + uv(7), panelY + uv(7), panelW - uv(14), panelH - uv(14), {
-                cut: uv(8), fill: SYSTEM.BG_PANEL, fillAlpha: 0,
-                border: SYSTEM.BORDER_DIM, borderAlpha: 0.34, borderWidth: 1,
-            });
+            const panel = UIAssets.createPanel(this, panelX, panelY, panelW, panelH, { variant: 'modal', depth: 219 });
             const innerShade = this.add.rectangle(cx, cy + uv(4), panelW - uv(118), panelH - uv(82), 0x02040a, 0.48)
                 .setDepth(219.2);
             const loadingIcon = this._addMenuIcon('icon_loading_core', cx, cy - uv(58), uv(46), 220, 0.98);
@@ -795,11 +765,6 @@ export class MenuScene extends Phaser.Scene {
                 stroke: '#02040a',
                 strokeThickness: 4,
             }).setOrigin(0.5).setDepth(220);
-            const status = this.add.text(cx, cy + uv(8), '[ GATE LINK · ASSET SYNC ]', {
-                fontSize: fs(9),
-                fontFamily: UI_FONT_MONO,
-                color: SYSTEM.TEXT_CYAN_DIM,
-            }).setOrigin(0.5).setDepth(220);
             const barW = Math.max(uv(160), panelW - uv(176));
             const barY = cy + uv(39);
             const barBg = this.add.rectangle(cx - barW / 2, barY, barW, uv(7), 0x061522, 0.98)
@@ -818,7 +783,6 @@ export class MenuScene extends Phaser.Scene {
             }).setOrigin(0.5).setDepth(220);
 
             this._fitText(loading, panelW - uv(120), uv(30));
-            this._fitText(status, panelW - uv(138), uv(18));
 
             const onProgress = (value) => {
                 const ratio = Phaser.Math.Clamp(value, 0, 1);
@@ -854,7 +818,6 @@ export class MenuScene extends Phaser.Scene {
                 if (innerShade.active) innerShade.destroy();
                 if (loadingIcon?.active) loadingIcon.destroy();
                 if (loading.active) loading.destroy();
-                if (status.active) status.destroy();
                 if (barBg.active) barBg.destroy();
                 if (barFill.active) barFill.destroy();
                 if (progress.active) progress.destroy();
@@ -1744,15 +1707,8 @@ export class MenuScene extends Phaser.Scene {
         const btnY = Math.ceil(12 / cssPerUnit);
         const depth = 50;
 
-        const triggerG = this.add.graphics().setDepth(depth);
-        const drawTrigger = (hover) => {
-            triggerG.clear();
-            drawSystemPanel(triggerG, btnX, btnY, btnW, btnH, {
-                cut: uv(6),
-                fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL, fillAlpha: 0.9,
-                border: SYSTEM.BORDER, borderAlpha: 0.85, borderWidth: 1,
-            });
-        };
+        const triggerG = UIAssets.createPanel(this, btnX, btnY, btnW, btnH, { variant: 'button', depth });
+        const drawTrigger = (hover) => triggerG.setUIState(hover ? 'hover' : 'normal');
         drawTrigger(false);
 
         const triggerHit = this.add.rectangle(btnX + btnW / 2, btnY + btnH / 2, btnW, btnH, 0x000000, 0)
@@ -1772,17 +1728,8 @@ export class MenuScene extends Phaser.Scene {
             const active = lang.code === LANG;
             const code = lang.code.toUpperCase();
 
-            const itemG = this.add.graphics().setDepth(depth + 2).setVisible(false);
-            const drawItem = (hover) => {
-                itemG.clear();
-                drawSystemPanel(itemG, btnX, itemY, btnW, btnH, {
-                    cut: uv(6),
-                    fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL, fillAlpha: 0.96,
-                    border: active ? SYSTEM.BORDER : SYSTEM.BORDER_DIM,
-                    borderAlpha: active ? 1 : 0.75,
-                    borderWidth: 1,
-                });
-            };
+            const itemG = UIAssets.createPanel(this, btnX, itemY, btnW, btnH, { variant: 'button', depth: depth + 2 }).setVisible(false);
+            const drawItem = (hover) => itemG.setUIState(active || hover ? 'hover' : 'normal');
             drawItem(false);
 
             const itemHit = this.add.rectangle(btnX + btnW / 2, itemY + btnH / 2, btnW, btnH, 0x000000, 0)
@@ -1859,26 +1806,9 @@ export class MenuScene extends Phaser.Scene {
         const bx = cx - boxW / 2;
         const by = cy - boxH / 2;
 
-        let boxFrame;
-        const useMasterFrame = this.textures.exists('ui_modal_master')
-            && Math.abs(boxW / Math.max(1, boxH) - 4 / 3) <= 0.22;
-        if (useMasterFrame) {
-            boxFrame = this._addBitmapPanel(bx, by, boxW, boxH, {
-                key: 'ui_modal_master',
-                alpha: 0.98,
-                depth: depth + 2,
-            });
-        } else {
-            boxFrame = this.add.graphics().setDepth(depth + 2);
-            drawSystemPanel(boxFrame, bx, by, boxW, boxH, {
-                cut: uv(14),
-                fill: SYSTEM.BG_DEEP,
-                fillAlpha: 0.985,
-                border: SYSTEM.BORDER,
-                borderAlpha: 0.95,
-                borderWidth: 1,
-            });
-        }
+        const boxFrame = UIAssets.createPanel(this, bx, by, boxW, boxH, {
+            depth: depth + 2, variant: 'modal',
+        });
         elements.push(boxFrame);
 
         const bodyShield = this.add.rectangle(cx, cy, boxW, boxH, 0x000000, 0)
@@ -1895,15 +1825,6 @@ export class MenuScene extends Phaser.Scene {
             strokeThickness: 4,
         }).setOrigin(0.5).setDepth(depth + 5);
         elements.push(title);
-
-        const hint = this.add.text(cx, by + (isShortLandscape ? 45 * px : uv(76)), 'SELECT HUNTER · ← → / ENTER', {
-            fontSize: isShortLandscape ? `${11 * px}px` : fs(11),
-            fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_BRIGHT,
-            stroke: '#02040a',
-            strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(depth + 5);
-        elements.push(hint);
 
         const characters = Object.values(CHARACTER_DEFS);
         const columns = isShortLandscape ? 5 : (isPortrait ? 2 : 3);
@@ -1926,8 +1847,7 @@ export class MenuScene extends Phaser.Scene {
         const redrawCard = (ref, hover = false) => {
             const selected = this.selectedCharacterId === ref.character.id;
             if (ref.bg) {
-                const key = selected || hover ? 'hunter_card_selected' : 'hunter_card_normal';
-                ref.bg.setTexture(key).setDisplaySize(ref.w, ref.h);
+                ref.bg.setTint(selected || hover ? 0xffffff : 0x9b94aa);
                 ref.bg.setAlpha(selected ? 1 : (hover ? 0.96 : 0.82));
             } else if (ref.g) {
                 ref.g.clear();
@@ -1965,8 +1885,8 @@ export class MenuScene extends Phaser.Scene {
             const rowStartX = cx - (cardW * rowCount + gap * (rowCount - 1)) / 2;
             const x = rowStartX + col * (cardW + gap);
             const y = cardAreaTop + row * (cardH + gap);
-            const bg = null;
-            const g = this.add.graphics().setDepth(depth + 4);
+            const bg = UIAssets.createPanel(this, x, y, cardW, cardH, { depth: depth + 4, variant: 'card' });
+            const g = null;
             const accentG = this.add.graphics().setDepth(depth + 5);
             const hit = this.add.rectangle(x + cardW / 2, y + cardH / 2, cardW, cardH, 0x000000, 0)
                 .setDepth(depth + 8)
@@ -2058,6 +1978,9 @@ export class MenuScene extends Phaser.Scene {
         closeBtn.on('pointerout', () => closeBtn.setColor(SYSTEM.TEXT_MUTED));
         closeBtn.on('pointerdown', closeAll);
         const closeHeight = Math.ceil(44 * GAME_WIDTH / Math.max(1, this.game.canvas.getBoundingClientRect().width));
+        const closeSkin = this.add.image(cx, closeBtn.y, 'ui_skin_button')
+            .setDisplaySize(Math.max(closeHeight * 3.2, closeBtn.width), closeHeight + 8 * px).setDepth(depth + 7);
+        elements.push(closeSkin);
         const closeHit = this.add.rectangle(cx, closeBtn.y, Math.max(closeHeight * 2.8, closeBtn.width), closeHeight, 0, 0)
             .setDepth(depth + 9).setInteractive({ useHandCursor: true });
         closeHit.on('pointerover', () => closeBtn.setColor(SYSTEM.TEXT_CYAN));
@@ -2230,23 +2153,7 @@ export class MenuScene extends Phaser.Scene {
         const contentBottom = closeBtnY - (isCrampedPortrait
             ? Math.min(uv(18), boxH * 0.025)
             : uv(isCrampedLandscape ? 8 : (isPortrait ? 30 : 26)));
-        let boxFrame;
-        const useMasterFrame = this.textures.exists('ui_modal_master')
-            && Math.abs(boxW / Math.max(1, boxH) - 4 / 3) <= 0.22;
-        if (useMasterFrame) {
-            boxFrame = this._addBitmapPanel(bx, by, boxW, boxH, {
-                key: 'ui_modal_master',
-                alpha: 0.98,
-                depth: depth + 1,
-            });
-        } else {
-            boxFrame = this.add.graphics().setDepth(depth + 1);
-            drawSystemPanel(boxFrame, bx, by, boxW, boxH, {
-                cut: uv(14),
-                fill: SYSTEM.BG_DEEP, fillAlpha: 0.985,
-                border: SYSTEM.BORDER_GOLD, borderWidth: 1,
-            });
-        }
+        const boxFrame = UIAssets.createPanel(this, bx, by, boxW, boxH, { variant: 'modal', depth: depth + 1 });
         elements.push(boxFrame);
 
         const bodyShield = this.add.rectangle(cx, cy, boxW, boxH, 0x000000, 0)
@@ -2265,17 +2172,6 @@ export class MenuScene extends Phaser.Scene {
         const titleY = isCrampedPortrait
             ? headerY + Math.min(uv(42), boxH * 0.075)
             : by + uv(isCrampedLandscape ? 72 : (isPortrait ? 144 : 128));
-        const headerTag = this.add.text(cx, headerY, '[ SYSTEM - RANKING ]', {
-            fontSize: fs(isCrampedLandscape || isCrampedPortrait ? 10 : (isPortrait ? 11 : 12)),
-            fontFamily: UI_FONT_MONO,
-            color: SYSTEM.TEXT_CYAN,
-            stroke: '#02040a',
-            strokeThickness: 3,
-            letterSpacing: 0,
-        }).setOrigin(0.5).setDepth(depth + 4);
-        this._fitText(headerTag, safeW * 0.82, uv(24));
-        elements.push(headerTag);
-
         const title = this.add.text(cx, titleY, t('hallOfFame'), {
             fontSize: fs(isCrampedLandscape || isCrampedPortrait ? 22 : (isPortrait ? 28 : 34)),
             fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_GOLD,
@@ -2357,15 +2253,7 @@ export class MenuScene extends Phaser.Scene {
         this.events.once('shutdown', stopContentTweens);
         const drawTab = (ref, hover = false) => {
             const selected = ref.character.id === activeCharacterId;
-            ref.g.clear();
-            drawSystemPanel(ref.g, ref.x, ref.y, ref.w, ref.h, {
-                cut: uv(6),
-                fill: selected || hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
-                fillAlpha: selected ? 0.98 : (hover ? 0.94 : 0.86),
-                border: selected ? ref.character.accent : (hover ? SYSTEM.BORDER : SYSTEM.BORDER_DIM),
-                borderAlpha: selected ? 1 : (hover ? 0.9 : 0.72),
-                borderWidth: selected ? 2 : 1,
-            });
+            ref.g.setTint(selected || hover ? 0xffffff : 0x9b94aa).setAlpha(selected || hover ? 1 : 0.88);
             ref.txt.setColor(selected ? ref.character.accentText : SYSTEM.TEXT_BRIGHT);
             ref.txt.setAlpha(selected ? 1 : (hover ? 0.96 : 0.74));
         };
@@ -2379,12 +2267,12 @@ export class MenuScene extends Phaser.Scene {
             const rowStartX = cx - (tabW * rowCount + tabGap * (rowCount - 1)) / 2;
             const x = rowStartX + col * (tabW + tabGap);
             const y = tabTop + row * (tabH + tabGap);
-            const g = this.add.graphics().setDepth(depth + 3);
+            const g = UIAssets.createPanel(this, x, y, tabW, tabH, { variant: 'button', depth: depth + 3 });
             const hit = this.add.rectangle(x + tabW / 2, y + tabH / 2, tabW, tabH, 0x000000, 0)
                 .setDepth(depth + 5)
                 .setInteractive({ useHandCursor: true });
             const txt = this.add.text(x + tabW / 2, y + tabH / 2, characterText.name, {
-                fontSize: fs(isPortrait ? 12 : (isCrampedLandscape ? 9 : 10)),
+                fontSize: `${11 / cssPerUnit}px`,
                 fontFamily: UI_FONT_KR,
                 fontStyle: 'bold',
                 color: SYSTEM.TEXT_BRIGHT,
@@ -2416,30 +2304,9 @@ export class MenuScene extends Phaser.Scene {
         elements.push(divG);
 
         const makeModalButton = (x, y, w, h, label, onClick) => {
-            const normalKey = this.textures.exists('start_button_secondary_wide')
-                ? 'start_button_secondary_wide'
-                : (this.textures.exists('start_button_secondary') ? 'start_button_secondary' : null);
-            const hoverKey = this.textures.exists('start_button_secondary_wide_hover')
-                ? 'start_button_secondary_wide_hover'
-                : (this.textures.exists('start_button_secondary_hover') ? 'start_button_secondary_hover' : normalKey);
-            const g = normalKey
-                ? this._addBitmapPanel(x, y, w, h, { key: normalKey, alpha: 0.9, depth: depth + 3 })
-                : this.add.graphics().setDepth(depth + 3);
-            const redraw = (hover) => {
-                if (g.setTexture) {
-                    g.setTexture(hover && hoverKey ? hoverKey : normalKey).setDisplaySize(w, h).setAlpha(hover ? 1 : 0.9);
-                    return;
-                }
-                g.clear();
-                drawSystemPanel(g, x, y, w, h, {
-                    cut: uv(6),
-                    fill: hover ? SYSTEM.BG_PANEL_HI : SYSTEM.BG_PANEL,
-                    fillAlpha: hover ? 0.98 : 0.88,
-                    border: SYSTEM.BORDER,
-                    borderAlpha: hover ? 1 : 0.78,
-                    borderWidth: hover ? 2 : 1,
-                });
-            };
+            const g = this.add.image(x + w / 2, y + h / 2, 'ui_skin_button')
+                .setDisplaySize(w, h).setDepth(depth + 3);
+            const redraw = (hover) => g.setTint(hover ? 0xffffff : 0xc4bdd2);
             redraw(false);
             const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
                 .setDepth(depth + 5)
@@ -2612,13 +2479,13 @@ export class MenuScene extends Phaser.Scene {
                         : Math.max(uv(120), contentBottom - startY);
                     const visibleRowBudget = Math.max(1, tableRankings.length);
                     const fittedRowH = (maxH - uv(4)) / Math.max(1, visibleRowBudget + 1);
-                    const rowH = isCrampedPortrait
+                    const rowH = Math.max(18 / cssPerUnit, isCrampedPortrait
                         ? Math.max(1, Math.min(uv(32), fittedRowH))
                         : Math.max(
                             uv(isPortrait ? 22 : 20),
                             Math.min(uv(isPortrait ? 36 : 32), fittedRowH)
-                        );
-                    const hStyle = { fontSize: fs(11), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN, stroke: '#02040a', strokeThickness: 2 };
+                        ));
+                    const hStyle = { fontSize: `${10 / cssPerUnit}px`, fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN, stroke: '#02040a', strokeThickness: 2 };
                     let y = startY;
                     const tableLeft = safeLeft + uv(isPortrait ? 12 : 18);
                     const tableRight = safeRight - uv(isPortrait ? 12 : 18);
@@ -2653,7 +2520,7 @@ export class MenuScene extends Phaser.Scene {
                         const colors = [SYSTEM.TEXT_GOLD, '#c8d0dc', '#d18b4a'];
                         const color = rankIndex < 3 ? colors[rankIndex] : SYSTEM.TEXT_BRIGHT;
                         const rankLabel = `#${String(rankIndex + 1).padStart(2, '0')}`;
-                        const fSize = fs(isPortrait ? 12 : Math.min(14, rowH * 0.6));
+                        const fSize = `${(isPortrait ? 12 : 11) / cssPerUnit}px`;
                         const bold = rankIndex < 3 ? 'bold' : 'normal';
                         if (i % 2 === 0) {
                             const rowG = trackContent(this.add.graphics().setDepth(depth + 2));

@@ -1,0 +1,50 @@
+/* Optical-glass controls, exported from the generated artwork. */
+body[data-game="lumen-shift"] .menu-screen .menu-command { width: min(380px,46%); margin-top: 40px; }
+body[data-game="lumen-shift"] .menu-screen .menu-actions { grid-template-columns: minmax(0,1fr); gap: 12px; }
+body[data-game="lumen-shift"] :is(.primary-button,.secondary-button,.submit-row button) { position: relative; isolation: isolate; background: none; color: #e8ffff; border: 0; border-radius: 0; box-shadow: none; clip-path: none; min-height: 60px; padding: 12px 26px; text-shadow: 0 2px 4px #001; font-weight: 750; overflow: visible; }
+body[data-game="lumen-shift"] :is(.primary-button,.secondary-button,.submit-row button)::before { content: ""; position: absolute; inset: -10px -4px; z-index: -1; background: url('../assets/ui/skin-button-v1.webp') center / 100% 100% no-repeat; pointer-events: none; transition: filter .16s; }
+body[data-game="lumen-shift"] .secondary-button::before { filter: saturate(.28) brightness(.74); }
+body[data-game="lumen-shift"] :is(.primary-button,.secondary-button)::after { display: none; }
+body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button) { min-height: 76px; padding: 12px 32px; background: none; border: 0; box-shadow: none; color: #ebffff; justify-content: center; }
+body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button)::before { inset: -10px -4px; width: auto; height: auto; opacity: 1; transform: none; animation: none; background: url('../assets/ui/skin-button-v1.webp') center / 100% 100% no-repeat; }
+body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button)::after { display: none; }
+body[data-game="lumen-shift"] .menu-screen .button-copy { font-size: 19px; letter-spacing: .07em; }
+body[data-game="lumen-shift"] :is(.icon-button,.touch-controls button,.control-drag-handle) { border: 7px solid transparent; border-image: url('../assets/ui/skin-panel-v1.webp') 180 fill / 7px stretch; background: none; border-radius: 0; box-shadow: none; color: #e1faff; }
+body[data-game="lumen-shift"] .touch-controls [data-action="drop"] { border-image-width: 9px; color: #c5ffff; }
+body[data-game="lumen-shift"] .touch-controls [data-action="rotate"] { color: #e5d3ff; }
+body[data-game="lumen-shift"] :is(.hud-main,.effect-stat) { position: relative; isolation: isolate; border-color: transparent; background: none; border-radius: 0; }
+body[data-game="lumen-shift"] :is(.hud-main,.effect-stat)::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 9px solid transparent; border-image: url('../assets/ui/skin-panel-v1.webp') 180 fill / 9px stretch; pointer-events: none; }
+body[data-game="lumen-shift"] .compact-screen, body[data-game="lumen-shift"] .result-screen { justify-content: center; padding: max(16px,var(--safe-top)) max(16px,var(--safe-right)) max(16px,var(--safe-bottom)) max(16px,var(--safe-left)); }
+.dialog-card { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(480px,100%); max-height: calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); padding: 28px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.dialog-card::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 24px solid transparent; border-image: url('../assets/ui/skin-panel-v1.webp') 180 fill / 24px stretch; pointer-events: none; }
+body[data-game="lumen-shift"] .dialog-card > :is(.menu-actions,.submit-row,.result-head,.ranking-list) { width: 100%; flex-shrink: 0; }
+body[data-game="lumen-shift"] .dialog-card .ranking-list { max-height: min(34dvh,300px); overflow-y: auto; }
+body[data-game="lumen-shift"] .dialog-card h2 { margin: 8px 0; }
+body[data-game="lumen-shift"] .dialog-card .result-head > span { display: none; }
+body[data-game="lumen-shift"] .dialog-card .submit-status:empty { display: none; }
+body[data-game="lumen-shift"] .dialog-card .result-head strong:empty { display: none; }
+@media (hover:hover) {
+  body[data-game="lumen-shift"] .primary-button:hover::before { filter: brightness(1.18); }
+  body[data-game="lumen-shift"] .secondary-button:hover::before { filter: saturate(.7) brightness(1.12); }
+}
+body[data-game="lumen-shift"] :is(.primary-button,.secondary-button):active { transform: translateY(2px); }
+@media (orientation:portrait) {
+  body[data-game="lumen-shift"] .menu-screen .menu-command { width: 100%; margin-top: 26px; }
+  body[data-game="lumen-shift"] .menu-screen .menu-lockup { text-align: center; }
+}
+@media (orientation:landscape) and (max-height:650px) {
+  body[data-game="lumen-shift"] .menu-screen .menu-command { width: min(340px,52%); margin-top: 24px; }
+  body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button) { min-height: 58px; }
+  body[data-game="lumen-shift"] .menu-screen .button-copy { font-size: 16px; }
+}
+@media (orientation:landscape) and (max-height:380px) {
+  body[data-game="lumen-shift"] .menu-screen .menu-actions { gap: 4px; }
+  body[data-game="lumen-shift"] .menu-screen .menu-command { margin-top: 18px; }
+  body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button) { min-height: 52px; }
+}
+@media (max-height:500px) {
+  .dialog-card { padding: 18px 24px; gap: 12px; }
+  body[data-game="lumen-shift"] .dialog-card .ranking-list { max-height: 120px; min-height: 75px; }
+}
+@media (max-width:380px) { .dialog-card { padding-inline: 18px; } body[data-game="lumen-shift"] .menu-screen :is(.primary-button,.secondary-button) { min-height: 68px; } }
+@media (prefers-reduced-motion:reduce) { body[data-game="lumen-shift"] button::before { transition: none; } }
