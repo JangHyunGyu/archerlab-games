@@ -38,6 +38,7 @@
       "tests": [
         "node school-zombie-defense/tests/core-modules.test.cjs",
         "node school-zombie-defense/tests/ui-surfaces.test.cjs",
+        "node --test school-zombie-defense/tests/shop-flow.test.cjs",
         "node school-zombie-defense/tests/defender-actions.test.cjs",
         "node school-zombie-defense/tests/allied-polish.test.cjs",
         "node school-zombie-defense/tests/zombie-death-placement.test.cjs",

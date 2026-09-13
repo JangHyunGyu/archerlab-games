@@ -3085,6 +3085,7 @@
         if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
           return;
         }
+        if (this.mode === "shop" && target?.closest?.(".school-shop")) return;
         const code = event.code;
         const consume = () => {
           event.preventDefault();
@@ -3099,7 +3100,8 @@
           }
           if (this.mode === "shop" || this.mode === "ranking") {
             consume();
-            this.showMenu();
+            if (this.shopUI?.isOpen()) this.shopUI.close();
+            else this.showMenu();
             return;
           }
         }
@@ -3190,6 +3192,14 @@
         }
       });
       const justPressed = (index) => pressed.has(index) && !this.gamepadButtons.has(index);
+      if (this.mode === "shop" && this.shopUI) {
+        if (justPressed(1)) this.shopUI.gamepad("back");
+        else if (justPressed(0)) this.shopUI.gamepad("accept");
+        else if (justPressed(12) || justPressed(14)) this.shopUI.gamepad("previous");
+        else if (justPressed(13) || justPressed(15)) this.shopUI.gamepad("next");
+        this.gamepadButtons = pressed;
+        return;
+      }
       if (justPressed(9) && (this.mode === "playing" || this.mode === "paused")) {
         this.playSfx("pause", 0.72);
         this.togglePause();
@@ -4460,6 +4470,10 @@
 
     showToast(message, color = COLORS.gold) {
       announceGameStatus(message);
+      if (this.mode === "shop" && this.shopUI) {
+        this.shopUI.notify(message);
+        return;
+      }
       const panel = this.trackTransient(this.addSurfaceImage(270, 158, 330, 48)
         .setDepth(430));
       const text = this.trackTransient(this.add.text(270, 158, message, {
@@ -4486,88 +4500,14 @@
     }
 
     showShopActionLoading(message = "처리 중") {
-      if (this.disposed || this.mode !== "shop") {
-        return;
-      }
-      this.clearShopActionLoading();
+      if (this.disposed || this.mode !== "shop") return;
       this.shopActionInFlight = true;
-      const depth = 590;
-      const objects = [];
-      const blocker = this.add.rectangle(270, 480, 540, 960, 0x010204, 0.44)
-        .setDepth(depth)
-        .setInteractive();
-      blocker.on("pointerdown", () => {});
-      const shadow = this.add.ellipse(270, 536, 320, 78, 0x000000, 0.42)
-        .setDepth(depth + 1);
-      const panel = this.addSurfaceImage(270, 462, 330, 176)
-        .setDepth(depth + 2);
-      const scan = this.add.rectangle(270, 384, 48, 2, UI_COLORS.amber, 0.7)
-        .setDepth(depth + 3);
-      const label = this.add.text(270, 438, message, {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 22,
-        fontStyle: "900",
-        color: "#eee6d2",
-        stroke: "#050607",
-        strokeThickness: 5
-      }).setOrigin(0.5).setDepth(depth + 4);
-      const dots = [0, 1, 2].map((index) => this.add.circle(246 + index * 24, 480, 7, UI_COLORS.amber, 0.82)
-        .setDepth(depth + 4));
-      const barBack = this.add.rectangle(270, 522, 226, 8, 0x05090d, 0.82)
-        .setStrokeStyle(1, UI_COLORS.steel, 0.45)
-        .setDepth(depth + 4);
-      const bar = this.add.rectangle(176, 522, 62, 6, COLORS.gold, 0.94)
-        .setOrigin(0, 0.5)
-        .setDepth(depth + 5);
-      objects.push(blocker, shadow, panel, scan, label, ...dots, barBack, bar);
-      this.shopLoadingObjects = objects;
-      this.overlayObjects.push(...objects);
-      this.shopLoadingTweens = this.reducedMotion ? [] : [
-        this.tweens.add({
-          targets: dots,
-          scale: { from: 0.72, to: 1.18 },
-          alpha: { from: 0.38, to: 1 },
-          duration: 460,
-          yoyo: true,
-          repeat: -1,
-          ease: "Sine.easeInOut"
-        }),
-        this.tweens.add({
-          targets: bar,
-          x: 302,
-          duration: 860,
-          yoyo: true,
-          repeat: -1,
-          ease: "Sine.easeInOut"
-        }),
-        this.tweens.add({
-          targets: scan,
-          alpha: { from: 0.35, to: 1 },
-          duration: 620,
-          yoyo: true,
-          repeat: -1,
-          ease: "Sine.easeInOut"
-        })
-      ];
+      this.shopUI?.setBusy(message);
     }
 
     clearShopActionLoading() {
-      if (this.shopLoadingTweens?.length) {
-        this.shopLoadingTweens.forEach((tween) => {
-          if (tween && typeof tween.stop === "function") {
-            tween.stop();
-          }
-        });
-      }
-      this.shopLoadingTweens = [];
-      const objects = this.shopLoadingObjects || [];
-      if (objects.length) {
-        const removeSet = new Set(objects);
-        this.overlayObjects = this.overlayObjects.filter((item) => !removeSet.has(item));
-        objects.forEach((item) => this.destroyGameObject(item));
-      }
-      this.shopLoadingObjects = [];
       this.shopActionInFlight = false;
+      this.shopUI?.setBusy("");
     }
 
     getStoredRankName() {
@@ -5477,114 +5417,58 @@
       const enteringShop = this.mode !== "shop";
       this.clearOverlay();
       this.mode = "shop";
-      announceGameStatus("암시장 정비소. 캐릭터와 강화를 선택할 수 있습니다. Escape 또는 게임패드 B로 돌아갑니다.");
+      announceGameStatus("암시장 정비소. 캐릭터 정비 버튼을 누르면 정비창이 열립니다. Escape 또는 게임패드 B로 돌아갑니다.");
       this.startBgm("menu");
-      if (enteringShop) {
-        this.playSfx("shop_open", 0.82);
-      }
-      const needsProfileSync = !this.profileReady;
-      if (needsProfileSync) {
+      if (enteringShop) this.playSfx("shop_open", 0.82);
+      this.shopSelectedCharacter = SHOP_CHARACTERS.find((character) => character.id === selectedId)?.id || "c";
+      this.overlayObjects.push(this.add.image(270, 480, "shop-blackmarket").setDisplaySize(540, 960).setDepth(500));
+      const shopUI = window.SchoolZombieShop.create({
+        host: document.getElementById("game-shell"),
+        getView: () => this.getShopView(),
+        onSelect: (id) => {
+          this.shopSelectedCharacter = id;
+          this.playSfx("button", 0.7);
+        },
+        onBuy: (id) => this.buyShopUpgrade(id),
+        onReset: () => this.resetShopUpgrades(),
+        onExit: () => this.showMenu()
+      });
+      this.shopUI = shopUI;
+      // A late profile response refreshes the balance without opening the dialog.
+      if (!this.profileReady) {
         this.ensureServerProfile({ quiet: true }).then(() => {
-          if (!this.disposed && this.mode === "shop") {
-            this.showShop(this.shopSelectedCharacter);
-          }
+          if (!this.disposed && this.shopUI === shopUI) shopUI.refresh();
         }).catch(() => {
-          if (!this.disposed && this.mode === "shop") {
-            this.clearShopActionLoading();
-            this.showToast("프로필 동기화 실패", COLORS.red);
-          }
+          if (!this.disposed && this.shopUI === shopUI) shopUI.notify("프로필 동기화 실패. 잠시 후 다시 시도하세요.");
         });
-      }
-      const selectedCharacter = SHOP_CHARACTERS.find((character) => character.id === selectedId) || SHOP_CHARACTERS[0];
-      this.shopSelectedCharacter = selectedCharacter.id;
-      const items = this.overlayObjects;
-      items.push(this.add.image(270, 480, "shop-blackmarket").setDisplaySize(540, 960).setDepth(500));
-      items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.42).setDepth(501));
-      const shopHeader = this.addOverlayHeader({
-        y: 96,
-        title: "암시장 정비소",
-        kicker: "FIELD ARMORY · PERMANENT UPGRADES",
-        subtitle: `보유 보급 $${this.meta.coins} · 캐릭터별 최대 Lv.${SHOP_MAX_LEVEL}`,
-        accent: COLORS.gold,
-        depth: 502
-      });
-
-      items.push(this.add.text(270, 304, "정비할 캐릭터 선택 · 탭하여 전환", {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 17,
-        fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0.5).setDepth(521));
-      SHOP_CHARACTERS.forEach((character, index) => {
-        const col = index % 4;
-        const row = Math.floor(index / 4);
-        this.addShopCharacterButton(character, 78 + col * 128, 372 + row * 104, character.id === selectedCharacter.id);
-      });
-      items.push(this.addSurfaceImage(270, 548, 430, 36).setDepth(520));
-      items.push(this.add.text(270, 548, `${selectedCharacter.name} · ${selectedCharacter.weapon} 정비`, {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 20,
-        fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0.5).setDepth(521));
-      this.getCharacterShopUpgrades(selectedCharacter.id).forEach((upgrade, index) => this.addShopUpgradeCard(upgrade, selectedCharacter, 270, 628 + index * 108));
-      const resetRefund = this.getShopResetRefund();
-      this.addTacticalMenuButton(166, 924, 236, 48, resetRefund > 0 ? `초기화 +$${formatShopCost(resetRefund)}` : "강화 초기화", 560, () => this.resetShopUpgrades(), resetRefund > 0 ? COLORS.red : 0x5b646b, {
-        compact: true,
-        fontSize: 15,
-        visualHeight: 44,
-        hitHeight: 76
-      });
-      this.addTacticalMenuButton(402, 924, 164, 48, "뒤로", 560, () => this.showMenu(), COLORS.gold, {
-        compact: true,
-        fontSize: 16,
-        visualHeight: 44,
-        hitHeight: 76
-      });
-      this.animateOverlayEntrance(shopHeader.objects, 40, 16, 340);
-      if (needsProfileSync) {
-        this.showShopActionLoading("프로필 동기화 중");
       }
     }
 
-    addShopCharacterButton(character, x, y, selected) {
-      const accent = fieldAccent(character.accent || COLORS.gold);
-      const objects = [];
-      objects.push(...this.addCommandPanel(x, y, 100, 94, 522, selected ? COLORS.gold : accent, {
-        fill: selected ? UI_COLORS.panelHover : UI_COLORS.panel, alpha: 0.94, track: false
-      }).objects);
-      objects.push(this.add.rectangle(x, y - 20, 56, 56, UI_COLORS.void, 0.9).setStrokeStyle(1, UI_COLORS.steel, 0.5).setDepth(523));
-      if (selected) objects.push(this.add.rectangle(x, y - 46, 60, 3, UI_COLORS.amber, 1).setDepth(524));
-      objects.push(this.add.image(x, y - 20, character.portrait).setDisplaySize(52, 52).setDepth(524));
-      objects.push(this.add.text(x, y + 17, character.weapon, {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 15,
-        fontStyle: "800",
-        color: selected ? "#eee6d2" : "#c6c4b5",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0.5).setDepth(524));
-      objects.push(this.add.text(x, y + 36, this.getCharacterTotalUpgradeLevel(character.id), {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 12,
-        fontStyle: "800",
-        color: "#d5b675",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0.5).setDepth(524));
-      const hit = this.add.rectangle(x, y, 94, 106, 0x000000, 0).setDepth(526);
-      hit.setInteractive({ useHandCursor: true });
-      hit.on("pointerdown", () => {
-        if (this.shopActionInFlight) {
-          return;
-        }
-        this.showShop(character.id);
-      });
-      [...objects, hit].forEach((item) => this.overlayObjects.push(item));
+    getShopView() {
+      const selected = SHOP_CHARACTERS.find((character) => character.id === this.shopSelectedCharacter) || SHOP_CHARACTERS[0];
+      return {
+        coins: formatShopCost(this.meta.coins),
+        maxLevel: SHOP_MAX_LEVEL,
+        selectedId: selected.id,
+        selectedName: selected.name,
+        weapon: selected.weapon,
+        refund: this.getShopResetRefund(),
+        characters: SHOP_CHARACTERS.map((character) => ({
+          id: character.id, name: character.name, weapon: character.weapon,
+          portrait: imageAsset(`assets/images/${character.portrait}.png`),
+          total: this.getCharacterTotalUpgradeLevel(character.id)
+        })),
+        upgrades: this.getCharacterShopUpgrades(selected.id).map((upgrade) => {
+          const level = this.getMetaUpgradeLevel(upgrade.id);
+          const cost = getShopUpgradeCost(level);
+          return {
+            id: upgrade.id, title: upgrade.title, part: upgrade.part,
+            stats: this.getShopUpgradeStatText(upgrade, level), level,
+            cost: formatShopCost(cost), maxed: level >= SHOP_MAX_LEVEL,
+            canAfford: this.meta.coins >= cost
+          };
+        })
+      };
     }
 
     getCharacterShopUpgrades(characterId) {
@@ -5641,69 +5525,7 @@
       return `${this.getShopUpgradeEffectLine(upgrade.id, level)}\n다음: ${this.getShopUpgradeEffectLine(upgrade.id, level + 1)}`;
     }
 
-    addShopUpgradeCard(upgrade, character, x, y) {
-      const level = this.getMetaUpgradeLevel(upgrade.id);
-      const cost = getShopUpgradeCost(level);
-      const maxed = level >= SHOP_MAX_LEVEL;
-      const canAfford = this.meta.coins >= cost;
-      const accent = fieldAccent(character.accent || COLORS.gold);
-      const objects = [];
-      objects.push(...this.addCommandPanel(x, y, 468, 104, 520, accent, { track: false, alpha: 0.96 }).objects);
-      objects.push(this.add.rectangle(x, y + 45, 444, 1, accent, 0.22).setDepth(521));
-      objects.push(this.add.rectangle(x - 198, y - 8, 68, 68, UI_COLORS.void, 0.78).setStrokeStyle(1, UI_COLORS.steel, 0.55).setDepth(522));
-      objects.push(this.add.image(x - 198, y - 8, upgrade.icon).setDisplaySize(62, 62).setDepth(523));
-      objects.push(this.add.text(x - 144, y - 31, upgrade.title, {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 20,
-        fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0, 0.5).setDepth(523));
-      objects.push(this.add.text(x - 144, y - 5, upgrade.part || "정비 부품", {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 14,
-        fontStyle: "800",
-        color: "#b4b2a0",
-        stroke: "#050607",
-        strokeThickness: 1,
-        wordWrap: { width: 228, useAdvancedWrap: true }
-      }).setOrigin(0, 0.5).setDepth(523));
-      objects.push(this.add.text(x - 144, y + 26, this.getShopUpgradeStatText(upgrade, level), {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 14,
-        fontStyle: "800",
-        color: "#d5b675",
-        align: "left",
-        lineSpacing: 1,
-        wordWrap: { width: 228, useAdvancedWrap: true }
-      }).setOrigin(0, 0.5).setDepth(523));
-      objects.push(this.add.text(x + 158, y - 34, `Lv.${level}/${SHOP_MAX_LEVEL}`, {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 14,
-        fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0.5).setDepth(523));
-      const progressSegments = 10;
-      const filledSegments = Math.ceil(level / (SHOP_MAX_LEVEL / progressSegments));
-      for (let i = 0; i < progressSegments; i += 1) {
-        objects.push(this.add.rectangle(x + 95 + i * 14, y - 12, 11, 8, i < filledSegments ? accent : 0x494d3e, i < filledSegments ? 0.95 : 0.72)
-          .setStrokeStyle(1, 0x000000, 0.35)
-          .setDepth(523));
-      }
-      this.overlayObjects.push(...objects);
-      const label = maxed ? "MAX" : `$${formatShopCost(cost)}`;
-      this.addTacticalMenuButton(x + 154, y + 26, 118, 46, label, 524, () => this.buyShopUpgrade(upgrade.id), maxed ? 0x5b646b : canAfford ? COLORS.gold : 0x6f3333, {
-        compact: true,
-        fontSize: 18,
-        visualHeight: 44,
-        primary: canAfford && !maxed,
-        disabled: maxed,
-        hitHeight: 76
-      });
-    }
+
 
     async buyShopUpgrade(id) {
       if (this.shopActionInFlight) {
@@ -5714,16 +5536,17 @@
       if (!upgrade) {
         return;
       }
+      const shopUI = this.shopUI;
       this.unlockAudio();
-      if (!this.profileReady) {
-        this.showShopActionLoading("프로필 동기화 중");
-      }
+      this.showShopActionLoading(this.profileReady ? "강화 구매 중" : "프로필 동기화 중");
       try {
         await this.ensureServerProfile();
       } catch (error) {
+        if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         return;
       }
+      if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
       this.clearShopActionLoading();
       const level = this.getMetaUpgradeLevel(id);
       if (level >= SHOP_MAX_LEVEL) {
@@ -5740,16 +5563,19 @@
       this.showShopActionLoading("강화 구매 중");
       try {
         const result = await this.postProfileAction("/school-zombie/profile/buy-upgrade", { upgrade_id: id });
+        if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
+        this.clearShopActionLoading();
         this.playSfx("purchase");
-        this.showShop(character.id);
+        shopUI?.refresh();
         this.showToast(`${upgrade.title} Lv.${result.level || level + 1}`, character.accent);
       } catch (error) {
+        if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         this.playSfx("core", 0.65);
         this.showToast("구매 처리 실패", COLORS.red);
         this.ensureServerProfile({ force: true, quiet: true }).then(() => {
-          if (!this.disposed && this.mode === "shop") {
-            this.showShop(character.id);
+          if (!this.disposed && this.shopUI === shopUI && this.mode === "shop") {
+            shopUI?.refresh();
           }
         }).catch(() => {});
       }
@@ -5761,138 +5587,29 @@
         .reduce((sum, id) => sum + getShopUpgradeRefund(meta.upgrades[id]), 0);
     }
 
-    closeShopResetNoticeLayer() {
-      const objects = this.shopResetNoticeObjects || [];
-      objects.forEach((item) => this.destroyGameObject(item));
-      if (objects.length > 0) {
-        const removeSet = new Set(objects);
-        this.overlayObjects = this.overlayObjects.filter((item) => !removeSet.has(item));
-      }
-      this.shopResetNoticeObjects = null;
-    }
-
     showShopResetNoticeLayer() {
-      this.closeShopResetNoticeLayer();
-      const objects = [];
-      const depth = 590;
-      const close = () => this.closeShopResetNoticeLayer();
-
-      const blocker = this.add.rectangle(270, 480, 540, 960, 0x010204, 0.58)
-        .setDepth(depth)
-        .setInteractive();
-      blocker.on("pointerdown", () => {});
-      const shadow = this.add.ellipse(270, 552, 330, 92, 0x000000, 0.44)
-        .setDepth(depth + 1);
-      const panel = this.addSurfaceImage(270, 474, 372, 276)
-        .setDepth(depth + 2);
-      const topLine = this.add.rectangle(270, 374, 48, 2, UI_COLORS.amber, 0.65)
-        .setDepth(depth + 3);
-      const title = this.add.text(270, 414, "초기화할 강화가 없습니다", {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 24,
-        fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#050607",
-        strokeThickness: 1,
-        align: "center"
-      }).setOrigin(0.5).setDepth(depth + 4);
-      const body = this.add.text(270, 480, "상점에서 구매한 강화가 있을 때만\n강화 초기화를 사용할 수 있습니다.\n강화를 구매한 뒤 다시 시도하세요.", {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 16,
-        fontStyle: "800",
-        color: "#c6c4b5",
-        stroke: "#050607",
-        strokeThickness: 1,
-        align: "center",
-        lineSpacing: 6,
-        wordWrap: { width: 318, useAdvancedWrap: true }
-      }).setOrigin(0.5).setDepth(depth + 4);
-
-      objects.push(blocker, shadow, panel, topLine, title, body);
-      const button = this.addOverlayButton(270, 586, 160, 44, "확인", depth + 5, close, COLORS.gold);
-      objects.push(...Object.values(button));
-      this.shopResetNoticeObjects = objects;
-      objects.forEach((item) => {
-        if (!this.overlayObjects.includes(item)) {
-          this.overlayObjects.push(item);
-        }
-      });
+      this.shopUI?.confirmReset(0, () => {});
     }
 
     showShopResetConfirmLayer(refund) {
-      this.closeShopResetNoticeLayer();
-      const objects = [];
-      const depth = 590;
-      const close = () => this.closeShopResetNoticeLayer();
-      const confirm = () => {
-        close();
-        this.resetShopUpgrades(true);
-      };
-      const blocker = this.add.rectangle(270, 480, 540, 960, 0x010204, 0.72)
-        .setDepth(depth)
-        .setInteractive();
-      blocker.on("pointerdown", () => {});
-      const panel = this.addCommandPanel(270, 480, 414, 356, depth + 1, COLORS.red, {
-        alpha: 0.96,
-        track: false
-      });
-      const kicker = this.add.text(270, 365, "RESET ALL UPGRADES", {
-        resolution: 2, fontFamily: "Arial, sans-serif",
-        fontSize: 11,
-        fontStyle: "800",
-        color: "#ff9b94"
-      }).setOrigin(0.5).setDepth(depth + 3);
-      const title = this.add.text(270, 406, "모든 강화를 초기화할까요?", {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 25,
-        fontStyle: "800",
-        color: "#eee6d2",
-        stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0.5).setDepth(depth + 3);
-      const body = this.add.text(270, 468, `구매한 영구 강화가 모두 사라지고\n보급 $${formatShopCost(refund)}이 반환됩니다.`, {
-        resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
-        fontSize: 16,
-        fontStyle: "800",
-        color: "#c6c4b5",
-        stroke: "#050607",
-        strokeThickness: 1,
-        align: "center",
-        lineSpacing: 7
-      }).setOrigin(0.5).setDepth(depth + 3);
-      objects.push(blocker, ...panel.objects, kicker, title, body);
-      const cancelButton = this.addTacticalMenuButton(164, 570, 180, 62, "취소", depth + 4, close, COLORS.blue, {
-        hitHeight: 76,
-        fontSize: 18
-      });
-      const confirmButton = this.addTacticalMenuButton(376, 570, 180, 62, "초기화", depth + 4, confirm, COLORS.red, {
-        hitHeight: 76,
-        fontSize: 18
-      });
-      objects.push(...Object.values(cancelButton), ...Object.values(confirmButton));
-      this.shopResetNoticeObjects = objects;
-      objects.forEach((item) => {
-        if (item && !this.overlayObjects.includes(item)) {
-          this.overlayObjects.push(item);
-        }
-      });
-      this.animateOverlayEntrance([...panel.objects, kicker, title, body, ...Object.values(cancelButton), ...Object.values(confirmButton)], 30, 16, 320);
+      this.shopUI?.confirmReset(refund, () => this.resetShopUpgrades(true));
     }
 
     async resetShopUpgrades(confirmed = false) {
       if (this.shopActionInFlight) {
         return;
       }
+      const shopUI = this.shopUI;
       this.unlockAudio();
-      if (!this.profileReady) {
-        this.showShopActionLoading("프로필 동기화 중");
-      }
+      this.showShopActionLoading(this.profileReady ? "강화 확인 중" : "프로필 동기화 중");
       try {
         await this.ensureServerProfile();
       } catch (error) {
+        if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         return;
       }
+      if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
       this.clearShopActionLoading();
       const refund = this.getShopResetRefund();
       if (refund <= 0) {
@@ -5907,16 +5624,19 @@
       this.showShopActionLoading("강화 초기화 중");
       try {
         const result = await this.postProfileAction("/school-zombie/profile/reset-upgrades");
+        if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
+        this.clearShopActionLoading();
         this.playSfx("coin");
-        this.showShop(this.shopSelectedCharacter);
+        shopUI?.refresh();
         this.showToast(`강화 초기화 +$${formatShopCost(result.refund || refund)}`, COLORS.gold);
       } catch (error) {
+        if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         this.playSfx("core", 0.65);
         this.showToast("초기화 처리 실패", COLORS.red);
         this.ensureServerProfile({ force: true, quiet: true }).then(() => {
-          if (!this.disposed && this.mode === "shop") {
-            this.showShop(this.shopSelectedCharacter);
+          if (!this.disposed && this.shopUI === shopUI && this.mode === "shop") {
+            shopUI?.refresh();
           }
         }).catch(() => {});
       }
@@ -10912,6 +10632,8 @@
     }
 
     clearOverlay() {
+      this.shopUI?.destroy();
+      this.shopUI = null;
       this.removeRankPrepLayer();
       this.removeRankNameLayer();
       this.clearShopActionLoading();
