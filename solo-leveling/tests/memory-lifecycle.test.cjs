@@ -39,7 +39,7 @@ assert.equal(
 );
 assert.match(
   indexSource,
-  /js\/main\.js\?v=20260913-immersive-v1/,
+  /js\/main\.js\?v=20260913-immersive-v2/,
   "the deployed entry point must invalidate cached game modules"
 );
 assert.match(

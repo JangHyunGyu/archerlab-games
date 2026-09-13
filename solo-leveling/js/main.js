@@ -2,7 +2,7 @@
 import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { PreloadScene } from './scenes/PreloadScene.js?v=20260913-crafted-ui-v1';
-import { MenuScene } from './scenes/MenuScene.js?v=20260913-immersive-v1';
+import { MenuScene } from './scenes/MenuScene.js?v=20260913-immersive-v2';
 import { GameScene } from './scenes/GameScene.js?v=20260913-crafted-ui-v1&ranking=20260913-v1';
 import { LevelUpScene } from './scenes/LevelUpScene.js?v=20260913-crafted-ui-v1';
 import { GameOverScene } from './scenes/GameOverScene.js?v=20260904-continuation-rank-v1&ranking=20260913-v1';

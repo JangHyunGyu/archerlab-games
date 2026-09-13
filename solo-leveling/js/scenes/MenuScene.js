@@ -365,6 +365,7 @@ export class MenuScene extends Phaser.Scene {
         this._createLanguageDropdown(layout.portrait);
         let focusIndex = hasSave ? 1 : 0;
         const onMenuKey = (event) => {
+            if (event.target?.closest?.('a, button, input, select, textarea, [contenteditable]')) return;
             if (this._startingGame || this._characterSelectOpen || this._modalElements.some(el => el.active)) return;
             if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) return;
             event.preventDefault();
@@ -1954,6 +1955,7 @@ export class MenuScene extends Phaser.Scene {
 
         let focusedCard = Math.max(0, characters.findIndex(character => character.id === this.selectedCharacterId));
         const onSelectKey = (event) => {
+            if (event.target?.closest?.('a, button, input, select, textarea, [contenteditable]')) return;
             if (!this._characterSelectOpen || this._startingGame) return;
             if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(event.key)) return;
             event.preventDefault();
@@ -2326,6 +2328,7 @@ export class MenuScene extends Phaser.Scene {
         };
 
         const onRankingKey = (event) => {
+            if (event.target?.closest?.('a, button, input, select, textarea, [contenteditable]')) return;
             if (event.key === 'Escape') {
                 event.preventDefault();
                 closeAll();
