@@ -28,7 +28,7 @@ The current score validators, profile ownership checks, deterministic board repl
 - `npm run test:ranking`: real SQLite transaction tests with injected database outages, mid-transaction errors, lost commit responses, object restart, out-of-order delivery, duplicate submissions, wrong payloads, browser reload, storage quota failures, two tabs and aborts.
 - `npm test`: all nine game targets, shared runtime/API checks and asset checks. Lumen Shift also checks submission after an empty successful flush.
 - Local Wrangler runtime plus browser: offline score, queued nickname, reload, reconnect and confirmed ranking; responsive notice at small/large phone, landscape, tablet and desktop widths; dynamic reduced viewport height and keyboard dismissal.
-- Deploy `migrations/ranking-delivery.sql` before `game-api-entry.js` using `wrangler.game-api.toml`. The GitHub deployment workflow performs this order and runs the recovery tests first.
+- Run the one-time additive archival migration with `npx wrangler d1 execute archerlab_db --remote --config wrangler.game-api.toml --file migrations/ranking-delivery.sql` before the initial Worker deployment. This was applied to production on 2026-09-13. The Worker also creates missing delivery tables at runtime. The GitHub deployment workflow runs the recovery tests and deploys the Worker; its restricted deployment token does not need D1 import permission or rerun the archival migration on every push.
 - Worker logs use `ranking_delivery_retry`, `ranking_delivery_database_unavailable`, `ranking_delivery_review` and `ranking_delivery_unavailable`. Request IDs and game IDs identify failures without logging player names or profile secrets.
 
 ## Practical limits
