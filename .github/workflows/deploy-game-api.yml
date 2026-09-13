@@ -7,7 +7,9 @@ on:
       - main
     paths:
       - game-api-worker.js
+      - game-api-entry.js
       - wrangler.game-api.toml
+      - migrations/ranking-delivery.sql
       - .github/workflows/deploy-game-api.yml
 
 jobs:
@@ -17,9 +19,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:ranking
+
       - name: Deploy worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          wranglerVersion: 4.103.0
-          command: deploy --config wrangler.game-api.toml
+          wranglerVersion: 4.131.1
+          command: |
+            d1 execute archerlab_db --remote --config wrangler.game-api.toml --file migrations/ranking-delivery.sql
+            deploy --config wrangler.game-api.toml

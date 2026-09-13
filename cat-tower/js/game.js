@@ -333,6 +333,7 @@
   function normalizeRankScoreEvent(event) {
     if (!event || typeof event !== 'object') return null;
     const normalized = { type: String(event.type || 'merge') };
+    if (event._delivery_id) normalized._delivery_id = event._delivery_id;
     ['created_tier', 'tier_created', 'tier', 'combo', 'delta', 'seq'].forEach((key) => {
       const value = toRankEventInteger(event[key]);
       if (value !== null) normalized[key] = value;
@@ -417,6 +418,7 @@
     if (!normalized) return;
     if (!Number.isFinite(normalized.seq)) normalized.seq = rankNextEventSeq++;
     else rankNextEventSeq = Math.max(rankNextEventSeq, normalized.seq + 1);
+    window.ArcherRanking?.track(GAME_ID, normalized, rankSessionId);
     rankEventQueue.push(normalized);
     markSaveDirty();
     flushRankEvents();
@@ -1600,19 +1602,19 @@
     status.textContent = tt('over.submitting');
     setRankSubmitLoading(true);
     try {
-      let synced = await flushRankEvents();
-      if (!synced && !rankSyncFailed) {
-        await delay(1200);
-        synced = await flushRankEvents();
+      let res;
+      if (window.ArcherRanking) {
+        rankEventQueue.forEach(event => window.ArcherRanking.track(GAME_ID, event, rankSessionId));
+        res = await window.ArcherRanking.submit({ game_id: GAME_ID, player_name: name,
+          score, session_id: rankSessionId, extra_data: { session_id: rankSessionId } });
+      } else {
+        const synced = await flushRankEvents();
+        if (!rankSessionId || !synced || rankSyncFailed) throw new Error('rank score sync failed');
+        res = await submitScore(name, score);
       }
-      if (!rankSessionId || !synced || rankSyncFailed) throw new Error('rank score sync failed');
-      const rankingScore = Number.isFinite(rankVerifiedScore) && rankVerifiedScore > 0
-        ? rankVerifiedScore
-        : score;
-      const res = await submitScore(name, rankingScore);
       try { localStorage.setItem(NICK_KEY, name); } catch {}
       status.className = 'submit-status ok';
-      status.textContent = tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');
+      status.textContent = res?.pending ? '기록을 보관했어요. 연결되면 자동으로 등록합니다.' : tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');
       setRankSubmitLoading(false);
       log(`랭킹 등록 성공: ${name} = ${score} rank=${res && res.rank}`);
     } catch (e) {

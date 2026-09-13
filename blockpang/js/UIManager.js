@@ -2707,9 +2707,11 @@ class UIManager {
             setSubmitStatus('');
             setSubmitting(true);
             try {
-                localStorage.setItem('blockpang_player_name', name);
-                synced = await this.game.flushRankEvents();
-                if (!this.game.rankSessionId || !synced || this.game.rankSyncFailed) throw new Error('rank score sync failed');
+                try { localStorage.setItem('blockpang_player_name', name); } catch (_) {}
+                if (!window.ArcherRanking) {
+                    synced = await this.game.flushRankEvents();
+                    if (!this.game.rankSessionId || !synced || this.game.rankSyncFailed) throw new Error('rank score sync failed');
+                }
                 const response = await fetch(`${GAME_API_URL}/rankings`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

@@ -267,6 +267,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     async _syncRankProgress(force = false) {
+        const deliveryScore = Math.max(0, Math.floor((this.enemyManager?.getGameTime?.() || 0) / 1000));
+        const deliveryEvent = this._getRankProgressEvent(deliveryScore);
+        if (!this._rankSyncDisabled && deliveryScore > 0) {
+            window.ArcherRanking?.track(this._getRankGameId(), deliveryEvent, this._rankSessionId);
+        }
         if (this._rankSyncInFlight) {
             if (!force) return this._rankSyncInFlight;
             await this._rankSyncInFlight;
@@ -288,7 +293,7 @@ export class GameScene extends Phaser.Scene {
                 body: JSON.stringify({
                     game_id: this._getRankGameId(),
                     session_id: sessionId,
-                    event: this._getRankProgressEvent(score),
+                    event: deliveryEvent,
                 }),
             });
             const data = await response.json().catch(() => null);
@@ -315,6 +320,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     async _flushRankProgress() {
+        if (window.ArcherRanking && !this._rankSyncDisabled) {
+            const score = Math.max(0, Math.floor((this.enemyManager?.getGameTime?.() || 0) / 1000));
+            if (score > 0) window.ArcherRanking.track(this._getRankGameId(), this._getRankProgressEvent(score), this._rankSessionId);
+            return null; // Verification happens in the durable server delivery, not in the UI.
+        }
         if (this._rankSyncDisabled) return null;
         if (this._rankSyncInFlight) await this._rankSyncInFlight;
         for (let attempt = 0; attempt < RANK_SYNC_MAX_ATTEMPTS; attempt += 1) {

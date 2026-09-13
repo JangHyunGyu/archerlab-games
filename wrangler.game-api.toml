@@ -1,6 +1,18 @@
 name = "game-api"
-main = "game-api-worker.js"
-compatibility_date = "2024-01-01"
+main = "game-api-entry.js"
+compatibility_date = "2026-09-01"
+
+[[durable_objects.bindings]]
+name = "RANKING_DELIVERY"
+class_name = "RankingDelivery"
+
+[[migrations]]
+tag = "ranking-delivery-v1"
+new_sqlite_classes = ["RankingDelivery"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
 
 [[d1_databases]]
 binding = "DB"

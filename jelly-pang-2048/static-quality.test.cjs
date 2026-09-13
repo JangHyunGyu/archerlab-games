@@ -44,7 +44,7 @@ assert.match(main, /event\.key\.toLowerCase\(\)/);
 assert.match(main, /refs\.titleScreen\.scrollTop = 0;/);
 assert.match(main, /const wasOpen = !refs\.rankModal\.classList\.contains\("hidden"\);/);
 assert.match(main, /if \(!wasOpen\) return;/);
-assert.match(sw, /version: '20260912-puzzle-ui-v5'/);
+assert.match(sw, /version: '20260913-ranking-delivery-v1'/);
 
 for (let rank = 0; rank < 12; rank++) {
   const stem = `jelly-${String(rank).padStart(2, '0')}`;

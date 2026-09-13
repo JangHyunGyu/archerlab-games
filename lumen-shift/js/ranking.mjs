@@ -30,24 +30,30 @@ export class RankClient {
   }
 
   record(event) {
-    if (this.disabled || !this.sessionId || !event) return;
+    if (this.disabled || !event) return;
     const delta = Math.floor(Number(event.delta || 0));
     if (!Number.isFinite(delta) || delta <= 0) return;
-    this.queue.push({
+    const queuedEvent = {
       ...event,
       delta,
       level: Math.floor(Number(event.level || 1)),
       combo: Math.floor(Number(event.combo || 0)),
       at: Date.now(),
-    });
-    if (this.queue.length > MAX_RANK_EVENT_QUEUE) {
-      this.queue.splice(0, this.queue.length - MAX_RANK_EVENT_QUEUE);
-    }
+    };
+    globalThis.ArcherRanking?.track(GAME_ID, queuedEvent, this.sessionId);
+    this.queue.push(queuedEvent);
     if (this.queue.length >= 8) this.flush().catch(() => null);
   }
 
   async flush() {
-    if (this.disabled || !this.sessionId || this.syncing || this.queue.length === 0) return false;
+    if (this.flushPromise) return this.flushPromise;
+    if (this.disabled || !this.sessionId) return false;
+    if (this.queue.length === 0) return true;
+    this.flushPromise = this.flushQueue();
+    try { return await this.flushPromise; } finally { this.flushPromise = null; }
+  }
+
+  async flushQueue() {
     this.syncing = true;
     try {
       while (this.queue.length > 0) {
@@ -62,8 +68,6 @@ export class RankClient {
       }
       return true;
     } catch {
-      this.disabled = true;
-      this.queue = [];
       return false;
     } finally {
       this.syncing = false;
@@ -71,6 +75,11 @@ export class RankClient {
   }
 
   async submit(playerName, score, extraData) {
+    if (globalThis.ArcherRanking) {
+      this.queue.forEach(event => globalThis.ArcherRanking.track(GAME_ID, event, this.sessionId));
+      return globalThis.ArcherRanking.submit({ game_id: GAME_ID, player_name: playerName,
+        score: Math.floor(score), session_id: this.sessionId, extra_data: extraData });
+    }
     if (this.disabled || !this.sessionId) throw new Error('ranking offline');
     const synced = await this.flush();
     if (!synced) throw new Error('score sync failed');

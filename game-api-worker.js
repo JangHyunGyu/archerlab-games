@@ -27,7 +27,6 @@ const CORS_HEADERS = {
 const CAT_TOWER_GAME_ID = 'cat-tower';
 const CAT_TOWER_SCORES = [10, 25, 55, 110, 220, 440, 880, 1700, 3500, 10000];
 const CAT_TOWER_MAX_SCORE = 500000;
-const CAT_TOWER_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 const CAT_TOWER_FREE_EVENT_BURST = 30;
 const CAT_TOWER_MIN_MS_PER_EVENT = 150;
 const CAT_TOWER_FREE_SCORE_BURST = 2000;
@@ -138,13 +137,10 @@ const SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS = [
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
 const SHADOW_MAX_SCORE = 7200;
 const SHADOW_SCORE_GRACE_SECONDS = 15;
-const SHADOW_FIRST_EVENT_MAX_SCORE = 30;
-const SHADOW_PROGRESS_SYNC_GRACE_SECONDS = 8;
-const SHADOW_PROGRESS_EVENT_INTERVAL_SECONDS = 5;
 function jsonResponse(data, status = 200) {
     return new Response(JSON.stringify(data), {
         status,
-        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...CORS_HEADERS },
     });
 }
 
@@ -1058,7 +1054,7 @@ async function createScoreSession(db, gameId, request, body = {}) {
     }
 
     const now = Date.now();
-    const sessionId = makeSessionId();
+    const sessionId = body.delivery_session_id || makeSessionId();
     const requestMeta = await getRequestMeta(request);
     let initialScore = gameId === PARKING_GAME_ID ? 1 : 0;
     let state = {
@@ -1085,9 +1081,6 @@ async function createScoreSession(db, gameId, request, body = {}) {
         'INSERT INTO ranking_sessions (session_id, game_id, score, event_count, started_at, updated_at, state_json) VALUES (?, ?, ?, 0, ?, ?, ?)'
     ).bind(sessionId, gameId, initialScore, now, now, safeJsonStringify(state)).run();
 
-    await db.prepare('DELETE FROM ranking_sessions WHERE updated_at < ?')
-        .bind(now - CAT_TOWER_SESSION_TTL_MS)
-        .run();
 
     const response = {
         success: true,
@@ -1137,9 +1130,6 @@ async function recordCatTowerScoreEvents(db, body) {
     }
 
     const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return jsonResponse({ error: 'score session expired' }, 410);
-    }
 
     const currentEventCount = Math.max(0, parseInteger(session.event_count) || 0);
     let deltaTotal = 0;
@@ -1285,9 +1275,6 @@ async function recordBlockpangScoreEvents(db, body) {
     }
 
     const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return jsonResponse({ error: 'score session expired' }, 410);
-    }
 
     const state = normalizeBlockpangState(parseJsonObject(session.state_json));
     if (!state) {
@@ -1420,9 +1407,6 @@ async function recordJewelriaScoreEvents(db, body) {
     }
 
     const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return jsonResponse({ error: 'score session expired' }, 410);
-    }
 
     let deltaTotal = 0;
     try {
@@ -1500,9 +1484,6 @@ async function recordJellyPangScoreEvents(db, body) {
     }
 
     const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return jsonResponse({ error: 'score session expired' }, 410);
-    }
 
     const state = normalizeJellyPangState(parseJsonObject(session.state_json));
     if (!state) {
@@ -1826,9 +1807,6 @@ async function recordShadowScoreEvents(db, body) {
     }
 
     const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return jsonResponse({ error: 'score session expired' }, 410);
-    }
 
     const currentScore = Math.max(0, Number(session.score) || 0);
     let projectedScore = currentScore;
@@ -1855,19 +1833,6 @@ async function recordShadowScoreEvents(db, body) {
     const elapsedSinceStartSeconds = Math.floor((now - Number(session.started_at)) / 1000) + SHADOW_SCORE_GRACE_SECONDS;
     if (projectedScore > elapsedSinceStartSeconds) {
         return jsonResponse({ error: 'shadow survival progress exceeds session time' }, 429);
-    }
-    if (currentEventCount === 0 && projectedScore > SHADOW_FIRST_EVENT_MAX_SCORE) {
-        return jsonResponse({ error: 'shadow survival first progress event is too late' }, 429);
-    }
-
-    const elapsedSinceUpdateSeconds = Math.floor((now - Number(session.updated_at)) / 1000) + SHADOW_PROGRESS_SYNC_GRACE_SECONDS;
-    if (projectedScore - currentScore > elapsedSinceUpdateSeconds) {
-        return jsonResponse({ error: 'shadow survival progress jump is too large' }, 429);
-    }
-
-    const minEventCount = Math.max(1, Math.floor(projectedScore / SHADOW_PROGRESS_EVENT_INTERVAL_SECONDS) - 6);
-    if (projectedEventCount < minEventCount) {
-        return jsonResponse({ error: 'shadow survival progress events are too sparse' }, 429);
     }
 
     await db.prepare(
@@ -1914,9 +1879,6 @@ async function verifyCatTowerRankingSession(db, body, clientScore) {
     }
 
     const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return { error: 'score session expired', status: 410 };
-    }
 
     const verifiedScore = Number(session.score);
     if (!Number.isFinite(verifiedScore) || verifiedScore <= 0) {
@@ -1925,8 +1887,9 @@ async function verifyCatTowerRankingSession(db, body, clientScore) {
     if (verifiedScore > CAT_TOWER_MAX_SCORE) {
         return { error: 'verified score exceeds allowed maximum', status: 400 };
     }
-    // Display score can drift after a resume/flush race. Rank the
-    // authoritative session score and keep the client value only as extra_data.
+    if (verifiedScore !== clientScore) {
+        return { error: 'client score does not match verified score', status: 400 };
+    }
     return { sessionId, score: verifiedScore };
 }
 
@@ -2002,9 +1965,6 @@ async function recordLumenShiftScoreEvents(db, body) {
     }
 
     const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return jsonResponse({ error: 'score session expired' }, 410);
-    }
 
     let deltaTotal = 0;
     try {
@@ -2058,9 +2018,6 @@ async function verifyStoredScoreRankingSession(db, body, clientScore, options) {
     }
 
     const now = Date.now();
-    if (now - Number(session.started_at) > CAT_TOWER_SESSION_TTL_MS) {
-        return { error: 'score session expired', status: 410 };
-    }
 
     const state = parseJsonObject(session.state_json);
     if (options.requiredStateVersion && state.version !== options.requiredStateVersion) {
@@ -2377,6 +2334,15 @@ async function bankSchoolZombieRunCoins(db, body) {
 }
 
 async function initDB(db) {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS ranking_delivery_receipts (
+        request_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
+        response_json TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now'))
+    )`).run();
+    await db.prepare(`CREATE TABLE IF NOT EXISTS ranking_submissions (
+        session_id TEXT PRIMARY KEY, game_id TEXT NOT NULL, player_name TEXT NOT NULL,
+        score INTEGER NOT NULL, extra_data TEXT, created_at TEXT DEFAULT (datetime('now'))
+    )`).run();
+
     await db.prepare(`
         CREATE TABLE IF NOT EXISTS rankings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2433,97 +2399,113 @@ async function initDB(db) {
     `).run();
 }
 
-async function saveParkingRankingRecord(db, gameId, name, score, extraStr) {
-    const existing = await db.prepare(`
-        SELECT id, score
-        FROM rankings
-        WHERE game_id = ?
-          AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
-        ORDER BY score DESC, created_at ASC, id ASC
-        LIMIT 1
-    `).bind(gameId, name).first();
+async function submitRanking(db, body) {
+    const { game_id, player_name, score } = body;
+    let { extra_data } = body;
 
-    if (existing) {
-        const existingScore = Number(existing.score);
-        if (Number.isFinite(existingScore) && score > existingScore) {
-            await db.prepare(`
-                UPDATE rankings
-                SET player_name = ?, score = ?, extra_data = ?, created_at = datetime('now')
-                WHERE id = ?
-            `).bind(name, score, extraStr, existing.id).run();
-            return { saved_score: score, updated: true };
+    if (!game_id || !player_name || score === undefined || score === null) {
+        return jsonResponse({ error: 'game_id, player_name, score are required' }, 400);
+    }
+
+    // Validate player_name: max 20 chars
+    const name = String(player_name).trim().slice(0, 20);
+    if (name.length === 0) {
+        return jsonResponse({ error: 'player_name cannot be empty' }, 400);
+    }
+
+    const numScore = parseInt(score, 10);
+    if (isNaN(numScore) || numScore < 0) {
+        return jsonResponse({ error: 'score must be a non-negative number' }, 400);
+    }
+
+    let scoreForInsert = numScore;
+    let verifiedSessionId = null;
+    const protectedKind = getProtectedGameKind(game_id);
+    if (!protectedKind) {
+        return jsonResponse({ error: 'unsupported game_id for rankings' }, 400);
+    }
+    const requestedSessionId = String(body.session_id || body.extra_data?.session_id || body.extra?.session_id || '');
+    const previous = await db.prepare('SELECT player_name, score, extra_data FROM ranking_submissions WHERE session_id = ?')
+        .bind(requestedSessionId).first();
+    if (previous) {
+        if (previous.player_name !== name || Number(previous.score) !== numScore) {
+            return jsonResponse({ error: 'score session already submitted with different data' }, 409);
         }
-        return { saved_score: Number.isFinite(existingScore) ? existingScore : score, duplicate_name: true };
+        return jsonResponse({ success: true, duplicate: true, player_name: name, score: previous.score });
     }
-
-    const insertResult = await db.prepare(
-        'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
-    ).bind(gameId, name, score, extraStr).run();
-
-    const changes = Number(insertResult?.meta?.changes ?? insertResult?.changes ?? 0);
-    if (changes > 0) {
-        return { saved_score: score, inserted: true };
+    const verified = await verifyRankingSession(db, body, numScore);
+    if (verified.error) {
+        return jsonResponse({ error: verified.error }, verified.status || 400);
     }
+    scoreForInsert = verified.score;
+    verifiedSessionId = verified.sessionId;
+    const baseExtra = isPlainObject(extra_data) ? extra_data : (isPlainObject(body.extra) ? body.extra : {});
+    extra_data = {
+        ...baseExtra,
+        session_id: verified.sessionId,
+        client_score: numScore,
+        verified_score: scoreForInsert,
+        verification_kind: protectedKind,
+        verified_at: new Date().toISOString(),
+    };
 
-    const fallback = await db.prepare(`
-        SELECT score
-        FROM rankings
-        WHERE game_id = ?
-          AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
-        ORDER BY score DESC, created_at ASC, id ASC
-        LIMIT 1
-    `).bind(gameId, name).first();
-
-    return { saved_score: Number(fallback?.score ?? score), duplicate_name: !!fallback };
-}
-
-async function saveRankingRecord(db, gameId, name, score, extraStr) {
-    if (gameId === PARKING_GAME_ID) {
-        return saveParkingRankingRecord(db, gameId, name, score, extraStr);
-    }
-    if (gameId === SCHOOL_ZOMBIE_GAME_ID) {
-        return saveSchoolZombieRankingRecord(db, gameId, name, score, extraStr);
-    }
-
-    await db.prepare(
-        'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
-    ).bind(gameId, name, score, extraStr).run();
-    return { saved_score: score };
-}
-
-async function saveSchoolZombieRankingRecord(db, gameId, name, score, extraStr) {
-    const kills = getSchoolZombieKillsFromExtra(extraStr);
-    const existing = await db.prepare(`
-        SELECT id, score, ${SCHOOL_ZOMBIE_KILLS_SQL} AS kills
-        FROM rankings
-        WHERE game_id = ?
-          AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
-        ORDER BY score DESC, kills DESC, created_at ASC, id ASC
-        LIMIT 1
-    `).bind(gameId, name).first();
-
-    if (existing) {
-        const existingScore = Number(existing.score);
-        const existingKills = Number(existing.kills || 0);
-        if (score > existingScore || (score === existingScore && kills > existingKills)) {
-            await db.prepare(`
-                UPDATE rankings
-                SET player_name = ?, score = ?, extra_data = ?, created_at = datetime('now')
-                WHERE id = ?
-            `).bind(name, score, extraStr, existing.id).run();
-            return { saved_score: score, saved_kills: kills, updated: true };
-        }
-        return {
-            saved_score: Number.isFinite(existingScore) ? existingScore : score,
-            saved_kills: Number.isFinite(existingKills) ? existingKills : kills,
-            duplicate_name: true,
+    if (game_id === BLOCKPANG_GAME_ID && verified.state) {
+        extra_data = {
+            ...extra_data,
+            level: verified.state.level,
+            lines: verified.state.linesCleared,
+            move_seq: verified.state.move_seq,
+            verification_protocol: verified.state.version,
         };
     }
 
-    await db.prepare(
-        'INSERT OR IGNORE INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)'
-    ).bind(gameId, name, score, extraStr).run();
-    return { saved_score: score, saved_kills: kills };
+    if (game_id === JEWELRIA_GAME_ID) {
+        extra_data = normalizeJewelriaExtraData(extra_data, scoreForInsert);
+    }
+    if (game_id === JELLY_PANG_GAME_ID) {
+        extra_data = normalizeJellyPangExtraData(extra_data, scoreForInsert);
+    }
+
+    const extraStr = extra_data ? JSON.stringify(extra_data) : null;
+
+    // The delivery layer commits the archive, leaderboard and session together.
+    await db.prepare(`INSERT INTO ranking_submissions (session_id, game_id, player_name, score, extra_data)
+        VALUES (?, ?, ?, ?, ?)`)
+        .bind(verifiedSessionId, game_id, name, scoreForInsert, extraStr).run();
+    // Keep every verified run. GET /rankings selects each name's best score.
+    await db.prepare('INSERT INTO rankings (game_id, player_name, score, extra_data) VALUES (?, ?, ?, ?)')
+        .bind(game_id, name, scoreForInsert, extraStr).run();
+    const saveResult = { saved_score: scoreForInsert };
+    const savedScore = Number(saveResult?.saved_score ?? scoreForInsert);
+    if (verifiedSessionId) {
+        const now = Date.now();
+        await db.prepare(
+            'UPDATE ranking_sessions SET submitted_at = ?, updated_at = ? WHERE session_id = ? AND submitted_at IS NULL'
+        ).bind(now, now, verifiedSessionId).run();
+    }
+    if (game_id === JEWELRIA_GAME_ID) {
+        await db.prepare(`
+            UPDATE rankings
+            SET extra_data = ?
+            WHERE game_id = ?
+              AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
+              AND score = ?
+              AND CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) < ?
+        `).bind(extraStr, game_id, name, scoreForInsert, extra_data.highest_stage).run();
+    }
+
+    const currentRank = null;
+    const bestScore = savedScore;
+
+    return jsonResponse({
+        success: true,
+        rank: currentRank,
+        player_name: name,
+        score: savedScore,
+        best_score: bestScore,
+        best_stage: game_id === JEWELRIA_GAME_ID ? extra_data?.highest_stage : undefined,
+        in_top_20: currentRank !== null && currentRank <= 20,
+    });
 }
 
 export default {
@@ -2540,7 +2522,8 @@ export default {
         if (path === '/' && request.method === 'GET') {
             return jsonResponse({
                 service: 'game-api',
-                version: '1.0.0',
+                version: '2.0.0',
+                ranking_delivery: '20260913-durable-v1',
                 status: 'ok',
             });
         }
@@ -2647,215 +2630,7 @@ export default {
             }
 
             if (path === '/rankings' && request.method === 'POST') {
-                const body = await request.json();
-                const { game_id, player_name, score } = body;
-                let { extra_data } = body;
-
-                if (!game_id || !player_name || score === undefined || score === null) {
-                    return jsonResponse({ error: 'game_id, player_name, score are required' }, 400);
-                }
-
-                // Validate player_name: max 20 chars
-                const name = String(player_name).trim().slice(0, 20);
-                if (name.length === 0) {
-                    return jsonResponse({ error: 'player_name cannot be empty' }, 400);
-                }
-
-                const numScore = parseInt(score, 10);
-                if (isNaN(numScore) || numScore < 0) {
-                    return jsonResponse({ error: 'score must be a non-negative number' }, 400);
-                }
-
-                let scoreForInsert = numScore;
-                let verifiedSessionId = null;
-                const protectedKind = getProtectedGameKind(game_id);
-                if (!protectedKind) {
-                    return jsonResponse({ error: 'unsupported game_id for rankings' }, 400);
-                }
-                const verified = await verifyRankingSession(env.DB, body, numScore);
-                if (verified.error) {
-                    return jsonResponse({ error: verified.error }, verified.status || 400);
-                }
-                scoreForInsert = verified.score;
-                verifiedSessionId = verified.sessionId;
-                const baseExtra = isPlainObject(extra_data) ? extra_data : (isPlainObject(body.extra) ? body.extra : {});
-                extra_data = {
-                    ...baseExtra,
-                    session_id: verified.sessionId,
-                    client_score: numScore,
-                    verified_score: scoreForInsert,
-                    verification_kind: protectedKind,
-                    verified_at: new Date().toISOString(),
-                };
-
-                if (game_id === BLOCKPANG_GAME_ID && verified.state) {
-                    extra_data = {
-                        ...extra_data,
-                        level: verified.state.level,
-                        lines: verified.state.linesCleared,
-                        move_seq: verified.state.move_seq,
-                        verification_protocol: verified.state.version,
-                    };
-                }
-
-                if (game_id === JEWELRIA_GAME_ID) {
-                    extra_data = normalizeJewelriaExtraData(extra_data, scoreForInsert);
-                }
-                if (game_id === JELLY_PANG_GAME_ID) {
-                    extra_data = normalizeJellyPangExtraData(extra_data, scoreForInsert);
-                }
-
-                const extraStr = extra_data ? JSON.stringify(extra_data) : null;
-
-                // Store the score. Parking Escape keeps one best record per visible name, so the
-                // same nickname can submit again without tripping older uniqueness constraints.
-                const saveResult = await saveRankingRecord(env.DB, game_id, name, scoreForInsert, extraStr);
-                const savedScore = Number(saveResult?.saved_score ?? scoreForInsert);
-                if (verifiedSessionId) {
-                    const now = Date.now();
-                    await env.DB.prepare(
-                        'UPDATE ranking_sessions SET submitted_at = ?, updated_at = ? WHERE session_id = ? AND submitted_at IS NULL'
-                    ).bind(now, now, verifiedSessionId).run();
-                }
-                if (game_id === JEWELRIA_GAME_ID) {
-                    await env.DB.prepare(`
-                        UPDATE rankings
-                        SET extra_data = ?
-                        WHERE game_id = ?
-                          AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
-                          AND score = ?
-                          AND CAST(COALESCE(json_extract(extra_data, '$.highest_stage'), json_extract(extra_data, '$.stage'), 1) AS INTEGER) < ?
-                    `).bind(extraStr, game_id, name, scoreForInsert, extra_data.highest_stage).run();
-                }
-
-                // Get the displayed rank for this name after deduping by player name.
-                const rankResult = game_id === SCHOOL_ZOMBIE_GAME_ID
-                    ? await env.DB.prepare(`
-                        WITH ranked_by_name AS (
-                            SELECT
-                                LOWER(TRIM(player_name)) AS name_key,
-                                score,
-                                ${SCHOOL_ZOMBIE_KILLS_SQL} AS kills,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY LOWER(TRIM(player_name))
-                                    ORDER BY score DESC, ${SCHOOL_ZOMBIE_KILLS_SQL} DESC, created_at ASC, id ASC
-                                ) AS name_rank
-                            FROM rankings
-                            WHERE game_id = ?
-                        ),
-                        best_scores AS (
-                            SELECT name_key, score, kills
-                            FROM ranked_by_name
-                            WHERE name_rank = 1
-                        ),
-                        current_player AS (
-                            SELECT score, kills
-                            FROM best_scores
-                            WHERE name_key = LOWER(TRIM(?))
-                            LIMIT 1
-                        )
-                        SELECT
-                            (SELECT score FROM current_player) AS best_score,
-                            (
-                                SELECT COUNT(*) + 1
-                                FROM best_scores
-                                WHERE score > (SELECT score FROM current_player)
-                                   OR (
-                                     score = (SELECT score FROM current_player)
-                                     AND kills > (SELECT kills FROM current_player)
-                                   )
-                            ) AS rank
-                    `).bind(game_id, name).first()
-                    : await env.DB.prepare(`
-                        WITH ranked_by_name AS (
-                            SELECT
-                                LOWER(TRIM(player_name)) AS name_key,
-                                score,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY LOWER(TRIM(player_name))
-                                    ORDER BY score DESC, created_at ASC, id ASC
-                                ) AS name_rank
-                            FROM rankings
-                            WHERE game_id = ?
-                        ),
-                        best_scores AS (
-                            SELECT name_key, score
-                            FROM ranked_by_name
-                            WHERE name_rank = 1
-                        ),
-                        current_player AS (
-                            SELECT score
-                            FROM best_scores
-                            WHERE name_key = LOWER(TRIM(?))
-                            LIMIT 1
-                        )
-                        SELECT
-                            (SELECT score FROM current_player) AS best_score,
-                            (
-                                SELECT COUNT(*) + 1
-                                FROM best_scores
-                                WHERE score > (SELECT score FROM current_player)
-                            ) AS rank
-                    `).bind(game_id, name).first();
-
-                const currentRank = rankResult?.rank || 1;
-                const bestScore = rankResult?.best_score ?? savedScore;
-
-                // Cleanup: keep only the top 100 unique names per game to prevent table bloat.
-                if (game_id === SCHOOL_ZOMBIE_GAME_ID) {
-                    await env.DB.prepare(`
-                        DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
-                            SELECT id
-                            FROM (
-                                SELECT
-                                    id,
-                                    score,
-                                    ${SCHOOL_ZOMBIE_KILLS_SQL} AS sort_kills,
-                                    created_at,
-                                    ROW_NUMBER() OVER (
-                                        PARTITION BY LOWER(TRIM(player_name))
-                                        ORDER BY score DESC, ${SCHOOL_ZOMBIE_KILLS_SQL} DESC, created_at ASC, id ASC
-                                    ) AS name_rank
-                                FROM rankings
-                                WHERE game_id = ?
-                            )
-                            WHERE name_rank = 1
-                            ORDER BY score DESC, sort_kills DESC, created_at ASC, id ASC
-                            LIMIT 100
-                        )
-                    `).bind(game_id, game_id).run();
-                } else {
-                    await env.DB.prepare(`
-                        DELETE FROM rankings WHERE game_id = ? AND id NOT IN (
-                            SELECT id
-                            FROM (
-                                SELECT
-                                    id,
-                                    score,
-                                    created_at,
-                                    ROW_NUMBER() OVER (
-                                        PARTITION BY LOWER(TRIM(player_name))
-                                        ORDER BY score DESC, created_at ASC, id ASC
-                                    ) AS name_rank
-                                FROM rankings
-                                WHERE game_id = ?
-                            )
-                            WHERE name_rank = 1
-                            ORDER BY score DESC, created_at ASC, id ASC
-                            LIMIT 100
-                        )
-                    `).bind(game_id, game_id).run();
-                }
-
-                return jsonResponse({
-                    success: true,
-                    rank: currentRank,
-                    player_name: name,
-                    score: savedScore,
-                    best_score: bestScore,
-                    best_stage: game_id === JEWELRIA_GAME_ID ? extra_data?.highest_stage : undefined,
-                    in_top_20: currentRank <= 20,
-                });
+                return submitRanking(env.DB, await request.json());
             }
 
             return jsonResponse({ error: 'Not Found' }, 404);
@@ -2885,3 +2660,5 @@ export default {
         }
     },
 };
+
+export { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse };

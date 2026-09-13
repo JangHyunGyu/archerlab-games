@@ -451,7 +451,7 @@ async function submitRank() {
       time_limit: TIME_LIMIT
     });
     submitted = true;
-    ui.setSubmitStatus(`등록 완료${result?.rank ? ` (#${result.rank})` : ''}`, 'ok');
+    ui.setSubmitStatus(result?.pending ? '기록을 보관했어요. 연결되면 자동으로 등록합니다.' : `등록 완료${result?.rank ? ` (#${result.rank})` : ''}`, 'ok');
   } catch {
     ui.setSubmitStatus('등록 실패. 다시 시도해 주세요.', 'fail');
   } finally {
@@ -576,6 +576,7 @@ class RankingClient {
 
   queueScoreEvent(event) {
     if (this.unsupported || this.syncFailed || !event) return;
+    window.ArcherRanking?.track(GAME_ID, event, this.sessionId);
     this.queue.push(event);
     this.flush();
   }
@@ -594,17 +595,17 @@ class RankingClient {
       const sessionId = await this.ensureSession();
       if (!sessionId) return false;
       while (this.queue.length > 0) {
-        const batch = this.queue.splice(0, 20);
+        const batch = this.queue.slice(0, 20);
         const res = await fetch(`${RANK_API_BASE}/score-events`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({ game_id: GAME_ID, session_id: sessionId, events: batch })
         });
         if (!res.ok) {
-          this.queue = batch.concat(this.queue);
           if (res.status === 400 || res.status === 404) this.unsupported = true;
           throw new Error(`rank event ${res.status}`);
         }
+        this.queue.splice(0, batch.length);
       }
       return true;
     })().catch(() => {
@@ -617,6 +618,11 @@ class RankingClient {
   }
 
   async submit(playerName, score, extraData = {}) {
+    if (window.ArcherRanking) {
+      this.queue.forEach(event => window.ArcherRanking.track(GAME_ID, event, this.sessionId));
+      return window.ArcherRanking.submit({ game_id: GAME_ID, player_name: playerName,
+        score: Math.max(0, Math.floor(score || 0)), session_id: this.sessionId, extra_data: extraData });
+    }
     await this.ensureSession();
     const canVerify = this.sessionId && !this.unsupported && !this.syncFailed;
     if (!canVerify) throw new Error('rank verification unavailable');

@@ -4755,6 +4755,9 @@
       }
       const stage = Math.floor(clearedStage);
       const event = this.createRankStageEvent(stage);
+      window.ArcherRanking?.track(RANK_GAME_ID, event, this.rankSessionId, {
+        profile_id: this.profileAuth?.profile_id, profile_secret: this.profileAuth?.profile_secret
+      });
       const syncToken = this.rankSyncToken;
       this.rankPendingStageEvents.set(stage, event);
       this.rankStageSyncQueue = this.rankStageSyncQueue
@@ -4791,7 +4794,7 @@
     }
 
     async recordRankRunProgress() {
-      const sessionId = await this.ensureRankSession();
+      const sessionId = this.rankSessionId || window.ArcherRanking?.sessionId(RANK_GAME_ID) || await this.ensureRankSession();
       if (!sessionId || this.disposed) {
         return false;
       }
@@ -5222,11 +5225,14 @@
         this.showToast("이름을 입력하세요", COLORS.red);
         return;
       }
+      if (!window.ArcherRanking) {
       this.showToast("랭킹 검증 중...", COLORS.gold);
       const synced = await this.ensureRankStagesRecorded().catch(() => false);
       if (!this.rankSessionId || !synced || this.rankSyncFailed) {
         this.showToast("랭킹 검증 실패", COLORS.red);
         return;
+      }
+
       }
 
       this.showToast("랭킹 등록 중...", COLORS.gold);
@@ -5259,7 +5265,7 @@
         this.saveStoredRankName(name);
         this.lastRankableRun = null;
         this.removeRankNameLayer();
-        this.showToast("랭킹 등록 완료", COLORS.green);
+        this.showToast(data?.pending ? "기록 보관 완료 · 자동 등록 대기" : "랭킹 등록 완료", COLORS.green);
         if (options.returnToMenuOnSuccess) {
           this.showMenu();
         } else {

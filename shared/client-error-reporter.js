@@ -540,7 +540,7 @@
 
     if (!window.ArcherGames && script && script.src) {
         var runtimeScript = document.createElement('script');
-        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260905-bot-filter-v2');
+        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260905-bot-filter-v2&ranking=20260913-v1');
         runtimeScript.async = false;
         runtimeScript.setAttribute('data-game-id', gameId);
         if (!/^(?:jewelria|solo-leveling|archerlab-games)$/.test(gameId)) {

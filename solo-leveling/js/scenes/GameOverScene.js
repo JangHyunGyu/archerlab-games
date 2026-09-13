@@ -435,9 +435,11 @@ export class GameOverScene extends Phaser.Scene {
             setStatus('');
             setSubmitting(true);
             try {
-                localStorage.setItem('shadow_player_name', name);
-                if (!sessionId || this.finalData.rankSyncFailed) throw new Error('rank score sync failed');
-                if (!Number.isFinite(verifiedScore) || verifiedScore !== time) throw new Error('rank score verification mismatch');
+                try { localStorage.setItem('shadow_player_name', name); } catch (_) {}
+                if (!window.ArcherRanking) {
+                    if (!sessionId || this.finalData.rankSyncFailed) throw new Error('rank score sync failed');
+                    if (!Number.isFinite(verifiedScore) || verifiedScore !== time) throw new Error('rank score verification mismatch');
+                }
                 const extraData = { level, rank, kills, shadowCount, characterId, characterName, session_id: sessionId };
                 gameId = getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
 

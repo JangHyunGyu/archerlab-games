@@ -125,14 +125,20 @@
         }
     };
     RankingClient.prototype.record = function (event) {
-        if (this.disabled || !this.sessionId || !event) return false;
+        if (this.disabled || !event) return false;
         var normalized = Object.assign({}, event, { at: event.at || this.now() });
+        if (global.ArcherRanking) global.ArcherRanking.track(this.gameId, normalized, this.sessionId);
         this.queue.push(normalized);
-        if (this.queue.length > this.maxQueue) this.queue.splice(0, this.queue.length - this.maxQueue);
         return true;
     };
     RankingClient.prototype.flush = async function () {
-        if (this.disabled || !this.sessionId || this.syncing || this.queue.length === 0) return false;
+        if (this.flushPromise) return this.flushPromise;
+        if (this.disabled || !this.sessionId) return false;
+        if (this.queue.length === 0) return true;
+        this.flushPromise = this.flushQueue();
+        try { return await this.flushPromise; } finally { this.flushPromise = null; }
+    };
+    RankingClient.prototype.flushQueue = async function () {
         this.syncing = true;
         try {
             while (this.queue.length) {
@@ -146,14 +152,18 @@
             }
             return true;
         } catch (_) {
-            this.disabled = true;
-            this.queue = [];
             return false;
         } finally {
             this.syncing = false;
         }
     };
     RankingClient.prototype.submit = async function (playerName, score, extraData) {
+        if (global.ArcherRanking) {
+            var client = this;
+            this.queue.forEach(function (event) { global.ArcherRanking.track(client.gameId, event, client.sessionId); });
+            return global.ArcherRanking.submit({ game_id: this.gameId, player_name: playerName,
+                score: Math.floor(Number(score) || 0), session_id: this.sessionId, extra_data: extraData });
+        }
         if (this.disabled || !this.sessionId) throw new Error('ranking offline');
         if (this.queue.length && !(await this.flush())) throw new Error('score sync failed');
         return this.request('/rankings', {

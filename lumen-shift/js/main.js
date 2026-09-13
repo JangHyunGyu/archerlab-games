@@ -1,5 +1,5 @@
 import { gravityIntervalMs } from "./gravity.mjs?v=20260712-stage-speed-v1";
-import { RankClient } from "./ranking.mjs?v=20260802-modules-v1";
+import { RankClient } from "./ranking.mjs?v=20260802-modules-v1&ranking=20260913-v1";
 
 const COLS = 10;
 const ROWS = 20;
@@ -6781,7 +6781,7 @@ class LumenShiftApp {
         elapsed_ms: Math.floor(snapshot.elapsed),
       });
       this.audio.ui("submit");
-      this.elements.submitStatus.textContent = `Rank ${data.rank || "-"} saved.`;
+      this.elements.submitStatus.textContent = data.pending ? "Record kept. Ranking will sync automatically." : `Rank ${data.rank || "-"} saved.`;
       await this.renderRanks();
     } catch (err) {
       this.audio.ui("error");

@@ -469,7 +469,10 @@
     }
 
     async recordRankClear(clearData) {
-      if (this.rankSyncFailed || !clearData) return false;
+      if (!clearData) return false;
+      const event = { type: "level_clear", moves: clearData.moves, level_moves: clearData.levelMoves,
+        vehicles: clearData.vehicles, seed: clearData.seed };
+      window.ArcherRanking?.track(GAME_ID, event, this.rankSessionId);
       try {
         const sessionId = await this.ensureRankSession();
         if (!sessionId) return false;
@@ -479,13 +482,7 @@
           body: JSON.stringify({
             game_id: GAME_ID,
             session_id: sessionId,
-            event: {
-              type: "level_clear",
-              moves: clearData.moves,
-              level_moves: clearData.levelMoves,
-              vehicles: clearData.vehicles,
-              seed: clearData.seed,
-            },
+            event,
           }),
         });
         if (!response.ok) throw new Error(`rank event ${response.status}`);
@@ -1490,19 +1487,10 @@
       }
       this.setRankSubmitLoading(true, "등록 중...");
       try {
-        const rankingRows = await this.fetchRankingRows();
-        const normalizedName = normalizeRankName(name);
-        const legacyConflict = rankingRows.find(row => (
-          normalizeRankName(row.player_name || "") === normalizedName
-          && getRankExtra(row).ruleset !== RANK_RULESET
-          && getRankLevel(row) >= this.lastClear.rankLevel
-        ));
-        if (legacyConflict) {
-          this.setRankSubmitLoading(false, "기존 랭킹과 겹치는 닉네임입니다. 다른 이름을 사용하세요");
-          return;
+        if (!window.ArcherRanking) {
+          const synced = await this.ensureRankClearRecorded(this.lastClear);
+          if (!this.rankSessionId || !synced || this.rankSyncFailed) throw new Error("rank score sync failed");
         }
-        const synced = await this.ensureRankClearRecorded(this.lastClear);
-        if (!this.rankSessionId || !synced || this.rankSyncFailed) throw new Error("rank score sync failed");
         const response = await fetch(`${RANK_API_BASE}/rankings`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -1536,8 +1524,8 @@
         dom.submitRank.disabled = true;
         dom.skipRank.disabled = true;
         dom.nickname.disabled = true;
-        dom.submitRank.textContent = "완료";
-        dom.submitStatus.textContent = "등록 완료";
+        dom.submitRank.textContent = result?.pending ? "저장 대기" : "완료";
+        dom.submitStatus.textContent = result?.pending ? "기록을 보관했습니다. 자동으로 등록합니다." : "등록 완료";
         this.playTone("submit");
         this.returnToMenuAfterRank();
       } catch (error) {

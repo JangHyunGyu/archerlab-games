@@ -53,7 +53,8 @@ for (const file of ['index.html', 'index-en.html']) {
     const html = read(file);
     for (const script of ['constants', 'SoundManager', 'ScoreManager', 'EffectManager', 'Board', 'Piece', 'InputManager', 'UIManager', 'Game', 'main']) {
         assert.ok(
-            html.includes('src="js/' + script + '.js?v=' + cacheVersion + '"'),
+            html.includes('src="js/' + script + '.js?v=' + cacheVersion
+                + (['UIManager', 'Game', 'main'].includes(script) ? '&ranking=20260913-v1' : '') + '"'),
             file + ' must cache-bust ' + script + '.js'
         );
     }

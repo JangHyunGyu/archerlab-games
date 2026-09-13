@@ -25,6 +25,9 @@ try {
   assert.equal(client.queue.length, 0);
   assert.deepEqual(await client.fetchTop(), [{ player_name: 'A', score: 10 }]);
   assert.equal(requests.length, 3);
+  assert.equal(await client.flush(), true, 'already synchronized queues must count as success');
+  await client.submit('A', 100, {});
+  assert.ok(requests.at(-1).url.endsWith('/rankings'), 'submission after an earlier flush must reach the server');
   console.log('✓ lumen ranking module behavior verified');
 } finally {
   globalThis.fetch = originalFetch;

@@ -1574,7 +1574,7 @@
     try {
       const result = await withServerTrip(() => ranking.submit(name, score, extra));
       playSound("rankSubmit");
-      completeRankSubmit(`등록 완료${result?.rank ? ` (#${result.rank})` : ""}`, "ok");
+      completeRankSubmit(result?.pending ? "기록을 보관했어요. 연결되면 자동으로 등록합니다." : `등록 완료${result?.rank ? ` (#${result.rank})` : ""}`, "ok");
     } catch (err) {
       const message = err?.message === "rank score verification mismatch"
         ? "서버 검증 점수와 현재 점수가 달라 등록하지 않았어요."
@@ -2520,6 +2520,7 @@
       const nextSeq = this.moveSeq + 1;
       this.moveSeq = nextSeq;
       const event = { type: "move", dir, move_seq: nextSeq };
+      window.ArcherRanking?.track(GAME_ID, event, this.sessionId);
       this.pendingEvents.push(event);
       return event;
     }
@@ -2555,6 +2556,11 @@
     }
 
     async submit(playerName, finalScore, extraData = {}) {
+      if (window.ArcherRanking) {
+        this.pendingEvents.forEach(event => window.ArcherRanking.track(GAME_ID, event, this.sessionId));
+        return window.ArcherRanking.submit({ game_id: GAME_ID, player_name: playerName,
+          score: Math.floor(finalScore), session_id: this.sessionId, extra_data: extraData });
+      }
       await withTimeout(this.ensureSession(), SESSION_REQUEST_TIMEOUT_MS, "rank session timeout");
       await this.flushMoves();
       const canVerify = this.sessionId && !this.unsupported && !this.syncFailed && this.pendingEvents.length === 0;

@@ -542,6 +542,7 @@ class Game {
         };
         this.rankMoveSeq = event.seq;
         if (this.rankSyncFailed || !event) return;
+        window.ArcherRanking?.track(GAME_ID_BLOCKPANG, event, this.rankSessionId);
         this.rankEventQueue.push(event);
         this.flushRankEvents();
     }
@@ -553,7 +554,7 @@ class Game {
             const sessionId = await this._ensureRankSession();
             if (!sessionId) return false;
             while (this.rankEventQueue.length > 0) {
-                const batch = this.rankEventQueue.splice(0, 20);
+                const batch = this.rankEventQueue.slice(0, 20);
                 const res = await fetch(`${GAME_API_URL}/score-events`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -564,11 +565,11 @@ class Game {
                     }),
                 });
                 if (!res.ok) {
-                    this.rankEventQueue = batch.concat(this.rankEventQueue);
                     throw new Error(`rank event ${res.status}`);
                 }
                 const data = await res.json().catch(() => null);
                 if (!data || data.success !== true) throw new Error('rank event response invalid');
+                this.rankEventQueue.splice(0, batch.length);
             }
             return true;
         })().catch((e) => {

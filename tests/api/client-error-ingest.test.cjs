@@ -4,6 +4,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 let source = fs.readFileSync(path.join(__dirname, '../../game-api-worker.js'), 'utf8');
+source = source.replace(/export \{[^}]+\};/g, '');
 source = source.replace('export default {', 'const __workerExport = {');
 source += '\nglobalThis.__gameApiTest = { storeClientError };';
 
