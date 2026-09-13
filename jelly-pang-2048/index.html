@@ -55,6 +55,11 @@
     gtag('config', 'G-66FS0YCEEM');
   </script>
   <script src="../shared/client-error-reporter.js?v=20260905-bot-filter-v2" data-game-id="jelly-pang-2048"></script>
+  <script src="../shared/immersive.js?v=20260913-immersive-v1" defer></script>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body data-game="jelly-pang">
   <noscript>젤리팡 2048을 플레이하려면 JavaScript를 활성화해 주세요.</noscript>
@@ -91,8 +96,8 @@
           </div>
         </div>
         <div class="title-actions">
-          <button id="play-game" class="title-play" type="button">게임 시작</button>
-          <button id="new-game" class="title-new" type="button" hidden>새 게임</button>
+          <button id="play-game" data-fullscreen-start class="title-play" type="button">게임 시작</button>
+          <button id="new-game" data-fullscreen-start class="title-new" type="button" hidden>새 게임</button>
           <button id="rank-open-title" class="title-rank" type="button">명예의 전당</button>
         </div>
       </div>
@@ -150,7 +155,7 @@
             </div>
             <div class="message-actions">
               <button id="keep-playing" type="button">Keep playing</button>
-              <button id="try-again" type="button">Try again</button>
+              <button id="try-again" data-fullscreen-start type="button">Try again</button>
               <button id="back-to-title" type="button" hidden>시작 화면</button>
             </div>
           </div>

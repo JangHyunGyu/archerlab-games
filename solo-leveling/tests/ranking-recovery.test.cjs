@@ -28,6 +28,6 @@ assert.equal((i18n.match(/continuedRunUnranked:/g) || []).length, 3);
 assert.match(main, /GameScene\.js\?v=20260913-crafted-ui-v1/);
 assert.match(main, /GameOverScene\.js\?v=20260904-continuation-rank-v1/);
 assert.match(menuScene, /GameScene\.js\?v=20260913-crafted-ui-v1/);
-assert.match(html, /js\/main\.js\?v=20260913-crafted-ui-v1/);
+assert.match(html, /js\/main\.js\?v=20260913-immersive-v1/);
 
 console.log('solo-leveling ranking transient recovery verified');

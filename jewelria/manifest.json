@@ -5,11 +5,15 @@
   "lang": "ko",
   "start_url": "./",
   "scope": "./",
-  "display": "standalone",
-  "orientation": "portrait-primary",
+  "display": "fullscreen",
+  "orientation": "any",
   "background_color": "#071a22",
   "theme_color": "#071a22",
-  "categories": ["games", "entertainment", "puzzle"],
+  "categories": [
+    "games",
+    "entertainment",
+    "puzzle"
+  ],
   "icons": [
     {
       "src": "assets/images/ui/icon-192.png",
@@ -23,5 +27,10 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "id": "./",
+  "display_override": [
+    "fullscreen",
+    "standalone"
   ]
 }

@@ -33,12 +33,14 @@ assert.match(main, /rankLevel:\s*isFinalLevel \? MAX_LEVEL \+ 1 : clearedLevel/)
 assert.match(main, /displayLevel:\s*this\.level,[\s\S]*?allClear:\s*false/);
 assert.match(main, /this\.rankEligible = options\.ranked === true && targetLevel === 1/);
 assert.match(main, /if \(this\.rankEligible\) this\.startRankSession\(\)/);
-assert.match(main, /this\.start\(startLevel, \{ ranked: startLevel === 1 \}\)/);
+assert.match(main, /dom\.play\.addEventListener\("click", \(\) => \{\s*this\.start\(1, \{ ranked: true \}\)/);
+assert.match(main, /dom\.continue\.addEventListener\("click", \(\) => \{\s*this\.start\(this\.bestLevel, \{ ranked: false \}\)/);
+assert.match(main, /dom\.continue\.classList\.toggle\("hidden", this\.bestLevel <= 1\)/);
 assert.match(main, /if \(!this\.rankEligible \|\| !this\.lastClear\) return/);
 assert.match(main, /this\.mode = "background-paused"/);
 assert.match(main, /this\.mode = "playing"/);
 assert.doesNotMatch(main, /if \(!continuesRun\) this\.startRankSession\(\)/);
-assert.match(html, /js\/main\.js\?v=20260913-image-ui-v3/);
+assert.match(html, /js\/main\.js\?v=20260913-immersive-v1/);
 assert.match(html, /css\/style\.css\?v=20260904-ranked-run-v1/);
 
 const scripts = Array.from(html.matchAll(/<script[^>]+src="([^"]+)"/g), match => match[1]);

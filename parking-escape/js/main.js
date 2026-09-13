@@ -89,6 +89,8 @@
     clearTitle: $("clear-title"),
     play: $("play-btn"),
     playLabel: $("play-label"),
+    continue: $("continue-btn"),
+    continueLabel: $("continue-label"),
     rank: $("rank-btn"),
     next: $("next-btn"),
     home: $("home-btn"),
@@ -506,8 +508,10 @@
 
     bindUI() {
       dom.play.addEventListener("click", () => {
-        const startLevel = this.bestLevel > 1 ? this.bestLevel : 1;
-        this.start(startLevel, { ranked: startLevel === 1 });
+        this.start(1, { ranked: true });
+      });
+      dom.continue.addEventListener("click", () => {
+        this.start(this.bestLevel, { ranked: false });
       });
       dom.next.addEventListener("click", () => {
         if (this.nextReturnsToMenu) this.showMenu();
@@ -744,9 +748,8 @@
     updateMenu() {
       this.bestLevel = clamp(Math.max(this.bestLevel, readInt(STORAGE.bestLevel, 1)), 1, MAX_LEVEL);
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
-      if (dom.playLabel) {
-        dom.playLabel.textContent = this.bestLevel > 1 ? `Lv ${this.bestLevel} 계속하기` : "게임 시작";
-      }
+      dom.continue.classList.toggle("hidden", this.bestLevel <= 1);
+      dom.continueLabel.textContent = `Lv ${this.bestLevel} 계속하기`;
     }
 
     showLoading(level) {
@@ -1306,12 +1309,12 @@
       this.lastClear = this.runRecord;
       if (this.rankEligible) this.rankClearSyncPromises.push(this.recordRankClear(this.runRecord));
       this.bestLevel = Math.max(this.bestLevel, Math.min(MAX_LEVEL, this.level + 1));
-      localStorage.setItem(STORAGE.bestLevel, String(this.bestLevel));
+      writeStorage(STORAGE.bestLevel, String(this.bestLevel));
       if (this.bestMoves === 0 || this.moves < this.bestMoves) {
         this.bestMoves = this.moves;
-        localStorage.setItem(STORAGE.bestMoves, String(this.bestMoves));
+        writeStorage(STORAGE.bestMoves, String(this.bestMoves));
       }
-      dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
+      dom.nickname.value = readStorage(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       this.setRankSubmitLoading(false);
       dom.clearMovesLabel.textContent = isFinalLevel ? "마지막" : "이동";
@@ -1382,7 +1385,7 @@
       dom.clearLevelCaption.textContent = "도달";
       dom.clearLevel.textContent = `Lv ${this.lastClear.rankLevel.toLocaleString()}`;
       dom.next.textContent = "메인";
-      dom.nickname.value = localStorage.getItem(NICK_KEY) || "";
+      dom.nickname.value = readStorage(NICK_KEY) || "";
       dom.submitStatus.textContent = "";
       this.setRankSubmitLoading(false);
       dom.rankSubmitRow.classList.toggle("hidden", !this.rankEligible);
@@ -1519,7 +1522,7 @@
         });
         const result = await response.json().catch(() => null);
         if (!response.ok) throw new Error(result?.error || `submit ${response.status}`);
-        localStorage.setItem(NICK_KEY, name);
+        writeStorage(NICK_KEY, name);
         this.setRankSubmitLoading(false);
         dom.submitRank.disabled = true;
         dom.skipRank.disabled = true;
@@ -1869,8 +1872,16 @@
   }
 
   function readInt(name, fallback) {
-    const value = parseInt(localStorage.getItem(name) || "", 10);
+    const value = parseInt(readStorage(name) || "", 10);
     return Number.isFinite(value) && value > 0 ? value : fallback;
+  }
+
+  function readStorage(name) {
+    try { return localStorage.getItem(name); } catch { return null; }
+  }
+
+  function writeStorage(name, value) {
+    try { localStorage.setItem(name, value); } catch { /* Gameplay continues when storage is unavailable. */ }
   }
 
   function nextFrame() {

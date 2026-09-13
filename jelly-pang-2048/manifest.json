@@ -1,0 +1,23 @@
+{
+  "name": "Jelly Pang 2048 - Free Jelly Merge Puzzle Game",
+  "short_name": "jelly-pang-2048",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#fff7ed",
+  "theme_color": "#fff7ed",
+  "icons": [
+    {
+      "src": "../favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "id": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "any"
+}

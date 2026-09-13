@@ -63,9 +63,13 @@
   </script>
   <script src="../shared/client-error-reporter.js?v=20260905-bot-filter-v2" data-game-id="jewelria"></script>
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
+  <script src="../shared/immersive.js?v=20260913-immersive-v1" defer></script>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body data-game="jewelria">
-  <a class="archerlab-link" href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" aria-label="ArcherLab로 이동">ArcherLab</a>
+  <a class="archerlab-link" href="https://archerlab.dev" rel="noopener noreferrer" aria-label="ArcherLab로 이동">ArcherLab</a>
 
   <main id="app" class="app-shell" data-lang="ko">
     <section id="title-screen" class="screen title-screen is-active" aria-label="쥬얼리아 타이틀">
@@ -100,7 +104,7 @@
             </div>
           </div>
           <div class="title-actions">
-            <button id="play-btn" class="button button-primary" type="button">
+            <button id="play-btn" data-fullscreen-start class="button button-primary" type="button">
               <span class="btn-label">게임 시작</span>
             </button>
           </div>
@@ -177,7 +181,7 @@
       </div>
 
       <div id="result-actions" class="modal-actions">
-        <button id="retry-btn" class="button button-primary" type="button">다시하기</button>
+        <button id="retry-btn" data-fullscreen-start class="button button-primary" type="button">다시하기</button>
         <button id="result-home-btn" class="button button-secondary" type="button">타이틀</button>
       </div>
     </div>

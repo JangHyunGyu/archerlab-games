@@ -1,0 +1,23 @@
+{
+  "name": "Slime Volleyball Online",
+  "short_name": "slimevolley",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#080d1a",
+  "theme_color": "#080d1a",
+  "icons": [
+    {
+      "src": "../favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "id": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "any"
+}

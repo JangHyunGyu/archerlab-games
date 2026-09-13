@@ -59,6 +59,11 @@
   <script src="../shared/client-error-reporter.js?v=20260905-bot-filter-v2" data-game-id="lumen-shift"></script>
   <script src="../shared/game-runtime.js?v=20260905-bot-filter-v2&ranking=20260913-v1" data-game-id="lumen-shift" data-service-worker="sw.js"></script>
   <link rel="stylesheet" href="css/image-ui.css?v=20260913-image-ui-v4">
+  <script src="../shared/immersive.js?v=20260913-immersive-v1" defer></script>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body data-game="lumen-shift">
   <main id="game-root" class="game-shell" aria-label="LUMEN SHIFT game">
@@ -97,7 +102,7 @@
     <div id="zone-veiler" class="zone-veiler" aria-hidden="true"></div>
 
     <section id="menu-screen" class="screen-layer menu-screen">
-      <a class="menu-archerlab-link" href="https://archerlab.dev/" target="_blank" rel="noopener noreferrer">ARCHERLAB</a>
+      <a class="menu-archerlab-link" href="https://archerlab.dev/" rel="noopener noreferrer">ARCHERLAB</a>
       <div class="menu-layout">
         <div class="menu-lockup">
           <h1><span>LUMEN</span><span>SHIFT</span></h1>
@@ -105,7 +110,7 @@
 
         <div class="menu-command">
           <div class="menu-actions">
-            <button id="play-button" class="primary-button" type="button">
+            <button id="play-button" data-fullscreen-start class="primary-button" type="button">
               <span class="button-copy">Start</span>
             </button>
             <button id="rank-button" class="secondary-button" type="button">
@@ -140,7 +145,7 @@
         <p id="submit-status" class="submit-status"></p>
         <div id="ranking-list" class="ranking-list" aria-label="ranking list"></div>
         <div class="menu-actions">
-          <button id="again-button" class="primary-button" type="button">Again</button>
+          <button id="again-button" data-fullscreen-start class="primary-button" type="button">Again</button>
           <button id="menu-button" class="secondary-button" type="button">Menu</button>
         </div>
       </div>

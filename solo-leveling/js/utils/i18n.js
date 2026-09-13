@@ -1,7 +1,8 @@
 // Detect language from saved preference, URL parameter, or default to 'ko'
 const params = new URLSearchParams(window.location.search);
 const langParam = params.get('lang');
-const savedLang = localStorage.getItem('shadow_survival_lang');
+let savedLang = null;
+try { savedLang = localStorage.getItem('shadow_survival_lang'); } catch { /* Storage may be blocked. */ }
 const _supportedLangs = ['ko', 'en', 'ja'];
 const _browserLang = (navigator.language || '').slice(0, 2);
 export let LANG = savedLang
@@ -16,7 +17,7 @@ export const LANGUAGES = [
 
 export function setLang(code) {
     LANG = code;
-    localStorage.setItem('shadow_survival_lang', code);
+    try { localStorage.setItem('shadow_survival_lang', code); } catch { /* Keep the in-memory language. */ }
 }
 
 const TEXTS = {
@@ -150,6 +151,9 @@ const TEXTS = {
         yourRank: '순위',
         loading: '로딩 중...',
         scoreLabel: '점수',
+        rankColumn: '순위',
+        nameColumn: '닉네임',
+        timeColumn: '생존 시간',
     },
 
     en: {
@@ -269,6 +273,9 @@ const TEXTS = {
         yourRank: 'Rank',
         loading: 'Loading...',
         scoreLabel: 'Score',
+        rankColumn: 'Rank',
+        nameColumn: 'Name',
+        timeColumn: 'Survival',
     },
 
     ja: {
@@ -388,6 +395,9 @@ const TEXTS = {
         yourRank: '順位',
         loading: '読み込み中...',
         scoreLabel: 'スコア',
+        rankColumn: '順位',
+        nameColumn: '名前',
+        timeColumn: '生存時間',
     },
 };
 

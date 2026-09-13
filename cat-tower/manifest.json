@@ -1,0 +1,23 @@
+{
+  "name": "Cat Tower (고양이 타워) - Free Cat Merge &amp; Stacking Game",
+  "short_name": "cat-tower",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#F5E9D4",
+  "theme_color": "#F5E9D4",
+  "icons": [
+    {
+      "src": "../favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "id": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "any"
+}

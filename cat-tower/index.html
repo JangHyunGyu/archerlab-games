@@ -73,13 +73,18 @@
 <script src="../shared/client-error-reporter.js?v=20260905-bot-filter-v2" data-game-id="cat-tower"></script>
 <script src="js/browser-check.js?v=1.1.0"></script>
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
+  <script src="../shared/immersive.js?v=20260913-immersive-v1" defer></script>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body data-game="cat-tower">
 <div id="app">
 
   <!-- 상단 전역 바: ArcherLab 홈 링크 + 언어 토글 -->
   <div id="topbar">
-    <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer"
+    <a href="https://archerlab.dev" rel="noopener noreferrer"
        class="topbar-btn archerlab-btn" aria-label="ArcherLab"
        data-i18n="menu.archerlab">ArcherLab</a>
     <button id="lang-toggle" class="lang-switch" type="button" aria-label="language toggle">
@@ -126,8 +131,8 @@
         <div class="best-value" id="best-score">0</div>
       </div>
       <div class="menu-btns">
-        <button id="resume-btn-menu" class="btn btn-secondary hidden" data-i18n="menu.resume">이어서 하기</button>
-        <button id="play-btn" class="btn btn-primary" data-i18n="menu.play">플레이</button>
+        <button id="resume-btn-menu" data-fullscreen-start class="btn btn-secondary hidden" data-i18n="menu.resume">이어서 하기</button>
+        <button id="play-btn" data-fullscreen-start class="btn btn-primary" data-i18n="menu.play">플레이</button>
         <button id="how-btn" class="btn btn-secondary" data-i18n="menu.how">조작법 · 진화표</button>
         <button id="rank-btn" class="btn btn-ghost" data-i18n="menu.rank">랭킹</button>
       </div>
@@ -185,7 +190,7 @@
           <span></span>
         </div>
       </div>
-      <button id="replay-btn" class="btn btn-primary" data-i18n="over.replay">다시 도전</button>
+      <button id="replay-btn" data-fullscreen-start class="btn btn-primary" data-i18n="over.replay">다시 도전</button>
       <button id="menu-btn" class="btn btn-ghost" data-i18n="over.menu">메인 메뉴</button>
     </div>
   </div>

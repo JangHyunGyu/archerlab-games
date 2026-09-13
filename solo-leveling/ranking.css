@@ -1,0 +1,35 @@
+.shadow-ranking-table {
+    position: fixed;
+    z-index: 10000;
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #9d8262 #0d0b17;
+    border: 1px solid #bc9a643b;
+    border-radius: 6px;
+    background: #070810eb;
+    color: #ede7f3;
+    font: 13px/1.5 "Pretendard Variable", Pretendard, sans-serif;
+    box-sizing: border-box;
+}
+.shadow-ranking-table:focus-visible { outline: 2px solid #e2bb80; outline-offset: 2px; }
+.shadow-ranking-table table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.shadow-ranking-table th, .shadow-ranking-table td { padding: 8px 10px; text-align: left; overflow-wrap: anywhere; }
+.shadow-ranking-table th { position: sticky; top: 0; z-index: 1; color: #cbb6da; background: #191322; font-size: 12px; font-weight: 600; }
+.shadow-ranking-table th:first-child { width: 42px; }
+.shadow-ranking-table th:last-child { width: 68px; }
+.shadow-ranking-table td:first-child, .shadow-ranking-table td:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shadow-ranking-table td:last-child, .shadow-ranking-table th:last-child { text-align: right; }
+.shadow-ranking-table tr + tr { border-top: 1px solid #b8a2cf12; }
+.shadow-ranking-table tbody tr:nth-child(odd) { background: #9d85b909; }
+.shadow-ranking-table tr[data-rank="1"] { color: #f5d486; }
+.shadow-ranking-table tr[data-rank="2"] { color: #d5dce9; }
+.shadow-ranking-table tr[data-rank="3"] { color: #d9a37b; }
+.shadow-ranking-table .shadow-ranking-empty { padding: 24px 10px; text-align: center; white-space: normal; color: #b7aec1; }
+@media (max-width: 380px) {
+    .shadow-ranking-table th, .shadow-ranking-table td { padding: 8px 6px; }
+    .shadow-ranking-table th:first-child { width: 32px; }
+    .shadow-ranking-table th:last-child { width: 62px; }
+}

@@ -1,3 +1,4 @@
+import { createRankingTable } from '../ui/RankingTable.js?v=20260913-immersive-v1';
 import { UIAssets } from '../ui/UIAssets.js?v=20260913-crafted-ui-v1';
 import { getShadowMenuLayout } from '../ui/MenuLayout.js?v=20260913-crafted-ui-v1';
 import {
@@ -2253,6 +2254,7 @@ export class MenuScene extends Phaser.Scene {
             contentElements = [];
         };
         this.events.once('shutdown', stopContentTweens);
+        this.events.once('shutdown', clearContent);
         const drawTab = (ref, hover = false) => {
             const selected = ref.character.id === activeCharacterId;
             ref.g.setTint(selected || hover ? 0xffffff : 0x9b94aa).setAlpha(selected || hover ? 1 : 0.88);
@@ -2323,25 +2325,37 @@ export class MenuScene extends Phaser.Scene {
             elements.push(g, hit, txt);
         };
 
+        const onRankingKey = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeAll();
+            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                event.preventDefault();
+                const index = characters.findIndex(character => character.id === activeCharacterId);
+                activeCharacterId = characters[(index + (event.key === 'ArrowRight' ? 1 : -1) + characters.length) % characters.length].id;
+                redrawTabs();
+                renderRanking(activeCharacterId);
+            }
+        };
+        const removeRankingKeys = () => document.removeEventListener('keydown', onRankingKey);
+        document.addEventListener('keydown', onRankingKey);
+        this.events.once('shutdown', removeRankingKeys);
+
         const closeAll = () => {
             if (closed) return;
             closed = true;
             this.events.off('shutdown', markClosed);
             this.events.off('shutdown', stopContentTweens);
-            stopContentTweens();
+            this.events.off('shutdown', clearContent);
+            this.events.off('shutdown', removeRankingKeys);
+            removeRankingKeys();
+            clearContent();
             elements.forEach(el => el.destroy());
             this._modalElements = this._modalElements.filter(el => !elements.includes(el));
         };
         makeModalButton(cx - uv(74), closeBtnY, uv(148), closeBtnH, t('close'), closeAll);
         this._modalElements.push(...elements);
         dim.on('pointerdown', closeAll);
-
-        const formatTime = (score) => {
-            const safeScore = Math.max(0, Number(score) || 0);
-            const mins = Math.floor(safeScore / 60).toString().padStart(2, '0');
-            const secs = Math.floor(safeScore % 60).toString().padStart(2, '0');
-            return `${mins}:${secs}`;
-        };
 
         const renderRanking = (characterId) => {
             const seq = ++requestSeq;
@@ -2368,184 +2382,20 @@ export class MenuScene extends Phaser.Scene {
 
             const gameId = getCharacterRankingGameId(GAME_ID_SHADOW, characterId);
             fetch(`${GAME_API_URL}/rankings?game_id=${encodeURIComponent(gameId)}&limit=${rankingDisplayLimit}`)
-                .then(resp => resp.json())
+                .then(resp => { if (!resp.ok) throw new Error('Ranking unavailable'); return resp.json(); })
                 .then(data => {
                     if (isClosed() || seq !== requestSeq) return;
                     clearContent();
-                    const rankings = (data.rankings || []).slice(0, rankingDisplayLimit);
-                    if (rankings.length === 0) {
-                        const emptyIcon = this._addMenuIcon('icon_empty_record', cx, contentCenterY - uv(34), uv(54), depth + 4, 0.86);
-                        if (emptyIcon) trackContent(emptyIcon);
-                        const emptyText = trackContent(this.add.text(cx, contentCenterY + uv(28), t('noRecords'), {
-                            fontSize: fs(15), fontFamily: UI_FONT_KR, color: SYSTEM.TEXT_BRIGHT,
-                            stroke: '#02040a', strokeThickness: 4,
-                        }).setOrigin(0.5).setDepth(depth + 4));
-                        this._fitText(emptyText, boxW - uv(60), uv(30));
-                        return;
-                    }
-
-                    const topStartY = divY + uv(isPortrait ? 28 : 24);
-                    const gap = uv(isPortrait ? 14 : 22);
-                    const preferredTopCount = isCrampedPortrait
-                        ? 0
-                        : (isPortrait ? Math.min(1, rankings.length) : Math.min(3, rankings.length));
-                    const topCardW = Math.min(
-                        uv(isPortrait ? 252 : 208),
-                        (safeW - gap * Math.max(0, preferredTopCount - 1)) / Math.max(1, preferredTopCount)
-                    );
-                    const topCardH = Math.min(uv(isPortrait ? 134 : 124), topCardW * 0.58);
-                    const topStartTableY = topStartY + topCardH + uv(isPortrait ? 30 : 28);
-                    const topTableRows = rankings.length - preferredTopCount;
-                    const minTableRowH = uv(isPortrait ? 26 : 24);
-                    const topTableNeedsH = topTableRows > 0
-                        ? (topTableRows + 1) * minTableRowH + uv(4)
-                        : 0;
-                    const canShowTopCards = preferredTopCount > 0
-                        && (contentBottom - topStartTableY) >= topTableNeedsH;
-                    const topCount = canShowTopCards ? preferredTopCount : 0;
-                    const topTotalW = topCardW * topCount + gap * Math.max(0, topCount - 1);
-                    const topStartX = cx - topTotalW / 2;
-                    const topColors = [SYSTEM.TEXT_GOLD, '#cfd8e8', '#d18b4a'];
-                    const topBorders = [SYSTEM.BORDER_GOLD, SYSTEM.BORDER, 0xd18b4a];
-
-                    if (topCount > 0) rankings.slice(0, topCount).forEach((entry, i) => {
-                        const cardX = topStartX + i * (topCardW + gap);
-                        const cardY = topStartY;
-                        const color = topColors[i];
-                        const border = topBorders[i];
-                        const rankCardKey = `rank_card_${i + 1}`;
-                        if (this.textures.exists(rankCardKey)) {
-                            trackContent(this._addBitmapPanel(cardX, cardY, topCardW, topCardH, {
-                                key: rankCardKey,
-                                alpha: 0.98,
-                                depth: depth + 3,
-                            }));
-                        } else {
-                            const cardG = trackContent(this.add.graphics().setDepth(depth + 3));
-                            drawSystemPanel(cardG, cardX, cardY, topCardW, topCardH, {
-                                cut: uv(8),
-                                fill: i === 0 ? 0x17110b : SYSTEM.BG_PANEL,
-                                fillAlpha: i === 0 ? 0.96 : 0.9,
-                                border,
-                                borderAlpha: i === 0 ? 1 : 0.78,
-                                borderWidth: i === 0 ? 2 : 1,
-                            });
-                            cardG.lineStyle(1, border, 0.26);
-                            cardG.lineBetween(cardX + uv(10), cardY + topCardH - uv(9), cardX + topCardW - uv(10), cardY + topCardH - uv(9));
-                        }
-
-                        const cardTextPadX = uv(isPortrait ? 30 : 24);
-                        const placeText = trackContent(this.add.text(cardX + cardTextPadX, cardY + uv(isPortrait ? 24 : 22), `#0${i + 1}`, {
-                            fontSize: fs(isPortrait ? 14 : 15),
-                            fontFamily: UI_FONT_MONO,
-                            fontStyle: 'bold',
-                            color,
-                            stroke: '#02040a',
-                            strokeThickness: 4,
-                        }).setOrigin(0, 0).setDepth(depth + 4));
-                        this._fitText(placeText, topCardW * 0.34, uv(22));
-                        const cardLabelW = topCardW - cardTextPadX * 2;
-                        const nameY = cardY + topCardH * 0.44;
-                        const scoreY = cardY + topCardH * 0.65;
-                        trackContent(this.add.rectangle(cardX + topCardW / 2, nameY, cardLabelW, uv(isPortrait ? 24 : 22), 0x02040a, 0.5)
-                            .setDepth(depth + 3.6));
-                        trackContent(this.add.rectangle(cardX + topCardW / 2, scoreY, cardLabelW * 0.74, uv(isPortrait ? 23 : 21), 0x02040a, 0.52)
-                            .setDepth(depth + 3.6));
-                        const name = trackContent(this.add.text(cardX + topCardW / 2, nameY, entry.player_name || 'UNKNOWN', {
-                            fontSize: fs(12),
-                            fontFamily: UI_FONT_KR,
-                            fontStyle: 'bold',
-                            color: i === 0 ? SYSTEM.TEXT_BRIGHT : color,
-                            stroke: '#02040a',
-                            strokeThickness: 4,
-                        }).setOrigin(0.5).setDepth(depth + 4));
-                        this._fitText(name, cardLabelW, uv(22));
-                        const scoreText = trackContent(this.add.text(cardX + topCardW / 2, scoreY, formatTime(entry.score), {
-                            fontSize: fs(12),
-                            fontFamily: UI_FONT_MONO,
-                            fontStyle: 'bold',
-                            color,
-                            stroke: '#02040a',
-                            strokeThickness: 4,
-                        }).setOrigin(0.5).setDepth(depth + 4));
-                        this._fitText(scoreText, cardLabelW * 0.74, uv(20));
-                    });
-
-                    const tableRankings = rankings.slice(topCount);
-                    const startY = topCount > 0
-                        ? topStartTableY
-                        : divY + uv(isPortrait ? 22 : (isCrampedLandscape ? 8 : 18));
-                    const maxH = isCrampedPortrait
-                        ? Math.max(1, contentBottom - startY)
-                        : Math.max(uv(120), contentBottom - startY);
-                    const visibleRowBudget = Math.max(1, tableRankings.length);
-                    const fittedRowH = (maxH - uv(4)) / Math.max(1, visibleRowBudget + 1);
-                    const rowH = Math.max(18 / cssPerUnit, isCrampedPortrait
-                        ? Math.max(1, Math.min(uv(32), fittedRowH))
-                        : Math.max(
-                            uv(isPortrait ? 22 : 20),
-                            Math.min(uv(isPortrait ? 36 : 32), fittedRowH)
-                        ));
-                    const hStyle = { fontSize: `${10 / cssPerUnit}px`, fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_CYAN, stroke: '#02040a', strokeThickness: 2 };
-                    let y = startY;
-                    const tableLeft = safeLeft + uv(isPortrait ? 12 : 18);
-                    const tableRight = safeRight - uv(isPortrait ? 12 : 18);
-                    const tableW = tableRight - tableLeft;
-                    const rankX = tableLeft;
-                    const nameX = tableLeft + uv(isPortrait ? 64 : 72);
-                    const scoreX = tableRight;
-                    const rankColW = uv(isPortrait ? 56 : 60);
-                    const scoreColW = uv(isPortrait ? 90 : 94);
-                    const nameColW = Math.max(uv(90), scoreX - scoreColW - nameX - uv(10));
-                    const tableBgH = isCrampedPortrait
-                        ? maxH
-                        : Math.max(rowH * 2, contentBottom - startY);
-                    trackContent(this.add.rectangle(tableLeft + tableW / 2, startY + tableBgH / 2, tableW, tableBgH, 0x02040a, isPortrait ? 0.44 : 0.36)
-                        .setDepth(depth + 1.8));
-                    const rankHead = trackContent(this.add.text(rankX, y, 'RANK', hStyle).setDepth(depth + 2));
-                    const nameHead = trackContent(this.add.text(nameX, y, 'NAME', hStyle).setDepth(depth + 2));
-                    const scoreHead = trackContent(this.add.text(scoreX, y, t('scoreLabel'), hStyle).setOrigin(1, 0).setDepth(depth + 2));
-                    this._fitText(rankHead, rankColW, rowH - uv(4));
-                    this._fitText(nameHead, nameColW, rowH - uv(4));
-                    this._fitText(scoreHead, scoreColW, rowH - uv(4));
-
-                    y += rowH;
-                    const hdiv = trackContent(this.add.graphics().setDepth(depth + 2));
-                    hdiv.lineStyle(1, SYSTEM.BORDER_DIM, 0.6);
-                    hdiv.lineBetween(tableLeft, y, tableRight, y);
-                    y += 4;
-
-                    tableRankings.forEach((entry, i) => {
-                        if (y + rowH > startY + maxH) return;
-                        const rankIndex = i + topCount;
-                        const colors = [SYSTEM.TEXT_GOLD, '#c8d0dc', '#d18b4a'];
-                        const color = rankIndex < 3 ? colors[rankIndex] : SYSTEM.TEXT_BRIGHT;
-                        const rankLabel = `#${String(rankIndex + 1).padStart(2, '0')}`;
-                        const fSize = `${(isPortrait ? 12 : 11) / cssPerUnit}px`;
-                        const bold = rankIndex < 3 ? 'bold' : 'normal';
-                        if (i % 2 === 0) {
-                            const rowG = trackContent(this.add.graphics().setDepth(depth + 2));
-                            rowG.fillStyle(rankIndex < 3 ? 0x201506 : 0x07101a, rankIndex < 3 ? 0.42 : 0.34);
-                            rowG.fillRect(tableLeft, y - uv(2), tableW, rowH);
-                        }
-
-                        const rowRankText = trackContent(this.add.text(rankX, y, rankLabel, {
-                            fontSize: fSize, fontFamily: UI_FONT_MONO, fontStyle: bold, color,
-                            stroke: '#02040a', strokeThickness: 3,
-                        }).setDepth(depth + 2));
-                        this._fitText(rowRankText, rankColW, rowH - uv(4));
-                        const nT = trackContent(this.add.text(nameX, y, entry.player_name, {
-                            fontSize: fSize, fontFamily: UI_FONT_KR, fontStyle: bold, color,
-                            stroke: '#02040a', strokeThickness: 3,
-                        }).setDepth(depth + 2));
-                        this._fitText(nT, nameColW, rowH - uv(4));
-                        const rowScoreText = trackContent(this.add.text(scoreX, y, formatTime(entry.score), {
-                            fontSize: fSize, fontFamily: UI_FONT_MONO, fontStyle: bold, color,
-                            stroke: '#02040a', strokeThickness: 3,
-                        }).setOrigin(1, 0).setDepth(depth + 2));
-                        this._fitText(rowScoreText, scoreColW, rowH - uv(4));
-                        y += rowH;
-                    });
+                    const rankings = Array.isArray(data.rankings) ? data.rankings.slice(0, rankingDisplayLimit) : [];
+                    const startY = divY + uv(isCrampedLandscape ? 8 : 18);
+                    trackContent(createRankingTable({
+                        canvas: this.game.canvas,
+                        bounds: { x: safeLeft, y: startY, width: safeW, height: contentBottom - startY,
+                            gameWidth: GAME_WIDTH, gameHeight: GAME_HEIGHT },
+                        rankings,
+                        labels: { title: t('hallOfFame'), rank: t('rankColumn'), name: t('nameColumn'),
+                            time: t('timeColumn'), empty: t('noRecords') },
+                    }));
                 })
                 .catch(() => {
                     if (isClosed() || seq !== requestSeq) return;

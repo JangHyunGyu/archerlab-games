@@ -1420,11 +1420,13 @@ if (!lobbyContent.includes('trim()') || !lobbyContent.includes('!msg')) {
 // ═══════════════════════════════════════════
 // L. 풀스크린 API 검증
 // ═══════════════════════════════════════════
-if (!mainContent.includes('requestFullscreen') && !mainContent.includes('webkitRequestFullscreen')) {
+const fullscreenContent = mainContent.includes('ArcherImmersive') && html.includes('../shared/immersive.js')
+    ? fs.readFileSync(path.join(ROOT, '../shared/immersive.js'), 'utf8') : mainContent;
+if (!fullscreenContent.includes('requestFullscreen') && !fullscreenContent.includes('webkitRequestFullscreen')) {
     warnings.push(`[FULLSCREEN] No fullscreen API calls found`);
 }
 // 이미 풀스크린인 경우 중복 요청 방지
-if (!mainContent.includes('fullscreenElement')) {
+if (!fullscreenContent.includes('fullscreenElement')) {
     warnings.push(`[FULLSCREEN] No fullscreenElement check — may cause errors when already fullscreen`);
 }
 

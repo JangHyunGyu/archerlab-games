@@ -236,9 +236,12 @@
         }
     </style>
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
+  <script src="../shared/immersive.js?v=20260913-immersive-v1" defer></script>
+  <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="ranking.css?v=20260913-immersive-v1">
 </head>
 <body>
-    <a href="https://archerlab.dev" target="_blank" rel="noopener noreferrer" class="archerlab-link" id="archerlab-link" title="ArcherLab">ArcherLab</a>
+    <a href="https://archerlab.dev" rel="noopener noreferrer" class="archerlab-link" id="archerlab-link" title="ArcherLab">ArcherLab</a>
     <style>
         .archerlab-link {
             position: fixed; left: 50%; right: auto; top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto;
@@ -296,9 +299,9 @@
             navigator.serviceWorker.register('sw.js').catch(() => {});
         }
     </script>
-    <script type="module" src="js/main.js?v=20260913-crafted-ui-v1&ranking=20260913-v1"></script>
+    <script type="module" src="js/main.js?v=20260913-immersive-v1"></script>
     <script>
-        document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+        document.addEventListener('touchmove', function(e) { if (!e.target.closest('[data-ranking-scroll]')) e.preventDefault(); }, { passive: false });
         document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
         document.addEventListener('gesturechange', function(e) { e.preventDefault(); });
         document.addEventListener('contextmenu', function(e) { e.preventDefault(); });

@@ -64,7 +64,8 @@
         "node solo-leveling/tests/stat-terminology.test.cjs",
         "node solo-leveling/tests/combat-vfx-direction.test.cjs",
         "node solo-leveling/tests/combat-vfx-coverage.test.cjs",
-        "node solo-leveling/tests/ranking-recovery.test.cjs"
+        "node solo-leveling/tests/ranking-recovery.test.cjs",
+        "node --test solo-leveling/tests/ranking-table.test.cjs"
       ]
     }
   ]

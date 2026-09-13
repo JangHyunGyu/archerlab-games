@@ -1804,7 +1804,7 @@ kbd {
     }
 
     #practice-setup .input-select {
-        min-height: 34px;
+        min-height: 44px;
     }
 
     #practice-setup .form-actions {
@@ -1819,7 +1819,7 @@ kbd {
     }
 
     #practice-setup .form-actions .btn {
-        min-height: 34px;
+        min-height: 44px;
     }
 
     #multiplayer-lobby .panel-wide {
@@ -1861,7 +1861,7 @@ kbd {
     }
 
     #multiplayer-lobby .input-text {
-        min-height: 34px;
+        min-height: 44px;
     }
 
     #multiplayer-lobby .lobby-actions {
@@ -1870,7 +1870,7 @@ kbd {
 
     #multiplayer-lobby .btn-small,
     #multiplayer-lobby .btn-small-primary {
-        min-height: 34px;
+        min-height: 44px;
         padding: 6px 10px;
         font-size: 0.74rem;
     }
@@ -1892,7 +1892,7 @@ kbd {
 
     #multiplayer-lobby .form-actions .btn {
         flex: 0 0 160px;
-        min-height: 34px;
+        min-height: 44px;
     }
 }
 
@@ -1942,7 +1942,7 @@ kbd {
         max-width: calc(100vw - 40px);
     }
 
-    #practice-setup .form-group:nth-of-type(3) {
+    #practice-setup .form-group:nth-last-child(2) {
         grid-column: 1 / -1;
     }
 
@@ -2196,7 +2196,7 @@ kbd {
 }
 
 #main-menu .language-btn {
-    min-height: 34px;
+    min-height: 44px;
     border-radius: 4px;
     font-family: var(--font-mono);
 }
@@ -2711,6 +2711,16 @@ kbd {
     body[data-screen="game-screen"] #rotate-overlay {
         display: flex;
     }
+}
+
+#game-header a, body button {
+    min-width: 44px;
+    min-height: 44px;
+}
+#game-header a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 @media (prefers-reduced-motion: reduce) {

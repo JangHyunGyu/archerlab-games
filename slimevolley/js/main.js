@@ -932,17 +932,7 @@ class SlimeVolleyGame {
 
     // === Fullscreen ===
     enterFullscreen() {
-        // iPhone Safari only supports the Fullscreen API partially and generally
-        // cannot fullscreen non-media elements. Keep gameplay in normal viewport.
-        if (/iPhone|iPod/.test(navigator.userAgent || '')) return;
-        if (document.fullscreenElement || document.webkitFullscreenElement) return;
-        const el = document.documentElement;
-        try {
-            const request = el.requestFullscreen
-                ? el.requestFullscreen({ navigationUI: 'hide' })
-                : el.webkitRequestFullscreen && el.webkitRequestFullscreen();
-            if (request && typeof request.catch === 'function') request.catch(() => {});
-        } catch (e) {}
+        window.ArcherImmersive?.autoEnter();
     }
 
     // === Sound ===

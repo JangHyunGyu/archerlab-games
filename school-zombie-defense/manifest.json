@@ -1,0 +1,23 @@
+{
+  "name": "스쿨 언데드 디펜스",
+  "short_name": "school-zombie-defense",
+  "start_url": "./",
+  "scope": "./",
+  "background_color": "#11120f",
+  "theme_color": "#11120f",
+  "icons": [
+    {
+      "src": "../favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "id": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "any"
+}
