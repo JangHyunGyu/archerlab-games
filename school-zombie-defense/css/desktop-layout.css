@@ -1,19 +1,28 @@
-/* Desktop landscape: widen the portrait playfield so 1280×800-class monitors
-   are not stuck with a phone-width column and huge side gutters.
-   Do not gate on hover/pointer — automated and some desktop browsers fail those. */
+/* Desktop landscape: wider shell + canvas fill.
+   Phaser FIT keeps a 540×960 (9:16) canvas, so CSS width alone cannot
+   widen the canvas beyond ~viewportHeight×0.5625. JS scales the canvas
+   to the shell width (overflow clips top/bottom slightly). */
 @media (min-width: 900px) and (min-aspect-ratio: 5/4) {
   #game-shell {
     width: min(
       calc(var(--game-viewport-width) - var(--game-safe-left) - var(--game-safe-right) - 48px),
-      calc((var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom) - 24px) * 0.78),
+      calc((var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom) - 24px) * 0.9),
       720px
     );
     height: min(
       calc(var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom) - 24px),
-      calc((var(--game-viewport-width) - var(--game-safe-left) - var(--game-safe-right) - 48px) * 1.4),
       1100px
     );
     max-width: 720px;
     max-height: 1100px;
+    overflow: hidden;
+  }
+
+  #game-root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
   }
 }
