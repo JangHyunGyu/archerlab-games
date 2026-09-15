@@ -1,0 +1,18 @@
+/* Desktop landscape: keep a portrait playfield but use a wider frame so
+   1280×800-class monitors are not stuck with a tiny phone column and huge gutters. */
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) and (min-aspect-ratio: 5/4) {
+  #game-shell {
+    width: min(
+      calc(var(--game-viewport-width) - var(--game-safe-left) - var(--game-safe-right) - 48px),
+      calc((var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom) - 24px) * 0.65),
+      640px
+    );
+    height: min(
+      calc(var(--game-viewport-height) - var(--game-safe-top) - var(--game-safe-bottom) - 24px),
+      calc((var(--game-viewport-width) - var(--game-safe-left) - var(--game-safe-right) - 48px) * 1.6),
+      1100px
+    );
+    max-width: 640px;
+    max-height: 1100px;
+  }
+}
