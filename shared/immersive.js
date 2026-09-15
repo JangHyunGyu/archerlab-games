@@ -43,21 +43,28 @@
     }
   }
 
+  // Desktop mouse play should not jump into browser fullscreen; keep that for
+  // explicit controls and for coarse-pointer (phone/tablet) canvas taps.
+  const prefersTouchImmersive = () => Boolean(root.matchMedia?.('(pointer: coarse)').matches);
+
   function onGesture(event) {
     const target = event.target;
     if (!event.isTrusted || !target?.closest || target.closest('a, input, textarea, select, [contenteditable], [data-ranking-scroll], [data-no-fullscreen]')) return;
-    if (target.closest('[data-fullscreen-start], canvas, [data-fullscreen-play]')) autoEnter();
+    const explicit = target.closest('[data-fullscreen-start], [data-fullscreen-play]');
+    const canvasTouch = prefersTouchImmersive() && target.closest('canvas');
+    if (explicit || canvasTouch) autoEnter();
   }
 
   // Click retains activation for touch, mouse and native keyboard buttons.
   // Never preventDefault: navigation, focus, audio and game input keep working.
   doc.addEventListener('click', onGesture, true);
   // Canvas engines can cancel compatibility clicks after a touch. Pointer-up
-  // still carries touch activation; Enter covers their keyboard-only menus.
+  // still carries touch activation on coarse pointers only.
   doc.addEventListener('pointerup', event => {
-    if (event.target?.closest?.('canvas')) onGesture(event);
+    if (prefersTouchImmersive() && event.target?.closest?.('canvas')) onGesture(event);
   }, true);
   doc.addEventListener('keydown', event => {
+    if (!prefersTouchImmersive()) return;
     if (event.isTrusted && event.key === 'Enter' && !event.repeat &&
         ['BODY', 'CANVAS'].includes(event.target?.tagName) && doc.querySelector('canvas')) autoEnter();
   }, true);
