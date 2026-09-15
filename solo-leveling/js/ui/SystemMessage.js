@@ -1,5 +1,6 @@
 import { GAME_WIDTH, GAME_HEIGHT, UI_FONT_MONO, UI_FONT_KR, fs, uv, fitText, padText } from '../utils/Constants.js';
 import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
+import { t } from '../utils/i18n.js';
 
 /**
  * 그림자 서바이벌의 시스템 창 UI입니다.
@@ -25,7 +26,7 @@ export class SystemMessage {
     show(title, lines, options = {}) {
         if (this._destroyed || !this.scene) return;
         const msg = {
-            title: title || '[시스템]',
+            title: title || t('sysSystem'),
             lines: Array.isArray(lines) ? lines : [lines],
             duration: options.duration || 3000,
             type: options.type || 'info', // info, warning, quest, levelup, arise
