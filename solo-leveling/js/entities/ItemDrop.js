@@ -1,3 +1,4 @@
+import { t, tf } from '../utils/i18n.js';
 import { COLORS } from '../utils/Constants.js';
 
 /**
@@ -15,7 +16,7 @@ const ITEM_TYPES = {
         effect: (player, scene) => {
             const healAmount = Math.floor(player.stats.maxHp * 0.08);
             player.heal(healAmount);
-            scene.systemMessage?.show('[시스템]', [`HP가 ${healAmount} 회복되었습니다.`], { duration: 1500 });
+            scene.systemMessage?.show(t('sysSystem'), [tf('itemHpRestored', { n: healAmount })], { duration: 1500 });
         },
     },
     manaCrystal: {
@@ -29,7 +30,7 @@ const ITEM_TYPES = {
             const bonus = 0.2;
             player._tempCooldownReduction = Math.max(0, (player._tempCooldownReduction || 0) + bonus);
             player._recalcStat?.('cooldownReduction');
-            scene.systemMessage?.show('[시스템]', ['마나 크리스탈 사용: 쿨타임 감소 10초'], { duration: 1500 });
+            scene.systemMessage?.show(t('sysSystem'), [t('itemManaCrystal')], { duration: 1500 });
             scene.itemDropManager?._delay(10000, () => {
                 if (!player?.scene) return;
                 player._tempCooldownReduction = Math.max(0, (player._tempCooldownReduction || 0) - bonus);
@@ -46,7 +47,7 @@ const ITEM_TYPES = {
         effect: (player, scene) => {
             // Temporary attack boost for 15 seconds
             player._tempAtkBuff = (player._tempAtkBuff || 0) + 0.5;
-            scene.systemMessage?.show('[시스템]', ['그림자 정수 흡수: 공격력 50% 증가 15초'], { duration: 1500, type: 'arise' });
+            scene.systemMessage?.show(t('sysSystem'), [t('itemShadowEssence')], { duration: 1500, type: 'arise' });
             scene.itemDropManager?._delay(15000, () => {
                 if (player?.scene) player._tempAtkBuff = Math.max(0, (player._tempAtkBuff || 0) - 0.5);
             });
