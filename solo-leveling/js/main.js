@@ -6,7 +6,10 @@ import { MenuScene } from './scenes/MenuScene.js?v=20260913-immersive-v2';
 import { GameScene } from './scenes/GameScene.js?v=20260915-locale-v1&ranking=20260913-v1';
 import { LevelUpScene } from './scenes/LevelUpScene.js?v=20260915-locale-v1';
 import { generateLevelUpChoices } from './scenes/LevelUpChoices.js?v=20260915-locale-v1';
+import { installInRunLocalePatches } from './utils/inrun-locale-patches.js?v=20260915-locale-v1';
 import { GameOverScene } from './scenes/GameOverScene.js?v=20260904-continuation-rank-v1&ranking=20260913-v1';
+
+installInRunLocalePatches();
 
 // Calculate game dimensions to match screen aspect ratio
 // This eliminates black bars on all devices
