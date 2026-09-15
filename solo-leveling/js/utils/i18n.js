@@ -1,3 +1,6 @@
+import { apply_skills } from './i18n-extras-skills.js?v=20260915-locale-v1';
+import { apply_toasts } from './i18n-extras-toasts.js?v=20260915-locale-v1';
+
 // Detect language from saved preference, URL parameter, or default to 'ko'
 const params = new URLSearchParams(window.location.search);
 const langParam = params.get('lang');
@@ -22,7 +25,6 @@ export function setLang(code) {
 
 const TEXTS = {
     ko: {
-        // Menu
         title: '그림자 서바이벌',
         subtitle: 'S U R V I V O R S',
         startGame: '게임 시작',
@@ -37,13 +39,9 @@ const TEXTS = {
         contactKakao: '카카오톡 오픈채팅',
         contactEmail: 'hyungyu@archerlab.dev',
         close: '닫기',
-
-        // Menu system notice (typewriter)
         menuMsg1: '▷ 플레이어 감지됨 ── 재야의 헌터',
         menuMsg2: '▷ 등급 평가: E - RANK',
         menuMsg3: '▷ 던전 균열 확인 ── 입장하시겠습니까?',
-
-        // System messages
         sysEnterDungeon: '플레이어가 던전에 입장했습니다.',
         sysKillToLevel: '마수를 처치하고 레벨을 올리세요.',
         sysQuestComing: '일일 퀘스트가 주어질 예정입니다.',
@@ -54,19 +52,13 @@ const TEXTS = {
         sysWarning: '[경고]',
         sysQuest: '[퀘스트]',
         resumeLoaded: '진행 데이터를 복구했습니다.',
-
-        // Level up
         levelUp: 'LEVEL UP!',
         levelUpMsg: '레벨이 올랐습니다!',
         newSkill: '새로운 스킬을 선택하세요.',
         skillLabel: '스킬',
         passiveLabel: '패시브',
-
-        // Boss
         bossDetected: '강력한 마수의 기운이 감지되었습니다!',
         bossAppeared: '이(가) 출현했습니다.',
-
-        // Death / Game Over / Victory
         playerDied: '플레이어가 사망했습니다.',
         exitDungeon: '던전에서 퇴장합니다...',
         huntOver: '사냥은 끝났다...',
@@ -82,8 +74,6 @@ const TEXTS = {
         killLabel: '처치수',
         timeLabel: '생존 시간',
         shadowLabel: '그림자 군단',
-
-        // Status window
         statusTitle: '상태창',
         statName: '이름',
         statRank: '칭호',
@@ -100,18 +90,12 @@ const TEXTS = {
         statUnit: '마리',
         tabClose: 'TAB 키로 닫기',
         playerName: '성진우',
-
-        // HUD
         hudStatus: '상태',
-
-        // Enemy names
         enemies: {
             goblin: '고블린', antSoldier: '개미 병사', orc: '오크',
             iceBear: '아이스 베어', stoneGolem: '스톤 골렘', darkMage: '다크 메이지',
             ironKnight: '아이언 나이트', demonWarrior: '마족 전사',
         },
-
-        // Weapons
         weapons: {
             basicDagger: { name: '단검 공격', desc: '단검으로 가까운 적을 빠르게 찌릅니다' },
             shadowDagger: { name: '단검 투척', desc: '가장 가까운 적에게 그림자 단검을 투척합니다' },
@@ -119,8 +103,6 @@ const TEXTS = {
             rulersAuthority: { name: '지배자의 권능', desc: '텔레키네시스로 주변 적에게 범위 피해를 줍니다' },
             dragonFear: { name: '용의 공포', desc: '공포의 오라로 주변 적의 이동속도를 감소시킵니다' },
         },
-
-        // Passives
         passives: {
             swiftness: { name: '신속', desc: '이동속도 +8%' },
             vitality: { name: '체력 강화', desc: '최대 HP +12%' },
@@ -130,15 +112,11 @@ const TEXTS = {
             hastening: { name: '쿨타임 감소', desc: '스킬 쿨타임 -6%' },
             magnet: { name: '자석', desc: '픽업 범위 +25%' },
         },
-
-        // Items
         items: {
             hpPotion: 'HP 포션',
             manaCrystal: '마나 크리스탈',
             shadowEssence: '그림자 정수',
         },
-
-        // Hall of Fame
         hallOfFame: '명예의 전당',
         ranking: '랭킹',
         noRecords: '기록이 없습니다',
@@ -171,12 +149,9 @@ const TEXTS = {
         contactKakao: 'KakaoTalk Open Chat',
         contactEmail: 'hyungyu@archerlab.dev',
         close: 'Close',
-
-        // Menu system notice (typewriter)
         menuMsg1: '▷ Player detected ── Unranked Hunter',
         menuMsg2: '▷ Grade: E - RANK',
         menuMsg3: '▷ Dungeon rift confirmed ── Do you wish to enter?',
-
         sysEnterDungeon: 'Player has entered the dungeon.',
         sysKillToLevel: 'Defeat monsters and level up.',
         sysQuestComing: 'A daily quest will be assigned soon.',
@@ -187,16 +162,13 @@ const TEXTS = {
         sysWarning: '[WARNING]',
         sysQuest: '[QUEST]',
         resumeLoaded: 'Progress restored.',
-
         levelUp: 'LEVEL UP!',
         levelUpMsg: 'Level increased!',
         newSkill: 'Choose a new skill.',
         skillLabel: 'Skill',
         passiveLabel: 'Passive',
-
         bossDetected: 'A powerful enemy has been detected!',
         bossAppeared: ' has appeared.',
-
         playerDied: 'Player has fallen.',
         exitDungeon: 'Leaving the dungeon...',
         huntOver: 'The hunt is over...',
@@ -212,7 +184,6 @@ const TEXTS = {
         killLabel: 'Kills',
         timeLabel: 'Time',
         shadowLabel: 'Shadow Army',
-
         statusTitle: 'Status',
         statName: 'Name',
         statRank: 'Title',
@@ -229,15 +200,12 @@ const TEXTS = {
         statUnit: '',
         tabClose: 'Press TAB to close',
         playerName: 'Sung Jinwoo',
-
         hudStatus: 'Status',
-
         enemies: {
             goblin: 'Goblin', antSoldier: 'Ant Soldier', orc: 'Orc',
             iceBear: 'Ice Bear', stoneGolem: 'Stone Golem', darkMage: 'Dark Mage',
             ironKnight: 'Iron Knight', demonWarrior: 'Demon Warrior',
         },
-
         weapons: {
             basicDagger: { name: 'Dagger Attack', desc: 'Stab nearby enemies quickly with a dagger' },
             shadowDagger: { name: 'Dagger Throw', desc: 'Throw a shadow dagger at the nearest enemy' },
@@ -245,7 +213,6 @@ const TEXTS = {
             rulersAuthority: { name: "Ruler's Authority", desc: 'Deal AoE damage with telekinesis' },
             dragonFear: { name: "Dragon's Fear", desc: 'Slow nearby enemies with an aura of fear' },
         },
-
         passives: {
             swiftness: { name: 'Swiftness', desc: 'Move speed +10%' },
             vitality: { name: 'Vitality', desc: 'Max HP +15%' },
@@ -254,13 +221,11 @@ const TEXTS = {
             scholar: { name: 'Scholar', desc: 'XP gain +15%' },
             hastening: { name: 'Haste', desc: 'Skill cooldown -6%' },
         },
-
         items: {
             hpPotion: 'HP Potion',
             manaCrystal: 'Mana Crystal',
             shadowEssence: 'Shadow Essence',
         },
-
         hallOfFame: 'HALL OF FAME',
         ranking: 'RANKING',
         noRecords: 'No records yet',
@@ -293,12 +258,9 @@ const TEXTS = {
         contactKakao: 'カカオトーク オープンチャット',
         contactEmail: 'hyungyu@archerlab.dev',
         close: '閉じる',
-
-        // Menu system notice (typewriter)
         menuMsg1: '▷ プレイヤーを検出 ── 在野のハンター',
         menuMsg2: '▷ 等級評価: E - RANK',
         menuMsg3: '▷ ダンジョンの亀裂を確認 ── 入場しますか？',
-
         sysEnterDungeon: 'プレイヤーがダンジョンに入場しました。',
         sysKillToLevel: '魔獣を倒してレベルを上げましょう。',
         sysQuestComing: 'デイリークエストが間もなく開始されます。',
@@ -309,16 +271,13 @@ const TEXTS = {
         sysWarning: '[警告]',
         sysQuest: '[クエスト]',
         resumeLoaded: '進行データを復元しました。',
-
         levelUp: 'LEVEL UP!',
         levelUpMsg: 'レベルが上がりました！',
         newSkill: '新しいスキルを選んでください。',
         skillLabel: 'スキル',
         passiveLabel: 'パッシブ',
-
         bossDetected: '強力な魔獣の気配が感知されました！',
         bossAppeared: 'が出現しました。',
-
         playerDied: 'プレイヤーが倒れました。',
         exitDungeon: 'ダンジョンから退場します...',
         huntOver: '狩りは終わった...',
@@ -334,7 +293,6 @@ const TEXTS = {
         killLabel: '討伐数',
         timeLabel: '生存時間',
         shadowLabel: '影の軍団',
-
         statusTitle: 'ステータス',
         statName: '名前',
         statRank: '称号',
@@ -351,15 +309,12 @@ const TEXTS = {
         statUnit: '体',
         tabClose: 'TABキーで閉じる',
         playerName: '旬',
-
         hudStatus: 'ステータス',
-
         enemies: {
             goblin: 'ゴブリン', antSoldier: 'アリ兵士', orc: 'オーク',
             iceBear: 'アイスベア', stoneGolem: 'ストーンゴーレム', darkMage: 'ダークメイジ',
             ironKnight: 'アイアンナイト', demonWarrior: '魔族戦士',
         },
-
         weapons: {
             basicDagger: { name: '短剣攻撃', desc: '短剣で近くの敵を素早く突きます' },
             shadowDagger: { name: '短剣投擲', desc: '最も近い敵に影の短剣を投げます' },
@@ -367,7 +322,6 @@ const TEXTS = {
             rulersAuthority: { name: '支配者の権能', desc: 'テレキネシスで周囲の敵に範囲ダメージ' },
             dragonFear: { name: '龍の恐怖', desc: '恐怖のオーラで周囲の敵の移動速度を減少' },
         },
-
         passives: {
             swiftness: { name: '迅速', desc: '移動速度 +10%' },
             vitality: { name: '体力強化', desc: '最大HP +15%' },
@@ -376,13 +330,11 @@ const TEXTS = {
             scholar: { name: '学習能力', desc: '経験値 +15%' },
             hastening: { name: 'クールダウン減少', desc: 'スキルクールダウン -6%' },
         },
-
         items: {
             hpPotion: 'HPポーション',
             manaCrystal: 'マナクリスタル',
             shadowEssence: '影のエッセンス',
         },
-
         hallOfFame: '殿堂入り',
         ranking: 'ランキング',
         noRecords: '記録がありません',
@@ -401,6 +353,9 @@ const TEXTS = {
     },
 };
 
+apply_skills(TEXTS);
+apply_toasts(TEXTS);
+
 // Game API Config
 export const GAME_API_URL = 'https://game-api.yama5993.workers.dev';
 export const GAME_ID_SHADOW = 'shadow-survival-character-v1';
@@ -411,4 +366,18 @@ export function t(key) {
 
 export function tNested(category, key) {
     return TEXTS[LANG]?.[category]?.[key] ?? TEXTS.ko[category]?.[key] ?? key;
+}
+
+export function tf(key, vars = {}) {
+    return String(t(key)).replace(/\{(\w+)\}/g, (_, name) => (
+        vars[name] == null ? `{${name}}` : String(vars[name])
+    ));
+}
+
+/** Resolve localized skill card copy; falls back to config strings. */
+export function tSkill(kind, key, field, fallback = '') {
+    const entry = TEXTS[LANG]?.[kind]?.[key] ?? TEXTS.ko?.[kind]?.[key];
+    if (entry && typeof entry === 'object' && entry[field] != null) return entry[field];
+    if (typeof entry === 'string') return entry;
+    return fallback ?? key;
 }
