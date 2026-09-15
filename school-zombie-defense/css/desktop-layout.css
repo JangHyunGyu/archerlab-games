@@ -1,7 +1,6 @@
-/* Desktop landscape: wider shell + canvas fill.
-   Phaser FIT keeps a 540×960 (9:16) canvas, so CSS width alone cannot
-   widen the canvas beyond ~viewportHeight×0.5625. JS scales the canvas
-   to the shell width (overflow clips top/bottom slightly). */
+/* Desktop landscape: wider shell + force canvas to fill shell width.
+   Phaser Scale.FIT (540×960) keeps rewriting inline canvas size to
+   ~viewportHeight×0.5625; !important beats those inline styles. */
 @media (min-width: 900px) and (min-aspect-ratio: 5/4) {
   #game-shell {
     width: min(
@@ -24,5 +23,12 @@
     overflow: hidden;
     display: grid;
     place-items: center;
+  }
+
+  #game-root canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
   }
 }
