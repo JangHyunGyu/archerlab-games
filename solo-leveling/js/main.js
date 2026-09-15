@@ -5,6 +5,7 @@ import { PreloadScene } from './scenes/PreloadScene.js?v=20260913-crafted-ui-v1'
 import { MenuScene } from './scenes/MenuScene.js?v=20260913-immersive-v2';
 import { GameScene } from './scenes/GameScene.js?v=20260915-locale-v1&ranking=20260913-v1';
 import { LevelUpScene } from './scenes/LevelUpScene.js?v=20260915-locale-v1';
+import { generateLevelUpChoices } from './scenes/LevelUpChoices.js?v=20260915-locale-v1';
 import { GameOverScene } from './scenes/GameOverScene.js?v=20260904-continuation-rank-v1&ranking=20260913-v1';
 
 // Calculate game dimensions to match screen aspect ratio
@@ -59,6 +60,11 @@ function syncCanvasDisplaySize(viewport = getViewportSize()) {
 const size = calcGameSize();
 const viewport = getViewportSize();
 setGameDimensions(size.w, size.h, viewport.w, viewport.h);
+
+// Locale-aware level-up cards (keeps LevelUpScene.js free of hardcoded Korean).
+LevelUpScene.prototype._generateChoices = function _generateChoicesLocalized() {
+    return generateLevelUpChoices(this.player, this.weaponManager, (key) => this._iconTexture(key));
+};
 
 const config = {
     type: Phaser.WEBGL,
