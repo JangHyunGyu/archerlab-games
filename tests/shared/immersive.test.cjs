@@ -8,16 +8,54 @@ const code = fs.readFileSync(path.join(__dirname, '../../shared/immersive.js'), 
 function setup(options = {}) {
   const calls = [];
   const listeners = {};
-  const document = { documentElement: {}, addEventListener: (name, fn) => { listeners[name] = fn; } };
+  const timeouts = [];
+  const classNames = new Set();
+  const style = { transform: '', setProperty(name, value) { this[name] = value; } };
+  const document = {
+    documentElement: {
+      style,
+      clientHeight: options.innerHeight || 800,
+      classList: {
+        add: name => classNames.add(name),
+        remove: name => classNames.delete(name),
+        toggle(name, force) {
+          const on = force === undefined ? !classNames.has(name) : !!force;
+          if (on) classNames.add(name); else classNames.delete(name);
+          return on;
+        },
+        contains: name => classNames.has(name)
+      }
+    },
+    body: {},
+    activeElement: options.activeElement || { matches: () => false, closest: () => null },
+    addEventListener: (name, fn) => { listeners[name] = fn; }
+  };
   if (!options.unsupported) document.documentElement[options.webkit ? 'webkitRequestFullscreen' : 'requestFullscreen'] = (value) => {
     calls.push(value);
     if (options.reject) return Promise.reject(new Error('denied'));
     if (options.throws) throw new Error('blocked');
     return options.webkit ? undefined : Promise.resolve();
   };
-  const window = { document, navigator: { userActivation: { isActive: true }, standalone: options.standalone }, matchMedia: () => ({ matches: false }), addEventListener: (name, fn) => { listeners[name] = fn; } };
+  const window = {
+    document,
+    innerHeight: options.innerHeight || 800,
+    navigator: {
+      userActivation: { isActive: true },
+      standalone: options.standalone,
+      virtualKeyboard: options.keyboard ? {
+        overlaysContent: false,
+        boundingRect: { height: options.keyboard },
+        addEventListener() {}
+      } : undefined
+    },
+    visualViewport: options.visualViewport,
+    matchMedia: () => ({ matches: false }),
+    addEventListener: (name, fn) => { listeners[name] = fn; },
+    setTimeout: (fn, ms) => { timeouts.push({ fn, ms }); return timeouts.length; },
+    clearTimeout() {}
+  };
   vm.runInNewContext(code, { window });
-  return { api: window.ArcherImmersive, calls, window, document, listeners, click: (kind, trusted = true) => listeners.click({ isTrusted: trusted, target: { closest: selector => selector.includes(kind) } }) };
+  return { api: window.ArcherImmersive, calls, window, document, listeners, timeouts, style, click: (kind, trusted = true) => listeners.click({ isTrusted: trusted, target: { closest: selector => selector.includes(kind) } }) };
 }
 
 test('fullscreen requests the whole document and hides browser navigation', async () => {
@@ -86,6 +124,23 @@ test('back-forward cache restoration allows a fresh start gesture', async () => 
   await s.api.autoEnter();
   assert.equal(s.calls.length, 2);
 });
+test('lifts the layout briefly after fullscreen so the browser exit hint does not cover controls', async () => {
+  const s = setup();
+  await s.api.enter();
+  s.document.fullscreenElement = s.document.documentElement;
+  s.listeners.fullscreenchange();
+  assert.match(s.style.transform, /translate3d\(0,-80px,0\)/);
+  assert.equal(s.timeouts[0].ms, 2000);
+  s.timeouts[0].fn();
+  assert.equal(s.style.transform, '');
+});
+test('lifts by virtual keyboard height when fullscreen overlays the composer', () => {
+  const s = setup({ keyboard: 320, activeElement: { matches: sel => sel.includes('textarea'), closest: () => null } });
+  s.document.fullscreenElement = s.document.documentElement;
+  s.listeners.fullscreenchange();
+  assert.match(s.style.transform, /translate3d\(0,-320px,0\)/);
+  assert.equal(s.document.documentElement.classList.contains('archer-immersive-keyboard'), true);
+});
 
 
 test('every localized game shell has a local immersive helper and an unrestricted app manifest', () => {
@@ -100,7 +155,9 @@ test('every localized game shell has a local immersive helper and an unrestricte
     entries = ['index.html', ...['en','ja','es','fr','de','pt'].map(lang => `${lang}/index.html`)];
   }
   for (const entry of entries) {
-    const html = fs.readFileSync(path.join(repo, entry), 'utf8');
+    let html = fs.readFileSync(path.join(repo, entry), 'utf8');
+    const gzipPayload = html.match(/var b64 = "([A-Za-z0-9+/=]+)"/);
+    if (gzipPayload) html = require('zlib').gunzipSync(Buffer.from(gzipPayload[1], 'base64')).toString('utf8');
     assert.match(html, /<script[^>]+src="[^"]*immersive\.js\?v=/, entry);
     assert.match(html, /name="apple-mobile-web-app-capable" content="yes"/, entry);
     assert.doesNotMatch(html, /<a\b(?=[^>]*href="https:\/\/archerlab\.dev\/?")(?=[^>]*target="_blank")[^>]*>/, entry);
