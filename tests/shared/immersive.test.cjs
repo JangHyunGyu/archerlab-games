@@ -138,8 +138,21 @@ test('lifts by virtual keyboard height when fullscreen overlays the composer', (
   const s = setup({ keyboard: 320, activeElement: { matches: sel => sel.includes('textarea'), closest: () => null } });
   s.document.fullscreenElement = s.document.documentElement;
   s.listeners.fullscreenchange();
-  assert.match(s.style.transform, /translate3d\(0,-320px,0\)/);
-  assert.equal(s.document.documentElement.classList.contains('archer-immersive-keyboard'), true);
+  assert.equal(s.style.transform, '', 'fullscreen keyboard inset is applied by the app, not by translating the document');
+  assert.equal(s.style['--immersive-keyboard-inset'], '320px');
+  assert.equal(s.api.keyboardOverlap(), 320);
+});
+test('keyboard overlap uses visual viewport shrink in windowed layout and the virtual keyboard in fullscreen overlay', () => {
+  const s = setup();
+  assert.equal(s.api.keyboardOverlapFrom({
+    editing: true, innerHeight: 800, clientHeight: 800, vvHeight: 480, vvOffsetTop: 0, vkHeight: 0
+  }), 320);
+  assert.equal(s.api.keyboardOverlapFrom({
+    editing: true, innerHeight: 800, clientHeight: 800, vvHeight: 800, vvOffsetTop: 0, vkHeight: 320
+  }), 320);
+  assert.equal(s.api.keyboardOverlapFrom({
+    editing: false, innerHeight: 800, clientHeight: 800, vvHeight: 480, vvOffsetTop: 0, vkHeight: 320
+  }), 0);
 });
 
 
