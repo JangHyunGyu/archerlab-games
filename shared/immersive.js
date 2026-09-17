@@ -106,6 +106,7 @@
     } else {
       clearHintTimer();
       hintUntil = 0;
+      leavingHome = false;
     }
     syncLayout();
   }
@@ -166,12 +167,17 @@
     const href = homeHref(anchor);
     if (!event.isTrusted || !href || !isFullscreen()) return false;
     event.preventDefault?.();
-    if (leavingHome) return true;
-    leavingHome = true;
-    Promise.resolve(exit()).finally(() => {
+    const go = () => {
+      leavingHome = false;
       if (root.location?.assign) root.location.assign(href);
       else root.location.href = href;
-    });
+    };
+    if (leavingHome) {
+      go();
+      return true;
+    }
+    leavingHome = true;
+    Promise.resolve(exit()).then(go, go);
     return true;
   }
 
@@ -186,7 +192,7 @@
   doc.addEventListener('pointerup', event => {
     // Touch/pen activation is pointerup; pointerdown is not a fullscreen gesture on Chrome Android.
     if (event.pointerType === 'mouse') return;
-    if (onHomeClick(event)) return;
+    if (event.target?.closest?.('a[href]')) return;
     if (event.target?.closest?.('canvas, [data-fullscreen-start], [data-fullscreen-play], button, [role="button"]')) onGesture(event);
   }, true);
   doc.addEventListener('keydown', event => {

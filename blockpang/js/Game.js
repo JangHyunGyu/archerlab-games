@@ -183,8 +183,13 @@ class Game {
         }
         this.ui.hideGameOver();
         this.state = 'title';
+        this.ui._restoreArcherLabLink();
         const alLink = document.getElementById('archerlab-link');
-        if (alLink) alLink.style.display = '';
+        if (alLink) {
+            alLink.style.display = '';
+            alLink.style.visibility = '';
+            alLink.style.pointerEvents = '';
+        }
         this.board.container.visible = false;
         this.tray.container.visible = false;
         this.ui.hideGameHUD();

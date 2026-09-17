@@ -123,6 +123,22 @@ test('ArcherLab home in fullscreen exits then navigates', async () => {
   assert.equal(exited, true);
   assert.deepEqual(s.assigned, ['https://archerlab.dev/']);
 });
+test('a failed ArcherLab jump does not disable later home clicks', async () => {
+  const s = setup();
+  s.document.fullscreenElement = s.document.documentElement;
+  s.document.exitFullscreen = () => Promise.resolve();
+  const event = () => ({
+    isTrusted: true,
+    preventDefault() { this.prevented = true; },
+    target: { closest: sel => sel === 'a' ? { href: 'https://archerlab.dev' } : null }
+  });
+  s.listeners.click(event());
+  for (let i = 0; i < 20 && !s.assigned.length; i++) await Promise.resolve();
+  s.assigned.length = 0;
+  s.listeners.click(event());
+  for (let i = 0; i < 20 && !s.assigned.length; i++) await Promise.resolve();
+  assert.deepEqual(s.assigned, ['https://archerlab.dev/']);
+});
 test('ArcherLab home outside fullscreen keeps native navigation', () => {
   const s = setup();
   const event = {
