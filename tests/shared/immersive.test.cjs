@@ -139,6 +139,22 @@ test('a failed ArcherLab jump does not disable later home clicks', async () => {
   for (let i = 0; i < 20 && !s.assigned.length; i++) await Promise.resolve();
   assert.deepEqual(s.assigned, ['https://archerlab.dev/']);
 });
+test('ArcherLab home with a trailing slash still navigates from fullscreen', async () => {
+  const s = setup();
+  s.document.fullscreenElement = s.document.documentElement;
+  s.document.exitFullscreen = () => {
+    s.document.fullscreenElement = null;
+    return Promise.resolve();
+  };
+  const event = {
+    isTrusted: true,
+    preventDefault() { this.prevented = true; },
+    target: { closest: sel => sel === 'a' ? { href: 'https://archerlab.dev/' } : null }
+  };
+  s.listeners.click(event);
+  for (let i = 0; i < 20 && !s.assigned.length; i++) await Promise.resolve();
+  assert.deepEqual(s.assigned, ['https://archerlab.dev/']);
+});
 test('ArcherLab home outside fullscreen keeps native navigation', () => {
   const s = setup();
   const event = {
@@ -191,7 +207,8 @@ test('lifts the layout briefly after fullscreen so the browser exit hint does no
   await s.api.enter();
   s.document.fullscreenElement = s.document.documentElement;
   s.listeners.fullscreenchange();
-  assert.match(s.style.transform, /translate3d\(0,-80px,0\)/);
+  assert.equal(s.style.transform, '', 'documentElement transform would break fixed ArcherLab hit targets');
+  assert.equal(s.style['--immersive-bottom-inset'], '80px');
   assert.equal(s.timeouts[0].ms, 2530);
   s.timeouts[0].fn();
   assert.equal(s.style.transform, '');

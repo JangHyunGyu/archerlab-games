@@ -88,14 +88,19 @@
     el.style.setProperty?.('--immersive-bottom-inset', `${hint}px`);
     el.style.setProperty?.('--immersive-keyboard-inset', `${keyboard}px`);
     el.style.setProperty?.('--immersive-top-shift', `${hint}px`);
-    el.style.transform = hint ? `translate3d(0,-${hint}px,0)` : '';
+    // Never transform <html>: it turns position:fixed into a broken hit target.
+    el.style.transform = '';
+    hardenHomeLinks();
   }
 
   function installStyle() {
     if (doc.getElementById?.('archer-immersive-style') || !doc.createElement || !doc.head?.appendChild) return;
     const style = doc.createElement('style');
     style.id = 'archer-immersive-style';
-    style.textContent = 'html.archer-immersive-fs :is(.archerlab-link,a.archerlab-btn,.lang-switcher,#topbar){top:max(88px,calc(env(safe-area-inset-top,0px) + 72px + var(--immersive-top-shift,0px)))!important}';
+    style.textContent = [
+      'a[href="https://archerlab.dev"],a[href="https://archerlab.dev/"],a[href="https://www.archerlab.dev"],a[href="https://www.archerlab.dev/"]{pointer-events:auto!important;z-index:2147483646!important}',
+      'html.archer-immersive-fs :is(.archerlab-link,a.archerlab-btn,.menu-archerlab-link,.title-brand,.brand-link,.lang-switcher,#topbar){top:max(88px,calc(env(safe-area-inset-top,0px) + 72px + var(--immersive-top-shift,0px)))!important}'
+    ].join('');
     doc.head.appendChild(style);
   }
 
@@ -158,26 +163,47 @@
   }
 
   function homeHref(anchor) {
-    const raw = String(anchor?.href || '');
-    return /^https:\/\/(?:www\.)?archerlab\.dev\/?$/i.test(raw) ? 'https://archerlab.dev/' : '';
+    const raw = String(anchor?.getAttribute?.('href') || anchor?.href || '').trim();
+    const path = raw.replace(/https?:\/\/(?:www\.)?archerlab\.dev/i, '');
+    if (!/^https?:\/\/(?:www\.)?archerlab\.dev/i.test(raw)) return '';
+    if (path && path !== '/' && path !== '') return '';
+    return 'https://archerlab.dev/';
+  }
+
+  function goHome(href) {
+    leavingHome = false;
+    if (root.location?.assign) root.location.assign(href);
+    else root.location.href = href;
+  }
+
+  function hardenHomeLinks() {
+    const nodes = doc.querySelectorAll?.('a[href]') || [];
+    for (const a of nodes) {
+      if (!homeHref(a)) continue;
+      if (a.style.pointerEvents === 'none') a.style.pointerEvents = 'auto';
+      if (!a.__archerHomeBound) {
+        a.__archerHomeBound = true;
+        a.addEventListener('click', onHomeClick, true);
+      }
+    }
   }
 
   function onHomeClick(event) {
     const anchor = event.target?.closest?.('a');
     const href = homeHref(anchor);
-    if (!event.isTrusted || !href || !isFullscreen()) return false;
+    if (!event.isTrusted || !href) return false;
+    if (!isFullscreen() && !event.defaultPrevented) return false;
     event.preventDefault?.();
-    const go = () => {
-      leavingHome = false;
-      if (root.location?.assign) root.location.assign(href);
-      else root.location.href = href;
-    };
     if (leavingHome) {
-      go();
+      goHome(href);
       return true;
     }
     leavingHome = true;
-    Promise.resolve(exit()).then(go, go);
+    if (!isFullscreen()) {
+      goHome(href);
+      return true;
+    }
+    Promise.resolve(exit()).then(() => goHome(href), () => goHome(href));
     return true;
   }
 
@@ -210,9 +236,16 @@
   root.addEventListener('resize', syncLayout);
   root.addEventListener('pageshow', event => {
     if (event.persisted) attempted = false;
+    leavingHome = false;
+    syncLayout();
+  });
+  doc.addEventListener('visibilitychange', () => {
+    if (!isFullscreen()) leavingHome = false;
+    syncLayout();
   });
   bindKeyboard();
   installStyle();
+  hardenHomeLinks();
   root.ArcherImmersive = Object.freeze({
     enter, autoEnter, exit, isFullscreen, isStandalone, supported,
     keyboardOverlap, keyboardOverlapFrom,
