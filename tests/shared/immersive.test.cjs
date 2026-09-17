@@ -36,9 +36,11 @@ function setup(options = {}) {
     if (options.throws) throw new Error('blocked');
     return options.webkit ? undefined : Promise.resolve();
   };
+  const assigned = [];
   const window = {
     document,
     innerHeight: options.innerHeight || 800,
+    location: { assign: href => assigned.push(href) },
     navigator: {
       userActivation: { isActive: true },
       standalone: options.standalone,
@@ -55,7 +57,7 @@ function setup(options = {}) {
     clearTimeout() {}
   };
   vm.runInNewContext(code, { window });
-  return { api: window.ArcherImmersive, calls, window, document, listeners, timeouts, style, click: (kind, trusted = true) => listeners.click({ isTrusted: trusted, target: { closest: selector => selector.includes(kind) } }) };
+  return { api: window.ArcherImmersive, calls, assigned, window, document, listeners, timeouts, style, click: (kind, trusted = true) => listeners.click({ isTrusted: trusted, target: { closest: selector => selector.includes(kind) } }) };
 }
 
 test('fullscreen requests the whole document and hides browser navigation', async () => {
@@ -99,6 +101,39 @@ test('standalone launch and inactive gestures need no fullscreen request', async
   inactive.window.navigator.userActivation.isActive = true;
   await inactive.api.autoEnter();
   assert.equal(inactive.calls.length, 1);
+});
+test('ArcherLab home in fullscreen exits then navigates', async () => {
+  const s = setup();
+  s.document.fullscreenElement = s.document.documentElement;
+  let exited = false;
+  s.document.exitFullscreen = () => {
+    exited = true;
+    s.document.fullscreenElement = null;
+    return Promise.resolve();
+  };
+  const event = {
+    isTrusted: true,
+    prevented: false,
+    preventDefault() { this.prevented = true; },
+    target: { closest: sel => sel === 'a' ? { href: 'https://archerlab.dev' } : null }
+  };
+  s.listeners.click(event);
+  for (let i = 0; i < 20 && !s.assigned.length; i++) await Promise.resolve();
+  assert.equal(event.prevented, true);
+  assert.equal(exited, true);
+  assert.deepEqual(s.assigned, ['https://archerlab.dev/']);
+});
+test('ArcherLab home outside fullscreen keeps native navigation', () => {
+  const s = setup();
+  const event = {
+    isTrusted: true,
+    prevented: false,
+    preventDefault() { this.prevented = true; },
+    target: { closest: sel => sel === 'a' ? { href: 'https://archerlab.dev' } : null }
+  };
+  s.listeners.click(event);
+  assert.equal(event.prevented, false);
+  assert.equal(s.assigned.length, 0);
 });
 test('links, forms, scrollable ranking and synthetic events never consume activation', async () => {
   for (const kind of ['a,', 'input', 'textarea', 'select', '[contenteditable]', '[data-ranking-scroll]', '[data-no-fullscreen]']) {

@@ -11,6 +11,7 @@
   let vkBound = false;
   let hintUntil = 0;
   let hintTimer = null;
+  let leavingHome = false;
 
   const isFullscreen = () => Boolean(doc.fullscreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement);
   const isStandalone = () => Boolean(root.navigator.standalone || root.matchMedia?.('(display-mode: standalone)').matches || root.matchMedia?.('(display-mode: fullscreen)').matches);
@@ -86,7 +87,16 @@
     el.classList?.toggle('archer-immersive-hint', hint > 0);
     el.style.setProperty?.('--immersive-bottom-inset', `${hint}px`);
     el.style.setProperty?.('--immersive-keyboard-inset', `${keyboard}px`);
+    el.style.setProperty?.('--immersive-top-shift', `${hint}px`);
     el.style.transform = hint ? `translate3d(0,-${hint}px,0)` : '';
+  }
+
+  function installStyle() {
+    if (doc.getElementById?.('archer-immersive-style') || !doc.createElement || !doc.head?.appendChild) return;
+    const style = doc.createElement('style');
+    style.id = 'archer-immersive-style';
+    style.textContent = 'html.archer-immersive-fs :is(.archerlab-link,a.archerlab-btn,.lang-switcher,#topbar){top:max(88px,calc(env(safe-area-inset-top,0px) + 72px + var(--immersive-top-shift,0px)))!important}';
+    doc.head.appendChild(style);
   }
 
   function onFullscreenChange() {
@@ -146,7 +156,27 @@
     }
   }
 
+  function homeHref(anchor) {
+    const raw = String(anchor?.href || '');
+    return /^https:\/\/(?:www\.)?archerlab\.dev\/?$/i.test(raw) ? 'https://archerlab.dev/' : '';
+  }
+
+  function onHomeClick(event) {
+    const anchor = event.target?.closest?.('a');
+    const href = homeHref(anchor);
+    if (!event.isTrusted || !href || !isFullscreen()) return false;
+    event.preventDefault?.();
+    if (leavingHome) return true;
+    leavingHome = true;
+    Promise.resolve(exit()).finally(() => {
+      if (root.location?.assign) root.location.assign(href);
+      else root.location.href = href;
+    });
+    return true;
+  }
+
   function onGesture(event) {
+    if (onHomeClick(event)) return;
     const target = event.target;
     if (!event.isTrusted || !target?.closest || target.closest('a, input, textarea, select, [contenteditable], [data-ranking-scroll], [data-no-fullscreen]')) return;
     if (target.closest('[data-fullscreen-start], canvas, [data-fullscreen-play], [data-fullscreen-force], button, [role="button"]')) autoEnter();
@@ -156,6 +186,7 @@
   doc.addEventListener('pointerup', event => {
     // Touch/pen activation is pointerup; pointerdown is not a fullscreen gesture on Chrome Android.
     if (event.pointerType === 'mouse') return;
+    if (onHomeClick(event)) return;
     if (event.target?.closest?.('canvas, [data-fullscreen-start], [data-fullscreen-play], button, [role="button"]')) onGesture(event);
   }, true);
   doc.addEventListener('keydown', event => {
@@ -175,6 +206,7 @@
     if (event.persisted) attempted = false;
   });
   bindKeyboard();
+  installStyle();
   root.ArcherImmersive = Object.freeze({
     enter, autoEnter, exit, isFullscreen, isStandalone, supported,
     keyboardOverlap, keyboardOverlapFrom,
