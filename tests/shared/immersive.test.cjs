@@ -67,6 +67,17 @@ test('fullscreen requests the whole document and hides browser navigation', asyn
   await s.api.enter();
   assert.equal(s.calls.length, 2, 'explicit settings toggle can reenter');
 });
+test('a denied first request does not lock the start gesture', async () => {
+  const s = setup({ reject: true });
+  assert.equal(await s.api.autoEnter(), false);
+  assert.equal(await s.api.autoEnter(), false);
+  assert.equal(s.calls.length, 2, 'failed autoEnter must retry on the next gesture');
+});
+test('touch pointerdown does not request fullscreen', () => {
+  const s = setup();
+  s.listeners.pointerdown?.({ isTrusted: true, pointerType: 'touch', target: { closest: () => null } });
+  assert.equal(s.calls.length, 0);
+});
 test('parallel requests share one pending transition', async () => {
   const s = setup();
   await Promise.all([s.api.enter(), s.api.enter()]);
@@ -130,7 +141,7 @@ test('lifts the layout briefly after fullscreen so the browser exit hint does no
   s.document.fullscreenElement = s.document.documentElement;
   s.listeners.fullscreenchange();
   assert.match(s.style.transform, /translate3d\(0,-80px,0\)/);
-  assert.equal(s.timeouts[0].ms, 2000);
+  assert.equal(s.timeouts[0].ms, 2530);
   s.timeouts[0].fn();
   assert.equal(s.style.transform, '');
 });
