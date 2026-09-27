@@ -2,7 +2,7 @@ export const copy = {
   tagline: '알록달록 물약 실험실!', intro: '매번 다른 배치로 100단계까지 도전하세요.',
   stage: '스테이지', home: '시작 화면', archerlab: 'Archerlab으로 가기',
   homeTitle: '시작 화면으로 나갈까요?', homeBody: '남은 시간이 있으면 이어서 할 수 있어요. 이 창을 열어 두거나 시작 화면으로 나가도 시간은 계속 흘러요.',
-  keepPlaying: '계속하기', leaveGame: '나가기', continueGame: '이어하기', viewRecord: '기록 확인', newGame: '새로 시작',
+  keepPlaying: '계속하기', leaveGame: '나가기', continueGame: '이어하기', newGame: '새로 시작',
   restartTitle: '새로 시작할까요?', restartBody: '새로 시작하면 이전 도전을 이어서 하거나 그 기록을 랭킹에 등록할 수 없어요.',
   syncChanged: '진행 상황을 새로 불러왔어요. 다시 시도해 주세요.',
   play: '플레이', how: '게임 방법', level: '단계', moves: '이동 횟수', unit: '회',

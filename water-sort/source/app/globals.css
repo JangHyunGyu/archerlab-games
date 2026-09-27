@@ -30,7 +30,7 @@ dialog{margin:auto;border:3px solid white;border-radius:30px;background:#fcf9ff;
 .drop-valid .tube{filter:drop-shadow(0 0 6px #58bf9fb0)}
 .drop-invalid .tube{filter:drop-shadow(0 0 5px #da73936b)}
 .hud-home{display:grid;place-items:center;flex-shrink:0;width:46px;height:46px;padding:0;border-radius:15px;border:2px solid #fff;background:#ffffffb3;box-shadow:0 4px 0 #ded2ef;font-size:25px;line-height:1}
-.confirmation-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}.continue-button{min-height:50px;padding:10px 18px;font-size:17px}.continue-button:disabled{opacity:1;background:#eee7f5;color:#a394b3;border-color:#f8f4fc;box-shadow:0 4px 0 #d9cce8}.pending-record{padding:1px 16px 16px;border-radius:18px;background:#f0e7fa}.pending-record button{width:100%}
+.confirmation-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}.continue-button{min-height:50px;padding:10px 18px;font-size:17px}.continue-button:disabled{opacity:1;background:#eee7f5;color:#a394b3;border-color:#f8f4fc;box-shadow:0 4px 0 #d9cce8}
 .modal-inner h2{word-break:keep-all}
 @media(max-height:740px) and (max-width:599px){.at-home .hero-art{height:87px;margin:7px 0 12px}.at-home .start-actions{gap:11px}.at-home .start-caption{margin-top:13px}}
 @media(max-height:600px) and (max-width:599px){.at-home .hero-art{height:65px;width:170px}.at-home .game-title{font-size:44px}.at-home .start-screen{padding:9px 0}.at-home .start-caption{margin-top:11px}}

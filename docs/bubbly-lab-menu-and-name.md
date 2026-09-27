@@ -1,5 +1,7 @@
 # Bubbly Lab menu and name — 2026-09-28
 
+Follow-up: the user requested a standard leaderboard without the extra View Record button. That section and its unused copy/styles/state were removed. Ranking now opens the list directly; registration stays on the game-over results screen. This supersedes the record-reopening flow described below. The retained Korean ranking/results copy passed contextual and independent review (`home_label_review`), with the original/final corpus and formal 0% editorial-change gate at `D:/workspace/_workspace/2026-09-28-004/`.
+
 The user selected **보글보글 실험실** (English: **Bubbly Lab**), replacing Water Sort. Updated the game heading and accessible name, page/Open Graph title, web manifest, Korean/English Archerlab homepage cards and structured data, games portal and square card artwork. The existing public URL, source folder, API, database and session identifiers are retained for compatibility; historical migration documents describe the old name at the time.
 
 New Game is always above Continue. Continue stays visible but disabled without a resumable run. The menu derives expiry from the same fixed deadlines as the server, including the next stage after a clear; it never resets or pauses time. Ended unregistered records are reached through Ranking → View Record → Register. Existing replacement and home confirmations remain.

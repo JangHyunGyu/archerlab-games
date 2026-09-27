@@ -12,4 +12,4 @@ For local play, run the repository's `npx wrangler dev --config wrangler.game-ap
 
 Every stage still has 60 seconds, including pour animation. Difficulty grows through 100 stages; the catalogue has three verified layouts per stage plus randomized colors and bottle order. Home and Continue never pause or reset the server deadline.
 
-The start screen always shows New Game above Continue. Continue is enabled only for a server-verified unfinished run with time left, including the fixed next-stage deadline after a clear. Expired unregistered records remain accessible from Ranking → View Record. New Game asks before replacing an unregistered run.
+The start screen always shows New Game above Continue. Continue is enabled only for a server-verified unfinished run with time left, including the fixed next-stage deadline after a clear. Ranking opens the leaderboard directly, without a separate record button. Players register their score from the game-over results screen. New Game asks before replacing an unregistered run.
