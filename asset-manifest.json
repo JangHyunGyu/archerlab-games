@@ -14615,8 +14615,13 @@
     },
     {
       "path": "water-sort/og.png",
-      "bytes": 1149424,
-      "sha256": "5fceb5d1a0f4593e361b2003559343a05c1ad1913146a279c186a894144f257c"
+      "bytes": 2121212,
+      "sha256": "645156e54f6f4b5b9ccd62bcce806814424143bea9be2e909393cd14ef43fdcb"
+    },
+    {
+      "path": "water-sort/og.webp",
+      "bytes": 252388,
+      "sha256": "9330941f8cc0ac7856ff74aec45ff250901a36bf116acaa1213e3af068f833b2"
     },
     {
       "path": "water-sort/sounds/v1/clear.wav",
@@ -14670,8 +14675,13 @@
     },
     {
       "path": "water-sort/source/public/og.png",
-      "bytes": 1149424,
-      "sha256": "5fceb5d1a0f4593e361b2003559343a05c1ad1913146a279c186a894144f257c"
+      "bytes": 2121212,
+      "sha256": "645156e54f6f4b5b9ccd62bcce806814424143bea9be2e909393cd14ef43fdcb"
+    },
+    {
+      "path": "water-sort/source/public/og.webp",
+      "bytes": 252388,
+      "sha256": "9330941f8cc0ac7856ff74aec45ff250901a36bf116acaa1213e3af068f833b2"
     },
     {
       "path": "water-sort/source/public/sounds/v1/clear.wav",

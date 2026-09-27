@@ -66,6 +66,28 @@ test('every stage has60 seconds and randomization preserves solvable boards', ()
   for (let i = 0; i < 15; i++) { const board = randomBoard(1); layouts.add(JSON.stringify(board)); assert.ok(solve(board)); }
   assert.ok(layouts.size > 1);
 });
+test('randomized starts across all 100 stages retain a playable solution and exactly two empty bottles', () => {
+  for (let level = 1; level <= 100; level++) {
+    for (let sample = 0; sample < 3; sample++) {
+      let seed = level * 65537 + sample * 97441;
+      const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+      let board = randomBoard(level, random);
+      const colors = colorsFor(level);
+      assert.equal(board.length, colors + 2);
+      assert.equal(board.filter(tube => tube.length === 0).length, 2);
+      for (let color = 0; color < colors; color++) assert.equal(board.flat().filter(c => c === color).length, 4);
+      const solution = shortestSolution(board, 100000)?.solution;
+      assert.ok(solution, `unplayable randomized start: stage ${level}, sample ${sample}`);
+      for (const [from, to] of solution) {
+        const next = pour(board, from, to);
+        assert.ok(next, `invalid solution move at stage ${level}`);
+        board = next;
+      }
+      assert.ok(won(board));
+    }
+  }
+});
+
 test('pouring never extends deadline, removed undo is blocked, and cooldown prevents overlaps', () => {
   const initial: Challenge = { ...newStage(1, 1000), board: [[0, 1], [1], [], []] };
   const moved = advance(initial, { type: 'pour', from: 0, to: 1 }, 2000);

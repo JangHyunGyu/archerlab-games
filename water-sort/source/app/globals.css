@@ -36,3 +36,9 @@ dialog{margin:auto;border:3px solid white;border-radius:30px;background:#fcf9ff;
 @media(max-height:600px) and (max-width:599px){.has-saved-run .hero-art{height:65px;width:170px}.has-saved-run .game-title{font-size:44px}.has-saved-run .start-screen{padding:9px 0}.has-saved-run .start-caption{margin-top:11px}}
 @media(max-height:550px) and (min-width:600px) and (orientation:landscape){.hud-home{width:44px;height:44px;border-radius:13px;font-size:23px}}
 .experiment-tray{background:radial-gradient(ellipse at 50% 40%,#ffffffc9,#ecf2f64a 65%,#dfebef70);box-shadow:0 9px 0 #c9bde42b,inset 0 1px 25px #ffffffb3}
+.start-footer{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;max-width:100%}
+.start-footer .sound-toggle{margin-top:0;flex-shrink:0;padding-inline:10px}
+.archerlab-link{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:6px 10px;border:1px solid #fff;border-radius:20px;background:#ffffff94;color:#79628e;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap}
+.archerlab-link span{font-size:18px;line-height:1}
+.archerlab-link:hover{background:#fff}
+@media(max-height:550px) and (min-width:600px) and (orientation:landscape){.start-footer{grid-column:1/3;margin-top:4px}}
