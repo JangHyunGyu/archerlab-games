@@ -6,6 +6,13 @@ const root = path.join(__dirname, '..');
 const constantsSource = fs.readFileSync(path.join(root, 'js', 'utils', 'Constants.js'), 'utf8');
 const i18nSource = fs.readFileSync(path.join(root, 'js', 'utils', 'i18n.js'), 'utf8');
 
+// Every consumer of the newer formatter export must bypass older module caches.
+for (const file of ['utils/inrun-locale-patches.js', 'entities/ItemDrop.js']) {
+    const source = fs.readFileSync(path.join(root, 'js', file), 'utf8');
+    assert.match(source, /import \{[^}]*\btf\b[^}]*\} from '[^']*i18n\.js\?v=20260928-locale-exports-v1'/);
+}
+assert.match(i18nSource, /export function tf\(/);
+
 assert.match(
     constantsSource,
     /strength:\s+\{ name: '공격력 강화', description: '공격력 \+8%', stat: 'attack', bonus: 0\.08/,

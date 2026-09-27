@@ -1,4 +1,4 @@
-import { t, tf } from '../utils/i18n.js';
+import { t, tf } from '../utils/i18n.js?v=20260928-locale-exports-v1';
 import { COLORS } from '../utils/Constants.js';
 
 /**

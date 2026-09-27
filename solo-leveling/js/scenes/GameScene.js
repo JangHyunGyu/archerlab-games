@@ -11,7 +11,7 @@ import { WeaponManager } from '../managers/WeaponManager.js';
 import { ShadowArmyManager } from '../managers/ShadowArmyManager.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { XPOrbPool } from '../entities/XPOrb.js';
-import { ItemDropManager } from '../entities/ItemDrop.js';
+import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
 import { Boss } from '../entities/Boss.js';
 import { Enemy } from '../entities/Enemy.js';
 import { HUD } from '../ui/HUD.js?v=20260913-crafted-ui-v1';

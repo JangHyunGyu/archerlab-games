@@ -1,4 +1,4 @@
-import { LANG, t, tf, tNested } from '../utils/i18n.js';
+import { LANG, t, tf, tNested } from '../utils/i18n.js?v=20260928-locale-exports-v1';
 import { SystemMessage } from '../ui/SystemMessage.js';
 
 function localizeToastTitle(title) {
