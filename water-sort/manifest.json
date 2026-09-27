@@ -1,0 +1,21 @@
+{
+  "name": "Water Sort",
+  "short_name": "Water Sort",
+  "start_url": "/water-sort/",
+  "scope": "/water-sort/",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "any",
+  "background_color": "#f0eaff",
+  "theme_color": "#8865df",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -68,6 +68,7 @@
         "node solo-leveling/tests/ranking-recovery.test.cjs",
         "node --test solo-leveling/tests/ranking-table.test.cjs"
       ]
-    }
+    },
+    { "id": "water-sort", "entry": "water-sort/index.html", "tests": ["npm --prefix water-sort/source test", "npm --prefix water-sort/source run test:render"] }
   ]
 }

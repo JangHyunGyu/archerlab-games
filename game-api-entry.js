@@ -1,3 +1,4 @@
+import { waterSortRoute } from './water-sort/source/worker/route.ts';
 import { DurableObject } from 'cloudflare:workers';
 import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse } from './game-api-worker.js';
 
@@ -194,6 +195,7 @@ export class RankingDelivery extends DurableObject {
 export default {
     async fetch(request, env, ctx) {
         const path = new URL(request.url).pathname;
+        if (path === '/water-sort/challenge') return waterSortRoute(request, env.DB);
         if (request.method !== 'POST' || (!PATHS.has(path) && path !== '/ranking-delivery')) {
             return api.fetch(request, env, ctx);
         }

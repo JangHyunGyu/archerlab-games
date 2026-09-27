@@ -1,6 +1,15 @@
 /tmp/*
   X-Robots-Tag: noindex, nofollow, noimageindex
 
+/water-sort/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/water-sort/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/water-sort/source/*
+  X-Robots-Tag: noindex, nofollow
+
 /blockpang/tmp-screenshots/*
   X-Robots-Tag: noindex, nofollow, noimageindex
 

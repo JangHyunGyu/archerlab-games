@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Glass material study</title>
+<style>body{margin:0;background:#edf2f6;color:#405563;font:14px system-ui}main{max-width:1200px;margin:auto}header{padding:20px;display:flex;align-items:center;gap:24px}label{display:flex;gap:8px;align-items:center}canvas{display:block;width:100%;height:auto;background:radial-gradient(ellipse at center,#fff,#e6eef2)}input[type=range]{width:240px}</style>
+<main><header><strong>Material / motion review</strong><label>Pour phase <input id="phase" type="range" min="0" max="100" value="52"></label><label><input id="animate" type="checkbox">Animate</label></header><canvas id="study" width="1200" height="760"></canvas></main>
+<script type="module">
+import {drawVessel,drawStream,glassInterior,liquidLayers,liquidVolume,liquidSurface} from '/glass-renderer.js';
+import {roundBottom,spillAngle,phases,mix} from '/pour-motion.ts';
+const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),slider=document.querySelector('#phase'),animate=document.querySelector('#animate');
+const ratio=Math.min(devicePixelRatio||1,2);canvas.width=1200*ratio;canvas.height=760*ratio;ctx.scale(ratio,ratio);
+function draw(now=0){ctx.clearRect(0,0,1200,760);ctx.font='14px system-ui';ctx.fillStyle='#536b7a';ctx.fillText('EMPTY GLASS',40,40);ctx.fillText('STRATIFIED LIQUID',210,40);ctx.fillText('SINGLE COLOR',380,40);ctx.fillText('CLEAR / AMBER',540,40);
+ [[],[1,1,2,0],[1,1,1,1],[2,2,2,2]].forEach((colors,i)=>drawVessel(ctx,{x:70+i*170,y:70,width:76,height:220},liquidLayers(colors)));
+ const t=Number(slider.value)/100,{approach,flow,retreat}=phases(t),w=66,h=188,inner=glassInterior(w,h),polygon=roundBottom(inner,inner.width*.48);
+ for(const [index,direction] of [[0,1],[1,-1]]){const targetX=310+index*550,targetY=470,pivot={x:direction>0?inner.x+inner.width:inner.x,y:inner.y},end={x:targetX+w/2,y:targetY-15};const start={x:targetX-direction*140+pivot.x,y:targetY+pivot.y};let angle=spillAngle(polygon,pivot,liquidVolume(inner,t<.27?4:4-2*flow),direction)*(t<.27?approach:1)*(1-retreat);let pos={x:mix(start.x,end.x,approach),y:mix(start.y,end.y,approach)-Math.sin(approach*Math.PI)*18};if(retreat)pos={x:mix(end.x,start.x,retreat),y:mix(end.y,start.y,retreat)-Math.sin(retreat*Math.PI)*12};
+ const targetInner={...inner,x:targetX+inner.x,y:targetY+inner.y};drawVessel(ctx,{x:targetX,y:targetY,width:w,height:h},liquidLayers([1,1],flow*2),{incoming:t>=.27&&t<.73,agitation:.8,time:now});if(t>=.27&&t<.73)drawStream(ctx,end,{x:end.x,y:liquidSurface(targetInner,flow*2)},1,4,now,flow);drawVessel(ctx,{x:pos.x,y:pos.y,width:w,height:h,angle,pivot},liquidLayers([0,2,1,1],4-2*flow),{shadow:false,time:now});}
+ ctx.fillStyle='#536b7a';ctx.fillText('POUR / RIGHT',40,390);ctx.fillText('POUR / LEFT',650,390);
+}
+slider.addEventListener('input',()=>draw());let frame=0;function tick(now){slider.value=String((now%5000)/50);draw(now);if(animate.checked)frame=requestAnimationFrame(tick)}animate.addEventListener('change',()=>{cancelAnimationFrame(frame);if(animate.checked)frame=requestAnimationFrame(tick);else draw()});draw();
+</script></html>

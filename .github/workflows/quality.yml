@@ -25,6 +25,7 @@ jobs:
           - school-zombie-defense
           - slimevolley
           - solo-leveling
+          - water-sort
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,6 +39,8 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install pillow
         if: matrix.game == 'school-zombie-defense'
+      - run: npm ci --prefix water-sort/source
+        if: matrix.game == 'water-sort'
       - run: npm run test:game -- --game=${{ matrix.game }}
 
   shared-and-assets:
