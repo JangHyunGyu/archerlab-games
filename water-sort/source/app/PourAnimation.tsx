@@ -75,7 +75,7 @@ export function PourAnimation({ motion, onFinish }: { motion: PourMotion; onFini
       drawVessel(ctx, { x: position.x, y: position.y, width: source.width, height: source.height, pivot, angle }, liquidLayers(tube, tube.length - amount * flow), { time, shadow: false, agitation: pouring ? .22 : Math.sin((approach + retreat) * Math.PI) * .8 });
       if (t < 1) frame = requestAnimationFrame(draw); else finish();
     }
-    // A changed viewport or background tab settles to the already-saved final board.
+    // Settle to the preview or confirmed board; the request still owns validation.
     const viewportKey = () => [innerWidth, innerHeight, scrollX, scrollY, visualViewport?.width, visualViewport?.height, visualViewport?.offsetLeft, visualViewport?.offsetTop].join(',');
     const initialViewport = viewportKey();
     const viewportChanged = () => { if (viewportKey() !== initialViewport) finish(); };

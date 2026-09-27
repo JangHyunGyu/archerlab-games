@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { complete, hasMove, pour } from '../lib/game';
+import { complete, hasMove, pour, type Board } from '../lib/game';
 import { timeLimit, pourDuration, CLEAR_DELAY, type RunView, type RankRow } from '../lib/challenge-rules';
 import { copy as c } from './copy';
 import { PourAnimation, measurePour, type PourMotion } from './PourAnimation';
@@ -34,6 +34,7 @@ export default function Home() {
   const [notice, setNotice] = useState<string>(c.choose), [error, setError] = useState('');
   const [modal, setModal] = useState<'help' | 'ranking' | 'register' | 'exit' | 'restart' | null>(null);
   const [motion, setMotion] = useState<PourMotion | null>(null), motionLock = useRef(false), sequence = useRef(0);
+  const [previewBoard, setPreviewBoard] = useState<Board | null>(null);
   const tubes = useRef<(HTMLSpanElement | null)[]>([]), settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [now, setNow] = useState(0), clockOffset = useRef(0);
   const [nickname, setNickname] = useState(''), [rows, setRows] = useState<RankRow[]>([]), [rankState, setRankState] = useState('');
@@ -72,10 +73,9 @@ export default function Home() {
   }, []);
   const expired = run?.status === 'playing' && now >= run.deadline;
   useEffect(() => {
-    if (atHome || !expired || busy) return;
-    setMotion(null); motionLock.current = false;
-    if (settleTimer.current) clearTimeout(settleTimer.current);
-    if (!error) void perform('sync');
+    if (atHome || !expired) return;
+    cancelPreview();
+    if (!busy && !error) void perform('sync');
   }, [atHome, expired, busy, error]);
   useEffect(() => {
     if (!atHome && run?.status === 'cleared' && now >= run.availableAt + CLEAR_DELAY && !motion && !motionLock.current && !busy && !error && !modal) void perform('sync');
@@ -85,15 +85,21 @@ export default function Home() {
     pendingRequest.current?.abort(); pendingRequest.current = null;
     lock.current = false; setBusy(false); setReady(true); retry.current = () => {};
     audio.stop();
-    setMotion(null); motionLock.current = false;
-    if (settleTimer.current) clearTimeout(settleTimer.current);
+    cancelPreview();
     setAtHome(true); setModal(null); setError(''); setSelected(null);
     setNotice(c.choose); lastSoundCue.current = '';
   }
-  function finishMotion(id: number) { setMotion(m => m?.id === id ? null : m); motionLock.current = false; }
+  function cancelPreview() {
+    setPreviewBoard(null); setMotion(null); motionLock.current = false;
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+  }
+  function finishMotion(id: number) {
+    if (id !== sequence.current) return;
+    setMotion(m => m?.id === id ? null : m); motionLock.current = false;
+  }
   async function choose(index: number) {
     const current = runRef.current;
-    if (atHome || modal || !current || lock.current || motionLock.current || current.status !== 'playing' || Date.now() + clockOffset.current >= current.deadline) return;
+    if (atHome || modal || error || !current || lock.current || motionLock.current || current.status !== 'playing' || Date.now() + clockOffset.current >= current.deadline) return;
     if (selected === index) { setSelected(null); setNotice(c.choose); return; }
     if (selected === null) { if (!current.board[index].length) { setNotice(c.empty); audio.play('invalid'); return; } setSelected(index); setNotice(c.target); audio.play('select'); return; }
     await pourFrom(selected, index);
@@ -102,7 +108,7 @@ export default function Home() {
     const epoch = requestEpoch.current;
     const current = runRef.current;
     const time = Date.now() + clockOffset.current;
-    if (atHome || modal || !current || lock.current || motionLock.current || current.status !== 'playing' || time >= current.deadline || time < current.availableAt) return;
+    if (atHome || modal || error || !current || lock.current || motionLock.current || current.status !== 'playing' || time >= current.deadline || time < current.availableAt) return;
     const board = pour(current.board, from, index);
     if (!board) { setNotice(c.invalid); audio.play('invalid'); return; }
     const amount = board[index].length - current.board[index].length;
@@ -110,24 +116,26 @@ export default function Home() {
     const geometry = source && destination ? measurePour(source, destination) : null;
     lock.current = true; setBusy(true); setError(''); setSelected(null);
     retry.current = () => { void perform('sync'); };
+    // Show the legal move immediately. Only the response may update score or progress.
+    const id = ++sequence.current, seconds = pourDuration(amount) / 1000;
+    motionLock.current = true; setPreviewBoard(board);
+    audio.play('pour', seconds * .27, seconds * .46);
+    const h = window.visualViewport?.height ?? innerHeight;
+    if (geometry && !matchMedia('(prefers-reduced-motion: reduce)').matches && geometry.source.y > 30 && geometry.destination.y > 48 && Math.max(geometry.source.y + geometry.source.height, geometry.destination.y + geometry.destination.height) < h - 6) {
+      setMotion({ id, from, to: index, before: current.board, amount, ...geometry });
+    } else {
+      settleTimer.current = setTimeout(() => { finishMotion(id); setNow(Date.now() + clockOffset.current); }, pourDuration(amount));
+    }
     try {
       const next = await call('pour', { from, to: index });
       if (epoch !== requestEpoch.current) return;
       accept(next);
-      if (next.version > current.version && next.moves === current.moves + 1 && next.status !== 'ended') {
-        const id = ++sequence.current;
-        motionLock.current = true;
-        const seconds = pourDuration(amount) / 1000;
-        audio.play('pour', seconds * .27, seconds * .46);
-        const h = window.visualViewport?.height ?? innerHeight;
-        if (geometry && !matchMedia('(prefers-reduced-motion: reduce)').matches && geometry.source.y > 30 && geometry.destination.y > 48 && Math.max(geometry.source.y + geometry.source.height, geometry.destination.y + geometry.destination.height) < h - 6) {
-          setMotion({ id, from, to: index, before: current.board, amount, ...geometry });
-        } else {
-          settleTimer.current = setTimeout(() => { motionLock.current = false; setNow(Date.now() + clockOffset.current); }, pourDuration(amount));
-        }
-      }
+      setPreviewBoard(null);
+      const accepted = next.id === current.id && next.level === current.level && next.version > current.version && next.moves === current.moves + 1 && next.status !== 'ended'
+        && next.board.length === board.length && board.every((tube, i) => tube.length === next.board[i].length && tube.every((color, j) => color === next.board[i][j]));
+      if (!accepted) { cancelPreview(); audio.stop(); }
       setNotice(hasMove(next.board) ? c.choose : c.blocked);
-    } catch (e) { if (epoch === requestEpoch.current) setError(e instanceof Error ? e.message : c.error); }
+    } catch (e) { if (epoch === requestEpoch.current) { cancelPreview(); audio.stop(); setError(e instanceof Error ? e.message : c.error); } }
     finally { if (epoch === requestEpoch.current) { lock.current = false; setBusy(false); } }
   }
   async function loadRanks() {
@@ -139,9 +147,9 @@ export default function Home() {
   const level = run?.level ?? 1, active = run?.status === 'playing' && !expired;
   const animating = !!motion || motionLock.current || !!run && now < run.availableAt;
   const ended = run?.status === 'ended' || expired;
-  const board = motion?.before ?? run?.board ?? [];
+  const board = motion?.before ?? previewBoard ?? run?.board ?? [];
   const remaining = run ? Math.max(0, Math.ceil((run.deadline - now) / 1000)) : timeLimit(1);
-  const disabled = !active || busy || animating;
+  const disabled = !active || busy || animating || !!error;
   const clockKey = run ? `${run.id}:${run.level}` : null;
   const clockRunning = !atHome && !!run && !ended && (run.status === 'playing' || now < run.availableAt);
   useEffect(() => { audio.countdown(clockKey, remaining, clockRunning); }, [audio, clockKey, remaining, clockRunning]);

@@ -1,0 +1,123 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { JSDOM } from 'jsdom';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
+import { createServer } from 'vite';
+import { advance } from '../lib/challenge.ts';
+
+test('pour previews start before the server responds and reconcile safely', async t => {
+  const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+  try {
+    const { default: Home } = await vite.ssrLoadModule('/app/page.tsx');
+    async function harness(check, reduced = false, overrides = {}) {
+      const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
+      const win = dom.window, requests = [];
+      const initial = { rules: 2, id: 'run', version: 1, level: 1, cleared: 0, score: 0, board: [[0, 1], [1, 0], [], []], moves: 0, deadline: Date.now() + 60000, availableAt: 0, status: 'playing', historyDepth: 0, registered: false, nickname: null, serverNow: Date.now(), ...overrides };
+      let authoritative = initial;
+      const media = () => ({ matches: reduced, addEventListener() {}, removeEventListener() {} });
+      Object.assign(globalThis, { window: win, document: win.document, localStorage: win.localStorage, IS_REACT_ACT_ENVIRONMENT: true, matchMedia: media, innerWidth: 1024, innerHeight: 768, scrollX: 0, scrollY: 0, visualViewport: undefined, devicePixelRatio: 1, requestAnimationFrame: () => 1, cancelAnimationFrame() {} });
+      Object.assign(win, { matchMedia: media });
+      win.HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+      win.HTMLCanvasElement.prototype.getContext = function () { return this.classList.contains('pour-overlay') ? { scale() {} } : null; };
+      Object.defineProperty(win.HTMLElement.prototype, 'offsetParent', { get() { return this.parentElement; } });
+      win.HTMLElement.prototype.getBoundingClientRect = function () { const index = Number(this.closest('[data-bottle-index]')?.dataset.bottleIndex ?? 0); return { x: 100 + index * 100, y: 200, width: 50, height: 150, top: 200, bottom: 350, left: 100 + index * 100, right: 150 + index * 100 }; };
+      globalThis.fetch = async (_url, init) => {
+        const body = JSON.parse(init.body);
+        if (body.type === 'pour') return new Promise((resolve, reject) => requests.push({ body, resolve, reject }));
+        return { ok: true, json: async () => ({ run: authoritative, ...(body.type === 'start' ? { token: 'token' } : {}) }) };
+      };
+      const root = createRoot(document.getElementById('root'));
+      const click = async element => act(() => element.click());
+      const button = text => [...document.querySelectorAll('button')].find(e => e.textContent.replace('▶', '').trim() === text);
+      const bottles = () => [...document.querySelectorAll('[data-bottle-index]')];
+      const animation = () => document.querySelector('[data-testid="pour-animation"]');
+      const begin = async () => { await click(bottles()[0]); await click(bottles()[2]); };
+      const confirm = async (run, ok = true) => { authoritative = run; await act(async () => requests[0].resolve({ ok, json: async () => ({ run, error: ok ? undefined : 'conflict' }) })); };
+      const moved = () => ({ ...initial, ...advance({ ...initial, history: [] }, { type: 'pour', from: 0, to: 2 }, Date.now()), version: 2, serverNow: Date.now() });
+      try {
+        await act(() => root.render(createElement(Home)));
+        await click(button('새로 시작'));
+        await check({ win, initial, requests, click, button, bottles, animation, begin, confirm, moved });
+      } finally { await act(() => root.unmount()); dom.window.close(); }
+    }
+
+    await t.test('click starts animation immediately, holds the final preview during latency, and submits once', () => harness(async h => {
+      await h.begin();
+      assert.equal(h.requests.length, 1);
+      assert.ok(h.animation(), 'animation must exist while the fetch promise is still unresolved');
+      assert.equal(document.querySelector('[data-testid="score"]').textContent, '0');
+      await h.click(h.bottles()[2]); assert.equal(h.requests.length, 1);
+      // Resize settles an animation even when the request takes longer than playback.
+      globalThis.innerWidth = 1000;
+      await act(() => h.win.dispatchEvent(new h.win.Event('resize')));
+      assert.equal(h.animation(), null);
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
+      assert.ok(h.bottles().every(b => b.disabled));
+      await h.confirm({ ...h.moved(), availableAt: 0 });
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
+      assert.equal(h.animation(), null, 'confirmation must not replay the animation');
+      assert.ok(h.bottles().every(b => !b.disabled));
+    }));
+    await t.test('touch drag uses the same immediate path and ignores the synthetic click', () => harness(async h => {
+      const source = h.bottles()[0];
+      Object.assign(source, { setPointerCapture() {}, hasPointerCapture: () => false, releasePointerCapture() {} });
+      document.elementFromPoint = () => h.bottles()[2];
+      for (const [type, x] of [['pointerdown', 125], ['pointermove', 325], ['pointerup', 325]]) {
+        const event = new h.win.Event(type, { bubbles: true, cancelable: true });
+        Object.assign(event, { pointerId: 1, isPrimary: true, button: 0, clientX: x, clientY: 250, pointerType: 'touch' });
+        await act(() => source.dispatchEvent(event));
+      }
+      assert.equal(h.requests.length, 1); assert.ok(h.animation());
+      await act(() => source.dispatchEvent(new h.win.MouseEvent('click', { bubbles: true, detail: 1 })));
+      assert.equal(h.requests.length, 1);
+      await h.confirm(h.moved());
+      assert.ok(h.animation(), 'fast confirmation must not interrupt playback');
+    }));
+    await t.test('server conflict cancels the preview and restores authoritative liquid and score', () => harness(async h => {
+      await h.begin();
+      await h.confirm({ ...h.initial, version: 2 }, false);
+      assert.equal(h.animation(), null); assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
+      assert.equal(document.querySelector('[data-testid="score"]').textContent, '0');
+      assert.ok(h.bottles().every(b => b.disabled));
+      await h.click(h.button('다시 시도'));
+      assert.ok(h.bottles().every(b => !b.disabled));
+    }));
+    await t.test('network failure rolls back and blocks more moves until sync', () => harness(async h => {
+      await h.begin(); await act(async () => h.requests[0].reject(new Error('offline')));
+      assert.equal(h.animation(), null); assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
+      assert.ok(h.bottles().every(b => b.disabled));
+    }));
+    await t.test('server timeout cannot turn a preview into points or a completed stage', () => harness(async h => {
+      await h.begin(); await h.confirm({ ...h.initial, status: 'ended', version: 2 });
+      assert.equal(h.animation(), null); assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
+      assert.equal(document.querySelector('[data-testid="score"]').textContent, '0');
+      assert.ok(document.querySelector('.result-dialog[open]'));
+    }));
+    await t.test('leaving home discards a late response and a later continue syncs the saved server board', () => harness(async h => {
+      await h.begin();
+      await h.click(document.querySelector('.hud-home')); await h.click(h.button('나가기'));
+      await h.confirm(h.moved());
+      assert.ok(document.querySelector('.start-screen')); assert.equal(h.animation(), null);
+      await h.click(h.button('이어하기'));
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
+    }));
+    await t.test('reduced motion previews immediately without an overlay and still awaits validation', () => harness(async h => {
+      await h.begin(); assert.equal(h.animation(), null);
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
+      assert.ok(h.bottles().every(b => b.disabled));
+      await h.confirm(h.moved());
+      assert.equal(document.querySelector('[data-testid="score"]').textContent, '0');
+    }, true));
+    await t.test('a visually completed puzzle earns nothing until the server confirms the clear', () => harness(async h => {
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[0]);
+      assert.equal(document.querySelector('[data-testid="score"]').textContent, '0');
+      assert.equal(document.querySelector('.clear-burst'), null);
+      const confirmed = { ...h.initial, ...advance({ ...h.initial, history: [] }, { type: 'pour', from: 1, to: 0 }, Date.now()), version: 2, serverNow: Date.now() };
+      assert.equal(confirmed.status, 'cleared');
+      await h.confirm(confirmed);
+      assert.equal(document.querySelector('[data-testid="score"]').textContent, confirmed.score.toLocaleString());
+      assert.equal(document.querySelector('.clear-burst'), null, 'clear feedback waits for the pour to finish');
+    }, true, { board: [[0, 0, 0], [0], [], []] }));
+  } finally { await vite.close(); }
+});
