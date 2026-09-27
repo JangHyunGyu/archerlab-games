@@ -7,6 +7,7 @@ import { PourAnimation, measurePour, type PourMotion } from './PourAnimation';
 import { useBottleDrag } from './useBottleDrag';
 import { useGameAudio } from './useGameAudio';
 import { BottleVisual } from './BottleVisual';
+import { menuState } from '../lib/menu-state';
 
 const API = import.meta.env.DEV ? '/water-sort/api/challenge' : 'https://game-api.yama5993.workers.dev/water-sort/challenge';
 const SESSION = 'water-sort-challenge-v2';
@@ -161,18 +162,23 @@ export default function Home() {
     onDrop: (from, to) => { setSelected(null); void pourFrom(from, to); },
   });
   const savedRun = !!run && !run.registered;
-  return <div className={'lab-app ' + (!atHome && run ? 'in-game' : 'at-home') + (savedRun ? ' has-saved-run' : '')} onPointerDownCapture={() => audio.unlock()} onKeyDownCapture={e => { if (e.key === 'Enter' || e.key === ' ') audio.unlock(); }}>
+  const { canContinue, hasRecord } = menuState(run, now);
+  return <div className={'lab-app ' + (!atHome && run ? 'in-game' : 'at-home')} onPointerDownCapture={() => audio.unlock()} onKeyDownCapture={e => { if (e.key === 'Enter' || e.key === ' ') audio.unlock(); }}>
     <div className="lab-scenery" aria-hidden="true"/><div className="lab-haze" aria-hidden="true"/>
     <main id="game" className="lab-main">
       {atHome || !run ? <section className="start-screen">
-        <div className="lab-badge"><span aria-hidden="true">✦</span> LITTLE POTION LAB</div>
-        <h1 className="game-title"><span>WATER</span><span>SORT<span className="title-bubble" aria-hidden="true">✧</span></span></h1>
+        <div className="lab-badge"><span aria-hidden="true">✦</span> BUBBLY LAB</div>
+        <h1 className="game-title" aria-label="보글보글 실험실"><span>보글보글</span><span>실험실<span className="title-bubble" aria-hidden="true">✧</span></span></h1>
         <p className="start-tagline">{c.tagline}</p>
         <div className="hero-art"><img src="/water-sort/lab-background.png" alt="" fetchPriority="high"/><span className="hero-spark spark-a" aria-hidden="true">✦</span><span className="hero-spark spark-b" aria-hidden="true">✧</span></div>
-        <div className="start-actions">{savedRun && <button className="primary-button play-button" disabled={!ready || busy} onClick={() => { void perform('sync'); }}><span aria-hidden="true">▶</span>{busy ? c.busy : ended ? c.viewRecord : c.continueGame}</button>}<button className={savedRun ? 'secondary-button new-game-button' : 'primary-button play-button'} disabled={!ready || busy} onClick={() => { if (savedRun) setModal('restart'); else void perform('start'); }}><span aria-hidden="true">▶</span>{!ready ? c.resume : busy ? c.busy : savedRun ? c.newGame : c.start}</button><div className="start-secondary"><button className="secondary-button" onClick={openRanks}><span aria-hidden="true">♛</span>{c.ranking}</button><button className="secondary-button" onClick={() => setModal('help')}><span aria-hidden="true">?</span>{c.how}</button></div></div>
+        <div className="start-actions">
+          <button className="primary-button play-button" disabled={!ready || busy} onClick={() => { if (savedRun) setModal('restart'); else void perform('start'); }}><span aria-hidden="true">▶</span>{c.newGame}</button>
+          <button className="secondary-button continue-button" disabled={!ready || busy || !canContinue} onClick={() => { void perform('sync'); }}><span aria-hidden="true">▶</span>{c.continueGame}</button>
+          <div className="start-secondary"><button className="secondary-button" onClick={openRanks}><span aria-hidden="true">♛</span>{c.ranking}</button><button className="secondary-button" onClick={() => setModal('help')}><span aria-hidden="true">?</span>{c.how}</button></div>
+        </div>
         <p className="start-caption">{c.readyBody}</p>
         <div className="start-footer"><button className="sound-toggle" aria-pressed={soundOn} onClick={toggleSound}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/>{soundOn ? <path d="M16 8q5 4 0 8M19 5q8 7 0 14"/> : <path d="m17 9 5 6m0-6-5 6"/>}</svg>{soundOn ? c.soundOn : c.soundOff}</button><a className="archerlab-link" href="https://archerlab.dev/"><span aria-hidden="true">↗</span>{c.archerlab}</a></div>
-      </section> : <section className="play-screen" aria-label="Water Sort">
+      </section> : <section className="play-screen" aria-label="보글보글 실험실">
         <div className="game-hud"><div className="hud-stat stage-stat"><span>{c.stage}</span><strong>{level.toString().padStart(2, '0')}</strong></div><button type="button" className="hud-home" onClick={() => setModal('exit')} aria-label={c.home} title={c.home}><span aria-hidden="true">🏠</span></button><div className="hud-stat score-stat"><span>{c.score}</span><strong data-testid="score">{run.score.toLocaleString()}</strong></div></div>
         <div className={'timer-strip ' + (remaining <= 10 && active ? 'low' : '')} role="timer" aria-label={`${remaining}${c.seconds}`}><div className="timer-track"><div className="timer-fill" style={{ transform: `scaleX(${Math.max(0, Math.min(1, (run.deadline - now) / 60000))})` }}/></div><span className="timer-number">{ended ? 0 : remaining}<small>s</small></span></div>
         <div className="experiment-tray">
@@ -192,6 +198,6 @@ export default function Home() {
     {modal === 'restart' && <Modal title={c.restartTitle} onClose={() => setModal(null)}><p>{c.restartBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.cancel}</button><button className="primary-button" disabled={busy} onClick={() => { void perform('start'); }}>{c.newGame}</button></div></Modal>}
     {modal === 'help' && <Modal title={c.rulesTitle} onClose={() => setModal(null)}><ol className="rules">{c.rules.map(rule => <li key={rule}>{rule}</li>)}</ol><p className="modal-note">{c.recordRule}</p><p className="keyboard-note">{c.keyboard}</p></Modal>}
     {modal === 'register' && run && <Modal title={c.register} onClose={() => setModal(null)}>{run.registered ? <div className="registration-done"><span aria-hidden="true">★</span><p role="status">{c.registered}</p><button className="primary-button" onClick={openRanks}>{c.ranking}</button><button className="secondary-button" onClick={home}>{c.home}</button></div> : <form className="ranking-form" onSubmit={e => { e.preventDefault(); void perform('register', { nickname }); }}><p>{run.score.toLocaleString()}{c.point} · {c.cleared} {run.cleared}</p><label htmlFor="nickname">{c.nickname}</label><input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} maxLength={16} required autoComplete="nickname" aria-describedby="nickname-help"/><small id="nickname-help">{c.nicknameHelp}</small><button className="primary-button" disabled={busy}>{busy ? c.submitting : c.register}</button>{error && <p className="form-error" role="alert">{error}</p>}</form>}</Modal>}
-    {modal === 'ranking' && <Modal title={c.ranking} onClose={() => setModal(null)}><p>{c.rankRule}</p>{rankState ? <p role="status">{rankState}</p> : rows.length ? <ol className="rank-list">{rows.map((row, i) => <li key={row.id} className={row.id === run?.id ? 'my-rank' : ''}><span className="rank-number">{i + 1}</span><strong>{row.nickname}</strong><span>{row.cleared}{c.level}<small>{row.score.toLocaleString()}{c.point}</small></span></li>)}</ol> : <p>{c.rankEmpty}</p>}{rankState === c.rankError && <button className="secondary-button" onClick={() => { void loadRanks(); }}>{c.retry}</button>}</Modal>}
+    {modal === 'ranking' && <Modal title={c.ranking} onClose={() => setModal(null)}><p>{c.rankRule}</p>{hasRecord && <div className="pending-record"><p>{c.endedBody}</p><button className="primary-button" disabled={!ready || busy} onClick={() => { void perform('sync'); }}>{c.viewRecord}</button></div>}{rankState ? <p role="status">{rankState}</p> : rows.length ? <ol className="rank-list">{rows.map((row, i) => <li key={row.id} className={row.id === run?.id ? 'my-rank' : ''}><span className="rank-number">{i + 1}</span><strong>{row.nickname}</strong><span>{row.cleared}{c.level}<small>{row.score.toLocaleString()}{c.point}</small></span></li>)}</ol> : <p>{c.rankEmpty}</p>}{rankState === c.rankError && <button className="secondary-button" onClick={() => { void loadRanks(); }}>{c.retry}</button>}</Modal>}
   </div>;
 }

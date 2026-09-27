@@ -1,6 +1,6 @@
 {
-  "name": "Water Sort",
-  "short_name": "Water Sort",
+  "name": "보글보글 실험실",
+  "short_name": "보글보글 실험실",
   "start_url": "/water-sort/",
   "scope": "/water-sort/",
   "display": "fullscreen",
