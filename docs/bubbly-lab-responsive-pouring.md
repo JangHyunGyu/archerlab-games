@@ -1,5 +1,7 @@
 # Immediate pouring feedback — 2026-09-28
 
+The later [stage restart policy](bubbly-lab-stage-restart.md) supersedes the Continue synchronization behavior described below; immediate pouring feedback is retained.
+
 Previously `pourFrom` awaited the challenge API response before starting sound and canvas playback. Network latency therefore appeared as a pause after both a target click and a drag release.
 
 Legal local moves now start the shared animation and audio schedule before awaiting the request. A temporary board holds the poured liquid if playback finishes before the response. Score, cleared stages, deadlines and the persistent board still come exclusively from the server. Inputs remain locked until both validation and the existing cooldown permit the next move; server validation and anti-replay logic are unchanged.

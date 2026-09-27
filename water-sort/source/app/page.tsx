@@ -40,7 +40,7 @@ export default function Home() {
   const [nickname, setNickname] = useState(''), [rows, setRows] = useState<RankRow[]>([]), [rankState, setRankState] = useState('');
   const retry = useRef<() => void>(() => {});
   function accept(next: RunView) { runRef.current = next; setRun(next); clockOffset.current = next.serverNow - Date.now(); setNow(next.serverNow); }
-  async function call(type: string, extra: Record<string, unknown> = {}) {
+  async function call(type: string, extra: Record<string, unknown> = {}, retryTransition = true): Promise<RunView> {
     const epoch = requestEpoch.current, controller = new AbortController();
     pendingRequest.current = controller;
     try {
@@ -49,6 +49,9 @@ export default function Home() {
       if (epoch !== requestEpoch.current) throw new DOMException('Abandoned game', 'AbortError');
       if (!response.ok) {
         if (data.run) accept(data.run);
+        // A pour may finish on the server while Home aborts its response.
+        // Retry the transition once against that authoritative version.
+        if ((type === 'resume' || type === 'leave') && retryTransition && data.error === 'conflict' && data.run) return await call(type, extra, false);
         throw new Error(data.error === 'nickname' ? c.nicknameError : data.error === 'conflict' ? c.syncChanged : c.error);
       }
       if (data.token) { credentials.current = { id: data.run.id, token: data.token }; try { localStorage.setItem(SESSION, JSON.stringify(credentials.current)); } catch { /* In-memory credentials still allow this run to finish. */ } }
@@ -59,7 +62,21 @@ export default function Home() {
     if (lock.current) return;
     const epoch = requestEpoch.current;
     lock.current = true; setBusy(true); setError(''); retry.current = () => { void perform(type, extra, showGame); };
-    try { const next = await call(type, extra); if (epoch !== requestEpoch.current) return; accept(next); if (showGame) setAtHome(false); setSelected(null); setNotice(c.choose); if (type !== 'register') setModal(null); if (type === 'start') audio.play('start'); }
+    try {
+      let next = await call(type, extra);
+      if (epoch !== requestEpoch.current) return;
+      accept(next);
+      // Reload opens the start screen too; save that interruption before enabling Continue.
+      if (type === 'sync' && !showGame && !next.registered && next.status !== 'ended' && !next.suspended) {
+        next = await call('leave');
+        if (epoch !== requestEpoch.current) return;
+        accept(next);
+      }
+      if (showGame) setAtHome(false);
+      setSelected(null); setNotice(c.choose);
+      if (type !== 'register') setModal(null);
+      if (type === 'start') audio.play('start');
+    }
     catch (e) { if (epoch === requestEpoch.current) setError(e instanceof Error ? e.message : c.error); }
     finally { if (epoch === requestEpoch.current) { lock.current = false; setBusy(false); setReady(true); } }
   }
@@ -71,7 +88,7 @@ export default function Home() {
     window.addEventListener('keydown', key);
     return () => { clearInterval(ticker); window.removeEventListener('keydown', key); if (settleTimer.current) clearTimeout(settleTimer.current); };
   }, []);
-  const expired = run?.status === 'playing' && now >= run.deadline;
+  const expired = run?.status === 'playing' && !run.suspended && now >= run.deadline;
   useEffect(() => {
     if (atHome || !expired) return;
     cancelPreview();
@@ -88,6 +105,7 @@ export default function Home() {
     cancelPreview();
     setAtHome(true); setModal(null); setError(''); setSelected(null);
     setNotice(c.choose); lastSoundCue.current = '';
+    if (runRef.current && runRef.current.status !== 'ended' && !runRef.current.registered) void perform('leave', {}, false);
   }
   function cancelPreview() {
     setPreviewBoard(null); setMotion(null); motionLock.current = false;
@@ -99,7 +117,7 @@ export default function Home() {
   }
   async function choose(index: number) {
     const current = runRef.current;
-    if (atHome || modal || error || !current || lock.current || motionLock.current || current.status !== 'playing' || Date.now() + clockOffset.current >= current.deadline) return;
+    if (atHome || modal || error || !current || current.suspended || lock.current || motionLock.current || current.status !== 'playing' || Date.now() + clockOffset.current >= current.deadline) return;
     if (selected === index) { setSelected(null); setNotice(c.choose); return; }
     if (selected === null) { if (!current.board[index].length) { setNotice(c.empty); audio.play('invalid'); return; } setSelected(index); setNotice(c.target); audio.play('select'); return; }
     await pourFrom(selected, index);
@@ -108,7 +126,7 @@ export default function Home() {
     const epoch = requestEpoch.current;
     const current = runRef.current;
     const time = Date.now() + clockOffset.current;
-    if (atHome || modal || error || !current || lock.current || motionLock.current || current.status !== 'playing' || time >= current.deadline || time < current.availableAt) return;
+    if (atHome || modal || error || !current || current.suspended || lock.current || motionLock.current || current.status !== 'playing' || time >= current.deadline || time < current.availableAt) return;
     const board = pour(current.board, from, index);
     if (!board) { setNotice(c.invalid); audio.play('invalid'); return; }
     const amount = board[index].length - current.board[index].length;
@@ -144,7 +162,7 @@ export default function Home() {
     catch { setRankState(c.rankError); }
   }
   function openRanks() { setModal('ranking'); void loadRanks(); }
-  const level = run?.level ?? 1, active = run?.status === 'playing' && !expired;
+  const level = run?.level ?? 1, active = run?.status === 'playing' && !run.suspended && !expired;
   const animating = !!motion || motionLock.current || !!run && now < run.availableAt;
   const ended = run?.status === 'ended' || expired;
   const board = motion?.before ?? previewBoard ?? run?.board ?? [];
@@ -181,7 +199,7 @@ export default function Home() {
         <div className="hero-art"><img src="/water-sort/lab-background.png" alt="" fetchPriority="high"/><span className="hero-spark spark-a" aria-hidden="true">✦</span><span className="hero-spark spark-b" aria-hidden="true">✧</span></div>
         <div className="start-actions">
           <button className="primary-button play-button" disabled={!ready || busy} onClick={() => { if (savedRun) setModal('restart'); else void perform('start'); }}><span aria-hidden="true">▶</span>{c.newGame}</button>
-          <button className="secondary-button continue-button" disabled={!ready || busy || !canContinue} onClick={() => { void perform('sync'); }}><span aria-hidden="true">▶</span>{c.continueGame}</button>
+          <button className="secondary-button continue-button" disabled={!ready || busy || !canContinue} onClick={() => { void perform('resume'); }}><span aria-hidden="true">▶</span>{c.continueGame}</button>
           <div className="start-secondary"><button className="secondary-button" onClick={openRanks}><span aria-hidden="true">♛</span>{c.ranking}</button><button className="secondary-button" onClick={() => setModal('help')}><span aria-hidden="true">?</span>{c.how}</button></div>
         </div>
         <p className="start-caption">{c.readyBody}</p>

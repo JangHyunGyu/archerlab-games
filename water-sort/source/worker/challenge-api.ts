@@ -1,14 +1,14 @@
-import { advance, expire, newStage, type Challenge, type RunView } from '../lib/challenge.ts';
+import { advance, expire, newStage, resumeStage, leaveStage, type Challenge, type RunView } from '../lib/challenge.ts';
 type Row = { id: string; token: string; data: string; version: number; nickname: string | null; created_at: number };
 const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
-const fields: Record<string, string[]> = { start: ['type', 'id', 'token', 'version'], sync: ['type', 'id', 'token', 'version'], pour: ['type', 'id', 'token', 'version', 'from', 'to'], register: ['type', 'id', 'token', 'version', 'nickname'] };
+const fields: Record<string, string[]> = { start: ['type', 'id', 'token', 'version'], sync: ['type', 'id', 'token', 'version'], leave: ['type', 'id', 'token', 'version'], resume: ['type', 'id', 'token', 'version'], pour: ['type', 'id', 'token', 'version', 'from', 'to'], register: ['type', 'id', 'token', 'version', 'nickname'] };
 function validPayload(body: unknown): body is Record<string, unknown> & { type: string } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
   const value = body as Record<string, unknown>;
   if (typeof value.type !== 'string' || !Object.hasOwn(fields, value.type)) return false;
   if (Object.keys(value).some(key => !fields[value.type as string].includes(key))) return false;
   if (value.type !== 'start' && (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.token !== 'string' || !UUID.test(value.token))) return false;
-  if ((value.type === 'pour' || value.type === 'register' || value.version !== undefined) && (!Number.isSafeInteger(value.version) || Number(value.version) < 0)) return false;
+  if ((['pour', 'leave', 'resume', 'register'].includes(value.type) || value.version !== undefined) && (!Number.isSafeInteger(value.version) || Number(value.version) < 0)) return false;
   return value.type !== 'pour' || [value.from, value.to].every(n => Number.isInteger(n) && Number(n) >= 0 && Number(n) < 10);
 }
 function validResult(state: Challenge, createdAt: number, now: number) {
@@ -27,7 +27,7 @@ async function database(db: D1Database) {
   return db;
 }
 function view(row: Row, now: number): RunView {
-  const { history, ...state } = JSON.parse(row.data) as Challenge;
+  const { history, initialBoard: _initialBoard, ...state } = JSON.parse(row.data) as Challenge;
   return { ...state, id: row.id, version: row.version, historyDepth: history.length, registered: row.nickname !== null, nickname: row.nickname, serverNow: now };
 }
 export async function challengeApi(request: Request, binding: D1Database, allowedOrigins: readonly string[] = []): Promise<Response> {
@@ -77,6 +77,10 @@ export async function challengeApi(request: Request, binding: D1Database, allowe
       nickname ??= body.nickname.trim();
     } else if (body.type === 'sync') {
       // Expiration is evaluated against the server clock on reload and retry.
+    } else if (body.type === 'resume' || body.type === 'leave') {
+      if (!matches) return json({ error: 'conflict', run: view(row, now) }, 409);
+      if (row.nickname !== null) return json({ error: 'registered', run: view(row, now) }, 409);
+      state = body.type === 'resume' ? resumeStage(before, now) : leaveStage(before, now);
     } else if (body.type === 'pour') {
       if (!matches) return json({ error: 'conflict', run: view(row, now) }, 409);
       if (row.nickname !== null) return json({ error: 'registered', run: view(row, now) }, 409);

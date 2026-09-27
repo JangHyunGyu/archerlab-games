@@ -1,0 +1,13 @@
+# Bubbly Lab stage restart — 2026-09-28
+
+Continue restores the current stage's initial board and starts a fresh 60-second deadline in one server transaction. Previous-stage score remains. The cumulative stage pour count remains, so retrying does not erase the move-bonus penalty. Leaving after a clear proceeds to the next stage on Continue without awarding the same clear again. Ordinary sync retains the current board and deadline.
+
+Confirmed Home suspends a valid run. Reload opens the start menu and synchronizes/suspends before enabling Continue. Merely switching tabs or apps during play does not suspend the clock. Expired runs cannot be resumed; registered runs cannot be modified. Legacy records lacking the private initial-board checkpoint get one verified same-level checkpoint, reused thereafter.
+
+Version checks and atomic D1 writes protect both transitions. Client-supplied state is rejected, stale and concurrent commands cannot both commit, and a transition retries a conflict at most once when a preceding pour finished during navigation. Late browser responses cannot restore abandoned animation/progress. Private checkpoints are not exposed in RunView.
+
+Validation: 42 game tests, static-output check, TypeScript/Vite build, two local HTTP/D1 tests, and 21 shared ranking tests passed. SQLite integration coverage includes day-long suspension, replay/concurrent transitions, fresh deadlines with restored layouts, preserved prior points/moves, completed-stage transitions, expiry, registration and legacy checkpoints. Component coverage includes reload and Home during a pending pour, plus the existing click/touch/reduced-motion cases.
+
+Korean copy: diagnosed and independently reviewed by `/root/home_label_review`; all three changed strings matched against app/copy.ts. The draft's combined phrase about starting a layout in 60 seconds was split into restoring the liquid layout and resetting the time. The background rule now specifies active play, and the retained pour count is explicit. Formal editorial change rate: 18.4%, gate OK, six checklist items passed. Functional rule changes were drafted before editorial comparison. Original/final records are in `D:/workspace/_workspace/2026-09-28-005/`.
+
+Responsive browser checks cover 320×568, 430×932, 768×1024, 1024×768, 667×375, 844×390, 1440×900 and dynamic-height 390×660. Start actions fit and remain at least 50px high; help dialogs fit without horizontal overflow, with intentional internal scrolling on short screens and reachable close controls. Actual local Worker play confirmed initial layout restoration and renewed time after pouring and leaving.

@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createServer } from 'vite';
-import { advance } from '../lib/challenge.ts';
+import { advance, leaveStage, resumeStage } from '../lib/challenge.ts';
 
 test('pour previews start before the server responds and reconcile safely', async t => {
   const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' });
@@ -12,7 +12,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
     const { default: Home } = await vite.ssrLoadModule('/app/page.tsx');
     async function harness(check, reduced = false, overrides = {}) {
       const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
-      const win = dom.window, requests = [];
+      const win = dom.window, requests = [], commands = [];
       const initial = { rules: 2, id: 'run', version: 1, level: 1, cleared: 0, score: 0, board: [[0, 1], [1, 0], [], []], moves: 0, deadline: Date.now() + 60000, availableAt: 0, status: 'playing', historyDepth: 0, registered: false, nickname: null, serverNow: Date.now(), ...overrides };
       let authoritative = initial;
       const media = () => ({ matches: reduced, addEventListener() {}, removeEventListener() {} });
@@ -24,10 +24,20 @@ test('pour previews start before the server responds and reconcile safely', asyn
       win.HTMLElement.prototype.getBoundingClientRect = function () { const index = Number(this.closest('[data-bottle-index]')?.dataset.bottleIndex ?? 0); return { x: 100 + index * 100, y: 200, width: 50, height: 150, top: 200, bottom: 350, left: 100 + index * 100, right: 150 + index * 100 }; };
       globalThis.fetch = async (_url, init) => {
         const body = JSON.parse(init.body);
+        commands.push(body);
         if (body.type === 'pour') return new Promise((resolve, reject) => requests.push({ body, resolve, reject }));
+        if (body.type === 'leave' || body.type === 'resume') {
+          const state = { ...authoritative, history: [], initialBoard: initial.board };
+          authoritative = { ...(body.type === 'leave' ? leaveStage(state, Date.now()) : resumeStage(state, Date.now())), version: authoritative.version + 1, serverNow: Date.now() };
+        }
         return { ok: true, json: async () => ({ run: authoritative, ...(body.type === 'start' ? { token: 'token' } : {}) }) };
       };
-      const root = createRoot(document.getElementById('root'));
+      let root = createRoot(document.getElementById('root'));
+      const reload = async () => {
+        await act(() => root.unmount());
+        root = createRoot(document.getElementById('root'));
+        await act(() => root.render(createElement(Home)));
+      };
       const click = async element => act(() => element.click());
       const button = text => [...document.querySelectorAll('button')].find(e => e.textContent.replace('▶', '').trim() === text);
       const bottles = () => [...document.querySelectorAll('[data-bottle-index]')];
@@ -38,7 +48,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
       try {
         await act(() => root.render(createElement(Home)));
         await click(button('새로 시작'));
-        await check({ win, initial, requests, click, button, bottles, animation, begin, confirm, moved });
+        await check({ win, initial, requests, commands, click, button, bottles, animation, begin, confirm, moved, reload });
       } finally { await act(() => root.unmount()); dom.window.close(); }
     }
 
@@ -94,13 +104,27 @@ test('pour previews start before the server responds and reconcile safely', asyn
       assert.equal(document.querySelector('[data-testid="score"]').textContent, '0');
       assert.ok(document.querySelector('.result-dialog[open]'));
     }));
-    await t.test('leaving home discards a late response and a later continue syncs the saved server board', () => harness(async h => {
+    await t.test('Home discards late responses and Continue resets the stage board and timer together', () => harness(async h => {
       await h.begin();
       await h.click(document.querySelector('.hud-home')); await h.click(h.button('나가기'));
       await h.confirm(h.moved());
       assert.ok(document.querySelector('.start-screen')); assert.equal(h.animation(), null);
       await h.click(h.button('이어하기'));
-      assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
+      assert.equal(h.commands.at(-1).type, 'resume');
+      assert.ok(h.commands.some(c => c.type === 'leave'));
+      assert.equal(document.querySelector('[role="timer"]').getAttribute('aria-label'), '60초');
+    }));
+    await t.test('reload saves the interruption before Continue resets layout and time', () => harness(async h => {
+      await h.begin();
+      await h.confirm({ ...h.moved(), availableAt: 0, deadline: Date.now() + 20000 });
+      await h.reload();
+      assert.ok(document.querySelector('.start-screen'));
+      assert.deepEqual(h.commands.slice(-2).map(c => c.type), ['sync', 'leave']);
+      assert.equal(h.button('이어하기').disabled, false);
+      await h.click(h.button('이어하기'));
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
+      assert.equal(document.querySelector('[role="timer"]').getAttribute('aria-label'), '60초');
     }));
     await t.test('reduced motion previews immediately without an overlay and still awaits validation', () => harness(async h => {
       await h.begin(); assert.equal(h.animation(), null);

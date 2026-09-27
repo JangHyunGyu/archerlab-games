@@ -6,7 +6,9 @@ export const pourDuration = (amount: number) => 1020 + amount * 130;
 export type Challenge = {
   rules: 2;
   level: number; cleared: number; score: number; board: Board; history: Board[];
+  initialBoard?: Board; // Server-only checkpoint; optional for runs created before this rule.
+  suspended?: boolean;
   moves: number; deadline: number; availableAt: number; status: 'playing' | 'cleared' | 'ended';
 };
-export type RunView = Omit<Challenge, 'history'> & { id: string; version: number; historyDepth: number; registered: boolean; nickname: string | null; serverNow: number };
+export type RunView = Omit<Challenge, 'history' | 'initialBoard'> & { id: string; version: number; historyDepth: number; registered: boolean; nickname: string | null; serverNow: number };
 export type RankRow = { id: string; nickname: string; cleared: number; score: number; created_at: number };
