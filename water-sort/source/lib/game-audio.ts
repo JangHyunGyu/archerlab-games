@@ -59,7 +59,7 @@ export class GameAudio {
       const source = context.createBufferSource(), volume = context.createGain();
       source.buffer = buffer;
       source.playbackRate.value = duration ? buffer.duration / duration : 1;
-      volume.gain.value = name === 'tick' ? .4 : .65;
+      volume.gain.value = name === 'tick' ? .4 : name === 'pour' ? .3 : .65;
       source.connect(volume); volume.connect(context.destination);
       this.sources.add(source);
       source.onended = () => { this.sources.delete(source); source.disconnect(); volume.disconnect(); };

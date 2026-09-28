@@ -8,7 +8,7 @@ import { pourDuration } from '../lib/challenge-rules';
 
 
 export type PourMotion = {
-  id: number; from: number; to: number; before: Board; amount: number;
+  id: number; from: number; to: number; before: Board; amount: number; started: number;
   source: Rect; destination: Rect; sourceWater: Rect; targetWater: Rect; sourceLift: number;
 };
 const rect = (r: DOMRect): Rect => ({ x: r.x, y: r.y, width: r.width, height: r.height });
@@ -24,72 +24,81 @@ export function measurePour(source: HTMLElement, destination: HTMLElement) {
   };
 }
 
-export function PourAnimation({ motion, onFinish }: { motion: PourMotion; onFinish: (id: number) => void }) {
+function paintMotion(ctx: CanvasRenderingContext2D, motion: PourMotion, time: number, width: number) {
+  const { source, destination, sourceWater: water, targetWater: target, amount, before, from, to } = motion;
+  const tube = before[from], receiving = before[to], color = tube.at(-1)!;
+  const direction = chooseDirection(source, destination, width);
+  const pivot = { x: direction > 0 ? water.x + water.width : water.x, y: water.y };
+  const polygon = roundBottom(water, water.width * .48);
+  const volume = (units: number) => liquidVolume(water, units);
+  const initialAngle = spillAngle(polygon, pivot, volume(tube.length), direction);
+  const start = { x: source.x + pivot.x, y: source.y + pivot.y + motion.sourceLift };
+  const end = { x: destination.x + destination.width / 2, y: destination.y - 15 };
+  const rest = { x: source.x + pivot.x, y: source.y + pivot.y };
+  const t = Math.max(0, Math.min(1, (time - motion.started) / pourDuration(amount)));
+  const { approach, flow, retreat } = phases(t);
+  let angle = t < .27 ? initialAngle * approach : spillAngle(polygon, pivot, volume(tube.length - amount * flow), direction);
+  angle *= 1 - retreat;
+  let position = { x: mix(start.x, end.x, approach), y: mix(start.y, end.y, approach) - Math.sin(approach * Math.PI) * 18 };
+  if (retreat) position = { x: mix(end.x, rest.x, retreat), y: mix(end.y, rest.y, retreat) - Math.sin(retreat * Math.PI) * 12 };
+  const pouring = t >= .27 && t < .73;
+  const targetLayers = liquidLayers([...receiving, ...Array(amount).fill(color)], receiving.length + amount * flow);
+  drawVessel(ctx, { ...destination }, targetLayers, { time, incoming: pouring, agitation: pouring ? 1 : Math.exp(-Math.max(0, t - .73) * 24) * .7 });
+  if (pouring) {
+    const surfaceY = liquidSurface(target, receiving.length + amount * flow);
+    drawStream(ctx, end, { x: end.x, y: surfaceY + 1 }, color, Math.min(5, target.width * .13), time, flow);
+  }
+  drawVessel(ctx, { x: position.x, y: position.y, width: source.width, height: source.height, pivot, angle }, liquidLayers(tube, tube.length - amount * flow), { time, shadow: false, agitation: pouring ? .22 : Math.sin((approach + retreat) * Math.PI) * .8 });
+  return t;
+}
+
+// One canvas and one RAF for every active pair, instead of one full-screen canvas per pour.
+export function PourAnimation({ motions, onFinish }: { motions: PourMotion[]; onFinish: (id: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const finishRef = useRef(onFinish);
+  const motionsRef = useRef(motions);
+  motionsRef.current = motions;
   finishRef.current = onFinish;
   useEffect(() => {
+    const completed = new Set<number>();
+    const finish = (id: number) => { if (!completed.has(id)) { completed.add(id); finishRef.current(id); } };
+    const finishAll = () => { for (const motion of motionsRef.current) finish(motion.id); };
     const canvas = ref.current, ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) { finishRef.current(motion.id); return; }
+    if (!canvas || !ctx) { finishAll(); return; }
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    if (reduced.matches) { finishRef.current(motion.id); return; }
+    if (reduced.matches) { finishAll(); return; }
     const width = document.documentElement.clientWidth, height = window.innerHeight;
     const ratio = Math.min(devicePixelRatio || 1, 2);
     canvas.width = Math.ceil(width * ratio); canvas.height = Math.ceil(height * ratio);
     canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
     ctx.scale(ratio, ratio);
-    const { source, destination, sourceWater: water, targetWater: target, amount, before, from, to } = motion;
-    const tube = before[from], receiving = before[to], color = tube.at(-1)!;
-    const direction = chooseDirection(source, destination, width);
-    const pivot = { x: direction > 0 ? water.x + water.width : water.x, y: water.y };
-    const polygon = roundBottom(water, water.width * .48);
-    const volume = (units: number) => liquidVolume(water, units);
-    const initialAngle = spillAngle(polygon, pivot, volume(tube.length), direction);
-    const start = { x: source.x + pivot.x, y: source.y + pivot.y + motion.sourceLift };
-    const end = { x: destination.x + destination.width / 2, y: destination.y - 15 };
-    const rest = { x: source.x + pivot.x, y: source.y + pivot.y };
-    const duration = pourDuration(amount);
     let frame = 0, finished = false;
-    const started = performance.now();
-    const finish = () => {
-      if (finished) return;
-      finished = true; cancelAnimationFrame(frame); finishRef.current(motion.id);
-    };
     function draw(time: number) {
       if (!ctx || !canvas || finished) return;
-      const t = Math.min(1, (time - started) / duration), { approach, flow, retreat } = phases(t);
-      let angle = t < .27 ? initialAngle * approach : spillAngle(polygon, pivot, volume(tube.length - amount * flow), direction);
-      angle *= 1 - retreat;
-      let position = { x: mix(start.x, end.x, approach), y: mix(start.y, end.y, approach) - Math.sin(approach * Math.PI) * 18 };
-      if (retreat) position = { x: mix(end.x, rest.x, retreat), y: mix(end.y, rest.y, retreat) - Math.sin(retreat * Math.PI) * 12 };
       ctx.clearRect(0, 0, width, height);
-      const pouring = t >= .27 && t < .73;
-      canvas.dataset.phase = pouring ? 'pour' : t < .27 ? 'lift' : 'return';
-      canvas.dataset.flow = flow.toFixed(3);
-      const targetLayers = liquidLayers([...receiving, ...Array(amount).fill(color)], receiving.length + amount * flow);
-      drawVessel(ctx, { ...destination }, targetLayers, { time, incoming: pouring, agitation: pouring ? 1 : Math.exp(-Math.max(0, t - .73) * 24) * .7 });
-      if (pouring) {
-        const surfaceY = liquidSurface(target, receiving.length + amount * flow);
-        drawStream(ctx, end, { x: end.x, y: surfaceY + 1 }, color, Math.min(5, target.width * .13), time, flow);
+      for (const motion of motionsRef.current) {
+        if (completed.has(motion.id)) continue;
+        const t = paintMotion(ctx, motion, time, width);
+        canvas.dataset.phase = t >= .27 && t < .73 ? 'pour' : t < .27 ? 'lift' : 'return';
+        if (t >= 1) finish(motion.id);
       }
-      drawVessel(ctx, { x: position.x, y: position.y, width: source.width, height: source.height, pivot, angle }, liquidLayers(tube, tube.length - amount * flow), { time, shadow: false, agitation: pouring ? .22 : Math.sin((approach + retreat) * Math.PI) * .8 });
-      if (t < 1) frame = requestAnimationFrame(draw); else finish();
+      frame = requestAnimationFrame(draw);
     }
     // Settle to the preview or confirmed board; the request still owns validation.
     const viewportKey = () => [innerWidth, innerHeight, scrollX, scrollY, visualViewport?.width, visualViewport?.height, visualViewport?.offsetLeft, visualViewport?.offsetTop].join(',');
     const initialViewport = viewportKey();
-    const viewportChanged = () => { if (viewportKey() !== initialViewport) finish(); };
-    const visibility = () => { if (document.hidden) finish(); };
+    const viewportChanged = () => { if (viewportKey() !== initialViewport) finishAll(); };
+    const visibility = () => { if (document.hidden) finishAll(); };
     window.addEventListener('resize', viewportChanged); window.addEventListener('scroll', viewportChanged, { passive: true });
     window.visualViewport?.addEventListener('resize', viewportChanged); window.visualViewport?.addEventListener('scroll', viewportChanged);
-    document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', finish);
+    document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', finishAll);
     frame = requestAnimationFrame(draw);
     return () => {
       finished = true; cancelAnimationFrame(frame);
       window.removeEventListener('resize', viewportChanged); window.removeEventListener('scroll', viewportChanged);
       window.visualViewport?.removeEventListener('resize', viewportChanged); window.visualViewport?.removeEventListener('scroll', viewportChanged);
-      document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', finish);
+      document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', finishAll);
     };
-  }, [motion]);
-  return createPortal(<canvas ref={ref} className="pour-overlay" data-testid="pour-animation" aria-hidden="true"/>, document.body);
+  }, []);
+  return createPortal(<canvas ref={ref} className="pour-overlay" data-testid="pour-animation" data-count={motions.length} aria-hidden="true"/>, document.body);
 }

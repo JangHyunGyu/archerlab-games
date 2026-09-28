@@ -8,7 +8,11 @@ export type Challenge = {
   level: number; cleared: number; score: number; board: Board; history: Board[];
   initialBoard?: Board; // Server-only checkpoint; optional for runs created before this rule.
   suspended?: boolean;
+  bottleAvailableAt?: number[]; // Per-bottle animation locks. Missing only on legacy runs.
   moves: number; deadline: number; availableAt: number; status: 'playing' | 'cleared' | 'ended';
 };
+export function bottleReadyAt(state: Pick<Challenge, 'bottleAvailableAt' | 'availableAt'>, index: number) {
+  return state.bottleAvailableAt?.[index] ?? state.availableAt;
+}
 export type RunView = Omit<Challenge, 'history' | 'initialBoard'> & { id: string; version: number; historyDepth: number; registered: boolean; nickname: string | null; serverNow: number };
 export type RankRow = { id: string; nickname: string; cleared: number; score: number; created_at: number };

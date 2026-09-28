@@ -21,6 +21,42 @@ class TestDatabase {
   async batch(statements) { return Promise.all(statements.map(s => s.run())); }
 }
 
+test('D1 accepts disjoint pours during animation but rejects shared-bottle bypasses and forged lock times', async () => {
+  const db = new TestDatabase(), originalNow = Date.now;
+  let now = 1800000000000;
+  Date.now = () => now;
+  const send = async body => {
+    const response = await challengeApi(new Request('https://game.test/api/challenge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), db);
+    return { status: response.status, ...await response.json() };
+  };
+  try {
+    const started = await send({ type: 'start' });
+    const auth = { id: started.run.id, token: started.token };
+    const board = [[0, 1, 0, 1], [1, 0, 1, 0], [], [], []];
+    const state = { ...started.run, board, initialBoard: board, history: [], bottleAvailableAt: board.map(() => now) };
+    db.database.prepare('UPDATE water_sort_runs SET data = ? WHERE id = ?').run(JSON.stringify(state), auth.id);
+    const first = await send({ type: 'pour', ...auth, version: 0, from: 0, to: 2 });
+    assert.equal(first.run.moves, 1);
+    now += 100;
+    const independent = await send({ type: 'pour', ...auth, version: first.run.version, from: 1, to: 3 });
+    assert.equal(independent.status, 200); assert.equal(independent.run.moves, 2);
+    assert.equal(independent.run.deadline, started.run.deadline);
+    const reused = await send({ type: 'pour', ...auth, version: independent.run.version, from: 0, to: 4 });
+    assert.equal(reused.run.moves, 2); assert.equal(reused.run.version, independent.run.version);
+    const forged = await send({ type: 'pour', ...auth, version: independent.run.version, from: 0, to: 4, bottleAvailableAt: [0, 0, 0, 0, 0] });
+    assert.equal(forged.status, 400);
+    const replay = await send({ type: 'pour', ...auth, version: first.run.version, from: 1, to: 3 });
+    assert.equal(replay.status, 409);
+    now = first.run.bottleAvailableAt[0];
+    const dependent = await send({ type: 'pour', ...auth, version: independent.run.version, from: 0, to: 4 });
+    assert.equal(dependent.run.moves, 3, 'first pair unlocks without waiting for the independent pair');
+    const resumed = await send({ type: 'resume', ...auth, version: dependent.run.version });
+    assert.deepEqual(resumed.run.board, board); assert.equal(resumed.run.deadline - now, 60000);
+    assert.ok(resumed.run.bottleAvailableAt.every(time => time === now));
+    assert.equal(resumed.run.moves, 3); assert.equal(resumed.run.score, 0);
+  } finally { Date.now = originalNow; db.database.close(); }
+});
+
 test('ranking API rejects forged state, hidden actions, replay and concurrent writes; sync keeps server time', async () => {
   const db = new TestDatabase(), originalNow = Date.now;
   let now = 1800000000000;

@@ -13,7 +13,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
     async function harness(check, reduced = false, overrides = {}) {
       const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
       const win = dom.window, requests = [], commands = [];
-      const initial = { rules: 2, id: 'run', version: 1, level: 1, cleared: 0, score: 0, board: [[0, 1], [1, 0], [], []], moves: 0, deadline: Date.now() + 60000, availableAt: 0, status: 'playing', historyDepth: 0, registered: false, nickname: null, serverNow: Date.now(), ...overrides };
+      const initial = { rules: 2, id: 'run', version: 1, level: 1, cleared: 0, score: 0, board: [[0, 1], [1, 0], [], []], bottleAvailableAt: [0, 0, 0, 0], moves: 0, deadline: Date.now() + 60000, availableAt: 0, status: 'playing', historyDepth: 0, registered: false, nickname: null, serverNow: Date.now(), ...overrides };
       let authoritative = initial;
       const media = () => ({ matches: reduced, addEventListener() {}, removeEventListener() {} });
       Object.assign(globalThis, { window: win, document: win.document, localStorage: win.localStorage, IS_REACT_ACT_ENVIRONMENT: true, matchMedia: media, innerWidth: 1024, innerHeight: 768, scrollX: 0, scrollY: 0, visualViewport: undefined, devicePixelRatio: 1, requestAnimationFrame: () => 1, cancelAnimationFrame() {} });
@@ -43,7 +43,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
       const bottles = () => [...document.querySelectorAll('[data-bottle-index]')];
       const animation = () => document.querySelector('[data-testid="pour-animation"]');
       const begin = async () => { await click(bottles()[0]); await click(bottles()[2]); };
-      const confirm = async (run, ok = true) => { authoritative = run; await act(async () => requests[0].resolve({ ok, json: async () => ({ run, error: ok ? undefined : 'conflict' }) })); };
+      const confirm = async (run, ok = true, index = 0) => { authoritative = run; await act(async () => requests[index].resolve({ ok, json: async () => ({ run, error: ok ? undefined : 'conflict' }) })); };
       const moved = () => ({ ...initial, ...advance({ ...initial, history: [] }, { type: 'pour', from: 0, to: 2 }, Date.now()), version: 2, serverNow: Date.now() });
       try {
         await act(() => root.render(createElement(Home)));
@@ -63,7 +63,8 @@ test('pour previews start before the server responds and reconcile safely', asyn
       await act(() => h.win.dispatchEvent(new h.win.Event('resize')));
       assert.equal(h.animation(), null);
       assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
-      assert.ok(h.bottles().every(b => b.disabled));
+      assert.ok(h.bottles().every(b => !b.disabled), 'inputs stay available for selection and reservation');
+      assert.equal(h.bottles()[0].dataset.pouring, 'true');
       await h.confirm({ ...h.moved(), availableAt: 0 });
       assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
       assert.equal(h.animation(), null, 'confirmation must not replay the animation');
@@ -83,6 +84,39 @@ test('pour previews start before the server responds and reconcile safely', asyn
       assert.equal(h.requests.length, 1);
       await h.confirm(h.moved());
       assert.ok(h.animation(), 'fast confirmation must not interrupt playback');
+    }));
+    await t.test('independent clicks animate together on one canvas while HTTP requests remain ordered', () => harness(async h => {
+      await h.begin();
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[3]);
+      assert.equal(h.animation().dataset.count, '2');
+      assert.equal(document.querySelectorAll('.pour-overlay').length, 1);
+      assert.equal(h.requests.length, 1, 'second visual move must not race the first server version');
+      const first = h.moved();
+      await h.confirm(first);
+      assert.equal(h.requests.length, 2);
+      assert.equal(h.requests[1].body.version, first.version);
+      const second = { ...first, ...advance({ ...first, history: [] }, { type: 'pour', from: 1, to: 3 }, Date.now()), version: 3, serverNow: Date.now() };
+      assert.equal(second.moves, 2);
+      await h.confirm(second, true, 1);
+      assert.equal(h.animation().dataset.count, '2');
+      assert.match(h.bottles()[3].getAttribute('aria-label'), /산호색/);
+    }));
+    await t.test('busy-bottle touch drop reserves once, shows its markers, and Escape cancels', () => harness(async h => {
+      await h.begin();
+      const source = h.bottles()[2];
+      Object.assign(source, { setPointerCapture() {}, hasPointerCapture: () => false, releasePointerCapture() {} });
+      document.elementFromPoint = () => h.bottles()[3];
+      for (const [type, x] of [['pointerdown', 325], ['pointermove', 425], ['pointerup', 425]]) {
+        const event = new h.win.Event(type, { bubbles: true, cancelable: true });
+        Object.assign(event, { pointerId: 1, isPrimary: true, button: 0, clientX: x, clientY: 250, pointerType: 'touch' });
+        await act(() => source.dispatchEvent(event));
+      }
+      assert.equal(h.requests.length, 1);
+      assert.equal(document.querySelectorAll('[data-queued]').length, 2);
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /예약/);
+      await act(() => h.win.dispatchEvent(new h.win.KeyboardEvent('keydown', { key: 'Escape' })));
+      assert.equal(document.querySelectorAll('[data-queued]').length, 0);
+      assert.equal(h.requests.length, 1);
     }));
     await t.test('server conflict cancels the preview and restores authoritative liquid and score', () => harness(async h => {
       await h.begin();
@@ -129,7 +163,10 @@ test('pour previews start before the server responds and reconcile safely', asyn
     await t.test('reduced motion previews immediately without an overlay and still awaits validation', () => harness(async h => {
       await h.begin(); assert.equal(h.animation(), null);
       assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
-      assert.ok(h.bottles().every(b => b.disabled));
+      assert.ok(h.bottles().every(b => !b.disabled));
+      await h.click(h.bottles()[2]); await h.click(h.bottles()[3]);
+      assert.equal(document.querySelectorAll('[data-queued]').length, 2);
+      assert.equal(h.requests.length, 1);
       await h.confirm(h.moved());
       assert.equal(document.querySelector('[data-testid="score"]').textContent, '0');
     }, true));

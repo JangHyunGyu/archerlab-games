@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { complete, hasMove, pour, type Board } from '../lib/game';
+import { complete, hasMove, pour, won } from '../lib/game';
 import { timeLimit, pourDuration, CLEAR_DELAY, type RunView, type RankRow } from '../lib/challenge-rules';
 import { copy as c } from './copy';
 import { PourAnimation, measurePour, type PourMotion } from './PourAnimation';
@@ -8,6 +8,7 @@ import { useBottleDrag } from './useBottleDrag';
 import { useGameAudio } from './useGameAudio';
 import { BottleVisual } from './BottleVisual';
 import { menuState } from '../lib/menu-state';
+import { PourController, type ActivePour } from '../lib/pour-controller';
 
 const API = import.meta.env.DEV ? '/water-sort/api/challenge' : 'https://game-api.yama5993.workers.dev/water-sort/challenge';
 const SESSION = 'water-sort-challenge-v2';
@@ -33,12 +34,25 @@ export default function Home() {
   const lastSoundCue = useRef('');
   const [notice, setNotice] = useState<string>(c.choose), [error, setError] = useState('');
   const [modal, setModal] = useState<'help' | 'ranking' | 'register' | 'exit' | 'restart' | null>(null);
-  const [motion, setMotion] = useState<PourMotion | null>(null), motionLock = useRef(false), sequence = useRef(0);
-  const [previewBoard, setPreviewBoard] = useState<Board | null>(null);
-  const tubes = useRef<(HTMLSpanElement | null)[]>([]), settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [motions, setMotions] = useState<PourMotion[]>([]);
+  const [, redrawPours] = useState(0);
+  const tubes = useRef<(HTMLSpanElement | null)[]>([]), settleTimers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
   const [now, setNow] = useState(0), clockOffset = useRef(0);
   const [nickname, setNickname] = useState(''), [rows, setRows] = useState<RankRow[]>([]), [rankState, setRankState] = useState('');
   const retry = useRef<() => void>(() => {});
+  const controllerRef = useRef<PourController | null>(null);
+  if (!controllerRef.current) controllerRef.current = new PourController({
+    getRun: () => runRef.current,
+    clock: () => Date.now() + clockOffset.current,
+    send: (from, to) => call('pour', { from, to }),
+    accept,
+    start: startMotion,
+    change: () => redrawPours(value => value + 1),
+    reset: () => { setMotions([]); for (const timer of settleTimers.current.values()) clearTimeout(timer); settleTimers.current.clear(); },
+    error: e => { audio.stop(); setError(e instanceof Error ? e.message : c.error); },
+    invalid: () => { setNotice(c.invalid); audio.play('invalid'); },
+  });
+  const pours = controllerRef.current;
   function accept(next: RunView) { runRef.current = next; setRun(next); clockOffset.current = next.serverNow - Date.now(); setNow(next.serverNow); }
   async function call(type: string, extra: Record<string, unknown> = {}, retryTransition = true): Promise<RunView> {
     const epoch = requestEpoch.current, controller = new AbortController();
@@ -65,6 +79,7 @@ export default function Home() {
     try {
       let next = await call(type, extra);
       if (epoch !== requestEpoch.current) return;
+      cancelPreview();
       accept(next);
       // Reload opens the start screen too; save that interruption before enabling Continue.
       if (type === 'sync' && !showGame && !next.registered && next.status !== 'ended' && !next.suspended) {
@@ -83,11 +98,16 @@ export default function Home() {
   useEffect(() => {
     try { const raw = localStorage.getItem(SESSION); if (raw) { const saved = JSON.parse(raw); if (typeof saved.id === 'string' && typeof saved.token === 'string') credentials.current = saved; } } catch { /* A new run remains available. */ }
     if (credentials.current) void perform('sync', {}, false); else setReady(true);
-    const ticker = setInterval(() => setNow(Date.now() + clockOffset.current), 100);
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { setSelected(null); setNotice(c.choose); } };
+    const ticker = setInterval(() => { setNow(Date.now() + clockOffset.current); pours.tick(); }, 50);
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { setSelected(null); pours.cancelQueued(); setNotice(c.choose); } };
+    const hidden = () => { if (document.hidden) pours.cancelQueued(); };
+    const resized = () => pours.cancelQueued();
     window.addEventListener('keydown', key);
-    return () => { clearInterval(ticker); window.removeEventListener('keydown', key); if (settleTimer.current) clearTimeout(settleTimer.current); };
+    window.addEventListener('resize', resized);
+    document.addEventListener('visibilitychange', hidden);
+    return () => { clearInterval(ticker); window.removeEventListener('keydown', key); window.removeEventListener('resize', resized); document.removeEventListener('visibilitychange', hidden); requestEpoch.current++; pendingRequest.current?.abort(); pours.clear(); };
   }, []);
+  useEffect(() => { if (modal) pours.cancelQueued(); }, [modal]);
   const expired = run?.status === 'playing' && !run.suspended && now >= run.deadline;
   useEffect(() => {
     if (atHome || !expired) return;
@@ -95,8 +115,8 @@ export default function Home() {
     if (!busy && !error) void perform('sync');
   }, [atHome, expired, busy, error]);
   useEffect(() => {
-    if (!atHome && run?.status === 'cleared' && now >= run.availableAt + CLEAR_DELAY && !motion && !motionLock.current && !busy && !error && !modal) void perform('sync');
-  }, [atHome, run, now, motion, busy, error, modal]);
+    if (!atHome && run?.status === 'cleared' && now >= run.availableAt + CLEAR_DELAY && !motions.length && !pours.entries.length && !busy && !error && !modal) void perform('sync');
+  }, [atHome, run, now, motions, busy, error, modal]);
   function home() {
     requestEpoch.current++;
     pendingRequest.current?.abort(); pendingRequest.current = null;
@@ -108,53 +128,40 @@ export default function Home() {
     if (runRef.current && runRef.current.status !== 'ended' && !runRef.current.registered) void perform('leave', {}, false);
   }
   function cancelPreview() {
-    setPreviewBoard(null); setMotion(null); motionLock.current = false;
-    if (settleTimer.current) clearTimeout(settleTimer.current);
+    pours.clear();
   }
   function finishMotion(id: number) {
-    if (id !== sequence.current) return;
-    setMotion(m => m?.id === id ? null : m); motionLock.current = false;
+    setMotions(items => items.filter(m => m.id !== id));
+    const timer = settleTimers.current.get(id);
+    if (timer) clearTimeout(timer);
+    settleTimers.current.delete(id);
+    pours.finish(id);
   }
   async function choose(index: number) {
-    const current = runRef.current;
-    if (atHome || modal || error || !current || current.suspended || lock.current || motionLock.current || current.status !== 'playing' || Date.now() + clockOffset.current >= current.deadline) return;
+    if (!pours.enabled) return;
     if (selected === index) { setSelected(null); setNotice(c.choose); return; }
-    if (selected === null) { if (!current.board[index].length) { setNotice(c.empty); audio.play('invalid'); return; } setSelected(index); setNotice(c.target); audio.play('select'); return; }
+    if (selected === null) { if (!pours.board[index].length) { setNotice(c.empty); audio.play('invalid'); return; } setSelected(index); setNotice(c.target); audio.play('select'); return; }
     await pourFrom(selected, index);
   }
   async function pourFrom(from: number, index: number) {
-    const epoch = requestEpoch.current;
-    const current = runRef.current;
-    const time = Date.now() + clockOffset.current;
-    if (atHome || modal || error || !current || current.suspended || lock.current || motionLock.current || current.status !== 'playing' || time >= current.deadline || time < current.availableAt) return;
-    const board = pour(current.board, from, index);
-    if (!board) { setNotice(c.invalid); audio.play('invalid'); return; }
-    const amount = board[index].length - current.board[index].length;
-    const source = tubes.current[from], destination = tubes.current[index];
-    const geometry = source && destination ? measurePour(source, destination) : null;
-    lock.current = true; setBusy(true); setError(''); setSelected(null);
+    if (!pours.enabled) return;
     retry.current = () => { void perform('sync'); };
-    // Show the legal move immediately. Only the response may update score or progress.
-    const id = ++sequence.current, seconds = pourDuration(amount) / 1000;
-    motionLock.current = true; setPreviewBoard(board);
+    const result = pours.request(from, index);
+    setSelected(null);
+    if (result !== 'invalid') setNotice(result === 'queued' ? c.queued : hasMove(pours.board) ? c.choose : c.blocked);
+  }
+  function startMotion(entry: ActivePour) {
+    const { id, from, to, before, amount } = entry;
+    const source = tubes.current[from], destination = tubes.current[to];
+    const geometry = source && destination ? measurePour(source, destination) : null;
+    const seconds = pourDuration(amount) / 1000;
     audio.play('pour', seconds * .27, seconds * .46);
     const h = window.visualViewport?.height ?? innerHeight;
     if (geometry && !matchMedia('(prefers-reduced-motion: reduce)').matches && geometry.source.y > 30 && geometry.destination.y > 48 && Math.max(geometry.source.y + geometry.source.height, geometry.destination.y + geometry.destination.height) < h - 6) {
-      setMotion({ id, from, to: index, before: current.board, amount, ...geometry });
+      setMotions(items => [...items, { id, from, to, before, amount, started: performance.now(), ...geometry }]);
     } else {
-      settleTimer.current = setTimeout(() => { finishMotion(id); setNow(Date.now() + clockOffset.current); }, pourDuration(amount));
+      settleTimers.current.set(id, setTimeout(() => { finishMotion(id); setNow(Date.now() + clockOffset.current); }, pourDuration(amount)));
     }
-    try {
-      const next = await call('pour', { from, to: index });
-      if (epoch !== requestEpoch.current) return;
-      accept(next);
-      setPreviewBoard(null);
-      const accepted = next.id === current.id && next.level === current.level && next.version > current.version && next.moves === current.moves + 1 && next.status !== 'ended'
-        && next.board.length === board.length && board.every((tube, i) => tube.length === next.board[i].length && tube.every((color, j) => color === next.board[i][j]));
-      if (!accepted) { cancelPreview(); audio.stop(); }
-      setNotice(hasMove(next.board) ? c.choose : c.blocked);
-    } catch (e) { if (epoch === requestEpoch.current) { cancelPreview(); audio.stop(); setError(e instanceof Error ? e.message : c.error); } }
-    finally { if (epoch === requestEpoch.current) { lock.current = false; setBusy(false); } }
   }
   async function loadRanks() {
     setRankState(c.rankLoading);
@@ -163,11 +170,12 @@ export default function Home() {
   }
   function openRanks() { setModal('ranking'); void loadRanks(); }
   const level = run?.level ?? 1, active = run?.status === 'playing' && !run.suspended && !expired;
-  const animating = !!motion || motionLock.current || !!run && now < run.availableAt;
+  const animating = !!motions.length || !!pours.entries.length || !!run && now < run.availableAt;
   const ended = run?.status === 'ended' || expired;
-  const board = motion?.before ?? previewBoard ?? run?.board ?? [];
+  const board = pours.board;
   const remaining = run ? Math.max(0, Math.ceil((run.deadline - now) / 1000)) : timeLimit(1);
-  const disabled = !active || busy || animating || !!error;
+  const disabled = !active || busy || !!error || won(board);
+  pours.enabled = !atHome && !disabled && !modal;
   const clockKey = run ? `${run.id}:${run.level}` : null;
   const clockRunning = !atHome && !!run && !ended && (run.status === 'playing' || now < run.availableAt);
   useEffect(() => { audio.countdown(clockKey, remaining, clockRunning); }, [audio, clockKey, remaining, clockRunning]);
@@ -182,8 +190,8 @@ export default function Home() {
   }, [atHome, run, ended, animating, audio]);
   const drag = useBottleDrag({
     disabled: atHome || disabled || !!modal,
-    canStart: from => !!run?.board[from]?.length,
-    canPour: (from, to) => !!run && !!pour(run.board, from, to),
+    canStart: from => !!pours.board[from]?.length,
+    canPour: (from, to) => !!pour(pours.board, from, to),
     onDragStart: () => audio.play('select'),
     onDrop: (from, to) => { setSelected(null); void pourFrom(from, to); },
   });
@@ -210,7 +218,14 @@ export default function Home() {
         <div className="experiment-tray">
           <div className="tray-spark tray-spark-one" aria-hidden="true">✦</div><div className="tray-spark tray-spark-two" aria-hidden="true">✧</div>
           <div className={'board ' + (board.length > 7 ? 'many-tubes' : '')} role="group" aria-label={c.play}>
-            {board.map((tube, i) => <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} disabled={disabled} aria-pressed={selected === i} aria-label={`${i + 1}${c.bottle}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${complete(tube) ? ', ' + c.done : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motion?.from === i ? 'pour-source ' : '') + (motion?.to === i ? 'pour-target' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}><span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/></span><span className="completion-star" aria-hidden="true">{complete(tube) ? '★' : ''}</span></button>)}
+            {board.map((tube, i) => {
+              const queued = pours.queued?.from === i || pours.queued?.to === i;
+              const pouring = pours.busy(i);
+              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${i + 1}${c.bottle}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${complete(tube) ? ', ' + c.done : ''}${queued ? ', ' + c.queued : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
+                <span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/></span>
+                <span className={'completion-star ' + (queued ? 'queue-label' : '')} aria-hidden="true">{queued ? c.queueBadge : complete(tube) && !pouring ? '★' : ''}</span>
+              </button>;
+            })}
           </div>
           {run.status === 'cleared' && !animating && <div className="clear-burst" role="status">✦ {c.success} ✦</div>}
         </div>
@@ -218,7 +233,7 @@ export default function Home() {
       </section>}
       {error && <div className="connection-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={busy} onClick={() => retry.current()}>{c.retry}</button></div>}
     </main>
-    {motion && <PourAnimation motion={motion} onFinish={finishMotion}/>}
+    {!!motions.length && <PourAnimation motions={motions} onFinish={finishMotion}/>}
     {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? 'ALL CLEAR!' : 'TIME OVER'}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : c.ended}</h2><div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
     {modal === 'exit' && <Modal title={c.homeTitle} onClose={() => setModal(null)}><p>{c.homeBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.keepPlaying}</button><button className="primary-button" onClick={home}>{c.leaveGame}</button></div></Modal>}
     {modal === 'restart' && <Modal title={c.restartTitle} onClose={() => setModal(null)}><p>{c.restartBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.cancel}</button><button className="primary-button" disabled={busy} onClick={() => { void perform('start'); }}>{c.newGame}</button></div></Modal>}

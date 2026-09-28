@@ -106,6 +106,29 @@ test('last pour must finish before deadline; late completion earns no points', (
   assert.equal(expire(late, 60000).status, 'ended');
   assert.equal(advance(initial, { type: 'pour', from: 1, to: 0 }, 60000).status, 'ended');
 });
+test('independent pairs overlap, shared bottles remain locked, and all animations must finish for a clear', () => {
+  const initial: Challenge = { ...newStage(1, 0), board: [[0, 0, 0, 0], [], [1, 1, 1], [1]], bottleAvailableAt: [0, 0, 0, 0] };
+  const first = advance(initial, { type: 'pour', from: 0, to: 1 }, 1000);
+  const second = advance(first, { type: 'pour', from: 3, to: 2 }, 1100);
+  assert.equal(second.moves, 2); assert.equal(second.status, 'cleared');
+  assert.equal(second.availableAt, 2540, 'longer earlier animation sets completion time');
+  assert.equal(second.deadline, initial.deadline);
+  assert.equal(second.score, 1000 + Math.floor(200 * (60000 - 2540) / 60000) + 96);
+  assert.equal(advance(first, { type: 'pour', from: 1, to: 0 }, 1100), first);
+  const late = advance({ ...first, deadline: 2400 }, { type: 'pour', from: 3, to: 2 }, 1100);
+  assert.equal(late.score, 0); assert.equal(late.status, 'playing');
+  assert.equal(expire(late, 2400).status, 'ended');
+  assert.equal(expire(second, second.availableAt + 449).level, 1);
+  assert.equal(expire(second, second.availableAt + 450).level, 2);
+});
+
+test('legacy global locks remain enforced until they finish, then become bottle locks', () => {
+  const state: Challenge = { ...newStage(1, 0), board: [[0, 1], [], [1, 0], []], availableAt: 1000 };
+  delete state.bottleAvailableAt;
+  assert.equal(advance(state, { type: 'pour', from: 0, to: 1 }, 999), state);
+  const moved = advance(state, { type: 'pour', from: 0, to: 1 }, 1000);
+  assert.equal(advance(moved, { type: 'pour', from: 2, to: 3 }, 1001).moves, 2);
+});
 test('all levels can finish within their clocks using verified solution playback', () => {
   catalog.forEach((stage, i) => stage.variants.forEach(variant => {
     let state = { ...newStage(i + 1, 0), board: variant.board }, now = 0;
