@@ -1,14 +1,15 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { complete, hasMove, pour, won } from '../lib/game';
+import { complete, hasMove, won } from '../lib/game';
 import { timeLimit, pourDuration, CLEAR_DELAY, type RunView, type RankRow } from '../lib/challenge-rules';
 import { copy as c } from './copy';
 import { PourAnimation, measurePour, type PourMotion } from './PourAnimation';
 import { useBottleDrag } from './useBottleDrag';
 import { useGameAudio } from './useGameAudio';
 import { BottleVisual } from './BottleVisual';
+import { BottleCompletion } from './BottleCompletion';
 import { menuState } from '../lib/menu-state';
-import { PourController, type ActivePour } from '../lib/pour-controller';
+import { MAX_QUEUED_POURS, PourController, type ActivePour } from '../lib/pour-controller';
 
 const API = import.meta.env.DEV ? '/water-sort/api/challenge' : 'https://game-api.yama5993.workers.dev/water-sort/challenge';
 const SESSION = 'water-sort-challenge-v2';
@@ -140,7 +141,7 @@ export default function Home() {
   async function choose(index: number) {
     if (!pours.enabled) return;
     if (selected === index) { setSelected(null); setNotice(c.choose); return; }
-    if (selected === null) { if (!pours.board[index].length) { setNotice(c.empty); audio.play('invalid'); return; } setSelected(index); setNotice(c.target); audio.play('select'); return; }
+    if (selected === null) { if (!pours.canStart(index)) { setNotice(c.empty); audio.play('invalid'); return; } setSelected(index); setNotice(c.target); audio.play('select'); return; }
     await pourFrom(selected, index);
   }
   async function pourFrom(from: number, index: number) {
@@ -148,7 +149,8 @@ export default function Home() {
     retry.current = () => { void perform('sync'); };
     const result = pours.request(from, index);
     setSelected(null);
-    if (result !== 'invalid') setNotice(result === 'queued' ? c.queued : hasMove(pours.board) ? c.choose : c.blocked);
+    if (result === 'full') { setNotice(c.queueFull); audio.play('invalid'); }
+    else if (result !== 'invalid') setNotice(result === 'queued' ? c.queued : hasMove(pours.board) ? c.choose : c.blocked);
   }
   function startMotion(entry: ActivePour) {
     const { id, from, to, before, amount } = entry;
@@ -190,8 +192,8 @@ export default function Home() {
   }, [atHome, run, ended, animating, audio]);
   const drag = useBottleDrag({
     disabled: atHome || disabled || !!modal,
-    canStart: from => !!pours.board[from]?.length,
-    canPour: (from, to) => !!pour(pours.board, from, to),
+    canStart: from => pours.canStart(from),
+    canPour: (from, to) => pours.canRequest(from, to),
     onDragStart: () => audio.play('select'),
     onTargetEnter: () => audio.play('target'),
     onDrop: (from, to) => { setSelected(null); void pourFrom(from, to); },
@@ -217,21 +219,25 @@ export default function Home() {
         <div className="game-hud"><div className="hud-stat stage-stat"><span>{c.stage}</span><strong>{level.toString().padStart(2, '0')}</strong></div><button type="button" className="hud-home" onClick={() => setModal('exit')} aria-label={c.home} title={c.home}><span aria-hidden="true">🏠</span></button><div className="hud-stat score-stat"><span>{c.score}</span><strong data-testid="score">{run.score.toLocaleString()}</strong></div></div>
         <div className={'timer-strip ' + (remaining <= 10 && active ? 'low' : '')} role="timer" aria-label={`${remaining}${c.seconds}`}><div className="timer-track"><div className="timer-fill" style={{ transform: `scaleX(${Math.max(0, Math.min(1, (run.deadline - now) / 60000))})` }}/></div><span className="timer-number">{ended ? 0 : remaining}<small>s</small></span></div>
         <div className="experiment-tray">
+          {!!pours.queued.length && <div className="queue-count" role="status">{c.queueBadge} {pours.queued.length}/{MAX_QUEUED_POURS}</div>}
           <div className="tray-spark tray-spark-one" aria-hidden="true">✦</div><div className="tray-spark tray-spark-two" aria-hidden="true">✧</div>
           <div className={'board ' + (board.length > 7 ? 'many-tubes' : '')} role="group" aria-label={c.play}>
             {board.map((tube, i) => {
-              const queued = pours.queued?.from === i || pours.queued?.to === i;
+              const orders = pours.queued.flatMap((intent, index) => intent.from === i || intent.to === i ? [index + 1] : []);
+              const queued = orders.length > 0;
               const pouring = pours.busy(i);
-              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${i + 1}${c.bottle}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${complete(tube) ? ', ' + c.done : ''}${queued ? ', ' + c.queued : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
+              const settled = !pouring && complete(tube) && complete(run.board[i] ?? []);
+              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${i + 1}${c.bottle}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${settled ? ', ' + c.filled : ''}${queued ? ', ' + c.queueOrder + ' ' + orders.join(', ') : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
                 <span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/></span>
                 <span className="drop-cue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></span>
-                <span className={'completion-star ' + (queued ? 'queue-label' : '')} aria-hidden="true">{queued ? c.queueBadge : complete(tube) && !pouring ? '★' : ''}</span>
+                <span className={'bottle-status ' + (queued ? 'queue-label' : '')} aria-hidden="true">{queued ? orders.join('·') : ''}</span>
+                <BottleCompletion key={`${run.level}:${i}`} ready={settled} color={tube[0]} hideLabel={queued}/>
               </button>;
             })}
           </div>
           {run.status === 'cleared' && !animating && <div className="clear-burst" role="status">✦ {c.success} ✦</div>}
         </div>
-        <p className={'board-notice ' + ([c.invalid, c.empty, c.blocked].includes(notice as typeof c.invalid) ? 'visible' : 'sr-only')} role="status">{notice}</p>
+        <p className={'board-notice ' + ([c.invalid, c.empty, c.blocked, c.queueFull].includes(notice as typeof c.invalid) ? 'visible' : 'sr-only')} role="status">{notice}</p>
       </section>}
       {error && <div className="connection-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={busy} onClick={() => retry.current()}>{c.retry}</button></div>}
     </main>

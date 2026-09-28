@@ -2,6 +2,7 @@ import { pour, type Board } from './game.ts';
 import { bottleReadyAt, type RunView } from './challenge-rules.ts';
 
 export type PourIntent = { from: number; to: number };
+export const MAX_QUEUED_POURS = 5;
 export type ActivePour = PourIntent & { id: number; before: Board; after: Board; amount: number; confirmed: boolean; visualDone: boolean; readyAt: number };
 type Options = {
   getRun: () => RunView | null;
@@ -17,10 +18,10 @@ type Options = {
 const sameBoard = (a: Board, b: Board) => JSON.stringify(a) === JSON.stringify(b);
 
 // Visual moves can overlap; HTTP writes remain ordered against the server version.
-// At most one dependent intent is retained, and active pairs never share a bottle.
+// Waiting intents start in FIFO order; active pairs never share a bottle.
 export class PourController {
   entries: ActivePour[] = [];
-  queued: PourIntent | null = null;
+  queued: PourIntent[] = [];
   enabled = false;
   private sending = false;
   private generation = 0;
@@ -32,53 +33,71 @@ export class PourController {
     for (const entry of this.entries) if (!entry.confirmed) board = pour(board, entry.from, entry.to) ?? board;
     return board;
   }
+  get plannedBoard(): Board {
+    let board = this.board;
+    for (const intent of this.queued) board = pour(board, intent.from, intent.to) ?? board;
+    return board;
+  }
+  private isLast(from: number, to: number) {
+    const last = this.queued.at(-1);
+    return !!last && last.from === from && last.to === to;
+  }
+  canStart(from: number) { return !!this.plannedBoard[from]?.length || this.queued.at(-1)?.from === from; }
+  canRequest(from: number, to: number) { return this.isLast(from, to) || this.queued.length < MAX_QUEUED_POURS && !!pour(this.plannedBoard, from, to); }
   busy(index: number) {
     const run = this.options.getRun();
     return this.entries.some(e => e.from === index || e.to === index)
       || !!run && this.options.clock() < bottleReadyAt(run, index);
   }
-  request(from: number, to: number): 'started' | 'queued' | 'cancelled' | 'invalid' {
+  request(from: number, to: number): 'started' | 'queued' | 'cancelled' | 'invalid' | 'full' {
     const run = this.options.getRun();
     if (!this.enabled || !run || run.status !== 'playing' || run.suspended || this.options.clock() >= run.deadline) return 'invalid';
-    if (this.queued?.from === from && this.queued.to === to) {
-      this.cancelQueued(); return 'cancelled';
+    if (this.isLast(from, to)) {
+      this.queued.pop(); this.options.change(); return 'cancelled';
     }
-    const before = this.board, after = pour(before, from, to);
+    if (this.queued.length >= MAX_QUEUED_POURS) return 'full';
+    const after = pour(this.plannedBoard, from, to);
     if (!after) { this.options.invalid(); return 'invalid'; }
-    if (this.busy(from) || this.busy(to)) {
-      this.queued = { from, to }; this.options.change(); return 'queued';
+    if (this.queued.length || this.busy(from) || this.busy(to)) {
+      this.queued.push({ from, to }); this.options.change(); return 'queued';
     }
-    // A new move involving a reserved bottle replaces the old reservation.
-    if (this.queued && [from, to].some(i => i === this.queued!.from || i === this.queued!.to)) this.queued = null;
+    this.start(from, to);
+    return 'started';
+  }
+  private start(from: number, to: number) {
+    const before = this.board, after = pour(before, from, to);
+    if (!after) { this.cancelQueued(); this.options.invalid(); return false; }
     const entry: ActivePour = { id: ++this.sequence, from, to, before, after, amount: after[to].length - before[to].length, confirmed: false, visualDone: false, readyAt: Infinity };
     this.entries.push(entry);
     this.options.start(entry); this.options.change();
     void this.pump();
-    return 'started';
+    return true;
   }
   finish(id: number) {
     const entry = this.entries.find(e => e.id === id);
     if (entry) entry.visualDone = true;
     this.tick();
   }
-  cancelQueued() { if (this.queued) { this.queued = null; this.options.change(); } }
+  cancelQueued() { if (this.queued.length) { this.queued = []; this.options.change(); } }
   clear() {
-    this.generation++; this.entries = []; this.queued = null; this.sending = false;
+    this.generation++; this.entries = []; this.queued = []; this.sending = false;
     this.options.reset(); this.options.change();
   }
   tick() {
     const run = this.options.getRun();
     if (run && (run.suspended || run.status === 'ended' || run.status === 'playing' && this.options.clock() >= run.deadline)) {
-      if (this.entries.length || this.queued) this.clear();
+      if (this.entries.length || this.queued.length) this.clear();
       return;
     }
     const count = this.entries.length;
     this.entries = this.entries.filter(e => !(e.confirmed && e.visualDone && this.options.clock() >= e.readyAt));
     if (this.entries.length !== count) this.options.change();
     if (run?.status === 'cleared') this.cancelQueued();
-    if (this.enabled && this.queued && !this.busy(this.queued.from) && !this.busy(this.queued.to)) {
-      const next = this.queued; this.queued = null;
-      this.request(next.from, next.to); this.options.change();
+    while (this.enabled && run?.status === 'playing' && this.queued.length) {
+      const next = this.queued[0];
+      if (this.busy(next.from) || this.busy(next.to)) break;
+      this.queued.shift();
+      if (!this.start(next.from, next.to)) break;
     }
     void this.pump();
   }

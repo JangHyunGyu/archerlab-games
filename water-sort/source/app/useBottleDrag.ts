@@ -83,6 +83,7 @@ export function useBottleDrag(options: Options) {
         });
         clone.removeAttribute('data-testid'); clone.removeAttribute('data-bottle-index');
         clone.classList.remove('selected', 'pour-source', 'pour-target', 'pour-queued', 'in-flight'); clone.tabIndex = -1;
+        clone.querySelector('.bottle-completion')?.remove();
         const layer = document.createElement('div'); layer.className = 'drag-layer';
         ghost.appendChild(clone); layer.appendChild(ghost); document.body.appendChild(layer);
         current.layer = layer; current.ghost = ghost;

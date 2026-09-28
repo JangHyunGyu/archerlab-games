@@ -118,6 +118,38 @@ test('pour previews start before the server responds and reconcile safely', asyn
       assert.equal(document.querySelectorAll('[data-queued]').length, 0);
       assert.equal(h.requests.length, 1);
     }));
+    await t.test('five UI reservations use future contents, expose their order, and need no erase button', () => harness(async h => {
+      await h.begin();
+      for (const [from, to] of [[2, 3], [3, 2], [2, 3], [3, 2], [2, 3]]) {
+        await h.click(h.bottles()[from]); await h.click(h.bottles()[to]);
+      }
+      assert.equal(document.querySelector('.queue-count').textContent, '예약 5/5');
+      assert.equal(document.querySelector('.queue-count button'), null);
+      assert.equal(h.bottles()[3].querySelector('.queue-label').textContent, '1·2·3·4·5');
+      assert.match(h.bottles()[3].getAttribute('aria-label'), /예약 순서 1, 2, 3, 4, 5/);
+      assert.equal(h.requests.length, 1);
+      await h.click(h.bottles()[3]); await h.click(h.bottles()[2]);
+      assert.equal(document.querySelector('.queue-count').textContent, '예약 5/5');
+      assert.match(document.querySelector('.board-notice').textContent, /최대 5개/);
+      await h.click(h.bottles()[2]); await h.click(h.bottles()[3]);
+      assert.equal(document.querySelector('.queue-count').textContent, '예약 4/5');
+      await act(() => h.win.dispatchEvent(new h.win.KeyboardEvent('keydown', { key: 'Escape' })));
+      assert.equal(document.querySelector('.queue-count'), null);
+    }));
+    await t.test('a color-matched completion seal and burst wait for confirmation and settled animation', () => harness(async h => {
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[0]);
+      assert.equal(document.querySelector('.completion-seal'), null);
+      assert.doesNotMatch(h.bottles()[0].getAttribute('aria-label'), /완성/);
+      const advanced = advance({ ...h.initial, history: [] }, { type: 'pour', from: 1, to: 0 }, Date.now());
+      await h.confirm({ ...h.initial, ...advanced, version: 2, serverNow: Date.now(), availableAt: 0, bottleAvailableAt: [0, 0, 0, 0, 0] });
+      assert.equal(document.querySelector('.completion-seal'), null, 'confirmation alone cannot celebrate an unfinished visual');
+      globalThis.innerWidth = 1000;
+      await act(() => h.win.dispatchEvent(new h.win.Event('resize')));
+      assert.equal(h.bottles()[0].querySelector('.completion-seal').textContent, '완성');
+      assert.ok(h.bottles()[0].querySelector('.completion-burst'));
+      assert.equal(h.bottles()[0].querySelector('.bottle-completion').style.getPropertyValue('--liquid-color'), '#eb4d68');
+      assert.match(h.bottles()[0].getAttribute('aria-label'), /완성/);
+    }, false, { board: [[0, 0, 0], [0], [1, 2], [], []], bottleAvailableAt: [0, 0, 0, 0, 0] }));
     await t.test('server conflict cancels the preview and restores authoritative liquid and score', () => harness(async h => {
       await h.begin();
       await h.confirm({ ...h.initial, version: 2 }, false);

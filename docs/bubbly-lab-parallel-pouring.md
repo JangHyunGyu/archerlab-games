@@ -1,5 +1,7 @@
 # Concurrent pouring and one-move reservation
 
+Historical implementation note: the single reservation described below has since been expanded to a five-move FIFO. See `bubbly-lab-multi-queue.md` for the current behavior.
+
 The previous global animation lock discarded clicks and drag attempts until the entire pour and server response finished. Now A→B and C→D start independently, with immediate visual feedback. A dependent B→E gesture reserves one move until both bottles' visual playback and server locks finish. The latest reservation replaces the previous one; repeating its ordered pair or Escape cancels it. Yellow outlines and an explicit badge acknowledge the reservation. Inputs use the projected post-pour liquid state, so a receiving bottle can be selected for the next move.
 
 The controller holds at most disjoint active pairs and one dependent intent. It sends HTTP writes serially against the current server version, reconciles each accepted board, and retains other pending projections. Errors, stale/invalid outcomes, Home and timeout discard speculative state without replay. Dialogs, resize and backgrounding cancel reservations. A confirmed win also cancels any reservation before the next stage. Scores remain server-authoritative.
