@@ -46,6 +46,11 @@ def chime(name, duration, notes):
 
 
 chime('select', .16, [(0, 920, .15, .21)])
+# A small rounded bubble pop when a draggable bottle acquires a valid target.
+target = [0.0] * int(RATE * .14)
+tone(target, 0, .13, 640, .28, end_hz=1120)
+tone(target, .025, .09, 1280, .065, end_hz=1540, glass=True)
+save('target', target)
 chime('start', .42, [(0, 523.25, .2, .2), (.09, 659.25, .2, .18), (.18, 783.99, .24, .2)])
 chime('clear', .9, [(0, 659.25, .3, .22), (.1, 783.99, .32, .22), (.2, 1046.5, .65, .2), (.28, 1318.5, .55, .12)])
 chime('timeout', .65, [(0, 523.25, .26, .2), (.14, 440, .28, .18), (.3, 349.23, .35, .19)])

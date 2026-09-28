@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { pickDropTarget, type DropRect } from '../lib/drop-target.ts';
 
-type Options = { disabled: boolean; canStart: (from: number) => boolean; canPour: (from: number, to: number) => boolean; onDrop: (from: number, to: number) => void; onDragStart?: () => void };
-type Gesture = { id: number; from: number; x: number; y: number; source: HTMLButtonElement; board: HTMLElement; active: boolean; layer: HTMLDivElement | null; ghost: HTMLDivElement | null; target: HTMLButtonElement | null };
+type Options = { disabled: boolean; canStart: (from: number) => boolean; canPour: (from: number, to: number) => boolean; onDrop: (from: number, to: number) => void; onDragStart?: () => void; onTargetEnter?: () => void };
+type Gesture = { id: number; from: number; x: number; y: number; source: HTMLButtonElement; board: HTMLElement; active: boolean; layer: HTMLDivElement | null; ghost: HTMLDivElement | null; target: HTMLButtonElement | null; touch: boolean; rect: DOMRect; candidates: { element: HTMLButtonElement; index: number; rect: DropRect }[]; lastCue: number };
 
 // Pointer capture keeps touch, pen and mouse gestures on the same path, even off-board.
 export function useBottleDrag(options: Options) {
@@ -24,13 +25,28 @@ export function useBottleDrag(options: Options) {
     window.addEventListener('keydown', key);
     window.addEventListener('blur', cancel);
     window.addEventListener('resize', cancel);
+    window.addEventListener('scroll', cancel, true);
     document.addEventListener('visibilitychange', hidden);
-    return () => { cancel(); window.removeEventListener('keydown', key); window.removeEventListener('blur', cancel); window.removeEventListener('resize', cancel); document.removeEventListener('visibilitychange', hidden); };
+    return () => { cancel(); window.removeEventListener('keydown', key); window.removeEventListener('blur', cancel); window.removeEventListener('resize', cancel); window.removeEventListener('scroll', cancel, true); document.removeEventListener('visibilitychange', hidden); };
   }, []);
   useEffect(() => { if (options.disabled) cancel(); }, [options.disabled]);
   function hit(current: Gesture, x: number, y: number) {
-    const element = document.elementFromPoint(x, y)?.closest<HTMLButtonElement>('[data-bottle-index]');
-    return element && element !== current.source && current.board.contains(element) ? element : null;
+    if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return null;
+    const center = { x: (current.rect.left + current.rect.right) / 2 + x - current.x, y: (current.rect.top + current.rect.bottom) / 2 + y - current.y };
+    const index = pickDropTarget(current.candidates, current.from, { x, y }, center, current.touch);
+    return current.candidates.find(candidate => candidate.index === index)?.element ?? null;
+  }
+  function highlight(current: Gesture, target: HTMLButtonElement | null) {
+    const wasValid = current.target?.classList.contains('drop-valid');
+    const changed = target !== current.target;
+    const valid = !!target && latest.current.canPour(current.from, Number(target.dataset.bottleIndex));
+    if (!changed && (!target || valid === wasValid)) return;
+    current.target?.classList.remove('drop-valid', 'drop-invalid');
+    current.target = target;
+    if (!target) return;
+    target.classList.add(valid ? 'drop-valid' : 'drop-invalid');
+    const now = performance.now();
+    if (valid && (changed || !wasValid) && now - current.lastCue >= 120) { current.lastCue = now; latest.current.onTargetEnter?.(); }
   }
   return {
     onPointerDown(e: ReactPointerEvent<HTMLButtonElement>, from: number) {
@@ -38,7 +54,9 @@ export function useBottleDrag(options: Options) {
       suppressClick.current = false;
       if (latest.current.disabled || !latest.current.canStart(from)) return;
       const source = e.currentTarget;
-      gesture.current = { id: e.pointerId, from, x: e.clientX, y: e.clientY, source, board: source.parentElement!, active: false, layer: null, ghost: null, target: null };
+      const board = source.parentElement!;
+      const candidates = [...board.querySelectorAll<HTMLButtonElement>('[data-bottle-index]')].map(element => ({ element, index: Number(element.dataset.bottleIndex), rect: element.getBoundingClientRect() }));
+      gesture.current = { id: e.pointerId, from, x: e.clientX, y: e.clientY, source, board, active: false, layer: null, ghost: null, target: null, touch: e.pointerType !== 'mouse', rect: source.getBoundingClientRect(), candidates, lastCue: -Infinity };
       source.setPointerCapture(e.pointerId);
     },
     onPointerMove(e: ReactPointerEvent<HTMLButtonElement>) {
@@ -51,7 +69,7 @@ export function useBottleDrag(options: Options) {
       if (!current.active) {
         current.active = true;
         latest.current.onDragStart?.();
-        const rect = current.source.getBoundingClientRect();
+        const rect = current.rect;
         const ghost = document.createElement('div');
         ghost.className = current.board.className + ' drag-preview';
         ghost.setAttribute('aria-hidden', 'true');
@@ -71,9 +89,7 @@ export function useBottleDrag(options: Options) {
         current.source.classList.add('drag-source');
       }
       current.ghost!.style.transform = `translate3d(${dx}px,${dy}px,0)`;
-      current.target?.classList.remove('drop-valid', 'drop-invalid');
-      current.target = hit(current, e.clientX, e.clientY);
-      if (current.target) current.target.classList.add(latest.current.canPour(current.from, Number(current.target.dataset.bottleIndex)) ? 'drop-valid' : 'drop-invalid');
+      highlight(current, hit(current, e.clientX, e.clientY));
     },
     onPointerUp(e: ReactPointerEvent<HTMLButtonElement>) {
       const current = gesture.current;

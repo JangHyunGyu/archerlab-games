@@ -1,4 +1,4 @@
-export const SOUND_NAMES = ['select', 'start', 'pour', 'invalid', 'clear', 'timeout', 'tick'] as const;
+export const SOUND_NAMES = ['select', 'target', 'start', 'pour', 'invalid', 'clear', 'timeout', 'tick'] as const;
 export type SoundName = typeof SOUND_NAMES[number];
 export const soundPath = (name: SoundName) => `/water-sort/sounds/${name === 'pour' ? 'v2' : 'v1'}/${name}.wav`;
 
@@ -59,7 +59,7 @@ export class GameAudio {
       const source = context.createBufferSource(), volume = context.createGain();
       source.buffer = buffer;
       source.playbackRate.value = duration ? buffer.duration / duration : 1;
-      volume.gain.value = name === 'tick' ? .4 : name === 'pour' ? .3 : .65;
+      volume.gain.value = name === 'target' ? .4 : name === 'tick' ? .4 : name === 'pour' ? .3 : .65;
       source.connect(volume); volume.connect(context.destination);
       this.sources.add(source);
       source.onended = () => { this.sources.delete(source); source.disconnect(); volume.disconnect(); };

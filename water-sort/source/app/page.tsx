@@ -193,6 +193,7 @@ export default function Home() {
     canStart: from => !!pours.board[from]?.length,
     canPour: (from, to) => !!pour(pours.board, from, to),
     onDragStart: () => audio.play('select'),
+    onTargetEnter: () => audio.play('target'),
     onDrop: (from, to) => { setSelected(null); void pourFrom(from, to); },
   });
   const savedRun = !!run && !run.registered;
@@ -223,6 +224,7 @@ export default function Home() {
               const pouring = pours.busy(i);
               return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${i + 1}${c.bottle}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${complete(tube) ? ', ' + c.done : ''}${queued ? ', ' + c.queued : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
                 <span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/></span>
+                <span className="drop-cue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></span>
                 <span className={'completion-star ' + (queued ? 'queue-label' : '')} aria-hidden="true">{queued ? c.queueBadge : complete(tube) && !pouring ? '★' : ''}</span>
               </button>;
             })}
