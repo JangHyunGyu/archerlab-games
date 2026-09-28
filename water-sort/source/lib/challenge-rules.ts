@@ -9,6 +9,8 @@ export type Challenge = {
   initialBoard?: Board; // Server-only checkpoint; optional for runs created before this rule.
   suspended?: boolean;
   bottleAvailableAt?: number[]; // Per-bottle animation locks. Missing only on legacy runs.
+  endReason?: 'blocked' | 'timeout';
+  endedAt?: number;
   moves: number; deadline: number; availableAt: number; status: 'playing' | 'cleared' | 'ended';
 };
 export function bottleReadyAt(state: Pick<Challenge, 'bottleAvailableAt' | 'availableAt'>, index: number) {

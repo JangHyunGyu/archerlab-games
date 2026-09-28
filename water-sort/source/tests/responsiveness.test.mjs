@@ -12,7 +12,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
     const { default: Home } = await vite.ssrLoadModule('/app/page.tsx');
     async function harness(check, reduced = false, overrides = {}) {
       const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
-      const win = dom.window, requests = [], commands = [];
+      const win = dom.window, requests = [], commands = [], inspections = [];
       const initial = { rules: 2, id: 'run', version: 1, level: 1, cleared: 0, score: 0, board: [[0, 1], [1, 0], [], []], bottleAvailableAt: [0, 0, 0, 0], moves: 0, deadline: Date.now() + 60000, availableAt: 0, status: 'playing', historyDepth: 0, registered: false, nickname: null, serverNow: Date.now(), ...overrides };
       let authoritative = initial;
       const media = () => ({ matches: reduced, addEventListener() {}, removeEventListener() {} });
@@ -24,6 +24,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
       win.HTMLElement.prototype.getBoundingClientRect = function () { const index = Number(this.closest('[data-bottle-index]')?.dataset.bottleIndex ?? 0); return { x: 100 + index * 100, y: 200, width: 50, height: 150, top: 200, bottom: 350, left: 100 + index * 100, right: 150 + index * 100 }; };
       globalThis.fetch = async (_url, init) => {
         const body = JSON.parse(init.body);
+        if (body.type === 'inspect') return new Promise(resolve => inspections.push({ body, resolve, signal: init.signal }));
         commands.push(body);
         if (body.type === 'pour') return new Promise((resolve, reject) => requests.push({ body, resolve, reject }));
         if (body.type === 'leave' || body.type === 'resume') {
@@ -48,7 +49,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
       try {
         await act(() => root.render(createElement(Home)));
         await click(button('새로 시작'));
-        await check({ win, initial, requests, commands, click, button, bottles, animation, begin, confirm, moved, reload });
+        await check({ win, initial, requests, commands, inspections, click, button, bottles, animation, begin, confirm, moved, reload });
       } finally { await act(() => root.unmount()); dom.window.close(); }
     }
 
@@ -169,6 +170,34 @@ test('pour previews start before the server responds and reconcile safely', asyn
       assert.equal(h.animation(), null); assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
       assert.equal(document.querySelector('[data-testid="score"]').textContent, '0');
       assert.ok(document.querySelector('.result-dialog[open]'));
+    }));
+    await t.test('an unresolved inspection never blocks another pour; authoritative dead end clears previews and reservations', () => harness(async h => {
+      await h.begin(); const first = h.moved(); await h.confirm(first);
+      assert.equal(h.inspections.length, 1);
+      assert.ok(h.bottles().every(b => !b.disabled));
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[3]);
+      assert.equal(h.requests.length, 2, 'the next pour must submit before the inspection response');
+      await h.click(h.bottles()[2]); await h.click(h.bottles()[1]);
+      const ended = { ...first, status: 'ended', endReason: 'blocked', endedAt: Date.now(), version: first.version + 1 };
+      await act(() => h.inspections[0].resolve({ ok: true, json: async () => ({ run: ended }) }));
+      assert.equal(h.animation(), null); assert.equal(document.querySelector('.queue-count'), null);
+      assert.ok(h.bottles().every(b => b.disabled));
+      assert.match(document.querySelector('.result-dialog').textContent, /GAME OVER/);
+      assert.match(document.querySelector('.blocked-explanation').textContent, /모을 수 없어/);
+      assert.doesNotMatch(document.querySelector('.result-dialog').textContent, /TIME OVER/);
+      assert.equal(h.button('랭킹 등록').disabled, false);
+      assert.notEqual(document.querySelector('[role="timer"]').getAttribute('aria-label'), '0초');
+    }));
+    await t.test('a stale inspection cannot replace a newer accepted board', () => harness(async h => {
+      await h.begin(); const first = h.moved(); await h.confirm(first);
+      const stale = h.inspections[0];
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[3]);
+      const second = { ...first, ...advance({ ...first, history: [] }, { type: 'pour', from: 1, to: 3 }, Date.now()), version: first.version + 1, serverNow: Date.now() };
+      await h.confirm(second, true, 1);
+      assert.equal(stale.signal.aborted, true);
+      await act(() => stale.resolve({ ok: true, json: async () => ({ run: { ...first, status: 'ended', endReason: 'blocked', version: first.version + 1 } }) }));
+      assert.equal(document.querySelector('.result-dialog'), null);
+      assert.match(h.bottles()[3].getAttribute('aria-label'), /산호색/);
     }));
     await t.test('Home discards late responses and Continue resets the stage board and timer together', () => harness(async h => {
       await h.begin();

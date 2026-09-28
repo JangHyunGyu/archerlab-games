@@ -78,3 +78,5 @@ dialog{margin:auto;border:3px solid white;border-radius:30px;background:#fcf9ff;
 @keyframes completion-flash{0%,100%{opacity:.8}35%{opacity:1;box-shadow:0 0 24px color-mix(in srgb,var(--liquid-color) 65%,transparent),inset 0 0 20px color-mix(in srgb,var(--liquid-color) 30%,transparent)}}
 @keyframes completion-stamp{0%{transform:translateX(-50%) scale(.45);opacity:0}65%{transform:translateX(-50%) scale(1.17);opacity:1}100%{transform:translateX(-50%) scale(1);opacity:1}}
 @media(max-height:550px) and (orientation:landscape){.completion-seal{height:19px;font-size:10px;min-width:43px}.completion-aura,.completion-ring,.completion-particles{bottom:20px;border-radius:18px}}
+.result-card .blocked-explanation{margin:10px 0 4px;font-size:13px;line-height:1.6;color:#7e668e;word-break:keep-all}
+@media(max-height:550px){.result-card .blocked-explanation{font-size:12px;margin:6px 0 2px}}

@@ -114,8 +114,10 @@ export class PourController {
       const next = await this.options.send(entry.from, entry.to);
       if (generation !== this.generation) return;
       this.options.accept(next);
+      // An authoritative game-over is a normal terminal response, not an invalid gesture.
+      if (next.status === 'ended') { this.clear(); return; }
       const accepted = next.id === run.id && next.level === run.level && next.version > run.version
-        && next.moves === run.moves + 1 && !next.suspended && next.status !== 'ended' && sameBoard(next.board, expected);
+        && next.moves === run.moves + 1 && !next.suspended && sameBoard(next.board, expected);
       if (!accepted) { this.clear(); this.options.invalid(); return; }
       entry.confirmed = true;
       entry.readyAt = Math.max(bottleReadyAt(next, entry.from), bottleReadyAt(next, entry.to));

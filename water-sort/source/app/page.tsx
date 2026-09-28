@@ -109,6 +109,21 @@ export default function Home() {
     return () => { clearInterval(ticker); window.removeEventListener('keydown', key); window.removeEventListener('resize', resized); document.removeEventListener('visibilitychange', hidden); requestEpoch.current++; pendingRequest.current?.abort(); pours.clear(); };
   }, []);
   useEffect(() => { if (modal) pours.cancelQueued(); }, [modal]);
+  useEffect(() => {
+    if (atHome || !run || run.status !== 'playing' || run.suspended || !run.moves || !credentials.current) return;
+    const controller = new AbortController(), examined = run;
+    // This request never owns pendingRequest, the busy flag, or the pour queue.
+    // The server analyzes its saved board; the browser performs no tree search.
+    void fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'inspect', ...credentials.current, version: examined.version }) })
+      .then(async response => {
+        const data = await response.json() as { run?: RunView };
+        if (controller.signal.aborted || !data.run || data.run.status !== 'ended') return;
+        const current = runRef.current;
+        if (!current || current.id !== examined.id || current.level !== examined.level || current.version !== examined.version || data.run.id !== current.id || data.run.version < current.version) return;
+        accept(data.run); pours.clear(); setSelected(null);
+      }).catch(() => { /* Inspection failure must not freeze input or end an unproven game. */ });
+    return () => controller.abort();
+  }, [atHome, run?.id, run?.version, run?.status]);
   const expired = run?.status === 'playing' && !run.suspended && now >= run.deadline;
   useEffect(() => {
     if (atHome || !expired) return;
@@ -174,8 +189,10 @@ export default function Home() {
   const level = run?.level ?? 1, active = run?.status === 'playing' && !run.suspended && !expired;
   const animating = !!motions.length || !!pours.entries.length || !!run && now < run.availableAt;
   const ended = run?.status === 'ended' || expired;
+  const blockedEnd = run?.status === 'ended' && run.endReason === 'blocked';
   const board = pours.board;
-  const remaining = run ? Math.max(0, Math.ceil((run.deadline - now) / 1000)) : timeLimit(1);
+  const timerNow = blockedEnd ? run.endedAt ?? now : now;
+  const remaining = run ? Math.max(0, Math.ceil((run.deadline - timerNow) / 1000)) : timeLimit(1);
   const disabled = !active || busy || !!error || won(board);
   pours.enabled = !atHome && !disabled && !modal;
   const clockKey = run ? `${run.id}:${run.level}` : null;
@@ -217,7 +234,7 @@ export default function Home() {
         <div className="start-footer"><button className="sound-toggle" aria-pressed={soundOn} onClick={toggleSound}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/>{soundOn ? <path d="M16 8q5 4 0 8M19 5q8 7 0 14"/> : <path d="m17 9 5 6m0-6-5 6"/>}</svg>{soundOn ? c.soundOn : c.soundOff}</button><a className="archerlab-link" href="https://archerlab.dev/"><span aria-hidden="true">↗</span>{c.archerlab}</a></div>
       </section> : <section className="play-screen" aria-label="보글보글 실험실">
         <div className="game-hud"><div className="hud-stat stage-stat"><span>{c.stage}</span><strong>{level.toString().padStart(2, '0')}</strong></div><button type="button" className="hud-home" onClick={() => setModal('exit')} aria-label={c.home} title={c.home}><span aria-hidden="true">🏠</span></button><div className="hud-stat score-stat"><span>{c.score}</span><strong data-testid="score">{run.score.toLocaleString()}</strong></div></div>
-        <div className={'timer-strip ' + (remaining <= 10 && active ? 'low' : '')} role="timer" aria-label={`${remaining}${c.seconds}`}><div className="timer-track"><div className="timer-fill" style={{ transform: `scaleX(${Math.max(0, Math.min(1, (run.deadline - now) / 60000))})` }}/></div><span className="timer-number">{ended ? 0 : remaining}<small>s</small></span></div>
+        <div className={'timer-strip ' + (remaining <= 10 && active ? 'low' : '')} role="timer" aria-label={`${remaining}${c.seconds}`}><div className="timer-track"><div className="timer-fill" style={{ transform: `scaleX(${Math.max(0, Math.min(1, (run.deadline - timerNow) / 60000))})` }}/></div><span className="timer-number">{ended && !blockedEnd ? 0 : remaining}<small>s</small></span></div>
         <div className="experiment-tray">
           {!!pours.queued.length && <div className="queue-count" role="status">{c.queueBadge} {pours.queued.length}/{MAX_QUEUED_POURS}</div>}
           <div className="tray-spark tray-spark-one" aria-hidden="true">✦</div><div className="tray-spark tray-spark-two" aria-hidden="true">✧</div>
@@ -242,7 +259,7 @@ export default function Home() {
       {error && <div className="connection-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={busy} onClick={() => retry.current()}>{c.retry}</button></div>}
     </main>
     {!!motions.length && <PourAnimation motions={motions} onFinish={finishMotion}/>}
-    {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? 'ALL CLEAR!' : 'TIME OVER'}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : c.ended}</h2><div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
+    {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : blockedEnd ? '⛔' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? 'ALL CLEAR!' : blockedEnd ? 'GAME OVER' : 'TIME OVER'}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : blockedEnd ? c.blockedTitle : c.ended}</h2>{blockedEnd && <p className="blocked-explanation" role="alert">{c.blockedBody}</p>}<div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
     {modal === 'exit' && <Modal title={c.homeTitle} onClose={() => setModal(null)}><p>{c.homeBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.keepPlaying}</button><button className="primary-button" onClick={home}>{c.leaveGame}</button></div></Modal>}
     {modal === 'restart' && <Modal title={c.restartTitle} onClose={() => setModal(null)}><p>{c.restartBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.cancel}</button><button className="primary-button" disabled={busy} onClick={() => { void perform('start'); }}>{c.newGame}</button></div></Modal>}
     {modal === 'help' && <Modal title={c.rulesTitle} onClose={() => setModal(null)}><ol className="rules">{c.rules.map(rule => <li key={rule}>{rule}</li>)}</ol><p className="modal-note">{c.recordRule}</p><p className="keyboard-note">{c.keyboard}</p></Modal>}

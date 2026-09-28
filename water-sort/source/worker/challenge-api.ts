@@ -1,21 +1,24 @@
-import { advance, expire, newStage, resumeStage, leaveStage, type Challenge, type RunView } from '../lib/challenge.ts';
+import { advance, expire, inspectStage, newStage, resumeStage, leaveStage, type Challenge, type RunView } from '../lib/challenge.ts';
+import { boardOutcome } from '../lib/dead-end.ts';
 type Row = { id: string; token: string; data: string; version: number; nickname: string | null; created_at: number };
 const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
-const fields: Record<string, string[]> = { start: ['type', 'id', 'token', 'version'], sync: ['type', 'id', 'token', 'version'], leave: ['type', 'id', 'token', 'version'], resume: ['type', 'id', 'token', 'version'], pour: ['type', 'id', 'token', 'version', 'from', 'to'], register: ['type', 'id', 'token', 'version', 'nickname'] };
+const fields: Record<string, string[]> = { start: ['type', 'id', 'token', 'version'], sync: ['type', 'id', 'token', 'version'], inspect: ['type', 'id', 'token', 'version'], leave: ['type', 'id', 'token', 'version'], resume: ['type', 'id', 'token', 'version'], pour: ['type', 'id', 'token', 'version', 'from', 'to'], register: ['type', 'id', 'token', 'version', 'nickname'] };
 function validPayload(body: unknown): body is Record<string, unknown> & { type: string } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
   const value = body as Record<string, unknown>;
   if (typeof value.type !== 'string' || !Object.hasOwn(fields, value.type)) return false;
   if (Object.keys(value).some(key => !fields[value.type as string].includes(key))) return false;
   if (value.type !== 'start' && (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.token !== 'string' || !UUID.test(value.token))) return false;
-  if ((['pour', 'leave', 'resume', 'register'].includes(value.type) || value.version !== undefined) && (!Number.isSafeInteger(value.version) || Number(value.version) < 0)) return false;
+  if ((['pour', 'leave', 'resume', 'register', 'inspect'].includes(value.type) || value.version !== undefined) && (!Number.isSafeInteger(value.version) || Number(value.version) < 0)) return false;
   return value.type !== 'pour' || [value.from, value.to].every(n => Number.isInteger(n) && Number(n) >= 0 && Number(n) < 10);
 }
 function validResult(state: Challenge, createdAt: number, now: number) {
+  const provenBlocked = state.endReason === 'blocked' && Number.isFinite(state.endedAt)
+    && state.endedAt! >= createdAt && state.endedAt! <= now && boardOutcome(state.board) === 'blocked';
   return state.status === 'ended' && Number.isInteger(state.level) && state.level >= 1 && state.level <= 100
     && Number.isInteger(state.cleared) && (state.cleared === state.level - 1 || state.level === 100 && state.cleared === 100)
     && Number.isSafeInteger(state.score) && state.score >= state.cleared * 1000 && state.score <= state.cleared * 1300
-    && now >= state.availableAt && (state.cleared === 100 || now >= state.deadline)
+    && (provenBlocked || state.endReason !== 'blocked' && now >= state.availableAt && (state.cleared === 100 || now >= state.deadline))
     && now - createdAt >= state.cleared * 1150;
 }
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -77,6 +80,11 @@ export async function challengeApi(request: Request, binding: D1Database, allowe
       nickname ??= body.nickname.trim();
     } else if (body.type === 'sync') {
       // Expiration is evaluated against the server clock on reload and retry.
+    } else if (body.type === 'inspect') {
+      // Separate request: never holds the serialized pour pipeline or changes a live
+      // version for a solvable/unknown result. A stale proof cannot overwrite a move.
+      if (!matches) return json({ error: 'conflict', run: view(row, now) }, 409);
+      state = inspectStage(state, now);
     } else if (body.type === 'resume' || body.type === 'leave') {
       if (!matches) return json({ error: 'conflict', run: view(row, now) }, 409);
       if (row.nickname !== null) return json({ error: 'registered', run: view(row, now) }, 409);

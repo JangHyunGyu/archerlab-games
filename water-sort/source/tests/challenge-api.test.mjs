@@ -57,6 +57,55 @@ test('D1 accepts disjoint pours during animation but rejects shared-bottle bypas
   } finally { Date.now = originalNow; db.database.close(); }
 });
 
+test('server-confirmed dead ends end early, remain rankable, and cannot be revived or forged', async () => {
+  const db = new TestDatabase(), originalNow = Date.now;
+  let now = 1800000000000; Date.now = () => now;
+  const send = async body => { const response = await challengeApi(new Request('https://game.test/api/challenge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), db); return { status: response.status, ...await response.json() }; };
+  try {
+    const started = await send({ type: 'start' }), auth = { id: started.run.id, token: started.token };
+    const board = [[0, 0, 1, 3], [1, 1, 2, 3], [2, 2, 3], [0, 0, 3], [1], [2]];
+    const state = { ...started.run, board, initialBoard: board, history: [], bottleAvailableAt: board.map(() => now) };
+    db.database.prepare('UPDATE water_sort_runs SET data = ? WHERE id = ?').run(JSON.stringify(state), auth.id);
+    const checked = await send({ type: 'inspect', ...auth, version: 0 });
+    assert.equal(checked.run.version, 0, 'a nonterminal inspection must not race the next pour version');
+    assert.equal(checked.run.status, 'playing');
+    const ended = await send({ type: 'pour', ...auth, version: 0, from: 3, to: 2 });
+    assert.equal(ended.run.endReason, 'blocked'); assert.equal(ended.run.status, 'ended');
+    assert.ok(now < ended.run.deadline); assert.ok(now < ended.run.availableAt);
+    for (const type of ['leave', 'resume']) {
+      const result = await send({ type, ...auth, version: ended.run.version });
+      assert.equal(result.run.status, 'ended'); assert.deepEqual(result.run.board, ended.run.board);
+    }
+    for (const key of ['board', 'endReason', 'endedAt', 'score']) {
+      assert.equal((await send({ type: 'inspect', ...auth, version: ended.run.version, [key]: 'blocked' })).status, 400);
+    }
+    assert.equal((await send({ type: 'inspect', ...auth, version: 0 })).status, 409);
+    const registered = await send({ type: 'register', ...auth, version: ended.run.version, nickname: 'Blocked Test' });
+    assert.equal(registered.status, 200); assert.equal(registered.run.registered, true); assert.equal(registered.run.score, 0);
+    const fake = await send({ type: 'start' }), fakeAuth = { id: fake.run.id, token: fake.token };
+    db.database.prepare('UPDATE water_sort_runs SET data = ? WHERE id = ?').run(JSON.stringify({ ...fake.run, history: [], status: 'ended', endReason: 'blocked', endedAt: now }), fakeAuth.id);
+    assert.equal((await send({ type: 'register', ...fakeAuth, version: 0, nickname: 'Forged' })).status, 409, 'even a stored blocked marker requires a real unsolvability proof');
+  } finally { Date.now = originalNow; db.database.close(); }
+});
+
+test('separate inspection proves a trapped board with legal moves without trusting the client board', async () => {
+  const db = new TestDatabase(), originalNow = Date.now;
+  let now = 1800000000000; Date.now = () => now;
+  const send = async body => { const response = await challengeApi(new Request('https://game.test/api/challenge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), db); return { status: response.status, ...await response.json() }; };
+  try {
+    const started = await send({ type: 'start' }), auth = { id: started.run.id, token: started.token };
+    const board = [[3], [2, 3, 2, 2], [3, 0, 1], [1, 0, 1, 1], [0], [0, 3, 2]];
+    db.database.prepare('UPDATE water_sort_runs SET data = ? WHERE id = ?').run(JSON.stringify({ ...started.run, board, history: [], moves: 3 }), auth.id);
+    assert.equal((await send({ type: 'sync', ...auth })).run.status, 'playing');
+    assert.equal((await send({ type: 'inspect', ...auth })).status, 400);
+    const checked = await send({ type: 'inspect', ...auth, version: 0 });
+    assert.equal(checked.run.status, 'ended'); assert.equal(checked.run.endReason, 'blocked');
+    assert.equal(checked.run.version, 1); assert.equal(checked.run.moves, 3); assert.equal(checked.run.score, 0);
+    const registered = await send({ type: 'register', ...auth, version: 1, nickname: 'Proof Test' });
+    assert.equal(registered.status, 200);
+  } finally { Date.now = originalNow; db.database.close(); }
+});
+
 test('ranking API rejects forged state, hidden actions, replay and concurrent writes; sync keeps server time', async () => {
   const db = new TestDatabase(), originalNow = Date.now;
   let now = 1800000000000;
