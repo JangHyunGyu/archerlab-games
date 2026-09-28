@@ -52,8 +52,8 @@ dialog{margin:auto;border:3px solid white;border-radius:30px;background:#fcf9ff;
 .bottle-button.drop-valid{box-shadow:inset 0 0 0 3px #55bda4,0 0 0 4px #8bdcc733}
 .bottle-button.drop-valid::before{content:"";position:absolute;inset:0;border-radius:inherit;background:#8bdcc72b;pointer-events:none;animation:target-halo .32s ease-out}
 .bottle-button.drop-invalid{box-shadow:inset 0 0 0 2px #d78aa1}
-.drop-cue{display:none;position:absolute;z-index:2;left:50%;top:-12px;width:26px;height:26px;margin-left:-13px;align-items:center;justify-content:center;border-radius:50%;background:#39a68e;border:2px solid white;box-shadow:0 2px 7px #397e6e40;pointer-events:none}
-.drop-cue svg{width:19px;height:19px;fill:none;stroke:white;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.drop-cue{display:none;position:absolute;z-index:2;left:50%;bottom:-12px;width:26px;height:26px;margin-left:-13px;align-items:center;justify-content:center;border-radius:50%;background:#39a68e;border:2px solid white;box-shadow:0 2px 7px #397e6e40;pointer-events:none}
+.drop-cue svg{width:19px;height:19px;fill:none;stroke:white;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;transform:rotate(180deg)}
 .drop-valid>.drop-cue{display:flex;animation:target-arrow .28s ease-out}
 .drop-valid .tube{animation:target-catch .28s ease-out}
 @keyframes target-halo{0%{transform:scale(.94);opacity:.3}50%{transform:scale(1.07);opacity:1}100%{transform:scale(1);opacity:1}}
