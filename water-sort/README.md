@@ -20,4 +20,4 @@ Pouring locks only its source and destination bottles. Disjoint pairs animate im
 
 Full monochrome bottles show a checkmarked completion seal and a glow matching their liquid. A short ripple and particle burst appear only after server confirmation and visual settling. Existing full bottles receive the steady seal without replaying a burst, and reduced motion keeps static feedback.
 
-Confirmed dead ends immediately open the game-over results with an explanation. No-legal-move checks run in the pour response; deeper bounded search uses a separate inspection request without blocking gestures or animations. Inconclusive searches never end a run. See [dead-end behavior and validation](../docs/bubbly-lab-dead-end.md).
+Confirmed dead ends immediately open the game-over results with an explanation. No-legal-move checks run in the pour response; deeper bounded search uses a warmed browser Web Worker without blocking gestures or animations. Only a local blocked result requests server verification; normal play needs no extra inspection request. Inconclusive searches never end a run. See [dead-end behavior and validation](../docs/bubbly-lab-dead-end.md).

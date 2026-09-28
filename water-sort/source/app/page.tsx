@@ -10,6 +10,7 @@ import { BottleVisual } from './BottleVisual';
 import { BottleCompletion } from './BottleCompletion';
 import { menuState } from '../lib/menu-state';
 import { MAX_QUEUED_POURS, PourController, type ActivePour } from '../lib/pour-controller';
+import type { InspectionResult } from '../lib/dead-end.worker';
 
 const API = import.meta.env.DEV ? '/water-sort/api/challenge' : 'https://game-api.yama5993.workers.dev/water-sort/challenge';
 const SESSION = 'water-sort-challenge-v2';
@@ -29,6 +30,7 @@ export default function Home() {
   const [atHome, setAtHome] = useState(true);
   const credentials = useRef<Credentials | null>(null);
   const requestEpoch = useRef(0), pendingRequest = useRef<AbortController | null>(null);
+  const inspectionWorker = useRef<Worker | null>(null);
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), lock = useRef(false);
   const [selected, setSelected] = useState<number | null>(null);
   const { audio, soundOn, toggleSound } = useGameAudio();
@@ -110,11 +112,25 @@ export default function Home() {
   }, []);
   useEffect(() => { if (modal) pours.cancelQueued(); }, [modal]);
   useEffect(() => {
+    // Warm one reusable worker on the menu, before the first pour needs it.
+    try {
+      const worker = new Worker(new URL('../lib/dead-end.worker.ts', import.meta.url), { type: 'module' });
+      worker.onerror = () => { worker.terminate(); inspectionWorker.current = null; };
+      inspectionWorker.current = worker;
+    }
+    catch { /* Unsupported/blocked workers use the nonblocking server fallback. */ }
+    return () => { inspectionWorker.current?.terminate(); inspectionWorker.current = null; };
+  }, []);
+  useEffect(() => {
     if (atHome || !run || run.status !== 'playing' || run.suspended || !run.moves || !credentials.current) return;
     const controller = new AbortController(), examined = run;
-    // This request never owns pendingRequest, the busy flag, or the pour queue.
-    // The server analyzes its saved board; the browser performs no tree search.
-    void fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'inspect', ...credentials.current, version: examined.version }) })
+    let requested = false;
+    // Only a local proof needs a network request. The server still owns the
+    // final decision and independently inspects its saved, versioned board.
+    const verify = () => {
+      if (requested || controller.signal.aborted) return;
+      requested = true;
+      void fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'inspect', ...credentials.current, version: examined.version }) })
       .then(async response => {
         const data = await response.json() as { run?: RunView };
         if (controller.signal.aborted || !data.run || data.run.status !== 'ended') return;
@@ -122,7 +138,17 @@ export default function Home() {
         if (!current || current.id !== examined.id || current.level !== examined.level || current.version !== examined.version || data.run.id !== current.id || data.run.version < current.version) return;
         accept(data.run); pours.clear(); setSelected(null);
       }).catch(() => { /* Inspection failure must not freeze input or end an unproven game. */ });
-    return () => controller.abort();
+    };
+    const worker = inspectionWorker.current;
+    if (worker) {
+      worker.onmessage = ({ data }: MessageEvent<InspectionResult>) => {
+        if (data.id === examined.id && data.version === examined.version && data.outcome === 'blocked') verify();
+      };
+      worker.onerror = () => { worker.terminate(); inspectionWorker.current = null; verify(); };
+      try { worker.postMessage({ id: examined.id, version: examined.version, board: examined.board }); }
+      catch { worker.terminate(); inspectionWorker.current = null; verify(); }
+    } else verify();
+    return () => { controller.abort(); if (worker) { worker.onmessage = null; worker.onerror = null; } };
   }, [atHome, run?.id, run?.version, run?.status]);
   const expired = run?.status === 'playing' && !run.suspended && now >= run.deadline;
   useEffect(() => {

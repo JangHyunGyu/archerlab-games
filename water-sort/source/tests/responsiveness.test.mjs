@@ -12,7 +12,17 @@ test('pour previews start before the server responds and reconcile safely', asyn
     const { default: Home } = await vite.ssrLoadModule('/app/page.tsx');
     async function harness(check, reduced = false, overrides = {}) {
       const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/', pretendToBeVisual: true });
-      const win = dom.window, requests = [], commands = [], inspections = [];
+      const win = dom.window, requests = [], commands = [], inspections = [], workers = [];
+      const savedWorker = globalThis.Worker;
+      globalThis.Worker = class {
+        jobs = []; onmessage = null; onerror = null; terminated = false;
+        constructor() { workers.push(this); }
+        postMessage(job) { this.jobs.push(structuredClone(job)); }
+        terminate() { this.terminated = true; }
+      };
+      const workerResult = async (outcome, job = workers.at(-1).jobs.at(-1)) => {
+        await act(() => workers.at(-1).onmessage?.({ data: { id: job.id, version: job.version, outcome } }));
+      };
       const initial = { rules: 2, id: 'run', version: 1, level: 1, cleared: 0, score: 0, board: [[0, 1], [1, 0], [], []], bottleAvailableAt: [0, 0, 0, 0], moves: 0, deadline: Date.now() + 60000, availableAt: 0, status: 'playing', historyDepth: 0, registered: false, nickname: null, serverNow: Date.now(), ...overrides };
       let authoritative = initial;
       const media = () => ({ matches: reduced, addEventListener() {}, removeEventListener() {} });
@@ -49,8 +59,8 @@ test('pour previews start before the server responds and reconcile safely', asyn
       try {
         await act(() => root.render(createElement(Home)));
         await click(button('새로 시작'));
-        await check({ win, initial, requests, commands, inspections, click, button, bottles, animation, begin, confirm, moved, reload });
-      } finally { await act(() => root.unmount()); dom.window.close(); }
+        await check({ win, initial, requests, commands, inspections, workers, workerResult, click, button, bottles, animation, begin, confirm, moved, reload });
+      } finally { await act(() => root.unmount()); assert.ok(workers.every(w => w.terminated)); globalThis.Worker = savedWorker; dom.window.close(); }
     }
 
     await t.test('click starts animation immediately, holds the final preview during latency, and submits once', () => harness(async h => {
@@ -173,6 +183,8 @@ test('pour previews start before the server responds and reconcile safely', asyn
     }));
     await t.test('an unresolved inspection never blocks another pour; authoritative dead end clears previews and reservations', () => harness(async h => {
       await h.begin(); const first = h.moved(); await h.confirm(first);
+      assert.equal(h.inspections.length, 0);
+      await h.workerResult('blocked');
       assert.equal(h.inspections.length, 1);
       assert.ok(h.bottles().every(b => !b.disabled));
       await h.click(h.bottles()[1]); await h.click(h.bottles()[3]);
@@ -190,6 +202,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
     }));
     await t.test('a stale inspection cannot replace a newer accepted board', () => harness(async h => {
       await h.begin(); const first = h.moved(); await h.confirm(first);
+      await h.workerResult('blocked');
       const stale = h.inspections[0];
       await h.click(h.bottles()[1]); await h.click(h.bottles()[3]);
       const second = { ...first, ...advance({ ...first, history: [] }, { type: 'pour', from: 1, to: 3 }, Date.now()), version: first.version + 1, serverNow: Date.now() };
@@ -198,6 +211,38 @@ test('pour previews start before the server responds and reconcile safely', asyn
       await act(() => stale.resolve({ ok: true, json: async () => ({ run: { ...first, status: 'ended', endReason: 'blocked', version: first.version + 1 } }) }));
       assert.equal(document.querySelector('.result-dialog'), null);
       assert.match(h.bottles()[3].getAttribute('aria-label'), /산호색/);
+    }));
+    await t.test('worker search does not hold pours and playable or inconclusive results send no inspection requests', () => harness(async h => {
+      await h.begin(); const first = h.moved(); await h.confirm(first);
+      assert.equal(h.workers.length, 1);
+      assert.deepEqual(h.workers[0].jobs[0].board, first.board);
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[3]);
+      assert.equal(h.requests.length, 2, 'second pour starts while the worker has not replied');
+      await h.workerResult('solvable'); await h.workerResult('unknown');
+      assert.equal(h.inspections.length, 0);
+      assert.equal(document.querySelector('.result-dialog'), null);
+    }));
+    await t.test('old worker results are ignored and duplicate blocked results need only one server confirmation', () => harness(async h => {
+      await h.begin(); const first = h.moved(); await h.confirm(first);
+      const oldJob = h.workers[0].jobs[0];
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[3]);
+      const second = { ...first, ...advance({ ...first, history: [] }, { type: 'pour', from: 1, to: 3 }, Date.now()), version: first.version + 1, serverNow: Date.now() };
+      await h.confirm(second, true, 1);
+      await h.workerResult('blocked', oldJob);
+      assert.equal(h.inspections.length, 0);
+      await h.workerResult('blocked'); await h.workerResult('blocked');
+      assert.equal(h.inspections.length, 1);
+      assert.equal(document.querySelector('.result-dialog'), null, 'local results cannot authorize game over');
+      assert.equal(h.workers.length, 1, 'reuse the warmed worker across moves');
+    }));
+    await t.test('a worker error falls back to the server without locking gameplay', () => harness(async h => {
+      await h.begin(); await h.confirm(h.moved());
+      await act(() => h.workers[0].onerror());
+      assert.equal(h.workers[0].terminated, true);
+      assert.equal(h.inspections.length, 1);
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[3]);
+      assert.equal(h.requests.length, 2);
+      assert.equal(document.querySelector('.result-dialog'), null);
     }));
     await t.test('Home discards late responses and Continue resets the stage board and timer together', () => harness(async h => {
       await h.begin();
