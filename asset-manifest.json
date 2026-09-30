@@ -14609,9 +14609,14 @@
       "sha256": "4dc46af335294a8ababaad8955919b4a5323879f72f48db0d3e7594c4dede747"
     },
     {
-      "path": "water-sort/lab-background.png",
-      "bytes": 2040641,
-      "sha256": "f64c1c5594aaa6c3742fc29e6ebeaa57bb6dc239d20fcf3dd1ec97a5eadc4760"
+      "path": "water-sort/lab-background.webp",
+      "bytes": 128540,
+      "sha256": "79a9a16c732d3fe7028ada03feb9607488e2369c08d4761bc5d9b1beec3f64be"
+    },
+    {
+      "path": "water-sort/lab-hero.webp",
+      "bytes": 38662,
+      "sha256": "2e475c9aa4da42b9354c4fcb1e9add8ba291acc73384dac442b1756ad72f2688"
     },
     {
       "path": "water-sort/og.png",
@@ -14674,9 +14679,14 @@
       "sha256": "352d4f978f6858802a08a4490f6edceb0a2788b66abee8b694f538833056f7da"
     },
     {
-      "path": "water-sort/source/public/lab-background.png",
-      "bytes": 2040641,
-      "sha256": "f64c1c5594aaa6c3742fc29e6ebeaa57bb6dc239d20fcf3dd1ec97a5eadc4760"
+      "path": "water-sort/source/public/lab-background.webp",
+      "bytes": 128540,
+      "sha256": "79a9a16c732d3fe7028ada03feb9607488e2369c08d4761bc5d9b1beec3f64be"
+    },
+    {
+      "path": "water-sort/source/public/lab-hero.webp",
+      "bytes": 38662,
+      "sha256": "2e475c9aa4da42b9354c4fcb1e9add8ba291acc73384dac442b1756ad72f2688"
     },
     {
       "path": "water-sort/source/public/og.png",

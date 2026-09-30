@@ -17,7 +17,7 @@ const html=`<!doctype html><html lang="ko"><meta name="viewport" content="width=
 http.createServer((req,res)=>{
   if(req.url==='/study'){res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(readFileSync(new URL('./glass-study.html',import.meta.url)));}
   if(req.url==='/glass-renderer.js'||req.url==='/pour-motion.ts'){const file=req.url==='/glass-renderer.js'?'glass-renderer.ts':'pour-motion.ts';const source=readFileSync(new URL('../lib/'+file,import.meta.url),'utf8');res.setHeader('Content-Type','text/javascript');return res.end(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText);}
-  if((req.url==='/lab-background.png'||req.url==='/water-sort/lab-background.png')){res.setHeader('Content-Type','image/png');return res.end(readFileSync(new URL('../public/lab-background.png',import.meta.url)));}
+  if((req.url==='/lab-background.webp'||req.url==='/water-sort/lab-background.webp')){res.setHeader('Content-Type','image/webp');return res.end(readFileSync(new URL('../public/lab-background.webp',import.meta.url)));}
   if(req.url==='/style.css'){const cssFile=readdirSync(new URL('../dist/assets/',import.meta.url)).find(f=>f.endsWith('.css'));res.setHeader('Content-Type','text/css');return res.end(readFileSync(new URL('../dist/assets/'+cssFile,import.meta.url)));}
   res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);
 }).listen(3004,'127.0.0.1',()=>console.log('Responsive fixture: http://127.0.0.1:3004/'));

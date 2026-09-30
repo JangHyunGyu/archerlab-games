@@ -175,6 +175,39 @@ test('pour previews start before the server responds and reconcile safely', asyn
       assert.equal(h.animation(), null); assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
       assert.ok(h.bottles().every(b => b.disabled));
     }));
+    await t.test('raw network and parser messages never reach the screen', () => harness(async h => {
+      await h.begin(); await act(async () => h.requests[0].reject(new TypeError('Failed to fetch')));
+      const alert = document.querySelector('.connection-error');
+      assert.match(alert.textContent, /연결하지 못했어요/);
+      assert.doesNotMatch(alert.textContent, /TypeError|Failed to fetch/);
+      globalThis.fetch = async () => ({ ok: false, status: 502, json: async () => { throw new SyntaxError('Unexpected token < in JSON'); } });
+      await h.click(h.button('다시 시도'));
+      assert.match(document.querySelector('.connection-error').textContent, /서버가 잠시 바빠요/);
+      assert.doesNotMatch(document.body.textContent, /SyntaxError|Unexpected token/);
+    }));
+    await t.test('a missing saved session is forgotten instead of retried forever', () => harness(async h => {
+      localStorage.setItem('water-sort-challenge-v2', JSON.stringify({ id: 'gone', token: 'old' }));
+      const calls = [];
+      globalThis.fetch = async (_url, init) => { calls.push(JSON.parse(init.body).type); return { ok: false, status: 404, json: async () => ({ error: 'missing' }) }; };
+      await h.reload();
+      assert.deepEqual(calls, ['sync']);
+      assert.equal(localStorage.getItem('water-sort-challenge-v2'), null);
+      assert.ok(document.querySelector('.start-screen'));
+      assert.equal(h.button('새로 시작').disabled, false);
+      assert.equal(h.button('이어하기').disabled, true);
+      assert.match(document.querySelector('.connection-error').textContent, /저장된 도전을 찾을 수 없어요/);
+      assert.equal(document.querySelector('.connection-error button').textContent, '확인');
+      await h.click(document.querySelector('.connection-error button'));
+      assert.equal(document.querySelector('.connection-error'), null);
+      assert.deepEqual(calls, ['sync']);
+    }));
+    await t.test('a cleared board that finishes pouring after the deadline explains why it was not counted', () => harness(async h => {
+      await h.click(h.bottles()[1]); await h.click(h.bottles()[0]);
+      const late = { ...h.initial, board: [[0, 0, 0, 0], [], [], []], moves: 1, status: 'ended', endReason: 'timeout', endedAt: h.initial.deadline, version: 2, serverNow: Date.now() };
+      await h.confirm(late);
+      assert.match(document.querySelector('.late-explanation').textContent, /마지막 붓기가 끝나기 전에 시간이 다 됐어요/);
+      assert.match(document.querySelector('.result-dialog').textContent, /시간 종료/);
+    }, true, { board: [[0, 0, 0], [0], [], []] }));
     await t.test('server timeout cannot turn a preview into points or a completed stage', () => harness(async h => {
       await h.begin(); await h.confirm({ ...h.initial, status: 'ended', version: 2 });
       assert.equal(h.animation(), null); assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
@@ -194,9 +227,9 @@ test('pour previews start before the server responds and reconcile safely', asyn
       await act(() => h.inspections[0].resolve({ ok: true, json: async () => ({ run: ended }) }));
       assert.equal(h.animation(), null); assert.equal(document.querySelector('.queue-count'), null);
       assert.ok(h.bottles().every(b => b.disabled));
-      assert.match(document.querySelector('.result-dialog').textContent, /GAME OVER/);
+      assert.match(document.querySelector('.result-dialog').textContent, /도전 종료/);
       assert.match(document.querySelector('.blocked-explanation').textContent, /모을 수 없어/);
-      assert.doesNotMatch(document.querySelector('.result-dialog').textContent, /TIME OVER/);
+      assert.doesNotMatch(document.querySelector('.result-dialog').textContent, /시간 종료/);
       assert.equal(h.button('랭킹 등록').disabled, false);
       assert.notEqual(document.querySelector('[role="timer"]').getAttribute('aria-label'), '0초');
     }));

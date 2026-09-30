@@ -6,9 +6,10 @@ export function useGameAudio() {
   const engine = useRef<GameAudio | null>(null);
   if (!engine.current) engine.current = new GameAudio();
   const audio = engine.current;
-  const [soundOn, setSoundOn] = useState(true);
+  // Read the saved preference before the first paint so the start screen never flashes the wrong label.
+  const [soundOn, setSoundOn] = useState(() => { try { return localStorage.getItem('water-sort-sound') !== 'off'; } catch { return true; } });
   useEffect(() => {
-    try { const enabled = localStorage.getItem('water-sort-sound') !== 'off'; setSoundOn(enabled); audio.setEnabled(enabled); } catch {}
+    try { audio.setEnabled(localStorage.getItem('water-sort-sound') !== 'off'); } catch {}
     const hidden = () => { if (document.hidden) audio.stop(); };
     document.addEventListener('visibilitychange', hidden);
     return () => { document.removeEventListener('visibilitychange', hidden); audio.dispose(); };

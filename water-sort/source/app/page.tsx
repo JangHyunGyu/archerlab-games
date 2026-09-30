@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { complete, hasMove, won } from '../lib/game';
 import { timeLimit, pourDuration, CLEAR_DELAY, type RunView, type RankRow } from '../lib/challenge-rules';
 import { copy as c } from './copy';
+import { Timer } from './Timer';
 import { PourAnimation, measurePour, type PourMotion } from './PourAnimation';
 import { useBottleDrag } from './useBottleDrag';
 import { useGameAudio } from './useGameAudio';
@@ -15,6 +16,21 @@ import type { InspectionResult } from '../lib/dead-end.worker';
 const API = import.meta.env.DEV ? '/water-sort/api/challenge' : 'https://game-api.yama5993.workers.dev/water-sort/challenge';
 const SESSION = 'water-sort-challenge-v2';
 type Credentials = { id: string; token: string };
+// Only ApiError text reaches the screen. Network, JSON and runtime failures use the generic copy.
+const API_MESSAGES: Record<string, string> = { nickname: c.nicknameError, conflict: c.syncChanged, missing: c.sessionMissing, legacy: c.sessionMissing, unavailable: c.unavailable, origin: c.originError };
+class ApiError extends Error {
+  code: string;
+  constructor(code: string) { super(API_MESSAGES[code] ?? c.error); this.code = code; }
+  // The saved credentials can never work again; retrying the same sync would loop forever.
+  get stale() { return this.code === 'missing' || this.code === 'legacy'; }
+  get retryable() { return !this.stale && this.code !== 'origin'; }
+}
+const errorMessage = (e: unknown) => e instanceof ApiError ? e.message : c.error;
+const nextWake = (run: RunView | null, now: number) => {
+  if (!run) return Infinity;
+  const times = [run.deadline, run.availableAt, run.availableAt + CLEAR_DELAY, run.availableAt + CLEAR_DELAY + timeLimit(run.level + 1) * 1000, ...(run.bottleAvailableAt ?? [])].filter(time => time > now);
+  return times.length ? Math.min(...times) : Infinity;
+};
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { ref.current?.showModal(); }, []);
@@ -35,12 +51,14 @@ export default function Home() {
   const [selected, setSelected] = useState<number | null>(null);
   const { audio, soundOn, toggleSound } = useGameAudio();
   const lastSoundCue = useRef('');
-  const [notice, setNotice] = useState<string>(c.choose), [error, setError] = useState('');
+  const [notice, setNotice] = useState<string>(c.choose), [error, setError] = useState(''), [canRetry, setCanRetry] = useState(true);
   const [modal, setModal] = useState<'help' | 'ranking' | 'register' | 'exit' | 'restart' | null>(null);
   const [motions, setMotions] = useState<PourMotion[]>([]);
   const [, redrawPours] = useState(0);
   const tubes = useRef<(HTMLSpanElement | null)[]>([]), settleTimers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
-  const [now, setNow] = useState(0), clockOffset = useRef(0);
+  const [now, setNow] = useState(0), clockOffset = useRef(0), nowRef = useRef(0), wakeAt = useRef(Infinity);
+  const [pageHidden, setPageHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
+  const clock = useRef(() => Date.now() + clockOffset.current).current;
   const [nickname, setNickname] = useState(''), [rows, setRows] = useState<RankRow[]>([]), [rankState, setRankState] = useState('');
   const retry = useRef<() => void>(() => {});
   const controllerRef = useRef<PourController | null>(null);
@@ -52,27 +70,42 @@ export default function Home() {
     start: startMotion,
     change: () => redrawPours(value => value + 1),
     reset: () => { setMotions([]); for (const timer of settleTimers.current.values()) clearTimeout(timer); settleTimers.current.clear(); },
-    error: e => { audio.stop(); setError(e instanceof Error ? e.message : c.error); },
+    error: e => { audio.stop(); fail(e); },
     invalid: () => { setNotice(c.invalid); audio.play('invalid'); },
   });
   const pours = controllerRef.current;
-  function accept(next: RunView) { runRef.current = next; setRun(next); clockOffset.current = next.serverNow - Date.now(); setNow(next.serverNow); }
+  function refreshNow(time = clock()) { nowRef.current = time; setNow(time); }
+  function accept(next: RunView) { runRef.current = next; setRun(next); clockOffset.current = next.serverNow - Date.now(); refreshNow(next.serverNow); }
+  function forgetSession() {
+    credentials.current = null; runRef.current = null;
+    try { localStorage.removeItem(SESSION); } catch { /* Nothing else to clear. */ }
+    pours.clear(); setRun(null); setAtHome(true); setModal(null); setSelected(null); setNotice(c.choose);
+  }
+  function fail(e: unknown) {
+    if (e instanceof ApiError && e.stale) forgetSession();
+    setCanRetry(!(e instanceof ApiError) || e.retryable); setError(errorMessage(e));
+  }
   async function call(type: string, extra: Record<string, unknown> = {}, retryTransition = true): Promise<RunView> {
     const epoch = requestEpoch.current, controller = new AbortController();
     pendingRequest.current = controller;
+    const abandoned = () => new DOMException('Abandoned game', 'AbortError');
     try {
-      const response = await fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, ...credentials.current, version: runRef.current?.version, ...extra }) });
-      const data = await response.json() as { error?: string; run: RunView; token?: string };
-      if (epoch !== requestEpoch.current) throw new DOMException('Abandoned game', 'AbortError');
+      let response: Response;
+      try { response = await fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, ...credentials.current, version: runRef.current?.version, ...extra }) }); }
+      catch { throw epoch !== requestEpoch.current || controller.signal.aborted ? abandoned() : new ApiError('network'); }
+      // A proxy error page is not JSON; keep the status and never surface the parser's message.
+      const data = await response.json().catch(() => null) as { error?: string; run?: RunView; token?: string } | null;
+      if (epoch !== requestEpoch.current) throw abandoned();
       if (!response.ok) {
-        if (data.run) accept(data.run);
+        if (data?.run) accept(data.run);
         // A pour may finish on the server while Home aborts its response.
         // Retry the transition once against that authoritative version.
-        if ((type === 'resume' || type === 'leave') && retryTransition && data.error === 'conflict' && data.run) return await call(type, extra, false);
-        throw new Error(data.error === 'nickname' ? c.nicknameError : data.error === 'conflict' ? c.syncChanged : c.error);
+        if ((type === 'resume' || type === 'leave') && retryTransition && data?.error === 'conflict' && data.run) return await call(type, extra, false);
+        throw new ApiError(data?.error ?? (response.status >= 500 ? 'unavailable' : 'unknown'));
       }
+      if (!data?.run) throw new ApiError('invalid');
       if (data.token) { credentials.current = { id: data.run.id, token: data.token }; try { localStorage.setItem(SESSION, JSON.stringify(credentials.current)); } catch { /* In-memory credentials still allow this run to finish. */ } }
-      return data.run as RunView;
+      return data.run;
     } finally { if (pendingRequest.current === controller) pendingRequest.current = null; }
   }
   async function perform(type: string, extra: Record<string, unknown> = {}, showGame = true) {
@@ -95,21 +128,39 @@ export default function Home() {
       if (type !== 'register') setModal(null);
       if (type === 'start') audio.play('start');
     }
-    catch (e) { if (epoch === requestEpoch.current) setError(e instanceof Error ? e.message : c.error); }
+    catch (e) { if (epoch === requestEpoch.current) fail(e); }
     finally { if (epoch === requestEpoch.current) { lock.current = false; setBusy(false); setReady(true); } }
   }
   useEffect(() => {
     try { const raw = localStorage.getItem(SESSION); if (raw) { const saved = JSON.parse(raw); if (typeof saved.id === 'string' && typeof saved.token === 'string') credentials.current = saved; } } catch { /* A new run remains available. */ }
     if (credentials.current) void perform('sync', {}, false); else setReady(true);
-    const ticker = setInterval(() => { setNow(Date.now() + clockOffset.current); pours.tick(); }, 50);
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { setSelected(null); pours.cancelQueued(); setNotice(c.choose); } };
-    const hidden = () => { if (document.hidden) pours.cancelQueued(); };
+    const hidden = () => { setPageHidden(document.hidden); if (document.hidden) pours.cancelQueued(); else refreshNow(); };
     const resized = () => pours.cancelQueued();
     window.addEventListener('keydown', key);
     window.addEventListener('resize', resized);
     document.addEventListener('visibilitychange', hidden);
-    return () => { clearInterval(ticker); window.removeEventListener('keydown', key); window.removeEventListener('resize', resized); document.removeEventListener('visibilitychange', hidden); requestEpoch.current++; pendingRequest.current?.abort(); pours.clear(); };
+    return () => { window.removeEventListener('keydown', key); window.removeEventListener('resize', resized); document.removeEventListener('visibilitychange', hidden); requestEpoch.current++; pendingRequest.current?.abort(); pours.clear(); };
   }, []);
+  // Pour scheduling needs a fast clock only while a run is on screen. Home re-renders on
+  // state changes and at the next timing boundary; the Timer owns the per-second display.
+  const ticking = !atHome && !!run && run.status !== 'ended' && !pageHidden;
+  useEffect(() => {
+    if (!ticking) return;
+    const ticker = setInterval(() => {
+      const time = clock();
+      pours.tick();
+      // Keep the short clear-to-next-stage hand-off as prompt as before; otherwise update once a second.
+      if (time >= wakeAt.current || time - nowRef.current >= 1000 || runRef.current?.status === 'cleared') refreshNow(time);
+    }, 50);
+    return () => clearInterval(ticker);
+  }, [ticking]);
+  useEffect(() => {
+    // Start screen: no interval, only a wake-up when Continue could expire.
+    if (!atHome || pageHidden || wakeAt.current === Infinity) return;
+    const timer = setTimeout(() => refreshNow(), Math.max(50, wakeAt.current - clock()) + 20);
+    return () => clearTimeout(timer);
+  }, [atHome, pageHidden, run, now]);
   useEffect(() => { if (modal) pours.cancelQueued(); }, [modal]);
   useEffect(() => {
     // Warm one reusable worker on the menu, before the first pour needs it.
@@ -203,7 +254,7 @@ export default function Home() {
     if (geometry && !matchMedia('(prefers-reduced-motion: reduce)').matches && geometry.source.y > 30 && geometry.destination.y > 48 && Math.max(geometry.source.y + geometry.source.height, geometry.destination.y + geometry.destination.height) < h - 6) {
       setMotions(items => [...items, { id, from, to, before, amount, started: performance.now(), ...geometry }]);
     } else {
-      settleTimers.current.set(id, setTimeout(() => { finishMotion(id); setNow(Date.now() + clockOffset.current); }, pourDuration(amount)));
+      settleTimers.current.set(id, setTimeout(() => { finishMotion(id); refreshNow(); }, pourDuration(amount)));
     }
   }
   async function loadRanks() {
@@ -217,13 +268,14 @@ export default function Home() {
   const ended = run?.status === 'ended' || expired;
   const blockedEnd = run?.status === 'ended' && run.endReason === 'blocked';
   const board = pours.board;
-  const timerNow = blockedEnd ? run.endedAt ?? now : now;
-  const remaining = run ? Math.max(0, Math.ceil((run.deadline - timerNow) / 1000)) : timeLimit(1);
+  // Correct board, but the final pour animation ran past the deadline: the server (unchanged) does not count it.
+  const lateClear = !!run && ended && !blockedEnd && run.cleared < 100 && won(run.board);
+  const timerFrozenAt = run && ended ? (blockedEnd ? run.endedAt ?? run.deadline : run.deadline) : null;
+  wakeAt.current = nextWake(run, now);
   const disabled = !active || busy || !!error || won(board);
   pours.enabled = !atHome && !disabled && !modal;
   const clockKey = run ? `${run.id}:${run.level}` : null;
   const clockRunning = !atHome && !!run && !ended && (run.status === 'playing' || now < run.availableAt);
-  useEffect(() => { audio.countdown(clockKey, remaining, clockRunning); }, [audio, clockKey, remaining, clockRunning]);
   useEffect(() => {
     if (atHome || !run) return;
     const cue = ended && run.cleared < 100 ? 'timeout' : run.status === 'cleared' && !animating ? 'clear' : null;
@@ -247,10 +299,10 @@ export default function Home() {
     <div className="lab-scenery" aria-hidden="true"/><div className="lab-haze" aria-hidden="true"/>
     <main id="game" className="lab-main">
       {atHome || !run ? <section className="start-screen">
-        <div className="lab-badge"><span aria-hidden="true">✦</span> BUBBLY LAB</div>
-        <h1 className="game-title" aria-label="보글보글 실험실"><span>보글보글</span><span>실험실<span className="title-bubble" aria-hidden="true">✧</span></span></h1>
+        <div className="lab-badge"><span aria-hidden="true">✦</span> {c.badge}</div>
+        <h1 className="game-title" aria-label={c.title}><span>보글보글</span><span>실험실<span className="title-bubble" aria-hidden="true">✧</span></span></h1>
         <p className="start-tagline">{c.tagline}</p>
-        <div className="hero-art"><img src="/water-sort/lab-background.png" alt="" fetchPriority="high"/><span className="hero-spark spark-a" aria-hidden="true">✦</span><span className="hero-spark spark-b" aria-hidden="true">✧</span></div>
+        <div className="hero-art"><img src="/water-sort/lab-hero.webp" width="600" height="400" decoding="async" alt="" fetchPriority="high"/><span className="hero-spark spark-a" aria-hidden="true">✦</span><span className="hero-spark spark-b" aria-hidden="true">✧</span></div>
         <div className="start-actions">
           <button className="primary-button play-button" disabled={!ready || busy} onClick={() => { if (savedRun) setModal('restart'); else void perform('start'); }}><span aria-hidden="true">▶</span>{c.newGame}</button>
           <button className="secondary-button continue-button" disabled={!ready || busy || !canContinue} onClick={() => { void perform('resume'); }}><span aria-hidden="true">▶</span>{c.continueGame}</button>
@@ -258,9 +310,9 @@ export default function Home() {
         </div>
         <p className="start-caption">{c.readyBody}</p>
         <div className="start-footer"><button className="sound-toggle" aria-pressed={soundOn} onClick={toggleSound}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/>{soundOn ? <path d="M16 8q5 4 0 8M19 5q8 7 0 14"/> : <path d="m17 9 5 6m0-6-5 6"/>}</svg>{soundOn ? c.soundOn : c.soundOff}</button><a className="archerlab-link" href="https://archerlab.dev/"><span aria-hidden="true">↗</span>{c.archerlab}</a></div>
-      </section> : <section className="play-screen" aria-label="보글보글 실험실">
+      </section> : <section className="play-screen" aria-label={c.title}>
         <div className="game-hud"><div className="hud-stat stage-stat"><span>{c.stage}</span><strong>{level.toString().padStart(2, '0')}</strong></div><button type="button" className="hud-home" onClick={() => setModal('exit')} aria-label={c.home} title={c.home}><span aria-hidden="true">🏠</span></button><div className="hud-stat score-stat"><span>{c.score}</span><strong data-testid="score">{run.score.toLocaleString()}</strong></div></div>
-        <div className={'timer-strip ' + (remaining <= 10 && active ? 'low' : '')} role="timer" aria-label={`${remaining}${c.seconds}`}><div className="timer-track"><div className="timer-fill" style={{ transform: `scaleX(${Math.max(0, Math.min(1, (run.deadline - timerNow) / 60000))})` }}/></div><span className="timer-number">{ended && !blockedEnd ? 0 : remaining}<small>s</small></span></div>
+        <Timer key={`${run.id}:${run.level}:${run.deadline}`} deadline={run.deadline} limit={timeLimit(level)} clock={clock} frozenAt={timerFrozenAt} active={active} running={clockRunning} audio={audio} clockKey={clockKey}/>
         <div className="experiment-tray">
           {!!pours.queued.length && <div className="queue-count" role="status">{c.queueBadge} {pours.queued.length}/{MAX_QUEUED_POURS}</div>}
           <div className="tray-spark tray-spark-one" aria-hidden="true">✦</div><div className="tray-spark tray-spark-two" aria-hidden="true">✧</div>
@@ -282,10 +334,10 @@ export default function Home() {
         </div>
         <p className={'board-notice ' + ([c.invalid, c.empty, c.blocked, c.queueFull].includes(notice as typeof c.invalid) ? 'visible' : 'sr-only')} role="status">{notice}</p>
       </section>}
-      {error && <div className="connection-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={busy} onClick={() => retry.current()}>{c.retry}</button></div>}
+      {error && modal !== 'register' && <div className="connection-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={busy} onClick={() => { if (canRetry) retry.current(); else setError(''); }}>{canRetry ? c.retry : c.confirm}</button></div>}
     </main>
     {!!motions.length && <PourAnimation motions={motions} onFinish={finishMotion}/>}
-    {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : blockedEnd ? '⛔' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? 'ALL CLEAR!' : blockedEnd ? 'GAME OVER' : 'TIME OVER'}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : blockedEnd ? c.blockedTitle : c.ended}</h2>{blockedEnd && <p className="blocked-explanation" role="alert">{c.blockedBody}</p>}<div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
+    {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : blockedEnd ? '⛔' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? c.eyebrowAllClear : blockedEnd ? c.eyebrowBlocked : c.eyebrowTimeout}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : blockedEnd ? c.blockedTitle : c.ended}</h2>{blockedEnd && <p className="blocked-explanation" role="alert">{c.blockedBody}</p>}{lateClear && <p className="late-explanation" role="status">{c.lateClearBody}</p>}<div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
     {modal === 'exit' && <Modal title={c.homeTitle} onClose={() => setModal(null)}><p>{c.homeBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.keepPlaying}</button><button className="primary-button" onClick={home}>{c.leaveGame}</button></div></Modal>}
     {modal === 'restart' && <Modal title={c.restartTitle} onClose={() => setModal(null)}><p>{c.restartBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.cancel}</button><button className="primary-button" disabled={busy} onClick={() => { void perform('start'); }}>{c.newGame}</button></div></Modal>}
     {modal === 'help' && <Modal title={c.rulesTitle} onClose={() => setModal(null)}><ol className="rules">{c.rules.map(rule => <li key={rule}>{rule}</li>)}</ol><p className="modal-note">{c.recordRule}</p><p className="keyboard-note">{c.keyboard}</p></Modal>}

@@ -5,7 +5,7 @@ import test from 'node:test';
 test('static subfolder output has metadata, reachable assets, and no server catalog', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /lang="ko"/);
-  assert.match(html, /<title>보글보글 실험실 \| Archerlab Games<\/title>/);
+  assert.match(html, /<title>보글보글 실험실 \(Bubbly Lab\) \| Archerlab Games<\/title>/);
   assert.match(html, /60?/);
   assert.match(html, /viewport-fit=cover/);
   assert.match(html, /https:\/\/game.archerlab.dev\/water-sort\//);
