@@ -8,8 +8,8 @@ on:
     paths:
       - game-api-worker.js
       - game-api-entry.js
-      - water-sort/source/worker/**
-      - water-sort/source/lib/**
+      - water-sort-src/worker/**
+      - water-sort-src/lib/**
       - wrangler.game-api.toml
       - migrations/ranking-delivery.sql
       - .github/workflows/deploy-game-api.yml

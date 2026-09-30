@@ -1,4 +1,4 @@
-import { waterSortRoute } from './water-sort/source/worker/route.ts';
+import { waterSortRoute } from './water-sort-src/worker/route.ts';
 import { DurableObject } from 'cloudflare:workers';
 import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse } from './game-api-worker.js';
 

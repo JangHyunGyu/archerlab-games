@@ -5,7 +5,7 @@ import { Worker } from 'node:worker_threads';
 import test from 'node:test';
 
 test('the shipped worker runs off-thread, preserves versions and classifies real boards', async t => {
-  const assets = new URL('../../assets/', import.meta.url);
+  const assets = new URL('../../water-sort/assets/', import.meta.url);
   const files = await readdir(assets);
   const filename = files.find(name => /^dead-end\.worker-.*\.js$/.test(name));
   assert.ok(filename, 'build must publish the standalone worker');

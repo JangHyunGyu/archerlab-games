@@ -11,7 +11,7 @@ export default defineConfig({
         const path = request.url?.split('?')[0].replace(/^\/water-sort/, '');
         if (!path || !['/shared/ranking-delivery.js', '/shared/immersive.js', '/favicon.svg'].includes(path)) return next();
         response.setHeader('Content-Type', path.endsWith('.svg') ? 'image/svg+xml' : 'text/javascript');
-        response.end(readFileSync(new URL(`../..${path}`, import.meta.url)));
+        response.end(readFileSync(new URL(`../../${path}`, import.meta.url)));
       });
     },
   }],

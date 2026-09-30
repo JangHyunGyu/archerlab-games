@@ -2,7 +2,7 @@
 
 Replaced the old landscape, botanical-style card with a newly generated square illustration matching the existing anime potion lab. The reference was the game's `water-sort/lab-background.png`: pastel lavender, turquoise and pink glassware, warm magical laboratory, and the blue droplet scientist. Generation used the built-in image generation tool; no specific model version is claimed. The original output is 1254×1254. The WebP delivery copy is 252,388 bytes.
 
-Assets: `water-sort/source/public/og.png`, `water-sort/source/public/og.webp`, built copies at `water-sort/og.png` and `water-sort/og.webp`; matching homepage assets are in `archerlab/assets/images/water-sort_link.png` and `.webp`.
+Assets: `water-sort-src/public/og.png`, `water-sort-src/public/og.webp`, built copies at `water-sort/og.png` and `water-sort/og.webp`; matching homepage assets are in `archerlab/assets/images/water-sort_link.png` and `.webp`.
 
 Both homepage languages now place Water Sort first, including the structured project list. The image is inside the same 1:1 picture wrapper as other cards. The games portal also puts Water Sort first and preserves the whole square illustration. The game start screen has a same-tab `https://archerlab.dev/` link beside the sound control; shared immersive handling exits fullscreen when following it.
 

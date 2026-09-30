@@ -2,7 +2,7 @@ import { cpSync, readdirSync, rmSync, readFileSync, writeFileSync } from 'node:f
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 const source = fileURLToPath(new URL('../dist/', import.meta.url));
-const destination = fileURLToPath(new URL('../../', import.meta.url));
+const destination = fileURLToPath(new URL('../../water-sort/', import.meta.url));
 // Only the dedicated generated bundle directory is replaced. Source and public assets stay intact.
 const assets = path.resolve(destination, 'assets');
 if (path.dirname(assets) !== path.resolve(destination) || path.basename(assets) !== 'assets') throw new Error('Unexpected asset target');

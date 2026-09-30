@@ -7,8 +7,8 @@
 /water-sort/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-/water-sort/source/*
-  X-Robots-Tag: noindex, nofollow
+/water-sort-src/*
+  X-Robots-Tag: noindex, nofollow, noimageindex
 
 /water-sort/README*
   X-Robots-Tag: noindex, nofollow

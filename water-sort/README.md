@@ -4,11 +4,11 @@ English name: Bubbly Lab. Previously Water Sort; the `/water-sort/` URL, session
 
 Public game: https://game.archerlab.dev/water-sort/
 
-The React/Vite source is in `source/`. Run `npm ci`, `npm test`, and `npm run build` there. The build writes the static entry, hashed bundles, and assets into this folder without deleting source files. Commit the built files with source changes.
+The React/Vite source lives outside the deployed folder, in `../water-sort-src/`. Run `npm ci`, `npm test`, and `npm run build` there. The build writes the static entry, hashed bundles, and assets into this folder (`water-sort/`). Only the built files are meant to be published from here; commit them with source changes. The game-api Worker imports `water-sort-src/worker` and `water-sort-src/lib` directly.
 
 The ranking API runs inside the shared `game-api` Worker at `/water-sort/challenge`, using the shared D1 binding and the isolated `water_sort_runs` table. The Worker owns boards, deadlines, score, version checks, and ranking registration. Client bundles do not include the challenge catalog. The previous Sites Worker is no longer required.
 
-For local play, run the repository's `npx wrangler dev --config wrangler.game-api.toml --port 8787`, then `npm run dev` in `source/` and open http://127.0.0.1:3010/water-sort/ .
+For local play, run the repository's `npx wrangler dev --config wrangler.game-api.toml --port 8787`, then `npm run dev` in `water-sort-src/` and open http://127.0.0.1:3010/water-sort/ .
 
 Every stage has 60 seconds, including pour animation and time spent in another tab or app during play. Difficulty grows through 100 stages; the catalogue has three verified layouts per stage plus randomized colors and bottle order. Confirming Home suspends the run on the server. Continue atomically restores the current stage's initial board and grants a fresh 60 seconds. Earlier points and the accumulated pour count remain; a cleared stage cannot award points again. Reload synchronizes and suspends a still-valid run before enabling Continue. An already expired run cannot be revived.
 
