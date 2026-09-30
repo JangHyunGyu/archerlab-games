@@ -1,6 +1,9 @@
 {
+  "id": "/water-sort/",
   "name": "보글보글 실험실",
   "short_name": "보글보글 실험실",
+  "description": "같은 색 물약을 한 병에 모으는 60초 스테이지 퍼즐 게임",
+  "lang": "ko",
   "start_url": "/water-sort/",
   "scope": "/water-sort/",
   "display": "fullscreen",
@@ -10,8 +13,14 @@
   ],
   "orientation": "any",
   "background_color": "#f0eaff",
-  "theme_color": "#8865df",
+  "theme_color": "#f6f7f2",
   "icons": [
+    {
+      "src": "/water-sort/og.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/favicon.svg",
       "sizes": "any",

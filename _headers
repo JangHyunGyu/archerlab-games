@@ -10,6 +10,21 @@
 /water-sort/source/*
   X-Robots-Tag: noindex, nofollow
 
+/water-sort/README*
+  X-Robots-Tag: noindex, nofollow
+
+/water-sort/sounds/v1/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/water-sort/sounds/v2/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/water-sort/*.png
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+
+/water-sort/*.webp
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+
 /blockpang/tmp-screenshots/*
   X-Robots-Tag: noindex, nofollow, noimageindex
 

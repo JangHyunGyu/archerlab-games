@@ -51,4 +51,9 @@
     <image:image><image:loc>https://game.archerlab.dev/slimevolley/assets/images/court-bg.webp</image:loc></image:image>
     <image:image><image:loc>https://game.archerlab.dev/slimevolley/assets/images/slime-blue.png</image:loc></image:image>
   </url>
+  <url>
+    <loc>https://game.archerlab.dev/water-sort/</loc>
+    <image:image><image:loc>https://game.archerlab.dev/water-sort/og.png</image:loc></image:image>
+    <image:image><image:loc>https://game.archerlab.dev/water-sort/lab-background.png</image:loc></image:image>
+  </url>
 </urlset>

@@ -44,19 +44,22 @@
     <loc>https://game.archerlab.dev/slimevolley/</loc>
     <lastmod>2026-07-07</lastmod>
   </url>
+  <url>
+    <loc>https://game.archerlab.dev/water-sort/</loc>
+    <lastmod>2026-09-28</lastmod>
+  </url>
 <!-- traffic-pages:start -->
   <url>
     <loc>https://game.archerlab.dev/seo/quick-browser-games</loc>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/seo/mobile-and-keyboard-web-games</loc>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 <!-- traffic-pages:end -->
-  <url><loc>https://game.archerlab.dev/water-sort/</loc><lastmod>2026-09-28</lastmod></url>
 </urlset>
