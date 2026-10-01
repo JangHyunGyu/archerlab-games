@@ -18,3 +18,5 @@ head_sampling_rate = 1
 binding = "DB"
 database_name = "archerlab_db"
 database_id = "babeec1b-1079-4a44-aefe-e1ffaa01f7ff"
+
+# Deployed by Cloudflare Workers Builds (git integration)
