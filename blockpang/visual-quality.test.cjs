@@ -49,11 +49,12 @@ for (const [width, height] of [[320,568], [360,640], [390,844], [430,932], [768,
 assert.ok(!game.includes('0.62) / PANEL_RATIO'), 'desktop board must not use the undersized fixed ratio');
 
 const cacheVersion = '20260912-puzzle-ui-v5';
+const scriptCacheVersions = { Game: '20260917-home-restore-v1' };
 for (const file of ['index.html', 'index-en.html']) {
     const html = read(file);
     for (const script of ['constants', 'SoundManager', 'ScoreManager', 'EffectManager', 'Board', 'Piece', 'InputManager', 'UIManager', 'Game', 'main']) {
         assert.ok(
-            html.includes('src="js/' + script + '.js?v=' + cacheVersion
+            html.includes('src="js/' + script + '.js?v=' + (scriptCacheVersions[script] || cacheVersion)
                 + (['UIManager', 'Game', 'main'].includes(script) ? '&ranking=20260913-v1' : '') + '"'),
             file + ' must cache-bust ' + script + '.js'
         );

@@ -54,7 +54,7 @@ assert.match(smoke, /peakParticles <= metrics\.effectDiagnostics\.particleBudget
 for (const file of ['index.html', 'index-en.html']) {
     const html = read(file);
     assert.ok(html.includes('EffectManager.js?v=20260912-puzzle-ui-v5'));
-    assert.ok(html.includes('Game.js?v=20260912-puzzle-ui-v5'));
+    assert.ok(html.includes('Game.js?v=20260917-home-restore-v1'));
 }
 
 console.log('blockpang effect quality tests passed');
