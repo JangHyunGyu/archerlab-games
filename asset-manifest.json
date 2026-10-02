@@ -519,71 +519,6 @@
       "sha256": "1189669a5deaafef2653ce343a2ba8df7b9034d990715e32467590158e8b7054"
     },
     {
-      "path": "blockpang/tmp-screenshots/desktop-playing-asset-audit.png",
-      "bytes": 529535,
-      "sha256": "cfc8bf0a07cfb3271785a88d97dcc0781f7b17724bf80d1662de03c458209722"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/desktop-playing-late-asset-audit.png",
-      "bytes": 779298,
-      "sha256": "9c754d918e426cc5857a14ff8f08df9ca786d58f97b14e632f303d6cfc662266"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/desktop-title-asset-audit.png",
-      "bytes": 512043,
-      "sha256": "d2958133addbe1c91b5f67e98aec7bb74b0e2619699310f3ce414527f0c5c522"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/header-board-after-fix.png",
-      "bytes": 1248338,
-      "sha256": "538fb2fe4632f85ebf459eca27faebb11dfa4c93bf59f71baf6907734f1eb2cc"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/mobile-playing-asset-audit.png",
-      "bytes": 282800,
-      "sha256": "e6ce73fd49bbcbf6ce48fcefe084a1935704dae84b43cab8c0ef667e5edd4aa7"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/mobile-playing-late-asset-audit.png",
-      "bytes": 313999,
-      "sha256": "15f638efd6fe603e70547fefb85646b2919c0492df93a8f8a958c3412d37b74c"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/mobile-title-asset-audit-late.png",
-      "bytes": 275246,
-      "sha256": "91952a775ccb986fcfa8265de0fc0e5eed97e8b4c336ef0c555634ab592d1b69"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/mobile-title-asset-audit.png",
-      "bytes": 274569,
-      "sha256": "a2416ee5ed9dde71ec24e430a8ca98433bc4562ed99d97ba4c2f40610cdd9fab"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/title-desktop-live.png",
-      "bytes": 9963,
-      "sha256": "04f43382352d216a73a4c3bacf8931d70dc919874c70f9c7be8d7e9078ee9d02"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/title-desktop.png",
-      "bytes": 18698,
-      "sha256": "7ba5a9f55df109a8ae1e8367d0202e7469c8f8e5c92bd45681b5303a75504b4d"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/title-mobile-buttons-after.png",
-      "bytes": 399400,
-      "sha256": "cd737b66183d748a7d5b333cfa0344f934a36cd337d0feabf20408cf7963bcab"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/title-mobile-live.png",
-      "bytes": 399168,
-      "sha256": "b4fe48f7a8ecce2af71a61ad53bc7847c9148c0ee0a06df107a8aec2a4a33304"
-    },
-    {
-      "path": "blockpang/tmp-screenshots/title-mobile.png",
-      "bytes": 15066,
-      "sha256": "c5d5ac2f06984e32ed6e879c7b1e88edf4abed91829245d3f7be1310ee392d7e"
-    },
-    {
       "path": "cat-tower/assets/cats/calico.png",
       "bytes": 535532,
       "sha256": "0b5e058e12b8a784bfae2bdb057fc61597e8cb3649d53f8fe0d50f710b51bfed"
@@ -14597,16 +14532,6 @@
       "path": "solo-leveling/sounds/xp.wav",
       "bytes": 60020,
       "sha256": "ef7373b13cd5e60a6f50ba91c89d9119c51f6be6b5d682bc9cc084885d0c7ae2"
-    },
-    {
-      "path": "solo-leveling/tmp-imagegen-contact.png",
-      "bytes": 603310,
-      "sha256": "1b1e913191b75ced08c6482880ac9b7ce9efda6e6ec57fdee472800c700065bb"
-    },
-    {
-      "path": "solo-leveling/tmp-menu-assets-contact.png",
-      "bytes": 113699,
-      "sha256": "4dc46af335294a8ababaad8955919b4a5323879f72f48db0d3e7594c4dede747"
     },
     {
       "path": "water-sort-src/freesound_community-bubbles-003-6397.mp3",
