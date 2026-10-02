@@ -4,6 +4,7 @@ const path = require("node:path");
 
 const gamePath = path.join(__dirname, "..", "js", "game.js");
 const gameSource = fs.readFileSync(gamePath, "utf8");
+const i18nSource = fs.readFileSync(path.join(__dirname, "..", "js", "i18n.js"), "utf8");
 
 const statusPanel = gameSource.match(
   /createStatusPanel\s*\(\)\s*\{([\s\S]*?)\n\s*bindInput\s*\(/
@@ -17,6 +18,7 @@ assert.match(
   /this\.addHudChip\s*\(270, 91, 176, SchoolI18n\.t\("hud\.supply"\), "\$0", COLORS\.gold\)/,
   "the supply chip must remain centered after removing side chips"
 );
+assert.match(i18nSource, /"hud\.supply": \["보급", "Supplies"\]/, "supply chip copy stays in the ko/en dictionary");
 assert.doesNotMatch(statusPanel, /"사기"|"보호막"/, "morale and persistent shield chips must not return");
 assert.match(statusPanel, /this\.ui\.statusChips\s*=\s*\{ coins \}/, "status chip tracking must only contain supply");
 assert.match(
