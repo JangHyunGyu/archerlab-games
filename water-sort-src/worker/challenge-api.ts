@@ -37,7 +37,13 @@ export async function challengeApi(request: Request, binding: D1Database, allowe
   try {
     const db = await database(binding);
     if (request.method === 'GET') {
-      const result = await db.prepare("SELECT id, nickname, cleared, score, created_at FROM water_sort_runs WHERE nickname IS NOT NULL AND json_extract(data, '$.rules') = 2 ORDER BY cleared DESC, score DESC, created_at ASC, id ASC LIMIT 50").all();
+      // One name keeps a single record: more clears, then higher score, then the earlier start.
+      // Letter case and surrounding spaces are the same name. Lower scores stay stored, but the board shows only the best.
+      const result = await db.prepare(`SELECT id, nickname, cleared, score, created_at FROM (
+        SELECT id, nickname, cleared, score, created_at,
+          ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(nickname)) ORDER BY cleared DESC, score DESC, created_at ASC, id ASC) AS name_rank
+        FROM water_sort_runs WHERE nickname IS NOT NULL AND json_extract(data, '$.rules') = 2
+      ) WHERE name_rank = 1 ORDER BY cleared DESC, score DESC, created_at ASC, id ASC LIMIT 50`).all();
       return json({ rows: result.results });
     }
     if (request.method !== 'POST') return json({ error: 'method' }, 405);

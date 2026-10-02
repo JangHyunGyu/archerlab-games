@@ -288,6 +288,42 @@ test('legacy runs receive one solvable restart checkpoint without changing score
   } finally { db.database.close(); }
 });
 
+test('ranking keeps one best record per nickname and still stores the lower runs', async () => {
+  const db = new TestDatabase();
+  try {
+    assert.equal((await challengeApi(new Request('https://game.test/api/challenge'), db)).status, 200);
+    const insert = db.database.prepare('INSERT INTO water_sort_runs (id, token, data, version, nickname, cleared, score, created_at) VALUES (?, ?, ?, 1, ?, ?, ?, ?)');
+    const add = (id, nickname, cleared, score, created, rules = 2) => insert.run(id, crypto.randomUUID(), JSON.stringify({ rules }), nickname, cleared, score, created);
+    add('wall-best', 'Wall', 100, 130000, 10);
+    for (let i = 0; i < 50; i++) add(`wall-${i}`, 'wall', 100, 100000, 100 + i);
+    add('visible', 'Visible', 99, 99000, 20);
+    add('lab-best', 'Lab', 10, 10000, 300);
+    add('lab-fast', 'lab', 8, 10400, 100);
+    add('lab-late', ' Lab ', 10, 10000, 400);
+    add('lab-low', 'LAB', 10, 9000, 50);
+    add('solo', 'Solo', 9, 11700, 200);
+    add('other-low', 'Other', 3, 3000, 10);
+    add('other-high', 'Other', 3, 3900, 20);
+    add('tie-late', 'Same', 4, 4000, 500);
+    add('tie-early', 'same', 4, 4000, 100);
+    add('legacy', 'Lab', 100, 999999, 1, 1);
+    add('blank', null, 100, 999999, 1);
+    const stored = db.database.prepare('SELECT COUNT(*) AS n FROM water_sort_runs').get().n;
+    const response = await challengeApi(new Request('https://game.test/api/challenge'), db);
+    const rows = (await response.json()).rows;
+    assert.deepEqual(rows.map(row => [row.id, row.nickname, row.cleared, row.score]), [
+      ['wall-best', 'Wall', 100, 130000],
+      ['visible', 'Visible', 99, 99000],
+      ['lab-best', 'Lab', 10, 10000],
+      ['solo', 'Solo', 9, 11700],
+      ['tie-early', 'same', 4, 4000],
+      ['other-high', 'Other', 3, 3900],
+    ]);
+    assert.equal(db.database.prepare('SELECT COUNT(*) AS n FROM water_sort_runs').get().n, stored);
+    assert.ok(stored > rows.length);
+  } finally { db.database.close(); }
+});
+
 test('zero-clear results remain rankable and corrupted high scores cannot be registered', async () => {
   const db = new TestDatabase(), originalNow = Date.now;
   let now = 1800000000000; Date.now = () => now;
