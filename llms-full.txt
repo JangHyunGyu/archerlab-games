@@ -1,0 +1,115 @@
+# Archerlab Games — full service description
+
+---
+
+## Archerlab Games란? 설치 없이 바로 하는 무료 브라우저 게임 포털 (ko)
+
+URL: https://game.archerlab.dev/seo/archerlab-games-about
+Last updated: 2026-10-02
+
+Archerlab Games(game.archerlab.dev)는 개발자 장현규가 만든 캐주얼 게임 10개를 한곳에 모은 무료 웹 게임 포털입니다. 물약 정렬, 낙하 블록, 합치기, 매치3, 디펜스, 온라인 배구까지 퍼즐 중심의 게임을 앱 설치나 다운로드 없이 모바일과 데스크톱 브라우저에서 바로 즐길 수 있습니다.
+
+### 한눈에 보기
+- 서비스: Archerlab Games — 무료 브라우저 게임 포털
+- 게임 수: 10개 (퍼즐 중심의 캐주얼 게임)
+- 이용 요금: 모든 게임 무료
+- 설치: 다운로드와 설치 없이 브라우저에서 플레이
+- 지원 환경: 모바일·데스크톱 브라우저
+- 언어: 한국어 중심. 일부 게임은 영어 지원
+- 운영: ArcherLab (장현규)
+
+### Who it is for / 대상
+- 짧은 시간에 가볍게 즐길 퍼즐 게임을 찾는 분
+- 앱 설치 없이 스마트폰이나 PC에서 바로 하고 싶은 분
+- 기록과 점수에 도전하는 캐주얼 게임을 좋아하는 분
+
+### How to use / 이용 방법
+1. 게임 포털에서 하고 싶은 게임 카드를 고릅니다.
+2. 게임 화면이 열리면 안내에 따라 바로 시작합니다. 설치나 로그인은 필요하지 않습니다.
+3. 모바일은 터치, PC는 마우스와 키보드로 조작합니다. 게임마다 조작은 화면 안내를 따릅니다.
+
+### Features / 기능
+- 한 곳에서 여는 10개의 무료 브라우저 게임
+- 짧게 한 판씩 즐기는 퍼즐·합치기·디펜스·스포츠 장르
+- 모바일과 데스크톱 모두 지원
+- 일부 게임의 점수 기록 도전(명예의 전당 등)
+
+### Notes / 알아 둘 점
+- 게임별 규칙과 조작은 각 게임 화면 안내를 따릅니다. 최신 브라우저에서 가장 안정적으로 동작합니다.
+
+### FAQ
+
+**Archerlab Games는 무료인가요?**
+네. 포털의 모든 게임을 무료로 플레이할 수 있습니다.
+
+**설치나 회원가입이 필요한가요?**
+아니요. 다운로드 없이 브라우저에서 바로 시작합니다.
+
+**모바일에서도 되나요?**
+네. 모바일과 데스크톱 브라우저를 모두 지원합니다.
+
+**어떤 게임이 있나요?**
+보글보글 실험실, 루멘 쉬프트, 젤리팡, 주차장 탈출, 쥬얼리아, 스쿨 언데드 디펜스, 블럭팡, 그림자 서바이벌, 고양이 타워, 슬라임 배구 10종입니다.
+
+**영어로도 할 수 있나요?**
+포털은 한국어 중심이고 일부 게임은 영어를 지원합니다.
+
+**가장 먼저 해 볼 게임은?**
+짧게 끊어 즐기고 싶다면 한 스테이지가 60초인 보글보글 실험실, 합치는 재미를 원하면 고양이 타워나 젤리팡이 무난합니다.
+
+---
+
+## What is Archerlab Games? A free browser game portal with no download (en)
+
+URL: https://game.archerlab.dev/seo/archerlab-games-about-en
+Last updated: 2026-10-02
+
+Archerlab Games (game.archerlab.dev) is a free web game portal that collects 10 casual games made by developer Hyungyu Jang. From potion sorting and falling blocks to merge puzzles, match-3, defense and online volleyball, you can play on mobile or desktop browsers without installing or downloading anything.
+
+### At a glance
+- Service: Archerlab Games — free browser game portal
+- Games: 10 casual games, mostly puzzles
+- Price: All games are free
+- Install: No download or install; plays in the browser
+- Devices: Mobile and desktop browsers
+- Languages: Mainly Korean; some games support English
+- Operator: ArcherLab (Hyungyu Jang)
+
+### Who it is for / 대상
+- Players looking for light puzzle games for short sessions
+- People who want to play on a phone or PC without installing an app
+- Fans of casual games with scores and records to chase
+
+### How to use / 이용 방법
+1. Choose a game card on the portal.
+2. When the game opens, follow the on-screen instructions. No install or login is needed.
+3. Use touch on mobile, or mouse and keyboard on desktop. Controls vary by game and are explained on screen.
+
+### Features / 기능
+- 10 free browser games in one place
+- Short rounds across puzzle, merge, defense and sports genres
+- Mobile and desktop support
+- Score challenges in some games, such as a hall of fame
+
+### Notes / 알아 둘 점
+- Rules and controls differ by game and are explained on each game screen. A current browser gives the most stable experience.
+
+### FAQ
+
+**Is Archerlab Games free?**
+Yes. Every game on the portal is free to play.
+
+**Do I need to install or sign up?**
+No. Start playing directly in the browser.
+
+**Does it work on mobile?**
+Yes, on both mobile and desktop browsers.
+
+**Which games are there?**
+Bubbly Lab, Lumen Shift, Jelly Pang!, Parking Escape, Jewelria, School Zombie Defense, Blockpang, Shadow Survival, Cat Tower and Slime Volley.
+
+**Is there an English version?**
+The portal is mainly Korean and some games support English.
+
+**Where should I start?**
+Bubbly Lab has 60-second stages for quick sessions. Cat Tower and Jelly Pang! suit merge-puzzle fans.

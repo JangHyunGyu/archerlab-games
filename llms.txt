@@ -41,3 +41,9 @@ Archerlab Games is a web game portal where you can play various casual games dir
 
 ## Category
 Browser Games, Casual Games, Free Web Games
+
+## Service guide (what it is, pricing, how to use, FAQ)
+- Korean: https://game.archerlab.dev/seo/archerlab-games-about
+- English: https://game.archerlab.dev/seo/archerlab-games-about-en
+- Full text for AI systems: https://game.archerlab.dev/llms-full.txt
+- Last updated: 2026-10-02
