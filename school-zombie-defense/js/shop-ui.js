@@ -1,43 +1,53 @@
 (function (root) {
   "use strict";
 
+  const SchoolI18n = root.SchoolI18n;
   const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[char]);
 
-  function create({ host, getView, onSelect, onBuy, onReset, onExit, initialOpen = false }) {
+  function create({ host, getView, onSelect, onBuy, onReset, onExit, onLocale, initialOpen = false }) {
     const layer = document.createElement("section");
     layer.className = "school-shop";
-    layer.setAttribute("aria-label", "암시장 정비소");
     layer.innerHTML = `
       <header class="school-shop__header">
-        <div><span class="school-shop__eyebrow">FIELD ARMORY</span><h1>암시장 정비소</h1></div>
-        <p class="school-shop__credit">보유 보급<strong data-credit></strong></p>
+        <div><span class="school-shop__eyebrow">FIELD ARMORY</span><h1 data-i18n="shop.title"></h1></div>
+        <div class="school-shop__tools">
+          <div class="school-shop__lang" role="group" data-i18n-aria="lang.group">
+            <button type="button" data-lang="ko">KO</button>
+            <button type="button" data-lang="en">EN</button>
+          </div>
+          <p class="school-shop__credit"><span data-i18n="shop.supplies"></span><strong data-credit></strong></p>
+        </div>
       </header>
       <div class="school-shop__actions">
         <p class="school-shop__status" role="status" aria-live="polite"></p>
-        <button type="button" class="school-shop__open" aria-haspopup="dialog">캐릭터 정비<span>캐릭터 선택 · 영구 강화</span></button>
-        <button type="button" class="school-shop__exit">상점 나가기</button>
+        <button type="button" class="school-shop__open" aria-haspopup="dialog"><span data-i18n="shop.open"></span><span data-i18n="shop.openHint"></span></button>
+        <button type="button" class="school-shop__exit" data-i18n="shop.exit"></button>
       </div>`;
     const dialog = document.createElement("dialog");
     dialog.className = "school-shop-dialog";
     dialog.setAttribute("aria-labelledby", "shop-maintenance-title");
     dialog.innerHTML = `
       <header class="school-shop-dialog__header">
-        <div><span class="school-shop__eyebrow">MAINTENANCE</span><h2 id="shop-maintenance-title">캐릭터 정비</h2></div>
-        <button type="button" data-close aria-label="정비창 닫기">×</button>
-        <p>보유 보급 <strong data-credit></strong></p>
+        <div><span class="school-shop__eyebrow">MAINTENANCE</span><h2 id="shop-maintenance-title" data-i18n="shop.maintenance"></h2></div>
+        <button type="button" data-close data-i18n-aria="shop.close">×</button>
+        <p><span data-i18n="shop.suppliesInline"></span> <strong data-credit></strong></p>
+        <div class="school-shop__lang" role="group" data-i18n-aria="lang.group">
+          <button type="button" data-lang="ko">KO</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
       </header>
       <div class="school-shop-dialog__scroll">
-        <p class="school-shop-dialog__hint">정비할 캐릭터를 선택하세요.</p>
-        <div class="school-shop-dialog__characters" role="group" aria-label="정비할 캐릭터"></div>
+        <p class="school-shop-dialog__hint" data-i18n="shop.pick"></p>
+        <div class="school-shop-dialog__characters" role="group" data-i18n-aria="shop.characters"></div>
         <h3 class="school-shop-dialog__selected"></h3>
         <div class="school-shop-dialog__upgrades"></div>
       </div>
       <footer class="school-shop-dialog__footer">
         <p class="school-shop-dialog__status" role="status" aria-live="polite"></p>
-        <button type="button" data-reset>강화 초기화</button>
-        <button type="button" data-close>정비 마치기</button>
+        <button type="button" data-reset></button>
+        <button type="button" data-close data-i18n="shop.done"></button>
       </footer>`;
     layer.append(dialog);
     host.append(layer);
@@ -46,6 +56,8 @@
     let busy = false;
     let destroyed = false;
     let confirmation = null;
+    let confirmRefund = 0;
+    let confirmAction = null;
     let busyFocus = null;
 
     function notify(message) {
@@ -66,26 +78,56 @@
           <img src="${escape(character.portrait)}" alt="" width="46" height="46" draggable="false">
           <strong>${escape(character.weapon)}</strong><span>${escape(character.total)}</span>
         </button>`).join("");
-      dialog.querySelector(".school-shop-dialog__selected").textContent = `${view.selectedName} · ${view.weapon} 정비`;
+      dialog.querySelector(".school-shop-dialog__selected").textContent = SchoolI18n.t("shop.selected", {
+        name: view.selectedName,
+        weapon: view.weapon
+      });
       dialog.querySelector(".school-shop-dialog__upgrades").innerHTML = view.upgrades.map((upgrade) => `
         <article class="school-shop-upgrade">
           <div class="school-shop-upgrade__copy"><h4>${escape(upgrade.title)}</h4><p>${escape(upgrade.part)}</p>
             <p class="school-shop-upgrade__stats">${escape(upgrade.stats)}</p></div>
           <div class="school-shop-upgrade__purchase"><span>Lv.${upgrade.level}/${view.maxLevel}</span>
-            <progress max="${view.maxLevel}" value="${upgrade.level}" aria-label="${escape(upgrade.title)} 강화 단계"></progress>
+            <progress max="${view.maxLevel}" value="${upgrade.level}" aria-label="${escape(SchoolI18n.t("shop.levelAria", { title: upgrade.title }))}"></progress>
             <button type="button" data-upgrade="${escape(upgrade.id)}" data-focus-key="upgrade-${escape(upgrade.id)}"
-              aria-label="${escape(upgrade.title)} ${upgrade.maxed ? "최대 강화" : `$${escape(upgrade.cost)} 구매`}" ${upgrade.maxed ? "data-maxed disabled" : ""}
+              aria-label="${escape(upgrade.title)} ${upgrade.maxed ? escape(SchoolI18n.t("shop.maxed")) : escape(SchoolI18n.t("shop.buy", { cost: upgrade.cost }))}" ${upgrade.maxed ? "data-maxed disabled" : ""}
               class="${upgrade.canAfford && !upgrade.maxed ? "can-afford" : ""}">${upgrade.maxed ? "MAX" : `$${escape(upgrade.cost)}`}</button>
           </div>
         </article>`).join("");
-      dialog.querySelector("[data-reset]").textContent = view.refund > 0 ? `초기화 +$${view.refund}` : "강화 초기화";
+      dialog.querySelector("[data-reset]").textContent = view.refund > 0
+        ? SchoolI18n.t("shop.resetRefund", { refund: `$${view.refund}` })
+        : SchoolI18n.t("shop.reset");
       updateBusyControls();
       if (focusKey) Array.from(dialog.querySelectorAll("[data-focus-key]")).find((item) => item.dataset.focusKey === focusKey)?.focus({ preventScroll: true });
     }
 
+    function localize() {
+      if (destroyed) return;
+      layer.querySelectorAll("[data-i18n]").forEach((node) => {
+        node.textContent = SchoolI18n.t(node.getAttribute("data-i18n"));
+      });
+      layer.querySelectorAll("[data-i18n-aria]").forEach((node) => {
+        node.setAttribute("aria-label", SchoolI18n.t(node.getAttribute("data-i18n-aria")));
+      });
+      const lang = SchoolI18n.getLang();
+      layer.querySelectorAll("[data-lang]").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.lang === lang));
+      });
+      layer.setAttribute("aria-label", SchoolI18n.t("shop.title"));
+      refresh();
+      if (confirmation && confirmAction) {
+        const refund = confirmRefund;
+        const action = confirmAction;
+        closeConfirmation();
+        confirmReset(refund, action);
+      }
+    }
+
     function updateBusyControls() {
       dialog.setAttribute("aria-busy", String(busy));
-      dialog.querySelectorAll("button").forEach((button) => { button.disabled = busy || button.hasAttribute("data-maxed"); });
+      dialog.querySelectorAll("button").forEach((button) => {
+        if (button.dataset.lang) return;
+        button.disabled = busy || button.hasAttribute("data-maxed");
+      });
     }
 
     function setBusy(message = "") {
@@ -124,12 +166,14 @@
 
     function confirmReset(refund, confirm) {
       if (destroyed || busy || confirmation) return;
+      confirmRefund = refund;
+      confirmAction = confirm;
       confirmation = document.createElement("dialog");
       confirmation.className = "school-shop-confirm";
       confirmation.setAttribute("aria-labelledby", "shop-reset-title");
-      confirmation.innerHTML = `<h2 id="shop-reset-title">${refund > 0 ? "강화를 초기화할까요?" : "초기화할 강화가 없습니다"}</h2>
-        <p>${refund > 0 ? `구매한 영구 강화가 모두 사라지고<br>보급 $${escape(refund)}이 반환됩니다.` : "강화를 구매한 뒤 다시 시도하세요."}</p>
-        <div><button type="button" data-cancel>${refund > 0 ? "취소" : "확인"}</button>${refund > 0 ? '<button type="button" data-confirm>초기화</button>' : ""}</div>`;
+      confirmation.innerHTML = `<h2 id="shop-reset-title">${refund > 0 ? SchoolI18n.t("shop.resetAsk") : SchoolI18n.t("shop.resetEmpty")}</h2>
+        <p>${refund > 0 ? SchoolI18n.t("shop.resetBody", { refund }) : SchoolI18n.t("shop.resetNeedBuy")}</p>
+        <div><button type="button" data-cancel>${refund > 0 ? SchoolI18n.t("shop.cancel") : SchoolI18n.t("shop.ok")}</button>${refund > 0 ? `<button type="button" data-confirm>${SchoolI18n.t("shop.resetConfirm")}</button>` : ""}</div>`;
       layer.append(confirmation);
       confirmation.addEventListener("keydown", (event) => containKeys(event, confirmation));
       confirmation.addEventListener("cancel", (event) => { event.preventDefault(); closeConfirmation(); });
@@ -164,11 +208,20 @@
       }
     }
 
+    function chooseLanguage(lang) {
+      if (lang !== "ko" && lang !== "en") return;
+      if (SchoolI18n.getLang() === lang) return;
+      SchoolI18n.setLang(lang);
+      localize();
+      if (typeof onLocale === "function") onLocale(lang);
+    }
+
     // Keep keyboard navigation inside the active layer and block game hotkeys.
     dialog.addEventListener("keydown", (event) => containKeys(event, dialog));
     dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
     dialog.addEventListener("click", (event) => {
       const button = event.target.closest("button");
+      if (button?.dataset.lang) return;
       if (busy) return;
       if (button?.hasAttribute("data-close")) return close();
       if (button?.dataset.character) { onSelect(button.dataset.character); refresh(); notify(""); return; }
@@ -177,18 +230,23 @@
       const bounds = dialog.getBoundingClientRect();
       if (event.target === dialog && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) close();
     });
+    layer.addEventListener("click", (event) => {
+      const langButton = event.target.closest("[data-lang]");
+      if (!langButton || !layer.contains(langButton)) return;
+      chooseLanguage(langButton.dataset.lang);
+    });
     openButton.addEventListener("click", open);
     layer.querySelector(".school-shop__exit").addEventListener("click", onExit);
     layer.addEventListener("keydown", (event) => {
       event.stopPropagation();
       if (event.code === "Escape" && !dialog.open) { event.preventDefault(); onExit(); }
     });
-    refresh();
+    localize();
     if (initialOpen) open();
     else openButton.focus({ preventScroll: true });
 
     return {
-      refresh, open, close, notify, setBusy, confirmReset,
+      refresh, open, close, notify, setBusy, confirmReset, localize,
       isOpen: () => dialog.open,
       gamepad(action) {
         if (action === "back") { if (dialog.open) close(); else onExit(); }

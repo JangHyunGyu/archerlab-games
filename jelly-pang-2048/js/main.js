@@ -167,6 +167,7 @@
   };
 
   const $ = (id) => document.getElementById(id);
+  const t = (key, vars) => (window.JellyI18n ? window.JellyI18n.t(key, vars) : key);
   const refs = {
     shell: document.querySelector(".game-shell"),
     titleScreen: $("title-screen"),
@@ -263,7 +264,7 @@
     appCanvas.style.width = "100%";
     appCanvas.style.height = "100%";
     appCanvas.tabIndex = 0;
-    appCanvas.setAttribute("aria-label", "4 by 4 jelly merge board");
+    appCanvas.setAttribute("aria-label", t("board.aria"));
     appCanvas.setAttribute("aria-describedby", "game-instructions");
     appCanvas.setAttribute("aria-keyshortcuts", "ArrowUp ArrowDown ArrowLeft ArrowRight W A S D");
     if (refs.rankModal && refs.rankModal.parentElement !== document.body) {
@@ -299,9 +300,9 @@
     setGameSurfaceActive(true);
     refs.modal.classList.remove("hidden");
     refs.modal.setAttribute("aria-hidden", "false");
-    refs.messageEyebrow.textContent = "Load error";
-    refs.messageTitle.textContent = "Reload";
-    refs.messageCopy.textContent = "라이브러리를 불러오지 못했습니다.";
+    refs.messageEyebrow.textContent = t("error.eyebrow");
+    refs.messageTitle.textContent = t("error.title");
+    refs.messageCopy.textContent = t("error.copy");
     refs.keepPlaying.style.display = "none";
   }
 
@@ -329,7 +330,7 @@
 
   function syncTitleActions() {
     const canResume = hasActiveGame && canMove();
-    refs.playGame.textContent = canResume ? "이어하기" : "게임 시작";
+    refs.playGame.textContent = canResume ? t("title.continue") : t("title.play");
     refs.newGame.hidden = !canResume;
     refs.titleActions.classList.toggle("has-resume", canResume);
   }
@@ -348,7 +349,7 @@
     refs.titleScreen.classList.add("hidden");
     setGameSurfaceActive(true);
     locked = false;
-    announceGameState("게임을 이어합니다.");
+    announceGameState(t("announce.resume"));
     focusGameBoard();
   }
 
@@ -528,7 +529,7 @@
       else startGame();
     });
     refs.newGame.addEventListener("click", () => {
-      if (!window.confirm("진행 중인 게임을 끝내고 새 게임을 시작할까요?")) return;
+      if (!window.confirm(t("confirm.newGame"))) return;
       startGame();
     });
     refs.homeGame.addEventListener("click", () => showTitle());
@@ -544,7 +545,7 @@
     refs.submitRank.addEventListener("click", () => submitRank());
     refs.skipRank.addEventListener("click", () => {
       if (rankSubmitInFlight) return;
-      completeRankSubmit("랭킹 등록을 건너뛰었습니다.", "");
+      completeRankSubmit(t("rank.skipped"), "");
     });
 
     window.addEventListener("blur", () => {
@@ -592,7 +593,7 @@
     }
     hasActiveGame = true;
     locked = false;
-    announceGameState("새 게임을 시작합니다.");
+    announceGameState(t("announce.newGame"));
     focusGameBoard();
   }
 
@@ -926,7 +927,7 @@
       shakeBoard(0.34);
       playSound("bump");
       playHaptic("bump");
-      announceGameState("움직일 수 없는 방향입니다.");
+      announceGameState(t("announce.blocked"));
       return;
     }
 
@@ -1205,8 +1206,8 @@
     if (!won && !keepPlaying && hasRank(TARGET_RANK)) {
       won = true;
       locked = false;
-      announceGameState("왕관 젤리를 완성했습니다!");
-      showModal("Crown Jelly", "You win!", "왕관 젤리를 계속 키워보세요.", true, false);
+      announceGameState(t("announce.crown"));
+      showModal(t("modal.crownEyebrow"), t("modal.winTitle"), t("modal.crownCopy"), true, false);
       celebrate();
       playSound("win");
       playHaptic("win");
@@ -1216,8 +1217,8 @@
     if (!canMove()) {
       locked = false;
       hasActiveGame = false;
-      announceGameState("더 움직일 수 없습니다. 게임 오버입니다.");
-      showModal("Game over", "No moves", "더 이상 움직일 수 없어요.", false, true);
+      announceGameState(t("announce.gameOver"));
+      showModal(t("modal.overEyebrow"), t("modal.overTitle"), t("modal.overCopy"), false, true);
       shakeBoard(0.6);
       playSound("gameover");
       playHaptic("gameover");
@@ -1225,21 +1226,30 @@
     }
 
     locked = false;
-    announceGameState(result.scoreGain > 0 ? `${formatScore(result.scoreGain)}점을 얻었습니다.` : "젤리를 움직였습니다.");
+    announceGameState(result.scoreGain > 0 ? t("announce.score", { score: formatScore(result.scoreGain) }) : t("announce.moved"));
   }
 
   function announceGameState(message = "") {
     let maxValue = 0;
     const rows = grid.map((row) => row.map((tile) => {
-      if (!tile) return "빈칸";
+      if (!tile) return t("board.empty");
       const value = tileValue(tile.rank);
       maxValue = Math.max(maxValue, value);
       return String(value);
     }).join(", "));
     const emptyCount = emptyCells().length;
-    const summary = `점수 ${formatScore(score)}점. 최고 젤리 ${formatScore(maxValue)}. 빈 칸 ${emptyCount}개.`;
+    const summary = t("board.summary", {
+      score: formatScore(score),
+      best: formatScore(maxValue),
+      empty: emptyCount,
+    });
     if (refs.gameStatus) refs.gameStatus.textContent = `${message} ${summary}`.trim();
-    if (appCanvas) appCanvas.setAttribute("aria-label", `4 곱하기 4 젤리 보드. ${rows.join(" / ")}. ${summary}`);
+    if (appCanvas) {
+      appCanvas.setAttribute("aria-label", t("board.live", {
+        rows: rows.join(" / "),
+        summary,
+      }));
+    }
   }
 
   function canMove() {
@@ -1531,7 +1541,7 @@
   async function openRanks() {
     resumeAudio();
     playSound("rankOpen");
-    refs.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
+    refs.rankContent.innerHTML = `<div class="rank-loading">${t("rank.loading")}</div>`;
     refs.rankModal.classList.remove("hidden");
     refs.rankModal.setAttribute("aria-hidden", "false");
     refs.rankClose.focus({ preventScroll: true });
@@ -1539,7 +1549,7 @@
       const rows = await ranking.fetchTopRanks();
       renderRanks(rows);
     } catch {
-      refs.rankContent.innerHTML = `<div class="rank-error">랭킹 서버에 연결할 수 없습니다.</div>`;
+      refs.rankContent.innerHTML = `<div class="rank-error">${t("rank.error")}</div>`;
     }
   }
 
@@ -1556,7 +1566,7 @@
     if (rankSubmitInFlight || score <= 0) return;
     const name = refs.nicknameInput.value.trim().slice(0, 20);
     if (!name) {
-      setSubmitStatus("닉네임을 입력해주세요.", "fail");
+      setSubmitStatus(t("rank.needName"), "fail");
       refs.nicknameInput.focus();
       return;
     }
@@ -1564,7 +1574,7 @@
     rankSubmitInFlight = true;
     setRankSubmitDisabled(true);
     saveNickname(name);
-    setSubmitStatus("서버 검증 중...", "");
+    setSubmitStatus(t("rank.verifying"), "");
 
     const extra = {
       max_tile: getMaxTileValue(),
@@ -1574,11 +1584,11 @@
     try {
       const result = await withServerTrip(() => ranking.submit(name, score, extra));
       playSound("rankSubmit");
-      completeRankSubmit(result?.pending ? "기록을 보관했어요. 연결되면 자동으로 등록합니다." : `등록 완료${result?.rank ? ` (#${result.rank})` : ""}`, "ok");
+      completeRankSubmit(result?.pending ? t("rank.pending") : t("rank.submitted", { rank: result?.rank ? ` (#${result.rank})` : "" }), "ok");
     } catch (err) {
       const message = err?.message === "rank score verification mismatch"
-        ? "서버 검증 점수와 현재 점수가 달라 등록하지 않았어요."
-        : "서버 검증이 지연되거나 실패했어요. 잠시 후 다시 눌러주세요.";
+        ? t("rank.mismatch")
+        : t("rank.failed");
       setSubmitStatus(message, "fail");
       setRankSubmitDisabled(false);
     } finally {
@@ -1622,7 +1632,7 @@
   function renderRanks(rows) {
     refs.rankContent.replaceChildren();
     if (!rows || rows.length === 0) {
-      refs.rankContent.innerHTML = `<div class="rank-empty">아직 등록된 기록이 없습니다.</div>`;
+      refs.rankContent.innerHTML = `<div class="rank-empty">${t("rank.empty")}</div>`;
       return;
     }
 
@@ -1647,7 +1657,7 @@
 
     const name = document.createElement("div");
     name.className = "rank-name";
-    name.textContent = row.player_name || "Jelly Player";
+    name.textContent = row.player_name || t("rank.player");
 
     const points = document.createElement("div");
     points.className = "rank-score";
@@ -2362,8 +2372,9 @@
   function syncSoundToggle() {
     if (!refs.soundToggle) return;
     refs.soundToggle.setAttribute("aria-pressed", soundEnabled ? "true" : "false");
-    refs.soundToggle.setAttribute("aria-label", soundEnabled ? "소리 끄기" : "소리 켜기");
-    refs.soundToggle.title = soundEnabled ? "소리 끄기" : "소리 켜기";
+    const soundLabel = soundEnabled ? t("sound.off") : t("sound.on");
+    refs.soundToggle.setAttribute("aria-label", soundLabel);
+    refs.soundToggle.title = soundLabel;
   }
 
   function toggleSound() {
@@ -2598,6 +2609,27 @@
       return Array.isArray(data.rankings) ? data.rankings : [];
     }
   }
+
+  function refreshLocalizedUi() {
+    syncTitleActions();
+    syncSoundToggle();
+    const loading = refs.rankContent?.querySelector(".rank-loading");
+    if (loading) loading.textContent = t("rank.loading");
+    const error = refs.rankContent?.querySelector(".rank-error");
+    if (error) error.textContent = t("rank.error");
+    const empty = refs.rankContent?.querySelector(".rank-empty");
+    if (empty) empty.textContent = t("rank.empty");
+  }
+
+  document.querySelectorAll("[data-lang-choice]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const next = button.getAttribute("data-lang-choice");
+      if (!next || !window.JellyI18n) return;
+      window.JellyI18n.setLang(next);
+      window.JellyI18n.apply();
+      refreshLocalizedUi();
+    });
+  });
 
   init().catch((error) => {
     console.error("[jelly-pang] initialization failed", error);

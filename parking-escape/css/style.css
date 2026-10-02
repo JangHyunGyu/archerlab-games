@@ -1493,6 +1493,51 @@ h2 {
   }
 }
 
+.lang-switch {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 14px;
+}
+
+.lang-switch-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(245, 203, 84, 0.55);
+  border-radius: 4px;
+  background: rgba(12, 16, 21, 0.62);
+  color: #f3f0e6;
+  font: 800 13px/1 inherit;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.lang-switch-btn.is-active {
+  background: #f3c84d;
+  color: #25271e;
+  border-color: #f3c84d;
+}
+
+.lang-switch-btn:focus-visible {
+  outline: 3px solid #fff0a8;
+  outline-offset: 3px;
+}
+
+@media (orientation: portrait) {
+  .lang-switch {
+    margin-inline: auto;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 380px) {
+  .lang-switch {
+    margin-top: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -238,6 +238,25 @@ body::before {
   .merge-goal { display: none; }
   .control-dock { gap: 10px; }
 }
+.title-lang {
+  top: max(18px, env(safe-area-inset-top));
+  right: max(24px, env(safe-area-inset-right));
+  min-height: 44px;
+  border-color: #d5bfbb70;
+  background: #fffdf7b3;
+  box-shadow: none;
+}
+.title-lang button { min-height: 36px; color: #725668; font-weight: 800; }
+.title-lang button.is-active { color: #d83c72; background: #fff; }
+.title-lang button:focus-visible { outline-color: #89517a; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .title-lang {
+    top: max(10px, env(safe-area-inset-top));
+    right: max(20px, env(safe-area-inset-right));
+    min-height: 32px;
+  }
+  .title-lang button { min-height: 26px; font-size: 10px; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

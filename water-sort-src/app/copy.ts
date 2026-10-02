@@ -1,4 +1,4 @@
-export const copy = {
+const ko = {
   title: '보글보글 실험실', tagline: '알록달록 물약 실험실!',
   stage: '스테이지', home: '시작 화면', archerlab: 'Archerlab으로 가기',
   homeTitle: '시작 화면으로 나갈까요?', homeBody: '이어하기를 누르면 이 스테이지의 물약이 처음 배치로 돌아가고 제한 시간도 다시 60초가 돼요. 이 창을 열어 둔 동안에는 시간이 계속 흘러요.',
@@ -49,4 +49,79 @@ export const copy = {
   unavailable: '서버가 잠시 바빠요. 잠시 후 다시 시도해 주세요.',
   originError: '이 주소에서는 게임에 접속할 수 없어요. game.archerlab.dev에서 다시 열어 주세요.',
   confirm: '확인',
+  language: '언어',
 } as const;
+
+type Copy = { [K in keyof typeof ko]: typeof ko[K] extends readonly string[] ? readonly string[] : string };
+
+const en = {
+  title: 'Bubbly Lab', tagline: 'A colorful potion lab!',
+  stage: 'Stage', home: 'Home', archerlab: 'Visit Archerlab',
+  homeTitle: 'Leave for the home screen?', homeBody: 'Continue puts this stage’s potions back to the starting layout and resets the timer to 60 seconds. Time keeps running while this window stays open.',
+  keepPlaying: 'Keep playing', leaveGame: 'Leave', continueGame: 'Continue', newGame: 'New game',
+  restartTitle: 'Start a new game?', restartBody: 'A new game cannot resume this run or submit its score to the ranking.',
+  syncChanged: 'Your progress was reloaded. Please try again.',
+  play: 'Play', how: 'How to play', level: 'stages',
+  choose: 'Choose a bottle to pour from.', target: 'Now tap the bottle to pour into.',
+  queued: 'Pour queued. Queued pours run in the order you picked them.', queueBadge: 'Queue', queueOrder: 'Queue order',
+  queueFull: 'You can queue up to 5 pours. Queue another once a queued pour starts.',
+  empty: 'That bottle is empty. Choose a bottle with liquid first.',
+  invalid: 'Choose an empty bottle or one with the same color on top. It also needs room for more liquid.',
+  cancel: 'Cancel', close: 'Close', rulesTitle: 'Sort each color together',
+  rules: [
+    'Tap the bottle to pour from, then tap the bottle to pour into. You can also drag a bottle onto another bottle.',
+    'While liquid is pouring, bottles that are not in use can pour at the same time. If either bottle you pick is busy or already waiting in the queue, the next pour is queued.',
+    'You can queue up to 5 pours. Choose the next pour from the layout after every earlier queued pour finishes. The number on a bottle is its queue order.',
+    'Pick the last two queued bottles again in the same order to cancel just that pour. Esc cancels every pour that is still waiting.',
+    'Pour only into an empty bottle, or one whose top color matches. The bottle you pour into needs room for more liquid.',
+    'The top liquid moves in one pour for as long as that color continues. Pouring stops when the receiving bottle is full. Fill every color into its own bottle to clear the stage.',
+    'Each stage has a 60-second limit. A clear moves you to the next stage on its own, and another 60 seconds starts. There are 100 stages.',
+    'Time keeps running while liquid pours. Switching to another tab or app does not pause the timer.',
+    'If the puzzle is confirmed to be stuck, the run ends even with time left. You can still submit that record to the ranking.',
+    'The timer stops on the home screen. Continue puts this stage’s potions back to the starting layout and resets the limit to 60 seconds. Pour counts keep adding up, and a stage scores its clear only once.',
+    'You can join the ranking even if you do not clear stage 1. More cleared stages rank higher. If the stage count matches, the higher score ranks higher.',
+  ],
+  recordRule: '1,000 points for each stage clear, plus up to 200 for time left and up to 100 for moves.',
+  keyboard: 'Use Tab to choose a bottle, then Enter or Space to select. Esc cancels the selection.',
+  success: 'Success!',
+  allClear: 'You cleared all 100 stages!',
+  soundOn: 'Sound on', soundOff: 'Sound off', filled: 'Done', blocked: 'No more liquid can be moved.',
+  colorNames: ['Coral', 'Blue', 'Yellow', 'Green', 'Purple', 'Pink', 'Teal', 'Orange'],
+  bottle: ' bottle', emptyBottle: 'Empty', bottomUp: 'Bottom to top', readyBody: '60 seconds per stage. Sort each color together.',
+  ranking: 'Ranking', score: 'Score', seconds: 's', point: ' pts', cleared: 'Cleared',
+  ended: 'Time is up!',
+  blockedTitle: 'No way forward', blockedBody: 'This layout cannot sort the potions by color, so the run is over.',
+  nickname: 'Nickname', nicknameHelp: '1–16 characters. Letters, numbers, spaces, and _ . - only.',
+  register: 'Submit score', registered: 'Saved to the ranking.', submitting: 'Submitting…',
+  rankEmpty: 'No scores yet. Be the first.', rankLoading: 'Loading the ranking.',
+  rankRule: 'Rank is by stages cleared, then by total score. If both match, the run that started first ranks higher.',
+  rankError: 'Could not load the ranking. Please try again.', error: 'Could not connect. Please try again. Time keeps running on an active run.',
+  nicknameError: 'Enter a nickname of 1–16 characters. Letters, numbers, spaces, and _ . - only.',
+  retry: 'Try again',
+  badge: 'BUBBLY LAB', eyebrowAllClear: 'All clear!', eyebrowBlocked: 'Run over', eyebrowTimeout: 'Time is up',
+  lateClearBody: 'The colors were sorted, but time ran out before the last pour finished. Pouring time counts toward the limit, so this was not a clear.',
+  lowTime: '10 seconds or less left.',
+  sessionMissing: 'No saved run was found. Please start a new game.',
+  unavailable: 'The server is busy. Please try again in a moment.',
+  originError: 'This address cannot open the game. Open it again at game.archerlab.dev.',
+  confirm: 'OK',
+  language: 'Language',
+} as const satisfies Copy;
+
+// Chosen once per page load. Path and ?lang=en beat storage; each HTML entry loads this module fresh.
+function resolveLang(): 'ko' | 'en' {
+  if (typeof window === 'undefined' || typeof window.location?.pathname !== 'string') return 'ko';
+  const path = window.location.pathname.replace(/\/+$/, '');
+  if (path.endsWith('index-en') || path.endsWith('index-en.html')) return 'en';
+  if (new URLSearchParams(window.location.search).get('lang') === 'en') return 'en';
+  try {
+    const stored = window.localStorage.getItem('water-sort-lang');
+    if (stored === 'en' || stored === 'ko') return stored;
+  } catch { /* Storage can be blocked; Korean remains the fallback. */ }
+  return 'ko';
+}
+
+export const uiLang = resolveLang();
+export const copy = uiLang === 'en' ? en : ko;
+
+if (typeof document !== 'undefined') document.documentElement.lang = uiLang;

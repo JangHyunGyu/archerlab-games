@@ -6,19 +6,35 @@
   </url>
   <url>
     <loc>https://game.archerlab.dev/cat-tower/</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/cat-tower/index-en</loc>
+    <lastmod>2026-10-02</lastmod>
   </url>
   <url>
     <loc>https://game.archerlab.dev/lumen-shift/</loc>
-    <lastmod>2026-07-07</lastmod>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/lumen-shift/index-en</loc>
+    <lastmod>2026-10-02</lastmod>
   </url>
   <url>
     <loc>https://game.archerlab.dev/jelly-pang-2048/</loc>
-    <lastmod>2026-07-07</lastmod>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/jelly-pang-2048/index-en</loc>
+    <lastmod>2026-10-02</lastmod>
   </url>
   <url>
     <loc>https://game.archerlab.dev/parking-escape/</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/parking-escape/index-en</loc>
+    <lastmod>2026-10-02</lastmod>
   </url>
   <url>
     <loc>https://game.archerlab.dev/jewelria/</loc>
@@ -42,34 +58,126 @@
   </url>
   <url>
     <loc>https://game.archerlab.dev/slimevolley/</loc>
-    <lastmod>2026-07-07</lastmod>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/slimevolley/index-en</loc>
+    <lastmod>2026-10-02</lastmod>
   </url>
   <url>
     <loc>https://game.archerlab.dev/water-sort/</loc>
-    <lastmod>2026-09-28</lastmod>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/water-sort/index-en</loc>
+    <lastmod>2026-10-02</lastmod>
   </url>
 <!-- traffic-pages:start -->
   <url>
     <loc>https://game.archerlab.dev/seo/quick-browser-games</loc>
-    <lastmod>2026-09-30</lastmod>
+    <lastmod>2026-10-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/seo/mobile-and-keyboard-web-games</loc>
-    <lastmod>2026-09-30</lastmod>
+    <lastmod>2026-10-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/seo/cat-tower-guide</loc>
-    <lastmod>2026-09-30</lastmod>
+    <lastmod>2026-10-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://game.archerlab.dev/seo/bubbly-lab-guide</loc>
-    <lastmod>2026-09-30</lastmod>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/cat-tower-guide-en</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/bubbly-lab-guide-en</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/jelly-pang-2048-guide</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/jelly-pang-2048-guide-en</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/lumen-shift-guide</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/lumen-shift-guide-en</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/parking-escape-guide</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/parking-escape-guide-en</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/school-zombie-defense-guide</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/school-zombie-defense-guide-en</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/slime-volley-guide</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/slime-volley-guide-en</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/quick-browser-games-en</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/seo/mobile-and-keyboard-web-games-en</loc>
+    <lastmod>2026-10-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

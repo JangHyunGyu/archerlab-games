@@ -1,6 +1,7 @@
 (function () {
   "use strict";
 
+  const SchoolI18n = window.SchoolI18n;
   const GAME_WIDTH = 540;
   const GAME_HEIGHT = 960;
   const COLORS = {
@@ -84,7 +85,7 @@
   };
   const RUN_LOADING_OVERLAY_ID = "run-loading-overlay";
   const RUN_LOADING_TEXT_SELECTOR = "[data-run-loading-text]";
-  const showRunLoadingOverlay = (message = "출격 준비 중") => {
+  const showRunLoadingOverlay = (message = SchoolI18n.t("loading.sortie")) => {
     const root = document.getElementById("game-root");
     if (!root) {
       return null;
@@ -101,12 +102,14 @@
         <div class="run-loading__panel">
           <div class="run-loading__signal" aria-hidden="true"><span></span><span></span><span></span></div>
           <div class="run-loading__kicker">SORTIE READY</div>
-          <div class="run-loading__title">출격 준비 중</div>
+          <div class="run-loading__title"></div>
           <div class="run-loading__text" data-run-loading-text></div>
           <div class="run-loading__bar" aria-hidden="true"><span></span></div>
         </div>`;
       root.appendChild(overlay);
     }
+    const title = overlay.querySelector(".run-loading__title");
+    if (title) title.textContent = SchoolI18n.t("loading.sortie");
     overlay.classList.remove("run-loading--hide");
     overlay.querySelector(RUN_LOADING_TEXT_SELECTOR).textContent = message;
     return overlay;
@@ -572,64 +575,64 @@
   const SHOP_CHARACTERS = [
     {
       id: "c",
-      name: "권총 주인공",
-      weapon: "권총",
+      get name() { return SchoolI18n.t("char.c.name"); },
+      get weapon() { return SchoolI18n.t("char.c.weapon"); },
       portrait: "avatar-pistol",
       icon: "skill-pistol-rapid",
       accent: 0xf2b84b
     },
     {
       id: "a",
-      name: "석궁 지원",
-      weapon: "석궁",
+      get name() { return SchoolI18n.t("char.a.name"); },
+      get weapon() { return SchoolI18n.t("char.a.weapon"); },
       portrait: "avatar-bow",
       icon: "skill-arrow-pin",
       accent: 0xff80b6
     },
     {
       id: "b",
-      name: "소총 지원",
-      weapon: "소총",
+      get name() { return SchoolI18n.t("char.b.name"); },
+      get weapon() { return SchoolI18n.t("char.b.weapon"); },
       portrait: "avatar-rifle",
       icon: "skill-rifle-grenade",
       accent: 0xf6b04f
     },
     {
       id: "d",
-      name: "로켓 지원",
-      weapon: "로켓",
+      get name() { return SchoolI18n.t("char.d.name"); },
+      get weapon() { return SchoolI18n.t("char.d.weapon"); },
       portrait: "avatar-rocket",
       icon: "skill-rocket-impact",
       accent: 0x91f7ff
     },
     {
       id: "e",
-      name: "저격 지원",
-      weapon: "저격총",
+      get name() { return SchoolI18n.t("char.e.name"); },
+      get weapon() { return SchoolI18n.t("char.e.weapon"); },
       portrait: "avatar-sniper",
       icon: "skill-sniper-weakpoint",
       accent: 0x91ff9a
     },
     {
       id: "f",
-      name: "화염병 지원",
-      weapon: "화염병",
+      get name() { return SchoolI18n.t("char.f.name"); },
+      get weapon() { return SchoolI18n.t("char.f.weapon"); },
       portrait: "avatar-fire",
       icon: "skill-rocket",
       accent: 0xff7a22
     },
     {
       id: "g",
-      name: "전기 지원",
-      weapon: "전격 제어",
+      get name() { return SchoolI18n.t("char.g.name"); },
+      get weapon() { return SchoolI18n.t("char.g.weapon"); },
       portrait: "avatar-shock",
       icon: "skill-shock-amplifier",
       accent: 0xff9ad6
     },
     {
       id: "h",
-      name: "엔지니어",
-      weapon: "공병 장비",
+      get name() { return SchoolI18n.t("char.h.name"); },
+      get weapon() { return SchoolI18n.t("char.h.weapon"); },
       portrait: "avatar-engineer",
       icon: "skill-barrage",
       accent: 0xffd166
@@ -637,44 +640,44 @@
   ];
   const SHOP_CHARACTER_UPGRADES = {
     c: [
-      { id: "c_power", title: "강화 총열", subtitle: "권총 부품", part: "총열 내구와 탄속 보정", icon: "skill-pistol-rapid" },
-      { id: "c_speed", title: "반동 스프링", subtitle: "권총 부품", part: "슬라이드 복귀 속도 개선", icon: "equipment-wrench" },
-      { id: "c_crit", title: "정밀 조준기", subtitle: "권총 부품", part: "급소 조준 보정 모듈", icon: "equipment-scope" }
+      { id: "c_power", get title() { return SchoolI18n.t("up.c_power.title"); }, get subtitle() { return SchoolI18n.t("up.c_power.subtitle"); }, get part() { return SchoolI18n.t("up.c_power.part"); }, icon: "skill-pistol-rapid" },
+      { id: "c_speed", get title() { return SchoolI18n.t("up.c_speed.title"); }, get subtitle() { return SchoolI18n.t("up.c_speed.subtitle"); }, get part() { return SchoolI18n.t("up.c_speed.part"); }, icon: "equipment-wrench" },
+      { id: "c_crit", get title() { return SchoolI18n.t("up.c_crit.title"); }, get subtitle() { return SchoolI18n.t("up.c_crit.subtitle"); }, get part() { return SchoolI18n.t("up.c_crit.part"); }, icon: "equipment-scope" }
     ],
     a: [
-      { id: "a_power", title: "강화 석궁 몸체", subtitle: "석궁 부품", part: "장력과 볼트 속도 강화", icon: "skill-arrow-pin" },
-      { id: "a_mark", title: "표식 볼트촉", subtitle: "볼트 부품", part: "약점 표식 각인 강화", icon: "equipment-bolt" },
-      { id: "a_crit", title: "균형 깃털", subtitle: "볼트 부품", part: "비행 안정성과 치명 보정", icon: "equipment-bolt" }
+      { id: "a_power", get title() { return SchoolI18n.t("up.a_power.title"); }, get subtitle() { return SchoolI18n.t("up.a_power.subtitle"); }, get part() { return SchoolI18n.t("up.a_power.part"); }, icon: "skill-arrow-pin" },
+      { id: "a_mark", get title() { return SchoolI18n.t("up.a_mark.title"); }, get subtitle() { return SchoolI18n.t("up.a_mark.subtitle"); }, get part() { return SchoolI18n.t("up.a_mark.part"); }, icon: "equipment-bolt" },
+      { id: "a_crit", get title() { return SchoolI18n.t("up.a_crit.title"); }, get subtitle() { return SchoolI18n.t("up.a_crit.subtitle"); }, get part() { return SchoolI18n.t("up.a_crit.part"); }, icon: "equipment-bolt" }
     ],
     b: [
-      { id: "b_power", title: "강선 총열", subtitle: "소총 부품", part: "탄속과 관통 안정성 강화", icon: "skill-barrage" },
-      { id: "b_control", title: "가스 피스톤", subtitle: "소총 부품", part: "연발 반동 제어 장치", icon: "equipment-wrench" },
-      { id: "b_grenade", title: "하부 유탄장치", subtitle: "소총 부품", part: "소형 유탄 발사 모듈", icon: "equipment-rocket" }
+      { id: "b_power", get title() { return SchoolI18n.t("up.b_power.title"); }, get subtitle() { return SchoolI18n.t("up.b_power.subtitle"); }, get part() { return SchoolI18n.t("up.b_power.part"); }, icon: "skill-barrage" },
+      { id: "b_control", get title() { return SchoolI18n.t("up.b_control.title"); }, get subtitle() { return SchoolI18n.t("up.b_control.subtitle"); }, get part() { return SchoolI18n.t("up.b_control.part"); }, icon: "equipment-wrench" },
+      { id: "b_grenade", get title() { return SchoolI18n.t("up.b_grenade.title"); }, get subtitle() { return SchoolI18n.t("up.b_grenade.subtitle"); }, get part() { return SchoolI18n.t("up.b_grenade.part"); }, icon: "equipment-rocket" }
     ],
     d: [
-      { id: "d_charge", title: "성형작약 탄두", subtitle: "로켓 부품", part: "직격 관통 폭압 집중", icon: "skill-rocket-impact" },
-      { id: "d_radius", title: "확산 노즐", subtitle: "로켓 부품", part: "폭발 확산각 조정", icon: "skill-rocket" },
-      { id: "d_slow", title: "냉각 연료캡슐", subtitle: "로켓 부품", part: "냉각 연소재 혼합", icon: "skill-frost" }
+      { id: "d_charge", get title() { return SchoolI18n.t("up.d_charge.title"); }, get subtitle() { return SchoolI18n.t("up.d_charge.subtitle"); }, get part() { return SchoolI18n.t("up.d_charge.part"); }, icon: "skill-rocket-impact" },
+      { id: "d_radius", get title() { return SchoolI18n.t("up.d_radius.title"); }, get subtitle() { return SchoolI18n.t("up.d_radius.subtitle"); }, get part() { return SchoolI18n.t("up.d_radius.part"); }, icon: "skill-rocket" },
+      { id: "d_slow", get title() { return SchoolI18n.t("up.d_slow.title"); }, get subtitle() { return SchoolI18n.t("up.d_slow.subtitle"); }, get part() { return SchoolI18n.t("up.d_slow.part"); }, icon: "skill-frost" }
     ],
     e: [
-      { id: "e_power", title: "대구경 총열", subtitle: "저격 부품", part: "고압탄 대응 총열 강화", icon: "skill-sniper" },
-      { id: "e_focus", title: "약점 스코프", subtitle: "저격 부품", part: "취약부위 자동 보정", icon: "skill-sniper-weakpoint" },
-      { id: "e_pierce", title: "철갑 탄심", subtitle: "저격 탄약", part: "장갑 관통 탄심 교체", icon: "skill-pierce" }
+      { id: "e_power", get title() { return SchoolI18n.t("up.e_power.title"); }, get subtitle() { return SchoolI18n.t("up.e_power.subtitle"); }, get part() { return SchoolI18n.t("up.e_power.part"); }, icon: "skill-sniper" },
+      { id: "e_focus", get title() { return SchoolI18n.t("up.e_focus.title"); }, get subtitle() { return SchoolI18n.t("up.e_focus.subtitle"); }, get part() { return SchoolI18n.t("up.e_focus.part"); }, icon: "skill-sniper-weakpoint" },
+      { id: "e_pierce", get title() { return SchoolI18n.t("up.e_pierce.title"); }, get subtitle() { return SchoolI18n.t("up.e_pierce.subtitle"); }, get part() { return SchoolI18n.t("up.e_pierce.part"); }, icon: "skill-pierce" }
     ],
     f: [
-      { id: "f_burn", title: "고농도 연료", subtitle: "화염병 재료", part: "연소 온도와 직격 피해 강화", icon: "equipment-fire" },
-      { id: "f_area", title: "확산 심지", subtitle: "화염병 부품", part: "불길 확산 범위와 지속시간 증가", icon: "equipment-fire" },
-      { id: "f_throw", title: "투척 훈련", subtitle: "화염병 전술", part: "투척 자세와 적중 피해 강화", icon: "equipment-fire" }
+      { id: "f_burn", get title() { return SchoolI18n.t("up.f_burn.title"); }, get subtitle() { return SchoolI18n.t("up.f_burn.subtitle"); }, get part() { return SchoolI18n.t("up.f_burn.part"); }, icon: "equipment-fire" },
+      { id: "f_area", get title() { return SchoolI18n.t("up.f_area.title"); }, get subtitle() { return SchoolI18n.t("up.f_area.subtitle"); }, get part() { return SchoolI18n.t("up.f_area.part"); }, icon: "equipment-fire" },
+      { id: "f_throw", get title() { return SchoolI18n.t("up.f_throw.title"); }, get subtitle() { return SchoolI18n.t("up.f_throw.subtitle"); }, get part() { return SchoolI18n.t("up.f_throw.part"); }, icon: "equipment-fire" }
     ],
     g: [
-      { id: "g_voltage", title: "고전압 배터리", subtitle: "전격 부품", part: "전격 피해와 스턴 지속 강화", icon: "equipment-battery" },
-      { id: "g_chain", title: "전도 코일", subtitle: "전격 부품", part: "연쇄 전도 반경과 횟수 보정", icon: "equipment-coil" },
-      { id: "g_control", title: "절연 손잡이", subtitle: "전격 제어", part: "방전 간격과 급소 방전 안정화", icon: "equipment-wrench" }
+      { id: "g_voltage", get title() { return SchoolI18n.t("up.g_voltage.title"); }, get subtitle() { return SchoolI18n.t("up.g_voltage.subtitle"); }, get part() { return SchoolI18n.t("up.g_voltage.part"); }, icon: "equipment-battery" },
+      { id: "g_chain", get title() { return SchoolI18n.t("up.g_chain.title"); }, get subtitle() { return SchoolI18n.t("up.g_chain.subtitle"); }, get part() { return SchoolI18n.t("up.g_chain.part"); }, icon: "equipment-coil" },
+      { id: "g_control", get title() { return SchoolI18n.t("up.g_control.title"); }, get subtitle() { return SchoolI18n.t("up.g_control.subtitle"); }, get part() { return SchoolI18n.t("up.g_control.part"); }, icon: "equipment-wrench" }
     ],
     h: [
-      { id: "h_turret", title: "터렛 모터", subtitle: "공병 장비", part: "휴대 터렛 출력과 회전 속도 강화", icon: "equipment-turret" },
-      { id: "h_wire", title: "강화 철조망", subtitle: "공병 장비", part: "철조망 피해와 저지력 강화", icon: "equipment-wire" },
-      { id: "h_barricade", title: "장갑 플레이트", subtitle: "바리케이드 부품", part: "보강 수리량과 보호막 품질 증가", icon: "equipment-armor" }
+      { id: "h_turret", get title() { return SchoolI18n.t("up.h_turret.title"); }, get subtitle() { return SchoolI18n.t("up.h_turret.subtitle"); }, get part() { return SchoolI18n.t("up.h_turret.part"); }, icon: "equipment-turret" },
+      { id: "h_wire", get title() { return SchoolI18n.t("up.h_wire.title"); }, get subtitle() { return SchoolI18n.t("up.h_wire.subtitle"); }, get part() { return SchoolI18n.t("up.h_wire.part"); }, icon: "equipment-wire" },
+      { id: "h_barricade", get title() { return SchoolI18n.t("up.h_barricade.title"); }, get subtitle() { return SchoolI18n.t("up.h_barricade.subtitle"); }, get part() { return SchoolI18n.t("up.h_barricade.part"); }, icon: "equipment-armor" }
     ]
   };
   const getAllShopUpgradeIds = () => Object.values(SHOP_CHARACTER_UPGRADES).flat().map((upgrade) => upgrade.id);
@@ -930,10 +933,10 @@
       recruit: {
         icon: "avatar-bow",
         portrait: "avatar-bow",
-        tag: "석궁",
-        title: "석궁 지원 합류",
-        desc: "볼트 지원 사격\n치명/표식 성장 해금",
-        line: "표식은 내가 잡을게."
+        get tag() { return SchoolI18n.t("recruit.a.tag"); },
+        get title() { return SchoolI18n.t("recruit.a.title"); },
+        get desc() { return SchoolI18n.t("recruit.a.desc"); },
+        get line() { return SchoolI18n.t("recruit.a.line"); }
       }
     },
     {
@@ -954,10 +957,10 @@
       recruit: {
         icon: "avatar-rifle",
         portrait: "avatar-rifle",
-        tag: "소총",
-        title: "소총 지원 합류",
-        desc: "3연발 지원 사격\n유탄 패시브 해금",
-        line: "탄창 충분해. 길 열어줄게."
+        get tag() { return SchoolI18n.t("recruit.b.tag"); },
+        get title() { return SchoolI18n.t("recruit.b.title"); },
+        get desc() { return SchoolI18n.t("recruit.b.desc"); },
+        get line() { return SchoolI18n.t("recruit.b.line"); }
       }
     },
     {
@@ -992,10 +995,10 @@
       recruit: {
         icon: "avatar-rocket",
         portrait: "avatar-rocket",
-        tag: "로켓",
-        title: "로켓 지원 합류",
-        desc: "폭발 로켓 사격\n냉각 탄두 성장",
-        line: "한 발이면 복도째 정리돼."
+        get tag() { return SchoolI18n.t("recruit.d.tag"); },
+        get title() { return SchoolI18n.t("recruit.d.title"); },
+        get desc() { return SchoolI18n.t("recruit.d.desc"); },
+        get line() { return SchoolI18n.t("recruit.d.line"); }
       }
     },
     {
@@ -1015,10 +1018,10 @@
       recruit: {
         icon: "avatar-sniper",
         portrait: "avatar-sniper",
-        tag: "저격",
-        title: "저격 지원 합류",
-        desc: "관통 저격 사격\n방어 보강 성장",
-        line: "숨 고르세요. 뒤는 제가 봅니다."
+        get tag() { return SchoolI18n.t("recruit.e.tag"); },
+        get title() { return SchoolI18n.t("recruit.e.title"); },
+        get desc() { return SchoolI18n.t("recruit.e.desc"); },
+        get line() { return SchoolI18n.t("recruit.e.line"); }
       }
     },
     {
@@ -1040,10 +1043,10 @@
       recruit: {
         icon: "avatar-fire",
         portrait: "avatar-fire",
-        tag: "화염",
-        title: "화염병 지원 합류",
-        desc: "화염병 투척\n지속 피해 구역 생성",
-        line: "불길은 제가 막아둘게요."
+        get tag() { return SchoolI18n.t("recruit.f.tag"); },
+        get title() { return SchoolI18n.t("recruit.f.title"); },
+        get desc() { return SchoolI18n.t("recruit.f.desc"); },
+        get line() { return SchoolI18n.t("recruit.f.line"); }
       }
     },
     {
@@ -1068,10 +1071,10 @@
       recruit: {
         icon: "avatar-shock",
         portrait: "avatar-shock",
-        tag: "전기",
-        title: "전기 지원 합류",
-        desc: "전격 지원 사격\n연쇄/스턴 성장 해금",
-        line: "전원 올렸어요. 복도는 제 쪽입니다."
+        get tag() { return SchoolI18n.t("recruit.g.tag"); },
+        get title() { return SchoolI18n.t("recruit.g.title"); },
+        get desc() { return SchoolI18n.t("recruit.g.desc"); },
+        get line() { return SchoolI18n.t("recruit.g.line"); }
       }
     },
     {
@@ -1090,10 +1093,10 @@
       recruit: {
         icon: "avatar-engineer",
         portrait: "avatar-engineer",
-        tag: "공병",
-        title: "엔지니어 합류",
-        desc: "터렛·가시철조망\n바리케이드 보강 해금",
-        line: "설치만 끝나면 복도가 우리 편입니다."
+        get tag() { return SchoolI18n.t("recruit.h.tag"); },
+        get title() { return SchoolI18n.t("recruit.h.title"); },
+        get desc() { return SchoolI18n.t("recruit.h.desc"); },
+        get line() { return SchoolI18n.t("recruit.h.line"); }
       }
     }
   ];
@@ -2083,10 +2086,10 @@
       this.load.on("progress", (progress) => {
         const percent = clamp(Math.round(progress * 100), 0, 100);
         if (loadingTitle) {
-          loadingTitle.textContent = percent < 100 ? "방어선 구축 중" : "전투 시스템 준비 완료";
+          loadingTitle.textContent = percent < 100 ? SchoolI18n.t("loading.building") : SchoolI18n.t("loading.ready");
         }
         if (loadingText) {
-          loadingText.textContent = `작전 자산 동기화 · ${percent}%`;
+          loadingText.textContent = SchoolI18n.t("loading.assets", { percent });
         }
         if (loadingBar) {
           loadingBar.style.animation = "none";
@@ -2096,7 +2099,7 @@
       });
       this.load.on("loaderror", () => {
         if (loadingText) {
-          loadingText.textContent = "일부 자산을 다시 확인하고 있습니다";
+          loadingText.textContent = SchoolI18n.t("loading.retryAsset");
         }
       });
       this.load.image("bg-corridor", imageAsset("assets/images/corridor-battlefield.png"));
@@ -2182,7 +2185,7 @@
       const fontsReady = document.fonts?.ready || Promise.resolve();
       const loadingText = document.querySelector(".loading__text");
       if (loadingText) {
-        loadingText.textContent = "캐릭터 데이터와 전술 UI 조립 중";
+        loadingText.textContent = SchoolI18n.t("loading.assemble");
       }
       Promise.all([this.loadManualCharacterAssets(), fontsReady]).then(() => {
         createGeneratedDefenderTextures(this);
@@ -2201,10 +2204,10 @@
         const loadingTitle = document.querySelector(".loading__title");
         const failedText = document.querySelector(".loading__text");
         if (loadingTitle) {
-          loadingTitle.textContent = "연결을 다시 확인해 주세요";
+          loadingTitle.textContent = SchoolI18n.t("loading.offlineTitle");
         }
         if (failedText) {
-          failedText.textContent = "새로고침하면 중단된 자산 동기화를 다시 시도합니다";
+          failedText.textContent = SchoolI18n.t("loading.offlineText");
         }
       });
     }
@@ -2223,7 +2226,7 @@
       if (canvas) {
         canvas.tabIndex = 0;
         canvas.setAttribute("role", "application");
-        canvas.setAttribute("aria-label", "스쿨 언데드 디펜스 게임");
+        canvas.setAttribute("aria-label", SchoolI18n.t("boot.canvas"));
         canvas.setAttribute("aria-describedby", "game-input-help");
       }
       this.bounds = {
@@ -2677,7 +2680,7 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0, 0.5);
-      const title = this.add.text(-58, -7, recruit.title || "지원 합류", {
+      const title = this.add.text(-58, -7, recruit.title || SchoolI18n.t("recruit.fallbackTitle"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 25,
         fontStyle: "900",
@@ -2685,7 +2688,7 @@
         stroke: "#050607",
         strokeThickness: 5
       }).setOrigin(0, 0.5);
-      const line = this.add.text(-58, 26, recruit.line || "전열 합류 완료", {
+      const line = this.add.text(-58, 26, recruit.line || SchoolI18n.t("recruit.fallbackLine"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 15,
         fontStyle: "900",
@@ -2693,7 +2696,7 @@
         stroke: "#050607",
         strokeThickness: 3
       }).setOrigin(0, 0.5);
-      const tag = this.add.text(164, 43, recruit.tag || "지원", {
+      const tag = this.add.text(164, 43, recruit.tag || SchoolI18n.t("tag.support"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 13,
         fontStyle: "900",
@@ -2757,12 +2760,12 @@
           tag: defender.recruit.tag,
           title: defender.recruit.title,
           desc: defender.recruit.desc,
-          stat: "전투 인원 +1",
+          stat: SchoolI18n.t("recruit.stat"),
           accent: SKILL_ACCENTS[`recruit-${defender.id}`],
           accentHex: SKILL_ACCENT_HEX[`recruit-${defender.id}`],
           sfx: "recruit",
           suppressToast: true,
-          toast: `${defender.recruit.title} 완료`,
+          toast: SchoolI18n.t("recruit.done", { title: defender.recruit.title }),
           apply: () => this.recruitDefender(defender.id)
         }));
     }
@@ -2891,7 +2894,7 @@
         stroke: "#0c1115",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(316);
-      this.ui.stage = this.add.text(270, 30, "STAGE 01 · 교문", {
+      this.ui.stage = this.add.text(270, 30, SchoolI18n.t("stage.line", { stage: "01", name: SchoolI18n.t("stage.gate") }), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 22,
         fontStyle: "900",
@@ -3020,7 +3023,8 @@
     }
 
     createStatusPanel() {
-      const coins = this.addHudChip(270, 91, 176, "보급", "$0", COLORS.gold);
+      const coins = this.addHudChip(270, 91, 176, SchoolI18n.t("hud.supply"), "$0", COLORS.gold);
+      this.ui.supplyLabel = coins.label;
       this.ui.coins = coins.value;
       this.ui.statusChips = { coins };
 
@@ -3059,7 +3063,7 @@
         .setOrigin(0, 0.5)
         .setDepth(318)
         .setVisible(false);
-      this.ui.threat = this.add.text(270, 947, "방어 안정", {
+      this.ui.threat = this.add.text(270, 947, SchoolI18n.t("hud.stable"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 12,
         fontStyle: "900",
@@ -3534,13 +3538,13 @@
             this.profileReady = true;
             if (!quiet) {
               this.playSfx("core", 0.5);
-              this.showToast("오프라인 모드 · 보상 동기화 보류", COLORS.gold);
+              this.showToast(SchoolI18n.t("toast.offlineRewards"), COLORS.gold);
             }
             return this.meta;
           }
           if (!quiet) {
             this.playSfx("core", 0.65);
-            this.showToast("프로필 동기화 실패", COLORS.red);
+            this.showToast(SchoolI18n.t("toast.profileFail"), COLORS.red);
           }
           throw error;
         })
@@ -4499,7 +4503,7 @@
       });
     }
 
-    showShopActionLoading(message = "처리 중") {
+    showShopActionLoading(message = SchoolI18n.t("shop.processing")) {
       if (this.disposed || this.mode !== "shop") return;
       this.shopActionInFlight = true;
       this.shopUI?.setBusy(message);
@@ -4781,7 +4785,7 @@
       this.abortFetchControllers(this.rankListFetchControllers);
       const requestId = (this.rankRequestId || 0) + 1;
       this.rankRequestId = requestId;
-      this.renderRankingsScreen([], "랭킹을 불러오는 중...");
+      this.renderRankingsScreen([], SchoolI18n.t("rank.loading"));
       this.fetchRankRows()
         .then((rows) => {
           if (this.rankRequestId === requestId && this.mode === "ranking") {
@@ -4793,15 +4797,15 @@
             return;
           }
           if (this.rankRequestId === requestId && this.mode === "ranking") {
-            this.renderRankingsScreen([], "랭킹을 불러오지 못했습니다");
+            this.renderRankingsScreen([], SchoolI18n.t("rank.loadFailed"), true);
           }
         });
     }
 
-    renderRankingsScreen(rows = [], status = "") {
+    renderRankingsScreen(rows = [], status = "", failed = false) {
       this.clearOverlay();
       this.mode = "ranking";
-      announceGameStatus(status || `랭킹 화면. ${rows.length ? `${Math.min(rows.length, 11)}개의 기록을 표시합니다.` : "등록된 기록이 없습니다."} Escape 또는 B로 뒤로 갑니다.`);
+      announceGameStatus(status || SchoolI18n.t("rank.a11y", { detail: rows.length ? SchoolI18n.t("rank.a11yCount", { count: Math.min(rows.length, 11) }) : SchoolI18n.t("rank.a11yEmpty") }));
       this.startBgm("menu");
       const items = this.overlayObjects;
       const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
@@ -4826,9 +4830,9 @@
       items.push(this.add.rectangle(270, 480, 540, 960, 0x020304, 0.78).setDepth(501));
       const header = this.addOverlayHeader({
         y: 112,
-        title: "스테이지 랭킹",
+        title: SchoolI18n.t("rank.title"),
         kicker: "DEFENDER RECORDS",
-        subtitle: "클리어 스테이지 우선 · 동률 시 처치 수",
+        subtitle: SchoolI18n.t("rank.subtitle"),
         accent: COLORS.gold,
         depth: 502
       });
@@ -4843,6 +4847,7 @@
         this.add.text(410, 214, "CLEAR", { resolution: 2, fontFamily: "Arial, sans-serif", fontSize: 11, fontStyle: "800", color: "#c5b995" }).setOrigin(1, 0.5).setDepth(505)
       ];
       items.push(boardTop, ...headers);
+      this.addLanguageSwitch(470, 48, 560);
 
       const visibleRows = rows.slice(0, 11);
       if (!visibleRows.length) {
@@ -4852,7 +4857,7 @@
           fontStyle: "800",
           color: status ? "#c5b995" : "#d5b675"
         }).setOrigin(0.5).setDepth(505);
-        const emptyTitle = this.add.text(270, 482, status || "첫 방어 기록을 남겨보세요", {
+        const emptyTitle = this.add.text(270, 482, status || SchoolI18n.t("rank.empty"), {
           resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
           fontSize: 19,
           fontStyle: "800",
@@ -4861,7 +4866,7 @@
           strokeThickness: 1,
           align: "center"
         }).setOrigin(0.5).setDepth(505);
-        const emptySub = this.add.text(270, 520, status ? "네트워크 상태를 확인한 뒤 다시 시도합니다" : "스테이지를 클리어하면 자동으로 등록할 수 있습니다", {
+        const emptySub = this.add.text(270, 520, status ? SchoolI18n.t("rank.network") : SchoolI18n.t("rank.emptyHint"), {
           resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
           fontSize: 12,
           fontStyle: "800",
@@ -4869,8 +4874,8 @@
           align: "center"
         }).setOrigin(0.5).setDepth(505);
         items.push(emptySignal, emptyTitle, emptySub);
-        if (status.includes("못했습니다")) {
-          this.addTacticalMenuButton(270, 596, 228, 58, "다시 불러오기", 506, () => this.showRankings(), COLORS.blue, {
+        if (failed) {
+          this.addTacticalMenuButton(270, 596, 228, 58, SchoolI18n.t("rank.retry"), 506, () => this.showRankings(), COLORS.blue, {
             hitHeight: 76,
             fontSize: 17
           });
@@ -4927,13 +4932,13 @@
       }
 
       const canRegister = this.lastRankableRun && this.lastRankableRun.score > 0;
-      const back = this.addTacticalMenuButton(canRegister ? 154 : 270, 884, canRegister ? 196 : 328, 64, "메인으로", 560, () => this.showMenu(), COLORS.gold, {
+      const back = this.addTacticalMenuButton(canRegister ? 154 : 270, 884, canRegister ? 196 : 328, 64, SchoolI18n.t("rank.menu"), 560, () => this.showMenu(), COLORS.gold, {
         kicker: "BACK · ESC / B",
         hitHeight: 76,
         fontSize: 19
       });
       if (canRegister) {
-        this.addTacticalMenuButton(386, 884, 196, 64, "기록 등록", 560, () => this.submitRankScore(), COLORS.blue, {
+        this.addTacticalMenuButton(386, 884, 196, 64, SchoolI18n.t("rank.submit"), 560, () => this.submitRankScore(), COLORS.blue, {
           kicker: "SUBMIT RUN",
           hitHeight: 76,
           fontSize: 19
@@ -4942,7 +4947,7 @@
       this.animateOverlayEntrance([...header.objects, ...board.objects, boardTop, ...headers, ...Object.values(back)], 40, 16, 340);
     }
 
-    showRankPrepLayer(message = "랭킹 등록 준비 중") {
+    showRankPrepLayer(message = SchoolI18n.t("rank.prep")) {
       this.removeRankPrepLayer();
       const shell = document.getElementById("game-shell") || document.body;
       const layer = document.createElement("div");
@@ -5002,7 +5007,7 @@
     showRankNameLayer(snapshot = this.lastRankableRun, options = {}) {
       const run = snapshot || this.getRankSnapshot();
       if (!run || run.score <= 0) {
-        this.showToast("클리어한 스테이지가 없습니다", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.noStage"), COLORS.red);
         return;
       }
       this.removeRankNameLayer();
@@ -5016,25 +5021,25 @@
         <form class="school-zombie-rank-dialog${inlineGameOver ? " school-zombie-rank-dialog--gameover" : ""}" autocomplete="off" role="dialog" aria-modal="true" aria-labelledby="school-zombie-rank-dialog-title">
           ${inlineGameOver ? "" : `
             <div class="school-zombie-rank-kicker">RANKING</div>
-            <div class="school-zombie-rank-title" id="school-zombie-rank-dialog-title">랭킹 등록</div>
-            <div class="school-zombie-rank-score">클리어 St.${run.score} · 처치 ${run.kills}</div>
+            <div class="school-zombie-rank-title" id="school-zombie-rank-dialog-title">${SchoolI18n.t("rank.dialogTitle")}</div>
+            <div class="school-zombie-rank-score">${SchoolI18n.t("rank.score", { score: run.score, kills: run.kills })}</div>
           `}
-          ${inlineGameOver ? '<div class="sr-only" id="school-zombie-rank-dialog-title">게임 오버 랭킹 등록</div>' : ""}
-          <label class="sr-only" for="school-zombie-rank-input">랭킹에 표시할 닉네임</label>
-          <input class="school-zombie-rank-input" id="school-zombie-rank-input" name="playerName" maxlength="20" inputmode="text" aria-describedby="school-zombie-rank-help" placeholder="닉네임 입력" />
-          <div class="sr-only" id="school-zombie-rank-help">최대 20자. 등록하거나 나중에 버튼으로 건너뛸 수 있습니다.</div>
+          ${inlineGameOver ? `<div class="sr-only" id="school-zombie-rank-dialog-title">${SchoolI18n.t("rank.gameOverTitle")}</div>` : ""}
+          <label class="sr-only" for="school-zombie-rank-input">${SchoolI18n.t("rank.nameLabel")}</label>
+          <input class="school-zombie-rank-input" id="school-zombie-rank-input" name="playerName" maxlength="20" inputmode="text" aria-describedby="school-zombie-rank-help" placeholder="${SchoolI18n.t('rank.namePlaceholder')}" />
+          <div class="sr-only" id="school-zombie-rank-help">${SchoolI18n.t("rank.nameHelp")}</div>
           <div class="school-zombie-rank-loader" role="status" aria-live="polite" aria-hidden="true">
             <div class="school-zombie-rank-loader__signal" aria-hidden="true">
               <span></span>
               <span></span>
               <span></span>
             </div>
-            <div class="school-zombie-rank-loader__label">랭킹 신호 송신 중</div>
+            <div class="school-zombie-rank-loader__label">${SchoolI18n.t("rank.sending")}</div>
             <div class="school-zombie-rank-loader__bar" aria-hidden="true"><span></span></div>
           </div>
           <div class="school-zombie-rank-actions">
-            <button class="school-zombie-rank-submit" type="submit">등록</button>
-            <button class="school-zombie-rank-skip" type="button">나중에</button>
+            <button class="school-zombie-rank-submit" type="submit">${SchoolI18n.t("rank.register")}</button>
+            <button class="school-zombie-rank-skip" type="button">${SchoolI18n.t("rank.later")}</button>
           </div>
         </form>
       `;
@@ -5071,7 +5076,7 @@
         if (loader) {
           loader.setAttribute("aria-hidden", "false");
         }
-        submitButton.textContent = "등록 중";
+        submitButton.textContent = SchoolI18n.t("rank.registering");
         this.rankSubmitInFlight = true;
         this.submitRankScore(run, name, options).finally(() => {
           if (this.rankNameLayer === layer) {
@@ -5083,7 +5088,7 @@
             input.disabled = false;
             updateSubmitState();
             skipButton.disabled = false;
-            submitButton.textContent = "등록";
+            submitButton.textContent = SchoolI18n.t("rank.register");
           }
         });
       };
@@ -5153,7 +5158,7 @@
     async submitRankScore(snapshot = this.lastRankableRun, rawName = null, options = {}) {
       const run = snapshot || this.getRankSnapshot();
       if (!run || run.score <= 0) {
-        this.showToast("클리어한 스테이지가 없습니다", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.noStage"), COLORS.red);
         return;
       }
       if (rawName === null) {
@@ -5162,20 +5167,20 @@
       }
       const name = String(rawName).trim().replace(/\s+/g, " ").slice(0, 20);
       if (!name) {
-        this.showToast("이름을 입력하세요", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.needName"), COLORS.red);
         return;
       }
       if (!window.ArcherRanking) {
-      this.showToast("랭킹 검증 중...", COLORS.gold);
+      this.showToast(SchoolI18n.t("toast.rankCheck"), COLORS.gold);
       const synced = await this.ensureRankStagesRecorded().catch(() => false);
       if (!this.rankSessionId || !synced || this.rankSyncFailed) {
-        this.showToast("랭킹 검증 실패", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.rankCheckFail"), COLORS.red);
         return;
       }
 
       }
 
-      this.showToast("랭킹 등록 중...", COLORS.gold);
+      this.showToast(SchoolI18n.t("toast.rankSubmit"), COLORS.gold);
       try {
         const response = await this.fetchWithAbort(`${RANK_API_BASE}/rankings`, {
           method: "POST",
@@ -5205,7 +5210,7 @@
         this.saveStoredRankName(name);
         this.lastRankableRun = null;
         this.removeRankNameLayer();
-        this.showToast(data?.pending ? "기록 보관 완료 · 자동 등록 대기" : "랭킹 등록 완료", COLORS.green);
+        this.showToast(data?.pending ? SchoolI18n.t("toast.rankQueued") : SchoolI18n.t("toast.rankDone"), COLORS.green);
         if (options.returnToMenuOnSuccess) {
           this.showMenu();
         } else {
@@ -5213,8 +5218,39 @@
         }
       } catch (error) {
         console.warn("[SchoolZombie] rank submit failed:", error.message);
-        this.showToast("랭킹 등록 실패", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.rankFail"), COLORS.red);
       }
+    }
+
+    refreshLanguageChrome() {
+      if (this.ui?.supplyLabel?.active) this.ui.supplyLabel.setText(SchoolI18n.t("hud.supply"));
+      if (this.ui?.stage?.active) this.updateHud();
+      const canvas = this.game?.canvas;
+      if (canvas) canvas.setAttribute("aria-label", SchoolI18n.t("boot.canvas"));
+    }
+
+    switchLanguage(lang) {
+      if (SchoolI18n.getLang() === lang) return;
+      SchoolI18n.setLang(lang);
+      this.refreshLanguageChrome();
+      if (this.mode === "menu") this.showMenu();
+      else if (this.mode === "ranking") this.showRankings();
+      else if (this.mode === "profile-loading") this.showInitialProfileLoading();
+      else if (this.mode === "shop") this.shopUI?.localize();
+      else if (this.mode === "paused") {
+        if (this.pauseConfirmOpen) this.showQuitConfirmation();
+        else this.showPauseOverlay();
+      }
+    }
+
+    addLanguageSwitch(x, y, depth) {
+      const make = (lang, offset) => this.addTacticalMenuButton(
+        x + offset, y, 52, 34, lang.toUpperCase(), depth,
+        () => this.switchLanguage(lang),
+        SchoolI18n.getLang() === lang ? COLORS.gold : COLORS.blue,
+        { compact: true, fontSize: 12, hitHeight: 44, visualHeight: 32, surfaceAlpha: 0.45, shadowAlpha: 0.12 }
+      );
+      return [make("ko", -30), make("en", 30)];
     }
 
     showInitialProfileLoading() {
@@ -5230,7 +5266,7 @@
       items.push(this.addSurfaceImage(270, 458, 342, 154)
         .setDepth(502));
       items.push(this.add.rectangle(270, 392, 48, 2, UI_COLORS.amber, 0.65).setDepth(503));
-      items.push(this.add.text(270, 438, "프로필 동기화 중", {
+      items.push(this.add.text(270, 438, SchoolI18n.t("loading.profile"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 24,
         fontStyle: "900",
@@ -5238,7 +5274,7 @@
         stroke: "#050607",
         strokeThickness: 5
       }).setOrigin(0.5).setDepth(504));
-      items.push(this.add.text(270, 486, "보유 코인 확인 중", {
+      items.push(this.add.text(270, 486, SchoolI18n.t("loading.coins"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 16,
         fontStyle: "900",
@@ -5251,7 +5287,7 @@
     showMenu() {
       this.clearOverlay();
       this.mode = "menu";
-      announceGameStatus(`메인 메뉴. 보유 보급 ${this.meta.coins}.${this.profileSyncFailed ? " 현재 오프라인 모드입니다." : ""} Enter 또는 게임패드 A로 출격하고, L은 랭킹, A 키는 상점입니다.`);
+      announceGameStatus(SchoolI18n.t("menu.a11y", { coins: this.meta.coins, offline: this.profileSyncFailed ? SchoolI18n.t("menu.offline") : "" }));
       this.startBgm("menu");
       const items = this.overlayObjects;
       const titleArt = this.add.image(270, 480, "title-keyart").setDepth(500);
@@ -5300,6 +5336,7 @@
         strokeThickness: 1
       }).setOrigin(1, 0.5).setDepth(504);
       items.push(protocol);
+      this.addLanguageSwitch(292, 38, 530);
       const eyebrow = this.add.text(270, 79, "SCHOOL UNDEAD · LAST DEFENSE", {
         resolution: 2, fontFamily: "Arial, sans-serif",
         fontSize: 14,
@@ -5310,7 +5347,7 @@
       }).setOrigin(0.5).setDepth(504);
       eyebrow.setShadow(0, 2, "#000000", 8, true, true);
       items.push(eyebrow);
-      const title = this.add.text(270, 132, "스쿨 언데드 디펜스", {
+      const title = this.add.text(270, 132, SchoolI18n.t("menu.title"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 40,
         fontStyle: "800",
@@ -5320,7 +5357,7 @@
       }).setOrigin(0.5).setDepth(504);
       title.setShadow(0, 5, "#000000", 10, true, true);
       items.push(title);
-      const subtitle = this.add.text(270, 179, "무너진 복도 · 마지막 방어선", {
+      const subtitle = this.add.text(270, 179, SchoolI18n.t("menu.subtitle"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 18,
         fontStyle: "800",
@@ -5341,7 +5378,7 @@
         fontStyle: "800",
         color: "#c5b995"
       }).setOrigin(0, 0.5).setDepth(524);
-      const missionTitle = this.add.text(72, 610, "바리케이드를 지키고 생존자를 규합하세요", {
+      const missionTitle = this.add.text(72, 610, SchoolI18n.t("menu.objective"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 15,
         fontStyle: "800",
@@ -5381,7 +5418,7 @@
       }).setOrigin(1, 0.5).setDepth(527);
       items.push(creditLabel, creditValue);
 
-      const startButton = this.addTacticalMenuButton(270, 790, 410, 86, "출격", 530, () => this.startRun(), 0xf15a47, {
+      const startButton = this.addTacticalMenuButton(270, 790, 410, 86, SchoolI18n.t("menu.deploy"), 530, () => this.startRun(), 0xf15a47, {
         primary: true,
         surfaceAlpha: 0.55,
         shadowAlpha: 0.14,
@@ -5389,13 +5426,13 @@
         kicker: "BEGIN SORTIE · ENTER / A",
         hitHeight: 86
       });
-      const rankingButton = this.addTacticalMenuButton(164, 892, 188, 76, "랭킹", 530, () => this.showRankings(), COLORS.gold, {
+      const rankingButton = this.addTacticalMenuButton(164, 892, 188, 76, SchoolI18n.t("menu.ranks"), 530, () => this.showRankings(), COLORS.gold, {
         surfaceAlpha: 0.32,
         shadowAlpha: 0.1,
         kicker: "RECORDS · L",
         hitHeight: 76
       });
-      const shopButton = this.addTacticalMenuButton(376, 892, 188, 76, "상점", 530, () => this.showShop(), COLORS.blue, {
+      const shopButton = this.addTacticalMenuButton(376, 892, 188, 76, SchoolI18n.t("menu.armory"), 530, () => this.showShop(), COLORS.blue, {
         surfaceAlpha: 0.32,
         shadowAlpha: 0.1,
         kicker: "ARMORY · A",
@@ -5417,7 +5454,7 @@
       const enteringShop = this.mode !== "shop";
       this.clearOverlay();
       this.mode = "shop";
-      announceGameStatus("암시장 정비소. 캐릭터 정비 버튼을 누르면 정비창이 열립니다. Escape 또는 게임패드 B로 돌아갑니다.");
+      announceGameStatus(SchoolI18n.t("shop.a11y"));
       this.startBgm("menu");
       if (enteringShop) this.playSfx("shop_open", 0.82);
       this.shopSelectedCharacter = SHOP_CHARACTERS.find((character) => character.id === selectedId)?.id || "c";
@@ -5431,7 +5468,8 @@
         },
         onBuy: (id) => this.buyShopUpgrade(id),
         onReset: () => this.resetShopUpgrades(),
-        onExit: () => this.showMenu()
+        onExit: () => this.showMenu(),
+        onLocale: () => this.refreshLanguageChrome()
       });
       this.shopUI = shopUI;
       // A late profile response refreshes the balance without opening the dialog.
@@ -5439,7 +5477,7 @@
         this.ensureServerProfile({ quiet: true }).then(() => {
           if (!this.disposed && this.shopUI === shopUI) shopUI.refresh();
         }).catch(() => {
-          if (!this.disposed && this.shopUI === shopUI) shopUI.notify("프로필 동기화 실패. 잠시 후 다시 시도하세요.");
+          if (!this.disposed && this.shopUI === shopUI) shopUI.notify(SchoolI18n.t("shop.syncFail"));
         });
       }
     }
@@ -5478,7 +5516,7 @@
     getCharacterTotalUpgradeLevel(characterId) {
       const total = this.getCharacterShopUpgrades(characterId)
         .reduce((sum, upgrade) => sum + this.getMetaUpgradeLevel(upgrade.id), 0);
-      return `합계 Lv.${total}`;
+      return SchoolI18n.t("shop.total", { total });
     }
 
     getMetaUpgradeLevel(id) {
@@ -5487,42 +5525,44 @@
 
     getShopUpgradeEffectLine(id, level) {
       const percent = (value) => `${Math.round(value * 10) / 10}%`;
-      if (id === "c_power") return `피해 +${percent(level * 3.2)}`;
-      if (id === "c_speed") return `공격 간격 -${percent(level * 0.9)}`;
-      if (id === "c_crit") return `치명 +${percent(level * 0.6)} · 치명피해 +${percent(level * 1)}`;
-      if (id === "a_power") return `피해 +${percent(level * 3)}`;
-      if (id === "a_mark") return `표식 피해 +${percent(level * 0.6)} · 지속 +${(level * 0.06).toFixed(2)}초`;
-      if (id === "a_crit") return `치명 +${percent(level * 0.7)} · 치명피해 +${percent(level * 1)}`;
-      if (id === "b_power") return `피해 +${percent(level * 3)}`;
-      if (id === "b_control") return `연발 간격 -${percent(level * 1)} · 사격 간격 -${percent(level * 0.4)}`;
+      const seconds = (value) => value.toFixed(2);
+      if (id === "c_power") return SchoolI18n.t("shop.effect.c_power", { value: percent(level * 3.2) });
+      if (id === "c_speed") return SchoolI18n.t("shop.effect.c_speed", { value: percent(level * 0.9) });
+      if (id === "c_crit") return SchoolI18n.t("shop.effect.c_crit", { crit: percent(level * 0.6), critDmg: percent(level * 1) });
+      if (id === "a_power") return SchoolI18n.t("shop.effect.a_power", { value: percent(level * 3) });
+      if (id === "a_mark") return SchoolI18n.t("shop.effect.a_mark", { mark: percent(level * 0.6), time: seconds(level * 0.06) });
+      if (id === "a_crit") return SchoolI18n.t("shop.effect.a_crit", { crit: percent(level * 0.7), critDmg: percent(level * 1) });
+      if (id === "b_power") return SchoolI18n.t("shop.effect.b_power", { value: percent(level * 3) });
+      if (id === "b_control") return SchoolI18n.t("shop.effect.b_control", { burst: percent(level * 1), fire: percent(level * 0.4) });
       if (id === "b_grenade") {
-        return level <= 0 ? "유탄 없음" : `유탄 ${getRifleGrenadeEveryForLevel(level)}세트마다`;
+        return level <= 0 ? SchoolI18n.t("shop.effect.b_grenade_none") : SchoolI18n.t("shop.effect.b_grenade", { every: getRifleGrenadeEveryForLevel(level) });
       }
-      if (id === "d_charge") return `직격 피해 +${percent(level * 3.4)}`;
-      if (id === "d_radius") return `폭발 반경 +${percent(level * 1.3)} · 폭발 피해 +${percent(level * 1)}`;
-      if (id === "d_slow") return `둔화 +${(level * 0.09).toFixed(2)}초`;
-      if (id === "e_power") return `피해 +${percent(level * 3.2)}`;
-      if (id === "e_focus") return `치명 +${percent(level * 0.6)} · 치명피해 +${percent(level * 2.5)}`;
+      if (id === "d_charge") return SchoolI18n.t("shop.effect.d_charge", { value: percent(level * 3.4) });
+      if (id === "d_radius") return SchoolI18n.t("shop.effect.d_radius", { radius: percent(level * 1.3), damage: percent(level * 1) });
+      if (id === "d_slow") return SchoolI18n.t("shop.effect.d_slow", { time: seconds(level * 0.09) });
+      if (id === "e_power") return SchoolI18n.t("shop.effect.e_power", { value: percent(level * 3.2) });
+      if (id === "e_focus") return SchoolI18n.t("shop.effect.e_focus", { crit: percent(level * 0.6), critDmg: percent(level * 2.5) });
       if (id === "e_pierce") {
-        return `관통 +${Math.floor(level / 5)} · 피해 +${percent(level * 0.8)}`;
+        return SchoolI18n.t("shop.effect.e_pierce", { pierce: Math.floor(level / 5), damage: percent(level * 0.8) });
       }
-      if (id === "f_burn") return `직격 +${percent(level * 2.6)} · 구역피해 +${percent(level * 0.6)}`;
-      if (id === "f_area") return `반경 +${Math.round(level * 1.5)} · 지속 +${(level * 0.05).toFixed(2)}초`;
-      if (id === "f_throw") return `피해 +${percent(level * 1.2)}`;
-      if (id === "g_voltage") return `피해 +${percent(level * 2.2)} · 스턴 +${(level * 0.03).toFixed(2)}초`;
-      if (id === "g_chain") return `전도 반경 +${Math.round(level * 2)} · 연쇄 +${Math.floor(level / 10)}`;
-      if (id === "g_control") return `공격 간격 -${percent(level * 0.6)} · 치명 +${percent(level * 0.35)}`;
-      if (id === "h_turret") return `터렛 출력 +${percent(level * 3.5)} · 속도 +${percent(level * 1.8)}`;
-      if (id === "h_wire") return `철조망 피해 +${percent(level * 3.2)} · 둔화 +${percent(level * 1.8)}`;
-      if (id === "h_barricade") return `보강량 +${percent(level * 2)} · 보호막 +${percent(level * 2.5)}`;
-      return `강화 +${percent(level * 2)}`;
+      if (id === "f_burn") return SchoolI18n.t("shop.effect.f_burn", { hit: percent(level * 2.6), zone: percent(level * 0.6) });
+      if (id === "f_area") return SchoolI18n.t("shop.effect.f_area", { radius: Math.round(level * 1.5), time: seconds(level * 0.05) });
+      if (id === "f_throw") return SchoolI18n.t("shop.effect.f_throw", { value: percent(level * 1.2) });
+      if (id === "g_voltage") return SchoolI18n.t("shop.effect.g_voltage", { damage: percent(level * 2.2), time: seconds(level * 0.03) });
+      if (id === "g_chain") return SchoolI18n.t("shop.effect.g_chain", { radius: Math.round(level * 2), jumps: Math.floor(level / 10) });
+      if (id === "g_control") return SchoolI18n.t("shop.effect.g_control", { interval: percent(level * 0.6), crit: percent(level * 0.35) });
+      if (id === "h_turret") return SchoolI18n.t("shop.effect.h_turret", { power: percent(level * 3.5), speed: percent(level * 1.8) });
+      if (id === "h_wire") return SchoolI18n.t("shop.effect.h_wire", { damage: percent(level * 3.2), slow: percent(level * 1.8) });
+      if (id === "h_barricade") return SchoolI18n.t("shop.effect.h_barricade", { repair: percent(level * 2), shield: percent(level * 2.5) });
+      return SchoolI18n.t("shop.effect.fallback", { value: percent(level * 2) });
     }
 
     getShopUpgradeStatText(upgrade, level) {
+      const current = this.getShopUpgradeEffectLine(upgrade.id, level);
       if (level >= SHOP_MAX_LEVEL) {
-        return `${this.getShopUpgradeEffectLine(upgrade.id, level)}\n최대 강화 완료`;
+        return SchoolI18n.t("shop.effect.maxed", { current });
       }
-      return `${this.getShopUpgradeEffectLine(upgrade.id, level)}\n다음: ${this.getShopUpgradeEffectLine(upgrade.id, level + 1)}`;
+      return SchoolI18n.t("shop.effect.next", { current, next: this.getShopUpgradeEffectLine(upgrade.id, level + 1) });
     }
 
 
@@ -5538,7 +5578,7 @@
       }
       const shopUI = this.shopUI;
       this.unlockAudio();
-      this.showShopActionLoading(this.profileReady ? "강화 구매 중" : "프로필 동기화 중");
+      this.showShopActionLoading(this.profileReady ? SchoolI18n.t("shop.buying") : SchoolI18n.t("loading.profile"));
       try {
         await this.ensureServerProfile();
       } catch (error) {
@@ -5551,16 +5591,16 @@
       const level = this.getMetaUpgradeLevel(id);
       if (level >= SHOP_MAX_LEVEL) {
         this.playSfx("upgrade_maxed", 0.78);
-        this.showToast("이미 최대 강화입니다", COLORS.gold);
+        this.showToast(SchoolI18n.t("toast.maxed"), COLORS.gold);
         return;
       }
       const cost = getShopUpgradeCost(level);
       if (this.meta.coins < cost) {
         this.playSfx("core", 0.65);
-        this.showToast("코인이 부족합니다", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.noCoins"), COLORS.red);
         return;
       }
-      this.showShopActionLoading("강화 구매 중");
+      this.showShopActionLoading(SchoolI18n.t("shop.buying"));
       try {
         const result = await this.postProfileAction("/school-zombie/profile/buy-upgrade", { upgrade_id: id });
         if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
@@ -5572,7 +5612,7 @@
         if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         this.playSfx("core", 0.65);
-        this.showToast("구매 처리 실패", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.buyFail"), COLORS.red);
         this.ensureServerProfile({ force: true, quiet: true }).then(() => {
           if (!this.disposed && this.shopUI === shopUI && this.mode === "shop") {
             shopUI?.refresh();
@@ -5601,7 +5641,7 @@
       }
       const shopUI = this.shopUI;
       this.unlockAudio();
-      this.showShopActionLoading(this.profileReady ? "강화 확인 중" : "프로필 동기화 중");
+      this.showShopActionLoading(this.profileReady ? SchoolI18n.t("shop.checking") : SchoolI18n.t("loading.profile"));
       try {
         await this.ensureServerProfile();
       } catch (error) {
@@ -5621,19 +5661,19 @@
         this.showShopResetConfirmLayer(refund);
         return;
       }
-      this.showShopActionLoading("강화 초기화 중");
+      this.showShopActionLoading(SchoolI18n.t("shop.resetting"));
       try {
         const result = await this.postProfileAction("/school-zombie/profile/reset-upgrades");
         if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         this.playSfx("coin");
         shopUI?.refresh();
-        this.showToast(`강화 초기화 +$${formatShopCost(result.refund || refund)}`, COLORS.gold);
+        this.showToast(SchoolI18n.t("toast.shopReset", { refund: `$${formatShopCost(result.refund || refund)}` }), COLORS.gold);
       } catch (error) {
         if (this.disposed || this.shopUI !== shopUI || this.mode !== "shop") return;
         this.clearShopActionLoading();
         this.playSfx("core", 0.65);
-        this.showToast("초기화 처리 실패", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.resetFail"), COLORS.red);
         this.ensureServerProfile({ force: true, quiet: true }).then(() => {
           if (!this.disposed && this.shopUI === shopUI && this.mode === "shop") {
             shopUI?.refresh();
@@ -5659,7 +5699,7 @@
       }
       this.unlockAudio();
       const previousMode = this.mode;
-      showRunLoadingOverlay("프로필 동기화 중");
+      showRunLoadingOverlay(SchoolI18n.t("loading.profile"));
       this.mode = "starting";
       try {
         await this.ensureServerProfile({ force: true });
@@ -5674,21 +5714,21 @@
         hideRunLoadingOverlay();
         return;
       }
-      updateRunLoadingOverlay("방어선 진입 중");
+      updateRunLoadingOverlay(SchoolI18n.t("loading.enterLine"));
       this.playSfx("start");
       this.startBgm("game");
       this.clearOverlay();
       this.resetRun();
       this.startRankSession();
-      updateRunLoadingOverlay("장비 점검 중");
+      updateRunLoadingOverlay(SchoolI18n.t("loading.checkGear"));
       await this.waitForGameplaySfxReady();
       if (this.disposed || this.mode !== "starting") {
         hideRunLoadingOverlay();
         return;
       }
       this.mode = "playing";
-      announceGameStatus("작전 시작. Escape 또는 Start로 일시정지하고 F 또는 오른쪽 범퍼로 속도를 바꿉니다.");
-      updateRunLoadingOverlay("전장 표시 중");
+      announceGameStatus(SchoolI18n.t("run.a11yStart"));
+      updateRunLoadingOverlay(SchoolI18n.t("loading.showField"));
       await waitForRenderFrames(2);
       hideRunLoadingOverlay();
     }
@@ -5710,7 +5750,7 @@
       this.resetRun();
       this.showMenu();
       if (earnedCoins > 0) {
-        this.showToast(`획득 $${earnedCoins}`, COLORS.gold);
+        this.showToast(SchoolI18n.t("toast.gained", { amount: earnedCoins }), COLORS.gold);
       }
     }
 
@@ -5738,7 +5778,7 @@
         return Math.max(0, Math.floor(Number(result.earned_coins) || 0));
       } catch (error) {
         this.playSfx("core", 0.65);
-        this.showToast("보상 동기화 실패", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.rewardFail"), COLORS.red);
         return 0;
       }
     }
@@ -5900,7 +5940,7 @@
     togglePause() {
       if (this.mode === "playing") {
         this.mode = "paused";
-        announceGameStatus(`일시정지. 스테이지 ${this.stage}, 웨이브 ${this.level}, 바리케이드 ${Math.round(this.coreHp)}. Escape 또는 Start로 계속합니다.`);
+        announceGameStatus(SchoolI18n.t("run.a11yPause", { stage: this.stage, wave: this.level, hp: Math.round(this.coreHp) }));
         if (this.ui.pauseText) {
           this.ui.pauseText.setText("▶");
         }
@@ -5912,7 +5952,7 @@
         }
         this.clearOverlay();
         this.mode = "playing";
-        announceGameStatus("작전을 계속합니다.");
+        announceGameStatus(SchoolI18n.t("run.a11yResume"));
         if (this.ui.pauseText) {
           this.ui.pauseText.setText("Ⅱ");
         }
@@ -5930,7 +5970,7 @@
       });
       const header = this.addOverlayHeader({
         y: 230,
-        title: "작전 일시정지",
+        title: SchoolI18n.t("pause.title"),
         kicker: "TACTICAL HOLD",
         subtitle: `STAGE ${String(this.stage).padStart(2, "0")} · WAVE ${String(this.level).padStart(2, "0")}`,
         accent: COLORS.gold,
@@ -5959,15 +5999,15 @@
         return [...panel.objects, labelText, valueText];
       };
       const snapshotObjects = [
-        ...addSnapshot(132, "생존 시간", formatRunClock(this.elapsed), COLORS.blue),
-        ...addSnapshot(270, "처치", `${this.kills}`, COLORS.red),
-        ...addSnapshot(408, "보급", `$${this.getDisplayedCoins()}`, COLORS.gold)
+        ...addSnapshot(132, SchoolI18n.t("pause.time"), formatRunClock(this.elapsed), COLORS.blue),
+        ...addSnapshot(270, SchoolI18n.t("pause.kills"), `${this.kills}`, COLORS.red),
+        ...addSnapshot(408, SchoolI18n.t("hud.supply"), `$${this.getDisplayedCoins()}`, COLORS.gold)
       ];
 
       const corePanel = this.addCommandPanel(270, 456, 400, 88, 525, this.coreHp < this.maxCoreHp * 0.35 ? COLORS.red : COLORS.green, {
         alpha: 0.78,
       });
-      const coreTitle = this.add.text(92, 431, "바리케이드 무결성", {
+      const coreTitle = this.add.text(92, 431, SchoolI18n.t("pause.core"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 12,
         fontStyle: "800",
@@ -5993,7 +6033,7 @@
       const speedPanel = this.addCommandPanel(270, 540, 400, 54, 525, COLORS.blue, {
         alpha: 0.72,
       });
-      const speedLabel = this.add.text(92, 540, "전투 속도", {
+      const speedLabel = this.add.text(92, 540, SchoolI18n.t("pause.speed"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 13,
         fontStyle: "800",
@@ -6016,17 +6056,17 @@
       });
       items.push(speedLabel, this.ui.pauseSpeedValue, speedHit);
 
-      const resume = this.addTacticalMenuButton(270, 636, 382, 78, "계속 방어", 530, () => this.togglePause(), COLORS.gold, {
+      const resume = this.addTacticalMenuButton(270, 636, 382, 78, SchoolI18n.t("pause.resume"), 530, () => this.togglePause(), COLORS.gold, {
         primary: true,
         kicker: "RESUME · ESC / START",
         hitHeight: 82
       });
-      const exit = this.addTacticalMenuButton(270, 734, 382, 62, "작전 종료", 530, () => this.showQuitConfirmation(), COLORS.red, {
+      const exit = this.addTacticalMenuButton(270, 734, 382, 62, SchoolI18n.t("pause.exit"), 530, () => this.showQuitConfirmation(), COLORS.red, {
         kicker: "BANK SUPPLIES & RETURN",
         hitHeight: 76,
         fontSize: 20
       });
-      const hint = this.add.text(270, 800, "홈 버튼은 먼저 이 화면을 열어 진행 손실을 방지합니다", {
+      const hint = this.add.text(270, 800, SchoolI18n.t("pause.hint"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 11,
         fontStyle: "800",
@@ -6062,7 +6102,7 @@
         fontStyle: "800",
         color: "#ff9b94"
       }).setOrigin(0.5).setDepth(573);
-      const title = this.add.text(270, 399, "작전을 종료할까요?", {
+      const title = this.add.text(270, 399, SchoolI18n.t("pause.quitTitle"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 30,
         fontStyle: "800",
@@ -6070,7 +6110,7 @@
         stroke: "#030607",
         strokeThickness: 1
       }).setOrigin(0.5).setDepth(573);
-      const body = this.add.text(270, 463, `현재 보급 $${this.getDisplayedCoins()}을 정산하고\n메인 화면으로 복귀합니다.`, {
+      const body = this.add.text(270, 463, SchoolI18n.t("pause.quitBody", { coins: this.getDisplayedCoins() }), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 16,
         fontStyle: "800",
@@ -6081,11 +6121,11 @@
         lineSpacing: 7
       }).setOrigin(0.5).setDepth(573);
       items.push(kicker, title, body);
-      const cancel = this.addTacticalMenuButton(164, 570, 180, 60, "계속 방어", 575, () => this.showPauseOverlay(), COLORS.blue, {
+      const cancel = this.addTacticalMenuButton(164, 570, 180, 60, SchoolI18n.t("pause.resume"), 575, () => this.showPauseOverlay(), COLORS.blue, {
         hitHeight: 76,
         fontSize: 18
       });
-      const confirm = this.addTacticalMenuButton(376, 570, 180, 60, "종료", 575, () => this.returnToMenuFromRun(), COLORS.red, {
+      const confirm = this.addTacticalMenuButton(376, 570, 180, 60, SchoolI18n.t("pause.quit"), 575, () => this.returnToMenuFromRun(), COLORS.red, {
         hitHeight: 76,
         fontSize: 18
       });
@@ -6388,7 +6428,7 @@
             ease: "Sine.easeOut"
           });
         }
-        this.showToast("터렛 출력 강화", SKILL_ACCENTS.engineer);
+        this.showToast(SchoolI18n.t("skill.h-turret.titleOwned"), SKILL_ACCENTS.engineer);
         return;
       }
 
@@ -9394,7 +9434,7 @@
         return;
       }
       this.mode = "skill";
-      announceGameStatus(`웨이브 ${this.level + 1} 보급 선택. 숫자 1부터 3으로 전술을 고르고 R로 한 번 리롤할 수 있습니다.`);
+      announceGameStatus(SchoolI18n.t("skill.a11yOpen", { wave: this.level + 1 }));
       this.playSfx("wave_clear", 0.92);
       this.cancelRunTimers();
       const previousStage = this.stage;
@@ -9432,9 +9472,9 @@
       items.push(this.add.ellipse(270, 514, 474, 720, COLORS.gold, 0.045).setDepth(522.2));
       const header = this.addOverlayHeader({
         y: 118,
-        title: "전술 보급 선택",
+        title: SchoolI18n.t("skill.title"),
         kicker: "WAVE CLEAR · SUPPLY AUTHORIZED",
-        subtitle: `WAVE ${String(this.level).padStart(2, "0")} · 세 가지 중 하나를 선택하세요`,
+        subtitle: SchoolI18n.t("skill.subtitle", { wave: String(this.level).padStart(2, "0") }),
         accent: COLORS.gold,
         depth: 523
       });
@@ -9442,7 +9482,7 @@
 
       this.renderSkillChoiceCards();
       this.addSkillRerollButton();
-      items.push(this.add.text(270, 912, "카드를 탭하거나 숫자 1–3으로 즉시 적용", {
+      items.push(this.add.text(270, 912, SchoolI18n.t("skill.hint"), {
         fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 14,
         fontStyle: "900",
@@ -9496,7 +9536,7 @@
       this.skillChoiceFocusHandlers.forEach((handler, handlerIndex) => handler?.(handlerIndex === normalized));
       const choice = this.currentSkillChoices[normalized];
       if (choice) {
-        announceGameStatus(`전술 ${normalized + 1}. ${choice.title}. ${String(choice.desc || "").replace(/\n/g, " ")}`);
+        announceGameStatus(SchoolI18n.t("skill.a11yCard", { index: normalized + 1, title: choice.title, desc: String(choice.desc || "").replace(/\n/g, " ") }));
       }
     }
 
@@ -9523,7 +9563,7 @@
     addSkillRerollButton() {
       const cost = this.getSkillRerollCost();
       const button = this.addTacticalMenuButton(270, 858, 230, 52,
-        this.skillRerollUsed ? "리롤 완료" : `R · 리롤 $${cost}`, 535,
+        this.skillRerollUsed ? SchoolI18n.t("skill.rerollDone") : SchoolI18n.t("skill.reroll", { cost }), 535,
         () => this.rerollSkillChoices(), COLORS.gold, { fontSize: 18, hitHeight: 76, disabled: this.skillRerollUsed });
       this.skillRerollButtonObjects = button;
     }
@@ -9531,7 +9571,7 @@
     updateSkillRerollButton() {
       const button = this.skillRerollButtonObjects;
       if (!button?.text?.active) return;
-      button.text.setText(this.skillRerollUsed ? "리롤 완료" : `R · 리롤 $${this.getSkillRerollCost()}`);
+      button.text.setText(this.skillRerollUsed ? SchoolI18n.t("skill.rerollDone") : SchoolI18n.t("skill.reroll", { cost: this.getSkillRerollCost() }));
       button.frame.setTint(this.skillRerollUsed ? 0x777a71 : 0xeeeae0);
       button.text.setAlpha(this.skillRerollUsed ? 0.55 : 1);
       button.wash.setAlpha(0);
@@ -9546,7 +9586,7 @@
       const cost = this.getSkillRerollCost();
       if (this.coins < cost) {
         this.playSfx("core", 0.65);
-        this.showToast("코인이 부족합니다", COLORS.red);
+        this.showToast(SchoolI18n.t("toast.noCoins"), COLORS.red);
         return;
       }
       const previousSignature = this.currentSkillChoiceSignature;
@@ -9557,7 +9597,7 @@
       this.renderSkillChoiceCards(previousSignature);
       this.updateSkillRerollButton();
       this.updateHud();
-      this.showToast(`리롤 -$${cost}`, COLORS.gold);
+      this.showToast(SchoolI18n.t("toast.reroll", { cost }), COLORS.gold);
     }
 
     formatPercent(value) {
@@ -9569,7 +9609,7 @@
     }
 
     formatSeconds(value) {
-      return `${value.toFixed(2)}초`;
+      return SchoolI18n.t("unit.seconds", { value: value.toFixed(2) });
     }
 
     formatMs(value) {
@@ -9608,10 +9648,13 @@
       add("c", {
         id: "c-impact",
         icon: "skill-pistol-impact",
-        tag: "권총",
-        title: "강화 탄환",
-        desc: "기본 탄환의 위력을\n안정적으로 끌어올립니다.",
-        stat: `피해 ${this.formatPercent(pistol.damageBoost)} → ${this.formatPercent(pistol.damageBoost * 1.12)}`,
+        tag: SchoolI18n.t("tag.pistol"),
+        title: SchoolI18n.t("skill.c-impact.title"),
+        desc: SchoolI18n.t("skill.c-impact.desc"),
+        stat: SchoolI18n.t("skill.stat.damage", {
+          from: this.formatPercent(pistol.damageBoost),
+          to: this.formatPercent(pistol.damageBoost * 1.12)
+        }),
         available: pistol.damageBoost < 2.2,
         apply: () => {
           const defender = this.getDefenderById("c");
@@ -9621,10 +9664,13 @@
       add("c", {
         id: "c-rapid",
         icon: "skill-pistol-rapid",
-        tag: "권총",
-        title: "권총 속사",
-        desc: "가까이 붙은 적을\n더 빠르게 끊어냅니다.",
-        stat: `공격 간격 ${this.formatSeconds(pistol.rate)} → ${this.formatSeconds(Math.max(pistol.baseRate * 0.52, pistol.rate * 0.82))}`,
+        tag: SchoolI18n.t("tag.pistol"),
+        title: SchoolI18n.t("skill.c-rapid.title"),
+        desc: SchoolI18n.t("skill.c-rapid.desc"),
+        stat: SchoolI18n.t("skill.stat.interval", {
+          from: this.formatSeconds(pistol.rate),
+          to: this.formatSeconds(Math.max(pistol.baseRate * 0.52, pistol.rate * 0.82))
+        }),
         available: pistol.rate > pistol.baseRate * 0.54,
         apply: () => {
           const defender = this.getDefenderById("c");
@@ -9634,10 +9680,13 @@
       add("c", {
         id: "c-multishot",
         icon: "skill-multishot",
-        tag: "권총",
-        title: "연속 사격",
-        desc: "한 번의 자동 사격을\n빠르게 이어 쏩니다.",
-        stat: `연속 사격 ${pistol.burstCount}회 → ${Math.min(4, pistol.burstCount + 1)}회`,
+        tag: SchoolI18n.t("tag.pistol"),
+        title: SchoolI18n.t("skill.c-multishot.title"),
+        desc: SchoolI18n.t("skill.c-multishot.desc"),
+        stat: SchoolI18n.t("skill.stat.followup", {
+          from: pistol.burstCount,
+          to: Math.min(4, pistol.burstCount + 1)
+        }),
         available: pistol.burstCount < 4,
         apply: () => {
           const defender = this.getDefenderById("c");
@@ -9647,10 +9696,15 @@
       add("c", {
         id: "c-pierce",
         icon: "skill-pistol-pierce",
-        tag: "권총",
-        title: "관통 탄환",
-        desc: "앞줄을 뚫고\n뒤쪽 좀비까지 맞춥니다.",
-        stat: `관통 ${pistol.pierce} → ${pistol.pierce + 1}\n피해 ${this.formatPercent(pistol.damageBoost)} → ${this.formatPercent(pistol.damageBoost * 1.08)}`,
+        tag: SchoolI18n.t("tag.pistol"),
+        title: SchoolI18n.t("skill.c-pierce.title"),
+        desc: SchoolI18n.t("skill.c-pierce.desc"),
+        stat: SchoolI18n.t("skill.stat.pierceDamage", {
+          pierceFrom: pistol.pierce,
+          pierceTo: pistol.pierce + 1,
+          from: this.formatPercent(pistol.damageBoost),
+          to: this.formatPercent(pistol.damageBoost * 1.08)
+        }),
         available: pistol.pierce < 2,
         apply: () => {
           const defender = this.getDefenderById("c");
@@ -9661,10 +9715,13 @@
       add("a", {
         id: "a-force",
         icon: "skill-arrow-force",
-        tag: "석궁",
-        title: "고장력 석궁 현",
-        desc: "석궁 현의 장력을 높여\n정면 피해를 강화합니다.",
-        stat: `피해 ${this.formatPercent(bow.damageBoost)} → ${this.formatPercent(bow.damageBoost * 1.1)}`,
+        tag: SchoolI18n.t("tag.crossbow"),
+        title: SchoolI18n.t("skill.a-force.title"),
+        desc: SchoolI18n.t("skill.a-force.desc"),
+        stat: SchoolI18n.t("skill.stat.damage", {
+          from: this.formatPercent(bow.damageBoost),
+          to: this.formatPercent(bow.damageBoost * 1.1)
+        }),
         available: bow.damageBoost < 2.2,
         apply: () => {
           const defender = this.getDefenderById("a");
@@ -9674,10 +9731,15 @@
       add("a", {
         id: "a-rally",
         icon: "skill-rally",
-        tag: "석궁",
-        title: "집중 호흡",
-        desc: "조준에 집중할수록\n치명타가 날카로워집니다.",
-        stat: `치명률 ${this.formatPercent(bow.critChance)} → ${this.formatPercent(Math.min(0.72, bow.critChance + 0.14))}\n치명 피해 ${this.formatPercent(bow.critMultiplier)} → ${this.formatPercent(bow.critMultiplier + 0.35)}`,
+        tag: SchoolI18n.t("tag.crossbow"),
+        title: SchoolI18n.t("skill.a-rally.title"),
+        desc: SchoolI18n.t("skill.a-rally.desc"),
+        stat: SchoolI18n.t("skill.stat.crit", {
+          critFrom: this.formatPercent(bow.critChance),
+          critTo: this.formatPercent(Math.min(0.72, bow.critChance + 0.14)),
+          dmgFrom: this.formatPercent(bow.critMultiplier),
+          dmgTo: this.formatPercent(bow.critMultiplier + 0.35)
+        }),
         apply: () => {
           const defender = this.getDefenderById("a");
           defender.critChance = Math.min(0.72, defender.critChance + 0.14);
@@ -9687,10 +9749,15 @@
       add("a", {
         id: "a-mark",
         icon: "skill-mark",
-        tag: "석궁",
-        title: "약점 표식",
-        desc: "표식이 붙은 적이\n더 큰 피해를 받습니다.",
-        stat: `표식 피해 ${this.formatBonus(bow.markDamageBonus)} → ${this.formatBonus(bow.markDamageBonus + 0.12)}\n표식 지속 ${this.formatSeconds(bow.markDuration)} → ${this.formatSeconds(bow.markDuration + 1.8)}`,
+        tag: SchoolI18n.t("tag.crossbow"),
+        title: SchoolI18n.t("skill.a-mark.title"),
+        desc: SchoolI18n.t("skill.a-mark.desc"),
+        stat: SchoolI18n.t("skill.stat.mark", {
+          from: this.formatBonus(bow.markDamageBonus),
+          to: this.formatBonus(bow.markDamageBonus + 0.12),
+          timeFrom: this.formatSeconds(bow.markDuration),
+          timeTo: this.formatSeconds(bow.markDuration + 1.8)
+        }),
         accent: 0xffd978,
         accentHex: "#ffd978",
         apply: () => {
@@ -9702,10 +9769,15 @@
       add("a", {
         id: "a-pin",
         icon: "skill-arrow-pin",
-        tag: "석궁",
-        title: "속박 볼트",
-        desc: "맞은 좀비의 발을\n잠시 묶어둡니다.",
-        stat: `둔화 ${this.formatSeconds(bow.slowDuration)} → ${this.formatSeconds(bow.slowDuration + 0.75)}\n표식 피해 ${this.formatBonus(bow.markDamageBonus)} → ${this.formatBonus(bow.markDamageBonus + 0.04)}`,
+        tag: SchoolI18n.t("tag.crossbow"),
+        title: SchoolI18n.t("skill.a-pin.title"),
+        desc: SchoolI18n.t("skill.a-pin.desc"),
+        stat: SchoolI18n.t("skill.stat.slowMark", {
+          slowFrom: this.formatSeconds(bow.slowDuration),
+          slowTo: this.formatSeconds(bow.slowDuration + 0.75),
+          markFrom: this.formatBonus(bow.markDamageBonus),
+          markTo: this.formatBonus(bow.markDamageBonus + 0.04)
+        }),
         apply: () => {
           const defender = this.getDefenderById("a");
           defender.slowDuration += 0.75;
@@ -9717,10 +9789,15 @@
       add("a", {
         id: "a-pierce",
         icon: "skill-arrow-pierce",
-        tag: "석궁",
-        title: "관통 볼트",
-        desc: "볼트가 깊게 박혀\n일렬의 적을 꿰뚫습니다.",
-        stat: `관통 ${bow.pierce} → ${bow.pierce + 1}\n피해 ${this.formatPercent(bow.damageBoost)} → ${this.formatPercent(bow.damageBoost * 1.1)}`,
+        tag: SchoolI18n.t("tag.crossbow"),
+        title: SchoolI18n.t("skill.a-pierce.title"),
+        desc: SchoolI18n.t("skill.a-pierce.desc"),
+        stat: SchoolI18n.t("skill.stat.pierceDamage", {
+          pierceFrom: bow.pierce,
+          pierceTo: bow.pierce + 1,
+          from: this.formatPercent(bow.damageBoost),
+          to: this.formatPercent(bow.damageBoost * 1.1)
+        }),
         available: bow.pierce < 3,
         apply: () => {
           const defender = this.getDefenderById("a");
@@ -9732,10 +9809,13 @@
       add("b", {
         id: "b-caliber",
         icon: "skill-rifle-caliber",
-        tag: "소총",
-        title: "대구경 탄창",
-        desc: "기본 소총탄의 저지력을\n한 단계 끌어올립니다.",
-        stat: `피해 ${this.formatPercent(rifle.damageBoost)} → ${this.formatPercent(rifle.damageBoost * 1.09)}`,
+        tag: SchoolI18n.t("tag.rifle"),
+        title: SchoolI18n.t("skill.b-caliber.title"),
+        desc: SchoolI18n.t("skill.b-caliber.desc"),
+        stat: SchoolI18n.t("skill.stat.damage", {
+          from: this.formatPercent(rifle.damageBoost),
+          to: this.formatPercent(rifle.damageBoost * 1.09)
+        }),
         available: rifle.damageBoost < 2.2,
         apply: () => {
           const defender = this.getDefenderById("b");
@@ -9745,12 +9825,25 @@
       add("b", {
         id: "b-barrage",
         icon: "skill-rifle-grenade",
-        tag: "소총",
-        title: "하부 유탄",
-        desc: "연발 중간마다\n소형 폭발을 섞습니다.",
+        tag: SchoolI18n.t("tag.rifle"),
+        title: SchoolI18n.t("skill.b-barrage.title"),
+        desc: SchoolI18n.t("skill.b-barrage.desc"),
         stat: rifle.rocketEvery === 0
-          ? `유탄 없음 → ${RIFLE_GRENADE_INITIAL_INTERVAL}세트\n폭발 ${this.formatPercent(rifleGrenadeDamageBoost)}→${this.formatPercent(rifleGrenadeDamageBoost * 1.2)} · 범위 ${this.formatPercent(rifleGrenadeRadiusBoost)}→${this.formatPercent(rifleGrenadeRadiusBoost * 1.1)}`
-          : `유탄 ${rifle.rocketEvery}→${getNextRifleGrenadeEvery(rifle.rocketEvery)}세트\n폭발 ${this.formatPercent(rifleGrenadeDamageBoost)}→${this.formatPercent(rifleGrenadeDamageBoost * 1.2)} · 범위 ${this.formatPercent(rifleGrenadeRadiusBoost)}→${this.formatPercent(rifleGrenadeRadiusBoost * 1.1)}`,
+          ? SchoolI18n.t("skill.stat.grenadeUnlock", {
+            sets: RIFLE_GRENADE_INITIAL_INTERVAL,
+            blastFrom: this.formatPercent(rifleGrenadeDamageBoost),
+            blastTo: this.formatPercent(rifleGrenadeDamageBoost * 1.2),
+            areaFrom: this.formatPercent(rifleGrenadeRadiusBoost),
+            areaTo: this.formatPercent(rifleGrenadeRadiusBoost * 1.1)
+          })
+          : SchoolI18n.t("skill.stat.grenade", {
+            from: rifle.rocketEvery,
+            to: getNextRifleGrenadeEvery(rifle.rocketEvery),
+            blastFrom: this.formatPercent(rifleGrenadeDamageBoost),
+            blastTo: this.formatPercent(rifleGrenadeDamageBoost * 1.2),
+            areaFrom: this.formatPercent(rifleGrenadeRadiusBoost),
+            areaTo: this.formatPercent(rifleGrenadeRadiusBoost * 1.1)
+          }),
         available: rifle.rocketEvery !== RIFLE_GRENADE_MIN_INTERVAL,
         apply: () => {
           const defender = this.getDefenderById("b");
@@ -9762,10 +9855,15 @@
       add("b", {
         id: "b-rifle",
         icon: "skill-barrage",
-        tag: "소총",
-        title: "연발 제어",
-        desc: "여러 적에게\n탄막을 짧게 끊어 쏩니다.",
-        stat: `연사 ${rifle.burstCount}회 → ${Math.min(6, rifle.burstCount + rifleBurstGain)}회\n간격 ${this.formatMs(rifle.burstDelay)} → ${this.formatMs(Math.max(MIN_CHAIN_SHOT_DELAY, rifle.burstDelay * 0.86))}`,
+        tag: SchoolI18n.t("tag.rifle"),
+        title: SchoolI18n.t("skill.b-rifle.title"),
+        desc: SchoolI18n.t("skill.b-rifle.desc"),
+        stat: SchoolI18n.t("skill.stat.burstControl", {
+          from: rifle.burstCount,
+          to: Math.min(6, rifle.burstCount + rifleBurstGain),
+          gapFrom: this.formatMs(rifle.burstDelay),
+          gapTo: this.formatMs(Math.max(MIN_CHAIN_SHOT_DELAY, rifle.burstDelay * 0.86))
+        }),
         available: rifle.burstCount < 6 || rifle.burstDelay > MIN_CHAIN_SHOT_DELAY,
         apply: () => {
           const defender = this.getDefenderById("b");
@@ -9776,10 +9874,15 @@
       add("b", {
         id: "b-suppress",
         icon: "skill-rifle-suppress",
-        tag: "소총",
-        title: "제압 사격",
-        desc: "연발 탄막으로\n전진 속도를 끊습니다.",
-        stat: `둔화 ${this.formatSeconds(rifle.slowDuration)} → ${this.formatSeconds(rifle.slowDuration + 0.22)}\n피해 ${this.formatPercent(rifle.damageBoost)} → ${this.formatPercent(rifle.damageBoost * 1.08)}`,
+        tag: SchoolI18n.t("tag.rifle"),
+        title: SchoolI18n.t("skill.b-suppress.title"),
+        desc: SchoolI18n.t("skill.b-suppress.desc"),
+        stat: SchoolI18n.t("skill.stat.slowDamage", {
+          slowFrom: this.formatSeconds(rifle.slowDuration),
+          slowTo: this.formatSeconds(rifle.slowDuration + 0.22),
+          from: this.formatPercent(rifle.damageBoost),
+          to: this.formatPercent(rifle.damageBoost * 1.08)
+        }),
         available: rifle.slowDuration < 0.66,
         apply: () => {
           const defender = this.getDefenderById("b");
@@ -9790,10 +9893,13 @@
       add("d", {
         id: "d-warhead",
         icon: "skill-rocket-warhead",
-        tag: "로켓",
-        title: "고밀도 탄두",
-        desc: "기본 로켓의 폭압을\n더 묵직하게 압축합니다.",
-        stat: `로켓 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.14)}`,
+        tag: SchoolI18n.t("tag.rocket"),
+        title: SchoolI18n.t("skill.d-warhead.title"),
+        desc: SchoolI18n.t("skill.d-warhead.desc"),
+        stat: SchoolI18n.t("skill.stat.rocketDamage", {
+          from: this.formatPercent(rocket.damageBoost),
+          to: this.formatPercent(rocket.damageBoost * 1.14)
+        }),
         available: rocket.damageBoost < 2.2,
         apply: () => {
           const defender = this.getDefenderById("d");
@@ -9803,10 +9909,15 @@
       add("d", {
         id: "d-frost",
         icon: "skill-frost",
-        tag: "로켓",
-        title: "냉각 탄두",
-        desc: "폭발에 휘말린 적을\n느리게 만듭니다.",
-        stat: `둔화 ${this.formatSeconds(rocket.slowDuration)} → ${this.formatSeconds(rocket.slowDuration + 1.4)}\n직격 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.22)}`,
+        tag: SchoolI18n.t("tag.rocket"),
+        title: SchoolI18n.t("skill.d-frost.title"),
+        desc: SchoolI18n.t("skill.d-frost.desc"),
+        stat: SchoolI18n.t("skill.stat.slowDirect", {
+          slowFrom: this.formatSeconds(rocket.slowDuration),
+          slowTo: this.formatSeconds(rocket.slowDuration + 1.4),
+          from: this.formatPercent(rocket.damageBoost),
+          to: this.formatPercent(rocket.damageBoost * 1.22)
+        }),
         apply: () => {
           const defender = this.getDefenderById("d");
           defender.slowDuration += 1.4;
@@ -9816,10 +9927,15 @@
       add("d", {
         id: "d-rocket",
         icon: "skill-rocket",
-        tag: "로켓",
-        title: "고폭 탄두",
-        desc: "몰려 있는 좀비를\n더 넓게 쓸어냅니다.",
-        stat: `반경 ${Math.round(rocket.splashRadius * rocket.splashRadiusBoost)} → ${Math.round(rocket.splashRadius * rocket.splashRadiusBoost * 1.12)}\n폭발 피해 ${this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost)} → ${this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost * 1.16)}`,
+        tag: SchoolI18n.t("tag.rocket"),
+        title: SchoolI18n.t("skill.d-rocket.title"),
+        desc: SchoolI18n.t("skill.d-rocket.desc"),
+        stat: SchoolI18n.t("skill.stat.radiusBlast", {
+          from: Math.round(rocket.splashRadius * rocket.splashRadiusBoost),
+          to: Math.round(rocket.splashRadius * rocket.splashRadiusBoost * 1.12),
+          dmgFrom: this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost),
+          dmgTo: this.formatPercent(rocket.splashDamageScale * rocket.splashDamageBoost * 1.16)
+        }),
         apply: () => {
           const defender = this.getDefenderById("d");
           defender.splashRadiusBoost *= 1.12;
@@ -9829,10 +9945,13 @@
       add("d", {
         id: "d-impact",
         icon: "skill-rocket-impact",
-        tag: "로켓",
-        title: "직격 장약",
-        desc: "정면으로 맞은 대상에게\n더 묵직하게 박힙니다.",
-        stat: `직격 피해 ${this.formatPercent(rocket.damageBoost)} → ${this.formatPercent(rocket.damageBoost * 1.28)}`,
+        tag: SchoolI18n.t("tag.rocket"),
+        title: SchoolI18n.t("skill.d-impact.title"),
+        desc: SchoolI18n.t("skill.d-impact.desc"),
+        stat: SchoolI18n.t("skill.stat.direct", {
+          from: this.formatPercent(rocket.damageBoost),
+          to: this.formatPercent(rocket.damageBoost * 1.28)
+        }),
         apply: () => {
           const defender = this.getDefenderById("d");
           defender.damageBoost *= 1.28;
@@ -9841,10 +9960,13 @@
       add("d", {
         id: "d-reload",
         icon: "skill-rocket-reload",
-        tag: "로켓",
-        title: "고속 장전",
-        desc: "무거운 탄두를\n더 빠르게 밀어 넣습니다.",
-        stat: `공격 간격 ${this.formatSeconds(rocket.rate)} → ${this.formatSeconds(Math.max(rocket.baseRate * 0.58, rocket.rate * 0.82))}`,
+        tag: SchoolI18n.t("tag.rocket"),
+        title: SchoolI18n.t("skill.d-reload.title"),
+        desc: SchoolI18n.t("skill.d-reload.desc"),
+        stat: SchoolI18n.t("skill.stat.interval", {
+          from: this.formatSeconds(rocket.rate),
+          to: this.formatSeconds(Math.max(rocket.baseRate * 0.58, rocket.rate * 0.82))
+        }),
         available: rocket.rate > rocket.baseRate * 0.6,
         apply: () => {
           const defender = this.getDefenderById("d");
@@ -9854,10 +9976,13 @@
       add("e", {
         id: "e-caliber",
         icon: "skill-sniper-caliber",
-        tag: "저격",
-        title: "대구경 탄환",
-        desc: "기본 저격탄의 관통력을\n순수 피해로 끌어올립니다.",
-        stat: `저격 피해 ${this.formatPercent(sniper.damageBoost)} → ${this.formatPercent(sniper.damageBoost * 1.13)}`,
+        tag: SchoolI18n.t("tag.sniper"),
+        title: SchoolI18n.t("skill.e-caliber.title"),
+        desc: SchoolI18n.t("skill.e-caliber.desc"),
+        stat: SchoolI18n.t("skill.stat.sniperDamage", {
+          from: this.formatPercent(sniper.damageBoost),
+          to: this.formatPercent(sniper.damageBoost * 1.13)
+        }),
         available: sniper.damageBoost < 2.2,
         apply: () => {
           const defender = this.getDefenderById("e");
@@ -9867,10 +9992,15 @@
       add("e", {
         id: "e-weakpoint",
         icon: "skill-sniper-weakpoint",
-        tag: "저격",
-        title: "약점 조준",
-        desc: "큰 위협을 노릴 때\n한 발의 위력이 커집니다.",
-        stat: `치명률 ${this.formatPercent(sniper.critChance)} → ${this.formatPercent(Math.min(0.78, sniper.critChance + 0.1))}\n치명 피해 ${this.formatPercent(sniper.critMultiplier)} → ${this.formatPercent(sniper.critMultiplier + 0.45)}`,
+        tag: SchoolI18n.t("tag.sniper"),
+        title: SchoolI18n.t("skill.e-weakpoint.title"),
+        desc: SchoolI18n.t("skill.e-weakpoint.desc"),
+        stat: SchoolI18n.t("skill.stat.crit", {
+          critFrom: this.formatPercent(sniper.critChance),
+          critTo: this.formatPercent(Math.min(0.78, sniper.critChance + 0.1)),
+          dmgFrom: this.formatPercent(sniper.critMultiplier),
+          dmgTo: this.formatPercent(sniper.critMultiplier + 0.45)
+        }),
         apply: () => {
           const defender = this.getDefenderById("e");
           defender.critChance = Math.min(0.78, defender.critChance + 0.1);
@@ -9880,10 +10010,15 @@
       add("e", {
         id: "e-sniper",
         icon: "skill-sniper",
-        tag: "저격",
-        title: "철갑 저격",
-        desc: "앞줄을 꿰뚫고\n뒤쪽 위협까지 노립니다.",
-        stat: `관통 ${sniper.pierce} → ${sniper.pierce + 1}\n저격 피해 ${this.formatPercent(sniper.damageBoost)} → ${this.formatPercent(sniper.damageBoost * 1.16)}`,
+        tag: SchoolI18n.t("tag.sniper"),
+        title: SchoolI18n.t("skill.e-sniper.title"),
+        desc: SchoolI18n.t("skill.e-sniper.desc"),
+        stat: SchoolI18n.t("skill.stat.pierceSniper", {
+          pierceFrom: sniper.pierce,
+          pierceTo: sniper.pierce + 1,
+          from: this.formatPercent(sniper.damageBoost),
+          to: this.formatPercent(sniper.damageBoost * 1.16)
+        }),
         apply: () => {
           const defender = this.getDefenderById("e");
           defender.pierce += 1;
@@ -9893,10 +10028,13 @@
       add("e", {
         id: "e-reload",
         icon: "skill-sniper-reload",
-        tag: "저격",
-        title: "정밀 재장전",
-        desc: "조준을 유지한 채\n다음 탄을 빠르게 올립니다.",
-        stat: `공격 간격 ${this.formatSeconds(sniper.rate)} → ${this.formatSeconds(Math.max(sniper.baseRate * 0.58, sniper.rate * 0.82))}`,
+        tag: SchoolI18n.t("tag.sniper"),
+        title: SchoolI18n.t("skill.e-reload.title"),
+        desc: SchoolI18n.t("skill.e-reload.desc"),
+        stat: SchoolI18n.t("skill.stat.interval", {
+          from: this.formatSeconds(sniper.rate),
+          to: this.formatSeconds(Math.max(sniper.baseRate * 0.58, sniper.rate * 0.82))
+        }),
         available: sniper.rate > sniper.baseRate * 0.6,
         apply: () => {
           const defender = this.getDefenderById("e");
@@ -9906,10 +10044,13 @@
       add("f", {
         id: "f-fuel",
         icon: "skill-fire-fuel",
-        tag: "화염",
-        title: "고열 연료",
-        desc: "화염병이 남기는 불길의\n연소 피해를 강화합니다.",
-        stat: `불길 피해 ${this.formatPercent(fire.fireZoneDamageScale)} → ${this.formatPercent(fire.fireZoneDamageScale + 0.045)}`,
+        tag: SchoolI18n.t("tag.fire"),
+        title: SchoolI18n.t("skill.f-fuel.title"),
+        desc: SchoolI18n.t("skill.f-fuel.desc"),
+        stat: SchoolI18n.t("skill.stat.flame", {
+          from: this.formatPercent(fire.fireZoneDamageScale),
+          to: this.formatPercent(fire.fireZoneDamageScale + 0.045)
+        }),
         available: fire.fireZoneDamageScale < 0.75,
         accent: SKILL_ACCENTS.fire,
         accentHex: SKILL_ACCENT_HEX.fire,
@@ -9921,10 +10062,15 @@
       add("f", {
         id: "f-zone",
         icon: "skill-rocket",
-        tag: "화염",
-        title: "번지는 불길",
-        desc: "화염병이 남기는 불길이\n더 넓게 번집니다.",
-        stat: `반경 ${Math.round(fire.fireZoneRadius)} → ${Math.round(fire.fireZoneRadius + 12)}\n구역 피해 ${this.formatPercent(fire.fireZoneDamageScale)} → ${this.formatPercent(fire.fireZoneDamageScale + 0.03)}`,
+        tag: SchoolI18n.t("tag.fire"),
+        title: SchoolI18n.t("skill.f-zone.title"),
+        desc: SchoolI18n.t("skill.f-zone.desc"),
+        stat: SchoolI18n.t("skill.stat.radiusZone", {
+          from: Math.round(fire.fireZoneRadius),
+          to: Math.round(fire.fireZoneRadius + 12),
+          dmgFrom: this.formatPercent(fire.fireZoneDamageScale),
+          dmgTo: this.formatPercent(fire.fireZoneDamageScale + 0.03)
+        }),
         accent: SKILL_ACCENTS.fire,
         accentHex: SKILL_ACCENT_HEX.fire,
         apply: () => {
@@ -9937,10 +10083,15 @@
       add("f", {
         id: "f-bottle",
         icon: "skill-rocket-impact",
-        tag: "화염",
-        title: "농축 화염병",
-        desc: "연소 기준 피해를 높이고\n불길 지속 피해를 강화합니다.",
-        stat: `연소 기준 ${this.formatPercent(fire.damageBoost)} → ${this.formatPercent(fire.damageBoost * 1.14)}\n구역 피해 ${this.formatPercent(fire.fireZoneDamageScale)} → ${this.formatPercent(fire.fireZoneDamageScale + 0.02)}`,
+        tag: SchoolI18n.t("tag.fire"),
+        title: SchoolI18n.t("skill.f-bottle.title"),
+        desc: SchoolI18n.t("skill.f-bottle.desc"),
+        stat: SchoolI18n.t("skill.stat.burnBase", {
+          from: this.formatPercent(fire.damageBoost),
+          to: this.formatPercent(fire.damageBoost * 1.14),
+          dmgFrom: this.formatPercent(fire.fireZoneDamageScale),
+          dmgTo: this.formatPercent(fire.fireZoneDamageScale + 0.02)
+        }),
         available: fire.damageBoost < 2,
         accent: SKILL_ACCENTS.fire,
         accentHex: SKILL_ACCENT_HEX.fire,
@@ -9953,10 +10104,15 @@
       add("f", {
         id: "f-sticky",
         icon: "skill-frost",
-        tag: "화염",
-        title: "끈적한 연소",
-        desc: "불길에 붙은 좀비가\n잠시 발이 묶입니다.",
-        stat: `둔화 ${this.formatSeconds(fire.slowDuration)} → ${this.formatSeconds(fire.slowDuration + 0.35)}\n지속 ${this.formatSeconds(fire.fireZoneDuration)} → ${this.formatSeconds(fire.fireZoneDuration + 0.45)}`,
+        tag: SchoolI18n.t("tag.fire"),
+        title: SchoolI18n.t("skill.f-sticky.title"),
+        desc: SchoolI18n.t("skill.f-sticky.desc"),
+        stat: SchoolI18n.t("skill.stat.slowHold", {
+          slowFrom: this.formatSeconds(fire.slowDuration),
+          slowTo: this.formatSeconds(fire.slowDuration + 0.35),
+          timeFrom: this.formatSeconds(fire.fireZoneDuration),
+          timeTo: this.formatSeconds(fire.fireZoneDuration + 0.45)
+        }),
         available: fire.slowDuration < 1.4,
         accent: SKILL_ACCENTS.fire,
         accentHex: SKILL_ACCENT_HEX.fire,
@@ -9970,10 +10126,13 @@
       add("g", {
         id: "g-amplifier",
         icon: "skill-shock-amplifier",
-        tag: "전기",
-        title: "증폭 전극",
-        desc: "기본 전격탄의 출력을 높여\n첫 타 피해를 강화합니다.",
-        stat: `전격 피해 ${this.formatPercent(shock.damageBoost)} → ${this.formatPercent(shock.damageBoost * 1.1)}`,
+        tag: SchoolI18n.t("tag.shock"),
+        title: SchoolI18n.t("skill.g-amplifier.title"),
+        desc: SchoolI18n.t("skill.g-amplifier.desc"),
+        stat: SchoolI18n.t("skill.stat.shock", {
+          from: this.formatPercent(shock.damageBoost),
+          to: this.formatPercent(shock.damageBoost * 1.1)
+        }),
         available: shock.damageBoost < 2.2,
         accent: SKILL_ACCENTS.shock,
         accentHex: SKILL_ACCENT_HEX.shock,
@@ -9985,10 +10144,15 @@
       add("g", {
         id: "g-voltage",
         icon: "skill-shock-amplifier",
-        tag: "전기",
-        title: "고전압 코일",
-        desc: "전격탄이 더 오래 붙잡아\n스턴 시간을 늘립니다.",
-        stat: `스턴 ${this.formatSeconds(shock.stunDuration)} → ${this.formatSeconds(Math.min(SHOCK_STUN_SKILL_MAX, shock.stunDuration + SHOCK_STUN_SKILL_GAIN))}\n연쇄 피해 ${this.formatPercent(shock.chainDamageScale)} → ${this.formatPercent(shock.chainDamageScale + 0.05)}`,
+        tag: SchoolI18n.t("tag.shock"),
+        title: SchoolI18n.t("skill.g-voltage.title"),
+        desc: SchoolI18n.t("skill.g-voltage.desc"),
+        stat: SchoolI18n.t("skill.stat.stunChain", {
+          stunFrom: this.formatSeconds(shock.stunDuration),
+          stunTo: this.formatSeconds(Math.min(SHOCK_STUN_SKILL_MAX, shock.stunDuration + SHOCK_STUN_SKILL_GAIN)),
+          from: this.formatPercent(shock.chainDamageScale),
+          to: this.formatPercent(shock.chainDamageScale + 0.05)
+        }),
         available: shock.stunDuration < SHOCK_STUN_SKILL_OFFER_LIMIT,
         accent: SKILL_ACCENTS.shock,
         accentHex: SKILL_ACCENT_HEX.shock,
@@ -10002,10 +10166,15 @@
       add("g", {
         id: "g-chain",
         icon: "skill-pierce",
-        tag: "전기",
-        title: "연쇄 전도",
-        desc: "전격이 근처 좀비로\n한 번 더 튀어 오릅니다.",
-        stat: `연쇄 ${shock.chainJumps}회 → ${shock.chainJumps + 1}회\n전도 반경 ${Math.round(shock.chainRadius)} → ${Math.round(shock.chainRadius + 18)}`,
+        tag: SchoolI18n.t("tag.shock"),
+        title: SchoolI18n.t("skill.g-chain.title"),
+        desc: SchoolI18n.t("skill.g-chain.desc"),
+        stat: SchoolI18n.t("skill.stat.chainRadius", {
+          from: shock.chainJumps,
+          to: shock.chainJumps + 1,
+          radiusFrom: Math.round(shock.chainRadius),
+          radiusTo: Math.round(shock.chainRadius + 18)
+        }),
         available: shock.chainJumps < 4,
         accent: SKILL_ACCENTS.shock,
         accentHex: SKILL_ACCENT_HEX.shock,
@@ -10019,10 +10188,15 @@
       add("g", {
         id: "g-overload",
         icon: "skill-barrage",
-        tag: "전기",
-        title: "과부하 방전",
-        desc: "전격탄의 급소 확률과\n치명 피해가 증가합니다.",
-        stat: `치명률 ${this.formatPercent(shock.critChance)} → ${this.formatPercent(Math.min(0.64, shock.critChance + 0.09))}\n치명 피해 ${this.formatPercent(shock.critMultiplier)} → ${this.formatPercent(shock.critMultiplier + 0.3)}`,
+        tag: SchoolI18n.t("tag.shock"),
+        title: SchoolI18n.t("skill.g-overload.title"),
+        desc: SchoolI18n.t("skill.g-overload.desc"),
+        stat: SchoolI18n.t("skill.stat.crit", {
+          critFrom: this.formatPercent(shock.critChance),
+          critTo: this.formatPercent(Math.min(0.64, shock.critChance + 0.09)),
+          dmgFrom: this.formatPercent(shock.critMultiplier),
+          dmgTo: this.formatPercent(shock.critMultiplier + 0.3)
+        }),
         accent: SKILL_ACCENTS.shock,
         accentHex: SKILL_ACCENT_HEX.shock,
         apply: () => {
@@ -10035,10 +10209,13 @@
       add("h", {
         id: "h-nail",
         icon: "skill-engineer-nail",
-        tag: "공병",
-        title: "강화 못탄",
-        desc: "기본 못탄을 더 단단하게\n가공해 피해를 높입니다.",
-        stat: `못탄 피해 ${this.formatPercent(engineer.damageBoost)} → ${this.formatPercent(engineer.damageBoost * 1.12)}`,
+        tag: SchoolI18n.t("tag.engineer"),
+        title: SchoolI18n.t("skill.h-nail.title"),
+        desc: SchoolI18n.t("skill.h-nail.desc"),
+        stat: SchoolI18n.t("skill.stat.nail", {
+          from: this.formatPercent(engineer.damageBoost),
+          to: this.formatPercent(engineer.damageBoost * 1.12)
+        }),
         available: engineer.damageBoost < 2.2,
         accent: SKILL_ACCENTS.engineer,
         accentHex: SKILL_ACCENT_HEX.engineer,
@@ -10050,10 +10227,13 @@
       add("h", {
         id: "h-turret",
         icon: "skill-barrage",
-        tag: "공병",
-        title: (this.turrets?.length || 0) > 0 ? "터렛 출력 강화" : "휴대 터렛",
-        desc: "방어선 앞에 자동 터렛을\n설치하거나 강화합니다.",
-        stat: `${(this.turrets?.length || 0) > 0 ? "터렛 설치됨" : "터렛 0/1 → 1/1"}\n출력 ${this.formatPercent(engineer.turretDamageBoost)} → ${this.formatPercent(engineer.turretDamageBoost * 1.08)}`,
+        tag: SchoolI18n.t("tag.engineer"),
+        title: (this.turrets?.length || 0) > 0 ? SchoolI18n.t("skill.h-turret.titleOwned") : SchoolI18n.t("skill.h-turret.title"),
+        desc: SchoolI18n.t("skill.h-turret.desc"),
+        stat: SchoolI18n.t((this.turrets?.length || 0) > 0 ? "skill.stat.turretOwned" : "skill.stat.turretNew", {
+          from: this.formatPercent(engineer.turretDamageBoost),
+          to: this.formatPercent(engineer.turretDamageBoost * 1.08)
+        }),
         accent: SKILL_ACCENTS.engineer,
         accentHex: SKILL_ACCENT_HEX.engineer,
         apply: () => {
@@ -10066,10 +10246,15 @@
       add("h", {
         id: "h-wire",
         icon: "skill-pierce",
-        tag: "공병",
-        title: this.barbedWire ? "철조망 보강" : "가시철조망",
-        desc: "진입로에 철조망을 깔아\n접근한 좀비를 늦춥니다.",
-        stat: `피해 ${this.formatPercent(engineer.wireDamageBoost)} → ${this.formatPercent(engineer.wireDamageBoost * 1.12)}\n둔화 ${this.formatPercent(engineer.wireSlowBoost)} → ${this.formatPercent(engineer.wireSlowBoost * 1.08)}`,
+        tag: SchoolI18n.t("tag.engineer"),
+        title: this.barbedWire ? SchoolI18n.t("skill.h-wire.titleOwned") : SchoolI18n.t("skill.h-wire.title"),
+        desc: SchoolI18n.t("skill.h-wire.desc"),
+        stat: SchoolI18n.t("skill.stat.wire", {
+          from: this.formatPercent(engineer.wireDamageBoost),
+          to: this.formatPercent(engineer.wireDamageBoost * 1.12),
+          slowFrom: this.formatPercent(engineer.wireSlowBoost),
+          slowTo: this.formatPercent(engineer.wireSlowBoost * 1.08)
+        }),
         accent: SKILL_ACCENTS.engineer,
         accentHex: SKILL_ACCENT_HEX.engineer,
         apply: () => {
@@ -10084,10 +10269,16 @@
       add("h", {
         id: "h-barricade",
         icon: "skill-max-hp",
-        tag: "공병",
-        title: "바리케이드 보강",
-        desc: "방어선에 장갑판과\n임시 보호막을 덧댑니다.",
-        stat: `HP ${Math.round(this.coreHp)}/${Math.round(this.maxCoreHp)} → ${Math.min(Math.round(this.maxCoreHp), Math.round(this.coreHp + barricadeRepair))}/${Math.round(this.maxCoreHp)}\n보호막 ${Math.round(this.shield)} → ${Math.round(this.shield + barricadeShield)}`,
+        tag: SchoolI18n.t("tag.engineer"),
+        title: SchoolI18n.t("skill.h-barricade.title"),
+        desc: SchoolI18n.t("skill.h-barricade.desc"),
+        stat: SchoolI18n.t("skill.stat.barricade", {
+          hpFrom: Math.round(this.coreHp),
+          hpTo: Math.min(Math.round(this.maxCoreHp), Math.round(this.coreHp + barricadeRepair)),
+          hpMax: Math.round(this.maxCoreHp),
+          shieldFrom: Math.round(this.shield),
+          shieldTo: Math.round(this.shield + barricadeShield)
+        }),
         accent: SKILL_ACCENTS.engineer,
         accentHex: SKILL_ACCENT_HEX.engineer,
         apply: () => {
@@ -10109,14 +10300,14 @@
           id: "core-full-repair",
           common: true,
           icon: "skill-full-repair",
-          tag: "방어",
-          title: "완전 복구",
-          desc: "방어선을 즉시\n최대 HP까지 수리",
+          tag: SchoolI18n.t("tag.defense"),
+          title: SchoolI18n.t("skill.core.title"),
+          desc: SchoolI18n.t("skill.core.desc"),
           stat: `HP ${currentHp}/${maxHp} → ${maxHp}/${maxHp}`,
           accent: SKILL_ACCENTS["core-full-repair"],
           accentHex: SKILL_ACCENT_HEX["core-full-repair"],
           sfx: "core_full_repair",
-          toast: "방어선 완전 복구",
+          toast: SchoolI18n.t("skill.core.toast"),
           apply: () => {
             this.coreHp = this.maxCoreHp;
           }
@@ -10186,7 +10377,7 @@
       const tagBg = this.add.rectangle(x - 64, y - 51, 86, 24, accent, 0.2)
         .setStrokeStyle(1, accent, 0.72)
         .setDepth(525);
-      const tagText = this.add.text(x - 64, y - 51, upgrade.tag || (isRecruit ? "영입" : "전술"), {
+      const tagText = this.add.text(x - 64, y - 51, upgrade.tag || (isRecruit ? SchoolI18n.t("tag.recruit") : SchoolI18n.t("tag.tactic")), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 13,
         fontStyle: "800",
@@ -10229,7 +10420,7 @@
           lineSpacing: 3,
           wordWrap: { width: 112, useAdvancedWrap: true }
         }).setOrigin(0.5).setDepth(527)
-        : this.add.text(x + 132, y - 10, "즉시 적용", {
+        : this.add.text(x + 132, y - 10, SchoolI18n.t("skill.now"), {
           resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
           fontSize: 14,
           fontStyle: "800",
@@ -10237,7 +10428,7 @@
         }).setOrigin(0.5).setDepth(527);
       const chooseBg = this.addSurfaceImage(x + 132, y + 49, 122, 38, "button")
         .setDepth(526);
-      const chooseText = this.add.text(x + 132, y + 49, "선택", {
+      const chooseText = this.add.text(x + 132, y + 49, SchoolI18n.t("skill.choose"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 17,
         fontStyle: "800",
@@ -10370,7 +10561,7 @@
       const tagBg = this.add.rectangle(x, tagY, isOwnerSkill ? 84 : 76, 24, accent, 0.2)
         .setStrokeStyle(1, accent, 0.78)
         .setDepth(528);
-      const tagText = this.add.text(x, tagY, upgrade.tag || "전술", {
+      const tagText = this.add.text(x, tagY, upgrade.tag || SchoolI18n.t("tag.tactic"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 12,
         fontStyle: "900",
@@ -10415,7 +10606,7 @@
       const chooseBg = this.add.rectangle(x, chooseY, 104, 30, 0x25271f, 0.9)
         .setStrokeStyle(1, accent, 0.85)
         .setDepth(529);
-      const chooseText = this.add.text(x, chooseY, "선택", {
+      const chooseText = this.add.text(x, chooseY, SchoolI18n.t("skill.choose"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 14,
         fontStyle: "900",
@@ -10519,7 +10710,7 @@
       const accent = upgrade.accent || SKILL_ACCENTS[upgrade.id] || COLORS.gold;
       this.createScreenPulse(accent);
       if (!upgrade.suppressToast) {
-        this.showToast(upgrade.toast || `${upgrade.title} 적용`, accent);
+        this.showToast(upgrade.toast || SchoolI18n.t("skill.applied", { title: upgrade.title }), accent);
       }
       this.updateHud();
     }
@@ -10563,7 +10754,7 @@
         return;
       }
       this.mode = "gameover";
-      announceGameStatus(`방어선 붕괴. 웨이브 ${this.level}, 처치 ${this.kills}. 기록을 등록하거나 메뉴로 돌아갈 수 있습니다.`);
+      announceGameStatus(SchoolI18n.t("over.a11y", { level: this.level, kills: this.kills }));
       this.setGameSpeed(DEFAULT_GAME_SPEED);
       this.cancelRunTimers();
       this.cancelSceneTimers();
@@ -10586,7 +10777,7 @@
       const summaryPanel = this.addSurfaceImage(270, 166, 424, 236).setAlpha(0.9)
         .setDepth(542);
       const summaryLine = this.add.rectangle(270, 62, 300, 4, 0xbf7963, 0.9).setDepth(543);
-      const summaryTitle = this.add.text(270, 98, "방어선 붕괴", {
+      const summaryTitle = this.add.text(270, 98, SchoolI18n.t("over.title"), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 42,
         fontStyle: "900",
@@ -10594,7 +10785,7 @@
         stroke: "#050607",
         strokeThickness: 6
       }).setOrigin(0.5).setDepth(544);
-      const summaryWave = this.add.text(270, 146, `웨이브 ${this.level} · 처치 ${this.kills}`, {
+      const summaryWave = this.add.text(270, 146, SchoolI18n.t("over.wave", { level: this.level, kills: this.kills }), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 22,
         fontStyle: "900",
@@ -10602,7 +10793,7 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544);
-      const summaryStage = this.add.text(270, 182, `클리어 St.${rankSnapshot.score} · 도달 St.${rankSnapshot.reachedStage}`, {
+      const summaryStage = this.add.text(270, 182, SchoolI18n.t("over.stage", { score: rankSnapshot.score, reached: rankSnapshot.reachedStage }), {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 19,
         fontStyle: "900",
@@ -10610,7 +10801,7 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544);
-      const summaryCoins = this.add.text(270, 216, `획득 $${earnedCoins} · 보유 $${this.meta.coins}`, {
+      const summaryCoins = this.add.text(270, 216, SchoolI18n.t("over.coins", { earned: earnedCoins, held: this.meta.coins }), {
         resolution: 2, fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -10627,7 +10818,7 @@
           returnToMenuOnSuccess: true
         });
       } else {
-        this.addOverlayButton(270, 286, 184, 52, "메뉴", 545, () => this.returnToGameStart(), COLORS.gold);
+        this.addOverlayButton(270, 286, 184, 52, SchoolI18n.t("over.menu"), 545, () => this.returnToGameStart(), COLORS.gold);
       }
     }
 
@@ -10651,8 +10842,8 @@
 
     updateHud() {
       this.ui.timer.setText(formatRunClock(this.elapsed));
-      const stageName = ["교문", "복도", "교실", "옥상"][Math.min(3, this.stage - 1)];
-      this.ui.stage.setText(`STAGE ${String(this.stage).padStart(2, "0")} · ${stageName}`);
+      const stageName = [SchoolI18n.t("stage.gate"), SchoolI18n.t("stage.hall"), SchoolI18n.t("stage.class"), SchoolI18n.t("stage.roof")][Math.min(3, this.stage - 1)];
+      this.ui.stage.setText(SchoolI18n.t("stage.line", { stage: String(this.stage).padStart(2, "0"), name: stageName }));
       this.ui.level.setText(`WAVE ${String(this.level).padStart(2, "0")} · ${this.killsInLevel} / ${this.levelNeed}`);
       this.ui.core.setText(`${Math.round(this.coreHp)} / ${this.maxCoreHp}`);
       this.ui.coins.setText(`$${this.getDisplayedCoins()}`);
@@ -10668,10 +10859,10 @@
       this.ui.shield.setText(`SHIELD +${shieldValue}`).setVisible(hasShield);
       this.shieldBar.setSize(380 * shieldRate, 3).setVisible(hasShield);
       const threatLabel = hpRate < 0.35
-        ? "붕괴 위험 · 즉시 복구 필요"
+        ? SchoolI18n.t("hud.collapse")
         : hpRate < 0.68
-          ? "방어선 압박 · 보강 권장"
-          : "방어 안정";
+          ? SchoolI18n.t("hud.pressure")
+          : SchoolI18n.t("hud.stable");
       this.ui.threat.setText(threatLabel);
       this.ui.threat.setColor(hpRate < 0.35 ? "#ff7771" : hpRate < 0.68 ? "#d5b675" : "#b4c097");
     }
@@ -10680,7 +10871,7 @@
   if (!window.Phaser) {
     const root = document.getElementById("game-root");
     if (root) {
-      root.innerHTML = '<div class="loading">Phaser 4 로드에 실패했습니다.</div>';
+      root.innerHTML = `<div class="loading">${SchoolI18n.t("loading.phaserFailed")}</div>`;
     }
     return;
   }

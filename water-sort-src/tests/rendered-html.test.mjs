@@ -20,4 +20,13 @@ test('static subfolder output has metadata, reachable assets, and no server cata
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /safe-area-inset/);
   assert.match(css, /100dvh/);
+  const english = await readFile(new URL('../../water-sort/index-en.html', import.meta.url), 'utf8');
+  assert.match(english, /<html lang="en">/);
+  assert.match(english, /<link rel="canonical" href="https:\/\/game\.archerlab\.dev\/water-sort\/index-en"\s*\/>/);
+  const bundle = html => {
+    const match = html.match(/src="(\/water-sort\/assets\/[^"]+\.js)"/);
+    assert.ok(match, 'js bundle');
+    return match[1];
+  };
+  assert.equal(bundle(english), bundle(html));
 });

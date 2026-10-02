@@ -13,6 +13,17 @@
 }
 
 .school-shop__header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: start; }
+.school-shop__tools { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.school-shop__lang { display: flex; gap: 6px; }
+.school-shop__lang button,
+.school-shop-dialog .school-shop__lang button {
+  min-width: 42px; min-height: 32px; padding: 4px 8px;
+  border: 1px solid #c5b99555; border-radius: 4px;
+  background: #11150e88; color: #eee6d2;
+  font: 800 12px/1 Arial, sans-serif; text-shadow: none;
+}
+.school-shop__lang button[aria-pressed="true"] { border-color: #eac17e; color: #f6d48a; background: #a17a3255; }
+.school-shop-dialog__header .school-shop__lang { margin-top: 8px; }
 .school-shop__eyebrow { color: #d5b675; font: 700 10px/1.5 Arial, sans-serif; letter-spacing: .14em; }
 .school-shop h1 { font-size: clamp(18px, 5cqw, 27px); margin: 3px 0 0; letter-spacing: -.04em; }
 .school-shop__credit { margin: 0; padding: 7px 10px; text-align: right; font-size: 11px; background: #11150e38; border: 1px solid #c5b99524; }

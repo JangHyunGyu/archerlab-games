@@ -12,8 +12,18 @@ const TOUCH_CONTROL_POSITION_KEY = "touchControlsPosition:v3";
 const TOUCH_CONTROL_POSITION_LEGACY_KEY = "touchControlsPosition:v2";
 const TOUCH_CONTROL_KEY_LAYOUT_KEY = "touchControlKeyLayout:v3";
 const TOUCH_CONTROL_KEY_LAYOUT_LEGACY_KEY = "touchControlKeyLayout:v2";
-const TOUCH_EDIT_LABEL = "키편집";
-const TOUCH_EDIT_DONE_LABEL = "키편집 종료";
+function pageLang() {
+  const path = (typeof location !== "undefined" && location.pathname) || "";
+  if (/index-en(?:\.html)?$/.test(path)) return "en";
+  try {
+    const requested = new URLSearchParams(location.search).get("lang");
+    if (requested === "en" || requested === "ko") return requested;
+  } catch (_) {}
+  return (document.documentElement.lang || "ko").toLowerCase().startsWith("en") ? "en" : "ko";
+}
+const PAGE_LANG = pageLang();
+const TOUCH_EDIT_LABEL = PAGE_LANG === "en" ? "Edit keys" : "키편집";
+const TOUCH_EDIT_DONE_LABEL = PAGE_LANG === "en" ? "Done" : "키편집 종료";
 const AUDIO_ASSET_VERSION = "20260705-audio-v9";
 const ENABLE_GENERATED_TONE_LOOPS = false;
 

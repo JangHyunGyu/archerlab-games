@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <script src="../shared/ranking-delivery.js?v=20260913-reliable-v1"></script>
   <meta charset="UTF-8">
@@ -7,19 +7,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#fff7ed">
   <title>Jelly Pang 2048 - Free Jelly Merge Puzzle Game | ArcherLab Games</title>
-  <meta name="description" content="말랑한 젤리를 밀어 합치고 명예의 전당 점수에 도전하는 무료 머지 퍼즐. Play Jelly Pang 2048, a soft browser merge puzzle for mobile and desktop.">
-  <meta name="keywords" content="Jelly Pang 2048, jelly merge puzzle, 2048 puzzle game, free merge game, browser puzzle game, 젤리 퍼즐, 무료 머지 게임">
+  <meta name="description" content="Slide soft jellies, merge matching numbers, and chase a Hall of Fame score. Jelly Pang 2048 is a free browser merge puzzle for phones and desktops.">
+  <meta name="keywords" content="Jelly Pang 2048, jelly merge puzzle, 2048 puzzle game, free merge game, browser puzzle game, crown jelly">
   <meta property="og:title" content="Jelly Pang 2048 - Free Jelly Merge Puzzle Game">
-  <meta property="og:description" content="같은 숫자 젤리를 밀어 합치고 왕관 젤리에 도전하는 무료 브라우저 머지 퍼즐.">
+  <meta property="og:description" content="Merge matching jellies, reach the Crown Jelly, and climb the Hall of Fame. Free in your browser.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://game.archerlab.dev/jelly-pang-2048/">
+  <meta property="og:url" content="https://game.archerlab.dev/jelly-pang-2048/index-en">
   <meta property="og:image" content="https://game.archerlab.dev/jelly-pang-2048/assets/images/jelly-pang-link.png">
-  <meta property="og:locale" content="ko_KR">
+  <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Jelly Pang 2048 - Free Jelly Merge Puzzle Game">
-  <meta name="twitter:description" content="A soft free browser jelly merge puzzle for quick mobile and desktop play.">
+  <meta name="twitter:description" content="A soft free browser jelly merge puzzle for quick play on mobile and desktop.">
   <meta name="twitter:image" content="https://game.archerlab.dev/jelly-pang-2048/assets/images/jelly-pang-link.png">
-  <link rel="canonical" href="https://game.archerlab.dev/jelly-pang-2048/">
+  <link rel="canonical" href="https://game.archerlab.dev/jelly-pang-2048/index-en">
   <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/jelly-pang-2048/">
   <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/jelly-pang-2048/index-en">
   <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/jelly-pang-2048/">
@@ -31,7 +31,7 @@
     "name": "Jelly Pang 2048",
     "alternateName": ["Jelly Pang", "Jelly Merge Puzzle", "젤리팡"],
     "description": "Free browser jelly merge puzzle with a 4x4 board, soft animations, high scores, and mobile-friendly play.",
-    "url": "https://game.archerlab.dev/jelly-pang-2048/",
+    "url": "https://game.archerlab.dev/jelly-pang-2048/index-en",
     "image": "https://game.archerlab.dev/jelly-pang-2048/assets/images/jelly-pang-link.png",
     "genre": ["Puzzle", "Merge", "2048", "Casual"],
     "keywords": ["jelly pang 2048", "jelly merge puzzle", "2048 puzzle game", "free merge game"],
@@ -40,7 +40,7 @@
     "operatingSystem": "Any",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW", "availability": "https://schema.org/InStock" },
     "author": { "@type": "Organization", "name": "ArcherLab", "url": "https://archerlab.dev/" },
-    "inLanguage": ["ko", "en"],
+    "inLanguage": "en",
     "isAccessibleForFree": true,
     "playMode": "SinglePlayer",
     "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
@@ -65,27 +65,27 @@
 <script src="../shared/immersive.js?v=20260917-immersive-home-hit-v1" defer></script>
 </head>
 <body data-game="jelly-pang">
-  <noscript>젤리팡 2048을 플레이하려면 JavaScript를 활성화해 주세요.</noscript>
+  <noscript>Enable JavaScript to play Jelly Pang 2048.</noscript>
   <main class="game-shell" data-i18n-aria="shell.aria" aria-label="Jelly Pang game">
-    <p id="game-instructions" class="sr-only" data-i18n="instructions">화면을 밀거나 방향 버튼, 키보드 방향키 또는 W A S D 키로 같은 숫자의 젤리를 합치세요.</p>
+    <p id="game-instructions" class="sr-only" data-i18n="instructions">Swipe, use the arrow buttons, or press the arrow keys or W A S D to merge jellies with the same number.</p>
     <p id="game-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
     <section id="title-screen" class="title-screen" data-i18n-aria="title.screenAria" aria-label="Jelly Pang start screen">
       <div class="title-bubbles" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span>
       </div>
-      <div class="title-lang" role="group" data-i18n-aria="lang.group" aria-label="언어">
-        <button type="button" data-lang-choice="ko" class="is-active" data-i18n-aria="lang.chooseKo" aria-label="한국어" aria-pressed="true">KO</button>
-        <button type="button" data-lang-choice="en" data-i18n-aria="lang.chooseEn" aria-label="English" aria-pressed="false">EN</button>
+      <div class="title-lang" role="group" data-i18n-aria="lang.group" aria-label="Language">
+        <button type="button" data-lang-choice="ko" data-i18n-aria="lang.chooseKo" aria-label="한국어" aria-pressed="false">KO</button>
+        <button type="button" data-lang-choice="en" class="is-active" data-i18n-aria="lang.chooseEn" aria-label="English" aria-pressed="true">EN</button>
       </div>
       <a class="brand-link title-brand" href="https://archerlab.dev/" data-i18n="brand.name" data-i18n-aria="brand.aria" aria-label="Archerlab home">Archerlab</a>
       <div class="title-hero">
         <div class="title-copy">
           <p class="kicker" data-i18n-html="title.kickerHtml"><span aria-hidden="true">✦</span> THE SOFTEST LITTLE PUZZLE</p>
           <h1><span data-i18n="title.jelly">Jelly</span> <span data-i18n="title.pang">Pang!</span></h1>
-          <p class="title-tagline" data-i18n-html="title.taglineHtml">톡, 밀면 말랑하게 팡!<br>같은 젤리를 합쳐 왕관 젤리까지.</p>
-          <div class="title-badges" data-i18n-aria="title.featuresAria" aria-label="game features">
-            <span data-i18n="title.badgeBoard">4 × 4 머지 퍼즐</span>
-            <span data-i18n="title.badgeFriends">12가지 젤리 친구</span>
+          <p class="title-tagline" data-i18n-html="title.taglineHtml">Give them a nudge and they pop!<br>Merge matches all the way to the Crown Jelly.</p>
+          <div class="title-badges" data-i18n-aria="title.featuresAria" aria-label="Game features">
+            <span data-i18n="title.badgeBoard">4 × 4 merge puzzle</span>
+            <span data-i18n="title.badgeFriends">12 jelly friends</span>
           </div>
         </div>
         <div class="title-art-shell" aria-hidden="true">
@@ -93,7 +93,7 @@
             <source srcset="assets/images/jelly-pang-main-link.webp" type="image/webp">
             <img src="assets/images/jelly-pang-main-link.png" alt="" draggable="false">
           </picture>
-          <span class="title-art-chip" data-i18n-html="title.chipHtml"><span aria-hidden="true">✦</span> 작은 젤리의 커다란 변신</span>
+          <span class="title-art-chip" data-i18n-html="title.chipHtml"><span aria-hidden="true">✦</span> Tiny jellies, big transformations</span>
           <div class="jelly-recipe" aria-hidden="true">
             <img src="assets/images/jellies/jelly-00.webp" alt="" width="56" height="56">
             <span>+</span>
@@ -103,9 +103,9 @@
           </div>
         </div>
         <div class="title-actions">
-          <button id="play-game" data-fullscreen-start class="title-play" type="button" data-i18n="title.play">게임 시작</button>
-          <button id="new-game" data-fullscreen-start class="title-new" type="button" hidden data-i18n="title.newGame">새 게임</button>
-          <button id="rank-open-title" class="title-rank" type="button" data-i18n="title.rank">명예의 전당</button>
+          <button id="play-game" data-fullscreen-start class="title-play" type="button" data-i18n="title.play">Start</button>
+          <button id="new-game" data-fullscreen-start class="title-new" type="button" hidden data-i18n="title.newGame">New game</button>
+          <button id="rank-open-title" class="title-rank" type="button" data-i18n="title.rank">Hall of Fame</button>
         </div>
       </div>
     </section>
@@ -118,21 +118,21 @@
       </div>
     </div>
     <header class="topbar" aria-hidden="true" inert>
-      <button id="home-game" class="icon-command home-command" type="button" data-i18n-aria="hud.home" aria-label="시작 화면으로 이동"></button>
+      <button id="home-game" class="icon-command home-command" type="button" data-i18n-aria="hud.home" aria-label="Back to the start screen"></button>
       <div class="title-lockup">
         <p class="kicker" data-i18n="hud.kicker">Merge Puzzle</p>
         <h1 data-i18n="hud.title">Jelly Pang!</h1>
       </div>
-      <button id="sound-toggle" class="icon-command sound-command" type="button" data-i18n-aria="sound.off" aria-label="소리 끄기" aria-pressed="true"></button>
+      <button id="sound-toggle" class="icon-command sound-command" type="button" data-i18n-aria="sound.off" aria-label="Turn sound off" aria-pressed="true"></button>
     </header>
 
-    <section class="score-row" data-i18n-aria="score.aria" aria-label="score board" aria-hidden="true" inert>
+    <section class="score-row" data-i18n-aria="score.aria" aria-label="Scoreboard" aria-hidden="true" inert>
       <div class="score-tile">
-        <span data-i18n="score.now">지금 점수</span>
+        <span data-i18n="score.now">Score</span>
         <strong id="score" aria-live="polite">0</strong>
       </div>
       <div class="score-tile">
-        <span data-i18n="score.best">최고 기록</span>
+        <span data-i18n="score.best">Best</span>
         <strong id="best-score" aria-live="polite">0</strong>
       </div>
     </section>
@@ -147,37 +147,37 @@
           <div class="message-card">
             <p id="message-eyebrow" class="message-eyebrow" data-i18n="modal.crownEyebrow">Crown Jelly</p>
             <h2 id="message-title" data-i18n="modal.winTitle">You win!</h2>
-            <p id="message-copy" data-i18n="modal.crownCopy">왕관 젤리를 계속 키워보세요.</p>
+            <p id="message-copy" data-i18n="modal.crownCopy">Keep growing your Crown Jelly.</p>
             <div id="rank-submit-panel" class="rank-submit-panel hidden">
               <div class="final-score-line">
                 <span data-i18n="modal.finalScore">Final Score</span>
                 <strong id="modal-score">0</strong>
               </div>
-              <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="modal.nickname" placeholder="닉네임 입력">
+              <input id="nickname-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-placeholder="modal.nickname" placeholder="Enter a nickname">
               <div class="rank-submit-buttons">
-                <button id="submit-rank" type="button" data-i18n="modal.submit">등록</button>
-                <button id="skip-rank" type="button" data-i18n="modal.skip">건너뛰기</button>
+                <button id="submit-rank" type="button" data-i18n="modal.submit">Submit</button>
+                <button id="skip-rank" type="button" data-i18n="modal.skip">Skip</button>
               </div>
               <p id="submit-status" class="submit-status" aria-live="polite"></p>
             </div>
             <div class="message-actions">
               <button id="keep-playing" type="button" data-i18n="modal.keep">Keep playing</button>
               <button id="try-again" data-fullscreen-start type="button" data-i18n="modal.retry">Try again</button>
-              <button id="back-to-title" type="button" hidden data-i18n="modal.home">시작 화면</button>
+              <button id="back-to-title" type="button" hidden data-i18n="modal.home">Start screen</button>
             </div>
           </div>
         </div>
-        <div id="rank-modal" class="rank-modal hidden" role="dialog" aria-modal="true" aria-live="polite" data-i18n-aria="rank.aria" aria-label="명예의 전당" aria-hidden="true">
+        <div id="rank-modal" class="rank-modal hidden" role="dialog" aria-modal="true" aria-live="polite" data-i18n-aria="rank.aria" aria-label="Hall of Fame" aria-hidden="true">
           <div class="rank-card">
             <div class="rank-card-head">
               <div>
-                <p data-i18n="rank.kicker">Hall of Fame</p>
-                <h2 data-i18n="rank.title">명예의 전당</h2>
+                <p data-i18n="rank.kicker">Rankings</p>
+                <h2 data-i18n="rank.title">Hall of Fame</h2>
               </div>
-              <button id="rank-close" class="rank-close" type="button" data-i18n-aria="rank.close" aria-label="닫기">&#215;</button>
+              <button id="rank-close" class="rank-close" type="button" data-i18n-aria="rank.close" aria-label="Close">&#215;</button>
             </div>
             <div id="rank-content" class="rank-content">
-              <div class="rank-loading" data-i18n="rank.loading">불러오는 중...</div>
+              <div class="rank-loading" data-i18n="rank.loading">Loading...</div>
             </div>
           </div>
         </div>
@@ -185,14 +185,14 @@
     </section>
 
     <footer class="control-dock" aria-label="direction controls" aria-hidden="true" inert>
-      <div class="merge-goal"><img src="assets/images/jellies/jelly-10.webp" alt="" width="48" height="48"><p><strong data-i18n="goal.title">다음 목표, 왕관 젤리!</strong><span data-i18n="goal.copy">같은 숫자를 합쳐 2048에 도전하세요.</span></p></div>
-      <div class="swipe-pad" role="group" data-i18n-aria="controls.aria" aria-label="방향 조작">
-        <button type="button" data-dir="up" data-i18n-aria="controls.up" aria-label="위로 이동"></button>
-        <button type="button" data-dir="left" data-i18n-aria="controls.left" aria-label="왼쪽으로 이동"></button>
-        <button type="button" data-dir="down" data-i18n-aria="controls.down" aria-label="아래로 이동"></button>
-        <button type="button" data-dir="right" data-i18n-aria="controls.right" aria-label="오른쪽으로 이동"></button>
+      <div class="merge-goal"><img src="assets/images/jellies/jelly-10.webp" alt="" width="48" height="48"><p><strong data-i18n="goal.title">Next up: Crown Jelly!</strong><span data-i18n="goal.copy">Merge matching numbers and race to 2048.</span></p></div>
+      <div class="swipe-pad" role="group" data-i18n-aria="controls.aria" aria-label="Direction controls">
+        <button type="button" data-dir="up" data-i18n-aria="controls.up" aria-label="Move up"></button>
+        <button type="button" data-dir="left" data-i18n-aria="controls.left" aria-label="Move left"></button>
+        <button type="button" data-dir="down" data-i18n-aria="controls.down" aria-label="Move down"></button>
+        <button type="button" data-dir="right" data-i18n-aria="controls.right" aria-label="Move right"></button>
       </div>
-      <p class="control-hint" data-i18n="controls.hint">화면을 밀거나 방향키로 움직여요</p>
+      <p class="control-hint" data-i18n="controls.hint">Swipe or use the arrow keys</p>
     </footer>
   </main>
 

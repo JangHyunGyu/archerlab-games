@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-66FS0YCEEM');
+  </script>
+  <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
+  <meta charset="utf-8">
+  <meta http-equiv="origin-trial" content="Agn9opFYdjvT/UqEIvt4RnCkmN8Kt+8/lzvg731pKSz7MpNoJkLvra/pLOIFgR9GZb39JbBGeJ+CDO++Tus3FggAAABmeyJvcmlnaW4iOiJodHRwczovL2FyY2hlcmxhYi5kZXY6NDQzIiwiZmVhdHVyZSI6IkhUTUxJbkNhbnZhcyIsImV4cGlyeSI6MTc5MjQ1NDQwMCwiaXNTdWJkb21haW4iOnRydWV9">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>젤리팡 2048 공략 | 4×4에서 왕관 젤리까지</title>
+  <meta name="description" content="젤리팡 2048의 4×4 밀기 규칙, 합칠 때 점수가 오르는 방식, 2048 왕관 젤리, 게임 오버 조건을 정리했습니다.">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <link rel="canonical" href="https://game.archerlab.dev/seo/jelly-pang-2048-guide">
+  <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/seo/jelly-pang-2048-guide">
+  <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/seo/jelly-pang-2048-guide-en">
+  <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/seo/jelly-pang-2048-guide">
+  <link rel="sitemap" type="application/xml" href="https://game.archerlab.dev/sitemap.xml">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="ArcherLab Games">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:title" content="젤리팡 2048 공략 | 4×4에서 왕관 젤리까지">
+  <meta property="og:description" content="젤리팡 2048의 4×4 밀기 규칙, 합칠 때 점수가 오르는 방식, 2048 왕관 젤리, 게임 오버 조건을 정리했습니다.">
+  <meta property="og:url" content="https://game.archerlab.dev/seo/jelly-pang-2048-guide">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="젤리팡 2048 공략 | 4×4에서 왕관 젤리까지">
+  <meta name="twitter:description" content="젤리팡 2048의 4×4 밀기 규칙, 합칠 때 점수가 오르는 방식, 2048 왕관 젤리, 게임 오버 조건을 정리했습니다.">
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://game.archerlab.dev/#website","url":"https://game.archerlab.dev/","name":"ArcherLab Games","inLanguage":"ko"},{"@type":"Article","@id":"https://game.archerlab.dev/seo/jelly-pang-2048-guide#article","headline":"젤리팡 2048 공략: 같은 숫자를 밀어 왕관 젤리 만들기","datePublished":"2026-10-02","dateModified":"2026-10-02","inLanguage":"ko","author":{"@type":"Organization","name":"ArcherLab","url":"https://archerlab.dev/"},"publisher":{"@type":"Organization","name":"ArcherLab","url":"https://archerlab.dev/"},"mainEntityOfPage":{"@id":"https://game.archerlab.dev/seo/jelly-pang-2048-guide#webpage"}},{"@type":"WebPage","@id":"https://game.archerlab.dev/seo/jelly-pang-2048-guide#webpage","url":"https://game.archerlab.dev/seo/jelly-pang-2048-guide","name":"젤리팡 2048 공략 | 4×4에서 왕관 젤리까지","description":"젤리팡 2048의 4×4 밀기 규칙, 합칠 때 점수가 오르는 방식, 2048 왕관 젤리, 게임 오버 조건을 정리했습니다.","inLanguage":"ko","dateModified":"2026-10-02","isPartOf":{"@id":"https://game.archerlab.dev/#website"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ArcherLab Games","item":"https://game.archerlab.dev/"},{"@type":"ListItem","position":2,"name":"젤리팡 2048 공략","item":"https://game.archerlab.dev/seo/jelly-pang-2048-guide"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"2048을 만들면 끝나나요?","acceptedAnswer":{"@type":"Answer","text":"아니요. 왕관 젤리를 만든 뒤에도 판을 이어 갈 수 있습니다. 더 이상 밀 곳이 없을 때 끝납니다."}},{"@type":"Question","name":"키보드로 할 수 있나요?","acceptedAnswer":{"@type":"Answer","text":"방향키와 W A S D로 밀 수 있습니다. 화면의 방향 버튼과 스와이프도 됩니다."}},{"@type":"Question","name":"설치나 가입이 필요한가요?","acceptedAnswer":{"@type":"Answer","text":"아니요. 브라우저에서 바로 시작합니다. 랭킹에 올릴 때만 닉네임을 입력합니다."}}]}]}</script>
+  <style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f5f3ff;color:#25232a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif;line-height:1.75}.shell{width:min(760px,calc(100% - 36px));margin:0 auto;padding:28px 0 72px}.brand{display:inline-flex;align-items:center;color:#37249b;font-weight:800;text-decoration:none;letter-spacing:-.01em}.lang-link{float:right;color:#37249b;font-weight:700;text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{margin:0 0 10px;color:#6c4df6;font-size:.82rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}h1{margin:0;color:#19171d;font-size:clamp(2rem,6vw,3.35rem);line-height:1.16;letter-spacing:-.045em}.intro{margin:22px 0 0;font-size:1.1rem;color:#514d58}.cta{display:inline-flex;margin-top:26px;padding:13px 22px;border-radius:999px;background:#6c4df6;color:#fff;font-weight:800;text-decoration:none;box-shadow:0 10px 28px color-mix(in srgb,#6c4df6 24%,transparent)}main section{margin-top:28px;padding:26px;background:#fff;border:1px solid color-mix(in srgb,#6c4df6 18%,#ddd);border-radius:18px;box-shadow:0 12px 34px rgba(30,25,35,.06)}h2{margin:0 0 14px;color:#37249b;font-size:1.35rem;line-height:1.35;letter-spacing:-.02em}p{margin:0 0 12px}p:last-child{margin-bottom:0}.faq-wrap{margin-top:36px}.faq-wrap h2{margin-bottom:8px}.faq-wrap details{background:#fff;border:1px solid color-mix(in srgb,#6c4df6 17%,#ddd);border-radius:14px;margin-top:10px;padding:0 18px}.faq-wrap summary{cursor:pointer;padding:16px 0;font-weight:800;color:#302c36}.faq-wrap details p{padding:0 0 17px;color:#56515d}.related{margin-top:36px}.related-grid{display:grid;gap:12px}.related-card{display:grid;gap:6px;padding:18px;background:#fff;border:1px solid color-mix(in srgb,#6c4df6 18%,#ddd);border-radius:14px;text-decoration:none;color:#27232b}.related-card strong{color:#37249b}.related-card span{font-size:.94rem;color:#625d69}.final-cta{margin-top:38px;padding:30px;text-align:center;background:linear-gradient(135deg,#6c4df6,#37249b);border-radius:20px;color:#fff}.final-cta p{font-size:1.05rem}.final-cta .cta{margin-top:10px;background:#fff;color:#37249b;box-shadow:none}footer{margin-top:40px;padding-top:22px;border-top:1px solid color-mix(in srgb,#6c4df6 16%,#ddd);font-size:.9rem;color:#716b77}footer a{color:#37249b}@media(max-width:560px){.shell{width:min(100% - 26px,760px)}.hero{padding:40px 0 24px}main section{padding:21px}.final-cta{padding:24px 18px}.lang-link{float:none;display:inline-block;margin-top:8px}}table{border-collapse:collapse;width:100%;margin:.6rem 0;font-size:.95rem}th,td{border:1px solid #ddd6fb;padding:.45rem .7rem;text-align:left}th{background:#f1eeff}main section ul{margin:.4rem 0 .4rem 1.2rem;padding:0}main section li{margin:.35rem 0}</style>
+</head>
+<body>
+  <div class="shell">
+    <a class="brand" href="/">ArcherLab Games</a>
+    <a class="lang-link" href="https://game.archerlab.dev/seo/jelly-pang-2048-guide-en">English</a>
+    <header class="hero">
+      <p class="eyebrow">게임 가이드</p>
+      <h1>젤리팡 2048 공략: 같은 숫자를 밀어 왕관 젤리 만들기</h1>
+      <p class="intro">보드는 가로세로 4칸입니다. 같은 숫자 젤리 둘을 한 방향으로 밀면 하나로 합쳐지고, 숫자는 두 배가 됩니다. 2에서 두 배씩 열 번 올라가면 2048, 왕관 젤리입니다.</p>
+      <a class="cta" href="/jelly-pang-2048/">젤리팡 2048 플레이하기</a>
+    </header>
+    <main><section><h2>움직이는 법</h2><p>화면을 밀거나, 화면의 방향 버튼, 키보드 방향키, W A S D로 보드 전체를 한 방향으로 밉니다. 빈 칸이 있는 쪽으로 젤리가 이동하고, 맞닿은 같은 숫자만 합쳐집니다.</p><p>한 번 밀 때마다 빈 칸 하나에 새 젤리가 나타납니다. 새로 나오는 값은 2 또는 4입니다.</p></section><section><h2>점수</h2><p>합쳐져 생긴 젤리의 숫자가 점수에 더해집니다. 2와 2가 만나 4가 되면 4점입니다. 숫자가 커질수록 한 번의 합치기가 점수에 크게 남습니다.</p></section><section><h2>왕관 젤리</h2><p>값은 2, 4, 8, 16 순으로 두 배씩 올라갑니다. 2048은 그 열한 번째 값이고, 화면에서는 왕관 젤리로 표시됩니다. 왕관을 만들어도 그 판이 바로 끝나지는 않습니다. 더 큰 수를 이어 갈 수 있습니다.</p></section><section><h2>막히기 전에</h2><ul><li>어느 방향으로도 밀 수 없으면 게임 오버입니다.</li><li>가장 큰 젤리는 한 모서리에 두고, 그 옆에 절반 값을 붙이면 다음 합치기가 짧아집니다.</li><li>큰 젤리를 보드 가운데로 흘리면 빈 칸이 조각나기 쉽습니다.</li></ul><p>새로 놓이는 칸은 판마다 달라서, 같은 배치가 항상 통하지는 않습니다.</p></section><section><h2>명예의 전당</h2><p>판이 끝나면 닉네임으로 점수를 명예의 전당에 올릴 수 있고, 등록을 건너뛸 수도 있습니다. 최고 점수와 닉네임은 그 브라우저에 남습니다.</p></section></main>
+    <section class="faq-wrap" aria-labelledby="faq-title"><h2 id="faq-title">자주 묻는 질문</h2><details><summary>2048을 만들면 끝나나요?</summary><p>아니요. 왕관 젤리를 만든 뒤에도 판을 이어 갈 수 있습니다. 더 이상 밀 곳이 없을 때 끝납니다.</p></details><details><summary>키보드로 할 수 있나요?</summary><p>방향키와 W A S D로 밀 수 있습니다. 화면의 방향 버튼과 스와이프도 됩니다.</p></details><details><summary>설치나 가입이 필요한가요?</summary><p>아니요. 브라우저에서 바로 시작합니다. 랭킹에 올릴 때만 닉네임을 입력합니다.</p></details></section>
+    <nav class="related" aria-labelledby="related-title"><h2 id="related-title">함께 보면 좋은 안내</h2><div class="related-grid"><a class="related-card" href="/seo/lumen-shift-guide"><strong>루멘 시프트 공략</strong><span>100스테이지 낙하 블록과 줄 점수 계산을 정리했습니다.</span></a><a class="related-card" href="/seo/cat-tower-guide"><strong>고양이 타워 공략</strong><span>10단계 진화 점수와 연쇄 콤보를 정리했습니다.</span></a><a class="related-card" href="/seo/quick-browser-games"><strong>짧게 즐기는 브라우저 게임</strong><span>한 판 길이에 맞춰 게임을 골라 보세요.</span></a></div></nav>
+    <section class="final-cta"><p>첫 판은 왕관을 노리기보다, 큰 숫자를 한구석에 붙여 두는 감각부터 익혀 보세요.</p><a class="cta" href="/jelly-pang-2048/">젤리팡 2048 플레이하기</a></section>
+    <footer><a href="/">ArcherLab Games 홈으로</a> · <a href="https://game.archerlab.dev/seo/jelly-pang-2048-guide-en">English</a> · 업데이트 2026-10-02</footer>
+  </div>
+</body>
+</html>

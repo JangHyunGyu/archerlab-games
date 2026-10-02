@@ -145,6 +145,12 @@
 
   const LANG_KEY = 'cat-tower.lang';
   let lang = (function loadLang() {
+    const path = (typeof location !== 'undefined' && location.pathname) || '';
+    if (/index-en(?:\.html)?$/.test(path)) return 'en';
+    try {
+      const requested = new URLSearchParams(location.search).get('lang');
+      if (requested === 'ko' || requested === 'en') return requested;
+    } catch {}
     try {
       const saved = localStorage.getItem(LANG_KEY);
       if (saved === 'ko' || saved === 'en') return saved;

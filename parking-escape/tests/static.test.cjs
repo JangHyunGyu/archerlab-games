@@ -40,7 +40,7 @@ assert.match(main, /if \(!this\.rankEligible \|\| !this\.lastClear\) return/);
 assert.match(main, /this\.mode = "background-paused"/);
 assert.match(main, /this\.mode = "playing"/);
 assert.doesNotMatch(main, /if \(!continuesRun\) this\.startRankSession\(\)/);
-assert.match(html, /js\/main\.js\?v=20260913-immersive-v1/);
+assert.match(html, /js\/main\.js\?v=20261002-en-page-v1/);
 assert.match(html, /css\/style\.css\?v=20260904-ranked-run-v1/);
 
 const scripts = Array.from(html.matchAll(/<script[^>]+src="([^"]+)"/g), match => match[1]);

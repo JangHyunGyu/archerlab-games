@@ -100,10 +100,21 @@
             'gameOver.lobby': '로비로',
             'gameOver.playAgain': '다시 하기',
             'gameOver.set': '세트',
+            'rotate.landscape': '화면을 가로로 돌려주세요',
+            'confirm.prompt': '나가시겠습니까?',
+            'migration.title': '호스트 이전 중...',
+            'migration.subtitle': '잠시만 기다려 주세요',
+            'migration.switching': '새 호스트로 전환 중...',
+            'migration.switchingBody': '게임이 곧 재개됩니다',
+            'migration.reconnecting': '새 호스트에 연결하고 있습니다',
+            'migration.connected': '새 호스트에 연결됨',
+            'migration.connectFailed': '호스트 연결 실패 — 봇 모드로 진행',
+            'migration.youAreHost': '당신이 새 호스트입니다',
+            'migration.switchFailed': '호스트 전환 실패',
         },
         en: {
             'app.name': 'Slime Volley',
-            'document.title': 'Slime Volley | Archerlab Games',
+            'document.title': 'Slime Volley - Free Online Browser Volleyball | ArcherLab',
             'header.back': 'Back to Games',
             'header.sound': 'Toggle Sound',
             'language.label': 'Language',
@@ -197,6 +208,17 @@
             'gameOver.lobby': 'Lobby',
             'gameOver.playAgain': 'Play Again',
             'gameOver.set': 'Set',
+            'rotate.landscape': 'Rotate to landscape',
+            'confirm.prompt': 'Leave now?',
+            'migration.title': 'Moving the host...',
+            'migration.subtitle': 'Please wait a moment',
+            'migration.switching': 'Switching to the new host...',
+            'migration.switchingBody': 'The match will resume shortly',
+            'migration.reconnecting': 'Connecting to the new host',
+            'migration.connected': 'Connected to the new host',
+            'migration.connectFailed': 'Could not reach the host. Continuing with bots.',
+            'migration.youAreHost': 'You are the new host',
+            'migration.switchFailed': 'Host switch failed',
         },
     };
 
@@ -268,13 +290,23 @@
         apply(lang);
     }
 
+    function requestedLang() {
+        const path = (typeof location !== 'undefined' && location.pathname) || '';
+        if (/index-en(?:\.html)?$/.test(path)) return 'en';
+        try {
+            const requested = new URLSearchParams(location.search).get('lang');
+            if (requested === 'en' || requested === 'ko') return requested;
+        } catch (_) {}
+        return getStoredLang();
+    }
+
     function init() {
         document.querySelectorAll('[data-lang-choice]').forEach(btn => {
             btn.addEventListener('click', () => {
                 setLang(btn.dataset.langChoice);
             });
         });
-        apply(getStoredLang());
+        apply(requestedLang());
     }
 
     window.SlimeVolleyI18n = {

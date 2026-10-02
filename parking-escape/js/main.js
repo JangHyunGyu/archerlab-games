@@ -108,6 +108,15 @@
     archerlab: document.querySelector(".archerlab-link"),
   };
 
+  function t(key, vars) {
+    const i18n = window.ParkingI18n;
+    return i18n ? i18n.t(key, vars) : key;
+  }
+
+  function uiLang() {
+    return window.ParkingI18n ? window.ParkingI18n.getLang() : "ko";
+  }
+
   function setMenuViewportLocked(locked) {
     document.documentElement.classList.toggle("menu-open", locked);
     document.body.classList.toggle("menu-open", locked);
@@ -382,6 +391,10 @@
       this.pausedForVisibility = false;
       this.lastTimeAlertSecond = null;
       this.dialogReturnFocus = null;
+      this.rankView = "";
+      this.rankRows = null;
+      this.rankStatusKey = "";
+      this.rankButtonKey = "";
       this.sound = new (window.ParkingSoundManager || class {
         ensure() {}
         isEnabled() { return true; }
@@ -427,6 +440,7 @@
       window.addEventListener("blur", () => this.cancelDrag(), { passive: true });
       document.addEventListener("visibilitychange", () => this.handleVisibilityChange());
       document.addEventListener("pointerdown", () => this.ensureAudio(), { once: true, passive: true });
+      window.addEventListener("parking-escape:langchange", () => this.refreshLocalized());
       document.addEventListener("keydown", event => this.handleDialogKeydown(event));
     }
 
@@ -749,7 +763,20 @@
       this.bestLevel = clamp(Math.max(this.bestLevel, readInt(STORAGE.bestLevel, 1)), 1, MAX_LEVEL);
       this.bestMoves = readInt(STORAGE.bestMoves, 0);
       dom.continue.classList.toggle("hidden", this.bestLevel <= 1);
-      dom.continueLabel.textContent = `Lv ${this.bestLevel} 계속하기`;
+      dom.continueLabel.textContent = uiLang() === "en"
+        ? t("menu.continueLevel", { level: this.bestLevel })
+        : `Lv ${this.bestLevel} 계속하기`;
+    }
+
+    refreshLocalized() {
+      this.updateMenu();
+      this.updateSoundButton();
+      if (this.mode === "complete" && this.lastClear) this.applyClearCopy(!!this.lastClear.allClear);
+      else if (this.mode === "timeout" && this.lastClear) this.applyFailCopy();
+      if (this.rankButtonKey) dom.submitRank.textContent = t(this.rankButtonKey);
+      if (this.rankStatusKey) dom.submitStatus.textContent = t(this.rankStatusKey);
+      else if (this.rankStatusKey === "") dom.submitStatus.textContent = "";
+      if (this.rankView && !dom.rankModal.classList.contains("hidden")) this.renderRankView({ animate: false });
     }
 
     showLoading(level) {
@@ -1223,7 +1250,7 @@
 
     blockPulse(vehicle) {
       this.playTone("blocked");
-      this.showToast("이 방향으로는 움직일 수 없습니다");
+      this.showToast(t("toast.blocked"));
       const originalX = vehicle.container.x;
       const originalY = vehicle.container.y;
       if (motionEnabled()) {
@@ -1315,31 +1342,23 @@
         writeStorage(STORAGE.bestMoves, String(this.bestMoves));
       }
       dom.nickname.value = readStorage(NICK_KEY) || "";
+      this.rankStatusKey = "";
       dom.submitStatus.textContent = "";
       this.setRankSubmitLoading(false);
-      dom.clearMovesLabel.textContent = isFinalLevel ? "마지막" : "이동";
       dom.clearMoves.textContent = String(this.moves);
-      dom.clearLevelCaption.textContent = "완료";
       if (isFinalLevel) {
-        dom.clearTitle.textContent = "ALL LEVELS CLEAR";
-        dom.nextLevelCaption.textContent = "총 이동";
         dom.nextLevel.textContent = String(this.runMoves);
         dom.clearLevel.textContent = `${MAX_LEVEL} / ${MAX_LEVEL}`;
         dom.rankSubmitRow.classList.toggle("hidden", !this.rankEligible);
         if (dom.next.parentElement) dom.next.parentElement.classList.toggle("hidden", this.rankEligible);
-        if (!this.rankEligible) {
-          this.nextReturnsToMenu = true;
-          dom.next.textContent = "메뉴로";
-        }
+        if (!this.rankEligible) this.nextReturnsToMenu = true;
       } else {
-        dom.clearTitle.textContent = `LEVEL ${this.level} CLEAR`;
-        dom.nextLevelCaption.textContent = "다음";
         dom.nextLevel.textContent = String(this.level + 1);
         dom.clearLevel.textContent = `Lv ${clearedLevel.toLocaleString()}`;
         dom.rankSubmitRow.classList.add("hidden");
         if (dom.next.parentElement) dom.next.parentElement.classList.remove("hidden");
-        dom.next.textContent = "다음";
       }
+      this.applyClearCopy(isFinalLevel);
       dom.modal.classList.remove("is-timeout");
       dom.modal.classList.add("is-clear");
       dom.modal.classList.remove("hidden");
@@ -1353,6 +1372,28 @@
         value => isFinalLevel ? `${Number(value).toLocaleString()} / ${MAX_LEVEL}` : `Lv ${Number(value).toLocaleString()}`
       );
       this.mode = "complete";
+    }
+
+    applyClearCopy(isFinalLevel) {
+      dom.clearMovesLabel.textContent = isFinalLevel ? t("clear.last") : t("clear.moves");
+      dom.clearLevelCaption.textContent = t("clear.done");
+      if (isFinalLevel) {
+        dom.clearTitle.textContent = t("clear.allTitle");
+        dom.nextLevelCaption.textContent = t("clear.totalMoves");
+        if (!this.rankEligible) dom.next.textContent = t("clear.toMenu");
+      } else {
+        dom.clearTitle.textContent = t("clear.levelTitle", { level: this.level });
+        dom.nextLevelCaption.textContent = t("clear.next");
+        dom.next.textContent = t("clear.nextBtn");
+      }
+    }
+
+    applyFailCopy() {
+      dom.clearTitle.textContent = t("fail.title");
+      dom.clearMovesLabel.textContent = t("fail.moves");
+      dom.nextLevelCaption.textContent = t("fail.failed");
+      dom.clearLevelCaption.textContent = t("fail.reached");
+      dom.next.textContent = this.rankEligible ? t("fail.menu") : t("fail.retry");
     }
 
     failLevel() {
@@ -1377,15 +1418,11 @@
         failedLevel: this.level,
         timedOut: true,
       };
-      dom.clearTitle.textContent = "TIME UP";
-      dom.clearMovesLabel.textContent = "이동";
       dom.clearMoves.textContent = String(this.moves);
-      dom.nextLevelCaption.textContent = "실패";
       dom.nextLevel.textContent = String(this.level);
-      dom.clearLevelCaption.textContent = "도달";
       dom.clearLevel.textContent = `Lv ${this.lastClear.rankLevel.toLocaleString()}`;
-      dom.next.textContent = "메인";
       dom.nickname.value = readStorage(NICK_KEY) || "";
+      this.rankStatusKey = "";
       dom.submitStatus.textContent = "";
       this.setRankSubmitLoading(false);
       dom.rankSubmitRow.classList.toggle("hidden", !this.rankEligible);
@@ -1395,8 +1432,8 @@
       if (!this.rankEligible) {
         this.nextLevelTarget = this.level;
         this.nextReturnsToMenu = false;
-        dom.next.textContent = "다시하기";
       }
+      this.applyFailCopy();
       dom.modal.classList.remove("is-clear");
       dom.modal.classList.add("is-timeout");
       dom.modal.classList.remove("hidden");
@@ -1419,16 +1456,33 @@
 
     async openRankModal() {
       this.playTone("rank");
-      dom.rankContent.innerHTML = `<div class="rank-loading">불러오는 중...</div>`;
+      this.rankRows = null;
+      this.rankView = "loading";
+      this.renderRankView({ animate: false });
       dom.rankModal.classList.remove("hidden");
       this.activateDialog(dom.rankModal);
       animatePanelIn(dom.rankModal);
       try {
         const rows = await this.fetchRankings();
-        this.renderRankRows(rows);
+        this.rankRows = rows;
+        this.rankView = "rows";
+        this.renderRankView();
       } catch (error) {
-        dom.rankContent.innerHTML = `<div class="rank-error">랭킹을 불러오지 못했습니다</div>`;
+        this.rankView = "error";
+        this.renderRankView({ animate: false });
       }
+    }
+
+    renderRankView({ animate = true } = {}) {
+      if (this.rankView === "loading") {
+        dom.rankContent.innerHTML = `<div class="rank-loading">${escapeHtml(t("rank.loading"))}</div>`;
+        return;
+      }
+      if (this.rankView === "error") {
+        dom.rankContent.innerHTML = `<div class="rank-error">${escapeHtml(t("rank.error"))}</div>`;
+        return;
+      }
+      if (this.rankView === "rows") this.renderRankRows(this.rankRows || [], { animate });
     }
 
     async fetchRankingRows() {
@@ -1447,9 +1501,9 @@
         .slice(0, RANK_LIMIT);
     }
 
-    renderRankRows(rows) {
+    renderRankRows(rows, { animate = true } = {}) {
       if (!rows.length) {
-        dom.rankContent.innerHTML = `<div class="rank-empty">아직 등록된 기록이 없습니다</div>`;
+        dom.rankContent.innerHTML = `<div class="rank-empty">${escapeHtml(t("rank.empty"))}</div>`;
         return;
       }
       const sortedRows = rows.slice().sort((a, b) => {
@@ -1464,7 +1518,7 @@
         let meta = "";
         if (row.created_at) {
           const date = new Date(row.created_at);
-          if (!Number.isNaN(date.getTime())) meta = date.toLocaleDateString("ko-KR");
+          if (!Number.isNaN(date.getTime())) meta = date.toLocaleDateString(uiLang() === "en" ? "en-US" : "ko-KR");
         }
         const cls = ["rank-row"];
         if (rank <= 3) cls.push(`top${rank}`);
@@ -1477,7 +1531,7 @@
           </div>
         `;
       }).join("");
-      animateRankRows();
+      if (animate) animateRankRows();
     }
 
     async handleSubmitRank() {
@@ -1485,10 +1539,11 @@
       if (dom.submitRank.disabled) return;
       const name = (dom.nickname.value || "").trim().slice(0, 20);
       if (!name) {
-        dom.submitStatus.textContent = "닉네임을 입력하세요";
+        this.rankStatusKey = "rank.needName";
+        dom.submitStatus.textContent = t(this.rankStatusKey);
         return;
       }
-      this.setRankSubmitLoading(true, "등록 중...");
+      this.setRankSubmitLoading(true, "rank.submitting");
       try {
         if (!window.ArcherRanking) {
           const synced = await this.ensureRankClearRecorded(this.lastClear);
@@ -1527,8 +1582,10 @@
         dom.submitRank.disabled = true;
         dom.skipRank.disabled = true;
         dom.nickname.disabled = true;
-        dom.submitRank.textContent = result?.pending ? "저장 대기" : "완료";
-        dom.submitStatus.textContent = result?.pending ? "기록을 보관했습니다. 자동으로 등록합니다." : "등록 완료";
+        this.rankButtonKey = result?.pending ? "rank.pendingBtn" : "rank.doneBtn";
+        dom.submitRank.textContent = t(this.rankButtonKey);
+        this.rankStatusKey = result?.pending ? "rank.pendingStatus" : "rank.doneStatus";
+        dom.submitStatus.textContent = t(this.rankStatusKey);
         this.playTone("submit");
         this.returnToMenuAfterRank();
       } catch (error) {
@@ -1536,7 +1593,7 @@
         const syncFailed = error.message.includes("rank score sync");
         this.setRankSubmitLoading(
           false,
-          syncFailed ? "기록 동기화가 끊겨 등록하지 못했습니다" : "등록 실패. 다시 시도하거나 Skip하세요"
+          syncFailed ? "rank.syncFail" : "rank.submitFail"
         );
       }
     }
@@ -1547,7 +1604,8 @@
       dom.submitRank.disabled = true;
       dom.skipRank.disabled = true;
       dom.nickname.disabled = true;
-      dom.submitStatus.textContent = "등록을 건너뛰었습니다";
+      this.rankStatusKey = "rank.skipped";
+      dom.submitStatus.textContent = t(this.rankStatusKey);
       this.returnToMenuAfterRank(180);
     }
 
@@ -1559,10 +1617,14 @@
         dom.submitProgress.setAttribute("aria-hidden", isLoading ? "false" : "true");
       }
       dom.submitRank.disabled = isLoading;
-      dom.submitRank.textContent = isLoading ? "등록 중" : "등록";
+      this.rankButtonKey = isLoading ? "rank.submittingShort" : "rank.submit";
+      dom.submitRank.textContent = t(this.rankButtonKey);
       dom.skipRank.disabled = isLoading;
       dom.nickname.disabled = isLoading;
-      if (message !== undefined) dom.submitStatus.textContent = message;
+      if (message !== undefined) {
+        this.rankStatusKey = message || "";
+        dom.submitStatus.textContent = message ? t(message) : "";
+      }
     }
 
     returnToMenuAfterRank(delay = 650) {
@@ -1637,7 +1699,7 @@
     updateSoundButton() {
       if (!dom.soundToggle) return;
       const enabled = !this.sound || !this.sound.isEnabled || this.sound.isEnabled();
-      const label = enabled ? "사운드 켬" : "사운드 끔";
+      const label = enabled ? t("sound.on") : t("sound.off");
       dom.soundToggle.classList.toggle("is-muted", !enabled);
       dom.soundToggle.setAttribute("aria-pressed", enabled ? "true" : "false");
       dom.soundToggle.setAttribute("aria-label", label);
@@ -1848,7 +1910,7 @@
 
   function getRankLevelLabel(row, level = getRankLevel(row)) {
     const extra = getRankExtra(row);
-    if (extra.all_clear === true) return "ALL CLEAR";
+    if (extra.all_clear === true) return t("rank.allClear");
     const displayLevel = Number(extra.display_level || level || 0);
     return `Lv ${displayLevel.toLocaleString()}`;
   }

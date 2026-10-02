@@ -1,3 +1,8 @@
+function svt(key, fallback) {
+    const value = window.SlimeVolleyI18n && window.SlimeVolleyI18n.t(key);
+    return value && value !== key ? value : fallback;
+}
+
 // Main Game Controller
 class SlimeVolleyGame {
     constructor() {
@@ -649,7 +654,7 @@ class SlimeVolleyGame {
         }
 
         // 마이그레이션 로딩 오버레이 표시
-        this._showMigrationOverlay('새 호스트로 전환 중...', '게임이 곧 재개됩니다');
+        this._showMigrationOverlay(svt('migration.switching', '새 호스트로 전환 중...'), svt('migration.switchingBody', '게임이 곧 재개됩니다'));
 
         // P2P 재구성: 클라이언트 → 호스트로 역할 변경
         try {
@@ -657,13 +662,13 @@ class SlimeVolleyGame {
             console.log('[Migration] Successfully became P2P host');
             this._hideMigrationOverlay();
             if (this.renderer) {
-                this.renderer.showNotice('당신이 새 호스트입니다', 2500);
+                this.renderer.showNotice(svt('migration.youAreHost', '당신이 새 호스트입니다'), 2500);
             }
         } catch (e) {
             console.error('[Migration] Failed to become P2P host:', e);
             this._hideMigrationOverlay();
             if (this.renderer) {
-                this.renderer.showNotice('호스트 전환 실패', 2500);
+                this.renderer.showNotice(svt('migration.switchFailed', '호스트 전환 실패'), 2500);
             }
         }
     }
@@ -723,18 +728,18 @@ class SlimeVolleyGame {
                     await this.becomeHost();
                 } else if (msg.newHostId && !this.network.isHost && msg.newHostId !== this.network.playerId) {
                     // 나는 비호스트인데 호스트가 바뀜 → 새 호스트로 재연결
-                    this._showMigrationOverlay('호스트 이전 중...', '새 호스트에 연결하고 있습니다');
+                    this._showMigrationOverlay(svt('migration.title', '호스트 이전 중...'), svt('migration.reconnecting', '새 호스트에 연결하고 있습니다'));
                     try {
                         await this.network.migrateP2P(msg.newHostId);
                         this._hideMigrationOverlay();
                         if (this.renderer) {
-                            this.renderer.showNotice('새 호스트에 연결됨', 1500);
+                            this.renderer.showNotice(svt('migration.connected', '새 호스트에 연결됨'), 1500);
                         }
                     } catch (e) {
                         console.error('[Migration] Failed to migrate to new host:', e);
                         this._hideMigrationOverlay();
                         if (this.renderer) {
-                            this.renderer.showNotice('호스트 연결 실패 — 봇 모드로 진행', 3000);
+                            this.renderer.showNotice(svt('migration.connectFailed', '호스트 연결 실패 — 봇 모드로 진행'), 3000);
                         }
                     }
                 }

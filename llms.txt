@@ -5,20 +5,27 @@
 Archerlab Games is a web game portal where you can play various casual games directly in the browser. All games are free and require no installation.
 
 ## Games
-- [Lumen Shift](https://game.archerlab.dev/lumen-shift/): Music-reactive falling-block puzzle
-- [Jelly Pang 2048](https://game.archerlab.dev/jelly-pang-2048/): Jelly merge puzzle
-- [Parking Escape](https://game.archerlab.dev/parking-escape/): Sliding-car parking puzzle
-- [Jewelria](https://game.archerlab.dev/jewelria/): Match-3 jewel puzzle
-- [School Zombie Defense](https://game.archerlab.dev/school-zombie-defense/): Vertical zombie defense game
-- [BlockPang](https://game.archerlab.dev/blockpang/): Block placement puzzle
-- [Shadow Survival](https://game.archerlab.dev/solo-leveling/): 2D dungeon survival game
-- [Cat Tower](https://game.archerlab.dev/cat-tower/): Physics-based cat merge puzzle
-- [Slime Volley](https://game.archerlab.dev/slimevolley/): Browser volleyball game
-- [Bubbly Lab (보글보글 실험실)](https://game.archerlab.dev/water-sort/): Potion color-sorting puzzle with 60-second stages
+- [Lumen Shift](https://game.archerlab.dev/lumen-shift/): Music-reactive falling-block puzzle ([English](https://game.archerlab.dev/lumen-shift/index-en))
+- [Jelly Pang 2048](https://game.archerlab.dev/jelly-pang-2048/): Jelly merge puzzle ([English](https://game.archerlab.dev/jelly-pang-2048/index-en))
+- [Parking Escape](https://game.archerlab.dev/parking-escape/): Sliding-car parking puzzle ([English](https://game.archerlab.dev/parking-escape/index-en))
+- [Jewelria](https://game.archerlab.dev/jewelria/): Match-3 jewel puzzle ([English](https://game.archerlab.dev/jewelria/index-en))
+- [School Zombie Defense](https://game.archerlab.dev/school-zombie-defense/): Vertical zombie defense game ([English](https://game.archerlab.dev/school-zombie-defense/index-en))
+- [BlockPang](https://game.archerlab.dev/blockpang/): Block placement puzzle ([English](https://game.archerlab.dev/blockpang/index-en))
+- [Shadow Survival](https://game.archerlab.dev/solo-leveling/): 2D dungeon survival game ([English](https://game.archerlab.dev/solo-leveling/index-en))
+- [Cat Tower](https://game.archerlab.dev/cat-tower/): Physics-based cat merge puzzle ([English](https://game.archerlab.dev/cat-tower/index-en))
+- [Slime Volley](https://game.archerlab.dev/slimevolley/): Browser volleyball game ([English](https://game.archerlab.dev/slimevolley/index-en))
+- [Bubbly Lab (보글보글 실험실)](https://game.archerlab.dev/water-sort/): Potion color-sorting puzzle with 60-second stages ([English](https://game.archerlab.dev/water-sort/index-en))
 
 ## Guides
-- [Cat Tower guide](https://game.archerlab.dev/seo/cat-tower-guide): evolution order, scoring, combos (Korean)
-- [Bubbly Lab guide](https://game.archerlab.dev/seo/bubbly-lab-guide): rules, 60-second stages, pour queue, ranking (Korean)
+- [Cat Tower guide](https://game.archerlab.dev/seo/cat-tower-guide) ([English](https://game.archerlab.dev/seo/cat-tower-guide-en)): evolution order, scoring, combos
+- [Bubbly Lab guide](https://game.archerlab.dev/seo/bubbly-lab-guide) ([English](https://game.archerlab.dev/seo/bubbly-lab-guide-en)): rules, 60-second stages, pour queue, ranking
+- [Jelly Pang 2048 guide](https://game.archerlab.dev/seo/jelly-pang-2048-guide) ([English](https://game.archerlab.dev/seo/jelly-pang-2048-guide-en))
+- [Lumen Shift guide](https://game.archerlab.dev/seo/lumen-shift-guide) ([English](https://game.archerlab.dev/seo/lumen-shift-guide-en))
+- [Parking Escape guide](https://game.archerlab.dev/seo/parking-escape-guide) ([English](https://game.archerlab.dev/seo/parking-escape-guide-en))
+- [School Zombie Defense guide](https://game.archerlab.dev/seo/school-zombie-defense-guide) ([English](https://game.archerlab.dev/seo/school-zombie-defense-guide-en))
+- [Slime Volley guide](https://game.archerlab.dev/seo/slime-volley-guide) ([English](https://game.archerlab.dev/seo/slime-volley-guide-en))
+- [Short browser games](https://game.archerlab.dev/seo/quick-browser-games) ([English](https://game.archerlab.dev/seo/quick-browser-games-en))
+- [Touch and keyboard](https://game.archerlab.dev/seo/mobile-and-keyboard-web-games) ([English](https://game.archerlab.dev/seo/mobile-and-keyboard-web-games-en))
 
 ## Features
 - 100% browser-based — no download or install
@@ -30,7 +37,7 @@ Archerlab Games is a web game portal where you can play various casual games dir
 - Developer: https://archerlab.dev
 
 ## Language
-- Korean (한국어), with English available on selected games
+- Korean (한국어) and English. Each game has a Korean page and an English page. Guides exist in both languages.
 
 ## Category
 Browser Games, Casual Games, Free Web Games
