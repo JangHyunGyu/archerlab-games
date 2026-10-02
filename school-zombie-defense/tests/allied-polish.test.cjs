@@ -13,7 +13,9 @@ const constant = name => vm.runInNewContext("(" + source.match(
 const sandbox = Object.fromEntries([
   "CHARACTER_READY_SOURCE_FRAMES", "CHARACTER_ATTACK_ACTIONS",
   "CHARACTER_ATTACK_RELEASE_FRAMES", "CHARACTER_ATTACK_FRAME_DURATIONS",
-  "CHARACTER_RECOVERY_BLEND_DURATIONS", "THROW_ANIMATION_FRAMES",
+  "CHARACTER_RECOVERY_BLEND_DURATIONS", "CHARACTER_FRAME_BLEND_DURATIONS", "CHARACTER_TURN_BLEND_SCALE",
+  "CHARACTER_FRAME_MUZZLE_OFFSETS", "CHARACTER_MUZZLE_OFFSETS", "CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES",
+  "DIRECTIONAL_MUZZLE_EFFECT_DEFENDERS", "MUZZLE_CORE", "THROW_ANIMATION_FRAMES",
   "THROW_ANIMATION_FRAME_DURATION", "WEAPON_SFX_INTENSITY", "MUZZLE_EFFECTS",
   "SHOCK_EFFECT_OUTER_COLOR"
 ].map(name => [name, constant(name)]));
@@ -75,6 +77,10 @@ function sprite(key = "ready") {
 }
 const startAttack = method("startDefenderAttackAnimation", "getAttackPose");
 const update = method("updateDefenderAnimations", "updateSpawning");
+sandbox.getAimPose = key => ({ key, angle: 0 });
+const blendFrame = method("blendDefenderFrame", "setDefenderPose");
+const getMuzzle = method("getDefenderMuzzle", "syncDefenderMuzzleFlash");
+const syncMuzzleFlash = method("syncDefenderMuzzleFlash", "createHud");
 for (const id of "abcdefgh") for (const dt of [1 / 60, 0.1, 0.5]) {
   const defender = { id, sprite: sprite(), recruited: true, pose: "aim-1030" };
   let releases = 0;
@@ -82,6 +88,7 @@ for (const id of "abcdefgh") for (const dt of [1 / 60, 0.1, 0.5]) {
     defenders: [defender], textures: { exists: () => true },
     fitDefenderActionHeight() {}, trackTransient: x => x,
     add: { image: () => sprite() }, tweens: { add() {} },
+    blendDefenderFrame: blendFrame, syncDefenderMuzzleFlash: syncMuzzleFlash,
     setDefenderPose(d, pose) { d.attackAnimation = null; d.pose = pose; d.sprite.setTexture("ready-" + pose); }
   };
   startAttack.call(scene, defender, "aim-1030", () => releases++);
@@ -104,6 +111,7 @@ for (const pose of poseKeys) {
     defenders: [defender], textures: { exists: () => true },
     fitDefenderActionHeight() {}, trackTransient: x => x,
     add: { image: () => sprite() }, tweens: { add() {} },
+    blendDefenderFrame: blendFrame, syncDefenderMuzzleFlash: syncMuzzleFlash,
     setDefenderPose(d, p) { d.attackAnimation = null; d.pose = p; d.sprite.setTexture("ready-" + p); }
   };
   startAttack.call(scene, defender, pose, () => releases++);
@@ -138,17 +146,86 @@ for (const projectile of ["projectile-shock", "projectile-firebomb", "projectile
   assert.ok(removed, "weapon discharge must release its transient object");
 }
 
+const minimumFlashWidth = {
+  "projectile-arrow": 50, "projectile-pistol": 50, "projectile-rifle": 60, "projectile-sniper": 74, "projectile-rocket": 84
+};
 for (const [projectile, effect] of Object.entries(sandbox.MUZZLE_EFFECTS)) {
   let origin;
   const flash = sprite();
   flash.setOrigin = (x, y) => { origin = [x, y]; return flash; };
   flash.setBlendMode = () => flash;
-  createMuzzle.call({
+  const core = sprite();
+  core.setBlendMode = () => core;
+  const coreArgs = [];
+  const tweenTargets = [];
+  const returned = createMuzzle.call({
     textures: { get: () => ({ getSourceImage: () => ({ width: 200, height: 100 }) }) },
-    add: { image: () => flash }, trackTransient: x => x, tweens: { add() {} }
+    add: { image: () => flash, circle: (...args) => { coreArgs.push(args); return core; } },
+    trackTransient: x => x, tweens: { add: options => tweenTargets.push(options.targets) }
   }, 40, 60, -1, projectile);
   assert.deepEqual(origin, [effect.originX, 0.5], "hotspot must stay anchored during flash scaling");
   assert.ok(origin[0] > 0.08 && origin[0] < 0.5);
+  assert.ok(effect.width >= minimumFlashWidth[projectile], `${projectile} flash must stay large enough to read on the dark field`);
+  assert.ok(effect.alpha >= 0.9, `${projectile} flash must stay bright`);
+  assert.equal(coreArgs.length, 1, `${projectile} flash needs a white-hot core`);
+  assert.deepEqual(coreArgs[0].slice(0, 2), [40, 60], "core must sit on the muzzle hotspot");
+  assert.equal(returned, flash, "createMuzzle must hand back the live flash so it can follow recoil frames");
+  assert.equal(returned.muzzleCore, core);
+  assert.ok(tweenTargets.includes(core) && tweenTargets.includes(flash), "both flash layers must fade out");
+}
+
+// Frame blending: aim -> fire and frame -> frame are dissolved for gun carriers only.
+for (const id of "abcdefgh") {
+  const defender = { id, sprite: sprite("ready-aim-12"), recruited: true, pose: "aim-12" };
+  const ghosts = [];
+  const tweens = [];
+  const scene = {
+    defenders: [defender], textures: { exists: () => true },
+    fitDefenderActionHeight() {}, trackTransient: x => x,
+    add: { image: () => { const ghost = sprite(); ghosts.push(ghost); return ghost; } },
+    tweens: { add: options => tweens.push(options) },
+    destroyTransientObject() {},
+    blendDefenderFrame: blendFrame, syncDefenderMuzzleFlash: syncMuzzleFlash,
+    setDefenderPose(d, p) { d.attackAnimation = null; d.pose = p; d.sprite.setTexture("ready-" + p); }
+  };
+  const baseBlend = sandbox.CHARACTER_FRAME_BLEND_DURATIONS[id] || 0;
+  startAttack.call(scene, defender, "aim-1030");
+  if (baseBlend) {
+    assert.equal(ghosts.length, 1, `${id}: turning toward a new target must dissolve from the previous drawing`);
+    assert.equal(tweens[0].duration, baseBlend * sandbox.CHARACTER_TURN_BLEND_SCALE, `${id}: turn blend is stretched`);
+    assert.equal(tweens[0].alpha, 0);
+    update.call(scene, 0.08);
+    assert.ok(ghosts.length >= 2, `${id}: frame-to-frame transitions must be interpolated`);
+    scene.reducedMotion = true;
+    const before = ghosts.length;
+    update.call(scene, 0.08);
+    assert.equal(ghosts.length, before, `${id}: reduced motion must skip dissolves`);
+  } else {
+    assert.equal(ghosts.length, 0, `${id}: curated sheets keep their reviewed timing`);
+  }
+}
+
+// The sniper's recoil frames swing the barrel, so a live flash must follow it.
+{
+  const defender = { id: "e", x: 488, y: 878, aim: { pivot: [2, -132], reach: 64 }, pose: "aim-12" };
+  const moves = [];
+  const flash = sprite();
+  flash.setPosition = (x, y) => { moves.push([x, y]); return flash; };
+  const core = sprite();
+  core.setPosition = (x, y) => { moves.push(["core", x, y]); return core; };
+  flash.muzzleCore = core;
+  defender.muzzleFlash = { flash, pose: "aim-12", shotOffset: 0 };
+  const scene = { getDefenderMuzzle: getMuzzle };
+  syncMuzzleFlash.call(scene, defender, 3);
+  assert.equal(moves.length, 0, "frames without their own barrel position must not move the flash");
+  const ready = getMuzzle.call(scene, defender, "aim-12");
+  syncMuzzleFlash.call(scene, defender, 1);
+  assert.deepEqual(moves[0], [488 - 15, 878 - 180], "recoil frame 1 moves the flash onto the swung barrel");
+  assert.notEqual(moves[0][0], ready.x);
+  assert.deepEqual(moves[1], ["core", 488 - 15, 878 - 180]);
+  flash.destroyed = true;
+  syncMuzzleFlash.call(scene, defender, 2);
+  assert.equal(defender.muzzleFlash, null, "a destroyed flash must be released");
 }
 
 let played;

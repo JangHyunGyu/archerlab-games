@@ -186,10 +186,24 @@
     b: [[-31, -176], [-37, -192], [-32, -198], [-23, -194], [2, -210], [24, -195], [34, -198], [39, -189], [32, -179]],
     c: [[-28, -182], [-38, -209], [-24, -210], [-15, -215], [0, -215], [15, -215], [28, -212], [34, -210], [28, -183]],
     d: [[-36, -172], [-30, -183], [-25, -193], [-15, -198], [2, -198], [18, -196], [30, -193], [31, -180], [41, -171]],
-    e: [[-33, -154], [-30, -160], [-34, -162], [-26, -165], [2, -180], [23, -175], [30, -167], [30, -158], [33, -151]],
+    e: [[-33, -154], [-30, -160], [-40, -163], [-34, -172], [2, -180], [23, -175], [30, -167], [30, -158], [33, -151]],
     f: [[-52, -150], [-58, -142], [-65, -158], [-31, -141], [32, -147], [32, -140], [64, -157], [58, -142], [52, -150]],
     g: [[-36, -159], [-40, -198], [-21, -199], [-15, -204], [0, -205], [17, -203], [27, -200], [33, -192], [36, -161]],
     h: [[-32, -174], [-39, -187], [-23, -203], [-14, -208], [0, -211], [21, -211], [32, -206], [39, -190], [36, -176]]
+  };
+  // E's recoil frames swing the rifle sideways by up to ~17 px, so the release
+  // frame's muzzle would float in empty air while the flash is still alive.
+  // These per-frame barrel tips keep the flash on the rifle as the frames play.
+  const CHARACTER_FRAME_MUZZLE_OFFSETS = {
+    e: {
+      1: [[-34, -154], [-32, -160], [-42, -163], [-26, -172], [-15, -180], [30, -175], [41, -167], [30, -158], [36, -151]],
+      2: [[-23, -154], [-31, -160], [-42, -163], [-27, -172], [-15, -180], [23, -175], [30, -167], [30, -158], [34, -151]]
+    }
+  };
+  // Some bullet art keeps transparent padding below its visible tail. Anchor
+  // those sprites at the visible tail so the bullet starts on the barrel tip.
+  const PROJECTILE_TAIL_ORIGINS = {
+    "projectile-sniper": 0.83
   };
   const DIRECTIONAL_MUZZLE_EFFECT_DEFENDERS = new Set(["b", "c", "d", "e", "g", "h"]);
   const CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES = {
@@ -210,9 +224,25 @@
   };
   const CHARACTER_RECOVERY_BLEND_DURATIONS = {
     a: 70,
+    b: 70,
+    c: 80,
+    d: 70,
+    e: 70,
     f: 90,
-    g: 50
+    g: 50,
+    h: 70
   };
+  // Cross-dissolve the previous drawing into the next one (ready -> first
+  // attack frame, then frame -> frame) so aiming and firing read as motion
+  // instead of a cut. Turning toward a new target stretches the first blend.
+  const CHARACTER_FRAME_BLEND_DURATIONS = {
+    b: 55,
+    c: 65,
+    d: 55,
+    e: 65,
+    h: 55
+  };
+  const CHARACTER_TURN_BLEND_SCALE = 1.6;
   // Use the same drawing for ready/attack transitions. In particular, F's
   // old ready sheet holds the bottle in the opposite hand for leftward throws.
   const CHARACTER_READY_SOURCE_FRAMES = { c: 0, f: 0, g: 1, h: 0 };
@@ -282,12 +312,16 @@
   };
   const MUZZLE_EFFECTS = {
     // Anchor the bright ignition point to the barrel, leaving smoke behind it.
-    "projectile-arrow": { texture: "muzzle-arrow", width: 42, duration: 150, alpha: 0.78, scalePeak: 1.12, originX: 0.18 },
-    "projectile-pistol": { texture: "muzzle-pistol", width: 36, duration: 130, alpha: 0.92, scalePeak: 1.18, originX: 0.34 },
-    "projectile-rifle": { texture: "muzzle-rifle", width: 48, duration: 120, alpha: 0.95, scalePeak: 1.16, originX: 0.25 },
-    "projectile-sniper": { texture: "muzzle-sniper", width: 58, duration: 135, alpha: 0.9, scalePeak: 1.12, originX: 0.2 },
-    "projectile-rocket": { texture: "muzzle-rocket", width: 68, duration: 190, alpha: 0.95, scalePeak: 1.08, originX: 0.35 }
+    // Sizes and alpha are tuned so the flash still reads on the dark field.
+    "projectile-arrow": { texture: "muzzle-arrow", width: 52, duration: 160, alpha: 0.9, scalePeak: 1.18, originX: 0.18 },
+    "projectile-pistol": { texture: "muzzle-pistol", width: 52, duration: 150, alpha: 1, scalePeak: 1.28, originX: 0.34 },
+    "projectile-rifle": { texture: "muzzle-rifle", width: 64, duration: 140, alpha: 1, scalePeak: 1.24, originX: 0.25 },
+    "projectile-sniper": { texture: "muzzle-sniper", width: 78, duration: 160, alpha: 1, scalePeak: 1.22, originX: 0.2 },
+    "projectile-rocket": { texture: "muzzle-rocket", width: 88, duration: 210, alpha: 1, scalePeak: 1.14, originX: 0.35 }
   };
+  // A short white-hot core at the hotspot keeps the flash visible even when
+  // the sprite itself is small.
+  const MUZZLE_CORE = { radiusRatio: 0.12, color: 0xfff4c2, alpha: 0.95, scalePeak: 2.3, durationRatio: 0.75 };
   const ZOMBIE_HIT_EFFECTS = {
     "projectile-arrow": { texture: "zombie-hit-arrow-sheet", width: 42, duration: 210, alpha: 0.94, scalePeak: 1.03, rotation: 0.08, frameWidth: 96, frameHeight: 96, frames: 12 },
     "projectile-pistol": { texture: "zombie-hit-pistol-sheet", width: 54, duration: 220, alpha: 0.96, scalePeak: 1.05, rotation: 0.1, frameWidth: 112, frameHeight: 96, frames: 12 },
@@ -2787,6 +2821,30 @@
       this.fitSpriteHeight(defender.sprite, defender.height * sourceHeightScale);
     }
 
+    blendDefenderFrame(defender, duration, nextTextureKey = null) {
+      const sprite = defender.sprite;
+      if (!sprite || !(duration > 0) || this.reducedMotion || sprite.texture?.key === nextTextureKey) {
+        return null;
+      }
+      // Leave the outgoing drawing on screen and dissolve it away, so the
+      // first rendered frame of a transition is never a hard cut.
+      const ghost = this.trackTransient(this.add.image(sprite.x, sprite.y, sprite.texture.key)
+        .setOrigin(sprite.originX, sprite.originY)
+        .setDisplaySize(sprite.displayWidth, sprite.displayHeight)
+        .setRotation(sprite.rotation)
+        .setFlip(sprite.flipX, sprite.flipY)
+        .setAlpha(sprite.alpha)
+        .setDepth(sprite.depth + 0.01));
+      this.tweens.add({
+        targets: ghost,
+        alpha: 0,
+        duration,
+        ease: "Sine.easeOut",
+        onComplete: () => this.destroyTransientObject(ghost, false)
+      });
+      return ghost;
+    }
+
     setDefenderPose(defender, pose) {
       if (!defender.sprite) {
         return;
@@ -2811,6 +2869,7 @@
       const frameDurations = CHARACTER_ATTACK_FRAME_DURATIONS[defender.id]
         || Array(THROW_ANIMATION_FRAMES).fill(THROW_ANIMATION_FRAME_DURATION);
       const delaysRelease = Number.isInteger(releaseFrame) && typeof onRelease === "function";
+      const previousPose = defender.pose;
       if (action && defender.sprite && this.textures.exists(firstAttackFrame)) {
         defender.pose = pose;
         defender.attackAnimation = {
@@ -2824,6 +2883,12 @@
           releaseFrame: delaysRelease ? releaseFrame : null,
           onRelease: delaysRelease ? onRelease : null
         };
+        this.blendDefenderFrame(
+          defender,
+          (CHARACTER_FRAME_BLEND_DURATIONS[defender.id] || 0)
+            * (previousPose && previousPose !== pose ? CHARACTER_TURN_BLEND_SCALE : 1),
+          firstAttackFrame
+        );
         defender.sprite.setTexture(firstAttackFrame);
         this.fitDefenderActionHeight(defender);
         defender.firePoseTimer = frameDurations.reduce((total, duration) => total + duration, 0);
@@ -2846,11 +2911,12 @@
       return getShotAimPoseKey(Math.atan2(dy, dx));
     }
 
-    getDefenderMuzzle(defender, pose) {
+    getDefenderMuzzle(defender, pose, frame = 0) {
       const aim = defender.aim || { pivot: [0, -160], reach: 84 };
       const poseInfo = getAimPose(pose);
       const poseIndex = AIM_POSE_KEYS.indexOf(poseInfo.key);
-      const measuredOffset = CHARACTER_MUZZLE_OFFSETS[defender.id]?.[poseIndex];
+      const measuredOffset = (frame > 0 ? CHARACTER_FRAME_MUZZLE_OFFSETS[defender.id]?.[frame]?.[poseIndex] : null)
+        || CHARACTER_MUZZLE_OFFSETS[defender.id]?.[poseIndex];
       if (measuredOffset) {
         const effectAngleOverride = CHARACTER_MUZZLE_EFFECT_ANGLE_OVERRIDES[defender.id]?.[poseIndex];
         const effectAngle = Number.isFinite(effectAngleOverride)
@@ -2868,6 +2934,29 @@
         x: defender.x + aim.pivot[0] + Math.cos(poseInfo.angle) * aim.reach,
         y: defender.y + aim.pivot[1] + Math.sin(poseInfo.angle) * aim.reach
       };
+    }
+
+    syncDefenderMuzzleFlash(defender, frame) {
+      const tracked = defender.muzzleFlash;
+      const flash = tracked?.flash;
+      if (!flash) {
+        return;
+      }
+      if (flash.destroyed || flash.active === false) {
+        defender.muzzleFlash = null;
+        return;
+      }
+      if (!CHARACTER_FRAME_MUZZLE_OFFSETS[defender.id]?.[frame]) {
+        return;
+      }
+      // Keep a live flash on the barrel while the recoil frames move it.
+      const muzzle = this.getDefenderMuzzle(defender, tracked.pose, frame);
+      const x = muzzle.x + tracked.shotOffset;
+      flash.setPosition(x, muzzle.y);
+      const core = flash.muzzleCore;
+      if (core && !core.destroyed && core.active !== false) {
+        core.setPosition(x, muzzle.y);
+      }
     }
 
     createHud() {
@@ -5934,6 +6023,7 @@
         defender.timer = rand(scaleWeaponInterval(0.1), defender.rate);
         defender.firePoseTimer = 0;
         defender.attackAnimation = null;
+        defender.muzzleFlash = null;
       });
       this.applyMetaUpgrades();
       this.defenders.forEach((defender) => {
@@ -6237,8 +6327,10 @@
             animation.timer += animation.frameDurations?.[animation.frame] || animation.frameDuration;
             const textureKey = `character-${defender.id}-${animation.action}-${animation.pose}-${animation.frame}`;
             if (defender.sprite && this.textures.exists(textureKey)) {
+              this.blendDefenderFrame(defender, CHARACTER_FRAME_BLEND_DURATIONS[defender.id] || 0, textureKey);
               defender.sprite.setTexture(textureKey);
               this.fitDefenderActionHeight(defender);
+              this.syncDefenderMuzzleFlash(defender, animation.frame);
             }
             if (animation.frame === animation.releaseFrame && animation.onRelease) {
               const releaseAttack = animation.onRelease;
@@ -6937,7 +7029,7 @@
         const usesHorizontalProjectile = defender.projectile === "projectile-nail"
           || defender.projectile === "projectile-arrow";
         const sprite = this.add.image(x, y, defender.projectile)
-          .setOrigin(0.5, usesHorizontalProjectile ? 0.5 : 1)
+          .setOrigin(0.5, usesHorizontalProjectile ? 0.5 : (PROJECTILE_TAIL_ORIGINS[defender.projectile] ?? 1))
           .setScale(PROJECTILE_SCALES[defender.projectile] || 0.78)
           .setRotation(angle + (usesHorizontalProjectile ? 0 : Math.PI / 2))
           .setDepth(190);
@@ -6989,7 +7081,8 @@
           hitTargets: new Set(),
           trailTimer: 0
         });
-        this.createMuzzle(x, y, muzzle.effectAngle ?? angle, defender.projectile);
+        const muzzleFlash = this.createMuzzle(x, y, muzzle.effectAngle ?? angle, defender.projectile);
+        defender.muzzleFlash = muzzleFlash ? { flash: muzzleFlash, pose, shotOffset } : null;
         this.playWeaponSfx(defender.projectile);
       });
     }
@@ -7252,6 +7345,17 @@
 
       const texture = this.textures.get(effect.texture).getSourceImage();
       const displayHeight = effect.width * texture.height / texture.width;
+      const core = this.trackTransient(this.add.circle(x, y, effect.width * MUZZLE_CORE.radiusRatio, MUZZLE_CORE.color, MUZZLE_CORE.alpha)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(239));
+      this.tweens.add({
+        targets: core,
+        scale: MUZZLE_CORE.scalePeak,
+        alpha: 0,
+        duration: effect.duration * MUZZLE_CORE.durationRatio,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.destroyTransientObject(core, false)
+      });
       const flash = this.trackTransient(this.add.image(x, y, effect.texture)
         .setOrigin(effect.originX, 0.5)
         .setDisplaySize(effect.width, displayHeight)
@@ -7268,6 +7372,8 @@
         ease: "Cubic.easeOut",
         onComplete: () => this.destroyTransientObject(flash, false)
       });
+      flash.muzzleCore = core;
+      return flash;
     }
 
     createWeaponDischarge(x, y, angle, projectile) {

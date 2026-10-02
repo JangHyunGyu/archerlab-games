@@ -1003,6 +1003,60 @@ assertCharacterBodyGeometry({
 assertShockCannonDirections();
 assertPngWebpAlphaParity();
 assertMeasuredMuzzlesTouchReleaseArt();
+
+// Recoil frames that swing the rifle away from its release-frame muzzle must
+// declare their own barrel positions, and those positions must touch the art.
+{
+  const frameOffsetsSource = gameSource.match(
+    /const\s+CHARACTER_FRAME_MUZZLE_OFFSETS\s*=\s*(\{[\s\S]*?\n\s*\});/
+  )?.[1];
+  assert.ok(frameOffsetsSource, "CHARACTER_FRAME_MUZZLE_OFFSETS must remain discoverable");
+  const frameOffsets = Function(`"use strict"; return (${frameOffsetsSource});`)();
+  const frameSheetHeights = { e: 205 };
+  for (const [defenderId, frames] of Object.entries(frameOffsets)) {
+    for (const [frame, offsets] of Object.entries(frames)) {
+      assert.equal(offsets.length, directionKeys.length, `${defenderId.toUpperCase()} frame ${frame} must cover all nine directions`);
+      const image = decodePngAlpha(path.join(imageRoot, `character-${defenderId}-attack-${frame}.png`));
+      offsets.forEach((offset, cellIndex) => {
+        const distance = nearestAlphaDistanceFromMuzzle(image, cellIndex, frameSheetHeights[defenderId], offset);
+        assert.ok(
+          distance <= 2,
+          `${defenderId.toUpperCase()} frame ${frame} direction ${directionKeys[cellIndex]} flash anchor floats ${distance.toFixed(2)} px off the barrel`
+        );
+      });
+    }
+  }
+  // Without these tables the sniper's flash hangs ~17 px in front of its recoil frames.
+  const sniperRelease = decodePngAlpha(path.join(imageRoot, "character-e.png"));
+  const sniperRecoil = decodePngAlpha(path.join(imageRoot, "character-e-attack-1.png"));
+  assert.ok(
+    nearestAlphaDistanceFromMuzzle(sniperRecoil, 4, 205, muzzleOffsets.e[4]) > 8
+      && nearestAlphaDistanceFromMuzzle(sniperRelease, 4, 205, muzzleOffsets.e[4]) <= 2,
+    "sniper recoil frame 1 still moves its straight-up barrel away from the release anchor"
+  );
+  assert.ok(frameOffsets.e?.[1] && frameOffsets.e?.[2], "sniper recoil frames 1 and 2 need their own barrel anchors");
+
+  // The sniper bullet must start at its visible tail, not at transparent padding.
+  const tailOrigin = Function(`"use strict"; return (${
+    gameSource.match(/const\s+PROJECTILE_TAIL_ORIGINS\s*=\s*(\{[\s\S]*?\n\s*\});/)?.[1]
+  });`)()["projectile-sniper"];
+  const bullet = decodePngAlpha(path.join(imageRoot, "projectile-sniper.png"));
+  let visibleBottom = -1;
+  for (let y = bullet.height - 1; y >= 0 && visibleBottom < 0; y -= 1) {
+    for (let x = 0; x < bullet.width; x += 1) {
+      if (bullet.alpha[y * bullet.width + x] > 16) { visibleBottom = y + 1; break; }
+    }
+  }
+  assert.ok(
+    Math.abs(tailOrigin - visibleBottom / bullet.height) <= 0.01,
+    `sniper bullet origin ${tailOrigin} must match its visible tail ${(visibleBottom / bullet.height).toFixed(3)}`
+  );
+  assert.match(
+    gameSource,
+    /\.setOrigin\(0\.5, usesHorizontalProjectile \? 0\.5 : \(PROJECTILE_TAIL_ORIGINS\[defender\.projectile\] \?\? 1\)\)/,
+    "bullets must use their visible-tail origin"
+  );
+}
 assertCrossbowDirectionalSymmetry();
 assertCrossbowSourceChecksums();
 assert.ok(
