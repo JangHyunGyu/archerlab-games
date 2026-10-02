@@ -9,13 +9,15 @@ const zlib = require("node:zlib");
 
 const root = path.resolve(__dirname, "..");
 const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+// Korean copy now lives in js/i18n.js, so check it together with game.js.
+const gameCopySource = gameSource + "\n" + fs.readFileSync(path.join(root, "js", "i18n.js"), "utf8");
 assert.doesNotMatch(
-  gameSource,
+  gameCopySource,
   /활|화살/,
   "game-facing Korean copy must not regress from crossbow/bolt terminology to bow/arrow"
 );
-assert.match(gameSource, /석궁/, "game-facing Korean copy must identify the crossbow");
-assert.match(gameSource, /볼트/, "game-facing Korean copy must identify crossbow bolts");
+assert.match(gameCopySource, /석궁/, "game-facing Korean copy must identify the crossbow");
+assert.match(gameCopySource, /볼트/, "game-facing Korean copy must identify crossbow bolts");
 const finalizeDirectionsSource = fs.readFileSync(
   path.join(root, "tools", "finalize-defender-action-directions.py"),
   "utf8"

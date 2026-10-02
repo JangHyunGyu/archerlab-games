@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../js/game.js'), 'utf8');
+// Minimal i18n stub: game.js reads SchoolI18n from window at load time, which is absent here.
+const SchoolI18n = { t: key => key, getLang: () => 'en', setLang() {} };
 
 function method(name, globals = {}) {
   const start = source.search(new RegExp(`^    (?:async )?${name}\\(`, 'm'));
@@ -12,7 +14,7 @@ function method(name, globals = {}) {
   return vm.runInNewContext(`({${source.slice(start, end)}}).${name}`, {
     SHOP_CHARACTERS: [{ id: 'c', accent: 1 }], SHOP_MAX_LEVEL: 30,
     COLORS: { gold: 1, red: 2 }, getShopUpgradeCost: () => 200,
-    formatShopCost: String, ...globals
+    formatShopCost: String, SchoolI18n, ...globals
   });
 }
 

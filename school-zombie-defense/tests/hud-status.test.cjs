@@ -14,7 +14,7 @@ const hudChips = [...statusPanel.matchAll(/this\.addHudChip\s*\(/g)];
 assert.equal(hudChips.length, 1, "the combat HUD must only keep the supply chip");
 assert.match(
   statusPanel,
-  /this\.addHudChip\s*\(270, 91, 176, "보급", "\$0", COLORS\.gold\)/,
+  /this\.addHudChip\s*\(270, 91, 176, SchoolI18n\.t\("hud\.supply"\), "\$0", COLORS\.gold\)/,
   "the supply chip must remain centered after removing side chips"
 );
 assert.doesNotMatch(statusPanel, /"사기"|"보호막"/, "morale and persistent shield chips must not return");
