@@ -315,7 +315,7 @@ const sheets = [
   { name: "character-d", width: 2016, height: 362 },
   ...[1, 2, 3].map(frame => ({ name: `character-d-attack-${frame}`, width: 2016, height: 362 })),
   { name: "character-f", width: 4608, height: 512 },
-  ...[0, 1, 2, 3].map(frame => ({ name: `character-f-throw-${frame}`, width: 4608, height: 640 })),
+  ...[0, 1, 2, 3, 4].map(frame => ({ name: `character-f-throw-${frame}`, width: 4608, height: 640 })),
   { name: "character-g", width: 2565, height: 512 },
   ...[0, 1, 2, 3].map(frame => ({ name: `character-g-attack-${frame}`, width: 1584, height: 256 }))
 ];

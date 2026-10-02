@@ -73,6 +73,7 @@
   };
   const ZOMBIE_ASSET_VERSION = "20260913-diva-elite-v1";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
+  const FIREBOMB_RECOVERY_ASSET_VERSION = "20261002-firebomb-recovery-v1";
   const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
@@ -203,7 +204,9 @@
   const CHARACTER_ATTACK_FRAME_DURATIONS = {
     // Give the crossbow a readable aim, a crisp release, and a softer recovery
     // while keeping the projectile release at roughly the original 150 ms beat.
-    a: [0.045, 0.11, 0.045, 0.09]
+    a: [0.045, 0.11, 0.045, 0.09],
+    // Preserve the 150 ms release and add a shoulder-height return before ready.
+    f: [0.075, 0.075, 0.075, 0.075, 0.12]
   };
   const CHARACTER_RECOVERY_BLEND_DURATIONS = {
     a: 70,
@@ -1400,7 +1403,8 @@
 
   function createCharacterAttackTextures(scene) {
     Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
-      for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
+      const frameCount = CHARACTER_ATTACK_FRAME_DURATIONS[id]?.length || THROW_ANIMATION_FRAMES;
+      for (let frame = 0; frame < frameCount; frame += 1) {
         const usesBasePose = frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id);
         const sourceKey = usesBasePose ? `character-${id}` : `character-${id}-${action}-${frame}`;
         if (!scene.textures.exists(sourceKey)) {
@@ -2121,13 +2125,15 @@
       this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
       Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
         const assetVersion = id === "a" ? CROSSBOW_ASSET_VERSION : CHARACTER_ASSET_VERSION;
-        for (let frame = 0; frame < THROW_ANIMATION_FRAMES; frame += 1) {
+        const frameCount = CHARACTER_ATTACK_FRAME_DURATIONS[id]?.length || THROW_ANIMATION_FRAMES;
+        for (let frame = 0; frame < frameCount; frame += 1) {
           if (frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id)) {
             continue;
           }
           this.load.image(
             `character-${id}-${action}-${frame}`,
-            versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`, assetVersion)
+            versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`,
+              id === "f" && frame === 4 ? FIREBOMB_RECOVERY_ASSET_VERSION : assetVersion)
           );
         }
       });
@@ -2811,7 +2817,7 @@
           action,
           pose,
           frame: 0,
-          frames: THROW_ANIMATION_FRAMES,
+          frames: frameDurations.length,
           timer: frameDurations[0],
           frameDuration: THROW_ANIMATION_FRAME_DURATION,
           frameDurations,

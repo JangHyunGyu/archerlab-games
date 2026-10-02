@@ -56,6 +56,17 @@ assets.delete("character-f-throw-0");
 makeReady(sceneTextures);
 assert.equal(slices.get("character-f-aim-1030").key, "character-f", "missing optional action source must preserve fallback");
 
+const attackFactoryEnd = source.indexOf("  function releaseCharacterSourceTextures(", factoryEnd);
+const makeAttacks = vm.runInNewContext("(" + source.slice(factoryEnd, attackFactoryEnd).trim() + ")", sandbox);
+sandbox.CHARACTER_ATTACK_FRAME_ZERO_ALIASES = constant("CHARACTER_ATTACK_FRAME_ZERO_ALIASES");
+assets.set("character-f-throw-4", { width: 4608, height: 640 });
+sceneTextures.textures.remove = key => assets.delete(key);
+makeAttacks(sceneTextures);
+poseKeys.forEach((pose, index) => {
+  const slice = slices.get(`character-f-throw-${pose}-4`);
+  assert.deepEqual({ ...slice }, { key: "character-f-throw-4", x: index * 512, y: 0, width: 512, height: 640 });
+});
+
 function sprite(key = "ready") {
   const item = { texture: { key }, x: 270, y: 925, originX: 0.5, originY: 1, displayWidth: 100, displayHeight: 200, rotation: 0, alpha: 1, depth: 200 };
   for (const name of ["setOrigin", "setDisplaySize", "setRotation", "setFlip", "setAlpha", "setDepth"]) item[name] = () => item;
@@ -64,7 +75,7 @@ function sprite(key = "ready") {
 }
 const startAttack = method("startDefenderAttackAnimation", "getAttackPose");
 const update = method("updateDefenderAnimations", "updateSpawning");
-for (const id of "abcdefgh") for (const dt of [1 / 60, 0.1]) {
+for (const id of "abcdefgh") for (const dt of [1 / 60, 0.1, 0.5]) {
   const defender = { id, sprite: sprite(), recruited: true, pose: "aim-1030" };
   let releases = 0;
   const scene = {
@@ -74,6 +85,8 @@ for (const id of "abcdefgh") for (const dt of [1 / 60, 0.1]) {
     setDefenderPose(d, pose) { d.attackAnimation = null; d.pose = pose; d.sprite.setTexture("ready-" + pose); }
   };
   startAttack.call(scene, defender, "aim-1030", () => releases++);
+  assert.equal(defender.attackAnimation.frames, id === "f" ? 5 : 4,
+    "only the firebomb thrower gets an extra recovery frame");
   const duration = (sandbox.CHARACTER_ATTACK_FRAME_DURATIONS[id] || [0.075, 0.075, 0.075, 0.075]).reduce((a, b) => a + b, 0);
   const ticks = Math.ceil((duration + 1e-8) / dt);
   for (let tick = 0; tick < ticks; tick++) update.call(scene, dt);
@@ -81,6 +94,28 @@ for (const id of "abcdefgh") for (const dt of [1 / 60, 0.1]) {
   assert.equal(defender.attackAnimation, null, `${id}: recovery cannot stretch at low FPS / 2x speed`);
   assert.equal(defender.pose, "aim-1030", "recovery must preserve aim");
   assert.equal(defender.sprite.y, 925, "feet must remain planted");
+}
+
+// Exercise the extra pose at every aim, without delaying or repeating the throw.
+for (const pose of poseKeys) {
+  const defender = { id: "f", sprite: sprite(), recruited: true };
+  let releases = 0;
+  const scene = {
+    defenders: [defender], textures: { exists: () => true },
+    fitDefenderActionHeight() {}, trackTransient: x => x,
+    add: { image: () => sprite() }, tweens: { add() {} },
+    setDefenderPose(d, p) { d.attackAnimation = null; d.pose = p; d.sprite.setTexture("ready-" + p); }
+  };
+  startAttack.call(scene, defender, pose, () => releases++);
+  update.call(scene, 0.149);
+  assert.equal(releases, 0, "firebomb cannot be released early");
+  update.call(scene, 0.002);
+  assert.equal(releases, 1, "firebomb still releases at 150 ms");
+  update.call(scene, 0.15);
+  assert.equal(defender.sprite.texture.key, `character-f-throw-${pose}-4`);
+  update.call(scene, 0.12);
+  assert.equal(defender.sprite.texture.key, "ready-" + pose);
+  assert.equal(releases, 1);
 }
 
 const createMuzzle = method("createMuzzle", "createWeaponDischarge");
@@ -127,6 +162,13 @@ const alphaCheck = spawnSync("python", ["-c", [
   "from PIL import Image",
   "import sys",
   "root=Path(sys.argv[1])/'assets/images'",
+  "recovery_png=Image.open(root/'character-f-throw-4.png').convert('RGBA')",
+  "recovery_webp=Image.open(root/'character-f-throw-4.webp').convert('RGBA')",
+  "assert recovery_png.size==(4608,640) and recovery_png.tobytes()==recovery_webp.tobytes(), 'recovery must retain lossless RGBA'",
+  "for i in range(9):",
+  " cell=recovery_png.crop((i*512,0,(i+1)*512,640))",
+  " box=cell.getchannel('A').point(lambda a: 255 if a>32 else 0).getbbox()",
+  " assert box and min(box[:2])>=6 and box[2]<=506 and box[3]<=634, f'recovery direction {i} clips'",
   "for kind in ['pistol','rifle','sniper','shock']:",
   " a=Image.open(root/f'projectile-{kind}.png').convert('RGBA')",
   " b=Image.open(root/f'projectile-{kind}.webp').convert('RGBA')",

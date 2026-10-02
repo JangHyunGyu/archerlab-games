@@ -1,0 +1,117 @@
+{
+  "date": "2026-10-02",
+  "scope": "Generate candidates, compare against existing sprites, publish only accepted improvements.",
+  "generation": {
+    "tool": "built-in image_gen",
+    "backend_model": "not exposed by this tool",
+    "quality_request": "maximum supported quality and native resolution in every prompt",
+    "native_masters": "1122x1402 RGBA, retained byte-for-byte",
+    "delivery": "4608x640 PNG and lossless WebP; 9 cells of 512x640 using the established runtime derivative size"
+  },
+  "accepted": {
+    "asset": "character-f-throw-4",
+    "reason": "An explicit shoulder-height recovery pose bridges lowered throwing arm to overhead ready pose, retaining hand, identity, footing and anatomical scale.",
+    "directions": 9,
+    "source_directions": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "mirrored_directions": {
+      "5": 3,
+      "6": 2,
+      "7": 1,
+      "8": 0
+    },
+    "animation": {
+      "previous_frames": 4,
+      "frames": 5,
+      "release_seconds": 0.15,
+      "previous_total_seconds": 0.3,
+      "total_seconds": 0.42
+    },
+    "prompts": {
+      "center": "Precise edit of image1. Preserve exactly her back-facing head, ponytail, torso, hips, left arm, trousers, planted legs and boots and their locations. Change ONLY the right arm (on image RIGHT) into an intermediate recovery pose: upper arm extends diagonally right and slightly downward from shoulder, elbow bent approximately 90 degrees, right forearm pointing vertically upward, right gloved hand level with her ear, holding the same small flaming brown bottle from image2. This is halfway between image1's lowered right arm and image2's overhead right arm. Do not lift shoulder or rotate torso. Maintain the same head size, anatomical proportions, detail, olive tactical outfit, red hair, painting style. Image2 is bottle reference and final arm pose, NOT a request to copy the fully raised arm. One single whole character, NO grid or duplicate characters. Preserve original canvas framing and proportions, all head/boots fully visible. Fully transparent alpha background including between limbs. No shadow, no checkerboard, no text. Highest supported quality and maximum native resolution at the reference's 4:5 aspect ratio. Keep all unchanged body regions as faithful to image1 as possible.",
+      "left_directions": "Precise single-sprite edit of image1, with image2 as bottle and ready-pose reference. Keep exact head, ponytail, torso angle, right arm on image RIGHT, hips, trousers, legs and boots in their original locations. Change ONLY her LEFT arm on IMAGE LEFT: lift it halfway from image1's lowered position toward image2's overhead ready position. Upper arm angles out to image-left, elbow bent about 90 degrees, forearm rises, gloved hand and the same small flaming brown bottle are at shoulder/ear height. Do not switch hands. Do not raise the bottle fully overhead. This intermediate recovery pose must fit between the supplied two poses. Same illustrated linework, color, proportions and olive outfit. Preserve image1 framing and scale; single full-body back-view character, no grid. Keep both boots and head fully visible and all original body proportions. True transparent background, no cast shadows or checkerboard. Maximum supported native resolution and maximum quality at the input 4:5 ratio. Render unchanged regions as faithfully as possible."
+    }
+  },
+  "rejected": [
+    {
+      "file": "runner-v1-master.png",
+      "size": [
+        1774,
+        887
+      ],
+      "reason": "Repeated arm/leg phases and uneven anatomy; not a demonstrated improvement.",
+      "prompt": "Use case: identity-preserve. Production game animation sprite atlas. Create an improved eight-frame RUN cycle for the EXACT male runner zombie in reference image 1; reference image 2 is the existing death atlas and locks his anatomy, face, outfit, head size and painterly comic rendering. Preserve black messy hair, pale white eyes, open mouth, torn dark-green school jacket, dirty off-white bloodstained T-shirt, ripped dark trousers and white sneakers. No redesign, no extra wounds, no different clothing. Maximum supported image quality and maximum native resolution, landscape 2:1 aspect ratio. EXACTLY EIGHT complete full-body sprites on an invisible regular FOUR COLUMN by TWO ROW grid. Read left to right top row frames 1-4, then bottom row frames 5-8. True transparent alpha background, no checkerboard, no opaque backing, no ground shadows, no text, no grid. Equal generous cell margins and one character per cell. Every frame is strictly front-facing, face and chest square toward viewer, moving toward the viewer without turning, same camera as references. Same anatomical scale and head size throughout. One seamless running stride with TWO opposite contacts: frame1 image-left foot contacts ground in front, opposite arm forward; frame2 weight compresses on that planted leg; frame3 opposite knee passes forward while planted foot pushes back; frame4 brief flight with opposite knee raised; frame5 image-right foot contacts ground in front, exact opposite stride phase of frame1; frame6 weight compression on that foot; frame7 opposite knee passes; frame8 brief flight returning to frame1. Arms counter-swing naturally with knees, not clawing at camera; retain zombie expression. Smooth gradual limb progression, believable weight transfer, slight vertical bob, no repeated duplicate poses. Full head, hands, and both shoes fully inside every cell. Stable pelvis horizontal center. Keep fine linework and shading consistent with reference2. Deliver only the eight-frame transparent sprite atlas."
+    },
+    {
+      "file": "crawler-v1-master.png",
+      "size": [
+        1774,
+        887
+      ],
+      "reason": "The latter half repeats the leading hand instead of completing an alternating crawl.",
+      "prompt": "Edit/reference task: production animation sprite atlas for this EXACT crawling male zombie. Both attached images lock identity and existing death continuity. Keep his precise black hair, face, blue school blazer, red tie, backpack, torn trousers, sneakers, anatomical size, fine shaded comic linework and colors. Create EIGHT sequential key poses of a seamless belly-low crawling cycle, approaching the camera frontally. Face always looks straight at viewer, torso remains square to camera, do not rotate or change perspective. The chest stays low, knees trail behind. One complete character in each cell of a FOUR COLUMNS by TWO ROWS regular invisible grid, read left-right then next row. Canvas landscape 2:1. Maximum supported native resolution and maximum quality; use 4096x2048 if natively supported, otherwise the highest supported native resolution at this aspect ratio. Genuine transparent alpha background. No shadows or opaque backdrop, checkerboard, grid, numbering or text. All hands, fingers, toes and backpack contained fully with clear margins. Same head and hand size in every cell. Frame1: hand on IMAGE LEFT is fully extended forward and planted, opposite elbow bent beside chest. Frame2: left-on-image hand stays planted, its elbow flexes, chest moves forward over it while opposite hand lifts. Frame3: opposite hand swings forward halfway and chest remains low. Frame4: opposite hand reaches close to ground, first arm now bent underneath shoulder. Frame5: hand on IMAGE RIGHT is fully extended forward and planted, opposite elbow bent beside chest. Frame6: right-on-image hand stays planted and elbow flexes to pull body; left-on-image hand lifts. Frame7: left-on-image hand swings forward halfway. Frame8: left-on-image hand reaches ahead about to plant, returning smoothly to frame1. Alternate opposite knee pushes, subtle shoulder and head follow-through, no head popping up, no idle duplicates. Match all current character details exactly; change only animation pose. Reference2 death poses are identity reference only: do NOT include dying or lying still poses. Output only the eight-frame transparent atlas."
+    },
+    {
+      "file": "charger-v1-master.png",
+      "size": [
+        1774,
+        887
+      ],
+      "reason": "Several near-duplicate contacts and body proportions drift from the existing death atlas.",
+      "prompt": "Create a high-quality game running animation atlas using this exact helmeted football zombie as the identity/style reference. Preserve identical navy helmet and facemask, pale eyes, jersey number 1, shoulder pads, shorts, knee guards, boots, muscles and injuries. No redesign. Maximum supported quality and maximum native resolution; 4096x2048 landscape if supported, otherwise maximum native 2:1. EXACT layout: four equal columns and two equal rows, eight full-body sprites, transparent alpha background with no ground shadow, no labels, no grid, no checkerboard. One continuous eight-frame run cycle, order left-to-right then second row. Face and chest square to camera in every frame, moving toward viewer, camera locked. Keep identical head size/body scale in every frame. Top row is the first half of ONE stride: (1) image-left boot landing forward and low, image-right arm forward; (2) same boot supports weight, hips lower slightly, opposite knee starts forward; (3) both knees passing beneath pelvis, supporting boot underneath pelvis, arms pass beside torso; (4) image-right knee lifted ahead, image-left leg trailing in a brief aerial phase. Bottom row is the opposite half of the stride: (5) image-right boot landing forward and low, image-left arm forward; (6) same boot supports weight, hips lower slightly, opposite knee starts forward; (7) both knees passing beneath pelvis, supporting boot underneath pelvis, arms pass beside torso; (8) image-left knee lifted ahead, image-right leg trailing, flowing into frame1. Clear planted-foot and passing poses, anatomically plausible feet with no duplicated limbs. Same pelvis center, subtle vertical weight shifts, every body fully inside its own cell with generous margin. Do NOT render only two alternating poses and do NOT repeat any frame. Preserve the current game's detailed illustrated style."
+    },
+    {
+      "file": "firebomb-v1-master.png",
+      "size": [
+        1086,
+        1448
+      ],
+      "reason": "Nine-direction batch switches the throwing hand in left-side cells.",
+      "prompt": "Use case: identity-preserve animation inbetween. This is NOT a character redesign. Reference1 is the exact existing female Molotov thrower's ready pose in nine aiming directions; reference2 is the same nine directions with her throwing arm lowered after release. Create ONE intermediate recovery pose for EACH of these nine directions, halfway from reference2's lowered arm to reference1's raised arm. Preserve exact red ponytail, olive sleeveless tactical top, harness, pouches, camouflage trousers, black boots, body/head proportions, illustrated shading and the original leg/foot positions. Only the throwing forearm and upper arm move smoothly upward halfway; the other arm stays as in reference2. The throwing hand now holds the same small amber Molotov bottle as reference1, held at shoulder level with elbow bent, halfway to the overhead ready pose. Small flame attached to bottle wick only, no thrown projectile. Keep body and feet anchored to original pose for each direction. Important: preserve the throwing hand used by the corresponding original reference column, do not switch hands. Exact NINE full-body sprites in a regular THREE COLUMNS by THREE ROWS invisible grid. Read order row-major equals original nine columns: 10 o'clock,10:30,11,11:30,12,12:30,1,1:30,2. All are BACK views aiming toward the top of the screen; keep original slight body rotations, do not show faces. Generous equal margins, whole head, hands, bottle and boots inside each cell. Absolutely identical anatomy scale across all nine cells. Maximum native resolution and maximum image quality supported, portrait aspect ratio 4:5, ideally 3072x3840 if natively available or the maximum native size. True alpha transparency, no backgrounds, no cast shadows, no checkerboard, no grid, no captions. Match existing painting precisely. Deliver only the recovery sprite sheet."
+    },
+    {
+      "file": "runner-between-01-master.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "reason": "Some interpolation but hand reach remains close to the next endpoint; art changes outweigh the small motion gain.",
+      "prompt": "Animation inbetween: create ONE single full-body sprite exactly halfway in time between reference1 and reference2. Exact SAME zombie, same pale face and eyes, hair, clothes, tears, colors, shading, head/body size, straight frontal camera. Keep the right leg on IMAGE LEFT planted, with shoe on the same ground plane as references, supporting knee slightly bent. The left knee on IMAGE RIGHT is halfway raised forward between the low trailing foot of reference1 and high lifted knee of reference2. Both arms halfway through their counter-swing: hand on image LEFT starts moving forward but is not yet fully reaching, hand on image RIGHT moves back and down beside ribs. Small forward shoulder weight shift, no rotation and no extra limbs. All costume details and face preserved; do not enlarge head, exaggerate proportions, add blood or change style. No sheet/grid: ONE complete character centered within same square framing, whole head and shoes visible with margins. Transparent alpha, no shadows, no backdrop, no checkerboard or text. Maximum supported native square resolution and maximum supported quality, ideally 4096x4096 if supported. Deliver one precise intermediate animation pose."
+    },
+    {
+      "file": "runner-between-12-master.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "reason": "Pose is close to the next contact and the shoe perspective changes; retained current runner.",
+      "prompt": "Create ONE precise animation inbetween halfway between the two provided running poses of the SAME zombie. Retain exact identity, hair, pale face, eyes, dark-green school jacket, dirty off-white shirt, ripped trousers, shoes and all body proportions. This half-step lowers the knee on IMAGE RIGHT: its sneaker moves down and forward halfway from the raised position in image1 toward the forward ground contact in image2. The leg on IMAGE LEFT pushes off and starts trailing behind. The arm on IMAGE LEFT stays extended forward but eases slightly down; the other arm stays behind. Front face and torso square to viewer, no rotation. Keep consistent head size, feet proportions, style, wounds and costume, no redesign. Single whole figure centered with original square framing and margins. True transparent alpha with no cast shadow, backdrop, checkerboard or text. Highest supported quality and highest native square resolution supported. Deliver one new intermediate pose, not a copy of either endpoint."
+    }
+  ],
+  "rejected_original_directory": "D:/workspace/_workspace/zombie-motion-candidates-20261002",
+  "preserved": "Existing sprites, zombie walks/deaths/corpses, other heroes, hit timing, damage, attack intervals, UI layout and copy.",
+  "validation": {
+    "status": "passed",
+    "tests": "npm test: complete game matrix, shared runtime, API/ranking delivery and asset manifest passed",
+    "runtime": "New frame 4 loaded and selected, callback once, ready pose restored. Nine aim directions tested at 60 FPS, 100 ms and 500 ms update steps.",
+    "visual": {
+      "viewports": [[360,800],[430,932],[768,1024],[1280,900],[932,430]],
+      "ready_state_changed_pixels": [0,0,0,0,0],
+      "method": "Seeded baseline HEAD and candidate comparison, loading overlay removed and matching lighting frozen. New recovery art reviewed separately.",
+      "browser_page_errors": 0
+    },
+    "packing": {
+      "foot_baseline_delta": 0,
+      "max_horizontal_foot_delta": 0.457,
+      "max_scalp_registration_delta": 2.537,
+      "unit": "source cell pixels, scaled down in game",
+      "png_webp": "identical decoded RGBA, lossless WebP"
+    },
+    "art_review": "Five single-pose masters selected after rejecting four batch atlases and two runner inbetweens. Existing sprites unchanged."
+  }
+}

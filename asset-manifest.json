@@ -2749,6 +2749,16 @@
       "sha256": "58531122b788a456f89158a91fccce2fe13d9f999a3d4d5b05617763cf4a2e9c"
     },
     {
+      "path": "school-zombie-defense/assets/images/character-f-throw-4.png",
+      "bytes": 1189972,
+      "sha256": "48a3ae8ca4a335ea8c3e85485ba0d1a8b934ba47a421c0821e05068406e0e106"
+    },
+    {
+      "path": "school-zombie-defense/assets/images/character-f-throw-4.webp",
+      "bytes": 816180,
+      "sha256": "cf632f11ac467f4e98c6b4bd5392220efeff0bd93aff74440c6e2cc9ef67a0dc"
+    },
+    {
       "path": "school-zombie-defense/assets/images/character-f.png",
       "bytes": 749354,
       "sha256": "014a4946594facc529154c64d9f86c8e47e4d85c4744e108afc81fbe43a7521b"
@@ -4857,6 +4867,31 @@
       "path": "school-zombie-defense/design/source-assets/diva-elite-v1/elite-walk.png",
       "bytes": 1535166,
       "sha256": "efd8a6835311230d95fe66a4d1119ab810cf27b8923a802311b7c18c4e4c2cc6"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/firebomb-recovery-v1/firebomb-recovery-c0-master.png",
+      "bytes": 526859,
+      "sha256": "403a21fd4bd4580a3d5100e5dbca84550f8b19c4a9db78ebf1e4245672ff986c"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/firebomb-recovery-v1/firebomb-recovery-c1-master.png",
+      "bytes": 530416,
+      "sha256": "1b327d1515c480c7a2af9095a45297782d90095be229f5a53bf8ff7bc547cae8"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/firebomb-recovery-v1/firebomb-recovery-c2-master.png",
+      "bytes": 528091,
+      "sha256": "cba24e64f333d33fc5c00c99387ef7750d72d5e4e137ae9ef2d7a079359e735b"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/firebomb-recovery-v1/firebomb-recovery-c3-master.png",
+      "bytes": 507799,
+      "sha256": "9c05ca0d39ba4637222abc69379e5e046d933f3f71e00d199b61dafe6be35eb5"
+    },
+    {
+      "path": "school-zombie-defense/design/source-assets/firebomb-recovery-v1/firebomb-recovery-c4-master.png",
+      "bytes": 533082,
+      "sha256": "d3d9839321e0090ef522b133605620d76d6933a7cab9bac763541b38fbb4defa"
     },
     {
       "path": "slimevolley/assets/images/ball.png",

@@ -1,0 +1,119 @@
+[
+  {
+    "direction": 0,
+    "source": "firebomb-recovery-c0-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      -0.242,
+      0
+    ],
+    "head_top_delta": -2.537
+  },
+  {
+    "direction": 1,
+    "source": "firebomb-recovery-c1-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      -0.118,
+      0
+    ],
+    "head_top_delta": -2.196
+  },
+  {
+    "direction": 2,
+    "source": "firebomb-recovery-c2-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      0.399,
+      0
+    ],
+    "head_top_delta": -2.492
+  },
+  {
+    "direction": 3,
+    "source": "firebomb-recovery-c3-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      0.449,
+      0
+    ],
+    "head_top_delta": 0.221
+  },
+  {
+    "direction": 4,
+    "source": "firebomb-recovery-c4-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      0.213,
+      0
+    ],
+    "head_top_delta": -0.249
+  },
+  {
+    "direction": 5,
+    "source": "firebomb-recovery-c3-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      -0.457,
+      0
+    ],
+    "head_top_delta": -0.315
+  },
+  {
+    "direction": 6,
+    "source": "firebomb-recovery-c2-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      -0.183,
+      0
+    ],
+    "head_top_delta": -1.636
+  },
+  {
+    "direction": 7,
+    "source": "firebomb-recovery-c1-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      0.118,
+      0
+    ],
+    "head_top_delta": -2.196
+  },
+  {
+    "direction": 8,
+    "source": "firebomb-recovery-c0-master.png",
+    "native_size": [
+      1122,
+      1402
+    ],
+    "foot_delta": [
+      0.242,
+      0
+    ],
+    "head_top_delta": -2.537
+  }
+]
