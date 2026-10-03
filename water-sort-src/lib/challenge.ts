@@ -2,6 +2,7 @@ import levels from './challenge-levels.json' with { type: 'json' };
 import { clone, hasMove, pour, won, type Board } from './game.ts';
 import { colorsFor } from './difficulty-curve.ts';
 import { boardOutcome } from './dead-end.ts';
+import { recordPour } from './pour-timing.ts';
 import { timeLimit, CLEAR_DELAY, pourDuration, bottleReadyAt, type Challenge } from './challenge-rules.ts';
 export { timeLimit, CLEAR_DELAY, pourDuration, type Challenge, type RunView, type RankRow } from './challenge-rules.ts';
 
@@ -15,9 +16,9 @@ export function randomBoard(level: number, random = Math.random): Board {
   const palette = shuffle(Array.from({ length: colors }, (_, i) => i));
   return shuffle(clone(pool[Math.floor(random() * pool.length)].board).map(tube => tube.map(c => palette[c])));
 }
-export function newStage(level: number, now: number, cleared = 0, score = 0): Challenge {
+export function newStage(level: number, now: number, cleared = 0, score = 0, pours?: Challenge['pours']): Challenge {
   const board = randomBoard(level);
-  return { rules: 2, level, cleared, score, board, initialBoard: clone(board), bottleAvailableAt: board.map(() => now), history: [], moves: 0, deadline: now + timeLimit(level) * 1000, availableAt: now, status: 'playing' };
+  return { rules: 2, level, cleared, score, board, initialBoard: clone(board), bottleAvailableAt: board.map(() => now), history: [], moves: 0, deadline: now + timeLimit(level) * 1000, availableAt: now, status: 'playing', ...(pours ? { pours } : {}) };
 }
 function checkDeadEnd(state: Challenge, now: number): Challenge {
   // At most 90 pairs; no solution-tree search in the interactive pour response.
@@ -29,12 +30,13 @@ export function inspectStage(state: Challenge, now: number): Challenge {
   return { ...state, status: 'ended', endReason: 'blocked', endedAt: now };
 }
 export type Action = { type: 'pour'; from: number; to: number } | { type: 'undo' | 'end' | 'next' };
+// The wall clock decides every deadline. A suspended (left) stage keeps counting, so leaving
+// the game, switching tabs or reloading can never stretch the 60 seconds.
 export function expire(state: Challenge, now: number): Challenge {
-  if (state.suspended) return state;
   if (state.status === 'cleared' && now >= state.availableAt + CLEAR_DELAY) {
     if (state.level === 100) return { ...state, status: 'ended' };
     // Anchor the next stage to the completion time, not to a delayed client request.
-    return expire(newStage(state.level + 1, state.availableAt + CLEAR_DELAY, state.cleared, state.score), now);
+    return expire(newStage(state.level + 1, state.availableAt + CLEAR_DELAY, state.cleared, state.score, state.pours), now);
   }
   if (state.status === 'playing' && now >= state.deadline) return { ...state, status: 'ended', endReason: 'timeout', endedAt: state.deadline };
   return checkDeadEnd(state, now);
@@ -45,14 +47,11 @@ export function resumeStage(original: Challenge, now: number): Challenge {
   if (state.status === 'ended') return state;
   if (state.status === 'cleared') {
     if (state.level === 100) return { ...state, suspended: false, status: 'ended' };
-    return newStage(state.level + 1, Math.max(now, state.availableAt + CLEAR_DELAY), state.cleared, state.score);
+    // Anchor the next stage to the completion time, so time away from the screen is not refunded.
+    return newStage(state.level + 1, Math.max(now, state.availableAt + CLEAR_DELAY), state.cleared, state.score, state.pours);
   }
-  // Legacy runs lack the original layout: assign one verified checkpoint once.
-  const initialBoard = state.initialBoard ?? (state.moves === 0 ? clone(state.board) : randomBoard(state.level));
-  // Reset the board and clock together; never preserve partial progress with fresh time.
-  // Keep score and the cumulative move penalty, so retries do not erase past moves.
-  // A fresh state/version also invalidates pours issued before this resume.
-  return { ...state, initialBoard, board: clone(initialBoard), bottleAvailableAt: initialBoard.map(() => now), history: [], suspended: false, deadline: now + timeLimit(state.level) * 1000, availableAt: now };
+  // Same board, same deadline: continuing only reopens input. Time spent away stays spent.
+  return { ...state, suspended: false };
 }
 export function leaveStage(original: Challenge, now: number): Challenge {
   const state = inspectStage(expire(original, now), now);
@@ -79,5 +78,6 @@ export function advance(original: Challenge, action: Action, now: number): Chall
   const bonus = Math.floor(200 * Math.min(1, remaining / (timeLimit(state.level) * 1000))) + Math.max(0, 100 - moves * 2);
   return checkDeadEnd({ ...state, board, moves, history: [],
     deadline: state.deadline, bottleAvailableAt, availableAt,
-    status: cleared ? 'cleared' : 'playing', cleared: state.cleared + Number(cleared), score: state.score + (cleared ? 1000 + bonus : 0) }, now);
+    status: cleared ? 'cleared' : 'playing', cleared: state.cleared + Number(cleared), score: state.score + (cleared ? 1000 + bonus : 0),
+    pours: recordPour(state.pours, now) }, now);
 }

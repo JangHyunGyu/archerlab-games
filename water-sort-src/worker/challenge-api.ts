@@ -1,13 +1,20 @@
 import { advance, expire, inspectStage, newStage, resumeStage, leaveStage, type Challenge, type RunView } from '../lib/challenge.ts';
 import { boardOutcome } from '../lib/dead-end.ts';
+import { checkNickname } from '../lib/nickname.ts';
+import { pourVerdict } from '../lib/pour-timing.ts';
+import { clientKey, startRetryAfter } from './rate-limit.ts';
+import { verifyTurnstile, turnstileSiteKey, type TurnstileEnv } from './turnstile.ts';
+import { invalidateLeaderboard, clearEdgeLeaderboard, leaderboard } from './leaderboard-cache.ts';
+export type ChallengeEnv = TurnstileEnv & { WATER_SORT_IP_SALT?: string };
 type Row = { id: string; token: string; data: string; version: number; nickname: string | null; created_at: number };
 const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
-const fields: Record<string, string[]> = { start: ['type', 'id', 'token', 'version'], sync: ['type', 'id', 'token', 'version'], inspect: ['type', 'id', 'token', 'version'], leave: ['type', 'id', 'token', 'version'], resume: ['type', 'id', 'token', 'version'], pour: ['type', 'id', 'token', 'version', 'from', 'to'], register: ['type', 'id', 'token', 'version', 'nickname'] };
+const fields: Record<string, string[]> = { start: ['type', 'id', 'token', 'version', 'turnstile'], sync: ['type', 'id', 'token', 'version'], inspect: ['type', 'id', 'token', 'version'], leave: ['type', 'id', 'token', 'version'], resume: ['type', 'id', 'token', 'version'], pour: ['type', 'id', 'token', 'version', 'from', 'to'], register: ['type', 'id', 'token', 'version', 'nickname', 'turnstile'] };
 function validPayload(body: unknown): body is Record<string, unknown> & { type: string } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
   const value = body as Record<string, unknown>;
   if (typeof value.type !== 'string' || !Object.hasOwn(fields, value.type)) return false;
   if (Object.keys(value).some(key => !fields[value.type as string].includes(key))) return false;
+  if (value.turnstile !== undefined && (typeof value.turnstile !== 'string' || value.turnstile.length > 2048)) return false;
   if (value.type !== 'start' && (typeof value.id !== 'string' || !UUID.test(value.id) || typeof value.token !== 'string' || !UUID.test(value.token))) return false;
   if ((['pour', 'leave', 'resume', 'register', 'inspect'].includes(value.type) || value.version !== undefined) && (!Number.isSafeInteger(value.version) || Number(value.version) < 0)) return false;
   return value.type !== 'pour' || [value.from, value.to].every(n => Number.isInteger(n) && Number(n) >= 0 && Number(n) < 10);
@@ -21,30 +28,18 @@ function validResult(state: Challenge, createdAt: number, now: number) {
     && (provenBlocked || state.endReason !== 'blocked' && now >= state.availableAt && (state.cleared === 100 || now >= state.deadline))
     && now - createdAt >= state.cleared * 1150;
 }
-const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
-async function database(db: D1Database) {
-  await db.batch([
-    db.prepare('CREATE TABLE IF NOT EXISTS water_sort_runs (id TEXT PRIMARY KEY, token TEXT NOT NULL, data TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 0, nickname TEXT, cleared INTEGER NOT NULL DEFAULT 0, score INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)'),
-    db.prepare('CREATE INDEX IF NOT EXISTS water_sort_ranking ON water_sort_runs(cleared, score)'),
-  ]);
-  return db;
-}
+const json = (data: unknown, status = 200, headers: Record<string, string> = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
+// The schema lives in migrations/water-sort-*.sql and is applied once per database. No request runs DDL.
 function view(row: Row, now: number): RunView {
-  const { history, initialBoard: _initialBoard, ...state } = JSON.parse(row.data) as Challenge;
+  const { history, initialBoard: _initialBoard, pours: _pours, ...state } = JSON.parse(row.data) as Challenge;
   return { ...state, id: row.id, version: row.version, historyDepth: history.length, registered: row.nickname !== null, nickname: row.nickname, serverNow: now };
 }
-export async function challengeApi(request: Request, binding: D1Database, allowedOrigins: readonly string[] = []): Promise<Response> {
+export async function challengeApi(request: Request, db: D1Database, allowedOrigins: readonly string[] = [], env: ChallengeEnv = {}): Promise<Response> {
   try {
-    const db = await database(binding);
     if (request.method === 'GET') {
-      // One name keeps a single record: more clears, then higher score, then the earlier start.
-      // Letter case and surrounding spaces are the same name. Lower scores stay stored, but the board shows only the best.
-      const result = await db.prepare(`SELECT id, nickname, cleared, score, created_at FROM (
-        SELECT id, nickname, cleared, score, created_at,
-          ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM(nickname)) ORDER BY cleared DESC, score DESC, created_at ASC, id ASC) AS name_rank
-        FROM water_sort_runs WHERE nickname IS NOT NULL AND json_extract(data, '$.rules') = 2
-      ) WHERE name_rank = 1 ORDER BY cleared DESC, score DESC, created_at ASC, id ASC LIMIT 50`).all();
-      return json({ rows: result.results });
+      // Public bot-defense settings: the site key is meant to be public. null means the gate is off.
+      if (new URL(request.url).searchParams.has('config')) return json({ turnstileSiteKey: turnstileSiteKey(env) });
+      return json({ rows: await leaderboard(db) });
     }
     if (request.method !== 'POST') return json({ error: 'method' }, 405);
     const origin = request.headers.get('origin');
@@ -55,7 +50,7 @@ export async function challengeApi(request: Request, binding: D1Database, allowe
     const reader = request.body?.getReader();
     if (!reader) return json({ error: 'body' }, 400);
     const chunks: Uint8Array[] = []; let length = 0;
-    while (true) { const part = await reader.read(); if (part.done) break; length += part.value.length; if (length > 1024) { await reader.cancel(); return json({ error: 'size' }, 413); } chunks.push(part.value); }
+    while (true) { const part = await reader.read(); if (part.done) break; length += part.value.length; if (length > 4096) { await reader.cancel(); return json({ error: 'size' }, 413); } chunks.push(part.value); }
     const bytes = new Uint8Array(length); let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
     let parsed: unknown;
@@ -64,9 +59,14 @@ export async function challengeApi(request: Request, binding: D1Database, allowe
     const body = parsed;
     if (body.type === 'start') {
       const now = Date.now();
+      const key = await clientKey(request, env.WATER_SORT_IP_SALT);
+      const wait = await startRetryAfter(db, key, now);
+      if (wait > 0) return json({ error: 'rate_limited', retryAfter: wait }, 429, { 'Retry-After': String(wait) });
+      const human = await verifyTurnstile(env, body.turnstile, request.headers.get('CF-Connecting-IP'), 'start');
+      if (human === 'missing' || human === 'failed') return json({ error: 'bot' }, 403);
       const id = crypto.randomUUID(), token = crypto.randomUUID();
       const data = JSON.stringify(newStage(1, now));
-      await db.prepare('INSERT INTO water_sort_runs (id, token, data, created_at) VALUES (?, ?, ?, ?)').bind(id, token, data, now).run();
+      await db.prepare('INSERT INTO water_sort_runs (id, token, data, created_at, ip_hash) VALUES (?, ?, ?, ?, ?)').bind(id, token, data, now, key).run();
       return json({ run: view({ id, token, data, version: 0, nickname: null, created_at: now }, now), token });
     }
     if (typeof body.id !== 'string' || typeof body.token !== 'string') return json({ error: 'credentials' }, 400);
@@ -79,11 +79,16 @@ export async function challengeApi(request: Request, binding: D1Database, allowe
     const matches = body.version === row.version;
     if (body.type === 'register') {
       if (state.status !== 'ended') return json({ error: 'unfinished' }, 409);
-      if (typeof body.nickname !== 'string' || !/^[\p{L}\p{N} _.-]{1,16}$/u.test(body.nickname.trim())) return json({ error: 'nickname' }, 400);
-      if (row.nickname !== null) return row.nickname === body.nickname.trim() ? json({ run: view(row, now) }) : json({ error: 'registered', run: view(row, now) }, 409);
+      const checked = checkNickname(body.nickname);
+      if (!checked.ok) return json({ error: checked.reason === 'banned' ? 'nickname_banned' : 'nickname' }, 400);
+      if (row.nickname !== null) return row.nickname === checked.name ? json({ run: view(row, now) }) : json({ error: 'registered', run: view(row, now) }, 409);
       if (!matches) return json({ error: 'conflict', run: view(row, now) }, 409);
       if (!validResult(state, row.created_at, now)) return json({ error: 'integrity' }, 409);
-      nickname ??= body.nickname.trim();
+      const human = await verifyTurnstile(env, body.turnstile, request.headers.get('CF-Connecting-IP'), 'register');
+      if (human === 'missing' || human === 'failed') return json({ error: 'bot' }, 403);
+      const timing = pourVerdict(before.pours);
+      if (timing !== 'ok') { console.warn('water_sort_pour_timing', timing, row.id); return json({ error: 'bot' }, 403); }
+      nickname ??= checked.name;
     } else if (body.type === 'sync') {
       // Expiration is evaluated against the server clock on reload and retry.
     } else if (body.type === 'inspect') {
@@ -105,6 +110,7 @@ export async function challengeApi(request: Request, binding: D1Database, allowe
         .bind(JSON.stringify(state), nickname, state.cleared, state.score, row.id, row.version).run();
       row = (await db.prepare('SELECT * FROM water_sort_runs WHERE id = ? AND token = ?').bind(body.id, body.token).first<Row>())!;
       if (!update.meta.changes) return json({ error: 'conflict', run: view(row, Date.now()) }, 409);
+      if (nickname !== null) { invalidateLeaderboard(); await clearEdgeLeaderboard(); }
     }
     return json({ run: view(row, Date.now()) });
   } catch (error) {

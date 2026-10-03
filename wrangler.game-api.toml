@@ -10,6 +10,15 @@ class_name = "RankingDelivery"
 tag = "ranking-delivery-v1"
 new_sqlite_classes = ["RankingDelivery"]
 
+# Daily 04:30 KST (19:30 UTC): stale unregistered Bubbly Lab runs.
+[triggers]
+crons = ["30 19 * * *"]
+
+# Optional Turnstile bot defense for Bubbly Lab. Leave unset to keep it off.
+#   TURNSTILE_SITE_KEY    (plain var, public)   -> [vars] TURNSTILE_SITE_KEY = "0x4AAAA..."
+#   TURNSTILE_SECRET_KEY  (secret)              -> npx wrangler secret put TURNSTILE_SECRET_KEY --config wrangler.game-api.toml
+#   WATER_SORT_IP_SALT    (optional secret)     -> salt for the hashed start rate-limit key
+
 [observability]
 enabled = true
 head_sampling_rate = 1

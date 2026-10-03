@@ -1,4 +1,5 @@
 import { waterSortRoute } from './water-sort-src/worker/route.ts';
+import { cleanupStaleRuns } from './water-sort-src/worker/cleanup.ts';
 import { DurableObject } from 'cloudflare:workers';
 import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse } from './game-api-worker.js';
 
@@ -193,9 +194,16 @@ export class RankingDelivery extends DurableObject {
 }
 
 export default {
+    // Daily: delete water-sort runs that were started but never registered and are older than the grace period.
+    async scheduled(_controller, env, ctx) {
+        ctx.waitUntil(cleanupStaleRuns(env.DB).then(
+            deleted => console.log(JSON.stringify({ event: 'water_sort_stale_cleanup', deleted })),
+            error => console.error(JSON.stringify({ event: 'water_sort_stale_cleanup_failed', error: String(error?.message).slice(0, 200) }))));
+    },
+
     async fetch(request, env, ctx) {
         const path = new URL(request.url).pathname;
-        if (path === '/water-sort/challenge') return waterSortRoute(request, env.DB);
+        if (path === '/water-sort/challenge') return waterSortRoute(request, env.DB, env);
         if (request.method !== 'POST' || (!PATHS.has(path) && path !== '/ranking-delivery')) {
             return api.fetch(request, env, ctx);
         }

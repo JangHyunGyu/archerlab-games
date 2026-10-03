@@ -1,8 +1,8 @@
-import { challengeApi } from './challenge-api.ts';
+import { challengeApi, type ChallengeEnv } from './challenge-api.ts';
 
 // A separate allowlist keeps the challenge endpoint stricter than legacy APIs.
 const PRODUCTION_ORIGINS = ['https://game.archerlab.dev', 'https://archerlab.dev', 'https://www.archerlab.dev'];
-export async function waterSortRoute(request: Request, db: D1Database): Promise<Response> {
+export async function waterSortRoute(request: Request, db: D1Database, env: ChallengeEnv = {}): Promise<Response> {
   const url = new URL(request.url);
   const origins = [...PRODUCTION_ORIGINS];
   // Local development never enables localhost origins on the production Worker.
@@ -14,7 +14,7 @@ export async function waterSortRoute(request: Request, db: D1Database): Promise<
   headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   headers.set('Access-Control-Allow-Headers', 'Content-Type');
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
-  const response = await challengeApi(request, db, origins);
+  const response = await challengeApi(request, db, origins, env);
   for (const [key, value] of headers) response.headers.set(key, value);
   return response;
 }

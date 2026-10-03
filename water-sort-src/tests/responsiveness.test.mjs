@@ -277,18 +277,18 @@ test('pour previews start before the server responds and reconcile safely', asyn
       assert.equal(h.requests.length, 2);
       assert.equal(document.querySelector('.result-dialog'), null);
     }));
-    await t.test('Home discards late responses and Continue resets the stage board and timer together', () => harness(async h => {
+    await t.test('Home discards late responses and Continue keeps the board and the running deadline', () => harness(async h => {
       await h.begin();
       await h.click(document.querySelector('.hud-home')); await h.click(h.button('나가기'));
       await h.confirm(h.moved());
       assert.ok(document.querySelector('.start-screen')); assert.equal(h.animation(), null);
       await h.click(h.button('이어하기'));
-      assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/, 'the board is exactly as the player left it');
       assert.equal(h.commands.at(-1).type, 'resume');
       assert.ok(h.commands.some(c => c.type === 'leave'));
       assert.equal(document.querySelector('[role="timer"]').getAttribute('aria-label'), '60초');
     }));
-    await t.test('reload saves the interruption before Continue resets layout and time', () => harness(async h => {
+    await t.test('reload saves the interruption before Continue returns to the same layout and remaining time', () => harness(async h => {
       await h.begin();
       await h.confirm({ ...h.moved(), availableAt: 0, deadline: Date.now() + 20000 });
       await h.reload();
@@ -296,8 +296,8 @@ test('pour previews start before the server responds and reconcile safely', asyn
       assert.deepEqual(h.commands.slice(-2).map(c => c.type), ['sync', 'leave']);
       assert.equal(h.button('이어하기').disabled, false);
       await h.click(h.button('이어하기'));
-      assert.match(h.bottles()[2].getAttribute('aria-label'), /비어 있음/);
-      assert.equal(document.querySelector('[role="timer"]').getAttribute('aria-label'), '60초');
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /파란색/);
+      assert.equal(document.querySelector('[role="timer"]').getAttribute('aria-label'), '20초', 'no fresh 60 seconds');
     }));
     await t.test('reduced motion previews immediately without an overlay and still awaits validation', () => harness(async h => {
       await h.begin(); assert.equal(h.animation(), null);

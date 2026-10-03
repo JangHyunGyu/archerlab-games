@@ -10,6 +10,7 @@ import { useGameAudio } from './useGameAudio';
 import { BottleVisual } from './BottleVisual';
 import { BottleCompletion } from './BottleCompletion';
 import { menuState } from '../lib/menu-state';
+import { turnstileToken } from './turnstile';
 import { MAX_QUEUED_POURS, PourController, type ActivePour } from '../lib/pour-controller';
 import type { InspectionResult } from '../lib/dead-end.worker';
 
@@ -17,7 +18,7 @@ const API = import.meta.env.DEV ? '/water-sort/api/challenge' : 'https://game-ap
 const SESSION = 'water-sort-challenge-v2';
 type Credentials = { id: string; token: string };
 // Only ApiError text reaches the screen. Network, JSON and runtime failures use the generic copy.
-const API_MESSAGES: Record<string, string> = { nickname: c.nicknameError, conflict: c.syncChanged, missing: c.sessionMissing, legacy: c.sessionMissing, unavailable: c.unavailable, origin: c.originError };
+const API_MESSAGES: Record<string, string> = { nickname: c.nicknameError, nickname_banned: c.nicknameBanned, rate_limited: c.rateLimited, bot: c.botBlocked, conflict: c.syncChanged, missing: c.sessionMissing, legacy: c.sessionMissing, unavailable: c.unavailable, origin: c.originError };
 class ApiError extends Error {
   code: string;
   constructor(code: string) { super(API_MESSAGES[code] ?? c.error); this.code = code; }
@@ -91,7 +92,10 @@ export default function Home() {
     const abandoned = () => new DOMException('Abandoned game', 'AbortError');
     try {
       let response: Response;
-      try { response = await fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, ...credentials.current, version: runRef.current?.version, ...extra }) }); }
+      // Bot check only where a run begins or a score is submitted. No key configured: no token, no delay.
+      const human = type === 'start' || type === 'register' ? await turnstileToken(API, type) : undefined;
+      if (epoch !== requestEpoch.current) throw abandoned();
+      try { response = await fetch(API, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, ...credentials.current, version: runRef.current?.version, ...extra, ...(human ? { turnstile: human } : {}) }) }); }
       catch { throw epoch !== requestEpoch.current || controller.signal.aborted ? abandoned() : new ApiError('network'); }
       // A proxy error page is not JSON; keep the status and never surface the parser's message.
       const data = await response.json().catch(() => null) as { error?: string; run?: RunView; token?: string } | null;

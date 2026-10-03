@@ -3,10 +3,16 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { challengeApi } from '../worker/challenge-api.ts';
 import { solve } from '../lib/game.ts';
+import { readFileSync } from 'node:fs';
+import { invalidateLeaderboard } from '../worker/leaderboard-cache.ts';
+
+// Production applies these files once with `wrangler d1 execute`; the Worker itself never runs DDL.
+const MIGRATIONS = ['water-sort-0001-schema.sql', 'water-sort-0002-start-rate-limit.sql'].map(name => readFileSync(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
 
 // Actual SQLite executes the production SQL, including compare-and-swap writes.
 class TestDatabase {
   database = new DatabaseSync(':memory:');
+  constructor() { for (const sql of MIGRATIONS) this.database.exec(sql); invalidateLeaderboard(); }
   prepare(sql) {
     const db = this.database;
     let args = [];
@@ -51,8 +57,9 @@ test('D1 accepts disjoint pours during animation but rejects shared-bottle bypas
     const dependent = await send({ type: 'pour', ...auth, version: independent.run.version, from: 0, to: 4 });
     assert.equal(dependent.run.moves, 3, 'first pair unlocks without waiting for the independent pair');
     const resumed = await send({ type: 'resume', ...auth, version: dependent.run.version });
-    assert.deepEqual(resumed.run.board, board); assert.equal(resumed.run.deadline - now, 60000);
-    assert.ok(resumed.run.bottleAvailableAt.every(time => time === now));
+    // Continuing keeps the live board and the original deadline; nothing is reset or refunded.
+    assert.deepEqual(resumed.run.board, dependent.run.board); assert.equal(resumed.run.deadline, started.run.deadline);
+    assert.deepEqual(resumed.run.bottleAvailableAt, dependent.run.bottleAvailableAt);
     assert.equal(resumed.run.moves, 3); assert.equal(resumed.run.score, 0);
   } finally { Date.now = originalNow; db.database.close(); }
 });
@@ -120,7 +127,7 @@ test('ranking API rejects forged state, hidden actions, replay and concurrent wr
     assert.equal((await send([])).status, 400);
     assert.equal((await send({ type: 'start' }, { Origin: 'https://other.test' })).status, 403);
     assert.equal((await send({ type: 'start' }, { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
-    assert.equal((await send(' '.repeat(1025))).status, 413);
+    assert.equal((await send(' '.repeat(4097))).status, 413);
     for (const key of ['score', 'level', 'cleared', 'deadline', 'now', 'board', 'moves']) {
       assert.equal((await send({ type: 'start', [key]: 999999 })).status, 400);
     }
@@ -187,7 +194,7 @@ test('ranking API rejects forged state, hidden actions, replay and concurrent wr
   } finally { Date.now = originalNow; db.database.close(); }
 });
 
-test('leave and resume reset the board and timer together without replay, partial-progress or score exploits', async () => {
+test('leave and resume never pause or refresh the clock: time away counts toward the limit', async () => {
   const db = new TestDatabase(), originalNow = Date.now;
   let now = 1800000000000; Date.now = () => now;
   const send = async body => {
@@ -196,78 +203,84 @@ test('leave and resume reset the board and timer together without replay, partia
   };
   try {
     const start = await send({ type: 'start' }); let run = start.run;
-    const auth = { id: run.id, token: start.token }, initial = run.board;
+    const auth = { id: run.id, token: start.token }, initial = run.board, originalDeadline = run.deadline;
     const command = (type, extra = {}) => ({ type, ...auth, version: run.version, ...extra });
     assert.equal('initialBoard' in run, false, 'checkpoint stays server-side');
+    assert.equal('pours' in run, false, 'pour timing stays server-side');
     for (const type of ['resume', 'leave']) {
       assert.equal((await send({ type, ...auth })).status, 400);
-      for (const key of ['score', 'level', 'cleared', 'deadline', 'now', 'board', 'initialBoard', 'moves', 'suspended']) assert.equal((await send(command(type, { [key]: 999999 }))).status, 400);
+      for (const key of ['score', 'level', 'cleared', 'deadline', 'now', 'board', 'initialBoard', 'moves', 'suspended', 'pours']) assert.equal((await send(command(type, { [key]: 999999 }))).status, 400);
     }
     now += 1000;
     const [from, to] = solve(run.board)[0];
     run = (await send(command('pour', { from, to }))).run;
-    assert.notDeepEqual(run.board, initial); assert.equal(run.moves, 1);
-    const stalePour = command('pour', { from, to }), originalDeadline = run.deadline;
+    const played = run.board;
+    assert.notDeepEqual(played, initial); assert.equal(run.moves, 1);
+    const stalePour = command('pour', { from, to });
     run = (await send(command('leave'))).run;
     assert.equal(run.suspended, true);
     assert.equal((await send(stalePour)).status, 409);
     const suspendedVersion = run.version;
     const blocked = await send(command('pour', { from, to }));
     assert.equal(blocked.run.version, suspendedVersion); assert.equal(blocked.run.moves, 1);
-    now += 86400000;
+    now += 20000; // Twenty seconds away.
     run = (await send(command('sync'))).run;
-    assert.equal(run.suspended, true); assert.equal(run.deadline, originalDeadline);
+    assert.equal(run.suspended, true); assert.equal(run.deadline, originalDeadline); assert.equal(run.status, 'playing');
     assert.equal((await send(command('register', { nickname: 'Early' }))).status, 409);
     const resumeRequest = command('resume');
     run = (await send(resumeRequest)).run;
-    assert.equal(run.suspended, false); assert.deepEqual(run.board, initial);
-    assert.equal(run.deadline, now + 60000); assert.equal(run.moves, 1); assert.equal(run.score, 0);
+    assert.equal(run.suspended, false); assert.deepEqual(run.board, played, 'same board as when the player left');
+    assert.equal(run.deadline, originalDeadline, 'no fresh 60 seconds'); assert.equal(run.moves, 1); assert.equal(run.score, 0);
     assert.equal((await send(resumeRequest)).status, 409);
+    // Repeated leave/resume cycles never add time.
     for (let attempt = 0; attempt < 3; attempt++) {
-      now += 4000;
+      run = (await send(command('leave'))).run; now += 4000;
       run = (await send(command('resume'))).run;
-      assert.deepEqual(run.board, initial); assert.equal(run.deadline, now + 60000);
-      assert.equal(run.moves, 1); assert.equal(run.score, 0); assert.equal(run.cleared, 0);
+      assert.equal(run.deadline, originalDeadline); assert.deepEqual(run.board, played);
     }
-    // A reset cannot race with a move to preserve the advanced board and refreshed time.
+    // A resume cannot race with a move to keep both.
     const version = run.version;
-    const races = await Promise.all([send(command('resume')), send(command('pour', { from, to }))]);
-    assert.deepEqual(races.map(r => r.status).sort(), [200, 409]);
+    const races = await Promise.all([send(command('leave')), send(command('pour', { from: 1, to: 2 }))]);
+    assert.ok(races.some(r => r.status === 200));
     run = (await send({ type: 'sync', ...auth })).run;
-    assert.equal(run.version, version + 1);
-    run = (await send(command('resume'))).run;
-    assert.deepEqual(run.board, initial);
-    const resetMoves = run.moves;
-    const solution = solve(run.board);
-    for (const [f, t] of solution) { now = run.availableAt; run = (await send(command('pour', { from: f, to: t }))).run; }
-    assert.equal(run.status, 'cleared'); assert.equal(run.cleared, 1);
-    assert.equal(run.moves, resetMoves + solution.length);
-    const score = run.score;
-    assert.equal(score, 1000 + Math.floor(200 * (run.deadline - run.availableAt) / 60000) + Math.max(0, 100 - run.moves * 2));
-    run = (await send(command('leave'))).run;
-    now += 86400000;
-    run = (await send(command('resume'))).run;
-    assert.equal(run.level, 2); assert.equal(run.cleared, 1); assert.equal(run.score, score);
-    assert.equal(run.deadline, now + 60000);
-    const secondBoard = run.board;
-    run = (await send(command('resume'))).run;
-    assert.deepEqual(run.board, secondBoard); assert.equal(run.score, score);
-    now = run.deadline;
-    run = (await send(command('leave'))).run;
-    assert.equal(run.status, 'ended');
-    const deadline = run.deadline;
-    run = (await send(command('resume'))).run;
-    assert.equal(run.status, 'ended'); assert.equal(run.deadline, deadline);
-    run = (await send(command('register', { nickname: 'ResumeTest' }))).run;
-    assert.equal(run.registered, true);
-    assert.equal((await send(command('resume'))).status, 409);
-    const ranks = await challengeApi(new Request('https://game.test/api/challenge'), db);
-    const rows = (await ranks.json()).rows;
-    assert.equal(rows.length, 1); assert.equal(rows[0].score, score); assert.equal(rows[0].cleared, 1);
+    assert.ok(run.version >= version + 1);
+    // Leave, then stay away past the limit: the stage times out on the server clock.
+    if (!run.suspended) run = (await send(command('leave'))).run;
+    now = originalDeadline + 1;
+    run = (await send({ type: 'sync', ...auth })).run;
+    assert.equal(run.status, 'ended'); assert.equal(run.endReason, 'timeout');
+    const ended = (await send(command('resume'))).run;
+    assert.equal(ended.status, 'ended'); assert.equal(ended.deadline, originalDeadline);
+    run = (await send({ type: 'register', ...auth, version: ended.version, nickname: 'AwayTooLong' })).run;
+    assert.equal(run.registered, true); assert.equal(run.cleared, 0);
   } finally { Date.now = originalNow; db.database.close(); }
 });
 
-test('legacy runs receive one solvable restart checkpoint without changing score or moves', async () => {
+test('a cleared stage keeps its fixed hand-off time while the player is away', async () => {
+  const db = new TestDatabase(), originalNow = Date.now;
+  let now = 1800000000000; Date.now = () => now;
+  const send = async body => {
+    const response = await challengeApi(new Request('https://game.test/api/challenge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), db);
+    return { status: response.status, ...await response.json() };
+  };
+  try {
+    for (const away of [100, 86400000]) {
+      const start = await send({ type: 'start' }); let run = start.run;
+      const auth = { id: run.id, token: start.token };
+      const command = (type, extra = {}) => ({ type, ...auth, version: run.version, ...extra });
+      for (const [f, t] of solve(run.board)) { now = run.availableAt; run = (await send(command('pour', { from: f, to: t }))).run; }
+      assert.equal(run.status, 'cleared');
+      const score = run.score, handoff = run.availableAt + 450;
+      run = (await send(command('leave'))).run;
+      now = run.availableAt + away;
+      run = (await send(command('resume'))).run;
+      if (away === 100) { assert.equal(run.level, 2); assert.equal(run.deadline, handoff + 60000); assert.equal(run.score, score); }
+      else { assert.equal(run.status, 'ended'); assert.equal(run.cleared, 1); assert.equal(run.score, score); }
+    }
+  } finally { Date.now = originalNow; db.database.close(); }
+});
+
+test('runs saved before the checkpoint existed resume on their live board without a new layout', async () => {
   const db = new TestDatabase();
   const send = async body => {
     const response = await challengeApi(new Request('https://game.test/api/challenge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), db);
@@ -280,11 +293,9 @@ test('legacy runs receive one solvable restart checkpoint without changing score
     const old = JSON.parse(row.data); delete old.initialBoard; old.moves = 3;
     db.database.prepare('UPDATE water_sort_runs SET data = ? WHERE id = ?').run(JSON.stringify(old), auth.id);
     const resumed = await send({ type: 'resume', ...auth, version: start.run.version });
-    assert.equal(resumed.status, 200); assert.ok(solve(resumed.run.board));
-    assert.equal(resumed.run.moves, 3); assert.equal(resumed.run.score, 0);
-    const again = await send({ type: 'resume', ...auth, version: resumed.run.version });
-    assert.deepEqual(again.run.board, resumed.run.board);
-    assert.equal('initialBoard' in again.run, false);
+    assert.equal(resumed.status, 200); assert.deepEqual(resumed.run.board, start.run.board);
+    assert.equal(resumed.run.moves, 3); assert.equal(resumed.run.score, 0); assert.equal(resumed.run.deadline, start.run.deadline);
+    assert.equal('initialBoard' in resumed.run, false);
   } finally { db.database.close(); }
 });
 
@@ -309,6 +320,7 @@ test('ranking keeps one best record per nickname and still stores the lower runs
     add('legacy', 'Lab', 100, 999999, 1, 1);
     add('blank', null, 100, 999999, 1);
     const stored = db.database.prepare('SELECT COUNT(*) AS n FROM water_sort_runs').get().n;
+    invalidateLeaderboard(); // Rows were inserted behind the API's back.
     const response = await challengeApi(new Request('https://game.test/api/challenge'), db);
     const rows = (await response.json()).rows;
     assert.deepEqual(rows.map(row => [row.id, row.nickname, row.cleared, row.score]), [
