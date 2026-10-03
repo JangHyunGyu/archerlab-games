@@ -6,7 +6,7 @@ import { challengeApi } from '../worker/challenge-api.ts';
 import { invalidateLeaderboard, leaderboard } from '../worker/leaderboard-cache.ts';
 import { cleanupStaleRuns, STALE_RUN_AGE_MS } from '../worker/cleanup.ts';
 import { clientKey } from '../worker/rate-limit.ts';
-import { checkNickname, hasBannedWord } from '../lib/nickname.ts';
+import { checkNickname } from '../lib/nickname.ts';
 import { recordPour, pourVerdict, MAX_FAST_STREAK, REGULARITY_SAMPLE } from '../lib/pour-timing.ts';
 import { solve } from '../lib/game.ts';
 
@@ -113,31 +113,30 @@ test('Turnstile is off without keys, and on it gates start and register with a f
   } finally { globalThis.fetch = realFetch; Date.now = originalNow; h.db.database.close(); }
 });
 
-test('nicknames are screened server-side, including spacing, symbol, jamo and leet tricks', async () => {
-  const blocked = ['시발', '씨 발', '시1발', 'ㅅㅂ', 'ㅅ ㅂ', 'ㅅㅣㅂㅏㄹ', '시ㅂ', '병신', 'ㅂㅅ', '개 새 끼', 'ㅈㄴ', '좆', 'ㅈㅗㅈ', '섹스', '야동', 'fuck', 'F u c k', 'fuuuck', 'sh1t', 'b!tch', 'Ｆｕｃｋ', 'fúck', 'BigAss', 'a55', 'sex', 'tlqkf', 'N1gger'];
-  const allowed = ['조지', '십자가', '앗불', '보글이', '홍길동', '성기훈', '시바견', 'Class', 'pass', 'grape', 'analysis', 'Essex', 'title', 'peacock', 'assist', 'Niger', 'Hancock', 'torpedo', 'ㅋㅋㅋ', 'Archer', 'Bubbly_Lab', 'Lab 1'];
-  for (const name of blocked) assert.equal(hasBannedWord(name), true, name);
-  for (const name of allowed) assert.equal(hasBannedWord(name), false, name);
+test('nicknames are format-checked only; previously banned words are accepted and shown', async () => {
+  for (const name of ['시발', 'ㅅㅂ', '씨 발', 'fuck', 'BigAss', 'Fuuuck']) assert.equal(checkNickname(name).ok, true, name);
+  assert.deepEqual(checkNickname('ㅅㅂ'), { ok: true, name: 'ㅅㅂ' });
   assert.deepEqual(checkNickname('  Good Name '), { ok: true, name: 'Good Name' });
   assert.deepEqual(checkNickname('a!'), { ok: false, reason: 'format' });
-  assert.deepEqual(checkNickname('씨.발'), { ok: false, reason: 'banned' });
   assert.deepEqual(checkNickname('씨?발'), { ok: false, reason: 'format' });
-  assert.deepEqual(checkNickname('씨 발'), { ok: false, reason: 'banned' });
+  assert.deepEqual(checkNickname(''), { ok: false, reason: 'format' });
+  assert.deepEqual(checkNickname('a'.repeat(17)), { ok: false, reason: 'format' });
 
   const h = harness(), originalNow = Date.now;
   let now = 1800000000000; Date.now = () => now;
   try {
     const { start, auth } = await endedRun(h); now = start.run.deadline + 1;
     const body = { type: 'register', ...auth, version: start.run.version };
-    assert.deepEqual([(await h.send({ ...body, nickname: '시 1 발' })).error, (await h.send({ ...body, nickname: 'Fuuuck' })).error], ['nickname_banned', 'nickname_banned']);
     assert.equal((await h.send({ ...body, nickname: '' })).error, 'nickname');
     assert.equal((await h.send({ ...body, nickname: 7 })).error, 'nickname');
-    assert.equal((await h.send({ ...body, nickname: 'Clean Name' })).status, 200);
-    // Names already on the board that no longer pass are hidden when the board is read.
+    assert.equal((await h.send({ ...body, nickname: 'a!' })).error, 'nickname');
+    const registered = await h.send({ ...body, nickname: 'ㅅㅂ' });
+    assert.equal(registered.status, 200); assert.notEqual(registered.error, 'nickname_banned');
+    // Stored names are never hidden on the board.
     h.db.database.prepare("INSERT INTO water_sort_runs (id, token, data, nickname, cleared, score, created_at) VALUES ('old-bad', 't', '{\"rules\":2}', '개새끼', 99, 99999, 1)").run();
     invalidateLeaderboard();
     const rows = (await (await challengeApi(new Request('https://game.test/api/challenge'), h.db)).json()).rows;
-    assert.deepEqual(rows.map(row => row.nickname), ['Clean Name']);
+    assert.deepEqual(rows.map(row => row.nickname), ['개새끼', 'ㅅㅂ']);
   } finally { Date.now = originalNow; h.db.database.close(); }
 });
 

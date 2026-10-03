@@ -18,7 +18,7 @@ const API = import.meta.env.DEV ? '/water-sort/api/challenge' : 'https://game-ap
 const SESSION = 'water-sort-challenge-v2';
 type Credentials = { id: string; token: string };
 // Only ApiError text reaches the screen. Network, JSON and runtime failures use the generic copy.
-const API_MESSAGES: Record<string, string> = { nickname: c.nicknameError, nickname_banned: c.nicknameBanned, rate_limited: c.rateLimited, bot: c.botBlocked, conflict: c.syncChanged, missing: c.sessionMissing, legacy: c.sessionMissing, unavailable: c.unavailable, origin: c.originError };
+const API_MESSAGES: Record<string, string> = { nickname: c.nicknameError, rate_limited: c.rateLimited, bot: c.botBlocked, conflict: c.syncChanged, missing: c.sessionMissing, legacy: c.sessionMissing, unavailable: c.unavailable, origin: c.originError };
 class ApiError extends Error {
   code: string;
   constructor(code: string) { super(API_MESSAGES[code] ?? c.error); this.code = code; }

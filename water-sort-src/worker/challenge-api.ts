@@ -80,7 +80,7 @@ export async function challengeApi(request: Request, db: D1Database, allowedOrig
     if (body.type === 'register') {
       if (state.status !== 'ended') return json({ error: 'unfinished' }, 409);
       const checked = checkNickname(body.nickname);
-      if (!checked.ok) return json({ error: checked.reason === 'banned' ? 'nickname_banned' : 'nickname' }, 400);
+      if (!checked.ok) return json({ error: 'nickname' }, 400);
       if (row.nickname !== null) return row.nickname === checked.name ? json({ run: view(row, now) }) : json({ error: 'registered', run: view(row, now) }, 409);
       if (!matches) return json({ error: 'conflict', run: view(row, now) }, 409);
       if (!validResult(state, row.created_at, now)) return json({ error: 'integrity' }, 409);
