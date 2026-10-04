@@ -129,6 +129,38 @@ const event = {
     'Jewelria must not defer cloning until after asynchronous cache access'
   );
 
+  const legacyAuth = {
+    request: { method: 'GET', url: 'https://game.archerlab.dev/_account/widget.js' },
+    respondWith() { throw new Error('Legacy auth must bypass game caches'); },
+    waitUntil() { throw new Error('Legacy auth must not be cached'); }
+  };
+  listeners.fetch(legacyAuth);
+
+  const jewelListeners = {};
+  const freshHtml = new Response('<head><script src="../assets/js/archerlab-session.js"></script></head>');
+  const staleHtml = new Response('<head><script src="/_account/widget.js"></script></head>');
+  const jewelWaiters = [];
+  const jewelScope = {
+    location: { origin: 'https://game.archerlab.dev' }, importScripts() {}, URL, Promise, Response,
+    addEventListener(name, listener) { jewelListeners[name] = listener; },
+    fetch: async () => freshHtml,
+    caches: { match: async () => staleHtml, open: async () => ({ put: async () => {} }) }
+  };
+  jewelScope.self = jewelScope;
+  vm.runInNewContext(jewelriaWorker, jewelScope);
+  jewelListeners.fetch(legacyAuth);
+  const navigation = {
+    request: { method: 'GET', mode: 'navigate', destination: 'document', url: 'https://game.archerlab.dev/jewelria/' },
+    respondWith(promise) { this.response = promise; },
+    waitUntil(promise) { jewelWaiters.push(promise); }
+  };
+  jewelListeners.fetch(navigation);
+  assert.equal(await navigation.response, freshHtml, 'a previously installed game must receive the new document rather than cached account controls');
+  await Promise.all(jewelWaiters);
+  jewelScope.fetch = async () => { throw new Error('Offline'); };
+  jewelListeners.fetch(navigation);
+  assert.equal(await navigation.response, staleHtml, 'offline play retains the previous game document');
+
   console.log('shared service worker response cloning and cache lifetime verified');
 })().catch((error) => {
   console.error(error);

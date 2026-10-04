@@ -91,6 +91,25 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/_account/')) return;
+
+  // Refresh documents so an installed app can receive its native session script.
+  // Keep the previous document only as an offline fallback.
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    const navigation = fetch(event.request).then((response) => {
+      let cacheWrite = Promise.resolve();
+      if (response.ok) {
+        const copy = response.clone();
+        cacheWrite = caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      }
+      return { response, cacheWrite };
+    });
+    event.waitUntil(navigation.then(entry => entry.cacheWrite).catch(() => {}));
+    event.respondWith(navigation.then(entry => entry.response).catch(async () =>
+      await caches.match(event.request) || await caches.match('./index.html') || Response.error()
+    ));
+    return;
+  }
 
   const result = caches.match(event.request).then((cached) => {
     if (cached) return { response: cached, cacheWrite: Promise.resolve() };

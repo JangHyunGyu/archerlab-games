@@ -59,6 +59,7 @@
                 if (event.request.method !== 'GET') return;
                 var url = new URL(event.request.url);
                 if (url.origin !== scope.location.origin) return;
+                if (url.pathname.startsWith('/_account/')) return;
                 if (event.request.mode === 'navigate') {
                     var navigation = fetchAndCache(event.request, './index.html');
                     keepAlive(event, navigation);
