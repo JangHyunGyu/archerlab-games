@@ -303,7 +303,7 @@ for (const key of ["skill-arrow-force", "skill-arrow-pierce", "skill-arrow-pin"]
 }
 assert.match(
   gameSource,
-  /const assetVersion = id === "a" \? CROSSBOW_ASSET_VERSION : CHARACTER_ASSET_VERSION;/,
+  /const assetVersion = id === "a" \? CROSSBOW_ASSET_VERSION\s*:\s*id === "d" \? CHARACTER_CONTINUITY_ASSET_VERSION : CHARACTER_ASSET_VERSION;/,
   "only defender A attack sheets must select the crossbow cache contract"
 );
 

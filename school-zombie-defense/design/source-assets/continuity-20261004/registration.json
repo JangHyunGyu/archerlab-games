@@ -1,0 +1,141 @@
+{
+  "rocket": {
+    "original_bounds": [
+      44,
+      71,
+      177,
+      336
+    ],
+    "packed_bounds": [
+      42,
+      71,
+      178,
+      336
+    ],
+    "uniform_scale": 0.2259164535379369
+  },
+  "brute": [
+    {
+      "original_bounds": [
+        128,
+        69,
+        385,
+        423
+      ],
+      "packed_bounds": [
+        125,
+        69,
+        387,
+        423
+      ],
+      "uniform_scale": 0.6298932384341637
+    },
+    {
+      "original_bounds": [
+        127,
+        114,
+        385,
+        391
+      ],
+      "packed_bounds": [
+        123,
+        114,
+        389,
+        391
+      ],
+      "uniform_scale": 0.6196868008948546
+    },
+    {
+      "original_bounds": [
+        96,
+        146,
+        415,
+        366
+      ],
+      "packed_bounds": [
+        100,
+        146,
+        411,
+        366
+      ],
+      "uniform_scale": 0.5670103092783505
+    },
+    {
+      "original_bounds": [
+        116,
+        176,
+        396,
+        337
+      ],
+      "packed_bounds": [
+        109,
+        176,
+        403,
+        337
+      ],
+      "uniform_scale": 0.5770609318996416
+    }
+  ],
+  "screamer": [
+    {
+      "original_bounds": [
+        68,
+        60,
+        443,
+        448
+      ],
+      "packed_bounds": [
+        100,
+        60,
+        412,
+        448
+      ],
+      "uniform_scale": 0.7886178861788617
+    },
+    {
+      "original_bounds": [
+        52,
+        124,
+        459,
+        424
+      ],
+      "packed_bounds": [
+        85,
+        126,
+        426,
+        424
+      ],
+      "uniform_scale": 0.7978723404255319
+    },
+    {
+      "original_bounds": [
+        36,
+        215,
+        477,
+        390
+      ],
+      "packed_bounds": [
+        76,
+        215,
+        436,
+        390
+      ],
+      "uniform_scale": 0.6782945736434108
+    },
+    {
+      "original_bounds": [
+        36,
+        241,
+        476,
+        351
+      ],
+      "packed_bounds": [
+        76,
+        241,
+        435,
+        351
+      ],
+      "uniform_scale": 0.6962025316455697
+    }
+  ]
+}

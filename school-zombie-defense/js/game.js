@@ -71,8 +71,9 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20260913-diva-elite-v1";
+  const ZOMBIE_ASSET_VERSION = "20261004-character-continuity-v1";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
+  const CHARACTER_CONTINUITY_ASSET_VERSION = "20261004-character-continuity-v1";
   const FIREBOMB_RECOVERY_ASSET_VERSION = "20261002-firebomb-recovery-v1";
   const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
@@ -412,7 +413,7 @@
   const ZOMBIE_DEATH_FINAL_FRAME_BOUNDS = {
     "zombie-death-athlete-sheet": { x: -0.0252, y: 0.3342, width: 0.7285, height: 0.2383 },
     "zombie-death-bloom-sheet": { x: -0.0135, y: 0.0588, width: 0.8594, height: 0.2656 },
-    "zombie-death-brute-sheet": { x: -0.0122, y: -0.0015, width: 0.5469, height: 0.3145 },
+    "zombie-death-brute-sheet": { x: -0.0139, y: 0.0022, width: 0.5742, height: 0.3145 },
     "zombie-death-charger-sheet": { x: -0.0512, y: 0.36, width: 0.748, height: 0.2324 },
     "zombie-death-crawler-sheet": { x: -0.0189, y: 0.0664, width: 0.8359, height: 0.4688 },
     "zombie-death-diva-sheet": { x: -0.0364, y: 0.3556, width: 0.5508, height: 0.1719 },
@@ -425,7 +426,7 @@
     "zombie-death-normal-variant-4-sheet": { x: 0.0248, y: 0.2632, width: 0.7246, height: 0.2402 },
     "zombie-death-nurse-sheet": { x: -0.0429, y: 0.333, width: 0.8301, height: 0.2559 },
     "zombie-death-runner-sheet": { x: -0.0516, y: 0.3208, width: 0.8047, height: 0.2734 },
-    "zombie-death-screamer-sheet": { x: -0.0622, y: 0.0616, width: 0.8594, height: 0.2148 },
+    "zombie-death-screamer-sheet": { x: -0.0425, y: 0.0709, width: 0.7012, height: 0.2148 },
     "zombie-death-spider-sheet": { x: 0.0123, y: 0.0539, width: 0.8906, height: 0.459 },
     "zombie-death-student-1-sheet": { x: -0.0486, y: 0.0409, width: 0.8496, height: 0.3535 },
     "zombie-death-student-2-sheet": { x: 0.0645, y: 0.0463, width: 0.8652, height: 0.3594 },
@@ -2152,13 +2153,14 @@
       this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CROSSBOW_ASSET_VERSION));
       this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", CHARACTER_ASSET_VERSION));
-      this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", CHARACTER_ASSET_VERSION));
+      this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", CHARACTER_CONTINUITY_ASSET_VERSION));
       this.load.image("character-e", versionedImageAsset("assets/images/character-e.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-g", versionedImageAsset("assets/images/character-g.png", CHARACTER_ASSET_VERSION));
       this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
       Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
-        const assetVersion = id === "a" ? CROSSBOW_ASSET_VERSION : CHARACTER_ASSET_VERSION;
+        const assetVersion = id === "a" ? CROSSBOW_ASSET_VERSION
+          : id === "d" ? CHARACTER_CONTINUITY_ASSET_VERSION : CHARACTER_ASSET_VERSION;
         const frameCount = CHARACTER_ATTACK_FRAME_DURATIONS[id]?.length || THROW_ANIMATION_FRAMES;
         for (let frame = 0; frame < frameCount; frame += 1) {
           if (frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id)) {
