@@ -17,7 +17,8 @@
         ['line', 'LINE', /\bLine\//i],
         ['facebook', 'Facebook', /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i],
         ['x', 'X', /Twitter(?:Android| for iPhone| for iPad|[\/; ])/i],
-        ['tiktok', 'TikTok', /TikTok|musical_ly|BytedanceWebview|trill_/i]
+        ['tiktok', 'TikTok', /TikTok|musical_ly|BytedanceWebview|trill_/i],
+        ['daum', 'Daum', /DaumApps/i]
     ];
     var app = apps.filter(function (entry) { return entry[2].test(ua); })[0];
     if (!app || !/^https?:$/.test(location.protocol)) return;
@@ -36,6 +37,9 @@
         var lineUrl = new URL(targetUrl);
         lineUrl.searchParams.set('openExternalBrowser', '1');
         externalUrl = lineUrl.href;
+    } else if (app[0] === 'kakao') {
+        // Official KakaoTalk scheme: opens the default external browser on both iOS and Android.
+        externalUrl = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(targetUrl);
     } else if (isAndroid) {
         // Preserve the original scheme, query and fragment, including room links.
         externalUrl = 'intent://' + targetUrl.slice(current.protocol.length + 2) +

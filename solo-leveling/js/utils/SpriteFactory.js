@@ -274,15 +274,20 @@ export class SpriteFactory {
         baseCtx.imageSmoothingEnabled = true;
         baseCtx.drawImage(src, 0, 0, W, H);
 
-        const imgData = baseCtx.getImageData(0, 0, W, H);
-        const d = imgData.data;
-        for (let p = 0; p < d.length; p += 4) {
-            const r = d[p], g = d[p + 1], b = d[p + 2];
-            if (g > 120 && g > r * 1.35 && g > b * 1.35) {
-                d[p + 3] = 0;
+        try {
+            const imgData = baseCtx.getImageData(0, 0, W, H);
+            const d = imgData.data;
+            for (let p = 0; p < d.length; p += 4) {
+                const r = d[p], g = d[p + 1], b = d[p + 2];
+                if (g > 120 && g > r * 1.35 && g > b * 1.35) {
+                    d[p + 3] = 0;
+                }
             }
+            baseCtx.putImageData(imgData, 0, 0);
+        } catch (e) {
+            // iOS Safari / in-app WebViews can throw InvalidStateError; use the procedural fallback.
+            return false;
         }
-        baseCtx.putImageData(imgData, 0, 0);
 
         const makeFrame = ({ bob = 0, sway = 0, scaleX = 1, scaleY = 1, angle = 0 }) => {
             const c = document.createElement('canvas');

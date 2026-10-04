@@ -1,3 +1,203 @@
+/* ArcherLab environment guard (kept identical across harem / cupid / nevergrad / games).
+ * Feature-detection first; the UA is only a hint. Every step is wrapped so the guard can never throw.
+ *  1. Web Storage shim: replaces localStorage/sessionStorage with an in-memory Storage only when
+ *     the real one is missing, throws on access, or silently drops writes (Samsung/iOS in-app WebViews).
+ *  2. Canvas getImageData: returns a blank ImageData instead of throwing InvalidStateError/IndexSizeError.
+ *  3. Audio: AudioContext.resume() rejections ("Failed to start the audio device") are swallowed and
+ *     retried on the next user gesture; related unhandled rejections are marked handled.
+ */
+(function (root) {
+    'use strict';
+    if (!root || root.__archerEnvGuard) return;
+    var guard = root.__archerEnvGuard = { version: '1.0.0', memoryStorage: {}, env: {} };
+
+    function attempt(fn, fallback) {
+        try { return fn(); } catch (e) { return fallback; }
+    }
+
+    /* ---- environment hints (auxiliary only) ---- */
+    var ua = attempt(function () { return String(root.navigator.userAgent || ''); }, '');
+    var inApp = '';
+    var inAppRules = [
+        ['kakao', /KAKAOTALK/i], ['naver', /NAVER\(|NaverApp/i], ['instagram', /Instagram/i],
+        ['facebook', /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i], ['line', /\bLine\//i], ['band', /\bBAND[\/; ]/i],
+        ['twitter', /Twitter/i], ['tiktok', /TikTok|musical_ly|BytedanceWebview|trill_/i], ['daum', /DaumApps/i]
+    ];
+    for (var r = 0; r < inAppRules.length; r++) {
+        if (inAppRules[r][1].test(ua)) { inApp = inAppRules[r][0]; break; }
+    }
+    var isIOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && attempt(function () { return root.navigator.maxTouchPoints > 1; }, false));
+    var isAndroid = /Android/i.test(ua);
+    var isSamsung = /SamsungBrowser/i.test(ua);
+    var isWebView = (isAndroid && /;\s*wv\)|\bVersion\/[\d.]+ Chrome\/[\d.]+ Mobile/i.test(ua) && !isSamsung) ||
+        (isIOS && !/Safari\//i.test(ua));
+    guard.env = { inApp: inApp, ios: isIOS, android: isAndroid, samsung: isSamsung, webview: !!(isWebView || inApp) };
+    var strictProbe = !!(inApp || isWebView || isSamsung);
+
+    /* ---- 1. Web Storage shim ---- */
+    function createMemoryStorage() {
+        var data = Object.create(null);
+        var api = {
+            getItem: function (key) { key = String(key); return key in data ? data[key] : null; },
+            setItem: function (key, value) { data[String(key)] = String(value); },
+            removeItem: function (key) { delete data[String(key)]; },
+            clear: function () { data = Object.create(null); },
+            key: function (index) { var keys = Object.keys(data); return index >= 0 && index < keys.length ? keys[index] : null; }
+        };
+        var proto = (root.Storage && root.Storage.prototype) ? Object.create(root.Storage.prototype) : {};
+        Object.keys(api).forEach(function (name) {
+            Object.defineProperty(proto, name, { value: api[name], writable: true, configurable: true, enumerable: false });
+        });
+        Object.defineProperty(proto, 'length', { get: function () { return Object.keys(data).length; }, configurable: true });
+        if (typeof root.Proxy === 'function') {
+            return new root.Proxy(proto, {
+                get: function (target, prop) {
+                    if (typeof prop === 'string' && prop !== 'length' && !(prop in proto) && prop in data) return data[prop];
+                    return target[prop];
+                },
+                set: function (target, prop, value) { if (typeof prop === 'string') data[prop] = String(value); return true; },
+                has: function (target, prop) { return (typeof prop === 'string' && prop in data) || prop in target; },
+                deleteProperty: function (target, prop) { if (typeof prop === 'string') delete data[prop]; return true; },
+                ownKeys: function () { return Object.keys(data); },
+                getOwnPropertyDescriptor: function (target, prop) {
+                    return typeof prop === 'string' && prop in data
+                        ? { value: data[prop], writable: true, enumerable: true, configurable: true } : undefined;
+                }
+            });
+        }
+        return proto;
+    }
+
+    function storageIsUsable(name) {
+        var store;
+        try { store = root[name]; } catch (e) { return false; }
+        if (!store || typeof store.getItem !== 'function' || typeof store.setItem !== 'function') return false;
+        var probeKey = '__archer_env_probe__';
+        try {
+            store.setItem(probeKey, '1');
+            var ok = store.getItem(probeKey) === '1';
+            if (typeof store.removeItem === 'function') store.removeItem(probeKey);
+            return ok;
+        } catch (e) {
+            var quota = e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
+            if (quota && !strictProbe) {
+                // Full storage in a normal browser: leave it to the app's own quota handling, but only if reads work.
+                try { store.getItem(probeKey); return true; } catch (readError) { return false; }
+            }
+            return false;
+        }
+    }
+
+    function installStorage(name) {
+        if (storageIsUsable(name)) return;
+        var memory = createMemoryStorage();
+        var done = false;
+        try {
+            Object.defineProperty(root, name, { value: memory, configurable: true, writable: true, enumerable: true });
+            done = root[name] === memory;
+        } catch (e) { /* try the next strategy */ }
+        if (!done) {
+            try {
+                var proto = root.Window && root.Window.prototype;
+                if (proto) {
+                    Object.defineProperty(proto, name, { get: function () { return memory; }, configurable: true });
+                    done = attempt(function () { return root[name] === memory; }, false);
+                }
+            } catch (e) { /* give up silently */ }
+        }
+        if (!done) { try { root[name] = memory; done = root[name] === memory; } catch (e) { /* ignore */ } }
+        guard.memoryStorage[name] = done;
+    }
+    attempt(function () { installStorage('localStorage'); });
+    attempt(function () { installStorage('sessionStorage'); });
+
+    /* ---- 2. Canvas getImageData ---- */
+    function isCanvasStateError(e) {
+        var name = e && e.name;
+        return name === 'InvalidStateError' || name === 'IndexSizeError' ||
+            (e && /getImageData|source width|source height|The source (width|height)/i.test(String(e.message || '')) && name !== 'SecurityError');
+    }
+    function patchGetImageData(Ctor) {
+        var proto = Ctor && Ctor.prototype;
+        var original = proto && proto.getImageData;
+        if (typeof original !== 'function' || original.__archerGuarded) return;
+        var guarded = function getImageData(sx, sy, sw, sh) {
+            try {
+                return original.apply(this, arguments);
+            } catch (e) {
+                if (!isCanvasStateError(e)) throw e;
+                var w = Math.max(1, Math.abs(Math.floor(Number(sw)) || 1));
+                var h = Math.max(1, Math.abs(Math.floor(Number(sh)) || 1));
+                try { return new root.ImageData(w, h); } catch (e1) { /* fall through */ }
+                try { return this.createImageData(w, h); } catch (e2) { /* fall through */ }
+                throw e;
+            }
+        };
+        guarded.__archerGuarded = true;
+        try { Object.defineProperty(proto, 'getImageData', { value: guarded, writable: true, configurable: true }); } catch (e) { /* ignore */ }
+    }
+    attempt(function () { patchGetImageData(root.CanvasRenderingContext2D); });
+    attempt(function () { patchGetImageData(root.OffscreenCanvasRenderingContext2D); });
+
+    /* ---- 3. Audio ---- */
+    var pendingAudio = [];
+    var gestureBound = false;
+    var GESTURES = ['pointerdown', 'touchend', 'mousedown', 'keydown', 'click'];
+    function retryAudioOnGesture(ctx) {
+        if (pendingAudio.indexOf(ctx) < 0) pendingAudio.push(ctx);
+        if (gestureBound || !root.document) return;
+        gestureBound = true;
+        var handler = function () {
+            var list = pendingAudio.slice();
+            pendingAudio.length = 0;
+            list.forEach(function (c) {
+                attempt(function () {
+                    if (c && c.state !== 'running' && c.state !== 'closed') {
+                        var p = c.resume();
+                        if (p && typeof p.catch === 'function') p.catch(function () {});
+                    }
+                });
+            });
+            if (!pendingAudio.length) {
+                GESTURES.forEach(function (type) { attempt(function () { root.document.removeEventListener(type, handler, true); }); });
+                gestureBound = false;
+            }
+        };
+        GESTURES.forEach(function (type) {
+            attempt(function () { root.document.addEventListener(type, handler, { capture: true, passive: true }); });
+        });
+    }
+    function patchAudioResume(Ctor) {
+        var proto = Ctor && Ctor.prototype;
+        var original = proto && proto.resume;
+        if (typeof original !== 'function' || original.__archerGuarded) return;
+        var guarded = function resume() {
+            var ctx = this;
+            var result;
+            try { result = original.apply(ctx, arguments); } catch (e) { retryAudioOnGesture(ctx); return Promise.resolve(); }
+            if (result && typeof result.then === 'function') {
+                return result.then(function (value) { return value; }, function () { retryAudioOnGesture(ctx); });
+            }
+            return result;
+        };
+        guarded.__archerGuarded = true;
+        try { Object.defineProperty(proto, 'resume', { value: guarded, writable: true, configurable: true }); } catch (e) { /* ignore */ }
+    }
+    attempt(function () { patchAudioResume(root.AudioContext); });
+    attempt(function () { if (root.webkitAudioContext !== root.AudioContext) patchAudioResume(root.webkitAudioContext); });
+
+    // Safety net: environment-only rejections never surface as uncaught errors.
+    function isEnvAudioIssue(reason) {
+        var text = String((reason && (reason.message || reason.name)) || reason || '');
+        return /Failed to start the audio device|audio device|AudioContext was not allowed to start|The play\(\) request was interrupted|play\(\) failed because the user didn't interact|NotAllowedError/i.test(text);
+    }
+    attempt(function () {
+        root.addEventListener('unhandledrejection', function (event) {
+            attempt(function () { if (event && isEnvAudioIssue(event.reason)) event.preventDefault(); });
+        });
+    });
+})(typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : null));
+
 (function () {
     if (window.__ARCHERLAB_CLIENT_ERROR_REPORTER__) return;
     window.__ARCHERLAB_CLIENT_ERROR_REPORTER__ = true;

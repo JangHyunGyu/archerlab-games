@@ -247,7 +247,8 @@ export class SoundManager {
             this._rampActiveMusicGains(-60, 0.12);
             try {
                 if (typeof Tone !== 'undefined' && this._toneReady) {
-                    Tone.getContext().rawContext.suspend();
+                    const suspended = Tone.getContext().rawContext.suspend();
+                    if (suspended && typeof suspended.catch === 'function') suspended.catch(() => {});
                 }
             } catch (e) { /* silent */ }
             return;
@@ -338,7 +339,11 @@ export class SoundManager {
         audio.muted = !this.enabled;
         audio.volume = Math.max(0, Math.min(0.72, volume * this._sfxMaster));
         try { audio.currentTime = 0; } catch (e) { /* silent */ }
-        audio.play().catch(() => { audio._inUse = false; });
+        try {
+            // Old iOS/in-app WebViews return undefined; autoplay policy may reject.
+            const playing = audio.play();
+            if (playing && typeof playing.catch === 'function') playing.catch(() => { audio._inUse = false; });
+        } catch (e) { audio._inUse = false; }
         return true;
     }
 

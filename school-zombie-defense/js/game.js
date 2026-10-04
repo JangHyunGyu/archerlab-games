@@ -1231,7 +1231,15 @@
   function harmonizeCrossbowPalette(ctx, width, height, direction) {
     // Grade the existing pixels once during texture construction. Geometry,
     // alpha, weapon calibration and action timing remain identical to the atlas.
-    const image = ctx.getImageData(0, 0, width, height);
+    // iOS Safari / in-app WebViews throw InvalidStateError for zero-sized or
+    // memory-evicted canvases. The grading is cosmetic, so skip it there.
+    if (!(width > 0 && height > 0)) return;
+    let image;
+    try {
+      image = ctx.getImageData(0, 0, width, height);
+    } catch (error) {
+      return;
+    }
     const pixels = image.data;
     const skirtExposure = [0.84, 0.9, 1.1, 1.18, 1.18, 1.18, 1.1, 0.9, 0.84][direction];
     for (let y = 0; y < height; y += 1) {
@@ -1259,7 +1267,11 @@
         }
       }
     }
-    ctx.putImageData(image, 0, 0);
+    try {
+      ctx.putImageData(image, 0, 0);
+    } catch (error) {
+      // Keep the ungraded pixels already on the canvas.
+    }
   }
 
   function makeImageSliceTexture(scene, sourceKey, key, sx, sy, sw, sh) {
@@ -1536,7 +1548,16 @@
       scanCanvas.height = source.height;
       const scanCtx = scanCanvas.getContext("2d");
       scanCtx.drawImage(source, 0, 0);
-      const pixels = scanCtx.getImageData(0, 0, source.width, source.height).data;
+      if (!(source.width > 0 && source.height > 0)) {
+        return;
+      }
+      let pixels;
+      try {
+        pixels = scanCtx.getImageData(0, 0, source.width, source.height).data;
+      } catch (error) {
+        // iOS Safari / in-app WebViews can throw InvalidStateError here.
+        return;
+      }
       let minX = source.width;
       let minY = source.height;
       let maxX = 0;

@@ -4,14 +4,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
-const files = ['assets/js/browser-check.js', 'js/browser-check.js',
+const files = ['assets/js/browser-check.js', 'js/browser-check.js', 'shared/browser-check.js',
   'cat-tower/js/browser-check.js', 'solo-leveling/js/browser-check.js', 'slimevolley/js/browser-check.js']
   .filter(file => fs.existsSync(path.join(root, file)));
 assert.ok(files.length, 'At least one deployed browser check must be tested');
 const android = 'Mozilla/5.0 (Linux; Android 14; Pixel 8; wv) AppleWebKit/537.36 Version/4.0 Chrome/130.0 Mobile Safari/537.36';
 const ios = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
 const apps = ['KAKAOTALK 26.1', 'Instagram 400', 'NAVER(inapp; search; 13.0)', 'BAND/18.0',
-  'FBAN/FBIOS;FBAV/500', 'Line/15.0', 'Twitter for iPhone/10.0', 'musical_ly_2026000000'];
+  'FBAN/FBIOS;FBAV/500', 'Line/15.0', 'Twitter for iPhone/10.0', 'musical_ly_2026000000', 'DaumApps/4.0'];
 let cases = 0;
 function environment(code, options = {}) {
   const elements = [];
@@ -59,7 +59,7 @@ function check(fn) { fn(); cases++; }
       const env = environment(code, { ua: base + ' ' + token });
       assert.ok(env.panel(), `${file}: ${token} on ${base}`);
       assert.ok(env.body.children.includes(env.original), 'Preserve the existing application');
-      assert.equal(env.navigations.length, base === android || token.startsWith('Line/') ? 1 : 0);
+      assert.equal(env.navigations.length, base === android || token.startsWith('Line/') || token.startsWith('KAKAOTALK') ? 1 : 0);
       assert.ok(!env.window.__CAT_TOWER_EXTERNAL_BROWSER_REQUIRED, 'Do not prevent game boot when the guide is dismissible');
     });
     for (const ua of [android, ios + ' Version/18.0 Safari/604.1',
