@@ -113,6 +113,7 @@ const PARKING_MAX_LEVEL_SCORE = 100000;
 const SCHOOL_ZOMBIE_GAME_ID = 'school-zombie-defense';
 const SCHOOL_ZOMBIE_MAX_CLEAR_STAGE = 1000;
 const SCHOOL_ZOMBIE_MIN_MS_PER_STAGE = 12000;
+const SCHOOL_ZOMBIE_MAX_GAME_SPEED = 2;
 const SCHOOL_ZOMBIE_RUN_COIN_LIMIT = 100000;
 const SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE = 30;
 const SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND = 8;
@@ -961,12 +962,15 @@ function normalizeSchoolZombieRunProgress(event, session, previousState, now) {
         throw new Error('invalid school zombie stage for level');
     }
     const elapsedSeconds = Math.max(0, Math.floor((now - Number(session.started_at)) / 1000));
-    if (Number.isFinite(survivedSeconds) && survivedSeconds > elapsedSeconds + 10) {
+    const maxGameSeconds = elapsedSeconds * SCHOOL_ZOMBIE_MAX_GAME_SPEED;
+    // The client clock advances with the supported 1x / 1.5x / 2x speeds.
+    // Use the fastest supported speed as the ceiling, never a client-supplied multiplier.
+    if (Number.isFinite(survivedSeconds) && (survivedSeconds < 0 || survivedSeconds > maxGameSeconds + 10)) {
         throw new Error('invalid school zombie survived time');
     }
-    const maxKills = SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE + elapsedSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND;
+    const maxKills = SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE + maxGameSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND;
     let verifiedRunCoins = Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, kills));
-    const maxCoinsByTime = SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE + elapsedSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND;
+    const maxCoinsByTime = SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE + maxGameSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND;
     if (kills > maxKills || verifiedRunCoins > maxCoinsByTime) {
         throw new Error('school zombie run progress exceeds allowed pace');
     }
@@ -1728,7 +1732,7 @@ async function recordSchoolZombieScoreEvents(db, body) {
     }
 
     const elapsedMs = now - Number(session.started_at);
-    const minElapsedMs = projectedScore * SCHOOL_ZOMBIE_MIN_MS_PER_STAGE;
+    const minElapsedMs = projectedScore * SCHOOL_ZOMBIE_MIN_MS_PER_STAGE / SCHOOL_ZOMBIE_MAX_GAME_SPEED;
     if (elapsedMs < minElapsedMs) {
         return jsonResponse({ error: 'school zombie stage clears are too fast' }, 429);
     }

@@ -6,7 +6,7 @@
   const frameScales = {
     // Male repaint atlases already contain the reviewed pose corrections.
     runner: [1, 1, 1, 1.02, 1.05, 1.10, 1.12, 1.12],
-    charger: [1, 1, 1, 1, 1.06, 1.07, 1.15, 1.15],
+    charger: [1, 1, 1, 1, 1.06, 1.07, 1.16, 1.16],
     student: [1, 0.88, 1.04, 1.03],
     brute: [0.95, 1, 1.06, 1.18],
     volatile: [1, 1, 1.03, 1.12],

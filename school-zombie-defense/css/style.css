@@ -567,6 +567,23 @@ noscript {
   -webkit-overflow-scrolling: touch;
 }
 
+/* A landscape canvas is narrow; nickname controls need the full viewport. */
+@media (orientation: landscape) {
+  .school-zombie-rank-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    padding: max(14px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+    align-items: center;
+    background: rgba(12, 13, 10, 0.9);
+  }
+
+  .school-zombie-rank-layer.school-zombie-rank-layer--gameover {
+    top: 0;
+  }
+
+}
+
 .school-zombie-rank-layer--gameover {
   top: 26.05%;
   padding: 0 42px 18px;
@@ -848,6 +865,7 @@ noscript {
 
 .school-zombie-rank-actions button {
   appearance: none;
+  min-width: 44px;
   height: 48px;
   border: 1px solid #8e8368;
   border-radius: 0;

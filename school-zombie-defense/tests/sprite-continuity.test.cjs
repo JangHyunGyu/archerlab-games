@@ -39,7 +39,25 @@ for name in ['character-d-attack-2','zombie-death-brute-sheet','zombie-death-scr
     png = Image.open(images/(name+'.png')).convert('RGBA')
     webp = Image.open(images/(name+'.webp')).convert('RGBA')
     assert png.size == webp.size and png.getchannel('A').tobytes() == webp.getchannel('A').tobytes(), name
-print('Sprite continuity: all 17 walk grids, 8 untouched rocket directions, 16 unchanged volatile cells, 8 collapse pose bounds, PNG/WebP alpha pass')
+proportions = root/'design/source-assets/proportions-20261004'
+for kind in ['runner','teacher','athlete','janitor','guard','charger','crawler','spider']:
+    for action in ['walk','death']:
+        name = f'zombie-walk-{kind}' if action == 'walk' else f'zombie-death-{kind}-sheet'
+        atlas = Image.open(images/(name+'.png')).convert('RGBA')
+        old = Image.open(proportions/f'{kind}-{action}-before.png').convert('RGBA')
+        webp = Image.open(images/(name+'.webp')).convert('RGBA')
+        assert atlas.size == old.size == webp.size
+        assert atlas.getchannel('A').tobytes() == webp.getchannel('A').tobytes(), name
+        for y in range(0,atlas.height,512):
+            for x in range(0,atlas.width,512):
+                box=(x,y,x+512,y+512)
+                a=atlas.crop(box).getchannel('A').point(lambda p:255 if p>8 else 0)
+                b=old.crop(box).getchannel('A').point(lambda p:255 if p>8 else 0)
+                aa,bb=a.getbbox(),b.getbbox()
+                assert abs(aa[1]-bb[1])<=2 and abs(aa[3]-bb[3])<=1, (name,x,y,'pose placement')
+                area=lambda im:sum(p>0 for p in im.getdata())
+                assert 0.7<=area(a)/area(b)<=1.35, (name,x,y,'pose coverage')
+print('Sprite continuity: all 17 walk grids, rocket/volatile unchanged, 8 original collapse poses, 180 proportional zombie frames, PNG/WebP alpha pass')
 `], { encoding: 'utf8' });
 assert.equal(check.status, 0, check.stderr || check.stdout);
 process.stdout.write(check.stdout);

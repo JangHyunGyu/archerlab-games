@@ -71,7 +71,7 @@
   const imageAsset = (path) => {
     return SUPPORTS_WEBP ? path.replace(/\.png$/i, ".webp") : path;
   };
-  const ZOMBIE_ASSET_VERSION = "20261004-character-continuity-v1";
+  const ZOMBIE_ASSET_VERSION = "20261004-proportions-v2";
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
   const CHARACTER_CONTINUITY_ASSET_VERSION = "20261004-character-continuity-v1";
   const FIREBOMB_RECOVERY_ASSET_VERSION = "20261002-firebomb-recovery-v1";
@@ -411,27 +411,27 @@
   );
   // Alpha-weighted final-frame centers and opaque bounds, normalized to each 512px death frame.
   const ZOMBIE_DEATH_FINAL_FRAME_BOUNDS = {
-    "zombie-death-athlete-sheet": { x: -0.0252, y: 0.3342, width: 0.7285, height: 0.2383 },
+    "zombie-death-athlete-sheet": { x: -0.0186, y: 0.332, width: 0.7051, height: 0.2383 },
     "zombie-death-bloom-sheet": { x: -0.0135, y: 0.0588, width: 0.8594, height: 0.2656 },
     "zombie-death-brute-sheet": { x: -0.0139, y: 0.0022, width: 0.5742, height: 0.3145 },
-    "zombie-death-charger-sheet": { x: -0.0512, y: 0.36, width: 0.748, height: 0.2324 },
-    "zombie-death-crawler-sheet": { x: -0.0189, y: 0.0664, width: 0.8359, height: 0.4688 },
+    "zombie-death-charger-sheet": { x: -0.0425, y: 0.3623, width: 0.7324, height: 0.2324 },
+    "zombie-death-crawler-sheet": { x: -0.0205, y: 0.0669, width: 0.8184, height: 0.4668 },
     "zombie-death-diva-sheet": { x: -0.0364, y: 0.3556, width: 0.5508, height: 0.1719 },
     "zombie-death-elite-sheet": { x: -0.0221, y: 0.0018, width: 0.6172, height: 0.3438 },
-    "zombie-death-guard-sheet": { x: -0.0188, y: 0.0792, width: 0.7695, height: 0.1992 },
-    "zombie-death-janitor-sheet": { x: -0.0532, y: 0.0615, width: 0.8223, height: 0.2363 },
+    "zombie-death-guard-sheet": { x: -0.0106, y: 0.0836, width: 0.7227, height: 0.1992 },
+    "zombie-death-janitor-sheet": { x: -0.0484, y: 0.0621, width: 0.7695, height: 0.2363 },
     "zombie-death-normal-variant-1-sheet": { x: 0.0444, y: 0.2937, width: 0.7617, height: 0.2539 },
     "zombie-death-normal-variant-2-sheet": { x: 0.019, y: 0.2912, width: 0.7188, height: 0.2812 },
     "zombie-death-normal-variant-3-sheet": { x: 0.0435, y: 0.3308, width: 0.7129, height: 0.1914 },
     "zombie-death-normal-variant-4-sheet": { x: 0.0248, y: 0.2632, width: 0.7246, height: 0.2402 },
     "zombie-death-nurse-sheet": { x: -0.0429, y: 0.333, width: 0.8301, height: 0.2559 },
-    "zombie-death-runner-sheet": { x: -0.0516, y: 0.3208, width: 0.8047, height: 0.2734 },
+    "zombie-death-runner-sheet": { x: -0.0488, y: 0.3196, width: 0.791, height: 0.2734 },
     "zombie-death-screamer-sheet": { x: -0.0425, y: 0.0709, width: 0.7012, height: 0.2148 },
-    "zombie-death-spider-sheet": { x: 0.0123, y: 0.0539, width: 0.8906, height: 0.459 },
+    "zombie-death-spider-sheet": { x: 0.0139, y: 0.05, width: 0.8652, height: 0.459 },
     "zombie-death-student-1-sheet": { x: -0.0486, y: 0.0409, width: 0.8496, height: 0.3535 },
     "zombie-death-student-2-sheet": { x: 0.0645, y: 0.0463, width: 0.8652, height: 0.3594 },
     "zombie-death-student-3-sheet": { x: -0.093, y: 0.0404, width: 0.8906, height: 0.3418 },
-    "zombie-death-teacher-sheet": { x: -0.0383, y: 0.036, width: 0.7246, height: 0.3027 },
+    "zombie-death-teacher-sheet": { x: -0.0297, y: 0.0403, width: 0.8594, height: 0.3027 },
     "zombie-death-volatile-sheet": { x: -0.0098, y: -0.0037, width: 0.5977, height: 0.3418 }
   };
   const ZOMBIE_DEATH_RENDER_SCALES = {
@@ -1232,11 +1232,15 @@
 
     const source = scene.textures.get(sourceKey).getSourceImage();
     const canvas = document.createElement("canvas");
-    canvas.width = sw;
-    canvas.height = sh;
+    // Action sheets are up to 960px tall but render below 267px. Keep enough
+    // detail for 2x displays without retaining hundreds of full-size canvases.
+    const textureScale = Math.min(1, 576 / sh);
+    canvas.width = Math.round(sw * textureScale);
+    canvas.height = Math.round(sh * textureScale);
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     scene.textures.addCanvas(key, canvas);
   }
 
@@ -2390,6 +2394,12 @@
       this.pauseConfirmOpen = false;
       this.events.once("shutdown", () => this.disposeScene());
       this.events.once("destroy", () => this.disposeScene());
+      this.boundHandleRankingSaved = (event) => {
+        if (!this.disposed && event.detail?.game_id === RANK_GAME_ID && this.mode === "ranking") {
+          this.showRankings();
+        }
+      };
+      window.addEventListener("archer-ranking-saved", this.boundHandleRankingSaved);
       this.drawBackground();
       this.createCharacters();
       this.createHud();
@@ -3519,6 +3529,9 @@
       if (this.zombieHitCandidates) {
         this.zombieHitCandidates.length = 0;
       }
+      if (this.zombieSeparationCandidates) {
+        this.zombieSeparationCandidates.length = 0;
+      }
       this.fireZones = [];
       this.turrets = [];
       this.barbedWire = null;
@@ -3755,6 +3768,8 @@
       }
       this.boundHandleKeyDown = null;
       this.boundHandleVisibilityChange = null;
+      window.removeEventListener("archer-ranking-saved", this.boundHandleRankingSaved);
+      this.boundHandleRankingSaved = null;
       this.gamepadButtons.clear();
       this.clearOverlay();
       this.clearTransientObjects();
@@ -8052,7 +8067,7 @@
       }
 
       const radius = this.getZombieCrowdRadius(zombie);
-      const foot = this.getZombieFootPoint(zombie);
+      const footY = zombie.y + this.getZombieFootOffset(zombie);
       const candidates = this.getNearbyZombies(zombie, radius * 3.2 + ZOMBIE_FRONT_BLOCK_LOOKAHEAD);
       let best = null;
       let bestScore = Infinity;
@@ -8069,8 +8084,7 @@
           continue;
         }
 
-        const otherFoot = this.getZombieFootPoint(other);
-        const footGap = otherFoot.y - foot.y;
+        const footGap = other.y + this.getZombieFootOffset(other) - footY;
         const tiedAhead = Math.abs(footGap) <= ZOMBIE_FRONT_TIE_EPSILON
           && (other.crowdOrder || 0) < (zombie.crowdOrder || 0);
         if (footGap <= ZOMBIE_FRONT_TIE_EPSILON && !tiedAhead) {
@@ -8092,10 +8106,10 @@
       return best;
     }
 
-    tryZombieSideStep(zombie, direction, dt, slowFactor) {
+    tryZombieSideStep(zombie, direction, dt, slowFactor, currentBlocker = null) {
       const minX = this.getZombieLaneMinX();
       const maxX = this.getZombieLaneMaxX();
-      const currentBlocker = this.getZombieFrontBlocker(zombie, zombie.x);
+      currentBlocker = currentBlocker || this.getZombieFrontBlocker(zombie, zombie.x);
       const step = ZOMBIE_SIDE_STEP_SPEED * Math.max(0.55, slowFactor) * dt;
       const proposedX = clamp(zombie.x + direction * step, minX, maxX);
       if (Math.abs(proposedX - zombie.x) < 0.001) {
@@ -8118,10 +8132,10 @@
       const preferredDirection = Math.abs(zombie.x - blocker.x) > 1
         ? (zombie.x >= blocker.x ? 1 : -1)
         : ((zombie.crowdSide || zombie.crowdSeed || 1) >= 0 ? 1 : -1);
-      if (this.tryZombieSideStep(zombie, preferredDirection, dt, slowFactor)) {
+      if (this.tryZombieSideStep(zombie, preferredDirection, dt, slowFactor, blocker)) {
         return true;
       }
-      return this.tryZombieSideStep(zombie, -preferredDirection, dt, slowFactor);
+      return this.tryZombieSideStep(zombie, -preferredDirection, dt, slowFactor, blocker);
     }
 
     getZombieStopYBehindBlocker(zombie, blocker, attackLine) {
@@ -11018,7 +11032,9 @@
         stableViewportSize = size;
         return size;
       }
-      if (!stableViewportSize) {
+      // Preserve height while the mobile keyboard opens, but accept real width
+      // changes even if a nickname dialog is already open during a resize.
+      if (!stableViewportSize || Math.abs(size.width - stableViewportSize.width) > 2) {
         stableViewportSize = size;
       }
       return stableViewportSize;

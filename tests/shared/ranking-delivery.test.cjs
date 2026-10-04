@@ -143,3 +143,21 @@ test('all game entry points load recovery before their game code', () => {
     assert.ok(html.indexOf('shared/ranking-delivery.js') < html.indexOf('</head>'), game.id);
   }
 });
+
+test('online submission drains more than one envelope without returning a queued result', async () => {
+  const e=environment(); const c=client(e.network); const session=await start(c);
+  e.db.sql.exec('UPDATE ranking_sessions SET started_at = started_at - 600000');
+  for(let i=0;i<45;i++) c.ranking.track('lumen-shift', event(), session);
+  const result=await c.ranking.submit({game_id:'lumen-shift',session_id:session,player_name:'Long run',score:4500});
+  assert.equal(result.success,true); assert.equal(result.pending,undefined);
+  assert.equal(c.ranking.pending().length,0);
+  assert.equal(e.db.sql.prepare('SELECT score FROM rankings').get().score,4500);
+});
+
+test('submission arriving during an in-flight score batch is confirmed in the same wait', async () => {
+  const e=environment();const c=client(e.network);const session=await start(c);
+  c.ranking.track('lumen-shift',event(),session);
+  const flushing=c.ranking.flush();
+  const result=await c.ranking.submit({game_id:'lumen-shift',session_id:session,player_name:'Concurrent submit',score:100});
+  await flushing; assert.equal(result.success,true); assert.equal(c.ranking.pending().length,0);
+});

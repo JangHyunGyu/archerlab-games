@@ -22,6 +22,11 @@
     }
     function pendingText() {
         var language = String(global.document?.documentElement?.lang || 'ko').slice(0, 2);
+        if (global.navigator?.onLine !== false) {
+            return language === 'en' ? 'Saving your ranking. Please wait a moment.'
+                : language === 'ja' ? 'ランキングに登録しています。少々お待ちください。'
+                    : '랭킹에 등록하고 있어요. 잠시만 기다려 주세요.';
+        }
         return language === 'en' ? 'Record kept. Ranking will sync automatically.'
             : language === 'ja' ? '記録を保存しました。接続が戻ると自動でランキングに登録します。'
                 : '기록을 보관했어요. 연결되면 자동으로 등록합니다.';
@@ -151,50 +156,70 @@
     async function sendSession(sessionId) {
         if (inflight.has(sessionId)) return inflight.get(sessionId);
         var task = (async function () {
-            var batch = Array.from(entries.values()).filter(function (entry) {
-                return entry.sessionId === sessionId && entry.state === 'pending';
-            }).sort(function (a, b) { return a.createdAt - b.createdAt; }).slice(0, 20);
-            if (!batch.length) return;
-            await Promise.all(batch.map(function (entry) { return entry.durable; }));
-            var controller = new AbortController();
-            var timeout = global.setTimeout(function () { controller.abort(); }, 12000);
-            try {
-                var response = await originalFetch(API + '/ranking-delivery', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    signal: controller.signal,
-                    body: JSON.stringify({ game_id: batch[0].gameId, session_id: sessionId,
-                        commands: batch.map(function (entry) { return {
-                            id: entry.id, path: entry.path, body: entry.body, after: entry.after,
-                        }; }),
-                    }),
-                });
-                if (!response.ok) throw new Error('delivery HTTP ' + response.status);
-                var result = await response.json();
-                if (!Array.isArray(result.results)) throw new Error('invalid delivery response');
-                for (var item of result.results) {
-                    var entry = entries.get(item.id);
-                    if (!entry || !batch.includes(entry)) continue;
-                    entry.accepted = true;
-                    entry.state = item.state;
-                    entry.status = item.status;
-                    entry.data = item.data;
-                    if (entry.state === 'done') {
-                        // Keep a tiny in-memory receipt for the active game's flush;
-                        // remove durable client data only after server confirmation.
-                        await putDatabase(entry, true);
-                        try { global.localStorage.removeItem(key(entry)); } catch (_) {}
-                        notify(entry);
-                    } else {
-                        putLocal(entry);
-                        await putDatabase(entry, false);
-                        if (entry.state === 'review') notify(entry);
+            // Keep draining this session: a submit can arrive while a score batch is
+            // in flight, and a long run may need more than one 20-command envelope.
+            while (true) {
+                var batch = Array.from(entries.values()).filter(function (entry) {
+                    return entry.sessionId === sessionId && entry.state === 'pending';
+                }).sort(function (a, b) { return a.createdAt - b.createdAt; }).slice(0, 20);
+                if (!batch.length) return;
+                await Promise.all(batch.map(function (entry) { return entry.durable; }));
+                var controller = new AbortController();
+                var timeout = global.setTimeout(function () { controller.abort(); }, 12000);
+                try {
+                    var response = await originalFetch(API + '/ranking-delivery', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        signal: controller.signal,
+                        body: JSON.stringify({ game_id: batch[0].gameId, session_id: sessionId,
+                            commands: batch.map(function (entry) { return {
+                                id: entry.id, path: entry.path, body: entry.body, after: entry.after,
+                            }; }),
+                        }),
+                    });
+                    if (!response.ok) throw new Error('delivery HTTP ' + response.status);
+                    var result = await response.json();
+                    if (!Array.isArray(result.results)) throw new Error('invalid delivery response');
+                    for (var item of result.results) {
+                        var entry = entries.get(item.id);
+                        if (!entry || !batch.includes(entry)) continue;
+                        entry.accepted = true;
+                        entry.state = item.state;
+                        entry.status = item.status;
+                        entry.data = item.data;
+                        if (entry.state === 'done') {
+                            // Keep a tiny in-memory receipt for the active game's flush;
+                            // remove durable client data only after server confirmation.
+                            await putDatabase(entry, true);
+                            try { global.localStorage.removeItem(key(entry)); } catch (_) {}
+                            notify(entry);
+                            if (entry.path === '/rankings' && typeof global.CustomEvent === 'function') {
+                                global.dispatchEvent(new global.CustomEvent('archer-ranking-saved', { detail: {
+                                    game_id: entry.gameId, request_id: entry.id, data: entry.data,
+                                } }));
+                            }
+                            // Completed receipts do not need profile secrets or large event
+                            // snapshots. Bound history while retaining recent retry receipts.
+                            entry.body = null;
+                            var receipts = Array.from(entries.values()).filter(function (item) { return item.state === 'done'; });
+                            receipts.slice(0, Math.max(0, receipts.length - 128)).forEach(function (item) {
+                                entries.delete(item.id);
+                                if (tails.get(item.sessionId) === item.id && !Array.from(sessions.values()).includes(item.sessionId)) {
+                                    tails.delete(item.sessionId);
+                                }
+                            });
+                        } else {
+                            putLocal(entry);
+                            await putDatabase(entry, false);
+                            if (entry.state === 'review') notify(entry);
+                        }
                     }
+                } catch (_) {
+                    batch.forEach(function (entry) { entry.attempts += 1; });
+                } finally {
+                    global.clearTimeout(timeout);
+                    renderStatus();
                 }
-            } catch (_) {
-                batch.forEach(function (entry) { entry.attempts += 1; });
-            } finally {
-                global.clearTimeout(timeout);
-                renderStatus();
+                if (batch.some(function (entry) { return entry.state === 'pending'; })) break;
             }
         })();
         inflight.set(sessionId, task);
@@ -219,7 +244,7 @@
         await entry.durable;
         // Bound the UI wait. Pending is explicitly different from saved.
         var timeout;
-        await Promise.race([sendSession(sessionId), new Promise(function (resolve) { timeout = global.setTimeout(resolve, 4000); })]);
+        await Promise.race([sendSession(sessionId), new Promise(function (resolve) { timeout = global.setTimeout(resolve, 7500); })]);
         global.clearTimeout(timeout);
         if (entry.state === 'review') throw new Error(entry.data.error || 'ranking requires review');
         if (entry.state === 'done') return entry.data;
@@ -245,7 +270,7 @@
             var sessionId = uuid();
             sessions.set(body.game_id, sessionId);
             var start = enqueue(path, body, sessionId, sessionId);
-            return responseFor(await waitFor(start));
+            return responseFor(await waitFor(start, options.signal));
         }
         var events = body.events || (body.event ? [body.event] : []);
         var requests = events.map(function (event) {
@@ -297,7 +322,9 @@
             element.append(text, close); document.body.appendChild(element);
         }
         var unsafe = pending.some(function (entry) { return !entry.localSaved && !entry.accepted; });
-        var review = pending.some(function (entry) { return entry.state === 'review'; });
+        var review = pending.some(function (entry) {
+            return Array.from(entries.values()).some(function (item) { return item.sessionId === entry.sessionId && item.state === 'review'; });
+        });
         element.firstChild.textContent = unsafe ? copy.unsafe : review ? copy.review : pendingText();
     }
     global.ArcherRanking = Object.freeze({ track: track, submit: submit, fetch: deliveryFetch, pendingText: pendingText,

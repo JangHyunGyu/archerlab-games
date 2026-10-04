@@ -122,3 +122,78 @@ test('school zombie: profile-bound stage clears retain authentication and rankin
   assert.ok(result.every(row => row.state === 'done'), JSON.stringify(result));
   assert.equal(f.db.sql.prepare('SELECT score FROM rankings').get().score, 1);
 });
+
+async function zombieRun() {
+  const f = fixture('school-zombie-defense');
+  const response = await server.api.fetch(new Request('https://api/school-zombie/profile', { method: 'POST', body: '{}' }), { DB: f.db });
+  const profile = await response.json();
+  const auth = { profile_id: profile.profile_id, profile_secret: profile.profile_secret };
+  await f.accept([f.command('/score-sessions', auth)]);
+  f.db.sql.exec('UPDATE ranking_sessions SET started_at = started_at - 60000');
+  const clear = f.command('/score-events', { ...auth, event: { type: 'stage_clear', cleared_stage: 1, reached_stage: 2, level: 5, kills: 60 } });
+  assert.equal((await f.accept([clear]))[0].state, 'done');
+  const progress = seconds => f.command('/score-events', { ...auth, event: { type: 'run_progress', run_coins: 60, reward_counts: {1:60,2:0,3:0,4:0}, kills:60, reached_stage:2, level:5, survived_seconds:seconds } });
+  return {...f, auth, progress};
+}
+
+test('school zombie: 1.5x and 2x clocks register immediately after reward progress', async () => {
+  for (const seconds of [90, 120]) {
+    const f = await zombieRun();
+    const result = await f.accept([f.progress(seconds), f.ranking(1)]);
+    assert.ok(result.every(row => row.state === 'done'), JSON.stringify(result));
+    assert.equal(f.db.sql.prepare('SELECT COUNT(*) AS n FROM rankings').get().n, 1);
+  }
+});
+
+test('school zombie: invalid optional reward progress cannot block an already verified ranking', async () => {
+  const f = await zombieRun();
+  const result = await f.accept([f.progress(99999), f.ranking(1)]);
+  assert.equal(result[0].state, 'review', 'impossible gameplay time stays rejected');
+  assert.equal(result[1].state, 'done', 'stage score remains independently verified');
+  assert.equal(f.db.sql.prepare('SELECT score FROM rankings').get().score, 1);
+});
+
+test('school zombie: invalid stage evidence cannot bypass ranking verification', async () => {
+  const f = await zombieRun();
+  const wrong = f.command('/score-events', {...f.auth, event:{type:'stage_clear',cleared_stage:2,reached_stage:3,level:9,kills:0}});
+  const result = await f.accept([wrong, f.ranking(2)]);
+  assert.equal(result[0].state, 'review');
+  assert.equal(result[1].state, 'pending');
+  assert.equal(f.db.sql.prepare('SELECT COUNT(*) AS n FROM rankings').get().n, 0);
+});
+
+test('school zombie: retained clock-validation failures are revalidated on resend', async () => {
+  const f = await zombieRun(); const command = f.progress(120);
+  f.db.offline = true;
+  await f.accept([command]);
+  f.durable.sql.exec("UPDATE jobs SET state='review', last_error='invalid school zombie survived time' WHERE id=?",command.id);
+  f.db.offline = false;
+  const result=await f.accept([command,f.ranking(1)]);
+  assert.ok(result.every(row=>row.state==='done'),JSON.stringify(result));
+});
+
+test('school zombie: alarm recovers an old clock rejection and its blocked stage without the browser', async () => {
+  const f = await zombieRun(); const progress = f.progress(120);
+  const stage = f.command('/score-events', {...f.auth, event:{type:'stage_clear',cleared_stage:2,reached_stage:3,level:9,kills:200}});
+  const rank = f.ranking(2);
+  f.db.offline = true;
+  await f.accept([progress,stage,rank]);
+  const original = f.durable.sql.exec('SELECT payload, hash FROM jobs WHERE id=?',progress.id).toArray()[0];
+  f.durable.sql.exec("UPDATE jobs SET state='review', last_error='invalid school zombie survived time' WHERE id=?",progress.id);
+  f.db.offline = false; f.expireRetry();
+  const restarted = new server.RankingDelivery({storage:f.durable},{DB:f.db});
+  await restarted.alarm();
+  assert.equal(f.db.sql.prepare('SELECT score FROM rankings').get().score,2);
+  assert.deepEqual(f.durable.sql.exec('SELECT payload, hash FROM jobs WHERE id=?',progress.id).toArray()[0],original);
+  assert.ok(f.durable.sql.exec('SELECT state FROM jobs').toArray().every(row=>row.state==='done'));
+  assert.equal(f.durable.alarmAt,null);
+});
+
+test('school zombie: stage pace accounts for 2x speed but rejects impossible clears', async () => {
+  const f=await zombieRun();
+  f.db.sql.exec('UPDATE ranking_sessions SET started_at='+ (Date.now()-14000));
+  const stage=f.command('/score-events',{...f.auth,event:{type:'stage_clear',cleared_stage:2,reached_stage:3,level:9,kills:200}});
+  assert.equal((await f.accept([stage]))[0].state,'done');
+  const fast=f.command('/score-events',{...f.auth,event:{type:'stage_clear',cleared_stage:3,reached_stage:4,level:13,kills:400}});
+  assert.equal((await f.accept([fast]))[0].state,'pending','below 6 wall-clock seconds per stage remains rejected');
+});

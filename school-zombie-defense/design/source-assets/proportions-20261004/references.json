@@ -1,0 +1,66 @@
+{
+  "runner": {
+    "death_frames": 8,
+    "reference": "C:\\workspace\\archerlab-games\\school-zombie-defense\\design\\source-assets\\proportions-20261004\\runner-reference.png",
+    "source_walk_size": [
+      2048,
+      2048
+    ]
+  },
+  "teacher": {
+    "death_frames": 4,
+    "reference": "C:\\workspace\\archerlab-games\\school-zombie-defense\\design\\source-assets\\proportions-20261004\\teacher-reference.png",
+    "source_walk_size": [
+      2048,
+      2048
+    ]
+  },
+  "athlete": {
+    "death_frames": 8,
+    "reference": "C:\\workspace\\archerlab-games\\school-zombie-defense\\design\\source-assets\\proportions-20261004\\athlete-reference.png",
+    "source_walk_size": [
+      2048,
+      2048
+    ]
+  },
+  "janitor": {
+    "death_frames": 4,
+    "reference": "C:\\workspace\\archerlab-games\\school-zombie-defense\\design\\source-assets\\proportions-20261004\\janitor-reference.png",
+    "source_walk_size": [
+      2048,
+      2048
+    ]
+  },
+  "guard": {
+    "death_frames": 4,
+    "reference": "C:\\workspace\\archerlab-games\\school-zombie-defense\\design\\source-assets\\proportions-20261004\\guard-reference.png",
+    "source_walk_size": [
+      2048,
+      2048
+    ]
+  },
+  "charger": {
+    "death_frames": 8,
+    "reference": "C:\\workspace\\archerlab-games\\school-zombie-defense\\design\\source-assets\\proportions-20261004\\charger-reference.png",
+    "source_walk_size": [
+      2048,
+      2048
+    ]
+  },
+  "crawler": {
+    "death_frames": 8,
+    "reference": "C:\\workspace\\archerlab-games\\school-zombie-defense\\design\\source-assets\\proportions-20261004\\crawler-reference.png",
+    "source_walk_size": [
+      2048,
+      2048
+    ]
+  },
+  "spider": {
+    "death_frames": 8,
+    "reference": "C:\\workspace\\archerlab-games\\school-zombie-defense\\design\\source-assets\\proportions-20261004\\spider-reference.png",
+    "source_walk_size": [
+      2048,
+      2048
+    ]
+  }
+}
