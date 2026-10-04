@@ -1,5 +1,8 @@
 # Ranking delivery and recovery
 
+The [2026-10-04 all-game audit](ranking-audit-20261004.md) covers every game,
+subsequent progression-limit fixes and restart/session isolation.
+
 ## Confirmed failure paths
 
 - Lumen Shift returned `false` when its event queue was already empty. Submitting immediately after a successful automatic flush therefore failed without sending a ranking request.

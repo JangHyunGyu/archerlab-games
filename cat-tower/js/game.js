@@ -191,6 +191,7 @@
   const NICK_KEY = 'cat-tower.nick';
   const RANK_EVENT_BATCH_LIMIT = 20;
   let rankSessionId = null;
+  let rankRunToken = {};
   let rankVerifiedScore = null;
   let rankSessionPromise = null;
   let rankEventQueue = [];
@@ -282,7 +283,7 @@
           : null,
         nextTier,
         score,
-        rankSessionId,
+        rankSessionId: rankSessionId || window.ArcherRanking?.sessionId(GAME_ID),
         rankEventQueue: getRankEventQueueSnapshot(),
         rankNextEventSeq,
         reachedFinal,
@@ -316,6 +317,7 @@
 
   // -------- 캔버스 & 리사이즈 --------
   function resetRankSessionState() {
+    rankRunToken = {};
     rankSessionId = null;
     rankVerifiedScore = null;
     rankSessionPromise = null;
@@ -360,6 +362,7 @@
   }
 
   async function createRankSession() {
+    const token = rankRunToken;
     const res = await fetch(`${RANK_API_BASE}/score-sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -367,6 +370,7 @@
     });
     if (!res.ok) throw new Error('rank session HTTP ' + res.status);
     const data = await res.json();
+    if (token !== rankRunToken) return null;
     if (!data || !data.session_id) throw new Error('rank session response invalid');
     rankSessionId = data.session_id;
     rankVerifiedScore = Number.isFinite(Number(data.score)) ? Number(data.score) : 0;
@@ -377,11 +381,12 @@
   function ensureRankSession() {
     if (rankSessionId) return Promise.resolve(rankSessionId);
     if (!rankSessionPromise) {
+      const token = rankRunToken;
       rankSessionPromise = createRankSession().catch((e) => {
         warn('rank session create failed:', e.message);
         return null;
       }).finally(() => {
-        if (!rankSessionId) rankSessionPromise = null;
+        if (token === rankRunToken && !rankSessionId) rankSessionPromise = null;
       });
     }
     return rankSessionPromise;
@@ -395,6 +400,12 @@
   function restoreRankSession(sessionId, restoredScore = 0, pendingEvents = [], nextEventSeq = 1) {
     resetRankSessionState();
     restoreRankEventQueue(pendingEvents);
+    if (!sessionId && rankEventQueue.length && window.ArcherRanking) {
+      const eventIds = new Set(rankEventQueue.map(event => event._delivery_id).filter(Boolean));
+      const candidates = new Set(window.ArcherRanking.pending()
+        .filter(entry => entry.gameId === GAME_ID && eventIds.has(entry.id)).map(entry => entry.sessionId));
+      if (candidates.size === 1) sessionId = candidates.values().next().value;
+    }
     const restoredNextSeq = toRankEventInteger(nextEventSeq);
     const highestQueuedSeq = rankEventQueue.reduce((max, event) => {
       const seq = toRankEventInteger(event.seq);
@@ -426,9 +437,11 @@
 
   async function flushRankEvents() {
     if (rankFlushPromise) return rankFlushPromise;
+    const token = rankRunToken;
     rankFlushPromise = (async () => {
       if (rankSyncFailed) return false;
       const sessionId = await ensureRankSession();
+      if (token !== rankRunToken) return false;
       if (!sessionId) throw new Error('rank session unavailable');
       while (rankEventQueue.length > 0) {
         const batch = rankEventQueue.slice(0, RANK_EVENT_BATCH_LIMIT);
@@ -442,6 +455,7 @@
             events: batch,
           }),
         });
+        if (token !== rankRunToken) return false;
         if (!res.ok) {
           const text = await res.text().catch(() => '');
           const error = new Error('rank event HTTP ' + res.status + (text ? ' ' + text : ''));
@@ -449,6 +463,7 @@
           throw error;
         }
         const data = await res.json().catch(() => null);
+        if (token !== rankRunToken) return false;
         if (!data || data.success !== true) throw new Error('rank event response invalid');
         if (Number.isFinite(Number(data.score))) rankVerifiedScore = Number(data.score);
         rankEventQueue.splice(0, batch.length);
@@ -456,6 +471,7 @@
       }
       return true;
     })().catch((e) => {
+      if (token !== rankRunToken) return false;
       if ((e.status === 404 || e.status === 410) && canRestartRankSessionFromQueue()) {
         rankSessionId = null;
         rankSessionPromise = null;
@@ -465,7 +481,7 @@
       warn('rank event sync failed:', e.message);
       return false;
     }).finally(() => {
-      rankFlushPromise = null;
+      if (token === rankRunToken) rankFlushPromise = null;
     });
     return rankFlushPromise;
   }

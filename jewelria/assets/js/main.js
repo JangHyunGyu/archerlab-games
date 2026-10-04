@@ -533,6 +533,7 @@ class RankingClient {
   }
 
   startSession() {
+    const token = this.rankRunToken = {};
     this.sessionId = null;
     this.queue = [];
     this.flushPromise = null;
@@ -543,20 +544,24 @@ class RankingClient {
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ game_id: GAME_ID })
     }).then(async (res) => {
+      if (token !== this.rankRunToken) return null;
       if (!res.ok) {
         if (res.status === 400 || res.status === 404) this.unsupported = true;
         throw new Error(`rank session ${res.status}`);
       }
       const data = await res.json();
+      if (token !== this.rankRunToken) return null;
       this.sessionId = data.session_id || null;
       return this.sessionId;
     }).catch(() => {
+      if (token !== this.rankRunToken) return null;
       if (!this.unsupported) this.syncFailed = true;
       return null;
     });
   }
 
   restore(sessionId, unsupported = false) {
+    this.rankRunToken = {};
     this.sessionId = sessionId || null;
     this.unsupported = !!unsupported;
     this.syncFailed = !this.sessionId && !this.unsupported;
@@ -566,6 +571,7 @@ class RankingClient {
   }
 
   disable() {
+    this.rankRunToken = {};
     this.sessionId = null;
     this.sessionPromise = null;
     this.queue = [];
@@ -591,8 +597,10 @@ class RankingClient {
   async flush() {
     if (this.unsupported || this.syncFailed) return false;
     if (this.flushPromise) return this.flushPromise;
+    const token = this.rankRunToken;
     this.flushPromise = (async () => {
       const sessionId = await this.ensureSession();
+      if (token !== this.rankRunToken) return false;
       if (!sessionId) return false;
       while (this.queue.length > 0) {
         const batch = this.queue.slice(0, 20);
@@ -601,6 +609,7 @@ class RankingClient {
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({ game_id: GAME_ID, session_id: sessionId, events: batch })
         });
+        if (token !== this.rankRunToken) return false;
         if (!res.ok) {
           if (res.status === 400 || res.status === 404) this.unsupported = true;
           throw new Error(`rank event ${res.status}`);
@@ -609,10 +618,11 @@ class RankingClient {
       }
       return true;
     })().catch(() => {
+      if (token !== this.rankRunToken) return false;
       if (!this.unsupported) this.syncFailed = true;
       return false;
     }).finally(() => {
-      this.flushPromise = null;
+      if (token === this.rankRunToken) this.flushPromise = null;
     });
     return this.flushPromise;
   }

@@ -96,6 +96,9 @@ export class RankingDelivery extends DurableObject {
             created_at INTEGER NOT NULL, last_error TEXT
         )`);
         ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS pending_jobs ON jobs(state, next_at, created_at)');
+        if (!ctx.storage.sql.exec('PRAGMA table_info(jobs)').toArray().some(column => column.name === 'progression_rechecked')) {
+            ctx.storage.sql.exec('ALTER TABLE jobs ADD COLUMN progression_rechecked INTEGER NOT NULL DEFAULT 0');
+        }
     }
 
     // Serialize D1 read/modify/write cycles for this run, without holding a
@@ -153,6 +156,27 @@ export class RankingDelivery extends DurableObject {
                 AND last_error IN ('invalid school zombie survived time',
                     'school zombie run coins must match reward counts',
                     'school zombie run progress cannot decrease')`);
+            // Older clients/alarms may retain valid endless-game payloads rejected
+            // by limits absent from gameplay. Recheck each job once, through the
+            // same verifier/atomic receipt, without bypassing an invalid ledger.
+            this.ctx.storage.sql.exec(`UPDATE jobs SET state = 'pending', next_at = 0,
+                response = NULL, http_status = NULL, progression_rechecked = 1
+                WHERE state = 'review' AND progression_rechecked = 0 AND (
+                    (game_id LIKE 'shadow-survival-character-v1-%' AND last_error IN
+                        ('invalid shadow survival level', 'invalid shadow survival kill count',
+                         'invalid shadow survival progress time', 'verified score exceeds allowed maximum'))
+                    OR (game_id = 'cat-tower' AND last_error IN
+                        ('invalid cat-tower combo count', 'cat-tower score exceeds allowed maximum', 'verified score exceeds allowed maximum'))
+                    OR (game_id = 'blockpang' AND last_error IN
+                        ('blockpang score exceeds allowed maximum', 'verified score exceeds allowed maximum'))
+                    OR (game_id = 'jewelria' AND last_error IN
+                        ('invalid jewelria combo count', 'jewelria score exceeds allowed maximum', 'verified score exceeds allowed maximum'))
+                    OR (game_id = 'jelly-pang-2048' AND last_error IN
+                        ('jelly-pang merge rank exceeds allowed maximum', 'jelly-pang score exceeds allowed maximum', 'verified score exceeds allowed maximum'))
+                    OR (game_id = 'lumen-shift' AND last_error IN
+                        ('invalid lumen shift level', 'invalid lumen shift combo count', 'invalid lumen shift zone line count',
+                         'lumen shift score exceeds allowed maximum', 'verified score exceeds allowed maximum'))
+                )`);
             for (let count = 0; count < 40; count += 1) {
                 const row = this.ctx.storage.sql.exec(`SELECT j.* FROM jobs j
                     WHERE j.state = 'pending' AND j.next_at <= ?

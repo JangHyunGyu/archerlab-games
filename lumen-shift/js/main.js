@@ -1,5 +1,5 @@
 import { gravityIntervalMs } from "./gravity.mjs?v=20260712-stage-speed-v1";
-import { RankClient } from "./ranking.mjs?v=20260802-modules-v1&ranking=20260913-v1";
+import { RankClient } from "./ranking.mjs?v=20260802-modules-v1&ranking=20261004-ranking-audit-v1";
 
 const COLS = 10;
 const ROWS = 20;

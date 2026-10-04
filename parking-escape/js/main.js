@@ -445,6 +445,7 @@
     }
 
     resetRankSessionState() {
+      this.rankRunToken = {};
       this.rankSessionId = null;
       this.rankSessionPromise = null;
       this.rankSyncFailed = false;
@@ -452,6 +453,7 @@
     }
 
     async createRankSession() {
+      const token = this.rankRunToken;
       const response = await fetch(`${RANK_API_BASE}/score-sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -459,6 +461,7 @@
       });
       if (!response.ok) throw new Error(`rank session ${response.status}`);
       const data = await response.json();
+      if (token !== this.rankRunToken) return null;
       if (!data || !data.session_id) throw new Error("invalid rank session response");
       this.rankSessionId = data.session_id;
       return this.rankSessionId;
@@ -466,7 +469,9 @@
 
     startRankSession() {
       this.resetRankSessionState();
+      const token = this.rankRunToken;
       this.rankSessionPromise = this.createRankSession().catch(error => {
+        if (token !== this.rankRunToken) return null;
         this.rankSyncFailed = true;
         console.warn("[Parking] rank session failed:", error.message);
         return null;
@@ -476,7 +481,9 @@
     ensureRankSession() {
       if (this.rankSessionId) return Promise.resolve(this.rankSessionId);
       if (!this.rankSessionPromise) {
+        const token = this.rankRunToken;
         this.rankSessionPromise = this.createRankSession().catch(error => {
+          if (token !== this.rankRunToken) return null;
           this.rankSyncFailed = true;
           throw error;
         });
@@ -486,11 +493,13 @@
 
     async recordRankClear(clearData) {
       if (!clearData) return false;
+      const token = this.rankRunToken;
       const event = { type: "level_clear", moves: clearData.moves, level_moves: clearData.levelMoves,
         vehicles: clearData.vehicles, seed: clearData.seed };
       window.ArcherRanking?.track(GAME_ID, event, this.rankSessionId);
       try {
         const sessionId = await this.ensureRankSession();
+        if (token !== this.rankRunToken) return false;
         if (!sessionId) return false;
         const response = await fetch(`${RANK_API_BASE}/score-events`, {
           method: "POST",
@@ -506,6 +515,7 @@
         if (!data || data.success !== true) throw new Error("invalid rank event response");
         return true;
       } catch (error) {
+        if (token !== this.rankRunToken) return false;
         this.rankSyncFailed = true;
         console.warn("[Parking] rank sync failed:", error.message);
         return false;

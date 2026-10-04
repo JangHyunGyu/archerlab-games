@@ -449,6 +449,7 @@ class Game {
     }
 
     _resetRankSessionState() {
+        this.rankRunToken = {};
         this.rankSessionId = null;
         this.rankSessionPromise = null;
         this.rankEventQueue = [];
@@ -475,6 +476,7 @@ class Game {
     }
 
     async _createRankSession() {
+        const token = this.rankRunToken;
         if (!this.rankSeed) this._initRankSeed();
         const res = await fetch(`${GAME_API_URL}/score-sessions`, {
             method: 'POST',
@@ -486,6 +488,7 @@ class Game {
         });
         if (!res.ok) throw new Error(`rank session ${res.status}`);
         const data = await res.json();
+        if (token !== this.rankRunToken) return null;
         if (!data || !data.session_id) throw new Error('rank session response invalid');
         if (data.protocol !== 2 || normalizeBlockpangSeed(data.seed) !== this.rankSeed) {
             throw new Error('rank session protocol mismatch');
@@ -497,7 +500,9 @@ class Game {
 
     _startRankSession() {
         this._resetRankSessionState();
+        const token = this.rankRunToken;
         this.rankSessionPromise = this._createRankSession().catch((e) => {
+            if (token !== this.rankRunToken) return null;
             this.rankSyncFailed = true;
             console.warn('[Blockpang] rank session failed:', e.message);
             return null;
@@ -510,6 +515,11 @@ class Game {
         const seed = normalizeBlockpangSeed(rankData.seed || 0);
         const rngState = normalizeBlockpangSeed(rankData.rngState || 0);
         const moveSeq = parseInt(rankData.moveSeq || 0, 10);
+        if (!sessionId && window.ArcherRanking && seed) {
+            const candidates = window.ArcherRanking.pending().filter(entry => entry.gameId === GAME_ID_BLOCKPANG
+                && entry.path === '/score-sessions' && normalizeBlockpangSeed(entry.body?.seed) === seed);
+            if (candidates.length === 1) sessionId = candidates[0].sessionId;
+        }
         if (sessionId && protocol === 2 && seed && rngState && Number.isFinite(moveSeq)) {
             this.rankSessionId = String(sessionId);
             this.rankSessionPromise = Promise.resolve(this.rankSessionId);
@@ -528,7 +538,9 @@ class Game {
     _ensureRankSession() {
         if (this.rankSessionId) return Promise.resolve(this.rankSessionId);
         if (!this.rankSessionPromise) {
+            const token = this.rankRunToken;
             this.rankSessionPromise = this._createRankSession().catch((e) => {
+                if (token !== this.rankRunToken) return null;
                 this.rankSyncFailed = true;
                 throw e;
             });
@@ -554,9 +566,11 @@ class Game {
 
     async flushRankEvents() {
         if (this.rankFlushPromise) return this.rankFlushPromise;
+        const token = this.rankRunToken;
         this.rankFlushPromise = (async () => {
             if (this.rankSyncFailed) return false;
             const sessionId = await this._ensureRankSession();
+            if (token !== this.rankRunToken) return false;
             if (!sessionId) return false;
             while (this.rankEventQueue.length > 0) {
                 const batch = this.rankEventQueue.slice(0, 20);
@@ -569,20 +583,23 @@ class Game {
                         events: batch,
                     }),
                 });
+                if (token !== this.rankRunToken) return false;
                 if (!res.ok) {
                     throw new Error(`rank event ${res.status}`);
                 }
                 const data = await res.json().catch(() => null);
+                if (token !== this.rankRunToken) return false;
                 if (!data || data.success !== true) throw new Error('rank event response invalid');
                 this.rankEventQueue.splice(0, batch.length);
             }
             return true;
         })().catch((e) => {
+            if (token !== this.rankRunToken) return false;
             this.rankSyncFailed = true;
             console.warn('[Blockpang] rank sync failed:', e.message);
             return false;
         }).finally(() => {
-            this.rankFlushPromise = null;
+            if (token === this.rankRunToken) this.rankFlushPromise = null;
         });
         return this.rankFlushPromise;
     }
@@ -825,7 +842,7 @@ class Game {
                 level: this.scoreManager.level,
                 linesCleared: this.scoreManager.linesCleared,
                 totalLinesForLevel: this.scoreManager.totalLinesForLevel,
-                rankSessionId: this.rankSessionId,
+                rankSessionId: this.rankSessionId || window.ArcherRanking?.sessionId(GAME_ID_BLOCKPANG),
                 rankProtocol: this.rankProtocol,
                 rankSeed: this.rankSeed,
                 rankMoveSeq: this.rankMoveSeq,

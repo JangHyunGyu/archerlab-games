@@ -35,6 +35,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     init(data = {}) {
+        this._rankRunToken = {};
         this._resumeRequested = !!data.resume;
         const savedData = this._resumeRequested ? GameScene.getSavedGameData() : null;
         this._selectedCharacterId = savedData?.player?.characterId || data.characterId || DEFAULT_CHARACTER_ID;
@@ -203,6 +204,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     _initRankSession() {
+        const token = this._rankRunToken;
         if (this._resumeRequested) {
             this._rankSyncDisabled = true;
             this._rankSyncFailed = true;
@@ -221,6 +223,7 @@ export class GameScene extends Phaser.Scene {
             .then(async (res) => {
                 if (!res.ok) throw new Error(`rank session ${res.status}`);
                 const data = await res.json();
+                if (token !== this._rankRunToken) return null;
                 if (!data || !data.session_id) throw new Error('rank session response invalid');
                 this._rankSessionId = data.session_id;
                 this._rankSyncFailed = false;
@@ -228,6 +231,7 @@ export class GameScene extends Phaser.Scene {
                 return this._rankSessionId;
             })
             .catch((e) => {
+                if (token !== this._rankRunToken) return null;
                 this._rankSyncFailed = true;
                 this._rankSessionPromise = null;
                 console.warn('[ShadowSurvival] rank session failed:', e.message);
@@ -267,6 +271,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     async _syncRankProgress(force = false) {
+        const token = this._rankRunToken;
+        const gameId = this._getRankGameId();
         const deliveryScore = Math.max(0, Math.floor((this.enemyManager?.getGameTime?.() || 0) / 1000));
         const deliveryEvent = this._getRankProgressEvent(deliveryScore);
         if (!this._rankSyncDisabled && deliveryScore > 0) {
@@ -275,6 +281,7 @@ export class GameScene extends Phaser.Scene {
         if (this._rankSyncInFlight) {
             if (!force) return this._rankSyncInFlight;
             await this._rankSyncInFlight;
+            if (token !== this._rankRunToken) return null;
         }
         if (this._rankSyncDisabled) return null;
 
@@ -285,18 +292,20 @@ export class GameScene extends Phaser.Scene {
 
         const syncPromise = (async () => {
             const sessionId = await this._ensureRankSession();
+            if (token !== this._rankRunToken) return null;
             if (!sessionId) throw new Error('rank session unavailable');
 
             const response = await fetch(`${GAME_API_URL}/score-events`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify({
-                    game_id: this._getRankGameId(),
+                    game_id: gameId,
                     session_id: sessionId,
                     event: deliveryEvent,
                 }),
             });
             const data = await response.json().catch(() => null);
+            if (token !== this._rankRunToken) return null;
             if (!response.ok || !data || data.success !== true) {
                 throw new Error(data?.error || `rank progress ${response.status}`);
             }
@@ -311,6 +320,7 @@ export class GameScene extends Phaser.Scene {
         try {
             return await syncPromise;
         } catch (e) {
+            if (token !== this._rankRunToken) return null;
             this._rankSyncFailed = true;
             console.warn('[ShadowSurvival] rank progress sync failed:', e.message);
             return null;
@@ -1331,6 +1341,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     shutdown() {
+        this._rankRunToken = {};
         try {
             if (!this.isGameOver) this._autoSave(true);
 

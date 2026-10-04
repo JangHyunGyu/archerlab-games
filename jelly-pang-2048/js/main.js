@@ -2464,6 +2464,8 @@
     }
 
     startSession() {
+      const token = this.rankRunToken = {};
+      this.flushPromise = null;
       this.sessionId = null;
       this.moveSeq = 0;
       this.verifiedScore = 0;
@@ -2477,11 +2479,13 @@
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ game_id: GAME_ID }),
       }, SESSION_REQUEST_TIMEOUT_MS)).then(async (res) => {
+        if (token !== this.rankRunToken) return null;
         if (!res.ok) {
           if (res.status === 400 || res.status === 404) this.unsupported = true;
           throw new Error(`rank session ${res.status}`);
         }
         const data = await res.json();
+        if (token !== this.rankRunToken) return null;
         this.sessionId = data.session_id || null;
         this.moveSeq = Number(data.move_seq || 0);
         this.verifiedScore = Number(data.score || 0);
@@ -2489,6 +2493,7 @@
         this.sessionData = data;
         return data;
       }).catch(() => {
+        if (token !== this.rankRunToken) return null;
         if (!this.unsupported) this.syncFailed = true;
         return null;
       });
@@ -2537,8 +2542,18 @@
     }
 
     async flushMoves() {
+      if (this.flushPromise) return this.flushPromise;
+      const token = this.rankRunToken;
+      this.flushPromise = this._flushMoves(token).finally(() => {
+        if (token === this.rankRunToken) this.flushPromise = null;
+      });
+      return this.flushPromise;
+    }
+
+    async _flushMoves(token) {
       if (this.unsupported || this.syncFailed) return false;
       const sessionId = await this.ensureSession();
+      if (token !== this.rankRunToken) return false;
       if (!sessionId) return false;
 
       while (this.pendingEvents.length > 0) {
@@ -2552,11 +2567,13 @@
             events,
           }),
         }, MOVE_UPLOAD_TIMEOUT_MS);
+        if (token !== this.rankRunToken) return false;
         if (!res.ok) {
           if (res.status === 400 || res.status === 404 || res.status === 409) this.unsupported = true;
           throw new Error(`rank move upload ${res.status}`);
         }
         const data = await res.json();
+        if (token !== this.rankRunToken) return false;
         const verifiedScore = Number(data.score);
         if (Number.isFinite(verifiedScore)) this.verifiedScore = verifiedScore;
         this.moveSeq = Math.max(this.moveSeq, Number(data.move_seq || events[events.length - 1].move_seq));

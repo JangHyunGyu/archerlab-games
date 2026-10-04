@@ -26,7 +26,9 @@ const CORS_HEADERS = {
 
 const CAT_TOWER_GAME_ID = 'cat-tower';
 const CAT_TOWER_SCORES = [10, 25, 55, 110, 220, 440, 880, 1700, 3500, 10000];
-const CAT_TOWER_MAX_SCORE = 500000;
+// Endless games have no gameplay score ceiling. Keep exact integer arithmetic
+// while validating their event formulas/replays, sequence and earning rate.
+const CAT_TOWER_MAX_SCORE = Number.MAX_SAFE_INTEGER;
 const CAT_TOWER_FREE_EVENT_BURST = 30;
 const CAT_TOWER_MIN_MS_PER_EVENT = 150;
 const CAT_TOWER_FREE_SCORE_BURST = 2000;
@@ -38,7 +40,7 @@ const BLOCKPANG_SCORE_PER_CELL = 1;
 const BLOCKPANG_SCORE_PER_LINE = 100;
 const BLOCKPANG_COMBO_MULTIPLIER = 0.5;
 const BLOCKPANG_PERFECT_CLEAR_BONUS = 500;
-const BLOCKPANG_MAX_SCORE = 500000;
+const BLOCKPANG_MAX_SCORE = Number.MAX_SAFE_INTEGER;
 const BLOCKPANG_FREE_SCORE_BURST = 2000;
 const BLOCKPANG_MAX_SCORE_PER_SECOND = 3000;
 const BLOCKPANG_PROTOCOL_VERSION = 2;
@@ -89,7 +91,7 @@ const BLOCKPANG_PIECE_SHAPES = [
     { shape: [[0, 1, 0], [1, 1, 1], [0, 1, 0]], weight: 2, tier: 5 },
 ];
 const JEWELRIA_GAME_ID = 'jewelria';
-const JEWELRIA_MAX_SCORE = 600000;
+const JEWELRIA_MAX_SCORE = Number.MAX_SAFE_INTEGER;
 const JEWELRIA_MAX_STAGE = 8;
 const JEWELRIA_FREE_SCORE_BURST = 2500;
 const JEWELRIA_MAX_SCORE_PER_SECOND = 4500;
@@ -97,12 +99,12 @@ const JEWELRIA_COMBO_MULTIPLIER = 0.5;
 const JELLY_PANG_GAME_ID = 'jelly-pang-2048';
 const JELLY_PANG_PROTOCOL_VERSION = 1;
 const JELLY_PANG_GRID_SIZE = 4;
-const JELLY_PANG_MAX_SCORE = 5000000;
-const JELLY_PANG_MAX_RANK = 20;
+const JELLY_PANG_MAX_SCORE = Number.MAX_SAFE_INTEGER;
+const JELLY_PANG_MAX_RANK = 51; // tile value 2 ** (rank + 1) must remain exact
 const JELLY_PANG_FREE_SCORE_BURST = 8192;
 const JELLY_PANG_MAX_SCORE_PER_SECOND = 20000;
 const LUMEN_SHIFT_GAME_ID = 'lumen-shift';
-const LUMEN_SHIFT_MAX_SCORE = 3000000;
+const LUMEN_SHIFT_MAX_SCORE = Number.MAX_SAFE_INTEGER;
 const LUMEN_SHIFT_FREE_SCORE_BURST = 2500;
 const LUMEN_SHIFT_MAX_SCORE_PER_SECOND = 18000;
 const LUMEN_SHIFT_SCORE_TABLE = [0, 100, 300, 500, 800];
@@ -130,7 +132,7 @@ const SCHOOL_ZOMBIE_SHOP_UPGRADE_IDS = [
     'h_turret', 'h_wire', 'h_barricade',
 ];
 const SHADOW_GAME_PREFIX = 'shadow-survival-character-v1-';
-const SHADOW_MAX_SCORE = 7200;
+const SHADOW_MAX_SCORE = Number.MAX_SAFE_INTEGER;
 const SHADOW_SCORE_GRACE_SECONDS = 15;
 function jsonResponse(data, status = 200) {
     return new Response(JSON.stringify(data), {
@@ -150,13 +152,9 @@ function isPlainObject(value) {
 }
 
 function parseInteger(value) {
-    if (typeof value === 'number') {
-        return Number.isInteger(value) ? value : NaN;
-    }
-    if (typeof value === 'string' && value.trim() !== '') {
-        return parseInt(value, 10);
-    }
-    return NaN;
+    if (typeof value !== 'number' && (typeof value !== 'string' || value.trim() === '')) return NaN;
+    const number = Number(value);
+    return Number.isSafeInteger(number) ? number : NaN;
 }
 
 function parseExtraData(extraStr) {
@@ -1046,7 +1044,7 @@ function validateCatTowerScoreEvent(event) {
         if (!Number.isFinite(createdTier) || createdTier < 1 || createdTier >= CAT_TOWER_SCORES.length) {
             throw new Error('invalid cat-tower merge tier');
         }
-        if (!Number.isFinite(combo) || combo < 1 || combo > 30) {
+        if (!Number.isFinite(combo) || combo < 1) {
             throw new Error('invalid cat-tower combo count');
         }
 
@@ -1186,7 +1184,7 @@ async function recordCatTowerScoreEvents(db, body) {
 
     const projectedScore = Number(session.score) + deltaTotal;
     const projectedEventCount = currentEventCount + appliedEventCount;
-    if (projectedScore > CAT_TOWER_MAX_SCORE) {
+    if (!Number.isSafeInteger(projectedScore) || projectedScore > CAT_TOWER_MAX_SCORE) {
         return jsonResponse({ error: 'cat-tower score exceeds allowed maximum' }, 400);
     }
 
@@ -1315,7 +1313,7 @@ async function recordBlockpangScoreEvents(db, body) {
 
     const projectedScore = Number(state.score);
     const projectedEventCount = Number(session.event_count) + events.length;
-    if (projectedScore > BLOCKPANG_MAX_SCORE) {
+    if (!Number.isSafeInteger(projectedScore) || projectedScore > BLOCKPANG_MAX_SCORE) {
         return jsonResponse({ error: 'blockpang score exceeds allowed maximum' }, 400);
     }
 
@@ -1389,7 +1387,7 @@ function validateJewelriaScoreEvent(event) {
     if (!Number.isFinite(special) || special < 0 || special > 16) {
         throw new Error('invalid jewelria special count');
     }
-    if (!Number.isFinite(combo) || combo < 1 || combo > 100) {
+    if (!Number.isFinite(combo) || combo < 1) {
         throw new Error('invalid jewelria combo count');
     }
 
@@ -1446,7 +1444,7 @@ async function recordJewelriaScoreEvents(db, body) {
 
     const projectedScore = Number(session.score) + deltaTotal;
     const projectedEventCount = Number(session.event_count) + events.length;
-    if (projectedScore > JEWELRIA_MAX_SCORE) {
+    if (!Number.isSafeInteger(projectedScore) || projectedScore > JEWELRIA_MAX_SCORE) {
         return jsonResponse({ error: 'jewelria score exceeds allowed maximum' }, 400);
     }
 
@@ -1524,7 +1522,7 @@ async function recordJellyPangScoreEvents(db, body) {
 
     const projectedScore = Number(state.score);
     const projectedEventCount = Number(session.event_count) + events.length;
-    if (projectedScore > JELLY_PANG_MAX_SCORE) {
+    if (!Number.isSafeInteger(projectedScore) || projectedScore > JELLY_PANG_MAX_SCORE) {
         return jsonResponse({ error: 'jelly-pang score exceeds allowed maximum' }, 400);
     }
 
@@ -1788,10 +1786,10 @@ function validateShadowScoreEvent(event) {
     if (!Number.isFinite(survivedSeconds) || survivedSeconds <= 0 || survivedSeconds > SHADOW_MAX_SCORE) {
         throw new Error('invalid shadow survival progress time');
     }
-    if (!Number.isFinite(level) || level < 1 || level > 30) {
+    if (!Number.isFinite(level) || level < 1) {
         throw new Error('invalid shadow survival level');
     }
-    if (!Number.isFinite(kills) || kills < 0 || kills > 100000) {
+    if (!Number.isFinite(kills) || kills < 0) {
         throw new Error('invalid shadow survival kill count');
     }
     if (!Number.isFinite(shadowCount) || shadowCount < 0 || shadowCount > 1000) {
@@ -1901,7 +1899,7 @@ async function verifyCatTowerRankingSession(db, body, clientScore) {
     const now = Date.now();
 
     const verifiedScore = Number(session.score);
-    if (!Number.isFinite(verifiedScore) || verifiedScore <= 0) {
+    if (!Number.isSafeInteger(verifiedScore) || verifiedScore <= 0) {
         return { error: 'verified score must be positive', status: 400 };
     }
     if (verifiedScore > CAT_TOWER_MAX_SCORE) {
@@ -1924,7 +1922,7 @@ function validateLumenShiftScoreEvent(event) {
     if (!Number.isFinite(delta) || delta <= 0) {
         throw new Error('score event delta must be positive');
     }
-    if (!Number.isFinite(level) || level < 1 || level > 80) {
+    if (!Number.isFinite(level) || level < 1) {
         throw new Error('invalid lumen shift level');
     }
 
@@ -1934,7 +1932,7 @@ function validateLumenShiftScoreEvent(event) {
         if (!Number.isFinite(lines) || lines < 1 || lines > 4) {
             throw new Error('invalid lumen shift line count');
         }
-        if (!Number.isFinite(combo) || combo < 1 || combo > 300) {
+        if (!Number.isFinite(combo) || combo < 1) {
             throw new Error('invalid lumen shift combo count');
         }
         const expected = (LUMEN_SHIFT_SCORE_TABLE[lines] * level) + (Math.max(0, combo - 1) * 50 * level);
@@ -1946,7 +1944,7 @@ function validateLumenShiftScoreEvent(event) {
 
     if (type === 'zone_bonus') {
         const zoneLines = parseInteger(event.zone_lines);
-        if (!Number.isFinite(zoneLines) || zoneLines < 1 || zoneLines > 120) {
+        if (!Number.isFinite(zoneLines) || zoneLines < 1) {
             throw new Error('invalid lumen shift zone line count');
         }
         const expected = zoneLines * zoneLines * 42 * level + zoneLines * 120;
@@ -1988,16 +1986,19 @@ async function recordLumenShiftScoreEvents(db, body) {
 
     let deltaTotal = 0;
     try {
-        for (const event of events) {
+        events.forEach((event, index) => {
+            if (event?.type === 'clear' && parseInteger(event.combo) > Number(session.event_count) + index + 1) {
+                throw new Error('lumen shift combo exceeds session sequence');
+            }
             deltaTotal += validateLumenShiftScoreEvent(event);
-        }
+        });
     } catch (err) {
         return jsonResponse({ error: err.message }, 400);
     }
 
     const projectedScore = Number(session.score) + deltaTotal;
     const projectedEventCount = Number(session.event_count) + events.length;
-    if (projectedScore > LUMEN_SHIFT_MAX_SCORE) {
+    if (!Number.isSafeInteger(projectedScore) || projectedScore > LUMEN_SHIFT_MAX_SCORE) {
         return jsonResponse({ error: 'lumen shift score exceeds allowed maximum' }, 400);
     }
 
@@ -2051,7 +2052,7 @@ async function verifyStoredScoreRankingSession(db, body, clientScore, options) {
     }
 
     const verifiedScore = authoritativeState ? Number(authoritativeState.score) : Number(session.score);
-    if (!Number.isFinite(verifiedScore) || verifiedScore <= 0) {
+    if (!Number.isSafeInteger(verifiedScore) || verifiedScore <= 0) {
         return { error: 'verified score must be positive', status: 400 };
     }
     if (options.maxScore && verifiedScore > options.maxScore) {
@@ -2421,8 +2422,8 @@ async function submitRanking(db, body) {
         return jsonResponse({ error: 'player_name cannot be empty' }, 400);
     }
 
-    const numScore = parseInt(score, 10);
-    if (isNaN(numScore) || numScore < 0) {
+    const numScore = parseInteger(score);
+    if (!Number.isSafeInteger(numScore) || numScore < 0) {
         return jsonResponse({ error: 'score must be a non-negative number' }, 400);
     }
 

@@ -11,8 +11,11 @@ export class RankClient {
   }
 
   async start() {
+    const token = this.rankRunToken = {};
     this.sessionId = '';
     this.queue = [];
+    this.flushPromise = null;
+    this.syncing = false;
     this.disabled = false;
     try {
       const res = await fetch(`${RANK_API_BASE}/score-sessions`, {
@@ -22,10 +25,11 @@ export class RankClient {
       });
       if (!res.ok) throw new Error(`session ${res.status}`);
       const data = await res.json();
+      if (token !== this.rankRunToken) return;
       this.sessionId = data.session_id || '';
       if (!this.sessionId) throw new Error('empty session');
     } catch {
-      this.disabled = true;
+      if (token === this.rankRunToken) this.disabled = true;
     }
   }
 
@@ -49,11 +53,12 @@ export class RankClient {
     if (this.flushPromise) return this.flushPromise;
     if (this.disabled || !this.sessionId) return false;
     if (this.queue.length === 0) return true;
-    this.flushPromise = this.flushQueue();
-    try { return await this.flushPromise; } finally { this.flushPromise = null; }
+    const token = this.rankRunToken;
+    this.flushPromise = this.flushQueue(token);
+    try { return await this.flushPromise; } finally { if (token === this.rankRunToken) this.flushPromise = null; }
   }
 
-  async flushQueue() {
+  async flushQueue(token) {
     this.syncing = true;
     try {
       while (this.queue.length > 0) {
@@ -63,6 +68,7 @@ export class RankClient {
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({ game_id: GAME_ID, session_id: this.sessionId, events }),
         });
+        if (token !== this.rankRunToken) return false;
         if (!res.ok) throw new Error(`events ${res.status}`);
         this.queue.splice(0, events.length);
       }
@@ -70,7 +76,7 @@ export class RankClient {
     } catch {
       return false;
     } finally {
-      this.syncing = false;
+      if (token === this.rankRunToken) this.syncing = false;
     }
   }
 
