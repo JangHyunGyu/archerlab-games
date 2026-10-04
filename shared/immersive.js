@@ -170,8 +170,49 @@
     return 'https://archerlab.dev/';
   }
 
+  const HOME_MESSAGE = 'archerlab:go-home';
+  const HOME_ORIGINS = ['https://archerlab.dev', 'https://www.archerlab.dev'];
+  const FRAME_ESCAPE_MS = 350;
+  const handledFrameEvents = typeof WeakSet === 'function' ? new WeakSet() : null;
+  let frameEscapeTimer = null;
+
+  function isFramed() {
+    try {
+      return Boolean(root.top) && root.top !== root;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  // Inside the Archerlab app launcher (mobile iframe overlay) a plain link would
+  // load the portal *inside* the frame. Ask the launcher to close itself, and if
+  // nobody answers (older cached portal script, other embedder), take over the top
+  // window instead. Cross-origin top.location assignment is allowed; reading is not.
+  function leaveFrame(href) {
+    if (frameEscapeTimer) return;
+    try {
+      for (const origin of HOME_ORIGINS) root.parent.postMessage({ type: HOME_MESSAGE, href }, origin);
+    } catch (_) {}
+    const fallback = () => {
+      frameEscapeTimer = null;
+      try {
+        root.top.location.href = href;
+      } catch (_) {
+        try { root.location.href = href; } catch (__) {}
+      }
+    };
+    if (root.setTimeout) frameEscapeTimer = root.setTimeout(fallback, FRAME_ESCAPE_MS);
+    else fallback();
+  }
+
   function goHome(href) {
     leavingHome = false;
+    href = href || 'https://archerlab.dev/';
+    if (isFramed()) {
+      if (isFullscreen()) Promise.resolve(exit()).then(() => leaveFrame(href), () => leaveFrame(href));
+      else leaveFrame(href);
+      return;
+    }
     if (root.location?.assign) root.location.assign(href);
     else root.location.href = href;
   }
@@ -192,6 +233,16 @@
     const anchor = event.target?.closest?.('a');
     const href = homeHref(anchor);
     if (!event.isTrusted || !href) return false;
+    if (isFramed()) {
+      // One activation can reach both the document and anchor listeners.
+      if (handledFrameEvents) {
+        if (handledFrameEvents.has(event)) return true;
+        handledFrameEvents.add(event);
+      }
+      event.preventDefault?.();
+      goHome(href);
+      return true;
+    }
     if (!isFullscreen() && !event.defaultPrevented) return false;
     event.preventDefault?.();
     if (leavingHome) {
@@ -247,7 +298,7 @@
   installStyle();
   hardenHomeLinks();
   root.ArcherImmersive = Object.freeze({
-    enter, autoEnter, exit, isFullscreen, isStandalone, supported,
+    enter, autoEnter, exit, isFullscreen, isStandalone, supported, goHome,
     keyboardOverlap, keyboardOverlapFrom,
     toggle: () => isFullscreen() ? exit() : enter()
   });

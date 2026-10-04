@@ -858,6 +858,28 @@
     profileAuthKey: PROFILE_AUTH_KEY
   });
 
+  let lastDomPointerDownAt = 0;
+  window.addEventListener("pointerdown", () => { lastDomPointerDownAt = performance.now(); }, true);
+
+  function goToArcherLabHome() {
+    const href = "https://archerlab.dev/";
+    // Inside the Archerlab app launcher (iframe) this must close the launcher instead
+    // of loading the portal in the frame; the shared helper handles both cases.
+    try {
+      if (window.ArcherImmersive?.goHome) {
+        window.ArcherImmersive.goHome(href);
+        return;
+      }
+    } catch (error) { /* fall through */ }
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = href;
+        return;
+      }
+    } catch (error) { /* fall through */ }
+    window.location.href = href;
+  }
+
   function isLocalDebugHost() {
     const host = String(window.location.hostname || "");
     return host === "localhost" || host === "127.0.0.1" || host === "";
@@ -4659,6 +4681,12 @@
         if (!item || !item.active) {
           return;
         }
+        // Interactive hit zones stay put and rendered: Phaser skips alpha-0 objects in
+        // hit tests, so animating them made fast taps right after a screen appeared
+        // (e.g. the ARCHERLAB button) hit nothing. Their fill is transparent anyway.
+        if (item.input) {
+          return;
+        }
         const targetY = item.y;
         const targetAlpha = item.alpha;
         item.setY(targetY + offsetY).setAlpha(0);
@@ -4712,12 +4740,39 @@
       if (disabled) { text.setAlpha(0.55); kicker?.setAlpha(0.55); hit.disableInteractive(); }
       hit.on("pointerover", () => setHover(true));
       hit.on("pointerout", () => setHover(false));
+      const createdAt = performance.now();
+      let pressFired = false;
+      const activate = () => {
+        // Audio is best-effort: a throw here must never swallow the button action.
+        try { this.unlockAudio(); } catch (error) { /* ignore */ }
+        try { this.playSfx("button", primary ? 0.94 : 0.76); } catch (error) { /* ignore */ }
+        onClick();
+      };
       hit.on("pointerdown", () => {
         if (disabled) return;
-        this.unlockAudio();
-        this.playSfx("button", primary ? 0.94 : 0.76);
-        onClick();
+        pressFired = true;
+        activate();
       });
+      if (options.activateOnRelease === true && !disabled) {
+        // A press can land before Phaser's first frame after the menu is built; the
+        // release still finds the button. Skip presses that started before this
+        // button existed (e.g. the tap that opened this screen) and dedupe against
+        // the normal pointerdown path.
+        hit.on("pointerup", () => {
+          const fired = pressFired;
+          pressFired = false;
+          if (fired || lastDomPointerDownAt < createdAt) return;
+          activate();
+        });
+      }
+      // Phaser only registers new interactive objects at the next scene pre-update,
+      // so presses in the first frame after a screen is built hit nothing. Register now.
+      try {
+        const inputPlugin = this.input;
+        if (!disabled && inputPlugin?._pendingInsertion?.length && typeof inputPlugin.preUpdate === "function") {
+          inputPlugin.preUpdate();
+        }
+      } catch (error) { /* the next frame registers it anyway */ }
       this.overlayObjects.push(shadow, frame, wash, text, hit);
       if (kicker) this.overlayObjects.push(kicker);
       return { shadow, frame, wash, ...(kicker ? { kicker } : {}), text, hit };
@@ -5616,8 +5671,8 @@
       items.push(scrim);
 
       const archerButton = this.addTacticalMenuButton(112, 38, 178, 42, "← ARCHERLAB", 530, () => {
-        window.location.href = "https://archerlab.dev/";
-      }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76, surfaceAlpha: 0.32, shadowAlpha: 0.1 });
+        goToArcherLabHome();
+      }, COLORS.blue, { compact: true, fontSize: 14, hitHeight: 76, surfaceAlpha: 0.32, shadowAlpha: 0.1, activateOnRelease: true });
       const protocol = this.add.text(492, 38, this.profileSyncFailed ? "SYNC · OFFLINE" : "THREAT · RED", {
         resolution: 2, fontFamily: "Arial, sans-serif",
         fontSize: 13,

@@ -235,6 +235,47 @@ test('keyboard overlap uses visual viewport shrink in windowed layout and the vi
 });
 
 
+function frameHomeEvent(href = 'https://archerlab.dev') {
+  return {
+    isTrusted: true,
+    prevented: false,
+    preventDefault() { this.prevented = true; },
+    target: { closest: sel => sel === 'a' ? { href } : null }
+  };
+}
+test('inside the app launcher frame the ArcherLab link asks the parent to close, then falls back to top navigation', () => {
+  const s = setup();
+  const messages = [];
+  const topLocation = {};
+  s.window.top = { location: topLocation };
+  s.window.parent = { postMessage: (data, origin) => messages.push({ data, origin }) };
+  const event = frameHomeEvent();
+  s.listeners.click(event);
+  s.listeners.click(event); // same activation reaching a second listener is deduped
+  assert.equal(event.prevented, true);
+  assert.equal(messages.length, 2, 'one message per archerlab origin');
+  assert.deepEqual(messages.map(m => m.origin).sort(), ['https://archerlab.dev', 'https://www.archerlab.dev']);
+  assert.equal(messages[0].data.type, 'archerlab:go-home');
+  assert.deepEqual(s.assigned, [], 'the frame itself never loads the portal');
+  assert.equal(s.timeouts.length, 1);
+  s.timeouts[0].fn();
+  assert.equal(topLocation.href, 'https://archerlab.dev/');
+});
+test('canvas menus can leave the launcher frame through ArcherImmersive.goHome', () => {
+  const s = setup();
+  const topLocation = {};
+  s.window.top = { location: topLocation };
+  s.window.parent = { postMessage() { throw new Error('blocked'); } };
+  s.api.goHome('https://archerlab.dev/');
+  s.timeouts[0].fn();
+  assert.equal(topLocation.href, 'https://archerlab.dev/');
+  assert.deepEqual(s.assigned, []);
+});
+test('unframed goHome navigates the window itself', () => {
+  const s = setup();
+  s.api.goHome('https://archerlab.dev/');
+  assert.deepEqual(s.assigned, ['https://archerlab.dev/']);
+});
 test('every localized game shell has a local immersive helper and an unrestricted app manifest', () => {
   const repo = path.resolve(__dirname, fs.existsSync(path.join(__dirname, '../../config/games.json')) ? '../..' : '..');
   let entries;

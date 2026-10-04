@@ -128,11 +128,26 @@ button {
     rgba(23, 32, 51, 0.18);
   backdrop-filter: blur(4px) saturate(1.05);
   -webkit-backdrop-filter: blur(4px) saturate(1.05);
-  pointer-events: auto;
+  /* Everything else is inert while loading (see .is-server-loading below); the
+     full-screen backdrop must not swallow taps meant for the Archerlab brand link. */
+  pointer-events: none;
   cursor: wait;
   opacity: 1;
   visibility: visible;
   transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.server-loader-card {
+  pointer-events: auto;
+}
+
+.game-shell.is-server-loading {
+  cursor: wait;
+}
+
+.game-shell.is-server-loading > .title-screen .title-brand {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .server-loader.hidden {
