@@ -144,20 +144,22 @@ export class RankingDelivery extends DurableObject {
         await this.ctx.storage.setAlarm(Date.now() + 60000);
         try {
             if (!this.dbReady) { await initDB(this.env.DB); this.dbReady = true; }
-            // Replay retained payloads rejected by the former 1x-only clock check,
+            // Replay retained payloads rejected by former clock/gross-coin checks,
             // including from alarms when the browser no longer resends the job.
             // Execute the normal verifier again; other review reasons stay blocked.
             this.ctx.storage.sql.exec(`UPDATE jobs SET state = 'pending', next_at = 0,
                 response = NULL, http_status = NULL
                 WHERE game_id = 'school-zombie-defense' AND state = 'review'
-                AND last_error = 'invalid school zombie survived time'`);
+                AND last_error IN ('invalid school zombie survived time',
+                    'school zombie run coins must match reward counts',
+                    'school zombie run progress cannot decrease')`);
             for (let count = 0; count < 40; count += 1) {
                 const row = this.ctx.storage.sql.exec(`SELECT j.* FROM jobs j
                     WHERE j.state = 'pending' AND j.next_at <= ?
                     AND (j.predecessor IS NULL OR EXISTS
                         (SELECT 1 FROM jobs p WHERE p.id = j.predecessor AND (p.state = 'done'
-                            OR (j.path = '/rankings' AND j.game_id = 'school-zombie-defense'
-                                AND p.state = 'review' AND (p.path = '/school-zombie/profile/bank-run'
+                            OR (j.path IN ('/rankings', '/school-zombie/profile/bank-run', '/score-events') AND j.game_id = 'school-zombie-defense'
+                                AND p.state = 'review' AND ((j.path = '/rankings' AND p.path = '/school-zombie/profile/bank-run')
                                 OR (p.path = '/score-events'
                                 AND json_array_length(COALESCE(json_extract(p.payload, '$.events'), json_array(json_extract(p.payload, '$.event')))) > 0
                                 AND NOT EXISTS (SELECT 1 FROM json_each(COALESCE(json_extract(p.payload, '$.events'), json_array(json_extract(p.payload, '$.event'))))

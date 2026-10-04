@@ -14,6 +14,12 @@
     var dismissed = false;
     var database;
     var lastCreatedAt = 0;
+    var rewardLeases = new Map();
+    var ownerId = null;
+    try {
+        ownerId = global.sessionStorage.getItem('archer-reward-tab');
+        if (!ownerId) { ownerId = uuid(); global.sessionStorage.setItem('archer-reward-tab', ownerId); }
+    } catch (_) { ownerId = null; }
 
     function uuid() {
         if (global.crypto.randomUUID) return global.crypto.randomUUID();
@@ -75,19 +81,23 @@
     }
     function remember(entry) {
         var current = entries.get(entry.id);
-        if (current) return current;
+        if (current) {
+            if (current.state !== 'draft' || (entry.updatedAt || entry.createdAt) <= (current.updatedAt || current.createdAt)) return current;
+        }
         entries.set(entry.id, entry);
         lastCreatedAt = Math.max(lastCreatedAt, entry.createdAt);
+        if (entry.state === 'draft') return entry;
         var previous = entries.get(tails.get(entry.sessionId));
         if (!previous || previous.createdAt <= entry.createdAt) tails.set(entry.sessionId, entry.id);
         return entry;
     }
     async function restore() {
+        var recoveredDrafts = new Set();
         try {
             for (var i = 0; i < global.localStorage.length; i += 1) {
                 var storedKey = global.localStorage.key(i);
                 if (storedKey && storedKey.indexOf(PREFIX) === 0) {
-                    try { var restored = JSON.parse(global.localStorage.getItem(storedKey)); restored.localSaved = true; remember(restored); } catch (_) {}
+                    try { var restored = JSON.parse(global.localStorage.getItem(storedKey)); restored.localSaved = true; remember(restored); if (restored.state === 'draft') recoveredDrafts.add(restored.id); } catch (_) {}
                 }
             }
         } catch (_) {}
@@ -95,10 +105,24 @@
         if (db) await new Promise(function (resolve) {
             try {
                 var request = db.transaction('outbox', 'readonly').objectStore('outbox').getAll();
-                request.onsuccess = function () { request.result.forEach(function (entry) { entry.localSaved = true; remember(entry); }); resolve(); };
+                request.onsuccess = function () { request.result.forEach(function (entry) { entry.localSaved = true; remember(entry); if (entry.state === 'draft') recoveredDrafts.add(entry.id); }); resolve(); };
                 request.onerror = function () { resolve(); };
             } catch (_) { resolve(); }
         });
+        // Only this tab's interrupted runs are finalized. Another live tab's
+        // checkpoint must not be paid while that player is still earning coins.
+        await Promise.all(Array.from(recoveredDrafts).map(async function (id) {
+            var entry = entries.get(id);
+            if (!entry || entry.state !== 'draft') return;
+            if (Array.from(sessions.values()).includes(entry.sessionId)) return;
+            var finalize = function () { enqueue(entry.path, entry.body, entry.sessionId, entry.id); };
+            if (global.navigator?.locks?.request) {
+                // An active tab holds this lease. Copied sessionStorage in a new
+                // tab must not finalize the original tab's ongoing battle.
+                await global.navigator.locks.request('archer-reward-' + entry.sessionId,
+                    { ifAvailable:true }, function (lock) { if (lock) finalize(); });
+            } else if (ownerId && entry.ownerId === ownerId) finalize();
+        }));
         renderStatus();
         schedule(0);
     }
@@ -109,11 +133,13 @@
     function enqueue(path, body, sessionId, id) {
         id = id || uuid();
         var existing = entries.get(id);
-        if (existing) return existing;
+        if (existing && existing.state !== 'draft') return existing;
+        if (existing) entries.delete(id);
         var entry = {
             id: id, path: path, gameId: body.game_id, sessionId: sessionId,
             body: clone(body), after: tails.get(sessionId) || null,
             createdAt: Math.max(Date.now(), lastCreatedAt + 1), state: 'pending', accepted: false, attempts: 0,
+            updatedAt: Math.max(Date.now(), (existing?.updatedAt || 0) + 1),
         };
         remember(entry);
         entry.localSaved = putLocal(entry);
@@ -126,6 +152,45 @@
         schedule(0);
         renderStatus();
         return entry;
+    }
+    function checkpointRun(body) {
+        var sessionId = body.session_id || sessions.get(body.game_id);
+        if (!sessionId || (!ownerId && !global.navigator?.locks?.request)) return Promise.resolve(false);
+        var id = 'bank_' + sessionId;
+        var entry = entries.get(id);
+        if (entry && entry.state !== 'draft') return Promise.resolve(true);
+        if (!entry) {
+            entry = { id:id, path:BANK_RUN_PATH, gameId:body.game_id, sessionId:sessionId,
+                createdAt:Math.max(Date.now(),lastCreatedAt+1), state:'draft', ownerId:ownerId,
+                accepted:false, attempts:0 };
+            remember(entry);
+            if (global.navigator?.locks?.request && !rewardLeases.has(sessionId)) {
+                var markReady;
+                var ready = new Promise(function (resolve) { markReady = resolve; });
+                rewardLeases.set(sessionId, { release:null, ready:ready });
+                void global.navigator.locks.request('archer-reward-' + sessionId, function () {
+                    return new Promise(function (resolve) {
+                        var lease = rewardLeases.get(sessionId);
+                        if (lease) lease.release = resolve; else resolve();
+                        markReady();
+                    });
+                }).catch(function () { markReady(); });
+            }
+        }
+        entry.body = clone(Object.assign({},body,{session_id:sessionId}));
+        entry.after = tails.get(sessionId) || null;
+        entry.updatedAt = Math.max(Date.now(), (entry.updatedAt || 0) + 1);
+        var lease = rewardLeases.get(sessionId);
+        entry.durable = Promise.resolve(lease?.ready).then(async function () {
+            // Do not expose a live checkpoint until its lease is actually held.
+            // A final claim may have replaced this draft while acquisition waited.
+            if (entries.get(id) !== entry || entry.state !== 'draft') return true;
+            entry.localSaved = putLocal(entry);
+            var saved = await putDatabase(entry,false);
+            entry.localSaved = entry.localSaved || saved;
+            return entry.localSaved;
+        });
+        return entry.durable;
     }
     function track(gameId, event, sessionId, extra) {
         if (!event || typeof event !== 'object') return event;
@@ -258,6 +323,10 @@
         dismissed = false;
         renderStatus();
         await entry.durable;
+        if (path === BANK_RUN_PATH) {
+            var lease = rewardLeases.get(sessionId);
+            if (lease) { rewardLeases.delete(sessionId); if (lease.release) lease.release(); }
+        }
         // Bound the UI wait. Pending is explicitly different from saved.
         var timeout;
         await Promise.race([sendSession(sessionId), new Promise(function (resolve) { timeout = global.setTimeout(resolve, 7500); })]);
@@ -324,7 +393,7 @@
             unsafe: '기록을 보관하지 못했습니다. 이 화면을 닫지 말아 주세요.',
             review: '기록을 보관했습니다. 점수 확인이 필요해 랭킹 반영을 기다리고 있습니다.',
         };
-        var submissions = Array.from(entries.values()).filter(function (entry) { return entry.path === '/rankings' || entry.path === BANK_RUN_PATH; });
+        var submissions = Array.from(entries.values()).filter(function (entry) { return entry.state !== 'draft' && (entry.path === '/rankings' || entry.path === BANK_RUN_PATH); });
         var pending = submissions.filter(function (entry) { return entry.state !== 'done'; });
         var element = document.getElementById('ranking-delivery-status');
         if (!pending.length || dismissed) { if (element) element.remove(); return; }
@@ -354,10 +423,10 @@
                 : '보상 기록을 보관했습니다. 정산하려면 기록 확인이 필요합니다.') : copy.review;
         element.firstChild.textContent = unsafe ? copy.unsafe : review ? reviewText : pendingText(rewardOnly);
     }
-    global.ArcherRanking = Object.freeze({ track: track, submit: submit, bankRun: bankRun, fetch: deliveryFetch, pendingText: pendingText,
+    global.ArcherRanking = Object.freeze({ track: track, submit: submit, bankRun: bankRun, checkpointRun: checkpointRun, fetch: deliveryFetch, pendingText: pendingText,
         sessionId: function (gameId) { return sessions.get(gameId) || null; },
         flush: pump,
-        pending: function () { return Array.from(entries.values()).filter(function (entry) { return entry.state !== 'done'; }).map(clone); },
+        pending: function () { return Array.from(entries.values()).filter(function (entry) { return entry.state !== 'done' && entry.state !== 'draft'; }).map(clone); },
     });
     // Ranking mutations and the zombie reward claim are intercepted. Existing game
     // modules keep their response API; unrelated requests are passed through.

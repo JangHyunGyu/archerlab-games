@@ -845,7 +845,10 @@
     loadMetaSave,
     saveMetaSave,
     loadProfileAuth,
-    saveProfileAuth
+    saveProfileAuth,
+    restoreProfileAuth,
+    readProfileAuthBackup,
+    isProfileAuthSaved
   } = window.SchoolZombiePersistence.create({
     getUpgradeIds: getAllShopUpgradeIds,
     maxLevel: SHOP_MAX_LEVEL,
@@ -1225,6 +1228,40 @@
     scene.textures.addCanvas(key, canvas);
   }
 
+  function harmonizeCrossbowPalette(ctx, width, height, direction) {
+    // Grade the existing pixels once during texture construction. Geometry,
+    // alpha, weapon calibration and action timing remain identical to the atlas.
+    const image = ctx.getImageData(0, 0, width, height);
+    const pixels = image.data;
+    const skirtExposure = [0.84, 0.9, 1.1, 1.18, 1.18, 1.18, 1.1, 0.9, 0.84][direction];
+    for (let y = 0; y < height; y += 1) {
+      const sourceY = y / height;
+      for (let x = 0; x < width; x += 1) {
+        const offset = (y * width + x) * 4;
+        if (!pixels[offset + 3]) continue;
+        const r = pixels[offset], g = pixels[offset + 1], b = pixels[offset + 2];
+        const legSkin = sourceY >= 0.68 && sourceY < 0.855 && r > 100 && g > r * 0.52;
+        const handSkin = sourceY >= 0.4 && sourceY < 0.555 && (x < width * 0.39 || x > width * 0.6)
+          && r > 175 && g > r * 0.78;
+        if ((legSkin || handSkin) && g < r * 0.97 && b < g * 0.98) {
+          pixels[offset] = r * 0.97;
+          pixels[offset + 1] = r * 0.83;
+          pixels[offset + 2] = r * 0.74;
+        } else if (sourceY >= 0.38 && sourceY < 0.58 && r > 95 && g < r * 0.86 && g > r * 0.3 && b < r * 0.82 && b > g * 0.48) {
+          pixels[offset] = r * 0.98;
+          pixels[offset + 1] = r * 0.65;
+          pixels[offset + 2] = r * 0.62;
+        } else if (sourceY >= 0.575 && sourceY < 0.705 && r < 180 && g < 180 && b < 160 && g >= r * 0.8 && g > 28) {
+          const shade = (r + g + b) / 3 * skirtExposure;
+          pixels[offset] = shade * 0.78;
+          pixels[offset + 1] = shade * 1.08;
+          pixels[offset + 2] = shade * 0.86;
+        }
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
   function makeImageSliceTexture(scene, sourceKey, key, sx, sy, sw, sh) {
     if (scene.textures.exists(key)) {
       scene.textures.remove(key);
@@ -1241,6 +1278,9 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    if (/^character-a(?:-attack-\d+)?$/.test(sourceKey)) {
+      harmonizeCrossbowPalette(ctx, canvas.width, canvas.height, Math.round(sx / sw));
+    }
     scene.textures.addCanvas(key, canvas);
   }
 
@@ -3291,6 +3331,21 @@
         }
       };
       document.addEventListener("visibilitychange", this.boundHandleVisibilityChange);
+      this.boundHandlePageHide = () => {
+        if (this.disposed || !["playing", "paused", "skill"].includes(this.mode)) return;
+        // bankRun enqueues the final snapshot synchronously before any network
+        // wait, so refresh/navigation keeps rewards even when disconnected.
+        this.mode = "gameover";
+        this.runEndedOnPageHide = true;
+        void this.bankRunCoins();
+      };
+      this.boundHandlePageShow = () => {
+        if (!this.runEndedOnPageHide || this.disposed) return;
+        this.runEndedOnPageHide = false;
+        this.returnToGameStart();
+      };
+      window.addEventListener("pagehide", this.boundHandlePageHide);
+      window.addEventListener("pageshow", this.boundHandlePageShow);
     }
 
     pollGamepadInput(time = 0) {
@@ -3604,9 +3659,15 @@
     }
 
     applyServerProfile(data) {
+      if (this.disposed) return this.meta;
       if (!data || data.success !== true) {
         throw new Error("invalid profile response");
       }
+      if (this.profileAuth && data.profile_id !== this.profileAuth.profile_id) {
+        throw new Error("profile response belongs to another account");
+      }
+      const revision = Number(data.profile_revision) || 0;
+      if (this.profileRevision && revision < this.profileRevision) return this.meta;
       if (data.profile_id && data.profile_secret) {
         this.profileAuth = {
           profile_id: data.profile_id,
@@ -3620,6 +3681,7 @@
         coins: data.coins,
         upgrades: data.upgrades
       });
+      this.profileRevision = revision;
       saveMetaSave(this.meta);
       if (this.ui?.coins) {
         this.updateHud();
@@ -3634,8 +3696,10 @@
       if (this.profileReady && !force) {
         return this.meta;
       }
-      if (this.profilePromise && !force) {
-        return this.profilePromise;
+      if (this.profilePromise) {
+        const meta = await this.profilePromise;
+        if (!allowOffline && this.profileSyncFailed) throw new Error("profile synchronization unavailable");
+        return meta;
       }
 
       const requestProfile = async (auth) => {
@@ -3648,24 +3712,49 @@
       };
 
       const load = async () => {
-        let auth = this.profileAuth || loadProfileAuth();
+        if (this.disposed) return this.meta;
+        let auth = this.profileAuth || await restoreProfileAuth();
+        if (auth) {
+          this.profileAuth = auth;
+          this.profileCredentialsSaved = await isProfileAuthSaved(auth);
+        }
+        // A failed authorization/read must never replace the existing wallet.
         let response = await requestProfile(auth);
-        if ((response.status === 401 || response.status === 404) && auth) {
-          this.profileAuth = null;
-          saveProfileAuth(null);
-          response = await requestProfile(null);
+        if (auth && response.status === 401) {
+          const backup = await readProfileAuthBackup();
+          if (backup?.profile_id === auth.profile_id && backup.profile_secret !== auth.profile_secret) {
+            const restoredResponse = await requestProfile(backup);
+            if (restoredResponse.ok) { auth = backup; response = restoredResponse; }
+          }
         }
         const data = await response.json().catch(() => null);
         if (!response.ok) {
-          throw new Error(data?.error || `profile ${response.status}`);
+          const error = new Error(data?.error || `profile ${response.status}`);
+          error.status = response.status;
+          throw error;
+        }
+        if (auth && data?.profile_id !== auth.profile_id) throw new Error("profile identity changed");
+        const nextAuth = data.profile_secret
+          ? { profile_id: data.profile_id, profile_secret: data.profile_secret } : auth;
+        if (nextAuth) {
+          this.profileAuth = nextAuth;
+          this.profileCredentialsSaved = await saveProfileAuth(nextAuth);
+        }
+        if (!this.profileCredentialsSaved) {
+          const error = new Error("profile credentials could not be stored");
+          error.storageUnavailable = true;
+          throw error;
         }
         return this.applyServerProfile(data);
       };
 
-      this.profilePromise = load()
+      // Two newly opened tabs must recover/create the same persistent identity.
+      const loading = typeof navigator !== "undefined" && navigator.locks?.request
+        ? navigator.locks.request("school-zombie-profile", load) : load();
+      this.profilePromise = loading
         .catch((error) => {
           this.profileSyncFailed = true;
-          if (allowOffline) {
+          if (allowOffline && this.profileAuth && this.profileCredentialsSaved && ![400, 401, 403, 404].includes(error.status)) {
             this.profileReady = true;
             if (!quiet) {
               this.playSfx("core", 0.5);
@@ -3675,7 +3764,7 @@
           }
           if (!quiet) {
             this.playSfx("core", 0.65);
-            this.showToast(SchoolI18n.t("toast.profileFail"), COLORS.red);
+            this.showToast(SchoolI18n.t(error.storageUnavailable ? "toast.profileSaveFail" : "toast.profileFail"), COLORS.red);
           }
           throw error;
         })
@@ -3771,6 +3860,9 @@
       if (this.disposed) {
         return;
       }
+      if (window.ArcherRanking?.bankRun && ["playing", "paused", "skill"].includes(this.mode)) {
+        void this.bankRunCoins();
+      }
       this.disposed = true;
       this.cancelRunTimers();
       this.cancelSceneTimers();
@@ -3789,6 +3881,9 @@
       }
       this.boundHandleKeyDown = null;
       this.boundHandleVisibilityChange = null;
+      window.removeEventListener("pagehide", this.boundHandlePageHide);
+      window.removeEventListener("pageshow", this.boundHandlePageShow);
+      this.boundHandlePageHide = this.boundHandlePageShow = null;
       window.removeEventListener("archer-ranking-saved", this.boundHandleRankingSaved);
       this.boundHandleRankingSaved = null;
       window.removeEventListener("archer-reward-saved", this.boundHandleRewardSaved);
@@ -4613,23 +4708,26 @@
         this.shopUI.notify(message);
         return;
       }
-      const panel = this.trackTransient(this.addSurfaceImage(270, 158, 330, 48)
-        .setDepth(430));
-      const text = this.trackTransient(this.add.text(270, 158, message, {
+        const text = this.trackTransient(this.add.text(270, 158, message, {
         resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
         fontSize: 20,
         fontStyle: "800",
         color: "#eee6d2",
         stroke: "#050607",
-        strokeThickness: 1
-      }).setOrigin(0.5).setDepth(431));
+          strokeThickness: 1,
+          align: "center",
+          wordWrap: { width: 402, useAdvancedWrap: true }
+        }).setOrigin(0.5).setDepth(431));
+        const panel = this.trackTransient(this.addSurfaceImage(270, 158,
+          Math.min(450, Math.max(330, text.width + 32)), Math.max(48, text.height + 20))
+          .setDepth(430));
 
       this.tweens.add({
         targets: [panel, text],
-        y: "-=18",
+          y: this.reducedMotion ? 158 : "-=18",
         alpha: 0,
-        delay: 720,
-        duration: 420,
+          delay: text.height > 30 ? 2600 : 720,
+          duration: this.reducedMotion ? 0 : 420,
         ease: "Cubic.easeIn",
         onComplete: () => {
           this.destroyTransientObject(panel, false);
@@ -4885,6 +4983,21 @@
       };
     }
 
+    checkpointRunRewards() {
+      if (this.rewardCheckpointQueued || !window.ArcherRanking?.checkpointRun) return;
+      this.rewardCheckpointQueued = true;
+      const syncToken = this.rankSyncToken;
+      // One write per JavaScript turn, including a whole explosion kill burst.
+      Promise.resolve().then(() => {
+        this.rewardCheckpointQueued = false;
+        if (this.disposed || syncToken !== this.rankSyncToken || !["playing", "paused", "skill"].includes(this.mode)) return;
+        const sessionId = this.rankSessionId || window.ArcherRanking.sessionId(RANK_GAME_ID);
+        if (sessionId && this.profileAuth) void window.ArcherRanking.checkpointRun({
+          ...this.profileAuth, game_id:RANK_GAME_ID, session_id:sessionId, event:this.createRankRunProgressEvent()
+        });
+      });
+    }
+
     async recordRankRunProgress() {
       const sessionId = this.rankSessionId || window.ArcherRanking?.sessionId(RANK_GAME_ID) || await this.ensureRankSession();
       if (!sessionId || this.disposed) {
@@ -5138,7 +5251,24 @@
       }
     }
 
-    returnToGameStart() {
+    showRewardRetryOverlay() {
+      this.mode = "gameover";
+      this.clearOverlay();
+      this.addGameOverBackdrop();
+      const notice = this.add.text(270, 420, SchoolI18n.t("toast.rewardFail"), {
+        fontFamily: "Pretendard Variable, Arial, sans-serif", fontSize: 24,
+        color: "#eee6d2", align: "center", wordWrap: { width: 420, useAdvancedWrap: true }
+      }).setOrigin(0.5).setDepth(544);
+      this.overlayObjects.push(notice);
+      this.addOverlayButton(270, 510, 280, 80, SchoolI18n.t("over.menu"), 545,
+        () => this.returnToGameStart(), COLORS.gold);
+    }
+
+    async returnToGameStart() {
+      if (this.coins > 0 && !this.runCoinsBanked && !this.runCoinsQueued) {
+        await this.bankRunCoins();
+        if (!this.runCoinsBanked && !this.runCoinsQueued) { this.showRewardRetryOverlay(); return; }
+      }
       this.removeRankNameLayer();
       this.lastRankableRun = null;
       this.showMenu();
@@ -5838,6 +5968,10 @@
       if (this.mode === "starting") {
         return;
       }
+      if (this.coins > 0 && !this.runCoinsBanked && !this.runCoinsQueued) {
+        await this.bankRunCoins();
+        if (!this.runCoinsBanked && !this.runCoinsQueued) { this.showRewardRetryOverlay(); return; }
+      }
       this.unlockAudio();
       const previousMode = this.mode;
       showRunLoadingOverlay(SchoolI18n.t("loading.profile"));
@@ -5887,7 +6021,11 @@
       this.mode = "gameover";
       this.clearOverlay();
       const pendingCoins = Math.max(0, Math.floor(Number(this.coins) || 0));
-      const earnedCoins = pendingCoins > 0 ? await this.bankRunCoins() : 0;
+      const earnedCoins = await this.bankRunCoins();
+      if (pendingCoins > 0 && !this.runCoinsBanked && !this.runCoinsQueued) {
+        this.showRewardRetryOverlay();
+        return;
+      }
       this.resetRun();
       this.showMenu();
       if (earnedCoins > 0) {
@@ -5913,7 +6051,7 @@
             : await this.postProfileAction("/school-zombie/profile/bank-run", body);
           if (result.pending) {
             if (this.rankSyncToken === syncToken) this.runCoinsQueued = true;
-            this.showToast(SchoolI18n.t("toast.rewardQueued"), COLORS.gold);
+            if (!this.disposed) this.showToast(SchoolI18n.t("toast.rewardQueued"), COLORS.gold);
             return 0;
           }
           if (!this.disposed && result.profile_id === this.profileAuth?.profile_id) {
@@ -5925,8 +6063,10 @@
           }
           return Math.max(0, Math.floor(Number(result.run_coins ?? result.earned_coins) || 0));
         } catch (error) {
-          this.playSfx("core", 0.65);
-          this.showToast(SchoolI18n.t("toast.rewardFail"), COLORS.red);
+          if (!this.disposed) {
+            this.playSfx("core", 0.65);
+            this.showToast(SchoolI18n.t("toast.rewardFail"), COLORS.red);
+          }
           return 0;
         }
       })();
@@ -8737,6 +8877,7 @@
       const reward = clamp(Math.floor(Number(zombie.reward) || (zombie.elite ? 4 : 1)), 1, 4);
       this.coins += reward;
       this.rewardCounts[reward] = Math.max(0, Math.floor(Number(this.rewardCounts[reward]) || 0)) + 1;
+      this.checkpointRunRewards();
       if (shouldExplode && this.mode === "playing") {
         this.createExplosion(x, y, 74, this.damage * 1.05, 0.35);
       }
@@ -9612,6 +9753,7 @@
       const previousStage = this.stage;
       this.level += 1;
       this.stage = Math.floor((this.level - 1) / 4) + 1;
+      this.checkpointRunRewards();
       if (this.stage > previousStage) {
         this.highestClearedStage = Math.max(this.highestClearedStage || 0, previousStage);
         this.recordRankStageClear(previousStage);
@@ -9765,6 +9907,7 @@
       this.coins = Math.max(0, Math.floor(Number(this.coins) || 0) - cost);
       this.skillRerollsThisRun = Math.max(0, Math.floor(Number(this.skillRerollsThisRun) || 0)) + 1;
       this.runRerollLevels.push(this.level);
+      this.checkpointRunRewards();
       this.skillRerollUsed = true;
       this.playSfx("button", 0.85);
       this.renderSkillChoiceCards(previousSignature);

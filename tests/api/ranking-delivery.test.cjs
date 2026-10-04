@@ -281,3 +281,42 @@ test('zombie coins: final net may decrease after a priced reroll; new-stage surc
   const result=(await f.accept([f.command(bankPath,{...f.auth,event:net})]))[0];
   assert.equal(result.state,'done');assert.equal(result.data.profile.coins,150);
 });
+
+test('zombie coins: invalid intermediate rewards cannot strand valid later progress and final payment', async () => {
+  const f = await fundedRun();
+  const invalid = netReward(); invalid.run_coins = 9999;
+  const first = f.command('/score-events', { ...f.auth, event: invalid });
+  const later = f.command('/score-events', { ...f.auth, event: netReward() });
+  const bank = f.command(bankPath, { ...f.auth, event: netReward() });
+  const results = await f.accept([first, later, bank, f.ranking(1)]);
+  assert.deepEqual(results.map(result => result.state), ['review', 'done', 'done', 'done']);
+  assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins, 155);
+});
+
+test('zombie coins: alarm revalidates retained pre-fix net-reroll claims without client resending', async () => {
+  const f = await fundedRun();
+  const event = netReward(); delete event.reroll_levels;
+  const bank = f.command(bankPath, { ...f.auth, event });
+  f.db.offline = true; await f.accept([bank]); f.db.offline = false;
+  f.durable.sql.exec("UPDATE jobs SET state='review', last_error='school zombie run coins must match reward counts' WHERE id=?", bank.id);
+  await new server.RankingDelivery({ storage: f.durable }, { DB: f.db }).alarm();
+  assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins, 155);
+  assert.equal(f.durable.sql.exec('SELECT state FROM jobs WHERE id=?', bank.id).toArray()[0].state, 'done');
+});
+
+test('zombie profile: each wallet mutation has a strictly increasing revision, including purchases and refunds', async () => {
+  const f = await fundedRun();
+  f.db.sql.exec('UPDATE school_zombie_profiles SET coins=1000');
+  const call = async (path, body) => {
+    const response = await server.api.fetch(new Request('https://api' + path, { method: 'POST', body: JSON.stringify({ ...f.auth, ...body }) }), { DB: f.db });
+    assert.equal(response.status, 200); return response.json();
+  };
+  const initial = await call('/school-zombie/profile', {});
+  const bank = (await f.accept([f.command(bankPath, { ...f.auth, event: netReward() })]))[0].data;
+  const purchase = await call('/school-zombie/profile/buy-upgrade', { upgrade_id: 'a_power' });
+  const refund = await call('/school-zombie/profile/reset-upgrades', {});
+  assert.ok(initial.profile_revision < bank.profile_revision);
+  assert.ok(bank.profile_revision < purchase.profile_revision);
+  assert.ok(purchase.profile_revision < refund.profile_revision);
+  assert.equal(refund.coins, purchase.coins + refund.refund);
+});

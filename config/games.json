@@ -37,6 +37,7 @@
       "entry": "school-zombie-defense/index.html",
       "tests": [
         "node school-zombie-defense/tests/core-modules.test.cjs",
+        "node --test school-zombie-defense/tests/profile-persistence.test.cjs",
         "node school-zombie-defense/tests/ui-surfaces.test.cjs",
         "node --test school-zombie-defense/tests/shop-flow.test.cjs",
         "node school-zombie-defense/tests/defender-actions.test.cjs",

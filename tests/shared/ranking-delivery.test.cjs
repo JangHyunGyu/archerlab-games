@@ -17,17 +17,18 @@ function browserStorage(fail = false) {
     removeItem: key => values.delete(key),
   };
 }
-function indexedStorage() {
+function indexedStorage(delayReads = false) {
   const values = new Map();
+  const reads = [];
   const db = { createObjectStore() {}, transaction() {
     const transaction = { objectStore() { return {
       put(entry) { values.set(entry.id, structuredClone(entry)); queueMicrotask(() => transaction.oncomplete?.()); },
       delete(id) { values.delete(id); queueMicrotask(() => transaction.oncomplete?.()); },
-      getAll() { const request = {}; queueMicrotask(() => { request.result = [...values.values()].map(value => structuredClone(value)); request.onsuccess?.(); }); return request; },
+      getAll() { const request = {}; const finish = () => { request.result = [...values.values()].map(value => structuredClone(value)); request.onsuccess?.(); }; if (delayReads) reads.push(finish); else queueMicrotask(finish); return request; },
     }; } };
     return transaction;
   } };
-  return { values, open() { const request = {}; queueMicrotask(() => { request.result = db; request.onsuccess?.(); }); return request; } };
+  return { values, releaseReads() { delayReads=false;reads.splice(0).forEach(finish=>finish()); }, open() { const request = {}; queueMicrotask(() => { request.result = db; request.onsuccess?.(); }); return request; } };
 }
 function environment() {
   const db = d1(); const mailboxes = new Map();
@@ -44,10 +45,10 @@ function environment() {
   } };
   return { db, mailboxes, network };
 }
-function client(network, local = browserStorage(), indexedDB) {
+function client(network, local = browserStorage(), indexedDB, sessionStorage) {
   const timers = new Map(); let next = 0;
   const listeners = {};
-  const context = { fetch: network.fetch.bind(network), localStorage: local, indexedDB,
+  const context = { fetch: network.fetch.bind(network), localStorage: local, indexedDB, sessionStorage,
     crypto, Request, Response, URL, AbortController, DOMException, console,
     navigator: { onLine: true }, location: { href: 'https://game.archerlab.dev/lumen-shift/' },
     setTimeout(callback, delay) { const id = ++next; timers.set(id, { callback, delay }); return id; },
@@ -213,4 +214,75 @@ test('reward client: no network and no storage cannot report a safely retained r
   const e=environment();const c=client(e.network,browserStorage(true));const body=await zombieWallet(e,c);
   e.network.offline=true;await assert.rejects(c.ranking.bankRun(body));
   assert.equal(e.db.sql.prepare('SELECT COUNT(*) AS n FROM school_zombie_coin_claims').get().n,0);
+});
+
+test('reward checkpoint: draft never pays an active run, and a different tab cannot finalize it', async () => {
+  const e=environment(), local=browserStorage(), indexed=indexedStorage(), tab=browserStorage();
+  const c=client(e.network,local,indexed,tab), body=await zombieWallet(e,c);
+  body.event.run_coins=4;body.event.kills=9;body.event.reward_counts[1]=9;
+  await c.ranking.checkpointRun(body);await c.ranking.flush();
+  assert.equal(c.ranking.pending().length,0);
+  const other=client(e.network,local,indexed,browserStorage());await turn();await other.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,100);
+  const reloaded=client(e.network,local,indexed,tab);await turn();await reloaded.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,104);
+});
+
+test('reward checkpoint: the latest net ledger survives abrupt reload with full localStorage', async () => {
+  const e=environment(), indexed=indexedStorage(), tab=browserStorage(), local=browserStorage(true);
+  const c=client(e.network,local,indexed,tab), body=await zombieWallet(e,c);
+  await c.ranking.checkpointRun(body);
+  body.event.run_coins=4;body.event.kills=9;body.event.reward_counts[1]=9;
+  await c.ranking.checkpointRun(body);
+  e.network.offline=true;
+  const reloaded=client(e.network,local,indexed,tab);await turn();
+  assert.equal(reloaded.ranking.pending().find(entry=>entry.path.endsWith('/bank-run')).body.event.run_coins,4);
+  e.network.offline=false;await reloaded.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,104);
+  await reloaded.ranking.bankRun(body);
+  assert.equal(e.db.sql.prepare('SELECT COUNT(*) AS n FROM school_zombie_coin_claims').get().n,1);
+});
+
+test('reward checkpoint: promotion cannot create a self dependency or hold up later stage events', async () => {
+  const e=environment(), c=client(e.network,browserStorage(),indexedStorage(),browserStorage());
+  const body=await zombieWallet(e,c);
+  body.event={type:'run_progress',run_coins:55,reward_counts:{1:50,2:10,3:0,4:0},reroll_levels:[2,3],kills:60,level:5,reached_stage:2};
+  await c.ranking.checkpointRun(body);
+  c.ranking.track('school-zombie-defense',{type:'stage_clear',cleared_stage:1,reached_stage:2,level:5,kills:60},body.session_id,body);
+  await c.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT score FROM ranking_sessions').get().score,1);
+  await c.ranking.bankRun(body);
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,155);
+});
+
+test('reward checkpoint: delayed startup restore cannot finalize this page newly started active run', async () => {
+  const e=environment(), indexed=indexedStorage(true), local=browserStorage(), tab=browserStorage();
+  const c=client(e.network,local,indexed,tab), body=await zombieWallet(e,c);
+  body.event.run_coins=4;body.event.kills=9;body.event.reward_counts[1]=9;
+  await c.ranking.checkpointRun(body);indexed.releaseReads();await turn();await c.ranking.flush();
+  assert.equal(c.ranking.pending().length,0);
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,100);
+  const reloaded=client(e.network,local,indexed,tab);await turn();await reloaded.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,104);
+});
+
+test('reward checkpoint: draft is exposed only after lease acquisition; copied tabs cannot claim a live draft', async () => {
+  const e=environment(), local=browserStorage(), indexed=indexedStorage(), tab=browserStorage();
+  const c=client(e.network,local,indexed,tab), body=await zombieWallet(e,c);
+  body.event.run_coins=4;body.event.kills=9;body.event.reward_counts[1]=9;
+  let grant, held=false;
+  const locks={request(name,options,callback) {
+    if(typeof options==='function') return new Promise(resolve=>{grant=()=>{held=true;Promise.resolve(options({name})).then(()=>{held=false;resolve();});};});
+    return Promise.resolve(callback(held?null:{name}));
+  }};
+  c.window.navigator.locks=locks;
+  const checkpoint=c.ranking.checkpointRun(body);await turn();
+  assert.equal(indexed.values.has('bank_'+body.session_id),false);
+  assert.equal(Array.from({length:local.length},(_,index)=>local.key(index)).some(key=>key.endsWith('bank_'+body.session_id)),false);
+  grant();await checkpoint;
+  const copied=client(e.network,local,indexed,tab);copied.window.navigator.locks=locks;
+  await turn();await copied.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,100);
+  await c.ranking.bankRun(body);assert.equal(held,false);
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,104);
 });

@@ -8,9 +8,76 @@
       clamp,
       cacheKey,
       legacySaveKey,
-      profileAuthKey,
-      storage = global.localStorage
+      profileAuthKey
     } = options;
+    let storage = options.storage;
+    if (!storage) { try { storage = global.localStorage; } catch {} }
+    let databaseFactory = options.databaseFactory;
+    if (!databaseFactory) { try { databaseFactory = global.indexedDB; } catch {} }
+    let memoryAuth = null;
+    let database;
+    let authWrite = Promise.resolve(false);
+
+    function normalizeAuth(auth) {
+      const profileId = String(auth?.profile_id || "").trim();
+      const profileSecret = String(auth?.profile_secret || "").trim();
+      return profileId && profileSecret ? { profile_id: profileId, profile_secret: profileSecret } : null;
+    }
+
+    function openDatabase() {
+      if (database) return database;
+      database = new Promise((resolve) => {
+        try {
+          const request = databaseFactory.open("school-zombie-profile", 1);
+          request.onupgradeneeded = () => request.result.createObjectStore("credentials");
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = request.onblocked = () => resolve(null);
+        } catch { resolve(null); }
+      });
+      return database;
+    }
+
+    async function writeBackup(auth) {
+      const db = await openDatabase();
+      if (!db) return false;
+      return new Promise((resolve) => {
+        try {
+          const transaction = db.transaction("credentials", "readwrite");
+          const store = transaction.objectStore("credentials");
+          if (auth) store.put(auth, profileAuthKey); else store.delete(profileAuthKey);
+          transaction.oncomplete = () => resolve(true);
+          transaction.onerror = transaction.onabort = () => resolve(false);
+        } catch { resolve(false); }
+      });
+    }
+
+    async function readProfileAuthBackup() {
+      const db = await openDatabase();
+      if (!db) return null;
+      return new Promise((resolve) => {
+        try {
+          const request = db.transaction("credentials", "readonly").objectStore("credentials").get(profileAuthKey);
+          request.onsuccess = () => {
+            resolve(normalizeAuth(request.result));
+          };
+          request.onerror = () => resolve(null);
+        } catch { resolve(null); }
+      });
+    }
+
+    async function restoreProfileAuth() {
+      const auth = loadProfileAuth();
+      if (auth) return auth;
+      memoryAuth = await readProfileAuthBackup();
+      if (memoryAuth) { try { storage.setItem(profileAuthKey, JSON.stringify(memoryAuth)); } catch {} }
+      return memoryAuth;
+    }
+
+    async function isProfileAuthSaved(auth) {
+      const matches = (saved) => saved?.profile_id === auth?.profile_id && saved?.profile_secret === auth?.profile_secret;
+      try { if (matches(normalizeAuth(JSON.parse(storage.getItem(profileAuthKey) || "{}")))) return true; } catch {}
+      return matches(await readProfileAuthBackup());
+    }
 
     function createDefaultMetaSave() {
       const save = { coins: 0, upgrades: {} };
@@ -66,30 +133,28 @@
 
     function loadProfileAuth() {
       try {
-        const auth = JSON.parse(storage.getItem(profileAuthKey) || "{}");
-        const profileId = String(auth.profile_id || "").trim();
-        const profileSecret = String(auth.profile_secret || "").trim();
-        return profileId && profileSecret
-          ? { profile_id: profileId, profile_secret: profileSecret }
-          : null;
+        return normalizeAuth(JSON.parse(storage.getItem(profileAuthKey) || "{}")) || memoryAuth;
       } catch {
-        return null;
+        return memoryAuth;
       }
     }
 
     function saveProfileAuth(auth) {
+      memoryAuth = normalizeAuth(auth);
+      let saved = false;
       try {
-        if (!auth?.profile_id || !auth?.profile_secret) {
+        if (!memoryAuth) {
           storage.removeItem(profileAuthKey);
-          return;
+        } else {
+          storage.setItem(profileAuthKey, JSON.stringify(memoryAuth));
         }
-        storage.setItem(profileAuthKey, JSON.stringify({
-          profile_id: String(auth.profile_id),
-          profile_secret: String(auth.profile_secret)
-        }));
+        saved = true;
       } catch {
         // Storage can be unavailable in private or embedded browser modes.
       }
+      const snapshot = memoryAuth;
+      authWrite = authWrite.then(() => writeBackup(snapshot)).then((backupSaved) => saved || backupSaved);
+      return authWrite;
     }
 
     return Object.freeze({
@@ -98,7 +163,10 @@
       loadMetaSave,
       saveMetaSave,
       loadProfileAuth,
-      saveProfileAuth
+      saveProfileAuth,
+      restoreProfileAuth,
+      readProfileAuthBackup,
+      isProfileAuthSaved
     });
   }
 

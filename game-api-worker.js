@@ -2109,6 +2109,7 @@ function schoolZombieProfileResponse(row, extra = {}) {
     return {
         success: true,
         profile_id: row.profile_id,
+        profile_revision: Number(row.updated_at) || 0,
         profile: meta,
         coins: meta.coins,
         upgrades: meta.upgrades,
@@ -2170,7 +2171,7 @@ async function updateSchoolZombieProfile(db, row, meta) {
     const now = Date.now();
     await db.prepare(`
         UPDATE school_zombie_profiles
-        SET coins = ?, upgrades = ?, updated_at = ?
+        SET coins = ?, upgrades = ?, updated_at = MAX(updated_at + 1, ?)
         WHERE profile_id = ?
     `).bind(next.coins, JSON.stringify(next.upgrades), now, row.profile_id).run();
     const updated = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
@@ -2203,7 +2204,7 @@ async function buySchoolZombieUpgrade(db, body) {
         UPDATE school_zombie_profiles
         SET coins = coins - ?,
             upgrades = json_set(CASE WHEN json_valid(upgrades) THEN upgrades ELSE '{}' END, ?, ?),
-            updated_at = ?
+            updated_at = MAX(updated_at + 1, ?)
         WHERE profile_id = ?
           AND coins >= ?
           AND CAST(COALESCE(CASE WHEN json_valid(upgrades) THEN json_extract(upgrades, ?) END, 0) AS INTEGER) = ?
@@ -2249,7 +2250,7 @@ async function resetSchoolZombieUpgrades(db, body) {
         UPDATE school_zombie_profiles
         SET coins = coins + ?,
             upgrades = ?,
-            updated_at = ?
+            updated_at = MAX(updated_at + 1, ?)
         WHERE profile_id = ?
           AND upgrades = ?
     `).bind(refund, resetUpgrades, now, auth.row.profile_id, auth.row.upgrades).run();
@@ -2318,7 +2319,7 @@ async function bankSchoolZombieRunCoins(db, body) {
     // insert, so concurrent/retried claims add exactly once and failures roll back
     // both the balance and the ledger. Never replace the existing coin balance.
     const writes = await db.batch([
-        db.prepare(`UPDATE school_zombie_profiles SET coins = coins + ?, updated_at = ?
+        db.prepare(`UPDATE school_zombie_profiles SET coins = coins + ?, updated_at = MAX(updated_at + 1, ?)
             WHERE profile_id = ? AND NOT EXISTS
                 (SELECT 1 FROM school_zombie_coin_claims WHERE session_id = ?)`)
             .bind(earnedCoins, now, auth.row.profile_id, sessionId),

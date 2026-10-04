@@ -208,6 +208,7 @@
     "shop.syncFail": ["프로필 동기화 실패. 잠시 후 다시 시도하세요.", "Profile sync failed. Try again shortly."],
     "toast.offlineRewards": ["오프라인 모드 · 보상 동기화 보류", "Offline · rewards will sync later"],
     "toast.profileFail": ["프로필 동기화 실패", "Profile sync failed"],
+    "toast.profileSaveFail": ["계정을 저장하지 못했어요. 브라우저 저장 공간을 확인해 주세요.", "Your account could not be saved. Please check your browser storage."],
     "toast.noStage": ["클리어한 스테이지가 없습니다", "No cleared stage"],
     "toast.needName": ["이름을 입력하세요", "Enter a name"],
     "toast.rankCheck": ["랭킹 검증 중...", "Checking rank..."],
