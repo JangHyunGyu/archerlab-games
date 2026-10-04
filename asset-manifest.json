@@ -2500,43 +2500,43 @@
     },
     {
       "path": "school-zombie-defense/assets/images/character-a-attack-1.png",
-      "bytes": 1609750,
-      "sha256": "4c96d0735aa28756905d2ce8f243f16d9ae74f23e6929da1d103e95882495ceb"
+      "bytes": 1590124,
+      "sha256": "ac19d7e242423f83704f02ef326a8659f5857851458df792f42583021b1cd9f6"
     },
     {
       "path": "school-zombie-defense/assets/images/character-a-attack-1.webp",
-      "bytes": 519216,
-      "sha256": "9736370adafec916de60d3c907cac06e0d891c5133e371c6f3763f420771d1cf"
+      "bytes": 525000,
+      "sha256": "9ee46aa6d09dec4cae8314f327623593720dd557f778b01c68f0284566561838"
     },
     {
       "path": "school-zombie-defense/assets/images/character-a-attack-2.png",
-      "bytes": 1658646,
-      "sha256": "5678302bbee104fad61adec44739c6a678d5a192198833c0b8a57de1cd963ef3"
+      "bytes": 1629136,
+      "sha256": "0fbdca343eea1bee2b8ed148d4783d618654e6697ef4ce24663d060dd7a2505f"
     },
     {
       "path": "school-zombie-defense/assets/images/character-a-attack-2.webp",
-      "bytes": 532980,
-      "sha256": "bf78cb62a2bc8275b67d00fdab4a269ba708329f8e17d66c5675845a553bbfc3"
+      "bytes": 536348,
+      "sha256": "d4380767a74b88180681c0b83a7581d44b459fa83a25c0817ef4148561f22d9c"
     },
     {
       "path": "school-zombie-defense/assets/images/character-a-attack-3.png",
-      "bytes": 1689045,
-      "sha256": "156044f2063ebf631491c9cdf6716d07e7fba13ac08da408d6be857a61868fd4"
+      "bytes": 1636513,
+      "sha256": "5a2781f70d185e5561042b699defb554b2360caf3a18958a2151874975fc5af7"
     },
     {
       "path": "school-zombie-defense/assets/images/character-a-attack-3.webp",
-      "bytes": 541134,
-      "sha256": "a00a27e1dd23035eb37329465330200506ac017206afb71572f312efa40e445b"
+      "bytes": 538594,
+      "sha256": "5ac4a0daed25b7b518bdae599f92b86d226b91580377415b32c128b0d77f605e"
     },
     {
       "path": "school-zombie-defense/assets/images/character-a.png",
-      "bytes": 1547950,
-      "sha256": "a30bd76f03ba206b36da96652d1ddf28fc5648207a832a0df4a2f4dd75cdace9"
+      "bytes": 1550427,
+      "sha256": "6bbfcc1a5e65425c20a1c6384fd35bc3f308f004be732b05f1689db22b4c84d1"
     },
     {
       "path": "school-zombie-defense/assets/images/character-a.webp",
-      "bytes": 524002,
-      "sha256": "81da6bf53f0fba385ceba97a1aea661277bce227aca1045606a452de1daec3f8"
+      "bytes": 525494,
+      "sha256": "cb7e257aa64b9ccc763ba1a62d6e0f6c3c574116a86448cd4ee110bfa736f6fb"
     },
     {
       "path": "school-zombie-defense/assets/images/character-b-attack-1.png",
@@ -4800,13 +4800,13 @@
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f0-c2.png",
-      "bytes": 887494,
-      "sha256": "ba74b6c708cd5f9f01db7e410bf27552eea9781bd26e1cae9b2fafeb34cde307"
+      "bytes": 57610,
+      "sha256": "95f3307a475e63d19698d48c43f4f10591ebe74d26329995f7386d73b8b4796d"
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f0-c3.png",
-      "bytes": 902892,
-      "sha256": "bd891b0d029ff4fac12fb2899a015dae49ebf0bd653628b3ebf8e0545d798953"
+      "bytes": 52822,
+      "sha256": "0e301f9da4227ba2603524614cccc8e0b41408233373e5eebe0f2584eb044c93"
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f0-c4.png",
@@ -4825,13 +4825,13 @@
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f1-c2.png",
-      "bytes": 237403,
-      "sha256": "f1ec6c7ce37ca16fa9c0eb83402bf04721e50ec4ce3921dbdc047544f08bc350"
+      "bytes": 57204,
+      "sha256": "0d8ae2853311f4d297c2dc7f8ac0d2e231e4608196e09b9a91de3eaaa7e79c11"
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f1-c3.png",
-      "bytes": 232955,
-      "sha256": "fc1741c368a04a81621617617875d9f616b9f90c739bae9be707cec08d661e81"
+      "bytes": 53059,
+      "sha256": "526be75ff39a01d9753761b10d02c517602d379c9a77e29aa069081828f9918a"
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f1-c4.png",
@@ -4850,13 +4850,13 @@
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f2-c2.png",
-      "bytes": 241455,
-      "sha256": "9713f46efae3300dfd65ef9abcb178f6db4140eba56c2ba67ff598d1cd484a80"
+      "bytes": 57513,
+      "sha256": "f85bd396fbdba64eb4aaf04fd909a350d58ef756e0a83ff3b8b62fe0ef74917a"
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f2-c3.png",
-      "bytes": 238450,
-      "sha256": "ebf6b90142f37cff8972b4447fb06bff77eb0bf3c68f4d99fb4639e7dd593d8c"
+      "bytes": 54558,
+      "sha256": "56482c0121ff27b372fb5ef327e592d36ef73440b50617b867e2cc818d1bf0eb"
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f2-c4.png",
@@ -4875,13 +4875,13 @@
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f3-c2.png",
-      "bytes": 254312,
-      "sha256": "47cbc94ba6833a19345758c28f02beb7fe8ec11288e5e6f548a43a58d1b2f4be"
+      "bytes": 58329,
+      "sha256": "f3044eb1aac43501f43776c7b8afacd644f0d721c56862d55de4bca0f83cf52f"
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f3-c3.png",
-      "bytes": 241346,
-      "sha256": "a5351bf06d8bdc7c1c31a507b17c9488f0f6db085f6cbf5d360d902886fe65d0"
+      "bytes": 54139,
+      "sha256": "2ccd140e54878b94b9f0a9fca3103d1a381dd09f16b39d5fcb5ba64b90775d3c"
     },
     {
       "path": "school-zombie-defense/design/source-assets/crossbow-v1/a-f3-c4.png",

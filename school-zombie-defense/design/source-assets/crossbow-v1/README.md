@@ -1,18 +1,44 @@
 # Crossbow v1 reviewed source cells
 
 This directory preserves the 20 reviewed source cells used to build the
-crossbow defender's production action sheets. `f0` is the direction's
-Higgsfield key pose; `f1` through `f3` are explicit frames selected from
-that direction's attack video.
+crossbow defender's production action sheets. In the original set, `f0` was
+the direction's Higgsfield key pose and `f1` through `f3` were explicit frames
+selected from that direction's attack video.
 
-The source images retain their native resolutions. Every cell has a guarded
+The 11:00 (`c2`) and 11:30 (`c3`) cells in all four frames were replaced on
+2026-10-04 with a reviewed imagegen correction. Their central bolt rails now
+remain in their clock direction throughout release and recovery. The other
+twelve cells still use the original Higgsfield selections below. The eight
+replacement alpha-PNG cells and their current hashes are the approved inputs;
+the original c2/c3 MP4 selections below describe the superseded source only.
+
+The source images retain their native resolutions. The original cells have a guarded
 soft alpha matte removed from its uniform blue chroma background. Key-like
 edge pixels use max-channel thresholds 24/96;
 distant navy and cyan pixels remain byte-for-byte opaque. Directions
 `c5` through `c8` are deterministic horizontal mirrors created later by
 `tools/finalize-defender-action-directions.py`.
 
-## Rebuild these reviewed cells
+## Build production sheets from the currently reviewed cells
+
+```powershell
+python school-zombie-defense/tools/finalize-defender-action-directions.py --crossbow-only
+```
+
+The existing finalizer aligns the body and planted feet, validates the full
+grid, and mirrors all four left-side directions into their right-side pairs.
+The 2026-10-04 correction used a two-column/four-row imagegen edit, isolated
+from a flat blue key with thresholds 20/60 before body/foot registration.
+The generated reference, prompts and review boards are preserved in
+`C:/workspace/output/zombie-crossbow-20261004/`.
+The accepted edit prompt is also tracked as
+`clock-direction-edit-prompt-20261004.txt` in this directory.
+
+## Rebuild the historical Higgsfield cells
+
+This extraction recreates the old c2/c3 images as well. It does not preserve
+the 2026-10-04 corrections; restore the approved eight replacement alpha-PNGs
+before building production sheets.
 
 ```powershell
 python school-zombie-defense/tools/prepare-crossbow-source-cells.py --manifest school-zombie-defense/design/source-assets/crossbow-v1/generated/selections.json --transparent-threshold 24 --opaque-threshold 96 --force

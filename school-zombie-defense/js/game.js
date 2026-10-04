@@ -75,7 +75,7 @@
   const CHARACTER_ASSET_VERSION = "20260718-bow-video-directions-v14";
   const CHARACTER_CONTINUITY_ASSET_VERSION = "20261004-character-continuity-v1";
   const FIREBOMB_RECOVERY_ASSET_VERSION = "20261002-firebomb-recovery-v1";
-  const CROSSBOW_ASSET_VERSION = "20260719-crossbow-directions-v1";
+  const CROSSBOW_ASSET_VERSION = "20261004-crossbow-directions-v2";
   const CROSSBOW_AUDIO_VERSION = "20260719-freesound-crossbow-firing-v1";
   const TURRET_ASSET_VERSION = "20260712-turret-v2";
   const COMBAT_EFFECT_ASSET_VERSION = "20260712-combat-fx-v2";
@@ -183,7 +183,7 @@
   // The commercial character sheets do not share one circular muzzle arc, so
   // a single pivot/reach pair cannot keep effects attached in every pose.
   const CHARACTER_MUZZLE_OFFSETS = {
-    a: [[-57, -143], [-38, -176], [-33, -171], [-19, -165], [8, -175], [19, -165], [33, -171], [38, -176], [57, -143]],
+    a: [[-57, -143], [-38, -176], [-38, -181], [-22, -185], [8, -175], [22, -185], [38, -181], [38, -176], [57, -143]],
     b: [[-31, -176], [-37, -192], [-32, -198], [-23, -194], [2, -210], [24, -195], [34, -198], [39, -189], [32, -179]],
     c: [[-28, -182], [-38, -209], [-24, -210], [-15, -215], [0, -215], [15, -215], [28, -212], [34, -210], [28, -183]],
     d: [[-36, -172], [-30, -183], [-25, -193], [-15, -198], [2, -198], [18, -196], [30, -193], [31, -180], [41, -171]],

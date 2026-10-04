@@ -281,7 +281,7 @@ const crossbowAssetVersion = gameSource.match(
 assert.ok(crossbowAssetVersion, "CROSSBOW_ASSET_VERSION must be declared");
 assert.equal(
   crossbowAssetVersion,
-  "20260719-crossbow-directions-v1",
+  "20261004-crossbow-directions-v2",
   "crossbow asset cache version must track the reviewed direction sheets"
 );
 const directlyVersionedCrossbowAssets = [...gameSource.matchAll(
@@ -881,6 +881,39 @@ function assertCharacterBodyGeometry({ defenderId, hair, baseName, actionNames }
     `character ${defenderId.toUpperCase()} screen foot baselines across every direction/frame drifted by ${(footRange * 100).toFixed(2)}% of defender height`
   );
 }
+
+// The regenerated inner directions have a copper rail above the hair crown.
+// Measure that rail, rather than transverse bow limbs or semantic column tags.
+function assertCrossbowInnerRailDirections() {
+  const names = ["character-a", ...[1, 2, 3].map(frame => `character-a-attack-${frame}`)];
+  const measured = new Map([2, 3, 5, 6].map(index => [index, []]));
+  for (const name of names) {
+    const image = decodePngAlpha(path.join(imageRoot, `${name}.png`));
+    const cellWidth = image.width / 9;
+    for (const index of measured.keys()) {
+      const points = [];
+      for (let y = 0; y < 360; y++) for (let x = 0; x < cellWidth; x++) {
+        const p = (y * image.width + index * cellWidth + x) * 4;
+        const [r, g, b, a] = image.rgba.subarray(p, p + 4);
+        if (a > 160 && r > 120 && g > 45 && g < r * 0.78 && b < g * 0.85) points.push([x, y]);
+      }
+      assert.ok(points.length >= 150, `${name} ${directionKeys[index]} needs a visible copper rail`);
+      const mx = points.reduce((sum, [x]) => sum + x, 0) / points.length;
+      const my = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
+      let xx = 0, yy = 0, xy = 0;
+      for (const [x, y] of points) { xx += (x - mx) ** 2; yy += (y - my) ** 2; xy += (x - mx) * (y - my); }
+      const axis = Math.atan2(2 * xy, xx - yy) * 90 / Math.PI;
+      const angle = index < 4 ? axis - 180 : axis;
+      assert.ok(Math.abs(angle - expectedAimPoses[index].degrees) <= 7.5,
+        `${name} ${directionKeys[index]} rail drifted into another direction: ${angle.toFixed(1)} degrees`);
+      measured.get(index).push(angle);
+    }
+  }
+  for (const [index, angles] of measured) assert.ok(Math.max(...angles) - Math.min(...angles) <= 4,
+    `${directionKeys[index]} must keep its firing axis during ready, windup, release and recovery`);
+}
+
+assertCrossbowInnerRailDirections();
 
 function cannonAxisAngle(image, cellIndex) {
   const bounds = cellVisibleBounds(image, cellIndex);
