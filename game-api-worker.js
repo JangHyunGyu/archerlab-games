@@ -112,13 +112,7 @@ const PARKING_MIN_MS_PER_LEVEL = 1800;
 const PARKING_MAX_LEVEL_SCORE = 100000;
 const SCHOOL_ZOMBIE_GAME_ID = 'school-zombie-defense';
 const SCHOOL_ZOMBIE_MAX_CLEAR_STAGE = 1000;
-const SCHOOL_ZOMBIE_MIN_MS_PER_STAGE = 12000;
-const SCHOOL_ZOMBIE_MAX_GAME_SPEED = 2;
 const SCHOOL_ZOMBIE_RUN_COIN_LIMIT = 100000;
-const SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE = 30;
-const SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND = 8;
-const SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE = 60;
-const SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND = 32;
 const SCHOOL_ZOMBIE_KILLS_SQL = "CAST(COALESCE(CASE WHEN json_valid(extra_data) THEN json_extract(extra_data, '$.kills') END, 0) AS INTEGER)";
 const SCHOOL_ZOMBIE_PROFILE_PREFIX = 'szp_';
 const SCHOOL_ZOMBIE_PROFILE_SECRET_BYTES = 32;
@@ -961,39 +955,64 @@ function normalizeSchoolZombieRunProgress(event, session, previousState, now) {
     if (reachedStage !== expectedStage) {
         throw new Error('invalid school zombie stage for level');
     }
-    const elapsedSeconds = Math.max(0, Math.floor((now - Number(session.started_at)) / 1000));
-    const maxGameSeconds = elapsedSeconds * SCHOOL_ZOMBIE_MAX_GAME_SPEED;
-    // The client clock advances with the supported 1x / 1.5x / 2x speeds.
-    // Use the fastest supported speed as the ceiling, never a client-supplied multiplier.
-    if (Number.isFinite(survivedSeconds) && (survivedSeconds < 0 || survivedSeconds > maxGameSeconds + 10)) {
-        throw new Error('invalid school zombie survived time');
-    }
-    const maxKills = SCHOOL_ZOMBIE_RUN_PROGRESS_KILL_GRACE + maxGameSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_KILLS_PER_SECOND;
-    let verifiedRunCoins = Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, kills));
-    const maxCoinsByTime = SCHOOL_ZOMBIE_RUN_PROGRESS_COIN_GRACE + maxGameSeconds * SCHOOL_ZOMBIE_RUN_PROGRESS_MAX_COINS_PER_SECOND;
-    if (kills > maxKills || verifiedRunCoins > maxCoinsByTime) {
-        throw new Error('school zombie run progress exceeds allowed pace');
+    // Validate the wave/kill ledger, not browser or wall-clock duration. Speed,
+    // offline session delivery and tab suspension must not reject earned coins.
+    if (kills > SCHOOL_ZOMBIE_RUN_COIN_LIMIT || kills < getSchoolZombieMinKillsForLevel(level)) {
+        throw new Error('school zombie kills do not match wave progress');
     }
     const rewards = normalizeSchoolZombieRewardCounts(event, kills, level);
-    if (Number.isFinite(clientRunCoins) && clientRunCoins !== rewards.coins) {
+    let spentCoins = 0;
+    const rerolls = event.reroll_levels;
+    if (rerolls !== undefined) {
+        if (!Array.isArray(rerolls) || rerolls.length >= level) throw new Error('invalid school zombie reroll ledger');
+        let previousLevel = 1;
+        rerolls.forEach((wave, index) => {
+            if (!Number.isInteger(wave) || wave <= previousLevel || wave > level) throw new Error('invalid school zombie reroll wave');
+            spentCoins += 5 * (index + Math.floor((wave - 1) / 4) + 1);
+            previousLevel = wave;
+        });
+        const priorRerolls = previousState.reroll_levels || [];
+        if (priorRerolls.some((wave, index) => rerolls[index] !== wave)) throw new Error('school zombie reroll history changed');
+    } else if (Number.isFinite(clientRunCoins) && clientRunCoins < rewards.coins) {
+        // Older clients only sent the net balance. Accept deductions achievable
+        // by the fixed reroll costs and at most one reroll per cleared wave.
+        spentCoins = rewards.coins - clientRunCoins;
+        let possible = false;
+        for (let count = 1; count < level && 5 * count * (count + 1) / 2 <= spentCoins; count += 1) {
+            let minimum = 5 * count * (count + 1) / 2, maximum = minimum;
+            for (let i = 0; i < count; i += 1) {
+                minimum += 5 * Math.floor((i + 1) / 4);
+                maximum += 5 * Math.floor((level - i - 1) / 4);
+            }
+            if (spentCoins % 5 === 0 && spentCoins >= minimum && spentCoins <= maximum) { possible = true; break; }
+        }
+        if (!possible) throw new Error('school zombie run coins must match reward counts');
+    }
+    if (rewards.coins > SCHOOL_ZOMBIE_RUN_COIN_LIMIT) {
+        throw new Error('school zombie run rewards exceed coin limit');
+    }
+    const verifiedRunCoins = rewards.coins - spentCoins;
+    if (verifiedRunCoins < 0 || (Number.isFinite(clientRunCoins) && clientRunCoins !== verifiedRunCoins)) {
         throw new Error('school zombie run coins must match reward counts');
     }
-    verifiedRunCoins = Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, rewards.coins));
-    if (verifiedRunCoins > maxCoinsByTime) {
-        throw new Error('school zombie run rewards exceed allowed pace');
-    }
-    const previousCoins = Math.max(0, parseInteger(previousState.run_coins) || 0);
     const previousKills = Math.max(0, parseInteger(previousState.kills) || 0);
-    if (verifiedRunCoins < previousCoins || kills < previousKills) {
+    if (kills < previousKills || spentCoins < (previousState.reroll_spent || 0)) {
         throw new Error('school zombie run progress cannot decrease');
+    }
+    for (const reward of [1, 2, 3, 4]) {
+        if (rewards.counts[reward] < (parseInteger(previousState.reward_counts?.[reward]) || 0)) {
+            throw new Error('school zombie reward counts cannot decrease');
+        }
     }
     return {
         run_coins: verifiedRunCoins,
         reward_counts: rewards.counts,
+        reroll_levels: rerolls || null,
+        reroll_spent: spentCoins,
         kills,
         reached_stage: reachedStage,
         level,
-        survived_seconds: Number.isFinite(survivedSeconds) ? Math.max(0, survivedSeconds) : elapsedSeconds,
+        survived_seconds: Number.isFinite(survivedSeconds) ? Math.max(0, survivedSeconds) : 0,
         updated_at: now,
     };
 }
@@ -1624,9 +1643,12 @@ async function recordParkingScoreEvents(db, body) {
 }
 
 function getSchoolZombieMinKillsForClearedStage(stage) {
+    return getSchoolZombieMinKillsForLevel(stage * 4 + 1);
+}
+
+function getSchoolZombieMinKillsForLevel(nextLevel) {
     let total = 0;
-    const maxLevel = stage * 4;
-    for (let level = 1; level <= maxLevel; level += 1) {
+    for (let level = 1; level < nextLevel; level += 1) {
         const rawNeed = level === 1 ? 12 : 15 + level * 4.4;
         total += Math.max(4, Math.round(rawNeed / 2.4));
     }
@@ -1729,12 +1751,6 @@ async function recordSchoolZombieScoreEvents(db, body) {
     const projectedEventCount = Number(session.event_count) + events.length;
     if (projectedScore > SCHOOL_ZOMBIE_MAX_CLEAR_STAGE) {
         return jsonResponse({ error: 'school zombie score exceeds allowed maximum' }, 400);
-    }
-
-    const elapsedMs = now - Number(session.started_at);
-    const minElapsedMs = projectedScore * SCHOOL_ZOMBIE_MIN_MS_PER_STAGE / SCHOOL_ZOMBIE_MAX_GAME_SPEED;
-    if (elapsedMs < minElapsedMs) {
-        return jsonResponse({ error: 'school zombie stage clears are too fast' }, 429);
     }
 
     await db.prepare(
@@ -2268,72 +2284,59 @@ async function bankSchoolZombieRunCoins(db, body) {
     if (sessionProfileId && sessionProfileId !== auth.row.profile_id) {
         return jsonResponse({ error: 'score session belongs to another profile' }, 403);
     }
-    const storedRunCoins = parseInteger(sessionState.run_coins);
-    const earnedCoins = Number.isFinite(storedRunCoins)
-        ? Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, storedRunCoins))
-        : getSchoolZombieStageCoinReward(clearedStage);
     const existingClaim = await db.prepare(
         'SELECT profile_id, coins, cleared_stage FROM school_zombie_coin_claims WHERE session_id = ?'
     ).bind(sessionId).first();
+    if (existingClaim && existingClaim.profile_id !== auth.row.profile_id) {
+        return jsonResponse({ error: 'score session already claimed by another profile' }, 403);
+    }
     if (existingClaim) {
-        if (existingClaim.profile_id !== auth.row.profile_id) {
-            return jsonResponse({ error: 'score session already claimed by another profile' }, 403);
-        }
         const latest = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
-            .bind(auth.row.profile_id)
-            .first();
+            .bind(auth.row.profile_id).first();
         return jsonResponse(schoolZombieProfileResponse(latest, {
-            earned_coins: 0,
-            cleared_stage: Number(existingClaim.cleared_stage || 0),
-            run_coins: Number(existingClaim.coins || 0),
-            duplicate_claim: true,
+            earned_coins: 0, cleared_stage: Number(existingClaim.cleared_stage || 0),
+            run_coins: Number(existingClaim.coins || 0), duplicate_claim: true,
         }));
+    }
+    if (!sessionProfileId) {
+        return jsonResponse({ error: 'school zombie score session requires profile binding' }, 409);
     }
     const now = Date.now();
-    const claim = await db.prepare(`
-        INSERT OR IGNORE INTO school_zombie_coin_claims (session_id, profile_id, coins, cleared_stage, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    `).bind(sessionId, auth.row.profile_id, earnedCoins, clearedStage, now).run();
-    if (getMutationChangeCount(claim) <= 0) {
-        const latestClaim = await db.prepare(
-            'SELECT profile_id, coins, cleared_stage FROM school_zombie_coin_claims WHERE session_id = ?'
-        ).bind(sessionId).first();
-        if (latestClaim && latestClaim.profile_id !== auth.row.profile_id) {
-            return jsonResponse({ error: 'score session already claimed by another profile' }, 403);
-        }
-        const latest = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
-            .bind(auth.row.profile_id)
-            .first();
-        return jsonResponse(schoolZombieProfileResponse(latest, {
-            earned_coins: 0,
-            cleared_stage: Number(latestClaim?.cleared_stage || 0),
-            run_coins: Number(latestClaim?.coins || 0),
-            duplicate_claim: true,
-        }));
+    let nextState = sessionState;
+    if (body.event) {
+        if (body.event.type !== 'run_progress') return jsonResponse({ error: 'invalid reward event' }, 400);
+        try {
+            nextState = { ...sessionState, ...normalizeSchoolZombieRunProgress(body.event, session, sessionState, now) };
+        } catch (error) { return jsonResponse({ error: error.message }, 400); }
     }
-
-    if (!sessionProfileId) {
-        const nextSessionState = {
-            ...sessionState,
-            profile_id: auth.row.profile_id,
-        };
-        await db.prepare(
-            'UPDATE ranking_sessions SET state_json = ? WHERE session_id = ?'
-        ).bind(safeJsonStringify(nextSessionState), sessionId).run();
+    const storedRunCoins = parseInteger(nextState.run_coins);
+    if (!Number.isFinite(storedRunCoins)) {
+        return jsonResponse({ error: 'verified run rewards unavailable' }, 409);
     }
-    await db.prepare(`
-        UPDATE school_zombie_profiles
-        SET coins = coins + ?,
-            updated_at = ?
-        WHERE profile_id = ?
-    `).bind(earnedCoins, now, auth.row.profile_id).run();
+    const earnedCoins = Math.max(0, Math.min(SCHOOL_ZOMBIE_RUN_COIN_LIMIT, storedRunCoins));
+    // D1 batch is transactional. The conditional addition runs before the claim
+    // insert, so concurrent/retried claims add exactly once and failures roll back
+    // both the balance and the ledger. Never replace the existing coin balance.
+    const writes = await db.batch([
+        db.prepare(`UPDATE school_zombie_profiles SET coins = coins + ?, updated_at = ?
+            WHERE profile_id = ? AND NOT EXISTS
+                (SELECT 1 FROM school_zombie_coin_claims WHERE session_id = ?)`)
+            .bind(earnedCoins, now, auth.row.profile_id, sessionId),
+        db.prepare(`UPDATE ranking_sessions SET state_json = ? WHERE session_id = ?
+            AND NOT EXISTS (SELECT 1 FROM school_zombie_coin_claims WHERE session_id = ?)`)
+            .bind(safeJsonStringify(nextState), sessionId, sessionId),
+        db.prepare(`INSERT OR IGNORE INTO school_zombie_coin_claims
+            (session_id, profile_id, coins, cleared_stage, created_at) VALUES (?, ?, ?, ?, ?)`)
+            .bind(sessionId, auth.row.profile_id, earnedCoins, clearedStage, now),
+    ]);
+    const credited = getMutationChangeCount(writes[0]) > 0;
+    const savedClaim = await db.prepare('SELECT coins, cleared_stage FROM school_zombie_coin_claims WHERE session_id = ?')
+        .bind(sessionId).first();
     const updated = await db.prepare('SELECT * FROM school_zombie_profiles WHERE profile_id = ?')
-        .bind(auth.row.profile_id)
-        .first();
+        .bind(auth.row.profile_id).first();
     return jsonResponse(schoolZombieProfileResponse(updated, {
-        earned_coins: earnedCoins,
-        cleared_stage: clearedStage,
-        run_coins: earnedCoins,
+        earned_coins: credited ? earnedCoins : 0, cleared_stage: Number(savedClaim.cleared_stage),
+        run_coins: Number(savedClaim.coins), duplicate_claim: !credited,
     }));
 }
 
@@ -2665,4 +2668,4 @@ export default {
     },
 };
 
-export { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse };
+export { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins };

@@ -223,6 +223,7 @@
     "toast.resetFail": ["초기화 처리 실패", "Reset failed"],
     "toast.gained": ["획득 ${amount}", "Gained ${amount}"],
     "toast.rewardFail": ["보상 동기화 실패", "Reward sync failed"],
+    "toast.rewardQueued": ["보상 기록 보관 완료 · 자동 정산 대기", "Rewards kept · waiting to save"],
     "toast.reroll": ["리롤 -${cost}", "Reroll -${cost}"],
     "recruit.a.tag": ["석궁", "Crossbow"],
     "recruit.a.title": ["석궁 지원 합류", "Crossbow joins"],
@@ -410,6 +411,7 @@
     "over.wave": ["웨이브 {level} · 처치 {kills}", "Wave {level} · Kills {kills}"],
     "over.stage": ["클리어 St.{score} · 도달 St.{reached}", "Cleared St.{score} · Reached St.{reached}"],
     "over.coins": ["획득 ${earned} · 보유 ${held}", "Gained ${earned} · Held ${held}"],
+    "over.coinsPending": ["정산 대기 ${earned} · 보유 ${held}", "Pending ${earned} · Held ${held}"],
     "over.menu": ["메뉴", "Menu"],
     "over.a11y": ["방어선 붕괴. 웨이브 {level}, 처치 {kills}. 기록을 등록하거나 메뉴로 돌아갈 수 있습니다.", "Line down. Wave {level}, kills {kills}. Submit a record or return to menu."]
   };

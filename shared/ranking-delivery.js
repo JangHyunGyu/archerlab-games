@@ -2,6 +2,7 @@
     'use strict';
     if (global.ArcherRanking || typeof global.fetch !== 'function') return;
     var API = 'https://game-api.yama5993.workers.dev';
+    var BANK_RUN_PATH = '/school-zombie/profile/bank-run';
     var PREFIX = 'archer-ranking-outbox-v1:';
     var originalFetch = global.fetch.bind(global);
     var entries = new Map();
@@ -20,8 +21,18 @@
         global.crypto.getRandomValues(bytes);
         return Array.from(bytes, function (byte) { return byte.toString(16).padStart(2, '0'); }).join('');
     }
-    function pendingText() {
+    function pendingText(reward) {
         var language = String(global.document?.documentElement?.lang || 'ko').slice(0, 2);
+        if (reward) {
+            if (global.navigator?.onLine !== false) {
+                return language === 'en' ? 'Saving your rewards. Please wait a moment.'
+                    : language === 'ja' ? '報酬を保存しています。少々お待ちください。'
+                        : '보상을 정산하고 있어요. 잠시만 기다려 주세요.';
+            }
+            return language === 'en' ? 'Rewards kept. They will sync automatically when connected.'
+                : language === 'ja' ? '報酬の記録を保存しました。接続が戻ると自動で反映します。'
+                    : '보상 기록을 보관했어요. 연결되면 자동으로 정산합니다.';
+        }
         if (global.navigator?.onLine !== false) {
             return language === 'en' ? 'Saving your ranking. Please wait a moment.'
                 : language === 'ja' ? 'ランキングに登録しています。少々お待ちください。'
@@ -192,11 +203,16 @@
                             await putDatabase(entry, true);
                             try { global.localStorage.removeItem(key(entry)); } catch (_) {}
                             notify(entry);
-                            if (entry.path === '/rankings' && typeof global.CustomEvent === 'function') {
+                        if (entry.path === '/rankings' && typeof global.CustomEvent === 'function') {
                                 global.dispatchEvent(new global.CustomEvent('archer-ranking-saved', { detail: {
                                     game_id: entry.gameId, request_id: entry.id, data: entry.data,
-                                } }));
-                            }
+                            } }));
+                        }
+                        if (entry.path === BANK_RUN_PATH && typeof global.CustomEvent === 'function') {
+                            global.dispatchEvent(new global.CustomEvent('archer-reward-saved', { detail: {
+                                game_id: entry.gameId, session_id: entry.sessionId, data: entry.data,
+                            } }));
+                        }
                             // Completed receipts do not need profile secrets or large event
                             // snapshots. Bound history while retaining recent retry receipts.
                             entry.body = null;
@@ -235,10 +251,10 @@
         }
         if (Array.from(entries.values()).some(function (entry) { return entry.state === 'pending'; })) schedule(2500);
     }
-    async function submit(body) {
+    async function durableMutation(path, body, prefix) {
         var sessionId = body.session_id || sessions.get(body.game_id);
         if (!sessionId) throw new Error('ranking session unavailable');
-        var entry = enqueue('/rankings', Object.assign({}, body, { session_id: sessionId }), sessionId, 'submit_' + sessionId);
+        var entry = enqueue(path, Object.assign({}, body, { session_id: sessionId }), sessionId, prefix + sessionId);
         dismissed = false;
         renderStatus();
         await entry.durable;
@@ -251,6 +267,8 @@
         if (!entry.localSaved && !entry.accepted) throw new Error('기록을 보관하지 못했습니다. 이 화면을 닫지 말고 다시 시도해 주세요.');
         return { pending: true, accepted: entry.accepted, request_id: entry.id, player_name: body.player_name, score: body.score };
     }
+    function submit(body) { return durableMutation('/rankings', body, 'submit_'); }
+    function bankRun(body) { return durableMutation(BANK_RUN_PATH, body, 'bank_'); }
     async function deliveryFetch(url, options) {
         var path;
         try {
@@ -258,10 +276,15 @@
             if (parsed.origin !== API) return originalFetch(url, options);
             path = parsed.pathname;
         } catch (_) { return originalFetch(url, options); }
-        if (!options || options.method !== 'POST' || !['/score-sessions', '/score-events', '/rankings'].includes(path)) {
+        if (!options || options.method !== 'POST' || !['/score-sessions', '/score-events', '/rankings', BANK_RUN_PATH].includes(path)) {
             return originalFetch(url, options);
         }
         var body = JSON.parse(options.body);
+        if (path === BANK_RUN_PATH) {
+            body.game_id = body.game_id || 'school-zombie-defense';
+            var result = await bankRun(body);
+            return new Response(JSON.stringify(result), { status: result.pending ? 202 : 200, headers: { 'Content-Type': 'application/json' } });
+        }
         if (path === '/rankings') {
             var data = await submit(body);
             return new Response(JSON.stringify(data), { status: data.pending ? 202 : 200, headers: { 'Content-Type': 'application/json' } });
@@ -289,19 +312,19 @@
         if (!document || !document.body) return;
         var language = String(document.documentElement?.lang || 'ko').slice(0, 2);
         var copy = language === 'en' ? {
-            label: 'Ranking save status', close: 'Dismiss notice. Your record will keep syncing.',
+            label: 'Record save status', close: 'Dismiss notice. Your record will keep syncing.',
             unsafe: 'This record could not be stored. Please keep this page open.',
             review: 'Your record is retained and waiting for score verification.',
         } : language === 'ja' ? {
-            label: 'ランキング保存状況', close: '通知を閉じる。記録の送信は継続します。',
+            label: '記録の保存状況', close: '通知を閉じる。記録の送信は継続します。',
             unsafe: '記録を保存できませんでした。この画面を閉じないでください。',
             review: '記録を保存しました。スコアの確認を待っています。',
         } : {
-            label: '랭킹 저장 상태', close: '알림 닫기. 기록은 계속 저장됩니다',
+            label: '기록 저장 상태', close: '알림 닫기. 기록은 계속 저장됩니다',
             unsafe: '기록을 보관하지 못했습니다. 이 화면을 닫지 말아 주세요.',
             review: '기록을 보관했습니다. 점수 확인이 필요해 랭킹 반영을 기다리고 있습니다.',
         };
-        var submissions = Array.from(entries.values()).filter(function (entry) { return entry.path === '/rankings'; });
+        var submissions = Array.from(entries.values()).filter(function (entry) { return entry.path === '/rankings' || entry.path === BANK_RUN_PATH; });
         var pending = submissions.filter(function (entry) { return entry.state !== 'done'; });
         var element = document.getElementById('ranking-delivery-status');
         if (!pending.length || dismissed) { if (element) element.remove(); return; }
@@ -325,14 +348,18 @@
         var review = pending.some(function (entry) {
             return Array.from(entries.values()).some(function (item) { return item.sessionId === entry.sessionId && item.state === 'review'; });
         });
-        element.firstChild.textContent = unsafe ? copy.unsafe : review ? copy.review : pendingText();
+        var rewardOnly = pending.every(function (entry) { return entry.path === BANK_RUN_PATH; });
+        var reviewText = rewardOnly ? (language === 'en' ? 'Reward record kept. It needs verification before saving.'
+            : language === 'ja' ? '報酬の記録を保存しました。反映には記録の確認が必要です。'
+                : '보상 기록을 보관했습니다. 정산하려면 기록 확인이 필요합니다.') : copy.review;
+        element.firstChild.textContent = unsafe ? copy.unsafe : review ? reviewText : pendingText(rewardOnly);
     }
-    global.ArcherRanking = Object.freeze({ track: track, submit: submit, fetch: deliveryFetch, pendingText: pendingText,
+    global.ArcherRanking = Object.freeze({ track: track, submit: submit, bankRun: bankRun, fetch: deliveryFetch, pendingText: pendingText,
         sessionId: function (gameId) { return sessions.get(gameId) || null; },
         flush: pump,
         pending: function () { return Array.from(entries.values()).filter(function (entry) { return entry.state !== 'done'; }).map(clone); },
     });
-    // Only the three game ranking mutation URLs are intercepted. Existing game
+    // Ranking mutations and the zombie reward claim are intercepted. Existing game
     // modules keep their response API; unrelated requests are passed through.
     global.fetch = deliveryFetch;
     if (global.addEventListener) {

@@ -40,15 +40,17 @@ function d1() {
     async batch(statements) {
       if (db.offline) throw new Error('DB offline');
       sql.exec('BEGIN');
+      const results = [];
       try {
         for (let i = 0; i < statements.length; i++) {
           if (i === db.failStatement) throw new Error('injected mid-transaction failure');
-          const s = statements[i]; sql.prepare(s.query).run(...s.values);
+          const s = statements[i]; const result = sql.prepare(s.query).run(...s.values);
+          results.push({ success: true, meta: { changes: Number(result.changes) } });
         }
         sql.exec('COMMIT');
       } catch (error) { sql.exec('ROLLBACK'); throw error; }
       if (db.loseResponse) { db.loseResponse = false; throw new Error('committed but response lost'); }
-      return statements.map(() => ({ success: true }));
+      return results;
     },
   };
   return db;

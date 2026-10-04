@@ -147,8 +147,9 @@ test('school zombie: 1.5x and 2x clocks register immediately after reward progre
 
 test('school zombie: invalid optional reward progress cannot block an already verified ranking', async () => {
   const f = await zombieRun();
-  const result = await f.accept([f.progress(99999), f.ranking(1)]);
-  assert.equal(result[0].state, 'review', 'impossible gameplay time stays rejected');
+  const invalid = f.progress(120); invalid.body.event.run_coins = 99999;
+  const result = await f.accept([invalid, f.ranking(1)]);
+  assert.equal(result[0].state, 'review', 'reward amount inconsistent with kills stays rejected');
   assert.equal(result[1].state, 'done', 'stage score remains independently verified');
   assert.equal(f.db.sql.prepare('SELECT score FROM rankings').get().score, 1);
 });
@@ -189,11 +190,94 @@ test('school zombie: alarm recovers an old clock rejection and its blocked stage
   assert.equal(f.durable.alarmAt,null);
 });
 
-test('school zombie: stage pace accounts for 2x speed but rejects impossible clears', async () => {
+test('school zombie: stage validation uses sequence and kills instead of elapsed time', async () => {
   const f=await zombieRun();
-  f.db.sql.exec('UPDATE ranking_sessions SET started_at='+ (Date.now()-14000));
+  f.db.sql.exec('UPDATE ranking_sessions SET started_at='+ Date.now());
   const stage=f.command('/score-events',{...f.auth,event:{type:'stage_clear',cleared_stage:2,reached_stage:3,level:9,kills:200}});
   assert.equal((await f.accept([stage]))[0].state,'done');
-  const fast=f.command('/score-events',{...f.auth,event:{type:'stage_clear',cleared_stage:3,reached_stage:4,level:13,kills:400}});
-  assert.equal((await f.accept([fast]))[0].state,'pending','below 6 wall-clock seconds per stage remains rejected');
+  const invalid=f.command('/score-events',{...f.auth,event:{type:'stage_clear',cleared_stage:3,reached_stage:4,level:13,kills:0}});
+  assert.equal((await f.accept([invalid]))[0].state,'review','missing kill evidence is rejected regardless of time');
+});
+
+const bankPath = '/school-zombie/profile/bank-run';
+const netReward = () => ({ type:'run_progress',run_coins:55,reward_counts:{1:50,2:10,3:0,4:0},
+  reroll_levels:[2,3],kills:60,reached_stage:2,level:5,survived_seconds:999999 });
+async function fundedRun() {
+  const f=await zombieRun();
+  f.db.sql.exec('UPDATE school_zombie_profiles SET coins=100');
+  f.db.sql.exec('UPDATE ranking_sessions SET started_at='+Date.now());
+  return f;
+}
+
+test('zombie coins: existing 100 plus 70 rewards minus 15 rerolls equals 155, exactly once', async()=>{
+  const f=await fundedRun();const bank=f.command(bankPath,{...f.auth,event:netReward()});
+  const result=(await f.accept([bank]))[0];assert.equal(result.state,'done');
+  assert.equal(result.data.earned_coins,55);assert.equal(result.data.profile.coins,155);
+  await Promise.all([f.accept([bank]),f.accept([f.command(bankPath,{...f.auth,event:netReward()})])]);
+  assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,155);
+  assert.equal(f.db.sql.prepare('SELECT COUNT(*) AS n FROM school_zombie_coin_claims').get().n,1);
+});
+
+test('zombie coins: each mid-transaction failure rolls back wallet, claim and final ledger',async()=>{
+  for(const fail of [0,1,2]) {
+    const f=await fundedRun();const bank=f.command(bankPath,{...f.auth,event:netReward()});
+    f.db.failStatement=fail;assert.equal((await f.accept([bank]))[0].state,'pending');
+    assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,100);
+    assert.equal(f.db.sql.prepare('SELECT COUNT(*) AS n FROM school_zombie_coin_claims').get().n,0);
+    assert.equal(JSON.parse(f.db.sql.prepare('SELECT state_json FROM ranking_sessions').get().state_json).run_coins,undefined);
+    f.db.failStatement=-1;f.expireRetry();await f.mailbox.alarm();
+    assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,155);
+  }
+});
+
+test('zombie coins: lost commit response and object restart never lose or double rewards',async()=>{
+  const f=await fundedRun();const bank=f.command(bankPath,{...f.auth,event:netReward()});
+  f.db.loseResponse=true;assert.equal((await f.accept([bank]))[0].state,'pending');
+  assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,155);
+  f.expireRetry();await new server.RankingDelivery({storage:f.durable},{DB:f.db}).alarm();
+  assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,155);
+  assert.equal(f.durable.sql.exec('SELECT state FROM jobs WHERE id=?',bank.id).toArray()[0].state,'done');
+});
+
+test('zombie coins: simultaneous distinct runs add to the same profile rather than replacing its balance',async()=>{
+  const f=await fundedRun();const b=fixture('school-zombie-defense');
+  const mailbox=new server.RankingDelivery({storage:b.durable},{DB:f.db});
+  const accept=commands=>mailbox.accept(b.session,'school-zombie-defense',commands,{});
+  await accept([b.command('/score-sessions',f.auth)]);
+  const early={type:'run_progress',run_coins:4,reward_counts:{1:4,2:0,3:0,4:0},reroll_levels:[],kills:4,level:1,reached_stage:1};
+  await Promise.all([f.accept([f.command(bankPath,{...f.auth,event:netReward()})]),accept([b.command(bankPath,{...f.auth,event:early})])]);
+  assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,159);
+});
+
+test('zombie coins: invalid reward/reroll/wave evidence and wrong profile cannot credit money',async()=>{
+  for(const change of [e=>e.run_coins=9999,e=>e.reroll_levels=[2,2],e=>e.level=1,e=>e.reward_counts[1]=49]) {
+    const f=await fundedRun();const event=netReward();change(event);
+    assert.equal((await f.accept([f.command(bankPath,{...f.auth,event})]))[0].state,'review');
+    assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,100);
+  }
+  const f=await fundedRun();const profile=await (await server.api.fetch(new Request('https://api/school-zombie/profile',{method:'POST',body:'{}'}),{DB:f.db})).json();
+  const wrong={profile_id:profile.profile_id,profile_secret:profile.profile_secret};
+  assert.equal((await f.accept([f.command(bankPath,{...wrong,event:netReward()})]))[0].status,403);
+});
+
+test('zombie coins: legacy net balances accept only deductions possible under reroll prices',async()=>{
+  for(const [coins,state] of [[55,'done'],[56,'review']]) {
+    const f=await fundedRun();const event=netReward();delete event.reroll_levels;event.run_coins=coins;
+    assert.equal((await f.accept([f.command(bankPath,{...f.auth,event})]))[0].state,state);
+  }
+});
+
+test('zombie coins: invalid optional bank does not block independently verified ranking',async()=>{
+  const f=await fundedRun();const event=netReward();event.run_coins=9999;
+  const result=await f.accept([f.command(bankPath,{...f.auth,event}),f.ranking(1)]);
+  assert.equal(result[0].state,'review');assert.equal(result[1].state,'done');
+  assert.equal(f.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,100);
+});
+
+test('zombie coins: final net may decrease after a priced reroll; new-stage surcharge is retained',async()=>{
+  const f=await fundedRun();const gross=netReward();gross.reroll_levels=[];gross.run_coins=70;
+  assert.equal((await f.accept([f.command('/score-events',{...f.auth,event:gross})]))[0].state,'done');
+  const net=netReward();net.reroll_levels=[2,5];net.run_coins=50;
+  const result=(await f.accept([f.command(bankPath,{...f.auth,event:net})]))[0];
+  assert.equal(result.state,'done');assert.equal(result.data.profile.coins,150);
 });

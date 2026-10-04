@@ -161,3 +161,56 @@ test('submission arriving during an in-flight score batch is confirmed in the sa
   const result=await c.ranking.submit({game_id:'lumen-shift',session_id:session,player_name:'Concurrent submit',score:100});
   await flushing; assert.equal(result.success,true); assert.equal(c.ranking.pending().length,0);
 });
+
+async function zombieWallet(e,c) {
+  const profile=await (await e.network.fetch(API+'/school-zombie/profile',{method:'POST',body:'{}'})).json();
+  const auth={profile_id:profile.profile_id,profile_secret:profile.profile_secret};
+  const waiting=c.window.fetch(API+'/score-sessions',{method:'POST',body:JSON.stringify({game_id:'school-zombie-defense',...auth})});
+  await c.ranking.flush();const session_id=(await (await waiting).json()).session_id;
+  e.db.sql.exec('UPDATE school_zombie_profiles SET coins=100');
+  return {game_id:'school-zombie-defense',session_id,...auth,event:{type:'run_progress',run_coins:0,reward_counts:{1:5,2:0,3:0,4:0},reroll_levels:[2],kills:5,level:2,reached_stage:1,survived_seconds:300}};
+}
+
+test('reward client: offline final net snapshot survives reset, reload and missing ranking submission',async()=>{
+  const e=environment();const c=client(e.network);const body=await zombieWallet(e,c);
+  body.event.run_coins=4;body.event.reward_counts[1]=9;body.event.kills=9;
+  e.network.offline=true;const result=await c.ranking.bankRun(body);
+  assert.equal(result.pending,true);assert.equal(c.local.length,1);
+  body.event.run_coins=0;body.event.kills=0; // A new run cannot overwrite the stored final snapshot.
+  const reopened=client(e.network,c.local);await turn();e.network.offline=false;await reopened.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,104);
+  assert.equal(c.local.length,0);assert.equal(e.db.sql.prepare('SELECT COUNT(*) AS n FROM rankings').get().n,0);
+});
+
+test('reward client: server retains an outage claim and completes it after browser closure',async()=>{
+  const e=environment();const c=client(e.network);const body=await zombieWallet(e,c);
+  body.event.run_coins=4;body.event.reward_counts[1]=9;body.event.kills=9;
+  e.db.offline=true;assert.equal((await c.ranking.bankRun(body)).accepted,true);
+  e.db.offline=false;
+  for(const box of e.mailboxes.values()){box.ctx.storage.sql.exec("UPDATE jobs SET next_at=0 WHERE state='pending'");await box.alarm();}
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,104);
+});
+
+test('reward client: lost acknowledgement retries one net credit; zero remaining coins still settle',async()=>{
+  for(const remainder of [0,4]) {
+    const e=environment();const c=client(e.network);const body=await zombieWallet(e,c);
+    body.event.run_coins=remainder;body.event.reward_counts[1]=5+remainder;body.event.kills=5+remainder;
+    e.network.loseResponse=true;assert.equal((await c.ranking.bankRun(body)).pending,true);
+    await c.ranking.flush();assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,100+remainder);
+    assert.equal(c.ranking.pending().length,0);
+  }
+});
+
+test('reward client: IndexedDB retains coins when localStorage is full',async()=>{
+  const e=environment();const indexed=indexedStorage();const c=client(e.network,browserStorage(true),indexed);const body=await zombieWallet(e,c);
+  body.event.run_coins=4;body.event.reward_counts[1]=9;body.event.kills=9;
+  e.network.offline=true;assert.equal((await c.ranking.bankRun(body)).pending,true);
+  const reopened=client(e.network,browserStorage(true),indexed);await turn();e.network.offline=false;await reopened.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,104);
+});
+
+test('reward client: no network and no storage cannot report a safely retained reward',async()=>{
+  const e=environment();const c=client(e.network,browserStorage(true));const body=await zombieWallet(e,c);
+  e.network.offline=true;await assert.rejects(c.ranking.bankRun(body));
+  assert.equal(e.db.sql.prepare('SELECT COUNT(*) AS n FROM school_zombie_coin_claims').get().n,0);
+});

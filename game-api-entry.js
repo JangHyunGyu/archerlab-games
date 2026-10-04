@@ -1,9 +1,10 @@
 import { waterSortRoute } from './water-sort-src/worker/route.ts';
 import { cleanupStaleRuns } from './water-sort-src/worker/cleanup.ts';
 import { DurableObject } from 'cloudflare:workers';
-import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse } from './game-api-worker.js';
+import api, { initDB, createScoreSession, recordScoreEvents, submitRanking, getProtectedGameKind, jsonResponse, bankSchoolZombieRunCoins } from './game-api-worker.js';
 
-const PATHS = new Set(['/score-sessions', '/score-events', '/rankings']);
+const BANK_RUN_PATH = '/school-zombie/profile/bank-run';
+const PATHS = new Set(['/score-sessions', '/score-events', '/rankings', BANK_RUN_PATH]);
 const ID = /^[a-zA-Z0-9_-]{16,100}$/;
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -35,6 +36,12 @@ async function rankingPosition(db, body) {
 // D1 commits the game mutation and its receipt together. A crash after commit
 // but before the Durable Object/browser receives the response cannot add points twice.
 export async function executeRankingCommand(db, command, sessionId, requestMeta = {}) {
+    if (command.path === BANK_RUN_PATH) {
+        // The session claim ledger and additive balance write share their own D1
+        // transaction. It also deduplicates legacy requests with different IDs.
+        const response = await bankSchoolZombieRunCoins(db, { ...command.body, session_id: sessionId });
+        return { status: response.status, data: await response.json() };
+    }
     const existing = await db.prepare('SELECT payload_hash, response_json FROM ranking_delivery_receipts WHERE request_id = ?')
         .bind(command.id).first();
     if (existing) {
@@ -150,10 +157,11 @@ export class RankingDelivery extends DurableObject {
                     AND (j.predecessor IS NULL OR EXISTS
                         (SELECT 1 FROM jobs p WHERE p.id = j.predecessor AND (p.state = 'done'
                             OR (j.path = '/rankings' AND j.game_id = 'school-zombie-defense'
-                                AND p.state = 'review' AND p.path = '/score-events'
+                                AND p.state = 'review' AND (p.path = '/school-zombie/profile/bank-run'
+                                OR (p.path = '/score-events'
                                 AND json_array_length(COALESCE(json_extract(p.payload, '$.events'), json_array(json_extract(p.payload, '$.event')))) > 0
                                 AND NOT EXISTS (SELECT 1 FROM json_each(COALESCE(json_extract(p.payload, '$.events'), json_array(json_extract(p.payload, '$.event'))))
-                                    WHERE COALESCE(json_extract(value, '$.type'), '') != 'run_progress')))))
+                                    WHERE COALESCE(json_extract(value, '$.type'), '') != 'run_progress')))))))
                     ORDER BY j.created_at, j.rowid LIMIT 1`, Date.now()).toArray()[0];
                 if (!row) break;
                 let result;
@@ -179,6 +187,7 @@ export class RankingDelivery extends DurableObject {
                         last_error = NULL WHERE id = ?`, JSON.stringify(result.data), row.id);
                 } else {
                     const retryable = result.status >= 500 || [404, 408, 425, 429].includes(result.status)
+                        || (row.path === BANK_RUN_PATH && result.data.error === 'verified run rewards unavailable')
                         || /sequence|does not match verified score/.test(result.data.error || '');
                     const delay = Math.min(300000, 1000 * 2 ** Math.min(row.attempts, 8));
                     this.ctx.storage.sql.exec(`UPDATE jobs SET state = ?, attempts = attempts + 1,
@@ -239,12 +248,13 @@ export default {
             const sessionId = legacy
                 ? (path === '/score-sessions' ? crypto.randomUUID() : String(body.session_id || body.extra_data?.session_id || body.extra?.session_id || ''))
                 : body.session_id;
-            const gameId = body.game_id;
-            const commands = legacy ? [{ id: crypto.randomUUID(), path, body }] : body.commands;
+            const gameId = body.game_id || (path === BANK_RUN_PATH ? 'school-zombie-defense' : null);
+            const commands = legacy ? [{ id: crypto.randomUUID(), path, body: { ...body, game_id: gameId } }] : body.commands;
             if (!ID.test(sessionId) || !getProtectedGameKind(gameId) || !Array.isArray(commands)
                 || !commands.length || commands.length > 20) return jsonResponse({ error: 'invalid delivery envelope' }, 400);
             for (const command of commands) {
                 if (!ID.test(command.id) || !PATHS.has(command.path) || !command.body || command.body.game_id !== gameId
+                    || (command.path === BANK_RUN_PATH && gameId !== 'school-zombie-defense')
                     || (command.after && (!ID.test(command.after) || command.after === command.id))
                     || (command.body.session_id && command.body.session_id !== sessionId)) {
                     return jsonResponse({ error: 'invalid delivery command' }, 400);

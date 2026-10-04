@@ -2328,6 +2328,9 @@
       this.rewardCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
       this.meta = loadMetaSave();
       this.runCoinsBanked = false;
+      this.runCoinsQueued = false;
+      this.runCoinBankPromise = null;
+      this.runRerollLevels = [];
       this.lastRankableRun = null;
       this.rankRequestId = 0;
       this.rankSessionId = null;
@@ -2400,6 +2403,24 @@
         }
       };
       window.addEventListener("archer-ranking-saved", this.boundHandleRankingSaved);
+      this.boundHandleRewardSaved = (event) => {
+        if (this.disposed || event.detail?.data?.profile_id !== this.profileAuth?.profile_id) return;
+        if (event.detail.session_id === (this.rankSessionId || window.ArcherRanking?.sessionId(RANK_GAME_ID))) {
+          this.runCoinsBanked = true;
+          this.runCoinsQueued = false;
+        }
+        // Read the latest wallet instead of applying an old delivery receipt over
+        // coins earned/spent in another run or tab.
+        this.ensureServerProfile({ force: true, quiet: true, allowOffline: false }).then(() => {
+          if (this.disposed) return;
+          if (this.menuCoinsText?.active) this.menuCoinsText.setText(`$${this.meta.coins}`);
+          if (this.gameOverCoinsText?.active && this.runCoinsBanked) {
+            this.gameOverCoinsText.setText(SchoolI18n.t("over.coins", { earned: this.coins, held: this.meta.coins }));
+          }
+          this.shopUI?.refresh();
+        }).catch(() => {});
+      };
+      window.addEventListener("archer-reward-saved", this.boundHandleRewardSaved);
       this.drawBackground();
       this.createCharacters();
       this.createHud();
@@ -3770,6 +3791,8 @@
       this.boundHandleVisibilityChange = null;
       window.removeEventListener("archer-ranking-saved", this.boundHandleRankingSaved);
       this.boundHandleRankingSaved = null;
+      window.removeEventListener("archer-reward-saved", this.boundHandleRewardSaved);
+      this.boundHandleRewardSaved = null;
       this.gamepadButtons.clear();
       this.clearOverlay();
       this.clearTransientObjects();
@@ -4849,6 +4872,19 @@
       return true;
     }
 
+    createRankRunProgressEvent() {
+      return {
+        type: "run_progress",
+        run_coins: Math.max(0, Math.floor(Number(this.coins) || 0)),
+        reward_counts: { ...this.rewardCounts },
+        reroll_levels: [...this.runRerollLevels],
+        kills: Math.max(0, Math.floor(Number(this.kills) || 0)),
+        reached_stage: Math.max(1, Math.floor(Number(this.stage) || 1)),
+        level: Math.max(1, Math.floor(Number(this.level) || 1)),
+        survived_seconds: Math.max(0, Math.floor(Number(this.elapsed) || 0))
+      };
+    }
+
     async recordRankRunProgress() {
       const sessionId = this.rankSessionId || window.ArcherRanking?.sessionId(RANK_GAME_ID) || await this.ensureRankSession();
       if (!sessionId || this.disposed) {
@@ -4862,15 +4898,7 @@
           session_id: sessionId,
           profile_id: this.profileAuth?.profile_id,
           profile_secret: this.profileAuth?.profile_secret,
-          event: {
-            type: "run_progress",
-            run_coins: Math.max(0, Math.floor(Number(this.coins) || 0)),
-            reward_counts: { ...this.rewardCounts },
-            kills: Math.max(0, Math.floor(Number(this.kills) || 0)),
-            reached_stage: Math.max(1, Math.floor(Number(this.stage) || 1)),
-            level: Math.max(1, Math.floor(Number(this.level) || 1)),
-            survived_seconds: Math.max(0, Math.floor(Number(this.elapsed) || 0))
-          }
+          event: this.createRankRunProgressEvent()
         })
       }, this.rankFetchControllers);
       if (!response.ok) {
@@ -5528,6 +5556,7 @@
         stroke: "#050607",
         strokeThickness: 1
       }).setOrigin(1, 0.5).setDepth(527);
+      this.menuCoinsText = creditValue;
       items.push(creditLabel, creditValue);
 
       const startButton = this.addTacticalMenuButton(270, 790, 410, 86, SchoolI18n.t("menu.deploy"), 530, () => this.startRun(), 0xf15a47, {
@@ -5866,33 +5895,45 @@
       }
     }
 
-    async bankRunCoins() {
-      if (this.runCoinsBanked) {
-        return 0;
-      }
-      try {
-        await this.ensureServerProfile();
-        const progressSynced = await this.recordRankRunProgress().catch((error) => {
-          console.warn("[SchoolZombie] run coin sync failed:", error.message);
-          return false;
-        });
-        if (!progressSynced) {
+    bankRunCoins() {
+      if (this.runCoinsBanked) return Promise.resolve(0);
+      if (this.runCoinBankPromise) return this.runCoinBankPromise;
+      // Capture before waiting: reset/menu/new-run actions must not replace this
+      // run's final ledger. Durable delivery persists it before returning pending.
+      const sessionId = this.rankSessionId || window.ArcherRanking?.sessionId(RANK_GAME_ID);
+      const syncToken = this.rankSyncToken;
+      const auth = this.profileAuth || loadProfileAuth();
+      const event = this.createRankRunProgressEvent();
+      const task = (async () => {
+        try {
+          if (!sessionId || !auth) throw new Error("reward session unavailable");
+          const body = { ...auth, game_id: RANK_GAME_ID, session_id: sessionId, event };
+          const result = window.ArcherRanking?.bankRun
+            ? await window.ArcherRanking.bankRun(body)
+            : await this.postProfileAction("/school-zombie/profile/bank-run", body);
+          if (result.pending) {
+            if (this.rankSyncToken === syncToken) this.runCoinsQueued = true;
+            this.showToast(SchoolI18n.t("toast.rewardQueued"), COLORS.gold);
+            return 0;
+          }
+          if (!this.disposed && result.profile_id === this.profileAuth?.profile_id) {
+            if (this.rankSyncToken === syncToken) {
+              this.runCoinsBanked = true;
+              this.runCoinsQueued = false;
+            }
+            this.applyServerProfile(result);
+          }
+          return Math.max(0, Math.floor(Number(result.run_coins ?? result.earned_coins) || 0));
+        } catch (error) {
+          this.playSfx("core", 0.65);
+          this.showToast(SchoolI18n.t("toast.rewardFail"), COLORS.red);
           return 0;
         }
-        await this.ensureRankStagesRecorded().catch(() => false);
-        if (!this.rankSessionId) {
-          return 0;
-        }
-        const result = await this.postProfileAction("/school-zombie/profile/bank-run", {
-          session_id: this.rankSessionId
-        });
-        this.runCoinsBanked = true;
-        return Math.max(0, Math.floor(Number(result.earned_coins) || 0));
-      } catch (error) {
-        this.playSfx("core", 0.65);
-        this.showToast(SchoolI18n.t("toast.rewardFail"), COLORS.red);
-        return 0;
-      }
+      })();
+      this.runCoinBankPromise = task;
+      return task.finally(() => {
+        if (this.runCoinBankPromise === task) this.runCoinBankPromise = null;
+      });
     }
 
     applyMetaUpgrades() {
@@ -5996,6 +6037,9 @@
       this.coins = 0;
       this.rewardCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
       this.runCoinsBanked = false;
+      this.runCoinsQueued = false;
+      this.runCoinBankPromise = null;
+      this.runRerollLevels = [];
       this.shield = 0;
       this.damage = getTeamDamageForLevel(this.level);
       this.playerFireTimer = 0;
@@ -9720,6 +9764,7 @@
       const previousSignature = this.currentSkillChoiceSignature;
       this.coins = Math.max(0, Math.floor(Number(this.coins) || 0) - cost);
       this.skillRerollsThisRun = Math.max(0, Math.floor(Number(this.skillRerollsThisRun) || 0)) + 1;
+      this.runRerollLevels.push(this.level);
       this.skillRerollUsed = true;
       this.playSfx("button", 0.85);
       this.renderSkillChoiceCards(previousSignature);
@@ -10929,7 +10974,7 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544);
-      const summaryCoins = this.add.text(270, 216, SchoolI18n.t("over.coins", { earned: earnedCoins, held: this.meta.coins }), {
+      const summaryCoins = this.add.text(270, 216, SchoolI18n.t(this.runCoinsQueued ? "over.coinsPending" : "over.coins", { earned: this.runCoinsQueued ? this.coins : earnedCoins, held: this.meta.coins }), {
         resolution: 2, fontFamily: "Arial, sans-serif",
         fontSize: 18,
         fontStyle: "900",
@@ -10937,6 +10982,7 @@
         stroke: "#050607",
         strokeThickness: 4
       }).setOrigin(0.5).setDepth(544);
+      this.gameOverCoinsText = summaryCoins;
       const summaryObjects = [summaryPanel, summaryLine, summaryTitle, summaryWave, summaryStage, summaryCoins];
       items.push(...summaryObjects);
       this.animateOverlayEntrance(summaryObjects, 60, 20, 420);
