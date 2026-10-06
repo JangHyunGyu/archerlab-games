@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { challengeApi } from '../worker/challenge-api.ts';
-import { solve } from '../lib/game.ts';
+import { solve, pour } from '../lib/game.ts';
+import { pourDuration, POUR_PACE } from '../lib/challenge-rules.ts';
+import { pourVerdict } from '../lib/pour-timing.ts';
 import { readFileSync } from 'node:fs';
 import { invalidateLeaderboard } from '../worker/leaderboard-cache.ts';
 
@@ -358,5 +360,103 @@ test('zero-clear results remain rankable and corrupted high scores cannot be reg
     }
     const ranks = await challengeApi(new Request('https://game.test/api/challenge'), db);
     assert.equal((await ranks.json()).rows.length, 1);
+  } finally { Date.now = originalNow; db.database.close(); }
+});
+
+// Plays real stages through the Worker the way the client paces them: a pour is sent only after the
+// server's bottle locks and the client's own animation of those bottles end, plus jittered latency,
+// with a thinking pause at least every five pours (the queue limit). `legacyRun` strips the stamped
+// pace to reproduce a run saved by the previous worker; `legacyClient` plays the old, longer animation.
+async function playRun({ legacyRun, legacyClient, stages = 3 }) {
+  const db = new TestDatabase(), originalNow = Date.now;
+  let now = 1800000000000; Date.now = () => now;
+  let seed = legacyRun ? 7 : 11;
+  const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  const between = (low, high) => Math.round(low + random() * (high - low));
+  const send = async body => {
+    const response = await challengeApi(new Request('https://game.test/api/challenge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), db);
+    return { status: response.status, ...await response.json() };
+  };
+  try {
+    const started = await send({ type: 'start' }); let run = started.run;
+    const auth = { id: run.id, token: started.token };
+    assert.equal(run.pace, POUR_PACE, 'the new worker stamps every new run');
+    if (legacyRun) {
+      const data = JSON.parse(db.database.prepare('SELECT data FROM water_sort_runs WHERE id = ?').get(auth.id).data);
+      delete data.pace;
+      db.database.prepare('UPDATE water_sort_runs SET data = ? WHERE id = ?').run(JSON.stringify(data), auth.id);
+      run = (await send({ type: 'sync', ...auth })).run;
+      assert.equal(run.pace, undefined);
+    }
+    const lockPace = legacyRun ? undefined : POUR_PACE, animationPace = legacyClient ? undefined : run.pace;
+    const locks = [];
+    for (let stage = 1; stage <= stages; stage++) {
+      assert.equal(run.level, stage); assert.equal(run.status, 'playing');
+      const animationEnd = run.board.map(() => now);
+      now += between(700, 1800); // Look at the new board.
+      let sinceThink = 0;
+      for (const [from, to] of solve(run.board)) {
+        if (sinceThink === 5) { now += between(400, 1600); sinceThink = 0; }
+        const ready = Math.max(run.bottleAvailableAt[from], run.bottleAvailableAt[to], animationEnd[from], animationEnd[to]);
+        now = Math.max(now + between(20, 70), ready + between(25, 90));
+        const amount = pour(run.board, from, to)[to].length - run.board[to].length;
+        const result = await send({ type: 'pour', ...auth, version: run.version, from, to });
+        assert.equal(result.status, 200); assert.equal(result.run.moves, run.moves + 1, 'every paced pour is accepted');
+        run = result.run; sinceThink++;
+        locks.push(run.bottleAvailableAt[from] - now);
+        assert.equal(run.bottleAvailableAt[from] - now, pourDuration(amount, lockPace));
+        animationEnd[from] = animationEnd[to] = now + pourDuration(amount, animationPace);
+      }
+      assert.equal(run.status, 'cleared'); assert.equal(run.cleared, stage);
+      now = Math.max(now, run.availableAt) + 450 + between(30, 200);
+      run = (await send({ type: 'sync', ...auth, version: run.version })).run;
+    }
+    now = run.deadline + 1;
+    run = (await send({ type: 'sync', ...auth, version: run.version })).run;
+    assert.equal(run.status, 'ended'); assert.equal(run.cleared, stages);
+    const stored = JSON.parse(db.database.prepare('SELECT data FROM water_sort_runs WHERE id = ?').get(auth.id).data);
+    const registered = await send({ type: 'register', ...auth, version: run.version, nickname: legacyRun ? 'OldPace' : 'NewPace' });
+    return { registered, stored, locks };
+  } finally { Date.now = originalNow; db.database.close(); }
+}
+
+test('a run on the new pour pace registers without a bot verdict', async () => {
+  const { registered, stored, locks } = await playRun({ legacyRun: false, legacyClient: false });
+  assert.equal(registered.status, 200); assert.equal(registered.run.registered, true);
+  assert.equal(pourVerdict(stored.pours), 'ok');
+  assert.ok(locks.every(ms => ms >= 680 && ms <= 920), 'locks follow 600 + 80/unit');
+});
+
+test('transition: runs started on the old worker keep the old clock and still register', async () => {
+  const { registered, stored, locks } = await playRun({ legacyRun: true, legacyClient: true });
+  assert.equal(registered.status, 200); assert.equal(pourVerdict(stored.pours), 'ok');
+  assert.ok(locks.every(ms => ms >= 1150 && ms <= 1540), 'old runs keep 1020 + 130/unit locks');
+  assert.equal('pace' in stored, false, 'later stages of an old run stay on the old pace');
+  // An old (cached) client on a new run animates longer than the lock; it only waits more.
+  const oldClient = await playRun({ legacyRun: false, legacyClient: true });
+  assert.equal(oldClient.registered.status, 200); assert.equal(pourVerdict(oldClient.stored.pours), 'ok');
+});
+
+test('an old run never gets the shorter lock: an early pour is ignored, not flagged', async () => {
+  const db = new TestDatabase(), originalNow = Date.now;
+  let now = 1800000000000; Date.now = () => now;
+  const send = async body => {
+    const response = await challengeApi(new Request('https://game.test/api/challenge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), db);
+    return { status: response.status, ...await response.json() };
+  };
+  try {
+    const started = await send({ type: 'start' }), auth = { id: started.run.id, token: started.token };
+    const board = [[0, 1, 0, 1], [1, 0, 1, 0], [], [], []];
+    const legacy = { ...started.run, board, initialBoard: board, history: [], bottleAvailableAt: board.map(() => now) };
+    delete legacy.pace;
+    db.database.prepare('UPDATE water_sort_runs SET data = ? WHERE id = ?').run(JSON.stringify(legacy), auth.id);
+    const first = await send({ type: 'pour', ...auth, version: 0, from: 0, to: 2 });
+    assert.equal(first.run.bottleAvailableAt[0] - now, 1150);
+    now += 680;
+    const early = await send({ type: 'pour', ...auth, version: first.run.version, from: 0, to: 3 });
+    assert.equal(early.status, 200); assert.equal(early.run.version, first.run.version);
+    now += 470;
+    const onTime = await send({ type: 'pour', ...auth, version: first.run.version, from: 0, to: 3 });
+    assert.equal(onTime.run.moves, 2);
   } finally { Date.now = originalNow; db.database.close(); }
 });

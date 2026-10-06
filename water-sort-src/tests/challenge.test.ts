@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import catalog from '../lib/challenge-levels.json' with { type: 'json' };
-import { advance, newStage, timeLimit, colorsFor, randomBoard, expire, pourDuration, type Challenge } from '../lib/challenge.ts';
+import { advance, newStage, timeLimit, colorsFor, randomBoard, expire, resumeStage, pourDuration, POUR_PACE, type Challenge } from '../lib/challenge.ts';
 import { pour, won, solve } from '../lib/game.ts';
 import { shortestSolution } from '../scripts/difficulty.ts';
 test('all 300 variants solve legally; difficulty bands increase through level100', () => {
@@ -22,13 +22,16 @@ test('all 300 variants solve legally; difficulty bands increase through level100
       assert.equal(variant.minimumMoves, variant.solution.length);
       assert.equal(shortestSolution(variant.board, 20000)?.solution.length, variant.minimumMoves, `minimum pours at stage ${index + 1}`);
       let board = variant.board;
-      let animationMs = 0;
+      let animationMs = 0, fastMs = 0;
       for (const [from, to] of variant.solution) {
         const next = pour(board, from, to); assert.ok(next);
-        animationMs += pourDuration(next[to].length - board[to].length); board = next;
+        // The catalog keeps its 40 s budget under the slower legacy pace, which old runs still use.
+        animationMs += pourDuration(next[to].length - board[to].length, undefined);
+        fastMs += pourDuration(next[to].length - board[to].length, POUR_PACE); board = next;
       }
       assert.ok(won(board));
       assert.equal(animationMs, variant.animationMs);
+      assert.ok(fastMs < animationMs);
       assert.ok(animationMs <= 40000, 'leave at least 20 seconds for decisions');
     }
   });
@@ -111,13 +114,13 @@ test('independent pairs overlap, shared bottles remain locked, and all animation
   const first = advance(initial, { type: 'pour', from: 0, to: 1 }, 1000);
   const second = advance(first, { type: 'pour', from: 3, to: 2 }, 1100);
   assert.equal(second.moves, 2); assert.equal(second.status, 'cleared');
-  assert.equal(second.availableAt, 2540, 'longer earlier animation sets completion time');
+  assert.equal(second.availableAt, 1920, 'longer earlier animation sets completion time (600 + 4 * 80)');
   assert.equal(second.deadline, initial.deadline);
-  assert.equal(second.score, 1000 + Math.floor(200 * (60000 - 2540) / 60000) + 96);
+  assert.equal(second.score, 1000 + Math.floor(200 * (60000 - 1920) / 60000) + 96);
   assert.equal(advance(first, { type: 'pour', from: 1, to: 0 }, 1100), first);
-  const late = advance({ ...first, deadline: 2400 }, { type: 'pour', from: 3, to: 2 }, 1100);
+  const late = advance({ ...first, deadline: 1900 }, { type: 'pour', from: 3, to: 2 }, 1100);
   assert.equal(late.score, 0); assert.equal(late.status, 'playing');
-  assert.equal(expire(late, 2400).status, 'ended');
+  assert.equal(expire(late, 1900).status, 'ended');
   assert.equal(expire(second, second.availableAt + 449).level, 1);
   assert.equal(expire(second, second.availableAt + 450).level, 2);
 });
@@ -148,7 +151,30 @@ test('zero-clear runs can end; next stages require clear; 100 is final', () => {
   assert.equal(ended.status, 'ended'); assert.equal(ended.cleared, 0);
   assert.equal(advance(ended, { type: 'next' }, 100), ended);
   assert.equal(expire({ ...initial, status: 'cleared', level: 100, cleared: 100 }, 500).status, 'ended');
-  assert.equal(pourDuration(1), 1150);
+});
+test('pour pace: new runs use 600 + 80/unit, runs started before the change keep 1020 + 130/unit', () => {
+  assert.deepEqual([1, 2, 3, 4].map(n => pourDuration(n, POUR_PACE)), [680, 760, 840, 920]);
+  assert.deepEqual([1, 2, 3, 4].map(n => pourDuration(n, undefined)), [1150, 1280, 1410, 1540]);
+  const board = [[0, 1], [], [1, 0], []];
+  const fresh: Challenge = { ...newStage(1, 0), board, bottleAvailableAt: [0, 0, 0, 0] };
+  assert.equal(fresh.pace, POUR_PACE);
+  const moved = advance(fresh, { type: 'pour', from: 0, to: 1 }, 1000);
+  assert.deepEqual(moved.bottleAvailableAt, [1680, 1680, 0, 0]);
+  assert.equal(advance(moved, { type: 'pour', from: 1, to: 3 }, 1679), moved, 'the lock still holds one millisecond early');
+  assert.equal(advance(moved, { type: 'pour', from: 1, to: 3 }, 1680).moves, 2);
+  // A run saved by the previous worker has no pace field and stays on the legacy clock.
+  const legacy: Challenge = { ...fresh }; delete legacy.pace;
+  const old = advance(legacy, { type: 'pour', from: 0, to: 1 }, 1000);
+  assert.deepEqual(old.bottleAvailableAt, [2150, 2150, 0, 0]);
+  assert.equal(old.pace, undefined);
+  assert.equal(advance(old, { type: 'pour', from: 1, to: 3 }, 1680), old, 'legacy locks are not shortened mid-run');
+  // Later stages keep the run's pace in both hand-off paths.
+  const cleared = (state: Challenge): Challenge => ({ ...state, status: 'cleared', cleared: 1, score: 1200, availableAt: 5000 });
+  assert.equal(expire(cleared(legacy), 5500).pace, undefined);
+  assert.equal(resumeStage(cleared(legacy), 5500).pace, undefined);
+  assert.equal(expire(cleared(fresh), 5500).pace, POUR_PACE);
+  assert.equal(resumeStage(cleared(fresh), 5500).pace, POUR_PACE);
+  assert.ok(!('pace' in JSON.parse(JSON.stringify(expire(cleared(legacy), 5500)))));
 });
 test('next stage starts automatically at a fixed time even with delayed polling', () => {
   const cleared: Challenge = { ...newStage(1, 0), status: 'cleared', cleared: 1, score: 1200, availableAt: 5000 };

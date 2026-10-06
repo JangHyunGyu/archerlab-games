@@ -4,11 +4,11 @@ import { createPortal } from 'react-dom';
 import { chooseDirection, mix, phases, roundBottom, spillAngle, type Rect } from '../lib/pour-motion';
 import { drawVessel, drawStream, glassInterior, liquidLayers, liquidVolume, liquidSurface } from '../lib/glass-renderer';
 import type { Board } from '../lib/game';
-import { pourDuration } from '../lib/challenge-rules';
 
 
 export type PourMotion = {
   id: number; from: number; to: number; before: Board; amount: number; started: number;
+  duration: number; // pourDuration(amount, run.pace), the same span the server locks both bottles for.
   source: Rect; destination: Rect; sourceWater: Rect; targetWater: Rect; sourceLift: number;
 };
 const rect = (r: DOMRect): Rect => ({ x: r.x, y: r.y, width: r.width, height: r.height });
@@ -35,7 +35,7 @@ function paintMotion(ctx: CanvasRenderingContext2D, motion: PourMotion, time: nu
   const start = { x: source.x + pivot.x, y: source.y + pivot.y + motion.sourceLift };
   const end = { x: destination.x + destination.width / 2, y: destination.y - 15 };
   const rest = { x: source.x + pivot.x, y: source.y + pivot.y };
-  const t = Math.max(0, Math.min(1, (time - motion.started) / pourDuration(amount)));
+  const t = Math.max(0, Math.min(1, (time - motion.started) / motion.duration));
   const { approach, flow, retreat } = phases(t);
   let angle = t < .27 ? initialAngle * approach : spillAngle(polygon, pivot, volume(tube.length - amount * flow), direction);
   angle *= 1 - retreat;

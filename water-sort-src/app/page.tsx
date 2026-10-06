@@ -26,6 +26,12 @@ class ApiError extends Error {
   get stale() { return this.code === 'missing' || this.code === 'legacy'; }
   get retryable() { return !this.stale && this.code !== 'origin'; }
 }
+type ErrorReporter = { reportClientException?: (error: unknown, context: object, errorType: string) => boolean };
+// The shared reporter itself drops real network failures and AbortError.
+const reportException = (e: unknown) => {
+  try { (window as unknown as { ArcherLabClientErrorReporter?: ErrorReporter }).ArcherLabClientErrorReporter?.reportClientException?.(e, { area: 'challenge' }, 'water_sort_client_exception'); }
+  catch { /* Reporting must never break the game. */ }
+};
 const errorMessage = (e: unknown) => e instanceof ApiError ? e.message : c.error;
 const nextWake = (run: RunView | null, now: number) => {
   if (!run) return Infinity;
@@ -83,6 +89,9 @@ export default function Home() {
     pours.clear(); setRun(null); setAtHome(true); setModal(null); setSelected(null); setNotice(c.choose);
   }
   function fail(e: unknown) {
+    // ApiError is a server/transport result (a failed fetch becomes ApiError('network')). Any other
+    // exception here is a code bug: send it to the D1 client error log instead of hiding it.
+    if (!(e instanceof ApiError)) reportException(e);
     if (e instanceof ApiError && e.stale) forgetSession();
     setCanRetry(!(e instanceof ApiError) || e.retryable); setError(errorMessage(e));
   }
@@ -252,13 +261,14 @@ export default function Home() {
     const { id, from, to, before, amount } = entry;
     const source = tubes.current[from], destination = tubes.current[to];
     const geometry = source && destination ? measurePour(source, destination) : null;
-    const seconds = pourDuration(amount) / 1000;
+    // The run's own pace: a run started before the faster pour keeps its slower animation.
+    const duration = pourDuration(amount, runRef.current?.pace), seconds = duration / 1000;
     audio.play('pour', seconds * .27, seconds * .46);
     const h = window.visualViewport?.height ?? innerHeight;
     if (geometry && !matchMedia('(prefers-reduced-motion: reduce)').matches && geometry.source.y > 30 && geometry.destination.y > 48 && Math.max(geometry.source.y + geometry.source.height, geometry.destination.y + geometry.destination.height) < h - 6) {
-      setMotions(items => [...items, { id, from, to, before, amount, started: performance.now(), ...geometry }]);
+      setMotions(items => [...items, { id, from, to, before, amount, duration, started: performance.now(), ...geometry }]);
     } else {
-      settleTimers.current.set(id, setTimeout(() => { finishMotion(id); refreshNow(); }, pourDuration(amount)));
+      settleTimers.current.set(id, setTimeout(() => { finishMotion(id); refreshNow(); }, duration));
     }
   }
   async function loadRanks() {
@@ -279,6 +289,11 @@ export default function Home() {
   const ended = run?.status === 'ended' || expired;
   const blockedEnd = run?.status === 'ended' && run.endReason === 'blocked';
   const board = pours.board;
+  // A lifted bottle leaves a faded ghost in its slot showing where it ends up after this pour and
+  // every queued reservation. Recomputed on each controller change, so adding or cancelling a
+  // reservation updates it at once.
+  const lifted = new Set(motions.map(m => m.from));
+  const planned = lifted.size ? pours.plannedBoard : board;
   // Correct board, but the final pour animation ran past the deadline: the server (unchanged) does not count it.
   const lateClear = !!run && ended && !blockedEnd && run.cleared < 100 && won(run.board);
   const timerFrozenAt = run && ended ? (blockedEnd ? run.endedAt ?? run.deadline : run.deadline) : null;
@@ -333,8 +348,9 @@ export default function Home() {
               const queued = orders.length > 0;
               const pouring = pours.busy(i);
               const settled = !pouring && complete(tube) && complete(run.board[i] ?? []);
-              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${uiLang === 'en' ? `Bottle ${i + 1}` : `${i + 1}${c.bottle}`}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${settled ? ', ' + c.filled : ''}${queued ? ', ' + c.queueOrder + ' ' + orders.join(', ') : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
-                <span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/></span>
+              const ghost = lifted.has(i) ? planned[i] ?? [] : null;
+              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} data-ghost={ghost ? ghost.join(',') : undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${uiLang === 'en' ? `Bottle ${i + 1}` : `${i + 1}${c.bottle}`}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${settled ? ', ' + c.filled : ''}${queued ? ', ' + c.queueOrder + ' ' + orders.join(', ') : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
+                <span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/>{ghost && <span className="bottle-ghost" data-testid={`bottle-ghost-${i}`} aria-hidden="true"><BottleVisual colors={ghost} selected={selected === i}/></span>}</span>
                 <span className="drop-cue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></span>
                 <span className={'bottle-status ' + (queued ? 'queue-label' : '')} aria-hidden="true">{queued ? orders.join('·') : ''}</span>
                 <BottleCompletion key={`${run.level}:${i}`} ready={settled} color={tube[0]} hideLabel={queued}/>

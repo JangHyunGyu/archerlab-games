@@ -7,7 +7,8 @@ import { invalidateLeaderboard, leaderboard } from '../worker/leaderboard-cache.
 import { cleanupStaleRuns, STALE_RUN_AGE_MS } from '../worker/cleanup.ts';
 import { clientKey } from '../worker/rate-limit.ts';
 import { checkNickname } from '../lib/nickname.ts';
-import { recordPour, pourVerdict, MAX_FAST_STREAK, REGULARITY_SAMPLE } from '../lib/pour-timing.ts';
+import { recordPour, pourVerdict, MAX_FAST_STREAK, REGULARITY_SAMPLE, FAST_GAP_MS } from '../lib/pour-timing.ts';
+import { pourDuration, POUR_PACE } from '../lib/challenge-rules.ts';
 import { solve } from '../lib/game.ts';
 
 const MIGRATIONS = ['water-sort-0001-schema.sql', 'water-sort-0002-start-rate-limit.sql'].map(name => readFileSync(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
@@ -226,4 +227,16 @@ test('the page asks for a Turnstile token only when the server publishes a site 
     assert.equal(await turnstileToken('https://api.test/water-sort/challenge', 'register'), undefined);
     assert.deepEqual(urls, ['https://api.test/water-sort/challenge?config=1'], 'the config is fetched once and no script is loaded');
   } finally { globalThis.fetch = realFetch; }
+});
+
+test('the shorter pour pace does not push a fast queued player into a bot verdict', () => {
+  // Back-to-back queued pours: each gap is one new-pace animation plus network jitter.
+  let seed = 5; const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  let stats; let t = 0;
+  for (let i = 0; i < 40; i++) {
+    stats = recordPour(stats, t);
+    t += pourDuration(1 + Math.floor(random() * 3), POUR_PACE) + 25 + Math.floor(random() * 65);
+  }
+  assert.equal(pourVerdict(stats), 'ok');
+  assert.ok(stats.gaps.every(gap => gap >= FAST_GAP_MS));
 });

@@ -1,5 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { pour } from '../lib/game.ts';
+import { pourDuration } from '../lib/challenge-rules.ts';
 import { DIFFICULTY_BANDS } from '../lib/difficulty-curve.ts';
 import { shortestSolution, segments } from './difficulty.ts';
 
@@ -25,7 +26,9 @@ for (const band of DIFFICULTY_BANDS) {
     let simulated = board, animationMs = 0;
     for (const [from, to] of solution) {
       const next = pour(simulated, from, to)!;
-      animationMs += 1020 + (next[to].length - simulated[to].length) * 130;
+      // Budget with the slower legacy pace: runs started before 2026-10-06 still pour at it,
+      // and keeping it leaves the generated catalog unchanged.
+      animationMs += pourDuration(next[to].length - simulated[to].length, undefined);
       simulated = next;
     }
     // Leave at least 20 seconds for decisions at the hardest 60-second stage.

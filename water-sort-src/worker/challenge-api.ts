@@ -1,4 +1,4 @@
-import { advance, expire, inspectStage, newStage, resumeStage, leaveStage, type Challenge, type RunView } from '../lib/challenge.ts';
+import { advance, expire, inspectStage, newStage, resumeStage, leaveStage, pourDuration, type Challenge, type RunView } from '../lib/challenge.ts';
 import { boardOutcome } from '../lib/dead-end.ts';
 import { checkNickname } from '../lib/nickname.ts';
 import { pourVerdict } from '../lib/pour-timing.ts';
@@ -26,7 +26,8 @@ function validResult(state: Challenge, createdAt: number, now: number) {
     && Number.isInteger(state.cleared) && (state.cleared === state.level - 1 || state.level === 100 && state.cleared === 100)
     && Number.isSafeInteger(state.score) && state.score >= state.cleared * 1000 && state.score <= state.cleared * 1300
     && (provenBlocked || state.endReason !== 'blocked' && now >= state.availableAt && (state.cleared === 100 || now >= state.deadline))
-    && now - createdAt >= state.cleared * 1150;
+    // Every clear needs at least one pour under the run's own pace (legacy runs: 1150 ms, new: 680 ms).
+    && now - createdAt >= state.cleared * pourDuration(1, state.pace);
 }
 const json = (data: unknown, status = 200, headers: Record<string, string> = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 // The schema lives in migrations/water-sort-*.sql and is applied once per database. No request runs DDL.

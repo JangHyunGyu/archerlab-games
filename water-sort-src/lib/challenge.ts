@@ -3,8 +3,8 @@ import { clone, hasMove, pour, won, type Board } from './game.ts';
 import { colorsFor } from './difficulty-curve.ts';
 import { boardOutcome } from './dead-end.ts';
 import { recordPour } from './pour-timing.ts';
-import { timeLimit, CLEAR_DELAY, pourDuration, bottleReadyAt, type Challenge } from './challenge-rules.ts';
-export { timeLimit, CLEAR_DELAY, pourDuration, type Challenge, type RunView, type RankRow } from './challenge-rules.ts';
+import { timeLimit, CLEAR_DELAY, pourDuration, bottleReadyAt, POUR_PACE, type Challenge, type PourPace } from './challenge-rules.ts';
+export { timeLimit, CLEAR_DELAY, pourDuration, POUR_PACE, type Challenge, type RunView, type RankRow } from './challenge-rules.ts';
 
 export { colorsFor };
 export function randomBoard(level: number, random = Math.random): Board {
@@ -16,9 +16,10 @@ export function randomBoard(level: number, random = Math.random): Board {
   const palette = shuffle(Array.from({ length: colors }, (_, i) => i));
   return shuffle(clone(pool[Math.floor(random() * pool.length)].board).map(tube => tube.map(c => palette[c])));
 }
-export function newStage(level: number, now: number, cleared = 0, score = 0, pours?: Challenge['pours']): Challenge {
+// `pace` null keeps a pre-2026-10-06 run on the legacy pour timing across its later stages.
+export function newStage(level: number, now: number, cleared = 0, score = 0, pours?: Challenge['pours'], pace: PourPace | null = POUR_PACE): Challenge {
   const board = randomBoard(level);
-  return { rules: 2, level, cleared, score, board, initialBoard: clone(board), bottleAvailableAt: board.map(() => now), history: [], moves: 0, deadline: now + timeLimit(level) * 1000, availableAt: now, status: 'playing', ...(pours ? { pours } : {}) };
+  return { rules: 2, level, cleared, score, board, initialBoard: clone(board), bottleAvailableAt: board.map(() => now), history: [], moves: 0, deadline: now + timeLimit(level) * 1000, availableAt: now, status: 'playing', ...(pours ? { pours } : {}), ...(pace ? { pace } : {}) };
 }
 function checkDeadEnd(state: Challenge, now: number): Challenge {
   // At most 90 pairs; no solution-tree search in the interactive pour response.
@@ -36,7 +37,7 @@ export function expire(state: Challenge, now: number): Challenge {
   if (state.status === 'cleared' && now >= state.availableAt + CLEAR_DELAY) {
     if (state.level === 100) return { ...state, status: 'ended' };
     // Anchor the next stage to the completion time, not to a delayed client request.
-    return expire(newStage(state.level + 1, state.availableAt + CLEAR_DELAY, state.cleared, state.score, state.pours), now);
+    return expire(newStage(state.level + 1, state.availableAt + CLEAR_DELAY, state.cleared, state.score, state.pours, state.pace ?? null), now);
   }
   if (state.status === 'playing' && now >= state.deadline) return { ...state, status: 'ended', endReason: 'timeout', endedAt: state.deadline };
   return checkDeadEnd(state, now);
@@ -48,7 +49,7 @@ export function resumeStage(original: Challenge, now: number): Challenge {
   if (state.status === 'cleared') {
     if (state.level === 100) return { ...state, suspended: false, status: 'ended' };
     // Anchor the next stage to the completion time, so time away from the screen is not refunded.
-    return newStage(state.level + 1, Math.max(now, state.availableAt + CLEAR_DELAY), state.cleared, state.score, state.pours);
+    return newStage(state.level + 1, Math.max(now, state.availableAt + CLEAR_DELAY), state.cleared, state.score, state.pours, state.pace ?? null);
   }
   // Same board, same deadline: continuing only reopens input. Time spent away stays spent.
   return { ...state, suspended: false };
@@ -70,7 +71,7 @@ export function advance(original: Challenge, action: Action, now: number): Chall
   if (now < bottleReadyAt(state, action.from) || now < bottleReadyAt(state, action.to)) return state;
   const board = pour(state.board, action.from, action.to);
   if (!board) return state;
-  const duration = pourDuration(board[action.to].length - state.board[action.to].length);
+  const duration = pourDuration(board[action.to].length - state.board[action.to].length, state.pace);
   const bottleAvailableAt = board.map((_, i) => i === action.from || i === action.to ? now + duration : bottleReadyAt(state, i));
   const availableAt = Math.max(...bottleAvailableAt);
   const moves = state.moves + 1, cleared = won(board) && availableAt <= state.deadline;
