@@ -89,3 +89,16 @@ test('with room, the lifted bottle also passes above the resting bottles between
   // No room: the neighbour is given up, never the top margin.
   assert.ok(hoverLift(outline, pivot, { x: base.x, y: 40 }, angles, ghost, 6, [between]) <= 40);
 });
+
+test('incoming liquid from queued pours is drawn faded on top and never merges with the solid part', async () => {
+  const { GHOST_LIQUID_ALPHA, GHOST_SLOT_OPACITY, INCOMING_ALPHA } = await import('../lib/glass-renderer.ts');
+  const { readFileSync } = await import('node:fs');
+  assert.deepEqual(liquidLayers([0, 1, 1, 1], 4, 2), [{ color: 0, units: 1 }, { color: 1, units: 1 }, { color: 1, units: 2, faded: true }]);
+  assert.deepEqual(liquidLayers([2, 2], 2, 0), [{ color: 2, units: 2, faded: true }]);
+  assert.deepEqual(liquidLayers([2, 2], 2), [{ color: 2, units: 2 }]);
+  // Same strength as the ghost bottle's liquid, whose slot is faded by CSS.
+  const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+  assert.equal(Number(css.match(/\.bottle-ghost\{[^}]*opacity:([\d.]+)/)![1]), GHOST_SLOT_OPACITY);
+  assert.equal(INCOMING_ALPHA, GHOST_LIQUID_ALPHA * GHOST_SLOT_OPACITY);
+  assert.ok(INCOMING_ALPHA > .4 && INCOMING_ALPHA < .55);
+});

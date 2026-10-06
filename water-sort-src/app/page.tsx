@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { complete, hasMove, won } from '../lib/game';
+import { complete, hasMove, sharedBottom, won } from '../lib/game';
 import { timeLimit, pourDuration, CLEAR_DELAY, type RunView, type RankRow } from '../lib/challenge-rules';
 import { copy as c, uiLang } from './copy';
 import { Timer } from './Timer';
@@ -294,7 +294,8 @@ export default function Home() {
   // every queued reservation. Recomputed on each controller change, so adding or cancelling a
   // reservation updates it at once.
   const lifted = new Set(motions.map(m => m.from));
-  const planned = lifted.size ? pours.plannedBoard : board;
+  const projected = pours.plannedBoard;
+  const planned = lifted.size ? projected : board;
   // Correct board, but the final pour animation ran past the deadline: the server (unchanged) does not count it.
   const lateClear = !!run && ended && !blockedEnd && run.cleared < 100 && won(run.board);
   const timerFrozenAt = run && ended ? (blockedEnd ? run.endedAt ?? run.deadline : run.deadline) : null;
@@ -345,15 +346,21 @@ export default function Home() {
           <div className="tray-spark tray-spark-one" aria-hidden="true">✦</div><div className="tray-spark tray-spark-two" aria-hidden="true">✧</div>
           <div className={'board ' + (board.length > 7 ? 'many-tubes' : '')} role="group" aria-label={c.play}>
             {board.map((tube, i) => {
-              const orders = pours.queued.flatMap((intent, index) => intent.from === i || intent.to === i ? [index + 1] : []);
+              // Each reservation this bottle is in, with its direction: 1↑ sends, ↓2 receives.
+              const orders = pours.queued.flatMap((intent, index) => intent.from === i ? [{ n: index + 1, out: true }] : intent.to === i ? [{ n: index + 1, out: false }] : []);
               const queued = orders.length > 0;
+              // A resting bottle that queued pours will fill shows the projected result: what stays is
+              // solid and what is still to come is faded. Liquid it will hand on first is left out, so
+              // the faded part sits where it will end up.
+              const target = projected[i] ?? [], keep = sharedBottom(tube, target);
+              const incoming = !lifted.has(i) && target.length > keep ? target.slice(keep) : [];
               const pouring = pours.busy(i);
               const settled = !pouring && complete(tube) && complete(run.board[i] ?? []);
               const ghost = lifted.has(i) ? planned[i] ?? [] : null;
-              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} data-ghost={ghost ? ghost.join(',') : undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${uiLang === 'en' ? `Bottle ${i + 1}` : `${i + 1}${c.bottle}`}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${settled ? ', ' + c.filled : ''}${queued ? ', ' + c.queueOrder + ' ' + orders.join(', ') : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
-                <span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/>{ghost && <span className="bottle-ghost" data-testid={`bottle-ghost-${i}`} aria-hidden="true"><BottleVisual colors={ghost} selected={selected === i} ghost/></span>}</span>
+              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} data-ghost={ghost ? ghost.join(',') : undefined} data-incoming={incoming.length ? incoming.join(',') : undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${uiLang === 'en' ? `Bottle ${i + 1}` : `${i + 1}${c.bottle}`}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${settled ? ', ' + c.filled : ''}${incoming.length ? ', ' + c.queueIncoming.replace('{colors}', incoming.map(n => c.colorNames[n]).join(', ')) : ''}${queued ? ', ' + orders.map(o => (o.out ? c.queueSource : c.queueTarget).replace('{n}', String(o.n))).join(', ') : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
+                <span className="tube" ref={node => { tubes.current[i] = node; }}>{incoming.length ? <BottleVisual colors={target} solid={keep} selected={selected === i}/> : <BottleVisual colors={tube} selected={selected === i}/>}{ghost && <span className="bottle-ghost" data-testid={`bottle-ghost-${i}`} aria-hidden="true"><BottleVisual colors={ghost} selected={selected === i} ghost/></span>}</span>
                 <span className="drop-cue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></span>
-                <span className={'bottle-status ' + (queued ? 'queue-label' : '')} aria-hidden="true">{queued ? orders.join('·') : ''}</span>
+                <span className={'bottle-status ' + (queued ? 'queue-label' : '') + (orders.length > 2 ? ' queue-many' : '')} aria-hidden="true">{orders.map((o, k) => <span key={o.n} className="queue-entry" data-dir={o.out ? 'out' : 'in'}>{o.out ? `${o.n}↑` : `↓${o.n}`}{k < orders.length - 1 ? '·' : ''}</span>)}</span>
                 <BottleCompletion key={`${run.level}:${i}`} ready={settled} color={tube[0]} hideLabel={queued}/>
               </button>;
             })}

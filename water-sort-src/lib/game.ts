@@ -10,6 +10,12 @@ export function pour(board: Board, from: number, to: number): Board | null {
   while (next[from].at(-1) === color && next[to].length < CAPACITY) next[to].push(next[from].pop()!);
   return next;
 }
+// How many units from the bottom two bottles share: the liquid that stays put between them.
+export function sharedBottom(a: number[], b: number[]) {
+  let k = 0;
+  while (k < a.length && k < b.length && a[k] === b[k]) k++;
+  return k;
+}
 export const hasMove = (board: Board) => board.some((a, i) => a.length && board.some((_, j) => pour(board, i, j)));
 export function solve(initial: Board, budget = 60000): [number, number][] | null {
   const seen = new Set<string>();

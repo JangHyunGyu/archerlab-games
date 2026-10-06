@@ -2,8 +2,9 @@
 import { useEffect, useRef } from 'react';
 import { drawVessel, liquidLayers } from '../lib/glass-renderer';
 
-/** Idle bottles draw once; only selection/settling uses a short animation. */
-export function BottleVisual({ colors, selected, ghost = false }: { colors: number[]; selected: boolean; ghost?: boolean }) {
+/** Idle bottles draw once; only selection/settling uses a short animation. Units from `solid` up
+ *  are liquid a queued pour will bring, drawn faded. */
+export function BottleVisual({ colors, selected, ghost = false, solid = colors.length }: { colors: number[]; selected: boolean; ghost?: boolean; solid?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const first = useRef(true);
   const key = colors.join(',');
@@ -13,7 +14,7 @@ export function BottleVisual({ colors, selected, ghost = false }: { colors: numb
     const ctx = canvas.getContext('2d'); if (!ctx) return;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const palette = key ? key.split(',').map(Number) : [];
-    const layers = liquidLayers(palette), started = performance.now();
+    const layers = liquidLayers(palette, palette.length, solid), started = performance.now();
     const animate = !first.current && !reduced.matches; first.current = false;
     let frame = 0, width = 0, height = 0;
     const paint = (time: number, moving = false) => {
@@ -36,6 +37,6 @@ export function BottleVisual({ colors, selected, ghost = false }: { colors: numb
     if (animate && !document.hidden) frame = requestAnimationFrame(tick);
     reduced.addEventListener('change', settle); document.addEventListener('visibilitychange', settle);
     return () => { observer.disconnect(); cancelAnimationFrame(frame); reduced.removeEventListener('change', settle); document.removeEventListener('visibilitychange', settle); };
-  }, [key, selected, ghost]);
-  return <canvas className="glass-canvas" ref={canvasRef} data-ghost={ghost || undefined} aria-hidden="true"/>;
+  }, [key, selected, ghost, solid]);
+  return <canvas className="glass-canvas" ref={canvasRef} data-ghost={ghost || undefined} data-solid={solid < colors.length ? solid : undefined} aria-hidden="true"/>;
 }

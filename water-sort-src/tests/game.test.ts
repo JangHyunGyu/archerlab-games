@@ -76,3 +76,11 @@ test('liquid transfer finishes before the bottle returns and never overshoots', 
   assert.equal(phases(1).flow,1);
   assert.equal(phases(1).retreat,1);
 });
+
+test('sharedBottom counts the units two bottles share from the bottom', async () => {
+  const { sharedBottom } = await import('../lib/game.ts');
+  assert.equal(sharedBottom([0, 1], [0, 1, 1]), 2);
+  assert.equal(sharedBottom([0, 1, 2], [0, 3]), 1);
+  assert.equal(sharedBottom([], [2]), 0);
+  assert.equal(sharedBottom([1], []), 0);
+});

@@ -1,13 +1,17 @@
 import { area, below, rotate, roundBottom, surface, type Point, type Rect } from './pour-motion.ts';
 
 export const WATER_COLORS = ['#eb4d68', '#249fdf', '#efbd28', '#36b889', '#8d59d2', '#df67b5', '#20bec5', '#f18c39'];
-export type LiquidLayer = { color: number; units: number };
+export type LiquidLayer = { color: number; units: number; faded?: boolean };
 export type VesselPose = { x: number; y: number; width: number; height: number; angle?: number; pivot?: Point };
 type RenderOptions = { time?: number; agitation?: number; incoming?: boolean; shadow?: boolean; ghost?: boolean };
 // A ghost (the projected bottle left in a lifted bottle's slot) draws its liquid see-through and a
 // little muted, so it never reads as a real, filled bottle. The slot also fades the whole canvas;
 // together the liquid shows at about half strength, easy to read but not solid.
 export const GHOST_LIQUID_ALPHA = .66;
+// The ghost slot's own fade (.bottle-ghost opacity in globals.css). Incoming layers in a resting
+// bottle have no such wrapper, so they carry both: the same strength as the ghost's liquid.
+export const GHOST_SLOT_OPACITY = .72;
+export const INCOMING_ALPHA = GHOST_LIQUID_ALPHA * GHOST_SLOT_OPACITY;
 const GHOST_DESATURATE = .22;
 export function ghostColor(hex: string) {
   const [r, g, b] = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16));
@@ -19,13 +23,15 @@ export function glassInterior(width: number, height: number): Rect {
   const wall = width * .09;
   return { x: wall, y: 3, width: width - wall * 2, height: height - 3 - width * .16 };
 }
-export function liquidLayers(colors: number[], remaining = colors.length): LiquidLayer[] {
+// Units from `solid` up are drawn faded: liquid a queued pour will bring but hasn't yet.
+export function liquidLayers(colors: number[], remaining = colors.length, solid = colors.length): LiquidLayer[] {
   const layers: LiquidLayer[] = [];
   colors.forEach((color, i) => {
     const units = Math.max(0, Math.min(1, remaining - i));
     if (!units) return;
-    if (layers.at(-1)?.color === color) layers[layers.length - 1].units += units;
-    else layers.push({ color, units });
+    const faded = i >= solid, last = layers.at(-1);
+    if (last && last.color === color && !!last.faded === faded) last.units += units;
+    else layers.push(faded ? { color, units, faded } : { color, units });
   });
   return layers;
 }
@@ -91,11 +97,12 @@ export function drawVessel(ctx: CanvasRenderingContext2D, pose: VesselPose, laye
   ctx.restore();
 
   ctx.save(); path(ctx, world); ctx.clip();
-  const liquidAlpha = options.ghost ? GHOST_LIQUID_ALPHA : 1;
-  ctx.globalAlpha = liquidAlpha;
   let lower = maxY + 1, total = 0;
   for (let i = 0; i < layers.length; i++) {
-    const layer = layers[i], color = options.ghost ? ghostColor(WATER_COLORS[layer.color]) : WATER_COLORS[layer.color]; total += layer.units;
+    const layer = layers[i], muted = options.ghost || layer.faded;
+    const liquidAlpha = options.ghost ? GHOST_LIQUID_ALPHA : layer.faded ? INCOMING_ALPHA : 1;
+    const color = muted ? ghostColor(WATER_COLORS[layer.color]) : WATER_COLORS[layer.color]; total += layer.units;
+    ctx.globalAlpha = liquidAlpha;
     const upper = surface(world, liquidVolume(inner, total));
     const section = sectionAt(world, upper), topmost = i === layers.length - 1;
     const amplitude = topmost ? agitation * Math.min(1, Math.max(0, lower - upper) / 8) : agitation * .12;

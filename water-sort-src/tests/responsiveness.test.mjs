@@ -136,14 +136,26 @@ test('pour previews start before the server responds and reconcile safely', asyn
       }
       assert.equal(document.querySelector('.queue-count').textContent, '예약 5/5');
       assert.equal(document.querySelector('.queue-count button'), null);
-      assert.equal(h.bottles()[3].querySelector('.queue-label').textContent, '1·2·3·4·5');
-      assert.match(h.bottles()[3].getAttribute('aria-label'), /예약 순서 1, 2, 3, 4, 5/);
+      // Each reservation reads with its direction: n↑ sends, ↓n receives.
+      assert.equal(h.bottles()[3].querySelector('.queue-label').textContent, '↓1·2↑·↓3·4↑·↓5');
+      assert.equal(h.bottles()[2].querySelector('.queue-label').textContent, '1↑·↓2·3↑·↓4·5↑');
+      assert.ok(h.bottles()[3].querySelector('.queue-label').classList.contains('queue-many'));
+      assert.match(h.bottles()[3].getAttribute('aria-label'), /예약 1번 받는 병, 예약 2번 보내는 병, 예약 3번 받는 병, 예약 4번 보내는 병, 예약 5번 받는 병$/);
+      assert.match(h.bottles()[2].getAttribute('aria-label'), /예약 1번 보내는 병, 예약 2번 받는 병/);
+      // Bottle 3 ends up with the coral unit: drawn faded on top of its (empty) current contents.
+      assert.equal(h.bottles()[3].dataset.incoming, '1');
+      assert.equal(h.bottles()[3].querySelector('.tube > canvas').dataset.solid, '0');
+      assert.match(h.bottles()[3].getAttribute('aria-label'), /예약대로 부으면 위에 더해질 색/);
+      assert.equal(h.bottles()[2].dataset.incoming, undefined);
       assert.equal(h.requests.length, 1);
       await h.click(h.bottles()[3]); await h.click(h.bottles()[2]);
       assert.equal(document.querySelector('.queue-count').textContent, '예약 5/5');
       assert.match(document.querySelector('.board-notice').textContent, /최대 5개/);
       await h.click(h.bottles()[2]); await h.click(h.bottles()[3]);
       assert.equal(document.querySelector('.queue-count').textContent, '예약 4/5');
+      // Cancelling the last reservation takes its incoming layer away again.
+      assert.equal(h.bottles()[3].dataset.incoming, undefined);
+      assert.equal(h.bottles()[3].querySelector('.queue-label').textContent, '↓1·2↑·↓3·4↑');
       await act(() => h.win.dispatchEvent(new h.win.KeyboardEvent('keydown', { key: 'Escape' })));
       assert.equal(document.querySelector('.queue-count'), null);
     }));
