@@ -63,7 +63,10 @@ dialog{margin:auto;border:3px solid white;border-radius:30px;background:#fcf9ff;
 .queue-count{position:absolute;top:12px;right:18px;padding:4px 12px;border-radius:14px;background:#fff4d9;color:#7a561a;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
 .bottle-button .queue-label{font-size:12px;max-width:100%;padding-inline:3px;white-space:nowrap}
 /* Three or more reservations on one bottle: smaller type that wraps between entries (never inside one), centred on the same fixed-height row so the bottle doesn't move. */
-.queue-label .queue-entry{white-space:nowrap}.bottle-button .queue-label.queue-many{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;font-size:9.5px;line-height:9.5px;letter-spacing:-.2px;padding-inline:2px}
+.queue-label .queue-entry{white-space:nowrap}.bottle-button .queue-label.queue-many{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;font-size:9px;line-height:11px;height:22px;letter-spacing:-.2px;padding-inline:2px}
+/* The pill is the badge row itself. Where that row is shorter than the text (or than two lines), the pill grows into the margin above and the board padding below by equal amounts, so the bottle above stays put. */
+@media(max-width:430px){.bottle-button .queue-label.queue-many{margin-top:7px;margin-bottom:-1px}}
+@media(max-height:550px) and (min-width:600px) and (orientation:landscape){.bottle-button .queue-label{line-height:15px;font-size:11px}.bottle-button .queue-label.queue-many{line-height:11px;font-size:9px;margin-top:2px;margin-bottom:-3px}}
 @media(max-height:550px) and (orientation:landscape){.queue-count{top:5px;right:12px;padding:2px 10px;font-size:12px}}
 .bottle-completion{position:absolute;inset:0;pointer-events:none;color:var(--liquid-color)}
 .completion-aura,.completion-ring{position:absolute;inset:8px 5px 26px;border:2px solid color-mix(in srgb,var(--liquid-color) 55%,white);border-radius:24px;box-shadow:0 0 13px color-mix(in srgb,var(--liquid-color) 28%,transparent),inset 0 0 12px color-mix(in srgb,var(--liquid-color) 12%,transparent)}

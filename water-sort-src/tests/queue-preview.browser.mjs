@@ -50,7 +50,11 @@ function expected(now, queue, lifted) {
 const read = () => page.evaluate(() => [...document.querySelectorAll('.bottle-button')].map(el => {
   const label = el.querySelector('.queue-label'), box = el.getBoundingClientRect(), l = label?.getBoundingClientRect();
   return { badge: label ? label.textContent : '', incoming: el.getAttribute('data-incoming'), lifted: el.classList.contains('pour-source'), aria: el.getAttribute('aria-label'),
-    fits: !label || (label.scrollWidth <= label.clientWidth + 1 && l.left >= box.left - .5 && l.right <= box.right + .5), many: !!label?.classList.contains('queue-many') };
+    fits: !label || (label.scrollWidth <= label.clientWidth + 1 && label.scrollHeight <= label.clientHeight + 1 && l.left >= box.left - .5 && l.right <= box.right + .5), many: !!label?.classList.contains('queue-many'),
+    // Every glyph box of the badge text, against the pill (the label's own box and background).
+    text: label && label.textContent ? (() => { const range = document.createRange(); range.selectNodeContents(label); const rects = [...range.getClientRects()].filter(r => r.width && r.height); return { x0: Math.min(...rects.map(r => r.left)), y0: Math.min(...rects.map(r => r.top)), x1: Math.max(...rects.map(r => r.right)), y1: Math.max(...rects.map(r => r.bottom)) }; })() : null,
+    pill: l ? { x0: l.left, y0: l.top, x1: l.right, y1: l.bottom } : null,
+    tube: el.querySelector('.tube').getBoundingClientRect().y };
 }));
 // Effective alpha of the liquid in the middle of unit `unit` of bottle i's canvas.
 async function alphaAt(i, unit) {
@@ -95,6 +99,7 @@ const visibleIncoming = (b1, queue, a, b) => expected(b1, queue, [a]).filter((e,
 const overSolid = (b1, queue, a, b) => expected(b1, queue, [a]).filter((e, i) => e.incoming && e.keep && i !== a && i !== b).length;
 
 async function runChain({ a, b, b1, queue }, shotAt2, shotAtEnd) {
+  const restingTubes = await page.evaluate(() => [...document.querySelectorAll('.bottle-button .tube')].map(t => t.getBoundingClientRect().y));
   // Wait out the server's bottle locks from earlier pours, so the first tap starts a pour at once.
   await page.waitForTimeout(Math.max(0, ...latest.bottleAvailableAt.map(t => t - latest.serverNow)) + 150);
   hold();
@@ -121,6 +126,12 @@ async function runChain({ a, b, b1, queue }, shotAt2, shotAtEnd) {
       assert.equal(bottle.badge, want[i].badge, `after ${k} reservation(s), bottle ${i} badge: ${JSON.stringify({ seen: seen.map(x => x.badge), want: want.map(x => x.badge), queue, first: [a, b] })}`);
       if (!bottle.lifted) assert.equal(bottle.incoming, want[i].incoming, `after ${k} reservation(s), bottle ${i} incoming`);
       assert.ok(bottle.fits, `bottle ${i} badge '${bottle.badge}' fits its bottle at ${vw}px`);
+      if (bottle.text) {
+        const { text: t, pill: p } = bottle;
+        assert.ok(t.x0 >= p.x0 - .5 && t.x1 <= p.x1 + .5 && t.y0 >= p.y0 - .5 && t.y1 <= p.y1 + .5, `bottle ${i} badge '${bottle.badge}' text stays inside its pill at ${vw}x${vh}: ${JSON.stringify(bottle)}`);
+      }
+      // Badges never move the bottle: same tube position as before any reservation.
+      assert.ok(Math.abs(bottle.tube - restingTubes[i]) < .5 || bottle.lifted, `bottle ${i} moved by its badge`);
       assert.equal(bottle.many, want[i].badge.split('·').length > 2 && want[i].badge !== '');
     });
   }
