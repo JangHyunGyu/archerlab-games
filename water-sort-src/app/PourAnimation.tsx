@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { boundsOf, chooseDirection, hoverLift, mix, phases, placeVessel, roundBottom, spillAngle, vesselOutline, type Box, type Rect } from '../lib/pour-motion';
-import { drawVessel, drawStream, glassInterior, liquidLayers, liquidVolume, liquidSurface } from '../lib/glass-renderer';
+import { boundsOf, type Box, type Rect } from '../lib/pour-motion';
+import { planPour, type PourPlan } from '../lib/pour-path';
+import { drawVessel, drawStream, glassInterior, liquidLayers, liquidSurface } from '../lib/glass-renderer';
 import type { Board } from '../lib/game';
-
 
 export type PourMotion = {
   id: number; from: number; to: number; before: Board; amount: number; started: number;
@@ -26,55 +26,28 @@ export function measurePour(source: HTMLElement, destination: HTMLElement, other
   };
 }
 
-// Highest the lifted bottle may go, so its rim is never cut off at the top of the screen.
-const TOP_MARGIN = 6;
-const lifts = new WeakMap<PourMotion, number>();
-type ProbeFrame = { id: number; from: number; to: number; t: number; phase: string; outline: { x: number; y: number }[]; vessel: Box; stream: Box | null; ghost: Box; lift: number; viewport: { width: number; height: number } };
+const plans = new WeakMap<PourMotion, PourPlan>();
+type ProbeFrame = { id: number; from: number; to: number; t: number; phase: string; blocked: boolean; outline: { x: number; y: number }[]; vessel: Box; stream: Box | null; ghost: Box; lift: number; viewport: { width: number; height: number } };
 // Tests read real frame geometry by setting window.__pourProbe = []. Nothing is recorded otherwise.
 const probe = () => (window as unknown as { __pourProbe?: ProbeFrame[] }).__pourProbe;
 
 function paintMotion(ctx: CanvasRenderingContext2D, motion: PourMotion, time: number, width: number) {
-  const { source, destination, sourceWater: water, targetWater: target, amount, before, from, to } = motion;
+  const { destination, targetWater: target, amount, before, from, to } = motion;
   const tube = before[from], receiving = before[to], color = tube.at(-1)!;
-  const direction = chooseDirection(source, destination, width);
-  const pivot = { x: direction > 0 ? water.x + water.width : water.x, y: water.y };
-  const polygon = roundBottom(water, water.width * .48);
-  const volume = (units: number) => liquidVolume(water, units);
-  const initialAngle = spillAngle(polygon, pivot, volume(tube.length), direction);
-  const start = { x: source.x + pivot.x, y: source.y + pivot.y + motion.sourceLift };
-  const finalAngle = spillAngle(polygon, pivot, volume(tube.length - amount), direction);
-  const outline = vesselOutline(source.width, source.height);
-  // The faded ghost stays in the source slot; the lifted bottle pours from above it.
-  const ghost: Box = { x0: source.x - 4, y0: source.y - 6, x1: source.x + source.width + 4, y1: source.y + source.height + 10 };
-  const base = { x: destination.x + destination.width / 2, y: destination.y - 15 };
-  let lift = lifts.get(motion);
-  if (lift === undefined) {
-    const angles = Array.from({ length: 17 }, (_, i) => mix(initialAngle, finalAngle, i / 16));
-    const others = (motion.others ?? []).map(r => ({ x0: r.x - 2, y0: r.y - 4, x1: r.x + r.width + 2, y1: r.y + r.height + 6 }));
-    lift = hoverLift(outline, pivot, base, angles, ghost, TOP_MARGIN, others);
-    lifts.set(motion, lift);
-  }
-  const end = { x: base.x, y: base.y - lift };
-  const rest = { x: source.x + pivot.x, y: source.y + pivot.y };
+  let plan = plans.get(motion);
+  if (!plan) { plan = planPour(motion, tube.length, amount, width); plans.set(motion, plan); }
+  const { end, ghost, pivot } = plan;
   const t = Math.max(0, Math.min(1, (time - motion.started) / motion.duration));
-  const { approach, flow, retreat } = phases(t);
-  let angle = t < .27 ? initialAngle * approach : spillAngle(polygon, pivot, volume(tube.length - amount * flow), direction);
-  angle *= 1 - retreat;
-  let position = { x: mix(start.x, end.x, approach), y: mix(start.y, end.y, approach) - Math.sin(approach * Math.PI) * 18 };
-  if (retreat) position = { x: mix(end.x, rest.x, retreat), y: mix(end.y, rest.y, retreat) - Math.sin(retreat * Math.PI) * 12 };
-  const pouring = t >= .27 && t < .73;
+  const { approach, flow, retreat, pouring, angle, position, outline } = plan.pose(t);
   const targetLayers = liquidLayers([...receiving, ...Array(amount).fill(color)], receiving.length + amount * flow);
   drawVessel(ctx, { ...destination }, targetLayers, { time, incoming: pouring, agitation: pouring ? 1 : Math.exp(-Math.max(0, t - .73) * 24) * .7 });
-  if (pouring) {
-    const surfaceY = liquidSurface(target, receiving.length + amount * flow);
-    drawStream(ctx, end, { x: end.x, y: surfaceY + 1 }, color, Math.min(5, target.width * .13), time, flow);
-  }
-  drawVessel(ctx, { x: position.x, y: position.y, width: source.width, height: source.height, pivot, angle }, liquidLayers(tube, tube.length - amount * flow), { time, shadow: false, agitation: pouring ? .22 : Math.sin((approach + retreat) * Math.PI) * .8 });
+  const surfaceY = liquidSurface(target, receiving.length + amount * flow);
+  if (pouring) drawStream(ctx, end, { x: end.x, y: surfaceY + 1 }, color, Math.min(5, target.width * .13), time, flow);
+  drawVessel(ctx, { x: position.x, y: position.y, width: motion.source.width, height: motion.source.height, pivot, angle }, liquidLayers(tube, tube.length - amount * flow), { time, shadow: false, agitation: pouring ? .22 : Math.sin((approach + retreat) * Math.PI) * .8 });
   const frames = probe();
   if (frames) {
-    const surfaceY = liquidSurface(target, receiving.length + amount * flow), half = Math.min(5, target.width * .13) / 2 + 1;
-    const lifted = placeVessel(outline, angle, pivot, position);
-    frames.push({ id: motion.id, from, to, t, phase: pouring ? 'pour' : t < .27 ? 'lift' : 'return', outline: lifted, vessel: boundsOf(lifted), stream: pouring ? { x0: end.x - half, y0: end.y, x1: end.x + half, y1: surfaceY + 4 } : null, ghost, lift, viewport: { width, height: window.innerHeight } });
+    const half = Math.min(5, target.width * .13) / 2 + 1;
+    frames.push({ id: motion.id, from, to, t, phase: pouring ? 'pour' : t < .27 ? 'lift' : 'return', blocked: plan.blocked, outline, vessel: boundsOf(outline), stream: pouring ? { x0: end.x - half, y0: end.y, x1: end.x + half, y1: surfaceY + 4 } : null, ghost, lift: plan.lift, viewport: { width, height: window.innerHeight } });
   }
   return t;
 }

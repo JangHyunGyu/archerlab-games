@@ -93,24 +93,56 @@ export function overlaps(points: Point[], box: Box): boolean {
   const part = clipStrip(points, box.x0, box.x1);
   return part.length > 0 && Math.min(...part.map(p => p.y)) < box.y1 && Math.max(...part.map(p => p.y)) > box.y0;
 }
-// How far to raise the pour point so the tilted bottle clears the ghost left in its slot for every
-// angle of the pour, without leaving the top of the viewport. `others` (the resting bottles) are
-// cleared too when the screen has room and doing so keeps the ghost clear; the ghost always wins.
-// Returns 0 when nothing is in the way. If the screen is too short, it rises as far as it can.
-export function hoverLift(outline: Point[], pivot: Point, at: Point, angles: number[], ghost: Box, top: number, others: Box[] = [], gap = 8): number {
+// How far to raise the pour point (a constant height for the whole hold and pour) so the tilted
+// bottle clears the ghost left in its slot at every pour angle, without leaving the top margin.
+// For each angle and box, the rises that would make them touch form one interval; the answer is
+// the lowest rise outside all of them. Checking only the angles that touch at the starting height
+// is not enough: pouring from the top row into the row below, a rise that clears the most tilted
+// pose carries the more upright, hanging poses up into the ghost.
+// `others` (resting bottles) are cleared too when there is room, the ghost stays clear and it costs
+// at most `spare` more rise (climbing over a whole row only to step around it looks worse than
+// passing in front); the ghost always wins. If no rise within the room clears the ghost, the rise
+// with the shallowest overlap is used and `blocked` reports it.
+export type HoverPlan = { lift: number; blocked: boolean; room: number };
+function forbidden(poses: Point[][], boxes: Box[], gap: number): [number, number][] {
+  const intervals: [number, number][] = [];
+  for (const poly of poses) for (const box of boxes) {
+    const part = clipStrip(poly, box.x0, box.x1);
+    if (!part.length) continue;
+    const ys = part.map(p => p.y);
+    // Raised by s, the strip part spans [min - s, max - s]; it touches the box between these rises.
+    // The gap keeps it clear above the box; the boxes already carry their own margin below.
+    intervals.push([Math.min(...ys) - box.y1, Math.max(...ys) - box.y0 + gap]);
+  }
+  return intervals;
+}
+function lowestClear(intervals: [number, number][], room: number): number | null {
+  const candidates = [0, ...intervals.map(([, hi]) => hi)].filter(c => c >= 0 && c <= room).sort((a, b) => a - b);
+  return candidates.find(c => intervals.every(([lo, hi]) => c <= lo || c >= hi)) ?? null;
+}
+function depthAt(poses: Point[][], box: Box, shift: number) {
+  let depth = 0;
+  for (const poly of poses) {
+    const part = clipStrip(poly, box.x0, box.x1);
+    if (!part.length) continue;
+    const lo = Math.min(...part.map(p => p.y)) - shift, hi = Math.max(...part.map(p => p.y)) - shift;
+    depth = Math.max(depth, Math.min(hi, box.y1) - Math.max(lo, box.y0));
+  }
+  return depth;
+}
+export function planHover(outline: Point[], pivot: Point, at: Point, angles: number[], ghost: Box, top: number, others: Box[] = [], gap = 8, spare = Infinity): HoverPlan {
   const poses = angles.map(angle => placeVessel(outline, angle, pivot, at));
-  const room = Math.min(...poses.map(poly => Math.min(...poly.map(p => p.y)) - top));
-  const needFor = (boxes: Box[]) => {
-    let need = 0;
-    for (const poly of poses) for (const box of boxes) {
-      if (overlaps(poly, box)) need = Math.max(need, Math.max(...clipStrip(poly, box.x0, box.x1).map(p => p.y)) - box.y0 + gap);
-    }
-    return Math.max(0, Math.min(need, room));
-  };
-  const clear = (shift: number) => poses.every(poly => !overlaps(poly.map(p => ({ x: p.x, y: p.y - shift })), ghost));
-  let lift = needFor([ghost]);
-  // A lift that solves one angle but pushes another into the ghost is not used.
-  if (lift && !clear(lift) && clear(0)) lift = 0;
-  const wider = needFor([ghost, ...others]);
-  return wider > lift && clear(wider) ? wider : lift;
+  const room = Math.max(0, Math.min(...poses.map(poly => Math.min(...poly.map(p => p.y)) - top)));
+  const ghostOnly = forbidden(poses, [ghost], gap);
+  const lift = lowestClear(ghostOnly, room);
+  if (lift === null) {
+    const tries = [0, room, ...ghostOnly.map(([, hi]) => hi).filter(c => c > 0 && c < room)];
+    const best = tries.reduce((a, b) => depthAt(poses, ghost, b) < depthAt(poses, ghost, a) ? b : a);
+    return { lift: best, blocked: depthAt(poses, ghost, best) > 0, room };
+  }
+  const wider = others.length ? lowestClear([...ghostOnly, ...forbidden(poses, others, gap)], room) : null;
+  return { lift: wider !== null && wider - lift <= spare ? wider : lift, blocked: false, room };
+}
+export function hoverLift(outline: Point[], pivot: Point, at: Point, angles: number[], ghost: Box, top: number, others: Box[] = [], gap = 8): number {
+  return planHover(outline, pivot, at, angles, ghost, top, others, gap).lift;
 }

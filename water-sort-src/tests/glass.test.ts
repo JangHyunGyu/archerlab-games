@@ -40,11 +40,12 @@ test('new glass geometry meets its open lip and keeps volume under mirrored tilt
   }
 });
 
-test('ghost bottles mute their liquid toward gray and draw it see-through', async () => {
+test('ghost bottles mute their liquid slightly toward gray and draw it see-through', async () => {
   const { ghostColor, GHOST_LIQUID_ALPHA, WATER_COLORS } = await import('../lib/glass-renderer.ts');
   const saturation = (hex: string) => { const v = [1, 3, 5].map(o => parseInt(hex.slice(o, o + 2), 16)); return (Math.max(...v) - Math.min(...v)) / 255; };
-  for (const color of WATER_COLORS) assert.ok(saturation(ghostColor(color)) < saturation(color) * .6, color);
-  assert.ok(GHOST_LIQUID_ALPHA <= .5);
+  for (const color of WATER_COLORS) { const muted = saturation(ghostColor(color)) / saturation(color); assert.ok(muted < .85 && muted > .6, color); }
+  // With the slot's own fade (.72) the liquid shows at about half strength: visible, never solid.
+  assert.ok(GHOST_LIQUID_ALPHA >= .6 && GHOST_LIQUID_ALPHA <= .7);
 });
 
 test('the pour point rises over the ghost slot for every pour angle, but stays on screen', async () => {

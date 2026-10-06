@@ -8,9 +8,10 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 3010",
     "build": "tsc --noEmit && vite build && node scripts/publish-static.mjs",
-    "test": "node --experimental-strip-types --test tests/game.test.ts tests/challenge.test.ts tests/challenge-api.test.mjs tests/drag.test.ts tests/audio.test.ts tests/glass.test.ts tests/route.test.mjs tests/menu.test.ts tests/responsiveness.test.mjs tests/pour-controller.test.ts tests/dead-end.test.ts tests/protections.test.mjs",
+    "test": "node --experimental-strip-types --test tests/game.test.ts tests/challenge.test.ts tests/challenge-api.test.mjs tests/drag.test.ts tests/audio.test.ts tests/glass.test.ts tests/pour-path.test.ts tests/route.test.mjs tests/menu.test.ts tests/responsiveness.test.mjs tests/pour-controller.test.ts tests/dead-end.test.ts tests/protections.test.mjs",
     "test:render": "node --test tests/rendered-html.test.mjs tests/dead-end-worker.test.mjs",
-    "test:browser": "node --experimental-strip-types tests/ghost-preview.browser.mjs"
+    "test:browser": "node --experimental-strip-types tests/ghost-preview.browser.mjs",
+    "test:layouts": "node --experimental-strip-types tests/two-row-layouts.browser.mjs"
   },
   "dependencies": {
     "react": "19.2.6",

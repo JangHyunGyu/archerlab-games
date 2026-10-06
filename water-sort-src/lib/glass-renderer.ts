@@ -4,10 +4,11 @@ export const WATER_COLORS = ['#eb4d68', '#249fdf', '#efbd28', '#36b889', '#8d59d
 export type LiquidLayer = { color: number; units: number };
 export type VesselPose = { x: number; y: number; width: number; height: number; angle?: number; pivot?: Point };
 type RenderOptions = { time?: number; agitation?: number; incoming?: boolean; shadow?: boolean; ghost?: boolean };
-// A ghost (the projected bottle left in a lifted bottle's slot) draws its liquid see-through and
-// muted, so it never reads as a real, filled bottle. The slot also fades the whole canvas.
-export const GHOST_LIQUID_ALPHA = .5;
-const GHOST_DESATURATE = .45;
+// A ghost (the projected bottle left in a lifted bottle's slot) draws its liquid see-through and a
+// little muted, so it never reads as a real, filled bottle. The slot also fades the whole canvas;
+// together the liquid shows at about half strength, easy to read but not solid.
+export const GHOST_LIQUID_ALPHA = .66;
+const GHOST_DESATURATE = .22;
 export function ghostColor(hex: string) {
   const [r, g, b] = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16));
   const gray = r * .3 + g * .59 + b * .11;
