@@ -6,7 +6,7 @@ const vm = require('node:vm');
 let source = fs.readFileSync(path.join(__dirname, '../../game-api-worker.js'), 'utf8');
 source = source.replace(/export \{[^}]+\};/g, '');
 source = source.replace('export default {', 'const __workerExport = {');
-source += '\nglobalThis.__gameApiTest = { storeClientError };';
+source += '\nglobalThis.__gameApiTest = { storeClientError, worker: __workerExport };';
 
 const context = {
   console,
@@ -154,6 +154,22 @@ function createDb() {
     reason: 'successful_base64_fallback'
   });
   assert.equal(base64Db.writes.length, 0);
+
+  // sendBeacon은 CORS 사전 요청을 피하려고 text/plain으로 보낸다. fetch 핸들러가 이 본문도 JSON으로 저장해야 한다.
+  const beaconDb = createDb();
+  const beaconResponse = await context.__gameApiTest.worker.fetch(new Request('https://game-api.yama5993.workers.dev/client-errors', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=UTF-8',
+      Origin: 'https://game.archerlab.dev',
+      'User-Agent': 'Mozilla/5.0 Chrome/154.0.0.0 Safari/537.36'
+    },
+    body: JSON.stringify({ game_id: 'blockpang', error_type: 'error', message: 'beacon text/plain body', url: 'https://game.archerlab.dev/blockpang/' })
+  }), { DB: beaconDb });
+  assert.equal(beaconResponse.status, 200);
+  assert.equal(beaconDb.writes.length, 1);
+  assert.equal(beaconDb.writes[0].values[0], 'blockpang');
+  assert.equal(beaconDb.writes[0].values[2], '[error] beacon text/plain body');
 
   console.log('✓ game API client-error automation filtering verified');
 })().catch((error) => {
