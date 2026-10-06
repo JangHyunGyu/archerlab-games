@@ -877,6 +877,7 @@ class UIManager {
         btn.on('pointerout',  () => draw(false));
 
         let lastFire = 0;
+        let pressHandled = false;
         const fire = (event) => {
             this._consumePointerEvent(event);
             const now = performance.now();
@@ -884,8 +885,22 @@ class UIManager {
             lastFire = now;
             if (onPress) onPress();
         };
-        btn.on('pointerdown', fire);
-        btn.on('pointertap',  fire);
+        // pointerdown fires the action; the tap of that same press is only a
+        // fallback. On slow devices pointerup can arrive after the 280 ms
+        // debounce, so a handled press must not fire a second time.
+        btn.on('pointerdown', (event) => {
+            const before = lastFire;
+            fire(event);
+            pressHandled = lastFire !== before;
+        });
+        btn.on('pointertap', (event) => {
+            if (pressHandled) {
+                pressHandled = false;
+                this._consumePointerEvent(event);
+                return;
+            }
+            fire(event);
+        });
         parent.addChild(btn);
 
         if (registerActive) {
@@ -1590,7 +1605,7 @@ class UIManager {
                     finish();
                     return true;
                 }
-                this.elapsed += dt;
+                this.elapsed = advanceTransitionElapsed(this, dt);
                 const t = Math.min(this.elapsed / this.duration, 1);
                 container.alpha = 1 - easeOutCubic(t);
                 if (t >= 1) {

@@ -1247,7 +1247,7 @@
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = true;
     draw(ctx, width, height);
-    scene.textures.addCanvas(key, canvas);
+    scene.textures.addImage(key, canvas);
   }
 
   function harmonizeCrossbowPalette(ctx, width, height, direction) {
@@ -1296,12 +1296,27 @@
     }
   }
 
+  // Combat textures are prepared after the menu is visible. While a deferred
+  // build is active, slices are queued (with their source image captured now,
+  // because sheets are released right after slicing) and then drawn in short
+  // time-boxed batches. Every job performs the exact draw/grade of the
+  // synchronous path, so the resulting pixels are identical.
+  let deferredSliceJobs = null;
+
   function makeImageSliceTexture(scene, sourceKey, key, sx, sy, sw, sh) {
+    const source = scene.textures.get(sourceKey).getSourceImage();
+    if (deferredSliceJobs) {
+      deferredSliceJobs.push(() => renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh));
+      return;
+    }
+    renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh);
+  }
+
+  function renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh) {
     if (scene.textures.exists(key)) {
       scene.textures.remove(key);
     }
 
-    const source = scene.textures.get(sourceKey).getSourceImage();
     const canvas = document.createElement("canvas");
     // Action sheets are up to 960px tall but render below 267px. Keep enough
     // detail for 2x displays without retaining hundreds of full-size canvases.
@@ -1315,7 +1330,10 @@
     if (/^character-a(?:-attack-\d+)?$/.test(sourceKey)) {
       harmonizeCrossbowPalette(ctx, canvas.width, canvas.height, Math.round(sx / sw));
     }
-    scene.textures.addCanvas(key, canvas);
+    // A plain canvas-backed texture uploads the same pixels. Unlike addCanvas
+    // (CanvasTexture), it does not read every slice back with getImageData or
+    // keep a CPU copy of its pixels alive.
+    scene.textures.addImage(key, canvas);
   }
 
   function createZombieSpriteTextures(scene) {
@@ -2143,65 +2161,219 @@
     });
   }
 
+  // Only the title, shop backdrop, UI frames and battlefield backdrop are
+  // needed before the menu can be shown. Everything else is combat-only.
+  function queueMenuAssetFiles() {
+    this.load.image("bg-corridor", imageAsset("assets/images/corridor-battlefield.png"));
+    Object.values(window.SchoolZombieUI.SURFACES).forEach(({ key }) => {
+      this.load.image(key, imageAsset(`assets/images/${key}.png`));
+    });
+    this.load.image("title-keyart", imageAsset("assets/images/title-keyart.png"));
+    this.load.image("shop-blackmarket", imageAsset("assets/images/shop-blackmarket.png"));
+  }
+
+  function queueCombatAssetFiles() {
+    this.load.image("ui-survival-equipment", imageAsset("assets/images/ui-survival-equipment.png"));
+    this.load.image("skill-choice-backdrop", imageAsset("assets/images/skill-choice-backdrop.png"));
+    this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
+    this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CROSSBOW_ASSET_VERSION));
+    this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", CHARACTER_CONTINUITY_ASSET_VERSION));
+    this.load.image("character-e", versionedImageAsset("assets/images/character-e.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-g", versionedImageAsset("assets/images/character-g.png", CHARACTER_ASSET_VERSION));
+    this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
+    Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
+      const assetVersion = id === "a" ? CROSSBOW_ASSET_VERSION
+        : id === "d" ? CHARACTER_CONTINUITY_ASSET_VERSION : CHARACTER_ASSET_VERSION;
+      const frameCount = CHARACTER_ATTACK_FRAME_DURATIONS[id]?.length || THROW_ANIMATION_FRAMES;
+      for (let frame = 0; frame < frameCount; frame += 1) {
+        if (frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id)) {
+          continue;
+        }
+        this.load.image(
+          `character-${id}-${action}-${frame}`,
+          versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`,
+            id === "f" && frame === 4 ? FIREBOMB_RECOVERY_ASSET_VERSION : assetVersion)
+        );
+      }
+    });
+    this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
+    this.load.image("avatar-bow", versionedImageAsset("assets/images/avatar-bow.png", CROSSBOW_ASSET_VERSION));
+    this.load.image("avatar-rifle", imageAsset("assets/images/avatar-rifle.png"));
+    this.load.image("avatar-rocket", imageAsset("assets/images/avatar-rocket.png"));
+    this.load.image("avatar-sniper", imageAsset("assets/images/avatar-sniper.png"));
+    this.load.image("avatar-fire", imageAsset("assets/images/avatar-fire.png"));
+    this.load.image("avatar-shock", imageAsset("assets/images/avatar-shock.png"));
+    this.load.image("avatar-engineer", imageAsset("assets/images/avatar-engineer.png"));
+    this.load.image("projectile-arrow", versionedImageAsset("assets/images/projectile-arrow.png", CROSSBOW_ASSET_VERSION));
+    this.load.image("projectile-pistol", versionedImageAsset("assets/images/projectile-pistol.png", ALLIED_WEAPON_ASSET_VERSION));
+    this.load.image("projectile-rifle", versionedImageAsset("assets/images/projectile-rifle.png", ALLIED_WEAPON_ASSET_VERSION));
+    this.load.image("projectile-grenade", imageAsset("assets/images/projectile-grenade.png"));
+    this.load.image("projectile-rocket", imageAsset("assets/images/projectile-rocket.png"));
+    this.load.image("projectile-sniper", versionedImageAsset("assets/images/projectile-sniper.png", ALLIED_WEAPON_ASSET_VERSION));
+    this.load.image("projectile-firebomb", versionedImageAsset("assets/images/projectile-firebomb.png", COMBAT_PROP_ASSET_VERSION));
+    this.load.image("projectile-shock", versionedImageAsset("assets/images/projectile-shock.png", ALLIED_WEAPON_ASSET_VERSION));
+    this.load.image("projectile-nail", versionedImageAsset("assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION));
+    this.load.image("muzzle-arrow", versionedImageAsset("assets/images/muzzle-arrow.png", CROSSBOW_ASSET_VERSION));
+    this.load.image("muzzle-pistol", imageAsset("assets/images/muzzle-pistol.png"));
+    this.load.image("muzzle-rifle", imageAsset("assets/images/muzzle-rifle.png"));
+    this.load.image("muzzle-rocket", imageAsset("assets/images/muzzle-rocket.png"));
+    this.load.image("muzzle-sniper", imageAsset("assets/images/muzzle-sniper.png"));
+    this.load.image("skill-repair", imageAsset("assets/images/skill-repair.png"));
+    this.load.spritesheet("zombie-hit-arrow-sheet", versionedImageAsset("assets/images/zombie-hit-arrow-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet("zombie-hit-pistol-sheet", versionedImageAsset("assets/images/zombie-hit-pistol-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 112, frameHeight: 96 });
+    this.load.spritesheet("zombie-hit-rifle-sheet", versionedImageAsset("assets/images/zombie-hit-rifle-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 140, frameHeight: 100 });
+    this.load.spritesheet("zombie-hit-rocket-sheet", versionedImageAsset("assets/images/zombie-hit-rocket-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 160, frameHeight: 130 });
+    this.load.spritesheet("zombie-hit-sniper-sheet", versionedImageAsset("assets/images/zombie-hit-sniper-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 150, frameHeight: 104 });
+    this.load.spritesheet("zombie-hit-nail-sheet", versionedImageAsset("assets/images/zombie-hit-nail-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("effect-fire-zone-sheet", versionedImageAsset("assets/images/effect-fire-zone-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 256, frameHeight: 160 });
+    this.load.image("barbed-wire", imageAsset("assets/images/barbed-wire.png"));
+    this.load.image("barricade-impact", versionedImageAsset("assets/images/barricade-impact.png", COMBAT_PROP_ASSET_VERSION));
+    this.load.image("blood-burst-core", versionedImageAsset("assets/images/blood-burst-core.png", COMBAT_EFFECT_ASSET_VERSION));
+    BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, versionedImageAsset(`assets/images/${key}.png`, COMBAT_EFFECT_ASSET_VERSION)));
+    Object.values(ZOMBIE_DEATH_TEXTURES)
+      .flat()
+      .forEach((key) => this.load.spritesheet(
+        key,
+        versionedImageAsset(`assets/images/${key}.png`, ZOMBIE_ASSET_VERSION),
+        { frameWidth: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE, frameHeight: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE }
+      ));
+    ZOMBIE_TEXTURE_TYPES.forEach((type) => {
+      this.load.image(
+        `zombie-walk-${type}`,
+        versionedImageAsset(`assets/images/zombie-walk-${type}.png`, ZOMBIE_ASSET_VERSION)
+      );
+    });
+  }
+
+  // The menu text is Pretendard, and Phaser bakes text into canvases, so the
+  // font must be ready before the first text object is created.
+  function waitForMenuFonts() {
+    const fonts = document.fonts;
+    if (!fonts) {
+      return Promise.resolve();
+    }
+    const requested = typeof fonts.load === "function"
+      ? Promise.resolve().then(() => fonts.load('800 16px "Pretendard Variable"')).catch(() => null)
+      : Promise.resolve();
+    return Promise.all([requested, fonts.ready]).then(() => undefined, () => undefined);
+  }
+
+  function runTimeSlicedJobs(jobs, getBudget, onProgress) {
+    return new Promise((resolve, reject) => {
+      let index = 0;
+      const step = () => {
+        const started = performance.now();
+        const budget = getBudget();
+        try {
+          while (index < jobs.length) {
+            jobs[index]();
+            index += 1;
+            if (performance.now() - started >= budget) {
+              break;
+            }
+          }
+        } catch (error) {
+          reject(error);
+          return;
+        }
+        onProgress(jobs.length ? index / jobs.length : 1);
+        if (index >= jobs.length) {
+          resolve();
+        } else {
+          window.setTimeout(step, 0);
+        }
+      };
+      window.setTimeout(step, 0);
+    });
+  }
+
+  // Same construction order as the original boot sequence; the slice jobs are
+  // only executed in small batches so the menu keeps receiving input.
+  async function buildCombatTextures(scene, getBudget, onProgress) {
+    let jobs = [];
+    deferredSliceJobs = jobs;
+    try {
+      createZombieSpriteTextures(scene);
+      await Promise.all([loadManualCharacterAssets(scene), waitForMenuFonts()]);
+      createGeneratedDefenderTextures(scene);
+      createCharacterSpriteTextures(scene);
+      createCharacterAttackTextures(scene);
+    } finally {
+      deferredSliceJobs = null;
+    }
+    await runTimeSlicedJobs(jobs, getBudget, onProgress);
+    jobs = null;
+    // Remaining steps run in order, each in its own task.
+    await runTimeSlicedJobs([
+      () => createCharacterBadgeTextures(scene),
+      () => releaseCharacterSourceTextures(scene),
+      () => createTextures(scene),
+      () => window.SchoolZombieUI.installIcons(scene)
+    ], () => 0, () => {});
+  }
+
+  function loadManualImage(path, version = "") {
+    return new Promise((resolve) => {
+      const encodedVersion = version ? `?v=${encodeURIComponent(version)}` : "";
+      const candidates = [versionedImageAsset(path, version), `${path}${encodedVersion}`]
+        .map((candidate) => new URL(candidate, window.location.href).href)
+        .filter((candidate, index, items) => items.indexOf(candidate) === index);
+      const tryLoad = (index) => {
+        if (index >= candidates.length) {
+          resolve(null);
+          return;
+        }
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.onload = () => resolve(image);
+        image.onerror = () => tryLoad(index + 1);
+        image.src = candidates[index];
+      };
+      tryLoad(0);
+    });
+  }
+
+  function loadManualTexture(scene, key, path, version = "") {
+    if (scene.textures.exists(key)) {
+      return Promise.resolve();
+    }
+    return loadManualImage(path, version).then((image) => {
+      if (!image || scene.textures.exists(key)) {
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth || image.width;
+      canvas.height = image.naturalHeight || image.height;
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(image, 0, 0);
+      scene.textures.addCanvas(key, canvas);
+    });
+  }
+
+  function loadManualCharacterAssets(scene) {
+    const assets = [
+      ["character-f", "assets/images/character-f.png", CHARACTER_ASSET_VERSION],
+      ["character-g", "assets/images/character-g.png", CHARACTER_ASSET_VERSION],
+      ["character-h", "assets/images/character-h.png", CHARACTER_ASSET_VERSION],
+      ["avatar-fire", "assets/images/avatar-fire.png"],
+      ["avatar-shock", "assets/images/avatar-shock.png"],
+      ["avatar-engineer", "assets/images/avatar-engineer.png"],
+      ["projectile-firebomb", "assets/images/projectile-firebomb.png", COMBAT_PROP_ASSET_VERSION],
+      ["projectile-shock", "assets/images/projectile-shock.png"],
+      ["projectile-nail", "assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION],
+      ["engineer-turret-base", "assets/images/engineer-turret-base.png", TURRET_ASSET_VERSION],
+      ["engineer-turret-head", "assets/images/engineer-turret-head.png", TURRET_ASSET_VERSION]
+    ];
+    return Promise.all(assets.map(([key, path, version]) => loadManualTexture(scene, key, path, version)));
+  }
+
   class BootScene extends Phaser.Scene {
     constructor() {
       super("BootScene");
-    }
-
-    loadManualImage(path, version = "") {
-      return new Promise((resolve) => {
-        const encodedVersion = version ? `?v=${encodeURIComponent(version)}` : "";
-        const candidates = [versionedImageAsset(path, version), `${path}${encodedVersion}`]
-          .map((candidate) => new URL(candidate, window.location.href).href)
-          .filter((candidate, index, items) => items.indexOf(candidate) === index);
-        const tryLoad = (index) => {
-          if (index >= candidates.length) {
-            resolve(null);
-            return;
-          }
-          const image = new Image();
-          image.crossOrigin = "anonymous";
-          image.onload = () => resolve(image);
-          image.onerror = () => tryLoad(index + 1);
-          image.src = candidates[index];
-        };
-        tryLoad(0);
-      });
-    }
-
-    loadManualTexture(key, path, version = "") {
-      if (this.textures.exists(key)) {
-        return Promise.resolve();
-      }
-      return this.loadManualImage(path, version).then((image) => {
-        if (!image || this.textures.exists(key)) {
-          return;
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = image.naturalWidth || image.width;
-        canvas.height = image.naturalHeight || image.height;
-        const ctx = canvas.getContext("2d");
-        ctx.imageSmoothingEnabled = true;
-        ctx.drawImage(image, 0, 0);
-        this.textures.addCanvas(key, canvas);
-      });
-    }
-
-    loadManualCharacterAssets() {
-      const assets = [
-        ["character-f", "assets/images/character-f.png", CHARACTER_ASSET_VERSION],
-        ["character-g", "assets/images/character-g.png", CHARACTER_ASSET_VERSION],
-        ["character-h", "assets/images/character-h.png", CHARACTER_ASSET_VERSION],
-        ["avatar-fire", "assets/images/avatar-fire.png"],
-        ["avatar-shock", "assets/images/avatar-shock.png"],
-        ["avatar-engineer", "assets/images/avatar-engineer.png"],
-        ["projectile-firebomb", "assets/images/projectile-firebomb.png", COMBAT_PROP_ASSET_VERSION],
-        ["projectile-shock", "assets/images/projectile-shock.png"],
-        ["projectile-nail", "assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION],
-        ["engineer-turret-base", "assets/images/engineer-turret-base.png", TURRET_ASSET_VERSION],
-        ["engineer-turret-head", "assets/images/engineer-turret-head.png", TURRET_ASSET_VERSION]
-      ];
-      return Promise.all(assets.map(([key, path, version]) => this.loadManualTexture(key, path, version)));
     }
 
     preload() {
@@ -2228,102 +2400,15 @@
           loadingText.textContent = SchoolI18n.t("loading.retryAsset");
         }
       });
-      this.load.image("bg-corridor", imageAsset("assets/images/corridor-battlefield.png"));
-      Object.values(window.SchoolZombieUI.SURFACES).forEach(({ key }) => {
-        this.load.image(key, imageAsset(`assets/images/${key}.png`));
-      });
-      this.load.image("ui-survival-equipment", imageAsset("assets/images/ui-survival-equipment.png"));
-      this.load.image("title-keyart", imageAsset("assets/images/title-keyart.png"));
-      this.load.image("skill-choice-backdrop", imageAsset("assets/images/skill-choice-backdrop.png"));
-      this.load.image("gameover-last-stand", imageAsset("assets/images/gameover-last-stand.png"));
-      this.load.image("shop-blackmarket", imageAsset("assets/images/shop-blackmarket.png"));
-      this.load.image("character-a", versionedImageAsset("assets/images/character-a.png", CROSSBOW_ASSET_VERSION));
-      this.load.image("character-b", versionedImageAsset("assets/images/character-b.png", CHARACTER_ASSET_VERSION));
-      this.load.image("character-c", versionedImageAsset("assets/images/character-c.png", CHARACTER_ASSET_VERSION));
-      this.load.image("character-d", versionedImageAsset("assets/images/character-d.png", CHARACTER_CONTINUITY_ASSET_VERSION));
-      this.load.image("character-e", versionedImageAsset("assets/images/character-e.png", CHARACTER_ASSET_VERSION));
-      this.load.image("character-f", versionedImageAsset("assets/images/character-f.png", CHARACTER_ASSET_VERSION));
-      this.load.image("character-g", versionedImageAsset("assets/images/character-g.png", CHARACTER_ASSET_VERSION));
-      this.load.image("character-h", versionedImageAsset("assets/images/character-h.png", CHARACTER_ASSET_VERSION));
-      Object.entries(CHARACTER_ATTACK_ACTIONS).forEach(([id, action]) => {
-        const assetVersion = id === "a" ? CROSSBOW_ASSET_VERSION
-          : id === "d" ? CHARACTER_CONTINUITY_ASSET_VERSION : CHARACTER_ASSET_VERSION;
-        const frameCount = CHARACTER_ATTACK_FRAME_DURATIONS[id]?.length || THROW_ANIMATION_FRAMES;
-        for (let frame = 0; frame < frameCount; frame += 1) {
-          if (frame === 0 && CHARACTER_ATTACK_FRAME_ZERO_ALIASES.has(id)) {
-            continue;
-          }
-          this.load.image(
-            `character-${id}-${action}-${frame}`,
-            versionedImageAsset(`assets/images/character-${id}-${action}-${frame}.png`,
-              id === "f" && frame === 4 ? FIREBOMB_RECOVERY_ASSET_VERSION : assetVersion)
-          );
-        }
-      });
-      this.load.image("avatar-pistol", imageAsset("assets/images/avatar-pistol.png"));
-      this.load.image("avatar-bow", versionedImageAsset("assets/images/avatar-bow.png", CROSSBOW_ASSET_VERSION));
-      this.load.image("avatar-rifle", imageAsset("assets/images/avatar-rifle.png"));
-      this.load.image("avatar-rocket", imageAsset("assets/images/avatar-rocket.png"));
-      this.load.image("avatar-sniper", imageAsset("assets/images/avatar-sniper.png"));
-      this.load.image("avatar-fire", imageAsset("assets/images/avatar-fire.png"));
-      this.load.image("avatar-shock", imageAsset("assets/images/avatar-shock.png"));
-      this.load.image("avatar-engineer", imageAsset("assets/images/avatar-engineer.png"));
-      this.load.image("projectile-arrow", versionedImageAsset("assets/images/projectile-arrow.png", CROSSBOW_ASSET_VERSION));
-      this.load.image("projectile-pistol", versionedImageAsset("assets/images/projectile-pistol.png", ALLIED_WEAPON_ASSET_VERSION));
-      this.load.image("projectile-rifle", versionedImageAsset("assets/images/projectile-rifle.png", ALLIED_WEAPON_ASSET_VERSION));
-      this.load.image("projectile-grenade", imageAsset("assets/images/projectile-grenade.png"));
-      this.load.image("projectile-rocket", imageAsset("assets/images/projectile-rocket.png"));
-      this.load.image("projectile-sniper", versionedImageAsset("assets/images/projectile-sniper.png", ALLIED_WEAPON_ASSET_VERSION));
-      this.load.image("projectile-firebomb", versionedImageAsset("assets/images/projectile-firebomb.png", COMBAT_PROP_ASSET_VERSION));
-      this.load.image("projectile-shock", versionedImageAsset("assets/images/projectile-shock.png", ALLIED_WEAPON_ASSET_VERSION));
-      this.load.image("projectile-nail", versionedImageAsset("assets/images/projectile-nail.png", COMBAT_PROP_ASSET_VERSION));
-      this.load.image("muzzle-arrow", versionedImageAsset("assets/images/muzzle-arrow.png", CROSSBOW_ASSET_VERSION));
-      this.load.image("muzzle-pistol", imageAsset("assets/images/muzzle-pistol.png"));
-      this.load.image("muzzle-rifle", imageAsset("assets/images/muzzle-rifle.png"));
-      this.load.image("muzzle-rocket", imageAsset("assets/images/muzzle-rocket.png"));
-      this.load.image("muzzle-sniper", imageAsset("assets/images/muzzle-sniper.png"));
-      this.load.image("skill-repair", imageAsset("assets/images/skill-repair.png"));
-      this.load.spritesheet("zombie-hit-arrow-sheet", versionedImageAsset("assets/images/zombie-hit-arrow-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 96, frameHeight: 96 });
-      this.load.spritesheet("zombie-hit-pistol-sheet", versionedImageAsset("assets/images/zombie-hit-pistol-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 112, frameHeight: 96 });
-      this.load.spritesheet("zombie-hit-rifle-sheet", versionedImageAsset("assets/images/zombie-hit-rifle-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 140, frameHeight: 100 });
-      this.load.spritesheet("zombie-hit-rocket-sheet", versionedImageAsset("assets/images/zombie-hit-rocket-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 160, frameHeight: 130 });
-      this.load.spritesheet("zombie-hit-sniper-sheet", versionedImageAsset("assets/images/zombie-hit-sniper-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 150, frameHeight: 104 });
-      this.load.spritesheet("zombie-hit-nail-sheet", versionedImageAsset("assets/images/zombie-hit-nail-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 128, frameHeight: 128 });
-      this.load.spritesheet("effect-fire-zone-sheet", versionedImageAsset("assets/images/effect-fire-zone-sheet.png", COMBAT_EFFECT_ASSET_VERSION), { frameWidth: 256, frameHeight: 160 });
-      this.load.image("barbed-wire", imageAsset("assets/images/barbed-wire.png"));
-      this.load.image("barricade-impact", versionedImageAsset("assets/images/barricade-impact.png", COMBAT_PROP_ASSET_VERSION));
-      this.load.image("blood-burst-core", versionedImageAsset("assets/images/blood-burst-core.png", COMBAT_EFFECT_ASSET_VERSION));
-      BLOOD_STAIN_TEXTURES.forEach((key) => this.load.image(key, versionedImageAsset(`assets/images/${key}.png`, COMBAT_EFFECT_ASSET_VERSION)));
-      Object.values(ZOMBIE_DEATH_TEXTURES)
-        .flat()
-        .forEach((key) => this.load.spritesheet(
-          key,
-          versionedImageAsset(`assets/images/${key}.png`, ZOMBIE_ASSET_VERSION),
-          { frameWidth: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE, frameHeight: ZOMBIE_DEATH_ANIMATION_FRAME_SIZE }
-        ));
-      ZOMBIE_TEXTURE_TYPES.forEach((type) => {
-        this.load.image(
-          `zombie-walk-${type}`,
-          versionedImageAsset(`assets/images/zombie-walk-${type}.png`, ZOMBIE_ASSET_VERSION)
-        );
-      });
+      queueMenuAssetFiles.call(this);
     }
 
     create() {
-      createZombieSpriteTextures(this);
-      const fontsReady = document.fonts?.ready || Promise.resolve();
       const loadingText = document.querySelector(".loading__text");
       if (loadingText) {
         loadingText.textContent = SchoolI18n.t("loading.assemble");
       }
-      Promise.all([this.loadManualCharacterAssets(), fontsReady]).then(() => {
-        createGeneratedDefenderTextures(this);
-        createCharacterSpriteTextures(this);
-        createCharacterAttackTextures(this);
-        createCharacterBadgeTextures(this);
-        releaseCharacterSourceTextures(this);
-        createTextures(this);
-        window.SchoolZombieUI.installIcons(this);
+      waitForMenuFonts().then(() => {
         const loading = document.querySelector(".loading");
         if (loading) {
           loading.remove();
@@ -2504,20 +2589,75 @@
         }).catch(() => {});
       };
       window.addEventListener("archer-reward-saved", this.boundHandleRewardSaved);
+      this.combatAssetsPromise = null;
+      this.combatAssetsReady = false;
+      this.combatAssetsProgress = 0;
+      this.combatAssetsUrgent = false;
       this.drawBackground();
-      this.createCharacters();
       this.createHud();
       this.bindInput();
-      this.showInitialProfileLoading();
+      // Show the menu immediately with the locally saved wallet; the server
+      // profile refreshes it in place, and sorties/shop actions still wait for it.
+      this.showMenu();
       this.ensureServerProfile({ quiet: true }).catch(() => null).finally(() => {
         if (this.disposed) {
           return;
         }
-        if (this.mode === "profile-loading") {
-          this.showMenu();
-        }
+        this.refreshMenuProfileStatus();
         this.applyDebugLaunchFlags();
       });
+      this.prepareCombatAssets().catch(() => null);
+    }
+
+    // Download and build combat-only textures while the menu is open. A sortie
+    // waits for this promise (with the run loading overlay) if it is not done.
+    prepareCombatAssets() {
+      if (this.combatAssetsPromise) {
+        return this.combatAssetsPromise;
+      }
+      const reportProgress = (progress) => {
+        this.combatAssetsProgress = clamp(progress, 0, 1);
+        if (this.mode === "starting" && !this.combatAssetsReady) {
+          updateRunLoadingOverlay(SchoolI18n.t("loading.assets", { percent: Math.round(this.combatAssetsProgress * 100) }));
+        }
+      };
+      const download = new Promise((resolve) => {
+        const load = this.load;
+        queueCombatAssetFiles.call(this);
+        const onProgress = (progress) => reportProgress(progress * 0.7);
+        load.on("progress", onProgress);
+        load.once("complete", () => {
+          load.off("progress", onProgress);
+          resolve();
+        });
+        load.start();
+      });
+      this.combatAssetsPromise = download
+        .then(() => {
+          if (this.disposed) {
+            throw new Error("scene disposed");
+          }
+          return buildCombatTextures(
+            this,
+            () => (this.combatAssetsUrgent ? 48 : 10),
+            (progress) => reportProgress(0.7 + progress * 0.3)
+          );
+        })
+        .then(() => {
+          this.combatAssetsReady = true;
+          reportProgress(1);
+        });
+      return this.combatAssetsPromise;
+    }
+
+    refreshMenuProfileStatus() {
+      if (this.mode !== "menu") {
+        return;
+      }
+      if (this.menuCoinsText?.active) this.menuCoinsText.setText(`$${this.meta.coins}`);
+      if (this.menuProtocolText?.active) this.menuProtocolText.setText(this.profileSyncFailed ? "SYNC · OFFLINE" : "THREAT · RED");
+      if (this.menuCreditLabel?.active) this.menuCreditLabel.setText(this.profileSyncFailed ? "OFFLINE SUPPLY" : "SUPPLY CREDIT");
+      announceGameStatus(SchoolI18n.t("menu.a11y", { coins: this.meta.coins, offline: this.profileSyncFailed ? SchoolI18n.t("menu.offline") : "" }));
     }
 
     applyDebugLaunchFlags() {
@@ -5684,6 +5824,7 @@
         stroke: "#050607",
         strokeThickness: 1
       }).setOrigin(1, 0.5).setDepth(504);
+      this.menuProtocolText = protocol;
       items.push(protocol);
       this.addLanguageSwitch(292, 38, 530);
       const eyebrow = this.add.text(270, 79, "SCHOOL UNDEAD · LAST DEFENSE", {
@@ -5757,6 +5898,7 @@
         stroke: "#050607",
         strokeThickness: 1
       }).setOrigin(0, 0.5).setDepth(527);
+      this.menuCreditLabel = creditLabel;
       const creditValue = this.add.text(408, 700, `$${this.meta.coins}`, {
         resolution: 2, fontFamily: "Arial, sans-serif",
         fontSize: 19,
@@ -6055,6 +6197,8 @@
       const previousMode = this.mode;
       showRunLoadingOverlay(SchoolI18n.t("loading.profile"));
       this.mode = "starting";
+      this.combatAssetsUrgent = true;
+      const combatAssets = this.prepareCombatAssets();
       try {
         await this.ensureServerProfile({ force: true });
       } catch (error) {
@@ -6067,6 +6211,26 @@
       if (this.disposed || this.mode !== "starting") {
         hideRunLoadingOverlay();
         return;
+      }
+      if (!this.combatAssetsReady) {
+        updateRunLoadingOverlay(SchoolI18n.t("loading.assets", { percent: Math.round(this.combatAssetsProgress * 100) }));
+        try {
+          await combatAssets;
+        } catch (error) {
+          hideRunLoadingOverlay();
+          if (!this.disposed && this.mode === "starting") {
+            this.mode = previousMode;
+            this.showToast(SchoolI18n.t("loading.offlineText"), COLORS.red);
+          }
+          return;
+        }
+        if (this.disposed || this.mode !== "starting") {
+          hideRunLoadingOverlay();
+          return;
+        }
+      }
+      if (!this.defenders.length) {
+        this.createCharacters();
       }
       updateRunLoadingOverlay(SchoolI18n.t("loading.enterLine"));
       this.playSfx("start");
@@ -11418,6 +11582,9 @@
     },
     audio: {
       noAudio: true
+    },
+    loader: {
+      maxParallelDownloads: 16
     },
     scene: [BootScene, GameScene]
   };

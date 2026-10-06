@@ -125,6 +125,10 @@ class Game {
 
     // ── Start game from title screen ──
     startGame(resume = false) {
+        // A second press while the title is already fading out (pointerdown +
+        // delayed pointertap, keyboard repeat) would clear and restart the fade.
+        const title = this.ui && this.ui.titleContainer;
+        if (this.state === 'playing' && title && !title.destroyed && title._blockpangTitleHiding) return;
         this._clearPendingTimeouts();
         if (this.input) this.input.cancelDrag({ animate: false, restorePiece: true });
         if (this.board && typeof this.board.clearTransientOverlays === 'function') this.board.clearTransientOverlays();
@@ -150,7 +154,7 @@ class Game {
                 elapsed: 0,
                 duration: 450,
                 update(dt) {
-                    this.elapsed += dt;
+                    this.elapsed = advanceTransitionElapsed(this, dt);
                     const t = Math.min(this.elapsed / this.duration, 1);
                     boardRef.alpha = easeOutCubic(t);
                     boardRef.scale.set(0.85 + easeOutBack(t) * 0.15);

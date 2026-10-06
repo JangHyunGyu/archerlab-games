@@ -55,6 +55,12 @@
 /school-zombie-defense/assets/sounds/*
   Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
 
+/blockpang/assets/ui/*
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+
+/blockpang/sounds/*
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+
 # Keep the Cloudflare Pages production subdomain and repository inputs out of search.
 https://archerlab-games.pages.dev/*
   X-Robots-Tag: noindex, follow

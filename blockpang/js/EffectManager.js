@@ -1,3 +1,12 @@
+// Screen transitions follow wall-clock time as well as ticker deltas. The
+// ticker clamps a frame to 100 ms, so on a slow device a 400 ms fade could
+// otherwise need many frames; at normal frame rates both are identical.
+function advanceTransitionElapsed(tween, dt) {
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (tween._wallStart == null) tween._wallStart = now - dt;
+    return Math.max(tween.elapsed + dt, now - tween._wallStart);
+}
+
 class EffectManager {
     constructor(game) {
         this.game = game;

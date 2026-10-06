@@ -144,6 +144,18 @@ async function createBlockpangApplication(options) {
     updateLoading(1, currentLang === 'ko' ? '준비 완료' : 'Ready');
     requestAnimationFrame(() => loading?.classList.add('is-hidden'));
 
+    // Build the sound graph and start decoding WAVs while the title is idle,
+    // so the first tap only has to resume the AudioContext.
+    const warmSound = () => {
+        if (game._destroyed) return;
+        try { game.sound.init(); } catch (_) { /* initialized again on first tap */ }
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(warmSound, { timeout: 2000 });
+    } else {
+        setTimeout(warmSound, 800);
+    }
+
     // Keyboard users get a visible canvas focus ring and the same primary
     // title action as pointer users. Modal/dropdown states keep priority.
     app.canvas.addEventListener('keydown', (event) => {
