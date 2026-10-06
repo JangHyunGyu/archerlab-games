@@ -54,7 +54,8 @@ const read = () => page.evaluate(() => [...document.querySelectorAll('.bottle-bu
     // Every glyph box of the badge text, against the pill (the label's own box and background).
     text: label && label.textContent ? (() => { const range = document.createRange(); range.selectNodeContents(label); const rects = [...range.getClientRects()].filter(r => r.width && r.height); return { x0: Math.min(...rects.map(r => r.left)), y0: Math.min(...rects.map(r => r.top)), x1: Math.max(...rects.map(r => r.right)), y1: Math.max(...rects.map(r => r.bottom)) }; })() : null,
     pill: l ? { x0: l.left, y0: l.top, x1: l.right, y1: l.bottom } : null,
-    tube: el.querySelector('.tube').getBoundingClientRect().y };
+    // Layout position (offsets ignore the brief select/deselect transform on the tube).
+    tube: el.offsetTop + el.querySelector('.tube').offsetTop };
 }));
 // Effective alpha of the liquid in the middle of unit `unit` of bottle i's canvas.
 async function alphaAt(i, unit) {
@@ -99,7 +100,7 @@ const visibleIncoming = (b1, queue, a, b) => expected(b1, queue, [a]).filter((e,
 const overSolid = (b1, queue, a, b) => expected(b1, queue, [a]).filter((e, i) => e.incoming && e.keep && i !== a && i !== b).length;
 
 async function runChain({ a, b, b1, queue }, shotAt2, shotAtEnd) {
-  const restingTubes = await page.evaluate(() => [...document.querySelectorAll('.bottle-button .tube')].map(t => t.getBoundingClientRect().y));
+  const restingTubes = await page.evaluate(() => [...document.querySelectorAll('.bottle-button')].map(el => el.offsetTop + el.querySelector('.tube').offsetTop));
   // Wait out the server's bottle locks from earlier pours, so the first tap starts a pour at once.
   await page.waitForTimeout(Math.max(0, ...latest.bottleAvailableAt.map(t => t - latest.serverNow)) + 150);
   hold();
@@ -131,7 +132,7 @@ async function runChain({ a, b, b1, queue }, shotAt2, shotAtEnd) {
         assert.ok(t.x0 >= p.x0 - .5 && t.x1 <= p.x1 + .5 && t.y0 >= p.y0 - .5 && t.y1 <= p.y1 + .5, `bottle ${i} badge '${bottle.badge}' text stays inside its pill at ${vw}x${vh}: ${JSON.stringify(bottle)}`);
       }
       // Badges never move the bottle: same tube position as before any reservation.
-      assert.ok(Math.abs(bottle.tube - restingTubes[i]) < .5 || bottle.lifted, `bottle ${i} moved by its badge`);
+      assert.ok(Math.abs(bottle.tube - restingTubes[i]) < .5 || bottle.lifted, `bottle ${i} moved by its badge after ${k} reservation(s): ${restingTubes[i]} → ${bottle.tube} ${JSON.stringify({ badge: bottle.badge, queue, first: [a, b] })}`);
       assert.equal(bottle.many, want[i].badge.split('·').length > 2 && want[i].badge !== '');
     });
   }
