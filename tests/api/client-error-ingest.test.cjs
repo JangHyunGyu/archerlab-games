@@ -155,6 +155,41 @@ function createDb() {
   });
   assert.equal(base64Db.writes.length, 0);
 
+  // PeerJS 시그널링 서버 연결이 끊긴 것(err.type 'network')은 실제 네트워크 끊김이라 저장하지 않는다.
+  const peerUa = 'Mozilla/5.0 (iPad; CPU OS 17_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.7 Mobile/15E148 Safari/605.1 NAVER(inapp; search; 2100; 12.23.72)';
+  for (const message of [
+    '[console_error] ERROR PeerJS:  Error: Lost connection to server.',
+    '[console_error] [PeerJS] Host error: network Lost connection to server.',
+    '[console_error] [PeerJS] Client error: network Lost connection to server.'
+  ]) {
+    const peerDb = createDb();
+    const peerResponse = await context.__gameApiTest.storeClientError(peerDb, new Request(browserRequest.url, {
+      method: 'POST',
+      headers: { 'User-Agent': peerUa }
+    }), {
+      appId: 'slimevolley',
+      errorType: 'console_error',
+      message,
+      url: 'https://game.archerlab.dev/slimevolley/'
+    });
+    assert.deepEqual(await peerResponse.json(), { ok: true, ignored: true, reason: 'peerjs_signaling_network_lost' });
+    assert.equal(peerDb.writes.length, 0);
+  }
+  // 네트워크가 아닌 PeerJS 오류와 코드 버그는 그대로 남긴다.
+  for (const message of [
+    '[console_error] [PeerJS] Host error: browser-incompatible The current browser does not support WebRTC',
+    "[console_error] TypeError: Cannot read properties of null (reading 'send')"
+  ]) {
+    const keepDb = createDb();
+    const keepResponse = await context.__gameApiTest.storeClientError(keepDb, browserRequest, {
+      appId: 'slimevolley',
+      errorType: 'console_error',
+      message
+    });
+    assert.deepEqual(await keepResponse.json(), { ok: true });
+    assert.equal(keepDb.writes.length, 1);
+  }
+
   // sendBeacon은 CORS 사전 요청을 피하려고 text/plain으로 보낸다. fetch 핸들러가 이 본문도 JSON으로 저장해야 한다.
   const beaconDb = createDb();
   const beaconResponse = await context.__gameApiTest.worker.fetch(new Request('https://game-api.yama5993.workers.dev/client-errors', {

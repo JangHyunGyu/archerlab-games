@@ -235,6 +235,20 @@ function isLocalDevelopmentUrl(value) {
     }
 }
 
+// PeerJS signaling WebSocket drops (mobile backgrounding, in-app browsers, flaky Wi-Fi) are real
+// network failures. PeerJS reports them as err.type 'network' with "Lost connection to server.";
+// both its own logger line and the game's '[PeerJS] Host/Client error: network' line are transport noise.
+function getTransientClientNetworkReason(body) {
+    const errorType = String(body.error_type || body.errorType || body.type || '');
+    const message = String(body.message || '').replace(/^\[[^\]]+\]\s*/, '').trim();
+    if (!/^(?:console_error|ConsoleError)$/i.test(errorType)) return '';
+    if (/^ERROR PeerJS:\s+Error:\s+Lost connection to server\.?$/i.test(message)
+        || /^\[PeerJS\] (?:Host|Client) error:\s+network\s+Lost connection to server\.?$/i.test(message)) {
+        return 'peerjs_signaling_network_lost';
+    }
+    return '';
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
@@ -270,6 +284,11 @@ async function storeClientError(db, request, body) {
 
     if (isAutomatedUserAgent(request.headers.get('User-Agent'))) {
         return jsonResponse({ ok: true, ignored: true });
+    }
+
+    const transientNetworkReason = getTransientClientNetworkReason(body);
+    if (transientNetworkReason) {
+        return jsonResponse({ ok: true, ignored: true, reason: transientNetworkReason });
     }
 
     const recoveredReason = getRecoveredClientErrorReason(body);
