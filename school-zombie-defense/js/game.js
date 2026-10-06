@@ -4900,6 +4900,7 @@
         if (!this.disposed && syncToken === this.rankSyncToken) {
           this.rankSyncFailed = true;
           this.rankLastSyncError = error.message;
+          window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-session' }, 'ranking_client_exception');
           console.warn("[SchoolZombie] rank session failed:", error.message);
         }
         return null;
@@ -4989,6 +4990,7 @@
           return true;
         } catch (error) {
           lastError = error;
+          window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-stage' }, 'ranking_client_exception');
           console.warn(`[SchoolZombie] rank stage ${clearedStage} sync attempt ${attempt} failed:`, error.message);
           if (attempt < maxAttempts) {
             await new Promise((resolve) => window.setTimeout(resolve, 450 * attempt));
@@ -5563,6 +5565,7 @@
           this.showRankings();
         }
       } catch (error) {
+        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-submit' }, 'ranking_client_exception');
         console.warn("[SchoolZombie] rank submit failed:", error.message);
         this.showToast(SchoolI18n.t("toast.rankFail"), COLORS.red);
       }

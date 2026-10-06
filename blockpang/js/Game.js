@@ -504,6 +504,7 @@ class Game {
         this.rankSessionPromise = this._createRankSession().catch((e) => {
             if (token !== this.rankRunToken) return null;
             this.rankSyncFailed = true;
+            window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-session' }, 'ranking_client_exception');
             console.warn('[Blockpang] rank session failed:', e.message);
             return null;
         });
@@ -596,6 +597,7 @@ class Game {
         })().catch((e) => {
             if (token !== this.rankRunToken) return false;
             this.rankSyncFailed = true;
+            window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-sync' }, 'ranking_client_exception');
             console.warn('[Blockpang] rank sync failed:', e.message);
             return false;
         }).finally(() => {

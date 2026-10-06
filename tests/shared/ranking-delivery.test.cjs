@@ -286,3 +286,25 @@ test('reward checkpoint: draft is exposed only after lease acquisition; copied t
   await c.ranking.bankRun(body);assert.equal(held,false);
   assert.equal(e.db.sql.prepare('SELECT coins FROM school_zombie_profiles').get().coins,104);
 });
+
+test('delivery reports code exceptions to D1 but keeps network failures silent; the record stays queued', async () => {
+  const e = environment();
+  const net = { fail: null, fetch: async (url, options) => { if (net.fail) throw net.fail; return e.network.fetch(url, options); } };
+  const c = client(net); const session = await start(c);
+  const reports = [];
+  c.window.ArcherLabClientErrorReporter = { reportPayload: payload => reports.push(payload) };
+  net.fail = new TypeError('Failed to fetch');
+  c.ranking.track('lumen-shift', event(), session);
+  const pending = await c.ranking.submit({ game_id: 'lumen-shift', session_id: session, player_name: 'Bug run', score: 100 });
+  assert.equal(pending.pending, true);
+  assert.equal(reports.length, 0, 'network failure must not be logged');
+  net.fail = new TypeError('Assignment to constant variable.');
+  await c.ranking.flush();
+  assert.equal(reports.length >= 1, true);
+  assert.equal(reports[0].error_type, 'ranking_client_exception');
+  assert.match(reports[0].message, /^TypeError: Assignment to constant variable\./);
+  assert.equal(reports[0].error_class, 'TypeError');
+  net.fail = null;
+  await c.ranking.flush();
+  assert.equal(e.db.sql.prepare('SELECT score FROM rankings').get().score, 100, 'queued record still delivers');
+});

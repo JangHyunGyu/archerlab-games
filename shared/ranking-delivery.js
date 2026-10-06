@@ -21,6 +21,38 @@
         if (!ownerId) { ownerId = uuid(); global.sessionStorage.setItem('archer-reward-tab', ownerId); }
     } catch (_) { ownerId = null; }
 
+    // Delivery retries only on real transport failures; anything else is a code bug
+    // that must reach the D1 error log (the record itself stays queued either way).
+    var NETWORK_FAILURE_PATTERN = /Failed to fetch|Load failed|NetworkError|network ?error|The network connection was lost|Internet connection appears to be offline|fetch failed|Network request failed/i;
+    function transportError(message) {
+        var error = new Error(message);
+        error.archerTransport = true;
+        return error;
+    }
+    function isTransportFailure(error) {
+        if (!error) return false;
+        if (error.archerTransport === true) return true;
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') return true;
+        if (global.navigator && global.navigator.onLine === false) return true;
+        return NETWORK_FAILURE_PATTERN.test(String(error.message !== undefined ? error.message : error));
+    }
+    function reportDeliveryException(error, context) {
+        if (isTransportFailure(error)) return false;
+        try {
+            var reporter = global.ArcherLabClientErrorReporter;
+            if (!reporter || typeof reporter.reportPayload !== 'function') return false;
+            var name = String((error && error.name) || 'Error');
+            reporter.reportPayload({
+                error_type: 'ranking_client_exception',
+                message: name + ': ' + String((error && error.message) || error || 'ranking delivery exception'),
+                stack: String((error && error.stack) || ''),
+                source: 'shared/ranking-delivery.js',
+                error_class: name,
+                context: context || {}
+            });
+            return true;
+        } catch (_) { return false; }
+    }
     function uuid() {
         if (global.crypto.randomUUID) return global.crypto.randomUUID();
         var bytes = new Uint8Array(16);
@@ -252,9 +284,9 @@
                             }; }),
                         }),
                     });
-                    if (!response.ok) throw new Error('delivery HTTP ' + response.status);
-                    var result = await response.json();
-                    if (!Array.isArray(result.results)) throw new Error('invalid delivery response');
+                    if (!response.ok) throw transportError('delivery HTTP ' + response.status);
+                    var result = await response.json().catch(function () { throw transportError('invalid delivery response'); });
+                    if (!result || !Array.isArray(result.results)) throw transportError('invalid delivery response');
                     for (var item of result.results) {
                         var entry = entries.get(item.id);
                         if (!entry || !batch.includes(entry)) continue;
@@ -294,8 +326,13 @@
                             if (entry.state === 'review') notify(entry);
                         }
                     }
-                } catch (_) {
+                } catch (error) {
                     batch.forEach(function (entry) { entry.attempts += 1; });
+                    reportDeliveryException(error, {
+                        phase: 'ranking-delivery', game_id: batch[0] && batch[0].gameId,
+                        paths: batch.map(function (entry) { return entry.path; }).slice(0, 5),
+                        attempts: batch[0] && batch[0].attempts
+                    });
                 } finally {
                     global.clearTimeout(timeout);
                     renderStatus();

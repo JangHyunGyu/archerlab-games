@@ -100,10 +100,44 @@
         this.syncing = false;
     }
 
+    // Ranking stays best-effort on real transport failures only; any other exception
+    // is a code bug and is reported to D1 instead of silently disabling ranking.
+    var NETWORK_FAILURE_PATTERN = /Failed to fetch|Load failed|NetworkError|network ?error|The network connection was lost|Internet connection appears to be offline|fetch failed|Network request failed/i;
+    function rankingTransportError(message, status) {
+        var error = new Error(message);
+        error.archerTransport = true;
+        error.status = status || 0;
+        return error;
+    }
+    function isRankingTransportFailure(error) {
+        if (!error) return false;
+        if (error.archerTransport === true) return true;
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') return true;
+        if (global.navigator && global.navigator.onLine === false) return true;
+        return NETWORK_FAILURE_PATTERN.test(String(error.message !== undefined ? error.message : error));
+    }
+    function reportRankingException(error, context) {
+        if (isRankingTransportFailure(error)) return false;
+        try {
+            var reporter = global.ArcherLabClientErrorReporter;
+            if (!reporter || typeof reporter.reportPayload !== 'function') return false;
+            var name = String((error && error.name) || 'Error');
+            reporter.reportPayload({
+                error_type: 'ranking_client_exception',
+                message: name + ': ' + String((error && error.message) || error || 'ranking client exception'),
+                stack: String((error && error.stack) || ''),
+                source: 'shared/game-runtime.js',
+                error_class: name,
+                context: context || {}
+            });
+            return true;
+        } catch (_) { return false; }
+    }
+
     RankingClient.prototype.request = async function (path, options) {
         var response = await this.fetch(this.apiBase + path, options || {});
         var data = await response.json().catch(function () { return {}; });
-        if (!response.ok) throw new Error(data.error || path + ' ' + response.status);
+        if (!response.ok) throw rankingTransportError(data.error || path + ' ' + response.status, response.status);
         return data;
     };
     RankingClient.prototype.start = async function (extra) {
@@ -117,10 +151,11 @@
                 body: JSON.stringify(Object.assign({ game_id: this.gameId }, extra || {}))
             });
             this.sessionId = String(data.session_id || '');
-            if (!this.sessionId) throw new Error('empty ranking session');
+            if (!this.sessionId) throw rankingTransportError('empty ranking session');
             return this.sessionId;
-        } catch (_) {
+        } catch (error) {
             this.disabled = true;
+            reportRankingException(error, { phase: 'ranking-start', game_id: this.gameId });
             return '';
         }
     };
@@ -151,7 +186,8 @@
                 this.queue.splice(0, events.length);
             }
             return true;
-        } catch (_) {
+        } catch (error) {
+            reportRankingException(error, { phase: 'ranking-flush', game_id: this.gameId, queued: this.queue.length });
             return false;
         } finally {
             this.syncing = false;
@@ -233,6 +269,7 @@
             return new RankingClient(Object.assign({ gameId: currentGameId }, options || {}));
         },
         registerServiceWorker: registerServiceWorker,
+        isRankingTransportFailure: isRankingTransportFailure,
         reportError: function (error, context) {
             if (global.ArcherLabClientErrorReporter) global.ArcherLabClientErrorReporter.report(error, context || {});
         }

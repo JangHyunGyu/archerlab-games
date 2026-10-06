@@ -553,8 +553,9 @@ class RankingClient {
       if (token !== this.rankRunToken) return null;
       this.sessionId = data.session_id || null;
       return this.sessionId;
-    }).catch(() => {
+    }).catch((error) => {
       if (token !== this.rankRunToken) return null;
+      window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-session' }, 'ranking_client_exception');
       if (!this.unsupported) this.syncFailed = true;
       return null;
     });
@@ -617,8 +618,9 @@ class RankingClient {
         this.queue.splice(0, batch.length);
       }
       return true;
-    })().catch(() => {
+    })().catch((error) => {
       if (token !== this.rankRunToken) return false;
+      window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-sync' }, 'ranking_client_exception');
       if (!this.unsupported) this.syncFailed = true;
       return false;
     }).finally(() => {

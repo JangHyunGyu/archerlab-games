@@ -281,6 +281,20 @@
         };
     }
 
+    // Only real fetch/network failures are transient. A TypeError from our own code
+    // ("x is not a function", "Assignment to constant variable") is a bug and must
+    // reach D1 instead of being hidden as a dropped connection.
+    var NETWORK_FAILURE_PATTERN = /Failed to fetch|Load failed|NetworkError|network ?error|The network connection was lost|Internet connection appears to be offline|fetch failed|Network request failed/i;
+
+    function isNetworkFailure(error) {
+        if (!error) return false;
+        // HTTP status / invalid-response errors tagged by a fetch wrapper are transport results.
+        if (error.archerTransport === true) return true;
+        if (error.name === 'AbortError' || error.name === 'TimeoutError') return true;
+        if (window.navigator && window.navigator.onLine === false) return true;
+        return NETWORK_FAILURE_PATTERN.test(safeString(error.message !== undefined ? error.message : error, ''));
+    }
+
     function safeJson(value) {
         try {
             return JSON.stringify(value);
@@ -735,12 +749,37 @@
         reportPayload: function (payload) {
             report(payload || {});
         },
+        isNetworkFailure: isNetworkFailure,
+        // Reports everything except real network failures with a distinct errorType.
+        reportClientException: function (error, context, errorType) {
+            if (isNetworkFailure(error)) return false;
+            var details = reasonPayload(error);
+            var name = safeString(error && error.name, '') || 'Error';
+            report({
+                error_type: errorType || 'game_client_exception',
+                message: name + ': ' + (details.message || 'Client exception'),
+                source: '',
+                lineno: 0,
+                colno: 0,
+                stack: details.stack || '',
+                error_class: name,
+                context: Object.assign({}, details.context || {}, context || {})
+            });
+            return true;
+        },
+        // For best-effort paths whose own transport/HTTP errors are plain Error objects:
+        // only built-in JS exceptions (TypeError, ReferenceError, RangeError) are code bugs.
+        reportCodeException: function (error, context, errorType) {
+            var name = safeString(error && error.name, '');
+            if (!/^(?:TypeError|ReferenceError|RangeError|EvalError|URIError)$/.test(name)) return false;
+            return window.ArcherLabClientErrorReporter.reportClientException(error, context, errorType);
+        },
         flush: flushQueue
     };
 
     if (!window.ArcherGames && script && script.src) {
         var runtimeScript = document.createElement('script');
-        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260905-bot-filter-v2&ranking=20260913-v1');
+        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260905-bot-filter-v2&ranking=20261006-client-exception-v1');
         runtimeScript.async = false;
         runtimeScript.setAttribute('data-game-id', gameId);
         if (!/^(?:jewelria|solo-leveling|archerlab-games)$/.test(gameId)) {

@@ -234,6 +234,7 @@ export class GameScene extends Phaser.Scene {
                 if (token !== this._rankRunToken) return null;
                 this._rankSyncFailed = true;
                 this._rankSessionPromise = null;
+                window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-session' }, 'ranking_client_exception');
                 console.warn('[ShadowSurvival] rank session failed:', e.message);
                 return null;
             });
@@ -322,6 +323,7 @@ export class GameScene extends Phaser.Scene {
         } catch (e) {
             if (token !== this._rankRunToken) return null;
             this._rankSyncFailed = true;
+            window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-progress-sync' }, 'ranking_client_exception');
             console.warn('[ShadowSurvival] rank progress sync failed:', e.message);
             return null;
         } finally {

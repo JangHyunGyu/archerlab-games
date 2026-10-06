@@ -55,7 +55,7 @@ for (const file of ['index.html', 'index-en.html']) {
     for (const script of ['constants', 'SoundManager', 'ScoreManager', 'EffectManager', 'Board', 'Piece', 'InputManager', 'UIManager', 'Game', 'main']) {
         assert.ok(
             html.includes('src="js/' + script + '.js?v=' + (scriptCacheVersions[script] || cacheVersion)
-                + (script === 'UIManager' ? '&ranking=20260913-v1' : ['Game', 'main'].includes(script) ? '&ranking=20261004-ranking-audit-v1' : '') + '"'),
+                + (['UIManager', 'Game'].includes(script) ? '&ranking=20261006-client-exception-v1' : script === 'main' ? '&ranking=20261004-ranking-audit-v1' : '') + '"'),
             file + ' must cache-bust ' + script + '.js'
         );
     }

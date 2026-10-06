@@ -383,6 +383,7 @@
     if (!rankSessionPromise) {
       const token = rankRunToken;
       rankSessionPromise = createRankSession().catch((e) => {
+        window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-session' }, 'ranking_client_exception');
         warn('rank session create failed:', e.message);
         return null;
       }).finally(() => {
@@ -478,6 +479,7 @@
       } else if (e.status && e.status >= 400 && e.status < 500 && e.status !== 429) {
         rankSyncFailed = true;
       }
+      window.ArcherLabClientErrorReporter?.reportCodeException?.(e, { phase: 'rank-sync' }, 'ranking_client_exception');
       warn('rank event sync failed:', e.message);
       return false;
     }).finally(() => {

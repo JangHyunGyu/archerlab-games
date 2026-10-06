@@ -2669,6 +2669,7 @@ class UIManager {
                 ? this.game.getErrorMetadata('rank-submit', extra)
                 : { scope: 'rank-submit', ...extra };
 
+            window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-submit' }, 'ranking_client_exception');
             console.warn('[Blockpang] rank submit failed:', error);
             if (window.ArcherLabClientErrorReporter?.report) {
                 window.ArcherLabClientErrorReporter.report(error, context);

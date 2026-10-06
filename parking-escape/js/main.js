@@ -473,6 +473,7 @@
       this.rankSessionPromise = this.createRankSession().catch(error => {
         if (token !== this.rankRunToken) return null;
         this.rankSyncFailed = true;
+        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-session' }, 'ranking_client_exception');
         console.warn("[Parking] rank session failed:", error.message);
         return null;
       });
@@ -517,6 +518,7 @@
       } catch (error) {
         if (token !== this.rankRunToken) return false;
         this.rankSyncFailed = true;
+        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-sync' }, 'ranking_client_exception');
         console.warn("[Parking] rank sync failed:", error.message);
         return false;
       }
@@ -1599,6 +1601,7 @@
         this.playTone("submit");
         this.returnToMenuAfterRank();
       } catch (error) {
+        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-submit' }, 'ranking_client_exception');
         console.warn("[Parking] rank submit failed:", error.message);
         const syncFailed = error.message.includes("rank score sync");
         this.setRankSubmitLoading(

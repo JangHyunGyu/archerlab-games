@@ -44,7 +44,7 @@ assert.match(main, /event\.key\.toLowerCase\(\)/);
 assert.match(main, /refs\.titleScreen\.scrollTop = 0;/);
 assert.match(main, /const wasOpen = !refs\.rankModal\.classList\.contains\("hidden"\);/);
 assert.match(main, /if \(!wasOpen\) return;/);
-assert.match(sw, /version: '20261005-frame-home-v1'/);
+assert.match(sw, /version: '20261006-client-exception-v1'/);
 
 for (let rank = 0; rank < 12; rank++) {
   const stem = `jelly-${String(rank).padStart(2, '0')}`;

@@ -2492,8 +2492,9 @@
         this.rngState = this.normalizeUint32(data.rng_state);
         this.sessionData = data;
         return data;
-      }).catch(() => {
+      }).catch((error) => {
         if (token !== this.rankRunToken) return null;
+        window.ArcherLabClientErrorReporter?.reportCodeException?.(error, { phase: 'rank-session' }, 'ranking_client_exception');
         if (!this.unsupported) this.syncFailed = true;
         return null;
       });
