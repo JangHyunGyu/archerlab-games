@@ -16,7 +16,10 @@ const api = process.env.GHOST_API;
 const shot = process.env.GHOST_SHOT;
 const browser = await chromium.launch(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
 const [vw, vh] = (process.env.GHOST_VIEWPORT || '1280x900').split('x').map(Number);
-const context = await browser.newContext({ viewport: { width: vw, height: vh }, hasTouch: vw < 600, ...(api ? { serviceWorkers: 'block' } : {}) });
+// The shared runtime skips service workers for HeadlessChrome (bot filter); a desktop UA lets the
+// live check read the installed SW version.
+const userAgent = api ? undefined : 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+const context = await browser.newContext({ viewport: { width: vw, height: vh }, hasTouch: vw < 600, ...(userAgent ? { userAgent } : {}), ...(api ? { serviceWorkers: 'block' } : {}) });
 const page = await context.newPage();
 if (api) await page.route(/workers\.dev\/water-sort\/challenge/, async route => {
   const request = route.request(), target = new URL(request.url());
@@ -28,14 +31,14 @@ page.on('pageerror', e => consoleErrors.push(String(e)));
 let latest = null; const pourReplies = [];
 page.on('response', async response => {
   if (!/challenge/.test(response.url()) || response.request().method() !== 'POST') return;
-  try { const data = await response.json(); if (data?.run) latest = { run: data.run, at: Date.now() }; if (data?.run && JSON.parse(response.request().postData() || '{}').type === 'pour') pourReplies.push(data.run); } catch { /* not JSON */ }
+  try { const data = await response.json(); if (data?.run) latest = { run: data.run, at: Date.now() }; if (data?.run && JSON.parse(response.request().postData() || '{}').type === 'pour') pourReplies.push({ ...data.run, rtt: response.request().timing().responseEnd }); } catch { /* not JSON */ }
 });
 try {
   await page.goto(url, { waitUntil: 'networkidle' });
-  const sw = await page.evaluate(async () => {
-    const registration = await navigator.serviceWorker?.getRegistration?.();
-    const script = registration?.active?.scriptURL || registration?.installing?.scriptURL || registration?.waiting?.scriptURL || null;
-    return script;
+  const sw = api ? null : await page.evaluate(async () => {
+    const registration = await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(r, 8000))]);
+    const script = registration?.active?.scriptURL;
+    return script ? (await (await fetch(script, { cache: 'no-store' })).text()).match(/version: '([^']+)'/)?.[1] ?? script : null;
   }).catch(() => null);
   await page.locator('.play-button').click();
   await page.locator('[data-testid="bottle-0"]').waitFor();
@@ -115,7 +118,8 @@ try {
   // The Worker locked both bottles of the first pour for exactly the new duration.
   const firstReply = pourReplies.find(r => r.moves === 1);
   const lock = firstReply.bottleAvailableAt[a] - firstReply.serverNow;
-  assert.ok(lock <= want && lock > want - 200, `server lock ${lock} ms vs ${want} ms`);
+  // serverNow is stamped after the D1 write, so the remaining lock is shorter by that processing time.
+  assert.ok(lock <= want && lock >= want - firstReply.rtt - 20, `server lock ${lock} ms vs ${want} ms (rtt ${Math.round(firstReply.rtt)} ms)`);
   assert.equal(firstReply.bottleAvailableAt[a], firstReply.bottleAvailableAt[b]);
   // Final real bottle contents equal the ghost's projection, confirmed by the server.
   assert.deepEqual(latest.run.board[a], b2[a]); assert.equal(latest.run.moves, 2);
