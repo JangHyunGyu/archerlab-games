@@ -49,7 +49,7 @@ for (const [width, height] of [[320,568], [360,640], [390,844], [430,932], [768,
 assert.ok(!game.includes('0.62) / PANEL_RATIO'), 'desktop board must not use the undersized fixed ratio');
 
 const cacheVersion = '20260912-puzzle-ui-v5';
-const scriptCacheVersions = { Game: '20261006-tap-v1', EffectManager: '20261006-tap-v1', UIManager: '20261006-tap-v1', main: '20261006-tap-v1' };
+const scriptCacheVersions = { Game: '20261006-start-guard-v1', InputManager: '20261006-start-guard-v1', EffectManager: '20261006-tap-v1', UIManager: '20261006-tap-v1', main: '20261006-tap-v1' };
 for (const file of ['index.html', 'index-en.html']) {
     const html = read(file);
     for (const script of ['constants', 'SoundManager', 'ScoreManager', 'EffectManager', 'Board', 'Piece', 'InputManager', 'UIManager', 'Game', 'main']) {

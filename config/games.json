@@ -8,7 +8,8 @@
         "node blockpang/validate.js",
         "node blockpang/visual-quality.test.cjs",
         "node blockpang/effect-quality.test.cjs",
-        "node blockpang/quality-fixes.test.cjs"
+        "node blockpang/quality-fixes.test.cjs",
+        "node blockpang/start-input-guard.test.cjs"
       ]
     },
     { "id": "cat-tower", "entry": "cat-tower/index.html", "tests": ["node cat-tower/static-quality.test.cjs"] },
@@ -50,7 +51,7 @@
         "node school-zombie-defense/tests/barricade-impact.test.cjs",
         "node school-zombie-defense/tests/hud-status.test.cjs",
         "node school-zombie-defense/tests/ranking-sync.test.cjs",
-        "node school-zombie-defense/tests/gamepad-permissions.test.cjs"
+        "node school-zombie-defense/tests/gamepad-permissions.test.cjs", "node school-zombie-defense/tests/combat-asset-jobs.test.cjs", "node school-zombie-defense/tests/combat-asset-loading.test.cjs"
       ]
     },
     { "id": "slimevolley", "entry": "slimevolley/index.html", "tests": ["node slimevolley/validate.js"] },

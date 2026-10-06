@@ -34,6 +34,13 @@ function getBlockpangLayout(width, height) {
     };
 }
 
+// Title fade (400 ms) and board entrance (450 ms) of startGame, plus a short
+// guard. Board and tray input is ignored until they finish, so the second
+// click of a double click on a title button cannot grab or drop a tray piece.
+const START_TITLE_FADE_MS = 400;
+const START_BOARD_ENTRANCE_MS = 450;
+const START_INPUT_GUARD_MS = 200;
+
 class Game {
     constructor(app) {
         this.app = app;
@@ -45,6 +52,7 @@ class Game {
         this._pendingTimeouts = [];
         this._placementAnimationToken = 0;
         this._placementSafetyTimeoutId = null;
+        this._boardInputLockedUntil = 0;
         this.rankSessionId = null;
         this.rankSessionPromise = null;
         this.rankEventQueue = [];
@@ -137,9 +145,13 @@ class Game {
             this.ui.clearOrphanTitleScreens({ keepCurrent: true });
         }
         this.state = 'playing';
+        this._lockBoardInput(START_TITLE_FADE_MS + START_BOARD_ENTRANCE_MS + START_INPUT_GUARD_MS);
         const alLink = document.getElementById('archerlab-link');
         if (alLink) alLink.style.display = 'none';
         this.ui.hideTitleScreen(() => {
+            // Counted again from the moment the board appears, in case the
+            // title fade finished late on a slow frame.
+            this._lockBoardInput(START_BOARD_ENTRANCE_MS + START_INPUT_GUARD_MS);
             this.ui.showGameHUD();
             this.board.container.visible = true;
             this.board.container.alpha = 0;
@@ -152,7 +164,7 @@ class Game {
             const trayRef = this.tray.container;
             this.effects.tweens.push({
                 elapsed: 0,
-                duration: 450,
+                duration: START_BOARD_ENTRANCE_MS,
                 update(dt) {
                     this.elapsed = advanceTransitionElapsed(this, dt);
                     const t = Math.min(this.elapsed / this.duration, 1);
@@ -174,6 +186,16 @@ class Game {
                 this.newGame({ clearEffects: false });
             }
         });
+    }
+
+    _lockBoardInput(durationMs) {
+        const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        this._boardInputLockedUntil = Math.max(this._boardInputLockedUntil, now + durationMs);
+    }
+
+    isBoardInputLocked() {
+        const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        return now < this._boardInputLockedUntil;
     }
 
     // ── Return to title screen ──

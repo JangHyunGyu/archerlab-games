@@ -20,25 +20,44 @@
     "skill-max-hp": 13, "skill-full-repair": 14
   });
 
-  function installIcons(scene) {
+  // One job per icon: the job draws the cell and returns the upload, so a
+  // deferred builder can run them in separate tasks. addImage uploads the same
+  // canvas pixels as addCanvas without reading them back first.
+  function iconJobs(scene, onDrawn) {
     const source = scene.textures.get("ui-survival-equipment").getSourceImage();
     const cellW = source.width / 4;
     const cellH = source.height / 4;
-    Object.entries(ICONS).forEach(([key, cell]) => {
-      if (scene.textures.exists(key)) scene.textures.remove(key);
+    const drawCell = (cell) => {
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = 256;
       canvas.getContext("2d").drawImage(source, (cell % 4) * cellW, Math.floor(cell / 4) * cellH,
         cellW, cellH, 0, 0, 256, 256);
-      scene.textures.addCanvas(key, canvas);
+      if (onDrawn) onDrawn(canvas);
+      return canvas;
+    };
+    // Some icons replace generated skill textures with the same key, so the
+    // old texture is removed right before the upload, keeping the job order.
+    const jobs = Object.entries(ICONS).map(([key, cell]) => () => {
+      const canvas = drawCell(cell);
+      return () => {
+        if (scene.textures.exists(key)) scene.textures.remove(key);
+        scene.textures.addImage(key, canvas);
+      };
     });
     // Additional inventory illustrations can be referenced directly by equipment type.
     ["pistol", "ammo", "bolt", "rifle", "rocket", "scope", "fire", "coolant", "battery", "coil", "turret", "wire", "wrench", "armor", "medical", "magazine"].forEach((name, cell) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = 256;
-      canvas.getContext("2d").drawImage(source, (cell % 4) * cellW, Math.floor(cell / 4) * cellH,
-        cellW, cellH, 0, 0, 256, 256);
-      scene.textures.addCanvas(`equipment-${name}`, canvas);
+      jobs.push(() => {
+        const canvas = drawCell(cell);
+        return () => scene.textures.addImage(`equipment-${name}`, canvas);
+      });
+    });
+    return jobs;
+  }
+
+  function installIcons(scene) {
+    iconJobs(scene).forEach((job) => {
+      const upload = job();
+      if (typeof upload === "function") upload();
     });
   }
 
@@ -78,5 +97,5 @@
     return key;
   }
 
-  root.SchoolZombieUI = Object.freeze({ SURFACES, ICONS, installIcons, texture });
+  root.SchoolZombieUI = Object.freeze({ SURFACES, ICONS, iconJobs, installIcons, texture });
 })(typeof window === "undefined" ? globalThis : window);

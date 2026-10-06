@@ -49,8 +49,13 @@ class InputManager {
         document.addEventListener('visibilitychange', this._onVisibilityChange);
     }
 
+    _isBoardInputLocked() {
+        return typeof this.game.isBoardInputLocked === 'function' && this.game.isBoardInputLocked();
+    }
+
     startDrag(slotIndex, event) {
         if (this.dragging || this.dragReturning || this.game.isGameOver || this.game.isAnimating || this.game.state !== 'playing') return;
+        if (this._isBoardInputLocked()) return;
 
         this.cancelKeyboardPlacement();
 
@@ -216,6 +221,7 @@ class InputManager {
     selectKeyboardPiece(slotIndex) {
         if (this.dragging || this.dragReturning || this.game.isGameOver ||
             this.game.isAnimating || this.game.state !== 'playing') return false;
+        if (this._isBoardInputLocked()) return false;
 
         const piece = this.game.tray.slots[slotIndex];
         if (!piece) {
@@ -278,6 +284,7 @@ class InputManager {
         const slotIndex = this.keyboardPieceIndex;
         const piece = this.game.tray.slots[slotIndex];
         if (!piece || this.game.isAnimating || this.game.state !== 'playing') return false;
+        if (this._isBoardInputLocked()) return false;
 
         const canPlace = this.game.board.canPlace(
             piece.shape,

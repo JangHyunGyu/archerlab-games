@@ -1236,18 +1236,56 @@
     return getNearestAimPose(angle).key;
   }
 
-  function makeCanvasTexture(scene, key, width, height, draw) {
+  // Deferred texture builds split each texture into a draw step and an upload
+  // step. After the draw, Chromium is asked to start rasterising the canvas on
+  // the GPU, and the upload (or read-back) runs in a later task, so the main
+  // thread does not sit waiting for the GPU inside texImage2D/getImageData.
+  // Canvas types and draw calls are unchanged, so the pixels are identical.
+  const CANVAS_FLUSH_HINT = typeof window !== "undefined"
+    && typeof window.createImageBitmap === "function"
+    && Boolean(window.navigator?.userAgentData);
+
+  function requestCanvasFlush(canvas) {
+    if (!CANVAS_FLUSH_HINT) {
+      return;
+    }
+    try {
+      // The snapshot submits the pending draw calls without waiting for them.
+      // The bitmap itself is not used.
+      window.createImageBitmap(canvas).then((bitmap) => bitmap.close?.(), () => {});
+    } catch (error) {
+      // Only a scheduling hint.
+    }
+  }
+
+  function addCanvasImageTexture(scene, key, canvas) {
     if (scene.textures.exists(key)) {
       scene.textures.remove(key);
     }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    ctx.imageSmoothingEnabled = true;
-    draw(ctx, width, height);
     scene.textures.addImage(key, canvas);
+  }
+
+  let deferredCanvasJobs = null;
+
+  function makeCanvasTexture(scene, key, width, height, draw) {
+    const render = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      draw(ctx, width, height);
+      return canvas;
+    };
+    if (deferredCanvasJobs) {
+      deferredCanvasJobs.push(() => {
+        const canvas = render();
+        requestCanvasFlush(canvas);
+        return () => addCanvasImageTexture(scene, key, canvas);
+      });
+      return;
+    }
+    addCanvasImageTexture(scene, key, render());
   }
 
   function harmonizeCrossbowPalette(ctx, width, height, direction) {
@@ -1306,17 +1344,15 @@
   function makeImageSliceTexture(scene, sourceKey, key, sx, sy, sw, sh) {
     const source = scene.textures.get(sourceKey).getSourceImage();
     if (deferredSliceJobs) {
-      deferredSliceJobs.push(() => renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh));
+      deferredSliceJobs.push(() => renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh, true));
       return;
     }
-    renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh);
+    renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh, false);
   }
 
-  function renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh) {
-    if (scene.textures.exists(key)) {
-      scene.textures.remove(key);
-    }
-
+  // With `deferred`, the draw happens now and the crossbow grading (a pixel
+  // read-back) and the upload are returned as continuations for later tasks.
+  function renderImageSliceTexture(scene, source, sourceKey, key, sx, sy, sw, sh, deferred) {
     const canvas = document.createElement("canvas");
     // Action sheets are up to 960px tall but render below 267px. Keep enough
     // detail for 2x displays without retaining hundreds of full-size canvases.
@@ -1327,13 +1363,27 @@
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    if (/^character-a(?:-attack-\d+)?$/.test(sourceKey)) {
-      harmonizeCrossbowPalette(ctx, canvas.width, canvas.height, Math.round(sx / sw));
-    }
     // A plain canvas-backed texture uploads the same pixels. Unlike addCanvas
     // (CanvasTexture), it does not read every slice back with getImageData or
     // keep a CPU copy of its pixels alive.
-    scene.textures.addImage(key, canvas);
+    const upload = () => addCanvasImageTexture(scene, key, canvas);
+    const needsGrade = /^character-a(?:-attack-\d+)?$/.test(sourceKey);
+    const grade = () => {
+      harmonizeCrossbowPalette(ctx, canvas.width, canvas.height, Math.round(sx / sw));
+      if (!deferred) {
+        upload();
+        return undefined;
+      }
+      requestCanvasFlush(canvas);
+      return upload;
+    };
+    if (!deferred) {
+      if (needsGrade) grade();
+      else upload();
+      return undefined;
+    }
+    requestCanvasFlush(canvas);
+    return needsGrade ? grade : upload;
   }
 
   function createZombieSpriteTextures(scene) {
@@ -1571,12 +1621,16 @@
     });
   }
 
-  function createCharacterBadgeTextures(scene) {
-    DEFENDER_ROSTER.map((defender) => defender.id).forEach((id) => {
+  // One job per defender. The bounding-box scan copies the idle slice 1:1 into
+  // a CPU-backed canvas (willReadFrequently), so reading its alpha back does not
+  // stall on the GPU; a 1:1 copy keeps the alpha values, so the crop is the same.
+  // The badge itself is still drawn on a regular canvas and uploaded later.
+  function createCharacterBadgeJobs(scene) {
+    return DEFENDER_ROSTER.map((defender) => defender.id).map((id) => () => {
       const sourceKey = `character-${id}-idle`;
       const targetKey = `character-${id}-badge`;
       if (!scene.textures.exists(sourceKey)) {
-        return;
+        return undefined;
       }
       if (scene.textures.exists(targetKey)) {
         scene.textures.remove(targetKey);
@@ -1586,17 +1640,17 @@
       const scanCanvas = document.createElement("canvas");
       scanCanvas.width = source.width;
       scanCanvas.height = source.height;
-      const scanCtx = scanCanvas.getContext("2d");
+      const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
       scanCtx.drawImage(source, 0, 0);
       if (!(source.width > 0 && source.height > 0)) {
-        return;
+        return undefined;
       }
       let pixels;
       try {
         pixels = scanCtx.getImageData(0, 0, source.width, source.height).data;
       } catch (error) {
         // iOS Safari / in-app WebViews can throw InvalidStateError here.
-        return;
+        return undefined;
       }
       let minX = source.width;
       let minY = source.height;
@@ -1614,7 +1668,7 @@
       }
 
       if (minX > maxX || minY > maxY) {
-        return;
+        return undefined;
       }
 
       const bodyW = maxX - minX + 1;
@@ -1644,7 +1698,10 @@
         drawW,
         drawH
       );
-      scene.textures.addCanvas(targetKey, output);
+      requestCanvasFlush(output);
+      // addImage uploads the same canvas pixels as addCanvas without reading
+      // them back into a CanvasTexture copy.
+      return () => scene.textures.addImage(targetKey, output);
     });
   }
 
@@ -2261,16 +2318,38 @@
     return Promise.all([requested, fonts.ready]).then(() => undefined, () => undefined);
   }
 
-  function runTimeSlicedJobs(jobs, getBudget, onProgress) {
+  // Runs jobs in short tasks. A job may return a continuation (for example the
+  // upload of a canvas it just drew); continuations wait `settleMs` and run
+  // first-in first-out, with at most `depth` of them outstanding.
+  // getSchedule() is read every task: { budget, settleMs, depth }.
+  function runTimeSlicedJobs(jobs, getSchedule, onProgress) {
     return new Promise((resolve, reject) => {
+      const total = jobs.length;
+      const pending = [];
       let index = 0;
+      let done = 0;
+      const settle = (result, settleMs) => {
+        if (typeof result === "function") {
+          pending.push({ run: result, readyAt: performance.now() + settleMs });
+        } else {
+          done += 1;
+        }
+      };
       const step = () => {
         const started = performance.now();
-        const budget = getBudget();
+        const { budget, settleMs, depth } = getSchedule();
         try {
-          while (index < jobs.length) {
-            jobs[index]();
-            index += 1;
+          while (done < total) {
+            if (pending.length && pending[0].readyAt <= performance.now()) {
+              settle(pending.shift().run(), settleMs);
+            } else if (index < total && pending.length < depth) {
+              const job = jobs[index];
+              jobs[index] = null;
+              index += 1;
+              settle(job(), settleMs);
+            } else {
+              break;
+            }
             if (performance.now() - started >= budget) {
               break;
             }
@@ -2279,40 +2358,91 @@
           reject(error);
           return;
         }
-        onProgress(jobs.length ? index / jobs.length : 1);
-        if (index >= jobs.length) {
+        onProgress(total ? done / total : 1);
+        if (done >= total) {
           resolve();
-        } else {
-          window.setTimeout(step, 0);
+          return;
         }
+        const blocked = pending.length && (index >= total || pending.length >= depth);
+        const wait = blocked ? Math.max(0, Math.ceil(pending[0].readyAt - performance.now())) : 0;
+        window.setTimeout(step, wait);
       };
       window.setTimeout(step, 0);
     });
   }
 
-  // Same construction order as the original boot sequence; the slice jobs are
-  // only executed in small batches so the menu keeps receiving input.
-  async function buildCombatTextures(scene, getBudget, onProgress) {
+  // Sheets that are only cut into slices (and released right after) are kept
+  // as plain decoded images instead of Phaser textures, so they are never
+  // uploaded to the GPU in full. This view of the texture manager lets the
+  // slicing code find them under their usual keys.
+  function createSliceSourceScene(scene, sources) {
+    const textures = scene.textures;
+    return {
+      textures: {
+        exists: (key) => sources.has(key) || textures.exists(key),
+        get: (key) => (sources.has(key)
+          ? { getSourceImage: () => sources.get(key) }
+          : textures.get(key)),
+        remove: (key) => {
+          if (sources.delete(key)) {
+            return;
+          }
+          textures.remove(key);
+        },
+        addImage: (key, source) => textures.addImage(key, source),
+        addCanvas: (key, source) => textures.addCanvas(key, source)
+      }
+    };
+  }
+
+  const SLICE_SOURCE_KEY = /^(?:character-[a-h](?:-(?:attack|throw)-\d+)?|zombie-walk-[a-z]+)$/;
+
+  function loadSliceSourceImage(url) {
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.onload = () => {
+        // decode() finishes decoding off the main thread before slicing starts.
+        const decoded = typeof image.decode === "function" ? image.decode().catch(() => null) : Promise.resolve();
+        decoded.then(() => resolve(image));
+      };
+      image.onerror = () => resolve(null);
+      image.src = url;
+    });
+  }
+
+  // Same construction order as the original boot sequence; the jobs are only
+  // executed in small batches so the menu keeps receiving input.
+  async function buildCombatTextures(scene, sliceSources, getSchedule, onProgress) {
+    const sliceScene = createSliceSourceScene(scene, sliceSources);
     let jobs = [];
     deferredSliceJobs = jobs;
     try {
-      createZombieSpriteTextures(scene);
-      await Promise.all([loadManualCharacterAssets(scene), waitForMenuFonts()]);
-      createGeneratedDefenderTextures(scene);
-      createCharacterSpriteTextures(scene);
-      createCharacterAttackTextures(scene);
+      createZombieSpriteTextures(sliceScene);
+      await Promise.all([loadManualCharacterAssets(sliceScene), waitForMenuFonts()]);
+      createGeneratedDefenderTextures(sliceScene);
+      createCharacterSpriteTextures(sliceScene);
+      createCharacterAttackTextures(sliceScene);
     } finally {
       deferredSliceJobs = null;
     }
-    await runTimeSlicedJobs(jobs, getBudget, onProgress);
+    const sliceShare = 0.85;
+    await runTimeSlicedJobs(jobs, getSchedule, (progress) => onProgress(progress * sliceShare));
     jobs = null;
-    // Remaining steps run in order, each in its own task.
-    await runTimeSlicedJobs([
-      () => createCharacterBadgeTextures(scene),
-      () => releaseCharacterSourceTextures(scene),
-      () => createTextures(scene),
-      () => window.SchoolZombieUI.installIcons(scene)
-    ], () => 0, () => {});
+    // Remaining steps keep their original order, one texture per job.
+    const finishJobs = createCharacterBadgeJobs(scene);
+    finishJobs.push(() => {
+      releaseCharacterSourceTextures(sliceScene);
+      sliceSources.clear();
+    });
+    deferredCanvasJobs = finishJobs;
+    try {
+      createTextures(scene);
+    } finally {
+      deferredCanvasJobs = null;
+    }
+    finishJobs.push(...window.SchoolZombieUI.iconJobs(scene, requestCanvasFlush));
+    await runTimeSlicedJobs(finishJobs, getSchedule, (progress) => onProgress(sliceShare + progress * (1 - sliceShare)));
   }
 
   function loadManualImage(path, version = "") {
@@ -2350,7 +2480,7 @@
       const ctx = canvas.getContext("2d");
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(image, 0, 0);
-      scene.textures.addCanvas(key, canvas);
+      scene.textures.addImage(key, canvas);
     });
   }
 
@@ -2621,25 +2751,58 @@
           updateRunLoadingOverlay(SchoolI18n.t("loading.assets", { percent: Math.round(this.combatAssetsProgress * 100) }));
         }
       };
-      const download = new Promise((resolve) => {
-        const load = this.load;
-        queueCombatAssetFiles.call(this);
-        const onProgress = (progress) => reportProgress(progress * 0.7);
+      const load = this.load;
+      const sliceSources = new Map();
+      const sliceSourceLoads = [];
+      let sliceSourcesDone = 0;
+      let loaderProgress = 0;
+      // Same file list and URLs as before. Sheets that are only sliced are
+      // fetched as plain images; everything else goes through the Phaser loader.
+      queueCombatAssetFiles.call({
+        load: {
+          image: (key, url) => {
+            if (!SLICE_SOURCE_KEY.test(key)) {
+              load.image(key, url);
+              return;
+            }
+            sliceSourceLoads.push(loadSliceSourceImage(url).then((image) => {
+              if (image) {
+                sliceSources.set(key, image);
+              }
+              sliceSourcesDone += 1;
+              reportDownload();
+            }));
+          },
+          spritesheet: (...args) => load.spritesheet(...args)
+        }
+      });
+      const loaderFiles = Math.max(1, load.list.size);
+      const reportDownload = () => {
+        const files = loaderFiles + sliceSourceLoads.length;
+        reportProgress(0.7 * (loaderProgress * loaderFiles + sliceSourcesDone) / files);
+      };
+      const loaderDone = new Promise((resolve) => {
+        const onProgress = (progress) => {
+          loaderProgress = progress;
+          reportDownload();
+        };
         load.on("progress", onProgress);
         load.once("complete", () => {
           load.off("progress", onProgress);
+          loaderProgress = 1;
           resolve();
         });
         load.start();
       });
-      this.combatAssetsPromise = download
+      this.combatAssetsPromise = Promise.all([loaderDone, ...sliceSourceLoads])
         .then(() => {
           if (this.disposed) {
             throw new Error("scene disposed");
           }
           return buildCombatTextures(
             this,
-            () => (this.combatAssetsUrgent ? 48 : 10),
+            sliceSources,
+            () => this.getCombatAssetSchedule(),
             (progress) => reportProgress(0.7 + progress * 0.3)
           );
         })
@@ -2648,6 +2811,25 @@
           reportProgress(1);
         });
       return this.combatAssetsPromise;
+    }
+
+    // While the menu is in use, the build takes small slices and leaves the GPU
+    // time to rasterise each canvas before it is uploaded. Once a sortie is
+    // waiting behind the opaque loading overlay, it runs in long batches.
+    getCombatAssetSchedule() {
+      return this.combatAssetsUrgent
+        ? { budget: 120, settleMs: 0, depth: 8 }
+        : { budget: 8, settleMs: 60, depth: 6 };
+    }
+
+    // The sortie overlay covers the whole game, so the menu under it does not
+    // need to be drawn while combat assets finish. Pausing those draws leaves
+    // the main thread and GPU to the asset build.
+    setMenuRenderSuspended(suspended) {
+      if (this.disposed || !this.sys) {
+        return;
+      }
+      this.sys.setVisible(!suspended);
     }
 
     refreshMenuProfileStatus() {
@@ -6197,11 +6379,22 @@
       const previousMode = this.mode;
       showRunLoadingOverlay(SchoolI18n.t("loading.profile"));
       this.mode = "starting";
-      this.combatAssetsUrgent = true;
+      const waitingForAssets = !this.combatAssetsReady;
+      // Restores normal menu drawing and background pacing when the sortie
+      // stops waiting, whether it continues or returns to the menu.
+      const stopWaiting = () => {
+        this.combatAssetsUrgent = false;
+        if (waitingForAssets) this.setMenuRenderSuspended(false);
+      };
+      if (waitingForAssets) {
+        this.combatAssetsUrgent = true;
+        this.setMenuRenderSuspended(true);
+      }
       const combatAssets = this.prepareCombatAssets();
       try {
         await this.ensureServerProfile({ force: true });
       } catch (error) {
+        stopWaiting();
         hideRunLoadingOverlay();
         if (!this.disposed && this.mode === "starting") {
           this.mode = previousMode;
@@ -6209,6 +6402,7 @@
         return;
       }
       if (this.disposed || this.mode !== "starting") {
+        stopWaiting();
         hideRunLoadingOverlay();
         return;
       }
@@ -6217,6 +6411,7 @@
         try {
           await combatAssets;
         } catch (error) {
+          stopWaiting();
           hideRunLoadingOverlay();
           if (!this.disposed && this.mode === "starting") {
             this.mode = previousMode;
@@ -6225,10 +6420,12 @@
           return;
         }
         if (this.disposed || this.mode !== "starting") {
+          stopWaiting();
           hideRunLoadingOverlay();
           return;
         }
       }
+      stopWaiting();
       if (!this.defenders.length) {
         this.createCharacters();
       }
