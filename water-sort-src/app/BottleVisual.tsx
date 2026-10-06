@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { drawVessel, liquidLayers } from '../lib/glass-renderer';
 
 /** Idle bottles draw once; only selection/settling uses a short animation. */
-export function BottleVisual({ colors, selected }: { colors: number[]; selected: boolean }) {
+export function BottleVisual({ colors, selected, ghost = false }: { colors: number[]; selected: boolean; ghost?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const first = useRef(true);
   const key = colors.join(',');
@@ -19,7 +19,7 @@ export function BottleVisual({ colors, selected }: { colors: number[]; selected:
     const paint = (time: number, moving = false) => {
       ctx.clearRect(0, 0, width + 20, height + 24);
       const age = (time - started) / 1000;
-      drawVessel(ctx, { x: 10, y: 10, width, height }, layers, { time, agitation: moving ? Math.exp(-age * 5) * (selected ? 1.8 : 1.2) : 0 });
+      drawVessel(ctx, { x: 10, y: 10, width, height }, layers, { time, ghost, agitation: moving ? Math.exp(-age * 5) * (selected ? 1.8 : 1.2) : 0 });
     };
     const resize = () => {
       width = tube.clientWidth; height = tube.clientHeight;
@@ -36,6 +36,6 @@ export function BottleVisual({ colors, selected }: { colors: number[]; selected:
     if (animate && !document.hidden) frame = requestAnimationFrame(tick);
     reduced.addEventListener('change', settle); document.addEventListener('visibilitychange', settle);
     return () => { observer.disconnect(); cancelAnimationFrame(frame); reduced.removeEventListener('change', settle); document.removeEventListener('visibilitychange', settle); };
-  }, [key, selected]);
-  return <canvas className="glass-canvas" ref={canvasRef} aria-hidden="true"/>;
+  }, [key, selected, ghost]);
+  return <canvas className="glass-canvas" ref={canvasRef} data-ghost={ghost || undefined} aria-hidden="true"/>;
 }

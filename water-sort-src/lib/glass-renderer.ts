@@ -3,7 +3,16 @@ import { area, below, rotate, roundBottom, surface, type Point, type Rect } from
 export const WATER_COLORS = ['#eb4d68', '#249fdf', '#efbd28', '#36b889', '#8d59d2', '#df67b5', '#20bec5', '#f18c39'];
 export type LiquidLayer = { color: number; units: number };
 export type VesselPose = { x: number; y: number; width: number; height: number; angle?: number; pivot?: Point };
-type RenderOptions = { time?: number; agitation?: number; incoming?: boolean; shadow?: boolean };
+type RenderOptions = { time?: number; agitation?: number; incoming?: boolean; shadow?: boolean; ghost?: boolean };
+// A ghost (the projected bottle left in a lifted bottle's slot) draws its liquid see-through and
+// muted, so it never reads as a real, filled bottle. The slot also fades the whole canvas.
+export const GHOST_LIQUID_ALPHA = .5;
+const GHOST_DESATURATE = .45;
+export function ghostColor(hex: string) {
+  const [r, g, b] = [1, 3, 5].map(offset => parseInt(hex.slice(offset, offset + 2), 16));
+  const gray = r * .3 + g * .59 + b * .11;
+  return '#' + [r, g, b].map(value => Math.round(value + (gray - value) * GHOST_DESATURATE).toString(16).padStart(2, '0')).join('');
+}
 
 export function glassInterior(width: number, height: number): Rect {
   const wall = width * .09;
@@ -81,9 +90,11 @@ export function drawVessel(ctx: CanvasRenderingContext2D, pose: VesselPose, laye
   ctx.restore();
 
   ctx.save(); path(ctx, world); ctx.clip();
+  const liquidAlpha = options.ghost ? GHOST_LIQUID_ALPHA : 1;
+  ctx.globalAlpha = liquidAlpha;
   let lower = maxY + 1, total = 0;
   for (let i = 0; i < layers.length; i++) {
-    const layer = layers[i], color = WATER_COLORS[layer.color]; total += layer.units;
+    const layer = layers[i], color = options.ghost ? ghostColor(WATER_COLORS[layer.color]) : WATER_COLORS[layer.color]; total += layer.units;
     const upper = surface(world, liquidVolume(inner, total));
     const section = sectionAt(world, upper), topmost = i === layers.length - 1;
     const amplitude = topmost ? agitation * Math.min(1, Math.max(0, lower - upper) / 8) : agitation * .12;
@@ -97,7 +108,7 @@ export function drawVessel(ctx: CanvasRenderingContext2D, pose: VesselPose, laye
     ctx.save(); ctx.clip(); ctx.fillStyle = gradient(ctx, 0, upper, 0, lower, [[0, '#ffffff15'], [.25, '#ffffff00'], [1, '#122c421a']]); ctx.fillRect(minX, upper - 4, maxX - minX, lower - upper + 6); ctx.restore();
     if (section && section[1] - section[0] > 2) {
       const [left, right] = section, center = (left + right) / 2, ry = Math.min(w * .065, (lower - upper) * .2);
-      ctx.save(); ctx.globalAlpha = topmost ? .85 : .35;
+      ctx.save(); ctx.globalAlpha = liquidAlpha * (topmost ? .85 : .35);
       ctx.beginPath(); ctx.ellipse(center, upper + ry * .24, (right - left) / 2, ry, 0, 0, Math.PI * 2);
       ctx.fillStyle = gradient(ctx, 0, upper - ry, 0, upper + ry, [[0, tint(color, .72)], [.52, tint(color, 1.35)], [1, tint(color, 1.08)]]); ctx.fill();
       // Thin raised meniscus catches the light where the liquid meets the glass.
@@ -113,12 +124,12 @@ export function drawVessel(ctx: CanvasRenderingContext2D, pose: VesselPose, laye
       const center = (section[0] + section[1]) / 2;
       for (let j = 0; j < 3; j++) {
         const phase = ((time * .0019 + j / 3) % 1), radius = (w * .08 + phase * w * .27);
-        ctx.globalAlpha = (1 - phase) * .5;
+        ctx.globalAlpha = liquidAlpha * (1 - phase) * .5;
         ctx.beginPath(); ctx.ellipse(center, upper + 1 + phase * 2, radius, radius * .2, 0, 0, Math.PI * 2); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = .8; ctx.stroke();
         const bx = center + Math.sin(j * 2.7 + time * .004) * w * .13, by = upper + 4 + (1 - phase) * Math.max(0, Math.min(16, lower - upper - 4));
         ctx.beginPath(); ctx.arc(bx, by, .6 + (1 - phase) * w * .018, 0, Math.PI * 2); ctx.strokeStyle = '#ffffffb3'; ctx.stroke();
       }
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = liquidAlpha;
     }
     lower = upper;
   }

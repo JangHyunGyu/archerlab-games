@@ -260,7 +260,8 @@ export default function Home() {
   function startMotion(entry: ActivePour) {
     const { id, from, to, before, amount } = entry;
     const source = tubes.current[from], destination = tubes.current[to];
-    const geometry = source && destination ? measurePour(source, destination) : null;
+    const others = tubes.current.filter((node, i): node is HTMLSpanElement => !!node && i !== from && i !== to);
+    const geometry = source && destination ? measurePour(source, destination, others) : null;
     // The run's own pace: a run started before the faster pour keeps its slower animation.
     const duration = pourDuration(amount, runRef.current?.pace), seconds = duration / 1000;
     audio.play('pour', seconds * .27, seconds * .46);
@@ -350,7 +351,7 @@ export default function Home() {
               const settled = !pouring && complete(tube) && complete(run.board[i] ?? []);
               const ghost = lifted.has(i) ? planned[i] ?? [] : null;
               return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} data-ghost={ghost ? ghost.join(',') : undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${uiLang === 'en' ? `Bottle ${i + 1}` : `${i + 1}${c.bottle}`}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${settled ? ', ' + c.filled : ''}${queued ? ', ' + c.queueOrder + ' ' + orders.join(', ') : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
-                <span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/>{ghost && <span className="bottle-ghost" data-testid={`bottle-ghost-${i}`} aria-hidden="true"><BottleVisual colors={ghost} selected={selected === i}/></span>}</span>
+                <span className="tube" ref={node => { tubes.current[i] = node; }}><BottleVisual colors={tube} selected={selected === i}/>{ghost && <span className="bottle-ghost" data-testid={`bottle-ghost-${i}`} aria-hidden="true"><BottleVisual colors={ghost} selected={selected === i} ghost/></span>}</span>
                 <span className="drop-cue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></span>
                 <span className={'bottle-status ' + (queued ? 'queue-label' : '')} aria-hidden="true">{queued ? orders.join('·') : ''}</span>
                 <BottleCompletion key={`${run.level}:${i}`} ready={settled} color={tube[0]} hideLabel={queued}/>
