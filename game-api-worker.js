@@ -249,6 +249,28 @@ function getTransientClientNetworkReason(body) {
     return '';
 }
 
+// 이미지 preload 링크는 미리 받아 두라는 신호일 뿐이라, 실패해도 IMG나 CSS가 같은 파일을 다시 받는다.
+// 같은 출처 이미지 preload 실패는 페이지를 떠났거나 회선이 잠깐 끊긴 경우라 화면은 그대로다.
+// 스타일시트나 스크립트, 다른 출처 이미지는 그대로 남긴다.
+function getOptionalImagePreloadReason(body) {
+    const errorType = String(body.error_type || body.errorType || body.type || '');
+    const message = String(body.message || '').replace(/^\[[^\]]+\]\s*/, '').trim();
+    if (!/^resource_?error$/i.test(errorType)) return '';
+    if (!/^Failed to load resource:\s*LINK$/i.test(message)) return '';
+    const context = parseClientErrorRecord(body.context);
+    const extra = parseClientErrorRecord(body.extra);
+    if (String(context.tag || extra.tag || 'LINK').toUpperCase() !== 'LINK') return '';
+    try {
+        const page = new URL(String(body.url || ''));
+        const resource = new URL(String(body.source || body.filename || ''), page);
+        if (resource.origin !== page.origin) return '';
+        if (!/\/assets\/[^?#]+\.(?:webp|png|jpe?g|avif|gif)$/i.test(resource.pathname)) return '';
+        return 'optional_image_preload_hint';
+    } catch {
+        return '';
+    }
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
@@ -289,6 +311,11 @@ async function storeClientError(db, request, body) {
     const transientNetworkReason = getTransientClientNetworkReason(body);
     if (transientNetworkReason) {
         return jsonResponse({ ok: true, ignored: true, reason: transientNetworkReason });
+    }
+
+    const preloadReason = getOptionalImagePreloadReason(body);
+    if (preloadReason) {
+        return jsonResponse({ ok: true, ignored: true, reason: preloadReason });
     }
 
     const recoveredReason = getRecoveredClientErrorReason(body);
