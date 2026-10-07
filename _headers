@@ -58,6 +58,13 @@
 /blockpang/assets/ui/*
   Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
 
+# Title UI is not content-hashed, so keep the same week-long browser cache as blockpang.
+/jewelria/assets/images/ui/*
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+
+/cat-tower/assets/ui/*
+  Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
+
 /blockpang/sounds/*
   Cache-Control: public, max-age=604800, s-maxage=31536000, stale-while-revalidate=86400
 

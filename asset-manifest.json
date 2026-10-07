@@ -100,8 +100,8 @@
     },
     {
       "path": "blockpang/assets/ui/blockpang-ui-material-sheet.webp",
-      "bytes": 1707434,
-      "sha256": "c7a1d8c3161f44a627660d6a94991cecb422d451f07dd25a2471c801d4b32a29"
+      "bytes": 278826,
+      "sha256": "540d313a922f4057753f303ecd102120ebfa70b8bbae25b3635826768fbe2bea"
     },
     {
       "path": "blockpang/assets/ui/board-panel.png",
@@ -715,8 +715,8 @@
     },
     {
       "path": "cat-tower/assets/ui/cat-tower-ui-material-sheet.webp",
-      "bytes": 1725464,
-      "sha256": "af1c1a06f399dfb49d2dd5d0c61f4da2d7138ef684ecde0203caf83ef3e29360"
+      "bytes": 338846,
+      "sha256": "14eef736d8c3709655fe2b6c60507c8017ef8dce9ff159ea7d6f6c731be9fbdf"
     },
     {
       "path": "cat-tower/assets/ui/crafted-button-v1.webp",
@@ -790,8 +790,8 @@
     },
     {
       "path": "cat-tower/assets/ui/merge-burst-final-sheet-30.webp",
-      "bytes": 828312,
-      "sha256": "deb731bde5290a5cbe3b9b33b18836fb172bcb2bf7dea85e658def65da84015f"
+      "bytes": 619458,
+      "sha256": "fc71a1bca4658327dda2d0bf441717df0acaac41a3048ba2cc887fe664ba60cc"
     },
     {
       "path": "cat-tower/assets/ui/merge-burst-sheet-16.png",
@@ -1135,8 +1135,8 @@
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-amethyst.webp",
-      "bytes": 839242,
-      "sha256": "9b1edb48abfe0eae239fab3afed26da1e2622f0381fdc2665b041cc04e599349"
+      "bytes": 533450,
+      "sha256": "de1fac904002391273d1b2e3e0889b4df436ce56de34b474158061d563900bce"
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-atlas.png",
@@ -1155,8 +1155,8 @@
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-citrine.webp",
-      "bytes": 814542,
-      "sha256": "544735a70a933d748c799c46b657621bdba42a1a51631ca0de6e56d157d5bb11"
+      "bytes": 528658,
+      "sha256": "a2d4ad97a9c460d4219d71b2bdbc8ec48d15aff1368096f2666947f880f2bd70"
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-emerald.png",
@@ -1165,8 +1165,8 @@
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-emerald.webp",
-      "bytes": 774218,
-      "sha256": "d274a1b5dec0e02255cbc8ac290c9e8bfb65f95014948a5b0bb8a8ea9e090c79"
+      "bytes": 491714,
+      "sha256": "88cfdfa22cea880fef2d32cf38af73fa894c8133f223a21722d31574227e8a56"
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-ruby.png",
@@ -1175,8 +1175,8 @@
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-ruby.webp",
-      "bytes": 777804,
-      "sha256": "08aac5ffb4f27535ce99fb9d9a15d4099fa20ae4de084637de1a3108aaa5eadf"
+      "bytes": 506164,
+      "sha256": "5388fbcc81c7ed427555b657a79358b639dc6a4d280616bd0ecca2cc35e48971"
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-sapphire.png",
@@ -1185,8 +1185,8 @@
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-sapphire.webp",
-      "bytes": 816984,
-      "sha256": "6d3f32063919e506425b88889c86480be78254bcba7683d4cc85fa1c69d35dcc"
+      "bytes": 511154,
+      "sha256": "0faca4efecd3435d17dd3adcc80f325d496b71d6972a330ba4dc6b33844ce472"
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-topaz.png",
@@ -1195,8 +1195,8 @@
     },
     {
       "path": "jewelria/assets/images/effects/gem-shards-topaz.webp",
-      "bytes": 841082,
-      "sha256": "29b510645da50ec55254b459d61be55c7ffebc5b15e4a4a66917bc55f94f63d7"
+      "bytes": 536378,
+      "sha256": "9b2131a9db09be89be1b57e641ab50eeb28997600dd89e34394af92f3c68d159"
     },
     {
       "path": "jewelria/assets/images/effects/gem-shatter-amethyst.png",
@@ -1375,8 +1375,8 @@
     },
     {
       "path": "jewelria/assets/images/ui/jewelria-link.webp",
-      "bytes": 1092088,
-      "sha256": "083642b612af5ef6413c6d8a64efe057ac8ac2c5f86740c44eedbbfeb8ba931a"
+      "bytes": 226254,
+      "sha256": "e68a6bce649f4aa10a83bcbb006132ab4b555b99729ae177c913dfc0b94bd26b"
     },
     {
       "path": "jewelria/assets/images/ui/jewelria-splash.png",
@@ -1385,8 +1385,8 @@
     },
     {
       "path": "jewelria/assets/images/ui/jewelria-splash.webp",
-      "bytes": 1219150,
-      "sha256": "9be1e629c18564b1c3dce9983d3ba9744f7b92063534c5295b8187c079147e9b"
+      "bytes": 195938,
+      "sha256": "f8fe11ee4d2999c5be64bc015de9846d41ee07bc47dff29f0ebc8a2b627537da"
     },
     {
       "path": "jewelria/assets/images/ui/og-image.png",
@@ -1395,8 +1395,8 @@
     },
     {
       "path": "jewelria/assets/images/ui/og-image.webp",
-      "bytes": 920266,
-      "sha256": "a453b0314716ecc30b4eb55432355d870e76cd2be05db19c2e09d4b1ae5aeaa7"
+      "bytes": 166560,
+      "sha256": "515d58261b8f620b4c53adab3aa7e7fdedfee45ae1fd451bbf84e00125a41a4f"
     },
     {
       "path": "jewelria/assets/images/ui/ui-board-frame.png",
@@ -2135,8 +2135,8 @@
     },
     {
       "path": "parking-escape/assets/ui/board-surface.webp",
-      "bytes": 2086080,
-      "sha256": "c8d3e667a194a70abbc52b1999b2d0e31fd988ff9096f092c140e2afd71c0821"
+      "bytes": 526232,
+      "sha256": "f1200801b76a03e2c17126655f633d164749bf1cbe4026c2c9416ab56caea210"
     },
     {
       "path": "parking-escape/assets/ui/game-board-cinematic.png",
@@ -2145,8 +2145,8 @@
     },
     {
       "path": "parking-escape/assets/ui/game-board-cinematic.webp",
-      "bytes": 2075870,
-      "sha256": "33ce5f54ee8cdfd4c3f41fb81f00dd0e1a23291242606dddf0af919dc9ac2821"
+      "bytes": 489416,
+      "sha256": "83194108ec5258fb95e83b46cd558d1a937b11fcade6574594e7e4d867182c6a"
     },
     {
       "path": "parking-escape/assets/ui/menu-bg-mobile-v2.png",
@@ -2175,8 +2175,8 @@
     },
     {
       "path": "parking-escape/assets/ui/menu-bg.webp",
-      "bytes": 1725866,
-      "sha256": "ed6d636b728b1795e85823413915e8fd627b20d0f96ef33b47e723b458a8340b"
+      "bytes": 298698,
+      "sha256": "17ae2ec015d599e8728b49f18a3dce27aac243a627769b8c495946a4695f4fd3"
     },
     {
       "path": "parking-escape/assets/ui/parking-escape-link.png",
@@ -2185,8 +2185,8 @@
     },
     {
       "path": "parking-escape/assets/ui/parking-escape-link.webp",
-      "bytes": 1727480,
-      "sha256": "169172467ce6f3e82a3af7dd1698e454bb3f5e8670361509af69451e9c2e1ddc"
+      "bytes": 312430,
+      "sha256": "defed5a8c914669e47b7231b4b015b882d3251c65dd7da577ed9f04e55deb134"
     },
     {
       "path": "parking-escape/assets/ui/parking-loading-badge-v2.png",
@@ -2205,8 +2205,8 @@
     },
     {
       "path": "parking-escape/assets/ui/parking-loading-badge.webp",
-      "bytes": 1630860,
-      "sha256": "aceac67aa88ed427da2cf77b8f358b47416567e3903ac9679bd2e2f428a4c78b"
+      "bytes": 304492,
+      "sha256": "b677d66d3732d280f8195259fab517e61eb7096d5cd39f4a9dcebbad16b4978d"
     },
     {
       "path": "parking-escape/assets/ui/skin-button-v1.png",
@@ -3075,8 +3075,8 @@
     },
     {
       "path": "school-zombie-defense/assets/images/run-loading-backdrop.webp",
-      "bytes": 1714870,
-      "sha256": "f4e8a1a80801ce0780c48c770c2f6ba032d18ce7fcdbb15ed5e0cc27a46f1496"
+      "bytes": 286814,
+      "sha256": "1279696d94125448280da170f9ca52b8b2670f5c184a3425242cc6c3656b193f"
     },
     {
       "path": "school-zombie-defense/assets/images/shop-blackmarket.png",
@@ -13250,8 +13250,8 @@
     },
     {
       "path": "solo-leveling/assets/player/player_motion_sheet.webp",
-      "bytes": 1052742,
-      "sha256": "a5ac9da48f458f70bd586445fd8a7f349adade4a66fb7290d23aa6743e876c70"
+      "bytes": 704372,
+      "sha256": "ac85cc14d7b3b936b0d35f7699b249b92964cf865641b43b10686841b86af663"
     },
     {
       "path": "solo-leveling/assets/player/source/shadow_hunter_source_alpha.png",
