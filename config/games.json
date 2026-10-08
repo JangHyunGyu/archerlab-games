@@ -14,7 +14,7 @@
     },
     { "id": "cat-tower", "entry": "cat-tower/index.html", "tests": ["node cat-tower/static-quality.test.cjs"] },
     { "id": "jelly-pang-2048", "entry": "jelly-pang-2048/index.html", "tests": ["node jelly-pang-2048/static-quality.test.cjs"] },
-    { "id": "jewelria", "entry": "jewelria/index.html", "tests": ["node jewelria/static-quality.test.cjs"] },
+    { "id": "jewelria", "entry": "jewelria/index.html", "tests": ["node jewelria/static-quality.test.cjs", "node jewelria/layout.browser.cjs"] },
     {
       "id": "lumen-shift",
       "entry": "lumen-shift/index.html",

@@ -18,7 +18,7 @@ assert.match(main, /if \(document\.hidden\) pauseGame\(\{ playSound: false \}\)/
 assert.match(main, /window\.addEventListener\('pagehide', \(\) => pauseGame/);
 assert.match(main, /if \(state\?\.status === 'paused'\)/);
 assert.match(main, /input\.setEnabled\(!resolving\)/);
-assert.match(serviceWorker, /jewelria-20261008-cache-isolation-v1/);
+assert.match(serviceWorker, /jewelria-20261008-fullscreen-link-v1/);
 assert.match(serviceWorker, /CORE_ASSETS\.map/);
 assert.doesNotMatch(serviceWorker, /CORE_ASSETS\.flatMap/);
 const coreBlock = serviceWorker.match(/const CORE_ASSETS = \[([\s\S]*?)\];/)?.[1] || '';

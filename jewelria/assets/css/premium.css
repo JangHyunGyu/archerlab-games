@@ -120,6 +120,15 @@
 .icon-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .is-muted .sound-waves { opacity: .2; }
 .archerlab-link { position: fixed; border: 12px solid transparent; border-image: var(--crafted-frame) 290 fill / 12px / 0 stretch; padding: 4px 12px; }
+/* Gameplay already reserves space above the HUD for this link. */
+html.archer-immersive-fs body[data-game="jewelria"]:has(#game-screen.is-active) > .archerlab-link {
+  top: max(12px, env(safe-area-inset-top, 0px)) !important;
+}
+@media (orientation: portrait) and (max-height: 650px) {
+  html.archer-immersive-fs body[data-game="jewelria"] #game-screen {
+    padding-top: max(62px, calc(env(safe-area-inset-top, 0px) + 61px));
+  }
+}
 .record-strip > div { border: 14px solid transparent; border-image: var(--crafted-frame) 290 fill / 14px / 0 stretch; padding: 2px 8px; text-align: center; }
 .hud-stat { border: 12px solid transparent; border-image: var(--crafted-frame) 290 fill / 12px / 0 stretch; background: none; box-shadow: none; padding: 0 4px; }
 .modal-card { border: 18px solid transparent; border-image: var(--crafted-frame) 290 fill / 18px / 0 stretch; background: none; border-radius: 0; padding: 18px; }

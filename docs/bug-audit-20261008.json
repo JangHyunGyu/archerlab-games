@@ -75,7 +75,7 @@
   ],
   "dependency_fixes": {
     "wrangler": "4.131.1 -> 4.148.0",
-    "miniflare_sharp_override": "0.35.5; patch override retained until the upstream Miniflare dependency includes this security fix",
+    "sharp_override": "0.35.5; the only consumer is Miniflare. A root-level override is used for npm 10/11 compatibility, until Miniflare includes the security patch upstream.",
     "undici": "7.29.0 -> 7.29.1",
     "vite": "8.0.13 -> 8.0.16",
     "source-map-js": "1.2.1 -> 1.2.2",
@@ -97,18 +97,21 @@
     "page_exceptions": 0,
     "missing_local_resources": 0,
     "unintended_horizontal_overflow": 0,
-    "visual_result": "All 20 title screenshots match baseline pixels exactly, using the final rebuilt Water Sort screenshots. No CSS, visible text or artwork changes. Gameplay screens were also captured and reviewed.",
+    "visual_result": "All 20 title screenshots match baseline pixels exactly, using the final rebuilt Water Sort screenshots. Visible text and artwork unchanged. A subsequent user-approved Jewelria gameplay link positioning fix has separate desktop/mobile, orientation, dynamic viewport, safe-area and pause-dialog checks.",
     "asset_manifest_files": 2979,
     "local_evidence_directory": "tmp/audit-20261008",
     "local_test_log": "tmp/audit-final-tests.log"
   },
-  "visible_change_pending_user_direction": {
+  "approved_visible_fix": {
     "game": "jewelria",
     "condition": "390x844 portrait viewport after entering fullscreen gameplay",
     "finding": "The ArcherLab link overlaps the remaining-time and score HUD; this already occurs on the baseline commit.",
     "evidence": "tmp/audit-20261008/before/jewelria-390-play.png and tmp/audit-20261008/after/jewelria-390-play.png",
     "cause": "The shared fullscreen rule places .archerlab-link at top:88px over Jewelria's game HUD.",
-    "disposition": "No visible positioning change applied: workspace AGENTS.md requires separate explicit approval. User direction requested while the nonvisual fixes continue to deployment."
+    "approval": "User explicitly approved the button position adjustment in this session.",
+    "fix": "Override the shared fullscreen top offset only while Jewelria gameplay is active; reserve notch space in short portrait gameplay without changing the normal board/HUD geometry.",
+    "verification": "8 viewport sizes; title, gameplay, pause/resume, changing viewport height, simulated safe-area insets; all 24 measured layouts have no link overlap with HUD/board and retain a 44px-or-larger link target.",
+    "artifacts": "tmp/jewelria-layout-before and tmp/jewelria-layout-after"
   },
   "coverage_limits_and_followups": [
     "This review establishes the tested behavior, not the absence of every possible bug.",
