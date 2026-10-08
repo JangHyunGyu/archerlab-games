@@ -5798,6 +5798,13 @@ class InputController {
       if (action === this.repeatAction) this.stopRepeat();
     }, { passive: true });
 
+    // A key released in the browser chrome never delivers keyup, so the hold
+    // repeat would keep walking or soft-dropping after the window is focused again.
+    this.on(window, "blur", () => this.stopRepeat());
+    this.on(document, "visibilitychange", () => {
+      if (document.hidden) this.stopRepeat();
+    });
+
     this.keyButtons.forEach((button) => {
       const action = button.dataset.action;
       this.on(button, "pointerdown", (event) => {

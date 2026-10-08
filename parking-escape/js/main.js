@@ -1026,6 +1026,7 @@
 
       drawCar(container, vehicle, this.cell);
       container.on("pointerdown", event => this.beginDrag(event, vehicle));
+      container.on("pointercancel", event => this.cancelPointer(event));
       this.vehicleLayer.addChild(container);
     }
 
@@ -1049,6 +1050,12 @@
       app.stage.on("pointermove", this.boundMove || (this.boundMove = event => this.moveDrag(event)));
       app.stage.on("pointerup", this.boundEnd || (this.boundEnd = event => this.endDrag(event)));
       app.stage.on("pointerupoutside", this.boundEnd);
+      app.stage.on("pointercancel", this.boundCancel || (this.boundCancel = event => this.cancelPointer(event)));
+    }
+
+    cancelPointer(event) {
+      if (!this.drag || event.pointerId !== this.drag.pointerId) return;
+      this.cancelDrag();
     }
 
     cancelDrag() {
@@ -1056,6 +1063,7 @@
       app.stage.off("pointermove", this.boundMove);
       app.stage.off("pointerup", this.boundEnd);
       app.stage.off("pointerupoutside", this.boundEnd);
+      app.stage.off("pointercancel", this.boundCancel);
       const vehicle = this.drag.vehicle;
       if (vehicle && vehicle.container && !vehicle.container.destroyed) {
         vehicle.container.position.set(vehicle.x * this.cell, vehicle.y * this.cell);
@@ -1103,6 +1111,7 @@
       app.stage.off("pointermove", this.boundMove);
       app.stage.off("pointerup", this.boundEnd);
       app.stage.off("pointerupoutside", this.boundEnd);
+      app.stage.off("pointercancel", this.boundCancel);
 
       let moved = false;
       let movedCells = 0;

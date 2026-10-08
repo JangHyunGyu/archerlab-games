@@ -9,7 +9,7 @@ import {
 import { SpriteFactory } from '../utils/SpriteFactory.js';
 import { SoundManager } from '../managers/SoundManager.js';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
-import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1';
+import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-orb-v1';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';
 import { getGameplayAssetList } from '../utils/AssetManifest.js?v=20260913-crafted-ui-v1';
 import { getCharacterMenuLabels, getCharacterText } from '../utils/CharacterLocalization.js';

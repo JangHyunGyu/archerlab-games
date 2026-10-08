@@ -22,12 +22,18 @@ class LobbyManager {
             e.preventDefault();
             this.game.sound.playUI('click');
 
-            // 게임 중이면 확인창 표시 (실수 방지)
-            if (this.currentScreen === 'game-screen' && this.game.running) {
-                this.showConfirm(this.t('confirm.leaveGame', '게임을 나가시겠습니까?'), () => {
-                    this.game.backToLobby();
-                    this.showScreen('main-menu');
-                });
+            // 경기 중에는 확인 후 나간다. 카운트다운과 종료 연출은 running이 아니므로
+            // 확인 없이 타이머를 끊고 메뉴로 돌아간다.
+            if (this.currentScreen === 'game-screen') {
+                if (this.game.running) {
+                    this.showConfirm(this.t('confirm.leaveGame', '게임을 나가시겠습니까?'), () => {
+                        this.game.backToLobby();
+                        this.showScreen('main-menu');
+                    });
+                    return;
+                }
+                this.game.backToLobby();
+                this.showScreen('main-menu');
                 return;
             }
 

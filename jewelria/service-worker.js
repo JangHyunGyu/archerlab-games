@@ -71,10 +71,24 @@ const CACHE_ASSETS = [...new Set(CORE_ASSETS.map((asset) => (
   asset.endsWith('.png') ? asset.replace(/\.png$/i, '.webp') : asset
 )))];
 
+function cacheableCopy(response) {
+  if (!response?.redirected) return response;
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => Promise.allSettled(CACHE_ASSETS.map((asset) => cache.add(asset))))
+      .then((cache) => Promise.allSettled(CACHE_ASSETS.map((asset) =>
+        fetch(new Request(asset, { cache: 'reload' })).then((response) => {
+          if (!response.ok) throw new TypeError(`failed to cache ${asset}`);
+          return cache.put(asset, cacheableCopy(response));
+        })
+      )))
       .then(() => self.skipWaiting())
   );
 });
@@ -113,7 +127,7 @@ self.addEventListener('fetch', (event) => {
     const navigation = fetch(event.request).then((response) => {
       let cacheWrite = Promise.resolve();
       if (response.ok) {
-        const copy = response.clone();
+        const copy = cacheableCopy(response.clone());
         cacheWrite = caches.open(CACHE_NAME).then((cache) => cache.put(documentKey, copy));
       }
       return { response, cacheWrite };
@@ -130,7 +144,7 @@ self.addEventListener('fetch', (event) => {
     return fetch(event.request).then((response) => {
       let cacheWrite = Promise.resolve();
       if (response && response.ok) {
-        const copy = response.clone();
+        const copy = cacheableCopy(response.clone());
         cacheWrite = caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
       }
       return { response, cacheWrite };

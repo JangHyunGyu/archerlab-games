@@ -331,9 +331,10 @@ export class EnemyManager {
             ], { duration: 2500, type: 'info' });
         }
 
-        // Bonus XP
-        if (this.scene.player) {
-            this.scene.player.addXP(100);
+        // Bonus XP. A level from this grant must open the skill screen, same as quests.
+        const leveled = this.scene.player?.addXP(100);
+        if (leveled && this.scene.onLevelUp) {
+            this.scene.onLevelUp();
         }
     }
 

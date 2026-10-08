@@ -43,6 +43,17 @@ const root = path.join(__dirname, '..');
         'both HUD layouts must clamp carried-over XP to the bar width'
     );
 
+    const enemySource = fs.readFileSync(path.join(root, 'js', 'managers', 'EnemyManager.js'), 'utf8');
+    const dungeonEnd = enemySource.slice(enemySource.indexOf('_endDungeonBreak()'));
+    assert.match(dungeonEnd, /const leveled = this\.scene\.player\?\.addXP\(100\)/);
+    assert.match(dungeonEnd, /if \(leveled && this\.scene\.onLevelUp\) \{\s*this\.scene\.onLevelUp\(\);/);
+
+    const orbSource = fs.readFileSync(path.join(root, 'js', 'entities', 'XPOrb.js'), 'utf8');
+    assert.match(
+        orbSource,
+        /if \(dist < pickupRange\) \{\s*if \(this\.scene\._levelUpActive\) return;\s*this\._collect\(orb, player\);/
+    );
+
     console.log(`infinite leveling verified: authored Lv.1-30 curve plus monotonic Lv.31-200 progression`);
 })().catch(error => {
     console.error(error);

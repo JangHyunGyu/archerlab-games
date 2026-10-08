@@ -30,6 +30,7 @@ let state = null;
 let selected = null;
 let locked = false;
 let resolving = false;
+let playGeneration = 0;
 let timerId = null;
 let rankSubmitInFlight = false;
 
@@ -106,6 +107,7 @@ function renderTitle() {
 }
 
 function startGame() {
+  playGeneration += 1;
   clearTimer();
   const board = new BoardModel(BOARD_SIZE);
   board.generateInitial();
@@ -194,6 +196,7 @@ function clearTimer() {
 }
 
 function goTitle() {
+  playGeneration += 1;
   audio.play('button');
   clearTimer();
   locked = false;
@@ -249,6 +252,7 @@ function handleKeyboardMove(dir) {
 
 async function attemptSwap(from, to) {
   if (!canPlay() || !state.board.areAdjacent(from, to)) return;
+  const generation = playGeneration;
   resolving = true;
   locked = true;
   input.setEnabled(false);
@@ -256,11 +260,13 @@ async function attemptSwap(from, to) {
   selected = null;
   ui.renderBoard(state.board.grid, selected);
   await delay(70);
+  if (!samePlay(generation)) return;
   const matches = state.board.findMatches();
 
   if (matches.length === 0) {
     audio.play('invalid');
     await ui.markCells([from, to], 'invalid', 250);
+    if (!samePlay(generation)) return;
     state.board.swap(from, to);
     ui.renderBoard(state.board.grid, selected);
     unlockBoard();
@@ -269,16 +275,19 @@ async function attemptSwap(from, to) {
 
   audio.play('swap');
   ui.updateHUD(state);
-  await processMatches(matches, [from, to]);
+  await processMatches(matches, [from, to], generation);
+  if (!samePlay(generation)) return;
   await ensurePlayableBoard();
+  if (!samePlay(generation)) return;
   finishTurn();
 }
 
-async function processMatches(initialMatches, originCells) {
+async function processMatches(initialMatches, originCells, generation = playGeneration) {
   let matches = initialMatches;
   let combo = 1;
   let guard = 0;
   while (matches.length > 0 && guard < 14) {
+    if (!samePlay(generation)) return;
     guard += 1;
     const resolution = state.board.buildResolution(matches, originCells);
     const removalCells = resolution.remove.map((cell) => {
@@ -331,12 +340,14 @@ async function processMatches(initialMatches, originCells) {
       ui.markCells(removalCells, 'clearing', 320, breakStagger),
       ui.markCells(resolution.specials, 'transforming', 360)
     ]);
+    if (!samePlay(generation)) return;
     state.board.removeCells(resolution.remove);
     state.board.placeSpecials(resolution.specials);
     const fallMoves = state.board.collapseAndRefill();
     ui.renderBoard(state.board.grid, null, fallMoves);
     if (fallMoves.length) audio.play('cascade', combo, { fallCount: fallMoves.length });
     await delay(getFallAnimationWait(fallMoves));
+    if (!samePlay(generation)) return;
 
     matches = state.board.findMatches();
     originCells = [];
@@ -489,6 +500,10 @@ function toggleSound() {
 
 function canPlay() {
   return !!state && state.status === 'playing' && !locked;
+}
+
+function samePlay(generation) {
+  return generation === playGeneration && !!state && state.status !== 'result';
 }
 
 function vibrateMatch(combo, resolution) {

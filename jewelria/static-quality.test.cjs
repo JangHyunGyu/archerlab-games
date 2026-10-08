@@ -11,6 +11,9 @@ const version = JSON.parse(read('version.json'));
 
 assert.match(html, /main\.js\?v=20260913-crafted-ui-v1/);
 assert.match(main, /let resolving = false;/);
+assert.match(main, /let playGeneration = 0;/);
+assert.match(main, /function samePlay\(generation\)/);
+assert.match(main, /if \(!samePlay\(generation\)\) return;/);
 assert.match(main, /function pauseGame\(\{ playSound = true \} = \{\}\)/);
 assert.match(main, /function resumeGame\(\)/);
 assert.match(main, /document\.addEventListener\('visibilitychange'/);

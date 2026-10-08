@@ -40,3 +40,12 @@ test('slimevolley: focus loss clears touch gestures and prevents stale drag move
   assert.equal(f.game.getMyInput().right,false);assert.equal(f.game.getMyInput().jump,false);
   assert.equal(elements.get('joystick-knob').style.transform,'');
 });
+
+test('slimevolley: leaving during countdown or the result delay cancels the pending start',()=>{
+  const lobby=fs.readFileSync(require('node:path').join(__dirname,'js/lobby.js'),'utf8');
+  const main=fs.readFileSync(require('node:path').join(__dirname,'js/main.js'),'utf8');
+  assert.match(lobby,/currentScreen === 'game-screen'/);
+  assert.match(lobby,/this\.game\.backToLobby\(\);\s*this\.showScreen\('main-menu'\)/);
+  assert.match(main,/this\.gameOverTimer = setTimeout/);
+  assert.match(main,/clearTimeout\(this\.gameOverTimer\)/);
+});

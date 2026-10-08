@@ -210,10 +210,14 @@ class SlimeVolleyGame {
     }
 
     startCountdown() {
-        // 이전 카운트다운 정리
+        // 이전 카운트다운과 종료 연출 정리
         if (this.countdownTimer) {
             clearInterval(this.countdownTimer);
             this.countdownTimer = null;
+        }
+        if (this.gameOverTimer) {
+            clearTimeout(this.gameOverTimer);
+            this.gameOverTimer = null;
         }
 
         this.countdown = 3;
@@ -560,7 +564,9 @@ class SlimeVolleyGame {
             this.sound.playGameOver(won);
             this.renderer.shake(12);
 
-            setTimeout(() => {
+            if (this.gameOverTimer) clearTimeout(this.gameOverTimer);
+            this.gameOverTimer = setTimeout(() => {
+                this.gameOverTimer = null;
                 this.lobby.showGameOver(
                     result.winner, result.setsWon, this.myTeam, result.setScores, result.mvp
                 );
@@ -587,6 +593,10 @@ class SlimeVolleyGame {
         if (this.countdownTimer) {
             clearInterval(this.countdownTimer);
             this.countdownTimer = null;
+        }
+        if (this.gameOverTimer) {
+            clearTimeout(this.gameOverTimer);
+            this.gameOverTimer = null;
         }
         this.sound.stopAll();
         if (this.renderer.initialized) {

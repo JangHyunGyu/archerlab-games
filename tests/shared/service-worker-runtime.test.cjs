@@ -86,8 +86,10 @@ const event = {
   ];
   for (const game of consumers) {
     const worker = fs.readFileSync(path.join(root, game, 'sw.js'), 'utf8');
-    assert.match(worker, /service-worker-runtime\.js\?v=20261008-runtime-v4/);
+    assert.match(worker, /service-worker-runtime\.js\?v=20261009-redirect-cache-v1/);
   }
+  const waterSortWorker = fs.readFileSync(path.join(root, 'water-sort', 'sw.js'), 'utf8');
+  assert.match(waterSortWorker, /service-worker-runtime\.js\?v=20261009-redirect-cache-v1/);
 
   const failedScope = {
     location: { origin: 'https://game.archerlab.dev' },
@@ -121,7 +123,8 @@ const event = {
   assert.equal(unavailable.status, 503, 'an uncached network failure must resolve to a response');
 
   const jewelriaWorker = fs.readFileSync(path.join(root, 'jewelria/service-worker.js'), 'utf8');
-  assert.match(jewelriaWorker, /const copy = response\.clone\(\);\s*cacheWrite = caches\.open/);
+  assert.match(jewelriaWorker, /const copy = cacheableCopy\(response\.clone\(\)\);\s*cacheWrite = caches\.open/);
+  assert.doesNotMatch(jewelriaWorker, /cache\.add(?:All)?\(/);
   assert.match(jewelriaWorker, /event\.waitUntil\(\s*result/);
   assert.doesNotMatch(
     jewelriaWorker,
@@ -160,6 +163,46 @@ const event = {
   jewelScope.fetch = async () => { throw new Error('Offline'); };
   jewelListeners.fetch(navigation);
   assert.equal(await navigation.response, staleHtml, 'offline play retains the previous game document');
+
+  const shellWrites = [];
+  const redirectScope = {
+    location: { origin: 'https://game.archerlab.dev' },
+    clients: { claim: async () => {} },
+    skipWaiting: async () => {},
+    URL,
+    Promise,
+    Response,
+    Request: function Request(input, init) {
+      this.url = String(input);
+      this.cache = init && init.cache;
+    },
+    fetch: async () => {
+      const response = new Response('game-shell', { status: 200, headers: { 'Content-Type': 'text/html' } });
+      Object.defineProperty(response, 'redirected', { get: () => true });
+      return response;
+    },
+    caches: {
+      keys: async () => [],
+      delete: async () => true,
+      match: async () => null,
+      open: async () => ({
+        put: async (request, response) => {
+          shellWrites.push({ request: String(request), redirected: response.redirected, body: await response.text() });
+        }
+      })
+    },
+    addEventListener(name, listener) { this.listeners[name] = listener; },
+    listeners: {}
+  };
+  redirectScope.self = redirectScope;
+  vm.runInNewContext(source, redirectScope, { filename: 'service-worker-runtime.js' });
+  redirectScope.ArcherGameServiceWorker.install({ gameId: 'blockpang', version: 'redirect-test' });
+  const installWaiters = [];
+  redirectScope.listeners.install({ waitUntil(promise) { installWaiters.push(promise); } });
+  await Promise.all(installWaiters);
+  assert.equal(shellWrites.length, 2, 'the default shell caches the directory and index.html');
+  assert.deepEqual(shellWrites.map((entry) => entry.redirected), [false, false]);
+  assert.deepEqual(shellWrites.map((entry) => entry.body), ['game-shell', 'game-shell']);
 
   console.log('shared service worker response cloning and cache lifetime verified');
 })().catch((error) => {

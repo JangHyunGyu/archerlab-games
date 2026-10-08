@@ -124,8 +124,10 @@ export class XPOrbPool {
                 );
             }
 
-            // Collect
+            // Collect. A level-up pauses the scene, but this loop is already running,
+            // so later orbs in the same pickup would spend the next level with no skill.
             if (dist < pickupRange) {
+                if (this.scene._levelUpActive) return;
                 this._collect(orb, player);
             }
         });

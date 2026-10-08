@@ -9,9 +9,26 @@
             var cacheName = 'archer-game-' + gameId + '-' + version;
             var shell = Array.isArray(options.shell) && options.shell.length ? options.shell : ['./', './index.html'];
 
+            // /index.html 308s to the directory. cache.add follows that redirect and
+            // stores redirected:true. Returning that entry for a navigation is a
+            // network error, so the offline shell must be a plain response.
+            function settledResponse(response) {
+                if (!response || !response.redirected) return response;
+                return new Response(response.body, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers
+                });
+            }
+
             scope.addEventListener('install', function (event) {
                 event.waitUntil(caches.open(cacheName).then(function (cache) {
-                    return cache.addAll(shell);
+                    return Promise.all(shell.map(function (asset) {
+                        return fetch(new Request(asset, { cache: 'reload' })).then(function (response) {
+                            if (!response.ok) throw new TypeError('shell request failed');
+                            return cache.put(asset, settledResponse(response));
+                        });
+                    }));
                 }).then(function () { return scope.skipWaiting(); }));
             });
 
@@ -26,16 +43,17 @@
             function fetchAndCache(request, cacheKey) {
                 return fetch(request).then(function (response) {
                     var cacheWrite = Promise.resolve();
+                    var served = response.ok ? settledResponse(response) : response;
                     if (response.ok) {
                         // Clone while the network response is still fresh. Delaying this
                         // until caches.open() resolves can leave a stale-while-revalidate
                         // response with an already-consumed body.
-                        var copy = response.clone();
+                        var copy = served.clone();
                         cacheWrite = caches.open(cacheName).then(function (cache) {
                             return cache.put(cacheKey, copy);
                         });
                     }
-                    return { response: response, cacheWrite: cacheWrite };
+                    return { response: served, cacheWrite: cacheWrite };
                 });
             }
 
