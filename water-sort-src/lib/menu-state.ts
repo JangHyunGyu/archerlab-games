@@ -9,3 +9,9 @@ export function menuState(run: RunView | null, now: number) {
     : run.deadline;
   return { canContinue: now < deadline };
 }
+
+// Home and reload normally stay on the start screen. An inspection that ended
+// the run there is the only ranking door, so that run has to come back on screen.
+export function stayOnBoard(showGame: boolean, run: { status: string; registered: boolean } | null) {
+  return showGame || !!run && run.status === 'ended' && !run.registered;
+}

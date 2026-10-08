@@ -9,7 +9,7 @@ import { useBottleDrag } from './useBottleDrag';
 import { useGameAudio } from './useGameAudio';
 import { BottleVisual } from './BottleVisual';
 import { BottleCompletion } from './BottleCompletion';
-import { menuState } from '../lib/menu-state';
+import { menuState, stayOnBoard } from '../lib/menu-state';
 import { turnstileToken } from './turnstile';
 import { MAX_QUEUED_POURS, PourController, type ActivePour } from '../lib/pour-controller';
 import type { InspectionResult } from '../lib/dead-end.worker';
@@ -77,6 +77,15 @@ export default function Home() {
     start: startMotion,
     change: () => redrawPours(value => value + 1),
     reset: () => { setMotions([]); for (const timer of settleTimers.current.values()) clearTimeout(timer); settleTimers.current.clear(); },
+    abandon: (ids) => {
+      const drop = new Set(ids);
+      setMotions(items => items.filter(item => !drop.has(item.id)));
+      for (const id of ids) {
+        const timer = settleTimers.current.get(id);
+        if (timer) clearTimeout(timer);
+        settleTimers.current.delete(id);
+      }
+    },
     error: e => { audio.stop(); fail(e); },
     invalid: () => { setNotice(c.invalid); audio.play('invalid'); },
   });
@@ -136,7 +145,7 @@ export default function Home() {
         if (epoch !== requestEpoch.current) return;
         accept(next);
       }
-      if (showGame) setAtHome(false);
+      if (stayOnBoard(showGame, next)) setAtHome(false);
       setSelected(null); setNotice(c.choose);
       if (type !== 'register') setModal(null);
       if (type === 'start') audio.play('start');

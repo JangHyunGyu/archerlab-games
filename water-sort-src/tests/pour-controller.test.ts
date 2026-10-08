@@ -8,15 +8,17 @@ function harness() {
   let now = 1000;
   let run: RunView = { ...newStage(1, now), board: [[0, 1], [1, 0], [], [], []], bottleAvailableAt: [0, 0, 0, 0, 0], id: 'run', version: 1, historyDepth: 0, registered: false, nickname: null, serverNow: now };
   const requests: { from: number; to: number; version: number; resolve: (run: RunView) => void; reject: (e: Error) => void }[] = [];
-  const starts: number[] = [], errors: unknown[] = [];
+  const starts: number[] = [], errors: unknown[] = [], abandoned: number[] = [];
   const controller = new PourController({
     getRun: () => run, clock: () => now,
     send: (from, to) => new Promise((resolve, reject) => requests.push({ from, to, version: run.version, resolve, reject })),
-    accept: next => { run = next; }, start: e => { starts.push(e.id); }, change() {}, reset() {}, error: e => { errors.push(e); }, invalid() {},
+    accept: next => { run = next; }, start: e => { starts.push(e.id); }, change() {}, reset() {},
+    abandon: ids => { abandoned.push(...ids); },
+    error: e => { errors.push(e); }, invalid() {},
   });
   controller.enabled = true;
   const flush = async () => { await new Promise(resolve => setImmediate(resolve)); };
-  return { controller, requests, starts, errors, flush, get run() { return run; }, set run(next) { run = next; }, setTime: (time: number) => { now = time; },
+  return { controller, requests, starts, errors, abandoned, flush, get run() { return run; }, set run(next) { run = next; }, setTime: (time: number) => { now = time; },
     confirm: async (index: number) => {
       const request = requests[index];
       const next = advance({ ...run, history: [] }, { type: 'pour', from: request.from, to: request.to }, now);
@@ -136,4 +138,29 @@ test('a confirmed clear cancels reservations even before the UI has rendered its
   assert.equal(p.request(0, 2), 'invalid');
   p.finish(h.starts[0]); h.setTime(h.run.availableAt); p.tick();
   assert.equal(p.entries.length, 0); assert.equal(h.requests.length, 1);
+});
+
+test('a clear drops a disjoint pour that already started and will not be sent', async () => {
+  const h = harness(), p = h.controller;
+  h.run = { ...h.run, board: [[0, 0], [0], [0], [1, 1, 1, 1], [], []], bottleAvailableAt: [0, 0, 0, 0, 0, 0] };
+  assert.equal(p.request(1, 0), 'started');
+  assert.equal(p.request(2, 0), 'queued');
+  assert.equal(p.request(3, 4), 'queued');
+  await h.confirm(0);
+  p.finish(h.starts[0]);
+  h.setTime(h.run.availableAt);
+  p.tick();
+  assert.equal(h.requests.length, 2);
+  assert.equal(p.entries.filter(entry => !entry.confirmed).length, 2);
+  const stray = p.entries.find(entry => entry.from === 3 && entry.to === 4);
+  assert.ok(stray);
+  await h.confirm(1);
+  assert.equal(h.run.status, 'cleared');
+  assert.equal(h.requests.length, 2);
+  assert.equal(p.entries.some(entry => entry.from === 3), false);
+  assert.deepEqual(h.abandoned, [stray.id]);
+  p.finish(h.starts[1]);
+  h.setTime(h.run.availableAt);
+  p.tick();
+  assert.equal(p.entries.length, 0);
 });

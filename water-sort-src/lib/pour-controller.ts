@@ -12,6 +12,7 @@ type Options = {
   start: (entry: ActivePour) => void;
   change: () => void;
   reset: () => void;
+  abandon?: (ids: number[]) => void;
   error: (error: unknown) => void;
   invalid: () => void;
 };
@@ -92,7 +93,17 @@ export class PourController {
     const count = this.entries.length;
     this.entries = this.entries.filter(e => !(e.confirmed && e.visualDone && this.options.clock() >= e.readyAt));
     if (this.entries.length !== count) this.options.change();
-    if (run?.status === 'cleared') this.cancelQueued();
+    if (run?.status === 'cleared') {
+      this.cancelQueued();
+      // A winning response does not send pours that already left the queue.
+      // Leaving them active blocks the clear hand-off forever.
+      const stray = this.entries.filter(entry => !entry.confirmed);
+      if (stray.length) {
+        this.entries = this.entries.filter(entry => entry.confirmed);
+        this.options.abandon?.(stray.map(entry => entry.id));
+        this.options.change();
+      }
+    }
     while (this.enabled && run?.status === 'playing' && this.queued.length) {
       const next = this.queued[0];
       if (this.busy(next.from) || this.busy(next.to)) break;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { menuState } from '../lib/menu-state.ts';
+import { menuState, stayOnBoard } from '../lib/menu-state.ts';
 import { expire, newStage } from '../lib/challenge.ts';
 import { CLEAR_DELAY, type RunView } from '../lib/challenge-rules.ts';
 
@@ -16,4 +16,13 @@ test('continue is available only for an unfinished run, with the same expiry as 
       assert.deepEqual(menuState({ ...run, registered: true }, now), { canContinue: false });
     }
   }
+});
+
+test('an ended unregistered run opened from Home or reload still shows results', () => {
+  const ended = { status: 'ended', registered: false };
+  assert.equal(stayOnBoard(false, ended), true);
+  assert.equal(stayOnBoard(false, { status: 'ended', registered: true }), false);
+  assert.equal(stayOnBoard(false, { status: 'playing', registered: false }), false);
+  assert.equal(stayOnBoard(false, null), false);
+  assert.equal(stayOnBoard(true, { status: 'playing', registered: false }), true);
 });
