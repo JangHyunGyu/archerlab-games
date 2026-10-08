@@ -41,7 +41,11 @@ const manifest = `${JSON.stringify({
 }, null, 2)}\n`;
 
 if (process.argv.includes('--check')) {
-  const current = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : '';
+  // Git may check this file out with CRLF on Windows. The asset bytes are
+  // already hashed above; a newline difference is not a stale manifest.
+  const current = fs.existsSync(outputPath)
+    ? fs.readFileSync(outputPath, 'utf8').replace(/\r\n/g, '\n')
+    : '';
   if (current !== manifest) {
     console.error('asset-manifest.json is stale; run npm run assets:build');
     process.exit(1);
