@@ -91,6 +91,7 @@
     "new_unit_regressions": 26,
     "new_browser_regression_command": "npm run test:offline",
     "ci_improvement": "Offline worker lifecycle regression added to the shared-and-assets job; new unit tests included in the existing matrix",
+    "clean_install_compatibility": "Both lockfiles validated with npm 10.9.4, including a clean Water Sort install in an isolated directory. Missing optional WASM peer entries were added; rebuilding kept identical production bundle names and content.",
     "checks": ["npm test", "npm run test:offline", "npm --prefix water-sort-src run build", "npx wrangler deploy --config wrangler.game-api.toml --dry-run", "npm audit", "npm --prefix water-sort-src audit"],
     "browser_cases": 20,
     "additional_browser_cases": "Solo Leveling character selection/combat at both viewports; Water Sort launch at both viewports after rebuilding with patched Vite",
