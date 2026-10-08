@@ -54,4 +54,5 @@ jobs:
       - run: npm ci
       - run: npm run test:shared
       - run: npm run test:api
+      - run: npm run test:offline
       - run: npm run assets:check

@@ -4,14 +4,20 @@
     "test": "npm run test:matrix && npm run test:shared && npm run test:api && npm run assets:check",
     "test:matrix": "node scripts/run-test-matrix.mjs",
     "test:game": "node scripts/run-test-matrix.mjs",
-    "test:shared": "node tests/browser-check.test.cjs && node tests/shared/env-guard.test.cjs && node tests/shared/game-runtime.test.cjs && node tests/shared/client-error-reporter.test.cjs && node tests/shared/client-exception-reporting.test.cjs && node tests/shared/service-worker-runtime.test.cjs && node tests/shared/portal-quality.test.cjs && node --test tests/shared/immersive.test.cjs",
+    "test:offline": "node tests/shared/offline.browser.cjs",
+    "test:shared": "node tests/browser-check.test.cjs && node tests/shared/env-guard.test.cjs && node tests/shared/game-runtime.test.cjs && node tests/shared/client-error-reporter.test.cjs && node tests/shared/client-exception-reporting.test.cjs && node tests/shared/service-worker-runtime.test.cjs && node tests/shared/portal-quality.test.cjs && node --test tests/shared/immersive.test.cjs tests/shared/cache-isolation.test.cjs tests/shared/runtime-boundaries.test.cjs",
     "test:api": "node tests/api/client-error-ingest.test.cjs && npm run test:ranking",
-    "test:ranking": "node --test tests/api/ranking-delivery.test.cjs tests/api/ranking-boundaries.test.cjs tests/shared/ranking-delivery.test.cjs tests/shared/ranking-session-isolation.test.cjs",
+    "test:ranking": "node --test tests/api/ranking-delivery.test.cjs tests/api/ranking-boundaries.test.cjs tests/api/delivery-validation.test.cjs tests/shared/ranking-delivery.test.cjs tests/shared/ranking-session-isolation.test.cjs",
     "assets:build": "node scripts/asset-manifest.mjs",
     "assets:check": "node scripts/asset-manifest.mjs --check"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",
-    "wrangler": "^4.131.1"
+    "wrangler": "^4.148.0"
+  },
+  "overrides": {
+    "miniflare": {
+      "sharp": "0.35.5"
+    }
   }
 }

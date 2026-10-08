@@ -55,18 +55,32 @@
                 });
             }
 
+            function navigationKey(request) {
+                var url = new URL(request.url);
+                url.search = '';
+                url.hash = '';
+                if (url.pathname.endsWith('/')) url.pathname += 'index.html';
+                else if (/\/index(?:-[a-z]{2})?$/.test(url.pathname)) url.pathname += '.html';
+                return url.href;
+            }
+
+            function matchCurrent(request) {
+                return caches.match(request, { cacheName: cacheName }).catch(function () { return undefined; });
+            }
+
             scope.addEventListener('fetch', function (event) {
                 if (event.request.method !== 'GET') return;
                 var url = new URL(event.request.url);
                 if (url.origin !== scope.location.origin) return;
                 if (url.pathname.startsWith('/_account/')) return;
                 if (event.request.mode === 'navigate') {
-                    var navigation = fetchAndCache(event.request, './index.html');
+                    var documentKey = navigationKey(event.request);
+                    var navigation = fetchAndCache(event.request, documentKey);
                     keepAlive(event, navigation);
                     event.respondWith(navigation.then(function (entry) {
                         return entry.response;
                     }).catch(function () {
-                        return caches.match('./index.html').then(function (cached) {
+                        return matchCurrent(documentKey).then(function (cached) {
                             return cached || unavailableResponse();
                         });
                     }));
@@ -74,7 +88,7 @@
                 }
                 var update = fetchAndCache(event.request, event.request);
                 keepAlive(event, update);
-                event.respondWith(caches.match(event.request).then(function (cached) {
+                event.respondWith(matchCurrent(event.request).then(function (cached) {
                     return cached || update.then(function (entry) {
                         return entry.response;
                     });

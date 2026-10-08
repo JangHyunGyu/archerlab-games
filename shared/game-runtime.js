@@ -16,7 +16,8 @@
 
     function Storage(namespace, storage) {
         this.namespace = normalizeGameId(namespace);
-        this.storage = storage || global.localStorage;
+        try { this.storage = storage || global.localStorage; }
+        catch (_) { this.storage = null; }
     }
 
     Storage.prototype.key = function (key) {
@@ -98,6 +99,7 @@
         this.queue = [];
         this.disabled = false;
         this.syncing = false;
+        this.runToken = {};
     }
 
     // Ranking stays best-effort on real transport failures only; any other exception
@@ -141,19 +143,24 @@
         return data;
     };
     RankingClient.prototype.start = async function (extra) {
+        var runToken = this.runToken = {};
         this.sessionId = '';
         this.queue = [];
         this.disabled = false;
+        this.flushPromise = null;
+        this.syncing = false;
         try {
             var data = await this.request('/score-sessions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
                 body: JSON.stringify(Object.assign({ game_id: this.gameId }, extra || {}))
             });
+            if (this.runToken !== runToken) return '';
             this.sessionId = String(data.session_id || '');
             if (!this.sessionId) throw rankingTransportError('empty ranking session');
             return this.sessionId;
         } catch (error) {
+            if (this.runToken !== runToken) return '';
             this.disabled = true;
             reportRankingException(error, { phase: 'ranking-start', game_id: this.gameId });
             return '';
@@ -170,27 +177,33 @@
         if (this.flushPromise) return this.flushPromise;
         if (this.disabled || !this.sessionId) return false;
         if (this.queue.length === 0) return true;
-        this.flushPromise = this.flushQueue();
-        try { return await this.flushPromise; } finally { this.flushPromise = null; }
+        var task = this.flushQueue();
+        this.flushPromise = task;
+        try { return await task; } finally { if (this.flushPromise === task) this.flushPromise = null; }
     };
     RankingClient.prototype.flushQueue = async function () {
+        var runToken = this.runToken;
+        var sessionId = this.sessionId;
+        var queue = this.queue;
         this.syncing = true;
         try {
-            while (this.queue.length) {
-                var events = this.queue.slice(0, 20);
+            while (queue.length) {
+                var events = queue.slice(0, 20);
                 await this.request('/score-events', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                    body: JSON.stringify({ game_id: this.gameId, session_id: this.sessionId, events: events })
+                    body: JSON.stringify({ game_id: this.gameId, session_id: sessionId, events: events })
                 });
-                this.queue.splice(0, events.length);
+                if (this.runToken !== runToken) return false;
+                queue.splice(0, events.length);
             }
             return true;
         } catch (error) {
+            if (this.runToken !== runToken) return false;
             reportRankingException(error, { phase: 'ranking-flush', game_id: this.gameId, queued: this.queue.length });
             return false;
         } finally {
-            this.syncing = false;
+            if (this.runToken === runToken) this.syncing = false;
         }
     };
     RankingClient.prototype.submit = async function (playerName, score, extraData) {
@@ -201,7 +214,10 @@
                 score: Math.floor(Number(score) || 0), session_id: this.sessionId, extra_data: extraData });
         }
         if (this.disabled || !this.sessionId) throw new Error('ranking offline');
+        var runToken = this.runToken;
+        var sessionId = this.sessionId;
         if (this.queue.length && !(await this.flush())) throw new Error('score sync failed');
+        if (this.runToken !== runToken) throw new Error('ranking session changed');
         return this.request('/rankings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -209,7 +225,7 @@
                 game_id: this.gameId,
                 player_name: playerName,
                 score: Math.floor(Number(score) || 0),
-                session_id: this.sessionId,
+                session_id: sessionId,
                 extra_data: extraData
             })
         });

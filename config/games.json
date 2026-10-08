@@ -54,7 +54,7 @@
         "node school-zombie-defense/tests/gamepad-permissions.test.cjs", "node school-zombie-defense/tests/combat-asset-jobs.test.cjs", "node school-zombie-defense/tests/combat-asset-loading.test.cjs"
       ]
     },
-    { "id": "slimevolley", "entry": "slimevolley/index.html", "tests": ["node slimevolley/validate.js"] },
+    { "id": "slimevolley", "entry": "slimevolley/index.html", "tests": ["node slimevolley/validate.js", "node --test slimevolley/input-lifecycle.test.cjs"] },
     {
       "id": "solo-leveling",
       "entry": "solo-leveling/index.html",

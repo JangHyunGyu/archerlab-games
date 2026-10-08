@@ -1,0 +1,119 @@
+{
+  "date": "2026-10-08",
+  "baseline_commit": "78f64d0821b9c57372ff0c84a8bf993c5cd6142a",
+  "scope": {
+    "games": ["blockpang", "cat-tower", "jelly-pang-2048", "jewelria", "lumen-shift", "parking-escape", "school-zombie-defense", "slimevolley", "solo-leveling", "water-sort"],
+    "entry_pages_including_locales_and_portal": 23,
+    "browser": "Google Chrome via Playwright",
+    "viewports": ["390x844", "1440x900"],
+    "backend_tests": "Production handlers with in-memory SQLite and Durable Object storage fixtures; no test scores submitted to production"
+  },
+  "fixed_findings": [
+    {
+      "id": "CACHE-1",
+      "file": "jewelria/service-worker.js",
+      "impact": "Activating Jewelria deleted every other application's cache on the same origin, removing other games' offline assets.",
+      "fix": "Delete obsolete jewelria-* caches only.",
+      "evidence": "Failed before correction; unit test and real Chromium installation/offline navigation passed afterwards."
+    },
+    {
+      "id": "CACHE-2",
+      "files": ["shared/service-worker-runtime.js", "jewelria/service-worker.js"],
+      "impact": "Shared workers stored all navigation responses under index.html, mixing languages. Clean URLs and .html aliases could miss the requested document and fall back to the wrong language.",
+      "fix": "Cache documents by normalized language-specific URL; normalize index aliases and discard navigation query strings; return unavailable when that document is absent.",
+      "evidence": "KO/EN/JA offline alias tests passed in unit tests and actual Chromium."
+    },
+    {
+      "id": "CACHE-3",
+      "files": ["shared/service-worker-runtime.js", "jewelria/service-worker.js"],
+      "impact": "Global cache searches could serve an old shared script from another game's cache after an update.",
+      "fix": "Restrict every active fetch-path cache lookup to the current game's current cache.",
+      "evidence": "A stale shared asset seeded in another cache no longer shadows the network/current cache."
+    },
+    {
+      "id": "CACHE-4",
+      "files": ["shared/service-worker-runtime.js", "jewelria/service-worker.js"],
+      "impact": "A cache read error caused an unavailable response even when the network could serve the requested asset.",
+      "fix": "Treat cache read failure as a miss and continue with network delivery.",
+      "evidence": "Injected cache read failures now return the successful network response."
+    },
+    {
+      "id": "INPUT-1",
+      "file": "slimevolley/js/main.js",
+      "impact": "Holding movement or jump while switching away from the game could leave input held because keyup/touchend never arrived.",
+      "fix": "Release keyboard and touch state on blur, hidden document and game transitions; send the neutral state to the multiplayer host; remove added listeners on destroy.",
+      "evidence": "Actual Chrome reproduced stuck movement at both viewports before the fix and cleared it after the fix; tests also cover host notification and stale touch movement."
+    },
+    {
+      "id": "RUNTIME-1",
+      "file": "shared/game-runtime.js",
+      "impact": "Accessing a blocked localStorage getter aborted initialization of the entire shared runtime.",
+      "fix": "Guard storage acquisition so preference reads return fallbacks and failed persistence returns false.",
+      "evidence": "A SecurityError getter fixture previously failed initialization and now passes."
+    },
+    {
+      "id": "RANKING-1",
+      "file": "shared/game-runtime.js",
+      "impact": "Late start/flush responses in the shared RankingClient could replace a new session, disable it, consume new events or release a new upload's lock. This is a latent shared API defect; the games' separate ranking clients already had their own isolation tests.",
+      "fix": "Bind asynchronous work to a run token and captured session/queue; clear only the matching upload promise; prevent an old submission from attaching to a restarted session.",
+      "evidence": "Out-of-order start successes/failures, old uploads, simultaneous new uploads and stale submissions are covered."
+    },
+    {
+      "id": "API-1",
+      "file": "game-api-entry.js",
+      "impact": "Null payloads/commands could throw and become retryable 503 errors; numeric IDs passed regex coercion and reached persistence.",
+      "fix": "Validate object shapes and string identifiers before invoking the Durable Object; malformed requests return 400.",
+      "evidence": "Eight invalid-envelope cases return 400 without a persistence call; existing successful ranking delivery and recovery tests also pass."
+    },
+    {
+      "id": "DEV-1",
+      "files": ["water-sort-src/vite.config.ts", "water-sort-src/scripts/shared-assets.mjs"],
+      "impact": "The Vite development server resolved shared files from the wrong parent and omitted required shared scripts, returning 500/404.",
+      "fix": "Resolve an explicit public asset allowlist relative to server.config.root; support root and /water-sort/ URLs; forward filesystem errors to Vite.",
+      "evidence": "Live local requests changed from 500/404 to 200; the regression test checks the actual page script references and injected runtime against repository bytes."
+    }
+  ],
+  "dependency_fixes": {
+    "wrangler": "4.131.1 -> 4.148.0",
+    "miniflare_sharp_override": "0.35.5; patch override retained until the upstream Miniflare dependency includes this security fix",
+    "undici": "7.29.0 -> 7.29.1",
+    "vite": "8.0.13 -> 8.0.16",
+    "source-map-js": "1.2.1 -> 1.2.2",
+    "audit_before": { "root_high_package_findings": 4, "water_sort_high_package_findings": 2 },
+    "audit_after": { "root_all_dependencies": 0, "water_sort_all_dependencies": 0 },
+    "references": [
+      "https://github.com/advisories/GHSA-fx2h-pf6j-xcff",
+      "https://github.com/advisories/GHSA-wq5f-xc86-pv6w",
+      "https://github.com/advisories/GHSA-68fv-2mgg-jv7q"
+    ]
+  },
+  "verification": {
+    "new_unit_regressions": 26,
+    "new_browser_regression_command": "npm run test:offline",
+    "ci_improvement": "Offline worker lifecycle regression added to the shared-and-assets job; new unit tests included in the existing matrix",
+    "checks": ["npm test", "npm run test:offline", "npm --prefix water-sort-src run build", "npx wrangler deploy --config wrangler.game-api.toml --dry-run", "npm audit", "npm --prefix water-sort-src audit"],
+    "browser_cases": 20,
+    "additional_browser_cases": "Solo Leveling character selection/combat at both viewports; Water Sort launch at both viewports after rebuilding with patched Vite",
+    "page_exceptions": 0,
+    "missing_local_resources": 0,
+    "unintended_horizontal_overflow": 0,
+    "visual_result": "All 20 title screenshots match baseline pixels exactly, using the final rebuilt Water Sort screenshots. No CSS, visible text or artwork changes. Gameplay screens were also captured and reviewed.",
+    "asset_manifest_files": 2979,
+    "local_evidence_directory": "tmp/audit-20261008",
+    "local_test_log": "tmp/audit-final-tests.log"
+  },
+  "visible_change_pending_user_direction": {
+    "game": "jewelria",
+    "condition": "390x844 portrait viewport after entering fullscreen gameplay",
+    "finding": "The ArcherLab link overlaps the remaining-time and score HUD; this already occurs on the baseline commit.",
+    "evidence": "tmp/audit-20261008/before/jewelria-390-play.png and tmp/audit-20261008/after/jewelria-390-play.png",
+    "cause": "The shared fullscreen rule places .archerlab-link at top:88px over Jewelria's game HUD.",
+    "disposition": "No visible positioning change applied: workspace AGENTS.md requires separate explicit approval. User direction requested while the nonvisual fixes continue to deployment."
+  },
+  "coverage_limits_and_followups": [
+    "This review establishes the tested behavior, not the absence of every possible bug.",
+    "Actual Safari/Firefox/iOS devices and live two-player relay/WebRTC matches were not covered. Extend browser/device CI and add a two-client network integration scenario.",
+    "The smoke runs are short. Existing unit/browser tests cover scoring, persistence, restart and asset lifecycle; they do not constitute completion of every level with every character.",
+    "Recheck and remove the narrow Sharp override when Miniflare ships a patched dependency."
+  ]
+}

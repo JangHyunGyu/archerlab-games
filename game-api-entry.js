@@ -270,18 +270,21 @@ export default {
             let offset = 0;
             for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
             const body = JSON.parse(new TextDecoder().decode(bytes));
+            if (!body || typeof body !== 'object' || Array.isArray(body)) return jsonResponse({ error: 'JSON object required' }, 400);
             const legacy = path !== '/ranking-delivery';
             const sessionId = legacy
                 ? (path === '/score-sessions' ? crypto.randomUUID() : String(body.session_id || body.extra_data?.session_id || body.extra?.session_id || ''))
                 : body.session_id;
             const gameId = body.game_id || (path === BANK_RUN_PATH ? 'school-zombie-defense' : null);
             const commands = legacy ? [{ id: crypto.randomUUID(), path, body: { ...body, game_id: gameId } }] : body.commands;
-            if (!ID.test(sessionId) || !getProtectedGameKind(gameId) || !Array.isArray(commands)
+            if (typeof sessionId !== 'string' || !ID.test(sessionId) || !getProtectedGameKind(gameId) || !Array.isArray(commands)
                 || !commands.length || commands.length > 20) return jsonResponse({ error: 'invalid delivery envelope' }, 400);
             for (const command of commands) {
-                if (!ID.test(command.id) || !PATHS.has(command.path) || !command.body || command.body.game_id !== gameId
+                if (!command || typeof command !== 'object' || Array.isArray(command)
+                    || typeof command.id !== 'string' || !ID.test(command.id) || !PATHS.has(command.path)
+                    || !command.body || typeof command.body !== 'object' || Array.isArray(command.body) || command.body.game_id !== gameId
                     || (command.path === BANK_RUN_PATH && gameId !== 'school-zombie-defense')
-                    || (command.after && (!ID.test(command.after) || command.after === command.id))
+                    || (command.after != null && (typeof command.after !== 'string' || !ID.test(command.after) || command.after === command.id))
                     || (command.body.session_id && command.body.session_id !== sessionId)) {
                     return jsonResponse({ error: 'invalid delivery command' }, 400);
                 }

@@ -66,8 +66,18 @@ class SlimeVolleyGame {
         };
         window.addEventListener('keydown', this._onKeyDown);
         window.addEventListener('keyup', this._onKeyUp);
+        this._onInputBlur = () => this.resetInput();
+        this._onInputVisibility = () => { if (document.hidden) this.resetInput(); };
+        window.addEventListener('blur', this._onInputBlur);
+        document.addEventListener('visibilitychange', this._onInputVisibility);
 
         this.setupMobileControls();
+    }
+
+    resetInput() {
+        this.keys = {};
+        if (this._resetTouchInput) this._resetTouchInput();
+        this._sendInputNow();
     }
 
     setupMobileControls() {
@@ -87,6 +97,12 @@ class SlimeVolleyGame {
 
         // 좌우 이동: 터치 시작점 기준으로 좌/우 드래그
         let moveStartX = null;
+        this._resetTouchInput = () => {
+            moveStartX = null;
+            moveZone.classList.remove('active');
+            jumpZone.classList.remove('active');
+            if (joystickKnob) joystickKnob.style.transform = '';
+        };
         const DEAD_ZONE = 3;
         const MAX_DRAG = 15; // 노브 최대 이동 범위
 
@@ -156,6 +172,7 @@ class SlimeVolleyGame {
 
     // === Practice Mode ===
     async startPractice(myTeamSize, botTeamSize, difficulty) {
+        this.resetInput();
         this.enterFullscreen();
         this.mode = 'practice';
         this.myTeam = 0;
@@ -561,6 +578,7 @@ class SlimeVolleyGame {
     }
 
     backToLobby() {
+        this.resetInput();
         this.running = false;
         if (this.gameLoop && this.renderer.app) {
             this.renderer.app.ticker.remove(this.gameLoop);
@@ -587,6 +605,8 @@ class SlimeVolleyGame {
         if (this._onKeyUp) {
             window.removeEventListener('keyup', this._onKeyUp);
         }
+        window.removeEventListener('blur', this._onInputBlur);
+        document.removeEventListener('visibilitychange', this._onInputVisibility);
         const moveZone = document.getElementById('touch-move-zone');
         const jumpZone = document.getElementById('touch-jump-zone');
         if (moveZone) {

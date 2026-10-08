@@ -86,7 +86,7 @@ const event = {
   ];
   for (const game of consumers) {
     const worker = fs.readFileSync(path.join(root, game, 'sw.js'), 'utf8');
-    assert.match(worker, /service-worker-runtime\.js\?v=20260819-runtime-v3/);
+    assert.match(worker, /service-worker-runtime\.js\?v=20261008-runtime-v4/);
   }
 
   const failedScope = {

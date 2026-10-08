@@ -1,7 +1,7 @@
 self.__ARCHERLAB_GAME_ID__ = 'jewelria-service-worker';
 importScripts('../shared/service-worker-error-reporter.js?v=20260710-d1-v2');
 
-const CACHE_NAME = 'jewelria-20261006-client-exception-v1';
+const CACHE_NAME = 'jewelria-20261008-cache-isolation-v1';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -82,10 +82,23 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith('jewelria-') && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
+
+function matchCurrent(request) {
+  return caches.match(request, { cacheName: CACHE_NAME }).catch(() => undefined);
+}
+
+function navigationKey(request) {
+  const url = new URL(request.url);
+  url.search = '';
+  url.hash = '';
+  if (url.pathname.endsWith('/')) url.pathname += 'index.html';
+  else if (/\/index(?:-[a-z]{2})?$/.test(url.pathname)) url.pathname += '.html';
+  return url.href;
+}
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
@@ -96,22 +109,23 @@ self.addEventListener('fetch', (event) => {
   // Refresh documents so an installed app can receive its native session script.
   // Keep the previous document only as an offline fallback.
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    const documentKey = navigationKey(event.request);
     const navigation = fetch(event.request).then((response) => {
       let cacheWrite = Promise.resolve();
       if (response.ok) {
         const copy = response.clone();
-        cacheWrite = caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        cacheWrite = caches.open(CACHE_NAME).then((cache) => cache.put(documentKey, copy));
       }
       return { response, cacheWrite };
     });
     event.waitUntil(navigation.then(entry => entry.cacheWrite).catch(() => {}));
     event.respondWith(navigation.then(entry => entry.response).catch(async () =>
-      await caches.match(event.request) || await caches.match('./index.html') || Response.error()
+      await matchCurrent(documentKey) || new Response('', { status: 503, statusText: 'Offline document unavailable' })
     ));
     return;
   }
 
-  const result = caches.match(event.request).then((cached) => {
+  const result = matchCurrent(event.request).then((cached) => {
     if (cached) return { response: cached, cacheWrite: Promise.resolve() };
     return fetch(event.request).then((response) => {
       let cacheWrite = Promise.resolve();
