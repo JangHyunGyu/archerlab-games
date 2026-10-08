@@ -19,8 +19,8 @@ test('WAV effects are short, non-silent, and have headroom', () => {
   assert.ok(total < 150000);
 });
 
-test('audio needs a gesture, aligns pours, and cancels muted/hidden/pending sounds', async () => {
-  const starts: number[] = [], rates: number[] = [];
+test('audio needs a gesture, trims pours without speeding them up, and cancels muted/hidden/pending sounds', async () => {
+  const starts: number[] = [], rates: number[] = [], clips: Array<number | undefined> = [];
   let context: FakeContext, stopped = 0, requests = 0, hidden = false;
   class FakeContext {
     state = 'suspended'; currentTime = 10; destination = {};
@@ -28,10 +28,14 @@ test('audio needs a gesture, aligns pours, and cancels muted/hidden/pending soun
     async resume() { this.state = 'running'; }
     async close() { this.state = 'closed'; }
     async decodeAudioData() { return { duration: .64 }; }
-    createGain() { return { gain: { value: 1 }, connect() {}, disconnect() {} }; }
+    createGain() {
+      return { gain: { value: 1, setValueAtTime() {}, linearRampToValueAtTime() {} }, connect() {}, disconnect() {} };
+    }
     createBufferSource() {
-      const source = { buffer: null, playbackRate: { value: 1 }, onended: null as null | (() => void),
-        connect() {}, disconnect() {}, start(at: number) { starts.push(at); rates.push(source.playbackRate.value); },
+      const source = { buffer: null as { duration: number } | null, playbackRate: { value: 1 }, onended: null as null | (() => void),
+        connect() {}, disconnect() {}, start(at: number, _offset?: number, length?: number) {
+          starts.push(at); rates.push(source.playbackRate.value); clips.push(length);
+        },
         stop() { stopped++; source.onended?.(); } };
       return source;
     }
@@ -45,15 +49,17 @@ test('audio needs a gesture, aligns pours, and cancels muted/hidden/pending soun
     audio.play('start'); await flush(); assert.equal(requests, 0); assert.equal(starts.length, 0);
     audio.unlock(); await flush(); assert.equal(requests, SOUND_NAMES.length);
     audio.play('pour', .3, .5); await flush();
-    assert.equal(starts[0], 10.3); assert.equal(rates[0], .64 / .5);
+    assert.equal(starts[0], 10.3); assert.equal(rates[0], 1); assert.equal(clips[0], .5);
     audio.play('clear'); audio.setEnabled(false); await flush();
     assert.equal(starts.length, 1); assert.equal(stopped, 1);
     audio.play('select'); audio.unlock(); await flush(); assert.equal(starts.length, 1);
     audio.setEnabled(true); audio.unlock(); hidden = true; audio.play('timeout'); await flush(); assert.equal(starts.length, 1);
     hidden = false; audio.play('clear'); context!.currentTime = 11; await flush(); assert.equal(starts.length, 1); // Skip stale queued audio.
     audio.play('select'); await flush(); assert.equal(starts.length, 2);
-    audio.dispose(); assert.equal(context!.state, 'closed'); assert.equal(stopped, 2);
-    audio.play('select'); await flush(); assert.equal(starts.length, 2);
+    audio.play('pour', 0, 2); await flush();
+    assert.equal(starts.length, 3); assert.equal(rates[2], 1); assert.equal(clips[2], undefined);
+    audio.dispose(); assert.equal(context!.state, 'closed'); assert.equal(stopped, 3);
+    audio.play('select'); await flush(); assert.equal(starts.length, 3);
   } finally { globalThis.fetch = originalFetch; }
 });
 

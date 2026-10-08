@@ -58,12 +58,21 @@ export class GameAudio {
       if (!this.enabled || generation !== this.generation || document.hidden || context.state !== 'running' || context.currentTime - target > .3) return;
       const source = context.createBufferSource(), volume = context.createGain();
       source.buffer = buffer;
-      source.playbackRate.value = duration ? buffer.duration / duration : 1;
-      volume.gain.value = name === 'target' ? .4 : name === 'tick' ? .4 : name === 'pour' ? .3 : .65;
+      // A short pour ends the clip early. playbackRate would raise the pitch of the water.
+      const level = name === 'target' ? .4 : name === 'tick' ? .4 : name === 'pour' ? .3 : .65;
+      volume.gain.value = level;
       source.connect(volume); volume.connect(context.destination);
       this.sources.add(source);
       source.onended = () => { this.sources.delete(source); source.disconnect(); volume.disconnect(); };
-      source.start(Math.max(context.currentTime, target));
+      const startAt = Math.max(context.currentTime, target);
+      const clip = duration && duration > 0 ? Math.min(duration, buffer.duration) : 0;
+      if (clip && clip < buffer.duration) {
+        const fade = Math.min(.04, clip / 2);
+        volume.gain.setValueAtTime(level, startAt);
+        volume.gain.setValueAtTime(level, startAt + clip - fade);
+        volume.gain.linearRampToValueAtTime(0, startAt + clip);
+        source.start(startAt, 0, clip);
+      } else source.start(startAt);
     }).catch(() => {});
   }
   stop() {
