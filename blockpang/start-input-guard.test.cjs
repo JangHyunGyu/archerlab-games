@@ -164,23 +164,49 @@ async function assertCleanNewGame(page, label) {
 }
 
 async function dragFirstPieceToBoard(page) {
-    const target = await page.evaluate(() => {
+    // Dispatch the gesture in the page. A Playwright mouse drag drops the piece
+    // when the machine is busy, and a fixed center cell misses large shapes.
+    await page.evaluate(() => {
         const g = window.__blockpangGame;
-        const rect = g.app.canvas.getBoundingClientRect();
+        const piece = g.tray.slots[0];
+        if (!piece) throw new Error('tray slot 0 is empty');
+        const rows = g.board.grid.length;
+        const cols = g.board.grid[0].length;
+        let spot = null;
+        for (let row = 0; row <= rows - piece.rows && !spot; row++) {
+            for (let col = 0; col <= cols - piece.cols; col++) {
+                if (g.board.canPlace(piece.shape, col, row)) {
+                    spot = { col, row };
+                    break;
+                }
+            }
+        }
+        if (!spot) throw new Error('no legal cell for the first tray piece');
+        const canvas = g.app.canvas;
+        const rect = canvas.getBoundingClientRect();
         const scale = rect.width / g.app.screen.width;
-        const board = g.board.getGlobalPosition();
         const from = g.tray.getSlotGlobalCenter(0);
-        const cx = board.x + g.cellSize * 5;
-        const cy = board.y + g.cellSize * 5 - g.input.dragOffsetY;
-        return {
-            from: { x: rect.left + from.x * scale, y: rect.top + from.y * scale },
-            to: { x: rect.left + cx * scale, y: rect.top + cy * scale },
+        const board = g.board.getGlobalPosition();
+        const centerX = board.x + (spot.col + piece.cols / 2) * g.cellSize;
+        const centerY = board.y + (spot.row + piece.rows / 2) * g.cellSize;
+        const fx = rect.left + from.x * scale;
+        const fy = rect.top + from.y * scale;
+        const tx = rect.left + centerX * scale;
+        const ty = rect.top + (centerY - g.input.dragOffsetY) * scale;
+        const fire = (type, x, y) => {
+            canvas.dispatchEvent(new PointerEvent(type, {
+                bubbles: true, cancelable: true, composed: true,
+                pointerId: 1, pointerType: 'mouse', isPrimary: true,
+                button: 0, buttons: type === 'pointerup' ? 0 : 1,
+                clientX: x, clientY: y,
+            }));
         };
+        fire('pointerdown', fx, fy);
+        for (let step = 1; step <= 8; step++) {
+            fire('pointermove', fx + (tx - fx) * step / 8, fy + (ty - fy) * step / 8);
+        }
+        fire('pointerup', tx, ty);
     });
-    await page.mouse.move(target.from.x, target.from.y);
-    await page.mouse.down();
-    await page.mouse.move(target.to.x, target.to.y, { steps: 8 });
-    await page.mouse.up();
 }
 
 // Waits in the page for the first frame on which the board is visible and,

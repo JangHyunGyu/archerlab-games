@@ -1,5 +1,5 @@
 import { WEAPONS, PASSIVES } from '../utils/Constants.js';
-import { tSkill } from '../utils/i18n.js?v=20260922-tskill-v1';
+import { tSkill } from '../utils/i18n.js?v=20261009-audit-v1';
 import { getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
 /** Build localized level-up card choices for the current player/weapons. */

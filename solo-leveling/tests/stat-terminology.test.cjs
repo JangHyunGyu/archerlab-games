@@ -34,5 +34,15 @@ assert.match(i18nSource, /critMaster: \{ name: '치명타 확률 강화', desc: 
 assert.match(i18nSource, /statCrit: 'Critical Chance'/);
 assert.match(i18nSource, /critMaster: \{ name: 'Critical Chance Boost', desc: 'Critical chance \+8%' \}/);
 assert.match(i18nSource, /critMaster: \{ name: 'クリティカル率強化', desc: 'クリティカル率 \+8%' \}/);
+assert.match(i18nSource, /hastening: \{ name: '쿨타임 감소', desc: '스킬 쿨타임 -4\.5%' \}/);
+assert.match(i18nSource, /swiftness: \{ name: 'Swiftness', desc: 'Move speed \+8%' \}/);
+assert.match(i18nSource, /vitality: \{ name: 'Vitality', desc: 'Max HP \+12%' \}/);
+assert.match(i18nSource, /scholar: \{ name: 'Scholar', desc: 'XP gain \+12%' \}/);
+assert.match(i18nSource, /hastening: \{ name: 'Haste', desc: 'Skill cooldown -4\.5%' \}/);
+assert.match(i18nSource, /swiftness: \{ name: '迅速', desc: '移動速度 \+8%' \}/);
+assert.match(i18nSource, /vitality: \{ name: '体力強化', desc: '最大HP \+12%' \}/);
+assert.match(i18nSource, /scholar: \{ name: '学習能力', desc: '経験値 \+12%' \}/);
+assert.match(i18nSource, /hastening: \{ name: 'クールダウン減少', desc: 'スキルクールダウン -4\.5%' \}/);
+assert.match(i18nSource, /export function questLine\(/);
 
 console.log('stat terminology verified: attack and critical chance labels in ko/en/ja');

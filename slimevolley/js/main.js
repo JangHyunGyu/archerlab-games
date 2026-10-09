@@ -942,7 +942,11 @@ class SlimeVolleyGame {
                     const won = msg.winner === this.myTeam;
                     this.sound.playGameOver(won);
                     this.renderer.shake(12);
-                    setTimeout(() => {
+                    // 호스트와 같이 타이머를 보관한다. 1.5초 안에 나가거나 다음 경기가
+                    // 시작되면 backToLobby / startCountdown 이 이 연출을 취소한다.
+                    if (this.gameOverTimer) clearTimeout(this.gameOverTimer);
+                    this.gameOverTimer = setTimeout(() => {
+                        this.gameOverTimer = null;
                         this.lobby.showGameOver(msg.winner, msg.setsWon, this.myTeam, msg.setScores, msg.mvp);
                     }, 1500);
                 }

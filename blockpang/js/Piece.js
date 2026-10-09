@@ -187,7 +187,15 @@ class PieceTray {
         if (this._reducedMotion) return;
         const delta = ticker.deltaTime;
         this._idleTime += delta * (1000 / 60) * 0.002;
+        const tweened = new Set();
+        const tweens = this.game && this.game.effects && this.game.effects.tweens;
+        if (Array.isArray(tweens)) {
+            for (const tween of tweens) {
+                if (tween && tween._isTraySlotTween) tweened.add(tween._traySlotIndex);
+            }
+        }
         for (let i = 0; i < 3; i++) {
+            if (tweened.has(i)) continue;
             const cont = this.slotContainers[i];
             const scale = cont && cont.scale;
             if (!cont || !cont.visible || cont.destroyed || !scale || typeof scale.set !== 'function') continue;
@@ -405,9 +413,12 @@ class PieceTray {
                             const scale = cont && cont.scale;
                             if (!cont || cont.destroyed || !scale || typeof scale.set !== 'function') return true;
                             if (trayRef.slotContainers[slotIdx] !== cont) return true;
-                            if (this.delay > 0) { this.delay -= dt; return false; }
-                            this.elapsed += dt;
-                            const t = Math.min(this.elapsed / this.duration, 1);
+                            // Ticker frames are clamped, so a slow device would leave the
+                            // piece small after the wall-clock input lock has already opened.
+                            const elapsed = advanceTransitionElapsed(this, dt);
+                            const delay = this.delay || 0;
+                            if (elapsed < delay) return false;
+                            const t = Math.min((elapsed - delay) / this.duration, 1);
                             cont.alpha = easeOutCubic(t);
                             scale.set(easeOutBack(t));
                             cont.y = targetY + 30 * (1 - easeOutCubic(t));

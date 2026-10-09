@@ -225,6 +225,8 @@
   let bestScore = Number.isFinite(storedBestScore) && storedBestScore >= 0 ? storedBestScore : 0;
   let soundEnabled = readStorage(STORAGE.sound, "1") !== "0";
   let locked = false;
+  let moveTimeline = null;
+  let moveToken = 0;
   let won = false;
   let keepPlaying = false;
   let pointerStart = null;
@@ -553,7 +555,17 @@
     });
   }
 
+  function abandonPendingMove() {
+    moveToken += 1;
+    const timeline = moveTimeline;
+    moveTimeline = null;
+    if (!timeline) return;
+    timeline.eventCallback("onComplete", null);
+    timeline.kill();
+  }
+
   async function newGame() {
+    abandonPendingMove();
     locked = true;
     won = false;
     keepPlaying = false;
@@ -1056,12 +1068,18 @@
     const blendDuration = MOVE_TIMING.mergeBlend;
     const mergeStart = slideDuration + (PREFERS_REDUCED_MOTION ? 0 : 0.025);
     const formationStart = mergeStart + (PREFERS_REDUCED_MOTION ? 0 : blendDuration * 0.08);
+    const token = ++moveToken;
+    if (moveTimeline) {
+      moveTimeline.eventCallback("onComplete", null);
+      moveTimeline.kill();
+    }
     const tl = gsap.timeline({
       defaults: { duration: slideDuration, ease: "power3.out" },
       onComplete: () => {
-        finishMove(result);
+        finishMove(result, token);
       },
     });
+    moveTimeline = tl;
 
     result.moves.forEach((moveItem) => {
       const visual = visuals.get(moveItem.id);
@@ -1146,7 +1164,9 @@
     });
   }
 
-  function finishMove(result) {
+  function finishMove(result, token) {
+    if (token !== moveToken) return;
+    moveTimeline = null;
     const mergeCount = result.merges.length;
     const orderedMerges = [...result.merges].sort((a, b) => a.tile.rank - b.tile.rank);
     const highestRank = orderedMerges.reduce((max, merge) => Math.max(max, merge.tile.rank), 0);

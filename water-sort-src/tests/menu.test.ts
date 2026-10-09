@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { menuState, stayOnBoard } from '../lib/menu-state.ts';
+import { endCue, menuState, stayOnBoard } from '../lib/menu-state.ts';
 import { expire, newStage } from '../lib/challenge.ts';
 import { CLEAR_DELAY, type RunView } from '../lib/challenge-rules.ts';
 
@@ -25,4 +25,14 @@ test('an ended unregistered run opened from Home or reload still shows results',
   assert.equal(stayOnBoard(false, { status: 'playing', registered: false }), false);
   assert.equal(stayOnBoard(false, null), false);
   assert.equal(stayOnBoard(true, { status: 'playing', registered: false }), true);
+});
+
+test('a stuck board does not use the timeout sting', () => {
+  const blocked = { status: 'ended', cleared: 3, endReason: 'blocked' as const };
+  assert.equal(endCue(blocked, true, false), null);
+  assert.equal(endCue({ status: 'ended', cleared: 3, endReason: 'timeout' }, true, false), 'timeout');
+  assert.equal(endCue({ status: 'playing', cleared: 3 }, true, false), 'timeout');
+  assert.equal(endCue({ status: 'cleared', cleared: 4 }, false, false), 'clear');
+  assert.equal(endCue({ status: 'cleared', cleared: 4 }, false, true), null);
+  assert.equal(endCue(null, true, false), null);
 });

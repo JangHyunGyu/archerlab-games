@@ -48,4 +48,6 @@ test('slimevolley: leaving during countdown or the result delay cancels the pend
   assert.match(lobby,/this\.game\.backToLobby\(\);\s*this\.showScreen\('main-menu'\)/);
   assert.match(main,/this\.gameOverTimer = setTimeout/);
   assert.match(main,/clearTimeout\(this\.gameOverTimer\)/);
+  assert.match(main,/msg\.event === 'gameOver'[\s\S]*?this\.gameOverTimer = setTimeout/);
+  assert.equal(main.split('this.gameOverTimer = setTimeout').length - 1, 2);
 });

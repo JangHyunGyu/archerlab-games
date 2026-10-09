@@ -109,7 +109,7 @@ const TEXTS = {
             strength: { name: '공격력 강화', desc: '공격력 +8%' },
             critMaster: { name: '치명타 확률 강화', desc: '치명타 확률 +8%' },
             scholar: { name: '학습 능력', desc: '경험치 +12%' },
-            hastening: { name: '쿨타임 감소', desc: '스킬 쿨타임 -6%' },
+            hastening: { name: '쿨타임 감소', desc: '스킬 쿨타임 -4.5%' },
             magnet: { name: '자석', desc: '픽업 범위 +25%' },
         },
         items: {
@@ -214,12 +214,12 @@ const TEXTS = {
             dragonFear: { name: "Dragon's Fear", desc: 'Slow nearby enemies with an aura of fear' },
         },
         passives: {
-            swiftness: { name: 'Swiftness', desc: 'Move speed +10%' },
-            vitality: { name: 'Vitality', desc: 'Max HP +15%' },
+            swiftness: { name: 'Swiftness', desc: 'Move speed +8%' },
+            vitality: { name: 'Vitality', desc: 'Max HP +12%' },
             strength: { name: 'Attack Boost', desc: 'Attack +8%' },
             critMaster: { name: 'Critical Chance Boost', desc: 'Critical chance +8%' },
-            scholar: { name: 'Scholar', desc: 'XP gain +15%' },
-            hastening: { name: 'Haste', desc: 'Skill cooldown -6%' },
+            scholar: { name: 'Scholar', desc: 'XP gain +12%' },
+            hastening: { name: 'Haste', desc: 'Skill cooldown -4.5%' },
         },
         items: {
             hpPotion: 'HP Potion',
@@ -323,12 +323,12 @@ const TEXTS = {
             dragonFear: { name: '龍の恐怖', desc: '恐怖のオーラで周囲の敵の移動速度を減少' },
         },
         passives: {
-            swiftness: { name: '迅速', desc: '移動速度 +10%' },
-            vitality: { name: '体力強化', desc: '最大HP +15%' },
+            swiftness: { name: '迅速', desc: '移動速度 +8%' },
+            vitality: { name: '体力強化', desc: '最大HP +12%' },
             strength: { name: '攻撃力強化', desc: '攻撃力 +8%' },
             critMaster: { name: 'クリティカル率強化', desc: 'クリティカル率 +8%' },
-            scholar: { name: '学習能力', desc: '経験値 +15%' },
-            hastening: { name: 'クールダウン減少', desc: 'スキルクールダウン -6%' },
+            scholar: { name: '学習能力', desc: '経験値 +12%' },
+            hastening: { name: 'クールダウン減少', desc: 'スキルクールダウン -4.5%' },
         },
         items: {
             hpPotion: 'HPポーション',
@@ -372,6 +372,14 @@ export function tf(key, vars = {}) {
     return String(t(key)).replace(/\{(\w+)\}/g, (_, name) => (
         vars[name] == null ? `{${name}}` : String(vars[name])
     ));
+}
+
+export function questLine(quest) {
+    if (!quest || typeof quest !== 'object') return '';
+    if (quest.type === 'kill') return tf('questKill', { n: quest.target });
+    if (quest.type === 'survive') return tf('questSurvive', { n: quest.target });
+    if (quest.type === 'killType') return tf('questKillType', { enemy: tNested('enemies', quest.targetType), n: quest.target });
+    return quest.description || '';
 }
 
 /** Resolve localized skill card copy; falls back to config strings. */

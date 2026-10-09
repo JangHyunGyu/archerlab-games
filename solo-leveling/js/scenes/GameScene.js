@@ -14,9 +14,9 @@ import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
 import { Boss } from '../entities/Boss.js';
 import { Enemy } from '../entities/Enemy.js';
-import { HUD } from '../ui/HUD.js?v=20261009-orient-v1';
+import { HUD } from '../ui/HUD.js?v=20261009-orient-v1&audit=20261009-v1';
 import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1';
-import { StatusWindow } from '../ui/StatusWindow.js?v=20261009-orient-v1';
+import { StatusWindow } from '../ui/StatusWindow.js?v=20261009-orient-v1&audit=20261009-v1';
 import { MobileControls } from '../ui/MobileControls.js?v=20261009-orient-v1';
 import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
@@ -583,6 +583,9 @@ export class GameScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isGameOver || this._isBooting) return;
         if (!this.player || !this.enemyManager || !this.weaponManager || !this.xpOrbPool || !this.itemDropManager || !this.shadowArmyManager || !this.hud) return;
+        // The status panel only pauses physics. Enemy attacks and weapon timers
+        // are plain update calls, so the run must stop while the player is reading it.
+        if (this.statusWindow?.isOpen) return;
 
         // Auto quality adjustment based on FPS
         this._fpsCheckTimer = (this._fpsCheckTimer || 0) + delta;

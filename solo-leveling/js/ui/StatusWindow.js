@@ -17,6 +17,19 @@ function cssPerGameUnit(scene) {
     return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
 }
 
+// Physics pause does not stop update() attacks or scene.time callbacks.
+// The panel stays on this scene, so the scene itself must keep running.
+function freezeCombat(scene, frozen) {
+    if (!scene?.scene?.isActive('GameScene')) return;
+    if (frozen) {
+        scene.physics.pause();
+        scene.time.paused = true;
+    } else {
+        scene.physics.resume();
+        scene.time.paused = false;
+    }
+}
+
 /**
  * TAB-key status window, System aesthetic.
  */
@@ -257,9 +270,7 @@ export class StatusWindow {
             });
         });
 
-        if (this.scene.scene.isActive('GameScene')) {
-            this.scene.physics.pause();
-        }
+        freezeCombat(this.scene, true);
     }
 
     _addRow(labelX, valueX, y, label, value, valueColor, labelSize = 12) {
@@ -294,9 +305,7 @@ export class StatusWindow {
             });
         });
 
-        if (this.scene.scene.isActive('GameScene')) {
-            this.scene.physics.resume();
-        }
+        freezeCombat(this.scene, false);
     }
 
     destroy() {
@@ -308,9 +317,7 @@ export class StatusWindow {
         });
         this.elements = [];
         this.isOpen = false;
-        if (this.scene?.scene?.isActive('GameScene')) {
-            this.scene.physics.resume();
-        }
+        freezeCombat(this.scene, false);
 
         if (this.tabKey && this._onTabDown) {
             this.tabKey.off('down', this._onTabDown);

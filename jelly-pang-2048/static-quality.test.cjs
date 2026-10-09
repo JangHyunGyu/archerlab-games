@@ -44,7 +44,11 @@ assert.match(main, /event\.key\.toLowerCase\(\)/);
 assert.match(main, /refs\.titleScreen\.scrollTop = 0;/);
 assert.match(main, /const wasOpen = !refs\.rankModal\.classList\.contains\("hidden"\);/);
 assert.match(main, /if \(!wasOpen\) return;/);
-assert.match(sw, /version: '20261008-cache-isolation-v1'/);
+assert.match(html, /move=20261009-abandon-v1/);
+assert.match(sw, /version: '20261009-abandon-v1'/);
+assert.match(main, /function abandonPendingMove\(\)/);
+assert.match(main, /if \(token !== moveToken\) return;/);
+assert.match(main, /abandonPendingMove\(\);\s*locked = true;/);
 
 for (let rank = 0; rank < 12; rank++) {
   const stem = `jelly-${String(rank).padStart(2, '0')}`;

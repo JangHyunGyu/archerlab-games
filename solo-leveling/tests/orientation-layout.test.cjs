@@ -37,4 +37,9 @@ assert.doesNotMatch(
     'a rotation during the choice animation must still redraw'
 );
 
+assert.match(game, /if \(this\.statusWindow\?\.isOpen\) return;/, 'the status panel must stop the combat update');
+const status = fs.readFileSync(path.join(__dirname, '..', 'js', 'ui', 'StatusWindow.js'), 'utf8');
+assert.match(status, /scene\.time\.paused = true/, 'scheduled attacks must not land while the status panel is open');
+assert.match(status, /scene\.time\.paused = false/, 'closing the status panel must resume scheduled combat');
+
 console.log('solo-leveling orientation layout verified: visual viewport, pointer scale, and in-run UI');

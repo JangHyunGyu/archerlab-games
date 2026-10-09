@@ -5,6 +5,7 @@ import {
     fs, uv, drawCornerBrackets, fitText, padText,
 } from '../utils/Constants.js';
 import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
+import { questLine } from '../utils/i18n.js?v=20261009-audit-v1';
 
 function cssPerGameUnit(scene) {
     const scale = scene?.game?.scale?.displayScale;
@@ -540,7 +541,7 @@ export class HUD {
         if (enemyManager && this.questText && (!this._questNextUpdateAt || now >= this._questNextUpdateAt)) {
             this._questNextUpdateAt = now + 250;
             const quests = enemyManager.getActiveQuests();
-            this._setTextIfChanged(this.questText, quests.length > 0 ? quests.slice(0, 3).map(q => `- ${q.description}`).join('\n') : '');
+            this._setTextIfChanged(this.questText, quests.length > 0 ? quests.slice(0, 3).map(q => `- ${questLine(q)}`).join('\n') : '');
         }
 
         const enemyCount = activeEnemies?.length || 0;
@@ -639,7 +640,7 @@ export class HUD {
 
         if (enemyManager && this.questText) {
             const quests = enemyManager.getActiveQuests();
-            this.questText.setText(quests.length > 0 ? quests.slice(0, 3).map(q => `▷ ${q.description}`).join('\n') : '');
+            this.questText.setText(quests.length > 0 ? quests.slice(0, 3).map(q => `▷ ${questLine(q)}`).join('\n') : '');
         }
 
         this._mmFrameCounter = ((this._mmFrameCounter || 0) + 1) % 3;

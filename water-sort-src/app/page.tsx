@@ -9,7 +9,7 @@ import { useBottleDrag } from './useBottleDrag';
 import { useGameAudio } from './useGameAudio';
 import { BottleVisual } from './BottleVisual';
 import { BottleCompletion } from './BottleCompletion';
-import { menuState, stayOnBoard } from '../lib/menu-state';
+import { endCue, menuState, stayOnBoard } from '../lib/menu-state';
 import { turnstileToken } from './turnstile';
 import { MAX_QUEUED_POURS, PourController, type ActivePour } from '../lib/pour-controller';
 import type { InspectionResult } from '../lib/dead-end.worker';
@@ -315,7 +315,7 @@ export default function Home() {
   const clockRunning = !atHome && !!run && !ended && (run.status === 'playing' || now < run.availableAt);
   useEffect(() => {
     if (atHome || !run) return;
-    const cue = ended && run.cleared < 100 ? 'timeout' : run.status === 'cleared' && !animating ? 'clear' : null;
+    const cue = endCue(run, ended, animating);
     const key = `${run.id}:${run.level}:${cue}`;
     if (!cue || lastSoundCue.current === key) return;
     lastSoundCue.current = key;
