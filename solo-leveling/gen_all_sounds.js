@@ -19,6 +19,8 @@ function bp(b, f, Q) {
 function lp(b, f) { const rc = 1 / (2 * Math.PI * f), dt = 1 / RATE, a = dt / (rc + dt); let p = 0; for (let i = 0; i < b.length; i++) { p += a * (b[i] - p); b[i] = p; } return b; }
 function hp(b, f) { const rc = 1 / (2 * Math.PI * f), dt = 1 / RATE, a = rc / (rc + dt); let pi = 0, po = 0; for (let i = 0; i < b.length; i++) { const x = b[i]; po = a * (po + x - pi); pi = x; b[i] = po; } return b; }
 function writeWav(name, buf) {
+    const only = process.env.SOLO_SOUND_ONLY;
+    if (only && !only.split(',').includes(name)) return;
     const h = Buffer.alloc(44); h.write('RIFF', 0); h.writeUInt32LE(36 + buf.length * 2, 4); h.write('WAVE', 8);
     h.write('fmt ', 12); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22);
     h.writeUInt32LE(RATE, 24); h.writeUInt32LE(RATE * 2, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34);
@@ -320,30 +322,23 @@ console.log('Generating all sounds (200 layers each)...\n');
 // ===================== 10. LEVELUP (레벨업) =====================
 (function() {
     const DUR = 0.5, len = Math.ceil(RATE * DUR), buf = new Float32Array(len);
-    // ascending major chord arpeggio
-    const notes = [261.6, 329.6, 392, 523.3, 659.3, 784];
-    addTones(buf, 40, (b) => notes[b % 6] * (1 + Math.floor(b / 6) * 0.001),
+    // Rising major chord only. The old 1–6 kHz noise bands were the static
+    // heard once combat ducked and this sting sat in front.
+    const notes = [261.63, 329.63, 392.0, 523.25, 659.25, 783.99];
+    addTones(buf, 18, (b) => notes[b % 6],
         (p, bt) => {
-            const delay = bt * 0.08;
+            const delay = (bt * 5) * 0.04;
             if (p < delay) return 0;
             const pp = (p - delay) / (1 - delay);
-            return (pp < 0.05 ? pp / 0.05 : Math.pow(1 - pp, 1.5));
-        }, 0.01);
-    addNoiseBands(buf, 40, 1000, 6000, 1.5, 3.0,
-        (p) => (p < 0.02 ? p / 0.02 : Math.exp(-p * 6)), 0.004);
-    addTones(buf, 30, (b) => 130 + b * 20,
-        (p) => (p < 0.03 ? Math.pow(p / 0.03, 2) : p < 0.2 ? 1 : Math.pow(1 - (p - 0.2) / 0.8, 1.5)), 0.006);
-    // shimmer
-    addTones(buf, 30, (b) => 2000 + b * 200,
-        (p) => (p < 0.05 ? Math.pow(p / 0.05, 2) : Math.exp(-p * 5)), 0.003);
-    // sub warmth
-    addTones(buf, 20, (b) => 65 + b * 10,
-        (p) => (p < 0.05 ? Math.pow(p / 0.05, 1.5) : Math.pow(1 - p, 2)), 0.008);
-    addNoiseBands(buf, 20, 200, 800, 0.4, 0.7,
-        (p) => Math.pow(1 - p, 0.8), 0.003);
-    addTones(buf, 20, (b) => [523, 659, 784, 1047][b % 4],
-        (p) => { if (p < 0.15) return 0; return Math.exp(-(p - 0.15) * 5); }, 0.005);
-    finalize(buf, 7000, 50, 1.45, 0.78);
+            return (pp < 0.04 ? pp / 0.04 : Math.pow(1 - pp, 1.7));
+        }, 0.018);
+    addTones(buf, 6, (b) => 130.81 + b * 16,
+        (p) => (p < 0.03 ? Math.pow(p / 0.03, 2) : p < 0.18 ? 1 : Math.pow(1 - (p - 0.18) / 0.82, 1.6)), 0.012);
+    addTones(buf, 4, (b) => 65.41 + b * 8,
+        (p) => (p < 0.05 ? Math.pow(p / 0.05, 1.5) : Math.pow(1 - p, 2)), 0.014);
+    addTones(buf, 4, (b) => [523.25, 659.25, 783.99, 1046.5][b % 4],
+        (p) => { if (p < 0.2) return 0; return Math.exp(-(p - 0.2) * 6); }, 0.01);
+    finalize(buf, 4800, 50, 1.2, 0.7);
     writeWav('levelup.wav', buf);
     console.log('  levelup.wav ✓');
 })();
@@ -492,6 +487,18 @@ for (const [name, dur, cfg] of [
     ['system.wav', 0.15, { baseF: 300, topF: 2000, bright: true }],
     ['warning.wav', 0.3, { baseF: 80, topF: 800, bright: false }],
 ]) {
+    if (name === 'select.wav') {
+        const len = Math.ceil(RATE * dur), buf = new Float32Array(len);
+        // Tonal UI click. The shared noise recipe ticked like static on every card.
+        addTones(buf, 2, [987.77, 1479.98],
+            (p) => (p < 0.008 ? p / 0.008 : Math.exp(-p * 24)), 0.22);
+        addTones(buf, 1, [1975.53],
+            (p) => (p < 0.004 ? p / 0.004 : Math.exp(-p * 36)), 0.045);
+        finalize(buf, 4600, 140, 1.15, 0.6);
+        writeWav(name, buf);
+        console.log('  ' + name + ' ✓');
+        continue;
+    }
     const len = Math.ceil(RATE * dur), buf = new Float32Array(len);
     addNoiseBands(buf, 40, cfg.baseF, cfg.topF, 0.5, 1.5,
         (p) => (p < 0.02 ? p / 0.02 : Math.exp(-p * (cfg.bright ? 8 : 5))), 0.012);

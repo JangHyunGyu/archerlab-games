@@ -306,12 +306,32 @@ export class SoundManager {
         this._masterVol = new Tone.Volume(-7);
         if (this._masterSum) this._masterVol.connect(this._masterSum);
         else this._masterVol.toDestination();
-        this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
-            .connect(this._masterVol).start();
-        this._comp = new Tone.Compressor(-20, 6).connect(this._chorus);
-        this._reverb = new Tone.Freeverb({ roomSize: 0.55, dampening: 3000, wet: 0.18 }).connect(this._comp);
-        this._delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.2, wet: 0.12 }).connect(this._comp);
+        // Dry music bus. Freeverb, the feedback delay, chorus, and the -20 dB
+        // compressor stayed live for the whole run. Their denormal tails and
+        // gain riding showed up as crackle whenever the main thread hitched.
+        this._musicIn = new Tone.Volume(-4).connect(this._masterVol);
         this._toneReady = true;
+    }
+
+    // One note per callback, on a grid that jumps over slots missed during a stall.
+    // Scheduling the backlog piles kicks and arpeggios into a burst of clicks.
+    _takeToneSlot(grid) {
+        if (typeof Tone === 'undefined' || !grid) return null;
+        const now = Tone.now();
+        const lead = Math.max(0.05, this._toneLeadTime || 0);
+        const earliest = now + 0.02;
+        const interval = grid.interval;
+        if (!Number.isFinite(interval) || interval <= 0) return { when: now + lead, skipped: 0 };
+        if (grid.next == null || !Number.isFinite(grid.next)) grid.next = now + lead;
+        let skipped = 0;
+        if (grid.next < earliest) {
+            skipped = Math.min(32, Math.ceil((earliest - grid.next) / interval));
+            grid.next += skipped * interval;
+            if (grid.next < earliest) grid.next = now + lead;
+        }
+        const when = grid.next;
+        grid.next += interval;
+        return { when, skipped };
     }
 
     _playFromBuffer(name, volume = 0.7) {
@@ -489,8 +509,8 @@ export class SoundManager {
         this._warmedUp = true;
     }
 
-    get out() { return this._comp; }
-    get wet() { return this._reverb; }
+    get out() { return this._musicIn; }
+    get wet() { return this._musicIn; }
 
     // SFX 볼륨 매핑 (사운드별 적절한 볼륨)
     _sfxVolume = {
@@ -592,7 +612,7 @@ export class SoundManager {
         this._introTransientNodes = [];
 
         try {
-            const introGain = new Tone.Volume(-30).connect(this._comp);
+            const introGain = new Tone.Volume(-30).connect(this._musicIn);
             this._introTargetVolume = -16;
             introGain.volume.rampTo(this._introTargetVolume, 4);
             this._introGain = introGain;
@@ -631,17 +651,20 @@ export class SoundManager {
                 harmonicity: 3, modulationIndex: 5,
                 envelope: { attack: 0.03, decay: 0.15, sustain: 0.08, release: 0.25 },
             });
-            arpSynth.connect(this._reverb);
             arpSynth.connect(introGain);
             this._introArpSynth = arpSynth;
 
             const notes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4'];
             let noteIdx = 0;
+            const introArpGrid = { interval: 0.6, next: null };
             const arpInterval = setInterval(() => {
                 if (!this._initialized || introToken !== this._introToken || this._pageHidden) return;
                 try {
-                    arpSynth.triggerAttackRelease(notes[noteIdx % notes.length], '8n', Tone.now() + this._toneLeadTime, 0.25);
-                    noteIdx++;
+                    const slot = this._takeToneSlot(introArpGrid);
+                    if (!slot) return;
+                    noteIdx = (noteIdx + slot.skipped) % notes.length;
+                    arpSynth.triggerAttackRelease(notes[noteIdx], '8n', slot.when, 0.25);
+                    noteIdx = (noteIdx + 1) % notes.length;
                 } catch (e) { /* silent */ }
             }, 600);
             this._introIntervals.push(arpInterval);
@@ -657,12 +680,13 @@ export class SoundManager {
                     rOsc.connect(rFilter);
                     rFilter.connect(rVol);
                     rVol.connect(introGain);
+                    const riserWhen = Tone.now() + Math.max(0.05, this._toneLeadTime || 0);
                     rOsc.frequency.rampTo(200, 2);
                     rFilter.frequency.rampTo(1500, 2);
                     rVol.volume.rampTo(-15, 1.5);
                     rVol.volume.rampTo(-60, 0.5, '+2');
-                    rOsc.start();
-                    rOsc.stop('+2.5');
+                    rOsc.start(riserWhen);
+                    rOsc.stop(riserWhen + 2.5);
                     this._introTransientNodes.push(rOsc, rFilter, rVol);
                     let cleanupTimer = null;
                     cleanupTimer = setTimeout(() => {
@@ -750,7 +774,7 @@ export class SoundManager {
         this._bgmIntervals = [];
 
         try {
-            const bgmGain = new Tone.Volume(-60).connect(this._comp);
+            const bgmGain = new Tone.Volume(-60).connect(this._musicIn);
             this._bgmTargetVolume = -21;
             bgmGain.volume.rampTo(this._bgmTargetVolume, 1.5);
             this._bgmGain = bgmGain;
@@ -798,12 +822,16 @@ export class SoundManager {
 
                     let beatIdx = 0;
                     const kickPattern = [1, 0, 0.6, 0, 1, 0, 0.4, 0.7];
+                    const kickGrid = { interval: (beatMs / 2) / 1000, next: null };
                     const kickInterval = setInterval(() => {
                         if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain || this._pageHidden) return;
                         try {
-                            const vel = kickPattern[beatIdx % kickPattern.length];
-                            if (vel > 0) kickSynth.triggerAttackRelease('C1', '32n', Tone.now() + this._toneLeadTime, vel * 0.28);
-                            beatIdx++;
+                            const slot = this._takeToneSlot(kickGrid);
+                            if (!slot) return;
+                            beatIdx = (beatIdx + slot.skipped) % kickPattern.length;
+                            const vel = kickPattern[beatIdx];
+                            beatIdx = (beatIdx + 1) % kickPattern.length;
+                            if (vel > 0) kickSynth.triggerAttackRelease('C1', '32n', slot.when, vel * 0.28);
                         } catch (e) { /* silent */ }
                     }, beatMs / 2);
                     this._bgmIntervals.push(kickInterval);
@@ -820,18 +848,21 @@ export class SoundManager {
                         envelope: { attack: 0.02, decay: 0.12, sustain: 0.05, release: 0.2 },
                     });
                     const arpVol = new Tone.Volume(-18);
-                    arpSynth.connect(this._reverb);
                     arpSynth.connect(arpVol);
                     arpVol.connect(bgmGain);
                     this._bgmNodes.push(arpSynth, arpVol);
 
                     const arpNotes = ['C3', 'Eb3', 'G3', 'Bb3', 'C4', 'Bb3', 'G3', 'Eb3'];
                     let arpIdx = 0;
+                    const arpGrid = { interval: beatMs / 1000, next: null };
                     const arpInterval = setInterval(() => {
                         if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain || this._pageHidden) return;
                         try {
-                            arpSynth.triggerAttackRelease(arpNotes[arpIdx % arpNotes.length], '16n', Tone.now() + this._toneLeadTime, 0.16);
-                            arpIdx++;
+                            const slot = this._takeToneSlot(arpGrid);
+                            if (!slot) return;
+                            arpIdx = (arpIdx + slot.skipped) % arpNotes.length;
+                            arpSynth.triggerAttackRelease(arpNotes[arpIdx], '16n', slot.when, 0.16);
+                            arpIdx = (arpIdx + 1) % arpNotes.length;
                         } catch (e) { /* silent */ }
                     }, beatMs);
                     this._bgmIntervals.push(arpInterval);
@@ -847,7 +878,6 @@ export class SoundManager {
                     const padFilter = new Tone.Filter({ frequency: 600, type: 'lowpass', Q: 1 });
                     const padVol = new Tone.Volume(-22);
                     padSynth.connect(padFilter);
-                    padFilter.connect(this._reverb);
                     padFilter.connect(padVol);
                     padVol.connect(bgmGain);
                     this._bgmNodes.push(padSynth, padFilter, padVol);
@@ -859,17 +889,23 @@ export class SoundManager {
                         ['G2', 'B2', 'D3', 'F3'],
                     ];
                     let padIdx = 0;
+                    const padGrid = { interval: (beatMs * 8) / 1000, next: null };
                     const padInterval = setInterval(() => {
                         if (!this._initialized || bgmToken !== this._bgmToken || this._bgmGain !== bgmGain || this._pageHidden) return;
                         try {
-                            const chord = padChords[padIdx % padChords.length];
-                            padSynth.triggerAttackRelease(chord, '1m', Tone.now() + this._toneLeadTime, 0.11);
-                            padIdx++;
+                            const slot = this._takeToneSlot(padGrid);
+                            if (!slot) return;
+                            padIdx = (padIdx + slot.skipped) % padChords.length;
+                            padSynth.triggerAttackRelease(padChords[padIdx], '1m', slot.when, 0.11);
+                            padIdx = (padIdx + 1) % padChords.length;
                         } catch (e) { /* silent */ }
                     }, beatMs * 8);
                     this._bgmIntervals.push(padInterval);
                     if (!this._pageHidden) {
-                        try { padSynth.triggerAttackRelease(padChords[0], '1m', Tone.now() + this._toneLeadTime, 0.11); } catch (e) { /* silent */ }
+                        try {
+                            const slot = this._takeToneSlot(padGrid);
+                            if (slot) padSynth.triggerAttackRelease(padChords[0], '1m', slot.when, 0.11);
+                        } catch (e) { /* silent */ }
                     }
                 } catch (e) { /* silent */ }
             }, 1200));
@@ -992,10 +1028,7 @@ export class SoundManager {
             this._sfxContext = null;
             this._sfxBuffers.clear();
             this._sfxLoadPromise = null;
-            if (this._delay) { this._delay.dispose(); this._delay = null; }
-            if (this._reverb) { this._reverb.dispose(); this._reverb = null; }
-            if (this._comp) { this._comp.dispose(); this._comp = null; }
-            if (this._chorus) { this._chorus.dispose(); this._chorus = null; }
+            if (this._musicIn) { this._musicIn.dispose(); this._musicIn = null; }
             if (this._masterVol) { this._masterVol.dispose(); this._masterVol = null; }
         } catch (e) { /* silent */ }
 

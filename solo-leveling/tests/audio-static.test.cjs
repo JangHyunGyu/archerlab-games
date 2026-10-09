@@ -37,6 +37,12 @@ assert.match(
     /_sfxGain\.connect\(this\._masterSum\)/,
     'SFX and BGM must share one sum so they cannot clip at the device'
 );
+assert.match(soundManagerSource, /_musicIn/, 'BGM must enter the shared sum on the dry music bus');
+assert.match(soundManagerSource, /_takeToneSlot/, 'late music callbacks must skip missed notes instead of bursting');
+assert.doesNotMatch(soundManagerSource, /new Tone\.Freeverb/, 'Freeverb denormals crackle when the main thread stalls');
+assert.doesNotMatch(soundManagerSource, /new Tone\.FeedbackDelay/, 'the feedback delay is a second denormal tail on the music bus');
+assert.doesNotMatch(soundManagerSource, /new Tone\.Compressor/, 'the music compressor gain-rides the bed into crackle');
+assert.doesNotMatch(soundManagerSource, /new Tone\.Chorus/, 'chorus modulation flutters on the same bus as the safety limiter');
 assert.match(
     soundManagerSource,
     /gain\.gain\.linearRampToValueAtTime\(0, now \+ buffer\.duration\)/,
@@ -57,9 +63,24 @@ assert.match(
     /prepareLevelUpMix\(\);\s*this\.soundManager\.play\('levelup'\)/,
     'level-up must clear combat tails before the sting'
 );
-assert.match(gameSource, /_bloomSuspendedForLevelUp/, 'level-up must not stack a second live blur on bloom');
+assert.match(gameSource, /_bloomSuspendedForLevelUp/, 'level-up must turn bloom off while the choice is open');
+assert.match(gameSource, /this\.scene\.setVisible\(false\)/, 'level-up must stop the live battle render');
+const levelUpBlurFn = gameSource.slice(
+    gameSource.indexOf('_addLevelUpBlur() {'),
+    gameSource.indexOf('removeLevelUpBlur() {')
+);
+assert.doesNotMatch(levelUpBlurFn, /addBlur\(/, 'level-up must not keep a full-screen blur running');
 
 const levelSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'scenes', 'LevelUpScene.js'), 'utf8');
 assert.match(levelSource, /restoreLevelUpMix\(\)/, 'leaving the choice screen must restore the BGM level');
+assert.match(levelSource, /setBackgroundColor\(SYSTEM\.BG_DEEP\)/, 'the choice screen must cover the hidden battle');
+
+const genSource = fs.readFileSync(path.join(__dirname, '..', 'gen_all_sounds.js'), 'utf8');
+const levelupGen = genSource.slice(genSource.indexOf('10. LEVELUP'), genSource.indexOf('11. RANKUP'));
+assert.doesNotMatch(levelupGen, /addNoiseBands\(/, 'the level-up sting must stay tonal');
+const selectAt = genSource.indexOf("name === 'select.wav'");
+const selectGen = genSource.slice(selectAt, genSource.indexOf('continue;', selectAt));
+assert.ok(selectGen.length > 0, 'select cue generator must stay in the source');
+assert.doesNotMatch(selectGen, /addNoiseBands\(/, 'the card click must stay tonal');
 
 console.log('solo-leveling audio static regression verified: tonal BGM and click-free SFX bus');

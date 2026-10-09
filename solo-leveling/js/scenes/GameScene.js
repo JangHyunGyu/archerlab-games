@@ -9,7 +9,7 @@ import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-levelup-v1';
 import { WeaponManager } from '../managers/WeaponManager.js';
 import { ShadowArmyManager } from '../managers/ShadowArmyManager.js';
-import { SoundManager } from '../managers/SoundManager.js?v=20261009-audio-v1';
+import { SoundManager } from '../managers/SoundManager.js?v=20261009-audio-v2';
 import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
 import { Boss } from '../entities/Boss.js';
@@ -879,7 +879,7 @@ export class GameScene extends Phaser.Scene {
             t('newSkill'),
         ], { duration: 2000, type: 'levelup' });
 
-        // Add blur to camera while paused
+        // Stop the live battle render before the choice screen opens.
         this._addLevelUpBlur();
 
         // Pause game and show level up screen
@@ -1035,28 +1035,32 @@ export class GameScene extends Phaser.Scene {
 
     _addLevelUpBlur() {
         try {
-            // The paused battle keeps rendering. Bloom already blurs that frame;
-            // a second full-screen blur stalls the audio callback while a card is open.
+            // A paused scene still renders. Bloom plus a full-screen blur on that
+            // live frame stalls the audio thread for the whole choice. Hide the
+            // battle instead of filtering it. LevelUpScene paints its own panel.
             if (this._bloomFilter?.setActive) {
                 this._bloomFilter.setActive(false);
                 this._bloomSuspendedForLevelUp = true;
             }
-            if (!this._levelUpBlur) {
-                this._levelUpBlur = this.cameras.main.filters.internal.addBlur(0, 1, 1, 1);
+            if (this._levelUpBlur?.setActive) this._levelUpBlur.setActive(false);
+            if (!this._levelUpSceneHidden) {
+                this.scene.setVisible(false);
+                this._levelUpSceneHidden = true;
             }
-            this._levelUpBlur.setActive(true);
-        } catch (e) { /* blur not available */ }
+        } catch (e) { /* hiding the battle is optional */ }
     }
 
     removeLevelUpBlur() {
         try {
-            if (this._levelUpBlur) {
-                this._levelUpBlur.setActive(false);
-            }
+            if (this._levelUpBlur?.setActive) this._levelUpBlur.setActive(false);
             if (this._bloomSuspendedForLevelUp && this._bloomFilter?.setActive) {
                 this._bloomFilter.setActive(true);
             }
             this._bloomSuspendedForLevelUp = false;
+            if (this._levelUpSceneHidden) {
+                this.scene.setVisible(true);
+                this._levelUpSceneHidden = false;
+            }
         } catch (e) { /* silent */ }
     }
 

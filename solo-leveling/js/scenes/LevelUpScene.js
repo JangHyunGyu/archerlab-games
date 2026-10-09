@@ -33,6 +33,7 @@ export class LevelUpScene extends Phaser.Scene {
         this.events.on('game-resize', this._onGameResize, this);
         this.events.once('shutdown', this._cleanupSceneRefs, this);
 
+        this.cameras.main.setBackgroundColor(SYSTEM.BG_DEEP);
         this._redraw();
     }
 

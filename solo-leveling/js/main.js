@@ -2,9 +2,9 @@
 import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { PreloadScene } from './scenes/PreloadScene.js?v=20260913-crafted-ui-v1';
-import { MenuScene } from './scenes/MenuScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v1';
-import { GameScene } from './scenes/GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v1';
-import { LevelUpScene } from './scenes/LevelUpScene.js?v=20260915-locale-v1&audio=20261009-bus-v1';
+import { MenuScene } from './scenes/MenuScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v2';
+import { GameScene } from './scenes/GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v2';
+import { LevelUpScene } from './scenes/LevelUpScene.js?v=20260915-locale-v1&audio=20261009-clean-v1';
 import { generateLevelUpChoices } from './scenes/LevelUpChoices.js?v=20260922-tskill-v1';
 import { installInRunLocalePatches } from './utils/inrun-locale-patches.js?v=20260928-locale-exports-v1';
 import { GameOverScene } from './scenes/GameOverScene.js?v=20260904-continuation-rank-v1&ranking=20261004-ranking-audit-v1';
