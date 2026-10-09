@@ -24,8 +24,45 @@ assert.match(
 );
 assert.match(
     soundManagerSource,
-    /_limiter\.threshold\.value = -1\.5/,
+    /limiter\.threshold\.value = -1\.5/,
     'the limiter must only catch overs, not pump every noisy SFX'
+);
+assert.match(
+    soundManagerSource,
+    /_rebuildLimiter/,
+    'waking the tab must replace the limiter whose envelope survived suspend'
+);
+assert.match(
+    soundManagerSource,
+    /_suppressToneUntil/,
+    'notes scheduled into a waking context must be dropped'
+);
+assert.match(
+    soundManagerSource,
+    /this\._bgmStarting = bgmToken/,
+    'an in-flight BGM start must keep its own generation across hide'
+);
+assert.match(
+    soundManagerSource,
+    /this\._introStarting = introToken/,
+    'an in-flight intro start must keep its own generation across hide'
+);
+assert.match(
+    soundManagerSource,
+    /_outputGain\.connect\(ctx\.destination\)/,
+    'the mute gate must sit in front of the device'
+);
+const hideFn = soundManagerSource.slice(
+    soundManagerSource.indexOf('_handleVisibilityChange() {'),
+    soundManagerSource.indexOf('async _settleAfterShow() {')
+);
+assert.ok(hideFn.length > 0, 'visibility handler must stay in SoundManager');
+assert.match(hideFn, /releaseCombatVoices\(\)/, 'hiding the tab must drop live combat voices');
+assert.match(hideFn, /stopGameBGM\(true\)/, 'hiding the tab must tear the synths down before suspend');
+assert.doesNotMatch(
+    hideFn,
+    /_sfxGain\.gain\.value = this\.enabled \? this\._sfxMaster : 0/,
+    'hide must not snap the SFX fader back open on the next show'
 );
 assert.doesNotMatch(
     soundManagerSource,

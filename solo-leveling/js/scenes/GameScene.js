@@ -9,7 +9,7 @@ import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-levelup-v1';
 import { WeaponManager } from '../managers/WeaponManager.js';
 import { ShadowArmyManager } from '../managers/ShadowArmyManager.js';
-import { SoundManager } from '../managers/SoundManager.js?v=20261009-audio-v2';
+import { SoundManager } from '../managers/SoundManager.js?v=20261009-audio-v3';
 import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
 import { Boss } from '../entities/Boss.js';

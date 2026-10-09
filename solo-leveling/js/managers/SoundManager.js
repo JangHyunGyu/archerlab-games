@@ -102,7 +102,15 @@ export class SoundManager {
         this._bgmPendingDispose = null;
         this._pageHidden = typeof document !== 'undefined' ? document.hidden : false;
         this._resumeSfxMutedUntil = 0;
+        this._suppressToneUntil = 0;
         this._visibilityResumeTimer = null;
+        this._wakeBgm = false;
+        this._wakeIntro = false;
+        this._bgmStarting = 0;
+        this._introStarting = 0;
+        this._contextInterrupted = false;
+        this._settleInFlight = false;
+        this._settleQueued = false;
         this._introTargetVolume = -16;
         this._bgmTargetVolume = -21;
 
@@ -145,15 +153,95 @@ export class SoundManager {
             // the gain and came out as crackle. This limiter only shaves real overs.
             this._masterSum = ctx.createGain();
             this._masterSum.gain.value = 1;
-            this._limiter = ctx.createDynamicsCompressor();
-            this._limiter.threshold.value = -1.5;
-            this._limiter.knee.value = 0;
-            this._limiter.ratio.value = 20;
-            this._limiter.attack.value = 0.001;
-            this._limiter.release.value = 0.04;
+            this._limiter = this._createLimiter(ctx);
+            // Unity mute gate. The limiter's envelope survives suspend/resume
+            // and comes back as continuous crackle, so the gate stays shut
+            // until a fresh limiter is in place.
+            this._outputGain = ctx.createGain();
+            this._outputGain.gain.value = 1;
             this._masterSum.connect(this._limiter);
-            this._limiter.connect(ctx.destination);
+            this._limiter.connect(this._outputGain);
+            this._outputGain.connect(ctx.destination);
+            this._watchContextState();
         } catch (e) { /* HTMLAudio fallback remains available */ }
+    }
+
+    _createLimiter(ctx) {
+        const limiter = ctx.createDynamicsCompressor();
+        limiter.threshold.value = -1.5;
+        limiter.knee.value = 0;
+        limiter.ratio.value = 20;
+        limiter.attack.value = 0.001;
+        limiter.release.value = 0.04;
+        return limiter;
+    }
+
+    _rebuildLimiter() {
+        const ctx = this._sfxContext;
+        if (!ctx || !this._masterSum || !this._outputGain) return;
+        const previous = this._limiter;
+        try { this._masterSum.disconnect(); } catch (e) { /* already open */ }
+        if (previous) {
+            try { previous.disconnect(); } catch (e) { /* already open */ }
+        }
+        this._limiter = this._createLimiter(ctx);
+        this._masterSum.connect(this._limiter);
+        this._limiter.connect(this._outputGain);
+    }
+
+    _setAudioParam(param, value, rampSeconds = 0) {
+        const ctx = this._sfxContext;
+        if (!param || !ctx) return;
+        const now = ctx.currentTime;
+        try {
+            param.cancelScheduledValues(now);
+            if (rampSeconds > 0) {
+                param.setValueAtTime(param.value, now);
+                param.linearRampToValueAtTime(value, now + rampSeconds);
+                return;
+            }
+            // setValueAtTime does not land once the context is already suspended,
+            // so a tab hide would come back with the gate still open.
+            param.value = value;
+        } catch (e) { /* silent */ }
+    }
+
+    _watchContextState() {
+        if (this._onContextState || typeof Tone === 'undefined') return;
+        const raw = Tone.getContext()?.rawContext;
+        if (!raw || typeof raw.addEventListener !== 'function') return;
+        this._onContextState = () => {
+            if (this._destroyed) return;
+            if (raw.state === 'suspended' || raw.state === 'interrupted') {
+                // Our own hide path sets _pageHidden before suspend, so that
+                // suspend must not schedule a second settle on the way back.
+                if (!this._pageHidden) this._contextInterrupted = true;
+                return;
+            }
+            if (
+                raw.state === 'running'
+                && this._contextInterrupted
+                && !this._pageHidden
+                && !this._settleInFlight
+                && !this._visibilityResumeTimer
+            ) {
+                this._contextInterrupted = false;
+                this._settleAfterShow();
+            }
+        };
+        raw.addEventListener('statechange', this._onContextState);
+    }
+
+    _audioNow() {
+        let now = 0;
+        try {
+            if (typeof Tone !== 'undefined') now = Tone.now() || 0;
+        } catch (e) { now = 0; }
+        try {
+            const raw = typeof Tone !== 'undefined' ? Tone.getContext()?.rawContext?.currentTime : 0;
+            if (Number.isFinite(raw) && raw > now) now = raw;
+        } catch (e) { /* Tone clock stands */ }
+        return now;
     }
 
     _ensureSfxBus() {
@@ -251,8 +339,17 @@ export class SoundManager {
     }
 
     _restoreActiveMusicGains() {
+        const bgmLevel = this._levelUpDuck ? this._bgmTargetVolume - 4 : this._bgmTargetVolume;
         try { if (this._introGain) this._introGain.volume.rampTo(this._introTargetVolume, 0.35); } catch (e) { /* silent */ }
-        try { if (this._bgmGain) this._bgmGain.volume.rampTo(this._bgmTargetVolume, 0.35); } catch (e) { /* silent */ }
+        try { if (this._bgmGain) this._bgmGain.volume.rampTo(bgmLevel, 0.35); } catch (e) { /* silent */ }
+    }
+
+    _suspendContext() {
+        try {
+            if (typeof Tone === 'undefined' || !this._toneReady) return;
+            const suspended = Tone.getContext().rawContext.suspend();
+            if (suspended && typeof suspended.catch === 'function') suspended.catch(() => {});
+        } catch (e) { /* silent */ }
     }
 
     _handleVisibilityChange() {
@@ -265,37 +362,98 @@ export class SoundManager {
             clearTimeout(this._visibilityResumeTimer);
             this._visibilityResumeTimer = null;
         }
-
-        this._resetSfxRuntimeState();
-        this._stopHtmlAudioPoolPlayback();
+        this._settleToken = (this._settleToken || 0) + 1;
 
         if (hidden) {
+            // A suspended DynamicsCompressor keeps a broken envelope and
+            // hisses after the tab returns. Silence the output, drop the
+            // live voices, and tear the synths down while the clock still runs.
             this._resumeSfxMutedUntil = now + 300;
-            if (this._sfxGain) this._sfxGain.gain.value = 0;
-            this._rampActiveMusicGains(-60, 0.12);
-            try {
-                if (typeof Tone !== 'undefined' && this._toneReady) {
-                    const suspended = Tone.getContext().rawContext.suspend();
-                    if (suspended && typeof suspended.catch === 'function') suspended.catch(() => {});
-                }
-            } catch (e) { /* silent */ }
+            this.releaseCombatVoices();
+            this._setAudioParam(this._outputGain?.gain, 0, 0);
+            this._setAudioParam(this._sfxGain?.gain, 0, 0);
+            this._wakeBgm = !!this._bgmGain || !!this._bgmStarting;
+            this._wakeIntro = (!!this._introGain || !!this._introStarting) && !this._wakeBgm;
+            if (this._wakeBgm) this.stopGameBGM(true);
+            if (this._wakeIntro) this.stopIntroMusic(true);
+            this._suspendContext();
             return;
         }
 
-        this._resumeSfxMutedUntil = now + 260;
-        this._visibilityResumeTimer = setTimeout(async () => {
+        // The show path owns the settle. A context that resumes on its own
+        // in the same moment must not start a second one.
+        this._contextInterrupted = false;
+        this._resumeSfxMutedUntil = now + 620;
+        this._suppressToneUntil = now + 560;
+        this._visibilityResumeTimer = setTimeout(() => {
             this._visibilityResumeTimer = null;
-            if (this._pageHidden || !this.enabled || this._destroyed) return;
+            this._settleAfterShow();
+        }, 40);
+    }
+
+    async _settleAfterShow() {
+        if (this._pageHidden || !this.enabled || this._destroyed) return;
+        if (this._settleInFlight) {
+            this._settleQueued = true;
+            return;
+        }
+        this._settleInFlight = true;
+        try {
+            do {
+                this._settleQueued = false;
+                await this._settleOnce();
+            } while (this._settleQueued && !this._destroyed && !this._pageHidden);
+        } catch (e) { /* silent */ }
+        finally {
+            this._settleInFlight = false;
+            if (this._settleQueued && !this._destroyed && !this._pageHidden) {
+                this._settleQueued = false;
+                this._settleAfterShow();
+            }
+        }
+    }
+
+    async _settleOnce() {
+        if (this._pageHidden || !this.enabled || this._destroyed) return;
+        // resume() flips the context to running. Drop the flag first so that
+        // statechange cannot start another settle over this one.
+        this._contextInterrupted = false;
+        const token = (this._settleToken || 0) + 1;
+        this._settleToken = token;
+        const restartBgm = this._wakeBgm;
+        const restartIntro = this._wakeIntro;
+        this._wakeBgm = false;
+        this._wakeIntro = false;
+        this._setAudioParam(this._outputGain?.gain, 0, 0);
+        let audioReady = await this.resume(false);
+        if (!audioReady && this._userActivated && !this._pageHidden && typeof Tone !== 'undefined') {
             try {
-                if (typeof Tone !== 'undefined' && this._toneReady) {
-                    const rawContext = Tone.getContext()?.rawContext;
-                    if (rawContext && rawContext.state !== 'running') await rawContext.resume();
-                    if (Tone.getContext().state !== 'running') await Tone.start();
-                }
-                if (this._sfxGain) this._sfxGain.gain.value = this.enabled ? this._sfxMaster : 0;
-                this._restoreActiveMusicGains();
-            } catch (e) { /* silent */ }
-        }, 80);
+                const raw = Tone.getContext()?.rawContext;
+                if (raw && raw.state !== 'running') await raw.resume();
+                audioReady = !!raw && raw.state === 'running';
+            } catch (e) { /* gesture-less resume can fail closed */ }
+        }
+        if (!audioReady || token !== this._settleToken || this._pageHidden || this._destroyed) return;
+        this._rebuildLimiter();
+        this._setAudioParam(this._sfxGain?.gain, this.enabled ? this._sfxMaster : 0, 0);
+        if (restartBgm) this.startGameBGM();
+        else if (restartIntro) this.playIntroMusic();
+        else this._restoreActiveMusicGains();
+        await new Promise(resolve => setTimeout(resolve, 160));
+        if (token !== this._settleToken || this._pageHidden || this._destroyed) return;
+        // A second suspend during the wait dirties the limiter we just made.
+        if (this._contextInterrupted) {
+            this._contextInterrupted = false;
+            try {
+                const raw = typeof Tone !== 'undefined' ? Tone.getContext()?.rawContext : null;
+                if (raw && raw.state !== 'running') await raw.resume();
+            } catch (e) { /* stay gated if the context will not run */ }
+            if (token !== this._settleToken || this._pageHidden || this._destroyed) return;
+            this._rebuildLimiter();
+        }
+        const raw = typeof Tone !== 'undefined' ? Tone.getContext()?.rawContext : null;
+        if (!raw || raw.state !== 'running') return;
+        this._setAudioParam(this._outputGain?.gain, 1, 0.18);
     }
 
     _ensureToneGraph() {
@@ -317,7 +475,9 @@ export class SoundManager {
     // Scheduling the backlog piles kicks and arpeggios into a burst of clicks.
     _takeToneSlot(grid) {
         if (typeof Tone === 'undefined' || !grid) return null;
-        const now = Tone.now();
+        const wallNow = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        if (wallNow < (this._suppressToneUntil || 0)) return null;
+        const now = this._audioNow();
         const lead = Math.max(0.05, this._toneLeadTime || 0);
         const earliest = now + 0.02;
         const interval = grid.interval;
@@ -604,8 +764,18 @@ export class SoundManager {
         this.stopIntroMusic();
         const introToken = (this._introToken || 0) + 1;
         this._introToken = introToken;
+        // Owned by this call only. A hide that bumps the token must not let
+        // this continuation clear a newer start's flag.
+        this._introStarting = introToken;
         const audioReady = await this.resume();
-        if (!audioReady || introToken !== this._introToken) return;
+        if (introToken !== this._introToken) {
+            if (this._introStarting === introToken) this._introStarting = 0;
+            return;
+        }
+        if (!audioReady) {
+            this._introStarting = 0;
+            return;
+        }
         this._introNodes = [];
         this._introIntervals = [];
         this._introTimeouts = [];
@@ -616,6 +786,7 @@ export class SoundManager {
             this._introTargetVolume = -16;
             introGain.volume.rampTo(this._introTargetVolume, 4);
             this._introGain = introGain;
+            this._introStarting = 0;
 
             // 1. Low drone
             const droneOsc = new Tone.Oscillator({ frequency: 65.41, type: 'sawtooth' });
@@ -680,7 +851,7 @@ export class SoundManager {
                     rOsc.connect(rFilter);
                     rFilter.connect(rVol);
                     rVol.connect(introGain);
-                    const riserWhen = Tone.now() + Math.max(0.05, this._toneLeadTime || 0);
+                    const riserWhen = this._audioNow() + Math.max(0.05, this._toneLeadTime || 0);
                     rOsc.frequency.rampTo(200, 2);
                     rFilter.frequency.rampTo(1500, 2);
                     rVol.volume.rampTo(-15, 1.5);
@@ -702,6 +873,8 @@ export class SoundManager {
             this._introIntervals.push(riserInterval);
         } catch (e) {
             console.warn('Intro music error:', e);
+            if (introToken !== this._introToken) return;
+            this._introStarting = 0;
             this.stopIntroMusic(true);
         }
     }
@@ -768,16 +941,26 @@ export class SoundManager {
         this.stopGameBGM();
         const bgmToken = (this._bgmToken || 0) + 1;
         this._bgmToken = bgmToken;
+        this._bgmStarting = bgmToken;
         const audioReady = await this.resume();
-        if (!audioReady || bgmToken !== this._bgmToken) return;
+        if (bgmToken !== this._bgmToken) {
+            if (this._bgmStarting === bgmToken) this._bgmStarting = 0;
+            return;
+        }
+        if (!audioReady) {
+            this._bgmStarting = 0;
+            return;
+        }
         this._bgmNodes = [];
         this._bgmIntervals = [];
 
         try {
             const bgmGain = new Tone.Volume(-60).connect(this._musicIn);
             this._bgmTargetVolume = -21;
-            bgmGain.volume.rampTo(this._bgmTargetVolume, 1.5);
+            const bgmLevel = this._levelUpDuck ? this._bgmTargetVolume - 4 : this._bgmTargetVolume;
+            bgmGain.volume.rampTo(bgmLevel, 1.5);
             this._bgmGain = bgmGain;
+            this._bgmStarting = 0;
             this._bgmTimeouts = [];
 
             const bpm = 100;
@@ -792,7 +975,7 @@ export class SoundManager {
             droneVol.connect(bgmGain);
             const droneLfo = new Tone.LFO({ frequency: 0.06, min: 180, max: 400 });
             droneLfo.connect(droneFilter.frequency);
-            const bgmStart = Tone.now() + 0.05;
+            const bgmStart = this._audioNow() + 0.05;
             droneLfo.start(bgmStart);
             droneOsc.start(bgmStart);
             this._bgmNodes.push(droneOsc, droneFilter, droneVol, droneLfo);
@@ -911,6 +1094,8 @@ export class SoundManager {
             }, 1200));
         } catch (e) {
             console.warn('Game BGM error:', e);
+            if (bgmToken !== this._bgmToken) return;
+            this._bgmStarting = 0;
             this.stopGameBGM(true);
         }
     }
@@ -970,6 +1155,8 @@ export class SoundManager {
 
     destroy() {
         this._destroyed = true;
+        this._settleToken = (this._settleToken || 0) + 1;
+        this._settleInFlight = false;
         if (this._visibilityResumeTimer) {
             clearTimeout(this._visibilityResumeTimer);
             this._visibilityResumeTimer = null;
@@ -1022,8 +1209,13 @@ export class SoundManager {
 
         try {
             this._liveSfx.clear();
+            if (this._onContextState && this._sfxContext) {
+                try { this._sfxContext.removeEventListener('statechange', this._onContextState); } catch (e) { /* silent */ }
+            }
+            this._onContextState = null;
             if (this._sfxGain) { this._sfxGain.disconnect(); this._sfxGain = null; }
             if (this._limiter) { this._limiter.disconnect(); this._limiter = null; }
+            if (this._outputGain) { this._outputGain.disconnect(); this._outputGain = null; }
             if (this._masterSum) { this._masterSum.disconnect(); this._masterSum = null; }
             this._sfxContext = null;
             this._sfxBuffers.clear();
