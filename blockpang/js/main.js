@@ -1,4 +1,29 @@
+function formatBlockpangInitError(error) {
+    if (error == null) return 'unknown error';
+    if (typeof error === 'string') return error;
+    const name = error && error.name ? String(error.name) : '';
+    const message = error && error.message ? String(error.message) : String(error);
+    return name && message && !message.startsWith(name) ? (name + ': ' + message) : message;
+}
+
+function assertBlockpangPixiRuntime() {
+    if (typeof PIXI === 'undefined' || !PIXI) {
+        throw new Error('PIXI global is missing');
+    }
+    if (typeof PIXI.Application !== 'function') {
+        throw new Error('PIXI.Application is not a function');
+    }
+    const proto = PIXI.Application && PIXI.Application.prototype;
+    if (!proto || typeof proto.init !== 'function') {
+        throw new Error('PIXI.Application.prototype.init is not a function');
+    }
+    if (typeof PIXI.Graphics !== 'function') {
+        throw new Error('PIXI.Graphics is not a function');
+    }
+}
+
 async function createBlockpangApplication(options) {
+    assertBlockpangPixiRuntime();
     const createApplication = async initOptions => {
         const application = new PIXI.Application();
         await application.init({ ...initOptions, autoStart: false });
@@ -245,7 +270,7 @@ async function createBlockpangApplication(options) {
 
     console.log('%c블럭팡', 'color: #E57A54; font-size: 14px; font-weight: bold;');
 })().catch((error) => {
-    console.error('[Blockpang] initialization failed', error);
+    console.error('[Blockpang] initialization failed', formatBlockpangInitError(error), error && error.stack ? error.stack : '');
     const loading = document.getElementById('game-loading');
     const loadingText = document.getElementById('game-loading-text');
     if (loadingText) loadingText.textContent = currentLang === 'ko'
