@@ -1,5 +1,5 @@
 import { LANG, t, tf, tNested } from '../utils/i18n.js?v=20260928-locale-exports-v1';
-import { SystemMessage } from '../ui/SystemMessage.js';
+import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1';
 
 function localizeToastTitle(title) {
     if (LANG === 'ko' || !title) return title;

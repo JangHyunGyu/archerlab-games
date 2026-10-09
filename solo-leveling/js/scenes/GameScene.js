@@ -6,18 +6,18 @@ import {
 import { t, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { Player } from '../entities/Player.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
-import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-levelup-v1';
+import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-orient-v1';
 import { WeaponManager } from '../managers/WeaponManager.js';
-import { ShadowArmyManager } from '../managers/ShadowArmyManager.js';
+import { ShadowArmyManager } from '../managers/ShadowArmyManager.js?v=20261009-orient-v1';
 import { SoundManager } from '../managers/SoundManager.js?v=20261009-audio-v3';
 import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
 import { Boss } from '../entities/Boss.js';
 import { Enemy } from '../entities/Enemy.js';
-import { HUD } from '../ui/HUD.js?v=20260913-crafted-ui-v1';
-import { SystemMessage } from '../ui/SystemMessage.js?v=20260913-crafted-ui-v1';
-import { StatusWindow } from '../ui/StatusWindow.js?v=20260913-crafted-ui-v1';
-import { MobileControls } from '../ui/MobileControls.js?v=20260913-crafted-ui-v1';
+import { HUD } from '../ui/HUD.js?v=20261009-orient-v1';
+import { SystemMessage } from '../ui/SystemMessage.js?v=20261009-orient-v1';
+import { StatusWindow } from '../ui/StatusWindow.js?v=20261009-orient-v1';
+import { MobileControls } from '../ui/MobileControls.js?v=20261009-orient-v1';
 import { DEFAULT_CHARACTER_ID, getCharacter, getCharacterRankingGameId, getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
 const SAVE_KEY = 'shadow_survival_save_v1';
@@ -479,9 +479,45 @@ export class GameScene extends Phaser.Scene {
         this._startupProgressFill = null;
     }
 
+    _relayoutStartupOverlay() {
+        if (!this._startupOverlay?.length) return;
+        const label = this._startupLabel?.text || '';
+        const percent = this._startupPercent?.text || '';
+        const ratio = this._startupProgressWidth > 0 && this._startupProgressFill
+            ? this._startupProgressFill.displayWidth / this._startupProgressWidth
+            : 1;
+        const elements = this._startupOverlay;
+        if (this._startupCoreTween) {
+            this._startupCoreTween.stop();
+            this._startupCoreTween = null;
+        }
+        elements.forEach(el => {
+            if (el?.active) el.destroy();
+        });
+        this._startupOverlay = null;
+        this._startupLabel = null;
+        this._startupPercent = null;
+        this._startupProgressFill = null;
+        this._createStartupOverlay();
+        if (label && this._startupLabel) this._startupLabel.setText(label);
+        if (percent && this._startupPercent) this._startupPercent.setText(percent);
+        if (this._startupProgressFill) {
+            this._startupProgressFill.setDisplaySize(
+                Math.max(2, (this._startupProgressWidth || 1) * Phaser.Math.Clamp(ratio, 0.02, 1)),
+                this._startupProgressHeight || uv(5)
+            );
+        }
+    }
+
     _registerResizeHandler() {
         this._onGameResize = () => {
-            this.cameras.main.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
+            const cam = this.cameras.main;
+            if (cam.width !== GAME_WIDTH || cam.height !== GAME_HEIGHT) {
+                cam.setSize(GAME_WIDTH, GAME_HEIGHT);
+            }
+            cam.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
+            if (this.player) cam.centerOn(this.player.x, this.player.y);
+            this._relayoutStartupOverlay();
             if (this.hud) this.hud.rebuild();
             if (this.statusWindow && this.statusWindow.isOpen) {
                 this.statusWindow.close();
@@ -491,18 +527,18 @@ export class GameScene extends Phaser.Scene {
                 this.mobileControls.destroy();
                 this.mobileControls = new MobileControls(this);
             }
+            if (this.systemMessage) this.systemMessage.relayout();
+            this.enemyManager?.syncScreenLayout?.();
+            this.shadowArmyManager?.syncScreenLayout?.();
             if (this._vignetteOverlay) {
-                const cam = this.cameras.main;
                 this._vignetteOverlay.setPosition(cam.width / 2, cam.height / 2);
                 this._vignetteOverlay.setDisplaySize(cam.width * 1.15, cam.height * 1.15);
             }
             if (this._colorTint) {
-                const cam = this.cameras.main;
                 this._colorTint.setPosition(cam.width / 2, cam.height / 2);
                 this._colorTint.setSize(cam.width, cam.height);
             }
             if (this._mobileDarken) {
-                const cam = this.cameras.main;
                 this._mobileDarken.setPosition(cam.width / 2, cam.height / 2);
                 this._mobileDarken.setSize(cam.width, cam.height);
             }

@@ -63,6 +63,7 @@
         "node solo-leveling/validate.js",
         "node solo-leveling/tests/memory-lifecycle.test.cjs",
         "node solo-leveling/tests/audio-static.test.cjs",
+        "node solo-leveling/tests/orientation-layout.test.cjs",
         "node solo-leveling/tests/infinite-leveling.test.cjs",
         "node solo-leveling/tests/second-skill-balance.test.cjs",
         "node solo-leveling/tests/remaining-skill-balance.test.cjs",

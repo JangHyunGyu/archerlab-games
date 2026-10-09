@@ -82,6 +82,21 @@ export class ShadowArmyManager {
         return el;
     }
 
+    syncScreenLayout() {
+        const cam = this.scene?.cameras?.main;
+        if (!cam || !this._ariseElements) return;
+        for (const el of this._ariseElements) {
+            const orient = el?._screenOrient;
+            if (!orient || !el.active) continue;
+            if (orient.mode === 'fill') {
+                el.setPosition(0, 0);
+                el.setSize(cam.width, cam.height);
+            } else if (orient.mode === 'anchor') {
+                el.setPosition(cam.width * orient.ax, cam.height * orient.ay);
+            }
+        }
+    }
+
     _delay(ms, callback) {
         if (!this.scene?.time) return null;
         const timer = this.scene.time.delayedCall(ms, () => {
@@ -107,6 +122,7 @@ export class ShadowArmyManager {
             scene.add.rectangle(0, 0, scene.cameras.main.width, scene.cameras.main.height, 0x000000, 0)
                 .setDepth(50).setScrollFactor(0).setOrigin(0, 0)
         );
+        overlay._screenOrient = { mode: 'fill' };
 
         scene.tweens.add({
             targets: overlay,
@@ -248,6 +264,7 @@ export class ShadowArmyManager {
                                     scene.cameras.main.width / 2,
                                     scene.cameras.main.height * 0.34
                                 );
+                                commandText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.34 };
 
                                 scene.tweens.add({
                                     targets: commandText,
@@ -278,6 +295,7 @@ export class ShadowArmyManager {
                                                     const fl = this._trackElement(scene.add.rectangle(0, 0, camW, camH,
                                                         f === 1 ? 0x7b2fff : COLORS.SHADOW_PRIMARY, 0
                                                     ).setDepth(53).setScrollFactor(0).setOrigin(0, 0));
+                                                    fl._screenOrient = { mode: 'fill' };
                                                     scene.tweens.add({
                                                         targets: fl,
                                                         alpha: f === 1 ? 0.5 : 0.3,
@@ -374,6 +392,7 @@ export class ShadowArmyManager {
                                             }).setOrigin(0.5).setDepth(56).setScrollFactor(0).setAlpha(0).setScale(0.3)
                                         );
                                         ariseText.setPosition(camW / 2, camH * 0.43);
+                                        ariseText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.43 };
 
                                         const ariseSubText = this._trackElement(
                                             scene.add.text(0, 0, 'ARISE', {
@@ -382,6 +401,7 @@ export class ShadowArmyManager {
                                             }).setOrigin(0.5).setDepth(55).setScrollFactor(0).setAlpha(0).setScale(1.5)
                                         );
                                         ariseSubText.setPosition(camW / 2, camH * 0.43);
+                                        ariseSubText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.43 };
 
                                         scene.tweens.add({
                                             targets: ariseText,

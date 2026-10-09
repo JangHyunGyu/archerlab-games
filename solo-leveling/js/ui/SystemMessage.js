@@ -46,7 +46,51 @@ export class SystemMessage {
         this.isShowing = true;
         const msg = this.queue.shift();
         this.currentMessage = msg;
+        this._mountMessage(msg, true);
 
+        this._delay(msg.duration, () => this._dismiss(msg));
+    }
+
+    relayout() {
+        if (this._destroyed || !this.scene || !this.isShowing || !this.currentMessage) return;
+        const msg = this.currentMessage;
+        this._clearElements(this.currentElements);
+        this.currentElements = [];
+        this._mountMessage(msg, false);
+    }
+
+    _clearElements(elements) {
+        for (const el of elements || []) {
+            try {
+                if (this.scene?.tweens) this.scene.tweens.killTweensOf(el);
+                if (el?.active) el.destroy();
+            } catch (e) { /* already gone */ }
+        }
+    }
+
+    _dismiss(msg) {
+        if (this._destroyed || !this.scene || this.currentMessage !== msg) return;
+        const live = this.currentElements || [];
+        live.forEach((el, idx) => {
+            this.scene.tweens.add({
+                targets: el,
+                alpha: 0,
+                y: el.y - uv(7),
+                duration: 180,
+                delay: Math.min(idx * 5, 40),
+                ease: 'Cubic.In',
+                onComplete: () => el.destroy(),
+            });
+        });
+        this._delay(260, () => {
+            if (this.currentMessage !== msg) return;
+            this.currentElements = [];
+            this.currentMessage = null;
+            this._showNext();
+        });
+    }
+
+    _mountMessage(msg, animate) {
         const colors = this._getColors(msg.type);
         const cx = GAME_WIDTH / 2;
         const lineCount = Math.max(1, msg.lines.length);
@@ -154,6 +198,11 @@ export class SystemMessage {
         ).setOrigin(0, 0.5).setDepth(203).setScrollFactor(0).setAlpha(0);
         elements.push(progress);
 
+        if (!animate) {
+            elements.forEach(el => el.setAlpha(1));
+            return;
+        }
+
         // Cohesive slide-in replaces the old flicker, keeping the alert legible in motion.
         const enterOffset = uv(10);
         elements.forEach((el, idx) => {
@@ -185,32 +234,12 @@ export class SystemMessage {
             ease: 'Linear',
         });
 
-        // Play sound
         if (this.scene.soundManager) {
             if (msg.type === 'levelup') this.scene.soundManager.play('levelup');
             else if (msg.type === 'arise') this.scene.soundManager.play('arise');
             else if (msg.type === 'warning') this.scene.soundManager.play('warning');
             else this.scene.soundManager.play('system');
         }
-
-        // Auto-dismiss
-        this._delay(msg.duration, () => {
-            elements.forEach((el, idx) => {
-                this.scene.tweens.add({
-                    targets: el,
-                    alpha: 0,
-                    y: el.y - uv(7),
-                    duration: 180,
-                    delay: Math.min(idx * 5, 40),
-                    ease: 'Cubic.In',
-                    onComplete: () => el.destroy(),
-                });
-            });
-            this._delay(260, () => {
-                if (this.currentElements === elements) this.currentElements = [];
-                this._showNext();
-            });
-        });
     }
 
     _delay(ms, callback) {

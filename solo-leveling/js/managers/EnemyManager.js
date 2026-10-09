@@ -315,6 +315,14 @@ export class EnemyManager {
         });
     }
 
+    syncScreenLayout() {
+        const border = this._dungeonBreakBorder;
+        const cam = this.scene?.cameras?.main;
+        if (!border?.active || !cam) return;
+        border.setPosition(cam.width / 2, cam.height / 2);
+        border.setSize(Math.max(1, cam.width - 4), Math.max(1, cam.height - 4));
+    }
+
     _endDungeonBreak() {
         this.activeDungeonBreak = null;
 

@@ -2,11 +2,11 @@
 import { setGameDimensions, GAME_WIDTH, GAME_HEIGHT } from './utils/Constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { PreloadScene } from './scenes/PreloadScene.js?v=20260913-crafted-ui-v1';
-import { MenuScene } from './scenes/MenuScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3';
-import { GameScene } from './scenes/GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3';
-import { LevelUpScene } from './scenes/LevelUpScene.js?v=20260915-locale-v1&audio=20261009-clean-v1';
+import { MenuScene } from './scenes/MenuScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1';
+import { GameScene } from './scenes/GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1';
+import { LevelUpScene } from './scenes/LevelUpScene.js?v=20260915-locale-v1&audio=20261009-clean-v1&orient=20261009-orient-v1';
 import { generateLevelUpChoices } from './scenes/LevelUpChoices.js?v=20260922-tskill-v1';
-import { installInRunLocalePatches } from './utils/inrun-locale-patches.js?v=20260928-locale-exports-v1';
+import { installInRunLocalePatches } from './utils/inrun-locale-patches.js?v=20260928-locale-exports-v1&orient=20261009-orient-v1';
 import { GameOverScene } from './scenes/GameOverScene.js?v=20260904-continuation-rank-v1&ranking=20261004-ranking-audit-v1';
 
 installInRunLocalePatches();
@@ -16,12 +16,53 @@ installInRunLocalePatches();
 const MIN_W = 1024;
 const MIN_H = 768;
 
-function getViewportSize() {
-    const container = document.getElementById('game-container');
+function visualViewportBox() {
     const viewport = window.visualViewport;
-    const w = Math.max(1, Math.round(container?.clientWidth || viewport?.width || window.innerWidth));
-    const h = Math.max(1, Math.round(container?.clientHeight || viewport?.height || window.innerHeight));
-    return { w, h };
+    return {
+        w: Math.max(1, Math.round(viewport?.width || window.innerWidth || 1)),
+        h: Math.max(1, Math.round(viewport?.height || window.innerHeight || 1)),
+        top: Math.round(viewport?.offsetTop || 0),
+        left: Math.round(viewport?.offsetLeft || 0),
+    };
+}
+
+// iOS keeps the fixed page box on the previous orientation for a while after a
+// rotate. Pin the document to the visual viewport before measuring the game.
+function lockDocumentToVisualViewport() {
+    const box = visualViewportBox();
+    const root = document.documentElement;
+    const body = document.body;
+    root.style.width = `${box.w}px`;
+    root.style.height = `${box.h}px`;
+    if (!body) return box;
+    body.style.width = `${box.w}px`;
+    body.style.height = `${box.h}px`;
+    body.style.top = `${box.top}px`;
+    body.style.left = `${box.left}px`;
+    body.style.right = 'auto';
+    body.style.bottom = 'auto';
+    return box;
+}
+
+function getViewportSize() {
+    const visual = visualViewportBox();
+    const container = document.getElementById('game-container');
+    const boxW = Math.round(container?.clientWidth || 0);
+    const boxH = Math.round(container?.clientHeight || 0);
+    const visualPortrait = visual.h > visual.w;
+    const boxPortrait = boxH > boxW;
+    // A stale container stays on the previous orientation and would lay the
+    // whole HUD out sideways. Fall back to the visual viewport until it catches up.
+    if (boxW >= 2 && boxH >= 2 && boxPortrait === visualPortrait) {
+        return { w: boxW, h: boxH };
+    }
+    const style = document.body ? getComputedStyle(document.body) : null;
+    const padX = style ? (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0) : 0;
+    const padY = style ? (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0) : 0;
+    return {
+        w: Math.max(1, Math.round(visual.w - padX)),
+        h: Math.max(1, Math.round(visual.h - padY)),
+    };
 }
 
 function calcGameSize() {
@@ -53,13 +94,16 @@ function syncCanvasDisplaySize(viewport = getViewportSize()) {
     const displayH = Math.max(1, Math.round(GAME_HEIGHT * scale));
     canvas.style.width = `${displayW}px`;
     canvas.style.height = `${displayH}px`;
-    canvas.style.maxWidth = '100%';
-    canvas.style.maxHeight = '100%';
+    // A percentage max-size shrinks only one axis when the box is 1px tight,
+    // which stretches the buffer after a portrait/landscape swap.
+    canvas.style.maxWidth = `${displayW}px`;
+    canvas.style.maxHeight = `${displayH}px`;
     // The container's flex layout centers the canvas without stale resize offsets.
     canvas.style.marginLeft = '0';
     canvas.style.marginTop = '0';
 }
 
+lockDocumentToVisualViewport();
 const size = calcGameSize();
 const viewport = getViewportSize();
 setGameDimensions(size.w, size.h, viewport.w, viewport.h);
@@ -109,55 +153,114 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
-requestAnimationFrame(() => syncCanvasDisplaySize(viewport));
 
 // Export the existing instance so browser smoke tests can inspect live scene
 // transforms without creating a second Phaser game.
 export { game };
 
 // Handle orientation/resize: keep internal game size and CSS canvas size in sync.
+// Phaser's pointer math (displayScale) is baseSize / canvas CSS box. It must be
+// refreshed after the CSS size changes, or a rotation leaves touches on the old axis.
 let resizeRefreshTimer = null;
-function handleResize() {
-    if (!game || !game.scale) return;
+const orientationFollowups = [];
+
+function clearOrientationFollowups() {
+    while (orientationFollowups.length) clearTimeout(orientationFollowups.pop());
+}
+
+function syncSceneCameras(width, height) {
+    const scenes = game.scene?.scenes || [];
+    for (const scene of scenes) {
+        const cameras = scene.cameras?.cameras || [];
+        for (const camera of cameras) {
+            if (!camera) continue;
+            if (camera.x !== 0 || camera.y !== 0) continue;
+            if (camera.width === width && camera.height === height) continue;
+            camera.setSize(width, height);
+        }
+    }
+}
+
+function applyViewport() {
+    if (!game?.scale) return;
+    lockDocumentToVisualViewport();
+    const nextViewport = getViewportSize();
+    const nextSize = calcGameSize();
+    const changed = nextSize.w !== GAME_WIDTH || nextSize.h !== GAME_HEIGHT;
+
+    if (!changed) {
+        const canvas = game.canvas;
+        const rect = canvas?.getBoundingClientRect?.();
+        const fitted = Math.min(nextViewport.w / nextSize.w, nextViewport.h / nextSize.h);
+        const wantW = Math.max(1, Math.round(nextSize.w * fitted));
+        const wantH = Math.max(1, Math.round(nextSize.h * fitted));
+        const cssMatches = rect && Math.abs(rect.width - wantW) <= 1 && Math.abs(rect.height - wantH) <= 1;
+        const scale = game.scale.displayScale;
+        const scaleMatches = cssMatches && scale && rect.width > 2
+            && Math.abs(scale.x - nextSize.w / rect.width) < 0.04
+            && Math.abs(scale.y - nextSize.h / rect.height) < 0.04;
+        if (scaleMatches) return;
+    }
+
+    setGameDimensions(nextSize.w, nextSize.h, nextViewport.w, nextViewport.h);
+    if (changed) game.scale.resize(nextSize.w, nextSize.h);
+    syncSceneCameras(GAME_WIDTH, GAME_HEIGHT);
+    syncCanvasDisplaySize(nextViewport);
+    // Read the canvas box after the CSS write so touch coordinates match the new orientation.
+    game.scale.refresh();
+    syncSceneCameras(GAME_WIDTH, GAME_HEIGHT);
+    if (!changed) return;
+
+    const scenes = game.scene.scenes || game.scene.getScenes();
+    scenes.forEach(scene => {
+        scene.events.emit('game-resize', nextSize);
+    });
+}
+
+function scheduleViewportSync(delay) {
+    if (!game?.scale) return;
     if (resizeRefreshTimer) clearTimeout(resizeRefreshTimer);
     resizeRefreshTimer = setTimeout(() => {
         resizeRefreshTimer = null;
-        if (!game || !game.scale) return;
-
-        const nextViewport = getViewportSize();
-        const nextSize = calcGameSize();
-        const changed = nextSize.w !== GAME_WIDTH || nextSize.h !== GAME_HEIGHT;
-
-        setGameDimensions(nextSize.w, nextSize.h, nextViewport.w, nextViewport.h);
-        if (changed) {
-            game.scale.resize(nextSize.w, nextSize.h);
-            const scenes = game.scene.scenes || game.scene.getScenes();
-            scenes.forEach(scene => {
-                scene.events.emit('game-resize', nextSize);
-            });
-        }
-        game.scale.refresh();
-        syncCanvasDisplaySize(nextViewport);
-        requestAnimationFrame(() => syncCanvasDisplaySize());
-    }, 200);
+        applyViewport();
+    }, delay);
 }
 
-window.addEventListener('orientationchange', handleResize);
+function handleResize() {
+    scheduleViewportSync(50);
+}
+
+function handleOrientationChange() {
+    clearOrientationFollowups();
+    scheduleViewportSync(0);
+    // Mobile browsers publish the final visual viewport late, after the first resize.
+    for (const delay of [80, 200, 450, 800]) {
+        orientationFollowups.push(setTimeout(() => applyViewport(), delay));
+    }
+}
+
+window.addEventListener('orientationchange', handleOrientationChange);
 window.addEventListener('resize', handleResize);
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', handleResize);
+    window.visualViewport.addEventListener('scroll', handleResize);
 }
+window.screen?.orientation?.addEventListener?.('change', handleOrientationChange);
+requestAnimationFrame(() => applyViewport());
 
 game.events.on('destroy', () => {
     if (resizeRefreshTimer) {
         clearTimeout(resizeRefreshTimer);
         resizeRefreshTimer = null;
     }
-    window.removeEventListener('orientationchange', handleResize);
+    clearOrientationFollowups();
+    window.removeEventListener('orientationchange', handleOrientationChange);
     window.removeEventListener('resize', handleResize);
     if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('scroll', handleResize);
     }
+    window.screen?.orientation?.removeEventListener?.('change', handleOrientationChange);
 });
 
 // 【글로벌 에러 핸들러】

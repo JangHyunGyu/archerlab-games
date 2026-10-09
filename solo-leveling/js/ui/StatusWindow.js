@@ -6,6 +6,17 @@ import {
 import { t } from '../utils/i18n.js';
 import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
 
+function cssPerGameUnit(scene) {
+    const scale = scene?.game?.scale?.displayScale;
+    const sx = Number(scale?.x);
+    const sy = Number(scale?.y);
+    if (sx > 0.01 && sy > 0.01) return 1 / Math.max(sx, sy);
+    const viewport = window.visualViewport;
+    const w = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
+    const h = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+    return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
+}
+
 /**
  * TAB-key status window, System aesthetic.
  */
@@ -83,10 +94,7 @@ export class StatusWindow {
         }).setDepth(303).setScrollFactor(0);
         this.elements.push(tag);
 
-        const viewportW = Math.max(1, window.innerWidth || GAME_WIDTH);
-        const viewportH = Math.max(1, window.innerHeight || GAME_HEIGHT);
-        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
-        const minTouchUnits = Math.ceil(44 / cssPerUnit);
+        const minTouchUnits = Math.ceil(44 / cssPerGameUnit(this.scene));
         const closeH = Math.max(minTouchUnits, Math.round(44 * (1 + (UI_SCALE - 1) * 0.7)));
         const closeW = Math.max(minTouchUnits, Math.min(uv(78), w * 0.3));
         const closeX = px + w - closeW - uv(8);

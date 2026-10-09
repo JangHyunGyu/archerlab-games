@@ -6,6 +6,17 @@ import {
 import { t } from '../utils/i18n.js';
 import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
 
+function cssPerGameUnit(scene) {
+    const scale = scene?.game?.scale?.displayScale;
+    const sx = Number(scale?.x);
+    const sy = Number(scale?.y);
+    if (sx > 0.01 && sy > 0.01) return 1 / Math.max(sx, sy);
+    const viewport = window.visualViewport;
+    const w = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
+    const h = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+    return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
+}
+
 /**
  * Mobile touch controls — System aesthetic.
  * Floating joystick spawns at touch, right-side action buttons.
@@ -184,10 +195,7 @@ export class MobileControls {
 
     _createButtons() {
         const isPortrait = GAME_HEIGHT > GAME_WIDTH;
-        const viewport = window.visualViewport;
-        const viewportW = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
-        const viewportH = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
-        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
+        const cssPerUnit = cssPerGameUnit(this.scene);
         const minTouch = Math.ceil(46 / cssPerUnit);
         const btnH = Math.max(uv(42), minTouch);
         const btnW = Math.max(uv(isPortrait ? 68 : 72), Math.ceil(minTouch * 1.25));

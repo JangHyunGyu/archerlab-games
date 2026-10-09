@@ -8,6 +8,17 @@ import { t } from '../utils/i18n.js';
 import { UIAssets } from '../ui/UIAssets.js?v=20260913-crafted-ui-v1';
 import { getCharacterWeaponKeys, getStarterWeaponKey } from '../utils/Characters.js';
 
+function cssPerGameUnit(scene) {
+    const scale = scene?.game?.scale?.displayScale;
+    const sx = Number(scale?.x);
+    const sy = Number(scale?.y);
+    if (sx > 0.01 && sy > 0.01) return 1 / Math.max(sx, sy);
+    const viewport = window.visualViewport;
+    const w = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
+    const h = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+    return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
+}
+
 export class LevelUpScene extends Phaser.Scene {
     constructor() {
         super({ key: 'LevelUpScene' });
@@ -28,7 +39,14 @@ export class LevelUpScene extends Phaser.Scene {
         // an opportunity to reroll the player's upgrade choices.
         this._choices = this._generateChoices();
         this._onGameResize = () => {
-            if (!this._selectionLocked) this._redraw();
+            if (!this.sys?.isActive?.()) return;
+            const cam = this.cameras.main;
+            if (cam && (cam.width !== GAME_WIDTH || cam.height !== GAME_HEIGHT)) {
+                cam.setSize(GAME_WIDTH, GAME_HEIGHT);
+            }
+            // Keep the same choices. A rotation must redraw the cards in the new
+            // frame even after the player has already tapped one.
+            this._redraw();
         };
         this.events.on('game-resize', this._onGameResize, this);
         this.events.once('shutdown', this._cleanupSceneRefs, this);
@@ -167,10 +185,7 @@ export class LevelUpScene extends Phaser.Scene {
     }
 
     _minTouchUnits() {
-        const viewportW = Math.max(1, window.innerWidth || GAME_WIDTH);
-        const viewportH = Math.max(1, window.innerHeight || GAME_HEIGHT);
-        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
-        return Math.ceil(44 / cssPerUnit);
+        return Math.ceil(44 / cssPerGameUnit(this));
     }
 
     _iconTexture(key) {

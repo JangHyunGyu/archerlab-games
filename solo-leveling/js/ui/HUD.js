@@ -6,6 +6,17 @@ import {
 } from '../utils/Constants.js';
 import { UIAssets } from './UIAssets.js?v=20260913-crafted-ui-v1';
 
+function cssPerGameUnit(scene) {
+    const scale = scene?.game?.scale?.displayScale;
+    const sx = Number(scale?.x);
+    const sy = Number(scale?.y);
+    if (sx > 0.01 && sy > 0.01) return 1 / Math.max(sx, sy);
+    const viewport = window.visualViewport;
+    const w = Math.max(1, viewport?.width || window.innerWidth || GAME_WIDTH);
+    const h = Math.max(1, viewport?.height || window.innerHeight || GAME_HEIGHT);
+    return Math.max(0.01, Math.min(w / GAME_WIDTH, h / GAME_HEIGHT));
+}
+
 export class HUD {
     constructor(scene) {
         this.scene = scene;
@@ -32,10 +43,7 @@ export class HUD {
     }
 
     _minTouchUnits(cssPixels = 44) {
-        const viewportW = Math.max(1, window.innerWidth || GAME_WIDTH);
-        const viewportH = Math.max(1, window.innerHeight || GAME_HEIGHT);
-        const cssPerUnit = Math.max(0.01, Math.min(viewportW / GAME_WIDTH, viewportH / GAME_HEIGHT));
-        return Math.ceil(cssPixels / cssPerUnit);
+        return Math.ceil(cssPixels / cssPerGameUnit(this.scene));
     }
 
     _text(x, y, value, style) {
