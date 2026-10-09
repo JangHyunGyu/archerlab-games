@@ -46,6 +46,7 @@ export class LevelUpScene extends Phaser.Scene {
             this._onGameResize = null;
         }
 
+        try { this.game?._soundManager?.restoreLevelUpMix(); } catch (e) { /* mix is restored on the next prepare */ }
         if (this.gameScene) {
             this.gameScene.removeLevelUpBlur?.();
             this.gameScene._levelUpActive = false;

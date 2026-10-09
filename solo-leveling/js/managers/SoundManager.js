@@ -93,6 +93,8 @@ export class SoundManager {
         this._pools = {};
         this._sfxSources = {};
         this._sfxBuffers = new Map();
+        this._liveSfx = new Set();
+        this._levelUpDuck = false;
         this._sfxLoadPromise = null;
         this._sfxLoadTimer = null;
         this._sfxLoadTimerType = null;
@@ -131,26 +133,52 @@ export class SoundManager {
         this._pools[name]._index = 0;
     }
 
-    _ensureSfxBus() {
-        if (this._sfxGain || typeof Tone === 'undefined' || !this._toneReady) return;
+    _ensureMasterBus() {
+        if (this._masterSum || typeof Tone === 'undefined') return;
         try {
             const ctx = Tone.getContext()?.rawContext;
             if (!ctx) return;
-
             this._sfxContext = ctx;
+
+            // One sum, then a safety limiter. The old SFX compressor sat at -22 dB
+            // with a 10:1 ratio, so every noisy hit and the level-up sting rode
+            // the gain and came out as crackle. This limiter only shaves real overs.
+            this._masterSum = ctx.createGain();
+            this._masterSum.gain.value = 1;
+            this._limiter = ctx.createDynamicsCompressor();
+            this._limiter.threshold.value = -1.5;
+            this._limiter.knee.value = 0;
+            this._limiter.ratio.value = 20;
+            this._limiter.attack.value = 0.001;
+            this._limiter.release.value = 0.04;
+            this._masterSum.connect(this._limiter);
+            this._limiter.connect(ctx.destination);
+        } catch (e) { /* HTMLAudio fallback remains available */ }
+    }
+
+    _ensureSfxBus() {
+        if (this._sfxGain || typeof Tone === 'undefined' || !this._toneReady) return;
+        try {
+            this._ensureMasterBus();
+            const ctx = this._sfxContext;
+            if (!ctx || !this._masterSum) return;
+
             this._sfxGain = ctx.createGain();
             this._sfxGain.gain.value = this.enabled ? this._sfxMaster : 0;
-
-            this._sfxComp = ctx.createDynamicsCompressor();
-            this._sfxComp.threshold.value = -22;
-            this._sfxComp.knee.value = 10;
-            this._sfxComp.ratio.value = 10;
-            this._sfxComp.attack.value = 0.003;
-            this._sfxComp.release.value = 0.16;
-
-            this._sfxGain.connect(this._sfxComp);
-            this._sfxComp.connect(ctx.destination);
+            this._sfxGain.connect(this._masterSum);
         } catch (e) { /* HTMLAudio fallback remains available */ }
+    }
+
+    _connectElementToBus(audio) {
+        if (!audio || audio._mediaSource || !this._sfxContext || !this._sfxGain) return false;
+        try {
+            const source = this._sfxContext.createMediaElementSource(audio);
+            source.connect(this._sfxGain);
+            audio._mediaSource = source;
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
     _loadSfxBuffers() {
@@ -274,7 +302,10 @@ export class SoundManager {
         this._attachVisibilityHandler();
         if (this._toneReady || typeof Tone === 'undefined') return;
 
-        this._masterVol = new Tone.Volume(-7).toDestination();
+        this._ensureMasterBus();
+        this._masterVol = new Tone.Volume(-7);
+        if (this._masterSum) this._masterVol.connect(this._masterSum);
+        else this._masterVol.toDestination();
         this._chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, depth: 0.3, wet: 0.1 })
             .connect(this._masterVol).start();
         this._comp = new Tone.Compressor(-20, 6).connect(this._chorus);
@@ -303,7 +334,10 @@ export class SoundManager {
             }
             source.connect(gain);
             gain.connect(this._sfxGain);
+            const voice = { source, gain };
+            this._liveSfx.add(voice);
             source.onended = () => {
+                this._liveSfx.delete(voice);
                 try { source.disconnect(); } catch (e) { /* silent */ }
                 try { gain.disconnect(); } catch (e) { /* silent */ }
             };
@@ -337,7 +371,10 @@ export class SoundManager {
         pool._index = (pickedIndex + 1) % pool.length;
         audio._inUse = true;
         audio.muted = !this.enabled;
-        audio.volume = Math.max(0, Math.min(0.72, volume * this._sfxMaster));
+        const throughBus = this._connectElementToBus(audio);
+        audio.volume = throughBus
+            ? Math.max(0, Math.min(0.88, volume))
+            : Math.max(0, Math.min(0.72, volume * this._sfxMaster));
         try { audio.currentTime = 0; } catch (e) { /* silent */ }
         try {
             // Old iOS/in-app WebViews return undefined; autoplay policy may reject.
@@ -499,6 +536,45 @@ export class SoundManager {
             this._activeSoundNames[soundName] = Math.max(0, (this._activeSoundNames[soundName] || 1) - 1);
         }, this._releaseMs[soundName] || 220);
         this._activeSoundTimers.add(releaseTimer);
+    }
+
+    // Drop combat tails before the level-up sting. Those tails were still
+    // inside the old compressor when the choice screen opened, which is when
+    // the crackle was loudest.
+    releaseCombatVoices() {
+        const ctx = this._sfxContext;
+        if (ctx) {
+            const now = ctx.currentTime;
+            for (const voice of this._liveSfx) {
+                try {
+                    const param = voice.gain.gain;
+                    param.cancelScheduledValues(now);
+                    param.setValueAtTime(Math.max(0.0001, param.value || 0.0001), now);
+                    param.linearRampToValueAtTime(0, now + 0.015);
+                    voice.source.stop(now + 0.02);
+                } catch (e) { /* already stopped */ }
+            }
+        }
+        this._stopHtmlAudioPoolPlayback();
+        this._resetSfxRuntimeState();
+    }
+
+    prepareLevelUpMix() {
+        this.releaseCombatVoices();
+        this._levelUpDuck = true;
+        try {
+            if (this._bgmGain) this._bgmGain.volume.rampTo(this._bgmTargetVolume - 4, 0.06);
+        } catch (e) { /* silent */ }
+    }
+
+    restoreLevelUpMix() {
+        if (!this._levelUpDuck) return;
+        this._levelUpDuck = false;
+        try {
+            if (this._bgmGain && this.enabled && !this._pageHidden) {
+                this._bgmGain.volume.rampTo(this._bgmTargetVolume, 0.2);
+            }
+        } catch (e) { /* silent */ }
     }
 
     // ========== INTRO MUSIC (Tone.js) ==========
@@ -909,8 +985,10 @@ export class SoundManager {
         this._lastPlayTime = {};
 
         try {
+            this._liveSfx.clear();
             if (this._sfxGain) { this._sfxGain.disconnect(); this._sfxGain = null; }
-            if (this._sfxComp) { this._sfxComp.disconnect(); this._sfxComp = null; }
+            if (this._limiter) { this._limiter.disconnect(); this._limiter = null; }
+            if (this._masterSum) { this._masterSum.disconnect(); this._masterSum = null; }
             this._sfxContext = null;
             this._sfxBuffers.clear();
             this._sfxLoadPromise = null;

@@ -9,7 +9,7 @@ import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-levelup-v1';
 import { WeaponManager } from '../managers/WeaponManager.js';
 import { ShadowArmyManager } from '../managers/ShadowArmyManager.js';
-import { SoundManager } from '../managers/SoundManager.js';
+import { SoundManager } from '../managers/SoundManager.js?v=20261009-audio-v1';
 import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
 import { Boss } from '../entities/Boss.js';
@@ -868,7 +868,10 @@ export class GameScene extends Phaser.Scene {
         if (this._levelUpActive) return;
         this._levelUpActive = true;
 
-        if (this.soundManager) this.soundManager.play('levelup');
+        if (this.soundManager) {
+            this.soundManager.prepareLevelUpMix();
+            this.soundManager.play('levelup');
+        }
 
         // System message
         this.systemMessage.show(t('sysSystem'), [
@@ -1032,8 +1035,14 @@ export class GameScene extends Phaser.Scene {
 
     _addLevelUpBlur() {
         try {
+            // The paused battle keeps rendering. Bloom already blurs that frame;
+            // a second full-screen blur stalls the audio callback while a card is open.
+            if (this._bloomFilter?.setActive) {
+                this._bloomFilter.setActive(false);
+                this._bloomSuspendedForLevelUp = true;
+            }
             if (!this._levelUpBlur) {
-                this._levelUpBlur = this.cameras.main.filters.internal.addBlur(0, 2, 2, 1);
+                this._levelUpBlur = this.cameras.main.filters.internal.addBlur(0, 1, 1, 1);
             }
             this._levelUpBlur.setActive(true);
         } catch (e) { /* blur not available */ }
@@ -1044,6 +1053,10 @@ export class GameScene extends Phaser.Scene {
             if (this._levelUpBlur) {
                 this._levelUpBlur.setActive(false);
             }
+            if (this._bloomSuspendedForLevelUp && this._bloomFilter?.setActive) {
+                this._bloomFilter.setActive(true);
+            }
+            this._bloomSuspendedForLevelUp = false;
         } catch (e) { /* silent */ }
     }
 
