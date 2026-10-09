@@ -14616,7 +14616,7 @@
     {
       "path": "solo-leveling/sounds/levelup.wav",
       "bytes": 44144,
-      "sha256": "57f9dd1f9756a04815acf864aaada12d577078e7a01e0482b87917ad22f58cf5"
+      "sha256": "a078b9da91d4cde5b99b7bb6bb3d40cc4e081c4670025854aeb127f3caf5746d"
     },
     {
       "path": "solo-leveling/sounds/light_crescent_sfx.wav",
@@ -14701,7 +14701,7 @@
     {
       "path": "solo-leveling/sounds/select.wav",
       "bytes": 8864,
-      "sha256": "6a7bb2dd185b4a8c56d6246f95a372f3b71320bf2550984c7f0a6ad3fb9a703b"
+      "sha256": "302e429147e9a37a23e32bb718905e2fcd8e0de50fec5a9037a444e0680c2e72"
     },
     {
       "path": "solo-leveling/sounds/shadow_soldier_slam.wav",
