@@ -49,7 +49,7 @@ for (const [width, height] of [[320,568], [360,640], [390,844], [430,932], [768,
 assert.ok(!game.includes('0.62) / PANEL_RATIO'), 'desktop board must not use the undersized fixed ratio');
 
 const cacheVersion = '20260912-puzzle-ui-v5';
-const scriptCacheVersions = { Game: '20261006-start-guard-v1', InputManager: '20261006-start-guard-v1', EffectManager: '20261006-tap-v1', UIManager: '20261006-tap-v1', Piece: '20261009-tray-wall-v1', main: '20261009-init-guard-v1' };
+const scriptCacheVersions = { Game: '20261006-start-guard-v1', InputManager: '20261006-start-guard-v1', EffectManager: '20261006-tap-v1', UIManager: '20261010-audio-rank-v1', SoundManager: '20261010-audio-rank-v1', Piece: '20261009-tray-wall-v1', main: '20261009-init-guard-v1' };
 assert.match(piece, /advanceTransitionElapsed\(this, dt\)/);
 assert.match(piece, /if \(tweened\.has\(i\)\) continue;/);
 for (const file of ['index.html', 'index-en.html']) {
@@ -57,7 +57,7 @@ for (const file of ['index.html', 'index-en.html']) {
     for (const script of ['constants', 'SoundManager', 'ScoreManager', 'EffectManager', 'Board', 'Piece', 'InputManager', 'UIManager', 'Game', 'main']) {
         assert.ok(
             html.includes('src="js/' + script + '.js?v=' + (scriptCacheVersions[script] || cacheVersion)
-                + (['UIManager', 'Game'].includes(script) ? '&ranking=20261006-client-exception-v1' : script === 'main' ? '&ranking=20261004-ranking-audit-v1' : '') + '"'),
+                + (script === 'UIManager' ? '&ranking=20261010-audio-rank-v1' : script === 'Game' ? '&ranking=20261006-client-exception-v1' : script === 'main' ? '&ranking=20261004-ranking-audit-v1' : '') + '"'),
             file + ' must cache-bust ' + script + '.js'
         );
     }

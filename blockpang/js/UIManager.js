@@ -920,6 +920,12 @@ class UIManager {
     // ══  TITLE SCREEN
     // ══════════════════════════════════════
     showTitleScreen() {
+        // Resize rebuilds this screen on top of the stage. Mobile browser chrome
+        // often resizes on the same tap that opens rankings, which buried the
+        // overlay and then ignored every later tap.
+        const rankingWasOpen = !!(this._hofOverlay && !this._hofOverlay.destroyed);
+        if (rankingWasOpen) this._closeHallOfFame();
+
         this._clearTitleTweens();
         this._destroyTitleRoots();
         this._titleRefs = null;
@@ -1561,6 +1567,7 @@ class UIManager {
 
         this.titleContainer = container;
         this.game.app.stage.addChild(container);
+        if (rankingWasOpen) this.showHallOfFame();
     }
 
     hideTitleScreen(onComplete) {
@@ -1975,7 +1982,10 @@ class UIManager {
 
     showHallOfFame() {
         this._blockDomFallback();
-        if (this._hofOverlay && !this._hofOverlay.destroyed) return;
+        if (this._hofOverlay && !this._hofOverlay.destroyed) {
+            if (this._hofOverlay.parent) this._hofOverlay.parent.addChild(this._hofOverlay);
+            return;
+        }
 
         this._hofPreviousActiveButtons = this._activeButtons ? [...this._activeButtons] : [];
         this._activeButtons = [];

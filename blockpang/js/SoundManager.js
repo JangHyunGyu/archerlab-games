@@ -3,8 +3,14 @@ class SoundManager {
         let storedSound = null;
         try { storedSound = localStorage.getItem('blockpang_sound_enabled'); } catch (_) {}
         this.enabled = storedSound !== '0';
-        this.volume = 1.4;
+        this.volume = 1;
         this._initialized = false;
+        this._masterSum = null;
+        this._outputGain = null;
+        this._sfxContext = null;
+        this._pageHidden = false;
+        this._settleToken = 0;
+        this._contextWatcher = null;
 
         // Synth references (created in init)
         this._membrane = null;
@@ -29,15 +35,121 @@ class SoundManager {
         this._pendingTimeouts = new Set();
         this._destroyed = false;
 
-        // 탭 복귀 시 AudioContext 자동 복구
+        // A suspended DynamicsCompressor comes back with a stuck envelope and
+        // crackles until it is replaced. Hide the output, then rebuild the limiter.
         this._visibilityHandler = () => {
-            if (!document.hidden && this.enabled && this._initialized) {
-                this.ensureContext();
+            if (this._destroyed) return;
+            this._settleToken += 1;
+            if (document.hidden) {
+                this._pageHidden = true;
+                this._ambientWasRunning = !!this._ambientLoop;
+                this.stopAmbient();
+                try {
+                    if (typeof Tone !== 'undefined' && Tone.Transport) Tone.Transport.pause();
+                } catch (_) { /* transport may not be started */ }
+                if (this._outputGain) this._outputGain.gain.value = 0;
+                this._suspendContext();
+                return;
             }
+            this._pageHidden = false;
+            this._settleAfterShow();
         };
         document.addEventListener('visibilitychange', this._visibilityHandler);
         if (typeof Tone !== 'undefined' && Tone.Destination) {
-            Tone.Destination.mute = !this.enabled;
+            Tone.Destination.mute = true;
+        }
+    }
+
+    _createLimiter(ctx) {
+        const limiter = ctx.createDynamicsCompressor();
+        // Safety ceiling only. The old -20 dB / 8:1 compressor rode the reverb
+        // floor and turned every stacked hit into crackle.
+        limiter.threshold.value = -1.5;
+        limiter.knee.value = 0;
+        limiter.ratio.value = 20;
+        limiter.attack.value = 0.003;
+        limiter.release.value = 0.05;
+        return limiter;
+    }
+
+    _ensureMasterBus() {
+        if (this._masterSum) return;
+        const ctx = this._getAudioContext();
+        if (!ctx || !ctx.createGain) return;
+        this._sfxContext = ctx;
+        this._masterSum = ctx.createGain();
+        this._masterSum.gain.value = 1;
+        this._outputGain = ctx.createGain();
+        this._outputGain.gain.value = 0;
+        this._limiter = this._createLimiter(ctx);
+        this._masterSum.connect(this._limiter);
+        this._limiter.connect(this._outputGain);
+        this._outputGain.connect(ctx.destination);
+        if (!this._contextWatcher) {
+            this._contextWatcher = () => {
+                if (!this._sfxContext) return;
+                if (this._sfxContext.state !== 'running' && this._outputGain) {
+                    this._outputGain.gain.value = 0;
+                }
+            };
+            ctx.addEventListener('statechange', this._contextWatcher);
+        }
+        if (ctx.state === 'running' && this.enabled && !this._pageHidden) {
+            this._outputGain.gain.value = 0.72;
+        }
+    }
+
+    _rebuildLimiter() {
+        const ctx = this._sfxContext;
+        if (!ctx || !this._masterSum || !this._outputGain) return;
+        const previous = this._limiter;
+        try { this._masterSum.disconnect(); } catch (_) { /* already open */ }
+        if (previous) {
+            try { previous.disconnect(); } catch (_) { /* already open */ }
+        }
+        this._limiter = this._createLimiter(ctx);
+        this._masterSum.connect(this._limiter);
+        this._limiter.connect(this._outputGain);
+    }
+
+    _suspendContext() {
+        const ctx = this._sfxContext || this._getAudioContext();
+        if (!ctx || typeof ctx.suspend !== 'function' || ctx.state === 'suspended') return;
+        const suspended = ctx.suspend();
+        if (suspended && typeof suspended.catch === 'function') suspended.catch(() => {});
+    }
+
+    _openOutput(rebuild) {
+        if (this._destroyed || this._pageHidden || !this.enabled) return;
+        if (rebuild) this._rebuildLimiter();
+        const ctx = this._sfxContext;
+        if (!this._outputGain || !ctx || ctx.state !== 'running') return;
+        // Assign the value directly. A ramp never reaches its target when the
+        // audio clock is still at 0, which leaves the whole game silent.
+        try { this._outputGain.gain.cancelScheduledValues(ctx.currentTime || 0); } catch (_) { /* no events yet */ }
+        this._outputGain.gain.value = 0.72;
+    }
+
+    async _settleAfterShow() {
+        if (this._pageHidden || !this.enabled || this._destroyed) return;
+        const token = this._settleToken;
+        if (this._outputGain) this._outputGain.gain.value = 0;
+        try {
+            if (typeof Tone !== 'undefined') {
+                const started = Tone.start();
+                if (started && typeof started.catch === 'function') await started.catch(() => {});
+            }
+            const raw = this._getAudioContext();
+            if (raw && raw.state !== 'running' && typeof raw.resume === 'function') {
+                await raw.resume().catch(() => {});
+            }
+        } catch (_) { /* resume can fail without a gesture */ }
+        if (token !== this._settleToken || this._pageHidden || this._destroyed) return;
+        this._ensureMasterBus();
+        this._openOutput(true);
+        if (this._ambientWasRunning && this.enabled && !this._destroyed && !this._pageHidden) {
+            this._ambientWasRunning = false;
+            this.startAmbient();
         }
     }
 
@@ -80,17 +192,20 @@ class SoundManager {
 
     _playWav(name, volumeMultiplier = 1) {
         if (!this.enabled) return;
-        const volume = Math.max(0, Math.min(1, this.volume * volumeMultiplier * 0.5));
+        // Several layers play together. Keep each one under the shared limiter
+        // instead of summing full-scale buffers straight into the speakers.
+        const volume = Math.max(0, Math.min(0.4, 0.32 * volumeMultiplier));
 
         const buffer = this._wavBuffers[name];
         const ctx = this._getAudioContext();
         if (buffer && ctx) {
             try {
+                this._ensureMasterBus();
                 const src = ctx.createBufferSource();
                 src.buffer = buffer;
                 const gain = ctx.createGain();
                 gain.gain.value = volume;
-                src.connect(gain).connect(ctx.destination);
+                src.connect(gain).connect(this._masterSum || ctx.destination);
                 src.onended = () => {
                     try { src.disconnect(); } catch (_) {}
                     try { gain.disconnect(); } catch (_) {}
@@ -149,35 +264,32 @@ class SoundManager {
         }
 
         try {
-            // Convert linear volume to dB for Tone.Destination
-            const volDb = 20 * Math.log10(this.volume);
-            Tone.Destination.volume.value = volDb;
+            this._ensureMasterBus();
+            // Synths sum into the same limiter as the WAVs. Tone.Destination
+            // stays muted so nothing is boosted past the ceiling.
+            if (Tone.Destination) {
+                Tone.Destination.volume.value = 0;
+                Tone.Destination.mute = true;
+            }
+            const sink = this._masterSum || Tone.Destination;
 
             // ── Effects chain ──
-            this._limiter = new Tone.Limiter(-1).toDestination();
-
-            this._compressor = new Tone.Compressor({
-                threshold: -20,
-                knee: 25,
-                ratio: 8,
-                attack: 0.002,
-                release: 0.15
-            }).connect(this._limiter);
+            this._compressor = null;
 
             this._reverb = new Tone.Reverb({
-                decay: 1.8,
-                wet: 0.18,
+                decay: 1.2,
+                wet: 0.1,
                 preDelay: 0.01
-            }).connect(this._compressor);
+            }).connect(sink);
 
             // Generate the reverb impulse response immediately
             this._reverb.generate();
 
             // Dry path (no reverb)
-            this._dryChannel = new Tone.Channel({ volume: 0 }).connect(this._compressor);
+            this._dryChannel = new Tone.Channel({ volume: -3 }).connect(sink);
 
             // Wet path (with reverb)
-            this._wetChannel = new Tone.Channel({ volume: 0 }).connect(this._reverb);
+            this._wetChannel = new Tone.Channel({ volume: -8 }).connect(this._reverb);
 
             // ── Synths ──
 
@@ -376,15 +488,19 @@ class SoundManager {
     }
 
     ensureContext() {
-        if (typeof Tone !== 'undefined') {
-            Tone.start().catch(() => {});
-            // 모바일에서 AudioContext suspended 상태 복구
-            if (Tone.context && Tone.context.state === 'suspended') {
-                Tone.context.resume().catch(() => {});
-            }
-        }
         if (!this._initialized) {
             this.init();
+        }
+        const raw = this._getAudioContext();
+        const wasRunning = !!(raw && raw.state === 'running');
+        if (typeof Tone !== 'undefined') {
+            const started = Tone.start();
+            if (started && typeof started.catch === 'function') started.catch(() => {});
+            if (raw && raw.state !== 'running' && typeof raw.resume === 'function') {
+                raw.resume().then(() => this._openOutput(true)).catch(() => {});
+            } else if (wasRunning) {
+                this._openOutput(false);
+            }
         }
     }
 
@@ -1060,13 +1176,23 @@ class SoundManager {
             document.removeEventListener('visibilitychange', this._visibilityHandler);
             this._visibilityHandler = null;
         }
+        if (this._contextWatcher && this._sfxContext) {
+            this._sfxContext.removeEventListener('statechange', this._contextWatcher);
+            this._contextWatcher = null;
+        }
         this.stopAmbient();
         const synths = [this._membrane, this._bass, this._click, this._bell,
                         this._poly, this._fm, this._am, this._metal, this._sweep, this._noise];
         for (const s of synths) { try { if (s?.dispose) s.dispose(); } catch(e) {} }
-        for (const node of [this._reverb, this._compressor, this._limiter, this._dryChannel, this._wetChannel]) {
+        for (const node of [this._reverb, this._compressor, this._dryChannel, this._wetChannel]) {
             try { if (node?.dispose) node.dispose(); } catch(e) {}
         }
+        for (const node of [this._masterSum, this._limiter, this._outputGain]) {
+            try { if (node && node.disconnect) node.disconnect(); } catch(e) {}
+        }
+        this._masterSum = null;
+        this._limiter = null;
+        this._outputGain = null;
         for (const name in this._wavPools) {
             const pool = this._wavPools[name];
             for (let i = 0; i < pool.length; i++) {
@@ -1084,8 +1210,11 @@ class SoundManager {
         try {
             localStorage.setItem('blockpang_sound_enabled', this.enabled ? '1' : '0');
         } catch (_) {}
-        if (typeof Tone !== 'undefined') {
-            Tone.Destination.mute = !this.enabled;
+        if (typeof Tone !== 'undefined' && Tone.Destination) {
+            Tone.Destination.mute = true;
+        }
+        if (this._outputGain) {
+            this._outputGain.gain.value = this.enabled && !this._pageHidden ? 0.72 : 0;
         }
         // Mute/unmute all WAV pools
         for (const name in this._wavPools) {
