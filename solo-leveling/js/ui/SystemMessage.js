@@ -7,8 +7,10 @@ import { t } from '../utils/i18n.js';
  * 파란색 반투명 홀로그램 윈도우에 메시지가 표시됩니다.
  */
 export class SystemMessage {
-    constructor(scene) {
+    constructor(scene, { placement = 'top' } = {}) {
         this.scene = scene;
+        this.placement = placement;
+        this.visible = true;
         this.queue = [];
         this.isShowing = false;
         this.currentMessage = null;
@@ -49,6 +51,11 @@ export class SystemMessage {
         this._mountMessage(msg, true);
 
         this._delay(msg.duration, () => this._dismiss(msg));
+    }
+
+    setVisible(visible) {
+        this.visible = visible;
+        this.currentElements.forEach(element => element.setVisible(visible));
     }
 
     relayout() {
@@ -106,7 +113,7 @@ export class SystemMessage {
             lineH = Math.max(18, Math.floor((maxBoxH - fixedH) / lineCount));
         }
         const boxH = Math.min(maxBoxH, fixedH + lineCount * lineH);
-        const preferredTop = portrait
+        const preferredTop = this.placement === 'bottom' ? GAME_HEIGHT - safeBottom - boxH : portrait
             ? Math.min(uv(156), GAME_HEIGHT * 0.2)
             : Math.min(uv(72), GAME_HEIGHT * 0.13);
         const boxTop = Math.max(safeTop, Math.min(preferredTop, GAME_HEIGHT - safeBottom - boxH));
@@ -197,6 +204,7 @@ export class SystemMessage {
             boxLeft + uv(10), boxTop + boxH - uv(5), boxW - uv(20), Math.max(1, uv(2)), colors.border, 0.72
         ).setOrigin(0, 0.5).setDepth(203).setScrollFactor(0).setAlpha(0);
         elements.push(progress);
+        elements.forEach(element => element.setVisible(this.visible));
 
         if (!animate) {
             elements.forEach(el => el.setAlpha(1));

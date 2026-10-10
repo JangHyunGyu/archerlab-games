@@ -17,6 +17,7 @@ export class ShadowArmyManager {
         if (!this.enabled || this._destroyed) return;
         if (this.soldiers.length >= this.maxSoldiers) return;
         if (this.isPerformingArise) return;
+        if (!this.scene.scene.isActive() || this.scene.isGameOver || this.scene.statusWindow?.isOpen) return;
 
         // Capture boss data immediately (boss will be destroyed soon)
         const bossData = {
@@ -36,7 +37,34 @@ export class ShadowArmyManager {
         this._ariseElements = [];
         this._ariseTimers.clear();
 
-        // Safety timeout: force reset after 12 seconds even if something goes wrong
+        this._pendingRecruit = bossData;
+        const camera = this.scene.cameras.main;
+        this._cameraState = {
+            scrollX: camera.scrollX, scrollY: camera.scrollY,
+            useBounds: camera.useBounds, target: camera._follow,
+            lerpX: camera.lerp.x, lerpY: camera.lerp.y,
+            roundPixels: camera.roundPixels,
+            bloomActive: this.scene._bloomFilter?.active === true,
+            messageVisible: this.scene.systemMessage?.visible !== false,
+        };
+        this.scene.systemMessage?.setVisible(false);
+        this.scene._bloomFilter?.setActive(false);
+        camera.stopFollow();
+        camera.shakeEffect?.reset();
+        this._focusAriseMap();
+        this.scene.mobileControls?._resetJoystick?.();
+        try {
+            this.scene.scene.pause();
+            this.scene.scene.launch('AriseScene', { manager: this, bossData });
+        } catch (e) {
+            console.error('[ARISE] Error launching presentation:', e);
+            this._cleanupArise();
+        }
+    }
+
+    _startArisePresentation(scene, bossData) {
+        this._presentationScene = scene;
+        // This timer belongs to the presentation, not the paused combat clock.
         this._ariseSafetyTimer = this._delay(12000, () => {
             if (this.isPerformingArise) {
                 console.warn('[ARISE] Safety timeout - force cleanup');
@@ -53,8 +81,11 @@ export class ShadowArmyManager {
     }
 
     _cleanupArise() {
+        if (!this.isPerformingArise) return;
+        const presentation = this._presentationScene;
+        this._presentationScene = null;
         // Kill tweens then destroy all tracked elements
-        const tweens = this.scene?.tweens;
+        const tweens = presentation?.tweens;
         for (const el of this._ariseElements) {
             try {
                 if (tweens && el && el.active !== false) {
@@ -65,6 +96,7 @@ export class ShadowArmyManager {
         }
         this._ariseElements = [];
         this.isPerformingArise = false;
+        this._soldierPreview = null;
 
         for (const timer of this._ariseTimers) {
             try { timer.remove(false); } catch (e) { /* already removed */ }
@@ -75,6 +107,38 @@ export class ShadowArmyManager {
             this._ariseSafetyTimer.remove(false);
             this._ariseSafetyTimer = null;
         }
+        const recruit = this._pendingRecruit;
+        this._pendingRecruit = null;
+        const camera = this.scene?.cameras?.main;
+        const previous = this._cameraState;
+        this._cameraState = null;
+        if (previous) this.scene.systemMessage?.setVisible(previous.messageVisible);
+        if (camera && previous) {
+            if (previous.bloomActive) this.scene._bloomFilter?.setActive(true);
+            camera.useBounds = previous.useBounds;
+            camera.setScroll(previous.scrollX, previous.scrollY);
+            if (previous.target?.active) {
+                camera.startFollow(previous.target, previous.roundPixels, previous.lerpX, previous.lerpY);
+                camera.centerOn(previous.target.x, previous.target.y);
+            }
+        }
+        try {
+            if (!this._destroyed && !this.scene?.isGameOver && recruit) {
+                this.soldiers.push(new ShadowSoldier(this.scene, recruit.x, recruit.y, recruit.bossKey));
+            }
+        } finally {
+            // Never leave combat suspended after either success or a VFX error.
+            if (!this._destroyed && !this.scene?.isGameOver && this.scene?.scene?.isPaused()) this.scene.scene.resume();
+            if (presentation?.scene?.isActive()) presentation.scene.stop();
+        }
+    }
+
+    _focusAriseMap() {
+        const camera = this.scene?.cameras?.main;
+        const boss = this._pendingRecruit;
+        if (!camera || !boss) return;
+        camera.useBounds = false; // Edge-of-map bosses must also sit in the center.
+        camera.centerOn(boss.x, boss.y);
     }
 
     _trackElement(el) {
@@ -83,7 +147,8 @@ export class ShadowArmyManager {
     }
 
     syncScreenLayout() {
-        const cam = this.scene?.cameras?.main;
+        this._focusAriseMap();
+        const cam = this._presentationScene?.cameras?.main;
         if (!cam || !this._ariseElements) return;
         for (const el of this._ariseElements) {
             const orient = el?._screenOrient;
@@ -98,10 +163,11 @@ export class ShadowArmyManager {
     }
 
     _delay(ms, callback) {
-        if (!this.scene?.time) return null;
-        const timer = this.scene.time.delayedCall(ms, () => {
+        const scene = this._presentationScene;
+        if (!scene?.time) return null;
+        const timer = scene.time.delayedCall(ms, () => {
             this._ariseTimers.delete(timer);
-            if (this._destroyed || !this.isPerformingArise || !this.scene?.scene?.isActive?.()) return;
+            if (this._destroyed || !this.isPerformingArise || !scene.scene?.isActive?.()) return;
             callback();
         });
         this._ariseTimers.add(timer);
@@ -109,7 +175,7 @@ export class ShadowArmyManager {
     }
 
     _performAriseSequence(bossData) {
-        const scene = this.scene;
+        const scene = this._presentationScene;
         const bossX = bossData.x;
         const bossY = bossData.y;
         const bossConfig = bossData.config;
@@ -123,6 +189,14 @@ export class ShadowArmyManager {
                 .setDepth(50).setScrollFactor(0).setOrigin(0, 0)
         );
         overlay._screenOrient = { mode: 'fill' };
+
+        // Keep the body readable without changing the recruited unit's game size.
+        const bossTexture = scene.textures.exists('ai_boss_' + bossData.bossKey)
+            ? 'ai_boss_' + bossData.bossKey : 'boss_' + bossData.bossKey + '_0';
+        const portrait = scene.textures.exists(bossTexture) ? this._trackElement(
+            scene.add.image(bossX, bossY, bossTexture).setDepth(51).setAlpha(0.65).setTint(0x8877aa)
+        ) : null;
+        if (portrait) portrait.setScale(300 / portrait.height);
 
         scene.tweens.add({
             targets: overlay,
@@ -262,9 +336,9 @@ export class ShadowArmyManager {
                                 );
                                 commandText.setPosition(
                                     scene.cameras.main.width / 2,
-                                    scene.cameras.main.height * 0.34
+                                    scene.cameras.main.height * 0.25
                                 );
-                                commandText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.34 };
+                                commandText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.25 };
 
                                 scene.tweens.add({
                                     targets: commandText,
@@ -277,10 +351,11 @@ export class ShadowArmyManager {
                                         if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
                                         // Heavy camera shake (long, intense)
-                                        scene.cameras.main.shake(1200, 0.025);
+                                        if (!scene.reducedMotion) scene.cameras.main.shake(500, 0.006);
+                                        if (portrait) scene.tweens.add({ targets: portrait, alpha: 0, duration: 500 });
 
                                         // Long vibration pattern (mobile)
-                                        if (navigator.vibrate) {
+                                        if (!scene.reducedMotion && navigator.vibrate) {
                                             navigator.vibrate([200, 50, 300, 40, 200, 30, 150, 50, 400]);
                                         }
 
@@ -288,7 +363,7 @@ export class ShadowArmyManager {
                                         const camH = scene.cameras.main.height;
 
                                         // Multi-flash sequence (3 bursts)
-                                        for (let f = 0; f < 3; f++) {
+                                        for (let f = 0; f < (scene.reducedMotion ? 0 : 3); f++) {
                                             this._delay(f * 150, () => {
                                                 if (!scene.scene?.isActive()) return;
                                                 try {
@@ -341,7 +416,7 @@ export class ShadowArmyManager {
                                         }
 
                                         // Shadow particle explosion (massive burst)
-                                        for (let i = 0; i < 25; i++) {
+                                        for (let i = 0; i < (scene.reducedMotion ? 8 : 25); i++) {
                                             this._delay(i * 30, () => {
                                                 if (!scene.scene?.isActive()) return;
                                                 try {
@@ -391,8 +466,8 @@ export class ShadowArmyManager {
                                                 color: '#b366ff', stroke: '#0a0020', strokeThickness: 8,
                                             }).setOrigin(0.5).setDepth(56).setScrollFactor(0).setAlpha(0).setScale(0.3)
                                         );
-                                        ariseText.setPosition(camW / 2, camH * 0.43);
-                                        ariseText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.43 };
+                                        ariseText.setPosition(camW / 2, camH * 0.25);
+                                        ariseText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.25 };
 
                                         const ariseSubText = this._trackElement(
                                             scene.add.text(0, 0, 'ARISE', {
@@ -400,8 +475,8 @@ export class ShadowArmyManager {
                                                 color: '#7b2fff',
                                             }).setOrigin(0.5).setDepth(55).setScrollFactor(0).setAlpha(0).setScale(1.5)
                                         );
-                                        ariseSubText.setPosition(camW / 2, camH * 0.43);
-                                        ariseSubText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.43 };
+                                        ariseSubText.setPosition(camW / 2, camH * 0.32);
+                                        ariseSubText._screenOrient = { mode: 'anchor', ax: 0.5, ay: 0.32 };
 
                                         scene.tweens.add({
                                             targets: ariseText,
@@ -428,16 +503,18 @@ export class ShadowArmyManager {
                                             try {
                                                 if (!scene.scene.isActive()) { this._cleanupArise(); return; }
 
-                                                const soldier = new ShadowSoldier(
-                                                    scene, bossX, bossY,
-                                                    bossData.bossKey
+                                                const sourceTexture = 'asset_shadow_' + bossConfig.shadowType;
+                                                const previewTexture = scene.textures.exists(sourceTexture)
+                                                    ? sourceTexture : 'shadow_' + bossConfig.shadowType;
+                                                const soldier = this._trackElement(
+                                                    scene.add.sprite(bossX, bossY, previewTexture).setDepth(54)
                                                 );
-                                                this.soldiers.push(soldier);
+                                                this._soldierPreview = soldier;
 
                                                 console.log(`[ARISE] Shadow soldier created: ${bossConfig.name} (${bossConfig.shadowType})`);
 
                                                 soldier.setAlpha(0);
-                                                const finalScale = soldier.scaleX;
+                                                const finalScale = 300 / soldier.height;
                                                 soldier.setScale(finalScale * 0.2);
                                                 scene.tweens.add({
                                                     targets: soldier,
@@ -454,7 +531,7 @@ export class ShadowArmyManager {
                                                             scene.systemMessage.show('[시스템]', [
                                                                 '그림자 추출에 성공했습니다.',
                                                                 `${bossConfig.name}이(가) 그림자 군단에 합류했습니다.`,
-                                                                `현재 그림자 병사: ${this.soldiers.length}/${this.maxSoldiers}`,
+                                                                `현재 그림자 병사: ${this.soldiers.length + 1}/${this.maxSoldiers}`,
                                                             ], { duration: 3000, type: 'arise' });
                                                         }
                                                     } catch (e) { console.warn('[ARISE] Message error:', e); }

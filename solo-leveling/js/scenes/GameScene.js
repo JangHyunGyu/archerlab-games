@@ -8,7 +8,7 @@ import { Player } from '../entities/Player.js';
 import { ShadowSoldier } from '../entities/ShadowSoldier.js';
 import { EnemyManager } from '../managers/EnemyManager.js?v=20261009-orient-v1';
 import { WeaponManager } from '../managers/WeaponManager.js';
-import { ShadowArmyManager } from '../managers/ShadowArmyManager.js?v=20261009-orient-v1';
+import { ShadowArmyManager } from '../managers/ShadowArmyManager.js?v=20261010-arise-v1';
 import { SoundManager } from '../managers/SoundManager.js?v=20261009-audio-v3';
 import { XPOrbPool } from '../entities/XPOrb.js?v=20261009-levelup-v1';
 import { ItemDropManager } from '../entities/ItemDrop.js?v=20260928-locale-exports-v1';
@@ -586,6 +586,7 @@ export class GameScene extends Phaser.Scene {
         // The status panel only pauses physics. Enemy attacks and weapon timers
         // are plain update calls, so the run must stop while the player is reading it.
         if (this.statusWindow?.isOpen) return;
+        if (this.shadowArmyManager?.isPerformingArise) return;
 
         // Auto quality adjustment based on FPS
         this._fpsCheckTimer = (this._fpsCheckTimer || 0) + delta;

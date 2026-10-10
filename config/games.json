@@ -64,6 +64,7 @@
         "node solo-leveling/tests/memory-lifecycle.test.cjs",
         "node solo-leveling/tests/audio-static.test.cjs",
         "node solo-leveling/tests/orientation-layout.test.cjs",
+        "node --test solo-leveling/tests/arise-cinematic.test.cjs",
         "node solo-leveling/tests/infinite-leveling.test.cjs",
         "node solo-leveling/tests/second-skill-balance.test.cjs",
         "node solo-leveling/tests/remaining-skill-balance.test.cjs",
