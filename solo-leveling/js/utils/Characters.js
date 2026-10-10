@@ -53,6 +53,7 @@ export const CHARACTER_WEAPON_EFFECT_KEYS = [
 
 export const CHARACTER_BASIC_ATTACK_EFFECT_KEYS = [
     'shadow_dagger_slash',
+    'shadow_dagger_cut',
     'light_sword_slash',
     'tiger_claw_swipe',
     'flame_fireball',
@@ -66,6 +67,7 @@ export const CHARACTER_SKILL_EFFECT_KEYS = [
 export const CHARACTER_DEFS = {
     shadowMonarch: {
         id: 'shadowMonarch',
+        basicAttackVariants: ['cut', 'reverse'],
         assetKey: 'original_shadow_monarch',
         texturePrefix: 'player',
         usesExistingPlayerMotion: true,
@@ -87,6 +89,7 @@ export const CHARACTER_DEFS = {
     },
     lightSwordswoman: {
         id: 'lightSwordswoman',
+        basicAttackVariants: ['rise'],
         assetKey: 'light_swordswoman',
         texturePrefix: 'char_light_swordswoman',
         name: '빛의 검사',
@@ -107,6 +110,7 @@ export const CHARACTER_DEFS = {
     },
     whiteTigerBrawler: {
         id: 'whiteTigerBrawler',
+        basicAttackVariants: ['backhand'],
         assetKey: 'white_tiger_brawler',
         texturePrefix: 'char_white_tiger_brawler',
         name: '백호 투사',
@@ -128,6 +132,7 @@ export const CHARACTER_DEFS = {
     },
     flameMage: {
         id: 'flameMage',
+        basicAttackVariants: ['lift'],
         assetKey: 'flame_mage',
         texturePrefix: 'char_flame_mage',
         name: '화염 마도사',
@@ -148,6 +153,7 @@ export const CHARACTER_DEFS = {
     },
     sanctuaryHealer: {
         id: 'sanctuaryHealer',
+        basicAttackVariants: ['blessing'],
         assetKey: 'sanctuary_healer',
         texturePrefix: 'char_sanctuary_healer',
         name: '성역 치유사',

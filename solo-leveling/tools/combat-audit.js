@@ -2,6 +2,7 @@ import { Player } from '../js/entities/Player.js';
 import { WeaponManager } from '../js/managers/WeaponManager.js';
 import { CHARACTER_DEFS, CHARACTER_FRAME_NAMES, getCharacterWeaponKeys } from '../js/utils/Characters.js';
 import { getGameplayAssetList, CHARACTER_MOTION_ASSET_VERSION } from '../js/utils/AssetManifest.js';
+import { WEAPONS } from '../js/utils/Constants.js';
 const $ = id => document.getElementById(id);
 const ids = Object.keys(CHARACTER_DEFS);
 for (const id of ids) $('character').add(new Option(id, id));
@@ -11,19 +12,22 @@ function choices() {
     $('action').replaceChildren(...getCharacterWeaponKeys($('character').value).map(key => new Option(key, key)));
     $('strips').replaceChildren();
     const character = CHARACTER_DEFS[$('character').value];
+    for (const variant of ['', ...(character.basicAttackVariants || [])]) {
     for (const direction of ['right', 'left', 'down', 'up']) {
         const article = document.createElement('article');
         const heading = document.createElement('h2');
-        heading.textContent = `${character.id} — ${direction}`;
+        heading.textContent = `${character.id} — ${variant || 'original'} — ${direction}`;
         const frames = document.createElement('div'); frames.className = 'frames';
         for (let i = 0; i < 6; i++) {
             const img = new Image(); img.alt = `${direction} frame ${i}`;
+            const name = `attack_${variant ? variant + '_' : ''}${direction}_${i}`;
             img.src = character.usesExistingPlayerMotion
-                ? `../assets/player/motion/player_attack_${direction}_${i}.png?v=${CHARACTER_MOTION_ASSET_VERSION}`
-                : `../assets/player/characters/${character.assetKey}/motion/attack_${direction}_${i}.png?v=${CHARACTER_MOTION_ASSET_VERSION}`;
+                ? `../assets/player/motion/player_${name}.png?v=${CHARACTER_MOTION_ASSET_VERSION}`
+                : `../assets/player/characters/${character.assetKey}/motion/${name}.png?v=${CHARACTER_MOTION_ASSET_VERSION}`;
             frames.append(img);
         }
         article.append(heading, frames); $('strips').append(article);
+    }
     }
 }
 choices();
@@ -32,7 +36,7 @@ class AuditScene extends Phaser.Scene {
     preload() {
         const assets = new Map();
         for (const id of ids) for (const asset of getGameplayAssetList(id)) {
-            if (/^(char_skill_|basic_attack_|char_.*_(idle|attack|walk|hit)_|motion_player_)/.test(asset.key)) {
+            if (/^(char_skill_|basic_attack_|char_.*_(idle|attack|walk|hit)_|motion_player_|player_attack_)/.test(asset.key)) {
                 const key = asset.key.replace(/^motion_/, '');
                 assets.set(key, `${asset.path}?v=${asset.cacheVersion || 'audit-20261010'}`);
             }
@@ -47,7 +51,7 @@ class AuditScene extends Phaser.Scene {
         // Player's optional aura is hidden in production as well.
         this.textures.addImage('player_aura', this.textures.get('player_idle_0').getSourceImage());
         this.reset();
-        $('fire').disabled = $('record').disabled = false;
+        $('fire').disabled = $('record').disabled = $('combo').disabled = false;
         $('status').textContent = 'Ready. Select a character, action and direction.';
     }
     reset() {
@@ -94,7 +98,7 @@ $('character').addEventListener('change',()=>{choices(); scene?.reset();});
 $('action').addEventListener('change',()=>scene?.reset());
 $('direction').addEventListener('change',()=>scene?.reset());
 $('fire').addEventListener('click',()=>scene?.fire());
-$('record').addEventListener('click',async()=>{
+async function capture(basicCycle = false) {
     if (!scene || recording) return;
     recording = true;
     // Fixed 60 Hz production steps keep diagnostic captures repeatable even
@@ -105,16 +109,22 @@ $('record').addEventListener('click',async()=>{
     // Supply the same diagnostic clock to tweens and scene timers.
     const tweenDelta = scene.tweens.getDelta;
     scene.tweens.getDelta = () => 1000/60;
-    for (const id of ['fire','record','character','action','direction']) $(id).disabled = true;
+    for (const id of ['fire','record','combo','character','action','direction']) $(id).disabled = true;
     $('capture').replaceChildren();
+    $('capture').dataset.state = 'recording';
     try {
-    for (const key of getCharacterWeaponKeys($('character').value)) {
+    const basic = getCharacterWeaponKeys($('character').value)[0];
+    const keys = basicCycle ? WEAPONS[basic].basicAttackPattern.map(()=>basic) : getCharacterWeaponKeys($('character').value);
+    if (basicCycle) { $('action').value = basic; scene.reset(); }
+    for (const [step, key] of keys.entries()) {
         $('action').value = key;
         const article = document.createElement('article');
-        const heading = document.createElement('h2'); heading.textContent = key;
+        const heading = document.createElement('h2');
+        heading.textContent = basicCycle ? `${key} step ${step+1}: ${WEAPONS[basic].basicAttackPattern[step].motion || 'original'}` : key;
         const timeline = document.createElement('div'); timeline.className='timeline';
         article.append(heading,timeline); $('capture').append(article);
-        scene.fire();
+        if (basicCycle) { scene.hits = 0; scene.frameKeys.clear(); scene.weapon.fire(); }
+        else scene.fire();
         let elapsed = 0;
         for (const at of [50,100,150,250,400,700,1100,1600]) {
             while (elapsed + .01 < at) {
@@ -130,11 +140,19 @@ $('record').addEventListener('click',async()=>{
         heading.textContent += ` — ${scene.hits} hits; ${scene.frameKeys.size} body frames seen`;
         await new Promise(resolve => setTimeout(resolve, 0));
     }
+    $('capture').dataset.state = 'complete';
+    } catch (error) {
+        $('capture').dataset.state = 'error';
+        const notice = document.createElement('p'); notice.textContent = `Capture failed: ${error.message}`;
+        $('capture').append(notice);
+        throw error;
     } finally {
-    for (const id of ['fire','record','character','action','direction']) $(id).disabled = false;
+    for (const id of ['fire','record','combo','character','action','direction']) $(id).disabled = false;
     recording = false;
     scene.tweens.getDelta = tweenDelta;
     scene.tweens.prevTime = Date.now();
     game.loop.start(game.step.bind(game));
     }
-});
+}
+$('record').addEventListener('click',()=>capture(false));
+$('combo').addEventListener('click',()=>capture(true));

@@ -130,8 +130,8 @@ const PLAYER_MOTION_NAMES = [
 // Character image URLs are otherwise stable across releases and can remain in
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
 export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
-export const CHARACTER_MOTION_ASSET_VERSION = '20261010-higgsfield-combat-motion-v3';
-export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261010-authored-combat-vfx-v14';
+export const CHARACTER_MOTION_ASSET_VERSION = '20261010-basic-combo-motion-v4';
+export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261010-basic-combo-vfx-v16';
 export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({
@@ -162,11 +162,17 @@ export function getCharacterPortraitAssets() {
 
 export function getCharacterMotionAssets(characterId = getStoredCharacterId()) {
     const character = getCharacter(characterId);
-    if (character.usesExistingPlayerMotion) return [];
+    const variants = (character.basicAttackVariants || []).flatMap(variant =>
+        ['down', 'right', 'up', 'left'].flatMap(direction =>
+            Array.from({length: 6}, (_, i) => `attack_${variant}_${direction}_${i}`)));
+    if (character.usesExistingPlayerMotion) {
+        return variants.map(name => ({key: `player_${name}`,
+            path: `assets/player/motion/player_${name}.png`, cacheVersion: CHARACTER_MOTION_ASSET_VERSION}));
+    }
     return frameAssets(
         character.texturePrefix,
         `assets/player/characters/${character.assetKey}/motion`,
-        CHARACTER_FRAME_NAMES
+        [...CHARACTER_FRAME_NAMES, ...variants]
     );
 }
 
@@ -197,6 +203,13 @@ export function getCharacterCombatVfxFrameAssets(characterId = getStoredCharacte
         }
     }
 
+    if (getCharacter(characterId).id === 'shadowMonarch') {
+        for (let frame = 0; frame < CHARACTER_COMBAT_VFX_FRAME_COUNT; frame++) {
+            effects.push({key: `basic_attack_shadow_dagger_cut_${frame}`,
+                path: `assets/effects/basic_attacks/frames/shadow_dagger_cut_${frame}.png`,
+                cacheVersion: CHARACTER_COMBAT_VFX_ASSET_VERSION});
+        }
+    }
     return effects;
 }
 

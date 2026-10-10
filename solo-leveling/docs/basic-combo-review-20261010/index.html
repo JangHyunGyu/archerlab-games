@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Basic attack cycle review</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111722;color:#e9edf5;font:16px/1.6 system-ui;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}main{max-width:1000px;margin:auto}h1{font-size:clamp(24px,5vw,36px)}a{color:#b6c9ff;overflow-wrap:anywhere}nav{display:flex;flex-wrap:wrap;gap:16px}nav a,summary{min-height:44px;padding:10px 0}table{width:100%;border-collapse:collapse}td,th{text-align:left;border-bottom:1px solid #43516a;padding:10px;vertical-align:top}details{margin:20px 0;background:#1b2535;padding:12px;border-radius:8px}summary{cursor:pointer}img{display:block;width:100%;height:auto;margin:12px 0}small{color:#acb8ca}
+</style>
+<main>
+<h1>Basic attack cycle review</h1>
+<p>10 October 2026 · Five protagonists · Deterministic animation cycles.</p>
+<nav><a href="../../">Play game</a><a href="../../tools/combat-audit.html">Interactive combat preview</a><a href="../../tools/responsive-audit.html">Viewport preview</a></nav>
+<table><thead><tr><th>Character</th><th>Repeating sequence</th><th>Ratio</th></tr></thead><tbody>
+<tr><td>Shadow Monarch</td><td>Diagonal dagger cut → reverse cut → thrust</td><td>2 cuts : 1 thrust</td></tr>
+<tr><td>Light Swordswoman</td><td>Descending cut → rising cut</td><td>1 : 1</td></tr>
+<tr><td>White Tiger Brawler</td><td>Claw rake → backhand rake</td><td>1 : 1</td></tr>
+<tr><td>Flame Mage</td><td>Forward palm ×2 → palm lift</td><td>2 : 1</td></tr>
+<tr><td>Sanctuary Healer</td><td>Forward channel ×2 → raised blessing</td><td>2 : 1</td></tr>
+</tbody></table>
+<p>The cycle advances once per emitted attack, including extra attacks gained through levels. Damage, cooldowns, attack counts and ranges retain their existing values. Skills use their existing body tracks and do not advance the basic attack cycle. Reduced-motion mode retains the same attack timing.</p>
+<p>Higgsfield MCP generated 18 four-pose body strips and the final six-stage dagger trail. Extraction adds 144 directional body frames and six VFX frames, each with lossless PNG/WebP pairs. Left-facing frames mirror complete right-facing poses. Each body strip uses one scale calibrated to its existing ready pose, and ends on the existing recovery frame. The new dagger trail has a +X forward axis and a narrower rendered height. The front-facing mage poses are mirrored individually to preserve the established staff hand.</p>
+<p>The first dagger cut was rejected after visual feedback: its broad white surface and smooth pale crescent did not match the existing thrust. The replacement was generated with the actual thrust PNG as its image reference. It retains saturated purple filaments, narrow bright cores, torn trailing strands and dark gaps, with six distinct growth and dissipation stages.</p>
+<img src="dagger-style-comparison.jpg" alt="Existing purple thrust, rejected pale crescent, and revised textured purple cut">
+<p><a href="../../assets/player/motion_v2_sources/basic_combos/generation.json">Body prompts, reference IDs and generation records</a> · <a href="../../assets/effects/source/basic_combo_20261010/generation.json">Dagger effect prompt and generation record</a></p>
+<details><summary>Shadow Monarch — bodies and runtime cycle</summary><img loading="lazy" src="shadow_monarch-cut.png" alt="Diagonal cut in four directions"><img loading="lazy" src="shadow_monarch-reverse.png" alt="Reverse cut in four directions"><img loading="lazy" src="shadowMonarch-runtime.jpg" alt="Two cuts and one thrust in four directions"></details>
+<details><summary>Light Swordswoman — bodies and runtime cycle</summary><img loading="lazy" src="light_swordswoman-rise.png" alt="Rising cut in four directions"><img loading="lazy" src="lightSwordswoman-runtime.jpg" alt="Descending and rising cuts in four directions"></details>
+<details><summary>White Tiger Brawler — bodies and runtime cycle</summary><img loading="lazy" src="white_tiger_brawler-backhand.png" alt="Backhand rake in four directions"><img loading="lazy" src="whiteTigerBrawler-runtime.jpg" alt="Two claw rakes in four directions"></details>
+<details><summary>Flame Mage — bodies and runtime cycle</summary><img loading="lazy" src="flame_mage-lift.png" alt="Palm lift in four directions"><img loading="lazy" src="flameMage-runtime.jpg" alt="Forward casts and palm lift in four directions"></details>
+<details><summary>Sanctuary Healer — bodies and runtime cycle</summary><img loading="lazy" src="sanctuary_healer-blessing.png" alt="Raised blessing in four directions"><img loading="lazy" src="sanctuaryHealer-runtime.jpg" alt="Forward channels and blessing in four directions"></details>
+<p><small>Body sheets: first column is the existing ready pose, followed by six new runtime frames. Runtime panels: 150 ms snapshots from a fixed 60 Hz capture, one complete cycle in each of four directions. Target dummies retain their hit color between beats.</small></p>
+<p>Verification: production weapon and Player classes, all 52 cycle beats across five characters and four directions; automated order checks over 12 attacks per character, extra-attack cadence, dead-player suppression, skill interruption, missing-track fallback and dagger hit parity; pixel/alpha, mirror, recovery and motion-variance checks for 484 body frame pairs; all 156 VFX frames. Korean dagger description reviewed independently with humanize-korean and synchronized with English/Japanese translations.</p>
+<p>Viewport checks: 320×568, 360×640, 390×844, 430×932, 768×1024, 1024×768, 1440×900, 1920×1080, 568×320, 844×390 and 932×430. Canvas, iframe and document scroll dimensions matched at every size. A shortened 390×764 viewport also passed. Title, character selection and upgrade dialogs were inspected; live gameplay was reviewed on phone, tablet, desktop and landscape sizes.</p>
+<p><a href="runtime-evidence.json">Captured attack order and texture keys</a> · <a href="korean-review.md">Independent Korean description review</a></p>
+<p><small>Viewport checks use browser iframe sizes and mouse/keyboard input. They do not constitute physical touch-device or hardware safe-area certification. This page records the implementation review; release status is tracked by the main-branch deployment.</small></p>
+</main>
+</html>

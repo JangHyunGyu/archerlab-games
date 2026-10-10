@@ -299,7 +299,7 @@ export const WAVE_CONFIG = {
 export const WEAPONS = {
     basicDagger: {
         name: '단검 공격',
-        description: '단검으로 가까운 적을 빠르게 찌릅니다',
+        description: '쌍단검으로 가까운 적을 베고 찌릅니다',
         type: 'melee',
         soundKey: 'shadowMonarchBasicDagger',
         unlockLevel: 1,
@@ -310,6 +310,12 @@ export const WEAPONS = {
         targetAcquireMultiplier: 2,
         hitAngle: 0.42,
         attackStyle: 'dualDaggerCrossThrust',
+        // Advance on each emitted attack, including level-up extra attacks.
+        basicAttackPattern: [
+            { motion: 'cut', side: 1, style: 'daggerSlash' },
+            { motion: 'reverse', side: -1, style: 'daggerSlash' },
+            { motion: null, side: 1 },
+        ],
         basicAttackEffectKey: 'shadow_dagger_slash',
         effectOrientation: 'bodyThrust',
         effectScale: 0.58,
@@ -450,6 +456,7 @@ Object.assign(WEAPONS, {
         name: '빛가름 검격',
         description: '가까운 적을 광휘의 검날로 빠르게 베어냅니다.',
         attackStyle: 'swordSlash',
+        basicAttackPattern: [{ motion: null, side: 1 }, { motion: 'rise', side: -1 }],
         basicAttackEffectKey: 'light_sword_slash',
         effectOrientation: 'bodyArc',
         effectRotationOffset: Math.PI / 4,
@@ -572,6 +579,7 @@ Object.assign(WEAPONS, {
         name: '백호 장타',
         description: '근접 적에게 묵직한 손날 타격을 꽂아 넣습니다.',
         attackStyle: 'clawSwipe',
+        basicAttackPattern: [{ motion: null, side: 1 }, { motion: 'backhand', side: -1 }],
         basicAttackEffectKey: 'tiger_claw_swipe',
         effectOrientation: 'bodyArc',
         effectRotationOffset: -Math.PI / 4,
@@ -676,6 +684,7 @@ Object.assign(WEAPONS, {
         description: '가까운 적을 짧은 화염 폭발로 태웁니다.',
         hitEffect: 'burn',
         attackStyle: 'fireball',
+        basicAttackPattern: [{ motion: null }, { motion: null }, { motion: 'lift' }],
         basicAttackEffectKey: 'flame_fireball',
         effectOrientation: 'projectile',
         effectRotationOffset: -Math.PI / 7,
@@ -779,6 +788,7 @@ Object.assign(WEAPONS, {
         name: '성역 타격',
         description: '정화의 힘을 담은 짧은 타격으로 가까운 적을 밀어냅니다.',
         attackStyle: 'sanctuaryBurst',
+        basicAttackPattern: [{ motion: null }, { motion: null }, { motion: 'blessing' }],
         basicAttackEffectKey: 'sanctuary_mace_slam',
         effectOrientation: 'targetImpact',
         soundKey: 'sanctuaryStaffCast',

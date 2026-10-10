@@ -137,7 +137,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
     const basicIdentity = key => `basic_attack_${WEAPONS[key].basicAttackEffectKey}`;
     const skillIdentity = key => `char_skill_${WEAPONS[key].effectKey}`;
 
-    // The dagger remains a forward-fitted thrust.
+    // The third dagger beat retains the original forward-fitted thrust.
     {
         const key = 'basicDagger';
         const centerForward = 86;
@@ -261,8 +261,8 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         ['_clawSwipe', '_sanctuaryBurst'],
     ];
     for (const [method, nextMethod] of centeredMethodBounds) {
-        const start = basicRuntime.indexOf(`    ${method}() {`);
-        const end = basicRuntime.indexOf(`    ${nextMethod}() {`, start);
+        const start = basicRuntime.indexOf(`    ${method}(variant = null) {`);
+        const end = basicRuntime.indexOf(`    ${nextMethod}(variant = null) {`, start);
         const body = basicRuntime.slice(start, end);
         assert.ok(start >= 0 && end > start, `${method}: runtime body not found`);
         assert.match(body, /getEffectCenteredFit\(effectTexture,/);
@@ -302,6 +302,14 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         frameFiles.set(key, files);
     }
     assert.strictEqual(frameAudit.size * 6, 150, 'pixel audit must cover all 25 six-frame sequences');
+    const cutFiles = Array.from({length:6},(_,i)=>path.join(root,'assets/effects/basic_attacks/frames',`shadow_dagger_cut_${i}.png`));
+    const cutFrames = cutFiles.map(file=>readRgbaPngAlphaBounds(file));
+    assert.equal(new Set(cutFiles.map(file=>fs.readFileSync(file).toString('base64'))).size,6,'cut stages must be distinct');
+    const cutPeak = readRgbaPngAlphaBounds(path.join(root,'assets/effects/basic_attacks/shadow_dagger_cut.png'));
+    const cutBounds = getCombatVfxVisibleBounds('basic_attack_shadow_dagger_cut');
+    for(const key of ['left','top','right','bottom','width','height']) assert.equal(cutBounds[key],cutPeak[key],'cut fitting uses measured peak');
+    assert.ok(cutPeak.meanX>276,'dagger crescent convex edge must face +X');
+    for(const frame of cutFrames) assert.ok(Math.hypot(frame.meanX-256,frame.meanY-256)<160,'cut pivot stays within forward-fit allowance');
 
     // For narrow projectile/thrust art, PCA measures the undirected image axis
     // on every frame. A separate visual head/tail audit chooses the signed
@@ -406,7 +414,7 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         );
     }
 
-    console.log(`combat VFX hit-range, direction, and pixel audit verified: ${coveredKeys.size}/25, 150/150 frames`);
+    console.log(`combat VFX hit-range, direction, and pixel audit verified: ${coveredKeys.size}/25 weapons, 156/156 frames including alternate dagger cut`);
 })().catch(error => {
     console.error(error);
     process.exit(1);

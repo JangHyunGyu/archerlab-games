@@ -1,0 +1,25 @@
+{
+  "params": {
+    "model": "gpt_image_2",
+    "prompt": "Create a production game VFX animation SPRITE SHEET matching the supplied reference effect precisely in material, palette and line quality. The reference is the existing dagger THRUST trail: jagged fine violet filaments, deep purple shadow streaks, a hairline electric magenta-white core, sparse sharp glowing splinters, mostly transparent empty space. Make its companion DAGGER CUT effect. Curve those SAME textured filaments into one asymmetric short sweeping arc, like a hooked streak of torn purple lightning, convex toward screen RIGHT (+X), two fine trailing tails tapering LEFT. This is a fleeting close-range dagger slash, not a magical crescent projectile. Preserve the reference's saturated purple color, sparse energy density, dark gaps and textured fringe. A narrow white core occupies no more than one tenth of the effect's thickness. No broad white filled blade, no pastel lavender ribbon, no turquoise/cyan outlines, no smooth solid crescent, no thick bloom cloud. Exactly SIX square cells arranged THREE columns by TWO rows. Read left to right then next row: 1 tiny curved violet spark, 2 growing broken filament sweep, 3 sharp full contact arc with narrow luminous core and trailing strands, 4 fragmented follow-through arc, 5 dissolving purple wisps, 6 a few dim short splinters. Every cell is a different temporal stage, same fixed center and scale, isolated with generous padding. Peak spans about 70% cell width and 30% cell height, fine irregular texture remains readable at a rendered width of 160px. Background must be perfectly flat uniform pure GREEN #00FF00 for chroma extraction, no black backdrop from reference. No character, weapon, hands, ground, shadows, text, numbering, borders or grid lines. Match the reference dagger thrust's gritty sharp anime shadow-energy treatment, only change its trajectory from straight to curved.",
+    "medias": [
+      {
+        "value": "ac42226b-9d0a-4304-b4c4-f995798a6a5f",
+        "role": "image"
+      }
+    ],
+    "count": 1,
+    "aspect_ratio": "3:2",
+    "resolution": "2k",
+    "quality": "high"
+  },
+  "context": "Replace a mismatched dagger slash effect with a textured purple trail matching the existing thrust effect.",
+  "provider": "Higgsfield MCP",
+  "job_id": "cd4433d1-effe-43ec-ada4-d1a9fb5a9c03",
+  "reference_asset": "assets/effects/basic_attacks/shadow_dagger_slash.png",
+  "reference_sha256": "b2de9e5359818e00bc177feeb299024e2173c9acbfe8c3073caf35451569eaee",
+  "source_sha256": "f25e60e1b72f93d495042c3909710837309b0aa47ccaa9947da5b4f9c5893839",
+  "processing": "Six fixed cells; shared scale and pivot; chroma removal/despill; native +X sweep; no per-frame mirroring or normalization.",
+  "replaces_job_id": "85fdcd4c-58a2-482a-a8f1-9c1e611dbc79",
+  "revision_reason": "The first pale, smooth, broad crescent did not match the existing thin purple filament thrust. Regenerated against the actual existing thrust asset."
+}

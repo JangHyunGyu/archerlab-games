@@ -3,6 +3,7 @@
 export const COMBAT_VFX_CANVAS_SIZE = 512;
 
 export const COMBAT_VFX_VISIBLE_BOUNDS = Object.freeze({
+    'basic_attack_shadow_dagger_cut': Object.freeze({ left: 49, top: 119, right: 411, bottom: 386, width: 362, height: 267 }),
     'basic_attack_shadow_dagger_slash': Object.freeze({ left: 86, top: 234, right: 426, bottom: 277, width: 340, height: 43 }),
     'char_skill_shadow_dagger': Object.freeze({ left: 57, top: 185, right: 456, bottom: 326, width: 399, height: 141 }),
     'char_skill_shadow_slash': Object.freeze({ left: 62, top: 94, right: 486, bottom: 343, width: 424, height: 249 }),

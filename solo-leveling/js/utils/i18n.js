@@ -97,7 +97,7 @@ const TEXTS = {
             ironKnight: '아이언 나이트', demonWarrior: '마족 전사',
         },
         weapons: {
-            basicDagger: { name: '단검 공격', desc: '단검으로 가까운 적을 빠르게 찌릅니다' },
+            basicDagger: { name: '단검 공격', desc: '쌍단검으로 가까운 적을 베고 찌릅니다' },
             shadowDagger: { name: '단검 투척', desc: '가장 가까운 적에게 그림자 단검을 투척합니다' },
             shadowSlash: { name: '그림자 베기', desc: '전방에 그림자 검기를 휘둘러 적을 벱니다' },
             rulersAuthority: { name: '지배자의 권능', desc: '텔레키네시스로 주변 적에게 범위 피해를 줍니다' },
@@ -207,7 +207,7 @@ const TEXTS = {
             ironKnight: 'Iron Knight', demonWarrior: 'Demon Warrior',
         },
         weapons: {
-            basicDagger: { name: 'Dagger Attack', desc: 'Stab nearby enemies quickly with a dagger' },
+            basicDagger: { name: 'Dagger Attack', desc: 'Slash and stab nearby enemies with twin daggers' },
             shadowDagger: { name: 'Dagger Throw', desc: 'Throw a shadow dagger at the nearest enemy' },
             shadowSlash: { name: 'Shadow Slash', desc: 'Swing a shadow blade to slash enemies ahead' },
             rulersAuthority: { name: "Ruler's Authority", desc: 'Deal AoE damage with telekinesis' },
@@ -316,7 +316,7 @@ const TEXTS = {
             ironKnight: 'アイアンナイト', demonWarrior: '魔族戦士',
         },
         weapons: {
-            basicDagger: { name: '短剣攻撃', desc: '短剣で近くの敵を素早く突きます' },
+            basicDagger: { name: '短剣攻撃', desc: '二本の短剣で近くの敵を斬り、突きます' },
             shadowDagger: { name: '短剣投擲', desc: '最も近い敵に影の短剣を投げます' },
             shadowSlash: { name: '影斬り', desc: '前方に影の剣気を振るい敵を斬ります' },
             rulersAuthority: { name: '支配者の権能', desc: 'テレキネシスで周囲の敵に範囲ダメージ' },

@@ -18,6 +18,7 @@ import statistics
 from typing import Sequence
 
 from PIL import Image, ImageChops, ImageFilter, ImageOps
+from build_basic_attack_variants import VARIANTS
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -351,6 +352,9 @@ def verify_motion_set(motion_set: MotionSet) -> dict[str, float]:
         raise AssertionError(f"missing motion directory: {motion_set.motion_dir}")
 
     expected = set(expected_names(motion_set.prefix))
+    variants = VARIANTS.get(motion_set.source_id, ())
+    expected.update(f'{motion_set.prefix}attack_{variant}_{direction}_{i}'
+                    for variant in variants for direction in DIRECTIONS for i in range(ATTACK_FRAMES))
     actual_png = {path.stem for path in motion_set.motion_dir.glob("*.png")}
     actual_webp = {path.stem for path in motion_set.motion_dir.glob("*.webp")}
     if actual_png != expected or actual_webp != expected:
@@ -374,6 +378,19 @@ def verify_motion_set(motion_set: MotionSet) -> dict[str, float]:
 
     peaks: list[float] = []
     step_means: list[float] = []
+    for variant in variants:
+        for direction in DIRECTIONS:
+            sequence = [logical(frames, motion_set, f'attack_{variant}_{direction}_{i}') for i in range(ATTACK_FRAMES)]
+            verify_sequence_variance(f'{motion_set.label}/{variant}/{direction}', sequence,
+                                     minimum_unique=4, minimum_peak=0.045, minimum_active_steps=3)
+            old_recovery = logical(frames, motion_set, f'attack_{direction}_5')
+            if sequence[-1].tobytes() != old_recovery.tobytes():
+                raise AssertionError(f'{motion_set.label}/{variant}: recovery drift')
+        for i in range(ATTACK_FRAMES):
+            right = logical(frames, motion_set, f'attack_{variant}_right_{i}')
+            left = logical(frames, motion_set, f'attack_{variant}_left_{i}')
+            if ImageOps.mirror(right).tobytes() != left.tobytes():
+                raise AssertionError(f'{motion_set.label}/{variant}: mirror drift')
     for direction in DIRECTIONS:
         walk = [logical(frames, motion_set, f"walk_{direction}_{index}") for index in range(WALK_FRAMES)]
         verify_sequence_variance(
@@ -730,7 +747,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         for motion_set in MOTION_SETS:
             metrics = verify_motion_set(motion_set)
             print(
-                f"frames verified {motion_set.label}: 68 PNG + 68 pixel-identical WebP / "
+                f"frames verified {motion_set.label}: {68 + 24 * len(VARIANTS.get(motion_set.source_id, ()))} PNG + pixel-identical WebP / "
                 f"direction down-up {metrics['down_up']:.3f}, left-right {metrics['left_right']:.3f} / "
                 f"min attack peak {metrics['min_attack_peak']:.3f}"
             )

@@ -5514,6 +5514,66 @@
       "sha256": "15ac37acb914b970554b414eaba6de915c2657b9a32f8bd7668252aebf3021bd"
     },
     {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_0.png",
+      "bytes": 11323,
+      "sha256": "b0a8931e13e0b920760c071b0a94983bc599b35d529f62ae747e280c1a5cffed"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_0.webp",
+      "bytes": 7790,
+      "sha256": "82d7afecc97c194212a39581cc6fa2dc59cbdb2aa002ed229719bc30604ce163"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_1.png",
+      "bytes": 41222,
+      "sha256": "32be5a28978bd1edbe0c1f81197a65c45c65ae98d9b49c9a75a1b5ae1ccf1b73"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_1.webp",
+      "bytes": 32646,
+      "sha256": "25d115e5c48954f43c9841df79b163ed4310143866b86e5801e5f7136c8d72a6"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_2.png",
+      "bytes": 85688,
+      "sha256": "7293f44fb6f9c7a757d5cca8cb014e299887eff8dfdd6563d394ddf0dc7df501"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_2.webp",
+      "bytes": 69274,
+      "sha256": "c05f99f75644e6a69b00c5a1089c95c9b674e55a91c39b8e798251b2d50ad115"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_3.png",
+      "bytes": 66995,
+      "sha256": "474d8b025a7498b84a25cef3881805378c888dd2e7372e8b7fb31480ed0eef45"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_3.webp",
+      "bytes": 50812,
+      "sha256": "0469ce4eb169a0412ae38eb02bfbcc76c572c95a4ffb1d43af46a3cf9f1e49fd"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_4.png",
+      "bytes": 35045,
+      "sha256": "277f4a1af8d1d4bedb5ad03333b82de565d6209df3ac756e01d687fde33fc6e1"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_4.webp",
+      "bytes": 24218,
+      "sha256": "301d6003891545774270d804aa2774981452e9eda06afbdce46fbf62ccb810a5"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_5.png",
+      "bytes": 11764,
+      "sha256": "db9d539ecc329918e941e7d6b9444843811ed191f22a9ae2f883894cfddebd54"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_cut_5.webp",
+      "bytes": 7102,
+      "sha256": "045207b591d3906d0d1f438a4c826ab33bd69f17795f29901716f2ce27ae5ff8"
+    },
+    {
       "path": "solo-leveling/assets/effects/basic_attacks/frames/shadow_dagger_slash_0.png",
       "bytes": 5439,
       "sha256": "2bb1d880a7af733ae32a8b392f7b76440a2b15905a1869f868d09232b70d19cd"
@@ -5652,6 +5712,16 @@
       "path": "solo-leveling/assets/effects/basic_attacks/sanctuary_mace_slam.webp",
       "bytes": 95398,
       "sha256": "80ae393cc5e99b09aa7f5105e8942d3767f4da2981124bf878242c308625eb7d"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/shadow_dagger_cut.png",
+      "bytes": 85688,
+      "sha256": "7293f44fb6f9c7a757d5cca8cb014e299887eff8dfdd6563d394ddf0dc7df501"
+    },
+    {
+      "path": "solo-leveling/assets/effects/basic_attacks/shadow_dagger_cut.webp",
+      "bytes": 69274,
+      "sha256": "c05f99f75644e6a69b00c5a1089c95c9b674e55a91c39b8e798251b2d50ad115"
     },
     {
       "path": "solo-leveling/assets/effects/basic_attacks/shadow_dagger_slash.png",
@@ -8844,6 +8914,11 @@
       "sha256": "0f90702fca0cdbf8a426df0f4a333e9af417abd7a92d47a69eb90a3ffb9ce42f"
     },
     {
+      "path": "solo-leveling/assets/effects/source/basic_combo_20261010/shadow_dagger_cut_sheet.png",
+      "bytes": 2257126,
+      "sha256": "f25e60e1b72f93d495042c3909710837309b0aa47ccaa9947da5b4f9c5893839"
+    },
+    {
       "path": "solo-leveling/assets/effects/source/boss_death_beru_sheet_alpha.png",
       "bytes": 1218976,
       "sha256": "01f2b37a660448922f52cfb955810d461ec6921c9a26d58f9d49438d8b537339"
@@ -9729,6 +9804,246 @@
       "sha256": "e24e97e8e22a104f3273e81ab61d9a56169b51abccc492b1982c55be1b3ddc8b"
     },
     {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_0.png",
+      "bytes": 14749,
+      "sha256": "332f8a258781630c6f2febc6ba8dc9ef4656f2dec7e5593912396c4f783bf249"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_0.webp",
+      "bytes": 11932,
+      "sha256": "5b3fc683ad0368dae1aba9de5fbe686c385cab3a3aaeb4dc25c1bb54ead0e6ca"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_1.png",
+      "bytes": 14967,
+      "sha256": "184cb6ac6690c5fbeaa31635eaffd2f056dfc32db405b1dc00562a0190a7905c"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_1.webp",
+      "bytes": 11884,
+      "sha256": "72b964ae8b06a0bf4bf7d45eb9f1f5e9429c3fee598b96ccc09d5e363a6693ab"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_2.png",
+      "bytes": 15069,
+      "sha256": "b1a8e9ef25c45e61cb5c050df7be64de8b5e7207c697838ee7b00dd5dc3f5339"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_2.webp",
+      "bytes": 11998,
+      "sha256": "5a59c18ca710bbbf2cb1c68ed67da8f3a74384a90f031cf8ca5c8ae9b9711d64"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_3.png",
+      "bytes": 15069,
+      "sha256": "b1a8e9ef25c45e61cb5c050df7be64de8b5e7207c697838ee7b00dd5dc3f5339"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_3.webp",
+      "bytes": 11998,
+      "sha256": "5a59c18ca710bbbf2cb1c68ed67da8f3a74384a90f031cf8ca5c8ae9b9711d64"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_4.png",
+      "bytes": 14668,
+      "sha256": "291cb27c75f92d0a676c38f49983d4652c2c8a8fd7466f6c880353f9b7a254a8"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_4.webp",
+      "bytes": 11558,
+      "sha256": "cca921d1828cf5f63dec93409782ddce26f4ac7752c730c5503b144f12b21a57"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_5.png",
+      "bytes": 13693,
+      "sha256": "665b5b47017555fe2ce5c89be9fc325faff42b0dde88658dba0a67935c2ecba7"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_down_5.webp",
+      "bytes": 11004,
+      "sha256": "375038ae2cbaad0bf0ad83689196d0684f40c798d0f2960f6490d88f552dd09e"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_0.png",
+      "bytes": 13147,
+      "sha256": "4ac4ad70927423bec6de7b7248618758fa402c3163c0fdc89f7bbc33aafa1cff"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_0.webp",
+      "bytes": 10214,
+      "sha256": "f080a1095e204ee8b00c4c89d82c5695fe0a4a3f32668c3ffdba19034a6f3fd0"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_1.png",
+      "bytes": 13542,
+      "sha256": "4f0e7a1d9b492c079316736a802e4081c315ec7d9220c9c6d24f8fb80fce1d4a"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_1.webp",
+      "bytes": 10598,
+      "sha256": "ebd5e84f9c36b7a0dfcccc86d5735eb1f8ab749e89d26841574bd0630616c93a"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_2.png",
+      "bytes": 13098,
+      "sha256": "417cd2c77feea997c6b1dcefa63b219cefe6c91eef3b36eb4f548dcaaa8529bf"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_2.webp",
+      "bytes": 10222,
+      "sha256": "90e214e1e136e61b45f04b6028b94fc015a12cf793834b67457cb9ac4f0a8a97"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_3.png",
+      "bytes": 13098,
+      "sha256": "417cd2c77feea997c6b1dcefa63b219cefe6c91eef3b36eb4f548dcaaa8529bf"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_3.webp",
+      "bytes": 10222,
+      "sha256": "90e214e1e136e61b45f04b6028b94fc015a12cf793834b67457cb9ac4f0a8a97"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_4.png",
+      "bytes": 12196,
+      "sha256": "1a3a716f600b4e6bea1ab91709273ff738b44fbed13448aedcd3a925d164e585"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_4.webp",
+      "bytes": 9604,
+      "sha256": "c2739d13bc28e8fe284be4db624d24e03e87516b53608b88873262e5847cca8d"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_5.png",
+      "bytes": 13275,
+      "sha256": "498188af8d15b7e55cb183340da961be3e00f1eb19c2ef2399fd07dfb68eb221"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_left_5.webp",
+      "bytes": 10734,
+      "sha256": "15abdba32a8d007aeec75db62de93b9362688cc9e1e26a9a91ad12621d17f4c6"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_0.png",
+      "bytes": 13120,
+      "sha256": "0c63b18d0b4db660d966b42fe7e2344b6f003d6058008c2ef64e6d856bf5d951"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_0.webp",
+      "bytes": 10224,
+      "sha256": "fdd27bb2e6d9aa3e8fbc7bfc7c4cce54b5cbe5c92dcd9ef9bb44dd0ff337be4b"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_1.png",
+      "bytes": 13600,
+      "sha256": "7f45493d0ef32bea0ba246d4be7c003939b88003a880a3075a961c80fa95f984"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_1.webp",
+      "bytes": 10560,
+      "sha256": "ee5bf549af530ceae7b492add4fadc777c0c83fc70d989b7dbdbec089ba262e7"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_2.png",
+      "bytes": 13106,
+      "sha256": "cf44691be250fe94918de7ba7b7715fb62f9ea509e90bd8584e254cb2c092c38"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_2.webp",
+      "bytes": 10226,
+      "sha256": "e6cf4b2d1930bc2643ef0cfa6c055fe9f28b0995f50124d97abdfc9134515325"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_3.png",
+      "bytes": 13106,
+      "sha256": "cf44691be250fe94918de7ba7b7715fb62f9ea509e90bd8584e254cb2c092c38"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_3.webp",
+      "bytes": 10226,
+      "sha256": "e6cf4b2d1930bc2643ef0cfa6c055fe9f28b0995f50124d97abdfc9134515325"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_4.png",
+      "bytes": 12293,
+      "sha256": "9dce8e93ab61fed85e384eedcd36538f12487a722b5b9921bb2ed307bb672e29"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_4.webp",
+      "bytes": 9702,
+      "sha256": "f9cd17daf0a66cb7035ff0b65ed2241fc59ef61535ef3f16309caeb563cdba11"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_5.png",
+      "bytes": 13393,
+      "sha256": "7996f3bcbbb357ec1ef63e7e97488204f5015ac0ddde4d162c9684c494497796"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_right_5.webp",
+      "bytes": 10704,
+      "sha256": "43e49e98fac5c04691e237d3252073882cdd90e1a3b7228fa41b8f4d3fd5b89f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_0.png",
+      "bytes": 13924,
+      "sha256": "dc06505d1724da8c77f05d26844f767783cf57dd9f8724686b713070ada4a947"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_0.webp",
+      "bytes": 10660,
+      "sha256": "679909b7d7d56974a0a437e1787a1413d47f7645df3b98f79ccfa7e4d0df4b2b"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_1.png",
+      "bytes": 13943,
+      "sha256": "1b42a89d49cfd957637deabb5af8277867af011bbcb08b74afb042424710d591"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_1.webp",
+      "bytes": 10776,
+      "sha256": "ddad682a66a5a335aa0532fafd6d5a89c9d69907e7b5823c7948bb3aa00b7f76"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_2.png",
+      "bytes": 13554,
+      "sha256": "613824cb5ea3b68c02f8a293558eef4c0871be76e62785ef1541401823bfbc02"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_2.webp",
+      "bytes": 10486,
+      "sha256": "acf32203ca38c6ea47c0b831c453fcb7342dc095beab7828bd9af63d1fd9b490"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_3.png",
+      "bytes": 13554,
+      "sha256": "613824cb5ea3b68c02f8a293558eef4c0871be76e62785ef1541401823bfbc02"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_3.webp",
+      "bytes": 10486,
+      "sha256": "acf32203ca38c6ea47c0b831c453fcb7342dc095beab7828bd9af63d1fd9b490"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_4.png",
+      "bytes": 13478,
+      "sha256": "60c283ffbb22c9373e9b1ba9e7c71ef58e60239c68cc62c417820c8485dc9a0d"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_4.webp",
+      "bytes": 10440,
+      "sha256": "2455dea4805df5e857498a69f7a788ee514d729fac4b77e18c7309504d78bf1c"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_5.png",
+      "bytes": 13339,
+      "sha256": "f0c880bb013f4335c4630a334e9308c69f3924606b3cbd941f631a17f64e5ff6"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_lift_up_5.webp",
+      "bytes": 10360,
+      "sha256": "569066ce18f7a20dc029fd49830d2e80b350d7437b02c0efa580ab00e953e95a"
+    },
+    {
       "path": "solo-leveling/assets/player/characters/flame_mage/motion/attack_right_0.png",
       "bytes": 12858,
       "sha256": "f36aa747901a55d2ed6523e9673aad9b7b6730ea9ad4122f53ad0e1ac7886a85"
@@ -10509,6 +10824,246 @@
       "sha256": "6fccc9a595ea51479949aa829f560954ea478f9f6b1757646d6f78b64975bc30"
     },
     {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_0.png",
+      "bytes": 10144,
+      "sha256": "2930122160b13b355f4b4475b3ae7aa962db5e8ca3239fd6e6ef887fb10265ad"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_0.webp",
+      "bytes": 8620,
+      "sha256": "de2dfc3f990a26151a965793d43587e36b9ec46a3944320f8193c5dd94db7c84"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_1.png",
+      "bytes": 9972,
+      "sha256": "51df225e3e6ac33ce61631bcf2ed10b3b5a740b7967885bfbe1096600be987ab"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_1.webp",
+      "bytes": 8094,
+      "sha256": "3a0a7d68311508687cfcc42ac6f3aff82abb594d255fa3304d39c69779661b0e"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_2.png",
+      "bytes": 9983,
+      "sha256": "cf9ac131cd9247c79b39a2c2247e2efd758d715a12cb11a0dbf25349c642c34e"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_2.webp",
+      "bytes": 8108,
+      "sha256": "ee6482711963efccc47aa0149959258819bc64f3481186be5a06129a22577144"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_3.png",
+      "bytes": 9983,
+      "sha256": "cf9ac131cd9247c79b39a2c2247e2efd758d715a12cb11a0dbf25349c642c34e"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_3.webp",
+      "bytes": 8108,
+      "sha256": "ee6482711963efccc47aa0149959258819bc64f3481186be5a06129a22577144"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_4.png",
+      "bytes": 10735,
+      "sha256": "a526bcdeddd222f1f72b22355c76fa4ddd65d8d994bba7191158267c4ee3bca5"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_4.webp",
+      "bytes": 8820,
+      "sha256": "4ec33cf080251c488f6c05b8295c0ccfa90339cf341caa2242462b651cc99966"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_5.png",
+      "bytes": 8543,
+      "sha256": "b0e52bb99a1805eec56ea5866fd0c36920ce5cc195068b52181601eb5509df37"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_down_5.webp",
+      "bytes": 6904,
+      "sha256": "b37b4daf6ffb01f249b97296befa50e86955dd0ee1ff92ea489f8a8593337e17"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_0.png",
+      "bytes": 7833,
+      "sha256": "01cfa58603f345229ac57eaea2de0e5c19bf4aed151e98faab097cc115136376"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_0.webp",
+      "bytes": 6280,
+      "sha256": "3268282e4e5b7b32720efeeabbfd2c3a0a4bf708bd4f20397c4343d97cd670e6"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_1.png",
+      "bytes": 8019,
+      "sha256": "82fdba667ae4d8947903c7cf0f878080ce41e0c783b95bcfb9107da94894a844"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_1.webp",
+      "bytes": 6278,
+      "sha256": "7accb6fb974edf35364962c169d86bc2ff633fe97774d99bf1494dccd895deed"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_2.png",
+      "bytes": 8524,
+      "sha256": "0a5ccff9317ae6f49be3998a9de2bed4fabe8344d7d83e22fa9996eb955a2eb1"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_2.webp",
+      "bytes": 6666,
+      "sha256": "cea3315d597d8633843ffd3ab5dd3f75d819dbc3397b4a50ca56fa70035c7e0d"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_3.png",
+      "bytes": 8524,
+      "sha256": "0a5ccff9317ae6f49be3998a9de2bed4fabe8344d7d83e22fa9996eb955a2eb1"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_3.webp",
+      "bytes": 6666,
+      "sha256": "cea3315d597d8633843ffd3ab5dd3f75d819dbc3397b4a50ca56fa70035c7e0d"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_4.png",
+      "bytes": 8476,
+      "sha256": "1ab66e4a952b5e5733aa1e049ece67151cd19336840e063737665e065292bbc8"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_4.webp",
+      "bytes": 6794,
+      "sha256": "814b6175080c6026b52ea5031ff87395920b517135ee2eb0240fd0aaf6b8dbbf"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_5.png",
+      "bytes": 9291,
+      "sha256": "72317e771cec88cf3802c32bfe7be3809d567c82c43d36eaae53be2d19d2813a"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_left_5.webp",
+      "bytes": 7332,
+      "sha256": "e1d6a30feeddb8c2b9d21034d75047b2139d23f4f070e5a8c63436d86b465a91"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_0.png",
+      "bytes": 7843,
+      "sha256": "a1239e23f30d713067aaee259e61fb612ad558f52faa3ae1eef7617e6f04b3ad"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_0.webp",
+      "bytes": 6236,
+      "sha256": "5f332b5e40043781e44b2ee13e8da065c5425e108f3e5f45b5a845316c227360"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_1.png",
+      "bytes": 8004,
+      "sha256": "251e77568c617e45aca8fabfcf62b75ed25b353788ed865b9ac224dd607409d4"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_1.webp",
+      "bytes": 6274,
+      "sha256": "9f244937af770bef573b80970d96ba640d732e3f4c7ea1970d35c7a597546cca"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_2.png",
+      "bytes": 8586,
+      "sha256": "49481a541b3ae6ace07dbc4bc76fb689f24be9589839c75f7179230d13247daf"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_2.webp",
+      "bytes": 6650,
+      "sha256": "5ae892c2a87243463fd6a20077ff4c8175e112ef430700c41f936815d0dcd28e"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_3.png",
+      "bytes": 8586,
+      "sha256": "49481a541b3ae6ace07dbc4bc76fb689f24be9589839c75f7179230d13247daf"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_3.webp",
+      "bytes": 6650,
+      "sha256": "5ae892c2a87243463fd6a20077ff4c8175e112ef430700c41f936815d0dcd28e"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_4.png",
+      "bytes": 8481,
+      "sha256": "11d8b181b5806c7b4ee45e3992cde52782ac55278295e211aa67200d42063e89"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_4.webp",
+      "bytes": 6782,
+      "sha256": "743249eb36659cc5fd300ab8e4ac420d8363364775539cbc8a9fc7ba6f7c0b53"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_5.png",
+      "bytes": 9274,
+      "sha256": "4a042d82cdd78aed79d03d1ab251b5e773179f54afa94bdac04b9300c16c5e58"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_right_5.webp",
+      "bytes": 7324,
+      "sha256": "34a275ca5c6a76e6a62f7233585b249db75a22575413fefab942e135fc37a6f8"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_0.png",
+      "bytes": 10654,
+      "sha256": "a17925c16568982627f4e2e813ca03309f6ef68f7b81cb674b41028ba200a1bb"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_0.webp",
+      "bytes": 8474,
+      "sha256": "84a6885528ade3947596b5623164d69968b3d8c627a5bbb526216dbb615952a1"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_1.png",
+      "bytes": 10287,
+      "sha256": "492af6c87e23a050e33c8b37459385af5af0ee137e4daef1ddac7d7d8d7f9c3f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_1.webp",
+      "bytes": 8186,
+      "sha256": "7c619034fd250846c34f0a5cf55da48ec17816bb043b6bdd7a65c07faec54b2b"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_2.png",
+      "bytes": 9744,
+      "sha256": "4394b995ada3205b5f896ba023dc70533f95a6b9b369f541e2175375cdecd3d0"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_2.webp",
+      "bytes": 7672,
+      "sha256": "c13c1f2944fa5a9fbde48d28c07a5a9b50452414840c8bab66ef01013d8ab0ce"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_3.png",
+      "bytes": 9744,
+      "sha256": "4394b995ada3205b5f896ba023dc70533f95a6b9b369f541e2175375cdecd3d0"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_3.webp",
+      "bytes": 7672,
+      "sha256": "c13c1f2944fa5a9fbde48d28c07a5a9b50452414840c8bab66ef01013d8ab0ce"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_4.png",
+      "bytes": 10461,
+      "sha256": "d5196d589e4be58add815c3aaecc847c14247b4a351bb0104325278d3e2ca11e"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_4.webp",
+      "bytes": 8290,
+      "sha256": "667e85ab04989c02890030f743dbafd8f38a8cee26adb8c4cb5daa346013f370"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_5.png",
+      "bytes": 6776,
+      "sha256": "aefb40c0acc73ff50e58dfc29ba86f154cf7eb1cbd76ff7bbb06143cfe495561"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_rise_up_5.webp",
+      "bytes": 5546,
+      "sha256": "eda16ed7191dba7abc7c360c0ab911ef991877c2c9ed5dae0d95084b3a7fdab1"
+    },
+    {
       "path": "solo-leveling/assets/player/characters/light_swordswoman/motion/attack_up_0.png",
       "bytes": 7430,
       "sha256": "26495ee04748ae0210a18369d737a8cc7fcb9759b8491b470383dcf184a2013e"
@@ -11067,6 +11622,246 @@
       "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_5.webp",
       "bytes": 9958,
       "sha256": "9b5591167a24cbaf61f870c62612e1ba3a61780c060dbb8c0caa893a5411b419"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_0.png",
+      "bytes": 11928,
+      "sha256": "00e6e1f13d3ad24e9fe179ffd2eadab4c45a8ec0222f995fabb27b5abd7ca14a"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_0.webp",
+      "bytes": 9688,
+      "sha256": "80f930a2529546565493828faa75e30ae03ffaae53186f6fcdecdda34e34025f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_1.png",
+      "bytes": 11922,
+      "sha256": "93ab2e66a8ebd5246add6665899f65139f44a754941f89f2369b8965796b7a45"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_1.webp",
+      "bytes": 9616,
+      "sha256": "867d5d54c0c670a3351bbcdd485b86cd9a9d77386d98cf84b17b2e0478e0be29"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_2.png",
+      "bytes": 12298,
+      "sha256": "7d3c3f07c1fcbf9e7db1d00d9a37b7f0f361a18e06e921c2412c1b7fb88e271f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_2.webp",
+      "bytes": 9926,
+      "sha256": "9068c071a493403b564707d6f9b30949885847fde6614103b92f7ec8e9a30fc9"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_3.png",
+      "bytes": 12298,
+      "sha256": "7d3c3f07c1fcbf9e7db1d00d9a37b7f0f361a18e06e921c2412c1b7fb88e271f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_3.webp",
+      "bytes": 9926,
+      "sha256": "9068c071a493403b564707d6f9b30949885847fde6614103b92f7ec8e9a30fc9"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_4.png",
+      "bytes": 11937,
+      "sha256": "5bb1696a63ed2f93845a5e50d03ae17a466479382af65a7dc182c9dbd8d01c0a"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_4.webp",
+      "bytes": 9684,
+      "sha256": "34d3abee781069212cab479722be43e020efe7b2c754f568fc06e07499303ed0"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_5.png",
+      "bytes": 12188,
+      "sha256": "38c99b641690be5763d234534de89e22088d9f311edaa249e4c901fbde678a44"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_down_5.webp",
+      "bytes": 10012,
+      "sha256": "4de2570e1eaef5dc35b84f71145b55ddd81761039b3f6c9a5ce3cbeeae627576"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_0.png",
+      "bytes": 13074,
+      "sha256": "6800a043ef5e32896237c0d7ca554ad3d50b246fa7a5e79015c6813ce1fdf3b2"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_0.webp",
+      "bytes": 10572,
+      "sha256": "df3d390c02008f1deb2be91462af6dca2d07d37dd0358dde99f99802c8305191"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_1.png",
+      "bytes": 12338,
+      "sha256": "210abda6bf2f84f2d81197c1251debe3dd3b776bf32558f96ea903939eb07000"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_1.webp",
+      "bytes": 10064,
+      "sha256": "6dbfe5652ca935f45a56c49ebe94ca678d4c92510ce87855601848304e263020"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_2.png",
+      "bytes": 13709,
+      "sha256": "dd6e5015769d18c1575628dc57f980d1ac2230945f6e957a97c487cd787199c3"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_2.webp",
+      "bytes": 11042,
+      "sha256": "5bcce1b5aef72a95be56413437daa8fb265577434056406297782315bea6eaf6"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_3.png",
+      "bytes": 13709,
+      "sha256": "dd6e5015769d18c1575628dc57f980d1ac2230945f6e957a97c487cd787199c3"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_3.webp",
+      "bytes": 11042,
+      "sha256": "5bcce1b5aef72a95be56413437daa8fb265577434056406297782315bea6eaf6"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_4.png",
+      "bytes": 12071,
+      "sha256": "cd04d9821856a5646857ba30362d8d66e45a76426019ccc71bc32d11c4b5943d"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_4.webp",
+      "bytes": 9762,
+      "sha256": "d0c61b135f488b9e8aae3f4592ad51d3ba41a19dae920e55d9b6c6501516d9cf"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_5.png",
+      "bytes": 10872,
+      "sha256": "19be5da3295775b66d97bd5829a93348c94cd24a33c097e2eca80e21807c9d06"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_left_5.webp",
+      "bytes": 8918,
+      "sha256": "8a0422e1cf259e7722bc77c5b7c1387200e3383f50fd17e8a8437626052bafcc"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_0.png",
+      "bytes": 13132,
+      "sha256": "b3bd375912bc6c66e1693d9fc2258dff07f8741d0412cfa6cb1b0da1ce463337"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_0.webp",
+      "bytes": 10622,
+      "sha256": "a6efaa009172d448601f0110e732aaabb4c8246d4779e8eb6953264d474f6c78"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_1.png",
+      "bytes": 12445,
+      "sha256": "5da43bef7e65d0ede2c1893bf241a66ee71cd3a17ec63938c1b3e2e690940ca5"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_1.webp",
+      "bytes": 10068,
+      "sha256": "e544b3b767573fc6fe15f2b08c2128bb5283a30e8826ec8b90563e44bcaf4750"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_2.png",
+      "bytes": 13663,
+      "sha256": "ebee377bc1a79743319c64bc05ced8c9588beb7ce511dd5ceff14d7701306bb4"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_2.webp",
+      "bytes": 11062,
+      "sha256": "862a1bb12dcbaa35229f4c294e179ca8674532a58189c991831665f489ad80cc"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_3.png",
+      "bytes": 13663,
+      "sha256": "ebee377bc1a79743319c64bc05ced8c9588beb7ce511dd5ceff14d7701306bb4"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_3.webp",
+      "bytes": 11062,
+      "sha256": "862a1bb12dcbaa35229f4c294e179ca8674532a58189c991831665f489ad80cc"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_4.png",
+      "bytes": 12033,
+      "sha256": "649f60813f5866c6ac4491ca3f865bca58952e3b8f97742ca6dfdc1468c05726"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_4.webp",
+      "bytes": 9774,
+      "sha256": "252a8a6b79de54bbde4cb26ae1266ca08470c0da8b420b64019a75efeff6c3df"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_5.png",
+      "bytes": 11002,
+      "sha256": "93a465f2d7b40cc1181c0d34dfa8237e1bd9bf8187099fd13c72d41990c8a353"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_right_5.webp",
+      "bytes": 8882,
+      "sha256": "740172a1642dd375f8a241a6b90d1d12a3a0a2bcc1998e32d5f64712cec65feb"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_0.png",
+      "bytes": 12256,
+      "sha256": "09aedf671110720b27cc588fe7736ea2109af549b8a4608e7e4020dc3081a8e2"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_0.webp",
+      "bytes": 10242,
+      "sha256": "49b4c3877cc36858c5c9bff05f4514625349046693d4d16e61444c1e9c762cfb"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_1.png",
+      "bytes": 11978,
+      "sha256": "652cd1b217ccdb5d7deaf5bc46e28ee3a19b4948247c315964632fca5fcbc265"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_1.webp",
+      "bytes": 10070,
+      "sha256": "855d00dbdf83ae261792e0ff81f248f90b6994679f7ea106f94ebd2a6bec9aa0"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_2.png",
+      "bytes": 12832,
+      "sha256": "046946c0d8659bb7da54a5209d322db8dcd1d208263990a8721c6098933e921c"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_2.webp",
+      "bytes": 10672,
+      "sha256": "2afb1fbee5e09ee5ea4af694ca1481464f11348bf44412af091d694fa72aae09"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_3.png",
+      "bytes": 12832,
+      "sha256": "046946c0d8659bb7da54a5209d322db8dcd1d208263990a8721c6098933e921c"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_3.webp",
+      "bytes": 10672,
+      "sha256": "2afb1fbee5e09ee5ea4af694ca1481464f11348bf44412af091d694fa72aae09"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_4.png",
+      "bytes": 12056,
+      "sha256": "4fa413a8a4f518762502a634561bde5997830cd4dfd0a3fb36e501716aa49575"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_4.webp",
+      "bytes": 10068,
+      "sha256": "9540508a4a8a286ed03d8cbf2166b76ad2a36aca8e8db47a7e4fd9e055332b31"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_5.png",
+      "bytes": 12096,
+      "sha256": "4c214a240df4308cdea75a2dd38716de053d132714664a610d80c708e6533b3f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_blessing_up_5.webp",
+      "bytes": 9960,
+      "sha256": "f0fb4158fe0258a7cc3ed3ad920abf710f718b3940f9271bcd10c54de7bf1e2e"
     },
     {
       "path": "solo-leveling/assets/player/characters/sanctuary_healer/motion/attack_down_0.png",
@@ -11779,6 +12574,246 @@
       "sha256": "6bbad02928dbe4593fc343b2b4f8c3ebea3d6a338ecf76df1d9ed9e8745860ae"
     },
     {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_0.png",
+      "bytes": 10135,
+      "sha256": "2aae4b659e463e133359dcd60cce07e9ed66ebc0354d93b1a5212597af816bec"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_0.webp",
+      "bytes": 7690,
+      "sha256": "924e5e505783c7e336c5d9c71175bea30210c54987b7eac85ae2a7fc328cedd8"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_1.png",
+      "bytes": 9025,
+      "sha256": "ed337b406cae1ee0c4f921f0934dd08a2418bd1b46a2ed0dcd102f13637dc0e4"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_1.webp",
+      "bytes": 6778,
+      "sha256": "592fc6b6f89b46dfd38e37440cddf417dd165fb5dbbc5b408c264639eb5a432c"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_2.png",
+      "bytes": 10192,
+      "sha256": "4c320b5dfce854ffcbbc90e3ea7d4de9922ef55df60bfaf642878e1ffa2c73a7"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_2.webp",
+      "bytes": 7684,
+      "sha256": "10c8824fec7091ec1d021787a9c2e0b384dc7140b10b7a13b7bd3aa3179add44"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_3.png",
+      "bytes": 10192,
+      "sha256": "4c320b5dfce854ffcbbc90e3ea7d4de9922ef55df60bfaf642878e1ffa2c73a7"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_3.webp",
+      "bytes": 7684,
+      "sha256": "10c8824fec7091ec1d021787a9c2e0b384dc7140b10b7a13b7bd3aa3179add44"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_4.png",
+      "bytes": 8989,
+      "sha256": "890589ee9670f96d7a93582b598ac246ba92c81c61083fb319145c1243dd7cfb"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_4.webp",
+      "bytes": 6718,
+      "sha256": "d40270819490d9b9ac7c5de6f4835c19ca40aa7166d3f4c7878814b0dcc8f5b1"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_5.png",
+      "bytes": 13098,
+      "sha256": "eaf437485b7914f7e07994b9209f4bf3fa2c73d932ec7d9b59ac22fbb434e8a8"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_down_5.webp",
+      "bytes": 10446,
+      "sha256": "6bbad02928dbe4593fc343b2b4f8c3ebea3d6a338ecf76df1d9ed9e8745860ae"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_0.png",
+      "bytes": 11986,
+      "sha256": "6f3d707d4205701953293bfbed24e8118f1dce6762ac77bf9ebf20ace78501fd"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_0.webp",
+      "bytes": 9354,
+      "sha256": "b697911f0bd47afea3c1db8030f19bd15f03ea85e1acfaa47b7f4a47333c0192"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_1.png",
+      "bytes": 9949,
+      "sha256": "99b2740aa134df5c0e46e1eb8f95bb0da8ec5ff88b330f9bfeaa87ef7d8182e0"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_1.webp",
+      "bytes": 7638,
+      "sha256": "3aba87ffde902c21b83fb574edeacc07acb6bc5db1d0751e5aed53a20e6aac0d"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_2.png",
+      "bytes": 10822,
+      "sha256": "86555087c04284a7d0217d799e382b4c784ad6dcaee9fa56501b3e85164d2e83"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_2.webp",
+      "bytes": 8278,
+      "sha256": "b44cb3ee884da13dd47faf60bb95f9a9d8b080470b20db887ac62643e67cca8f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_3.png",
+      "bytes": 10822,
+      "sha256": "86555087c04284a7d0217d799e382b4c784ad6dcaee9fa56501b3e85164d2e83"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_3.webp",
+      "bytes": 8278,
+      "sha256": "b44cb3ee884da13dd47faf60bb95f9a9d8b080470b20db887ac62643e67cca8f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_4.png",
+      "bytes": 9598,
+      "sha256": "6fa2b8c4a8e504704f8853d7262f1f8e0f20fcc41279d2ecae25376b50ce2c82"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_4.webp",
+      "bytes": 7304,
+      "sha256": "7a0b2d5bfbbd21782b6ed555c8071a63f5052070ea8557b97c40f0c4b0c18485"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_5.png",
+      "bytes": 12928,
+      "sha256": "e880fd5090ef7aa957100b0bad93a2be3c45504fe2fcc8b894b5665dbab6cd68"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_left_5.webp",
+      "bytes": 10096,
+      "sha256": "f80c707be0341b823fcf9f5112faf0820e670cd7dcea7b98f4eccd237e3e3327"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_0.png",
+      "bytes": 12005,
+      "sha256": "53340090bfd97e8505d48e087b98b43b8aa1184311fa3224e633e094f602172f"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_0.webp",
+      "bytes": 9366,
+      "sha256": "59e2c75cfd573d4dd7cdccb101cf136252e7e26b403c25fa6ee96bc2f6dc04af"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_1.png",
+      "bytes": 9943,
+      "sha256": "a194ecd10542074f9dfbc97f47f6f414c1168c7bf9d1d89e545159cabdda0361"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_1.webp",
+      "bytes": 7640,
+      "sha256": "46751fa115f5171bdee708b7afcb021694d1b4d2ca676e7f926c01f80d83917c"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_2.png",
+      "bytes": 10827,
+      "sha256": "36adc4e2ddab0af4b4926015fca24fe65ab12ac89348089e5e92b8f357f342e8"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_2.webp",
+      "bytes": 8274,
+      "sha256": "76e6f277ede7b7b2c52bc30b6e5b36d5d78e3a96bd81f795dbf5fcbae24adcdc"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_3.png",
+      "bytes": 10827,
+      "sha256": "36adc4e2ddab0af4b4926015fca24fe65ab12ac89348089e5e92b8f357f342e8"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_3.webp",
+      "bytes": 8274,
+      "sha256": "76e6f277ede7b7b2c52bc30b6e5b36d5d78e3a96bd81f795dbf5fcbae24adcdc"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_4.png",
+      "bytes": 9660,
+      "sha256": "f4217b0036654dafd0882980e3bd4daf1936fffcc0abb5b0db6dd21d9552036d"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_4.webp",
+      "bytes": 7310,
+      "sha256": "39c40dc60252d30174545fe9141d2695e632aa814c16de6ed4f0cf55c148cc6c"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_5.png",
+      "bytes": 12933,
+      "sha256": "fa44e5baea3f0e967ce41b797ef2a83cd9b78d56970eb7c5d6ce1fe633da0871"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_right_5.webp",
+      "bytes": 10078,
+      "sha256": "a5bb0bc8064ac468c10ee279585dfa566a2e94919deaeedadaa78882db45f4a5"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_0.png",
+      "bytes": 10631,
+      "sha256": "893eaf57c27cf8edf20f6489e4e1d23d691d32c833501fcb20d9ca3cba60086c"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_0.webp",
+      "bytes": 8132,
+      "sha256": "15db044bc7f89aac5cead49e548dbaf14907a16f09c106ec647bb0e2d54ad9d5"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_1.png",
+      "bytes": 9837,
+      "sha256": "92f49578f52cdf8f62319ea710bdd5b46c0570700d02727b80d813a13c874977"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_1.webp",
+      "bytes": 7362,
+      "sha256": "d90599d9aa1026b7fc8cb12b03868713e365876c5af066cdb523cc6f573edb6a"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_2.png",
+      "bytes": 10125,
+      "sha256": "60ba17504b5362ed00c1eafef0aa5a708ba937be2aa740a5e49bb3b88f3644d6"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_2.webp",
+      "bytes": 7644,
+      "sha256": "bc13c26d2c0e586c713398b3ae18bc202573c1cd2c4d5452d93475f76b653c11"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_3.png",
+      "bytes": 10125,
+      "sha256": "60ba17504b5362ed00c1eafef0aa5a708ba937be2aa740a5e49bb3b88f3644d6"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_3.webp",
+      "bytes": 7644,
+      "sha256": "bc13c26d2c0e586c713398b3ae18bc202573c1cd2c4d5452d93475f76b653c11"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_4.png",
+      "bytes": 9694,
+      "sha256": "df5458bb30a275821e9c712721a2f7831adf2d61ed9a230bbeca223d946da7ab"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_4.webp",
+      "bytes": 7324,
+      "sha256": "98ed15b588365bfe3586dd257da980f8fa5c8ab9d7225793ba059c228dcc02cb"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_5.png",
+      "bytes": 12086,
+      "sha256": "d3cff4b0cdaa0d217acc2cedaf40b41d3ce6bb060a7cf164446b9c7b8e5629bf"
+    },
+    {
+      "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_backhand_up_5.webp",
+      "bytes": 9854,
+      "sha256": "5abfa6f14d90e1a8b87a0d54bf21fb7fb5b6dfeb67c1d9806c78a032388259c3"
+    },
+    {
       "path": "solo-leveling/assets/player/characters/white_tiger_brawler/motion/attack_down_0.png",
       "bytes": 10003,
       "sha256": "27d8e566d6a4f67385f6d1b111b33e0af7da081b59aa0db169719923acff9e87"
@@ -12479,6 +13514,246 @@
       "sha256": "f96e3753015db2fdb364dcf504315af10c4188a97cf227cd3deb4b4371c12937"
     },
     {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_0.png",
+      "bytes": 14167,
+      "sha256": "affbb6269a5424e3a42827be98aee1d93bb2a4f692bc5e244a1cf3369bdbbafa"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_0.webp",
+      "bytes": 10398,
+      "sha256": "289de5123af44b0bf0f56ef3ee30751f526df898d4f1f26cb3c00f0ab6101791"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_1.png",
+      "bytes": 14615,
+      "sha256": "ee686187b249b46915851180c7e0b4e491b9c2d7321130a75cbcb514293e0d9a"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_1.webp",
+      "bytes": 10554,
+      "sha256": "2d249baf84d1baa3fc1d0a306dd980d8a82f7e3192a86f322116c38556a0c0ac"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_2.png",
+      "bytes": 12224,
+      "sha256": "497184f6c12642b727b8810713f98abdfb1da1d3c7b71858ecc1c41cbc89230f"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_2.webp",
+      "bytes": 8984,
+      "sha256": "4ba0ce201749306968331f501513aa1b7ec8606b50c547d51ed826071f4f61bc"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_3.png",
+      "bytes": 12224,
+      "sha256": "497184f6c12642b727b8810713f98abdfb1da1d3c7b71858ecc1c41cbc89230f"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_3.webp",
+      "bytes": 8984,
+      "sha256": "4ba0ce201749306968331f501513aa1b7ec8606b50c547d51ed826071f4f61bc"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_4.png",
+      "bytes": 12063,
+      "sha256": "0dc5ab71e3d0b7ecfe7526dbe4dbd58555d69cd6d17f0df752a1ba0345e6dab2"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_4.webp",
+      "bytes": 8708,
+      "sha256": "9f64b8718efef3022944e686b1b7493ab417231b34017e4fd0dfc2ed2704e325"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_5.png",
+      "bytes": 14865,
+      "sha256": "1f0a2ca823c361fe992c8997190960235d77b9511c51544ee0f67306cd9568ee"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_down_5.webp",
+      "bytes": 11878,
+      "sha256": "b0e8b92f3a5733ff584428f61717d98de9fa003f7e71f476fb66cd9d89067b75"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_0.png",
+      "bytes": 13225,
+      "sha256": "fc81c1245eb5f00dc43e62f0c2c9ec78d6e109ee0c51df19f542983c034b27e3"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_0.webp",
+      "bytes": 10000,
+      "sha256": "327b8af41467cd9b93a344f8cbd4d14546af9fd459e3ecd101da5de68161b657"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_1.png",
+      "bytes": 12743,
+      "sha256": "abeaa335eb6ede791eaa900f635740da5c09f2794945a2a959e9d0f72ec57fee"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_1.webp",
+      "bytes": 9638,
+      "sha256": "e98f628c56b59815f321be5bd89660fef15b88e2689f476f26cb308f827afd33"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_2.png",
+      "bytes": 12266,
+      "sha256": "9e5e1cb0fad14d1c8d03bed56662db61039fd071e3b7052905a2f32d09b9c67a"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_2.webp",
+      "bytes": 9224,
+      "sha256": "028f609a16a6fa24a848a77c566cfa94ffb4916de89431dec46431e708d3af9a"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_3.png",
+      "bytes": 12266,
+      "sha256": "9e5e1cb0fad14d1c8d03bed56662db61039fd071e3b7052905a2f32d09b9c67a"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_3.webp",
+      "bytes": 9224,
+      "sha256": "028f609a16a6fa24a848a77c566cfa94ffb4916de89431dec46431e708d3af9a"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_4.png",
+      "bytes": 11587,
+      "sha256": "973cdf8ee9cc951104fb04688ed55789febe9540c6f8be25b8aae295245a1f31"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_4.webp",
+      "bytes": 8756,
+      "sha256": "1a696c4ab4d2b84f217bf4d7497ac23e95d34eaabd02286142c336ff2b3f0305"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_5.png",
+      "bytes": 15469,
+      "sha256": "73fd0c9fc8758f1e2a281fbf5ee0c695513881a1384d2971e8d554322be55d38"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_left_5.webp",
+      "bytes": 12392,
+      "sha256": "99414f25d97c38839b39afb0ad6aea638b29d4523ea51be1dac3dcf87a7bf9e2"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_0.png",
+      "bytes": 13265,
+      "sha256": "616b2073a920488a90dff32906a9080d22333d788acd6d83a66be18c307dcc94"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_0.webp",
+      "bytes": 10004,
+      "sha256": "01ea262ccb76415bbc0aa0040044e3fc9dcde14b947c172b5dfcfcf704b819b8"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_1.png",
+      "bytes": 12794,
+      "sha256": "c65658d4d00089edf5e39d4b8ac9b94ecf4be83ff3724441c549570254243846"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_1.webp",
+      "bytes": 9696,
+      "sha256": "8d0abcf61e7a23a48666ffdf772ab2db64b5ed8481603aa8f9471369c9b7bc2d"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_2.png",
+      "bytes": 12289,
+      "sha256": "e290109e503b8b56bbff4243b2eebc2fb70858f2c8e3426ce780cbe332b9c084"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_2.webp",
+      "bytes": 9224,
+      "sha256": "5f2eeee899406a1d386fd2feacb16301ee013ec85104c841cb11061fff8fc622"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_3.png",
+      "bytes": 12289,
+      "sha256": "e290109e503b8b56bbff4243b2eebc2fb70858f2c8e3426ce780cbe332b9c084"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_3.webp",
+      "bytes": 9224,
+      "sha256": "5f2eeee899406a1d386fd2feacb16301ee013ec85104c841cb11061fff8fc622"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_4.png",
+      "bytes": 11567,
+      "sha256": "1d96dd19c373c2220e42895652c0e12b12ec0fcf17c98d2864ca98f128f9efe7"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_4.webp",
+      "bytes": 8776,
+      "sha256": "41b1166a32b8b2ce6a551c795e3210ecc138f5f6a3c2a4d47eab1f46c7de0ef2"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_5.png",
+      "bytes": 15497,
+      "sha256": "27ee3694aadcb91e0c231c330303e2a166a4a452dc95b9d8e11e5b5e67986101"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_right_5.webp",
+      "bytes": 12394,
+      "sha256": "9a281d90d739be57ee1b8b3d1ac03f06567e602fd837c7b3afe29c9e457aea80"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_0.png",
+      "bytes": 13661,
+      "sha256": "2ba7198e57c895a5be34b1004e83e782fe9be6f945784a9465f4f24d4bcebec0"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_0.webp",
+      "bytes": 10222,
+      "sha256": "edc163830656dea754d9dcb5fdd28c12a1f5603595a4dc98b1250b25a25c717e"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_1.png",
+      "bytes": 13092,
+      "sha256": "597cbdf10eabd232d13a0cc1faf5ca8ae29c93a449e3ea3421382a55b3a20db0"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_1.webp",
+      "bytes": 9712,
+      "sha256": "69e2a60d6b41958aedd5973ffe34ce1bca3df3609cb6cbb0ceafd0686092a63e"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_2.png",
+      "bytes": 11268,
+      "sha256": "d8f0f4a361f3c0a25eb4f0989b3cecca2dd1b30fb8d0cae99f07d56e01dc2abf"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_2.webp",
+      "bytes": 8328,
+      "sha256": "6fc80410da26ed11825d0e256e3ca63cfa2c13cee6138a5e0a6d0691c69943e1"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_3.png",
+      "bytes": 11268,
+      "sha256": "d8f0f4a361f3c0a25eb4f0989b3cecca2dd1b30fb8d0cae99f07d56e01dc2abf"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_3.webp",
+      "bytes": 8328,
+      "sha256": "6fc80410da26ed11825d0e256e3ca63cfa2c13cee6138a5e0a6d0691c69943e1"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_4.png",
+      "bytes": 10549,
+      "sha256": "5883dba774f4c421389a0bfe2c4c49810352015f50c51315590677d1ecb7088d"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_4.webp",
+      "bytes": 7806,
+      "sha256": "12a99da3f16dce17217f6f2a812b9303dcc5e60135f8d57a1be0b930164b5489"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_5.png",
+      "bytes": 14559,
+      "sha256": "6ef6c89267080eb78f86508712e881397934c18e37a9fa276e7a1e6998824567"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_cut_up_5.webp",
+      "bytes": 11796,
+      "sha256": "213b857af8691375a0b0ecfc4b1351fe5fade1f953fcd52252a0c82c661edca2"
+    },
+    {
       "path": "solo-leveling/assets/player/motion/player_attack_down_0.png",
       "bytes": 13941,
       "sha256": "8ad2c9f6f2103761b96f6a71b04af2f1bbc9624e67a0387a8115a80ccb55fa21"
@@ -12597,6 +13872,246 @@
       "path": "solo-leveling/assets/player/motion/player_attack_left_5.webp",
       "bytes": 12490,
       "sha256": "4aa73fa588241eff7b70a4170c542cbe385ca581b995799c1264463882c726f3"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_0.png",
+      "bytes": 14169,
+      "sha256": "8e2ea40bdb8021af9126df681d71c8d8a641279c4f2e138c3b3b2f8f91495392"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_0.webp",
+      "bytes": 10674,
+      "sha256": "037460d60fac6de2125980303948c940de569759b55f7d01ac02cda6aa29c4f5"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_1.png",
+      "bytes": 11579,
+      "sha256": "6870759bc0d1d23b900e24f3715d2f0f7184860f23c18171af77a8051d49e589"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_1.webp",
+      "bytes": 8562,
+      "sha256": "4243a00daa4cb5448e8ee53186504558114adedca0fe281f2a6d2cd673b11e61"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_2.png",
+      "bytes": 12338,
+      "sha256": "af985895a401a9b2feef7f33ea2c3f9507e52a5563f667e1a0555f6ee1a2596e"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_2.webp",
+      "bytes": 9028,
+      "sha256": "289f7f143b32bef1c5489575277d077e301b46f6cad7e899f06bfa8bedd36af8"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_3.png",
+      "bytes": 12338,
+      "sha256": "af985895a401a9b2feef7f33ea2c3f9507e52a5563f667e1a0555f6ee1a2596e"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_3.webp",
+      "bytes": 9028,
+      "sha256": "289f7f143b32bef1c5489575277d077e301b46f6cad7e899f06bfa8bedd36af8"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_4.png",
+      "bytes": 13043,
+      "sha256": "ffd9be5da5d3b14cd88c0eb5cab0839da8985a810532aad2ee93a4bed1fd53ab"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_4.webp",
+      "bytes": 9628,
+      "sha256": "14ed0193155c29f4dd129e145a56649d71997e99ca33d25ad798a40d5676907a"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_5.png",
+      "bytes": 14865,
+      "sha256": "1f0a2ca823c361fe992c8997190960235d77b9511c51544ee0f67306cd9568ee"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_down_5.webp",
+      "bytes": 11878,
+      "sha256": "b0e8b92f3a5733ff584428f61717d98de9fa003f7e71f476fb66cd9d89067b75"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_0.png",
+      "bytes": 13175,
+      "sha256": "4160fc5589ec55f4a7a32f64be1af88b03ddf1a72f7e77c2f844b31b18419f9b"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_0.webp",
+      "bytes": 9858,
+      "sha256": "d619821215268079d3a16b17bd4729a65c1924b176d0caa4e193da97272e0b9a"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_1.png",
+      "bytes": 12258,
+      "sha256": "8325354abe2c5448bf7a298673857db77e7ad14c1a540f35cbb324569c970638"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_1.webp",
+      "bytes": 9132,
+      "sha256": "df4548c42ea9f2cc0b2a0fdaba106cf2b2e6f1fa80f60b69bd2d65e9ad87e371"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_2.png",
+      "bytes": 11912,
+      "sha256": "58f44fe766ec5c67363b62eb16f25c9ec8ba28a62b78b1ec94f5ab0673d802df"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_2.webp",
+      "bytes": 9010,
+      "sha256": "89120bc52f38993581e21d30e2958a0d02c4431e751ac7ed42f83136142f3392"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_3.png",
+      "bytes": 11912,
+      "sha256": "58f44fe766ec5c67363b62eb16f25c9ec8ba28a62b78b1ec94f5ab0673d802df"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_3.webp",
+      "bytes": 9010,
+      "sha256": "89120bc52f38993581e21d30e2958a0d02c4431e751ac7ed42f83136142f3392"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_4.png",
+      "bytes": 11687,
+      "sha256": "b452954684ac3e934eaa8efeadd3952632cb3b2206ef7c72620375600eb1c818"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_4.webp",
+      "bytes": 9112,
+      "sha256": "fbd20c82f1d9ba75181bfb02579895eb7e2ec3b65889f2a43fec902e88b7a96f"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_5.png",
+      "bytes": 15469,
+      "sha256": "73fd0c9fc8758f1e2a281fbf5ee0c695513881a1384d2971e8d554322be55d38"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_left_5.webp",
+      "bytes": 12392,
+      "sha256": "99414f25d97c38839b39afb0ad6aea638b29d4523ea51be1dac3dcf87a7bf9e2"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_0.png",
+      "bytes": 13161,
+      "sha256": "a5c4cda3516791dedacd132856ab2b66062701926934cda909244569b895f2b6"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_0.webp",
+      "bytes": 9874,
+      "sha256": "fc5f0b0403d2ecfc4a0458234a73ad26a6f5bf834663857ed1b158a699a59d80"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_1.png",
+      "bytes": 12275,
+      "sha256": "dcc34949de82e88062e54d4cbd3d86df5cdc518b5c62e6073b6a71b590acc882"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_1.webp",
+      "bytes": 9180,
+      "sha256": "326d66c99bf38b14dce09845e4ebfaa1607d434d7e76e6262908b9d794bee339"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_2.png",
+      "bytes": 11935,
+      "sha256": "067110f13ae8560e430ca6a55287d6efce865702de2890221653cb4942cf9caa"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_2.webp",
+      "bytes": 8982,
+      "sha256": "dc909408323460b1730023967d074156b35bebca667a9e84789237ab9f1a5cd8"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_3.png",
+      "bytes": 11935,
+      "sha256": "067110f13ae8560e430ca6a55287d6efce865702de2890221653cb4942cf9caa"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_3.webp",
+      "bytes": 8982,
+      "sha256": "dc909408323460b1730023967d074156b35bebca667a9e84789237ab9f1a5cd8"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_4.png",
+      "bytes": 11733,
+      "sha256": "ead04fb2b81e659ce344648dd72a0087c43a7b8ac2735ad4d3c2ecdae5e858ca"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_4.webp",
+      "bytes": 9098,
+      "sha256": "92f2719341d1bf42c79f2a9099b1e4a7f8b378dd6e09efec40d13dca4e86a886"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_5.png",
+      "bytes": 15497,
+      "sha256": "27ee3694aadcb91e0c231c330303e2a166a4a452dc95b9d8e11e5b5e67986101"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_right_5.webp",
+      "bytes": 12394,
+      "sha256": "9a281d90d739be57ee1b8b3d1ac03f06567e602fd837c7b3afe29c9e457aea80"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_0.png",
+      "bytes": 12876,
+      "sha256": "d5f644a1d81b9be02fea6f4c40ea10316c9096c7599a1753aaf33d3211d60ef7"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_0.webp",
+      "bytes": 9576,
+      "sha256": "407559cb3aa47018007d5be8fd3c9ffae2eebf1981ab3f1abfe52bb32cafd0e7"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_1.png",
+      "bytes": 12405,
+      "sha256": "f915190ba71530a7141d91575c57b5503038f574e08be9e5b385f4cc60377dbc"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_1.webp",
+      "bytes": 9342,
+      "sha256": "010ae9a6bcd810f5bd76bb6d3ead7d2a1b93e039a6e53cd25b89b10271d9d7cd"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_2.png",
+      "bytes": 11709,
+      "sha256": "e2ab458198712d0e7f586e2e5a0b19bf9425cb8f5c2359779166e00be428e660"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_2.webp",
+      "bytes": 8836,
+      "sha256": "cf4b5f01a9cf0cbc5ded3f93d44d96dc46d7e4cdf72a832e12708fe13040bded"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_3.png",
+      "bytes": 11709,
+      "sha256": "e2ab458198712d0e7f586e2e5a0b19bf9425cb8f5c2359779166e00be428e660"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_3.webp",
+      "bytes": 8836,
+      "sha256": "cf4b5f01a9cf0cbc5ded3f93d44d96dc46d7e4cdf72a832e12708fe13040bded"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_4.png",
+      "bytes": 11247,
+      "sha256": "45067692fbfc6303df6758d61f72837f2712e8c18b1ab12ecd393851fc779bca"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_4.webp",
+      "bytes": 8434,
+      "sha256": "b690478c8a4ed5cf9157f20796ca03bf81153f4b72f8951a6d637d4bf383cf38"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_5.png",
+      "bytes": 14559,
+      "sha256": "6ef6c89267080eb78f86508712e881397934c18e37a9fa276e7a1e6998824567"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion/player_attack_reverse_up_5.webp",
+      "bytes": 11796,
+      "sha256": "213b857af8691375a0b0ecfc4b1351fe5fade1f953fcd52252a0c82c661edca2"
     },
     {
       "path": "solo-leveling/assets/player/motion/player_attack_right_0.png",
@@ -13097,6 +14612,96 @@
       "path": "solo-leveling/assets/player/motion/player_walk_up_7.webp",
       "bytes": 11844,
       "sha256": "fb7947312acb5a4a9630a9f7af4ee31cec4d705d7f59b6da5071d85051beb9cc"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/flame_mage/lift_down.png",
+      "bytes": 3059728,
+      "sha256": "ced349a514c47857da7ed04eeb73973f26121c57392250895875bb18aa57226c"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/flame_mage/lift_right.png",
+      "bytes": 2947980,
+      "sha256": "1fe12acb9b36e231741e7f01dbf4446f7ee1c62b252f33618130b3286f1a1aab"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/flame_mage/lift_up.png",
+      "bytes": 2899455,
+      "sha256": "6cb6210a507ed2752304d27140098851c4b0113c7374f6e3978a3235d3d2c139"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/light_swordswoman/rise_down.png",
+      "bytes": 2884020,
+      "sha256": "d6be8fe064f0a7fd8f202d0c91f1da8fe0773de93ac9d8031058f5a7657f12ad"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/light_swordswoman/rise_right.png",
+      "bytes": 2944191,
+      "sha256": "43dd660f2b44d96c0fbd778f17aa5b3f5d598bc6806f439837672fade6759d63"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/light_swordswoman/rise_up.png",
+      "bytes": 2862147,
+      "sha256": "d1ca647fa968e52c576cd92172044af675c56160ffdbc7c1267d511892046f3d"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/sanctuary_healer/blessing_down.png",
+      "bytes": 2927384,
+      "sha256": "e8595ba6131bcfc1f0523fb32771de94eca565d5f85878986e7cdbebf18c1104"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/sanctuary_healer/blessing_right.png",
+      "bytes": 2973426,
+      "sha256": "d7168cc8050a1d8e19741f5bd40fd9b5c09920da5b96f70884435f26f49ad985"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/sanctuary_healer/blessing_up.png",
+      "bytes": 2846577,
+      "sha256": "02b1d0a8d264d4f822319afdab496cc696dffd4fa30f533323943f130e172a14"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/shadow_monarch/cut_down.png",
+      "bytes": 3089162,
+      "sha256": "717c8ec0f014a29b47a33cab265c37acd3869927d708a2e8e6aa6cc39beb5d71"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/shadow_monarch/cut_right.png",
+      "bytes": 2922017,
+      "sha256": "6a0496343714c49e16d382bd2a6ff1c55f7bd06c44d8ea33c2bc63411cad76cb"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/shadow_monarch/cut_up.png",
+      "bytes": 2876377,
+      "sha256": "b05df5c53a019821fee3a0e7964bb4314b6aeceff06cdd6e272a681b6ae7ff08"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/shadow_monarch/reverse_down.png",
+      "bytes": 3042941,
+      "sha256": "796546be623fb0b3188c51fb7355b73976941d0bbd27477cc6ad916adc012162"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/shadow_monarch/reverse_right.png",
+      "bytes": 2913025,
+      "sha256": "019696eb7e4eeec9f749fb8760db289e43ac0cab4b13bf3321dea2b05139951c"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/shadow_monarch/reverse_up.png",
+      "bytes": 2847845,
+      "sha256": "ef9011e8cb0ccc26a4b87296ecd42bba1668c0014659f190f5ec361e06b8b64f"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/white_tiger_brawler/backhand_down.png",
+      "bytes": 3193057,
+      "sha256": "972952f80d2282782918c9905334fbe47bb46d4854c6035049b845add2aa34d9"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/white_tiger_brawler/backhand_right.png",
+      "bytes": 3359360,
+      "sha256": "e2a60eb3ffc3947ebbb50c13885b2caeadc981dae632b0f9a887626dbb538f3d"
+    },
+    {
+      "path": "solo-leveling/assets/player/motion_v2_sources/basic_combos/white_tiger_brawler/backhand_up.png",
+      "bytes": 3172527,
+      "sha256": "07b28ae2be2aca69cf459fb2601738fa193f90f5a1a94fc32e991395cf2b2591"
     },
     {
       "path": "solo-leveling/assets/player/motion_v2_sources/flame_mage/attack_down_chroma.png",
@@ -14242,6 +15847,66 @@
       "path": "solo-leveling/assets/ui/ui_slot.webp",
       "bytes": 6238,
       "sha256": "1e6a19f29db17b8cb380dd2c5bf54ff691e926d0170058220c791281ac40e8b0"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/dagger-style-comparison.jpg",
+      "bytes": 31063,
+      "sha256": "f1efcf746e19139e65d26780823e9e4e52f661a6056df6c59f32b9921df19041"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/flameMage-runtime.jpg",
+      "bytes": 220980,
+      "sha256": "1d785f0d283ff3875b106a22f30da7660d55592cb24ad1720ae6b32759636e66"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/flame_mage-lift.png",
+      "bytes": 249238,
+      "sha256": "f2808722feb11e233df2ee816f051a079f509ab5697900c5526cae6e9a84aa2c"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/lightSwordswoman-runtime.jpg",
+      "bytes": 172278,
+      "sha256": "ef2531e1f9eeb911b06a7b80b34f2d7731f5a35e72fc13926bb72caa20bd557d"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/light_swordswoman-rise.png",
+      "bytes": 169304,
+      "sha256": "910041157b590280d9a1a3e06bc6f8c6ec25bdf06aab86e0598952d0b990eb9d"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/sanctuaryHealer-runtime.jpg",
+      "bytes": 246162,
+      "sha256": "a5ca5f66d52c0dbf14f4f861fde22d3f7da2397b9c1f82b124465a972f7abf33"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/sanctuary_healer-blessing.png",
+      "bytes": 230362,
+      "sha256": "4b60571a59f2e2b78af7ae6c6dac95feecffdff8a91aa966e2f68297b6ae3ac8"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/shadowMonarch-runtime.jpg",
+      "bytes": 232520,
+      "sha256": "288151f721ec6099c138b57fc444663a0c7edae9d535be326c2c7875045402b1"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/shadow_monarch-cut.png",
+      "bytes": 239580,
+      "sha256": "6f1c3d8b03a603c7493ed7d9ab7d153ced3cb94ef033a1be6bbe3d7183f27e91"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/shadow_monarch-reverse.png",
+      "bytes": 237150,
+      "sha256": "d367a0b7f68704eee5e0f6805e63977eabf304b127588375a464b02a404cf478"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/whiteTigerBrawler-runtime.jpg",
+      "bytes": 260599,
+      "sha256": "edcf8bd2d1818984e9a27609c1c37d15d4e836183bb9fbc23548d2e27ccfc51f"
+    },
+    {
+      "path": "solo-leveling/docs/basic-combo-review-20261010/white_tiger_brawler-backhand.png",
+      "bytes": 207441,
+      "sha256": "45c0617aa97a02be143c14b8579e778b0688544c7280cbab86f07ea46a9c0a64"
     },
     {
       "path": "solo-leveling/docs/combat-review-20261010/flame_mage_motion_v2_contact.png",

@@ -11,6 +11,7 @@ export class BasicDagger extends WeaponBase {
         this._bladePool = [];
         this._activeThrusts = [];
         this._stabSide = 1;
+        this._basicAttackIndex = 0;
     }
 
     _getBlade(textureKey = 'proj_dagger_stab') {
@@ -56,30 +57,38 @@ export class BasicDagger extends WeaponBase {
     fire() {
         const style = this.config.attackStyle || 'daggerThrust';
         for (let i = 0; i < this.count; i++) {
-            this._delay(i * (style === 'fireball' ? 145 : 110), () => this._attackByStyle(style));
+            this._delay(i * (style === 'fireball' ? 145 : 110), () => {
+                if (!this.player?.active || this.player.isDead) return;
+                const pattern = this.config.basicAttackPattern;
+                const variant = pattern?.length ? pattern[this._basicAttackIndex++ % pattern.length] : null;
+                this._attackByStyle(variant?.style || style, variant);
+            });
         }
     }
 
-    _attackByStyle(style) {
+    _attackByStyle(style, variant = null) {
         switch (style) {
+            case 'daggerSlash':
+                this._daggerSlash(variant);
+                break;
             case 'dualDaggerCrossThrust':
-                this._dualDaggerCrossThrust();
+                this._dualDaggerCrossThrust(variant);
                 break;
             case 'swordSlash':
-                this._swordSlash();
+                this._swordSlash(variant);
                 break;
             case 'clawSwipe':
-                this._clawSwipe();
+                this._clawSwipe(variant);
                 break;
             case 'sanctuaryBurst':
             case 'maceSlam':
-                this._sanctuaryBurst();
+                this._sanctuaryBurst(variant);
                 break;
             case 'fireball':
-                this._fireball();
+                this._fireball(variant);
                 break;
             default:
-                this._thrust();
+                this._thrust(variant);
                 break;
         }
     }
@@ -96,7 +105,7 @@ export class BasicDagger extends WeaponBase {
         return baseRange * (this.config.targetAcquireMultiplier ?? 1);
     }
 
-    _getAttackSetup({ rangeBonus = 50, duration = 240 } = {}) {
+    _getAttackSetup({ rangeBonus = 50, duration = 240, variant = null } = {}) {
         const target = this.player.getClosestEnemy(this._getTargetAcquireRange(rangeBonus));
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
@@ -111,14 +120,14 @@ export class BasicDagger extends WeaponBase {
         }
 
         this._stabSide *= -1;
-        const side = this._stabSide;
+        const side = variant?.side ?? this._stabSide;
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, duration, side);
+            this.player.playAttackMotion(baseAngle, duration, side, variant?.motion);
         }
         return { target, baseAngle, side };
     }
 
-    _getMovementPriorityAttackSetup({ rangeBonus = 50, duration = 240 } = {}) {
+    _getMovementPriorityAttackSetup({ rangeBonus = 50, duration = 240, variant = null } = {}) {
         const isMoving = this.player.moveIntensity > 0.12;
         const target = isMoving
             ? null
@@ -136,9 +145,9 @@ export class BasicDagger extends WeaponBase {
         }
 
         this._stabSide *= -1;
-        const side = this._stabSide;
+        const side = variant?.side ?? this._stabSide;
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, duration, side);
+            this.player.playAttackMotion(baseAngle, duration, side, variant?.motion);
         }
         return { target, baseAngle, side };
     }
@@ -198,7 +207,7 @@ export class BasicDagger extends WeaponBase {
         }
     }
 
-    _thrust() {
+    _thrust(variant = null) {
         const target = this.player.getClosestEnemy(this._getTargetAcquireRange(this.config.targetRangeBonus ?? 50));
         const fallbackAngle = this.player.moveIntensity > 0.12
             ? this.player.lastMoveAngle
@@ -213,9 +222,9 @@ export class BasicDagger extends WeaponBase {
         }
 
         this._stabSide *= -1;
-        const side = this._stabSide;
+        const side = variant?.side ?? this._stabSide;
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(baseAngle, BASIC_ATTACK_MOTION_DURATION, side);
+            this.player.playAttackMotion(baseAngle, BASIC_ATTACK_MOTION_DURATION, side, variant?.motion);
         }
         const effectTexture = this._getConfiguredEffectTexture() || this.getEffectTexture();
         const useCharacterEffect = !!effectTexture;
@@ -512,16 +521,59 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('dagger');
     }
 
-    _dualDaggerCrossThrust() {
+    _daggerSlash(variant = null) {
+        const texture = 'basic_attack_shadow_dagger_cut';
+        if (!this.scene.textures.exists(texture)) {
+            this._dualDaggerCrossThrust(variant);
+            return;
+        }
+        const { baseAngle, side } = this._getAttackSetup({
+            rangeBonus: this.config.targetRangeBonus ?? 50,
+            duration: BASIC_ATTACK_MOTION_DURATION,
+            variant,
+        });
+        const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
+        const flipY = side < 0;
+        const fit = this.getEffectForwardFit(texture, {
+            innerReach: 18, outerReach: hitRange * (this.config.visualRangeRatio ?? 0.9),
+            rotationOffset: 0, flipY,
+        });
+        const arc = this.createEffectSprite(this.player.x, this.player.y - 16, texture, { frameMs: 46 })
+            .setDepth(14).setAlpha(0).setFlipY(flipY)
+            .setScale(fit.scale, fit.scale * 0.58).setRotation(baseAngle).setBlendMode(Phaser.BlendModes.ADD);
+        const progress = { t: 0 };
+        const entry = this._trackAttackObjects([arc]);
+        entry.tween = this.scene.tweens.add({
+            targets: progress, t: 1, duration: 280, ease: 'Linear',
+            onUpdate: () => {
+                arc.setPosition(this.player.x + Math.cos(baseAngle) * fit.centerForward,
+                    this.player.y - 16 + Math.sin(baseAngle) * fit.centerForward);
+                arc.setRotation(baseAngle + side * (0.12 - progress.t * 0.24));
+                arc.setAlpha(Math.sin(Math.PI * progress.t) * 0.74);
+            },
+            onComplete: () => this._destroyAttackObjects(entry),
+        });
+        // Same one hit, 132 ms contact, range, cone and knockback as the stab.
+        this._delay(132, () => {
+            if (!this.scene?.scene?.isActive() || !this.player?.active) return;
+            this._damageEnemiesInCone(baseAngle, hitRange, this.config.hitAngle ?? 0.42,
+                this.player.x + Math.cos(baseAngle) * 159.5,
+                this.player.y - 16 + Math.sin(baseAngle) * 159.5);
+        });
+        this.playConfiguredSound('dagger');
+    }
+
+    _dualDaggerCrossThrust(variant = null) {
         const effectTexture = this._getConfiguredEffectTexture();
         if (!effectTexture) {
-            this._thrust();
+            this._thrust(variant);
             return;
         }
 
         const { baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 50,
             duration: BASIC_ATTACK_MOTION_DURATION,
+            variant,
         });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
@@ -627,10 +679,11 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('dagger');
     }
 
-    _swordSlash() {
+    _swordSlash(variant = null) {
         const { baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 65,
             duration: BASIC_ATTACK_MOTION_DURATION,
+            variant,
         });
         const originX = this.player.x;
         const originY = this.player.y - 18;
@@ -704,10 +757,11 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('slash');
     }
 
-    _clawSwipe() {
+    _clawSwipe(variant = null) {
         const { baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 35,
             duration: BASIC_ATTACK_MOTION_DURATION,
+            variant,
         });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
@@ -719,12 +773,14 @@ export class BasicDagger extends WeaponBase {
         const glowColor = this.getEffectGlowColor(0xffffff);
         const effectTexture = this._getConfiguredEffectTexture();
         const hitRange = this.attackRange + this.extraRange + (this.config.hitRangeBonus ?? 0);
-        const swipeRotationOffset = side * 0.08 + (this.config.effectRotationOffset ?? 0);
+        const flipY = side < 0;
+        const swipeRotationOffset = side * 0.08 + (flipY ? -1 : 1) * (this.config.effectRotationOffset ?? 0);
         const desiredOuterReach = hitRange * (this.config.visualRangeRatio ?? 0.9);
         const effectFit = effectTexture
             ? this.getEffectCenteredFit(effectTexture, {
                 outerReach: desiredOuterReach,
                 rotationOffset: swipeRotationOffset,
+                flipY,
             })
             : null;
         const targetScale = effectFit?.scale ?? (this.config.effectScale || 0.42);
@@ -782,7 +838,8 @@ export class BasicDagger extends WeaponBase {
                 // Keep the claw fan centered on the brawler so the image reads
                 // as a lateral body swing instead of a narrow forward thrust.
                 swipeSprite.setPosition(this.player.x, this.player.y - 14);
-                swipeSprite.setRotation(this.getEffectRotation(baseAngle) + side * 0.08);
+                swipeSprite.setRotation(this.getMirroredEffectRotation(baseAngle, flipY) + side * 0.08);
+                swipeSprite.setFlipY(flipY);
                 swipeSprite.setAlpha(alpha * 0.86);
                 swipeSprite.setScale(targetScale * (0.76 + eased * 0.24));
             }
@@ -810,10 +867,11 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('slash');
     }
 
-    _sanctuaryBurst() {
+    _sanctuaryBurst(variant = null) {
         const { target, baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 25,
             duration: BASIC_ATTACK_MOTION_DURATION,
+            variant,
         });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
@@ -891,10 +949,11 @@ export class BasicDagger extends WeaponBase {
         this.playConfiguredSound('groundSlam');
     }
 
-    _fireball() {
+    _fireball(variant = null) {
         const { target, baseAngle, side } = this._getAttackSetup({
             rangeBonus: this.config.targetRangeBonus ?? 130,
             duration: BASIC_ATTACK_MOTION_DURATION,
+            variant,
         });
         const cosA = Math.cos(baseAngle);
         const sinA = Math.sin(baseAngle);
