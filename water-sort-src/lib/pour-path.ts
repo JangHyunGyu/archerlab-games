@@ -4,30 +4,29 @@ import { liquidVolume } from './glass-renderer.ts';
 // The lifted bottle's whole path for one pour, shared by PourAnimation and the geometry tests.
 export type PourGeometry = {
   source: Rect; destination: Rect; sourceWater: Rect; sourceLift: number;
-  others?: Rect[]; // Resting bottles the lifted bottle should pass above when there is room.
+  others?: Rect[]; // Resting bottles beside the pour. The lip does not climb over them.
 };
 export type PourPose = { t: number; approach: number; flow: number; retreat: number; pouring: boolean; angle: number; position: Point; outline: Point[] };
 // Highest the lifted bottle may go, so its rim is never cut off at the top of the screen.
 export const TOP_MARGIN = 6;
 // The stretch where the bottle has left its slot and not yet started back: hold, then pour.
 export const HOLD_START = .24, RETURN_START = .77;
-const ANGLE_SAMPLES = 33;
+const HOVER_SAMPLES = 97;
 
-// Usually the bottle tips toward the side it came from. When that side would have to climb far to
-// keep the ghost clear (a top-row bottle pouring into the row below swings back over its own slot),
-// it tips the other way instead, if the bottle fits on screen that way.
-export function planPour(geometry: PourGeometry, units: number, amount: number, viewportWidth: number) {
-  const { source, destination } = geometry;
-  const usual = chooseDirection(source, destination, viewportWidth);
-  const plan = planSide(geometry, units, amount, usual);
-  const x = destination.x + destination.width / 2, needed = Math.hypot(source.width, source.height) + 12;
-  const fits = usual === 1 ? viewportWidth - x >= needed : x >= needed;
-  if (!fits || plan.lift < 24 && !plan.blocked) return plan;
-  const other = planSide(geometry, units, amount, -usual);
-  const better = plan.blocked ? !other.blocked || other.lift < plan.lift : !other.blocked && other.lift <= plan.lift - 24;
-  return better ? other : plan;
+// The lip stays at one height for a route, whichever water level is poured. It clears every tilt
+// from a full bottle down to empty, and it does not climb over neighboring glasses: that climb
+// followed how upright this glass was, so the same move poured from higher up as the glass got
+// fuller. The glass tips toward the side it came from unless the other side stays on screen and
+// sits lower. The ghost left in the source slot is still cleared.
+export function planPour(geometry: PourGeometry, units: number, amount: number, viewportWidth: number, viewportHeight = Number.POSITIVE_INFINITY) {
+  const usual = chooseDirection(geometry.source, geometry.destination, viewportWidth);
+  const plan = planSide(geometry, units, amount, usual, viewportWidth, viewportHeight);
+  const other = planSide(geometry, units, amount, -usual, viewportWidth, viewportHeight);
+  const usable = (side: { fits: boolean; blocked: boolean; lift: number }) => side.fits && !side.blocked;
+  if (usable(other) && (!usable(plan) || other.lift < plan.lift - .5)) return other;
+  return plan;
 }
-function planSide(geometry: PourGeometry, units: number, amount: number, direction: number) {
+function planSide(geometry: PourGeometry, units: number, amount: number, direction: number, viewportWidth: number, viewportHeight: number) {
   const { source, destination, sourceWater: water } = geometry;
   const pivot = { x: direction > 0 ? water.x + water.width : water.x, y: water.y };
   const polygon = roundBottom(water, water.width * .48);
@@ -38,11 +37,14 @@ function planSide(geometry: PourGeometry, units: number, amount: number, directi
   // The faded ghost stays in the source slot; the lifted bottle pours from above it.
   const ghost: Box = { x0: source.x - 4, y0: source.y - 6, x1: source.x + source.width + 4, y1: source.y + source.height + 10 };
   const base = { x: destination.x + destination.width / 2, y: destination.y - 15 };
-  const others = (geometry.others ?? []).map(r => ({ x0: r.x - 2, y0: r.y - 4, x1: r.x + r.width + 2, y1: r.y + r.height + 6 }));
-  // Every angle the bottle holds still at: the hold uses the first, the pour sweeps to the last.
-  const angles = Array.from({ length: ANGLE_SAMPLES }, (_, i) => mix(initialAngle, finalAngle, i / (ANGLE_SAMPLES - 1)));
-  const hover = planHover(outline, pivot, base, angles, ghost, TOP_MARGIN, others, 8, source.height);
+  // Same angles for every water level, so the lip height does not change between pours.
+  const hoverAngles = Array.from({ length: HOVER_SAMPLES }, (_, i) => mix(angleFor(4), angleFor(0), i / (HOVER_SAMPLES - 1)));
+  const hover = planHover(outline, pivot, base, hoverAngles, ghost, TOP_MARGIN);
   const end = { x: base.x, y: base.y - hover.lift };
+  const fits = hoverAngles.every(angle => {
+    const box = boundsOf(placeVessel(outline, angle, pivot, end));
+    return box.x0 >= -0.5 && box.x1 <= viewportWidth + 0.5 && box.y0 >= -0.5 && box.y1 <= viewportHeight + 0.5;
+  });
   const start = { x: source.x + pivot.x, y: source.y + pivot.y + geometry.sourceLift };
   const rest = { x: source.x + pivot.x, y: source.y + pivot.y };
   function pose(t: number): PourPose {
@@ -60,6 +62,6 @@ function planSide(geometry: PourGeometry, units: number, amount: number, directi
     }
     return { t, approach, flow, retreat, pouring: t >= .27 && t < .73, angle, position, outline: placed };
   }
-  return { direction, pivot, ghost, end, lift: hover.lift, blocked: hover.blocked, initialAngle, finalAngle, pose };
+  return { direction, pivot, ghost, end, lift: hover.lift, blocked: hover.blocked, fits, initialAngle, finalAngle, pose };
 }
 export type PourPlan = ReturnType<typeof planPour>;

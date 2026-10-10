@@ -28,6 +28,7 @@ for (const [screen, stages] of Object.entries(layouts)) for (const [stage, { tub
     const [width, height] = screen.split('x').map(Number);
     let pours = 0, maxLift = 0;
     const blocked: string[] = [], streamOverGhost: string[] = [];
+    const lipByPair = new Map<string, number[]>();
     for (let from = 0; from < tubes.length; from++) for (let to = 0; to < tubes.length; to++) {
       if (from === to) continue;
       const source = tubes[from], destination = tubes[to];
@@ -35,8 +36,14 @@ for (const [screen, stages] of Object.entries(layouts)) for (const [stage, { tub
       for (const sourceLift of [0, SELECTED]) for (let units = 1; units <= 4; units++) for (let amount = 1; amount <= units; amount++) {
         if (units === 4 && amount === 4) continue; // A full bottle of one colour is finished, never poured.
         const name = `${from}→${to} (${units}/${amount}${sourceLift ? ', selected' : ''})`;
-        const plan = planPour({ source, destination, sourceWater: glassInterior(source.width, source.height), sourceLift, others }, units, amount, width);
+        const plan = planPour({ source, destination, sourceWater: glassInterior(source.width, source.height), sourceLift, others }, units, amount, width, height);
         pours++; maxLift = Math.max(maxLift, plan.lift);
+        if (sourceLift === 0) {
+          const key = `${from}→${to}`;
+          const lifts = lipByPair.get(key) ?? [];
+          lifts.push(plan.lift);
+          lipByPair.set(key, lifts);
+        }
         if (plan.blocked) blocked.push(name);
         const water = glassInterior(destination.width, destination.height), half = Math.min(5, water.width * .13) / 2 + 1;
         for (const t of times) {
@@ -58,6 +65,11 @@ for (const [screen, stages] of Object.entries(layouts)) for (const [stage, { tub
     // that bottle stands right under the source's slot (the bottle then pours from above its ghost).
     const stacked = streamOverGhost.filter(pair => { const [from, to] = pair.split('→').map(Number); const g = tubes[from], x = tubes[to].x + tubes[to].width / 2; return rows[to] > rows[from] && x > g.x - 4 && x < g.x + g.width + 4; });
     assert.deepEqual(streamOverGhost, stacked, 'stream passes over the ghost only for a bottle right below it');
+    // Same two bottles pour from the same lip height whatever the water level is.
+    for (const [pair, lifts] of lipByPair) {
+      const spread = Math.max(...lifts) - Math.min(...lifts);
+      assert.ok(spread <= 3, `${pair} lip height changes with the water level by ${spread.toFixed(1)}px`);
+    }
     console.log(`${screen} stage ${stage}: ${pours} pours, highest rise ${Math.round(maxLift)} px${stacked.length ? `, stream over the ghost for ${stacked.join(', ')}` : ''}`);
   });
 }

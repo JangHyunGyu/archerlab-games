@@ -31,11 +31,11 @@ type ProbeFrame = { id: number; from: number; to: number; t: number; phase: stri
 // Tests read real frame geometry by setting window.__pourProbe = []. Nothing is recorded otherwise.
 const probe = () => (window as unknown as { __pourProbe?: ProbeFrame[] }).__pourProbe;
 
-function paintMotion(ctx: CanvasRenderingContext2D, motion: PourMotion, time: number, width: number) {
+function paintMotion(ctx: CanvasRenderingContext2D, motion: PourMotion, time: number, width: number, height: number) {
   const { destination, targetWater: target, amount, before, from, to } = motion;
   const tube = before[from], receiving = before[to], color = tube.at(-1)!;
   let plan = plans.get(motion);
-  if (!plan) { plan = planPour(motion, tube.length, amount, width); plans.set(motion, plan); }
+  if (!plan) { plan = planPour(motion, tube.length, amount, width, height); plans.set(motion, plan); }
   const { end, ghost, pivot } = plan;
   const t = Math.max(0, Math.min(1, (time - motion.started) / motion.duration));
   const { approach, flow, retreat, pouring, angle, position, outline } = plan.pose(t);
@@ -78,7 +78,7 @@ export function PourAnimation({ motions, onFinish }: { motions: PourMotion[]; on
       ctx.clearRect(0, 0, width, height);
       for (const motion of motionsRef.current) {
         if (completed.has(motion.id)) continue;
-        const t = paintMotion(ctx, motion, time, width);
+        const t = paintMotion(ctx, motion, time, width, height);
         canvas.dataset.phase = t >= .27 && t < .73 ? 'pour' : t < .27 ? 'lift' : 'return';
         if (t >= 1) finish(motion.id);
       }
