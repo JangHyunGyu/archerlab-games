@@ -91,6 +91,9 @@ class CharacterProfile:
     embedded_weapon: bool = False
     socket_overrides: Mapping[str, WeaponSocket] = field(default_factory=dict)
     body_track_adjustments: Mapping[str, tuple[float, int, int]] = field(default_factory=dict)
+    # Calibrate source-camera scale before the shared canvas fit. Never fit
+    # individual poses to their bounds: a crouch must retain anatomical size.
+    source_track_scales: Mapping[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -122,26 +125,31 @@ CHARACTER_PROFILES: dict[str, CharacterProfile] = {
         output_relative=Path("assets/player/motion"),
         filename_prefix="player_",
         embedded_weapon=True,
+        source_track_scales={"attack_down": 1.08, "attack_right": 1.08, "attack_up": 1.08},
     ),
     "light_swordswoman": CharacterProfile(
         character_id="light_swordswoman",
         output_relative=Path("assets/player/characters/light_swordswoman/motion"),
         embedded_weapon=True,
+        source_track_scales={"attack_down": 1.22, "attack_right": 1.14, "attack_up": 1.14},
     ),
     "white_tiger_brawler": CharacterProfile(
         character_id="white_tiger_brawler",
         output_relative=Path("assets/player/characters/white_tiger_brawler/motion"),
         embedded_weapon=True,
+        source_track_scales={"attack_down": 1.10, "attack_right": 1.08, "attack_up": 1.08},
     ),
     "flame_mage": CharacterProfile(
         character_id="flame_mage",
         output_relative=Path("assets/player/characters/flame_mage/motion"),
         embedded_weapon=True,
+        source_track_scales={"attack_down": 1.15, "attack_right": 1.15, "attack_up": 1.15},
     ),
     "sanctuary_healer": CharacterProfile(
         character_id="sanctuary_healer",
         output_relative=Path("assets/player/characters/sanctuary_healer/motion"),
         embedded_weapon=True,
+        source_track_scales={"attack_down": 1.12, "attack_right": 1.12, "attack_up": 1.12},
     ),
 }
 
@@ -586,6 +594,11 @@ def load_character_poses(source_root: Path, profile: CharacterProfile) -> dict[s
         listing = "\n  ".join(str(path) for path in missing)
         raise FileNotFoundError(f"{profile.character_id}: missing source strips:\n  {listing}")
     poses = normalize_source_resolution(poses)
+    for track, factor in profile.source_track_scales.items():
+        poses[track] = [replace(pose, image=pose.image.resize(
+            (round(pose.image.width * factor), round(pose.image.height * factor)),
+            Image.Resampling.LANCZOS,
+        )) for pose in poses[track]]
     validate_source_pose_consistency(profile.character_id, poses)
     return poses
 

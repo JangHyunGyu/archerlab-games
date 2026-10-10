@@ -672,10 +672,12 @@ export class BasicDagger extends WeaponBase {
             if (slash) {
                 // This authored arc is a body-centered horizontal sweep, not a
                 // projectile. It must stay pinned to the character while it opens.
-                slash.setPosition(originX, originY);
+                slash.setPosition(this.player.x, this.player.y - 18);
                 slash.setRotation(this.getMirroredEffectRotation(baseAngle, flipY));
                 slash.setFlipY(flipY);
-                slash.setAlpha((1 - eased) * peakAlpha);
+                // The hit lands at 118 ms of a 250 ms sweep. Keep the light
+                // strongest at contact, rather than fading 85% before it.
+                slash.setAlpha(Math.sin(Math.PI * Phaser.Math.Clamp(t, 0, 1)) * peakAlpha);
                 slash.setScale(targetScale * (0.78 + eased * 0.22));
             }
         };
@@ -779,7 +781,7 @@ export class BasicDagger extends WeaponBase {
             if (swipeSprite) {
                 // Keep the claw fan centered on the brawler so the image reads
                 // as a lateral body swing instead of a narrow forward thrust.
-                swipeSprite.setPosition(originX, originY);
+                swipeSprite.setPosition(this.player.x, this.player.y - 14);
                 swipeSprite.setRotation(this.getEffectRotation(baseAngle) + side * 0.08);
                 swipeSprite.setAlpha(alpha * 0.86);
                 swipeSprite.setScale(targetScale * (0.76 + eased * 0.24));

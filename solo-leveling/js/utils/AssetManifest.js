@@ -130,8 +130,8 @@ const PLAYER_MOTION_NAMES = [
 // Character image URLs are otherwise stable across releases and can remain in
 // a browser/CDN cache after portraits or motion frames are rebuilt in place.
 export const CHARACTER_VISUAL_ASSET_VERSION = '20260714-integrated-character-motion-v2';
-export const CHARACTER_MOTION_ASSET_VERSION = CHARACTER_VISUAL_ASSET_VERSION;
-export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20260716-direction-audit-v13';
+export const CHARACTER_MOTION_ASSET_VERSION = '20261010-higgsfield-combat-motion-v3';
+export const CHARACTER_COMBAT_VFX_ASSET_VERSION = '20261010-authored-combat-vfx-v14';
 export const CHARACTER_COMBAT_VFX_FRAME_COUNT = 6;
 
 const uiAsset = (key) => ({
@@ -217,7 +217,10 @@ export function getMenuAssetList() {
 export function getGameplayAssetList(characterId = getStoredCharacterId()) {
     return [
         ...getMenuAssetList(),
-        ...Object.keys(WEAPONS).map(key => ({ key: `asset_icon_${key}`, path: `assets/ui/icons/${key}.png` })),
+        ...Object.keys(WEAPONS).map(key => ({
+            key: `asset_icon_${key}`, path: `assets/ui/icons/${key}.png`,
+            cacheVersion: CHARACTER_COMBAT_VFX_ASSET_VERSION,
+        })),
         ...Object.keys(PASSIVES).map(key => ({ key: `asset_icon_${key}`, path: `assets/ui/icons/${key}.png` })),
         ...ITEM_KEYS.map(key => ({ key: `item_${key}`, path: `assets/items/${key}.png` })),
         ...TELEGRAPH_KEYS.map(key => ({ key: `telegraph_${key}`, path: `assets/effects/telegraphs/${key}.png` })),

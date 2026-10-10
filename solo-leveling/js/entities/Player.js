@@ -54,6 +54,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this._hitReactTimer = 0;
         this._hitReactDuration = 0;
         this._lastAfterimageAt = 0;
+        this._reducedMotion = typeof window !== 'undefined' &&
+            !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         this._allEnemiesFrame = -1;
         this._allEnemiesCache = [];
         this._allEnemiesMergedCache = [];
@@ -88,7 +90,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Glow filter (rank-based)
         try {
             this.enableFilters();
-            this._glowFilter = this.filters.internal.addGlow(0x7b2fff, 2, 0, 1, false, 8, 8);
+            this._glowFilter = this.filters.internal.addGlow(character.accent ?? 0x7b2fff, 2, 0, 1, false, 8, 8);
             this._glowFilter.setActive(true);
         } catch (e) { /* filters not available */ }
 
@@ -233,7 +235,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             ? preferredAnimKey
             : (this.scene.anims.exists(fallbackAnimKey) ? fallbackAnimKey : null);
         if (activeAnimKey) {
-            this.play(activeAnimKey, false);
+            // Fit all six authored poses into this action. Fixed 20 fps used
+            // to cut a 190 ms cast off before its recovery frames.
+            this.play({ key: activeAnimKey, duration, frameRate: null }, false);
             this._applyFlipForAnimation(activeAnimKey);
         }
     }
@@ -350,6 +354,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     _emitMovementAfterimage(time, speedRatio, walkWeight) {
+        if (this._reducedMotion) return;
         if (walkWeight < 0.55 || speedRatio < 0.45 || this._attackPose.active || this._hitReactTimer > 0) return;
         if (time - this._lastAfterimageAt < 105) return;
         this._lastAfterimageAt = time;
@@ -362,7 +367,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             )
                 .setDepth(this.depth - 1)
                 .setAlpha(0.18)
-                .setTint(0x7b2fff)
+                .setTint(this.character?.accent ?? 0x7b2fff)
                 .setBlendMode(Phaser.BlendModes.ADD)
                 .setScale(this.scaleX * 0.99, this.scaleY * 0.99)
                 .setRotation(this.rotation)
@@ -433,7 +438,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             pose.active = false;
         }
 
-        return { lean, twist, scaleX, scaleY };
+        // The authored limbs now carry the action. Caster gestures need a
+        // quieter root than a claw strike, rather than the same full-body
+        // sword lunge on all five characters.
+        const rootWeight = this._reducedMotion ? 0 : ({
+            shadowMonarch: 0.7,
+            lightSwordswoman: 0.55,
+            whiteTigerBrawler: 0.85,
+            flameMage: 0.28,
+            sanctuaryHealer: 0.2,
+        }[this.character?.id] ?? 1);
+        return { lean: lean * rootWeight, twist: twist * rootWeight,
+            scaleX: scaleX * rootWeight, scaleY: scaleY * rootWeight };
     }
 
     _sampleHitReact(delta) {

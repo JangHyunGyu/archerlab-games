@@ -77,6 +77,7 @@ export class ShadowSlash extends WeaponBase {
 
     _doSlash(angleOffset) {
         const angle = this._getAimAngle((this.config.acquireRange || 360) + this.extraRange) + angleOffset;
+        this.player.playAttackMotion?.(angle, this.config.motionDuration || 260, 1);
 
         const range = (this.config.slashRange || 350) + this.extraRange;
         const slashDist = range * (this.config.slashDistanceRatio ?? 0.45);
@@ -400,7 +401,7 @@ export class ShadowSlash extends WeaponBase {
         }
 
         if (this.player.playAttackMotion) {
-            this.player.playAttackMotion(angle, 230, 1);
+            this.player.playAttackMotion(angle, this.config.motionDuration || 230, 1);
         }
         this.playConfiguredSound('slash');
     }

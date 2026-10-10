@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Combat motion audit</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111722;color:#eaf0fc;font:15px system-ui;padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}main{max-width:1200px;margin:auto}h1{font-size:22px}nav{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}label{display:flex;align-items:center;gap:6px}select,button{min-height:44px;background:#26334a;color:inherit;border:1px solid #62779a;border-radius:6px;padding:8px;font:inherit}button:focus-visible,select:focus-visible{outline:3px solid #a6daff}#stage{width:100%;aspect-ratio:1000/700}#stage canvas{display:block;width:100%;height:auto}#status{min-height:2em}#strips{display:grid;gap:14px}article{background:#1b2535;border-radius:8px;padding:10px;overflow:hidden}article h2{font-size:16px}.frames{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px}.frames img{width:100%;image-rendering:auto}.timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.timeline img{width:100%}#capture{display:grid;gap:12px}small{color:#9cacc6}@media(max-width:500px){label{width:100%;justify-content:space-between}select{max-width:65%}.timeline{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<main>
+<h1>Combat motion / VFX audit</h1>
+<nav>
+<label>Character <select id="character" aria-label="Character"></select></label>
+<label>Action <select id="action" aria-label="Action"></select></label>
+<label>Direction <select id="direction" aria-label="Direction"><option value="0">Right</option><option value="90">Down</option><option value="180">Left</option><option value="270">Up</option><option value="45">Down-right</option></select></label>
+<button id="fire" disabled>Play once</button><button id="record" disabled>Capture five actions</button>
+</nav>
+<p id="status" role="status">Loading production textures…</p>
+<div id="stage"></div>
+<p><small>Production Player, weapons and textures. Live playback plus fixed 60 Hz captures at 50 / 100 / 150 / 250 / 400 / 700 / 1100 / 1600 ms. Target dummies do not die. No player save data is changed.</small></p>
+<div id="capture"></div><h2>Authored attack frames — all four directions</h2><div id="strips"></div>
+</main>
+<script src="../../assets/vendor/phaser/phaser-4.2.0.min.js"></script>
+<script type="module" src="combat-audit.js"></script>
+</html>

@@ -267,7 +267,8 @@ function assertCoverage(rows, key, coverage, min = 0.85, max = 1.05, role = 'ran
         assert.ok(start >= 0 && end > start, `${method}: runtime body not found`);
         assert.match(body, /getEffectCenteredFit\(effectTexture,/);
         assert.match(body, /createEffectSprite\(originX, originY, effectTexture,/);
-        assert.match(body, /setPosition\(originX, originY\)/);
+        assert.match(body, /setPosition\(this\.player\.x, this\.player\.y - (18|14)\)/,
+            `${method}: body-centered trails must follow the moving player`);
         assert.doesNotMatch(body, /centerForward/);
     }
 

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shadow survival viewport review</title>
+<style>
+*{box-sizing:border-box}body{background:#101723;color:#e5eeff;font:16px system-ui;margin:16px}nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}select,button{min-height:44px;padding:8px;font:inherit}iframe{display:block;border:0;background:#000;max-width:100%}#dimensions{min-height:24px}
+</style>
+<nav><label>Viewport <select id="size" aria-label="Viewport"></select></label><button id="shorten">Shorter browser viewport</button><a href="combat-audit.html">Combat review</a></nav>
+<p id="dimensions" role="status"></p><p id="measure"></p><iframe title="Production game viewport" src="../index.html" allow="fullscreen"></iframe>
+<script>
+const sizes=[[320,568],[360,640],[390,844],[430,932],[768,1024],[1024,768],[1440,900],[1920,1080],[568,320],[844,390],[932,430]];
+const select=document.querySelector('#size'),frame=document.querySelector('iframe');
+for(const [w,h] of sizes)select.add(new Option(`${w} × ${h}`,`${w},${h}`));
+function apply(shorten=false){const [w,h]=select.value.split(',').map(Number);frame.style.width=w+'px';frame.style.height=(h-(shorten?80:0))+'px';document.querySelector('#dimensions').textContent=`Requested viewport: ${w} × ${h-(shorten?80:0)}. The embedded page uses the production layout and input handlers.`;}
+select.addEventListener('change',()=>{apply();frame.focus();});document.querySelector('#shorten').addEventListener('click',()=>{apply(true);frame.focus();});apply();
+setInterval(()=>{const d=frame.contentDocument,c=d?.querySelector('canvas');if(!c)return;const b=c.getBoundingClientRect();document.querySelector('#measure').textContent=`Canvas CSS: ${Math.round(b.width)} × ${Math.round(b.height)}; frame: ${frame.clientWidth} × ${frame.clientHeight}; scroll: ${d.documentElement.scrollWidth} × ${d.documentElement.scrollHeight}`;},500);
+</script>
+</html>

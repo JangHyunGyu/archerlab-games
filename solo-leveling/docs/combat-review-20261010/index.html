@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Combat motion review — 10 October 2026</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:#101722;color:#e9f1ff;font:16px/1.6 system-ui}main{max-width:1100px;margin:auto}h1{font-size:clamp(25px,4vw,38px)}h2{margin-top:32px}a{color:#a9d8ff}li{margin:8px 0}img{display:block;width:100%;height:auto;border:1px solid #34435b;border-radius:8px}details{margin:14px 0;background:#1a2535;padding:12px;border-radius:8px}summary{cursor:pointer;min-height:44px;padding:8px;font-weight:650}.links{display:flex;flex-wrap:wrap;gap:16px}.links a{padding:10px 0}code{overflow-wrap:anywhere}small{color:#aebed5}
+</style>
+<main>
+<h1>Combat motion and effects review</h1>
+<p>10 October 2026 · Five protagonists · Five basic attacks and twenty skills · Local implementation and review.</p>
+<nav class="links"><a href="../../tools/combat-audit.html">Interactive combat preview</a><a href="../../tools/responsive-audit.html">Production viewport review</a><a href="../../assets/player/motion_v2_sources/higgsfield_20261010.json">Motion generation records</a><a href="../../assets/effects/source/higgsfield_20261010/generation.json">Effect generation records</a></nav>
+<h2>Findings and corrections</h2>
+<ul>
+<li>Short casts used fixed 20 fps body animations: a 190 ms action could end before recovery. Each action now plays all six frames within its requested duration, including Phaser's required null frame-rate override.</li>
+<li>Arc skills lacked a body attack trigger. The shared arc implementation now starts the character's directional motion; piercing skills honor their configured duration.</li>
+<li>Sword and claw trails stayed at the starting position while the player moved. Their origins now follow the player. The sword trail also retains brightness at contact.</li>
+<li>Fifteen Higgsfield strips replace the five characters' three authored attack directions. Left is an exact mirror of right. Source-camera scale is calibrated before the common frame fit; crouching does not independently resize the body.</li>
+<li>The first frontal mage candidate changed staff hands at contact and was rejected. A replacement keeps one staff hand; each cell is mirrored separately to match the established idle artwork without reversing the temporal sequence.</li>
+<li>Six effects were regenerated as genuine six-cell sequences: shadow slash, ruler pressure, fear, tiger quake, tiger guard, and flame arc. Fixed cell scale and pivot preserve ignition, growth, contact, breakup and dissipation.</li>
+<li>Character glow and movement trails use the character accent. Root motion is restrained for casters. Reduced motion disables cosmetic movement afterimages and attack-root deformation.</li>
+</ul>
+<h2>Character review</h2>
+<p>The user confirmed these anime references. The new poses interpret their combat motifs within the existing top-down camera, costumes, four-direction system and six-frame action budget. This is not an episode-by-episode or frame-exact reproduction.</p>
+<div id="characters"></div>
+<h2>Verification and scope</h2>
+<ul>
+<li>All 25 actions exercised with production Player and weapon classes. Eight captures per action at 50, 100, 150, 250, 400, 700, 1100 and 1600 ms. The review harness advances both scene timers and Phaser tweens at 60 Hz; live playback remains available.</li>
+<li>Visual contact sheets cover 340 body PNG frames and all 150 effect frames. The motion verifier checks all 340 PNG and 340 pixel-identical lossless WebP files, four directions, recovery, distinct poses and source chroma.</li>
+<li>Game test matrix passed, including all 25 effect/hit-range contracts, 150 effect-frame pixel checks, four-direction corrections, timing regression, moving trail origins, balance, menu geometry across eleven viewports, and rotation rules.</li>
+<li>Production menu, character selection, gameplay and level-up screens were visually reviewed in Chrome iframe viewports: small and large portrait phones, tablet portrait/landscape, desktop and compact landscape. The 844 × 390 viewport was also shortened to 844 × 310. These are browser viewport checks, not physical-device touch or safe-area hardware tests.</li>
+<li>The asset manifest check passed for 3,000 tracked assets. All 42 replaced effect frame/peak PNG-WebP pairs match. Motion, effect and weapon-icon cache versions were updated along with the service-worker release version.</li>
+<li>Runtime combat captures were repeated from a fresh origin with versioned textures after detecting stale browser images. Earlier stale-image and unsynchronized-clock captures were excluded from the evidence shown here.</li>
+<li>Combat values and Korean player-facing text were retained. This report records the local review; release status is tracked by the main-branch deployment.</li>
+</ul>
+<p><small>Generation provider: Higgsfield MCP, GPT Image 2, 2K/high. 22 jobs completed: 15 accepted motion strips, one rejected motion candidate and six effect sheets. Rebuild with <code>scripts/build_character_motion_v2.py --all</code> and <code>scripts/install_higgsfield_combat_20261010.py</code>; source prompts and job IDs are retained above.</small></p>
+</main>
+<script>
+const records=[
+['shadowMonarch','shadow_monarch','shadow','Shadow monarch / Sung Jinwoo','Lowered dagger guard, compact anticipation and committed dual-dagger extension. Replaced the ornamental cross, seal-like pressure and petal-like fear effect.','basicDagger · shadowDagger · shadowSlash · rulersAuthority · dragonFear'],
+['lightSwordswoman','light_swordswoman','light','Light swordswoman / Cha Hae-In','A two-handed overhead-to-forward cut replaces the thrust-like action. Gold blade trails, lance, crescent, judgment and aura retained after frame and runtime review.','lightPierce · lightLance · lightCrescent · lightJudgment · lightSanctum'],
+['whiteTigerBrawler','white_tiger_brawler','tiger','White tiger / Baek Yoonho','Weighted guard, loaded shoulder and driving claw strike. Replaced the snowflake-like quake with dust and fragments, and the spiral guard with an open battle aura.','tigerPalm · tigerFang · tigerRend · tigerQuake · tigerGuard'],
+['flameMage','flame_mage','flame','Flame mage / Choi Jong-In','Palm-led casting and stable staff support replace the weapon thrust. Replaced the closed flame torus with a forward crescent; fireball, bolt, meteor and inferno retained.','flameSpark · flameBolt · flameArc · flameMeteor · flameInferno'],
+['sanctuaryHealer','sanctuary_healer','sanctuary','Sanctuary healer / Lee Joohee','Open-palm channeling, restrained root motion and stable focus hand replace the aggressive staff thrust. Mint-white support effects retained after all six stages and runtime casts were reviewed.','sanctuaryStrike · sanctuaryOrb · sanctuaryArc · sanctuarySeal · sanctuaryField']
+];
+for(const [id,asset,family,title,verdict,actions] of records){
+const section=document.createElement('section');const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=verdict;const list=document.createElement('p');list.textContent=actions;section.append(h,p,list);
+for(const [label,file] of [['Runtime timeline',`runtime-${id}.jpg`],['All body frames',`${asset}_motion_v2_contact.png`],['All effect frames',`vfx-${family}.jpg`]]){const detail=document.createElement('details'),summary=document.createElement('summary'),img=new Image();summary.textContent=label;img.src=file;img.alt=title+' — '+label;img.loading='lazy';detail.append(summary,img);section.append(detail);}
+document.querySelector('#characters').append(section);
+}
+</script>
+</html>
