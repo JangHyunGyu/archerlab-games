@@ -5540,10 +5540,11 @@
           const y = 262 + index * 48;
           const rank = Math.max(1, Math.floor(Number(row.rank) || index + 1));
           const score = Math.max(0, Math.floor(Number(row.score) || 0));
-          const name = String(row.player_name || "DEFENDER").trim().slice(0, 14) || "DEFENDER";
+          const fullName = String(row.player_name || "DEFENDER").trim() || "DEFENDER";
           const extra = row.extra_data && typeof row.extra_data === "object" ? row.extra_data : {};
           const kills = Math.max(0, Math.floor(Number(extra.kills) || 0));
-          const isPlayer = Boolean(storedName && name.toLocaleUpperCase() === storedName);
+          const isPlayer = Boolean(storedName && fullName.toLocaleUpperCase() === storedName);
+          const name = fullName.length > 12 ? `${fullName.slice(0, 12)}…` : fullName;
           const rowAccent = rank <= 3 ? medalColors[rank - 1] : isPlayer ? COLORS.blue : 0x626659;
           const rowPanel = this.add.rectangle(270, y, 414, 40, isPlayer ? UI_COLORS.amber : 0xffffff, isPlayer ? 0.12 : index % 2 ? 0.015 : 0.04).setDepth(503);
           const rowRule = this.add.rectangle(270, y + 23, 404, 1, UI_COLORS.steel, 0.16).setDepth(504);
@@ -5558,7 +5559,7 @@
             stroke: "#050607",
             strokeThickness: rank <= 3 ? 0 : 2
           }).setOrigin(0.5).setDepth(506);
-          const nameText = this.add.text(132, y - 5, name.length > 12 ? `${name.slice(0, 12)}…` : name, {
+          const nameText = this.add.text(132, y - 5, name, {
             resolution: 2, fontFamily: "Pretendard Variable, Arial, sans-serif",
             fontSize: 15,
             fontStyle: "800",

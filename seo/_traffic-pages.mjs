@@ -9,7 +9,7 @@ const ORIGIN = '<meta http-equiv="origin-trial" content="Agn9opFYdjvT/UqEIvt4RnC
 const CSS = `*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f5f3ff;color:#25232a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif;line-height:1.75}.shell{width:min(760px,calc(100% - 36px));margin:0 auto;padding:28px 0 72px}.brand{display:inline-flex;align-items:center;color:#37249b;font-weight:800;text-decoration:none;letter-spacing:-.01em}.lang-link{float:right;color:#37249b;font-weight:700;text-decoration:none}.hero{padding:54px 0 34px}.eyebrow{margin:0 0 10px;color:#6c4df6;font-size:.82rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}h1{margin:0;color:#19171d;font-size:clamp(2rem,6vw,3.35rem);line-height:1.16;letter-spacing:-.045em}.intro{margin:22px 0 0;font-size:1.1rem;color:#514d58}.cta{display:inline-flex;margin-top:26px;padding:13px 22px;border-radius:999px;background:#6c4df6;color:#fff;font-weight:800;text-decoration:none;box-shadow:0 10px 28px color-mix(in srgb,#6c4df6 24%,transparent)}main section{margin-top:28px;padding:26px;background:#fff;border:1px solid color-mix(in srgb,#6c4df6 18%,#ddd);border-radius:18px;box-shadow:0 12px 34px rgba(30,25,35,.06)}h2{margin:0 0 14px;color:#37249b;font-size:1.35rem;line-height:1.35;letter-spacing:-.02em}p{margin:0 0 12px}p:last-child{margin-bottom:0}.faq-wrap{margin-top:36px}.faq-wrap h2{margin-bottom:8px}.faq-wrap details{background:#fff;border:1px solid color-mix(in srgb,#6c4df6 17%,#ddd);border-radius:14px;margin-top:10px;padding:0 18px}.faq-wrap summary{cursor:pointer;padding:16px 0;font-weight:800;color:#302c36}.faq-wrap details p{padding:0 0 17px;color:#56515d}.related{margin-top:36px}.related-grid{display:grid;gap:12px}.related-card{display:grid;gap:6px;padding:18px;background:#fff;border:1px solid color-mix(in srgb,#6c4df6 18%,#ddd);border-radius:14px;text-decoration:none;color:#27232b}.related-card strong{color:#37249b}.related-card span{font-size:.94rem;color:#625d69}.final-cta{margin-top:38px;padding:30px;text-align:center;background:linear-gradient(135deg,#6c4df6,#37249b);border-radius:20px;color:#fff}.final-cta p{font-size:1.05rem}.final-cta .cta{margin-top:10px;background:#fff;color:#37249b;box-shadow:none}footer{margin-top:40px;padding-top:22px;border-top:1px solid color-mix(in srgb,#6c4df6 16%,#ddd);font-size:.9rem;color:#716b77}footer a{color:#37249b}@media(max-width:560px){.shell{width:min(100% - 26px,760px)}.hero{padding:40px 0 24px}main section{padding:21px}.final-cta{padding:24px 18px}.lang-link{float:none;display:inline-block;margin-top:8px}}table{border-collapse:collapse;width:100%;margin:.6rem 0;font-size:.95rem}th,td{border:1px solid #ddd6fb;padding:.45rem .7rem;text-align:left}th{background:#f1eeff}main section ul{margin:.4rem 0 .4rem 1.2rem;padding:0}main section li{margin:.35rem 0}`;
 
 const ui = {
-  ko: { eyebrow: '게임 가이드', faq: '자주 묻는 질문', related: '함께 보면 좋은 안내', home: 'ArcherLab Games 홈으로', other: 'English', updated: '업데이트' },
+  ko: { eyebrow: '게임 가이드', faq: '자주 묻는 질문', related: '관련 글', home: 'ArcherLab Games 홈으로', other: 'English', updated: '업데이트' },
   en: { eyebrow: 'Game guide', faq: 'Questions', related: 'Related guides', home: 'ArcherLab Games home', other: '한국어', updated: 'Updated' }
 };
 
@@ -197,10 +197,10 @@ const pages = [
       title: '젤리팡 2048 공략 | 4×4에서 왕관 젤리까지',
       h1: '젤리팡 2048 공략: 같은 숫자를 밀어 왕관 젤리 만들기',
       crumb: '젤리팡 2048 공략',
-      description: '젤리팡 2048의 4×4 밀기 규칙, 합칠 때 점수가 오르는 방식, 2048 왕관 젤리, 게임 오버 조건을 정리했습니다.',
+      description: '젤리팡 2048의 4×4 밀기 규칙, 합칠 때 오르는 점수, 2048 왕관 젤리, 게임 오버 조건.',
       intro: '보드는 가로세로 4칸입니다. 같은 숫자 젤리 둘을 한 방향으로 밀면 하나로 합쳐지고, 숫자는 두 배가 됩니다. 2에서 두 배씩 열 번 올라가면 2048, 왕관 젤리입니다.',
       play: '/jelly-pang-2048/', cta: '젤리팡 2048 플레이하기',
-      closing: '첫 판은 왕관보다, 큰 숫자를 한구석에 붙여 두는 쪽을 먼저 익혀 보세요.',
+      closing: '첫 판은 왕관보다, 큰 숫자를 한구석에 붙여 두는 쪽부터 익히세요.',
       sections: [
         { h2: '움직이는 법', html: '<p>화면을 밀거나, 화면의 방향 버튼, 키보드 방향키, W A S D로 보드 전체를 한 방향으로 밉니다. 젤리는 빈 칸 쪽으로 움직이고, 맞닿은 같은 숫자만 합쳐집니다.</p><p>한 번 밀 때마다 빈 칸 하나에 새 젤리가 나타납니다. 새로 나오는 값은 2 또는 4입니다.</p>' },
         { h2: '점수', html: '<p>합쳐져 생긴 젤리의 숫자가 점수에 더해집니다. 2와 2가 만나 4가 되면 4점입니다. 숫자가 커질수록 한 번에 오르는 점수도 커집니다.</p>' },
@@ -215,8 +215,8 @@ const pages = [
       ],
       related: [
         { href: '/seo/lumen-shift-guide', title: '루멘 시프트 공략', text: '100스테이지 낙하 블록과 줄 점수 계산.' },
-        { href: '/seo/cat-tower-guide', title: '고양이 타워 공략', text: '10단계 진화 점수와 연쇄 콤보를 정리했습니다.' },
-        { href: '/seo/quick-browser-games', title: '짧게 즐기는 브라우저 게임', text: '한 판 길이에 맞춰 게임을 골라 보세요.' }
+        { href: '/seo/cat-tower-guide', title: '고양이 타워 공략', text: '10단계 진화 점수와 연쇄 콤보.' },
+        { href: '/seo/quick-browser-games', title: '쉬는 시간에 하는 브라우저 게임', text: '한 판 길이에 맞춰 고른 게임.' }
       ]
     },
     {
@@ -253,15 +253,15 @@ const pages = [
       title: '루멘 시프트 공략 | 100스테이지 낙하 블록',
       h1: '루멘 시프트 공략: 줄을 지우고 스테이지를 넘기는 법',
       crumb: '루멘 시프트 공략',
-      description: '루멘 시프트의 블록 종류, 여정 100스테이지, 줄 점수, 스프린트·울트라·마라톤·릴랙스 모드와 터치 조작을 정리했습니다.',
+      description: '루멘 시프트의 블록 종류, 여정 100스테이지, 줄 점수, 스프린트·울트라·마라톤·릴랙스, 터치 조작.',
       intro: '루멘 시프트는 가로 10칸 보드에 블록을 떨어뜨려 가로줄을 지우는 퍼즐입니다. 플레이에 맞춰 빛과 음악이 바뀌고, 여정 모드는 스테이지가 100개입니다.',
       play: '/lumen-shift/', cta: '루멘 시프트 플레이하기',
-      closing: '처음에는 여정보다 스프린트로 줄 지우기만 익혀 보세요. 40줄이면 한 판이 짧습니다.',
+      closing: '처음에는 여정보다 스프린트로 줄 지우기만 익히세요. 40줄이면 한 판이 짧습니다.',
       sections: [
         { h2: '블록', html: '<p>블록은 I, O, T, S, Z, J, L 일곱 가지입니다. 좌우로 옮기고, 회전하고, 소프트 드롭으로 천천히 내리거나 하드 드롭으로 한 번에 떨어뜨립니다. 가로로 가득 찬 줄은 지워집니다.</p>' },
         { h2: '모드', html: `<ul><li>여정: 스테이지 100개. 스테이지마다 14줄을 지우면 다음으로 넘어갑니다.</li><li>스프린트: 40줄을 지우면 끝입니다.</li><li>울트라: 3분 동안 줄을 지웁니다.</li><li>마라톤: 스테이지 없이 줄을 계속 지웁니다.</li><li>릴랙스: 떨어지는 속도가 느리고, 랭킹에는 오르지 않습니다.</li></ul><p>여정, 스프린트, 울트라, 마라톤은 랭킹에 기록을 남길 수 있습니다.</p>` },
         { h2: '줄 점수', html: '<p>한 번에 지운 줄 수에 기본 점수가 있고, 그 값에 현재 레벨을 곱한 뒤 콤보 보너스가 붙습니다. 기본 점수는 1줄 100, 2줄 300, 3줄 500, 4줄 800입니다.</p>' },
-        { h2: '터치 버튼', html: '<p>화면 아래 버튼으로 좌우, 소프트 드롭, 회전, 하드 드롭을 누릅니다. 키편집으로 버튼 자리를 옮기고, Reset으로 처음 자리로 되돌립니다. 키보드로 하면 버튼 없이 플레이합니다.</p>' }
+        { h2: '터치 버튼', html: '<p>화면 아래 버튼으로 좌우, 소프트 드롭, 회전, 하드 드롭을 누릅니다. 키편집으로 버튼 자리를 옮기고, Reset으로 처음 자리로 되돌립니다. 키보드는 버튼 없이 합니다.</p>' }
       ],
       faqs: [
         ['모바일에서도 되나요?', '터치 버튼이 있습니다. 버튼이 손에 안 맞으면 키편집으로 옮기세요.'],
@@ -307,7 +307,7 @@ const pages = [
       title: '주차장 탈출 공략 | 50레벨 차 빼기 퍼즐',
       h1: '주차장 탈출 공략: 막힌 차를 밀고 출구로 빼기',
       crumb: '주차장 탈출 공략',
-      description: '주차장 탈출의 가로세로 6칸 보드, 50레벨, 왼쪽 출구, 레벨별 제한 시간, 최소 이동 수와 랭킹을 정리했습니다.',
+      description: '주차장 탈출의 가로세로 6칸 보드, 50레벨, 왼쪽 출구, 레벨별 제한 시간, 최소 이동 수, 랭킹.',
       intro: '주차장 탈출은 가로세로 6칸 주차장에서 차를 밀고, 목표 차량을 왼쪽 출구로 빼는 퍼즐입니다. 레벨은 50개입니다.',
       play: '/parking-escape/', cta: '주차장 탈출 플레이하기',
       closing: '1레벨은 차가 적습니다. 목표 차의 왼쪽이 비었는지만 봐도 규칙이 잡힙니다.',
@@ -319,12 +319,12 @@ const pages = [
       faqs: [
         ['레벨은 몇 개인가요?', '50개입니다. 보드는 모두 가로세로 6칸이고 출구는 왼쪽입니다.'],
         ['시간이 레벨마다 같나요?', '아니요. 짧은 퍼즐은 30초이고, 최소 이동이 긴 레벨은 더 긴 시간이 주어집니다.'],
-        ['설치가 필요한가요?', '아니요. 브라우저에서 바로 플레이합니다.']
+        ['설치가 필요한가요?', '아니요. 브라우저에서 바로 시작합니다.']
       ],
       related: [
         { href: '/seo/bubbly-lab-guide', title: '보글보글 실험실 공략', text: '60초 스테이지와 붓기 예약.' },
         { href: '/seo/lumen-shift-guide', title: '루멘 시프트 공략', text: '낙하 블록 모드와 줄 점수.' },
-        { href: '/seo/quick-browser-games', title: '짧게 즐기는 브라우저 게임', text: '한 판이 짧은 게임을 모아 두었습니다.' }
+        { href: '/seo/quick-browser-games', title: '쉬는 시간에 하는 브라우저 게임', text: '한 판이 짧은 게임을 모아 두었습니다.' }
       ]
     },
     {
@@ -359,7 +359,7 @@ const pages = [
       title: '스쿨 언데드 디펜스 공략 | 세로 화면 학교 디펜스',
       h1: '스쿨 언데드 디펜스 공략: 복도 바리케이드를 버티는 법',
       crumb: '스쿨 언데드 디펜스 공략',
-      description: '스쿨 언데드 디펜스의 세로 화면, 위에서 내려오는 좀비, 바리케이드, 스킬 선택, 키보드·게임패드, 암시장 정비소를 정리했습니다.',
+      description: '스쿨 언데드 디펜스의 세로 화면, 위에서 내려오는 좀비, 바리케이드, 스킬 선택, 키보드·게임패드, 암시장 정비소.',
       intro: '스쿨 언데드 디펜스는 세로 화면에서 학교 복도를 지키는 디펜스입니다. 좀비는 위에서 아래로 내려오고, 아래쪽 바리케이드를 넘기 전에 막아야 합니다.',
       play: '/school-zombie-defense/', cta: '스쿨 언데드 디펜스 플레이하기',
       closing: '첫 출격은 스킬 이름보다, 바리케이드 앞에 몰린 무리부터 보세요.',
@@ -413,10 +413,10 @@ const pages = [
       title: '슬라임 배구 공략 | 봇 연습과 온라인 대전',
       h1: '슬라임 배구 공략: 1대1부터 4대4까지',
       crumb: '슬라임 배구 공략',
-      description: '슬라임 배구의 이동·점프, 봇 연습 인원과 난이도, 온라인 방의 세트·점수·듀스 규칙을 정리했습니다.',
+      description: '슬라임 배구의 이동·점프, 봇 연습 인원과 난이도, 온라인 방의 세트·점수·듀스 규칙.',
       intro: '슬라임 배구는 브라우저에서 바로 하는 배구입니다. 봇과 연습하거나, 방을 만들어 1대1부터 4대4까지 온라인으로 붙습니다. 화면은 가로로 두는 편이 편합니다.',
       play: '/slimevolley/', cta: '슬라임 배구 플레이하기',
-      closing: '온라인 방에 들어가기 전에, 연습 모드에서 점프 타이밍만 맞춰 보세요. 1대1에 보통 난이도면 충분합니다.',
+      closing: '온라인 방에 들어가기 전에, 연습 모드에서 점프 타이밍만 맞추세요. 1대1에 보통 난이도면 충분합니다.',
       sections: [
         { h2: '조작', html: '<p>이동은 왼쪽·오른쪽 방향키 또는 A, D입니다. 점프는 위 방향키, W, 스페이스 중 하나입니다. 슬라임은 자기 코트 안에서 움직이고, 네트 위로 올라간 공에 몸을 맞춥니다.</p><p>휴대폰을 세로로 들고 있으면 가로로 돌리라는 안내가 나옵니다.</p>' },
         { h2: '혼자 연습', html: '<p>내 팀과 봇 팀을 각각 1명에서 4명까지 고릅니다. 난이도는 쉬움, 보통, 어려움입니다. 설치나 방 없이 바로 시작합니다.</p>' },
@@ -429,7 +429,7 @@ const pages = [
       ],
       related: [
         { href: '/seo/school-zombie-defense-guide', title: '스쿨 언데드 디펜스 공략', text: '세로 화면 디펜스의 조작과 정비소.' },
-        { href: '/seo/quick-browser-games', title: '짧게 즐기는 브라우저 게임', text: '한 판이 짧은 게임과 긴 게임.' },
+        { href: '/seo/quick-browser-games', title: '쉬는 시간에 하는 브라우저 게임', text: '한 판이 짧은 게임과 긴 게임.' },
         { href: '/seo/mobile-and-keyboard-web-games', title: '터치와 키보드', text: '키보드 액션과 터치 퍼즐을 비교합니다.' }
       ]
     },

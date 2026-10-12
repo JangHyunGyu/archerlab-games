@@ -298,7 +298,7 @@ const GAME_ID_BLOCKPANG = 'blockpang';
 const I18N = {
     ko: {
         gameTitle: '블럭팡',
-        titleTagline: '빈칸에 쏙, 한 줄이면 팡!\n나만의 리듬으로 최고 기록에 도전하세요.',
+        titleTagline: '빈칸에 쏙, 한 줄이면 팡!\n줄을 지우고 점수를 올리세요.',
         gameStart: '게임 시작',
         language: '다국어',
         contact: '연락하기',

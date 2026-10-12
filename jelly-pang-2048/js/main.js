@@ -1223,18 +1223,29 @@
 
     spawnNextTile(true);
 
-    if (!won && !keepPlaying && hasRank(TARGET_RANK)) {
+    const crowned = !won && !keepPlaying && hasRank(TARGET_RANK);
+    const stuck = !canMove();
+    if (crowned) {
       won = true;
       locked = false;
       announceGameState(t("announce.crown"));
-      showModal(t("modal.crownEyebrow"), t("modal.winTitle"), t("modal.crownCopy"), true, false);
+      // A crown that fills the last cell has no Keep Playing move. The score form
+      // has to open here, or later swipes only bump and the run never submits.
+      showModal(
+        t("modal.crownEyebrow"),
+        t("modal.winTitle"),
+        stuck ? t("modal.overCopy") : t("modal.crownCopy"),
+        !stuck,
+        stuck
+      );
       celebrate();
       playSound("win");
       playHaptic("win");
+      if (stuck) hasActiveGame = false;
       return;
     }
 
-    if (!canMove()) {
+    if (stuck) {
       locked = false;
       hasActiveGame = false;
       announceGameState(t("announce.gameOver"));

@@ -288,7 +288,7 @@ export class UI {
   renderRanks(rows, myName = '') {
     this.refs.rankContent.replaceChildren();
     if (!rows || rows.length === 0) {
-      this._setRankMessage('rank-empty', this.text('아직 기록이 없습니다. 첫 번째 도전자가 되어보세요!', 'No scores yet. Be the first to play!'));
+      this._setRankMessage('rank-empty', this.text('아직 기록이 없습니다. 첫 기록을 남겨 주세요.', 'No scores yet. Be the first to play!'));
       return;
     }
     rows.slice(0, 20).forEach((row, index) => {

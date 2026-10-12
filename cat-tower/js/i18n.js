@@ -8,6 +8,8 @@
       'menu.title': '고양이 타워',
       'menu.best': '최고 기록',
       'menu.play': '플레이',
+      'menu.loading': '불러오는 중…',
+      'menu.loadFail': '불러오기 실패',
       'menu.resume': '이어서 하기',
       'menu.how': '조작법 · 진화표',
       'menu.rank': '랭킹',
@@ -36,6 +38,7 @@
       'over.submitting': '등록 중...',
       'over.submitOk': '등록 완료!',
       'over.submitFail': '등록 실패 — 나중에 다시',
+      'over.submitPending': '기록을 보관했어요. 연결되면 자동으로 등록합니다.',
 
       // 조작법
       'how.title': '조작법',
@@ -50,7 +53,7 @@
       // 랭킹 모달
       'rank.title': '랭킹 TOP 20',
       'rank.loading': '불러오는 중...',
-      'rank.empty': '아직 기록이 없어요. 첫 번째 도전자가 되어보세요!',
+      'rank.empty': '아직 기록이 없어요. 첫 기록을 남겨 주세요.',
       'rank.error': '랭킹을 불러오지 못했어요',
       'rank.close': '닫기',
       'rank.rank': '순위',
@@ -80,6 +83,8 @@
       'menu.title': 'Cat Tower',
       'menu.best': 'Best',
       'menu.play': 'Play',
+      'menu.loading': 'Loading…',
+      'menu.loadFail': 'Could not load',
       'menu.resume': 'Continue',
       'menu.how': 'How to Play · Tiers',
       'menu.rank': 'Ranking',
@@ -106,6 +111,7 @@
       'over.submitting': 'Submitting...',
       'over.submitOk': 'Submitted!',
       'over.submitFail': 'Submit failed — try later',
+      'over.submitPending': 'Saved on this device. It submits when the connection is back.',
 
       'how.title': 'How to Play',
       'how.1': 'Drag to move and tap to drop. On a keyboard, use the left and right arrows and Space.',

@@ -388,7 +388,7 @@
     "rank.loadFailed": ["랭킹을 불러오지 못했습니다", "Could not load ranks"],
     "rank.title": ["스테이지 랭킹", "Stage ranks"],
     "rank.subtitle": ["클리어 스테이지 우선 · 동률 시 처치 수", "Cleared stage first · kills break ties"],
-    "rank.empty": ["첫 방어 기록을 남겨보세요", "Leave the first defense record"],
+    "rank.empty": ["첫 방어 기록을 남겨 주세요", "Leave the first defense record"],
     "rank.network": ["네트워크 상태를 확인한 뒤 다시 시도합니다", "Check the network, then retry"],
     "rank.emptyHint": ["스테이지를 클리어하면 자동으로 등록할 수 있습니다", "Clear a stage to submit"],
     "rank.retry": ["다시 불러오기", "Retry"],

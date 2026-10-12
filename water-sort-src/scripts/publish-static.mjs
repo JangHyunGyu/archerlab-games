@@ -31,11 +31,11 @@ function englishPage(html) {
   page = replaceExact(page, '보글보글 실험실 (Bubbly Lab) | Archerlab Games', 'Bubbly Lab - Free Potion Sort Puzzle | Archerlab Games', 'title');
   page = replaceExact(
     page,
-    '<main class="static-intro"><h1>보글보글 실험실 (Bubbly Lab)</h1><p>같은 색 물약을 한 병에 모으세요. 한 스테이지에 60초! 점점 어려워지는 퍼즐에 도전해 보세요. 같은 색끼리 모아 100단계까지 도전하고, 완료한 단계와 점수를 랭킹에 남겨 보세요. 설치 없이 브라우저에서 바로 즐길 수 있어요.</p></main>',
+    '<main class="static-intro"><h1>보글보글 실험실 (Bubbly Lab)</h1><p>같은 색 물약을 한 병에 모으세요. 한 스테이지는 60초이고, 갈수록 어려워집니다. 같은 색을 모아 100단계까지 가고, 깬 단계와 점수는 랭킹에 남깁니다. 설치 없이 브라우저에서 바로 시작합니다.</p></main>',
     '<main class="static-intro"><h1>Bubbly Lab</h1><p>Sort matching potion colors into one bottle. You get 60 seconds per stage, and the puzzles get harder as you go. Clear all 100 stages, then save your cleared stages and score to the ranking. Play instantly in your browser, with nothing to install.</p></main>',
     'static intro',
   );
-  page = replaceExact(page, '같은 색 물약을 한 병에 모으세요. 한 스테이지에 60초! 점점 어려워지는 퍼즐에 도전해 보세요.', 'Sort matching potion colors into one bottle. You get 60 seconds per stage, and the puzzles get harder as you go.', 'description');
+  page = replaceExact(page, '같은 색 물약을 한 병에 모으세요. 한 스테이지는 60초이고, 갈수록 어려워집니다.', 'Sort matching potion colors into one bottle. You get 60 seconds per stage, and the puzzles get harder as you go.', 'description');
   page = replaceExact(page, '보글보글 실험실을 플레이하려면 JavaScript를 켜 주세요.', 'Turn on JavaScript to play Bubbly Lab.', 'noscript');
   page = replaceExact(page, '알록달록 물약 병이 놓인 보글보글 실험실 화면', 'Colorful potion bottles in Bubbly Lab', 'image alt');
   page = replaceExact(page, '"name": "보글보글 실험실"', '"name": "Bubbly Lab"', 'schema name');

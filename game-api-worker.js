@@ -2609,6 +2609,7 @@ export default {
                                 score,
                                 extra_data,
                                 created_at,
+                                id,
                                 ${SCHOOL_ZOMBIE_KILLS_SQL} AS sort_kills,
                                 ROW_NUMBER() OVER (
                                     PARTITION BY LOWER(TRIM(player_name))
@@ -2618,7 +2619,7 @@ export default {
                             WHERE game_id = ?
                         )
                         WHERE name_rank = 1
-                        ORDER BY score DESC, sort_kills DESC, created_at ASC
+                        ORDER BY score DESC, sort_kills DESC, created_at ASC, id ASC
                         LIMIT ?
                     `).bind(gameId, limit).all()
                     : await env.DB.prepare(`
@@ -2629,6 +2630,7 @@ export default {
                                 score,
                                 extra_data,
                                 created_at,
+                                id,
                                 ROW_NUMBER() OVER (
                                     PARTITION BY LOWER(TRIM(player_name))
                                     ORDER BY score DESC, created_at ASC, id ASC
@@ -2637,7 +2639,7 @@ export default {
                             WHERE game_id = ?
                         )
                         WHERE name_rank = 1
-                        ORDER BY score DESC, created_at ASC
+                        ORDER BY score DESC, created_at ASC, id ASC
                         LIMIT ?
                     `).bind(gameId, limit).all();
 

@@ -922,6 +922,45 @@
     log(`spawnCurrent tier=${tier}(${TIERS[tier].name}) next=${nextTier}`);
   }
 
+  function spawnCircleHitsCat(tier, x) {
+    const radius = TIERS[tier].radius;
+    const bodies = Composite.allBodies(world).filter(b => b.label === 'cat' && !b.isStatic);
+    for (const body of bodies) {
+      const other = TIERS[body.cat?.tier]?.radius || body.circleRadius || 0;
+      const dx = body.position.x - x;
+      const dy = body.position.y - SPAWN_Y;
+      const reach = radius + other;
+      if (dx * dx + dy * dy < reach * reach) return true;
+    }
+    return false;
+  }
+
+  // 드롭 직후 저장을 이어서 열면 다음 고양이가 아직 안 내려온 고양이 안에 생긴다.
+  // 스폰 원이 비울 때까지 기다렸다가, 800ms가 지나도 비지 않으면 그대로 꺼낸다.
+  function spawnCurrentWhenClear() {
+    const started = performance.now();
+    const attempt = () => {
+      dropCooldownTimeoutId = null;
+      if (!running || gameOver || currentCat) {
+        dropCooldown = false;
+        return;
+      }
+      if (nextTier == null) nextTier = pickNextTier();
+      const radius = TIERS[nextTier].radius;
+      const x = Math.min(FIELD_W - radius, Math.max(radius, pointerX));
+      if (spawnCircleHitsCat(nextTier, x) && performance.now() - started < 800) {
+        dropCooldown = true;
+        dropCooldownTimeoutId = setTimeout(attempt, 50);
+        return;
+      }
+      dropCooldown = false;
+      spawnCurrent();
+    };
+    dropCooldown = true;
+    if (dropCooldownTimeoutId) clearTimeout(dropCooldownTimeoutId);
+    attempt();
+  }
+
   function dropCurrent() {
     if (!currentCat) { log('dropCurrent skip: currentCat 없음'); return; }
     if (dropCooldown) { log('dropCurrent skip: cooldown'); return; }
@@ -1421,7 +1460,7 @@
         updateCurrentCatLabel(data.current.t);
         drawNextPreview();
       } else {
-        spawnCurrent();
+        spawnCurrentWhenClear();
       }
 
       updateScoreUI();
@@ -1632,7 +1671,7 @@
       }
       try { localStorage.setItem(NICK_KEY, name); } catch {}
       status.className = 'submit-status ok';
-      status.textContent = res?.pending ? '기록을 보관했어요. 연결되면 자동으로 등록합니다.' : tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');
+      status.textContent = res?.pending ? tt('over.submitPending') : tt('over.submitOk') + (res && res.rank ? ` (#${res.rank})` : '');
       setRankSubmitLoading(false);
       log(`랭킹 등록 성공: ${name} = ${score} rank=${res && res.rank}`);
     } catch (e) {
@@ -1721,8 +1760,9 @@
 
       // 버튼 바인딩
       const playBtn = $('play-btn');
+      let playLabelState = 'loading';
       playBtn.disabled = true;
-      playBtn.textContent = '불러오는 중…';
+      playBtn.textContent = tt('menu.loading');
 
       $('how-btn').addEventListener('click', () => { sound?.playButton(); log('UI: how 열기'); show(modals.how); });
       $('how-close').addEventListener('click', () => { sound?.playButton(); log('UI: how 닫기'); hide(modals.how); });
@@ -1773,9 +1813,8 @@
         // 티어 프리뷰는 텍스트에 언어별 고양이 이름이 들어있어 재생성 필요
         buildTierPreview();
         buildGameTierStrip();
-        // 플레이 버튼이 '불러오는 중…'이 아닐 때만 i18n 라벨 복원 (preload 실패 시 보존)
         const pb = $('play-btn');
-        if (!pb.disabled) pb.textContent = tt('menu.play');
+        pb.textContent = tt(playLabelState === 'failed' ? 'menu.loadFail' : playLabelState === 'loading' ? 'menu.loading' : 'menu.play');
         // 이어서 버튼은 점수 suffix가 붙어있어 applyDom 대신 직접 재갱신
         updateMenuResumeButton();
         updateCurrentCatLabel(currentCat?.cat?.tier);
@@ -1831,11 +1870,13 @@
         // 사운드 합성 그래프 선행 구축 — AudioContext는 suspended지만 노드/reverb IR 생성은 가능.
         // 첫 플레이 시 Tone.js 초기화 블로킹으로 인한 100ms+ 히치 제거.
         try { sound?.init(); log('SoundManager pre-init 완료'); } catch (e) { warn('SoundManager pre-init 실패:', e.message); }
+        playLabelState = 'ready';
         playBtn.disabled = false;
         playBtn.textContent = tt('menu.play');
       } catch (e) {
         err('에셋 로드 실패:', e.message, e.stack);
-        playBtn.textContent = '불러오기 실패';
+        playLabelState = 'failed';
+        playBtn.textContent = tt('menu.loadFail');
       }
 
       // 키보드 접근성
