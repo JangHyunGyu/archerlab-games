@@ -118,8 +118,12 @@ test('nicknames are format-checked only; previously banned words are accepted an
   for (const name of ['시발', 'ㅅㅂ', '씨 발', 'fuck', 'BigAss', 'Fuuuck']) assert.equal(checkNickname(name).ok, true, name);
   assert.deepEqual(checkNickname('ㅅㅂ'), { ok: true, name: 'ㅅㅂ' });
   assert.deepEqual(checkNickname('  Good Name '), { ok: true, name: 'Good Name' });
-  assert.deepEqual(checkNickname('a!'), { ok: false, reason: 'format' });
-  assert.deepEqual(checkNickname('씨?발'), { ok: false, reason: 'format' });
+  assert.deepEqual(checkNickname('a!'), { ok: true, name: 'a!' });
+  assert.deepEqual(checkNickname('씨?발'), { ok: true, name: '씨?발' });
+  assert.deepEqual(checkNickname('★젤리'), { ok: true, name: '★젤리' });
+  assert.deepEqual(checkNickname('a\n'), { ok: true, name: 'a' });
+  assert.deepEqual(checkNickname('a\nb'), { ok: false, reason: 'format' });
+  assert.deepEqual(checkNickname('이름\u202E'), { ok: false, reason: 'format' });
   assert.deepEqual(checkNickname(''), { ok: false, reason: 'format' });
   assert.deepEqual(checkNickname('a'.repeat(17)), { ok: false, reason: 'format' });
 
@@ -130,7 +134,7 @@ test('nicknames are format-checked only; previously banned words are accepted an
     const body = { type: 'register', ...auth, version: start.run.version };
     assert.equal((await h.send({ ...body, nickname: '' })).error, 'nickname');
     assert.equal((await h.send({ ...body, nickname: 7 })).error, 'nickname');
-    assert.equal((await h.send({ ...body, nickname: 'a!' })).error, 'nickname');
+    assert.equal((await h.send({ ...body, nickname: 'a!\nb' })).error, 'nickname');
     const registered = await h.send({ ...body, nickname: 'ㅅㅂ' });
     assert.equal(registered.status, 200); assert.notEqual(registered.error, 'nickname_banned');
     // Stored names are never hidden on the board.
