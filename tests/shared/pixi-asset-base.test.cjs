@@ -29,5 +29,5 @@ for (const file of pages) {
   const fixerAt = html.search(fixer);
   assert.ok(fixerAt > pixiAt, `${path.relative(root, file)} must load pixi-asset-base.js after Pixi`);
 }
-assert.equal(covered, 11);
+assert.equal(covered, 12);
 console.log(`pixi asset base: ${covered} pages pin the resolver to the game directory`);

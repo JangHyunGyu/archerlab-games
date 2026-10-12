@@ -86,4 +86,12 @@
     <image:image><image:loc>https://game.archerlab.dev/water-sort/og.png</image:loc></image:image>
     <image:image><image:loc>https://game.archerlab.dev/water-sort/lab-background.webp</image:loc></image:image>
   </url>
+  <url>
+    <loc>https://game.archerlab.dev/jewelria/index-en</loc>
+    <image:image><image:loc>https://game.archerlab.dev/jewelria/assets/images/ui/og-image.png</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/solo-leveling/index-en</loc>
+    <image:image><image:loc>https://game.archerlab.dev/solo-leveling/assets/ui/menu/shadow_gate_backdrop.png</image:loc></image:image>
+  </url>
 </urlset>

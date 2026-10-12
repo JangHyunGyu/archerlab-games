@@ -4,6 +4,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const ORIGIN = 'https://game.archerlab.dev';
 const config = require('../config/search-pages.json');
+const { englishEntry } = require('./english-game-entries.cjs');
 const read = file => fs.readFileSync(path.join(ROOT, file), 'utf8').replace(/\r\n/g, '\n');
 const escape = text => String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 const canonical = html => (html.match(/<link\s+rel="canonical"\s+href="([^"]+)"/) || [])[1];
@@ -22,7 +23,9 @@ function buildOutputs() {
     const outputs = new Map();
     const changedUrls = new Set();
     for (const [file, copy] of Object.entries(config.pages)) {
-        const source = read(file);
+        const game = file.split('/')[0];
+        const source = ['jewelria/index-en.html', 'solo-leveling/index-en.html'].includes(file)
+            ? englishEntry(read(`${game}/index.html`), game, copy) : read(file);
         const split = source.indexOf('</head>');
         if (split < 0) throw new Error(`Missing head: ${file}`);
         let head = source.slice(0, split);
@@ -46,6 +49,7 @@ function buildOutputs() {
             for (const node of data['@graph'] || [data]) {
                 const types = [].concat(node['@type'] || []);
                 if (types.includes('VideoGame')) {
+                    if (copy.gameName) node.name = copy.gameName;
                     node['@type'] = ['VideoGame', 'WebApplication'];
                     node.applicationCategory = 'GameApplication';
                     node.description = copy.description;

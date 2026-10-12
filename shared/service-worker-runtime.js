@@ -75,6 +75,10 @@
 
             function navigationKey(request) {
                 var url = new URL(request.url);
+                if (gameId === 'solo-leveling' && url.searchParams.get('lang') === 'en'
+                    && /\/solo-leveling\/(?:index\.html)?$/.test(url.pathname)) {
+                    url.pathname = '/solo-leveling/index-en.html';
+                }
                 url.search = '';
                 url.hash = '';
                 if (url.pathname.endsWith('/')) url.pathname += 'index.html';

@@ -3,6 +3,9 @@ import { formatTime } from './stage.js';
 import { PixiBoard } from './pixi-board.js';
 
 export class UI {
+  text(korean, english) {
+    return this.lang === 'en' ? english : korean;
+  }
   constructor(lang = 'ko') {
     this.lang = lang;
     this.refs = {
@@ -245,7 +248,7 @@ export class UI {
 
   showResult({ score, bestScore, nickname }) {
     this.refs.resultKicker.textContent = 'TIME UP';
-    this.refs.resultTitle.textContent = '타임 어택 종료';
+    this.refs.resultTitle.textContent = this.text('타임 어택 종료', 'Time Attack Over');
     this.refs.resultScore.textContent = Number(score).toLocaleString();
     this.refs.resultBest.textContent = Number(bestScore).toLocaleString();
     // 점수가 0보다 높으면 명예의 전당 등록 UI를 노출한다.
@@ -285,7 +288,7 @@ export class UI {
   renderRanks(rows, myName = '') {
     this.refs.rankContent.replaceChildren();
     if (!rows || rows.length === 0) {
-      this._setRankMessage('rank-empty', '아직 기록이 없습니다. 첫 번째 도전자가 되어보세요!');
+      this._setRankMessage('rank-empty', this.text('아직 기록이 없습니다. 첫 번째 도전자가 되어보세요!', 'No scores yet. Be the first to play!'));
       return;
     }
     rows.slice(0, 20).forEach((row, index) => {
@@ -306,7 +309,7 @@ export class UI {
       score.className = 'rank-score';
       const points = document.createElement('span');
       points.className = 'rank-points';
-      points.textContent = `${Number(row.score || 0).toLocaleString()}\uC810`;
+      points.textContent = `${Number(row.score || 0).toLocaleString()}${this.text('\uC810', ' pts')}`;
       score.append(points);
       item.append(pos, name, score);
       this.refs.rankContent.appendChild(item);
@@ -315,12 +318,12 @@ export class UI {
   }
 
   showRankLoading() {
-    this._setRankMessage('rank-loading', '불러오는 중...');
+    this._setRankMessage('rank-loading', this.text('불러오는 중...', 'Loading...'));
     this.showModal(this.refs.rankModal);
   }
 
   showRankError() {
-    this._setRankMessage('rank-error', '랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+    this._setRankMessage('rank-error', this.text('랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.', 'Could not load rankings. Please try again later.'));
   }
 
   _setRankMessage(className, message) {

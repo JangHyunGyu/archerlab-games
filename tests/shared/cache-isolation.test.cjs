@@ -26,7 +26,8 @@ function worker(kind) {
     fetch:async request => {
       if (offline) throw new TypeError('Failed to fetch');
       const url = key(request);
-      return new Response(url.includes('index-en') ? 'English' : url.includes('index-ja') ? 'Japanese' : 'Korean');
+      const englishAlias = ['jewelria', 'solo-leveling'].includes(kind) && new URL(url).searchParams.get('lang') === 'en';
+      return new Response(url.includes('index-en') || englishAlias ? 'English' : url.includes('index-ja') ? 'Japanese' : 'Korean');
     },
     caches:{
       keys:async()=>[...stores.keys()],
@@ -53,6 +54,18 @@ function worker(kind) {
     activate:()=>dispatch('activate'),
     request:(url, mode='navigate')=>dispatch('fetch',{method:'GET',mode,url:new URL(url,base).href}),
   };
+}
+
+for (const game of ['jewelria', 'solo-leveling']) {
+  test(`${game}: a legacy English redirect cannot replace the Korean offline document`, async () => {
+    const w = worker(game);
+    await w.request('./');
+    assert.equal(await (await w.request('./?lang=en&source=bookmark')).text(), 'English');
+    w.offline();
+    assert.equal(await (await w.request('./')).text(), 'Korean');
+    assert.equal(await (await w.request('./index-en')).text(), 'English');
+    assert.equal(await (await w.request('./?lang=en')).text(), 'English');
+  });
 }
 
 for (const game of ['cat-tower','jewelria']) {

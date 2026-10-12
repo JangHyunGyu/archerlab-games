@@ -10,7 +10,7 @@ import {
   updateBestScore
 } from './storage.js';
 import { AudioManager } from './audio.js';
-import { UI, delay } from './ui.js?v=20260913-crafted-ui-v1';
+import { UI, delay } from './ui.js?v=20260913-crafted-ui-v1&locale=20261012-entry-v1';
 import { trackEvent } from './ga.js';
 import { checkBrowserSupport } from './browser-check.js';
 
@@ -19,7 +19,8 @@ const RANK_API_BASE = 'https://game-api.yama5993.workers.dev';
 const RANK_LIMIT = 20;
 
 const query = new URLSearchParams(location.search);
-const lang = query.get('lang') || document.documentElement.lang || 'ko';
+const lang = /\/index-en(?:\.html)?\/?$/.test(location.pathname)
+  ? 'en' : query.get('lang') || document.documentElement.lang || 'ko';
 document.documentElement.lang = lang.slice(0, 2);
 
 const audio = new AudioManager();
@@ -38,7 +39,7 @@ queueMicrotask(boot);
 
 async function boot() {
   ranking = new RankingClient();
-  if (!checkBrowserSupport()) ui.showToast('이 브라우저에서는 일부 기능이 제한될 수 있습니다.', 2600);
+  if (!checkBrowserSupport()) ui.showToast(ui.text('이 브라우저에서는 일부 기능이 제한될 수 있습니다.', 'Some features may be limited in this browser.'), 2600);
   await ui.initBoard();
   input = ui.createInput({
     tap: handleTap,
@@ -365,7 +366,7 @@ function repairPlayableBoard({ announce = true } = {}) {
   if (state.board.findMatches().length > 0) return false;
   if (state.board.findPossibleMove()) return false;
 
-  if (announce) ui.showToast('가능한 이동이 없어 보드를 섞었습니다.');
+  if (announce) ui.showToast(ui.text('가능한 이동이 없어 보드를 섞었습니다.', 'No moves left. The board was shuffled.'));
   for (let guard = 0; guard < 80; guard += 1) {
     state.board.shuffle();
     if (state.board.findMatches().length === 0 && state.board.findPossibleMove()) break;
@@ -448,13 +449,13 @@ async function submitRank() {
   if (!state || rankSubmitInFlight) return;
   const name = ui.refs.nicknameInput.value.trim().slice(0, 20);
   if (!name) {
-    ui.setSubmitStatus('닉네임을 입력해 주세요.', 'fail');
+    ui.setSubmitStatus(ui.text('닉네임을 입력해 주세요.', 'Please enter a nickname.'), 'fail');
     ui.refs.nicknameInput.focus();
     return;
   }
   rankSubmitInFlight = true;
   saveNickname(name);
-  ui.setRankSubmitLoading(true, '등록 중...');
+  ui.setRankSubmitLoading(true, ui.text('등록 중...', 'Submitting...'));
   let submitted = false;
   try {
     const result = await ranking.submit(name, state.score, {
@@ -462,9 +463,9 @@ async function submitRank() {
       time_limit: TIME_LIMIT
     });
     submitted = true;
-    ui.setSubmitStatus(result?.pending ? '기록을 보관했어요. 연결되면 자동으로 등록합니다.' : `등록 완료${result?.rank ? ` (#${result.rank})` : ''}`, 'ok');
+    ui.setSubmitStatus(result?.pending ? ui.text('기록을 보관했어요. 연결되면 자동으로 등록합니다.', 'Score saved. It will submit automatically when connected.') : `${ui.text('등록 완료', 'Submitted')}${result?.rank ? ` (#${result.rank})` : ''}`, 'ok');
   } catch {
-    ui.setSubmitStatus('등록 실패. 다시 시도해 주세요.', 'fail');
+    ui.setSubmitStatus(ui.text('등록 실패. 다시 시도해 주세요.', 'Submission failed. Please try again.'), 'fail');
   } finally {
     rankSubmitInFlight = false;
     ui.setRankSubmitLoading(false);

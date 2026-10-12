@@ -60,6 +60,38 @@
       "image": "https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png?v=3",
       "imageWidth": 1280,
       "imageHeight": 1280
+    },
+    "jewelria/index.html": {
+      "title": "쥬얼리아 Jewelria - Free Match 3 Jewel Puzzle Game",
+      "description": "쥬얼리아는 8x8 보드에서 보석을 맞추는 무료 매치3 퍼즐. Play Jewelria, a free match 3 jewel puzzle game for mobile and desktop.",
+      "gameName": "쥬얼리아",
+      "image": "https://game.archerlab.dev/jewelria/assets/images/ui/og-image.png",
+      "imageWidth": 1200,
+      "imageHeight": 630
+    },
+    "jewelria/index-en.html": {
+      "title": "Jewelria - Free Match-3 Jewel Puzzle | ArcherLab Games",
+      "description": "Play Jewelria, a free browser match-3 jewel puzzle game for PC and mobile.",
+      "gameName": "Jewelria",
+      "image": "https://game.archerlab.dev/jewelria/assets/images/ui/og-image.png",
+      "imageWidth": 1200,
+      "imageHeight": 630
+    },
+    "solo-leveling/index.html": {
+      "title": "그림자 서바이벌 | Shadow Survival - Free Dungeon Roguelike Web Game",
+      "description": "설치 없이 즐기는 무료 2D 던전 서바이벌. Play Shadow Survival, a free dungeon roguelike browser game with monsters, level-ups, and shadow army action.",
+      "gameName": "그림자 서바이벌",
+      "image": "https://archerlab.dev/assets/images/solo-leveling_link.png",
+      "imageWidth": 1024,
+      "imageHeight": 1024
+    },
+    "solo-leveling/index-en.html": {
+      "title": "Shadow Survival - Free 2D Dungeon Roguelike Web Game | ArcherLab",
+      "description": "Play instantly in your browser! A free 2D dungeon survival roguelike game. Lead your shadow army, defeat monsters, and level up! Supports PC and mobile.",
+      "gameName": "Shadow Survival",
+      "image": "https://archerlab.dev/assets/images/solo-leveling_link.png",
+      "imageWidth": 1024,
+      "imageHeight": 1024
     }
   }
 }

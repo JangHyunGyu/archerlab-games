@@ -64,8 +64,16 @@
   </url>
   <url>
     <loc>https://game.archerlab.dev/jewelria/</loc>
-    <lastmod>2026-07-07</lastmod>
+    <lastmod>2026-10-12</lastmod>
     <xhtml:link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/jewelria/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://game.archerlab.dev/jewelria/index-en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/jewelria/"/>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/jewelria/index-en</loc>
+    <lastmod>2026-10-12</lastmod>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/jewelria/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://game.archerlab.dev/jewelria/index-en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/jewelria/"/>
   </url>
   <url>
@@ -84,8 +92,16 @@
   </url>
   <url>
     <loc>https://game.archerlab.dev/solo-leveling/</loc>
-    <lastmod>2026-07-07</lastmod>
+    <lastmod>2026-10-12</lastmod>
     <xhtml:link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/solo-leveling/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://game.archerlab.dev/solo-leveling/index-en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/solo-leveling/"/>
+  </url>
+  <url>
+    <loc>https://game.archerlab.dev/solo-leveling/index-en</loc>
+    <lastmod>2026-10-12</lastmod>
+    <xhtml:link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/solo-leveling/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://game.archerlab.dev/solo-leveling/index-en"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/solo-leveling/"/>
   </url>
   <url>

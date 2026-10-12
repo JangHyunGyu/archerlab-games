@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        // Keep older cached runtimes aligned with the explicitly selected page.
+        (() => {
+            const query = new URLSearchParams(location.search).get('lang');
+            const lang = /\/index-en(?:\.html)?\/?$/.test(location.pathname) ? 'en'
+                : ['ko', 'en', 'ja'].includes(query) ? query : document.documentElement.lang;
+            try { localStorage.setItem('shadow_survival_lang', lang); } catch (_) {}
+        })();
+    </script>
   <script src="../shared/ranking-delivery.js?v=20261006-client-exception-v1"></script>
     <meta charset="UTF-8">
     <meta http-equiv="origin-trial" content="Agn9opFYdjvT/UqEIvt4RnCkmN8Kt+8/lzvg731pKSz7MpNoJkLvra/pLOIFgR9GZb39JbBGeJ+CDO++Tus3FggAAABmeyJvcmlnaW4iOiJodHRwczovL2FyY2hlcmxhYi5kZXY6NDQzIiwiZmVhdHVyZSI6IkhUTUxJbkNhbnZhcyIsImV4cGlyeSI6MTc5MjQ1NDQwMCwiaXNTdWJkb21haW4iOnRydWV9">
@@ -11,80 +20,323 @@
     <link rel="icon" type="image/png" href="assets/ui/menu/icon_play.png">
     <title>Shadow Survival - Free 2D Dungeon Roguelike Web Game | ArcherLab</title>
     <meta name="description" content="Play instantly in your browser! A free 2D dungeon survival roguelike game. Lead your shadow army, defeat monsters, and level up! Supports PC and mobile.">
-    <meta name="keywords" content="shadow survival, 2D dungeon roguelike, browser survival game, vampire survivors style, free action web game">
-    <meta property="og:title" content="Shadow Survival - Free 2D Dungeon Roguelike Web Game">
-    <meta property="og:description" content="Play instantly in your browser! Lead your shadow army, defeat dungeon monsters, and become the strongest hunter.">
+    <meta name="keywords" content="shadow survival, dungeon survival game, free roguelike browser game, 2d action survival, 그림자 서바이벌, 2D 던전 로그라이크, 무료 액션 웹게임">
+    <meta property="og:title" content="Shadow Survival - Free 2D Dungeon Roguelike Web Game | ArcherLab">
+    <meta property="og:description" content="Play instantly in your browser! A free 2D dungeon survival roguelike game. Lead your shadow army, defeat monsters, and level up! Supports PC and mobile.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://game.archerlab.dev/solo-leveling/index-en">
     <meta property="og:image" content="https://archerlab.dev/assets/images/solo-leveling_link.png">
-    <meta property="og:image:width" content="512">
-    <meta property="og:image:height" content="512">
+    <meta property="og:image:width" content="1024">
+    <meta property="og:image:height" content="1024">
     <meta property="og:locale" content="en_US">
     <meta property="og:site_name" content="ArcherLab">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Shadow Survival - Free 2D Dungeon Roguelike Web Game">
-    <meta name="twitter:description" content="Play instantly in your browser! Lead your shadow army, defeat dungeon monsters, and become the strongest hunter.">
+    <meta name="twitter:title" content="Shadow Survival - Free 2D Dungeon Roguelike Web Game | ArcherLab">
+    <meta name="twitter:description" content="Play instantly in your browser! A free 2D dungeon survival roguelike game. Lead your shadow army, defeat monsters, and level up! Supports PC and mobile.">
     <meta name="twitter:image" content="https://archerlab.dev/assets/images/solo-leveling_link.png">
     <link rel="canonical" href="https://game.archerlab.dev/solo-leveling/index-en">
     <link rel="alternate" hreflang="ko" href="https://game.archerlab.dev/solo-leveling/">
-    <link rel="alternate" hreflang="ja" href="https://game.archerlab.dev/solo-leveling/index-ja">
     <link rel="alternate" hreflang="en" href="https://game.archerlab.dev/solo-leveling/index-en">
-    <meta name="robots" content="index, follow">
+    <link rel="alternate" hreflang="x-default" href="https://game.archerlab.dev/solo-leveling/">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <meta name="author" content="ArcherLab">
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "VideoGame",
-      "name": "Shadow Survival",
-      "description": "A free 2D dungeon survival roguelike game you can play instantly in your browser. Lead your shadow army, defeat monsters, and level up!",
-      "url": "https://game.archerlab.dev/solo-leveling/index-en",
-      "image": "https://archerlab.dev/assets/images/solo-leveling_link.png",
-      "genre": ["Survival", "Roguelike", "Action", "RPG"],
-      "gamePlatform": ["Web Browser", "Mobile Browser"],
-      "applicationCategory": "Game",
-      "operatingSystem": "Any",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD",
-        "availability": "https://schema.org/InStock"
-      },
-      "author": {
-        "@type": "Organization",
-        "name": "ArcherLab",
-        "url": "https://archerlab.dev/"
-      },
-      "inLanguage": "en",
-      "isAccessibleForFree": true,
-      "playMode": "SinglePlayer"
-    }
+{
+  "@context": "https://schema.org",
+  "@type": [
+    "VideoGame",
+    "WebApplication"
+  ],
+  "name": "Shadow Survival",
+  "alternateName": [
+    "Shadow Survival",
+    "Dungeon Survival Game",
+    "Free Roguelike Browser Game"
+  ],
+  "description": "Play instantly in your browser! A free 2D dungeon survival roguelike game. Lead your shadow army, defeat monsters, and level up! Supports PC and mobile.",
+  "url": "https://game.archerlab.dev/solo-leveling/index-en",
+  "image": "https://archerlab.dev/assets/images/solo-leveling_link.png",
+  "genre": [
+    "Survival",
+    "Roguelike",
+    "Action",
+    "RPG"
+  ],
+  "keywords": [
+    "shadow survival",
+    "dungeon survival game",
+    "free roguelike browser game",
+    "2d action survival",
+    "그림자 서바이벌"
+  ],
+  "gamePlatform": [
+    "Web Browser",
+    "Mobile Browser"
+  ],
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/InStock"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "ArcherLab",
+    "url": "https://archerlab.dev/"
+  },
+  "inLanguage": "en",
+  "isAccessibleForFree": true,
+  "playMode": "SinglePlayer",
+  "numberOfPlayers": {
+    "@type": "QuantitativeValue",
+    "value": 1
+  },
+  "dateModified": "2026-10-12"
+}
     </script>
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
-    <script src="../shared/client-error-reporter.js?v=20261006-client-exception-v1&audit=20261008-runtime-v4" data-game-id="solo-leveling"></script>
-    <script src="../shared/browser-check.js?v=20261005-env-guard-v1"></script>
+    <script async crossorigin="anonymous" src="https://www.googletagmanager.com/gtag/js?id=G-66FS0YCEEM"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
         gtag('config', 'G-66FS0YCEEM');
     </script>
-    <script>
-        (function() {
-        if (/bot|crawl|spider|slurp|facebookexternalhit|mediapartners/i.test(navigator.userAgent)) return;
-        // Redirect to main page with lang parameter
-        const url = new URL('./', window.location.href);
-        url.searchParams.set('lang', 'en');
-        window.location.replace(url.href);
-        })();
-    </script>
+    <script src="../shared/client-error-reporter.js?v=20261006-client-exception-v1&audit=20261008-runtime-v4" data-game-id="solo-leveling"></script>
+    <script src="js/browser-check.js?v=1.1.0"></script>
+    <style>
+        @font-face {
+            font-family: "Pretendard Variable";
+            src: url("../assets/vendor/pretendard/PretendardVariable.woff2") format("woff2");
+            font-style: normal;
+            font-weight: 45 920;
+            font-display: swap;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            background: #03050a;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            color: #d9f4ff;
+            font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif;
+            background:
+                radial-gradient(circle at 50% 44%, rgba(20, 79, 112, 0.2), transparent 52%),
+                linear-gradient(145deg, #020308 0%, #070b14 52%, #03050a 100%);
+            /* Safe area padding for notch phones */
+            padding:
+                env(safe-area-inset-top, 0px)
+                env(safe-area-inset-right, 0px)
+                env(safe-area-inset-bottom, 0px)
+                env(safe-area-inset-left, 0px);
+        }
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            isolation: isolate;
+            background:
+                linear-gradient(rgba(77, 210, 255, 0.018) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(77, 210, 255, 0.014) 1px, transparent 1px),
+                radial-gradient(circle at 50% 50%, rgba(26, 96, 132, 0.12), transparent 58%),
+                #05070d;
+            background-size: 48px 48px, 48px 48px, auto, auto;
+            box-shadow: inset 0 0 96px rgba(0, 0, 0, 0.72);
+        }
+        #game-container canvas {
+            display: block;
+            touch-action: none;
+            max-width: 100%;
+            max-height: 100%;
+            position: relative;
+            z-index: 1;
+            outline: none;
+        }
+
+        .shadow-html-canvas {
+            position: fixed;
+            z-index: 9999;
+            display: block;
+            max-width: none;
+            max-height: none;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            pointer-events: none;
+        }
+
+        .shadow-html-canvas > .shadow-name-entry {
+            position: relative;
+            top: 0;
+            left: 0;
+            transform: none;
+            pointer-events: auto;
+        }
+
+        .shadow-name-entry {
+            --entry-accent: #4dd2ff;
+            position: fixed;
+            z-index: 10000;
+            width: min(420px, calc(100vw - 32px));
+            padding: 1px;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(110deg, rgba(77, 210, 255, 0.28), var(--entry-accent) 42%, rgba(77, 210, 255, 0.22));
+            clip-path: polygon(12px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 4px 100%, 0 calc(100% - 4px), 0 12px);
+            filter: drop-shadow(0 0 14px rgba(77, 210, 255, 0.2)) drop-shadow(0 16px 28px rgba(0, 0, 0, 0.46));
+            transition: filter 160ms ease, background 160ms ease;
+            pointer-events: auto;
+        }
+        .shadow-name-entry::before,
+        .shadow-name-entry::after {
+            content: "";
+            position: absolute;
+            z-index: 2;
+            top: 7px;
+            width: 24px;
+            height: 1px;
+            background: var(--entry-accent);
+            box-shadow: 0 0 8px rgba(77, 210, 255, 0.72);
+            pointer-events: none;
+        }
+        .shadow-name-entry::before { left: 8px; }
+        .shadow-name-entry::after { right: 8px; }
+        .shadow-name-entry:focus-within {
+            background: linear-gradient(110deg, rgba(124, 228, 255, 0.5), #8cecff 42%, rgba(77, 210, 255, 0.34));
+            filter: drop-shadow(0 0 20px rgba(77, 210, 255, 0.34)) drop-shadow(0 18px 34px rgba(0, 0, 0, 0.52));
+        }
+        .shadow-name-input {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            height: 52px;
+            padding: 0 22px;
+            border: 0;
+            border-radius: 0;
+            outline: none;
+            background:
+                linear-gradient(180deg, rgba(16, 31, 48, 0.98), rgba(5, 10, 18, 0.98)),
+                #080c16;
+            clip-path: inherit;
+            color: #eefbff;
+            caret-color: #8cecff;
+            font: 650 15px/1 "Pretendard Variable", Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif;
+            letter-spacing: 0.04em;
+            text-align: center;
+            text-shadow: 0 0 12px rgba(77, 210, 255, 0.2);
+            box-shadow: inset 0 1px rgba(255, 255, 255, 0.025), inset 0 0 24px rgba(32, 117, 158, 0.07);
+            appearance: none;
+            -webkit-appearance: none;
+            -webkit-user-select: text;
+            user-select: text;
+            touch-action: manipulation;
+            transition: background 160ms ease, color 160ms ease, opacity 160ms ease;
+        }
+        .shadow-name-input::placeholder {
+            color: #6e8998;
+            opacity: 1;
+            font-weight: 520;
+            letter-spacing: 0.08em;
+        }
+        .shadow-name-input:focus {
+            background: linear-gradient(180deg, rgba(20, 40, 59, 0.99), rgba(7, 14, 24, 0.99));
+        }
+        .shadow-name-input:disabled {
+            cursor: wait;
+            color: #80a7b8;
+            opacity: 0.72;
+        }
+    </style>
 <script src="../assets/js/ga-engagement.js?v=20260618-engagement" defer></script>
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="ranking.css?v=20260913-immersive-v1">
+    <link rel="stylesheet" href="ranking.css?v=20260913-immersive-v2">
 <script src="../shared/immersive.js?v=20261005-frame-home-v1" defer></script>
   <script src="../assets/js/archerlab-session.js" defer data-archerlab-account></script>
 </head>
 <body>
-    <p>Redirecting to Shadow Survival (English)...</p>
+    <a href="https://archerlab.dev" rel="noopener noreferrer" class="archerlab-link" id="archerlab-link" title="ArcherLab">ArcherLab</a>
+    <style>
+        .archerlab-link {
+            position: fixed; left: 50%; right: auto; top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto;
+            transform: translateX(-50%); z-index: 9999;
+            background: linear-gradient(180deg, rgba(12, 22, 35, 0.82), rgba(5, 9, 16, 0.9));
+            color: #79dcfa; border: 1px solid rgba(77, 210, 255, 0.38);
+            padding: 5px 14px; text-decoration: none;
+            font-size: 0.69rem; font-weight: 650; letter-spacing: 0.14em;
+            font-family: "Pretendard Variable", Pretendard, sans-serif;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), inset 0 1px rgba(255, 255, 255, 0.025);
+            transition: color 0.15s, border-color 0.15s, background 0.15s, opacity 0.15s;
+            white-space: nowrap;
+        }
+        .archerlab-link:hover { color: #ecfbff; border-color: #72e1ff; background: rgba(15, 27, 43, 0.96); }
+        .archerlab-link:focus-visible {
+            outline: 3px solid #8cecff;
+            outline-offset: 4px;
+            color: #ffffff;
+            border-color: #8cecff;
+        }
+        @media (max-width: 768px), (max-height: 500px) {
+            .archerlab-link {
+                left: 50%; right: auto; top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto;
+                transform: translateX(-50%); font-size: 0.62rem; padding: 2px 8px;
+                opacity: 0.68;
+            }
+            .shadow-name-entry {
+                width: min(360px, calc(100vw - 28px));
+            }
+            .shadow-name-input {
+                height: 48px;
+                padding: 0 18px;
+                font-size: 14px;
+            }
+        }
+        @media (max-height: 500px) and (orientation: landscape) {
+            .shadow-name-input { height: 44px; }
+            .shadow-name-entry { width: min(380px, calc(100vw - 36px)); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .archerlab-link,
+            .shadow-name-entry,
+            .shadow-name-input { transition: none; }
+        }
+    </style>
+    <link rel="stylesheet" href="premium.css?v=20260913-crafted-ui-v1">
+    <div id="game-container"></div>
+    <script crossorigin="anonymous" src="../assets/vendor/tone/tone-15.5.25.js"></script>
+    <script src="../assets/vendor/phaser/phaser-4.2.0.min.js"></script>
+    <script>
+        // Service Worker 등록 - 모든 JS 파일 캐시 방지
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+    <script type="module" src="js/main.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1&audit=20261009-v1&arise=20261010-v1"></script>
+    <script>
+        document.addEventListener('touchmove', function(e) { if (!e.target.closest('[data-ranking-scroll]')) e.preventDefault(); }, { passive: false });
+        document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+        document.addEventListener('gesturechange', function(e) { e.preventDefault(); });
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
 </body>
 </html>

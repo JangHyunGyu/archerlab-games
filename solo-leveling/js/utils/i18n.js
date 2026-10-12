@@ -1,15 +1,18 @@
 import { apply_skills } from './i18n-extras-skills.js?v=20260915-locale-v1';
 import { apply_toasts } from './i18n-extras-toasts.js?v=20260915-locale-v1';
 
-// Detect language from saved preference, URL parameter, or default to 'ko'
+// Explicit language URLs take precedence over previously saved preferences.
 const params = new URLSearchParams(window.location.search);
 const langParam = params.get('lang');
+const pathLang = /\/index-en(?:\.html)?\/?$/.test(window.location.pathname) ? 'en' : null;
 let savedLang = null;
 try { savedLang = localStorage.getItem('shadow_survival_lang'); } catch { /* Storage may be blocked. */ }
 const _supportedLangs = ['ko', 'en', 'ja'];
 const _browserLang = (navigator.language || '').slice(0, 2);
-export let LANG = savedLang
-    || (langParam === 'en' || langParam === 'ja' ? langParam : null)
+export let LANG = pathLang
+    || (_supportedLangs.includes(langParam) ? langParam : null)
+    || (typeof document !== 'undefined' && _supportedLangs.includes(document.documentElement.lang) ? document.documentElement.lang : null)
+    || (_supportedLangs.includes(savedLang) ? savedLang : null)
     || (_supportedLangs.includes(_browserLang) ? _browserLang : 'ko');
 
 export const LANGUAGES = [
@@ -19,9 +22,21 @@ export const LANGUAGES = [
 ];
 
 export function setLang(code) {
+    if (!_supportedLangs.includes(code)) return;
     LANG = code;
     try { localStorage.setItem('shadow_survival_lang', code); } catch { /* Keep the in-memory language. */ }
+    if (typeof document !== 'undefined') document.documentElement.lang = code;
+    // Keep the selected language on reload without interrupting the current game.
+    if (window.history?.replaceState) {
+        const url = new URL(window.location.href);
+        url.pathname = code === 'en' ? '/solo-leveling/index-en' : '/solo-leveling/';
+        url.searchParams.delete('lang');
+        if (code === 'ja') url.searchParams.set('lang', 'ja');
+        window.history.replaceState(window.history.state, '', url);
+    }
 }
+
+if (typeof document !== 'undefined') document.documentElement.lang = LANG;
 
 const TEXTS = {
     ko: {
