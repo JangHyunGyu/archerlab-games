@@ -9,7 +9,9 @@
     "test:api": "node tests/api/client-error-ingest.test.cjs && npm run test:ranking",
     "test:ranking": "node --test tests/api/ranking-delivery.test.cjs tests/api/ranking-boundaries.test.cjs tests/api/delivery-validation.test.cjs tests/shared/ranking-delivery.test.cjs tests/shared/ranking-session-isolation.test.cjs",
     "assets:build": "node scripts/asset-manifest.mjs",
-    "assets:check": "node scripts/asset-manifest.mjs --check"
+    "assets:check": "node scripts/asset-manifest.mjs --check",
+    "seo:sync": "node scripts/sync-search-metadata.cjs --write",
+    "seo:check": "node scripts/sync-search-metadata.cjs --check && node --test tests/shared/search-metadata.test.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",

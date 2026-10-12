@@ -1,0 +1,65 @@
+{
+  "updatedAt": "2026-10-12",
+  "pages": {
+    "index.html": {
+      "title": "무료 브라우저 게임 모음 | ArcherLab Games",
+      "description": "슬라임 배구, 블럭팡, 고양이 타워, 루멘 쉬프트 등 10가지 게임을 설치 없이 즐겨보세요. PC와 모바일에서 무료로 플레이할 수 있습니다."
+    },
+    "slimevolley/index.html": {
+      "title": "슬라임 배구 | 무료 온라인 배구 게임 - Slime Volley",
+      "description": "슬라임 배구를 설치 없이 무료로 플레이하세요. 혼자 봇과 연습하거나 온라인에서 1대1부터 4대4까지 배구 경기를 즐길 수 있습니다.",
+      "image": "https://archerlab.dev/assets/images/slimevolley_link.png",
+      "imageWidth": 2048,
+      "imageHeight": 2048
+    },
+    "slimevolley/index-en.html": {
+      "title": "Slime Volleyball Online | Slime Volley - Free Browser Game",
+      "description": "Play Slime Volley, a free online slime volleyball game. Practice against bots or join 1v1 to 4v4 matches in your browser. No download required.",
+      "image": "https://archerlab.dev/assets/images/slimevolley_link.png",
+      "imageWidth": 2048,
+      "imageHeight": 2048
+    },
+    "blockpang/index.html": {
+      "title": "블럭팡 | 무료 10×10 블록 퍼즐 게임 - Blockpang",
+      "description": "10×10 보드에 블록을 놓고 가로세로 줄을 완성하는 무료 블록 퍼즐입니다. 블럭팡을 PC와 모바일 브라우저에서 설치 없이 즐겨보세요.",
+      "image": "https://game.archerlab.dev/blockpang/blox_pang_link.png",
+      "imageWidth": 512,
+      "imageHeight": 512
+    },
+    "blockpang/index-en.html": {
+      "title": "Blockpang (Block Pang) | Free 10×10 Block Puzzle Online",
+      "description": "Play Blockpang online for free. Place blocks on a 10×10 board, clear rows and columns, and beat your high score on mobile or desktop. No download required.",
+      "image": "https://game.archerlab.dev/blockpang/blox_pang_link.png",
+      "imageWidth": 512,
+      "imageHeight": 512
+    },
+    "cat-tower/index.html": {
+      "title": "고양이 타워 | 무료 고양이 합치기 퍼즐 - Cat Tower",
+      "description": "같은 고양이 두 마리를 합쳐 10단계 사바나까지 키워보세요. 고양이 타워는 PC와 모바일에서 설치 없이 즐기는 무료 물리 퍼즐입니다.",
+      "image": "https://game.archerlab.dev/cat-tower/cat-tower_link.png",
+      "imageWidth": 512,
+      "imageHeight": 512
+    },
+    "cat-tower/index-en.html": {
+      "title": "Cat Tower | Free Cat Merge Puzzle Game Online",
+      "description": "Play Cat Tower, a free cat merge puzzle. Stack and merge matching cats through 10 tiers to the Savannah, and chase a high score in your browser.",
+      "image": "https://game.archerlab.dev/cat-tower/cat-tower_link.png",
+      "imageWidth": 512,
+      "imageHeight": 512
+    },
+    "lumen-shift/index.html": {
+      "title": "루멘 쉬프트 | 무료 낙하 블록 퍼즐 - Lumen Shift",
+      "description": "음악에 반응하는 빛의 무대에서 블록을 쌓고 줄을 완성하세요. 루멘 존을 활용해 스테이지와 기록에 도전하는 무료 브라우저 퍼즐입니다.",
+      "image": "https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png?v=3",
+      "imageWidth": 1280,
+      "imageHeight": 1280
+    },
+    "lumen-shift/index-en.html": {
+      "title": "Lumen Shift | Free Falling Block Puzzle Online",
+      "description": "Play Lumen Shift online for free. Clear lines, use the Lumen Zone, and chase stage and ranking scores in a music-reactive falling-block puzzle.",
+      "image": "https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png?v=3",
+      "imageWidth": 1280,
+      "imageHeight": 1280
+    }
+  }
+}

@@ -92,3 +92,25 @@ https://archerlab-games.pages.dev/*
 
 /tests/*
   X-Robots-Tag: noindex, nofollow
+
+# Preview builds and development references are not search landing pages.
+https://:version.archerlab-games.pages.dev/*
+  X-Robots-Tag: noindex, follow
+
+/config/*
+  X-Robots-Tag: noindex, nofollow
+
+/docs/*
+  X-Robots-Tag: noindex, nofollow
+
+/design/*
+  X-Robots-Tag: noindex, nofollow
+
+/solo-leveling/docs/*
+  X-Robots-Tag: noindex, nofollow
+
+/solo-leveling/scripts/*
+  X-Robots-Tag: noindex, nofollow
+
+/school-zombie-defense/tools/*
+  X-Robots-Tag: noindex, nofollow

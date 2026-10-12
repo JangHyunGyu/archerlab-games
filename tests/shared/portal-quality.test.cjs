@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+require('./search-metadata.test.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');

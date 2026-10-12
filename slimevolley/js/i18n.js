@@ -6,7 +6,7 @@
     const translations = {
         ko: {
             'app.name': '슬라임 배구',
-            'document.title': '슬라임 배구 | Archerlab Games',
+            'document.title': "슬라임 배구 | 무료 온라인 배구 게임 - Slime Volley",
             'header.back': '게임 목록으로 돌아가기',
             'header.sound': '사운드 켜기/끄기',
             'language.label': '언어 선택',
@@ -114,7 +114,7 @@
         },
         en: {
             'app.name': 'Slime Volley',
-            'document.title': 'Slime Volley - Free Online Browser Volleyball | ArcherLab',
+            'document.title': "Slime Volleyball Online | Slime Volley - Free Browser Game",
             'header.back': 'Back to Games',
             'header.sound': 'Toggle Sound',
             'language.label': 'Language',
