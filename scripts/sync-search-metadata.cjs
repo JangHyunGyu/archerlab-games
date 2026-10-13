@@ -48,6 +48,9 @@ function buildOutputs() {
             const data = JSON.parse(raw);
             for (const node of data['@graph'] || [data]) {
                 const types = [].concat(node['@type'] || []);
+                if (copy.image && (types.includes('WebPage') || types.includes('CollectionPage'))) {
+                    node.primaryImageOfPage = { '@type': 'ImageObject', url: copy.image, width: copy.imageWidth, height: copy.imageHeight };
+                }
                 if (types.includes('VideoGame')) {
                     if (copy.gameName) node.name = copy.gameName;
                     node['@type'] = ['VideoGame', 'WebApplication'];

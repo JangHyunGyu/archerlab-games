@@ -3,7 +3,10 @@
   "pages": {
     "index.html": {
       "title": "무료 브라우저 게임 모음 | ArcherLab Games",
-      "description": "슬라임 배구, 블럭팡, 고양이 타워, 루멘 쉬프트 등 게임 10종. 설치 없이, PC와 모바일에서 무료입니다."
+      "description": "슬라임 배구, 블럭팡, 고양이 타워, 루멘 쉬프트 등 게임 10종. 설치 없이, PC와 모바일에서 무료입니다.",
+      "image": "https://game.archerlab.dev/assets/images/social/archerlab-games-representative.png",
+      "imageWidth": 1024,
+      "imageHeight": 1024
     },
     "slimevolley/index.html": {
       "title": "슬라임 배구 | 무료 온라인 배구 게임 - Slime Volley",
@@ -36,16 +39,16 @@
     "cat-tower/index.html": {
       "title": "고양이 타워 | 무료 고양이 합치기 퍼즐 - Cat Tower",
       "description": "같은 고양이 두 마리를 합쳐 10단계 사바나까지 키우는 무료 물리 퍼즐. PC와 모바일에서 설치 없이 합니다.",
-      "image": "https://game.archerlab.dev/cat-tower/cat-tower_link.png",
-      "imageWidth": 512,
-      "imageHeight": 512
+      "image": "https://game.archerlab.dev/assets/images/social/archerlab-games-representative.png",
+      "imageWidth": 1024,
+      "imageHeight": 1024
     },
     "cat-tower/index-en.html": {
       "title": "Cat Tower | Free Cat Merge Puzzle Game Online",
       "description": "Play Cat Tower, a free cat merge puzzle. Stack and merge matching cats through 10 tiers to the Savannah, and chase a high score in your browser.",
-      "image": "https://game.archerlab.dev/cat-tower/cat-tower_link.png",
-      "imageWidth": 512,
-      "imageHeight": 512
+      "image": "https://game.archerlab.dev/assets/images/social/archerlab-games-representative.png",
+      "imageWidth": 1024,
+      "imageHeight": 1024
     },
     "lumen-shift/index.html": {
       "title": "루멘 쉬프트 | 무료 낙하 블록 퍼즐 - Lumen Shift",
