@@ -814,7 +814,9 @@ export class PixiBoard {
   }
 
   _tween(target, props, duration, ease = easeOutCubic, delay = 0) {
-    if (this._motionEnabled() && target && !target.destroyed) {
+    // 지연 호출(setTimeout) 사이에 판이 다시 그려지면 스프라이트가 이미 파괴돼 scale이 null이다. 그때는 트윈을 만들지 않는다.
+    if (!target || target.destroyed) return null;
+    if (this._motionEnabled()) {
       const gsap = window.gsap;
       const seconds = Math.max(0.001, duration / 1000);
       const direct = { duration: seconds, ease: this._motionEase(ease) };
