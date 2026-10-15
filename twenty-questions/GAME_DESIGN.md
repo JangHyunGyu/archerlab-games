@@ -76,7 +76,7 @@
 
 ### Jev: 게임 중 판단
 
-Jev는 자유 문장 생성 대신 정해진 판단 결과와 확률을 반환하는 모델이다. 문서 확인 시점의 모델 ID는 `typesafe/jev-1.13`이며, `POST https://openrouter.ai/api/alpha/decisions`로 호출한다. 운영 전에는 지원 모델과 API 명세를 다시 확인한다.
+Jev는 자유 문장 생성 대신 정해진 판단 결과와 확률을 반환하는 모델이다. 문서 확인 시점의 모델 ID는 `typesafe/jev-1.14`이며, `POST https://openrouter.ai/api/alpha/decisions`로 호출한다. 운영 전에는 지원 모델과 API 명세를 다시 확인한다.
 
 서버가 보내는 정보는 고정된 정답의 의미·사실 카드, 사용자 질문, 필요한 이전 판정이다. 질문 유효성, 자료 충분성, Y/N 여부를 독립된 질문으로 요청하고 서버가 결과를 조합한다. Noul은 예일 확률을 반환하고, Choice는 미리 정의한 선택지 중 하나를 반환한다. 같은 요청에 넣은 판단들은 서로의 결과를 참조하지 않는다.
 
@@ -177,7 +177,7 @@ AI 판정이 끝난 뒤 세션 상태를 다시 확인하고 기록·횟수·승
 
 - [OpenRouter Jev 개요](https://openrouter.ai/docs/guides/community/jev)
 - [Jev 요청과 확률 해석](https://openrouter.ai/docs/guides/community/jev-tutorial)
-- [Jev 1.13 모델과 가격](https://openrouter.ai/typesafe/jev-1.13)
+- [Jev 1.14 모델과 가격](https://openrouter.ai/typesafe/jev-1.14)
 - [Decisions API](https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request)
 - [Cloudflare Cron Triggers와 UTC 기준](https://developers.cloudflare.com/workers/configuration/cron-triggers/)
 - [D1 Worker API](https://developers.cloudflare.com/d1/worker-api/)
