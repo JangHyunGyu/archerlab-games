@@ -182,5 +182,20 @@ export function drawStream(ctx: CanvasRenderingContext2D, start: Point, end: Poi
   ctx.bezierCurveTo(end.x + radius * .7, end.y - 14, start.x + radius + wobble, start.y + 12, start.x + radius, start.y);
   ctx.closePath(); ctx.fillStyle = gradient(ctx, start.x - radius, 0, start.x + radius, 0, [[0, tint(base, .68, .8)], [.35, tint(base, 1.45, .9)], [.7, tint(base, 1.08, .92)], [1, tint(base, .75, .8)]]); ctx.fill();
   ctx.beginPath(); ctx.moveTo(start.x - radius * .25, start.y + 1); ctx.bezierCurveTo(start.x + wobble, start.y + 13, end.x - .35, end.y - 9, end.x, end.y);
-  ctx.strokeStyle = '#ffffff73'; ctx.lineWidth = Math.max(.5, radius * .25); ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = '#ffffff73'; ctx.lineWidth = Math.max(.5, radius * .25); ctx.stroke();
+  const impact = Math.sin(Math.PI * Math.max(0, Math.min(1, flow))) * taper;
+  ctx.globalAlpha = impact * .85;
+  ctx.beginPath(); ctx.ellipse(end.x, end.y, width * 1.65, width * .42, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 1; ctx.stroke();
+  for (let i = 0; i < 5; i++) {
+    const phase = (time * .0038 + i * .21) % 1;
+    const side = i % 2 ? -1 : 1;
+    const x = end.x + side * (2 + phase * width * 2.2);
+    const y = end.y - Math.sin(phase * Math.PI) * (5 + i * 1.8);
+    ctx.globalAlpha = impact * (1 - phase) * .8;
+    ctx.fillStyle = tint(base, 1.25, .9);
+    ctx.beginPath(); ctx.ellipse(x, y, .85 + (1 - phase) * .65, 1.3 + phase * .6, side * .4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffffbb'; ctx.beginPath(); ctx.arc(x - .25, y - .5, .45, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
 }

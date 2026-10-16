@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { complete, hasMove, sharedBottom, won } from '../lib/game';
 import { timeLimit, pourDuration, CLEAR_DELAY, type RunView, type RankRow } from '../lib/challenge-rules';
 import { copy as c, uiLang } from './copy';
@@ -9,6 +9,8 @@ import { useBottleDrag } from './useBottleDrag';
 import { useGameAudio } from './useGameAudio';
 import { BottleVisual } from './BottleVisual';
 import { BottleCompletion } from './BottleCompletion';
+import { RewardEffects, type RewardHandle } from './RewardEffects';
+import { AlchemySeal } from './AlchemySeal';
 import { endCue, menuState, stayOnBoard } from '../lib/menu-state';
 import { turnstileToken } from './turnstile';
 import { MAX_QUEUED_POURS, PourController, type ActivePour } from '../lib/pour-controller';
@@ -58,6 +60,9 @@ export default function Home() {
   const [selected, setSelected] = useState<number | null>(null);
   const { audio, soundOn, toggleSound } = useGameAudio();
   const lastSoundCue = useRef('');
+  const rewardEffects = useRef<RewardHandle>(null);
+  const awardedScore = useRef(0);
+  const celebrateBottle = useCallback((node: HTMLElement, color: number) => rewardEffects.current?.bottle(node, color), []);
   const [notice, setNotice] = useState<string>(c.choose), [error, setError] = useState(''), [canRetry, setCanRetry] = useState(true);
   const [modal, setModal] = useState<'help' | 'ranking' | 'register' | 'exit' | 'restart' | null>(null);
   const [motions, setMotions] = useState<PourMotion[]>([]);
@@ -91,7 +96,10 @@ export default function Home() {
   });
   const pours = controllerRef.current;
   function refreshNow(time = clock()) { nowRef.current = time; setNow(time); }
-  function accept(next: RunView) { runRef.current = next; setRun(next); clockOffset.current = next.serverNow - Date.now(); refreshNow(next.serverNow); }
+  function accept(next: RunView) {
+    awardedScore.current = next.id === runRef.current?.id ? Math.max(awardedScore.current, next.score - runRef.current.score) : 0;
+    runRef.current = next; setRun(next); clockOffset.current = next.serverNow - Date.now(); refreshNow(next.serverNow);
+  }
   function forgetSession() {
     credentials.current = null; runRef.current = null;
     try { localStorage.removeItem(SESSION); } catch { /* Nothing else to clear. */ }
@@ -321,6 +329,7 @@ export default function Home() {
     lastSoundCue.current = key;
     if (cue === 'timeout') audio.stop();
     audio.play(cue);
+    if (cue === 'clear') { rewardEffects.current?.clear(awardedScore.current); awardedScore.current = 0; }
   }, [atHome, run, ended, animating, audio]);
   const drag = useBottleDrag({
     disabled: atHome || disabled || !!modal,
@@ -366,21 +375,23 @@ export default function Home() {
               const pouring = pours.busy(i);
               const settled = !pouring && complete(tube) && complete(run.board[i] ?? []);
               const ghost = lifted.has(i) ? planned[i] ?? [] : null;
-              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-pouring={pouring || undefined} data-queued={queued || undefined} data-ghost={ghost ? ghost.join(',') : undefined} data-incoming={incoming.length ? incoming.join(',') : undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${uiLang === 'en' ? `Bottle ${i + 1}` : `${i + 1}${c.bottle}`}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${settled ? ', ' + c.filled : ''}${incoming.length ? ', ' + c.queueIncoming.replace('{colors}', incoming.map(n => c.colorNames[n]).join(', ')) : ''}${queued ? ', ' + orders.map(o => (o.out ? c.queueSource : c.queueTarget).replace('{n}', String(o.n))).join(', ') : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
+              return <button key={i} data-testid={`bottle-${i}`} data-bottle-index={i} data-reward-color={tube[0]} data-pouring={pouring || undefined} data-queued={queued || undefined} data-ghost={ghost ? ghost.join(',') : undefined} data-incoming={incoming.length ? incoming.join(',') : undefined} disabled={disabled} aria-pressed={selected === i} aria-label={`${uiLang === 'en' ? `Bottle ${i + 1}` : `${i + 1}${c.bottle}`}, ${tube.length ? c.bottomUp + ' ' + tube.map(n => c.colorNames[n]).join(', ') : c.emptyBottle}${settled ? ', ' + c.filled : ''}${incoming.length ? ', ' + c.queueIncoming.replace('{colors}', incoming.map(n => c.colorNames[n]).join(', ')) : ''}${queued ? ', ' + orders.map(o => (o.out ? c.queueSource : c.queueTarget).replace('{n}', String(o.n))).join(', ') : ''}`} className={'bottle-button ' + (selected === i ? 'selected ' : '') + (complete(tube) ? 'complete ' : '') + (motions.some(m => m.from === i) ? 'pour-source ' : '') + (motions.some(m => m.to === i) ? 'pour-target ' : '') + (queued ? 'pour-queued ' : '') + (pouring ? 'in-flight' : '')} onPointerDown={e => drag.onPointerDown(e, i)} onPointerMove={drag.onPointerMove} onPointerUp={drag.onPointerUp} onPointerCancel={drag.onPointerCancel} onLostPointerCapture={drag.onLostPointerCapture} onClick={e => { if (drag.allowClick(e.detail)) void choose(i); }}>
                 <span className="tube" ref={node => { tubes.current[i] = node; }}>{incoming.length ? <BottleVisual colors={target} solid={keep} selected={selected === i}/> : <BottleVisual colors={tube} selected={selected === i}/>}{ghost && <span className="bottle-ghost" data-testid={`bottle-ghost-${i}`} aria-hidden="true"><BottleVisual colors={ghost} selected={selected === i} ghost/></span>}</span>
+                <AlchemySeal/>
                 <span className="drop-cue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></span>
                 <span className={'bottle-status ' + (queued ? 'queue-label' : '') + (orders.length > 2 ? ' queue-many' : '')} aria-hidden="true">{orders.map((o, k) => <span key={o.n} className="queue-entry" data-dir={o.out ? 'out' : 'in'}>{o.out ? `${o.n}↑` : `↓${o.n}`}{k < orders.length - 1 ? '·' : ''}</span>)}</span>
-                <BottleCompletion key={`${run.level}:${i}`} ready={settled} color={tube[0]} hideLabel={queued}/>
+                <BottleCompletion key={`${run.level}:${i}`} ready={settled} color={tube[0]} hideLabel={queued} onCelebrate={celebrateBottle}/>
               </button>;
             })}
           </div>
-          {run.status === 'cleared' && !animating && <div className="clear-burst" role="status">✦ {c.success} ✦</div>}
+          {run.status === 'cleared' && !animating && <div className="clear-burst" role="status"><span className="clear-emblem" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M24 9h16m-12 0v18L14 48q-4 8 6 8h24q10 0 6-8L36 27V9"/><path d="M21 39h22l6 11q2 4-5 4H20q-6 0-4-4z"/><path d="m28 40 4 4 8-9"/></svg></span><strong>✦ {c.success} ✦</strong></div>}
         </div>
         <p className={'board-notice ' + ([c.invalid, c.empty, c.blocked, c.queueFull].includes(notice as typeof c.invalid) ? 'visible' : 'sr-only')} role="status">{notice}</p>
       </section>}
       {error && modal !== 'register' && <div className="connection-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={busy} onClick={() => { if (canRetry) retry.current(); else setError(''); }}>{canRetry ? c.retry : c.confirm}</button></div>}
     </main>
     {!!motions.length && <PourAnimation motions={motions} onFinish={finishMotion}/>}
+    <RewardEffects ref={rewardEffects} audio={audio} active={!atHome && !modal && !error && !ended} scope={run ? `${run.id}:${run.level}` : ''}/>
     {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : blockedEnd ? '⛔' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? c.eyebrowAllClear : blockedEnd ? c.eyebrowBlocked : c.eyebrowTimeout}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : blockedEnd ? c.blockedTitle : c.ended}</h2>{blockedEnd && <p className="blocked-explanation" role="alert">{c.blockedBody}</p>}{lateClear && <p className="late-explanation" role="status">{c.lateClearBody}</p>}<div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
     {modal === 'exit' && <Modal title={c.homeTitle} onClose={() => setModal(null)}><p>{c.homeBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.keepPlaying}</button><button className="primary-button" onClick={home}>{c.leaveGame}</button></div></Modal>}
     {modal === 'restart' && <Modal title={c.restartTitle} onClose={() => setModal(null)}><p>{c.restartBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.cancel}</button><button className="primary-button" disabled={busy} onClick={() => { void perform('start'); }}>{c.newGame}</button></div></Modal>}

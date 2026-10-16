@@ -16,7 +16,7 @@ test('WAV effects are short, non-silent, and have headroom', () => {
     assert.ok(peak > .1 && peak < .7, `${name}: ${peak}`);
     total += bytes.length;
   }
-  assert.ok(total < 150000);
+  assert.ok(total < 280000);
 });
 
 test('audio needs a gesture, trims pours without speeding them up, and cancels muted/hidden/pending sounds', async () => {
@@ -61,6 +61,16 @@ test('audio needs a gesture, trims pours without speeding them up, and cancels m
     audio.dispose(); assert.equal(context!.state, 'closed'); assert.equal(stopped, 3);
     audio.play('select'); await flush(); assert.equal(starts.length, 3);
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test('completion harmonics climb with the chain, cap at six, and never pitch-shift water', () => {
+  const audio = new GameAudio(), calls: unknown[][] = [];
+  audio.play = (...args) => { calls.push(args); };
+  for (const chain of [1, 2, 6, 99]) audio.completion(chain);
+  assert.deepEqual(calls.map(call => call[0]), ['complete', 'complete', 'complete', 'complete']);
+  const rates = calls.map(call => Number(call[3]));
+  assert.equal(rates[0], 1); assert.ok(rates[1] > 1); assert.equal(rates[2], rates[3]);
+  assert.ok(rates[2] < 2);
 });
 
 test('missing audio support does not interrupt gameplay', () => {

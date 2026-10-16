@@ -29,4 +29,9 @@ test('static subfolder output has metadata, reachable assets, and no server cata
     return match[1];
   };
   assert.equal(bundle(english), bundle(html));
+  const schemas = [...english.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(match => JSON.parse(match[1]));
+  const game = schemas.find(schema => schema['@type'] === 'VideoGame');
+  assert.equal(game.name, 'Bubbly Lab'); assert.equal(game.inLanguage, 'en');
+  assert.equal(game.url, 'https://game.archerlab.dev/water-sort/index-en');
+  assert.equal(schemas.find(schema => schema['@type'] === 'WebPage')['@id'], game.url + '#webpage');
 });

@@ -1,12 +1,13 @@
-export const SOUND_NAMES = ['select', 'target', 'start', 'pour', 'invalid', 'clear', 'timeout', 'tick'] as const;
+export const SOUND_NAMES = ['select', 'target', 'start', 'pour', 'invalid', 'clear', 'timeout', 'tick', 'complete'] as const;
 export type SoundName = typeof SOUND_NAMES[number];
-export const soundPath = (name: SoundName) => `/water-sort/sounds/${name === 'pour' ? 'v2' : 'v1'}/${name}.wav`;
+export const soundPath = (name: SoundName) => `/water-sort/sounds/${name === 'pour' ? 'v2' : name === 'complete' || name === 'clear' ? 'v3' : 'v1'}/${name}.wav`;
 
 /** Lazy Web Audio: never gates gameplay and never starts before a user gesture. */
 export class GameAudio {
   private context: AudioContext | null = null;
   private buffers = new Map<SoundName, Promise<AudioBuffer>>();
   private sources = new Set<AudioBufferSourceNode>();
+  private compressor: DynamicsCompressorNode | null = null;
   private enabled = true;
   private unlocked = false;
   private generation = 0;
@@ -28,6 +29,12 @@ export class GameAudio {
         const Constructor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!Constructor) return;
         this.context = new Constructor();
+        if (typeof this.context.createDynamicsCompressor === 'function') {
+          this.compressor = this.context.createDynamicsCompressor();
+          this.compressor.threshold.value = -10; this.compressor.knee.value = 16;
+          this.compressor.ratio.value = 12; this.compressor.attack.value = .003; this.compressor.release.value = .18;
+          this.compressor.connect(this.context.destination);
+        }
       }
       this.unlocked = true;
       if (this.context.state !== 'running') void this.context.resume().catch(() => {});
@@ -50,7 +57,10 @@ export class GameAudio {
     }
     return pending;
   }
-  play(name: SoundName, delay = 0, duration?: number) {
+  completion(chain: number) {
+    this.play('complete', 0, undefined, 2 ** (Math.max(0, Math.min(5, chain - 1)) * 2 / 12));
+  }
+  play(name: SoundName, delay = 0, duration?: number, pitch = 1) {
     const context = this.context;
     if (!this.enabled || !this.unlocked || !context || document.hidden) return;
     const generation = this.generation, target = context.currentTime + delay;
@@ -58,10 +68,11 @@ export class GameAudio {
       if (!this.enabled || generation !== this.generation || document.hidden || context.state !== 'running' || context.currentTime - target > .3) return;
       const source = context.createBufferSource(), volume = context.createGain();
       source.buffer = buffer;
+      if (name === 'complete') source.playbackRate.value = pitch;
       // A short pour ends the clip early. playbackRate would raise the pitch of the water.
       const level = name === 'target' ? .4 : name === 'tick' ? .4 : name === 'pour' ? .3 : .65;
       volume.gain.value = level;
-      source.connect(volume); volume.connect(context.destination);
+      source.connect(volume); volume.connect(this.compressor ?? context.destination);
       this.sources.add(source);
       source.onended = () => { this.sources.delete(source); source.disconnect(); volume.disconnect(); };
       const startAt = Math.max(context.currentTime, target);
@@ -83,6 +94,7 @@ export class GameAudio {
   dispose() {
     this.stop(); this.unlocked = false; this.buffers.clear(); this.clock = null;
     if (this.context) void this.context.close().catch(() => {});
+    this.compressor?.disconnect(); this.compressor = null;
     this.context = null;
   }
 }

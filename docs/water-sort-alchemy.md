@@ -1,0 +1,28 @@
+# Water Sort alchemy rewards — 2026-10-16
+
+The player activates an original rotating transmutation seal by selecting a bottle. A newly completed, server-confirmed and visually settled bottle triggers a rising energy column, brief lightning filaments, two rotating floor seals, saturated bloom, iridescent bubbles and star fragments. Completing another bottle within 4.2 seconds increases the visible chain and raises the glass harmonics by a whole tone, capped at six. Chains are audiovisual rewards and do not change scores or puzzle rules.
+
+The final bottle activates a larger dual-color transmutation circle. Energy motes and the actual awarded score travel toward the score display. The existing 450 ms stage handoff is preserved. A new board immediately removes the previous board's local bursts and ritual; the remaining score flights finish without intercepting input. Existing bottle geometry, hitboxes, layout, text, time limits and server rules are unchanged.
+
+## Rendering and sound
+
+- One DPR-aware canvas, requestAnimationFrame, elapsed-time trajectories; native refresh scheduling supports high-refresh displays without baking a frame rate into assets.
+- At most 280 motes, 30 score flights and 12 local bursts; no animation loop when idle. Resize, scrolling, hidden tabs, dialogs and disabled gameplay clear pending canvas work. Reduced motion suppresses canvas effects, sheen and rotating seals.
+- Original SVG/Canvas geometry, gradients and procedural particles; no low-resolution raster frames or external image downloads.
+- Reproducible 48 kHz PCM glass/bubble completion sound and a clear flourish in `sounds/v3`. A dynamics compressor controls overlapping rewards; muting, background-tab cancellation and user-gesture audio unlocking retain their existing behavior.
+- Each bottle position and clear can reward only once per stage. Initial/resumed completed bottles do not replay completion rewards. Unconfirmed previews, conflicts and timeouts do not generate canvas rewards.
+- Versioned sound paths and a bumped Water Sort service-worker version avoid retaining old reward assets.
+
+The existing static publisher required pretty-printed JSON-LD strings and failed on the repository's compact metadata. It now parses structured data before translating the English game fields and WebPage URL. Both language pages use the same new bundle; metadata checks report no drift.
+
+## Validation
+
+- Water Sort unit/integration suite: 115 passing cases, including every catalog layout, deadlines, server-owned awards, queues, late responses, completion gating, chain boundaries and bounded effect lifetime.
+- Static output / worker / shared-assets suite: 3 passing cases. Shared runtime, API/ranking and real Chromium offline checks passed. Search metadata check passed with zero drift.
+- Actual production bundle in Chromium at DPR 2: 320×568, 360×640, 390×844, 430×932, 768×1024, 1024×768, 667×375, 844×390 and 1440×900. Title, selected seal, burst, two-bottle chain, clear, next stage, exit dialog and saved-run screens checked; no page errors, horizontal overflow or off-screen bottle controls.
+- Maximum ten-bottle boards: 320×568, 390×844, 768×1024, 844×390 and 1440×900. Played legal moves through completion rewards and checked hitboxes and screenshots.
+- Separate delayed-response, rejected-response and reduced-motion browser scenarios passed. Browser fixtures route all game writes to an in-process implementation of the real challenge rules; no fake scores reach production.
+- Local headless Chromium, 390×844 at DPR 2: 83 active-reward frame samples, median 16.7 ms, p95 16.7 ms, maximum 16.8 ms. This is a local rendering observation, not a mobile hardware guarantee.
+- Before/after visual regression against the previous committed bundle: title and idle gameplay at 390×844 and 1440×900 are pixel-identical after rendering settles, with a fixed test clock. Only authorized interaction/reward effects change the rendered experience.
+
+Screenshots and fixture reports are retained locally in `tmp/water-sort-alchemy/`; baseline comparisons are in `D:/workspace/_workspace/water-sort-effects-review/`. To repeat the reward browser checks, serve the repository root at `127.0.0.1:8080`, then run `npm --prefix water-sort-src run test:effects`.

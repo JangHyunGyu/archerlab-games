@@ -4,6 +4,11 @@
   "textNormalization": "svg-lf",
   "assets": [
     {
+      "path": "assets/images/social/archerlab-games-representative.png",
+      "bytes": 1890151,
+      "sha256": "bdb0aa397b81560f3e910db50c3de1742cb294fd928bb220c5d9c6af90080a11"
+    },
+    {
       "path": "blockpang/assets/ui/arcade-bg.png",
       "bytes": 791399,
       "sha256": "c9d1ec2c63acc2d7b376b6210ae43dd1e9a7a91a3f249a8a290254b4eea81114"
@@ -16604,6 +16609,16 @@
       "sha256": "5d2478ec4f17ff079d77fdc0871cc98932a0d2327f0308cea9682303951f66c0"
     },
     {
+      "path": "water-sort-src/public/sounds/v3/clear.wav",
+      "bytes": 94124,
+      "sha256": "3b7b161e8b40c50dbda79fc602ab58e4f2525f2d3dace529977f44aab322980f"
+    },
+    {
+      "path": "water-sort-src/public/sounds/v3/complete.wav",
+      "bytes": 59564,
+      "sha256": "cf72034217f20a11b28cf6d62025810e422d67323e57e6fa5088452571c4d7b4"
+    },
+    {
       "path": "water-sort/lab-background.webp",
       "bytes": 128540,
       "sha256": "79a9a16c732d3fe7028ada03feb9607488e2369c08d4761bc5d9b1beec3f64be"
@@ -16667,6 +16682,16 @@
       "path": "water-sort/sounds/v2/pour.wav",
       "bytes": 28268,
       "sha256": "5d2478ec4f17ff079d77fdc0871cc98932a0d2327f0308cea9682303951f66c0"
+    },
+    {
+      "path": "water-sort/sounds/v3/clear.wav",
+      "bytes": 94124,
+      "sha256": "3b7b161e8b40c50dbda79fc602ab58e4f2525f2d3dace529977f44aab322980f"
+    },
+    {
+      "path": "water-sort/sounds/v3/complete.wav",
+      "bytes": 59564,
+      "sha256": "cf72034217f20a11b28cf6d62025810e422d67323e57e6fa5088452571c4d7b4"
     }
   ]
 }
