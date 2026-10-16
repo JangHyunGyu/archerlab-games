@@ -9,7 +9,7 @@ The final bottle activates a larger dual-color transmutation circle. Energy mote
 - One DPR-aware canvas, requestAnimationFrame, elapsed-time trajectories; native refresh scheduling supports high-refresh displays without baking a frame rate into assets.
 - At most 280 motes, 30 score flights and 12 local bursts; no animation loop when idle. Resize, scrolling, hidden tabs, dialogs and disabled gameplay clear pending canvas work. Reduced motion suppresses canvas effects, sheen and rotating seals.
 - Original SVG/Canvas geometry, gradients and procedural particles; no low-resolution raster frames or external image downloads.
-- Reproducible 48 kHz PCM glass/bubble completion sound and a clear flourish in `sounds/v3`. A dynamics compressor controls overlapping rewards; muting, background-tab cancellation and user-gesture audio unlocking retain their existing behavior.
+- Reproducible 48 kHz PCM glass/bubble completion sound and a clear flourish in `sounds/v4`. A dynamics compressor controls overlapping rewards; muting, background-tab cancellation and user-gesture audio unlocking retain their existing behavior. The v3 masters remain preserved.
 - Each bottle position and clear can reward only once per stage. Initial/resumed completed bottles do not replay completion rewards. Unconfirmed previews, conflicts and timeouts do not generate canvas rewards.
 - Versioned sound paths and a bumped Water Sort service-worker version avoid retaining old reward assets.
 
@@ -26,3 +26,13 @@ The existing static publisher required pretty-printed JSON-LD strings and failed
 - Before/after visual regression against the previous committed bundle: title and idle gameplay at 390×844 and 1440×900 are pixel-identical after rendering settles, with a fixed test clock. Only authorized interaction/reward effects change the rendered experience.
 
 Screenshots and fixture reports are retained locally in `tmp/water-sort-alchemy/`; baseline comparisons are in `D:/workspace/_workspace/water-sort-effects-review/`. To repeat the reward browser checks, serve the repository root at `127.0.0.1:8080`, then run `npm --prefix water-sort-src run test:effects`.
+
+## Stronger reaction pass
+
+The follow-up adds a colored expanding shockwave, white/gold impact glint, radial energy rays, two luminous helices around each completed vessel, crystal shards and comet trails. Completion particle density increases from 36–56 to 56–86 per reward while preserving the shared 280-mote ceiling. The finale has larger counter-rotating sigils, radiant spokes, a gold corona and glowing score comets. A short tray-edge light reaction reinforces the impact without moving bottle hitboxes or changing the resting design.
+
+Recent completed bottles exchange paired energy ribbons. The renderer retains one previous-bottle checkpoint while sleeping, so the 4.2-second chain can reconnect after the previous burst has fully finished. Stage changes, cancellation, resize and explicit resets discard that checkpoint and all board-local ribbons. At most eight ribbons coexist. Render frames remain dormant between rewards.
+
+The v4 sound masters add a falling low-frequency impact, a metallic strike, an airy sweep and rising crystal harmonics. Both effects remain below one second, at 48 kHz PCM, peak 0.62, with the existing compressor and mute/background controls.
+
+Follow-up validation: 116 unit/integration cases (including chain ribbon bounds and stage cleanup), 3 static/worker checks, and the production-bundle browser matrix with nine screen sizes, five maximum ten-bottle layouts, delayed/rejected responses, reduced motion and an explicit idle-gap chain. The final browser run passed all 18 functional/layout scenarios and the frame-timing scenario; 84 active frames at DPR 2 measured median/p95 16.7 ms, maximum 16.8 ms on local headless Chromium. Mobile/desktop title and idle-gameplay comparisons against the preceding release are pixel-identical at 390×844 and 1440×900. Follow-up screenshots are in `tmp/water-sort-alchemy-v2-final/` and `D:/workspace/_workspace/water-sort-effects-review-v2/`.

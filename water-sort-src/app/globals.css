@@ -110,6 +110,12 @@ dialog{margin:auto;border:3px solid white;border-radius:30px;background:#fcf9ff;
 .clear-emblem svg path:nth-child(2){fill:#fff9;stroke:none}
 .clear-emblem svg path:nth-child(3){stroke:#bd8a49;stroke-width:3}
 .score-reward{animation:reward-score .45s .65s cubic-bezier(.2,.8,.3,1.2) both;transform-origin:right center}
+.experiment-tray.reaction-impact{animation:reaction-panel .7s ease-out both}
+.experiment-tray.reaction-finale{animation:reaction-panel 1s ease-out both}
+.clear-emblem{position:relative;isolation:isolate}
+.clear-emblem::before{content:"";position:absolute;inset:-20px;z-index:-1;border-radius:50%;background:conic-gradient(from 0deg,transparent 0deg 18deg,#ffe49799 20deg 24deg,transparent 27deg 48deg,#f3c77199 50deg 54deg,transparent 57deg 78deg,#ffe49799 80deg 84deg,transparent 87deg 108deg,#f3c77199 110deg 114deg,transparent 117deg 138deg,#ffe49799 140deg 144deg,transparent 147deg 168deg,#f3c77199 170deg 174deg,transparent 177deg 198deg,#ffe49799 200deg 204deg,transparent 207deg 228deg,#f3c77199 230deg 234deg,transparent 237deg 258deg,#ffe49799 260deg 264deg,transparent 267deg 288deg,#f3c77199 290deg 294deg,transparent 297deg 318deg,#ffe49799 320deg 324deg,transparent 327deg 348deg,#f3c77199 350deg 354deg,transparent 357deg);animation:alchemy-turn 8s linear infinite}
+.clear-emblem::after{content:"";position:absolute;inset:-10px;border:2px solid #ffe6a3;border-radius:30px;transform:rotate(20deg);box-shadow:0 0 20px #ffd06b66}
+@keyframes reaction-panel{0%,100%{border-color:#ffffffad;box-shadow:0 8px 0 #c9bde43b,inset 0 0 45px #fff6}15%{border-color:color-mix(in srgb,var(--reaction-color) 55%,white);box-shadow:0 8px 0 #c9bde43b,0 0 40px color-mix(in srgb,var(--reaction-color) 28%,transparent),inset 0 0 65px color-mix(in srgb,var(--reaction-color) 12%,transparent)}50%{border-color:#ffffffe0;box-shadow:0 8px 0 #c9bde43b,0 0 18px color-mix(in srgb,var(--reaction-color) 15%,transparent),inset 0 0 45px #fff6}}
 @keyframes reward-sheen{0%{transform:translateX(-65%);opacity:0}18%{opacity:1}85%,100%{transform:translateX(65%);opacity:0}}
 @keyframes reward-aura{0%{transform:scale(.96);opacity:.8}18%{transform:scale(1.06);box-shadow:0 0 32px color-mix(in srgb,var(--liquid-color) 70%,transparent),inset 0 0 18px color-mix(in srgb,var(--liquid-color) 24%,transparent)}55%{transform:scale(1.01)}100%{transform:scale(1);opacity:.8}}
 @keyframes reward-clear{0%{opacity:0;transform:scale(.72) translateY(12px)}65%{opacity:1;transform:scale(1.05) translateY(-3px)}100%{opacity:1;transform:scale(1) translateY(0)}}

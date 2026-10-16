@@ -1,6 +1,6 @@
 export const SOUND_NAMES = ['select', 'target', 'start', 'pour', 'invalid', 'clear', 'timeout', 'tick', 'complete'] as const;
 export type SoundName = typeof SOUND_NAMES[number];
-export const soundPath = (name: SoundName) => `/water-sort/sounds/${name === 'pour' ? 'v2' : name === 'complete' || name === 'clear' ? 'v3' : 'v1'}/${name}.wav`;
+export const soundPath = (name: SoundName) => `/water-sort/sounds/${name === 'pour' ? 'v2' : name === 'complete' || name === 'clear' ? 'v4' : 'v1'}/${name}.wav`;
 
 /** Lazy Web Audio: never gates gameplay and never starts before a user gesture. */
 export class GameAudio {

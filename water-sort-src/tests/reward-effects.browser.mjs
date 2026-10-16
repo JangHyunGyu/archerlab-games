@@ -54,13 +54,14 @@ try {
     await page.screenshot({ path: `${out}/${width}-selected.png` });
     await h.tap(2); await h.idle(); await h.move(1,0);
     await page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.chain === '1');
+    await page.waitForFunction(() => Number(document.querySelector('.reward-overlay')?.dataset.particles) > 0);
     await page.waitForTimeout(150); await page.screenshot({ path: `${out}/${width}-burst.png` });
-    assert.ok(Number(await page.locator('.reward-overlay').getAttribute('data-particles')) > 0);
     await h.idle(); await h.move(2,1);
     await page.waitForSelector('.clear-burst');
-    await page.waitForTimeout(120); await page.screenshot({ path: `${out}/${width}-clear.png` });
+    await page.waitForFunction(() => Number(document.querySelector('.reward-overlay')?.dataset.resonances) > 0);
     assert.equal(await page.locator('.reward-overlay').getAttribute('data-chain'), '2');
     assert.equal(await page.locator('.reward-overlay').getAttribute('data-finale'), 'local-effects:1');
+    await page.waitForTimeout(120); await page.screenshot({ path: `${out}/${width}-clear.png` });
     await page.waitForFunction(() => document.querySelector('.stage-stat strong')?.textContent === '02');
     await assertLayout(page);
     await page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.active === 'false');
@@ -86,6 +87,15 @@ try {
     if (mode === 'reduced') { await h.idle(); assert.equal(await h.page.locator('.reward-overlay').evaluate(node => getComputedStyle(node).display), 'none'); }
     assert.deepEqual(h.errors, []); reports.push({ mode, errors: h.errors }); await h.context.close(); console.log(`PASS ${mode}`);
   }
+  const pausedChain = await fixture({ width: 390, height: 844 });
+  await pausedChain.page.locator('.play-button').click(); await pausedChain.page.locator('.bottle-button').first().waitFor();
+  await pausedChain.move(0,2); await pausedChain.idle(); await pausedChain.move(1,0);
+  await pausedChain.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.chain === '1');
+  await pausedChain.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.active === 'false');
+  await pausedChain.move(2,1);
+  await pausedChain.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.chain === '2' && Number(document.querySelector('.reward-overlay')?.dataset.resonances) > 0);
+  assert.deepEqual(pausedChain.errors, []); reports.push({ mode: 'chain survives the idle gap between bursts', errors: pausedChain.errors });
+  await pausedChain.context.close(); console.log('PASS idle chain');
   // A dense two-row board retains the same bottle hitboxes while effects overlap.
   for (const [width,height] of [[320,568],[390,844],[768,1024],[844,390],[1440,900]]) {
     const dense = await fixture({ width, height }, { level: 20, board: [[0,0,0,1],[1,1,1,0],[2,2,2,3],[3,3,3,2],[4,4,4,5],[5,5,5,4],[6,6,6,7],[7,7,7,6],[],[]] });

@@ -2,6 +2,7 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { RewardChain, RewardPainter, type RewardBottle } from '../lib/reward-effects';
 import type { GameAudio } from '../lib/game-audio';
+import { WATER_COLORS } from '../lib/glass-renderer';
 
 export type RewardHandle = {
   bottle: (node: HTMLElement, color: number) => void;
@@ -25,11 +26,21 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0, width = 0, height = 0, disposed = false, paintScope = state.current.scope;
     const scoreNode = () => document.querySelector<HTMLElement>('.score-stat strong');
-    const clear = () => {
-      cancelAnimationFrame(frame); frame = 0; painter.reset();
+    const pulseTray = (color: string, finale = false) => {
+      const tray = document.querySelector<HTMLElement>('.experiment-tray');
+      if (!tray) return;
+      tray.style.setProperty('--reaction-color', color);
+      tray.classList.remove('reaction-impact', 'reaction-finale');
+      void tray.offsetWidth;
+      tray.classList.add(finale ? 'reaction-finale' : 'reaction-impact');
+    };
+    const hide = () => {
+      cancelAnimationFrame(frame); frame = 0;
       ctx.clearRect(0, 0, width, height); canvas.dataset.active = 'false';
       document.querySelectorAll('.score-reward').forEach(node => node.classList.remove('score-reward'));
+      document.querySelectorAll('.reaction-impact,.reaction-finale').forEach(node => node.classList.remove('reaction-impact', 'reaction-finale'));
     };
+    const clear = () => { painter.reset(); hide(); };
     const size = () => {
       clear(); width = document.documentElement.clientWidth; height = window.innerHeight;
       const ratio = Math.min(devicePixelRatio || 1, 2);
@@ -43,8 +54,9 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
       if (paintScope !== state.current.scope) { painter.finishStage(); paintScope = state.current.scope; }
       painter.draw(ctx, now, width, height);
       canvas.dataset.particles = String(painter.particles);
+      canvas.dataset.resonances = String(painter.connections);
       if (painter.active) frame = requestAnimationFrame(draw);
-      else clear();
+      else hide();
     };
     const wake = () => {
       canvas.dataset.active = 'true';
@@ -61,6 +73,7 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
         if (reduced.matches) return;
         if (paintScope !== state.current.scope) { painter.finishStage(); paintScope = state.current.scope; }
         painter.bottle(bottleGeometry(node, color), count, performance.now());
+        pulseTray(WATER_COLORS[color] ?? '#b485ef');
         canvas.dataset.chain = String(count); wake();
       },
       clear(amount) {
@@ -69,6 +82,7 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
         const score = scoreNode(), rect = score?.getBoundingClientRect();
         if (!rect || !bottles.length) return;
         painter.clear(bottles, { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }, amount, performance.now());
+        pulseTray('#b783e5', true);
         score?.classList.remove('score-reward');
         // Restart only on a confirmed stage award, without changing the server-owned number.
         if (score) { void score.offsetWidth; score.classList.add('score-reward'); }

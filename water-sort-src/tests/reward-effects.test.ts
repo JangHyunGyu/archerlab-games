@@ -33,3 +33,16 @@ test('the next board keeps score flights but drops bursts from the previous boar
   painter.finishStage(); assert.equal(painter.particles, 0); assert.equal(painter.active, true);
   painter.reset(); assert.equal(painter.active, false);
 });
+
+test('chain ribbons connect recent completions, stay bounded, and cannot connect across stages', () => {
+  const painter = new RewardPainter();
+  const bottle = { x: 100, y: 240, width: 45, height: 125, color: 0 };
+  painter.bottle(bottle, 1, 0); assert.equal(painter.connections, 0);
+  painter.bottle({ ...bottle, x: 220 }, 2, 500); assert.equal(painter.connections, 1);
+  painter.finishStage(); assert.equal(painter.connections, 0);
+  painter.bottle(bottle, 2, 600); assert.equal(painter.connections, 0);
+  painter.bottle({ ...bottle, x: 220 }, 2, 6000); assert.equal(painter.connections, 0);
+  for (let i = 0; i < 50; i++) painter.bottle({ ...bottle, x: 100 + i }, 6, 6100 + i);
+  assert.equal(painter.connections, 8); assert.ok(painter.particles <= 280);
+  painter.reset(); assert.equal(painter.connections, 0); assert.equal(painter.active, false);
+});

@@ -6,7 +6,7 @@ import wave
 from pathlib import Path
 
 RATE = 48000
-OUT = Path(__file__).resolve().parent.parent / 'public' / 'sounds' / 'v3'
+OUT = Path(__file__).resolve().parent.parent / 'public' / 'sounds' / 'v4'
 
 
 def render(name, duration, notes, bubbles):
@@ -20,6 +20,15 @@ def render(name, duration, notes, bubbles):
             body += .08 * math.sin(math.tau * hz * 5.404 * t) * math.exp(-30 * t)
             samples[int(start * RATE) + i] += body * envelope * gain
     rng = random.Random(927)
+    # A short falling body, airy upward sweep and a crystal attack share one headroom budget.
+    for i in range(len(samples)):
+        t = i / RATE
+        attack = min(1, t / .003)
+        body = math.sin(math.tau * (150 * t - 110 * t * t)) * math.exp(-t * 28) * .3
+        strike = (math.sin(math.tau * 2380 * t) + .4 * rng.uniform(-1, 1)) * math.exp(-t * 90) * .12
+        air = rng.uniform(-1, 1) * math.exp(-((t - .11) / .065) ** 2) * .045
+        shimmer = math.sin(math.tau * (1450 * t + 1800 * t * t)) * math.exp(-t * 15) * .035
+        samples[i] += (body + strike + air + shimmer) * attack * min(1, (duration - t) / .025)
     for start, hz in bubbles:
         for i in range(min(int(.1 * RATE), len(samples) - int(start * RATE))):
             t = i / RATE
@@ -36,10 +45,10 @@ def render(name, duration, notes, bubbles):
     print(f'{name}: {duration}s, {RATE}Hz, peak 0.62')
 
 
-render('complete', .62, [(0, 783.99, .34, .25), (.035, 1174.66, .4, .19),
-                       (.09, 1567.98, .5, .11), (.15, 2349.32, .3, .035)],
+render('complete', .68, [(0, 783.99, .4, .25), (.025, 1174.66, .45, .20),
+                       (.07, 1567.98, .56, .13), (.13, 2349.32, .4, .045), (.18, 3135.96, .35, .02)],
        [(0, 520), (.035, 820), (.075, 1100)])
 render('clear', .98, [(0, 523.25, .36, .20), (.055, 659.25, .38, .18),
                     (.11, 783.99, .43, .18), (.18, 1046.5, .65, .19),
                     (.23, 1318.51, .65, .13), (.29, 1567.98, .63, .09),
-                    (.36, 2093, .5, .055)], [(0, 420), (.08, 680), (.17, 900)])
+                    (.36, 2093, .5, .065), (.42, 2637.02, .48, .04)], [(0, 420), (.08, 680), (.17, 900)])
