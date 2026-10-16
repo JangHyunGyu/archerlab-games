@@ -22,7 +22,7 @@ assert.match(html, /aria-modal="true"/);
 assert.match(html, /<noscript>/);
 assert.match(html, /main\.js\?v=20260912-puzzle-ui-v5/);
 assert.match(html, /style\.css\?v=20260912-puzzle-ui-v5/);
-assert.match(html, /"dateModified": "2026-09-12"/);
+assert.equal(JSON.parse(jsonLdMatch[1]).dateModified, '2026-09-12');
 assert.match(html, /id="new-game"/);
 assert.match(html, /id="game-status"/);
 assert.match(html, /class="topbar" aria-hidden="true" inert/);

@@ -734,10 +734,15 @@
         };
     }
 
-    window.addEventListener('online', function () { scheduleFlush(0); });
+    window.addEventListener('online', function () {
+        scheduleFlush(0);
+        resumeRuntimeScript();
+    });
     window.addEventListener('pagehide', function () { flushQueue(); });
+    window.addEventListener('pageshow', function () { resumeRuntimeScript(); });
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'hidden') flushQueue();
+        else resumeRuntimeScript();
     });
 
     window.ArcherLabClientErrorReporter = {
@@ -784,15 +789,35 @@
         flush: flushQueue
     };
 
-    // The shared runtime is injected here. A dropped request on a flaky mobile connection
-    // is retried with a cache-busting query; only a load that still fails after the retries
-    // while the browser reports itself online is logged (flagged recoveryFailed).
+    var runtimeLoading = false;
+    var runtimeLoadComplete = false;
+    var runtimeWaitingForOnline = false;
+    var runtimeFailureReported = false;
+    var runtimeRetryTimer = null;
+    var runtimeLoadSequence = 0;
+    var runtimeBaseSrc = script && script.src
+        ? script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260905-bot-filter-v2&ranking=20261006-client-exception-v1&audit=20261016-online-recovery-v2')
+        : '';
+
+    // Keep one request in flight. A failed offline load waits for connectivity;
+    // reconnection or returning to the page gets a bounded retry cycle, with one
+    // final report per page. Visibility also covers outages without an online event.
+    function resumeRuntimeScript() {
+        if (!runtimeWaitingForOnline || runtimeRetryTimer !== null
+            || (window.navigator && window.navigator.onLine === false)) return;
+        injectRuntimeScript(runtimeBaseSrc, 0);
+    }
+
     function injectRuntimeScript(baseSrc, attempt) {
+        if (!baseSrc || window.ArcherGames || runtimeLoadComplete || runtimeLoading) return;
+        runtimeLoading = true;
+        runtimeWaitingForOnline = false;
         var runtimeScript = document.createElement('script');
         var runtimeSrc = baseSrc;
-        if (attempt > 0) {
-            runtimeSrc += (runtimeSrc.indexOf('?') >= 0 ? '&' : '?') + '__resource_retry=' + Date.now().toString(36) + '-' + attempt;
+        if (runtimeLoadSequence > 0) {
+            runtimeSrc += (runtimeSrc.indexOf('?') >= 0 ? '&' : '?') + '__resource_retry=' + Date.now().toString(36) + '-' + runtimeLoadSequence;
         }
+        runtimeLoadSequence += 1;
         runtimeScript.src = runtimeSrc;
         runtimeScript.async = false;
         runtimeScript.setAttribute('data-game-id', gameId);
@@ -800,13 +825,37 @@
         if (!/^(?:jewelria|solo-leveling|archerlab-games)$/.test(gameId)) {
             runtimeScript.setAttribute('data-service-worker', 'sw.js');
         }
+        var settled = false;
+        runtimeScript.onload = function () {
+            if (settled) return;
+            settled = true;
+            runtimeLoading = false;
+            runtimeLoadComplete = true;
+        };
         runtimeScript.onerror = function () {
+            if (settled) return;
+            settled = true;
+            runtimeLoading = false;
+            if (typeof runtimeScript.remove === 'function') runtimeScript.remove();
             if (window.ArcherGames) return;
-            if (window.navigator && window.navigator.onLine === false) return;
-            if (attempt < RUNTIME_SCRIPT_MAX_RETRIES) {
-                window.setTimeout(function () { injectRuntimeScript(baseSrc, attempt + 1); }, 800 * (attempt + 1));
+            if (window.navigator && window.navigator.onLine === false) {
+                runtimeWaitingForOnline = true;
                 return;
             }
+            if (attempt < RUNTIME_SCRIPT_MAX_RETRIES) {
+                runtimeRetryTimer = window.setTimeout(function () {
+                    runtimeRetryTimer = null;
+                    if (window.navigator && window.navigator.onLine === false) {
+                        runtimeWaitingForOnline = true;
+                        return;
+                    }
+                    injectRuntimeScript(baseSrc, attempt + 1);
+                }, 800 * (attempt + 1));
+                return;
+            }
+            runtimeWaitingForOnline = true;
+            if (runtimeFailureReported) return;
+            runtimeFailureReported = true;
             report({
                 error_type: 'resource_error',
                 message: 'Failed to load resource: SCRIPT',
@@ -824,8 +873,8 @@
         document.head.appendChild(runtimeScript);
     }
 
-    if (!window.ArcherGames && script && script.src) {
-        injectRuntimeScript(script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260905-bot-filter-v2&ranking=20261006-client-exception-v1&audit=20261008-runtime-v4'), 0);
+    if (!window.ArcherGames && runtimeBaseSrc) {
+        injectRuntimeScript(runtimeBaseSrc, 0);
     }
 
     scheduleFlush(0);

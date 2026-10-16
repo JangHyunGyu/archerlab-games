@@ -8,6 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '../../shared/client-error-r
 function loadReporter(userAgent, options = {}) {
   const values = new Map();
   const listeners = {};
+  const documentListeners = {};
   const appended = [];
   const script = {
     src: options.scriptSrc || '',
@@ -18,7 +19,7 @@ function loadReporter(userAgent, options = {}) {
     documentElement: { lang: 'ko' },
     title: 'Block Pang',
     visibilityState: 'visible',
-    addEventListener() {},
+    addEventListener(name, listener) { documentListeners[name] = listener; },
     head: { appendChild(element) { appended.push(element); } },
     createElement: (tagName) => {
       const attributes = new Map();
@@ -82,6 +83,8 @@ function loadReporter(userAgent, options = {}) {
     window,
     values,
     listeners,
+    document,
+    documentListeners,
     appended,
     flushTimers(delay) {
       const selected = timers.filter((timer) => (
@@ -281,4 +284,75 @@ console.log('✓ client error reporter automation filtering verified');
   offlineLoader.flushTimers();
   assert.equal(offlineLoader.appended.length, 1);
   assert.equal(offlineLoader.values.has('archerlab-client-error-queue:v2'), false);
+
+  offlineLoader.window.navigator.onLine = true;
+  offlineLoader.listeners.online();
+  assert.equal(offlineLoader.appended.length, 2, 'reconnection resumes an offline runtime failure');
+  assert.match(offlineLoader.appended[1].src, /__resource_retry=/);
+  assert.equal(offlineLoader.appended[1].getAttribute('data-game-id'), 'blockpang');
+  assert.equal(offlineLoader.appended[1].getAttribute('data-service-worker'), 'sw.js');
+  offlineLoader.listeners.online();
+  assert.equal(offlineLoader.appended.length, 2, 'repeated online events cannot duplicate an in-flight load');
+  offlineLoader.window.ArcherGames = {};
+  offlineLoader.appended[1].onload();
+  offlineLoader.listeners.online();
+  offlineLoader.appended[0].onerror();
+  offlineLoader.flushTimers();
+  assert.equal(offlineLoader.appended.length, 2, 'a completed runtime must never be injected again');
+  assert.equal(offlineLoader.values.has('archerlab-client-error-queue:v2'), false);
+
+  const interruptedRetry = loadReporter('Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36', {
+    scriptSrc: 'https://game.archerlab.dev/shared/client-error-reporter.js?v=test'
+  });
+  interruptedRetry.appended[0].onerror();
+  interruptedRetry.appended[0].onerror();
+  interruptedRetry.listeners.online();
+  assert.equal(interruptedRetry.appended.length, 1, 'an online event cannot race a scheduled retry');
+  interruptedRetry.window.navigator.onLine = false;
+  interruptedRetry.flushTimers(800);
+  assert.equal(interruptedRetry.appended.length, 1, 'a scheduled retry pauses when connectivity disappears');
+  interruptedRetry.window.navigator.onLine = true;
+  interruptedRetry.listeners.online();
+  assert.equal(interruptedRetry.appended.length, 2);
+  interruptedRetry.appended[1].onerror();
+  interruptedRetry.flushTimers(800);
+  assert.equal(interruptedRetry.appended.length, 3, 'each failed element schedules only one retry');
+  interruptedRetry.window.ArcherGames = {};
+  interruptedRetry.appended[2].onload();
+  interruptedRetry.listeners.online();
+  interruptedRetry.flushTimers();
+  assert.equal(interruptedRetry.appended.length, 3);
+  assert.equal(interruptedRetry.values.has('archerlab-client-error-queue:v2'), false);
+
+  // An exhausted online cycle can recover after reconnecting, without repeated reports.
+  runtimeLoader.appended[2].onerror();
+  runtimeLoader.window.navigator.onLine = false;
+  runtimeLoader.listeners.online();
+  assert.equal(runtimeLoader.appended.length, 3);
+  runtimeLoader.window.navigator.onLine = true;
+  runtimeLoader.listeners.online();
+  assert.equal(runtimeLoader.appended.length, 4);
+  for (const [index, delay] of [[3, 800], [4, 1600]]) {
+    runtimeLoader.appended[index].onerror();
+    runtimeLoader.flushTimers(delay);
+  }
+  runtimeLoader.appended[5].onerror();
+  const reconnectQueue = JSON.parse(runtimeLoader.values.get('archerlab-client-error-queue:v2'));
+  assert.equal(reconnectQueue.length, 1, 'multiple failed recovery cycles produce one report per page');
+  runtimeLoader.flushTimers(800);
+  runtimeLoader.flushTimers(1600);
+  assert.equal(runtimeLoader.appended.length, 6, 'retry exhaustion must not start an endless polling loop');
+
+  runtimeLoader.document.visibilityState = 'hidden';
+  runtimeLoader.documentListeners.visibilitychange();
+  assert.equal(runtimeLoader.appended.length, 6, 'backgrounding does not start a recovery cycle');
+  runtimeLoader.document.visibilityState = 'visible';
+  runtimeLoader.documentListeners.visibilitychange();
+  assert.equal(runtimeLoader.appended.length, 7, 'foregrounding recovers outages that never emitted an online event');
+  runtimeLoader.listeners.pageshow();
+  assert.equal(runtimeLoader.appended.length, 7, 'page restoration cannot duplicate a foreground recovery');
+  runtimeLoader.window.ArcherGames = {};
+  runtimeLoader.appended[6].onload();
+  runtimeLoader.listeners.pageshow();
+  assert.equal(runtimeLoader.appended.length, 7, 'restoring a healthy page does not reload its runtime');
 }

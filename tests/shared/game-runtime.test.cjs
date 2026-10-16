@@ -53,6 +53,25 @@ const ranking = window.ArcherGames.createRankingClient({
   await listeners.load();
   assert.deepEqual(registrations, ['sw.js']);
 
+  const lateRegistrations = [];
+  const lateListeners = {};
+  const lateWindow = {
+    ...window,
+    ArcherGames: undefined,
+    document: { ...window.document, readyState: 'complete' },
+    navigator: {
+      onLine: true,
+      serviceWorker: { register: async (url) => lateRegistrations.push(url) }
+    },
+    addEventListener: (name, listener) => { lateListeners[name] = listener; }
+  };
+  lateWindow.window = lateWindow;
+  vm.runInNewContext(source, lateWindow, { filename: 'game-runtime.js' });
+  assert.deepEqual(lateRegistrations, ['sw.js'], 'a runtime recovered after page load still registers its worker');
+  assert.equal(lateListeners.load, undefined, 'late recovery cannot wait for an event that already fired');
+  vm.runInNewContext(source, lateWindow, { filename: 'game-runtime.js' });
+  assert.deepEqual(lateRegistrations, ['sw.js'], 'runtime reinjection cannot register the worker twice');
+
   const retryDelays = [];
   const retryReports = [];
   let retryAttempts = 0;

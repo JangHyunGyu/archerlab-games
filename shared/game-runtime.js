@@ -293,6 +293,10 @@
 
     var workerUrl = currentScript && currentScript.getAttribute('data-service-worker');
     if (workerUrl && global.addEventListener) {
-        global.addEventListener('load', function () { registerServiceWorker(workerUrl); }, { once: true });
+        if (global.document.readyState === 'complete') {
+            registerServiceWorker(workerUrl);
+        } else {
+            global.addEventListener('load', function () { registerServiceWorker(workerUrl); }, { once: true });
+        }
     }
 })(window);
