@@ -378,6 +378,8 @@
         return true;
     }
 
+    var RUNTIME_SCRIPT_MAX_RETRIES = 2;
+
     function isIgnorableResourceError(source, target) {
         var src = safeString(source, '');
         var tag = safeString(target && (target.tagName || target.nodeName), '').toUpperCase();
@@ -386,6 +388,11 @@
         // commonly cancel otherwise healthy image requests. Their resource errors
         // are not actionable player failures.
         if (isAutomatedUserAgent(userAgent)) {
+            return true;
+        }
+        // The injected shared runtime retries itself and reports only a final failure.
+        if (tag === 'SCRIPT' && target && typeof target.getAttribute === 'function'
+            && target.getAttribute('data-archerlab-runtime-loader') !== null) {
             return true;
         }
         if (tag === 'IMG') {
@@ -777,15 +784,48 @@
         flush: flushQueue
     };
 
-    if (!window.ArcherGames && script && script.src) {
+    // The shared runtime is injected here. A dropped request on a flaky mobile connection
+    // is retried with a cache-busting query; only a load that still fails after the retries
+    // while the browser reports itself online is logged (flagged recoveryFailed).
+    function injectRuntimeScript(baseSrc, attempt) {
         var runtimeScript = document.createElement('script');
-        runtimeScript.src = script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260905-bot-filter-v2&ranking=20261006-client-exception-v1&audit=20261008-runtime-v4');
+        var runtimeSrc = baseSrc;
+        if (attempt > 0) {
+            runtimeSrc += (runtimeSrc.indexOf('?') >= 0 ? '&' : '?') + '__resource_retry=' + Date.now().toString(36) + '-' + attempt;
+        }
+        runtimeScript.src = runtimeSrc;
         runtimeScript.async = false;
         runtimeScript.setAttribute('data-game-id', gameId);
+        runtimeScript.setAttribute('data-archerlab-runtime-loader', String(attempt));
         if (!/^(?:jewelria|solo-leveling|archerlab-games)$/.test(gameId)) {
             runtimeScript.setAttribute('data-service-worker', 'sw.js');
         }
+        runtimeScript.onerror = function () {
+            if (window.ArcherGames) return;
+            if (window.navigator && window.navigator.onLine === false) return;
+            if (attempt < RUNTIME_SCRIPT_MAX_RETRIES) {
+                window.setTimeout(function () { injectRuntimeScript(baseSrc, attempt + 1); }, 800 * (attempt + 1));
+                return;
+            }
+            report({
+                error_type: 'resource_error',
+                message: 'Failed to load resource: SCRIPT',
+                source: runtimeSrc,
+                lineno: 0,
+                colno: 0,
+                stack: '',
+                context: {
+                    tag: 'SCRIPT',
+                    runtimeLoaderAttempts: attempt + 1,
+                    recoveryFailed: true
+                }
+            });
+        };
         document.head.appendChild(runtimeScript);
+    }
+
+    if (!window.ArcherGames && script && script.src) {
+        injectRuntimeScript(script.src.replace(/client-error-reporter\.js(?:\?.*)?$/, 'game-runtime.js?v=20260905-bot-filter-v2&ranking=20261006-client-exception-v1&audit=20261008-runtime-v4'), 0);
     }
 
     scheduleFlush(0);

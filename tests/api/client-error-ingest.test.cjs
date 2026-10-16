@@ -200,6 +200,47 @@ function createDb() {
     assert.equal(keptDb.writes.length, 1);
   }
 
+  // Older cached reporters logged a single dropped request for the shared runtime script;
+  // a final failure from the current reporter (recoveryFailed) and other scripts are kept.
+  {
+    const runtimeUa = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36';
+    const runtimeSource = 'https://game.archerlab.dev/shared/game-runtime.js?v=20260905-bot-filter-v2&ranking=20261006-client-exception-v1&audit=20261008-runtime-v4';
+    const ignoredDb = createDb();
+    const ignoredResponse = await context.__gameApiTest.storeClientError(ignoredDb, new Request(browserRequest.url, {
+      method: 'POST',
+      headers: { 'User-Agent': runtimeUa }
+    }), {
+      appId: 'jelly-pang-2048',
+      errorType: 'resource_error',
+      message: '[resource_error] Failed to load resource: SCRIPT',
+      url: 'https://game.archerlab.dev/jelly-pang-2048/',
+      source: runtimeSource,
+      context: { language: 'ko', tag: 'SCRIPT' }
+    });
+    assert.deepEqual(await ignoredResponse.json(), { ok: true, ignored: true, reason: 'transient_runtime_script_load' });
+    assert.equal(ignoredDb.writes.length, 0);
+    for (const [source, extraContext] of [
+      [runtimeSource, { recoveryFailed: true, runtimeLoaderAttempts: 3 }],
+      ['https://game.archerlab.dev/jelly-pang-2048/js/main.js?v=test', {}],
+      ['https://cdn.example.com/shared/game-runtime.js', {}]
+    ]) {
+      const keptDb = createDb();
+      const keptResponse = await context.__gameApiTest.storeClientError(keptDb, new Request(browserRequest.url, {
+        method: 'POST',
+        headers: { 'User-Agent': runtimeUa }
+      }), {
+        appId: 'jelly-pang-2048',
+        errorType: 'resource_error',
+        message: '[resource_error] Failed to load resource: SCRIPT',
+        url: 'https://game.archerlab.dev/jelly-pang-2048/',
+        source,
+        context: Object.assign({ tag: 'SCRIPT' }, extraContext)
+      });
+      assert.deepEqual(await keptResponse.json(), { ok: true });
+      assert.equal(keptDb.writes.length, 1);
+    }
+  }
+
   // PeerJS 시그널링 서버 연결이 끊긴 것(err.type 'network')은 실제 네트워크 끊김이라 저장하지 않는다.
   const peerUa = 'Mozilla/5.0 (iPad; CPU OS 17_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.7 Mobile/15E148 Safari/605.1 NAVER(inapp; search; 2100; 12.23.72)';
   for (const message of [

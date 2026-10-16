@@ -271,6 +271,30 @@ function getOptionalImagePreloadReason(body) {
     }
 }
 
+// The shared game runtime (shared/game-runtime.js) is injected by client-error-reporter.js.
+// Older cached reporters logged any single dropped request for it, even though the file is
+// served fine. Current reporters retry and send only a final failure with recoveryFailed,
+// which getRecoveredClientErrorReason lets through, so only unflagged reports are ignored.
+function getTransientRuntimeScriptReason(body) {
+    const errorType = String(body.error_type || body.errorType || body.type || '');
+    const message = String(body.message || '').replace(/^\[[^\]]+\]\s*/, '').trim();
+    if (!/^resource_?error$/i.test(errorType)) return '';
+    if (!/^Failed to load resource:\s*SCRIPT$/i.test(message)) return '';
+    const records = [body, parseClientErrorRecord(body.context), parseClientErrorRecord(body.extra)];
+    if (records.some((record) => hasTruthyClientErrorFlag(record, ['recoveryFailed', 'fallbackFailed', 'recoveryExhausted']))) {
+        return '';
+    }
+    try {
+        const page = new URL(String(body.url || ''));
+        const resource = new URL(String(body.source || body.filename || ''), page);
+        if (resource.origin !== page.origin) return '';
+        if (resource.pathname !== '/shared/game-runtime.js') return '';
+        return 'transient_runtime_script_load';
+    } catch {
+        return '';
+    }
+}
+
 async function insertErrorLog(db, request, payload) {
     if (!db) throw new Error('D1 DB binding is unavailable');
     await db.prepare(`
@@ -316,6 +340,11 @@ async function storeClientError(db, request, body) {
     const preloadReason = getOptionalImagePreloadReason(body);
     if (preloadReason) {
         return jsonResponse({ ok: true, ignored: true, reason: preloadReason });
+    }
+
+    const runtimeScriptReason = getTransientRuntimeScriptReason(body);
+    if (runtimeScriptReason) {
+        return jsonResponse({ ok: true, ignored: true, reason: runtimeScriptReason });
     }
 
     const recoveredReason = getRecoveredClientErrorReason(body);

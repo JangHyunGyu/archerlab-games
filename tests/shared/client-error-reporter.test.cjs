@@ -8,8 +8,9 @@ const source = fs.readFileSync(path.join(__dirname, '../../shared/client-error-r
 function loadReporter(userAgent, options = {}) {
   const values = new Map();
   const listeners = {};
+  const appended = [];
   const script = {
-    src: '',
+    src: options.scriptSrc || '',
     getAttribute: (key) => key === 'data-game-id' ? 'blockpang' : null
   };
   const document = {
@@ -18,8 +19,15 @@ function loadReporter(userAgent, options = {}) {
     title: 'Block Pang',
     visibilityState: 'visible',
     addEventListener() {},
-    head: { appendChild() {} },
-    createElement: () => ({ setAttribute() {} })
+    head: { appendChild(element) { appended.push(element); } },
+    createElement: (tagName) => {
+      const attributes = new Map();
+      return {
+        tagName: String(tagName).toUpperCase(),
+        setAttribute: (name, value) => attributes.set(name, String(value)),
+        getAttribute: (name) => attributes.has(name) ? attributes.get(name) : null
+      };
+    }
   };
   const timers = [];
   let timerSequence = 0;
@@ -74,6 +82,7 @@ function loadReporter(userAgent, options = {}) {
     window,
     values,
     listeners,
+    appended,
     flushTimers(delay) {
       const selected = timers.filter((timer) => (
         !timer.cancelled && (delay === undefined || timer.delay === delay)
@@ -221,3 +230,55 @@ console.log('✓ client error reporter automation filtering verified');
   console.error(error);
   process.exitCode = 1;
 });
+
+// The injected shared runtime script retries a dropped request and logs only a final failure.
+{
+  const runtimeLoader = loadReporter('Mozilla/5.0 (Linux; Android 10; K) Chrome/154.0.0.0 Mobile Safari/537.36', {
+    scriptSrc: 'https://game.archerlab.dev/shared/client-error-reporter.js?v=test'
+  });
+  assert.equal(runtimeLoader.appended.length, 1);
+  const first = runtimeLoader.appended[0];
+  assert.match(first.src, /\/shared\/game-runtime\.js\?v=/);
+  assert.equal(first.getAttribute('data-archerlab-runtime-loader'), '0');
+  // The global capture listener leaves the runtime script to its own retry handler.
+  runtimeLoader.listeners.error({ target: first });
+  first.onerror();
+  runtimeLoader.flushTimers(800);
+  assert.equal(runtimeLoader.appended.length, 2);
+  assert.match(runtimeLoader.appended[1].src, /__resource_retry=/);
+  runtimeLoader.listeners.error({ target: runtimeLoader.appended[1] });
+  runtimeLoader.appended[1].onerror();
+  runtimeLoader.flushTimers(1600);
+  assert.equal(runtimeLoader.appended.length, 3);
+  assert.equal(runtimeLoader.values.has('archerlab-client-error-queue:v2'), false);
+  // Third failure while online is reported once, flagged recoveryFailed.
+  runtimeLoader.listeners.error({ target: runtimeLoader.appended[2] });
+  runtimeLoader.appended[2].onerror();
+  const runtimeQueue = JSON.parse(runtimeLoader.values.get('archerlab-client-error-queue:v2'));
+  assert.equal(runtimeQueue.length, 1);
+  assert.equal(runtimeQueue[0].body.errorType, 'resource_error');
+  assert.equal(runtimeQueue[0].body.context.recoveryFailed, true);
+  assert.equal(runtimeQueue[0].body.context.runtimeLoaderAttempts, 3);
+
+  // A retry that loads leaves nothing in the queue.
+  const recoveredLoader = loadReporter('Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36', {
+    scriptSrc: 'https://game.archerlab.dev/shared/client-error-reporter.js?v=test'
+  });
+  recoveredLoader.listeners.error({ target: recoveredLoader.appended[0] });
+  recoveredLoader.appended[0].onerror();
+  recoveredLoader.flushTimers(800);
+  recoveredLoader.window.ArcherGames = {};
+  recoveredLoader.appended[1].onload?.();
+  assert.equal(recoveredLoader.values.has('archerlab-client-error-queue:v2'), false);
+
+  // Offline failures are network interruptions, not logged.
+  const offlineLoader = loadReporter('Mozilla/5.0 Chrome/138.0.0.0 Safari/537.36', {
+    scriptSrc: 'https://game.archerlab.dev/shared/client-error-reporter.js?v=test',
+    onLine: false
+  });
+  offlineLoader.listeners.error({ target: offlineLoader.appended[0] });
+  offlineLoader.appended[0].onerror();
+  offlineLoader.flushTimers();
+  assert.equal(offlineLoader.appended.length, 1);
+  assert.equal(offlineLoader.values.has('archerlab-client-error-queue:v2'), false);
+}
