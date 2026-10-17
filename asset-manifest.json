@@ -16629,6 +16629,16 @@
       "sha256": "d8b67c1288f932e7a2789050e13d5be01900bf4e8930f400a14ea54ecccdfa51"
     },
     {
+      "path": "water-sort-src/public/sounds/v5/clear.wav",
+      "bytes": 94124,
+      "sha256": "cee912e03a504dd343fd154225114d4b5f9202d61f70838e43fd19d7418848b7"
+    },
+    {
+      "path": "water-sort-src/public/sounds/v5/complete.wav",
+      "bytes": 65324,
+      "sha256": "9becf855fffdd0c25b491e246bd933281fc0c3ac9738495abf4dfe9b2ac2564f"
+    },
+    {
       "path": "water-sort/lab-background.webp",
       "bytes": 128540,
       "sha256": "79a9a16c732d3fe7028ada03feb9607488e2369c08d4761bc5d9b1beec3f64be"
@@ -16712,6 +16722,16 @@
       "path": "water-sort/sounds/v4/complete.wav",
       "bytes": 65324,
       "sha256": "d8b67c1288f932e7a2789050e13d5be01900bf4e8930f400a14ea54ecccdfa51"
+    },
+    {
+      "path": "water-sort/sounds/v5/clear.wav",
+      "bytes": 94124,
+      "sha256": "cee912e03a504dd343fd154225114d4b5f9202d61f70838e43fd19d7418848b7"
+    },
+    {
+      "path": "water-sort/sounds/v5/complete.wav",
+      "bytes": 65324,
+      "sha256": "9becf855fffdd0c25b491e246bd933281fc0c3ac9738495abf4dfe9b2ac2564f"
     }
   ]
 }

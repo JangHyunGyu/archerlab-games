@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { RewardChain, RewardPainter } from '../lib/reward-effects.ts';
+import { ReactionSpectacle } from '../lib/reaction-spectacle.ts';
 
 test('only new settled bottles earn chains; duplicate, stage and time boundaries are explicit', () => {
   const chain = new RewardChain();
@@ -45,4 +46,23 @@ test('chain ribbons connect recent completions, stay bounded, and cannot connect
   for (let i = 0; i < 50; i++) painter.bottle({ ...bottle, x: 100 + i }, 6, 6100 + i);
   assert.equal(painter.connections, 8); assert.ok(painter.particles <= 280);
   painter.reset(); assert.equal(painter.connections, 0); assert.equal(painter.active, false);
+});
+
+test('the finale survives a board handoff, expires independently, and is cancelled by reset', () => {
+  const spectacle = new ReactionSpectacle();
+  const bottle = { x: 100, y: 240, width: 45, height: 125, color: 0 };
+  for (let i = 0; i < 100; i++) spectacle.bottle(bottle, 6, 0);
+  assert.ok(spectacle.count <= 4);
+  spectacle.finishStage(); assert.equal(spectacle.active, false);
+  spectacle.clear(195, 400, 0); spectacle.finishStage();
+  assert.equal(spectacle.active, true);
+  const gradient = { addColorStop() {} };
+  const context = new Proxy({}, {
+    get: (_target, key) => key === 'createRadialGradient' || key === 'createLinearGradient' ? () => gradient : () => {},
+    set: () => true,
+  }) as CanvasRenderingContext2D;
+  spectacle.draw(context, 450, 390, 844); assert.equal(spectacle.active, true);
+  spectacle.draw(context, 1899, 390, 844); assert.equal(spectacle.active, true);
+  spectacle.draw(context, 1900, 390, 844); assert.equal(spectacle.active, false);
+  spectacle.clear(195, 400, 2000); spectacle.reset(); assert.equal(spectacle.active, false);
 });

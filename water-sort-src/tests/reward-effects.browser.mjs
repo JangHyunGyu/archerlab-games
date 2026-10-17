@@ -10,6 +10,11 @@ const out = process.env.REWARDS_SHOTS || new URL('../../tmp/water-sort-alchemy/'
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch();
 const reports = [];
+// Set REWARDS_VIEWPORTS=1440x900 for a focused capture, or none for functional checks only.
+// REWARDS_PERF_ONLY=1 isolates frame timing from screenshot/fixture work.
+const viewports = process.env.REWARDS_VIEWPORTS === 'none' ? [] : process.env.REWARDS_VIEWPORTS
+  ? process.env.REWARDS_VIEWPORTS.split(',').map(value => value.split('x').map(Number))
+  : [[320,568],[360,640],[390,844],[430,932],[768,1024],[1024,768],[667,375],[844,390],[1440,900]];
 async function fixture(viewport, options = {}) {
   const context = await browser.newContext({ viewport, serviceWorkers: 'block', hasTouch: viewport.width < 600, reducedMotion: options.reduced ? 'reduce' : 'no-preference', deviceScaleFactor: 2 });
   const page = await context.newPage(), errors = [];
@@ -44,32 +49,39 @@ const assertLayout = async page => {
   for (const b of layout.buttons) { assert.ok(b.width >= 44 && b.height >= 44); assert.ok(b.x >= 0 && b.x + b.width <= layout.width + 1); assert.ok(b.y >= 0 && b.bottom <= layout.height + 1); }
 };
 try {
-  for (const [width, height] of [[320,568],[360,640],[390,844],[430,932],[768,1024],[1024,768],[667,375],[844,390],[1440,900]]) {
+  if (!process.env.REWARDS_PERF_ONLY) {
+  for (const [width, height] of viewports) {
     const h = await fixture({ width, height }), { page } = h;
-    await page.screenshot({ path: `${out}/${width}-title.png` });
+    await page.screenshot({ scale: 'css', path: `${out}/${width}-title.png` });
     await page.locator('.play-button').click(); await page.locator('.bottle-button').first().waitFor();
     await assertLayout(page);
     await h.tap(0); await page.waitForTimeout(150);
     assert.ok(await page.locator('.selected .alchemy-seal').evaluate(node => Number(getComputedStyle(node).opacity) > .8));
-    await page.screenshot({ path: `${out}/${width}-selected.png` });
-    await h.tap(2); await h.idle(); await h.move(1,0);
+    await page.screenshot({ scale: 'css', path: `${out}/${width}-selected.png` });
+    await h.tap(2);
+    if (width === 390) {
+      await page.waitForFunction(() => document.querySelector('.pour-overlay')?.dataset.phase === 'pour');
+      await page.screenshot({ scale: 'css', path: `${out}/${width}-magic-pour.png` });
+    }
+    await h.idle(); await h.move(1,0);
     await page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.chain === '1');
     await page.waitForFunction(() => Number(document.querySelector('.reward-overlay')?.dataset.particles) > 0);
-    await page.waitForTimeout(150); await page.screenshot({ path: `${out}/${width}-burst.png` });
+    await page.waitForTimeout(150); await page.screenshot({ scale: 'css', path: `${out}/${width}-burst.png` });
     await h.idle(); await h.move(2,1);
-    await page.waitForSelector('.clear-burst');
+    // Observe the 450ms connection on RAF before locator polling can skip the handoff.
     await page.waitForFunction(() => Number(document.querySelector('.reward-overlay')?.dataset.resonances) > 0);
+    await page.waitForSelector('.clear-burst');
     assert.equal(await page.locator('.reward-overlay').getAttribute('data-chain'), '2');
     assert.equal(await page.locator('.reward-overlay').getAttribute('data-finale'), 'local-effects:1');
-    await page.waitForTimeout(120); await page.screenshot({ path: `${out}/${width}-clear.png` });
+    await page.waitForTimeout(120); await page.screenshot({ scale: 'css', path: `${out}/${width}-clear.png` });
     await page.waitForFunction(() => document.querySelector('.stage-stat strong')?.textContent === '02');
     await assertLayout(page);
     await page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.active === 'false');
     await page.locator('.hud-home').click(); await page.locator('dialog[open]').waitFor();
-    await page.screenshot({ path: `${out}/${width}-dialog.png` });
+    await page.screenshot({ scale: 'css', path: `${out}/${width}-dialog.png` });
     await page.getByRole('button', { name: '나가기', exact: true }).click();
     await page.locator('.start-screen').waitFor();
-    await page.screenshot({ path: `${out}/${width}-saved.png` });
+    await page.screenshot({ scale: 'css', path: `${out}/${width}-saved.png` });
     assert.deepEqual(h.errors, []);
     reports.push({ viewport: `${width}x${height}`, surfaces: 'title, selected seal, bottle burst, chain, clear, next board, dialog, saved run', errors: h.errors });
     await h.context.close(); console.log(`PASS ${width}x${height}`);
@@ -96,6 +108,28 @@ try {
   await pausedChain.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.chain === '2' && Number(document.querySelector('.reward-overlay')?.dataset.resonances) > 0);
   assert.deepEqual(pausedChain.errors, []); reports.push({ mode: 'chain survives the idle gap between bursts', errors: pausedChain.errors });
   await pausedChain.context.close(); console.log('PASS idle chain');
+  for (const cancel of ['tail', 'dialog', 'resize']) {
+    const h = await fixture({ width: 390, height: 844 });
+    await h.page.locator('.play-button').click(); await h.page.locator('.bottle-button').first().waitFor();
+    if (cancel === 'resize') {
+      // Chromium cannot resize a fullscreen native window through the automation protocol.
+      await h.page.evaluate(async () => { if (document.fullscreenElement) await document.exitFullscreen(); });
+    }
+    await h.move(0,2); await h.idle(); await h.move(1,0); await h.idle(); await h.move(2,1);
+    await h.page.waitForFunction(() => !!document.querySelector('.reward-overlay')?.dataset.finale);
+    if (cancel === 'tail') {
+      // Measure before capturing: screenshot encoding can consume the entire effect on a busy host.
+      await h.page.waitForFunction(() => document.querySelector('.stage-stat strong')?.textContent === '02');
+      await h.page.waitForTimeout(750);
+      assert.equal(await h.page.locator('.reward-overlay').getAttribute('data-active'), 'true', 'finale continues over the next playable board');
+      await h.page.screenshot({ scale: 'css', path: `${out}/390-finale-tail.png` });
+    } else if (cancel === 'dialog') await h.page.locator('.hud-home').click();
+    else await h.page.setViewportSize({ width: 844, height: 390 });
+    await h.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.active === 'false');
+    assert.equal(await h.page.locator('.score-reward').count(), 0);
+    assert.deepEqual(h.errors, []); reports.push({ mode: cancel === 'tail' ? 'finale continues over next playable board' : `finale cancellation on ${cancel}`, errors: h.errors });
+    await h.context.close(); console.log(`PASS finale ${cancel}`);
+  }
   // A dense two-row board retains the same bottle hitboxes while effects overlap.
   for (const [width,height] of [[320,568],[390,844],[768,1024],[844,390],[1440,900]]) {
     const dense = await fixture({ width, height }, { level: 20, board: [[0,0,0,1],[1,1,1,0],[2,2,2,3],[3,3,3,2],[4,4,4,5],[5,5,5,4],[6,6,6,7],[7,7,7,6],[],[]] });
@@ -103,10 +137,11 @@ try {
     await assertLayout(dense.page);
     const solution = solve(dense.state().board);
     for (const [from, to] of solution.slice(0,3)) { await dense.move(from,to); await dense.idle(); }
-    await dense.page.screenshot({ path: `${out}/${width}-dense.png` });
+    await dense.page.screenshot({ scale: 'css', path: `${out}/${width}-dense.png` });
     await assertLayout(dense.page); assert.deepEqual(dense.errors, []);
     reports.push({ viewport: `${width}x${height}`, mode: 'ten-bottle board', errors: dense.errors });
     await dense.context.close(); console.log(`PASS ${width}x${height} dense`);
+  }
   }
   const perf = await fixture({ width: 390, height: 844 });
   await perf.page.locator('.play-button').click(); await perf.page.locator('.bottle-button').first().waitFor();
@@ -131,5 +166,5 @@ try {
   reports.push({ mode: 'headless Chromium frame timing at DPR 2; local hardware only', ...timing });
   await perf.context.close(); console.log(`Frame timing: ${JSON.stringify(timing)}`);
   await writeFile(`${out}/report.json`, JSON.stringify(reports, null, 2));
-  console.log(`PASS ${reports.length} scenarios and dense board; screenshots: ${out}`);
+  console.log(`PASS ${reports.length} scenarios; screenshots/report: ${out}`);
 } finally { await browser.close(); }

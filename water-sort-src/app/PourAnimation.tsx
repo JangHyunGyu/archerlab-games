@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { boundsOf, type Box, type Rect } from '../lib/pour-motion';
 import { planPour, type PourPlan } from '../lib/pour-path';
 import { drawVessel, drawStream, glassInterior, liquidLayers, liquidSurface } from '../lib/glass-renderer';
+import { drawPourMagic } from '../lib/pour-magic';
 import type { Board } from '../lib/game';
 
 export type PourMotion = {
@@ -42,7 +43,10 @@ function paintMotion(ctx: CanvasRenderingContext2D, motion: PourMotion, time: nu
   const targetLayers = liquidLayers([...receiving, ...Array(amount).fill(color)], receiving.length + amount * flow);
   drawVessel(ctx, { ...destination }, targetLayers, { time, incoming: pouring, agitation: pouring ? 1 : Math.exp(-Math.max(0, t - .73) * 24) * .7 });
   const surfaceY = liquidSurface(target, receiving.length + amount * flow);
-  if (pouring) drawStream(ctx, end, { x: end.x, y: surfaceY + 1 }, color, Math.min(5, target.width * .13), time, flow);
+  if (pouring) {
+    drawStream(ctx, end, { x: end.x, y: surfaceY + 1 }, color, Math.min(5, target.width * .13), time, flow);
+    drawPourMagic(ctx, end, { x: end.x, y: surfaceY + 1 }, color, time, flow, destination.width);
+  }
   drawVessel(ctx, { x: position.x, y: position.y, width: motion.source.width, height: motion.source.height, pivot, angle }, liquidLayers(tube, tube.length - amount * flow), { time, shadow: false, agitation: pouring ? .22 : Math.sin((approach + retreat) * Math.PI) * .8 });
   const frames = probe();
   if (frames) {

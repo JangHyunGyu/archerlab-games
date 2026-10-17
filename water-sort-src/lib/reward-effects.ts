@@ -1,4 +1,5 @@
 import { WATER_COLORS } from './glass-renderer.ts';
+import { ReactionSpectacle } from './reaction-spectacle.ts';
 
 export type RewardPoint = { x: number; y: number };
 export type RewardBottle = RewardPoint & { width: number; height: number; color: number };
@@ -66,6 +67,7 @@ export class RewardChain {
 
 /** Time-based trajectories stay identical at 60/90/120 Hz. One bounded canvas sleeps when idle. */
 export class RewardPainter {
+  private spectacle = new ReactionSpectacle();
   private bursts: Burst[] = [];
   private motes: Mote[] = [];
   private flights: Flight[] = [];
@@ -74,13 +76,14 @@ export class RewardPainter {
   private serial = 0;
   private links: Resonance[] = [];
   private lastBottle: { bottle: RewardBottle; at: number } | null = null;
-  get active() { return !!(this.bursts.length || this.motes.length || this.flights.length || this.score || this.ritual || this.links.length); }
+  get active() { return !!(this.bursts.length || this.motes.length || this.flights.length || this.score || this.ritual || this.links.length || this.spectacle.active); }
   get particles() { return this.motes.length; }
   get connections() { return this.links.length; }
-  finishStage() { this.bursts = []; this.motes = []; this.ritual = null; this.links = []; this.lastBottle = null; }
-  reset() { this.finishStage(); this.flights = []; this.score = null; }
+  finishStage() { this.bursts = []; this.motes = []; this.ritual = null; this.links = []; this.lastBottle = null; this.spectacle.finishStage(); }
+  reset() { this.finishStage(); this.flights = []; this.score = null; this.spectacle.reset(); }
   bottle(bottle: RewardBottle, chain: number, now: number, finale = false) {
     if (!finale) {
+      this.spectacle.bottle(bottle, chain, now);
       const last = this.lastBottle;
       if (chain > 1 && last && now - last.at <= 4200) {
         this.links.push({ from: { x: last.bottle.x, y: last.bottle.y + last.bottle.height * .5 },
@@ -117,6 +120,7 @@ export class RewardPainter {
     this.score = { from: center, to: target, amount, started: now };
     this.ritual = { x: center.x, y: bottles.reduce((sum, b) => sum + b.y + b.height * .5, 0) / bottles.length,
       radius: Math.min(310, Math.max(145, (Math.max(...bottles.map(b => b.x)) - Math.min(...bottles.map(b => b.x))) * .85)), started: now };
+    this.spectacle.clear(this.ritual.x, this.ritual.y, now);
   }
   draw(ctx: CanvasRenderingContext2D, now: number, width: number, height: number) {
     ctx.clearRect(0, 0, width, height);
@@ -124,6 +128,7 @@ export class RewardPainter {
     this.motes = this.motes.filter(p => now - p.born < p.life);
     this.flights = this.flights.filter(p => now - p.started - p.delay < 900);
     this.links = this.links.filter(link => now - link.started < 720);
+    this.spectacle.draw(ctx, now, width, height);
     if (this.ritual) {
       const age = now - this.ritual.started, p = age / 450;
       if (p >= 1) this.ritual = null;
