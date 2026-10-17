@@ -1,11 +1,14 @@
 'use client';
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
-import { RewardChain, RewardPainter, type RewardBottle } from '../lib/reward-effects';
+import { RewardChain, RewardPainter, type RewardBottle, type RewardPoint } from '../lib/reward-effects';
+import type { PourImpactPhase } from '../lib/pour-motion';
 import type { GameAudio } from '../lib/game-audio';
 import { WATER_COLORS } from '../lib/glass-renderer';
 
 export type RewardHandle = {
-  bottle: (node: HTMLElement, color: number) => void;
+  bottle: (node: HTMLElement, color: number, pourId?: number) => boolean;
+  pour: (id: number, target: number, bottle: RewardBottle, point: RewardPoint, phase: PourImpactPhase, completes: boolean) => void;
+  cancelPours: () => void;
   clear: (amount: number) => void;
 };
 type Props = { ref: Ref<RewardHandle>; audio: GameAudio; active: boolean; scope: string };
@@ -17,12 +20,18 @@ const bottleGeometry = (node: HTMLElement, color: number): RewardBottle => {
 export function RewardEffects({ ref, audio, active, scope }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const state = useRef({ audio, active, scope }); state.current = { audio, active, scope };
-  const api = useRef<RewardHandle>({ bottle() {}, clear() {} });
-  useImperativeHandle(ref, () => ({ bottle: (node, color) => api.current.bottle(node, color), clear: amount => api.current.clear(amount) }), []);
+  const api = useRef<RewardHandle>({ bottle: () => true, pour() {}, cancelPours() {}, clear() {} });
+  useImperativeHandle(ref, () => ({ bottle: (node, color, pourId) => api.current.bottle(node, color, pourId), pour: (...args) => api.current.pour(...args), cancelPours: () => api.current.cancelPours(), clear: amount => api.current.clear(amount) }), []);
   useEffect(() => {
     const canvas = canvasRef.current, ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
     const painter = new RewardPainter(), chain = new RewardChain();
+    const anticipated = new Set<string>();
+    let anticipationScope = state.current.scope;
+    const enterScope = () => {
+      if (anticipationScope !== state.current.scope) { anticipated.clear(); anticipationScope = state.current.scope; }
+      if (paintScope !== state.current.scope) { painter.finishStage(); paintScope = state.current.scope; }
+    };
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0, width = 0, height = 0, disposed = false, paintScope = state.current.scope;
     const scoreNode = () => document.querySelector<HTMLElement>('.score-stat strong');
@@ -63,18 +72,40 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
       if (!frame) frame = requestAnimationFrame(draw);
     };
     api.current = {
-      bottle(node, color) {
-        if (!state.current.active || document.hidden) return;
+      bottle(node, color, pourId) {
+        if (!state.current.active || document.hidden) return false;
+        enterScope();
         const id = node.closest<HTMLElement>('[data-bottle-index]')?.dataset.bottleIndex;
-        if (id === undefined) return;
+        if (id === undefined) return false;
+        if (pourId !== undefined) {
+          canvas.dataset.pourId = String(pourId); canvas.dataset.pourPhase = 'filled';
+          canvas.dataset.pourAt = String(performance.now());
+        }
         const count = chain.bottle(state.current.scope, id, performance.now());
-        if (!count) return;
-        state.current.audio.completion(count);
-        if (reduced.matches) return;
-        if (paintScope !== state.current.scope) { painter.finishStage(); paintScope = state.current.scope; }
-        painter.bottle(bottleGeometry(node, color), count, performance.now());
-        pulseTray(WATER_COLORS[color] ?? '#b485ef');
-        canvas.dataset.chain = String(count); wake();
+        if (!count) return false;
+        const replay = anticipated.has(id);
+        if (!replay) state.current.audio.completion(count);
+        if (reduced.matches) return !replay;
+        painter.bottle(bottleGeometry(node, color), count, performance.now(), false, !replay);
+        if (!replay) pulseTray(WATER_COLORS[color] ?? '#b485ef');
+        canvas.dataset.chain = String(count); if (painter.active) wake();
+        return !replay;
+      },
+      pour(id, target, bottle, point, phase, completes) {
+        if (!state.current.active || document.hidden || reduced.matches) return;
+        enterScope();
+        if (phase === 'filled') {
+          if (completes) { anticipated.add(String(target)); state.current.audio.completion(1); }
+          else state.current.audio.play('target');
+          pulseTray(WATER_COLORS[bottle.color]);
+        }
+        painter.pour(bottle, point, phase, performance.now(), completes);
+        canvas.dataset.pourId = String(id); canvas.dataset.pourPhase = phase;
+        canvas.dataset.pourAt = String(performance.now()); wake();
+      },
+      cancelPours() {
+        anticipated.clear(); painter.finishStage();
+        if (painter.active) wake(); else hide();
       },
       clear(amount) {
         if (!state.current.active || document.hidden || !chain.clear(state.current.scope) || reduced.matches) return;
@@ -95,7 +126,7 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
     window.visualViewport?.addEventListener('resize', size); window.visualViewport?.addEventListener('scroll', clear);
     document.addEventListener('visibilitychange', hidden); reduced.addEventListener('change', clear);
     return () => {
-      disposed = true; clear(); api.current = { bottle() {}, clear() {} };
+      disposed = true; clear(); api.current = { bottle: () => true, pour() {}, cancelPours() {}, clear() {} };
       window.removeEventListener('resize', size); window.removeEventListener('scroll', clear);
       window.visualViewport?.removeEventListener('resize', size); window.visualViewport?.removeEventListener('scroll', clear);
       document.removeEventListener('visibilitychange', hidden); reduced.removeEventListener('change', clear);

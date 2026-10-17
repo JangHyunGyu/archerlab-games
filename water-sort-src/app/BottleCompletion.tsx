@@ -3,20 +3,21 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { WATER_COLORS } from '../lib/glass-renderer';
 import { copy as c } from './copy';
 
-/** Only confirmed, settled liquid earns a burst; prefilled and resumed bottles get a steady seal. */
-export function BottleCompletion({ ready, color, hideLabel, onCelebrate }: { ready: boolean; color: number; hideLabel: boolean; onCelebrate?: (node: HTMLElement, color: number) => void }) {
+/** The seal is authoritative. A fill-frame celebration must not replay when the bottle settles. */
+export function BottleCompletion({ ready, color, hideLabel, onCelebrate }: { ready: boolean; color: number; hideLabel: boolean; onCelebrate?: (node: HTMLElement, color: number) => boolean | undefined }) {
   const node = useRef<HTMLSpanElement>(null);
   const previous = useRef(ready);
   const [burst, setBurst] = useState(false);
   useEffect(() => {
     const celebrate = ready && !previous.current;
     previous.current = ready;
-    setBurst(celebrate);
     if (celebrate) {
-      if (node.current) onCelebrate?.(node.current.parentElement!, color);
+      const animate = !node.current || onCelebrate?.(node.current.parentElement!, color) !== false;
+      setBurst(animate);
       const timer = setTimeout(() => setBurst(false), 1100);
       return () => clearTimeout(timer);
     }
+    setBurst(false);
   }, [ready, color, onCelebrate]);
   if (!ready) return null;
   return <span ref={node} className={'bottle-completion' + (burst ? ' completion-burst' : '')} style={{ '--liquid-color': WATER_COLORS[color] } as CSSProperties} aria-hidden="true">

@@ -50,6 +50,63 @@ const assertLayout = async page => {
 };
 try {
   if (!process.env.REWARDS_PERF_ONLY) {
+  for (const mode of ['ordinary', 'completion', 'delayed', 'queued']) {
+    const board = mode === 'ordinary' ? [[0,1],[1,0],[],[]] : [[0,0,0],[0],[1,1,1],[1],[],[]];
+    const h = await fixture({ width: 390, height: 844 }, { board });
+    await h.page.evaluate(() => {
+      window.__pourProbe = []; window.__impactEvents = []; window.__impactSounds = [];
+      new MutationObserver(records => {
+        for (const record of records) {
+          const node = record.target;
+          window.__impactEvents.push({ id: Number(node.dataset.pourId), phase: node.dataset.pourPhase, at: Number(node.dataset.pourAt) });
+        }
+      }).observe(document, { subtree: true, attributes: true, attributeFilter: ['data-pour-at'] });
+      const start = AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start = function (...args) {
+        window.__impactSounds.push({ at: performance.now(), duration: this.buffer?.duration });
+        return start.apply(this, args);
+      };
+    });
+    await h.page.locator('.play-button').click(); await h.page.locator('.bottle-button').first().waitFor();
+    if (mode === 'delayed') h.delay(3000);
+    await h.move(mode === 'ordinary' ? 0 : 1, mode === 'ordinary' ? 2 : 0);
+    if (mode === 'queued') {
+      await h.move(0,4);
+      assert.equal(await h.page.evaluate(() => window.__impactEvents.some(e => e.id === 2)), false, 'reserving a move cannot fire its launch');
+    }
+    const id = mode === 'queued' ? 2 : 1;
+    await h.page.waitForFunction(id => document.querySelector('.reward-overlay')?.dataset.pourId === String(id) && document.querySelector('.reward-overlay')?.dataset.pourPhase === 'filled', id);
+    const timing = await h.page.evaluate(id => {
+      const events = window.__impactEvents.filter(e => e.id === id);
+      const frame = window.__pourProbe.find(f => f.id === id);
+      return { events, launchMs: events.find(e => e.phase === 'launch').at - frame.started,
+        contactLagMs: events.find(e => e.phase === 'contact').at - frame.started - frame.duration * .27,
+        fillLagMs: events.find(e => e.phase === 'filled').at - frame.started - frame.duration * .73,
+        sounds: window.__impactSounds };
+    }, id);
+    assert.deepEqual(timing.events.map(e => e.phase), ['launch','contact','filled']);
+    assert.ok(timing.launchMs >= 0 && timing.launchMs < 50, JSON.stringify(timing));
+    assert.ok(timing.contactLagMs >= -1 && timing.contactLagMs < 55, JSON.stringify(timing));
+    assert.ok(timing.fillLagMs >= -1 && timing.fillLagMs < 55, JSON.stringify(timing));
+    if (mode !== 'ordinary') {
+      await h.page.waitForTimeout(50);
+      const sounds = await h.page.evaluate(() => window.__impactSounds);
+      assert.ok(sounds.some(s => Math.abs(s.duration - .68) < .005 && Math.abs(s.at - timing.events.at(-1).at) < 100), 'impact audio belongs on the fill frame');
+    }
+    if (mode === 'completion') await h.page.screenshot({ scale: 'css', path: `${out}/fill-frame-impact.png` });
+    if (mode === 'delayed') {
+      assert.equal(await h.page.locator('.completion-seal').count(), 0);
+      assert.equal(await h.page.locator('[data-testid="score"]').textContent(), '0');
+      await h.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.chain === '1');
+      assert.equal(await h.page.locator('.completion-burst').count(), 0);
+      assert.equal(await h.page.locator('.reward-overlay').getAttribute('data-active'), 'false');
+      assert.equal(await h.page.evaluate(() => window.__impactSounds.filter(s => Math.abs(s.duration - .68) < .005).length), 1, 'late confirmation cannot replay the impact sound');
+    }
+    await h.idle();
+    assert.equal(await h.page.evaluate(id => window.__impactEvents.filter(e => e.id === id && e.phase === 'filled').length, id), 1);
+    assert.deepEqual(h.errors, []); reports.push({ mode: `pour frame timing: ${mode}`, ...timing });
+    await h.context.close(); console.log(`PASS ${mode} timing: launch ${timing.launchMs.toFixed(1)}ms, contact +${timing.contactLagMs.toFixed(1)}ms, fill +${timing.fillLagMs.toFixed(1)}ms`);
+  }
   for (const [width, height] of viewports) {
     const h = await fixture({ width, height }), { page } = h;
     await page.screenshot({ scale: 'css', path: `${out}/${width}-title.png` });
@@ -92,9 +149,16 @@ try {
     if (mode !== 'reduced') h.delay(1600);
     if (mode === 'conflict') h.reject();
     await h.move(1,0);
-    await h.page.waitForTimeout(1000);
-    assert.equal(await h.page.locator('.reward-overlay').getAttribute('data-active'), 'false');
-    if (mode === 'latency') { await h.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.chain === '1'); }
+    if (mode !== 'reduced') {
+      await h.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.pourPhase === 'filled');
+      assert.equal(await h.page.locator('.reward-overlay').getAttribute('data-active'), 'true', 'fill feedback cannot wait for the server');
+      assert.equal(await h.page.locator('.completion-seal').count(), 0);
+      assert.equal(await h.page.locator('[data-testid="score"]').textContent(), '0');
+    }
+    if (mode === 'latency') {
+      await h.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.chain === '1');
+      assert.equal(await h.page.locator('.completion-burst').count(), 0, 'late confirmation must not replay the fill burst');
+    }
     if (mode === 'conflict') { await h.page.locator('.connection-error').waitFor(); assert.equal(await h.page.locator('.completion-burst').count(), 0); }
     if (mode === 'reduced') { await h.idle(); assert.equal(await h.page.locator('.reward-overlay').evaluate(node => getComputedStyle(node).display), 'none'); }
     assert.deepEqual(h.errors, []); reports.push({ mode, errors: h.errors }); await h.context.close(); console.log(`PASS ${mode}`);

@@ -11,6 +11,8 @@ import { BottleVisual } from './BottleVisual';
 import { BottleCompletion } from './BottleCompletion';
 import { RewardEffects, type RewardHandle } from './RewardEffects';
 import { AlchemySeal } from './AlchemySeal';
+import { liquidSurface } from '../lib/glass-renderer';
+import { FLOW_START, FLOW_END, type PourImpactPhase } from '../lib/pour-motion';
 import { endCue, menuState, stayOnBoard } from '../lib/menu-state';
 import { turnstileToken } from './turnstile';
 import { MAX_QUEUED_POURS, PourController, type ActivePour } from '../lib/pour-controller';
@@ -81,7 +83,7 @@ export default function Home() {
     accept,
     start: startMotion,
     change: () => redrawPours(value => value + 1),
-    reset: () => { setMotions([]); for (const timer of settleTimers.current.values()) clearTimeout(timer); settleTimers.current.clear(); },
+    reset: () => { rewardEffects.current?.cancelPours(); setMotions([]); for (const timer of settleTimers.current.values()) clearTimeout(timer); settleTimers.current.clear(); },
     abandon: (ids) => {
       const drop = new Set(ids);
       setMotions(items => items.filter(item => !drop.has(item.id)));
@@ -281,12 +283,27 @@ export default function Home() {
     const geometry = source && destination ? measurePour(source, destination, others) : null;
     // The run's own pace: a run started before the faster pour keeps its slower animation.
     const duration = pourDuration(amount, runRef.current?.pace), seconds = duration / 1000;
-    audio.play('pour', seconds * .27, seconds * .46);
+    audio.play('pour', seconds * FLOW_START, seconds * (FLOW_END - FLOW_START));
     const h = window.visualViewport?.height ?? innerHeight;
     if (geometry && !matchMedia('(prefers-reduced-motion: reduce)').matches && geometry.source.y > 30 && geometry.destination.y > 48 && Math.max(geometry.source.y + geometry.source.height, geometry.destination.y + geometry.destination.height) < h - 6) {
-      setMotions(items => [...items, { id, from, to, before, amount, duration, started: performance.now(), ...geometry }]);
+      const motion = { id, from, to, before, amount, duration, started: performance.now(), ...geometry };
+      setMotions(items => [...items, motion]); impactMotion(motion, 'launch');
     } else {
       settleTimers.current.set(id, setTimeout(() => { finishMotion(id); refreshNow(); }, duration));
+    }
+  }
+  function impactMotion(motion: PourMotion, phase: PourImpactPhase) {
+    const entry = pours.entries.find(item => item.id === motion.id);
+    if (!entry) return;
+    const color = motion.before[motion.from].at(-1)!;
+    const result = [...motion.before[motion.to], ...Array(motion.amount).fill(color)];
+    const completes = complete(result), node = tubes.current[motion.to]?.parentElement;
+    if (phase === 'filled' && completes && entry.confirmed && node) {
+      rewardEffects.current?.bottle(node, color, motion.id);
+    } else {
+      const b = motion.destination;
+      const point = { x: b.x + b.width / 2, y: liquidSurface(motion.targetWater, phase === 'filled' ? result.length : motion.before[motion.to].length) };
+      rewardEffects.current?.pour(motion.id, motion.to, { x: point.x, y: b.y, width: b.width, height: b.height, color }, point, phase, completes);
     }
   }
   async function loadRanks() {
@@ -390,7 +407,7 @@ export default function Home() {
       </section>}
       {error && modal !== 'register' && <div className="connection-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={busy} onClick={() => { if (canRetry) retry.current(); else setError(''); }}>{canRetry ? c.retry : c.confirm}</button></div>}
     </main>
-    {!!motions.length && <PourAnimation motions={motions} onFinish={finishMotion}/>}
+    {!!motions.length && <PourAnimation motions={motions} onFinish={finishMotion} onImpact={impactMotion}/>}
     <RewardEffects ref={rewardEffects} audio={audio} active={!atHome && !modal && !error && !ended} scope={run ? `${run.id}:${run.level}` : ''}/>
     {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : blockedEnd ? '⛔' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? c.eyebrowAllClear : blockedEnd ? c.eyebrowBlocked : c.eyebrowTimeout}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : blockedEnd ? c.blockedTitle : c.ended}</h2>{blockedEnd && <p className="blocked-explanation" role="alert">{c.blockedBody}</p>}{lateClear && <p className="late-explanation" role="status">{c.lateClearBody}</p>}<div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
     {modal === 'exit' && <Modal title={c.homeTitle} onClose={() => setModal(null)}><p>{c.homeBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.keepPlaying}</button><button className="primary-button" onClick={home}>{c.leaveGame}</button></div></Modal>}

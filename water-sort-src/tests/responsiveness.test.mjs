@@ -159,7 +159,7 @@ test('pour previews start before the server responds and reconcile safely', asyn
       await act(() => h.win.dispatchEvent(new h.win.KeyboardEvent('keydown', { key: 'Escape' })));
       assert.equal(document.querySelector('.queue-count'), null);
     }));
-    await t.test('a color-matched completion seal and burst wait for confirmation and settled animation', () => harness(async h => {
+    await t.test('without a reward canvas, the authoritative completion seal and CSS fallback wait for confirmation and settling', () => harness(async h => {
       await h.click(h.bottles()[1]); await h.click(h.bottles()[0]);
       assert.equal(document.querySelector('.completion-seal'), null);
       assert.doesNotMatch(h.bottles()[0].getAttribute('aria-label'), /완성/);

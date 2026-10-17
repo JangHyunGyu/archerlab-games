@@ -58,8 +58,10 @@ export function chooseDirection(source: Rect, target: Rect, viewportWidth: numbe
   if (preferred === 1 && x >= needed || preferred === -1 && viewportWidth - x >= needed) return preferred;
   return x > viewportWidth / 2 ? 1 : -1;
 }
+export const FLOW_START = .27, FLOW_END = .73;
+export type PourImpactPhase = 'launch' | 'contact' | 'filled';
 export function phases(progress: number) {
-  return { approach: ease(progress / .24), flow: clamp01((progress - .27) / .46), retreat: ease((progress - .77) / .23) };
+  return { approach: ease(progress / .24), flow: clamp01((progress - FLOW_START) / (FLOW_END - FLOW_START)), retreat: ease((progress - .77) / .23) };
 }
 
 // Conservative outline of a drawn vessel (rim included) in its local coordinates.

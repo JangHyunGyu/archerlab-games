@@ -1,5 +1,6 @@
 import { WATER_COLORS } from './glass-renderer.ts';
 import { ReactionSpectacle } from './reaction-spectacle.ts';
+import type { Point, PourImpactPhase } from './pour-motion.ts';
 
 export type RewardPoint = { x: number; y: number };
 export type RewardBottle = RewardPoint & { width: number; height: number; color: number };
@@ -38,7 +39,7 @@ function sigil(ctx: CanvasRenderingContext2D, radius: number, color: string, rot
   ctx.moveTo(0, -radius * .2); ctx.lineTo(0, radius * .2); ctx.stroke(); ctx.restore();
 }
 
-/** A settled bottle earns one reward per stage; returning to a saved board earns none. */
+/** A confirmed bottle earns one reward per stage; returning to a saved board earns none. */
 export class RewardChain {
   scope = '';
   private bottles = new Set<string>();
@@ -81,9 +82,14 @@ export class RewardPainter {
   get connections() { return this.links.length; }
   finishStage() { this.bursts = []; this.motes = []; this.ritual = null; this.links = []; this.lastBottle = null; this.spectacle.finishStage(); }
   reset() { this.finishStage(); this.flights = []; this.score = null; this.spectacle.reset(); }
-  bottle(bottle: RewardBottle, chain: number, now: number, finale = false) {
+  pour(bottle: RewardBottle, point: Point, phase: PourImpactPhase, now: number, completes = false) {
+    if (phase === 'filled' && completes) {
+      this.spectacle.bottle(bottle, 1, now); this.emitBurst(bottle, 1, now, false);
+    } else this.spectacle.pour(bottle, point, phase, now);
+  }
+  bottle(bottle: RewardBottle, chain: number, now: number, finale = false, visual = true) {
     if (!finale) {
-      this.spectacle.bottle(bottle, chain, now);
+      if (visual) this.spectacle.bottle(bottle, chain, now);
       const last = this.lastBottle;
       if (chain > 1 && last && now - last.at <= 4200) {
         this.links.push({ from: { x: last.bottle.x, y: last.bottle.y + last.bottle.height * .5 },
@@ -92,6 +98,9 @@ export class RewardPainter {
       }
       this.lastBottle = { bottle, at: now };
     }
+    if (visual) this.emitBurst(bottle, chain, now, finale);
+  }
+  private emitBurst(bottle: RewardBottle, chain: number, now: number, finale: boolean) {
     this.bursts.push({ ...bottle, chain, started: now, finale });
     this.bursts = this.bursts.slice(-12);
     const count = finale ? 32 : 50 + chain * 6;
@@ -102,7 +111,7 @@ export class RewardPainter {
       this.motes.push({ x: bottle.x, y: bottle.y + 4, vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed - 42 * scale, size: (2 + noise(seed + 3) * 7) * scale,
         color: i % 5 === 0 ? '#ffd76b' : WATER_COLORS[bottle.color] ?? '#b485ef',
-        born: now + 60 + noise(seed + 9) * 150, life: 620 + noise(seed + 11) * 600,
+        born: now + noise(seed + 9) * 55, life: 620 + noise(seed + 11) * 600,
         kind: i % 6, seed });
     }
     this.motes = this.motes.slice(-280);
@@ -238,7 +247,7 @@ export class RewardPainter {
     ctx.restore();
   }
   private drawImpact(ctx: CanvasRenderingContext2D, b: Burst, t: number, scale: number, color: string) {
-    const p = (t - .065) / .56;
+    const p = t / .56;
     if (p <= 0 || p >= 1) return;
     ctx.save();
     const radius = (14 + ease(p) * (105 + b.chain * 10)) * scale;

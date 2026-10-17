@@ -3,7 +3,7 @@ import test from 'node:test';
 import { RewardChain, RewardPainter } from '../lib/reward-effects.ts';
 import { ReactionSpectacle } from '../lib/reaction-spectacle.ts';
 
-test('only new settled bottles earn chains; duplicate, stage and time boundaries are explicit', () => {
+test('only new confirmed bottles earn chains; duplicate, stage and time boundaries are explicit', () => {
   const chain = new RewardChain();
   assert.equal(chain.bottle('run:1', '0', 0), 1);
   assert.equal(chain.bottle('run:1', '0', 100), 0);
@@ -65,4 +65,20 @@ test('the finale survives a board handoff, expires independently, and is cancell
   spectacle.draw(context, 1899, 390, 844); assert.equal(spectacle.active, true);
   spectacle.draw(context, 1900, 390, 844); assert.equal(spectacle.active, false);
   spectacle.clear(195, 400, 2000); spectacle.reset(); assert.equal(spectacle.active, false);
+});
+
+test('pour impacts expire without confirmation; quiet confirmation cannot replay particles or prolong an idle painter', () => {
+  const painter = new RewardPainter();
+  const bottle = { x: 100, y: 240, width: 45, height: 125, color: 0 };
+  for (let i = 0; i < 100; i++) {
+    for (const phase of ['launch', 'contact', 'filled'] as const) painter.pour(bottle, { x: 100, y: 280 }, phase, 0, true);
+  }
+  assert.ok(painter.particles <= 280); assert.equal(painter.active, true);
+  const context = { clearRect() {}, globalAlpha: 1 } as unknown as CanvasRenderingContext2D;
+  painter.draw(context, 3000, 390, 844);
+  assert.equal(painter.active, false); assert.equal(painter.particles, 0);
+  painter.bottle(bottle, 1, 3100, false, false);
+  assert.equal(painter.active, false); assert.equal(painter.particles, 0);
+  painter.pour(bottle, { x: 100, y: 280 }, 'contact', 3200);
+  painter.reset(); assert.equal(painter.active, false);
 });

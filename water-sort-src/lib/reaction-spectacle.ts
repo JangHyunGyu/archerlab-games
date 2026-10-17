@@ -1,10 +1,12 @@
 import { WATER_COLORS } from './glass-renderer.ts';
 import type { RewardBottle } from './reward-effects.ts';
+import type { PourImpactPhase, Point } from './pour-motion.ts';
 
 const TAU = Math.PI * 2;
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 const random = (n: number) => { const x = Math.sin(n * 127.1 + 78.23) * 43758.5453; return x - Math.floor(x); };
-type Reaction = { x: number; y: number; color: string; chain: number; started: number; finale: boolean; seed: number };
+type Reaction = { x: number; y: number; color: string; chain: number; started: number; finale: boolean; seed: number; arrival?: boolean };
+type Splash = { point: Point; color: string; started: number; launch: boolean; width: number };
 
 function star(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
   ctx.fillStyle = color; ctx.beginPath();
@@ -16,6 +18,7 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, size: number,
 /** Bounded, time-based celebrations. Only the finale survives the 450ms board handoff. */
 export class ReactionSpectacle {
   private events: Reaction[] = [];
+  private splashes: Splash[] = [];
   private serial = 0;
   private textures = new Map<string, CanvasImageSource>();
   private glow(ctx: CanvasRenderingContext2D, color: string, radius: number, ring: boolean) {
@@ -48,19 +51,31 @@ export class ReactionSpectacle {
     }
     ctx.fillStyle = gradient; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   }
-  get active() { return this.events.length > 0; }
+  get active() { return this.events.length > 0 || this.splashes.length > 0; }
   get count() { return this.events.length; }
   bottle(b: RewardBottle, chain: number, now: number) {
     this.events.push({ x: b.x, y: b.y + b.height * .28, color: WATER_COLORS[b.color] ?? '#8d59d2', chain, started: now, finale: false, seed: ++this.serial });
     this.events = this.events.slice(-4);
   }
+  pour(b: RewardBottle, point: Point, phase: PourImpactPhase, now: number) {
+    const color = WATER_COLORS[b.color] ?? '#8d59d2';
+    if (phase === 'filled') {
+      this.events.push({ ...point, color, chain: 1, started: now, finale: false, seed: ++this.serial, arrival: true });
+      this.events = this.events.slice(-4);
+    } else {
+      this.splashes.push({ point, color, started: now, launch: phase === 'launch', width: b.width });
+      this.splashes = this.splashes.slice(-12);
+    }
+  }
   clear(x: number, y: number, now: number) {
     this.events = [{ x, y, color: '#a343ed', chain: 6, started: now, finale: true, seed: ++this.serial }];
   }
-  finishStage() { this.events = this.events.filter(event => event.finale); }
-  reset() { this.events = []; }
+  finishStage() { this.events = this.events.filter(event => event.finale); this.splashes = []; }
+  reset() { this.events = []; this.splashes = []; }
   draw(ctx: CanvasRenderingContext2D, now: number, width: number, height: number) {
-    this.events = this.events.filter(event => now - event.started < (event.finale ? 1900 : 1400));
+    this.splashes = this.splashes.filter(s => now - s.started < 360);
+    for (const splash of this.splashes) this.splash(ctx, splash, now);
+    this.events = this.events.filter(event => now - event.started < (event.finale ? 1900 : event.arrival ? 650 : 1400));
     if (!this.events.length) return;
     const latest = this.events.at(-1)!;
     const age = (now - latest.started) / 1000;
@@ -76,16 +91,33 @@ export class ReactionSpectacle {
       if (event.finale) this.finale(ctx, event, t, width, height);
     }
   }
+  private splash(ctx: CanvasRenderingContext2D, s: Splash, now: number) {
+    const p = (now - s.started) / 360;
+    if (p < 0) return;
+    const radius = (8 + (1 - (1 - p) ** 3) * s.width * (s.launch ? .65 : 1.1));
+    ctx.save(); ctx.translate(s.point.x, s.point.y); ctx.globalAlpha = (1 - p) ** 1.5;
+    this.glow(ctx, s.color, radius, false);
+    ctx.strokeStyle = s.color; ctx.lineWidth = 3 * (1 - p);
+    ctx.beginPath(); ctx.ellipse(0, 0, radius, radius * .42, -.12, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, radius * .78, radius * .32, .1, 0, TAU); ctx.stroke();
+    for (let i = 0; i < (s.launch ? 6 : 12); i++) {
+      const a = i * 2.39996, r = radius * (1 + i % 3 * .25);
+      star(ctx, Math.cos(a) * r, Math.sin(a) * r * .6 - p * 16, (1 - p) * 4, i % 3 ? '#ffffff' : '#ffe08a');
+    }
+    ctx.restore();
+  }
   private nova(ctx: CanvasRenderingContext2D, e: Reaction, t: number, width: number, height: number) {
+    if (e.arrival) t *= 2;
     const size = Math.min(width, height), scale = Math.min(1.25, size / 390);
-    const radius = (e.finale ? size * .7 : 112 + e.chain * 16) * (1 - (1 - clamp(t / .65)) ** 3);
-    const fade = Math.min(1, t / .045) * (1 - clamp((t - .25) / .85));
+    const radius = (e.finale ? size * .7 : e.arrival ? 88 : 112 + e.chain * 16) * (1 - (1 - clamp(t / .65)) ** 3);
+    const fade = 1 - clamp((t - .2) / .85);
     ctx.save(); ctx.translate(e.x, e.y); ctx.lineCap = 'round';
     // Volumetric color behind the sharp geometry gives the burst a luminous body.
     const bloomRadius = Math.max(1, (80 + e.chain * 14) * scale * (.5 + clamp(t / .3)));
     ctx.globalAlpha = fade * (1 - clamp(t / .85)); this.glow(ctx, e.color, bloomRadius, false);
     // Broad, rising ribbons unravel in opposite directions around the completed potion.
-    for (let ribbon = 0; ribbon < 3; ribbon++) {
+    for (let ribbon = 0; ribbon < (e.arrival ? 1 : 3); ribbon++) {
       ctx.beginPath();
       for (let i = 0; i <= 50; i++) {
         const p = i / 50, a = p * TAU * 1.4 + ribbon * TAU / 3 + t * 5;
@@ -118,7 +150,7 @@ export class ReactionSpectacle {
       ctx.lineTo(Math.cos(a + spread) * inner, Math.sin(a + spread) * inner); ctx.closePath(); ctx.fill();
     }
     // Launch trails first, then a second glitter detonation at their tips.
-    const count = e.finale ? 90 : 38 + e.chain * 4;
+    const count = e.finale ? 90 : e.arrival ? 24 : 38 + e.chain * 4;
     for (let i = 0; i < count; i++) {
       const n = random(i * 7 + e.seed * 113), a = i * 2.39996 + e.seed;
       const life = .8 + n * .55, p = t / life;

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { boundsOf, type Box, type Rect } from '../lib/pour-motion';
+import { boundsOf, FLOW_START, FLOW_END, type Box, type Rect, type PourImpactPhase } from '../lib/pour-motion';
 import { planPour, type PourPlan } from '../lib/pour-path';
 import { drawVessel, drawStream, glassInterior, liquidLayers, liquidSurface } from '../lib/glass-renderer';
 import { drawPourMagic } from '../lib/pour-magic';
@@ -28,7 +28,7 @@ export function measurePour(source: HTMLElement, destination: HTMLElement, other
 }
 
 const plans = new WeakMap<PourMotion, PourPlan>();
-type ProbeFrame = { id: number; from: number; to: number; t: number; phase: string; blocked: boolean; outline: { x: number; y: number }[]; vessel: Box; stream: Box | null; ghost: Box; lift: number; viewport: { width: number; height: number } };
+type ProbeFrame = { id: number; from: number; to: number; started: number; duration: number; t: number; phase: string; blocked: boolean; outline: { x: number; y: number }[]; vessel: Box; stream: Box | null; ghost: Box; lift: number; viewport: { width: number; height: number } };
 // Tests read real frame geometry by setting window.__pourProbe = []. Nothing is recorded otherwise.
 const probe = () => (window as unknown as { __pourProbe?: ProbeFrame[] }).__pourProbe;
 
@@ -41,7 +41,7 @@ function paintMotion(ctx: CanvasRenderingContext2D, motion: PourMotion, time: nu
   const t = Math.max(0, Math.min(1, (time - motion.started) / motion.duration));
   const { approach, flow, retreat, pouring, angle, position, outline } = plan.pose(t);
   const targetLayers = liquidLayers([...receiving, ...Array(amount).fill(color)], receiving.length + amount * flow);
-  drawVessel(ctx, { ...destination }, targetLayers, { time, incoming: pouring, agitation: pouring ? 1 : Math.exp(-Math.max(0, t - .73) * 24) * .7 });
+  drawVessel(ctx, { ...destination }, targetLayers, { time, incoming: pouring, agitation: pouring ? 1 : Math.exp(-Math.max(0, t - FLOW_END) * 24) * .7 });
   const surfaceY = liquidSurface(target, receiving.length + amount * flow);
   if (pouring) {
     drawStream(ctx, end, { x: end.x, y: surfaceY + 1 }, color, Math.min(5, target.width * .13), time, flow);
@@ -51,20 +51,22 @@ function paintMotion(ctx: CanvasRenderingContext2D, motion: PourMotion, time: nu
   const frames = probe();
   if (frames) {
     const half = Math.min(5, target.width * .13) / 2 + 1;
-    frames.push({ id: motion.id, from, to, t, phase: pouring ? 'pour' : t < .27 ? 'lift' : 'return', blocked: plan.blocked, outline, vessel: boundsOf(outline), stream: pouring ? { x0: end.x - half, y0: end.y, x1: end.x + half, y1: surfaceY + 4 } : null, ghost, lift: plan.lift, viewport: { width, height: window.innerHeight } });
+    frames.push({ id: motion.id, from, to, started: motion.started, duration: motion.duration, t, phase: pouring ? 'pour' : t < FLOW_START ? 'lift' : 'return', blocked: plan.blocked, outline, vessel: boundsOf(outline), stream: pouring ? { x0: end.x - half, y0: end.y, x1: end.x + half, y1: surfaceY + 4 } : null, ghost, lift: plan.lift, viewport: { width, height: window.innerHeight } });
   }
   return t;
 }
 
 // One canvas and one RAF for every active pair, instead of one full-screen canvas per pour.
-export function PourAnimation({ motions, onFinish }: { motions: PourMotion[]; onFinish: (id: number) => void }) {
+export function PourAnimation({ motions, onFinish, onImpact }: { motions: PourMotion[]; onFinish: (id: number) => void; onImpact?: (motion: PourMotion, phase: PourImpactPhase) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const finishRef = useRef(onFinish);
   const motionsRef = useRef(motions);
+  const impactRef = useRef(onImpact); impactRef.current = onImpact;
   motionsRef.current = motions;
   finishRef.current = onFinish;
   useEffect(() => {
     const completed = new Set<number>();
+    const impacts = new WeakMap<PourMotion, PourImpactPhase>();
     const finish = (id: number) => { if (!completed.has(id)) { completed.add(id); finishRef.current(id); } };
     const finishAll = () => { for (const motion of motionsRef.current) finish(motion.id); };
     const canvas = ref.current, ctx = canvas?.getContext('2d');
@@ -83,7 +85,11 @@ export function PourAnimation({ motions, onFinish }: { motions: PourMotion[]; on
       for (const motion of motionsRef.current) {
         if (completed.has(motion.id)) continue;
         const t = paintMotion(ctx, motion, time, width, height);
-        canvas.dataset.phase = t >= .27 && t < .73 ? 'pour' : t < .27 ? 'lift' : 'return';
+        const phase = t >= FLOW_END ? 'filled' : t >= FLOW_START ? 'contact' : null;
+        if (phase && impacts.get(motion) !== phase) {
+          impacts.set(motion, phase); impactRef.current?.(motion, phase);
+        }
+        canvas.dataset.phase = t >= FLOW_START && t < FLOW_END ? 'pour' : t < FLOW_START ? 'lift' : 'return';
         if (t >= 1) finish(motion.id);
       }
       frame = requestAnimationFrame(draw);

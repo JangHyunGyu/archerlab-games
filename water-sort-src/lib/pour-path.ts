@@ -1,4 +1,4 @@
-import { boundsOf, chooseDirection, mix, phases, placeVessel, planHover, roundBottom, spillAngle, vesselOutline, type Box, type Point, type Rect } from './pour-motion.ts';
+import { boundsOf, chooseDirection, FLOW_START, FLOW_END, mix, phases, placeVessel, planHover, roundBottom, spillAngle, vesselOutline, type Box, type Point, type Rect } from './pour-motion.ts';
 import { liquidVolume } from './glass-renderer.ts';
 
 // The lifted bottle's whole path for one pour, shared by PourAnimation and the geometry tests.
@@ -49,7 +49,7 @@ function planSide(geometry: PourGeometry, units: number, amount: number, directi
   const rest = { x: source.x + pivot.x, y: source.y + pivot.y };
   function pose(t: number): PourPose {
     const { approach, flow, retreat } = phases(t);
-    let angle = t < .27 ? initialAngle * approach : angleFor(units - amount * flow);
+    let angle = t < FLOW_START ? initialAngle * approach : angleFor(units - amount * flow);
     angle *= 1 - retreat;
     let position = { x: mix(start.x, end.x, approach), y: mix(start.y, end.y, approach) - Math.sin(approach * Math.PI) * 18 };
     if (retreat) position = { x: mix(end.x, rest.x, retreat), y: mix(end.y, rest.y, retreat) - Math.sin(retreat * Math.PI) * 12 };
@@ -60,7 +60,7 @@ function planSide(geometry: PourGeometry, units: number, amount: number, directi
       position = { x: position.x, y: position.y + over };
       placed = placed.map(p => ({ x: p.x, y: p.y + over }));
     }
-    return { t, approach, flow, retreat, pouring: t >= .27 && t < .73, angle, position, outline: placed };
+    return { t, approach, flow, retreat, pouring: t >= FLOW_START && t < FLOW_END, angle, position, outline: placed };
   }
   return { direction, pivot, ghost, end, lift: hover.lift, blocked: hover.blocked, fits, initialAngle, finalAngle, pose };
 }
