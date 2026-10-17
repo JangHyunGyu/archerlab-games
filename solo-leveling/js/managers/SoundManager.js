@@ -3,6 +3,22 @@
  * SFX: 사전 생성된 WAV 파일을 Audio 풀로 재생 (실시간 합성 오버헤드 없음)
  * BGM: Tone.js 프로시저럴 합성 유지 (인트로 음악, 게임 BGM)
  */
+const TONE_CLEANUP_GUARD = Symbol.for('archerlab.tone.disposed-oscillator-cleanup');
+
+// Tone 15.5.25 can deliver onended after dispose has disconnected its control
+// signals. Repeating that targeted disconnect throws asynchronously, outside
+// the caller's dispose try/catch. A disposed graph needs no second cleanup.
+export function guardToneOscillatorCleanup(tone) {
+    const prototype = tone?.Oscillator?.prototype;
+    if (tone?.version !== '15.5.25' || !prototype || prototype[TONE_CLEANUP_GUARD] || typeof prototype._cleanUpConnections !== 'function') return;
+    const original = prototype._cleanUpConnections;
+    prototype._cleanUpConnections = function(source) {
+        if (this.disposed || this.frequency?.disposed || this.detune?.disposed) return;
+        return original.call(this, source);
+    };
+    Object.defineProperty(prototype, TONE_CLEANUP_GUARD, { value: true });
+}
+
 const CHARACTER_SFX_CONFIG = {
     shadowMonarchBasicDagger: { file: 'effects/characters/shadow_monarch/shadow_monarch_basic_dagger.wav', pool: 6, throttle: 220, release: 360, volume: 0.45, priority: 2 },
     shadowMonarchShadowDagger: { file: 'effects/characters/shadow_monarch/shadow_monarch_shadow_dagger.wav', pool: 6, throttle: 240, release: 430, volume: 0.5, priority: 2 },
@@ -459,6 +475,8 @@ export class SoundManager {
     _ensureToneGraph() {
         this._attachVisibilityHandler();
         if (this._toneReady || typeof Tone === 'undefined') return;
+
+        guardToneOscillatorCleanup(Tone);
 
         this._ensureMasterBus();
         this._masterVol = new Tone.Volume(-7);

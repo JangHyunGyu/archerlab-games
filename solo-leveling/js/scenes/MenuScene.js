@@ -7,7 +7,7 @@ import {
     fs, uv, drawSystemPanel, padText,
 } from '../utils/Constants.js';
 import { SpriteFactory } from '../utils/SpriteFactory.js';
-import { SoundManager } from '../managers/SoundManager.js?v=20261009-audio-v3';
+import { SoundManager } from '../managers/SoundManager.js?v=20261018-tone-cleanup-v1';
 import { t, LANG, LANGUAGES, setLang, GAME_API_URL, GAME_ID_SHADOW } from '../utils/i18n.js';
 import { GameScene } from './GameScene.js?v=20260928-locale-exports-v1&ranking=20261006-client-exception-v1&levelup=20261009-audio-v3&orient=20261009-orient-v1&audit=20261009-v1';
 import { CHARACTER_DEFS, getCharacter, getStoredCharacterId, setStoredCharacterId, getCharacterRankingGameId } from '../utils/Characters.js';

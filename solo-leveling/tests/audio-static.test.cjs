@@ -7,6 +7,19 @@ const soundManagerSource = fs.readFileSync(
     'utf8'
 );
 
+const vm = require('node:vm'), scope = {};
+vm.runInNewContext(soundManagerSource.replace(/^export /gm, '') + '\nglobalThis.guard = guardToneOscillatorCleanup;', scope);
+let cleanups = 0;
+class Oscillator { _cleanUpConnections(source) { cleanups++; if(source==='unexpected')throw Error('unexpected failure'); return source; } }
+const tone = {version:'15.5.25',Oscillator};
+scope.guard(tone);const guarded=Oscillator.prototype._cleanUpConnections;scope.guard(tone);
+assert.equal(Oscillator.prototype._cleanUpConnections,guarded,'multiple managers must not stack wrappers');
+const oscillator=new Oscillator();
+assert.equal(oscillator._cleanUpConnections('source'),'source');
+oscillator.disposed=true;oscillator._cleanUpConnections('late-source');assert.equal(cleanups,1,'disposed control signals must not be disconnected twice');
+oscillator.disposed=false;oscillator.frequency={disposed:true};oscillator._cleanUpConnections('late-source');assert.equal(cleanups,1);
+oscillator.frequency.disposed=false;assert.throws(()=>oscillator._cleanUpConnections('unexpected'),/unexpected failure/,'other failures must remain visible');
+
 assert.doesNotMatch(
     soundManagerSource,
     /new Tone\.NoiseSynth/,
