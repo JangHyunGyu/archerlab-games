@@ -3,6 +3,7 @@ import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { RewardChain, RewardPainter, type RewardBottle, type RewardPoint } from '../lib/reward-effects';
 import type { PourImpactPhase } from '../lib/pour-motion';
 import type { GameAudio } from '../lib/game-audio';
+import type { GameHaptics } from '../lib/game-haptics';
 import { WATER_COLORS } from '../lib/glass-renderer';
 
 export type RewardHandle = {
@@ -11,15 +12,16 @@ export type RewardHandle = {
   cancelPours: () => void;
   clear: (amount: number) => void;
 };
-type Props = { ref: Ref<RewardHandle>; audio: GameAudio; active: boolean; scope: string };
+type Props = { ref: Ref<RewardHandle>; audio: GameAudio; haptics: GameHaptics; active: boolean; scope: string };
 const bottleGeometry = (node: HTMLElement, color: number): RewardBottle => {
   const rect = (node.querySelector('.tube') ?? node).getBoundingClientRect();
   return { x: rect.x + rect.width / 2, y: rect.y, width: rect.width, height: rect.height, color };
 };
 
-export function RewardEffects({ ref, audio, active, scope }: Props) {
+export function RewardEffects({ ref, audio, haptics, active, scope }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const state = useRef({ audio, active, scope }); state.current = { audio, active, scope };
+  const state = useRef({ audio, haptics, active, scope }); state.current = { audio, haptics, active, scope };
+  useEffect(() => { haptics.setActive(active); return () => haptics.setActive(false); }, [haptics, active]);
   const api = useRef<RewardHandle>({ bottle: () => true, pour() {}, cancelPours() {}, clear() {} });
   useImperativeHandle(ref, () => ({ bottle: (node, color, pourId) => api.current.bottle(node, color, pourId), pour: (...args) => api.current.pour(...args), cancelPours: () => api.current.cancelPours(), clear: amount => api.current.clear(amount) }), []);
   useEffect(() => {
@@ -49,7 +51,7 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
       document.querySelectorAll('.score-reward').forEach(node => node.classList.remove('score-reward'));
       document.querySelectorAll('.reaction-impact,.reaction-finale').forEach(node => node.classList.remove('reaction-impact', 'reaction-finale'));
     };
-    const clear = () => { painter.reset(); hide(); };
+    const clear = () => { state.current.haptics.stop(); painter.reset(); hide(); };
     const size = () => {
       clear(); width = document.documentElement.clientWidth; height = window.innerHeight;
       const ratio = Math.min(devicePixelRatio || 1, 2);
@@ -84,7 +86,7 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
         const count = chain.bottle(state.current.scope, id, performance.now());
         if (!count) return false;
         const replay = anticipated.has(id);
-        if (!replay) state.current.audio.completion(count);
+        if (!replay) { state.current.audio.completion(count); state.current.haptics.play('complete', count); }
         if (reduced.matches) return !replay;
         painter.bottle(bottleGeometry(node, color), count, performance.now(), false, !replay);
         if (!replay) pulseTray(WATER_COLORS[color] ?? '#b485ef');
@@ -94,6 +96,7 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
       pour(id, target, bottle, point, phase, completes) {
         if (!state.current.active || document.hidden || reduced.matches) return;
         enterScope();
+        state.current.haptics.play(phase === 'filled' ? completes ? 'complete' : 'arrival' : phase);
         if (phase === 'filled') {
           if (completes) { anticipated.add(String(target)); state.current.audio.completion(1); }
           else state.current.audio.play('target');
@@ -104,6 +107,7 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
         canvas.dataset.pourAt = String(performance.now()); wake();
       },
       cancelPours() {
+        state.current.haptics.stop();
         anticipated.clear(); painter.finishStage();
         if (painter.active) wake(); else hide();
       },
@@ -112,6 +116,7 @@ export function RewardEffects({ ref, audio, active, scope }: Props) {
         const bottles = [...document.querySelectorAll<HTMLElement>('.bottle-button.complete')].map(node => bottleGeometry(node, Number(node.dataset.rewardColor ?? 0)));
         const score = scoreNode(), rect = score?.getBoundingClientRect();
         if (!rect || !bottles.length) return;
+        state.current.haptics.play('clear');
         painter.clear(bottles, { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }, amount, performance.now());
         pulseTray('#b783e5', true);
         score?.classList.remove('score-reward');

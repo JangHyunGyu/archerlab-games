@@ -7,6 +7,7 @@ import { Timer } from './Timer';
 import { PourAnimation, measurePour, type PourMotion } from './PourAnimation';
 import { useBottleDrag } from './useBottleDrag';
 import { useGameAudio } from './useGameAudio';
+import { useGameHaptics } from './useGameHaptics';
 import { BottleVisual } from './BottleVisual';
 import { BottleCompletion } from './BottleCompletion';
 import { RewardEffects, type RewardHandle } from './RewardEffects';
@@ -61,6 +62,7 @@ export default function Home() {
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), lock = useRef(false);
   const [selected, setSelected] = useState<number | null>(null);
   const { audio, soundOn, toggleSound } = useGameAudio();
+  const { haptics, supported: vibrationSupported, vibrationOn, toggleVibration } = useGameHaptics();
   const lastSoundCue = useRef('');
   const rewardEffects = useRef<RewardHandle>(null);
   const awardedScore = useRef(0);
@@ -265,7 +267,7 @@ export default function Home() {
   async function choose(index: number) {
     if (!pours.enabled) return;
     if (selected === index) { setSelected(null); setNotice(c.choose); return; }
-    if (selected === null) { if (!pours.canStart(index)) { setNotice(c.empty); audio.play('invalid'); return; } setSelected(index); setNotice(c.target); audio.play('select'); return; }
+    if (selected === null) { if (!pours.canStart(index)) { setNotice(c.empty); audio.play('invalid'); return; } setSelected(index); setNotice(c.target); audio.play('select'); haptics.play('select'); return; }
     await pourFrom(selected, index);
   }
   async function pourFrom(from: number, index: number) {
@@ -352,13 +354,13 @@ export default function Home() {
     disabled: atHome || disabled || !!modal,
     canStart: from => pours.canStart(from),
     canPour: (from, to) => pours.canRequest(from, to),
-    onDragStart: () => audio.play('select'),
+    onDragStart: () => { audio.play('select'); haptics.play('select'); },
     onTargetEnter: () => audio.play('target'),
     onDrop: (from, to) => { setSelected(null); void pourFrom(from, to); },
   });
   const savedRun = !!run && !run.registered;
   const { canContinue } = menuState(run, now);
-  return <div className={'lab-app ' + (!atHome && run ? 'in-game' : 'at-home')} onPointerDownCapture={() => audio.unlock()} onKeyDownCapture={e => { if (e.key === 'Enter' || e.key === ' ') audio.unlock(); }}>
+  return <div className={'lab-app ' + (!atHome && run ? 'in-game' : 'at-home')} onPointerDownCapture={() => { audio.unlock(); haptics.unlock(); }} onKeyDownCapture={e => { if (e.key === 'Enter' || e.key === ' ') { audio.unlock(); haptics.unlock(); } }}>
     <div className="lab-scenery" aria-hidden="true"/><div className="lab-haze" aria-hidden="true"/>
     <main id="game" className="lab-main">
       {atHome || !run ? <section className="start-screen">
@@ -372,7 +374,12 @@ export default function Home() {
           <div className="start-secondary"><button className="secondary-button" onClick={openRanks}><span aria-hidden="true">♛</span><span>{c.ranking}</span></button><button className="secondary-button" onClick={() => setModal('help')}><span aria-hidden="true">?</span><span>{c.how}</span></button></div>
         </div>
         <p className="start-caption">{c.readyBody}</p>
-        <div className="start-footer"><div className="lang-switch" role="group" aria-label={c.language}><button type="button" aria-pressed={uiLang === 'ko'} onClick={() => chooseLang('ko')}>KO</button><button type="button" aria-pressed={uiLang === 'en'} onClick={() => chooseLang('en')}>EN</button></div><button className="sound-toggle" aria-pressed={soundOn} onClick={toggleSound}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/>{soundOn ? <path d="M16 8q5 4 0 8M19 5q8 7 0 14"/> : <path d="m17 9 5 6m0-6-5 6"/>}</svg>{soundOn ? c.soundOn : c.soundOff}</button><a className="archerlab-link" href="https://archerlab.dev/"><span aria-hidden="true">↗</span>{c.archerlab}</a></div>
+        <div className="start-footer">
+          <div className="lang-switch" role="group" aria-label={c.language}><button type="button" aria-pressed={uiLang === 'ko'} onClick={() => chooseLang('ko')}>KO</button><button type="button" aria-pressed={uiLang === 'en'} onClick={() => chooseLang('en')}>EN</button></div>
+          <button className="sound-toggle" aria-pressed={soundOn} onClick={toggleSound}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/>{soundOn ? <path d="M16 8q5 4 0 8M19 5q8 7 0 14"/> : <path d="m17 9 5 6m0-6-5 6"/>}</svg>{soundOn ? c.soundOn : c.soundOff}</button>
+          {vibrationSupported && <button type="button" className="sound-toggle vibration-toggle" aria-pressed={vibrationOn} title={c.vibrationHint} onClick={toggleVibration}><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M5 7q-3 5 0 10m14-10q3 5 0 10M11 17h2"/></svg>{vibrationOn ? c.vibrationOn : c.vibrationOff}</button>}
+          <a className="archerlab-link" href="https://archerlab.dev/"><span aria-hidden="true">↗</span>{c.archerlab}</a>
+        </div>
       </section> : <section className="play-screen" aria-label={c.title}>
         <div className="game-hud"><div className="hud-stat stage-stat"><span>{c.stage}</span><strong>{level.toString().padStart(2, '0')}</strong></div><button type="button" className="hud-home" onClick={() => setModal('exit')} aria-label={c.home} title={c.home}><span aria-hidden="true">🏠</span></button><div className="hud-stat score-stat"><span>{c.score}</span><strong data-testid="score">{run.score.toLocaleString()}</strong></div></div>
         <Timer key={`${run.id}:${run.level}:${run.deadline}`} deadline={run.deadline} limit={timeLimit(level)} clock={clock} frozenAt={timerFrozenAt} active={active} running={clockRunning} audio={audio} clockKey={clockKey}/>
@@ -408,7 +415,7 @@ export default function Home() {
       {error && modal !== 'register' && <div className="connection-error" role="alert"><p>{error}</p><button className="secondary-button" disabled={busy} onClick={() => { if (canRetry) retry.current(); else setError(''); }}>{canRetry ? c.retry : c.confirm}</button></div>}
     </main>
     {!!motions.length && <PourAnimation motions={motions} onFinish={finishMotion} onImpact={impactMotion}/>}
-    <RewardEffects ref={rewardEffects} audio={audio} active={!atHome && !modal && !error && !ended} scope={run ? `${run.id}:${run.level}` : ''}/>
+    <RewardEffects ref={rewardEffects} audio={audio} haptics={haptics} active={!atHome && !modal && !error && !ended} scope={run ? `${run.id}:${run.level}` : ''}/>
     {!atHome && ended && run && !modal && <Results><span className="result-sticker" aria-hidden="true">{run.cleared === 100 ? '★' : blockedEnd ? '⛔' : '⌛'}</span><p className="result-eyebrow">{run.cleared === 100 ? c.eyebrowAllClear : blockedEnd ? c.eyebrowBlocked : c.eyebrowTimeout}</p><h2 id="result-title">{run.cleared === 100 ? c.allClear : blockedEnd ? c.blockedTitle : c.ended}</h2>{blockedEnd && <p className="blocked-explanation" role="alert">{c.blockedBody}</p>}{lateClear && <p className="late-explanation" role="status">{c.lateClearBody}</p>}<div className="result-score">{run.score.toLocaleString()}<small>{c.point}</small></div><p className="result-stage">{c.stage} {run.level} · {c.cleared} {run.cleared}</p>{run.registered && <p role="status">{c.registered}</p>}<button className="primary-button" disabled={busy || run.status !== 'ended'} onClick={() => run.registered ? openRanks() : setModal('register')}>{run.registered ? c.ranking : c.register}</button><button className="secondary-button" disabled={busy} onClick={home}>{c.home}</button></Results>}
     {modal === 'exit' && <Modal title={c.homeTitle} onClose={() => setModal(null)}><p>{c.homeBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.keepPlaying}</button><button className="primary-button" onClick={home}>{c.leaveGame}</button></div></Modal>}
     {modal === 'restart' && <Modal title={c.restartTitle} onClose={() => setModal(null)}><p>{c.restartBody}</p><div className="confirmation-actions"><button className="secondary-button" onClick={() => setModal(null)}>{c.cancel}</button><button className="primary-button" disabled={busy} onClick={() => { void perform('start'); }}>{c.newGame}</button></div></Modal>}

@@ -16,7 +16,14 @@ const viewports = process.env.REWARDS_VIEWPORTS === 'none' ? [] : process.env.RE
   ? process.env.REWARDS_VIEWPORTS.split(',').map(value => value.split('x').map(Number))
   : [[320,568],[360,640],[390,844],[430,932],[768,1024],[1024,768],[667,375],[844,390],[1440,900]];
 async function fixture(viewport, options = {}) {
-  const context = await browser.newContext({ viewport, serviceWorkers: 'block', hasTouch: viewport.width < 600, reducedMotion: options.reduced ? 'reduce' : 'no-preference', deviceScaleFactor: 2 });
+  const context = await browser.newContext({ viewport, serviceWorkers: 'block', hasTouch: options.touch ?? viewport.width <= 1024, reducedMotion: options.reduced ? 'reduce' : 'no-preference', deviceScaleFactor: 2 });
+  await context.addInitScript(({ supported, enabled }) => {
+    window.__vibrations = [];
+    Object.defineProperty(Navigator.prototype, 'vibrate', { configurable: true, value: supported ? function (pattern) {
+      window.__vibrations.push({ pattern, at: performance.now() }); return true;
+    } : undefined });
+    if (!enabled) localStorage.setItem('water-sort-vibration', 'off');
+  }, { supported: options.haptics !== false, enabled: options.vibration !== false });
   const page = await context.newPage(), errors = [];
   page.on('pageerror', e => errors.push(String(e)));
   let state, delay = 0, reject = false;
@@ -40,7 +47,9 @@ async function fixture(viewport, options = {}) {
   };
   const move = async (a, b) => { await tap(a); await tap(b); };
   const idle = () => page.waitForFunction(() => !document.querySelector('[data-pouring]'));
-  await page.goto(url, { waitUntil: 'networkidle' });
+  const address = new URL(url);
+  if (options.lang) address.searchParams.set('lang', options.lang);
+  await page.goto(address.href, { waitUntil: 'networkidle' });
   return { page, context, errors, tap, move, idle, state: () => state, delay: value => { delay = value; }, reject: () => { reject = true; } };
 }
 const assertLayout = async page => {
@@ -48,8 +57,70 @@ const assertLayout = async page => {
   assert.ok(layout.scroll <= layout.width, JSON.stringify(layout));
   for (const b of layout.buttons) { assert.ok(b.width >= 44 && b.height >= 44); assert.ok(b.x >= 0 && b.x + b.width <= layout.width + 1); assert.ok(b.y >= 0 && b.bottom <= layout.height + 1); }
 };
+const assertMenu = async page => {
+  const layout = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, scroll: document.documentElement.scrollWidth,
+    controls: [...document.querySelectorAll('.start-screen button,.archerlab-link')].map(node => { const b = node.getBoundingClientRect(); return { text: node.textContent, x: b.x, y: b.y, width: b.width, height: b.height, right: b.right, bottom: b.bottom }; }) }));
+  assert.ok(layout.scroll <= layout.width, JSON.stringify(layout));
+  for (const b of layout.controls) {
+    assert.ok(b.width >= 44 && b.height >= 44 && b.x >= 0 && b.right <= layout.width + 1 && b.y >= 0 && b.bottom <= layout.height + 1, JSON.stringify({ viewport: [layout.width,layout.height], control: b }));
+  }
+};
 try {
   if (!process.env.REWARDS_PERF_ONLY) {
+  for (const [mode, options] of [['unsupported', { haptics: false }], ['desktop', { touch: false }], ['disabled', { vibration: false }]]) {
+    const h = await fixture({ width: 390, height: 844 }, options);
+    assert.equal(await h.page.locator('.vibration-toggle').count(), mode === 'disabled' ? 1 : 0);
+    await h.page.locator('.play-button').click(); await h.page.locator('.bottle-button').first().waitFor();
+    await h.move(0,2); await h.idle(); await h.move(1,0); await h.idle();
+    assert.equal(await h.page.evaluate(() => window.__vibrations.filter(v => v.pattern !== 0).length), 0);
+    assert.deepEqual(h.errors, []); reports.push({ mode: `haptics: ${mode}`, errors: h.errors });
+    await h.context.close(); console.log(`PASS haptics ${mode}`);
+  }
+  {
+    const h = await fixture({ width: 390, height: 844 });
+    await h.page.locator('.vibration-toggle').click();
+    assert.equal(await h.page.locator('.vibration-toggle').getAttribute('aria-pressed'), 'false');
+    await h.page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await h.page.locator('.vibration-toggle').getAttribute('aria-pressed'), 'false', 'vibration opt-out survives reload');
+    await h.page.locator('.play-button').click(); await h.page.locator('.bottle-button').first().waitFor();
+    await h.move(0,2); await h.idle();
+    assert.equal(await h.page.evaluate(() => window.__vibrations.length), 0);
+    await h.page.locator('.hud-home').click(); await h.page.locator('.confirmation-actions .primary-button').click();
+    await h.page.locator('.start-screen').waitFor();
+    await h.page.locator('.vibration-toggle').click();
+    await h.page.locator('.sound-toggle:not(.vibration-toggle)').click();
+    assert.equal(await h.page.locator('.sound-toggle:not(.vibration-toggle)').getAttribute('aria-pressed'), 'false');
+    await h.page.locator('.continue-button').click(); await h.page.locator('.bottle-button').first().waitFor();
+    await h.move(1,0); await h.idle();
+    assert.ok(await h.page.evaluate(() => window.__vibrations.some(v => Array.isArray(v.pattern))), 'muted sound does not disable re-enabled vibration');
+    assert.deepEqual(h.errors, []); reports.push({ mode: 'haptics: persistent opt-out, re-enable and independent mute', errors: h.errors });
+    await h.context.close(); console.log('PASS haptics preferences');
+  }
+  for (const [width,height] of [[320,568],[667,375],[1280,800]]) {
+    const h = await fixture({ width, height }, { lang: 'en', touch: true });
+    await assertMenu(h.page);
+    assert.equal(await h.page.locator('.vibration-toggle').textContent(), 'Vibration on');
+    await h.page.screenshot({ scale: 'css', path: `${out}/${width}-en-title.png` });
+    assert.deepEqual(h.errors, []); reports.push({ mode: 'English haptic control, touch tablet/phone', viewport: `${width}x${height}`, errors: h.errors });
+    await h.context.close(); console.log(`PASS English haptics ${width}x${height}`);
+  }
+  for (const cancel of ['hidden', 'reduced']) {
+    const h = await fixture({ width: 390, height: 844 }, { board: [[0,0,0],[0],[1,1,1],[1],[],[]] });
+    await h.page.locator('.play-button').click(); await h.page.locator('.bottle-button').first().waitFor();
+    await h.move(1,0);
+    await h.page.waitForFunction(() => window.__vibrations.some(v => Array.isArray(v.pattern)));
+    const before = await h.page.evaluate(() => window.__vibrations.filter(v => v.pattern !== 0).length);
+    if (cancel === 'hidden') await h.page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    else await h.page.emulateMedia({ reducedMotion: 'reduce' });
+    await h.page.waitForFunction(() => window.__vibrations.at(-1)?.pattern === 0);
+    await h.page.waitForTimeout(400);
+    assert.equal(await h.page.evaluate(() => window.__vibrations.filter(v => v.pattern !== 0).length), before, 'interrupted vibration cannot replay');
+    assert.deepEqual(h.errors, []); reports.push({ mode: `haptics: cancellation on ${cancel}`, errors: h.errors });
+    await h.context.close(); console.log(`PASS haptics cancel ${cancel}`);
+  }
   for (const mode of ['ordinary', 'completion', 'delayed', 'queued']) {
     const board = mode === 'ordinary' ? [[0,1],[1,0],[],[]] : [[0,0,0],[0],[1,1,1],[1],[],[]];
     const h = await fixture({ width: 390, height: 844 }, { board });
@@ -82,12 +153,17 @@ try {
       return { events, launchMs: events.find(e => e.phase === 'launch').at - frame.started,
         contactLagMs: events.find(e => e.phase === 'contact').at - frame.started - frame.duration * .27,
         fillLagMs: events.find(e => e.phase === 'filled').at - frame.started - frame.duration * .73,
-        sounds: window.__impactSounds };
+        sounds: window.__impactSounds, vibrations: window.__vibrations };
     }, id);
     assert.deepEqual(timing.events.map(e => e.phase), ['launch','contact','filled']);
     assert.ok(timing.launchMs >= 0 && timing.launchMs < 50, JSON.stringify(timing));
     assert.ok(timing.contactLagMs >= -1 && timing.contactLagMs < 55, JSON.stringify(timing));
     assert.ok(timing.fillLagMs >= -1 && timing.fillLagMs < 55, JSON.stringify(timing));
+    const nonzero = timing.vibrations.filter(v => v.pattern !== 0);
+    const fill = timing.events.at(-1).at;
+    assert.ok(nonzero.some(v => Math.abs(v.at - timing.events[0].at) < 10 && v.pattern === 8), 'launch haptic shares the launch cue');
+    assert.ok(nonzero.some(v => Math.abs(v.at - timing.events[1].at) < 10 && v.pattern === 12), 'contact haptic shares the stream contact cue');
+    assert.ok(nonzero.some(v => Math.abs(v.at - fill) < 10 && (mode === 'ordinary' ? v.pattern === 20 : Array.isArray(v.pattern))), 'arrival/completion haptic shares the fill frame');
     if (mode !== 'ordinary') {
       await h.page.waitForTimeout(50);
       const sounds = await h.page.evaluate(() => window.__impactSounds);
@@ -101,6 +177,7 @@ try {
       assert.equal(await h.page.locator('.completion-burst').count(), 0);
       assert.equal(await h.page.locator('.reward-overlay').getAttribute('data-active'), 'false');
       assert.equal(await h.page.evaluate(() => window.__impactSounds.filter(s => Math.abs(s.duration - .68) < .005).length), 1, 'late confirmation cannot replay the impact sound');
+      assert.equal(await h.page.evaluate(() => window.__vibrations.filter(v => Array.isArray(v.pattern)).length), 1, 'late confirmation cannot replay the completion vibration');
     }
     await h.idle();
     assert.equal(await h.page.evaluate(id => window.__impactEvents.filter(e => e.id === id && e.phase === 'filled').length, id), 1);
@@ -109,6 +186,7 @@ try {
   }
   for (const [width, height] of viewports) {
     const h = await fixture({ width, height }), { page } = h;
+    await assertMenu(page);
     await page.screenshot({ scale: 'css', path: `${out}/${width}-title.png` });
     await page.locator('.play-button').click(); await page.locator('.bottle-button').first().waitFor();
     await assertLayout(page);
@@ -130,6 +208,7 @@ try {
     await page.waitForSelector('.clear-burst');
     assert.equal(await page.locator('.reward-overlay').getAttribute('data-chain'), '2');
     assert.equal(await page.locator('.reward-overlay').getAttribute('data-finale'), 'local-effects:1');
+    if (width <= 1024) assert.ok(await page.evaluate(() => window.__vibrations.some(v => Array.isArray(v.pattern) && v.pattern.length === 5)), 'clear haptic belongs to the finale');
     await page.waitForTimeout(120); await page.screenshot({ scale: 'css', path: `${out}/${width}-clear.png` });
     await page.waitForFunction(() => document.querySelector('.stage-stat strong')?.textContent === '02');
     await assertLayout(page);
@@ -138,6 +217,7 @@ try {
     await page.screenshot({ scale: 'css', path: `${out}/${width}-dialog.png` });
     await page.getByRole('button', { name: '나가기', exact: true }).click();
     await page.locator('.start-screen').waitFor();
+    await assertMenu(page);
     await page.screenshot({ scale: 'css', path: `${out}/${width}-saved.png` });
     assert.deepEqual(h.errors, []);
     reports.push({ viewport: `${width}x${height}`, surfaces: 'title, selected seal, bottle burst, chain, clear, next board, dialog, saved run', errors: h.errors });
@@ -160,7 +240,10 @@ try {
       assert.equal(await h.page.locator('.completion-burst').count(), 0, 'late confirmation must not replay the fill burst');
     }
     if (mode === 'conflict') { await h.page.locator('.connection-error').waitFor(); assert.equal(await h.page.locator('.completion-burst').count(), 0); }
-    if (mode === 'reduced') { await h.idle(); assert.equal(await h.page.locator('.reward-overlay').evaluate(node => getComputedStyle(node).display), 'none'); }
+    if (mode === 'reduced') {
+      await h.idle(); assert.equal(await h.page.locator('.reward-overlay').evaluate(node => getComputedStyle(node).display), 'none');
+      assert.equal(await h.page.evaluate(() => window.__vibrations.filter(v => v.pattern !== 0).length), 0, 'reduced motion also suppresses haptics');
+    }
     assert.deepEqual(h.errors, []); reports.push({ mode, errors: h.errors }); await h.context.close(); console.log(`PASS ${mode}`);
   }
   const pausedChain = await fixture({ width: 390, height: 844 });
@@ -191,6 +274,7 @@ try {
     else await h.page.setViewportSize({ width: 844, height: 390 });
     await h.page.waitForFunction(() => document.querySelector('.reward-overlay')?.dataset.active === 'false');
     assert.equal(await h.page.locator('.score-reward').count(), 0);
+    if (cancel !== 'tail') assert.equal(await h.page.evaluate(() => window.__vibrations.at(-1)?.pattern), 0, 'dialog/resize stops the motor');
     assert.deepEqual(h.errors, []); reports.push({ mode: cancel === 'tail' ? 'finale continues over next playable board' : `finale cancellation on ${cancel}`, errors: h.errors });
     await h.context.close(); console.log(`PASS finale ${cancel}`);
   }
