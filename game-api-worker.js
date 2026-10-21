@@ -249,6 +249,22 @@ function getTransientClientNetworkReason(body) {
     return '';
 }
 
+// 서비스 워커 등록은 오프라인 캐시를 위한 선택 기능이라, 실패해도 게임은 네트워크로 그대로 돈다.
+// shared/game-runtime.js가 세 번까지 다시 시도한 뒤에도 sw.js를 받는 중 회선이 끊기면
+// Chrome은 "An unknown error occurred when fetching the script"를 낸다(error_logs 5708, sw.js는 200).
+// 이런 순수 네트워크 실패만 거르고, 404·MIME·SecurityError 같은 응답·설정 오류는 그대로 남긴다.
+const SERVICE_WORKER_FETCH_FAILURE_PATTERN = /An unknown error occurred when fetching the script|Failed to fetch|Load failed|NetworkError|The network connection was lost|Internet connection appears to be offline/i;
+
+function getTransientServiceWorkerFetchReason(body) {
+    const errorType = String(body.error_type || body.errorType || body.type || '');
+    if (!/^manual$/i.test(errorType)) return '';
+    const context = parseClientErrorRecord(body.context);
+    if (String(context.source || '') !== 'shared-service-worker') return '';
+    const message = String(body.message || '').replace(/^\[[^\]]+\]\s*/, '').trim();
+    if (/bad HTTP response code|unsupported MIME type|SecurityError|redirect/i.test(message)) return '';
+    return SERVICE_WORKER_FETCH_FAILURE_PATTERN.test(message) ? 'transient_service_worker_script_fetch' : '';
+}
+
 // 이미지 preload 링크는 미리 받아 두라는 신호일 뿐이라, 실패해도 IMG나 CSS가 같은 파일을 다시 받는다.
 // 같은 출처 이미지 preload 실패는 페이지를 떠났거나 회선이 잠깐 끊긴 경우라 화면은 그대로다.
 // 스타일시트나 스크립트, 다른 출처 이미지는 그대로 남긴다.
@@ -335,6 +351,11 @@ async function storeClientError(db, request, body) {
     const transientNetworkReason = getTransientClientNetworkReason(body);
     if (transientNetworkReason) {
         return jsonResponse({ ok: true, ignored: true, reason: transientNetworkReason });
+    }
+
+    const serviceWorkerFetchReason = getTransientServiceWorkerFetchReason(body);
+    if (serviceWorkerFetchReason) {
+        return jsonResponse({ ok: true, ignored: true, reason: serviceWorkerFetchReason });
     }
 
     const preloadReason = getOptionalImagePreloadReason(body);

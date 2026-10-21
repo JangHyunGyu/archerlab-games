@@ -276,6 +276,39 @@ function createDb() {
     assert.equal(keepDb.writes.length, 1);
   }
 
+  // error_logs 5708: sw.js 등록이 세 번 모두 네트워크 단계에서 끊겼다(sw.js는 200). 게임은 그대로 돌아 저장하지 않는다.
+  const swUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36';
+  const swPayload = (message) => ({
+    appId: 'cat-tower', errorType: 'manual', errorClass: '', source: '',
+    message: '[manual] ' + message,
+    stack: 'TypeError: ' + message,
+    url: 'https://game.archerlab.dev/cat-tower/',
+    context: { language: 'en', name: 'TypeError', source: 'shared-service-worker', url: 'sw.js', attempts: 3 }
+  });
+  const swMessage = "Failed to register a ServiceWorker for scope ('https://game.archerlab.dev/cat-tower/') with script ('https://game.archerlab.dev/cat-tower/sw.js'): An unknown error occurred when fetching the script.";
+  for (const payload of [swPayload(swMessage), { ...swPayload(swMessage), context: JSON.stringify(swPayload(swMessage).context) }, swPayload('Load failed')]) {
+    const swDb = createDb();
+    const swResponse = await context.__gameApiTest.storeClientError(swDb, new Request(browserRequest.url, {
+      method: 'POST', headers: { 'User-Agent': swUa }
+    }), payload);
+    assert.deepEqual(await swResponse.json(), { ok: true, ignored: true, reason: 'transient_service_worker_script_fetch' });
+    assert.equal(swDb.writes.length, 0);
+  }
+  // 응답·설정 오류와 다른 출처의 같은 문구는 그대로 남긴다.
+  for (const payload of [
+    swPayload("Failed to register a ServiceWorker for scope ('https://game.archerlab.dev/cat-tower/') with script ('https://game.archerlab.dev/cat-tower/sw.js'): A bad HTTP response code (404) was received when fetching the script."),
+    swPayload("Failed to register a ServiceWorker: The script has an unsupported MIME type ('text/html')."),
+    { ...swPayload(swMessage), context: { source: 'gameplay' } },
+    { ...swPayload(swMessage), errorType: 'error' }
+  ]) {
+    const keepDb = createDb();
+    const keepResponse = await context.__gameApiTest.storeClientError(keepDb, new Request(browserRequest.url, {
+      method: 'POST', headers: { 'User-Agent': swUa }
+    }), payload);
+    assert.deepEqual(await keepResponse.json(), { ok: true });
+    assert.equal(keepDb.writes.length, 1);
+  }
+
   // sendBeacon은 CORS 사전 요청을 피하려고 text/plain으로 보낸다. fetch 핸들러가 이 본문도 JSON으로 저장해야 한다.
   const beaconDb = createDb();
   const beaconResponse = await context.__gameApiTest.worker.fetch(new Request('https://game-api.yama5993.workers.dev/client-errors', {
