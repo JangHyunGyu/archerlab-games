@@ -7,7 +7,7 @@
 URL: https://game.archerlab.dev/seo/archerlab-games-about
 Last updated: 2026-10-02
 
-Archerlab Games(game.archerlab.dev)는 개발자 장현규가 만든 캐주얼 게임 10개를 한곳에 모은 무료 웹 게임 포털입니다. 물약 정렬, 낙하 블록, 합치기, 매치3, 디펜스, 온라인 배구까지 퍼즐 중심의 게임을 앱 설치나 다운로드 없이 모바일과 데스크톱 브라우저에서 바로 합니다.
+Archerlab Games(game.archerlab.dev)는 개발자 archerlab이 만든 캐주얼 게임 10개를 한곳에 모은 무료 웹 게임 포털입니다. 물약 정렬, 낙하 블록, 합치기, 매치3, 디펜스, 온라인 배구까지 퍼즐 중심의 게임을 앱 설치나 다운로드 없이 모바일과 데스크톱 브라우저에서 바로 합니다.
 
 ### 한눈에 보기
 - 서비스: Archerlab Games — 무료 브라우저 게임 포털
@@ -16,7 +16,7 @@ Archerlab Games(game.archerlab.dev)는 개발자 장현규가 만든 캐주얼 �
 - 설치: 다운로드와 설치 없이 브라우저에서 시작
 - 지원 환경: 모바일·데스크톱 브라우저
 - 언어: 한국어 중심. 일부 게임은 영어 지원
-- 운영: ArcherLab (장현규)
+- 운영: archerlab
 
 ### Who it is for / 대상
 - 짧은 시간에 가볍게 할 퍼즐을 찾는 분
@@ -64,7 +64,7 @@ Archerlab Games(game.archerlab.dev)는 개발자 장현규가 만든 캐주얼 �
 URL: https://game.archerlab.dev/seo/archerlab-games-about-en
 Last updated: 2026-10-02
 
-Archerlab Games (game.archerlab.dev) is a free web game portal that collects 10 casual games made by developer Hyungyu Jang. From potion sorting and falling blocks to merge puzzles, match-3, defense and online volleyball, you can play on mobile or desktop browsers without installing or downloading anything.
+Archerlab Games (game.archerlab.dev) is a free web game portal that collects 10 casual games made by developer archerlab. From potion sorting and falling blocks to merge puzzles, match-3, defense and online volleyball, you can play on mobile or desktop browsers without installing or downloading anything.
 
 ### At a glance
 - Service: Archerlab Games — free browser game portal
@@ -73,7 +73,7 @@ Archerlab Games (game.archerlab.dev) is a free web game portal that collects 10 
 - Install: No download or install; plays in the browser
 - Devices: Mobile and desktop browsers
 - Languages: Mainly Korean; some games support English
-- Operator: ArcherLab (Hyungyu Jang)
+- Operator: archerlab
 
 ### Who it is for / 대상
 - Players looking for light puzzle games for short sessions

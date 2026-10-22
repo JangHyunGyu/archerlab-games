@@ -2075,7 +2075,7 @@ export class MenuScene extends Phaser.Scene {
         };
 
         mk(by + uv(78), 'icon_kakao', t('contactKakao'), () => window.open('https://open.kakao.com/o/pF6xil6h', '_blank'));
-        mk(by + uv(122), 'icon_mail', t('contactEmail'), () => window.open('mailto:hyungyu@archerlab.dev'));
+        mk(by + uv(122), 'icon_mail', t('contactEmail'), () => window.open('mailto:archerlab@archerlab.dev'));
 
         const closeBtn = this.add.text(cx, by + boxH - uv(20), `[ ${t('close')} ]`, {
             fontSize: fs(12), fontFamily: UI_FONT_MONO, color: SYSTEM.TEXT_MUTED,
