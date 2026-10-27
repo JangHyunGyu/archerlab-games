@@ -11,14 +11,14 @@
     "slimevolley/index.html": {
       "title": "슬라임 배구 | 무료 온라인 배구 게임 - Slime Volley",
       "description": "설치 없이 하는 슬라임 배구. 봇과 연습하거나, 온라인에서 1대1부터 4대4까지 붙습니다.",
-      "image": "https://archerlab.dev/assets/images/slimevolley_link.png",
+      "image": "https://archerlab.dev/assets/images/slimevolley_link.png?v=2",
       "imageWidth": 2048,
       "imageHeight": 2048
     },
     "slimevolley/index-en.html": {
       "title": "Slime Volleyball Online | Slime Volley - Free Browser Game",
       "description": "Play Slime Volley, a free online slime volleyball game. Practice against bots or join 1v1 to 4v4 matches in your browser. No download required.",
-      "image": "https://archerlab.dev/assets/images/slimevolley_link.png",
+      "image": "https://archerlab.dev/assets/images/slimevolley_link.png?v=2",
       "imageWidth": 2048,
       "imageHeight": 2048
     },
@@ -84,7 +84,7 @@
       "title": "그림자 서바이벌 | Shadow Survival - Free Dungeon Roguelike Web Game",
       "description": "설치 없이 하는 무료 2D 던전 서바이벌. Play Shadow Survival, a free dungeon roguelike browser game with monsters, level-ups, and shadow army action.",
       "gameName": "그림자 서바이벌",
-      "image": "https://archerlab.dev/assets/images/solo-leveling_link.png",
+      "image": "https://archerlab.dev/assets/images/solo-leveling_link.png?v=4",
       "imageWidth": 1024,
       "imageHeight": 1024
     },
@@ -92,7 +92,7 @@
       "title": "Shadow Survival - Free 2D Dungeon Roguelike Web Game | ArcherLab",
       "description": "Play instantly in your browser! A free 2D dungeon survival roguelike game. Lead your shadow army, defeat monsters, and level up! Supports PC and mobile.",
       "gameName": "Shadow Survival",
-      "image": "https://archerlab.dev/assets/images/solo-leveling_link.png",
+      "image": "https://archerlab.dev/assets/images/solo-leveling_link.png?v=4",
       "imageWidth": 1024,
       "imageHeight": 1024
     }
