@@ -53,16 +53,16 @@
     "lumen-shift/index.html": {
       "title": "루멘 쉬프트 | 무료 낙하 블록 퍼즐 - Lumen Shift",
       "description": "음악에 따라 빛이 바뀌는 무대에서 블록을 쌓고 줄을 지웁니다. 루멘 존으로 스테이지와 기록을 노리는 무료 퍼즐.",
-      "image": "https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png?v=3",
-      "imageWidth": 1280,
-      "imageHeight": 1280
+      "image": "https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png?v=4",
+      "imageWidth": 960,
+      "imageHeight": 960
     },
     "lumen-shift/index-en.html": {
       "title": "Lumen Shift | Free Falling Block Puzzle Online",
       "description": "Play Lumen Shift online for free. Clear lines, use the Lumen Zone, and chase stage and ranking scores in a music-reactive falling-block puzzle.",
-      "image": "https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png?v=3",
-      "imageWidth": 1280,
-      "imageHeight": 1280
+      "image": "https://game.archerlab.dev/lumen-shift/assets/images/lumen-shift-link.png?v=4",
+      "imageWidth": 960,
+      "imageHeight": 960
     },
     "jewelria/index.html": {
       "title": "쥬얼리아 Jewelria - Free Match 3 Jewel Puzzle Game",
